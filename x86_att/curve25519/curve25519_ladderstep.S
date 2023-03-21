@@ -5,7 +5,7 @@
 // Montgomery ladder step on pairs of (X,Z)-projective curve25519 points
 //
 // extern void curve25519_ladderstep
-//   (uint64_t rr[16],uint64_t point[8],uint64_t pp[16],uint64_t b)
+//   uint8_t rr[128],uint8_t point[64],uint8_t pp[128],uint8_t b[8]);
 //
 // If point = (X,1) and pp = (n * (X,1),[n+1] * (X,1)) then the output
 // rr = (n' * (X,1),[n'+1] * (X,1)) where n' = 2 * n + b, with input

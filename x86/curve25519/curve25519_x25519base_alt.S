@@ -3,10 +3,10 @@
 
 // ----------------------------------------------------------------------------
 // The x25519 function for curve25519 on base element 9
-// Input scalar[4]; output res[4]
+// Input scalar[32]; output res[32]
 //
 // extern void curve25519_x25519base_alt
-//   (uint64_t res[static 4],uint64_t scalar[static 4]);
+//   (uint8_t res[static 32],uint8_t scalar[static 32]);
 //
 // Given a scalar n, returns the X coordinate of n * G where G = (9,...) is
 // the standard generator. The scalar is first slightly modified/mangled

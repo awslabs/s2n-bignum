@@ -3,10 +3,10 @@
 
 // ----------------------------------------------------------------------------
 // Extended projective addition for edwards25519
-// Inputs p1[16], p2[16]; output p3[16]
+// Inputs p1[128], p2[128]; output p3[128]
 //
 // extern void edwards25519_epadd
-//   (uint64_t p3[static 16],uint64_t p1[static 16],uint64_t p2[static 16])
+//   (uint8_t p3[static 128],uint8_t p1[static 128],uint8_t p2[static 128]);
 //
 // The output p3 and both inputs p1 and p2 are points (x,y) on
 // edwards25519 represented in extended projective quadruples (X,Y,Z,T)

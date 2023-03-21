@@ -3,10 +3,10 @@
 
 // ----------------------------------------------------------------------------
 // Projective scalar multiplication, x coordinate only, for curve25519
-// Inputs scalar[4], point[4]; output res[8]
+// Inputs scalar[32], point[32]; output res[64]
 //
 // extern void curve25519_pxscalarmul_alt
-//   (uint64_t res[static 8],uint64_t scalar[static 4],uint64_t point[static 4])
+//   (uint8_t res[static 64],uint8_t scalar[static 32],uint8_t point[static 32]);
 //
 // Given the X coordinate of an input point = (X,Y) on curve25519, which
 // could also be part of a projective representation (X,Y,1) of the same

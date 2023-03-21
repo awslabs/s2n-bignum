@@ -3,10 +3,10 @@
 
 // ----------------------------------------------------------------------------
 // The x25519 function for curve25519
-// Inputs scalar[4], point[4]; output res[4]
+// Inputs scalar[32], point[32]; output res[32]
 //
 // extern void curve25519_x25519_alt
-//   (uint64_t res[static 4],uint64_t scalar[static 4],uint64_t point[static 4])
+//   (uint8_t res[static 32],uint8_t scalar[static 32],uint8_t point[static 32]);
 //
 // Given a scalar n and the X coordinate of an input point P = (X,Y) on
 // curve25519 (Y can live in any extension field of characteristic 2^255-19),
