@@ -11,4 +11,5 @@ phases:
       - make ctCheck
       - cd ${CODEBUILD_SRC_DIR}/benchmarks
       - make
+      - cd ..
 
