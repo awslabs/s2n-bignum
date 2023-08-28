@@ -764,6 +764,11 @@ void call_bignum_mul_8_16_neon(void) repeat(bignum_mul_8_16_neon(b0,b1,b2))
 void call_bignum_sqr_8_16_neon(void) repeat(bignum_sqr_8_16_neon(b0,b1))
 
 #else
+void call_bignum_copy_row_from_table_8n_neon__32_16(void) {}
+void call_bignum_copy_row_from_table_8n_neon__32_32(void) {}
+void call_bignum_copy_row_from_table_16_neon__32(void) {}
+void call_bignum_copy_row_from_table_32_neon__32(void) {}
+
 void call_bignum_emontredc_8n_neon__32(void) {}
 void call_bignum_kmul_16_32_neon(void) {}
 void call_bignum_ksqr_16_32_neon(void) {}

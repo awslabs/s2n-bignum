@@ -2609,10 +2609,16 @@ int test_bignum_copy_row_from_table(void)
 }
 
 int test_bignum_copy_row_from_table_8n_neon(void)
-{ return test_bignum_copy_row_from_table_specific("bignum_copy_row_from_table_8n_neon",
+{
+#ifdef __ARM_NEON
+  return test_bignum_copy_row_from_table_specific("bignum_copy_row_from_table_8n_neon",
       0, 1, bignum_copy_row_from_table_8n_neon);
+#else
+  return 1;
+#endif
 }
 
+#ifdef __ARM_NEON
 void _bignum_copy_row_from_table_16_neon_wrapper(uint64_t *z, uint64_t *table,
     uint64_t height, uint64_t width, uint64_t index)
 { assert(width == 16);
@@ -2624,7 +2630,13 @@ int test_bignum_copy_row_from_table_16_neon(void)
       "bignum_copy_row_from_table_16_neon", 16, 0,
       _bignum_copy_row_from_table_16_neon_wrapper);
 }
+#else
+int test_bignum_copy_row_from_table_16_neon(void)
+{ return 1;
+}
+#endif
 
+#ifdef __ARM_NEON
 void _bignum_copy_row_from_table_32_neon_wrapper(uint64_t *z, uint64_t *table,
     uint64_t height, uint64_t width, uint64_t index)
 { assert(width == 32);
@@ -2636,6 +2648,11 @@ int test_bignum_copy_row_from_table_32_neon(void)
       "bignum_copy_row_from_table_32_neon", 32, 0,
       _bignum_copy_row_from_table_32_neon_wrapper);
 }
+#else
+int test_bignum_copy_row_from_table_32_neon(void)
+{ return 1;
+}
+#endif
 
 int test_bignum_ctd(void)
 { uint64_t t, k;
