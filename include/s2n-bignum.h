@@ -155,10 +155,16 @@ extern uint64_t bignum_coprime (uint64_t m, uint64_t *x, uint64_t n, uint64_t *y
 extern void bignum_copy (uint64_t k, uint64_t *z, uint64_t n, uint64_t *x);
 
 // Given table: uint64_t[height*width], copy table[idx*width...(idx+1)*width-1]
-// into z[0..row-1].
+// into z[0..width-1].
 // Input table[height*width]; output z[width]
 extern void bignum_copy_row_from_table (uint64_t *z, uint64_t *table, uint64_t height,
         uint64_t width, uint64_t idx);
+
+// Given table: uint64_t[height*width], copy table[idx*width...(idx+1)*width-1]
+// into z[0..width-1]. width must be a multiple of 8.
+// Input table[height*width]; output z[width]
+extern void bignum_copy_row_from_table_8n_neon (uint64_t *z, uint64_t *table,
+        uint64_t height, uint64_t width, uint64_t idx);
 
 // Given table: uint64_t[height*16], copy table[idx*16...(idx+1)*16-1] into z[0..row-1].
 // Input table[height*16]; output z[16]

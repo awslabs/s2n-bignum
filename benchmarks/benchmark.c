@@ -746,10 +746,15 @@ void call_sm2_montjdouble(void) repeat(sm2_montjdouble(b1,b2))
 void call_sm2_montjmixadd(void) repeat(sm2_montjmixadd(b1,b2,b3))
 
 #ifdef __ARM_NEON
+void call_bignum_copy_row_from_table_8n_neon__32_16(void) \
+    repeat(bignum_copy_row_from_table_8n_neon(b0,b1,32,16,0))
+void call_bignum_copy_row_from_table_8n_neon__32_32(void) \
+    repeat(bignum_copy_row_from_table_8n_neon(b0,b1,32,32,0))
 void call_bignum_copy_row_from_table_16_neon__32(void) \
     repeat(bignum_copy_row_from_table_16_neon(b0,b1,32,0))
 void call_bignum_copy_row_from_table_32_neon__32(void) \
     repeat(bignum_copy_row_from_table_32_neon(b0,b1,32,0))
+
 void call_bignum_emontredc_8n_neon__32(void) repeat(bignum_emontredc_8n_neon(32,b0,b1,b2[0]))
 void call_bignum_kmul_16_32_neon(void) repeat(bignum_kmul_16_32_neon(b0,b1,b2,b3))
 void call_bignum_ksqr_16_32_neon(void) repeat(bignum_ksqr_16_32_neon(b0,b1,b2))
@@ -878,6 +883,8 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_copy (32 -> 32)" ,call_bignum_copy__32_32);
   timingtest(all,"bignum_copy_row_from_table (h=32,w=16)",call_bignum_copy_row_from_table__32_16);
   timingtest(all,"bignum_copy_row_from_table (h=32,w=32)",call_bignum_copy_row_from_table__32_32);
+  timingtest(neon,"bignum_copy_row_from_table_8n_neon (h=32,w=16)",call_bignum_copy_row_from_table_8n_neon__32_16);
+  timingtest(neon,"bignum_copy_row_from_table_8n_neon (h=32,w=32)",call_bignum_copy_row_from_table_8n_neon__32_32);
   timingtest(neon,"bignum_copy_row_from_table_16_neon (h=32)",call_bignum_copy_row_from_table_16_neon__32);
   timingtest(neon,"bignum_copy_row_from_table_32_neon (h=32)",call_bignum_copy_row_from_table_32_neon__32);
   timingtest(all,"bignum_ctd (32)" ,call_bignum_ctd__32);
