@@ -7,6 +7,8 @@
 (* Simplified model of aarch64 (64-bit ARM) semantics.                       *)
 (* ========================================================================= *)
 
+let arm_print_log = ref false;;
+
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding. For ARM we                *)
 (* currently go all the way to the semantics in one jump, no asm.            *)
@@ -308,8 +310,6 @@ let ARM_ENSURES_SUBSUBLEMMA_TAC =
   ENSURES_SUBSUBLEMMA_TAC o
   map (MATCH_MP aligned_bytes_loaded_update o CONJUNCT1);;
 
-let WORD_SUB_ADD = WORD_RULE `word_sub (word (a + b)) (word b) = word a`;;
-
 let ARM_CONV execth2 ths tm =
   let th = tryfind (MATCH_MP execth2) ths in
   let eth = tryfind (fun th2 -> GEN_REWRITE_CONV I [ARM_THM th th2] tm) ths in
@@ -416,13 +416,25 @@ let DISCARD_STATE_TAC s =
 
 let DISCARD_OLDSTATE_TAC s =
   let v = mk_var(s,`:armstate`) in
-  let rec badread okvs tm =
+  let rec unbound_statevars_of_read bound_svars tm =
     match tm with
-      Comb(Comb(Const("read",_),cmp),s) -> not(mem s okvs)
-    | Comb(s,t) -> badread okvs s || badread okvs t
-    | Abs(v,t) -> badread (v::okvs) t
-    | _ -> false in
-  DISCARD_ASSUMPTIONS_TAC(badread [v] o concl);;
+      Comb(Comb(Const("read",_),cmp),s) ->
+        if mem s bound_svars then [] else [s]
+    | Comb(a,b) -> union (unbound_statevars_of_read bound_svars a)
+                         (unbound_statevars_of_read bound_svars b)
+    | Abs(v,t) -> unbound_statevars_of_read (v::bound_svars) t
+    | _ -> [] in
+  DISCARD_ASSUMPTIONS_TAC(
+    fun thm ->
+      let us = unbound_statevars_of_read [] (concl thm) in
+      if us = [] || us = [v] then false
+      else if not(mem v us) then true
+      else
+        if !arm_print_log then
+          (Printf.printf
+            "Info: assumption `%s` is erased, but it might have contained useful information\n"
+            (string_of_term (concl thm)); true)
+        else true);;
 
 (* ------------------------------------------------------------------------- *)
 (* More convenient stepping tactics, optionally with accumulation.           *)

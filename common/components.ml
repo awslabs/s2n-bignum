@@ -27,6 +27,8 @@
 needs "Library/words.ml";;
 needs "common/overlap.ml";;
 
+let components_print_log = ref false;;
+
 (* ------------------------------------------------------------------------- *)
 (* Storing useful per-case theorems not true of a general component.         *)
 (* ------------------------------------------------------------------------- *)
@@ -3071,11 +3073,13 @@ let ASSUMPTION_STATE_UPDATE_TAC =
     ASSUM_LIST(MAP_EVERY (fun th g ->
       try STATE_UPDATE_TAC uth th g
       with Failure s ->
-        if s = "NONOVERLAPPING_TAC: orthogonal_components with identical operands"
-        then ALL_TAC g (* Exactly overwrites, e.g., orthogonal_components PC PC *)
-        else (Printf.printf
-          "Warning: assumption `%s` is erased.\n    - Reason: %s\n"
-          (string_of_term (concl th)) s; ALL_TAC g))));;
+        if !components_print_log then
+          if s = "NONOVERLAPPING_TAC: orthogonal_components with identical operands"
+          then ALL_TAC g (* Exactly overwrites, e.g., orthogonal_components PC PC *)
+          else (Printf.printf
+            "Info: assumption `%s` is erased.\n    - Reason: %s\n"
+            (string_of_term (concl th)) s; ALL_TAC g)
+        else ALL_TAC g)));;
 
 (* ------------------------------------------------------------------------- *)
 (* Rule for "non-selfmodification" when supplied with std exec theorem       *)

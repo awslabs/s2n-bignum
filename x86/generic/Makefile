@@ -22,6 +22,7 @@ OBJ = bignum_add.o \
       bignum_cmul.o \
       bignum_coprime.o \
       bignum_copy.o \
+      bignum_copy_row_from_table.o \
       bignum_ctd.o \
       bignum_ctz.o \
       bignum_demont.o \
