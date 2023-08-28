@@ -600,6 +600,12 @@ void call_bignum_coprime__16_16(void) repeatfewer(10,bignum_coprime(16,b1,16,b2,
 
 void call_bignum_copy__32_32(void) repeat(bignum_copy(32,b0,32,b1))
 
+void call_bignum_copy_row_from_table__32_16(void) \
+    repeat(bignum_copy_row_from_table(b0,b1,32,16,0))
+
+void call_bignum_copy_row_from_table__32_32(void) \
+    repeat(bignum_copy_row_from_table(b0,b1,32,32,0))
+
 void call_bignum_ctd__32(void) repeat(bignum_ctd(32,b1))
 
 void call_bignum_ctz__32(void) repeat(bignum_ctz(32,b1))
@@ -740,22 +746,26 @@ void call_sm2_montjdouble(void) repeat(sm2_montjdouble(b1,b2))
 void call_sm2_montjmixadd(void) repeat(sm2_montjmixadd(b1,b2,b3))
 
 #ifdef __ARM_NEON
-void call_bignum_mul_8_16_neon(void) repeat(bignum_mul_8_16_neon(b0,b1,b2))
-void call_bignum_sqr_8_16_neon(void) repeat(bignum_sqr_8_16_neon(b0,b1))
+void call_bignum_copy_row_from_table_16_neon__32(void) \
+    repeat(bignum_copy_row_from_table_16_neon(b0,b1,32,0))
+void call_bignum_copy_row_from_table_32_neon__32(void) \
+    repeat(bignum_copy_row_from_table_32_neon(b0,b1,32,0))
+void call_bignum_emontredc_8n_neon__32(void) repeat(bignum_emontredc_8n_neon(32,b0,b1,b2[0]))
 void call_bignum_kmul_16_32_neon(void) repeat(bignum_kmul_16_32_neon(b0,b1,b2,b3))
 void call_bignum_ksqr_16_32_neon(void) repeat(bignum_ksqr_16_32_neon(b0,b1,b2))
 void call_bignum_kmul_32_64_neon(void) repeat(bignum_kmul_32_64_neon(b0,b1,b2,b3))
 void call_bignum_ksqr_32_64_neon(void) repeat(bignum_ksqr_32_64_neon(b0,b1,b2))
-void call_bignum_emontredc_8n_neon__32(void) repeat(bignum_emontredc_8n_neon(32,b0,b1,b2[0]))
+void call_bignum_mul_8_16_neon(void) repeat(bignum_mul_8_16_neon(b0,b1,b2))
+void call_bignum_sqr_8_16_neon(void) repeat(bignum_sqr_8_16_neon(b0,b1))
 
 #else
-void call_bignum_mul_8_16_neon(void) {}
-void call_bignum_sqr_8_16_neon(void) {}
+void call_bignum_emontredc_8n_neon__32(void) {}
 void call_bignum_kmul_16_32_neon(void) {}
 void call_bignum_ksqr_16_32_neon(void) {}
 void call_bignum_kmul_32_64_neon(void) {}
 void call_bignum_ksqr_32_64_neon(void) {}
-void call_bignum_emontredc_8n_neon__32(void) {}
+void call_bignum_mul_8_16_neon(void) {}
+void call_bignum_sqr_8_16_neon(void) {}
 
 #endif
 
@@ -866,6 +876,10 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_coprime (6x6)",call_bignum_coprime__6_6);
   timingtest(all,"bignum_coprime (16x16)",call_bignum_coprime__16_16);
   timingtest(all,"bignum_copy (32 -> 32)" ,call_bignum_copy__32_32);
+  timingtest(all,"bignum_copy_row_from_table (h=32,w=16)",call_bignum_copy_row_from_table__32_16);
+  timingtest(all,"bignum_copy_row_from_table (h=32,w=32)",call_bignum_copy_row_from_table__32_32);
+  timingtest(neon,"bignum_copy_row_from_table_16_neon (h=32)",call_bignum_copy_row_from_table_16_neon__32);
+  timingtest(neon,"bignum_copy_row_from_table_32_neon (h=32)",call_bignum_copy_row_from_table_32_neon__32);
   timingtest(all,"bignum_ctd (32)" ,call_bignum_ctd__32);
   timingtest(all,"bignum_ctz (32)" ,call_bignum_ctz__32);
   timingtest(bmi,"bignum_deamont_p256",call_bignum_deamont_p256);

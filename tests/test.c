@@ -9,9 +9,11 @@
 // against disparities between the formal model and the real world.
 // ***************************************************************************
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <inttypes.h>
+#include <math.h>
 #include <time.h>
 #include <alloca.h>
 #include <string.h>
@@ -2552,6 +2554,78 @@ int test_bignum_copy(void)
    }
   printf("All OK\n");
   return 0;
+}
+
+int test_bignum_copy_row_from_table_specific(const char *name, uint64_t fixed_width,
+    void (*f)(uint64_t*, uint64_t*, uint64_t, uint64_t, uint64_t))
+{ uint64_t i, t;
+  // The height, width, height*width of table
+  uint64_t h, w, n;
+  printf("Testing %s with %d cases\n", name, tests);
+  int c;
+
+  for (t = 0; t < tests; ++t)
+   { // Use BUFFERSIZE instead of MAXSIZE is too 
+     if (fixed_width) w = fixed_width;
+     else w = (uint64_t) rand() % (uint64_t)sqrt((double)BUFFERSIZE);
+
+     h = (uint64_t) rand() % (uint64_t)sqrt((double)BUFFERSIZE);
+     n = h * w;
+     uint64_t *table = malloc(n * sizeof(uint64_t));
+     for (i = 0; i < h; ++i)
+       random_bignum(w,&table[w * i]);
+
+     i = rand() % h;
+     reference_copy(w,b1,w,&table[w * i]);
+     f(b2, table, h, w, i);
+
+     c = reference_compare(w,b2,w,b1);
+     free(table);
+
+     if (c != 0)
+      { printf("### Disparity: [height %5"PRIu64", width %5"PRIu64"] "
+               "table [%5"PRIu64"*%5"PRIu64"] = ....0x%016"PRIx64" not ...0x%016"PRIx64"\n",
+               h, w, i, w, b2[0], b1[0]);
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: [height %5"PRIu64", width %5"PRIu64"]", h, w);
+        if (n == 0) printf("\n");
+        else printf(" element [%5"PRIu64"*%5"PRIu64"] = .0x%016"PRIx64"\n",
+                    i, w, b2[0]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+}
+
+int test_bignum_copy_row_from_table(void)
+{ return test_bignum_copy_row_from_table_specific("bignum_copy_row_from_table",
+      0, bignum_copy_row_from_table);
+}
+
+void _bignum_copy_row_from_table_16_neon_wrapper(uint64_t *z, uint64_t *table,
+    uint64_t height, uint64_t width, uint64_t index)
+{ assert(width == 16);
+  bignum_copy_row_from_table_16_neon(z, table, height, index);
+}
+
+int test_bignum_copy_row_from_table_16_neon(void)
+{ return test_bignum_copy_row_from_table_specific(
+      "bignum_copy_row_from_table_16_neon", 16,
+      _bignum_copy_row_from_table_16_neon_wrapper);
+}
+
+void _bignum_copy_row_from_table_32_neon_wrapper(uint64_t *z, uint64_t *table,
+    uint64_t height, uint64_t width, uint64_t index)
+{ assert(width == 32);
+  bignum_copy_row_from_table_32_neon(z, table, height, index);
+}
+
+int test_bignum_copy_row_from_table_32_neon(void)
+{ return test_bignum_copy_row_from_table_specific(
+      "bignum_copy_row_from_table_32_neon", 32,
+      _bignum_copy_row_from_table_32_neon_wrapper);
 }
 
 int test_bignum_ctd(void)
@@ -10699,6 +10773,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"bignum_cmul_sm2_alt",test_bignum_cmul_sm2_alt);
   functionaltest(all,"bignum_coprime",test_bignum_coprime);
   functionaltest(all,"bignum_copy",test_bignum_copy);
+  functionaltest(all,"bignum_copy_row_from_table",test_bignum_copy_row_from_table);
   functionaltest(all,"bignum_ctd",test_bignum_ctd);
   functionaltest(all,"bignum_ctz",test_bignum_ctz);
   functionaltest(bmi,"bignum_deamont_p256",test_bignum_deamont_p256);
@@ -10940,6 +11015,8 @@ int main(int argc, char *argv[])
 
   if (get_arch_name() == ARCH_AARCH64) {
     int neon = supports_neon();
+    functionaltest(neon,"bignum_copy_row_from_table_16_neon",test_bignum_copy_row_from_table_16_neon);
+    functionaltest(neon,"bignum_copy_row_from_table_32_neon",test_bignum_copy_row_from_table_32_neon);
     functionaltest(neon,"bignum_emontredc_8n_neon",test_bignum_emontredc_8n_neon);
     functionaltest(neon,"bignum_kmul_16_32_neon", test_bignum_kmul_16_32_neon);
     functionaltest(neon,"bignum_kmul_32_64_neon", test_bignum_kmul_32_64_neon);
