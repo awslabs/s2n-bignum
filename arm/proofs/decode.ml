@@ -1082,7 +1082,7 @@ let dest_cons4 =
   let assert_byte n = function
   | Comb(Const("word",_),a) -> dest_numeral a = Int n
   | _ -> false in
-  fun n -> function
+  fun n t -> match t with
   | Comb(Comb(Const("CONS",_),a1), Comb(Comb(Const("CONS",_),a2),
       Comb(Comb(Const("CONS",_),a3), Comb(Comb(Const("CONS",_),a4),tm)))) when
     0 <= n && n <= 0xffffffff &&
@@ -1090,7 +1090,8 @@ let dest_cons4 =
     assert_byte ((n lsr 8) land 0xff) a2 &&
     assert_byte ((n lsr 16) land 0xff) a3 &&
     assert_byte ((n lsr 24) land 0xff) a4 -> tm
-  | _ -> failwith "dest_cons4";;
+  | _ -> failwith ("dest_cons4: 4-byte inst code " ^ string_of_int n ^
+                   " != first 4 bytes of " ^ string_of_term t);;
 
 (* Asserts that the input term is the given list of words, and returns it. *)
 let assert_word_list tm ls =

@@ -2561,7 +2561,7 @@ let (NONOVERLAPPING_TAC:tactic) =
         with Failure _ ->
         try TAC_PROOF (g, SIMPLE_ARITH_TAC)
         with Failure _ ->
-          failwith ("NONOVERLAPPING_TAC: cannot prove " ^ (string_of_term t))
+          failwith ("NONOVERLAPPING_TAC: cannot prove `" ^ (string_of_term t) ^ "`")
         in
       cache := th::!cache; th) in
 
@@ -2910,7 +2910,10 @@ let (NONOVERLAPPING_TAC:tactic) =
                     else fail()) asl in
                 ACCEPT_TAC th gl
            with Failure _ -> NONOVERLAPPING_TAC gl)
-    | _ -> failwith "NONOVERLAPPING_TAC: inapplicable goal" in
+        | Comb(Comb(Const("orthogonal_components", _), p1), p2) when p1 = p2 ->
+          failwith "NONOVERLAPPING_TAC: orthogonal_components with identical operands"
+        | _ -> failwith ("NONOVERLAPPING_TAC: inapplicable goal: " ^
+                         (string_of_term w)) in
 
   OVERRIDDEN_NONOVERLAPPING_TAC;;
 
@@ -3064,8 +3067,15 @@ let STATE_UPDATE_NEW_RULE th =
 
 let ASSUMPTION_STATE_UPDATE_TAC =
   DISCH_THEN(fun uth ->
-        MP_TAC uth THEN
-        ASSUM_LIST(MAP_EVERY (TRY o STATE_UPDATE_TAC uth)));;
+    MP_TAC uth THEN
+    ASSUM_LIST(MAP_EVERY (fun th g ->
+      try STATE_UPDATE_TAC uth th g
+      with Failure s ->
+        if s = "NONOVERLAPPING_TAC: orthogonal_components with identical operands"
+        then ALL_TAC g (* Exactly overwrites, e.g., orthogonal_components PC PC *)
+        else (Printf.printf
+          "Warning: assumption `%s` is erased.\n    - Reason: %s\n"
+          (string_of_term (concl th)) s; ALL_TAC g))));;
 
 (* ------------------------------------------------------------------------- *)
 (* Rule for "non-selfmodification" when supplied with std exec theorem       *)
