@@ -3074,7 +3074,7 @@ let ASSUMPTION_STATE_UPDATE_TAC =
         if s = "NONOVERLAPPING_TAC: orthogonal_components with identical operands"
         then ALL_TAC g (* Exactly overwrites, e.g., orthogonal_components PC PC *)
         else (Printf.printf
-          "Warning: assumption `%s` is erased.\n    - Reason: %s\n"
+          "Info: assumption `%s` is erased.\n    - Reason: %s\n"
           (string_of_term (concl th)) s; ALL_TAC g))));;
 
 (* ------------------------------------------------------------------------- *)

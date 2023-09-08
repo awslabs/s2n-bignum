@@ -416,13 +416,22 @@ let DISCARD_STATE_TAC s =
 
 let DISCARD_OLDSTATE_TAC s =
   let v = mk_var(s,`:armstate`) in
-  let rec badread okvs tm =
+  let rec unbound_statevars_of_read bound_svars tm =
     match tm with
-      Comb(Comb(Const("read",_),cmp),s) -> not(mem s okvs)
-    | Comb(s,t) -> badread okvs s || badread okvs t
-    | Abs(v,t) -> badread (v::okvs) t
-    | _ -> false in
-  DISCARD_ASSUMPTIONS_TAC(badread [v] o concl);;
+      Comb(Comb(Const("read",_),cmp),s) ->
+        if mem s bound_svars then [] else [s]
+    | Comb(a,b) -> union (unbound_statevars_of_read bound_svars a)
+                         (unbound_statevars_of_read bound_svars b)
+    | Abs(v,t) -> unbound_statevars_of_read (v::bound_svars) t
+    | _ -> [] in
+  DISCARD_ASSUMPTIONS_TAC(
+    fun thm ->
+      let us = unbound_statevars_of_read [] (concl thm) in
+      if us = [] || us = [v] then false
+      else if not(mem v us) then true
+      else
+        let _ = Printf.printf "Info: assumption `%s` is erased, but it might have contained useful information\n" (string_of_term (concl thm)) in
+        true);;
 
 (* ------------------------------------------------------------------------- *)
 (* More convenient stepping tactics, optionally with accumulation.           *)

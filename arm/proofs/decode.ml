@@ -268,9 +268,9 @@ let decode = new_definition `!w:int32. decode w =
       (Immediate_Offset (iword (ival imm7 * &(if x then 8 else 4)))))
 
   // SIMD ld,st operations
-  | [0b00:2; 0b111101:6; 0b11:2; imm12:12; Rn:5; Rt:5] ->
-    // LDR (immediate, SIMD&FP), Unsigned offset. Q registers only
-    SOME (arm_ldst_q T Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))))
+  | [0b00:2; 0b111101:6; 0b1:1; is_ld; imm12:12; Rn:5; Rt:5] ->
+    // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback. Q registers only
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))))
 
   // SIMD operations
   | [0:1; q; 0b001110:6; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
