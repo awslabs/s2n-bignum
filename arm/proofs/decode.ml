@@ -68,7 +68,7 @@ let arm_bfmop = new_definition `arm_bfmop (u:bool)
 let arm_ldst = new_definition `arm_ldst ld x Rt =
   if x then (if ld then arm_LDR else arm_STR) (XREG' Rt)
        else (if ld then arm_LDR else arm_STR) (WREG' Rt)`;;
-let arm_ldst_q = new_definition `arm_ldst_q ld Rt =
+let arm_ldstq = new_definition `arm_ldstq ld Rt =
   (if ld then arm_LDR else arm_STR) (QREG' Rt)`;;
 let arm_ldstb = new_definition `arm_ldstb ld Rt =
   (if ld then arm_LDRB else arm_STRB) (WREG' Rt)`;;
@@ -270,7 +270,13 @@ let decode = new_definition `!w:int32. decode w =
   // SIMD ld,st operations
   | [0b00:2; 0b111101:6; 0b1:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback. Q registers only
-    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))))
+    SOME (arm_ldstq is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))))
+  | [0b00:2; 0b111100:6; 0b110:3; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    // LDUR (immediate, SIMD&FP), Signed offset, no writeback. Q registers only
+    SOME (arm_ldstq T Rt (XREG_SP Rn) (Immediate_Offset (iword (ival imm9))))
+  | [0b00:2; 0b111100:6; 0b110:3; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    // LDR (immediate, SIMD&FP), Signed offset, pre-index writeback. Q registers only
+    SOME (arm_ldstq T Rt (XREG_SP Rn) (Preimmediate_Offset (iword (ival imm9))))
 
   // SIMD operations
   | [0:1; q; 0b001110:6; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
@@ -774,7 +780,7 @@ let PURE_DECODE_CONV =
   and pth_lsvop = mk_pth_split arm_lsvop
   and pth_bfmop = mk_pth_split arm_bfmop
   and pth_ldst = mk_pth arm_ldst
-  and pth_ldst_q = mk_pth arm_ldst_q
+  and pth_ldstq = mk_pth arm_ldstq
   and pth_ldstrb = mk_pth arm_ldstb
   and pth_ldstp = mk_pth arm_ldstp
   and pth_adv_simd_expand_imm = mk_pth arm_adv_simd_expand_imm in
@@ -954,7 +960,7 @@ let PURE_DECODE_CONV =
     let N = dest_word_ty (snd (dest_component (type_of rn))) in
     eval_nary (pth_bfmop N) t F
   | Comb(Comb(Comb(Const("arm_ldst",_),_),_),_) -> eval_nary pth_ldst t F
-  | Comb(Comb(Const("arm_ldst_q",_),_),_) -> eval_nary pth_ldst_q t F
+  | Comb(Comb(Const("arm_ldstq",_),_),_) -> eval_nary pth_ldstq t F
   | Comb(Comb(Const("arm_ldstb",_),_),_) -> eval_nary pth_ldstrb t F
   | Comb(Comb(Comb(Comb(Const("arm_ldstp",_),_),_),_),_) ->
     eval_nary pth_ldstp t F

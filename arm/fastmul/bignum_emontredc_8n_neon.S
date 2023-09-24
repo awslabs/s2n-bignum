@@ -97,6 +97,8 @@
 #define vpre11 v19
 #define vpre12 v20
 
+#define m x2
+
 S2N_BN_SYMBOL(bignum_emontredc_8n_neon):
 
         sub sp, sp, #(14*16)
@@ -141,13 +143,13 @@ S2N_BN_SYMBOL(bignum_emontredc_8n_neon):
         mov x30, x4
 
         // Save modulus pointer
-        mov x25, x2
+        mov x25, m
 
         mov count, x12
 
 bignum_emontredc_8n_neon_precomp:
-        ldp a0, a1, [x2, #32]!
-        ldp a2, a3, [x2, #16]
+        ldp a0, a1, [m, #32]!
+        ldp a2, a3, [m, #16]
 
 #define t x28
 #define c x29
@@ -171,7 +173,7 @@ bignum_emontredc_8n_neon_precomp:
         cbnz count, bignum_emontredc_8n_neon_precomp
 
         // Set modulus pointer and buffer pointer back to its original value
-        mov x2, x25
+        mov m, x25
         mov x30, x24
 
         //
@@ -189,12 +191,12 @@ bignum_emontredc_8n_neon_precomp:
 bignum_emontredc_8n_neon_outerloop:
         ldp x15, x24, [x1, #0]
         ldr x3, [sp]                                 // gap(s) to follow
-        ldr q7, [x2, #48]                            // gap(s) to follow
-        ldr q19, [x2, #32]!                          // gap(s) to follow
+        ldr q7, [m, #48]                            // gap(s) to follow
+        ldr q19, [m, #32]!                          // gap(s) to follow
         lsr x27, x0, #5                              // gap(s) to follow
-        ldp x5, x13, [x2, #-32]                      // gap(s) to follow
+        ldp x5, x13, [m, #-32]                      // gap(s) to follow
         mul x9, x15, x3                              // gap(s) to follow
-        ldr q26, [x2, #-16]                          // gap(s) to follow
+        ldr q26, [m, #-16]                          // gap(s) to follow
         sub x27, x27, #1                             // gap(s) to follow
         dup v16.2D, x9                               // gap(s) to follow
         rev64 v11.4S, v26.4S
@@ -307,7 +309,7 @@ bignum_emontredc_8n_neon_outerloop:
         umulh x20, x11, x5
         xtn v4.2S, v7.2D
         adcs x12, x23, x7
-        ldp x25, x21, [x2, #-16]                     // gap(s) to follow
+        ldp x25, x21, [m, #-16]                     // gap(s) to follow
         mov x17, v6.d[1]                             // gap(s) to follow
         and v31.16B, v9.16B, v29.16B
         mov x29, v6.d[0]                             // gap(s) to follow
@@ -432,11 +434,11 @@ bignum_emontredc_8n_neon_outerloop:
 
 bignum_emontredc_8n_neon_maddloop_neon:
 
-        ldr q27, [x2, #32]!
+        ldr q27, [m, #32]!
         umulh x25, x5, x17
         adcs x11, x20, x11
         ldp x20, x5, [x30, #cache_m31 - 96]
-        ldr q8, [x2, #16]
+        ldr q8, [m, #16]
         adcs x13, x15, x24                           // gap(s) to follow
         eor x17, x29, x7                             // gap(s) to follow
         adcs x29, x4, x12                            // gap(s) to follow
@@ -672,7 +674,7 @@ bignum_emontredc_8n_neon_maddloop_neon:
         stp x17, x19, [x1, #32]
         stp x20, x21, [x1, #48]
         sub x1, x1, x0
-        sub x2, x2, x0
+        sub m, m, x0
         add x1, x1, #32
         subs x26, x26, #1
         stp x26, xzr, [sp, #16]
