@@ -1963,7 +1963,9 @@ let arm_MOVK_ALT =
 (* ------------------------------------------------------------------------- *)
 
 let all_simd_rules = [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;
-    word_interleave8;word_interleave4;word_interleave2;word_split_lohi];;
+    word_interleave8;word_interleave4;word_interleave2;word_split_lohi;
+    DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;
+    WORD_BITMANIP_SIMP_LEMMAS];;
 let arm_ADD_VEC_ALT =   REWRITE_RULE all_simd_rules arm_ADD_VEC;;
 let arm_MUL_VEC_ALT =   REWRITE_RULE all_simd_rules arm_MUL_VEC;;
 let arm_REV64_VEC_ALT = REWRITE_RULE all_simd_rules arm_REV64_VEC;;
