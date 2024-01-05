@@ -636,6 +636,7 @@ let GEN_DECARRY_RULE =
     let l,r = dest_eq(concl th') in
     if l = r then [] else [th'] in
   fun boths ->
+    let brule = BOUNDER_RULE boths in
     let rec zonker ths =
       match ths with
         [] -> []
@@ -646,7 +647,7 @@ let GEN_DECARRY_RULE =
                                    REAL_POLY_CONV))
                         (simper th) in
             let etm = concl th' in
-            let lrth = time (BOUNDER_RULE boths) (rand etm) in
+            let lrth = time brule (rand etm) in
             if rat_of_term(rand(rand(concl lrth))) </ num_1 then
               let ith = uncarry (CONJ th' lrth) in
               let bth = REAL_RAT_LT_CONV(lhand(concl ith)) in
