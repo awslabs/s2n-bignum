@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
+needs "arm/proofs/bignum_sqr_8_16_neon.ml";;
+
 (* ========================================================================= *)
 (* 16x16 -> 32 squaring, using Karatsuba reduction.                          *)
 (* ========================================================================= *)
@@ -562,53 +564,52 @@ let BIGNUM_KSQR_16_32_NEON_EXEC = ARM_MK_EXEC_RULE bignum_ksqr_16_32_neon_mc;;
 (* First of all the correctness lemma for the embedded bignum_sqr_8_16       *)
 (* ------------------------------------------------------------------------- *)
 
-let lemma1 = prove
- (`!(x0:num) x1 (y0:num) y1.
-       (if y0 <= y1
-        then if x1 <= x0 then word 0 else word 18446744073709551615
-        else word_not
-         (if x1 <= x0 then word 0 else word 18446744073709551615)):int64 =
-   word_neg(word(bitval(y0 <= y1 <=> x0 < x1)))`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM NOT_LE] THEN
-  REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[BITVAL_CLAUSES]) THEN
-  CONV_TAC WORD_REDUCE_CONV);;
+let BIGNUM_KSQR_16_32_NEON_LEMMA_NO_RET = prove(`!z x a pc.
+      ALL (nonoverlapping (z,8 * 16))
+          [(word pc,2164); (x,8 * 8)]
+      ==> ensures arm
+           (\s. aligned_bytes_loaded s (word(pc)) bignum_ksqr_16_32_neon_mc /\
+                read PC s = word(pc + 0x2c0) /\
+                C_ARGUMENTS [z; x] s /\
+                bignum_from_memory (x,8) s = a)
+           (\s. read PC s = word(pc + 0x870) /\
+                bignum_from_memory (z,16) s = a EXP 2)
+           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                       X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
+            MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
+                      Q21; Q22; Q23; Q30] ,,
+            MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
+            MAYCHANGE SOME_FLAGS)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC (SPECL [`z:int64`;`x:int64`;`a:num`;`pc+0x2c0`]
+    BIGNUM_SQR_8_16_NEON_CORE_CORRECT) THEN
+  ANTS_TAC THENL [
+    FIRST_X_ASSUM MP_TAC THEN
+    REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES;BIGNUM_SQR_8_16_NEON_CORE_EXEC] THEN
+    STRIP_TAC THEN CONJ_TAC THEN NONOVERLAPPING_TAC;
 
-let lemma2 = prove
- (`!(x0:int64) (x1:int64) (y0:int64) (y1:int64).
-        &(val(if val x1 <= val x0 then word_sub x0 x1
-              else word_neg (word_sub x0 x1))) *
-        &(val(if val y0 <= val y1 then word_sub y1 y0
-              else word_neg (word_sub y1 y0))):real =
-        --(&1) pow bitval(val y0 <= val y1 <=> val x0 < val x1) *
-        (&(val x0) - &(val x1)) * (&(val y1) - &(val y0))`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM NOT_LE; WORD_NEG_SUB] THEN
-  REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[BITVAL_CLAUSES]) THEN
-  REPEAT(FIRST_X_ASSUM(ASSUME_TAC o MATCH_MP (ARITH_RULE
-   `~(m:num <= n) ==> n <= m /\ ~(m <= n)`))) THEN
-  ASM_SIMP_TAC[VAL_WORD_SUB_CASES; GSYM REAL_OF_NUM_SUB] THEN
-  REAL_ARITH_TAC);;
+    ALL_TAC
+  ] THEN
+  MATCH_MP_TAC ENSURES_SUBLEMMA_THM THEN REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THENL [
+    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN
+        `bignum_sqr_8_16_neon_core_mc = SUB_LIST (0x2c0,0x870-0x2c0) bignum_ksqr_16_32_neon_mc`
+        (fun th -> REWRITE_TAC[th]) THENL [
+      REWRITE_TAC[bignum_sqr_8_16_neon_core_mc;bignum_ksqr_16_32_neon_mc] THEN
+      CONV_TAC (ONCE_DEPTH_CONV NUM_SUB_CONV) THEN
+      CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC;
+      ALL_TAC
+    ] THEN
+    IMP_REWRITE_TAC[ALIGNED_BYTES_LOADED_SUB_LIST;WORD_ADD] THEN
+    CONV_TAC NUM_DIVIDES_CONV;
 
-let ADK_48_TAC =
-  MATCH_MP_TAC EQUAL_FROM_CONGRUENT_REAL THEN
-  MAP_EVERY EXISTS_TAC [`512`; `&0:real`] THEN
-  REPLICATE_TAC 2 (CONJ_TAC THENL [BOUNDER_TAC[]; ALL_TAC]) THEN
-  CONJ_TAC THENL [REAL_INTEGER_TAC; ALL_TAC] THEN
-  ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
-  POP_ASSUM_LIST(K ALL_TAC) THEN
-  REWRITE_TAC[lemma1; lemma2] THEN REWRITE_TAC[WORD_XOR_MASK] THEN
-  REPEAT(COND_CASES_TAC THEN
-         ASM_REWRITE_TAC[BITVAL_CLAUSES; REAL_VAL_WORD_NOT]) THEN
-  CONV_TAC WORD_REDUCE_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[BITVAL_CLAUSES; DIMINDEX_64] THEN
-  POP_ASSUM_LIST(K ALL_TAC) THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC o end_itlist CONJ o DESUM_RULE o CONJUNCTS) THEN
-  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-  CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN
-  FIRST_ASSUM(MP_TAC o end_itlist CONJ o filter (is_ratconst o rand o concl) o
-             DECARRY_RULE o CONJUNCTS) THEN
-  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC;;
+    SUBSUMED_MAYCHANGE_TAC;
 
-needs "arm/proofs/neon_helper.ml";;
+    REWRITE_TAC[BIGNUM_SQR_8_16_NEON_CORE_EXEC;GSYM ADD_ASSOC] THEN
+    CONV_TAC (ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
+    MESON_TAC[]
+  ]);;
 
 let BIGNUM_KSQR_16_32_NEON_LEMMA = prove
  (`!z x a pc returnaddress.
@@ -628,139 +629,9 @@ let BIGNUM_KSQR_16_32_NEON_LEMMA = prove
                       Q21; Q22; Q23; Q30] ,,
             MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
             MAYCHANGE SOME_FLAGS)`,
-  REWRITE_TAC[ADD_CLAUSES] THEN
-
-  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; ALL; NONOVERLAPPING_CLAUSES] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ENSURES_INIT_TAC "s0" THEN
-  BIGNUM_DIGITIZE_TAC "x_" `bignum_from_memory (x,8) s0` THEN
-  BYTES128_EQ_JOIN64_TAC `read (memory :> bytes128 x) s0` `x_1:(64)word` `x_0:(64)word` THEN
-  BYTES128_EQ_JOIN64_TAC `read (memory :> bytes128 (word_add x (word 16:(64)word))) s0`
-    `x_3:(64)word` `x_2:(64)word` THEN
-  BYTES128_EQ_JOIN64_TAC `read (memory :> bytes128 (word_add x (word 32:(64)word))) s0`
-    `x_5:(64)word` `x_4:(64)word` THEN
-  BYTES128_EQ_JOIN64_TAC `read (memory :> bytes128 (word_add x (word 48:(64)word))) s0`
-    `x_7:(64)word` `x_6:(64)word` THEN
-
-  (*** First nested mini-ADK 4x4 squaring block ***)
-
-  ARM_REWRITE_ASSUM_AND_ACCSTEPS_TAC BIGNUM_KSQR_16_32_NEON_EXEC
-    [49;51;53;55;79;81;83;85]
-    [WORD_SQR64_HI; WORD_SQR64_LO]
-    [10;11;25;35;37;41;43;44;45;46;48;49;50;52;53;54;56;58;60;62;
-     64;68;70;72;74;76;77;80;81;82;84;85;86;88;92;96;98;100;102;104;
-     106;108;110;114;116]
-    (1--118) THEN
-
-  SUBGOAL_THEN
-   `bignum_of_wordlist [x_0;x_1;x_2;x_3] EXP 2 =
-    bignum_of_wordlist [mullo_s53; sum_s74; sum_s80; sum_s82;
-                        sum_s108; sum_s110; sum_s114; sum_s116]`
-  ASSUME_TAC THENL
-   [REWRITE_TAC[bignum_of_wordlist; GSYM REAL_OF_NUM_CLAUSES] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES; VAL_WORD_BITVAL]) THEN
-    ADK_48_TAC;
-    ACCUMULATOR_POP_ASSUM_LIST(K ALL_TAC) THEN
-    DISCARD_MATCHING_ASSUMPTIONS [`word a = b`]] THEN
-
-  (*** Second nested mini-ADK 4x4 squaring block ***)
-
-
-  ARM_REWRITE_ASSUM_AND_ACCSTEPS_TAC BIGNUM_KSQR_16_32_NEON_EXEC
-   [148;152;154;156;167;178;180;182]
-   [WORD_SQR64_HI; WORD_SQR64_LO]
-   [119;121;132;140;141;144;145;146;147;149;151;153;155;157;158;160;161;
-    162;154;152;164;168;169;171;172;174;175;177;179;181;183;184;182;178;
-    188;192;193;195;196;198;199;201;202]
-   (119--207) THEN
-  RULE_ASSUM_TAC (REWRITE_RULE
-      [WORD_BITMANIP_SIMP_LEMMAS; WORD_MUL64_LO]) THEN
-  ARM_REWRITE_ASSUM_AND_ACCSTEPS_TAC BIGNUM_KSQR_16_32_NEON_EXEC
-   [208;209] [WORD_SQR64_HI; WORD_SQR64_LO] [208;209]
-   (208--210) THEN
-  RULE_ASSUM_TAC (REWRITE_RULE
-      [WORD_BITMANIP_SIMP_LEMMAS; WORD_MUL64_HI]) THEN
-  ARM_REWRITE_ASSUM_AND_ACCSTEPS_TAC BIGNUM_KSQR_16_32_NEON_EXEC
-   [211;212] [WORD_SQR64_HI; WORD_SQR64_LO] [211;212;214;215]
-   (211--216) THEN
-
-  SUBGOAL_THEN
-   `bignum_of_wordlist [x_4;x_5;x_6;x_7] EXP 2 =
-    bignum_of_wordlist [mullo_s154;sum_s172;sum_s177;sum_s179;
-                        sum_s201;sum_s202;sum_s214;sum_s215]`
-  ASSUME_TAC THENL
-    [REWRITE_TAC[bignum_of_wordlist; GSYM REAL_OF_NUM_CLAUSES] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES; VAL_WORD_BITVAL]) THEN
-    ADK_48_TAC;
-    let is_acc_thm_for_next acc_thm =
-      List.exists (contains_str (string_of_term (concl acc_thm)))
-        ["208";"209";"211";"212"] in
-    let filter_acc_thms_for_next acc_thms =
-      List.filter is_acc_thm_for_next acc_thms in
-    let wpat = `word a = b` in
-    ACCUMULATOR_POP_ASSUM_LIST(
-      fun acc_thms ->
-        let acc_thms = filter_acc_thms_for_next acc_thms in
-        List.iter (fun t -> Printf.printf "assuming: %s\n" t)
-          (List.map string_of_thm acc_thms);
-        MAP_EVERY ASSUME_TAC acc_thms) THEN
-    DISCARD_ASSUMPTIONS_TAC
-      (fun th -> can (term_match [] wpat) (concl th) &&
-                 not (is_acc_thm_for_next th))] THEN
-
-  (*** Nested ADK 4x4 multiplication block ***)
-
-  ARM_ACCSTEPS_TAC BIGNUM_KSQR_16_32_NEON_EXEC
-   [217;218;220;222;223;224;225;226;227;228;229;230;231;232;233;
-    234;235;241;246;248;249;255;260;262;263;264;265;266;267;273;278;
-    280;281;282;288;293;295;296;297;298;299;305;310;312;313;314;315;
-    321;326;328;329;330;331]
-   (217--331) THEN
-
-  SUBGOAL_THEN
-   `bignum_of_wordlist [x_0;x_1;x_2;x_3] *
-    bignum_of_wordlist [x_4;x_5;x_6;x_7] =
-    bignum_of_wordlist
-     [mullo_s217; sum_s260; sum_s293; sum_s326;
-      sum_s328; sum_s329; sum_s330; sum_s331]`
-  ASSUME_TAC THENL
-   [REWRITE_TAC[bignum_of_wordlist; GSYM REAL_OF_NUM_CLAUSES] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES; VAL_WORD_BITVAL]) THEN
-    ADK_48_TAC;
-    ACCUMULATOR_POP_ASSUM_LIST(K ALL_TAC) THEN
-    DISCARD_MATCHING_ASSUMPTIONS [`word a = b`]] THEN
-
-  (*** Final accumulation simulation and 16-digit focusing ***)
-
-  ARM_ACCSTEPS_TAC BIGNUM_KSQR_16_32_NEON_EXEC (332--364) (332--365) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONV_TAC(LAND_CONV BIGNUM_EXPAND_CONV) THEN ASM_REWRITE_TAC[] THEN
-  DISCARD_STATE_TAC "s365" THEN
-  REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN
-  MATCH_MP_TAC EQUAL_FROM_CONGRUENT_REAL THEN
-  MAP_EVERY EXISTS_TAC [`1024`; `&0:real`] THEN
-  CONJ_TAC THENL [BOUNDER_TAC[]; ALL_TAC] THEN CONJ_TAC THENL
-   [EXPAND_TAC "a" THEN
-    REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN BOUNDER_TAC[];
-    REWRITE_TAC[INTEGER_CLOSED]] THEN
-
-  (*** The core rearrangement we are using ***)
-
-  SUBGOAL_THEN
-   `(&a:real) pow 2 =
-    &(bignum_of_wordlist [x_0;x_1;x_2;x_3] EXP 2) +
-    &2 pow 512 * &(bignum_of_wordlist [x_4;x_5;x_6;x_7] EXP 2) +
-    &2 pow 257 * &(bignum_of_wordlist [x_0;x_1;x_2;x_3] *
-                   bignum_of_wordlist [x_4;x_5;x_6;x_7])`
-  SUBST1_TAC THENL
-   [EXPAND_TAC "a" THEN
-    REWRITE_TAC[bignum_of_wordlist; REAL_OF_NUM_CLAUSES] THEN ARITH_TAC;
-    ASM_REWRITE_TAC[]] THEN
-  REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES; bignum_of_wordlist] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ADD_CLAUSES; VAL_WORD_BITVAL]) THEN
-  ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o DESUM_RULE) THEN
-  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC);;
+  REWRITE_TAC[ADD_0] THEN
+  ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_KSQR_16_32_NEON_EXEC
+    BIGNUM_KSQR_16_32_NEON_LEMMA_NO_RET);;
 
 let BIGNUM_KSQR_16_32_NEON_LEMMA_TAC =
   ARM_SUBROUTINE_SIM_TAC

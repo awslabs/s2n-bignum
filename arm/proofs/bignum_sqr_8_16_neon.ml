@@ -582,7 +582,7 @@ let actions2 = [
 let equiv_goal = mk_equiv_statement
   `ALL (nonoverlapping (z,8 * 16)) [
     (word pc:int64,LENGTH bignum_sqr_8_16_mc);
-    (word pc2:int64,LENGTH bignum_sqr_8_16_neon_mc);
+    (word pc2:int64,LENGTH bignum_sqr_8_16_neon_core_mc);
     (x,8 * 8)]`
   bignum_sqr_8_16_equiv_input_states
   bignum_sqr_8_16_equiv_output_states
@@ -591,7 +591,7 @@ let equiv_goal = mk_equiv_statement
               X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
    MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
    MAYCHANGE SOME_FLAGS`
-  bignum_sqr_8_16_neon_core_mc 8
+  bignum_sqr_8_16_neon_core_mc 0
   `MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
               X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
    MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
@@ -623,10 +623,9 @@ let BIGNUM_SQR_8_16_EQUIV = prove(equiv_goal,
       BIGNUM_SQR_8_16_CORE_EXEC THEN
   ASSERT_NONOVERLAPPING_MODULO_TAC
       `nonoverlapping_modulo (2 EXP 64)
-          (val (z:int64),8 * 16) (pc2 + 8,LENGTH bignum_sqr_8_16_neon_core_mc)`
+          (val (z:int64),8 * 16) (pc2,LENGTH bignum_sqr_8_16_neon_core_mc)`
       BIGNUM_SQR_8_16_NEON_CORE_EXEC THEN
   ABBREV_TAC `pc' = pc + 8` THEN
-  ABBREV_TAC `pc2' = pc2 + 8` THEN
 
   (* Start *)
   EQUIV_STEPS_TAC actions BIGNUM_SQR_8_16_CORE_EXEC BIGNUM_SQR_8_16_NEON_CORE_EXEC THEN
@@ -647,17 +646,14 @@ let BIGNUM_SQR_8_16_EQUIV = prove(equiv_goal,
     (** SUBGOAL 0. PC **)
     EXPAND_TAC "pc'" THEN CONV_TAC WORD_RULE;
 
-    (** SUBGOAL 1. PC2 **)
-    EXPAND_TAC "pc2'" THEN CONV_TAC WORD_RULE;
-
-    (** SUBGOAL 2. Outputs **)
+    (** SUBGOAL 1. Outputs **)
     ASM_REWRITE_TAC[bignum_sqr_8_16_equiv_output_states;mk_equiv_regs;mk_equiv_bool_regs;
                     BIGNUM_EXPAND_CONV `bignum_from_memory (ptr,8) state`;
                     C_ARGUMENTS] THEN
     REPEAT (HINT_EXISTS_REFL_TAC THEN ASM_REWRITE_TAC[]) THEN
     ASM_REWRITE_TAC[BIGNUM_EXPAND_CONV `bignum_from_memory (p,16) st`];
 
-    (** SUBGOAL 3. MAYCHANGE left **)
+    (** SUBGOAL 2. MAYCHANGE left **)
     DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
     MONOTONE_MAYCHANGE_TAC;
 
@@ -715,16 +711,16 @@ let BIGNUM_SQR_8_16_CORE_CORRECT_N =
     BIGNUM_SQR_8_16_EVENTUALLY_N_AT_PC;;
 
 
-let BIGNUM_SQR_8_16_NEON_CORRECT = prove(
+let BIGNUM_SQR_8_16_NEON_CORE_CORRECT = prove(
   `!z x a pc2.
       ALL (nonoverlapping (z,8 * 16))
-          [(word pc2,1476); (x,8 * 8)]
+          [(word pc2,LENGTH bignum_sqr_8_16_neon_core_mc); (x,8 * 8)]
       ==> ensures arm
-            (\s. aligned_bytes_loaded s (word pc2) bignum_sqr_8_16_neon_mc /\
-                 read PC s = word(pc2 + 0x8) /\
+            (\s. aligned_bytes_loaded s (word pc2) bignum_sqr_8_16_neon_core_mc /\
+                 read PC s = word(pc2) /\
                  C_ARGUMENTS [z; x] s /\
                  bignum_from_memory (x,8) s = a)
-          (\s. read PC s = word (pc2 + 1464) /\
+          (\s. read PC s = word (pc2 + LENGTH bignum_sqr_8_16_neon_core_mc) /\
                bignum_from_memory (z,16) s = a EXP 2)
            (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                        X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
@@ -733,9 +729,8 @@ let BIGNUM_SQR_8_16_NEON_CORRECT = prove(
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
              MAYCHANGE SOME_FLAGS)`,
 
-  let mc_lengths_th =
-    map (fst o CONJ_PAIR) [BIGNUM_SQR_8_16_EXEC; BIGNUM_SQR_8_16_NEON_EXEC] in
   REPEAT GEN_TAC THEN
+  REWRITE_TAC[fst (CONJ_PAIR BIGNUM_SQR_8_16_NEON_CORE_EXEC)] THEN
   (* Prepare pc for the 'left' program that does not overlap with buffers z and
      x. *)
   SUBGOAL_THEN
@@ -756,10 +751,10 @@ let BIGNUM_SQR_8_16_NEON_CORRECT = prove(
   REPEAT_N 2 STRIP_TAC THEN
 
   VCGEN_EQUIV_TAC BIGNUM_SQR_8_16_EQUIV BIGNUM_SQR_8_16_CORE_CORRECT_N
-    [BIGNUM_SQR_8_16_EXEC; BIGNUM_SQR_8_16_NEON_EXEC] THEN
+    [BIGNUM_SQR_8_16_EXEC; BIGNUM_SQR_8_16_NEON_CORE_EXEC] THEN
 
   (* unfold definitions that may block further tactics *)
-  RULE_ASSUM_TAC (REWRITE_RULE([ALL;NONOVERLAPPING_CLAUSES] @ mc_lengths_th)) THEN
+  RULE_ASSUM_TAC (REWRITE_RULE([ALL;NONOVERLAPPING_CLAUSES;BIGNUM_SQR_8_16_EXEC])) THEN
   REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
   REWRITE_TAC[C_ARGUMENTS;BIGNUM_FROM_MEMORY_BYTES] THEN
   REPEAT CONJ_TAC THENL [
@@ -775,13 +770,6 @@ let BIGNUM_SQR_8_16_NEON_CORRECT = prove(
           (word (pc+8),LENGTH (APPEND bignum_sqr_8_16_core_mc barrier_inst_bytes)))
           (APPEND bignum_sqr_8_16_core_mc barrier_inst_bytes)
           (write PC (word (pc+8)) s2)` THEN
-    SUBGOAL_THEN `aligned_bytes_loaded s2 (word (pc2 + 8):int64) bignum_sqr_8_16_neon_core_mc`
-      (fun th -> REWRITE_TAC[th]) THENL [
-      REWRITE_TAC[bignum_sqr_8_16_neon_core_mc_def] THEN
-      IMP_REWRITE_TAC[WORD_ADD;ALIGNED_BYTES_LOADED_SUB_LIST] THEN
-      CONV_TAC NUM_DIVIDES_CONV;
-      ALL_TAC
-    ] THEN
     SUBGOAL_THEN `4 divides val (word (pc+8):int64)` ASSUME_TAC THENL [
       IMP_REWRITE_TAC[DIVIDES_4_VAL_WORD_ADD_64] THEN CONV_TAC NUM_DIVIDES_CONV;
       ALL_TAC
@@ -798,6 +786,48 @@ let BIGNUM_SQR_8_16_NEON_CORRECT = prove(
     MESON_TAC[bignum_sqr_8_16_equiv_output_states;BIGNUM_FROM_MEMORY_BYTES];
 
     (** SUBGOAL 3. Frame **)
+    MESON_TAC[]
+  ]);;
+
+let BIGNUM_SQR_8_16_NEON_CORRECT = prove(
+  `!z x a pc2.
+      ALL (nonoverlapping (z,8 * 16))
+          [(word pc2,LENGTH bignum_sqr_8_16_neon_mc); (x,8 * 8)]
+      ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc2) bignum_sqr_8_16_neon_mc /\
+                 read PC s = word(pc2 + 8) /\
+                 C_ARGUMENTS [z; x] s /\
+                 bignum_from_memory (x,8) s = a)
+          (\s. read PC s = word (pc2 + 1464) /\
+               bignum_from_memory (z,16) s = a EXP 2)
+           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                       X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
+             MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
+                        Q21; Q22; Q23; Q30] ,,
+             MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
+             MAYCHANGE SOME_FLAGS)`,
+
+  REPEAT GEN_TAC THEN
+  DISCH_THEN (ASSUME_TAC o (REWRITE_RULE [BIGNUM_SQR_8_16_NEON_EXEC])) THEN
+  MP_TAC (SPECL [`z:int64`;`x:int64`;`a:num`;`pc2+8`]
+    (REWRITE_RULE[BIGNUM_SQR_8_16_NEON_CORE_EXEC] BIGNUM_SQR_8_16_NEON_CORE_CORRECT)) THEN
+  ANTS_TAC THENL [
+    REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[ALL; NONOVERLAPPING_CLAUSES]) THEN
+    SPLIT_FIRST_CONJ_ASSUM_TAC THEN
+    CONJ_TAC THEN NONOVERLAPPING_TAC;
+    ALL_TAC
+  ] THEN
+  MATCH_MP_TAC ENSURES_SUBLEMMA_THM THEN REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THENL [
+    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[bignum_sqr_8_16_neon_core_mc_def] THEN
+    REWRITE_TAC[WORD_RULE`word (pc2+8):int64 = word_add (word pc2) (word 8)`] THEN
+    IMP_REWRITE_TAC[ALIGNED_BYTES_LOADED_SUB_LIST] THEN
+    CONV_TAC NUM_DIVIDES_CONV;
+
+    SUBSUMED_MAYCHANGE_TAC;
+
+    REWRITE_TAC[GSYM ADD_ASSOC] THEN CONV_TAC (ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
     MESON_TAC[]
   ]);;
 

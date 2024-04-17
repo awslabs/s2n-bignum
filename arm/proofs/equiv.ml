@@ -1405,6 +1405,24 @@ let mk_eventually_n_at_pc_statement
   list_mk_forall (`pc:num`::quants, (mk_imp (assum,body)));;
 
 
+(* This is a format of a term which describes a relational Hoare triple stating
+   program equivalence.
+   `!x. assum ==> ensures2 arm
+      (\(s,s2). aligned_bytes_loaded s (word (pc + pc_ofs1)) mc1 /\
+                read PC s = word (pc + pc_ofs1) /\
+                aligned_bytes_loaded s2 (word (pc + pc_ofs2)) mc2 /\
+                read PC s2 = word (pc2 + pc_ofs2) /\
+                equiv_in)
+      (\(s,s2). aligned_bytes_loaded s (word (pc + pc_ofs1)) mc1 /\
+                read PC s = word (pc + <mc1's byte length>) /\
+                aligned_bytes_loaded s2 (word (pc + pc_ofs2)) mc2 /\
+                read PC s2 = word (pc2 + <mc2's byte length>) /\
+                equiv_out)
+      (\(s,s2) (s',s2'). maychange1 s s' /\ maychange2 s2 s2')
+      (\s. <mc1's # instructions>)
+      (\s. <mc2's # instructions>)`
+  Note that x is a set of free variables in equiv_in and quiv_out.
+*)
 let mk_equiv_statement (assum:term) (equiv_in:thm) (equiv_out:thm)
     (mc1:thm) (pc_ofs1:int) (maychange1:term)
     (mc2:thm) (pc_ofs2:int) (maychange2:term):term =
