@@ -4107,8 +4107,50 @@ int test_bignum_emontredc_8n_neon(void)
   // Do not call the neon function to avoid a linking failure error.
   return 1;
 #else
-  return test_bignum_emontredc_specific("bignum_emontredc_8n_neon", 1,
-                                        bignum_emontredc_8n_neon);
+  uint64_t t, k, w, tc;
+  printf("Testing bignum_emontredc_8n_neon (including precomputation) with %d cases\n", tests);
+
+  int c;
+  for (t = 0; t < tests; ++t) {
+    k = (unsigned)rand() % MAXSIZE;
+    if (is_8n) {
+      k = (k >> 3) << 3;
+      if (k == 0)
+        k = 8;
+    }
+
+    random_bignum(k, b0);
+    b0[0] |= 1;                // b0 = m
+    w = word_negmodinv(b0[0]); // w = negated modular inverse
+    random_bignum(2 * k, b4);  // b4 = initial z
+
+    reference_copy(2 * k + 1, b1, 2 * k, b4); // b1 = longer copy of z_0
+    reference_copy(2 * k + 1, b2, 2 * k, b4); // b2 = also longer copy of z_0
+
+    bignum_emontredc_8n_neon_precomp(k, b5, b0);
+    tc = bignum_emontredc_8n_neon(k, b4, b0, w, b5);
+
+    reference_madd(2 * k + 1, b1, k, b4, k, b0); // b1 = q * m + z_0
+
+    c = ((b1[2 * k] == tc) && reference_eq_samelen(k, b4 + k, b1 + k) &&
+         reference_iszero(k, b1));
+
+    if (!c) {
+      printf("### Disparity reducing modulo: [size %4" PRIu64 " -> %4" PRIu64
+             "] "
+             "...%016" PRIx64 " / 2^%" PRIu64 " mod ...%016" PRIx64
+             " = ...%016" PRIx64 "\n",
+             2 * k, k, b2[0], 64 * k, b0[0], b4[k]);
+      return 1;
+    } else if (VERBOSE) {
+      printf("OK: [size %4" PRIu64 " -> %4" PRIu64 "] "
+             "...%016" PRIx64 " / 2^%" PRIu64 " mod ...%016" PRIx64
+             " = ...%016" PRIx64 "\n",
+             2 * k, k, b2[0], 64 * k, b0[0], b4[0]);
+    }
+  }
+  printf("All OK\n");
+  return 0;
 #endif
 }
 
