@@ -10,8 +10,8 @@
 
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_emontredc_8n_neon)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_emontredc_8n_neon)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_emontredc_8n_neon_precomp)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_emontredc_8n_neon_precomp)
         .text
         .balign 4
 
@@ -47,10 +47,10 @@ S2N_BN_SYMBOL(bignum_emontredc_8n_neon_precomp):
         subs x0, x0, #1
         bcc bignum_emontredc_8n_neon_precomp_loop_end
 
+bignum_emontredc_8n_neon_precomp_loop:
+
         ldp a0, a1, [x2, #32]!
         ldp a2, a3, [x2, #16]
-
-bignum_emontredc_8n_neon_precomp_loop:
 
         cdiff(t, c, a1, a0)
         stp   t, c, [x1, #cache_m10]
