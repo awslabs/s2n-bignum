@@ -20,12 +20,12 @@ let bignum_emontredc_8n_mc =
   0xa9bf63f7;       (* arm_STP X23 X24 SP (Preimmediate_Offset (iword (-- &16))) *)
   0xa9bf6bf9;       (* arm_STP X25 X26 SP (Preimmediate_Offset (iword (-- &16))) *)
   0xa9bf73fb;       (* arm_STP X27 X28 SP (Preimmediate_Offset (iword (-- &16))) *)
-  0xd342fc00;       (* arm_LSR X0 X0 (rvalue (word 2)) *)
+  0xd342fc00;       (* arm_LSR X0 X0 2 *)
   0xaa0003fa;       (* arm_MOV X26 X0 *)
   0xf100040c;       (* arm_SUBS X12 X0 (rvalue (word 1)) *)
-  0x54001e43;       (* arm_BCC (word 968) *)
+  0x54001e03;       (* arm_BCC (word 960) *)
   0xaa1f03fc;       (* arm_MOV X28 XZR *)
-  0xd37be980;       (* arm_LSL X0 X12 (rvalue (word 5)) *)
+  0xd37be980;       (* arm_LSL X0 X12 5 *)
   0xa9404c31;       (* arm_LDP X17 X19 X1 (Immediate_Offset (iword (&0))) *)
   0xa9415434;       (* arm_LDP X20 X21 X1 (Immediate_Offset (iword (&16))) *)
   0xa9402448;       (* arm_LDP X8 X9 X2 (Immediate_Offset (iword (&0))) *)
@@ -104,7 +104,7 @@ let bignum_emontredc_8n_mc =
   0x9a0f032f;       (* arm_ADC X15 X25 X15 *)
   0xa9001424;       (* arm_STP X4 X5 X1 (Immediate_Offset (iword (&0))) *)
   0xa9011c26;       (* arm_STP X6 X7 X1 (Immediate_Offset (iword (&16))) *)
-  0xb4001220;       (* arm_CBZ X0 (word 580) *)
+  0xb40011e0;       (* arm_CBZ X0 (word 572) *)
   0xaa0003fb;       (* arm_MOV X27 X0 *)
   0x91008042;       (* arm_ADD X2 X2 (rvalue (word 32)) *)
   0x91008021;       (* arm_ADD X1 X1 (rvalue (word 32)) *)
@@ -247,8 +247,6 @@ let bignum_emontredc_8n_mc =
   0xaa1603ec;       (* arm_MOV X12 X22 *)
   0xa9004c31;       (* arm_STP X17 X19 X1 (Immediate_Offset (iword (&0))) *)
   0xa9015434;       (* arm_STP X20 X21 X1 (Immediate_Offset (iword (&16))) *)
-  0xf100837b;       (* arm_SUBS X27 X27 (rvalue (word 32)) *)
-  0x54ffee41;       (* arm_BNE (word 2096584) *)
   0xa9424c31;       (* arm_LDP X17 X19 X1 (Immediate_Offset (iword (&32))) *)
   0xa9435434;       (* arm_LDP X20 X21 X1 (Immediate_Offset (iword (&48))) *)
   0xab1c039f;       (* arm_CMN X28 X28 *)
@@ -263,7 +261,7 @@ let bignum_emontredc_8n_mc =
   0xcb000042;       (* arm_SUB X2 X2 X0 *)
   0x91008021;       (* arm_ADD X1 X1 (rvalue (word 32)) *)
   0xf100075a;       (* arm_SUBS X26 X26 (rvalue (word 1)) *)
-  0x54ffe261;       (* arm_BNE (word 2096204) *)
+  0x54ffe2a1;       (* arm_BNE (word 2096212) *)
   0xcb1c03e0;       (* arm_NEG X0 X28 *)
   0xa8c173fb;       (* arm_LDP X27 X28 SP (Postimmediate_Offset (iword (&16))) *)
   0xa8c16bf9;       (* arm_LDP X25 X26 SP (Postimmediate_Offset (iword (&16))) *)
@@ -332,7 +330,7 @@ let lemma2 = prove
 
 let BIGNUM_EMONTREDC_8N_CORRECT = time prove
  (`!k z m w a n pc.
-        nonoverlapping (word pc,0x400) (z,8 * 2 * val k) /\
+        nonoverlapping (word pc,LENGTH bignum_emontredc_8n_mc) (z,8 * 2 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * 2 * val k) /\
         8 divides val k
         ==> ensures arm
@@ -341,7 +339,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
                 C_ARGUMENTS [k; z; m; w] s /\
                 bignum_from_memory (z,2 * val k) s = a /\
                 bignum_from_memory (m,val k) s = n)
-           (\s. read PC s = word(pc + 0x3e8) /\
+           (\s. read PC s = word(pc + 0x3e0) /\
                 ((n * val w + 1 == 0) (mod (2 EXP 64))
                  ==> n * bignum_from_memory (z,val k) s + a =
                      2 EXP (64 * val k) *
@@ -357,7 +355,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`] THEN
   W64_GEN_TAC `w:num` THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `n:num`; `pc:num`] THEN
-  REWRITE_TAC[ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
+  REWRITE_TAC[ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES; fst BIGNUM_EMONTREDC_8N_EXEC] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   BIGNUM_TERMRANGE_TAC `2 * k` `a:num` THEN
@@ -373,7 +371,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     ASM_REWRITE_TAC[VAL_WORD_USHR; NUM_REDUCE_CONV `2 EXP 2`] THEN
     ASM_REWRITE_TAC[DIVIDES_DIV_MULT; MULT_CLAUSES; ARITH_RULE `0 < 1`;
                     DIV_0; ARITH_RULE `k DIV 8 = k DIV 4 DIV 2`] THEN
-    ASM_CASES_TAC `k = 0` THEN ASM_REWRITE_TAC[] THEN
+    ASM_CASES_TAC `k = 0` THENL replicate (ASM_REWRITE_TAC[]) 2 THEN
     EXPAND_TAC "a" THEN
     REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; VAL_WORD_0] THEN
     ASM_REWRITE_TAC[ADD_CLAUSES; MULT_CLAUSES; BIGNUM_FROM_MEMORY_TRIVIAL];
@@ -404,10 +402,10 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES] THEN
     REWRITE_TAC[LOWDIGITS_BIGNUM_FROM_MEMORY] THEN
     MAP_EVERY EXPAND_TAC ["k'"; "k4"] THEN
-    CONJ_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC;
+    CONJ_TAC THENL replicate (AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC) 2;
     ALL_TAC] THEN
 
-  ENSURES_SEQUENCE_TAC `pc + 0x3e8`
+  ENSURES_SEQUENCE_TAC `pc + 0x3e0`
    `\s. ((n' * w + 1 == 0) (mod (2 EXP 64))
          ==> n' * bignum_from_memory (z,k') s + a' =
            2 EXP (64 * k') *
@@ -421,19 +419,20 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
      `y divides a ==> !x:num. x divides y ==> x divides a`)) THEN
     ANTS_TAC THENL [CONV_TAC DIVIDES_CONV; ALL_TAC] THEN
     ASM_REWRITE_TAC[ONCE_REWRITE_RULE[MULT_SYM] DIVIDES_DIV_MULT] THEN
-    ASM_CASES_TAC `k':num = k` THEN ASM_REWRITE_TAC[] THEN
+    ASM_CASES_TAC `k':num = k` THENL replicate (ASM_REWRITE_TAC[]) 2 THEN
     UNDISCH_THEN `k':num = k` SUBST_ALL_TAC THEN
     MAP_EVERY UNDISCH_TAC
      [`lowdigits a (2 * k) = a'`; `lowdigits n k = n'`] THEN
     ASM_SIMP_TAC[LOWDIGITS_SELF]] THEN
 
   SUBGOAL_THEN
-   `nonoverlapping (z,8 * 2 * k') (word pc,0x400) /\
+   `nonoverlapping (z,8 * 2 * k') (word pc,LENGTH bignum_emontredc_8n_mc) /\
     nonoverlapping (z,8 * 2 * k') (m:int64,8 * k')`
-  MP_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES] THENL
-   [MAP_EVERY EXPAND_TAC ["k'"; "k4"] THEN
+  MP_TAC THENL
+   [REWRITE_TAC[NONOVERLAPPING_CLAUSES; fst BIGNUM_EMONTREDC_8N_EXEC] THEN
+    MAP_EVERY EXPAND_TAC ["k'"; "k4"] THEN
     REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC;
-    STRIP_TAC] THEN
+    REWRITE_TAC[NONOVERLAPPING_CLAUSES; fst BIGNUM_EMONTREDC_8N_EXEC] THEN STRIP_TAC] THEN
 
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC
    `MAYCHANGE
@@ -474,7 +473,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
 
   (*** Main loop invariant for "outerloop" ***)
 
-  ENSURES_WHILE_PUP_TAC `k4:num` `pc + 0x2c` `pc + 0x3e0`
+  ENSURES_WHILE_PUP_TAC `k4:num` `pc + 0x2c` `pc + 0x3d8`
    `\i s. (read X2 s = m /\
            read X3 s = word w /\
            bignum_from_memory (m,k) s = n /\
@@ -587,7 +586,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
   BIGNUM_TERMRANGE_TAC `4 * i` `q1:num` THEN
   GLOBALIZE_PRECONDITION_TAC THEN
 
-  ENSURES_SEQUENCE_TAC `pc + 0x3e0`
+  ENSURES_SEQUENCE_TAC `pc + 0x3d8`
    `\s. read X2 s = m /\
         read X3 s = word w /\
         bignum_from_memory (m,k) s = n /\
@@ -640,12 +639,14 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
 
   SUBGOAL_THEN
    `nonoverlapping (z':int64,8 * (k + 4)) (z,8 * 4 * i) /\
-    nonoverlapping (z':int64,8 * (k + 4)) (word pc,0x400) /\
+    nonoverlapping (z':int64,8 * (k + 4)) (word pc,LENGTH bignum_emontredc_8n_mc) /\
     nonoverlapping (z':int64,8 * (k + 4)) (m,8 * k) /\
     nonoverlapping (z':int64,8 * (k + 4))
      (word_add z' (word (8 * (k + 4))),8 * (k - 4 * (i + 1)))`
-  MP_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES] THENL
-   [EXPAND_TAC "z'" THEN REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC;
+  MP_TAC THENL
+   [REWRITE_TAC[NONOVERLAPPING_CLAUSES; fst BIGNUM_EMONTREDC_8N_EXEC] THEN
+    EXPAND_TAC "z'" THEN REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC;
+    REWRITE_TAC[NONOVERLAPPING_CLAUSES; fst BIGNUM_EMONTREDC_8N_EXEC] THEN
     STRIP_TAC] THEN
 
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
@@ -679,7 +680,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
   REPEAT(FIRST_X_ASSUM(K ALL_TAC o check (vfree_in `q1:num`) o concl)) THEN
   REPEAT(FIRST_X_ASSUM(K ALL_TAC o check (vfree_in `r1:num`) o concl)) THEN
 
-  ENSURES_SEQUENCE_TAC `pc + 0x3d0`
+  ENSURES_SEQUENCE_TAC `pc + 0x3c8`
    `\s. read X2 s = word_add m (word(32 * (k4 - 1))) /\
         read X3 s = word w /\
         bignum_from_memory (m,k) s = n /\
@@ -792,6 +793,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN
      (MP_TAC o MATCH_MP (MESON[REAL_ADD_LID]
         `n = 0 ==> !x:real. &n + x = x`))) THEN
+    (* HERE *)
     REPEAT(DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))) THEN
     ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o DECARRY_RULE) THEN
     REWRITE_TAC[VAL_WORD_BIGDIGIT] THEN
