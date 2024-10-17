@@ -724,6 +724,80 @@ let mk_equiv_bool_regs = define
                   mk_equiv_bool_regs regs (s1,s2))`;;
 
 (* ------------------------------------------------------------------------- *)
+(* Given ranges of PCs of interest, overapproximate the set of input state   *)
+(* components that the instructions will read, and also overapproximate the  *)
+(* output state components that the instructions will update.                *)
+(* These results will not include PC.                                        *)
+(* ------------------------------------------------------------------------- *)
+
+let approximate_input_output_components
+    (decode_ths:thm option array) (pc_ranges: (int*int)list)
+    :term list * term list =
+  let input_comps: term list ref = ref [] in
+  let output_comps: term list ref = ref [] in
+  let normalize_word_expr t =
+    rhs (concl ((DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV THENC REWRITE_CONV[WORD_ADD_0]) t)) in
+  let update_comps (pc_begin,pc_end) =
+    (* Input and output components *)
+    for i = pc_begin to pc_end do
+      match decode_ths.(i) with
+      | None -> ()
+      | Some the_th -> begin
+        let r = snd (dest_imp (snd (strip_forall (concl the_th)))) in
+        (* r is something like `arm_decode s (word (pc + 4)) (arm_ADD X3 X1 X2)` *)
+        let f,args = strip_comb r in
+        if name_of f <> "arm_decode" then failwith "Unknown inst" else
+        let the_inst = last args in
+        let state_update_th = ARM_EXEC_CONV the_inst in
+        let state_update:term = snd (dest_eq (concl state_update_th)) in
+
+        (* Update input_comps. get `read ...`s first *)
+        let reads = find_terms (fun t -> is_comb t &&
+            let c,args = strip_comb t in
+            name_of c = "read" && length args = 2)
+          state_update in
+        let read_comps = map (fun t -> normalize_word_expr (hd (snd (strip_comb t))))
+          reads in
+        (* subtract reads that are already written! *)
+        let read_comps = subtract read_comps !output_comps in
+        let _ = input_comps := union !input_comps read_comps in
+
+        (* Update output_comps. *)
+        let writes = find_terms (is_binary ":=") state_update in
+        let write_comps = map (fun t -> normalize_word_expr (fst (dest_binary ":=" t)))
+          writes in
+        output_comps := union !output_comps write_comps
+      end
+    done in
+
+  List.iter update_comps pc_ranges;
+  (!input_comps, !output_comps);;
+
+(* example *)
+let equiv_test_ops: int list = [
+  0x8b010002; (* add     x2, x0, x1 *)
+  0x8b020023; (* add     x3, x1, x2 *)
+  0xa9402fea; (* ldp     x10, x11, [sp] *)
+  0xa900abeb; (* stp     x11, x10, [sp, #8] *)
+];;
+
+let equiv_test_mc =
+  let charlist = List.concat_map
+    (fun op32 ->
+      [Char.chr (Int.logand op32 255);
+       Char.chr (Int.logand (Int.shift_right op32 8) 255);
+       Char.chr (Int.logand (Int.shift_right op32 16) 255);
+       Char.chr (Int.logand (Int.shift_right op32 24) 255)])
+    equiv_test_ops in
+  let byte_list = Bytes.init (List.length charlist) (fun i -> List.nth charlist i) in
+  define_word_list "__equiv_test_mc" (term_of_bytes byte_list);;
+
+let EQUIV_TEST_EXEC = ARM_MK_EXEC_RULE equiv_test_mc;;
+
+let _ = approximate_input_output_components (snd EQUIV_TEST_EXEC) [(0,15)];;
+let _ = approximate_input_output_components (snd EQUIV_TEST_EXEC) [(0,7);(12,15)];;
+
+(* ------------------------------------------------------------------------- *)
 (* Tactics for proving equivalence of two partially different programs.      *)
 (* Renamed registers in the input programs should not affect the behavior of *)
 (* these tactics.                                                            *)
