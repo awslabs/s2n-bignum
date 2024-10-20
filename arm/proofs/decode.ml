@@ -293,6 +293,10 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
      (Immediate_Offset (iword (ival imm7 * &8))))
 
+  // LDR/STR (immediate, SIMD&FP), Pre-index (has writeback)
+  | [0b00:2; 0b1111001:7; is_ld; 0b0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
     // ADD and SUB

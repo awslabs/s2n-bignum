@@ -324,6 +324,7 @@ bignum_emontredc_8n_outerloop:
         stp     a2, a3, [z, #16]
 
 // Repeated multiply-add block to do the k/4-1 remaining 4-digit chunks
+        mov     j, k4m1
 
 bignum_emontredc_8n_maddloop:
         add     m, m, #32

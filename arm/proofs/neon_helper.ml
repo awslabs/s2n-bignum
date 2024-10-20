@@ -899,26 +899,10 @@ let decompose_read_memory_bytes64 t: (term * term * term) option =
 
 let _ = decompose_read_memory_bytes64 `read (memory :> bytes64 addr) s = v`;;
 
-let option_get (x:'a option) =
-  match x with
-  | Some x' -> x'
-  | None -> failwith "option_get";;
-
-let are_consecutive_read_byte64s t1 t2 =
-  let addr1,_,_ = option_get (decompose_read_memory_bytes64 t1) in
-  let addr2,_,_ = option_get (decompose_read_memory_bytes64 t2) in
-  let eq = subst [addr1,`addr1:int64`; addr2,`addr2:int64`]
-      `word_add addr1 (word 8):int64 = addr2` in
-  can WORD_RULE eq;;
-
-let _ = are_consecutive_read_byte64s
-  `read (memory :> bytes64 (word_add addr (word 8))) s = v`
-  `read (memory :> bytes64 (word_add addr (word 16))) s = v2`;;
-
 (* Combine `read (memory :> bytes64 addr1) s = v1`
     and    `read (memory :> bytes64 addr2) s = v2` into
     `read (memory :> bytes128 addr1) s = word_join v2 v1` if addr2 = addr1 + 8 *)
-let COMBINE_READ_BYTES64_PAIRS_TAC =
+let COMBINE_READ_BYTES64_PAIRS_TAC ?(base_ptr:term option) =
   (* Is (t1's read memory offset + 8) = t2's read memory offset? *)
   let rec fn (asms:(thm*(term*term*term)) list) (idx:int): tactic =
     if idx >= List.length asms then ALL_TAC else
@@ -961,7 +945,15 @@ let COMBINE_READ_BYTES64_PAIRS_TAC =
     let asms = List.filter_map
       (fun (_,th) ->
         match decompose_read_memory_bytes64 (concl th) with
-        | Some t -> Some (th, t)
+        | Some (addr,s,v) ->
+          begin match base_ptr with
+          | Some bptr -> (try
+              if bptr = addr || bptr = fst (dest_binary "word_add" addr)
+              then Some (th, (addr,s,v))
+              else None
+            with _ -> None)
+          | None -> Some (th, (addr,s,v))
+          end
         | None -> None) asl in
     (*Printf.printf "# found read(memory :> bytes64) asms: %d\n" (List.length asms);*)
     fn asms 0);;

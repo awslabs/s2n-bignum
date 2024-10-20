@@ -7,12 +7,10 @@
 (*    Relational Hoare Logic for proving program equivalence.                *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* To help users investigate proofs using e-g, prevent THEN from creating    *)
-(* subgoals                                                                  *)
-(* ------------------------------------------------------------------------- *)
-
-unset_then_multiple_subgoals;;
+(**** Proofs in this file can be easily converted to the e-g form.
+      Please use this directive in REPL:
+  unset_then_multiple_subgoals;;
+ ****)
 
 (* ------------------------------------------------------------------------- *)
 (* A definition of steps and its properties.                                 *)
@@ -801,6 +799,8 @@ let ENSURES2_TRIVIAL = prove(
 
 (* ENSURES2_WHILE_PAUP_TAC verifies a relational hoare triple of two WHILE loops,
    induction variables of which increasing from a to b - 1 (b is not included).
+   The loops should terminate at their backedges when the indution variables
+   eventually become b.
    ENSURES_WHILE_PAUP_TAC takes the following arguments, all of which are HOL
    Light terms:
   - a: counter begin, has `:num` type
@@ -811,9 +811,10 @@ let ENSURES2_TRIVIAL = prove(
                             the loop of the second program, has `:num` type
   - loopinv: relational loop invariant, has `:num->S#S->bool` type where S is
              the type of a program state
-  - flagcond1, flagcond2: `:S->bool` typed terms checking when the backedge is
-                          taken, in the two programs
-  - f_nsteps1, f_nsteps2: `:S->num`, the number of small steps taken inside
+  - flagcond1, flagcond2: `:num->S->bool` typed terms describing when loops
+                          terminate. Typically involves a flag; e.g.,
+                          `\(i:num) s. read ZF s <=> (word i:int64) = word n`
+  - f_nsteps1, f_nsteps2: `:num->num`, the number of small steps taken inside
                           the loop bodies
   - nsteps_pre1, nsteps_pre2: `:num`, the number of small steps taken to reach
                               from precondition to the loop header
@@ -846,6 +847,7 @@ let ENSURES2_WHILE_PAUP_TAC =
                     loopinv a s s2)
           C
           (\s. nsteps_pre1) (\s. nsteps_pre2) /\
+        // loop body
         (!i. a <= i /\ i < b
             ==> ensures2 step
                 (\(s,s2). program_decodes1 s /\ read pcounter s = word pc1 /\
@@ -857,6 +859,7 @@ let ENSURES2_WHILE_PAUP_TAC =
                           flagpred2 (i+1) s2)
                 C
                 (\s. f_nsteps1 i) (\s. f_nsteps2 i)) /\
+        // backedge taken
         (!i. a < i /\ i < b
             ==> ensures2 step
                 (\(s,s2). program_decodes1 s /\ read pcounter s = word pc1' /\
@@ -867,6 +870,7 @@ let ENSURES2_WHILE_PAUP_TAC =
                           loopinv i s s2)
                 C
                 (\s. nsteps_backedge1) (\s. nsteps_backedge2)) /\
+        // backedge not taken
         ensures2 step
             (\(s,s2). program_decodes1 s /\ read pcounter s = word pc1' /\
                       program_decodes2 s2 /\ read pcounter s2 = word pc2' /\
@@ -1009,7 +1013,8 @@ let ENSURES2_INIT_TAC sname sname2 =
         let svar2 = mk_var(sname2,ty) in
         MAP_EVERY X_GEN_TAC [svar;svar2] THEN
         DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
+        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER) THEN
+        ASSUME_TAC(ISPEC svar2 MAYCHANGE_STARTER));;
 
 let APPLY_IF (checker:term->bool) (t:tactic) =
   W (fun (asl,g) ->
@@ -1042,6 +1047,3 @@ let ENSURES2_TRANS_TAC ensures2th ensures2th2 =
     REMOVE_THEN "_tmp_trans2" (fun c2 ->
       MP_TAC (REWRITE_RULE [] (MATCH_MP ENSURES2_CONJ2 (CONJ c1 c2)))
     ));;
-
-
-set_then_multiple_subgoals;;

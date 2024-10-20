@@ -710,33 +710,34 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
 
 (* A recursive function for defining a conjunction of equality clauses *)
 let mk_equiv_regs = define
-  `((mk_equiv_regs:((armstate,(64)word)component)list->armstate#armstate->bool)
-      [] s = T) /\
+  `((mk_equiv_regs:((armstate,(N)word)component)list->armstate#armstate->bool)
+      [] s = true) /\
    (mk_equiv_regs (CONS reg regs) (s1,s2) =
-      ?(a:int64). read reg s1 = a /\ read reg s2 = a /\
-                  mk_equiv_regs regs (s1,s2))`;;
+     (mk_equiv_regs regs (s1,s2) /\
+      exists (a:(N)word). read reg s1 = a /\ read reg s2 = a))`;;
 
 let mk_equiv_bool_regs = define
   `((mk_equiv_bool_regs:((armstate,bool)component)list->armstate#armstate->bool)
-      [] s = T) /\
+      [] s = true) /\
    (mk_equiv_bool_regs (CONS reg regs) (s1,s2) =
-      ?(a:bool). read reg s1 = a /\ read reg s2 = a /\
-                  mk_equiv_bool_regs regs (s1,s2))`;;
+     (mk_equiv_bool_regs regs (s1,s2) /\
+      exists (a:bool). read reg s1 = a /\ read reg s2 = a))`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Given ranges of PCs of interest, overapproximate the set of input state   *)
-(* components that the instructions will read, and also overapproximate the  *)
-(* output state components that the instructions will update.                *)
+(* registers that the instructions will read, and also overapproximate the   *)
+(* output registers that the instructions will update.                       *)
 (* These results will not include PC.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-let approximate_input_output_components
+let approximate_input_output_regs
     (decode_ths:thm option array) (pc_ranges: (int*int)list)
     :term list * term list =
   let input_comps: term list ref = ref [] in
   let output_comps: term list ref = ref [] in
   let normalize_word_expr t =
     rhs (concl ((DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV THENC REWRITE_CONV[WORD_ADD_0]) t)) in
+  let is_interesting_reg t = not (is_comb t) && t <> `PC` in
   let update_comps (pc_begin,pc_end) =
     (* Input and output components *)
     for i = pc_begin to pc_end do
@@ -758,6 +759,7 @@ let approximate_input_output_components
           state_update in
         let read_comps = map (fun t -> normalize_word_expr (hd (snd (strip_comb t))))
           reads in
+        let read_comps = filter is_interesting_reg read_comps in
         (* subtract reads that are already written! *)
         let read_comps = subtract read_comps !output_comps in
         let _ = input_comps := union !input_comps read_comps in
@@ -766,6 +768,7 @@ let approximate_input_output_components
         let writes = find_terms (is_binary ":=") state_update in
         let write_comps = map (fun t -> normalize_word_expr (fst (dest_binary ":=" t)))
           writes in
+        let write_comps = filter is_interesting_reg write_comps in
         output_comps := union !output_comps write_comps
       end
     done in
@@ -794,8 +797,8 @@ let equiv_test_mc =
 
 let EQUIV_TEST_EXEC = ARM_MK_EXEC_RULE equiv_test_mc;;
 
-let _ = approximate_input_output_components (snd EQUIV_TEST_EXEC) [(0,15)];;
-let _ = approximate_input_output_components (snd EQUIV_TEST_EXEC) [(0,7);(12,15)];;
+let _ = approximate_input_output_regs (snd EQUIV_TEST_EXEC) [(0,15)];;
+let _ = approximate_input_output_regs (snd EQUIV_TEST_EXEC) [(0,7);(12,15)];;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics for proving equivalence of two partially different programs.      *)
@@ -884,7 +887,6 @@ let ARM_LOCKSTEP_TAC =
 
 let EQUIV_INITIATE_TAC input_equiv_states_th =
   ENSURES2_INIT_TAC "s0" "s0'" THEN
-  ASSUME_TAC(ISPEC (mk_var("s0'",`:armstate`)) MAYCHANGE_STARTER) THEN
   let input_pred = SPEC_ALL
       (SPECL [`s0:armstate`;`s0':armstate`] input_equiv_states_th) in
   UNDISCH_TAC (fst (dest_binary "=" (concl input_pred))) THEN
@@ -1982,6 +1984,7 @@ let mk_eventually_n_at_pc_statement_simple
         (\(s,s2) (s',s2'). maychange1 s s' /\ maychange2 s2 s2')
         fnsteps1
         fnsteps2`
+  equiv_in and equiv_out's first two universal quantifiers must be armstates.
 *)
 let mk_equiv_statement (assum:term) (equiv_in:thm) (equiv_out:thm)
     (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
