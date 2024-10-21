@@ -1166,6 +1166,9 @@ let CLEAR_UNUSED_ABBREVS =
   dead values in the left program. Same for dead_value_info_right.
   They are for optimization, and giving None to them will still functionally
   work.
+
+  Note that this tactic may remove assumptions on abbreviations if they are
+  considered unused.
 *)
 
 let EQUIV_STEP_TAC action execth1 execth2
