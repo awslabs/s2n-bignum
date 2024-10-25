@@ -1091,11 +1091,13 @@ let SIMPLIFY_MAYCHANGES_TAC =
           UNDISCH_THEN (concl asm) (K ALL_TAC)))
       mcs);;
 
+(* Clear unused abbreviations in assumptions.
+   Do not clear it if its name ends with "DO_NOT_CLEAR". *)
 let CLEAR_UNUSED_ABBREVS =
   fun (asl,w) ->
-    (* asl_with_flags: (keep it?, abbrev var, (name, th)) array *)
+    (* asl_with_flags: (keep it?, (abbrev var, asm name, th)) array *)
     let asl_with_flags = ref (Array.of_list (map
-      (fun (name,th) -> true, (None, name, th)) asl)) in
+      (fun (asmname,th) -> true, (None, asmname, th)) asl)) in
 
     (* From assumptions, find those that abbreviates to the_var *)
     let find_indices (the_var:term): int list =
@@ -1107,17 +1109,18 @@ let CLEAR_UNUSED_ABBREVS =
       done;
       !res in
 
-    (* do BFS to mark assumptions that must be not be cleared *)
+    (* do BFS to mark assumptions that must not be cleared *)
     let alive_queue = ref [] in
     for i = 0 to Array.length !asl_with_flags - 1 do
-      let _,(_,name,th) = !asl_with_flags.(i) in
+      let _,(_,asmname,th) = !asl_with_flags.(i) in
       let dummy_ref = ref "" in
       if reads_state (concl th) dummy_ref then
         (* assumptions that read states should not be removed *)
         alive_queue := i::!alive_queue
-      else if is_eq (concl th) && is_var (rand (concl th)) then
+      else if is_eq (concl th) && is_var (rand (concl th)) &&
+              not (String.ends_with ~suffix:"DO_NOT_CLEAR" asmname) then
         (* if th is 'e = var', mark it as initially dead & extract rhs var *)
-        !asl_with_flags.(i) <- (false, (Some (rand (concl th)), name, th))
+        !asl_with_flags.(i) <- (false, (Some (rand (concl th)), asmname, th))
       else
         (* if th is not 'e = var', don't remove this because
            we don't know what this is *)

@@ -12,6 +12,32 @@ needs "arm/proofs/base.ml";;
 needs "arm/proofs/equiv.ml";;
 needs "arm/proofs/neon_helper.ml";;
 
+let DESTRUCT_EXISTS_ASSUMS_TAC =
+  REPEAT (FIRST_X_ASSUM (fun th ->
+    let cth = concl th in
+    if is_exists cth then MP_TAC th THEN STRIP_TAC
+    else NO_TAC));;
+
+let FIND_ABBREV_THEN (varname:string) (ttac:thm_tactic): tactic =
+  fun (asl,g) ->
+    let _,the_th = find (fun (_,th) -> let c = concl th in
+      is_eq c && is_var (rhs c) && name_of (rhs c) = varname)
+      asl in
+    ttac the_th (asl,g);;
+
+let REMOVE_ABBREV_THEN (varname:string) (ttac:thm_tactic): tactic =
+  fun (asl,g) ->
+    let asl1,asl2 = partition (fun (_,th) -> let c = concl th in
+      is_eq c && is_var (rhs c) && name_of (rhs c) = varname)
+      asl in
+    let (_,the_th),asl2 = hd asl1,(asl2 @ tl asl1) in
+    ttac the_th (asl2,g);;
+
+let WORD_SUB2 = MESON [WORD_SUB] `y <= x ==> word_sub (word x) (word y):int64 = word (x - y)`;;
+
+let WORD_ADD_SUB = WORD_RULE
+    `word_add (word_sub x (word y)) (word z):(N)word = word_add x (word_sub (word z) (word y))`;;
+
 let maddloop_step2_full_ops:int list = [
   0x3cc20c4e;       (* arm_LDR Q14 X2 (Preimmediate_Offset (iword (&32))) *)
   0x3dc00459;       (* arm_LDR Q25 X2 (Immediate_Offset (word 16)) *)
@@ -502,147 +528,110 @@ let maddloop_step3_full_labels = [
   new_definition `maddloop_step3_label_innerloop_postamble = 0x30c`;  
 ];;
 
-let in_regs, out_regs = approximate_input_output_regs (snd MADDLOOP_STEP3_FULL_EXEC) [(0xb0,0x308)];;
-let in_xregs = filter (fun t -> type_of t = `:(armstate,int64)component`) in_regs;;
-(* exclude pointers because they will explicitly appear in loop_rotate_eqin*)
-let in_xregs = subtract in_xregs [`X27`;`X1`;`X2`;`SP`;`X30`];;
-let in_qregs = filter (fun t -> type_of t = `:(armstate,int128)component`) in_regs;;
-let eq_xregs = new_definition
-  (mk_eq
-    (`(loop_rotate_eq_xregs:armstate#armstate->bool) (s1,s1')`,
-      list_mk_icomb "mk_equiv_regs"
-      [mk_list (in_xregs,`:(armstate,int64)component`);`(s1:armstate,s1':armstate)`]));;
-let eq_qregs = new_definition
-  (mk_eq
-    (`(loop_rotate_eq_qregs:armstate#armstate->bool) (s1,s1')`,
-      list_mk_icomb "mk_equiv_regs"
-      [mk_list (in_qregs,`:(armstate,int128)component`);`(s1:armstate,s1':armstate)`]));;
 
-let out_xregs,out_regs2 = partition (fun t -> type_of t = `:(armstate,int64)component`) out_regs;;
-let out_qregs,out_flags = partition (fun t -> type_of t = `:(armstate,int128)component`) out_regs2;;
+(* ------------------------------------------------------------------------- *)
+(*                 Equivalence between Step 2 - Step 3                       *)
+(* ------------------------------------------------------------------------- *)
 
-let loop_rotate_eqin = new_definition
-  `forall s1 s1' z m m_precalc sp k i.
-  (loop_rotate_eqin:(armstate#armstate)->int64->int64->int64->int64->num->num->bool)
-        (s1,s1') z m m_precalc sp k i <=>
-   (read X27 s1 = word (i + 1) /\ read X27 s1' = word i /\
-    read X1 s1 = word_add z (word 32) /\ read X1 s1' = word_add z (word 32) /\
-    read X2 s1 = word_add m (word 32) /\ read X2 s1' = word_add m (word 32) /\
-    read SP s1 = sp /\ read SP s1' = sp /\
-    read X30 s1 = word_add m_precalc (word 96) /\
-    read X30 s1' = word_add m_precalc (word 96) /\
+(* ------------------------------------------------------------------------- *)
+(* Equivalence between the loop body, but after (k/4) - 2 iterations!        *)
+(* maddloop_step2 will start in the middle of the loop body and stop there   *)
+(* after the iterations. maddloop_step3 will start from the maddloop_neon    *)
+(* label.                                                                    *)
+(* ------------------------------------------------------------------------- *)
+
+let step2_body_in_regs, step2_body_out_regs =
+    approximate_input_output_regs (snd MADDLOOP_STEP3_FULL_EXEC) [(0xb0,0x308)];;
+let step2_body_in_xregs = filter (fun t -> type_of t = `:(armstate,int64)component`)
+    step2_body_in_regs;;
+let step2_body_in_qregs = filter (fun t -> type_of t = `:(armstate,int128)component`)
+    step2_body_in_regs;;
+
+(* exclude pointers and loop counter because they will explicitly appear in step2_body_eqin*)
+let step2_body_in_xregs = subtract step2_body_in_xregs [`X27`;`X1`;`X2`;`SP`;`X30`];;
+
+(* Build equalities. *)
+let step2_body_eq_xregs = new_definition
+  (mk_eq
+    (`(step2_body_eq_xregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_body_in_xregs,`:(armstate,int64)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_body_eq_qregs = new_definition
+  (mk_eq
+    (`(step2_body_eq_qregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_body_in_qregs,`:(armstate,int128)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_body_eq_mems = new_definition
+  `(step2_body_eq_mems:int64->int64->int64->int64->num->armstate#armstate->bool)
+      z m sp m_precalc k (s1,s1') <=>
     (exists a. bignum_from_memory (z,k) s1  = a /\ bignum_from_memory (z,k) s1' = a) /\
     (exists a. bignum_from_memory (m,k) s1  = a /\ bignum_from_memory (m,k) s1' = a) /\
     (exists a. bignum_from_memory (word_add sp (word 32),12) s1 = a /\
                 bignum_from_memory (word_add sp (word 32),12) s1' = a) /\
     (exists a. bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1 = a /\
-                bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1' = a) /\
-    loop_rotate_eq_xregs(s1,s1') /\
-    loop_rotate_eq_qregs(s1,s1'))`;;
+                bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1' = a)`;;
 
-let loop_rotate_eqout = new_definition
+
+let step2_body_eqin = new_definition
   `forall s1 s1' z m m_precalc sp k.
-  (loop_rotate_eqout:(armstate#armstate)->int64->int64->int64->int64->num->bool)
+  (step2_body_eqin:(armstate#armstate)->int64->int64->int64->int64->num->bool)
         (s1,s1') z m m_precalc sp k <=>
-   (read X1 s1 = word_add z (word (8 * (k - 4))) /\
+   (// Actual values of pointers
+    read X27 s1 = word (k DIV 4 - 1) /\ read X27 s1' = word (k DIV 4 - 2) /\
+    read X1 s1 = word_add z (word 32) /\ read X1 s1' = word_add z (word 32) /\
+    read X2 s1 = word_add m (word 32) /\ read X2 s1' = word_add m (word 32) /\
+    read SP s1 = sp /\ read SP s1' = sp /\
+    read X30 s1 = word_add m_precalc (word 96) /\
+    read X30 s1' = word_add m_precalc (word 96) /\
+    // Equalities
+    step2_body_eq_mems z m sp m_precalc k (s1,s1') /\
+    step2_body_eq_xregs(s1,s1') /\
+    step2_body_eq_qregs(s1,s1'))`;;
+
+let step2_body_eqout = new_definition
+  `forall s1 s1' z m m_precalc sp k.
+  (step2_body_eqout:(armstate#armstate)->int64->int64->int64->int64->num->bool)
+        (s1,s1') z m m_precalc sp k <=>
+   (read X27 s1 = word 1 /\
+    read X27 s1' = word 0 /\
+    read X1 s1 = word_add z (word (8 * (k - 4))) /\
     read X1 s1' = word_add z (word (8 * (k - 4))) /\
     read X2 s1 = word_add m (word (8 * (k - 4))) /\
     read X2 s1' = word_add m (word (8 * (k - 4))) /\
     read SP s1 = sp /\ read SP s1' = sp /\
     read X30 s1 = word_add m_precalc (word (8 * (12*(k DIV 4 - 1)))) /\
     read X30 s1' = word_add m_precalc (word (8 * (12*(k DIV 4 - 1)))) /\
-    (exists a. bignum_from_memory (z,k) s1  = a /\ bignum_from_memory (z,k) s1' = a) /\
-    (exists a. bignum_from_memory (m,k) s1  = a /\ bignum_from_memory (m,k) s1' = a) /\
-    (exists a. bignum_from_memory (word_add sp (word 32),12) s1 = a /\
-                bignum_from_memory (word_add sp (word 32),12) s1' = a) /\
-    (exists a. bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1 = a /\
-                bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1' = a) /\
-    loop_rotate_eq_xregs(s1,s1') /\
-    loop_rotate_eq_qregs(s1,s1'))`;;
+    // Equalities
+    step2_body_eq_mems z m sp m_precalc k (s1,s1') /\
+    step2_body_eq_xregs(s1,s1') /\
+    step2_body_eq_qregs(s1,s1'))`;;
 
-let maychanges =
+let step2_body_out_xregs,step2_body_out_regs2 = partition
+  (fun t -> type_of t = `:(armstate,int64)component`) step2_body_out_regs;;
+let step2_body_out_qregs,step2_body_out_flags = partition
+  (fun t -> type_of t = `:(armstate,int128)component`) step2_body_out_regs2;;
+
+let step2_body_maychanges =
   end_itlist (fun x y -> mk_icomb (mk_icomb (`,,`,x),y))
-    [mk_icomb (`MAYCHANGE`,mk_list (out_xregs, `:(armstate,int64)component`));
-     mk_icomb (`MAYCHANGE`,mk_list (out_qregs, `:(armstate,int128)component`));
-     mk_icomb (`MAYCHANGE`,mk_list (out_flags, `:(armstate,bool)component`));
+    [mk_icomb (`MAYCHANGE`,mk_list (step2_body_out_xregs, `:(armstate,int64)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_body_out_qregs, `:(armstate,int128)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_body_out_flags, `:(armstate,bool)component`));
      `MAYCHANGE [memory :> bytes (z:int64,8 * k)]`;
      `MAYCHANGE [PC]`];;
 
-(* The new definition of equiv_goal1 is created by running the following statement and
-   modifying the last argument of loop_rotate_eqin as "(k DIV 4 - 2)".
-  mk_equiv_statement
+let equiv_goal1 = mk_equiv_statement
     `ALL (nonoverlapping (z,8 * k))
      [word pc:int64,LENGTH maddloop_step2_full_mc; word pc2:int64,LENGTH maddloop_step3_full_mc;
       sp:int64,128; m:int64,8*k; m_precalc:int64,8*12*(k DIV 4 - 1)] /\
      aligned 16 (sp:int64) /\ 8 divides k /\ 12 <= k /\ k < 2 EXP 61`
-    loop_rotate_eqin
-    loop_rotate_eqout
+    step2_body_eqin
+    step2_body_eqout
     maddloop_step2_full_mc 0xb0 0xb0
-    maychanges
+    step2_body_maychanges
     maddloop_step3_full_mc 0xb0 0x30c
-    maychanges
+    step2_body_maychanges
     `\(s:armstate). 151 * (k DIV 4 - 2)` `\(s:armstate). 151 * (k DIV 4 - 2)`;;
-*)
 
-let equiv_goal1 = 
-  `forall pc pc2 z m m_precalc sp k.
-     ALL (nonoverlapping (z,8 * k))
-     [word pc,LENGTH maddloop_step2_full_mc; word pc2,LENGTH maddloop_step3_full_mc;
-      sp,128; m,8*k; m_precalc,8*12*(k DIV 4 - 1)] /\
-     aligned 16 sp /\ 8 divides k /\ 12 <= k /\ k < 2 EXP 61
-     ==> ensures2 arm
-         (\(s,s2).
-              aligned_bytes_loaded s (word pc) maddloop_step2_full_mc /\
-              read PC s = word (pc + 176) /\
-              aligned_bytes_loaded s2 (word pc2) maddloop_step3_full_mc /\
-              read PC s2 = word (pc2 + 176) /\
-              loop_rotate_eqin (s,s2) z m m_precalc sp k (k DIV 4 - 2))
-         (\(s,s2).
-              aligned_bytes_loaded s (word pc) maddloop_step2_full_mc /\
-              read PC s = word (pc + 176) /\
-              aligned_bytes_loaded s2 (word pc2) maddloop_step3_full_mc /\
-              read PC s2 = word (pc2 + 780) /\
-              loop_rotate_eqout (s,s2) z m m_precalc sp k)
-         (\(s,s2) (s',s2').
-              (MAYCHANGE
-               [X19; X4; X13; X14; X15; X12; X2; X3; X26; X9; X17; X16; X5;
-                X6; X25; X7; X21; X23; X30; X10; X24; X22; X11; X1; X29; X20;
-                X8; X27] ,,
-               MAYCHANGE
-               [Q14; Q21; Q31; Q24; Q1; Q6; Q5; Q13; Q25; Q2; Q16; Q7; Q0;
-                Q10; Q15] ,,
-               MAYCHANGE [VF; CF; ZF; NF] ,,
-               MAYCHANGE [memory :> bytes (z,8 * k)] ,,
-               MAYCHANGE [PC])
-              s
-              s' /\
-              (MAYCHANGE
-               [X19; X4; X13; X14; X15; X12; X2; X3; X26; X9; X17; X16; X5;
-                X6; X25; X7; X21; X23; X30; X10; X24; X22; X11; X1; X29; X20;
-                X8; X27] ,,
-               MAYCHANGE
-               [Q14; Q21; Q31; Q24; Q1; Q6; Q5; Q13; Q25; Q2; Q16; Q7; Q0;
-                Q10; Q15] ,,
-               MAYCHANGE [VF; CF; ZF; NF] ,,
-               MAYCHANGE [memory :> bytes (z,8 * k)] ,,
-               MAYCHANGE [PC])
-              s2
-              s2')
-         (\s. 151 * (k DIV 4 - 2))
-         (\s. 151 * (k DIV 4 - 2))`;;
-
-let DESTRUCT_EXISTS_ASSUMS_TAC =
-  REPEAT (FIRST_X_ASSUM (fun th ->
-    let cth = concl th in
-    if is_exists cth then MP_TAC th THEN STRIP_TAC
-    else NO_TAC));;
-
-let FIND_ABBREV_THEN (varname:string) (ttac:thm_tactic): tactic =
-  fun (asl,g) ->
-    let _,the_th = find (fun (_,th) -> let c = concl th in
-      is_eq c && is_var (rhs c) && name_of (rhs c) = varname)
-      asl in
-    ttac the_th (asl,g);;
 
 let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
   REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS;
@@ -675,15 +664,10 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       read SP s1 = sp /\ read SP s1' = sp /\
       read X30 s1 = word_add m_precalc (word (8 * 12 * i)) /\
       read X30 s1' = word_add m_precalc (word (8 * 12 * i)) /\
-      // equality
-      (exists a. bignum_from_memory (z, k) s1  = a /\ bignum_from_memory (z,k) s1' = a) /\
-      (exists a. bignum_from_memory (m,k) s1  = a /\ bignum_from_memory (m,k) s1' = a) /\
-      (exists a. bignum_from_memory (word_add sp (word 32),12) s1 = a /\
-                  bignum_from_memory (word_add sp (word 32),12) s1' = a) /\
-      (exists a. bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1 = a /\
-                  bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1' = a) /\
-      loop_rotate_eq_xregs(s1,s1') /\
-      loop_rotate_eq_qregs(s1,s1')`
+      // equalities
+      step2_body_eq_mems z m sp m_precalc k (s1,s1') /\
+      step2_body_eq_xregs(s1,s1') /\
+      step2_body_eq_qregs(s1,s1')`
     `\(i:num) (s:armstate). T` `\(i:num) (s:armstate). T`
     `\(i:num). 151` (* include backedge *)
     `\(i:num). 150`
@@ -694,9 +678,8 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       FIRST_ASSUM (fun th -> MP_TAC (MATCH_MP DIVIDES_LE th)) THEN ASM_ARITH_TAC;
 
       (* precond to loop entrance *)
-      REWRITE_TAC[loop_rotate_eqin; MULT_0; WORD_ADD_0; SUB_0] THEN
+      REWRITE_TAC[step2_body_eqin; MULT_0; WORD_ADD_0; SUB_0; ASSUME `k DIV 4 = k4`] THEN
       MATCH_MP_TAC ENSURES2_TRIVIAL THEN REWRITE_TAC[FORALL_PAIR_THM] THEN
-      SUBGOAL_THEN `k4 - 2 + 1 = k4 - 1` SUBST_ALL_TAC THENL [ASM_ARITH_TAC;ALL_TAC] THEN
       CONJ_TAC THENL [
         CONV_TAC (ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN NO_TAC;
         REPEAT STRIP_TAC THENL [
@@ -714,7 +697,9 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       REPEAT STRIP_TAC THEN
       ENSURES2_INIT_TAC "s0" "s0'" THEN
       UNDISCH_THEN `k DIV 4 = k4` (fun th -> SUBST_ALL_TAC th THEN ASSUME_TAC th) THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[eq_xregs;eq_qregs;mk_equiv_regs;BIGNUM_FROM_MEMORY_BYTES]) THEN
+      RULE_ASSUM_TAC(REWRITE_RULE[
+        step2_body_eq_mems;step2_body_eq_xregs;step2_body_eq_qregs;
+        mk_equiv_regs;BIGNUM_FROM_MEMORY_BYTES]) THEN
       REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
       DESTRUCT_EXISTS_ASSUMS_TAC THEN
       ARM_STUTTER_RIGHT_TAC MADDLOOP_STEP3_FULL_EXEC [1] "'" None THEN
@@ -725,16 +710,14 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       ] THEN
       DISCH_THEN (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
       CONJ_TAC THENL [
-        REPEAT_N 18 (CONJ_TAC THENL
+        REPEAT_N 14 (CONJ_TAC THENL
           [FIRST_X_ASSUM MATCH_ACCEPT_TAC ORELSE ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
           ALL_TAC]) THEN
-        CONJ_TAC THENL [
-          REWRITE_TAC[eq_xregs;eq_qregs;mk_equiv_regs] THEN
-          ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[];
-
-          REWRITE_TAC[eq_xregs;eq_qregs;mk_equiv_regs] THEN
-          ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[];
-        ];
+        REPEAT CONJ_TAC THENL (replicate
+          (REWRITE_TAC[step2_body_eq_mems;step2_body_eq_xregs;step2_body_eq_qregs;
+                       BIGNUM_FROM_MEMORY_BYTES;mk_equiv_regs] THEN
+           ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[])
+          3);
 
         CONJ_TAC THENL [
           ASSUME_TAC (ISPECL [`p1:armstate`] MAYCHANGE_STARTER) THEN
@@ -745,30 +728,30 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       ];
 
       (* postcond! *)
-      REWRITE_TAC[loop_rotate_eqout;SUB_REFL;MULT_0] THEN
+      REWRITE_TAC[step2_body_eqout;SUB_REFL;MULT_0] THEN
       ENSURES2_INIT_TAC "s0" "s0'" THEN
-      UNDISCH_THEN `k DIV 4 = k4` (fun th -> SUBST_ALL_TAC th THEN ASSUME_TAC th) THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[eq_xregs;eq_qregs;mk_equiv_regs;BIGNUM_FROM_MEMORY_BYTES]) THEN
+      RULE_ASSUM_TAC(REWRITE_RULE[
+        step2_body_eq_mems;step2_body_eq_xregs;step2_body_eq_qregs;
+        mk_equiv_regs;BIGNUM_FROM_MEMORY_BYTES]) THEN
       REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
       DESTRUCT_EXISTS_ASSUMS_TAC THEN
       ARM_STUTTER_RIGHT_TAC MADDLOOP_STEP3_FULL_EXEC [1] "'" None THEN
       REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
       CONJ_TAC THENL [
-        SUBGOAL_THEN `(val (word (k4 - (k4 - 1 + 1)):int64) = 0)` (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
-        [ SUBGOAL_THEN `k4 - (k4 - 1 + 1)=0` SUBST_ALL_TAC THENL [ASM_ARITH_TAC;ALL_TAC] THEN REWRITE_TAC[VAL_WORD_0]; ALL_TAC ] THEN
+        SUBGOAL_THEN `(val (word (k4 - (k4 - 1 + 1)):int64) = 0)`
+          (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
+        [ SUBGOAL_THEN `k4 - (k4 - 1 + 1)=0` SUBST_ALL_TAC THENL [ASM_ARITH_TAC;ALL_TAC]
+          THEN REWRITE_TAC[VAL_WORD_0]; ALL_TAC ] THEN
         REPLICATE_TAC 4 (CONJ_TAC THENL [FIRST_X_ASSUM MATCH_ACCEPT_TAC; ALL_TAC]) THEN
-        SUBGOAL_THEN `8 * (k-4) = 8 * 4 * (k4-1)` SUBST_ALL_TAC THENL
+        SUBGOAL_THEN `k4 - (k4 - 1) = 1 /\ k4 - (k4 - 1 + 1) = 0 /\
+                      8 * (k-4) = 8 * 4 * (k4-1)`
+          (REPEAT_TCL CONJUNCTS_THEN SUBST_ALL_TAC) THENL
         [ ASM_ARITH_TAC; ALL_TAC ] THEN
-        REPLICATE_TAC 8 (CONJ_TAC THENL
-          [FIRST_X_ASSUM MATCH_ACCEPT_TAC; ALL_TAC]) THEN
-        REPLICATE_TAC 4 (CONJ_TAC THENL
-          [ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES]; ALL_TAC]) THEN
-        CONJ_TAC THENL [
-          REWRITE_TAC[eq_xregs;eq_qregs;mk_equiv_regs] THEN
-          ASM_MESON_TAC[];
-          REWRITE_TAC[eq_xregs;eq_qregs;mk_equiv_regs] THEN
-          ASM_MESON_TAC[]
-        ];
+        ASM_REWRITE_TAC[] THEN
+        REPEAT CONJ_TAC THENL (replicate
+          (REWRITE_TAC[step2_body_eq_mems;step2_body_eq_xregs;step2_body_eq_qregs;
+                      BIGNUM_FROM_MEMORY_BYTES;mk_equiv_regs] THEN
+           ASM_MESON_TAC[]) 3);
 
         CONJ_TAC THENL [
           ASSUME_TAC (ISPECL [`p1:armstate`] MAYCHANGE_STARTER) THEN
@@ -787,7 +770,7 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       ASM_ARITH_TAC
     ] THEN
 
-    REWRITE_TAC[] THEN
+    REWRITE_TAC[step2_body_eq_mems] THEN
     REPEAT STRIP_TAC THEN
     (* To avoid appearance of 'i-1' in memory accesses in the upcoming goal states..
        create i', which starts from 0. *)
@@ -839,7 +822,8 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       ALL_TAC
     ] THEN
 
-    REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES;eq_xregs;eq_qregs;mk_equiv_regs] THEN
+    REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES;
+      step2_body_eq_mems;step2_body_eq_xregs;step2_body_eq_qregs;mk_equiv_regs] THEN
     DISCH_THEN (LABEL_TAC "HSPLITTER") (* the 3 part splitter *) THEN
     SUBGOAL_THEN `(i' + 1) + 1 = i' + 2` SUBST_ALL_TAC THENL [ARITH_TAC;ALL_TAC] THEN
 
@@ -1000,7 +984,6 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       USE_THEN "H" (fun th -> REWRITE_TAC[th]) THEN
       DISCH_THEN (fun th ->
         MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
-      REWRITE_TAC[LEFT_ADD_DISTRIB] THEN
       DISCH_THEN SUBST1_TAC THEN
 
       MP_TAC (GSYM (SPECL [`12 * (k4 - 1)`;`m_precalc:int64`;`s0':armstate`;`12*i'+(j+4):num`]
@@ -1008,7 +991,6 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       USE_THEN "H" (fun th -> REWRITE_TAC[th]) THEN
       DISCH_THEN (fun th ->
         MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
-      REWRITE_TAC[LEFT_ADD_DISTRIB] THEN
       DISCH_THEN SUBST1_TAC THEN
 
       ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
@@ -1028,34 +1010,32 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       ALL_TAC
     ] THEN
 
-    (W (fun (asl,g) ->
-      let zi'_abbrev = ref (TAUT `T`) in
-      (* EQUIV_STEPS_TAC cleans up abbreviations. cache zi'. *)
-      FIND_ABBREV_THEN "zi'" (fun th -> zi'_abbrev := th; ALL_TAC) THEN
-      EQUIV_STEPS_TAC [("equal",0,105,0,105)] MADDLOOP_STEP2_FULL_EXEC MADDLOOP_STEP3_FULL_EXEC THEN
-      (* backedge! *)
-      ARM_STUTTER_LEFT_TAC MADDLOOP_STEP2_FULL_EXEC [106;107] None THEN
-      SUBGOAL_THEN `~(val (word_sub (word (k4 - (i' + 1))) (word 1):int64) = 0)` MP_TAC THENL [
-        REWRITE_TAC[VAL_EQ_0] THEN
-        IMP_REWRITE_TAC[MESON [WORD_SUB] `y <= x ==> word_sub (word x) (word y):int64 = word (x - y)`] THEN
-        IMP_REWRITE_TAC[WORD_EQ_0;DIMINDEX_64] THEN
-        REPEAT CONJ_TAC THENL [
-          USE_THEN "HBOUND" MP_TAC THEN ARITH_TAC;
-          UNDISCH_TAC `k4 < 2 EXP 59` THEN ARITH_TAC;
-          USE_THEN "HBOUND" MP_TAC THEN ARITH_TAC
-        ];
+    FIND_ABBREV_THEN "zi'" (fun th ->
+      UNDISCH_THEN (concl th) (LABEL_TAC "DO_NOT_CLEAR")) THEN
 
-        DISCH_THEN (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN LABEL_TAC "HVALBOUND" th)
-      ] THEN
-      EQUIV_STEPS_TAC
-        [("replace",108,109,106,107) (* use 'replace' because ldr's pointer writeback should not be abbreviated *);
-        ("equal",109,147,107,145);
-        ("replace",147,148,145,146);
-        ("equal",148,150,146,148);
-        ("replace",150,151,148,149);
-        ("equal",151,152,149,150)] MADDLOOP_STEP2_FULL_EXEC MADDLOOP_STEP3_FULL_EXEC THEN
-      ARM_STUTTER_RIGHT_TAC MADDLOOP_STEP3_FULL_EXEC [151] "'" None THEN
-      (fun (asl,g) -> ASSUME_TAC !zi'_abbrev (asl,g)))) THEN
+    EQUIV_STEPS_TAC [("equal",0,105,0,105)] MADDLOOP_STEP2_FULL_EXEC MADDLOOP_STEP3_FULL_EXEC THEN
+    (* backedge! *)
+    ARM_STUTTER_LEFT_TAC MADDLOOP_STEP2_FULL_EXEC [106;107] None THEN
+    SUBGOAL_THEN `~(val (word_sub (word (k4 - (i' + 1))) (word 1):int64) = 0)` MP_TAC THENL [
+      REWRITE_TAC[VAL_EQ_0] THEN
+      IMP_REWRITE_TAC[WORD_SUB2] THEN
+      IMP_REWRITE_TAC[WORD_EQ_0;DIMINDEX_64] THEN
+      REPEAT CONJ_TAC THENL [
+        USE_THEN "HBOUND" MP_TAC THEN ARITH_TAC;
+        UNDISCH_TAC `k4 < 2 EXP 59` THEN ARITH_TAC;
+        USE_THEN "HBOUND" MP_TAC THEN ARITH_TAC
+      ];
+
+      DISCH_THEN (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN LABEL_TAC "HVALBOUND" th)
+    ] THEN
+    EQUIV_STEPS_TAC
+      [("replace",108,109,106,107) (* use 'replace' because ldr's pointer writeback should not be abbreviated *);
+      ("equal",109,147,107,145);
+      ("replace",147,148,145,146);
+      ("equal",148,150,146,148);
+      ("replace",150,151,148,149);
+      ("equal",151,152,149,150)] MADDLOOP_STEP2_FULL_EXEC MADDLOOP_STEP3_FULL_EXEC THEN
+    ARM_STUTTER_RIGHT_TAC MADDLOOP_STEP3_FULL_EXEC [151] "'" None THEN
 
     REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
     (* Prove remaining clauses from the postcondition *)
@@ -1063,12 +1043,12 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
     REWRITE_TAC[MESON[]`forall (a:A). exists x. a = x`] THEN
     CONJ_TAC THENL [
       REPEAT CONJ_TAC THENL [
-        IMP_REWRITE_TAC[MESON [WORD_SUB] `y <= x ==> word_sub (word x) (word y):int64 = word (x - y)`] THEN
+        IMP_REWRITE_TAC[WORD_SUB2] THEN
         REWRITE_TAC[WORD_EQ;DIMINDEX_64;CONG] THEN
         IMP_REWRITE_TAC[MOD_LT] THEN UNDISCH_TAC `k4 < 2 EXP 59` THEN USE_THEN "HBOUND" MP_TAC THEN
         ARITH_TAC;
 
-        IMP_REWRITE_TAC[MESON [WORD_SUB] `y <= x ==> word_sub (word x) (word y):int64 = word (x - y)`] THEN
+        IMP_REWRITE_TAC[WORD_SUB2] THEN
         REWRITE_TAC[WORD_EQ;DIMINDEX_64;CONG] THEN
         IMP_REWRITE_TAC[MOD_LT] THEN UNDISCH_TAC `k4 < 2 EXP 59` THEN USE_THEN "HBOUND" MP_TAC THEN
         ARITH_TAC;
@@ -1093,3 +1073,618 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
         MONOTONE_MAYCHANGE_TAC;
       ]
     ]);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Equivalence between the prologues only.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+(* Building input state equiv. *)
+
+let step2_prolog_in_regs, step2_prolog_out_regs = approximate_input_output_regs
+    (snd MADDLOOP_STEP3_FULL_EXEC) [(0x00,0xac)];;
+let step2_prolog_in_regs = union step2_prolog_in_regs
+    (subtract step2_body_in_regs step2_prolog_out_regs);;
+let step2_prolog_out_regs = union step2_prolog_out_regs step2_body_in_regs;;
+
+let step2_prolog_in_xregs = filter (fun t -> type_of t = `:(armstate,int64)component`)
+    step2_prolog_in_regs;;
+let step2_prolog_in_qregs = filter (fun t -> type_of t = `:(armstate,int128)component`)
+    step2_prolog_in_regs;;
+
+(* exclude pointers and loop counter because they will explicitly appear in step2_prolog_eqin*)
+let step2_prolog_in_xregs = subtract step2_prolog_in_xregs [`X27`;`X1`;`X2`;`SP`;`X30`];;
+
+let step2_prolog_eqin_xregs = new_definition
+  (mk_eq
+    (`(step2_prolog_eqin_xregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_prolog_in_xregs,`:(armstate,int64)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_prolog_eqin_qregs = new_definition
+  (mk_eq
+    (`(step2_prolog_eqin_qregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_prolog_in_qregs,`:(armstate,int128)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_prolog_eq_mems = new_definition
+  `(step2_prolog_eq_mems:int64->int64->int64->int64->num->armstate#armstate->bool)
+      z m sp m_precalc k (s1,s1') <=>
+    (exists a. bignum_from_memory (z,k) s1  = a /\ bignum_from_memory (z,k) s1' = a) /\
+    (exists a. bignum_from_memory (m,k) s1  = a /\ bignum_from_memory (m,k) s1' = a) /\
+    (exists a. bignum_from_memory (word_add sp (word 32),12) s1 = a /\
+                bignum_from_memory (word_add sp (word 32),12) s1' = a) /\
+    (exists a. bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1 = a /\
+                bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1' = a)`;;
+
+let step2_prolog_eqin = new_definition
+  `forall s1 s1' z m m_precalc sp k.
+  (step2_prolog_eqin:(armstate#armstate)->int64->int64->int64->int64->num->bool)
+        (s1,s1') z m m_precalc sp k <=>
+   (read X27 s1 = word (k DIV 4 - 1) /\ read X27 s1' = word (k DIV 4 - 2) /\
+    read X1 s1 = z /\ read X1 s1' = z /\
+    read X2 s1 = m /\ read X2 s1' = m /\
+    read SP s1 = sp /\ read SP s1' = sp /\
+    read X30 s1 = m_precalc /\ read X30 s1' = m_precalc /\
+    // Equalities
+    step2_prolog_eq_mems z m sp m_precalc k (s1,s1') /\
+    step2_prolog_eqin_xregs (s1,s1') /\
+    step2_prolog_eqin_qregs (s1,s1'))`;;
+
+
+(* Building output state equiv and maychange sets. *)
+
+let step2_prolog_out_xregs,step2_prolog_out_regs2 = partition
+    (fun t -> type_of t = `:(armstate,int64)component`) step2_prolog_out_regs;;
+let step2_prolog_out_qregs,step2_prolog_out_flags = partition
+    (fun t -> type_of t = `:(armstate,int128)component`) step2_prolog_out_regs2;;
+
+
+let step2_prolog_maychanges =
+  end_itlist (fun x y -> mk_icomb (mk_icomb (`,,`,x),y))
+    [mk_icomb (`MAYCHANGE`,mk_list (step2_prolog_out_xregs, `:(armstate,int64)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_prolog_out_qregs, `:(armstate,int128)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_prolog_out_flags, `:(armstate,bool)component`));
+     `MAYCHANGE [memory :> bytes (z:int64,8 * k)]`;
+     `MAYCHANGE [PC]`];;
+
+(* Prolog's output regs equivalence must cover loop body's input regs equiv. *)
+assert (subset step2_body_in_xregs step2_prolog_out_xregs);;
+assert (subset step2_body_in_qregs step2_prolog_out_qregs);;
+
+(* exclude pointers and loop counter because they will explicitly appear in step2_prolog_eqout *)
+let step2_prolog_out_xregs = subtract step2_prolog_out_xregs [`X27`;`X1`;`X2`;`SP`;`X30`];;
+
+let step2_prolog_eqout_xregs = new_definition
+  (mk_eq
+    (`(step2_prolog_eqout_xregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_prolog_out_xregs,`:(armstate,int64)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_prolog_eqout_qregs = new_definition
+  (mk_eq
+    (`(step2_prolog_eqout_qregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_prolog_out_qregs,`:(armstate,int128)component`);`(s1:armstate,s1':armstate)`]));;
+
+let step2_prolog_eqout = new_definition
+  `forall s1 s1' z m m_precalc sp k.
+  (step2_prolog_eqout:(armstate#armstate)->int64->int64->int64->int64->num->bool)
+        (s1,s1') z m m_precalc sp k <=>
+   (read X27 s1 = word (k DIV 4 - 1) /\ read X27 s1' = word (k DIV 4 - 2) /\
+    read X1 s1 = word_add z (word 32) /\ read X1 s1' = word_add z (word 32) /\
+    read X2 s1 = word_add m (word 32) /\ read X2 s1' = word_add m (word 32) /\
+    read SP s1 = sp /\ read SP s1' = sp /\
+    read X30 s1 = word_add m_precalc (word 96) /\
+    read X30 s1' = word_add m_precalc (word 96) /\
+    // Equalities
+    step2_prolog_eq_mems z m sp m_precalc k (s1,s1') /\
+    step2_prolog_eqout_xregs(s1,s1') /\
+    step2_prolog_eqout_qregs(s1,s1'))`;;
+
+
+let equiv_goal2 = mk_equiv_statement
+    `ALL (nonoverlapping (z,8 * k))
+     [word pc:int64,LENGTH maddloop_step2_full_mc; word pc2:int64,LENGTH maddloop_step3_full_mc;
+      sp:int64,128; m:int64,8*k; m_precalc:int64,8*12*(k DIV 4 - 1)] /\
+     aligned 16 (sp:int64) /\ 8 divides k /\ 12 <= k /\ k < 2 EXP 61`
+    step2_prolog_eqin
+    step2_prolog_eqout
+    maddloop_step2_full_mc 0x0 0xb0
+    step2_prolog_maychanges
+    maddloop_step3_full_mc 0x0 0xb0
+    step2_prolog_maychanges
+    `\(s:armstate). 44` `\(s:armstate). 44`;;
+
+
+let MADDLOOP_STEP2_STEP3_PROLOG_EQUIV = prove(equiv_goal2,
+  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS;
+    ALLPAIRS;ALL;NONOVERLAPPING_CLAUSES;
+    fst MADDLOOP_STEP2_FULL_EXEC; fst MADDLOOP_STEP3_FULL_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+
+  (** Initialize **)
+  EQUIV_INITIATE_TAC step2_prolog_eqin THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[
+    step2_prolog_eq_mems;step2_prolog_eqin_qregs;step2_prolog_eqin_xregs;
+    mk_equiv_regs; BIGNUM_FROM_MEMORY_BYTES]) THEN
+  REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
+  DESTRUCT_EXISTS_ASSUMS_TAC THEN
+
+  (* prepare memory loads *)
+  ABBREV_TAC `k4 = k DIV 4` THEN
+  SUBGOAL_THEN `k4 < 2 EXP 59` ASSUME_TAC THENL [ASM_ARITH_TAC;ALL_TAC]
+  THEN
+  SUBGOAL_THEN `4 * k4 = k`
+      (fun th -> SUBST_ALL_TAC (GSYM th) THEN LABEL_TAC "DO_NOT_CLEAR" th)
+      THENL [
+    UNDISCH_TAC `8 divides k` THEN
+    REWRITE_TAC[DIVIDES_DIV_MULT;ARITH_RULE`k DIV 8 = k DIV (4*2)`;GSYM DIV_DIV] THEN
+    ASM_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+
+  (* load from m (x2).. *)
+  SUBGOAL_THEN
+    `forall j. j < 4 ==> exists a1.
+        read (memory :> bytes64 (word_add m (word (8 * (4 + j))))) s0 = a1 /\
+        read (memory :> bytes64 (word_add m (word (8 * (4 + j))))) s0' = a1`
+  MP_TAC THENL [
+    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
+
+    MAP_EVERY (fun state_term ->
+      MP_TAC (GSYM (SPECL [`4*k4:num`;`m:int64`;state_term;`4 + j`]
+          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
+      COND_CASES_TAC THENL [ALL_TAC; ASM_ARITH_TAC] THEN
+      DISCH_THEN (fun th ->
+        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
+      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
+
+    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
+
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
+  STRIP_TAC THEN
+
+  (* combine loads from X2 to q !! *)
+  COMBINE_READ_BYTES64_PAIRS_TAC ~base_ptr:`m:int64` THEN
+
+  (* load from sp.. *)
+  SUBGOAL_THEN
+    `forall j. j < 4 ==> exists a2.
+        read (memory :> bytes64 (word_add sp (word (32 + 8 * j)))) s0 = a2 /\
+        read (memory :> bytes64 (word_add sp (word (32 + 8 * j)))) s0' = a2`
+  MP_TAC THENL [
+    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
+
+    MAP_EVERY (fun state_term ->
+      MP_TAC (GSYM (SPECL [`12:num`;`word_add sp (word 32):int64`;state_term;`j:num`]
+          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
+      COND_CASES_TAC THENL [ALL_TAC; ASM_ARITH_TAC] THEN
+      DISCH_THEN (fun th ->
+        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
+            WORD_ADD_ASSOC_CONSTS; LEFT_ADD_DISTRIB] th)) THEN
+      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
+
+    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
+
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
+                       ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
+  STRIP_TAC THEN
+
+  (* load from m_precalc (x30).. *)
+  SUBGOAL_THEN
+    `forall j. j < 4 ==> exists a3.
+        read (memory :> bytes64 (word_add m_precalc (word (8 * j)))) s0 = a3 /\
+        read (memory :> bytes64 (word_add m_precalc (word (8 * j)))) s0' = a3`
+  MP_TAC THENL [
+    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
+
+    MAP_EVERY (fun state_term ->
+      MP_TAC (GSYM (SPECL [`12 * (k4 - 1):num`;`m_precalc:int64`;state_term;`j:num`]
+          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
+      COND_CASES_TAC THENL [ALL_TAC; ASM_ARITH_TAC] THEN
+      DISCH_THEN (fun th ->
+        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
+      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
+
+    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
+
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LAND_CONV
+    (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
+     ONCE_DEPTH_CONV NUM_REDUCE_CONV THENC REWRITE_CONV[WORD_ADD_0])) THEN
+  STRIP_TAC THEN
+
+  (* load from z (x1).. *)
+  SUBGOAL_THEN
+    `forall j. j < 2 ==> exists a4.
+        read (memory :> bytes64 (word_add z (word (32 + 8 * j)))) s0 = a4 /\
+        read (memory :> bytes64 (word_add z (word (32 + 8 * j)))) s0' = a4`
+  MP_TAC THENL [
+    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
+
+    MAP_EVERY (fun state_term ->
+      MP_TAC (GSYM (SPECL [`4 * k4`;`z:int64`;state_term;`4 + j:num`]
+          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
+      COND_CASES_TAC THENL [ALL_TAC; ASM_ARITH_TAC] THEN
+      DISCH_THEN (fun th ->
+        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
+                LEFT_ADD_DISTRIB;ARITH_RULE`8*4=32`] th)) THEN
+      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
+
+    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
+
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LAND_CONV
+    (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
+     ONCE_DEPTH_CONV NUM_REDUCE_CONV THENC REWRITE_CONV[WORD_ADD_0])) THEN
+  STRIP_TAC THEN
+
+  (* start *)
+  EQUIV_STEPS_TAC [
+      ("replace",0,1,0,1);("equal",1,39,1,39);("replace",39,40,39,40);
+      ("replace",40,44,40,44)]
+    MADDLOOP_STEP2_FULL_EXEC MADDLOOP_STEP3_FULL_EXEC THEN
+
+  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  (* Prove remaining clauses from the postcondition *)
+  ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THENL [
+    (** SUBGOAL 1. Outputs **)
+    ASM_REWRITE_TAC[step2_prolog_eqout;
+                step2_prolog_eq_mems;step2_prolog_eqout_xregs;step2_prolog_eqout_qregs;
+                mk_equiv_regs;BIGNUM_FROM_MEMORY_BYTES] THEN
+    FIND_ABBREV_THEN "k" (SUBST_ALL_TAC o GSYM) THEN
+    ASM_REWRITE_TAC[ARITH_RULE`(4 * x) DIV 4 = x`; MESON[]`!(x:A). exists y. x = y`] THEN
+    NO_TAC;
+
+    (** SUBGOAL 2. Maychange left **)
+    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
+    MONOTONE_MAYCHANGE_TAC;
+
+    (** SUBGOAL 3. Maychange right **)
+    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
+    MONOTONE_MAYCHANGE_TAC
+  ]);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Equivalence between the epilogues only.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+(* input states *)
+
+let step2_epilog_in_regs, step2_epilog_out_regs = approximate_input_output_regs
+    (snd MADDLOOP_STEP3_FULL_EXEC) [(0x30c,0x4ac)];;
+
+let step2_epilog_in_xregs = filter (fun t -> type_of t = `:(armstate,int64)component`)
+    step2_epilog_in_regs;;
+let step2_epilog_in_qregs = filter (fun t -> type_of t = `:(armstate,int128)component`)
+    step2_epilog_in_regs;;
+
+(* Loop body's output regs equivalence must cover epilogue's input regs equiv. *)
+assert (subset step2_epilog_in_xregs step2_body_out_xregs);;
+assert (subset step2_epilog_in_qregs step2_body_out_qregs);;
+
+(* exclude pointers and loop counter because they will explicitly appear in step2_epilog_eqin *)
+let step2_epilog_in_xregs = subtract step2_epilog_in_xregs [`X27`;`X1`;`X2`;`SP`;`X30`];;
+
+let step2_epilog_eqin_xregs = new_definition
+  (mk_eq
+    (`(step2_epilog_eqin_xregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_epilog_in_xregs,`:(armstate,int64)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_epilog_eqin_qregs = new_definition
+  (mk_eq
+    (`(step2_epilog_eqin_qregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_epilog_in_qregs,`:(armstate,int128)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_epilog_eq_mems = new_definition
+  `(step2_epilog_eq_mems:int64->int64->int64->int64->num->armstate#armstate->bool)
+      z m sp m_precalc k (s1,s1') <=>
+    (exists a. bignum_from_memory (z,k) s1  = a /\ bignum_from_memory (z,k) s1' = a) /\
+    (exists a. bignum_from_memory (m,k) s1  = a /\ bignum_from_memory (m,k) s1' = a) /\
+    (exists a. bignum_from_memory (word_add sp (word 32),12) s1 = a /\
+                bignum_from_memory (word_add sp (word 32),12) s1' = a) /\
+    (exists a. bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1 = a /\
+                bignum_from_memory (m_precalc,12*(k DIV 4 - 1)) s1' = a)`;;
+
+let step2_epilog_eqin = new_definition
+  `forall s1 s1' z m m_precalc sp k.
+  (step2_epilog_eqin:(armstate#armstate)->int64->int64->int64->int64->num->bool)
+        (s1,s1') z m m_precalc sp k <=>
+   (read X27 s1 = word 1 /\ read X27 s1' = word 0 /\
+    read X1 s1 = word_add z (word (8 * (k - 4))) /\
+    read X1 s1' = word_add z (word (8 * (k - 4))) /\
+    read X2 s1 = word_add m (word (8 * (k - 4))) /\
+    read X2 s1' = word_add m (word (8 * (k - 4))) /\
+    read SP s1 = sp /\
+    read SP s1' = sp /\
+    read X30 s1 = word_add m_precalc (word (8 * 12 * (k DIV 4 - 1))) /\
+    read X30 s1' = word_add m_precalc (word (8 * 12 * (k DIV 4 - 1))) /\
+    step2_epilog_eq_mems z m sp m_precalc k (s1,s1') /\
+    step2_epilog_eqin_xregs (s1,s1') /\
+    step2_epilog_eqin_qregs (s1,s1'))`;;
+
+
+(* output states and maychange *)
+
+let step2_epilog_out_xregs,step2_epilog_out_regs2 = partition
+    (fun t -> type_of t = `:(armstate,int64)component`) step2_epilog_out_regs;;
+let step2_epilog_out_qregs,step2_epilog_out_flags = partition
+    (fun t -> type_of t = `:(armstate,int128)component`) step2_epilog_out_regs2;;
+
+let step2_epilog_maychanges_left =
+  end_itlist (fun x y -> mk_icomb (mk_icomb (`,,`,x),y))
+    [mk_icomb (`MAYCHANGE`,mk_list (step2_epilog_out_xregs, `:(armstate,int64)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_epilog_out_qregs, `:(armstate,int128)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_epilog_out_flags, `:(armstate,bool)component`));
+     `MAYCHANGE [memory :> bytes (z:int64,8 * k)]`;
+     `MAYCHANGE [PC; X27]`];;
+(* X27 is a counter. actually, this is changed in the left program only. *)
+let step2_epilog_maychanges_right =
+  end_itlist (fun x y -> mk_icomb (mk_icomb (`,,`,x),y))
+    [mk_icomb (`MAYCHANGE`,mk_list (step2_epilog_out_xregs, `:(armstate,int64)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_epilog_out_qregs, `:(armstate,int128)component`));
+     mk_icomb (`MAYCHANGE`,mk_list (step2_epilog_out_flags, `:(armstate,bool)component`));
+     `MAYCHANGE [memory :> bytes (z:int64,8 * k)]`;
+     `MAYCHANGE [PC]`];;
+
+(* exclude pointers and loop counter because they will explicitly appear in step2_epilog_eqout *)
+let step2_epilog_out_xregs = subtract step2_epilog_out_xregs [`X1`;`X2`;`SP`;`X30`];;
+
+let step2_epilog_eqout_xregs = new_definition
+  (mk_eq
+    (`(step2_epilog_eqout_xregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_epilog_out_xregs,`:(armstate,int64)component`);`(s1:armstate,s1':armstate)`]));;
+let step2_epilog_eqout_qregs = new_definition
+  (mk_eq
+    (`(step2_epilog_eqout_qregs:armstate#armstate->bool) (s1,s1')`,
+      list_mk_icomb "mk_equiv_regs"
+      [mk_list (step2_epilog_in_qregs,`:(armstate,int128)component`);`(s1:armstate,s1':armstate)`]));;
+
+let step2_epilog_eqout = new_definition
+  `forall s1 s1' z m m_precalc sp k.
+  (step2_epilog_eqout:(armstate#armstate)->int64->int64->int64->int64->num->bool)
+        (s1,s1') z m m_precalc sp k <=>
+   (read X1 s1 = word_add z (word (8 * (k - 4))) /\
+    read X1 s1' = word_add z (word (8 * (k - 4))) /\
+    read X2 s1 = word_add m (word (8 * (k - 4))) /\
+    read X2 s1' = word_add m (word (8 * (k - 4))) /\
+    read SP s1 = sp /\
+    read SP s1' = sp /\
+    read X30 s1 = word_add m_precalc (word (8 * 12 * (k DIV 4 - 1))) /\
+    read X30 s1' = word_add m_precalc (word (8 * 12 * (k DIV 4 - 1))) /\
+    // Equalities
+    step2_epilog_eq_mems z m sp m_precalc k (s1,s1') /\
+    step2_epilog_eqout_xregs(s1,s1') /\
+    step2_epilog_eqout_qregs(s1,s1'))`;;
+
+
+let equiv_goal3 = mk_equiv_statement
+    `ALL (nonoverlapping (z,8 * k))
+     [word pc:int64,LENGTH maddloop_step2_full_mc; word pc2:int64,LENGTH maddloop_step3_full_mc;
+      sp:int64,128; m:int64,8*k; m_precalc:int64,8*12*(k DIV 4 - 1)] /\
+     aligned 16 (sp:int64) /\ 8 divides k /\ 12 <= k /\ k < 2 EXP 61`
+    step2_epilog_eqin
+    step2_epilog_eqout
+    maddloop_step2_full_mc 0xb0 0x25c
+    step2_epilog_maychanges_left
+    maddloop_step3_full_mc 0x30c 0x4b0
+    step2_epilog_maychanges_right
+    `\(s:armstate). 107` `\(s:armstate). 105`;;
+
+
+let MADDLOOP_STEP2_STEP3_EPILOG_EQUIV = prove(equiv_goal3,
+  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS;
+    ALLPAIRS;ALL;NONOVERLAPPING_CLAUSES;
+    fst MADDLOOP_STEP2_FULL_EXEC; fst MADDLOOP_STEP3_FULL_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+
+  (* prepare memory loads *)
+  ABBREV_TAC `k4 = k DIV 4` THEN
+  SUBGOAL_THEN `3 <= k4 /\ k4 < 2 EXP 59` MP_TAC THENL [ASM_ARITH_TAC;STRIP_TAC]
+  THEN
+  SUBGOAL_THEN `k = 4 * k4` (LABEL_TAC "HK_DO_NOT_CLEAR") THENL [
+    UNDISCH_TAC `8 divides k` THEN
+    REWRITE_TAC[DIVIDES_DIV_MULT;ARITH_RULE`k DIV 8 = k DIV (4*2)`;GSYM DIV_DIV] THEN
+    ASM_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+
+  (* split 'bignum_from_memory (z,k) s = bignum_from_memory (z,k) s2' into two parts:
+      1. bignum_from_memory (z,k-1) s = ..
+      2. bignum_from_memory (z+4*(k-1),4) s = .. *)
+  SUBGOAL_THEN `!(s:armstate) (s2:armstate).
+      (exists a. bignum_from_memory (z:int64,4*k4) s = a /\ bignum_from_memory (z,4*k4) s2 = a)
+      <=>
+      ((exists a1. bignum_from_memory (z,(4*k4-4)) s = a1 /\ bignum_from_memory (z,(4*k4-4)) s2 = a1) /\
+       (exists a2. bignum_from_memory (word_add z (word (8*(4*k4-4))),4) s = a2 /\
+                   bignum_from_memory (word_add z (word (8*(4*k4-4))),4) s2 = a2))`
+      (LABEL_TAC "Hmemsplit") THENL [
+    REPEAT STRIP_TAC THEN EQ_TAC THENL [
+      STRIP_TAC THEN REPEAT CONJ_TAC THENL [
+        SUBGOAL_THEN `MIN (4*k4) (4 * k4-4) = 4 * k4-4` ASSUME_TAC
+        THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+        ASM_MESON_TAC[LOWDIGITS_BIGNUM_FROM_MEMORY];
+
+        SUBGOAL_THEN `4 = 4*k4 - (4*k4-4)` (LABEL_TAC "H") THENL [ ASM_ARITH_TAC; ALL_TAC ] THEN
+        ASM_MESON_TAC[HIGHDIGITS_BIGNUM_FROM_MEMORY]
+      ];
+
+      REPEAT STRIP_TAC THEN
+      SUBGOAL_THEN `4 * k4 = (4 * k4 - 4) + 4` SUBST1_TAC THENL [ ASM_ARITH_TAC; ALL_TAC ] THEN
+      ASM_MESON_TAC[BIGNUM_FROM_MEMORY_SPLIT]
+    ];
+
+    ALL_TAC
+  ] THEN
+
+  (** Initialize **)
+  EQUIV_INITIATE_TAC step2_epilog_eqin THEN
+  REMOVE_THEN "HK_DO_NOT_CLEAR" (fun th -> SUBST_ALL_TAC th THEN LABEL_TAC "HK_DO_NOT_CLEAR" th) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[
+    step2_epilog_eq_mems;step2_epilog_eqin_qregs;step2_epilog_eqin_xregs;
+    mk_equiv_regs; BIGNUM_FROM_MEMORY_BYTES; ARITH_RULE`(4 * x) DIV 4 = x`]) THEN
+  REMOVE_THEN "Hmemsplit" (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN LABEL_TAC "Hmemsplit" th) THEN
+  REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
+  DESTRUCT_EXISTS_ASSUMS_TAC THEN
+
+  (* define m_precalc' to avoid negative offsets appearing in equations. *)
+
+  ABBREV_TAC `m_precalc' = word_add m_precalc (word (8 * 12 * (k4 - 2))):int64` THEN
+  SUBGOAL_THEN `word_sub m_precalc' (word (8 * 12 * (k4 - 2))) = m_precalc:int64` ASSUME_TAC THENL
+  [ EXPAND_TAC "m_precalc'" THEN CONV_TAC WORD_RULE; ALL_TAC ] THEN
+  REPEAT (FIRST_X_ASSUM (fun th -> let c = concl th in
+    if can (find_term (fun t -> t = `X30`)) c then
+      (FIND_ABBREV_THEN "m_precalc" (fun ath -> MP_TAC (REWRITE_RULE[GSYM ath] th)))
+    else NO_TAC)) THEN
+  REWRITE_TAC[WORD_RULE
+    `word_add (word_sub x (word y)) (word z):int64 = word_add x (word_sub (word z) (word y))`] THEN
+  SUBGOAL_THEN `word_sub (word (8 * 12 * (k4 - 1))) (word (8 * 12 * (k4 - 2))):int64 =
+                word 96` (LABEL_TAC "Hm_precalc'") THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+      AP_TERM_TAC THEN ASM_ARITH_TAC;
+      ASM_ARITH_TAC
+    ];
+    ALL_TAC
+  ] THEN
+  REMOVE_THEN "Hm_precalc'" (fun th -> SUBST_ALL_TAC th THEN LABEL_TAC "Hm_precalc'" th) THEN
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `nonoverlapping_modulo (2 EXP 64) (val (z:int64),8 * 4 * k4)
+      (val (m_precalc':int64),96)` ASSUME_TAC THENL [
+
+    EXPAND_TAC "m_precalc'" THEN NONOVERLAPPING_TAC;
+    ALL_TAC
+  ] THEN
+
+  (* load from sp.. *)
+  SUBGOAL_THEN
+    `forall j. j < 8 ==> exists a1.
+        read (memory :> bytes64 (word_add sp (word (64 + 8 * j)))) s0 = a1 /\
+        read (memory :> bytes64 (word_add sp (word (64 + 8 * j)))) s0' = a1`
+  MP_TAC THENL [
+    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
+
+    MAP_EVERY (fun state_term ->
+      MP_TAC (GSYM (SPECL [`12:num`;`word_add sp (word 32):int64`;state_term;`4 + j:num`]
+          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
+      COND_CASES_TAC THENL [ALL_TAC; DISCARD_ASSUMPTIONS_TAC
+        (fun th -> can (find_term (fun t -> is_const t && name_of t = "read")) (concl th))
+        THEN ASM_ARITH_TAC] THEN
+      DISCH_THEN (fun th ->
+        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
+            WORD_ADD_ASSOC_CONSTS; LEFT_ADD_DISTRIB; ADD_ASSOC] th)) THEN
+      CONV_TAC (ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
+
+    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
+
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
+                       ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
+  STRIP_TAC THEN
+
+  (* load from m_precalc (x30).. *)
+  SUBGOAL_THEN
+    `forall j. j < 12 ==> exists a2.
+        read (memory :> bytes64 (word_add m_precalc' (word (8 * j)))) s0 = a2 /\
+        read (memory :> bytes64 (word_add m_precalc' (word (8 * j)))) s0' = a2`
+  MP_TAC THENL [
+    REPEAT STRIP_TAC THEN
+    DISCARD_ASSUMPTIONS_TAC
+      (fun th -> can (find_term
+        (fun t -> is_const t && let n = name_of t in
+            (n = "bytes64" || n = "nonoverlapping_modulo" || n = "aligned_bytes_loaded" ||
+             List.exists (fun x -> String.starts_with ~prefix:x n) ["X";"Q"])))
+        (concl th)) THEN
+    EXPAND_TAC "m_precalc'" THEN
+    REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN
+
+    MAP_EVERY (fun state_term ->
+      MP_TAC (GSYM (SPECL [`12 * (k4 - 1):num`;`m_precalc:int64`;
+                           state_term;`(12 * (k4 - 2) + j)`]
+          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
+      COND_CASES_TAC THENL [ALL_TAC;
+        FIRST_X_ASSUM MP_TAC THEN MATCH_MP_TAC (TAUT `P ==> (~P ==> Q)`) THEN ASM_ARITH_TAC] THEN
+      DISCH_THEN (fun th ->
+        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
+                             WORD_ADD_ASSOC_CONSTS; LEFT_ADD_DISTRIB] th)) THEN
+      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
+
+    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
+
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
+                       ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
+  STRIP_TAC THEN
+
+  (* load from z (x1).. *)
+  SUBGOAL_THEN
+    `forall j. j < 2 ==> exists a3.
+        read (memory :> bytes64 (word_add z (word (8 * ((4 * k4 - 4) + 2 + j))))) s0 = a3 /\
+        read (memory :> bytes64 (word_add z (word (8 * ((4 * k4 - 4) + 2 + j))))) s0' = a3`
+  MP_TAC THENL [
+    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
+
+    MAP_EVERY (fun state_term ->
+      MP_TAC (GSYM (SPECL [`4`;`word_add z (word (8 * (4 * k4 - 4))):int64`;state_term;`2 + j:num`]
+          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
+      COND_CASES_TAC THENL [ALL_TAC; DISCARD_ASSUMPTIONS_TAC
+          (fun th -> can (find_term (fun t -> is_const t && name_of t = "read")) (concl th))
+          THEN FIRST_X_ASSUM MP_TAC THEN MATCH_MP_TAC (TAUT `P ==> (~P ==> Q)`)
+          THEN ASM_ARITH_TAC] THEN
+      DISCH_THEN (fun th ->
+        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; WORD_ADD_ASSOC_CONSTS;
+                LEFT_ADD_DISTRIB] th)) THEN
+      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
+
+    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
+
+    ALL_TAC
+  ] THEN
+  CONV_TAC (LAND_CONV
+    (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
+     ONCE_DEPTH_CONV NUM_REDUCE_CONV THENC REWRITE_CONV[WORD_ADD_0])) THEN
+  STRIP_TAC THEN
+
+  (* start *)
+  REMOVE_ABBREV_THEN "m_precalc" (LABEL_TAC "m_precalc_DO_NOT_CLEAR") THEN
+  REMOVE_ABBREV_THEN "m_precalc'" (K ALL_TAC) THEN
+
+  EQUIV_STEPS_TAC [
+      ("equal",0,105,0,105);
+      ("delete",105,107,105,105) (* exit the branch of the maddloop (step2) *)]
+    MADDLOOP_STEP2_FULL_EXEC MADDLOOP_STEP3_FULL_EXEC THEN
+
+  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  (* Prove remaining clauses from the postcondition *)
+  ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THENL [
+    (** SUBGOAL 1. Outputs **)
+    ASM_REWRITE_TAC[step2_epilog_eqout;
+                step2_epilog_eq_mems;step2_epilog_eqout_xregs;step2_epilog_eqout_qregs;
+                mk_equiv_regs;BIGNUM_FROM_MEMORY_BYTES] THEN
+    ASM_REWRITE_TAC[ARITH_RULE`(4 * x) DIV 4 = x`; MESON[] `!(x:A). exists y. x = y`] THEN
+    EXPAND_TAC "m_precalc" THEN ASM_REWRITE_TAC[WORD_ADD_SUB] THEN
+    (* only one goal here.. let's expand memory :> bytes. *)
+    REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES] THEN
+    REPEAT (ONCE_REWRITE_TAC[BIGNUM_FROM_MEMORY_EXPAND] THEN
+            CHANGED_TAC (CONV_TAC (ONCE_DEPTH_CONV NUM_REDUCE_CONV))) THEN
+    REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN CONV_TAC (ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+    ASM_REWRITE_TAC[] THEN MESON_TAC[];
+
+    (** SUBGOAL 2. Maychange left **)
+    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
+    MONOTONE_MAYCHANGE_TAC;
+
+    (** SUBGOAL 3. Maychange right **)
+    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
+    MONOTONE_MAYCHANGE_TAC
+  ]);;
