@@ -727,6 +727,28 @@ let ENSURES2_WEAKEN = prove(
   MATCH_MP_TAC EVENTUALLY_N_MONO THEN REWRITE_TAC[] THEN GEN_TAC THEN
   ASM_MESON_TAC[]);;
 
+(*  ENSURES2_TRANS but slightly relaxes constraints on the intermediate
+    assertion Q and the final frame C ,, C'.
+*)
+let ENSURES2_TRANS_GEN = prove(
+  `forall (step:S->S->bool) P Q Q' R C C' C'' n1 n1' n2 n2'.
+      ensures2 step P Q C (\s. n1) (\s. n1') /\
+      ensures2 step Q' R C' (\s. n2) (\s. n2') /\
+      (forall s s'. Q(s,s') ==> Q'(s,s')) /\
+      (C ,, C') subsumed C''
+      ==> ensures2 step P R C'' (\s. n1 + n2) (\s. n1' + n2')`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC (REWRITE_RULE [GSYM IMP_CONJ] ENSURES2_WEAKEN) THEN
+  MAP_EVERY EXISTS_TAC [`P:S#S->bool`;`R:S#S->bool`;`(C:S#S->S#S->bool) ,, (C':S#S->S#S->bool)`] THEN
+  REPEAT CONJ_TAC THENL [
+    MESON_TAC[]; MESON_TAC[]; ASM_REWRITE_TAC[]; ALL_TAC
+  ] THEN
+  MATCH_MP_TAC ENSURES2_TRANS THEN
+  EXISTS_TAC `Q:S#S->bool` THEN ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC (REWRITE_RULE [GSYM IMP_CONJ] ENSURES2_WEAKEN) THEN
+  MAP_EVERY EXISTS_TAC [`Q':S#S->bool`;`R:S#S->bool`;`C':S#S->S#S->bool`] THEN
+  ASM_REWRITE_TAC[SUBSUMED_REFL]);;
+
 let ENSURES2_CONJ = prove(
   `!(step:S->S->bool) P Q P' Q' C fn1 fn2.
       ensures2 step P Q C fn1 fn2 /\
@@ -1024,7 +1046,7 @@ let APPLY_IF (checker:term->bool) (t:tactic) =
    result as an antecendent. If any or both of the two theorems have assumption
    like `(assumption) ==> ensures2`, this tactic tries to prove the
    assumption(s). *)
-let ENSURES2_TRANS_TAC ensures2th ensures2th2 =
+let ENSURES2_CONJ2_TRANS_TAC ensures2th ensures2th2 =
   (* instantiate first ensures2 theorem *)
   MP_TAC (SPEC_ALL (SPECL [`pc:num`;`pc3:num`] ensures2th)) THEN
   APPLY_IF is_imp (ANTS_TAC THENL [

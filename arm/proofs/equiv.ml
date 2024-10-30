@@ -32,6 +32,16 @@ let rec takedrop (n:int) (l:'a list): 'a list * 'a list =
       (h::a,b);;
 
 
+let define_mc_from_intlist (newname:string) (ops:int list) =
+  let charlist = List.concat_map
+    (fun op32 ->
+      [Char.chr (Int.logand op32 255);
+       Char.chr (Int.logand (Int.shift_right op32 8) 255);
+       Char.chr (Int.logand (Int.shift_right op32 16) 255);
+       Char.chr (Int.logand (Int.shift_right op32 24) 255)]) ops in
+  let byte_list = Bytes.init (List.length charlist) (fun i -> List.nth charlist i) in
+  define_word_list newname (term_of_bytes byte_list);;
+
 let DIVIDES_4_VAL_WORD_ADD_64 = prove(
   `!pc ofs. 4 divides val (word pc:int64) /\ 4 divides ofs ==>
       4 divides val (word (pc+ofs):int64)`,
@@ -933,7 +943,9 @@ let ARM_STUTTER_RIGHT_TAC exec_th (snames:int list) (st_suffix:string)
     CLARIFY_TAC);;
 
 
-(* maychanges: `(MAYCHANGE [..] ,, MAYCHANGE ...)` *)
+(* maychanges: `(MAYCHANGE [..] ,, MAYCHANGE ...)`
+   combine MAYCHANGE of fragmented memory accesses of constant sizes into
+   one if contiguous. *)
 let simplify_maychanges: term -> term =
   let maychange_const = `MAYCHANGE` and seq_const = `,,` in
   let word64ty = `:(64)word` and word128ty = `:(128)word` in
@@ -971,12 +983,16 @@ let simplify_maychanges: term -> term =
         (* t is register *)
         let _,args = dest_type (type_of t) in
         let destty = last args in
-        if destty = word64ty then
-          maychange_regs64 := !maychange_regs64 @ [t]
-        else if destty = word128ty then
-          maychange_regs128 := !maychange_regs128 @ [t]
-        else
-          maychange_others := !maychange_others @ [t] in
+        if destty = word64ty then begin
+          if not (mem t !maychange_regs64) then
+            maychange_regs64 := !maychange_regs64 @ [t]
+        end else if destty = word128ty then begin
+          if not (mem t !maychange_regs128) then
+            maychange_regs128 := !maychange_regs128 @ [t]
+        end else begin
+          if not (mem t !maychange_others) then
+            maychange_others := !maychange_others @ [t]
+        end in
 
     let rec f (t:term): unit =
       if is_binary ",," t then
@@ -1011,10 +1027,13 @@ let simplify_maychanges: term -> term =
       with _ -> (t, 0) in
     while length !maychange_mems <> 0 do
       let next_term,(ptr,len) = List.hd !maychange_mems in
-      if not (is_numeral len) then
-        (* there is nothing we can do *)
-        maychange_mems_merged := next_term::!maychange_mems_merged
-      else
+      if not (is_numeral len) then begin
+        (* if len is not a constant, be conservative and just add it
+           unless it already exists *)
+        (if not (mem next_term !maychange_mems_merged) then
+          maychange_mems_merged := next_term::!maychange_mems_merged);
+        maychange_mems := List.tl !maychange_mems
+      end else
         let baseptr, _ = base_ptr_and_ofs ptr in
 
         let mems_of_interest, remaining = List.partition
@@ -2093,8 +2112,8 @@ let mk_equiv_statement_simple (assum:term) (equiv_in:thm) (equiv_out:thm)
 (* Tactics for high-level reasoning on program equivalence.                  *)
 (* ------------------------------------------------------------------------- *)
 
-(* Given two program equivalences, say 'equiv1 p1 p2' and 'equiv2 p2 p3',
-   prove 'equiv p1 p3'. *)
+(* Given two program equivalences between three programs, say 'equiv1 p1 p2'
+   and 'equiv2 p2 p3', prove 'equiv p1 p3'. *)
 
 let EQUIV_TRANS_TAC
     (equiv1_th,equiv2_th)
@@ -2111,7 +2130,7 @@ let EQUIV_TRANS_TAC
       let def = fst (dest_eq (snd (strip_forall (concl eq_in_state_th)))) in
       fst (strip_comb def) in
 
-  ENSURES2_TRANS_TAC equiv1_th equiv2_th THEN
+  ENSURES2_CONJ2_TRANS_TAC equiv1_th equiv2_th THEN
 
   (* break 'ALL nonoverlapping' in assumptions *)
   RULE_ASSUM_TAC (REWRITE_RULE[
@@ -2251,6 +2270,118 @@ let PROVE_ENSURES_FROM_EQUIV_AND_ENSURES_N_TAC
     (** SUBGOAL 3. Frame **)
     MESON_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;MODIFIABLE_SIMD_REGS]
   ];;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Sequentially composing two program equivalences and making a theorem      *)
+(* on a larger program equivalence between the two composed programs.        *)
+(* ------------------------------------------------------------------------- *)
+
+let prove_equiv_seq_composition (equivth1:thm) (equivth2:thm)
+    (prog1_out_implies_prog2_in_thm:thm) =
+  (* step 1. let's make a goal. *)
+  let quants1,body1 = strip_forall (concl equivth1) and
+      quants2,body2 = strip_forall (concl equivth2) in
+  (* check that there is no quantified variable with same name but different types. *)
+  if List.exists2 (fun t1 t2 -> name_of t1 = name_of t2 && type_of t1 <> type_of t2)
+                  quants1 quants2
+  then failwith "has quantified variable with same name but different types" else
+  let quants = union quants1 quants2 in
+
+  (* break '(assums) ==> ensures ...' *)
+  let assums1,body1 = if is_imp body1 then dest_imp body1 else `T`,body1 and
+      assums2,body2 = if is_imp body2 then dest_imp body2 else `T`,body2 in
+  if assums1 <> assums2 then failwith "assumptions are different" else
+  let assums = assums1 in
+
+  (* get pre/post/frame/steps *)
+  let ensures_const,[arm_const;precond1;postcond1;frame1;step11;step12] =
+      strip_comb body1 in
+  if name_of ensures_const <> "ensures2"
+  then failwith "equivth1 is not ensures2" else
+  if name_of arm_const <> "arm"
+  then failwith "equivth1 is not ensures2 arm" else
+  let ensures_const,[arm_const;precond2;postcond2;frame2;step21;step22] =
+      strip_comb body2 in
+  if name_of ensures_const <> "ensures2"
+  then failwith "equivth2 is not ensures2" else
+  if name_of arm_const <> "arm"
+  then failwith "equivth1 is not ensures2 arm" else
+
+  let postcond1_vars, postcond1_body = dest_gabs postcond1 and
+      precond2_vars, precond2_body = dest_gabs precond2 in
+  let postcond1_var1,postcond1_var2 = dest_pair postcond1_vars and
+      precond2_var1,precond2_var2 = dest_pair precond2_vars in
+  let [frame1_vars1;frame1_vars2], frame1_body = strip_gabs frame1 and
+      [frame2_vars1;frame2_vars2], frame2_body = strip_gabs frame2 and
+      step11_var,step11_body = dest_abs step11 and
+      step12_var,step12_body = dest_abs step12 and
+      step21_var,step21_body = dest_abs step21 and
+      step22_var,step22_body = dest_abs step22 in
+  if frame1_vars1 <> frame2_vars1 || frame1_vars2 <> frame2_vars2
+  then failwith "lambda variables of frames mismatch" else
+  if step11_var <> step21_var || step12_var <> step22_var
+  then failwith "lambda variables of steps mismatch" else
+
+  (* simplify maychange first, then make the maychange term *)
+  let frame1_body_left,frame1_body_right = dest_conj frame1_body and
+      frame2_body_left,frame2_body_right = dest_conj frame2_body in
+  let combine_maychanges t1 t2 =
+      let t1' = fst (dest_comb (fst (dest_comb t1))) and
+          t2' = fst (dest_comb (fst (dest_comb t2))) in
+      let res = mk_icomb (mk_icomb (`,,`,t1'),t2') in
+      let res' = REWRITE_CONV[GSYM SEQ_ASSOC] res in
+      snd (dest_eq (concl res')) in
+  let new_maychange1 =
+      simplify_maychanges (combine_maychanges frame1_body_left frame2_body_left) in
+  let new_maychange1 = list_mk_comb (new_maychange1,
+    let s,s' = fst (dest_pair frame1_vars1),fst (dest_pair frame1_vars2) in [s;s']) in
+  let new_maychange2 =
+      simplify_maychanges (combine_maychanges frame1_body_right frame2_body_right) in
+  let new_maychange2 = list_mk_comb (new_maychange2,
+    let s2,s2' = snd (dest_pair frame1_vars1),snd (dest_pair frame1_vars2) in [s2;s2']) in
+  let new_maychange = list_mk_gabs ([frame1_vars1;frame1_vars2],
+    mk_conj(new_maychange1,new_maychange2)) in
+  
+  (* make a new step. *)
+  let new_step1 = mk_abs (step11_var,(mk_binary "+" (step11_body,step21_body))) and
+      new_step2 = mk_abs (step12_var,(mk_binary "+" (step12_body,step22_body))) in
+
+  (* build a new ensures2 *)
+  let new_ensures2 = list_mk_icomb "ensures2"
+      [`arm`;precond1;postcond2;new_maychange;new_step1;new_step2] in
+  (* finally, make a goal! *)
+  let new_goal = list_mk_forall (quants,
+    if assums = `T` then new_ensures2 else mk_imp (assums,new_ensures2)) in
+  prove(new_goal,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES2_TRANS_GEN THEN
+    MAP_EVERY EXISTS_TAC [postcond1;precond2;frame1;frame2] THEN
+    REPEAT CONJ_TAC THENL [
+      (* First ensures2 *)
+      ASM_MESON_TAC[equivth1];
+
+      (* Second ensures2 *)
+      ASM_MESON_TAC[equivth2];
+
+      (* The implication between postcond1 and precond2 *)
+      REWRITE_TAC[] THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
+      ASM_REWRITE_TAC[] THEN
+      (ASM_MESON_TAC[prog1_out_implies_prog2_in_thm] ORELSE PRINT_GOAL_TAC);
+
+      (* Maychanges: copid from ENSURES2_FRAME_SUBSUMED_TAC modulo its first line *)
+      REWRITE_TAC[subsumed;FORALL_PAIR_THM;SEQ_PAIR_SPLIT;ETA_AX;SOME_FLAGS] THEN
+      REPEAT STRIP_TAC THENL
+      (* two subgoals from here *)
+      replicate
+        ((fun (asl,g) ->
+          let st,st' = rand(rator g), rand g in
+          (FIRST_X_ASSUM (fun th ->
+            if rand(concl th) = st' then
+              MP_TAC th THEN MAP_EVERY SPEC_TAC [(st',st');(st,st)]
+            else NO_TAC)) (asl,g)) THEN
+        REWRITE_TAC[GSYM subsumed; ETA_AX] THEN SUBSUMED_MAYCHANGE_TAC)
+        2
+    ]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Load convenient OCaml functions for merging two lists of actions which    *)
