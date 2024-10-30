@@ -501,7 +501,7 @@ let PRINT_TAC (s:string): tactic =
 (* A variant of ARM_BASIC_STEP_TAC, but
    - targets eventually_n
    - preserves 'arm s sname' at assumption *)
-let ARM_BASIC_STEP'_TAC =
+let ARM_N_BASIC_STEP_TAC =
   let arm_tm = `arm` and arm_ty = `:armstate` and one = `1:num` in
   fun decode_th sname (asl,w) ->
     (* w = `eventually_n _ {stepn} _ {sv}` *)
@@ -520,11 +520,11 @@ let ARM_BASIC_STEP'_TAC =
 (* A variant of ARM_STEP_TAC for equivalence checking.
    If 'store_update_to' is Some ref, a list of
    (`read .. = expr`) will be stored instead of added as assumptions *)
-let ARM_STEP'_TAC (mc_length_th,decode_th) subths sname
+let ARM_N_STEP_TAC (mc_length_th,decode_th) subths sname
                   (store_update_to:thm list ref option) =
   (*** This does the basic decoding setup ***)
 
-  ARM_BASIC_STEP'_TAC decode_th sname THEN
+  ARM_N_BASIC_STEP_TAC decode_th sname THEN
 
   (*** This part shows the code isn't self-modifying ***)
 
@@ -564,7 +564,7 @@ let ARM_STEP'_TAC (mc_length_th,decode_th) subths sname
    to preserve, 'ss'.
    If clean_old_abbrevs is true, transitively remove assumptions that
    were using the removed variables (rhs of the removed assumptions) *)
-let DISCARD_OLDSTATE'_TAC ss (clean_old_abbrevs:bool) =
+let DISCARD_OLDSTATE_AGGRESSIVE_TAC ss (clean_old_abbrevs:bool) =
   let vs = List.map (fun s -> mk_var(s,`:armstate`)) ss in
   let rec unbound_statevars_of_read bound_svars tm =
     match tm with
@@ -628,14 +628,14 @@ let DISCARD_REGS_WITH_DEAD_VALUE_TAC (dead_regs:term list) =
       asl in
     ALL_TAC (asl,w);;
 
-(* A variant of ARM_STEPS_TAC but using ARM_STEP'_TAC and DISCARD_OLDSTATE'_TAC instead.
+(* A variant of ARM_STEPS_TAC but using ARM_N_STEP_TAC and DISCARD_OLDSTATE_AGGRESSIVE_TAC instead.
    dead_value_info is an optional array that maps the step number - 1 to the dead
    registers. *)
-let ARM_STEPS'_TAC th snums stname_suffix stnames_no_discard dead_value_info =
+let ARM_N_STEPS_TAC th snums stname_suffix stnames_no_discard dead_value_info =
   MAP_EVERY (fun s ->
       let stname = "s" ^ string_of_int s ^ stname_suffix in
-      time (ARM_STEP'_TAC th [] stname) None THEN
-      DISCARD_OLDSTATE'_TAC (stname::stnames_no_discard) false THEN
+      time (ARM_N_STEP_TAC th [] stname) None THEN
+      DISCARD_OLDSTATE_AGGRESSIVE_TAC (stname::stnames_no_discard) false THEN
       begin match dead_value_info with
       | None -> ALL_TAC
       | Some arr -> DISCARD_REGS_WITH_DEAD_VALUE_TAC (arr.(s-1))
@@ -643,7 +643,7 @@ let ARM_STEPS'_TAC th snums stname_suffix stnames_no_discard dead_value_info =
     snums;;
 
 (* A variant of ENSURES_FINAL_STATE_TAC but targets eventually_n. *)
-let ENSURES_FINAL_STATE'_TAC =
+let ENSURES_N_FINAL_STATE_TAC =
   GEN_REWRITE_TAC I [EVENTUALLY_N_TRIVIAL] THEN
   GEN_REWRITE_TAC TRY_CONV [BETA_THM] THEN
   W(fun (asl,w) ->
@@ -846,9 +846,9 @@ let ARM_LOCKSTEP_TAC =
       Printf.printf "Running left...\n";
       let cur_stname' = name_of (rand (snd ((dest_abs o rand o rator) g))) in
       STASH_ASMS_OF_READ_STATES [cur_stname'] (asl,g)) THEN
-    ARM_STEP'_TAC execth [] new_stname (Some update_eqs_prog1) THEN
+    ARM_N_STEP_TAC execth [] new_stname (Some update_eqs_prog1) THEN
     (*cleanup assumptions that use old abbrevs*)
-    DISCARD_OLDSTATE'_TAC [new_stname] false THEN
+    DISCARD_OLDSTATE_AGGRESSIVE_TAC [new_stname] false THEN
     (* .. and dead registers. *)
     DISCARD_REGS_WITH_DEAD_VALUE_TAC ignored_output_regs_left THEN
     RECOVER_ASMS_OF_READ_STATES THEN
@@ -857,9 +857,9 @@ let ARM_LOCKSTEP_TAC =
     (fun (asl,g) -> Printf.printf "Running right...\n"; ALL_TAC (asl,g)) THEN
     MATCH_MP_TAC EVENTUALLY_N_SWAP THEN
     STASH_ASMS_OF_READ_STATES [new_stname] THEN
-    ARM_STEP'_TAC execth' [] new_stname' (Some update_eqs_prog2) THEN
+    ARM_N_STEP_TAC execth' [] new_stname' (Some update_eqs_prog2) THEN
     (*cleanup assumptions that use old abbrevs*)
-    DISCARD_OLDSTATE'_TAC [new_stname'] true THEN
+    DISCARD_OLDSTATE_AGGRESSIVE_TAC [new_stname'] true THEN
     (* .. and dead registers. *)
     DISCARD_REGS_WITH_DEAD_VALUE_TAC ignored_output_regs_right THEN
     RECOVER_ASMS_OF_READ_STATES THEN
@@ -926,7 +926,7 @@ let ARM_STUTTER_LEFT_TAC exec_th (snames:int list)
     let inner_eventually = snd (dest_abs (snd (dest_comb (t')))) in
     let sname = fst (dest_var (snd (dest_comb inner_eventually))) in
     STASH_ASMS_OF_READ_STATES [sname] THEN
-    ARM_STEPS'_TAC exec_th snames "" [] dead_value_info THEN
+    ARM_N_STEPS_TAC exec_th snames "" [] dead_value_info THEN
     RECOVER_ASMS_OF_READ_STATES THEN
     CLARIFY_TAC);;
 
@@ -937,7 +937,7 @@ let ARM_STUTTER_RIGHT_TAC exec_th (snames:int list) (st_suffix:string)
     let sname = fst (dest_var (snd (dest_comb g))) in
     MATCH_MP_TAC EVENTUALLY_N_SWAP THEN
     STASH_ASMS_OF_READ_STATES [sname] THEN
-    ARM_STEPS'_TAC exec_th snames st_suffix [] dead_value_info THEN
+    ARM_N_STEPS_TAC exec_th snames st_suffix [] dead_value_info THEN
     RECOVER_ASMS_OF_READ_STATES THEN
     MATCH_MP_TAC EVENTUALLY_N_SWAP THEN
     CLARIFY_TAC);;
@@ -1293,7 +1293,7 @@ let ABBREV_READ_TAC (eqth:thm) (append_to:thm list ref):tactic =
     do not appear as assumptions.
 *)
 
-let ARM_STEP'_AND_ABBREV_TAC =
+let ARM_N_STEP_AND_ABBREV_TAC =
   let update_eqs_prog: thm list ref = ref [] in
   fun execth (new_stname) (store_to:thm list ref) ->
     (* Stash the right program's state equations first *)
@@ -1301,8 +1301,8 @@ let ARM_STEP'_AND_ABBREV_TAC =
       let cur_stname' = name_of (rand (snd ((dest_abs o rand o rator) g))) in
       STASH_ASMS_OF_READ_STATES [cur_stname'] (asl,g)) THEN
     (* One step on the left program *)
-    ARM_STEP'_TAC execth [] new_stname (Some update_eqs_prog) THEN
-    DISCARD_OLDSTATE'_TAC [new_stname] false THEN
+    ARM_N_STEP_TAC execth [] new_stname (Some update_eqs_prog) THEN
+    DISCARD_OLDSTATE_AGGRESSIVE_TAC [new_stname] false THEN
     RECOVER_ASMS_OF_READ_STATES THEN
     (* Abbreviate RHSes of the new state equations *)
     W (fun (asl,g) ->
@@ -1313,9 +1313,9 @@ let ARM_STEP'_AND_ABBREV_TAC =
 
 (* store_to is a reference to list of state numbers and abbreviations.
    It is initialized as empty when this tactic starts.
-   Unlike ARM_STEP'_AND_ABBREV_TAC, the equations on assigned fresh variables
+   Unlike ARM_N_STEP_AND_ABBREV_TAC, the equations on assigned fresh variables
     (`RHS = assigned_fresh_var`) are added as assumptions. *)
-let ARM_STEPS'_AND_ABBREV_TAC execth (snums:int list)
+let ARM_N_STEPS_AND_ABBREV_TAC execth (snums:int list)
     (store_to: (int * thm) list ref):tactic =
   W (fun (asl,g) -> store_to := []; ALL_TAC) THEN
   (* Stash the right program's state equations first *)
@@ -1333,7 +1333,7 @@ let ARM_STEPS'_AND_ABBREV_TAC execth (snums:int list)
       (fun (asl,g) ->
         let _ = Printf.printf "Stepping to state %s..\n" stname in
         ALL_TAC (asl,g)) THEN
-      ARM_STEP'_AND_ABBREV_TAC execth stname store_to_n THEN
+      ARM_N_STEP_AND_ABBREV_TAC execth stname store_to_n THEN
       (fun (asl,g) ->
         store_to := (map (fun x -> (n,x)) !store_to_n) @ !store_to;
         Printf.printf "%d new abbreviations (%d in total)\n%!"
@@ -1349,10 +1349,10 @@ let get_read_component (eq:term): term =
 
 let _ = get_read_component `read X1 s = word 0`;;
 
-(* For the right program. abbrevs must be generated by ARM_STEPS'_AND_ABBREV_TAC. *)
-let ARM_STEPS'_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
+(* For the right program. abbrevs must be generated by ARM_N_STEPS_AND_ABBREV_TAC. *)
+let ARM_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
                                (abbrevs: (int * thm) list ref): tactic =
-  (* Warning: no nested call of ARM_STEPS'_AND_REWRITE_TAC *)
+  (* Warning: no nested call of ARM_N_STEPS_AND_REWRITE_TAC *)
   let abbrevs_cpy:(int * thm) list ref = ref [] in
   (* Stash the left program's state equations first *)
   (fun (asl,g) ->
@@ -1368,8 +1368,8 @@ let ARM_STEPS'_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
             stname (List.length !abbrevs_cpy) in
         ALL_TAC) THEN
       MATCH_MP_TAC EVENTUALLY_N_SWAP THEN
-      ARM_STEP'_TAC execth [] stname (Some new_state_eq) THEN
-      DISCARD_OLDSTATE'_TAC [stname] false THEN
+      ARM_N_STEP_TAC execth [] stname (Some new_state_eq) THEN
+      DISCARD_OLDSTATE_AGGRESSIVE_TAC [stname] false THEN
       MATCH_MP_TAC EVENTUALLY_N_SWAP THEN
       (fun (asl,g) ->
         let n_at_lprog = List.nth inst_map (n-1) in
@@ -1403,7 +1403,7 @@ let ARM_STEPS'_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
                   (Printf.printf "Failed to proceed.\n";
                     Printf.printf "- rhs: `%s`\n" (string_of_term rhs);
                     Printf.printf "- rhs_to_abbrev: `%s`\n" (string_of_thm rhs_to_abbrev);
-                    failwith "ARM_STEPS'_AND_REWRITE_TAC"))
+                    failwith "ARM_N_STEPS_AND_REWRITE_TAC"))
               | None -> (* This case happens when new_state_eq already has abbreviated RHS *)
                 None)
             new_state_eqs in
@@ -1419,7 +1419,7 @@ let ARM_STEPS'_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
           List.iter (fun t -> Printf.printf "    %s\n" (string_of_term (concl t))) new_state_eqs;
           Printf.printf "  old state eq:\n";
           List.iter (fun (_,t) -> Printf.printf "    %s\n" (string_of_term (concl t))) abbrevs_for_st_n;
-          failwith "ARM_STEPS'_AND_REWRITE_TAC")) THEN CLARIFY_TAC)
+          failwith "ARM_N_STEPS_AND_REWRITE_TAC")) THEN CLARIFY_TAC)
     snums THEN
   RECOVER_ASMS_OF_READ_STATES THEN
   CLARIFY_TAC;;
