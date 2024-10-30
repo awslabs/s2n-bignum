@@ -1254,14 +1254,7 @@ let OUTERLOOP_MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       MAP_EVERY (fun state_term ->
         MP_TAC (GSYM (SPECL [`4*k4:num`;`z:int64`;state_term;`4 * i' + (j + 6)`]
             BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-        COND_CASES_TAC THENL [ALL_TAC;
-          FIRST_X_ASSUM MP_TAC THEN
-          EVERY_ASSUM (fun th ->
-            let c = concl th in
-            if can (find_term (fun t -> is_const t && mem (name_of t) ["read";"nonoverlapping_modulo";"word_add"])) c
-            then ALL_TAC else
-            if exists (fun t -> mem t [`j:num`;`i':num`;`k4:num`]) (frees c)
-            then MP_TAC th else ALL_TAC) THEN ARITH_TAC] THEN
+        COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC] THEN
         DISCH_THEN (fun th ->
           MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
         DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
@@ -1284,14 +1277,7 @@ let OUTERLOOP_MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
       MAP_EVERY (fun state_term ->
         MP_TAC (GSYM (SPECL [`4*k4:num`;`m:int64`;state_term;`4 * i' + (j + 4)`]
             BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-        COND_CASES_TAC THENL [ALL_TAC;
-          FIRST_X_ASSUM MP_TAC THEN
-          EVERY_ASSUM (fun th ->
-            let c = concl th in
-            if can (find_term (fun t -> is_const t && mem (name_of t) ["read";"nonoverlapping_modulo";"word_add"])) c
-            then ALL_TAC else
-            if exists (fun t -> mem t [`j:num`;`i':num`;`k4:num`]) (frees c)
-            then MP_TAC th else ALL_TAC) THEN ARITH_TAC] THEN
+        COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC] THEN
         DISCH_THEN (fun th ->
           MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
         DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
