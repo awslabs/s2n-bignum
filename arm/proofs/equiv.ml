@@ -409,6 +409,43 @@ let mk_fresh_temp_name =
     counter := (i + 1);
     "temp_" ^ (string_of_int i);;
 
+(* Given t which is `memory :> bytes (..)` or `memory :> bytes64 (..)`,
+   return the address and byte size. *)
+let get_memory_read_info (t:term): (term * term) option =
+  if not (is_binary ":>" t) then None else
+  let l,r = dest_binary ":>" t in
+  let lname,_ = dest_const l in
+  if lname <> "memory" then None else
+  let c,args = strip_comb r in
+  match fst (dest_const c) with
+  | "bytes64" -> (* args is just a location *)
+    assert (List.length args = 1);
+    Some (List.hd args, `8`)
+  | "bytes" -> (* args is (loc, len). *)
+    assert (List.length args = 1);
+    Some (dest_pair (List.hd args))
+  | _ -> (* don't know what it is *)
+    None;;
+
+get_memory_read_info `memory :> bytes64 x`;; (* Some (`x`,`8`) *)
+get_memory_read_info `memory :> bytes (x, sz)`;; (* Some (`x`,`sz`) *)
+get_memory_read_info `X0`;; (* None *)
+
+
+let get_base_ptr_and_ofs (t:term): term * int =
+  try (* t is "word_add baseptr (word ofs)" *)
+    let baseptr,y = dest_binary "word_add" t in
+    let wordc, ofs = dest_comb y in
+    if name_of wordc <> "word" then failwith "not word" else
+    (baseptr, dest_small_numeral ofs)
+  with _ -> (t, 0);;
+
+get_base_ptr_and_ofs `x:int64`;;
+get_base_ptr_and_ofs `word_add x (word 32):int64`;;
+(* To get (x, 48) from this, WORD_ADD_ASSOC_CONST must be applied first. *)
+get_base_ptr_and_ofs `word_add (word_add x (word 16)) (word 32):int64`;;
+
+
 (* ------------------------------------------------------------------------- *)
 (* eventually_n_at_pc states that if pre/postconditions at pc/pc2 are        *)
 (* satisfied at nth step, you can 'promote' eventually to eventually_n.      *)
@@ -514,8 +551,76 @@ let ARM_N_BASIC_STEP_TAC =
     let stepn_thm = GSYM (NUM_ADD_CONV (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
     (GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
       GEN_REWRITE_TAC I [EVENTUALLY_N_STEP] THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN CONV_TAC EXISTS_NONTRIVIAL_CONV;
+     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
+      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
+       (PRINT_GOAL_TAC THEN
+        FAIL_TAC ("Equality between two states is ill-formed." ^
+                  " Did you forget extra condition like pointer alignment?")));
       X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth]]) (asl,w);;
+
+
+let MK_MEMORY_READ_EQ_BIGDIGIT_RULE (t:term) (assumptions:(string * thm) list): thm =
+  let get_full_info t =
+    match t with
+    | Comb (Comb (Const ("read", _), comp), state_var) ->
+      Option.map (fun (x,size) -> (x,get_base_ptr_and_ofs x,size,state_var)) (get_memory_read_info comp)
+    | _ -> None in
+
+  match get_full_info t with
+  | Some (ptrofs,(ptr, ofs),size,state_var) ->
+    if size <> `8` then failwith "read memory other than bytes64 is unsupported" else
+    if ofs mod 8 <> 0 then failwith "offset is not divisible by 8" else
+    let larger_reads = List.filter (fun (_,ath) ->
+      try
+        let c = lhs (concl ath) in
+        match get_full_info c with
+        | Some (ptrofs2,(ptr2,ofs2),size2,state_var2) ->
+          ptr = ptr2 && state_var = state_var2
+        | None -> false
+      with _ -> false) assumptions in
+    if larger_reads = []
+    then failwith ("No memory read assumption that encompasses `" ^ (string_of_term t) ^ "`")
+    else
+    let _ = if length larger_reads > 1 then
+      Printf.printf "Warning: There are more than one memory read assumption that encompasses `%s`\n"
+          (string_of_term t) in
+
+    let larger_read_th = snd (List.hd larger_reads) in
+    let larger_read = lhs (concl larger_read_th) in
+    let ptrofs2,(ptr2,ofs2),size2,_ = Option.get (get_full_info (lhs (concl larger_read_th))) in
+    if ofs2 mod 8 <> 0 then failwith "offset of the larger read is not divisible by 8" else
+    let reldigitofs = mk_small_numeral ((ofs - ofs2) / 8) in
+    let nwords = rhs (concl (NUM_REDUCE_CONV (mk_binary "DIV" (size2,`8`)))) in
+
+    (* t = bigdigit t' ofs *)
+    let the_goal = mk_eq(t,mk_comb
+      (`word:num->int64`,list_mk_comb (`bigdigit`,[larger_read;reldigitofs]))) in
+
+    let eq_th = TAC_PROOF((assumptions,the_goal),
+      SUBGOAL_THEN (subst [size2,`size2:num`;nwords,`nwords:num`] `8 * nwords = size2`) MP_TAC
+      THENL [ ARITH_TAC; DISCH_THEN (LABEL_TAC "H_NWORDS") ] THEN
+      USE_THEN "H_NWORDS" (fun hth -> REWRITE_TAC[REWRITE_RULE[hth]
+        (SPECL [nwords;ptrofs2] (GSYM BIGNUM_FROM_MEMORY_BYTES))]) THEN
+      REWRITE_TAC[BIGDIGIT_BIGNUM_FROM_MEMORY] THEN
+      COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC (* index must be within bounds *) ] THEN
+      REWRITE_TAC[WORD_VAL; WORD_ADD_ASSOC_CONSTS; MULT_0; WORD_ADD_0] THEN ARITH_TAC) in
+    REWRITE_RULE[larger_read_th] eq_th
+  | None -> failwith "not memory read";;
+
+(*
+  # MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 x) s`
+    ["",new_axiom `read (memory :> bytes (x:int64,32)) s = k`];;
+  - : thm = |- read (memory :> bytes64 x) s = word (bigdigit k 0)
+
+  # MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word 16))) s`
+    ["",new_axiom `read (memory :> bytes (word_add x (word 8):int64,32)) s = k`];;
+  - : thm = |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1)
+
+  # MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word 16))) s`
+    ["",new_axiom `read (memory :> bytes (word_add x (word 8):int64,8 * 4)) s = k`];;
+  - : thm = |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1)
+*)
+
 
 (* A variant of ARM_STEP_TAC for equivalence checking.
    If 'store_update_to' is Some ref, a list of
@@ -553,6 +658,25 @@ let ARM_N_STEP_TAC (mc_length_th,decode_th) subths sname
     MP_TAC(end_itlist CONJ thl) THEN
     ASSEMBLER_SIMPLIFY_TAC) THEN
 
+  (*** If there is an 'unsimplified' memory read on the right hand side,
+       try to find its right expression using bigdigit. ***)
+  DISCH_THEN(fun th (asl,w) ->
+    let new_memory_reads: thm list ref = ref [] in
+    let ths = map (fun th2 ->
+      try
+        let the_rhs = rhs (concl th2) in
+        try
+          let th2' = MK_MEMORY_READ_EQ_BIGDIGIT_RULE the_rhs asl in
+          let _ = new_memory_reads := th2'::!new_memory_reads in
+          GEN_REWRITE_RULE RAND_CONV [th2'] th2
+        with Failure s -> failwith s
+      with _ -> th2) (CONJUNCTS th) in
+    let res_th = end_itlist CONJ (ths @ !new_memory_reads) in
+    let _ = if !arm_print_log then
+       (Printf.printf "original th: %s\n" (string_of_term (concl th));
+        Printf.printf "rewritten th: %s\n" (string_of_term (concl res_th))) in
+    MP_TAC res_th (asl,w)) THEN
+
   begin match store_update_to with
   | None -> STRIP_TAC
   | Some r -> DISCH_THEN (fun th ->
@@ -576,7 +700,7 @@ let DISCARD_OLDSTATE_AGGRESSIVE_TAC ss (clean_old_abbrevs:bool) =
     | _ -> [] in
   let is_read (tm:term): bool =
     match tm with
-    Comb(Comb(Const("read",_),_),s) -> true
+    Comb(Comb(Const("read",_),_),_) -> true
     | _ -> false in
   let old_abbrevs: term list ref = ref [] in
   (* Erase all 'read c s' equations from assumptions whose s does not
@@ -963,23 +1087,9 @@ let simplify_maychanges: term -> term =
         maychange_others = ref [] in
     (* t: `X1`, `PC`, `Q0`, `memory :> bytes64 (x:int64)`, ... *)
     let add_maychange (t:term): unit =
-      try
-        (* t is memory access, e.g., `memory :> bytes64 (x:int64)` *)
-        let l,r = dest_binary ":>" t in
-        let lname,_ = dest_const l in
-        if lname <> "memory" then failwith "not mem" else
-        let c,args = strip_comb r in
-        match fst (dest_const c) with
-        | "bytes64" -> (* args is just a location *)
-          assert (List.length args = 1);
-          maychange_mems := !maychange_mems @ [(t, (List.hd args, `8`))]
-        | "bytes" -> (* args is (loc, len). *)
-          assert (List.length args = 1);
-          let loc, len = dest_pair (List.hd args) in
-          maychange_mems := !maychange_mems @ [(t, (loc, len))]
-        | _ -> (* don't know what it is *)
-          maychange_others := !maychange_others @ [t]
-      with _ ->
+      match get_memory_read_info t with
+      | Some (ptr,len) -> maychange_mems := !maychange_mems @ [(t, (ptr,len))]
+      | None ->
         (* t is register *)
         let _,args = dest_type (type_of t) in
         let destty = last args in
@@ -1018,13 +1128,6 @@ let simplify_maychanges: term -> term =
           subst [base_ptr,the_base_ptr;mk_small_numeral len,the_len] the_memory_base_ptr_len in
       maychange_mems_merged := !maychange_mems_merged @ [final_term] in
 
-    let base_ptr_and_ofs (t:term): term * int =
-      try (* t is "word_add baseptr (word ofs)" *)
-        let baseptr,y = dest_binary "word_add" t in
-        let wordc, ofs = dest_comb y in
-        if name_of wordc <> "word" then failwith "not word" else
-        (baseptr, dest_small_numeral ofs)
-      with _ -> (t, 0) in
     while length !maychange_mems <> 0 do
       let next_term,(ptr,len) = List.hd !maychange_mems in
       if not (is_numeral len) then begin
@@ -1034,10 +1137,10 @@ let simplify_maychanges: term -> term =
           maychange_mems_merged := next_term::!maychange_mems_merged);
         maychange_mems := List.tl !maychange_mems
       end else
-        let baseptr, _ = base_ptr_and_ofs ptr in
+        let baseptr, _ = get_base_ptr_and_ofs ptr in
 
         let mems_of_interest, remaining = List.partition
-          (fun _,(ptr,len) -> baseptr = fst (base_ptr_and_ofs ptr) && is_numeral len)
+          (fun _,(ptr,len) -> baseptr = fst (get_base_ptr_and_ofs ptr) && is_numeral len)
           !maychange_mems in
         maychange_mems := remaining;
 
@@ -1047,7 +1150,7 @@ let simplify_maychanges: term -> term =
           (* combine mem accesses in mems_of_interest *)
           (* get (ofs, len). len must be constant. *)
           let ranges = map
-            (fun (_,(t,len)) -> snd (base_ptr_and_ofs t),dest_small_numeral len)
+            (fun (_,(t,len)) -> snd (get_base_ptr_and_ofs t),dest_small_numeral len)
             mems_of_interest in
           let ranges = mergesort (<) ranges in
           let rec merge_and_update ranges =
@@ -1342,12 +1445,6 @@ let ARM_N_STEPS_AND_ABBREV_TAC execth (snums:int list)
       CLARIFY_TAC)
     snums THEN
   RECOVER_ASMS_OF_READ_STATES;;
-
-let get_read_component (eq:term): term =
-  let lhs = fst (dest_eq eq) in
-  rand (rator lhs);;
-
-let _ = get_read_component `read X1 s = word 0`;;
 
 (* For the right program. abbrevs must be generated by ARM_N_STEPS_AND_ABBREV_TAC. *)
 let ARM_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)

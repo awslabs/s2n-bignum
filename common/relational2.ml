@@ -1025,6 +1025,15 @@ let ENSURES2_WHILE_PAUP_TAC =
       ALL_TAC
     ];;
 
+let ENSURES_N_INIT_TAC sname =
+  GEN_REWRITE_TAC I [ensures_n] THEN BETA_TAC THEN
+  W(fun (asl,w) ->
+        let ty = type_of(fst(dest_forall w)) in
+        let svar = mk_var(sname,ty) in
+        X_GEN_TAC svar THEN
+        DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
+
 (* A relational hoare triple version of ENSURES_INIT_TAC. *)
 let ENSURES2_INIT_TAC sname sname2 =
   GEN_REWRITE_TAC I [ensures2] THEN

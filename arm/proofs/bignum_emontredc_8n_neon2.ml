@@ -1293,36 +1293,6 @@ let OUTERLOOP_MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
     COMBINE_READ_BYTES64_PAIRS_TAC ~base_ptr:`mi':int64` THEN
 
     SUBGOAL_THEN
-      `forall j. j < 12 ==> exists a3.
-          read (memory :> bytes64 (word_add sp (word (32 + 8 * j)))) s0 = a3 /\
-          read (memory :> bytes64 (word_add sp (word (32 + 8 * j)))) s0' = a3`
-    MP_TAC THENL [
-      REPEAT STRIP_TAC THEN
-
-      MP_TAC (GSYM (SPECL [`12`;`word_add sp (word 32):int64`;`s0:armstate`;`j:num`]
-          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-      REWRITE_TAC[ASSUME `j < 12`] THEN
-      DISCH_THEN (fun th ->
-        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
-          WORD_ADD_ASSOC_CONSTS] th)) THEN
-      DISCH_THEN SUBST1_TAC THEN
-
-      MP_TAC (GSYM (SPECL [`12`;`word_add sp (word 32):int64`;`s0':armstate`;`j:num`]
-          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-      REWRITE_TAC[ASSUME `j < 12`] THEN
-      DISCH_THEN (fun th ->
-        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
-          WORD_ADD_ASSOC_CONSTS] th)) THEN
-      DISCH_THEN SUBST1_TAC THEN
-
-      ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
-
-      ALL_TAC
-    ] THEN
-    CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
-    STRIP_TAC THEN
-
-    SUBGOAL_THEN
       `forall j. j < 12 ==> exists a4.
           read (memory :> bytes64 (word_add m_precalci' (word (8*(j+4)))))
                s0 = a4 /\
@@ -1614,31 +1584,6 @@ let OUTERLOOP_PROLOG_STEP2_STEP3_EQUIV = prove(equiv_goal2,
 
   (* combine loads from X2 to q !! *)
   COMBINE_READ_BYTES64_PAIRS_TAC ~base_ptr:`m:int64` THEN
-
-  (* load from sp.. *)
-  SUBGOAL_THEN
-    `forall j. j < 4 ==> exists a2.
-        read (memory :> bytes64 (word_add sp (word (32 + 8 * j)))) s0 = a2 /\
-        read (memory :> bytes64 (word_add sp (word (32 + 8 * j)))) s0' = a2`
-  MP_TAC THENL [
-    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
-
-    MAP_EVERY (fun state_term ->
-      MP_TAC (GSYM (SPECL [`12:num`;`word_add sp (word 32):int64`;state_term;`j:num`]
-          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-      COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC] THEN
-      DISCH_THEN (fun th ->
-        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
-            WORD_ADD_ASSOC_CONSTS; LEFT_ADD_DISTRIB] th)) THEN
-      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
-
-    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
-
-    ALL_TAC
-  ] THEN
-  CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
-                       ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
-  STRIP_TAC THEN
 
   (* load from m_precalc (x30).. *)
   SUBGOAL_THEN
@@ -1938,32 +1883,6 @@ let OUTERLOOP_EPILOG_STEP2_STEP3_EQUIV = prove(equiv_goal3,
     EXPAND_TAC "m_precalc'" THEN NONOVERLAPPING_TAC;
     ALL_TAC
   ] THEN
-
-  (* load from sp.. *)
-  SUBGOAL_THEN
-    `forall j. j < 8 ==> exists a1.
-        read (memory :> bytes64 (word_add sp (word (64 + 8 * j)))) s0 = a1 /\
-        read (memory :> bytes64 (word_add sp (word (64 + 8 * j)))) s0' = a1`
-  MP_TAC THENL [
-    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
-
-    MAP_EVERY (fun state_term ->
-      MP_TAC (GSYM (SPECL [`12:num`;`word_add sp (word 32):int64`;state_term;`4 + j:num`]
-          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-      COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC] THEN
-      DISCH_THEN (fun th ->
-        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
-            WORD_ADD_ASSOC_CONSTS; LEFT_ADD_DISTRIB; ADD_ASSOC] th)) THEN
-      CONV_TAC (ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
-      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
-
-    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
-
-    ALL_TAC
-  ] THEN
-  CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
-                       ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
-  STRIP_TAC THEN
 
   (* load from m_precalc (x30).. *)
   SUBGOAL_THEN
