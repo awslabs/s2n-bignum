@@ -432,18 +432,20 @@ get_memory_read_info `memory :> bytes (x, sz)`;; (* Some (`x`,`sz`) *)
 get_memory_read_info `X0`;; (* None *)
 
 
-let get_base_ptr_and_ofs (t:term): term * int =
+let get_base_ptr_and_constofs (t:term): term * int =
   try (* t is "word_add baseptr (word ofs)" *)
     let baseptr,y = dest_binary "word_add" t in
     let wordc, ofs = dest_comb y in
     if name_of wordc <> "word" then failwith "not word" else
+    let ofs = rhs (concl (NUM_REDUCE_CONV ofs)) in
     (baseptr, dest_small_numeral ofs)
   with _ -> (t, 0);;
 
-get_base_ptr_and_ofs `x:int64`;;
-get_base_ptr_and_ofs `word_add x (word 32):int64`;;
+get_base_ptr_and_constofs `x:int64`;;
+get_base_ptr_and_constofs `word_add x (word 32):int64`;;
+get_base_ptr_and_constofs `word_add x (word (8*4)):int64`;;
 (* To get (x, 48) from this, WORD_ADD_ASSOC_CONST must be applied first. *)
-get_base_ptr_and_ofs `word_add (word_add x (word 16)) (word 32):int64`;;
+get_base_ptr_and_constofs `word_add (word_add x (word 16)) (word 32):int64`;;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -559,68 +561,94 @@ let ARM_N_BASIC_STEP_TAC =
       X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth]]) (asl,w);;
 
 
-let MK_MEMORY_READ_EQ_BIGDIGIT_RULE (t:term) (assumptions:(string * thm) list): thm =
+let MK_MEMORY_READ_EQ_BIGDIGIT_RULE =
   let get_full_info t =
     match t with
     | Comb (Comb (Const ("read", _), comp), state_var) ->
-      Option.map (fun (x,size) -> (x,get_base_ptr_and_ofs x,size,state_var)) (get_memory_read_info comp)
+      Option.map (fun (x,size) -> (x,get_base_ptr_and_constofs x,size,state_var))
+        (get_memory_read_info comp)
     | _ -> None in
+  let divxy1 = ARITH_RULE `(8 * y) DIV 8 = y` and divxy2 = ARITH_RULE `(y * 8) DIV 8 = y` in
+  let reduce_num nterm = rhs (concl (NUM_REDUCE_CONV nterm)) in
 
-  match get_full_info t with
-  | Some (ptrofs,(ptr, ofs),size,state_var) ->
-    if size <> `8` then failwith "read memory other than bytes64 is unsupported" else
-    if ofs mod 8 <> 0 then failwith "offset is not divisible by 8" else
-    let larger_reads = List.filter (fun (_,ath) ->
-      try
-        let c = lhs (concl ath) in
-        match get_full_info c with
-        | Some (ptrofs2,(ptr2,ofs2),size2,state_var2) ->
-          ptr = ptr2 && state_var = state_var2
-        | None -> false
-      with _ -> false) assumptions in
-    if larger_reads = []
-    then failwith ("No memory read assumption that encompasses `" ^ (string_of_term t) ^ "`")
-    else
-    let _ = if length larger_reads > 1 then
-      Printf.printf "Warning: There are more than one memory read assumption that encompasses `%s`\n"
-          (string_of_term t) in
+  fun (t:term) (assumptions:(string * thm) list): thm ->
+    match get_full_info t with
+    | Some (ptrofs,(ptr, ofs),size,state_var) ->
+      if size <> `8` then failwith "read memory other than bytes64 is unsupported" else
+      if ofs mod 8 <> 0 then failwith "offset is not divisible by 8" else
+      let larger_reads = List.filter (fun (_,ath) ->
+        try
+          let c = lhs (concl ath) in
+          match get_full_info c with
+          | Some (ptrofs2,(ptr2,ofs2),size2,state_var2) ->
+            ptr = ptr2 && state_var = state_var2 &&
+            let size2 = reduce_num size2 in
+            (if is_numeral size2 && is_numeral size then
+              ofs2 <= ofs && ofs + (dest_small_numeral size) <= ofs2 + (dest_small_numeral size2)
+             else if is_numeral size then not (ofs + (dest_small_numeral size) <= ofs2)
+             else true)
+          | None -> false
+        with _ -> false) assumptions in
+      if larger_reads = []
+      then failwith ("No memory read assumption that encompasses `" ^ (string_of_term t) ^ "`")
+      else
+      let _ = if length larger_reads > 1 then
+        Printf.printf "Warning: There are more than one memory read assumption that encompasses `%s`\n"
+            (string_of_term t) in
 
-    let larger_read_th = snd (List.hd larger_reads) in
-    let larger_read = lhs (concl larger_read_th) in
-    let ptrofs2,(ptr2,ofs2),size2,_ = Option.get (get_full_info (lhs (concl larger_read_th))) in
-    if ofs2 mod 8 <> 0 then failwith "offset of the larger read is not divisible by 8" else
-    let reldigitofs = mk_small_numeral ((ofs - ofs2) / 8) in
-    let nwords = rhs (concl (NUM_REDUCE_CONV (mk_binary "DIV" (size2,`8`)))) in
+      let larger_read_th = snd (List.hd larger_reads) in
+      let larger_read = lhs (concl larger_read_th) in
+      let ptrofs2,(ptr2,ofs2),size2,_ = Option.get (get_full_info (lhs (concl larger_read_th))) in
+      if ofs2 mod 8 <> 0 then failwith "offset of the larger read is not divisible by 8" else
+      let reldigitofs = mk_small_numeral ((ofs - ofs2) / 8) in
+      let nwords = rhs (concl ((REWRITE_CONV [divxy1;divxy2] THENC NUM_REDUCE_CONV) (mk_binary "DIV" (size2,`8`)))) in
 
-    (* t = bigdigit t' ofs *)
-    let the_goal = mk_eq(t,mk_comb
-      (`word:num->int64`,list_mk_comb (`bigdigit`,[larger_read;reldigitofs]))) in
+      (* t = bigdigit t' ofs *)
+      let the_goal = mk_eq(t,mk_comb
+        (`word:num->int64`,list_mk_comb (`bigdigit`,[larger_read;reldigitofs]))) in
 
-    let eq_th = TAC_PROOF((assumptions,the_goal),
-      SUBGOAL_THEN (subst [size2,`size2:num`;nwords,`nwords:num`] `8 * nwords = size2`) MP_TAC
-      THENL [ ARITH_TAC; DISCH_THEN (LABEL_TAC "H_NWORDS") ] THEN
-      USE_THEN "H_NWORDS" (fun hth -> REWRITE_TAC[REWRITE_RULE[hth]
-        (SPECL [nwords;ptrofs2] (GSYM BIGNUM_FROM_MEMORY_BYTES))]) THEN
-      REWRITE_TAC[BIGDIGIT_BIGNUM_FROM_MEMORY] THEN
-      COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC (* index must be within bounds *) ] THEN
-      REWRITE_TAC[WORD_VAL; WORD_ADD_ASSOC_CONSTS; MULT_0; WORD_ADD_0] THEN ARITH_TAC) in
-    REWRITE_RULE[larger_read_th] eq_th
-  | None -> failwith "not memory read";;
+      let eq_th = TAC_PROOF((assumptions,the_goal),
+        SUBGOAL_THEN (subst [size2,`size2:num`;nwords,`nwords:num`] `8 * nwords = size2`) MP_TAC
+        THENL [ ARITH_TAC; DISCH_THEN (LABEL_TAC "H_NWORDS") ] THEN
+        USE_THEN "H_NWORDS" (fun hth -> REWRITE_TAC[REWRITE_RULE[hth]
+          (SPECL [nwords;ptrofs2] (GSYM BIGNUM_FROM_MEMORY_BYTES))]) THEN
+        REWRITE_TAC[BIGDIGIT_BIGNUM_FROM_MEMORY] THEN
+        COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC (* index must be within bounds *) ] THEN
+        REWRITE_TAC[WORD_VAL; WORD_ADD_ASSOC_CONSTS; MULT_0; WORD_ADD_0] THEN ARITH_TAC) in
+      REWRITE_RULE[larger_read_th] eq_th
+    | None -> failwith "not memory read";;
 
+(*** examples ***)
 (*
-  # MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 x) s`
+MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 x) s`
     ["",new_axiom `read (memory :> bytes (x:int64,32)) s = k`];;
-  - : thm = |- read (memory :> bytes64 x) s = word (bigdigit k 0)
+(* - : thm = |- read (memory :> bytes64 x) s = word (bigdigit k 0) *)
 
-  # MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word 16))) s`
+MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word 16))) s`
     ["",new_axiom `read (memory :> bytes (word_add x (word 8):int64,32)) s = k`];;
-  - : thm = |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1)
+(* - : thm = |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1) *)
 
-  # MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word 16))) s`
+MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word 16))) s`
     ["",new_axiom `read (memory :> bytes (word_add x (word 8):int64,8 * 4)) s = k`];;
-  - : thm = |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1)
-*)
+(* - : thm = |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1) *)
 
+MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word 16))) s`
+    ["",new_axiom `read (memory :> bytes (word_add x (word 8):int64,8 * n)) s = k`;
+     "",new_axiom `n > 3`];;
+(* - : thm = |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1) *)
+
+MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word (8 * 2)))) s`
+    ["",new_axiom `read (memory :> bytes (word_add x (word (8 * 1)):int64,8 * n)) s = k`;
+     "",new_axiom `n > 3`];;
+(* - : thm = |- read (memory :> bytes64 (word_add x (word (8 * 2)))) s = word (bigdigit k 1) *)
+
+MK_MEMORY_READ_EQ_BIGDIGIT_RULE `read (memory :> bytes64 (word_add x (word (8 * 2)))) s`
+    ["",new_axiom `read (memory :> bytes (x:int64,8 * 2)) s = k`;
+     "",new_axiom `read (memory :> bytes (word_add x (word (8 * 2)):int64,8 * n)) s = k2`;
+     "",new_axiom `read (memory :> bytes (word_add x (word (8 * 4)):int64,8 * n)) s = k2`;
+     "",new_axiom `n > 3`];;
+(* - : thm = |- read (memory :> bytes64 (word_add x (word (8 * 2)))) s = word (bigdigit k2 0) *)
+*)
 
 (* A variant of ARM_STEP_TAC for equivalence checking.
    If 'store_update_to' is Some ref, a list of
@@ -1137,10 +1165,10 @@ let simplify_maychanges: term -> term =
           maychange_mems_merged := next_term::!maychange_mems_merged);
         maychange_mems := List.tl !maychange_mems
       end else
-        let baseptr, _ = get_base_ptr_and_ofs ptr in
+        let baseptr, _ = get_base_ptr_and_constofs ptr in
 
         let mems_of_interest, remaining = List.partition
-          (fun _,(ptr,len) -> baseptr = fst (get_base_ptr_and_ofs ptr) && is_numeral len)
+          (fun _,(ptr,len) -> baseptr = fst (get_base_ptr_and_constofs ptr) && is_numeral len)
           !maychange_mems in
         maychange_mems := remaining;
 
@@ -1150,7 +1178,7 @@ let simplify_maychanges: term -> term =
           (* combine mem accesses in mems_of_interest *)
           (* get (ofs, len). len must be constant. *)
           let ranges = map
-            (fun (_,(t,len)) -> snd (get_base_ptr_and_ofs t),dest_small_numeral len)
+            (fun (_,(t,len)) -> snd (get_base_ptr_and_constofs t),dest_small_numeral len)
             mems_of_interest in
           let ranges = mergesort (<) ranges in
           let rec merge_and_update ranges =

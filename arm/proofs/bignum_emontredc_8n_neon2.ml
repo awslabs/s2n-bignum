@@ -1244,29 +1244,6 @@ let OUTERLOOP_MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
 
     (* Prepare the loaded values of 64 bit words at locations that simulator will read *)
     SUBGOAL_THEN
-      `forall j. j < 4 ==> exists a1.
-          read (memory :> bytes64 (word_add zi' (word (8 * (j + 6))))) s0 = a1 /\
-          read (memory :> bytes64 (word_add zi' (word (8 * (j + 6))))) s0' = a1`
-    MP_TAC THENL [
-      REPEAT STRIP_TAC THEN EXPAND_TAC "zi'" THEN
-      REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
-
-      MAP_EVERY (fun state_term ->
-        MP_TAC (GSYM (SPECL [`4*k4:num`;`z:int64`;state_term;`4 * i' + (j + 6)`]
-            BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-        COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC] THEN
-        DISCH_THEN (fun th ->
-          MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
-        DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
-
-      ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
-
-      ALL_TAC
-    ] THEN
-    CONV_TAC (LAND_CONV (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC ONCE_DEPTH_CONV NUM_REDUCE_CONV)) THEN
-    STRIP_TAC THEN
-
-    SUBGOAL_THEN
       `forall j. j < 8 ==> exists a2.
           read (memory :> bytes64 (word_add mi' (word (8 * (j + 4))))) s0 = a2 /\
           read (memory :> bytes64 (word_add mi' (word (8 * (j + 4))))) s0' = a2`
@@ -1584,57 +1561,6 @@ let OUTERLOOP_PROLOG_STEP2_STEP3_EQUIV = prove(equiv_goal2,
 
   (* combine loads from X2 to q !! *)
   COMBINE_READ_BYTES64_PAIRS_TAC ~base_ptr:`m:int64` THEN
-
-  (* load from m_precalc (x30).. *)
-  SUBGOAL_THEN
-    `forall j. j < 4 ==> exists a3.
-        read (memory :> bytes64 (word_add m_precalc (word (8 * j)))) s0 = a3 /\
-        read (memory :> bytes64 (word_add m_precalc (word (8 * j)))) s0' = a3`
-  MP_TAC THENL [
-    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
-
-    MAP_EVERY (fun state_term ->
-      MP_TAC (GSYM (SPECL [`12 * (k4 - 1):num`;`m_precalc:int64`;state_term;`j:num`]
-          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-      COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC] THEN
-      DISCH_THEN (fun th ->
-        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; LEFT_ADD_DISTRIB] th)) THEN
-      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
-
-    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
-
-    ALL_TAC
-  ] THEN
-  CONV_TAC (LAND_CONV
-    (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
-     ONCE_DEPTH_CONV NUM_REDUCE_CONV THENC REWRITE_CONV[WORD_ADD_0])) THEN
-  STRIP_TAC THEN
-
-  (* load from z (x1).. *)
-  SUBGOAL_THEN
-    `forall j. j < 2 ==> exists a4.
-        read (memory :> bytes64 (word_add z (word (32 + 8 * j)))) s0 = a4 /\
-        read (memory :> bytes64 (word_add z (word (32 + 8 * j)))) s0' = a4`
-  MP_TAC THENL [
-    REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_ADD_ASSOC_CONSTS;LEFT_ADD_DISTRIB] THEN
-
-    MAP_EVERY (fun state_term ->
-      MP_TAC (GSYM (SPECL [`4 * k4`;`z:int64`;state_term;`4 + j:num`]
-          BIGDIGIT_BIGNUM_FROM_MEMORY)) THEN
-      COND_CASES_TAC THENL [ALL_TAC; SIMPLE_ARITH_TAC] THEN
-      DISCH_THEN (fun th ->
-        MP_TAC (REWRITE_RULE[VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND;
-                LEFT_ADD_DISTRIB;ARITH_RULE`8*4=32`] th)) THEN
-      DISCH_THEN SUBST1_TAC) [`s0:armstate`;`s0':armstate`] THEN
-
-    ASM_MESON_TAC[BIGNUM_FROM_MEMORY_BYTES];
-
-    ALL_TAC
-  ] THEN
-  CONV_TAC (LAND_CONV
-    (EXPAND_CASES_CONV THENC REWRITE_CONV[LEFT_ADD_DISTRIB] THENC
-     ONCE_DEPTH_CONV NUM_REDUCE_CONV THENC REWRITE_CONV[WORD_ADD_0])) THEN
-  STRIP_TAC THEN
 
   (* start *)
   EQUIV_STEPS_TAC [
