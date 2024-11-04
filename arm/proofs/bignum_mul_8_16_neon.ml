@@ -607,6 +607,10 @@ let actions = [
   ("equal", 135, 457, 171, 493);
 ];;
 
+let actions = break_equal_loads actions
+    (snd BIGNUM_MUL_8_16_CORE_EXEC) 0x0
+    (snd BIGNUM_MUL_8_16_NEON_CORE_EXEC) 0x0;;
+
 let BIGNUM_MUL_8_16_CORE_EQUIV = time prove(
   equiv_goal,
 
@@ -616,17 +620,14 @@ let BIGNUM_MUL_8_16_CORE_EQUIV = time prove(
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC bignum_mul_8_16_equiv_input_states THEN
-  REPEAT(FIRST_X_ASSUM BIGNUM_EXPAND_AND_DIGITIZE_TAC) THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
-  (* necessary to run ldr qs. *)
-  COMBINE_READ_BYTES64_PAIRS_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE[BIGNUM_FROM_MEMORY_BYTES]) THEN
 
   (* The main simulation part *)
   EQUIV_STEPS_TAC actions
     BIGNUM_MUL_8_16_CORE_EXEC BIGNUM_MUL_8_16_NEON_CORE_EXEC THEN
 
   (* We finished simulation of the programs. Prove postconditions *)
-  ENSURES_FINAL_STATE'_TAC THEN ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL [
     (** SUBGOAL 2. Outputs **)

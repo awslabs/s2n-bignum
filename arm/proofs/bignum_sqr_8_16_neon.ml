@@ -578,6 +578,13 @@ let actions2 = [
   ("equal", 260, 290, 334, 364);
 ];;
 
+let actions = break_equal_loads actions
+    (snd BIGNUM_SQR_8_16_CORE_EXEC) 0x0
+    (snd BIGNUM_SQR_8_16_NEON_CORE_EXEC) 0x0;;
+
+let actions2 = break_equal_loads actions2
+    (snd BIGNUM_SQR_8_16_CORE_EXEC) 0x0
+    (snd BIGNUM_SQR_8_16_NEON_CORE_EXEC) 0x0;;
 
 
 let equiv_goal = mk_equiv_statement_simple
@@ -612,24 +619,23 @@ let BIGNUM_SQR_8_16_CORE_EQUIV = time prove(equiv_goal,
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC bignum_sqr_8_16_equiv_input_states THEN
-  REPEAT (FIRST_X_ASSUM BIGNUM_EXPAND_AND_DIGITIZE_TAC) THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
-  (* necessary to run ldr qs *)
-  COMBINE_READ_BYTES64_PAIRS_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE[BIGNUM_FROM_MEMORY_BYTES]) THEN
 
   (* Start *)
   EQUIV_STEPS_TAC actions BIGNUM_SQR_8_16_CORE_EXEC BIGNUM_SQR_8_16_NEON_CORE_EXEC THEN
   (* This is an unfortunate manual tweak because the word rule in neon_helper isn't
      exactly applied. This mismatch happened when the assembly was written by hand. *)
-  SUBGOAL_THEN `val (a'_6:int64) * val (a'_2:int64) = val a'_2 * val a'_6`
+  SUBGOAL_THEN `val (word (bigdigit a 6):int64) * val (word (bigdigit a 2):int64) =
+                val (word (bigdigit a 2):int64) * val (word (bigdigit a 6):int64)`
     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL [ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `val (a'_7:int64) * val (a'_3:int64) = val a'_3 * val a'_7`
+  SUBGOAL_THEN `val (word (bigdigit a 7):int64) * val (word (bigdigit a 3):int64) =
+                val (word (bigdigit a 3):int64) * val (word (bigdigit a 7):int64)`
     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL [ARITH_TAC; ALL_TAC] THEN
   (* More steps *)
   EQUIV_STEPS_TAC actions2 BIGNUM_SQR_8_16_CORE_EXEC BIGNUM_SQR_8_16_NEON_CORE_EXEC THEN
 
   (* Finalize *)
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL [

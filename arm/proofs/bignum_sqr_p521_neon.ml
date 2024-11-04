@@ -546,15 +546,7 @@ let bignum_sqr_p521_interm1_ops:int list = [
 ];;
 
 let bignum_sqr_p521_interm1_core_mc =
-  let charlist = List.concat_map
-    (fun op32 ->
-      [Char.chr (Int.logand op32 255);
-       Char.chr (Int.logand (Int.shift_right op32 8) 255);
-       Char.chr (Int.logand (Int.shift_right op32 16) 255);
-       Char.chr (Int.logand (Int.shift_right op32 24) 255)])
-    bignum_sqr_p521_interm1_ops in
-  let byte_list = Bytes.init (List.length charlist) (fun i -> List.nth charlist i) in
-  define_word_list "bignum_sqr_p521_interm1_core_mc" (term_of_bytes byte_list);;
+  define_mc_from_intlist "bignum_sqr_p521_interm1_core_mc" bignum_sqr_p521_interm1_ops;;
 
 let BIGNUM_SQR_P521_INTERM1_CORE_EXEC =
   ARM_MK_EXEC_RULE bignum_sqr_p521_interm1_core_mc;;
@@ -599,6 +591,14 @@ let actions = [
   ("insert", 253, 253, 367, 368); ("equal", 253, 412, 368, 527)
 ];;
 
+(* Vectorization loads a same memory location using one ldp to a pair of X
+   registers and one ldr to one Q register. If one of these loads is abbreviated,
+   then we lose the fact that ldr to Q is word_join of the ldp Xs. *)
+let actions = break_equal_loads actions
+    (snd BIGNUM_SQR_P521_CORE_EXEC) 0x0
+    (snd BIGNUM_SQR_P521_INTERM1_CORE_EXEC) 0x0;;
+
+
 let equiv_goal1 = mk_equiv_statement_simple
     `ALL (nonoverlapping (z:int64,8 * 9))
        [(word pc,LENGTH bignum_sqr_p521_core_mc);
@@ -632,17 +632,14 @@ let BIGNUM_SQR_P521_CORE_EQUIV1 = time prove(equiv_goal1,
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC sqr_p521_eqin THEN
-  REPEAT (FIRST_X_ASSUM BIGNUM_EXPAND_AND_DIGITIZE_TAC) THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
-  (* necessary to run ldr qs *)
-  COMBINE_READ_BYTES64_PAIRS_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE[BIGNUM_FROM_MEMORY_BYTES]) THEN
 
   (* Start *)
   EQUIV_STEPS_TAC actions
     BIGNUM_SQR_P521_CORE_EXEC
     BIGNUM_SQR_P521_INTERM1_CORE_EXEC THEN
 
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL [
@@ -724,20 +721,17 @@ let BIGNUM_SQR_P521_CORE_EQUIV2 = time prove(
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC sqr_p521_eqin THEN
-  REPEAT (FIRST_X_ASSUM BIGNUM_EXPAND_AND_DIGITIZE_TAC) THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
-  (* necessary to run ldr qs *)
-  COMBINE_READ_BYTES64_PAIRS_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE[BIGNUM_FROM_MEMORY_BYTES]) THEN
 
   (* Left *)
-  ARM_STEPS'_AND_ABBREV_TAC BIGNUM_SQR_P521_INTERM1_CORE_EXEC
+  ARM_N_STEPS_AND_ABBREV_TAC BIGNUM_SQR_P521_INTERM1_CORE_EXEC
     (1--(List.length inst_map)) state_to_abbrevs THEN
 
   (* Right *)
-  ARM_STEPS'_AND_REWRITE_TAC BIGNUM_SQR_P521_NEON_CORE_EXEC
+  ARM_N_STEPS_AND_REWRITE_TAC BIGNUM_SQR_P521_NEON_CORE_EXEC
     (1--(List.length inst_map)) inst_map state_to_abbrevs THEN
 
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL [

@@ -1895,6 +1895,7 @@ let equiv_goal = mk_equiv_statement
     (vsubst [mk_small_numeral(len_p256_montjdouble_opt - 6 - 7),`x:num`]
         `\(s:armstate). (x:num)`);;
 
+(* Manually digitize bignum_from_memory for speed. *)
 extra_early_rewrite_rules :=
   (hd (CONJUNCTS READ_MEMORY_BYTESIZED_SPLIT))::
   !extra_early_rewrite_rules;;
@@ -1927,6 +1928,7 @@ let P256_MONTJDOUBLE_EQUIV = time prove(equiv_goal,
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC p256_montjdouble_eqin THEN
+  (* Manually digitize bignum_from_memory for speed. *)
   REPEAT (FIRST_X_ASSUM BIGNUM_EXPAND_AND_DIGITIZE_TAC) THEN
   ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
 
@@ -1936,7 +1938,7 @@ let P256_MONTJDOUBLE_EQUIV = time prove(equiv_goal,
     ~dead_value_info_right:p256_montjdouble_dead_value_info
     actions_merged P256_MONTJDOUBLE_CORE_EXEC P256_MONTJDOUBLE_OPT_EXEC THEN
 
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL [
