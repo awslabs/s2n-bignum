@@ -2154,7 +2154,12 @@ let WINDOWS_EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
               MAYCHANGE [memory :> bytes(z,8 * 8);
                     memory :> bytes(word_sub stackpointer (word 336),336)])`,
   let WINDOWS_EDWARDS25519_DECODE_EXEC =
-    X86_MK_EXEC_RULE windows_edwards25519_decode_mc in
+    X86_MK_EXEC_RULE windows_edwards25519_decode_mc
+  and subth =
+   X86_SIMD_SHARPEN_RULE EDWARDS25519_DECODE_SUBROUTINE_CORRECT
+   (X86_ADD_RETURN_STACK_TAC
+    EDWARDS25519_DECODE_EXEC EDWARDS25519_DECODE_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 312) in
   REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 336 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS; C_RETURN;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -2166,7 +2171,7 @@ let WINDOWS_EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
   X86_SUBROUTINE_SIM_TAC
    (windows_edwards25519_decode_mc,
     WINDOWS_EDWARDS25519_DECODE_EXEC,
-    0x10,edwards25519_decode_mc,EDWARDS25519_DECODE_SUBROUTINE_CORRECT)
+    0x10,edwards25519_decode_mc,subth)
      [`read RDI s`; `read RSI s`;
       `read (memory :> bytes (read RSI s,32)) s`;
       `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]

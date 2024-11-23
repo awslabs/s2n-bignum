@@ -5608,10 +5608,13 @@ let SM2_MONTJSCALARMUL_ALT_EXEC = X86_MK_EXEC_RULE sm2_montjscalarmul_alt_mc;;
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_JADD_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE SM2_MONTJADD_ALT_SUBROUTINE_CORRECT
+   (X86_PROMOTE_RETURN_STACK_TAC sm2_montjadd_alt_mc SM2_MONTJADD_ALT_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 272) in
   let th =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
       (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-       SM2_MONTJADD_ALT_SUBROUTINE_CORRECT) in
+       baseth) in
   X86_SUBROUTINE_SIM_TAC
    (sm2_montjscalarmul_alt_mc,SM2_MONTJSCALARMUL_ALT_EXEC,
     0xb83,sm2_montjadd_alt_mc,th)
@@ -5626,10 +5629,13 @@ let LOCAL_JADD_TAC =
    `pc + 0xb83`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_JDOUBLE_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC sm2_montjdouble_alt_mc SM2_MONTJDOUBLE_ALT_CORRECT
+    `[RBX; R12; R13; R14; R15]` 232) in
   let th =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
       (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-       SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT) in
+       baseth) in
   X86_SUBROUTINE_SIM_TAC
    (sm2_montjscalarmul_alt_mc,SM2_MONTJSCALARMUL_ALT_EXEC,
     0x32d7,sm2_montjdouble_alt_mc,th)
@@ -5703,7 +5709,9 @@ let SM2_MONTJSCALARMUL_ALT_CORRECT = time prove
                       ==> represents_sm2
                             (group_pow sm2_group P n)
                             (bignum_triple_from_memory(res,4) s))
-          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          (MAYCHANGE [RIP] ,,
+           MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
            MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(res,96);
                       memory :> bytes(stackpointer,1320)])`,
@@ -6550,9 +6558,13 @@ let WINDOWS_SM2_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 1392),1392)])`,
   let WINDOWS_SM2_MONTJSCALARMUL_ALT_EXEC =
     X86_MK_EXEC_RULE windows_sm2_montjscalarmul_alt_mc
-   and th =
+  and baseth =
+    X86_SIMD_SHARPEN_RULE SM2_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT
+    (X86_ADD_RETURN_STACK_TAC SM2_MONTJSCALARMUL_ALT_EXEC
+     SM2_MONTJSCALARMUL_ALT_CORRECT `[RBX; RBP; R12; R13; R14; R15]` 1368) in
+  let subth =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-     (REWRITE_RULE[bignum_triple_from_memory] SM2_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT) in
+     (REWRITE_RULE[bignum_triple_from_memory] baseth) in
   REPLICATE_TAC 6 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 1392 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -6570,7 +6582,7 @@ let WINDOWS_SM2_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
   X86_SUBROUTINE_SIM_TAC
    (windows_sm2_montjscalarmul_alt_mc,
     WINDOWS_SM2_MONTJSCALARMUL_ALT_EXEC,
-    0x13,sm2_montjscalarmul_alt_mc,th)
+    0x13,sm2_montjscalarmul_alt_mc,subth)
    [`read RDI s`; `read RSI s`; `read RDX s`;
     `read(memory :> bytes(read RSI s,8 * 4)) s`;
     `read(memory :> bytes(read RDX s,8 * 4)) s,
