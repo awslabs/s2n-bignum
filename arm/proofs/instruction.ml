@@ -2012,7 +2012,7 @@ let arm_RAX1 = define
       and m:int128 = read Rm s 
       and hi:int64 = word_subword m (64,64)
       and lo:int64 = word_subword m (0,64) in
-      let d' = word_xor n (word_join (word_rol hi 1) (word_rol lo 1))
+      let d' = word_xor n (word_join (word_rol hi 1) (word_rol lo 1)) in
       (Rd := d') s`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -2025,7 +2025,7 @@ let arm_EOR3 = define
       let n:int128 = read Rn s
       and m:int128 = read Rm s
       and a:int128 = read Ra s in
-      let d':int128 = word_xor (word_xor n m) a
+      let d':int128 = word_xor (word_xor n m) a in
       (Rd := d') s`;;
 
 let arm_BCAX = define 
@@ -2034,7 +2034,7 @@ let arm_BCAX = define
       let n:int128 = read Rn s
       and m:int128 = read Rm s
       and a:int128 = read Ra s in
-      let d':int128 = word_xor n (word_and m (word_not a))
+      let d':int128 = word_xor n (word_and m (word_not a)) in
       (Rd := d') s`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -2048,9 +2048,9 @@ let arm_xar = define
       and m:int128 = read Rm s
       and tmp:int128 = word_xor n m
       and hi:int64 = word_subword tmp (64,64)
-      and lo:int64 = word_subword tmp (0,64)
-      let d':int128 = word_join (word_ror hi imm6) (word_ror lo imm6)
-  `;;
+      and lo:int64 = word_subword tmp (0,64) in
+      let d':int128 = word_join (word_ror hi imm6) (word_ror lo imm6) in
+      (Rd := d') s`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Pseudo-instructions that are defined by ARM as aliases.                   *)

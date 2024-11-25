@@ -683,7 +683,7 @@ let decode = new_definition `!w:int32. decode w =
     // XAR
     SOME (arm_XAR (QREG' Rd) (QREG' Rn) (QREG' Rm) imm6)
 
- | _ -> NONE`;;
+  | _ -> NONE`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Decode tactics.                                                           *)
