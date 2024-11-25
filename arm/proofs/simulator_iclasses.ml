@@ -319,20 +319,17 @@ let iclasses =
   "00001110100xxxxx011110xxxxxxxxxx"; (* q=0, size!=3 *)
 
   (*** EOR3 ***)
-  (** "11001110000xxxxx0xxxxxxxxxxxxxxx"; 
-  *)
+  "11001110000xxxxx0xxxxxxxxxxxxxxx"; 
+ 
 
   (*** BCAX ***)
-  (** "11001110001xxxxx0xxxxxxxxxxxxxxx"; 
-  *)
+  "11001110001xxxxx0xxxxxxxxxxxxxxx";
 
   (*** RAX1 ***)
-  (** "11001110011xxxxx100011xxxxxxxxxx"; 
-  *)
+  "11001110011xxxxx100011xxxxxxxxxx"; 
 
   (*** XAR ***)
-  (** "11001110100xxxxxxxxxxxxxxxxxxxxx"; 
-  *)
+  "11001110100xxxxxxxxxxxxxxxxxxxxx";
 ];;
 
 
