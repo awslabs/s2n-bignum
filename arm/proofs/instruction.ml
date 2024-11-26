@@ -2510,7 +2510,7 @@ let ARM_OPERATION_CLAUSES =
        INST_TYPE[`:32`,`:N`] arm_SBCS;
        INST_TYPE[`:32`,`:N`] arm_SUBS;
     (*** SHA256 & SHA512 instructions from Carl Kwan ***)
-       arm_RAX1
+       arm_RAX1;
        arm_SHA256H;
        arm_SHA256H2;
        arm_SHA256SU0;
