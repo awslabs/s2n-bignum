@@ -2009,8 +2009,8 @@ let arm_RAX1 = define
  `arm_RAX1 Rd Rn Rm =
     \s:armstate.
       let n:int128 = read Rn s
-      and m:int128 = read Rm s 
-      and hi:int64 = word_subword m (64,64)
+      and m:int128 = read Rm s in
+      let hi:int64 = word_subword m (64,64)
       and lo:int64 = word_subword m (0,64) in
       let d' = word_xor n (word_join (word_rol hi 1) (word_rol lo 1)) in
       (Rd := d') s`;;
@@ -2045,11 +2045,11 @@ let arm_XAR = define
   `arm_XAR Rd Rn Rm imm6 =
     \s:armstate.
       let n:int128 = read Rn s
-      and m:int128 = read Rm s
-      and tmp:int128 = word_xor n m
-      and hi:int64 = word_subword tmp (64,64)
+      and m:int128 = read Rm s in
+      let tmp:int128 = word_xor n m in
+      let hi:int64 = word_subword tmp (64,64)
       and lo:int64 = word_subword tmp (0,64) in
-      let d':int128 = word_join (word_ror hi imm6) (word_ror lo imm6) in
+      let d':int128 = word_join (word_ror hi (val imm6)) (word_ror lo (val imm6)) in
       (Rd := d') s`;;
 
 (* ------------------------------------------------------------------------- *)
