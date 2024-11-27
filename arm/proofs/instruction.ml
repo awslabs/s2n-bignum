@@ -1723,6 +1723,15 @@ let word_interleave8 = new_definition
     let ylo,yhi = word_split_lohi y in
     word_join (word_interleave4 xhi yhi) (word_interleave4 xlo ylo)`;;
 
+let word_interleave16 = new_definition
+ `(word_interleave16:((((N tybit0)tybit0)tybit0)tybit0)word
+      ->((((N tybit0)tybit0)tybit0)tybit0)word
+      ->(((((N tybit0)tybit0)tybit0)tybit0)tybit0)word)
+      x y =
+    let xlo,xhi = word_split_lohi x in
+    let ylo,yhi = word_split_lohi y in
+    word_join (word_interleave4 xhi yhi) (word_interleave4 xlo ylo)`;;
+
 let arm_ZIP1 = new_definition
  `arm_ZIP1 Rd Rn Rm esize datasize =
     \s. let n = read Rn s in
@@ -1928,6 +1937,128 @@ let arm_STP = define
            memory :> wbytes(word_add addr (word w)) := read Rt2 s ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+(** LD1 with 1 register is equivalent to simply loading the whole word *)
+let arm_LD1_1 = define
+  `arm_LD1_1 (Rt:(armstate, N word)component) Rn off = 
+    \s. let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 address) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           Rt := read (memory :> wbytes eaddr) s ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let arm_ST1_1 = define 
+  `arm_ST1_1 (Rt:(armstate, N word)component) Rn off = 
+    \s. let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 address) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           memory :> wbytes eaddr := read Rt s ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let word_deinterleave2 = new_definition
+  `(word_deinterleave2:
+    ((N tybit0)tybit0)word->((N tybit0)word # (N tybit0)word))
+      z =
+    let zlo,zhi = word_split_lohi z in
+    let xlo,ylo = word_split_lohi zlo in
+    let xhi,yhi = word_split_lohi zhi in
+    ( word_join xhi xlo, word_join yhi ylo)`;;
+
+let word_deinterleave4 = new_definition
+  `(word_deinterleave4:
+      (((N tybit0)tybit0)tybit0)word
+      ->(((N tybit0)tybit0)word # ((N tybit0)tybit0)word))
+      z =
+    let zlo,zhi = word_split_lohi z in
+    let xlo,ylo = word_deinterleave2 zlo in
+    let xhi,yhi = word_deinterleave2 zhi in
+    ( word_join xhi xlo, word_join yhi ylo)`;;
+
+let word_deinterleave8 = new_definition
+  `(word_deinterleave8:
+      ((((N tybit0)tybit0)tybit0)tybit0)word
+      ->((((N tybit0)tybit0)tybit0)word # (((N tybit0)tybit0)tybit0)word))
+      z =
+    let zlo,zhi = word_split_lohi z in
+    let xlo,ylo = word_deinterleave4 zlo in
+    let xhi,yhi = word_deinterleave4 zhi in
+    ( word_join xhi xlo, word_join yhi ylo)`;;
+
+let word_deinterleave16 = new_definition
+  `(word_deinterleave16:
+     (((((N tybit0)tybit0)tybit0)tybit0)tybit0)word
+    ->((((N tybit0)tybit0)tybit0)tybit0)word # ((((N tybit0)tybit0)tybit0)tybit0)word)
+      z =
+    let zlo,zhi = word_split_lohi z in
+    let xlo,ylo = word_deinterleave8 zlo in
+    let xhi,yhi = word_deinterleave8 zhi in
+    ( word_join xhi xlo, word_join yhi ylo)`;;
+
+let arm_LD2 = define 
+  `arm_LD2 Rt Rtt Rn off datasize esize =
+    \s. let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 address) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           (if datasize = 128 then
+              let tmp:(256 word) = read (memory :> wbytes eaddr) s in
+              let (x:128 word), (y:128 word) =
+                if esize = 64 then word_deinterleave2 tmp
+                else if esize = 32 then word_deinterleave4 tmp
+                else if esize = 16 then word_deinterleave8 tmp
+                else word_deinterleave16 tmp in
+              (Rt := x),, (Rtt := y)
+            else
+              let tmp:(128 word) = read (memory :> wbytes eaddr) s in
+              let (x:64 word), (y:64 word) =
+                if esize = 32 then word_deinterleave2 tmp
+                else if esize = 16 then word_deinterleave4 tmp
+                else word_deinterleave8 tmp in
+              (Rt := word_zx x:(128)word),, (Rtt := word_zx y:(128)word)) ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let arm_ST2 = define 
+  `arm_ST2 Rt Rtt Rn off datasize esize = 
+    \s. let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 address) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           let (x:128 word) = read Rt s in
+           let (y:128 word) = read Rtt s in
+           (if datasize = 128 then
+              let (tmp:256 word) =
+                if esize = 64 then word_interleave2 x y
+                else if esize = 32 then word_interleave4 x y
+                else if esize = 16 then word_interleave8 x y
+                else word_interleave16 x y in
+              memory :> wbytes eaddr := tmp
+            else
+              let (x:64 word) = word_subword x (0, 64) in
+              let (y:64 word) = word_subword y (0, 64) in
+              let (tmp:128 word) =
+                if esize = 32 then word_interleave2 x y
+                else if esize = 16 then word_interleave4 x y
+                else word_interleave8 x y in
+              memory :> wbytes eaddr := tmp) ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off)
             else (=))
          else ASSIGNS entirety) s`;;
 
