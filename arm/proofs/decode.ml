@@ -88,6 +88,13 @@ let arm_ldstp_d = new_definition `arm_ldstp_d ld Rt Rt2 =
   (if ld then arm_LDP else arm_STP) (DREG' Rt) (DREG' Rt2)`;;
 let arm_ldstp_q = new_definition `arm_ldstp_q ld Rt Rt2 =
   (if ld then arm_LDP else arm_STP) (QREG' Rt) (QREG' Rt2)`;;
+let arm_ldst1_1_d = new_definition `arm_ldst1_1_d ld Rt Rn = 
+  (if ld then arm_LD1_1 else arm_ST1_1) (DREG' Rt) (XREG_SP Rn)`;;
+let arm_ldst1_1_q = new_definition `arm_ldst1_1_q ld Rt Rn = 
+  (if ld then arm_LD1_1 else arm_ST1_1) (QREG' Rt) (XREG_SP Rn)`;;
+let arm_ldst2 = new_definition `arm_ldst2 ld Rt Rn = 
+  let Rtt:(5 word) = word ((val Rt + 1) MOD 32) in
+  (if ld then arm_LD2 else arm_ST2) (QREG' Rt) (QREG' Rtt) (XREG_SP Rn)`;;
 
 (* The 'AdvSimdExpandImm' shared function in the A64 ISA specification.
    This definition takes one 8-bit word and expands it to 64 bit according to
@@ -312,6 +319,24 @@ let decode = new_definition `!w:int32. decode w =
   // LDUR/STUR, only size 128
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+
+  // LD1/ST1 (multiple structures), 1 register, Post-immediate offset, datasize = 64
+  | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst1_1_d is_ld Rt Rn (Postimmediate_Offset (word 8)))
+  // datasize = 128
+  | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst1_1_q is_ld Rt Rn (Postimmediate_Offset (word 16)))
+
+  // LD2/ST2 (multiple structures), 2 registers, Post-immediate offset, datasize = 64
+  | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b1000:4; size:2; Rn:5; Rt:5] ->
+    if size = (word 0b11:(2)word) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * 2 EXP (val size) in
+      SOME (arm_ldst2 is_ld Rt Rn (Postimmediate_Offset (word 16)) 64 esize)
+  // datasize = 128
+  | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b1000:4; size:2; Rn:5; Rt:5] ->
+    let esize = 8 * 2 EXP (val size) in
+    SOME (arm_ldst2 is_ld Rt Rn (Postimmediate_Offset (word 32)) 128 esize)
 
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
@@ -964,6 +989,7 @@ let PURE_DECODE_CONV =
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop; arm_logop; arm_lsvop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
+              arm_ldst1_1_d; arm_ldst1_1_q; arm_ldst2;
               arm_movop] rw;
     add_thms [QLANE] rw;
     add_conv (`Condition`, 1, CONDITION_CONV) rw;
