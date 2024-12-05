@@ -429,26 +429,27 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
   | [0b1100010:7; vl] -> if has_pfxs pfxs then NONE else
     if is_some rex then NONE else
     read_VEX vl l >>= \((rex,m,v,L,pfxs),l).
-    (if m = VEXM_0F38 then
-      read_byte l >>= \(b,l).
-      (bitmatch b with
-      | [0xf6:8] ->
-        let sz = op_size_W rex T pfxs in
-        read_ModRM_operand rex sz l >>= \((reg,rm),l).
-        (match pfxs with
-        | (F, RepNZ) ->
-          SOME (MULX4 (reg, %(Gpr v sz)) (%(Gpr (word 2) sz), rm), l)
+    (match m with
+      VEXM_0F38 ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0xf6:8] ->
+          let sz = op_size_W rex T pfxs in
+          read_ModRM_operand rex sz l >>= \((reg,rm),l).
+          (match pfxs with
+          | (F, RepNZ) ->
+            SOME (MULX4 (reg, %(Gpr v sz)) (%(Gpr (word 2) sz), rm), l)
+          | _ -> NONE)
         | _ -> NONE)
-      | _ -> NONE)
-    else if m = VEXM_0F then
-      read_byte l >>= \(b,l).
-      (bitmatch b with
-      | [0xef:8] ->
-        let sz = vexL_size L in
-        (read_ModRM rex l >>= \((reg,rm),l).
-          SOME (VPXOR (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
-      | _ -> NONE)
-    else NONE)
+    | VEXM_0F ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0xef:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VPXOR (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
+        | _ -> NONE)
+    | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
     read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).
@@ -590,11 +591,6 @@ let READ_VEXM_CONV =
     (try pths.(Num.int_of_num (dest_numeral n) - 1)
     with Invalid_argument _ -> failwith "READ_VEXM_CONV")
   | _ -> failwith "READ_VEXM_CONV";;
-
-let VEXM_EQ_CONV =
-  GEN_REWRITE_CONV I
-   (MESON [] `(m:VEXM = m) <=> T` ::
-    map EQF_INTRO (CONJUNCTS(prove_constructors_distinct VEXM_RECURSION)));;
 
 let READ_VEXP_CONV =
   let pths = Array.init 4 (fun i ->
@@ -1098,7 +1094,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     let th = SPEC_ALL read_opcode_ModRM in
     let Comb(Comb(_,rex),l) = lhs (concl th) in
     fun rex' l' -> INST [rex',rex; l',l] th
-  and rep_pfx_constructors = [`Rep0`; `RepZ`; `RepNZ`] in
+  and rep_pfx_constructors = [`Rep0`; `RepZ`; `RepNZ`]
+  and VEXM_constructors = [`VEXM_0F`; `VEXM_0F38`; `VEXM_0F3A`] in
 
   let rec eval_prod = function
   | Tyapp("prod",[A;B]) ->
@@ -1197,6 +1194,21 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       .(Num.int_of_num (dest_numeral opc))
       [sz,`sz:wordsize`; v,`v:bool`; rm,`rm:operand`; l,`l:byte list`]
   | _ -> failwith "DECODE_HI_CONV" in
+
+ (* Evaluates term t in a continuation-passing style. The continuation
+     'F thm binding' takes (1) thm: a rewrite rule that describes the
+     equality `e = v` where `e` was the previous expression and `v` is the
+     result of evaluation (2) binding: a list of free variables and
+     their values.
+     To understand this function further, you can start with the "LET"
+     case which is HOL Light's let binding `let x = e1 in e2` that
+     (1) evaluates e1, (2) takes `|- e1 = v1` and evaluates e2.
+     The benefit of using this continuation-passing style over repetitively
+     applying rewriting rules is its speed.
+     To understand the data structure of HOL Light's terms, you will want
+     to disable the term printer in OCaml REPL via
+     "#remove_printer pp_print_qterm;;". This can be enabled by
+     "#disable_printer pp_print_qterm;;" again. *)
 
   let rec evaluate t (F:thm->(term*term)list->thm) = match t with
   | Comb(Comb(Const(">>=",_),f),g) ->
@@ -1309,16 +1321,24 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           let g = try gs a b with Failure _ -> failwith "match pfxs failed" in
           PROVE_HYP (REFL e2) (g ls)
         | _ -> failwith "match pfxs failed")
-    (* else if ty = `:RM` then
-      let e' = `RM_mem ea` in
-      let th1 = AP_THM (AP_TERM f (ASSUME (mk_eq (e, e')))) cs in
-      let th = TRANS th1 (REPEATC MATCH_CONV (rhs (concl th1))) in
-      let g = evaluate (rhs (concl th)) (F o TRANS th) in
+    else if ty = `:VEXM` then
+      let rec go = function
+        | [] -> []
+        | b::bs ->
+          let ls = go bs in
+          let th1 = AP_THM (AP_TERM f (ASSUME (mk_eq (e, b)))) cs in
+          let th = TRANS th1 (REPEATC MATCH_CONV (rhs (concl th1))) in
+          match rhs (concl th) with
+          | Const("NONE",_) -> ls
+          | r -> try (b, evaluate r (F o TRANS th)) :: ls
+                 with Failure _ -> ls in
+      let gs = C assoc (go VEXM_constructors) in
       fun ls ->
         (match rev_assoc e ls with
-        | Comb(Const("RM_mem",_),ea) as e2 ->
-          PROVE_HYP (REFL e2) (g ((ea, rand e') :: ls))
-        | _ -> failwith "match RM as RM_mem failed") *)
+        | Const(_,_) as e2 ->
+          let g = try gs e2 with Failure _ -> failwith "match VEXM failed" in
+          PROVE_HYP (REFL e2) (g ls)
+        | _ -> failwith "match VEXM failed")
     else
       raise (Invalid_argument ("Unknown match type " ^ string_of_type ty))
   | Comb((Const("decode_BT",_) as f),a) -> eval_unary f a F DECODE_BT_CONV
@@ -1333,14 +1353,14 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb((Const("decode_condition",_) as f),a) ->
     eval_unary f a F DECODE_CONDITION_CONV
   | Comb((Const("word_zx",_) as f),a) -> eval_unary f a F WORD_ZX_34_CONV
-  | Comb((Const("word_sx",_) as f),a) -> eval_unary f a F WORD_RED_CONV
-  | Comb((Const("word_not",_) as f),a) -> eval_unary f a F WORD_RED_CONV
+  | Comb((Const("word_sx",_) as f),a) -> eval_unary f a F WORD_SX_CONV
+  | Comb((Const("word_not",_) as f),a) -> eval_unary f a F WORD_NOT_CONV
   | Comb((Const("regsize8",_) as f),a) ->
     evaluate a (fun th ->
       let th = AP_TERM f th in
       delay_if true (rhs (concl th)) (F o TRANS th) REGSIZE8_CONV)
   | Comb((Const("is_some",_) as f),a) ->
-    eval_unary f a F (REWRITE_CONV [is_some])
+    eval_unary f a F (GEN_REWRITE_CONV I [is_some])
   | Comb(Const("has_operand_override",_) as f,a) ->
     eval_unary f a F HAS_OPERAND_OVERRIDE_CONV
   | Comb(Const("has_unhandled_pfxs",_) as f,a) ->
@@ -1413,14 +1433,11 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     evaluate (rhs (concl th)) (F o TRANS th)
   | Comb(Const("@",_),_) -> failwith "ARB"
   | Const("ARB",_) -> failwith "ARB"
-  | Comb(Comb((Const("=",_) as f),a),b) ->
-      (match type_of b with
-         Tyapp("VEXM",[]) -> eval_binary f a b F VEXM_EQ_CONV
-       | _ -> eval_binary f a b F WORD_RED_CONV)
+  | Comb(Comb((Const("=",_) as f),a),b) -> eval_binary f a b F WORD_RED_CONV
   | Comb(Comb((Const("/\\",_) as f),a),b) ->
-    eval_binary f a b F (REWRITE_CONV [])
-  | Comb((Const("val",_) as f),a) -> eval_unary f a F WORD_RED_CONV
-  | Comb((Const("ival",_) as f),a) -> eval_unary f a F WORD_RED_CONV
+    eval_binary f a b F (GEN_REWRITE_CONV I [AND_CLAUSES])
+  | Comb((Const("val",_) as f),a) -> eval_unary f a F WORD_VAL_CONV
+  | Comb((Const("ival",_) as f),a) -> eval_unary f a F WORD_IVAL_CONV
   | Comb(f,a) when (match f with
     | Comb(Const("GABS",_),_) -> true
     | Abs(_,_) -> true
