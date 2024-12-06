@@ -6262,7 +6262,10 @@ let LOCAL_JDOUBLE_SUBR_CORRECT = time prove
                   !P. represents_p521 P t1
                       ==> represents_p521 (group_mul p521_group P P)
                             (bignum_triple_from_memory(p3,9) s))
-          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          (MAYCHANGE [RSP] ,,
+           MAYCHANGE [RIP] ,,
+           MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(word_sub stackpointer (word 648),648)])`,
   X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_ALT_EXEC LOCAL_JDOUBLE_CORRECT
@@ -6480,7 +6483,10 @@ let LOCAL_JADD_SUBR_CORRECT = time prove
                           (P1 = P2 ==> P2 = NONE)
                           ==> represents_p521(group_mul p521_group P1 P2)
                                (bignum_triple_from_memory(p3,9) s))
-          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          (MAYCHANGE [RSP] ,,
+           MAYCHANGE [RIP] ,,
+           MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(word_sub stackpointer (word 656),656)])`,
   X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_ALT_EXEC LOCAL_JADD_CORRECT
@@ -6491,17 +6497,23 @@ let LOCAL_JADD_SUBR_CORRECT = time prove
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MOD_N521_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_MOD_N521_9_ALT_SUBROUTINE_CORRECT
+   (X86_PROMOTE_RETURN_NOSTACK_TAC
+    bignum_mod_n521_9_alt_mc BIGNUM_MOD_N521_9_ALT_CORRECT) in
   X86_SUBROUTINE_SIM_TAC
    (p521_jscalarmul_alt_mc,P521_JSCALARMUL_ALT_EXEC,
-    0x1ac3,bignum_mod_n521_9_alt_mc,BIGNUM_MOD_N521_9_ALT_SUBROUTINE_CORRECT)
+    0x1ac3,bignum_mod_n521_9_alt_mc,baseth)
   [`read RDI s`; `read RSI s`;
    `read(memory :> bytes(read RSI s,8 * 9)) s`;
    `pc + 0x1ac3`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_MOD_P521_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_MOD_P521_9_SUBROUTINE_CORRECT
+   (X86_PROMOTE_RETURN_STACK_TAC bignum_mod_p521_9_mc BIGNUM_MOD_P521_9_CORRECT
+   `[RBX]` 8) in
   X86_SUBROUTINE_SIM_TAC
    (p521_jscalarmul_alt_mc,P521_JSCALARMUL_ALT_EXEC,
-    0x1a1b,bignum_mod_p521_9_mc,BIGNUM_MOD_P521_9_SUBROUTINE_CORRECT)
+    0x1a1b,bignum_mod_p521_9_mc,baseth)
   [`read RDI s`; `read RSI s`;
    `read(memory :> bytes(read RSI s,8 * 9)) s`;
    `pc + 0x1a1b`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
@@ -6595,7 +6607,9 @@ let P521_JSCALARMUL_ALT_CORRECT = time prove
                       ==> represents_p521
                             (group_pow p521_group P n)
                             (bignum_triple_from_memory(res,9) s))
-          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          (MAYCHANGE [RIP] ,,
+           MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
            MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(res,216);
                       memory :> bytes(stackpointer,4696)])`,
@@ -7587,9 +7601,13 @@ let WINDOWS_P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 4768),4768)])`,
   let WINDOWS_P521_JSCALARMUL_ALT_EXEC =
     X86_MK_EXEC_RULE windows_p521_jscalarmul_alt_mc
-   and th =
+  and baseth =
+    X86_SIMD_SHARPEN_RULE P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT
+    (X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_ALT_EXEC
+     P521_JSCALARMUL_ALT_CORRECT `[RBX; RBP; R12; R13; R14; R15]` 4744) in
+  let subth =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-     (REWRITE_RULE[bignum_triple_from_memory] P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT) in
+     (REWRITE_RULE[bignum_triple_from_memory] baseth) in
   REPLICATE_TAC 6 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 4768 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -7607,7 +7625,7 @@ let WINDOWS_P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
   X86_SUBROUTINE_SIM_TAC
    (windows_p521_jscalarmul_alt_mc,
     WINDOWS_P521_JSCALARMUL_ALT_EXEC,
-    0x13,p521_jscalarmul_alt_mc,th)
+    0x13,p521_jscalarmul_alt_mc,subth)
    [`read RDI s`; `read RSI s`; `read RDX s`;
     `read(memory :> bytes(read RSI s,8 * 9)) s`;
     `read(memory :> bytes(read RDX s,8 * 9)) s,

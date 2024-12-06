@@ -2019,7 +2019,7 @@ let arm_RAX1 = define
 (* Cryptographic four-register                                               *)
 (* ------------------------------------------------------------------------- *)
 
-let arm_EOR3 = define 
+let arm_EOR3 = define
  `arm_EOR3 Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
@@ -2028,7 +2028,7 @@ let arm_EOR3 = define
       let d':int128 = word_xor (word_xor n m) a in
       (Rd := d') s`;;
 
-let arm_BCAX = define 
+let arm_BCAX = define
  `arm_BCAX Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
