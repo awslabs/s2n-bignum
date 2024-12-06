@@ -340,12 +340,26 @@ let aes_mix_columns_CONV = REWRITE_CONV [aes_mix_columns]
   THENC aes_mix_word_CONV
   THENC TOP_DEPTH_CONV let_CONV
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
-let aese_CONV = REWRITE_CONV [aese]
+let aese_helper_CONV = REWRITE_CONV [aese]
   THENC aes_shift_rows_CONV
   THENC aes_sub_bytes_CONV
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
-let aesmc_CONV = REWRITE_CONV [aesmc]
+let aesmc_helper_CONV = REWRITE_CONV [aesmc]
   THENC aes_mix_columns_CONV;;
+
+(** Stop early if unmatched. Conversions will become extremely expensive if we don't stop early *)
+let aese_CONV tm =
+    match tm with
+      Comb(Comb(Const("aese",_),
+           Comb(Const("word",_),d)),
+           Comb(Const("word",_),n))
+    when is_numeral d && is_numeral n -> aese_helper_CONV tm
+  | _ -> failwith "aese_CONV: inapplicable";;
+let aesmc_CONV tm =
+    match tm with
+      Comb(Const("aesmc",_), Comb(Const("word",_),n))
+    when is_numeral n -> aesmc_helper_CONV tm
+  | _ -> failwith "aesmc_CONV: inapplicable";;
 
 joined_GF2_CONV `joined_GF2`;;
 (REWRITE_CONV [input] THENC aes_sub_bytes_select_CONV) `aes_sub_bytes_select input 0`;;
