@@ -434,15 +434,7 @@ let bignum_montmul_p384_interm1_ops:int list = [
 ];;
 
 let bignum_montmul_p384_interm1_mc =
-  let charlist = List.concat_map
-    (fun op32 ->
-      [Char.chr (Int.logand op32 255);
-       Char.chr (Int.logand (Int.shift_right op32 8) 255);
-       Char.chr (Int.logand (Int.shift_right op32 16) 255);
-       Char.chr (Int.logand (Int.shift_right op32 24) 255)])
-    bignum_montmul_p384_interm1_ops in
-  let byte_list = Bytes.init (List.length charlist) (fun i -> List.nth charlist i) in
-  define_word_list "bignum_montmul_p384_interm1_mc" (term_of_bytes byte_list);;
+  define_mc_from_intlist "bignum_montmul_p384_interm1_mc" bignum_montmul_p384_interm1_ops;;
 
 let BIGNUM_MONTMUL_P384_INTERM1_EXEC =
     ARM_MK_EXEC_RULE bignum_montmul_p384_interm1_mc;;
@@ -532,23 +524,18 @@ let BIGNUM_MONTMUL_P384_CORE_EQUIV1 = time prove(equiv_goal1,
     BIGNUM_MONTMUL_P384_CORE_EXEC
     BIGNUM_MONTMUL_P384_INTERM1_CORE_EXEC THEN
 
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THENL [
+  CONJ_TAC THENL [
     (** SUBGOAL 1. Outputs **)
     ASM_REWRITE_TAC[montmul_p384_eqout;mk_equiv_regs;mk_equiv_bool_regs;
                     BIGNUM_EXPAND_CONV `bignum_from_memory (ptr,6) state`;
                     C_ARGUMENTS] THEN
     REPEAT (HINT_EXISTS_REFL_TAC THEN ASM_REWRITE_TAC[]);
 
-    (** SUBGOAL 2. Maychange left **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC;
-
-    (** SUBGOAL 3. Maychange right **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC
+    (** SUBGOAL 2. Maychange pair **)
+    MONOTONE_MAYCHANGE_CONJ_TAC
   ]);;
 
 extra_word_CONV := _org_extra_word_CONV;;
@@ -625,30 +612,25 @@ let BIGNUM_MONTMUL_P384_CORE_EQUIV2 = time prove(
   COMBINE_READ_BYTES64_PAIRS_TAC THEN
 
   (* Left *)
-  ARM_STEPS'_AND_ABBREV_TAC BIGNUM_MONTMUL_P384_INTERM1_CORE_EXEC
+  ARM_N_STEPS_AND_ABBREV_TAC BIGNUM_MONTMUL_P384_INTERM1_CORE_EXEC
     (1--(List.length inst_map)) state_to_abbrevs THEN
 
   (* Right *)
-  ARM_STEPS'_AND_REWRITE_TAC BIGNUM_MONTMUL_P384_NEON_CORE_EXEC
+  ARM_N_STEPS_AND_REWRITE_TAC BIGNUM_MONTMUL_P384_NEON_CORE_EXEC
     (1--(List.length inst_map)) inst_map state_to_abbrevs THEN
 
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THENL [
+  CONJ_TAC THENL [
     (** SUBGOAL 1. Outputs **)
     ASM_REWRITE_TAC[montmul_p384_eqout;mk_equiv_regs;mk_equiv_bool_regs;
                     BIGNUM_EXPAND_CONV `bignum_from_memory (ptr,6) state`;
                     C_ARGUMENTS] THEN
     REPEAT (HINT_EXISTS_REFL_TAC THEN ASM_REWRITE_TAC[]);
 
-    (** SUBGOAL 2. Maychange left **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC;
-
-    (** SUBGOAL 3. Maychange right **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC
+    (** SUBGOAL 2. Maychange pair **)
+    MONOTONE_MAYCHANGE_CONJ_TAC
   ]);;
 
 

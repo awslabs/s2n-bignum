@@ -72,31 +72,26 @@ let SIMP_EQUIV = prove(
   ASSUME_TAC(ISPEC (mk_var("s0'",`:armstate`)) MAYCHANGE_STARTER) THEN
 
   (* Symbolically execute the left program only. *)
-  ARM_STUTTER_LEFT_TAC SIMP_EXEC (1--3) None THEN
+  ARM_N_STUTTER_LEFT_TAC SIMP_EXEC (1--3) None THEN
   (* Symbolically execute the right program only. "'" is the suffix of the
      state name. *)
-  ARM_STUTTER_RIGHT_TAC SIMP2_EXEC (1--2) "'" None THEN
+  ARM_N_STUTTER_RIGHT_TAC SIMP2_EXEC (1--2) "'" None THEN
 
   (* Let's prove the postcondition. *)
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
 
-  REPEAT CONJ_TAC THENL [
+  CONJ_TAC THENL [
     (* ((?k. word_add a (word 4) = k)
        Actually, simplification procedure in symbolic execution tactic already
        folded 'word_add (word_add a (word 1)) (word 3)' into
        'word_add a (word 4)'. *)
     (* META_EXISTS_TAC is somewhat similar to eexists in Coq. *)
-    META_EXISTS_TAC THEN UNIFY_REFL_TAC;
+    CONJ_TAC THENL [
+      META_EXISTS_TAC THEN UNIFY_REFL_TAC;
+      META_EXISTS_TAC THEN UNIFY_REFL_TAC;
+    ];
 
-    (* (?k2. word_add b (word 2) = k2)) *)
-    META_EXISTS_TAC THEN UNIFY_REFL_TAC;
-
-    (* MAYCHANGE [PC; X0; X1] s0 s3 *)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC;
-
-    (* MAYCHANGE [PC; X0; X1] s0' s2' *)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC;
+    (* Maychange pair *)
+    MONOTONE_MAYCHANGE_CONJ_TAC
   ]);;
