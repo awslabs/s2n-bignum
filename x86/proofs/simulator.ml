@@ -4,7 +4,7 @@
  *)
 
 (* ------------------------------------------------------------------------- *)
-(* Encoding the registers and flags as a 16-element list of numbers.         *)
+(* Encoding the registers and flags as an 80-element list of numbers.        *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/base.ml";;
@@ -17,7 +17,71 @@ let regfile = new_definition
     2048 * bitval(read OF s);
     val(read RBP s); val(read RSI s); val(read RDI s); val(read R8 s);
     val(read R9 s); val(read R10 s); val(read R11 s); val(read R12 s);
-    val(read R13 s); val(read R14 s); val(read R15 s)]`;;
+    val(read R13 s); val(read R14 s); val(read R15 s);
+    val(word_subword (read YMM0 s) (0,64):int64);
+    val(word_subword (read YMM0 s) (64,64):int64);
+    val(word_subword (read YMM0 s) (128,64):int64);
+    val(word_subword (read YMM0 s) (192,64):int64);
+    val(word_subword (read YMM1 s) (0,64):int64);
+    val(word_subword (read YMM1 s) (64,64):int64);
+    val(word_subword (read YMM1 s) (128,64):int64);
+    val(word_subword (read YMM1 s) (192,64):int64);
+    val(word_subword (read YMM2 s) (0,64):int64);
+    val(word_subword (read YMM2 s) (64,64):int64);
+    val(word_subword (read YMM2 s) (128,64):int64);
+    val(word_subword (read YMM2 s) (192,64):int64);
+    val(word_subword (read YMM3 s) (0,64):int64);
+    val(word_subword (read YMM3 s) (64,64):int64);
+    val(word_subword (read YMM3 s) (128,64):int64);
+    val(word_subword (read YMM3 s) (192,64):int64);
+    val(word_subword (read YMM4 s) (0,64):int64);
+    val(word_subword (read YMM4 s) (64,64):int64);
+    val(word_subword (read YMM4 s) (128,64):int64);
+    val(word_subword (read YMM4 s) (192,64):int64);
+    val(word_subword (read YMM5 s) (0,64):int64);
+    val(word_subword (read YMM5 s) (64,64):int64);
+    val(word_subword (read YMM5 s) (128,64):int64);
+    val(word_subword (read YMM5 s) (192,64):int64);
+    val(word_subword (read YMM6 s) (0,64):int64);
+    val(word_subword (read YMM6 s) (64,64):int64);
+    val(word_subword (read YMM6 s) (128,64):int64);
+    val(word_subword (read YMM6 s) (192,64):int64);
+    val(word_subword (read YMM7 s) (0,64):int64);
+    val(word_subword (read YMM7 s) (64,64):int64);
+    val(word_subword (read YMM7 s) (128,64):int64);
+    val(word_subword (read YMM7 s) (192,64):int64);
+    val(word_subword (read YMM8 s) (0,64):int64);
+    val(word_subword (read YMM8 s) (64,64):int64);
+    val(word_subword (read YMM8 s) (128,64):int64);
+    val(word_subword (read YMM8 s) (192,64):int64);
+    val(word_subword (read YMM9 s) (0,64):int64);
+    val(word_subword (read YMM9 s) (64,64):int64);
+    val(word_subword (read YMM9 s) (128,64):int64);
+    val(word_subword (read YMM9 s) (192,64):int64);
+    val(word_subword (read YMM10 s) (0,64):int64);
+    val(word_subword (read YMM10 s) (64,64):int64);
+    val(word_subword (read YMM10 s) (128,64):int64);
+    val(word_subword (read YMM10 s) (192,64):int64);
+    val(word_subword (read YMM11 s) (0,64):int64);
+    val(word_subword (read YMM11 s) (64,64):int64);
+    val(word_subword (read YMM11 s) (128,64):int64);
+    val(word_subword (read YMM11 s) (192,64):int64);
+    val(word_subword (read YMM12 s) (0,64):int64);
+    val(word_subword (read YMM12 s) (64,64):int64);
+    val(word_subword (read YMM12 s) (128,64):int64);
+    val(word_subword (read YMM12 s) (192,64):int64);
+    val(word_subword (read YMM13 s) (0,64):int64);
+    val(word_subword (read YMM13 s) (64,64):int64);
+    val(word_subword (read YMM13 s) (128,64):int64);
+    val(word_subword (read YMM13 s) (192,64):int64);
+    val(word_subword (read YMM14 s) (0,64):int64);
+    val(word_subword (read YMM14 s) (64,64):int64);
+    val(word_subword (read YMM14 s) (128,64):int64);
+    val(word_subword (read YMM14 s) (192,64):int64);
+    val(word_subword (read YMM15 s) (0,64):int64);
+    val(word_subword (read YMM15 s) (64,64):int64);
+    val(word_subword (read YMM15 s) (128,64):int64);
+    val(word_subword (read YMM15 s) (192,64):int64)]`;;
 
 let FLAGENCODING_11 = prove
  (`bitval b0 + 4 * bitval b1 + 16 * bitval b2 +
@@ -45,6 +109,27 @@ let FLAGENCODING_11 = prove
   CONV_TAC NUM_REDUCE_CONV THEN
   ASM_REWRITE_TAC[MOD_2_CASES; GSYM NOT_ODD] THEN ARITH_TAC);;
 
+let YMMENCODING_REGROUP = prove
+ (`(!(y:256 word) (y0:int64) (y1:int64) (y2:int64) (y3:int64).
+    word_subword y (0,64) = y0 /\
+    word_subword y (64,64) = y1 /\
+    word_subword y (128,64) = y2 /\
+    word_subword y (192,64) = y3 <=>
+    y = word_join (word_join y3 y2:128 word) (word_join y1 y0:128 word)) /\
+   (!(y:256 word) (y0:int64) (y1:int64) (y2:int64) (y3:int64) P.
+    word_subword y (0,64) = y0 /\
+    word_subword y (64,64) = y1 /\
+    word_subword y (128,64) = y2 /\
+    word_subword y (192,64) = y3 /\
+    P <=>
+    y = word_join (word_join y3 y2:128 word) (word_join y1 y0:128 word) /\ P)`,
+  CONJ_TAC THEN REPEAT GEN_TAC THEN
+  ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
+  REWRITE_TAC[DIMINDEX_64; DIMINDEX_256] THEN
+  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC(TOP_DEPTH_CONV BIT_WORD_CONV) THEN
+  REWRITE_TAC[CONJ_ASSOC]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Random numbers with random bit density, random state for simulating.      *)
 (* ------------------------------------------------------------------------- *)
@@ -61,8 +146,7 @@ let random_regstate () =
   let d = Random.int 65 in
   map (fun _ -> randomnd 64 d) (0--3) @
   [num(Random.int 256 land 0b11010101)] @
-  [num(4294967295)] @
-  map (fun _ -> randomnd 64 d) (6--15);;
+  map (fun _ -> randomnd 64 d) (5--79);;
 
 (* ------------------------------------------------------------------------- *)
 (* Generate random instance of instruction class itself.                     *)
@@ -127,11 +211,14 @@ let iclasses = iclasses @
  [0x4c; 0x0f; 0xbe; 0xfa];  (* MOVSX (% r15) (% dl) *)
  [0x44; 0x0f; 0xbe; 0xfa];  (* MOVSX (% r15d) (% dl) *)
  [0x4c; 0x63; 0xfa];        (* MOVSX (% r15) (% edx) *)
- [0x44; 0x63; 0xfa]         (* MOVSX (% r15d) (% edx) *)
+ [0x44; 0x63; 0xfa];        (* MOVSX (% r15d) (% edx) *)
+ [0xc5; 0xe9; 0xef; 0xcb];  (* VPXOR (%_% xmm1) (%_% xmm2) (%_% xmm3) *)
+ [0xc5; 0xed; 0xef; 0xcb];  (* VPXOR (%_% ymm1) (%_% ymm2) (%_% ymm3) *)
+ [0xc4; 0x41; 0x31; 0xef; 0xd0]; (* VPXOR (%_% xmm10) (%_% xmm9) (%_% xmm8) *)
+ [0xc4; 0x41; 0x35; 0xef; 0xd0]; (* VPXOR (%_% ymm10) (%_% ymm9) (%_% ymm8) *)
+ [0xc4; 0x41; 0x09; 0xef; 0xef]; (* VPXOR (%_% xmm13) (%_% xmm14) (%_% xmm15) *)
+ [0xc4; 0x41; 0x0d; 0xef; 0xef] (* VPXOR (%_% ymm13) (%_% ymm14) (%_% ymm15) *)
 ];;
-
-(*let iclasses =
-  map (function (0x48::l::m) -> l::m | m -> m) iclasses;;*)
 
 (* ------------------------------------------------------------------------- *)
 (* Run a random example.                                                     *)
@@ -145,6 +232,8 @@ let template =
      (\s. regfile s = output_state)
      (MAYCHANGE [RIP; RAX; RCX; RDX; RBX; RBP; RSI; RDI;
                  R8; R9; R10; R11; R12; R13; R14; R15] ,,
+      MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
+                 ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
       MAYCHANGE SOME_FLAGS)`;;
 
 let num_two_to_64 = Num.num_of_string "18446744073709551616";;
@@ -166,7 +255,6 @@ let only_undefinedness =
     | Comb(Const("~",_),l) when is_undef l -> true
     | _ -> is_undef tm in
   forall is_nundef o conjuncts;;
-
 
 let run_random_simulation () =
   let ibytes:int list = random_instruction iclasses in
@@ -220,14 +308,11 @@ let run_random_simulation () =
        (REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
         REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN
         CONV_TAC (ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+        REWRITE_TAC[YMMENCODING_REGROUP] THEN
+        CONV_TAC(DEPTH_CONV WORD_JOIN_CONV) THEN
         REWRITE_TAC[SOME_FLAGS] THEN
         X86_SIM_TAC execth [1] THEN
-        (* Deal with the BSWAP instruction *)
-        TRY (REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
-          REWRITE_TAC[BIT_WORD_OF_BITS; IN_ELIM_THM] THEN
-          REWRITE_TAC[DIMINDEX_64] THEN CONV_TAC EXPAND_CASES_CONV THEN
-          CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
-          FAIL_TAC "Not BSWAP, or BSWAP having more complicated "))
+        CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV))
        ([],goal)
       with
         _,[_,endres],_ ->

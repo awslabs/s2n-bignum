@@ -509,7 +509,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11001110011:11; Rm:5; 0b100010:6; Rn:5; Rd:5] ->
     // SHA512SU1
     SOME (arm_SHA512SU1 (QREG' Rd) (QREG' Rn) (QREG' Rm))
-  
+
   | [0b11001110011:11; Rm:5; 0b100011:6; Rn:5; Rd:5] ->
     // RAX1
     SOME (arm_RAX1 (QREG' Rd) (QREG' Rn) (QREG' Rm))
@@ -676,7 +676,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11001110001:11; Rm:5; 0:1; Ra:5; Rn:5; Rd:5] ->
     // BCAX
     SOME (arm_BCAX (QREG' Rd) (QREG' Rn) (QREG' Rm) (QREG' Ra))
-  
+
   | [0b11001110100:11; Rm:5; imm6:6; Rn:5; Rd:5] ->
     // XAR
     SOME (arm_XAR (QREG' Rd) (QREG' Rn) (QREG' Rm) imm6)
