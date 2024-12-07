@@ -139,19 +139,13 @@ let VECTORIZE_SQR_EQUIV = prove(equiv_goal1,
                        WORD_SQR128_DIGIT1;WORD_SQR128_DIGIT2;
                        WORD_SQR128_DIGIT3]) THEN
 
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THENL [
+  CONJ_TAC THENL [
     (* Prove the equivalence! *)
     ASM_REWRITE_TAC[equiv_output_states;mk_equiv_regs;mk_equiv_bool_regs] THEN
     REPEAT (HINT_EXISTS_REFL_TAC THEN ASM_REWRITE_TAC[]);
 
-    (* Maychange 1 *)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC;
-
-    (* Maychange 2 *)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC
+    MONOTONE_MAYCHANGE_CONJ_TAC
   ]);;

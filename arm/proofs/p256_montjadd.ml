@@ -1205,10 +1205,10 @@ let P256_MONTJADD_EQUIV = time prove(equiv_goal,
     ~dead_value_info_right:p256_montjadd_dead_value_info
     actions_merged P256_MONTJADD_CORE_EXEC P256_MONTJADD_OPT_EXEC THEN
 
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THENL [
+  CONJ_TAC THENL [
     (** SUBGOAL 1. Outputs **)
     ASM_REWRITE_TAC[p256_montjadd_eqout;mk_equiv_regs;mk_equiv_bool_regs;
                     BIGNUM_EXPAND_CONV `bignum_from_memory (ptr,4) state`;
@@ -1220,13 +1220,8 @@ let P256_MONTJADD_EQUIV = time prove(equiv_goal,
     (* Prove eq. *)
     REPEAT (HINT_EXISTS_REFL_TAC THEN ASM_REWRITE_TAC[]);
 
-    (** SUBGOAL 2. Maychange left **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC;
-
-    (** SUBGOAL 3. Maychange right **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC
+    (** SUBGOAL 2. Maychange pair **)
+    MONOTONE_MAYCHANGE_CONJ_TAC
   ]);;
 
 orthogonal_components_conv_custom_cache := fun _ -> None;;
