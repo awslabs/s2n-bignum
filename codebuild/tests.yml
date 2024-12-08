@@ -2,6 +2,9 @@
 version: 0.2
 
 phases:
+  install:
+    commands:
+      - yum -y install valgrind || (apt-get --allow-insecure-repositories update && apt-get -y install valgrind)
   build:
     commands:
       - cd ${CODEBUILD_SRC_DIR}/${S2N_BIGNUM_ARCH}

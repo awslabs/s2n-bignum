@@ -1489,7 +1489,7 @@ let p384_montjadd_eqin = new_definition
       C_ARGUMENTS [p3; p1; p2] s1' /\
       // 48 is the amount used by montmul_p384
       read SP s1 = word_add stackpointer (word 48) /\
-      read SP s1' = word_add stackpointer (word 48) /\
+      read SP s1' = stackpointer /\
       ?a. bignum_from_memory (p1,18) s1 = a /\
           bignum_from_memory (p1,18) s1' = a /\
       ?b. bignum_from_memory (p2,18) s1 = b /\
@@ -1502,7 +1502,7 @@ let p384_montjadd_eqout = new_definition
     (// 48 is the amount used by montmul_p384
      // keep track of the SP values to remove MAYCHANGE SP later.
      read SP s1 = word_add stackpointer (word 48) /\
-     read SP s1' = word_add stackpointer (word 48) /\
+     read SP s1' = stackpointer /\
      // 3 separate 6-word reads to make proving equality between
      // two bignum_triple_from_memory results straightforward
      ?a0. bignum_from_memory (p3,6) s1 = a0 /\
@@ -1736,7 +1736,7 @@ let P384_MONTJADD_CORRECT = prove(
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc2) p384_montjadd_opt_mc /\
                   read PC s = word(pc2 + 0x18) /\
-                  read SP s = (word_add stackpointer (word 48)) /\
+                  read SP s = stackpointer /\
                   C_ARGUMENTS [p3; p1; p2] s /\
                   bignum_triple_from_memory (p1,6) s = t1 /\
                   bignum_triple_from_memory (p2,6) s = t2)
@@ -1792,7 +1792,8 @@ let P384_MONTJADD_CORRECT = prove(
       `write (memory :> bytelist
           (word pc,LENGTH (APPEND p384_montjadd_core_mc barrier_inst_bytes)))
           (APPEND p384_montjadd_core_mc barrier_inst_bytes)
-          (write PC (word (pc + 0xbd0)) s2)` THEN
+          (write SP (word_add stackpointer (word 48))
+            (write PC (word (pc + 0xbd0)) s2))` THEN
     (* Expand variables appearing in the equiv relation *)
     PROVE_CONJ_OF_EQ_READS_TAC P384_MONTJADD_CORE_EXEC THEN
     (* Now has only one subgoal: the input state equivalence! *)

@@ -7671,6 +7671,7 @@ int test_bignum_mux16(void)
      i = rand() & 15;
      reference_copy(k,b1,k,bs+k*i);
      bignum_mux16(k,b2,bs,i);
+     free(bs);
 
      c = reference_compare(k,b2,k,b1);
 
