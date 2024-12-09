@@ -4,7 +4,6 @@
  *)
 
 needs "Library/words.ml";;
-needs "compute.ml";;
 
 (** TODO:define a recursive definition for word_join_list and its CONV *)
 
