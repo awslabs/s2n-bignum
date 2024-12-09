@@ -146,14 +146,15 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
            bignum_from_memory (word_add table (word (8 * val idx * val width)), val width) s = m)
       (\s. read RIP s = word (pc + LENGTH (BUTLAST bignum_copy_row_from_table_mc)) /\
            bignum_from_memory (z, val width) s = m)
-      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+      (MAYCHANGE [RIP] ,,
+       MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+       MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
        MAYCHANGE [memory :> bytes(z,8 * val width)])`,
 
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
     fst BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC;
-    fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC;
-    MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
   ASM_CASES_TAC `val (height:(64)word) = 0` THENL [
@@ -208,8 +209,10 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
     (* 3. loop body *)
     REPEAT STRIP_TAC THEN REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
-    EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-        MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * (val (width:int64) - (i + 1))))]` THEN
+    EXISTS_TAC `MAYCHANGE [RIP] ,,
+                MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * (val (width:int64) - (i + 1))))]` THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     CONJ_TAC THENL [
       REPEAT(MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
@@ -369,8 +372,10 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
   REPEAT STRIP_TAC THEN REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
 
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
-    EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-        MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * i'))]` THEN
+    EXISTS_TAC `MAYCHANGE [RIP] ,,
+                MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * i'))]` THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     CONJ_TAC THENL [
       REPEAT(MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN

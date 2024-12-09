@@ -21,6 +21,14 @@
 //      R13 = regfile[13]
 //      R14 = regfile[14]
 //      R15 = regfile[15]
+//      YMM0.d[0] = regfile[16]
+//      YMM0.d[1] = regfile[17]
+//      YMM0.d[2] = regfile[18]
+//      YMM0.d[3] = regfile[19]
+//      YMM1.d[0] = regfile[20]
+//      ...
+//      YMM15.d[2] = regfile[78]
+//      YMM15.d[3] = regfile[79]
 //
 // executes the instruction at "modinst", then copies the new state
 // back into the same array, also returning new value RAX directly.
@@ -77,6 +85,23 @@ harness:
         mov     r14, [rdi+14*8]
         mov     r15, [rdi+15*8]
 
+        vmovdqu ymm0, [rdi+16*8]
+        vmovdqu ymm1, [rdi+20*8]
+        vmovdqu ymm2, [rdi+24*8]
+        vmovdqu ymm3, [rdi+28*8]
+        vmovdqu ymm4, [rdi+32*8]
+        vmovdqu ymm5, [rdi+36*8]
+        vmovdqu ymm6, [rdi+40*8]
+        vmovdqu ymm7, [rdi+44*8]
+        vmovdqu ymm8, [rdi+48*8]
+        vmovdqu ymm9, [rdi+52*8]
+        vmovdqu ymm10, [rdi+56*8]
+        vmovdqu ymm11, [rdi+60*8]
+        vmovdqu ymm12, [rdi+64*8]
+        vmovdqu ymm13, [rdi+68*8]
+        vmovdqu ymm14, [rdi+72*8]
+        vmovdqu ymm15, [rdi+76*8]
+
         mov     rdi, [rdi+7*8]
 
 // Execute the instruction, which may be modified from this placeholder
@@ -94,6 +119,23 @@ modinst:
         pop     rax
         and     rax, 0b100011010101
         mov     [rdi+4*8], rax
+
+        vmovdqu [rdi+16*8],  ymm0
+        vmovdqu [rdi+20*8],  ymm1
+        vmovdqu [rdi+24*8],  ymm2
+        vmovdqu [rdi+28*8],  ymm3
+        vmovdqu [rdi+32*8],  ymm4
+        vmovdqu [rdi+36*8],  ymm5
+        vmovdqu [rdi+40*8],  ymm6
+        vmovdqu [rdi+44*8],  ymm7
+        vmovdqu [rdi+48*8],  ymm8
+        vmovdqu [rdi+52*8],  ymm9
+        vmovdqu [rdi+56*8], ymm10
+        vmovdqu [rdi+60*8], ymm11
+        vmovdqu [rdi+64*8], ymm12
+        vmovdqu [rdi+68*8], ymm13
+        vmovdqu [rdi+72*8], ymm14
+        vmovdqu [rdi+76*8], ymm15
 
         mov     [rdi+1*8],  rcx
         mov     [rdi+2*8],  rdx

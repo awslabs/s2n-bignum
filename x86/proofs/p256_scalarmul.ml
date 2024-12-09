@@ -10646,53 +10646,74 @@ let P256_SCALARMUL_EXEC = X86_MK_EXEC_RULE p256_scalarmul_mc;;
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_DEMONT_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_DEMONT_P256_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC
+    bignum_demont_p256_mc BIGNUM_DEMONT_P256_CORRECT `[RBX]` 8) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
-    0xb96,bignum_demont_p256_mc,BIGNUM_DEMONT_P256_SUBROUTINE_CORRECT)
+    0xb96,bignum_demont_p256_mc,baseth)
   [`read RDI s`; `read RSI s`;
    `read(memory :> bytes(read RSI s,8 * 4)) s`;
    `pc + 0xb96`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_INV_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_INV_P256_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC bignum_inv_p256_mc BIGNUM_INV_P256_CORRECT
+      `[RBX; RBP; R12; R13; R14; R15]` 288) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
-    0xc88,bignum_inv_p256_mc,BIGNUM_INV_P256_SUBROUTINE_CORRECT)
+    0xc88,bignum_inv_p256_mc,baseth)
   [`read RDI s`; `read RSI s`;
    `read(memory :> bytes(read RSI s,8 * 4)) s`;
    `pc + 0xc88`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_MUL_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_MONTMUL_P256_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC
+   bignum_montmul_p256_mc BIGNUM_MONTMUL_P256_CORRECT
+   `[RBX; R12; R13; R14; R15]` 40) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
     0x21f7,bignum_montmul_p256_mc,
-    BIGNUM_MONTMUL_P256_SUBROUTINE_CORRECT)
+    baseth)
   [`read RDI s`; `read RSI s`; `read RDX s`;
    `read(memory :> bytes(read RSI s,8 * 4)) s`;
    `read(memory :> bytes(read RDX s,8 * 4)) s`;
    `pc + 0x21f7`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_SQR_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_MONTSQR_P256_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC
+   bignum_montsqr_p256_mc BIGNUM_MONTSQR_P256_CORRECT
+   `[RBX; RBP; R12; R13; R14; R15]` 48) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
     0x2439,bignum_montsqr_p256_mc,
-    BIGNUM_MONTSQR_P256_SUBROUTINE_CORRECT)
+    baseth)
   [`read RDI s`; `read RSI s`;
    `read(memory :> bytes(read RSI s,8 * 4)) s`;
    `pc + 0x2439`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_TOMONT_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_TOMONT_P256_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC
+    bignum_tomont_p256_mc BIGNUM_TOMONT_P256_CORRECT
+    `[R12; R13; R14; R15]` 32) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
-    0x264f,bignum_tomont_p256_mc,BIGNUM_TOMONT_P256_SUBROUTINE_CORRECT)
+    0x264f,bignum_tomont_p256_mc,baseth)
   [`read RDI s`; `read RSI s`;
    `read(memory :> bytes(read RSI s,8 * 4)) s`;
    `pc + 0x264f`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_JADD_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE P256_MONTJADD_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC p256_montjadd_mc P256_MONTJADD_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 272) in
   let th =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
       (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-       P256_MONTJADD_SUBROUTINE_CORRECT) in
+       baseth) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
     0x28e8,p256_montjadd_mc,th)
@@ -10707,10 +10728,13 @@ let LOCAL_JADD_TAC =
    `pc + 0x28e8`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_JDOUBLE_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE P256_MONTJDOUBLE_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC p256_montjdouble_mc P256_MONTJDOUBLE_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 240) in
   let th =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
       (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-       P256_MONTJDOUBLE_SUBROUTINE_CORRECT) in
+       baseth) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
     0x51f6,p256_montjdouble_mc,th)
@@ -10721,10 +10745,13 @@ let LOCAL_JDOUBLE_TAC =
    `pc + 0x51f6`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`];;
 
 let LOCAL_JMIXADD_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE P256_MONTJMIXADD_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC p256_montjmixadd_mc P256_MONTJMIXADD_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 240) in
   let th =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
       (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-       P256_MONTJMIXADD_SUBROUTINE_CORRECT) in
+       baseth) in
   X86_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
     0x6847,p256_montjmixadd_mc,th)
@@ -10866,7 +10893,9 @@ let P256_SCALARMUL_CORRECT = time prove
                       ==> affinepointz_p256
                             (bignum_pair_from_memory(res,4) s)
                             (group_pow p256_group P n))
-          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          (MAYCHANGE [RIP] ,,
+           MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
            MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(res,64);
                       memory :> bytes(stackpointer,1320)])`,
@@ -11837,9 +11866,13 @@ let WINDOWS_P256_SCALARMUL_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 1392),1392)])`,
   let WINDOWS_P256_SCALARMUL_EXEC =
     X86_MK_EXEC_RULE windows_p256_scalarmul_mc
-   and th =
+  and baseth =
+    X86_SIMD_SHARPEN_RULE P256_SCALARMUL_SUBROUTINE_CORRECT
+    (X86_ADD_RETURN_STACK_TAC P256_SCALARMUL_EXEC
+     P256_SCALARMUL_CORRECT `[RBX; RBP; R12; R13; R14; R15]` 1368) in
+  let subth =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-     (REWRITE_RULE[bignum_pair_from_memory] P256_SCALARMUL_SUBROUTINE_CORRECT) in
+     (REWRITE_RULE[bignum_pair_from_memory] baseth) in
   REPLICATE_TAC 6 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 1392 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -11856,7 +11889,7 @@ let WINDOWS_P256_SCALARMUL_SUBROUTINE_CORRECT = time prove
   X86_SUBROUTINE_SIM_TAC
    (windows_p256_scalarmul_mc,
     WINDOWS_P256_SCALARMUL_EXEC,
-    0x13,p256_scalarmul_mc,th)
+    0x13,p256_scalarmul_mc,subth)
    [`read RDI s`; `read RSI s`; `read RDX s`;
     `read(memory :> bytes(read RSI s,8 * 4)) s`;
     `read(memory :> bytes(read RDX s,8 * 4)) s,

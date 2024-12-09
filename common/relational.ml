@@ -106,6 +106,14 @@ let ASSIGN_ZEROTOP_64 = prove
  (`!c y. ((c :> zerotop_64) := y) = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_64]);;
 
+let ASSIGN_ZEROTOP_128 = prove
+ (`!c y. ((c :> zerotop_128) := y) = (c := word_zx y)`,
+  REWRITE_TAC[assign; WRITE_ZEROTOP_128]);;
+
+let ASSIGN_ZEROTOP_256 = prove
+ (`!c y. ((c :> zerotop_256) := y) = (c := word_zx y)`,
+  REWRITE_TAC[assign; WRITE_ZEROTOP_256]);;
+
 (* ------------------------------------------------------------------------- *)
 (* A nondeterministic assignment of a state component.                       *)
 (* ------------------------------------------------------------------------- *)
