@@ -536,9 +536,36 @@ let joined_FFmul_03_CONV =
   DEPTH_CONV WORD_JOIN_CONV;;
 let joined_FFmul_03_CLAUSES = joined_FFmul_03_CONV `joined_FFmul_03`;;
 
+let joined_FFmul_0E_CONV =
+  GEN_REWRITE_CONV I [joined_FFmul_0E] THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [FFmul_0E] THENC
+  word_join_list_16_128_CONV THENC
+  DEPTH_CONV WORD_JOIN_CONV;;
+let joined_FFmul_0E_CLAUSES = joined_FFmul_0E_CONV `joined_FFmul_0E`;;
+
+let joined_FFmul_0B_CONV =
+  GEN_REWRITE_CONV I [joined_FFmul_0B] THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [FFmul_0B] THENC
+  word_join_list_16_128_CONV THENC
+  DEPTH_CONV WORD_JOIN_CONV;;
+let joined_FFmul_0B_CLAUSES = joined_FFmul_0B_CONV `joined_FFmul_0B`;;
+
+let joined_FFmul_0D_CONV =
+  GEN_REWRITE_CONV I [joined_FFmul_0D] THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [FFmul_0D] THENC
+  word_join_list_16_128_CONV THENC
+  DEPTH_CONV WORD_JOIN_CONV;;
+let joined_FFmul_0D_CLAUSES = joined_FFmul_0D_CONV `joined_FFmul_0D`;;
+
+let joined_FFmul_09_CONV =
+  GEN_REWRITE_CONV I [joined_FFmul_09] THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [FFmul_09] THENC
+  word_join_list_16_128_CONV THENC
+  DEPTH_CONV WORD_JOIN_CONV;;
+let joined_FFmul_09_CLAUSES = joined_FFmul_09_CONV `joined_FFmul_09`;;
+
 let aes_sub_bytes_select_CONV = REWRITE_CONV [aes_sub_bytes_select]
-  THENC ((GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_GF2_CLAUSE])
-    ORELSEC (GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_GF2_inv_CLAUSE]))
+  THENC (GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_GF2_CLAUSE; joined_GF2_inv_CLAUSE])
   THENC TOP_DEPTH_CONV let_CONV
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
@@ -551,6 +578,10 @@ let aes_shift_rows_CONV = REWRITE_CONV [aes_shift_rows]
   THENC word_join_list_16_8_CONV
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
+let aes_inv_shift_rows_CONV = REWRITE_CONV [aes_inv_shift_rows]
+  THENC word_join_list_16_8_CONV
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
 let FFmul02_CONV = REWRITE_CONV [FFmul02]
   THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_FFmul_02_CLAUSES]
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
@@ -559,13 +590,42 @@ let FFmul03_CONV = REWRITE_CONV [FFmul03]
   THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_FFmul_03_CLAUSES]
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
+let FFmul0E_CONV = REWRITE_CONV [FFmul0E]
+  THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_FFmul_0E_CLAUSES]
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let FFmul0B_CONV = REWRITE_CONV [FFmul0B]
+  THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_FFmul_0B_CLAUSES]
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let FFmul0D_CONV = REWRITE_CONV [FFmul0D]
+  THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_FFmul_0D_CLAUSES]
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let FFmul09_CONV = REWRITE_CONV [FFmul09]
+  THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_FFmul_09_CLAUSES]
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
 let aes_mix_word_CONV = REWRITE_CONV [aes_mix_word]
   THENC FFmul02_CONV
   THENC FFmul03_CONV
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
+let aes_inv_mix_word_CONV = REWRITE_CONV [aes_inv_mix_word]
+  THENC FFmul0E_CONV
+  THENC FFmul0B_CONV
+  THENC FFmul0D_CONV
+  THENC FFmul09_CONV
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
 let aes_mix_columns_CONV = REWRITE_CONV [aes_mix_columns]
   THENC aes_mix_word_CONV
+  THENC word_join_list_16_8_CONV
+  THENC TOP_DEPTH_CONV let_CONV
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let aes_inv_mix_columns_CONV = REWRITE_CONV [aes_inv_mix_columns]
+  THENC aes_inv_mix_word_CONV
   THENC word_join_list_16_8_CONV
   THENC TOP_DEPTH_CONV let_CONV
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
@@ -577,6 +637,14 @@ let aese_helper_CONV = REWRITE_CONV [aese]
 
 let aesmc_helper_CONV = REWRITE_CONV [aesmc]
   THENC aes_mix_columns_CONV;;
+
+let aesd_helper_CONV = REWRITE_CONV [aesd]
+  THENC aes_inv_shift_rows_CONV
+  THENC aes_sub_bytes_CONV
+  THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let aesimc_helper_CONV = REWRITE_CONV [aesimc]
+  THENC aes_inv_mix_columns_CONV;;
 
 (** Stop early if unmatched. Conversions will become extremely expensive if we don't stop early *)
 let aese_CONV tm =
@@ -591,16 +659,32 @@ let aesmc_CONV tm =
       Comb(Const("aesmc",_), Comb(Const("word",_),n))
     when is_numeral n -> aesmc_helper_CONV tm
   | _ -> failwith "aesmc_CONV: inapplicable";;
+let aesd_CONV tm =
+    match tm with
+      Comb(Comb(Const("aesd",_),
+           Comb(Const("word",_),d)),
+           Comb(Const("word",_),n))
+    when is_numeral d && is_numeral n -> aesd_helper_CONV tm
+  | _ -> failwith "aesd_CONV: inapplicable";;
+let aesimc_CONV tm =
+    match tm with
+      Comb(Const("aesimc",_), Comb(Const("word",_),n))
+    when is_numeral n -> aesimc_helper_CONV tm
+  | _ -> failwith "aesimc_CONV: inapplicable";;
 
 time (REWRITE_CONV [input] THENC aes_sub_bytes_select_CONV) `aes_sub_bytes_select joined_GF2 input 0`;;
 time (REWRITE_CONV [input] THENC aes_sub_bytes_CONV) `aes_sub_bytes joined_GF2 input`;;
 time (REWRITE_CONV [input] THENC aes_sub_bytes_select_CONV) `aes_sub_bytes_select joined_GF2_inv input 0`;;
 time (REWRITE_CONV [input] THENC aes_sub_bytes_CONV) `aes_sub_bytes joined_GF2_inv input`;;
 time (REWRITE_CONV [input] THENC aes_shift_rows_CONV) `aes_shift_rows input`;;
+time (REWRITE_CONV [input] THENC aes_inv_shift_rows_CONV) `aes_inv_shift_rows input`;;
 time FFmul02_CONV `FFmul02 (word 0x2a)`;;
 time FFmul03_CONV `FFmul03 (word 0x2a)`;;
 time (REWRITE_CONV [input] THENC aes_mix_word_CONV) `aes_mix_word input 0 8 16 24`;;
+time (REWRITE_CONV [input] THENC aes_inv_mix_word_CONV) `aes_inv_mix_word input 0 8 16 24`;;
 time (REWRITE_CONV [input] THENC aes_mix_columns_CONV) `aes_mix_columns input`;;
+time (REWRITE_CONV [input] THENC aes_inv_mix_columns_CONV) `aes_inv_mix_columns input`;;
 time (REWRITE_CONV [input] THENC aese_CONV) `aese (word 0xae6910a45715645a02502baaf5a826c9) (word 0xec882f3270973907d69635eea82d71)`;;
 time (REWRITE_CONV [input] THENC aesmc_CONV) `aesmc (word 0xae6910a45715645a02502baaf5a826c9)`;;
-
+time (REWRITE_CONV [input] THENC aesd_CONV) `aesd (word 0xae6910a45715645a02502baaf5a826c9) (word 0xec882f3270973907d69635eea82d71)`;;
+time (REWRITE_CONV [input] THENC aesimc_CONV) `aesimc (word 0xae6910a45715645a02502baaf5a826c9)`;;
