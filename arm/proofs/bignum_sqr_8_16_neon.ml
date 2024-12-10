@@ -629,24 +629,19 @@ let BIGNUM_SQR_8_16_CORE_EQUIV = time prove(equiv_goal,
   EQUIV_STEPS_TAC actions2 BIGNUM_SQR_8_16_CORE_EXEC BIGNUM_SQR_8_16_NEON_CORE_EXEC THEN
 
   (* Finalize *)
-  REPEAT_N 2 ENSURES_FINAL_STATE'_TAC THEN
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THENL [
-    (** SUBGOAL 2. Outputs **)
+  CONJ_TAC THENL [
+    (** SUBGOAL 1. Outputs **)
     ASM_REWRITE_TAC[bignum_sqr_8_16_equiv_output_states;mk_equiv_regs;mk_equiv_bool_regs;
                     BIGNUM_EXPAND_CONV `bignum_from_memory (ptr,8) state`;
                     C_ARGUMENTS] THEN
     REPEAT (HINT_EXISTS_REFL_TAC THEN ASM_REWRITE_TAC[]) THEN
     ASM_REWRITE_TAC[BIGNUM_EXPAND_CONV `bignum_from_memory (p,16) st`];
 
-    (** SUBGOAL 3. MAYCHANGE left **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC;
-
-    (** SUBGOAL 4. MAYCHANGE right **)
-    DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
-    MONOTONE_MAYCHANGE_TAC
+    (** SUBGOAL 2. Maychange pair **)
+    MONOTONE_MAYCHANGE_CONJ_TAC
   ]);;
 
 extra_word_CONV := _org_extra_word_CONV;;
