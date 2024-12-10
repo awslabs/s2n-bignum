@@ -60,7 +60,8 @@ extra_word_CONV :=
 
 loadt "arm/proofs/aes.ml";;
 
-extra_word_CONV := [aese_CONV; aesmc_CONV] @ (!extra_word_CONV);;
+extra_word_CONV := [aese_CONV; aesmc_CONV; 
+                    aesd_CONV; aesimc_CONV] @ (!extra_word_CONV);;
 
 (* ------------------------------------------------------------------------- *)
 (* The main ARM model.                                                       *)

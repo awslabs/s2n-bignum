@@ -335,6 +335,12 @@ let iclasses =
 
   (*** AESMC ***)
   "0100111000101000011010xxxxxxxxxx";
+
+  (*** AESD ***)
+  "0100111000101000010110xxxxxxxxxx";
+
+  (*** AESIMC ***)
+  "0100111000101000011110xxxxxxxxxx";
 ];;
 
 
