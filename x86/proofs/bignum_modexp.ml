@@ -654,10 +654,13 @@ let X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC (mc,ex,d,smc,cth) ins outs s n =
 
 needs "x86/proofs/bignum_amontifier.ml";;
 
-let LOCAL_AMONTIFIER_TAC s n =
-  X86_SUBROUTINE_SIM_ABBREV_TAC
+let LOCAL_AMONTIFIER_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT
+   (X86_PROMOTE_RETURN_STACK_TAC bignum_amontifier_mc BIGNUM_AMONTIFIER_CORRECT
+    `[RBX; RBP; R12; R13]` 32) in
+  fun s n -> X86_SUBROUTINE_SIM_ABBREV_TAC
     (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x152,bignum_amontifier_mc,BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT)
+     0x152,bignum_amontifier_mc,baseth)
     [`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`;
      `read (memory :> bytes(read RDX s,8 * k)) s`;
      `pc + 0x152`; `read RSP s`;
@@ -666,10 +669,14 @@ let LOCAL_AMONTIFIER_TAC s n =
 
 needs "x86/proofs/bignum_amontmul.ml";;
 
-let LOCAL_AMONTMUL_TAC s n =
-  X86_SUBROUTINE_SIM_ABBREV_TAC
+let LOCAL_AMONTMUL_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_AMONTMUL_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC
+    bignum_amontmul_mc BIGNUM_AMONTMUL_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 56) in
+  fun s n -> X86_SUBROUTINE_SIM_ABBREV_TAC
     (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x479,bignum_amontmul_mc,BIGNUM_AMONTMUL_SUBROUTINE_CORRECT)
+     0x479,bignum_amontmul_mc,baseth)
     [`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`; `read R8 s`;
      `read (memory :> bytes(read RDX s,8 * k)) s`;
      `read (memory :> bytes(read RCX s,8 * k)) s`;
@@ -680,10 +687,13 @@ let LOCAL_AMONTMUL_TAC s n =
 
 needs "x86/proofs/bignum_demont.ml";;
 
-let LOCAL_DEMONT_TAC s n =
-  X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC
+let LOCAL_DEMONT_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_DEMONT_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC bignum_demont_mc BIGNUM_DEMONT_CORRECT
+   `[RBX; RBP; R12]` 24) in
+  fun s n -> X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC
     (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x5d7,bignum_demont_mc,BIGNUM_DEMONT_SUBROUTINE_CORRECT)
+     0x5d7,bignum_demont_mc,baseth)
     [`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`;
      `read (memory :> bytes(read RDX s,8 * k)) s`;
      `read (memory :> bytes(read RCX s,8 * k)) s`;
@@ -693,10 +703,12 @@ let LOCAL_DEMONT_TAC s n =
 
 needs "x86/proofs/bignum_mux.ml";;
 
-let LOCAL_MUX_TAC s n =
-  X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC
+let LOCAL_MUX_TAC =
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_MUX_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_NOSTACK_TAC bignum_mux_mc BIGNUM_MUX_CORRECT) in
+  fun s n -> X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC
     (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x6ed,bignum_mux_mc,BIGNUM_MUX_SUBROUTINE_CORRECT)
+     0x6ed,bignum_mux_mc,baseth)
     [`read RDI s`; `read RSI s`; `read RCX s`; `read R8 s`; `read RDX s`;
      `read (memory :> bytes(read RCX s,8 * k)) s`;
      `read (memory :> bytes(read R8 s,8 * k)) s`;
@@ -727,7 +739,9 @@ let BIGNUM_MODEXP_CORRECT = prove
                bignum_from_memory(m,val k) s = n)
           (\s. read RIP s = word (pc + 0x14d) /\
                (ODD n ==> bignum_from_memory(z,val k) s = (x EXP y) MOD n))
-          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          (MAYCHANGE [RIP] ,,
+           MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
            MAYCHANGE [memory :> bignum(z,val k);
                       memory :> bytes(t,24 * val k);
                       memory :> bytes(word_sub stackpointer (word 64),136)])`,
@@ -961,7 +975,28 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
                       memory :> bytes(t,24 * val k);
                       memory :> bytes(word_sub stackpointer (word 160),160)])`,
   let WINDOWS_BIGNUM_MODEXP_EXEC =
-    X86_MK_EXEC_RULE windows_bignum_modexp_mc in
+    X86_MK_EXEC_RULE windows_bignum_modexp_mc
+  and subth =
+    X86_SIMD_SHARPEN_RULE BIGNUM_MODEXP_SUBROUTINE_CORRECT
+    (MP_TAC BIGNUM_MODEXP_CORRECT THEN
+     REPLICATE_TAC 10 (MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
+     DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC 136 THEN
+                          X_GEN_TAC `sptr:int64` THEN GEN_TAC THEN
+                          MP_TAC(SPEC `word_add sptr (word 64):int64` th)) THEN
+     REWRITE_TAC[WORD_RULE `word_sub (word_add x y) y = x`] THEN
+     REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALLPAIRS; ALL] THEN
+     REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
+                 MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+     DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
+     ASM_REWRITE_TAC[] THEN ANTS_TAC THENL
+      [REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
+     DISCH_THEN(fun th ->
+       REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+       X86_STEPS_TAC BIGNUM_MODEXP_EXEC [1] THEN MP_TAC th THEN
+       X86_BIGSTEP_TAC BIGNUM_MODEXP_EXEC "s2" THEN
+       REWRITE_TAC(!simulation_precanon_thms) THEN
+       X86_STEPS_TAC BIGNUM_MODEXP_EXEC (3--4) THEN
+       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[])) in
   REPLICATE_TAC 10 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 160 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -977,7 +1012,7 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
   X86_SUBROUTINE_SIM_TAC
    (windows_bignum_modexp_mc,
     WINDOWS_BIGNUM_MODEXP_EXEC,
-    0x20,bignum_modexp_mc,BIGNUM_MODEXP_SUBROUTINE_CORRECT)
+    0x20,bignum_modexp_mc,subth)
    [`read RDI s`; `read RSI s`;
     `read RDX s`; `read (memory :> bytes(read RDX s,8 * val(k:int64))) s`;
     `read RCX s`; `read (memory :> bytes(read RCX s,8 * val(k:int64))) s`;
