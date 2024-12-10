@@ -26,6 +26,51 @@ let TEST thms =
 let input = new_definition
   `input:128 word = word 0xdee0b81ebfb441275d52119830aef1e5`;;
 
+(* let FOLDL = new_recursive_definition list_RECURSION
+  `(FOLDL f b [] = b) /\
+   (!h:A. !t. FOLDL f b (CONS h t) = (FOLDL f (f h b) t))`;;
+
+let word_join_list = new_definition 
+  `word_join_list (lst:((N)word) list) =  FOLDL word_join (word 0:(0) word) lst`;; *)
+
+let word_join_list_16_128 = new_definition
+  `word_join_list_16_128 (lst:((128) word) list) : (2048) word =
+  ((word_join:128 word->1920 word->2048 word) (EL 0 lst)
+    ((word_join:128 word->1792 word->1920 word) (EL 1 lst)
+     ((word_join:128 word->1664 word->1792 word) (EL 2 lst)
+      ((word_join:128 word->1536 word->1664 word) (EL 3 lst)
+       ((word_join:128 word->1408 word->1536 word) (EL 4 lst)
+        ((word_join:128 word->1280 word->1408 word) (EL 5 lst)
+         ((word_join:128 word->1152 word->1280 word) (EL 6 lst)
+          ((word_join:128 word->1024 word->1152 word) (EL 7 lst)
+           ((word_join:128 word->896 word->1024 word) (EL 8 lst)
+            ((word_join:128 word->768 word->896 word) (EL 9 lst)
+             ((word_join:128 word->640 word->768 word) (EL 10 lst)
+              ((word_join:128 word->512 word->640 word) (EL 11 lst)
+               ((word_join:128 word->384 word->512 word) (EL 12 lst)
+                ((word_join:128 word->256 word->384 word) (EL 13 lst)
+                 ((word_join:128 word->128 word->256 word) (EL 14 lst) 
+                  (EL 15 lst))))))))))))))))`;;
+
+let word_join_list_16_8 = new_definition
+  `word_join_list_16_8 (lst:((8) word) list) : (128) word =
+  ((word_join:8 word->120 word->128 word) (EL 0 lst)
+    ((word_join:8 word->112 word->120 word) (EL 1 lst)
+     ((word_join:8 word->104 word->112 word) (EL 2 lst)
+      ((word_join:8 word->96 word->104 word) (EL 3 lst)
+       ((word_join:8 word->88 word->96 word) (EL 4 lst)
+        ((word_join:8 word->80 word->88 word) (EL 5 lst)
+         ((word_join:8 word->72 word->80 word) (EL 6 lst)
+          ((word_join:8 word->64 word->72 word) (EL 7 lst)
+           ((word_join:8 word->56 word->64 word) (EL 8 lst)
+            ((word_join:8 word->48 word->56 word) (EL 9 lst)
+             ((word_join:8 word->40 word->48 word) (EL 10 lst)
+              ((word_join:8 word->32 word->40 word) (EL 11 lst)
+               ((word_join:8 word->24 word->32 word) (EL 12 lst)
+                ((word_join:8 word->16 word->24 word) (EL 13 lst)
+                 ((word_join:8 word->8 word->16 word) (EL 14 lst)
+                  (EL 15 lst))))))))))))))))`;;
+
 (*
 bits(16*16*8) GF2 = (
         /*       F E D C B A 9 8 7 6 5 4 3 2 1 0       */
@@ -69,74 +114,62 @@ let GF2 = new_definition `GF2:((128)word) list =
 TEST [GF2] `GF2`;;
 
 let joined_GF2 = new_definition `joined_GF2:(2048)word =
-  ((word_join:128 word->1920 word->2048 word) (EL 0 GF2)
-    ((word_join:128 word->1792 word->1920 word) (EL 1 GF2)
-     ((word_join:128 word->1664 word->1792 word) (EL 2 GF2)
-      ((word_join:128 word->1536 word->1664 word) (EL 3 GF2)
-       ((word_join:128 word->1408 word->1536 word) (EL 4 GF2)
-        ((word_join:128 word->1280 word->1408 word) (EL 5 GF2)
-         ((word_join:128 word->1152 word->1280 word) (EL 6 GF2)
-          ((word_join:128 word->1024 word->1152 word) (EL 7 GF2)
-           ((word_join:128 word->896 word->1024 word) (EL 8 GF2)
-            ((word_join:128 word->768 word->896 word) (EL 9 GF2)
-             ((word_join:128 word->640 word->768 word) (EL 10 GF2)
-              ((word_join:128 word->512 word->640 word) (EL 11 GF2)
-               ((word_join:128 word->384 word->512 word) (EL 12 GF2)
-                ((word_join:128 word->256 word->384 word) (EL 13 GF2)
-                 ((word_join:128 word->128 word->256 word) (EL 14 GF2) 
-                  (EL 15 GF2))))))))))))))))`;;
+  word_join_list_16_128 GF2`;;
 
-TEST [joined_GF2; GF2] `joined_GF2`;;
+TEST [joined_GF2; word_join_list_16_128; GF2] `joined_GF2`;;
 
 let aes_sub_bytes_select = new_definition 
-`aes_sub_bytes_select (op:128 word) (i : num) : 8 word =
+`aes_sub_bytes_select (GF:2048 word) (op:128 word) (i : num) : 8 word =
   let pos = (val ((word_subword:128 word->(num#num)->8 word) op (i*8, 8)))*8 in
-  (word_subword:2048 word->(num#num)->8 word) joined_GF2 (pos, 8)`;;
+  (word_subword:2048 word->(num#num)->8 word) GF (pos, 8)`;;
 
-TEST [joined_GF2; GF2; aes_sub_bytes_select; input] 
-`aes_sub_bytes_select input 0`;;
+TEST [joined_GF2; word_join_list_16_128; GF2; aes_sub_bytes_select; input] 
+`aes_sub_bytes_select joined_GF2 input 0`;;
 
+(* Parameterize GF so that it works both for aes_sub_bytes and aes_inv_sub_bytes *)
 let aes_sub_bytes = new_definition 
-`aes_sub_bytes (op:(128)word) : (128)word =
-  ((word_join:8 word->120 word->128 word) (aes_sub_bytes_select op 15)
-    ((word_join:8 word->112 word->120 word) (aes_sub_bytes_select op 14)
-      ((word_join:8 word->104 word->112 word) (aes_sub_bytes_select op 13)
-        ((word_join:8 word->96 word->104 word) (aes_sub_bytes_select op 12)
-          ((word_join:8 word->88 word->96 word) (aes_sub_bytes_select op 11)
-            ((word_join:8 word->80 word->88 word) (aes_sub_bytes_select op 10)
-              ((word_join:8 word->72 word->80 word) (aes_sub_bytes_select op 9)
-                ((word_join:8 word->64 word->72 word) (aes_sub_bytes_select op 8)
-                  ((word_join:8 word->56 word->64 word) (aes_sub_bytes_select op 7)
-                    ((word_join:8 word->48 word->56 word) (aes_sub_bytes_select op 6)
-                      ((word_join:8 word->40 word->48 word) (aes_sub_bytes_select op 5)
-                        ((word_join:8 word->32 word->40 word) (aes_sub_bytes_select op 4)
-                          ((word_join:8 word->24 word->32 word) (aes_sub_bytes_select op 3)
-                            ((word_join:8 word->16 word->24 word) (aes_sub_bytes_select op 2)
-                              ((word_join:8 word->8 word->16 word) (aes_sub_bytes_select op 1)
-                                (aes_sub_bytes_select op 0)))))))))))))))) `;;
+`aes_sub_bytes (GF:2048 word) (op:(128)word) : (128)word =
+  (word_join_list_16_8
+    [ (aes_sub_bytes_select GF op 15)
+    ; (aes_sub_bytes_select GF op 14)
+    ; (aes_sub_bytes_select GF op 13)
+    ; (aes_sub_bytes_select GF op 12)
+    ; (aes_sub_bytes_select GF op 11)
+    ; (aes_sub_bytes_select GF op 10)
+    ; (aes_sub_bytes_select GF op 9)
+    ; (aes_sub_bytes_select GF op 8)
+    ; (aes_sub_bytes_select GF op 7)
+    ; (aes_sub_bytes_select GF op 6)
+    ; (aes_sub_bytes_select GF op 5)
+    ; (aes_sub_bytes_select GF op 4)
+    ; (aes_sub_bytes_select GF op 3)
+    ; (aes_sub_bytes_select GF op 2)
+    ; (aes_sub_bytes_select GF op 1)
+    ; (aes_sub_bytes_select GF op 0)])`;;
 
-TEST [joined_GF2; GF2; aes_sub_bytes_select; aes_sub_bytes; input] 
-`aes_sub_bytes input`;;
+TEST [joined_GF2; word_join_list_16_8; word_join_list_16_128; GF2; aes_sub_bytes_select; aes_sub_bytes; input] 
+`aes_sub_bytes joined_GF2 input`;;
 
 let aes_shift_rows = new_definition `aes_shift_rows (op:(128)word) : (128)word =
-  ((word_join:8 word->120 word->128 word) (word_subword op (88, 8))
-    ((word_join:8 word->112 word->120 word) (word_subword op (48, 8))
-      ((word_join:8 word->104 word->112 word) (word_subword op (8, 8))
-        ((word_join:8 word->96 word->104 word) (word_subword op (96, 8))
-          ((word_join:8 word->88 word->96 word) (word_subword op (56, 8))
-            ((word_join:8 word->80 word->88 word) (word_subword op (16, 8))
-              ((word_join:8 word->72 word->80 word) (word_subword op (104, 8))
-                ((word_join:8 word->64 word->72 word) (word_subword op (64, 8))
-                  ((word_join:8 word->56 word->64 word) (word_subword op (24, 8))
-                    ((word_join:8 word->48 word->56 word) (word_subword op (112, 8))
-                      ((word_join:8 word->40 word->48 word) (word_subword op (72, 8))
-                        ((word_join:8 word->32 word->40 word) (word_subword op (32, 8))
-                          ((word_join:8 word->24 word->32 word) (word_subword op (120, 8))
-                            ((word_join:8 word->16 word->24 word) (word_subword op (80, 8))
-                              ((word_join:8 word->8 word->16 word) (word_subword op (40, 8))
-                                (word_subword op (0, 8))))))))))))))))) `;;
+  (word_join_list_16_8
+    [ (word_subword op (88, 8))
+    ; (word_subword op (48, 8))
+    ; (word_subword op (8, 8))
+    ; (word_subword op (96, 8))
+    ; (word_subword op (56, 8))
+    ; (word_subword op (16, 8))
+    ; (word_subword op (104, 8))
+    ; (word_subword op (64, 8))
+    ; (word_subword op (24, 8))
+    ; (word_subword op (112, 8))
+    ; (word_subword op (72, 8))
+    ; (word_subword op (32, 8))
+    ; (word_subword op (120, 8))
+    ; (word_subword op (80, 8))
+    ; (word_subword op (40, 8))
+    ; (word_subword op (0, 8))] )`;;
 
-TEST [aes_shift_rows; input] `aes_shift_rows input`;;
+TEST [aes_shift_rows; word_join_list_16_8; input] `aes_shift_rows input`;;
 
 let FFmul_02 = new_definition `FFmul_02:(((128)word) list) = [
     word 0xE5E7E1E3EDEFE9EBF5F7F1F3FDFFF9FB
@@ -156,29 +189,6 @@ let FFmul_02 = new_definition `FFmul_02:(((128)word) list) = [
   ; word 0x3E3C3A38363432302E2C2A2826242220
   ; word 0x1E1C1A18161412100E0C0A0806040200 ]`;;
 
-let joined_FFmul_02 = new_definition `joined_FFmul_02:2048 word =
-  ((word_join:128 word->1920 word->2048 word) (EL 0 FFmul_02)
-    ((word_join:128 word->1792 word->1920 word) (EL 1 FFmul_02)
-     ((word_join:128 word->1664 word->1792 word) (EL 2 FFmul_02)
-      ((word_join:128 word->1536 word->1664 word) (EL 3 FFmul_02)
-       ((word_join:128 word->1408 word->1536 word) (EL 4 FFmul_02)
-        ((word_join:128 word->1280 word->1408 word) (EL 5 FFmul_02)
-         ((word_join:128 word->1152 word->1280 word) (EL 6 FFmul_02)
-          ((word_join:128 word->1024 word->1152 word) (EL 7 FFmul_02)
-           ((word_join:128 word->896 word->1024 word) (EL 8 FFmul_02)
-            ((word_join:128 word->768 word->896 word) (EL 9 FFmul_02)
-             ((word_join:128 word->640 word->768 word) (EL 10 FFmul_02)
-              ((word_join:128 word->512 word->640 word) (EL 11 FFmul_02)
-               ((word_join:128 word->384 word->512 word) (EL 12 FFmul_02)
-                ((word_join:128 word->256 word->384 word) (EL 13 FFmul_02)
-                 ((word_join:128 word->128 word->256 word) (EL 14 FFmul_02) 
-                  (EL 15 FFmul_02))))))))))))))))`;;
-
-let FFmul02 = new_definition `FFmul02 (b : 8 word) : 8 word = 
-  (word_subword:2048 word->(num#num)->8 word) joined_FFmul_02 ((val b)*8, 8) `;;
-
-TEST [FFmul02; FFmul_02; joined_FFmul_02] `FFmul02 (word 0x2a)`;;
-
 let FFmul_03 = new_definition `FFmul_03:(((128)word) list) = [
     word 0x1A191C1F16151013020104070E0D080B
   ; word 0x2A292C2F26252023323134373E3D383B
@@ -197,28 +207,129 @@ let FFmul_03 = new_definition `FFmul_03:(((128)word) list) = [
   ; word 0x212227242D2E2B28393A3F3C35363330
   ; word 0x111217141D1E1B18090A0F0C05060300 ]`;;
 
+let FFmul_09 = new_definition `FFmul_09:(((128)word) list) = [
+    word 0x464F545D626B70790E071C152A233831
+  ; word 0xD6DFC4CDF2FBE0E99E978C85BAB3A8A1
+  ; word 0x7D746F6659504B42353C272E1118030A
+  ; word 0xEDE4FFF6C9C0DBD2A5ACB7BE8188939A
+  ; word 0x3039222B141D060F78716A635C554E47
+  ; word 0xA0A9B2BB848D969FE8E1FAF3CCC5DED7
+  ; word 0x0B0219102F263D34434A5158676E757C
+  ; word 0x9B928980BFB6ADA4D3DAC1C8F7FEE5EC
+  ; word 0xAAA3B8B18E879C95E2EBF0F9C6CFD4DD
+  ; word 0x3A3328211E170C05727B6069565F444D
+  ; word 0x9198838AB5BCA7AED9D0CBC2FDF4EFE6
+  ; word 0x0108131A252C373E49405B526D647F76
+  ; word 0xDCD5CEC7F8F1EAE3949D868FB0B9A2AB
+  ; word 0x4C455E5768617A73040D161F2029323B
+  ; word 0xE7EEF5FCC3CAD1D8AFA6BDB48B829990
+  ; word 0x777E656C535A41483F362D241B120900 ]`;;
+
+let FFmul_0B = new_definition `FFmul_0B:(((128)word) list) = [
+    word 0xA3A8B5BE8F849992FBF0EDE6D7DCC1CA
+  ; word 0x1318050E3F3429224B405D56676C717A
+  ; word 0xD8D3CEC5F4FFE2E9808B969DACA7BAB1
+  ; word 0x68637E75444F5259303B262D1C170A01
+  ; word 0x555E434879726F640D061B10212A373C
+  ; word 0xE5EEF3F8C9C2DFD4BDB6ABA0919A878C
+  ; word 0x2E2538330209141F767D606B5A514C47
+  ; word 0x9E958883B2B9A4AFC6CDD0DBEAE1FCF7
+  ; word 0x545F424978736E650C071A11202B363D
+  ; word 0xE4EFF2F9C8C3DED5BCB7AAA1909B868D
+  ; word 0x2F2439320308151E777C616A5B504D46
+  ; word 0x9F948982B3B8A5AEC7CCD1DAEBE0FDF6
+  ; word 0xA2A9B4BF8E859893FAF1ECE7D6DDC0CB
+  ; word 0x1219040F3E3528234A415C57666D707B
+  ; word 0xD9D2CFC4F5FEE3E8818A979CADA6BBB0
+  ; word 0x69627F74454E5358313A272C1D160B00 ]`;;
+
+let FFmul_0D = new_definition `FFmul_0D:(((128)word) list) = [
+    word 0x979A8D80A3AEB9B4FFF2E5E8CBC6D1DC
+  ; word 0x474A5D50737E69642F2235381B16010C
+  ; word 0x2C21363B1815020F44495E53707D6A67
+  ; word 0xFCF1E6EBC8C5D2DF94998E83A0ADBAB7
+  ; word 0xFAF7E0EDCEC3D4D9929F8885A6ABBCB1
+  ; word 0x2A27303D1E130409424F5855767B6C61
+  ; word 0x414C5B5675786F622924333E1D10070A
+  ; word 0x919C8B86A5A8BFB2F9F4E3EECDC0D7DA
+  ; word 0x4D40575A7974636E25283F32111C0B06
+  ; word 0x9D90878AA9A4B3BEF5F8EFE2C1CCDBD6
+  ; word 0xF6FBECE1C2CFD8D59E938489AAA7B0BD
+  ; word 0x262B3C31121F08054E4354597A77606D
+  ; word 0x202D3A3714190E034845525F7C71666B
+  ; word 0xF0FDEAE7C4C9DED39895828FACA1B6BB
+  ; word 0x9B96818CAFA2B5B8F3FEE9E4C7CADDD0
+  ; word 0x4B46515C7F726568232E3934171A0D00 ]`;;
+
+let FFmul_0E = new_definition `FFmul_0E:(((128)word) list) = [
+    word 0x8D83919FB5BBA9A7FDF3E1EFC5CBD9D7
+  ; word 0x6D63717F555B49471D13010F252B3937
+  ; word 0x56584A446E60727C26283A341E10020C
+  ; word 0xB6B8AAA48E80929CC6C8DAD4FEF0E2EC
+  ; word 0x202E3C321816040A505E4C426866747A
+  ; word 0xC0CEDCD2F8F6E4EAB0BEACA28886949A
+  ; word 0xFBF5E7E9C3CDDFD18B859799B3BDAFA1
+  ; word 0x1B150709232D3F316B657779535D4F41
+  ; word 0xCCC2D0DEF4FAE8E6BCB2A0AE848A9896
+  ; word 0x2C22303E141A08065C52404E646A7876
+  ; word 0x17190B052F21333D67697B755F51434D
+  ; word 0xF7F9EBE5CFC1D3DD87899B95BFB1A3AD
+  ; word 0x616F7D735957454B111F0D032927353B
+  ; word 0x818F9D93B9B7A5ABF1FFEDE3C9C7D5DB
+  ; word 0xBAB4A6A8828C9E90CAC4D6D8F2FCEEE0
+  ; word 0x5A544648626C7E702A243638121C0E00 ]`;;
+
+let joined_FFmul_02 = new_definition `joined_FFmul_02:2048 word =
+  word_join_list_16_128 FFmul_02`;;
+
+let FFmul02 = new_definition `FFmul02 (b : 8 word) : 8 word = 
+  (word_subword:2048 word->(num#num)->8 word) joined_FFmul_02 ((val b)*8, 8) `;;
+
+TEST [FFmul02; FFmul_02; joined_FFmul_02; word_join_list_16_128] `FFmul02 (word 0x2a)`;;
+
 let joined_FFmul_03 = new_definition `joined_FFmul_03:2048 word =
-  ((word_join:128 word->1920 word->2048 word) (EL 0 FFmul_03)
-    ((word_join:128 word->1792 word->1920 word) (EL 1 FFmul_03)
-     ((word_join:128 word->1664 word->1792 word) (EL 2 FFmul_03)
-      ((word_join:128 word->1536 word->1664 word) (EL 3 FFmul_03)
-       ((word_join:128 word->1408 word->1536 word) (EL 4 FFmul_03)
-        ((word_join:128 word->1280 word->1408 word) (EL 5 FFmul_03)
-         ((word_join:128 word->1152 word->1280 word) (EL 6 FFmul_03)
-          ((word_join:128 word->1024 word->1152 word) (EL 7 FFmul_03)
-           ((word_join:128 word->896 word->1024 word) (EL 8 FFmul_03)
-            ((word_join:128 word->768 word->896 word) (EL 9 FFmul_03)
-             ((word_join:128 word->640 word->768 word) (EL 10 FFmul_03)
-              ((word_join:128 word->512 word->640 word) (EL 11 FFmul_03)
-               ((word_join:128 word->384 word->512 word) (EL 12 FFmul_03)
-                ((word_join:128 word->256 word->384 word) (EL 13 FFmul_03)
-                 ((word_join:128 word->128 word->256 word) (EL 14 FFmul_03) 
-                  (EL 15 FFmul_03))))))))))))))))`;;
+  word_join_list_16_128 FFmul_03`;;
 
 let FFmul03 = new_definition `FFmul03 (b : 8 word) : 8 word =
   (word_subword:2048 word->(num#num)->8 word) joined_FFmul_03 ((val b)*8, 8) `;;
 
-TEST [FFmul03; FFmul_03; joined_FFmul_03] `FFmul03 (word 0x2a)`;;
+TEST [FFmul03; FFmul_03; joined_FFmul_03; word_join_list_16_128] `FFmul03 (word 0x2a)`;;
+
+
+let joined_FFmul_09 = new_definition `joined_FFmul_09:2048 word =
+  word_join_list_16_128 FFmul_09`;;
+
+let FFmul09 = new_definition `FFmul09 (b : 8 word) : 8 word =
+  (word_subword:2048 word->(num#num)->8 word) joined_FFmul_09 ((val b)*8, 8) `;;
+
+TEST [FFmul09; FFmul_09; joined_FFmul_09; word_join_list_16_128] `FFmul09 (word 0x2a)`;;
+
+
+let joined_FFmul_0B = new_definition `joined_FFmul_0B:2048 word =
+  word_join_list_16_128 FFmul_0B`;;
+
+let FFmul0B = new_definition `FFmul0B (b : 8 word) : 8 word =
+  (word_subword:2048 word->(num#num)->8 word) joined_FFmul_0B ((val b)*8, 8) `;;
+
+TEST [FFmul0B; FFmul_0B; joined_FFmul_0B; word_join_list_16_128] `FFmul0B (word 0x2a)`;;
+
+
+let joined_FFmul_0D = new_definition `joined_FFmul_0D:2048 word =
+  word_join_list_16_128 FFmul_0D`;;
+
+let FFmul0D = new_definition `FFmul0D (b : 8 word) : 8 word =
+  (word_subword:2048 word->(num#num)->8 word) joined_FFmul_0D ((val b)*8, 8) `;;
+
+TEST [FFmul0D; FFmul_0D; joined_FFmul_0D; word_join_list_16_128] `FFmul0D (word 0x2a)`;;
+
+
+let joined_FFmul_0E = new_definition `joined_FFmul_0E:2048 word =
+  word_join_list_16_128 FFmul_0E`;;
+
+let FFmul0E = new_definition `FFmul0E (b : 8 word) : 8 word =
+  (word_subword:2048 word->(num#num)->8 word) joined_FFmul_0E ((val b)*8, 8) `;;
+
+TEST [FFmul0E; FFmul_0E; joined_FFmul_0E; word_join_list_16_128] `FFmul0E (word 0x2a)`;;
 
 let aes_mix_word = new_definition 
 `aes_mix_word (op:(128)word) (a:num) (b:num) (c:num) (d:num) : (8)word =
@@ -246,38 +357,126 @@ let aes_mix_columns = new_definition `aes_mix_columns (op:(128)word) : (128)word
     let out13 = aes_mix_word op 104 112 120 96 in
     let out23 = aes_mix_word op 112 120 96 104 in
     let out33 = aes_mix_word op 120 96 104 112 in
-    (word_join:8 word->120 word->128 word) out33
-      ((word_join:8 word->112 word->120 word) out23
-        ((word_join:8 word->104 word->112 word) out13
-          ((word_join:8 word->96 word->104 word) out03
-            ((word_join:8 word->88 word->96 word) out32
-              ((word_join:8 word->80 word->88 word) out22
-                ((word_join:8 word->72 word->80 word) out12
-                  ((word_join:8 word->64 word->72 word) out02
-                    ((word_join:8 word->56 word->64 word) out31
-                      ((word_join:8 word->48 word->56 word) out21
-                        ((word_join:8 word->40 word->48 word) out11
-                          ((word_join:8 word->32 word->40 word) out01
-                            ((word_join:8 word->24 word->32 word) out30
-                              ((word_join:8 word->16 word->24 word) out20
-                                ((word_join:8 word->8 word->16 word) out10 out00)))))))))))))) `;;
+    word_join_list_16_8
+    [out33; out23; out13; out03; out32; out22; out12; out02; 
+     out31; out21; out11; out01; out30; out20; out10; out00] `;;
 
-time (TEST [aes_mix_columns; aes_mix_word; FFmul02; FFmul03; input])
+time (TEST [aes_mix_columns; aes_mix_word; word_join_list_16_8; FFmul02; FFmul03; 
+  joined_FFmul_02; joined_FFmul_03; word_join_list_16_128; FFmul_02; FFmul_03; input])
 `aes_mix_columns input`;;
 
 (* ========================================================================= *)
 (* AESE                                                                      *)
 (* ========================================================================= *)
 let aese = new_definition `aese (d:128 word) (n:128 word) =
-  aes_sub_bytes (aes_shift_rows (word_xor d n)) `;;
+  aes_sub_bytes joined_GF2 (aes_shift_rows (word_xor d n)) `;;
 
-TEST [aese; aes_shift_rows; aes_sub_bytes; aes_sub_bytes_select; joined_GF2; GF2]
+TEST [aese; aes_shift_rows; aes_sub_bytes; aes_sub_bytes_select; 
+  word_join_list_16_8; word_join_list_16_128; joined_GF2; GF2]
 `aese (word 0xae6910a45715645a02502baaf5a826c9) (word 0xec882f3270973907d69635eea82d71)`;;
 
 (* ========================================================================= *)
 (* AESMC                                                                     *)
 (* ========================================================================= *)
 let aesmc = new_definition `aesmc (n: 128 word) = aes_mix_columns n`;;
+
+
+let GF2_inv = new_definition `GF2_inv:((128)word) list =
+  [ word 0x7d0c2155631469e126d677ba7e042b17
+  ; word 0x619953833cbbebc8b0f52aae4d3be0a0
+  ; word 0xef9cc9939f7ae52d0d4ab519a97f5160
+  ; word 0x5fec8027591012b131c7078833a8dd1f
+  ; word 0xf45acd78fec0db9a2079d2c64b3e56fc
+  ; word 0x1bbe18aa0e62b76f89c5291d711af147
+  ; word 0x6edf751ce837f9e28535ade72274ac96
+  ; word 0x73e6b4f0cecff297eadc674f4111913a
+  ; word 0x6b8a130103bdafc1020f3fca8f1e2cd0
+  ; word 0x0645b3b80558e4f70ad3bc8c00abd890
+  ; word 0x849d8da75746155edab9edfd5048706c
+  ; word 0x92b6655dcc5ca4d41698688664f6f872
+  ; word 0x25d18b6d49a25b76b224d92866a12e08
+  ; word 0x4ec3fa420b954cee3d23c2a632947b54
+  ; word 0xcbe9dec444438e3487ff2f9b8239e37c
+  ; word 0xfbd7f3819ea340bf38a53630d56a0952
+  ]`;;
+
+TEST [GF2_inv] `GF2_inv`;;
+
+let joined_GF2_inv = new_definition `joined_GF2_inv:(2048)word =
+  word_join_list_16_128 GF2_inv`;;
+
+TEST [joined_GF2_inv; GF2_inv] `joined_GF2_inv`;;
+
+let aes_inv_shift_rows = new_definition `aes_inv_shift_rows (op:(128)word) : (128)word =
+  word_join_list_16_8
+  [ (word_subword op (24, 8))
+  ; (word_subword op (48, 8))
+  ; (word_subword op (72, 8))
+  ; (word_subword op (96, 8))
+  ; (word_subword op (120, 8))
+  ; (word_subword op (16, 8))
+  ; (word_subword op (40, 8))
+  ; (word_subword op (64, 8))
+  ; (word_subword op (88, 8))
+  ; (word_subword op (112, 8))
+  ; (word_subword op (8, 8))
+  ; (word_subword op (32, 8))
+  ; (word_subword op (56, 8))
+  ; (word_subword op (80, 8))
+  ; (word_subword op (104, 8))
+  ; (word_subword op (0, 8)) ]`;;
+
+TEST [aes_inv_shift_rows; word_join_list_16_8; input] `aes_inv_shift_rows input`;;
+
+let aes_inv_mix_word = new_definition 
+`aes_inv_mix_word (op:(128)word) (a:num) (b:num) (c:num) (d:num) : (8)word =
+  word_xor (FFmul0E (word_subword op (a, 8)))
+    (word_xor (FFmul0B (word_subword op (b, 8)))
+      (word_xor (FFmul0D (word_subword op (c, 8)))
+        (FFmul09 (word_subword op (d, 8))))) `;;
+
+let aes_inv_mix_columns = new_definition `aes_inv_mix_columns (op:(128)word) : (128)word =
+  let out00 = aes_inv_mix_word op 0 8 16 24 in
+  let out10 = aes_inv_mix_word op 8 16 24 0 in
+  let out20 = aes_inv_mix_word op 16 24 0 8 in
+  let out30 = aes_inv_mix_word op 24 0 8 16 in
+  let out01 = aes_inv_mix_word op 32 40 48 56 in
+  let out11 = aes_inv_mix_word op 40 48 56 32 in
+  let out21 = aes_inv_mix_word op 48 56 32 40 in
+  let out31 = aes_inv_mix_word op 56 32 40 48 in
+  let out02 = aes_inv_mix_word op 64 72 80 88 in
+  let out12 = aes_inv_mix_word op 72 80 88 64 in
+  let out22 = aes_inv_mix_word op 80 88 64 72 in
+  let out32 = aes_inv_mix_word op 88 64 72 80 in
+  let out03 = aes_inv_mix_word op 96 104 112 120 in
+  let out13 = aes_inv_mix_word op 104 112 120 96 in
+  let out23 = aes_inv_mix_word op 112 120 96 104 in
+  let out33 = aes_inv_mix_word op 120 96 104 112 in
+  word_join_list_16_8
+  [out33; out23; out13; out03; out32; out22; out12; out02; 
+   out31; out21; out11; out01; out30; out20; out10; out00] `;;
+
+time (TEST [aes_inv_mix_columns; aes_inv_mix_word; word_join_list_16_8; 
+  FFmul09; FFmul0B; FFmul0D; FFmul0E; joined_FFmul_09; joined_FFmul_0B;
+  joined_FFmul_0D; joined_FFmul_0E; word_join_list_16_128; 
+  FFmul_09; FFmul_0B; FFmul_0D; FFmul_0E; input])
+`aes_inv_mix_columns input`;;
+
+(* ========================================================================= *)
+(* AESD                                                                      *)
+(* ========================================================================= *)
+let aesd = new_definition `aesd (d:128 word) (n:128 word) =
+  aes_sub_bytes joined_GF2_inv (aes_inv_shift_rows (word_xor d n)) `;;
+
+TEST [aesd; aes_inv_shift_rows; aes_sub_bytes; aes_sub_bytes_select; 
+  word_join_list_16_8; word_join_list_16_128; joined_GF2_inv; GF2_inv]
+`aesd (word 0xae6910a45715645a02502baaf5a826c9) (word 0xec882f3270973907d69635eea82d71)`;;
+
+
+(* ========================================================================= *)
+(* AESIMC                                                                    *)
+(* ========================================================================= *)
+let aesimc = new_definition `aesimc (n: 128 word) = aes_inv_mix_columns n`;;
 
 
 (************************************************)
@@ -294,15 +493,24 @@ let EL_CONV =
 let EL_CLAUSES =
   let pat = `EL n [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15]:128 word` in
   map (fun n -> EL_CONV(subst [mk_small_numeral n,`n:num`] pat)) (0--15);;
+let EL8_CLAUSES =
+    let pat = `EL n [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15]:8 word` in
+    map (fun n -> EL_CONV(subst [mk_small_numeral n,`n:num`] pat)) (0--15);;
 
 (** Compute EL n x in which x is a constant before-hand. 
     This allows conversions on subsequent functions to be 
     faster, because it avoids the expensive computation of ELs. *)
-let joined_GF2_CONV =
+let joined_GF2_CONV_helper joined_GF2 GF2 =
   GEN_REWRITE_CONV I [joined_GF2] THENC
+  GEN_REWRITE_CONV I [word_join_list_16_128] THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [GF2] THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV EL_CLAUSES THENC
   DEPTH_CONV WORD_JOIN_CONV;;
+
+let joined_GF2_CONV = joined_GF2_CONV_helper joined_GF2 GF2;;
+let joined_GF2_inv_CONV = joined_GF2_CONV_helper joined_GF2_inv GF2_inv;;
+let joined_GF2_CLAUSE = joined_GF2_CONV `joined_GF2`;;
+let joined_GF2_inv_CLAUSE = joined_GF2_inv_CONV `joined_GF2_inv`;;
 
 let joined_FFmul_02_CONV =
   GEN_REWRITE_CONV I [joined_FFmul_02] THENC
@@ -317,11 +525,14 @@ let joined_FFmul_03_CONV =
   DEPTH_CONV WORD_JOIN_CONV;;
 
 let aes_sub_bytes_select_CONV = REWRITE_CONV [aes_sub_bytes_select]
-  THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_GF2_CONV `joined_GF2`]
+  THENC ((GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_GF2_CLAUSE])
+    ORELSEC (GEN_REWRITE_CONV ONCE_DEPTH_CONV [joined_GF2_inv_CLAUSE]))
   THENC TOP_DEPTH_CONV let_CONV
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 let aes_sub_bytes_CONV = REWRITE_CONV [aes_sub_bytes]
   THENC aes_sub_bytes_select_CONV
+  THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV [word_join_list_16_8]
+  THENC GEN_REWRITE_CONV ONCE_DEPTH_CONV EL8_CLAUSES
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 let aes_shift_rows_CONV = REWRITE_CONV [aes_shift_rows]
   THENC DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
@@ -361,32 +572,14 @@ let aesmc_CONV tm =
   | _ -> failwith "aesmc_CONV: inapplicable";;
 
 joined_GF2_CONV `joined_GF2`;;
-(REWRITE_CONV [input] THENC aes_sub_bytes_select_CONV) `aes_sub_bytes_select input 0`;;
-(REWRITE_CONV [input] THENC aes_sub_bytes_CONV) `aes_sub_bytes input`;;
+(REWRITE_CONV [input] THENC aes_sub_bytes_select_CONV) `aes_sub_bytes_select joined_GF2 input 0`;;
+(REWRITE_CONV [input] THENC aes_sub_bytes_CONV) `aes_sub_bytes joined_GF2 input`;;
 (REWRITE_CONV [input] THENC aes_shift_rows_CONV) `aes_shift_rows input`;;
 time FFmul02_CONV `FFmul02 (word 0x2a)`;;
 time FFmul03_CONV `FFmul03 (word 0x2a)`;;
+(** TODO ..... *)
 time (REWRITE_CONV [input] THENC aes_mix_word_CONV) `aes_mix_word input 0 8 16 24`;;
 time (REWRITE_CONV [input] THENC aes_mix_columns_CONV) `aes_mix_columns input`;;
 time (REWRITE_CONV [input] THENC aese_CONV) `aese (word 0xae6910a45715645a02502baaf5a826c9) (word 0xec882f3270973907d69635eea82d71)`;;
 time (REWRITE_CONV [input] THENC aesmc_CONV) `aesmc (word 0xae6910a45715645a02502baaf5a826c9)`;;
-
-
-
-(* let aes_inv_sub_bytes = new_definition ``;;
-
-let aes_inv_shift_rows = new_definition ``;;
-
-let aes_inv_mix_columns = new_definition ``;; *)
-
-(* ========================================================================= *)
-(* AESD                                                                      *)
-(* ========================================================================= *)
-
-(* ========================================================================= *)
-(* AESIMC                                                                    *)
-(* ========================================================================= *)
-
-
-
 
