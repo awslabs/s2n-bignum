@@ -23,4 +23,4 @@ let EVAL thms =
      install_user_printer("pp_print_num",pp_print_num);; *)
 let pp_print_num_hex fmt tm =
   let n = dest_numeral tm in
-  pp_print_string fmt (string_of_num_hex n)
+  pp_print_string fmt (string_of_num_hex n);;
