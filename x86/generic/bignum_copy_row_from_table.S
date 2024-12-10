@@ -33,6 +33,7 @@
 #define j   r10
 
 S2N_BN_SYMBOL(bignum_copy_row_from_table):
+	_CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi
