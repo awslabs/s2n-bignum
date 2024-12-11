@@ -541,27 +541,3 @@ let AESIMC_REDUCE_CONV tm =
       Comb(Const("aesimc",_), Comb(Const("word",_),n))
     when is_numeral n -> AESIMC_HELPER_CONV tm
   | _ -> failwith "AESIMC_CONV: inapplicable";;
-
-(* ========================================================================= *)
-(* Tests for conversions                                                     *)
-(* ========================================================================= *)
-
-(* let input = new_definition
-  `input:128 word = word 0xdee0b81ebfb441275d52119830aef1e5`;;
-
-time (REWRITE_CONV [input] THENC AES_SUB_BYTES_SELECT_CONV) `aes_sub_bytes_select joined_GF2 input 0`;;
-time (REWRITE_CONV [input] THENC AES_SUB_BYTES_CONV) `aes_sub_bytes joined_GF2 input`;;
-time (REWRITE_CONV [input] THENC AES_SUB_BYTES_SELECT_CONV) `aes_sub_bytes_select joined_GF2_inv input 0`;;
-time (REWRITE_CONV [input] THENC AES_SUB_BYTES_CONV) `aes_sub_bytes joined_GF2_inv input`;;
-time (REWRITE_CONV [input] THENC AES_SHIFT_ROWS_CONV) `aes_shift_rows input`;;
-time (REWRITE_CONV [input] THENC AES_INV_SHIFT_ROWS_CONV) `aes_inv_shift_rows input`;;
-time FFMUL02_CONV `FFmul02 (word 0x2a)`;;
-time FFMUL03_CONV `FFmul03 (word 0x2a)`;;
-time (REWRITE_CONV [input] THENC AES_MIX_WORD_CONV) `aes_mix_word input 0 8 16 24`;;
-time (REWRITE_CONV [input] THENC AES_INV_MIX_WORD_CONV) `aes_inv_mix_word input 0 8 16 24`;;
-time (REWRITE_CONV [input] THENC AES_MIX_COLUMNS_CONV) `aes_mix_columns input`;;
-time (REWRITE_CONV [input] THENC AES_INV_MIX_COLUMNS_CONV) `aes_inv_mix_columns input`;;
-time (REWRITE_CONV [input] THENC AESE_CONV) `aese (word 0xae6910a45715645a02502baaf5a826c9) (word 0xec882f3270973907d69635eea82d71)`;;
-time (REWRITE_CONV [input] THENC AESMC_CONV) `aesmc (word 0xae6910a45715645a02502baaf5a826c9)`;;
-time (REWRITE_CONV [input] THENC AESD_CONV) `aesd (word 0xae6910a45715645a02502baaf5a826c9) (word 0xec882f3270973907d69635eea82d71)`;;
-time (REWRITE_CONV [input] THENC AESIMC_CONV) `aesimc (word 0xae6910a45715645a02502baaf5a826c9)`;; *)
