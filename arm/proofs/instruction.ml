@@ -2037,6 +2037,40 @@ let arm_BCAX = define
       let d':int128 = word_xor n (word_and m (word_not a)) in
       (Rd := d') s`;;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Cryptographic AES                                                         *)
+(* ------------------------------------------------------------------------- *)
+let arm_AESE = define
+ `arm_AESE Rd Rn =
+    \s:armstate.
+        let d = read Rd s
+        and n = read Rn s in
+        let d' = aese d n in
+        (Rd := d') s`;;
+
+let arm_AESMC = define
+ `arm_AESMC Rd Rn =
+    \s:armstate.
+        let n = read Rn s in
+        let d' = aesmc n in
+        (Rd := d') s`;;
+
+let arm_AESD = define
+  `arm_AESD Rd Rn =
+     \s:armstate.
+       let d = read Rd s
+       and n = read Rn s in
+       let d' = aesd d n in
+       (Rd := d') s`;;
+
+let arm_AESIMC = define
+  `arm_AESIMC Rd Rn =
+     \s:armstate.
+       let n = read Rn s in
+       let d' = aesimc n in
+       (Rd := d') s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* XAR : Exclusive-OR and Rotate                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -2509,6 +2543,11 @@ let ARM_OPERATION_CLAUSES =
        INST_TYPE[`:32`,`:N`] arm_ADDS;
        INST_TYPE[`:32`,`:N`] arm_SBCS;
        INST_TYPE[`:32`,`:N`] arm_SUBS;
+    (*** AES instructions ***)
+       arm_AESE;
+       arm_AESMC;
+       arm_AESD;
+       arm_AESIMC;
     (*** SHA256 & SHA512 instructions from Carl Kwan ***)
        arm_RAX1;
        arm_SHA256H;

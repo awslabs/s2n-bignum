@@ -329,6 +329,18 @@ let iclasses =
 
   (*** XAR ***)
   "11001110100xxxxxxxxxxxxxxxxxxxxx";
+
+  (*** AESE ***)
+  "0100111000101000010010xxxxxxxxxx";
+
+  (*** AESMC ***)
+  "0100111000101000011010xxxxxxxxxx";
+
+  (*** AESD ***)
+  "0100111000101000010110xxxxxxxxxx";
+
+  (*** AESIMC ***)
+  "0100111000101000011110xxxxxxxxxx";
 ];;
 
 
