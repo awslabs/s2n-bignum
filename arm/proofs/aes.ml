@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-loadt "arm/proofs/utils.ml";;
+(* loadt "arm/proofs/utils.ml";; *)
 
 (* install_user_printer("pp_print_num",pp_print_num_hex);; *)
 
@@ -523,21 +523,21 @@ let AESE_REDUCE_CONV tm =
            Comb(Const("word",_),d)),
            Comb(Const("word",_),n))
     when is_numeral d && is_numeral n -> AESE_HELPER_CONV tm
-  | _ -> failwith "AESE_CONV: inapplicable";;
+  | _ -> failwith "AESE_REDUCE_CONV: inapplicable";;
 let AESMC_REDUCE_CONV tm =
     match tm with
       Comb(Const("aesmc",_), Comb(Const("word",_),n))
     when is_numeral n -> AESMC_HELPER_CONV tm
-  | _ -> failwith "AESMC_CONV: inapplicable";;
+  | _ -> failwith "AESMC_REDUCE_CONV: inapplicable";;
 let AESD_REDUCE_CONV tm =
     match tm with
       Comb(Comb(Const("aesd",_),
            Comb(Const("word",_),d)),
            Comb(Const("word",_),n))
     when is_numeral d && is_numeral n -> AESD_HELPER_CONV tm
-  | _ -> failwith "AESD_CONV: inapplicable";;
+  | _ -> failwith "AESD_REDUCE_CONV: inapplicable";;
 let AESIMC_REDUCE_CONV tm =
     match tm with
       Comb(Const("aesimc",_), Comb(Const("word",_),n))
     when is_numeral n -> AESIMC_HELPER_CONV tm
-  | _ -> failwith "AESIMC_CONV: inapplicable";;
+  | _ -> failwith "AESIMC_REDUCE_CONV: inapplicable";;
