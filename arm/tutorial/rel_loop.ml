@@ -90,9 +90,8 @@ let LOOP_EQUIV = prove(
     (* Start symbolic execution of two programs. *)
     ENSURES2_INIT_TAC "s0" "s0'" THEN
 
-    POP_ASSUM (fun th -> POP_ASSUM (fun th2 -> MP_TAC th2 THEN ASSUME_TAC th)) THEN
+    FIRST_X_ASSUM (MP_TAC o (check (is_exists o concl))) THEN
     STRIP_TAC THEN
-    ASSUME_TAC(ISPEC (mk_var("s0'",`:armstate`)) MAYCHANGE_STARTER) THEN
     REWRITE_TAC[GSYM CONJ_ASSOC] THEN
 
     (* Symbolically execute the left program only. *)
@@ -117,7 +116,6 @@ let LOOP_EQUIV = prove(
     ENSURES2_INIT_TAC "s0" "s0'" THEN
     UNDISCH_TAC `?k. read X2 s0 = k /\ read X2 s0' = k` THEN
     STRIP_TAC THEN
-    ASSUME_TAC(ISPEC (mk_var("s0'",`:armstate`)) MAYCHANGE_STARTER) THEN
     REWRITE_TAC[GSYM CONJ_ASSOC] THEN
 
     ARM_N_STUTTER_LEFT_TAC LOOP_EXEC (1--1) None THEN

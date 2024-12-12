@@ -731,6 +731,14 @@ let actions = [
   ("equal", 144, 624, 184, 664);
 ];;
 
+(* Vectorization loads a same memory location using one ldp to a pair of X
+   registers and one ldr to one Q register. If one of these loads is abbreviated,
+   then we lose the fact that ldr to Q is word_join of the ldp Xs. *)
+let actions = break_equal_loads actions
+    (snd BIGNUM_MUL_P521_CORE_EXEC) 0x0
+    (snd BIGNUM_MUL_P521_INTERM1_CORE_EXEC) 0x0;;
+
+
 let equiv_goal1 = mk_equiv_statement_simple
     `aligned 16 stackpointer /\
      ALL (nonoverlapping (z:int64,8 * 9))
@@ -773,10 +781,7 @@ let BIGNUM_MUL_P521_CORE_EQUIV1 = time prove(equiv_goal1,
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC mul_p521_eqin THEN
-  REPEAT (FIRST_X_ASSUM BIGNUM_EXPAND_AND_DIGITIZE_TAC) THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
-  (* necessary to run ldr qs *)
-  COMBINE_READ_BYTES64_PAIRS_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE[BIGNUM_FROM_MEMORY_BYTES]) THEN
 
   (* Start *)
   EQUIV_STEPS_TAC actions
@@ -869,18 +874,15 @@ let BIGNUM_MUL_P521_CORE_EQUIV2 = time prove(
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC mul_p521_eqin THEN
-  REPEAT (FIRST_X_ASSUM BIGNUM_EXPAND_AND_DIGITIZE_TAC) THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
-  (* necessary to run ldr qs *)
-  COMBINE_READ_BYTES64_PAIRS_TAC THEN
+  RULE_ASSUM_TAC (REWRITE_RULE[BIGNUM_FROM_MEMORY_BYTES]) THEN
 
   (* Left *)
   ARM_N_STEPS_AND_ABBREV_TAC BIGNUM_MUL_P521_INTERM1_CORE_EXEC
-    (1--(List.length inst_map)) state_to_abbrevs THEN
+    (1--(List.length inst_map)) state_to_abbrevs None THEN
 
   (* Right *)
   ARM_N_STEPS_AND_REWRITE_TAC BIGNUM_MUL_P521_NEON_CORE_EXEC
-    (1--(List.length inst_map)) inst_map state_to_abbrevs THEN
+    (1--(List.length inst_map)) inst_map state_to_abbrevs None THEN
 
   REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
@@ -969,7 +971,8 @@ let BIGNUM_MUL_P521_CORE_EQUIV = time prove(equiv_goal,
 
   EQUIV_TRANS_TAC
     (BIGNUM_MUL_P521_CORE_EQUIV1,BIGNUM_MUL_P521_CORE_EQUIV2)
-    (mul_p521_eqin,mul_p521_eqout_TRANS)
+    (mul_p521_eqin,mul_p521_eqin,mul_p521_eqin)
+    mul_p521_eqout_TRANS
     (BIGNUM_MUL_P521_CORE_EXEC,BIGNUM_MUL_P521_INTERM1_CORE_EXEC,
      BIGNUM_MUL_P521_NEON_CORE_EXEC));;
 

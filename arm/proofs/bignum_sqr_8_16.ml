@@ -527,7 +527,7 @@ let BIGNUM_SQR_8_16_SUBROUTINE_CORRECT = prove
                      memory :> bytes(word_sub stackpointer (word 32),32)])`,
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_SQR_8_16_EXEC
-   ((CONV_RULE (ONCE_DEPTH_CONV NUM_REDUCE_CONV) o
+   ((CONV_RULE NUM_REDUCE_CONV o
     REWRITE_RULE [fst BIGNUM_SQR_8_16_EXEC;fst BIGNUM_SQR_8_16_CORE_EXEC;
                   GSYM ADD_ASSOC]) BIGNUM_SQR_8_16_CORRECT)
    `[X19;X20;X21;X22]` 32);;
