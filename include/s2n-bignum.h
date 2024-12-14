@@ -999,6 +999,14 @@ extern void edwards25519_scalarmulbase_alt(uint64_t res[S2N_BIGNUM_STATIC 8],uin
 extern void edwards25519_scalarmuldouble(uint64_t res[S2N_BIGNUM_STATIC 8],uint64_t scalar[S2N_BIGNUM_STATIC 4], uint64_t point[S2N_BIGNUM_STATIC 8],uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[S2N_BIGNUM_STATIC 8],uint64_t scalar[S2N_BIGNUM_STATIC 4], uint64_t point[S2N_BIGNUM_STATIC 8],uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 
+// Inverse number-theoretic transform from ML-KEM
+// Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
+extern void mlkem_intt(int16_t a[S2N_BIGNUM_STATIC 256]);
+
+// Forward number-theoretic transform from ML-KEM
+// Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
+extern void mlkem_ntt(int16_t a[S2N_BIGNUM_STATIC 256]);
+
 // Point addition on NIST curve P-256 in Montgomery-Jacobian coordinates
 // Inputs p1[12], p2[12]; output p3[12]
 extern void p256_montjadd(uint64_t p3[S2N_BIGNUM_STATIC 12],uint64_t p1[S2N_BIGNUM_STATIC 12],uint64_t p2[S2N_BIGNUM_STATIC 12]);

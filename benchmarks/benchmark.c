@@ -840,6 +840,8 @@ void call_bignum_mul_8_16_neon(void) {}
 void call_bignum_mul_p521_neon(void) {}
 void call_bignum_sqr_8_16_neon(void) {}
 void call_bignum_sqr_p521_neon(void) {}
+void call_mlkem_intt(void) {}
+void call_mlkem_ntt(void) {}
 
 #else
 
@@ -867,6 +869,9 @@ void call_bignum_mul_8_16_neon(void) repeat(bignum_mul_8_16_neon(b0,b1,b2))
 void call_bignum_mul_p521_neon(void) repeat(bignum_mul_p521_neon(b0,b1,b2))
 void call_bignum_sqr_8_16_neon(void) repeat(bignum_sqr_8_16_neon(b0,b1))
 void call_bignum_sqr_p521_neon(void) repeat(bignum_sqr_p521_neon(b0,b1))
+
+void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0))
+void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0))
 
 #endif
 
@@ -1262,6 +1267,8 @@ int main(int argc, char *argv[])
   timingtest(all,"edwards25519_scalarmulbase_alt",call_edwards25519_scalarmulbase_alt);
   timingtest(bmi,"edwards25519_scalarmuldouble",call_edwards25519_scalarmuldouble);
   timingtest(all,"edwards25519_scalarmuldouble_alt",call_edwards25519_scalarmuldouble_alt);
+  timingtest(arm,"mlkem_intt",call_mlkem_intt);
+  timingtest(arm,"mlkem_ntt",call_mlkem_ntt);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
   timingtest(all,"p256_montjadd_alt",call_p256_montjadd_alt);
   timingtest(bmi,"p256_montjdouble",call_p256_montjdouble);

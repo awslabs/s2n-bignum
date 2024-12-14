@@ -1895,6 +1895,99 @@ void reference_scalarmultab
 }
 
 // ****************************************************************************
+// References for ML-KEM operations, lots of mod-3329 stuff
+// ****************************************************************************
+
+// Proper nonnegative remainder regardless of C's handling of negative x
+
+int16_t rem_3329(int16_t x)
+{ return (x % 3329 + 3329) % 3329;
+}
+
+// Combine that with a promotion from int16_t to uint64_t
+
+uint64_t mod_3329(int16_t x)
+{ return (uint64_t) (rem_3329(x));
+}
+
+// Raise number to power: x^n mod 3329
+
+uint64_t pow_3329(uint64_t x,uint64_t n)
+{ uint64_t t;
+  if (n == 0) return 1;
+  t = pow_3329(x,n>>1);
+  t = (t * t) % 3329;
+  if (n % 2 == 0) return t;
+  else return (x * t) % 3329;
+}
+
+// Pure forward NTT
+// NTT[k] = sum_{j=0..127} a[2 * j + k % 2] * 17^((2 * (k / 2) + 1) * j)
+
+void reference_forward_ntt(int16_t r[256],int16_t a[256])
+{ uint64_t k, j, s;
+  int16_t t[256];
+  for (k = 0; k < 256; ++k)
+   { s = 0;
+     for (j = 0; j < 128; ++j)
+       s += mod_3329(a[2 * j + k % 2]) * pow_3329(17,(2 * (k / 2) + 1) * j);
+     s = s % 3329;
+     t[k] = (int16_t) s;
+   }
+  for (k = 0; k < 256; ++k) r[k] = t[k];
+}
+
+// Pure inverse NTT
+// iNTT[k] =
+// 1/128 * sum_{j=0..127} a[2 * j + k % 2] * 1175^((2 * j + 1) * (k / 2))
+
+void reference_inverse_ntt(int16_t r[256],int16_t a[256])
+{ uint64_t k, j, s;
+  int16_t t[256];
+  for (k = 0; k < 256; ++k)
+   { s = 0;
+     for (j = 0; j < 128; ++j)
+       s += mod_3329(a[2 * j + k % 2]) * pow_3329(1175,(2 * j + 1) * (k / 2));
+     s = (3303 * s) % 3329;
+     t[k] = (int16_t) s;
+   }
+  for (k = 0; k < 256; ++k) r[k] = t[k];
+}
+
+// Reverse bits 1..7 of an 8-bit value, leaving but 0 alone. This is a
+// strightforward variant of the Schroeppel-Anderson hack described here:
+// https://graphics.stanford.edu/~seander/bithacks.html#ReverseByteWith64Bits
+// It has been manually transcribed into HOL Light and checked for correctness.
+
+uint64_t bitreverse_pairs(uint64_t x)
+{ return ((((x * UINT64_C(0x40100401)) & UINT64_C(0x884422011)) *
+          UINT64_C(0x0101010101)) >> 32)
+         & UINT64_C(0xFF);
+}
+
+// Bit reversal of a 256-element array as in the NTT spec
+// We start with a local intermediate copy to make this aliasing-safe
+// if the input and output arrays are the same; we could swap pairs...
+
+void reference_bitreverse(int16_t r[256],int16_t a[256])
+{ int16_t t[256];
+  uint64_t i;
+  for (i = 0; i < 256; ++i) t[i] = a[bitreverse_pairs(i)];
+  for (i = 0; i < 256; ++i) r[i] = t[i];
+}
+
+// Convert elements of a 256-element array to Montgomery form
+
+void reference_tomont3329(int16_t r[256],int16_t a[256])
+{ uint64_t i, t;
+  for (i = 0; i < 256; ++i)
+   { t = mod_3329(a[i]);
+     t = (65536 * t) % 3329;
+     r[i] = (int16_t) t;
+   }
+}
+
+// ****************************************************************************
 // Testing functions
 // ****************************************************************************
 
@@ -7671,7 +7764,6 @@ int test_bignum_mux16(void)
      i = rand() & 15;
      reference_copy(k,b1,k,bs+k*i);
      bignum_mux16(k,b2,bs,i);
-     free(bs);
 
      c = reference_compare(k,b2,k,b1);
 
@@ -11012,6 +11104,82 @@ int test_edwards25519_scalarmuldouble_alt(void)
   return 0;
 }
 
+int test_mlkem_intt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  int16_t a[256], b[256], c[256];
+  printf("Testing mlkem_intt with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+        a[i] = (int16_t) (random64()); // any int16_t inputs allowed
+     for (i = 0; i < 256; ++i) b[i] = a[i];
+     mlkem_intt(b);
+     reference_bitreverse(c,a);
+     reference_inverse_ntt(c,c);
+     reference_tomont3329(c,c);
+     for (i = 0; i < 256; ++i)
+      { if (rem_3329(b[i]) != rem_3329(c[i]))
+         { printf("Error in iNTT element i = %"PRIu64"; code[i] = 0x%04"PRIx16
+                  " while reference[i] = 0x%04"PRIx16"\n",
+                  i,b[i],c[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: iNTT[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"] = "
+               "[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"]\n",
+               a[0],a[1],a[254],a[255],
+               c[0],c[1],c[254],c[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_mlkem_ntt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t t, i;
+  int16_t a[256], b[256], c[256];
+  printf("Testing mlkem_ntt with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+        a[i] = (int16_t) (random64() % 16383) - 8192; // |a[i]| < 8192 assumed
+     for (i = 0; i < 256; ++i) b[i] = a[i];
+     mlkem_ntt(b);
+     reference_forward_ntt(c,a); reference_bitreverse(c,c);
+     for (i = 0; i < 256; ++i)
+      { if (rem_3329(b[i]) != rem_3329(c[i]))
+         { printf("Error in NTT element i = %"PRIu64"; code[i] = 0x%04"PRIx16
+                  " while reference[i] = 0x%04"PRIx16"\n",
+                  i,b[i],c[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: NTT[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"] = "
+               "[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"]\n",
+               a[0],a[1],a[254],a[255],
+               c[0],c[1],c[254],c[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_p256_montjadd(void)
 { uint64_t t, k;
   printf("Testing p256_montjadd with %d cases\n",tests);
@@ -13541,6 +13709,7 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 
 int main(int argc, char *argv[])
 { int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
+  int arm = get_arch_name() == ARCH_AARCH64;
   int all = 1;
   int extrastrigger = 1;
 
@@ -13916,6 +14085,8 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_mul_p521_neon",test_bignum_mul_p521_neon);
     functionaltest(all,"bignum_sqr_8_16_neon",test_bignum_sqr_8_16_neon);
     functionaltest(all,"bignum_sqr_p521_neon", test_bignum_sqr_p521_neon);
+    functionaltest(arm,"mlkem_intt",test_mlkem_intt);
+    functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
   }
 
   if (extrastrigger) function_to_test = "_";
