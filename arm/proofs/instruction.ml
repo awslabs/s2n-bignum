@@ -2593,7 +2593,9 @@ let WORD_DUPLICATE_64_128 = prove
 let all_simd_rules = [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;
     WORD_DUPLICATE_64_128;
     word_interleave8;word_interleave4;word_interleave2;word_split_lohi;
-    word_interleave_lo; word_interleave_hi];;
+    word_interleave_lo; word_interleave_hi;
+    word_deinterleave2; word_deinterleave4; word_deinterleave8; 
+    word_deinterleave16];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
@@ -2692,4 +2694,5 @@ let ARM_OPERATION_CLAUSES =
 
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
-      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP];;
+      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP; 
+       arm_LD1_1; arm_ST1_1; arm_LD2; arm_ST2];;
