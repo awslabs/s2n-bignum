@@ -320,14 +320,14 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
-  // LD1/ST1 (multiple structures), 1 register, Post-immediate offset, datasize = 64
+  // LD1/ST1 (multiple structures), 1 register, immediate offset, Post-immediate offset, datasize = 64
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst1_1_d is_ld Rt Rn (Postimmediate_Offset (word 8)))
   // datasize = 128
   | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst1_1_q is_ld Rt Rn (Postimmediate_Offset (word 16)))
 
-  // LD2/ST2 (multiple structures), 2 registers, Post-immediate offset, datasize = 64
+  // LD2/ST2 (multiple structures), 2 registers, immediate offset, Post-immediate offset, datasize = 64
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b1000:4; size:2; Rn:5; Rt:5] ->
     if size = (word 0b11:(2)word) then NONE // "UNDEFINED"
     else
