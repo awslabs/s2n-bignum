@@ -2623,6 +2623,9 @@ let arm_UZP2_ALT =       EXPAND_SIMD_RULE arm_UZP2;;
 let arm_XTN_ALT =        EXPAND_SIMD_RULE arm_XTN;;
 let arm_ZIP1_ALT =       EXPAND_SIMD_RULE arm_ZIP1;;
 let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
+let arm_LD2_ALT =        EXPAND_SIMD_RULE arm_LD2;;
+let arm_ST2_ALT =        EXPAND_SIMD_RULE arm_ST2;;
+
 
 let arm_SQDMULH_VEC_ALT =
   REWRITE_RULE[word_2smulh] (EXPAND_SIMD_RULE arm_SQDMULH_VEC);;
@@ -2695,4 +2698,4 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP; 
-       arm_LD1_1; arm_ST1_1; arm_LD2; arm_ST2];;
+       arm_LD1_1; arm_ST1_1; arm_LD2_ALT; arm_ST2_ALT];;
