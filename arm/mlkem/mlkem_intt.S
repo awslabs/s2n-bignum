@@ -25,15 +25,13 @@
 
 S2N_BN_SYMBOL(mlkem_intt):
 
-// This code is substantially a copy of the optimized output from SLOTHY:
-//
-//   https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/native/aarch64/intt_opt.S
-//
-// The high-level structure is clearer in the SLOTHY input source:
+// This implementation is a slightly tweaked form of the code generated
+// by SLOTHY, set up to optimize for the Neoverse N1 microarchitecture,
+// starting from this clean version:
 //
 //   https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/native/aarch64/intt_clean.S
 //
-// Relative to these originals, the main changes are as follows:
+// Relative to the original, the main changes are as follows:
 //
 // * Moved constants to the end (to match ELF parser expectations)
 //
@@ -45,454 +43,391 @@ S2N_BN_SYMBOL(mlkem_intt):
 //
 // * Used .hword in place of .short since it seems better defined
 
-#define MLKEM_NATIVE_VERSION 0
-
         sub     sp, sp, #0x40
         stp     d8, d9, [sp]
         stp     d10, d11, [sp, #16]
         stp     d12, d13, [sp, #32]
         stp     d14, d15, [sp, #48]
-        adr     x3, roots_l34
-        add     x3, x3, #0x0
-        adr     x4, roots_l56
-        add     x4, x4, #0x0
-        adr     x5, const_addr
 
-#if MLKEM_NATIVE_VERSION
-        add     x5, x5, #0x0
-        ld1     {v7.8h}, [x5]
-#else
-        dup   v7.8h, wzr
-        mov   w5, 0x0d01
-        mov   v7.h[0], w5
-        mov   w5, 0x4ebf
-        mov   v7.h[1], w5
-#endif
-
-        adr     x5, ninv_addr
-#if MLKEM_NATIVE_VERSION
-        add     x5, x5, #0x0
-        ld1r    {v29.8h}, [x5]
-#else
-        mov   w5, 0x0200
-        dup   v29.8h, w5
-#endif
-
-        adr     x5, ninv_tw_addr
-#if MLKEM_NATIVE_VERSION
-        add     x5, x5, #0x0
-        ld1r    {v30.8h}, [x5]
-#else
-        mov   w5, 0x13b0
-        dup   v30.8h, w5
-#endif
-
-        mov     x1, x0
-        mov     x2, #0x8
-        ldr     q12, [x1, #16]
-        ldr     q31, [x1, #32]
-        ldr     q6, [x1, #48]
-        sub     x2, x2, #0x1
+        adr     x1, roots_l34
+        adr     x2, roots_l56
+        dup     v7.8h, wzr
+        mov     w5, 0x0d01
+        mov     v7.h[0], w5
+        mov     w5, 0x4ebf
+        mov     v7.h[1], w5
+        mov     w5, 0x0200
+        dup     v29.8h, w5
+        mov     w5, 0x13b0
+        dup     v30.8h, w5
+        mov     x3, x0
+        mov     x4, #0x8
 
 scale_start:
-        ldr     q10, [x1]
-        sqrdmulh v13.8h, v12.8h, v30.8h
-        mul     v21.8h, v12.8h, v29.8h
-        sqrdmulh v3.8h, v10.8h, v30.8h
+        ldr     q8, [x3]
+        ldr     q9, [x3, #16]
+        ldr     q10, [x3, #32]
+        ldr     q11, [x3, #48]
+        sqrdmulh v27.8h, v8.8h, v30.8h
+        mul     v8.8h, v8.8h, v29.8h
+        mls     v8.8h, v27.8h, v7.h[0]
+        sqrdmulh v27.8h, v9.8h, v30.8h
+        mul     v9.8h, v9.8h, v29.8h
+        mls     v9.8h, v27.8h, v7.h[0]
+        sqrdmulh v27.8h, v10.8h, v30.8h
         mul     v10.8h, v10.8h, v29.8h
-        sqrdmulh v12.8h, v31.8h, v30.8h
-        mls     v21.8h, v13.8h, v7.h[0]
-        mul     v13.8h, v31.8h, v29.8h
-        mls     v10.8h, v3.8h, v7.h[0]
-        sqrdmulh v3.8h, v6.8h, v30.8h
-        mul     v6.8h, v6.8h, v29.8h
-        mls     v13.8h, v12.8h, v7.h[0]
-        str     q10, [x1], #64
-        ldr     q12, [x1, #16]
-        stur    q21, [x1, #-48]
-        mls     v6.8h, v3.8h, v7.h[0]
-        stur    q13, [x1, #-32]
-        ldr     q31, [x1, #32]
-        stur    q6, [x1, #-16]
-        ldr     q6, [x1, #48]
-        sub     x2, x2, #0x1
-        cbnz    x2, scale_start
-        sqrdmulh v0.8h, v6.8h, v30.8h
-        mul     v13.8h, v6.8h, v29.8h
-        ldr     q10, [x1]
-        mul     v23.8h, v31.8h, v29.8h
-        mls     v13.8h, v0.8h, v7.h[0]
-        sqrdmulh v4.8h, v10.8h, v30.8h
-        mul     v18.8h, v10.8h, v29.8h
-        sqrdmulh v10.8h, v12.8h, v30.8h
-        mul     v21.8h, v12.8h, v29.8h
-        sqrdmulh v0.8h, v31.8h, v30.8h
-        mls     v18.8h, v4.8h, v7.h[0]
-        str     q13, [x1, #48]
-        mls     v21.8h, v10.8h, v7.h[0]
-        mls     v23.8h, v0.8h, v7.h[0]
-        str     q18, [x1], #64
-        stur    q21, [x1, #-48]
-        stur    q23, [x1, #-32]
-        mov     x1, x0
-        mov     x2, #0x8
-        ldr     q10, [x1]
-        ldr     q21, [x1, #16]
-        ldr     q31, [x1, #32]
-        ldr     q12, [x1, #48]
-        ldr     q5, [x4], #96
-        trn1    v30.4s, v31.4s, v12.4s
-        ldur    q9, [x4, #-80]
-        ldur    q15, [x4, #-64]
-        ldur    q6, [x4, #-48]
-        ldur    q25, [x4, #-32]
-        ldur    q20, [x4, #-16]
-        sub     x2, x2, #0x1
+        mls     v10.8h, v27.8h, v7.h[0]
+        sqrdmulh v27.8h, v11.8h, v30.8h
+        mul     v11.8h, v11.8h, v29.8h
+        mls     v11.8h, v27.8h, v7.h[0]
+        str     q8, [x3], #64
+        stur    q9, [x3, #-48]
+        stur    q10, [x3, #-32]
+        stur    q11, [x3, #-16]
+        subs    x4, x4, #0x1
+        cbnz    x4, scale_start
+
+        mov     x3, x0
+        mov     x4, #0x8
+        ldr     q27, [x3, #32]
+        ldr     q13, [x3, #48]
+        ldr     q2, [x3]
+        ldr     q28, [x3, #16]
+        ldr     q9, [x2, #48]
+        ldr     q22, [x2, #16]
+        ldr     q17, [x2, #64]
+        ldr     q14, [x2, #80]
+        trn1    v23.4s, v27.4s, v13.4s
+        trn2    v27.4s, v27.4s, v13.4s
+        trn1    v13.4s, v2.4s, v28.4s
+        trn2    v2.4s, v2.4s, v28.4s
+        ldr     q28, [x2, #32]
+        ldr     q4, [x2], #96
+        trn2    v24.2d, v13.2d, v23.2d
+        trn2    v15.2d, v2.2d, v27.2d
+        trn1    v13.2d, v13.2d, v23.2d
+        trn1    v27.2d, v2.2d, v27.2d
+        add     v2.8h, v24.8h, v15.8h
+        sub     v23.8h, v24.8h, v15.8h
+        add     v24.8h, v13.8h, v27.8h
+        sub     v27.8h, v13.8h, v27.8h
+        ldr     q15, [x1], #16
+        mul     v17.8h, v23.8h, v17.8h
+        sqrdmulh v13.8h, v27.8h, v9.8h
+        sqrdmulh v14.8h, v23.8h, v14.8h
+        mul     v27.8h, v27.8h, v28.8h
+        mls     v27.8h, v13.8h, v7.h[0]
+        sub     v9.8h, v24.8h, v2.8h
+        mls     v17.8h, v14.8h, v7.h[0]
+        sqrdmulh v13.8h, v9.8h, v22.8h
+        add     v2.8h, v24.8h, v2.8h
+        mul     v28.8h, v9.8h, v4.8h
+        sub     v9.8h, v27.8h, v17.8h
+        add     v27.8h, v27.8h, v17.8h
+        sqrdmulh v22.8h, v9.8h, v22.8h
+        trn1    v17.4s, v2.4s, v27.4s
+        mul     v9.8h, v9.8h, v4.8h
+        trn2    v10.4s, v2.4s, v27.4s
+        mls     v28.8h, v13.8h, v7.h[0]
+        mls     v9.8h, v22.8h, v7.h[0]
+        trn2    v2.4s, v28.4s, v9.4s
+        trn1    v13.4s, v28.4s, v9.4s
+        trn2    v22.2d, v17.2d, v13.2d
+        trn2    v28.2d, v10.2d, v2.2d
+        trn1    v9.2d, v17.2d, v13.2d
+        sub     v27.8h, v22.8h, v28.8h
+        trn1    v18.2d, v10.2d, v2.2d
+        add     v14.8h, v22.8h, v28.8h
+        sqrdmulh v20.8h, v27.8h, v15.h[5]
+        mul     v21.8h, v27.8h, v15.h[4]
+        sub     x4, x4, #0x1
 
 layer4567_start:
-        trn1    v13.4s, v10.4s, v21.4s
-        trn2    v10.4s, v10.4s, v21.4s
-        trn2    v21.4s, v31.4s, v12.4s
-        trn2    v3.2d, v13.2d, v30.2d
-        trn1    v13.2d, v13.2d, v30.2d
-        trn2    v12.2d, v10.2d, v21.2d
-        trn1    v10.2d, v10.2d, v21.2d
-        sub     v21.8h, v3.8h, v12.8h
-        add     v3.8h, v3.8h, v12.8h
-        sub     v12.8h, v13.8h, v10.8h
-        add     v13.8h, v13.8h, v10.8h
-        sqrdmulh v10.8h, v21.8h, v20.8h
-        sqrdmulh v6.8h, v12.8h, v6.8h
-        mul     v12.8h, v12.8h, v15.8h
-        mul     v21.8h, v21.8h, v25.8h
-        sub     v30.8h, v13.8h, v3.8h
-        add     v13.8h, v13.8h, v3.8h
-        mls     v12.8h, v6.8h, v7.h[0]
-        mls     v21.8h, v10.8h, v7.h[0]
-        sqrdmulh v10.8h, v30.8h, v9.8h
-        mul     v3.8h, v30.8h, v5.8h
-        ldr     q6, [x3], #16
-        sub     v30.8h, v12.8h, v21.8h
-        mls     v3.8h, v10.8h, v7.h[0]
-        add     v10.8h, v12.8h, v21.8h
-        sqrdmulh v21.8h, v30.8h, v9.8h
-        mul     v12.8h, v30.8h, v5.8h
-        trn1    v30.4s, v13.4s, v10.4s
-        trn2    v13.4s, v13.4s, v10.4s
-        ldr     q10, [x1, #64]
-        mls     v12.8h, v21.8h, v7.h[0]
-        ldr     q21, [x1, #80]
-        ldr     q31, [x1, #96]
-        trn1    v5.4s, v3.4s, v12.4s
-        trn2    v3.4s, v3.4s, v12.4s
-        ldr     q12, [x1, #112]
-        trn2    v9.2d, v30.2d, v5.2d
-        trn2    v15.2d, v13.2d, v3.2d
-        trn1    v30.2d, v30.2d, v5.2d
-        trn1    v13.2d, v13.2d, v3.2d
-        sub     v3.8h, v9.8h, v15.8h
-        sub     v5.8h, v30.8h, v13.8h
-        add     v13.8h, v30.8h, v13.8h
-        sqrdmulh v30.8h, v3.8h, v6.h[5]
-        sqrdmulh v25.8h, v5.8h, v6.h[3]
-        mul     v5.8h, v5.8h, v6.h[2]
-        mul     v3.8h, v3.8h, v6.h[4]
-        add     v9.8h, v9.8h, v15.8h
-        sqdmulh v15.8h, v13.8h, v7.h[1]
-        mls     v5.8h, v25.8h, v7.h[0]
-        mls     v3.8h, v30.8h, v7.h[0]
-        sqdmulh v30.8h, v9.8h, v7.h[1]
-        srshr   v15.8h, v15.8h, #11
-        sqdmulh v25.8h, v5.8h, v7.h[1]
-        sqdmulh v20.8h, v3.8h, v7.h[1]
-        mls     v13.8h, v15.8h, v7.h[0]
-        srshr   v30.8h, v30.8h, #11
-        srshr   v15.8h, v25.8h, #11
-        srshr   v25.8h, v20.8h, #11
-        mls     v9.8h, v30.8h, v7.h[0]
-        mls     v5.8h, v15.8h, v7.h[0]
-        mls     v3.8h, v25.8h, v7.h[0]
-        trn1    v30.4s, v31.4s, v12.4s
-        sub     v15.8h, v13.8h, v9.8h
-        add     v13.8h, v13.8h, v9.8h
-        sub     v9.8h, v5.8h, v3.8h
-        sqrdmulh v25.8h, v15.8h, v6.h[1]
-        mul     v15.8h, v15.8h, v6.h[0]
-        sqrdmulh v20.8h, v9.8h, v6.h[1]
-        mul     v6.8h, v9.8h, v6.h[0]
-        add     v3.8h, v5.8h, v3.8h
-        mls     v15.8h, v25.8h, v7.h[0]
-        str     q13, [x1], #64
-        mls     v6.8h, v20.8h, v7.h[0]
-        stur    q3, [x1, #-48]
-        ldr     q5, [x4], #96
-        stur    q15, [x1, #-32]
-        ldur    q9, [x4, #-80]
-        stur    q6, [x1, #-16]
-        ldur    q15, [x4, #-64]
-        ldur    q6, [x4, #-48]
-        ldur    q25, [x4, #-32]
-        ldur    q20, [x4, #-16]
-        sub     x2, x2, #0x1
-        cbnz    x2, layer4567_start
-        trn1    v3.4s, v10.4s, v21.4s
-        trn2    v12.4s, v31.4s, v12.4s
-        trn2    v13.4s, v10.4s, v21.4s
-        trn1    v28.2d, v3.2d, v30.2d
-        trn2    v1.2d, v3.2d, v30.2d
-        trn2    v31.2d, v13.2d, v12.2d
-        trn1    v12.2d, v13.2d, v12.2d
-        sub     v10.8h, v1.8h, v31.8h
-        sub     v13.8h, v28.8h, v12.8h
-        add     v30.8h, v28.8h, v12.8h
-        mul     v21.8h, v10.8h, v25.8h
-        mul     v3.8h, v13.8h, v15.8h
-        sqrdmulh v13.8h, v13.8h, v6.8h
-        sqrdmulh v10.8h, v10.8h, v20.8h
-        add     v31.8h, v1.8h, v31.8h
-        mls     v3.8h, v13.8h, v7.h[0]
-        mls     v21.8h, v10.8h, v7.h[0]
-        sub     v10.8h, v30.8h, v31.8h
-        ldr     q15, [x3], #16
-        sub     v13.8h, v3.8h, v21.8h
-        sqrdmulh v6.8h, v10.8h, v9.8h
-        mul     v12.8h, v10.8h, v5.8h
-        mul     v10.8h, v13.8h, v5.8h
-        sqrdmulh v13.8h, v13.8h, v9.8h
-        add     v3.8h, v3.8h, v21.8h
-        add     v31.8h, v30.8h, v31.8h
-        mls     v12.8h, v6.8h, v7.h[0]
-        mls     v10.8h, v13.8h, v7.h[0]
-        trn1    v30.4s, v31.4s, v3.4s
-        trn2    v21.4s, v31.4s, v3.4s
-        trn2    v13.4s, v12.4s, v10.4s
-        trn1    v10.4s, v12.4s, v10.4s
-        trn1    v6.2d, v21.2d, v13.2d
-        trn2    v12.2d, v21.2d, v13.2d
-        trn1    v31.2d, v30.2d, v10.2d
-        trn2    v30.2d, v30.2d, v10.2d
-        sub     v13.8h, v31.8h, v6.8h
-        add     v31.8h, v31.8h, v6.8h
-        sub     v21.8h, v30.8h, v12.8h
-        sqrdmulh v26.8h, v13.8h, v15.h[3]
-        mul     v2.8h, v13.8h, v15.h[2]
-        mul     v9.8h, v21.8h, v15.h[4]
-        sqrdmulh v10.8h, v21.8h, v15.h[5]
-        sqdmulh v3.8h, v31.8h, v7.h[1]
-        mls     v2.8h, v26.8h, v7.h[0]
-        add     v12.8h, v30.8h, v12.8h
+        sqdmulh v23.8h, v14.8h, v7.h[1]
+        sub     v26.8h, v9.8h, v18.8h
+        ldr     q6, [x3, #96]
+        ldr     q28, [x3, #112]
+        mls     v21.8h, v20.8h, v7.h[0]
+        ldr     q11, [x3, #64]
+        ldr     q5, [x3, #80]
+        ldr     q25, [x2, #16]
+        add     v13.8h, v9.8h, v18.8h
+        sqrdmulh v10.8h, v26.8h, v15.h[3]
+        trn1    v29.4s, v6.4s, v28.4s
+        ldr     q16, [x2, #48]
+        trn2    v1.4s, v6.4s, v28.4s
+        mul     v17.8h, v26.8h, v15.h[2]
+        trn1    v18.4s, v11.4s, v5.4s
+        ldr     q9, [x2, #64]
+        trn2    v30.4s, v11.4s, v5.4s
+        sqdmulh v20.8h, v13.8h, v7.h[1]
+        trn2    v26.2d, v18.2d, v29.2d
+        ldr     q27, [x2, #80]
+        mls     v17.8h, v10.8h, v7.h[0]
+        trn2    v24.2d, v30.2d, v1.2d
+        trn1    v31.2d, v18.2d, v29.2d
+        ldr     q12, [x2, #32]
+        sub     v19.8h, v26.8h, v24.8h
+        sqdmulh v11.8h, v21.8h, v7.h[1]
+        trn1    v0.2d, v30.2d, v1.2d
+        sqrdmulh v6.8h, v19.8h, v27.8h
+        sub     v10.8h, v31.8h, v0.8h
+        srshr   v2.8h, v20.8h, #11
+        sqdmulh v8.8h, v17.8h, v7.h[1]
+        add     v31.8h, v31.8h, v0.8h
+        ldr     q0, [x2], #96
+        sqrdmulh v29.8h, v10.8h, v16.8h
+        add     v27.8h, v26.8h, v24.8h
+        srshr   v3.8h, v11.8h, #11
+        mul     v22.8h, v10.8h, v12.8h
+        sub     v28.8h, v31.8h, v27.8h
+        add     v4.8h, v31.8h, v27.8h
+        srshr   v8.8h, v8.8h, #11
+        sqrdmulh v10.8h, v28.8h, v25.8h
+        srshr   v12.8h, v23.8h, #11
+        mls     v22.8h, v29.8h, v7.h[0]
+        mls     v17.8h, v8.8h, v7.h[0]
+        mls     v21.8h, v3.8h, v7.h[0]
+        mul     v27.8h, v19.8h, v9.8h
+        mls     v27.8h, v6.8h, v7.h[0]
+        mls     v13.8h, v2.8h, v7.h[0]
+        mls     v14.8h, v12.8h, v7.h[0]
+        mul     v9.8h, v28.8h, v0.8h
+        sub     v8.8h, v22.8h, v27.8h
+        add     v23.8h, v22.8h, v27.8h
+        sqrdmulh v5.8h, v8.8h, v25.8h
+        sub     v1.8h, v13.8h, v14.8h
+        mul     v25.8h, v8.8h, v0.8h
+        add     v2.8h, v13.8h, v14.8h
+        trn1    v0.4s, v4.4s, v23.4s
         mls     v9.8h, v10.8h, v7.h[0]
-        srshr   v3.8h, v3.8h, #11
-        sqdmulh v10.8h, v12.8h, v7.h[1]
-        sqdmulh v21.8h, v2.8h, v7.h[1]
-        sqdmulh v13.8h, v9.8h, v7.h[1]
-        mls     v31.8h, v3.8h, v7.h[0]
-        srshr   v10.8h, v10.8h, #11
-        srshr   v16.8h, v21.8h, #11
-        srshr   v13.8h, v13.8h, #11
-        mls     v12.8h, v10.8h, v7.h[0]
-        mls     v2.8h, v16.8h, v7.h[0]
-        mls     v9.8h, v13.8h, v7.h[0]
-        sub     v10.8h, v31.8h, v12.8h
-        add     v6.8h, v31.8h, v12.8h
-        sub     v13.8h, v2.8h, v9.8h
-        mul     v3.8h, v10.8h, v15.h[0]
-        sqrdmulh v12.8h, v10.8h, v15.h[1]
-        mul     v10.8h, v13.8h, v15.h[0]
-        sqrdmulh v21.8h, v13.8h, v15.h[1]
-        add     v13.8h, v2.8h, v9.8h
-        mls     v3.8h, v12.8h, v7.h[0]
-        str     q6, [x1], #64
-        mls     v10.8h, v21.8h, v7.h[0]
-        stur    q13, [x1, #-48]
-        stur    q3, [x1, #-32]
-        stur    q10, [x1, #-16]
-        mov     x2, #0x4
-        adr     x3, roots_l012
-        add     x3, x3, #0x0
-        ldr     q0, [x3], #32
-        ldur    q1, [x3, #-16]
-        ldr     q31, [x0, #256]
-        ldr     q5, [x0, #320]
-        ldr     q30, [x0, #128]
-        add     v25.8h, v31.8h, v5.8h
-        ldr     q9, [x0, #384]
-        ldr     q15, [x0, #448]
-        ldr     q12, [x0, #192]
-        add     v20.8h, v9.8h, v15.8h
-        ldr     q3, [x0]
-        add     v27.8h, v30.8h, v12.8h
-        add     v24.8h, v25.8h, v20.8h
-        ldr     q6, [x0, #64]
-        sub     x2, x2, #0x1
+        trn2    v10.4s, v4.4s, v23.4s
+        mls     v25.8h, v5.8h, v7.h[0]
+        sqrdmulh v19.8h, v1.8h, v15.h[1]
+        mul     v16.8h, v1.8h, v15.h[0]
+        sub     v6.8h, v17.8h, v21.8h
+        trn1    v31.4s, v9.4s, v25.4s
+        trn2    v4.4s, v9.4s, v25.4s
+        sqrdmulh v12.8h, v6.8h, v15.h[1]
+        trn1    v9.2d, v0.2d, v31.2d
+        mls     v16.8h, v19.8h, v7.h[0]
+        trn2    v23.2d, v10.2d, v4.2d
+        trn2    v8.2d, v0.2d, v31.2d
+        mul     v27.8h, v6.8h, v15.h[0]
+        ldr     q15, [x1], #16
+        trn1    v18.2d, v10.2d, v4.2d
+        mls     v27.8h, v12.8h, v7.h[0]
+        sub     v6.8h, v8.8h, v23.8h
+        add     v10.8h, v17.8h, v21.8h
+        str     q16, [x3, #32]
+        add     v14.8h, v8.8h, v23.8h
+        sqrdmulh v20.8h, v6.8h, v15.h[5]
+        str     q10, [x3, #16]
+        str     q2, [x3], #64
+        mul     v21.8h, v6.8h, v15.h[4]
+        stur    q27, [x3, #-16]
+        sub     x4, x4, #0x1
+        cbnz    x4, layer4567_start
+
+        mls     v21.8h, v20.8h, v7.h[0]
+        sub     v27.8h, v9.8h, v18.8h
+        add     v30.8h, v9.8h, v18.8h
+        sqrdmulh v10.8h, v27.8h, v15.h[3]
+        mul     v28.8h, v27.8h, v15.h[2]
+        sqdmulh v27.8h, v14.8h, v7.h[1]
+        mls     v28.8h, v10.8h, v7.h[0]
+        sqdmulh v10.8h, v30.8h, v7.h[1]
+        srshr   v27.8h, v27.8h, #11
+        sqdmulh v13.8h, v21.8h, v7.h[1]
+        sqdmulh v22.8h, v28.8h, v7.h[1]
+        srshr   v25.8h, v10.8h, #11
+        srshr   v24.8h, v13.8h, #11
+        mls     v14.8h, v27.8h, v7.h[0]
+        mls     v30.8h, v25.8h, v7.h[0]
+        srshr   v2.8h, v22.8h, #11
+        mls     v21.8h, v24.8h, v7.h[0]
+        mls     v28.8h, v2.8h, v7.h[0]
+        sub     v25.8h, v30.8h, v14.8h
+        add     v27.8h, v30.8h, v14.8h
+        sqrdmulh v3.8h, v25.8h, v15.h[1]
+        str     q27, [x3], #64
+        sub     v27.8h, v28.8h, v21.8h
+        mul     v13.8h, v25.8h, v15.h[0]
+        add     v2.8h, v28.8h, v21.8h
+        sqrdmulh v31.8h, v27.8h, v15.h[1]
+        mul     v27.8h, v27.8h, v15.h[0]
+        mls     v13.8h, v3.8h, v7.h[0]
+        mls     v27.8h, v31.8h, v7.h[0]
+        stur    q2, [x3, #-48]
+        stur    q13, [x3, #-32]
+        stur    q27, [x3, #-16]
+        mov     x4, #0x4
+        ldr     q0, [x1], #32
+        ldur    q1, [x1, #-16]
+        ldr     q13, [x0, #448]
+        ldr     q2, [x0, #384]
+        ldr     q8, [x0, #192]
+        ldr     q12, [x0, #256]
+        ldr     q23, [x0, #64]
+        sub     v26.8h, v2.8h, v13.8h
+        ldr     q27, [x0, #320]
+        add     v13.8h, v2.8h, v13.8h
+        ldr     q20, [x0]
+        sqrdmulh v28.8h, v26.8h, v1.h[5]
+        ldr     q14, [x0, #128]
+        mul     v18.8h, v26.8h, v1.h[4]
+        sub     v2.8h, v12.8h, v27.8h
+        add     v3.8h, v20.8h, v23.8h
+        add     v26.8h, v14.8h, v8.8h
+        sqrdmulh v31.8h, v2.8h, v1.h[3]
+        sub     v11.8h, v3.8h, v26.8h
+        mls     v18.8h, v28.8h, v7.h[0]
+        mul     v29.8h, v2.8h, v1.h[2]
+        mls     v29.8h, v31.8h, v7.h[0]
+        mul     v22.8h, v11.8h, v0.h[2]
+        sub     v31.8h, v29.8h, v18.8h
+        sqrdmulh v28.8h, v31.8h, v0.h[5]
+        mul     v4.8h, v31.8h, v0.h[4]
+        sub     x4, x4, #0x1
 
 layer123_start:
-        sub     v13.8h, v3.8h, v6.8h
-        add     v10.8h, v3.8h, v6.8h
-        sub     v21.8h, v30.8h, v12.8h
-        sqrdmulh v3.8h, v13.8h, v0.h[7]
-        mul     v13.8h, v13.8h, v0.h[6]
-        sub     v12.8h, v10.8h, v27.8h
-        add     v10.8h, v10.8h, v27.8h
-        sqrdmulh v6.8h, v21.8h, v1.h[1]
-        mul     v21.8h, v21.8h, v1.h[0]
-        mls     v13.8h, v3.8h, v7.h[0]
-        sub     v3.8h, v31.8h, v5.8h
-        sqrdmulh v30.8h, v12.8h, v0.h[3]
-        mul     v12.8h, v12.8h, v0.h[2]
-        sub     v31.8h, v10.8h, v24.8h
-        add     v10.8h, v10.8h, v24.8h
-        mls     v21.8h, v6.8h, v7.h[0]
-        sqrdmulh v6.8h, v3.8h, v1.h[3]
-        mul     v3.8h, v3.8h, v1.h[2]
-        sub     v5.8h, v9.8h, v15.8h
-        sub     v9.8h, v13.8h, v21.8h
-        add     v13.8h, v13.8h, v21.8h
-        mls     v3.8h, v6.8h, v7.h[0]
-        sqrdmulh v21.8h, v5.8h, v1.h[5]
-        mls     v12.8h, v30.8h, v7.h[0]
-        mul     v6.8h, v5.8h, v1.h[4]
-        sqrdmulh v30.8h, v9.8h, v0.h[3]
-        mul     v5.8h, v9.8h, v0.h[2]
-        sqrdmulh v9.8h, v31.8h, v0.h[1]
-        mul     v31.8h, v31.8h, v0.h[0]
-        str     q10, [x0], #16
-        mls     v6.8h, v21.8h, v7.h[0]
-        mls     v5.8h, v30.8h, v7.h[0]
-        sub     v10.8h, v25.8h, v20.8h
-        mls     v31.8h, v9.8h, v7.h[0]
-        sub     v21.8h, v3.8h, v6.8h
-        sqrdmulh v30.8h, v10.8h, v0.h[5]
-        mul     v10.8h, v10.8h, v0.h[4]
-        add     v3.8h, v3.8h, v6.8h
-        sqrdmulh v6.8h, v21.8h, v0.h[5]
-        mul     v21.8h, v21.8h, v0.h[4]
-        mls     v10.8h, v30.8h, v7.h[0]
-        sub     v30.8h, v13.8h, v3.8h
-        add     v13.8h, v13.8h, v3.8h
-        mls     v21.8h, v6.8h, v7.h[0]
-        sqrdmulh v3.8h, v30.8h, v0.h[1]
-        mul     v6.8h, v30.8h, v0.h[0]
-        sub     v30.8h, v12.8h, v10.8h
-        add     v10.8h, v12.8h, v10.8h
-        sub     v12.8h, v5.8h, v21.8h
-        mls     v6.8h, v3.8h, v7.h[0]
-        sqrdmulh v3.8h, v30.8h, v0.h[1]
-        mul     v30.8h, v30.8h, v0.h[0]
-        add     v21.8h, v5.8h, v21.8h
-        sqrdmulh v5.8h, v12.8h, v0.h[1]
-        mul     v12.8h, v12.8h, v0.h[0]
-        mls     v30.8h, v3.8h, v7.h[0]
-        str     q31, [x0, #240]
-        ldr     q3, [x0]
-        mls     v12.8h, v5.8h, v7.h[0]
-        str     q6, [x0, #304]
-        ldr     q6, [x0, #64]
-        str     q30, [x0, #368]
-        ldr     q30, [x0, #128]
-        str     q12, [x0, #432]
-        ldr     q12, [x0, #192]
-        str     q13, [x0, #48]
-        ldr     q31, [x0, #256]
-        ldr     q5, [x0, #320]
-        ldr     q9, [x0, #384]
-        ldr     q15, [x0, #448]
-        str     q10, [x0, #112]
-        add     v25.8h, v31.8h, v5.8h
-        add     v20.8h, v9.8h, v15.8h
-        str     q21, [x0, #176]
-        add     v27.8h, v30.8h, v12.8h
-        add     v24.8h, v25.8h, v20.8h
-        sub     x2, x2, #0x1
-        cbnz    x2, layer123_start
-        add     v14.8h, v3.8h, v6.8h
-        sub     v13.8h, v25.8h, v20.8h
-        sub     v3.8h, v3.8h, v6.8h
-        sub     v29.8h, v14.8h, v27.8h
-        mul     v28.8h, v13.8h, v0.h[4]
-        sqrdmulh v10.8h, v13.8h, v0.h[5]
-        sqrdmulh v13.8h, v29.8h, v0.h[3]
-        mul     v20.8h, v29.8h, v0.h[2]
-        sub     v19.8h, v30.8h, v12.8h
-        sqrdmulh v29.8h, v3.8h, v0.h[7]
-        mls     v28.8h, v10.8h, v7.h[0]
-        mls     v20.8h, v13.8h, v7.h[0]
-        sqrdmulh v22.8h, v19.8h, v1.h[1]
-        mul     v23.8h, v19.8h, v1.h[0]
-        mul     v6.8h, v3.8h, v0.h[6]
-        sub     v13.8h, v20.8h, v28.8h
-        sub     v15.8h, v9.8h, v15.8h
-        mls     v23.8h, v22.8h, v7.h[0]
-        sqrdmulh v10.8h, v13.8h, v0.h[1]
-        mul     v13.8h, v13.8h, v0.h[0]
-        mls     v6.8h, v29.8h, v7.h[0]
-        sqrdmulh v21.8h, v15.8h, v1.h[5]
-        mul     v15.8h, v15.8h, v1.h[4]
-        mls     v13.8h, v10.8h, v7.h[0]
-        sub     v16.8h, v6.8h, v23.8h
-        sub     v25.8h, v31.8h, v5.8h
-        mls     v15.8h, v21.8h, v7.h[0]
-        mul     v30.8h, v16.8h, v0.h[2]
-        sqrdmulh v21.8h, v16.8h, v0.h[3]
-        sqrdmulh v5.8h, v25.8h, v1.h[3]
-        add     v27.8h, v14.8h, v27.8h
-        mul     v25.8h, v25.8h, v1.h[2]
-        mls     v30.8h, v21.8h, v7.h[0]
-        sub     v3.8h, v27.8h, v24.8h
-        str     q13, [x0, #384]
-        mls     v25.8h, v5.8h, v7.h[0]
-        sqrdmulh v12.8h, v3.8h, v0.h[1]
-        mul     v31.8h, v3.8h, v0.h[0]
-        add     v5.8h, v6.8h, v23.8h
-        add     v10.8h, v25.8h, v15.8h
-        sub     v6.8h, v25.8h, v15.8h
-        mls     v31.8h, v12.8h, v7.h[0]
-        add     v9.8h, v5.8h, v10.8h
-        mul     v21.8h, v6.8h, v0.h[4]
-        sqrdmulh v6.8h, v6.8h, v0.h[5]
-        str     q31, [x0, #256]
-        sub     v22.8h, v5.8h, v10.8h
-        str     q9, [x0, #64]
-        mls     v21.8h, v6.8h, v7.h[0]
-        sqrdmulh v6.8h, v22.8h, v0.h[1]
-        mul     v3.8h, v22.8h, v0.h[0]
-        add     v12.8h, v20.8h, v28.8h
-        sub     v13.8h, v30.8h, v21.8h
-        add     v21.8h, v30.8h, v21.8h
-        mls     v3.8h, v6.8h, v7.h[0]
-        sqrdmulh v10.8h, v13.8h, v0.h[1]
-        mul     v13.8h, v13.8h, v0.h[0]
-        str     q21, [x0, #192]
-        add     v6.8h, v27.8h, v24.8h
-        str     q3, [x0, #320]
-        mls     v13.8h, v10.8h, v7.h[0]
-        str     q6, [x0], #16
-        str     q12, [x0, #112]
-        str     q13, [x0, #432]
+        sqrdmulh v15.8h, v11.8h, v0.h[3]
+        sub     v31.8h, v20.8h, v23.8h
+        sub     v2.8h, v14.8h, v8.8h
+        mul     v9.8h, v31.8h, v0.h[6]
+        ldr     q24, [x0, #400]
+        add     v30.8h, v12.8h, v27.8h
+        ldr     q17, [x0, #464]
+        sqrdmulh v11.8h, v2.8h, v1.h[1]
+        add     v6.8h, v30.8h, v13.8h
+        add     v25.8h, v3.8h, v26.8h
+        sqrdmulh v27.8h, v31.8h, v0.h[7]
+        ldr     q8, [x0, #208]
+        sub     v14.8h, v24.8h, v17.8h
+        mul     v3.8h, v2.8h, v1.h[0]
+        mls     v3.8h, v11.8h, v7.h[0]
+        sub     v16.8h, v25.8h, v6.8h
+        sub     v26.8h, v30.8h, v13.8h
+        mls     v9.8h, v27.8h, v7.h[0]
+        ldr     q27, [x0, #336]
+        mul     v30.8h, v16.8h, v0.h[0]
+        mls     v4.8h, v28.8h, v7.h[0]
+        add     v28.8h, v29.8h, v18.8h
+        add     v19.8h, v9.8h, v3.8h
+        sub     v3.8h, v9.8h, v3.8h
+        sqrdmulh v13.8h, v16.8h, v0.h[1]
+        sub     v23.8h, v19.8h, v28.8h
+        add     v16.8h, v19.8h, v28.8h
+        sqrdmulh v12.8h, v3.8h, v0.h[3]
+        mul     v10.8h, v3.8h, v0.h[2]
+        str     q16, [x0, #64]
+        mls     v30.8h, v13.8h, v7.h[0]
+        mls     v10.8h, v12.8h, v7.h[0]
+        ldr     q12, [x0, #272]
+        mls     v22.8h, v15.8h, v7.h[0]
+        str     q30, [x0, #256]
+        sqrdmulh v2.8h, v14.8h, v1.h[5]
+        sub     v15.8h, v12.8h, v27.8h
+        add     v30.8h, v25.8h, v6.8h
+        add     v25.8h, v10.8h, v4.8h
+        sqrdmulh v9.8h, v26.8h, v0.h[5]
+        sub     v13.8h, v10.8h, v4.8h
+        str     q25, [x0, #192]
+        mul     v18.8h, v14.8h, v1.h[4]
+        mul     v31.8h, v23.8h, v0.h[0]
+        sqrdmulh v10.8h, v23.8h, v0.h[1]
+        ldr     q23, [x0, #80]
+        sqrdmulh v20.8h, v13.8h, v0.h[1]
+        mls     v18.8h, v2.8h, v7.h[0]
+        mul     v5.8h, v26.8h, v0.h[4]
+        mul     v14.8h, v13.8h, v0.h[0]
+        mls     v14.8h, v20.8h, v7.h[0]
+        mls     v5.8h, v9.8h, v7.h[0]
+        sqrdmulh v9.8h, v15.8h, v1.h[3]
+        ldr     q20, [x0, #16]
+        mls     v31.8h, v10.8h, v7.h[0]
+        str     q14, [x0, #448]
+        ldr     q14, [x0, #144]
+        sub     v10.8h, v22.8h, v5.8h
+        mul     v29.8h, v15.8h, v1.h[2]
+        add     v13.8h, v22.8h, v5.8h
+        str     q30, [x0], #16
+        mls     v29.8h, v9.8h, v7.h[0]
+        str     q13, [x0, #112]
+        str     q31, [x0, #304]
+        add     v26.8h, v14.8h, v8.8h
+        add     v3.8h, v20.8h, v23.8h
+        sqrdmulh v28.8h, v10.8h, v0.h[1]
+        mul     v21.8h, v10.8h, v0.h[0]
+        sub     v11.8h, v3.8h, v26.8h
+        sub     v13.8h, v29.8h, v18.8h
+        mul     v22.8h, v11.8h, v0.h[2]
+        mls     v21.8h, v28.8h, v7.h[0]
+        sqrdmulh v28.8h, v13.8h, v0.h[5]
+        mul     v4.8h, v13.8h, v0.h[4]
+        add     v13.8h, v24.8h, v17.8h
+        str     q21, [x0, #368]
+        sub     x4, x4, #0x1
+        cbnz    x4, layer123_start
+
+        sqrdmulh v2.8h, v11.8h, v0.h[3]
+        sub     v9.8h, v20.8h, v23.8h
+        sub     v17.8h, v14.8h, v8.8h
+        add     v27.8h, v12.8h, v27.8h
+        mls     v4.8h, v28.8h, v7.h[0]
+        add     v28.8h, v3.8h, v26.8h
+        add     v14.8h, v29.8h, v18.8h
+        mul     v23.8h, v9.8h, v0.h[6]
+        add     v24.8h, v27.8h, v13.8h
+        sub     v27.8h, v27.8h, v13.8h
+        mls     v22.8h, v2.8h, v7.h[0]
+        sub     v13.8h, v28.8h, v24.8h
+        sqrdmulh v2.8h, v9.8h, v0.h[7]
+        add     v28.8h, v28.8h, v24.8h
+        str     q28, [x0], #16
+        sqrdmulh v28.8h, v17.8h, v1.h[1]
+        mul     v9.8h, v17.8h, v1.h[0]
+        mul     v17.8h, v13.8h, v0.h[0]
+        mls     v9.8h, v28.8h, v7.h[0]
+        mls     v23.8h, v2.8h, v7.h[0]
+        sqrdmulh v13.8h, v13.8h, v0.h[1]
+        sqrdmulh v2.8h, v27.8h, v0.h[5]
+        add     v28.8h, v23.8h, v9.8h
+        mul     v27.8h, v27.8h, v0.h[4]
+        sub     v9.8h, v23.8h, v9.8h
+        sub     v23.8h, v28.8h, v14.8h
+        add     v28.8h, v28.8h, v14.8h
+        sqrdmulh v14.8h, v9.8h, v0.h[3]
+        mls     v27.8h, v2.8h, v7.h[0]
+        str     q28, [x0, #48]
+        mul     v2.8h, v9.8h, v0.h[2]
+        mls     v2.8h, v14.8h, v7.h[0]
+        sub     v28.8h, v22.8h, v27.8h
+        add     v27.8h, v22.8h, v27.8h
+        mls     v17.8h, v13.8h, v7.h[0]
+        str     q27, [x0, #112]
+        mul     v27.8h, v23.8h, v0.h[0]
+        add     v13.8h, v2.8h, v4.8h
+        sub     v2.8h, v2.8h, v4.8h
+        sqrdmulh v9.8h, v23.8h, v0.h[1]
+        str     q17, [x0, #240]
+        str     q13, [x0, #176]
+        sqrdmulh v13.8h, v2.8h, v0.h[1]
+        mul     v2.8h, v2.8h, v0.h[0]
+        mls     v27.8h, v9.8h, v7.h[0]
+        sqrdmulh v9.8h, v28.8h, v0.h[1]
+        mls     v2.8h, v13.8h, v7.h[0]
+        str     q27, [x0, #304]
+        mul     v27.8h, v28.8h, v0.h[0]
+        mls     v27.8h, v9.8h, v7.h[0]
+        str     q2, [x0, #432]
+        str     q27, [x0, #368]
         ldp     d8, d9, [sp]
         ldp     d10, d11, [sp, #16]
         ldp     d12, d13, [sp, #32]
         ldp     d14, d15, [sp, #48]
         add     sp, sp, #0x40
         ret
-
-const_addr:
-        .word   0x4ebf0d01
-        .word   0x00000000
-        .word   0x00000000
-        .word   0x00000000
-
-ninv_addr:
-        .word   0x02000200
-        .word   0x02000200
-        .word   0x02000200
-        .word   0x02000200
-
-ninv_tw_addr:
-        .word   0x13b013b0
-        .word   0x13b013b0
-        .word   0x13b013b0
-        .word   0x13b013b0
 
 // This is from the file intt_123_45_67_twiddles.S
 
