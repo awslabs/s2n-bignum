@@ -79,36 +79,38 @@ let LD2_SIMD_128_IMM_POST_EXEC = ARM_MK_EXEC_RULE LD2_SIMD_128_IMM_POST;;
 let mc_length_th, decode_ths = LD2_SIMD_128_IMM_POST_EXEC;;
 
 let LD2_SIMD_128_IMM_POST_CORRECT = time prove
- (`!x a b pc.
+ (`!x a pc.
      ensures arm
           (\s. aligned_bytes_loaded s (word pc) LD2_SIMD_128_IMM_POST /\
                read PC s = word pc /\
                C_ARGUMENTS [x] s /\
-               read (memory :> bytes128 x) s = a /\
-               read (memory :> bytes128 (word_add x (word 0x80))) s = b)
+               bignum_from_memory (x, 32) s = a)
           (\s. read PC s = word (pc + 0x04) /\
                read Q0 s = ((word_join:(96 word->32 word->128 word))
                              ((word_join:(64 word->32 word->96 word))
                                ((word_join:(32 word->32 word->64 word))
-                                 (word_subword a (0,32)) (word_subword a (64,32)))
-                                   (word_subword b (0,32))) (word_subword b (64,32))) /\
+                                 ((word_subword:(256 word->(num#num)->32 word)) (word a) (192,32)) 
+                                 ((word_subword:(256 word->(num#num)->32 word)) (word a) (128,32)))
+                                   ((word_subword:(256 word->(num#num)->32 word)) (word a) (64,32))) 
+                                     ((word_subword:(256 word->(num#num)->32 word)) (word a) (0,32))) /\
                read Q1 s = ((word_join:(96 word->32 word->128 word))
                              ((word_join:(64 word->32 word->96 word))
                                ((word_join:(32 word->32 word->64 word))
-                                 (word_subword a (32,32)) (word_subword a (96,32)))
-                                   (word_subword b (32,32))) (word_subword b (96,32))) /\
+                                 ((word_subword:(256 word->(num#num)->32 word)) (word a) (224,32)) 
+                                 ((word_subword:(256 word->(num#num)->32 word)) (word a) (160,32)))
+                                   ((word_subword:(256 word->(num#num)->32 word)) (word a) (96,32)))
+                                     ((word_subword:(256 word->(num#num)->32 word)) (word a) (32,32))) /\
                read X0 s = word_add x (word 32))
           (MAYCHANGE [PC; X0],, MAYCHANGE [Q0; Q1])`,
-  MAP_EVERY X_GEN_TAC [`x:int64`; `a:int128`; `b:int128`; `pc:num`] THEN
+  MAP_EVERY X_GEN_TAC [`x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS] THEN
-  ENSURES_INIT_TAC "s0" THEN
-  BIGNUM_DIGITIZE_TAC "a_" `read (memory :> bytes128 x) s0` THEN
-  BIGNUM_DIGITIZE_TAC "b_" `read (memory :> bytes128 (word_add x (word 128))) s0` THEN
+  REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
+  (* BIGNUM_DIGITIZE_TAC "a_" `read (memory :> bytes (x,8 * 32)) s0` THEN *)
 
   ARM_ACCSTEPS_TAC LD2_SIMD_128_IMM_POST_EXEC [] [1] THEN
   ARM_VERBOSE_STEP_TAC LD2_SIMD_128_IMM_POST_EXEC "S0" THEN
   ARM_STEP_TAC LD2_SIMD_128_IMM_POST_EXEC [] "S0" THEN
-  ARM_BASIC_STEP_TAC decode_ths "s0"
+  ARM_BASIC_STEP_TAC decode_ths "s1" THEN
 
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[]
