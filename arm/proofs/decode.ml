@@ -510,6 +510,22 @@ let decode = new_definition `!w:int32. decode w =
     // SHA512SU1
     SOME (arm_SHA512SU1 (QREG' Rd) (QREG' Rn) (QREG' Rm))
   
+  | [0b0100111000101000010010:22; Rn:5; Rd:5] ->
+    // AESE
+    SOME (arm_AESE (QREG' Rd) (QREG' Rn))
+
+  | [0b0100111000101000011010:22; Rn:5; Rd:5] ->
+    // AESMC
+    SOME (arm_AESMC (QREG' Rd) (QREG' Rn))
+
+  | [0b0100111000101000010110:22; Rn:5; Rd:5] ->
+    // AESD
+    SOME (arm_AESD (QREG' Rd) (QREG' Rn))
+
+  | [0b0100111000101000011110:22; Rn:5; Rd:5] ->
+    // AESIMC
+    SOME (arm_AESIMC (QREG' Rd) (QREG' Rn))
+
   | [0b11001110011:11; Rm:5; 0b100011:6; Rn:5; Rd:5] ->
     // RAX1
     SOME (arm_RAX1 (QREG' Rd) (QREG' Rn) (QREG' Rm))
