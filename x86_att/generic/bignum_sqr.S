@@ -74,7 +74,7 @@ S2N_BN_SYMBOL(bignum_sqr):
 // If p = 0 the result is trivial and nothing needs doing
 
         testq   p, p
-        jz      end
+        jz      bignum_sqr_end
 
 // initialize (hh,ll) = 0
 
@@ -85,7 +85,7 @@ S2N_BN_SYMBOL(bignum_sqr):
 
         xorq    k, k
 
-outerloop:
+bignum_sqr_outerloop:
 
 // First let bot = MAX 0 (k + 1 - n) and top = MIN (k + 1) n
 // We want to accumulate all x[i] * x[k - i] for bot <= i < top
@@ -110,7 +110,7 @@ outerloop:
 // If htop <= bot then main doubled part of the sum is empty
 
         cmpq    htop, i
-        jnc     nosumming
+        jnc     bignum_sqr_nosumming
 
 // Use a moving pointer for [y] = x[k-i] for the cofactor
 
@@ -120,7 +120,7 @@ outerloop:
 
 // Do the main part of the sum x[i] * x[k - i] for 2 * i < k
 
-innerloop:
+bignum_sqr_innerloop:
         movq    (x,i,8), a
         mulq     (y)
         addq    a, l
@@ -129,7 +129,7 @@ innerloop:
         subq    $8, y
         incq    i
         cmpq    htop, i
-        jc      innerloop
+        jc      bignum_sqr_innerloop
 
 // Now double it
 
@@ -139,11 +139,11 @@ innerloop:
 
 // If k is even (which means 2 * i = k) and i < n add the extra x[i]^2 term
 
-nosumming:
+bignum_sqr_nosumming:
         testq   $1, k
-        jnz     innerend
+        jnz     bignum_sqr_innerend
         cmpq    n, i
-        jnc     innerend
+        jnc     bignum_sqr_innerend
 
         movq    (x,i,8), a
         mulq    a
@@ -153,7 +153,7 @@ nosumming:
 
 // Now add the local sum into the global sum, store and shift
 
-innerend:
+bignum_sqr_innerend:
         addq    ll, l
         movq    l, (z,k,8)
         adcq    hh, h
@@ -163,11 +163,11 @@ innerend:
 
         incq    k
         cmpq    p, k
-        jc      outerloop
+        jc      bignum_sqr_outerloop
 
 // Restore registers and return
 
-end:
+bignum_sqr_end:
         popq    %r15
         popq    %r14
         popq    %r13

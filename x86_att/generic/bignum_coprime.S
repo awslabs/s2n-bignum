@@ -117,7 +117,7 @@ S2N_BN_SYMBOL(bignum_coprime):
         pushq   %r15
         subq    $STACKVARSIZE, %rsp
 
-// Compute k = max(m,n), and if this is zero skip to the end. Note that
+// Compute k = max(m,n), and if this is zero skip to the bignum_coprime_end. Note that
 // in this case k is also in %rax so serves as the right answer of "false"
 
         movq    arg1, %rax
@@ -126,7 +126,7 @@ S2N_BN_SYMBOL(bignum_coprime):
         movq    %rax, k
 
         testq   %rax, %rax
-        jz      end
+        jz      bignum_coprime_end
 
 // Set up inside w two size-k buffers m and n
 
@@ -136,41 +136,41 @@ S2N_BN_SYMBOL(bignum_coprime):
 
         xorq    i, i
         testq   arg1, arg1
-        jz      xpadloop
-xloop:
+        jz      bignum_coprime_xpadloop
+bignum_coprime_xloop:
         movq    (arg2,i,8), a
         movq    a, (m,i,8)
         incq    i
         cmpq    arg1, i
-        jc      xloop
+        jc      bignum_coprime_xloop
         cmpq    k, i
-        jnc     xskip
-xpadloop:
+        jnc     bignum_coprime_xskip
+bignum_coprime_xpadloop:
         movq    $0,  (m,i,8)
         incq    i
         cmpq    k, i
-        jc      xpadloop
-xskip:
+        jc      bignum_coprime_xpadloop
+bignum_coprime_xskip:
 
 // Copy the input y into the buffer n, padding with zeros as needed
 
         xorq    i, i
         testq   arg3, arg3
-        jz      ypadloop
-yloop:
+        jz      bignum_coprime_ypadloop
+bignum_coprime_yloop:
         movq    (arg4,i,8), a
         movq    a, (n,i,8)
         incq    i
         cmpq    arg3, i
-        jc      yloop
+        jc      bignum_coprime_yloop
         cmpq    k, i
-        jnc     yskip
-ypadloop:
+        jnc     bignum_coprime_yskip
+bignum_coprime_ypadloop:
         movq    $0,  (n,i,8)
         incq    i
         cmpq    k, i
-        jc      ypadloop
-yskip:
+        jc      bignum_coprime_ypadloop
+bignum_coprime_yskip:
 
 // Set up the outer loop count of 64 * sum of input sizes.
 // The invariant is that m * n < 2^t at all times.
@@ -179,7 +179,7 @@ yskip:
         shlq    $6, a
         movq    a, t
 
-// Record for the very end the OR of the lowest words.
+// Record for the very bignum_coprime_end the OR of the lowest words.
 // If the bottom bit is zero we know both are even so the answer is false.
 // But since this is constant-time code we still execute all the main part.
 
@@ -196,7 +196,7 @@ yskip:
         subq    $1, b
 
         xorq    i, i
-swaploop:
+bignum_coprime_swaploop:
         movq    (m,i,8), a
         movq    (n,i,8), c
         movq    a, d
@@ -208,11 +208,11 @@ swaploop:
         movq    c, (n,i,8)
         incq    i
         cmpq    k, i
-        jnz     swaploop
+        jnz     bignum_coprime_swaploop
 
 // Start of the main outer loop iterated t / CHUNKSIZE times
 
-outerloop:
+bignum_coprime_outerloop:
 
 // We need only bother with sharper l = min k (ceil(t/64)) digits
 // Either both m and n fit in l digits, or m has become zero and so
@@ -238,7 +238,7 @@ outerloop:
         // and in this case h1 and h2 are those words
 
         xorq    i, i
-toploop:
+bignum_coprime_toploop:
         movq    (m,i,8), b
         movq    (n,i,8), c
         movq    c2, c1
@@ -254,7 +254,7 @@ toploop:
         sbbq    c2, c2
         incq    i
         cmpq    l, i
-        jc      toploop
+        jc      bignum_coprime_toploop
 
         movq    h1, a
         orq     h2, a
@@ -314,7 +314,7 @@ toploop:
 // The actual computation computes updates before actually swapping and
 // then corrects as needed.
 
-innerloop:
+bignum_coprime_innerloop:
 
         xorl    %eax, %eax
         xorl    %ebx, %ebx
@@ -351,7 +351,7 @@ innerloop:
 // End of the inner for-loop
 
         decq    i
-        jnz     innerloop
+        jnz     bignum_coprime_innerloop
 
 // Unstash the temporary variables
 
@@ -381,7 +381,7 @@ innerloop:
         xorq    l1, l1
         xorq    h2, h2
         xorq    l2, l2
-crossloop:
+bignum_coprime_crossloop:
 
         movq    (m,i,8), c
         movq    mat_mm, a
@@ -419,16 +419,16 @@ crossloop:
 
         incq    i
         cmpq    l, i
-        jc      crossloop
+        jc      bignum_coprime_crossloop
 
 // Now fix the signs of m and n if they have gone negative
 
         xorq    i, i
         movq    h1, c1 // carry-in coded up as well
         movq    h2, c2 // carry-in coded up as well
-        xorq    h1, l1 // for the end digit
-        xorq    h2, l2 // for the end digit
-optnegloop:
+        xorq    h1, l1 // for the bignum_coprime_end digit
+        xorq    h2, l2 // for the bignum_coprime_end digit
+bignum_coprime_optnegloop:
         movq    (m,i,8), a
         xorq    h1, a
         negq    c1
@@ -443,14 +443,14 @@ optnegloop:
         movq    a, (n,i,8)
         incq    i
         cmpq    l, i
-        jc      optnegloop
+        jc      bignum_coprime_optnegloop
         subq    c1, l1
         subq    c2, l2
 
 // Now shift them right CHUNKSIZE bits
 
         movq    l, i
-shiftloop:
+bignum_coprime_shiftloop:
         movq    -8(m,i,8), a
         movq    a, h1
         shrdq   $CHUNKSIZE, l1, a
@@ -462,7 +462,7 @@ shiftloop:
         movq    a, -8(n,i,8)
         movq    h2, l2
         decq    i
-        jnz     shiftloop
+        jnz     bignum_coprime_shiftloop
 
 // End of main loop. We can stop if t' <= 0 since then m * n < 2^0, which
 // since n is odd (in the main cases where we had one or other input odd)
@@ -471,33 +471,33 @@ shiftloop:
 // optimized digit bound l could collapse to 0.
 
         subq    $CHUNKSIZE, t
-        jnbe    outerloop
+        jnbe    bignum_coprime_outerloop
 
 // Now compare n with 1 (OR of the XORs in a)
 
         movq    (n), a
         xorq    $1, a
         cmpq    $1, k
-        jz      finalcomb
+        jz      bignum_coprime_finalcomb
         movl    $1, ishort
-compareloop:
+bignum_coprime_compareloop:
         orq     (n,i,8), a
         incq    i
         cmpq    k, i
-        jc      compareloop
+        jc      bignum_coprime_compareloop
 
 // Now combine that with original "evenor" oddness flag
 // The final condition is lsb(evenor) = 1 AND a = 0
 
-finalcomb:
+bignum_coprime_finalcomb:
         negq    a
         sbbq    a, a
         incq    a
         andq    evenor, a
 
-// The end
+// The bignum_coprime_end
 
-end:
+bignum_coprime_end:
         addq    $STACKVARSIZE, %rsp
         popq    %r15
         popq    %r14

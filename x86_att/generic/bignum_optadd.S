@@ -53,17 +53,17 @@ S2N_BN_SYMBOL(bignum_optadd):
 // If k = 0 do nothing
 
         testq   k, k
-        jz      end
+        jz      bignum_optadd_end
 
 // Convert the nonzero/zero status of p into an all-1s or all-0s mask
 
         negq    p
         sbbq    p, p
 
-// Now go round the loop for i=0...k-1, saving the carry in c each iteration
+// Now go round the bignum_optadd_loop for i=0...k-1, saving the carry in c each iteration
 
         xorq    i, i
-loop:
+bignum_optadd_loop:
         movq    (x,i,8), a
         movq    (y,i,8), b
         andq    p, b
@@ -73,13 +73,13 @@ loop:
         movq    a, (z,i,8)
         incq    i
         cmpq    k, i
-        jc      loop
+        jc      bignum_optadd_loop
 
 // Return top carry
 
         negq    %rax
 
-end:
+bignum_optadd_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

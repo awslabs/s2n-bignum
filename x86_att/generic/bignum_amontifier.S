@@ -77,19 +77,19 @@ S2N_BN_SYMBOL(bignum_amontifier):
 // If k = 0 the whole operation is trivial
 
         testq   k, k
-        jz      end
+        jz      bignum_amontifier_end
 
 // Copy the input m into the temporary buffer t. The temporary register
 // c matters since we want it to hold the highest digit, ready for the
 // normalization phase.
 
         xorq    i, i
-copyinloop:
+bignum_amontifier_copyinloop:
         movq    (m,i,8), c
         movq    c, (t,i,8)
         incq    i
         cmpq    k, i
-        jc      copyinloop
+        jc      bignum_amontifier_copyinloop
 
 // Do a rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
@@ -99,22 +99,22 @@ copyinloop:
 
         movq    k, i
         decq    i
-        jz      normalized
-normloop:
+        jz      bignum_amontifier_normalized
+bignum_amontifier_normloop:
         xorq    j, j
         movq    k, h
         negq    c
         movl    $0, ashort
-shufloop:
+bignum_amontifier_shufloop:
         movq    a, c
         movq    (t,j,8), a
         cmovcq  a, c
         movq    c, (t,j,8)
         incq    j
         decq    h
-        jnz     shufloop
+        jnz     bignum_amontifier_shufloop
         decq    i
-        jnz     normloop
+        jnz     bignum_amontifier_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
@@ -122,14 +122,14 @@ shufloop:
 // Note that we don't care about the result of bsr for zero inputs so
 // the simple xor-ing with 63 is safe.
 
-normalized:
+bignum_amontifier_normalized:
 
         bsrq    c, c
         xorq    $63, c
 
         xorq    b, b
         xorq    i, i
-bitloop:
+bignum_amontifier_bitloop:
         movq    (t,i,8), a
         movq    a, j
         shldq   %cl, b, a
@@ -137,7 +137,7 @@ bitloop:
         movq    j, b
         incq    i
         cmpq    k, i
-        jc      bitloop
+        jc      bignum_amontifier_bitloop
 
 // Let h be the high word of n, which in all the in-scope cases is >= 2^63.
 // Now successively form q = 2^i div h and r = 2^i mod h as i goes from
@@ -151,7 +151,7 @@ bitloop:
         movq    h, r
         negq    r
         movl    $62, ishort
-estloop:
+bignum_amontifier_estloop:
 
         addq    q, q
         movq    h, a
@@ -164,7 +164,7 @@ estloop:
         andq    h, a
         subq    a, r
         decq    i
-        jnz     estloop
+        jnz     bignum_amontifier_estloop
 
 // Strictly speaking the above loop doesn't quite give the true remainder
 // and quotient in the special case r = h = 2^63, so fix it up. We get
@@ -212,7 +212,7 @@ estloop:
 
         xorq    c, c
         xorq    i, i
-mulloop:
+bignum_amontifier_mulloop:
         movq    (t,i,8), %rax
         mulq    q
         addq    c, %rax
@@ -221,7 +221,7 @@ mulloop:
         movq    %rdx, c
         incq    i
         cmpq    k, i
-        jc      mulloop
+        jc      bignum_amontifier_mulloop
 
 // Now c is the high word of the product, so subtract 2^62
 // and then turn it into a bitmask in q = h
@@ -235,7 +235,7 @@ mulloop:
 
         xorq    c, c
         xorq    i, i
-remloop:
+bignum_amontifier_remloop:
         movq    (t,i,8), a
         andq    q, a
         negq    c
@@ -244,7 +244,7 @@ remloop:
         movq    a, (z,i,8)
         incq    i
         cmpq    k, i
-        jc      remloop
+        jc      bignum_amontifier_remloop
 
 // Now still need to do a couple of modular doublings to get us all the
 // way up to 2^{p+64} == r from initial 2^{p+62} == r (mod n).
@@ -252,7 +252,7 @@ remloop:
         xorq    c, c
         xorq    j, j
         xorq    b, b
-dubloop1:
+bignum_amontifier_dubloop1:
         movq    (z,j,8), a
         shrdq   $63, a, c
         negq    b
@@ -262,12 +262,12 @@ dubloop1:
         movq    a, c
         incq    j
         cmpq    k, j
-        jc      dubloop1
+        jc      bignum_amontifier_dubloop1
         shrq    $63, c
         addq    b, c
         xorq    j, j
         xorq    b, b
-corrloop1:
+bignum_amontifier_corrloop1:
         movq    (t,j,8), a
         andq    c, a
         negq    b
@@ -276,7 +276,7 @@ corrloop1:
         movq    a, (z,j,8)
         incq    j
         cmpq    k, j
-        jc      corrloop1
+        jc      bignum_amontifier_corrloop1
 
 // This is not exactly the same: we also copy output to t giving the
 // initialization t_1 = r == 2^{p+64} mod n for the main loop next.
@@ -284,7 +284,7 @@ corrloop1:
         xorq    c, c
         xorq    j, j
         xorq    b, b
-dubloop2:
+bignum_amontifier_dubloop2:
         movq    (z,j,8), a
         shrdq   $63, a, c
         negq    b
@@ -294,12 +294,12 @@ dubloop2:
         movq    a, c
         incq    j
         cmpq    k, j
-        jc      dubloop2
+        jc      bignum_amontifier_dubloop2
         shrq    $63, c
         addq    b, c
         xorq    j, j
         xorq    b, b
-corrloop2:
+bignum_amontifier_corrloop2:
         movq    (t,j,8), a
         andq    c, a
         negq    b
@@ -309,7 +309,7 @@ corrloop2:
         movq    a, (t,j,8)
         incq    j
         cmpq    k, j
-        jc      corrloop2
+        jc      bignum_amontifier_corrloop2
 
 // We then successively generate (k+1)-digit values satisfying
 // t_i == 2^{p+64*i} mod n, each of which is stored in h::t. Finish
@@ -321,7 +321,7 @@ corrloop2:
 // we have t_{i+1} == 2^64 * t_i
 //         = (2^{p+64} * h) + (2^64 * l)
 //        == r * h + l<<64
-// Do this k more times so we end up == 2^{128*k+64}, one more than we want
+// Do this k more times so we bignum_amontifier_end up == 2^{128*k+64}, one more than we want
 //
 // Writing B = 2^{64k}, the possible correction of adding r, which for
 // a (k+1)-digit result is equivalent to subtracting q = 2^{64*(k+1)} - r
@@ -333,12 +333,12 @@ corrloop2:
 // "previous" digit (initially 0) to offset things by 1.
 
         movq    k, i
-modloop:
+bignum_amontifier_modloop:
         xorq    b, b
         movq    k, n
         xorq    j, j
         xorq    c, c
-cmaloop:
+bignum_amontifier_cmaloop:
         adcq    b, c
         sbbq    l, l
         movq    (z,j,8), %rax
@@ -350,7 +350,7 @@ cmaloop:
         movq    %rdx, c
         incq    j
         decq    n
-        jnz     cmaloop
+        jnz     bignum_amontifier_cmaloop
         adcq    c, b
         movq    b, h
 
@@ -358,7 +358,7 @@ cmaloop:
 
         xorq    j, j
         xorq    c, c
-oaloop:
+bignum_amontifier_oaloop:
         movq    (t,j,8), a
         movq    (z,j,8), b
         andq    l, b
@@ -368,16 +368,16 @@ oaloop:
         movq    a, (t,j,8)
         incq    j
         cmpq    k, j
-        jc      oaloop
+        jc      bignum_amontifier_oaloop
         subq    c, h
 
         decq    i
-        jnz     modloop
+        jnz     bignum_amontifier_modloop
 
 // Now do one almost-Montgomery reduction w.r.t. the original m
 // which lops off one 2^64 from the congruence and, with the usual
 // almost-Montgomery correction, gets us back inside k digits for
-// the end result.
+// the bignum_amontifier_end result.
 
         movq    (m), a
         movq    a, c
@@ -414,9 +414,9 @@ oaloop:
         movl    $1, jshort
         movq    k, n
         decq    n
-        jz      montend
+        jz      bignum_amontifier_montend
 
-montloop:
+bignum_amontifier_montloop:
         adcq    (t,j,8), c
         sbbq    l, l
         movq    (m,j,8), %rax
@@ -427,15 +427,15 @@ montloop:
         movq    %rdx, c
         incq    j
         decq    n
-        jnz     montloop
-montend:
+        jnz     bignum_amontifier_montloop
+bignum_amontifier_montend:
         adcq    c, h
         sbbq    l, l
         movq    h, -8(t,k,8)
 
         xorq    j, j
         xorq    c, c
-osloop:
+bignum_amontifier_osloop:
         movq    (t,j,8), a
         movq    (m,j,8), b
         andq    l, b
@@ -445,9 +445,9 @@ osloop:
         movq    a, (z,j,8)
         incq    j
         cmpq    k, j
-        jc      osloop
+        jc      bignum_amontifier_osloop
 
- end:
+ bignum_amontifier_end:
         popq    %r13
         popq    %r12
         popq    %rbx

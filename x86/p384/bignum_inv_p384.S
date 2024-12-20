@@ -1134,15 +1134,15 @@ S2N_BN_SYMBOL(bignum_inv_p384):
         mov     [rsp+V+4*N], rax
         mov     [rsp+V+5*N], rax
 
-// Start of main loop. We jump into the middle so that the divstep
+// Start of main bignum_inv_p384_loop. We jump into the middle so that the divstep
 // portion is common to the special fifteenth iteration after a uniform
 // first 14.
 
         mov     i, 15
         mov     d, 1
-        jmp     midloop
+        jmp     bignum_inv_p384_midloop
 
-loop:
+bignum_inv_p384_loop:
 
 // Separate out the matrix into sign-magnitude pairs
 
@@ -1587,7 +1587,7 @@ loop:
 
         amontred(v)
 
-midloop:
+bignum_inv_p384_midloop:
 
         divstep59(d,ff,gg)
         mov     d, rsi
@@ -1595,11 +1595,11 @@ midloop:
 // Next iteration
 
         dec     i
-        jnz     loop
+        jnz     bignum_inv_p384_loop
 
 // The 15th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the
-// lowest word of f. So it's done differently from the main loop.
+// lowest word of f. So it's done differently from the main bignum_inv_p384_loop.
 // Find the sign of the new f. For this we just need one digit
 // since we know (for in-scope cases) that f is either +1 or -1.
 // We don't explicitly shift right by 59 either, but looking at

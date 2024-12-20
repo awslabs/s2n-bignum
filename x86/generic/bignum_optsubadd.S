@@ -61,7 +61,7 @@ S2N_BN_SYMBOL(bignum_optsubadd):
 // If k = 0 do nothing
 
         test    k, k
-        jz      end
+        jz      bignum_optsubadd_end
 
 // Turn the input p into two bitmasks, m indicating to use the y input at
 // all (same register as p) and q indicating a sign-flip
@@ -76,10 +76,10 @@ S2N_BN_SYMBOL(bignum_optsubadd):
 
         mov     c, q
 
-// Now go round the loop for i=0...k-1, saving the carry in c each iteration
+// Now go round the bignum_optsubadd_loop for i=0...k-1, saving the carry in c each iteration
 
         xor     i, i
-loop:
+bignum_optsubadd_loop:
         mov     a, [y+8*i]
         xor     a, q
         and     a, m
@@ -89,14 +89,14 @@ loop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      loop
+        jc      bignum_optsubadd_loop
 
 // Return carry flag, fixing up inversion for negative case
 
         xor     rax, q
         neg     rax
 
-end:
+bignum_optsubadd_end:
 #if WINDOWS_ABI
         pop    rsi
         pop    rdi

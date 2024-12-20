@@ -42,20 +42,20 @@ S2N_BN_SYMBOL(bignum_cmul):
 
 // First clamp the input size n := min(p,n) since we can never need to read
 // past the p'th term of the input to generate p-digit output.
-// Subtract p := p - min(n,p) so it holds the size of the extra tail needed
+// Subtract p := p - min(n,p) so it holds the size of the extra bignum_cmul_tail needed
 
         cmp     n, p
         csel    n, p, n, cs
         sub     p, p, n
 
 // Initialize current input/output pointer offset i and high part h.
-// But then if n = 0 skip the multiplication and go to the tail part
+// But then if n = 0 skip the multiplication and go to the bignum_cmul_tail part
 
         mov     h, xzr
         mov     i, xzr
-        cbz     n, tail
+        cbz     n, bignum_cmul_tail
 
-// Initialization of the loop: [h,l] = c * x_0
+// Initialization of the bignum_cmul_loop: [h,l] = c * x_0
 
         ldr     a, [x]
         mul     l, c, a
@@ -63,12 +63,12 @@ S2N_BN_SYMBOL(bignum_cmul):
         str     l, [z]
         add     i, i, #8
         subs    n, n, #1
-        beq     tail
+        beq     bignum_cmul_tail
 
-// Main loop (force CF = 0 at the beginning)
+// Main bignum_cmul_loop (force CF = 0 at the beginning)
 
         adds    xzr, xzr, xzr
-loop:
+bignum_cmul_loop:
         ldr     a, [x, i]
         mul     l, c, a
         adcs    l, l, h
@@ -76,26 +76,26 @@ loop:
         str     l, [z, i]
         add     i, i, #8
         sub     n, n, #1
-        cbnz    n, loop
+        cbnz    n, bignum_cmul_loop
 
         adc     h, h, xzr
 
-tail:
-        cbz     p, end
+bignum_cmul_tail:
+        cbz     p, bignum_cmul_end
         str     h, [z, i]
         mov     h, xzr
         subs    p, p, #1
-        beq     end
+        beq     bignum_cmul_end
 
-tloop:
+bignum_cmul_tloop:
         add     i, i, #8
         str     xzr, [z, i]
         sub     p, p, #1
-        cbnz    p, tloop
+        cbnz    p, bignum_cmul_tloop
 
 // Return the high/carry word
 
-end:
+bignum_cmul_end:
         mov     x0, h
         ret
 

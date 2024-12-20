@@ -150,11 +150,11 @@ p256_scalarmul_alt_standard:
 
         lea     rdi, [rsp+TAB]
         mov     rsi, rbx
-        call    local_tomont_p256
+        call    p256_scalarmul_alt_local_tomont_p256
 
         lea     rsi, [rbx+32]
         lea     rdi, [rsp+TAB+32]
-        call    local_tomont_p256
+        call    p256_scalarmul_alt_local_tomont_p256
 
         mov     eax, 1
         mov     [rsp+TAB+64], rax
@@ -198,34 +198,34 @@ p256_scalarmul_alt_standard:
 
         lea     rdi, [rsp+TAB+96*1]
         lea     rsi, [rsp+TAB]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
         lea     rdi, [rsp+TAB+96*2]
         lea     rsi, [rsp+TAB+96*1]
         lea     rdx, [rsp+TAB]
-        call    local_p256_montjmixadd
+        call    p256_scalarmul_alt_local_p256_montjmixadd
 
         lea     rdi, [rsp+TAB+96*3]
         lea     rsi, [rsp+TAB+96*1]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
         lea     rdi, [rsp+TAB+96*4]
         lea     rsi, [rsp+TAB+96*3]
         lea     rdx, [rsp+TAB]
-        call    local_p256_montjmixadd
+        call    p256_scalarmul_alt_local_p256_montjmixadd
 
         lea     rdi, [rsp+TAB+96*5]
         lea     rsi, [rsp+TAB+96*2]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
         lea     rdi, [rsp+TAB+96*6]
         lea     rsi, [rsp+TAB+96*5]
         lea     rdx, [rsp+TAB]
-        call    local_p256_montjmixadd
+        call    p256_scalarmul_alt_local_p256_montjmixadd
 
         lea     rdi, [rsp+TAB+96*7]
         lea     rsi, [rsp+TAB+96*3]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
 // Set up accumulator as table entry for top 4 bits (constant-time indexing)
 
@@ -276,28 +276,28 @@ p256_scalarmul_alt_standard:
         mov      [rsp+ACC+80], r14
         mov      [rsp+ACC+88], r15
 
-// Main loop over size-4 bitfield
+// Main p256_scalarmul_alt_loop over size-4 bitfield
 
         mov     ebp, 252
 
-loop:
+p256_scalarmul_alt_loop:
         sub     rbp, 4
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    local_p256_montjdouble
+        call    p256_scalarmul_alt_local_p256_montjdouble
 
         mov     rax, rbp
         shr     rax, 6
@@ -378,34 +378,34 @@ loop:
         lea     rdx, [rsp+TABENT]
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    local_p256_montjadd
+        call    p256_scalarmul_alt_local_p256_montjadd
 
         test    rbp, rbp
-        jne     loop
+        jne     p256_scalarmul_alt_loop
 
 // Let z2 = 1/z^2 and z3 = 1/z^3, both without Montgomery form
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
-        call    local_montsqr_p256
+        call    p256_scalarmul_alt_local_montsqr_p256
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z2]
-        call    local_montmul_p256
+        call    p256_scalarmul_alt_local_montmul_p256
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+Z3]
-        call    local_demont_p256
+        call    p256_scalarmul_alt_local_demont_p256
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+Z2]
-        call    local_inv_p256
+        call    p256_scalarmul_alt_local_inv_p256
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z3]
-        call    local_montmul_p256
+        call    p256_scalarmul_alt_local_montmul_p256
 
 // Convert back from Jacobian (X, Y, Z) |-> (X/Z^2, Y/Z^3)
 
@@ -413,12 +413,12 @@ loop:
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+Z2]
         mov     rbx, rdi
-        call    local_montmul_p256
+        call    p256_scalarmul_alt_local_montmul_p256
 
         lea     rdi, [rbx+32]
         lea     rsi, [rsp+ACC+32]
         lea     rdx, [rsp+Z3]
-        call    local_montmul_p256
+        call    p256_scalarmul_alt_local_montmul_p256
 
 // Restore stack and registers and return
 
@@ -433,7 +433,7 @@ loop:
 
 // Local copies of subroutines, complete clones at the moment
 
-local_demont_p256:
+p256_scalarmul_alt_local_demont_p256:
         mov     r8, [rsi]
         mov     r9, [rsi+0x8]
         mov     r10, [rsi+0x10]
@@ -495,7 +495,7 @@ local_demont_p256:
         mov     [rdi+0x18], r10
         ret
 
-local_inv_p256:
+p256_scalarmul_alt_local_inv_p256:
         push    rbx
         push    rbp
         push    r12
@@ -1923,7 +1923,7 @@ p256_scalarmul_alt_inv_midloop:
         pop     rbx
         ret
 
-local_montmul_p256:
+p256_scalarmul_alt_local_montmul_p256:
         push    rbx
         push    r12
         push    r13
@@ -2103,7 +2103,7 @@ local_montmul_p256:
         pop     rbx
         ret
 
-local_montsqr_p256:
+p256_scalarmul_alt_local_montsqr_p256:
         push    rbx
         push    r12
         push    r13
@@ -2254,7 +2254,7 @@ local_montsqr_p256:
         ret
 
 
-local_tomont_p256:
+p256_scalarmul_alt_local_tomont_p256:
         push    r12
         push    r13
         push    r14
@@ -2432,7 +2432,7 @@ local_tomont_p256:
         pop     r12
         ret
 
-local_p256_montjadd:
+p256_scalarmul_alt_local_p256_montjadd:
         push    rbx
         push    rbp
         push    r12
@@ -5204,7 +5204,7 @@ local_p256_montjadd:
         pop     rbx
         ret
 
-local_p256_montjdouble:
+p256_scalarmul_alt_local_p256_montjdouble:
         push    rbx
         push    r12
         push    r13
@@ -6688,7 +6688,7 @@ local_p256_montjdouble:
         pop     rbx
         ret
 
-local_p256_montjmixadd:
+p256_scalarmul_alt_local_p256_montjmixadd:
         push    rbx
         push    rbp
         push    r12

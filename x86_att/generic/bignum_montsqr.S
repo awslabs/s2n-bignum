@@ -77,7 +77,7 @@ S2N_BN_SYMBOL(bignum_montsqr):
 // If k = 0 the whole operation is trivial
 
         testq   k, k
-        jz      end
+        jz      bignum_montsqr_end
 
 // Move x input into its permanent home, since we need %rdx for multiplications
 
@@ -122,17 +122,17 @@ S2N_BN_SYMBOL(bignum_montsqr):
 
         xorq    i, i // Also initializes i for main loop
         xorq    j, j
-zoop:
+bignum_montsqr_zoop:
         movq    i, (z,j,8)
         incq    j
         cmpq    k, j
-        jc      zoop
+        jc      bignum_montsqr_zoop
 
         xorq    c0, c0
 
 // Outer loop pulling down digits d=x[i], multiplying by x and reducing
 
-outerloop:
+bignum_montsqr_outerloop:
 
 // Multiply-add loop where we always have CF + previous high part h to add in.
 // Note that in general we do need yet one more carry in this phase and hence
@@ -144,7 +144,7 @@ outerloop:
         xorq    c1, c1
         movq    k, n
 
-maddloop:
+bignum_montsqr_maddloop:
         adcq    (z,j,8), h
         sbbq    e, e
         movq    (x,j,8), a
@@ -155,7 +155,7 @@ maddloop:
         movq    %rdx, h
         incq    j
         decq    n
-        jnz     maddloop
+        jnz     bignum_montsqr_maddloop
         adcq    h, c0
         adcq    c1, c1
 
@@ -171,9 +171,9 @@ maddloop:
         movl    $1, jshort
         movq    k, n
         decq    n
-        jz      montend
+        jz      bignum_montsqr_montend
 
-montloop:
+bignum_montsqr_montloop:
         adcq    (z,j,8), h
         sbbq    e, e
         movq    (m,j,8), a
@@ -184,9 +184,9 @@ montloop:
         movq    %rdx, h
         incq    j
         decq    n
-        jnz     montloop
+        jnz     bignum_montsqr_montloop
 
-montend:
+bignum_montsqr_montend:
         adcq    c0, h
         adcq    $0, c1
         movq    c1, c0
@@ -196,19 +196,19 @@ montend:
 
         incq    i
         cmpq    k, i
-        jc      outerloop
+        jc      bignum_montsqr_outerloop
 
 // Now do a comparison of (c0::z) with (0::m) to set a final correction mask
 // indicating that (c0::z) >= m and so we need to subtract m.
 
         xorq    j, j
         movq    k, n
-cmploop:
+bignum_montsqr_cmploop:
         movq    (z,j,8), a
         sbbq    (m,j,8), a
         incq    j
         decq    n
-        jnz     cmploop
+        jnz     bignum_montsqr_cmploop
 
         sbbq    $0, c0
         sbbq    d, d
@@ -218,7 +218,7 @@ cmploop:
 
         xorq    e, e
         xorq    j, j
-corrloop:
+bignum_montsqr_corrloop:
         movq    (m,j,8), a
         andq    d, a
         negq    e
@@ -226,9 +226,9 @@ corrloop:
         sbbq    e, e
         incq    j
         cmpq    k, j
-        jc      corrloop
+        jc      bignum_montsqr_corrloop
 
-end:
+bignum_montsqr_end:
         popq    %r15
         popq    %r14
         popq    %r13

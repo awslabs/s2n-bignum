@@ -76,7 +76,7 @@ S2N_BN_SYMBOL(bignum_madd):
 
         xor     rax, rax
         test    p, p
-        jz      end
+        jz      bignum_madd_end
 
 // Set initial 2-part sum to zero (we zero c inside the body)
 
@@ -87,7 +87,7 @@ S2N_BN_SYMBOL(bignum_madd):
 
         xor     k, k
 
-outerloop:
+bignum_madd_outerloop:
 
 // Zero our carry term first; we eventually want it and a zero is useful now
 // Set a =  max 0 (k + 1 - n), i = min (k + 1) m
@@ -113,11 +113,11 @@ outerloop:
         mov     d, k
         sub     d, i
         sub     i, a
-        jbe     innerend
+        jbe     bignum_madd_innerend
         lea     x,[rcx+8*a]
         lea     y,[r9+8*d-8]
 
-innerloop:
+bignum_madd_innerloop:
         mov     rax, [y+8*i]
         mul     QWORD PTR  [x]
         add     x, 8
@@ -125,9 +125,9 @@ innerloop:
         adc     h, rdx
         adc     c, 0
         dec     i
-        jnz     innerloop
+        jnz     bignum_madd_innerloop
 
-innerend:
+bignum_madd_innerend:
 
         add     [z], l
         adc     h, 0
@@ -137,13 +137,13 @@ innerend:
         add     z, 8
 
         cmp     k, p
-        jc      outerloop
+        jc      bignum_madd_outerloop
 
 // Move the carry term into the return value
 
         mov     rax, l
 
-end:
+bignum_madd_end:
         pop     r15
         pop     r14
         pop     r13

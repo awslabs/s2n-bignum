@@ -84,18 +84,18 @@
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        bl      local_mul_p521
+        bl      p521_jmixadd_local_mul_p521
 
 #define sqr_p521(P0,P1)                         \
         add     x0, P0;                         \
         add     x1, P1;                         \
-        bl      local_sqr_p521
+        bl      p521_jmixadd_local_sqr_p521
 
 #define sub_p521(P0,P1,P2)                      \
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        bl      local_sub_p521
+        bl      p521_jmixadd_local_sub_p521
 
 S2N_BN_SYMBOL(p521_jmixadd):
 
@@ -255,10 +255,10 @@ S2N_BN_SYMBOL(p521_jmixadd):
 // Local versions of the three field operations, almost identical to
 // bignum_mul_p521, bignum_sqr_p521 and bignum_sub_p521 except for
 // avoiding all intial register save-restore, and in the case of
-// local_mul_p521, using the tmp buffer as temporary storage and
+// p521_jmixadd_local_mul_p521, using the tmp buffer as temporary storage and
 // avoiding x26.
 
-local_mul_p521:
+p521_jmixadd_local_mul_p521:
         ldp     x3, x4, [x1]
         ldp     x5, x6, [x1, #16]
         ldp     x7, x8, [x2]
@@ -885,7 +885,7 @@ local_mul_p521:
         str     x22, [x0, #64]
         ret
 
-local_sqr_p521:
+p521_jmixadd_local_sqr_p521:
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         ldp     x6, x7, [x1, #32]
@@ -1300,7 +1300,7 @@ local_sqr_p521:
         str     x10, [x0, #64]
         ret
 
-local_sub_p521:
+p521_jmixadd_local_sub_p521:
         ldp     x5, x6, [x1]
         ldp     x4, x3, [x2]
         subs    x5, x5, x4

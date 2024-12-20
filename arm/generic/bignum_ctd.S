@@ -28,24 +28,24 @@ S2N_BN_SYMBOL(bignum_ctd):
 
 // If the bignum is zero-length, x0 is already the right answer of 0
 
-        cbz     k, end
+        cbz     k, bignum_ctd_end
 
 // Record in i that the lowest nonzero word is i, where i = k means
 // that the bignum was entirely zero
 
         mov     i, k
-loop:
+bignum_ctd_loop:
         sub     k, k, #1
         ldr     a, [x, k, lsl #3]
         cmp     a, #0
         csel    i, k, i, ne
-        cbnz    k, loop
+        cbnz    k, bignum_ctd_loop
 
 // Now return i
 
         mov     x0, i
 
-end:
+bignum_ctd_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

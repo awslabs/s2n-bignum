@@ -86,7 +86,7 @@ S2N_BN_SYMBOL(bignum_montmul):
 // If k = 0 the whole operation is trivial
 
         test    k, k
-        jz      end
+        jz      bignum_montmul_end
 
 // Move x input into its permanent home, since we need rdx for multiplications
 
@@ -133,17 +133,17 @@ S2N_BN_SYMBOL(bignum_montmul):
 
         xor     i, i            // Also initializes i for main loop
         xor     j, j
-zoop:
+bignum_montmul_zoop:
         mov     [z+8*j], i
         inc     j
         cmp     j, k
-        jc      zoop
+        jc      bignum_montmul_zoop
 
         xor     c0, c0
 
 // Outer loop pulling down digits d=x[i], multiplying by y and reducing
 
-outerloop:
+bignum_montmul_outerloop:
 
 // Multiply-add loop where we always have CF + previous high part h to add in.
 // Note that in general we do need yet one more carry in this phase and hence
@@ -155,7 +155,7 @@ outerloop:
         xor     c1, c1
         mov     n, k
 
-maddloop:
+bignum_montmul_maddloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [y+8*j]
@@ -166,7 +166,7 @@ maddloop:
         mov     h, rdx
         inc     j
         dec     n
-        jnz     maddloop
+        jnz     bignum_montmul_maddloop
         adc     c0, h
         adc     c1, c1
 
@@ -182,9 +182,9 @@ maddloop:
         mov     jshort, 1
         mov     n, k
         dec     n
-        jz      montend
+        jz      bignum_montmul_montend
 
-montloop:
+bignum_montmul_montloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [m+8*j]
@@ -195,9 +195,9 @@ montloop:
         mov     h, rdx
         inc     j
         dec     n
-        jnz     montloop
+        jnz     bignum_montmul_montloop
 
-montend:
+bignum_montmul_montend:
         adc     h, c0
         adc     c1, 0
         mov     c0, c1
@@ -207,19 +207,19 @@ montend:
 
         inc     i
         cmp     i, k
-        jc      outerloop
+        jc      bignum_montmul_outerloop
 
 // Now do a comparison of (c0::z) with (0::m) to set a final correction mask
 // indicating that (c0::z) >= m and so we need to subtract m.
 
         xor     j, j
         mov     n, k
-cmploop:
+bignum_montmul_cmploop:
         mov     a, [z+8*j]
         sbb     a, [m+8*j]
         inc     j
         dec     n
-        jnz     cmploop
+        jnz     bignum_montmul_cmploop
 
         sbb     c0, 0
         sbb     d, d
@@ -229,7 +229,7 @@ cmploop:
 
         xor     e, e
         xor     j, j
-corrloop:
+bignum_montmul_corrloop:
         mov     a, [m+8*j]
         and     a, d
         neg     e
@@ -237,9 +237,9 @@ corrloop:
         sbb     e, e
         inc     j
         cmp     j, k
-        jc      corrloop
+        jc      bignum_montmul_corrloop
 
-end:
+bignum_montmul_end:
         add     rsp, 8
         pop     r15
         pop     r14

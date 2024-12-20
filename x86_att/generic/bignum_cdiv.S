@@ -85,7 +85,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xorq    l, l
         testq   n, n
-        jz      nomodulus
+        jz      bignum_cdiv_nomodulus
 
         bsrq    m, e
         xorq    $63, e
@@ -151,7 +151,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xorl    hshort, hshort
         movq    n, i
-modloop:
+bignum_cdiv_modloop:
         movq    h, a
         mulq    r
         addq    -8(x,i,8), a
@@ -162,7 +162,7 @@ modloop:
         addq    a, l
         adcq    $0, h
         decq    i
-        jnz     modloop
+        jnz     bignum_cdiv_modloop
 
         movq    h, i
         movq    w, a
@@ -200,13 +200,13 @@ modloop:
 
         movq    l, r
         subq    m, l
-nomodulus:
+bignum_cdiv_nomodulus:
         cmovncq l, r
 
 // If k = 0 then there's no more to be done
 
         testq   k, k
-        jz      end
+        jz      bignum_cdiv_end
 
 // Let e be the number of trailing zeros in m (we can ignore m = 0)
 
@@ -270,25 +270,25 @@ nomodulus:
 
 // Unless n = 0, preload the zeroth digit and bump up the x pointer by
 // 8 and n down by 1, to ease indexing and comparison using the same
-// variable i in the main loop. When n = 0 we leave it alone, as the
+// variable i in the main bignum_cdiv_loop. When n = 0 we leave it alone, as the
 // comparison i < n will always fail and the x pointer is unused.
 
         xorq    d, d
         testq   n, n
-        jz      loop
+        jz      bignum_cdiv_loop
         movq    (x), d
         addq    $8, x
         decq    n
 
-loop:
+bignum_cdiv_loop:
 
 // Load the next digit up to get [l,d] then shift right e places
 
         xorq    l, l
         cmpq    n, i
-        jnc     noload
+        jnc     bignum_cdiv_noload
         movq    (x,i,8), l
-noload:
+bignum_cdiv_noload:
         shrdq   %cl, l, d
         addq    c, d
         sbbq    c, c
@@ -312,11 +312,11 @@ noload:
 
         incq    i
         cmpq    k, i
-        jc      loop
+        jc      bignum_cdiv_loop
 
 // Return the modulus
 
-end:
+bignum_cdiv_end:
         movq    r, %rax
 
         popq    %r15

@@ -63,7 +63,7 @@ S2N_BN_SYMBOL(bignum_add):
         cmpq    n, p
         cmovcq  p, n
         cmpq    n, m
-        jc      ylonger
+        jc      bignum_add_ylonger
 
 // The case where x is longer or of the same size (p >= m >= n)
 
@@ -71,27 +71,27 @@ S2N_BN_SYMBOL(bignum_add):
         subq    n, m
         incq    m
         testq   n, n
-        jz      xtest
-xmainloop:
+        jz      bignum_add_xtest
+bignum_add_xmainloop:
         movq    (x,i,8), a
         adcq    (y,i,8), a
         movq    a, (z,i,8)
         incq    i
         decq    n
-        jnz     xmainloop
-        jmp     xtest
-xtoploop:
+        jnz     bignum_add_xmainloop
+        jmp     bignum_add_xtest
+bignum_add_xtoploop:
         movq    (x,i,8), a
         adcq    $0, a
         movq    a, (z,i,8)
         incq    i
-xtest:
+bignum_add_xtest:
         decq    m
-        jnz     xtoploop
+        jnz     bignum_add_xtoploop
         movl    $0, ashort
         adcq    $0, a
         testq   p, p
-        jnz     tails
+        jnz     bignum_add_tails
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi
@@ -100,48 +100,48 @@ xtest:
 
 // The case where y is longer (p >= n > m)
 
-ylonger:
+bignum_add_ylonger:
 
         subq    n, p
         subq    m, n
         testq   m, m
-        jz      ytoploop
-ymainloop:
+        jz      bignum_add_ytoploop
+bignum_add_ymainloop:
         movq    (x,i,8), a
         adcq    (y,i,8), a
         movq    a, (z,i,8)
         incq    i
         decq    m
-        jnz     ymainloop
-ytoploop:
+        jnz     bignum_add_ymainloop
+bignum_add_ytoploop:
         movq    (y,i,8), a
         adcq    $0, a
         movq    a, (z,i,8)
         incq    i
         decq    n
-        jnz     ytoploop
+        jnz     bignum_add_ytoploop
         movl    $0, ashort
         adcq    $0, a
         testq   p, p
-        jnz     tails
+        jnz     bignum_add_tails
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi
 #endif
         ret
 
-// Adding a non-trivial tail, when p > max(m,n)
+// Adding a non-trivial bignum_add_tail, when p > max(m,n)
 
-tails:
+bignum_add_tails:
         movq    a, (z,i,8)
         xorq    a, a
-        jmp     tail
-tailloop:
+        jmp     bignum_add_tail
+bignum_add_tailloop:
         movq    a, (z,i,8)
-tail:
+bignum_add_tail:
         incq    i
         decq    p
-        jnz     tailloop
+        jnz     bignum_add_tailloop
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

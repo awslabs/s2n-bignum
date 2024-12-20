@@ -44,39 +44,39 @@ S2N_BN_SYMBOL(bignum_modadd):
 // If k = 0 do nothing
 
         testq   k, k
-        jz      end
+        jz      bignum_modadd_end
 
 // First just add (c::z) := x + y
 
         xorq    c, c
         movq    k, j
         xorq    i, i
-addloop:
+bignum_modadd_addloop:
         movq    (x,i,8), a
         adcq    (y,i,8), a
         movq    a, (z,i,8)
         incq    i
         decq    j
-        jnz     addloop
+        jnz     bignum_modadd_addloop
         adcq    $0, c
 
 // Now do a comparison subtraction (c::z) - m, recording mask for (c::z) >= m
 
         movq    k, j
         xorq    i, i
-cmploop:
+bignum_modadd_cmploop:
         movq    (z,i,8), a
         sbbq    (m,i,8), a
         incq    i
         decq    j
-        jnz     cmploop
+        jnz     bignum_modadd_cmploop
         sbbq    $0, c
         notq    c
 
 // Now do a masked subtraction z := z - [c] * m
 
         xorq    i, i
-subloop:
+bignum_modadd_subloop:
         movq    (m,i,8), a
         andq    c, a
         negq    j
@@ -84,9 +84,9 @@ subloop:
         sbbq    j, j
         incq    i
         cmpq    k, i
-        jc      subloop
+        jc      bignum_modadd_subloop
 
-end:
+bignum_modadd_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

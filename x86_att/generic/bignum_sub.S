@@ -63,7 +63,7 @@ S2N_BN_SYMBOL(bignum_sub):
         cmpq    n, p
         cmovcq  p, n
         cmpq    n, m
-        jc      ylonger
+        jc      bignum_sub_ylonger
 
 // The case where x is longer or of the same size (p >= m >= n)
 
@@ -71,32 +71,32 @@ S2N_BN_SYMBOL(bignum_sub):
         subq    n, m
         incq    m
         testq   n, n
-        jz      xtest
-xmainloop:
+        jz      bignum_sub_xtest
+bignum_sub_xmainloop:
         movq    (x,i,8), a
         sbbq    (y,i,8), a
         movq    a, (z,i,8)
         incq    i
         decq    n
-        jnz     xmainloop
-        jmp     xtest
-xtoploop:
+        jnz     bignum_sub_xmainloop
+        jmp     bignum_sub_xtest
+bignum_sub_xtoploop:
         movq    (x,i,8), a
         sbbq    $0, a
         movq    a, (z,i,8)
         incq    i
-xtest:
+bignum_sub_xtest:
         decq    m
-        jnz     xtoploop
+        jnz     bignum_sub_xtoploop
         sbbq    a, a
         testq   p, p
-        jz      tailskip
-tailloop:
+        jz      bignum_sub_tailskip
+bignum_sub_tailloop:
         movq    a, (z,i,8)
         incq    i
         decq    p
-        jnz     tailloop
-tailskip:
+        jnz     bignum_sub_tailloop
+bignum_sub_tailskip:
         negq    a
 #if WINDOWS_ABI
         popq   %rsi
@@ -106,29 +106,29 @@ tailskip:
 
 // The case where y is longer (p >= n > m)
 
-ylonger:
+bignum_sub_ylonger:
 
         subq    n, p
         subq    m, n
         testq   m, m
-        jz      ytoploop
-ymainloop:
+        jz      bignum_sub_ytoploop
+bignum_sub_ymainloop:
         movq    (x,i,8), a
         sbbq    (y,i,8), a
         movq    a, (z,i,8)
         incq    i
         decq    m
-        jnz     ymainloop
-ytoploop:
+        jnz     bignum_sub_ymainloop
+bignum_sub_ytoploop:
         movl    $0, ashort
         sbbq    (y,i,8), a
         movq    a, (z,i,8)
         incq    i
         decq    n
-        jnz     ytoploop
+        jnz     bignum_sub_ytoploop
         sbbq    a, a
         testq   p, p
-        jnz     tailloop
+        jnz     bignum_sub_tailloop
         negq    a
 #if WINDOWS_ABI
         popq   %rsi

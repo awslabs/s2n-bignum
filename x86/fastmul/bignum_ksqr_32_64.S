@@ -56,13 +56,13 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 
 // Square the low half
 
-        call    local_bignum_sqr_16_32
+        call    bignum_ksqr_32_64_local_bignum_sqr_16_32
 
 // Square the high half; from here on x and z are modified
 
         lea     x,[x+8*K]               // input at x+8*K
         lea     z,[z+16*K]             // result at z+16*K
-        call    local_bignum_sqr_16_32
+        call    bignum_ksqr_32_64_local_bignum_sqr_16_32
 
 // Form |x_lo - x_hi|, stored at t
 
@@ -126,7 +126,7 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
         mov     x, t
         lea     t, [z-16*K]
         lea     z, [x+16*K]
-        call    local_bignum_sqr_16_32
+        call    bignum_ksqr_32_64_local_bignum_sqr_16_32
 
 // Subtract M, pausing at the 3k position to bump down accumulated carry.
 // The carry cannot go negative since it's the top word of a value
@@ -182,7 +182,7 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 
 // Local copy of the half-length subroutine
 
-local_bignum_sqr_16_32:
+bignum_ksqr_32_64_local_bignum_sqr_16_32:
         xor    ebp, ebp
         mov    rdx, [x]
         mulx   rax, r9, [x+0x8]

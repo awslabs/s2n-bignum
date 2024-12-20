@@ -59,7 +59,7 @@ S2N_BN_SYMBOL(bignum_amontredc):
 
 // If k = 0 the whole operation is trivial
 
-        cbz     k, end
+        cbz     k, bignum_amontredc_end
 
 // Compute word-level negated modular inverse w for m == m[0].
 // This is essentially the same as word_negmodinv.
@@ -83,34 +83,34 @@ S2N_BN_SYMBOL(bignum_amontredc):
         cmp     n, k
         csel    j, k, n, cs
         mov     i, xzr
-        cbz     j, padloop
-copyloop:
+        cbz     j, bignum_amontredc_padloop
+bignum_amontredc_copyloop:
         ldr     a, [x, i, lsl #3]
         str     a, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, j
-        bcc     copyloop
+        bcc     bignum_amontredc_copyloop
 
         cmp     i, k
-        bcs     initialized
+        bcs     bignum_amontredc_initialized
 
-padloop:
+bignum_amontredc_padloop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     padloop
+        bcc     bignum_amontredc_padloop
 
-initialized:
+bignum_amontredc_initialized:
         mov     c, xzr
 
-// Now if p = 0 that's the end of the operation
+// Now if p = 0 that's the bignum_amontredc_end of the operation
 
-        cbz     p, end
+        cbz     p, bignum_amontredc_end
 
 // Outer loop, just doing a standard Montgomery reduction on z
 
         mov     i, xzr
-outerloop:
+bignum_amontredc_outerloop:
 
         ldr     e, [z]
         mul     d, e, w
@@ -120,8 +120,8 @@ outerloop:
         adds    e, e, l         // Will be zero but want the carry
         mov     j, #1
         sub     a, k, #1
-        cbz     a, montend
-montloop:
+        cbz     a, bignum_amontredc_montend
+bignum_amontredc_montloop:
         ldr     a, [m, j, lsl #3]
         ldr     e, [z, j, lsl #3]
         mul     l, d, a
@@ -133,17 +133,17 @@ montloop:
         str     e, [z, l, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, montloop
-montend:
+        cbnz    a, bignum_amontredc_montloop
+bignum_amontredc_montend:
         adcs    h, h, c
         adc     c, xzr, xzr
         add     j, j, i
         cmp     j, n
-        bcs     offtheend
+        bcs     bignum_amontredc_offtheend
         ldr     a, [x, j, lsl #3]
         adds    h, h, a
         adc     c, c, xzr
-offtheend:
+bignum_amontredc_offtheend:
         sub     j, k, #1
         str     h, [z, j, lsl #3]
 
@@ -151,14 +151,14 @@ offtheend:
 
         add     i, i, #1
         cmp     i, p
-        bcc     outerloop
+        bcc     bignum_amontredc_outerloop
 
 // Now convert carry word, which is always in {0,1}, into a mask
 // and do a masked subtraction of m for the final almost-Montgomery result.
 
         neg     c, c
         subs    j, xzr, xzr
-corrloop:
+bignum_amontredc_corrloop:
         ldr     a, [z, j, lsl #3]
         ldr     e, [m, j, lsl #3]
         and     e, e, c
@@ -166,9 +166,9 @@ corrloop:
         str     a, [z, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, corrloop
+        cbnz    a, bignum_amontredc_corrloop
 
-end:
+bignum_amontredc_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

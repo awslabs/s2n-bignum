@@ -1105,15 +1105,15 @@ S2N_BN_SYMBOL(bignum_inv_sm2):
         movq    %rax, V+16(%rsp)
         movq    %rax, V+24(%rsp)
 
-// Start of main loop. We jump into the middle so that the divstep
+// Start of main bignum_inv_sm2_loop. We jump into the middle so that the divstep
 // portion is common to the special tenth iteration after a uniform
 // first 9.
 
         movq    $10, i
         movq    $1, d
-        jmp     midloop
+        jmp     bignum_inv_sm2_midloop
 
-loop:
+bignum_inv_sm2_loop:
 
 // Separate out the matrix into sign-magnitude pairs
 
@@ -1442,7 +1442,7 @@ loop:
 
         amontred(v)
 
-midloop:
+bignum_inv_sm2_midloop:
 
         divstep59(d,ff,gg)
         movq    %rsi, d
@@ -1450,11 +1450,11 @@ midloop:
 // Next iteration
 
         decq    i
-        jnz     loop
+        jnz     bignum_inv_sm2_loop
 
 // The 10th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the
-// lowest word of f. So it's done differently from the main loop.
+// lowest word of f. So it's done differently from the main bignum_inv_sm2_loop.
 // Find the sign of the new f. For this we just need one digit
 // since we know (for in-scope cases) that f is either +1 or -1.
 // We don't explicitly shift right by 59 either, but looking at

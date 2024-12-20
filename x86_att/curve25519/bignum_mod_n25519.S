@@ -53,7 +53,7 @@ S2N_BN_SYMBOL(bignum_mod_n25519):
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
         cmpq    $4, k
-        jc      shortinput
+        jc      bignum_mod_n25519_shortinput
 
 // Otherwise load the top 4 digits (top-down) and reduce k by 4
 // This [m3;m2;m1;m0] is the initial x where we begin reduction.
@@ -119,9 +119,9 @@ S2N_BN_SYMBOL(bignum_mod_n25519):
 // estimation process.
 
         testq   k, k
-        jz      writeback
+        jz      bignum_mod_n25519_writeback
 
-loop:
+bignum_mod_n25519_loop:
 
 // Assume that the new 5-digit x is 2^64 * previous_x + next_digit.
 // Get the quotient estimate q = max (floor(x/2^252)) (2^64 - 1)
@@ -175,7 +175,7 @@ loop:
         adcq    $0, m1
         adcq    %rbx, m2
 
-// Now shuffle registers up and loop
+// Now shuffle registers up and bignum_mod_n25519_loop
 
         movq    m2, m3
         movq    m1, m2
@@ -183,11 +183,11 @@ loop:
         movq    d, m0
 
         decq    k
-        jnz     loop
+        jnz     bignum_mod_n25519_loop
 
 // Write back
 
-writeback:
+bignum_mod_n25519_writeback:
 
         movq    m0, (z)
         movq    m1, 8(z)
@@ -205,7 +205,7 @@ writeback:
 #endif
         ret
 
-shortinput:
+bignum_mod_n25519_shortinput:
 
         xorq    m0, m0
         xorq    m1, m1
@@ -213,15 +213,15 @@ shortinput:
         xorq    m3, m3
 
         testq   k, k
-        jz      writeback
+        jz      bignum_mod_n25519_writeback
         movq    (%rdx), m0
         decq    k
-        jz      writeback
+        jz      bignum_mod_n25519_writeback
         movq    8(%rdx), m1
         decq    k
-        jz      writeback
+        jz      bignum_mod_n25519_writeback
         movq    16(%rdx), m2
-        jmp     writeback
+        jmp     bignum_mod_n25519_writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

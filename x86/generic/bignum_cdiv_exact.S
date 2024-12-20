@@ -71,7 +71,7 @@ S2N_BN_SYMBOL(bignum_cdiv_exact):
 // If k = 0 then there's nothing to be done
 
         test    k, k
-        jz      end
+        jz      bignum_cdiv_exact_end
 
 // Move parameters that need a new home
 
@@ -132,25 +132,25 @@ S2N_BN_SYMBOL(bignum_cdiv_exact):
 
 // Unless n = 0, preload the zeroth digit and bump up the x pointer by
 // 8 and n down by 1, to ease indexing and comparison using the same
-// variable i in the main loop. When n = 0 we leave it alone, as the
+// variable i in the main bignum_cdiv_exact_loop. When n = 0 we leave it alone, as the
 // comparison i < n will always fail and the x pointer is unused.
 
         xor     d, d
         test    n, n
-        jz      loop
+        jz      bignum_cdiv_exact_loop
         mov     d, [x]
         add     x, 8
         dec     n
 
-loop:
+bignum_cdiv_exact_loop:
 
 // Load the next digit up to get [t,d] then shift right e places
 
         xor     t, t
         cmp     i, n
-        jnc     noload
+        jnc     bignum_cdiv_exact_noload
         mov     t, [x+8*i]
-noload:
+bignum_cdiv_exact_noload:
         shrd    d, t, cl
         add     d, c
         sbb     c, c
@@ -174,9 +174,9 @@ noload:
 
         inc     i
         cmp     i, k
-        jc      loop
+        jc      bignum_cdiv_exact_loop
 
-end:
+bignum_cdiv_exact_end:
         pop     r14
         pop     r13
         pop     r12

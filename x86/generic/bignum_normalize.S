@@ -57,16 +57,16 @@ S2N_BN_SYMBOL(bignum_normalize):
         xor     r, r
         mov     i, k
         sub     i, 1
-        jc      end
+        jc      bignum_normalize_end
         mov     c, [z+8*i]
-        jz      bitpart
+        jz      bignum_normalize_bitpart
 
 // Do d rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
 // With careful binary striding this could be O(k*log(k)) instead of O(k^2)
 // while still retaining the constant-time style.
 
-normloop:
+bignum_normalize_normloop:
         xor     j, j
         mov     b, k
         mov     d, r
@@ -74,23 +74,23 @@ normloop:
         neg     c
         cmovne  r, d
         mov     dshort, 0
-shufloop:
+bignum_normalize_shufloop:
         mov     c, d
         mov     d, [z+8*j]
         cmovc   c, d
         mov     [z+8*j], c
         inc     j
         dec     b
-        jnz     shufloop
+        jnz     bignum_normalize_shufloop
         dec     i
-        jnz     normloop
+        jnz     bignum_normalize_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
 // now just count c's leading zeros and shift z bitwise that many bits.
 // We need to patch the bsr result for the undefined case of zero input
 
-bitpart:
+bignum_normalize_bitpart:
         mov     dshort, 127
         bsr     c, c
         cmovz   c, d
@@ -101,7 +101,7 @@ bitpart:
 
         xor     b, b
         xor     i, i
-bitloop:
+bignum_normalize_bitloop:
         mov     d, [z+8*i]
         mov     j, d
         shld    d, b, cl
@@ -109,9 +109,9 @@ bitloop:
         mov     b, j
         inc     i
         cmp     i, k
-        jc      bitloop
+        jc      bignum_normalize_bitloop
 
- end:
+ bignum_normalize_end:
 #if WINDOWS_ABI
         pop    rsi
         pop    rdi

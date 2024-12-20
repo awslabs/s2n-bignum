@@ -42,7 +42,7 @@ S2N_BN_SYMBOL(bignum_modexp):
 
 // If size is zero (which falsifies the oddness condition) do nothing
 
-        cbz     x0, end
+        cbz     x0, bignum_modexp_end
 
 // Move parameters into permanent homes
 
@@ -59,26 +59,26 @@ S2N_BN_SYMBOL(bignum_modexp):
         add     x1, z
         mov     x2, m
         add     x3, y
-        bl local_amontifier
+        bl bignum_modexp_local_amontifier
 
         mov     x0, k
         mov     x1, x
         add     x2, z
         mov     x3, a
         mov     x4, m
-        bl local_amontmul
+        bl bignum_modexp_local_amontmul
 
         mov     x0, k
         add     x1, z
         add     x2, z
         mov     x3, m
-        bl local_demont
+        bl bignum_modexp_local_demont
 
-// Main loop with z == 2^64k * a^(p >> 2^i) (mod m)
+// Main bignum_modexp_loop with z == 2^64k * a^(p >> 2^i) (mod m)
 
         lsl     i, k, #6
 
-loop:
+bignum_modexp_loop:
         sub     i, i, #1
 
         mov     x0, k
@@ -86,14 +86,14 @@ loop:
         add     x2, z
         add     x3, z
         mov     x4, m
-        bl      local_amontmul
+        bl      bignum_modexp_local_amontmul
 
         mov     x0, k
         add     x1, z
         mov     x2, x
         add     x3, y
         mov     x4, m
-        bl      local_amontmul
+        bl      bignum_modexp_local_amontmul
 
         lsr     x0, i, #6
         ldr     x0, [p, x0, lsl #3]
@@ -104,9 +104,9 @@ loop:
         add     x2, z
         add     x3, z
         add     x4, y
-        bl      local_mux
+        bl      bignum_modexp_local_mux
 
-        cbnz    i, loop
+        cbnz    i, bignum_modexp_loop
 
 // Convert back from Montgomery representation and copy the result
 // (via a degenerate case of multiplexing) into the output buffer
@@ -115,18 +115,18 @@ loop:
         add     x1, z
         add     x2, z
         mov     x3, m
-        bl      local_demont
+        bl      bignum_modexp_local_demont
 
         mov     x0, xzr
         mov     x1, k
         mov     x2, res
         add     x3, z
         add     x4, z
-        bl      local_mux
+        bl      bignum_modexp_local_mux
 
 // Restore registers and return
 
-end:
+bignum_modexp_end:
 
         ldp     x25, x30, [sp], 16
         ldp     x23, x24, [sp], 16
@@ -136,39 +136,39 @@ end:
 
 // Local copy of bignum_amontifier
 
-local_amontifier:
-        cbz     x0, amontifend
+bignum_modexp_local_amontifier:
+        cbz     x0, bignum_modexp_amontifend
         mov     x4, xzr
-copyinloop:
+bignum_modexp_copyinloop:
         ldr     x9, [x2, x4, lsl #3]
         str     x9, [x3, x4, lsl #3]
         add     x4, x4, #0x1
         cmp     x4, x0
-        b.cc    copyinloop
+        b.cc    bignum_modexp_copyinloop
         subs    x4, x0, #0x1
-        b.eq    normalized
-normloop:
+        b.eq    bignum_modexp_normalized
+bignum_modexp_normloop:
         mov     x5, xzr
         cmp     x9, xzr
         mov     x7, xzr
-shufloop:
+bignum_modexp_shufloop:
         mov     x9, x7
         ldr     x7, [x3, x5, lsl #3]
         csel    x9, x9, x7, eq
         str     x9, [x3, x5, lsl #3]
         add     x5, x5, #0x1
         sub     x11, x5, x0
-        cbnz    x11, shufloop
+        cbnz    x11, bignum_modexp_shufloop
         subs    x4, x4, #0x1
-        b.ne    normloop
-normalized:
+        b.ne    bignum_modexp_normloop
+bignum_modexp_normalized:
         clz     x9, x9
         mov     x10, xzr
         mov     x4, xzr
         tst     x9, #0x3f
         csetm   x8, ne
         neg     x11, x9
-bitloop:
+bignum_modexp_bitloop:
         ldr     x5, [x3, x4, lsl #3]
         lsl     x7, x5, x9
         orr     x7, x7, x10
@@ -177,13 +177,13 @@ bitloop:
         str     x7, [x3, x4, lsl #3]
         add     x4, x4, #0x1
         cmp     x4, x0
-        b.cc    bitloop
+        b.cc    bignum_modexp_bitloop
         sub     x6, x0, #0x1
         ldr     x6, [x3, x6, lsl #3]
         mov     x11, #0x1
         neg     x10, x6
         mov     x4, #0x3e
-estloop:
+bignum_modexp_estloop:
         add     x11, x11, x11
         mov     x7, x6
         sub     x7, x7, x10
@@ -194,12 +194,12 @@ estloop:
         and     x7, x7, x6
         sub     x10, x10, x7
         subs    x4, x4, #0x1
-        b.ne    estloop
+        b.ne    bignum_modexp_estloop
         cmp     x10, x6
         cinc    x11, x11, eq
         mov     x9, xzr
         adds    x4, xzr, xzr
-mulloop:
+bignum_modexp_mulloop:
         ldr     x7, [x3, x4, lsl #3]
         mul     x8, x11, x7
         adcs    x8, x8, x9
@@ -207,13 +207,13 @@ mulloop:
         str     x8, [x1, x4, lsl #3]
         add     x4, x4, #0x1
         sub     x7, x4, x0
-        cbnz    x7, mulloop
+        cbnz    x7, bignum_modexp_mulloop
         adc     x9, x9, xzr
         mov     x7, #0x4000000000000000
         subs    x9, x9, x7
         csetm   x11, cs
         negs    x4, xzr
-remloop:
+bignum_modexp_remloop:
         ldr     x7, [x3, x4, lsl #3]
         ldr     x10, [x1, x4, lsl #3]
         and     x7, x7, x11
@@ -221,10 +221,10 @@ remloop:
         str     x7, [x1, x4, lsl #3]
         add     x4, x4, #0x1
         sub     x7, x4, x0
-        cbnz    x7, remloop
+        cbnz    x7, bignum_modexp_remloop
         mov     x9, xzr
         negs    x5, xzr
-dubloop1:
+bignum_modexp_dubloop1:
         ldr     x7, [x1, x5, lsl #3]
         extr    x9, x7, x9, #63
         ldr     x10, [x3, x5, lsl #3]
@@ -233,11 +233,11 @@ dubloop1:
         mov     x9, x7
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, dubloop1
+        cbnz    x7, bignum_modexp_dubloop1
         lsr     x9, x9, #63
         sbc     x9, x9, xzr
         adds    x5, xzr, xzr
-corrloop1:
+bignum_modexp_corrloop1:
         ldr     x7, [x1, x5, lsl #3]
         ldr     x10, [x3, x5, lsl #3]
         and     x10, x10, x9
@@ -245,10 +245,10 @@ corrloop1:
         str     x7, [x1, x5, lsl #3]
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, corrloop1
+        cbnz    x7, bignum_modexp_corrloop1
         mov     x9, xzr
         negs    x5, xzr
-dubloop2:
+bignum_modexp_dubloop2:
         ldr     x7, [x1, x5, lsl #3]
         extr    x9, x7, x9, #63
         ldr     x10, [x3, x5, lsl #3]
@@ -257,11 +257,11 @@ dubloop2:
         mov     x9, x7
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, dubloop2
+        cbnz    x7, bignum_modexp_dubloop2
         lsr     x9, x9, #63
         sbc     x9, x9, xzr
         adds    x5, xzr, xzr
-corrloop2:
+bignum_modexp_corrloop2:
         ldr     x7, [x1, x5, lsl #3]
         ldr     x10, [x3, x5, lsl #3]
         and     x10, x10, x9
@@ -270,14 +270,14 @@ corrloop2:
         str     x7, [x3, x5, lsl #3]
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, corrloop2
+        cbnz    x7, bignum_modexp_corrloop2
         mov     x6, xzr
         mov     x4, x0
-modloop:
+bignum_modexp_modloop:
         mov     x5, xzr
         mov     x10, xzr
         adds    x9, xzr, xzr
-cmaloop:
+bignum_modexp_cmaloop:
         ldr     x7, [x1, x5, lsl #3]
         mul     x8, x6, x7
         adcs    x10, x10, x9
@@ -288,11 +288,11 @@ cmaloop:
         str     x8, [x3, x5, lsl #3]
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, cmaloop
+        cbnz    x7, bignum_modexp_cmaloop
         adcs    x6, x10, x9
         csetm   x8, cs
         adds    x5, xzr, xzr
-oaloop:
+bignum_modexp_oaloop:
         ldr     x7, [x3, x5, lsl #3]
         ldr     x10, [x1, x5, lsl #3]
         and     x10, x10, x8
@@ -300,10 +300,10 @@ oaloop:
         str     x7, [x3, x5, lsl #3]
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, oaloop
+        cbnz    x7, bignum_modexp_oaloop
         adc     x6, x6, xzr
         subs    x4, x4, #0x1
-        b.ne    modloop
+        b.ne    bignum_modexp_modloop
         ldr     x7, [x2]
         lsl     x11, x7, #2
         sub     x11, x7, x11
@@ -324,8 +324,8 @@ oaloop:
         mov     x5, #0x1
         sub     x7, x0, #0x1
         cmn     x10, x8
-        cbz     x7, montifend
-montifloop:
+        cbz     x7, bignum_modexp_montifend
+bignum_modexp_montifloop:
         ldr     x7, [x2, x5, lsl #3]
         ldr     x10, [x3, x5, lsl #3]
         mul     x8, x11, x7
@@ -337,14 +337,14 @@ montifloop:
         str     x10, [x3, x7, lsl #3]
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, montifloop
-montifend:
+        cbnz    x7, bignum_modexp_montifloop
+bignum_modexp_montifend:
         adcs    x6, x6, x9
         csetm   x8, cs
         sub     x7, x0, #0x1
         str     x6, [x3, x7, lsl #3]
         negs    x5, xzr
-osloop:
+bignum_modexp_osloop:
         ldr     x7, [x3, x5, lsl #3]
         ldr     x10, [x2, x5, lsl #3]
         and     x10, x10, x8
@@ -352,14 +352,14 @@ osloop:
         str     x7, [x1, x5, lsl #3]
         add     x5, x5, #0x1
         sub     x7, x5, x0
-        cbnz    x7, osloop
-amontifend:
+        cbnz    x7, bignum_modexp_osloop
+bignum_modexp_amontifend:
         ret
 
 // Local copy of bignum_amontmul
 
-local_amontmul:
-        cbz     x0, amomend
+bignum_modexp_local_amontmul:
+        cbz     x0, bignum_modexp_amomend
         ldr     x14, [x4]
         lsl     x5, x14, #2
         sub     x5, x14, x5
@@ -374,18 +374,18 @@ local_amontmul:
         madd    x5, x6, x5, x5
         madd    x5, x7, x5, x5
         mov     x8, xzr
-zoop:
+bignum_modexp_zoop:
         str     xzr, [x1, x8, lsl #3]
         add     x8, x8, #0x1
         cmp     x8, x0
-        b.cc    zoop
+        b.cc    bignum_modexp_zoop
         mov     x6, xzr
         mov     x8, xzr
-outerloop:
+bignum_modexp_outerloop:
         ldr     x9, [x2, x8, lsl #3]
         mov     x10, xzr
         adds    x11, xzr, xzr
-maddloop:
+bignum_modexp_maddloop:
         ldr     x14, [x3, x10, lsl #3]
         ldr     x12, [x1, x10, lsl #3]
         mul     x13, x9, x14
@@ -396,7 +396,7 @@ maddloop:
         str     x12, [x1, x10, lsl #3]
         add     x10, x10, #0x1
         sub     x14, x10, x0
-        cbnz    x14, maddloop
+        cbnz    x14, bignum_modexp_maddloop
         adcs    x6, x6, x11
         adc     x7, xzr, xzr
         ldr     x12, [x1]
@@ -407,8 +407,8 @@ maddloop:
         adds    x12, x12, x13
         mov     x10, #0x1
         sub     x14, x0, #0x1
-        cbz     x14, montend
-montloop:
+        cbz     x14, bignum_modexp_montend
+bignum_modexp_montloop:
         ldr     x14, [x4, x10, lsl #3]
         ldr     x12, [x1, x10, lsl #3]
         mul     x13, x9, x14
@@ -420,18 +420,18 @@ montloop:
         str     x12, [x1, x13, lsl #3]
         add     x10, x10, #0x1
         sub     x14, x10, x0
-        cbnz    x14, montloop
-montend:
+        cbnz    x14, bignum_modexp_montloop
+bignum_modexp_montend:
         adcs    x11, x6, x11
         adc     x6, x7, xzr
         sub     x13, x10, #0x1
         str     x11, [x1, x13, lsl #3]
         add     x8, x8, #0x1
         cmp     x8, x0
-        b.cc    outerloop
+        b.cc    bignum_modexp_outerloop
         neg     x6, x6
         negs    x10, xzr
-corrloop3:
+bignum_modexp_corrloop3:
         ldr     x14, [x1, x10, lsl #3]
         ldr     x12, [x4, x10, lsl #3]
         and     x12, x12, x6
@@ -439,14 +439,14 @@ corrloop3:
         str     x14, [x1, x10, lsl #3]
         add     x10, x10, #0x1
         sub     x14, x10, x0
-        cbnz    x14, corrloop3
-amomend:
+        cbnz    x14, bignum_modexp_corrloop3
+bignum_modexp_amomend:
         ret
 
 // Local copy of bignum_demont
 
-local_demont:
-        cbz     x0, demontend
+bignum_modexp_local_demont:
+        cbz     x0, bignum_modexp_demontend
         ldr     x11, [x3]
         lsl     x4, x11, #2
         sub     x4, x11, x4
@@ -461,14 +461,14 @@ local_demont:
         madd    x4, x5, x4, x4
         madd    x4, x6, x4, x4
         mov     x5, xzr
-iloop:
+bignum_modexp_iloop:
         ldr     x11, [x2, x5, lsl #3]
         str     x11, [x1, x5, lsl #3]
         add     x5, x5, #0x1
         cmp     x5, x0
-        b.cc    iloop
+        b.cc    bignum_modexp_iloop
         mov     x5, xzr
-douterloop:
+bignum_modexp_douterloop:
         ldr     x9, [x1]
         mul     x7, x9, x4
         ldr     x11, [x3]
@@ -477,8 +477,8 @@ douterloop:
         adds    x9, x9, x10
         mov     x6, #0x1
         sub     x11, x0, #0x1
-        cbz     x11, dmontend
-dmontloop:
+        cbz     x11, bignum_modexp_dmontend
+bignum_modexp_dmontloop:
         ldr     x11, [x3, x6, lsl #3]
         ldr     x9, [x1, x6, lsl #3]
         mul     x10, x7, x11
@@ -490,25 +490,25 @@ dmontloop:
         str     x9, [x1, x10, lsl #3]
         add     x6, x6, #0x1
         sub     x11, x6, x0
-        cbnz    x11, dmontloop
-dmontend:
+        cbnz    x11, bignum_modexp_dmontloop
+bignum_modexp_dmontend:
         adc     x8, xzr, x8
         sub     x10, x6, #0x1
         str     x8, [x1, x10, lsl #3]
         add     x5, x5, #0x1
         cmp     x5, x0
-        b.cc    douterloop
+        b.cc    bignum_modexp_douterloop
         negs    x6, xzr
-cmploop:
+bignum_modexp_cmploop:
         ldr     x11, [x1, x6, lsl #3]
         ldr     x9, [x3, x6, lsl #3]
         sbcs    xzr, x11, x9
         add     x6, x6, #0x1
         sub     x11, x6, x0
-        cbnz    x11, cmploop
+        cbnz    x11, bignum_modexp_cmploop
         csetm   x8, cs
         negs    x6, xzr
-corrloop:
+bignum_modexp_corrloop:
         ldr     x11, [x1, x6, lsl #3]
         ldr     x9, [x3, x6, lsl #3]
         and     x9, x9, x8
@@ -516,23 +516,23 @@ corrloop:
         str     x11, [x1, x6, lsl #3]
         add     x6, x6, #0x1
         sub     x11, x6, x0
-        cbnz    x11, corrloop
-demontend:
+        cbnz    x11, bignum_modexp_corrloop
+bignum_modexp_demontend:
         ret
 
 // Local copy of bignum_mux
 
-local_mux:
-        cbz     x1, muxend
+bignum_modexp_local_mux:
+        cbz     x1, bignum_modexp_muxend
         cmp     x0, #0x0
-muxloop:
+bignum_modexp_muxloop:
         sub     x1, x1, #0x1
         ldr     x5, [x3, x1, lsl #3]
         ldr     x0, [x4, x1, lsl #3]
         csel    x5, x5, x0, ne
         str     x5, [x2, x1, lsl #3]
-        cbnz    x1, muxloop
-muxend:
+        cbnz    x1, bignum_modexp_muxloop
+bignum_modexp_muxend:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

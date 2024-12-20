@@ -35,27 +35,27 @@ S2N_BN_SYMBOL(bignum_copy):
         csel    n, k, n, cc
         mov     i, #0
 
-// If min(k,n) = 0 jump to the padding stage
+// If min(k,n) = 0 jump to the bignum_copy_padding stage
 
-        cbz     n, padding
+        cbz     n, bignum_copy_padding
 
-copyloop:
+bignum_copy_copyloop:
         ldr     a, [x, i, lsl #3]
         str     a, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, n
-        bcc     copyloop
+        bcc     bignum_copy_copyloop
 
-padding:
+bignum_copy_padding:
         cmp     i, k
-        bcs     end
-padloop:
+        bcs     bignum_copy_end
+bignum_copy_padloop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     padloop
+        bcc     bignum_copy_padloop
 
-end:
+bignum_copy_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)
