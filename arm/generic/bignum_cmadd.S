@@ -42,7 +42,7 @@ S2N_BN_SYMBOL(bignum_cmadd):
 
 // First clamp the input size n := min(p,n) since we can never need to read
 // past the p'th term of the input to generate p-digit output.
-// Subtract p := p - min(n,p) so it holds the size of the extra tail needed
+// Subtract p := p - min(n,p) so it holds the size of the extra bignum_cmadd_tail needed
 
         cmp     n, p
         csel    n, p, n, cs
@@ -51,9 +51,9 @@ S2N_BN_SYMBOL(bignum_cmadd):
 // Initialize high part h = 0; if n = 0 do nothing but return that zero
 
         adds    h, xzr, xzr
-        cbz     n, end
+        cbz     n, bignum_cmadd_end
 
-// Initialization of the loop: 2^64 * CF + [h,z_0'] = z_0 + c * x_0
+// Initialization of the bignum_cmadd_loop: 2^64 * CF + [h,z_0'] = z_0 + c * x_0
 
         ldr     a, [x]
         mul     l, c, a
@@ -63,11 +63,11 @@ S2N_BN_SYMBOL(bignum_cmadd):
         str     b, [z]
         mov     i, #8
         sub     n, n, #1
-        cbz     n, tail
+        cbz     n, bignum_cmadd_tail
 
-// Main loop, where we always have CF + previous high part h to add in
+// Main bignum_cmadd_loop, where we always have CF + previous high part h to add in
 
-loop:
+bignum_cmadd_loop:
         ldr     a, [x, i]
         ldr     b, [z, i]
         mul     l, c, a
@@ -78,33 +78,33 @@ loop:
         str     b, [z, i]
         add     i, i, #8
         sub     n, n, #1
-        cbnz    n, loop
+        cbnz    n, bignum_cmadd_loop
 
-// Propagate the carry all the way to the end with h as extra carry word
+// Propagate the carry all the way to the bignum_cmadd_end with h as extra carry word
 
-tail:
-        cbz     p, end
+bignum_cmadd_tail:
+        cbz     p, bignum_cmadd_end
         ldr     b, [z, i]
         adcs    b, b, h
         str     b, [z, i]
         mov     h, xzr
         sub     p, p, #1
-        cbz     p, end
+        cbz     p, bignum_cmadd_end
 
-tloop:
+bignum_cmadd_tloop:
         add     i, i, #8
         ldr     b, [z, i]
         adcs    b, b, xzr
         str     b, [z, i]
         sub     p, p, #1
-        cbnz    p, tloop
+        cbnz    p, bignum_cmadd_tloop
 
 // Return the high/carry word. This gives the top word of the result provided
 // n <= p and the result fits in p + 1 digits. More generally, indeed, the
 // 2^64 * CF + return = the top part of the result whenever n <= p, though this
 // is not very exploitable from a C call.
 
-end:
+bignum_cmadd_end:
         adcs    x0, h, xzr
         ret
 

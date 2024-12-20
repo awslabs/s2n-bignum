@@ -59,18 +59,18 @@ S2N_BN_SYMBOL(bignum_cmul):
         cmovc   n, p
 
 // Initialize current input/output pointer offset i and high part h.
-// But then if n = 0 skip the multiplication and go to the tail part
+// But then if n = 0 skip the multiplication and go to the bignum_cmul_tail part
 
         xor     h, h
         xor     i, i
         test    n, n
-        jz      tail
+        jz      bignum_cmul_tail
 
 // Move c into a safer register as multiplies overwrite rdx
 
         mov     c, rdx
 
-// Initialization of the loop: [h,l] = c * x_0
+// Initialization of the bignum_cmul_loop: [h,l] = c * x_0
 
         mov     rax, [x]
         mul     c
@@ -78,11 +78,11 @@ S2N_BN_SYMBOL(bignum_cmul):
         mov     h, rdx
         inc     i
         cmp     i, n
-        jz      tail
+        jz      bignum_cmul_tail
 
-// Main loop doing the multiplications
+// Main bignum_cmul_loop doing the multiplications
 
-loop:
+bignum_cmul_loop:
         mov     rax, [x+8*i]
         mul     c
         add     rax, h
@@ -91,28 +91,28 @@ loop:
         mov     h, rdx
         inc     i
         cmp     i, n
-        jc      loop
+        jc      bignum_cmul_loop
 
-// Add a tail when the destination is longer
+// Add a bignum_cmul_tail when the destination is longer
 
-tail:
+bignum_cmul_tail:
         cmp     i, p
-        jnc     end
+        jnc     bignum_cmul_end
         mov     [z+8*i], h
         xor     h, h
         inc     i
         cmp     i, p
-        jnc     end
+        jnc     bignum_cmul_end
 
-tloop:
+bignum_cmul_tloop:
         mov     [z+8*i], h
         inc     i
         cmp     i, p
-        jc      tloop
+        jc      bignum_cmul_tloop
 
 // Return the high/carry word
 
-end:
+bignum_cmul_end:
         mov     rax, h
 
 #if WINDOWS_ABI

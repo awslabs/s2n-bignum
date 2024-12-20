@@ -63,7 +63,7 @@ S2N_BN_SYMBOL(bignum_amontsqr):
 
 // If k = 0 the whole operation is trivial
 
-        cbz     k, end
+        cbz     k, bignum_amontsqr_end
 
 // Compute word-level negated modular inverse w for m == m[0].
 // This is essentially the same as word_negmodinv.
@@ -87,17 +87,17 @@ S2N_BN_SYMBOL(bignum_amontsqr):
 // this keeps the code slightly simpler.
 
         mov     i, xzr
-zoop:
+bignum_amontsqr_zoop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     zoop
+        bcc     bignum_amontsqr_zoop
         mov     c0, xzr
 
 // Outer loop pulling down digits d=x[i], multiplying by x and reducing
 
         mov     i, xzr
-outerloop:
+bignum_amontsqr_outerloop:
 
 // Multiply-add loop where we always have CF + previous high part h to add in
 // Note that in general we do need yet one more carry in this phase and hence
@@ -106,7 +106,7 @@ outerloop:
         ldr     d, [x, i, lsl #3]
         mov     j, xzr
         adds    h, xzr, xzr
-maddloop:
+bignum_amontsqr_maddloop:
         ldr     a, [x, j, lsl #3]
         ldr     e, [z, j, lsl #3]
         mul     l, d, a
@@ -117,7 +117,7 @@ maddloop:
         str     e, [z, j, lsl #3]
         add     j, j, #1
         sub     t, j, k
-        cbnz    t, maddloop
+        cbnz    t, bignum_amontsqr_maddloop
         adcs    c0, c0, h
         adc     c1, xzr, xzr
 
@@ -131,8 +131,8 @@ maddloop:
         adds    e, e, l         // Will be zero but want the carry
         mov     j, #1
         sub     t, k, #1
-        cbz     t, montend
-montloop:
+        cbz     t, bignum_amontsqr_montend
+bignum_amontsqr_montloop:
         ldr     a, [m, j, lsl #3]
         ldr     e, [z, j, lsl #3]
         mul     l, d, a
@@ -144,8 +144,8 @@ montloop:
         str     e, [z, l, lsl #3]
         add     j, j, #1
         sub     t, j, k
-        cbnz    t, montloop
-montend:
+        cbnz    t, bignum_amontsqr_montloop
+bignum_amontsqr_montend:
         adcs    h, c0, h
         adc     c0, c1, xzr
         sub     l, j, #1
@@ -155,14 +155,14 @@ montend:
 
         add     i, i, #1
         cmp     i, k
-        bcc     outerloop
+        bcc     bignum_amontsqr_outerloop
 
 // Now convert carry word, which is always in {0,1}, into a mask
 // and do a masked subtraction of m for the final almost-Montgomery result.
 
         neg     c0, c0
         subs    j, xzr, xzr
-corrloop:
+bignum_amontsqr_corrloop:
         ldr     a, [z, j, lsl #3]
         ldr     e, [m, j, lsl #3]
         and     e, e, c0
@@ -170,9 +170,9 @@ corrloop:
         str     a, [z, j, lsl #3]
         add     j, j, #1
         sub     t, j, k
-        cbnz    t, corrloop
+        cbnz    t, bignum_amontsqr_corrloop
 
-end:
+bignum_amontsqr_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

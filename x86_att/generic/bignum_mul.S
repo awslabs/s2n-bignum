@@ -76,7 +76,7 @@ S2N_BN_SYMBOL(bignum_mul):
 // If we did a multiply-add variant, however, then we could
 
         testq   p, p
-        jz      end
+        jz      bignum_mul_end
 
 // Set initial 2-part sum to zero (we zero c inside the body)
 
@@ -87,7 +87,7 @@ S2N_BN_SYMBOL(bignum_mul):
 
         xorq    k, k
 
-outerloop:
+bignum_mul_outerloop:
 
 // Zero our carry term first; we eventually want it and a zero is useful now
 // Set a =  max 0 (k + 1 - n), i = min (k + 1) m
@@ -113,11 +113,11 @@ outerloop:
         movq    k, d
         subq    i, d
         subq    a, i
-        jbe     innerend
+        jbe     bignum_mul_innerend
         leaq    (%rcx,a,8), x
         leaq    -8(%r9,d,8), y
 
-innerloop:
+bignum_mul_innerloop:
         movq    (y,i,8), %rax
         mulq      (x)
         addq    $8, x
@@ -125,9 +125,9 @@ innerloop:
         adcq    %rdx, h
         adcq    $0, c
         decq    i
-        jnz     innerloop
+        jnz     bignum_mul_innerloop
 
-innerend:
+bignum_mul_innerend:
 
         movq    l, (z)
         movq    h, l
@@ -135,9 +135,9 @@ innerend:
         addq    $8, z
 
         cmpq    p, k
-        jc      outerloop
+        jc      bignum_mul_outerloop
 
-end:
+bignum_mul_end:
         popq    %r15
         popq    %r14
         popq    %r13

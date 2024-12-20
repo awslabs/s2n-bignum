@@ -801,15 +801,15 @@ S2N_BN_SYMBOL(bignum_montinv_sm2):
         orr     x13, x13, #0x0000000000040000
         stp     x12, x13, [v+2*N]
 
-// Start of main loop. We jump into the middle so that the divstep
+// Start of main bignum_montinv_sm2_loop. We jump into the middle so that the divstep
 // portion is common to the special tenth iteration after a uniform
 // first 9.
 
         mov     i, #10
         mov     d, #1
-        b       midloop
+        b       bignum_montinv_sm2_midloop
 
-loop:
+bignum_montinv_sm2_loop:
 
 // Separate the matrix elements into sign-magnitude pairs
 
@@ -1124,7 +1124,7 @@ loop:
         stp     x1, x3, [v]
         stp     x2, x5, [v+16]
 
-midloop:
+bignum_montinv_sm2_midloop:
 
         mov     x1, d
         ldr     x2, [f]
@@ -1135,11 +1135,11 @@ midloop:
 // Next iteration
 
         subs    i, i, #1
-        bne     loop
+        bne     bignum_montinv_sm2_loop
 
 // The 10th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the
-// lowest word of f. So it's done differently from the main loop.
+// lowest word of f. So it's done differently from the main bignum_montinv_sm2_loop.
 // Find the sign of the new f. For this we just need one digit
 // since we know (for in-scope cases) that f is either +1 or -1.
 // We don't explicitly shift right by 59 either, but looking at

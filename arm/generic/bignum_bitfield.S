@@ -39,7 +39,7 @@ S2N_BN_SYMBOL(bignum_bitfield):
 
 // For length zero finish immediately (the return value in x0 is 0)
 
-        cbz     k, end
+        cbz     k, bignum_bitfield_end
 
 // Decompose the index into n = 64 * n + m, then increment n for next part
 
@@ -51,16 +51,16 @@ S2N_BN_SYMBOL(bignum_bitfield):
 
         mov     i, xzr
         mov     e, xzr
-loop:
+bignum_bitfield_loop:
         ldr     a, [x, i, lsl #3]
         cmp     i, n
         csel    d, a, d, cc
         csel    e, a, e, eq
         add     i, i, #1
         cmp     i, k
-        bcc     loop
+        bcc     bignum_bitfield_loop
 
-// Override d with 0 if we ran off the end (e will retain original 0).
+// Override d with 0 if we ran off the bignum_bitfield_end (e will retain original 0).
 
         cmp     i, n
         csel    d, xzr, d, cc
@@ -85,7 +85,7 @@ loop:
         lsl     m, m, l
         sub     m, m, #1
         and     x0, a, m
-end:
+bignum_bitfield_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

@@ -33,46 +33,46 @@ S2N_BN_SYMBOL(bignum_eq):
 
         mov     c, xzr
 
-// If m >= n jump into the m > n loop at the final equality test
+// If m >= n jump into the m > n bignum_eq_loop at the final equality test
 // This will drop through for m = n
 
         cmp     m, n
-        bcs     mtest
+        bcs     bignum_eq_mtest
 
 // Toploop for the case n > m
 
-nloop:
+bignum_eq_nloop:
         sub     n, n, #1
         ldr     a, [y, n, lsl #3]
         orr     c, c, a
         cmp     m, n
-        bne     nloop
-        b       mmain
+        bne     bignum_eq_nloop
+        b       bignum_eq_mmain
 
-// Toploop for the case m > n (or n = m which enters at "mtest")
+// Toploop for the case m > n (or n = m which enters at "bignum_eq_mtest")
 
-mloop:
+bignum_eq_mloop:
         sub     m, m, #1
         ldr     a, [x, m, lsl #3]
         orr     c, c, a
         cmp     m, n
-mtest:
-        bne     mloop
+bignum_eq_mtest:
+        bne     bignum_eq_mloop
 
-// Combined main loop for the min(m,n) lower words
+// Combined main bignum_eq_loop for the min(m,n) lower words
 
-mmain:
-        cbz     m, end
+bignum_eq_mmain:
+        cbz     m, bignum_eq_end
 
-loop:
+bignum_eq_loop:
         sub     m, m, #1
         ldr     a, [x, m, lsl #3]
         ldr     d, [y, m, lsl #3]
         eor     a, a, d
         orr     c, c, a
-        cbnz    m, loop
+        cbnz    m, bignum_eq_loop
 
-end:
+bignum_eq_end:
         cmp     c, xzr
         cset    x0, eq
         ret

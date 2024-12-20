@@ -35,51 +35,51 @@ S2N_BN_SYMBOL(bignum_le):
 // Speculatively form n := n - m and do case split
 
         subs    n, n, m
-        bcc     ylonger
+        bcc     bignum_le_ylonger
 
 // The case where y is longer or of the same size (n >= m)
 // Note that CF=1 initially by the fact that we reach this point
 
-        cbz     m, xtest
-xmainloop:
+        cbz     m, bignum_le_xtest
+bignum_le_xmainloop:
         ldr     a, [y, i, lsl #3]
         ldr     d, [x, i, lsl #3]
         sbcs    xzr, a, d
         add     i, i, #1
         sub     m, m, #1
-        cbnz    m, xmainloop
-xtest:
-        cbz     n, xskip
-xtoploop:
+        cbnz    m, bignum_le_xmainloop
+bignum_le_xtest:
+        cbz     n, bignum_le_xskip
+bignum_le_xtoploop:
         ldr     a, [y, i, lsl #3]
         sbcs    xzr, a, xzr
         add     i, i, #1
         sub     n, n, #1
-        cbnz    n, xtoploop
-xskip:
+        cbnz    n, bignum_le_xtoploop
+bignum_le_xskip:
         cset    x0, cs
         ret
 
 // The case where x is longer (m > n)
 // The first "adds" also makes sure CF=1 initially in this branch
 
-ylonger:
+bignum_le_ylonger:
         adds    n, n, m
-        cbz     n, ytoploop
+        cbz     n, bignum_le_ytoploop
         sub     m, m, n
-ymainloop:
+bignum_le_ymainloop:
         ldr     a, [y, i, lsl #3]
         ldr     d, [x, i, lsl #3]
         sbcs    xzr, a, d
         add     i, i, #1
         sub     n, n, #1
-        cbnz    n, ymainloop
-ytoploop:
+        cbnz    n, bignum_le_ymainloop
+bignum_le_ytoploop:
         ldr     a, [x, i, lsl #3]
         sbcs    xzr, xzr, a
         add     i, i, #1
         sub     m, m, #1
-        cbnz    m, ytoploop
+        cbnz    m, bignum_le_ytoploop
 
         cset    x0, cs
         ret

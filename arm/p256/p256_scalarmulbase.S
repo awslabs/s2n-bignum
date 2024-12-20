@@ -79,7 +79,7 @@ S2N_BN_SYMBOL(p256_scalarmulbase):
 
 // Preserve the input arguments except the scalar, since that gets absorbed
 // immediately. The "table" value subsequently gets shifted up each iteration
-// of the loop, while "res" and "blocksize" are static throughout.
+// of the p256_scalarmulbase_loop, while "res" and "blocksize" are static throughout.
 
         mov     res, x0
         mov     blocksize, x2
@@ -121,12 +121,12 @@ S2N_BN_SYMBOL(p256_scalarmulbase):
         stp     xzr, xzr, [acc+80]
         mov     cf, xzr
 
-// Main loop over {i >= 0 | blocksize * i <= 256}. Note the non-strict
+// Main p256_scalarmulbase_loop over {i >= 0 | blocksize * i <= 256}. Note the non-strict
 // inequality, to allow top carry for any choices of blocksize.
 
         mov     i, xzr
 
-loop:
+p256_scalarmulbase_loop:
 
 // The next raw bitfield is bf = bitfield(blocksize * i,blocksize) + cf,
 // adding in the deferred carry cf. We then shift the whole scalar right
@@ -183,7 +183,7 @@ loop:
         lsr     x16, x16, #1
         mov     x17, j
 
-tabloop:
+p256_scalarmulbase_tabloop:
         ldp     x8, x9, [table]
         ldp     x10, x11, [table, #16]
         ldp     x12, x13, [table, #32]
@@ -202,7 +202,7 @@ tabloop:
         add     table, table, #64
 
         sub     x16, x16, #1
-        cbnz    x16, tabloop
+        cbnz    x16, p256_scalarmulbase_tabloop
 
 // Before storing back, optionally negate the y coordinate of the table entry
 
@@ -231,7 +231,7 @@ tabloop:
         add     x0, nacc
         add     x1, acc
         add     x2, tabent
-        bl      local_p256_montjmixadd
+        bl      p256_scalarmulbase_local_p256_montjmixadd
 
 // However, only commit that update to the accumulator if j is nonzero,
 // because the mixed addition function does not handle this case directly,
@@ -280,45 +280,45 @@ tabloop:
         add     i, i, #1
         mul     x0, blocksize, i
         cmp     x0, #257
-        bcc     loop
+        bcc     p256_scalarmulbase_loop
 
-// That's the end of the main loop, and we just need to translate
+// That's the end of the main p256_scalarmulbase_loop, and we just need to translate
 // back from the Jacobian representation to affine. First of all,
 // let z2 = 1/z^2 and z3 = 1/z^3, both without Montgomery form
 
         add     x0, z2
         add     x1, acc+64
-        bl      local_montsqr_p256
+        bl      p256_scalarmulbase_local_montsqr_p256
 
         add     x0, z3
         add     x1, acc+64
         add     x2, z2
-        bl      local_montmul_p256
+        bl      p256_scalarmulbase_local_montmul_p256
 
         add     x0, z2
         add     x1, z3
-        bl      local_demont_p256
+        bl      p256_scalarmulbase_local_demont_p256
 
         add     x0, z3
         add     x1, z2
-        bl      local_inv_p256
+        bl      p256_scalarmulbase_local_inv_p256
 
         add     x0, z2
         add     x1, acc+64
         add     x2, z3
-        bl      local_montmul_p256
+        bl      p256_scalarmulbase_local_montmul_p256
 
 // Convert back from Jacobian (X,Y,Z) |-> (X/Z^2, Y/Z^3)
 
         mov     x0, res
         add     x1, acc
         add     x2, z2
-        bl      local_montmul_p256
+        bl      p256_scalarmulbase_local_montmul_p256
 
         add     x0, res, #32
         add     x1, acc+32
         add     x2, z3
-        bl      local_montmul_p256
+        bl      p256_scalarmulbase_local_montmul_p256
 
 // Restore stack and registers and return
 
@@ -331,7 +331,7 @@ tabloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-local_demont_p256:
+p256_scalarmulbase_local_demont_p256:
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         lsl     x7, x2, #32
@@ -370,7 +370,7 @@ local_demont_p256:
         stp     x4, x5, [x0, #16]
         ret
 
-local_inv_p256:
+p256_scalarmulbase_local_inv_p256:
         stp     x19, x20, [sp, #-16]!
         stp     x21, x22, [sp, #-16]!
         stp     x23, x24, [sp, #-16]!
@@ -1447,7 +1447,7 @@ p256_scalarmulbase_inv_midloop:
         ldp     x19, x20, [sp], #16
         ret
 
-local_montmul_p256:
+p256_scalarmulbase_local_montmul_p256:
         ldp     x3, x4, [x1]
         ldp     x5, x6, [x1, #16]
         ldp     x7, x8, [x2]
@@ -1625,7 +1625,7 @@ local_montmul_p256:
         stp     x3, x4, [x0, #16]
         ret
 
-local_montsqr_p256:
+p256_scalarmulbase_local_montsqr_p256:
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         umull   x15, w2, w2
@@ -1752,7 +1752,7 @@ local_montsqr_p256:
         stp     x10, x6, [x0, #16]
         ret
 
-local_p256_montjmixadd:
+p256_scalarmulbase_local_p256_montjmixadd:
         stp     x19, x20, [sp, #-16]!
         sub     sp, sp, #0xc0
         mov     x17, x0

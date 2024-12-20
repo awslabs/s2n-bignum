@@ -150,11 +150,11 @@ p256_scalarmul_alt_standard:
 
         leaq    TAB(%rsp), %rdi
         movq    %rbx, %rsi
-        callq   local_tomont_p256
+        callq   p256_scalarmul_alt_local_tomont_p256
 
         leaq    32(%rbx), %rsi
         leaq    TAB+32(%rsp), %rdi
-        callq   local_tomont_p256
+        callq   p256_scalarmul_alt_local_tomont_p256
 
         movl    $1, %eax
         movq    %rax, TAB+64(%rsp)
@@ -198,34 +198,34 @@ p256_scalarmul_alt_standard:
 
         leaq    TAB+96*1(%rsp), %rdi
         leaq    TAB(%rsp), %rsi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
         leaq    TAB+96*2(%rsp), %rdi
         leaq    TAB+96*1(%rsp), %rsi
         leaq    TAB(%rsp), %rdx
-        callq   local_p256_montjmixadd
+        callq   p256_scalarmul_alt_local_p256_montjmixadd
 
         leaq    TAB+96*3(%rsp), %rdi
         leaq    TAB+96*1(%rsp), %rsi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
         leaq    TAB+96*4(%rsp), %rdi
         leaq    TAB+96*3(%rsp), %rsi
         leaq    TAB(%rsp), %rdx
-        callq   local_p256_montjmixadd
+        callq   p256_scalarmul_alt_local_p256_montjmixadd
 
         leaq    TAB+96*5(%rsp), %rdi
         leaq    TAB+96*2(%rsp), %rsi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
         leaq    TAB+96*6(%rsp), %rdi
         leaq    TAB+96*5(%rsp), %rsi
         leaq    TAB(%rsp), %rdx
-        callq   local_p256_montjmixadd
+        callq   p256_scalarmul_alt_local_p256_montjmixadd
 
         leaq    TAB+96*7(%rsp), %rdi
         leaq    TAB+96*3(%rsp), %rsi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
 // Set up accumulator as table entry for top 4 bits (constant-time indexing)
 
@@ -276,28 +276,28 @@ p256_scalarmul_alt_standard:
         movq     %r14, ACC+80(%rsp)
         movq     %r15, ACC+88(%rsp)
 
-// Main loop over size-4 bitfield
+// Main p256_scalarmul_alt_loop over size-4 bitfield
 
         movl    $252, %ebp
 
-loop:
+p256_scalarmul_alt_loop:
         subq    $4, %rbp
 
         leaq    ACC(%rsp), %rsi
         leaq    ACC(%rsp), %rdi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
         leaq    ACC(%rsp), %rsi
         leaq    ACC(%rsp), %rdi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
         leaq    ACC(%rsp), %rsi
         leaq    ACC(%rsp), %rdi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
         leaq    ACC(%rsp), %rsi
         leaq    ACC(%rsp), %rdi
-        callq   local_p256_montjdouble
+        callq   p256_scalarmul_alt_local_p256_montjdouble
 
         movq    %rbp, %rax
         shrq    $6, %rax
@@ -378,34 +378,34 @@ loop:
         leaq    TABENT(%rsp), %rdx
         leaq    ACC(%rsp), %rsi
         leaq    ACC(%rsp), %rdi
-        callq   local_p256_montjadd
+        callq   p256_scalarmul_alt_local_p256_montjadd
 
         testq   %rbp, %rbp
-        jne     loop
+        jne     p256_scalarmul_alt_loop
 
 // Let z2 = 1/z^2 and z3 = 1/z^3, both without Montgomery form
 
         leaq    Z2(%rsp), %rdi
         leaq    ACC+64(%rsp), %rsi
-        callq   local_montsqr_p256
+        callq   p256_scalarmul_alt_local_montsqr_p256
 
         leaq    Z3(%rsp), %rdi
         leaq    ACC+64(%rsp), %rsi
         leaq    Z2(%rsp), %rdx
-        callq   local_montmul_p256
+        callq   p256_scalarmul_alt_local_montmul_p256
 
         leaq    Z2(%rsp), %rdi
         leaq    Z3(%rsp), %rsi
-        callq   local_demont_p256
+        callq   p256_scalarmul_alt_local_demont_p256
 
         leaq    Z3(%rsp), %rdi
         leaq    Z2(%rsp), %rsi
-        callq   local_inv_p256
+        callq   p256_scalarmul_alt_local_inv_p256
 
         leaq    Z2(%rsp), %rdi
         leaq    ACC+64(%rsp), %rsi
         leaq    Z3(%rsp), %rdx
-        callq   local_montmul_p256
+        callq   p256_scalarmul_alt_local_montmul_p256
 
 // Convert back from Jacobian (X, Y, Z) |-> (X/Z^2, Y/Z^3)
 
@@ -413,12 +413,12 @@ loop:
         leaq    ACC(%rsp), %rsi
         leaq    Z2(%rsp), %rdx
         movq    %rdi, %rbx
-        callq   local_montmul_p256
+        callq   p256_scalarmul_alt_local_montmul_p256
 
         leaq    32(%rbx), %rdi
         leaq    ACC+32(%rsp), %rsi
         leaq    Z3(%rsp), %rdx
-        callq   local_montmul_p256
+        callq   p256_scalarmul_alt_local_montmul_p256
 
 // Restore stack and registers and return
 
@@ -433,7 +433,7 @@ loop:
 
 // Local copies of subroutines, complete clones at the moment
 
-local_demont_p256:
+p256_scalarmul_alt_local_demont_p256:
         movq    (%rsi), %r8
         movq    0x8(%rsi), %r9
         movq    0x10(%rsi), %r10
@@ -495,7 +495,7 @@ local_demont_p256:
         movq    %r10, 0x18(%rdi)
         ret
 
-local_inv_p256:
+p256_scalarmul_alt_local_inv_p256:
         pushq   %rbx
         pushq   %rbp
         pushq   %r12
@@ -1923,7 +1923,7 @@ p256_scalarmul_alt_inv_midloop:
         popq    %rbx
         ret
 
-local_montmul_p256:
+p256_scalarmul_alt_local_montmul_p256:
         pushq   %rbx
         pushq   %r12
         pushq   %r13
@@ -2103,7 +2103,7 @@ local_montmul_p256:
         popq    %rbx
         ret
 
-local_montsqr_p256:
+p256_scalarmul_alt_local_montsqr_p256:
         pushq   %rbx
         pushq   %r12
         pushq   %r13
@@ -2254,7 +2254,7 @@ local_montsqr_p256:
         ret
 
 
-local_tomont_p256:
+p256_scalarmul_alt_local_tomont_p256:
         pushq   %r12
         pushq   %r13
         pushq   %r14
@@ -2432,7 +2432,7 @@ local_tomont_p256:
         popq    %r12
         ret
 
-local_p256_montjadd:
+p256_scalarmul_alt_local_p256_montjadd:
         pushq   %rbx
         pushq   %rbp
         pushq   %r12
@@ -5204,7 +5204,7 @@ local_p256_montjadd:
         popq    %rbx
         ret
 
-local_p256_montjdouble:
+p256_scalarmul_alt_local_p256_montjdouble:
         pushq   %rbx
         pushq   %r12
         pushq   %r13
@@ -6688,7 +6688,7 @@ local_p256_montjdouble:
         popq    %rbx
         ret
 
-local_p256_montjmixadd:
+p256_scalarmul_alt_local_p256_montjmixadd:
         pushq   %rbx
         pushq   %rbp
         pushq   %r12

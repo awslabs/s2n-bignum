@@ -84,19 +84,19 @@ S2N_BN_SYMBOL(bignum_montifier):
 // If k = 0 the whole operation is trivial
 
         test    k, k
-        jz      end
+        jz      bignum_montifier_end
 
 // Copy the input m into the temporary buffer t. The temporary register
 // c matters since we want it to hold the highest digit, ready for the
 // normalization phase.
 
         xor     i, i
-copyinloop:
+bignum_montifier_copyinloop:
         mov     c, [m+8*i]
         mov     [t+8*i], c
         inc     i
         cmp     i, k
-        jc      copyinloop
+        jc      bignum_montifier_copyinloop
 
 // Do a rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
@@ -106,22 +106,22 @@ copyinloop:
 
         mov     i, k
         dec     i
-        jz      normalized
-normloop:
+        jz      bignum_montifier_normalized
+bignum_montifier_normloop:
         xor     j, j
         mov     h, k
         neg     c
         mov     ashort, 0
-shufloop:
+bignum_montifier_shufloop:
         mov     c, a
         mov     a, [t+8*j]
         cmovc   c, a
         mov     [t+8*j], c
         inc     j
         dec     h
-        jnz     shufloop
+        jnz     bignum_montifier_shufloop
         dec     i
-        jnz     normloop
+        jnz     bignum_montifier_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
@@ -129,14 +129,14 @@ shufloop:
 // Note that we don't care about the result of bsr for zero inputs so
 // the simple xor-ing with 63 is safe.
 
-normalized:
+bignum_montifier_normalized:
 
         bsr     c, c
         xor     c, 63
 
         xor     b, b
         xor     i, i
-bitloop:
+bignum_montifier_bitloop:
         mov     a, [t+8*i]
         mov     j, a
         shld    a, b, cl
@@ -144,7 +144,7 @@ bitloop:
         mov     b, j
         inc     i
         cmp     i, k
-        jc      bitloop
+        jc      bignum_montifier_bitloop
 
 // Let h be the high word of n, which in all the in-scope cases is >= 2^63.
 // Now successively form q = 2^i div h and r = 2^i mod h as i goes from
@@ -158,7 +158,7 @@ bitloop:
         mov     r, h
         neg     r
         mov     ishort, 62
-estloop:
+bignum_montifier_estloop:
 
         add     q, q
         mov     a, h
@@ -171,7 +171,7 @@ estloop:
         and     a, h
         sub     r, a
         dec     i
-        jnz     estloop
+        jnz     bignum_montifier_estloop
 
 // Strictly speaking the above loop doesn't quite give the true remainder
 // and quotient in the special case r = h = 2^63, so fix it up. We get
@@ -219,7 +219,7 @@ estloop:
 
         xor     c, c
         xor     i, i
-mulloop:
+bignum_montifier_mulloop:
         mov     a, [t+8*i]
         mul     q
         add     a, c
@@ -228,7 +228,7 @@ mulloop:
         mov     c, d
         inc     i
         cmp     i, k
-        jc      mulloop
+        jc      bignum_montifier_mulloop
 
 // Now c is the high word of the product, so subtract 2^62
 // and then turn it into a bitmask in q = h
@@ -242,7 +242,7 @@ mulloop:
 
         xor     c, c
         xor     i, i
-remloop:
+bignum_montifier_remloop:
         mov     a, [t+8*i]
         and     a, q
         neg     c
@@ -251,7 +251,7 @@ remloop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      remloop
+        jc      bignum_montifier_remloop
 
 // Now still need to do a couple of modular doublings to get us all the
 // way up to 2^{p+64} == r from initial 2^{p+62} == r (mod n).
@@ -259,7 +259,7 @@ remloop:
         xor     c, c
         xor     j, j
         xor     b, b
-dubloop1:
+bignum_montifier_dubloop1:
         mov     a, [z+8*j]
         shrd    c, a, 63
         neg     b
@@ -269,12 +269,12 @@ dubloop1:
         mov     c, a
         inc     j
         cmp     j, k
-        jc      dubloop1
+        jc      bignum_montifier_dubloop1
         shr     c, 63
         add     c, b
         xor     j, j
         xor     b, b
-corrloop1:
+bignum_montifier_corrloop1:
         mov     a, [t+8*j]
         and     a, c
         neg     b
@@ -283,7 +283,7 @@ corrloop1:
         mov     [z+8*j], a
         inc     j
         cmp     j, k
-        jc      corrloop1
+        jc      bignum_montifier_corrloop1
 
 // This is not exactly the same: we also copy output to t giving the
 // initialization t_1 = r == 2^{p+64} mod n for the main loop next.
@@ -291,7 +291,7 @@ corrloop1:
         xor     c, c
         xor     j, j
         xor     b, b
-dubloop2:
+bignum_montifier_dubloop2:
         mov     a, [z+8*j]
         shrd    c, a, 63
         neg     b
@@ -301,12 +301,12 @@ dubloop2:
         mov     c, a
         inc     j
         cmp     j, k
-        jc      dubloop2
+        jc      bignum_montifier_dubloop2
         shr     c, 63
         add     c, b
         xor     j, j
         xor     b, b
-corrloop2:
+bignum_montifier_corrloop2:
         mov     a, [t+8*j]
         and     a, c
         neg     b
@@ -316,7 +316,7 @@ corrloop2:
         mov     [t+8*j], a
         inc     j
         cmp     j, k
-        jc      corrloop2
+        jc      bignum_montifier_corrloop2
 
 // We then successively generate (k+1)-digit values satisfying
 // t_i == 2^{p+64*i} mod n, each of which is stored in h::t. Finish
@@ -328,7 +328,7 @@ corrloop2:
 // we have t_{i+1} == 2^64 * t_i
 //         = (2^{p+64} * h) + (2^64 * l)
 //        == r * h + l<<64
-// Do this 2*k more times so we end up == 2^{192*k+64}, one more than we want
+// Do this 2*k more times so we bignum_montifier_end up == 2^{192*k+64}, one more than we want
 //
 // Writing B = 2^{64k}, the possible correction of adding r, which for
 // a (k+1)-digit result is equivalent to subtracting q = 2^{64*(k+1)} - r
@@ -340,12 +340,12 @@ corrloop2:
 // "previous" digit (initially 0) to offset things by 1.
 
         lea     i, [k+k]
-modloop:
+bignum_montifier_modloop:
         xor     b, b
         mov     n, k
         xor     j, j
         xor     c, c
-cmaloop:
+bignum_montifier_cmaloop:
         adc     c, b
         sbb     l, l
         mov     a, [z+8*j]
@@ -357,7 +357,7 @@ cmaloop:
         mov     c, d
         inc     j
         dec     n
-        jnz     cmaloop
+        jnz     bignum_montifier_cmaloop
         adc     b, c
         mov     h, b
 
@@ -365,7 +365,7 @@ cmaloop:
 
         xor     j, j
         xor     c, c
-oaloop:
+bignum_montifier_oaloop:
         mov     a, [t+8*j]
         mov     b, [z+8*j]
         and     b, l
@@ -375,11 +375,11 @@ oaloop:
         mov     [t+8*j], a
         inc     j
         cmp     j, k
-        jc      oaloop
+        jc      bignum_montifier_oaloop
         sub     h, c
 
         dec     i
-        jnz     modloop
+        jnz     bignum_montifier_modloop
 
 // Compute the negated modular inverse w (same register as i, not used again).
 
@@ -423,8 +423,8 @@ oaloop:
         mov     jshort, 1
         mov     n, k
         dec     n
-        jz      amontend
-amontloop:
+        jz      bignum_montifier_amontend
+bignum_montifier_amontloop:
         adc     c, [t+8*j]
         sbb     l, l
         mov     a, [m+8*j]
@@ -435,15 +435,15 @@ amontloop:
         mov     c, d
         inc     j
         dec     n
-        jnz     amontloop
-amontend:
+        jnz     bignum_montifier_amontloop
+bignum_montifier_amontend:
         adc     h, c
         sbb     l, l
         mov     [t+8*k-8], h
 
         xor     j, j
         xor     c, c
-aosloop:
+bignum_montifier_aosloop:
         mov     a, [t+8*j]
         mov     b, [m+8*j]
         and     b, l
@@ -453,7 +453,7 @@ aosloop:
         mov     [z+8*j], a
         inc     j
         cmp     j, k
-        jc      aosloop
+        jc      bignum_montifier_aosloop
 
 // So far, the code (basically a variant of bignum_amontifier) has produced
 // a k-digit value z == 2^{192k} (mod m), not necessarily fully reduced mod m.
@@ -463,7 +463,7 @@ aosloop:
 
         mov     h, k
 
-montouterloop:
+bignum_montifier_montouterloop:
         mov     c, [z]
         mov     b, w
         imul    b, c
@@ -474,8 +474,8 @@ montouterloop:
         mov     jshort, 1
         mov     n, k
         dec     n
-        jz      montend
-montloop:
+        jz      bignum_montifier_montend
+bignum_montifier_montloop:
         adc     c, [z+8*j]
         sbb     l, l
         mov     a, [m+8*j]
@@ -486,25 +486,25 @@ montloop:
         mov     c, d
         inc     j
         dec     n
-        jnz     montloop
-montend:
+        jnz     bignum_montifier_montloop
+bignum_montifier_montend:
         adc     c, 0
         mov     [z+8*k-8], c
 
         dec     h
-        jnz     montouterloop
+        jnz     bignum_montifier_montouterloop
 
 // Now do a comparison of z with m to set a final correction mask
 // indicating that z >= m and so we need to subtract m.
 
         xor     j, j
         mov     n, k
-cmploop:
+bignum_montifier_cmploop:
         mov     a, [z+8*j]
         sbb     a, [m+8*j]
         inc     j
         dec     n
-        jnz     cmploop
+        jnz     bignum_montifier_cmploop
         sbb     d, d
         not     d
 
@@ -512,7 +512,7 @@ cmploop:
 
         xor     l, l
         xor     j, j
-corrloop:
+bignum_montifier_corrloop:
         mov     a, [m+8*j]
         and     a, d
         neg     l
@@ -520,9 +520,9 @@ corrloop:
         sbb     l, l
         inc     j
         cmp     j, k
-        jc      corrloop
+        jc      bignum_montifier_corrloop
 
-end:
+bignum_montifier_end:
         pop     r13
         pop     r12
         pop     rbx
