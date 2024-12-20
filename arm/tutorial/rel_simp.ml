@@ -68,8 +68,6 @@ let SIMP_EQUIV = prove(
   (* Start symbolic execution of the two programs! The left program's initial
      state is named as s0, and the right is s0'. *)
   ENSURES2_INIT_TAC "s0" "s0'" THEN
-  (* Some auxiliary updates to initialize... *)
-  ASSUME_TAC(ISPEC (mk_var("s0'",`:armstate`)) MAYCHANGE_STARTER) THEN
 
   (* Symbolically execute the left program only. *)
   ARM_N_STUTTER_LEFT_TAC SIMP_EXEC (1--3) None THEN
