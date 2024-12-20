@@ -241,6 +241,13 @@ add_component_alias_thms
 
 (* ------------------------------------------------------------------------- *)
 (* Shorthands for the SIMD registers.                                        *)
+(*                                                                           *)
+(* Note that the treatment of XMMs within YMMs within ZMMs zero-extends      *)
+(* all writes, e.g. a 128-bit XMM operation will set the top 384 bits        *)
+(* of the ZMM register to zero. This is the specified behavior               *)
+(* *WHEN THE XMM OPERATION IS VEX-ENCODED*, which is the only                *)
+(* form of XMM operation we accept in the decoder. See section 15.5 of       *)
+(* Intel's ISA Combined Manual, "Accessing XMM, YMM and ZMM Registers"       *)
 (* ------------------------------------------------------------------------- *)
 
 let ZMM0  = define `ZMM0  = simdregisters :> element(word 0)`
@@ -282,43 +289,43 @@ add_component_alias_thms
   ZMM16; ZMM17; ZMM18; ZMM19; ZMM20; ZMM21; ZMM22; ZMM23;
   ZMM24; ZMM25; ZMM26; ZMM27; ZMM28; ZMM29; ZMM30; ZMM31];;
 
-let YMM0  = define `YMM0  = ZMM0  :> bottom_256`
-and YMM1  = define `YMM1  = ZMM1  :> bottom_256`
-and YMM2  = define `YMM2  = ZMM2  :> bottom_256`
-and YMM3  = define `YMM3  = ZMM3  :> bottom_256`
-and YMM4  = define `YMM4  = ZMM4  :> bottom_256`
-and YMM5  = define `YMM5  = ZMM5  :> bottom_256`
-and YMM6  = define `YMM6  = ZMM6  :> bottom_256`
-and YMM7  = define `YMM7  = ZMM7  :> bottom_256`
-and YMM8  = define `YMM8  = ZMM8  :> bottom_256`
-and YMM9  = define `YMM9  = ZMM9  :> bottom_256`
-and YMM10 = define `YMM10 = ZMM10 :> bottom_256`
-and YMM11 = define `YMM11 = ZMM11 :> bottom_256`
-and YMM12 = define `YMM12 = ZMM12 :> bottom_256`
-and YMM13 = define `YMM13 = ZMM13 :> bottom_256`
-and YMM14 = define `YMM14 = ZMM14 :> bottom_256`
-and YMM15 = define `YMM15 = ZMM15 :> bottom_256`;;
+let YMM0  = define `YMM0  = ZMM0  :> zerotop_256`
+and YMM1  = define `YMM1  = ZMM1  :> zerotop_256`
+and YMM2  = define `YMM2  = ZMM2  :> zerotop_256`
+and YMM3  = define `YMM3  = ZMM3  :> zerotop_256`
+and YMM4  = define `YMM4  = ZMM4  :> zerotop_256`
+and YMM5  = define `YMM5  = ZMM5  :> zerotop_256`
+and YMM6  = define `YMM6  = ZMM6  :> zerotop_256`
+and YMM7  = define `YMM7  = ZMM7  :> zerotop_256`
+and YMM8  = define `YMM8  = ZMM8  :> zerotop_256`
+and YMM9  = define `YMM9  = ZMM9  :> zerotop_256`
+and YMM10 = define `YMM10 = ZMM10 :> zerotop_256`
+and YMM11 = define `YMM11 = ZMM11 :> zerotop_256`
+and YMM12 = define `YMM12 = ZMM12 :> zerotop_256`
+and YMM13 = define `YMM13 = ZMM13 :> zerotop_256`
+and YMM14 = define `YMM14 = ZMM14 :> zerotop_256`
+and YMM15 = define `YMM15 = ZMM15 :> zerotop_256`;;
 
 add_component_alias_thms
  [YMM0; YMM1; YMM2; YMM3; YMM4; YMM5; YMM6; YMM7;
   YMM8; YMM9; YMM10; YMM11; YMM12; YMM13; YMM14; YMM15];;
 
-let XMM0  = define `XMM0  = YMM0  :> bottom_128`
-and XMM1  = define `XMM1  = YMM1  :> bottom_128`
-and XMM2  = define `XMM2  = YMM2  :> bottom_128`
-and XMM3  = define `XMM3  = YMM3  :> bottom_128`
-and XMM4  = define `XMM4  = YMM4  :> bottom_128`
-and XMM5  = define `XMM5  = YMM5  :> bottom_128`
-and XMM6  = define `XMM6  = YMM6  :> bottom_128`
-and XMM7  = define `XMM7  = YMM7  :> bottom_128`
-and XMM8  = define `XMM8  = YMM8  :> bottom_128`
-and XMM9  = define `XMM9  = YMM9  :> bottom_128`
-and XMM10 = define `XMM10 = YMM10 :> bottom_128`
-and XMM11 = define `XMM11 = YMM11 :> bottom_128`
-and XMM12 = define `XMM12 = YMM12 :> bottom_128`
-and XMM13 = define `XMM13 = YMM13 :> bottom_128`
-and XMM14 = define `XMM14 = YMM14 :> bottom_128`
-and XMM15 = define `XMM15 = YMM15 :> bottom_128`;;
+let XMM0  = define `XMM0  = YMM0  :> zerotop_128`
+and XMM1  = define `XMM1  = YMM1  :> zerotop_128`
+and XMM2  = define `XMM2  = YMM2  :> zerotop_128`
+and XMM3  = define `XMM3  = YMM3  :> zerotop_128`
+and XMM4  = define `XMM4  = YMM4  :> zerotop_128`
+and XMM5  = define `XMM5  = YMM5  :> zerotop_128`
+and XMM6  = define `XMM6  = YMM6  :> zerotop_128`
+and XMM7  = define `XMM7  = YMM7  :> zerotop_128`
+and XMM8  = define `XMM8  = YMM8  :> zerotop_128`
+and XMM9  = define `XMM9  = YMM9  :> zerotop_128`
+and XMM10 = define `XMM10 = YMM10 :> zerotop_128`
+and XMM11 = define `XMM11 = YMM11 :> zerotop_128`
+and XMM12 = define `XMM12 = YMM12 :> zerotop_128`
+and XMM13 = define `XMM13 = YMM13 :> zerotop_128`
+and XMM14 = define `XMM14 = YMM14 :> zerotop_128`
+and XMM15 = define `XMM15 = YMM15 :> zerotop_128`;;
 
 add_component_alias_thms
  [XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7;
@@ -1105,6 +1112,13 @@ let x86_TZCNT = new_definition
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
 
+let x86_VPXOR = new_definition
+ `x86_VPXOR dest src1 src2 (s:x86state) =
+        let x = read src1 s
+        and y = read src2 s in
+        let z = word_xor x y in
+        (dest := (z:N word)) s`;;
+
 let x86_XOR = new_definition
  `x86_XOR dest src s =
         let x = read dest s and y = read src s in
@@ -1157,6 +1171,16 @@ let GPR = define
         registers :> element reg :>
             bottom_32 :> bottom_16 :> bottom_8 :> asnumber`;;
 
+(*** The zero-top-on-write behavior when VEX-encoded, which we assume ***)
+
+let SIMD256 = define
+ `SIMD256 (Simdreg reg Lower_256) =
+      simdregisters :> element reg :> zerotop_256`;;
+
+let SIMD128 = define
+ `SIMD128 (Simdreg reg Lower_128) =
+    simdregisters :> element reg :> zerotop_256 :> zerotop_128`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Decoding of a bsid address, always returning a 64-bit word.               *)
 (* ------------------------------------------------------------------------- *)
@@ -1175,6 +1199,20 @@ let bsid_semantics = define
 (* Note: this is in 64-bit mode only. Of course things are different in      *)
 (* other modes; particularly the "zerotop" stuff does not apply then.        *)
 (* ------------------------------------------------------------------------- *)
+
+let OPERAND256 = define
+ `OPERAND256 (Simdregister r) s =
+        (if simdregister_size r = 256 then SIMD256 r else ARB) /\
+  OPERAND256 (Memop w ea) s =
+       (if w = Word256 then memory :> bytes256 (bsid_semantics ea s)
+        else ARB)`;;
+
+let OPERAND128 = define
+ `OPERAND128 (Simdregister r) s =
+        (if simdregister_size r = 128 then SIMD128 r else ARB) /\
+  OPERAND128 (Memop w ea) s =
+       (if w = Word128 then memory :> bytes128 (bsid_semantics ea s)
+        else ARB)`;;
 
 let OPERAND64 = define
  `OPERAND64 (Register r) s =
@@ -1659,6 +1697,10 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+    | VPXOR dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPXOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPXOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | XOR dest src ->
         (match operand_size dest with
            64 -> x86_XOR (OPERAND64 dest s) (OPERAND64 src s)
@@ -1725,10 +1767,18 @@ let PRESERVED_GPRS = define
 let MODIFIABLE_GPRS = define
  `MODIFIABLE_GPRS = [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11]`;;
 
+let MODIFIABLE_ZMMS = define
+ `MODIFIABLE_ZMMS =
+   [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
+    ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15;
+    ZMM16; ZMM17; ZMM18; ZMM19; ZMM20; ZMM21; ZMM22; ZMM23;
+    ZMM24; ZMM25; ZMM26; ZMM27; ZMM28; ZMM29; ZMM30; ZMM31]`;;
+
 let MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
-    [SOME_FLAGS; MODIFIABLE_GPRS]
+    [SOME_FLAGS; MODIFIABLE_GPRS; MODIFIABLE_ZMMS]
  (new_definition `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI =
-    MAYCHANGE [RIP] ,, MAYCHANGE MODIFIABLE_GPRS ,, MAYCHANGE SOME_FLAGS`);;
+    MAYCHANGE [RIP] ,, MAYCHANGE MODIFIABLE_GPRS ,,
+    MAYCHANGE MODIFIABLE_ZMMS ,, MAYCHANGE SOME_FLAGS`);;
 
 (* ------------------------------------------------------------------------- *)
 (* Microsoft x86 fastcall ABI (the return value is in fact the same).        *)
@@ -1765,17 +1815,44 @@ let WINDOWS_PRESERVED_GPRS = define
 let WINDOWS_MODIFIABLE_GPRS = define
  `WINDOWS_MODIFIABLE_GPRS = [RAX; RCX; RDX; R8; R9; R10; R11]`;;
 
+let WINDOWS_MODIFIABLE_ZMMS = define
+ `WINDOWS_MODIFIABLE_ZMMS =
+   [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5;
+    ZMM16; ZMM17; ZMM18; ZMM19; ZMM20; ZMM21; ZMM22; ZMM23;
+    ZMM24; ZMM25; ZMM26; ZMM27; ZMM28; ZMM29; ZMM30; ZMM31]`;;
+
+let WINDOWS_MODIFIABLE_UPPER_ZMMS = define
+ `WINDOWS_MODIFIABLE_UPPER_ZMMS =
+   [ZMM6 :> tophalf; ZMM7 :> tophalf; ZMM8 :> tophalf; ZMM9 :> tophalf;
+    ZMM10 :> tophalf; ZMM11 :> tophalf; ZMM12 :> tophalf; ZMM13 :> tophalf;
+    ZMM14 :> tophalf; ZMM15 :> tophalf]`;;
+
+let WINDOWS_MODIFIABLE_UPPER_YMMS = define
+ `WINDOWS_MODIFIABLE_UPPER_YMMS =
+   [ZMM6 :> bottomhalf :> tophalf; ZMM7 :> bottomhalf :> tophalf;
+    ZMM8 :> bottomhalf :> tophalf; ZMM9 :> bottomhalf :> tophalf;
+    ZMM10 :> bottomhalf :> tophalf; ZMM11 :> bottomhalf :> tophalf;
+    ZMM12 :> bottomhalf :> tophalf; ZMM13 :> bottomhalf :> tophalf;
+    ZMM14 :> bottomhalf :> tophalf; ZMM15 :> bottomhalf :> tophalf]`;;
+
 let WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
-    [SOME_FLAGS; WINDOWS_MODIFIABLE_GPRS]
+    [SOME_FLAGS; WINDOWS_MODIFIABLE_GPRS; WINDOWS_MODIFIABLE_ZMMS;
+     WINDOWS_MODIFIABLE_UPPER_ZMMS; WINDOWS_MODIFIABLE_UPPER_YMMS]
  (new_definition `WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI =
-    MAYCHANGE [RIP] ,, MAYCHANGE WINDOWS_MODIFIABLE_GPRS ,, MAYCHANGE SOME_FLAGS`);;
+    MAYCHANGE [RIP] ,, MAYCHANGE WINDOWS_MODIFIABLE_GPRS ,,
+    MAYCHANGE WINDOWS_MODIFIABLE_ZMMS ,,
+    MAYCHANGE WINDOWS_MODIFIABLE_UPPER_ZMMS ,,
+    MAYCHANGE WINDOWS_MODIFIABLE_UPPER_YMMS ,,
+    MAYCHANGE SOME_FLAGS`);;
 
 (* ------------------------------------------------------------------------- *)
 (* Clausal theorems and other execution assistance.                          *)
 (* ------------------------------------------------------------------------- *)
 
 let OPERAND_SIZE_CASES = prove
- (`(match 64 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = a /\
+ (`(match 256 with 256 -> a | 128 -> b) = a /\
+   (match 128 with 256 -> a | 128 -> b) = b /\
+   (match 64 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = a /\
    (match 32 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = b /\
    (match 16 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = c /\
    (match  8 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = d /\
@@ -1834,13 +1911,17 @@ let REGISTER_ALIASES =
   eax; ecx; edx; ebx; esp; ebp; esi; edi;
   r8d; r9d; r10d; r11d; r12d; r13d; r14d; r15d;
   ax; cx; dx; bx; sp; bp; si; di; ah;
-  al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil];;
+  al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil;
+  xmm0; xmm1; xmm2; xmm3; xmm4; xmm5; xmm6; xmm7;
+  xmm8; xmm9; xmm10; xmm11; xmm12; xmm13; xmm14; xmm15;
+  ymm0; ymm1; ymm2; ymm3; ymm4; ymm5; ymm6; ymm7;
+  ymm8; ymm9; ymm10; ymm11;ymm12; ymm13; ymm14; ymm15];;
 
 let OPERAND_SIZE_CONV =
   let topconv = GEN_REWRITE_CONV I [operand_size]
   and botconv = GEN_REWRITE_CONV TOP_DEPTH_CONV (QWORD::REGISTER_ALIASES)
   and midconv = GEN_REWRITE_CONV REPEATC
-   [register_size; bytesize; regsize] in
+   [simdregister_size; register_size; bytesize; simdregsize; regsize] in
   fun tm ->
     match tm with
       Comb(Const("operand_size",_),_)->
@@ -1942,8 +2023,44 @@ let BSID_CLAUSES = prove
               R8;   R9;  R10;  R11;  R12;  R13;  R14;  R15] THEN
   REWRITE_TAC[BSID_CLAUSES_GEN; base_displacement]);;
 
-let OPERAND_CLAUSES_GEN = prove
- (`OPERAND64 (%rax) s = RAX /\
+let OPERAND_CLAUSES = prove
+ (`OPERAND128(%_% xmm0) s = YMM0 :> zerotop_128  /\
+   OPERAND128(%_% xmm1) s = YMM1 :> zerotop_128  /\
+   OPERAND128(%_% xmm2) s = YMM2 :> zerotop_128  /\
+   OPERAND128(%_% xmm3) s = YMM3 :> zerotop_128  /\
+   OPERAND128(%_% xmm4) s = YMM4 :> zerotop_128  /\
+   OPERAND128(%_% xmm5) s = YMM5 :> zerotop_128  /\
+   OPERAND128(%_% xmm6) s = YMM6 :> zerotop_128  /\
+   OPERAND128(%_% xmm7) s = YMM7 :> zerotop_128  /\
+   OPERAND128(%_% xmm8) s = YMM8 :> zerotop_128  /\
+   OPERAND128(%_% xmm9) s = YMM9 :> zerotop_128  /\
+   OPERAND128(%_% xmm10) s = YMM10 :> zerotop_128  /\
+   OPERAND128(%_% xmm11) s = YMM11 :> zerotop_128  /\
+   OPERAND128(%_% xmm12) s = YMM12 :> zerotop_128  /\
+   OPERAND128(%_% xmm13) s = YMM13 :> zerotop_128  /\
+   OPERAND128(%_% xmm14) s = YMM14 :> zerotop_128  /\
+   OPERAND128(%_% xmm15) s = YMM15 :> zerotop_128  /\
+   OPERAND128 (Memop Word128 bsid) s =
+    memory :> bytes128 (bsid_semantics bsid s) /\
+   OPERAND256(%_% ymm0) s = YMM0  /\
+   OPERAND256(%_% ymm1) s = YMM1  /\
+   OPERAND256(%_% ymm2) s = YMM2  /\
+   OPERAND256(%_% ymm3) s = YMM3  /\
+   OPERAND256(%_% ymm4) s = YMM4  /\
+   OPERAND256(%_% ymm5) s = YMM5  /\
+   OPERAND256(%_% ymm6) s = YMM6  /\
+   OPERAND256(%_% ymm7) s = YMM7  /\
+   OPERAND256(%_% ymm8) s = YMM8  /\
+   OPERAND256(%_% ymm9) s = YMM9  /\
+   OPERAND256(%_% ymm10) s = YMM10  /\
+   OPERAND256(%_% ymm11) s = YMM11  /\
+   OPERAND256(%_% ymm12) s = YMM12  /\
+   OPERAND256(%_% ymm13) s = YMM13  /\
+   OPERAND256(%_% ymm14) s = YMM14  /\
+   OPERAND256(%_% ymm15) s = YMM15  /\
+   OPERAND256 (Memop Word256 bsid) s =
+    memory :> bytes256 (bsid_semantics bsid s) /\
+   OPERAND64 (%rax) s = RAX /\
    OPERAND64 (%rcx) s = RCX /\
    OPERAND64 (%rdx) s = RDX /\
    OPERAND64 (%rbx) s = RBX /\
@@ -2028,69 +2145,22 @@ let OPERAND_CLAUSES_GEN = prove
               R8D; R9D; R10D; R11D; R12D; R13D; R14D; R15D;
               AX; CX; DX; BX; SP; BP; SI; DI;
               AH; AL; BH; BL; CH; CL; DH; DL;
-              SPL; BPL; SIL; DIL] THEN
+              SPL; BPL; SIL; DIL;
+              xmm0; xmm1; xmm2; xmm3; xmm4; xmm5; xmm6; xmm7;
+              xmm8; xmm9; xmm10; xmm11; xmm12; xmm13; xmm14; xmm15;
+              XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7; XMM8;
+              XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15;
+              ymm0; ymm1; ymm2; ymm3; ymm4; ymm5; ymm6; ymm7;
+              ymm8; ymm9; ymm10; ymm11; ymm12; ymm13; ymm14; ymm15;
+              YMM0; YMM1; YMM2; YMM3; YMM4; YMM5; YMM6; YMM7; YMM8;
+              YMM9; YMM10; YMM11; YMM12; YMM13; YMM14; YMM15;
+              ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8;
+              ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] THEN
   REWRITE_TAC[simple_immediate; base_displacement; QWORD] THEN
-  REWRITE_TAC[OPERAND64; OPERAND32; OPERAND16; OPERAND8;
-              register_size; regsize; GPR64; GPR32_Z; GPR32; GPR16; GPR8] THEN
+  REWRITE_TAC[OPERAND256; OPERAND128; OPERAND64; OPERAND32; OPERAND16; OPERAND8;
+              register_size; regsize; simdregister_size; simdregsize;
+              SIMD256; SIMD128; GPR64; GPR32_Z; GPR32; GPR16; GPR8] THEN
   REWRITE_TAC[COMPONENT_COMPOSE_ASSOC]);;
-
-let OPERAND_CLAUSES = prove
- (`OPERAND64 (%rax) s = RAX /\
-   OPERAND64 (%rcx) s = RCX /\
-   OPERAND64 (%rdx) s = RDX /\
-   OPERAND64 (%rbx) s = RBX /\
-   OPERAND64 (%rsp) s = RSP /\
-   OPERAND64 (%rbp) s = RBP /\
-   OPERAND64 (%rsi) s = RSI /\
-   OPERAND64 (%rdi) s = RDI /\
-   OPERAND64 (% r8) s =  R8 /\
-   OPERAND64 (% r9) s =  R9 /\
-   OPERAND64 (%r10) s = R10 /\
-   OPERAND64 (%r11) s = R11 /\
-   OPERAND64 (%r12) s = R12 /\
-   OPERAND64 (%r13) s = R13 /\
-   OPERAND64 (%r14) s = R14 /\
-   OPERAND64 (%r15) s = R15 /\
-   OPERAND64 (## n) s = rvalue(word_sx(word n:32 word)) /\
-   OPERAND64 (Imm64 w64) s = rvalue w64 /\
-   OPERAND64 (Imm32 w32) s = rvalue(word_sx w32) /\
-   OPERAND64 (Imm16 w16) s = rvalue(word_sx w16) /\
-   OPERAND64 (Imm8 w8) s = rvalue(word_sx w8) /\
-   OPERAND64 (QWORD(%%(rax,d))) s =
-     memory :> bytes64(word_add (read RAX s) (word d)) /\
-   OPERAND64 (QWORD(%%(rcx,d))) s =
-     memory :> bytes64(word_add (read RCX s) (word d)) /\
-   OPERAND64 (QWORD(%%(rdx,d))) s =
-     memory :> bytes64(word_add (read RDX s) (word d)) /\
-   OPERAND64 (QWORD(%%(rbx,d))) s =
-     memory :> bytes64(word_add (read RBX s) (word d)) /\
-   OPERAND64 (QWORD(%%(rsp,d))) s =
-     memory :> bytes64(word_add (read RSP s) (word d)) /\
-   OPERAND64 (QWORD(%%(rbp,d))) s =
-     memory :> bytes64(word_add (read RBP s) (word d)) /\
-   OPERAND64 (QWORD(%%(rsi,d))) s =
-     memory :> bytes64(word_add (read RSI s) (word d)) /\
-   OPERAND64 (QWORD(%%(rdi,d))) s =
-     memory :> bytes64(word_add (read RDI s) (word d)) /\
-   OPERAND64 (QWORD(%%( r8,d))) s =
-     memory :> bytes64(word_add (read  R8 s) (word d)) /\
-   OPERAND64 (QWORD(%%( r9,d))) s =
-     memory :> bytes64(word_add (read  R9 s) (word d)) /\
-   OPERAND64 (QWORD(%%(r10,d))) s =
-     memory :> bytes64(word_add (read R10 s) (word d)) /\
-   OPERAND64 (QWORD(%%(r11,d))) s =
-     memory :> bytes64(word_add (read R11 s) (word d)) /\
-   OPERAND64 (QWORD(%%(r12,d))) s =
-     memory :> bytes64(word_add (read R12 s) (word d)) /\
-   OPERAND64 (QWORD(%%(r13,d))) s =
-     memory :> bytes64(word_add (read R13 s) (word d)) /\
-   OPERAND64 (QWORD(%%(r14,d))) s =
-     memory :> bytes64(word_add (read R14 s) (word d)) /\
-   OPERAND64 (QWORD(%%(r15,d))) s =
-     memory :> bytes64(word_add (read R15 s) (word d))`,
-  REWRITE_TAC[OPERAND_CLAUSES_GEN] THEN
-  CONV_TAC(ONCE_DEPTH_CONV BSID_SEMANTICS_CONV) THEN
-  REWRITE_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Some forms with a comprehensible carry flag; currently 64-bit only.       *)
@@ -2313,6 +2383,8 @@ let X86_OPERATION_CLAUSES =
     x86_POP_ALT; x86_PUSH_ALT; x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XOR;
+    (*** AVX2 instructions ***)
+    x86_VPXOR;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
@@ -2351,7 +2423,8 @@ let X86_THM =
         let pc_base,ofs = dest_binary "+" pc_expr in
         dest_small_numeral ofs
       with Failure _ ->
-        failwith ("X86_THM: Cannot decompose PC expression: " ^ (string_of_term (concl pc_th))) in
+        failwith ("X86_THM: Cannot decompose PC expression: " ^
+                  string_of_term (concl pc_th)) in
     CONV_RULE
       (ONCE_DEPTH_CONV
         (REWR_CONV (GSYM ADD_ASSOC) THENC RAND_CONV NUM_REDUCE_CONV))
@@ -2401,10 +2474,12 @@ let X86_FORCE_CONDITIONAL_CONV =
                else REFL tm;;
 
 let ASSIGNS_PULL_ZEROTOP_THM = prove
- (`(if P then ASSIGNS (c :> zerotop_32) else c := y) =
-   (\s s'. ?d:int32. (c := if P then word_zx d else y) s s')`,
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[ETA_AX] THEN
-  REWRITE_TAC[ASSIGNS; ASSIGN_ZEROTOP_32; FUN_EQ_THM] THEN
+ (`(!P c y. (if P then ASSIGNS (c :> zerotop_32) else c := y) =
+            (\s s'. ?d:int32. (c := if P then word_zx d else y) s s')) /\
+   (!P c y. (if P then ASSIGNS (c :> zerotop_128) else c := y) =
+              (\s s'. ?d:int128. (c := if P then word_zx d else y) s s'))`,
+  REPEAT STRIP_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[ETA_AX] THEN
+  REWRITE_TAC[ASSIGNS; ASSIGN_ZEROTOP_32; ASSIGN_ZEROTOP_128; FUN_EQ_THM] THEN
   MESON_TAC[]);;
 
 (* returns true if t is `read RIP <state>`. *)
@@ -2434,11 +2509,12 @@ let X86_CONV (decode_ths:thm option array) ths tm =
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
    REWRITE_CONV[condition_semantics] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
-   REWRITE_CONV[OPERAND_CLAUSES_GEN] THENC
+   REWRITE_CONV[OPERAND_CLAUSES] THENC
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
    REWRITE_CONV X86_OPERATION_CLAUSES THENC
-   REWRITE_CONV[READ_RVALUE; ASSIGN_ZEROTOP_32;
-                READ_ZEROTOP_32; WRITE_ZEROTOP_32] THENC
+   REWRITE_CONV[READ_RVALUE;
+                ASSIGN_ZEROTOP_32; READ_ZEROTOP_32; WRITE_ZEROTOP_32;
+                ASSIGN_ZEROTOP_128; READ_ZEROTOP_128; WRITE_ZEROTOP_128] THENC
    DEPTH_CONV WORD_NUM_RED_CONV THENC
    REWRITE_CONV[SEQ; condition_semantics] THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV
@@ -2480,7 +2556,8 @@ let X86_STEP_TAC (mc_length_th,decode_ths) subths sname =
 
   (*** This part shows the code isn't self-modifying ***)
 
-  NONSELFMODIFYING_STATE_UPDATE_TAC (MATCH_MP bytes_loaded_update mc_length_th) THEN
+  NONSELFMODIFYING_STATE_UPDATE_TAC
+    (MATCH_MP bytes_loaded_update mc_length_th) THEN
 
   (*** Attempt also to show subroutines aren't modified, if applicable ***)
 
@@ -2542,9 +2619,10 @@ let DISCARD_OLDSTATE_TAC s =
       else if not(mem v us) then true
       else
         if !x86_print_log then
-          (Printf.printf
-            "Info: assumption `%s` is erased, but it might have contained useful information\n"
-            (string_of_term (concl thm)); true)
+          (Format.print_string
+           ("Info: assumption \`"^string_of_term (concl thm)^
+            "\` is erased, but it might have contained useful information\n");
+           true)
         else true);;
 
 (* ------------------------------------------------------------------------- *)
@@ -3134,3 +3212,20 @@ let WINDOWS_X86_WRAP_STACK_TAC =
       ALL_TAC] THEN
     X86_STEPS_TAC winexecth ((prolog_len+2)--(prolog_len+epilog_len+1)) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]) (asl,w);;
+
+(* ------------------------------------------------------------------------- *)
+(* Generalize MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI where the            *)
+(* standard ABI form is used as a Windows subroutine, basically by repeating *)
+(* the standard subroutine wrapper process on a modified version.            *)
+(* This is useful where the core subroutine does not use SIMD registers      *)
+(* since MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI doesn't imply that.       *)
+(* ------------------------------------------------------------------------- *)
+
+let X86_SIMD_SHARPEN_RULE =
+  let subfn = subst
+   [`MAYCHANGE [RIP] ,,
+     MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+     MAYCHANGE [CF; PF; AF; ZF; SF; OF]`,
+    `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`] in
+  fun stdthm tac ->
+    let stdthm' = subfn(concl stdthm) in prove(stdthm',tac);;
