@@ -1987,6 +1987,90 @@ void reference_tomont3329(int16_t r[256],int16_t a[256])
    }
 }
 
+// Keccak-f1600 reference.
+// https://keccak.team/files/Keccak-reference-3.0.pdf
+
+uint64_t keccak_RC[24] =
+ { UINT64_C(0x0000000000000001),
+   UINT64_C(0x0000000000008082),
+   UINT64_C(0x800000000000808a),
+   UINT64_C(0x8000000080008000),
+   UINT64_C(0x000000000000808b),
+   UINT64_C(0x0000000080000001),
+   UINT64_C(0x8000000080008081),
+   UINT64_C(0x8000000000008009),
+   UINT64_C(0x000000000000008a),
+   UINT64_C(0x0000000000000088),
+   UINT64_C(0x0000000080008009),
+   UINT64_C(0x000000008000000a),
+   UINT64_C(0x000000008000808b),
+   UINT64_C(0x800000000000008b),
+   UINT64_C(0x8000000000008089),
+   UINT64_C(0x8000000000008003),
+   UINT64_C(0x8000000000008002),
+   UINT64_C(0x8000000000000080),
+   UINT64_C(0x000000000000800a),
+   UINT64_C(0x800000008000000a),
+   UINT64_C(0x8000000080008081),
+   UINT64_C(0x8000000000008080),
+   UINT64_C(0x0000000080000001),
+   UINT64_C(0x8000000080008008)
+};
+
+uint64_t keccak_r[5][5] =
+{{ UINT64_C(0), UINT64_C(36), UINT64_C(3), UINT64_C(41), UINT64_C(18) },
+ { UINT64_C(1), UINT64_C(44), UINT64_C(10), UINT64_C(45), UINT64_C(2) },
+ { UINT64_C(62), UINT64_C(6), UINT64_C(43), UINT64_C(15), UINT64_C(61) },
+ { UINT64_C(28), UINT64_C(55), UINT64_C(25), UINT64_C(21), UINT64_C(56) },
+ { UINT64_C(27), UINT64_C(20), UINT64_C(39), UINT64_C(8), UINT64_C(14) }
+};
+
+uint64_t rol(uint64_t x,uint64_t k)
+{ k &= 0x3F;
+  if (k == 0) return x;
+  else return (x << k) | (x >> (64 - k));
+}
+
+#define add5(x,y) (((x) + (y)) % 5)
+#define sub5(x,y) (((x) + (5 - (y))) % 5)
+
+void reference_keccak_f1600(uint64_t r[25],uint64_t a[25])
+{ uint64_t i, x, y;
+
+  uint64_t A[5][5], B[5][5], C[5], D[5];
+
+  for (x = 0; x < 5; ++x)
+     for (y = 0; y < 5; ++y)
+        A[x][y] = a[5*y+x];
+
+  for (i = 0; i <= 23; ++i)
+   { for (x = 0; x < 5; ++x)
+        C[x] = A[x][0] ^ A[x][1] ^ A[x][2] ^ A[x][3] ^ A[x][4];
+     for (x = 0; x < 5; ++x)
+        D[x] = C[sub5(x,1)] ^ rol(C[add5(x,1)],1);
+     for (x = 0; x < 5; ++x)
+        for (y = 0; y < 5; ++y)
+           A[x][y] = A[x][y] ^ D[x];
+
+     // rho and pi steps
+     for (x = 0; x < 5; ++x)
+        for (y = 0; y < 5; ++y)
+           B[y][(2*x+3*y)%5] = rol(A[x][y],keccak_r[x][y]);
+
+    // chi step
+     for (x = 0; x < 5; ++x)
+        for (y = 0; y < 5; ++y)
+           A[x][y] = B[x][y] ^ (~B[add5(x,1)][y] & B[add5(x,2)][y]);
+
+    // iota step
+    A[0][0] = A[0][0] ^ keccak_RC[i];
+  }
+
+  for (x = 0; x < 5; ++x)
+     for (y = 0; y < 5; ++y)
+        r[5*y+x] = A[x][y];
+}
+
 // ****************************************************************************
 // Testing functions
 // ****************************************************************************
@@ -11143,6 +11227,42 @@ int test_mlkem_intt(void)
 #endif
 }
 
+int test_mlkem_keccak_f1600(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[25], b[25], c[25];
+  printf("Testing mlkem_keccak_f1600 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(25,a);
+     for (i = 0; i < 25; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     mlkem_keccak_f1600(c);
+     for (i = 0; i < 25; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak_f1600 element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64">\n",
+                  i,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_mlkem_ntt(void)
 {
 #ifdef __x86_64__
@@ -14086,6 +14206,7 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_sqr_8_16_neon",test_bignum_sqr_8_16_neon);
     functionaltest(all,"bignum_sqr_p521_neon", test_bignum_sqr_p521_neon);
     functionaltest(arm,"mlkem_intt",test_mlkem_intt);
+    functionaltest(arm,"mlkem_keccak_f1600",test_mlkem_keccak_f1600);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
   }
 

@@ -1003,6 +1003,10 @@ extern void edwards25519_scalarmuldouble_alt(uint64_t res[S2N_BIGNUM_STATIC 8],u
 // Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
 extern void mlkem_intt(int16_t a[S2N_BIGNUM_STATIC 256]);
 
+// Keccak-f1600 permutation for SHA3
+// Input a[25]; output a[25]
+extern void mlkem_keccak_f1600(uint64_t a[S2N_BIGNUM_STATIC 25]);
+
 // Forward number-theoretic transform from ML-KEM
 // Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
 extern void mlkem_ntt(int16_t a[S2N_BIGNUM_STATIC 256]);
