@@ -733,6 +733,15 @@ let ENSURES2_CONJ = prove(
 
   REWRITE_TAC[ensures2;eventually_n] THEN MESON_TAC[]);;
 
+let ENSURES2_CONJ_FRAME = prove
+ (`forall (step:S->S->bool) P Q R nstep1 nstep2 f.
+        (!s s2 s_final s_final2. R (s,s2) (s_final,s_final2)
+           ==> (f s s2 <=> f s_final s_final2)) /\
+        ensures2 step P Q R nstep1 nstep2
+        ==> ensures2 step (\(s,s'). P (s,s') /\ f s s') (\(s,s'). Q (s,s') /\ f s s')
+            R nstep1 nstep2`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[ensures2;eventually_n] THEN MESON_TAC[]);;
+
 let ENSURES2_CONJ2 = prove(
   `!(step:S->S->bool) P Q P' Q' C1 C2 C3 fn1 fn2 fn3.
       ensures2 step P Q
@@ -985,6 +994,15 @@ let ENSURES2_WHILE_PAUP_TAC =
       ALL_TAC
     ];;
 
+let ENSURES_N_INIT_TAC sname =
+  GEN_REWRITE_TAC I [ensures_n] THEN BETA_TAC THEN
+  W(fun (asl,w) ->
+        let ty = type_of(fst(dest_forall w)) in
+        let svar = mk_var(sname,ty) in
+        X_GEN_TAC svar THEN
+        DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
+
 (* A relational hoare triple version of ENSURES_INIT_TAC. *)
 let ENSURES2_INIT_TAC sname sname2 =
   GEN_REWRITE_TAC I [ensures2] THEN
@@ -995,7 +1013,8 @@ let ENSURES2_INIT_TAC sname sname2 =
         let svar2 = mk_var(sname2,ty) in
         MAP_EVERY X_GEN_TAC [svar;svar2] THEN
         DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
+        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER) THEN
+        ASSUME_TAC(ISPEC svar2 MAYCHANGE_STARTER));;
 
 let APPLY_IF (checker:term->bool) (t:tactic) =
   W (fun (asl,g) ->
@@ -1005,7 +1024,7 @@ let APPLY_IF (checker:term->bool) (t:tactic) =
    result as an antecendent. If any or both of the two theorems have assumption
    like `(assumption) ==> ensures2`, this tactic tries to prove the
    assumption(s). *)
-let ENSURES2_TRANS_TAC ensures2th ensures2th2 =
+let ENSURES2_CONJ2_TRANS_TAC ensures2th ensures2th2 =
   (* instantiate first ensures2 theorem *)
   MP_TAC (SPEC_ALL (SPECL [`pc:num`;`pc3:num`] ensures2th)) THEN
   APPLY_IF is_imp (ANTS_TAC THENL [
