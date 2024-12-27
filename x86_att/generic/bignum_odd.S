@@ -31,14 +31,14 @@ S2N_BN_SYMBOL(bignum_odd):
 
         xorl    %eax, %eax
         testq   %rdi, %rdi
-        jz      bignum_odd_end
+        jz      end
 
 // Otherwise return lowest bit of the input
 
         movl    $1, %eax
         andq    (%rsi), %rax
 
-bignum_odd_end:
+end:
 
 #if WINDOWS_ABI
         popq   %rsi

@@ -85,19 +85,19 @@ S2N_BN_SYMBOL(bignum_modifier):
 // If k = 0 the whole operation is trivial
 
         testq   k, k
-        jz      bignum_modifier_end
+        jz      end
 
 // Copy the input m into the temporary buffer t. The temporary register
 // c matters since we want it to hold the highest digit, ready for the
 // normalization phase.
 
         xorq    i, i
-bignum_modifier_copyinloop:
+copyinloop:
         movq    (m,i,8), c
         movq    c, (t,i,8)
         incq    i
         cmpq    k, i
-        jc      bignum_modifier_copyinloop
+        jc      copyinloop
 
 // Do a rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
@@ -107,22 +107,22 @@ bignum_modifier_copyinloop:
 
         movq    k, i
         decq    i
-        jz      bignum_modifier_normalized
-bignum_modifier_normloop:
+        jz      normalized
+normloop:
         xorq    j, j
         movq    k, h
         negq    c
         movl    $0, ashort
-bignum_modifier_shufloop:
+shufloop:
         movq    a, c
         movq    (t,j,8), a
         cmovcq  a, c
         movq    c, (t,j,8)
         incq    j
         decq    h
-        jnz     bignum_modifier_shufloop
+        jnz     shufloop
         decq    i
-        jnz     bignum_modifier_normloop
+        jnz     normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
@@ -130,14 +130,14 @@ bignum_modifier_shufloop:
 // Note that we don't care about the result of bsr for zero inputs so
 // the simple xor-ing with 63 is safe.
 
-bignum_modifier_normalized:
+normalized:
 
         bsrq    c, c
         xorq    $63, c
 
         xorq    b, b
         xorq    i, i
-bignum_modifier_bitloop:
+bitloop:
         movq    (t,i,8), a
         movq    a, j
         shldq   %cl, b, a
@@ -145,7 +145,7 @@ bignum_modifier_bitloop:
         movq    j, b
         incq    i
         cmpq    k, i
-        jc      bignum_modifier_bitloop
+        jc      bitloop
 
 // Let h be the high word of n, which in all the in-scope cases is >= 2^63.
 // Now successively form q = 2^i div h and r = 2^i mod h as i goes from
@@ -159,7 +159,7 @@ bignum_modifier_bitloop:
         movq    h, r
         negq    r
         movl    $62, ishort
-bignum_modifier_estloop:
+estloop:
 
         addq    q, q
         movq    h, a
@@ -172,7 +172,7 @@ bignum_modifier_estloop:
         andq    h, a
         subq    a, r
         decq    i
-        jnz     bignum_modifier_estloop
+        jnz     estloop
 
 // Strictly speaking the above loop doesn't quite give the true remainder
 // and quotient in the special case r = h = 2^63, so fix it up. We get
@@ -220,7 +220,7 @@ bignum_modifier_estloop:
 
         xorq    c, c
         xorq    i, i
-bignum_modifier_mulloop:
+mulloop:
         movq    (t,i,8), a
         mulq    q
         addq    c, a
@@ -229,7 +229,7 @@ bignum_modifier_mulloop:
         movq    d, c
         incq    i
         cmpq    k, i
-        jc      bignum_modifier_mulloop
+        jc      mulloop
 
 // Now c is the high word of the product, so subtract 2^62
 // and then turn it into a bitmask in q = h
@@ -243,7 +243,7 @@ bignum_modifier_mulloop:
 
         xorq    c, c
         xorq    i, i
-bignum_modifier_remloop:
+remloop:
         movq    (t,i,8), a
         andq    q, a
         negq    c
@@ -252,7 +252,7 @@ bignum_modifier_remloop:
         movq    a, (z,i,8)
         incq    i
         cmpq    k, i
-        jc      bignum_modifier_remloop
+        jc      remloop
 
 // Now still need to do a couple of modular doublings to get us all the
 // way up to 2^{p+64} == r from initial 2^{p+62} == r (mod n).
@@ -260,7 +260,7 @@ bignum_modifier_remloop:
         xorq    c, c
         xorq    j, j
         xorq    b, b
-bignum_modifier_dubloop1:
+dubloop1:
         movq    (z,j,8), a
         shrdq   $63, a, c
         negq    b
@@ -270,12 +270,12 @@ bignum_modifier_dubloop1:
         movq    a, c
         incq    j
         cmpq    k, j
-        jc      bignum_modifier_dubloop1
+        jc      dubloop1
         shrq    $63, c
         addq    b, c
         xorq    j, j
         xorq    b, b
-bignum_modifier_corrloop1:
+corrloop1:
         movq    (t,j,8), a
         andq    c, a
         negq    b
@@ -284,7 +284,7 @@ bignum_modifier_corrloop1:
         movq    a, (z,j,8)
         incq    j
         cmpq    k, j
-        jc      bignum_modifier_corrloop1
+        jc      corrloop1
 
 // This is not exactly the same: we also copy output to t giving the
 // initialization t_1 = r == 2^{p+64} mod n for the main loop next.
@@ -292,7 +292,7 @@ bignum_modifier_corrloop1:
         xorq    c, c
         xorq    j, j
         xorq    b, b
-bignum_modifier_dubloop2:
+dubloop2:
         movq    (z,j,8), a
         shrdq   $63, a, c
         negq    b
@@ -302,12 +302,12 @@ bignum_modifier_dubloop2:
         movq    a, c
         incq    j
         cmpq    k, j
-        jc      bignum_modifier_dubloop2
+        jc      dubloop2
         shrq    $63, c
         addq    b, c
         xorq    j, j
         xorq    b, b
-bignum_modifier_corrloop2:
+corrloop2:
         movq    (t,j,8), a
         andq    c, a
         negq    b
@@ -317,7 +317,7 @@ bignum_modifier_corrloop2:
         movq    a, (t,j,8)
         incq    j
         cmpq    k, j
-        jc      bignum_modifier_corrloop2
+        jc      corrloop2
 
 // We then successively generate (k+1)-digit values satisfying
 // t_i == 2^{p+64*i} mod n, each of which is stored in h::t. Finish
@@ -329,7 +329,7 @@ bignum_modifier_corrloop2:
 // we have t_{i+1} == 2^64 * t_i
 //         = (2^{p+64} * h) + (2^64 * l)
 //        == r * h + l<<64
-// Do this k more times so we bignum_modifier_end up == 2^{128*k+64}, one more than we want
+// Do this k more times so we end up == 2^{128*k+64}, one more than we want
 //
 // Writing B = 2^{64k}, the possible correction of adding r, which for
 // a (k+1)-digit result is equivalent to subtracting q = 2^{64*(k+1)} - r
@@ -341,12 +341,12 @@ bignum_modifier_corrloop2:
 // "previous" digit (initially 0) to offset things by 1.
 
         movq    k, i
-bignum_modifier_modloop:
+modloop:
         xorq    b, b
         movq    k, n
         xorq    j, j
         xorq    c, c
-bignum_modifier_cmaloop:
+cmaloop:
         adcq    b, c
         sbbq    l, l
         movq    (z,j,8), a
@@ -358,7 +358,7 @@ bignum_modifier_cmaloop:
         movq    d, c
         incq    j
         decq    n
-        jnz     bignum_modifier_cmaloop
+        jnz     cmaloop
         adcq    c, b
         movq    b, h
 
@@ -366,7 +366,7 @@ bignum_modifier_cmaloop:
 
         xorq    j, j
         xorq    c, c
-bignum_modifier_oaloop:
+oaloop:
         movq    (t,j,8), a
         movq    (z,j,8), b
         andq    l, b
@@ -376,11 +376,11 @@ bignum_modifier_oaloop:
         movq    a, (t,j,8)
         incq    j
         cmpq    k, j
-        jc      bignum_modifier_oaloop
+        jc      oaloop
         subq    c, h
 
         decq    i
-        jnz     bignum_modifier_modloop
+        jnz     modloop
 
 // Compute the negated modular inverse w (same register as i, not used again).
 
@@ -424,8 +424,8 @@ bignum_modifier_oaloop:
         movl    $1, jshort
         movq    k, n
         decq    n
-        jz      bignum_modifier_amontend
-bignum_modifier_amontloop:
+        jz      amontend
+amontloop:
         adcq    (t,j,8), c
         sbbq    l, l
         movq    (m,j,8), a
@@ -436,15 +436,15 @@ bignum_modifier_amontloop:
         movq    d, c
         incq    j
         decq    n
-        jnz     bignum_modifier_amontloop
-bignum_modifier_amontend:
+        jnz     amontloop
+amontend:
         adcq    c, h
         sbbq    l, l
         movq    h, -8(t,k,8)
 
         xorq    j, j
         xorq    c, c
-bignum_modifier_aosloop:
+aosloop:
         movq    (t,j,8), a
         movq    (m,j,8), b
         andq    l, b
@@ -454,7 +454,7 @@ bignum_modifier_aosloop:
         movq    a, (z,j,8)
         incq    j
         cmpq    k, j
-        jc      bignum_modifier_aosloop
+        jc      aosloop
 
 // So far, the code (basically the same as bignum_amontifier) has produced
 // a k-digit value z == 2^{128k} (mod m), not necessarily fully reduced mod m.
@@ -464,7 +464,7 @@ bignum_modifier_aosloop:
 
         movq    k, h
 
-bignum_modifier_montouterloop:
+montouterloop:
         movq    (z), c
         movq    w, b
         imulq   c, b
@@ -475,8 +475,8 @@ bignum_modifier_montouterloop:
         movl    $1, jshort
         movq    k, n
         decq    n
-        jz      bignum_modifier_montend
-bignum_modifier_montloop:
+        jz      montend
+montloop:
         adcq    (z,j,8), c
         sbbq    l, l
         movq    (m,j,8), a
@@ -487,25 +487,25 @@ bignum_modifier_montloop:
         movq    d, c
         incq    j
         decq    n
-        jnz     bignum_modifier_montloop
-bignum_modifier_montend:
+        jnz     montloop
+montend:
         adcq    $0, c
         movq    c, -8(z,k,8)
 
         decq    h
-        jnz     bignum_modifier_montouterloop
+        jnz     montouterloop
 
 // Now do a comparison of z with m to set a final correction mask
 // indicating that z >= m and so we need to subtract m.
 
         xorq    j, j
         movq    k, n
-bignum_modifier_cmploop:
+cmploop:
         movq    (z,j,8), a
         sbbq    (m,j,8), a
         incq    j
         decq    n
-        jnz     bignum_modifier_cmploop
+        jnz     cmploop
         sbbq    d, d
         notq    d
 
@@ -513,7 +513,7 @@ bignum_modifier_cmploop:
 
         xorq    l, l
         xorq    j, j
-bignum_modifier_corrloop:
+corrloop:
         movq    (m,j,8), a
         andq    d, a
         negq    l
@@ -521,9 +521,9 @@ bignum_modifier_corrloop:
         sbbq    l, l
         incq    j
         cmpq    k, j
-        jc      bignum_modifier_corrloop
+        jc      corrloop
 
-bignum_modifier_end:
+end:
         popq    %r13
         popq    %r12
         popq    %rbx

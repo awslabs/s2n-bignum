@@ -1089,15 +1089,15 @@ S2N_BN_SYMBOL(bignum_inv_p521):
         movq    %rax, V+56(%rsp)
         movq    %rax, V+64(%rsp)
 
-// Start of main bignum_inv_p521_loop. We jump into the middle so that the divstep
+// Start of main loop. We jump into the middle so that the divstep
 // portion is common to the special 21st iteration after a uniform
 // first 20.
 
         movq    $21, i
         movq    $1, d
-        jmp     bignum_inv_p521_midloop
+        jmp     midloop
 
-bignum_inv_p521_loop:
+loop:
 
 // Separate out the matrix into sign-magnitude pairs
 
@@ -1775,7 +1775,7 @@ bignum_inv_p521_loop:
         adcq    %rax, %rbp
         movq    %rbp, V+8*N(%rsp)
 
-bignum_inv_p521_midloop:
+midloop:
 
         divstep59(d,ff,gg)
         movq    %rsi, d
@@ -1783,11 +1783,11 @@ bignum_inv_p521_midloop:
 // Next iteration
 
         decq    i
-        jnz     bignum_inv_p521_loop
+        jnz     loop
 
 // The 21st and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the
-// lowest word of f. So it's done differently from the main bignum_inv_p521_loop.
+// lowest word of f. So it's done differently from the main loop.
 // Find the sign of the new f. For this we just need one digit
 // since we know (for in-scope cases) that f is either +1 or -1.
 // We don't explicitly shift right by 59 either, but looking at

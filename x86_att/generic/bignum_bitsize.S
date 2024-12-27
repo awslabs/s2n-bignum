@@ -48,21 +48,21 @@ S2N_BN_SYMBOL(bignum_bitsize):
 // If the bignum is zero-length, just return 0
 
         testq   k, k
-        jz      bignum_bitsize_end
+        jz      end
 
 // Use w = a[i-1] to store nonzero words in a bottom-up sweep
 // Set the initial default to be as if we had a 11...11 word directly below
 
         movq    $-1, w
         xorq    j, j
-bignum_bitsize_loop:
+loop:
         movq    (x,j,8), a
         incq    j
         testq   a, a
         cmovnzq j, i
         cmovnzq a, w
         cmpq    k, j
-        jnz     bignum_bitsize_loop
+        jnz     loop
 
 // Now w = a[i-1] is the highest nonzero word, or in the zero case the
 // default of the "extra" 11...11 = a[0-1]. We now want 64* i - clz(w) =
@@ -75,7 +75,7 @@ bignum_bitsize_loop:
         bsrq    w, w
         addq    w, %rax
 
-bignum_bitsize_end:
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

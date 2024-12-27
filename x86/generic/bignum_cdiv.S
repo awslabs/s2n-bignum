@@ -85,7 +85,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xor     l, l
         test    n, n
-        jz      bignum_cdiv_nomodulus
+        jz      nomodulus
 
         bsr     e, m
         xor     e, 63
@@ -151,7 +151,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xor     hshort, hshort
         mov     i, n
-bignum_cdiv_modloop:
+modloop:
         mov     a, h
         mul     r
         add     a, [x+8*i-8]
@@ -162,7 +162,7 @@ bignum_cdiv_modloop:
         add     l, a
         adc     h, 0
         dec     i
-        jnz     bignum_cdiv_modloop
+        jnz     modloop
 
         mov     i, h
         mov     a, w
@@ -200,13 +200,13 @@ bignum_cdiv_modloop:
 
         mov     r, l
         sub     l, m
-bignum_cdiv_nomodulus:
+nomodulus:
         cmovnc  r, l
 
 // If k = 0 then there's no more to be done
 
         test    k, k
-        jz      bignum_cdiv_end
+        jz      end
 
 // Let e be the number of trailing zeros in m (we can ignore m = 0)
 
@@ -270,25 +270,25 @@ bignum_cdiv_nomodulus:
 
 // Unless n = 0, preload the zeroth digit and bump up the x pointer by
 // 8 and n down by 1, to ease indexing and comparison using the same
-// variable i in the main bignum_cdiv_loop. When n = 0 we leave it alone, as the
+// variable i in the main loop. When n = 0 we leave it alone, as the
 // comparison i < n will always fail and the x pointer is unused.
 
         xor     d, d
         test    n, n
-        jz      bignum_cdiv_loop
+        jz      loop
         mov     d, [x]
         add     x, 8
         dec     n
 
-bignum_cdiv_loop:
+loop:
 
 // Load the next digit up to get [l,d] then shift right e places
 
         xor     l, l
         cmp     i, n
-        jnc     bignum_cdiv_noload
+        jnc     noload
         mov     l, [x+8*i]
-bignum_cdiv_noload:
+noload:
         shrd    d, l, cl
         add     d, c
         sbb     c, c
@@ -312,11 +312,11 @@ bignum_cdiv_noload:
 
         inc     i
         cmp     i, k
-        jc      bignum_cdiv_loop
+        jc      loop
 
 // Return the modulus
 
-bignum_cdiv_end:
+end:
         mov     rax, r
 
         pop     r15

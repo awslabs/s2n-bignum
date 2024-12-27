@@ -46,18 +46,18 @@ S2N_BN_SYMBOL(bignum_modoptneg):
 // Do nothing if k = 0
 
         test    k, k
-        jz      bignum_modoptneg_end
+        jz      end
 
 // Make an additional check for zero input, and force p to zero in this case.
 // This can be skipped if the input is known not to be zero a priori.
 
         xor     i, i
         xor     a, a
-bignum_modoptneg_cmploop:
+cmploop:
         or      a, [x+8*i]
         inc     i
         cmp     i, k
-        jc      bignum_modoptneg_cmploop
+        jc      cmploop
 
         cmp     a, 0
         cmovz   p, a
@@ -71,7 +71,7 @@ bignum_modoptneg_cmploop:
 
         xor     i, i
         mov     c, p
-bignum_modoptneg_mainloop:
+mainloop:
         mov     a, [m+8*i]
         and     a, p
         mov     b, [x+8*i]
@@ -82,9 +82,9 @@ bignum_modoptneg_mainloop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_modoptneg_mainloop
+        jc      mainloop
 
-bignum_modoptneg_end:
+end:
 #if WINDOWS_ABI
         pop    rsi
         pop    rdi

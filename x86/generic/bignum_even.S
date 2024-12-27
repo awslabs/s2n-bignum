@@ -31,14 +31,14 @@ S2N_BN_SYMBOL(bignum_even):
 
         mov     eax, 1
         test    rdi, rdi
-        jz      bignum_even_end
+        jz      end
 
 // Otherwise XOR that initial 1 with the lowest bit of the input
 
         xor     rax, [rsi]
         and     rax, 1
 
-bignum_even_end:
+end:
 
 #if WINDOWS_ABI
         pop    rsi

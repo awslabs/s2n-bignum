@@ -66,42 +66,42 @@ S2N_BN_SYMBOL(bignum_shr_small):
 // First, if p > n then pad output on the left with p-n zeros
 
         cmp     n, p
-        jnc     bignum_shr_small_nopad
-bignum_shr_small_padloop:
+        jnc     nopad
+padloop:
         dec     p
         mov     [z+8*p],b
         cmp     n, p
-        jc      bignum_shr_small_padloop
-bignum_shr_small_nopad:
+        jc      padloop
+nopad:
 
 // We now know that p <= n. If in fact p < n let carry word = x[p] instead of 0
 
-        jz      bignum_shr_small_shiftstart
+        jz      shiftstart
         mov     b,[x+8*p]
-bignum_shr_small_shiftstart:
+shiftstart:
         test    p, p
-        jz      bignum_shr_small_trivial
+        jz      trivial
 
-// Now the main bignum_shr_small_loop
+// Now the main loop
 
-bignum_shr_small_loop:
+loop:
         mov     a, [x+8*p-8]
         mov     t, a
         shrd    a, b, cl
         mov     [z+8*p-8],a
         mov     b, t
         dec     p
-        jnz     bignum_shr_small_loop
+        jnz     loop
 
 // Mask the carry word and return with that as RAX = b
 
-bignum_shr_small_trivial:
+trivial:
         mov     ashort, 1
         shl     a, cl
         dec     a
         and     b, a
 
-bignum_shr_small_end:
+end:
 #if WINDOWS_ABI
         pop    rsi
         pop    rdi

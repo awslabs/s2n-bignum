@@ -32,12 +32,12 @@ S2N_BN_SYMBOL(bignum_muladd10):
 
 // If k = 0 just return the input d as the carry (out of zero digits)
 
-        cbz     k, bignum_muladd10_end
+        cbz     k, end
 
-// Simple bignum_muladd10_loop
+// Simple loop
 
         mov     i, xzr
-bignum_muladd10_loop:
+loop:
         ldr     a, [z, i, lsl #3]
         lsr     h, a, #61
         add     l, a, a
@@ -49,11 +49,11 @@ bignum_muladd10_loop:
         adc     d, h, xzr
         add     i, i, 1
         cmp     i, k
-        bcc     bignum_muladd10_loop
+        bcc     loop
 
 // Return the final carry
 
-bignum_muladd10_end:
+end:
         mov     x0, d
         ret
 

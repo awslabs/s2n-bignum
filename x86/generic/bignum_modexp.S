@@ -65,7 +65,7 @@ bignum_modexp_standard:
 // If size is zero (which falsifies the oddness condition) do nothing
 
         test    rdi, rdi
-        jz      bignum_modexp_end
+        jz      end
 
 // Set up local variables based on input parameters
 
@@ -86,28 +86,28 @@ bignum_modexp_standard:
         mov     rsi, z
         mov     rdx, m
         mov     rcx, y
-        call    bignum_modexp_local_amontifier
+        call    local_amontifier
 
         mov     rdi, k
         mov     rsi, x
         mov     rdx, z
         mov     rcx, a
         mov     r8, m
-        call    bignum_modexp_local_amontmul
+        call    local_amontmul
 
         mov     rdi, k
         mov     rsi, z
         mov     rdx, z
         mov     rcx, m
-        call    bignum_modexp_local_demont
+        call    local_demont
 
-// Main bignum_modexp_loop with z == 2^64k * a^(p >> 2^i) (mod m)
+// Main loop with z == 2^64k * a^(p >> 2^i) (mod m)
 
         mov     rax, k
         shl     rax, 6
         mov     i, rax
 
-bignum_modexp_loop:
+loop:
         sub     rax, 1
         mov     i, rax
 
@@ -116,14 +116,14 @@ bignum_modexp_loop:
         mov     rdx, z
         mov     rcx, z
         mov     r8, m
-        call    bignum_modexp_local_amontmul
+        call    local_amontmul
 
         mov     rdi, k
         mov     rsi, z
         mov     rdx, x
         mov     rcx, y
         mov     r8, m
-        call    bignum_modexp_local_amontmul
+        call    local_amontmul
 
         mov     rdx, i
         mov     rcx, rdx
@@ -137,11 +137,11 @@ bignum_modexp_loop:
         mov     rdx, z
         mov     rcx, z
         mov     r8, y
-        call    bignum_modexp_local_mux
+        call    local_mux
 
         mov     rax, i
         test    rax, rax
-        jnz     bignum_modexp_loop
+        jnz     loop
 
 // Convert back from Montgomery representation and copy the result
 // (via a degenerate case of multiplexing) into the output buffer
@@ -150,24 +150,24 @@ bignum_modexp_loop:
         mov     rsi, z
         mov     rdx, z
         mov     rcx, m
-        call    bignum_modexp_local_demont
+        call    local_demont
 
         xor     edi, edi
         mov     rsi, k
         mov     rdx, res
         mov     rcx, z
         mov     r8, z
-        call    bignum_modexp_local_mux
+        call    local_mux
 
 // Restore the stack pointer and return
 
-bignum_modexp_end:
+end:
         add     rsp, VARSIZE
         ret
 
 // Local copy of bignum_amontifier
 
-bignum_modexp_local_amontifier:
+local_amontifier:
          push   rbp
          push   rbx
          push   r12
@@ -175,38 +175,38 @@ bignum_modexp_local_amontifier:
          mov    r12, rdx
          mov    r13, rcx
          test   rdi, rdi
-         je     bignum_modexp_amontifier_end
+         je     amontifier_end
          xor    rbx, rbx
-bignum_modexp_copyinloop:
+copyinloop:
          mov    rcx, [r12+8*rbx]
          mov    [r13+8*rbx], rcx
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_copyinloop
+         jb     copyinloop
          mov    rbx, rdi
          dec    rbx
-         je     bignum_modexp_normalized
-bignum_modexp_normloop:
+         je     normalized
+normloop:
          xor    rbp, rbp
          mov    r11, rdi
          neg    rcx
          mov    eax, 0x0
-bignum_modexp_shufloop:
+shufloop:
          mov    rcx, rax
          mov    rax, [r13+8*rbp]
          cmovb  rcx, rax
          mov    [r13+8*rbp], rcx
          inc    rbp
          dec    r11
-         jne    bignum_modexp_shufloop
+         jne    shufloop
          dec    rbx
-         jne    bignum_modexp_normloop
-bignum_modexp_normalized:
+         jne    normloop
+normalized:
          bsr    rcx, rcx
          xor    rcx, 0x3f
          xor    r9, r9
          xor    rbx, rbx
-bignum_modexp_bitloop:
+bitloop:
          mov    rax, [r13+8*rbx]
          mov    rbp, rax
          shld   rax, r9, cl
@@ -214,13 +214,13 @@ bignum_modexp_bitloop:
          mov    r9, rbp
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_bitloop
+         jb     bitloop
          mov    r11, [r13+8*rdi-0x8]
          mov    r8d, 0x1
          mov    r9, r11
          neg    r9
          mov    ebx, 0x3e
-bignum_modexp_estloop:
+estloop:
          add    r8, r8
          mov    rax, r11
          sub    rax, r9
@@ -232,13 +232,13 @@ bignum_modexp_estloop:
          and    rax, r11
          sub    r9, rax
          dec    rbx
-         jne    bignum_modexp_estloop
+         jne    estloop
          inc    r9
          cmp    r11, r9
          adc    r8, 0x0
          xor    rcx, rcx
          xor    rbx, rbx
-bignum_modexp_mulloop:
+mulloop:
          mov    rax, [r13+8*rbx]
          mul    r8
          add    rax, rcx
@@ -247,14 +247,14 @@ bignum_modexp_mulloop:
          mov    rcx, rdx
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_mulloop
+         jb     mulloop
          movabs rax, 0x4000000000000000
          sub    rcx, rax
          sbb    r8, r8
          not    r8
          xor    rcx, rcx
          xor    rbx, rbx
-bignum_modexp_remloop:
+remloop:
          mov    rax, [r13+8*rbx]
          and    rax, r8
          neg    rcx
@@ -263,11 +263,11 @@ bignum_modexp_remloop:
          mov    [rsi+8*rbx], rax
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_remloop
+         jb     remloop
          xor    rcx, rcx
          xor    rbp, rbp
          xor    r9, r9
-bignum_modexp_dubloop1:
+dubloop1:
          mov    rax, [rsi+8*rbp]
          shrd   rcx, rax, 0x3f
          neg    r9
@@ -277,12 +277,12 @@ bignum_modexp_dubloop1:
          mov    rcx, rax
          inc    rbp
          cmp    rbp, rdi
-         jb     bignum_modexp_dubloop1
+         jb     dubloop1
          shr    rcx, 0x3f
          add    rcx, r9
          xor    rbp, rbp
          xor    r9, r9
-bignum_modexp_corrloop1:
+corrloop1:
          mov    rax, [r13+8*rbp]
          and    rax, rcx
          neg    r9
@@ -291,11 +291,11 @@ bignum_modexp_corrloop1:
          mov    [rsi+8*rbp], rax
          inc    rbp
          cmp    rbp, rdi
-         jb     bignum_modexp_corrloop1
+         jb     corrloop1
          xor    rcx, rcx
          xor    rbp, rbp
          xor    r9, r9
-bignum_modexp_dubloop2:
+dubloop2:
          mov    rax, [rsi+8*rbp]
          shrd   rcx, rax, 0x3f
          neg    r9
@@ -305,12 +305,12 @@ bignum_modexp_dubloop2:
          mov    rcx, rax
          inc    rbp
          cmp    rbp, rdi
-         jb     bignum_modexp_dubloop2
+         jb     dubloop2
          shr    rcx, 0x3f
          add    rcx, r9
          xor    rbp, rbp
          xor    r9, r9
-bignum_modexp_corrloop2:
+corrloop2:
          mov    rax, [r13+8*rbp]
          and    rax, rcx
          neg    r9
@@ -320,15 +320,15 @@ bignum_modexp_corrloop2:
          mov    [r13+8*rbp], rax
          inc    rbp
          cmp    rbp, rdi
-         jb     bignum_modexp_corrloop2
+         jb     corrloop2
          xor    r11, r11
          mov    rbx, rdi
-bignum_modexp_modloop:
+modloop:
          xor    r9, r9
          mov    r8, rdi
          xor    rbp, rbp
          xor    rcx, rcx
-bignum_modexp_cmaloop:
+cmaloop:
          adc    rcx, r9
          sbb    r10, r10
          mov    rax, [rsi+8*rbp]
@@ -340,13 +340,13 @@ bignum_modexp_cmaloop:
          mov    rcx, rdx
          inc    rbp
          dec    r8
-         jne    bignum_modexp_cmaloop
+         jne    cmaloop
          adc    r9, rcx
          mov    r11, r9
          sbb    r10, r10
          xor    rbp, rbp
          xor    rcx, rcx
-bignum_modexp_oaloop:
+oaloop:
          mov    rax, [r13+8*rbp]
          mov    r9, [rsi+8*rbp]
          and    r9, r10
@@ -356,10 +356,10 @@ bignum_modexp_oaloop:
          mov    [r13+8*rbp], rax
          inc    rbp
          cmp    rbp, rdi
-         jb     bignum_modexp_oaloop
+         jb     oaloop
          sub    r11, rcx
          dec    rbx
-         jne    bignum_modexp_modloop
+         jne    modloop
          mov    rax, [r12]
          mov    rcx, rax
          mov    r9, rax
@@ -393,8 +393,8 @@ bignum_modexp_oaloop:
          mov    ebp, 0x1
          mov    r8, rdi
          dec    r8
-         je     bignum_modexp_montifend
-bignum_modexp_montifloop:
+         je     montifend
+montifloop:
          adc    rcx, [r13+8*rbp]
          sbb    r10, r10
          mov    rax, [r12+8*rbp]
@@ -405,14 +405,14 @@ bignum_modexp_montifloop:
          mov    rcx, rdx
          inc    rbp
          dec    r8
-         jne    bignum_modexp_montifloop
-bignum_modexp_montifend:
+         jne    montifloop
+montifend:
          adc    r11, rcx
          sbb    r10, r10
          mov    [r13+8*rdi-0x8], r11
          xor    rbp, rbp
          xor    rcx, rcx
-bignum_modexp_osloop:
+osloop:
          mov    rax, [r13+8*rbp]
          mov    r9, [r12+8*rbp]
          and    r9, r10
@@ -422,8 +422,8 @@ bignum_modexp_osloop:
          mov    [rsi+8*rbp], rax
          inc    rbp
          cmp    rbp, rdi
-         jb     bignum_modexp_osloop
-bignum_modexp_amontifier_end:
+         jb     osloop
+amontifier_end:
          pop    r13
          pop    r12
          pop    rbx
@@ -432,7 +432,7 @@ bignum_modexp_amontifier_end:
 
 // Local copy of bignum_amontmul
 
-bignum_modexp_local_amontmul:
+local_amontmul:
          push   rbx
          push   rbp
          push   r12
@@ -441,7 +441,7 @@ bignum_modexp_local_amontmul:
          push   r15
          sub    rsp, 0x8
          test   rdi, rdi
-         je     bignum_modexp_amont_end
+         je     amont_end
          mov    r9, rdx
          mov    rax, [r8]
          mov    rdx, rax
@@ -470,19 +470,19 @@ bignum_modexp_local_amontmul:
          mov    [rsp], rbx
          xor    r13, r13
          xor    rbx, rbx
-bignum_modexp_zoop:
+zoop:
          mov    [rsi+8*rbx], r13
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_zoop
+         jb     zoop
          xor    r14, r14
-bignum_modexp_outeramontloop:
+outeramontloop:
          mov    rbp, [r9+8*r13]
          xor    rbx, rbx
          xor    r10, r10
          xor    r15, r15
          mov    r12, rdi
-bignum_modexp_maddloop:
+maddloop:
          adc    r10, [rsi+8*rbx]
          sbb    r11, r11
          mov    rax, [rcx+8*rbx]
@@ -493,7 +493,7 @@ bignum_modexp_maddloop:
          mov    r10, rdx
          inc    rbx
          dec    r12
-         jne    bignum_modexp_maddloop
+         jne    maddloop
          adc    r14, r10
          adc    r15, r15
          mov    r11, [rsi]
@@ -506,8 +506,8 @@ bignum_modexp_maddloop:
          mov    ebx, 0x1
          mov    r12, rdi
          dec    r12
-         je     bignum_modexp_montend
-bignum_modexp_montloop:
+         je     montend
+montloop:
          adc    r10, [rsi+8*rbx]
          sbb    r11, r11
          mov    rax, [r8+8*rbx]
@@ -518,20 +518,20 @@ bignum_modexp_montloop:
          mov    r10, rdx
          inc    rbx
          dec    r12
-         jne    bignum_modexp_montloop
-bignum_modexp_montend:
+         jne    montloop
+montend:
          adc    r10, r14
          adc    r15, 0x0
          mov    r14, r15
          mov    [rsi+8*rbx-0x8], r10
          inc    r13
          cmp    r13, rdi
-         jb     bignum_modexp_outeramontloop
+         jb     outeramontloop
          xor    rbp, rbp
          sub    rbp, r14
          xor    r11, r11
          xor    rbx, rbx
-bignum_modexp_acorrloop:
+acorrloop:
          mov    rax, [r8+8*rbx]
          and    rax, rbp
          neg    r11
@@ -539,8 +539,8 @@ bignum_modexp_acorrloop:
          sbb    r11, r11
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_acorrloop
-bignum_modexp_amont_end:
+         jb     acorrloop
+amont_end:
          add    rsp, 0x8
          pop    r15
          pop    r14
@@ -552,12 +552,12 @@ bignum_modexp_amont_end:
 
 // Local copy of bignum_demont
 
-bignum_modexp_local_demont:
+local_demont:
          push   rbx
          push   rbp
          push   r12
          test   rdi, rdi
-         je     bignum_modexp_demont_end
+         je     demont_end
          mov    rax, [rcx]
          mov    rbx, rax
          mov    r8, rax
@@ -583,14 +583,14 @@ bignum_modexp_local_demont:
          add    rax, rbx
          imul   r8, rax
          xor    rbx, rbx
-bignum_modexp_iloop:
+iloop:
          mov    rax, [rdx+8*rbx]
          mov    [rsi+8*rbx], rax
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_iloop
+         jb     iloop
          xor    r9, r9
-bignum_modexp_outerdemontloop:
+outerdemontloop:
          mov    r11, [rsi]
          mov    rbp, r8
          imul   rbp, r11
@@ -601,8 +601,8 @@ bignum_modexp_outerdemontloop:
          mov    ebx, 0x1
          mov    r12, rdi
          dec    r12
-         je     bignum_modexp_demontend
-bignum_modexp_demontloop:
+         je     demontend
+demontloop:
          adc    r10, [rsi+8*rbx]
          sbb    r11, r11
          mov    rax, [rcx+8*rbx]
@@ -613,26 +613,26 @@ bignum_modexp_demontloop:
          mov    r10, rdx
          inc    rbx
          dec    r12
-         jne    bignum_modexp_demontloop
-bignum_modexp_demontend:
+         jne    demontloop
+demontend:
          adc    r10, 0x0
          mov    [rsi+8*rbx-0x8], r10
          inc    r9
          cmp    r9, rdi
-         jb     bignum_modexp_outerdemontloop
+         jb     outerdemontloop
          xor    rbx, rbx
          mov    r12, rdi
-bignum_modexp_cmploop:
+cmploop:
          mov    rax, [rsi+8*rbx]
          sbb    rax, [rcx+8*rbx]
          inc    rbx
          dec    r12
-         jne    bignum_modexp_cmploop
+         jne    cmploop
          sbb    rbp, rbp
          not    rbp
          xor    r11, r11
          xor    rbx, rbx
-bignum_modexp_dcorrloop:
+dcorrloop:
          mov    rax, [rcx+8*rbx]
          and    rax, rbp
          neg    r11
@@ -640,8 +640,8 @@ bignum_modexp_dcorrloop:
          sbb    r11, r11
          inc    rbx
          cmp    rbx, rdi
-         jb     bignum_modexp_dcorrloop
-bignum_modexp_demont_end:
+         jb     dcorrloop
+demont_end:
          pop    r12
          pop    rbp
          pop    rbx
@@ -649,20 +649,20 @@ bignum_modexp_demont_end:
 
 // Local copy of bignum_mux
 
-bignum_modexp_local_mux:
+local_mux:
          test   rsi, rsi
-         je     bignum_modexp_muxend
+         je     muxend
          xor    r9, r9
          neg    rdi
-bignum_modexp_muxloop:
+muxloop:
          mov    rax, [rcx+8*r9]
          mov    rdi, [r8+8*r9]
          cmovae rax, rdi
          mov    [rdx+8*r9], rax
          inc    r9
          dec    rsi
-         jne    bignum_modexp_muxloop
-bignum_modexp_muxend:
+         jne    muxloop
+muxend:
          ret
 
 #if defined(__linux__) && defined(__ELF__)

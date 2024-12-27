@@ -60,7 +60,7 @@ S2N_BN_SYMBOL(bignum_montredc):
 
 // If k = 0 the whole operation is trivial
 
-        cbz     k, bignum_montredc_end
+        cbz     k, end
 
 // Compute word-level negated modular inverse w for m == m[0].
 // This is essentially the same as word_negmodinv.
@@ -84,36 +84,36 @@ S2N_BN_SYMBOL(bignum_montredc):
         cmp     n, k
         csel    j, k, n, cs
         mov     i, xzr
-        cbz     j, bignum_montredc_padloop
-bignum_montredc_copyloop:
+        cbz     j, padloop
+copyloop:
         ldr     a, [x, i, lsl #3]
         str     a, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, j
-        bcc     bignum_montredc_copyloop
+        bcc     copyloop
 
         cmp     i, k
-        bcs     bignum_montredc_initialized
+        bcs     initialized
 
-bignum_montredc_padloop:
+padloop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_montredc_padloop
+        bcc     padloop
 
-bignum_montredc_initialized:
+initialized:
         mov     c, xzr
 
-// Now if p = 0 we just need the bignum_montredc_corrective tail, and even that is
+// Now if p = 0 we just need the corrective tail, and even that is
 // only needed for the case when the input is exactly the modulus,
 // to maintain the <= 2^64p * n precondition
 
-        cbz     p, bignum_montredc_corrective
+        cbz     p, corrective
 
 // Outer loop, just doing a standard Montgomery reduction on z
 
         mov     i, xzr
-bignum_montredc_outerloop:
+outerloop:
 
         ldr     e, [z]
         mul     d, e, w
@@ -123,8 +123,8 @@ bignum_montredc_outerloop:
         adds    e, e, l         // Will be zero but want the carry
         mov     j, #1
         sub     a, k, #1
-        cbz     a, bignum_montredc_montend
-bignum_montredc_montloop:
+        cbz     a, montend
+montloop:
         ldr     a, [m, j, lsl #3]
         ldr     e, [z, j, lsl #3]
         mul     l, d, a
@@ -136,17 +136,17 @@ bignum_montredc_montloop:
         str     e, [z, l, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montredc_montloop
-bignum_montredc_montend:
+        cbnz    a, montloop
+montend:
         adcs    h, h, c
         adc     c, xzr, xzr
         add     j, j, i
         cmp     j, n
-        bcs     bignum_montredc_offtheend
+        bcs     offtheend
         ldr     a, [x, j, lsl #3]
         adds    h, h, a
         adc     c, c, xzr
-bignum_montredc_offtheend:
+offtheend:
         sub     j, k, #1
         str     h, [z, j, lsl #3]
 
@@ -154,21 +154,21 @@ bignum_montredc_offtheend:
 
         add     i, i, #1
         cmp     i, p
-        bcc     bignum_montredc_outerloop
+        bcc     outerloop
 
 // Now do a comparison of (c::z) with (0::m) to set a final correction mask
 // indicating that (c::z) >= m and so we need to subtract m.
 
-bignum_montredc_corrective:
+corrective:
 
         subs    j, xzr, xzr
-bignum_montredc_cmploop:
+cmploop:
         ldr     a, [z, j, lsl #3]
         ldr     e, [m, j, lsl #3]
         sbcs    xzr, a, e
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montredc_cmploop
+        cbnz    a, cmploop
 
         sbcs    xzr, c, xzr
         csetm   c, cs
@@ -176,7 +176,7 @@ bignum_montredc_cmploop:
 // Now do a masked subtraction of m for the final reduced result.
 
         subs    j, xzr, xzr
-bignum_montredc_corrloop:
+corrloop:
         ldr     a, [z, j, lsl #3]
         ldr     e, [m, j, lsl #3]
         and     e, e, c
@@ -184,9 +184,9 @@ bignum_montredc_corrloop:
         str     a, [z, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montredc_corrloop
+        cbnz    a, corrloop
 
-bignum_montredc_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

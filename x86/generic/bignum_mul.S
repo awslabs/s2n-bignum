@@ -76,7 +76,7 @@ S2N_BN_SYMBOL(bignum_mul):
 // If we did a multiply-add variant, however, then we could
 
         test    p, p
-        jz      bignum_mul_end
+        jz      end
 
 // Set initial 2-part sum to zero (we zero c inside the body)
 
@@ -87,7 +87,7 @@ S2N_BN_SYMBOL(bignum_mul):
 
         xor     k, k
 
-bignum_mul_outerloop:
+outerloop:
 
 // Zero our carry term first; we eventually want it and a zero is useful now
 // Set a =  max 0 (k + 1 - n), i = min (k + 1) m
@@ -113,11 +113,11 @@ bignum_mul_outerloop:
         mov     d, k
         sub     d, i
         sub     i, a
-        jbe     bignum_mul_innerend
+        jbe     innerend
         lea     x,[rcx+8*a]
         lea     y,[r9+8*d-8]
 
-bignum_mul_innerloop:
+innerloop:
         mov     rax, [y+8*i]
         mul     QWORD PTR  [x]
         add     x, 8
@@ -125,9 +125,9 @@ bignum_mul_innerloop:
         adc     h, rdx
         adc     c, 0
         dec     i
-        jnz     bignum_mul_innerloop
+        jnz     innerloop
 
-bignum_mul_innerend:
+innerend:
 
         mov     [z], l
         mov     l, h
@@ -135,9 +135,9 @@ bignum_mul_innerend:
         add     z, 8
 
         cmp     k, p
-        jc      bignum_mul_outerloop
+        jc      outerloop
 
-bignum_mul_end:
+end:
         pop     r15
         pop     r14
         pop     r13

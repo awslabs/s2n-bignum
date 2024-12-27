@@ -48,14 +48,14 @@ S2N_BN_SYMBOL(bignum_divmod10):
 
         xorl    rshort, rshort
         testq   k, k
-        jz      bignum_divmod10_end
+        jz      end
 
 // Straightforward top-down loop doing 10 * q + r' := 2^64 * r + d
 
         movq    $0x3333333333333334, s
         movl    $0x3333333, wshort
 
-bignum_divmod10_divloop:
+divloop:
         movq    -8(z,k,8), d
 
 // First re-split and shift so 2^28 * h + l = (2^64 * r + d) / 2
@@ -81,11 +81,11 @@ bignum_divmod10_divloop:
         leaq    (d,q,2), r
 
         decq    k
-        jnz     bignum_divmod10_divloop
+        jnz     divloop
 
 // Return %rax = r as the final remainder
 
-bignum_divmod10_end:
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

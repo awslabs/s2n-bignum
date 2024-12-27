@@ -61,7 +61,7 @@ S2N_BN_SYMBOL(bignum_mod_p384):
 // If the input is already <= 5 words long, go to a trivial "copy" path
 
         cmpq    $6, k
-        jc      bignum_mod_p384_shortinput
+        jc      shortinput
 
 // Otherwise load the top 6 digits (top-down) and reduce k by 6
 
@@ -104,9 +104,9 @@ S2N_BN_SYMBOL(bignum_mod_p384):
 // Now do (k-6) iterations of 7->6 word modular reduction
 
         testq   k, k
-        jz      bignum_mod_p384_writeback
+        jz      writeback
 
-bignum_mod_p384_loop:
+loop:
 
 // Compute q = min (m5 + 1) (2^64 - 1)
 
@@ -159,7 +159,7 @@ bignum_mod_p384_loop:
         sbbq    $0, m3
         sbbq    $0, m4
 
-// Now shuffle registers up and bignum_mod_p384_loop
+// Now shuffle registers up and loop
 
         movq    m4, m5
         movq    m3, m4
@@ -169,11 +169,11 @@ bignum_mod_p384_loop:
         movq    d, m0
 
         decq    k
-        jnz     bignum_mod_p384_loop
+        jnz     loop
 
 // Write back
 
-bignum_mod_p384_writeback:
+writeback:
 
         movq    m0, (z)
         movq    m1, 8(z)
@@ -194,7 +194,7 @@ bignum_mod_p384_writeback:
 #endif
         ret
 
-bignum_mod_p384_shortinput:
+shortinput:
 
         xorq    m0, m0
         xorq    m1, m1
@@ -204,21 +204,21 @@ bignum_mod_p384_shortinput:
         xorq    m5, m5
 
         testq   k, k
-        jz      bignum_mod_p384_writeback
+        jz      writeback
         movq    (%rdx), m0
         decq    k
-        jz      bignum_mod_p384_writeback
+        jz      writeback
         movq    8(%rdx), m1
         decq    k
-        jz      bignum_mod_p384_writeback
+        jz      writeback
         movq    16(%rdx), m2
         decq    k
-        jz      bignum_mod_p384_writeback
+        jz      writeback
         movq    24(%rdx), m3
         decq    k
-        jz      bignum_mod_p384_writeback
+        jz      writeback
         movq    32(%rdx), m4
-        jmp     bignum_mod_p384_writeback
+        jmp     writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -63,7 +63,7 @@ S2N_BN_SYMBOL(bignum_sub):
         cmp     p, n
         cmovc   n, p
         cmp     m, n
-        jc      bignum_sub_ylonger
+        jc      ylonger
 
 // The case where x is longer or of the same size (p >= m >= n)
 
@@ -71,32 +71,32 @@ S2N_BN_SYMBOL(bignum_sub):
         sub     m, n
         inc     m
         test    n, n
-        jz      bignum_sub_xtest
-bignum_sub_xmainloop:
+        jz      xtest
+xmainloop:
         mov     a, [x+8*i]
         sbb     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     n
-        jnz     bignum_sub_xmainloop
-        jmp     bignum_sub_xtest
-bignum_sub_xtoploop:
+        jnz     xmainloop
+        jmp     xtest
+xtoploop:
         mov     a, [x+8*i]
         sbb     a, 0
         mov     [z+8*i],a
         inc     i
-bignum_sub_xtest:
+xtest:
         dec     m
-        jnz     bignum_sub_xtoploop
+        jnz     xtoploop
         sbb     a, a
         test    p, p
-        jz      bignum_sub_tailskip
-bignum_sub_tailloop:
+        jz      tailskip
+tailloop:
         mov     [z+8*i],a
         inc     i
         dec     p
-        jnz     bignum_sub_tailloop
-bignum_sub_tailskip:
+        jnz     tailloop
+tailskip:
         neg     a
 #if WINDOWS_ABI
         pop    rsi
@@ -106,29 +106,29 @@ bignum_sub_tailskip:
 
 // The case where y is longer (p >= n > m)
 
-bignum_sub_ylonger:
+ylonger:
 
         sub     p, n
         sub     n, m
         test    m, m
-        jz      bignum_sub_ytoploop
-bignum_sub_ymainloop:
+        jz      ytoploop
+ymainloop:
         mov     a, [x+8*i]
         sbb     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     m
-        jnz     bignum_sub_ymainloop
-bignum_sub_ytoploop:
+        jnz     ymainloop
+ytoploop:
         mov     ashort, 0
         sbb     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     n
-        jnz     bignum_sub_ytoploop
+        jnz     ytoploop
         sbb     a, a
         test    p, p
-        jnz     bignum_sub_tailloop
+        jnz     tailloop
         neg     a
 #if WINDOWS_ABI
         pop    rsi

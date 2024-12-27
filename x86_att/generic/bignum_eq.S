@@ -42,46 +42,46 @@ S2N_BN_SYMBOL(bignum_eq):
 
         xorq    c, c
 
-// If m >= n jump into the m > n bignum_eq_loop at the final equality test
+// If m >= n jump into the m > n loop at the final equality test
 // This will drop through for m = n
 
         cmpq    n, m
-        jnc     bignum_eq_mtest
+        jnc     mtest
 
 // Toploop for the case n > m
 
-bignum_eq_nloop:
+nloop:
         decq    n
         orq     (y,n,8), c
         cmpq    n, m
-        jnz     bignum_eq_nloop
-        jmp     bignum_eq_mmain
+        jnz     nloop
+        jmp     mmain
 
-// Toploop for the case m > n (or n = m which enters at "bignum_eq_mtest")
+// Toploop for the case m > n (or n = m which enters at "mtest")
 
-bignum_eq_mloop:
+mloop:
         decq    m
         orq     (x,m,8), c
         cmpq    n, m
-bignum_eq_mtest:
-        jnz     bignum_eq_mloop
+mtest:
+        jnz     mloop
 
-// Combined main bignum_eq_loop for the min(m,n) lower words
+// Combined main loop for the min(m,n) lower words
 
-bignum_eq_mmain:
+mmain:
         testq   m, m
-        jz      bignum_eq_end
+        jz      end
 
-bignum_eq_loop:
+loop:
         movq    -8(x,m,8), d
         xorq    -8(y,m,8), d
         orq     d, c
         decq    m
-        jnz     bignum_eq_loop
+        jnz     loop
 
 // Set a standard C condition based on whether c is nonzero
 
-bignum_eq_end:
+end:
         negq    c
         sbbq    c, c
         incq    c

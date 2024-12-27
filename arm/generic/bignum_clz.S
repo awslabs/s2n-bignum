@@ -33,7 +33,7 @@ S2N_BN_SYMBOL(bignum_clz):
 
 // If the bignum is zero-length, x0 is already the right answer of 0
 
-        cbz     k, bignum_clz_end
+        cbz     k, end
 
 // Use w = a[i-1] to store nonzero words in a bottom-up sweep
 // Set the initial default to be as if we had a 11...11 word directly below
@@ -41,14 +41,14 @@ S2N_BN_SYMBOL(bignum_clz):
         mov     i, xzr
         mov     w, #-1
         mov     j, xzr
-bignum_clz_loop:
+loop:
         ldr     a, [x, j, lsl #3]
         add     j, j, #1
         cmp     a, #0
         csel    i, j, i, ne
         csel    w, a, w, ne
         cmp     j, k
-        bne     bignum_clz_loop
+        bne     loop
 
 // Now w = a[i-1] is the highest nonzero word, or in the zero case the
 // default of the "extra" 11...11 = a[0-1]. We now want 64*(k - i) + clz(w).
@@ -60,7 +60,7 @@ bignum_clz_loop:
         clz     a, w
         add     x0, k, a
 
-bignum_clz_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

@@ -32,26 +32,26 @@
 S2N_BN_SYMBOL(bignum_modsub):
 
 adds    j, k, xzr               // j = k and ZF = (k = 0)
-        beq     bignum_modsub_end                     // if k = 0 do nothing
+        beq     end                     // if k = 0 do nothing
         subs    i, xzr, xzr             // i = 0 and CF = 1
 
 // Subtract z := x - y and record a mask for the carry x - y < 0
 
-bignum_modsub_subloop:
+subloop:
         ldr     a, [x, i]
         ldr     b, [y, i]
         sbcs    a, a, b
         str     a, [z, i]
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_modsub_subloop
+        cbnz    j, subloop
         csetm   c, cc
 
 // Now do a masked addition z := z + [c] * m
 
         mov     j, k
         adds    i, xzr, xzr
-bignum_modsub_addloop:
+addloop:
         ldr     a, [z, i]
         ldr     b, [m, i]
         and     b, b, c
@@ -59,9 +59,9 @@ bignum_modsub_addloop:
         str     a, [z, i]
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_modsub_addloop
+        cbnz    j, addloop
 
-bignum_modsub_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

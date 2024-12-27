@@ -299,9 +299,9 @@
 
         movq    k8m1, %rax
         testq   %rax, %rax
-        jz      bignum_emontredc_8n_innerend
+        jz      innerend
         movq    %rax, innercount
-bignum_emontredc_8n_innerloop:
+innerloop:
         addq    $64, zz
         addq    $64, m
         addrow 0
@@ -313,10 +313,10 @@ bignum_emontredc_8n_innerloop:
         addrow 6
         addrow 7
         subq    $64, innercount
-        jnz     bignum_emontredc_8n_innerloop
+        jnz     innerloop
 
         movq    k8m1, %rax
-bignum_emontredc_8n_innerend:
+innerend:
         subq    %rax, m
 
         movq    carry, %rbx
@@ -367,7 +367,7 @@ S2N_BN_SYMBOL(bignum_emontredc_8n):
 // k/8 itself which is here initializing the outer loop count.
 
         shrq    $3, %rdi
-        jz      bignum_emontredc_8n_end
+        jz      end
 
         leaq    -1(%rdi), %rbx
         shlq    $6, %rbx
@@ -385,11 +385,11 @@ S2N_BN_SYMBOL(bignum_emontredc_8n):
 
 // Now just systematically add in the rows
 
-bignum_emontredc_8n_outerloop:
+outerloop:
         addrows
         addq    $64, z
         subq    $1, outercount
-        jnz     bignum_emontredc_8n_outerloop
+        jnz     outerloop
 
 // Pop the carry-out "p", which was stored at [%rsp], put in %rax for return
 
@@ -401,7 +401,7 @@ bignum_emontredc_8n_outerloop:
 
 // Reset of epilog
 
-bignum_emontredc_8n_end:
+end:
 
         popq    %r15
         popq    %r14

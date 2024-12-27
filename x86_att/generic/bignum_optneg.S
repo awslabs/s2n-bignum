@@ -48,7 +48,7 @@ S2N_BN_SYMBOL(bignum_optneg):
 
         xorq    c, c
         testq   k, k
-        jz      bignum_optneg_end
+        jz      end
 
 // Convert p into a strict bitmask and set initial carry-in in c
 
@@ -56,10 +56,10 @@ S2N_BN_SYMBOL(bignum_optneg):
         sbbq    p, p
         subq    p, c
 
-// Main bignum_optneg_loop
+// Main loop
 
         xorq    i, i
-bignum_optneg_loop:
+loop:
 
         movq    (x,i,8), a
         xorq    p, a
@@ -69,14 +69,14 @@ bignum_optneg_loop:
         adcq    $0, c
         incq    i
         cmpq    k, i
-        jc      bignum_optneg_loop
+        jc      loop
 
 // Return carry flag, fixing up inversion for negative case
 
         xorq    p, %rax
         andq    $1, %rax
 
-bignum_optneg_end:
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

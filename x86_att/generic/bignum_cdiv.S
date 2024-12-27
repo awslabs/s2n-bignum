@@ -85,7 +85,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xorq    l, l
         testq   n, n
-        jz      bignum_cdiv_nomodulus
+        jz      nomodulus
 
         bsrq    m, e
         xorq    $63, e
@@ -151,7 +151,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xorl    hshort, hshort
         movq    n, i
-bignum_cdiv_modloop:
+modloop:
         movq    h, a
         mulq    r
         addq    -8(x,i,8), a
@@ -162,7 +162,7 @@ bignum_cdiv_modloop:
         addq    a, l
         adcq    $0, h
         decq    i
-        jnz     bignum_cdiv_modloop
+        jnz     modloop
 
         movq    h, i
         movq    w, a
@@ -200,13 +200,13 @@ bignum_cdiv_modloop:
 
         movq    l, r
         subq    m, l
-bignum_cdiv_nomodulus:
+nomodulus:
         cmovncq l, r
 
 // If k = 0 then there's no more to be done
 
         testq   k, k
-        jz      bignum_cdiv_end
+        jz      end
 
 // Let e be the number of trailing zeros in m (we can ignore m = 0)
 
@@ -270,25 +270,25 @@ bignum_cdiv_nomodulus:
 
 // Unless n = 0, preload the zeroth digit and bump up the x pointer by
 // 8 and n down by 1, to ease indexing and comparison using the same
-// variable i in the main bignum_cdiv_loop. When n = 0 we leave it alone, as the
+// variable i in the main loop. When n = 0 we leave it alone, as the
 // comparison i < n will always fail and the x pointer is unused.
 
         xorq    d, d
         testq   n, n
-        jz      bignum_cdiv_loop
+        jz      loop
         movq    (x), d
         addq    $8, x
         decq    n
 
-bignum_cdiv_loop:
+loop:
 
 // Load the next digit up to get [l,d] then shift right e places
 
         xorq    l, l
         cmpq    n, i
-        jnc     bignum_cdiv_noload
+        jnc     noload
         movq    (x,i,8), l
-bignum_cdiv_noload:
+noload:
         shrdq   %cl, l, d
         addq    c, d
         sbbq    c, c
@@ -312,11 +312,11 @@ bignum_cdiv_noload:
 
         incq    i
         cmpq    k, i
-        jc      bignum_cdiv_loop
+        jc      loop
 
 // Return the modulus
 
-bignum_cdiv_end:
+end:
         movq    r, %rax
 
         popq    %r15

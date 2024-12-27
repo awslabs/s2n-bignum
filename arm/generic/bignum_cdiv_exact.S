@@ -56,7 +56,7 @@ S2N_BN_SYMBOL(bignum_cdiv_exact):
 
 // If k = 0 then there's nothing to be done
 
-        cbz     k, bignum_cdiv_exact_end
+        cbz     k, end
 
 // Let e be the number of trailing zeros in m. This implementation uses
 // 63 - clz(-m & m) which is a bit slicker than the main word_ctz function
@@ -110,26 +110,26 @@ S2N_BN_SYMBOL(bignum_cdiv_exact):
 
 // Unless n = 0, preload the zeroth digit shifted right e places and bump
 // up the x pointer by 8 and n down by 1, to ease indexing and comparison
-// using the same variable i in the main bignum_cdiv_exact_loop. When n = 0 we leave it alone,
+// using the same variable i in the main loop. When n = 0 we leave it alone,
 // as the comparison i < n will always fail and the x pointer is unused.
 
         mov     d, xzr
-        cbz     n, bignum_cdiv_exact_loop
+        cbz     n, loop
         ldr     d, [x], #8
         lsr     d, d, e
         sub     n, n, 1
 
-bignum_cdiv_exact_loop:
+loop:
 
 // Load the next digit up to get [l,d] then shift right e places,
 // eventually setting d back to the other part of the newly loaded digit
-// ready for the next time round the bignum_cdiv_exact_loop.
+// ready for the next time round the loop.
 
         mov     l, xzr
         cmp     i, n
-        bcs     bignum_cdiv_exact_noload
+        bcs     noload
         ldr     l, [x, i, lsl #3]
-bignum_cdiv_exact_noload:
+noload:
         rorv    l, l, e
         bic     a, l, f
         orr     a, d, a
@@ -152,9 +152,9 @@ bignum_cdiv_exact_noload:
 
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_cdiv_exact_loop
+        bcc     loop
 
-bignum_cdiv_exact_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

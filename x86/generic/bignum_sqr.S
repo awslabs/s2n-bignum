@@ -74,7 +74,7 @@ S2N_BN_SYMBOL(bignum_sqr):
 // If p = 0 the result is trivial and nothing needs doing
 
         test    p, p
-        jz      bignum_sqr_end
+        jz      end
 
 // initialize (hh,ll) = 0
 
@@ -85,7 +85,7 @@ S2N_BN_SYMBOL(bignum_sqr):
 
         xor     k, k
 
-bignum_sqr_outerloop:
+outerloop:
 
 // First let bot = MAX 0 (k + 1 - n) and top = MIN (k + 1) n
 // We want to accumulate all x[i] * x[k - i] for bot <= i < top
@@ -110,7 +110,7 @@ bignum_sqr_outerloop:
 // If htop <= bot then main doubled part of the sum is empty
 
         cmp     i, htop
-        jnc     bignum_sqr_nosumming
+        jnc     nosumming
 
 // Use a moving pointer for [y] = x[k-i] for the cofactor
 
@@ -120,7 +120,7 @@ bignum_sqr_outerloop:
 
 // Do the main part of the sum x[i] * x[k - i] for 2 * i < k
 
-bignum_sqr_innerloop:
+innerloop:
         mov     a, [x+8*i]
         mul     QWORD PTR [y]
         add     l, a
@@ -129,7 +129,7 @@ bignum_sqr_innerloop:
         sub     y, 8
         inc     i
         cmp     i, htop
-        jc      bignum_sqr_innerloop
+        jc      innerloop
 
 // Now double it
 
@@ -139,11 +139,11 @@ bignum_sqr_innerloop:
 
 // If k is even (which means 2 * i = k) and i < n add the extra x[i]^2 term
 
-bignum_sqr_nosumming:
+nosumming:
         test    k, 1
-        jnz     bignum_sqr_innerend
+        jnz     innerend
         cmp     i, n
-        jnc     bignum_sqr_innerend
+        jnc     innerend
 
         mov     a, [x+8*i]
         mul     a
@@ -153,7 +153,7 @@ bignum_sqr_nosumming:
 
 // Now add the local sum into the global sum, store and shift
 
-bignum_sqr_innerend:
+innerend:
         add     l, ll
         mov     [z+8*k], l
         adc     h, hh
@@ -163,11 +163,11 @@ bignum_sqr_innerend:
 
         inc     k
         cmp     k, p
-        jc      bignum_sqr_outerloop
+        jc      outerloop
 
 // Restore registers and return
 
-bignum_sqr_end:
+end:
         pop     r15
         pop     r14
         pop     r13

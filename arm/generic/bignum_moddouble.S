@@ -31,13 +31,13 @@
 S2N_BN_SYMBOL(bignum_moddouble):
 
 adds    j, k, xzr               // j = k and ZF = (k = 0)
-        beq     bignum_moddouble_end                     // if k = 0 do nothing
+        beq     end                     // if k = 0 do nothing
 
 // Do (_::z) = 2 * x - m and generate a mask in c for 2 * x < m
 
         mov     c, xzr
         subs    i, xzr, xzr             // i = 0 and CF = 1
-bignum_moddouble_dubloop:
+dubloop:
         ldr     a, [x, i]
         extr    c, a, c, #63
         ldr     b, [m, i]
@@ -46,7 +46,7 @@ bignum_moddouble_dubloop:
         mov     c, a
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_moddouble_dubloop
+        cbnz    j, dubloop
         lsr     c, c, #63
         sbc     c, c, xzr
 
@@ -54,7 +54,7 @@ bignum_moddouble_dubloop:
 
         mov     j, k
         adds    i, xzr, xzr
-bignum_moddouble_corrloop:
+corrloop:
         ldr     a, [z, i]
         ldr     b, [m, i]
         and     b, b, c
@@ -62,9 +62,9 @@ bignum_moddouble_corrloop:
         str     a, [z, i]
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_moddouble_corrloop
+        cbnz    j, corrloop
 
-bignum_moddouble_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

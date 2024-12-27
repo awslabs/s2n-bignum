@@ -87,18 +87,18 @@
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        bl      p521_jadd_local_mul_p521
+        bl      local_mul_p521
 
 #define sqr_p521(P0,P1)                         \
         add     x0, P0;                         \
         add     x1, P1;                         \
-        bl      p521_jadd_local_sqr_p521
+        bl      local_sqr_p521
 
 #define sub_p521(P0,P1,P2)                      \
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        bl      p521_jadd_local_sub_p521
+        bl      local_sub_p521
 
 S2N_BN_SYMBOL(p521_jadd):
 
@@ -350,7 +350,7 @@ S2N_BN_SYMBOL(p521_jadd):
 // Local versions of the three field operations, identical to
 // bignum_mul_p521_neon, bignum_sqr_p521_neon and bignum_sub_p521.
 
-p521_jadd_local_mul_p521:
+local_mul_p521:
         stp     x19, x20, [sp, #-16]!
         stp     x21, x22, [sp, #-16]!
         stp     x23, x24, [sp, #-16]!
@@ -1027,7 +1027,7 @@ p521_jadd_local_mul_p521:
         ldp     x19, x20, [sp], #16
         ret
 
-p521_jadd_local_sqr_p521:
+local_sqr_p521:
         stp     x19, x20, [sp, #-16]!
         stp     x21, x22, [sp, #-16]!
         stp     x23, x24, [sp, #-16]!
@@ -1563,7 +1563,7 @@ p521_jadd_local_sqr_p521:
         ldp     x19, x20, [sp], #16
         ret
 
-p521_jadd_local_sub_p521:
+local_sub_p521:
         ldp     x5, x6, [x1]
         ldp     x4, x3, [x2]
         subs    x5, x5, x4

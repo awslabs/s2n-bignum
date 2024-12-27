@@ -63,7 +63,7 @@ S2N_BN_SYMBOL(bignum_montmul):
 
 // If k = 0 the whole operation is trivial
 
-        cbz     k, bignum_montmul_end
+        cbz     k, end
 
 // Compute word-level negated modular inverse w for m == m[0].
 // This is essentially the same as word_negmodinv.
@@ -87,17 +87,17 @@ S2N_BN_SYMBOL(bignum_montmul):
 // this keeps the code slightly simpler.
 
         mov     i, xzr
-bignum_montmul_zoop:
+zoop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_montmul_zoop
+        bcc     zoop
         mov     c0, xzr
 
 // Outer loop pulling down digits d=x[i], multiplying by y and reducing
 
         mov     i, xzr
-bignum_montmul_outerloop:
+outerloop:
 
 // Multiply-add loop where we always have CF + previous high part h to add in
 // Note that in general we do need yet one more carry in this phase and hence
@@ -106,7 +106,7 @@ bignum_montmul_outerloop:
         ldr     d, [x, i, lsl #3]
         mov     j, xzr
         adds    h, xzr, xzr
-bignum_montmul_maddloop:
+maddloop:
         ldr     a, [y, j, lsl #3]
         ldr     e, [z, j, lsl #3]
         mul     l, d, a
@@ -117,7 +117,7 @@ bignum_montmul_maddloop:
         str     e, [z, j, lsl #3]
         add     j, j, #1
         sub     t, j, k
-        cbnz    t, bignum_montmul_maddloop
+        cbnz    t, maddloop
         adcs    c0, c0, h
         adc     c1, xzr, xzr
 
@@ -131,8 +131,8 @@ bignum_montmul_maddloop:
         adds    e, e, l         // Will be zero but want the carry
         mov     j, #1
         sub     t, k, #1
-        cbz     t, bignum_montmul_montend
-bignum_montmul_montloop:
+        cbz     t, montend
+montloop:
         ldr     a, [m, j, lsl #3]
         ldr     e, [z, j, lsl #3]
         mul     l, d, a
@@ -144,8 +144,8 @@ bignum_montmul_montloop:
         str     e, [z, l, lsl #3]
         add     j, j, #1
         sub     t, j, k
-        cbnz    t, bignum_montmul_montloop
-bignum_montmul_montend:
+        cbnz    t, montloop
+montend:
         adcs    h, c0, h
         adc     c0, c1, xzr
         sub     l, j, #1
@@ -155,19 +155,19 @@ bignum_montmul_montend:
 
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_montmul_outerloop
+        bcc     outerloop
 
 // Now do a comparison of (c0::z) with (0::m) to set a final correction mask
 // indicating that (c0::z) >= m and so we need to subtract m.
 
         subs    j, xzr, xzr
-bignum_montmul_cmploop:
+cmploop:
         ldr     a, [z, j, lsl #3]
         ldr     e, [m, j, lsl #3]
         sbcs    xzr, a, e
         add     j, j, #1
         sub     t, j, k
-        cbnz    t, bignum_montmul_cmploop
+        cbnz    t, cmploop
 
         sbcs    xzr, c0, xzr
         csetm   c0, cs
@@ -175,7 +175,7 @@ bignum_montmul_cmploop:
 // Now do a masked subtraction of m for the final reduced result.
 
         subs    j, xzr, xzr
-bignum_montmul_corrloop:
+corrloop:
         ldr     a, [z, j, lsl #3]
         ldr     e, [m, j, lsl #3]
         and     e, e, c0
@@ -183,9 +183,9 @@ bignum_montmul_corrloop:
         str     a, [z, j, lsl #3]
         add     j, j, #1
         sub     t, j, k
-        cbnz    t, bignum_montmul_corrloop
+        cbnz    t, corrloop
 
-bignum_montmul_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

@@ -47,7 +47,7 @@ S2N_BN_SYMBOL(bignum_ctz):
 
         xorq    %rax, %rax
         testq   k, k
-        jz      bignum_ctz_end
+        jz      end
 
 // Use w = a[i-1] to store nonzero words in a top-down sweep
 // Set the initial default to be as if we had a 1 word directly above
@@ -56,13 +56,13 @@ S2N_BN_SYMBOL(bignum_ctz):
         incq    i
         movl    $1, wshort
 
-bignum_ctz_loop:
+loop:
         movq    -8(x,k,8), a
         testq   a, a
         cmovneq k, i
         cmovneq a, w
         decq    k
-        jnz     bignum_ctz_loop
+        jnz     loop
 
 // Now w = a[i-1] is the lowest nonzero word, or in the zero case the
 // default of the "extra" 1 = a[k]. We now want 64*(i-1) + ctz(w).
@@ -74,7 +74,7 @@ bignum_ctz_loop:
         bsfq    w, %rax
         addq    i, %rax
 
-bignum_ctz_end:
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

@@ -58,7 +58,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
 // If k = 0 do nothing (actually we could have avoiding the pushes and pops)
 
         test    k, k
-        jz      bignum_negmodinv_end
+        jz      end
 
 // Move the x pointer into its permanent home (rdx is needed for muls)
 
@@ -101,7 +101,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
 
         mov     [z], w
         cmp     k, 1
-        jz      bignum_negmodinv_end
+        jz      end
 
 // Otherwise compute and write the other digits (1..k-1) of w * x + 1
 
@@ -111,7 +111,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
         add     a, 1
         adc     h, d
         mov     ishort, 1
-bignum_negmodinv_initloop:
+initloop:
         mov     a, [x+8*i]
         mul     w
         add     a, h
@@ -120,7 +120,7 @@ bignum_negmodinv_initloop:
         mov     h, d
         inc     i
         cmp     i, k
-        jc      bignum_negmodinv_initloop
+        jc      initloop
 
 // For simpler indexing, z := z + 8 and k := k - 1 per outer iteration
 // Then we can use the same index for x and for z and effective size k.
@@ -130,13 +130,13 @@ bignum_negmodinv_initloop:
 // getting k + 1 total as required.
 //
 // This lets us avoid some special cases inside the loop at the cost
-// of needing the additional "bignum_negmodinv_finale" tail for the final iteration
+// of needing the additional "finale" tail for the final iteration
 // since we do one outer loop iteration too few.
 
         sub     k, 2
-        jz      bignum_negmodinv_finale
+        jz      finale
 
-bignum_negmodinv_outerloop:
+outerloop:
         add     z, 8
 
         mov     h, [z]
@@ -150,7 +150,7 @@ bignum_negmodinv_outerloop:
         mov     h, d
         mov     ishort, 1
         mov     t, k
- bignum_negmodinv_innerloop:
+ innerloop:
         adc     h, [z+8*i]
         sbb     e, e
         mov     a, [x+8*i]
@@ -161,17 +161,17 @@ bignum_negmodinv_outerloop:
         mov     h, d
         inc     i
         dec     t
-        jnz     bignum_negmodinv_innerloop
+        jnz     innerloop
 
         dec     k
-        jnz     bignum_negmodinv_outerloop
+        jnz     outerloop
 
-bignum_negmodinv_finale:
+finale:
         mov     a, [z+8]
         imul    a, w
         mov     [z+8], a
 
-bignum_negmodinv_end:
+end:
         pop     r12
         pop     rbx
 #if WINDOWS_ABI

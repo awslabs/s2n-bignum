@@ -25,18 +25,18 @@
 S2N_BN_SYMBOL(bignum_nonzero):
 
 mov     c, xzr                  // c will be or of the digits
-        cbz     k, bignum_nonzero_end                  // if k = 0 skip the bignum_nonzero_loop
+        cbz     k, end                  // if k = 0 skip the loop
 
-bignum_nonzero_loop:
+loop:
         sub     k, k, #1
         ldr     a, [x, k, lsl #3]
         orr     c, c, a
-        cbnz    k, bignum_nonzero_loop
+        cbnz    k, loop
 
         cmp     c, xzr
         cset    x0, ne
 
-bignum_nonzero_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

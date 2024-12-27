@@ -26,18 +26,18 @@
 
 S2N_BN_SYMBOL(bignum_of_word):
 
-cbz     k, bignum_of_word_end                  // if k = 0 do nothing
+cbz     k, end                  // if k = 0 do nothing
 
         str     n, [z]                  // Set zeroth word to n
         subs    k, k, #1                 // k := k - 1
-        beq     bignum_of_word_end                     // and if that's 0, finish
+        beq     end                     // and if that's 0, finish
 
-bignum_of_word_loop:
+loop:
         str     xzr, [z, k, lsl #3]
         subs    k, k, #1
-        bne     bignum_of_word_loop
+        bne     loop
 
-bignum_of_word_end:
+end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

@@ -85,7 +85,7 @@ S2N_BN_SYMBOL(bignum_amontredc):
 // If k = 0 the whole operation is trivial
 
         testq   k, k
-        jz      bignum_amontredc_end
+        jz      end
 
 // Move n input into its permanent home, since we need %rdx for multiplications
 
@@ -133,36 +133,36 @@ S2N_BN_SYMBOL(bignum_amontredc):
         cmovcq  n, j
         xorq    i, i
         testq   j, j
-        jz      bignum_amontredc_padloop
-bignum_amontredc_copyloop:
+        jz      padloop
+copyloop:
         movq    (x,i,8), a
         movq    a, (z,i,8)
         incq    i
         cmpq    j, i
-        jc      bignum_amontredc_copyloop
+        jc      copyloop
 
         cmpq    k, i
-        jnc     bignum_amontredc_initialized
+        jnc     initialized
 
         xorq    j, j
-bignum_amontredc_padloop:
+padloop:
         movq    j, (z,i,8)
         incq    i
         cmpq    k, i
-        jc      bignum_amontredc_padloop
+        jc      padloop
 
-bignum_amontredc_initialized:
+initialized:
         xorq    c, c
 
-// Now if p = 0 that's the bignum_amontredc_end of the operation
+// Now if p = 0 that's the end of the operation
 
         testq   p, p
-        jz      bignum_amontredc_end
+        jz      end
 
 // Outer loop, just doing a standard Montgomery reduction on z
 
         xorq    i, i
-bignum_amontredc_outerloop:
+outerloop:
         movq    (z), e
         movq    w, d
         imulq   e, d
@@ -173,9 +173,9 @@ bignum_amontredc_outerloop:
         movl    $1, jshort
         movq    k, t
         decq    t
-        jz      bignum_amontredc_montend
+        jz      montend
 
-bignum_amontredc_montloop:
+montloop:
         adcq    (z,j,8), h
         sbbq    e, e
         movq    (m,j,8), a
@@ -186,27 +186,27 @@ bignum_amontredc_montloop:
         movq    %rdx, h
         incq    j
         decq    t
-        jnz     bignum_amontredc_montloop
+        jnz     montloop
 
-bignum_amontredc_montend:
+montend:
         adcq    c, h
         movl    $0, cshort
         adcq    $0, c
 
         addq    i, j
         cmpq    n, j
-        jnc     bignum_amontredc_offtheend
+        jnc     offtheend
         movq    (x,j,8), a
         addq    a, h
         adcq    $0, c
-bignum_amontredc_offtheend:
+offtheend:
         movq    h, -8(z,k,8)
 
 // End of outer loop.
 
         incq    i
         cmpq    p, i
-        jc      bignum_amontredc_outerloop
+        jc      outerloop
 
 // Now convert carry word, which is always in {0,1}, into a mask "d"
 // and do a masked subtraction of m for the final almost-Montgomery result.
@@ -215,7 +215,7 @@ bignum_amontredc_offtheend:
         subq    c, d
         xorq    e, e
         xorq    j, j
-bignum_amontredc_corrloop:
+corrloop:
         movq    (m,j,8), a
         andq    d, a
         negq    e
@@ -223,9 +223,9 @@ bignum_amontredc_corrloop:
         sbbq    e, e
         incq    j
         cmpq    k, j
-        jc      bignum_amontredc_corrloop
+        jc      corrloop
 
-bignum_amontredc_end:
+end:
         addq    $8, %rsp
         popq    %r15
         popq    %r14

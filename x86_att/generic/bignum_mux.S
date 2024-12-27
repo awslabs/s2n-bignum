@@ -43,19 +43,19 @@ S2N_BN_SYMBOL(bignum_mux):
         movq    56(%rsp), %r8
 #endif
         testq   k, k
-        jz      bignum_mux_end                     // If length = 0 do nothing
+        jz      end                     // If length = 0 do nothing
 
         xorq    i, i
         negq    b                       // CF <=> (b != 0)
-bignum_mux_loop:
+loop:
         movq    (x,i,8), a
         movq    (y,i,8), b
         cmovncq b, a // CF ? a : b
         movq    a, (z,i,8)
         incq    i
         decq    k
-        jnz     bignum_mux_loop
-bignum_mux_end:
+        jnz     loop
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

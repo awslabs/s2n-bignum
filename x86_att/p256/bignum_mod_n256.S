@@ -58,7 +58,7 @@ S2N_BN_SYMBOL(bignum_mod_n256):
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
         cmpq    $4, k
-        jc      bignum_mod_n256_shortinput
+        jc      shortinput
 
 // Otherwise load the top 4 digits (top-down) and reduce k by 4
 
@@ -95,9 +95,9 @@ S2N_BN_SYMBOL(bignum_mod_n256):
 // Now do (k-4) iterations of 5->4 word modular reduction
 
         testq   k, k
-        jz      bignum_mod_n256_writeback
+        jz      writeback
 
-bignum_mod_n256_loop:
+loop:
 
 // Writing the input as z = 2^256 * m3 + 2^192 * m2 + t = 2^192 * h + t, our
 // intended quotient approximation is MIN ((h + h>>32 + 1)>>64) (2^64 - 1).
@@ -152,7 +152,7 @@ bignum_mod_n256_loop:
         sbbq    $0, m1
         sbbq    n3, m2
 
-// Now shuffle registers up and bignum_mod_n256_loop
+// Now shuffle registers up and loop
 
         movq    m2, m3
         movq    m1, m2
@@ -160,11 +160,11 @@ bignum_mod_n256_loop:
         movq    d, m0
 
         decq    k
-        jnz     bignum_mod_n256_loop
+        jnz     loop
 
 // Write back
 
-bignum_mod_n256_writeback:
+writeback:
 
         movq    m0, (z)
         movq    m1, 8(z)
@@ -181,7 +181,7 @@ bignum_mod_n256_writeback:
 #endif
         ret
 
-bignum_mod_n256_shortinput:
+shortinput:
 
         xorq    m0, m0
         xorq    m1, m1
@@ -189,15 +189,15 @@ bignum_mod_n256_shortinput:
         xorq    m3, m3
 
         testq   k, k
-        jz      bignum_mod_n256_writeback
+        jz      writeback
         movq    (%rdx), m0
         decq    k
-        jz      bignum_mod_n256_writeback
+        jz      writeback
         movq    8(%rdx), m1
         decq    k
-        jz      bignum_mod_n256_writeback
+        jz      writeback
         movq    16(%rdx), m2
-        jmp     bignum_mod_n256_writeback
+        jmp     writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -44,11 +44,11 @@ S2N_BN_SYMBOL(bignum_shl_small):
         csel    n, p, n, cs
 
 // Initialize counter i and "previous word" carry b to zero
-// and skip main bignum_shl_small_loop if n = 0
+// and skip main loop if n = 0
 
         mov     b, xzr
         mov     i, xzr
-        cbz     n, bignum_shl_small_tail
+        cbz     n, tail
 
 // Set up a mask for nonzero shift and a negated version of the shift.
 // Note that all basic word-level shifts are predictably masked to 6 bits.
@@ -57,8 +57,8 @@ S2N_BN_SYMBOL(bignum_shl_small):
         csetm   m, ne
         neg     d, c
 
-// Now the main bignum_shl_small_loop
-bignum_shl_small_loop:
+// Now the main loop
+loop:
         ldr     t, [x, i, lsl #3]
         lsl     a, t, c
         orr     a, a, b
@@ -67,29 +67,29 @@ bignum_shl_small_loop:
         str     a, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, n
-        bcc     bignum_shl_small_loop
+        bcc     loop
 
-// If we are at the bignum_shl_small_end, finish, otherwise write carry word then zeros
+// If we are at the end, finish, otherwise write carry word then zeros
 
-bignum_shl_small_tail:
+tail:
 
         cmp     i, p
-        bcs     bignum_shl_small_end
+        bcs     end
         str     b, [z, i, lsl #3]
         mov     b, xzr
         add     i, i, #1
         cmp     i, p
-        bcs     bignum_shl_small_end
+        bcs     end
 
-bignum_shl_small_tloop:
+tloop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, p
-        bcc     bignum_shl_small_tloop
+        bcc     tloop
 
 // Return top word
 
-bignum_shl_small_end:
+end:
 
         mov     x0, b
         ret

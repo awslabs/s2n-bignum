@@ -42,17 +42,17 @@ S2N_BN_SYMBOL(bignum_muladd10):
         movq    %r8, %rdx
 #endif
 
-// Move carry input to permanent home, and if k = 0 skip the main bignum_muladd10_loop
+// Move carry input to permanent home, and if k = 0 skip the main loop
 
         movq    %rdx, d
         testq   k, k
-        jz      bignum_muladd10_end
+        jz      end
 
-// Simple bignum_muladd10_loop
+// Simple loop
 
         xorq    i, i
         movl    $10, tenshort
-bignum_muladd10_loop:
+loop:
         movq    (z,i,8), a
         mulq    ten
         addq    d, l
@@ -61,11 +61,11 @@ bignum_muladd10_loop:
         movq    h, d
         incq    i
         cmpq    k, i
-        jc      bignum_muladd10_loop
+        jc      loop
 
 // Return the final carry
 
-bignum_muladd10_end:
+end:
         movq    d, %rax
 #if WINDOWS_ABI
         popq   %rsi

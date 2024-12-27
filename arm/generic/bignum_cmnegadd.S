@@ -41,7 +41,7 @@ S2N_BN_SYMBOL(bignum_cmnegadd):
 
 // First clamp the input size n := min(p,n) since we can never need to read
 // past the p'th term of the input to generate p-digit output.
-// Subtract p := p - min(n,p) so it holds the size of the extra bignum_cmnegadd_tail needed
+// Subtract p := p - min(n,p) so it holds the size of the extra tail needed
 
         cmp     n, p
         csel    n, p, n, cs
@@ -50,9 +50,9 @@ S2N_BN_SYMBOL(bignum_cmnegadd):
 // Initialize high part h = 0; if n = 0 do nothing but return that zero
 
         mov     h, xzr
-        cbz     n, bignum_cmnegadd_end
+        cbz     n, end
 
-// Initialization of the bignum_cmnegadd_loop: 2^64 * CF + [h,z_0'] = z_0 + c * ~x_0 + c
+// Initialization of the loop: 2^64 * CF + [h,z_0'] = z_0 + c * ~x_0 + c
 
         ldr     a, [x]
         mvn     a, a
@@ -65,11 +65,11 @@ S2N_BN_SYMBOL(bignum_cmnegadd):
         str     b, [z]
         mov     i, #8
         sub     n, n, #1
-        cbz     n, bignum_cmnegadd_tail
+        cbz     n, tail
 
-// Main bignum_cmnegadd_loop, where we always have CF + previous high part h to add in
+// Main loop, where we always have CF + previous high part h to add in
 
-bignum_cmnegadd_loop:
+loop:
         ldr     a, [x, i]
         ldr     b, [z, i]
         mvn     a, a
@@ -81,44 +81,44 @@ bignum_cmnegadd_loop:
         str     b, [z, i]
         add     i, i, #8
         sub     n, n, #1
-        cbnz    n, bignum_cmnegadd_loop
+        cbnz    n, loop
 
 // At this point we have 2^{64n} * (h + CF) + z' = z + c * (2^{64n} - x)
 // so z' - 2^{64n} * (c - (h + CF)) = z - c * x.
 // Since z - c * x < 2^{64n} we must have c - (h + CF) >= 0.
 // Accumulate the negative carry in h for consistency with trivial cases.
 
-bignum_cmnegadd_tail:
+tail:
         adc     h, h, xzr
         sub     h, c, h
 
-// Propagate the carry all the way to the bignum_cmnegadd_end with h as extra carry word
+// Propagate the carry all the way to the end with h as extra carry word
 
-        cbz     p, bignum_cmnegadd_end
+        cbz     p, end
         ldr     b, [z, i]
         subs    b, b, h
         str     b, [z, i]
         mov     h, xzr
         sub     p, p, #1
-        cbz     p, bignum_cmnegadd_highend
+        cbz     p, highend
 
-bignum_cmnegadd_tloop:
+tloop:
         add     i, i, #8
         ldr     b, [z, i]
         sbcs    b, b, xzr
         str     b, [z, i]
         sub     p, p, #1
-        cbnz    p, bignum_cmnegadd_tloop
+        cbnz    p, tloop
 
 // Adjust the high word with the inverted carry h := h + (1 - CF)
 
-bignum_cmnegadd_highend:
+highend:
         cset    x0, cc
         add     h, h, x0
 
 // Now copy h into the function return
 
-bignum_cmnegadd_end:
+end:
         mov     x0, h
         ret
 

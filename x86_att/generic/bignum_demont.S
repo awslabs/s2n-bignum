@@ -72,7 +72,7 @@ S2N_BN_SYMBOL(bignum_demont):
 // If k = 0 the whole operation is trivial
 
         testq   k, k
-        jz      bignum_demont_end
+        jz      end
 
 // Compute word-level negated modular inverse w for m == m[0].
 
@@ -112,18 +112,18 @@ S2N_BN_SYMBOL(bignum_demont):
 // After this we never use x again and can safely recycle RDX for muls
 
         xorq    j, j
-bignum_demont_iloop:
+iloop:
         movq    (x,j,8), a
         movq    a, (z,j,8)
         incq    j
         cmpq    k, j
-        jc      bignum_demont_iloop
+        jc      iloop
 
 // Outer loop, just doing a standard Montgomery reduction on z
 
         xorq    i, i
 
-bignum_demont_outerloop:
+outerloop:
         movq    (z), e
         movq    w, d
         imulq   e, d
@@ -134,9 +134,9 @@ bignum_demont_outerloop:
         movl    $1, jshort
         movq    k, n
         decq    n
-        jz      bignum_demont_montend
+        jz      montend
 
-bignum_demont_montloop:
+montloop:
         adcq    (z,j,8), h
         sbbq    e, e
         movq    (m,j,8), a
@@ -147,9 +147,9 @@ bignum_demont_montloop:
         movq    %rdx, h
         incq    j
         decq    n
-        jnz     bignum_demont_montloop
+        jnz     montloop
 
-bignum_demont_montend:
+montend:
         adcq    $0, h
         movq    h, -8(z,j,8)
 
@@ -157,19 +157,19 @@ bignum_demont_montend:
 
         incq    i
         cmpq    k, i
-        jc      bignum_demont_outerloop
+        jc      outerloop
 
 // Now do a comparison of z with m to set a final correction mask
 // indicating that z >= m and so we need to subtract m.
 
         xorq    j, j
         movq    k, n
-bignum_demont_cmploop:
+cmploop:
         movq    (z,j,8), a
         sbbq    (m,j,8), a
         incq    j
         decq    n
-        jnz     bignum_demont_cmploop
+        jnz     cmploop
         sbbq    d, d
         notq    d
 
@@ -177,7 +177,7 @@ bignum_demont_cmploop:
 
         xorq    e, e
         xorq    j, j
-bignum_demont_corrloop:
+corrloop:
         movq    (m,j,8), a
         andq    d, a
         negq    e
@@ -185,9 +185,9 @@ bignum_demont_corrloop:
         sbbq    e, e
         incq    j
         cmpq    k, j
-        jc      bignum_demont_corrloop
+        jc      corrloop
 
-bignum_demont_end:
+end:
         popq    %r12
         popq    %rbp
         popq    %rbx

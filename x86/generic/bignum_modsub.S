@@ -44,26 +44,26 @@ S2N_BN_SYMBOL(bignum_modsub):
 // If k = 0 do nothing
 
         test    k, k
-        jz      bignum_modsub_end
+        jz      end
 
 // Subtract z := x - y and record a mask for the carry x - y < 0
 
         xor     c, c
         mov     j, k
         xor     i, i
-bignum_modsub_subloop:
+subloop:
         mov     a, [x+8*i]
         sbb     a, [y+8*i]
         mov     [z+8*i], a
         inc     i
         dec     j
-        jnz     bignum_modsub_subloop
+        jnz     subloop
         sbb     c, c
 
 // Now do a masked addition z := z + [c] * m
 
         xor     i, i
-bignum_modsub_addloop:
+addloop:
         mov     a, [m+8*i]
         and     a, c
         neg     j
@@ -71,9 +71,9 @@ bignum_modsub_addloop:
         sbb     j, j
         inc     i
         cmp     i, k
-        jc      bignum_modsub_addloop
+        jc      addloop
 
-bignum_modsub_end:
+end:
 #if WINDOWS_ABI
         pop    rsi
         pop    rdi

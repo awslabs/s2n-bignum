@@ -32,19 +32,19 @@ S2N_BN_SYMBOL(bignum_iszero):
 #endif
         xor     a, a
         test    k,k
-        jz      bignum_iszero_end
+        jz      end
 
-bignum_iszero_loop:
+loop:
         or      a, [x+8*k-8]
         dec     k
-        jnz     bignum_iszero_loop
+        jnz     loop
 
 // Set a standard C condition based on whether a is nonzero
 
         neg     a
         sbb     a, a
 
-bignum_iszero_end:
+end:
         inc     a
 #if WINDOWS_ABI
         pop    rsi

@@ -43,19 +43,19 @@ S2N_BN_SYMBOL(bignum_shr_small):
 // First, if p > n then pad output on the left with p-n zeros
 
         cmp     n, p
-        bcs     bignum_shr_small_nopad
-bignum_shr_small_padloop:
+        bcs     nopad
+padloop:
         sub     p, p, #1
         str     xzr, [z, p, lsl #3]
         cmp     n, p
-        bcc     bignum_shr_small_padloop
+        bcc     padloop
 
 // We now know that p <= n. If in fact p < n let carry word = x[p] instead of 0
 
-bignum_shr_small_nopad:
-        beq     bignum_shr_small_shiftstart
+nopad:
+        beq     shiftstart
         ldr     b, [x, p, lsl #3]
-bignum_shr_small_shiftstart:
+shiftstart:
 
 // Set up negated version of the shift and shift b in preparation.
 // Use a mask for nonzero shift to fake 64-bit left shift in zero case
@@ -66,10 +66,10 @@ bignum_shr_small_shiftstart:
         csetm   m, ne
         and     b, b, m
 
-// Now the main bignum_shr_small_loop
+// Now the main loop
 
-        cbz     p, bignum_shr_small_end
-bignum_shr_small_loop:
+        cbz     p, end
+loop:
         sub     p, p, #1
         ldr     t, [x, p, lsl #3]
         lsr     a, t, c
@@ -77,11 +77,11 @@ bignum_shr_small_loop:
         lsl     b, t, d
         and     b, b, m
         str     a, [z, p, lsl #3]
-        cbnz    p, bignum_shr_small_loop
+        cbnz    p, loop
 
 // Return top word, shifted back to be a modulus
 
-bignum_shr_small_end:
+end:
         lsr     x0, b, d
         ret
 

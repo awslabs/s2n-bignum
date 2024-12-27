@@ -34,29 +34,29 @@ S2N_BN_SYMBOL(bignum_of_word):
 // If k = 0 do nothing
 
         testq   %rdi, %rdi
-        jz      bignum_of_word_end
+        jz      end
 
 bignum_of_word_nontrivial:
 
-// Write lowest word and jump to bignum_of_word_end if k = 1
+// Write lowest word and jump to end if k = 1
 
         movq    %rdx, (%rsi)
         decq    %rdi
-        jz      bignum_of_word_end
+        jz      end
 
 // Zero %rdx and write it to all z[i] for i = k-1 down to 1
 // It's a bit more compact to iterate "high to low" like this.
 // But at the cost of bumping up %rsi by lea %rsi, [%rsi+8]
-// each time round the bignum_of_word_loop (which also modifies one more reg)
+// each time round the loop (which also modifies one more reg)
 // we could go "low to high" if it helps with prefetch etc.
 
         xorq    %rdx, %rdx
-bignum_of_word_loop:
+loop:
         movq    %rdx, (%rsi,%rdi,8)
         decq    %rdi
-        jnz     bignum_of_word_loop
+        jnz     loop
 
-bignum_of_word_end:
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

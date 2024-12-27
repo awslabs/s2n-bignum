@@ -121,7 +121,7 @@ S2N_BN_SYMBOL(bignum_modinv):
 // If k = 0 then do nothing (this is out of scope anyway)
 
         testq   k, k
-        jz      bignum_modinv_end
+        jz      end
 
 // Set up the additional two buffers m and n beyond w in temp space
 // and record all pointers m, n, w and z in stack-based variables
@@ -138,7 +138,7 @@ S2N_BN_SYMBOL(bignum_modinv):
 
         xorq    %r11, %r11
         xorq    i, i
-bignum_modinv_copyloop:
+copyloop:
         movq    (%rdx,i,8), a
         movq    (%rcx,i,8), b
         movq    a, (%r10,i,8)
@@ -147,7 +147,7 @@ bignum_modinv_copyloop:
         movq    %r11, (%rsi,i,8)
         incq    i
         cmpq    k, i
-        jc      bignum_modinv_copyloop
+        jc      copyloop
 
 // Tweak down w to b - 1 (this crude approach is safe as b needs to be odd
 // for it to be in scope). We have then established the congruence invariant:
@@ -205,7 +205,7 @@ bignum_modinv_copyloop:
 
 // Start of the main outer loop iterated t / CHUNKSIZE times
 
-bignum_modinv_outerloop:
+outerloop:
 
 // We need only bother with sharper l = min k (ceil(t/64)) digits
 // for the computations on m and n (but we still need k for w and z).
@@ -234,7 +234,7 @@ bignum_modinv_outerloop:
         movq    m, p1
         leaq    (p1,k,8), p2
         xorq    i, i
-bignum_modinv_toploop:
+toploop:
         movq    (p1,i,8), b
         movq    (p2,i,8), c
         movq    c2, c1
@@ -250,7 +250,7 @@ bignum_modinv_toploop:
         sbbq    c2, c2
         incq    i
         cmpq    l, i
-        jc      bignum_modinv_toploop
+        jc      toploop
 
         movq    h1, a
         orq     h2, a
@@ -310,7 +310,7 @@ bignum_modinv_toploop:
 // The actual computation computes updates before actually swapping and
 // then corrects as needed.
 
-bignum_modinv_innerloop:
+innerloop:
 
         xorl    %eax, %eax
         xorl    %ebx, %ebx
@@ -347,7 +347,7 @@ bignum_modinv_innerloop:
 // End of the inner for-loop
 
         decq    i
-        jnz     bignum_modinv_innerloop
+        jnz     innerloop
 
 // Unstash the temporary variables
 
@@ -382,7 +382,7 @@ bignum_modinv_innerloop:
         xorq    c1, c1
         xorq    c2, c2
         xorq    i, i
-bignum_modinv_congloop:
+congloop:
 
         movq    (p1,i,8), c
         movq    mat_mm, a
@@ -418,7 +418,7 @@ bignum_modinv_congloop:
 
         incq    i
         cmpq    k, i
-        jc      bignum_modinv_congloop
+        jc      congloop
 
         shldq   $64-CHUNKSIZE, c1, l1
         shldq   $64-CHUNKSIZE, c2, l2
@@ -437,9 +437,9 @@ bignum_modinv_congloop:
         movl    $1, ishort
         movq    k, c
         decq    c
-        jz      bignum_modinv_wmontend
+        jz      wmontend
 
-bignum_modinv_wmontloop:
+wmontloop:
         adcq    (p1,i,8), c1
         sbbq    b, b
         movq    (p2,i,8), a
@@ -450,9 +450,9 @@ bignum_modinv_wmontloop:
         movq    %rdx, c1
         incq    i
         decq    c
-        jnz     bignum_modinv_wmontloop
+        jnz     wmontloop
 
-bignum_modinv_wmontend:
+wmontend:
         adcq    l1, c1
         movq    c1, -8(p1,k,8)
         sbbq    c1, c1
@@ -460,19 +460,19 @@ bignum_modinv_wmontend:
 
         movq    k, c
         xorq    i, i
-bignum_modinv_wcmploop:
+wcmploop:
         movq    (p1,i,8), a
         sbbq    (p2,i,8), a
         incq    i
         decq    c
-        jnz     bignum_modinv_wcmploop
+        jnz     wcmploop
         sbbq    $0, c1
         sbbq    c1, c1
         notq    c1
 
         xorq    c, c
         xorq    i, i
-bignum_modinv_wcorrloop:
+wcorrloop:
         movq    (p1,i,8), a
         movq    (p2,i,8), b
         andq    c1, b
@@ -482,7 +482,7 @@ bignum_modinv_wcorrloop:
         movq    a, (p1,i,8)
         incq    i
         cmpq    k, i
-        jc      bignum_modinv_wcorrloop
+        jc      wcorrloop
 
 // Do a Montgomery reduction of l2::z
 
@@ -498,9 +498,9 @@ bignum_modinv_wcorrloop:
         movl    $1, ishort
         movq    k, c
         decq    c
-        jz      bignum_modinv_zmontend
+        jz      zmontend
 
-bignum_modinv_zmontloop:
+zmontloop:
         adcq    (p1,i,8), c2
         sbbq    b, b
         movq    (p2,i,8), a
@@ -511,9 +511,9 @@ bignum_modinv_zmontloop:
         movq    %rdx, c2
         incq    i
         decq    c
-        jnz     bignum_modinv_zmontloop
+        jnz     zmontloop
 
-bignum_modinv_zmontend:
+zmontend:
         adcq    l2, c2
         movq    c2, -8(p1,k,8)
         sbbq    c2, c2
@@ -521,19 +521,19 @@ bignum_modinv_zmontend:
 
         movq    k, c
         xorq    i, i
-bignum_modinv_zcmploop:
+zcmploop:
         movq    (p1,i,8), a
         sbbq    (p2,i,8), a
         incq    i
         decq    c
-        jnz     bignum_modinv_zcmploop
+        jnz     zcmploop
         sbbq    $0, c2
         sbbq    c2, c2
         notq    c2
 
         xorq    c, c
         xorq    i, i
-bignum_modinv_zcorrloop:
+zcorrloop:
         movq    (p1,i,8), a
         movq    (p2,i,8), b
         andq    c2, b
@@ -543,7 +543,7 @@ bignum_modinv_zcorrloop:
         movq    a, (p1,i,8)
         incq    i
         cmpq    k, i
-        jc      bignum_modinv_zcorrloop
+        jc      zcorrloop
 
 // Now actually compute the updates to m and n corresponding to the matrix,
 // and correct the signs if they have gone negative. First we compute the
@@ -560,7 +560,7 @@ bignum_modinv_zcorrloop:
         xorq    l1, l1
         xorq    h2, h2
         xorq    l2, l2
-bignum_modinv_crossloop:
+crossloop:
 
         movq    (p1,i,8), c
         movq    mat_mm, a
@@ -598,16 +598,16 @@ bignum_modinv_crossloop:
 
         incq    i
         cmpq    l, i
-        jc      bignum_modinv_crossloop
+        jc      crossloop
 
 // Now fix the signs of m and n if they have gone negative
 
         xorq    i, i
         movq    h1, c1 // carry-in coded up as well
         movq    h2, c2 // carry-in coded up as well
-        xorq    h1, l1 // for the bignum_modinv_end digit
-        xorq    h2, l2 // for the bignum_modinv_end digit
-bignum_modinv_optnegloop:
+        xorq    h1, l1 // for the end digit
+        xorq    h2, l2 // for the end digit
+optnegloop:
         movq    (p1,i,8), a
         xorq    h1, a
         negq    c1
@@ -622,14 +622,14 @@ bignum_modinv_optnegloop:
         movq    a, (p2,i,8)
         incq    i
         cmpq    l, i
-        jc      bignum_modinv_optnegloop
+        jc      optnegloop
         subq    c1, l1
         subq    c2, l2
 
 // Now shift them right CHUNKSIZE bits
 
         movq    l, i
-bignum_modinv_shiftloop:
+shiftloop:
         movq    -8(p1,i,8), a
         movq    a, c1
         shrdq   $CHUNKSIZE, l1, a
@@ -641,7 +641,7 @@ bignum_modinv_shiftloop:
         movq    a, -8(p2,i,8)
         movq    c2, l2
         decq    i
-        jnz     bignum_modinv_shiftloop
+        jnz     shiftloop
 
 // Finally, use the signs h1 and h2 to do optional modular negations of
 // w and z respectively, flipping h2 to make signs work. We don't make
@@ -658,7 +658,7 @@ bignum_modinv_shiftloop:
         movq    h1, c1
         movq    h2, c2
         xorq    i, i
-bignum_modinv_fliploop:
+fliploop:
         movq    h2, d
         movq    (c,i,8), a
         andq    a, d
@@ -677,7 +677,7 @@ bignum_modinv_fliploop:
         movq    d, (p2,i,8)
         incq    i
         cmpq    k, i
-        jc      bignum_modinv_fliploop
+        jc      fliploop
 
 // End of main loop. We can stop if t' <= 0 since then m * n < 2^0, which
 // since n is odd and m and n are coprime (in the in-scope cases) means
@@ -686,9 +686,9 @@ bignum_modinv_fliploop:
 // or the computation of the optimized digit bound l could collapse to 0.
 
         subq    $CHUNKSIZE, t
-        jnbe    bignum_modinv_outerloop
+        jnbe    outerloop
 
-bignum_modinv_end:
+end:
         addq    $STACKVARSIZE, %rsp
         popq    %r15
         popq    %r14

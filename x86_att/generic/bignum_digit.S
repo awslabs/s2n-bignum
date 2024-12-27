@@ -9,7 +9,7 @@
 //
 // n'th digit of a k-digit (digit=64 bits) bignum, in constant-time style.
 // Indexing starts at 0, which is the least significant digit (little-endian).
-// Returns zero if n >= k, i.e. we read a digit off the bignum_digit_end of the bignum.
+// Returns zero if n >= k, i.e. we read a digit off the end of the bignum.
 //
 // Standard x86-64 ABI: RDI = k, RSI = x, RDX = n, returns RAX
 // Microsoft x64 ABI:   RCX = k, RDX = x, R8 = n, returns RAX
@@ -44,22 +44,22 @@ S2N_BN_SYMBOL(bignum_digit):
 
         xorq    d, d
         testq   k, k
-        jz      bignum_digit_end
+        jz      end
 
-// Main bignum_digit_loop: run over all the digits and take note of the n'th one
+// Main loop: run over all the digits and take note of the n'th one
 
         xorq    i, i
-bignum_digit_loop:
+loop:
         movq    (x,i,8), a
         cmpq    n, i
         cmovzq  a, d
         incq    i
         cmpq    k, i
-        jc      bignum_digit_loop
+        jc      loop
 
 // Return
 
-bignum_digit_end:
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

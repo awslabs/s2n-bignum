@@ -56,7 +56,7 @@ S2N_BN_SYMBOL(bignum_bitfield):
 
         xorq    e, e
         testq   k, k
-        jz      bignum_bitfield_end
+        jz      end
 
 // Decompose the index into n = 64 * n + m, then increment n for next part
 
@@ -68,20 +68,20 @@ S2N_BN_SYMBOL(bignum_bitfield):
 // Run over the digits setting d = n'th and e = (n+1)'th
 
         xorq    i, i
-bignum_bitfield_loop:
+loop:
         movq    (x,i,8), a
         cmpq    n, i
         cmovcq  a, d
         cmovzq  a, e
         incq    i
         cmpq    k, i
-        jc      bignum_bitfield_loop
+        jc      loop
 
 // Put zero in a register, for several purposes
 
         xorq    a, a
 
-// Override d with 0 if we ran off the bignum_bitfield_end (e will retain original 0).
+// Override d with 0 if we ran off the end (e will retain original 0).
 
         cmpq    n, i
         cmovcq  a, d
@@ -111,7 +111,7 @@ bignum_bitfield_loop:
 
         andq    a, e
 
-bignum_bitfield_end:
+end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

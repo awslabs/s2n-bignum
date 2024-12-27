@@ -99,7 +99,7 @@ S2N_BN_SYMBOL(bignum_modinv):
 
 // If k = 0 then do nothing (this is out of scope anyway)
 
-        cbz     k, bignum_modinv_end
+        cbz     k, end
 
 // Set up the additional two buffers m and n beyond w in temp space
 
@@ -111,7 +111,7 @@ S2N_BN_SYMBOL(bignum_modinv):
 // m = a, n = b, w = b (to be tweaked to b - 1) and z = 0
 
         mov     i, xzr
-bignum_modinv_copyloop:
+copyloop:
         ldr     t1, [a, i, lsl #3]
         ldr     t2, [b, i, lsl #3]
         str     t1, [m, i, lsl #3]
@@ -120,7 +120,7 @@ bignum_modinv_copyloop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_modinv_copyloop
+        bcc     copyloop
 
 // Tweak down w to b - 1 (this crude approach is safe as b needs to be odd
 // for it to be in scope). We have then established the congruence invariant:
@@ -157,7 +157,7 @@ bignum_modinv_copyloop:
 
 // Start of the main outer loop iterated t / CHUNKSIZE times
 
-bignum_modinv_outerloop:
+outerloop:
 
 // We need only bother with sharper l = min k (ceil(t/64)) digits
 // for the computations on m and n (but we still need k for w and z).
@@ -182,7 +182,7 @@ bignum_modinv_outerloop:
         mov     c2, xzr // Mask flag: previous word of one was nonzero
         // and in this case h1 and h2 are those words
         mov     i, xzr
-bignum_modinv_toploop:
+toploop:
         ldr     t1, [m, i, lsl #3]
         ldr     t2, [n, i, lsl #3]
         orr     c1, t1, t2
@@ -196,7 +196,7 @@ bignum_modinv_toploop:
         csetm   c2, ne
         add     i, i, #1
         cmp     i, l
-        bcc     bignum_modinv_toploop
+        bcc     toploop
 
         orr     t1, h1, h2
         clz     t2, t1
@@ -253,7 +253,7 @@ bignum_modinv_toploop:
 
         ands    xzr, m_lo, #1
 
-bignum_modinv_innerloop:
+innerloop:
 
 // At the start of the loop ~ZF <=> m_lo is odd; mask values accordingly
 // Set the flags for m_hi - [~ZF] * n_hi so we know to flip things.
@@ -294,7 +294,7 @@ bignum_modinv_innerloop:
 // Next iteration; don't disturb the flags since they are used at entry
 
         sub     i, i, #1
-        cbnz    i, bignum_modinv_innerloop
+        cbnz    i, innerloop
 
 // Apply the update to w and z, using addition in this case, and also take
 // the chance to shift an additional 6 = 64-CHUNKSIZE bits to be ready for a
@@ -313,7 +313,7 @@ bignum_modinv_innerloop:
         mov     c2, xzr
 
         mov     i, xzr
-bignum_modinv_congloop:
+congloop:
         ldr     t1, [w, i, lsl #3]
         ldr     t2, [z, i, lsl #3]
 
@@ -343,7 +343,7 @@ bignum_modinv_congloop:
 
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_modinv_congloop
+        bcc     congloop
 
         extr    h1, h1, c1, #CHUNKSIZE
         extr    h2, h2, c2, #CHUNKSIZE
@@ -359,8 +359,8 @@ bignum_modinv_congloop:
 
         mov     i, #1
         sub     t1, k, #1
-        cbz     t1, bignum_modinv_wmontend
-bignum_modinv_wmontloop:
+        cbz     t1, wmontend
+wmontloop:
         ldr     t1, [b, i, lsl #3]
         ldr     t2, [w, i, lsl #3]
         mul     l1, c1, t1
@@ -372,27 +372,27 @@ bignum_modinv_wmontloop:
         str     t2, [w, l1, lsl #3]
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_wmontloop
-bignum_modinv_wmontend:
+        cbnz    t1, wmontloop
+wmontend:
         adcs    l2, l2, h1
         adc     h1, xzr, xzr
         sub     l1, i, #1
         str     l2, [w, l1, lsl #3]
 
         subs    i, xzr, xzr
-bignum_modinv_wcmploop:
+wcmploop:
         ldr     t1, [w, i, lsl #3]
         ldr     t2, [b, i, lsl #3]
         sbcs    xzr, t1, t2
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_wcmploop
+        cbnz    t1, wcmploop
 
         sbcs    xzr, h1, xzr
         csetm   h1, cs
 
         subs    i, xzr, xzr
-bignum_modinv_wcorrloop:
+wcorrloop:
         ldr     t1, [w, i, lsl #3]
         ldr     t2, [b, i, lsl #3]
         and     t2, t2, h1
@@ -400,7 +400,7 @@ bignum_modinv_wcorrloop:
         str     t1, [w, i, lsl #3]
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_wcorrloop
+        cbnz    t1, wcorrloop
 
 // Do a Montgomery reduction of h2::z
 
@@ -413,8 +413,8 @@ bignum_modinv_wcorrloop:
 
         mov     i, #1
         sub     t1, k, #1
-        cbz     t1, bignum_modinv_zmontend
-bignum_modinv_zmontloop:
+        cbz     t1, zmontend
+zmontloop:
         ldr     t1, [b, i, lsl #3]
         ldr     t2, [z, i, lsl #3]
         mul     l1, c1, t1
@@ -426,27 +426,27 @@ bignum_modinv_zmontloop:
         str     t2, [z, l1, lsl #3]
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_zmontloop
-bignum_modinv_zmontend:
+        cbnz    t1, zmontloop
+zmontend:
         adcs    l2, l2, h2
         adc     h2, xzr, xzr
         sub     l1, i, #1
         str     l2, [z, l1, lsl #3]
 
         subs    i, xzr, xzr
-bignum_modinv_zcmploop:
+zcmploop:
         ldr     t1, [z, i, lsl #3]
         ldr     t2, [b, i, lsl #3]
         sbcs    xzr, t1, t2
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_zcmploop
+        cbnz    t1, zcmploop
 
         sbcs    xzr, h2, xzr
         csetm   h2, cs
 
         subs    i, xzr, xzr
-bignum_modinv_zcorrloop:
+zcorrloop:
         ldr     t1, [z, i, lsl #3]
         ldr     t2, [b, i, lsl #3]
         and     t2, t2, h2
@@ -454,7 +454,7 @@ bignum_modinv_zcorrloop:
         str     t1, [z, i, lsl #3]
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_zcorrloop
+        cbnz    t1, zcorrloop
 
 // Now actually compute the updates to m and n corresponding to the matrix,
 // and correct the signs if they have gone negative. First we compute the
@@ -469,7 +469,7 @@ bignum_modinv_zcorrloop:
         mov     c1, xzr
         mov     c2, xzr
         mov     i, xzr
-bignum_modinv_crossloop:
+crossloop:
         ldr     t1, [m, i, lsl #3]
         ldr     t2, [n, i, lsl #3]
 
@@ -499,7 +499,7 @@ bignum_modinv_crossloop:
 
         add     i, i, #1
         cmp     i, l
-        bcc     bignum_modinv_crossloop
+        bcc     crossloop
 
 // Write back m optionally negated and shifted right CHUNKSIZE bits
 
@@ -508,9 +508,9 @@ bignum_modinv_crossloop:
         ldr     l1, [m]
         mov     i, xzr
         sub     j, l, #1
-        cbz     j, bignum_modinv_negskip1
+        cbz     j, negskip1
 
-bignum_modinv_negloop1:
+negloop1:
         add     t1, i, #8
         ldr     t2, [m, t1]
         extr    l1, t2, l1, #CHUNKSIZE
@@ -520,8 +520,8 @@ bignum_modinv_negloop1:
         mov     l1, t2
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_modinv_negloop1
-bignum_modinv_negskip1:
+        cbnz    j, negloop1
+negskip1:
         extr    l1, h1, l1, #CHUNKSIZE
         eor     l1, l1, c1
         adcs    l1, l1, xzr
@@ -534,8 +534,8 @@ bignum_modinv_negskip1:
         ldr     l1, [n]
         mov     i, xzr
         sub     j, l, #1
-        cbz     j, bignum_modinv_negskip2
-bignum_modinv_negloop2:
+        cbz     j, negskip2
+negloop2:
         add     t1, i, #8
         ldr     t2, [n, t1]
         extr    l1, t2, l1, #CHUNKSIZE
@@ -545,8 +545,8 @@ bignum_modinv_negloop2:
         mov     l1, t2
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_modinv_negloop2
-bignum_modinv_negskip2:
+        cbnz    j, negloop2
+negskip2:
         extr    l1, h2, l1, #CHUNKSIZE
         eor     l1, l1, c2
         adcs    l1, l1, xzr
@@ -562,7 +562,7 @@ bignum_modinv_negskip2:
 
         mov     i, xzr
         adds    xzr, c1, c1
-bignum_modinv_wfliploop:
+wfliploop:
         ldr     t1, [b, i, lsl #3]
         ldr     t2, [w, i, lsl #3]
         and     t1, t1, c1
@@ -571,13 +571,13 @@ bignum_modinv_wfliploop:
         str     t1, [w, i, lsl #3]
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_wfliploop
+        cbnz    t1, wfliploop
 
         mvn     c2, c2
 
         mov     i, xzr
         adds    xzr, c2, c2
-bignum_modinv_zfliploop:
+zfliploop:
         ldr     t1, [b, i, lsl #3]
         ldr     t2, [z, i, lsl #3]
         and     t1, t1, c2
@@ -586,7 +586,7 @@ bignum_modinv_zfliploop:
         str     t1, [z, i, lsl #3]
         add     i, i, #1
         sub     t1, i, k
-        cbnz    t1, bignum_modinv_zfliploop
+        cbnz    t1, zfliploop
 
 // End of main loop. We can stop if t' <= 0 since then m * n < 2^0, which
 // since n is odd and m and n are coprime (in the in-scope cases) means
@@ -595,9 +595,9 @@ bignum_modinv_zfliploop:
 // or the computation of the optimized digit bound l could collapse to 0.
 
         subs    t, t, #CHUNKSIZE
-        bhi     bignum_modinv_outerloop
+        bhi     outerloop
 
-bignum_modinv_end:
+end:
         ldp     x21, x22, [sp], #16
         ldp     x19, x20, [sp], #16
 

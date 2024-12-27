@@ -64,14 +64,14 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 
 // Multiply the low halves
 
-        callq   bignum_kmul_32_64_local_bignum_kmul_16_32
+        callq   local_bignum_kmul_16_32
 
 // Multiply the high halves
 
         leaq    16*K-0x40(%rdi), %rdi
         leaq    8*K-0x40(%rsi), %rsi
         leaq    8*K(%rcx), %rcx
-        callq   bignum_kmul_32_64_local_bignum_kmul_16_32
+        callq   local_bignum_kmul_16_32
 
 // Establish %r8 as the t pointer and use the cell to back up z now
 
@@ -145,7 +145,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         movq    %r8, %rcx
         leaq    8*K(%r8), %rsi
         leaq    16*K(%r8), %rdi
-        callq   bignum_kmul_32_64_local_bignum_kmul_16_32
+        callq   local_bignum_kmul_16_32
         movq    (%rsp), z
 
 // Compose the middle parts [2,1] + [1,0] + [3,2], saving carry in %rbx.
@@ -219,7 +219,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 // save-restore of the other registers. It naturally moves z and x on by
 // 0x40, which we compensate for when it is called by adjusting offsets.
 
-bignum_kmul_32_64_local_bignum_kmul_16_32:
+local_bignum_kmul_16_32:
         movq   (%rcx), %rdx
         xorl   %ebp, %ebp
         mulxq  (%rsi), %rax, %r9

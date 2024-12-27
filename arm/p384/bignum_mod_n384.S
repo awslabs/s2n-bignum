@@ -52,7 +52,7 @@
 #define d x14
 
 // This is aliased to t5; we get one extra (free-ish?) reg-reg move in the
-// main bignum_mod_n384_loop by not using an additional register, which seems an OK decision.
+// main loop by not using an additional register, which seems an OK decision.
 
 #define t x14
 
@@ -71,7 +71,7 @@ S2N_BN_SYMBOL(bignum_mod_n384_alt):
 // If the input is already <= 5 words long, go to a trivial "copy" path
 
         cmp     k, #6
-        bcc     bignum_mod_n384_short
+        bcc     short
 
 // Otherwise load the top 6 digits (top-down) and reduce k by 6
 
@@ -105,8 +105,8 @@ S2N_BN_SYMBOL(bignum_mod_n384_alt):
 
 // Now do (k-6) iterations of 7->6 word modular reduction
 
-        cbz     k, bignum_mod_n384_writeback
-bignum_mod_n384_loop:
+        cbz     k, writeback
+loop:
 
 // Compute q = min (m5 + 1) (2^64 - 1)
 
@@ -161,11 +161,11 @@ bignum_mod_n384_loop:
         sbc     m5, m4, xzr
         mov     m4, t
 
-        cbnz    k, bignum_mod_n384_loop
+        cbnz    k, loop
 
 // Finally write back [m5;m4;m3;m2;m1;m0] and return
 
-bignum_mod_n384_writeback:
+writeback:
         stp     m0, m1, [z]
         stp     m2, m3, [z, #16]
         stp     m4, m5, [z, #32]
@@ -174,7 +174,7 @@ bignum_mod_n384_writeback:
 
 // Short case: just copy the input with zero-padding
 
-bignum_mod_n384_short:
+short:
         mov     m0, xzr
         mov     m1, xzr
         mov     m2, xzr
@@ -182,21 +182,21 @@ bignum_mod_n384_short:
         mov     m4, xzr
         mov     m5, xzr
 
-        cbz     k, bignum_mod_n384_writeback
+        cbz     k, writeback
         ldr     m0, [x]
         subs    k, k, #1
-        beq     bignum_mod_n384_writeback
+        beq     writeback
         ldr     m1, [x, #8]
         subs    k, k, #1
-        beq     bignum_mod_n384_writeback
+        beq     writeback
         ldr     m2, [x, #16]
         subs    k, k, #1
-        beq     bignum_mod_n384_writeback
+        beq     writeback
         ldr     m3, [x, #24]
         subs    k, k, #1
-        beq     bignum_mod_n384_writeback
+        beq     writeback
         ldr     m4, [x, #32]
-        b       bignum_mod_n384_writeback
+        b       writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

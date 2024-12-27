@@ -60,7 +60,7 @@ S2N_BN_SYMBOL(bignum_cmadd):
 
 // First clamp the input size n := min(p,n) since we can never need to read
 // past the p'th term of the input to generate p-digit output.
-// Subtract p := p - min(n,p) so it holds the size of the extra bignum_cmadd_tail needed
+// Subtract p := p - min(n,p) so it holds the size of the extra tail needed
 
         cmp     p, n
         cmovc   n, p
@@ -70,13 +70,13 @@ S2N_BN_SYMBOL(bignum_cmadd):
 
         xor     h, h
         test    n, n
-        jz      bignum_cmadd_end
+        jz      end
 
 // Move c into a safer register as multiplies overwrite rdx
 
         mov     c, rdx
 
-// Initialization of the bignum_cmadd_loop: 2^64 * CF + [h,z_0'] = z_0 + c * x_0
+// Initialization of the loop: 2^64 * CF + [h,z_0'] = z_0 + c * x_0
 
         mov     rax, [x]
         mul     c
@@ -84,11 +84,11 @@ S2N_BN_SYMBOL(bignum_cmadd):
         mov     h, rdx
         mov     ishort, 1
         dec     n
-        jz      bignum_cmadd_hightail
+        jz      hightail
 
-// Main bignum_cmadd_loop, where we always have CF + previous high part h to add in
+// Main loop, where we always have CF + previous high part h to add in
 
-bignum_cmadd_loop:
+loop:
         adc     h, [z+8*i]
         sbb     r, r
         mov     rax, [x+8*i]
@@ -99,36 +99,36 @@ bignum_cmadd_loop:
         mov     h, rdx
         inc     i
         dec     n
-        jnz     bignum_cmadd_loop
+        jnz     loop
 
-bignum_cmadd_hightail:
+hightail:
         adc     h, 0
 
-// Propagate the carry all the way to the bignum_cmadd_end with h as extra carry word
+// Propagate the carry all the way to the end with h as extra carry word
 
-bignum_cmadd_tail:
+tail:
         test    p, p
-        jz      bignum_cmadd_end
+        jz      end
 
         add     [z+8*i], h
         mov     hshort, 0
         inc     i
         dec     p
-        jz      bignum_cmadd_highend
+        jz      highend
 
-bignum_cmadd_tloop:
+tloop:
         adc     [z+8*i], h
         inc     i
         dec     p
-        jnz     bignum_cmadd_tloop
+        jnz     tloop
 
-bignum_cmadd_highend:
+highend:
 
         adc     h, 0
 
 // Return the high/carry word
 
-bignum_cmadd_end:
+end:
         mov     rax, h
 
         pop     rbx

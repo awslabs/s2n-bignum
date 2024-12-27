@@ -47,30 +47,30 @@ S2N_BN_SYMBOL(bignum_copy):
         cmovc   n, k
         xor     i, i
 
-// If min(k,n) = 0 jump to the bignum_copy_padding stage
+// If min(k,n) = 0 jump to the padding stage
 
         test    n, n
-        jz      bignum_copy_padding
+        jz      padding
 
-bignum_copy_copyloop:
+copyloop:
         mov     a, [x+8*i]
         mov     [z+8*i], a
         inc     i
         cmp     i, n
-        jc      bignum_copy_copyloop
+        jc      copyloop
 
-bignum_copy_padding:
+padding:
         cmp     i, k
-        jnc     bignum_copy_end
+        jnc     end
         xor     a, a
 
-bignum_copy_padloop:
+padloop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_copy_padloop
+        jc      padloop
 
-bignum_copy_end:
+end:
 #if WINDOWS_ABI
         pop    rsi
         pop    rdi

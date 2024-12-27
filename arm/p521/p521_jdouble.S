@@ -68,14 +68,14 @@
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        bl      p521_jdouble_local_mul_p521
+        bl      local_mul_p521
 
 // Call local code equivalent to bignum_sqr_p521
 
 #define sqr_p521(P0,P1)                         \
         add     x0, P0;                         \
         add     x1, P1;                         \
-        bl      p521_jdouble_local_sqr_p521
+        bl      local_sqr_p521
 
 // Corresponds exactly to bignum_add_p521
 
@@ -496,7 +496,7 @@ S2N_BN_SYMBOL(p521_jdouble):
 // Local versions of the two "big" field operations, identical to
 // bignum_mul_p521_neon and bignum_sqr_p521_neon.
 
-p521_jdouble_local_mul_p521:
+local_mul_p521:
         stp     x19, x20, [sp, #-16]!
         stp     x21, x22, [sp, #-16]!
         stp     x23, x24, [sp, #-16]!
@@ -1173,7 +1173,7 @@ p521_jdouble_local_mul_p521:
         ldp     x19, x20, [sp], #16
         ret
 
-p521_jdouble_local_sqr_p521:
+local_sqr_p521:
         stp     x19, x20, [sp, #-16]!
         stp     x21, x22, [sp, #-16]!
         stp     x23, x24, [sp, #-16]!
