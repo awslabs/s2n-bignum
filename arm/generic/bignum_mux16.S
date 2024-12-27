@@ -36,13 +36,13 @@ S2N_BN_SYMBOL(bignum_mux16):
 // Copy size into decrementable counter, skip everything if k = 0
 
         adds    n, k, xzr
-        beq     end
+        beq     bignum_mux16_end
 
 // Multiply i by k so we can compare pointer offsets directly with it
 
         mul     i, i, k
 
-loop:
+bignum_mux16_loop:
 
         ldr     a, [x]
         mov     j, k
@@ -57,9 +57,9 @@ loop:
         add     z, z, #8
         add     x, x, #8
         subs    n, n, #1
-        bne     loop
+        bne     bignum_mux16_loop
 
-end:
+bignum_mux16_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

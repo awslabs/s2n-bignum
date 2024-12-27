@@ -44,72 +44,72 @@ S2N_BN_SYMBOL(bignum_sub):
         cmp     n, p
         csel    n, p, n, cs
         cmp     m, n
-        bcc     ylonger
+        bcc     bignum_sub_ylonger
 
 // The case where x is longer or of the same size (p >= m >= n)
 
         sub     p, p, m
         sub     m, m, n
         subs    i, xzr, xzr
-        cbz     n, xmainskip
-xmainloop:
+        cbz     n, bignum_sub_xmainskip
+bignum_sub_xmainloop:
         ldr     a, [x, i, lsl #3]
         ldr     d, [y, i, lsl #3]
         sbcs    a, a, d
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     n, n, #1
-        cbnz    n, xmainloop
-xmainskip:
-        cbz     m, xtopskip
-xtoploop:
+        cbnz    n, bignum_sub_xmainloop
+bignum_sub_xmainskip:
+        cbz     m, bignum_sub_xtopskip
+bignum_sub_xtoploop:
         ldr     a, [x, i, lsl #3]
         sbcs    a, a, xzr
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     m, m, #1
-        cbnz    m, xtoploop
-xtopskip:
-        cbnz    p, tails
+        cbnz    m, bignum_sub_xtoploop
+bignum_sub_xtopskip:
+        cbnz    p, bignum_sub_tails
         cset    x0, cc
         ret
 
 // The case where y is longer (p >= n > m)
 
-ylonger:
+bignum_sub_ylonger:
         sub     p, p, n
         sub     n, n, m
         subs    i, xzr, xzr
-        cbz     m, ytoploop
-ymainloop:
+        cbz     m, bignum_sub_ytoploop
+bignum_sub_ymainloop:
         ldr     a, [x, i, lsl #3]
         ldr     d, [y, i, lsl #3]
         sbcs    a, a, d
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     m, m, #1
-        cbnz    m, ymainloop
-ytoploop:
+        cbnz    m, bignum_sub_ymainloop
+bignum_sub_ytoploop:
         ldr     a, [y, i, lsl #3]
         sbcs    a, xzr, a
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     n, n, #1
-        cbnz    n, ytoploop
-ytopskip:
-        cbnz    p, tails
+        cbnz    n, bignum_sub_ytoploop
+bignum_sub_ytopskip:
+        cbnz    p, bignum_sub_tails
         cset    x0, cc
         ret
 
 // Adding a non-trivial tail, when p > max(m,n)
 
-tails:
+bignum_sub_tails:
         csetm   a, cc
-tailloop:
+bignum_sub_tailloop:
         str     a, [z, i, lsl #3]
         add     i, i, #1
         subs    p, p, #1
-        bne     tailloop
+        bne     bignum_sub_tailloop
         neg     x0, a
         ret
 

@@ -54,7 +54,7 @@ S2N_BN_SYMBOL(bignum_mod_sm2):
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
         cmp     k, 4
-        jc      shortinput
+        jc      bignum_mod_sm2_shortinput
 
 // Otherwise load the top 4 digits (top-down) and reduce k by 4
 
@@ -86,9 +86,9 @@ S2N_BN_SYMBOL(bignum_mod_sm2):
 // Now do (k-4) iterations of 5->4 word modular reduction
 
         test    k, k
-        jz      writeback
+        jz      bignum_mod_sm2_writeback
 
-loop:
+bignum_mod_sm2_loop:
 
 // Writing the input, with the new zeroth digit implicitly appended, as
 // z = 2^256 * m3 + 2^192 * m2 + t, our intended quotient approximation is
@@ -153,11 +153,11 @@ loop:
         mov     m0, d
 
         dec     k
-        jnz     loop
+        jnz     bignum_mod_sm2_loop
 
 // Write back
 
-writeback:
+bignum_mod_sm2_writeback:
 
         mov     [z], m0
         mov     [z+8], m1
@@ -174,7 +174,7 @@ writeback:
 #endif
         ret
 
-shortinput:
+bignum_mod_sm2_shortinput:
 
         xor     m0, m0
         xor     m1, m1
@@ -182,15 +182,15 @@ shortinput:
         xor     m3, m3
 
         test    k, k
-        jz      writeback
+        jz      bignum_mod_sm2_writeback
         mov     m0, [rdx]
         dec     k
-        jz      writeback
+        jz      bignum_mod_sm2_writeback
         mov     m1, [rdx + 8]
         dec     k
-        jz      writeback
+        jz      bignum_mod_sm2_writeback
         mov     m2, [rdx + 16]
-        jmp     writeback
+        jmp     bignum_mod_sm2_writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

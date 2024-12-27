@@ -44,7 +44,7 @@ S2N_BN_SYMBOL(bignum_optsubadd):
 
 // if k = 0 do nothing. This is also the right top carry in X0
 
-        cbz     k, end
+        cbz     k, bignum_optsubadd_end
 
 // Turn the input p into two bitmasks, m indicating to use the y input at
 // all (same register as p) and q indicating a sign-flip
@@ -61,7 +61,7 @@ S2N_BN_SYMBOL(bignum_optsubadd):
 // Main loop
 
         mov     i, xzr
-loop:
+bignum_optsubadd_loop:
         ldr     b, [y, i]
         eor     b, b, q
         ldr     a, [x, i]
@@ -70,7 +70,7 @@ loop:
         str     a, [z, i]
         add     i, i, #8
         sub     k, k, #1
-        cbnz    k, loop
+        cbnz    k, bignum_optsubadd_loop
 
 // Return carry flag, fixing up inversion for negative case
 
@@ -78,7 +78,7 @@ loop:
         neg     q, q
         eor     x0, x0, q
 
-end:
+bignum_optsubadd_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

@@ -78,7 +78,7 @@ S2N_BN_SYMBOL(bignum_amontsqr):
 // If k = 0 the whole operation is trivial
 
         testq   k, k
-        jz      end
+        jz      bignum_amontsqr_end
 
 // Move x input into its permanent home, since we need %rdx for multiplications
 
@@ -123,17 +123,17 @@ S2N_BN_SYMBOL(bignum_amontsqr):
 
         xorq    i, i // Also initializes i for main loop
         xorq    j, j
-zoop:
+bignum_amontsqr_zoop:
         movq    i, (z,j,8)
         incq    j
         cmpq    k, j
-        jc      zoop
+        jc      bignum_amontsqr_zoop
 
         xorq    c0, c0
 
 // Outer loop pulling down digits d=x[i], multiplying by x and reducing
 
-outerloop:
+bignum_amontsqr_outerloop:
 
 // Multiply-add loop where we always have CF + previous high part h to add in.
 // Note that in general we do need yet one more carry in this phase and hence
@@ -145,7 +145,7 @@ outerloop:
         xorq    c1, c1
         movq    k, n
 
-maddloop:
+bignum_amontsqr_maddloop:
         adcq    (z,j,8), h
         sbbq    e, e
         movq    (x,j,8), a
@@ -156,7 +156,7 @@ maddloop:
         movq    %rdx, h
         incq    j
         decq    n
-        jnz     maddloop
+        jnz     bignum_amontsqr_maddloop
         adcq    h, c0
         adcq    c1, c1
 
@@ -172,9 +172,9 @@ maddloop:
         movl    $1, jshort
         movq    k, n
         decq    n
-        jz      montend
+        jz      bignum_amontsqr_montend
 
-montloop:
+bignum_amontsqr_montloop:
         adcq    (z,j,8), h
         sbbq    e, e
         movq    (m,j,8), a
@@ -185,9 +185,9 @@ montloop:
         movq    %rdx, h
         incq    j
         decq    n
-        jnz     montloop
+        jnz     bignum_amontsqr_montloop
 
-montend:
+bignum_amontsqr_montend:
         adcq    c0, h
         adcq    $0, c1
         movq    c1, c0
@@ -197,7 +197,7 @@ montend:
 
         incq    i
         cmpq    k, i
-        jc      outerloop
+        jc      bignum_amontsqr_outerloop
 
 // Now convert carry word, which is always in {0,1}, into a mask "d"
 // and do a masked subtraction of m for the final almost-Montgomery result.
@@ -206,7 +206,7 @@ montend:
         subq    c0, d
         xorq    e, e
         xorq    j, j
-corrloop:
+bignum_amontsqr_corrloop:
         movq    (m,j,8), a
         andq    d, a
         negq    e
@@ -214,9 +214,9 @@ corrloop:
         sbbq    e, e
         incq    j
         cmpq    k, j
-        jc      corrloop
+        jc      bignum_amontsqr_corrloop
 
-end:
+bignum_amontsqr_end:
         popq    %r15
         popq    %r14
         popq    %r13
