@@ -198,7 +198,7 @@
 
 S2N_BN_SYMBOL(bignum_emontredc_8n):
 
-stp     x19, x20, [sp, #-16]!
+        stp     x19, x20, [sp, #-16]!
         stp     x21, x22, [sp, #-16]!
         stp     x23, x24, [sp, #-16]!
         stp     x25, x26, [sp, #-16]!
@@ -325,7 +325,6 @@ bignum_emontredc_8n_outerloop:
 
 // Repeated multiply-add block to do the k/4-1 remaining 4-digit chunks
 
-        cbz     k4m1, bignum_emontredc_8n_madddone
         mov     j, k4m1
 bignum_emontredc_8n_maddloop:
         add     m, m, #32
@@ -360,8 +359,8 @@ bignum_emontredc_8n_madddone:
 // Bump up z only and keep going
 
         add     z, z, #32
-        subs    i, i, #1
-        bne     bignum_emontredc_8n_outerloop
+        sub     i, i, #1
+        cbnz    i, bignum_emontredc_8n_outerloop
 
 // Return the top carry as 0 or 1 (it's currently a bitmask)
 

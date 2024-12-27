@@ -839,7 +839,7 @@ let BIGNUM_SQR_P521_EVENTUALLY_N_AT_PC = time prove(event_n_at_pc_goal,
 
 
 let BIGNUM_SQR_P521_CORE_CORRECT_N =
-  prove_correct_n
+  prove_ensures_n
     BIGNUM_SQR_P521_EXEC
     BIGNUM_SQR_P521_CORE_EXEC
     BIGNUM_SQR_P521_CORE_CORRECT
