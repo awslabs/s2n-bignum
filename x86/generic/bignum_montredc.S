@@ -86,7 +86,7 @@ S2N_BN_SYMBOL(bignum_montredc):
 // If k = 0 the whole operation is trivial
 
         test    k, k
-        jz      end
+        jz      bignum_montredc_end
 
 // Move n input into its permanent home, since we need rdx for multiplications
 
@@ -134,25 +134,25 @@ S2N_BN_SYMBOL(bignum_montredc):
         cmovc   j, n
         xor     i, i
         test    j, j
-        jz      padloop
-copyloop:
+        jz      bignum_montredc_padloop
+bignum_montredc_copyloop:
         mov     a, [x+8*i]
         mov     [z+8*i], a
         inc     i
         cmp     i, j
-        jc      copyloop
+        jc      bignum_montredc_copyloop
 
         cmp     i, k
-        jnc     initialized
+        jnc     bignum_montredc_initialized
 
         xor     j, j
-padloop:
+bignum_montredc_padloop:
         mov     [z+8*i], j
         inc     i
         cmp     i, k
-        jc      padloop
+        jc      bignum_montredc_padloop
 
-initialized:
+bignum_montredc_initialized:
         xor     c, c
 
 // Now if p = 0 we just need the corrective tail, and even that is
@@ -160,12 +160,12 @@ initialized:
 // to maintain the <= 2^64p * n precondition
 
         test    p, p
-        jz      corrective
+        jz      bignum_montredc_corrective
 
 // Outer loop, just doing a standard Montgomery reduction on z
 
         xor     i, i
-outerloop:
+bignum_montredc_outerloop:
         mov     e, [z]
         mov     d, w
         imul    d, e
@@ -176,9 +176,9 @@ outerloop:
         mov     jshort, 1
         mov     t, k
         dec     t
-        jz      montend
+        jz      bignum_montredc_montend
 
-montloop:
+bignum_montredc_montloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [m+8*j]
@@ -189,41 +189,41 @@ montloop:
         mov     h, rdx
         inc     j
         dec     t
-        jnz     montloop
+        jnz     bignum_montredc_montloop
 
-montend:
+bignum_montredc_montend:
         adc     h, c
         mov     cshort, 0
         adc     c, 0
 
         add     j, i
         cmp     j, n
-        jnc     offtheend
+        jnc     bignum_montredc_offtheend
         mov     a, [x+8*j]
         add     h, a
         adc     c, 0
-offtheend:
+bignum_montredc_offtheend:
         mov     [z+8*k-8], h
 
 // End of outer loop.
 
         inc     i
         cmp     i, p
-        jc      outerloop
+        jc      bignum_montredc_outerloop
 
 // Now do a comparison of (c::z) with (0::m) to set a final correction mask
 // indicating that (c::z) >= m and so we need to subtract m.
 
-corrective:
+bignum_montredc_corrective:
 
         xor     j, j
         mov     n, k
-cmploop:
+bignum_montredc_cmploop:
         mov     a, [z+8*j]
         sbb     a, [m+8*j]
         inc     j
         dec     n
-        jnz     cmploop
+        jnz     bignum_montredc_cmploop
 
         sbb     c, 0
         sbb     d, d
@@ -233,7 +233,7 @@ cmploop:
 
         xor     e, e
         xor     j, j
-corrloop:
+bignum_montredc_corrloop:
         mov     a, [m+8*j]
         and     a, d
         neg     e
@@ -241,9 +241,9 @@ corrloop:
         sbb     e, e
         inc     j
         cmp     j, k
-        jc      corrloop
+        jc      bignum_montredc_corrloop
 
-end:
+bignum_montredc_end:
         add     rsp, 8
         pop     r15
         pop     r14

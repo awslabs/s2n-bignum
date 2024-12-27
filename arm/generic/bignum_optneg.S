@@ -33,7 +33,7 @@ S2N_BN_SYMBOL(bignum_optneg):
 
 // if k = 0 do nothing. This also has the right top carry zero in x0
 
-        cbz     k, end
+        cbz     k, bignum_optneg_end
 
 // Convert p into a strict bitmask
 
@@ -47,14 +47,14 @@ S2N_BN_SYMBOL(bignum_optneg):
 
 // Main loop
         mov     i, xzr
-loop:
+bignum_optneg_loop:
         ldr     a, [x, i]
         eor     a, a, p
         adcs    a, a, xzr
         str     a, [z, i]
         add     i, i, #8
         sub     k, k, #1
-        cbnz    k, loop
+        cbnz    k, bignum_optneg_loop
 
 // Return carry flag, fixing up inversion for negative case
 
@@ -62,7 +62,7 @@ loop:
         neg     p, p
         eor     x0, x0, p
 
-end:
+bignum_optneg_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

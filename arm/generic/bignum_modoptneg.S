@@ -32,19 +32,19 @@ S2N_BN_SYMBOL(bignum_modoptneg):
 
 // Do nothing if k = 0
 
-        cbz     k, end
+        cbz     k, bignum_modoptneg_end
 
 // Make an additional check for zero input, and force p to zero in this case.
 // This can be skipped if the input is known not to be zero a priori.
 
         mov     i, xzr
         mov     a, xzr
-cmploop:
+bignum_modoptneg_cmploop:
         ldr     b, [x, i, lsl #3]
         orr     a, a, b
         add     i, i, #1
         cmp     i, k
-        bcc     cmploop
+        bcc     bignum_modoptneg_cmploop
 
         cmp     a, xzr
         csel    p, p, xzr, ne
@@ -58,7 +58,7 @@ cmploop:
 
         mov     i, xzr
         adds    xzr, p, p
-mainloop:
+bignum_modoptneg_mainloop:
 
         ldr     a, [m, i, lsl #3]
         ldr     b, [x, i, lsl #3]
@@ -68,9 +68,9 @@ mainloop:
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     a, i, k
-        cbnz    a, mainloop
+        cbnz    a, bignum_modoptneg_mainloop
 
-end:
+bignum_modoptneg_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

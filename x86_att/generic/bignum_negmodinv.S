@@ -58,7 +58,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
 // If k = 0 do nothing (actually we could have avoiding the pushes and pops)
 
         testq   k, k
-        jz      end
+        jz      bignum_negmodinv_end
 
 // Move the x pointer into its permanent home (%rdx is needed for muls)
 
@@ -101,7 +101,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
 
         movq    w, (z)
         cmpq    $1, k
-        jz      end
+        jz      bignum_negmodinv_end
 
 // Otherwise compute and write the other digits (1..k-1) of w * x + 1
 
@@ -111,7 +111,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
         addq    $1, a
         adcq    d, h
         movl    $1, ishort
-initloop:
+bignum_negmodinv_initloop:
         movq    (x,i,8), a
         mulq    w
         addq    h, a
@@ -120,7 +120,7 @@ initloop:
         movq    d, h
         incq    i
         cmpq    k, i
-        jc      initloop
+        jc      bignum_negmodinv_initloop
 
 // For simpler indexing, z := z + 8 and k := k - 1 per outer iteration
 // Then we can use the same index for x and for z and effective size k.
@@ -134,9 +134,9 @@ initloop:
 // since we do one outer loop iteration too few.
 
         subq    $2, k
-        jz      finale
+        jz      bignum_negmodinv_finale
 
-outerloop:
+bignum_negmodinv_outerloop:
         addq    $8, z
 
         movq    (z), h
@@ -150,7 +150,7 @@ outerloop:
         movq    d, h
         movl    $1, ishort
         movq    k, t
- innerloop:
+ bignum_negmodinv_innerloop:
         adcq    (z,i,8), h
         sbbq    e, e
         movq    (x,i,8), a
@@ -161,17 +161,17 @@ outerloop:
         movq    d, h
         incq    i
         decq    t
-        jnz     innerloop
+        jnz     bignum_negmodinv_innerloop
 
         decq    k
-        jnz     outerloop
+        jnz     bignum_negmodinv_outerloop
 
-finale:
+bignum_negmodinv_finale:
         movq    8(z), a
         imulq   w, a
         movq    a, 8(z)
 
-end:
+bignum_negmodinv_end:
         popq    %r12
         popq    %rbx
 #if WINDOWS_ABI

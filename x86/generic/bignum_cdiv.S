@@ -85,7 +85,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xor     l, l
         test    n, n
-        jz      nomodulus
+        jz      bignum_cdiv_nomodulus
 
         bsr     e, m
         xor     e, 63
@@ -151,7 +151,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 
         xor     hshort, hshort
         mov     i, n
-modloop:
+bignum_cdiv_modloop:
         mov     a, h
         mul     r
         add     a, [x+8*i-8]
@@ -162,7 +162,7 @@ modloop:
         add     l, a
         adc     h, 0
         dec     i
-        jnz     modloop
+        jnz     bignum_cdiv_modloop
 
         mov     i, h
         mov     a, w
@@ -200,13 +200,13 @@ modloop:
 
         mov     r, l
         sub     l, m
-nomodulus:
+bignum_cdiv_nomodulus:
         cmovnc  r, l
 
 // If k = 0 then there's no more to be done
 
         test    k, k
-        jz      end
+        jz      bignum_cdiv_end
 
 // Let e be the number of trailing zeros in m (we can ignore m = 0)
 
@@ -275,20 +275,20 @@ nomodulus:
 
         xor     d, d
         test    n, n
-        jz      loop
+        jz      bignum_cdiv_loop
         mov     d, [x]
         add     x, 8
         dec     n
 
-loop:
+bignum_cdiv_loop:
 
 // Load the next digit up to get [l,d] then shift right e places
 
         xor     l, l
         cmp     i, n
-        jnc     noload
+        jnc     bignum_cdiv_noload
         mov     l, [x+8*i]
-noload:
+bignum_cdiv_noload:
         shrd    d, l, cl
         add     d, c
         sbb     c, c
@@ -312,11 +312,11 @@ noload:
 
         inc     i
         cmp     i, k
-        jc      loop
+        jc      bignum_cdiv_loop
 
 // Return the modulus
 
-end:
+bignum_cdiv_end:
         mov     rax, r
 
         pop     r15

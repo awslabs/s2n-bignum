@@ -57,16 +57,16 @@ S2N_BN_SYMBOL(bignum_normalize):
         xorq    r, r
         movq    k, i
         subq    $1, i
-        jc      end
+        jc      bignum_normalize_end
         movq    (z,i,8), c
-        jz      bitpart
+        jz      bignum_normalize_bitpart
 
 // Do d rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
 // With careful binary striding this could be O(k*log(k)) instead of O(k^2)
 // while still retaining the constant-time style.
 
-normloop:
+bignum_normalize_normloop:
         xorq    j, j
         movq    k, b
         movq    r, d
@@ -74,23 +74,23 @@ normloop:
         negq    c
         cmovneq d, r
         movl    $0, dshort
-shufloop:
+bignum_normalize_shufloop:
         movq    d, c
         movq    (z,j,8), d
         cmovcq  d, c
         movq    c, (z,j,8)
         incq    j
         decq    b
-        jnz     shufloop
+        jnz     bignum_normalize_shufloop
         decq    i
-        jnz     normloop
+        jnz     bignum_normalize_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
 // now just count c's leading zeros and shift z bitwise that many bits.
 // We need to patch the bsr result for the undefined case of zero input
 
-bitpart:
+bignum_normalize_bitpart:
         movl    $127, dshort
         bsrq    c, c
         cmovzq  d, c
@@ -101,7 +101,7 @@ bitpart:
 
         xorq    b, b
         xorq    i, i
-bitloop:
+bignum_normalize_bitloop:
         movq    (z,i,8), d
         movq    d, j
         shldq   %cl, b, d
@@ -109,9 +109,9 @@ bitloop:
         movq    j, b
         incq    i
         cmpq    k, i
-        jc      bitloop
+        jc      bignum_normalize_bitloop
 
- end:
+ bignum_normalize_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

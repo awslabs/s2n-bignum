@@ -807,9 +807,9 @@ S2N_BN_SYMBOL(bignum_montinv_sm2):
 
         mov     i, #10
         mov     d, #1
-        b       midloop
+        b       bignum_montinv_sm2_midloop
 
-loop:
+bignum_montinv_sm2_loop:
 
 // Separate the matrix elements into sign-magnitude pairs
 
@@ -1124,7 +1124,7 @@ loop:
         stp     x1, x3, [v]
         stp     x2, x5, [v+16]
 
-midloop:
+bignum_montinv_sm2_midloop:
 
         mov     x1, d
         ldr     x2, [f]
@@ -1135,7 +1135,7 @@ midloop:
 // Next iteration
 
         subs    i, i, #1
-        bne     loop
+        bne     bignum_montinv_sm2_loop
 
 // The 10th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the

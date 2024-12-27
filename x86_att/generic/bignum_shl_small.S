@@ -66,7 +66,7 @@ S2N_BN_SYMBOL(bignum_shl_small):
         xorq    i, i
 
         testq   n, n
-        jz      tail
+        jz      bignum_shl_small_tail
 
 // Reshuffle registers to put the shift count into CL
 
@@ -75,7 +75,7 @@ S2N_BN_SYMBOL(bignum_shl_small):
 
 // Now the main loop
 
-loop:
+bignum_shl_small_loop:
         movq    (x,i,8), a
         movq    a, t
         shldq   %cl, b, a
@@ -83,7 +83,7 @@ loop:
         movq    t, b
         incq    i
         cmpq    n, i
-        jc      loop
+        jc      bignum_shl_small_loop
 
 // Shift the top word correspondingly. Using shld one more time is easier
 // than carefully producing a complementary shift with care over the zero case
@@ -94,24 +94,24 @@ loop:
 
 // If we are at the end, finish, otherwise write carry word then zeros
 
-tail:
+bignum_shl_small_tail:
         cmpq    p, i
-        jnc     end
+        jnc     bignum_shl_small_end
         movq    b, (z,i,8)
         xorq    b, b
         incq    i
         cmpq    p, i
-        jnc     end
+        jnc     bignum_shl_small_end
 
-tloop:
+bignum_shl_small_tloop:
         movq    b, (z,i,8)
         incq    i
         cmpq    p, i
-        jc      tloop
+        jc      bignum_shl_small_tloop
 
 // Return, with RAX = b as the top word
 
-end:
+bignum_shl_small_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

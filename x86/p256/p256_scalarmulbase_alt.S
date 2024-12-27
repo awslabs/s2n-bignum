@@ -160,7 +160,7 @@ p256_scalarmulbase_alt_standard:
 
         mov     i, rax
 
-loop:
+p256_scalarmulbase_alt_loop:
 
 // The next raw bitfield is bf = bitfield(blocksize * i,blocksize) + cf,
 // adding in the deferred carry cf. We then shift the whole scalar right
@@ -219,7 +219,7 @@ loop:
         mov     r12, j
         mov     rbp, table
 
-tabloop:
+p256_scalarmulbase_alt_tabloop:
         sub     r12, 1
         cmovz   rax, [rbp]
         cmovz   rbx, [rbp+8]
@@ -232,7 +232,7 @@ tabloop:
 
         add     rbp, 64
         dec     rsi
-        jnz     tabloop
+        jnz     p256_scalarmulbase_alt_tabloop
 
         mov     table, rbp
 
@@ -271,7 +271,7 @@ tabloop:
         lea     rdi, [rsp+NACC]
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+TABENT]
-        call    local_p256_montjmixadd
+        call    p256_scalarmulbase_alt_local_p256_montjmixadd
 
 // However, only commit that update to the accumulator if j is nonzero,
 // because the mixed addition function does not handle this case directly,
@@ -336,7 +336,7 @@ tabloop:
 
         imul    rax, blocksize
         cmp     rax, 257
-        jc      loop
+        jc      p256_scalarmulbase_alt_loop
 
 // That's the end of the main loop, and we just need to translate
 // back from the Jacobian representation to affine. First of all,
@@ -344,25 +344,25 @@ tabloop:
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
-        call    local_montsqr_p256
+        call    p256_scalarmulbase_alt_local_montsqr_p256
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z2]
-        call    local_montmul_p256
+        call    p256_scalarmulbase_alt_local_montmul_p256
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+Z3]
-        call    local_demont_p256
+        call    p256_scalarmulbase_alt_local_demont_p256
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+Z2]
-        call    local_inv_p256
+        call    p256_scalarmulbase_alt_local_inv_p256
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z3]
-        call    local_montmul_p256
+        call    p256_scalarmulbase_alt_local_montmul_p256
 
 // Convert back from Jacobian (X, Y, Z) |-> (X/Z^2, Y/Z^3)
 
@@ -370,12 +370,12 @@ tabloop:
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+Z2]
         mov     rbx, rdi
-        call    local_montmul_p256
+        call    p256_scalarmulbase_alt_local_montmul_p256
 
         lea     rdi, [rbx+32]
         lea     rsi, [rsp+ACC+32]
         lea     rdx, [rsp+Z3]
-        call    local_montmul_p256
+        call    p256_scalarmulbase_alt_local_montmul_p256
 
 // Restore stack and registers and return
 
@@ -390,7 +390,7 @@ tabloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-local_demont_p256:
+p256_scalarmulbase_alt_local_demont_p256:
         mov     r8, [rsi]
         mov     r9, [rsi+0x8]
         mov     r10, [rsi+0x10]
@@ -452,7 +452,7 @@ local_demont_p256:
         mov     [rdi+0x18], r10
         ret
 
-local_inv_p256:
+p256_scalarmulbase_alt_local_inv_p256:
         push    rbx
         push    rbp
         push    r12
@@ -1880,7 +1880,7 @@ p256_scalarmulbase_alt_inv_midloop:
         pop     rbx
         ret
 
-local_montmul_p256:
+p256_scalarmulbase_alt_local_montmul_p256:
         push    rbx
         push    r12
         push    r13
@@ -2060,7 +2060,7 @@ local_montmul_p256:
         pop     rbx
         ret
 
-local_montsqr_p256:
+p256_scalarmulbase_alt_local_montsqr_p256:
         push    rbx
         push    r12
         push    r13
@@ -2210,7 +2210,7 @@ local_montsqr_p256:
         pop     rbx
         ret
 
-local_p256_montjmixadd:
+p256_scalarmulbase_alt_local_p256_montjmixadd:
         push    rbx
         push    rbp
         push    r12

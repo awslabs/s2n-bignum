@@ -54,7 +54,7 @@ S2N_BN_SYMBOL(bignum_mux16):
 // Copy size into decrementable counter, or skip everything if k = 0
 
         testq   k, k
-        jz      end                     // If length = 0 do nothing
+        jz      bignum_mux16_end                     // If length = 0 do nothing
         movq    k, n
 
 // Multiply i by k so we can compare pointer offsets directly with it
@@ -65,7 +65,7 @@ S2N_BN_SYMBOL(bignum_mux16):
 
 // Main loop
 
-loop:
+bignum_mux16_loop:
         movq    (x), a
         movq    k, j
 .rep 15
@@ -78,9 +78,9 @@ loop:
         addq    $8, z
         addq    $8, x
         decq    n
-        jnz     loop
+        jnz     bignum_mux16_loop
 
-end:
+bignum_mux16_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

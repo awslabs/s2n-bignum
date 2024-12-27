@@ -65,7 +65,7 @@ bignum_modexp_standard:
 // If size is zero (which falsifies the oddness condition) do nothing
 
         testq   %rdi, %rdi
-        jz      end
+        jz      bignum_modexp_end
 
 // Set up local variables based on input parameters
 
@@ -86,20 +86,20 @@ bignum_modexp_standard:
         movq    z, %rsi
         movq    m, %rdx
         movq    y, %rcx
-        callq   local_amontifier
+        callq   bignum_modexp_local_amontifier
 
         movq    k, %rdi
         movq    x, %rsi
         movq    z, %rdx
         movq    a, %rcx
         movq    m, %r8
-        callq   local_amontmul
+        callq   bignum_modexp_local_amontmul
 
         movq    k, %rdi
         movq    z, %rsi
         movq    z, %rdx
         movq    m, %rcx
-        callq   local_demont
+        callq   bignum_modexp_local_demont
 
 // Main loop with z == 2^64k * a^(p >> 2^i) (mod m)
 
@@ -107,7 +107,7 @@ bignum_modexp_standard:
         shlq    $6, %rax
         movq    %rax, i
 
-loop:
+bignum_modexp_loop:
         subq    $1, %rax
         movq    %rax, i
 
@@ -116,14 +116,14 @@ loop:
         movq    z, %rdx
         movq    z, %rcx
         movq    m, %r8
-        callq   local_amontmul
+        callq   bignum_modexp_local_amontmul
 
         movq    k, %rdi
         movq    z, %rsi
         movq    x, %rdx
         movq    y, %rcx
         movq    m, %r8
-        callq   local_amontmul
+        callq   bignum_modexp_local_amontmul
 
         movq    i, %rdx
         movq    %rdx, %rcx
@@ -137,11 +137,11 @@ loop:
         movq    z, %rdx
         movq    z, %rcx
         movq    y, %r8
-        callq   local_mux
+        callq   bignum_modexp_local_mux
 
         movq    i, %rax
         testq   %rax, %rax
-        jnz     loop
+        jnz     bignum_modexp_loop
 
 // Convert back from Montgomery representation and copy the result
 // (via a degenerate case of multiplexing) into the output buffer
@@ -150,24 +150,24 @@ loop:
         movq    z, %rsi
         movq    z, %rdx
         movq    m, %rcx
-        callq   local_demont
+        callq   bignum_modexp_local_demont
 
         xorl    %edi, %edi
         movq    k, %rsi
         movq    res, %rdx
         movq    z, %rcx
         movq    z, %r8
-        callq   local_mux
+        callq   bignum_modexp_local_mux
 
 // Restore the stack pointer and return
 
-end:
+bignum_modexp_end:
         addq    $VARSIZE, %rsp
         ret
 
 // Local copy of bignum_amontifier
 
-local_amontifier:
+bignum_modexp_local_amontifier:
          pushq  %rbp
          pushq  %rbx
          pushq  %r12
@@ -175,38 +175,38 @@ local_amontifier:
          movq   %rdx, %r12
          movq   %rcx, %r13
          testq  %rdi, %rdi
-         je     amontifier_end
+         je     bignum_modexp_amontifier_end
          xorq   %rbx, %rbx
-copyinloop:
+bignum_modexp_copyinloop:
          movq   (%r12,%rbx,8), %rcx
          movq   %rcx, (%r13,%rbx,8)
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     copyinloop
+         jb     bignum_modexp_copyinloop
          movq   %rdi, %rbx
          decq   %rbx
-         je     normalized
-normloop:
+         je     bignum_modexp_normalized
+bignum_modexp_normloop:
          xorq   %rbp, %rbp
          movq   %rdi, %r11
          negq   %rcx
          movl   $0x0, %eax
-shufloop:
+bignum_modexp_shufloop:
          movq   %rax, %rcx
          movq   (%r13,%rbp,8), %rax
          cmovbq %rax, %rcx
          movq   %rcx, (%r13,%rbp,8)
          incq   %rbp
          decq   %r11
-         jne    shufloop
+         jne    bignum_modexp_shufloop
          decq   %rbx
-         jne    normloop
-normalized:
+         jne    bignum_modexp_normloop
+bignum_modexp_normalized:
          bsrq   %rcx, %rcx
          xorq   $0x3f, %rcx
          xorq   %r9, %r9
          xorq   %rbx, %rbx
-bitloop:
+bignum_modexp_bitloop:
          movq   (%r13,%rbx,8), %rax
          movq   %rax, %rbp
          shldq  %cl, %r9, %rax
@@ -214,13 +214,13 @@ bitloop:
          movq   %rbp, %r9
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     bitloop
+         jb     bignum_modexp_bitloop
          movq   -0x8(%r13,%rdi,8), %r11
          movl   $0x1, %r8d
          movq   %r11, %r9
          negq   %r9
          movl   $0x3e, %ebx
-estloop:
+bignum_modexp_estloop:
          addq   %r8, %r8
          movq   %r11, %rax
          subq   %r9, %rax
@@ -232,13 +232,13 @@ estloop:
          andq   %r11, %rax
          subq   %rax, %r9
          decq   %rbx
-         jne    estloop
+         jne    bignum_modexp_estloop
          incq   %r9
          cmpq   %r9, %r11
          adcq   $0x0, %r8
          xorq   %rcx, %rcx
          xorq   %rbx, %rbx
-mulloop:
+bignum_modexp_mulloop:
          movq   (%r13,%rbx,8), %rax
          mulq   %r8
          addq   %rcx, %rax
@@ -247,14 +247,14 @@ mulloop:
          movq   %rdx, %rcx
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     mulloop
+         jb     bignum_modexp_mulloop
          movabs $0x4000000000000000, %rax
          subq   %rax, %rcx
          sbbq   %r8, %r8
          notq   %r8
          xorq   %rcx, %rcx
          xorq   %rbx, %rbx
-remloop:
+bignum_modexp_remloop:
          movq   (%r13,%rbx,8), %rax
          andq   %r8, %rax
          negq   %rcx
@@ -263,11 +263,11 @@ remloop:
          movq   %rax, (%rsi,%rbx,8)
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     remloop
+         jb     bignum_modexp_remloop
          xorq   %rcx, %rcx
          xorq   %rbp, %rbp
          xorq   %r9, %r9
-dubloop1:
+bignum_modexp_dubloop1:
          movq   (%rsi,%rbp,8), %rax
          shrdq  $0x3f, %rax, %rcx
          negq   %r9
@@ -277,12 +277,12 @@ dubloop1:
          movq   %rax, %rcx
          incq   %rbp
          cmpq   %rdi, %rbp
-         jb     dubloop1
+         jb     bignum_modexp_dubloop1
          shrq   $0x3f, %rcx
          addq   %r9, %rcx
          xorq   %rbp, %rbp
          xorq   %r9, %r9
-corrloop1:
+bignum_modexp_corrloop1:
          movq   (%r13,%rbp,8), %rax
          andq   %rcx, %rax
          negq   %r9
@@ -291,11 +291,11 @@ corrloop1:
          movq   %rax, (%rsi,%rbp,8)
          incq   %rbp
          cmpq   %rdi, %rbp
-         jb     corrloop1
+         jb     bignum_modexp_corrloop1
          xorq   %rcx, %rcx
          xorq   %rbp, %rbp
          xorq   %r9, %r9
-dubloop2:
+bignum_modexp_dubloop2:
          movq   (%rsi,%rbp,8), %rax
          shrdq  $0x3f, %rax, %rcx
          negq   %r9
@@ -305,12 +305,12 @@ dubloop2:
          movq   %rax, %rcx
          incq   %rbp
          cmpq   %rdi, %rbp
-         jb     dubloop2
+         jb     bignum_modexp_dubloop2
          shrq   $0x3f, %rcx
          addq   %r9, %rcx
          xorq   %rbp, %rbp
          xorq   %r9, %r9
-corrloop2:
+bignum_modexp_corrloop2:
          movq   (%r13,%rbp,8), %rax
          andq   %rcx, %rax
          negq   %r9
@@ -320,15 +320,15 @@ corrloop2:
          movq   %rax, (%r13,%rbp,8)
          incq   %rbp
          cmpq   %rdi, %rbp
-         jb     corrloop2
+         jb     bignum_modexp_corrloop2
          xorq   %r11, %r11
          movq   %rdi, %rbx
-modloop:
+bignum_modexp_modloop:
          xorq   %r9, %r9
          movq   %rdi, %r8
          xorq   %rbp, %rbp
          xorq   %rcx, %rcx
-cmaloop:
+bignum_modexp_cmaloop:
          adcq   %r9, %rcx
          sbbq   %r10, %r10
          movq   (%rsi,%rbp,8), %rax
@@ -340,13 +340,13 @@ cmaloop:
          movq   %rdx, %rcx
          incq   %rbp
          decq   %r8
-         jne    cmaloop
+         jne    bignum_modexp_cmaloop
          adcq   %rcx, %r9
          movq   %r9, %r11
          sbbq   %r10, %r10
          xorq   %rbp, %rbp
          xorq   %rcx, %rcx
-oaloop:
+bignum_modexp_oaloop:
          movq   (%r13,%rbp,8), %rax
          movq   (%rsi,%rbp,8), %r9
          andq   %r10, %r9
@@ -356,10 +356,10 @@ oaloop:
          movq   %rax, (%r13,%rbp,8)
          incq   %rbp
          cmpq   %rdi, %rbp
-         jb     oaloop
+         jb     bignum_modexp_oaloop
          subq   %rcx, %r11
          decq   %rbx
-         jne    modloop
+         jne    bignum_modexp_modloop
          movq   (%r12), %rax
          movq   %rax, %rcx
          movq   %rax, %r9
@@ -393,8 +393,8 @@ oaloop:
          movl   $0x1, %ebp
          movq   %rdi, %r8
          decq   %r8
-         je     montifend
-montifloop:
+         je     bignum_modexp_montifend
+bignum_modexp_montifloop:
          adcq   (%r13,%rbp,8), %rcx
          sbbq   %r10, %r10
          movq   (%r12,%rbp,8), %rax
@@ -405,14 +405,14 @@ montifloop:
          movq   %rdx, %rcx
          incq   %rbp
          decq   %r8
-         jne    montifloop
-montifend:
+         jne    bignum_modexp_montifloop
+bignum_modexp_montifend:
          adcq   %rcx, %r11
          sbbq   %r10, %r10
          movq   %r11, -0x8(%r13,%rdi,8)
          xorq   %rbp, %rbp
          xorq   %rcx, %rcx
-osloop:
+bignum_modexp_osloop:
          movq   (%r13,%rbp,8), %rax
          movq   (%r12,%rbp,8), %r9
          andq   %r10, %r9
@@ -422,8 +422,8 @@ osloop:
          movq   %rax, (%rsi,%rbp,8)
          incq   %rbp
          cmpq   %rdi, %rbp
-         jb     osloop
-amontifier_end:
+         jb     bignum_modexp_osloop
+bignum_modexp_amontifier_end:
          popq   %r13
          popq   %r12
          popq   %rbx
@@ -432,7 +432,7 @@ amontifier_end:
 
 // Local copy of bignum_amontmul
 
-local_amontmul:
+bignum_modexp_local_amontmul:
          pushq  %rbx
          pushq  %rbp
          pushq  %r12
@@ -441,7 +441,7 @@ local_amontmul:
          pushq  %r15
          subq   $0x8, %rsp
          testq  %rdi, %rdi
-         je     amont_end
+         je     bignum_modexp_amont_end
          movq   %rdx, %r9
          movq   (%r8), %rax
          movq   %rax, %rdx
@@ -470,19 +470,19 @@ local_amontmul:
          movq   %rbx, (%rsp)
          xorq   %r13, %r13
          xorq   %rbx, %rbx
-zoop:
+bignum_modexp_zoop:
          movq   %r13, (%rsi,%rbx,8)
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     zoop
+         jb     bignum_modexp_zoop
          xorq   %r14, %r14
-outeramontloop:
+bignum_modexp_outeramontloop:
          movq   (%r9,%r13,8), %rbp
          xorq   %rbx, %rbx
          xorq   %r10, %r10
          xorq   %r15, %r15
          movq   %rdi, %r12
-maddloop:
+bignum_modexp_maddloop:
          adcq   (%rsi,%rbx,8), %r10
          sbbq   %r11, %r11
          movq   (%rcx,%rbx,8), %rax
@@ -493,7 +493,7 @@ maddloop:
          movq   %rdx, %r10
          incq   %rbx
          decq   %r12
-         jne    maddloop
+         jne    bignum_modexp_maddloop
          adcq   %r10, %r14
          adcq   %r15, %r15
          movq   (%rsi), %r11
@@ -506,8 +506,8 @@ maddloop:
          movl   $0x1, %ebx
          movq   %rdi, %r12
          decq   %r12
-         je     montend
-montloop:
+         je     bignum_modexp_montend
+bignum_modexp_montloop:
          adcq   (%rsi,%rbx,8), %r10
          sbbq   %r11, %r11
          movq   (%r8,%rbx,8), %rax
@@ -518,20 +518,20 @@ montloop:
          movq   %rdx, %r10
          incq   %rbx
          decq   %r12
-         jne    montloop
-montend:
+         jne    bignum_modexp_montloop
+bignum_modexp_montend:
          adcq   %r14, %r10
          adcq   $0x0, %r15
          movq   %r15, %r14
          movq   %r10, -0x8(%rsi,%rbx,8)
          incq   %r13
          cmpq   %rdi, %r13
-         jb     outeramontloop
+         jb     bignum_modexp_outeramontloop
          xorq   %rbp, %rbp
          subq   %r14, %rbp
          xorq   %r11, %r11
          xorq   %rbx, %rbx
-acorrloop:
+bignum_modexp_acorrloop:
          movq   (%r8,%rbx,8), %rax
          andq   %rbp, %rax
          negq   %r11
@@ -539,8 +539,8 @@ acorrloop:
          sbbq   %r11, %r11
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     acorrloop
-amont_end:
+         jb     bignum_modexp_acorrloop
+bignum_modexp_amont_end:
          addq   $0x8, %rsp
          popq   %r15
          popq   %r14
@@ -552,12 +552,12 @@ amont_end:
 
 // Local copy of bignum_demont
 
-local_demont:
+bignum_modexp_local_demont:
          pushq  %rbx
          pushq  %rbp
          pushq  %r12
          testq  %rdi, %rdi
-         je     demont_end
+         je     bignum_modexp_demont_end
          movq   (%rcx), %rax
          movq   %rax, %rbx
          movq   %rax, %r8
@@ -583,14 +583,14 @@ local_demont:
          addq   %rbx, %rax
          imulq  %rax, %r8
          xorq   %rbx, %rbx
-iloop:
+bignum_modexp_iloop:
          movq   (%rdx,%rbx,8), %rax
          movq   %rax, (%rsi,%rbx,8)
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     iloop
+         jb     bignum_modexp_iloop
          xorq   %r9, %r9
-outerdemontloop:
+bignum_modexp_outerdemontloop:
          movq   (%rsi), %r11
          movq   %r8, %rbp
          imulq  %r11, %rbp
@@ -601,8 +601,8 @@ outerdemontloop:
          movl   $0x1, %ebx
          movq   %rdi, %r12
          decq   %r12
-         je     demontend
-demontloop:
+         je     bignum_modexp_demontend
+bignum_modexp_demontloop:
          adcq   (%rsi,%rbx,8), %r10
          sbbq   %r11, %r11
          movq   (%rcx,%rbx,8), %rax
@@ -613,26 +613,26 @@ demontloop:
          movq   %rdx, %r10
          incq   %rbx
          decq   %r12
-         jne    demontloop
-demontend:
+         jne    bignum_modexp_demontloop
+bignum_modexp_demontend:
          adcq   $0x0, %r10
          movq   %r10, -0x8(%rsi,%rbx,8)
          incq   %r9
          cmpq   %rdi, %r9
-         jb     outerdemontloop
+         jb     bignum_modexp_outerdemontloop
          xorq   %rbx, %rbx
          movq   %rdi, %r12
-cmploop:
+bignum_modexp_cmploop:
          movq   (%rsi,%rbx,8), %rax
          sbbq   (%rcx,%rbx,8), %rax
          incq   %rbx
          decq   %r12
-         jne    cmploop
+         jne    bignum_modexp_cmploop
          sbbq   %rbp, %rbp
          notq   %rbp
          xorq   %r11, %r11
          xorq   %rbx, %rbx
-dcorrloop:
+bignum_modexp_dcorrloop:
          movq   (%rcx,%rbx,8), %rax
          andq   %rbp, %rax
          negq   %r11
@@ -640,8 +640,8 @@ dcorrloop:
          sbbq   %r11, %r11
          incq   %rbx
          cmpq   %rdi, %rbx
-         jb     dcorrloop
-demont_end:
+         jb     bignum_modexp_dcorrloop
+bignum_modexp_demont_end:
          popq   %r12
          popq   %rbp
          popq   %rbx
@@ -649,20 +649,20 @@ demont_end:
 
 // Local copy of bignum_mux
 
-local_mux:
+bignum_modexp_local_mux:
          testq  %rsi, %rsi
-         je     muxend
+         je     bignum_modexp_muxend
          xorq   %r9, %r9
          negq   %rdi
-muxloop:
+bignum_modexp_muxloop:
          movq   (%rcx,%r9,8), %rax
          movq   (%r8,%r9,8), %rdi
          cmovae %rdi, %rax
          movq   %rax, (%rdx,%r9,8)
          incq   %r9
          decq   %rsi
-         jne    muxloop
-muxend:
+         jne    bignum_modexp_muxloop
+bignum_modexp_muxend:
          ret
 
 #if defined(__linux__) && defined(__ELF__)

@@ -755,9 +755,9 @@ S2N_BN_SYMBOL(bignum_inv_p25519):
 
         mov     i, #10
         mov     d, #1
-        b       midloop
+        b       bignum_inv_p25519_midloop
 
-loop:
+bignum_inv_p25519_loop:
 
 // Separate the matrix elements into sign-magnitude pairs
 
@@ -1086,7 +1086,7 @@ loop:
         stp     x0, x1, [v]
         stp     x3, x2, [v+16]
 
-midloop:
+bignum_inv_p25519_midloop:
 
         mov     x1, d
         ldr     x2, [f]
@@ -1097,7 +1097,7 @@ midloop:
 // Next iteration
 
         subs    i, i, #1
-        bne     loop
+        bne     bignum_inv_p25519_loop
 
 // The 10th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the
