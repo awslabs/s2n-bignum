@@ -329,7 +329,7 @@ let _ = prove(
     val b0 + 2 EXP 64 * val b1 + 2 EXP 128 * val b2 = n
     ==> a0 = b0 /\ a1 = b1 /\ a2 = b2`,
   REPEAT STRIP_TAC THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
+  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN 
   REFL_TAC);;
 
 (* Apply ENSURES2_FRAME_SUBSUMED and automatically resolve the subsumes
@@ -478,6 +478,31 @@ let eventually_n_at_pc = new_definition
       aligned_bytes_loaded s (word pc_mc) mc /\ read PC s = word pc /\ s0_pred s
       ==> eventually arm (\s'. read PC s' = word pc2 /\ P s s') s
       ==> eventually_n arm nth (\s'. read PC s' = word pc2 /\ P s s') s)`;;
+
+let ENSURES_AND_EVENTUALLY_N_AT_PC_PROVES_ENSURES_N = prove(
+  `forall Pre pc_mc mc pc n.
+    eventually_n_at_pc pc_mc mc pc pc2 n Pre
+    ==> forall Post R.
+      ensures arm
+        (\s. aligned_bytes_loaded s (word pc_mc) mc /\ read PC s = word pc /\ Pre s)
+        (\s. read PC s = word pc2 /\ Post s)
+        R
+      ==> ensures_n arm
+        (\s. aligned_bytes_loaded s (word pc_mc) mc /\ read PC s = word pc /\ Pre s)
+        (\s. read PC s = word pc2 /\ Post s)
+        R (\s. n)`,
+
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[eventually_n_at_pc;ensures;ensures_n] THEN
+  INTRO_TAC "H2" THEN
+  REWRITE_TAC[GSYM CONJ_ASSOC] THEN
+  REPEAT GEN_TAC THEN INTRO_TAC "H1" THEN
+  GEN_TAC THEN INTRO_TAC "HA HB HC" THEN
+  REMOVE_THEN "H1" (fun th -> MP_TAC (SPECL [`s:armstate`] th)) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN (LABEL_TAC "H1") THEN
+  REMOVE_THEN "H2" (fun th -> MP_TAC (SPECL [`s:armstate`;`(\(s:armstate) (s2:armstate). Post s2 /\ R s s2)`] th)) THEN
+  ASM_REWRITE_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
 (* A "barrier" instruction that makes Arm program stop.                      *)
@@ -1135,26 +1160,6 @@ let ARM_N_STEPS_TAC th snums stname_suffix stnames_no_discard dead_value_info =
       | Some arr -> DISCARD_REGS_WITH_DEAD_VALUE_TAC (arr.(s-1))
       end)
     snums;;
-
-(* A variant of ENSURES_FINAL_STATE_TAC but targets eventually_n. *)
-let ENSURES_N_FINAL_STATE_TAC =
-  GEN_REWRITE_TAC I [EVENTUALLY_N_TRIVIAL] THEN
-  GEN_REWRITE_TAC TRY_CONV [BETA_THM] THEN
-  W(fun (asl,w) ->
-        let onlycjs,othercjs = partition maychange_term (conjuncts w) in
-        if othercjs = [] then
-          TRY(REPEAT CONJ_TAC THEN MONOTONE_MAYCHANGE_TAC THEN NO_TAC)
-        else if onlycjs = [] then
-          let w' = list_mk_conj othercjs in
-          GEN_REWRITE_TAC I [CONJ_ACI_RULE(mk_eq(w,w'))]
-        else
-          let w' = mk_conj(list_mk_conj othercjs,list_mk_conj onlycjs) in
-          (GEN_REWRITE_TAC I [CONJ_ACI_RULE(mk_eq(w,w'))] THEN
-           TRY(CONJ_TAC THENL
-                [ALL_TAC;
-                 REPEAT CONJ_TAC THEN MONOTONE_MAYCHANGE_TAC THEN
-                 NO_TAC])));;
-
 
 (* Given readth,readth2 = (`|- read c s = e1`, `|- read c' s' = e2`),
    prove e1 = e2 using WORD_RULE, abbreviate e1 and e2 as a
@@ -2491,14 +2496,22 @@ let to_ensures_n (ensures_form:term) (numsteps_fn:term): term =
   list_mk_forall (g_quants,mk_imp(g_asms,g_ensures_n));;
 
 (* prove_correct_barrier_appended replaces `core_mc` with
-   `APPEND core_mc barrier_inst_bytes` inside assumption and precond.
+   `APPEND core_mc barrier_inst_bytes` inside assumption
+   (e.g., nonoverlapping (pc, LENGTH core_mc) ...) and
+   precondition (e.g., aligned_bytes_loaded core_mc).
 
    This is a method to prove the ensures predicate with the
-   barrier_inst_bytes-appended version without manipulating its proof.
+   barrier_inst_bytes-appended version without modifying its proof.
    This uses ENSURES_SUBLEMMA_THM.
    If barrier_inst_bytes was not appended, but inserted inside the program,
    then this approach cannot be used because implication between two
    preconditions will not hold.
+
+   Note that the resulting ensures predicate is now hard to be used for
+   compositional reasoning. Since the barrier instruction is appended,
+   no program (other than one starting with a barrier instruction; such a
+   program is useless in practice) can come next to the code, making
+   composition of two sequential programs impossible.
 *)
 let prove_correct_barrier_appended (correct_th:thm) core_exec_th: thm =
   (* core_exec_th = `LENGTH core_mc = ..`, an array of arm_decodes *)
@@ -2531,13 +2544,13 @@ let prove_correct_barrier_appended (correct_th:thm) core_exec_th: thm =
     MP_TAC (SPEC_ALL correct_th) THEN
     (* Prove antedecent of correct_th *)
     ANTS_TAC THENL [
-      REPEAT (POP_ASSUM MP_TAC) THEN
+      POP_ASSUM_LIST (fun th -> MP_TAC (end_itlist CONJ th)) THEN
       REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES;LENGTH_APPEND;
                   BARRIER_INST_BYTES_LENGTH] THEN
-      REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-      (NONOVERLAPPING_TAC ORELSE
+      REPEAT GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+      (REPEAT CONJ_TAC THEN (NONOVERLAPPING_TAC ORELSE
        (PRINT_TAC "prove_correct_barrier_appended failed" THEN
-        PRINT_GOAL_TAC THEN NO_TAC));
+        PRINT_GOAL_TAC THEN NO_TAC)));
       ALL_TAC
     ] THEN
 
@@ -2561,8 +2574,11 @@ let prove_correct_barrier_appended (correct_th:thm) core_exec_th: thm =
       MESON_TAC[]
     ]);;
 
-let prove_correct_n execth core_execth (correct_th:thm)
-                    (event_n_at_pc_th:thm): thm =
+(* When ASM_MESON_TAC cannot discharge the final goal state because the
+   goal is `exists ...`, you can use exists_params to instantiate the
+   variables. *)
+let prove_ensures_n ?(exists_params:term list option)
+    execth core_execth (correct_th:thm) (event_n_at_pc_th:thm): thm =
   let correct_th = prove_correct_barrier_appended correct_th core_execth in
   let to_eventually_th = REWRITE_RULE [fst execth;fst core_execth] event_n_at_pc_th in
   let to_eventually_th = CONV_RULE NUM_REDUCE_CONV to_eventually_th in
@@ -2602,11 +2618,18 @@ let prove_correct_n execth core_execth (correct_th:thm)
     CONV_TAC (
       REWRITE_CONV[fst execth;fst core_execth;LENGTH_APPEND;BARRIER_INST_BYTES_LENGTH] THENC
       ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
-    (ASM_MESON_TAC[ALL;NONOVERLAPPING_CLAUSES;NONOVERLAPPING_MODULO_SYM;
-                   eventually_form] ORELSE
-    (PRINT_TAC ("ASM_MESON could not prove this goal. eventually_form: `" ^
+
+    ((match exists_params with
+     | None -> NO_TAC
+     | Some ls -> MAP_EVERY EXISTS_TAC ls THEN ASM_REWRITE_TAC[] THEN
+        MATCH_MP_TAC eventually_form THEN ASM_REWRITE_TAC[] THEN
+        NO_TAC) ORELSE
+     (ASM_MESON_TAC[eventually_form] ORELSE
+      ASM_MESON_TAC[ALL;NONOVERLAPPING_CLAUSES;NONOVERLAPPING_MODULO_SYM;
+                    eventually_form]) ORELSE
+     (PRINT_TAC ("ASM_MESON could not prove this goal. eventually_form: `" ^
         (string_of_thm eventually_form) ^ "`") THEN
-     PRINT_GOAL_TAC THEN NO_TAC)));;
+      PRINT_GOAL_TAC THEN NO_TAC)));;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -3084,15 +3107,81 @@ let EQUIV_TRANS_TAC
     SUBSUMED_MAYCHANGE_TAC
   ];;
 
+
+let EQUIV_TRANS_GEN_TAC
+    (equiv1_th,equiv2_th)
+    (eq1_in_state_th,eq2_in_state_th,eq_main_in_state_th)
+    eq_out_state_trans_th
+    (P1_EXEC,P2_EXEC,P3_EXEC) =
+  let p2_mc =
+    let len_p2_mc = fst (dest_eq (concl (fst P2_EXEC))) in
+    snd (dest_comb len_p2_mc) in
+  let interm_state =
+    subst [p2_mc,`p2_mc:((8)word)list`]
+      `write (memory :> bytelist (word pc3,LENGTH (p2_mc:((8)word)list)))
+             p2_mc (write PC (word pc3) s')`
+    and eq_main_in_const =
+      let def = fst (dest_eq (snd (strip_forall (concl eq_main_in_state_th)))) in
+      fst (strip_comb def) in
+
+  ENSURES2_CONJ2_TRANS_TAC equiv1_th equiv2_th THEN
+
+  (* break 'ALL nonoverlapping' in assumptions *)
+  RULE_ASSUM_TAC (REWRITE_RULE[
+      ALLPAIRS;ALL;fst P1_EXEC;fst P2_EXEC;fst P3_EXEC;NONOVERLAPPING_CLAUSES]) THEN
+  REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
+
+  MATCH_MP_TAC ENSURES2_WEAKEN THEN
+  REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THENL [
+    (* Prove that, from the main goal equivalence's precondition,
+       the existential form of the combined preconditions
+       (generated by ENSURES2_CONJ2_TRANS_TAC) is true. *)
+    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    REWRITE_TAC[TAUT `(p /\ q /\ r) /\ p /\ q /\ r' <=> p /\ q /\ r /\ r'`] THEN
+    EXISTS_TAC interm_state THEN
+
+    PROVE_CONJ_OF_EQ_READS_TAC P2_EXEC THENL [
+      (* Undischarge `eq_main_in_state_th (s,s') (args..)`. *)
+      FIRST_ASSUM (fun th ->
+        if fst (strip_comb (concl th)) = eq_main_in_const
+        then UNDISCH_TAC (concl th) else ALL_TAC) THEN
+      REWRITE_TAC[eq1_in_state_th;eq_main_in_state_th;C_ARGUMENTS;BIGNUM_FROM_MEMORY_BYTES;fst P2_EXEC;
+                  mk_equiv_regs] THEN
+      STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+      REPEAT (TRY HINT_EXISTS_REFL_TAC THEN
+              CHANGED_TAC (PROVE_CONJ_OF_EQ_READS_TAC P2_EXEC))
+      THEN PRINT_GOAL_TAC THEN NO_TAC;
+
+      (* Undischarge `eq2_in_state_th (s,s') (args..)`. *)
+      FIRST_ASSUM (fun th ->
+        if fst (strip_comb (concl th)) = eq_main_in_const
+        then UNDISCH_TAC (concl th) else ALL_TAC) THEN
+      REWRITE_TAC[eq_main_in_state_th;eq2_in_state_th;C_ARGUMENTS;
+                  BIGNUM_FROM_MEMORY_BYTES;fst P2_EXEC;
+                  mk_equiv_regs] THEN
+      STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+      REPEAT (TRY HINT_EXISTS_REFL_TAC THEN
+              CHANGED_TAC (PROVE_CONJ_OF_EQ_READS_TAC P2_EXEC))
+      THEN PRINT_GOAL_TAC THEN NO_TAC;
+    ];
+
+    (* Prove that the main postcondition can be proven. *)
+    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[eq_out_state_trans_th];
+
+    SUBSUMED_MAYCHANGE_TAC
+  ];;
+
 (* Given a goal `ensures ..` which is a spec of program p, generate a
    verification condition from two lemmas:
   1. equiv_th: a program equivalence theorem between p and another program p2
-  2. correct_n_th: a specification of p2 in `ensures_n`.
+  2. ensures_n_th: a specification of p2 in `ensures_n`.
   mc_length_ths is a list of LENGTH *_mc theorems for p1 and p2 used in equiv_th's
   hypotheses, specifically the nonoverlapping predicates.
   The result of tactic is conjunction of three clauses.
   If arm_print_log is set to true, it prints more info. *)
-let VCGEN_EQUIV_TAC equiv_th correct_n_th mc_length_ths =
+let VCGEN_EQUIV_TAC equiv_th ensures_n_th mc_length_ths =
   let stepfn =
     let b = snd (strip_forall (concl equiv_th)) in
     let b = if is_imp b then snd (dest_imp b) else b in
@@ -3103,13 +3192,13 @@ let VCGEN_EQUIV_TAC equiv_th correct_n_th mc_length_ths =
   EXISTS_TAC stepfn THEN
   (* Prepare a 'conjunction' of SPEC and EQUIV *)
   MP_TAC (
-      let ensures_n_part = SPEC_ALL correct_n_th in
+      let ensures_n_part = SPEC_ALL ensures_n_th in
       let equiv_part = SPEC_ALL equiv_th in
       let conj_ensures_n_equiv = CONJ ensures_n_part equiv_part in
       MATCH_MP (TAUT`((P==>Q)/\(R==>S)) ==> ((P/\R)==>(Q/\S))`) conj_ensures_n_equiv) THEN
 
   (* Try to prove the assumptions of equiv_th and
-     correct_n_th, which are in ASSUM of
+     ensures_n_th, which are in ASSUM of
      (ASSUM ==> ensures_n) ==> ensures_n.
      If it could not be proven, it will be left as a subgoal of this tactic. *)
   W (fun (asl,g) ->
@@ -3127,11 +3216,11 @@ let VCGEN_EQUIV_TAC equiv_th correct_n_th mc_length_ths =
         MATCH_MP_TAC (REWRITE_RULE [TAUT`(P==>Q==>R) <=> (P/\Q==>R)`] th2)) THEN
     REWRITE_TAC[] in
 
-  W (fun (asl,g) ->
-    if is_imp g then
+  W (fun (asl,w) ->
+    if is_imp w then
       let r = ([ALL;NONOVERLAPPING_CLAUSES;LENGTH_APPEND;
                 BARRIER_INST_BYTES_LENGTH] @ mc_length_ths) in
-      SUBGOAL_THEN (fst (dest_imp (fst (dest_imp g))))
+      SUBGOAL_THEN (fst (dest_imp (fst (dest_imp w))))
           (fun th -> REWRITE_TAC[th]) THENL [
         (REWRITE_TAC r THEN RULE_ASSUM_TAC(REWRITE_RULE r) THEN
         REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
@@ -3144,7 +3233,9 @@ let VCGEN_EQUIV_TAC equiv_th correct_n_th mc_length_ths =
     else maintac);;
 
 (* From program equivalence between programs P1 and P2 as well as
-   ensures_n spec of P1, prove ensures spec of P2. *)
+   ensures_n spec of P1, prove ensures spec of P2.
+   ensures_n_th must have the barrier instruction appended after
+   the main machine code. *)
 let PROVE_ENSURES_FROM_EQUIV_AND_ENSURES_N_TAC
     equiv_th ensures_n_th (P1_EXEC,P2_EXEC) (eqin_th,eqout_th) =
 
@@ -3187,6 +3278,121 @@ let PROVE_ENSURES_FROM_EQUIV_AND_ENSURES_N_TAC
     (** SUBGOAL 3. Frame **)
     MESON_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;MODIFIABLE_SIMD_REGS]
   ];;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Sequentially composing two program equivalences and making a theorem      *)
+(* on a larger program equivalence between the two composed programs.        *)
+(* ------------------------------------------------------------------------- *)
+
+let prove_equiv_seq_composition (equivth1:thm) (equivth2:thm)
+    (prog1_out_implies_prog2_in_thm:thm) =
+  (* step 1. let's make a goal. *)
+  let quants1,body1 = strip_forall (concl equivth1) and
+      quants2,body2 = strip_forall (concl equivth2) in
+  (* check that there is no quantified variable with same name but different types. *)
+  if List.exists2 (fun t1 t2 -> name_of t1 = name_of t2 && type_of t1 <> type_of t2)
+                  quants1 quants2
+  then failwith "has quantified variable with same name but different types" else
+  let quants = union quants1 quants2 in
+
+  (* break '(assums) ==> ensures ...' *)
+  let assums1,body1 = if is_imp body1 then dest_imp body1 else `T`,body1 and
+      assums2,body2 = if is_imp body2 then dest_imp body2 else `T`,body2 in
+  let assums =
+    if assums1 = assums2 then assums1 else begin
+    Printf.printf "assumptions are different.. breaking conjunctions & merging";
+    let cjs1 = conjuncts assums1 and cjs2 = conjuncts assums2 in
+    list_mk_conj (union cjs1 cjs2) end in
+
+  (* get pre/post/frame/steps *)
+  let ensures_const,[arm_const;precond1;postcond1;frame1;step11;step12] =
+      strip_comb body1 in
+  if name_of ensures_const <> "ensures2"
+  then failwith "equivth1 is not ensures2" else
+  if name_of arm_const <> "arm"
+  then failwith "equivth1 is not ensures2 arm" else
+  let ensures_const,[arm_const;precond2;postcond2;frame2;step21;step22] =
+      strip_comb body2 in
+  if name_of ensures_const <> "ensures2"
+  then failwith "equivth2 is not ensures2" else
+  if name_of arm_const <> "arm"
+  then failwith "equivth1 is not ensures2 arm" else
+
+  let postcond1_vars, postcond1_body = dest_gabs postcond1 and
+      precond2_vars, precond2_body = dest_gabs precond2 in
+  let postcond1_var1,postcond1_var2 = dest_pair postcond1_vars and
+      precond2_var1,precond2_var2 = dest_pair precond2_vars in
+  let [frame1_vars1;frame1_vars2], frame1_body = strip_gabs frame1 and
+      [frame2_vars1;frame2_vars2], frame2_body = strip_gabs frame2 and
+      step11_var,step11_body = dest_abs step11 and
+      step12_var,step12_body = dest_abs step12 and
+      step21_var,step21_body = dest_abs step21 and
+      step22_var,step22_body = dest_abs step22 in
+  if frame1_vars1 <> frame2_vars1 || frame1_vars2 <> frame2_vars2
+  then failwith "lambda variables of frames mismatch" else
+  if step11_var <> step21_var || step12_var <> step22_var
+  then failwith "lambda variables of steps mismatch" else
+
+  (* simplify maychange first, then make the maychange term *)
+  let frame1_body_left,frame1_body_right = dest_conj frame1_body and
+      frame2_body_left,frame2_body_right = dest_conj frame2_body in
+  let combine_maychanges t1 t2 =
+      let t1' = fst (dest_comb (fst (dest_comb t1))) and
+          t2' = fst (dest_comb (fst (dest_comb t2))) in
+      let res = mk_icomb (mk_icomb (`,,`,t1'),t2') in
+      let res' = REWRITE_CONV[GSYM SEQ_ASSOC] res in
+      snd (dest_eq (concl res')) in
+  let new_maychange1 =
+      simplify_maychanges (combine_maychanges frame1_body_left frame2_body_left) in
+  let new_maychange1 = list_mk_comb (new_maychange1,
+    let s,s' = fst (dest_pair frame1_vars1),fst (dest_pair frame1_vars2) in [s;s']) in
+  let new_maychange2 =
+      simplify_maychanges (combine_maychanges frame1_body_right frame2_body_right) in
+  let new_maychange2 = list_mk_comb (new_maychange2,
+    let s2,s2' = snd (dest_pair frame1_vars1),snd (dest_pair frame1_vars2) in [s2;s2']) in
+  let new_maychange = list_mk_gabs ([frame1_vars1;frame1_vars2],
+    mk_conj(new_maychange1,new_maychange2)) in
+
+  (* make a new step. *)
+  let new_step1 = mk_abs (step11_var,(mk_binary "+" (step11_body,step21_body))) and
+      new_step2 = mk_abs (step12_var,(mk_binary "+" (step12_body,step22_body))) in
+
+  (* build a new ensures2 *)
+  let new_ensures2 = list_mk_icomb "ensures2"
+      [`arm`;precond1;postcond2;new_maychange;new_step1;new_step2] in
+  (* finally, make a goal! *)
+  let new_goal = list_mk_forall (quants,
+    if assums = `T` then new_ensures2 else mk_imp (assums,new_ensures2)) in
+  prove(new_goal,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES2_TRANS_GEN THEN
+    MAP_EVERY EXISTS_TAC [postcond1;precond2;frame1;frame2] THEN
+    REPEAT CONJ_TAC THENL [
+      (* First ensures2 *)
+      ASM_MESON_TAC[equivth1];
+
+      (* Second ensures2 *)
+      ASM_MESON_TAC[equivth2];
+
+      (* The implication between postcond1 and precond2 *)
+      REWRITE_TAC[] THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
+      ASM_REWRITE_TAC[] THEN
+      (ASM_MESON_TAC[prog1_out_implies_prog2_in_thm] ORELSE PRINT_GOAL_TAC);
+
+      (* Maychanges: copid from ENSURES2_FRAME_SUBSUMED_TAC modulo its first line *)
+      REWRITE_TAC[subsumed;FORALL_PAIR_THM;SEQ_PAIR_SPLIT;ETA_AX;SOME_FLAGS] THEN
+      REPEAT STRIP_TAC THENL
+      (* two subgoals from here *)
+      replicate
+        ((fun (asl,g) ->
+          let st,st' = rand(rator g), rand g in
+          (FIRST_X_ASSUM (fun th ->
+            if rand(concl th) = st' then
+              MP_TAC th THEN MAP_EVERY SPEC_TAC [(st',st');(st,st)]
+            else NO_TAC)) (asl,g)) THEN
+        REWRITE_TAC[GSYM subsumed; ETA_AX] THEN SUBSUMED_MAYCHANGE_TAC)
+        2
+    ]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Load convenient OCaml functions for merging two lists of actions which    *)

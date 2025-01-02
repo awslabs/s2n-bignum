@@ -378,8 +378,8 @@ let check_insns () =
     "10110101xxxxxxxxxxxxxxxxxxxxxxxx";
 
     (*** ldp ***)
-    "x0101000x1xxxxxxxxxxxxxxxxxxxxxx";
-    "x010100101xxxxxxxxxxxxxxxxxxxxxx";
+    "x010100x1xxxxxxxxxxxxxxxxxxxxxxx"; (* Preimmediate_Offset or Postimmediate_Offset *)
+    "x01010010xxxxxxxxxxxxxxxxxxxxxxx"; (* Immediate_Offset *)
 
     (*** ldp (SIMD & FP) ***)
     "xx10110011xxxxxxxxxxxxxxxxxxxxxx";
@@ -435,6 +435,7 @@ let check_insns () =
     (*** sub/add with sp regs ***)
     "xx0100010xxxxxxxxxxxxxxxxxx11111";
     "xx0100010xxxxxxxxxxxxx11111xxxxx";
+    "11001011001xxxxxxxxxxx11111xxxxx";
 
     (*** ret ***)
     "1101011001011111000000xxxxx00000";

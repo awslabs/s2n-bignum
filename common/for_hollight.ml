@@ -70,6 +70,10 @@ let ODD_DOUBLE = prove (`!n. ~ODD (2 * n)`,
 let EXP_2_NE_0 = prove
   (`~(2 EXP n = 0)`, REWRITE_TAC [EXP_EQ_0; ARITH_EQ]);;
 
+let ONE_LE_EXP_2 = prove(`forall y. 1 <= 2 EXP y`,
+  REWRITE_TAC[ARITH_RULE`1=SUC 0`;LE_SUC_LT] THEN
+  REWRITE_TAC[ARITH_RULE`0 < x <=> ~(x = 0)`;EXP_2_NE_0]);;
+
 let MOD_DIV_EQ_0 = prove
   (`~(n = 0) ==> (m MOD n) DIV n = 0`, DISCH_THEN (fun th ->
     IMP_REWRITE_TAC [th; DIV_EQ_0; MOD_LT_EQ]));;

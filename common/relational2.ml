@@ -4,167 +4,29 @@
  *)
 
 (* ========================================================================= *)
-(*    Relational Hoare Logic for proving program equivalence.                *)
+(*         Relational Hoare Logic for proving program equivalence.           *)
 (* ========================================================================= *)
 
-(* ------------------------------------------------------------------------- *)
-(* A definition of steps and its properties.                                 *)
-(* ------------------------------------------------------------------------- *)
+(**** Proofs in this file can be easily converted to the e-g form.
+      Please use this directive in REPL:
+  unset_then_multiple_subgoals;;
+ ****)
 
-let steps_RULES,steps_INDUCT,steps_CASES = new_inductive_definition
-  `(!s. steps (step:S->S->bool) 0 (s:S) (s:S)) /\
-   (!s s'' n. (?s'. step s s' /\ steps step n s' s'') ==> steps step (n+1) s s'')`;;
-
-let STEPS_TRIVIAL = prove(
-  `!(s:S) s' step. steps step 0 s s' <=> s = s'`,
-  ONCE_REWRITE_TAC[steps_CASES] THEN REWRITE_TAC[ARITH_RULE`~(0=n+1)`] THEN MESON_TAC[]);;
-
-(* Trivial, but to help pattern matcher... *)
-let STEPS_SYM = prove(
-  `!(step:S->S->bool) m n s s'. steps step (m+n) s s' <=> steps step (n+m) s s'`,
-  REWRITE_TAC[ADD_SYM]);;
-
-let STEPS_STEP_LEFT_RIGHT = prove(
-  `!(step:S->S->bool) n s s'.
-      (?s''. step s s'' /\ steps step n s'' s') <=> (?s''. steps step n s s'' /\ step s'' s')`,
-  GEN_TAC THEN
-  MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL [
-    MESON_TAC[STEPS_TRIVIAL];
-
-    REPEAT STRIP_TAC THEN
-    REWRITE_TAC[ARITH_RULE`SUC n=1+n`] THEN
-    ONCE_REWRITE_TAC [steps_CASES] THEN
-    REWRITE_TAC[ARITH_RULE`~(1+n = 0)`] THEN
-    SUBGOAL_THEN `!k (P:num->bool). (?n'. 1+k = n'+1 /\ P n') <=> P k`
-        (fun th -> REWRITE_TAC[th]) THENL [
-      REPEAT GEN_TAC THEN EQ_TAC THENL [
-        REPEAT STRIP_TAC THEN
-        SUBGOAL_THEN `k:num=n'` SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-        ASM_REWRITE_TAC[ADD_SYM];
-
-        REPEAT STRIP_TAC THEN EXISTS_TAC `k:num` THEN ASM_REWRITE_TAC[ADD_SYM]
-      ];
-      ALL_TAC
-    ] THEN
-    let tt1 = `!P Q. (?a. P a /\ (?b. Q a b)) <=> (?a b. P a /\ Q a b)` in
-    let tt2 = `!P Q. (?a. (?b. Q a b) /\ P a) <=> (?a b. Q a b /\ P a)` in
-    REWRITE_TAC(map ITAUT [tt1;tt2]) THEN
-    REWRITE_TAC[GSYM CONJ_ASSOC] THEN
-    let tt3 = `!P Q. (?b a. P a /\ Q a b) <=> (?a. P a /\ (?b. Q a b))` in
-    REWRITE_TAC[ITAUT tt3] THEN
-    ASM_MESON_TAC[]
-  ]);;
-
-let STEPS_ADD =
-  let lemma = prove(`!k (P:num->bool). (?n'. k+1 = n'+1 /\ P n') <=> P k`,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [
-    REPEAT STRIP_TAC THEN
-    SUBGOAL_THEN `k:num=n'` SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    ASM_REWRITE_TAC[];
-
-    REPEAT STRIP_TAC THEN EXISTS_TAC `k:num` THEN ASM_REWRITE_TAC[]
-  ]) in
-  prove(
-    `!(step:S->S->bool) m n s s'.
-    steps step (m+n) s s' <=> ?s''. steps step m s s'' /\ steps step n s'' s'`,
-    REPEAT_N 2 GEN_TAC THEN
-    MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL [
-      REWRITE_TAC[ADD_0;STEPS_TRIVIAL] THEN MESON_TAC[];
-
-      REWRITE_TAC[ARITH_RULE`m + SUC n = (m + n) + 1`;ARITH_RULE`SUC n = n + 1`] THEN
-      REPEAT STRIP_TAC THEN
-      GEN_REWRITE_TAC LAND_CONV [steps_CASES] THEN
-      ASM_REWRITE_TAC[ARITH_RULE`!m n. ~((m+n)+1 = 0)`;lemma] THEN
-      SUBGOAL_THEN `!(s'':S).
-          (steps (step:S->S->bool) (n + 1) s'' s' <=>
-          ?s'''. step s'' s''' /\ steps step n s''' s')`
-          (fun th -> REWRITE_TAC[th]) THENL [
-        REPEAT STRIP_TAC THEN
-        GEN_REWRITE_TAC LAND_CONV [steps_CASES] THEN
-        REWRITE_TAC[ARITH_RULE`!n. ~(n+1=0)`;lemma];
-        ALL_TAC
-      ] THEN
-      REWRITE_TAC[CONJ_ASSOC;
-        ITAUT `!P Q. (?a. P a /\ (?b. Q a b)) <=> (?a b. P a /\ Q a b)`;
-        ITAUT `!P Q. (?a b. P a b /\ Q b) <=> (?b. (?a. P a b) /\ Q b)`] THEN
-      REWRITE_TAC[STEPS_STEP_LEFT_RIGHT]
-    ]);;
-
-(* Again trivial, but for pattern matching... *)
-let STEPS_STEP = prove(
-  `!n (s:S) s' step.
-     steps step (1+n) s s' <=> ?s''. step s s'' /\ steps step n s'' s'`,
-  REPEAT STRIP_TAC THEN
-  GEN_REWRITE_TAC LAND_CONV [steps_CASES] THEN
-  REWRITE_TAC[ARITH_RULE`~(1+n=0)`] THEN
-  EQ_TAC THENL [
-    STRIP_TAC THEN
-    SUBGOAL_THEN `n:num = n'` SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    ASM_MESON_TAC[];
-
-    STRIP_TAC THEN
-    EXISTS_TAC `n:num` THEN
-    REWRITE_TAC[ADD_SYM] THEN ASM_MESON_TAC[]]);;
-
-let STEPS_ONE = prove(
-  `!(s:S) s' step. steps step 1 s s' <=> step s s'`,
-  METIS_TAC[ARITH_RULE`1=1+0`;STEPS_STEP;STEPS_TRIVIAL]);;
-
-let STEPS_NOSTUCK = prove(
-  `!(step:S->S->bool) (n:num) (s:S).
-    (!s' n'. (n' < n /\ steps step n' s s') ==> ?s''. step s' s'')
-    ==> ?s'. steps step n s s'`,
-  GEN_TAC THEN MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL [
-    MESON_TAC[STEPS_TRIVIAL];
-
-    REPEAT STRIP_TAC THEN
-    REWRITE_TAC[ARITH_RULE`SUC n=1+n`;STEPS_STEP;STEPS_STEP_LEFT_RIGHT] THEN
-    SUBGOAL_THEN
-        `(!(s':S) n'. (n' < n /\ steps (step:S->S->bool) n' s s' ==> (?s''. step s' s''))) /\
-        (!(s':S). steps (step:S->S->bool) n s s' ==> (?s''. step s' s''))`
-        MP_TAC THENL [
-      CONJ_TAC THENL [
-        REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN EXISTS_TAC`n':num` THEN
-        ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
-
-        REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN EXISTS_TAC`n:num` THEN
-        ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC
-      ];
-      ALL_TAC
-    ] THEN
-    DISCH_THEN (fun th -> let th1,th2 = CONJ_PAIR th in
-      LABEL_TAC "H1" th1 THEN LABEL_TAC "H2" th2) THEN
-    SUBGOAL_THEN `?(s':S). steps step n s s'` MP_TAC THENL [
-      ASM_MESON_TAC[]; ALL_TAC
-    ] THEN STRIP_TAC THEN
-    ASM_MESON_TAC[]
-  ]);;
+needs "common/relational_n.ml";;
 
 
 (* ------------------------------------------------------------------------- *)
 (* A relational hoare triple 'ensures2'. It is defined using 'eventually_n'. *)
 (* ------------------------------------------------------------------------- *)
 
-let eventually_n = new_definition
-  `eventually_n (step:S->S->bool) (n:num) (P:S->bool) s <=>
-   ((!s'. steps step n s s' ==> P s') /\
-    // There isn't a 'stuck' state at the end of a trace shorter than n
-    (!s' n'. (n' < n /\ steps step n' s s') ==> ?s''. step s' s''))`;;
-
 (* Define relational hoare triples using eventually_n. *)
 let ensures2 = new_definition
   `ensures2 (step:S->S->bool) (precond:S#S->bool) (postcond:S#S->bool) (frame:S#S->S#S->bool)
             (step_calc1:S->num) (step_calc2:S->num) <=>
-  !(s1:S) (s2:S). precond (s1,s2)
-      ==> eventually_n step (step_calc1 s1)
-            (\s1'. eventually_n step (step_calc2 s2)
-                (\s2'. postcond (s1',s2') /\ frame (s1,s2) (s1',s2')) s2) s1`;;
-
-(* eventually_n version of ensures. *)
-let ensures_n = new_definition
-  `ensures_n (step:S->S->bool) (precond:S->bool) (postcond:S->bool) (frame:S->S->bool)
-             (step_calc:S->num) <=>
-    !s. precond s ==> eventually_n step (step_calc s) (\s'. postcond s' /\ frame s s') s`;;
+  !(s1_init:S) (s2_init:S). precond (s1_init,s2_init)
+      ==> eventually_n step (step_calc1 s1_init)
+            (\s1'. eventually_n step (step_calc2 s2_init)
+                (\s2'. postcond (s1',s2') /\ frame (s1_init,s2_init) (s1',s2')) s2_init) s1_init`;;
 
 
 (******************************************************************************
@@ -354,12 +216,12 @@ let EVENTUALLY_NESTED_DOES_NOT_COMPOSE =
     (* sb *) EVENTUALLY_STOP_TAC THEN
     (* sa->sa1|sa2 *) EVENTUALLY_NEXT_TAC THEN
     CONJ_TAC THENL [MESON_TAC[]; ALL_TAC] THEN ASM_REWRITE_TAC[] THEN
-    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN EVENTUALLY_STOP_TAC THEN ASM_REWRITE_TAC[];
+    REPEAT STRIP_TAC THENL (replicate (ASM_REWRITE_TAC[] THEN EVENTUALLY_STOP_TAC THEN ASM_REWRITE_TAC[]) 2);
 
-    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THENL [
-      EVENTUALLY_STOP_TAC THEN EVENTUALLY_STOP_TAC THEN ASM_REWRITE_TAC[];
+    REPEAT STRIP_TAC THENL [
+      ASM_REWRITE_TAC[] THEN EVENTUALLY_STOP_TAC THEN EVENTUALLY_STOP_TAC THEN ASM_REWRITE_TAC[];
 
-      EVENTUALLY_NEXT_TAC THEN ASM_REWRITE_TAC[] THEN
+      ASM_REWRITE_TAC[] THEN EVENTUALLY_NEXT_TAC THEN ASM_REWRITE_TAC[] THEN
       CONJ_TAC THENL [MESON_TAC[]; ALL_TAC] THEN REPEAT STRIP_TAC THEN
       ASM_REWRITE_TAC[] THEN EVENTUALLY_STOP_TAC THEN EVENTUALLY_STOP_TAC THEN ASM_REWRITE_TAC[]
     ];
@@ -382,36 +244,17 @@ let EVENTUALLY_NESTED_DOES_NOT_COMPOSE =
   ]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Properties of eventually_n                                                *)
+(* Properties of two eventually_ns.                                          *)
 (* ------------------------------------------------------------------------- *)
-
-let EVENTUALLY_N_TRIVIAL = prove(
-  `!(step:S->S->bool) s (P:S->bool). eventually_n step 0 P s <=> P s`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[eventually_n;ARITH_RULE`!x. ~(x<0)`] THEN
-  MESON_TAC[STEPS_TRIVIAL]);;
-
-let EVENTUALLY_N_CONJ = prove(
-  `!(step:S->S->bool) (P:S->bool) (Q:S->bool) n s.
-    eventually_n step n P s /\ eventually_n step n Q s ==>
-    eventually_n step n (\s. P s /\ Q s) s`,
-  REWRITE_TAC[eventually_n] THEN MESON_TAC[]);;
 
 let EVENTUALLY_N_SWAP = prove(
   `!(step:S->S->bool) s1 s2 n m (P:S->S->bool).
    eventually_n step n (\s1'. eventually_n step m (\s2'. P s1' s2') s2) s1 ==>
    eventually_n step m (\s2'. eventually_n step n (\s1'. P s1' s2') s1) s2`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[eventually_n] THEN REPEAT STRIP_TAC THEN
-  ASM_MESON_TAC[STEPS_NOSTUCK]);;
+  REPEAT GEN_TAC THEN REWRITE_TAC[eventually_n] THEN REPEAT STRIP_TAC THENL
+  replicate (ASM_MESON_TAC[STEPS_NOSTUCK]) 3);;
 
-let EVENTUALLY_N_NESTED = prove(
-  `!(step:S->S->bool) (s0:S).
-    eventually_n step n (\s. eventually_n step n (\s2. P s s2) s0) s0 ==>
-    eventually_n step n (\s. P s s) s0`,
-  REWRITE_TAC[eventually_n] THEN
-  REPEAT STRIP_TAC THEN
-  ASM_MESON_TAC[]);;
-
-let EVENTUALLY_N_COMPOSE =
+let EVENTUALLY_N_NESTED_COMPOSE =
   prove(
     `!(step:S->S->bool) (P:S->S->bool) (Q:S->S->bool) (R:S->S->bool) n1 m1 n2 m2 sa0 sb0.
         eventually_n step n1 (\s''. eventually_n step m1 (\s'. Q s' s'') sa0) sb0 /\
@@ -453,114 +296,6 @@ let EVENTUALLY_N_COMPOSE =
     ]
   ]);;
 
-let EVENTUALLY_N_STEP =
-  prove(
-    `!(step:S->S->bool) (P:S->bool) n s.
-      eventually_n step (1+n) P s <=>
-      ((?s'. step s s') /\
-       (!s'. step s s' ==> eventually_n step n P s'))`,
-    REWRITE_TAC[eventually_n;STEPS_ADD;STEPS_ONE] THEN
-    REPEAT STRIP_TAC THEN EQ_TAC THENL [
-      REPEAT STRIP_TAC THENL [
-        FIRST_X_ASSUM (fun th -> MP_TAC (SPECL [`s:S`;`0`] th)) THEN
-        MESON_TAC[ARITH_RULE`0<1+n`; STEPS_TRIVIAL];
-
-        ASM_MESON_TAC[];
-
-        FIRST_X_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `1+n':num` THEN
-        CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-        ASM_MESON_TAC[STEPS_STEP]
-      ];
-
-      REPEAT STRIP_TAC THENL [
-        ASM_MESON_TAC[];
-
-        MP_TAC (SPEC `n':num` num_CASES) THEN
-        STRIP_TAC THENL [
-          ASM_MESON_TAC[STEPS_TRIVIAL];
-          UNDISCH_TAC `n' = SUC n''` THEN REWRITE_TAC[ARITH_RULE`!k. SUC k = 1+k`] THEN
-          DISCH_THEN SUBST_ALL_TAC THEN
-          RULE_ASSUM_TAC (REWRITE_RULE[STEPS_ADD;STEPS_ONE]) THEN
-          SUBGOAL_THEN `n''<n` ASSUME_TAC THENL [ASM_ARITH_TAC;ALL_TAC] THEN
-          ASM_MESON_TAC[]
-        ]
-      ]
-    ]);;
-
-let EVENTUALLY_N_STEPS =
-  prove(
-    `!(step:S->S->bool) P (n:num) s. eventually_n step n P s ==> ?s'. steps step n s s'`,
-    MESON_TAC[eventually_n;STEPS_NOSTUCK]);;
-
-let EVENTUALLY_N_MONO =
-  prove(
-    `!(step:S->S->bool) (P:S->bool) (Q:S->bool) n s.
-      (!s'. P s' ==> Q s') ==>
-      eventually_n step n P s ==> eventually_n step n Q s`,
-    REWRITE_TAC[eventually_n] THEN MESON_TAC[]);;
-
-let EVENTUALLY_N_EVENTUALLY =
-  prove(
-    `!(step:S->S->bool) (P:S->bool) n s.
-      eventually_n step n P s ==> eventually step P s`,
-    REPEAT_N 2 GEN_TAC THEN MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL [
-      REWRITE_TAC[eventually_n; STEPS_TRIVIAL] THEN
-      ONCE_REWRITE_TAC[eventually_CASES] THEN MESON_TAC[];
-
-      REWRITE_TAC[ARITH_RULE`SUC n=1+n`] THEN
-      REPEAT STRIP_TAC THEN
-      FIRST_ASSUM(fun th -> MP_TAC (GEN_REWRITE_RULE I [EVENTUALLY_N_STEP] th)) THEN
-      STRIP_TAC THEN
-      ONCE_REWRITE_TAC[eventually_CASES] THEN
-      DISJ2_TAC THEN
-      UNDISCH_TAC `eventually_n (step:S->S->bool) (1+n) P s` THEN
-      REWRITE_TAC[eventually_n;STEPS_ADD;STEPS_ONE] THEN
-      STRIP_TAC THEN
-      FIRST_X_ASSUM (fun th -> MP_TAC (MATCH_MP STEPS_NOSTUCK th)) THEN
-      STRIP_TAC THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[STEPS_ADD;STEPS_ONE]) THEN
-      ASM_MESON_TAC[eventually_n]
-    ]);;
-
-let EVENTUALLY_N_P_INOUT = prove(
-  `!(step:S->S->bool) P Q n s0.
-    P /\ eventually_n step n (\s. Q s s0) s0 <=>
-    eventually_n step n (\s. P /\ Q s s0) s0`,
-  REWRITE_TAC[eventually_n] THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
-  MESON_TAC[STEPS_NOSTUCK]);;
-
-(* Inverse direction of this lemma (EVENTUALLY_N_EVENTUALLY_STEPS) is not true.
-   Consider three states s0, s1, s2 that forms a triangle:
-   (1) s0 -> s1 -> s2
-   (2) s0 -> s2
-   If P(s2) is true and P(s1) is false, then
-   `eventually step (\s'. steps step 1 s s' /\ P s') s0` is true because
-   `steps step 1 s0 s0` holds.
-   However, `eventually_n step 1 P s` is false because P(s1) is false. *)
-let EVENTUALLY_N_EVENTUALLY_STEPS = prove(
-  `!(step:S->S->bool) P n s.
-    eventually_n step n P s ==> eventually step (\s'. steps step n s s' /\ P s') s`,
-
-  REPEAT_N 2 GEN_TAC THEN INDUCT_TAC THENL [
-    REWRITE_TAC[eventually_n] THEN
-    ONCE_REWRITE_TAC[eventually_CASES] THEN
-    REWRITE_TAC[STEPS_TRIVIAL;ARITH_RULE`!n. ~(n<0)`] THEN
-    GEN_TAC THEN STRIP_TAC THEN ASM_MESON_TAC[];
-
-    REWRITE_TAC[ARITH_RULE`SUC n = 1 + n`] THEN
-    GEN_TAC THEN
-    DISCH_THEN (fun th -> MP_TAC (GEN_REWRITE_RULE I [EVENTUALLY_N_STEP] th)) THEN
-    STRIP_TAC THEN ONCE_REWRITE_TAC[eventually_CASES] THEN DISJ2_TAC THEN
-    CONJ_TAC THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-    REWRITE_TAC[STEPS_ADD;STEPS_ONE] THEN GEN_TAC THEN
-    DISCH_TAC THEN
-    FIRST_X_ASSUM (fun evth -> ASSUME_TAC (MATCH_MP evth (ASSUME `(step:S->S->bool) s s''`))) THEN
-    REWRITE_TAC[ITAUT`((?(x:S). P x) /\ Q) <=> (?x. P x /\ Q)`] THEN
-    MATCH_MP_TAC EVENTUALLY_EXISTS THEN
-    REWRITE_TAC[GSYM CONJ_ASSOC;GSYM EVENTUALLY_P_INOUT] THEN
-    EXISTS_TAC `s'':S` THEN ASM_MESON_TAC[]
-  ]);;
-
 
 (******************************************************************************
   This shows that using nested eventually_n is equivalent to defining a
@@ -588,21 +323,8 @@ let NESTED_EVENTUALLY_N_IS_PROD_OF_STEPS = prove(
   ]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Properties of ensures_n, ensures2_n.                                      *)
+(* Properties of ensures2.                                                   *)
 (* ------------------------------------------------------------------------- *)
-
-let SEQ_PAIR_SPLIT = prove(
-  `!(P:A->A->bool) (Q:A->A->bool) (R:A->A->bool) (S:A->A->bool) p1 p2 p1' p2'.
-    ((\(s,s2) (s',s2'). P s s' /\ Q s2 s2') ,, (\(s,s2) (s',s2'). R s s' /\ S s2 s2'))
-    (p1,p2) (p1',p2')
-    <=>
-    ((P ,, R) p1 p1' /\ (Q ,, S) p2 p2')`,
-  REWRITE_TAC[seq;EXISTS_PAIR_THM] THEN MESON_TAC[]);;
-
-let ENSURES_N_ENSURES = prove(
-  `!(step:S->S->bool) P Q C f_n.
-      ensures_n step P Q C f_n ==> ensures step P Q C`,
-  REWRITE_TAC[ensures_n;ensures] THEN ASM_MESON_TAC[EVENTUALLY_N_EVENTUALLY]);;
 
 (* From ensures2 and proper implications one can prove some ensures. *)
 let ENSURES2_ENSURES_N = prove(
@@ -642,11 +364,11 @@ let ENSURES2_SYM = prove(
                         (\(s,s2) (s',s2'). C (s2,s) (s2',s')) fn_2 fn_1`,
   REWRITE_TAC [ensures2] THEN REPEAT STRIP_TAC THEN EQ_TAC THENL [
     REPEAT STRIP_TAC THEN
-    FIRST_X_ASSUM (fun th -> MP_TAC (MATCH_MP th (ASSUME `(P:S#S->bool) (s2,s1)`))) THEN
+    FIRST_X_ASSUM (fun th -> MP_TAC (MATCH_MP th (ASSUME `(P:S#S->bool) (s2_init,s1_init)`))) THEN
     DISCH_TAC THEN MATCH_MP_TAC EVENTUALLY_N_SWAP THEN ASM_REWRITE_TAC[];
 
     REPEAT STRIP_TAC THEN
-    FIRST_X_ASSUM (fun th -> MP_TAC (MATCH_MP th (ASSUME `(P:S#S->bool) (s1,s2)`))) THEN
+    FIRST_X_ASSUM (fun th -> MP_TAC (MATCH_MP th (ASSUME `(P:S#S->bool) (s1_init,s2_init)`))) THEN
     DISCH_TAC THEN MATCH_MP_TAC EVENTUALLY_N_SWAP THEN ASM_REWRITE_TAC[]
   ]);;
 
@@ -675,12 +397,12 @@ let ENSURES2_TRANS = prove(
       ensures2 step Q R C' (\s. n2) (\s. n2')
       ==> ensures2 step P R (C ,, C') (\s. n1 + n2) (\s. n1' + n2')`,
   REPEAT GEN_TAC THEN REWRITE_TAC[ensures2] THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM (fun th -> ASSUME_TAC (MATCH_MP th (ASSUME `(P:S#S->bool) (s1,s2)`))) THEN
+  FIRST_X_ASSUM (fun th -> ASSUME_TAC (MATCH_MP th (ASSUME `(P:S#S->bool) (s1_init,s2_init)`))) THEN
   SUBGOAL_THEN `!s1'' s2''.
-    (Q:S#S->bool) (s1'',s2'') /\ (C:S#S->S#S->bool) (s1,s2) (s1'',s2'')
+    (Q:S#S->bool) (s1'',s2'') /\ (C:S#S->S#S->bool) (s1_init,s2_init) (s1'',s2'')
     ==> eventually_n (step:S->S->bool) n2
         (\s1'. eventually_n step n2'
-                (\s2'. R (s1',s2') /\ (C ,, C') (s1,s2) (s1',s2')) s2'')
+                (\s2'. R (s1',s2') /\ (C ,, C') (s1_init,s2_init) (s1',s2')) s2'')
         s1''` ASSUME_TAC THENL [
     REPEAT STRIP_TAC THEN
     FIRST_X_ASSUM (fun th -> MP_TAC (MATCH_MP th (ASSUME `(Q:S#S->bool) (s1'',s2'')`))) THEN
@@ -689,8 +411,8 @@ let ENSURES2_TRANS = prove(
     REWRITE_TAC[seq] THEN ASM_MESON_TAC[];
     ALL_TAC
   ] THEN
-  MATCH_MP_TAC EVENTUALLY_N_COMPOSE THEN
-  EXISTS_TAC `\s2' s1'. (Q:S#S->bool) (s1',s2') /\ (C:S#S->S#S->bool) (s1,s2) (s1',s2')` THEN
+  MATCH_MP_TAC EVENTUALLY_N_NESTED_COMPOSE THEN
+  EXISTS_TAC `\s2' s1'. (Q:S#S->bool) (s1',s2') /\ (C:S#S->S#S->bool) (s1_init,s2_init) (s1',s2')` THEN
   ASM_REWRITE_TAC[]);;
 
 let ENSURES2_FRAME_SUBSUMED = prove(
@@ -711,16 +433,65 @@ let ENSURES2_WEAKEN = prove(
     MP_TAC (MATCH_MP (MATCH_MP ENSURES2_FRAME_SUBSUMED th1) th2))) THEN
   REWRITE_TAC[ensures2] THEN
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `eventually_n (step:S->S->bool) (fn1 s1)
-              (\s1'. eventually_n step (fn2 s2)
-                     (\s2'. Q (s1',s2') /\ C' (s1,s2) (s1',s2'))
-                     s2)
-              s1` MP_TAC THENL [
+  SUBGOAL_THEN `eventually_n (step:S->S->bool) (fn1 s1_init)
+              (\s1'. eventually_n step (fn2 s2_init)
+                     (\s2'. Q (s1',s2') /\ C' (s1_init,s2_init) (s1',s2'))
+                     s2_init)
+              s1_init` MP_TAC THENL [
     ASM_MESON_TAC[]; ALL_TAC
   ] THEN
   MATCH_MP_TAC EVENTUALLY_N_MONO THEN REWRITE_TAC[] THEN GEN_TAC THEN
   MATCH_MP_TAC EVENTUALLY_N_MONO THEN REWRITE_TAC[] THEN GEN_TAC THEN
   ASM_MESON_TAC[]);;
+
+let ENSURES2_WEAKEN2 = prove(
+  `!(step:S->S->bool) P Q P' Q' C C' fn1 fn2.
+    (!s s'. P'(s,s') ==> P(s,s')) /\
+    (!s s' s_init s_init'. P (s_init,s_init') /\ Q(s,s') /\
+           C (s_init,s_init') (s,s')
+      ==> Q'(s,s')) /\
+    C subsumed C'
+    ==> ensures2 step P Q C fn1 fn2
+    ==> ensures2 step P' Q' C' fn1 fn2`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+
+  MP_TAC (ASSUME `(C:(S#S->S#S->bool)) subsumed C'`) THEN
+  REWRITE_TAC[subsumed] THEN DISCH_TAC THEN
+  REWRITE_TAC[ensures2] THEN
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `eventually_n (step:S->S->bool) (fn1 s1_init)
+              (\s1'. eventually_n step (fn2 s2_init)
+                     (\s2'. Q (s1',s2') /\ C (s1_init,s2_init) (s1',s2'))
+                     s2_init)
+              s1_init` MP_TAC THENL [
+    ASM_MESON_TAC[]; ALL_TAC
+  ] THEN
+  MATCH_MP_TAC EVENTUALLY_N_MONO THEN REWRITE_TAC[] THEN GEN_TAC THEN
+  MATCH_MP_TAC EVENTUALLY_N_MONO THEN REWRITE_TAC[] THEN GEN_TAC THEN
+  ASM_MESON_TAC[]);;
+
+
+(*  ENSURES2_TRANS but slightly relaxes constraints on the intermediate
+    assertion Q and the final frame C ,, C'.
+*)
+let ENSURES2_TRANS_GEN = prove(
+  `forall (step:S->S->bool) P Q Q' R C C' C'' n1 n1' n2 n2'.
+      ensures2 step P Q C (\s. n1) (\s. n1') /\
+      ensures2 step Q' R C' (\s. n2) (\s. n2') /\
+      (forall s s'. Q(s,s') ==> Q'(s,s')) /\
+      (C ,, C') subsumed C''
+      ==> ensures2 step P R C'' (\s. n1 + n2) (\s. n1' + n2')`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC (REWRITE_RULE [GSYM IMP_CONJ] ENSURES2_WEAKEN) THEN
+  MAP_EVERY EXISTS_TAC [`P:S#S->bool`;`R:S#S->bool`;`(C:S#S->S#S->bool) ,, (C':S#S->S#S->bool)`] THEN
+  REPEAT CONJ_TAC THENL [
+    MESON_TAC[]; MESON_TAC[]; ASM_REWRITE_TAC[]; ALL_TAC
+  ] THEN
+  MATCH_MP_TAC ENSURES2_TRANS THEN
+  EXISTS_TAC `Q:S#S->bool` THEN ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC (REWRITE_RULE [GSYM IMP_CONJ] ENSURES2_WEAKEN) THEN
+  MAP_EVERY EXISTS_TAC [`Q':S#S->bool`;`R:S#S->bool`;`C':S#S->S#S->bool`] THEN
+  ASM_REWRITE_TAC[SUBSUMED_REFL]);;
 
 let ENSURES2_CONJ = prove(
   `!(step:S->S->bool) P Q P' Q' C fn1 fn2.
@@ -770,12 +541,12 @@ let ENSURES2_CONJ2 = prove(
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `eventually_n (step:S->S->bool) (fn2 s'')
       (\s2'. eventually_n step (fn2 s'')
-             (\s1''. eventually_n step (fn3 s2)
-                    (\s2''. Q' (s1'',s2'') /\ C2 s'' s1'' /\ C3 s2 s2'' /\
+             (\s1''. eventually_n step (fn3 s2_init)
+                    (\s2''. Q' (s1'',s2'') /\ C2 s'' s1'' /\ C3 s2_init s2'' /\
                             Q (s':S,s2') /\
-                            (C1:S->S->bool) s1 s' /\
+                            (C1:S->S->bool) s1_init s' /\
                             C2 s'' s2')
-                    s2)
+                    s2_init)
              s'')
       s''` MP_TAC THENL [
     FIRST_X_ASSUM MP_TAC THEN
@@ -802,7 +573,9 @@ let ENSURES2_TRIVIAL = prove(
 
 
 (* ENSURES2_WHILE_PAUP_TAC verifies a relational hoare triple of two WHILE loops,
-   induction variables of which increasing from a to b - 1 (b - 1 is not included).
+   whose induction variable increases from a to b.
+   The loops should terminate at their backedges when the induction variables
+   eventually become b.
    ENSURES_WHILE_PAUP_TAC takes the following arguments, all of which are HOL
    Light terms:
   - a: counter begin, has `:num` type
@@ -813,15 +586,20 @@ let ENSURES2_TRIVIAL = prove(
                             the loop of the second program, has `:num` type
   - loopinv: relational loop invariant, has `:num->S#S->bool` type where S is
              the type of a program state
-  - flagcond1, flagcond2: `:S->bool` typed terms checking when the backedge is
-                          taken, in the two programs
-  - f_nsteps1, f_nsteps2: `:S->num`, the number of small steps taken inside
+  - flagcond1, flagcond2: `:num->S->bool` typed terms describing when loops
+                          terminate. Typically involves a flag; e.g.,
+                          `\(i:num) s. read ZF s <=> (word i:int64) = word n`
+  - f_nsteps1, f_nsteps2: `:num->num`, the number of small steps taken inside
                           the loop bodies
   - nsteps_pre1, nsteps_pre2: `:num`, the number of small steps taken to reach
                               from precondition to the loop header
   - nsteps_post1, nsteps_post2: `:num`, the number of small steps taken to reach
                                 from pc1_backedge,pc2_backedge to
                                 postcondition
+  - nsteps_backedge1, nsteps_backedge2:
+      `:num`, the number of small steps that must be taken to 'take' backedges.
+      These are typically 1, but you can do some clever tricks such as giving
+      relation between rotated loops.
 *)
 
 let ENSURES2_WHILE_PAUP_TAC =
@@ -831,19 +609,21 @@ let ENSURES2_WHILE_PAUP_TAC =
             (flagpred1:num->A->bool) (flagpred2:num->A->bool)
             (f_nsteps1:num->num) (f_nsteps2:num->num)
             (nsteps_pre1:num) (nsteps_pre2:num)
-            (nsteps_post1:num) (nsteps_post2:num).
+            (nsteps_post1:num) (nsteps_post2:num)
+            (nsteps_backedge1:num) (nsteps_backedge2:num).
         C ,, C = C /\
         a < b /\
         ensures2 step
-          (\(s,s2). program_decodes1 s /\ read pcounter s = (word pc1_pre) /\
-                    program_decodes2 s2 /\ read pcounter s2 = (word pc2_pre) /\
+          (\(s,s2). program_decodes1 s /\ read pcounter s = (word pc1_pre:(N)word) /\
+                    program_decodes2 s2 /\ read pcounter s2 = (word pc2_pre:(N)word) /\
                     precondition s s2)
           (\(s,s2). program_decodes1 s /\ read pcounter s = (word pc1) /\
                     program_decodes2 s2 /\ read pcounter s2 = (word pc2) /\
                     loopinv a s s2)
           C
           (\s. nsteps_pre1) (\s. nsteps_pre2) /\
-        (!i. a <= i /\ i < b /\ ~(i = b) /\ ~(b = 0) /\ 0 < b
+        // loop body
+        (!i. a <= i /\ i < b
             ==> ensures2 step
                 (\(s,s2). program_decodes1 s /\ read pcounter s = word pc1 /\
                           program_decodes2 s2 /\ read pcounter s2 = word pc2 /\
@@ -854,8 +634,8 @@ let ENSURES2_WHILE_PAUP_TAC =
                           flagpred2 (i+1) s2)
                 C
                 (\s. f_nsteps1 i) (\s. f_nsteps2 i)) /\
-        (!i. a < i /\ i < b /\ ~(i = b) /\ ~(i = 0) /\ ~(i = a) /\ ~(b = 0) /\
-            0 < b
+        // backedge taken
+        (!i. a < i /\ i < b
             ==> ensures2 step
                 (\(s,s2). program_decodes1 s /\ read pcounter s = word pc1' /\
                           program_decodes2 s2 /\ read pcounter s2 = word pc2' /\
@@ -864,8 +644,8 @@ let ENSURES2_WHILE_PAUP_TAC =
                           program_decodes2 s2 /\ read pcounter s2 = word pc2 /\
                           loopinv i s s2)
                 C
-                // It only takes a single step to take the backedge.
-                (\s. 1) (\s. 1)) /\
+                (\s. nsteps_backedge1) (\s. nsteps_backedge2)) /\
+        // backedge not taken
         ensures2 step
             (\(s,s2). program_decodes1 s /\ read pcounter s = word pc1' /\
                       program_decodes2 s2 /\ read pcounter s2 = word pc2' /\
@@ -873,9 +653,9 @@ let ENSURES2_WHILE_PAUP_TAC =
             postcondition
             C
             (\s. nsteps_post1) (\s. nsteps_post2) /\
-        nsteps1 = nsteps_pre1 + (nsum(a..(b-1)) (\i. f_nsteps1 i) + (b-1-a)) +
+        nsteps1 = nsteps_pre1 + (nsum(a..(b-1)) (\i. f_nsteps1 i) + (b-1-a) * nsteps_backedge1) +
                   nsteps_post1 /\
-        nsteps2 = nsteps_pre2 + (nsum(a..(b-1)) (\i. f_nsteps2 i) + (b-1-a)) +
+        nsteps2 = nsteps_pre2 + (nsum(a..(b-1)) (\i. f_nsteps2 i) + (b-1-a) * nsteps_backedge2) +
                   nsteps_post2
         ==> ensures2 step
             (\(s,s2). program_decodes1 s /\ read pcounter s = word pc1_pre /\
@@ -930,17 +710,19 @@ let ENSURES2_WHILE_PAUP_TAC =
         DISCH_THEN (fun th -> UNIFY_ACCEPT_TAC  [`Q:(A#A)->bool`] th)
       ];
 
-      REWRITE_TAC[ensures2;eventually_n;STEPS_TRIVIAL;ARITH_RULE`~(x<0)`] THEN MESON_TAC[]
+      REWRITE_TAC[ensures2;eventually_n;STEPS_TRIVIAL;ARITH_RULE`~(x<0)`;MULT] THEN MESON_TAC[]
     ]
   ] THEN
 
   SUBGOAL_THEN
-    `!f. nsum (a..SUC b - 1) (\i. f i) + SUC b - 1 - a =
-         (nsum (a..b - 1) (\i. f i) + b - 1 - a) + 1 + f b`
+    `!f x. nsum (a..SUC b - 1) (\i. f i) + (SUC b - 1 - a) * x =
+           (nsum (a..b - 1) (\i. f i) + (b - 1 - a) * x) + x + f b`
       (fun th -> REWRITE_TAC[th]) THENL [
     REWRITE_TAC[ADD1;ADD_SUB;ETA_AX] THEN
     REWRITE_TAC[ARITH_RULE`(x+y)+z+w=(x+w)+y+z`] THEN
     IMP_REWRITE_TAC[GSYM NSUM_CLAUSES_RIGHT] THEN
+    REWRITE_TAC[ARITH_RULE`p*q+q=(p+1)*q`] THEN
+    SUBGOAL_THEN `b - 1 - a + 1=b-a` SUBST_ALL_TAC THENL [ASM_ARITH_TAC;ALL_TAC] THEN
     ASM_ARITH_TAC;
     ALL_TAC
   ] THEN
@@ -969,22 +751,25 @@ let ENSURES2_WHILE_PAUP_TAC =
   fun a b pc1_head pc1_backedge pc2_head pc2_backedge
       loopinv flagcond1 flagcond2 f_nsteps1 f_nsteps2
       nsteps_pre1 nsteps_pre2
-      nsteps_post1 nsteps_post2 ->
+      nsteps_post1 nsteps_post2
+      nsteps_backedge1 nsteps_backedge2 ->
     MATCH_MP_TAC pth THEN
     MAP_EVERY EXISTS_TAC [a;b;pc1_head;pc1_backedge;pc2_head;pc2_backedge;
       loopinv;flagcond1;flagcond2;
-      f_nsteps1;f_nsteps2;nsteps_pre1;nsteps_pre2;nsteps_post1;
-      nsteps_post2] THEN
+      f_nsteps1;f_nsteps2;nsteps_pre1;nsteps_pre2;nsteps_post1;nsteps_post2;
+      nsteps_backedge1;nsteps_backedge2] THEN
     CONJ_TAC THENL [
       (* MAYCHANGE. *)
-      REWRITE_TAC[FUN_EQ_THM] THEN
-      REWRITE_TAC[FORALL_PAIR_THM] THEN
-      REWRITE_TAC[SEQ_PAIR_SPLIT] THEN
-      REWRITE_TAC[ETA_AX] THEN
-      REPEAT STRIP_TAC THEN
+      then_ (* apply multiple subgoals *)
+      (REWRITE_TAC[FUN_EQ_THM] THEN
+       REWRITE_TAC[FORALL_PAIR_THM] THEN
+       REWRITE_TAC[SEQ_PAIR_SPLIT] THEN
+       REWRITE_TAC[ETA_AX] THEN
+       REPEAT STRIP_TAC)
       ((MATCH_MP_TAC (MESON[] `!(p:A->A->bool) (q:A->A->bool) r s.
         ((p = r) /\ (q = s)) ==> (p x1 x2 /\ q y1 y2 <=> r x1 x2 /\ s y1 y2)`) THEN
         REWRITE_TAC[ETA_AX] THEN
+        REPEAT (CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]) THEN
         MAYCHANGE_IDEMPOT_TAC)
         ORELSE
         (* a simpler case *)
@@ -993,15 +778,6 @@ let ENSURES2_WHILE_PAUP_TAC =
       (* The remaining condition. *)
       ALL_TAC
     ];;
-
-let ENSURES_N_INIT_TAC sname =
-  GEN_REWRITE_TAC I [ensures_n] THEN BETA_TAC THEN
-  W(fun (asl,w) ->
-        let ty = type_of(fst(dest_forall w)) in
-        let svar = mk_var(sname,ty) in
-        X_GEN_TAC svar THEN
-        DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-        ASSUME_TAC(ISPEC svar MAYCHANGE_STARTER));;
 
 (* A relational hoare triple version of ENSURES_INIT_TAC. *)
 let ENSURES2_INIT_TAC sname sname2 =
@@ -1047,3 +823,4 @@ let ENSURES2_CONJ2_TRANS_TAC ensures2th ensures2th2 =
     REMOVE_THEN "_tmp_trans2" (fun c2 ->
       MP_TAC (REWRITE_RULE [] (MATCH_MP ENSURES2_CONJ2 (CONJ c1 c2)))
     ));;
+

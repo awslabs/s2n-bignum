@@ -673,7 +673,7 @@ let BIGNUM_SQR_8_16_EVENTUALLY_N_AT_PC = prove(event_n_at_pc_goal,
 
 
 let BIGNUM_SQR_8_16_CORE_CORRECT_N =
-  prove_correct_n
+  prove_ensures_n
     BIGNUM_SQR_8_16_EXEC
     BIGNUM_SQR_8_16_CORE_EXEC
     BIGNUM_SQR_8_16_CORE_CORRECT
