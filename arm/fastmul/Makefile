@@ -23,6 +23,7 @@ endif
 
 OBJ = bignum_emontredc_8n.o \
       bignum_emontredc_8n_neon.o \
+      bignum_emontredc_8n_cdiff.o \
       bignum_kmul_16_32.o \
       bignum_kmul_16_32_neon.o \
       bignum_kmul_32_64.o \

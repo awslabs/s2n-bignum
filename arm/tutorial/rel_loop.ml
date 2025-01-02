@@ -74,7 +74,7 @@ let LOOP_EQUIV = prove(
     `\(i:num) s. read ZF s <=> (word i:int64) = word n`
     `\(i:num). 3`
     `\(i:num). 4`
-    `0` `0` `0` `0` THEN
+    `0` `0` `0` `0` `1` `1` THEN
   REPEAT CONJ_TAC THENL [
     (* # loop itrs > 0 *)
     ASM_ARITH_TAC;

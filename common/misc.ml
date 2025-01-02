@@ -1483,6 +1483,11 @@ let ADD_SUB_SWAP2 = prove(
   `!(x:num) (y:num) (z:num). y >= z /\ z >= x ==> x + (y - z) = y - (z - x)`,
   ARITH_TAC);;
 
+let LE_SUB_RCANCEL = prove(
+  `forall (x:num) (y:num) (z:num).
+    x <= y /\ y <= z ==> y - x <= z - x`,
+  ARITH_TAC);;
+
 let SUB_MOD_EQ_0 = prove(`!(x:num) (y:num).
     ~(x = 0) ==> ((x - y) MOD x = 0 <=> (x <= y \/ y = 0))`,
   REPEAT STRIP_TAC THEN
