@@ -305,6 +305,10 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
      (Immediate_Offset (iword (ival imm7 * &8))))
 
+  // LDR/STR (immediate, SIMD&FP), Pre-index (has writeback)
+  | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+
   // LDUR/STUR, only size 128
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
@@ -927,6 +931,20 @@ let ALIAS_CONV =
 
 let PURE_DECODE_CONV =
   let open Compute in
+
+  let custom_word_red_conv_list =
+    (* No WORD_IWORD_CONV *)
+    filter (fun pat,_ ->
+      if is_comb pat then let c = fst (strip_comb pat) in
+        not (is_const c && name_of c = "iword")
+      else true) word_red_conv_list in
+  let custom_word_compute_add_convs =
+    let convlist = map (fun pat,the_conv ->
+      let c,args = strip_comb pat in (c,length args,the_conv))
+      custom_word_red_conv_list in
+    fun (compset:Compute.compset) ->
+      itlist (fun newc () -> Compute.add_conv newc compset) convlist () in
+
   let decode_rw =
     let rw = bool_compset() in
     (* avoid folding the branches of conditional expression before evaluating
@@ -935,7 +953,7 @@ let PURE_DECODE_CONV =
     set_skip rw `_MATCH:A->(A->B->bool)->B` (Some 1);
     set_skip rw `_BITMATCH:(N)word->(num->B->bool)->B` (Some 1);
     (* basic expressions *)
-    word_compute_add_convs rw;
+    custom_word_compute_add_convs rw;
     int_compute_add_convs rw;
     num_compute_add_convs rw;
     add_thms [obind; LET_END_DEF] rw;

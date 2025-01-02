@@ -826,6 +826,7 @@ void call_bignum_copy_row_from_table_16_neon__32(void) {}
 void call_bignum_copy_row_from_table_32_neon__32(void) {}
 
 void call_bignum_emontredc_8n_neon__32(void) {}
+void call_bignum_emontredc_8n_cdiff__32(void) {}
 void call_bignum_kmul_16_32_neon(void) {}
 void call_bignum_ksqr_16_32_neon(void) {}
 void call_bignum_kmul_32_64_neon(void) {}
@@ -856,6 +857,7 @@ void call_bignum_copy_row_from_table_32_neon__32(void) \
     repeat(bignum_copy_row_from_table_32_neon(b0,b1,32,0))
 
 void call_bignum_emontredc_8n_neon__32(void) repeat(bignum_emontredc_8n_neon(32,b0,b1,b2[0]))
+void call_bignum_emontredc_8n_cdiff__32(void) repeat(bignum_emontredc_8n_cdiff(32,b0,b1,b2[0],b3))
 void call_bignum_kmul_16_32_neon(void) repeat(bignum_kmul_16_32_neon(b0,b1,b2,b3))
 void call_bignum_ksqr_16_32_neon(void) repeat(bignum_ksqr_16_32_neon(b0,b1,b2))
 void call_bignum_kmul_32_64_neon(void) repeat(bignum_kmul_32_64_neon(b0,b1,b2,b3))
@@ -1026,6 +1028,8 @@ int main(int argc, char *argv[])
   timingtest(bmi,"bignum_emontredc_8n (64 -> 32)",call_bignum_emontredc_8n__32);
   timingtest(arm, "bignum_emontredc_8n_neon (64 -> 32)",
              call_bignum_emontredc_8n_neon__32);
+  timingtest(arm, "bignum_emontredc_8n_cdiff (64 -> 32)",
+             call_bignum_emontredc_8n_cdiff__32);
   timingtest(all,"bignum_eq (32x32)" ,call_bignum_eq__32_32);
   timingtest(all,"bignum_even (32)" ,call_bignum_even__32);
   timingtest(all,"bignum_frombebytes_4",call_bignum_frombebytes_4);

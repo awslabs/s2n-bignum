@@ -38,6 +38,38 @@ let BIGDIGIT_ZERO = prove
  (`!n i. n < 2 EXP (64 * i) ==> bigdigit n i = 0`,
   SIMP_TAC[bigdigit; DIV_LT; MOD_0]);;
 
+let BIGDIGIT_ADD_LEFT =
+  prove(`forall a n b i.
+  i < n ==> bigdigit (a + 2 EXP (64 * n) * b) i = bigdigit a i`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[bigdigit] THEN
+  SUBGOAL_THEN `2 EXP (64 * n) = 2 EXP (64 * i) * (2 EXP (64 * (n-i)))` SUBST_ALL_TAC THENL [
+    REWRITE_TAC[GSYM EXP_ADD] THEN
+    REWRITE_TAC[GSYM LEFT_ADD_DISTRIB] THEN
+    AP_TERM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+
+    REWRITE_TAC[GSYM MULT_ASSOC] THEN
+    IMP_REWRITE_TAC[DIV_MULT_ADD; EXP_2_NE_0] THEN
+    SUBGOAL_THEN
+      `2 EXP (64*(n-i)) = 2 EXP 64 * (2 EXP (64*(n-i-1)))`
+      SUBST_ALL_TAC THENL [
+      REWRITE_TAC[GSYM EXP_ADD] THEN
+      AP_TERM_TAC THEN ASM_ARITH_TAC;
+
+      ALL_TAC
+    ] THEN
+    REWRITE_TAC[GSYM MULT_ASSOC] THEN
+    IMP_REWRITE_TAC[MOD_MULT_ADD; EXP_2_NE_0]]);;
+
+let BIGDIGIT_SUC = prove(`forall n i t.
+  t < 2 EXP 64 ==> bigdigit (t + 2 EXP 64 * n) (SUC i) = bigdigit n i`,
+
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[bigdigit;ARITH_RULE`SUC i = 1 + i`;LEFT_ADD_DISTRIB;EXP_ADD;GSYM DIV_DIV;
+              ARITH_RULE`64 * 1 = 64`] THEN
+  IMP_REWRITE_TAC[DIV_MULT_ADD;EXP_2_NE_0;SPECL [`t:num`;`2 EXP 64`] DIV_LT] THEN
+  REWRITE_TAC[ADD]);;
+
 let highdigits = new_definition
  `highdigits n i = n DIV (2 EXP (64 * i))`;;
 
@@ -325,6 +357,31 @@ let BIGNUM_OF_WORDLIST_DIV_CONV =
   GEN_REWRITE_CONV (TRY_CONV o LAND_CONV)
    [BIGNUM_OF_WORDLIST_SING; CONJUNCT1 bignum_of_wordlist] THENC
   GEN_REWRITE_CONV TRY_CONV [DIV_0; ARITH_RULE `n DIV 2 EXP 0 = n`];;
+
+let BIGDIGIT_BIGNUM_OF_WORDLIST = prove(`forall l i.
+  i < LENGTH l ==> bigdigit (bignum_of_wordlist l) i = val (EL i l)`,
+
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[LENGTH] THEN ARITH_TAC;
+
+    REWRITE_TAC[LENGTH; bignum_of_wordlist] THEN
+    REPEAT STRIP_TAC THEN
+    MP_TAC (SPEC `i:num` num_CASES) THEN
+    STRIP_TAC THENL [
+      (* i = 0 *)
+      FIRST_X_ASSUM SUBST_ALL_TAC THEN
+      REWRITE_TAC[bigdigit;EL;HD] THEN
+      REWRITE_TAC[MULT_0;EXP;DIV_1] THEN
+      ONCE_REWRITE_TAC[GSYM MOD_ADD_MOD] THEN
+      REWRITE_TAC[MOD_MULT; ADD_0; MOD_MOD_REFL] THEN
+      SIMP_TAC[VAL_BOUND_64;MOD_LT];
+
+      FIRST_X_ASSUM SUBST_ALL_TAC THEN
+      REWRITE_TAC[EL;TL] THEN
+      IMP_REWRITE_TAC[BIGDIGIT_SUC;VAL_BOUND_64] THEN
+      ASM_ARITH_TAC
+    ]
+  ]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Extracting a bignum from memory.                                          *)

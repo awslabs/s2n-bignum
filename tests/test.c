@@ -4220,7 +4220,7 @@ int test_bignum_double_sm2(void)
   return 0;
 }
 
-int test_bignum_emontredc_specific(const char *name, int is_8n,
+int test_bignum_emontredc_specific(const char *name, int is_8n, int ge_16,
                                    uint64_t (*f)(uint64_t, uint64_t *,
                                                  uint64_t *, uint64_t)) {
   uint64_t t, k, w, tc;
@@ -4233,6 +4233,8 @@ int test_bignum_emontredc_specific(const char *name, int is_8n,
       k = (k >> 3) << 3;
       if (k == 0)
         k = 8;
+      if (ge_16 && k < 16)
+        k = 16;
     }
 
     random_bignum(k, b0);
@@ -4269,12 +4271,12 @@ int test_bignum_emontredc_specific(const char *name, int is_8n,
 }
 
 int test_bignum_emontredc(void)
-{ return test_bignum_emontredc_specific("bignum_emontredc", 0,
+{ return test_bignum_emontredc_specific("bignum_emontredc", 0, 0,
                                         bignum_emontredc);
 }
 
 int test_bignum_emontredc_8n(void)
-{ return test_bignum_emontredc_specific("bignum_emontredc_8n", 1,
+{ return test_bignum_emontredc_specific("bignum_emontredc_8n", 1, 0,
                                         bignum_emontredc_8n);
 }
 
@@ -4284,8 +4286,27 @@ int test_bignum_emontredc_8n_neon(void)
   // Do not call the neon function to avoid a linking failure error.
   return 1;
 #else
-  return test_bignum_emontredc_specific("bignum_emontredc_8n_neon", 1,
+  return test_bignum_emontredc_specific("bignum_emontredc_8n_neon", 1, 0,
                                         bignum_emontredc_8n_neon);
+#endif
+}
+
+#ifndef __x86_64__
+uint64_t bignum_emontredc_8n_cdiff_wrapper (uint64_t k, uint64_t *z, uint64_t *m,
+                                          uint64_t w) {
+  // b12 is a buffer that is not used by bignum_emontredc_specific.
+  return bignum_emontredc_8n_cdiff(k, z, m, w, b12);
+}
+#endif
+
+int test_bignum_emontredc_8n_cdiff(void)
+{
+#ifdef __x86_64__
+  // Do not call the neon function to avoid a linking failure error.
+  return 1;
+#else
+  return test_bignum_emontredc_specific("bignum_emontredc_8n_cdiff", 1, 1,
+                                        bignum_emontredc_8n_cdiff_wrapper);
 #endif
 }
 
@@ -14191,6 +14212,7 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_16_neon",test_bignum_copy_row_from_table_16_neon);
     functionaltest(all,"bignum_copy_row_from_table_32_neon",test_bignum_copy_row_from_table_32_neon);
     functionaltest(all,"bignum_emontredc_8n_neon",test_bignum_emontredc_8n_neon);
+    functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
     functionaltest(all,"bignum_kmul_16_32_neon", test_bignum_kmul_16_32_neon);
     functionaltest(all,"bignum_kmul_32_64_neon", test_bignum_kmul_32_64_neon);
     functionaltest(all,"bignum_ksqr_16_32_neon",test_bignum_ksqr_16_32_neon);

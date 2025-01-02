@@ -575,7 +575,7 @@ let BIGNUM_MONTSQR_P256_EVENTUALLY_N_AT_PC = prove(event_n_at_pc_goal,
 
 
 let BIGNUM_MONTSQR_P256_CORE_CORRECT_N =
-  prove_correct_n
+  prove_ensures_n
     BIGNUM_MONTSQR_P256_EXEC
     BIGNUM_MONTSQR_P256_CORE_EXEC
     BIGNUM_MONTSQR_P256_CORE_CORRECT
@@ -674,7 +674,7 @@ let BIGNUM_MONTSQR_P256_NEON_SUBROUTINE_CORRECT = time prove
 ******************************************************************************)
 
 let BIGNUM_AMONTSQR_P256_CORE_CORRECT_N =
-  prove_correct_n
+  prove_ensures_n
     BIGNUM_MONTSQR_P256_EXEC
     BIGNUM_MONTSQR_P256_CORE_EXEC
     BIGNUM_AMONTSQR_P256_CORE_CORRECT

@@ -737,7 +737,7 @@ let BIGNUM_MONTMUL_P384_EVENTUALLY_N_AT_PC = prove(event_n_at_pc_goal,
 
 
 let BIGNUM_MONTMUL_P384_CORE_CORRECT_N =
-  prove_correct_n
+  prove_ensures_n
     BIGNUM_MONTMUL_P384_EXEC
     BIGNUM_MONTMUL_P384_CORE_EXEC
     BIGNUM_MONTMUL_P384_CORE_CORRECT
@@ -858,7 +858,7 @@ let BIGNUM_MONTMUL_P384_NEON_SUBROUTINE_CORRECT = time prove
 ******************************************************************************)
 
 let BIGNUM_AMONTMUL_P384_CORE_CORRECT_N =
-  prove_correct_n
+  prove_ensures_n
     BIGNUM_MONTMUL_P384_EXEC
     BIGNUM_MONTMUL_P384_CORE_EXEC
     BIGNUM_AMONTMUL_P384_CORE_CORRECT

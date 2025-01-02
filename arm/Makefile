@@ -161,6 +161,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              curve25519/bignum_sub_p25519.o \
              fastmul/bignum_emontredc_8n.o \
              fastmul/bignum_emontredc_8n_neon.o \
+             fastmul/bignum_emontredc_8n_cdiff.o \
              fastmul/bignum_kmul_16_32.o \
              fastmul/bignum_kmul_16_32_neon.o \
              fastmul/bignum_kmul_32_64.o \
@@ -388,7 +389,8 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
 UNOPT_OBJ = p256/unopt/p256_montjadd.o \
             p256/unopt/p256_montjdouble.o \
             p384/unopt/p384_montjadd.o \
-            p384/unopt/p384_montjdouble.o
+            p384/unopt/p384_montjdouble.o \
+            fastmul/unopt/bignum_emontredc_8n_cdiff_base.o
 
 OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
