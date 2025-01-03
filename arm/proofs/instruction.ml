@@ -1975,10 +1975,10 @@ let arm_ST1_1 = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(* There is a bit of duplication in the following defintions.
+  We have to do this because one step in symbolic execution 
+  doesn't handle let binding of pairs. *)
 let word_deinterleave2_x = new_definition
-(* let zlo,zhi = word_split_lohi z in
-let xlo,ylo = word_split_lohi zlo in
-let xhi,yhi = word_split_lohi zhi in *)
   `(word_deinterleave2_x:
     ((N tybit0)tybit0)word->(N tybit0)word)
       z =
@@ -1989,9 +1989,6 @@ let xhi,yhi = word_split_lohi zhi in *)
     word_join xhi xlo`;;
 
 let word_deinterleave2_y = new_definition
-(* let zlo,zhi = word_split_lohi z in
-let xlo,ylo = word_split_lohi zlo in
-let xhi,yhi = word_split_lohi zhi in *)
   `(word_deinterleave2_y:
     ((N tybit0)tybit0)word->(N tybit0)word)
       z =
