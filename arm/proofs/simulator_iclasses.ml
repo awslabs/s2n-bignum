@@ -405,16 +405,16 @@ let check_insns () =
     "0011100101xxxxxxxxxxxxxxxxxxxxxx";
 
     (*** ld1 (1 register, Post-immediate offset) ***)
-    "0x001100110111110111xxxxxxxxxxxx";
+    "0x0x001100110111110111xxxxxxxxxx";
 
     (*** st1 (1 register, Post-immediate offset) ***)
-    "0x001100100111110111xxxxxxxxxxxx";
+    "0x0x001100100111110111xxxxxxxxxx";
 
     (*** ld2 (2 register, Post-immediate offset) ***)
-    "0x001100110111111000xxxxxxxxxxxx";
+    "0x0x001100110111111000xxxxxxxxxx";
 
     (*** st2 (2 register, Post-immediate offset) ***)
-    "0x001100100111111000xxxxxxxxxxxx";
+    "0x0x001100100111111000xxxxxxxxxx";
 
     (*** stp ***)
     "x010100010xxxxxxxxxxxxxxxxxxxxxx";
