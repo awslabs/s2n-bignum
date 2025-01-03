@@ -7,11 +7,9 @@
 (* Unit proofs for LDST.                                                     *)
 (* ========================================================================= *)
 
-loadt "arm/proofs/base.ml";;
-
 (* ------------------------------------------------------------------------- *)
 (* ld1, one register, SIMD, 64-bit, immediate offset, post-index *)
-(* ld1 v0[0], [x0], #8 *)
+(* ld1 v0[0].2D, [x0], #8 *)
 let LD1_1_SIMD_64_IMM_POST = define_word_list "LD1_1_SIMD_64_IMM_POST"
   `[word 0x00; word 0x70; word 0xDF; word 0x0C]:byte list`;;
 
@@ -69,7 +67,7 @@ let ST1_1_SIMD_128_IMM_POST_CORRECT = time prove
 
 (* ------------------------------------------------------------------------- *)
 (* ld2, two register, SIMD, 128-bit, immediate offset, post-index *)
-(* ld2 v0, [x0], #32 *)
+(* ld2 v0.4s, v1.4s, [x0], #32 *)
 let LD2_SIMD_128_IMM_POST = define_word_list "LD2_SIMD_128_IMM_POST"
   `[word 0x00; word 0x88; word 0xDF; word 0x4C]:byte list`;;
 
@@ -102,9 +100,59 @@ let LD2_SIMD_128_IMM_POST_CORRECT = time prove
                read X0 s = word_add x (word 32))
           (MAYCHANGE [PC; X0],, MAYCHANGE [Q0; Q1])`,
   MAP_EVERY X_GEN_TAC [`x:int64`; `a:(256 word)`; `pc:num`] THEN
-  REWRITE_TAC[C_ARGUMENTS; BYTES128_WBYTES] THEN
+  REWRITE_TAC[C_ARGUMENTS] THEN
   ENSURES_INIT_TAC "s0" THEN
   ARM_ACCSTEPS_TAC LD2_SIMD_128_IMM_POST_EXEC [] [1] THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  BITBLAST_TAC
+  );;
+
+(* ------------------------------------------------------------------------- *)
+(* st2, two register, SIMD, 64-bit, immediate offset, post-index *)
+(* st2 v0.4HB, v1.4H, [x0], #16 *)
+let ST2_SIMD_64_IMM_POST = define_word_list "ST2_SIMD_64_IMM_POST"
+  `[word 0x00; word 0x84; word 0x9F; word 0x0C]:byte list`;;
+
+let ST2_SIMD_64_IMM_POST_EXEC = ARM_MK_EXEC_RULE ST2_SIMD_64_IMM_POST;;
+
+(* Use wbytes because the definition of ST2 uses wbytes. 
+   This helps symbolic execution. *)
+let ST2_SIMD_64_IMM_POST_CORRECT = time prove
+(`!x a b pc.
+  nonoverlapping (word pc,0x04) (x,16)
+  ==>
+    ensures arm
+      (\s. aligned_bytes_loaded s (word pc) ST2_SIMD_64_IMM_POST /\
+           read PC s = word pc /\
+           C_ARGUMENTS [x] s /\
+           word_subword (read Q0 s) (0, 64) = a /\
+           word_subword (read Q1 s) (0, 64) = b )
+      (\s. read PC s = word (pc + 0x04) /\
+           read (memory :> bytes128 x) s = 
+             ((word_join:(16 word->112 word->128 word)) 
+               ((word_subword:(64 word->(num#num)->16 word)) b (48, 16))
+               ((word_join:(16 word->96 word->112 word))
+                ((word_subword:(64 word->(num#num)->16 word)) a (48, 16))
+                ((word_join:(16 word->80 word->96 word))
+                 ((word_subword:(64 word->(num#num)->16 word)) b (32, 16))
+                   ((word_join:(16 word->64 word->80 word))
+                    ((word_subword:(64 word->(num#num)->16 word)) a (32, 16))
+                     ((word_join:(16 word->48 word->64 word))
+                      ((word_subword:(64 word->(num#num)->16 word)) b (16, 16))
+                       ((word_join:(16 word->32 word->48 word))
+                        ((word_subword:(64 word->(num#num)->16 word)) a (16, 16))
+                         ((word_join:(16 word->16 word->32 word))
+                          ((word_subword:(64 word->(num#num)->16 word)) b (0, 16)) 
+                          ((word_subword:(64 word->(num#num)->16 word)) a (0, 16))))))))) /\
+           read X0 s = word_add x (word 16))
+      (MAYCHANGE [PC; X0],, 
+       MAYCHANGE [memory :> bytes128 x])`,
+  MAP_EVERY X_GEN_TAC [`x:int64`; `a:int64`; `b:int64`; `pc:num`] THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_ACCSTEPS_TAC ST2_SIMD_64_IMM_POST_EXEC [] [1] THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   BITBLAST_TAC

@@ -7,8 +7,6 @@
 (* Load basic background needed for the ARM bignum proofs.                   *)
 (* ========================================================================= *)
 
-use_file_raise_failure := true;;
-
 loads "update_database.ml";;
 prioritize_num();;
 
@@ -73,6 +71,12 @@ extra_word_CONV := [AESE_REDUCE_CONV; AESMC_REDUCE_CONV;
 loadt "arm/proofs/instruction.ml";;
 loadt "arm/proofs/decode.ml";;
 loadt "arm/proofs/arm.ml";;
+
+(* ------------------------------------------------------------------------- *)
+(* LDST unit proofs.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+loadt "arm/proofs/ldst.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Bignum material and standard overloading                                  *)
