@@ -7,7 +7,7 @@
         An example that proves equivalence of two straight-line codes.
 ******************************************************************************)
 
-(* Please copy this file,rel_simp.o and rel_simp2.o to the root directory of
+(* Please copy this file to the root directory of
    s2n-bignum, then follow the instructions. *)
 
 needs "arm/proofs/equiv.ml";;
