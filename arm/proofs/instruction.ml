@@ -1857,7 +1857,7 @@ let arm_TRN2 = define
  *** undefined state. I am not sure if a pre/post of zero is encodable
  *** but I consider even that as a writeback.
  ***)
-
+ 
 let arm_LDR = define
  `arm_LDR (Rt:(armstate,N word)component) Rn off =
     \s. let base = read Rn s in
@@ -1945,33 +1945,6 @@ let arm_STP = define
            memory :> wbytes(word_add addr (word w)) := read Rt2 s ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
-            else (=))
-         else ASSIGNS entirety) s`;;
-
-(** LD1 with 1 register is equivalent to simply loading the whole word *)
-let arm_LD1_1 = define
-  `arm_LD1_1 (Rt:(armstate, N word)component) Rn off = 
-    \s. let address = read Rn s in
-        let eaddr = word_add address (offset_address off s) in
-        (if (Rn = SP ==> aligned 16 address) /\
-            (offset_writesback off ==> orthogonal_components Rt Rn)
-         then
-           Rt := read (memory :> wbytes eaddr) s ,,
-           (if offset_writesback off
-            then Rn := word_add address (offset_writeback off)
-            else (=))
-         else ASSIGNS entirety) s`;;
-
-let arm_ST1_1 = define 
-  `arm_ST1_1 (Rt:(armstate, N word)component) Rn off = 
-    \s. let address = read Rn s in
-        let eaddr = word_add address (offset_address off s) in
-        (if (Rn = SP ==> aligned 16 address) /\
-            (offset_writesback off ==> orthogonal_components Rt Rn)
-         then
-           memory :> wbytes eaddr := read Rt s ,,
-           (if offset_writesback off
-            then Rn := word_add address (offset_writeback off)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2774,4 +2747,4 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP; 
-       arm_LD1_1; arm_ST1_1; arm_LD2_ALT; arm_ST2_ALT];;
+       arm_LD2_ALT; arm_ST2_ALT];;
