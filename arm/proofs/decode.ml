@@ -313,6 +313,13 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
+  // LD1R, Post-immediate offset, size 64 and 128
+  | [0b0:1; q; 0b001101110:9; Rm:5; 0b1100:4; size:2; Rn:5; Rt:5] ->
+    let esize = 8 * (2 EXP (val size)) in
+    let datasize = if q then 128 else 64 in
+    let off = word (esize DIV 8) in
+    SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize)
+
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
     // ADD and SUB

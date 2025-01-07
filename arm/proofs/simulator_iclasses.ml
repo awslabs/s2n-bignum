@@ -404,6 +404,9 @@ let check_insns () =
     "00111000010xxxxxxxxx11xxxxxxxxxx";
     "0011100101xxxxxxxxxxxxxxxxxxxxxx";
 
+    (*** ld1r (post immediate ofs) ***)
+    "0x001101110111111100xxxxxxxxxxxx";
+
     (*** stp ***)
     "x010100010xxxxxxxxxxxxxxxxxxxxxx";
     "x010100110xxxxxxxxxxxxxxxxxxxxxx";
