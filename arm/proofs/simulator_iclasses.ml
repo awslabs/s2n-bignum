@@ -133,6 +133,10 @@ let iclasses =
   "00011110001xxxxxxxxx11xxxxxxxxxx";
   "00011110011xxxxxxxxx11xxxxxxxxxx";
 
+  (*** FMOV, double precision ***)
+  "100111101010111x000000xxxxxxxxxx";
+  "100111100110011x000000xxxxxxxxxx";
+
   (*** INS, or MOV (element) ***)
   "01101110000xxxx10xxxx1xxxxxxxxxx";
   "01101110000xxx100xxxx1xxxxxxxxxx";

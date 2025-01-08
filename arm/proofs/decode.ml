@@ -422,6 +422,23 @@ let decode = new_definition `!w:int32. decode w =
         SOME (arm_SLI_VEC (QREG' Rd) (QREG' Rn) shift esize)
     else NONE
 
+  | [sf; 0b0011110:7; ftype:2; 0b10:2; rmode0; 0b11:2; opcode0; 0b000000:6; Rn:5; Rd:5] ->
+    // FMOV (general), double precision
+    if ftype = (word 0b10:(2)word) /\ ~rmode0 then NONE
+    else if ftype = (word 0b01:(2)word) /\ rmode0 then NONE
+    // Only double precision is implemented
+    else if ftype = (word 0b00:(2)word) \/ ftype = (word 0b11:(2)word) \/ ~sf then NONE
+    else
+      if rmode0
+      // FMOV D[1]
+      then if opcode0 
+           then SOME (arm_FMOV_ItoF 1 (XREG' Rn) (QREG' Rd))
+           else SOME (arm_FMOV_FtoI 1 (QREG' Rn) (XREG' Rd))
+      // FMOV
+      else if opcode0
+           then SOME (arm_FMOV_ItoF 0 (XREG' Rn) (QREG' Rd))
+           else SOME (arm_FMOV_FtoI 0 (QREG' Rn) (XREG' Rd))
+
   | [0:1; q; 0b101111:6; sz:2; L:1; M:1; R:4; 0b0100:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MLS (by element)
     if sz = word 0b00 \/ sz = word 0b11 then NONE else // "UNDEFINED"

@@ -1177,6 +1177,28 @@ let arm_MOVZ = define
  `arm_MOVZ (Rd:(armstate,N word)component) (imm:int16) pos =
     Rd := word (val imm * 2 EXP pos)`;;
 
+(* Only double precision is implemented *)
+(* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged 
+  due to type resolution failure *)
+let arm_FMOV_FtoI = define
+ `arm_FMOV_FtoI (part:num) Rn Rd =
+    \s. let n:(128)word = read Rn s in
+        let intval:(64)word =
+          if part = 0
+          then word_subword n (0, 64)
+          else word_subword n (64, 64) in
+        (Rd := intval) s
+    `;;
+let arm_FMOV_ItoF = define
+ `arm_FMOV_ItoF (part:num) Rn Rd =
+    \s. let fltval:(64)word = read Rn s in
+        let d:(128)word = read Rd s in
+        if part = 0
+        then (Rd := word_zx fltval:(128)word) s
+        else (Rd := (word_join:(64)word->(64)word->(128)word) 
+                      fltval (word_subword d (0, 64))) s
+    `;;
+
 let arm_MSUB = define
  `arm_MSUB Rd Rn Rm Ra =
     \s. let n:N word = read Rn s
@@ -2576,7 +2598,7 @@ let ARM_OPERATION_CLAUSES =
        arm_CSINC; arm_CSINV; arm_CSNEG;
        arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR3; arm_EXT; arm_EXTR;
-       arm_FCSEL; arm_INS; arm_INS_GEN;
+       arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
        arm_MADD;
        arm_MLS_VEC_ALT;
