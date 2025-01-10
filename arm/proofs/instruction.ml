@@ -1392,6 +1392,40 @@ let arm_SLI_VEC = define
               (word_shl ni shiftamnt) (word_and di (word mask))) n d in
         (Rd := d) s`;;
 
+(* SRI (vector) *)
+let arm_SRI_VEC = define
+ `arm_SRI_VEC Rd Rn shiftamnt esize datasize =
+   \s. let n:(128)word = read Rn s in 
+       let d:(128)word = read Rd s in
+       let mask = (2 EXP (esize - shiftamnt)) - 1 in
+       if datasize = 128 then
+         let d:(128)word = if esize = 64 then
+             simd2 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
+           else if esize = 32 then
+             simd4 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
+           else if esize = 16 then 
+             simd8 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
+           else
+             simd16 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d in
+         (Rd := d) s
+       else
+         let nd:(64)word = word_subword n (0, 64) in 
+         let dd:(64)word = word_subword d (0, 64) in
+         let dd:(64)word = if esize = 32 then
+             simd2 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) nd dd
+           else if esize = 16 then
+             simd4 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) nd dd
+           else
+             simd8 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) nd dd in
+         (Rd := word_zx dd:(128)word) s`;;
+
 let arm_SHRN = define
  `arm_SHRN Rd Rn amnt esize = // esize is Rd's element size
     \s. let n:(128)word = read Rn s in

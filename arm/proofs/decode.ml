@@ -367,7 +367,7 @@ let decode = new_definition `!w:int32. decode w =
     else NONE
 
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
-    // MOVI, USHR (Vector), USRA (Vector), SLI (Vector)
+    // MOVI, USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
     if val immh = 0 then
       // MOVI
       if q then
@@ -420,6 +420,20 @@ let decode = new_definition `!w:int32. decode w =
         let elements = datasize DIV esize in
         let shift = val (word_join immh immb:(7)word) - esize in
         SOME (arm_SLI_VEC (QREG' Rd) (QREG' Rn) shift esize)
+    else if cmode = (word 0b0100:(4)word) then 
+      // SRI (vector)
+      let immb = abc in 
+      let Rn = defgh in 
+      if bit 3 immh /\ ~q then NONE 
+      else 
+        let highest_set_bit = 
+          if bit 3 immh then 3 else
+          if bit 2 immh then 2 else
+          if bit 1 immh then 1 else 0 in 
+        let esize = 8 * (2 EXP highest_set_bit) in
+        let datasize = if q then 128 else 64 in
+        let shift = (esize * 2) - val (word_join immh immb:(7)word) in
+        SOME (arm_SRI_VEC (QREG' Rd) (QREG' Rn) shift esize datasize)
     else NONE
 
   | [sf; 0b0011110:7; ftype:2; 0b10:2; rmode0; 0b11:2; opcode0; 0b000000:6; Rn:5; Rd:5] ->

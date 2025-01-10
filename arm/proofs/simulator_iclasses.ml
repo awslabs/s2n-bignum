@@ -255,6 +255,12 @@ let iclasses =
   "011011110001xxxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
   "0110111100001xxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
 
+  (*** SRI (vector) ***)
+  "0x10111101xxxxxx010001xxxxxxxxxx"; (* immh!=0 *)
+  "0x101111001xxxxx010001xxxxxxxxxx"; (* immh!=0 *)
+  "0x1011110001xxxx010001xxxxxxxxxx"; (* immh!=0 *)
+  "0x10111100001xxx010001xxxxxxxxxx"; (* immh!=0 *)
+
   (*** SUB ***)
   "01101110xx1xxxxx100001xxxxxxxxxx"; (* 128 bits *)
   "001011100x1xxxxx100001xxxxxxxxxx"; (* 64 bits, size=0 or 1 *)
