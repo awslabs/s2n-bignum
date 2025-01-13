@@ -32,12 +32,12 @@ S2N_BN_SYMBOL(bignum_nonzero):
 #endif
         xorq    a, a
         testq   k, k
-        jz      end
+        jz      bignum_nonzero_end
 
-loop:
+bignum_nonzero_loop:
         orq     -8(x,k,8), a
         decq    k
-        jnz     loop
+        jnz     bignum_nonzero_loop
 
 // Set a standard C condition based on whether a is nonzero
 
@@ -45,7 +45,7 @@ loop:
         sbbq    a, a
         negq    a
 
-end:
+bignum_nonzero_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

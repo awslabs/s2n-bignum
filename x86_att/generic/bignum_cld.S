@@ -44,23 +44,23 @@ S2N_BN_SYMBOL(bignum_cld):
 // If the bignum is zero-length, just return k = 0
 
         testq   k, k
-        jz      end
+        jz      bignum_cld_end
 
 // Run over the words j = 0..i-1, and set i := j + 1 when hitting nonzero a[j]
 
         xorq    j, j
-loop:
+bignum_cld_loop:
         movq    (x,j,8), a
         incq    j
         testq   a, a
         cmovnzq j, i
         cmpq    k, j
-        jnz     loop
+        jnz     bignum_cld_loop
 
         negq    %rax
         addq    %rdi, %rax
 
-end:
+bignum_cld_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

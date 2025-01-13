@@ -58,7 +58,7 @@ S2N_BN_SYMBOL(bignum_mod_p256_alt):
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
         cmp     k, 4
-        jc      shortinput
+        jc      bignum_mod_p256_alt_shortinput
 
 // Otherwise load the top 4 digits (top-down) and reduce k by 4
 
@@ -94,9 +94,9 @@ S2N_BN_SYMBOL(bignum_mod_p256_alt):
 // Now do (k-4) iterations of 5->4 word modular reduction
 
         test    k, k
-        jz      writeback
+        jz      bignum_mod_p256_alt_writeback
 
-loop:
+bignum_mod_p256_alt_loop:
 
 // Writing the input as z = 2^256 * m3 + 2^192 * m2 + t = 2^192 * h + t, our
 // intended quotient approximation is MIN ((h + h>>32 + 1)>>64) (2^64 - 1).
@@ -157,11 +157,11 @@ loop:
         mov     m0, d
 
         dec     k
-        jnz     loop
+        jnz     bignum_mod_p256_alt_loop
 
 // Write back
 
-writeback:
+bignum_mod_p256_alt_writeback:
 
         mov     [z], m0
         mov     [z+8], m1
@@ -178,7 +178,7 @@ writeback:
 #endif
         ret
 
-shortinput:
+bignum_mod_p256_alt_shortinput:
 
         xor     m0, m0
         xor     m1, m1
@@ -186,15 +186,15 @@ shortinput:
         xor     m3, m3
 
         test    k, k
-        jz      writeback
+        jz      bignum_mod_p256_alt_writeback
         mov     m0, [rdx]
         dec     k
-        jz      writeback
+        jz      bignum_mod_p256_alt_writeback
         mov     m1, [rdx + 8]
         dec     k
-        jz      writeback
+        jz      bignum_mod_p256_alt_writeback
         mov     m2, [rdx + 16]
-        jmp     writeback
+        jmp     bignum_mod_p256_alt_writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

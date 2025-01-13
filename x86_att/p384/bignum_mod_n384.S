@@ -62,7 +62,7 @@ S2N_BN_SYMBOL(bignum_mod_n384):
 // If the input is already <= 5 words long, go to a trivial "copy" path
 
         cmpq    $6, k
-        jc      shortinput
+        jc      bignum_mod_n384_shortinput
 
 // Otherwise load the top 6 digits (top-down) and reduce k by 6
 
@@ -105,9 +105,9 @@ S2N_BN_SYMBOL(bignum_mod_n384):
 // Now do (k-6) iterations of 7->6 word modular reduction
 
         testq   k, k
-        jz      writeback
+        jz      bignum_mod_n384_writeback
 
-loop:
+bignum_mod_n384_loop:
 
 // Compute q = min (m5 + 1) (2^64 - 1)
 
@@ -170,11 +170,11 @@ loop:
         movq    d, m0
 
         decq    k
-        jnz     loop
+        jnz     bignum_mod_n384_loop
 
 // Write back
 
-writeback:
+bignum_mod_n384_writeback:
 
         movq    m0, (z)
         movq    m1, 8(z)
@@ -195,7 +195,7 @@ writeback:
 #endif
         ret
 
-shortinput:
+bignum_mod_n384_shortinput:
 
         xorq    m0, m0
         xorq    m1, m1
@@ -205,21 +205,21 @@ shortinput:
         xorq    m5, m5
 
         testq   k, k
-        jz      writeback
+        jz      bignum_mod_n384_writeback
         movq    (%rdx), m0
         decq    k
-        jz      writeback
+        jz      bignum_mod_n384_writeback
         movq    8(%rdx), m1
         decq    k
-        jz      writeback
+        jz      bignum_mod_n384_writeback
         movq    16(%rdx), m2
         decq    k
-        jz      writeback
+        jz      bignum_mod_n384_writeback
         movq    24(%rdx), m3
         decq    k
-        jz      writeback
+        jz      bignum_mod_n384_writeback
         movq    32(%rdx), m4
-        jmp     writeback
+        jmp     bignum_mod_n384_writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
