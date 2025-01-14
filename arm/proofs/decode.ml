@@ -446,12 +446,12 @@ let decode = new_definition `!w:int32. decode w =
       if rmode0
       // FMOV D[1]
       then if opcode0 
-           then SOME (arm_FMOV_ItoF 1 (XREG' Rn) (QREG' Rd))
-           else SOME (arm_FMOV_FtoI 1 (QREG' Rn) (XREG' Rd))
+           then SOME (arm_FMOV FPConvOp_MOV_ItoF 1 (QREG' Rn) (QREG' Rd))
+           else SOME (arm_FMOV FPConvOp_MOV_FtoI 1 (QREG' Rn) (QREG' Rd))
       // FMOV
       else if opcode0
-           then SOME (arm_FMOV_ItoF 0 (XREG' Rn) (QREG' Rd))
-           else SOME (arm_FMOV_FtoI 0 (QREG' Rn) (XREG' Rd))
+           then SOME (arm_FMOV FPConvOp_MOV_ItoF 0 (QREG' Rn) (QREG' Rd))
+           else SOME (arm_FMOV FPConvOp_MOV_FtoI 0 (QREG' Rn) (QREG' Rd))
 
   | [0:1; q; 0b101111:6; sz:2; L:1; M:1; R:4; 0b0100:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MLS (by element)
