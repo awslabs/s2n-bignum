@@ -649,14 +649,6 @@ let CONDITION_SEMANTICS_INVERT_CONDITION = prove
   CONV_TAC WORD_REDUCE_CONV);;
 
 (* ------------------------------------------------------------------------- *)
-(* FPConvOp: Floating-point convert/move instruction types                   *)
-(* ------------------------------------------------------------------------- *)
-
-let fpconvop_INDUCT,fpconvop_RECURSION = define_type
-  "fpconvop = FPConvOp_CVT_FtoI | FPConvOp_CVT_ItoF | 
-    FPConvOp_MOV_FtoI | FPConvOp_MOV_ItoF | FPConvOp_CVT_FtoI_JS";;
-
-(* ------------------------------------------------------------------------- *)
 (* Addressing modes and offsets for loads and stores (LDP, LDR, STP, STR)    *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1186,24 +1178,26 @@ let arm_MOVZ = define
     Rd := word (val imm * 2 EXP pos)`;;
 
 (* Only double precision is implemented *)
-let arm_FMOV = define 
-  `arm_FMOV (op:fpconvop) (part:num) Rn Rd = 
-    \s. if op = FPConvOp_MOV_FtoI then 
-          let n:(128)word = read Rn s in
-          let intval:(64)word = 
-            if part = 0 
-            then word_subword n (0, 64)
-            else word_subword n (64, 64) in 
-          (Rd := word_zx intval:(128)word) s
-        else
-          let n:(128)word = read Rn s in
-          let fltval:(64)word = word_subword n (0, 64) in
-          let d:(128)word = read Rd s in
+(* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged 
+  due to type resolution failure *)
+let arm_FMOV_FtoI = define
+ `arm_FMOV_FtoI (part:num) Rn Rd =
+    \s. let n:(128)word = read Rn s in
+        let intval:(64)word =
           if part = 0
-          then (Rd := word_zx fltval:(128)word) s
-          else (Rd := (word_join:(64)word->(64)word->(128)word) 
-                        fltval (word_subword d (0, 64))) s
-  `;;
+          then word_subword n (0, 64)
+          else word_subword n (64, 64) in
+        (Rd := intval) s
+    `;;
+let arm_FMOV_ItoF = define
+ `arm_FMOV_ItoF (part:num) Rn Rd =
+    \s. let fltval:(64)word = read Rn s in
+        let d:(128)word = read Rd s in
+        if part = 0
+        then (Rd := word_zx fltval:(128)word) s
+        else (Rd := (word_join:(64)word->(64)word->(128)word) 
+                      fltval (word_subword d (0, 64))) s
+    `;;
 
 let arm_MSUB = define
  `arm_MSUB Rd Rn Rm Ra =
@@ -2597,7 +2591,6 @@ let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
 let arm_SSHR_VEC_ALT =   EXPAND_SIMD_RULE arm_SSHR_VEC;;
 let arm_SHRN_ALT =       EXPAND_SIMD_RULE arm_SHRN;;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
-let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
@@ -2639,7 +2632,7 @@ let ARM_OPERATION_CLAUSES =
        arm_CSINC; arm_CSINV; arm_CSNEG;
        arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR3; arm_EXT; arm_EXTR;
-       arm_FCSEL; arm_FMOV; arm_INS; arm_INS_GEN;
+       arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
        arm_MADD;
        arm_MLS_VEC_ALT;
@@ -2650,7 +2643,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
-       arm_SLI_VEC_ALT; arm_SRI_VEC_ALT; arm_SMULH;
+       arm_SLI_VEC_ALT; arm_SMULH;
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
