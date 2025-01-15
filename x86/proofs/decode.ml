@@ -91,6 +91,11 @@ let to_wordsize = define
   to_wordsize Lower_32 = Doubleword /\
   to_wordsize Full_64 = Quadword`;;
 
+let simd_to_wordsize = define
+ `simd_to_wordsize Lower_128 = Word128 /\
+  simd_to_wordsize Lower_256 = Word256 /\
+  simd_to_wordsize Full_512 = Word512`;;
+
 let op_size_W = new_definition `op_size_W rex =
   op_size (is_some rex) (rex_W rex)`;;
 
@@ -101,13 +106,19 @@ let read_imm = define
  `(!l. read_imm Byte l = read_byte l >>= \(b,l). SOME(Imm8 b,l)) /\
   (!l. read_imm Word l = read_int16 l >>= \(b,l). SOME(Imm16 b,l)) /\
   (!l. read_imm Doubleword l = read_int32 l >>= \(b,l). SOME(Imm32 b,l)) /\
-  (!l. read_imm Quadword l = read_int32 l >>= \(b,l). SOME(Imm32 b,l))`;;
+  (!l. read_imm Quadword l = read_int32 l >>= \(b,l). SOME(Imm32 b,l)) /\
+  (!l. read_imm Word128 l = read_int32 l >>= \(b,l). NONE) /\
+  (!l. read_imm Word256 l = read_int32 l >>= \(b,l). NONE) /\
+  (!l. read_imm Word512 l = read_int32 l >>= \(b,l). NONE)`;;
 
 let read_full_imm = define
  `(!l. read_full_imm Byte l = read_byte l >>= \(b,l). SOME(Imm8 b,l)) /\
   (!l. read_full_imm Word l = read_int16 l >>= \(b,l). SOME(Imm16 b,l)) /\
   (!l. read_full_imm Doubleword l = read_int32 l >>= \(b,l). SOME(Imm32 b,l)) /\
-  (!l. read_full_imm Quadword l = read_int64 l >>= \(b,l). SOME(Imm64 b,l))`;;
+  (!l. read_full_imm Quadword l = read_int64 l >>= \(b,l). SOME(Imm64 b,l)) /\
+  (!l. read_full_imm Word128 l = read_int64 l >>= \(b,l). NONE) /\
+  (!l. read_full_imm Word256 l = read_int64 l >>= \(b,l). NONE) /\
+  (!l. read_full_imm Word512 l = read_int64 l >>= \(b,l). NONE)`;;
 
 let read_displacement = new_definition `read_displacement (md:2 word) l =
   match val md with
@@ -169,6 +180,14 @@ let operand_of_RM = define
  `(!reg. operand_of_RM sz (RM_reg reg) = %(gpr_adjust reg sz)) /\
   (!ea. operand_of_RM sz (RM_mem ea) = Memop (to_wordsize sz) ea)`;;
 
+let mmreg = new_definition
+ `mmreg (reg:4 word) sz = %_%(Simdreg (word_zx reg) sz)`;;
+
+let simd_of_RM = define
+ `(!reg. simd_of_RM sz (RM_reg reg) =
+         Simdregister(Simdreg (word_zx reg) sz)) /\
+  (!ea. simd_of_RM sz (RM_mem ea) = Memop (simd_to_wordsize sz) ea)`;;
+
 let read_ModRM_operand = new_definition
  `read_ModRM_operand rex sz l =
   read_ModRM rex l >>= \((reg,rm),l).
@@ -209,6 +228,10 @@ let read_VEX = define
    read_byte l >>= \(b,l). bitmatch b with [w; v:4; L; p:2] ->
    read_VEXM m >>= \m.
    SOME((SOME(rex_reg w (word_not rxb)), m, word_not v, L, read_VEXP p), l))`;;
+
+let vexL_size = define
+ `vexL_size F = Lower_128 /\
+  vexL_size T = Lower_256`;;
 
 let decode_condition = new_definition
  `decode_condition (n:4 word) =
@@ -407,17 +430,25 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     if is_some rex then NONE else
     read_VEX vl l >>= \((rex,m,v,L,pfxs),l).
     (match m with
-    | VEXM_0F38 ->
-      read_byte l >>= \(b,l).
-      (bitmatch b with
-      | [0xf6:8] ->
-        let sz = op_size_W rex T pfxs in
-        read_ModRM_operand rex sz l >>= \((reg,rm),l).
-        (match pfxs with
-        | (F, RepNZ) ->
-          SOME (MULX4 (reg, %(Gpr v sz)) (%(Gpr (word 2) sz), rm), l)
+      VEXM_0F38 ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0xf6:8] ->
+          let sz = op_size_W rex T pfxs in
+          read_ModRM_operand rex sz l >>= \((reg,rm),l).
+          (match pfxs with
+          | (F, RepNZ) ->
+            SOME (MULX4 (reg, %(Gpr v sz)) (%(Gpr (word 2) sz), rm), l)
+          | _ -> NONE)
         | _ -> NONE)
-      | _ -> NONE)
+    | VEXM_0F ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0xef:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VPXOR (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
+        | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
@@ -756,6 +787,30 @@ let GPR_thms,GPR_CONV =
     | _ -> failwith "GPR_CONV")
   | _ -> failwith "GPR_CONV";;
 
+let simdregsize_DISTINCT = prove_constructors_distinct simdregsize_RECURSION;;
+
+let SIMDREG_thms,SIMDREG_CONV =
+  let c512 = [|zmm0; zmm1; zmm2; zmm3; zmm4; zmm5; zmm6; zmm7; zmm8; zmm9;
+               zmm10; zmm11; zmm12; zmm13; zmm14; zmm15; zmm16; zmm17;
+               zmm18; zmm19; zmm20; zmm21; zmm22; zmm23; zmm24; zmm25;
+               zmm26; zmm27; zmm28; zmm29; zmm30; zmm31|]
+  and c256 = [|ymm0; ymm1; ymm2; ymm3; ymm4; ymm5; ymm6; ymm7; ymm8; ymm9;
+               ymm10; ymm11; ymm12; ymm13; ymm14; ymm15|]
+  and c128 = [|xmm0; xmm1; xmm2; xmm3; xmm4; xmm5; xmm6; xmm7; xmm8; xmm9;
+               xmm10; xmm11; xmm12; xmm13; xmm14; xmm15|] in
+  flat (map (fun A ->
+    let l = Array.to_list A in
+    Array.iteri (fun i th -> A.(i) <- SYM th) A; l) [c512;c256;c128]),
+  function
+  | Comb(Comb(Const("Simdreg",_),Comb(Const("word",_),i)),Const(sz,_)) ->
+    let i' = Num.int_of_num (dest_numeral i) in
+    (match sz with
+    | "Full_512"  -> c512.(i')
+    | "Lower_256" -> c256.(i')
+    | "Lower_128" -> c128.(i')
+    | _ -> failwith "SIMDREG_CONV")
+  | _ -> failwith "SIMDREG_CONV";;
+
 let BSID_CONV =
   let bd = SYM base_displacement
   and bsi = SYM base_scaled_index
@@ -824,6 +879,24 @@ let TO_WORDSIZE_CONV =
     with _ -> failwith "TO_WORDSIZE_CONV")
   | _ -> failwith "TO_WORDSIZE_CONV";;
 
+let SIMD_TO_WORDSIZE_CONV =
+  let pths = map (fun th -> rand (lhs (concl th)), th)
+    (CONJUNCTS simd_to_wordsize) in
+  function
+  | Comb(Const("simd_to_wordsize",_),v) ->
+    (try assoc v pths
+    with _ -> failwith "SIMD_TO_WORDSIZE_CONV")
+  | _ -> failwith "SIMD_TO_WORDSIZE_CONV";;
+
+let VEXL_SIZE_CONV =
+  let pths = map (fun th -> rand (lhs (concl th)), th)
+    (CONJUNCTS vexL_size) in
+  function
+  | Comb(Const("vexL_size",_),v) ->
+    (try assoc v pths
+    with _ -> failwith "VEXL_SIZE_CONV")
+  | _ -> failwith "VEXL_SIZE_CONV";;
+
 let operand_of_RM = define
  `(!reg. operand_of_RM sz (RM_reg reg) = %(gpr_adjust reg sz)) /\
   (!ea. operand_of_RM sz (RM_mem ea) = Memop (to_wordsize sz) ea)`;;
@@ -845,6 +918,28 @@ let OPERAND_OF_RM_CONV =
     let th = TO_WORDSIZE_CONV (mk_comb (ws, sz')) in
     PROVE_HYP th (INST [sz',sz; ea',ea; rhs (concl th),sz2] pth2)
   | _ -> failwith "OPERAND_OF_RM_CONV";;
+
+let SIMD_OF_RM_CONV =
+  let conv1 =
+    GEN_REWRITE_CONV I [CONJUNCT1 simd_of_RM] THENC
+    RAND_CONV(LAND_CONV WORD_ZX_CONV THENC SIMDREG_CONV)
+  and conv2 =
+    GEN_REWRITE_CONV I [CONJUNCT2 simd_of_RM] THENC
+    LAND_CONV SIMD_TO_WORDSIZE_CONV in
+  fun tm -> match tm with
+  | Comb(Comb(Const("simd_of_RM",_),sz'),Comb(Const("RM_reg",_),reg')) ->
+    conv1 tm
+  | Comb(Comb(Const("simd_of_RM",_),sz'),Comb(Const("RM_mem",_),ea')) ->
+    conv2 tm
+  | _ -> failwith "OPERAND_OF_RM_CONV";;
+
+let MMREG_CONV =
+  let conv =
+    GEN_REWRITE_CONV I [mmreg] THENC
+    RAND_CONV(LAND_CONV WORD_ZX_CONV THENC SIMDREG_CONV) in
+  fun tm -> match tm with
+  | Comb(Comb(Const("mmreg",_),_),_) -> conv tm
+  | _ -> failwith "MMREG_CONV";;
 
 let decode' = new_definition `decode' p rex l =
   if is_some rex then decode_aux p rex l else
@@ -961,8 +1056,10 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     constructors_of RM_INDUCTION @
     constructors_of VEXM_INDUCTION @
     constructors_of regsize_INDUCT @
+    constructors_of simdregsize_INDUCT @
     constructors_of wordsize_INDUCT @
     map (fst o dest_const o lhs o concl) GPR_thms @
+    map (fst o dest_const o lhs o concl) SIMDREG_thms @
     map (fst o dest_const o lhs o concl) CONDITION_ALIAS_thms in
 
   let genvar =
@@ -997,7 +1094,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     let th = SPEC_ALL read_opcode_ModRM in
     let Comb(Comb(_,rex),l) = lhs (concl th) in
     fun rex' l' -> INST [rex',rex; l',l] th
-  and rep_pfx_constructors = [`Rep0`; `RepZ`; `RepNZ`] in
+  and rep_pfx_constructors = [`Rep0`; `RepZ`; `RepNZ`]
+  and VEXM_constructors = [`VEXM_0F`; `VEXM_0F38`; `VEXM_0F3A`] in
 
   let rec eval_prod = function
   | Tyapp("prod",[A;B]) ->
@@ -1096,6 +1194,21 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       .(Num.int_of_num (dest_numeral opc))
       [sz,`sz:wordsize`; v,`v:bool`; rm,`rm:operand`; l,`l:byte list`]
   | _ -> failwith "DECODE_HI_CONV" in
+
+ (* Evaluates term t in a continuation-passing style. The continuation
+     'F thm binding' takes (1) thm: a rewrite rule that describes the
+     equality `e = v` where `e` was the previous expression and `v` is the
+     result of evaluation (2) binding: a list of free variables and
+     their values.
+     To understand this function further, you can start with the "LET"
+     case which is HOL Light's let binding `let x = e1 in e2` that
+     (1) evaluates e1, (2) takes `|- e1 = v1` and evaluates e2.
+     The benefit of using this continuation-passing style over repetitively
+     applying rewriting rules is its speed.
+     To understand the data structure of HOL Light's terms, you will want
+     to disable the term printer in OCaml REPL via
+     "#remove_printer pp_print_qterm;;". This can be enabled by
+     "#disable_printer pp_print_qterm;;" again. *)
 
   let rec evaluate t (F:thm->(term*term)list->thm) = match t with
   | Comb(Comb(Const(">>=",_),f),g) ->
@@ -1208,16 +1321,24 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           let g = try gs a b with Failure _ -> failwith "match pfxs failed" in
           PROVE_HYP (REFL e2) (g ls)
         | _ -> failwith "match pfxs failed")
-    (* else if ty = `:RM` then
-      let e' = `RM_mem ea` in
-      let th1 = AP_THM (AP_TERM f (ASSUME (mk_eq (e, e')))) cs in
-      let th = TRANS th1 (REPEATC MATCH_CONV (rhs (concl th1))) in
-      let g = evaluate (rhs (concl th)) (F o TRANS th) in
+    else if ty = `:VEXM` then
+      let rec go = function
+        | [] -> []
+        | b::bs ->
+          let ls = go bs in
+          let th1 = AP_THM (AP_TERM f (ASSUME (mk_eq (e, b)))) cs in
+          let th = TRANS th1 (REPEATC MATCH_CONV (rhs (concl th1))) in
+          match rhs (concl th) with
+          | Const("NONE",_) -> ls
+          | r -> try (b, evaluate r (F o TRANS th)) :: ls
+                 with Failure _ -> ls in
+      let gs = C assoc (go VEXM_constructors) in
       fun ls ->
         (match rev_assoc e ls with
-        | Comb(Const("RM_mem",_),ea) as e2 ->
-          PROVE_HYP (REFL e2) (g ((ea, rand e') :: ls))
-        | _ -> failwith "match RM as RM_mem failed") *)
+        | Const(_,_) as e2 ->
+          let g = try gs e2 with Failure _ -> failwith "match VEXM failed" in
+          PROVE_HYP (REFL e2) (g ls)
+        | _ -> failwith "match VEXM failed")
     else
       raise (Invalid_argument ("Unknown match type " ^ string_of_type ty))
   | Comb((Const("decode_BT",_) as f),a) -> eval_unary f a F DECODE_BT_CONV
@@ -1232,14 +1353,14 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb((Const("decode_condition",_) as f),a) ->
     eval_unary f a F DECODE_CONDITION_CONV
   | Comb((Const("word_zx",_) as f),a) -> eval_unary f a F WORD_ZX_34_CONV
-  | Comb((Const("word_sx",_) as f),a) -> eval_unary f a F WORD_RED_CONV
-  | Comb((Const("word_not",_) as f),a) -> eval_unary f a F WORD_RED_CONV
+  | Comb((Const("word_sx",_) as f),a) -> eval_unary f a F WORD_SX_CONV
+  | Comb((Const("word_not",_) as f),a) -> eval_unary f a F WORD_NOT_CONV
   | Comb((Const("regsize8",_) as f),a) ->
     evaluate a (fun th ->
       let th = AP_TERM f th in
       delay_if true (rhs (concl th)) (F o TRANS th) REGSIZE8_CONV)
   | Comb((Const("is_some",_) as f),a) ->
-    eval_unary f a F (REWRITE_CONV [is_some])
+    eval_unary f a F (GEN_REWRITE_CONV I [is_some])
   | Comb(Const("has_operand_override",_) as f,a) ->
     eval_unary f a F HAS_OPERAND_OVERRIDE_CONV
   | Comb(Const("has_unhandled_pfxs",_) as f,a) ->
@@ -1284,15 +1405,23 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb(Comb((Const("gpr_adjust",_) as f),a),b) ->
     eval_binary f a b F GPR_ADJUST_CONV
   | Comb(Comb((Const("Gpr",_) as f),a),b) -> eval_binary f a b F GPR_CONV
+  | Comb(Comb((Const("Simdreg",_) as f),a),b) ->
+    eval_binary f a b F SIMDREG_CONV
   | Comb(Comb(Comb((Comb(Const("Bsid",_),_) as f),a),b),c) ->
     evaluate a (fun th ->
       let th = AP_THM (AP_THM (AP_TERM f th) b) c in
       delay_if true (rhs (concl th)) (F o TRANS th) BSID_CONV)
   | Comb(Const("Riprel",_) as f,a) -> eval_unary f a F ALL_CONV
   | Comb((Const("to_wordsize",_) as f),a) -> eval_unary f a F TO_WORDSIZE_CONV
+  | Comb((Const("vexL_size",_) as f),a) -> eval_unary f a F VEXL_SIZE_CONV
+  | Comb((Const("simd_to_wordsize",_) as f),a) -> eval_unary f a F SIMD_TO_WORDSIZE_CONV
   | Comb((Const("adx",_) as f),a) -> eval_unary f a F ADX_CONV
   | Comb(Comb((Const("operand_of_RM",_) as f),a),b) ->
     eval_binary f a b F OPERAND_OF_RM_CONV
+  | Comb(Comb((Const("mmreg",_) as f),a),b) ->
+    eval_binary f a b F MMREG_CONV
+  | Comb(Comb((Const("simd_of_RM",_) as f),a),b) ->
+    eval_binary f a b F SIMD_OF_RM_CONV
   | Comb(Comb(Comb(Const("read_ModRM_operand",_),rex),sz),l) ->
     let th = pth_rmo rex sz l in
     evaluate (rhs (concl th)) (F o TRANS th)
@@ -1306,9 +1435,9 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Const("ARB",_) -> failwith "ARB"
   | Comb(Comb((Const("=",_) as f),a),b) -> eval_binary f a b F WORD_RED_CONV
   | Comb(Comb((Const("/\\",_) as f),a),b) ->
-    eval_binary f a b F (REWRITE_CONV [])
-  | Comb((Const("val",_) as f),a) -> eval_unary f a F WORD_RED_CONV
-  | Comb((Const("ival",_) as f),a) -> eval_unary f a F WORD_RED_CONV
+    eval_binary f a b F (GEN_REWRITE_CONV I [AND_CLAUSES])
+  | Comb((Const("val",_) as f),a) -> eval_unary f a F WORD_VAL_CONV
+  | Comb((Const("ival",_) as f),a) -> eval_unary f a F WORD_IVAL_CONV
   | Comb(f,a) when (match f with
     | Comb(Const("GABS",_),_) -> true
     | Abs(_,_) -> true
