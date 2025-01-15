@@ -126,7 +126,7 @@ S2N_BN_SYMBOL(bignum_coprime):
         mov     k, rax
 
         test    rax, rax
-        jz      end
+        jz      bignum_coprime_end
 
 // Set up inside w two size-k buffers m and n
 
@@ -136,41 +136,41 @@ S2N_BN_SYMBOL(bignum_coprime):
 
         xor     i, i
         test    arg1, arg1
-        jz      xpadloop
-xloop:
+        jz      bignum_coprime_xpadloop
+bignum_coprime_xloop:
         mov     a, [arg2+8*i]
         mov     [m+8*i], a
         inc     i
         cmp     i, arg1
-        jc      xloop
+        jc      bignum_coprime_xloop
         cmp     i, k
-        jnc     xskip
-xpadloop:
+        jnc     bignum_coprime_xskip
+bignum_coprime_xpadloop:
         mov     QWORD PTR [m+8*i], 0
         inc     i
         cmp     i, k
-        jc      xpadloop
-xskip:
+        jc      bignum_coprime_xpadloop
+bignum_coprime_xskip:
 
 // Copy the input y into the buffer n, padding with zeros as needed
 
         xor     i, i
         test    arg3, arg3
-        jz      ypadloop
-yloop:
+        jz      bignum_coprime_ypadloop
+bignum_coprime_yloop:
         mov     a, [arg4+8*i]
         mov     [n+8*i], a
         inc     i
         cmp     i, arg3
-        jc      yloop
+        jc      bignum_coprime_yloop
         cmp     i, k
-        jnc     yskip
-ypadloop:
+        jnc     bignum_coprime_yskip
+bignum_coprime_ypadloop:
         mov     QWORD PTR [n+8*i], 0
         inc     i
         cmp     i, k
-        jc      ypadloop
-yskip:
+        jc      bignum_coprime_ypadloop
+bignum_coprime_yskip:
 
 // Set up the outer loop count of 64 * sum of input sizes.
 // The invariant is that m * n < 2^t at all times.
@@ -196,7 +196,7 @@ yskip:
         sub     b, 1
 
         xor     i, i
-swaploop:
+bignum_coprime_swaploop:
         mov     a, [m+8*i]
         mov     c, [n+8*i]
         mov     d, a
@@ -208,11 +208,11 @@ swaploop:
         mov     [n+8*i], c
         inc     i
         cmp     i, k
-        jnz     swaploop
+        jnz     bignum_coprime_swaploop
 
 // Start of the main outer loop iterated t / CHUNKSIZE times
 
-outerloop:
+bignum_coprime_outerloop:
 
 // We need only bother with sharper l = min k (ceil(t/64)) digits
 // Either both m and n fit in l digits, or m has become zero and so
@@ -238,7 +238,7 @@ outerloop:
         // and in this case h1 and h2 are those words
 
         xor     i, i
-toploop:
+bignum_coprime_toploop:
         mov     b, [m+8*i]
         mov     c, [n+8*i]
         mov     c1, c2
@@ -254,7 +254,7 @@ toploop:
         sbb     c2, c2
         inc     i
         cmp     i, l
-        jc      toploop
+        jc      bignum_coprime_toploop
 
         mov     a, h1
         or      a, h2
@@ -314,7 +314,7 @@ toploop:
 // The actual computation computes updates before actually swapping and
 // then corrects as needed.
 
-innerloop:
+bignum_coprime_innerloop:
 
         xor     eax, eax
         xor     ebx, ebx
@@ -351,7 +351,7 @@ innerloop:
 // End of the inner for-loop
 
         dec     i
-        jnz     innerloop
+        jnz     bignum_coprime_innerloop
 
 // Unstash the temporary variables
 
@@ -381,7 +381,7 @@ innerloop:
         xor     l1, l1
         xor     h2, h2
         xor     l2, l2
-crossloop:
+bignum_coprime_crossloop:
 
         mov     c, [m+8*i]
         mov     a, mat_mm
@@ -419,16 +419,16 @@ crossloop:
 
         inc     i
         cmp     i, l
-        jc      crossloop
+        jc      bignum_coprime_crossloop
 
 // Now fix the signs of m and n if they have gone negative
 
         xor     i, i
         mov     c1, h1  // carry-in coded up as well
         mov     c2, h2  // carry-in coded up as well
-        xor     l1, h1  // for the end digit
-        xor     l2, h2  // for the end digit
-optnegloop:
+        xor     l1, h1  // for the bignum_coprime_end digit
+        xor     l2, h2  // for the bignum_coprime_end digit
+bignum_coprime_optnegloop:
         mov     a, [m+8*i]
         xor     a, h1
         neg     c1
@@ -443,14 +443,14 @@ optnegloop:
         mov     [n+8*i], a
         inc     i
         cmp     i, l
-        jc      optnegloop
+        jc      bignum_coprime_optnegloop
         sub     l1, c1
         sub     l2, c2
 
 // Now shift them right CHUNKSIZE bits
 
         mov     i, l
-shiftloop:
+bignum_coprime_shiftloop:
         mov     a, [m+8*i-8]
         mov     h1, a
         shrd    a, l1, CHUNKSIZE
@@ -462,7 +462,7 @@ shiftloop:
         mov     [n+8*i-8],a
         mov     l2, h2
         dec     i
-        jnz     shiftloop
+        jnz     bignum_coprime_shiftloop
 
 // End of main loop. We can stop if t' <= 0 since then m * n < 2^0, which
 // since n is odd (in the main cases where we had one or other input odd)
@@ -471,25 +471,25 @@ shiftloop:
 // optimized digit bound l could collapse to 0.
 
         sub     t, CHUNKSIZE
-        jnbe    outerloop
+        jnbe    bignum_coprime_outerloop
 
 // Now compare n with 1 (OR of the XORs in a)
 
         mov     a, [n]
         xor     a, 1
         cmp     k, 1
-        jz      finalcomb
+        jz      bignum_coprime_finalcomb
         mov     ishort, 1
-compareloop:
+bignum_coprime_compareloop:
         or      a, [n+8*i]
         inc     i
         cmp     i, k
-        jc      compareloop
+        jc      bignum_coprime_compareloop
 
 // Now combine that with original "evenor" oddness flag
 // The final condition is lsb(evenor) = 1 AND a = 0
 
-finalcomb:
+bignum_coprime_finalcomb:
         neg     a
         sbb     a, a
         inc     a
@@ -497,7 +497,7 @@ finalcomb:
 
 // The end
 
-end:
+bignum_coprime_end:
         add     rsp, STACKVARSIZE
         pop     r15
         pop     r14

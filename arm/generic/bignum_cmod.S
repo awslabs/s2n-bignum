@@ -41,7 +41,7 @@ S2N_BN_SYMBOL(bignum_cmod):
 
 // If the bignum is zero-length, x0 is already the right answer of 0
 
-        cbz     k, end
+        cbz     k, bignum_cmod_end
 
 // Find number of leading zeros of m and let n = 2^e m so that for an
 // in-scope (nonzero) input m we have n >= 2^63, e <= 63.
@@ -108,7 +108,7 @@ S2N_BN_SYMBOL(bignum_cmod):
 
         mov     h, xzr
         mov     l, xzr
-loop:
+bignum_cmod_loop:
         sub     k, k, #1
         ldr     d, [x, k, lsl #3]
         mul     a, r, h
@@ -118,7 +118,7 @@ loop:
         csel    l, r, xzr, cs
         adds    l, l, a
         adc     h, h, xzr
-        cbnz    k, loop
+        cbnz    k, bignum_cmod_loop
 
 // Now do reciprocal multiplication to reduce the 2-word modular equivalent
 // [h;l] to the single word l. If we assume the truncations are as follows
@@ -171,7 +171,7 @@ loop:
         subs    x0, l, m
         csel    x0, x0, l, cs
 
-end:
+bignum_cmod_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)
