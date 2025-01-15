@@ -32,32 +32,32 @@
 S2N_BN_SYMBOL(bignum_modadd):
 
 adds    j, k, xzr               // j = k and ZF = (k = 0)
-        beq     end                     // if k = 0 do nothing
+        beq     bignum_modadd_end                     // if k = 0 do nothing
         adds    i, xzr, xzr             // i = 0 and CF = 0
 
 // First just add (c::z) := x + y
 
-addloop:
+bignum_modadd_addloop:
         ldr     a, [x, i]
         ldr     b, [y, i]
         adcs    a, a, b
         str     a, [z, i]
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, addloop
+        cbnz    j, bignum_modadd_addloop
         cset    c, cs
 
 // Now do a comparison subtraction (c::z) - m, recording mask for (c::z) >= m
 
         mov     j, k
         subs    i, xzr, xzr
-cmploop:
+bignum_modadd_cmploop:
         ldr     a, [z, i]
         ldr     b, [m, i]
         sbcs    xzr, a, b
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, cmploop
+        cbnz    j, bignum_modadd_cmploop
         sbcs    c, c, xzr
         mvn     c, c
 
@@ -65,7 +65,7 @@ cmploop:
 
         mov     j, k
         subs    i, xzr, xzr
-subloop:
+bignum_modadd_subloop:
         ldr     a, [z, i]
         ldr     b, [m, i]
         and     b, b, c
@@ -73,9 +73,9 @@ subloop:
         str     a, [z, i]
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, subloop
+        cbnz    j, bignum_modadd_subloop
 
-end:
+bignum_modadd_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

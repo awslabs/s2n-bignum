@@ -52,13 +52,13 @@ S2N_BN_SYMBOL(bignum_emontredc):
 
 // If k = 0 the whole operation is trivial; note we also get a return of c = 0
 
-        cbz     k, end
+        cbz     k, bignum_emontredc_end
 
 // Initialize top carry to zero, and launch into the outer loop
 
         mov     c, xzr
         mov     i, xzr
-outerloop:
+bignum_emontredc_outerloop:
 
         ldr     e, [z]
         mul     d, e, w
@@ -69,8 +69,8 @@ outerloop:
         adds    xzr, e, l       // Will be zero but want the carry
         mov     j, #1
         sub     a, k, #1
-        cbz     a, montend
-montloop:
+        cbz     a, bignum_emontredc_montend
+bignum_emontredc_montloop:
         ldr     a, [m, j, lsl #3]
         ldr     e, [z, j, lsl #3]
         mul     l, d, a
@@ -81,8 +81,8 @@ montloop:
         str     e, [z, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, montloop
-montend:
+        cbnz    a, bignum_emontredc_montloop
+bignum_emontredc_montend:
         adcs    h, h, c
         adc     c, xzr, xzr
         ldr     a, [z, k, lsl #3]
@@ -95,13 +95,13 @@ montend:
         add     z, z, #8         // For simple indexing, z pointer moves
         add     i, i, #1
         cmp     i, k
-        bcc     outerloop
+        bcc     bignum_emontredc_outerloop
 
 // Return c in X0
 
         mov     x0, c
 
-end:
+bignum_emontredc_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

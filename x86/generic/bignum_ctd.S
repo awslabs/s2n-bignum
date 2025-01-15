@@ -40,25 +40,25 @@ S2N_BN_SYMBOL(bignum_ctd):
 
         xor     rax, rax
         test    k, k
-        jz      end
+        jz      bignum_ctd_end
 
 // Record in i that the lowest nonzero word is i - 1, where i = k + 1 means
 // that the bignum was entirely zero
 
         mov     i, k
         inc     i
-loop:
+bignum_ctd_loop:
         mov     a, [x+8*k-8]
         test    a, a
         cmovne  i, k
         dec     k
-        jnz     loop
+        jnz     bignum_ctd_loop
 
 // We now want to return i - 1
 
         dec     i
         mov     rax, i
-end:
+bignum_ctd_end:
 #if WINDOWS_ABI
         pop    rsi
         pop    rdi

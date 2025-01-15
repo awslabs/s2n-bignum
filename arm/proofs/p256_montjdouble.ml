@@ -1896,7 +1896,7 @@ let equiv_goal = mk_equiv_statement
         `\(s:armstate). (x:num)`);;
 
 extra_early_rewrite_rules :=
-  (hd (CONJUNCTS READ_MEMORY_BYTESIZED_SPLIT))::
+  (el 1 (CONJUNCTS READ_MEMORY_BYTESIZED_SPLIT))::
   !extra_early_rewrite_rules;;
 
 let occ_cache_left:(term * ((term * thm) list ref)) list ref = ref []

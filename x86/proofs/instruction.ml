@@ -8,7 +8,8 @@
 (* ========================================================================= *)
 
 let wordsize_INDUCT,wordsize_RECURSION = define_type
- "wordsize = Quadword | Doubleword | Word | Byte";;
+ "wordsize = Word512 | Word256 | Word128 |
+             Quadword | Doubleword | Word | Byte";;
 
 (* ------------------------------------------------------------------------- *)
 (* The general-purpose registers                                             *)
@@ -285,6 +286,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | SUB operand operand
    | TEST operand operand
    | TZCNT operand operand
+   | VPXOR operand operand operand
    | XOR operand operand";;
 
 (* ------------------------------------------------------------------------- *)
@@ -292,6 +294,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
 (* ------------------------------------------------------------------------- *)
 
 override_interface("%",`Register`);;
+override_interface("%_%",`Simdregister`);;
 
 let  base_displacement = define
   `%%(r,d) = Bsid (SOME r) NONE (word 0) (word d)`
