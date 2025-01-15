@@ -316,8 +316,19 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
-  // LD1/ST1 (multiple structures), 1 register, immediate offset, Post-immediate offset, datasize = 64
-  // LD1/ST1 with 1 register is equivalent to simply loading/storing the whole word
+  // LD1/ST1 (multiple structures), 1 register, immediate offset, 
+  //   Post-immediate offset, datasize = 64
+  //
+  // NOTE: On little-endian machines, LD1/ST1 with 1 register is equivalent to 
+  // simply loading/storing the whole word.
+  // On big-endian machines, for LD1/ST1, each lane is byte-reversed 
+  // but the lane order is kept the same. For LDR/STR, the whole register is 
+  // byte-reversed. This results in different hehaviour for LD1/ST1 vs LDR/STR
+  // when running on big-endian machines.
+  // See https://llvm.org/docs/BigEndianNEON.html#ldr-and-ld1
+  // 
+  // Since instructions are modeled only for little-endian, the optimization
+  // that reuses functions of LDR/STR for LD1/ST1 is okay.
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 8)))
   // datasize = 128
