@@ -1987,23 +1987,6 @@ let arm_STP = define
             else (=))
          else ASSIGNS entirety) s`;;
 
-(* Given x:(N word), return x ++ x:(2*N word). *)
-let word_replicate2 = new_definition
-`(word_replicate2:N word->(N tybit0)word)
-    x = word_join x x`;;
-
-let word_replicate4 = new_definition
-`(word_replicate4:N word->((N tybit0)tybit0)word)
-    x = let y = word_replicate2 x in word_join y y`;;
-
-let word_replicate8 = new_definition
-`(word_replicate8:N word->(((N tybit0)tybit0)tybit0)word)
-    x = let y = word_replicate4 x in word_join y y`;;
-
-let word_replicate16 = new_definition
-`(word_replicate16:N word->((((N tybit0)tybit0)tybit0)tybit0)word)
-    x = let y = word_replicate8 x in word_join y y`;;
-
 let arm_LD1R = define 
   `arm_LD1R (Rt:(armstate,(128)word)component) Rn off esize datasize =
     \s. let base = read Rn s in
@@ -2014,31 +1997,23 @@ let arm_LD1R = define
            (if datasize = 128 then 
               let (replicated:128 word) =
                 (if esize = 64 then 
-                  let e:(64 word) = read (memory :> wbytes addr) s in 
-                  word_replicate2 e
+                  word_duplicate ((read (memory :> wbytes addr) s):(64)word)
                 else if esize = 32 then
-                  let e:(32 word) = read (memory :> wbytes addr) s in 
-                  word_replicate4 e
+                  word_duplicate ((read (memory :> wbytes addr) s):(32)word)
                 else if esize = 16 then
-                  let e:(16 word) = read (memory :> wbytes addr) s in 
-                  word_replicate8 e
+                  word_duplicate ((read (memory :> wbytes addr) s):(16)word)
                 else
-                  let e:(8 word) = read (memory :> wbytes addr) s in 
-                  word_replicate16 e) in
+                  word_duplicate ((read (memory :> wbytes addr) s):(8)word)) in
               (Rt := replicated)
             else 
               let (replicated:64 word) =
-                (if esize = 64 then
-                  let e:(64 word) = read (memory :> wbytes addr) s in e
+                (if esize = 64 then read (memory :> wbytes addr) s
                 else if esize = 32 then
-                  let e:(32 word) = read (memory :> wbytes addr) s in 
-                  word_replicate2 e
+                  word_duplicate ((read (memory :> wbytes addr) s):(32)word)
                 else if esize = 16 then
-                  let e:(16 word) = read (memory :> wbytes addr) s in 
-                  word_replicate4 e
+                  word_duplicate ((read (memory :> wbytes addr) s):(16)word)
                 else
-                  let e:(8 word) = read (memory :> wbytes addr) s in 
-                  word_replicate8 e) in
+                  word_duplicate ((read (memory :> wbytes addr) s):(8)word)) in
               (Rt := (word_zx replicated):(128)word)) ,,
             (if offset_writesback off
              then Rn := word_add base (offset_writeback off)
@@ -2576,8 +2551,7 @@ let WORD_DUPLICATE_64_128 = prove
 let all_simd_rules = [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;
     WORD_DUPLICATE_64_128;
     word_interleave8;word_interleave4;word_interleave2;word_split_lohi;
-    word_interleave_lo; word_interleave_hi;
-    word_replicate2; word_replicate4; word_replicate8; word_replicate16];;
+    word_interleave_lo; word_interleave_hi];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
@@ -2606,7 +2580,6 @@ let arm_UZP2_ALT =       EXPAND_SIMD_RULE arm_UZP2;;
 let arm_XTN_ALT =        EXPAND_SIMD_RULE arm_XTN;;
 let arm_ZIP1_ALT =       EXPAND_SIMD_RULE arm_ZIP1;;
 let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
-let arm_LD1R_ALT =       EXPAND_SIMD_RULE arm_LD1R;;
 
 let arm_SQDMULH_VEC_ALT =
   REWRITE_RULE[word_2smulh] (EXPAND_SIMD_RULE arm_SQDMULH_VEC);;
@@ -2678,4 +2651,4 @@ let ARM_OPERATION_CLAUSES =
 
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
-      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP; arm_LD1R_ALT];;
+      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP; arm_LD1R];;
