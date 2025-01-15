@@ -354,49 +354,6 @@ let ASSERT_NONOVERLAPPING_MODULO_TAC t core_exec =
     ALL_TAC];;
 
 
-let reads_state (c:term) (store_state_name:string ref): bool =
-  match c with
-  | Comb (Comb (Const ("=",_),
-      Comb (Comb (Const ("read", _),_), Var (stname, _))),
-      _) -> store_state_name := stname; true
-  | Comb (Comb (Const
-      ("read", _),_),
-      Var (stname, _)) ->
-    (* flags are boolean *)
-    store_state_name := stname; true
-  | Comb (Const ("~", _),
-      Comb
-        (Comb (Const ("read", _),
-          _), Var (stname, _))) ->
-    store_state_name := stname; true
-  | Comb (Comb (Comb
-    (Const ("aligned_bytes_loaded",_), Var (stname, _)),_),_) ->
-    store_state_name := stname; true
-  | _ ->
-    maychange_term c &&
-      (let s' = snd (dest_comb c) in is_var s' &&
-        (store_state_name := name_of s'; true));;
-
-(* Assumption stash/recovery tactic. *)
-let stashed_asms: (string * thm) list list ref = ref [];;
-
-(* Stash `read e s = r`, `aligned_bytes_loaded s ...` and `(MAYCHANGE ...) ... s`
-   where s is a member of stnames. *)
-let STASH_ASMS_OF_READ_STATES (stnames:string list): tactic =
-  fun (asl,g) ->
-    let matched_asms, others = List.partition (fun (name,th) ->
-        let s = ref "" in
-        reads_state (concl th) s && mem !s stnames)
-      asl in
-    stashed_asms := matched_asms::!stashed_asms;
-    ALL_TAC (others,g);;
-
-let RECOVER_ASMS_OF_READ_STATES: tactic =
-  fun (asl,g) ->
-    let a = List.hd !stashed_asms in
-    stashed_asms := List.tl !stashed_asms;
-    ALL_TAC (asl @ a, g);;
-
 let mk_fresh_temp_name =
   let counter: int ref = ref 0 in
   fun () ->
@@ -1075,53 +1032,6 @@ let ARM_N_STEP_TAC (mc_length_th,decode_th) subths sname
             to_ref := (CONJUNCTS res, CONJUNCTS auxmems); ALL_TAC))
         else
           DISCH_THEN (fun res -> to_ref := (CONJUNCTS res, []); ALL_TAC)));;
-
-(* A variant of DISCARD_OLDSTATE_TAC which receives a list of state names
-   to preserve, 'ss'.
-   If clean_old_abbrevs is true, transitively remove assumptions that
-   were using the removed variables (rhs of the removed assumptions) *)
-let DISCARD_OLDSTATE_AGGRESSIVELY_TAC ss (clean_old_abbrevs:bool) =
-  let vs = List.map (fun s -> mk_var(s,`:armstate`)) ss in
-  let rec unbound_statevars_of_read bound_svars tm =
-    match tm with
-      Comb(Comb(Const("read",_),cmp),s) ->
-        if mem s bound_svars then [] else [s]
-    | Comb(a,b) -> union (unbound_statevars_of_read bound_svars a)
-                         (unbound_statevars_of_read bound_svars b)
-    | Abs(v,t) -> unbound_statevars_of_read (v::bound_svars) t
-    | _ -> [] in
-  let is_read (tm:term): bool =
-    match tm with
-    Comb(Comb(Const("read",_),_),_) -> true
-    | _ -> false in
-  let old_abbrevs: term list ref = ref [] in
-  (* Erase all 'read c s' equations from assumptions whose s does not
-     belong to ss. *)
-  DISCARD_ASSUMPTIONS_TAC(
-    fun thm ->
-      let us = unbound_statevars_of_read [] (concl thm) in
-      if us = [] || subset us vs then false
-      else
-        (* Accumulate rhses of old equalities that are abbreviations *)
-        ((if clean_old_abbrevs && is_eq (concl thm) then
-          let lhs, rhs = dest_eq (concl thm) in
-          if is_var rhs then old_abbrevs := rhs::!old_abbrevs
-          else ()
-        else (); true))) THEN
-  (if not clean_old_abbrevs then ALL_TAC else
-   (* Transitively remove assumptions that use variables in old_abbrevs. *)
-   W(fun (_,_) ->
-    MAP_EVERY (fun (old_abbrev_var:term) ->
-      fun (asl,g) ->
-        (* If the old abbrev var is used by another 'read', don't remove it. *)
-        if List.exists (fun _,asm ->
-              let asm = concl asm in
-              is_eq asm && is_read (fst (dest_eq asm)) && vfree_in old_abbrev_var asm)
-            asl then
-          ALL_TAC (asl,g)
-        else
-          DISCARD_ASSUMPTIONS_TAC(fun thm -> vfree_in old_abbrev_var (concl thm)) (asl,g))
-      !old_abbrevs));;
 
 let get_read_component (targ:term): term option =
   let targ = if is_eq targ then lhand targ else targ in
@@ -2237,25 +2147,6 @@ let ARM_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
   CLARIFY_TAC;;
 
 (* ------------------------------------------------------------------------- *)
-(* A useful tactic that proves a conjunction of MAYCHANGEs.                  *)
-(* ------------------------------------------------------------------------- *)
-
-let MONOTONE_MAYCHANGE_CONJ_TAC =
-  CONJ_TAC THENL [
-    (* MAYCHANGE of the left program *)
-    (DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0':armstate` (concl th)) THEN
-      MONOTONE_MAYCHANGE_TAC) ORELSE
-    (* for MAYCHANGE s s' where s = s' *)
-    (ASSUME_TAC (ISPECL [`dummy_state:armstate`] MAYCHANGE_STARTER) THEN MONOTONE_MAYCHANGE_TAC);
-
-    (* MAYCHANGE of the right program *)
-    (DISCARD_ASSUMPTIONS_TAC (fun th -> free_in `s0:armstate` (concl th)) THEN
-      MONOTONE_MAYCHANGE_TAC) ORELSE
-    (* for MAYCHANGE s s' where s = s' *)
-    (ASSUME_TAC (ISPECL [`dummy_state:armstate`] MAYCHANGE_STARTER) THEN MONOTONE_MAYCHANGE_TAC)
-  ];;
-
-(* ------------------------------------------------------------------------- *)
 (* Tactics that do not perform symbolic execution but are necessary to       *)
 (* initiate/finalize program equivalence proofs.                             *)
 (* ------------------------------------------------------------------------- *)
@@ -3035,6 +2926,35 @@ let mk_equiv_statement_simple (assum:term) (equiv_in:thm) (equiv_out:thm)
 (* ------------------------------------------------------------------------- *)
 (* Tactics for high-level reasoning on program equivalence.                  *)
 (* ------------------------------------------------------------------------- *)
+
+
+(* Given two ensures2 theorems, combine them using ENSURES2_CONJ2 and put the
+   result as an antecendent. If any or both of the two theorems have assumption
+   like `(assumption) ==> ensures2`, this tactic tries to prove the
+   assumption(s). *)
+let ENSURES2_CONJ2_TRANS_TAC ensures2th ensures2th2 =
+  (* instantiate first ensures2 theorem *)
+  MP_TAC (SPEC_ALL (SPECL [`pc:num`;`pc3:num`] ensures2th)) THEN
+  APPLY_IF is_imp (ANTS_TAC THENL [
+    ASM_REWRITE_TAC[] THEN REPEAT (POP_ASSUM MP_TAC) THEN
+    REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES] THEN
+    REPEAT STRIP_TAC THEN NONOVERLAPPING_TAC;
+    ALL_TAC]) THEN
+  DISCH_THEN (LABEL_TAC "_tmp_trans1") THEN
+  (* instantiate second ensures2 theorem *)
+  MP_TAC (SPEC_ALL (SPECL [`pc3:num`;`pc2:num`] ensures2th2)) THEN
+  APPLY_IF is_imp (ANTS_TAC THENL [
+    ASM_REWRITE_TAC[] THEN REPEAT (POP_ASSUM MP_TAC) THEN
+    REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES;MODIFIABLE_SIMD_REGS;
+                MODIFIABLE_GPRS;MODIFIABLE_UPPER_SIMD_REGS] THEN
+    REPEAT STRIP_TAC THEN NONOVERLAPPING_TAC;
+    ALL_TAC]) THEN
+  DISCH_THEN (LABEL_TAC "_tmp_trans2") THEN
+
+  REMOVE_THEN "_tmp_trans1" (fun c1 ->
+    REMOVE_THEN "_tmp_trans2" (fun c2 ->
+      MP_TAC (REWRITE_RULE [] (MATCH_MP ENSURES2_CONJ2 (CONJ c1 c2)))
+    ));;
 
 (* Given two program equivalences between three programs, say
    equiv1_th: 'equiv1 p1 p2' and equiv2_th: 'equiv2 p2 p3',
