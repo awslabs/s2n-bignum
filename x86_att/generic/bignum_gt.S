@@ -48,27 +48,27 @@ S2N_BN_SYMBOL(bignum_gt):
 // Speculatively form n := n - m and do case split
 
         subq    m, n
-        jc      ylonger
+        jc      bignum_gt_ylonger
 
 // The case where y is longer or of the same size (n >= m)
 
         incq    n
         testq   m, m
-        jz      xtest
-xmainloop:
+        jz      bignum_gt_xtest
+bignum_gt_xmainloop:
         movq    (y,i,8), a
         sbbq    (x,i,8), a
         incq    i
         decq    m
-        jnz     xmainloop
-        jmp     xtest
-xtoploop:
+        jnz     bignum_gt_xmainloop
+        jmp     bignum_gt_xtest
+bignum_gt_xtoploop:
         movq    (y,i,8), a
         sbbq    $0, a
         incq    i
-xtest:
+bignum_gt_xtest:
         decq    n
-        jnz     xtoploop
+        jnz     bignum_gt_xtoploop
         sbbq    a, a
         negq    a
 #if WINDOWS_ABI
@@ -79,23 +79,23 @@ xtest:
 
 // The case where x is longer (m > n)
 
-ylonger:
+bignum_gt_ylonger:
         addq    m, n
         subq    n, m
         testq   n, n
-        jz      ytoploop
-ymainloop:
+        jz      bignum_gt_ytoploop
+bignum_gt_ymainloop:
         movq    (y,i,8), a
         sbbq    (x,i,8), a
         incq    i
         decq    n
-        jnz     ymainloop
-ytoploop:
+        jnz     bignum_gt_ymainloop
+bignum_gt_ytoploop:
         movl    $0, ashort
         sbbq    (x,i,8), a
         incq    i
         decq    m
-        jnz     ytoploop
+        jnz     bignum_gt_ytoploop
 
         sbbq    a, a
         negq    a

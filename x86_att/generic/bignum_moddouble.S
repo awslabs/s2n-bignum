@@ -42,7 +42,7 @@ S2N_BN_SYMBOL(bignum_moddouble):
 // If k = 0 do nothing
 
         testq   k, k
-        jz      end
+        jz      bignum_moddouble_end
 
 // Do (_::z) = 2 * x - m and generate a mask in c for 2 * x < m
 
@@ -50,7 +50,7 @@ S2N_BN_SYMBOL(bignum_moddouble):
         xorq    i, i
         xorq    b, b
 
-dubloop:
+bignum_moddouble_dubloop:
         movq    (x,i,8), a
         shrdq   $63, a, c
         negq    b
@@ -60,7 +60,7 @@ dubloop:
         movq    a, c
         incq    i
         cmpq    k, i
-        jc      dubloop
+        jc      bignum_moddouble_dubloop
         shrq    $63, c
 
         addq    b, c
@@ -69,7 +69,7 @@ dubloop:
 
         xorq    i, i
         xorq    b, b
-corrloop:
+bignum_moddouble_corrloop:
         movq    (m,i,8), a
         andq    c, a
         negq    b
@@ -78,9 +78,9 @@ corrloop:
         movq    a, (z,i,8)
         incq    i
         cmpq    k, i
-        jc      corrloop
+        jc      bignum_moddouble_corrloop
 
-end:
+bignum_moddouble_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

@@ -34,7 +34,7 @@ S2N_BN_SYMBOL(bignum_divmod10):
 
 // If k = 0 then return; the return in x0 is indeed 0 mod 10 = 0
 
-        cbz     k, end
+        cbz     k, bignum_divmod10_end
 
 // Straightforward top-down loop doing 10 * q + r' := 2^64 * r + d
 
@@ -42,7 +42,7 @@ S2N_BN_SYMBOL(bignum_divmod10):
         mov     w, 0x3333333333333333
         add     s, w, 1
         and     w, w, 0xfffffff
-divloop:
+bignum_divmod10_divloop:
         sub     k, k, 1
         ldr     d, [z, k, lsl #3]
 
@@ -65,13 +65,13 @@ divloop:
         add     q, q, q, lsl #2
         sub     r, d, q, lsl #1
 
-        cbnz    k, divloop
+        cbnz    k, bignum_divmod10_divloop
 
 // Return the final remainder
 
         mov     x0, r
 
-end:
+bignum_divmod10_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

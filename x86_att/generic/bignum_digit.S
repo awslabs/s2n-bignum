@@ -44,22 +44,22 @@ S2N_BN_SYMBOL(bignum_digit):
 
         xorq    d, d
         testq   k, k
-        jz      end
+        jz      bignum_digit_end
 
 // Main loop: run over all the digits and take note of the n'th one
 
         xorq    i, i
-loop:
+bignum_digit_loop:
         movq    (x,i,8), a
         cmpq    n, i
         cmovzq  a, d
         incq    i
         cmpq    k, i
-        jc      loop
+        jc      bignum_digit_loop
 
 // Return
 
-end:
+bignum_digit_end:
 #if WINDOWS_ABI
         popq   %rsi
         popq   %rdi

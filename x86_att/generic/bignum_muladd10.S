@@ -46,13 +46,13 @@ S2N_BN_SYMBOL(bignum_muladd10):
 
         movq    %rdx, d
         testq   k, k
-        jz      end
+        jz      bignum_muladd10_end
 
 // Simple loop
 
         xorq    i, i
         movl    $10, tenshort
-loop:
+bignum_muladd10_loop:
         movq    (z,i,8), a
         mulq    ten
         addq    d, l
@@ -61,11 +61,11 @@ loop:
         movq    h, d
         incq    i
         cmpq    k, i
-        jc      loop
+        jc      bignum_muladd10_loop
 
 // Return the final carry
 
-end:
+bignum_muladd10_end:
         movq    d, %rax
 #if WINDOWS_ABI
         popq   %rsi
