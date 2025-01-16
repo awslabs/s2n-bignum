@@ -13,6 +13,166 @@
 //
 // Standard ARM ABI: X0 = z, X1 = x
 // ----------------------------------------------------------------------------
+
+// bignum_montsqr_p256 is functionally equivalent to
+// unopt/bignum_montsqr_p256_base.
+// It is written in a way that
+// 1. A subset of scalar multiplications in bignum_montsqr_p256_base are carefully
+//    chosen and vectorized
+// 2. The vectorized assembly is rescheduled using the SLOTHY superoptimizer.
+//    https://github.com/slothy-optimizer/slothy
+//
+// The output program of step 1. is as follows:
+//
+//        ldp x7, x3, [x1]
+//        ldr q6, [x1]
+//        ldp x9, x8, [x1, #16]
+//        ldr q18, [x1, #16]
+//        ldr q27, [x1]
+//        umull v16.2D, v27.2S, v27.2S
+//        umull2 v17.2D, v27.4S, v27.4S
+//        xtn v30.2S, v27.2D
+//        uzp2 v27.4S, v27.4S, v27.4S
+//        umull v27.2D, v27.2S, v30.2S
+//        mov x6, v16.d[0]
+//        mov x12, v16.d[1]
+//        mov x13, v17.d[0]
+//        mov x1, v17.d[1]
+//        mov x15, v27.d[0]
+//        mov x10, v27.d[1]
+//        adds x4, x6, x15, lsl #33
+//        lsr x6, x15, #31
+//        adc x15, x12, x6
+//        adds x13, x13, x10, lsl #33
+//        lsr x6, x10, #31
+//        adc x12, x1, x6
+//        mul x6, x7, x3
+//        umulh x1, x7, x3
+//        adds x5, x15, x6, lsl #1
+//        extr x6, x1, x6, #63
+//        adcs x10, x13, x6
+//        lsr x6, x1, #63
+//        adc x15, x12, x6
+//        lsl x6, x4, #32
+//        subs x13, x4, x6
+//        lsr x12, x4, #32
+//        sbc x1, x4, x12
+//        adds x6, x5, x6
+//        adcs x5, x10, x12
+//        adcs x10, x15, x13
+//        adc x15, x1, xzr
+//        lsl x13, x6, #32
+//        subs x12, x6, x13
+//        lsr x1, x6, #32
+//        sbc x6, x6, x1
+//        adds x16, x5, x13
+//        adcs x11, x10, x1
+//        adcs x2, x15, x12
+//        adc x17, x6, xzr
+//        uzp1 v30.4S, v18.4S, v6.4S
+//        rev64 v27.4S, v18.4S
+//        uzp1 v18.4S, v6.4S, v6.4S
+//        mul v27.4S, v27.4S, v6.4S
+//        uaddlp v5.2D, v27.4S
+//        shl v6.2D, v5.2D, #32
+//        umlal v6.2D, v18.2S, v30.2S
+//        mov x4, v6.d[0]
+//        mov x5, v6.d[1]
+//        umulh x10, x7, x9
+//        subs x6, x7, x3
+//        cneg x13, x6, cc
+//        csetm x12, cc
+//        subs x6, x8, x9
+//        cneg x6, x6, cc
+//        mul x1, x13, x6
+//        umulh x6, x13, x6
+//        cinv x15, x12, cc
+//        eor x12, x1, x15
+//        eor x13, x6, x15
+//        adds x1, x4, x10
+//        adc x6, x10, xzr
+//        umulh x3, x3, x8
+//        adds x1, x1, x5
+//        adcs x6, x6, x3
+//        adc x3, x3, xzr
+//        adds x6, x6, x5
+//        adc x3, x3, xzr
+//        cmn x15, #0x1
+//        adcs x12, x1, x12
+//        adcs x1, x6, x13
+//        adc x3, x3, x15
+//        adds x6, x4, x4
+//        adcs x13, x12, x12
+//        adcs x12, x1, x1
+//        adcs x1, x3, x3
+//        adc x3, xzr, xzr
+//        adds x6, x6, x16
+//        adcs x5, x13, x11
+//        adcs x10, x12, x2
+//        adcs x15, x1, x17
+//        adc x13, x3, xzr
+//        lsl x3, x6, #32
+//        subs x12, x6, x3
+//        lsr x1, x6, #32
+//        sbc x6, x6, x1
+//        adds x3, x5, x3
+//        adcs x5, x10, x1
+//        adcs x15, x15, x12
+//        adcs x13, x13, x6
+//        adc x10, xzr, xzr
+//        lsl x6, x3, #32
+//        subs x12, x3, x6
+//        lsr x1, x3, #32
+//        sbc x3, x3, x1
+//        adds x6, x5, x6
+//        adcs x15, x15, x1
+//        adcs x13, x13, x12
+//        adcs x12, x10, x3
+//        adc x1, xzr, xzr
+//        mul x3, x9, x9
+//        adds x5, x6, x3
+//        mul x6, x8, x8
+//        umulh x3, x9, x9
+//        adcs x15, x15, x3
+//        adcs x13, x13, x6
+//        umulh x3, x8, x8
+//        adcs x12, x12, x3
+//        adc x1, x1, xzr
+//        mul x6, x9, x8
+//        umulh x3, x9, x8
+//        adds x8, x6, x6
+//        adcs x9, x3, x3
+//        adc x3, xzr, xzr
+//        adds x10, x15, x8
+//        adcs x15, x13, x9
+//        adcs x13, x12, x3
+//        adcs x12, x1, xzr
+//        mov x3, #0xffffffff
+//        adds x6, x5, #0x1
+//        sbcs x8, x10, x3
+//        mov x3, #0xffffffff00000001
+//        sbcs x9, x15, xzr
+//        sbcs x1, x13, x3
+//        sbcs xzr, x12, xzr
+//        csel x6, x6, x5, cs
+//        csel x8, x8, x10, cs
+//        csel x9, x9, x15, cs
+//        csel x3, x1, x13, cs
+//        stp x6, x8, [x0]                    // @slothy:writes=buffer0
+//        stp x9, x3, [x0, #16]               // @slothy:writes=buffer16
+//        ret
+//
+// The bash script used for step 2 is as follows:
+//
+//        # Store the assembly instructions except the last 'ret' as, say, 'input.S'
+//        export OUTPUTS="[hint_buffer0,hint_buffer16]"
+//        export RESERVED_REGS="[x18,x19,x20,x21,x22,x23,x24,x25,x26,x27,x28,x29,x30,sp,q8,q9,q10,q11,q12,q13,q14,q15,v8,v9,v10,v11,v12,v13,v14,v15]"
+//        <s2n-bignum>/tools/external/slothy.sh input.S my_out_dir
+//        # my_out_dir/3.opt.s is the optimized assembly. Its output may differ
+//        # from this file since the sequence is non-deterministically chosen.
+//        # Please add 'ret' at the end of the output assembly.
+
+
 #include "_internal_s2n_bignum.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_montsqr_p256)
@@ -20,245 +180,144 @@
         .text
         .balign 4
 
-// ---------------------------------------------------------------------------
-// Macro returning (c,h,l) = 3-word 1s complement (x - y) * (w - z)
-// c,h,l,t should all be different
-// t,h should not overlap w,z
-// ---------------------------------------------------------------------------
-
-#define muldiffn(c,h,l, t, x,y, w,z)    \
-        subs    t, x, y;                \
-        cneg    t, t, cc;               \
-        csetm   c, cc;                  \
-        subs    h, w, z;                \
-        cneg    h, h, cc;               \
-        mul     l, t, h;                \
-        umulh   h, t, h;                \
-        cinv    c, c, cc;               \
-        eor     l, l, c;                \
-        eor     h, h, c
-
-// ---------------------------------------------------------------------------
-// Core one-step "end" Montgomery reduction macro. Takes input in
-// [d5;d4;d3;d2;d1;d0] and returns result in [d5;d4;d3;d2;d1], adding to
-// the existing [d4;d3;d2;d1], re-using d0 as a temporary internally as well
-// as t1, t2, t3, and initializing d5 from zero (hence "end").
-// ---------------------------------------------------------------------------
-
-#define montrede(d5, d4,d3,d2,d1,d0, t2,t1,t0)                              \
-/* Let w = d0, the original word we use as offset; d0 gets recycled */      \
-/* First let [t2;t1] = 2^32 * w                                     */      \
-/* then let [d0;t0] = (2^64 - 2^32 + 1) * w (overwrite old d0)      */      \
-        lsl     t1, d0, #32;                                        \
-        subs    t0, d0, t1;                                         \
-        lsr     t2, d0, #32;                                        \
-        sbc     d0, d0, t2;                                         \
-/* Hence basic [d4;d3;d2;d1] += (2^256 - 2^224 + 2^192 + 2^96) * w  */      \
-        adds    d1, d1, t1;                                         \
-        adcs    d2, d2, t2;                                         \
-        adcs    d3, d3, t0;                                         \
-        adcs    d4, d4, d0;                                         \
-        adc     d5, xzr, xzr
-
-// ---------------------------------------------------------------------------
-// Core one-step "short" Montgomery reduction macro. Takes input in
-// [d3;d2;d1;d0] and returns result in [d4;d3;d2;d1], adding to the
-// existing contents of [d3;d2;d1] and generating d4 from zero, re-using
-// d0 as a temporary internally together with t0, t1 and t2.
-// It is fine for d4 to be the same register as d0, and it often is.
-// ---------------------------------------------------------------------------
-
-#define montreds(d4,d3,d2,d1,d0, t2,t1,t0)                                  \
-/* Let w = d0, the original word we use as offset; d0 gets recycled      */ \
-/* First let [t2;t1] = 2^32 * w                                          */ \
-/* then let [d0;t0] = (2^64 - 2^32 + 1) * w (overwrite old d0)           */ \
-        lsl     t1, d0, #32;                                        \
-        subs    t0, d0, t1;                                         \
-        lsr     t2, d0, #32;                                        \
-        sbc     d0, d0, t2;                                         \
-/* Hence [d4;..;d1] := [d3;d2;d1;0] + (2^256 - 2^224 + 2^192 + 2^96) * w */ \
-        adds    d1, d1, t1;                                         \
-        adcs    d2, d2, t2;                                         \
-        adcs    d3, d3, t0;                                         \
-        adc     d4, d0, xzr
-
-#define a0 x2
-#define a1 x3
-#define a2 x4
-#define a3 x5
-
-#define c0 x6
-#define c1 x7
-#define c2 x8
-#define c3 x9
-#define c4 x10
-#define d1 x11
-#define d2 x12
-#define d3 x13
-#define d4 x14
-
-#define s0 x15
-#define s1 x16
-#define s2 x17
-#define s3 x1
-
-#define a0short w2
-#define a1short w3
-#define d1short w11
-
 S2N_BN_SYMBOL(bignum_montsqr_p256):
 
-// Load in all words of the input
-
-        ldp     a0, a1, [x1]
-        ldp     a2, a3, [x1, #16]
-
-// Square the low half, getting a result in [s3;s2;s1;s0]
-// This uses 32x32->64 multiplications to reduce the number of UMULHs
-
-        umull   s0, a0short, a0short
-        lsr     d1, a0, #32
-        umull   s1, d1short, d1short
-        umull   d1, a0short, d1short
-        adds    s0, s0, d1, lsl #33
-        lsr     d1, d1, #31
-        adc     s1, s1, d1
-        umull   s2, a1short, a1short
-        lsr     d1, a1, #32
-        umull   s3, d1short, d1short
-        umull   d1, a1short, d1short
-        mul     d2, a0, a1
-        umulh   d3, a0, a1
-        adds    s2, s2, d1, lsl #33
-        lsr     d1, d1, #31
-        adc     s3, s3, d1
-        adds    d2, d2, d2
-        adcs    d3, d3, d3
-        adc     s3, s3, xzr
-        adds    s1, s1, d2
-        adcs    s2, s2, d3
-        adc     s3, s3, xzr
-
-// Perform two "short" Montgomery steps on the low square
-// This shifts it to an offset compatible with middle product
-
-        montreds(s0,s3,s2,s1,s0, d1,d2,d3)
-
-        montreds(s1,s0,s3,s2,s1, d1,d2,d3)
-
-// Compute cross-product with ADK 2x2->4 multiplier as [c3;c2;c1;c0]
-
-        mul     c0, a0, a2
-        mul     d4, a1, a3
-        umulh   c2, a0, a2
-        muldiffn(d3,d2,d1, c4, a0,a1, a3,a2)
-
-        adds    c1, c0, c2
-        adc     c2, c2, xzr
-
-        umulh   c3, a1, a3
-
-        adds    c1, c1, d4
-        adcs    c2, c2, c3
-        adc     c3, c3, xzr
-        adds    c2, c2, d4
-        adc     c3, c3, xzr
-
-        adds    xzr, d3, #1
-        adcs    c1, c1, d1
-        adcs    c2, c2, d2
-        adc     c3, c3, d3
-
-// Double it and add the Montgomerified low square
-
-        adds    c0, c0, c0
-        adcs    c1, c1, c1
-        adcs    c2, c2, c2
-        adcs    c3, c3, c3
-        adc     c4, xzr, xzr
-
-        adds    c0, c0, s2
-        adcs    c1, c1, s3
-        adcs    c2, c2, s0
-        adcs    c3, c3, s1
-        adc     c4, c4, xzr
-
-// Montgomery-reduce the combined low and middle term another twice
-
-        montrede(c0,c4,c3,c2,c1,c0, d1,d2,d3)
-
-        montrede(c1,c0,c4,c3,c2,c1, d1,d2,d3)
-
-// Our sum so far is in [c1,c0,c4,c3,c2]; choose more intuitive names
-
-#define r0 x8
-#define r1 x9
-#define r2 x10
-#define r3 x6
-#define c x7
-
-// So we can have these as temps
-
-#define t1 x11
-#define t2 x12
-#define t3 x13
-
-// Add in the pure squares 22 + 33
-
-        mul     t1, a2, a2
-        adds    r0, r0, t1
-        mul     t2, a3, a3
-        umulh   t1, a2, a2
-        adcs    r1, r1, t1
-        adcs    r2, r2, t2
-        umulh   t2, a3, a3
-        adcs    r3, r3, t2
-        adc     c, c, xzr
-
-// Construct the 23 term, double and add it in
-
-        mul     t1, a2, a3
-        umulh   t2, a2, a3
-        adds    t1, t1, t1
-        adcs    t2, t2, t2
-        adc     t3, xzr, xzr
-
-        adds    r1, r1, t1
-        adcs    r2, r2, t2
-        adcs    r3, r3, t3
-        adcs    c, c, xzr
-
-// We know, writing B = 2^{4*64} that the full implicit result is
-// B^2 c <= z + (B - 1) * p < B * p + (B - 1) * p < 2 * B * p,
-// so the top half is certainly < 2 * p. If c = 1 already, we know
-// subtracting p will give the reduced modulus. But now we do a
-// subtraction-comparison to catch cases where the residue is >= p.
-// The constants are such that [t3;0;t1;-1] = p_256.
-
-#define t0      x5
-
-// Set CF (because of inversion) iff (0,p_256) <= (c,r3,r2,r1,r0)
-
-        mov     t1, #0x00000000ffffffff
-        subs    t0, r0, #-1
-        sbcs    t1, r1, t1
-        mov     t3, #0xffffffff00000001
-        sbcs    t2, r2, xzr
-        sbcs    t3, r3, t3
-        sbcs    xzr, c, xzr
-
-// Select final output accordingly
-
-        csel    r0, t0, r0, cs
-        csel    r1, t1, r1, cs
-        csel    r2, t2, r2, cs
-        csel    r3, t3, r3, cs
-
-// Store things back in place
-
-        stp     r0, r1, [x0]
-        stp     r2, r3, [x0, #16]
-
+        ldr q19, [x1]
+        ldp x9, x13, [x1]
+        ldr q23, [x1, #16]
+        ldr q0, [x1]
+        ldp x1, x10, [x1, #16]
+        uzp2 v29.4S, v19.4S, v19.4S
+        xtn v4.2S, v19.2D
+        umulh x8, x9, x13
+        rev64 v20.4S, v23.4S
+        umull v16.2D, v19.2S, v19.2S
+        umull v1.2D, v29.2S, v4.2S
+        mul v20.4S, v20.4S, v0.4S
+        subs x14, x9, x13
+        umulh x15, x9, x1
+        mov x16, v16.d[1]
+        umull2 v4.2D, v19.4S, v19.4S
+        mov x4, v16.d[0]
+        uzp1 v17.4S, v23.4S, v0.4S
+        uaddlp v19.2D, v20.4S
+        lsr x7, x8, #63
+        mul x11, x9, x13
+        mov x12, v1.d[0]
+        csetm x5, cc
+        cneg x6, x14, cc
+        mov x3, v4.d[1]
+        mov x14, v4.d[0]
+        subs x2, x10, x1
+        mov x9, v1.d[1]
+        cneg x17, x2, cc
+        cinv x2, x5, cc
+        adds x5, x4, x12, lsl #33
+        extr x4, x8, x11, #63
+        lsr x8, x12, #31
+        uzp1 v20.4S, v0.4S, v0.4S
+        shl v19.2D, v19.2D, #32
+        adc x16, x16, x8
+        adds x8, x14, x9, lsl #33
+        lsr x14, x9, #31
+        lsl x9, x5, #32
+        umlal v19.2D, v20.2S, v17.2S
+        adc x14, x3, x14
+        adds x16, x16, x11, lsl #1
+        lsr x3, x5, #32
+        umulh x12, x6, x17
+        adcs x4, x8, x4
+        adc x11, x14, x7
+        subs x8, x5, x9
+        sbc x5, x5, x3
+        adds x16, x16, x9
+        mov x14, v19.d[0]
+        mul x17, x6, x17
+        adcs x3, x4, x3
+        lsl x7, x16, #32
+        umulh x13, x13, x10
+        adcs x11, x11, x8
+        lsr x8, x16, #32
+        adc x5, x5, xzr
+        subs x9, x16, x7
+        sbc x16, x16, x8
+        adds x7, x3, x7
+        mov x3, v19.d[1]
+        adcs x6, x11, x8
+        umulh x11, x1, x10
+        adcs x5, x5, x9
+        eor x8, x12, x2
+        adc x9, x16, xzr
+        adds x16, x14, x15
+        adc x15, x15, xzr
+        adds x12, x16, x3
+        eor x16, x17, x2
+        mul x4, x1, x10
+        adcs x15, x15, x13
+        adc x17, x13, xzr
+        adds x15, x15, x3
+        adc x3, x17, xzr
+        cmn x2, #0x1
+        mul x17, x10, x10
+        adcs x12, x12, x16
+        adcs x16, x15, x8
+        umulh x10, x10, x10
+        adc x2, x3, x2
+        adds x14, x14, x14
+        adcs x12, x12, x12
+        adcs x16, x16, x16
+        adcs x2, x2, x2
+        adc x15, xzr, xzr
+        adds x14, x14, x7
+        mul x3, x1, x1
+        adcs x12, x12, x6
+        lsr x7, x14, #32
+        adcs x16, x16, x5
+        lsl x5, x14, #32
+        umulh x13, x1, x1
+        adcs x2, x2, x9
+        mov x6, #0xffffffff
+        adc x15, x15, xzr
+        adds x8, x4, x4
+        adcs x1, x11, x11
+        mov x11, #0xffffffff00000001
+        adc x4, xzr, xzr
+        subs x9, x14, x5
+        sbc x14, x14, x7
+        adds x12, x12, x5
+        adcs x16, x16, x7
+        lsl x5, x12, #32
+        lsr x7, x12, #32
+        adcs x2, x2, x9
+        adcs x14, x15, x14
+        adc x15, xzr, xzr
+        subs x9, x12, x5
+        sbc x12, x12, x7
+        adds x16, x16, x5
+        adcs x2, x2, x7
+        adcs x14, x14, x9
+        adcs x12, x15, x12
+        adc x15, xzr, xzr
+        adds x16, x16, x3
+        adcs x2, x2, x13
+        adcs x14, x14, x17
+        adcs x12, x12, x10
+        adc x15, x15, xzr
+        adds x2, x2, x8
+        adcs x14, x14, x1
+        adcs x12, x12, x4
+        adcs x15, x15, xzr
+        adds x3, x16, #0x1
+        sbcs x5, x2, x6
+        sbcs x8, x14, xzr
+        sbcs x11, x12, x11
+        sbcs xzr, x15, xzr
+        csel x16, x3, x16, cs
+        csel x14, x8, x14, cs
+        csel x12, x11, x12, cs
+        csel x2, x5, x2, cs
+        stp x14, x12, [x0, #16]
+        stp x16, x2, [x0]
         ret
 
 #if defined(__linux__) && defined(__ELF__)

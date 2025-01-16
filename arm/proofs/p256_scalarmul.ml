@@ -18,8 +18,8 @@ prioritize_num();;
 
 needs "arm/proofs/bignum_demont_p256.ml";;
 needs "arm/proofs/bignum_inv_p256.ml";;
-needs "arm/proofs/bignum_montmul_p256_neon.ml";;
-needs "arm/proofs/bignum_montsqr_p256_neon.ml";;
+needs "arm/proofs/bignum_montmul_p256.ml";;
+needs "arm/proofs/bignum_montsqr_p256.ml";;
 needs "arm/proofs/bignum_tomont_p256.ml";;
 needs "arm/proofs/p256_montjadd.ml";;
 needs "arm/proofs/p256_montjdouble.ml";;
@@ -8738,8 +8738,8 @@ let LOCAL_INV_TAC =
 let LOCAL_MUL_TAC =
   ARM_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
-    0x1980,bignum_montmul_p256_neon_mc,
-    BIGNUM_MONTMUL_P256_NEON_SUBROUTINE_CORRECT)
+    0x1980,bignum_montmul_p256_mc,
+    BIGNUM_MONTMUL_P256_SUBROUTINE_CORRECT)
   [`read X0 s`; `read X1 s`; `read X2 s`;
    `read(memory :> bytes(read X1 s,8 * 4)) s`;
    `read(memory :> bytes(read X2 s,8 * 4)) s`;
@@ -8748,8 +8748,8 @@ let LOCAL_MUL_TAC =
 let LOCAL_SQR_TAC =
   ARM_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
-    0x1cb4,bignum_montsqr_p256_neon_mc,
-    BIGNUM_MONTSQR_P256_NEON_SUBROUTINE_CORRECT)
+    0x1cb4,bignum_montsqr_p256_mc,
+    BIGNUM_MONTSQR_P256_SUBROUTINE_CORRECT)
   [`read X0 s`; `read X1 s`;
    `read(memory :> bytes(read X1 s,8 * 4)) s`;
    `pc + 0x1cb4`; `read X30 s`];;

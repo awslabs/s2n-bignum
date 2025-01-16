@@ -60,7 +60,7 @@
 
 #define NSPACE #(NUMSIZE*6)
 
-// Corresponds exactly to bignum_montmul_p256_neon
+// Corresponds exactly to bignum_montmul_p256
 
 .montmul_p256:
         ldr	q20, [x2]
@@ -269,7 +269,7 @@
         stp	x4, x1, [x0, #16]
         ret
 
-// Corresponds exactly to bignum_montsqr_p256_neon
+// Corresponds exactly to bignum_montsqr_p256
 
 .montsqr_p256:
         ldr	q19, [x1]
