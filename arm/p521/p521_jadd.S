@@ -348,7 +348,7 @@ S2N_BN_SYMBOL(p521_jadd):
         ret
 
 // Local versions of the three field operations, identical to
-// bignum_mul_p521_neon, bignum_sqr_p521_neon and bignum_sub_p521.
+// bignum_mul_p521, bignum_sqr_p521 and bignum_sub_p521.
 
 p521_jadd_local_mul_p521:
         stp     x19, x20, [sp, #-16]!

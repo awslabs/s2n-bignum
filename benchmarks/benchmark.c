@@ -820,55 +820,25 @@ void call_sm2_montjscalarmul_alt(void) repeatfewer(10,sm2_montjscalarmul_alt(b1,
 
 #ifdef __x86_64__
 
-void call_bignum_copy_row_from_table_8n_neon__32_16(void) {}
-void call_bignum_copy_row_from_table_8n_neon__32_32(void) {}
-void call_bignum_copy_row_from_table_16_neon__32(void) {}
-void call_bignum_copy_row_from_table_32_neon__32(void) {}
+void call_bignum_copy_row_from_table_8n__32_16(void) {}
+void call_bignum_copy_row_from_table_8n__32_32(void) {}
+void call_bignum_copy_row_from_table_16__32(void) {}
+void call_bignum_copy_row_from_table_32__32(void) {}
 
-void call_bignum_emontredc_8n_neon__32(void) {}
 void call_bignum_emontredc_8n_cdiff__32(void) {}
-void call_bignum_kmul_16_32_neon(void) {}
-void call_bignum_ksqr_16_32_neon(void) {}
-void call_bignum_kmul_32_64_neon(void) {}
-void call_bignum_ksqr_32_64_neon(void) {}
-void call_bignum_montmul_p256_neon(void) {}
-void call_bignum_montmul_p384_neon(void) {}
-void call_bignum_montmul_p521_neon(void) {}
-void call_bignum_montsqr_p256_neon(void) {}
-void call_bignum_montsqr_p384_neon(void) {}
-void call_bignum_montsqr_p521_neon(void) {}
-void call_bignum_mul_8_16_neon(void) {}
-void call_bignum_mul_p521_neon(void) {}
-void call_bignum_sqr_8_16_neon(void) {}
-void call_bignum_sqr_p521_neon(void) {}
 
 #else
 
-void call_bignum_copy_row_from_table_8n_neon__32_16(void) \
-    repeat(bignum_copy_row_from_table_8n_neon(b0,b1,32,16,0))
-void call_bignum_copy_row_from_table_8n_neon__32_32(void) \
-    repeat(bignum_copy_row_from_table_8n_neon(b0,b1,32,32,0))
-void call_bignum_copy_row_from_table_16_neon__32(void) \
-    repeat(bignum_copy_row_from_table_16_neon(b0,b1,32,0))
-void call_bignum_copy_row_from_table_32_neon__32(void) \
-    repeat(bignum_copy_row_from_table_32_neon(b0,b1,32,0))
+void call_bignum_copy_row_from_table_8n__32_16(void) \
+    repeat(bignum_copy_row_from_table_8n(b0,b1,32,16,0))
+void call_bignum_copy_row_from_table_8n__32_32(void) \
+    repeat(bignum_copy_row_from_table_8n(b0,b1,32,32,0))
+void call_bignum_copy_row_from_table_16__32(void) \
+    repeat(bignum_copy_row_from_table_16(b0,b1,32,0))
+void call_bignum_copy_row_from_table_32__32(void) \
+    repeat(bignum_copy_row_from_table_32(b0,b1,32,0))
 
-void call_bignum_emontredc_8n_neon__32(void) repeat(bignum_emontredc_8n_neon(32,b0,b1,b2[0]))
 void call_bignum_emontredc_8n_cdiff__32(void) repeat(bignum_emontredc_8n_cdiff(32,b0,b1,b2[0],b3))
-void call_bignum_kmul_16_32_neon(void) repeat(bignum_kmul_16_32_neon(b0,b1,b2,b3))
-void call_bignum_ksqr_16_32_neon(void) repeat(bignum_ksqr_16_32_neon(b0,b1,b2))
-void call_bignum_kmul_32_64_neon(void) repeat(bignum_kmul_32_64_neon(b0,b1,b2,b3))
-void call_bignum_ksqr_32_64_neon(void) repeat(bignum_ksqr_32_64_neon(b0,b1,b2))
-void call_bignum_montmul_p256_neon(void) repeat(bignum_montmul_p256_neon(b0,b1,b2))
-void call_bignum_montmul_p384_neon(void) repeat(bignum_montmul_p384_neon(b0,b1,b2))
-void call_bignum_montmul_p521_neon(void) repeat(bignum_montmul_p521_neon(b0,b1,b2))
-void call_bignum_montsqr_p256_neon(void) repeat(bignum_montsqr_p256_neon(b0,b1))
-void call_bignum_montsqr_p384_neon(void) repeat(bignum_montsqr_p384_neon(b0,b1))
-void call_bignum_montsqr_p521_neon(void) repeat(bignum_montsqr_p521_neon(b0,b1))
-void call_bignum_mul_8_16_neon(void) repeat(bignum_mul_8_16_neon(b0,b1,b2))
-void call_bignum_mul_p521_neon(void) repeat(bignum_mul_p521_neon(b0,b1,b2))
-void call_bignum_sqr_8_16_neon(void) repeat(bignum_sqr_8_16_neon(b0,b1))
-void call_bignum_sqr_p521_neon(void) repeat(bignum_sqr_p521_neon(b0,b1))
 
 #endif
 
@@ -981,14 +951,14 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_copy (32 -> 32)" ,call_bignum_copy__32_32);
   timingtest(all,"bignum_copy_row_from_table (h=32,w=16)",call_bignum_copy_row_from_table__32_16);
   timingtest(all,"bignum_copy_row_from_table (h=32,w=32)",call_bignum_copy_row_from_table__32_32);
-  timingtest(arm, "bignum_copy_row_from_table_8n_neon (h=32,w=16)",
-             call_bignum_copy_row_from_table_8n_neon__32_16);
-  timingtest(arm, "bignum_copy_row_from_table_8n_neon (h=32,w=32)",
-             call_bignum_copy_row_from_table_8n_neon__32_32);
-  timingtest(arm, "bignum_copy_row_from_table_16_neon (h=32)",
-             call_bignum_copy_row_from_table_16_neon__32);
-  timingtest(arm, "bignum_copy_row_from_table_32_neon (h=32)",
-             call_bignum_copy_row_from_table_32_neon__32);
+  timingtest(arm, "bignum_copy_row_from_table_8n (h=32,w=16)",
+             call_bignum_copy_row_from_table_8n__32_16);
+  timingtest(arm, "bignum_copy_row_from_table_8n (h=32,w=32)",
+             call_bignum_copy_row_from_table_8n__32_32);
+  timingtest(arm, "bignum_copy_row_from_table_16 (h=32)",
+             call_bignum_copy_row_from_table_16__32);
+  timingtest(arm, "bignum_copy_row_from_table_32 (h=32)",
+             call_bignum_copy_row_from_table_32__32);
   timingtest(all,"bignum_ctd (32)" ,call_bignum_ctd__32);
   timingtest(all,"bignum_ctz (32)" ,call_bignum_ctz__32);
   timingtest(bmi,"bignum_deamont_p256",call_bignum_deamont_p256);
@@ -1019,8 +989,6 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_emontredc (12 -> 6)",call_bignum_emontredc__6);
   timingtest(all,"bignum_emontredc (64 -> 32)",call_bignum_emontredc__32);
   timingtest(bmi,"bignum_emontredc_8n (64 -> 32)",call_bignum_emontredc_8n__32);
-  timingtest(arm, "bignum_emontredc_8n_neon (64 -> 32)",
-             call_bignum_emontredc_8n_neon__32);
   timingtest(arm, "bignum_emontredc_8n_cdiff (64 -> 32)",
              call_bignum_emontredc_8n_cdiff__32);
   timingtest(all,"bignum_eq (32x32)" ,call_bignum_eq__32_32);
@@ -1046,13 +1014,9 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_invsqrt_p25519_alt",call_bignum_invsqrt_p25519_alt);
   timingtest(all,"bignum_iszero (32)" ,call_bignum_iszero__32);
   timingtest(bmi,"bignum_kmul_16_32",call_bignum_kmul_16_32);
-  timingtest(arm, "bignum_kmul_16_32_neon", call_bignum_kmul_16_32_neon);
   timingtest(bmi,"bignum_kmul_32_64",call_bignum_kmul_32_64);
-  timingtest(arm, "bignum_kmul_32_64_neon", call_bignum_kmul_32_64_neon);
   timingtest(bmi,"bignum_ksqr_16_32",call_bignum_ksqr_16_32);
-  timingtest(arm, "bignum_ksqr_16_32_neon", call_bignum_ksqr_16_32_neon);
   timingtest(bmi,"bignum_ksqr_32_64",call_bignum_ksqr_32_64);
-  timingtest(arm, "bignum_ksqr_32_64_neon", call_bignum_ksqr_32_64_neon);
   timingtest(all,"bignum_le (32x32)" ,call_bignum_le__32_32);
   timingtest(all,"bignum_littleendian_4",call_bignum_littleendian_4);
   timingtest(all,"bignum_littleendian_6",call_bignum_littleendian_6);
@@ -1109,30 +1073,24 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_montmul (32x32 -> 32)" ,call_bignum_montmul__32);
   timingtest(bmi,"bignum_montmul_p256",call_bignum_montmul_p256);
   timingtest(all,"bignum_montmul_p256_alt",call_bignum_montmul_p256_alt);
-  timingtest(arm,"bignum_montmul_p256_neon",call_bignum_montmul_p256_neon);
   timingtest(bmi,"bignum_montmul_p256k1",call_bignum_montmul_p256k1);
   timingtest(all,"bignum_montmul_p256k1_alt",call_bignum_montmul_p256k1_alt);
   timingtest(bmi,"bignum_montmul_p384",call_bignum_montmul_p384);
   timingtest(all,"bignum_montmul_p384_alt",call_bignum_montmul_p384_alt);
-  timingtest(arm,"bignum_montmul_p384_neon", call_bignum_montmul_p384_neon);
   timingtest(bmi,"bignum_montmul_p521",call_bignum_montmul_p521);
   timingtest(all,"bignum_montmul_p521_alt",call_bignum_montmul_p521_alt);
-  timingtest(arm,"bignum_montmul_p521_neon", call_bignum_montmul_p521_neon);
   timingtest(bmi,"bignum_montmul_sm2", call_bignum_montmul_sm2);
   timingtest(all,"bignum_montmul_sm2_alt",call_bignum_montmul_sm2_alt);
   timingtest(all,"bignum_montredc (32/16 -> 16)",call_bignum_montredc__32_16);
   timingtest(all,"bignum_montsqr (32 -> 32)" ,call_bignum_montsqr__32);
   timingtest(bmi,"bignum_montsqr_p256",call_bignum_montsqr_p256);
   timingtest(all,"bignum_montsqr_p256_alt",call_bignum_montsqr_p256_alt);
-  timingtest(arm,"bignum_montsqr_p256_neon",call_bignum_montsqr_p256_neon);
   timingtest(bmi,"bignum_montsqr_p256k1",call_bignum_montsqr_p256k1);
   timingtest(all,"bignum_montsqr_p256k1_alt",call_bignum_montsqr_p256k1_alt);
   timingtest(bmi,"bignum_montsqr_p384",call_bignum_montsqr_p384);
   timingtest(all,"bignum_montsqr_p384_alt",call_bignum_montsqr_p384_alt);
-  timingtest(arm,"bignum_montsqr_p384_neon", call_bignum_montsqr_p384_neon);
   timingtest(bmi,"bignum_montsqr_p521",call_bignum_montsqr_p521);
   timingtest(all,"bignum_montsqr_p521_alt",call_bignum_montsqr_p521_alt);
-  timingtest(arm,"bignum_montsqr_p521_neon", call_bignum_montsqr_p521_neon);
   timingtest(bmi,"bignum_montsqr_sm2",call_bignum_montsqr_sm2);
   timingtest(all,"bignum_montsqr_sm2_alt",call_bignum_montsqr_sm2_alt);
   timingtest(all,"bignum_mul (4x4 -> 8)",call_bignum_mul__4_8);
@@ -1146,14 +1104,12 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_mul_6_12_alt",call_bignum_mul_6_12_alt);
   timingtest(bmi,"bignum_mul_8_16",call_bignum_mul_8_16);
   timingtest(all,"bignum_mul_8_16_alt",call_bignum_mul_8_16_alt);
-  timingtest(arm, "bignum_mul_8_16_neon", call_bignum_mul_8_16_neon);
   timingtest(bmi,"bignum_mul_p25519",call_bignum_mul_p25519);
   timingtest(all,"bignum_mul_p25519_alt",call_bignum_mul_p25519_alt);
   timingtest(bmi,"bignum_mul_p256k1",call_bignum_mul_p256k1);
   timingtest(all,"bignum_mul_p256k1_alt",call_bignum_mul_p256k1_alt);
   timingtest(bmi,"bignum_mul_p521",call_bignum_mul_p521);
   timingtest(all,"bignum_mul_p521_alt",call_bignum_mul_p521_alt);
-  timingtest(arm,"bignum_mul_p521_neon", call_bignum_mul_p521_neon);
   timingtest(all,"bignum_muladd10 (32 -> 32)",call_bignum_muladd10__32);
   timingtest(all,"bignum_mux16 (4 -> 4)",call_bignum_mux16__4);
   timingtest(all,"bignum_mux16 (6 -> 6)",call_bignum_mux16__6);
@@ -1197,14 +1153,12 @@ int main(int argc, char *argv[])
   timingtest(all,"bignum_sqr_6_12_alt",call_bignum_sqr_6_12_alt);
   timingtest(bmi,"bignum_sqr_8_16",call_bignum_sqr_8_16);
   timingtest(all,"bignum_sqr_8_16_alt",call_bignum_sqr_8_16_alt);
-  timingtest(arm, "bignum_sqr_8_16_neon", call_bignum_sqr_8_16_neon);
   timingtest(bmi,"bignum_sqr_p25519",call_bignum_sqr_p25519);
   timingtest(all,"bignum_sqr_p25519_alt",call_bignum_sqr_p25519_alt);
   timingtest(bmi,"bignum_sqr_p256k1",call_bignum_sqr_p256k1);
   timingtest(all,"bignum_sqr_p256k1_alt",call_bignum_sqr_p256k1_alt);
   timingtest(bmi,"bignum_sqr_p521",call_bignum_sqr_p521);
   timingtest(all,"bignum_sqr_p521_alt",call_bignum_sqr_p521_alt);
-  timingtest(arm,"bignum_sqr_p521_neon", call_bignum_sqr_p521_neon);
   timingtest(bmi,"bignum_sqrt_p25519",call_bignum_sqrt_p25519);
   timingtest(all,"bignum_sqrt_p25519_alt",call_bignum_sqrt_p25519_alt);
   timingtest(all,"bignum_sub (4x4->4)",call_bignum_sub__4_4);

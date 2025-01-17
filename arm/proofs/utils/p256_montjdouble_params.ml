@@ -9,9 +9,9 @@ let count_insts (execth:thm*thm option array) =
   let length_th = fst execth in
   dest_small_numeral (snd (dest_eq (concl length_th))) / 4;;
 
-let len_montsqr_p256_neon, len_montmul_p256_neon, len_sub_p256 =
-  count_insts BIGNUM_MONTSQR_P256_NEON_EXEC,
-  count_insts BIGNUM_MONTMUL_P256_NEON_EXEC,
+let len_montsqr_p256, len_montmul_p256, len_sub_p256 =
+  count_insts BIGNUM_MONTSQR_P256_EXEC,
+  count_insts BIGNUM_MONTMUL_P256_EXEC,
   count_insts BIGNUM_SUB_P256_EXEC;;
 
 (* ------------------------------------------------------------------------- *)
@@ -46,10 +46,10 @@ let code_blocks = [
 
 (* The number of instructions of functions. *)
 
-let len_montsqr_p256_neon, len_montmul_p256_neon, len_sub_p256,
+let len_montsqr_p256, len_montmul_p256, len_sub_p256,
     len_add_p256 =
-  count_insts BIGNUM_MONTSQR_P256_NEON_EXEC,
-  count_insts BIGNUM_MONTMUL_P256_NEON_EXEC,
+  count_insts BIGNUM_MONTSQR_P256_EXEC,
+  count_insts BIGNUM_MONTMUL_P256_EXEC,
   count_insts BIGNUM_SUB_P256_EXEC,
   count_insts BIGNUM_ADD_P256_EXEC;;
 
@@ -66,8 +66,8 @@ List.iter (fun code_block ->
     (* nsteps_prologue = # fn arguments
        nsteps_fnbody = # insts of fn except last ret *)
     let nsteps_prologue, nsteps_fnbody = match callfn with
-      | "call montsqr_p256" -> 2, len_montsqr_p256_neon - 1
-      | "call montmul_p256" -> 3, len_montmul_p256_neon - 1
+      | "call montsqr_p256" -> 2, len_montsqr_p256 - 1
+      | "call montmul_p256" -> 3, len_montmul_p256 - 1
       | "call sub_p256" -> 3, len_sub_p256 - 1
       | "call add_p256" -> 3, len_add_p256 - 1
       | _ -> failwith callfn in begin

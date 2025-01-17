@@ -58,7 +58,7 @@
 
 #define NSPACE #(NUMSIZE*7)
 
-// Corresponds exactly to bignum_montmul_p384_neon
+// Corresponds exactly to bignum_montmul_p384
 
 .montmul_p384:
         sub sp, sp, 48

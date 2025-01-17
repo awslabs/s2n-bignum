@@ -494,7 +494,7 @@ S2N_BN_SYMBOL(p521_jdouble):
         ret
 
 // Local versions of the two "big" field operations, identical to
-// bignum_mul_p521_neon and bignum_sqr_p521_neon.
+// bignum_mul_p521 and bignum_sqr_p521.
 
 p521_jdouble_local_mul_p521:
         stp     x19, x20, [sp, #-16]!

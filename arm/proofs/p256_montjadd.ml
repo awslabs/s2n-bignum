@@ -16,8 +16,8 @@ prioritize_int();;
 prioritize_real();;
 prioritize_num();;
 
-needs "arm/proofs/bignum_montsqr_p256_neon.ml";;
-needs "arm/proofs/bignum_montmul_p256_neon.ml";;
+needs "arm/proofs/bignum_montsqr_p256.ml";;
+needs "arm/proofs/bignum_montmul_p256.ml";;
 needs "arm/proofs/bignum_sub_p256.ml";;
 
 
@@ -593,7 +593,7 @@ let LOCAL_MONTSQR_P256_CORRECT =
                   read PC s = word (pc + 0x334) /\
                   C_ARGUMENTS [z; x] s /\
                   bignum_from_memory (x,4) s = a)
-             (\s. read PC s = word (pc + (0x334 + LENGTH bignum_montsqr_p256_neon_core_mc)) /\
+             (\s. read PC s = word (pc + (0x334 + LENGTH bignum_montsqr_p256_core_mc)) /\
                   (a EXP 2 <= 2 EXP 256 * p_256
                    ==> bignum_from_memory (z,4) s =
                        (inverse_mod p_256 (2 EXP 256) * a EXP 2) MOD p_256))
@@ -603,18 +603,18 @@ let LOCAL_MONTSQR_P256_CORRECT =
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
               MAYCHANGE SOME_FLAGS)`,
     SUBGOAL_THEN
-      `bignum_montsqr_p256_neon_core_mc =
-        SUB_LIST (0x334, LENGTH bignum_montsqr_p256_neon_core_mc)
+      `bignum_montsqr_p256_core_mc =
+        SUB_LIST (0x334, LENGTH bignum_montsqr_p256_core_mc)
                  p256_montjadd_core_mc` MP_TAC THENL [
-      REWRITE_TAC[fst BIGNUM_MONTSQR_P256_NEON_CORE_EXEC;
-                  bignum_montsqr_p256_neon_core_mc; p256_montjadd_core_mc] THEN
+      REWRITE_TAC[fst BIGNUM_MONTSQR_P256_CORE_EXEC;
+                  bignum_montsqr_p256_core_mc; p256_montjadd_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC;
       ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
-    ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P256_NEON_CORE_CORRECT
-        (REWRITE_RULE [fst BIGNUM_MONTSQR_P256_NEON_CORE_EXEC] th)
-        [fst BIGNUM_MONTSQR_P256_NEON_CORE_EXEC;
+    ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P256_CORE_CORRECT
+        (REWRITE_RULE [fst BIGNUM_MONTSQR_P256_CORE_EXEC] th)
+        [fst BIGNUM_MONTSQR_P256_CORE_EXEC;
         fst P256_MONTJADD_CORE_EXEC])) in
   REWRITE_RULE [fst P256_MONTJADD_CORE_EXEC]
     (prove(`!z x a pc returnaddress.
@@ -638,7 +638,7 @@ let LOCAL_MONTSQR_P256_CORRECT =
     ARM_ADD_RETURN_NOSTACK_TAC
     P256_MONTJADD_CORE_EXEC
     ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o
-     REWRITE_RULE [fst P256_MONTJADD_CORE_EXEC;fst BIGNUM_MONTSQR_P256_NEON_CORE_EXEC])
+     REWRITE_RULE [fst P256_MONTJADD_CORE_EXEC;fst BIGNUM_MONTSQR_P256_CORE_EXEC])
      lemma)));;
 
 let LOCAL_MONTSQR_P256_TAC =
@@ -662,7 +662,7 @@ let LOCAL_MONTMUL_P256_CORRECT =
                   C_ARGUMENTS [z; x; y] s /\
                   bignum_from_memory (x,4) s = a /\
                   bignum_from_memory (y,4) s = b)
-             (\s. read PC s = word (pc + LENGTH bignum_montmul_p256_neon_core_mc) /\
+             (\s. read PC s = word (pc + LENGTH bignum_montmul_p256_core_mc) /\
                   (a * b <= 2 EXP 256 * p_256
                    ==> bignum_from_memory (z,4) s =
                        (inverse_mod p_256 (2 EXP 256) * a * b) MOD p_256))
@@ -672,17 +672,17 @@ let LOCAL_MONTMUL_P256_CORRECT =
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
               MAYCHANGE SOME_FLAGS)`,
     SUBGOAL_THEN
-      `bignum_montmul_p256_neon_core_mc =
-        SUB_LIST (0, LENGTH bignum_montmul_p256_neon_core_mc) p256_montjadd_core_mc` MP_TAC THENL [
-      REWRITE_TAC[fst BIGNUM_MONTMUL_P256_NEON_CORE_EXEC;
-                  bignum_montmul_p256_neon_core_mc; p256_montjadd_core_mc] THEN
+      `bignum_montmul_p256_core_mc =
+        SUB_LIST (0, LENGTH bignum_montmul_p256_core_mc) p256_montjadd_core_mc` MP_TAC THENL [
+      REWRITE_TAC[fst BIGNUM_MONTMUL_P256_CORE_EXEC;
+                  bignum_montmul_p256_core_mc; p256_montjadd_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC;
       ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
-    ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTMUL_P256_NEON_CORE_CORRECT
-        (REWRITE_RULE [fst BIGNUM_MONTMUL_P256_NEON_CORE_EXEC] th)
-        [fst BIGNUM_MONTMUL_P256_NEON_CORE_EXEC;
+    ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTMUL_P256_CORE_CORRECT
+        (REWRITE_RULE [fst BIGNUM_MONTMUL_P256_CORE_EXEC] th)
+        [fst BIGNUM_MONTMUL_P256_CORE_EXEC;
         fst P256_MONTJADD_CORE_EXEC])) in
   REWRITE_RULE [fst P256_MONTJADD_CORE_EXEC]
     (prove(`!z x y a b pc returnaddress.
@@ -707,7 +707,7 @@ let LOCAL_MONTMUL_P256_CORRECT =
     ARM_ADD_RETURN_NOSTACK_TAC
     P256_MONTJADD_CORE_EXEC
     ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o
-     REWRITE_RULE [fst P256_MONTJADD_CORE_EXEC;fst BIGNUM_MONTMUL_P256_NEON_CORE_EXEC])
+     REWRITE_RULE [fst P256_MONTJADD_CORE_EXEC;fst BIGNUM_MONTMUL_P256_CORE_EXEC])
      lemma)));;
 
 let LOCAL_MONTMUL_P256_TAC =
@@ -1157,7 +1157,7 @@ let equiv_goal = mk_equiv_statement
      MAYCHANGE [memory :> bytes(p3,96);
                 memory :> bytes(stackpointer,224)]`
     (vsubst [mk_small_numeral(
-        150 + len_montsqr_p256_neon * 4 + len_montmul_p256_neon * 12
+        150 + len_montsqr_p256 * 4 + len_montmul_p256 * 12
             + len_sub_p256 * 7),`x:num`]
         `\(s:armstate). (x:num)`)
     (vsubst [mk_small_numeral(len_p256_montjadd_opt - 13),`x:num`]

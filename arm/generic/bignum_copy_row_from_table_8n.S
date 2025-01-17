@@ -8,15 +8,15 @@
 // achieved by reading the whole table and using the bit-masking to get the
 // `idx`-th row.
 //
-//    extern void bignum_copy_from_table_8_neon
+//    extern void bignum_copy_from_table_8n
 //     (uint64_t *z, uint64_t *table, uint64_t height, uint64_t width, uint64_t idx);
 //
 // Standard ARM ABI: X0 = z, X1 = table, X2 = height, X3 = width, X4 = idx
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_copy_row_from_table_8n_neon)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_copy_row_from_table_8n_neon)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_copy_row_from_table_8n)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_copy_row_from_table_8n)
         .text
         .balign 4
 
@@ -33,27 +33,27 @@
 
 #define vmask v16
 
-S2N_BN_SYMBOL(bignum_copy_row_from_table_8n_neon):
+S2N_BN_SYMBOL(bignum_copy_row_from_table_8n):
 
-        cbz     height, bignum_copy_row_from_table_8n_neon_end
-        cbz     width,  bignum_copy_row_from_table_8n_neon_end
+        cbz     height, bignum_copy_row_from_table_8n_end
+        cbz     width,  bignum_copy_row_from_table_8n_end
         mov     i, width
         mov     x6, z
         dup     v16.2d, xzr
 
-bignum_copy_row_from_table_8n_neon_initzero:
+bignum_copy_row_from_table_8n_initzero:
         str     q16, [x6]
         str     q16, [x6, #16]
         str     q16, [x6, #32]
         str     q16, [x6, #48]
         add     x6, x6, #64
         subs    i, i, #8
-        bne     bignum_copy_row_from_table_8n_neon_initzero
+        bne     bignum_copy_row_from_table_8n_initzero
 
         mov     i, xzr
         mov     x8, table
 
-bignum_copy_row_from_table_8n_neon_outerloop:
+bignum_copy_row_from_table_8n_outerloop:
 
         cmp     i, idx
         csetm   mask, eq
@@ -62,7 +62,7 @@ bignum_copy_row_from_table_8n_neon_outerloop:
         mov     j, width
         mov     x9, z
 
-bignum_copy_row_from_table_8n_neon_innerloop:
+bignum_copy_row_from_table_8n_innerloop:
 
         ldr     q17, [x8]
         ldr     q18, [x9]
@@ -87,14 +87,14 @@ bignum_copy_row_from_table_8n_neon_innerloop:
         add     x8, x8, #64
         add     x9, x9, #64
         subs    j, j, #8
-        bne     bignum_copy_row_from_table_8n_neon_innerloop
+        bne     bignum_copy_row_from_table_8n_innerloop
 
-bignum_copy_row_from_table_8n_neon_innerloop_done:
+bignum_copy_row_from_table_8n_innerloop_done:
         add     i, i, #1
         cmp     i, height
-        bne     bignum_copy_row_from_table_8n_neon_outerloop
+        bne     bignum_copy_row_from_table_8n_outerloop
 
-bignum_copy_row_from_table_8n_neon_end:
+bignum_copy_row_from_table_8n_end:
         ret
 
 #if defined(__linux__) && defined(__ELF__)

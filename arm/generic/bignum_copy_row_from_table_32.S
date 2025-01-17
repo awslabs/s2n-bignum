@@ -8,7 +8,7 @@
 // achieved by reading the whole table and using the bit-masking to get the
 // `idx`-th row.
 //
-//    extern void bignum_copy_from_table_32_neon
+//    extern void bignum_copy_from_table_32
 //     (uint64_t *z, uint64_t *table, uint64_t height, uint64_t idx);
 //
 // Initial version written by Hanno Becker
@@ -16,8 +16,8 @@
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_copy_row_from_table_32_neon)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_copy_row_from_table_32_neon)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_copy_row_from_table_32)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_copy_row_from_table_32)
         .text
         .balign 4
 
@@ -72,7 +72,7 @@
 
 #define vmask    v17
 
-S2N_BN_SYMBOL(bignum_copy_row_from_table_32_neon):
+S2N_BN_SYMBOL(bignum_copy_row_from_table_32):
 
     // Clear accumulator
     // Zeroing can be done via xor, but xor isn't formalized yet.
@@ -94,7 +94,7 @@ S2N_BN_SYMBOL(bignum_copy_row_from_table_32_neon):
     mov ventry15.16b,  ventry0.16b
 
     mov cnt, #0
-bignum_copy_row_from_table_32_neon_loop:
+bignum_copy_row_from_table_32_loop:
 
     // Compute mask: Check if current index matches target index
     subs xzr, cnt, idx
@@ -153,9 +153,9 @@ bignum_copy_row_from_table_32_neon_loop:
 
     add cnt, cnt, #1
     subs xzr, height, cnt
-    b.ne bignum_copy_row_from_table_32_neon_loop
+    b.ne bignum_copy_row_from_table_32_loop
 
-bignum_copy_row_from_table_32_neon_end:
+bignum_copy_row_from_table_32_end:
 
     str qentry0,  [z, #16*0]
     str qentry1,  [z, #16*1]
