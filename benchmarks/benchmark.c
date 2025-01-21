@@ -873,9 +873,9 @@ void call_bignum_mul_p521_neon(void) repeat(bignum_mul_p521_neon(b0,b1,b2))
 void call_bignum_sqr_8_16_neon(void) repeat(bignum_sqr_8_16_neon(b0,b1))
 void call_bignum_sqr_p521_neon(void) repeat(bignum_sqr_p521_neon(b0,b1))
 
-void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0))
+void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 void call_mlkem_keccak_f1600(void) repeat(mlkem_keccak_f1600(b0))
-void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0))
+void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 
 #endif
 
