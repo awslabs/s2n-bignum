@@ -725,6 +725,13 @@ let x86_LZCNT = new_definition
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
 
+
+let x86_XCHG = new_definition
+ `x86_XCHG dest src s =
+    let temp = read dest s in 
+    let s = (dest := src) s in 
+    (src := temp) s`;;
+
 let x86_MOV = new_definition
  `x86_MOV dest src s =
         let x = read src s in (dest := x) s`;;
@@ -1510,6 +1517,12 @@ let x86_execute = define
         | 32 -> (OPERAND32 dest s) := word_sx(bsid_semantics bsid s)
         | 16 -> (OPERAND16 dest s) := word_sx(bsid_semantics bsid s)
         | 8 -> (OPERAND8 dest s) := word_sx(bsid_semantics bsid s)) s
+    | XCHG dest src ->
+        (match operand_size dest with
+          64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
+        | 32 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
+        | 16 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
+        | 8 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)) s
     | MOV dest src ->
         (match operand_size dest with
            64 -> x86_MOV (OPERAND64 dest s) (OPERAND64 src s)

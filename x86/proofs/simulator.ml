@@ -217,7 +217,8 @@ let iclasses = iclasses @
  [0xc4; 0x41; 0x31; 0xef; 0xd0]; (* VPXOR (%_% xmm10) (%_% xmm9) (%_% xmm8) *)
  [0xc4; 0x41; 0x35; 0xef; 0xd0]; (* VPXOR (%_% ymm10) (%_% ymm9) (%_% ymm8) *)
  [0xc4; 0x41; 0x09; 0xef; 0xef]; (* VPXOR (%_% xmm13) (%_% xmm14) (%_% xmm15) *)
- [0xc4; 0x41; 0x0d; 0xef; 0xef] (* VPXOR (%_% ymm13) (%_% ymm14) (%_% ymm15) *)
+ [0xc4; 0x41; 0x0d; 0xef; 0xef]; (* VPXOR (%_% ymm13) (%_% ymm14) (%_% ymm15) *)
+ [0x48; 0x87; 0xFE]; (* XCHG (% rsi) (%rdi) *)
 ];;
 
 (* ------------------------------------------------------------------------- *)
