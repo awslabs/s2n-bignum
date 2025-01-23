@@ -725,12 +725,11 @@ let x86_LZCNT = new_definition
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
 
-
+(* Only deal with register-register exchange *)
 let x86_XCHG = new_definition
  `x86_XCHG dest src s =
-    let temp = read dest s in 
-    let s = (dest := src) s in 
-    (src := temp) s`;;
+    let temp = read dest s in
+    (dest := read src s ,, src := temp) s`;;
 
 let x86_MOV = new_definition
  `x86_MOV dest src s =
@@ -2395,7 +2394,7 @@ let X86_OPERATION_CLAUSES =
     x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOT; x86_OR;
     x86_POP_ALT; x86_PUSH_ALT; x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
-    x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XOR;
+    x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPXOR;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
