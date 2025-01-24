@@ -1519,9 +1519,9 @@ let x86_execute = define
     | XCHG dest src ->
         (match operand_size dest with
           64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
-        | 32 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
-        | 16 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
-        | 8 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)) s
+        | 32 -> x86_XCHG (OPERAND32 dest s) (OPERAND32 src s)
+        | 16 -> x86_XCHG (OPERAND16 dest s) (OPERAND16 src s)
+        | 8 -> x86_XCHG (OPERAND8 dest s) (OPERAND8 src s)) s
     | MOV dest src ->
         (match operand_size dest with
            64 -> x86_MOV (OPERAND64 dest s) (OPERAND64 src s)
