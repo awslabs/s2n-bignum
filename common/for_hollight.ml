@@ -16,6 +16,15 @@ let rec dest_list = function
 
 let catch f x = try Some(f x) with Failure _ -> None;;
 
+let rec takedrop (n:int) (l:'a list): 'a list * 'a list =
+  if n = 0 then ([],l)
+  else
+    match l with
+    | [] -> failwith "l too short"
+    | h::t ->
+      let a,b = takedrop (n-1) t in
+      (h::a,b);;
+
 let pinst tyin tmin =
   let iterm_fn = vsubst (map (I F_F (inst tyin)) tmin)
   and itype_fn = inst tyin in
