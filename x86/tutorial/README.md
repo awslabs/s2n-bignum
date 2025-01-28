@@ -1,8 +1,8 @@
 # Tutorials for s2n-bignum
 
-This directory includes examples for verifying Arm programs using s2n-bignum
+This directory includes examples for verifying x86 programs using s2n-bignum
 and HOL Light.
-To verify programs in x86, see `x86/tutorial`.
+To verify programs in Arm, see `arm/tutorial`.
 
 ### Unary reasoning
 
@@ -15,6 +15,6 @@ To verify programs in x86, see `x86/tutorial`.
 
 ### Relational reasoning
 
+Note that Arm tutorial has more examples in this topic.
+
 1. `rel_simp.ml`: Proving equivalence of two simple programs.
-2. `rel_loop.ml`: Proving equivalence of two simple loops.
-3. `rel_veceq.ml`: Proving equivalence of scalar vs. vectorized 128x128->256-bit squaring.

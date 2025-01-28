@@ -391,6 +391,12 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
 
 OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
+# Tutorial assembly files
+
+TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
+
+TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_simp2.o
+
 .PHONY: bmi clean clobber
 
 # Actual object files for execution, with the "native" ABI
@@ -437,6 +443,8 @@ HOLLIGHT:=$(HOLDIR)/hol.sh
 
 PROOF_BINS = $(OBJ:.o=.native)
 PROOF_LOGS = $(OBJ:.o=.correct)
+TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
+TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
 # Build precompiled native binaries of HOL Light proofs
 
@@ -485,15 +493,20 @@ p521/p521_jscalarmul_alt.native: p521/bignum_mod_n521_9.native
 sm2/sm2_montjscalarmul.native: sm2/sm2_montjadd.native sm2/sm2_montjdouble.native
 sm2/sm2_montjscalarmul_alt.native: sm2/sm2_montjadd_alt.native sm2/sm2_montjdouble_alt.native
 
+# Tutorial
+
+.SECONDEXPANSION:
+tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+# Additional dependencies on .o files
+tutorial/rel_simp.native: tutorial/rel_simp2.o
+
 
 build_proofs: $(PROOF_BINS);
+build_tutorial: $(TUTORIAL_OBJ) $(TUTORIAL_PROOF_BINS);
 run_proofs: build_proofs $(PROOF_LOGS);
 
-# Tutorial for x86 is left as TODO
-build_tutorial: ;
-
 proofs: run_proofs ; ../tools/count-proofs.sh .
-tutorial: ;
+tutorial: build_tutorial $(TUTORIAL_PROOF_LOGS);
 
 
 x86-insns.ml: $(OBJ) $(WINOBJ); ../tools/list-x86-insns.sh x86-insns.ml
