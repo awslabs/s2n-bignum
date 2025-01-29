@@ -88,7 +88,7 @@ let arm_ldstp_d = new_definition `arm_ldstp_d ld Rt Rt2 =
   (if ld then arm_LDP else arm_STP) (DREG' Rt) (DREG' Rt2)`;;
 let arm_ldstp_q = new_definition `arm_ldstp_q ld Rt Rt2 =
   (if ld then arm_LDP else arm_STP) (QREG' Rt) (QREG' Rt2)`;;
-let arm_ldst2 = new_definition `arm_ldst2 ld Rt = 
+let arm_ldst2 = new_definition `arm_ldst2 ld Rt =
   let Rtt:(5 word) = word ((val Rt + 1) MOD 32) in
   (if ld then arm_LD2 else arm_ST2) (QREG' Rt) (QREG' Rtt)`;;
 
@@ -316,17 +316,17 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
-  // LD1/ST1 (multiple structures), 1 register, immediate offset, 
+  // LD1/ST1 (multiple structures), 1 register, immediate offset,
   //   Post-immediate offset, datasize = 64
   //
-  // NOTE: On little-endian machines, LD1/ST1 with 1 register is equivalent to 
+  // NOTE: On little-endian machines, LD1/ST1 with 1 register is equivalent to
   // simply loading/storing the whole word.
-  // On big-endian machines, for LD1/ST1, each lane is byte-reversed 
-  // but the lane order is kept the same. For LDR/STR, the whole register is 
+  // On big-endian machines, for LD1/ST1, each lane is byte-reversed
+  // but the lane order is kept the same. For LDR/STR, the whole register is
   // byte-reversed. This results in different hehaviour for LD1/ST1 vs LDR/STR
   // when running on big-endian machines.
   // See https://llvm.org/docs/BigEndianNEON.html#ldr-and-ld1
-  // 
+  //
   // Since instructions are modeled only for little-endian, the optimization
   // that reuses functions of LDR/STR for LD1/ST1 is okay.
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
@@ -546,7 +546,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11001110011:11; Rm:5; 0b100010:6; Rn:5; Rd:5] ->
     // SHA512SU1
     SOME (arm_SHA512SU1 (QREG' Rd) (QREG' Rn) (QREG' Rm))
-  
+
   | [0b0100111000101000010010:22; Rn:5; Rd:5] ->
     // AESE
     SOME (arm_AESE (QREG' Rd) (QREG' Rn))
@@ -729,7 +729,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11001110001:11; Rm:5; 0:1; Ra:5; Rn:5; Rd:5] ->
     // BCAX
     SOME (arm_BCAX (QREG' Rd) (QREG' Rn) (QREG' Rm) (QREG' Ra))
-  
+
   | [0b11001110100:11; Rm:5; imm6:6; Rn:5; Rd:5] ->
     // XAR
     SOME (arm_XAR (QREG' Rd) (QREG' Rn) (QREG' Rm) imm6)

@@ -1738,7 +1738,7 @@ let word_interleave16 = new_definition
       x y =
     let xlo,xhi = word_split_lohi x in
     let ylo,yhi = word_split_lohi y in
-    word_join (word_interleave4 xhi yhi) (word_interleave4 xlo ylo)`;;
+    word_join (word_interleave8 xhi yhi) (word_interleave8 xlo ylo)`;;
 
 let arm_ZIP1 = new_definition
  `arm_ZIP1 Rd Rn Rm esize datasize =
@@ -1857,7 +1857,7 @@ let arm_TRN2 = define
  *** undefined state. I am not sure if a pre/post of zero is encodable
  *** but I consider even that as a writeback.
  ***)
- 
+
 let arm_LDR = define
  `arm_LDR (Rt:(armstate,N word)component) Rn off =
     \s. let base = read Rn s in
@@ -1949,7 +1949,7 @@ let arm_STP = define
          else ASSIGNS entirety) s`;;
 
 (* There is a bit of duplication in the following defintions.
-  We have to do this because one step in symbolic execution 
+  We have to do this because one step in symbolic execution
   doesn't handle let binding of pairs. *)
 let word_deinterleave2_x = new_definition
   `(word_deinterleave2_x:
@@ -2037,10 +2037,10 @@ let word_deinterleave16_y = new_definition
     let yhi = word_deinterleave8_y zhi in
     word_join yhi ylo`;;
 
-(* Association of ,, is not well understood by symbolic execution. 
-   So instead of doing `((a := x ,, b := y) ,, c := z) s`, we do 
+(* Association of ,, is not well understood by symbolic execution.
+   So instead of doing `((a := x ,, b := y) ,, c := z) s`, we do
    `(a := x ,, b := y ,, c := z) s` *)
-let arm_LD2 = define 
+let arm_LD2 = define
   `arm_LD2 Rt Rtt Rn off datasize esize =
     \s. let address = read Rn s in
         let eaddr = word_add address (offset_address off s) in
@@ -2079,8 +2079,8 @@ let arm_LD2 = define
                else (=)))
          else ASSIGNS entirety) s`;;
 
-let arm_ST2 = define 
-  `arm_ST2 Rt Rtt Rn off datasize esize = 
+let arm_ST2 = define
+  `arm_ST2 Rt Rtt Rn off datasize esize =
     \s. let address = read Rn s in
         let eaddr = word_add address (offset_address off s) in
         (if (Rn = SP ==> aligned 16 address) /\
@@ -2196,7 +2196,7 @@ let arm_RAX1 = define
 (* Cryptographic four-register                                               *)
 (* ------------------------------------------------------------------------- *)
 
-let arm_EOR3 = define 
+let arm_EOR3 = define
  `arm_EOR3 Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
@@ -2205,7 +2205,7 @@ let arm_EOR3 = define
       let d':int128 = word_xor (word_xor n m) a in
       (Rd := d') s`;;
 
-let arm_BCAX = define 
+let arm_BCAX = define
  `arm_BCAX Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
@@ -2638,10 +2638,11 @@ let WORD_DUPLICATE_64_128 = prove
 
 let all_simd_rules = [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;
     WORD_DUPLICATE_64_128;
+    word_interleave16;
     word_interleave8;word_interleave4;word_interleave2;word_split_lohi;
     word_interleave_lo; word_interleave_hi;
     word_split_hi; word_split_lo;
-    word_deinterleave2_x; word_deinterleave2_y; 
+    word_deinterleave2_x; word_deinterleave2_y;
     word_deinterleave4_x; word_deinterleave4_y;
     word_deinterleave8_x; word_deinterleave8_y;
     word_deinterleave16_x; word_deinterleave16_y];;
@@ -2746,5 +2747,5 @@ let ARM_OPERATION_CLAUSES =
 
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
-      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP; 
+      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
        arm_LD2_ALT; arm_ST2_ALT];;
