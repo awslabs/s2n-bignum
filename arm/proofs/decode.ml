@@ -420,16 +420,16 @@ let decode = new_definition `!w:int32. decode w =
         let elements = datasize DIV esize in
         let shift = val (word_join immh immb:(7)word) - esize in
         SOME (arm_SLI_VEC (QREG' Rd) (QREG' Rn) shift esize)
-    else if cmode = (word 0b0100:(4)word) then 
+    else if cmode = (word 0b0100:(4)word) then
       // SRI (vector)
-      let immb = abc in 
-      let Rn = defgh in 
-      if bit 3 immh /\ ~q then NONE 
-      else 
-        let highest_set_bit = 
+      let immb = abc in
+      let Rn = defgh in
+      if bit 3 immh /\ ~q then NONE
+      else
+        let highest_set_bit =
           if bit 3 immh then 3 else
           if bit 2 immh then 2 else
-          if bit 1 immh then 1 else 0 in 
+          if bit 1 immh then 1 else 0 in
         let esize = 8 * (2 EXP highest_set_bit) in
         let datasize = if q then 128 else 64 in
         let shift = (esize * 2) - val (word_join immh immb:(7)word) in
@@ -445,7 +445,7 @@ let decode = new_definition `!w:int32. decode w =
     else
       if rmode0
       // FMOV D[1]
-      then if opcode0 
+      then if opcode0
            then SOME (arm_FMOV_ItoF 1 (XREG' Rn) (QREG' Rd))
            else SOME (arm_FMOV_FtoI 1 (QREG' Rn) (XREG' Rd))
       // FMOV
@@ -551,7 +551,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11001110011:11; Rm:5; 0b100010:6; Rn:5; Rd:5] ->
     // SHA512SU1
     SOME (arm_SHA512SU1 (QREG' Rd) (QREG' Rn) (QREG' Rm))
-  
+
   | [0b0100111000101000010010:22; Rn:5; Rd:5] ->
     // AESE
     SOME (arm_AESE (QREG' Rd) (QREG' Rn))
@@ -734,7 +734,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11001110001:11; Rm:5; 0:1; Ra:5; Rn:5; Rd:5] ->
     // BCAX
     SOME (arm_BCAX (QREG' Rd) (QREG' Rn) (QREG' Rm) (QREG' Ra))
-  
+
   | [0b11001110100:11; Rm:5; imm6:6; Rn:5; Rd:5] ->
     // XAR
     SOME (arm_XAR (QREG' Rd) (QREG' Rn) (QREG' Rm) imm6)

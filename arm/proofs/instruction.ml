@@ -1178,7 +1178,7 @@ let arm_MOVZ = define
     Rd := word (val imm * 2 EXP pos)`;;
 
 (* Only double precision is implemented *)
-(* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged 
+(* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged
   due to type resolution failure *)
 let arm_FMOV_FtoI = define
  `arm_FMOV_FtoI (part:num) Rn Rd =
@@ -1195,7 +1195,7 @@ let arm_FMOV_ItoF = define
         let d:(128)word = read Rd s in
         if part = 0
         then (Rd := word_zx fltval:(128)word) s
-        else (Rd := (word_join:(64)word->(64)word->(128)word) 
+        else (Rd := (word_join:(64)word->(64)word->(128)word)
                       fltval (word_subword d (0, 64))) s
     `;;
 
@@ -1395,7 +1395,7 @@ let arm_SLI_VEC = define
 (* SRI (vector) *)
 let arm_SRI_VEC = define
  `arm_SRI_VEC Rd Rn shiftamnt esize datasize =
-   \s. let n:(128)word = read Rn s in 
+   \s. let n:(128)word = read Rn s in
        let d:(128)word = read Rd s in
        let mask = (2 EXP (esize - shiftamnt)) - 1 in
        if datasize = 128 then
@@ -1405,7 +1405,7 @@ let arm_SRI_VEC = define
            else if esize = 32 then
              simd4 (\ni di. word_or
                (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
-           else if esize = 16 then 
+           else if esize = 16 then
              simd8 (\ni di. word_or
                (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
            else
@@ -1413,7 +1413,7 @@ let arm_SRI_VEC = define
                (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d in
          (Rd := d) s
        else
-         let nd:(64)word = word_subword n (0, 64) in 
+         let nd:(64)word = word_subword n (0, 64) in
          let dd:(64)word = word_subword d (0, 64) in
          let dd:(64)word = if esize = 32 then
              simd2 (\ni di. word_or
@@ -1987,16 +1987,16 @@ let arm_STP = define
             else (=))
          else ASSIGNS entirety) s`;;
 
-let arm_LD1R = define 
+let arm_LD1R = define
   `arm_LD1R (Rt:(armstate,(128)word)component) Rn off esize datasize =
     \s. let base = read Rn s in
         let addr = word_add base (offset_address off s) in
         (if (Rn = SP ==> aligned 16 base) /\
             (offset_writesback off ==> orthogonal_components Rt Rn)
          then
-           (if datasize = 128 then 
+           (if datasize = 128 then
               let (replicated:128 word) =
-                (if esize = 64 then 
+                (if esize = 64 then
                   word_duplicate ((read (memory :> wbytes addr) s):(64)word)
                 else if esize = 32 then
                   word_duplicate ((read (memory :> wbytes addr) s):(32)word)
@@ -2005,7 +2005,7 @@ let arm_LD1R = define
                 else
                   word_duplicate ((read (memory :> wbytes addr) s):(8)word)) in
               (Rt := replicated)
-            else 
+            else
               let (replicated:64 word) =
                 (if esize = 64 then read (memory :> wbytes addr) s
                 else if esize = 32 then
@@ -2108,7 +2108,7 @@ let arm_RAX1 = define
 (* Cryptographic four-register                                               *)
 (* ------------------------------------------------------------------------- *)
 
-let arm_EOR3 = define 
+let arm_EOR3 = define
  `arm_EOR3 Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
@@ -2117,7 +2117,7 @@ let arm_EOR3 = define
       let d':int128 = word_xor (word_xor n m) a in
       (Rd := d') s`;;
 
-let arm_BCAX = define 
+let arm_BCAX = define
  `arm_BCAX Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
