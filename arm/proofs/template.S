@@ -3,23 +3,30 @@
 //
 //         uint64_t harness(uint64_t *regfile);
 //
-// Copies state from "regfile" into registers and flags:
+// Copies state from "regfile" into registers, flags and a small buffer
+// starting at the stack pointer.
 //
 //         X0 = regfile[0]
 //         X1 = regfile[1]
 //         ...
 //         X30 = regfile[30]
+//
 //         NF:ZF:CF:VF = regfile[31] & 0xF
+//
 //         Q0.d[0] = regfile[32]
 //         Q0.d[1] = regfile[33]
 //         ...
 //         Q31.d[1] = regfile[95]
 //
+//         [SP+0,..,SP+7] = reg[96]
+//         ...
+//         [SP+248,...,SP+255] = reg[127]
+//
 // executes the instruction at "modinst", then copies the new state
 // back into the same array, also returning new value X0 directly.
 // -------------------------------------------------------------------------
 
-        .globl  harness
+        .globl  harness, _harness
         .text
         .balign 4
 
@@ -28,8 +35,9 @@
 #define pccode x20
 
 harness:
+_harness:
 
-// Save non-modifiable input registers and input arguments on the stack
+// Save non-modifiable input registers
 
                 str     q31, [sp, -16]!
                 str     q30, [sp, -16]!
@@ -70,7 +78,46 @@ harness:
                 stp     x22, x23,  [sp, -16]!
                 stp     x20, x21,  [sp, -16]!
                 stp     x18, x19,  [sp, -16]!
+
+// Also save the "regfile" pointer on the stack
+
                 stp     x0, x1,    [sp, -16]!
+
+// Create little 256-byte buffer and copy in the contents
+
+                sub     sp, sp, #256
+                ldr     q31, [regfile, 768]
+                str     q31, [sp]
+                ldr     q31, [regfile, 768+1*16]
+                str     q31, [sp, 1*16]
+                ldr     q31, [regfile, 768+2*16]
+                str     q31, [sp, 2*16]
+                ldr     q31, [regfile, 768+3*16]
+                str     q31, [sp, 3*16]
+                ldr     q31, [regfile, 768+4*16]
+                str     q31, [sp, 4*16]
+                ldr     q31, [regfile, 768+5*16]
+                str     q31, [sp, 5*16]
+                ldr     q31, [regfile, 768+6*16]
+                str     q31, [sp, 6*16]
+                ldr     q31, [regfile, 768+7*16]
+                str     q31, [sp, 7*16]
+                ldr     q31, [regfile, 768+8*16]
+                str     q31, [sp, 8*16]
+                ldr     q31, [regfile, 768+9*16]
+                str     q31, [sp, 9*16]
+                ldr     q31, [regfile, 768+10*16]
+                str     q31, [sp, 10*16]
+                ldr     q31, [regfile, 768+11*16]
+                str     q31, [sp, 11*16]
+                ldr     q31, [regfile, 768+12*16]
+                str     q31, [sp, 12*16]
+                ldr     q31, [regfile, 768+13*16]
+                str     q31, [sp, 13*16]
+                ldr     q31, [regfile, 768+14*16]
+                str     q31, [sp, 14*16]
+                ldr     q31, [regfile, 768+15*16]
+                str     q31, [sp, 15*16]
 
 // Load new register contents from regfile (last overwrites args)
 
@@ -133,7 +180,7 @@ modinst:
 // Copy new state back to the buffer
 
                 stp     x0, x1, [sp, -16]!
-                ldr     regfile, [sp, 16]
+                ldr     regfile, [sp, 256+16]
 
                 str     q31, [regfile, 16*47]
                 str     q30, [regfile, 16*46]
@@ -192,9 +239,46 @@ modinst:
 
                 stp     x2, x3,    [regfile, 16*0]
 
+// Copy back contents of the buffer and deallocate stack
+// This includes getting rid of the space for "regfile"
+// which is still safely in  x0 now
+
+                ldr     q31, [sp]
+                str     q31, [regfile, 768]
+                ldr     q31, [sp, 1*16]
+                str     q31, [regfile, 768+1*16]
+                ldr     q31, [sp, 2*16]
+                str     q31, [regfile, 768+2*16]
+                ldr     q31, [sp, 3*16]
+                str     q31, [regfile, 768+3*16]
+                ldr     q31, [sp, 4*16]
+                str     q31, [regfile, 768+4*16]
+                ldr     q31, [sp, 5*16]
+                str     q31, [regfile, 768+5*16]
+                ldr     q31, [sp, 6*16]
+                str     q31, [regfile, 768+6*16]
+                ldr     q31, [sp, 7*16]
+                str     q31, [regfile, 768+7*16]
+                ldr     q31, [sp, 8*16]
+                str     q31, [regfile, 768+8*16]
+                ldr     q31, [sp, 9*16]
+                str     q31, [regfile, 768+9*16]
+                ldr     q31, [sp, 10*16]
+                str     q31, [regfile, 768+10*16]
+                ldr     q31, [sp, 11*16]
+                str     q31, [regfile, 768+11*16]
+                ldr     q31, [sp, 12*16]
+                str     q31, [regfile, 768+12*16]
+                ldr     q31, [sp, 13*16]
+                str     q31, [regfile, 768+13*16]
+                ldr     q31, [sp, 14*16]
+                str     q31, [regfile, 768+14*16]
+                ldr     q31, [sp, 15*16]
+                str     q31, [regfile, 768+15*16]
+                add     sp, sp, #256+16
+
 // Load back the preserved registers
 
-                add     sp, sp, 16
                 ldp     x18, x19, [sp], #16
                 ldp     x20, x21, [sp], #16
                 ldp     x22, x23, [sp], #16
