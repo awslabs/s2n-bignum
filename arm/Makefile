@@ -410,7 +410,7 @@ TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_loop2.o tutorial/rel_simp2
 	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+.quad\s+0x[0-9a-f]+$$' | $(ASSEMBLE) -o $@ -
 	$(OBJDUMP) $@ | ( ( ! grep --ignore-case -E 'w18|[^0]x18' ) || ( rm $@ ; exit 1 ) )
 	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -o $@ -
-	[[ -z "$(GOBJCOPY)" ]] || "$(GOBJCOPY)" -I mach-o-arm64 -O elf64-littleaarch64 $@ $@
+	if [ -n "$(GOBJCOPY)" ] ; then "$(GOBJCOPY)" -I mach-o-arm64 -O elf64-littleaarch64 $@ $@ ; fi
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 

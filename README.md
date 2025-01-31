@@ -333,7 +333,7 @@ the `hol-light` directory and use the Makefile within either the `arm` or
 
 **Running a proof on Apple Silicon.**
 For Apple Silicon, `GOBJCOPY` environment variable must be set
-to the path of GNU `gobjcopy` which can be installed through
+to the full path of the GNU `gobjcopy` binary which can be installed through
 `brew install binutils`. This is because s2n-bignum does not have a reader for
 the Mach-O format yet. Once the variable is set, compiled `.o` binaries will
 be converted to the ELF format and the proofs will run successfully.
