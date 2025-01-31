@@ -19,7 +19,6 @@ else
 SYMBOL_HIDING=
 endif
 
-
 # Add explicit language input parameter to cpp, otherwise the use of #n for
 # numeric literals in ARM code is a problem when used inside #define macros
 # since normally that means stringization.
@@ -47,6 +46,12 @@ SPLIT=tr ';' '\n'
 # can be installed via something like:
 #
 #  sudo apt-get install binutils-aarch64-linux-gnu
+
+# On Apple silicon, s2n-bignum proofs will fail because it does not support
+# the Mach-O format. As a workaround, we rely on GNU gobjcopy and convert the
+# input files to the ELF format. If this GOBJCOPY variable is set, the
+# Makefile commands will use the given GOBJCOPY to do the conversion.
+GOBJCOPY?=
 
 ifeq ($(ARCHTYPE_RESULT),aarch64)
 ASSEMBLE=as
@@ -405,6 +410,7 @@ TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_loop2.o tutorial/rel_simp2
 	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+.quad\s+0x[0-9a-f]+$$' | $(ASSEMBLE) -o $@ -
 	$(OBJDUMP) $@ | ( ( ! grep --ignore-case -E 'w18|[^0]x18' ) || ( rm $@ ; exit 1 ) )
 	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -o $@ -
+	[[ -z "$(GOBJCOPY)" ]] || "$(GOBJCOPY)" -I mach-o-arm64 -O elf64-littleaarch64 $@ $@
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 

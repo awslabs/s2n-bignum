@@ -330,6 +330,15 @@ After installation, set the `HOLDIR` environment variable to the path of
 the `hol-light` directory and use the Makefile within either the `arm` or
 `x86` directories to generate a target of the form
 `function_name.correct` for a corresponding object file `function_name.o`.
+
+**Running a proof on Apple Silicon.**
+For Apple Silicon, `GOBJCOPY` environment variable must be set
+to the path of GNU `gobjcopy` which can be installed through
+`brew install binutils`. This is because s2n-bignum does not have a reader for
+the Mach-O format yet. Once the variable is set, compiled `.o` binaries will
+be converted to the ELF format and the proofs will run successfully.
+
+**Running all proofs.**
 Alternatively, the entire collection of functions can all be formally proved
 via the `proofs` pseudo-target. This is likely to be very time-consuming and
 hence better executed with some parallelism, e.g.
@@ -337,7 +346,9 @@ hence better executed with some parallelism, e.g.
     nohup make -j 16 proofs &
 
 The proof process is controlled by a corresponding "proof script" in the
-`proofs` subdirectory with corresponding name `proofs/function_name.ml`
+`proofs` subdirectory with corresponding name `proofs/function_name.ml`.
+
+**Formal specification.**
 The technical details of how the machine is modeled and how the proof is
 performed are too involved to enter into in detail in this brief summary,
 but by examining the proof script file you can find detailed specifications
