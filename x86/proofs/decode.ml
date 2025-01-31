@@ -390,6 +390,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     let sz = op_size_W rex v pfxs in
     read_ModRM_operand rex sz l >>= \((reg,rm),l).
     SOME (TEST rm reg,l)
+  | [0b1000011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
+    let sz = op_size_W rex v pfxs in
+    read_ModRM_operand rex sz l >>= \((reg,rm),l).
+    SOME (XCHG reg rm,l)
   | [0b100010:6; d; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
     read_ModRM_operand rex sz l >>= \((reg,rm),l).
