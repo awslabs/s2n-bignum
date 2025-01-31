@@ -81,7 +81,40 @@ let regfile = new_definition
     val(word_subword (read YMM15 s) (0,64):int64);
     val(word_subword (read YMM15 s) (64,64):int64);
     val(word_subword (read YMM15 s) (128,64):int64);
-    val(word_subword (read YMM15 s) (192,64):int64)]`;;
+    val(word_subword (read YMM15 s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(read RSP s)) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 32))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 64))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 96))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 128))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 160))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 192))) s) (192,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (0,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (64,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (128,64):int64);
+    val(word_subword (read (memory :> bytes256(word_add (read RSP s) (word 224))) s) (192,64):int64)
+    ]`;;
 
 let FLAGENCODING_11 = prove
  (`bitval b0 + 4 * bitval b1 + 16 * bitval b2 +
@@ -146,7 +179,8 @@ let random_regstate () =
   let d = Random.int 65 in
   map (fun _ -> randomnd 64 d) (0--3) @
   [num(Random.int 256 land 0b11010101)] @
-  map (fun _ -> randomnd 64 d) (5--79);;
+  map (fun _ -> randomnd 64 d) (5--79) @
+  map (fun _ -> randomnd 64 d) (80--111);;
 
 (* ------------------------------------------------------------------------- *)
 (* Generate random instance of instruction class itself.                     *)
@@ -230,15 +264,19 @@ let iclasses = iclasses @
 (* ------------------------------------------------------------------------- *)
 
 let template =
- `ensures x86
+ `nonoverlapping (word pc,LENGTH ibytes) (stackpointer,256)
+  ==> ensures x86
      (\s. bytes_loaded s (word pc) ibytes /\
           read RIP s = word pc /\
+          read RSP s = stackpointer /\
           regfile s = input_state)
-     (\s. regfile s = output_state)
-     (MAYCHANGE [RIP; RAX; RCX; RDX; RBX; RBP; RSI; RDI;
+     (\s. read RSP s = stackpointer /\
+          regfile s = output_state)
+     (MAYCHANGE [RIP; RSP; RAX; RCX; RDX; RBX; RBP; RSI; RDI;
                  R8; R9; R10; R11; R12; R13; R14; R15] ,,
       MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
                  ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+      MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
       MAYCHANGE SOME_FLAGS)`;;
 
 let num_two_to_64 = Num.num_of_string "18446744073709551616";;
@@ -261,11 +299,103 @@ let only_undefinedness =
     | _ -> is_undef tm in
   forall is_nundef o conjuncts;;
 
-let run_random_simulation () =
-  let ibytes:int list = random_instruction iclasses in
-  let icode = itlist (fun h t -> num h +/ num 256 */ t) ibytes num_0 in
-  let _ = Format.print_string
-   ("random inst: decode "^string_of_num icode ^ "\n") in
+
+let READ_MEMORY_MERGE_CONV =
+  let baseconv =
+    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT] THENC
+    LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
+     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
+               RAND_CONV WORD_ADD_CONV))))) in
+  let rec conv tm =
+    (baseconv THENC BINOP_CONV(TRY_CONV conv)) tm in
+  conv;;
+
+let MEMORY_SPLIT_TAC k =
+  let tac =
+    STRIP_ASSUME_TAC o
+    CONV_RULE (BINOP_CONV(BINOP2_CONV
+       (ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) WORD_REDUCE_CONV)) o
+    GEN_REWRITE_RULE I [el k (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] in
+  EVERY_ASSUM (fun th -> try tac th with Failure _ -> ALL_TAC);;
+
+(*** Before and after tactics for goals that either do or don't involve
+ *** memory operations (memop = they do). Non-memory ones are simpler and
+ *** quicker; the memory ones do some more elaborate fiddling with format
+ *** of memory assumptions to maximize their usability.
+ ***)
+
+let extra_simp_tac =
+  REWRITE_TAC[WORD_RULE `word_sub x (word_add x y):N word = word_neg y`;
+              WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
+              WORD_RULE `word_sub (word_add x y) x:N word = y`;
+              WORD_RULE `word_sub (word_add x y) y:N word = x`] THEN
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[];;
+
+let tac_before memop =
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+  REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
+  REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[YMMENCODING_REGROUP] THEN CONV_TAC(DEPTH_CONV WORD_JOIN_CONV) THEN
+  REWRITE_TAC[SOME_FLAGS] THEN ONCE_REWRITE_TAC[MESON[]
+   `read RSP s = stackpointer /\ P (read RSP s) s <=>
+    read RSP s = stackpointer /\ P stackpointer s`] THEN
+  ENSURES_INIT_TAC "s0" THEN
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC)
+and tac_main memop = (if memop then X86_VSTEPS_TAC else X86_STEPS_TAC)
+and tac_after memop =
+  (* MEMORY_SPLIT_TAC will split out the memory write to the stack.
+   Assumptions for flags that involves memory reads of more than one byte
+   (for example, ADD for byte64) will not be splitted out into bytes by
+   MEMORY_SPLIT_TAC. Instead, the flag expression is only treated until
+   it gets into the goal. After it gets into the goal, the first
+   READ_MEMORY_MERGE_CONV will split the memory read in the goal that
+   represents the flag changes. After that we simplify/rewrite the goal.
+   Given that the MEMORY_SPLIT_TAC splits out the memory write to the stack,
+   the rewrites pick that up and turn the memory read in the flag expression
+   into its RHS, which again isn't in byte form (but rather byte64 for the ADD
+   example). To further assist, we will perform the READ_MEMORY_MERGE_CONV
+   and rewrite/simplification again for spliting out the memory read and
+   simplify the goal. *)
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
+   else ALL_TAC) THEN
+  ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
+  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
+   else ALL_TAC) THEN
+  ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
+  PRINT_GOAL_TAC THEN ALL_TAC;;
+
+(* A function that decodes a list of bytes into an x86 instruction.
+ Could be used for figuring out if an instruction exist in s2n-bignum. *)
+let decode_inst ibytes =
+  let ibyteterm =
+     mk_flist(map (curry mk_comb `word:num->byte` o mk_small_numeral) ibytes) in
+  let execth = X86_MK_EXEC_RULE(REFL ibyteterm) in
+  let decoded = mk_flist
+     (map (rand o rand o snd o strip_forall o concl o Option.get)
+       (filter Option.is_some (Array.to_list (snd execth)))) in
+  let _ = print_term decoded in
+  decoded
+
+(*** Cosimulate a list of x86_64 instruction codes against hardware.
+ *** To pass, the formal simulation has to agree with the hardware,
+ *** only modify the 256-byte buffer [RSP,..,RSP+255] and also
+ *** leave the final RSP value the same as the initial value, though
+ *** it can be modified in between.
+ ***)
+
+let cosimulate_instructions memop ibytes_list =
+  let ibyte_to_icode_fn =
+    fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
+  let icodes = map ibyte_to_icode_fn ibytes_list in
+  let icodestring =
+    end_itlist (fun s t -> s^","^t) (map string_of_num_hex icodes) in
+  let _ =
+    (Format.print_string("Cosimulating "^icodestring);
+     Format.print_newline()) in
+
+  let ibytes = itlist (fun a b -> a @ b) ibytes_list [] in
 
   let ibyteterm =
     mk_flist(map (curry mk_comb `word:num->byte` o mk_small_numeral) ibytes) in
@@ -282,7 +412,6 @@ let run_random_simulation () =
     " >" ^ outfile in
 
   let _ = Sys.command command in
-
   (*** This branch determines whether the actual simulation worked ***)
   (*** In each branch we try to confirm that we likewise do or don't ***)
 
@@ -305,19 +434,16 @@ let run_random_simulation () =
     let execth = X86_MK_EXEC_RULE(REFL ibyteterm) in
 
     let inst_th = Option.get (snd execth).(0) in
-    let decoded =
-      rand(rand(snd(strip_forall(concl(inst_th))))) in
+    let decoded = mk_flist
+      (map (rand o rand o snd o strip_forall o concl o Option.get)
+        (filter Option.is_some (Array.to_list (snd execth)))) in
 
     let result =
       match
-       (REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
-        REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN
-        CONV_TAC NUM_REDUCE_CONV THEN
-        REWRITE_TAC[YMMENCODING_REGROUP] THEN
-        CONV_TAC(DEPTH_CONV WORD_JOIN_CONV) THEN
-        REWRITE_TAC[SOME_FLAGS] THEN
-        X86_SIM_TAC execth [1] THEN
-        CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV))
+       (PURE_REWRITE_TAC [fst execth] THEN
+        (tac_before memop THEN
+         tac_main memop execth (1--length icodes) THEN
+         tac_after memop))
        ([],goal)
       with
         _,[_,endres],_ ->
@@ -332,12 +458,28 @@ let run_random_simulation () =
      | _,[],_ -> true in
     (decoded,result)
   else
-    let decoded = mk_numeral icode in
+    let decoded = mk_flist(map mk_numeral icodes) in
     decoded,not(can X86_MK_EXEC_RULE(REFL ibyteterm));;
+
+(*** Pick random instances from register-to-register iclasses and run ***)
+
+let run_random_regsimulation () =
+  let ibytes:int list = random_instruction iclasses in
+  cosimulate_instructions false [ibytes];;
+
+loadt "x86/proofs/x86-mem-insns.ml";;
+
+let run_random_memopsimulation() =
+  let icodes = el (Random.int (length mem_iclasses)) mem_iclasses in
+  cosimulate_instructions true icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
 (* ------------------------------------------------------------------------- *)
+
+let run_random_simulation() =
+  if Random.int 100 < 50 then run_random_regsimulation()
+  else run_random_memopsimulation();;
 
 let time_limit_sec = 1800.0;;
 let tested_instances = ref 0;;
