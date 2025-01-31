@@ -1,4 +1,5 @@
 #!/bin/bash
+set -o xtrace
 # Get the directory path that includes this 'armsimulate' file
 DIR="$( dirname -- "${BASH_SOURCE[0]}"; )"
 DIR="$( realpath -- "$DIR"; )"
@@ -16,4 +17,4 @@ gcc -o $temp simulator.c $temp_o
 shift 1
 $temp $*
 
-rm -f $temp $temp_s $temp_o
+# rm -f $temp $temp_s $temp_o
