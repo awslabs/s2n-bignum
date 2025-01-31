@@ -287,6 +287,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TEST operand operand
    | TZCNT operand operand
    | VPXOR operand operand operand
+   | XCHG operand operand
    | XOR operand operand";;
 
 (* ------------------------------------------------------------------------- *)
