@@ -9,9 +9,9 @@
 
 needs "arm/proofs/base.ml";;
 
-let bignum_copy_row_from_table_8n_neon_mc =
-  define_assert_from_elf "bignum_copy_row_from_table_8n_neon_mc"
-                         "arm/generic/bignum_copy_row_from_table_8n_neon.o"
+let bignum_copy_row_from_table_8n_mc =
+  define_assert_from_elf "bignum_copy_row_from_table_8n_mc"
+                         "arm/generic/bignum_copy_row_from_table_8n.o"
 [
   0xb4000542;       (* arm_CBZ X2 (word 168) *)
   0xb4000523;       (* arm_CBZ X3 (word 164) *)
@@ -59,7 +59,7 @@ let bignum_copy_row_from_table_8n_neon_mc =
 ];;
 
 
-let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC = ARM_MK_EXEC_RULE bignum_copy_row_from_table_8n_neon_mc;;
+let BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC = ARM_MK_EXEC_RULE bignum_copy_row_from_table_8n_mc;;
 
 (* ARITH_RULE for proving `lp=rp` where lp and rp are pairs *)
 let PAIR_EQ_ARITH_RULE (lp,rp:term*term) =
@@ -260,14 +260,14 @@ let VAL_WORD_8_EQ_0 = prove(
   ARITH_TAC);;
 
 
-let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
+let BIGNUM_COPY_ROW_FROM_TABLE_8N_SUBROUTINE_CORRECT = prove(
   `!z table height width idx pc n m returnaddress.
     nonoverlapping (word pc, 0xac) (z, 8 * val width) /\
     nonoverlapping (word pc, 0xac) (table, 8 * val height * val width) /\
     nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
     8 * val width < 2 EXP 64 /\ val width MOD 8 = 0 /\ val idx < val height
     ==> ensures arm
-      (\s. aligned_bytes_loaded s (word pc) bignum_copy_row_from_table_8n_neon_mc /\
+      (\s. aligned_bytes_loaded s (word pc) bignum_copy_row_from_table_8n_mc /\
            read PC s = word pc /\
            read X30 s = returnaddress /\
            C_ARGUMENTS [z; table; height; width; idx] s /\
@@ -289,7 +289,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
   ASM_CASES_TAC `width = (word 0):(64)word` THENL [
     ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[VAL_WORD_0; MULT_0; WORD_ADD_0] THEN
-    ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC [1;2;3] THEN
+    ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [1;2;3] THEN
     ASM_MESON_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; BIGNUM_FROM_MEMORY_TRIVIAL];
     ALL_TAC] THEN
   SUBGOAL_THEN `~(val (width:64 word) = 0)` ASSUME_TAC THENL [
@@ -304,7 +304,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
          bignum_from_memory (table, val height * val width) s = n /\
          bignum_from_memory (word_add table (word (8 * val idx * val width)), val width) s = m /\
          read Q16 s = word 0` THEN CONJ_TAC THENL [
-  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--5);
+  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--5);
 
   ALL_TAC] THEN
 
@@ -332,7 +332,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
   ASM_ARITH_TAC;
 
   (* 2. loop starts *)
-  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC [] THEN
+  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [] THEN
     REWRITE_TAC[SUB_REFL; WORD_VAL; MULT_0; ADD_0; GSYM BIGNUM_FROM_MEMORY_BYTES; BIGNUM_FROM_MEMORY_TRIVIAL];
 
   (* 3. loop body *)
@@ -369,7 +369,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
     `(64 * (val (width:int64) DIV 8 - (i + 1)) + 16) + 16 <= 18446744073709551616`;
     `(64 * (val (width:int64) DIV 8 - (i + 1)) + 32) + 16 <= 18446744073709551616`;
     `(64 * (val (width:int64) DIV 8 - (i + 1)) + 48) + 16 <= 18446744073709551616`] THEN
-  ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--6) THEN
+  ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--6) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THENL [
     CONV_TAC WORD_RULE;
@@ -412,7 +412,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
   ];
 
   (* 4. loop backedge *)
-  REPEAT STRIP_TAC THEN ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--1);
+  REPEAT STRIP_TAC THEN ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--1);
 
   ALL_TAC
   ] THEN
@@ -432,7 +432,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
   ASM_MESON_TAC[];
 
   (* 2. to loop start *)
-  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--3) THEN
+  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--3) THEN
   REWRITE_TAC[ARITH_RULE `x * 0 = 0`; ARITH_RULE `0 * x = 0`; WORD_ADD_0] THEN
   SUBGOAL_THEN `8 * (val (width:int64) DIV 8 - 0) = val width` (fun thm -> RULE_ASSUM_TAC (REWRITE_RULE [thm])) THENL
   [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -443,10 +443,10 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
 
   (* 4. loop backedge *)
   REPEAT STRIP_TAC THEN
-  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--1);
+  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--1);
 
   (* next *)
-  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC [1;2] THEN
+  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [1;2] THEN
   CASES_FIRST_DISJ_ASSUM_TAC THEN SPLIT_FIRST_CONJ_ASSUM_TAC THENL [
     UNDISCH_TAC `val (idx:int64) < val (height:int64)` THEN
     UNDISCH_TAC `val (height:int64) <= val (idx:int64)` THEN
@@ -490,7 +490,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
           (read ZF s <=> j = 0)` THEN REPEAT CONJ_TAC THENL [
   ASM_ARITH_TAC;
 
-  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--5) THEN
+  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--5) THEN
   SUBGOAL_THEN `8 * val (width:int64) DIV 8 = val width` (fun thm -> REWRITE_TAC[thm]) THENL [
     UNDISCH_TAC `val (width:int64) MOD 8 = 0` THEN ARITH_TAC; ALL_TAC] THEN
   ASM_REWRITE_TAC[SUB_REFL; WORD_VAL; ADD_0; MULT_0; WORD_ADD_0] THEN
@@ -523,10 +523,10 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
   ALL_TAC;
 
   (* backedge *)
-  REPEAT STRIP_TAC THEN ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC [1];
+  REPEAT STRIP_TAC THEN ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [1];
 
   (* finishes outer loop; pc ac -> b4 *)
-  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC [1;2;3] THEN
+  ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC [1;2;3] THEN
   REWRITE_TAC[WORD_ADD; ARITH_RULE `a*b+b-8*0=(a+1)*b`] THEN
   REWRITE_TAC[VAL_WORD_ADD;VAL_WORD;DIMINDEX_64;ARITH_RULE `1 MOD 2 EXP 64 = 1`; ADD_0] THEN
   REWRITE_TAC[MATCH_MP MOD_LT (ASSUME `i < 2 EXP 64`); MATCH_MP MOD_LT (ASSUME `i + 1 < 2 EXP 64`)] THEN
@@ -644,7 +644,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
   ABBREV_TAC `i'' = val (width:int64) - 8 * (i'+1)` THEN
   ASSERT_USING_ASM_ARITH_TAC `(8 * i'' + 64) + 8 * 8 * i' <= 18446744073709551616` THEN
 
-  ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--19) THEN
+  ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--19) THEN
   ENSURES_FINAL_STATE_TAC THEN
   SUBST_ALL_TAC (GSYM (ASSUME `val (width:int64) - 8 * (i' + 1) = i''`)) THEN
   SUBGOAL_THEN `8 * (val (width:int64) - 8 * (i' + 1)) + 64 = 8 * (val width - 8 * i')` SUBST_ALL_TAC THENL [
@@ -732,7 +732,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
     ABBREV_TAC `i'' = val (width:int64) - 8 * (i'+1)` THEN
     ASSERT_USING_ASM_ARITH_TAC `(8 * i'' + 64) + 8 * 8 * i' <= 18446744073709551616` THEN
 
-    ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--19) THEN
+    ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--19) THEN
     ENSURES_FINAL_STATE_TAC THEN
     SUBST_ALL_TAC (GSYM (ASSUME `val (width:int64) - 8 * (i' + 1) = i''`)) THEN
     SUBGOAL_THEN `8 * (val (width:int64) - 8 * (i' + 1)) + 64 = 8 * (val width - 8 * i')` SUBST_ALL_TAC THENL [
@@ -816,7 +816,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_SUBROUTINE_CORRECT = prove(
     ALL_TAC] THEN
   ASSERT_USING_ASM_ARITH_TAC `(8 * i'' + 64) + 8 * 8 * i' <= 18446744073709551616` THEN
 
-  ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_NEON_EXEC (1--19) THEN
+  ARM_STEPS_TAC BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC (1--19) THEN
   ENSURES_FINAL_STATE_TAC THEN
   SUBST_ALL_TAC (GSYM (ASSUME `val (width:int64) - 8 * (i' + 1) = i''`)) THEN
   SUBGOAL_THEN `8 * (val (width:int64) - 8 * (i' + 1)) + 64 = 8 * (val width - 8 * i')` SUBST_ALL_TAC THENL [

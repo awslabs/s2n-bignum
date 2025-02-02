@@ -64,11 +64,11 @@ let _org_extra_word_CONV_backup = !extra_word_CONV;;
 (*                             The base version.                             *)
 (* ------------------------------------------------------------------------- *)
 
-(**** print_literal_from_elf "arm/fastmul/bignum_emontredc_8n.o";;
+(**** print_literal_from_elf "arm/fastmul/unopt/bignum_emontredc_8n_base.o";;
  ****)
 
 let bignum_emontredc_8n_mc =
-  define_assert_from_elf "bignum_emontredc_8n_mc" "arm/fastmul/bignum_emontredc_8n.o"
+  define_assert_from_elf "bignum_emontredc_8n_mc" "arm/fastmul/unopt/bignum_emontredc_8n_base.o"
 [
   0xa9bf53f3;       (* arm_STP X19 X20 SP (Preimmediate_Offset (iword (-- &16))) *)
   0xa9bf5bf5;       (* arm_STP X21 X22 SP (Preimmediate_Offset (iword (-- &16))) *)

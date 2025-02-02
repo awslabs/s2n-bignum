@@ -16,8 +16,8 @@ prioritize_int();;
 prioritize_real();;
 prioritize_num();;
 
-needs "arm/proofs/bignum_mul_p521_neon.ml";;
-needs "arm/proofs/bignum_sqr_p521_neon.ml";;
+needs "arm/proofs/bignum_mul_p521.ml";;
+needs "arm/proofs/bignum_sqr_p521.ml";;
 needs "arm/proofs/bignum_mod_n521_9.ml";;
 needs "arm/proofs/bignum_mod_p521_9.ml";;
 
@@ -3361,7 +3361,7 @@ let LOCAL_SQR_P521_SUBR_CORRECT =
                   read PC s = word(pc + 0x2984) /\
                   C_ARGUMENTS [z; x] s /\
                   bignum_from_memory (x,9) s = n)
-             (\s. read PC s = word(pc + 0x2984 + LENGTH bignum_sqr_p521_neon_core_mc) /\
+             (\s. read PC s = word(pc + 0x2984 + LENGTH bignum_sqr_p521_core_mc) /\
                   (n < p_521
                    ==> bignum_from_memory (z,9) s = (n EXP 2) MOD p_521))
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
@@ -3370,17 +3370,17 @@ let LOCAL_SQR_P521_SUBR_CORRECT =
               MAYCHANGE SOME_FLAGS ,,
               MAYCHANGE [memory :> bignum(z,9)])`,
     SUBGOAL_THEN
-      `bignum_sqr_p521_neon_core_mc =
-        SUB_LIST (0x2984, LENGTH bignum_sqr_p521_neon_core_mc) p521_jscalarmul_mc` MP_TAC THENL [
-      REWRITE_TAC[fst BIGNUM_SQR_P521_NEON_CORE_EXEC;
-                  bignum_sqr_p521_neon_core_mc; p521_jscalarmul_mc] THEN
+      `bignum_sqr_p521_core_mc =
+        SUB_LIST (0x2984, LENGTH bignum_sqr_p521_core_mc) p521_jscalarmul_mc` MP_TAC THENL [
+      REWRITE_TAC[fst BIGNUM_SQR_P521_CORE_EXEC;
+                  bignum_sqr_p521_core_mc; p521_jscalarmul_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC;
       ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
-      ARM_SUB_LIST_OF_MC_TAC BIGNUM_SQR_P521_NEON_CORE_CORRECT
-        (REWRITE_RULE [fst BIGNUM_SQR_P521_NEON_CORE_EXEC] th)
-        [fst BIGNUM_SQR_P521_NEON_CORE_EXEC;fst P521_JSCALARMUL_EXEC])) in
+      ARM_SUB_LIST_OF_MC_TAC BIGNUM_SQR_P521_CORE_CORRECT
+        (REWRITE_RULE [fst BIGNUM_SQR_P521_CORE_EXEC] th)
+        [fst BIGNUM_SQR_P521_CORE_EXEC;fst P521_JSCALARMUL_EXEC])) in
   prove(`!z x n pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         nonoverlapping (word pc,LENGTH p521_jscalarmul_mc) (z,8 * 9) /\
@@ -3403,7 +3403,7 @@ let LOCAL_SQR_P521_SUBR_CORRECT =
               MAYCHANGE [memory :> bignum(z,9);
                          memory :> bytes(word_sub stackpointer (word 48),48)])`,
     ARM_ADD_RETURN_STACK_TAC P521_JSCALARMUL_EXEC
-      (let th = REWRITE_RULE [fst BIGNUM_SQR_P521_NEON_CORE_EXEC] lemma in
+      (let th = REWRITE_RULE [fst BIGNUM_SQR_P521_CORE_EXEC] lemma in
         CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
       `[X19;X20;X21;X22;X23;X24]` 48);;
 
@@ -3420,7 +3420,7 @@ let LOCAL_MUL_P521_SUBR_CORRECT =
                   C_ARGUMENTS [z; x; y] s /\
                   bignum_from_memory (x,9) s = a /\
                   bignum_from_memory (y,9) s = b)
-             (\s. read PC s = word(pc + 0x1f00 + LENGTH bignum_mul_p521_neon_core_mc) /\
+             (\s. read PC s = word(pc + 0x1f00 + LENGTH bignum_mul_p521_core_mc) /\
                   (a < p_521 /\ b < p_521
                    ==> bignum_from_memory (z,9) s = (a * b) MOD p_521))
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
@@ -3429,17 +3429,17 @@ let LOCAL_MUL_P521_SUBR_CORRECT =
               MAYCHANGE SOME_FLAGS ,,
               MAYCHANGE [memory :> bignum(z,9); memory :> bytes(stackpointer,80)])`,
     SUBGOAL_THEN
-      `bignum_mul_p521_neon_core_mc =
-        SUB_LIST (0x1f00, LENGTH bignum_mul_p521_neon_core_mc) p521_jscalarmul_mc` MP_TAC THENL [
-      REWRITE_TAC[fst BIGNUM_MUL_P521_NEON_CORE_EXEC;
-                  bignum_mul_p521_neon_core_mc; p521_jscalarmul_mc] THEN
+      `bignum_mul_p521_core_mc =
+        SUB_LIST (0x1f00, LENGTH bignum_mul_p521_core_mc) p521_jscalarmul_mc` MP_TAC THENL [
+      REWRITE_TAC[fst BIGNUM_MUL_P521_CORE_EXEC;
+                  bignum_mul_p521_core_mc; p521_jscalarmul_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC;
       ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
-      ARM_SUB_LIST_OF_MC_TAC BIGNUM_MUL_P521_NEON_CORE_CORRECT
-        (REWRITE_RULE [fst BIGNUM_MUL_P521_NEON_CORE_EXEC] th)
-        [fst BIGNUM_MUL_P521_NEON_CORE_EXEC;fst P521_JSCALARMUL_EXEC])) in
+      ARM_SUB_LIST_OF_MC_TAC BIGNUM_MUL_P521_CORE_CORRECT
+        (REWRITE_RULE [fst BIGNUM_MUL_P521_CORE_EXEC] th)
+        [fst BIGNUM_MUL_P521_CORE_EXEC;fst P521_JSCALARMUL_EXEC])) in
   prove(`!z x y a b pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         nonoverlapping (word pc,LENGTH p521_jscalarmul_mc) (z,8 * 9) /\
@@ -3463,7 +3463,7 @@ let LOCAL_MUL_P521_SUBR_CORRECT =
               MAYCHANGE [memory :> bignum(z,9);
                          memory :> bytes(word_sub stackpointer (word 144),144)])`,
     ARM_ADD_RETURN_STACK_TAC P521_JSCALARMUL_EXEC
-      (let th = REWRITE_RULE [fst BIGNUM_MUL_P521_NEON_CORE_EXEC] lemma in
+      (let th = REWRITE_RULE [fst BIGNUM_MUL_P521_CORE_EXEC] lemma in
         CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
       `[X19;X20;X21;X22;X23;X24;X25;X26]` 144);;
 

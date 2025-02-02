@@ -9,9 +9,9 @@ let count_insts (execth:thm*thm option array) =
   let length_th = fst execth in
   dest_small_numeral (snd (dest_eq (concl length_th))) / 4;;
 
-let len_montsqr_p384_neon, len_montmul_p384_neon, len_sub_p384 =
-  count_insts BIGNUM_MONTSQR_P384_NEON_EXEC,
-  count_insts BIGNUM_MONTMUL_P384_NEON_EXEC,
+let len_montsqr_p384, len_montmul_p384, len_sub_p384 =
+  count_insts BIGNUM_MONTSQR_P384_EXEC,
+  count_insts BIGNUM_MONTMUL_P384_EXEC,
   count_insts BIGNUM_SUB_P384_EXEC;;
 
 (* ------------------------------------------------------------------------- *)
@@ -65,10 +65,10 @@ List.iter (fun code_block ->
     (* nsteps_prologue = # fn arguments
        nsteps_fnbody = # insts of fn except last ret *)
     let nsteps_prologue, nsteps_fnbody = match callfn with
-      | "call montsqr_p384" -> 2, len_montsqr_p384_neon - 1
+      | "call montsqr_p384" -> 2, len_montsqr_p384 - 1
       | "call montmul_p384" ->
         (* +2 for sp updates *)
-        3, len_montmul_p384_neon - 1 + 2
+        3, len_montmul_p384 - 1 + 2
       | "call sub_p384" -> 3, len_sub_p384 - 1
       | _ -> failwith callfn in begin
     actions1 := !actions1 @

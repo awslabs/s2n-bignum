@@ -44,11 +44,11 @@ let code_blocks = [
 
 (* The number of instructions of functions. *)
 
-let len_montsqr_p384_neon, len_montmul_p384_neon, len_sub_p384,
+let len_montsqr_p384, len_montmul_p384, len_sub_p384,
     len_add_p384 =
-  count_insts BIGNUM_MONTSQR_P384_NEON_EXEC,
+  count_insts BIGNUM_MONTSQR_P384_EXEC,
   (* add 2 because p384_montjdouble's montmul_p384 has two more sp updates *)
-  2 + count_insts BIGNUM_MONTMUL_P384_NEON_EXEC,
+  2 + count_insts BIGNUM_MONTMUL_P384_EXEC,
   count_insts BIGNUM_SUB_P384_EXEC,
   count_insts BIGNUM_ADD_P384_EXEC;;
 
@@ -65,8 +65,8 @@ List.iter (fun code_block ->
     (* nsteps_prologue = # fn arguments
        nsteps_fnbody = # insts of fn except last ret *)
     let nsteps_prologue, nsteps_fnbody = match callfn with
-      | "call montsqr_p384" -> 2, len_montsqr_p384_neon - 1
-      | "call montmul_p384" -> 3, len_montmul_p384_neon - 1
+      | "call montsqr_p384" -> 2, len_montsqr_p384 - 1
+      | "call montmul_p384" -> 3, len_montmul_p384 - 1
       | "call sub_p384" -> 3, len_sub_p384 - 1
       | "call add_p384" -> 3, len_add_p384 - 1
       | _ -> failwith callfn in begin
@@ -822,7 +822,7 @@ let local_montmul_p384_dead_value_info = [|
 |];;
 
 assert (Array.length local_montmul_p384_dead_value_info =
-        len_montmul_p384_neon - 9 (* 8 for stack save/restore, 1 for ret *));;
+        len_montmul_p384 - 9 (* 8 for stack save/restore, 1 for ret *));;
 
 let local_montsqr_p384_dead_value_info = [|
   []; (* 1: ldr q1, [x1] *)
@@ -1134,7 +1134,7 @@ let local_montsqr_p384_dead_value_info = [|
 |];;
 
 assert (Array.length local_montsqr_p384_dead_value_info =
-        len_montsqr_p384_neon - 1);;
+        len_montsqr_p384 - 1);;
 
 let local_sub_p384_dead_value_info = [|
   []; (* 1: ldp x5, x6, [x1] *)

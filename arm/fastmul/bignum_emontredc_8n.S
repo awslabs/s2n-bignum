@@ -10,371 +10,1086 @@
 //
 // Functionally equivalent to bignum_emontredc (see that file for more detail).
 // But in general assumes that the input k is a multiple of 8.
+// bignum_emontredc_8n is a vectorized version of
+// unopt/bignum_emontredc_8n_base.
 //
 // Standard ARM ABI: X0 = k, X1 = z, X2 = m, X3 = w, returns X0
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_emontredc_8n)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_emontredc_8n)
-        .text
-        .balign 4
+					S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_emontredc_8n)
+					S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_emontredc_8n)
+					.text
+					.balign 4
 
-// ---------------------------------------------------------------------------
-// Macro computing (c,h,l) = 3-word 1s complement (x - y) * (w - z)
-// and adding it with carry to (b,a) so that we have CF+c in the 2 position.
-//
-// c,h,l,t should all be different
-// t,h should not overlap w,z
-// ---------------------------------------------------------------------------
-
-#define muldiffnadd(b,a, c,h,l,t, x,y, w,z) \
-        subs    t, x, y ; \
-        cneg    t, t, cc ; \
-        csetm   c, cc ; \
-        subs    h, w, z ; \
-        cneg    h, h, cc ; \
-        mul     l, t, h ; \
-        umulh   h, t, h ; \
-        cinv    c, c, cc ; \
-        adds    xzr, c, #1 ; \
-        eor     l, l, c ; \
-        adcs    a, a, l ; \
-        eor     h, h, c ; \
-        adcs    b, b, h
-
-// The inputs, though k gets processed so we use a different name
-
-#define k4m1 x0
-#define z x1
-#define m x2
-#define w x3
-
-// Additional variables
-
-#define a0 x4
-#define a1 x5
-#define a2 x6
-#define a3 x7
-
-#define b0 x8
-#define b1 x9
-#define b2 x10
-#define b3 x11
-
-#define c0 x12
-#define c1 x13
-#define c2 x14
-#define c3 x15
-#define c4 x16
-
-#define u0 x17
-#define u1 x19
-#define u2 x20
-#define u3 x21
-#define u4 x22
-#define u5 x23
-#define u6 x24
-#define u7 x25
-
-// These temp registers are aliased to c0..c3, which is safe here
-
-#define c x12
-#define h x13
-#define l x14
-#define t x15
-
-// Loop counters, outer and inner
-
-#define i x26
-#define j x27
-
-// Top carry, eventually returned when aligned with top
-// It's maintained as a bitmask since this seems slightly easier(?)
-
-#define tc x28
-
-// -----------------------------------------------------------------------
-// The basic 4x4->8 multiply-add block, which does in ADK style (10 muls):
-//
-// [c3;c2;c1;c0;z_3;z_2;z_1;z_0] :=
-//   [a3;a2;a1;a0] * [b3;b2;b1;b0] + [c3;c2;c1;c0] + [z_3;z_2;z_1;z_0]
-// -----------------------------------------------------------------------
-
-.macro madd4
-        mul     u0, a0, b0
-        mul     u4, a1, b1
-        mul     u5, a2, b2
-        mul     u6, a3, b3
-
-// Accumulate the simple products as [u7,u6,u5,u4,u0]
-
-        umulh   c4, a0, b0
-        adds    u4, u4, c4
-        umulh   c4, a1, b1
-        adcs    u5, u5, c4
-        umulh   c4, a2, b2
-        adcs    u6, u6, c4
-        umulh   c4, a3, b3
-        adc     u7, c4, xzr
-
-// Add up the carry-in and the existing z contents
-
-        ldp     u2, u3, [z]
-        adds    c0, c0, u2
-        adcs    c1, c1, u3
-        ldp     u2, u3, [z, #16]
-        adcs    c2, c2, u2
-        adcs    c3, c3, u3
-        adc     c4, xzr, xzr
-
-// Multiply by B + 1 to get [u7;u6;u5;u4;u1;u0]
-
-        adds    u1, u4, u0
-        adcs    u4, u5, u4
-        adcs    u5, u6, u5
-        adcs    u6, u7, u6
-        adc     u7, xzr, u7
-
-// Multiply by B^2 + 1 to get [u6;u5;u4;u3;u2;u1;u0]
-
-        adds    u2, u4, u0
-        adcs    u3, u5, u1
-        adcs    u4, u6, u4
-        adcs    u5, u7, u5
-        adcs    u6, xzr, u6
-        adc     u7, xzr, u7
-
-// Add in the carry-in and original z contents
-
-        adds    u0, u0, c0
-        adcs    u1, u1, c1
-        adcs    u2, u2, c2
-        adcs    u3, u3, c3
-        adcs    u4, u4, c4
-        adcs    u5, u5, xzr
-        adcs    u6, u6, xzr
-        adc     u7, u7, xzr
-
-// Now add in all the "complicated" terms.
-
-        muldiffnadd (u6,u5, c,h,l,t, a2,a3, b3,b2)
-        adc     u7, u7, c
-
-        muldiffnadd (u2,u1, c,h,l,t, a0,a1, b1,b0)
-        adcs    u3, u3, c
-        adcs    u4, u4, c
-        adcs    u5, u5, c
-        adcs    u6, u6, c
-        adc     u7, u7, c
-
-        muldiffnadd (u5,u4, c,h,l,t, a1,a3, b3,b1)
-        adcs    u6, u6, c
-        adc     u7, u7, c
-
-        muldiffnadd (u3,u2, c,h,l,t, a0,a2, b2,b0)
-        adcs    u4, u4, c
-        adcs    u5, u5, c
-        adcs    u6, u6, c
-        adc     u7, u7, c
-
-        muldiffnadd (u4,u3, c,h,l,t, a0,a3, b3,b0)
-        adcs    u5, u5, c
-        adcs    u6, u6, c
-        adc     u7, u7, c
-        muldiffnadd (u4,u3, c,h,l,t, a1,a2, b2,b1)
-        adcs    c1, u5, c
-        adcs    c2, u6, c
-        adc     c3, u7, c
-        mov     c0, u4
-
-        stp     u0, u1, [z]
-        stp     u2, u3, [z, #16]
-.endm
-
-// *****************************************************
-// Main code
-// *****************************************************
 
 S2N_BN_SYMBOL(bignum_emontredc_8n):
+           stp x19, x20, [sp, #-16]!
+           stp x21, x22, [sp, #-16]!
+           stp x23, x24, [sp, #-16]!
+           stp x25, x26, [sp, #-16]!
+           stp x27, x28, [sp, #-16]!
+           sub sp, sp, #32
+           lsr x0, x0, #2
+           mov x26, x0
+           subs x12, x0, #1
+           bcc bignum_emontredc_8n_end
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
-        stp     x27, x28, [sp, #-16]!
-
-// Set up (k/4 - 1)<<5 which is used as inner count and pointer fixup
-// ns i = k/4 as the outer loop count.
-// At this point skip everything if k/4 = 0, returning our x0 = 0 value
-
-        lsr     k4m1, x0, #2
-        mov     i, k4m1
-        subs    c, k4m1, #1
-        bcc     bignum_emontredc_8n_end
-        mov     tc, xzr
-        lsl     k4m1, c, #5
-
-// Outer loop, one digit of Montgomery reduction adding in word * m.
-// Rather than propagating the carry to the end each time, we
-// stop at the "natural" end and store top carry in tc as a bitmask.
+           stp x3, xzr, [sp]
+           stp x26, xzr, [sp, #16]
+           mov x28, xzr
+           lsl x0, x12, #5
 
 bignum_emontredc_8n_outerloop:
+          ldp x3, xzr, [sp]
+          ldp x17, x19, [x1]
+          ldp x20, x21, [x1, #16]
+          ldp x8, x9, [x2]
+          ldp x10, x11, [x2, #16]
+          ldr q21, [x2, #16]
 
-// Load [u3;u2;u1;u0] = bottom 4 digits of the input at current window
+          // Montgomery step 0
 
-        ldp     u0, u1, [z]
-        ldp     u2, u3, [z, #16]
+          mul x4, x17, x3
+// NEON: Calculate x4 * (x10, x11) that does two 64x64->128-bit multiplications.
+dup v0.2d, x4
+uzp2    v3.4s, v21.4s, v0.4s
+xtn     v4.2s, v0.2d
+xtn     v5.2s, v21.2d
+          mul	x12, x4, x8
+          adds x17, x17, x12
+          umulh x12, x4, x8
+          mul	x13, x4, x9
+rev64   v1.4s, v21.4s
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, v0.4s, v0.4s
+mul     v0.4s, v1.4s, v0.4s
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   v1.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     v0.2d, v0.2d, #32
+usra    v1.2d, v7.2d, #32
+umlal   v0.2d, v4.2s, v5.2s
+mov x14, v0.d[0]
+mov x15, v0.d[1]
+          adcs x19, x19, x13
+          umulh x13, x4, x9
+          adcs x20, x20, x14
+usra    v1.2d, v2.2d, #32
+mov x14, v1.d[0]
+          adcs x21, x21, x15
+mov x15, v1.d[1]
+          adc x22, xzr, xzr
+          adds x19, x19, x12
+          mul x5, x19, x3 // hoisted from step 1
+          adcs x20, x20, x13
+          adcs x21, x21, x14
+          adc x22, x22, x15
 
-// Load the bottom 4 digits of m
+          // Montgomery step 1
 
-        ldp     b0, b1, [m]
-        ldp     b2, b3, [m, #16]
+// NEON: Calculate x5 * (x10, x11) that does two 64x64->128-bit multiplications.
+dup v0.2d, x5
+uzp2    v3.4s, v21.4s, v0.4s
+xtn     v4.2s, v0.2d
+xtn     v5.2s, v21.2d
 
-// Montgomery step 0
+          mul	x12, x5, x8
+          adds	x19, x19, x12
+          umulh	x12, x5, x8
+          mul	x13, x5, x9
 
-        mul     a0, u0, w
-        mul     c0, a0, b0
-        mul     c1, a0, b1
-        mul     c2, a0, b2
-        mul     c3, a0, b3
-        adds    u0, u0, c0
-        umulh   c0, a0, b0
-        adcs    u1, u1, c1
-        umulh   c1, a0, b1
-        adcs    u2, u2, c2
-        umulh   c2, a0, b2
-        adcs    u3, u3, c3
-        umulh   c3, a0, b3
-        adc     u4, xzr, xzr
-        adds    u1, u1, c0
-        adcs    u2, u2, c1
-        adcs    u3, u3, c2
-        adc     u4, u4, c3
+rev64   v1.4s, v21.4s
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, v0.4s, v0.4s
+mul     v0.4s, v1.4s, v0.4s
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   v1.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     v0.2d, v0.2d, #32
+usra    v1.2d, v7.2d, #32
+umlal   v0.2d, v4.2s, v5.2s
+mov x14, v0.d[0]
+mov x15, v0.d[1]
+          adcs	x20, x20, x13
+          umulh	x13, x5, x9
+          adcs x21, x21, x14
+usra    v1.2d, v2.2d, #32
+mov x14, v1.d[0]
+          adcs x22, x22, x15
+mov x15, v1.d[1]
+          adc x23, xzr, xzr
+          adds x20, x20, x12
+          mul	x6, x20, x3 // hoisted from step 2
 
-// Montgomery step 1
+// NEON: For montgomery step 2,
+// calculate x6 * (x10, x11) that does two 64x64->128-bit multiplications.
+dup v0.2d, x6
+#define in1  v21
+#define in2  v0
+#define out_lo v0
+#define out_hi v1
+uzp2    v3.4s, in2.4s, in1.4s
+xtn     v4.2s, in1.2d
+xtn     v5.2s, in2.2d
 
-        mul     a1, u1, w
-        mul     c0, a1, b0
-        mul     c1, a1, b1
-        mul     c2, a1, b2
-        mul     c3, a1, b3
-        adds    u1, u1, c0
-        umulh   c0, a1, b0
-        adcs    u2, u2, c1
-        umulh   c1, a1, b1
-        adcs    u3, u3, c2
-        umulh   c2, a1, b2
-        adcs    u4, u4, c3
-        umulh   c3, a1, b3
-        adc     u5, xzr, xzr
-        adds    u2, u2, c0
-        adcs    u3, u3, c1
-        adcs    u4, u4, c2
-        adc     u5, u5, c3
+          adcs x21, x21, x13
+          adcs x22, x22, x14
+          adc x23, x23, x15
 
-// Montgomery step 2
+          stp x4, x5, [x1]
 
-        mul     a2, u2, w
-        mul     c0, a2, b0
-        mul     c1, a2, b1
-        mul     c2, a2, b2
-        mul     c3, a2, b3
-        adds    u2, u2, c0
-        umulh   c0, a2, b0
-        adcs    u3, u3, c1
-        umulh   c1, a2, b1
-        adcs    u4, u4, c2
-        umulh   c2, a2, b2
-        adcs    u5, u5, c3
-        umulh   c3, a2, b3
-        adc     u6, xzr, xzr
-        adds    u3, u3, c0
-        adcs    u4, u4, c1
-        adcs    u5, u5, c2
-        adc     u6, u6, c3
+// hoisted from maddloop_firstitr
+ldr q20, [x1]
+// q21 will be loaded later.
 
-// Montgomery step 3. In the last four instructions we put the top in
-// the carry variables expected by the "madd" block next, which is why
-// the pattern is slightly different.
+ldr q22, [x2, #32]
+ldr q23, [x2, #48]
 
-        mul     a3, u3, w
-        mul     c0, a3, b0
-        mul     c1, a3, b1
-        mul     c2, a3, b2
-        mul     c3, a3, b3
-        adds    u3, u3, c0
-        umulh   c0, a3, b0
-        adcs    u4, u4, c1
-        umulh   c1, a3, b1
-        adcs    u5, u5, c2
-        umulh   c2, a3, b2
-        adcs    u6, u6, c3
-        umulh   c3, a3, b3
-        adc     u7, xzr, xzr
-        adds    c0, u4, c0
-        adcs    c1, u5, c1
-        adcs    c2, u6, c2
-        adc     c3, u7, c3
+        // Montgomery step 2
 
-// Stash the multipliers as expected by the bignum_emontredc interface
-// We don't use these ourselves again though; they stay in [a3;a2;a1;a0]
+rev64   v1.4s, in2.4s
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, in1.4s, in1.4s
 
-        stp     a0, a1, [z]
-        stp     a2, a3, [z, #16]
+        mul	x12, x6, x8
+        adds	x20, x20, x12
 
-// Repeated multiply-add block to do the k/4-1 remaining 4-digit chunks
+mul     v0.4s, v1.4s, in1.4s
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   out_hi.2d, v16.2s, v3.2s
 
-        mov     j, k4m1
+        umulh	x12, x6, x8
+        mul	x13, x6, x9
+
+uaddlp  v0.2d, v0.4s
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     out_lo.2d, v0.2d, #32
+
+        adcs	x21, x21, x13
+        umulh	x13, x6, x9
+
+usra    out_hi.2d, v7.2d, #32
+umlal   out_lo.2d, v4.2s, v5.2s
+mov x14, out_lo.d[0]
+mov x15, out_lo.d[1]
+
+usra    out_hi.2d, v2.2d, #32
+#undef in1
+#undef in2
+#undef out_lo
+#undef out_hi
+
+          adcs x22, x22, x14
+          adcs x23, x23, x15
+
+mov x14, v1.d[0]
+mov x15, v1.d[1]
+
+          adc	x24, xzr, xzr
+          adds	x21, x21, x12
+          mul	x7, x21, x3
+          adcs	x22, x22, x13
+          adcs	x23, x23, x14
+          adc	x24, x24, x15
+
+          stp x6, x7, [x1, #16]
+
+// hoisted from maddloop_firstitr
+ldr q21, [x1, #16]
+
+// pre-calculate 2mul+2umulhs in maddloop_firstitr
+// v25++v24 = hi and lo of (x4 * x8, x5 * x9)
+#define in1  v20
+#define in2  v22
+#define out_lo v24
+#define out_hi v25
+uzp2    v3.4s, in2.4s, in1.4s
+xtn     v4.2s, in1.2d
+
+          // Montgomery step 3
+
+           mul	x12, x7, x8
+           mul	x13, x7, x9
+
+xtn     v5.2s, in2.2d
+rev64   v1.4s, in2.4s
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+
+           mul	x14, x7, x10
+           mul	x15, x7, x11
+
+uzp2    v16.4s, in1.4s, in1.4s
+mul     v0.4s, v1.4s, in1.4s
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   out_hi.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+
+           adds	x21, x21, x12
+           umulh	x12, x7, x8
+           adcs	x22, x22, x13
+           umulh	x13, x7, x9
+
+shl     out_lo.2d, v0.2d, #32
+usra    out_hi.2d, v7.2d, #32
+umlal   out_lo.2d, v4.2s, v5.2s
+usra    out_hi.2d, v2.2d, #32
+#undef in1
+#undef in2
+#undef out_lo
+#undef out_hi
+
+           adcs	x23, x23, x14
+           umulh	x14, x7, x10
+           adcs	x24, x24, x15
+           umulh	x15, x7, x11
+
+// v27++v26 = hi and lo of (x6 * x10, x7 * x11)
+#define in1  v21
+#define in2  v23
+#define out_lo v26
+#define out_hi v27
+uzp2    v3.4s, in2.4s, in1.4s
+xtn     v4.2s, in1.2d
+xtn     v5.2s, in2.2d
+rev64   v1.4s, in2.4s
+
+// hoisted from maddloop_firstitr and maddloop_x0one
+          ldp x8, x9, [x2, #32]
+          ldp x10, x11, [x2, #48]
+
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, in1.4s, in1.4s
+mul     v0.4s, v1.4s, in1.4s
+
+          adc	x25, xzr, xzr
+          adds	x12, x22, x12
+          adcs	x13, x23, x13
+          adcs	x14, x24, x14
+          adc	x15, x25, x15
+
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   out_hi.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     out_lo.2d, v0.2d, #32
+usra    out_hi.2d, v7.2d, #32
+umlal   out_lo.2d, v4.2s, v5.2s
+usra    out_hi.2d, v2.2d, #32
+#undef in1
+#undef in2
+#undef out_lo
+#undef out_hi
+
+          cbz x0, bignum_emontredc_8n_madddone
+          mov x27, x0
+          cmp x0, #32
+          bne bignum_emontredc_8n_maddloop_firstitr
+
+bignum_emontredc_8n_maddloop_x0one:
+         	add	x2, x2, #0x20
+         	add	x1, x1, #0x20
+         	mul	x17, x4, x8
+         	mul	x22, x5, x9
+         	mul	x23, x6, x10
+         	mul	x24, x7, x11
+         	umulh	x16, x4, x8
+         	adds	x22, x22, x16
+         	umulh	x16, x5, x9
+         	adcs	x23, x23, x16
+         	umulh	x16, x6, x10
+         	adcs	x24, x24, x16
+         	umulh	x16, x7, x11
+         	adc	x25, x16, xzr
+         	ldp	x20, x21, [x1]
+         	adds	x12, x12, x20
+         	adcs	x13, x13, x21
+         	ldp	x20, x21, [x1, #16]
+         	adcs	x14, x14, x20
+         	adcs	x15, x15, x21
+         	adc	x16, xzr, xzr
+         	adds	x19, x22, x17
+         	adcs	x22, x23, x22
+         	adcs	x23, x24, x23
+         	adcs	x24, x25, x24
+         	adc	x25, xzr, x25
+         	adds	x20, x22, x17
+         	adcs	x21, x23, x19
+         	adcs	x22, x24, x22
+         	adcs	x23, x25, x23
+         	adcs	x24, xzr, x24
+         	adc	x25, xzr, x25
+         	adds	x17, x17, x12
+         	adcs	x19, x19, x13
+         	adcs	x20, x20, x14
+         	adcs	x21, x21, x15
+         	adcs	x22, x22, x16
+         	adcs	x23, x23, xzr
+         	adcs	x24, x24, xzr
+         	adc	x25, x25, xzr
+         	subs	x15, x6, x7
+         	cneg	x15, x15, cc  // cc = lo, ul, last
+         	csetm	x12, cc  // cc = lo, ul, last
+         	subs	x13, x11, x10
+         	cneg	x13, x13, cc  // cc = lo, ul, last
+         	mul	x14, x15, x13
+         	umulh	x13, x15, x13
+         	cinv	x12, x12, cc  // cc = lo, ul, last
+         	cmn	x12, #0x1
+         	eor	x14, x14, x12
+         	adcs	x23, x23, x14
+         	eor	x13, x13, x12
+         	adcs	x24, x24, x13
+         	adc	x25, x25, x12
+         	subs	x15, x4, x5
+         	cneg	x15, x15, cc  // cc = lo, ul, last
+         	csetm	x12, cc  // cc = lo, ul, last
+         	subs	x13, x9, x8
+         	cneg	x13, x13, cc  // cc = lo, ul, last
+         	mul	x14, x15, x13
+         	umulh	x13, x15, x13
+         	cinv	x12, x12, cc  // cc = lo, ul, last
+         	cmn	x12, #0x1
+         	eor	x14, x14, x12
+         	adcs	x19, x19, x14
+         	eor	x13, x13, x12
+         	adcs	x20, x20, x13
+         	adcs	x21, x21, x12
+         	adcs	x22, x22, x12
+         	adcs	x23, x23, x12
+         	adcs	x24, x24, x12
+         	adc	x25, x25, x12
+         	subs	x15, x5, x7
+         	cneg	x15, x15, cc  // cc = lo, ul, last
+         	csetm	x12, cc  // cc = lo, ul, last
+         	subs	x13, x11, x9
+         	cneg	x13, x13, cc  // cc = lo, ul, last
+         	mul	x14, x15, x13
+         	umulh	x13, x15, x13
+         	cinv	x12, x12, cc  // cc = lo, ul, last
+         	cmn	x12, #0x1
+         	eor	x14, x14, x12
+         	adcs	x22, x22, x14
+         	eor	x13, x13, x12
+         	adcs	x23, x23, x13
+         	adcs	x24, x24, x12
+         	adc	x25, x25, x12
+         	subs	x15, x4, x6
+         	cneg	x15, x15, cc  // cc = lo, ul, last
+         	csetm	x12, cc  // cc = lo, ul, last
+         	subs	x13, x10, x8
+         	cneg	x13, x13, cc  // cc = lo, ul, last
+         	mul	x14, x15, x13
+         	umulh	x13, x15, x13
+         	cinv	x12, x12, cc  // cc = lo, ul, last
+         	cmn	x12, #0x1
+         	eor	x14, x14, x12
+         	adcs	x20, x20, x14
+         	eor	x13, x13, x12
+         	adcs	x21, x21, x13
+         	adcs	x22, x22, x12
+         	adcs	x23, x23, x12
+         	adcs	x24, x24, x12
+         	adc	x25, x25, x12
+         	subs	x15, x4, x7
+         	cneg	x15, x15, cc  // cc = lo, ul, last
+         	csetm	x12, cc  // cc = lo, ul, last
+         	subs	x13, x11, x8
+         	cneg	x13, x13, cc  // cc = lo, ul, last
+         	mul	x14, x15, x13
+         	umulh	x13, x15, x13
+         	cinv	x12, x12, cc  // cc = lo, ul, last
+         	cmn	x12, #0x1
+         	eor	x14, x14, x12
+         	adcs	x21, x21, x14
+         	eor	x13, x13, x12
+         	adcs	x22, x22, x13
+         	adcs	x23, x23, x12
+         	adcs	x24, x24, x12
+         	adc	x25, x25, x12
+         	subs	x15, x5, x6
+         	cneg	x15, x15, cc  // cc = lo, ul, last
+         	csetm	x12, cc  // cc = lo, ul, last
+         	subs	x13, x10, x9
+         	cneg	x13, x13, cc  // cc = lo, ul, last
+         	mul	x14, x15, x13
+         	umulh	x13, x15, x13
+         	cinv	x12, x12, cc  // cc = lo, ul, last
+         	cmn	x12, #0x1
+         	eor	x14, x14, x12
+         	adcs	x21, x21, x14
+         	eor	x13, x13, x12
+         	adcs	x22, x22, x13
+         	adcs	x13, x23, x12
+         	adcs	x14, x24, x12
+         	adc	x15, x25, x12
+         	mov	x12, x22
+         	stp	x17, x19, [x1]
+         	stp	x20, x21, [x1, #16]
+         	sub	x27, x27, #0x20
+          b bignum_emontredc_8n_madddone
+
+
+bignum_emontredc_8n_maddloop_firstitr:
+
+mov x16, v25.d[0] //umulh x16,x4,x8
+mov x22, v24.d[1] //mul x22, x5, x9
+
+mov x20, v25.d[1] //umulh x20,x5,x9
+mov x23, v26.d[0] //mul x23, x6, x10
+
+mov x21, v27.d[0] //umulh x21,x6,x10
+mov x24, v26.d[1] //mul x24, x7, x11
+
+mov x3, v27.d[1] //umulh x3,x7,x11
+mov x17, v24.d[0] //mul x17, x4, x8
+
+          adds x22,x22,x16
+          adcs x23,x23,x20
+          adcs x24,x24,x21
+          adc x25,x3,xzr
+
+// pre-calculate the multiplications for the next iter.
+// v25 ++ v24 = hi, lo of (x4 * x8, x5 * x9)
+ldr q22, [x2, #64]
+ldr q23, [x2, #80]
+
+          add x2, x2, #32
+          add x1, x1, #32
+
+#define in1  v20
+#define in2  v22
+#define out_lo v24
+#define out_hi v25
+uzp2    v3.4s, in2.4s, in1.4s
+xtn     v4.2s, in1.2d
+xtn     v5.2s, in2.2d
+rev64   v1.4s, in2.4s
+
+          ldp x20,x21,[x1]
+          adds x12,x12,x20
+          adcs x13,x13,x21
+          ldp x20,x21,[x1,#16]
+
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, in1.4s, in1.4s
+mul     v0.4s, v1.4s, in1.4s
+
+          adcs x14,x14,x20
+          adcs x15,x15,x21
+          adc x16,xzr,xzr
+          adds x19,x22,x17
+
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   out_hi.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+
+          adcs x22,x23,x22
+          adcs x23,x24,x23
+          adcs x24,x25,x24
+          adc x25,xzr,x25
+
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     out_lo.2d, v0.2d, #32
+usra    out_hi.2d, v7.2d, #32
+
+          adds x20,x22,x17
+          adcs x21,x23,x19
+          adcs x22,x24,x22
+          adcs x23,x25,x23
+
+umlal   out_lo.2d, v4.2s, v5.2s
+usra    out_hi.2d, v2.2d, #32
+#undef in1
+#undef in2
+#undef out_lo
+#undef out_hi
+
+          adcs x24,xzr,x24
+          adc x25,xzr,x25
+          adds x17,x17,x12
+          adcs x19,x19,x13
+
+#define in1  v21
+#define in2  v23
+#define out_lo v26
+#define out_hi v27
+uzp2    v3.4s, in2.4s, in1.4s
+xtn     v4.2s, in1.2d
+xtn     v5.2s, in2.2d
+rev64   v1.4s, in2.4s
+
+          adcs x20,x20,x14
+          adcs x21,x21,x15
+          adcs x22,x22,x16
+          adcs x23,x23,xzr
+
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, in1.4s, in1.4s
+mul     v0.4s, v1.4s, in1.4s
+
+          adcs x24,x24,xzr
+          adc x25,x25,xzr
+          subs x15,x6,x7
+          cneg x15,x15,cc
+
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   out_hi.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+
+          csetm x12,cc
+          subs x13,x11,x10
+          cneg x13,x13,cc
+          mul x14,x15,x13
+
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     out_lo.2d, v0.2d, #32
+usra    out_hi.2d, v7.2d, #32
+
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+
+umlal   out_lo.2d, v4.2s, v5.2s
+usra    out_hi.2d, v2.2d, #32
+#undef in1
+#undef in2
+#undef out_lo
+#undef out_hi
+
+          adcs x23,x23,x14
+          eor x13,x13,x12
+          adcs x24,x24,x13
+          adc x25,x25,x12
+          subs x15,x4,x5
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x9,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x19,x19,x14
+          eor x13,x13,x12
+          adcs x20,x20,x13
+          adcs x21,x21,x12
+          adcs x22,x22,x12
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+
+          stp x17,x19,[x1]
+
+mov x16, v25.d[0] // hi bits of (x4 * x8)
+mov x26, v27.d[0] // hi bits of (x6 * x10)
+mov x3, v25.d[1] // hi bits of (x5 * x9)
+mov x17, v27.d[1] // hi bits of (x6 * x10)
+
+          subs x15,x5,x7
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x11,x9
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x22,x22,x14
+          eor x13,x13,x12
+          adcs x23,x23,x13
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x4,x6
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x10,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x20,x20,x14
+          eor x13,x13,x12
+          adcs x21,x21,x13
+          adcs x22,x22,x12
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x4,x7
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x11,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x21,x21,x14
+          eor x13,x13,x12
+          adcs x22,x22,x13
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x5,x6
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x10,x9
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x21,x21,x14
+
+          stp x20,x21,[x1,#16]
+mov x20, v24.d[1] // lo bits of (x5 * x9)
+mov x21, v26.d[0] // lo bits of (x6 * x10)
+
+          eor x13,x13,x12
+          adcs x22,x22,x13
+          adcs x13,x23,x12
+          adcs x14,x24,x12
+          adc x15,x25,x12
+          mov x12,x22
+
+mov x24, v26.d[1] // lo bits of (x7 * x11)
+
+           sub x27, x27, #32
+           cmp x27, #32
+           beq bignum_emontredc_8n_maddloop_last
+
+
 bignum_emontredc_8n_maddloop:
-        add     m, m, #32
-        add     z, z, #32
+          ldp x8, x9, [x2, #32]
+          ldp x10, x11, [x2, #48]
 
-        ldp     b0, b1, [m]
-        ldp     b2, b3, [m, #16]
-        madd4
-        subs    j, j, #32
-        bne     bignum_emontredc_8n_maddloop
+// pre-calculate the multiplications for the next iter.
+// v25 ++ v24 = hi, lo of (x4 * x8, x5 * x9)
+ldr q22, [x2, #64]
+ldr q23, [x2, #80]
+
+          add x2, x2, #32
+          add x1, x1, #32
+
+          adds x22,x20,x16
+          adcs x23,x21,x3
+          adcs x24,x24,x26
+          adc x25,x17,xzr
+mov x17, v24.d[0] // lo bits of (x4 * x8)
+
+#define in1  v20
+#define in2  v22
+#define out_lo v24
+#define out_hi v25
+uzp2    v3.4s, in2.4s, in1.4s
+xtn     v4.2s, in1.2d
+xtn     v5.2s, in2.2d
+rev64   v1.4s, in2.4s
+
+          ldp x20,x21,[x1]
+          adds x12,x12,x20
+          adcs x13,x13,x21
+          ldp x20,x21,[x1,#16]
+
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, in1.4s, in1.4s
+mul     v0.4s, v1.4s, in1.4s
+
+          adcs x14,x14,x20
+          adcs x15,x15,x21
+          adc x16,xzr,xzr
+          adds x19,x22,x17
+
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   out_hi.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+
+          adcs x22,x23,x22
+          adcs x23,x24,x23
+          adcs x24,x25,x24
+          adc x25,xzr,x25
+
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     out_lo.2d, v0.2d, #32
+usra    out_hi.2d, v7.2d, #32
+
+          adds x20,x22,x17
+          adcs x21,x23,x19
+          adcs x22,x24,x22
+          adcs x23,x25,x23
+
+umlal   out_lo.2d, v4.2s, v5.2s
+usra    out_hi.2d, v2.2d, #32
+#undef in1
+#undef in2
+#undef out_lo
+#undef out_hi
+
+          adcs x24,xzr,x24
+          adc x25,xzr,x25
+          adds x17,x17,x12
+          adcs x19,x19,x13
+
+#define in1  v21
+#define in2  v23
+#define out_lo v26
+#define out_hi v27
+uzp2    v3.4s, in2.4s, in1.4s
+xtn     v4.2s, in1.2d
+xtn     v5.2s, in2.2d
+rev64   v1.4s, in2.4s
+
+          adcs x20,x20,x14
+          adcs x21,x21,x15
+          adcs x22,x22,x16
+          adcs x23,x23,xzr
+
+umull   v6.2d, v4.2s, v5.2s
+umull   v7.2d, v4.2s, v3.2s
+uzp2    v16.4s, in1.4s, in1.4s
+mul     v0.4s, v1.4s, in1.4s
+
+          adcs x24,x24,xzr
+          adc x25,x25,xzr
+          subs x15,x6,x7
+          cneg x15,x15,cc
+
+movi    v2.2d, #0x000000ffffffff
+usra    v7.2d, v6.2d, #32
+umull   out_hi.2d, v16.2s, v3.2s
+uaddlp  v0.2d, v0.4s
+
+          csetm x12,cc
+          subs x13,x11,x10
+          cneg x13,x13,cc
+          mul x14,x15,x13
+
+and     v2.16b, v7.16b, v2.16b
+umlal   v2.2d, v16.2s, v5.2s
+shl     out_lo.2d, v0.2d, #32
+usra    out_hi.2d, v7.2d, #32
+
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+
+umlal   out_lo.2d, v4.2s, v5.2s
+usra    out_hi.2d, v2.2d, #32
+#undef in1
+#undef in2
+#undef out_lo
+#undef out_hi
+
+          adcs x23,x23,x14
+          eor x13,x13,x12
+          adcs x24,x24,x13
+          adc x25,x25,x12
+          subs x15,x4,x5
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x9,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x19,x19,x14
+          eor x13,x13,x12
+          adcs x20,x20,x13
+          adcs x21,x21,x12
+          adcs x22,x22,x12
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+
+          stp x17,x19,[x1]
+
+mov x16, v25.d[0] // hi bits of (x4 * x8)
+mov x26, v27.d[0] // hi bits of (x6 * x10)
+mov x3, v25.d[1] // hi bits of (x5 * x9)
+mov x17, v27.d[1] // hi bits of (x6 * x10)
+
+          subs x15,x5,x7
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x11,x9
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x22,x22,x14
+          eor x13,x13,x12
+          adcs x23,x23,x13
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x4,x6
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x10,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x20,x20,x14
+          eor x13,x13,x12
+          adcs x21,x21,x13
+          adcs x22,x22,x12
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x4,x7
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x11,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x21,x21,x14
+          eor x13,x13,x12
+          adcs x22,x22,x13
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x5,x6
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x10,x9
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x21,x21,x14
+
+          stp x20,x21,[x1,#16]
+mov x20, v24.d[1] // lo bits of (x5 * x9)
+mov x21, v26.d[0] // lo bits of (x6 * x10)
+
+          eor x13,x13,x12
+          adcs x22,x22,x13
+          adcs x13,x23,x12
+          adcs x14,x24,x12
+          adc x15,x25,x12
+          mov x12,x22
+
+mov x24, v26.d[1] // lo bits of (x7 * x11)
+
+           sub x27, x27, #32
+           cmp x27, #32
+           bne bignum_emontredc_8n_maddloop
+
+
+bignum_emontredc_8n_maddloop_last:
+          ldp x8, x9, [x2, #32]
+          ldp x10, x11, [x2, #48]
+
+          add x2, x2, #32
+          add x1, x1, #32
+
+          adds x22,x20,x16
+          adcs x23,x21,x3
+          adcs x24,x24,x26
+          adc x25,x17,xzr
+mov x17, v24.d[0] // lo bits of (x4 * x8)
+
+          ldp x20,x21,[x1]
+          adds x12,x12,x20
+          adcs x13,x13,x21
+          ldp x20,x21,[x1,#16]
+          adcs x14,x14,x20
+          adcs x15,x15,x21
+          adc x16,xzr,xzr
+          adds x19,x22,x17
+          adcs x22,x23,x22
+          adcs x23,x24,x23
+          adcs x24,x25,x24
+          adc x25,xzr,x25
+          adds x20,x22,x17
+          adcs x21,x23,x19
+          adcs x22,x24,x22
+          adcs x23,x25,x23
+          adcs x24,xzr,x24
+          adc x25,xzr,x25
+          adds x17,x17,x12
+          adcs x19,x19,x13
+          adcs x20,x20,x14
+          adcs x21,x21,x15
+          adcs x22,x22,x16
+          adcs x23,x23,xzr
+          adcs x24,x24,xzr
+          adc x25,x25,xzr
+          subs x15,x6,x7
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x11,x10
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x23,x23,x14
+          eor x13,x13,x12
+          adcs x24,x24,x13
+          adc x25,x25,x12
+          subs x15,x4,x5
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x9,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x19,x19,x14
+          eor x13,x13,x12
+          adcs x20,x20,x13
+          adcs x21,x21,x12
+          adcs x22,x22,x12
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x5,x7
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x11,x9
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x22,x22,x14
+          eor x13,x13,x12
+          adcs x23,x23,x13
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x4,x6
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x10,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x20,x20,x14
+          eor x13,x13,x12
+          adcs x21,x21,x13
+          adcs x22,x22,x12
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x4,x7
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x11,x8
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x21,x21,x14
+          eor x13,x13,x12
+          adcs x22,x22,x13
+          adcs x23,x23,x12
+          adcs x24,x24,x12
+          adc x25,x25,x12
+          subs x15,x5,x6
+          cneg x15,x15,cc
+          csetm x12,cc
+          subs x13,x10,x9
+          cneg x13,x13,cc
+          mul x14,x15,x13
+          umulh x13,x15,x13
+          cinv x12,x12,cc
+          adds xzr,x12,#1
+          eor x14,x14,x12
+          adcs x21,x21,x14
+          eor x13,x13,x12
+          adcs x22,x22,x13
+          adcs x13,x23,x12
+          adcs x14,x24,x12
+          adc x15,x25,x12
+          mov x12,x22
+          stp x17,x19,[x1]
+          stp x20,x21,[x1,#16]
+           subs x27, x27, #64
+
 bignum_emontredc_8n_madddone:
-
-// Add the carry out to the existing z contents, propagating the
-// top carry tc up by 32 places as we move "leftwards".
-
-        ldp     u0, u1, [z, #32]
-        ldp     u2, u3, [z, #48]
-        adds    xzr, tc, tc
-        adcs    u0, u0, c0
-        adcs    u1, u1, c1
-        adcs    u2, u2, c2
-        adcs    u3, u3, c3
-        csetm   tc, cs
-        stp     u0, u1, [z, #32]
-        stp     u2, u3, [z, #48]
-
-// Compensate for the repeated bumps in m and z in the inner loop
-
-        sub     z, z, k4m1
-        sub     m, m, k4m1
-
-// Bump up z only and keep going
-
-        add     z, z, #32
-        sub     i, i, #1
-        cbnz    i, bignum_emontredc_8n_outerloop
-
-// Return the top carry as 0 or 1 (it's currently a bitmask)
-
-        neg     x0, tc
+           ldp x17, x19, [x1, #32]
+           ldp x20, x21, [x1, #48]
+           ldp x26, xzr, [sp, #16]
+           adds xzr, x28, x28
+           adcs x17, x17, x12
+           adcs x19, x19, x13
+           adcs x20, x20, x14
+           adcs x21, x21, x15
+           csetm x28, cs
+           stp x17, x19, [x1, #32]
+           stp x20, x21, [x1, #48]
+           sub x1, x1, x0
+           sub x2, x2, x0
+           add x1, x1, #32
+           subs x26, x26, #1
+           stp x26, xzr, [sp, #16]
+           bne bignum_emontredc_8n_outerloop
+           neg x0, x28
 
 bignum_emontredc_8n_end:
-        ldp     x27, x28, [sp], #16
-        ldp     x25, x26, [sp], #16
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
+           add sp, sp, #32
 
-        ret
+           ldp x27, x28, [sp], #16
+           ldp x25, x26, [sp], #16
+           ldp x23, x24, [sp], #16
+           ldp x21, x22, [sp], #16
+           ldp x19, x20, [sp], #16
+           ret
 
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack,"",%progbits
-#endif

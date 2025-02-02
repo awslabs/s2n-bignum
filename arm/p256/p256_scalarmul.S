@@ -356,12 +356,12 @@ p256_scalarmul_loop:
 
         add     x0, z2
         add     x1, acc+64
-        bl      p256_scalarmul_local_montsqr_p256_neon
+        bl      p256_scalarmul_local_montsqr_p256
 
         add     x0, z3
         add     x2, z2
         add     x1, acc+64
-        bl      p256_scalarmul_local_montmul_p256_neon
+        bl      p256_scalarmul_local_montmul_p256
 
         add     x0, z2
         add     x1, z3
@@ -374,19 +374,19 @@ p256_scalarmul_loop:
         add     x0, z2
         add     x2, z3
         add     x1, acc+64
-        bl      p256_scalarmul_local_montmul_p256_neon
+        bl      p256_scalarmul_local_montmul_p256
 
 // Convert back from Jacobian (X,Y,Z) |-> (X/Z^2, Y/Z^3)
 
         add     x1, acc
         add     x2, z2
         mov     x0, res
-        bl      p256_scalarmul_local_montmul_p256_neon
+        bl      p256_scalarmul_local_montmul_p256
 
         add     x0, res, #32
         add     x1, acc+32
         add     x2, z3
-        bl      p256_scalarmul_local_montmul_p256_neon
+        bl      p256_scalarmul_local_montmul_p256
 
 // Restore stack and registers and return
 
@@ -1513,7 +1513,7 @@ p256_scalarmul_inv_midloop:
         ldp     x19, x20, [sp], #16
         ret
 
-p256_scalarmul_local_montmul_p256_neon:
+p256_scalarmul_local_montmul_p256:
         ldr q20, [x2]
         ldp x7, x17, [x1]
         ldr q0, [x1]
@@ -1720,7 +1720,7 @@ p256_scalarmul_local_montmul_p256_neon:
         stp x4, x1, [x0, #16]
         ret
 
-p256_scalarmul_local_montsqr_p256_neon:
+p256_scalarmul_local_montsqr_p256:
         ldr q19, [x1]
         ldp x9, x13, [x1]
         ldr q23, [x1, #16]
