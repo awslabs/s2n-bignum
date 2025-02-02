@@ -1694,6 +1694,14 @@ let word_split_lohi = new_definition
     (word_subword x (0,dimindex(:N)):(N)word,
      word_subword x (dimindex(:N),dimindex(:N)):(N)word)`;;
 
+let word_split_lo = new_definition
+ `(word_split_lo:(N tybit0)word->(N)word) x =
+    word_subword x (0,dimindex(:N)):(N)word`;;
+
+let word_split_hi = new_definition
+ `(word_split_hi:(N tybit0)word->(N)word) x =
+    word_subword x (dimindex(:N),dimindex(:N)):(N)word`;;
+
 (* Given x = [xlo; xhi] (LSB to MSB) and y = [ylo; yhi],
    return [xlo;ylo;xhi;yhi]. *)
 let word_interleave2 = new_definition
@@ -1722,6 +1730,15 @@ let word_interleave8 = new_definition
     let xlo,xhi = word_split_lohi x in
     let ylo,yhi = word_split_lohi y in
     word_join (word_interleave4 xhi yhi) (word_interleave4 xlo ylo)`;;
+
+let word_interleave16 = new_definition
+ `(word_interleave16:((((N tybit0)tybit0)tybit0)tybit0)word
+      ->((((N tybit0)tybit0)tybit0)tybit0)word
+      ->(((((N tybit0)tybit0)tybit0)tybit0)tybit0)word)
+      x y =
+    let xlo,xhi = word_split_lohi x in
+    let ylo,yhi = word_split_lohi y in
+    word_join (word_interleave8 xhi yhi) (word_interleave8 xlo ylo)`;;
 
 let arm_ZIP1 = new_definition
  `arm_ZIP1 Rd Rn Rm esize datasize =
@@ -1931,6 +1948,166 @@ let arm_STP = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(* There is a bit of duplication in the following defintions.
+  We have to do this because one step in symbolic execution
+  doesn't handle let binding of pairs. *)
+let word_deinterleave2_x = new_definition
+  `(word_deinterleave2_x:
+    ((N tybit0)tybit0)word->(N tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let xlo = word_split_lo zlo in
+    let xhi = word_split_lo zhi in
+    word_join xhi xlo`;;
+
+let word_deinterleave2_y = new_definition
+  `(word_deinterleave2_y:
+    ((N tybit0)tybit0)word->(N tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let ylo = word_split_hi zlo in
+    let yhi = word_split_hi zhi in
+    word_join yhi ylo`;;
+
+let word_deinterleave4_x = new_definition
+  `(word_deinterleave4_x:
+      (((N tybit0)tybit0)tybit0)word
+      ->((N tybit0)tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let xlo = word_deinterleave2_x zlo in
+    let xhi = word_deinterleave2_x zhi in
+    word_join xhi xlo`;;
+
+let word_deinterleave4_y = new_definition
+  `(word_deinterleave4_y:
+      (((N tybit0)tybit0)tybit0)word
+      ->((N tybit0)tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let ylo = word_deinterleave2_y zlo in
+    let yhi = word_deinterleave2_y zhi in
+    word_join yhi ylo`;;
+
+let word_deinterleave8_x = new_definition
+  `(word_deinterleave8_x:
+      ((((N tybit0)tybit0)tybit0)tybit0)word
+      ->(((N tybit0)tybit0)tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let xlo = word_deinterleave4_x zlo in
+    let xhi = word_deinterleave4_x zhi in
+    word_join xhi xlo`;;
+
+let word_deinterleave8_y = new_definition
+  `(word_deinterleave8_y:
+      ((((N tybit0)tybit0)tybit0)tybit0)word
+      ->(((N tybit0)tybit0)tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let ylo = word_deinterleave4_y zlo in
+    let yhi = word_deinterleave4_y zhi in
+    word_join yhi ylo`;;
+
+let word_deinterleave16_x = new_definition
+  `(word_deinterleave16_x:
+     (((((N tybit0)tybit0)tybit0)tybit0)tybit0)word
+    ->((((N tybit0)tybit0)tybit0)tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let xlo = word_deinterleave8_x zlo in
+    let xhi = word_deinterleave8_x zhi in
+    word_join xhi xlo`;;
+
+let word_deinterleave16_y = new_definition
+  `(word_deinterleave16_y:
+     (((((N tybit0)tybit0)tybit0)tybit0)tybit0)word
+    ->((((N tybit0)tybit0)tybit0)tybit0)word)
+      z =
+    let zlo = word_split_lo z in
+    let zhi = word_split_hi z in
+    let ylo = word_deinterleave8_y zlo in
+    let yhi = word_deinterleave8_y zhi in
+    word_join yhi ylo`;;
+
+(* Association of ,, is not well understood by symbolic execution.
+   So instead of doing `((a := x ,, b := y) ,, c := z) s`, we do
+   `(a := x ,, b := y ,, c := z) s` *)
+let arm_LD2 = define
+  `arm_LD2 Rt Rtt Rn off datasize esize =
+    \s. let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 address) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           (if datasize = 128 then
+              let tmp:(256 word) = read (memory :> wbytes eaddr) s in
+              let (x:128 word) =
+                if esize = 64 then word_deinterleave2_x tmp
+                else if esize = 32 then word_deinterleave4_x tmp
+                else if esize = 16 then word_deinterleave8_x tmp
+                else word_deinterleave16_x tmp in
+              let (y:128 word) =
+                if esize = 64 then word_deinterleave2_y tmp
+                else if esize = 32 then word_deinterleave4_y tmp
+                else if esize = 16 then word_deinterleave8_y tmp
+                else word_deinterleave16_y tmp in
+              (Rt := x),, (Rtt := y) ,,
+              (if offset_writesback off
+               then Rn := word_add address (offset_writeback off)
+               else (=))
+            else
+              let tmp:(128 word) = read (memory :> wbytes eaddr) s in
+              let (x:64 word) =
+                if esize = 32 then word_deinterleave2_x tmp
+                else if esize = 16 then word_deinterleave4_x tmp
+                else word_deinterleave8_x tmp in
+              let (y:64 word) =
+                if esize = 32 then word_deinterleave2_y tmp
+                else if esize = 16 then word_deinterleave4_y tmp
+                else word_deinterleave8_y tmp in
+              (Rt := word_zx x:(128)word),, (Rtt := word_zx y:(128)word) ,,
+              (if offset_writesback off
+               then Rn := word_add address (offset_writeback off)
+               else (=)))
+         else ASSIGNS entirety) s`;;
+
+let arm_ST2 = define
+  `arm_ST2 Rt Rtt Rn off datasize esize =
+    \s. let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 address) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           let (x:128 word) = read Rt s in
+           let (y:128 word) = read Rtt s in
+           (if datasize = 128 then
+              let (tmp:256 word) =
+                if esize = 64 then word_interleave2 x y
+                else if esize = 32 then word_interleave4 x y
+                else if esize = 16 then word_interleave8 x y
+                else word_interleave16 x y in
+              memory :> wbytes eaddr := tmp
+            else
+              let (x:64 word) = word_subword x (0, 64) in
+              let (y:64 word) = word_subword y (0, 64) in
+              let (tmp:128 word) =
+                if esize = 32 then word_interleave2 x y
+                else if esize = 16 then word_interleave4 x y
+                else word_interleave8 x y in
+              memory :> wbytes eaddr := tmp) ,,
+           (if offset_writesback off
+            then Rn := word_add address (offset_writeback off)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* SHA-related SIMD operations                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -2019,7 +2196,7 @@ let arm_RAX1 = define
 (* Cryptographic four-register                                               *)
 (* ------------------------------------------------------------------------- *)
 
-let arm_EOR3 = define 
+let arm_EOR3 = define
  `arm_EOR3 Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
@@ -2028,7 +2205,7 @@ let arm_EOR3 = define
       let d':int128 = word_xor (word_xor n m) a in
       (Rd := d') s`;;
 
-let arm_BCAX = define 
+let arm_BCAX = define
  `arm_BCAX Rd Rn Rm Ra =
     \s:armstate.
       let n:int128 = read Rn s
@@ -2461,8 +2638,14 @@ let WORD_DUPLICATE_64_128 = prove
 
 let all_simd_rules = [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;
     WORD_DUPLICATE_64_128;
+    word_interleave16;
     word_interleave8;word_interleave4;word_interleave2;word_split_lohi;
-    word_interleave_lo; word_interleave_hi];;
+    word_interleave_lo; word_interleave_hi;
+    word_split_hi; word_split_lo;
+    word_deinterleave2_x; word_deinterleave2_y;
+    word_deinterleave4_x; word_deinterleave4_y;
+    word_deinterleave8_x; word_deinterleave8_y;
+    word_deinterleave16_x; word_deinterleave16_y];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
@@ -2490,6 +2673,9 @@ let arm_UZP2_ALT =       EXPAND_SIMD_RULE arm_UZP2;;
 let arm_XTN_ALT =        EXPAND_SIMD_RULE arm_XTN;;
 let arm_ZIP1_ALT =       EXPAND_SIMD_RULE arm_ZIP1;;
 let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
+let arm_LD2_ALT =        EXPAND_SIMD_RULE arm_LD2;;
+let arm_ST2_ALT =        EXPAND_SIMD_RULE arm_ST2;;
+
 
 let arm_SQDMULH_VEC_ALT =
   REWRITE_RULE[word_2smulh] (EXPAND_SIMD_RULE arm_SQDMULH_VEC);;
@@ -2561,4 +2747,5 @@ let ARM_OPERATION_CLAUSES =
 
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
-      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP];;
+      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
+       arm_LD2_ALT; arm_ST2_ALT];;
