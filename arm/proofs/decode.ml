@@ -347,7 +347,7 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 32)) 128 esize)
 
   // LD1R, Post-immediate offset, size 64 and 128
-  | [0b0:1; q; 0b001101110:9; Rm:5; 0b1100:4; size:2; Rn:5; Rt:5] ->
+  | [0b0:1; q; 0b001101110111111100:18; size:2; Rn:5; Rt:5] ->
     let esize = 8 * (2 EXP (val size)) in
     let datasize = if q then 128 else 64 in
     let off = word (esize DIV 8) in

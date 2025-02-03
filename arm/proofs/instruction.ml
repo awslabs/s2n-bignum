@@ -2162,7 +2162,7 @@ let arm_ST2 = define
            (if offset_writesback off
             then Rn := word_add address (offset_writeback off)
             else (=))
-          else ASSIGNS entirety) s`;;
+         else ASSIGNS entirety) s`;;
 
 let arm_LD1R = define
   `arm_LD1R (Rt:(armstate,(128)word)component) Rn off esize datasize =
