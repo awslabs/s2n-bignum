@@ -181,7 +181,7 @@ and tac_after memop =
 
 (*** Cosimulate a list of ARM instruction codes against hardware.
  *** To pass, the formal simulation has to agree with the hardware,
- *** only modify the 256-byte buffer [RSP,..,RSP+255] and also
+ *** only modify the 256-byte buffer [SP,..,SP+255] and also
  *** leave the final SP value the same as the initial value, though
  *** it can be modified in between.
  ***)
