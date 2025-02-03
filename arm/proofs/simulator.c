@@ -7,22 +7,27 @@
 // regs[0 ~ 31]:  X registers
 // regs[32 + 2*i]: Qi.d[0]
 // regs[32 + 2*i+1]: Qi.d[1]
-static uint64_t regs[32 + /*Q registers */2 * 32];
+// regs[96..127]: [SP,...SP+255]
+
+#define STATESIZE 128
+static uint64_t regs[STATESIZE];
 
 extern uint64_t harness(uint64_t *regfile);
 
 void print_regs()
 { uint64_t i;
   for (i = 0; i < 32; ++i)
-    printf("   %sX%ld = 0x%016lx\n",((i<10)?" ":""),i,regs[i]);
+    printf("   %sX%"PRId64" = 0x%016"PRIx64"\n",((i<10)?" ":""),i,regs[i]);
   for (i = 0; i < 32; ++i)
-    printf("   %sQ%ld.{d[0], d[1]} = { 0x%016lx, 0x%016lx }\n",((i<10)?" ":""),i,regs[32+i*2],regs[32+i*2+1]);
+    printf("   %sQ%"PRId64".{d[0], d[1]} = { 0x%016"PRIx64", 0x%016"PRIx64" }\n",((i<10)?" ":""),i,regs[32+i*2],regs[32+i*2+1]);
+  for (i = 0; i < 32; ++i)
+    printf("SP[%"PRId64"] = 0x%016"PRIx64"\n",i,regs[96+i]);
 }
 
 int main(int argc, char *argv[])
 { uint64_t retval, i;
 
-  for (i = 1; i < argc && i <= 32 + 2 * 32; ++i)
+  for (i = 1; i < argc && i <= STATESIZE; ++i)
     regs[i-1] = strtoul(argv[i],NULL,0);
 
   if (DEBUG)
@@ -33,11 +38,11 @@ int main(int argc, char *argv[])
   retval = harness(regs);
 
   if (DEBUG)
-   { printf("Called it and got %lu\n",retval);
+   { printf("Called it and got %"PRIu64"\n",retval);
      print_regs();
    }
   else
-   { for (i = 0; i < 32 + 2 * 32; ++i) printf("%lu ",regs[i]);
+   { for (i = 0; i < STATESIZE; ++i) printf("%"PRIu64" ",regs[i]);
      printf("\n");
    }
 
