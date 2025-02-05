@@ -359,7 +359,7 @@ and tac_after memop =
 
 let cosimulate_instructions memop ibytes_list =
   let ibyte_to_icode_fn =
-    fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) ibyte num_0) in
+    fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
   let icodes = map ibyte_to_icode_fn ibytes_list in
   let icodestring =
     end_itlist (fun s t -> s^","^t) (map string_of_num_hex icodes) in
@@ -368,15 +368,11 @@ let cosimulate_instructions memop ibytes_list =
      Format.print_newline()) in
 
   let ibytes = itlist (fun a b -> a @ b) ibytes_list [] in
-  let _ = print_string "here1" in
 
   let ibyteterm =
     mk_flist(map (curry mk_comb `word:num->byte` o mk_small_numeral) ibytes) in
-  let _ = print_string "here2" in
 
   let input_state = random_regstate() in
-
-  let _ = print_string "here3" in
 
   let outfile = Filename.temp_file "x86simulator" ".out" in
 
@@ -388,7 +384,6 @@ let cosimulate_instructions memop ibytes_list =
     " >" ^ outfile in
 
   let _ = Sys.command command in
-  let _ = print_string "here4" in
   (*** This branch determines whether the actual simulation worked ***)
   (*** In each branch we try to confirm that we likewise do or don't ***)
 
@@ -400,17 +395,12 @@ let cosimulate_instructions memop ibytes_list =
 
     let tmp = lex(explode resultstring) in
 
-    let _ = print_string "here0000" in
-
     let output_state_raw =
       map (fun (Ident s) -> let _ = print_string s in num_of_string s)
           (tmp) in
-    let _ = print_string "here1111" in
 
     (* Synthesize q registers from two 64 ints *)
     let output_state = output_state_raw in
-
-    let _ = print_string "here2222" in
 
     let goal = subst
       [ibyteterm,`ibytes:byte list`;
@@ -420,7 +410,6 @@ let cosimulate_instructions memop ibytes_list =
     let _ = print_term goal in
 
     let execth = X86_MK_EXEC_RULE(REFL ibyteterm) in
-    let _ = print_thm (fst execth) in
 
     let inst_th = Option.get (snd execth).(0) in
     let decoded = mk_flist
@@ -459,14 +448,46 @@ let run_random_regsimulation () =
   cosimulate_instructions false [ibytes];;
 
 (* ------------------------------------------------------------------------- *)
+(* Setting up safe self-contained tests for memory-accessing instructions.   *)
+(* ------------------------------------------------------------------------- *)
+
+(* Auxiliary instructions are for making sure operand registers don't depend
+   on RSP. This is because RSP in the theorem statement is an arbitrary value
+   represented by `stackpointer`. However in actual machine run, it is a
+   concrete value. If certain register's value depends on RSP value then the
+   machine run and the instruction modeling result won't match. *)
+let mem_iclasses =
+  [
+    [[0x48; 0x89; 0xd1]; (* mov rcx, rdx *)
+     [0x48; 0x8d; 0x54; 0x24; 0x03]; (*  lea rdx, [rsp+3] *)
+     [0x48; 0x8b; 0x02]; (* mov rax, [rdx] *)
+     [0x48; 0x89; 0xca] (* mov rbx, rcx *)
+     ];
+    [[0x48; 0x89; 0xd1]; (* mov rcx, rdx *)
+     [0x48; 0x8d; 0x54; 0x24; 0x03]; (*  lea rdx, [rsp+3] *)
+     [0x48; 0x8b; 0x02]; (* mov [rdx], rax *)
+     [0x48; 0x89; 0xca] (* mov rbx, rcx *)
+     ];
+  ];;
+
+
+let run_random_memopsimulation() =
+  let icodes = el (Random.int (length mem_iclasses)) mem_iclasses in
+  cosimulate_instructions true icodes;;
+
+(* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
 (* ------------------------------------------------------------------------- *)
+
+let run_random_simulation() =
+  if Random.int 100 < 0 then run_random_regsimulation()
+  else run_random_memopsimulation();;
 
 let time_limit_sec = 1800.0;;
 let tested_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result = run_random_regsimulation() in
+  let decoded,result = run_random_simulation() in
   if result then begin
     tested_instances := !tested_instances + 1;
     let fey = if is_numeral decoded
