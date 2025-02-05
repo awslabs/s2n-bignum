@@ -104,7 +104,8 @@ let load_elf_contents arch = fst o load_elf arch
      TODO: support relocation
 ***)
 
-let is_macho (file:bytes) = get_list file 0x0 4 = ['\xcf'; '\xfa'; '\xed'; '\xfe'];;
+let is_macho (file:bytes) =
+  get_list file 0x0 4 = ['\207'; '\250'; '\237'; '\254'];;
 
 let load_macho (cputype:int) (file:bytes): bytes =
 
