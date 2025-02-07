@@ -16,8 +16,8 @@ prioritize_int();;
 prioritize_real();;
 prioritize_num();;
 
-needs "arm/proofs/bignum_montsqr_p384_neon.ml";;
-needs "arm/proofs/bignum_montmul_p384_neon.ml";;
+needs "arm/proofs/bignum_montsqr_p384.ml";;
+needs "arm/proofs/bignum_montmul_p384.ml";;
 needs "arm/proofs/bignum_sub_p384.ml";;
 needs "arm/proofs/bignum_add_p384.ml";;
 
@@ -1462,7 +1462,7 @@ let LOCAL_MONTSQR_P384_CORRECT =
                   read PC s = word (pc + 0x67c) /\
                   C_ARGUMENTS [z; x] s /\
                   bignum_from_memory (x,6) s = a)
-             (\s. read PC s = word (pc + (0x67c + LENGTH bignum_montsqr_p384_neon_core_mc)) /\
+             (\s. read PC s = word (pc + (0x67c + LENGTH bignum_montsqr_p384_core_mc)) /\
                   (a EXP 2 <= 2 EXP 384 * p_384
                    ==> bignum_from_memory (z,6) s =
                        (inverse_mod p_384 (2 EXP 384) * a EXP 2) MOD p_384))
@@ -1472,17 +1472,17 @@ let LOCAL_MONTSQR_P384_CORRECT =
               MAYCHANGE [memory :> bytes(z,8 * 6)] ,,
               MAYCHANGE SOME_FLAGS)`,
     SUBGOAL_THEN
-      `bignum_montsqr_p384_neon_core_mc =
-        SUB_LIST (0x67c, LENGTH bignum_montsqr_p384_neon_core_mc)
+      `bignum_montsqr_p384_core_mc =
+        SUB_LIST (0x67c, LENGTH bignum_montsqr_p384_core_mc)
                  p384_montjdouble_core_mc` MP_TAC THENL [
-      REWRITE_TAC[fst BIGNUM_MONTSQR_P384_NEON_CORE_EXEC;
-                  bignum_montsqr_p384_neon_core_mc; p384_montjdouble_core_mc] THEN
+      REWRITE_TAC[fst BIGNUM_MONTSQR_P384_CORE_EXEC;
+                  bignum_montsqr_p384_core_mc; p384_montjdouble_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC; ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
-    ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P384_NEON_CORE_CORRECT
-        (REWRITE_RULE [fst BIGNUM_MONTSQR_P384_NEON_CORE_EXEC] th)
-        [fst BIGNUM_MONTSQR_P384_NEON_CORE_EXEC;
+    ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P384_CORE_CORRECT
+        (REWRITE_RULE [fst BIGNUM_MONTSQR_P384_CORE_EXEC] th)
+        [fst BIGNUM_MONTSQR_P384_CORE_EXEC;
         fst P384_MONTJDOUBLE_CORE_EXEC])) in
   REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC]
     (prove(`!z x a pc returnaddress.
@@ -1506,7 +1506,7 @@ let LOCAL_MONTSQR_P384_CORRECT =
     ARM_ADD_RETURN_NOSTACK_TAC
       P384_MONTJDOUBLE_CORE_EXEC
       ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o
-        REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC;fst BIGNUM_MONTSQR_P384_NEON_CORE_EXEC])
+        REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC;fst BIGNUM_MONTSQR_P384_CORE_EXEC])
       lemma)));;
 
 let LOCAL_MONTSQR_P384_TAC =
@@ -1529,7 +1529,7 @@ let LOCAL_MONTMUL_P384_CORRECT =
                   C_ARGUMENTS [z; x; y] s /\
                   bignum_from_memory (x,6) s = a /\
                   bignum_from_memory (y,6) s = b)
-             (\s. read PC s = word (pc + (16 + LENGTH bignum_montmul_p384_neon_core_mc)) /\
+             (\s. read PC s = word (pc + (16 + LENGTH bignum_montmul_p384_core_mc)) /\
                   (a * b <= 2 EXP 384 * p_384
                    ==> bignum_from_memory (z,6) s =
                        (inverse_mod p_384 (2 EXP 384) * a * b) MOD p_384))
@@ -1540,17 +1540,17 @@ let LOCAL_MONTMUL_P384_CORRECT =
               MAYCHANGE [memory :> bytes(z,8 * 6)] ,,
               MAYCHANGE SOME_FLAGS)`,
     SUBGOAL_THEN
-      `bignum_montmul_p384_neon_core_mc =
-        SUB_LIST (16, LENGTH bignum_montmul_p384_neon_core_mc)
+      `bignum_montmul_p384_core_mc =
+        SUB_LIST (16, LENGTH bignum_montmul_p384_core_mc)
                  p384_montjdouble_core_mc` MP_TAC THENL [
-      REWRITE_TAC[fst BIGNUM_MONTMUL_P384_NEON_CORE_EXEC;
-                  bignum_montmul_p384_neon_core_mc; p384_montjdouble_core_mc] THEN
+      REWRITE_TAC[fst BIGNUM_MONTMUL_P384_CORE_EXEC;
+                  bignum_montmul_p384_core_mc; p384_montjdouble_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC; ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
-      ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTMUL_P384_NEON_CORE_CORRECT
-        (REWRITE_RULE [fst BIGNUM_MONTMUL_P384_NEON_CORE_EXEC] th)
-        [fst BIGNUM_MONTMUL_P384_NEON_CORE_EXEC;fst P384_MONTJDOUBLE_CORE_EXEC])) in
+      ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTMUL_P384_CORE_CORRECT
+        (REWRITE_RULE [fst BIGNUM_MONTMUL_P384_CORE_EXEC] th)
+        [fst BIGNUM_MONTMUL_P384_CORE_EXEC;fst P384_MONTJDOUBLE_CORE_EXEC])) in
   REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC]
     (prove(`!z x y a b pc stackpointer returnaddress.
         aligned 16 stackpointer /\
@@ -1580,7 +1580,7 @@ let LOCAL_MONTMUL_P384_CORRECT =
       ~pre_post_nsteps:(4,4)
       P384_MONTJDOUBLE_CORE_EXEC
       (let th = REWRITE_RULE [
-            fst BIGNUM_MONTMUL_P384_NEON_CORE_EXEC;
+            fst BIGNUM_MONTMUL_P384_CORE_EXEC;
             fst P384_MONTJDOUBLE_CORE_EXEC] lemma in
         CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
       `[X19;X20;X21;X22;X23;X24]` 48));;

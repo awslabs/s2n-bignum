@@ -16,133 +16,6 @@
         .text
         .balign 4
 
-// ---------------------------------------------------------------------------
-// Macro computing [c,b,a] := [b,a] + (x - y) * (w - z), adding with carry
-// to the [b,a] components but leaving CF aligned with the c term, which is
-// a sign bitmask for (x - y) * (w - z). Continued add-with-carry operations
-// with [c,...,c] will continue the carry chain correctly starting from
-// the c position if desired to add to a longer term of the form [...,b,a].
-//
-// c,h,l,t should all be different and t,h should not overlap w,z.
-// ---------------------------------------------------------------------------
-
-.macro muldiffnadd b,a, c,h,l,t, x,y, w,z
-        subs    \t, \x, \y
-        cneg    \t, \t, cc
-        csetm   \c, cc
-        subs    \h, \w, \z
-        cneg    \h, \h, cc
-        mul     \l, \t, \h
-        umulh   \h, \t, \h
-        cinv    \c, \c, cc
-        adds    xzr, \c, #1
-        eor     \l, \l, \c
-        adcs    \a, \a, \l
-        eor     \h, \h, \c
-        adcs    \b, \b, \h
-.endm
-
-#define z x0
-#define x x1
-
-#define a0 x2
-#define a1 x3
-#define a2 x4
-#define a3 x5
-#define b0 x6
-#define b1 x7
-#define b2 x8
-#define b3 x9
-
-#define s0 x10
-#define s1 x11
-#define s2 x12
-#define s3 x13
-#define s4 x14
-#define s5 x15
-#define s6 x16
-#define s7 x17
-
-#define c  x19
-#define h  x20
-#define l  x21
-#define t  x22
-
-// ---------------------------------------------------------------------------
-// Core 4x4->8 ADK multiplication macro
-// Does [s7,s6,s5,s4,s3,s2,s1,s0] = [a3,a2,a1,a0] * [b3,b2,b1,b0]
-// ---------------------------------------------------------------------------
-
-.macro  mul4
-
-// First accumulate all the "simple" products as [s7,s6,s5,s4,s0]
-
-        mul     s0, a0, b0
-        mul     s4, a1, b1
-        mul     s5, a2, b2
-        mul     s6, a3, b3
-
-        umulh   s7, a0, b0
-        adds    s4, s4, s7
-        umulh   s7, a1, b1
-        adcs    s5, s5, s7
-        umulh   s7, a2, b2
-        adcs    s6, s6, s7
-        umulh   s7, a3, b3
-        adc     s7, s7, xzr
-
-// Multiply by B + 1 to get [s7;s6;s5;s4;s1;s0]
-
-        adds    s1, s4, s0
-        adcs    s4, s5, s4
-        adcs    s5, s6, s5
-        adcs    s6, s7, s6
-        adc     s7, xzr, s7
-
-// Multiply by B^2 + 1 to get [s7;s6;s5;s4;s3;s2;s1;s0]
-
-        adds    s2, s4, s0
-        adcs    s3, s5, s1
-        adcs    s4, s6, s4
-        adcs    s5, s7, s5
-        adcs    s6, xzr, s6
-        adc     s7, xzr, s7
-
-// Now add in all the "complicated" terms.
-
-        muldiffnadd s6,s5, c,h,l,t, a2,a3, b3,b2
-        adc     s7, s7, c
-
-        muldiffnadd s2,s1, c,h,l,t, a0,a1, b1,b0
-        adcs    s3, s3, c
-        adcs    s4, s4, c
-        adcs    s5, s5, c
-        adcs    s6, s6, c
-        adc     s7, s7, c
-
-        muldiffnadd s5,s4, c,h,l,t, a1,a3, b3,b1
-        adcs    s6, s6, c
-        adc     s7, s7, c
-
-        muldiffnadd s3,s2, c,h,l,t, a0,a2, b2,b0
-        adcs    s4, s4, c
-        adcs    s5, s5, c
-        adcs    s6, s6, c
-        adc     s7, s7, c
-
-        muldiffnadd s4,s3, c,h,l,t, a0,a3, b3,b0
-        adcs    s5, s5, c
-        adcs    s6, s6, c
-        adc     s7, s7, c
-        muldiffnadd s4,s3, c,h,l,t, a1,a2, b2,b1
-        adcs    s5, s5, c
-        adcs    s6, s6, c
-        adc     s7, s7, c
-.endm
-
-// ---------------------------------------------------------------------------
-// The main code
-// ---------------------------------------------------------------------------
 
 S2N_BN_SYMBOL(bignum_sqr_8_16):
 
@@ -151,200 +24,393 @@ S2N_BN_SYMBOL(bignum_sqr_8_16):
         stp     x19, x20, [sp, #-16]!
         stp     x21, x22, [sp, #-16]!
 
-// Load all the inputs first
+// Load registers.
+        ldp	x2, x3, [x1]
+ldr	q20, [x1]
+        ldp	x4, x5, [x1, #16]
+ldr	q21, [x1, #16]
+        ldp	x6, x7, [x1, #32]
+ldr	q22, [x1, #32]
+        ldp	x8, x9, [x1, #48]
+ldr	q23, [x1, #48]
+movi	v30.2d, #0xffffffff
 
-        ldp     a0, a1, [x]
-        ldp     a2, a3, [x, #16]
-        ldp     b0, b1, [x, #32]
-        ldp     b2, b3, [x, #48]
+        mul	x17, x2, x4
+        mul	x14, x3, x5
 
-// Square the lower half with a near-clone of bignum_sqr_4_8
+// Scalar+NEON: square the lower half with a near-clone of bignum_sqr_4_8
+// NEON: prepare 64x64->128 squaring of two 64-bit ints (x2, x3)
+ext	v1.16b, v20.16b, v20.16b, #8
+        umulh	x20, x2, x4
+shrn	v2.2s, v20.2d, #32
+        subs	x21, x2, x3
+zip1	v0.2s, v20.2s, v1.2s
+        cneg	x21, x21, cc  // cc = lo, ul, last
+umull	v5.2d, v2.2s, v2.2s
+        csetm	x11, cc  // cc = lo, ul, last
+umull	v6.2d, v2.2s, v0.2s
+        subs	x12, x5, x4
+umull	v3.2d, v0.2s, v0.2s
+        cneg	x12, x12, cc  // cc = lo, ul, last
+mov	v1.16b, v6.16b
+        mul	x13, x21, x12
+usra	v1.2d, v3.2d, #32
+        umulh	x12, x21, x12
+and	v4.16b, v1.16b, v30.16b
+        cinv	x11, x11, cc  // cc = lo, ul, last
+add	v4.2d, v4.2d, v6.2d
+        eor	x13, x13, x11
+usra	v5.2d, v4.2d, #32
+        eor	x12, x12, x11
+sli	v3.2d, v4.2d, #32
+        adds	x19, x17, x20
+usra	v5.2d, v1.2d, #32
+        adc	x20, x20, xzr
+  // NEON: prepare 64x64->128 squaring of two 64-bit ints (x4, x5)
+  ext	v1.16b, v21.16b, v21.16b, #8
+        umulh	x21, x3, x5
+  shrn	v2.2s, v21.2d, #32
+        adds	x19, x19, x14
+  zip1	v0.2s, v21.2s, v1.2s
+        adcs	x20, x20, x21
+        adc	x21, x21, xzr
+        adds	x20, x20, x14
+        adc	x21, x21, xzr
+        cmn	x11, #0x1
+        adcs	x19, x19, x13
+mov	x13, v3.d[1] // mul     x13, x3, x3
+        adcs	x20, x20, x12
+mov	x14, v5.d[1] // umulh   x14, x3, x3
+        adc	x21, x21, x11
+mov	x12, v3.d[0] // mul     x12, x2, x2
+        adds	x17, x17, x17
+mov	x11, v5.d[0] // umulh   x11, x2, x2
+        adcs	x19, x19, x19
+  umull	v5.2d, v2.2s, v2.2s
+        adcs	x20, x20, x20
+  umull	v6.2d, v2.2s, v0.2s
+        adcs	x21, x21, x21
+  umull	v3.2d, v0.2s, v0.2s
+        adc	x10, xzr, xzr
+  mov	v1.16b, v6.16b
 
-        mul     x17, x2, x4
-        mul     x14, x3, x5
-        umulh   x20, x2, x4
-        subs    x21, x2, x3
-        cneg    x21, x21, cc
-        csetm   x11, cc
-        subs    x12, x5, x4
-        cneg    x12, x12, cc
-        mul     x13, x21, x12
-        umulh   x12, x21, x12
-        cinv    x11, x11, cc
-        eor     x13, x13, x11
-        eor     x12, x12, x11
-        adds    x19, x17, x20
-        adc     x20, x20, xzr
-        umulh   x21, x3, x5
-        adds    x19, x19, x14
-        adcs    x20, x20, x21
-        adc     x21, x21, xzr
-        adds    x20, x20, x14
-        adc     x21, x21, xzr
-        cmn     x11, #0x1
-        adcs    x19, x19, x13
-        adcs    x20, x20, x12
-        adc     x21, x21, x11
-        adds    x17, x17, x17
-        adcs    x19, x19, x19
-        adcs    x20, x20, x20
-        adcs    x21, x21, x21
-        adc     x10, xzr, xzr
-        mul     x12, x2, x2
-        mul     x13, x3, x3
-        mul     x15, x2, x3
-        umulh   x11, x2, x2
-        umulh   x14, x3, x3
-        umulh   x16, x2, x3
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        stp     x12, x11, [z]
-        adds    x17, x17, x13
-        adcs    x19, x19, x14
-        adcs    x20, x20, xzr
-        adcs    x21, x21, xzr
-        adc     x10, x10, xzr
-        stp     x17, x19, [z, #16]
-        mul     x12, x4, x4
-        mul     x13, x5, x5
-        mul     x15, x4, x5
-        umulh   x11, x4, x4
-        umulh   x14, x5, x5
-        umulh   x16, x4, x5
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        adds    x12, x12, x20
-        adcs    x11, x11, x21
-        stp     x12, x11, [z, #32]
-        adcs    x13, x13, x10
-        adc     x14, x14, xzr
-        stp     x13, x14, [z, #48]
+        mul	x15, x2, x3
+  usra	v1.2d, v3.2d, #32
+        umulh	x16, x2, x3
+  and	v4.16b, v1.16b, v30.16b
+        adds	x11, x11, x15
+  add	v4.2d, v4.2d, v6.2d
+        adcs	x13, x13, x16
+  usra	v5.2d, v4.2d, #32
+        adc	x14, x14, xzr
+  sli	v3.2d, v4.2d, #32
+        adds	x11, x11, x15
+  usra	v5.2d, v1.2d, #32
+        adcs	x13, x13, x16
+        adc	x14, x14, xzr
+        stp	x12, x11, [x0]
+  mov	x11, v5.d[0] // umulh   x11, x4, x4
+        adds	x17, x17, x13
+  mov	x13, v3.d[1] // mul     x13, x5, x5
+        adcs	x19, x19, x14
+  mov	x14, v5.d[1] // umulh   x14, x5, x5
+        adcs	x20, x20, xzr
+  mov	x12, v3.d[0] // mul     x12, x4, x4
+        adcs	x21, x21, xzr
+// NEON: prepare muls in the upper half
+ext	v1.16b, v22.16b, v22.16b, #8
+        adc	x10, x10, xzr
+shrn	v2.2s, v22.2d, #32
+        stp	x17, x19, [x0, #16]
+zip1	v0.2s, v22.2s, v1.2s
+        mul	x15, x4, x5
+umull	v5.2d, v2.2s, v2.2s
+        umulh	x16, x4, x5
+umull	v6.2d, v2.2s, v0.2s
+        adds	x11, x11, x15
+umull	v3.2d, v0.2s, v0.2s
+        adcs	x13, x13, x16
+mov	v1.16b, v6.16b
+        adc	x14, x14, xzr
+usra	v1.2d, v3.2d, #32
+        adds	x11, x11, x15
+and	v4.16b, v1.16b, v30.16b
+        adcs	x13, x13, x16
+add	v4.2d, v4.2d, v6.2d
+        adc	x14, x14, xzr
+usra	v5.2d, v4.2d, #32
+        adds	x12, x12, x20
+sli	v3.2d, v4.2d, #32
+        adcs	x11, x11, x21
+usra	v5.2d, v1.2d, #32
+        stp	x12, x11, [x0, #32]
+  // NEON: prepare muls in the upper half
+  ext	v1.16b, v23.16b, v23.16b, #8
+        adcs	x13, x13, x10
+  shrn	v2.2s, v23.2d, #32
+        adc	x14, x14, xzr
+  zip1	v0.2s, v23.2s, v1.2s
+        stp	x13, x14, [x0, #48]
 
-// Square the upper half with a slight variant of the previous block
-
-        mul     x17, x6, x8
-        mul     x14, x7, x9
-        umulh   x20, x6, x8
-        subs    x21, x6, x7
-        cneg    x21, x21, cc
-        csetm   x11, cc
-        subs    x12, x9, x8
-        cneg    x12, x12, cc
-        mul     x13, x21, x12
-        umulh   x12, x21, x12
-        cinv    x11, x11, cc
-        eor     x13, x13, x11
-        eor     x12, x12, x11
-        adds    x19, x17, x20
-        adc     x20, x20, xzr
-        umulh   x21, x7, x9
-        adds    x19, x19, x14
-        adcs    x20, x20, x21
-        adc     x21, x21, xzr
-        adds    x20, x20, x14
-        adc     x21, x21, xzr
-        cmn     x11, #0x1
-        adcs    x19, x19, x13
-        adcs    x20, x20, x12
-        adc     x21, x21, x11
-        adds    x17, x17, x17
-        adcs    x19, x19, x19
-        adcs    x20, x20, x20
-        adcs    x21, x21, x21
-        adc     x10, xzr, xzr
-        mul     x12, x6, x6
-        mul     x13, x7, x7
-        mul     x15, x6, x7
-        umulh   x11, x6, x6
-        umulh   x14, x7, x7
-        umulh   x16, x6, x7
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        stp     x12, x11, [z, #64]
-        adds    x17, x17, x13
-        adcs    x19, x19, x14
-        adcs    x20, x20, xzr
-        adcs    x21, x21, xzr
-        adc     x10, x10, xzr
-        stp     x17, x19, [z, #80]
-        mul     x12, x8, x8
-        mul     x13, x9, x9
-        mul     x15, x8, x9
-        umulh   x11, x8, x8
-        umulh   x14, x9, x9
-        umulh   x16, x8, x9
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        adds    x11, x11, x15
-        adcs    x13, x13, x16
-        adc     x14, x14, xzr
-        adds    x12, x12, x20
-        adcs    x11, x11, x21
-        stp     x12, x11, [z, #96]
-        adcs    x13, x13, x10
-        adc     x14, x14, xzr
-        stp     x13, x14, [z, #112]
+// Scalar: square the upper half with a slight variant of the previous block
+        mul	x17, x6, x8
+  umull	v16.2d, v2.2s, v2.2s
+        mul	x14, x7, x9
+  umull	v6.2d, v2.2s, v0.2s
+        umulh	x20, x6, x8
+  umull	v18.2d, v0.2s, v0.2s
+        subs	x21, x6, x7
+        cneg	x21, x21, cc  // cc = lo, ul, last
+  mov	v1.16b, v6.16b
+        csetm	x11, cc  // cc = lo, ul, last
+        subs	x12, x9, x8
+        cneg	x12, x12, cc  // cc = lo, ul, last
+  usra	v1.2d, v18.2d, #32
+        mul	x13, x21, x12
+  and	v4.16b, v1.16b, v30.16b
+        umulh	x12, x21, x12
+  add	v4.2d, v4.2d, v6.2d
+        cinv	x11, x11, cc  // cc = lo, ul, last
+        eor	x13, x13, x11
+        eor	x12, x12, x11
+  usra	v16.2d, v4.2d, #32
+        adds	x19, x17, x20
+        adc	x20, x20, xzr
+  sli	v18.2d, v4.2d, #32
+        umulh	x21, x7, x9
+        adds	x19, x19, x14
+        adcs	x20, x20, x21
+        adc	x21, x21, xzr
+        adds	x20, x20, x14
+mov	x14, v5.d[1]
+        adc	x21, x21, xzr
+        cmn	x11, #0x1
+        adcs	x19, x19, x13
+mov	x13, v3.d[1]
+        adcs	x20, x20, x12
+mov	x12, v3.d[0]
+        adc	x21, x21, x11
+mov	x11, v5.d[0]
+        adds	x17, x17, x17
+        adcs	x19, x19, x19
+  usra	v16.2d, v1.2d, #32
+        adcs	x20, x20, x20
+        adcs	x21, x21, x21
+        adc	x10, xzr, xzr
+// NEON: two mul+umulhs for the next stage
+uzp2	v17.4s, v21.4s, v23.4s
+        mul	x15, x6, x7
+xtn	v4.2s, v23.2d
+        umulh	x16, x6, x7
+  mov	x22, v16.d[0]
+        adds	x11, x11, x15
+        adcs	x13, x13, x16
+xtn	v5.2s, v21.2d
+        adc	x14, x14, xzr
+        adds	x11, x11, x15
+rev64	v1.4s, v21.4s
+        adcs	x13, x13, x16
+        adc	x14, x14, xzr
+        stp	x12, x11, [x0, #64]
+        adds	x17, x17, x13
+  mov	x13, v18.d[1]
+        adcs	x19, x19, x14
+  mov	x14, v16.d[1]
+        adcs	x20, x20, xzr
+  mov	x12, v18.d[0]
+        adcs	x21, x21, xzr
+        adc	x10, x10, xzr
+umull	v6.2d, v4.2s, v5.2s
+        stp	x17, x19, [x0, #80]
+umull	v7.2d, v4.2s, v17.2s
+        mul	x15, x8, x9
+uzp2	v16.4s, v23.4s, v23.4s
+        umulh	x16, x8, x9
+mul	v0.4s, v1.4s, v23.4s
+        adds	x11, x22, x15
+        adcs	x13, x13, x16
+usra	v7.2d, v6.2d, #32
+        adc	x14, x14, xzr
+        adds	x11, x11, x15
+umull	v1.2d, v16.2s, v17.2s
+        adcs	x13, x13, x16
+        adc	x14, x14, xzr
+uaddlp	v0.2d, v0.4s
+        adds	x12, x12, x20
+        adcs	x11, x11, x21
+and	v2.16b, v7.16b, v30.16b
+umlal	v2.2d, v16.2s, v5.2s
+shl	v0.2d, v0.2d, #32
+usra	v1.2d, v7.2d, #32
+umlal	v0.2d, v4.2s, v5.2s
+mov	x16, v0.d[1]
+mov	x15, v0.d[0]
+usra	v1.2d, v2.2d, #32
+mov	x20, v1.d[0]
+mov	x21, v1.d[1]
+        stp	x12, x11, [x0, #96]
+        adcs	x13, x13, x10
+        adc	x14, x14, xzr
+        stp	x13, x14, [x0, #112]
 
 // Now get the cross-product in [s7,...,s0] and double it as [c,s7,...,s0]
 
-        mul4
-
-        adds    s0, s0, s0
-        adcs    s1, s1, s1
-        adcs    s2, s2, s2
-        adcs    s3, s3, s3
-        adcs    s4, s4, s4
-        adcs    s5, s5, s5
-        adcs    s6, s6, s6
-        adcs    s7, s7, s7
-        adc     c, xzr, xzr
+        mul	x10, x2, x6
+        mul	x14, x3, x7
+        umulh	x17, x2, x6
+        adds	x14, x14, x17
+        umulh	x17, x3, x7
+        adcs	x15, x15, x17
+        adcs	x16, x16, x20
+        adc	x17, x21, xzr
+        adds	x11, x14, x10
+        adcs	x14, x15, x14
+        adcs	x15, x16, x15
+        adcs	x16, x17, x16
+        adc	x17, xzr, x17
+        adds	x12, x14, x10
+        adcs	x13, x15, x11
+        adcs	x14, x16, x14
+        adcs	x15, x17, x15
+        adcs	x16, xzr, x16
+        adc	x17, xzr, x17
+        subs	x22, x4, x5
+        cneg	x22, x22, cc  // cc = lo, ul, last
+        csetm	x19, cc  // cc = lo, ul, last
+        subs	x20, x9, x8
+        cneg	x20, x20, cc  // cc = lo, ul, last
+        mul	x21, x22, x20
+        umulh	x20, x22, x20
+        cinv	x19, x19, cc  // cc = lo, ul, last
+        cmn	x19, #0x1
+        eor	x21, x21, x19
+        adcs	x15, x15, x21
+        eor	x20, x20, x19
+        adcs	x16, x16, x20
+        adc	x17, x17, x19
+        subs	x22, x2, x3
+        cneg	x22, x22, cc  // cc = lo, ul, last
+        csetm	x19, cc  // cc = lo, ul, last
+        subs	x20, x7, x6
+        cneg	x20, x20, cc  // cc = lo, ul, last
+        mul	x21, x22, x20
+        umulh	x20, x22, x20
+        cinv	x19, x19, cc  // cc = lo, ul, last
+        cmn	x19, #0x1
+        eor	x21, x21, x19
+        adcs	x11, x11, x21
+        eor	x20, x20, x19
+        adcs	x12, x12, x20
+        adcs	x13, x13, x19
+        adcs	x14, x14, x19
+        adcs	x15, x15, x19
+        adcs	x16, x16, x19
+        adc	x17, x17, x19
+        subs	x22, x3, x5
+        cneg	x22, x22, cc  // cc = lo, ul, last
+        csetm	x19, cc  // cc = lo, ul, last
+        subs	x20, x9, x7
+        cneg	x20, x20, cc  // cc = lo, ul, last
+        mul	x21, x22, x20
+        umulh	x20, x22, x20
+        cinv	x19, x19, cc  // cc = lo, ul, last
+        cmn	x19, #0x1
+        eor	x21, x21, x19
+        adcs	x14, x14, x21
+        eor	x20, x20, x19
+        adcs	x15, x15, x20
+        adcs	x16, x16, x19
+        adc	x17, x17, x19
+        subs	x22, x2, x4
+        cneg	x22, x22, cc  // cc = lo, ul, last
+        csetm	x19, cc  // cc = lo, ul, last
+        subs	x20, x8, x6
+        cneg	x20, x20, cc  // cc = lo, ul, last
+        mul	x21, x22, x20
+        umulh	x20, x22, x20
+        cinv	x19, x19, cc  // cc = lo, ul, last
+        cmn	x19, #0x1
+        eor	x21, x21, x19
+        adcs	x12, x12, x21
+        eor	x20, x20, x19
+        adcs	x13, x13, x20
+        adcs	x14, x14, x19
+        adcs	x15, x15, x19
+        adcs	x16, x16, x19
+        adc	x17, x17, x19
+        subs	x22, x2, x5
+        cneg	x22, x22, cc  // cc = lo, ul, last
+        csetm	x19, cc  // cc = lo, ul, last
+        subs	x20, x9, x6
+        cneg	x20, x20, cc  // cc = lo, ul, last
+        mul	x21, x22, x20
+        umulh	x20, x22, x20
+        cinv	x19, x19, cc  // cc = lo, ul, last
+        cmn	x19, #0x1
+        eor	x21, x21, x19
+        adcs	x13, x13, x21
+        eor	x20, x20, x19
+        adcs	x14, x14, x20
+        adcs	x15, x15, x19
+        adcs	x16, x16, x19
+        adc	x17, x17, x19
+        subs	x22, x3, x4
+        cneg	x22, x22, cc  // cc = lo, ul, last
+        csetm	x19, cc  // cc = lo, ul, last
+        subs	x20, x8, x7
+        cneg	x20, x20, cc  // cc = lo, ul, last
+        mul	x21, x22, x20
+        umulh	x20, x22, x20
+        cinv	x19, x19, cc  // cc = lo, ul, last
+        cmn	x19, #0x1
+        eor	x21, x21, x19
+        adcs	x13, x13, x21
+        eor	x20, x20, x19
+        adcs	x14, x14, x20
+        adcs	x15, x15, x19
+        adcs	x16, x16, x19
+        adc	x17, x17, x19
+        adds	x10, x10, x10
+        adcs	x11, x11, x11
+        adcs	x12, x12, x12
+        adcs	x13, x13, x13
+        adcs	x14, x14, x14
+        adcs	x15, x15, x15
+        adcs	x16, x16, x16
+        adcs	x17, x17, x17
+        adc	x19, xzr, xzr
 
 // Add it back to the buffer
 
-        ldp     a0, a1, [z, #32]
-        adds    s0, s0, a0
-        adcs    s1, s1, a1
-        stp     s0, s1, [z, #32]
+        ldp	x2, x3, [x0, #32]
+        adds	x10, x10, x2
+        adcs	x11, x11, x3
+        stp	x10, x11, [x0, #32]
 
-        ldp     a0, a1, [z, #48]
-        adcs    s2, s2, a0
-        adcs    s3, s3, a1
-        stp     s2, s3, [z, #48]
+        ldp	x2, x3, [x0, #48]
+        adcs	x12, x12, x2
+        adcs	x13, x13, x3
+        stp	x12, x13, [x0, #48]
 
-        ldp     a0, a1, [z, #64]
-        adcs    s4, s4, a0
-        adcs    s5, s5, a1
-        stp     s4, s5, [z, #64]
+        ldp	x2, x3, [x0, #64]
+        adcs	x14, x14, x2
+        adcs	x15, x15, x3
+        stp	x14, x15, [x0, #64]
 
-        ldp     a0, a1, [z, #80]
-        adcs    s6, s6, a0
-        adcs    s7, s7, a1
-        stp     s6, s7, [z, #80]
+        ldp	x2, x3, [x0, #80]
+        adcs	x16, x16, x2
+        adcs	x17, x17, x3
+        stp	x16, x17, [x0, #80]
 
-        ldp     a0, a1, [z, #96]
-        adcs    a0, a0, c
-        adcs    a1, a1, xzr
-        stp     a0, a1, [z, #96]
+        ldp	x2, x3, [x0, #96]
+        adcs	x2, x2, x19
+        adcs	x3, x3, xzr
+        stp	x2, x3, [x0, #96]
 
-        ldp     a0, a1, [z, #112]
-        adcs    a0, a0, xzr
-        adc     a1, a1, xzr
-        stp     a0, a1, [z, #112]
-
-// Restore regs and return
+        ldp	x2, x3, [x0, #112]
+        adcs	x2, x2, xzr
+        adc	x3, x3, xzr
+        stp	x2, x3, [x0, #112]
 
         ldp     x21, x22, [sp], #16
         ldp     x19, x20, [sp], #16
@@ -354,3 +420,4 @@ S2N_BN_SYMBOL(bignum_sqr_8_16):
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif
+

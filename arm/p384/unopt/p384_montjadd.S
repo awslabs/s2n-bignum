@@ -73,7 +73,7 @@
 
 #define NSPACE (NUMSIZE*7)
 
-// Corresponds to bignum_montmul_p384_neon, with callee-save register spills
+// Corresponds to bignum_montmul_p384, with callee-save register spills
 // rewritten to update sp in advance
 
 .montmul_p384:
