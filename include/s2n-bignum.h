@@ -21,7 +21,6 @@
 //
 //      - On ARM, the "_alt" forms target machines with higher multiplier
 //        throughput, generally offering higher performance there.
-//        The "_neon" forms target machines with NEON instructions.
 // ----------------------------------------------------------------------------
 
 
@@ -176,7 +175,7 @@ extern void bignum_copy_row_from_table (uint64_t *z, uint64_t *table, uint64_t h
 // achieved by reading the whole table and using the bit-masking to get the
 // `idx`-th row.
 // Input table[height*width]; output z[width]
-extern void bignum_copy_row_from_table_8n_neon (uint64_t *z, uint64_t *table,
+extern void bignum_copy_row_from_table_8n (uint64_t *z, uint64_t *table,
         uint64_t height, uint64_t width, uint64_t idx);
 
 // Given table: uint64_t[height*16], copy table[idx*16...(idx+1)*16-1] into z[0..row-1].
@@ -184,7 +183,7 @@ extern void bignum_copy_row_from_table_8n_neon (uint64_t *z, uint64_t *table,
 // achieved by reading the whole table and using the bit-masking to get the
 // `idx`-th row.
 // Input table[height*16]; output z[16]
-extern void bignum_copy_row_from_table_16_neon (uint64_t *z, uint64_t *table,
+extern void bignum_copy_row_from_table_16 (uint64_t *z, uint64_t *table,
         uint64_t height, uint64_t idx);
 
 // Given table: uint64_t[height*32], copy table[idx*32...(idx+1)*32-1] into z[0..row-1].
@@ -192,7 +191,7 @@ extern void bignum_copy_row_from_table_16_neon (uint64_t *z, uint64_t *table,
 // achieved by reading the whole table and using the bit-masking to get the
 // `idx`-th row.
 // Input table[height*32]; output z[32]
-extern void bignum_copy_row_from_table_32_neon (uint64_t *z, uint64_t *table,
+extern void bignum_copy_row_from_table_32 (uint64_t *z, uint64_t *table,
         uint64_t height, uint64_t idx);
 
 // Count trailing zero digits (64-bit words)
@@ -294,8 +293,6 @@ extern uint64_t bignum_emontredc (uint64_t k, uint64_t *z, uint64_t *m, uint64_t
 // Extended Montgomery reduce in 8-digit blocks, results in input-output buffer
 // Inputs z[2*k], m[k], w; outputs function return (extra result bit) and z[2*k]
 extern uint64_t bignum_emontredc_8n (uint64_t k, uint64_t *z, uint64_t *m, uint64_t w);
-extern uint64_t bignum_emontredc_8n_neon (uint64_t k, uint64_t *z, uint64_t *m,
-                                          uint64_t w);
 // Inputs z[2*k], m[k], w; outputs function return (extra result bit) and z[2*k]
 // Temporary buffer m_precalc[12*(k/4-1)]
 extern uint64_t bignum_emontredc_8n_cdiff (uint64_t k, uint64_t *z, uint64_t *m,
@@ -389,26 +386,18 @@ extern uint64_t bignum_iszero (uint64_t k, uint64_t *x);
 // Multiply z := x * y
 // Inputs x[16], y[16]; output z[32]; temporary buffer t[>=32]
 extern void bignum_kmul_16_32 (uint64_t z[S2N_BIGNUM_STATIC 32], uint64_t x[S2N_BIGNUM_STATIC 16], uint64_t y[S2N_BIGNUM_STATIC 16], uint64_t t[S2N_BIGNUM_STATIC 32]);
-extern void bignum_kmul_16_32_neon (uint64_t z[S2N_BIGNUM_STATIC 32], uint64_t x[S2N_BIGNUM_STATIC 16],
-                                    uint64_t y[S2N_BIGNUM_STATIC 16], uint64_t t[S2N_BIGNUM_STATIC 32]);
 
 // Multiply z := x * y
 // Inputs x[32], y[32]; output z[64]; temporary buffer t[>=96]
 extern void bignum_kmul_32_64 (uint64_t z[S2N_BIGNUM_STATIC 64], uint64_t x[S2N_BIGNUM_STATIC 32], uint64_t y[S2N_BIGNUM_STATIC 32], uint64_t t[S2N_BIGNUM_STATIC 96]);
-extern void bignum_kmul_32_64_neon (uint64_t z[S2N_BIGNUM_STATIC 64], uint64_t x[S2N_BIGNUM_STATIC 32],
-                                    uint64_t y[S2N_BIGNUM_STATIC 32], uint64_t t[S2N_BIGNUM_STATIC 96]);
 
 // Square, z := x^2
 // Input x[16]; output z[32]; temporary buffer t[>=24]
 extern void bignum_ksqr_16_32 (uint64_t z[S2N_BIGNUM_STATIC 32], uint64_t x[S2N_BIGNUM_STATIC 16], uint64_t t[S2N_BIGNUM_STATIC 24]);
-extern void bignum_ksqr_16_32_neon (uint64_t z[S2N_BIGNUM_STATIC 32], uint64_t x[S2N_BIGNUM_STATIC 16],
-                                    uint64_t t[S2N_BIGNUM_STATIC 24]);
 
 // Square, z := x^2
 // Input x[32]; output z[64]; temporary buffer t[>=72]
 extern void bignum_ksqr_32_64 (uint64_t z[S2N_BIGNUM_STATIC 64], uint64_t x[S2N_BIGNUM_STATIC 32], uint64_t t[S2N_BIGNUM_STATIC 72]);
-extern void bignum_ksqr_32_64_neon (uint64_t z[S2N_BIGNUM_STATIC 64], uint64_t x[S2N_BIGNUM_STATIC 32],
-                                    uint64_t t[S2N_BIGNUM_STATIC 72]);
 
 // Compare bignums, x <= y
 // Inputs x[m], y[n]; output function return
@@ -573,7 +562,6 @@ extern void bignum_montmul (uint64_t k, uint64_t *z, uint64_t *x, uint64_t *y, u
 // Inputs x[4], y[4]; output z[4]
 extern void bignum_montmul_p256 (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S2N_BIGNUM_STATIC 4], uint64_t y[S2N_BIGNUM_STATIC 4]);
 extern void bignum_montmul_p256_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S2N_BIGNUM_STATIC 4], uint64_t y[S2N_BIGNUM_STATIC 4]);
-extern void bignum_montmul_p256_neon (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S2N_BIGNUM_STATIC 4], uint64_t y[S2N_BIGNUM_STATIC 4]);
 
 // Montgomery multiply, z := (x * y / 2^256) mod p_256k1
 // Inputs x[4], y[4]; output z[4]
@@ -584,15 +572,11 @@ extern void bignum_montmul_p256k1_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t
 // Inputs x[6], y[6]; output z[6]
 extern void bignum_montmul_p384 (uint64_t z[S2N_BIGNUM_STATIC 6], uint64_t x[S2N_BIGNUM_STATIC 6], uint64_t y[S2N_BIGNUM_STATIC 6]);
 extern void bignum_montmul_p384_alt (uint64_t z[S2N_BIGNUM_STATIC 6], uint64_t x[S2N_BIGNUM_STATIC 6], uint64_t y[S2N_BIGNUM_STATIC 6]);
-extern void bignum_montmul_p384_neon(uint64_t z[S2N_BIGNUM_STATIC 6],
-                                     uint64_t x[S2N_BIGNUM_STATIC 6],
-                                     uint64_t y[S2N_BIGNUM_STATIC 6]);
 
 // Montgomery multiply, z := (x * y / 2^576) mod p_521
 // Inputs x[9], y[9]; output z[9]
 extern void bignum_montmul_p521 (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9], uint64_t y[S2N_BIGNUM_STATIC 9]);
 extern void bignum_montmul_p521_alt (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9], uint64_t y[S2N_BIGNUM_STATIC 9]);
-extern void bignum_montmul_p521_neon (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9], uint64_t y[S2N_BIGNUM_STATIC 9]);
 
 // Montgomery multiply, z := (x * y / 2^256) mod p_sm2
 // Inputs x[4], y[4]; output z[4]
@@ -611,7 +595,6 @@ extern void bignum_montsqr (uint64_t k, uint64_t *z, uint64_t *x, uint64_t *m);
 // Input x[4]; output z[4]
 extern void bignum_montsqr_p256 (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S2N_BIGNUM_STATIC 4]);
 extern void bignum_montsqr_p256_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S2N_BIGNUM_STATIC 4]);
-extern void bignum_montsqr_p256_neon (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S2N_BIGNUM_STATIC 4]);
 
 // Montgomery square, z := (x^2 / 2^256) mod p_256k1
 // Input x[4]; output z[4]
@@ -622,14 +605,11 @@ extern void bignum_montsqr_p256k1_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t
 // Input x[6]; output z[6]
 extern void bignum_montsqr_p384 (uint64_t z[S2N_BIGNUM_STATIC 6], uint64_t x[S2N_BIGNUM_STATIC 6]);
 extern void bignum_montsqr_p384_alt (uint64_t z[S2N_BIGNUM_STATIC 6], uint64_t x[S2N_BIGNUM_STATIC 6]);
-extern void bignum_montsqr_p384_neon(uint64_t z[S2N_BIGNUM_STATIC 6],
-                                     uint64_t x[S2N_BIGNUM_STATIC 6]);
 
 // Montgomery square, z := (x^2 / 2^576) mod p_521
 // Input x[9]; output z[9]
 extern void bignum_montsqr_p521 (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9]);
 extern void bignum_montsqr_p521_alt (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9]);
-extern void bignum_montsqr_p521_neon (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9]);
 
 // Montgomery square, z := (x^2 / 2^256) mod p_sm2
 // Input x[4]; output z[4]
@@ -654,8 +634,6 @@ extern void bignum_mul_6_12_alt (uint64_t z[S2N_BIGNUM_STATIC 12], uint64_t x[S2
 // Inputs x[8], y[8]; output z[16]
 extern void bignum_mul_8_16 (uint64_t z[S2N_BIGNUM_STATIC 16], uint64_t x[S2N_BIGNUM_STATIC 8], uint64_t y[S2N_BIGNUM_STATIC 8]);
 extern void bignum_mul_8_16_alt (uint64_t z[S2N_BIGNUM_STATIC 16], uint64_t x[S2N_BIGNUM_STATIC 8], uint64_t y[S2N_BIGNUM_STATIC 8]);
-extern void bignum_mul_8_16_neon (uint64_t z[S2N_BIGNUM_STATIC 16], uint64_t x[S2N_BIGNUM_STATIC 8],
-                                  uint64_t y[S2N_BIGNUM_STATIC 8]);
 
 // Multiply modulo p_25519, z := (x * y) mod p_25519
 // Inputs x[4], y[4]; output z[4]
@@ -671,7 +649,6 @@ extern void bignum_mul_p256k1_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S
 // Inputs x[9], y[9]; output z[9]
 extern void bignum_mul_p521 (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9], uint64_t y[S2N_BIGNUM_STATIC 9]);
 extern void bignum_mul_p521_alt (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9], uint64_t y[S2N_BIGNUM_STATIC 9]);
-extern void bignum_mul_p521_neon(uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9], uint64_t y[S2N_BIGNUM_STATIC 9]);
 
 // Multiply bignum by 10 and add word: z := 10 * z + d
 // Inputs z[k], d; outputs function return (carry) and z[k]
@@ -815,7 +792,6 @@ extern void bignum_sqr_6_12_alt (uint64_t z[S2N_BIGNUM_STATIC 12], uint64_t x[S2
 // Input x[8]; output z[16]
 extern void bignum_sqr_8_16 (uint64_t z[S2N_BIGNUM_STATIC 16], uint64_t x[S2N_BIGNUM_STATIC 8]);
 extern void bignum_sqr_8_16_alt (uint64_t z[S2N_BIGNUM_STATIC 16], uint64_t x[S2N_BIGNUM_STATIC 8]);
-extern void bignum_sqr_8_16_neon (uint64_t z[S2N_BIGNUM_STATIC 16], uint64_t x[S2N_BIGNUM_STATIC 8]);
 
 // Square modulo p_25519, z := (x^2) mod p_25519
 // Input x[4]; output z[4]
@@ -831,7 +807,6 @@ extern void bignum_sqr_p256k1_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t x[S
 // Input x[9]; output z[9]
 extern void bignum_sqr_p521 (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9]);
 extern void bignum_sqr_p521_alt (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9]);
-extern void bignum_sqr_p521_neon (uint64_t z[S2N_BIGNUM_STATIC 9], uint64_t x[S2N_BIGNUM_STATIC 9]);
 
 // Square root modulo p_25519
 // Input x[4]; output function return (Legendre symbol) and z[4]

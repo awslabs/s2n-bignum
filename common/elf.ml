@@ -131,15 +131,12 @@ let load_macho (cputype:int) (file:bytes): bytes =
   for i = 0 to num_load_commands - 1 do
     let cmd_type = get_int_le file !curr_file_offset 4 and
         cmd_size = get_int_le file (4 + !curr_file_offset) 4 in
-    let _ = Printf.printf "load cmd: ofs: %x, type: %x, size: %x\n" !curr_file_offset cmd_type cmd_size in
     let next_file_offset = cmd_size + !curr_file_offset in
 
     (begin match cmd_type with
     | 0x00000019 -> begin (* Segment load (64 bit) *)
-      let _ = print_endline "Segment load (64 bit)" in
       (* Read the following sections. *)
       let num_sections = get_int_le file (64 + !curr_file_offset) 4 in
-      let _ = Printf.printf "num_sections: %d\n" num_sections in
       (* each section info consumes 80 bytes *)
 
       for j = 0 to num_sections - 1 do
