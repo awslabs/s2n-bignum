@@ -426,11 +426,7 @@ let decode = new_definition `!w:int32. decode w =
       else
         let immb = abc in
         let Rn = defgh in
-        let highest_set_bit =
-          if bit 3 immh then 3 else
-          if bit 2 immh then 2 else
-          if bit 1 immh then 1 else 0 in
-        let esize = 8 * (2 EXP highest_set_bit) in
+        let esize = 8 * 2 EXP (3 - word_clz immh) in
         let datasize = if q then 128 else 64 in
         let elements = datasize DIV esize in
         let shift = (esize * 2) - val(word_join immh immb:(7)word) in
@@ -444,11 +440,7 @@ let decode = new_definition `!w:int32. decode w =
       if bit 3 immh /\ ~q then NONE // "UNDEFINED"
       else if ~q then NONE // 64-bit case is unsupported
       else
-        let highest_set_bit =
-          if bit 3 immh then 3 else
-          if bit 2 immh then 2 else
-          if bit 1 immh then 1 else 0 in
-        let esize = 8 * (2 EXP highest_set_bit) in
+        let esize = 8 * 2 EXP (3 - word_clz immh) in
         let datasize = 128 in
         let elements = datasize DIV esize in
         let shift = val (word_join immh immb:(7)word) - esize in
@@ -459,11 +451,7 @@ let decode = new_definition `!w:int32. decode w =
       let Rn = defgh in
       if bit 3 immh /\ ~q then NONE
       else
-        let highest_set_bit =
-          if bit 3 immh then 3 else
-          if bit 2 immh then 2 else
-          if bit 1 immh then 1 else 0 in
-        let esize = 8 * (2 EXP highest_set_bit) in
+        let esize = 8 * 2 EXP (3 - word_clz immh) in
         let datasize = if q then 128 else 64 in
         let shift = (esize * 2) - val (word_join immh immb:(7)word) in
         SOME (arm_SRI_VEC (QREG' Rd) (QREG' Rn) shift esize datasize)
@@ -479,12 +467,12 @@ let decode = new_definition `!w:int32. decode w =
       if rmode0
       // FMOV D[1]
       then if opcode0
-           then SOME (arm_FMOV_ItoF 1 (XREG' Rn) (QREG' Rd))
-           else SOME (arm_FMOV_FtoI 1 (QREG' Rn) (XREG' Rd))
+           then SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 1)
+           else SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 1)
       // FMOV
       else if opcode0
-           then SOME (arm_FMOV_ItoF 0 (XREG' Rn) (QREG' Rd))
-           else SOME (arm_FMOV_FtoI 0 (QREG' Rn) (XREG' Rd))
+           then SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 0)
+           else SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 0)
 
   | [0:1; q; 0b101111:6; sz:2; L:1; M:1; R:4; 0b0100:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MLS (by element)
@@ -621,9 +609,7 @@ let decode = new_definition `!w:int32. decode w =
     else if immh = (word 0b0:(4)word) then NONE // "asimdimm case"
     else if bit 3 immh then NONE // "UNDEFINED"
     else
-      let highest_set_bit =
-        if bit 2 immh then 2 else if bit 1 immh then 1 else 0 in
-      let esize = 8 * (2 EXP highest_set_bit) in
+      let esize = 8 * 2 EXP (3 - word_clz immh) in
       // datasize is 64, part is 0
       let elements = 64 DIV esize in
       let shift = (2 * esize) - val(word_join immh immb: (7)word) in

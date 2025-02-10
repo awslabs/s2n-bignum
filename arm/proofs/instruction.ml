@@ -1181,7 +1181,7 @@ let arm_MOVZ = define
 (* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged
   due to type resolution failure *)
 let arm_FMOV_FtoI = define
- `arm_FMOV_FtoI (part:num) Rn Rd =
+ `arm_FMOV_FtoI Rd Rn (part:num) =
     \s. let n:(128)word = read Rn s in
         let intval:(64)word =
           if part = 0
@@ -1190,13 +1190,12 @@ let arm_FMOV_FtoI = define
         (Rd := intval) s
     `;;
 let arm_FMOV_ItoF = define
- `arm_FMOV_ItoF (part:num) Rn Rd =
+ `arm_FMOV_ItoF Rd Rn (part:num) =
     \s. let fltval:(64)word = read Rn s in
         let d:(128)word = read Rd s in
         if part = 0
         then (Rd := word_zx fltval:(128)word) s
-        else (Rd := (word_join:(64)word->(64)word->(128)word)
-                      fltval (word_subword d (0, 64))) s
+        else (Rd := word_insert d (64, 64) fltval) s
     `;;
 
 let arm_MSUB = define
