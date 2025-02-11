@@ -1177,6 +1177,27 @@ let arm_MOVZ = define
  `arm_MOVZ (Rd:(armstate,N word)component) (imm:int16) pos =
     Rd := word (val imm * 2 EXP pos)`;;
 
+(* Only double precision is implemented *)
+(* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged
+  due to type resolution failure *)
+let arm_FMOV_FtoI = define
+ `arm_FMOV_FtoI Rd Rn (part:num) =
+    \s. let n:(128)word = read Rn s in
+        let intval:(64)word =
+          if part = 0
+          then word_subword n (0, 64)
+          else word_subword n (64, 64) in
+        (Rd := intval) s
+    `;;
+let arm_FMOV_ItoF = define
+ `arm_FMOV_ItoF Rd Rn (part:num) =
+    \s. let fltval:(64)word = read Rn s in
+        let d:(128)word = read Rd s in
+        if part = 0
+        then (Rd := word_zx fltval:(128)word) s
+        else (Rd := word_insert d (64, 64) fltval) s
+    `;;
+
 let arm_MSUB = define
  `arm_MSUB Rd Rn Rm Ra =
     \s. let n:N word = read Rn s
@@ -1369,6 +1390,40 @@ let arm_SLI_VEC = define
           else simd16 (\ni di. word_or
               (word_shl ni shiftamnt) (word_and di (word mask))) n d in
         (Rd := d) s`;;
+
+(* SRI (vector) *)
+let arm_SRI_VEC = define
+ `arm_SRI_VEC Rd Rn shiftamnt esize datasize =
+   \s. let n:(128)word = read Rn s in
+       let d:(128)word = read Rd s in
+       let mask = (2 EXP (esize - shiftamnt)) - 1 in
+       if datasize = 128 then
+         let d:(128)word = if esize = 64 then
+             simd2 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
+           else if esize = 32 then
+             simd4 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
+           else if esize = 16 then
+             simd8 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d
+           else
+             simd16 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) n d in
+         (Rd := d) s
+       else
+         let nd:(64)word = word_subword n (0, 64) in
+         let dd:(64)word = word_subword d (0, 64) in
+         let dd:(64)word = if esize = 32 then
+             simd2 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) nd dd
+           else if esize = 16 then
+             simd4 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) nd dd
+           else
+             simd8 (\ni di. word_or
+               (word_ushr ni shiftamnt) (word_and di (word_not (word mask)))) nd dd in
+         (Rd := word_zx dd:(128)word) s`;;
 
 let arm_SHRN = define
  `arm_SHRN Rd Rn amnt esize = // esize is Rd's element size
@@ -2108,6 +2163,39 @@ let arm_ST2 = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+let arm_LD1R = define
+  `arm_LD1R (Rt:(armstate,(128)word)component) Rn off esize datasize =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           (if datasize = 128 then
+              let (replicated:128 word) =
+                (if esize = 64 then
+                  word_duplicate ((read (memory :> wbytes addr) s):(64)word)
+                else if esize = 32 then
+                  word_duplicate ((read (memory :> wbytes addr) s):(32)word)
+                else if esize = 16 then
+                  word_duplicate ((read (memory :> wbytes addr) s):(16)word)
+                else
+                  word_duplicate ((read (memory :> wbytes addr) s):(8)word)) in
+              (Rt := replicated)
+            else
+              let (replicated:64 word) =
+                (if esize = 64 then read (memory :> wbytes addr) s
+                else if esize = 32 then
+                  word_duplicate ((read (memory :> wbytes addr) s):(32)word)
+                else if esize = 16 then
+                  word_duplicate ((read (memory :> wbytes addr) s):(16)word)
+                else
+                  word_duplicate ((read (memory :> wbytes addr) s):(8)word)) in
+              (Rt := (word_zx replicated):(128)word)) ,,
+            (if offset_writesback off
+             then Rn := word_add base (offset_writeback off)
+             else (=))
+         else ASSIGNS entirety) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* SHA-related SIMD operations                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -2659,6 +2747,7 @@ let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
 let arm_SSHR_VEC_ALT =   EXPAND_SIMD_RULE arm_SSHR_VEC;;
 let arm_SHRN_ALT =       EXPAND_SIMD_RULE arm_SHRN;;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
+let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
@@ -2702,7 +2791,7 @@ let ARM_OPERATION_CLAUSES =
        arm_CSINC; arm_CSINV; arm_CSNEG;
        arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR3; arm_EXT; arm_EXTR;
-       arm_FCSEL; arm_INS; arm_INS_GEN;
+       arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
        arm_MADD;
        arm_MLS_VEC_ALT;
@@ -2713,7 +2802,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
-       arm_SLI_VEC_ALT; arm_SMULH;
+       arm_SLI_VEC_ALT; arm_SRI_VEC_ALT; arm_SMULH;
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
@@ -2748,4 +2837,4 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
-       arm_LD2_ALT; arm_ST2_ALT];;
+       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R];;
