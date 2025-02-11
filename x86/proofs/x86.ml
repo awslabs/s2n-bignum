@@ -7,7 +7,7 @@
 (* Simplified model of x86 semantics.                                        *)
 (* ========================================================================= *)
 
-let x86_print_log = ref false;;
+let x86_print_log = ref true;;
 
 (* ------------------------------------------------------------------------- *)
 (* Size in bits corresponding to the tags.                                   *)
