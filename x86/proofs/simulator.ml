@@ -340,7 +340,7 @@ let tac_before memop =
    `read RSP s = stackpointer /\ P (read RSP s) s <=>
     read RSP s = stackpointer /\ P stackpointer s`] THEN
   ENSURES_INIT_TAC "s0" THEN
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (1--4) else ALL_TAC)
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC)
 and tac_main memop = (if memop then X86_VSTEPS_TAC else X86_STEPS_TAC)
 and tac_after memop =
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
@@ -461,13 +461,17 @@ let mem_iclasses =
     [[0x48; 0x89; 0xd1]; (* mov rcx, rdx *)
      [0x48; 0x8d; 0x54; 0x24; 0x03]; (*  lea rdx, [rsp+3] *)
      [0x48; 0x8b; 0x02]; (* mov rax, [rdx] *)
-     [0x48; 0x89; 0xca] (* mov rbx, rcx *)
+     [0x48; 0x89; 0xca] (* mov rdx, rcx *)
      ];
     [[0x48; 0x89; 0xd1]; (* mov rcx, rdx *)
      [0x48; 0x8d; 0x54; 0x24; 0x03]; (*  lea rdx, [rsp+3] *)
      [0x48; 0x8b; 0x02]; (* mov [rdx], rax *)
-     [0x48; 0x89; 0xca] (* mov rbx, rcx *)
+     [0x48; 0x89; 0xca] (* mov rdx, rcx *)
      ];
+    [[0x48; 0x83; 0xc4; 0x10]; (* add rsp, 16 *)
+     [0x50]; (* push rax *)
+     [0x48; 0x83; 0xec; 0x08] (* sub rsp, 8 *)
+    ]
   ];;
 
 
