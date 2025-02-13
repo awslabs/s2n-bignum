@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(*         Relational Hoare Logic for proving program equivalence.           *)
+(*         Relational Hoare Logic for proving program relation.              *)
 (* ========================================================================= *)
 
 (**** Proofs in this file can be easily converted to the e-g form.
@@ -13,7 +13,6 @@
  ****)
 
 needs "common/relational_n.ml";;
-
 
 (* ------------------------------------------------------------------------- *)
 (* A relational hoare triple 'ensures2'. It is defined using 'eventually_n'. *)
@@ -796,105 +795,6 @@ let APPLY_IF (checker:term->bool) (t:tactic) =
   W (fun (asl,g) ->
     if checker g then t else ALL_TAC);;
 
-
-(* ------------------------------------------------------------------------- *)
-(* Useful tactics for relational reasoning, esp. equivalence checking.       *)
-(* ------------------------------------------------------------------------- *)
-
-(* A variant of DISCARD_OLDSTATE_TAC which receives a list of state names
-   to preserve, 'ss'.
-   If clean_old_abbrevs is true, transitively remove assumptions that
-   were using the removed variables (rhs of the removed assumptions) *)
-let DISCARD_OLDSTATE_AGGRESSIVELY_TAC ss (clean_old_abbrevs:bool) =
-  let rec unbound_statevars_of_read bound_svars tm =
-    match tm with
-      Comb(Comb(Const("read",_),cmp),s) ->
-      let sname = name_of s in
-      if mem sname bound_svars then [] else [sname]
-    | Comb(a,b) -> union (unbound_statevars_of_read bound_svars a)
-                         (unbound_statevars_of_read bound_svars b)
-    | Abs(v,t) ->
-      let vname = name_of v in
-      unbound_statevars_of_read (vname::bound_svars) t
-    | _ -> [] in
-  let is_read (tm:term): bool =
-    match tm with
-    Comb(Comb(Const("read",_),_),_) -> true
-    | _ -> false in
-  let old_abbrevs: term list ref = ref [] in
-  (* Erase all 'read c s' equations from assumptions whose s does not
-     belong to ss. *)
-  DISCARD_ASSUMPTIONS_TAC(
-    fun thm ->
-      let us = unbound_statevars_of_read [] (concl thm) in
-      if us = [] || subset us ss then false
-      else
-        (* Accumulate rhses of old equalities that are abbreviations *)
-        ((if clean_old_abbrevs && is_eq (concl thm) then
-          let lhs, rhs = dest_eq (concl thm) in
-          if is_var rhs then old_abbrevs := rhs::!old_abbrevs
-          else ()
-        else (); true))) THEN
-  (if not clean_old_abbrevs then ALL_TAC else
-   (* Transitively remove assumptions that use variables in old_abbrevs. *)
-   W(fun (_,_) ->
-    MAP_EVERY (fun (old_abbrev_var:term) ->
-      fun (asl,g) ->
-        (* If the old abbrev var is used by another 'read', don't remove it. *)
-        if List.exists (fun _,asm ->
-              let asm = concl asm in
-              is_eq asm && is_read (fst (dest_eq asm)) && vfree_in old_abbrev_var asm)
-            asl then
-          ALL_TAC (asl,g)
-        else
-          DISCARD_ASSUMPTIONS_TAC(fun thm -> vfree_in old_abbrev_var (concl thm)) (asl,g))
-      !old_abbrevs));;
-
-(* Assumption stash/recovery tactic. *)
-let stashed_asms: (string * thm) list list ref = ref [];;
-
-let reads_state (c:term) (store_state_name:string ref): bool =
-  match c with
-  | Comb (Comb (Const ("=",_),
-      Comb (Comb (Const ("read", _),_), Var (stname, _))),
-      _) -> store_state_name := stname; true
-  | Comb (Comb (Const
-      ("read", _),_),
-      Var (stname, _)) ->
-    (* flags are boolean *)
-    store_state_name := stname; true
-  | Comb (Const ("~", _),
-      Comb
-        (Comb (Const ("read", _),
-          _), Var (stname, _))) ->
-    store_state_name := stname; true
-  | Comb (Comb (Comb
-    (Const ("aligned_bytes_loaded",_), Var (stname, _)),_),_) ->
-    store_state_name := stname; true
-  | Comb (Comb (Comb
-    (Const ("bytes_loaded",_), Var (stname, _)),_),_) ->
-    store_state_name := stname; true
-  | _ ->
-    maychange_term c &&
-      (let s' = snd (dest_comb c) in is_var s' &&
-        (store_state_name := name_of s'; true));;
-
-(* Stash `read e s = r`, `aligned_bytes_loaded s ...` and `(MAYCHANGE ...) ... s`
-   where s is a member of stnames. *)
-let STASH_ASMS_OF_READ_STATES (stnames:string list): tactic =
-  fun (asl,g) ->
-    let matched_asms, others = List.partition (fun (name,th) ->
-        let s = ref "" in
-        reads_state (concl th) s && mem !s stnames)
-      asl in
-    stashed_asms := matched_asms::!stashed_asms;
-    ALL_TAC (others,g);;
-
-let RECOVER_ASMS_OF_READ_STATES: tactic =
-  fun (asl,g) ->
-    let a = List.hd !stashed_asms in
-    stashed_asms := List.tl !stashed_asms;
-    ALL_TAC (asl @ a, g);;
 
 (* ------------------------------------------------------------------------- *)
 (* A useful tactic that proves a conjunction of MAYCHANGEs.                  *)

@@ -16,5 +16,7 @@ To verify programs in x86, see `x86/tutorial`.
 ### Relational reasoning
 
 1. `rel_simp.ml`: Proving equivalence of two simple programs.
-2. `rel_loop.ml`: Proving equivalence of two simple loops.
-3. `rel_veceq.ml`: Proving equivalence of scalar vs. vectorized 128x128->256-bit squaring.
+2. `rel_equivtac.ml`: Proving equivalence of two programs that have small differences.
+3. `rel_reordertac.ml`: Proving equivalence of two programs where the second one has instructions reordered from that of the first one.
+4. `rel_loop.ml`: Proving equivalence of two simple loops.
+5. `rel_veceq.ml`: Proving equivalence of scalar vs. vectorized 128x128->256-bit squaring.
