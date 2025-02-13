@@ -492,6 +492,8 @@ tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(
 tutorial/rel_loop.native: tutorial/rel_loop2.o
 tutorial/rel_simp.native: tutorial/rel_simp2.o
 tutorial/rel_veceq.native: tutorial/rel_veceq2.o
+tutorial/rel_equivtac.native: tutoria/rel_equivtac2.o
+tutorial/rel_reordertac.native: tutoria/rel_reordertac2.o
 
 
 unopt: $(UNOPT_OBJ)
