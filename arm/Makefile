@@ -403,7 +403,10 @@ UNOPT_OBJ = p256/unopt/bignum_montmul_p256_base.o \
             fastmul/unopt/bignum_mul_8_16_base.o \
             fastmul/unopt/bignum_sqr_8_16_base.o
 
-OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
+AES_XTS_OBJ = aes-xts/aes-xts-armv8.o
+
+# OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ)
+OBJ = $(AES_XTS_OBJ)
 
 # Tutorial assembly files
 
