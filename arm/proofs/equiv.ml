@@ -808,10 +808,6 @@ let map_output_regs
       if name_of f <> "arm_decode" then failwith "Unknown inst" else
       let name_right,comp_updates_right = get_inst_info (last args) in
 
-      let find_index f l =
-        let rec fn l i =
-          match l with | [] -> None | h::t -> if f h then Some i else fn t (1+i) in
-        fn l 0 in
       let update_idx = find_index (fun l,_ -> l = output_reg_right) comp_updates_right in
 
       match update_idx with
