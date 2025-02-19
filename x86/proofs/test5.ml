@@ -156,3 +156,5 @@ let result =
   | _,[],_ -> 1 in
 let _ = print_int result in
 result
+
+let x = `(word 0)`;;
