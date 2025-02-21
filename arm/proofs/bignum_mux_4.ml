@@ -55,7 +55,7 @@ let BIGNUM_MUX_4_CORRECT = prove
            (\s. read PC s = word (pc + 0x44) /\
                 bignum_from_memory (z,4) s =
                   if ~(p = word 0) then m else n)
-          (MAYCHANGE [PC; X0; X4] ,, MAYCHANGE SOME_FLAGS ,,
+          (MAYCHANGE [PC; X0; X4] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`p:int64`; `z:int64`; `x:int64`; `y:int64`;

@@ -115,7 +115,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
                        (mod (2 EXP (64 * val k)))))
              (MAYCHANGE [PC; X0; X1; X3; X4; X5; X6; X7; X8; X9] ,,
               MAYCHANGE [memory :> bytes(z,8 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`] THEN
   MAP_EVERY X_GEN_TAC [`m:num`; `pc:num`] THEN
   REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN

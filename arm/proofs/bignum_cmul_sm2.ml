@@ -83,7 +83,7 @@ let BIGNUM_CMUL_SM2_CORRECT = time prove
                   (a < p_sm2
                    ==> bignum_from_memory (z,4) s = (val c * a) MOD p_sm2))
           (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `c:int64`; `x:int64`; `a:num`; `pc:num`] THEN

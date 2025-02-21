@@ -1690,7 +1690,7 @@ let BIGNUM_EMONTREDC_8N_CDIFF_PRECALCLOOP = prove(
                     get_m_precalc mn (val k DIV 4 - 1))
           (MAYCHANGE [PC; X2; X4; X5; X6; X7; X24; X25; X27; X28; X29; X30] ,,
             MAYCHANGE [memory :> bytes (m_precalc, 8 * 12 * (val k DIV 4 - 1))] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   REWRITE_TAC(map (snd o snd) bignum_emontredc_8n_cdiff_labels) THEN
   REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES;SOME_FLAGS;
@@ -8714,7 +8714,7 @@ let BIGNUM_EMONTREDC_8N_CDIFF_CORE_CORRECT = prove(
           MAYCHANGE [memory :> bytes(z,8 * 2 * k)] ,,
           MAYCHANGE [memory :> bytes(sp,128)] ,,
           MAYCHANGE [memory :> bytes(m_precalc,8 * 12 * (k DIV 4 - 1))] ,,
-          MAYCHANGE SOME_FLAGS)`,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   REWRITE_TAC[NONOVERLAPPING_CLAUSES;ALL;SOME_FLAGS;
       fst BIGNUM_EMONTREDC_8N_CDIFF_EXEC] THEN
@@ -8847,7 +8847,7 @@ let BIGNUM_EMONTREDC_8N_CDIFF_CORRECT = time prove
             MAYCHANGE [memory :> bytes(z,8 * 2 * val k)] ,,
             MAYCHANGE [memory :> bytes(sp,128)] ,,
             MAYCHANGE [memory :> bytes(m_precalc,8 * 12 * (val k DIV 4 - 1))] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`; `m_precalc:int64`] THEN
   W64_GEN_TAC `w:num` THEN

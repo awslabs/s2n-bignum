@@ -1303,7 +1303,7 @@ let LOCAL_SQR_P256K1_TAC =
                       X10; X11; X12; X13; X14; X15; X16] ,,
             MAYCHANGE
              [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-            MAYCHANGE SOME_FLAGS)`
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ENSURES_INIT_TAC "s0" THEN
@@ -1662,7 +1662,7 @@ let LOCAL_MUL_P256K1_TAC =
                         X10; X11; X12; X13; X14; X15; X16] ,,
               MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
@@ -2050,7 +2050,7 @@ let LOCAL_ROUGHSQR_P256K1_TAC =
                      X10; X11; X12; X13; X14; X15; X16] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 5)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ENSURES_INIT_TAC "s0" THEN
@@ -2330,7 +2330,7 @@ let LOCAL_ROUGHMUL_P256K1_TAC =
                      X10; X11; X12; X13; X14; X15; X16] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 5)] ,,
-            MAYCHANGE SOME_FLAGS)`
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
@@ -2637,7 +2637,7 @@ let LOCAL_WEAKDOUBLE_P256K1_TAC =
            (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5] ,,
             MAYCHANGE
              [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-            MAYCHANGE SOME_FLAGS)`
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ENSURES_INIT_TAC "s0" THEN
@@ -2747,7 +2747,7 @@ let LOCAL_CMSUBC9_P256K1_TAC =
                      X10; X11; X12; X13; X14] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -2967,7 +2967,7 @@ let LOCAL_CMSUB38_P256K1_TAC =
                      X10; X11; X12; X13; X14] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -3203,7 +3203,7 @@ let LOCAL_CMSUB41_P256K1_TAC =
          (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -3381,7 +3381,7 @@ let SECP256K1_JDOUBLE_CORRECT = time prove
                             (bignum_triple_from_memory(p3,4) s))
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                       X11; X12; X13; X14; X15; X16; X17; X19; X20] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(stackpointer,384)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN

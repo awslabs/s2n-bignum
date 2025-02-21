@@ -62,7 +62,7 @@ let BIGNUM_HALF_P384_CORRECT = time prove
                    ==> bignum_from_memory (z,6) s =
                        (inverse_mod p_384 2 * n) MOD p_384))
           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN

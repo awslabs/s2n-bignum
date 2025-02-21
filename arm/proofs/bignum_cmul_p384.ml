@@ -97,7 +97,7 @@ let BIGNUM_CMUL_P384_CORRECT = time prove
                    ==> bignum_from_memory (z,6) s = (val c * a) MOD p_384))
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8;
                          X9; X10; X11; X12; X13] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,6)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `c:int64`; `x:int64`; `a:num`; `pc:num`] THEN

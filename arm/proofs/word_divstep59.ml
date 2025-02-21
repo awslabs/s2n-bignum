@@ -1023,7 +1023,7 @@ let WORD_DIVSTEP59_CORRECT = prove
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X7; X8; X9;
                       X10; X11; X12; X13; X14; X15; X16] ,,
            MAYCHANGE [memory :> bytes(m,32)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   X_GEN_TAC `m:int64` THEN
   MAP_EVERY
     (fun t -> GEN_REWRITE_TAC I [FORALL_IVAL_GEN] THEN

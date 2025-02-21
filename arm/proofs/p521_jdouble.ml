@@ -1857,7 +1857,7 @@ let LOCAL_SQR_P521_CORRECT =
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                          X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9)])`,
     SUBGOAL_THEN
       `bignum_sqr_p521_core_mc =
@@ -1889,7 +1889,7 @@ let LOCAL_SQR_P521_CORRECT =
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                          X14; X15; X16; X17] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9);
                          memory :> bytes(word_sub stackpointer (word 48),48)])`,
     ARM_ADD_RETURN_STACK_TAC P521_JDOUBLE_EXEC
@@ -1927,7 +1927,7 @@ let LOCAL_MUL_P521_CORRECT =
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                          X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25; X26] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9); memory :> bytes(stackpointer,80)])`,
     SUBGOAL_THEN
       `bignum_mul_p521_core_mc =
@@ -1960,7 +1960,7 @@ let LOCAL_MUL_P521_CORRECT =
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                          X14; X15; X16; X17] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9);
                          memory :> bytes(word_sub stackpointer (word 144),144)])`,
     ARM_ADD_RETURN_STACK_TAC P521_JDOUBLE_EXEC
@@ -2006,7 +2006,7 @@ let LOCAL_ADD_P521_TAC =
          (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;fst P521_JDOUBLE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -2113,7 +2113,7 @@ let LOCAL_SUB_P521_TAC =
          (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13] ,,
           MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst P521_JDOUBLE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -2201,7 +2201,7 @@ let LOCAL_CMSUBC9_P521_TAC =
                         X19; X20; X21; X22; X23] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-             MAYCHANGE SOME_FLAGS)`
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst P521_JDOUBLE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -2469,7 +2469,7 @@ let LOCAL_CMSUB41_P521_TAC =
                         X10; X11; X12; X13; X14; X15] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-             MAYCHANGE SOME_FLAGS)`
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst P521_JDOUBLE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -2775,7 +2775,7 @@ let LOCAL_CMSUB38_P521_TAC =
                         X19; X20; X21; X22; X23] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-             MAYCHANGE SOME_FLAGS)`
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst P521_JDOUBLE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -3122,7 +3122,7 @@ let P521_JDOUBLE_CORRECT = time prove
                       X11; X12; X13; X14; X15; X16; X17; X19; X20;
                       X21; X22; X23; X24; X25; X26; X27; X28; X30] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(stackpointer,656)])`,
   REWRITE_TAC[FORALL_PAIR_THM; fst P521_JDOUBLE_EXEC] THEN
