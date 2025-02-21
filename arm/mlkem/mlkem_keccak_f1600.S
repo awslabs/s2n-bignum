@@ -6,19 +6,23 @@
 
 // ----------------------------------------------------------------------------
 // Keccak-f1600 permutation for SHA3
-// Input a[25]; output a[25]
+// Input a[25], rc[24]; output a[25]
 //
-// Thinking of the input and output array as a row-major flattening of a
+// Thinking of the input/output array a as a row-major flattening of a
 // 5x5 matrix of 64-bit words, this performs the Keccak-f1600 permutation,
-// all 24 rounds with the distinct round constants for each one. See:
+// all 24 rounds with the distinct round constants rc[i] for each one. For
+// correct operation, the input pointer rc should point at the standard
+// round constants as in the specification:
+//
+//   https://keccak.team/keccak_specs_summary.html#roundConstants
+//
+// This operation is at the core of SHA3 and is fully specified here:
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
 //
-// This operation is at the core of SHA3.
+// extern void mlkem_keccak_f1600(uint64_t a[25],uint64_t rc[24]);
 //
-// extern void mlkem_keccak_f1600(uint64_t a[25]);
-//
-// Standard ARM ABI: X0 = a
+// Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
@@ -32,14 +36,10 @@
 //
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/fips202/native/aarch64/src/keccak_f1600_x1_scalar_asm_opt.S
 //
-// The only changes are
-//
-// * Round constants are placed at the end of the text section
-//
-// * Simple 64-bit addressing is used once in place of [x9, w25, uxtw #3]
+// The only change is the use of simple 64-bit addressing in place of
+// the unnecessary down-and-upcasting arising from [x9, w25, uxtw #3]
 
 S2N_BN_SYMBOL(mlkem_keccak_f1600):
-
         sub     sp, sp, #0x80
         stp     x19, x20, [sp, #32]
         stp     x21, x22, [sp, #48]
@@ -48,9 +48,8 @@ S2N_BN_SYMBOL(mlkem_keccak_f1600):
         stp     x27, x28, [sp, #96]
         stp     x29, x30, [sp, #112]
 
-initial:
-
-        adr     x26, round_constants
+mlkem_keccak_f1600_initial:
+        mov     x26, x1
         str     x26, [sp, #8]
         ldp     x1, x6, [x0]
         ldp     x11, x16, [x0, #16]
@@ -179,7 +178,7 @@ initial:
 // shifted operands, the total number of rotation instructions is reduced
 // relative to a naive implementation.
 
-loop:
+mlkem_keccak_f1600_loop:
         eor     x0, x15, x11, ror #52
         eor     x0, x0, x13, ror #48
         eor     x26, x8, x9, ror #57
@@ -292,7 +291,7 @@ loop:
         bic     x3, x0, x30, ror #5
         eor     x23, x3, x26, ror #52
         eor     x3, x29, x30, ror #24
-        ble     loop
+        ble     mlkem_keccak_f1600_loop
 
 // Final rotations
 
@@ -341,32 +340,3 @@ loop:
         ldp     x29, x30, [sp, #112]
         add     sp, sp, #0x80
         ret
-
-// Round constants RC[i]
-// https://keccak.team/keccak_specs_summary.html#roundConstants
-
-round_constants:
-    .quad 0x0000000000000001
-    .quad 0x0000000000008082
-    .quad 0x800000000000808a
-    .quad 0x8000000080008000
-    .quad 0x000000000000808b
-    .quad 0x0000000080000001
-    .quad 0x8000000080008081
-    .quad 0x8000000000008009
-    .quad 0x000000000000008a
-    .quad 0x0000000000000088
-    .quad 0x0000000080008009
-    .quad 0x000000008000000a
-    .quad 0x000000008000808b
-    .quad 0x800000000000008b
-    .quad 0x8000000000008089
-    .quad 0x8000000000008003
-    .quad 0x8000000000008002
-    .quad 0x8000000000000080
-    .quad 0x000000000000800a
-    .quad 0x800000008000000a
-    .quad 0x8000000080008081
-    .quad 0x8000000000008080
-    .quad 0x0000000080000001
-    .quad 0x8000000080008008

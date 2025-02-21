@@ -844,7 +844,7 @@ void call_bignum_copy_row_from_table_32__32(void) \
 void call_bignum_emontredc_8n_cdiff__32(void) repeat(bignum_emontredc_8n_cdiff(32,b0,b1,b2[0],b3))
 
 void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
-void call_mlkem_keccak_f1600(void) repeat(mlkem_keccak_f1600(b0))
+void call_mlkem_keccak_f1600(void) repeat(mlkem_keccak_f1600(b0,b1))
 void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 
 #endif

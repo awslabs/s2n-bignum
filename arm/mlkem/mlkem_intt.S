@@ -134,7 +134,7 @@ scale_start:
         srshr   v14.8h, v1.8h, #11
         sub     x4, x4, #0x1
 
-layer4567_start:
+layer3456_start:
         mls     v29.8h, v14.8h, v7.h[0]
         ldr     q3, [x3, #96]
         ldr     q30, [x3, #112]
@@ -216,7 +216,7 @@ layer4567_start:
         sqdmulh v27.8h, v9.8h, v7.h[1]
         stur    q31, [x3, #-32]
         sub     x4, x4, #0x1
-        cbnz    x4, layer4567_start
+        cbnz    x4, layer3456_start
 
         mls     v29.8h, v14.8h, v7.h[0]
         srshr   v1.8h, v27.8h, #11
@@ -271,7 +271,7 @@ layer4567_start:
         mul     v21.8h, v21.8h, v1.h[0]
         sub     x4, x4, #0x1
 
-layer123_start:
+layer012_start:
         mls     v14.8h, v27.8h, v7.h[0]
         ldr     q15, [x0, #16]
         ldr     q9, [x0, #208]
@@ -349,7 +349,7 @@ layer123_start:
         str     q11, [x0, #304]
         sub     v13.8h, v2.8h, v4.8h
         sub     x4, x4, #0x1
-        cbnz    x4, layer123_start
+        cbnz    x4, layer012_start
 
         mls     v21.8h, v31.8h, v7.h[0]
         add     v22.8h, v2.8h, v4.8h

@@ -11225,7 +11225,7 @@ int test_mlkem_keccak_f1600(void)
    { random_bignum(25,a);
      for (i = 0; i < 25; ++i) c[i] = a[i];
      reference_keccak_f1600(b,a);
-     mlkem_keccak_f1600(c);
+     mlkem_keccak_f1600(c,keccak_RC);
      for (i = 0; i < 25; ++i)
       { if (b[i] != c[i])
          { printf("Error in keccak_f1600 element i = %"PRIu64"; "
