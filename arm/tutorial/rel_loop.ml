@@ -57,8 +57,8 @@ let LOOP_EQUIV = prove(
                   (?k. read X2 s1 = k /\ read X2 s2 = k))
       // State components that may change.
       (\(s1,s2) (s1',s2').
-        (MAYCHANGE [PC;X0;X2] ,, MAYCHANGE SOME_FLAGS) s1 s1' /\
-        (MAYCHANGE [PC;X0;X2] ,, MAYCHANGE SOME_FLAGS) s2 s2')
+        (MAYCHANGE [PC;X0;X2] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]) s1 s1' /\
+        (MAYCHANGE [PC;X0;X2] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]) s2 s2')
       // The number of small steps of the 'left' program and 'right' program.
       (\s. 4 * n - 1) (\s. 5 * n - 1)`,
 

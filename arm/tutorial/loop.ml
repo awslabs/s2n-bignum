@@ -48,7 +48,9 @@ let loop_SPEC = prove(
     (\s. read PC s = word retpc /\
          read X0 s = word 20)
     // Registers (and memory locations) that may change after execution
-    (MAYCHANGE [PC;X0;X1] ,, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [PC;X0;X1] ,, MAYCHANGE SOME_FLAGS ,,
+     // Branch instructions raise observable microarchitectural events!
+     MAYCHANGE [events])`,
   (* Unravel ARM flag registers! *)
   REWRITE_TAC[SOME_FLAGS] THEN
   REPEAT STRIP_TAC THEN
