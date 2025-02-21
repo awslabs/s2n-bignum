@@ -319,7 +319,27 @@ let cosimulate_ldst_12() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
-let memclasses = [cosimulate_ldst_12];;
+let cosimulate_ld1r() =
+  let q = Random.int 2
+  and size = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let stackoff =
+    if rn = 31 then Random.int 14 * 16
+    else Random.int 224 in
+  let stackoff' = (Int.shift_left 8 size)/8 + stackoff in
+  let code =
+    pow2 30 */ num q +/
+    pow2 12 */ num 0b001101110111111100 +/
+    pow2 10 */ num size +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff']
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+let memclasses = [cosimulate_ldst_12; cosimulate_ld1r];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in

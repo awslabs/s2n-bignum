@@ -136,6 +136,10 @@ let iclasses =
   "00011110001xxxxxxxxx11xxxxxxxxxx";
   "00011110011xxxxxxxxx11xxxxxxxxxx";
 
+  (*** FMOV, double precision ***)
+  "100111101010111x000000xxxxxxxxxx";
+  "100111100110011x000000xxxxxxxxxx";
+
   (*** INS, or MOV (element) ***)
   "01101110000xxxx10xxxx1xxxxxxxxxx";
   "01101110000xxx100xxxx1xxxxxxxxxx";
@@ -253,6 +257,12 @@ let iclasses =
   "01101111001xxxxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
   "011011110001xxxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
   "0110111100001xxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
+
+  (*** SRI (vector) ***)
+  "0x10111101xxxxxx010001xxxxxxxxxx"; (* immh!=0 *)
+  "0x101111001xxxxx010001xxxxxxxxxx"; (* immh!=0 *)
+  "0x1011110001xxxx010001xxxxxxxxxx"; (* immh!=0 *)
+  "0x10111100001xxx010001xxxxxxxxxx"; (* immh!=0 *)
 
   (*** SUB ***)
   "01101110xx1xxxxx100001xxxxxxxxxx"; (* 128 bits *)
@@ -418,6 +428,9 @@ let check_insns () =
 
     (*** st2 (2 register, Post-immediate offset) ***)
     "0x001100100111111000xxxxxxxxxxxx";
+
+    (*** ld1r (post immediate ofs) ***)
+    "0x001101110111111100xxxxxxxxxxxx";
 
     (*** stp ***)
     "x010100010xxxxxxxxxxxxxxxxxxxxxx";
