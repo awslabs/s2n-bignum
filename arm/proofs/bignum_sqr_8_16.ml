@@ -395,7 +395,7 @@ let BIGNUM_SQR_8_16_UNOPT_CORE_CORRECT = prove
            (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                        X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
               fst BIGNUM_SQR_8_16_UNOPT_CORE_EXEC] THEN
@@ -507,7 +507,7 @@ let BIGNUM_SQR_8_16_UNOPT_CORRECT = prove(
            (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                        X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_SQR_8_16_UNOPT_CORE_CORRECT
       bignum_sqr_8_16_unopt_core_mc_def
       [fst BIGNUM_SQR_8_16_UNOPT_CORE_EXEC;fst BIGNUM_SQR_8_16_UNOPT_EXEC]);;
@@ -1095,14 +1095,14 @@ let equiv_goal = mk_equiv_statement_simple
   `MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
               X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
    MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-   MAYCHANGE SOME_FLAGS`
+   MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`
   bignum_sqr_8_16_core_mc
   `MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
               X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
    MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
               Q21; Q22; Q23; Q30] ,,
    MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-   MAYCHANGE SOME_FLAGS`;;
+   MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`;;
 
 let _org_extra_word_CONV = !extra_word_CONV;;
 extra_word_CONV :=
@@ -1197,7 +1197,7 @@ let BIGNUM_SQR_8_16_CORE_CORRECT = prove(
              MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
                         Q21; Q22; Q23; Q30] ,,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   let mc_lengths_th =
     map fst [BIGNUM_SQR_8_16_UNOPT_CORE_EXEC; BIGNUM_SQR_8_16_CORE_EXEC] in
@@ -1274,7 +1274,7 @@ let BIGNUM_SQR_8_16_CORRECT = prove(
              MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
                         Q21; Q22; Q23; Q30] ,,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_SQR_8_16_CORE_CORRECT
       bignum_sqr_8_16_core_mc_def

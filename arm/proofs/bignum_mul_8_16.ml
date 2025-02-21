@@ -567,7 +567,7 @@ let BIGNUM_MUL_8_16_UNOPT_CORE_CORRECT = prove
                         X9; X10; X11; X12; X13; X14; X15; X16;
                         X17; X19; X20; X21; X22; X23; X24] ,,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; fst BIGNUM_MUL_8_16_UNOPT_CORE_EXEC] THEN
@@ -802,7 +802,7 @@ let BIGNUM_MUL_8_16_UNOPT_CORRECT = prove(
                         X9; X10; X11; X12; X13; X14; X15; X16;
                         X17; X19; X20; X21; X22; X23; X24] ,,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_MUL_8_16_UNOPT_CORE_CORRECT
       bignum_mul_8_16_unopt_core_mc_def
       [fst BIGNUM_MUL_8_16_UNOPT_EXEC;fst BIGNUM_MUL_8_16_UNOPT_CORE_EXEC]);;
@@ -1372,14 +1372,14 @@ let equiv_goal = mk_equiv_statement_simple
               X9; X10; X11; X12; X13; X14; X15; X16;
               X17; X19; X20; X21; X22; X23; X24] ,,
    MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-   MAYCHANGE SOME_FLAGS`
+   MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`
   bignum_mul_8_16_core_mc
   `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8;
               X9; X10; X11; X12; X13; X14; X15; X16;
               X17; X19; X20; X21; X22; X23; X24] ,,
    MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5] ,,
    MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-   MAYCHANGE SOME_FLAGS`;;
+   MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`;;
 
 let _org_extra_word_CONV = !extra_word_CONV;;
 extra_word_CONV :=
@@ -1514,7 +1514,7 @@ let BIGNUM_MUL_8_16_CORE_CORRECT = prove(
                         X17; X19; X20; X21; X22; X23; X24] ,,
              MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5],,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   let mc_lengths_th =
     map fst [BIGNUM_MUL_8_16_UNOPT_CORE_EXEC; BIGNUM_MUL_8_16_CORE_EXEC] in
@@ -1590,7 +1590,7 @@ let BIGNUM_MUL_8_16_CORRECT = prove(
                         X17; X19; X20; X21; X22; X23; X24] ,,
              MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5],,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_MUL_8_16_CORE_CORRECT
       bignum_mul_8_16_core_mc_def
@@ -1619,7 +1619,7 @@ let BIGNUM_MUL_8_16_SUBROUTINE_CORRECT = prove
              MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5],,
              MAYCHANGE [memory :> bytes(z,8 * 16);
                      memory :> bytes(word_sub stackpointer (word 48),48)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_MUL_8_16_EXEC
    ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o REWRITE_RULE

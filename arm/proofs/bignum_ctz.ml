@@ -50,7 +50,7 @@ let BIGNUM_CTZ_CORRECT = prove
                C_RETURN s' = if x = 0 then word(64 * val k)
                              else word(index 2 x))
          (MAYCHANGE [PC; X0; X2; X3; X4] ,,
-          MAYCHANGE SOME_FLAGS)`,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`a:int64`; `x:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN

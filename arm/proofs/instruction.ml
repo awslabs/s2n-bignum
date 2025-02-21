@@ -812,7 +812,7 @@ let MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
  (new_definition `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI =
     MAYCHANGE [PC] ,, MAYCHANGE MODIFIABLE_GPRS ,,
     MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-    MAYCHANGE MODIFIABLE_UPPER_SIMD_REGS ,, MAYCHANGE SOME_FLAGS`);;
+    MAYCHANGE MODIFIABLE_UPPER_SIMD_REGS ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`);;
 
 (* ------------------------------------------------------------------------- *)
 (* General register-register instructions.                                   *)

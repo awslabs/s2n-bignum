@@ -77,7 +77,7 @@ let BIGNUM_MADD_CORRECT = prove
                 ==> 2 EXP (64 * val p) * val(C_RETURN s) +
                     bignum_from_memory(z,val p) s = a * b + c))
           (MAYCHANGE [PC; X0; X6; X7; X8; X9; X10; X11; X12; X13; X14; X15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val p)])`,
   MAP_EVERY W64_GEN_TAC [`p:num`; `m:num`; `n:num`] THEN
   MAP_EVERY X_GEN_TAC

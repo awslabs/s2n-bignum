@@ -78,7 +78,7 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
                           (word_add z (word(8 * val k)),val k) s)))
              (MAYCHANGE [PC; X0; X1; X4; X5; X6; X7; X8; X9; X10; X11] ,,
               MAYCHANGE [memory :> bytes(z,8 * 2 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`] THEN
   W64_GEN_TAC `w:num` THEN
