@@ -52,7 +52,9 @@ let memory_SPEC = prove(
     // ',,' is composition of relations.
     (MAYCHANGE [PC;X2;X3] ,,
      // The memory locations may change. Record this.
-     MAYCHANGE [memory :> bytes64 (word loc0); memory :> bytes64 (word loc1)])`,
+     MAYCHANGE [memory :> bytes64 (word loc0); memory :> bytes64 (word loc1)] ,,
+     // Memory instructions raise observable microarchitectural events!
+     MAYCHANGE [events])`,
 
   (* Convert 'nonoverlapping' into 'nonoverlapping_modulo' and rewrite 'LENGTH memory_mc'
      with the concrete number. *)

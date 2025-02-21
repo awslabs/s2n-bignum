@@ -191,7 +191,8 @@ let BIGNUM_CMOD_CORRECT = prove
             &2 pow 64 + &(val (read X5 s)) < &2 pow 128 / &n /\
             &2 pow 128 / &n <= &2 pow 64 + &(val (read X5 s)) + &1)
        (MAYCHANGE [PC; X5; X6; X9; X10] ,,
-        MAYCHANGE [NF; ZF; CF; VF])`
+        MAYCHANGE [NF; ZF; CF; VF] ,,
+        MAYCHANGE [events])`
     MP_TAC THENL
      [ALL_TAC;
       REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN DISCH_THEN(fun th ->

@@ -228,7 +228,8 @@ let BIGNUM_CDIV_CORRECT = prove
             (~(m = 0) ==> read X14 s = word (a MOD m)))
        (MAYCHANGE [PC; X5; X6; X7; X8; X9; X10;
                        X11; X12; X13; X14] ,,
-        MAYCHANGE [NF; ZF; CF; VF])`
+        MAYCHANGE [NF; ZF; CF; VF] ,,
+        MAYCHANGE [events])`
     MP_TAC THENL
      [ALL_TAC;
       REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN DISCH_THEN(fun th ->
@@ -315,7 +316,8 @@ let BIGNUM_CDIV_CORRECT = prove
               &2 pow 64 + &(val (read X5 s)) < &2 pow 128 / &n /\
               &2 pow 128 / &n <= &2 pow 64 + &(val (read X5 s)) + &1)
          (MAYCHANGE [PC; X5; X7; X9; X14] ,,
-          MAYCHANGE [NF; ZF; CF; VF])`
+          MAYCHANGE [NF; ZF; CF; VF] ,,
+          MAYCHANGE [events])`
       MP_TAC THENL
        [ALL_TAC;
         REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN DISCH_THEN(fun th ->

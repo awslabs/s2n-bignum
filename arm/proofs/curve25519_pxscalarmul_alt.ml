@@ -2144,7 +2144,7 @@ let LOCAL_MUX_4_TAC =
            (\s. read PC s = pcout /\
                 read(memory :> bytes(word_add (read p3 t) (word n3),8 * 4)) s =
                 (if b then n else m))
-        (MAYCHANGE [PC; X0; X1; X2; X3] ,,
+        (MAYCHANGE [PC; X0; X1; X2; X3] ,, MAYCHANGE [events] ,,
          MAYCHANGE [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
