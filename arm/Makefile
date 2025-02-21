@@ -391,7 +391,7 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
 
-TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_loop2.o tutorial/rel_simp2.o tutorial/rel_veceq2.o
+TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_loop2.o tutorial/rel_simp2.o tutorial/rel_veceq2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o
 
 # According to
 # https://developer.apple.com/documentation/xcode/writing-arm64-code-for-apple-platforms,
@@ -492,6 +492,8 @@ tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(
 tutorial/rel_loop.native: tutorial/rel_loop2.o
 tutorial/rel_simp.native: tutorial/rel_simp2.o
 tutorial/rel_veceq.native: tutorial/rel_veceq2.o
+tutorial/rel_equivtac.native: tutorial/rel_equivtac2.o
+tutorial/rel_reordertac.native: tutorial/rel_reordertac2.o
 
 
 unopt: $(UNOPT_OBJ)
