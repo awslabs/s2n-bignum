@@ -2449,13 +2449,19 @@ let X86_ENSURES_SUBSUBLEMMA_TAC =
   ENSURES_SUBSUBLEMMA_TAC o map (MATCH_MP bytes_loaded_update o CONJUNCT1);;
 
 let X86_UNDEFINED_GEN_TAC =
-  let rec chundef avoids n =
-    let v = "undefined_"^string_of_int n in
-    if mem v avoids then chundef avoids (n+1) else v in
+  (* Globally assign a unique number to the undefined variable.
+     If variable names overlap, this can cause a very weird error
+     'Exception: Failure "ABS"'.
+     Not scanning the assumptions is also beneficial for the speed
+     of this tactic. *)
+  let undef_n = ref 1 in
+  let rec chundef () =
+    let v = "undefined_"^string_of_int !undef_n in
+    undef_n := 1 + !undef_n;
+    v in
   fun (asl,w) ->
     try let ty = snd(dest_var(fst(dest_forall w))) in
-        let avoids = itlist (union o thm_frees o snd) asl (frees w) in
-        let x' = chundef (map (fst o dest_var) avoids) 1 in
+        let x' = chundef () in
         X_GEN_TAC (mk_var(x',ty)) (asl,w)
       with Failure _ -> failwith "X86_UNDEFINED_GEN_TAC";;
 
@@ -2501,6 +2507,8 @@ let is_read_rip t =
   | Comb (Comb (Const ("read", _), Const ("RIP", _)), _) -> true
   | _ -> false;;
 
+(* For compatibility with is_read_pc in Arm *)
+let is_read_pc = is_read_rip;;
 
 (*** decode_ths is an array from int offset i to
  ***   Some `|- !s pc. bytes_loaded s pc *_mc
