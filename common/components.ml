@@ -2885,7 +2885,7 @@ let (NONOVERLAPPING_TAC:tactic) =
       let th =
         try snd (find ((=) t o concl o snd) asl)
         with Failure _ ->
-        try TAC_PROOF (g, REWRITE_TAC[VAL_WORD] THEN SIMPLE_ARITH_TAC)
+        try TAC_PROOF (g, SIMPLE_ARITH_TAC)
         with Failure _ ->
           failwith ("NONOVERLAPPING_TAC: cannot prove `" ^ (string_of_term t) ^ "`")
         in

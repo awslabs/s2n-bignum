@@ -142,7 +142,7 @@ let result =
      CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV) THEN
      ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
      CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV) THEN
-     ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
+     (* ASM_REWRITE_TAC[] THEN extra_simp_tac THEN *)
      PRINT_GOAL_TAC THEN ALL_TAC)
      ([],goal)
   with
