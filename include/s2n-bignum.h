@@ -985,6 +985,7 @@ extern void mlkem_intt(int16_t a[S2N_BIGNUM_STATIC 256],int16_t z_01234[S2N_BIGN
 // Keccak-f1600 permutation for SHA3
 // Inputs a[25], rc[24]; output a[25]
 extern void mlkem_keccak_f1600(uint64_t a[S2N_BIGNUM_STATIC 25],uint64_t rc[S2N_BIGNUM_STATIC 24]);
+extern void mlkem_keccak_f1600_alt(uint64_t a[S2N_BIGNUM_STATIC 25],uint64_t rc[S2N_BIGNUM_STATIC 24]);
 
 // Forward number-theoretic transform from ML-KEM
 // Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words)

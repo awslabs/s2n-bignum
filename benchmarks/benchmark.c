@@ -828,6 +828,7 @@ void call_bignum_copy_row_from_table_32__32(void) {}
 void call_bignum_emontredc_8n_cdiff__32(void) {}
 void call_mlkem_intt(void) {}
 void call_mlkem_keccak_f1600(void) {}
+void call_mlkem_keccak_f1600_alt(void) {}
 void call_mlkem_ntt(void) {}
 
 #else
@@ -845,6 +846,7 @@ void call_bignum_emontredc_8n_cdiff__32(void) repeat(bignum_emontredc_8n_cdiff(3
 
 void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 void call_mlkem_keccak_f1600(void) repeat(mlkem_keccak_f1600(b0,b1))
+void call_mlkem_keccak_f1600_alt(void) repeat(mlkem_keccak_f1600_alt(b0,b1))
 void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 
 #endif
@@ -1229,6 +1231,7 @@ int main(int argc, char *argv[])
   timingtest(all,"edwards25519_scalarmuldouble_alt",call_edwards25519_scalarmuldouble_alt);
   timingtest(arm,"mlkem_intt",call_mlkem_intt);
   timingtest(arm,"mlkem_keccak_f1600",call_mlkem_keccak_f1600);
+  timingtest(arm,"mlkem_keccak_f1600_alt",call_mlkem_keccak_f1600_alt);
   timingtest(arm,"mlkem_ntt",call_mlkem_ntt);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
   timingtest(all,"p256_montjadd_alt",call_p256_montjadd_alt);

@@ -23,6 +23,7 @@ endif
 
 OBJ = mlkem_intt.o \
       mlkem_keccak_f1600.o \
+      mlkem_keccak_f1600_alt.o \
       mlkem_ntt.o
 
 %.o : %.S ; $(CC) -E -I../../include $< | $(GAS) -o $@ -
