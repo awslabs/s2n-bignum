@@ -22,6 +22,11 @@ enum arch_name get_arch_name()
 { return ARCH_X86_64;
 }
 
+int supports_arm_sha3(void)
+{ // Not an ARM machine at all
+  return 0;
+}
+
 #else
 
 int supports_bmi2_and_adx(void)
