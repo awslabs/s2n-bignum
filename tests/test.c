@@ -13825,10 +13825,12 @@ void functionaltest(int enabled,char *name,int (*f)(void))
      return;
    }
 
-  // Only benchmark function using supported instructions (on x86)
+  // Only benchmark function using supported instructions
 
   if (!enabled)
-   { printf("Skipping %s because not applicable (x86 BMI/ADX support)\n",name);
+   { printf("Skipping %s because not applicable (%s support)\n",name,
+            (get_arch_name() == ARCH_AARCH64) ? "ARM sha3" :
+            "x86 BMI/ADX");
      ++inapplicable;
      return;
    }
@@ -13850,6 +13852,7 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 
 int main(int argc, char *argv[])
 { int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
+  int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
   int arm = get_arch_name() == ARCH_AARCH64;
   int all = 1;
   int extrastrigger = 1;
@@ -14214,7 +14217,7 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
     functionaltest(arm,"mlkem_intt",test_mlkem_intt);
     functionaltest(arm,"mlkem_keccak_f1600",test_mlkem_keccak_f1600);
-    functionaltest(arm,"mlkem_keccak_f1600_alt",test_mlkem_keccak_f1600_alt);
+    functionaltest(sha3,"mlkem_keccak_f1600_alt",test_mlkem_keccak_f1600_alt);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
   }
 

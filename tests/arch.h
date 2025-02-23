@@ -29,9 +29,22 @@ int supports_bmi2_and_adx(void)
   return 0;
 }
 
+#if __linux__
+  #include <sys/auxv.h>
+  #include <asm/hwcap.h>
+  int supports_arm_sha3(void)
+  {
+    long hwcaps = getauxval(AT_HWCAP);
+    return (hwcaps & HWCAP_SHA3) != 0;
+  }
+#elif __APPLE__
+  int supports_arm_sha3(void) { return 1; }
+#else
+  int supports_arm_sha3(void) { return 0; }
+#endif
+
 enum arch_name get_arch_name()
 { return ARCH_AARCH64;
 }
 
 #endif
-

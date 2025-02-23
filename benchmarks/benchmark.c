@@ -854,6 +854,7 @@ void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b
 int main(int argc, char *argv[])
 {
   int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
+  int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
   int all = 1;
   int arm = get_arch_name() == ARCH_AARCH64;
   char *argending;
@@ -1231,7 +1232,7 @@ int main(int argc, char *argv[])
   timingtest(all,"edwards25519_scalarmuldouble_alt",call_edwards25519_scalarmuldouble_alt);
   timingtest(arm,"mlkem_intt",call_mlkem_intt);
   timingtest(arm,"mlkem_keccak_f1600",call_mlkem_keccak_f1600);
-  timingtest(arm,"mlkem_keccak_f1600_alt",call_mlkem_keccak_f1600_alt);
+  timingtest(sha3,"mlkem_keccak_f1600_alt",call_mlkem_keccak_f1600_alt);
   timingtest(arm,"mlkem_ntt",call_mlkem_ntt);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
   timingtest(all,"p256_montjadd_alt",call_p256_montjadd_alt);

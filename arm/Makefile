@@ -49,18 +49,18 @@ SPLIT=tr ';' '\n'
 #  sudo apt-get install binutils-aarch64-linux-gnu
 
 ifeq ($(ARCHTYPE_RESULT),aarch64)
-ASSEMBLE=as
+ASSEMBLE=as -march=armv8.2-a+sha3
 OBJDUMP=objdump -d
 else
 ifeq ($(ARCHTYPE_RESULT),arm64)
-ASSEMBLE=as
+ASSEMBLE=as -march=armv8.2-a+sha3
 OBJDUMP=objdump -d
 else
 ifeq ($(OSTYPE_RESULT),Darwin)
-ASSEMBLE=as -arch arm64
+ASSEMBLE=as -arch arm64 -march=armv8.2-a+sha3
 OBJDUMP=otool -tvV
 else
-ASSEMBLE=aarch64-linux-gnu-as
+ASSEMBLE=aarch64-linux-gnu-as -march=armv8.2-a+sha3                
 OBJDUMP=aarch64-linux-gnu-objdump -d
 endif
 endif
