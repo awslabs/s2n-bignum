@@ -44,7 +44,7 @@ let BIGNUM_NONZERO_6_CORRECT = prove
           (\s. read PC s = word(pc + 0x28) /\
                C_RETURN s = if ~(n = 0) then word 1 else word 0)
           (MAYCHANGE [PC; X0; X1; X2; X3] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN

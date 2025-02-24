@@ -110,7 +110,7 @@ let EDWARDS25519_ENCODE_CORRECT = time prove
                 (x < p_25519 /\ y < p_25519
                 ==> read (memory :> bytelist(z,32)) s =
                     bytelist_of_num 32 (ed25519_encode (&x,&y))))
-          (MAYCHANGE [PC; X2; X3; X4; X5; X6] ,,
+          (MAYCHANGE [PC; X2; X3; X4; X5; X6] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(z,32)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `p:int64`; `x:num`; `y:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;

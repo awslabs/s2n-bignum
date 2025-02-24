@@ -55,7 +55,7 @@ let BIGNUM_SUB_P256K1_CORRECT = time prove
                   (m < p_256k1 /\ n < p_256k1
                    ==> &(bignum_from_memory (z,4) s) = (&m - &n) rem &p_256k1))
           (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `m:num`; `n:num`; `pc:num`] THEN

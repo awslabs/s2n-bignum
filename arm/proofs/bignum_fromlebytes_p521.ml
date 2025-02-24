@@ -176,7 +176,7 @@ let BIGNUM_FROMLEBYTES_P521_CORRECT = time prove
                 read (memory :> bytelist(x,66)) s = l)
            (\s. read PC s = word (pc + 0x234) /\
                 bignum_from_memory(z,9) s = num_of_bytelist l)
-          (MAYCHANGE [PC; X2; X3] ,,
+          (MAYCHANGE [PC; X2; X3] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `l:byte list`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

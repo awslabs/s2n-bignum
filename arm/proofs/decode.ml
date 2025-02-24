@@ -198,13 +198,13 @@ let decode = new_definition `!w:int32. decode w =
        (if opc = word 3 then WREG' Rd else WREG_SP Rd)
        (WREG' Rn) (rvalue imm)
   | [op; 0b00101:5; imm26:26] ->
-    SOME ((if op then arm_BL else arm_B) (word (val imm26 * 4)))
+    SOME ((if op then arm_BL else arm_B) (word (val imm26 * 4)) w)
   | [0b01010100:8; imm19:19; 0:1; cond:4] ->
-    SOME (arm_Bcond (Condition cond) (word (val imm19 * 4)))
+    SOME (arm_Bcond (Condition cond) (word (val imm19 * 4)) w)
   | [sf; 0b011010:6; op; imm19:19; Rt:5] ->
     SOME ((if sf then (if op then arm_CBNZ else arm_CBZ) (XREG' Rt)
                  else (if op then arm_CBNZ else arm_CBZ) (WREG' Rt))
-      (word (val imm19 * 4)))
+      (word (val imm19 * 4)) w)
   | [sf; op; 0b011010100:9; Rm:5; cond:4; 0:1; o2; Rn:5; Rd:5] ->
     SOME ((if sf
       then arm_csop op o2 (XREG' Rd) (XREG' Rn) (XREG' Rm)
@@ -254,7 +254,7 @@ let decode = new_definition `!w:int32. decode w =
                 else (if o0 then arm_MSUB else arm_MADD)
                   (WREG' Rd) (WREG' Rn) (WREG' Rm) (WREG' Ra))
   | [0b1101011001011111000000:22; Rn:5; 0:5] ->
-    SOME (arm_RET (XREG' Rn))
+    SOME (arm_RET (XREG' Rn) w)
   | [0b10011011010:11; Rm:5; 0b011111:6; Rn:5; Rd:5] ->
     SOME (arm_SMULH (XREG' Rd) (XREG' Rn) (XREG' Rm))
   | [0b10011011110:11; Rm:5; 0b011111:6; Rn:5; Rd:5] ->
@@ -265,56 +265,56 @@ let decode = new_definition `!w:int32. decode w =
   | [0:1; immlo:2; 0b10000:5; immhi:19; Rd:5] ->
     SOME (arm_ADR (XREG' Rd) (word_join immhi immlo))
   | [1:1; x; 0b1110000:7; ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst ld x Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
+    SOME (arm_ldst ld x Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)) w)
   | [1:1; x; 0b1110000:7; ld; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst ld x Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+    SOME (arm_ldst ld x Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)) w)
   | [1:1; x; 0b1110010:7; ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst ld x Rt (XREG_SP Rn)
-      (Immediate_Offset (word (val imm12 * if x then 8 else 4))))
+      (Immediate_Offset (word (val imm12 * if x then 8 else 4))) w)
   | [1:1; x; 0b1110000:7; ld; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldst ld x Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) (if x then 3 else 2)
-            else Register_Offset (XREG' Rm)))
+            else Register_Offset (XREG' Rm)) w)
   | [0b001110000:9; ld; 0b0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
-    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)) w)
   | [0b001110000:9; ld; 0b0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
-    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)) w)
   | [0b001110010:9; ld; imm12:12; Rn:5; Rt:5] ->
-    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Immediate_Offset (word_zx imm12)))
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Immediate_Offset (word_zx imm12)) w)
   | [x; 0b010100:6; pre; 0b1:1; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       ((if pre then Preimmediate_Offset else Postimmediate_Offset)
-        (iword (ival imm7 * &(if x then 8 else 4)))))
+        (iword (ival imm7 * &(if x then 8 else 4)))) w)
   | [x; 0b01010010:8; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
-      (Immediate_Offset (iword (ival imm7 * &(if x then 8 else 4)))))
+      (Immediate_Offset (iword (ival imm7 * &(if x then 8 else 4)))) w)
 
   // SIMD ld,st operations
   // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback
   // Currently only supports sizes 128 and 64 (not 32, 16 or 8)
   | [0b00:2; 0b111101:6; 0b1:1; is_ld; imm12:12; Rn:5; Rt:5] ->
-    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))))
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))) w)
   | [0b11:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
-    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 8))))
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 8))) w)
   // Post-immediate offset, size 128 only
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)) w)
 
   // LDP/STP (signed offset, SIMD&FP), only sizes 128 and 64
   | [0b10:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
-     (Immediate_Offset (iword (ival imm7 * &16))))
+     (Immediate_Offset (iword (ival imm7 * &16))) w)
   | [0b01:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
-     (Immediate_Offset (iword (ival imm7 * &8))))
+     (Immediate_Offset (iword (ival imm7 * &8))) w)
 
   // LDR/STR (immediate, SIMD&FP), Pre-index (has writeback)
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)) w)
 
   // LDUR/STUR, only size 128
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)) w)
 
   // LD1/ST1 (multiple structures), 1 register, immediate offset,
   //   Post-immediate offset, datasize = 64
@@ -330,28 +330,28 @@ let decode = new_definition `!w:int32. decode w =
   // Since instructions are modeled only for little-endian, the optimization
   // that reuses functions of LDR/STR for LD1/ST1 is okay.
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 8)))
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 8)) w)
   // datasize = 128
   | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 16)))
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 16)) w)
 
   // LD2/ST2 (multiple structures), 2 registers, immediate offset, Post-immediate offset, datasize = 64
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b1000:4; size:2; Rn:5; Rt:5] ->
     if size = (word 0b11:(2)word) then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (val size) in
-      SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 16)) 64 esize)
+      SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 16)) 64 esize w)
   // datasize = 128
   | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b1000:4; size:2; Rn:5; Rt:5] ->
     let esize = 8 * 2 EXP (val size) in
-    SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 32)) 128 esize)
+    SOME (arm_ldst2 is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 32)) 128 esize w)
 
   // LD1R, Post-immediate offset, size 64 and 128
   | [0b0:1; q; 0b001101110111111100:18; size:2; Rn:5; Rt:5] ->
     let esize = 8 * (2 EXP (val size)) in
     let datasize = if q then 128 else 64 in
     let off = word (esize DIV 8) in
-    SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize)
+    SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize w)
 
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
@@ -768,7 +768,8 @@ let encode_BL = new_definition `encode_BL n =
   0x94000000 + val (iword (n div &4):26 word)`;;
 
 let decode_encode_BL = prove (`decode (word (encode_BL n)) =
-  SOME (arm_BL (word (val (iword (n div &4):26 word) * 4)))`,
+  SOME (arm_BL (word (val (iword (n div &4):26 word) * 4))
+               (word (encode_BL n)))`,
   MATCH_MP_TAC (
     let th = SPEC `word (encode_BL n):int32` decode in
     let tm = rhs (concl th) in

@@ -34,7 +34,7 @@ let WORD_MAX_CORRECT = prove
           (\s. read PC s = word(pc + 0x8) /\
                C_RETURN s = word_umax a b)
           (MAYCHANGE [PC; X0] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`a:int64`; `b:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   ARM_SIM_TAC WORD_MAX_EXEC (1--2) THEN POP_ASSUM_LIST(K ALL_TAC) THEN

@@ -26,6 +26,11 @@ let get_bytelist_length (ls:term): int =
     failwith (Printf.sprintf
       "get_bytelist_length: cannot get the length of `%s`" (string_of_term ls));;
 
+(* returns true if t is `read events <state>`. *)
+let is_read_events t =
+  match t with
+  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
+  | _ -> false;;
 
 let define_mc_from_intlist (newname:string) (ops:int list) =
   let charlist = List.concat_map
@@ -535,8 +540,6 @@ let ARM_N_STEPS_TAC th snums stname_suffix stnames_no_discard dead_value_info =
       end)
     snums;;
 
-
-
 (* ------------------------------------------------------------------------- *)
 (* Definitions for stating program equivalence.                              *)
 (* ------------------------------------------------------------------------- *)
@@ -584,7 +587,7 @@ let get_input_output_regs
   let output_comps: term list ref = ref [] in
   let normalize_word_expr t =
     rhs (concl ((DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV THENC REWRITE_CONV[WORD_ADD_0]) t)) in
-  let is_interesting_reg t = not (is_comb t) && t <> `PC` in
+  let is_interesting_reg t = not (is_comb t) && t <> `PC` && t <> `events` in
   let update_comps (pc_begin,pc_end) =
     (* Input and output components *)
     for i = pc_begin to pc_end do
@@ -805,10 +808,6 @@ let map_output_regs
       if name_of f <> "arm_decode" then failwith "Unknown inst" else
       let name_right,comp_updates_right = get_inst_info (last args) in
 
-      let find_index f l =
-        let rec fn l i =
-          match l with | [] -> None | h::t -> if f h then Some i else fn t (1+i) in
-        fn l 0 in
       let update_idx = find_index (fun l,_ -> l = output_reg_right) comp_updates_right in
 
       match update_idx with
@@ -1018,7 +1017,8 @@ let build_maychanges regs extra =
      mk_icomb (`MAYCHANGE`,mk_list (qregs, `:(armstate,int128)component`));
      mk_icomb (`MAYCHANGE`,mk_list (flags, `:(armstate,bool)component`));
      extra;
-     `MAYCHANGE [PC]`];;
+     `MAYCHANGE [PC]`;
+     `MAYCHANGE [events]`];;
 
 (* maychanges: `(MAYCHANGE [..] ,, MAYCHANGE ...)`
    combine MAYCHANGE of fragmented memory accesses of constant sizes into
@@ -1121,11 +1121,17 @@ let simplify_maychanges: term -> term =
 
     (* now rebuild maychange terms! *)
     let result = ref zero in
-    let join_result (comps:term list): unit =
-      if comps = [] then () else
-      let mterm = mk_icomb (maychange_const, mk_flist comps) in
-      if !result = zero then result := mterm
-      else result := mk_icomb(mk_icomb (seq_const,mterm),!result) in
+    let rec join_result (comps:term list): unit =
+      match comps with
+      | [] -> ()
+      | first_comp::comps ->
+        let fcty = type_of first_comp in
+        let comps0,comps1 = List.partition (fun c -> type_of c = fcty)
+          comps in
+        let mterm = mk_icomb (maychange_const, mk_flist (first_comp::comps0)) in
+        (if !result = zero then result := mterm
+        else result := mk_icomb(mk_icomb (seq_const,mterm),!result));
+        join_result comps1 in
     let _ = join_result !maychange_regs64 in
     let _ = join_result !maychange_regs128 in
     let _ = join_result !maychange_others in
@@ -1146,6 +1152,12 @@ let simplify_maychanges: term -> term =
                          MAYCHANGE [memory :> bytes64 (x:int64)] ,,
                          MAYCHANGE [memory :> bytes64 (word_add y (word 24))] ,,
                          MAYCHANGE [memory :> bytes64 (word_add y (word 16))]`;;
+    TODO:
+    simplify_maychanges
+       `MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i)))] ,,
+        MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i + 8)))] ,,
+        MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i + 16)))] ,,
+        MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i + 24)))]`;;
 *)
 
 let SIMPLIFY_MAYCHANGES_TAC =
@@ -1393,11 +1405,13 @@ let ARM_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
 
         (* Reading flags may not have 'read flag s = ..' form, but just
             'read flag s' or '~(read flag s)'. They don't need to be rewritten.
-           Also, 'read PC' should not be rewritten as well. Collect them
+           Also, 'read PC' and 'read events' should not be rewritten as well. Collect them
            separately. *)
         let new_state_eqs_norewrite,new_state_eqs =
           List.partition
-            (fun th -> not (is_eq (concl th)) || (is_read_pc (lhs (concl th))))
+            (fun th -> not (is_eq (concl th))
+                       || (is_read_pc (lhs (concl th)))
+                       || (is_read_events (lhs (concl th))))
           new_state_eqs in
 
         (* filter out regs from new_state_eqs that are regs_to_avoid_abbrev.

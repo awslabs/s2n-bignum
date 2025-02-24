@@ -47,7 +47,7 @@ let BIGNUM_MUX_CORRECT = prove
                 word (pc + 0x20) /\
                 bignum_from_memory (z,val k) s =
                   if ~(b = word 0) then m else n)
-          (MAYCHANGE [PC; X0; X1; X5] ,, MAYCHANGE SOME_FLAGS ,,
+          (MAYCHANGE [PC; X0; X1; X5] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; fst BIGNUM_MUX_EXEC] THEN

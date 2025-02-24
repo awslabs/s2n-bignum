@@ -410,6 +410,12 @@ let is_read_pc t =
   | Comb (Comb (Const ("read", _), Const ("PC", _)), _) -> true
   | _ -> false;;
 
+(* returns true if t is `read events <state>`. *)
+let is_read_events t =
+  match t with
+  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
+  | _ -> false;;
+
 (*** decode_ths is an array from int offset i to
  ***   Some `|- !s pc. aligned_bytes_loaded s pc *_mc
  ***            ==> arm_decode s (word (pc+i)) (..inst..)`

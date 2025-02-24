@@ -69,7 +69,7 @@ let BIGNUM_MUL_CORRECT = prove
           (\s. read PC s = word (pc + 0x80) /\
                bignum_from_memory(z,val p) s = lowdigits (a * b) (val p))
           (MAYCHANGE [PC; X0; X6; X7; X8; X9; X10; X11; X12; X13; X14; X15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val p)])`,
   MAP_EVERY W64_GEN_TAC [`p:num`; `m:num`; `n:num`] THEN
   MAP_EVERY X_GEN_TAC
