@@ -7,7 +7,7 @@
 (* Simplified model of x86 semantics.                                        *)
 (* ========================================================================= *)
 
-let x86_print_log = ref false;;
+let x86_print_log = ref true;;
 
 (* ------------------------------------------------------------------------- *)
 (* Size in bits corresponding to the tags.                                   *)
@@ -2555,6 +2555,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
    GEN_REWRITE_CONV (SUB_COMPONENTS_CONV o TOP_DEPTH_CONV) ths THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL] THENC
    ONCE_DEPTH_CONV WORD_PC_PLUS_CONV THENC
+   DEPTH_CONV WORD_NUM_RED_CONV THENC
    ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV
  ) tm;;
 

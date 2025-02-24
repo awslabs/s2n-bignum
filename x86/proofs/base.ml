@@ -6,7 +6,7 @@
 (* ========================================================================= *)
 (* Load basic background needed for the x86 bignum proofs.                   *)
 (* ========================================================================= *)
-
+use_file_raise_failure := true;;
 loads "update_database.ml";;
 prioritize_num();;
 
