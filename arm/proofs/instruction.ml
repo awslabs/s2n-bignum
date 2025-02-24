@@ -30,6 +30,15 @@ let armevent_INDUCT, armevent_RECURSION = define_type
     // (the undecoded instruction, address, byte length)
     | EventStore (int32#int64#num)
     // (the undecoded instruction, src pc, destination pc)
+    // In fact, the number of cycles of a conditional branch can depend on the
+    // previous N taken/untaken branches (even without speculative execution
+    // considered). There are two types of branch predictors that maintain
+    // the history: local and global branch predictors.
+    // We use abstraction and only condier the current branch instruction.
+    // This is still fine because s2n-bignum will compare the whole trace of
+    // events after function returned. The history of taken/untaken branches
+    // are already preserved in the output state of a program regardless of
+    // the abstract/concrete definition of events.
     | EventJump (int32#int64#int64)
   ";;
 
