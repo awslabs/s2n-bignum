@@ -42,10 +42,17 @@ int supports_bmi2_and_adx(void)
     long hwcaps = getauxval(AT_HWCAP);
     return (hwcaps & HWCAP_SHA3) != 0;
   }
-#elif __APPLE__
-  int supports_arm_sha3(void) { return 1; }
+
 #else
-  int supports_arm_sha3(void) { return 0; }
+
+  int supports_arm_sha3(void)
+  {
+  #if __ARM_FEATURE_SHA3
+    return 1;
+  #else
+    return 0;
+  #endif
+  }
 #endif
 
 enum arch_name get_arch_name()

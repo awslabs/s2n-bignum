@@ -169,3 +169,28 @@ let keccak_round = define
 let keccak = define
  `keccak 0 l = l /\
   keccak (n + 1) l = keccak_round (EL n round_constants) (keccak n l)`;;
+
+(* ------------------------------------------------------------------------- *)
+(* A few lemmas that are useful when reasoning about Keccak.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let LENGTH_KECCAK = prove
+ (`!A i. LENGTH A = 25 ==> LENGTH(keccak i A) = 25`,
+  REWRITE_TAC[RIGHT_FORALL_IMP_THM] THEN GEN_TAC THEN DISCH_TAC THEN
+  INDUCT_TAC THEN ASM_REWRITE_TAC[keccak; ADD1; keccak_round] THEN
+  REPEAT LET_TAC THEN CONV_TAC(LAND_CONV LENGTH_CONV) THEN REFL_TAC);;
+
+let LENGTH_EQ_25 = prove
+ (`!l:A list.
+        LENGTH l = 25 <=>
+        l = [EL 0 l; EL 1 l; EL 2 l; EL 3 l; EL 4 l;
+             EL 5 l; EL 6 l; EL 7 l; EL 8 l; EL 9 l;
+             EL 10 l; EL 11 l; EL 12 l; EL 13 l; EL 14 l;
+             EL 15 l; EL 16 l; EL 17 l; EL 18 l; EL 19 l;
+             EL 20 l; EL 21 l; EL 22 l; EL 23 l; EL 24 l]`,
+  GEN_TAC THEN EQ_TAC THENL
+   [CONV_TAC(LAND_CONV(TOP_DEPTH_CONV num_CONV)) THEN
+    REWRITE_TAC[LENGTH_EQ_CONS; LENGTH_EQ_NIL] THEN
+    STRIP_TAC THEN ASM_REWRITE_TAC[CONS_11] THEN
+    CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
+    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[LENGTH] THEN ARITH_TAC]);;

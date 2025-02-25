@@ -60,7 +60,7 @@ ifeq ($(OSTYPE_RESULT),Darwin)
 ASSEMBLE=as -arch arm64 -march=armv8.2-a+sha3
 OBJDUMP=otool -tvV
 else
-ASSEMBLE=aarch64-linux-gnu-as -march=armv8.2-a+sha3                
+ASSEMBLE=aarch64-linux-gnu-as -march=armv8.2-a+sha3
 OBJDUMP=aarch64-linux-gnu-objdump -d
 endif
 endif
@@ -254,6 +254,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mlkem/mlkem_intt.o \
              mlkem/mlkem_keccak_f1600.o \
              mlkem/mlkem_keccak_f1600_alt.o \
+             mlkem/mlkem_keccak2_f1600.o \
              mlkem/mlkem_ntt.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \
