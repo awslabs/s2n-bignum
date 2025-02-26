@@ -830,6 +830,7 @@ void call_mlkem_intt(void) {}
 void call_mlkem_keccak_f1600(void) {}
 void call_mlkem_keccak_f1600_alt(void) {}
 void call_mlkem_keccak2_f1600(void) {}
+void call_mlkem_keccak2_f1600_alt(void) {}
 void call_mlkem_ntt(void) {}
 
 #else
@@ -849,6 +850,7 @@ void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0,(int16_t*)b1,(int16_t*
 void call_mlkem_keccak_f1600(void) repeat(mlkem_keccak_f1600(b0,b1))
 void call_mlkem_keccak_f1600_alt(void) repeat(mlkem_keccak_f1600_alt(b0,b1))
 void call_mlkem_keccak2_f1600(void) repeat(mlkem_keccak2_f1600(b0,b1))
+void call_mlkem_keccak2_f1600_alt(void) repeat(mlkem_keccak2_f1600_alt(b0,b1))
 void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 
 #endif
@@ -1236,6 +1238,7 @@ int main(int argc, char *argv[])
   timingtest(arm,"mlkem_keccak_f1600",call_mlkem_keccak_f1600);
   timingtest(sha3,"mlkem_keccak_f1600_alt",call_mlkem_keccak_f1600_alt);
   timingtest(sha3,"mlkem_keccak2_f1600",call_mlkem_keccak2_f1600);
+  timingtest(sha3,"mlkem_keccak2_f1600_alt",call_mlkem_keccak2_f1600_alt);
   timingtest(arm,"mlkem_ntt",call_mlkem_ntt);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
   timingtest(all,"p256_montjadd_alt",call_p256_montjadd_alt);

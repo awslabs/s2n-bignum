@@ -11321,6 +11321,43 @@ int test_mlkem_keccak2_f1600(void)
 #endif
 }
 
+int test_mlkem_keccak2_f1600_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[50], b[50], c[50];
+  printf("Testing mlkem_keccak2_f1600_alt with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(50,a);
+     for (i = 0; i < 50; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     reference_keccak_f1600(b+25,a+25);
+     mlkem_keccak2_f1600_alt(c,keccak_RC);
+     for (i = 0; i < 50; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak2_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
+                  i/25,i%25,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak2_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_mlkem_ntt(void)
 {
 #ifdef __x86_64__
@@ -14256,6 +14293,7 @@ int main(int argc, char *argv[])
     functionaltest(arm,"mlkem_keccak_f1600",test_mlkem_keccak_f1600);
     functionaltest(sha3,"mlkem_keccak_f1600_alt",test_mlkem_keccak_f1600_alt);
     functionaltest(sha3,"mlkem_keccak2_f1600",test_mlkem_keccak2_f1600);
+    functionaltest(sha3,"mlkem_keccak2_f1600_alt",test_mlkem_keccak2_f1600_alt);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
   }
 
@@ -14290,6 +14328,7 @@ int main(int argc, char *argv[])
   printf("                                       Passed = %3d\n",successes);
   printf("                                      Failed  = %3d\n",failures);
   printf("         Skipped because not selected by user = %3d\n",skipped);
-  printf("Skipped because inapplicable (no x86 BMI/ADX) = %3d\n",inapplicable);
+  printf("Skipped because inapplicable (no %s) = %3d\n",
+         ((get_arch_name() == ARCH_AARCH64) ? "ARM sha3" : "x86 BMI/ADX"),inapplicable);
   return 1;
 }
