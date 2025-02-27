@@ -202,8 +202,8 @@ let mem_iclasses = [
    cosimulate_mul_full_harness();
    cosimulate_mul_base_disp_harness();
    cosimulate_mul_rsp_harness();
-   (* PUSH rax *)
+   (* PUSH r64 *)
    cosimulate_push_harness();
-   (* POP rax *)
+   (* POP r64 *)
    cosimulate_pop_harness();
   ];;

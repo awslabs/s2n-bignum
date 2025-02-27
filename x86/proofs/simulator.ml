@@ -478,7 +478,7 @@ let run_random_memopsimulation() =
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 50 then run_random_regsimulation()
+  if Random.int 100 < 90 then run_random_regsimulation()
   else run_random_memopsimulation();;
 
 let time_limit_sec = 1800.0;;
