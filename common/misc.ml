@@ -299,6 +299,19 @@ let VAL_BOUND_64 = prove
   GEN_TAC THEN MP_TAC(ISPEC `x:int64` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_64]);;
 
+let VAL_BOUND_128 = prove
+  (`!x:int128. val x < 2 EXP 128`,
+   GEN_TAC THEN MP_TAC(ISPEC `x:int128` VAL_BOUND) THEN
+   REWRITE_TAC[DIMINDEX_128]);;
+
+(* TODO: move to HOL Light *)
+new_type_abbrev("int256",`:(256)word`);;
+
+let VAL_BOUND_256 = prove
+  (`!x:int256. val x < 2 EXP 256`,
+   GEN_TAC THEN MP_TAC(ISPEC `x:int256` VAL_BOUND) THEN
+   REWRITE_TAC[DIMINDEX_256]);;
+
 let LEXICOGRAPHIC_LT = prove
  (`!B h l h' l':num.
         l < B /\ l' < B

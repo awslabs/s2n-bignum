@@ -310,6 +310,139 @@ add_component_alias_thms
  [YMM0; YMM1; YMM2; YMM3; YMM4; YMM5; YMM6; YMM7;
   YMM8; YMM9; YMM10; YMM11; YMM12; YMM13; YMM14; YMM15];;
 
+let YMM0_SSE  = define `YMM0_SSE  = ZMM0  :> bottom_256`
+and YMM1_SSE  = define `YMM1_SSE  = ZMM1  :> bottom_256`
+and YMM2_SSE  = define `YMM2_SSE  = ZMM2  :> bottom_256`
+and YMM3_SSE  = define `YMM3_SSE  = ZMM3  :> bottom_256`
+and YMM4_SSE  = define `YMM4_SSE  = ZMM4  :> bottom_256`
+and YMM5_SSE  = define `YMM5_SSE  = ZMM5  :> bottom_256`
+and YMM6_SSE  = define `YMM6_SSE  = ZMM6  :> bottom_256`
+and YMM7_SSE  = define `YMM7_SSE  = ZMM7  :> bottom_256`
+and YMM8_SSE  = define `YMM8_SSE  = ZMM8  :> bottom_256`
+and YMM9_SSE  = define `YMM9_SSE  = ZMM9  :> bottom_256`
+and YMM10_SSE = define `YMM10_SSE = ZMM10 :> bottom_256`
+and YMM11_SSE = define `YMM11_SSE = ZMM11 :> bottom_256`
+and YMM12_SSE = define `YMM12_SSE = ZMM12 :> bottom_256`
+and YMM13_SSE = define `YMM13_SSE = ZMM13 :> bottom_256`
+and YMM14_SSE = define `YMM14_SSE = ZMM14 :> bottom_256`
+and YMM15_SSE = define `YMM15_SSE = ZMM15 :> bottom_256`;;
+
+add_component_alias_thms
+ [YMM0_SSE; YMM1_SSE; YMM2_SSE; YMM3_SSE;
+  YMM4_SSE; YMM5_SSE; YMM6_SSE; YMM7_SSE;
+  YMM8_SSE; YMM9_SSE; YMM10_SSE; YMM11_SSE;
+  YMM12_SSE; YMM13_SSE; YMM14_SSE; YMM15_SSE];;
+
+(* TODO: Move to HOL Light *)
+let WORD_SUBWORD_EQUAL_SUBWORD_THEN_ZX = prove
+  (`!(x:N word) (pos:num) (len1:num) (len2:num).
+    len1 >= len2 /\ len1 <= dimindex(:P) /\ len2 = dimindex(:M)
+    ==> ((word_subword x (pos,len2)):M word) =
+    word_zx ((word_subword x (pos,len1)):P word)`,
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_SUBWORD; BIT_WORD_ZX] THEN
+    REPEAT(STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC[] THEN
+    ASM_ARITH_TAC );;
+
+(* TODO: Move to HOL Light *)
+let WORD_SUBWORD_N_EQUAL = prove
+  (`!(x:N word). (word_subword x (0,dimindex (:N))) = x`,
+    REWRITE_TAC[word_subword] THEN
+    ASM_REWRITE_TAC(map ARITH_RULE [`2 EXP 0=1`;`x DIV 1=x`]) THEN
+    IMP_REWRITE_TAC[MOD_LT] THEN
+    REWRITE_TAC[WORD_VAL; VAL_BOUND]
+  );;
+
+let WORD_SUBWORD_EQUAL_WORD_ZX_POS0 = prove
+  (`!(x:N word) (len:num).
+    len = dimindex(:M) /\ len <= dimindex(:N)
+    ==> ((word_subword x (0,len)):M word) = word_zx x`,
+    REPEAT STRIP_TAC THEN
+    SUBGOAL_THEN `((word_subword (x:N word) (0,len)):M word) =
+      ((word_zx ((word_subword x (0,dimindex(:N))):N word)):M word)`
+    ASSUME_TAC THENL
+    [MATCH_MP_TAC(ISPECL [`x:N word`;`0:num`;`(dimindex(:N):num)`;`len:num`]
+              WORD_SUBWORD_EQUAL_SUBWORD_THEN_ZX) THEN
+     ASM_REWRITE_TAC[] THEN
+     ASM_ARITH_TAC THEN
+     ASM_REWRITE_TAC[WORD_SUBWORD_N_EQUAL]; ALL_TAC] THEN
+    ASM_REWRITE_TAC[WORD_SUBWORD_N_EQUAL]
+    );;
+
+let READ_YMM_SSE_TAC SSE_fn fn =
+  STRIP_TAC THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; SSE_fn; fn;
+    READ_SUBWORD; DIMINDEX_256; bottom_256; zerotop_256;
+    bottomhalf; through; read] THEN
+  (* BITBLAST_TAC works too *)
+  MATCH_MP_TAC WORD_SUBWORD_EQUAL_WORD_ZX_POS0 THEN
+  REWRITE_TAC[DIMINDEX_256; DIMINDEX_512] THEN
+  CONV_TAC(NUM_REDUCE_CONV) ;;
+
+let READ_YMM0_SSE_EQUIV = prove
+  (`!s:x86state. read YMM0_SSE s = read YMM0 s`,
+   READ_YMM_SSE_TAC YMM0_SSE YMM0);;
+
+let READ_YMM1_SSE_EQUIV = prove
+  (`!s:x86state. read YMM1_SSE s = read YMM1 s`,
+   READ_YMM_SSE_TAC YMM1_SSE YMM1);;
+
+let READ_YMM2_SSE_EQUIV = prove
+  (`!s:x86state. read YMM2_SSE s = read YMM2 s`,
+   READ_YMM_SSE_TAC YMM2_SSE YMM2);;
+
+let READ_YMM3_SSE_EQUIV = prove
+  (`!s:x86state. read YMM3_SSE s = read YMM3 s`,
+   READ_YMM_SSE_TAC YMM3_SSE YMM3);;
+
+let READ_YMM4_SSE_EQUIV = prove
+  (`!s:x86state. read YMM4_SSE s = read YMM4 s`,
+   READ_YMM_SSE_TAC YMM4_SSE YMM4);;
+
+let READ_YMM5_SSE_EQUIV = prove
+  (`!s:x86state. read YMM5_SSE s = read YMM5 s`,
+   READ_YMM_SSE_TAC YMM5_SSE YMM5);;
+
+let READ_YMM6_SSE_EQUIV = prove
+  (`!s:x86state. read YMM6_SSE s = read YMM6 s`,
+   READ_YMM_SSE_TAC YMM6_SSE YMM6);;
+
+let READ_YMM7_SSE_EQUIV = prove
+  (`!s:x86state. read YMM7_SSE s = read YMM7 s`,
+   READ_YMM_SSE_TAC YMM7_SSE YMM7);;
+
+let READ_YMM8_SSE_EQUIV = prove
+  (`!s:x86state. read YMM8_SSE s = read YMM8 s`,
+   READ_YMM_SSE_TAC YMM8_SSE YMM8);;
+
+let READ_YMM9_SSE_EQUIV = prove
+  (`!s:x86state. read YMM9_SSE s = read YMM9 s`,
+   READ_YMM_SSE_TAC YMM9_SSE YMM9);;
+
+let READ_YMM10_SSE_EQUIV = prove
+  (`!s:x86state. read YMM10_SSE s = read YMM10 s`,
+   READ_YMM_SSE_TAC YMM10_SSE YMM10);;
+
+let READ_YMM11_SSE_EQUIV = prove
+  (`!s:x86state. read YMM11_SSE s = read YMM11 s`,
+   READ_YMM_SSE_TAC YMM11_SSE YMM11);;
+
+let READ_YMM12_SSE_EQUIV = prove
+  (`!s:x86state. read YMM12_SSE s = read YMM12 s`,
+   READ_YMM_SSE_TAC YMM12_SSE YMM12);;
+
+let READ_YMM13_SSE_EQUIV = prove
+  (`!s:x86state. read YMM13_SSE s = read YMM13 s`,
+   READ_YMM_SSE_TAC YMM13_SSE YMM13);;
+
+let READ_YMM14_SSE_EQUIV = prove
+  (`!s:x86state. read YMM14_SSE s = read YMM14 s`,
+   READ_YMM_SSE_TAC YMM14_SSE YMM14);;
+
+let READ_YMM15_SSE_EQUIV = prove
+  (`!s:x86state. read YMM15_SSE s = read YMM15 s`,
+   READ_YMM_SSE_TAC YMM15_SSE YMM15);;
+
 let XMM0  = define `XMM0  = YMM0  :> zerotop_128`
 and XMM1  = define `XMM1  = YMM1  :> zerotop_128`
 and XMM2  = define `XMM2  = YMM2  :> zerotop_128`
@@ -330,6 +463,29 @@ and XMM15 = define `XMM15 = YMM15 :> zerotop_128`;;
 add_component_alias_thms
  [XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7;
   XMM8; XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15];;
+
+let XMM0_SSE  = define `XMM0_SSE  = YMM0_SSE  :> bottom_128`
+and XMM1_SSE  = define `XMM1_SSE  = YMM1_SSE  :> bottom_128`
+and XMM2_SSE  = define `XMM2_SSE  = YMM2_SSE  :> bottom_128`
+and XMM3_SSE  = define `XMM3_SSE  = YMM3_SSE  :> bottom_128`
+and XMM4_SSE  = define `XMM4_SSE  = YMM4_SSE  :> bottom_128`
+and XMM5_SSE  = define `XMM5_SSE  = YMM5_SSE  :> bottom_128`
+and XMM6_SSE  = define `XMM6_SSE  = YMM6_SSE  :> bottom_128`
+and XMM7_SSE  = define `XMM7_SSE  = YMM7_SSE  :> bottom_128`
+and XMM8_SSE  = define `XMM8_SSE  = YMM8_SSE  :> bottom_128`
+and XMM9_SSE  = define `XMM9_SSE  = YMM9_SSE  :> bottom_128`
+and XMM10_SSE = define `XMM10_SSE = YMM10_SSE :> bottom_128`
+and XMM11_SSE = define `XMM11_SSE = YMM11_SSE :> bottom_128`
+and XMM12_SSE = define `XMM12_SSE = YMM12_SSE :> bottom_128`
+and XMM13_SSE = define `XMM13_SSE = YMM13_SSE :> bottom_128`
+and XMM14_SSE = define `XMM14_SSE = YMM14_SSE :> bottom_128`
+and XMM15_SSE = define `XMM15_SSE = YMM15_SSE :> bottom_128`;;
+
+add_component_alias_thms
+ [XMM0_SSE; XMM1_SSE; XMM2_SSE; XMM3_SSE;
+  XMM4_SSE; XMM5_SSE; XMM6_SSE; XMM7_SSE;
+  XMM8_SSE; XMM9_SSE; XMM10_SSE; XMM11_SSE;
+  XMM12_SSE; XMM13_SSE; XMM14_SSE; XMM15_SSE];;
 
 (*** Note that K0 is actually hardwired to all-1s              ***)
 (*** So strictly we should have left it out of the state above ***)
@@ -501,6 +657,42 @@ let x86_ADOX = new_definition
         let z = word_add (word_add x y) (word c) in
         (dest := (z:N word) ,,
          OF := ~(val x + val y + c = val z)) s`;;
+
+(* AESENC does not modify DEST[MAXVL-1:128] *)
+let x86_AESENC = new_definition
+  `x86_AESENC dest src s =
+     let state = read dest s and roundkey = read src s in
+     let new_state = aesenc state roundkey in
+     (dest := new_state) s`;;
+
+(* AESENCLAST does not modify DEST[MAXVL-1:128] *)
+let x86_AESENCLAST = new_definition
+  `x86_AESENCLAST dest src s =
+     let state = read dest s and roundkey = read src s in
+     let new_state = aesenclast state roundkey in
+     (dest := new_state) s`;;
+
+(* AESDEC does not modify DEST[MAXVL-1:128] *)
+let x86_AESDEC = new_definition
+  `x86_AESDEC dest src s =
+     let state = read dest s and roundkey = read src s in
+     let new_state = aesdec state roundkey in
+     (dest := new_state) s`;;
+
+(* AESDECLAST does not modify DEST[MAXVL-1:128] *)
+let x86_AESDECLAST = new_definition
+  `x86_AESDECLAST dest src s =
+     let state = read dest s and roundkey = read src s in
+     let new_state = aesdeclast state roundkey in
+     (dest := new_state) s`;;
+
+(* AESDECLAST does not modify DEST[MAXVL-1:128] *)
+let x86_AESKEYGENASSIST = new_definition
+  `x86_AESKEYGENASSIST dest src imm8 s =
+     let x = read src s in
+     let imm8 = read imm8 s in
+     let res = aeskeygenassist x imm8 in
+     (dest := res) s`;;
 
 let x86_AND = new_definition
  `x86_AND dest src s =
@@ -1199,6 +1391,10 @@ let SIMD128 = define
  `SIMD128 (Simdreg reg Lower_128) =
     simdregisters :> element reg :> zerotop_256 :> zerotop_128`;;
 
+let SIMD128_SSE = define
+ `SIMD128_SSE (Simdreg reg Lower_128) =
+    simdregisters :> element reg :> bottom_256 :> bottom_128`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Decoding of a bsid address, always returning a 64-bit word.               *)
 (* ------------------------------------------------------------------------- *)
@@ -1229,6 +1425,13 @@ let OPERAND128 = define
  `OPERAND128 (Simdregister r) s =
         (if simdregister_size r = 128 then SIMD128 r else ARB) /\
   OPERAND128 (Memop w ea) s =
+       (if w = Word128 then memory :> bytes128 (bsid_semantics ea s)
+        else ARB)`;;
+
+let OPERAND128_SSE = define
+ `OPERAND128_SSE (Simdregister r) s =
+        (if simdregister_size r = 128 then SIMD128_SSE r else ARB) /\
+  OPERAND128_SSE (Memop w ea) s =
        (if w = Word128 then memory :> bytes128 (bsid_semantics ea s)
         else ARB)`;;
 
@@ -1399,6 +1602,16 @@ let x86_execute = define
         (match operand_size dest with
            64 -> x86_ADOX (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_ADOX (OPERAND32 dest s) (OPERAND32 src s)) s
+    | AESDEC dest src ->
+        x86_AESDEC (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | AESDECLAST dest src ->
+        x86_AESDECLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | AESENC dest src ->
+        x86_AESENC (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | AESENCLAST dest src ->
+        x86_AESENCLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | AESKEYGENASSIST dest src imm8 ->
+        x86_AESKEYGENASSIST (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
     | AND dest src ->
         (match operand_size dest with
            64 -> x86_AND (OPERAND64 dest s) (OPERAND64 src s)
@@ -2068,6 +2281,24 @@ let OPERAND_CLAUSES = prove
    OPERAND128(%_% xmm15) s = YMM15 :> zerotop_128  /\
    OPERAND128 (Memop Word128 bsid) s =
     memory :> bytes128 (bsid_semantics bsid s) /\
+   OPERAND128_SSE(%_% xmm0) s = YMM0_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm1) s = YMM1_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm2) s = YMM2_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm3) s = YMM3_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm4) s = YMM4_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm5) s = YMM5_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm6) s = YMM6_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm7) s = YMM7_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm8) s = YMM8_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm9) s = YMM9_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm10) s = YMM10_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm11) s = YMM11_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm12) s = YMM12_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm13) s = YMM13_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm14) s = YMM14_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm15) s = YMM15_SSE :> bottom_128  /\
+   OPERAND128_SSE (Memop Word128 bsid) s =
+    memory :> bytes128 (bsid_semantics bsid s) /\
    OPERAND256(%_% ymm0) s = YMM0  /\
    OPERAND256(%_% ymm1) s = YMM1  /\
    OPERAND256(%_% ymm2) s = YMM2  /\
@@ -2176,16 +2407,24 @@ let OPERAND_CLAUSES = prove
               xmm8; xmm9; xmm10; xmm11; xmm12; xmm13; xmm14; xmm15;
               XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7; XMM8;
               XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15;
+              XMM0_SSE; XMM1_SSE; XMM2_SSE; XMM3_SSE;
+              XMM4_SSE; XMM5_SSE; XMM6_SSE; XMM7_SSE;
+              XMM8_SSE; XMM9_SSE; XMM10_SSE; XMM11_SSE;
+              XMM12_SSE; XMM13_SSE; XMM14_SSE; XMM15_SSE;
               ymm0; ymm1; ymm2; ymm3; ymm4; ymm5; ymm6; ymm7;
               ymm8; ymm9; ymm10; ymm11; ymm12; ymm13; ymm14; ymm15;
               YMM0; YMM1; YMM2; YMM3; YMM4; YMM5; YMM6; YMM7; YMM8;
               YMM9; YMM10; YMM11; YMM12; YMM13; YMM14; YMM15;
+              YMM0_SSE; YMM1_SSE; YMM2_SSE; YMM3_SSE;
+              YMM4_SSE; YMM5_SSE; YMM6_SSE; YMM7_SSE;
+              YMM8_SSE; YMM9_SSE; YMM10_SSE; YMM11_SSE;
+              YMM12_SSE; YMM13_SSE; YMM14_SSE; YMM15_SSE;
               ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8;
               ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] THEN
   REWRITE_TAC[simple_immediate; base_displacement; QWORD] THEN
-  REWRITE_TAC[OPERAND256; OPERAND128; OPERAND64; OPERAND32; OPERAND16; OPERAND8;
+  REWRITE_TAC[OPERAND256; OPERAND128; OPERAND128_SSE; OPERAND64; OPERAND32; OPERAND16; OPERAND8;
               register_size; regsize; simdregister_size; simdregsize;
-              SIMD256; SIMD128; GPR64; GPR32_Z; GPR32; GPR16; GPR8] THEN
+              SIMD256; SIMD128; SIMD128_SSE; GPR64; GPR32_Z; GPR32; GPR16; GPR8] THEN
   REWRITE_TAC[COMPONENT_COMPOSE_ASSOC]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -2399,9 +2638,10 @@ let x86_RET_POP_RIP = prove
 
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
-   [x86_ADC_ALT; x86_ADCX_ALT; x86_ADOX_ALT;
-    x86_ADD_ALT; x86_AND; x86_BSF; x86_BSR; x86_BSWAP;
-    x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
+   [x86_ADC_ALT; x86_ADCX_ALT; x86_ADOX_ALT; x86_ADD_ALT;
+    x86_AESDEC; x86_AESDECLAST; x86_AESENC; x86_AESENCLAST;
+    x86_AESKEYGENASSIST; x86_AND;
+    x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_DIV2; x86_ENDBR64;
     x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
@@ -2553,7 +2793,8 @@ let X86_CONV (decode_ths:thm option array) ths tm =
    REWRITE_CONV X86_OPERATION_CLAUSES THENC
    REWRITE_CONV[READ_RVALUE;
                 ASSIGN_ZEROTOP_32; READ_ZEROTOP_32; WRITE_ZEROTOP_32;
-                ASSIGN_ZEROTOP_128; READ_ZEROTOP_128; WRITE_ZEROTOP_128] THENC
+                ASSIGN_ZEROTOP_128; READ_ZEROTOP_128; WRITE_ZEROTOP_128;
+                READ_BOTTOM_128] THENC
    DEPTH_CONV WORD_NUM_RED_CONV THENC
    REWRITE_CONV[SEQ; condition_semantics] THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV
@@ -2563,6 +2804,17 @@ let X86_CONV (decode_ths:thm option array) ths tm =
    REWRITE_CONV[ASSIGNS_THM] THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV [SEQ_PULL_THM; BETA_THM] THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV[assign; seq; UNWIND_THM1; BETA_THM] THENC
+   TRY_CONV(REWRITE_CONV[WRITE_BOTTOM_128]) THENC
+   TRY_CONV(REWRITE_CONV[
+     READ_YMM0_SSE_EQUIV; READ_YMM1_SSE_EQUIV;
+     READ_YMM2_SSE_EQUIV; READ_YMM3_SSE_EQUIV;
+     READ_YMM4_SSE_EQUIV; READ_YMM5_SSE_EQUIV;
+     READ_YMM6_SSE_EQUIV; READ_YMM7_SSE_EQUIV;
+     READ_YMM8_SSE_EQUIV; READ_YMM9_SSE_EQUIV;
+     READ_YMM10_SSE_EQUIV; READ_YMM11_SSE_EQUIV;
+     READ_YMM12_SSE_EQUIV; READ_YMM13_SSE_EQUIV;
+     READ_YMM14_SSE_EQUIV; READ_YMM15_SSE_EQUIV
+     ]) THENC
    REWRITE_CONV[] THENC REWRITE_CONV[WRITE_SHORT; READ_SHORT] THENC
    TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV THENC
    X86_FORCE_CONDITIONAL_CONV ths THENC
@@ -2620,6 +2872,17 @@ let X86_STEP_TAC (mc_length_th,decode_ths) subths sname =
     if thl = [] then ALL_TAC else
     MP_TAC(end_itlist CONJ thl) THEN
     ASSEMBLER_SIMPLIFY_TAC THEN
+    (* Reduce reads of YMMx_SSE into reads of YMMx *)
+    REWRITE_TAC[
+      READ_YMM0_SSE_EQUIV; READ_YMM1_SSE_EQUIV;
+      READ_YMM2_SSE_EQUIV; READ_YMM3_SSE_EQUIV;
+      READ_YMM4_SSE_EQUIV; READ_YMM5_SSE_EQUIV;
+      READ_YMM6_SSE_EQUIV; READ_YMM7_SSE_EQUIV;
+      READ_YMM8_SSE_EQUIV; READ_YMM9_SSE_EQUIV;
+      READ_YMM10_SSE_EQUIV; READ_YMM11_SSE_EQUIV;
+      READ_YMM12_SSE_EQUIV; READ_YMM13_SSE_EQUIV;
+      READ_YMM14_SSE_EQUIV; READ_YMM15_SSE_EQUIV
+    ] THEN
     STRIP_TAC);;
 
 let X86_VERBOSE_STEP_TAC (exth1,exth2) sname g =
