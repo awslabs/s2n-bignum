@@ -364,7 +364,7 @@ and tac_after memop =
   (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
    else ALL_TAC) THEN
   ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
-  PRINT_GOAL_TAC THEN ALL_TAC;;
+  ALL_TAC;;
 
 (* A function that decodes a list of bytes into an x86 instruction.
  Could be used for figuring out if an instruction exist in s2n-bignum. *)
