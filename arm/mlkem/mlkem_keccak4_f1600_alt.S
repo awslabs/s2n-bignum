@@ -8,6 +8,7 @@
 // Keccak-f1600 permutation for SHA3, batch of four independent operations
 // Input a[100], rc[24]; output a[100]
 //
+//
 // The input/output argument is in effect four 25-element Keccak arrays
 // a[0...24], a[25..49], a[50..74] and a[75..99], which could be considered
 // as type a[25][4].
@@ -24,25 +25,25 @@
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
 //
-// extern void mlkem_keccak4_f1600(uint64_t a[100],uint64_t rc[24]);
+// extern void mlkem_keccak4_f1600_alt(uint64_t a[100],uint64_t rc[24]);
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_keccak4_f1600)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_keccak4_f1600)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_keccak4_f1600_alt)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_keccak4_f1600_alt)
         .text
         .balign 4
 
 // This is similar to the code in the mlkem-native repository here:
 //
-//  mlkem/fips202/native/aarch64/src/keccak_f1600_x4_scalar_v84a_asm_hybrid.S
+//  mlkem/fips202/native/aarch64/src/keccak_f1600_x4_v8a_scalar_hybrid_asm.S
 //
 // The main difference is the avoidance of ld2/st2 in favour of explicit
 // transposition operations and conventional loads and stores.
 
-S2N_BN_SYMBOL(mlkem_keccak4_f1600):
+S2N_BN_SYMBOL(mlkem_keccak4_f1600_alt):
 
         sub     sp, sp, #0xe0
         stp     x19, x20, [sp, #0x30]
@@ -126,7 +127,7 @@ S2N_BN_SYMBOL(mlkem_keccak4_f1600):
         ldr     x25, [x0, #0xc0]
         sub     x0, x0, #0x190
 
-mlkem_keccak4_f1600_initial:
+mlkem_keccak4_f1600_alt_initial:
         eor     x30, x24, x25
         eor     x27, x9, x10
         eor     x0, x30, x21
@@ -346,360 +347,546 @@ mlkem_keccak4_f1600_initial:
         bic     x3, x0, x30, ror #5
         eor     x23, x3, x26, ror #52
         eor     x3, x29, x30, ror #24
-        eor3    v30.16b, v0.16b, v5.16b, v10.16b
-        eor3    v30.16b, v30.16b, v15.16b, v20.16b
-        eor3    v29.16b, v1.16b, v6.16b, v11.16b
-        eor3    v29.16b, v29.16b, v16.16b, v21.16b
-        eor3    v28.16b, v2.16b, v7.16b, v12.16b
-        eor3    v28.16b, v28.16b, v17.16b, v22.16b
-        eor3    v27.16b, v3.16b, v8.16b, v13.16b
-        eor3    v27.16b, v27.16b, v18.16b, v23.16b
-        eor3    v26.16b, v4.16b, v9.16b, v14.16b
-        eor3    v26.16b, v26.16b, v19.16b, v24.16b
-        rax1    v25.2d, v30.2d, v28.2d
-        rax1    v28.2d, v28.2d, v26.2d
-        rax1    v26.2d, v26.2d, v29.2d
-        rax1    v29.2d, v29.2d, v27.2d
-        rax1    v27.2d, v27.2d, v30.2d
+        eor     v30.16b, v0.16b, v5.16b
+        eor     v30.16b, v30.16b, v10.16b
+        eor     v30.16b, v30.16b, v15.16b
+        eor     v30.16b, v30.16b, v20.16b
+        eor     v29.16b, v1.16b, v6.16b
+        eor     v29.16b, v29.16b, v11.16b
+        eor     v29.16b, v29.16b, v16.16b
+        eor     v29.16b, v29.16b, v21.16b
+        eor     v28.16b, v2.16b, v7.16b
+        eor     v28.16b, v28.16b, v12.16b
+        eor     v28.16b, v28.16b, v17.16b
+        eor     v28.16b, v28.16b, v22.16b
+        eor     v27.16b, v3.16b, v8.16b
+        eor     v27.16b, v27.16b, v13.16b
+        eor     v27.16b, v27.16b, v18.16b
+        eor     v27.16b, v27.16b, v23.16b
+        eor     v26.16b, v4.16b, v9.16b
+        eor     v26.16b, v26.16b, v14.16b
+        eor     v26.16b, v26.16b, v19.16b
+        eor     v26.16b, v26.16b, v24.16b
+        add     v31.2d, v28.2d, v28.2d
+        sri     v31.2d, v28.2d, #0x3f
+        eor     v25.16b, v31.16b, v30.16b
+        add     v31.2d, v26.2d, v26.2d
+        sri     v31.2d, v26.2d, #0x3f
+        eor     v28.16b, v31.16b, v28.16b
+        add     v31.2d, v29.2d, v29.2d
+        sri     v31.2d, v29.2d, #0x3f
+        eor     v26.16b, v31.16b, v26.16b
+        add     v31.2d, v27.2d, v27.2d
+        sri     v31.2d, v27.2d, #0x3f
+        eor     v29.16b, v31.16b, v29.16b
+        add     v31.2d, v30.2d, v30.2d
+        sri     v31.2d, v30.2d, #0x3f
+        eor     v27.16b, v31.16b, v27.16b
         eor     v30.16b, v0.16b, v26.16b
-        xar     v0.2d, v2.2d, v29.2d, #0x2
-        xar     v2.2d, v12.2d, v29.2d, #0x15
-        xar     v12.2d, v13.2d, v28.2d, #0x27
-        xar     v13.2d, v19.2d, v27.2d, #0x38
-        xar     v19.2d, v23.2d, v28.2d, #0x8
-        xar     v23.2d, v15.2d, v26.2d, #0x17
-        xar     v15.2d, v1.2d, v25.2d, #0x3f
-        xar     v1.2d, v8.2d, v28.2d, #0x9
-        xar     v8.2d, v16.2d, v25.2d, #0x13
-        xar     v16.2d, v7.2d, v29.2d, #0x3a
-        xar     v7.2d, v10.2d, v26.2d, #0x3d
-        xar     v10.2d, v3.2d, v28.2d, #0x24
-        xar     v3.2d, v18.2d, v28.2d, #0x2b
-        xar     v18.2d, v17.2d, v29.2d, #0x31
-        xar     v17.2d, v11.2d, v25.2d, #0x36
-        xar     v11.2d, v9.2d, v27.2d, #0x2c
-        xar     v9.2d, v22.2d, v29.2d, #0x3
-        xar     v22.2d, v14.2d, v27.2d, #0x19
-        xar     v14.2d, v20.2d, v26.2d, #0x2e
-        xar     v20.2d, v4.2d, v27.2d, #0x25
-        xar     v4.2d, v24.2d, v27.2d, #0x32
-        xar     v24.2d, v21.2d, v25.2d, #0x3e
-        xar     v21.2d, v5.2d, v26.2d, #0x1c
-        xar     v27.2d, v6.2d, v25.2d, #0x14
+        eor     v31.16b, v2.16b, v29.16b
+        shl     v0.2d, v31.2d, #0x3e
+        sri     v0.2d, v31.2d, #0x2
+        eor     v31.16b, v12.16b, v29.16b
+        shl     v2.2d, v31.2d, #0x2b
+        sri     v2.2d, v31.2d, #0x15
+        eor     v31.16b, v13.16b, v28.16b
+        shl     v12.2d, v31.2d, #0x19
+        sri     v12.2d, v31.2d, #0x27
+        eor     v31.16b, v19.16b, v27.16b
+        shl     v13.2d, v31.2d, #0x8
+        sri     v13.2d, v31.2d, #0x38
+        eor     v31.16b, v23.16b, v28.16b
+        shl     v19.2d, v31.2d, #0x38
+        sri     v19.2d, v31.2d, #0x8
+        eor     v31.16b, v15.16b, v26.16b
+        shl     v23.2d, v31.2d, #0x29
+        sri     v23.2d, v31.2d, #0x17
+        eor     v31.16b, v1.16b, v25.16b
+        shl     v15.2d, v31.2d, #0x1
+        sri     v15.2d, v31.2d, #0x3f
+        eor     v31.16b, v8.16b, v28.16b
+        shl     v1.2d, v31.2d, #0x37
+        sri     v1.2d, v31.2d, #0x9
+        eor     v31.16b, v16.16b, v25.16b
+        shl     v8.2d, v31.2d, #0x2d
+        sri     v8.2d, v31.2d, #0x13
+        eor     v31.16b, v7.16b, v29.16b
+        shl     v16.2d, v31.2d, #0x6
+        sri     v16.2d, v31.2d, #0x3a
+        eor     v31.16b, v10.16b, v26.16b
+        shl     v7.2d, v31.2d, #0x3
+        sri     v7.2d, v31.2d, #0x3d
+        eor     v31.16b, v3.16b, v28.16b
+        shl     v10.2d, v31.2d, #0x1c
+        sri     v10.2d, v31.2d, #0x24
+        eor     v31.16b, v18.16b, v28.16b
+        shl     v3.2d, v31.2d, #0x15
+        sri     v3.2d, v31.2d, #0x2b
+        eor     v31.16b, v17.16b, v29.16b
+        shl     v18.2d, v31.2d, #0xf
+        sri     v18.2d, v31.2d, #0x31
+        eor     v31.16b, v11.16b, v25.16b
+        shl     v17.2d, v31.2d, #0xa
+        sri     v17.2d, v31.2d, #0x36
+        eor     v31.16b, v9.16b, v27.16b
+        shl     v11.2d, v31.2d, #0x14
+        sri     v11.2d, v31.2d, #0x2c
+        eor     v31.16b, v22.16b, v29.16b
+        shl     v9.2d, v31.2d, #0x3d
+        sri     v9.2d, v31.2d, #0x3
+        eor     v31.16b, v14.16b, v27.16b
+        shl     v22.2d, v31.2d, #0x27
+        sri     v22.2d, v31.2d, #0x19
+        eor     v31.16b, v20.16b, v26.16b
+        shl     v14.2d, v31.2d, #0x12
+        sri     v14.2d, v31.2d, #0x2e
+        eor     v31.16b, v4.16b, v27.16b
+        shl     v20.2d, v31.2d, #0x1b
+        sri     v20.2d, v31.2d, #0x25
+        eor     v31.16b, v24.16b, v27.16b
+        shl     v4.2d, v31.2d, #0xe
+        sri     v4.2d, v31.2d, #0x32
+        eor     v31.16b, v21.16b, v25.16b
+        shl     v24.2d, v31.2d, #0x2
+        sri     v24.2d, v31.2d, #0x3e
+        eor     v31.16b, v5.16b, v26.16b
+        shl     v21.2d, v31.2d, #0x24
+        sri     v21.2d, v31.2d, #0x1c
+        eor     v31.16b, v6.16b, v25.16b
+        shl     v27.2d, v31.2d, #0x2c
+        sri     v27.2d, v31.2d, #0x14
         ldr     x30, [sp, #0x10]
         ld1r    { v28.2d }, [x30], #8
         str     x30, [sp, #0x10]
-        bcax    v5.16b, v10.16b, v7.16b, v11.16b
-        bcax    v6.16b, v11.16b, v8.16b, v7.16b
-        bcax    v7.16b, v7.16b, v9.16b, v8.16b
-        bcax    v8.16b, v8.16b, v10.16b, v9.16b
-        bcax    v9.16b, v9.16b, v11.16b, v10.16b
-        bcax    v10.16b, v15.16b, v12.16b, v16.16b
-        bcax    v11.16b, v16.16b, v13.16b, v12.16b
-        bcax    v12.16b, v12.16b, v14.16b, v13.16b
-        bcax    v13.16b, v13.16b, v15.16b, v14.16b
-        bcax    v14.16b, v14.16b, v16.16b, v15.16b
-        bcax    v15.16b, v20.16b, v17.16b, v21.16b
-        bcax    v16.16b, v21.16b, v18.16b, v17.16b
-        bcax    v17.16b, v17.16b, v19.16b, v18.16b
-        bcax    v18.16b, v18.16b, v20.16b, v19.16b
-        bcax    v19.16b, v19.16b, v21.16b, v20.16b
-        bcax    v20.16b, v0.16b, v22.16b, v1.16b
-        bcax    v21.16b, v1.16b, v23.16b, v22.16b
-        bcax    v22.16b, v22.16b, v24.16b, v23.16b
-        bcax    v23.16b, v23.16b, v0.16b, v24.16b
-        bcax    v24.16b, v24.16b, v1.16b, v0.16b
-        bcax    v0.16b, v30.16b, v2.16b, v27.16b
-        bcax    v1.16b, v27.16b, v3.16b, v2.16b
-        bcax    v2.16b, v2.16b, v4.16b, v3.16b
-        bcax    v3.16b, v3.16b, v30.16b, v4.16b
-        bcax    v4.16b, v4.16b, v27.16b, v30.16b
+        bic     v31.16b, v7.16b, v11.16b
+        eor     v5.16b, v31.16b, v10.16b
+        bic     v31.16b, v8.16b, v7.16b
+        eor     v6.16b, v31.16b, v11.16b
+        bic     v31.16b, v9.16b, v8.16b
+        eor     v7.16b, v31.16b, v7.16b
+        bic     v31.16b, v10.16b, v9.16b
+        eor     v8.16b, v31.16b, v8.16b
+        bic     v31.16b, v11.16b, v10.16b
+        eor     v9.16b, v31.16b, v9.16b
+        bic     v31.16b, v12.16b, v16.16b
+        eor     v10.16b, v31.16b, v15.16b
+        bic     v31.16b, v13.16b, v12.16b
+        eor     v11.16b, v31.16b, v16.16b
+        bic     v31.16b, v14.16b, v13.16b
+        eor     v12.16b, v31.16b, v12.16b
+        bic     v31.16b, v15.16b, v14.16b
+        eor     v13.16b, v31.16b, v13.16b
+        bic     v31.16b, v16.16b, v15.16b
+        eor     v14.16b, v31.16b, v14.16b
+        bic     v31.16b, v17.16b, v21.16b
+        eor     v15.16b, v31.16b, v20.16b
+        bic     v31.16b, v18.16b, v17.16b
+        eor     v16.16b, v31.16b, v21.16b
+        bic     v31.16b, v19.16b, v18.16b
+        eor     v17.16b, v31.16b, v17.16b
+        bic     v31.16b, v20.16b, v19.16b
+        eor     v18.16b, v31.16b, v18.16b
+        bic     v31.16b, v21.16b, v20.16b
+        eor     v19.16b, v31.16b, v19.16b
+        bic     v31.16b, v22.16b, v1.16b
+        eor     v20.16b, v31.16b, v0.16b
+        bic     v31.16b, v23.16b, v22.16b
+        eor     v21.16b, v31.16b, v1.16b
+        bic     v31.16b, v24.16b, v23.16b
+        eor     v22.16b, v31.16b, v22.16b
+        bic     v31.16b, v0.16b, v24.16b
+        eor     v23.16b, v31.16b, v23.16b
+        bic     v31.16b, v1.16b, v0.16b
+        eor     v24.16b, v31.16b, v24.16b
+        bic     v31.16b, v2.16b, v27.16b
+        eor     v0.16b, v31.16b, v30.16b
+        bic     v31.16b, v3.16b, v2.16b
+        eor     v1.16b, v31.16b, v27.16b
+        bic     v31.16b, v4.16b, v3.16b
+        eor     v2.16b, v31.16b, v2.16b
+        bic     v31.16b, v30.16b, v4.16b
+        eor     v3.16b, v31.16b, v3.16b
+        bic     v31.16b, v27.16b, v30.16b
+        eor     v4.16b, v31.16b, v4.16b
         eor     v0.16b, v0.16b, v28.16b
 
-mlkem_keccak4_f1600_loop:
+mlkem_keccak4_f1600_alt_loop:
         eor     x0, x15, x11, ror #52
         eor     x0, x0, x13, ror #48
+        eor     v30.16b, v0.16b, v5.16b
+        eor     v30.16b, v30.16b, v10.16b
         eor     x26, x8, x9, ror #57
+        eor     v30.16b, v30.16b, v15.16b
         eor     x27, x0, x14, ror #10
-        eor3    v30.16b, v0.16b, v5.16b, v10.16b
-        eor3    v30.16b, v30.16b, v15.16b, v20.16b
         eor     x29, x16, x28, ror #63
+        eor     v30.16b, v30.16b, v20.16b
         eor     x26, x26, x6, ror #51
+        eor     v29.16b, v1.16b, v6.16b
         eor     x30, x23, x22, ror #50
-        eor3    v29.16b, v1.16b, v6.16b, v11.16b
+        eor     v29.16b, v29.16b, v11.16b
         eor     x0, x26, x10, ror #31
         eor     x29, x29, x19, ror #37
+        eor     v29.16b, v29.16b, v16.16b
         eor     x27, x27, x12, ror #5
-        eor3    v29.16b, v29.16b, v16.16b, v21.16b
+        eor     v29.16b, v29.16b, v21.16b
         eor     x30, x30, x24, ror #34
         eor     x0, x0, x7, ror #27
+        eor     v28.16b, v2.16b, v7.16b
         eor     x26, x30, x21, ror #26
-        eor3    v28.16b, v2.16b, v7.16b, v12.16b
+        eor     v28.16b, v28.16b, v12.16b
         eor     x26, x26, x25, ror #15
+        eor     v28.16b, v28.16b, v17.16b
         ror     x30, x27, #0x3e
         eor     x30, x30, x26, ror #57
+        eor     v28.16b, v28.16b, v22.16b
         ror     x26, x26, #0x3a
-        eor3    v28.16b, v28.16b, v17.16b, v22.16b
+        eor     v27.16b, v3.16b, v8.16b
         eor     x16, x30, x16
+        eor     v27.16b, v27.16b, v13.16b
         eor     x28, x30, x28, ror #63
         str     x28, [sp, #0xd0]
-        eor3    v27.16b, v3.16b, v8.16b, v13.16b
+        eor     v27.16b, v27.16b, v18.16b
         eor     x29, x29, x17, ror #36
+        eor     v27.16b, v27.16b, v23.16b
         eor     x28, x1, x2, ror #61
         eor     x19, x30, x19, ror #37
-        eor3    v27.16b, v27.16b, v18.16b, v23.16b
+        eor     v26.16b, v4.16b, v9.16b
         eor     x29, x29, x20, ror #2
+        eor     v26.16b, v26.16b, v14.16b
         eor     x28, x28, x4, ror #54
+        eor     v26.16b, v26.16b, v19.16b
         eor     x26, x26, x0, ror #55
-        eor3    v26.16b, v4.16b, v9.16b, v14.16b
         eor     x28, x28, x3, ror #39
+        eor     v26.16b, v26.16b, v24.16b
         eor     x28, x28, x5, ror #25
+        add     v31.2d, v28.2d, v28.2d
         ror     x0, x0, #0x38
         eor     x0, x0, x29, ror #63
-        eor3    v26.16b, v26.16b, v19.16b, v24.16b
+        sri     v31.2d, v28.2d, #0x3f
         eor     x27, x28, x27, ror #61
+        eor     v25.16b, v31.16b, v30.16b
         eor     x13, x0, x13, ror #46
+        add     v31.2d, v26.2d, v26.2d
         eor     x28, x29, x28, ror #63
-        rax1    v25.2d, v30.2d, v28.2d
         eor     x29, x30, x20, ror #2
+        sri     v31.2d, v26.2d, #0x3f
         eor     x20, x26, x3, ror #39
+        eor     v28.16b, v31.16b, v28.16b
         eor     x11, x0, x11, ror #50
-        rax1    v28.2d, v28.2d, v26.2d
+        add     v31.2d, v29.2d, v29.2d
         eor     x25, x28, x25, ror #9
         eor     x3, x28, x21, ror #20
+        sri     v31.2d, v29.2d, #0x3f
         eor     x21, x26, x1
-        rax1    v26.2d, v26.2d, v29.2d
+        eor     v26.16b, v31.16b, v26.16b
         eor     x9, x27, x9, ror #49
         eor     x24, x28, x24, ror #28
+        add     v31.2d, v27.2d, v27.2d
         eor     x1, x30, x17, ror #36
+        sri     v31.2d, v27.2d, #0x3f
         eor     x14, x0, x14, ror #8
-        rax1    v29.2d, v29.2d, v27.2d
+        eor     v29.16b, v31.16b, v29.16b
         eor     x22, x28, x22, ror #44
         eor     x8, x27, x8, ror #56
+        add     v31.2d, v30.2d, v30.2d
         eor     x17, x27, x7, ror #19
-        rax1    v27.2d, v27.2d, v30.2d
+        sri     v31.2d, v30.2d, #0x3f
         eor     x15, x0, x15, ror #62
         bic     x7, x20, x22, ror #47
+        eor     v27.16b, v31.16b, v27.16b
         eor     x4, x26, x4, ror #54
         eor     v30.16b, v0.16b, v26.16b
         eor     x0, x0, x12, ror #3
+        eor     v31.16b, v2.16b, v29.16b
         eor     x28, x28, x23, ror #58
         eor     x23, x26, x2, ror #61
-        xar     v0.2d, v2.2d, v29.2d, #0x2
+        shl     v0.2d, v31.2d, #0x3e
         eor     x26, x26, x5, ror #25
+        sri     v0.2d, v31.2d, #0x2
         eor     x2, x7, x16, ror #39
+        eor     v31.16b, v12.16b, v29.16b
         bic     x7, x9, x20, ror #42
         bic     x30, x15, x9, ror #16
-        xar     v2.2d, v12.2d, v29.2d, #0x15
+        shl     v2.2d, v31.2d, #0x2b
         eor     x7, x7, x22, ror #25
+        sri     v2.2d, v31.2d, #0x15
         eor     x12, x30, x20, ror #58
         bic     x20, x22, x16, ror #56
-        xar     v12.2d, v13.2d, v28.2d, #0x27
+        eor     v31.16b, v13.16b, v28.16b
         eor     x30, x27, x6, ror #43
+        shl     v12.2d, v31.2d, #0x19
         eor     x22, x20, x15, ror #23
+        sri     v12.2d, v31.2d, #0x27
         bic     x6, x19, x13, ror #42
-        xar     v13.2d, v19.2d, v27.2d, #0x38
         eor     x6, x6, x17, ror #41
+        eor     v31.16b, v19.16b, v27.16b
         bic     x5, x13, x17, ror #63
+        shl     v13.2d, v31.2d, #0x8
         eor     x5, x21, x5, ror #21
-        xar     v19.2d, v23.2d, v28.2d, #0x8
+        sri     v13.2d, v31.2d, #0x38
         bic     x17, x17, x21, ror #44
         eor     x27, x27, x10, ror #23
+        eor     v31.16b, v23.16b, v28.16b
         bic     x21, x21, x25, ror #50
+        shl     v19.2d, v31.2d, #0x38
         bic     x20, x27, x4, ror #25
-        xar     v23.2d, v15.2d, v26.2d, #0x17
         bic     x10, x16, x15, ror #31
+        sri     v19.2d, v31.2d, #0x8
         eor     x16, x21, x19, ror #43
+        eor     v31.16b, v15.16b, v26.16b
         eor     x21, x17, x25, ror #30
-        xar     v15.2d, v1.2d, v25.2d, #0x3f
+        shl     v23.2d, v31.2d, #0x29
         bic     x19, x25, x19, ror #57
         ldr     x25, [sp, #0x18]
+        sri     v23.2d, v31.2d, #0x17
         eor     x17, x10, x9, ror #47
-        xar     v1.2d, v8.2d, v28.2d, #0x9
+        eor     v31.16b, v1.16b, v25.16b
         ldr     x9, [sp, #0x8]
         eor     x15, x20, x28, ror #27
+        shl     v15.2d, v31.2d, #0x1
         bic     x20, x4, x28, ror #2
-        xar     v8.2d, v16.2d, v25.2d, #0x13
+        sri     v15.2d, v31.2d, #0x3f
         eor     x10, x20, x1, ror #50
+        eor     v31.16b, v8.16b, v28.16b
         bic     x20, x11, x27, ror #60
         eor     x20, x20, x4, ror #21
+        shl     v1.2d, v31.2d, #0x37
         bic     x4, x28, x1, ror #48
-        xar     v16.2d, v7.2d, v29.2d, #0x3a
+        sri     v1.2d, v31.2d, #0x9
         bic     x1, x1, x11, ror #57
+        eor     v31.16b, v16.16b, v25.16b
         ldr     x28, [x9, x25, lsl #3]
         ldr     x9, [sp, #0xd0]
-        xar     v7.2d, v10.2d, v26.2d, #0x3d
+        shl     v8.2d, v31.2d, #0x2d
         add     x25, x25, #0x1
+        sri     v8.2d, v31.2d, #0x13
         str     x25, [sp, #0x18]
         cmp     x25, #0x17
-        xar     v10.2d, v3.2d, v28.2d, #0x24
+        eor     v31.16b, v7.16b, v29.16b
         eor     x25, x1, x27, ror #53
+        shl     v16.2d, v31.2d, #0x6
         bic     x27, x30, x26, ror #47
+        sri     v16.2d, v31.2d, #0x3a
         eor     x1, x5, x28
-        xar     v3.2d, v18.2d, v28.2d, #0x2b
         eor     x5, x4, x11, ror #41
+        eor     v31.16b, v10.16b, v26.16b
         eor     x11, x19, x13, ror #35
+        shl     v7.2d, v31.2d, #0x3
         bic     x13, x26, x24, ror #10
         eor     x28, x27, x24, ror #57
-        xar     v18.2d, v17.2d, v29.2d, #0x31
+        sri     v7.2d, v31.2d, #0x3d
         bic     x27, x24, x9, ror #47
+        eor     v31.16b, v3.16b, v28.16b
         bic     x19, x23, x3, ror #9
+        shl     v10.2d, v31.2d, #0x1c
         bic     x4, x29, x14, ror #41
-        xar     v17.2d, v11.2d, v25.2d, #0x36
         eor     x24, x19, x29, ror #44
+        sri     v10.2d, v31.2d, #0x24
         bic     x29, x3, x29, ror #35
+        eor     v31.16b, v18.16b, v28.16b
         eor     x13, x13, x9, ror #57
-        xar     v11.2d, v9.2d, v27.2d, #0x2c
+        shl     v3.2d, v31.2d, #0x15
         eor     x19, x29, x14, ror #12
         bic     x29, x9, x0, ror #19
+        sri     v3.2d, v31.2d, #0x2b
         bic     x14, x14, x8, ror #5
-        xar     v9.2d, v22.2d, v29.2d, #0x3
+        eor     v31.16b, v17.16b, v29.16b
         eor     x9, x14, x23, ror #43
         eor     x14, x4, x8, ror #46
+        shl     v18.2d, v31.2d, #0xf
         bic     x23, x8, x23, ror #38
+        sri     v18.2d, v31.2d, #0x31
         eor     x8, x27, x0, ror #2
-        xar     v22.2d, v14.2d, v27.2d, #0x19
+        eor     v31.16b, v11.16b, v25.16b
         eor     x4, x23, x3, ror #47
         bic     x3, x0, x30, ror #5
+        shl     v17.2d, v31.2d, #0xa
         eor     x23, x3, x26, ror #52
-        xar     v14.2d, v20.2d, v26.2d, #0x2e
+        sri     v17.2d, v31.2d, #0x36
         eor     x3, x29, x30, ror #24
         eor     x0, x15, x11, ror #52
+        eor     v31.16b, v9.16b, v27.16b
         eor     x0, x0, x13, ror #48
-        xar     v20.2d, v4.2d, v27.2d, #0x25
+        shl     v11.2d, v31.2d, #0x14
         eor     x26, x8, x9, ror #57
+        sri     v11.2d, v31.2d, #0x2c
         eor     x27, x0, x14, ror #10
         eor     x29, x16, x28, ror #63
-        xar     v4.2d, v24.2d, v27.2d, #0x32
+        eor     v31.16b, v22.16b, v29.16b
         eor     x26, x26, x6, ror #51
+        shl     v9.2d, v31.2d, #0x3d
         eor     x30, x23, x22, ror #50
+        sri     v9.2d, v31.2d, #0x3
         eor     x0, x26, x10, ror #31
         eor     x29, x29, x19, ror #37
-        xar     v24.2d, v21.2d, v25.2d, #0x3e
+        eor     v31.16b, v14.16b, v27.16b
         eor     x27, x27, x12, ror #5
+        shl     v22.2d, v31.2d, #0x27
         eor     x30, x30, x24, ror #34
         eor     x0, x0, x7, ror #27
-        xar     v21.2d, v5.2d, v26.2d, #0x1c
+        sri     v22.2d, v31.2d, #0x19
         eor     x26, x30, x21, ror #26
+        eor     v31.16b, v20.16b, v26.16b
         eor     x26, x26, x25, ror #15
+        shl     v14.2d, v31.2d, #0x12
         ror     x30, x27, #0x3e
-        xar     v27.2d, v6.2d, v25.2d, #0x14
         eor     x30, x30, x26, ror #57
+        sri     v14.2d, v31.2d, #0x2e
         ror     x26, x26, #0x3a
+        eor     v31.16b, v4.16b, v27.16b
         eor     x16, x30, x16
-        bcax    v5.16b, v10.16b, v7.16b, v11.16b
+        shl     v20.2d, v31.2d, #0x1b
         eor     x28, x30, x28, ror #63
         str     x28, [sp, #0xd0]
+        sri     v20.2d, v31.2d, #0x25
         eor     x29, x29, x17, ror #36
+        eor     v31.16b, v24.16b, v27.16b
         eor     x28, x1, x2, ror #61
-        bcax    v6.16b, v11.16b, v8.16b, v7.16b
         eor     x19, x30, x19, ror #37
+        shl     v4.2d, v31.2d, #0xe
         eor     x29, x29, x20, ror #2
+        sri     v4.2d, v31.2d, #0x32
         eor     x28, x28, x4, ror #54
-        bcax    v7.16b, v7.16b, v9.16b, v8.16b
+        eor     v31.16b, v21.16b, v25.16b
         eor     x26, x26, x0, ror #55
         eor     x28, x28, x3, ror #39
+        shl     v24.2d, v31.2d, #0x2
         eor     x28, x28, x5, ror #25
-        bcax    v8.16b, v8.16b, v10.16b, v9.16b
+        sri     v24.2d, v31.2d, #0x3e
         ror     x0, x0, #0x38
         eor     x0, x0, x29, ror #63
+        eor     v31.16b, v5.16b, v26.16b
         eor     x27, x28, x27, ror #61
-        bcax    v9.16b, v9.16b, v11.16b, v10.16b
+        shl     v21.2d, v31.2d, #0x24
         eor     x13, x0, x13, ror #46
+        sri     v21.2d, v31.2d, #0x1c
         eor     x28, x29, x28, ror #63
         eor     x29, x30, x20, ror #2
+        eor     v31.16b, v6.16b, v25.16b
         eor     x20, x26, x3, ror #39
-        bcax    v10.16b, v15.16b, v12.16b, v16.16b
+        shl     v27.2d, v31.2d, #0x2c
         eor     x11, x0, x11, ror #50
+        sri     v27.2d, v31.2d, #0x14
         eor     x25, x28, x25, ror #9
         eor     x3, x28, x21, ror #20
-        bcax    v11.16b, v16.16b, v13.16b, v12.16b
+        bic     v31.16b, v7.16b, v11.16b
         eor     x21, x26, x1
+        eor     v5.16b, v31.16b, v10.16b
         eor     x9, x27, x9, ror #49
         eor     x24, x28, x24, ror #28
-        bcax    v12.16b, v12.16b, v14.16b, v13.16b
+        bic     v31.16b, v8.16b, v7.16b
         eor     x1, x30, x17, ror #36
+        eor     v6.16b, v31.16b, v11.16b
         eor     x14, x0, x14, ror #8
+        bic     v31.16b, v9.16b, v8.16b
         eor     x22, x28, x22, ror #44
-        bcax    v13.16b, v13.16b, v15.16b, v14.16b
         eor     x8, x27, x8, ror #56
+        eor     v7.16b, v31.16b, v7.16b
         eor     x17, x27, x7, ror #19
+        bic     v31.16b, v10.16b, v9.16b
         eor     x15, x0, x15, ror #62
         bic     x7, x20, x22, ror #47
-        bcax    v14.16b, v14.16b, v16.16b, v15.16b
+        eor     v8.16b, v31.16b, v8.16b
         eor     x4, x26, x4, ror #54
+        bic     v31.16b, v11.16b, v10.16b
         eor     x0, x0, x12, ror #3
+        eor     v9.16b, v31.16b, v9.16b
         eor     x28, x28, x23, ror #58
-        bcax    v15.16b, v20.16b, v17.16b, v21.16b
         eor     x23, x26, x2, ror #61
+        bic     v31.16b, v12.16b, v16.16b
         eor     x26, x26, x5, ror #25
+        eor     v10.16b, v31.16b, v15.16b
         eor     x2, x7, x16, ror #39
-        bcax    v16.16b, v21.16b, v18.16b, v17.16b
+        bic     v31.16b, v13.16b, v12.16b
         bic     x7, x9, x20, ror #42
         bic     x30, x15, x9, ror #16
+        eor     v11.16b, v31.16b, v16.16b
         eor     x7, x7, x22, ror #25
-        bcax    v17.16b, v17.16b, v19.16b, v18.16b
+        bic     v31.16b, v14.16b, v13.16b
         eor     x12, x30, x20, ror #58
         bic     x20, x22, x16, ror #56
+        eor     v12.16b, v31.16b, v12.16b
         eor     x30, x27, x6, ror #43
+        bic     v31.16b, v15.16b, v14.16b
         eor     x22, x20, x15, ror #23
-        bcax    v18.16b, v18.16b, v20.16b, v19.16b
+        eor     v13.16b, v31.16b, v13.16b
         bic     x6, x19, x13, ror #42
         eor     x6, x6, x17, ror #41
+        bic     v31.16b, v16.16b, v15.16b
         bic     x5, x13, x17, ror #63
-        bcax    v19.16b, v19.16b, v21.16b, v20.16b
+        eor     v14.16b, v31.16b, v14.16b
         eor     x5, x21, x5, ror #21
+        bic     v31.16b, v17.16b, v21.16b
         bic     x17, x17, x21, ror #44
         eor     x27, x27, x10, ror #23
-        bcax    v20.16b, v0.16b, v22.16b, v1.16b
+        eor     v15.16b, v31.16b, v20.16b
         bic     x21, x21, x25, ror #50
+        bic     v31.16b, v18.16b, v17.16b
         bic     x20, x27, x4, ror #25
         bic     x10, x16, x15, ror #31
-        bcax    v21.16b, v1.16b, v23.16b, v22.16b
+        eor     v16.16b, v31.16b, v21.16b
         eor     x16, x21, x19, ror #43
+        bic     v31.16b, v19.16b, v18.16b
         eor     x21, x17, x25, ror #30
+        eor     v17.16b, v31.16b, v17.16b
         bic     x19, x25, x19, ror #57
         ldr     x25, [sp, #0x18]
-        bcax    v22.16b, v22.16b, v24.16b, v23.16b
+        bic     v31.16b, v20.16b, v19.16b
         eor     x17, x10, x9, ror #47
+        eor     v18.16b, v31.16b, v18.16b
         ldr     x9, [sp, #0x8]
         eor     x15, x20, x28, ror #27
-        bcax    v23.16b, v23.16b, v0.16b, v24.16b
+        bic     v31.16b, v21.16b, v20.16b
         bic     x20, x4, x28, ror #2
+        eor     v19.16b, v31.16b, v19.16b
         eor     x10, x20, x1, ror #50
+        bic     v31.16b, v22.16b, v1.16b
         bic     x20, x11, x27, ror #60
-        bcax    v24.16b, v24.16b, v1.16b, v0.16b
         eor     x20, x20, x4, ror #21
+        eor     v20.16b, v31.16b, v0.16b
         bic     x4, x28, x1, ror #48
+        bic     v31.16b, v23.16b, v22.16b
         bic     x1, x1, x11, ror #57
-        bcax    v0.16b, v30.16b, v2.16b, v27.16b
+        eor     v21.16b, v31.16b, v1.16b
         ldr     x28, [x9, x25, lsl #3]
         ldr     x9, [sp, #0xd0]
+        bic     v31.16b, v24.16b, v23.16b
         add     x25, x25, #0x1
+        eor     v22.16b, v31.16b, v22.16b
         str     x25, [sp, #0x18]
-        bcax    v1.16b, v27.16b, v3.16b, v2.16b
         cmp     x25, #0x17
+        bic     v31.16b, v0.16b, v24.16b
         eor     x25, x1, x27, ror #53
+        eor     v23.16b, v31.16b, v23.16b
         bic     x27, x30, x26, ror #47
-        bcax    v2.16b, v2.16b, v4.16b, v3.16b
+        bic     v31.16b, v1.16b, v0.16b
         eor     x1, x5, x28
         eor     x5, x4, x11, ror #41
+        eor     v24.16b, v31.16b, v24.16b
         eor     x11, x19, x13, ror #35
-        bcax    v3.16b, v3.16b, v30.16b, v4.16b
+        bic     v31.16b, v2.16b, v27.16b
         bic     x13, x26, x24, ror #10
         eor     x28, x27, x24, ror #57
+        eor     v0.16b, v31.16b, v30.16b
         bic     x27, x24, x9, ror #47
-        bcax    v4.16b, v4.16b, v27.16b, v30.16b
+        bic     v31.16b, v3.16b, v2.16b
         bic     x19, x23, x3, ror #9
+        eor     v1.16b, v31.16b, v27.16b
         bic     x4, x29, x14, ror #41
         eor     x24, x19, x29, ror #44
+        bic     v31.16b, v4.16b, v3.16b
         bic     x29, x3, x29, ror #35
+        eor     v2.16b, v31.16b, v2.16b
         eor     x13, x13, x9, ror #57
+        bic     v31.16b, v30.16b, v4.16b
         eor     x19, x29, x14, ror #12
         bic     x29, x9, x0, ror #19
+        eor     v3.16b, v31.16b, v3.16b
         bic     x14, x14, x8, ror #5
+        bic     v31.16b, v27.16b, v30.16b
         eor     x9, x14, x23, ror #43
         eor     x14, x4, x8, ror #46
+        eor     v4.16b, v31.16b, v4.16b
         bic     x23, x8, x23, ror #38
         eor     x8, x27, x0, ror #2
         eor     x4, x23, x3, ror #47
@@ -710,8 +897,7 @@ mlkem_keccak4_f1600_loop:
         ld1r    { v28.2d }, [x30], #8
         str     x30, [sp, #0x10]
         eor     v0.16b, v0.16b, v28.16b
-        ble     mlkem_keccak4_f1600_loop
-
+        b.le    mlkem_keccak4_f1600_alt_loop
         ror     x2, x2, #0x3d
         ror     x3, x3, #0x27
         ror     x4, x4, #0x36
@@ -737,8 +923,7 @@ mlkem_keccak4_f1600_loop:
         ror     x25, x25, #0x9
         ldr     x30, [sp, #0x20]
         cmp     x30, #0x1
-
-        beq     mlkem_keccak4_f1600_done
+        b.eq    mlkem_keccak4_f1600_alt_done
         mov     x30, #0x1
         str     x30, [sp, #0x20]
         ldr     x0, [sp]
@@ -772,10 +957,9 @@ mlkem_keccak4_f1600_loop:
         ldp     x15, x20, [x0, #0xb0]
         ldr     x25, [x0, #0xc0]
         sub     x0, x0, #0x258
-        b       mlkem_keccak4_f1600_initial
+        b       mlkem_keccak4_f1600_alt_initial
 
-
-mlkem_keccak4_f1600_done:
+mlkem_keccak4_f1600_alt_done:
         ldr     x0, [sp]
         add     x0, x0, #0x258
         stp     x1, x6, [x0]

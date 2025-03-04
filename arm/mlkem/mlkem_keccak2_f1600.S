@@ -36,7 +36,7 @@
 
 // This is similar to the code in the mlkem-native repository here:
 //
-//   mlkem/fips202/native/aarch64/src/keccak_f1600_x2_v84a_asm_clean.S
+//   mlkem/fips202/native/aarch64/src/keccak_f1600_x2_v84a_asm.S
 //
 // The main difference is the avoidance of ld2/st2 in favour of explicit
 // transposition operations and conventional loads and stores.

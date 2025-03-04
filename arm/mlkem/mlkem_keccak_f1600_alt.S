@@ -34,7 +34,7 @@
 // This is very similar to the vector code in the mlkem-native
 // repository here:
 //
-// https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/fips202/native/aarch64/src/keccak_f1600_x1_v84a_asm_clean.S
+// https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/fips202/native/aarch64/src/keccak_f1600_x1_v84a_asm.S
 //
 // The main difference is the use of ldp/stp dx,dy in place of
 // ld2, the variant used being currently unsupported by the

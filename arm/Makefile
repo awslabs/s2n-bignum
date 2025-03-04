@@ -257,6 +257,8 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mlkem/mlkem_keccak2_f1600.o \
              mlkem/mlkem_keccak2_f1600_alt.o \
              mlkem/mlkem_keccak4_f1600.o \
+             mlkem/mlkem_keccak4_f1600_alt.o \
+             mlkem/mlkem_keccak4_f1600_alt2.o \
              mlkem/mlkem_ntt.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \

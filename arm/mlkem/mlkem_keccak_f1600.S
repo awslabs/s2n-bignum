@@ -34,7 +34,7 @@
 // This is almost exactly the same as the scalar code in the mlkem-native
 // repository here:
 //
-// https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/fips202/native/aarch64/src/keccak_f1600_x1_scalar_asm_opt.S
+// https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/fips202/native/aarch64/src/keccak_f1600_x1_scalar_asm.S
 //
 // The only change is the use of simple 64-bit addressing in place of
 // the unnecessary down-and-upcasting arising from [x9, w25, uxtw #3]
