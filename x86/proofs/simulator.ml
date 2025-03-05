@@ -299,6 +299,9 @@ let only_undefinedness =
     | _ -> is_undef tm in
   forall is_nundef o conjuncts;;
 
+(* This makes MESON quiet. *)
+verbose := false;;
+
 
 let READ_MEMORY_MERGE_CONV =
   let baseconv =
@@ -340,7 +343,17 @@ let tac_before memop =
    `read RSP s = stackpointer /\ P (read RSP s) s <=>
     read RSP s = stackpointer /\ P stackpointer s`] THEN
   ENSURES_INIT_TAC "s0" THEN
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC)
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) THEN
+    (* Remove non-"memory :> bytes8" reads because they are not necessary :) *)
+    let non_byte_read_list = [
+      `read (memory :> bytes16 x) s = y`;
+      `read (memory :> bytes32 x) s = y`;
+      `read (memory :> bytes64 x) s = y`;
+      `read (memory :> bytes128 x) s = y`;
+      `read (memory :> bytes256 x) s = y`
+    ] in
+    DISCARD_MATCHING_ASSUMPTIONS non_byte_read_list
+  else ALL_TAC)
 and tac_main (memopidx: int option) mc states =
   begin match memopidx with
   | Some idx ->
