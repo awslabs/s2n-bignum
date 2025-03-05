@@ -373,24 +373,31 @@ let run_random_memopsimulation() =
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 90 then run_random_regsimulation()
-  else run_random_memopsimulation();;
+  if Random.int 100 < 90 then
+    let decoded, result = run_random_regsimulation() in
+    decoded,result,true
+  else
+    let decoded, result = run_random_memopsimulation() in
+    decoded,result,false;;
 
 let time_limit_sec = 1800.0;;
-let tested_instances = ref 0;;
+let tested_reg_instances = ref 0;;
+let tested_mem_instances = ref 0;;
 
 let rec run_random_simulations start_t =
   let decoded,result = run_random_simulation() in
   if result then begin
-    tested_instances := !tested_instances + 1;
+    tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
+    tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
     let fey = if is_numeral (lhand decoded)
               then " (fails correctly) instruction codes " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
     let now_t = Sys.time() in
     if now_t -. start_t > time_limit_sec then
-      let _ = Printf.printf "Finished (time limit: %fs, tested instances: %d)\n"
-          time_limit_sec !tested_instances in
+      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
+          time_limit_sec !tested_reg_instances !tested_mem_instances
+          (!tested_reg_instances + !tested_mem_instances) in
       None
     else run_random_simulations start_t
   end
