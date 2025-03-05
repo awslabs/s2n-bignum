@@ -341,7 +341,14 @@ let tac_before memop =
     read RSP s = stackpointer /\ P stackpointer s`] THEN
   ENSURES_INIT_TAC "s0" THEN
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC)
-and tac_main memop = (if memop then X86_VSTEPS_TAC else X86_STEPS_TAC)
+and tac_main (memopidx: int option) mc states =
+  begin match memopidx with
+  | Some idx ->
+    let states1, states2 = chop_list idx states in
+    (if states1 <> [] then X86_STEPS_TAC mc states1 else ALL_TAC) THEN
+    (if states2 <> [] then X86_VSTEPS_TAC mc states2 else ALL_TAC)
+  | None -> X86_STEPS_TAC mc states
+  end
 and tac_after memop =
   (* MEMORY_SPLIT_TAC will split out the memory write to the stack.
    Assumptions for flags that involves memory reads of more than one byte
@@ -385,7 +392,7 @@ let decode_inst ibytes =
  *** it can be modified in between.
  ***)
 
-let cosimulate_instructions memop ibytes_list =
+let cosimulate_instructions (memopidx: int option) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
   let icodes = map ibyte_to_icode_fn ibytes_list in
@@ -441,9 +448,9 @@ let cosimulate_instructions memop ibytes_list =
     let result =
       match
        (PURE_REWRITE_TAC [fst execth] THEN
-        (tac_before memop THEN
-         tac_main memop execth (1--length icodes) THEN
-         tac_after memop))
+        (tac_before (memopidx <> None) THEN
+         tac_main memopidx execth (1--length icodes) THEN
+         tac_after (memopidx <> None)))
        ([],goal)
       with
         _,[_,endres],_ ->
@@ -465,13 +472,15 @@ let cosimulate_instructions memop ibytes_list =
 
 let run_random_regsimulation () =
   let ibytes:int list = random_instruction iclasses in
-  cosimulate_instructions false [ibytes];;
+  cosimulate_instructions None [ibytes];;
 
 loadt "x86/proofs/x86-mem-insns.ml";;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length mem_iclasses)) mem_iclasses in
-  cosimulate_instructions true icodes;;
+  let _ = assert (length icodes >= 2) in
+  let memop_index = length icodes - 2 in
+  cosimulate_instructions (Some memop_index) icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
