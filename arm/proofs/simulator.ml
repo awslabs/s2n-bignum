@@ -385,7 +385,7 @@ let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result = run_random_simulation() in
+  let decoded,result,isreg = run_random_simulation() in
   if result then begin
     tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
     tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
