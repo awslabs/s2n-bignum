@@ -3,7 +3,8 @@
 //
 //         uint64_t harness(uint64_t *regfile);
 //
-// Copies state from "regfile" into registers and flags as follows:
+// Copies state from "regfile" into registers, flags and a small buffer
+// starting at the stack pointer as follows:
 //
 //      RAX = regfile[0]
 //      RCX = regfile[1]
@@ -30,6 +31,10 @@
 //      YMM15.d[2] = regfile[78]
 //      YMM15.d[3] = regfile[79]
 //
+//      [SP+0,...,SP+7] = regfile[80]
+//      ...
+//      [SP+248,...,SP+255] = regfile[111]
+//
 // executes the instruction at "modinst", then copies the new state
 // back into the same array, also returning new value RAX directly.
 //
@@ -39,10 +44,11 @@
 // -------------------------------------------------------------------------
 
         .intel_syntax noprefix
-        .globl  harness
+        .globl  harness, _harness
         .text
 
 harness:
+_harness:
 
 // Save non-modifiable input registers and input arguments on the stack
 
@@ -56,6 +62,26 @@ harness:
 // Also save the "rdi" pointer rdi
 
         push    rdi
+
+// Create little 256-byte buffer and copy in the contents
+// We can use ymm0 because it hasn't been set yet
+        sub rsp, 256
+        vmovdqu ymm0, [rdi+640+0*32]
+        vmovdqu [rsp], ymm0
+        vmovdqu ymm0, [rdi+640+1*32]
+        vmovdqu [rsp+1*32], ymm0
+        vmovdqu ymm0, [rdi+640+2*32]
+        vmovdqu [rsp+2*32], ymm0
+        vmovdqu ymm0, [rdi+640+3*32]
+        vmovdqu [rsp+3*32], ymm0
+        vmovdqu ymm0, [rdi+640+4*32]
+        vmovdqu [rsp+4*32], ymm0
+        vmovdqu ymm0, [rdi+640+5*32]
+        vmovdqu [rsp+5*32], ymm0
+        vmovdqu ymm0, [rdi+640+6*32]
+        vmovdqu [rsp+6*32], ymm0
+        vmovdqu ymm0, [rdi+640+7*32]
+        vmovdqu [rsp+7*32], ymm0
 
 // Load new register contents from rdi (last overwrites the input pointer)
 
@@ -112,7 +138,7 @@ modinst:
 // Copy new state back to the buffer
 
         push    rdi
-        mov     rdi, [rsp+8]
+        mov     rdi, [rsp+256+8]
         mov     [rdi+0*8], rax
 
         pushfq
@@ -152,6 +178,26 @@ modinst:
         mov     [rdi+15*8], r15
         pop     rcx
         mov     [rdi+7*8],  rcx
+
+// Copy back contents of the buffer and deallocate stack
+// We can use ymm0 because its value has already been saved to regfile
+        vmovdqu ymm0, [rsp]
+        vmovdqu [rdi+640+0*32], ymm0
+        vmovdqu ymm0, [rsp+1*32]
+        vmovdqu [rdi+640+1*32], ymm0
+        vmovdqu ymm0, [rsp+2*32]
+        vmovdqu [rdi+640+2*32], ymm0
+        vmovdqu ymm0, [rsp+3*32]
+        vmovdqu [rdi+640+3*32], ymm0
+        vmovdqu ymm0, [rsp+4*32]
+        vmovdqu [rdi+640+4*32], ymm0
+        vmovdqu ymm0, [rsp+5*32]
+        vmovdqu [rdi+640+5*32], ymm0
+        vmovdqu ymm0, [rsp+6*32]
+        vmovdqu [rdi+640+6*32], ymm0
+        vmovdqu ymm0, [rsp+7*32]
+        vmovdqu [rdi+640+7*32], ymm0
+        add rsp, 256
 
 // Dummy pop to match push of rdi
 

@@ -130,6 +130,10 @@ let template =
 
 let num_two_to_64 = Num.num_of_string "18446744073709551616";;
 
+(* This makes MESON quiet. *)
+verbose := false;;
+
+
 let READ_MEMORY_MERGE_CONV =
   let baseconv =
     GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT] THENC
@@ -169,8 +173,25 @@ let tac_before memop =
    `read SP s = stackpointer /\ P (read SP s) s <=>
     read SP s = stackpointer /\ P stackpointer s`] THEN
   ENSURES_INIT_TAC "s0" THEN
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (1--4) else ALL_TAC)
-and tac_main memop = (if memop then ARM_VSTEPS_TAC else ARM_STEPS_TAC)
+  (if memop then
+    MAP_EVERY MEMORY_SPLIT_TAC (1--4) THEN
+	  (* Remove non-"memory :> bytes8" reads because they are not necessary :) *)
+    let non_byte_read_list = [
+      `read (memory :> bytes16 x) s = y`;
+      `read (memory :> bytes32 x) s = y`;
+      `read (memory :> bytes64 x) s = y`;
+      `read (memory :> bytes128 x) s = y`
+    ] in
+    DISCARD_MATCHING_ASSUMPTIONS non_byte_read_list
+  else ALL_TAC)
+and tac_main (memopidx: int option) mc states =
+  begin match memopidx with
+  | Some idx ->
+    let states1, states2 = chop_list idx states in
+    (if states1 <> [] then ARM_STEPS_TAC mc states1 else ALL_TAC) THEN
+    (if states2 <> [] then ARM_VSTEPS_TAC mc states2 else ALL_TAC)
+  | None -> ARM_STEPS_TAC mc states
+  end
 and tac_after memop =
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -186,7 +207,7 @@ and tac_after memop =
  *** it can be modified in between.
  ***)
 
-let cosimulate_instructions memop icodes =
+let cosimulate_instructions (memopidx: int option) icodes =
   let icodestring =
     end_itlist (fun s t -> s^","^t) (map string_of_num_hex icodes) in
   let _ =
@@ -257,9 +278,9 @@ let cosimulate_instructions memop icodes =
     can prove
      (goal,
       PURE_REWRITE_TAC [fst execth] THEN
-      (tac_before memop THEN
-       tac_main memop execth (1--length icodes) THEN
-       tac_after memop)) in
+      (tac_before (memopidx <> None) THEN
+       tac_main memopidx execth (1--length icodes) THEN
+       tac_after (memopidx <> None))) in
     (decoded,result)
   else
     let decoded = mk_flist(map mk_numeral icodes) in
@@ -269,7 +290,7 @@ let cosimulate_instructions memop icodes =
 
 let run_random_regsimulation () =
   let icode:num = random_instruction iclasses in
-  cosimulate_instructions false [icode];;
+  cosimulate_instructions None [icode];;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for load-store instructions.         *)
@@ -343,31 +364,40 @@ let memclasses = [cosimulate_ldst_12; cosimulate_ld1r];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in
-  cosimulate_instructions true icodes;;
+  let _ = assert (length icodes >= 2) in
+  let memop_index = length icodes - 2 in
+  cosimulate_instructions (Some memop_index) icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 90 then run_random_regsimulation()
-  else run_random_memopsimulation();;
+  if Random.int 100 < 90 then
+    let decoded, result = run_random_regsimulation() in
+    decoded,result,true
+  else
+    let decoded, result = run_random_memopsimulation() in
+    decoded,result,false;;
 
 let time_limit_sec = 1800.0;;
-let tested_instances = ref 0;;
+let tested_reg_instances = ref 0;;
+let tested_mem_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result = run_random_simulation() in
+  let decoded,result,isreg = run_random_simulation() in
   if result then begin
-    tested_instances := !tested_instances + 1;
+    tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
+    tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
     let fey = if is_numeral (lhand decoded)
               then " (fails correctly) instruction codes " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
     let now_t = Sys.time() in
     if now_t -. start_t > time_limit_sec then
-      let _ = Printf.printf "Finished (time limit: %fs, tested instances: %d)\n"
-          time_limit_sec !tested_instances in
+      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
+          time_limit_sec !tested_reg_instances !tested_mem_instances
+          (!tested_reg_instances + !tested_mem_instances) in
       None
     else run_random_simulations start_t
   end
