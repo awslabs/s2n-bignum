@@ -108,7 +108,7 @@ let BIGNUM_DEMONT_P521_CORRECT = time prove
                    ==> bignum_from_memory (z,9) s =
                        (inverse_mod p_521 (2 EXP 576) * n) MOD p_521))
           (MAYCHANGE [PC; X2; X3; X4; X5; X6] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN

@@ -553,7 +553,7 @@ let BIGNUM_MONTSQR_P521_UNOPT_CORE_CORRECT = time prove
                        (inverse_mod p_521 (2 EXP 576) * n EXP 2) MOD p_521))
           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                       X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
@@ -1283,7 +1283,7 @@ let BIGNUM_MONTSQR_P521_UNOPT_CORRECT = time prove
                        (inverse_mod p_521 (2 EXP 576) * n EXP 2) MOD p_521))
           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                       X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
 
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P521_UNOPT_CORE_CORRECT
@@ -1894,13 +1894,13 @@ let equiv_goal1 = mk_equiv_statement_simple
     bignum_montsqr_p521_unopt_core_mc
     `MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9)]`
     bignum_montsqr_p521_interm1_core_mc
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9)]`;;
 
 let _org_extra_word_CONV = !extra_word_CONV;;
@@ -1980,13 +1980,13 @@ let equiv_goal2 = mk_equiv_statement_simple
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9)]`
     bignum_montsqr_p521_core_mc
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9)]`;;
 
 (* Line numbers from the fully optimized prog. to the intermediate prog.
@@ -2048,13 +2048,13 @@ let equiv_goal = mk_equiv_statement_simple
     bignum_montsqr_p521_unopt_core_mc
     `MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9)]`
     bignum_montsqr_p521_core_mc
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9)]`;;
 
 let montsqr_p521_eqout_TRANS = prove(
@@ -2159,7 +2159,7 @@ let BIGNUM_MONTSQR_P521_CORE_CORRECT = time prove
           (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                       X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
 
   REPEAT GEN_TAC THEN
@@ -2204,7 +2204,7 @@ let BIGNUM_MONTSQR_P521_CORRECT = time prove
           (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                       X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
 
   ARM_SUB_LIST_OF_MC_TAC

@@ -78,7 +78,7 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
                           (word_add z (word(8 * val k)),val k) s)))
              (MAYCHANGE [PC; X0; X1; X4; X5; X6; X7; X8; X9; X10; X11] ,,
               MAYCHANGE [memory :> bytes(z,8 * 2 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`] THEN
   W64_GEN_TAC `w:num` THEN
@@ -201,7 +201,8 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC
    `MAYCHANGE [PC; X0; X1; X4; X5; X6; X7; X8; X9; X10; X11] ,,
     MAYCHANGE [memory :> bytes (z',8 * p)] ,,
-    MAYCHANGE [NF; ZF; CF; VF]` THEN
+    MAYCHANGE [NF; ZF; CF; VF] ,,
+    MAYCHANGE [events]` THEN
   CONJ_TAC THENL
    [REPEAT(MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
     EXPAND_TAC "z'" THEN SUBSUMED_MAYCHANGE_TAC;

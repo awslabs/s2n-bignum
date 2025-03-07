@@ -47,7 +47,7 @@ let BIGNUM_BITSIZE_CORRECT = prove
          (\s'. read PC s' = word (pc + 0x38) /\
                C_RETURN s' = word(bitsize x))
          (MAYCHANGE [PC; X0; X2; X3; X4; X5] ,,
-          MAYCHANGE SOME_FLAGS)`,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`a:int64`; `x:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN

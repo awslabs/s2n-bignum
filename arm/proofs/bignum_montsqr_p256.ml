@@ -220,7 +220,7 @@ let BIGNUM_MONTSQR_P256_UNOPT_CORE_CORRECT = time prove
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
@@ -388,7 +388,7 @@ let BIGNUM_MONTSQR_P256_UNOPT_CORRECT = time prove
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P256_UNOPT_CORE_CORRECT
     bignum_montsqr_p256_unopt_core_mc_def
@@ -415,7 +415,7 @@ let BIGNUM_AMONTSQR_P256_UNOPT_CORE_CORRECT = time prove
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
@@ -580,7 +580,7 @@ let BIGNUM_AMONTSQR_P256_UNOPT_CORRECT = time prove
              (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_AMONTSQR_P256_UNOPT_CORE_CORRECT
     bignum_montsqr_p256_unopt_core_mc_def
@@ -803,13 +803,13 @@ let equiv_goal1 = mk_equiv_statement_simple
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                 X13; X14; X15; X16; X17] ,,
      MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-     MAYCHANGE SOME_FLAGS`
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`
     bignum_montsqr_p256_interm1_core_mc
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                 X13; X14; X15; X16; X17] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
      MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-     MAYCHANGE SOME_FLAGS`;;
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`;;
 
 
 let lemma1 = prove(`!(x:int64).
@@ -1005,13 +1005,13 @@ let equiv_goal2 = mk_equiv_statement_simple
                 X13; X14; X15; X16; X17] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
      MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-     MAYCHANGE SOME_FLAGS`
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`
     bignum_montsqr_p256_core_mc
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                 X13; X14; X15; X16; X17] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
      MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-     MAYCHANGE SOME_FLAGS`;;
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`;;
 
 (* Line numbers from bignum_montsqr_p256_core_mc (the fully optimized
    prog.) to bignum_montsqr_p256_interm1_core_mc (the intermediate prog.)
@@ -1075,13 +1075,13 @@ let equiv_goal = mk_equiv_statement_simple
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                 X13; X14; X15; X16; X17] ,,
      MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-     MAYCHANGE SOME_FLAGS`
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`
     bignum_montsqr_p256_core_mc
     `MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
                 X13; X14; X15; X16; X17] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
      MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-     MAYCHANGE SOME_FLAGS`;;
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`;;
 
 let montsqr_p256_eqout_TRANS = prove(
   `!s s2 s'
@@ -1178,7 +1178,7 @@ let BIGNUM_MONTSQR_P256_CORE_CORRECT = prove(
                       X13; X14; X15; X16; X17] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
            MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   REPEAT GEN_TAC THEN
   (* Prepare pc for the original program.  *)
@@ -1221,7 +1221,7 @@ let BIGNUM_MONTSQR_P256_CORRECT = time prove
                       X13; X14; X15; X16; X17] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
            MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P256_CORE_CORRECT
       bignum_montsqr_p256_core_mc_def
@@ -1275,7 +1275,7 @@ let BIGNUM_AMONTSQR_P256_CORE_CORRECT = prove(
                       X13; X14; X15; X16; X17] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
            MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   REPEAT GEN_TAC THEN
   (* Prepare pc for the original program.  *)
@@ -1316,7 +1316,7 @@ let BIGNUM_AMONTSQR_P256_CORRECT = time prove
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   ARM_SUB_LIST_OF_MC_TAC BIGNUM_AMONTSQR_P256_CORE_CORRECT
     bignum_montsqr_p256_core_mc_def
     [fst BIGNUM_MONTSQR_P256_EXEC;
