@@ -15,3 +15,9 @@
 #else
 #   define S2N_BN_SYM_PRIVACY_DIRECTIVE(name)  /* NO-OP: S2N_BN_SYM_PRIVACY_DIRECTIVE */
 #endif
+
+#ifdef __CET__
+#include <cet.h>
+#else
+#define _CET_ENDBR
+#endif
