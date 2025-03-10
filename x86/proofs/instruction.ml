@@ -253,6 +253,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | CMP operand operand
    | DEC operand
    | DIV2 (operand#operand) (operand#operand) operand
+   | ENDBR64
    | IMUL3 operand (operand#operand)
    | IMUL2 (operand#operand) operand
    | INC operand

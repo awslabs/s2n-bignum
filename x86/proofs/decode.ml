@@ -356,6 +356,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       read_ModRM rex l >>= \((reg,rm),l).
       let op = if s then MOVSX else MOVZX in
       SOME (op (%(gpr_adjust reg sz2)) (operand_of_RM sz rm),l)
+    | [0x1e:8] ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+         | [0xfa:8] ->
+           (match pfxs with
+            | (F, RepZ) -> SOME (ENDBR64,l)
+            | _ -> NONE)
+         | _ -> NONE)
     | _ -> NONE)
   | [0b01010:5; r:3] -> if has_pfxs pfxs then NONE else
     SOME (PUSH (%(Gpr (rex_reg (rex_B rex) r) Full_64)),l)
