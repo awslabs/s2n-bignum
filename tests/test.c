@@ -11512,6 +11512,42 @@ uint64_t t, i;
 #endif
 }
 
+int test_mlkem_poly_reduce(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t t, i;
+  int16_t a[256], b[256];
+  printf("Testing mlkem_poly_reduce with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+        b[i] = a[i] = (int16_t) (random64() % 65536) - 32768;
+     mlkem_poly_reduce(b);
+     for (i = 0; i < 256; ++i)
+      { if (rem_3329(a[i]) != b[i])
+         { printf("Error in mlkem_poly_reduce; element i = %"PRIu64
+                  "; code[i] = 0x%04"PRIx16
+                  " while reference[i] = 0x%04"PRIx16"\n",
+                  i,b[i],rem_3329(a[i]));
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK:mlkem_poly_reduce[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"] = "
+               "[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"]\n",
+               a[0],a[1],a[254],a[255],
+               b[0],b[1],b[254],b[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_p256_montjadd(void)
 { uint64_t t, k;
   printf("Testing p256_montjadd with %d cases\n",tests);
@@ -14415,6 +14451,7 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"mlkem_keccak4_f1600_alt",test_mlkem_keccak4_f1600_alt);
     functionaltest(sha3,"mlkem_keccak4_f1600_alt2",test_mlkem_keccak4_f1600_alt2);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
+    functionaltest(arm,"mlkem_poly_reduce",test_mlkem_poly_reduce);
   }
 
   if (extrastrigger) function_to_test = "_";

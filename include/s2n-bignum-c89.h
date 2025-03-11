@@ -996,6 +996,10 @@ extern void mlkem_keccak4_f1600_alt2(uint64_t a[100],uint64_t rc[24]);
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_ntt(int16_t a[256],int16_t z_01234[80],int16_t z_56[384]);
 
+/* Canonical modular reduction of polynomial coefficients for ML-KEM */
+/* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */
+extern void mlkem_poly_reduce(int16_t a[256]);
+
 /* Point addition on NIST curve P-256 in Montgomery-Jacobian coordinates */
 /* Inputs p1[12], p2[12]; output p3[12] */
 extern void p256_montjadd(uint64_t p3[12],uint64_t p1[12],uint64_t p2[12]);

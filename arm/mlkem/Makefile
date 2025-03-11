@@ -29,7 +29,8 @@ OBJ = mlkem_intt.o \
       mlkem_keccak4_f1600.o \
       mlkem_keccak4_f1600_alt.o \
       mlkem_keccak4_f1600_alt2.o \
-      mlkem_ntt.o
+      mlkem_ntt.o \
+      mlkem_poly_reduce.o
 
 %.o : %.S ; $(CC) -E -I../../include $< | $(GAS) -o $@ -
 
