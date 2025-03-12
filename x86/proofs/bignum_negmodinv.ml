@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_negmodinv_mc =
   define_assert_from_elf "bignum_negmodinv_mc" "x86/generic/bignum_negmodinv.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)

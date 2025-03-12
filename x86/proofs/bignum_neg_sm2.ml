@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_neg_sm2_mc = define_assert_from_elf "bignum_neg_sm2_mc" "x86/sm2/bignum_neg_sm2.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0x8b; 0x4e; 0x08;  (* MOV (% rcx) (Memop Quadword (%% (rsi,8))) *)
   0x49; 0x89; 0xc2;        (* MOV (% r10) (% rax) *)

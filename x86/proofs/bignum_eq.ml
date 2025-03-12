@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_eq_mc =
   define_assert_from_elf "bignum_eq_mc" "x86/generic/bignum_eq.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
   0x48; 0x39; 0xd7;        (* CMP (% rdi) (% rdx) *)
   0x73; 0x18;              (* JAE (Imm8 (word 24)) *)

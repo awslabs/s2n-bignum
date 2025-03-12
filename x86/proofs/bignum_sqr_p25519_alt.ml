@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_sqr_p25519_alt_mc = define_assert_from_elf "bignum_sqr_p25519_alt_mc" "x86/curve25519/bignum_sqr_p25519_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)
   0x41; 0x56;              (* PUSH (% r14) *)

@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_gt_mc =
   define_assert_from_elf "bignum_gt_mc" "x86/generic/bignum_gt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4d; 0x31; 0xc0;        (* XOR (% r8) (% r8) *)
   0x48; 0x29; 0xfa;        (* SUB (% rdx) (% rdi) *)
   0x72; 0x31;              (* JB (Imm8 (word 49)) *)

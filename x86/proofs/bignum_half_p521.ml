@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_half_p521_mc = define_assert_from_elf "bignum_half_p521_mc" "x86/p521/bignum_half_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x0e;        (* MOV (% rcx) (Memop Quadword (%% (rsi,0))) *)
   0xb8; 0x01; 0x00; 0x00; 0x00;
                            (* MOV (% eax) (Imm32 (word 1)) *)

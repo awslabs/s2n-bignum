@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_triple_p256k1_mc =
   define_assert_from_elf "bignum_triple_p256k1_mc" "x86/secp256k1/bignum_triple_p256k1.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x31; 0xc0;              (* XOR (% eax) (% eax) *)
   0x48; 0x8b; 0x16;        (* MOV (% rdx) (Memop Quadword (%% (rsi,0))) *)
   0x49; 0x89; 0xd0;        (* MOV (% r8) (% rdx) *)

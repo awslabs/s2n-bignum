@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_tomont_p256k1_alt_mc =
   define_assert_from_elf "bignum_tomont_p256k1_alt_mc" "x86/secp256k1/bignum_tomont_p256k1_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xb9; 0xd1; 0x03; 0x00; 0x00; 0x01; 0x00; 0x00; 0x00;
                            (* MOV (% rcx) (Imm64 (word 4294968273)) *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)

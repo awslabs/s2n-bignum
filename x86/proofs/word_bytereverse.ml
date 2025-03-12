@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_bytereverse_mc = define_assert_from_elf "word_bytereverse_mc" "x86/generic/word_bytereverse.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)
   0x48; 0x0f; 0xc8;        (* BSWAP (% rax) *)
   0xc3                     (* RET *)

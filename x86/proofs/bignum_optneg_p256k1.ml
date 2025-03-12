@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_optneg_p256k1_mc = define_assert_from_elf "bignum_optneg_p256k1_mc" "x86/secp256k1/bignum_optneg_p256k1.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x02;        (* MOV (% rax) (Memop Quadword (%% (rdx,0))) *)
   0x49; 0x89; 0xc2;        (* MOV (% r10) (% rax) *)
   0x48; 0x8b; 0x4a; 0x08;  (* MOV (% rcx) (Memop Quadword (%% (rdx,8))) *)

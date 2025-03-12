@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_triple_p384_alt_mc = define_assert_from_elf "bignum_triple_p384_alt_mc" "x86/p384/bignum_triple_p384_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0xb9; 0x03; 0x00; 0x00; 0x00;
                            (* MOV (% ecx) (Imm32 (word 3)) *)

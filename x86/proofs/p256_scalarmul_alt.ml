@@ -35,6 +35,7 @@ needs "x86/proofs/p256_montjmixadd_alt.ml";;
 let p256_scalarmul_alt_mc = define_assert_from_elf
   "p256_scalarmul_alt_mc" "x86/p256/p256_scalarmul_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x41; 0x57;              (* PUSH (% r15) *)
   0x41; 0x56;              (* PUSH (% r14) *)
   0x41; 0x55;              (* PUSH (% r13) *)

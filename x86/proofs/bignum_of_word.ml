@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_of_word_mc =
   define_assert_from_elf "bignum_of_word_mc" "x86/generic/bignum_of_word.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
   0x74; 0x14;              (* JE (Imm8 (word 20)) *)
   0x48; 0x89; 0x16;        (* MOV (Memop Quadword (%% (rsi,0))) (% rdx) *)

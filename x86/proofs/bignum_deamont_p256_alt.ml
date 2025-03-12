@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_deamont_p256_alt_mc =
   define_assert_from_elf "bignum_deamont_p256_alt_mc" "x86/p256/bignum_deamont_p256_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4c; 0x8b; 0x06;        (* MOV (% r8) (Memop Quadword (%% (rsi,0))) *)
   0x4c; 0x8b; 0x4e; 0x08;  (* MOV (% r9) (Memop Quadword (%% (rsi,8))) *)
   0x4c; 0x8b; 0x56; 0x10;  (* MOV (% r10) (Memop Quadword (%% (rsi,16))) *)

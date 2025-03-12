@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_double_p521_mc =
   define_assert_from_elf "bignum_double_p521_mc" "x86/p521/bignum_double_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x4e; 0x40;  (* MOV (% rcx) (Memop Quadword (%% (rsi,64))) *)
   0x48; 0x0f; 0xba; 0xe1; 0x08;
                            (* BT (% rcx) (Imm8 (word 8)) *)

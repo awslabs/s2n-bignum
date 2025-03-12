@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_neg_p384_mc = define_assert_from_elf "bignum_neg_p384_mc" "x86/p384/bignum_neg_p384.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0x0b; 0x46; 0x08;  (* OR (% rax) (Memop Quadword (%% (rsi,8))) *)
   0x48; 0x8b; 0x4e; 0x10;  (* MOV (% rcx) (Memop Quadword (%% (rsi,16))) *)

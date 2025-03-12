@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_normalize_mc =
   define_assert_from_elf "bignum_normalize_mc" "x86/generic/bignum_normalize.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
   0x49; 0x89; 0xf8;        (* MOV (% r8) (% rdi) *)
   0x49; 0x83; 0xe8; 0x01;  (* SUB (% r8) (Imm8 (word 1)) *)

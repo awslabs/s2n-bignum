@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_mod_p384_6_mc =
   define_assert_from_elf "bignum_mod_p384_6_mc" "x86/p384/bignum_mod_p384_6.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x16;        (* MOV (% rdx) (Memop Quadword (%% (rsi,0))) *)
   0xb8; 0xff; 0xff; 0xff; 0xff;
                            (* MOV (% eax) (Imm32 (word 4294967295)) *)

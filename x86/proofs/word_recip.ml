@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_recip_mc = define_assert_from_elf "word_recip_mc" "x86/generic/word_recip.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xfe;        (* MOV (% rsi) (% rdi) *)
   0x48; 0xb9; 0xff; 0xff; 0xff; 0xff; 0xff; 0xff; 0x01; 0x00;
                            (* MOV (% rcx) (Imm64 (word 562949953421311)) *)

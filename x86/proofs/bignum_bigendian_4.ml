@@ -17,6 +17,7 @@ needs "x86/proofs/base.ml";;
 let bignum_bigendian_4_mc =
   define_assert_from_elf "bignum_bigendian_4_mc" "x86/p256/bignum_bigendian_4.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0x8b; 0x56; 0x18;  (* MOV (% rdx) (Memop Quadword (%% (rsi,24))) *)
   0x48; 0x0f; 0xc8;        (* BSWAP (% rax) *)

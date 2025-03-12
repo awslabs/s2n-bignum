@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_montmul_p521_alt_mc =
   define_assert_from_elf "bignum_montmul_p521_alt_mc" "x86/p521/bignum_montmul_p521_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)
   0x41; 0x56;              (* PUSH (% r14) *)

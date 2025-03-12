@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_moddouble_mc =
   define_assert_from_elf "bignum_moddouble_mc" "x86/generic/bignum_moddouble.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
   0x74; 0x55;              (* JE (Imm8 (word 85)) *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)

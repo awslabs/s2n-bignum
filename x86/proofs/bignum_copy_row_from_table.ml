@@ -13,6 +13,7 @@ let bignum_copy_row_from_table_mc =
   define_assert_from_elf "bignum_copy_row_from_table_mc"
                          "x86/generic/bignum_copy_row_from_table.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xd2;        (* TEST (% rdx) (% rdx) *)
   0x74; 0x56;              (* JE (Imm8 (word 86)) *)
   0x48; 0x85; 0xc9;        (* TEST (% rcx) (% rcx) *)

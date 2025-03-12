@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_min_mc = define_assert_from_elf "word_min_mc" "x86/generic/word_min.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)
   0x48; 0x39; 0xf7;        (* CMP (% rdi) (% rsi) *)
   0x48; 0x0f; 0x43; 0xc6;  (* CMOVAE (% rax) (% rsi) *)

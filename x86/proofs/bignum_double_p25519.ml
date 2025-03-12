@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_double_p25519_mc =
   define_assert_from_elf "bignum_double_p25519_mc" "x86/curve25519/bignum_double_p25519.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4c; 0x8b; 0x06;        (* MOV (% r8) (Memop Quadword (%% (rsi,0))) *)
   0x4d; 0x01; 0xc0;        (* ADD (% r8) (% r8) *)
   0x4c; 0x8b; 0x4e; 0x08;  (* MOV (% r9) (Memop Quadword (%% (rsi,8))) *)

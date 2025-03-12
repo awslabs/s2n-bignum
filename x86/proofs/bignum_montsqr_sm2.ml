@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_montsqr_sm2_mc =
   define_assert_from_elf "bignum_montsqr_sm2_mc" "x86/sm2/bignum_montsqr_sm2.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)

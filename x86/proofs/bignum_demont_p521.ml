@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_demont_p521_mc = define_assert_from_elf "bignum_demont_p521_mc" "x86/p521/bignum_demont_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x16;        (* MOV (% rdx) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0x89; 0xd0;        (* MOV (% rax) (% rdx) *)
   0x48; 0x8b; 0x4e; 0x08;  (* MOV (% rcx) (Memop Quadword (%% (rsi,8))) *)

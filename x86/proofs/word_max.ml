@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_max_mc = define_assert_from_elf "word_max_mc" "x86/generic/word_max.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)
   0x48; 0x39; 0xf7;        (* CMP (% rdi) (% rsi) *)
   0x48; 0x0f; 0x42; 0xc6;  (* CMOVB (% rax) (% rsi) *)

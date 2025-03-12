@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_mod_n25519_4_mc =
   define_assert_from_elf "bignum_mod_n25519_4_mc" "x86/curve25519/bignum_mod_n25519_4.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x4e; 0x18;  (* MOV (% rcx) (Memop Quadword (%% (rsi,24))) *)
   0x49; 0x89; 0xcb;        (* MOV (% r11) (% rcx) *)
   0x48; 0xc1; 0xe9; 0x3c;  (* SHR (% rcx) (Imm8 (word 60)) *)

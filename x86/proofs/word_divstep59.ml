@@ -19,6 +19,7 @@ needs "Divstep/idivstep.ml";;
 
 let word_divstep59_mc = define_assert_from_elf "word_divstep59_mc" "x86/generic/word_divstep59.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)

@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_digitsize_mc = define_assert_from_elf "bignum_digitsize_mc" "x86/generic/bignum_digitsize.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
   0x74; 0x16;              (* JE (Imm8 (word 22)) *)

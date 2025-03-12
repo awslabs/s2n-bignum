@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_ctz_mc = define_assert_from_elf "word_ctz_mc" "x86/generic/word_ctz.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x0f; 0xbc; 0xc7;  (* BSF (% rax) (% rdi) *)
   0xba; 0x40; 0x00; 0x00; 0x00;
                            (* MOV (% edx) (Imm32 (word 64)) *)

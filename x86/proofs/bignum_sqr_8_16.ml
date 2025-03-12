@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_sqr_8_16_mc =
   define_assert_from_elf "bignum_sqr_8_16_mc" "x86/fastmul/bignum_sqr_8_16.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)

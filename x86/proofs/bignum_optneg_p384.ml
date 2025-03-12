@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_optneg_p384_mc = define_assert_from_elf "bignum_optneg_p384_mc" "x86/p384/bignum_optneg_p384.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x02;        (* MOV (% rax) (Memop Quadword (%% (rdx,0))) *)
   0x48; 0x0b; 0x42; 0x08;  (* OR (% rax) (Memop Quadword (%% (rdx,8))) *)
   0x48; 0x8b; 0x4a; 0x10;  (* MOV (% rcx) (Memop Quadword (%% (rdx,16))) *)

@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_even_mc = define_assert_from_elf "bignum_even_mc" "x86/generic/bignum_even.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0xb8; 0x01; 0x00; 0x00; 0x00;
                            (* MOV (% eax) (Imm32 (word 1)) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)

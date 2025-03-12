@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_shr_small_mc =
   define_assert_from_elf "bignum_shr_small_mc" "x86/generic/bignum_shr_small.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x49; 0x89; 0xc9;        (* MOV (% r9) (% rcx) *)
   0x4c; 0x89; 0xc1;        (* MOV (% rcx) (% r8) *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)

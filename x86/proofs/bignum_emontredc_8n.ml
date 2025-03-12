@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_emontredc_8n_mc =
   define_assert_from_elf "bignum_emontredc_8n_mc" "x86/fastmul/bignum_emontredc_8n.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)

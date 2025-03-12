@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_deamont_p521_mc =
   define_assert_from_elf "bignum_deamont_p521_mc" "x86/p521/bignum_deamont_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)

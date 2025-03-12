@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_cmul_mc =
   define_assert_from_elf "bignum_cmul_mc" "x86/generic/bignum_cmul.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x39; 0xcf;        (* CMP (% rdi) (% rcx) *)
   0x48; 0x0f; 0x42; 0xcf;  (* CMOVB (% rcx) (% rdi) *)
   0x4d; 0x31; 0xdb;        (* XOR (% r11) (% r11) *)

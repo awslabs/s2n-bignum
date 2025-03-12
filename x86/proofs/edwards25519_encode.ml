@@ -16,6 +16,7 @@ needs "common/ecencoding.ml";;
 let edwards25519_encode_mc =
   define_assert_from_elf "edwards25519_encode_mc" "x86/curve25519/edwards25519_encode.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4c; 0x8b; 0x0e;        (* MOV (% r9) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0x8b; 0x46; 0x20;  (* MOV (% rax) (Memop Quadword (%% (rsi,32))) *)
   0x48; 0x8b; 0x4e; 0x28;  (* MOV (% rcx) (Memop Quadword (%% (rsi,40))) *)

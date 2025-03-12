@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_sqr_4_8_alt_mc =
   define_assert_from_elf "bignum_sqr_4_8_alt_mc" "x86/fastmul/bignum_sqr_4_8_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0xf7; 0xe0;        (* MUL2 (% rdx,% rax) (% rax) *)
   0x48; 0x89; 0x07;        (* MOV (Memop Quadword (%% (rdi,0))) (% rax) *)

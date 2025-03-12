@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_half_p256k1_mc =
   define_assert_from_elf "bignum_half_p256k1_mc" "x86/secp256k1/bignum_half_p256k1.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x0e;        (* MOV (% rcx) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0xb8; 0xd1; 0x03; 0x00; 0x00; 0x01; 0x00; 0x00; 0x00;
                            (* MOV (% rax) (Imm64 (word 4294968273)) *)

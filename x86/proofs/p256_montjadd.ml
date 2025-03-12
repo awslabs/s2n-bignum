@@ -22,6 +22,7 @@ prioritize_num();;
 let p256_montjadd_mc = define_assert_from_elf
   "p256_montjadd_mc" "x86/p256/p256_montjadd.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)

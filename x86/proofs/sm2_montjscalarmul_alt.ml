@@ -29,6 +29,7 @@ needs "x86/proofs/sm2_montjdouble_alt.ml";;
 let sm2_montjscalarmul_alt_mc = define_assert_from_elf
   "sm2_montjscalarmul_alt_mc" "x86/sm2/sm2_montjscalarmul_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x41; 0x57;              (* PUSH (% r15) *)
   0x41; 0x56;              (* PUSH (% r14) *)
   0x41; 0x55;              (* PUSH (% r13) *)

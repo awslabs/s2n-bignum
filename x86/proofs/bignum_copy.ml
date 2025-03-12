@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_copy_mc =
   define_assert_from_elf "bignum_copy_mc" "x86/generic/bignum_copy.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x39; 0xd7;        (* CMP (% rdi) (% rdx) *)
   0x48; 0x0f; 0x42; 0xd7;  (* CMOVB (% rdx) (% rdi) *)
   0x4d; 0x31; 0xc0;        (* XOR (% r8) (% r8) *)

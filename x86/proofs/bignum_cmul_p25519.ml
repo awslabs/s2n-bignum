@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_cmul_p25519_mc = define_assert_from_elf "bignum_cmul_p25519_mc" "x86/curve25519/bignum_cmul_p25519.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
   0x48; 0x89; 0xf2;        (* MOV (% rdx) (% rsi) *)
   0xc4; 0x62; 0xbb; 0xf6; 0x09;

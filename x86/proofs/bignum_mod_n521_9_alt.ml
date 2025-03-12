@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_mod_n521_9_alt_mc =
   define_assert_from_elf "bignum_mod_n521_9_alt_mc" "x86/p521/bignum_mod_n521_9_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x4e; 0x40;  (* MOV (% rcx) (Memop Quadword (%% (rsi,64))) *)
   0x48; 0xc7; 0xc0; 0x00; 0xfe; 0xff; 0xff;
                            (* MOV (% rax) (Imm32 (word 4294966784)) *)

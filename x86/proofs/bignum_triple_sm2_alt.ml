@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_triple_sm2_alt_mc = define_assert_from_elf "bignum_triple_sm2_alt_mc" "x86/sm2/bignum_triple_sm2_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0xb9; 0x03; 0x00; 0x00; 0x00;
                            (* MOV (% ecx) (Imm32 (word 3)) *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)

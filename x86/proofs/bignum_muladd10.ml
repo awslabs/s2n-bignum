@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_muladd10_mc =
   define_assert_from_elf "bignum_muladd10_mc" "x86/generic/bignum_muladd10.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
   0x74; 0x26;              (* JE (Imm8 (word 38)) *)

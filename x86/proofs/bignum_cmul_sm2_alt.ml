@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_cmul_sm2_alt_mc =
   define_assert_from_elf "bignum_cmul_sm2_alt_mc" "x86/sm2/bignum_cmul_sm2_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
   0x48; 0x8b; 0x01;        (* MOV (% rax) (Memop Quadword (%% (rcx,0))) *)
   0x48; 0xf7; 0xe6;        (* MUL2 (% rdx,% rax) (% rsi) *)

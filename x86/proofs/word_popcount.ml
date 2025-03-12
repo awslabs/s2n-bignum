@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_popcount_mc = define_assert_from_elf "word_popcount_mc" "x86/generic/word_popcount.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xba; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55;
                            (* MOV (% rdx) (Imm64 (word 6148914691236517205)) *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)

@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_optneg_p521_mc = define_assert_from_elf "bignum_optneg_p521_mc" "x86/p521/bignum_optneg_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x0a;        (* MOV (% rcx) (Memop Quadword (%% (rdx,0))) *)
   0x48; 0x89; 0xc8;        (* MOV (% rax) (% rcx) *)
   0x4c; 0x8b; 0x42; 0x08;  (* MOV (% r8) (Memop Quadword (%% (rdx,8))) *)

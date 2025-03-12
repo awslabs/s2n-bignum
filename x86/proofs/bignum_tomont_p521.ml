@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_tomont_p521_mc =
   define_assert_from_elf "bignum_tomont_p521_mc" "x86/p521/bignum_tomont_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x48; 0x8b; 0x46; 0x40;  (* MOV (% rax) (Memop Quadword (%% (rsi,64))) *)
   0xba; 0xff; 0x01; 0x00; 0x00;

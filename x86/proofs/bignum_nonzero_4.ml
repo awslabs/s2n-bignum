@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_nonzero_4_mc =
   define_assert_from_elf "bignum_nonzero_4_mc" "x86/p256/bignum_nonzero_4.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x07;        (* MOV (% rax) (Memop Quadword (%% (rdi,0))) *)
   0x48; 0x8b; 0x57; 0x08;  (* MOV (% rdx) (Memop Quadword (%% (rdi,8))) *)
   0x48; 0x0b; 0x47; 0x10;  (* OR (% rax) (Memop Quadword (%% (rdi,16))) *)

@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_half_p384_mc =
   define_assert_from_elf "bignum_half_p384_mc" "x86/p384/bignum_half_p384.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0x41; 0xb9; 0x01; 0x00; 0x00; 0x00;
                            (* MOV (% r9d) (Imm32 (word 1)) *)

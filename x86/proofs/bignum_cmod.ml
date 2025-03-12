@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_cmod_mc =
   define_assert_from_elf "bignum_cmod_mc" "x86/generic/bignum_cmod.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4d; 0x31; 0xdb;        (* XOR (% r11) (% r11) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
   0x0f; 0x84; 0x5d; 0x01; 0x00; 0x00;

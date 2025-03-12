@@ -22,6 +22,7 @@ prioritize_num();;
 let p521_jdouble_mc = define_assert_from_elf
   "p521_jdouble_mc" "x86/p521/p521_jdouble.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)

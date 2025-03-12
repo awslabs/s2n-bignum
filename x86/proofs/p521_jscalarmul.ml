@@ -29,6 +29,7 @@ needs "x86/proofs/bignum_mod_p521_9.ml";;
 let p521_jscalarmul_mc = define_assert_from_elf
   "p521_jscalarmul_mc" "x86/p521/p521_jscalarmul.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x41; 0x57;              (* PUSH (% r15) *)
   0x41; 0x56;              (* PUSH (% r14) *)
   0x41; 0x55;              (* PUSH (% r13) *)

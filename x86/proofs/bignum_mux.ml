@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_mux_mc =
   define_assert_from_elf "bignum_mux_mc" "x86/generic/bignum_mux.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xf6;        (* TEST (% rsi) (% rsi) *)
   0x74; 0x1e;              (* JE (Imm8 (word 30)) *)
   0x4d; 0x31; 0xc9;        (* XOR (% r9) (% r9) *)

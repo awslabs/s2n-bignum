@@ -22,6 +22,7 @@ prioritize_num();;
 let p384_montjmixadd_alt_mc = define_assert_from_elf
   "p384_montjmixadd_alt_mc" "x86/p384/p384_montjmixadd_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)

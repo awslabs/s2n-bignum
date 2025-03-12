@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_add_p256_mc = define_assert_from_elf "bignum_add_p256_mc" "x86/p256/bignum_add_p256.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4d; 0x31; 0xdb;        (* XOR (% r11) (% r11) *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0x03; 0x02;        (* ADD (% rax) (Memop Quadword (%% (rdx,0))) *)

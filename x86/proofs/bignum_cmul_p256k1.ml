@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_cmul_p256k1_mc = define_assert_from_elf "bignum_cmul_p256k1_mc" "x86/secp256k1/bignum_cmul_p256k1.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
   0x48; 0x89; 0xf2;        (* MOV (% rdx) (% rsi) *)
   0xc4; 0x62; 0xcb; 0xf6; 0x01;

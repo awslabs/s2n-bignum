@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_negmodinv_mc = define_assert_from_elf "word_negmodinv_mc" "x86/generic/word_negmodinv.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf9;        (* MOV (% rcx) (% rdi) *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)
   0x48; 0xc1; 0xe1; 0x02;  (* SHL (% rcx) (Imm8 (word 2)) *)
