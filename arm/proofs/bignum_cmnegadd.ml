@@ -89,7 +89,7 @@ let BIGNUM_CMNEGADD_CORRECT = prove
                        &2 pow (64 * val p) * &(val(C_RETURN s)):int =
                        &d - &(val c) * &a))
              (MAYCHANGE [PC; X0; X3; X5; X6; X7; X8; X9] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   W64_GEN_TAC `p:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `d:num`] THEN
   W64_GEN_TAC `c:num` THEN

@@ -105,7 +105,7 @@ let BIGNUM_FROMLEBYTES_4_CORRECT = time prove
                 read (memory :> bytelist(x,32)) s = l)
            (\s. read PC s = word (pc + 0x110) /\
                 bignum_from_memory(z,4) s = num_of_bytelist l)
-          (MAYCHANGE [PC; X2; X3] ,,
+          (MAYCHANGE [PC; X2; X3] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `l:byte list`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
@@ -150,7 +150,7 @@ let BIGNUM_TOLEBYTES_4_CORRECT = time prove
                 bignum_from_memory(x,4) s = n)
            (\s. read PC s = word (pc + 0x110) /\
                 read (memory :> bytelist(z,32)) s = bytelist_of_num 32 n)
-          (MAYCHANGE [PC; X2; X3] ,,
+          (MAYCHANGE [PC; X2; X3] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
@@ -195,7 +195,7 @@ let BIGNUM_LITTLEENDIAN_4_CORRECT = time prove
                 bignum_from_memory(x,4) s = n)
            (\s. read PC s = word (pc + 0x110) /\
                 bignum_from_memory(z,4) s = n)
-          (MAYCHANGE [PC; X2; X3] ,,
+          (MAYCHANGE [PC; X2; X3] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   BIGNUM_TERMRANGE_TAC `4` `n:num` THEN

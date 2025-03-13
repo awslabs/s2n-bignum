@@ -73,7 +73,8 @@ let BIGNUM_SPEC = prove(
     (\s. read PC s = word retpc /\
          read X0 s = word (if a = b then 1 else 0))
     // Registers (and memory locations) that may change after execution
-    (MAYCHANGE [PC;X0;X2;X3;X4;X5] ,, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [PC;X0;X2;X3;X4;X5] ,, MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE [events])`,
 
   REPEAT STRIP_TAC THEN
   (* Convert 'bignum_from_memory' into 'memory :> bytes (..)'.

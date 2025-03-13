@@ -258,7 +258,7 @@ let BIGNUM_COPRIME_CORRECT = prove
                   C_RETURN s = if coprime(a,b) then word 1 else word 0)
              (MAYCHANGE [PC; X0; X1; X2; X3; X5; X6; X7; X8; X9; X10; X11;
                          X12; X13; X14; X15; X16; X17; X19; X20] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(w,2 * MAX (val m) (val n))])`,
   W64_GEN_TAC `m:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `a:num`] THEN
   W64_GEN_TAC `n:num` THEN MAP_EVERY X_GEN_TAC [`y:int64`; `b:num`] THEN
@@ -319,7 +319,7 @@ let BIGNUM_COPRIME_CORRECT = prove
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC
    `MAYCHANGE [PC; X0; X1; X2; X3; X5; X6; X7; X8; X9; X10; X11;
                X12; X13; X14; X15; X16; X17; X19; X20] ,,
-    MAYCHANGE [NF; ZF; CF; VF] ,,
+    MAYCHANGE [NF; ZF; CF; VF] ,, MAYCHANGE [events] ,,
     MAYCHANGE [memory :> bignum(mm,k); memory :> bignum(nn,k)]` THEN
   CONJ_TAC THENL
    [REPEAT(MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
