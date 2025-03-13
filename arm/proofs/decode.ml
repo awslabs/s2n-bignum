@@ -371,6 +371,10 @@ let decode = new_definition `!w:int32. decode w =
     // BIC
     SOME (arm_BIC_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
 
+  | [0:1; q; 0b101110001:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
+    // EOR
+    SOME (arm_EOR_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
+
   | [0:1; q; 0b101110101:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
     // BIT
     SOME (arm_BIT (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))

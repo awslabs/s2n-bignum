@@ -1068,6 +1068,17 @@ let arm_EOR = define
         let d:N word = word_xor m n in
         (Rd := d) s`;;
 
+let arm_EOR_VEC = define
+ `arm_EOR_VEC Rd Rn Rm datasize =
+    \s. let m = read Rm s
+        and n = read Rn s in
+        if datasize = 128 then
+          let d:(128)word = word_xor m n in
+          (Rd := d) s
+        else
+          let d:(64)word = word_subword (word_xor m n) (0,64) in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_EXT = define
  `arm_EXT Rd Rn Rm pos =
     \s. let m:N word = read Rm s
@@ -2790,7 +2801,7 @@ let ARM_OPERATION_CLAUSES =
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ; arm_CSEL;
        arm_CSINC; arm_CSINV; arm_CSNEG;
        arm_DUP_GEN_ALT;
-       arm_EON; arm_EOR; arm_EOR3; arm_EXT; arm_EXTR;
+       arm_EON; arm_EOR; arm_EOR_VEC; arm_EOR3; arm_EXT; arm_EXTR;
        arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
        arm_MADD;
