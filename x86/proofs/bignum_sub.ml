@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_sub.o";;
  ****)
 
-let bignum_sub_mc =
-  define_assert_from_elf "bignum_sub_mc" "x86/generic/bignum_sub.o"
+let bignum_sub_cmc =
+  define_assert_from_elf "bignum_sub_cmc" "x86/generic/bignum_sub.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4d; 0x31; 0xd2;        (* XOR (% r10) (% r10) *)
@@ -73,6 +73,8 @@ let bignum_sub_mc =
   0x48; 0xf7; 0xd8;        (* NEG (% rax) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_sub_mc = define_trimmed "bignum_sub_mc" bignum_sub_cmc;;
 
 let BIGNUM_SUB_EXEC = X86_MK_EXEC_RULE bignum_sub_mc;;
 
@@ -751,8 +753,10 @@ let BIGNUM_SUB_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_sub_mc = define_from_elf
-   "windows_bignum_sub_mc" "x86/generic/bignum_sub.obj";;
+let windows_bignum_sub_cmc = define_from_elf
+   "windows_bignum_sub_cmc" "x86/generic/bignum_sub.obj";;
+
+let windows_bignum_sub_mc = define_trimmed "windows_bignum_sub_mc" windows_bignum_sub_cmc;;
 
 let WINDOWS_BIGNUM_SUB_CORRECT = prove
  (`!p z m x a n y b pc.

@@ -26,8 +26,8 @@ needs "x86/proofs/p256_montjdouble.ml";;
 (**** print_literal_from_elf "x86/p256/p256_montjscalarmul.o";;
  ****)
 
-let p256_montjscalarmul_mc = define_assert_from_elf
-  "p256_montjscalarmul_mc" "x86/p256/p256_montjscalarmul.o"
+let p256_montjscalarmul_cmc = define_assert_from_elf
+  "p256_montjscalarmul_cmc" "x86/p256/p256_montjscalarmul.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x41; 0x57;              (* PUSH (% r15) *)
@@ -5929,6 +5929,8 @@ let p256_montjscalarmul_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let p256_montjscalarmul_mc = define_trimmed "p256_montjscalarmul_mc" p256_montjscalarmul_cmc;;
+
 let P256_MONTJSCALARMUL_EXEC = X86_MK_EXEC_RULE p256_montjscalarmul_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -6859,8 +6861,10 @@ let P256_MONTJSCALARMUL_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p256_montjscalarmul_mc = define_from_elf "windows_p256_montjscalarmul_mc"
+let windows_p256_montjscalarmul_cmc = define_from_elf "windows_p256_montjscalarmul_cmc"
       "x86/p256/p256_montjscalarmul.obj";;
+
+let windows_p256_montjscalarmul_mc = define_trimmed "windows_p256_montjscalarmul_mc" windows_p256_montjscalarmul_cmc;;
 
 let WINDOWS_P256_MONTJSCALARMUL_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.

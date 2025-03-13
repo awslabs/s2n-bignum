@@ -12,13 +12,15 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/word_bytereverse.o";;
  ****)
 
-let word_bytereverse_mc = define_assert_from_elf "word_bytereverse_mc" "x86/generic/word_bytereverse.o"
+let word_bytereverse_cmc = define_assert_from_elf "word_bytereverse_cmc" "x86/generic/word_bytereverse.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)
   0x48; 0x0f; 0xc8;        (* BSWAP (% rax) *)
   0xc3                     (* RET *)
 ];;
+
+let word_bytereverse_mc = define_trimmed "word_bytereverse_mc" word_bytereverse_cmc;;
 
 let WORD_BYTEREVERSE_EXEC = X86_MK_CORE_EXEC_RULE word_bytereverse_mc;;
 
@@ -66,8 +68,10 @@ let WORD_BYTEREVERSE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_bytereverse_mc = define_from_elf
-   "windows_word_bytereverse_mc" "x86/generic/word_bytereverse.obj";;
+let windows_word_bytereverse_cmc = define_from_elf
+   "windows_word_bytereverse_cmc" "x86/generic/word_bytereverse.obj";;
+
+let windows_word_bytereverse_mc = define_trimmed "windows_word_bytereverse_mc" windows_word_bytereverse_cmc;;
 
 let WINDOWS_WORD_BYTEREVERSE_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.

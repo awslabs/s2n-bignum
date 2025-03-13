@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_nonzero.o";;
  ****)
 
-let bignum_nonzero_mc =
-  define_assert_from_elf "bignum_nonzero_mc" "x86/generic/bignum_nonzero.o"
+let bignum_nonzero_cmc =
+  define_assert_from_elf "bignum_nonzero_cmc" "x86/generic/bignum_nonzero.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
@@ -28,6 +28,8 @@ let bignum_nonzero_mc =
   0x48; 0xf7; 0xd8;        (* NEG (% rax) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_nonzero_mc = define_trimmed "bignum_nonzero_mc" bignum_nonzero_cmc;;
 
 let BIGNUM_NONZERO_EXEC = X86_MK_CORE_EXEC_RULE bignum_nonzero_mc;;
 
@@ -100,8 +102,10 @@ let BIGNUM_NONZERO_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_nonzero_mc = define_from_elf
-   "windows_bignum_nonzero_mc" "x86/generic/bignum_nonzero.obj";;
+let windows_bignum_nonzero_cmc = define_from_elf
+   "windows_bignum_nonzero_cmc" "x86/generic/bignum_nonzero.obj";;
+
+let windows_bignum_nonzero_mc = define_trimmed "windows_bignum_nonzero_mc" windows_bignum_nonzero_cmc;;
 
 let WINDOWS_BIGNUM_NONZERO_SUBROUTINE_CORRECT = prove
  (`!k a x pc stackpointer returnaddress.

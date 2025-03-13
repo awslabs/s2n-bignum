@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/curve25519/curve25519_pxscalarmul.o";;
  ****)
 
-let curve25519_pxscalarmul_mc = define_assert_from_elf
-  "curve25519_pxscalarmul_mc" "x86/curve25519/curve25519_pxscalarmul.o"
+let curve25519_pxscalarmul_cmc = define_assert_from_elf
+  "curve25519_pxscalarmul_cmc" "x86/curve25519/curve25519_pxscalarmul.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -1788,6 +1788,8 @@ let curve25519_pxscalarmul_mc = define_assert_from_elf
   0x5b;                    (* POP (% rbx) *)
   0xc3                     (* RET *)
 ];;
+
+let curve25519_pxscalarmul_mc = define_trimmed "curve25519_pxscalarmul_mc" curve25519_pxscalarmul_cmc;;
 
 let CURVE25519_PXSCALARMUL_EXEC =
   X86_MK_CORE_EXEC_RULE curve25519_pxscalarmul_mc;;
@@ -3558,9 +3560,11 @@ let CURVE25519_PXSCALARMUL_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_curve25519_pxscalarmul_mc = define_from_elf
-  "windows_curve25519_pxscalarmul_mc"
+let windows_curve25519_pxscalarmul_cmc = define_from_elf
+  "windows_curve25519_pxscalarmul_cmc"
   "x86/curve25519/curve25519_pxscalarmul.obj";;
+
+let windows_curve25519_pxscalarmul_mc = define_trimmed "windows_curve25519_pxscalarmul_mc" windows_curve25519_pxscalarmul_cmc;;
 
 let WINDOWS_CURVE25519_PXSCALARMUL_SUBROUTINE_CORRECT = time prove
  (`!res scalar n point X pc stackpointer returnaddress.

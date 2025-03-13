@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_muladd10.o";;
  ****)
 
-let bignum_muladd10_mc =
-  define_assert_from_elf "bignum_muladd10_mc" "x86/generic/bignum_muladd10.o"
+let bignum_muladd10_cmc =
+  define_assert_from_elf "bignum_muladd10_cmc" "x86/generic/bignum_muladd10.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
@@ -34,6 +34,8 @@ let bignum_muladd10_mc =
   0x48; 0x89; 0xc8;        (* MOV (% rax) (% rcx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_muladd10_mc = define_trimmed "bignum_muladd10_mc" bignum_muladd10_cmc;;
 
 let BIGNUM_MULADD10_EXEC = X86_MK_CORE_EXEC_RULE bignum_muladd10_mc;;
 
@@ -173,8 +175,10 @@ let BIGNUM_MULADD10_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_muladd10_mc = define_from_elf
-   "windows_bignum_muladd10_mc" "x86/generic/bignum_muladd10.obj";;
+let windows_bignum_muladd10_cmc = define_from_elf
+   "windows_bignum_muladd10_cmc" "x86/generic/bignum_muladd10.obj";;
+
+let windows_bignum_muladd10_mc = define_trimmed "windows_bignum_muladd10_mc" windows_bignum_muladd10_cmc;;
 
 let WINDOWS_BIGNUM_MULADD10_SUBROUTINE_CORRECT = time prove
  (`!k z d n pc stackpointer returnaddress.

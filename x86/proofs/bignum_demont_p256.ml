@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/p256/bignum_demont_p256.o";;
  ****)
 
-let bignum_demont_p256_mc =
-  define_assert_from_elf "bignum_demont_p256_mc" "x86/p256/bignum_demont_p256.o"
+let bignum_demont_p256_cmc =
+  define_assert_from_elf "bignum_demont_p256_cmc" "x86/p256/bignum_demont_p256.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -95,6 +95,8 @@ let bignum_demont_p256_mc =
   0x5b;                    (* POP (% rbx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_demont_p256_mc = define_trimmed "bignum_demont_p256_mc" bignum_demont_p256_cmc;;
 
 let BIGNUM_DEMONT_P256_EXEC = X86_MK_CORE_EXEC_RULE bignum_demont_p256_mc;;
 
@@ -184,8 +186,10 @@ let BIGNUM_DEMONT_P256_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_demont_p256_mc = define_from_elf
-   "windows_bignum_demont_p256_mc" "x86/p256/bignum_demont_p256.obj";;
+let windows_bignum_demont_p256_cmc = define_from_elf
+   "windows_bignum_demont_p256_cmc" "x86/p256/bignum_demont_p256.obj";;
+
+let windows_bignum_demont_p256_mc = define_trimmed "windows_bignum_demont_p256_mc" windows_bignum_demont_p256_cmc;;
 
 let WINDOWS_BIGNUM_DEMONT_P256_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.

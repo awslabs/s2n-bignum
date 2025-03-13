@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/p384/p384_montjadd.o";;
  ****)
 
-let p384_montjadd_mc = define_assert_from_elf
-  "p384_montjadd_mc" "x86/p384/p384_montjadd.o"
+let p384_montjadd_cmc = define_assert_from_elf
+  "p384_montjadd_cmc" "x86/p384/p384_montjadd.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -6640,6 +6640,8 @@ let p384_montjadd_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let p384_montjadd_mc = define_trimmed "p384_montjadd_mc" p384_montjadd_cmc;;
+
 let P384_MONTJADD_EXEC = X86_MK_CORE_EXEC_RULE p384_montjadd_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -7499,8 +7501,10 @@ let P384_MONTJADD_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p384_montjadd_mc = define_from_elf "windows_p384_montjadd_mc"
+let windows_p384_montjadd_cmc = define_from_elf "windows_p384_montjadd_cmc"
       "x86/p384/p384_montjadd.obj";;
+
+let windows_p384_montjadd_mc = define_trimmed "windows_p384_montjadd_mc" windows_p384_montjadd_cmc;;
 
 let WINDOWS_P384_MONTJADD_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.

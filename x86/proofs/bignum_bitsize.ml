@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_bitsize.o";;
  ****)
 
-let bignum_bitsize_mc = define_assert_from_elf "bignum_bitsize_mc" "x86/generic/bignum_bitsize.o"
+let bignum_bitsize_cmc = define_assert_from_elf "bignum_bitsize_cmc" "x86/generic/bignum_bitsize.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
@@ -34,6 +34,8 @@ let bignum_bitsize_mc = define_assert_from_elf "bignum_bitsize_mc" "x86/generic/
   0x48; 0x01; 0xd0;        (* ADD (% rax) (% rdx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_bitsize_mc = define_trimmed "bignum_bitsize_mc" bignum_bitsize_cmc;;
 
 let BIGNUM_BITSIZE_EXEC = X86_MK_CORE_EXEC_RULE bignum_bitsize_mc;;
 
@@ -224,8 +226,10 @@ let BIGNUM_BITSIZE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_bitsize_mc = define_from_elf
-   "windows_bignum_bitsize_mc" "x86/generic/bignum_bitsize.obj";;
+let windows_bignum_bitsize_cmc = define_from_elf
+   "windows_bignum_bitsize_cmc" "x86/generic/bignum_bitsize.obj";;
+
+let windows_bignum_bitsize_mc = define_trimmed "windows_bignum_bitsize_mc" windows_bignum_bitsize_cmc;;
 
 let WINDOWS_BIGNUM_BITSIZE_SUBROUTINE_CORRECT = prove
  (`!k a x pc stackpointer returnaddress.

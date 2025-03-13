@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/secp256k1/secp256k1_jdouble.o";;
  ****)
 
-let secp256k1_jdouble_mc = define_assert_from_elf
-  "secp256k1_jdouble_mc" "x86/secp256k1/secp256k1_jdouble.o"
+let secp256k1_jdouble_cmc = define_assert_from_elf
+  "secp256k1_jdouble_cmc" "x86/secp256k1/secp256k1_jdouble.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -1194,6 +1194,8 @@ let secp256k1_jdouble_mc = define_assert_from_elf
   0x5b;                    (* POP (% rbx) *)
   0xc3                     (* RET *)
 ];;
+
+let secp256k1_jdouble_mc = define_trimmed "secp256k1_jdouble_mc" secp256k1_jdouble_cmc;;
 
 let SECP256K1_JDOUBLE_EXEC = X86_MK_CORE_EXEC_RULE secp256k1_jdouble_mc;;
 
@@ -2382,8 +2384,10 @@ let SECP256K1_JDOUBLE_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_secp256k1_jdouble_mc = define_from_elf
-   "windows_secp256k1_jdouble_mc" "x86/secp256k1/secp256k1_jdouble.obj";;
+let windows_secp256k1_jdouble_cmc = define_from_elf
+   "windows_secp256k1_jdouble_cmc" "x86/secp256k1/secp256k1_jdouble.obj";;
+
+let windows_secp256k1_jdouble_mc = define_trimmed "windows_secp256k1_jdouble_mc" windows_secp256k1_jdouble_cmc;;
 
 let WINDOWS_SECP256K1_JDOUBLE_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.

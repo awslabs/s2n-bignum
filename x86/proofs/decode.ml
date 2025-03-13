@@ -2229,6 +2229,18 @@ let save_literal_from_elf deffile objfile =
   let ls = make_fn_word_list bs (decode_all (term_of_array bs)) in
   file_of_string deffile ls;;
 
+(*** Define a variant with initial ENDBR64 trimmed away ***)
+
+let define_trimmed =
+  let trim_tm = `TRIM_LIST(4,0):byte list->byte list`
+  and bl_ty = `:byte list` in
+  fun name th ->
+    let eth = CONV_RULE(RAND_CONV TRIM_LIST_CONV) (AP_TERM trim_tm th) in
+    let ldef =
+      try mk_mconst(name,bl_ty) with Failure _ -> mk_var(name,bl_ty) in
+    let def' = mk_eq(ldef,lhand(concl eth)) in
+    TRANS (new_definition def') eth;;
+
 let mk_bytelist = C (curry mk_list) `:byte`;;
 
 let extract_coda_from_elf =

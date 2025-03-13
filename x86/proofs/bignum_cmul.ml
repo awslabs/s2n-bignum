@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_cmul.o";;
  ****)
 
-let bignum_cmul_mc =
-  define_assert_from_elf "bignum_cmul_mc" "x86/generic/bignum_cmul.o"
+let bignum_cmul_cmc =
+  define_assert_from_elf "bignum_cmul_cmc" "x86/generic/bignum_cmul.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x39; 0xcf;        (* CMP (% rdi) (% rcx) *)
@@ -53,6 +53,8 @@ let bignum_cmul_mc =
   0x4c; 0x89; 0xd8;        (* MOV (% rax) (% r11) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_cmul_mc = define_trimmed "bignum_cmul_mc" bignum_cmul_cmc;;
 
 let BIGNUM_CMUL_EXEC = X86_MK_CORE_EXEC_RULE bignum_cmul_mc;;
 
@@ -384,8 +386,10 @@ let BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_cmul_mc = define_from_elf
-   "windows_bignum_cmul_mc" "x86/generic/bignum_cmul.obj";;
+let windows_bignum_cmul_cmc = define_from_elf
+   "windows_bignum_cmul_cmc" "x86/generic/bignum_cmul.obj";;
+
+let windows_bignum_cmul_mc = define_trimmed "windows_bignum_cmul_mc" windows_bignum_cmul_cmc;;
 
 let WINDOWS_BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
  (`!p z c n x a pc stackpointer returnaddress.

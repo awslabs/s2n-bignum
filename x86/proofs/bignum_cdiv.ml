@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_cdiv.o";;
  ****)
 
-let bignum_cdiv_mc =
-  define_assert_from_elf "bignum_cdiv_mc" "x86/generic/bignum_cdiv.o"
+let bignum_cdiv_cmc =
+  define_assert_from_elf "bignum_cdiv_cmc" "x86/generic/bignum_cdiv.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -204,6 +204,8 @@ let bignum_cdiv_mc =
   0x5b;                    (* POP (% rbx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_cdiv_mc = define_trimmed "bignum_cdiv_mc" bignum_cdiv_cmc;;
 
 let BIGNUM_CDIV_EXEC = X86_MK_CORE_EXEC_RULE bignum_cdiv_mc;;
 
@@ -1959,8 +1961,10 @@ let BIGNUM_CDIV_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_cdiv_mc = define_from_elf
-   "windows_bignum_cdiv_mc" "x86/generic/bignum_cdiv.obj";;
+let windows_bignum_cdiv_cmc = define_from_elf
+   "windows_bignum_cdiv_cmc" "x86/generic/bignum_cdiv.obj";;
+
+let windows_bignum_cdiv_mc = define_trimmed "windows_bignum_cdiv_mc" windows_bignum_cdiv_cmc;;
 
 let WINDOWS_BIGNUM_CDIV_SUBROUTINE_CORRECT = prove
  (`!k z n x m a pc stackpointer returnaddress.

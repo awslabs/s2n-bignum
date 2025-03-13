@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_cmod.o";;
  ****)
 
-let bignum_cmod_mc =
-  define_assert_from_elf "bignum_cmod_mc" "x86/generic/bignum_cmod.o"
+let bignum_cmod_cmc =
+  define_assert_from_elf "bignum_cmod_cmc" "x86/generic/bignum_cmod.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4d; 0x31; 0xdb;        (* XOR (% r11) (% r11) *)
@@ -128,6 +128,8 @@ let bignum_cmod_mc =
   0x49; 0x0f; 0x43; 0xc3;  (* CMOVAE (% rax) (% r11) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_cmod_mc = define_trimmed "bignum_cmod_mc" bignum_cmod_cmc;;
 
 let BIGNUM_CMOD_EXEC = X86_MK_CORE_EXEC_RULE bignum_cmod_mc;;
 
@@ -1394,8 +1396,10 @@ let BIGNUM_CMOD_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_cmod_mc = define_from_elf
-   "windows_bignum_cmod_mc" "x86/generic/bignum_cmod.obj";;
+let windows_bignum_cmod_cmc = define_from_elf
+   "windows_bignum_cmod_cmc" "x86/generic/bignum_cmod.obj";;
+
+let windows_bignum_cmod_mc = define_trimmed "windows_bignum_cmod_mc" windows_bignum_cmod_cmc;;
 
 let WINDOWS_BIGNUM_CMOD_SUBROUTINE_CORRECT = prove
  (`!k x m a pc stackpointer returnaddress.

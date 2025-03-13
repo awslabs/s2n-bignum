@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_shl_small.o";;
  ****)
 
-let bignum_shl_small_mc =
-  define_assert_from_elf "bignum_shl_small_mc" "x86/generic/bignum_shl_small.o"
+let bignum_shl_small_cmc =
+  define_assert_from_elf "bignum_shl_small_cmc" "x86/generic/bignum_shl_small.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x39; 0xd7;        (* CMP (% rdi) (% rdx) *)
@@ -48,6 +48,8 @@ let bignum_shl_small_mc =
   0x72; 0xf4;              (* JB (Imm8 (word 244)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_shl_small_mc = define_trimmed "bignum_shl_small_mc" bignum_shl_small_cmc;;
 
 let BIGNUM_SHL_SMALL_EXEC = X86_MK_CORE_EXEC_RULE bignum_shl_small_mc;;
 
@@ -313,8 +315,10 @@ let BIGNUM_SHL_SMALL_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_shl_small_mc = define_from_elf
-   "windows_bignum_shl_small_mc" "x86/generic/bignum_shl_small.obj";;
+let windows_bignum_shl_small_cmc = define_from_elf
+   "windows_bignum_shl_small_cmc" "x86/generic/bignum_shl_small.obj";;
+
+let windows_bignum_shl_small_mc = define_trimmed "windows_bignum_shl_small_mc" windows_bignum_shl_small_cmc;;
 
 let WINDOWS_BIGNUM_SHL_SMALL_SUBROUTINE_CORRECT = prove
  (`!p z n x a c pc stackpointer returnaddress.

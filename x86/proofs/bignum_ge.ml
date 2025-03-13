@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_ge.o";;
  ****)
 
-let bignum_ge_mc =
-  define_assert_from_elf "bignum_ge_mc" "x86/generic/bignum_ge.o"
+let bignum_ge_cmc =
+  define_assert_from_elf "bignum_ge_cmc" "x86/generic/bignum_ge.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4d; 0x31; 0xc0;        (* XOR (% r8) (% r8) *)
@@ -55,6 +55,8 @@ let bignum_ge_mc =
   0x48; 0xff; 0xc0;        (* INC (% rax) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_ge_mc = define_trimmed "bignum_ge_mc" bignum_ge_cmc;;
 
 let BIGNUM_GE_EXEC = X86_MK_EXEC_RULE bignum_ge_mc;;
 
@@ -410,8 +412,10 @@ let BIGNUM_GE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_ge_mc = define_from_elf
-   "windows_bignum_ge_mc" "x86/generic/bignum_ge.obj";;
+let windows_bignum_ge_cmc = define_from_elf
+   "windows_bignum_ge_cmc" "x86/generic/bignum_ge.obj";;
+
+let windows_bignum_ge_mc = define_trimmed "windows_bignum_ge_mc" windows_bignum_ge_cmc;;
 
 let WINDOWS_BIGNUM_GE_CORRECT = prove
  (`!m a x n b y pc.

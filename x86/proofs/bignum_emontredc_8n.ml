@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/fastmul/bignum_emontredc_8n.o";;
  ****)
 
-let bignum_emontredc_8n_mc =
-  define_assert_from_elf "bignum_emontredc_8n_mc" "x86/fastmul/bignum_emontredc_8n.o"
+let bignum_emontredc_8n_cmc =
+  define_assert_from_elf "bignum_emontredc_8n_cmc" "x86/fastmul/bignum_emontredc_8n.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -977,6 +977,8 @@ let bignum_emontredc_8n_mc =
   0xc3                     (* RET *)
 ];;
 
+let bignum_emontredc_8n_mc = define_trimmed "bignum_emontredc_8n_mc" bignum_emontredc_8n_cmc;;
+
 let BIGNUM_EMONTREDC_8N_EXEC = X86_MK_CORE_EXEC_RULE bignum_emontredc_8n_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1935,8 +1937,10 @@ let BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_emontredc_8n_mc = define_from_elf
-   "windows_bignum_emontredc_8n_mc" "x86/fastmul/bignum_emontredc_8n.obj";;
+let windows_bignum_emontredc_8n_cmc = define_from_elf
+   "windows_bignum_emontredc_8n_cmc" "x86/fastmul/bignum_emontredc_8n.obj";;
+
+let windows_bignum_emontredc_8n_mc = define_trimmed "windows_bignum_emontredc_8n_mc" windows_bignum_emontredc_8n_cmc;;
 
 (*** Likewise, a manual tweak of WINDOWS_X86_WRAP_STACK_TAC
  *** to get the Windows ABI version

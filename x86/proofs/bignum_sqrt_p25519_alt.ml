@@ -17,7 +17,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/curve25519/bignum_sqrt_p25519_alt.o";;
  ****)
 
-let bignum_sqrt_p25519_alt_mc = define_assert_from_elf "bignum_sqrt_p25519_alt_mc" "x86/curve25519/bignum_sqrt_p25519_alt.o"
+let bignum_sqrt_p25519_alt_cmc = define_assert_from_elf "bignum_sqrt_p25519_alt_cmc" "x86/curve25519/bignum_sqrt_p25519_alt.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -683,6 +683,8 @@ let bignum_sqrt_p25519_alt_mc = define_assert_from_elf "bignum_sqrt_p25519_alt_m
   0x48; 0x89; 0x57; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% rdx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_sqrt_p25519_alt_mc = define_trimmed "bignum_sqrt_p25519_alt_mc" bignum_sqrt_p25519_alt_cmc;;
 
 let BIGNUM_SQRT_P25519_ALT_EXEC = X86_MK_EXEC_RULE bignum_sqrt_p25519_alt_mc;;
 
@@ -1619,9 +1621,11 @@ let BIGNUM_SQRT_P25519_ALT_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_sqrt_p25519_alt_mc = define_from_elf
-  "windows_bignum_sqrt_p25519_alt_mc"
+let windows_bignum_sqrt_p25519_alt_cmc = define_from_elf
+  "windows_bignum_sqrt_p25519_alt_cmc"
   "x86/curve25519/bignum_sqrt_p25519_alt.obj";;
+
+let windows_bignum_sqrt_p25519_alt_mc = define_trimmed "windows_bignum_sqrt_p25519_alt_mc" windows_bignum_sqrt_p25519_alt_cmc;;
 
 let WINDOWS_BIGNUM_SQRT_P25519_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.

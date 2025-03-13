@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/p256/p256_montjdouble_alt.o";;
  ****)
 
-let p256_montjdouble_alt_mc = define_assert_from_elf
-  "p256_montjdouble_alt_mc" "x86/p256/p256_montjdouble_alt.o"
+let p256_montjdouble_alt_cmc = define_assert_from_elf
+  "p256_montjdouble_alt_cmc" "x86/p256/p256_montjdouble_alt.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -1741,6 +1741,8 @@ let p256_montjdouble_alt_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let p256_montjdouble_alt_mc = define_trimmed "p256_montjdouble_alt_mc" p256_montjdouble_alt_cmc;;
+
 let P256_MONTJDOUBLE_ALT_EXEC = X86_MK_CORE_EXEC_RULE p256_montjdouble_alt_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -3084,8 +3086,10 @@ let P256_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p256_montjdouble_alt_mc = define_from_elf "windows_p256_montjdouble_alt_mc"
+let windows_p256_montjdouble_alt_cmc = define_from_elf "windows_p256_montjdouble_alt_cmc"
       "x86/p256/p256_montjdouble_alt.obj";;
+
+let windows_p256_montjdouble_alt_mc = define_trimmed "windows_p256_montjdouble_alt_mc" windows_p256_montjdouble_alt_cmc;;
 
 let WINDOWS_P256_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.

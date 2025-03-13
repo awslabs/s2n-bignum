@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_optneg.o";;
  ****)
 
-let bignum_optneg_mc =
-  define_assert_from_elf "bignum_optneg_mc" "x86/generic/bignum_optneg.o"
+let bignum_optneg_cmc =
+  define_assert_from_elf "bignum_optneg_cmc" "x86/generic/bignum_optneg.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
@@ -37,6 +37,8 @@ let bignum_optneg_mc =
   0x48; 0x83; 0xe0; 0x01;  (* AND (% rax) (Imm8 (word 1)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_optneg_mc = define_trimmed "bignum_optneg_mc" bignum_optneg_cmc;;
 
 let BIGNUM_OPTNEG_EXEC = X86_MK_CORE_EXEC_RULE bignum_optneg_mc;;
 
@@ -211,8 +213,10 @@ let BIGNUM_OPTNEG_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_optneg_mc = define_from_elf
-   "windows_bignum_optneg_mc" "x86/generic/bignum_optneg.obj";;
+let windows_bignum_optneg_cmc = define_from_elf
+   "windows_bignum_optneg_cmc" "x86/generic/bignum_optneg.obj";;
+
+let windows_bignum_optneg_mc = define_trimmed "windows_bignum_optneg_mc" windows_bignum_optneg_cmc;;
 
 let WINDOWS_BIGNUM_OPTNEG_SUBROUTINE_CORRECT = prove
  (`!k z p x a pc stackpointer returnaddress.

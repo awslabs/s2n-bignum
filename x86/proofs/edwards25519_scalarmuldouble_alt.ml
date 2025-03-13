@@ -26,11 +26,12 @@ prioritize_num();;
 (**** print_coda_from_elf (-1) "x86/curve25519/edwards25519_scalarmuldouble_alt.o";;
  ****)
 
-let edwards25519_scalarmuldouble_alt_mc,edwards25519_scalarmuldouble_alt_data =
+let edwards25519_scalarmuldouble_alt_cmc,edwards25519_scalarmuldouble_alt_data =
   define_coda_literal_from_elf
-  "edwards25519_scalarmuldouble_alt_mc" "edwards25519_scalarmuldouble_alt_data"
+  "edwards25519_scalarmuldouble_alt_cmc" "edwards25519_scalarmuldouble_alt_data"
   "x86/curve25519/edwards25519_scalarmuldouble_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -8928,6 +8929,8 @@ let edwards25519_scalarmuldouble_alt_mc,edwards25519_scalarmuldouble_alt_data =
  139; 120; 113; 163; 184; 50; 42; 182; 14; 25; 18; 100; 99; 149; 78; 204; 46;
  92; 124; 144; 38];;
 
+let edwards25519_scalarmuldouble_alt_mc = define_trimmed "edwards25519_scalarmuldouble_alt_mc" edwards25519_scalarmuldouble_alt_cmc;;
+
 let EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC =
   X86_MK_EXEC_RULE edwards25519_scalarmuldouble_alt_mc;;
 
@@ -11858,12 +11861,14 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_scalarmuldouble_alt_mc,
+let windows_edwards25519_scalarmuldouble_alt_cmc,
     windows_edwards25519_scalarmuldouble_alt_data =
-  define_coda_from_elf 0x6fdf
-  "windows_edwards25519_scalarmuldouble_alt_mc"
+  define_coda_from_elf 0x6fe3
+  "windows_edwards25519_scalarmuldouble_alt_cmc"
   "windows_edwards25519_scalarmuldouble_alt_data"
   "x86/curve25519/edwards25519_scalarmuldouble_alt.obj";;
+
+let windows_edwards25519_scalarmuldouble_alt_mc = define_trimmed "windows_edwards25519_scalarmuldouble_alt_mc" windows_edwards25519_scalarmuldouble_alt_cmc;;
 
 let WINDOWS_EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!res scalar point bscalar n xy m pc stackpointer returnaddress.

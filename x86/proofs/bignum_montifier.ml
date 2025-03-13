@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_montifier.o";;
  ****)
 
-let bignum_montifier_mc =
-  define_assert_from_elf "bignum_montifier_mc" "x86/generic/bignum_montifier.o"
+let bignum_montifier_cmc =
+  define_assert_from_elf "bignum_montifier_cmc" "x86/generic/bignum_montifier.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -342,6 +342,8 @@ let bignum_montifier_mc =
   0x5d;                    (* POP (% rbp) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_montifier_mc = define_trimmed "bignum_montifier_mc" bignum_montifier_cmc;;
 
 let BIGNUM_MONTIFIER_EXEC = X86_MK_CORE_EXEC_RULE bignum_montifier_mc;;
 
@@ -3114,8 +3116,10 @@ let BIGNUM_MONTIFIER_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_montifier_mc = define_from_elf
-   "windows_bignum_montifier_mc" "x86/generic/bignum_montifier.obj";;
+let windows_bignum_montifier_cmc = define_from_elf
+   "windows_bignum_montifier_cmc" "x86/generic/bignum_montifier.obj";;
+
+let windows_bignum_montifier_mc = define_trimmed "windows_bignum_montifier_mc" windows_bignum_montifier_cmc;;
 
 let WINDOWS_BIGNUM_MONTIFIER_SUBROUTINE_CORRECT = time prove
  (`!k z m t n pc stackpointer returnaddress.

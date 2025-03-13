@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/p521/p521_jadd_alt.o";;
  ****)
 
-let p521_jadd_alt_mc = define_assert_from_elf
-  "p521_jadd_alt_mc" "x86/p521/p521_jadd_alt.o"
+let p521_jadd_alt_cmc = define_assert_from_elf
+  "p521_jadd_alt_cmc" "x86/p521/p521_jadd_alt.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -10381,6 +10381,8 @@ let p521_jadd_alt_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let p521_jadd_alt_mc = define_trimmed "p521_jadd_alt_mc" p521_jadd_alt_cmc;;
+
 let P521_JADD_ALT_EXEC = X86_MK_CORE_EXEC_RULE p521_jadd_alt_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -11174,8 +11176,10 @@ let P521_JADD_ALT_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p521_jadd_alt_mc = define_from_elf "windows_p521_jadd_alt_mc"
+let windows_p521_jadd_alt_cmc = define_from_elf "windows_p521_jadd_alt_cmc"
       "x86/p521/p521_jadd_alt.obj";;
+
+let windows_p521_jadd_alt_mc = define_trimmed "windows_p521_jadd_alt_mc" windows_p521_jadd_alt_cmc;;
 
 let WINDOWS_P521_JADD_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.

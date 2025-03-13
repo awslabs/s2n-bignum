@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/fastmul/bignum_ksqr_32_64.o";;
  ****)
 
-let bignum_ksqr_32_64_mc =
-  define_assert_from_elf "bignum_ksqr_32_64_mc" "x86/fastmul/bignum_ksqr_32_64.o"
+let bignum_ksqr_32_64_cmc =
+  define_assert_from_elf "bignum_ksqr_32_64_cmc" "x86/fastmul/bignum_ksqr_32_64.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -1750,6 +1750,8 @@ let bignum_ksqr_32_64_mc =
   0xc3                     (* RET *)
 ];;
 
+let bignum_ksqr_32_64_mc = define_trimmed "bignum_ksqr_32_64_mc" bignum_ksqr_32_64_cmc;;
+
 let BIGNUM_KSQR_32_64_EXEC = X86_MK_EXEC_RULE bignum_ksqr_32_64_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -2063,8 +2065,10 @@ let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_ksqr_32_64_mc = define_from_elf
-   "windows_bignum_ksqr_32_64_mc" "x86/fastmul/bignum_ksqr_32_64.obj";;
+let windows_bignum_ksqr_32_64_cmc = define_from_elf
+   "windows_bignum_ksqr_32_64_cmc" "x86/fastmul/bignum_ksqr_32_64.obj";;
+
+let windows_bignum_ksqr_32_64_mc = define_trimmed "windows_bignum_ksqr_32_64_mc" windows_bignum_ksqr_32_64_cmc;;
 
 let WINDOWS_BIGNUM_KSQR_32_64_EXEC =
   X86_MK_EXEC_RULE windows_bignum_ksqr_32_64_mc;;

@@ -26,11 +26,12 @@ prioritize_num();;
 (**** print_coda_from_elf 0x3079 "x86/curve25519/edwards25519_scalarmulbase.o";;
  ****)
 
-let edwards25519_scalarmulbase_mc,edwards25519_scalarmulbase_data =
+let edwards25519_scalarmulbase_cmc,edwards25519_scalarmulbase_data =
   define_coda_literal_from_elf
-  "edwards25519_scalarmulbase_mc" "edwards25519_scalarmulbase_data"
+  "edwards25519_scalarmulbase_cmc" "edwards25519_scalarmulbase_data"
   "x86/curve25519/edwards25519_scalarmulbase.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -6634,6 +6635,8 @@ let edwards25519_scalarmulbase_mc,edwards25519_scalarmulbase_data =
  102; 66; 200; 66; 208; 144; 171; 227; 126; 84; 25; 127; 15; 142; 132; 235;
  185; 151; 164; 101; 208; 161; 3; 37; 95; 137; 223; 145; 17; 145; 239; 15];;
 
+let edwards25519_scalarmulbase_mc = define_trimmed "edwards25519_scalarmulbase_mc" edwards25519_scalarmulbase_cmc;;
+
 let EDWARDS25519_SCALARMULBASE_EXEC =
   X86_MK_EXEC_RULE edwards25519_scalarmulbase_mc;;
 
@@ -8206,12 +8209,14 @@ let EDWARDS25519_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_scalarmulbase_mc,
+let windows_edwards25519_scalarmulbase_cmc,
     windows_edwards25519_scalarmulbase_data =
-  define_coda_from_elf 0x3089
-  "windows_edwards25519_scalarmulbase_mc"
+  define_coda_from_elf 0x308d
+  "windows_edwards25519_scalarmulbase_cmc"
   "windows_edwards25519_scalarmulbase_data"
   "x86/curve25519/edwards25519_scalarmulbase.obj";;
+
+let windows_edwards25519_scalarmulbase_mc = define_trimmed "windows_edwards25519_scalarmulbase_mc" windows_edwards25519_scalarmulbase_cmc;;
 
 let WINDOWS_EDWARDS25519_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
  (`!res scalar n pc stackpointer returnaddress.

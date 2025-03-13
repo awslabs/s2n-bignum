@@ -27,11 +27,12 @@ prioritize_num();;
 (**** print_coda_from_elf (-1) "x86/curve25519/curve25519_x25519base.o";;
  ****)
 
-let curve25519_x25519base_mc,curve25519_x25519base_data =
+let curve25519_x25519base_cmc,curve25519_x25519base_data =
   define_coda_literal_from_elf
-  "curve25519_x25519base_mc" "curve25519_x25519base_data"
+  "curve25519_x25519base_cmc" "curve25519_x25519base_data"
   "x86/curve25519/curve25519_x25519base.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -6482,6 +6483,8 @@ let curve25519_x25519base_mc,curve25519_x25519base_data =
  137; 102; 4; 39; 79; 157; 122; 63; 255; 10; 153; 135; 9; 61; 69; 186; 218;
  103; 98; 243; 158; 208; 156; 102; 28; 123; 94; 69; 97; 119];;
 
+let curve25519_x25519base_mc = define_trimmed "curve25519_x25519base_mc" curve25519_x25519base_cmc;;
+
 let CURVE25519_X25519BASE_EXEC =
   X86_MK_EXEC_RULE curve25519_x25519base_mc;;
 
@@ -8030,12 +8033,14 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_curve25519_x25519base_mc,
+let windows_curve25519_x25519base_cmc,
     windows_curve25519_x25519base_data =
-  define_coda_from_elf 0x2e87
-  "windows_curve25519_x25519base_mc"
+  define_coda_from_elf 0x2e8b
+  "windows_curve25519_x25519base_cmc"
   "windows_curve25519_x25519base_data"
   "x86/curve25519/curve25519_x25519base.obj";;
+
+let windows_curve25519_x25519base_mc = define_trimmed "windows_curve25519_x25519base_mc" windows_curve25519_x25519base_cmc;;
 
 let WINDOWS_CURVE25519_X25519BASE_SUBROUTINE_CORRECT = time prove
  (`!res scalar n pc stackpointer returnaddress.

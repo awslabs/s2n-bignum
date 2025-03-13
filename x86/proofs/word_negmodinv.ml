@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/word_negmodinv.o";;
  ****)
 
-let word_negmodinv_mc = define_assert_from_elf "word_negmodinv_mc" "x86/generic/word_negmodinv.o"
+let word_negmodinv_cmc = define_assert_from_elf "word_negmodinv_cmc" "x86/generic/word_negmodinv.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf9;        (* MOV (% rcx) (% rdi) *)
@@ -44,6 +44,8 @@ let word_negmodinv_mc = define_assert_from_elf "word_negmodinv_mc" "x86/generic/
   0x48; 0x0f; 0xaf; 0xc2;  (* IMUL (% rax) (% rdx) *)
   0xc3                     (* RET *)
 ];;
+
+let word_negmodinv_mc = define_trimmed "word_negmodinv_mc" word_negmodinv_cmc;;
 
 let WORD_NEGMODINV_EXEC = X86_MK_CORE_EXEC_RULE word_negmodinv_mc;;
 
@@ -121,8 +123,10 @@ let WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_negmodinv_mc = define_from_elf
-   "windows_word_negmodinv_mc" "x86/generic/word_negmodinv.obj";;
+let windows_word_negmodinv_cmc = define_from_elf
+   "windows_word_negmodinv_cmc" "x86/generic/word_negmodinv.obj";;
+
+let windows_word_negmodinv_mc = define_trimmed "windows_word_negmodinv_mc" windows_word_negmodinv_cmc;;
 
 let WINDOWS_WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.

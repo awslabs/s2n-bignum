@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/secp256k1/bignum_cmul_p256k1_alt.o";;
  ****)
 
-let bignum_cmul_p256k1_alt_mc = define_assert_from_elf "bignum_cmul_p256k1_alt_mc" "x86/secp256k1/bignum_cmul_p256k1_alt.o"
+let bignum_cmul_p256k1_alt_cmc = define_assert_from_elf "bignum_cmul_p256k1_alt_cmc" "x86/secp256k1/bignum_cmul_p256k1_alt.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
@@ -55,6 +55,8 @@ let bignum_cmul_p256k1_alt_mc = define_assert_from_elf "bignum_cmul_p256k1_alt_m
   0x48; 0x89; 0x4f; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% rcx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_cmul_p256k1_alt_mc = define_trimmed "bignum_cmul_p256k1_alt_mc" bignum_cmul_p256k1_alt_cmc;;
 
 let BIGNUM_CMUL_P256K1_ALT_EXEC = X86_MK_CORE_EXEC_RULE bignum_cmul_p256k1_alt_mc;;
 
@@ -195,8 +197,10 @@ let BIGNUM_CMUL_P256K1_ALT_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_cmul_p256k1_alt_mc = define_from_elf
-   "windows_bignum_cmul_p256k1_alt_mc" "x86/secp256k1/bignum_cmul_p256k1_alt.obj";;
+let windows_bignum_cmul_p256k1_alt_cmc = define_from_elf
+   "windows_bignum_cmul_p256k1_alt_cmc" "x86/secp256k1/bignum_cmul_p256k1_alt.obj";;
+
+let windows_bignum_cmul_p256k1_alt_mc = define_trimmed "windows_bignum_cmul_p256k1_alt_mc" windows_bignum_cmul_p256k1_alt_cmc;;
 
 let WINDOWS_BIGNUM_CMUL_P256K1_ALT_SUBROUTINE_CORRECT = time prove
  (`!z c x a pc stackpointer returnaddress.

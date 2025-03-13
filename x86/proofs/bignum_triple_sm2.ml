@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/sm2/bignum_triple_sm2.o";;
  ****)
 
-let bignum_triple_sm2_mc = define_assert_from_elf "bignum_triple_sm2_mc" "x86/sm2/bignum_triple_sm2.o"
+let bignum_triple_sm2_cmc = define_assert_from_elf "bignum_triple_sm2_cmc" "x86/sm2/bignum_triple_sm2.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x31; 0xc0;              (* XOR (% eax) (% eax) *)
@@ -72,6 +72,8 @@ let bignum_triple_sm2_mc = define_assert_from_elf "bignum_triple_sm2_mc" "x86/sm
   0x4c; 0x89; 0x5f; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% r11) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_triple_sm2_mc = define_trimmed "bignum_triple_sm2_mc" bignum_triple_sm2_cmc;;
 
 let BIGNUM_TRIPLE_SM2_EXEC = X86_MK_CORE_EXEC_RULE bignum_triple_sm2_mc;;
 
@@ -233,8 +235,10 @@ let BIGNUM_TRIPLE_SM2_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_triple_sm2_mc = define_from_elf
-   "windows_bignum_triple_sm2_mc" "x86/sm2/bignum_triple_sm2.obj";;
+let windows_bignum_triple_sm2_cmc = define_from_elf
+   "windows_bignum_triple_sm2_cmc" "x86/sm2/bignum_triple_sm2.obj";;
+
+let windows_bignum_triple_sm2_mc = define_trimmed "windows_bignum_triple_sm2_mc" windows_bignum_triple_sm2_cmc;;
 
 let WINDOWS_BIGNUM_TRIPLE_SM2_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.

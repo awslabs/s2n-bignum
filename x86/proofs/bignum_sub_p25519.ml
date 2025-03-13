@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/curve25519/bignum_sub_p25519.o";;
  ****)
 
-let bignum_sub_p25519_mc = define_assert_from_elf "bignum_sub_p25519_mc" "x86/curve25519/bignum_sub_p25519.o"
+let bignum_sub_p25519_cmc = define_assert_from_elf "bignum_sub_p25519_cmc" "x86/curve25519/bignum_sub_p25519.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4c; 0x8b; 0x06;        (* MOV (% r8) (Memop Quadword (%% (rsi,0))) *)
@@ -38,6 +38,8 @@ let bignum_sub_p25519_mc = define_assert_from_elf "bignum_sub_p25519_mc" "x86/cu
   0x4c; 0x89; 0x5f; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% r11) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_sub_p25519_mc = define_trimmed "bignum_sub_p25519_mc" bignum_sub_p25519_cmc;;
 
 let BIGNUM_SUB_P25519_EXEC = X86_MK_CORE_EXEC_RULE bignum_sub_p25519_mc;;
 
@@ -133,8 +135,10 @@ let BIGNUM_SUB_P25519_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_sub_p25519_mc = define_from_elf
-   "windows_bignum_sub_p25519_mc" "x86/curve25519/bignum_sub_p25519.obj";;
+let windows_bignum_sub_p25519_cmc = define_from_elf
+   "windows_bignum_sub_p25519_cmc" "x86/curve25519/bignum_sub_p25519.obj";;
+
+let windows_bignum_sub_p25519_mc = define_trimmed "windows_bignum_sub_p25519_mc" windows_bignum_sub_p25519_cmc;;
 
 let WINDOWS_BIGNUM_SUB_P25519_SUBROUTINE_CORRECT = time prove
  (`!z x y m n pc stackpointer returnaddress.

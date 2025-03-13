@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_pow2.o";;
  ****)
 
-let bignum_pow2_mc =
-  define_assert_from_elf "bignum_pow2_mc" "x86/generic/bignum_pow2.o"
+let bignum_pow2_cmc =
+  define_assert_from_elf "bignum_pow2_cmc" "x86/generic/bignum_pow2.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
@@ -33,6 +33,8 @@ let bignum_pow2_mc =
   0x72; 0xea;              (* JB (Imm8 (word 234)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_pow2_mc = define_trimmed "bignum_pow2_mc" bignum_pow2_cmc;;
 
 let BIGNUM_POW2_EXEC = X86_MK_CORE_EXEC_RULE bignum_pow2_mc;;
 
@@ -153,8 +155,10 @@ let BIGNUM_POW2_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_pow2_mc = define_from_elf
-   "windows_bignum_pow2_mc" "x86/generic/bignum_pow2.obj";;
+let windows_bignum_pow2_cmc = define_from_elf
+   "windows_bignum_pow2_cmc" "x86/generic/bignum_pow2.obj";;
+
+let windows_bignum_pow2_mc = define_trimmed "windows_bignum_pow2_mc" windows_bignum_pow2_cmc;;
 
 let WINDOWS_BIGNUM_POW2_SUBROUTINE_CORRECT = prove
  (`!k z n pc stackpointer returnaddress.

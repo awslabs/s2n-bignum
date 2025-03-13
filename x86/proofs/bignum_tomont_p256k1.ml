@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/secp256k1/bignum_tomont_p256k1.o";;
  ****)
 
-let bignum_tomont_p256k1_mc =
-  define_assert_from_elf "bignum_tomont_p256k1_mc" "x86/secp256k1/bignum_tomont_p256k1.o"
+let bignum_tomont_p256k1_cmc =
+  define_assert_from_elf "bignum_tomont_p256k1_cmc" "x86/secp256k1/bignum_tomont_p256k1.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xba; 0xd1; 0x03; 0x00; 0x00; 0x01; 0x00; 0x00; 0x00;
@@ -49,6 +49,8 @@ let bignum_tomont_p256k1_mc =
   0x4c; 0x89; 0x57; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% r10) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_tomont_p256k1_mc = define_trimmed "bignum_tomont_p256k1_mc" bignum_tomont_p256k1_cmc;;
 
 let BIGNUM_TOMONT_P256K1_EXEC = X86_MK_CORE_EXEC_RULE bignum_tomont_p256k1_mc;;
 
@@ -186,8 +188,10 @@ let BIGNUM_TOMONT_P256K1_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_tomont_p256k1_mc = define_from_elf
-   "windows_bignum_tomont_p256k1_mc" "x86/secp256k1/bignum_tomont_p256k1.obj";;
+let windows_bignum_tomont_p256k1_cmc = define_from_elf
+   "windows_bignum_tomont_p256k1_cmc" "x86/secp256k1/bignum_tomont_p256k1.obj";;
+
+let windows_bignum_tomont_p256k1_mc = define_trimmed "windows_bignum_tomont_p256k1_mc" windows_bignum_tomont_p256k1_cmc;;
 
 let WINDOWS_BIGNUM_TOMONT_P256K1_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.

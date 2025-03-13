@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_modifier.o";;
  ****)
 
-let bignum_modifier_mc =
-  define_assert_from_elf "bignum_modifier_mc" "x86/generic/bignum_modifier.o"
+let bignum_modifier_cmc =
+  define_assert_from_elf "bignum_modifier_cmc" "x86/generic/bignum_modifier.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -342,6 +342,8 @@ let bignum_modifier_mc =
   0x5d;                    (* POP (% rbp) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_modifier_mc = define_trimmed "bignum_modifier_mc" bignum_modifier_cmc;;
 
 let BIGNUM_MODIFIER_EXEC = X86_MK_CORE_EXEC_RULE bignum_modifier_mc;;
 
@@ -3110,8 +3112,10 @@ let BIGNUM_MODIFIER_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_modifier_mc = define_from_elf
-   "windows_bignum_modifier_mc" "x86/generic/bignum_modifier.obj";;
+let windows_bignum_modifier_cmc = define_from_elf
+   "windows_bignum_modifier_cmc" "x86/generic/bignum_modifier.obj";;
+
+let windows_bignum_modifier_mc = define_trimmed "windows_bignum_modifier_mc" windows_bignum_modifier_cmc;;
 
 let WINDOWS_BIGNUM_MODIFIER_SUBROUTINE_CORRECT = time prove
  (`!k z m t n pc stackpointer returnaddress.

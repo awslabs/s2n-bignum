@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_mux16.o";;
  ****)
 
-let bignum_mux16_mc =
-  define_assert_from_elf "bignum_mux16_mc" "x86/generic/bignum_mux16.o"
+let bignum_mux16_cmc =
+  define_assert_from_elf "bignum_mux16_cmc" "x86/generic/bignum_mux16.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
@@ -93,6 +93,8 @@ let bignum_mux16_mc =
                            (* JNE (Imm32 (word 4294967060)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_mux16_mc = define_trimmed "bignum_mux16_mc" bignum_mux16_cmc;;
 
 let BIGNUM_MUX16_EXEC = X86_MK_CORE_EXEC_RULE bignum_mux16_mc;;
 
@@ -288,8 +290,10 @@ let BIGNUM_MUX16_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_mux16_mc = define_from_elf
-   "windows_bignum_mux16_mc" "x86/generic/bignum_mux16.obj";;
+let windows_bignum_mux16_cmc = define_from_elf
+   "windows_bignum_mux16_cmc" "x86/generic/bignum_mux16.obj";;
+
+let windows_bignum_mux16_mc = define_trimmed "windows_bignum_mux16_mc" windows_bignum_mux16_cmc;;
 
 let WINDOWS_BIGNUM_MUX16_SUBROUTINE_CORRECT = prove
  (`!k z xs i n pc stackpointer returnaddress.

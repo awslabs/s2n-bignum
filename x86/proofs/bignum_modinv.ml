@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_modinv.o";;
  ****)
 
-let bignum_modinv_mc =
-  define_assert_from_elf "bignum_modinv_mc" "x86/generic/bignum_modinv.o"
+let bignum_modinv_cmc =
+  define_assert_from_elf "bignum_modinv_cmc" "x86/generic/bignum_modinv.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -469,6 +469,8 @@ let bignum_modinv_mc =
   0x5d;                    (* POP (% rbp) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_modinv_mc = define_trimmed "bignum_modinv_mc" bignum_modinv_cmc;;
 
 let BIGNUM_MODINV_EXEC = X86_MK_CORE_EXEC_RULE bignum_modinv_mc;;
 
@@ -4792,8 +4794,10 @@ let BIGNUM_MODINV_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_modinv_mc = define_from_elf
-   "windows_bignum_modinv_mc" "x86/generic/bignum_modinv.obj";;
+let windows_bignum_modinv_cmc = define_from_elf
+   "windows_bignum_modinv_cmc" "x86/generic/bignum_modinv.obj";;
+
+let windows_bignum_modinv_mc = define_trimmed "windows_bignum_modinv_mc" windows_bignum_modinv_cmc;;
 
 let WINDOWS_BIGNUM_MODINV_SUBROUTINE_CORRECT = prove
  (`!k z x a y b w pc stackpointer returnaddress.

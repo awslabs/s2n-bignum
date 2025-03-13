@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/word_ctz.o";;
  ****)
 
-let word_ctz_mc = define_assert_from_elf "word_ctz_mc" "x86/generic/word_ctz.o"
+let word_ctz_cmc = define_assert_from_elf "word_ctz_cmc" "x86/generic/word_ctz.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x0f; 0xbc; 0xc7;  (* BSF (% rax) (% rdi) *)
@@ -22,6 +22,8 @@ let word_ctz_mc = define_assert_from_elf "word_ctz_mc" "x86/generic/word_ctz.o"
   0x48; 0x0f; 0x44; 0xc2;  (* CMOVE (% rax) (% rdx) *)
   0xc3                     (* RET *)
 ];;
+
+let word_ctz_mc = define_trimmed "word_ctz_mc" word_ctz_cmc;;
 
 let WORD_CTZ_EXEC = X86_MK_CORE_EXEC_RULE word_ctz_mc;;
 
@@ -63,8 +65,10 @@ let WORD_CTZ_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_ctz_mc = define_from_elf
-   "windows_word_ctz_mc" "x86/generic/word_ctz.obj";;
+let windows_word_ctz_cmc = define_from_elf
+   "windows_word_ctz_cmc" "x86/generic/word_ctz.obj";;
+
+let windows_word_ctz_mc = define_trimmed "windows_word_ctz_mc" windows_word_ctz_cmc;;
 
 let WINDOWS_WORD_CTZ_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.

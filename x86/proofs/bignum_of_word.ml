@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_of_word.o";;
  ****)
 
-let bignum_of_word_mc =
-  define_assert_from_elf "bignum_of_word_mc" "x86/generic/bignum_of_word.o"
+let bignum_of_word_cmc =
+  define_assert_from_elf "bignum_of_word_cmc" "x86/generic/bignum_of_word.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
@@ -27,6 +27,8 @@ let bignum_of_word_mc =
   0x75; 0xf7;              (* JNE (Imm8 (word 247)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_of_word_mc = define_trimmed "bignum_of_word_mc" bignum_of_word_cmc;;
 
 let BIGNUM_OF_WORD_EXEC = X86_MK_CORE_EXEC_RULE bignum_of_word_mc;;
 
@@ -125,8 +127,10 @@ let BIGNUM_OF_WORD_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_of_word_mc = define_from_elf
-   "windows_bignum_of_word_mc" "x86/generic/bignum_of_word.obj";;
+let windows_bignum_of_word_cmc = define_from_elf
+   "windows_bignum_of_word_cmc" "x86/generic/bignum_of_word.obj";;
+
+let windows_bignum_of_word_mc = define_trimmed "windows_bignum_of_word_mc" windows_bignum_of_word_cmc;;
 
 let WINDOWS_BIGNUM_OF_WORD_SUBROUTINE_CORRECT = prove
  (`!k z n pc stackpointer returnaddress.

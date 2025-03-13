@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/fastmul/bignum_sqr_6_12.o";;
  ****)
 
-let bignum_sqr_6_12_mc =
-  define_assert_from_elf "bignum_sqr_6_12_mc" "x86/fastmul/bignum_sqr_6_12.o"
+let bignum_sqr_6_12_cmc =
+  define_assert_from_elf "bignum_sqr_6_12_cmc" "x86/fastmul/bignum_sqr_6_12.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -202,6 +202,8 @@ let bignum_sqr_6_12_mc =
   0xc3                     (* RET *)
 ];;
 
+let bignum_sqr_6_12_mc = define_trimmed "bignum_sqr_6_12_mc" bignum_sqr_6_12_cmc;;
+
 let BIGNUM_SQR_6_12_EXEC = X86_MK_CORE_EXEC_RULE bignum_sqr_6_12_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -262,8 +264,10 @@ let BIGNUM_SQR_6_12_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_sqr_6_12_mc = define_from_elf
-   "windows_bignum_sqr_6_12_mc" "x86/fastmul/bignum_sqr_6_12.obj";;
+let windows_bignum_sqr_6_12_cmc = define_from_elf
+   "windows_bignum_sqr_6_12_cmc" "x86/fastmul/bignum_sqr_6_12.obj";;
+
+let windows_bignum_sqr_6_12_mc = define_trimmed "windows_bignum_sqr_6_12_mc" windows_bignum_sqr_6_12_cmc;;
 
 let WINDOWS_BIGNUM_SQR_6_12_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.

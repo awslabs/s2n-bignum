@@ -17,7 +17,7 @@ needs "Divstep/idivstep.ml";;
 (**** print_literal_from_elf "x86/generic/word_divstep59.o";;
  ****)
 
-let word_divstep59_mc = define_assert_from_elf "word_divstep59_mc" "x86/generic/word_divstep59.o"
+let word_divstep59_cmc = define_assert_from_elf "word_divstep59_cmc" "x86/generic/word_divstep59.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -1033,6 +1033,8 @@ let word_divstep59_mc = define_assert_from_elf "word_divstep59_mc" "x86/generic/
   0xc3                     (* RET *)
 ];;
 
+let word_divstep59_mc = define_trimmed "word_divstep59_mc" word_divstep59_cmc;;
+
 let WORD_DIVSTEP59_EXEC = X86_MK_CORE_EXEC_RULE word_divstep59_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1717,8 +1719,10 @@ let WORD_DIVSTEP59_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_divstep59_mc = define_from_elf "windows_word_divstep59_mc"
+let windows_word_divstep59_cmc = define_from_elf "windows_word_divstep59_cmc"
       "x86/generic/word_divstep59.obj";;
+
+let windows_word_divstep59_mc = define_trimmed "windows_word_divstep59_mc" windows_word_divstep59_cmc;;
 
 let WINDOWS_WORD_DIVSTEP59_SUBROUTINE_CORRECT = time prove
  (`!m d f g pc stackpointer returnaddress.

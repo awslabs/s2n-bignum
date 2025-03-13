@@ -14,8 +14,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/p256/bignum_littleendian_4.o";;
  ****)
 
-let bignum_littleendian_4_mc =
-  define_assert_from_elf "bignum_littleendian_4_mc" "x86/p256/bignum_littleendian_4.o"
+let bignum_littleendian_4_cmc =
+  define_assert_from_elf "bignum_littleendian_4_cmc" "x86/p256/bignum_littleendian_4.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
@@ -28,6 +28,8 @@ let bignum_littleendian_4_mc =
   0x48; 0x89; 0x47; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% rax) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_littleendian_4_mc = define_trimmed "bignum_littleendian_4_mc" bignum_littleendian_4_cmc;;
 
 let BIGNUM_LITTLEENDIAN_4_EXEC = X86_MK_CORE_EXEC_RULE bignum_littleendian_4_mc;;
 
@@ -190,8 +192,10 @@ let BIGNUM_LITTLEENDIAN_4_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_littleendian_4_mc = define_from_elf
-   "windows_bignum_littleendian_4_mc" "x86/p256/bignum_littleendian_4.obj";;
+let windows_bignum_littleendian_4_cmc = define_from_elf
+   "windows_bignum_littleendian_4_cmc" "x86/p256/bignum_littleendian_4.obj";;
+
+let windows_bignum_littleendian_4_mc = define_trimmed "windows_bignum_littleendian_4_mc" windows_bignum_littleendian_4_cmc;;
 
 let WINDOWS_BIGNUM_FROMLEBYTES_4_SUBROUTINE_CORRECT = time prove
  (`!z x l pc stackpointer returnaddress.

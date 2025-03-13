@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/p256/bignum_mod_p256.o";;
  ****)
 
-let bignum_mod_p256_mc =
-  define_assert_from_elf "bignum_mod_p256_mc" "x86/p256/bignum_mod_p256.o"
+let bignum_mod_p256_cmc =
+  define_assert_from_elf "bignum_mod_p256_cmc" "x86/p256/bignum_mod_p256.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -114,6 +114,8 @@ let bignum_mod_p256_mc =
   0x4c; 0x8b; 0x52; 0x10;  (* MOV (% r10) (Memop Quadword (%% (rdx,16))) *)
   0xeb; 0xc5               (* JMP (Imm8 (word 197)) *)
 ];;
+
+let bignum_mod_p256_mc = define_trimmed "bignum_mod_p256_mc" bignum_mod_p256_cmc;;
 
 let BIGNUM_MOD_P256_EXEC = X86_MK_EXEC_RULE bignum_mod_p256_mc;;
 
@@ -454,8 +456,10 @@ let BIGNUM_MOD_P256_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_mod_p256_mc = define_from_elf
-   "windows_bignum_mod_p256_mc" "x86/p256/bignum_mod_p256.obj";;
+let windows_bignum_mod_p256_cmc = define_from_elf
+   "windows_bignum_mod_p256_cmc" "x86/p256/bignum_mod_p256.obj";;
+
+let windows_bignum_mod_p256_mc = define_trimmed "windows_bignum_mod_p256_mc" windows_bignum_mod_p256_cmc;;
 
 let WINDOWS_BIGNUM_MOD_P256_CORRECT = time prove
  (`!z k x n pc.

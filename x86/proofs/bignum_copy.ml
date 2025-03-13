@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_copy.o";;
  ****)
 
-let bignum_copy_mc =
-  define_assert_from_elf "bignum_copy_mc" "x86/generic/bignum_copy.o"
+let bignum_copy_cmc =
+  define_assert_from_elf "bignum_copy_cmc" "x86/generic/bignum_copy.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x39; 0xd7;        (* CMP (% rdi) (% rdx) *)
@@ -35,6 +35,8 @@ let bignum_copy_mc =
   0x72; 0xf4;              (* JB (Imm8 (word 244)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_copy_mc = define_trimmed "bignum_copy_mc" bignum_copy_cmc;;
 
 let BIGNUM_COPY_EXEC = X86_MK_CORE_EXEC_RULE bignum_copy_mc;;
 
@@ -187,8 +189,10 @@ let BIGNUM_COPY_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_copy_mc = define_from_elf
-   "windows_bignum_copy_mc" "x86/generic/bignum_copy.obj";;
+let windows_bignum_copy_cmc = define_from_elf
+   "windows_bignum_copy_cmc" "x86/generic/bignum_copy.obj";;
+
+let windows_bignum_copy_mc = define_trimmed "windows_bignum_copy_mc" windows_bignum_copy_cmc;;
 
 let WINDOWS_BIGNUM_COPY_SUBROUTINE_CORRECT = prove
  (`!k z n x a pc stackpointer returnaddress.

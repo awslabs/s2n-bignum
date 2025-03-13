@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_amontifier.o";;
  ****)
 
-let bignum_amontifier_mc =
-  define_assert_from_elf "bignum_amontifier_mc" "x86/generic/bignum_amontifier.o"
+let bignum_amontifier_cmc =
+  define_assert_from_elf "bignum_amontifier_cmc" "x86/generic/bignum_amontifier.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -292,6 +292,8 @@ let bignum_amontifier_mc =
   0x5d;                    (* POP (% rbp) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_amontifier_mc = define_trimmed "bignum_amontifier_mc" bignum_amontifier_cmc;;
 
 let BIGNUM_AMONTIFIER_EXEC = X86_MK_CORE_EXEC_RULE bignum_amontifier_mc;;
 
@@ -2547,8 +2549,10 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_amontifier_mc = define_from_elf
-   "windows_bignum_amontifier_mc" "x86/generic/bignum_amontifier.obj";;
+let windows_bignum_amontifier_cmc = define_from_elf
+   "windows_bignum_amontifier_cmc" "x86/generic/bignum_amontifier.obj";;
+
+let windows_bignum_amontifier_mc = define_trimmed "windows_bignum_amontifier_mc" windows_bignum_amontifier_cmc;;
 
 let WINDOWS_BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
  (`!k z m t n pc stackpointer returnaddress.

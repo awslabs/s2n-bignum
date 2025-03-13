@@ -20,8 +20,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/curve25519/edwards25519_pdouble_alt.o";;
  ****)
 
-let edwards25519_pdouble_alt_mc = define_assert_from_elf
-  "edwards25519_pdouble_alt_mc" "x86/curve25519/edwards25519_pdouble_alt.o"
+let edwards25519_pdouble_alt_cmc = define_assert_from_elf
+  "edwards25519_pdouble_alt_cmc" "x86/curve25519/edwards25519_pdouble_alt.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -1191,6 +1191,8 @@ let edwards25519_pdouble_alt_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let edwards25519_pdouble_alt_mc = define_trimmed "edwards25519_pdouble_alt_mc" edwards25519_pdouble_alt_cmc;;
+
 let EDWARDS25519_PDOUBLE_ALT_EXEC = X86_MK_CORE_EXEC_RULE edwards25519_pdouble_alt_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1999,9 +2001,11 @@ let EDWARDS25519_PDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_pdouble_alt_mc = define_from_elf
-  "windows_edwards25519_pdouble_alt_mc"
+let windows_edwards25519_pdouble_alt_cmc = define_from_elf
+  "windows_edwards25519_pdouble_alt_cmc"
   "x86/curve25519/edwards25519_pdouble_alt.obj";;
+
+let windows_edwards25519_pdouble_alt_mc = define_trimmed "windows_edwards25519_pdouble_alt_mc" windows_edwards25519_pdouble_alt_cmc;;
 
 let WINDOWS_EDWARDS25519_PDOUBLE_ALT_SUBROUTINE_CORRECT = prove
  (`!p3 p1 T1 pc stackpointer returnaddress.

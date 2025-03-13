@@ -26,11 +26,12 @@ prioritize_num();;
 (**** print_coda_from_elf (-1) "x86/curve25519/edwards25519_scalarmuldouble.o";;
  ****)
 
-let edwards25519_scalarmuldouble_mc,edwards25519_scalarmuldouble_data =
+let edwards25519_scalarmuldouble_cmc,edwards25519_scalarmuldouble_data =
   define_coda_literal_from_elf
-  "edwards25519_scalarmuldouble_mc" "edwards25519_scalarmuldouble_data"
+  "edwards25519_scalarmuldouble_cmc" "edwards25519_scalarmuldouble_data"
   "x86/curve25519/edwards25519_scalarmuldouble.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -8884,6 +8885,8 @@ let edwards25519_scalarmuldouble_mc,edwards25519_scalarmuldouble_data =
  139; 120; 113; 163; 184; 50; 42; 182; 14; 25; 18; 100; 99; 149; 78; 204; 46;
  92; 124; 144; 38];;
 
+let edwards25519_scalarmuldouble_mc = define_trimmed "edwards25519_scalarmuldouble_mc" edwards25519_scalarmuldouble_cmc;;
+
 let EDWARDS25519_SCALARMULDOUBLE_EXEC =
   X86_MK_EXEC_RULE edwards25519_scalarmuldouble_mc;;
 
@@ -11783,12 +11786,14 @@ let EDWARDS25519_SCALARMULDOUBLE_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_scalarmuldouble_mc,
+let windows_edwards25519_scalarmuldouble_cmc,
     windows_edwards25519_scalarmuldouble_data =
-  define_coda_from_elf 0x6df7
-  "windows_edwards25519_scalarmuldouble_mc"
+  define_coda_from_elf 0x6dfb
+  "windows_edwards25519_scalarmuldouble_cmc"
   "windows_edwards25519_scalarmuldouble_data"
   "x86/curve25519/edwards25519_scalarmuldouble.obj";;
+
+let windows_edwards25519_scalarmuldouble_mc = define_trimmed "windows_edwards25519_scalarmuldouble_mc" windows_edwards25519_scalarmuldouble_cmc;;
 
 let WINDOWS_EDWARDS25519_SCALARMULDOUBLE_SUBROUTINE_CORRECT = time prove
  (`!res scalar point bscalar n xy m pc stackpointer returnaddress.

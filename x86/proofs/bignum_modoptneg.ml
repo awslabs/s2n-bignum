@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_modoptneg.o";;
  ****)
 
-let bignum_modoptneg_mc =
-  define_assert_from_elf "bignum_modoptneg_mc" "x86/generic/bignum_modoptneg.o"
+let bignum_modoptneg_cmc =
+  define_assert_from_elf "bignum_modoptneg_cmc" "x86/generic/bignum_modoptneg.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
@@ -43,6 +43,8 @@ let bignum_modoptneg_mc =
   0x72; 0xdd;              (* JB (Imm8 (word 221)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_modoptneg_mc = define_trimmed "bignum_modoptneg_mc" bignum_modoptneg_cmc;;
 
 let BIGNUM_MODOPTNEG_EXEC = X86_MK_CORE_EXEC_RULE bignum_modoptneg_mc;;
 
@@ -233,8 +235,10 @@ let BIGNUM_MODOPTNEG_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_modoptneg_mc = define_from_elf
-   "windows_bignum_modoptneg_mc" "x86/generic/bignum_modoptneg.obj";;
+let windows_bignum_modoptneg_cmc = define_from_elf
+   "windows_bignum_modoptneg_cmc" "x86/generic/bignum_modoptneg.obj";;
+
+let windows_bignum_modoptneg_mc = define_trimmed "windows_bignum_modoptneg_mc" windows_bignum_modoptneg_cmc;;
 
 let WINDOWS_BIGNUM_MODOPTNEG_SUBROUTINE_CORRECT = prove
  (`!k z p x m a n pc stackpointer returnaddress.

@@ -9,8 +9,8 @@
 
 needs "x86/proofs/base.ml";;
 
-let bignum_copy_row_from_table_mc =
-  define_assert_from_elf "bignum_copy_row_from_table_mc"
+let bignum_copy_row_from_table_cmc =
+  define_assert_from_elf "bignum_copy_row_from_table_cmc"
                          "x86/generic/bignum_copy_row_from_table.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
@@ -46,6 +46,8 @@ let bignum_copy_row_from_table_mc =
   0x75; 0xcf;              (* JNE (Imm8 (word 207)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_copy_row_from_table_mc = define_trimmed "bignum_copy_row_from_table_mc" bignum_copy_row_from_table_cmc;;
 
 let BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC = X86_MK_CORE_EXEC_RULE bignum_copy_row_from_table_mc;;
 let BIGNUM_COPY_ROW_FROM_TABLE_EXEC = X86_MK_EXEC_RULE bignum_copy_row_from_table_mc;;
@@ -695,10 +697,12 @@ let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_copy_row_from_table_mc = define_from_elf
-    "windows_bignum_copy_row_from_table_mc"
+let windows_bignum_copy_row_from_table_cmc = define_from_elf
+    "windows_bignum_copy_row_from_table_cmc"
     "x86/generic/bignum_copy_row_from_table.obj";;
-let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_EXEC =
+
+let windows_bignum_copy_row_from_table_mc = define_trimmed "windows_bignum_copy_row_from_table_mc" windows_bignum_copy_row_from_table_cmc;;let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_EXEC =
+
     X86_MK_EXEC_RULE windows_bignum_copy_row_from_table_mc;;
 
 

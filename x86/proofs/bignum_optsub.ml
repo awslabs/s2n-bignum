@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_optsub.o";;
  ****)
 
-let bignum_optsub_mc =
-  define_assert_from_elf "bignum_optsub_mc" "x86/generic/bignum_optsub.o"
+let bignum_optsub_cmc =
+  define_assert_from_elf "bignum_optsub_cmc" "x86/generic/bignum_optsub.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
@@ -35,6 +35,8 @@ let bignum_optsub_mc =
   0x48; 0xf7; 0xd8;        (* NEG (% rax) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_optsub_mc = define_trimmed "bignum_optsub_mc" bignum_optsub_cmc;;
 
 let BIGNUM_OPTSUB_EXEC = X86_MK_CORE_EXEC_RULE bignum_optsub_mc;;
 
@@ -208,8 +210,10 @@ let BIGNUM_OPTSUB_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_optsub_mc = define_from_elf
-   "windows_bignum_optsub_mc" "x86/generic/bignum_optsub.obj";;
+let windows_bignum_optsub_cmc = define_from_elf
+   "windows_bignum_optsub_cmc" "x86/generic/bignum_optsub.obj";;
+
+let windows_bignum_optsub_mc = define_trimmed "windows_bignum_optsub_mc" windows_bignum_optsub_cmc;;
 
 let WINDOWS_BIGNUM_OPTSUB_SUBROUTINE_CORRECT = prove
  (`!k z x p y m n pc stackpointer returnaddress.

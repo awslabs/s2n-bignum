@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/p384/bignum_tomont_p384.o";;
  ****)
 
-let bignum_tomont_p384_mc =
-  define_assert_from_elf "bignum_tomont_p384_mc" "x86/p384/bignum_tomont_p384.o"
+let bignum_tomont_p384_cmc =
+  define_assert_from_elf "bignum_tomont_p384_cmc" "x86/p384/bignum_tomont_p384.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -371,6 +371,8 @@ let bignum_tomont_p384_mc =
   0xc3                     (* RET *)
 ];;
 
+let bignum_tomont_p384_mc = define_trimmed "bignum_tomont_p384_mc" bignum_tomont_p384_cmc;;
+
 let BIGNUM_TOMONT_P384_EXEC = X86_MK_CORE_EXEC_RULE bignum_tomont_p384_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -544,8 +546,10 @@ let BIGNUM_TOMONT_P384_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_tomont_p384_mc = define_from_elf
-   "windows_bignum_tomont_p384_mc" "x86/p384/bignum_tomont_p384.obj";;
+let windows_bignum_tomont_p384_cmc = define_from_elf
+   "windows_bignum_tomont_p384_cmc" "x86/p384/bignum_tomont_p384.obj";;
+
+let windows_bignum_tomont_p384_mc = define_trimmed "windows_bignum_tomont_p384_mc" windows_bignum_tomont_p384_cmc;;
 
 let WINDOWS_BIGNUM_TOMONT_P384_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.

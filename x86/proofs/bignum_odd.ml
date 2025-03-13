@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_odd.o";;
  ****)
 
-let bignum_odd_mc = define_assert_from_elf "bignum_odd_mc" "x86/generic/bignum_odd.o"
+let bignum_odd_cmc = define_assert_from_elf "bignum_odd_cmc" "x86/generic/bignum_odd.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x31; 0xc0;              (* XOR (% eax) (% eax) *)
@@ -23,6 +23,8 @@ let bignum_odd_mc = define_assert_from_elf "bignum_odd_mc" "x86/generic/bignum_o
   0x48; 0x23; 0x06;        (* AND (% rax) (Memop Quadword (%% (rsi,0))) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_odd_mc = define_trimmed "bignum_odd_mc" bignum_odd_cmc;;
 
 let BIGNUM_ODD_EXEC = X86_MK_CORE_EXEC_RULE bignum_odd_mc;;
 
@@ -74,8 +76,10 @@ let BIGNUM_ODD_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_odd_mc = define_from_elf
-   "windows_bignum_odd_mc" "x86/generic/bignum_odd.obj";;
+let windows_bignum_odd_cmc = define_from_elf
+   "windows_bignum_odd_cmc" "x86/generic/bignum_odd.obj";;
+
+let windows_bignum_odd_mc = define_trimmed "windows_bignum_odd_mc" windows_bignum_odd_cmc;;
 
 let WINDOWS_BIGNUM_ODD_SUBROUTINE_CORRECT = prove
  (`!k a x pc stackpointer returnaddress.

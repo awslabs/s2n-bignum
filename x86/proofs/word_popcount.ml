@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/word_popcount.o";;
  ****)
 
-let word_popcount_mc = define_assert_from_elf "word_popcount_mc" "x86/generic/word_popcount.o"
+let word_popcount_cmc = define_assert_from_elf "word_popcount_cmc" "x86/generic/word_popcount.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xba; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55;
@@ -40,6 +40,8 @@ let word_popcount_mc = define_assert_from_elf "word_popcount_mc" "x86/generic/wo
   0x48; 0xc1; 0xe8; 0x38;  (* SHR (% rax) (Imm8 (word 56)) *)
   0xc3                     (* RET *)
 ];;
+
+let word_popcount_mc = define_trimmed "word_popcount_mc" word_popcount_cmc;;
 
 let WORD_POPCOUNT_EXEC = X86_MK_CORE_EXEC_RULE word_popcount_mc;;
 
@@ -80,8 +82,10 @@ let WORD_POPCOUNT_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_popcount_mc = define_from_elf
-   "windows_word_popcount_mc" "x86/generic/word_popcount.obj";;
+let windows_word_popcount_cmc = define_from_elf
+   "windows_word_popcount_cmc" "x86/generic/word_popcount.obj";;
+
+let windows_word_popcount_mc = define_trimmed "windows_word_popcount_mc" windows_word_popcount_cmc;;
 
 let WINDOWS_WORD_POPCOUNT_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.

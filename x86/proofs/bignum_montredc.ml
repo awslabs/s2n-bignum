@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_montredc.o";;
  ****)
 
-let bignum_montredc_mc =
-  define_assert_from_elf "bignum_montredc_mc" "x86/generic/bignum_montredc.o"
+let bignum_montredc_cmc =
+  define_assert_from_elf "bignum_montredc_cmc" "x86/generic/bignum_montredc.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -146,6 +146,8 @@ let bignum_montredc_mc =
   0x5b;                    (* POP (% rbx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_montredc_mc = define_trimmed "bignum_montredc_mc" bignum_montredc_cmc;;
 
 let BIGNUM_MONTREDC_EXEC = X86_MK_CORE_EXEC_RULE bignum_montredc_mc;;
 
@@ -1091,8 +1093,10 @@ let BIGNUM_MONTREDC_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_montredc_mc = define_from_elf
-   "windows_bignum_montredc_mc" "x86/generic/bignum_montredc.obj";;
+let windows_bignum_montredc_cmc = define_from_elf
+   "windows_bignum_montredc_cmc" "x86/generic/bignum_montredc.obj";;
+
+let windows_bignum_montredc_mc = define_trimmed "windows_bignum_montredc_mc" windows_bignum_montredc_cmc;;
 
 let WINDOWS_BIGNUM_MONTREDC_SUBROUTINE_CORRECT = time prove
  (`!k z r x m p a n pc stackpointer returnaddress.

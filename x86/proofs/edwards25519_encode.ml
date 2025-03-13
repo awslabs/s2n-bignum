@@ -13,8 +13,8 @@ needs "common/ecencoding.ml";;
 (**** print_literal_from_elf "x86/curve25519/edwards25519_encode.o";;
  ****)
 
-let edwards25519_encode_mc =
-  define_assert_from_elf "edwards25519_encode_mc" "x86/curve25519/edwards25519_encode.o"
+let edwards25519_encode_cmc =
+  define_assert_from_elf "edwards25519_encode_cmc" "x86/curve25519/edwards25519_encode.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4c; 0x8b; 0x0e;        (* MOV (% r9) (Memop Quadword (%% (rsi,0))) *)
@@ -32,6 +32,8 @@ let edwards25519_encode_mc =
   0x4c; 0x89; 0x47; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% r8) *)
   0xc3                     (* RET *)
 ];;
+
+let edwards25519_encode_mc = define_trimmed "edwards25519_encode_mc" edwards25519_encode_cmc;;
 
 let EDWARDS25519_ENCODE_EXEC = X86_MK_CORE_EXEC_RULE edwards25519_encode_mc;;
 
@@ -123,8 +125,10 @@ let EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_encode_mc = define_from_elf
-   "windows_edwards25519_encode_mc" "x86/curve25519/edwards25519_encode.obj";;
+let windows_edwards25519_encode_cmc = define_from_elf
+   "windows_edwards25519_encode_cmc" "x86/curve25519/edwards25519_encode.obj";;
+
+let windows_edwards25519_encode_mc = define_trimmed "windows_edwards25519_encode_mc" windows_edwards25519_encode_cmc;;
 
 let WINDOWS_EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
  (`!z p x y pc stackpointer returnaddress.

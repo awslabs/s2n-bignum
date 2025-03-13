@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/sm2/sm2_montjadd.o";;
  ****)
 
-let sm2_montjadd_mc = define_assert_from_elf
-  "sm2_montjadd_mc" "x86/sm2/sm2_montjadd.o"
+let sm2_montjadd_cmc = define_assert_from_elf
+  "sm2_montjadd_cmc" "x86/sm2/sm2_montjadd.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -3105,6 +3105,8 @@ let sm2_montjadd_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let sm2_montjadd_mc = define_trimmed "sm2_montjadd_mc" sm2_montjadd_cmc;;
+
 let SM2_MONTJADD_EXEC = X86_MK_CORE_EXEC_RULE sm2_montjadd_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -3840,8 +3842,10 @@ let SM2_MONTJADD_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_sm2_montjadd_mc = define_from_elf "windows_sm2_montjadd_mc"
+let windows_sm2_montjadd_cmc = define_from_elf "windows_sm2_montjadd_cmc"
       "x86/sm2/sm2_montjadd.obj";;
+
+let windows_sm2_montjadd_mc = define_trimmed "windows_sm2_montjadd_mc" windows_sm2_montjadd_cmc;;
 
 let WINDOWS_SM2_MONTJADD_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.

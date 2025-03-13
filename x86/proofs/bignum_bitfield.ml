@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_bitfield.o";;
  ****)
 
-let bignum_bitfield_mc =
-  define_assert_from_elf "bignum_bitfield_mc" "x86/generic/bignum_bitfield.o"
+let bignum_bitfield_cmc =
+  define_assert_from_elf "bignum_bitfield_cmc" "x86/generic/bignum_bitfield.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
@@ -49,6 +49,8 @@ let bignum_bitfield_mc =
   0x4c; 0x21; 0xd0;        (* AND (% rax) (% r10) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_bitfield_mc = define_trimmed "bignum_bitfield_mc" bignum_bitfield_cmc;;
 
 let BIGNUM_BITFIELD_EXEC = X86_MK_CORE_EXEC_RULE bignum_bitfield_mc;;
 
@@ -273,8 +275,10 @@ let BIGNUM_BITFIELD_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_bitfield_mc = define_from_elf
-   "windows_bignum_bitfield_mc" "x86/generic/bignum_bitfield.obj";;
+let windows_bignum_bitfield_cmc = define_from_elf
+   "windows_bignum_bitfield_cmc" "x86/generic/bignum_bitfield.obj";;
+
+let windows_bignum_bitfield_mc = define_trimmed "windows_bignum_bitfield_mc" windows_bignum_bitfield_cmc;;
 
 let WINDOWS_BIGNUM_BITFIELD_SUBROUTINE_CORRECT = prove
  (`!k x n l a pc stackpointer returnaddress.

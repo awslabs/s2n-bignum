@@ -23,7 +23,7 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/curve25519/edwards25519_decode.o";;
  ****)
 
-let edwards25519_decode_mc = define_assert_from_elf "edwards25519_decode_mc" "x86/curve25519/edwards25519_decode.o"
+let edwards25519_decode_cmc = define_assert_from_elf "edwards25519_decode_cmc" "x86/curve25519/edwards25519_decode.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -803,6 +803,8 @@ let edwards25519_decode_mc = define_assert_from_elf "edwards25519_decode_mc" "x8
   0x48; 0x89; 0x57; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% rdx) *)
   0xc3                     (* RET *)
 ];;
+
+let edwards25519_decode_mc = define_trimmed "edwards25519_decode_mc" edwards25519_decode_cmc;;
 
 let EDWARDS25519_DECODE_EXEC = X86_MK_EXEC_RULE edwards25519_decode_mc;;
 
@@ -2127,9 +2129,11 @@ let EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_decode_mc = define_from_elf
-  "windows_edwards25519_decode_mc"
+let windows_edwards25519_decode_cmc = define_from_elf
+  "windows_edwards25519_decode_cmc"
   "x86/curve25519/edwards25519_decode.obj";;
+
+let windows_edwards25519_decode_mc = define_trimmed "windows_edwards25519_decode_mc" windows_edwards25519_decode_cmc;;
 
 let WINDOWS_EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
  (`!z c n pc stackpointer returnaddress.

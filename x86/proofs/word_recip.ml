@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/word_recip.o";;
  ****)
 
-let word_recip_mc = define_assert_from_elf "word_recip_mc" "x86/generic/word_recip.o"
+let word_recip_cmc = define_assert_from_elf "word_recip_cmc" "x86/generic/word_recip.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xfe;        (* MOV (% rsi) (% rdi) *)
@@ -74,6 +74,8 @@ let word_recip_mc = define_assert_from_elf "word_recip_mc" "x86/generic/word_rec
   0x48; 0x83; 0xd8; 0x00;  (* SBB (% rax) (Imm8 (word 0)) *)
   0xc3                     (* RET *)
 ];;
+
+let word_recip_mc = define_trimmed "word_recip_mc" word_recip_cmc;;
 
 let WORD_RECIP_EXEC = X86_MK_CORE_EXEC_RULE word_recip_mc;;
 
@@ -724,8 +726,10 @@ let WORD_RECIP_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_recip_mc = define_from_elf
-   "windows_word_recip_mc" "x86/generic/word_recip.obj";;
+let windows_word_recip_cmc = define_from_elf
+   "windows_word_recip_cmc" "x86/generic/word_recip.obj";;
+
+let windows_word_recip_mc = define_trimmed "windows_word_recip_mc" windows_word_recip_cmc;;
 
 let WINDOWS_WORD_RECIP_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.

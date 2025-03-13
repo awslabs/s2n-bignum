@@ -26,8 +26,8 @@ needs "x86/proofs/bignum_mod_p521_9.ml";;
 (**** print_literal_from_elf "x86/p521/p521_jscalarmul.o";;
  ****)
 
-let p521_jscalarmul_mc = define_assert_from_elf
-  "p521_jscalarmul_mc" "x86/p521/p521_jscalarmul.o"
+let p521_jscalarmul_cmc = define_assert_from_elf
+  "p521_jscalarmul_cmc" "x86/p521/p521_jscalarmul.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x41; 0x57;              (* PUSH (% r15) *)
@@ -4578,6 +4578,8 @@ let p521_jscalarmul_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let p521_jscalarmul_mc = define_trimmed "p521_jscalarmul_mc" p521_jscalarmul_cmc;;
+
 let P521_JSCALARMUL_EXEC = X86_MK_EXEC_RULE p521_jscalarmul_mc;;
 
 let DESUM_RULE' = cache DESUM_RULE and DECARRY_RULE' = cache DECARRY_RULE;;
@@ -7656,8 +7658,10 @@ let P521_JSCALARMUL_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p521_jscalarmul_mc = define_from_elf "windows_p521_jscalarmul_mc"
+let windows_p521_jscalarmul_cmc = define_from_elf "windows_p521_jscalarmul_cmc"
       "x86/p521/p521_jscalarmul.obj";;
+
+let windows_p521_jscalarmul_mc = define_trimmed "windows_p521_jscalarmul_mc" windows_p521_jscalarmul_cmc;;
 
 let WINDOWS_P521_JSCALARMUL_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.

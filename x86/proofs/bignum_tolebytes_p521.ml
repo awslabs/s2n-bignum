@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/p521/bignum_tolebytes_p521.o";;
  ****)
 
-let bignum_tolebytes_p521_mc =
-  define_assert_from_elf "bignum_tolebytes_p521_mc" "x86/p521/bignum_tolebytes_p521.o"
+let bignum_tolebytes_p521_cmc =
+  define_assert_from_elf "bignum_tolebytes_p521_cmc" "x86/p521/bignum_tolebytes_p521.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
@@ -36,6 +36,8 @@ let bignum_tolebytes_p521_mc =
   0x66; 0x89; 0x47; 0x40;  (* MOV (Memop Word (%% (rdi,64))) (% ax) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_tolebytes_p521_mc = define_trimmed "bignum_tolebytes_p521_mc" bignum_tolebytes_p521_cmc;;
 
 let BIGNUM_TOLEBYTES_P521_EXEC = X86_MK_CORE_EXEC_RULE bignum_tolebytes_p521_mc;;
 
@@ -115,8 +117,10 @@ let BIGNUM_TOLEBYTES_P521_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_tolebytes_p521_mc = define_from_elf
-   "windows_bignum_tolebytes_p521_mc" "x86/p521/bignum_tolebytes_p521.obj";;
+let windows_bignum_tolebytes_p521_cmc = define_from_elf
+   "windows_bignum_tolebytes_p521_cmc" "x86/p521/bignum_tolebytes_p521.obj";;
+
+let windows_bignum_tolebytes_p521_mc = define_trimmed "windows_bignum_tolebytes_p521_mc" windows_bignum_tolebytes_p521_cmc;;
 
 let WINDOWS_BIGNUM_TOLEBYTES_P521_SUBROUTINE_CORRECT = prove
  (`!z x n pc stackpointer returnaddress.

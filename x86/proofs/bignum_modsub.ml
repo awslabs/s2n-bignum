@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_modsub.o";;
  ****)
 
-let bignum_modsub_mc =
-  define_assert_from_elf "bignum_modsub_mc" "x86/generic/bignum_modsub.o"
+let bignum_modsub_cmc =
+  define_assert_from_elf "bignum_modsub_cmc" "x86/generic/bignum_modsub.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
@@ -39,6 +39,8 @@ let bignum_modsub_mc =
   0x72; 0xe7;              (* JB (Imm8 (word 231)) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_modsub_mc = define_trimmed "bignum_modsub_mc" bignum_modsub_cmc;;
 
 let BIGNUM_MODSUB_EXEC = X86_MK_CORE_EXEC_RULE bignum_modsub_mc;;
 
@@ -291,8 +293,10 @@ let BIGNUM_MODSUB_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_modsub_mc = define_from_elf
-   "windows_bignum_modsub_mc" "x86/generic/bignum_modsub.obj";;
+let windows_bignum_modsub_cmc = define_from_elf
+   "windows_bignum_modsub_cmc" "x86/generic/bignum_modsub.obj";;
+
+let windows_bignum_modsub_mc = define_trimmed "windows_bignum_modsub_mc" windows_bignum_modsub_cmc;;
 
 let WINDOWS_BIGNUM_MODSUB_SUBROUTINE_CORRECT = prove
  (`!k z x y m a b n pc stackpointer returnaddress.

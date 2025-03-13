@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/p256/bignum_mux_4.o";;
  ****)
 
-let bignum_mux_4_mc =
-  define_assert_from_elf "bignum_mux_4_mc" "x86/p256/bignum_mux_4.o"
+let bignum_mux_4_cmc =
+  define_assert_from_elf "bignum_mux_4_cmc" "x86/p256/bignum_mux_4.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
@@ -35,6 +35,8 @@ let bignum_mux_4_mc =
   0x48; 0x89; 0x46; 0x18;  (* MOV (Memop Quadword (%% (rsi,24))) (% rax) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_mux_4_mc = define_trimmed "bignum_mux_4_mc" bignum_mux_4_cmc;;
 
 let BIGNUM_MUX_4_EXEC = X86_MK_CORE_EXEC_RULE bignum_mux_4_mc;;
 
@@ -98,8 +100,10 @@ let BIGNUM_MUX_4_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_mux_4_mc = define_from_elf
-   "windows_bignum_mux_4_mc" "x86/p256/bignum_mux_4.obj";;
+let windows_bignum_mux_4_cmc = define_from_elf
+   "windows_bignum_mux_4_cmc" "x86/p256/bignum_mux_4.obj";;
+
+let windows_bignum_mux_4_mc = define_trimmed "windows_bignum_mux_4_mc" windows_bignum_mux_4_cmc;;
 
 let WINDOWS_BIGNUM_MUX_4_SUBROUTINE_CORRECT = prove
  (`!p z x y m n pc stackpointer returnaddress.

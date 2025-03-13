@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/p384/p384_montjdouble.o";;
  ****)
 
-let p384_montjdouble_mc = define_assert_from_elf
-  "p384_montjdouble_mc" "x86/p384/p384_montjdouble.o"
+let p384_montjdouble_cmc = define_assert_from_elf
+  "p384_montjdouble_cmc" "x86/p384/p384_montjdouble.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -3560,6 +3560,8 @@ let p384_montjdouble_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let p384_montjdouble_mc = define_trimmed "p384_montjdouble_mc" p384_montjdouble_cmc;;
+
 let P384_MONTJDOUBLE_EXEC = X86_MK_CORE_EXEC_RULE p384_montjdouble_mc;;
 
 (* ------------------------------------------------------------------------- *)
@@ -4853,8 +4855,10 @@ let P384_MONTJDOUBLE_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p384_montjdouble_mc = define_from_elf "windows_p384_montjdouble_mc"
+let windows_p384_montjdouble_cmc = define_from_elf "windows_p384_montjdouble_cmc"
       "x86/p384/p384_montjdouble.obj";;
+
+let windows_p384_montjdouble_mc = define_trimmed "windows_p384_montjdouble_mc" windows_p384_montjdouble_cmc;;
 
 let WINDOWS_P384_MONTJDOUBLE_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.

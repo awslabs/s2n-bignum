@@ -20,8 +20,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/curve25519/curve25519_x25519.o";;
  ****)
 
-let curve25519_x25519_mc = define_assert_from_elf
-  "curve25519_x25519_mc" "x86/curve25519/curve25519_x25519.o"
+let curve25519_x25519_cmc = define_assert_from_elf
+  "curve25519_x25519_cmc" "x86/curve25519/curve25519_x25519.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -6322,6 +6322,8 @@ let curve25519_x25519_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
+let curve25519_x25519_mc = define_trimmed "curve25519_x25519_mc" curve25519_x25519_cmc;;
+
 let CURVE25519_X25519_EXEC =
   X86_MK_CORE_EXEC_RULE curve25519_x25519_mc;;
 
@@ -8328,9 +8330,11 @@ let CURVE25519_X25519_BYTE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_curve25519_x25519_mc = define_from_elf
-  "windows_curve25519_x25519_mc"
+let windows_curve25519_x25519_cmc = define_from_elf
+  "windows_curve25519_x25519_cmc"
   "x86/curve25519/curve25519_x25519.obj";;
+
+let windows_curve25519_x25519_mc = define_trimmed "windows_curve25519_x25519_mc" windows_curve25519_x25519_cmc;;
 
 let WINDOWS_CURVE25519_X25519_SUBROUTINE_CORRECT = time prove
  (`!res scalar n point X pc stackpointer returnaddress.

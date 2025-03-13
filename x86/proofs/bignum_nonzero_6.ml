@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/p384/bignum_nonzero_6.o";;
  ****)
 
-let bignum_nonzero_6_mc =
-  define_assert_from_elf "bignum_nonzero_6_mc" "x86/p384/bignum_nonzero_6.o"
+let bignum_nonzero_6_cmc =
+  define_assert_from_elf "bignum_nonzero_6_cmc" "x86/p384/bignum_nonzero_6.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x07;        (* MOV (% rax) (Memop Quadword (%% (rdi,0))) *)
@@ -28,6 +28,8 @@ let bignum_nonzero_6_mc =
   0x48; 0x0f; 0x45; 0xc2;  (* CMOVNE (% rax) (% rdx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_nonzero_6_mc = define_trimmed "bignum_nonzero_6_mc" bignum_nonzero_6_cmc;;
 
 let BIGNUM_NONZERO_6_EXEC = X86_MK_CORE_EXEC_RULE bignum_nonzero_6_mc;;
 
@@ -76,8 +78,10 @@ let BIGNUM_NONZERO_6_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_nonzero_6_mc = define_from_elf
-   "windows_bignum_nonzero_6_mc" "x86/p384/bignum_nonzero_6.obj";;
+let windows_bignum_nonzero_6_cmc = define_from_elf
+   "windows_bignum_nonzero_6_cmc" "x86/p384/bignum_nonzero_6.obj";;
+
+let windows_bignum_nonzero_6_mc = define_trimmed "windows_bignum_nonzero_6_mc" windows_bignum_nonzero_6_cmc;;
 
 let WINDOWS_BIGNUM_NONZERO_6_SUBROUTINE_CORRECT = prove
  (`!x n pc stackpointer returnaddress.

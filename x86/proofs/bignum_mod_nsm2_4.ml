@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/sm2/bignum_mod_nsm2_4.o";;
  ****)
 
-let bignum_mod_nsm2_4_mc =
-  define_assert_from_elf "bignum_mod_nsm2_4_mc" "x86/sm2/bignum_mod_nsm2_4.o"
+let bignum_mod_nsm2_4_cmc =
+  define_assert_from_elf "bignum_mod_nsm2_4_cmc" "x86/sm2/bignum_mod_nsm2_4.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xb8; 0xdd; 0xbe; 0x2a; 0xc6; 0xf6; 0x0b; 0x44; 0xac;
@@ -45,6 +45,8 @@ let bignum_mod_nsm2_4_mc =
   0x4c; 0x89; 0x4f; 0x18;  (* MOV (Memop Quadword (%% (rdi,24))) (% r9) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_mod_nsm2_4_mc = define_trimmed "bignum_mod_nsm2_4_mc" bignum_mod_nsm2_4_cmc;;
 
 let BIGNUM_MOD_NSM2_4_EXEC = X86_MK_CORE_EXEC_RULE bignum_mod_nsm2_4_mc;;
 
@@ -139,8 +141,10 @@ let BIGNUM_MOD_NSM2_4_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_mod_nsm2_4_mc = define_from_elf
-   "windows_bignum_mod_nsm2_4_mc" "x86/sm2/bignum_mod_nsm2_4.obj";;
+let windows_bignum_mod_nsm2_4_cmc = define_from_elf
+   "windows_bignum_mod_nsm2_4_cmc" "x86/sm2/bignum_mod_nsm2_4.obj";;
+
+let windows_bignum_mod_nsm2_4_mc = define_trimmed "windows_bignum_mod_nsm2_4_mc" windows_bignum_mod_nsm2_4_cmc;;
 
 let WINDOWS_BIGNUM_MOD_NSM2_4_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.

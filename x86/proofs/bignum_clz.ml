@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_clz.o";;
  ****)
 
-let bignum_clz_mc = define_assert_from_elf "bignum_clz_mc" "x86/generic/bignum_clz.o"
+let bignum_clz_cmc = define_assert_from_elf "bignum_clz_cmc" "x86/generic/bignum_clz.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
@@ -35,6 +35,8 @@ let bignum_clz_mc = define_assert_from_elf "bignum_clz_mc" "x86/generic/bignum_c
   0x48; 0x01; 0xf8;        (* ADD (% rax) (% rdi) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_clz_mc = define_trimmed "bignum_clz_mc" bignum_clz_cmc;;
 
 let BIGNUM_CLZ_EXEC = X86_MK_CORE_EXEC_RULE bignum_clz_mc;;
 
@@ -238,8 +240,10 @@ let BIGNUM_CLZ_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_clz_mc = define_from_elf
-   "windows_bignum_clz_mc" "x86/generic/bignum_clz.obj";;
+let windows_bignum_clz_cmc = define_from_elf
+   "windows_bignum_clz_cmc" "x86/generic/bignum_clz.obj";;
+
+let windows_bignum_clz_mc = define_trimmed "windows_bignum_clz_mc" windows_bignum_clz_cmc;;
 
 let WINDOWS_BIGNUM_CLZ_SUBROUTINE_CORRECT = prove
  (`!k a x pc stackpointer returnaddress.

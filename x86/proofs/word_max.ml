@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/word_max.o";;
  ****)
 
-let word_max_mc = define_assert_from_elf "word_max_mc" "x86/generic/word_max.o"
+let word_max_cmc = define_assert_from_elf "word_max_cmc" "x86/generic/word_max.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)
@@ -20,6 +20,8 @@ let word_max_mc = define_assert_from_elf "word_max_mc" "x86/generic/word_max.o"
   0x48; 0x0f; 0x42; 0xc6;  (* CMOVB (% rax) (% rsi) *)
   0xc3                     (* RET *)
 ];;
+
+let word_max_mc = define_trimmed "word_max_mc" word_max_cmc;;
 
 let WORD_MAX_EXEC = X86_MK_CORE_EXEC_RULE word_max_mc;;
 
@@ -60,8 +62,10 @@ let WORD_MAX_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_max_mc = define_from_elf
-   "windows_word_max_mc" "x86/generic/word_max.obj";;
+let windows_word_max_cmc = define_from_elf
+   "windows_word_max_cmc" "x86/generic/word_max.obj";;
+
+let windows_word_max_mc = define_trimmed "windows_word_max_mc" windows_word_max_cmc;;
 
 let WINDOWS_WORD_MAX_SUBROUTINE_CORRECT = prove
  (`!a b pc stackpointer returnaddress.

@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/curve25519/bignum_madd_n25519.o";;
  ****)
 
-let bignum_madd_n25519_mc =
-  define_assert_from_elf "bignum_madd_n25519_mc" "x86/curve25519/bignum_madd_n25519.o"
+let bignum_madd_n25519_cmc =
+  define_assert_from_elf "bignum_madd_n25519_cmc" "x86/curve25519/bignum_madd_n25519.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -327,6 +327,8 @@ let bignum_madd_n25519_mc =
   0x5b;                    (* POP (% rbx) *)
   0xc3                     (* RET *)
 ];;
+
+let bignum_madd_n25519_mc = define_trimmed "bignum_madd_n25519_mc" bignum_madd_n25519_cmc;;
 
 let BIGNUM_MADD_N25519_EXEC = X86_MK_CORE_EXEC_RULE bignum_madd_n25519_mc;;
 
@@ -963,8 +965,10 @@ let BIGNUM_MADD_N25519_SUBROUTINE_CORRECT = time prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_madd_n25519_mc = define_from_elf
-   "windows_bignum_madd_n25519_mc" "x86/curve25519/bignum_madd_n25519.obj";;
+let windows_bignum_madd_n25519_cmc = define_from_elf
+   "windows_bignum_madd_n25519_cmc" "x86/curve25519/bignum_madd_n25519.obj";;
+
+let windows_bignum_madd_n25519_mc = define_trimmed "windows_bignum_madd_n25519_mc" windows_bignum_madd_n25519_cmc;;
 
 let WINDOWS_BIGNUM_MADD_N25519_SUBROUTINE_CORRECT = time prove
  (`!z x m y n c r pc stackpointer returnaddress.
