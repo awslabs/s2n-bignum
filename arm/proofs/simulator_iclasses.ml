@@ -126,6 +126,9 @@ let iclasses =
   "01001110000x1000000011xxxxxxxxxx"; (* original DUP Vd.2d, xn *)
   "0x001110000xxxxx000011xxxxxxxxxx"; (* other variants too     *)
 
+  (*** EOR ***)
+  "0x101110001xxxxx000111xxxxxxxxxx";
+
   (*** EXT ***)
   "01101110000xxxxx0xxxx0xxxxxxxxxx"; (* 128 bits only *)
 
