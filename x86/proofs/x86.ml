@@ -3337,14 +3337,13 @@ let ADD_IBT_TAC =
              ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
               (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
       REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
-
       REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
       MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
         NONOVERLAPPING_MODULO_SUBREGIONS) THEN
       REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
       MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
       ALL_TAC]) THEN
-    DISCH_TAC THEN REWRITE_TAC[expth] THEN
+    DISCH_TAC THEN REWRITE_TAC[expth; GSYM APPEND_ASSOC] THEN
     MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL
      [MAYCHANGE_IDEMPOT_TAC;
       SUBSUMED_MAYCHANGE_TAC;
@@ -3354,14 +3353,23 @@ let ADD_IBT_TAC =
       FIRST_X_ASSUM ACCEPT_TAC];;
 
 let ADD_IBT_RULE th =
-  let trimctm =
+  let bldat =
    rand(lhand(body(lhand(rator
     (repeat (snd o dest_imp) (snd(strip_forall(concl th)))))))) in
+  let trimctm = if is_const bldat then bldat else lhand bldat in
   let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
   let fullmctm = rand(rand(concl trimcd)) in
   let fullmc = find ((=) fullmctm o lhand o concl) (definitions()) in
   let trimc =
     CONV_RULE (RAND_CONV TRIM_LIST_CONV)
      (GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [fullmc] trimcd) in
-  prove(subst[fullmctm,trimctm] (concl th),
+  let rec adjust tm =
+    match tm with
+      Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
+          when is_numeral off ->
+        mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
+    | Comb(s,t) -> mk_comb(adjust s,adjust t)
+    | Abs(x,t) -> mk_abs(x,adjust t)
+    | _ -> if tm = trimctm then  fullmctm else tm in
+  prove(adjust (concl th),
         ADD_IBT_TAC fullmc trimc th);;

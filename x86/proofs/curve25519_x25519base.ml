@@ -8224,4 +8224,3 @@ let WINDOWS_CURVE25519_X25519BASE_BYTE_IBT_SUBROUTINE_CORRECT = prove
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 560),560)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT));;
-
