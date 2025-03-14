@@ -6097,6 +6097,33 @@ let P256_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
    P256_SCALARMULBASE_CORRECT `[RBX; RBP; R12; R13; R14; R15]`
      696);;
 
+let P256_SCALARMULBASE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar blocksize tab n len tabulation pc stackpointer returnaddress.
+        2 <= val blocksize /\ val blocksize <= 31 /\
+        ALL (nonoverlapping (word_sub stackpointer (word 696),696))
+            [(word pc,LENGTH p256_scalarmulbase_cmc); (scalar,32); (tab,len)] /\
+        ALL (nonoverlapping (res,64))
+            [(word pc,LENGTH p256_scalarmulbase_cmc); (word_sub stackpointer (word 696),704)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p256_scalarmulbase_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [res;scalar;blocksize;tab] s /\
+                  bignum_from_memory (scalar,4) s = n /\
+                  read (memory :> bytes(tab,len)) s = tabulation)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. P IN group_carrier p256_group /\
+                      p256_tabulates P (val blocksize) tab len tabulation
+                      ==> affinepointz_p256
+                           (bignum_pair_from_memory(res,4) s)
+                           (group_pow p256_group P n))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,64);
+                      memory :> bytes(word_sub stackpointer (word 696),696)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P256_SCALARMULBASE_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -6166,3 +6193,31 @@ let WINDOWS_P256_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
     `read (memory :> bytes64 (read RSP s)) s`] 8 THEN
   X86_STEPS_TAC WINDOWS_P256_SCALARMULBASE_EXEC (9--11) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_P256_SCALARMULBASE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar blocksize tab n len tabulation pc stackpointer returnaddress.
+        2 <= val blocksize /\ val blocksize <= 31 /\
+        ALL (nonoverlapping (word_sub stackpointer (word 728),728))
+            [(word pc,LENGTH windows_p256_scalarmulbase_cmc); (scalar,32); (tab,len)] /\
+        ALL (nonoverlapping (res,64))
+            [(word pc,LENGTH windows_p256_scalarmulbase_cmc); (word_sub stackpointer (word 728),736)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_p256_scalarmulbase_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [res;scalar;blocksize;tab] s /\
+                  bignum_from_memory (scalar,4) s = n /\
+                  read (memory :> bytes(tab,len)) s = tabulation)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. P IN group_carrier p256_group /\
+                      p256_tabulates P (val blocksize) tab len tabulation
+                      ==> affinepointz_p256
+                           (bignum_pair_from_memory(res,4) s)
+                           (group_pow p256_group P n))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,64);
+                      memory :> bytes(word_sub stackpointer (word 728),728)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_P256_SCALARMULBASE_SUBROUTINE_CORRECT));;
+

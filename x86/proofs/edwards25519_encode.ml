@@ -121,6 +121,26 @@ let EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
   X86_PROMOTE_RETURN_NOSTACK_TAC edwards25519_encode_mc
     EDWARDS25519_ENCODE_CORRECT);;
 
+let EDWARDS25519_ENCODE_IBT_SUBROUTINE_CORRECT = prove
+ (`!z p x y pc stackpointer returnaddress.
+      nonoverlapping (stackpointer,8) (z,32) /\
+      nonoverlapping (word pc,LENGTH edwards25519_encode_cmc) (z,32)
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) edwards25519_encode_cmc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                C_ARGUMENTS [z; p] s /\
+                bignum_pair_from_memory(p,4) s = (x,y))
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                (x < p_25519 /\ y < p_25519
+                ==> read (memory :> bytelist(z,32)) s =
+                    bytelist_of_num 32 (ed25519_encode (&x,&y))))
+           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(z,32)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_ENCODE_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -154,3 +174,27 @@ let WINDOWS_EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
   WINDOWS_X86_WRAP_NOSTACK_TAC
     windows_edwards25519_encode_mc edwards25519_encode_mc
     EDWARDS25519_ENCODE_CORRECT);;
+
+let WINDOWS_EDWARDS25519_ENCODE_IBT_SUBROUTINE_CORRECT = prove
+ (`!z p x y pc stackpointer returnaddress.
+      ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+          [(word pc,LENGTH windows_edwards25519_encode_cmc); (p,8 * 8)] /\
+      nonoverlapping (word_sub stackpointer (word 16),24) (z,32) /\
+      nonoverlapping (word pc,LENGTH windows_edwards25519_encode_cmc) (z,32)
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) windows_edwards25519_encode_cmc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                WINDOWS_C_ARGUMENTS [z; p] s /\
+                bignum_pair_from_memory(p,4) s = (x,y))
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                (x < p_25519 /\ y < p_25519
+                ==> read (memory :> bytelist(z,32)) s =
+                    bytelist_of_num 32 (ed25519_encode (&x,&y))))
+           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(z,32);
+                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_EDWARDS25519_ENCODE_SUBROUTINE_CORRECT));;
+

@@ -6539,6 +6539,29 @@ let P521_JDOUBLE_SUBROUTINE_CORRECT = time prove
   X86_PROMOTE_RETURN_STACK_TAC p521_jdouble_mc P521_JDOUBLE_CORRECT
     `[RBX; R12; R13; R14; R15]` 608);;
 
+let P521_JDOUBLE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 608),608))
+            [(word pc,LENGTH p521_jdouble_cmc); (p1,216)] /\
+        ALL (nonoverlapping (p3,216))
+            [(word pc,LENGTH p521_jdouble_cmc); (word_sub stackpointer (word 608),616)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p521_jdouble_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1] s /\
+                  bignum_triple_from_memory (p1,9) s = t1)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. represents_p521 P t1
+                      ==> represents_p521 (group_mul p521_group P P)
+                            (bignum_triple_from_memory(p3,9) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,216);
+                      memory :> bytes(word_sub stackpointer (word 608),608)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JDOUBLE_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -6573,3 +6596,27 @@ let WINDOWS_P521_JDOUBLE_SUBROUTINE_CORRECT = time prove
    windows_p521_jdouble_mc p521_jdouble_mc
    P521_JDOUBLE_CORRECT
     `[RBX; R12; R13; R14; R15]` 608);;
+
+let WINDOWS_P521_JDOUBLE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 624),624))
+            [(word pc,LENGTH windows_p521_jdouble_cmc); (p1,216)] /\
+        ALL (nonoverlapping (p3,216))
+            [(word pc,LENGTH windows_p521_jdouble_cmc); (word_sub stackpointer (word 624),632)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_p521_jdouble_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                  bignum_triple_from_memory (p1,9) s = t1)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. represents_p521 P t1
+                      ==> represents_p521 (group_mul p521_group P P)
+                            (bignum_triple_from_memory(p3,9) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,216);
+                      memory :> bytes(word_sub stackpointer (word 624),624)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_P521_JDOUBLE_SUBROUTINE_CORRECT));;
+

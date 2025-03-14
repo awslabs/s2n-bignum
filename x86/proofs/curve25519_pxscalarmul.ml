@@ -3556,6 +3556,34 @@ let CURVE25519_PXSCALARMUL_SUBROUTINE_CORRECT = time prove
     curve25519_pxscalarmul_mc CURVE25519_PXSCALARMUL_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 408);;
 
+let CURVE25519_PXSCALARMUL_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n point X pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 408),408))
+        [(word pc,LENGTH curve25519_pxscalarmul_cmc); (scalar,32); (point,32)] /\
+    nonoverlapping (res,64) (word pc,LENGTH curve25519_pxscalarmul_cmc) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 408),416)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc) curve25519_pxscalarmul_cmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [res; scalar; point] s /\
+              bignum_from_memory (scalar,4) s = n /\
+              bignum_from_memory (point,4) s = X)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !(f:A ring) P.
+                  field f /\ ring_char f = p_25519 /\
+                  P IN group_carrier(curve25519x_group f) /\
+                  curve25519x_canonically_represents f P (X,1)
+                  ==> curve25519x_canonically_represents f
+                        (group_pow (curve25519x_group f) P n)
+                        (bignum_pair_from_memory(res,4) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,64);
+                      memory :> bytes(word_sub stackpointer (word 408),408)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_PXSCALARMUL_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -3596,3 +3624,32 @@ let WINDOWS_CURVE25519_PXSCALARMUL_SUBROUTINE_CORRECT = time prove
    windows_curve25519_pxscalarmul_mc curve25519_pxscalarmul_mc
    CURVE25519_PXSCALARMUL_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 408);;
+
+let WINDOWS_CURVE25519_PXSCALARMUL_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n point X pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+        [(word pc,LENGTH windows_curve25519_pxscalarmul_cmc); (scalar,32); (point,32)] /\
+    nonoverlapping (res,64) (word pc,LENGTH windows_curve25519_pxscalarmul_cmc) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 424),432)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc) windows_curve25519_pxscalarmul_cmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+              bignum_from_memory (scalar,4) s = n /\
+              bignum_from_memory (point,4) s = X)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !(f:A ring) P.
+                  field f /\ ring_char f = p_25519 /\
+                  P IN group_carrier(curve25519x_group f) /\
+                  curve25519x_canonically_represents f P (X,1)
+                  ==> curve25519x_canonically_represents f
+                        (group_pow (curve25519x_group f) P n)
+                        (bignum_pair_from_memory(res,4) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,64);
+                      memory :> bytes(word_sub stackpointer (word 424),424)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_CURVE25519_PXSCALARMUL_SUBROUTINE_CORRECT));;
+

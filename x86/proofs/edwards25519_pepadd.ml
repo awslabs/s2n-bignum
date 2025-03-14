@@ -2148,6 +2148,34 @@ let EDWARDS25519_PEPADD_SUBROUTINE_CORRECT = time prove
     edwards25519_pepadd_mc EDWARDS25519_PEPADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
 
+let EDWARDS25519_PEPADD_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 Q1 p2 T2 pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 240),240))
+        [(word pc,LENGTH edwards25519_pepadd_cmc); (p3,128); (p1,128); (p2,96)] /\
+    nonoverlapping (p3,128) (word pc,LENGTH edwards25519_pepadd_cmc) /\
+    nonoverlapping (p3,128) (word_sub stackpointer (word 240),248)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc) edwards25519_pepadd_cmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [p3; p1; p2] s /\
+              bignum_quadruple_from_memory (p1,4) s = Q1 /\
+              bignum_triple_from_memory (p2,4) s = T2)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !P1 P2. P1 IN group_carrier edwards25519_group /\
+                      P2 IN group_carrier edwards25519_group /\
+                      edwards25519_exprojective P1 Q1 /\
+                      edwards25519_epprojective P2 T2
+                      ==> edwards25519_exprojective
+                           (edwards_add edwards25519 P1 P2)
+                           (bignum_quadruple_from_memory(p3,4) s))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,128);
+                      memory :> bytes(word_sub stackpointer (word 240),240)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_PEPADD_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -2188,3 +2216,32 @@ let WINDOWS_EDWARDS25519_PEPADD_SUBROUTINE_CORRECT = prove
    windows_edwards25519_pepadd_mc edwards25519_pepadd_mc
    EDWARDS25519_PEPADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
+
+let WINDOWS_EDWARDS25519_PEPADD_IBT_SUBROUTINE_CORRECT = prove
+ (`!p3 p1 Q1 p2 T2 pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 256),256))
+        [(word pc,LENGTH windows_edwards25519_pepadd_cmc); (p3,128); (p1,128); (p2,96)] /\
+    nonoverlapping (p3,128) (word pc,LENGTH windows_edwards25519_pepadd_cmc) /\
+    nonoverlapping (p3,128) (word_sub stackpointer (word 256),264)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc) windows_edwards25519_pepadd_cmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+              bignum_quadruple_from_memory (p1,4) s = Q1 /\
+              bignum_triple_from_memory (p2,4) s = T2)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !P1 P2. P1 IN group_carrier edwards25519_group /\
+                      P2 IN group_carrier edwards25519_group /\
+                      edwards25519_exprojective P1 Q1 /\
+                      edwards25519_epprojective P2 T2
+                      ==> edwards25519_exprojective
+                           (edwards_add edwards25519 P1 P2)
+                           (bignum_quadruple_from_memory(p3,4) s))
+         (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,128);
+                      memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_EDWARDS25519_PEPADD_SUBROUTINE_CORRECT));;
+

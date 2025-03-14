@@ -3108,6 +3108,32 @@ let BIGNUM_MODIFIER_SUBROUTINE_CORRECT = time prove
   X86_PROMOTE_RETURN_STACK_TAC bignum_modifier_mc BIGNUM_MODIFIER_CORRECT
    `[RBX; RBP; R12; R13]` 32);;
 
+let BIGNUM_MODIFIER_IBT_SUBROUTINE_CORRECT = time prove
+ (`!k z m t n pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (t,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 32),40))
+            [(z,8 * val k); (t,8 * val k)] /\
+        ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
+                                 (word_sub stackpointer (word 32),32)]
+                                [(word pc,LENGTH bignum_modifier_cmc); (m,8 * val k)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_modifier_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [k; z; m; t] s /\
+                  bignum_from_memory (m,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+                  (ODD n
+                   ==> bignum_from_memory (z,val k) s =
+                        2 EXP (64 * val k) MOD n))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                         memory :> bytes(t,8 * val k);
+                       memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MODIFIER_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -3143,3 +3169,30 @@ let WINDOWS_BIGNUM_MODIFIER_SUBROUTINE_CORRECT = time prove
                        memory :> bytes(word_sub stackpointer (word 48),48)])`,
   WINDOWS_X86_WRAP_STACK_TAC windows_bignum_modifier_mc bignum_modifier_mc
    BIGNUM_MODIFIER_CORRECT `[RBX; RBP; R12; R13]` 32);;
+
+let WINDOWS_BIGNUM_MODIFIER_IBT_SUBROUTINE_CORRECT = time prove
+ (`!k z m t n pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (t,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 48),56))
+            [(z,8 * val k); (t,8 * val k)] /\
+        ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
+                                 (word_sub stackpointer (word 48),48)]
+                                [(word pc,LENGTH windows_bignum_modifier_cmc); (m,8 * val k)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_bignum_modifier_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [k; z; m; t] s /\
+                  bignum_from_memory (m,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+                  (ODD n
+                   ==> bignum_from_memory (z,val k) s =
+                        2 EXP (64 * val k) MOD n))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                         memory :> bytes(t,8 * val k);
+                       memory :> bytes(word_sub stackpointer (word 48),48)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_MODIFIER_SUBROUTINE_CORRECT));;
+

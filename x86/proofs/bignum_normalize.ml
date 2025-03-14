@@ -471,6 +471,26 @@ let BIGNUM_NORMALIZE_SUBROUTINE_CORRECT = time prove
               MAYCHANGE [memory :> bytes(z,8 * val k)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC bignum_normalize_mc BIGNUM_NORMALIZE_CORRECT);;
 
+let BIGNUM_NORMALIZE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!k z n pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_normalize_cmc) (z,8 * val k) /\
+        nonoverlapping (stackpointer,8) (z,8 * val k)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_normalize_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [k; z] s /\
+                  bignum_from_memory (z,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,val k) s =
+                  2 EXP (64 * val k - bitsize n) * n /\
+                  C_RETURN s = word(64 * val k - bitsize n))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_NORMALIZE_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -502,3 +522,26 @@ let WINDOWS_BIGNUM_NORMALIZE_SUBROUTINE_CORRECT = time prove
                          memory :> bytes(word_sub stackpointer (word 16),16)])`,
   WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_normalize_mc
     bignum_normalize_mc BIGNUM_NORMALIZE_CORRECT);;
+
+let WINDOWS_BIGNUM_NORMALIZE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!k z n pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH windows_bignum_normalize_cmc) (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 16),24))
+            [(word pc,LENGTH windows_bignum_normalize_cmc);  (z,8 * val k)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_bignum_normalize_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [k; z] s /\
+                  bignum_from_memory (z,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,val k) s =
+                  2 EXP (64 * val k - bitsize n) * n /\
+                  WINDOWS_C_RETURN s = word(64 * val k - bitsize n))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                         memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_NORMALIZE_SUBROUTINE_CORRECT));;
+

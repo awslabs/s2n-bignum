@@ -1724,6 +1724,32 @@ let BIGNUM_INVSQRT_P25519_SUBROUTINE_CORRECT = time prove
    BIGNUM_INVSQRT_P25519_EXEC BIGNUM_INVSQRT_P25519_CORRECT
    `[RBX; RBP; R12; R13; R14; R15]` 232);;
 
+let BIGNUM_INVSQRT_P25519_IBT_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 232),232))
+            [(word pc,LENGTH bignum_invsqrt_p25519_cmc); (z,8 * 4); (x,8 * 4)] /\
+        ALL (nonoverlapping (z,8 * 4))
+            [(word pc,LENGTH bignum_invsqrt_p25519_cmc); (word_sub stackpointer (word 232),240)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_invsqrt_p25519_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory(x,4) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  ival(C_RETURN s) = jacobi (n,p_25519) /\
+                  bignum_from_memory (z,4) s < p_25519 /\
+                  EVEN (bignum_from_memory (z,4) s) /\
+                  (jacobi(n,p_25519) = &1
+                   ==> (n * bignum_from_memory (z,4) s EXP 2 == 1)
+                       (mod p_25519)))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 4);
+                    memory :> bytes(word_sub stackpointer (word 232),232)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_INVSQRT_P25519_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -1786,3 +1812,30 @@ let WINDOWS_BIGNUM_INVSQRT_P25519_SUBROUTINE_CORRECT = time prove
       6 THEN
   X86_STEPS_TAC WINDOWS_BIGNUM_INVSQRT_P25519_EXEC (7--9) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_BIGNUM_INVSQRT_P25519_IBT_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 256),256))
+            [(word pc,LENGTH windows_bignum_invsqrt_p25519_cmc); (z,8 * 4); (x,8 * 4)] /\
+        ALL (nonoverlapping (z,8 * 4))
+            [(word pc,LENGTH windows_bignum_invsqrt_p25519_cmc); (word_sub stackpointer (word 256),264)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_bignum_invsqrt_p25519_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory(x,4) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  ival(C_RETURN s) = jacobi (n,p_25519) /\
+                  bignum_from_memory (z,4) s < p_25519 /\
+                  EVEN (bignum_from_memory (z,4) s) /\
+                  (jacobi(n,p_25519) = &1
+                   ==> (n * bignum_from_memory (z,4) s EXP 2 == 1)
+                       (mod p_25519)))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 4);
+                    memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_INVSQRT_P25519_SUBROUTINE_CORRECT));;
+

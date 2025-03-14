@@ -8314,6 +8314,31 @@ let EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
     EDWARDS25519_SCALARMULBASE_ALT_CORRECT)
     `[RBX; RBP; R12; R13; R14; R15]` 536);;
 
+let EDWARDS25519_SCALARMULBASE_ALT_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 536),536))
+        [(word pc,0xef3b); (scalar,32)] /\
+    nonoverlapping (res,64) (word pc,0xef3b) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 536),544)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND edwards25519_scalarmulbase_alt_cmc
+                       edwards25519_scalarmulbase_alt_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [res; scalar] s /\
+              bignum_from_memory (scalar,4) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              bignum_pair_from_memory(res,4) s =
+              paired (modular_encode (256,p_25519))
+                     (group_pow edwards25519_group E_25519 n))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,64);
+                     memory :> bytes(word_sub stackpointer (word 536),536)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -8394,3 +8419,29 @@ let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
         6 THEN
   X86_STEPS_TAC WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_EXEC (7--9) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [(word pc,0xef4b); (scalar,32)] /\
+    nonoverlapping (res,64) (word pc,0xef4b) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 560),568)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND windows_edwards25519_scalarmulbase_alt_cmc
+                       windows_edwards25519_scalarmulbase_alt_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [res; scalar] s /\
+              bignum_from_memory (scalar,4) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              bignum_pair_from_memory(res,4) s =
+              paired (modular_encode (256,p_25519))
+                     (group_pow edwards25519_group E_25519 n))
+         (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,64);
+                     memory :> bytes(word_sub stackpointer (word 560),560)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT));;
+

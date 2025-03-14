@@ -4491,6 +4491,28 @@ let BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
      BIGNUM_INV_P521_CORRECT
       `[RBX; RBP; R12; R13; R14; R15]` 408);;
 
+let BIGNUM_INV_P521_IBT_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 408),408))
+            [(word pc,LENGTH bignum_inv_p521_cmc); (x,8 * 9)] /\
+        ALL (nonoverlapping (z,8 * 9))
+            [(word_sub stackpointer (word 408),416); (word pc,LENGTH bignum_inv_p521_cmc)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_inv_p521_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory(z,9) s =
+                  (if p_521 divides n then 0 else inverse_mod p_521 n))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                    memory :> bytes(word_sub stackpointer (word 408),408)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_INV_P521_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -4524,3 +4546,27 @@ let WINDOWS_BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
   WINDOWS_X86_WRAP_STACK_TAC windows_bignum_inv_p521_mc bignum_inv_p521_mc
      BIGNUM_INV_P521_CORRECT
       `[RBX; RBP; R12; R13; R14; R15]` 408);;
+
+let WINDOWS_BIGNUM_INV_P521_IBT_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+            [(word pc,LENGTH windows_bignum_inv_p521_cmc); (x,8 * 9)] /\
+        ALL (nonoverlapping (z,8 * 9))
+            [(word_sub stackpointer (word 424),432); (word pc,LENGTH windows_bignum_inv_p521_cmc)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_bignum_inv_p521_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory(z,9) s =
+                  (if p_521 divides n then 0 else inverse_mod p_521 n))
+             (MAYCHANGE [RSP] ,,
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                    memory :> bytes(word_sub stackpointer (word 424),424)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_INV_P521_SUBROUTINE_CORRECT));;
+

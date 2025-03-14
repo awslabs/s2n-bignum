@@ -3229,6 +3229,33 @@ let CURVE25519_LADDERSTEP_SUBROUTINE_CORRECT = time prove
     curve25519_ladderstep_mc CURVE25519_LADDERSTEP_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 464);;
 
+let CURVE25519_LADDERSTEP_IBT_SUBROUTINE_CORRECT = time prove
+ (`!rr point P pp Pm Pn b pc stackpointer returnaddress.
+    ALLPAIRS nonoverlapping
+     [(rr,128); (word_sub stackpointer (word 464),464)]
+     [(word pc,LENGTH curve25519_ladderstep_cmc); (point,64); (pp,128)] /\
+    nonoverlapping (rr,128) (word_sub stackpointer (word 464),472)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc) curve25519_ladderstep_cmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [rr; point; pp; b] s /\
+              bignum_pair_from_memory (point,4) s = P /\
+              bignum_pairpair_from_memory (pp,4) s = (Pm,Pn))
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !Q Qm Qn.
+               P = paired curve25519_encode Q /\ SND Q = &1 /\
+               (Pm,Pn) = pairpaired curve25519_encode (Qm,Qn)
+               ==> bignum_pairpair_from_memory(rr,4) s =
+                   pairpaired curve25519_encode
+                    (montgomery_ladderstep curve25519 (~(b = word 0)) Q Qm Qn))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(rr,128);
+                      memory :> bytes(word_sub stackpointer (word 464),464)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_LADDERSTEP_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -3268,3 +3295,31 @@ let WINDOWS_CURVE25519_LADDERSTEP_SUBROUTINE_CORRECT = time prove
    windows_curve25519_ladderstep_mc curve25519_ladderstep_mc
    CURVE25519_LADDERSTEP_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 464);;
+
+let WINDOWS_CURVE25519_LADDERSTEP_IBT_SUBROUTINE_CORRECT = time prove
+ (`!rr point P pp Pm Pn b pc stackpointer returnaddress.
+    ALLPAIRS nonoverlapping
+     [(rr,128); (word_sub stackpointer (word 480),480)]
+     [(word pc,LENGTH windows_curve25519_ladderstep_cmc); (point,64); (pp,128)] /\
+    nonoverlapping (rr,128) (word_sub stackpointer (word 480),488)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc) windows_curve25519_ladderstep_cmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [rr; point; pp; b] s /\
+              bignum_pair_from_memory (point,4) s = P /\
+              bignum_pairpair_from_memory (pp,4) s = (Pm,Pn))
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !Q Qm Qn.
+               P = paired curve25519_encode Q /\ SND Q = &1 /\
+               (Pm,Pn) = pairpaired curve25519_encode (Qm,Qn)
+               ==> bignum_pairpair_from_memory(rr,4) s =
+                   pairpaired curve25519_encode
+                    (montgomery_ladderstep curve25519 (~(b = word 0)) Q Qm Qn))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(rr,128);
+                      memory :> bytes(word_sub stackpointer (word 480),480)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_CURVE25519_LADDERSTEP_SUBROUTINE_CORRECT));;
+

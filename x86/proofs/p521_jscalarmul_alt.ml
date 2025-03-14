@@ -7571,6 +7571,32 @@ let P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
    X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_ALT_EXEC
      P521_JSCALARMUL_ALT_CORRECT `[RBX; RBP; R12; R13; R14; R15]` 4744);;
 
+let P521_JSCALARMUL_ALT_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar point n xyz pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 4744),4744))
+            [(word pc,LENGTH p521_jscalarmul_alt_cmc); (scalar,72); (point,216)] /\
+        ALL (nonoverlapping (res,216))
+            [(word pc,LENGTH p521_jscalarmul_alt_cmc); (word_sub stackpointer (word 4744),4752)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p521_jscalarmul_alt_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [res;scalar;point] s /\
+                  bignum_from_memory (scalar,9) s = n /\
+                  bignum_triple_from_memory (point,9) s = xyz)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. P IN group_carrier p521_group /\
+                      represents_p521 P xyz
+                      ==> represents_p521
+                            (group_pow p521_group P n)
+                            (bignum_triple_from_memory(res,9) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE[memory :> bytes(res,216);
+                     memory :> bytes(word_sub stackpointer (word 4744),4744)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -7641,3 +7667,30 @@ let WINDOWS_P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
     `read (memory :> bytes64 (read RSP s)) s`] 7 THEN
   X86_STEPS_TAC WINDOWS_P521_JSCALARMUL_ALT_EXEC (8--10) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_P521_JSCALARMUL_ALT_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar point n xyz pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 4768),4768))
+            [(word pc,LENGTH windows_p521_jscalarmul_alt_cmc); (scalar,72); (point,216)] /\
+        ALL (nonoverlapping (res,216))
+            [(word pc,LENGTH windows_p521_jscalarmul_alt_cmc); (word_sub stackpointer (word 4768),4776)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_p521_jscalarmul_alt_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [res;scalar;point] s /\
+                  bignum_from_memory (scalar,9) s = n /\
+                  bignum_triple_from_memory (point,9) s = xyz)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. P IN group_carrier p521_group /\
+                      represents_p521 P xyz
+                      ==> represents_p521
+                            (group_pow p521_group P n)
+                            (bignum_triple_from_memory(res,9) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE[memory :> bytes(res,216);
+                     memory :> bytes(word_sub stackpointer (word 4768),4768)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_P521_JSCALARMUL_ALT_SUBROUTINE_CORRECT));;
+

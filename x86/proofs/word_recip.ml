@@ -722,6 +722,21 @@ let WORD_RECIP_SUBROUTINE_CORRECT = prove
       (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   X86_PROMOTE_RETURN_NOSTACK_TAC word_recip_mc WORD_RECIP_CORRECT);;
 
+let WORD_RECIP_IBT_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+    ensures x86
+      (\s. bytes_loaded s (word pc) word_recip_cmc /\
+           read RIP s = word pc /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           C_ARGUMENTS [a] s)
+      (\s. read RIP s = returnaddress /\
+           (bit 63 a
+            ==> &2 pow 64 + &(val(C_RETURN s)) < &2 pow 128 / &(val a) /\
+                &2 pow 128 / &(val a) <= &2 pow 64 + &(val(C_RETURN s)) + &1))
+      (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_RECIP_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -750,3 +765,23 @@ let WINDOWS_WORD_RECIP_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   WINDOWS_X86_WRAP_NOSTACK_TAC windows_word_recip_mc word_recip_mc
     WORD_RECIP_CORRECT);;
+
+let WINDOWS_WORD_RECIP_IBT_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_recip_cmc)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_word_recip_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [a] s)
+             (\s. read RIP s = returnaddress /\
+                  (bit 63 a
+                   ==> &2 pow 64 + &(val(WINDOWS_C_RETURN s)) <
+                       &2 pow 128 / &(val a) /\
+                       &2 pow 128 / &(val a) <=
+                       &2 pow 64 + &(val(WINDOWS_C_RETURN s)) + &1))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_WORD_RECIP_SUBROUTINE_CORRECT));;
+

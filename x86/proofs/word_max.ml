@@ -58,6 +58,20 @@ let WORD_MAX_SUBROUTINE_CORRECT = prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   X86_PROMOTE_RETURN_NOSTACK_TAC word_max_mc WORD_MAX_CORRECT);;
 
+let WORD_MAX_IBT_SUBROUTINE_CORRECT = prove
+ (`!a b pc stackpointer returnaddress.
+        ensures x86
+          (\s. bytes_loaded s (word pc) word_max_cmc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [a; b] s)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               C_RETURN s = word_umax a b)
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_MAX_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -83,3 +97,20 @@ let WINDOWS_WORD_MAX_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   WINDOWS_X86_WRAP_NOSTACK_TAC windows_word_max_mc word_max_mc
     WORD_MAX_CORRECT);;
+
+let WINDOWS_WORD_MAX_IBT_SUBROUTINE_CORRECT = prove
+ (`!a b pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_max_cmc)
+        ==> ensures x86
+              (\s. bytes_loaded s (word pc) windows_word_max_cmc /\
+                   read RIP s = word pc /\
+                   read RSP s = stackpointer /\
+                   read (memory :> bytes64 stackpointer) s = returnaddress /\
+                   WINDOWS_C_ARGUMENTS [a; b] s)
+              (\s. read RIP s = returnaddress /\
+                   read RSP s = word_add stackpointer (word 8) /\
+                   WINDOWS_C_RETURN s = word_umax a b)
+              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_WORD_MAX_SUBROUTINE_CORRECT));;
+

@@ -11857,6 +11857,37 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
     EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT)
     `[RBX; RBP; R12; R13; R14; R15]` 1720);;
 
+let EDWARDS25519_SCALARMULDOUBLE_ALT_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar point bscalar n xy m pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 1720),1720))
+        [(word pc,0x72cd); (scalar,32); (point,64); (bscalar,32)] /\
+    nonoverlapping (res,64) (word pc,0x72cd) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 1720),1728)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND edwards25519_scalarmuldouble_alt_cmc
+                       edwards25519_scalarmuldouble_alt_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [res; scalar; point; bscalar] s /\
+              bignum_from_memory (scalar,4) s = n /\
+              bignum_pair_from_memory (point,4) s = xy /\
+              bignum_from_memory (bscalar,4) s = m)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !P. P IN group_carrier edwards25519_group /\
+                  paired (modular_decode (256,p_25519)) xy = P
+                  ==> bignum_pair_from_memory(res,4) s =
+                      paired (modular_encode (256,p_25519))
+                             (group_mul edwards25519_group
+                                 (group_pow edwards25519_group P n)
+                                 (group_pow edwards25519_group E_25519 m)))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,64);
+                     memory :> bytes(word_sub stackpointer (word 1720),1720)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -11946,3 +11977,35 @@ let WINDOWS_EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
         8 THEN
   X86_STEPS_TAC WINDOWS_EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (9--11) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_EDWARDS25519_SCALARMULDOUBLE_ALT_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar point bscalar n xy m pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 1744),1744))
+        [(word pc,0x72e3); (scalar,32); (point,64); (bscalar,32)] /\
+    nonoverlapping (res,64) (word pc,0x72e3) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 1744),1752)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND windows_edwards25519_scalarmuldouble_alt_cmc
+                       windows_edwards25519_scalarmuldouble_alt_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [res; scalar; point; bscalar] s /\
+              bignum_from_memory (scalar,4) s = n /\
+              bignum_pair_from_memory (point,4) s = xy /\
+              bignum_from_memory (bscalar,4) s = m)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !P. P IN group_carrier edwards25519_group /\
+                  paired (modular_decode (256,p_25519)) xy = P
+                  ==> bignum_pair_from_memory(res,4) s =
+                      paired (modular_encode (256,p_25519))
+                             (group_mul edwards25519_group
+                                 (group_pow edwards25519_group P n)
+                                 (group_pow edwards25519_group E_25519 m)))
+       (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+        MAYCHANGE [memory :> bytes(res,64);
+                   memory :> bytes(word_sub stackpointer (word 1744),1744)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT));;
+

@@ -2125,6 +2125,31 @@ let EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
    EDWARDS25519_DECODE_EXEC EDWARDS25519_DECODE_CORRECT
    `[RBX; RBP; R12; R13; R14; R15]` 312);;
 
+let EDWARDS25519_DECODE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!z c n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 312),312))
+            [(word pc,LENGTH edwards25519_decode_cmc); (z,8 * 8); (c,8 * 4)] /\
+        ALL (nonoverlapping (z,8 * 8))
+            [(word pc,LENGTH edwards25519_decode_cmc); (word_sub stackpointer (word 312),320)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) edwards25519_decode_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; c] s /\
+                  read (memory :> bytes(c,32)) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  C_RETURN s = word(bitval(~ed25519_validencode n)) /\
+                  (ed25519_validencode n
+                   ==> bignum_pair_from_memory(z,4) s =
+                       paired (modular_encode (256,p_25519))
+                              (ed25519_decode n)))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 8);
+                    memory :> bytes(word_sub stackpointer (word 312),312)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_DECODE_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -2186,3 +2211,29 @@ let WINDOWS_EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
       6 THEN
   X86_STEPS_TAC WINDOWS_EDWARDS25519_DECODE_EXEC (7--9) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_EDWARDS25519_DECODE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!z c n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 336),336))
+            [(word pc,LENGTH windows_edwards25519_decode_cmc); (z,8 * 8); (c,8 * 4)] /\
+        ALL (nonoverlapping (z,8 * 8))
+            [(word pc,LENGTH windows_edwards25519_decode_cmc); (word_sub stackpointer (word 336),344)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_edwards25519_decode_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [z; c] s /\
+                  read (memory :> bytes(c,32)) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  C_RETURN s = word(bitval(~ed25519_validencode n)) /\
+                  (ed25519_validencode n
+                   ==> bignum_pair_from_memory(z,4) s =
+                       paired (modular_encode (256,p_25519))
+                              (ed25519_decode n)))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 8);
+                    memory :> bytes(word_sub stackpointer (word 336),336)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_EDWARDS25519_DECODE_SUBROUTINE_CORRECT));;
+

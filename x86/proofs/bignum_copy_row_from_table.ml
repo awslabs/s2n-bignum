@@ -693,6 +693,31 @@ let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
       BIGNUM_COPY_ROW_FROM_TABLE_CORRECT in
   X86_PROMOTE_RETURN_NOSTACK_TAC bignum_copy_row_from_table_mc core);;
 
+let BIGNUM_COPY_ROW_FROM_TABLE_IBT_SUBROUTINE_CORRECT = prove(
+  `!z table height width idx n m pc stackpointer returnaddress.
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_cmc)
+                   (z, 8 * val width) /\
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_cmc)
+                   (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (stackpointer, 8) /\
+    8 * val width < 2 EXP 64 /\
+    val idx < val height
+    ==> ensures x86
+      (\s. bytes_loaded s (word pc) bignum_copy_row_from_table_cmc /\
+           read RIP s = word pc /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           C_ARGUMENTS [z; table; height; width; idx] s /\
+           bignum_from_memory (table, val height * val width) s = n /\
+           bignum_from_memory (word_add table (word (8 * val idx * val width)), val width) s = m)
+      (\s. read RIP s = returnaddress /\
+           read RSP s = word_add stackpointer (word 8) /\
+           bignum_from_memory (z, val width) s = m)
+      (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(z,8 * val width)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -753,3 +778,33 @@ let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
       BIGNUM_COPY_ROW_FROM_TABLE_CORRECT in
   WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_copy_row_from_table_mc
     bignum_copy_row_from_table_mc core);;
+
+let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_IBT_SUBROUTINE_CORRECT = prove(
+  `!z table height width idx n m pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 16), 16))
+        [(word pc, LENGTH windows_bignum_copy_row_from_table_cmc);
+         (table, 8 * val height * val width)] /\
+    nonoverlapping (word pc, LENGTH windows_bignum_copy_row_from_table_cmc)
+                   (z, 8 * val width) /\
+    nonoverlapping (word pc, LENGTH windows_bignum_copy_row_from_table_cmc)
+                   (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (word_sub stackpointer (word 16), 24) /\
+    8 * val width < 2 EXP 64 /\
+    val idx < val height
+    ==> ensures x86
+      (\s. bytes_loaded s (word pc) windows_bignum_copy_row_from_table_cmc /\
+           read RIP s = word pc /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           WINDOWS_C_ARGUMENTS [z; table; height; width; idx] s /\
+           bignum_from_memory (table, val height * val width) s = n /\
+           bignum_from_memory (word_add table (word (8 * val idx * val width)), val width) s = m)
+      (\s. read RIP s = returnaddress /\
+           read RSP s = word_add stackpointer (word 8) /\
+           bignum_from_memory (z, val width) s = m)
+      (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(z,8 * val width);
+                  memory :> bytes(word_sub stackpointer (word 16), 16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT));;
+

@@ -4068,6 +4068,31 @@ let P256_MONTJADD_SUBROUTINE_CORRECT = time prove
   X86_PROMOTE_RETURN_STACK_TAC p256_montjadd_mc P256_MONTJADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 272);;
 
+let P256_MONTJADD_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 272),272))
+            [(word pc,LENGTH p256_montjadd_cmc); (p1,96); (p2,96)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH p256_montjadd_cmc); (word_sub stackpointer (word 272),280)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p256_montjadd_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_triple_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p256 P1 t1 /\ represents_p256 P2 t2 /\
+                          (P1 = P2 ==> P2 = NONE)
+                          ==> represents_p256 (group_mul p256_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 272),272)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P256_MONTJADD_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -4104,3 +4129,29 @@ let WINDOWS_P256_MONTJADD_SUBROUTINE_CORRECT = time prove
    windows_p256_montjadd_mc p256_montjadd_mc
    P256_MONTJADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 272);;
+
+let WINDOWS_P256_MONTJADD_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 288),288))
+            [(word pc,LENGTH windows_p256_montjadd_cmc); (p1,96); (p2,96)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH windows_p256_montjadd_cmc); (word_sub stackpointer (word 288),296)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_p256_montjadd_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_triple_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p256 P1 t1 /\ represents_p256 P2 t2 /\
+                          (P1 = P2 ==> P2 = NONE)
+                          ==> represents_p256 (group_mul p256_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 288),288)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_P256_MONTJADD_SUBROUTINE_CORRECT));;
+

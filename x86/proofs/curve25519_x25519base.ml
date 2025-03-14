@@ -8004,6 +8004,29 @@ let CURVE25519_X25519BASE_SUBROUTINE_CORRECT = time prove
     CURVE25519_X25519BASE_CORRECT)
     `[RBX; RBP; R12; R13; R14; R15]` 536);;
 
+let CURVE25519_X25519BASE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 536),536))
+        [(word pc,0xec3b); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,0xec3b) /\
+    nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND curve25519_x25519base_cmc
+                       curve25519_x25519base_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [res; scalar] s /\
+              bignum_from_memory (scalar,4) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              bignum_from_memory (res,4) s = rfcx25519(n,9))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,32);
+                     memory :> bytes(word_sub stackpointer (word 536),536)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_X25519BASE_SUBROUTINE_CORRECT));;
+
 let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
  (`!res scalar n pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 536),536))
@@ -8028,6 +8051,29 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
   REWRITE_TAC[GSYM(CONV_RULE NUM_REDUCE_CONV
    (SPEC `4` BIGNUM_FROM_MEMORY_BYTES))] THEN
   MATCH_ACCEPT_TAC CURVE25519_X25519BASE_SUBROUTINE_CORRECT);;
+
+let CURVE25519_X25519BASE_BYTE_IBT_SUBROUTINE_CORRECT = prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 536),536))
+        [(word pc,0xec3b); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,0xec3b) /\
+    nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND curve25519_x25519base_cmc
+                       curve25519_x25519base_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [res; scalar] s /\
+              read (memory :> bytes(scalar,32)) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              read (memory :> bytes(res,32)) s = rfcx25519(n,9))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,32);
+                     memory :> bytes(word_sub stackpointer (word 536),536)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
@@ -8108,6 +8154,29 @@ let WINDOWS_CURVE25519_X25519BASE_SUBROUTINE_CORRECT = time prove
   X86_STEPS_TAC WINDOWS_CURVE25519_X25519BASE_EXEC (7--9) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
+let WINDOWS_CURVE25519_X25519BASE_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [(word pc,0xec4b); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,0xec4b) /\
+    nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND windows_curve25519_x25519base_cmc
+                       windows_curve25519_x25519base_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [res; scalar] s /\
+              bignum_from_memory (scalar,4) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              bignum_from_memory (res,4) s = rfcx25519(n,9))
+         (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,32);
+                     memory :> bytes(word_sub stackpointer (word 560),560)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_CURVE25519_X25519BASE_SUBROUTINE_CORRECT));;
+
 let WINDOWS_CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
  (`!res scalar n pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 560),560))
@@ -8132,3 +8201,27 @@ let WINDOWS_CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
   REWRITE_TAC[GSYM(CONV_RULE NUM_REDUCE_CONV
    (SPEC `4` BIGNUM_FROM_MEMORY_BYTES))] THEN
   MATCH_ACCEPT_TAC WINDOWS_CURVE25519_X25519BASE_SUBROUTINE_CORRECT);;
+
+let WINDOWS_CURVE25519_X25519BASE_BYTE_IBT_SUBROUTINE_CORRECT = prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [(word pc,0xec4b); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,0xec4b) /\
+    nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND windows_curve25519_x25519base_cmc
+                       windows_curve25519_x25519base_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [res; scalar] s /\
+              read (memory :> bytes(scalar,32)) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              read (memory :> bytes(res,32)) s = rfcx25519(n,9))
+         (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,32);
+                     memory :> bytes(word_sub stackpointer (word 560),560)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT));;
+

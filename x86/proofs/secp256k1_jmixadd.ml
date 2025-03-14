@@ -2510,6 +2510,32 @@ let SECP256K1_JMIXADD_SUBROUTINE_CORRECT = time prove
   X86_PROMOTE_RETURN_STACK_TAC secp256k1_jmixadd_mc SECP256K1_JMIXADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
 
+let SECP256K1_JMIXADD_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 240),240))
+            [(word pc,LENGTH secp256k1_jmixadd_cmc); (p1,96); (p2,64)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH secp256k1_jmixadd_cmc); (word_sub stackpointer (word 240),248)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) secp256k1_jmixadd_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_pair_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p256k1 P1 t1 /\
+                          represents2_p256k1 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_p256k1(group_mul p256k1_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 240),240)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JMIXADD_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -2547,3 +2573,30 @@ let WINDOWS_SECP256K1_JMIXADD_SUBROUTINE_CORRECT = time prove
    windows_secp256k1_jmixadd_mc secp256k1_jmixadd_mc
    SECP256K1_JMIXADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
+
+let WINDOWS_SECP256K1_JMIXADD_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 256),256))
+            [(word pc,LENGTH windows_secp256k1_jmixadd_cmc); (p1,96); (p2,64)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH windows_secp256k1_jmixadd_cmc); (word_sub stackpointer (word 256),264)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_secp256k1_jmixadd_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_pair_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p256k1 P1 t1 /\
+                          represents2_p256k1 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_p256k1(group_mul p256k1_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_SECP256K1_JMIXADD_SUBROUTINE_CORRECT));;
+

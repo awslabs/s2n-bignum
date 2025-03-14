@@ -1934,6 +1934,34 @@ let BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
   X86_STEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (8--14) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
+let BIGNUM_EMONTREDC_8N_IBT_SUBROUTINE_CORRECT = time prove
+ (`!k z m w a n pc stackpointer returnaddress.
+      nonoverlapping (z,8 * 2 * val k) (word_sub stackpointer (word 80),88) /\
+      ALLPAIRS nonoverlapping
+         [(z,8 * 2 * val k); (word_sub stackpointer (word 80),80)]
+         [(word pc,LENGTH bignum_emontredc_8n_cmc); (m,8 * val k)] /\
+      8 divides val k
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) bignum_emontredc_8n_cmc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                C_ARGUMENTS [k; z; m; w] s /\
+                bignum_from_memory (z,2 * val k) s = a /\
+                bignum_from_memory (m,val k) s = n)
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                ((n * val w + 1 == 0) (mod (2 EXP 64))
+                 ==> n * bignum_from_memory (z,val k) s + a =
+                     2 EXP (64 * val k) *
+                     (2 EXP (64 * val k) * val(C_RETURN s) +
+                      bignum_from_memory
+                        (word_add z (word(8 * val k)),val k) s)))
+           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(z,8 * 2 * val k);
+                       memory :> bytes(word_sub stackpointer (word 80),80)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -2017,3 +2045,32 @@ let WINDOWS_BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
   REWRITE_TAC(!simulation_precanon_thms) THEN
   X86_STEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (14--22) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_BIGNUM_EMONTREDC_8N_IBT_SUBROUTINE_CORRECT = time prove
+ (`!k z m w a n pc stackpointer returnaddress.
+      nonoverlapping (z,8 * 2 * val k) (word_sub stackpointer (word 96),104) /\
+      ALLPAIRS nonoverlapping
+         [(z,8 * 2 * val k); (word_sub stackpointer (word 96),96)]
+         [(word pc,LENGTH windows_bignum_emontredc_8n_cmc); (m,8 * val k)] /\
+      8 divides val k
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) windows_bignum_emontredc_8n_cmc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                WINDOWS_C_ARGUMENTS [k; z; m; w] s /\
+                bignum_from_memory (z,2 * val k) s = a /\
+                bignum_from_memory (m,val k) s = n)
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                ((n * val w + 1 == 0) (mod (2 EXP 64))
+                 ==> n * bignum_from_memory (z,val k) s + a =
+                     2 EXP (64 * val k) *
+                     (2 EXP (64 * val k) * val(WINDOWS_C_RETURN s) +
+                      bignum_from_memory
+                        (word_add z (word(8 * val k)),val k) s)))
+           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(z,8 * 2 * val k);
+                       memory :> bytes(word_sub stackpointer (word 96),96)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT));;
+

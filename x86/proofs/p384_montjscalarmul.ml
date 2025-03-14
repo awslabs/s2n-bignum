@@ -13039,6 +13039,32 @@ let P384_MONTJSCALARMUL_SUBROUTINE_CORRECT = time prove
    X86_ADD_RETURN_STACK_TAC P384_MONTJSCALARMUL_EXEC
      P384_MONTJSCALARMUL_CORRECT `[RBX; RBP; R12; R13; R14; R15]` 3144);;
 
+let P384_MONTJSCALARMUL_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar point n xyz pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 3144),3144))
+            [(word pc,LENGTH p384_montjscalarmul_cmc); (scalar,48); (point,144)] /\
+        ALL (nonoverlapping (res,144))
+            [(word pc,LENGTH p384_montjscalarmul_cmc); (word_sub stackpointer (word 3144),3152)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p384_montjscalarmul_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [res;scalar;point] s /\
+                  bignum_from_memory (scalar,6) s = n /\
+                  bignum_triple_from_memory (point,6) s = xyz)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. P IN group_carrier p384_group /\
+                      represents_p384 P xyz
+                      ==> represents_p384
+                            (group_pow p384_group P n)
+                            (bignum_triple_from_memory(res,6) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE[memory :> bytes(res,144);
+                     memory :> bytes(word_sub stackpointer (word 3144),3144)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJSCALARMUL_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -13109,3 +13135,30 @@ let WINDOWS_P384_MONTJSCALARMUL_SUBROUTINE_CORRECT = time prove
     `read (memory :> bytes64 (read RSP s)) s`] 7 THEN
   X86_STEPS_TAC WINDOWS_P384_MONTJSCALARMUL_EXEC (8--10) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let WINDOWS_P384_MONTJSCALARMUL_IBT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar point n xyz pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 3168),3168))
+            [(word pc,LENGTH windows_p384_montjscalarmul_cmc); (scalar,48); (point,144)] /\
+        ALL (nonoverlapping (res,144))
+            [(word pc,LENGTH windows_p384_montjscalarmul_cmc); (word_sub stackpointer (word 3168),3176)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_p384_montjscalarmul_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [res;scalar;point] s /\
+                  bignum_from_memory (scalar,6) s = n /\
+                  bignum_triple_from_memory (point,6) s = xyz)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. P IN group_carrier p384_group /\
+                      represents_p384 P xyz
+                      ==> represents_p384
+                            (group_pow p384_group P n)
+                            (bignum_triple_from_memory(res,6) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE[memory :> bytes(res,144);
+                     memory :> bytes(word_sub stackpointer (word 3168),3168)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_P384_MONTJSCALARMUL_SUBROUTINE_CORRECT));;
+

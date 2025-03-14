@@ -2940,6 +2940,32 @@ let SM2_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
   X86_PROMOTE_RETURN_STACK_TAC sm2_montjmixadd_mc SM2_MONTJMIXADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
 
+let SM2_MONTJMIXADD_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 240),240))
+            [(word pc,LENGTH sm2_montjmixadd_cmc); (p1,96); (p2,64)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH sm2_montjmixadd_cmc); (word_sub stackpointer (word 240),248)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) sm2_montjmixadd_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_pair_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_sm2 P1 t1 /\
+                          represents2_sm2 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_sm2 (group_mul sm2_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 240),240)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SM2_MONTJMIXADD_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -2977,3 +3003,30 @@ let WINDOWS_SM2_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
    windows_sm2_montjmixadd_mc sm2_montjmixadd_mc
    SM2_MONTJMIXADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
+
+let WINDOWS_SM2_MONTJMIXADD_IBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 256),256))
+            [(word pc,LENGTH windows_sm2_montjmixadd_cmc); (p1,96); (p2,64)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH windows_sm2_montjmixadd_cmc); (word_sub stackpointer (word 256),264)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_sm2_montjmixadd_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_pair_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_sm2 P1 t1 /\
+                          represents2_sm2 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_sm2 (group_mul sm2_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_SM2_MONTJMIXADD_SUBROUTINE_CORRECT));;
+

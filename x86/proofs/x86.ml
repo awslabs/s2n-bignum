@@ -3267,3 +3267,101 @@ let X86_SIMD_SHARPEN_RULE =
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`] in
   fun stdthm tac ->
     let stdthm' = subfn(concl stdthm) in prove(stdthm',tac);;
+
+(* ------------------------------------------------------------------------- *)
+(* Tweak a standard correctness theorem to use the version with an           *)
+(* initial ENDBR64 before the same code, assuming they are defined           *)
+(* together in the standard way.                                             *)
+(* ------------------------------------------------------------------------- *)
+
+let IBT_WRAP_THM = prove
+ (`R ,, R = R /\ MAYCHANGE [RIP] subsumed R /\
+   (!s y. P(write RIP y s) <=> P s) /\
+   ensures x86
+    (\s. bytes_loaded s (word (pc + 4)) mc /\
+         read RIP s = word (pc + 4) /\
+         P s) Q R
+   ==> ensures x86
+        (\s. bytes_loaded s (word pc)
+               (APPEND [word 0xf3; word 0x0f; word 0x1e; word 0xfa] mc) /\
+             read RIP s = word pc /\
+             P s) Q R`,
+  let execlen =
+    REWRITE_CONV[LENGTH_APPEND; LENGTH; ARITH]
+     `LENGTH(APPEND [word 0xf3:byte; word 0x0f; word 0x1e; word 0xfa] mc)`
+  and execstart = prove
+   (`!s pc. bytes_loaded s (word pc)
+                    (APPEND [word 0xf3; word 0x0f; word 0x1e; word 0xfa] mc)
+            ==> x86_decode s (word pc) (4,ENDBR64)`,
+    REPEAT GEN_TAC THEN REWRITE_TAC[bytes_loaded_append] THEN
+    DISCH_THEN(MP_TAC o CONJUNCT1) THEN
+    let Some th = (snd(X86_MK_EXEC_RULE
+     (REFL `[word 243; word 15; word 30; word 250]:byte list`))).(0) in
+    REWRITE_TAC[th]) in
+  let execth = (execlen,[|Some execstart; None; None; None|]) in
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+  EXISTS_TAC `(MAYCHANGE [RIP] ,, R):x86state->x86state->bool` THEN
+  ASM_SIMP_TAC[SUBSUMED_FOR_SEQ; SUBSUMED_REFL] THEN
+  MATCH_MP_TAC ENSURES_TRANS THEN
+  EXISTS_TAC `\s. bytes_loaded s (word (pc + 4)) mc /\
+                  read RIP s = word (pc + 4) /\
+                  P s` THEN
+  ASM_REWRITE_TAC[] THEN X86_SIM_TAC execth [1] THEN CONJ_TAC THENL
+   [FIRST_X_ASSUM(MP_TAC o CONJUNCT2 o REWRITE_RULE[bytes_loaded_append]) THEN
+    CONV_TAC(ONCE_DEPTH_CONV LENGTH_CONV) THEN REWRITE_TAC[WORD_ADD];
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE
+        (RATOR_CONV o RATOR_CONV) [MAYCHANGE_SING]) THEN
+    REWRITE_TAC[ASSIGNS; assign] THEN ASM_MESON_TAC[]]);;
+
+let ADD_IBT_TAC =
+  let tweak = subst[`pc + 4`,`pc:num`]
+  and EXPAND_TRIMMED_RULE =
+    let pth = prove
+     (`CONS (a:byte) (CONS b (CONS c (CONS d l))) = APPEND [a;b;c;d] l`,
+      REWRITE_TAC[APPEND]) in
+    fun fullmc trimc ->
+     GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [GSYM trimc]
+     (GEN_REWRITE_RULE RAND_CONV [pth] fullmc) in
+  fun fullmc trimc th ->
+    let expth = EXPAND_TRIMMED_RULE fullmc trimc in
+    W(fun (asl,w) ->
+          let avs = fst(strip_forall w) in
+          MAP_EVERY X_GEN_TAC avs THEN MP_TAC(SPECL (map tweak avs) th)) THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    REWRITE_TAC[C_ARGUMENTS; C_RETURN;
+                MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                WINDOWS_C_ARGUMENTS; ALL; ALLPAIRS;
+                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
+     [REPEAT(REWRITE_TAC[] THEN
+             ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
+              (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
+      REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
+
+      REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+      MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
+        NONOVERLAPPING_MODULO_SUBREGIONS) THEN
+      REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
+      MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
+      ALL_TAC]) THEN
+    DISCH_TAC THEN REWRITE_TAC[expth] THEN
+    MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL
+     [MAYCHANGE_IDEMPOT_TAC;
+      SUBSUMED_MAYCHANGE_TAC;
+      REPEAT GEN_TAC THEN
+      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
+      REFL_TAC;
+      FIRST_X_ASSUM ACCEPT_TAC];;
+
+let ADD_IBT_RULE th =
+  let trimctm =
+   rand(lhand(body(lhand(rator
+    (repeat (snd o dest_imp) (snd(strip_forall(concl th)))))))) in
+  let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
+  let fullmctm = rand(rand(concl trimcd)) in
+  let fullmc = find ((=) fullmctm o lhand o concl) (definitions()) in
+  let trimc =
+    CONV_RULE (RAND_CONV TRIM_LIST_CONV)
+     (GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [fullmc] trimcd) in
+  prove(subst[fullmctm,trimctm] (concl th),
+        ADD_IBT_TAC fullmc trimc th);;

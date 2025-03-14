@@ -119,6 +119,21 @@ let WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   X86_PROMOTE_RETURN_NOSTACK_TAC word_negmodinv_mc WORD_NEGMODINV_CORRECT);;
 
+let WORD_NEGMODINV_IBT_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+        ensures x86
+          (\s. bytes_loaded s (word pc) word_negmodinv_cmc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [a] s)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               (ODD(val a)
+                ==> (val a * val(C_RETURN s) + 1 == 0) (mod (2 EXP 64))))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_NEGMODINV_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -146,3 +161,22 @@ let WINDOWS_WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   WINDOWS_X86_WRAP_NOSTACK_TAC windows_word_negmodinv_mc word_negmodinv_mc
     WORD_NEGMODINV_CORRECT);;
+
+let WINDOWS_WORD_NEGMODINV_IBT_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_negmodinv_cmc)
+        ==>  ensures x86
+              (\s. bytes_loaded s (word pc) windows_word_negmodinv_cmc /\
+                   read RIP s = word pc /\
+                   read RSP s = stackpointer /\
+                   read (memory :> bytes64 stackpointer) s = returnaddress /\
+                   WINDOWS_C_ARGUMENTS [a] s)
+              (\s. read RIP s = returnaddress /\
+                   read RSP s = word_add stackpointer (word 8) /\
+                   (ODD(val a)
+                    ==> (val a * val(WINDOWS_C_RETURN s) + 1 == 0)
+                        (mod (2 EXP 64))))
+              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_WORD_NEGMODINV_SUBROUTINE_CORRECT));;
+

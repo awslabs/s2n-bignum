@@ -200,6 +200,21 @@ let BIGNUM_DIGITSIZE_SUBROUTINE_CORRECT = prove
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   X86_PROMOTE_RETURN_NOSTACK_TAC bignum_digitsize_mc BIGNUM_DIGITSIZE_CORRECT);;
 
+let BIGNUM_DIGITSIZE_IBT_SUBROUTINE_CORRECT = prove
+ (`!k a x pc stackpointer returnaddress.
+        ensures x86
+         (\s. bytes_loaded s (word pc) bignum_digitsize_cmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [k;a] s /\
+              bignum_from_memory(a,val k) s = x)
+         (\s'. read RIP s' = returnaddress /\
+               read RSP s' = word_add stackpointer (word 8) /\
+               C_RETURN s' = word((bitsize x + 63) DIV 64))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DIGITSIZE_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
@@ -227,3 +242,22 @@ let WINDOWS_BIGNUM_DIGITSIZE_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_digitsize_mc bignum_digitsize_mc
    BIGNUM_DIGITSIZE_CORRECT);;
+
+let WINDOWS_BIGNUM_DIGITSIZE_IBT_SUBROUTINE_CORRECT = prove
+ (`!k a x pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+            [(word pc,LENGTH windows_bignum_digitsize_cmc); (a,8 * val k)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) windows_bignum_digitsize_cmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [k;a] s /\
+                  bignum_from_memory(a,val k) s = x)
+             (\s'. read RIP s' = returnaddress /\
+                   read RSP s' = word_add stackpointer (word 8) /\
+                   WINDOWS_C_RETURN s' = word((bitsize x + 63) DIV 64))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_DIGITSIZE_SUBROUTINE_CORRECT));;
+
