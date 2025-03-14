@@ -1884,7 +1884,7 @@ let BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
       nonoverlapping (z,8 * 2 * val k) (word_sub stackpointer (word 80),88) /\
       ALLPAIRS nonoverlapping
          [(z,8 * 2 * val k); (word_sub stackpointer (word 80),80)]
-         [(word pc,0xb32); (m,8 * val k)] /\
+         [(word pc,LENGTH bignum_emontredc_8n_mc); (m,8 * val k)] /\
       8 divides val k
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_emontredc_8n_mc /\
@@ -1906,6 +1906,7 @@ let BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
             MAYCHANGE [memory :> bytes(z,8 * 2 * val k);
                        memory :> bytes(word_sub stackpointer (word 80),80)])`,
   let BIGNUM_EMONTREDC_8N_EXEC = X86_MK_EXEC_RULE bignum_emontredc_8n_mc in
+  REWRITE_TAC[fst BIGNUM_EMONTREDC_8N_EXEC] THEN
   REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   MP_TAC (X86_CORE_PROMOTE BIGNUM_EMONTREDC_8N_CORRECT) THEN
   REPLICATE_TAC 7 (MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
@@ -1951,7 +1952,7 @@ let WINDOWS_BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
       nonoverlapping (z,8 * 2 * val k) (word_sub stackpointer (word 96),104) /\
       ALLPAIRS nonoverlapping
          [(z,8 * 2 * val k); (word_sub stackpointer (word 96),96)]
-         [(word pc,0xb42); (m,8 * val k)] /\
+         [(word pc,LENGTH windows_bignum_emontredc_8n_mc); (m,8 * val k)] /\
       8 divides val k
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_emontredc_8n_mc /\
@@ -1982,6 +1983,7 @@ let WINDOWS_BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
           (TRANS windows_bignum_emontredc_8n_mc (N_SUBLIST_CONV
              (SPEC_ALL (X86_TRIM_EXEC_RULE bignum_emontredc_8n_mc)) 14
              (rhs(concl windows_bignum_emontredc_8n_mc)))))) in
+  REWRITE_TAC[fst BIGNUM_EMONTREDC_8N_EXEC] THEN
   REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   MP_TAC BIGNUM_EMONTREDC_8N_CORRECT THEN
   REPLICATE_TAC 6 (MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN

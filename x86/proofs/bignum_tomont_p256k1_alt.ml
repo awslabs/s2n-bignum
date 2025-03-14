@@ -175,7 +175,7 @@ let BIGNUM_TOMONT_P256K1_ALT_CORRECT = time prove
 
 let BIGNUM_TOMONT_P256K1_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x81) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_tomont_p256k1_alt_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_tomont_p256k1_alt_mc /\
@@ -204,8 +204,8 @@ let windows_bignum_tomont_p256k1_alt_mc = define_trimmed "windows_bignum_tomont_
 let WINDOWS_BIGNUM_TOMONT_P256K1_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x8b); (x,8 * 4)] /\
-        nonoverlapping (word pc,0x8b) (z,8 * 4) /\
+            [(word pc,LENGTH windows_bignum_tomont_p256k1_alt_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_tomont_p256k1_alt_mc) (z,8 * 4) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_tomont_p256k1_alt_mc /\

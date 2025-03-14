@@ -3204,7 +3204,7 @@ let CURVE25519_LADDERSTEP_SUBROUTINE_CORRECT = time prove
  (`!rr point P pp Pm Pn b pc stackpointer returnaddress.
     ALLPAIRS nonoverlapping
      [(rr,128); (word_sub stackpointer (word 464),464)]
-     [(word pc,0x14f6); (point,64); (pp,128)] /\
+     [(word pc,LENGTH curve25519_ladderstep_mc); (point,64); (pp,128)] /\
     nonoverlapping (rr,128) (word_sub stackpointer (word 464),472)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) curve25519_ladderstep_mc /\
@@ -3243,7 +3243,7 @@ let WINDOWS_CURVE25519_LADDERSTEP_SUBROUTINE_CORRECT = time prove
  (`!rr point P pp Pm Pn b pc stackpointer returnaddress.
     ALLPAIRS nonoverlapping
      [(rr,128); (word_sub stackpointer (word 480),480)]
-     [(word pc,0x1506); (point,64); (pp,128)] /\
+     [(word pc,LENGTH windows_curve25519_ladderstep_mc); (point,64); (pp,128)] /\
     nonoverlapping (rr,128) (word_sub stackpointer (word 480),488)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) windows_curve25519_ladderstep_mc /\

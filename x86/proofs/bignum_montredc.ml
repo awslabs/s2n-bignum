@@ -1064,8 +1064,8 @@ let BIGNUM_MONTREDC_SUBROUTINE_CORRECT = time prove
  (`!k z r x m p a n pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 56),64) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 56),56))
-            [(word pc,0x17d); (x,8 * val r); (m,8 * val k)] /\
-        ALL (nonoverlapping (z,8 * val k)) [(word pc,0x17d); (m,8 * val k)] /\
+            [(word pc,LENGTH bignum_montredc_mc); (x,8 * val r); (m,8 * val k)] /\
+        ALL (nonoverlapping (z,8 * val k)) [(word pc,LENGTH bignum_montredc_mc); (m,8 * val k)] /\
         (x = z \/ nonoverlapping (x,8 * val r) (z,8 * val k)) /\
         val p < 2 EXP 61 /\ val r < 2 EXP 61
         ==> ensures x86
@@ -1102,8 +1102,8 @@ let WINDOWS_BIGNUM_MONTREDC_SUBROUTINE_CORRECT = time prove
  (`!k z r x m p a n pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 72),80) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 72),72))
-            [(word pc,0x197); (x,8 * val r); (m,8 * val k)] /\
-        ALL (nonoverlapping (z,8 * val k)) [(word pc,0x197); (m,8 * val k)] /\
+            [(word pc,LENGTH windows_bignum_montredc_mc); (x,8 * val r); (m,8 * val k)] /\
+        ALL (nonoverlapping (z,8 * val k)) [(word pc,LENGTH windows_bignum_montredc_mc); (m,8 * val k)] /\
         (x = z \/ nonoverlapping (x,8 * val r) (z,8 * val k)) /\
         val p < 2 EXP 61 /\ val r < 2 EXP 61
         ==> ensures x86

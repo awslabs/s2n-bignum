@@ -3075,11 +3075,11 @@ let BIGNUM_KMUL_32_64_SUBROUTINE_CORRECT = prove
       ALL (nonoverlapping (word_sub stackpointer (word 64),72))
           [(z,8 * 64); (t,8 * 96)] /\
       ALL (nonoverlapping (word_sub stackpointer (word 64),64))
-         [(word pc,0x2233); (x,8 * 32); (y,8 * 32)] /\
+         [(word pc,LENGTH bignum_kmul_32_64_mc); (x,8 * 32); (y,8 * 32)] /\
       nonoverlapping (z,8 * 64) (t,8 * 96) /\
       ALLPAIRS nonoverlapping
        [(z,8 * 64); (t,8 * 96)]
-       [(word pc,0x2233); (x,8 * 32); (y,8 * 32)]
+       [(word pc,LENGTH bignum_kmul_32_64_mc); (x,8 * 32); (y,8 * 32)]
       ==> ensures x86
             (\s. bytes_loaded s (word pc) bignum_kmul_32_64_mc /\
                  read RIP s = word pc /\
@@ -3094,6 +3094,7 @@ let BIGNUM_KMUL_32_64_SUBROUTINE_CORRECT = prove
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 96);
                         memory :> bytes(word_sub stackpointer (word 64),64)])`,
+  REWRITE_TAC[fst BIGNUM_KMUL_32_64_EXEC] THEN
   REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`;
@@ -3158,11 +3159,11 @@ let WINDOWS_BIGNUM_KMUL_32_64_SUBROUTINE_CORRECT = prove
       ALL (nonoverlapping (word_sub stackpointer (word 80),88))
           [(z,8 * 64); (t,8 * 96)] /\
       ALL (nonoverlapping (word_sub stackpointer (word 80),80))
-         [(word pc,0x2243); (x,8 * 32); (y,8 * 32)] /\
+         [(word pc,LENGTH windows_bignum_kmul_32_64_mc); (x,8 * 32); (y,8 * 32)] /\
       nonoverlapping (z,8 * 64) (t,8 * 96) /\
       ALLPAIRS nonoverlapping
        [(z,8 * 64); (t,8 * 96)]
-       [(word pc,0x2243); (x,8 * 32); (y,8 * 32)]
+       [(word pc,LENGTH windows_bignum_kmul_32_64_mc); (x,8 * 32); (y,8 * 32)]
       ==> ensures x86
             (\s. bytes_loaded s (word pc) windows_bignum_kmul_32_64_mc /\
                  read RIP s = word pc /\
@@ -3177,6 +3178,7 @@ let WINDOWS_BIGNUM_KMUL_32_64_SUBROUTINE_CORRECT = prove
             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 96);
                         memory :> bytes(word_sub stackpointer (word 80),80)])`,
+  REWRITE_TAC[fst WINDOWS_BIGNUM_KMUL_32_64_EXEC] THEN
   REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`;

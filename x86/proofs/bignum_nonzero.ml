@@ -110,7 +110,7 @@ let windows_bignum_nonzero_mc = define_trimmed "windows_bignum_nonzero_mc" windo
 let WINDOWS_BIGNUM_NONZERO_SUBROUTINE_CORRECT = prove
  (`!k a x pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x26); (a,8 * val k)]
+            [(word pc,LENGTH windows_bignum_nonzero_mc); (a,8 * val k)]
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_bignum_nonzero_mc /\
                    read RIP s = word pc /\

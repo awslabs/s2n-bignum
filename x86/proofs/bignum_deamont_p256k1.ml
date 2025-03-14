@@ -217,7 +217,7 @@ let BIGNUM_DEAMONT_P256K1_CORRECT = time prove
 
 let BIGNUM_DEAMONT_P256K1_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0xc4) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_p256k1_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_deamont_p256k1_mc /\
@@ -247,8 +247,8 @@ let windows_bignum_deamont_p256k1_mc = define_trimmed "windows_bignum_deamont_p2
 let WINDOWS_BIGNUM_DEAMONT_P256K1_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0xce); (x,8 * 4)] /\
-        nonoverlapping (word pc,0xce) (z,8 * 4) /\
+            [(word pc,LENGTH windows_bignum_deamont_p256k1_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_deamont_p256k1_mc) (z,8 * 4) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_deamont_p256k1_mc /\

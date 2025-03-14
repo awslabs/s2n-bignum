@@ -303,7 +303,7 @@ let windows_bignum_eq_mc = define_trimmed "windows_bignum_eq_mc" windows_bignum_
 let WINDOWS_BIGNUM_EQ_SUBROUTINE_CORRECT = prove
  (`!m a x n b y pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-         [(word pc,0x53); (a,8 * val m); (b,8 * val n)]
+         [(word pc,LENGTH windows_bignum_eq_mc); (a,8 * val m); (b,8 * val n)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) windows_bignum_eq_mc /\
                read RIP s = word pc /\

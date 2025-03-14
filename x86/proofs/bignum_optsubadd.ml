@@ -251,7 +251,7 @@ let BIGNUM_OPTSUBADD_CORRECT = prove
 
 let BIGNUM_OPTSUBADD_SUBROUTINE_CORRECT = prove
  (`!k z x p y a b pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x42) (z,8 * val k) /\
+        nonoverlapping (word pc,LENGTH bignum_optsubadd_mc) (z,8 * val k) /\
         nonoverlapping (stackpointer,8) (z,8 * val k) /\
         (x = z \/ nonoverlapping(x,8 * val k) (z,8 * val k)) /\
         (y = z \/ nonoverlapping(y,8 * val k) (z,8 * val k))
@@ -286,8 +286,8 @@ let windows_bignum_optsubadd_mc = define_trimmed "windows_bignum_optsubadd_mc" w
 let WINDOWS_BIGNUM_OPTSUBADD_SUBROUTINE_CORRECT = prove
  (`!k z x p y a b pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x57); (x,8 * val k); (y,8 * val k)] /\
-        nonoverlapping (word pc,0x57) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_optsubadd_mc); (x,8 * val k); (y,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_optsubadd_mc) (z,8 * val k) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k) /\
         (x = z \/ nonoverlapping(x,8 * val k) (z,8 * val k)) /\
         (y = z \/ nonoverlapping(y,8 * val k) (z,8 * val k))

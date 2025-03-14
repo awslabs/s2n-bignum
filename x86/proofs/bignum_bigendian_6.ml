@@ -86,7 +86,7 @@ let BIGNUM_FROMBEBYTES_6_CORRECT = time prove
 let BIGNUM_FROMBEBYTES_6_SUBROUTINE_CORRECT = time prove
  (`!z x l pc stackpointer returnaddress.
       nonoverlapping (stackpointer,8) (z,8 * 6) /\
-      nonoverlapping (word pc,0x41) (z,8 * 6) /\
+      nonoverlapping (word pc,LENGTH bignum_bigendian_6_mc) (z,8 * 6) /\
       (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_bigendian_6_mc /\
@@ -135,7 +135,7 @@ let BIGNUM_TOBEBYTES_6_CORRECT = time prove
 let BIGNUM_TOBEBYTES_6_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
       nonoverlapping (stackpointer,8) (z,8 * 6) /\
-      nonoverlapping (word pc,0x41) (z,8 * 6) /\
+      nonoverlapping (word pc,LENGTH bignum_bigendian_6_mc) (z,8 * 6) /\
       (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_bigendian_6_mc /\
@@ -185,7 +185,7 @@ let BIGNUM_BIGENDIAN_6_CORRECT = time prove
 let BIGNUM_BIGENDIAN_6_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
       nonoverlapping (stackpointer,8) (z,8 * 6) /\
-      nonoverlapping (word pc,0x41) (z,8 * 6) /\
+      nonoverlapping (word pc,LENGTH bignum_bigendian_6_mc) (z,8 * 6) /\
       (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_bigendian_6_mc /\
@@ -215,9 +215,9 @@ let windows_bignum_bigendian_6_mc = define_trimmed "windows_bignum_bigendian_6_m
 let WINDOWS_BIGNUM_FROMBEBYTES_6_SUBROUTINE_CORRECT = time prove
  (`!z x l pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x4b); (x,8 * 6)] /\
+            [(word pc,LENGTH windows_bignum_bigendian_6_mc); (x,8 * 6)] /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 6) /\
-      nonoverlapping (word pc,0x4b) (z,8 * 6) /\
+      nonoverlapping (word pc,LENGTH windows_bignum_bigendian_6_mc) (z,8 * 6) /\
       (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_bigendian_6_mc /\
@@ -238,9 +238,9 @@ let WINDOWS_BIGNUM_FROMBEBYTES_6_SUBROUTINE_CORRECT = time prove
 let WINDOWS_BIGNUM_TOBEBYTES_6_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x4b); (x,8 * 6)] /\
+            [(word pc,LENGTH windows_bignum_bigendian_6_mc); (x,8 * 6)] /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 6) /\
-      nonoverlapping (word pc,0x4b) (z,8 * 6) /\
+      nonoverlapping (word pc,LENGTH windows_bignum_bigendian_6_mc) (z,8 * 6) /\
       (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_bigendian_6_mc /\
@@ -262,9 +262,9 @@ let WINDOWS_BIGNUM_TOBEBYTES_6_SUBROUTINE_CORRECT = time prove
 let WINDOWS_BIGNUM_BIGENDIAN_6_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x4b); (x,8 * 6)] /\
+            [(word pc,LENGTH windows_bignum_bigendian_6_mc); (x,8 * 6)] /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 6) /\
-      nonoverlapping (word pc,0x4b) (z,8 * 6) /\
+      nonoverlapping (word pc,LENGTH windows_bignum_bigendian_6_mc) (z,8 * 6) /\
       (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_bigendian_6_mc /\

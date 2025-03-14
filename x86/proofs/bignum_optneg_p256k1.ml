@@ -126,7 +126,7 @@ let BIGNUM_OPTNEG_P256K1_CORRECT = time prove
 
 let BIGNUM_OPTNEG_P256K1_SUBROUTINE_CORRECT = time prove
  (`!z q x n pc stackpointer returnaddress.
-        ALL (nonoverlapping (z,8 * 4)) [(word pc,0x5c); (stackpointer,8)]
+        ALL (nonoverlapping (z,8 * 4)) [(word pc,LENGTH bignum_optneg_p256k1_mc); (stackpointer,8)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_optneg_p256k1_mc /\
                   read RIP s = word pc /\
@@ -157,9 +157,9 @@ let windows_bignum_optneg_p256k1_mc = define_trimmed "windows_bignum_optneg_p256
 let WINDOWS_BIGNUM_OPTNEG_P256K1_SUBROUTINE_CORRECT = time prove
  (`!z q x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x69); (x,8 * 4)] /\
+            [(word pc,LENGTH windows_bignum_optneg_p256k1_mc); (x,8 * 4)] /\
         ALL (nonoverlapping (z,8 * 4))
-            [(word pc,0x69); (word_sub stackpointer (word 16),24)]
+            [(word pc,LENGTH windows_bignum_optneg_p256k1_mc); (word_sub stackpointer (word 16),24)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_optneg_p256k1_mc /\
                   read RIP s = word pc /\

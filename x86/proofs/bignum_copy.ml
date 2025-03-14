@@ -168,7 +168,7 @@ let BIGNUM_COPY_CORRECT = prove
 
 let BIGNUM_COPY_SUBROUTINE_CORRECT = prove
  (`!k z n x a pc stackpointer returnaddress.
-     nonoverlapping (word pc,0x34) (z,8 * val k) /\
+     nonoverlapping (word pc,LENGTH bignum_copy_mc) (z,8 * val k) /\
      nonoverlapping(z,8 * val k) (stackpointer,8) /\
      (x = z \/ nonoverlapping(x,8 * MIN (val n) (val k)) (z,8 * val k))
      ==> ensures x86
@@ -197,8 +197,8 @@ let windows_bignum_copy_mc = define_trimmed "windows_bignum_copy_mc" windows_big
 let WINDOWS_BIGNUM_COPY_SUBROUTINE_CORRECT = prove
  (`!k z n x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x44); (x,8 * val n)] /\
-     nonoverlapping (word pc,0x44) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_copy_mc); (x,8 * val n)] /\
+     nonoverlapping (word pc,LENGTH windows_bignum_copy_mc) (z,8 * val k) /\
      nonoverlapping(z,8 * val k) (word_sub stackpointer (word 16),24) /\
      (x = z \/ nonoverlapping(x,8 * MIN (val n) (val k)) (z,8 * val k))
      ==> ensures x86

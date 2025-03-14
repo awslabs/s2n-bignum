@@ -3602,8 +3602,8 @@ let CURVE25519_PXSCALARMUL_ALT_CORRECT = time prove
 let CURVE25519_PXSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
  (`!res scalar n point X pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 408),408))
-        [(word pc,0x16ce); (scalar,32); (point,32)] /\
-    nonoverlapping (res,64) (word pc,0x16ce) /\
+        [(word pc,LENGTH curve25519_pxscalarmul_alt_mc); (scalar,32); (point,32)] /\
+    nonoverlapping (res,64) (word pc,LENGTH curve25519_pxscalarmul_alt_mc) /\
     nonoverlapping (res,64) (word_sub stackpointer (word 408),416)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) curve25519_pxscalarmul_alt_mc /\
@@ -3642,8 +3642,8 @@ let windows_curve25519_pxscalarmul_alt_mc = define_trimmed "windows_curve25519_p
 let WINDOWS_CURVE25519_PXSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
  (`!res scalar n point X pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 424),424))
-        [(word pc,0x16db); (scalar,32); (point,32)] /\
-    nonoverlapping (res,64) (word pc,0x16db) /\
+        [(word pc,LENGTH windows_curve25519_pxscalarmul_alt_mc); (scalar,32); (point,32)] /\
+    nonoverlapping (res,64) (word pc,LENGTH windows_curve25519_pxscalarmul_alt_mc) /\
     nonoverlapping (res,64) (word_sub stackpointer (word 424),432)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) windows_curve25519_pxscalarmul_alt_mc /\

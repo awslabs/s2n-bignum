@@ -904,9 +904,9 @@ let BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
  (`!k z a x p y m n t pc stackpointer returnaddress.
      val k < 2 EXP 58 /\
      ALL (nonoverlapping (word_sub stackpointer (word 136),144))
-         [(word pc,0x711); (z,8 * val k); (t,24 * val k);
+         [(word pc,LENGTH bignum_modexp_mc); (z,8 * val k); (t,24 * val k);
           (a,8 * val k); (p,8 * val k); (m,8 * val k)] /\
-     ALL (nonoverlapping (word pc,0x711)) [(z,8 * val k); (t,24 * val k)] /\
+     ALL (nonoverlapping (word pc,LENGTH bignum_modexp_mc)) [(z,8 * val k); (t,24 * val k)] /\
      ALL (nonoverlapping (t,24 * val k))
          [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
      ==> ensures x86
@@ -926,6 +926,7 @@ let BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
                       memory :> bytes(t,24 * val k);
                       memory :> bytes(word_sub stackpointer (word 136),136)])`,
   MP_TAC BIGNUM_MODEXP_CORRECT THEN
+  REWRITE_TAC[fst BIGNUM_MODEXP_EXEC] THEN
   REPLICATE_TAC 10 (MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
   DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC 136 THEN
                        X_GEN_TAC `sptr:int64` THEN GEN_TAC THEN
@@ -958,9 +959,9 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
  (`!k z a x p y m n t pc stackpointer returnaddress.
      val k < 2 EXP 58 /\
      ALL (nonoverlapping (word_sub stackpointer (word 160),168))
-         [(word pc,0x731); (z,8 * val k); (t,24 * val k);
+         [(word pc,LENGTH windows_bignum_modexp_mc); (z,8 * val k); (t,24 * val k);
           (a,8 * val k); (p,8 * val k); (m,8 * val k)] /\
-     ALL (nonoverlapping (word pc,0x731)) [(z,8 * val k); (t,24 * val k)] /\
+     ALL (nonoverlapping (word pc,LENGTH windows_bignum_modexp_mc)) [(z,8 * val k); (t,24 * val k)] /\
      ALL (nonoverlapping (t,24 * val k))
          [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
      ==> ensures x86
@@ -982,7 +983,9 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
   let WINDOWS_BIGNUM_MODEXP_EXEC =
     X86_MK_EXEC_RULE windows_bignum_modexp_mc
   and subth =
-    X86_SIMD_SHARPEN_RULE BIGNUM_MODEXP_SUBROUTINE_CORRECT
+    X86_SIMD_SHARPEN_RULE
+    (REWRITE_RULE[fst BIGNUM_MODEXP_EXEC]
+      BIGNUM_MODEXP_SUBROUTINE_CORRECT)
     (MP_TAC BIGNUM_MODEXP_CORRECT THEN
      REPLICATE_TAC 10 (MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
      DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC 136 THEN
@@ -1002,6 +1005,7 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
        REWRITE_TAC(!simulation_precanon_thms) THEN
        X86_STEPS_TAC BIGNUM_MODEXP_EXEC (3--4) THEN
        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[])) in
+  REWRITE_TAC[fst WINDOWS_BIGNUM_MODEXP_EXEC] THEN
   REPLICATE_TAC 10 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 160 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN

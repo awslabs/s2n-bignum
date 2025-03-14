@@ -134,7 +134,7 @@ let BIGNUM_MOD_P384_6_CORRECT = time prove
 
 let BIGNUM_MOD_P384_6_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
-      nonoverlapping (word pc,0x7a) (z,8 * 6) /\
+      nonoverlapping (word pc,LENGTH bignum_mod_p384_6_mc) (z,8 * 6) /\
       nonoverlapping (stackpointer,8) (z,8 * 6)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_mod_p384_6_mc /\
@@ -162,8 +162,8 @@ let windows_bignum_mod_p384_6_mc = define_trimmed "windows_bignum_mod_p384_6_mc"
 let WINDOWS_BIGNUM_MOD_P384_6_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x84); (x,8 * 6)] /\
-      nonoverlapping (word pc,0x84) (z,8 * 6) /\
+            [(word pc,LENGTH windows_bignum_mod_p384_6_mc); (x,8 * 6)] /\
+      nonoverlapping (word pc,LENGTH windows_bignum_mod_p384_6_mc) (z,8 * 6) /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 6)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_mod_p384_6_mc /\

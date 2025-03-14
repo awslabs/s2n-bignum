@@ -103,7 +103,7 @@ let EDWARDS25519_ENCODE_CORRECT = prove
 let EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
  (`!z p x y pc stackpointer returnaddress.
       nonoverlapping (stackpointer,8) (z,32) /\
-      nonoverlapping (word pc,0x2f) (z,32)
+      nonoverlapping (word pc,LENGTH edwards25519_encode_mc) (z,32)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) edwards25519_encode_mc /\
                 read RIP s = word pc /\
@@ -133,9 +133,9 @@ let windows_edwards25519_encode_mc = define_trimmed "windows_edwards25519_encode
 let WINDOWS_EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
  (`!z p x y pc stackpointer returnaddress.
       ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-          [(word pc,0x39); (p,8 * 8)] /\
+          [(word pc,LENGTH windows_edwards25519_encode_mc); (p,8 * 8)] /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,32) /\
-      nonoverlapping (word pc,0x39) (z,32)
+      nonoverlapping (word pc,LENGTH windows_edwards25519_encode_mc) (z,32)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_edwards25519_encode_mc /\
                 read RIP s = word pc /\

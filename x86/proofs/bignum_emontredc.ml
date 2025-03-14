@@ -516,8 +516,8 @@ let BIGNUM_EMONTREDC_SUBROUTINE_CORRECT = time prove
         nonoverlapping (word_sub stackpointer (word 32),40)
                        (z,8 * 2 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,0x92); (m,8 * val k)] /\
-        nonoverlapping (word pc,0x92) (z,8 * 2 * val k) /\
+            [(word pc,LENGTH bignum_emontredc_mc); (m,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_emontredc_mc) (z,8 * 2 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * 2 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_emontredc_mc /\
@@ -555,8 +555,8 @@ let WINDOWS_BIGNUM_EMONTREDC_SUBROUTINE_CORRECT = time prove
         nonoverlapping (word_sub stackpointer (word 48),56)
                        (z,8 * 2 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,0xa2); (m,8 * val k)] /\
-        nonoverlapping (word pc,0xa2) (z,8 * 2 * val k) /\
+            [(word pc,LENGTH windows_bignum_emontredc_mc); (m,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_emontredc_mc) (z,8 * 2 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * 2 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_emontredc_mc /\

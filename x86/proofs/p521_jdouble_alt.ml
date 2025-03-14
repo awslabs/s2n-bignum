@@ -6826,9 +6826,9 @@ let P521_JDOUBLE_ALT_CORRECT = time prove
 let P521_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 624),624))
-            [(word pc,0x4290); (p1,216)] /\
+            [(word pc,LENGTH p521_jdouble_alt_mc); (p1,216)] /\
         ALL (nonoverlapping (p3,216))
-            [(word pc,0x4290); (word_sub stackpointer (word 624),632)]
+            [(word pc,LENGTH p521_jdouble_alt_mc); (word_sub stackpointer (word 624),632)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p521_jdouble_alt_mc /\
                   read RIP s = word pc /\
@@ -6859,9 +6859,9 @@ let windows_p521_jdouble_alt_mc = define_trimmed "windows_p521_jdouble_alt_mc" w
 let WINDOWS_P521_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 640),640))
-            [(word pc,0x429a); (p1,216)] /\
+            [(word pc,LENGTH windows_p521_jdouble_alt_mc); (p1,216)] /\
         ALL (nonoverlapping (p3,216))
-            [(word pc,0x429a); (word_sub stackpointer (word 640),648)]
+            [(word pc,LENGTH windows_p521_jdouble_alt_mc); (word_sub stackpointer (word 640),648)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p521_jdouble_alt_mc /\
                   read RIP s = word pc /\

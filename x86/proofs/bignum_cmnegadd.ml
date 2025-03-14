@@ -469,8 +469,8 @@ let BIGNUM_CMNEGADD_SUBROUTINE_CORRECT = prove
  (`!p z d c n x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * val p) (word_sub stackpointer (word 8),16) /\
         ALL (nonoverlapping (word_sub stackpointer (word 8),8))
-            [(word pc,0x8f); (x,8 * val n)] /\
-        nonoverlapping (word pc,0x8f) (z,8 * val p) /\
+            [(word pc,LENGTH bignum_cmnegadd_mc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH bignum_cmnegadd_mc) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_cmnegadd_mc /\
@@ -507,8 +507,8 @@ let WINDOWS_BIGNUM_CMNEGADD_SUBROUTINE_CORRECT = prove
  (`!p z d c n x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * val p) (word_sub stackpointer (word 24),32) /\
         ALL (nonoverlapping (word_sub stackpointer (word 24),24))
-            [(word pc,0xa4); (x,8 * val n)] /\
-        nonoverlapping (word pc,0xa4) (z,8 * val p) /\
+            [(word pc,LENGTH windows_bignum_cmnegadd_mc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_cmnegadd_mc) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_cmnegadd_mc /\

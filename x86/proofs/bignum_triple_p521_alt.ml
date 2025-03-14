@@ -293,8 +293,8 @@ let BIGNUM_TRIPLE_P521_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 24),32) (z,8 * 9) /\
         ALL (nonoverlapping (word_sub stackpointer (word 24),24))
-            [(word pc,0xfe); (x,8 * 9)] /\
-        nonoverlapping (word pc,0xfe) (z,8 * 9)
+            [(word pc,LENGTH bignum_triple_p521_alt_mc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH bignum_triple_p521_alt_mc) (z,8 * 9)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_triple_p521_alt_mc /\
                   read RIP s = word pc /\
@@ -326,8 +326,8 @@ let WINDOWS_BIGNUM_TRIPLE_P521_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 40),48) (z,8 * 9) /\
         ALL (nonoverlapping (word_sub stackpointer (word 40),40))
-            [(word pc,0x108); (x,8 * 9)] /\
-        nonoverlapping (word pc,0x108) (z,8 * 9)
+            [(word pc,LENGTH windows_bignum_triple_p521_alt_mc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_triple_p521_alt_mc) (z,8 * 9)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_triple_p521_alt_mc /\
                   read RIP s = word pc /\

@@ -7425,9 +7425,9 @@ let P521_JMIXADD_CORRECT = time prove
 let P521_JMIXADD_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 544),544))
-            [(word pc,0x5941); (p1,216); (p2,144)] /\
+            [(word pc,LENGTH p521_jmixadd_mc); (p1,216); (p2,144)] /\
         ALL (nonoverlapping (p3,216))
-            [(word pc,0x5941); (word_sub stackpointer (word 544),552)]
+            [(word pc,LENGTH p521_jmixadd_mc); (word_sub stackpointer (word 544),552)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p521_jmixadd_mc /\
                   read RIP s = word pc /\
@@ -7461,9 +7461,9 @@ let windows_p521_jmixadd_mc = define_trimmed "windows_p521_jmixadd_mc" windows_p
 let WINDOWS_P521_JMIXADD_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 560),560))
-            [(word pc,0x594e); (p1,216); (p2,144)] /\
+            [(word pc,LENGTH windows_p521_jmixadd_mc); (p1,216); (p2,144)] /\
         ALL (nonoverlapping (p3,216))
-            [(word pc,0x594e); (word_sub stackpointer (word 560),568)]
+            [(word pc,LENGTH windows_p521_jmixadd_mc); (word_sub stackpointer (word 560),568)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p521_jmixadd_mc /\
                   read RIP s = word pc /\

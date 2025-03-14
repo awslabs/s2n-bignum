@@ -84,7 +84,7 @@ let windows_bignum_nonzero_4_mc = define_trimmed "windows_bignum_nonzero_4_mc" w
 let WINDOWS_BIGNUM_NONZERO_4_SUBROUTINE_CORRECT = prove
  (`!x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x23); (x,8 * 4)]
+            [(word pc,LENGTH windows_bignum_nonzero_4_mc); (x,8 * 4)]
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_bignum_nonzero_4_mc /\
                    read RIP s = word pc /\

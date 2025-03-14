@@ -75,7 +75,7 @@ let windows_word_bytereverse_mc = define_trimmed "windows_word_bytereverse_mc" w
 
 let WINDOWS_WORD_BYTEREVERSE_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0xe)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_bytereverse_mc)
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_word_bytereverse_mc /\
                    read RIP s = word pc /\

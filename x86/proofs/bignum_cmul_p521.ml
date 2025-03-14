@@ -350,7 +350,7 @@ let BIGNUM_CMUL_P521_SUBROUTINE_CORRECT = time prove
  (`!z c x a pc stackpointer returnaddress.
        nonoverlapping (word_sub stackpointer (word 32),32) (x,8 * 9) /\
        nonoverlapping (z,8 * 9) (word_sub stackpointer (word 32),40) /\
-       ALL (nonoverlapping (word pc,0xdf))
+       ALL (nonoverlapping (word pc,LENGTH bignum_cmul_p521_mc))
            [(z,8 * 9); (word_sub stackpointer (word 32),32)]
        ==> ensures x86
             (\s. bytes_loaded s (word pc) bignum_cmul_p521_mc /\
@@ -382,7 +382,7 @@ let WINDOWS_BIGNUM_CMUL_P521_SUBROUTINE_CORRECT = time prove
  (`!z c x a pc stackpointer returnaddress.
        nonoverlapping (word_sub stackpointer (word 48),48) (x,8 * 9) /\
        nonoverlapping (z,8 * 9) (word_sub stackpointer (word 48),56) /\
-       ALL (nonoverlapping (word pc,0xec))
+       ALL (nonoverlapping (word pc,LENGTH windows_bignum_cmul_p521_mc))
            [(z,8 * 9); (word_sub stackpointer (word 48),48)]
        ==> ensures x86
             (\s. bytes_loaded s (word pc) windows_bignum_cmul_p521_mc /\

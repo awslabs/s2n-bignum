@@ -438,7 +438,7 @@ let WINDOWS_BIGNUM_LT_CORRECT = prove
 let WINDOWS_BIGNUM_LT_SUBROUTINE_CORRECT = prove
  (`!m a x n b y pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x7e); (a,8 * val m); (b,8 * val n)]
+            [(word pc,LENGTH windows_bignum_lt_mc); (a,8 * val m); (b,8 * val n)]
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_bignum_lt_mc /\
                    read RIP s = word pc /\

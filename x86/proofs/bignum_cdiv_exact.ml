@@ -474,8 +474,8 @@ let BIGNUM_CDIV_EXACT_SUBROUTINE_CORRECT = prove
  (`!k z n x m a pc stackpointer returnaddress.
         nonoverlapping (z,8 * val k) (word_sub stackpointer (word 32),40) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,0xd2); (x,8 * val n)] /\
-        nonoverlapping (word pc,0xd2) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_cdiv_exact_mc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH bignum_cdiv_exact_mc) (z,8 * val k) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val k))
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_cdiv_exact_mc /\
@@ -508,8 +508,8 @@ let WINDOWS_BIGNUM_CDIV_EXACT_SUBROUTINE_CORRECT = prove
  (`!k z n x m a pc stackpointer returnaddress.
         nonoverlapping (z,8 * val k) (word_sub stackpointer (word 48),56) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,0xe7); (x,8 * val n)] /\
-        nonoverlapping (word pc,0xe7) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_cdiv_exact_mc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_cdiv_exact_mc) (z,8 * val k) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val k))
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_cdiv_exact_mc /\

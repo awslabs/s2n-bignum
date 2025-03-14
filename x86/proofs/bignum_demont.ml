@@ -736,8 +736,8 @@ let BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
         nonoverlapping (word_sub stackpointer (word 24),32)
                        (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 24),24))
-            [(word pc,0x116); (m,8 * val k); (x,8 * val k)] /\
-        nonoverlapping (word pc,0x116) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_demont_mc); (m,8 * val k); (x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_demont_mc) (z,8 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * val k) /\
         (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
         ==> ensures x86
@@ -773,8 +773,8 @@ let WINDOWS_BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
         nonoverlapping (word_sub stackpointer (word 40),48)
                        (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 40),40))
-            [(word pc,0x126); (m,8 * val k); (x,8 * val k)] /\
-        nonoverlapping (word pc,0x126) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_demont_mc); (m,8 * val k); (x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_demont_mc) (z,8 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * val k) /\
         (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
         ==> ensures x86

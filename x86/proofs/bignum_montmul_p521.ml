@@ -913,9 +913,9 @@ let BIGNUM_MONTMUL_P521_CORRECT = prove
 let BIGNUM_MONTMUL_P521_SUBROUTINE_CORRECT = prove
  (`!z x y a b pc stackpointer returnaddress.
        ALL (nonoverlapping (z,8 * 9))
-           [(word pc,0x6dd); (word_sub stackpointer (word 112),120)] /\
+           [(word pc,LENGTH bignum_montmul_p521_mc); (word_sub stackpointer (word 112),120)] /\
        ALL (nonoverlapping (word_sub stackpointer (word 112),112))
-           [(word pc,0x6dd); (x,8 * 9); (y,8 * 9)]
+           [(word pc,LENGTH bignum_montmul_p521_mc); (x,8 * 9); (y,8 * 9)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_montmul_p521_mc /\
                   read RIP s = word pc /\
@@ -948,9 +948,9 @@ let windows_bignum_montmul_p521_mc = define_trimmed "windows_bignum_montmul_p521
 let WINDOWS_BIGNUM_MONTMUL_P521_SUBROUTINE_CORRECT = prove
  (`!z x y a b pc stackpointer returnaddress.
        ALL (nonoverlapping (z,8 * 9))
-           [(word pc,0x6ea); (word_sub stackpointer (word 128),136)] /\
+           [(word pc,LENGTH windows_bignum_montmul_p521_mc); (word_sub stackpointer (word 128),136)] /\
        ALL (nonoverlapping (word_sub stackpointer (word 128),128))
-           [(word pc,0x6ea); (x,8 * 9); (y,8 * 9)]
+           [(word pc,LENGTH windows_bignum_montmul_p521_mc); (x,8 * 9); (y,8 * 9)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_montmul_p521_mc /\
                   read RIP s = word pc /\

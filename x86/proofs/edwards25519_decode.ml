@@ -2101,9 +2101,9 @@ let EDWARDS25519_DECODE_CORRECT = time prove
 let EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
  (`!z c n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 312),312))
-            [(word pc,0x97e); (z,8 * 8); (c,8 * 4)] /\
+            [(word pc,LENGTH edwards25519_decode_mc); (z,8 * 8); (c,8 * 4)] /\
         ALL (nonoverlapping (z,8 * 8))
-            [(word pc,0x97e); (word_sub stackpointer (word 312),320)]
+            [(word pc,LENGTH edwards25519_decode_mc); (word_sub stackpointer (word 312),320)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) edwards25519_decode_mc /\
                   read RIP s = word pc /\
@@ -2138,9 +2138,9 @@ let windows_edwards25519_decode_mc = define_trimmed "windows_edwards25519_decode
 let WINDOWS_EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
  (`!z c n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 336),336))
-            [(word pc,0x98e); (z,8 * 8); (c,8 * 4)] /\
+            [(word pc,LENGTH windows_edwards25519_decode_mc); (z,8 * 8); (c,8 * 4)] /\
         ALL (nonoverlapping (z,8 * 8))
-            [(word pc,0x98e); (word_sub stackpointer (word 336),344)]
+            [(word pc,LENGTH windows_edwards25519_decode_mc); (word_sub stackpointer (word 336),344)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_edwards25519_decode_mc /\
                   read RIP s = word pc /\
@@ -2161,10 +2161,13 @@ let WINDOWS_EDWARDS25519_DECODE_SUBROUTINE_CORRECT = time prove
   let WINDOWS_EDWARDS25519_DECODE_EXEC =
     X86_MK_EXEC_RULE windows_edwards25519_decode_mc
   and subth =
-   X86_SIMD_SHARPEN_RULE EDWARDS25519_DECODE_SUBROUTINE_CORRECT
-   (X86_ADD_RETURN_STACK_TAC
-    EDWARDS25519_DECODE_EXEC EDWARDS25519_DECODE_CORRECT
-    `[RBX; RBP; R12; R13; R14; R15]` 312) in
+   X86_SIMD_SHARPEN_RULE
+    (REWRITE_RULE[fst EDWARDS25519_DECODE_EXEC]
+      EDWARDS25519_DECODE_SUBROUTINE_CORRECT)
+    (X86_ADD_RETURN_STACK_TAC
+     EDWARDS25519_DECODE_EXEC EDWARDS25519_DECODE_CORRECT
+     `[RBX; RBP; R12; R13; R14; R15]` 312) in
+  REWRITE_TAC[fst WINDOWS_EDWARDS25519_DECODE_EXEC] THEN
   REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 336 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS; C_RETURN;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN

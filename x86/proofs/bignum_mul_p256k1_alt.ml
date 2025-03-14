@@ -298,10 +298,10 @@ let BIGNUM_MUL_P256K1_ALT_CORRECT = time prove
 
 let BIGNUM_MUL_P256K1_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y m n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x1b8) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_mul_p256k1_alt_mc) (z,8 * 4) /\
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 32),40) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,0x1b8); (x,8 * 4); (y,8 * 4)]
+            [(word pc,LENGTH bignum_mul_p256k1_alt_mc); (x,8 * 4); (y,8 * 4)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_mul_p256k1_alt_mc /\
                   read RIP s = word pc /\
@@ -331,10 +331,10 @@ let windows_bignum_mul_p256k1_alt_mc = define_trimmed "windows_bignum_mul_p256k1
 
 let WINDOWS_BIGNUM_MUL_P256K1_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y m n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x1c5) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH windows_bignum_mul_p256k1_alt_mc) (z,8 * 4) /\
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 48),56) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,0x1c5); (x,8 * 4); (y,8 * 4)]
+            [(word pc,LENGTH windows_bignum_mul_p256k1_alt_mc); (x,8 * 4); (y,8 * 4)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_mul_p256k1_alt_mc /\
                   read RIP s = word pc /\

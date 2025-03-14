@@ -89,7 +89,7 @@ let windows_word_popcount_mc = define_trimmed "windows_word_popcount_mc" windows
 
 let WINDOWS_WORD_POPCOUNT_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0x61)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_popcount_mc)
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_word_popcount_mc /\
                    read RIP s = word pc /\

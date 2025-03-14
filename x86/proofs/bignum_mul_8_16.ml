@@ -475,8 +475,8 @@ let BIGNUM_MUL_8_16_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 48),56) (z,8 * 16) /\
      ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-         [(word pc,0x4cb); (x,8 * 8); (y,8 * 8)] /\
-     nonoverlapping (word pc,0x4cb) (z,8 * 16) /\
+         [(word pc,LENGTH bignum_mul_8_16_mc); (x,8 * 8); (y,8 * 8)] /\
+     nonoverlapping (word pc,LENGTH bignum_mul_8_16_mc) (z,8 * 16) /\
      nonoverlapping (x,8 * 8) (z,8 * 16) /\
      (y = z \/ nonoverlapping (y,8 * 8) (z,8 * 16))
      ==> ensures x86
@@ -509,8 +509,8 @@ let WINDOWS_BIGNUM_MUL_8_16_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 64),72) (z,8 * 16) /\
      ALL (nonoverlapping (word_sub stackpointer (word 64),64))
-         [(word pc,0x4d8); (x,8 * 8); (y,8 * 8)] /\
-     nonoverlapping (word pc,0x4d8) (z,8 * 16) /\
+         [(word pc,LENGTH windows_bignum_mul_8_16_mc); (x,8 * 8); (y,8 * 8)] /\
+     nonoverlapping (word pc,LENGTH windows_bignum_mul_8_16_mc) (z,8 * 16) /\
      nonoverlapping (x,8 * 8) (z,8 * 16) /\
      (y = z \/ nonoverlapping (y,8 * 8) (z,8 * 16))
      ==> ensures x86

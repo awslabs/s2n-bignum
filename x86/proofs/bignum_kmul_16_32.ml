@@ -1782,9 +1782,9 @@ let BIGNUM_KMUL_16_32_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 48),56) (z,8 * 32) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,0x1430); (x,8 * 16); (y,8 * 16)] /\
+            [(word pc,LENGTH bignum_kmul_16_32_mc); (x,8 * 16); (y,8 * 16)] /\
         ALL (nonoverlapping (z,8 * 32))
-            [(word pc,0x1430); (x,8 * 16); (y,8 * 16)]
+            [(word pc,LENGTH bignum_kmul_16_32_mc); (x,8 * 16); (y,8 * 16)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_kmul_16_32_mc /\
                   read RIP s = word pc /\
@@ -1815,9 +1815,9 @@ let WINDOWS_BIGNUM_KMUL_16_32_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 64),72) (z,8 * 32) /\
         ALL (nonoverlapping (word_sub stackpointer (word 64),64))
-            [(word pc,0x143d); (x,8 * 16); (y,8 * 16)] /\
+            [(word pc,LENGTH windows_bignum_kmul_16_32_mc); (x,8 * 16); (y,8 * 16)] /\
         ALL (nonoverlapping (z,8 * 32))
-            [(word pc,0x143d); (x,8 * 16); (y,8 * 16)]
+            [(word pc,LENGTH windows_bignum_kmul_16_32_mc); (x,8 * 16); (y,8 * 16)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_kmul_16_32_mc /\
                   read RIP s = word pc /\

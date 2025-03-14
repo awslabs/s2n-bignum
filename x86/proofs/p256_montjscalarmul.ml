@@ -6833,9 +6833,9 @@ let P256_MONTJSCALARMUL_CORRECT = time prove
 let P256_MONTJSCALARMUL_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 1368),1368))
-            [(word pc,0x4adc); (scalar,32); (point,96)] /\
+            [(word pc,LENGTH p256_montjscalarmul_mc); (scalar,32); (point,96)] /\
         ALL (nonoverlapping (res,96))
-            [(word pc,0x4adc); (word_sub stackpointer (word 1368),1376)]
+            [(word pc,LENGTH p256_montjscalarmul_mc); (word_sub stackpointer (word 1368),1376)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p256_montjscalarmul_mc /\
                   read RIP s = word pc /\
@@ -6869,9 +6869,9 @@ let windows_p256_montjscalarmul_mc = define_trimmed "windows_p256_montjscalarmul
 let WINDOWS_P256_MONTJSCALARMUL_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 1392),1392))
-            [(word pc,0x4aef); (scalar,32); (point,96)] /\
+            [(word pc,LENGTH windows_p256_montjscalarmul_mc); (scalar,32); (point,96)] /\
         ALL (nonoverlapping (res,96))
-            [(word pc,0x4aef); (word_sub stackpointer (word 1392),1400)]
+            [(word pc,LENGTH windows_p256_montjscalarmul_mc); (word_sub stackpointer (word 1392),1400)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p256_montjscalarmul_mc /\
                   read RIP s = word pc /\
@@ -6899,6 +6899,7 @@ let WINDOWS_P256_MONTJSCALARMUL_SUBROUTINE_CORRECT = time prove
   let subth =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
      (REWRITE_RULE[bignum_triple_from_memory] baseth) in
+  REWRITE_TAC[fst WINDOWS_P256_MONTJSCALARMUL_EXEC] THEN
   REPLICATE_TAC 6 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 1392 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN

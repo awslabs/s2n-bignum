@@ -355,7 +355,7 @@ let BIGNUM_MODDOUBLE_CORRECT = prove
 
 let BIGNUM_MODDOUBLE_SUBROUTINE_CORRECT = prove
  (`!k z x m a n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x5b) (z,8 * val k) /\
+        nonoverlapping (word pc,LENGTH bignum_moddouble_mc) (z,8 * val k) /\
         nonoverlapping (stackpointer,8) (z,8 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * val k) /\
         (x = z \/ nonoverlapping(x,8 * val k) (z,8 * val k))
@@ -386,8 +386,8 @@ let windows_bignum_moddouble_mc = define_trimmed "windows_bignum_moddouble_mc" w
 let WINDOWS_BIGNUM_MODDOUBLE_SUBROUTINE_CORRECT = prove
  (`!k z x m a n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x6b); (x,8 * val k); (m,8 * val k)] /\
-        nonoverlapping (word pc,0x6b) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_moddouble_mc); (x,8 * val k); (m,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_moddouble_mc) (z,8 * val k) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * val k) /\
         (x = z \/ nonoverlapping(x,8 * val k) (z,8 * val k))

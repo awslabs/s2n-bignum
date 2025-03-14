@@ -2359,9 +2359,9 @@ let SECP256K1_JDOUBLE_CORRECT = time prove
 let SECP256K1_JDOUBLE_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 424),424))
-            [(word pc,0xe0b); (p1,96)] /\
+            [(word pc,LENGTH secp256k1_jdouble_mc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0xe0b); (word_sub stackpointer (word 424),432)]
+            [(word pc,LENGTH secp256k1_jdouble_mc); (word_sub stackpointer (word 424),432)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) secp256k1_jdouble_mc /\
                   read RIP s = word pc /\
@@ -2392,9 +2392,9 @@ let windows_secp256k1_jdouble_mc = define_trimmed "windows_secp256k1_jdouble_mc"
 let WINDOWS_SECP256K1_JDOUBLE_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 440),440))
-            [(word pc,0xe15); (p1,96)] /\
+            [(word pc,LENGTH windows_secp256k1_jdouble_mc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0xe15); (word_sub stackpointer (word 440),448)]
+            [(word pc,LENGTH windows_secp256k1_jdouble_mc); (word_sub stackpointer (word 440),448)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_secp256k1_jdouble_mc /\
                   read RIP s = word pc /\

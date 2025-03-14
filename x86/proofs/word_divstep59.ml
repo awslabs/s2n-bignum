@@ -1690,7 +1690,7 @@ let WORD_DIVSTEP59_CORRECT = prove
 let WORD_DIVSTEP59_SUBROUTINE_CORRECT = prove
  (`!m d f g pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 32),40) (m,32) /\
-     ALL (nonoverlapping (word pc,0xd1b))
+     ALL (nonoverlapping (word pc,LENGTH word_divstep59_mc))
          [(word_sub stackpointer (word 32),32); (m,32)]
    ==> ensures x86
         (\s. bytes_loaded s (word pc) word_divstep59_mc /\
@@ -1727,7 +1727,7 @@ let windows_word_divstep59_mc = define_trimmed "windows_word_divstep59_mc" windo
 let WINDOWS_WORD_DIVSTEP59_SUBROUTINE_CORRECT = time prove
  (`!m d f g pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 48),56) (m,32) /\
-     ALL (nonoverlapping (word pc,0xd2b))
+     ALL (nonoverlapping (word pc,LENGTH windows_word_divstep59_mc))
          [(word_sub stackpointer (word 48),48); (m,32)]
    ==> ensures x86
         (\s. bytes_loaded s (word pc) windows_word_divstep59_mc /\

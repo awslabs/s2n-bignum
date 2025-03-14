@@ -1404,7 +1404,7 @@ let windows_bignum_cmod_mc = define_trimmed "windows_bignum_cmod_mc" windows_big
 let WINDOWS_BIGNUM_CMOD_SUBROUTINE_CORRECT = prove
  (`!k x m a pc stackpointer returnaddress.
       ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-          [(word pc,0x17b); (x,8 * val k)]
+          [(word pc,LENGTH windows_bignum_cmod_mc); (x,8 * val k)]
       ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_cmod_mc /\
                   read RIP s = word pc /\

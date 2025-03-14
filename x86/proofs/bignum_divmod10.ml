@@ -225,7 +225,7 @@ let BIGNUM_DIVMOD10_CORRECT = time prove
 
 let BIGNUM_DIVMOD10_SUBROUTINE_CORRECT = time prove
  (`!k z n pc stackpointer returnaddress.
-      nonoverlapping (word pc,0x52) (z,8 * val k) /\
+      nonoverlapping (word pc,LENGTH bignum_divmod10_mc) (z,8 * val k) /\
       nonoverlapping (stackpointer,8) (z,8 * val k)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_divmod10_mc /\
@@ -253,8 +253,8 @@ let windows_bignum_divmod10_mc = define_trimmed "windows_bignum_divmod10_mc" win
 
 let WINDOWS_BIGNUM_DIVMOD10_SUBROUTINE_CORRECT = time prove
  (`!k z n pc stackpointer returnaddress.
-      nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0x5c) /\
-      nonoverlapping (word pc,0x5c) (z,8 * val k) /\
+      nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_bignum_divmod10_mc) /\
+      nonoverlapping (word pc,LENGTH windows_bignum_divmod10_mc) (z,8 * val k) /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_divmod10_mc /\

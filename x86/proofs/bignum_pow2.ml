@@ -135,7 +135,7 @@ let BIGNUM_POW2_CORRECT = prove
 
 let BIGNUM_POW2_SUBROUTINE_CORRECT = prove
  (`!k z n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x2e) (z,8 * val k) /\
+        nonoverlapping (word pc,LENGTH bignum_pow2_mc) (z,8 * val k) /\
         nonoverlapping (stackpointer,8) (z,8 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_pow2_mc /\
@@ -163,8 +163,8 @@ let windows_bignum_pow2_mc = define_trimmed "windows_bignum_pow2_mc" windows_big
 let WINDOWS_BIGNUM_POW2_SUBROUTINE_CORRECT = prove
  (`!k z n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x3b)] /\
-        nonoverlapping (word pc,0x3b) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_pow2_mc)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_pow2_mc) (z,8 * val k) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_pow2_mc /\

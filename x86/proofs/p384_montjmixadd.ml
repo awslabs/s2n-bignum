@@ -5478,9 +5478,9 @@ let P384_MONTJMIXADD_CORRECT = time prove
 let P384_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 352),352))
-            [(word pc,0x3bcd); (p1,144); (p2,96)] /\
+            [(word pc,LENGTH p384_montjmixadd_mc); (p1,144); (p2,96)] /\
         ALL (nonoverlapping (p3,144))
-            [(word pc,0x3bcd); (word_sub stackpointer (word 352),360)]
+            [(word pc,LENGTH p384_montjmixadd_mc); (word_sub stackpointer (word 352),360)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p384_montjmixadd_mc /\
                   read RIP s = word pc /\
@@ -5514,9 +5514,9 @@ let windows_p384_montjmixadd_mc = define_trimmed "windows_p384_montjmixadd_mc" w
 let WINDOWS_P384_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 368),368))
-            [(word pc,0x3bda); (p1,144); (p2,96)] /\
+            [(word pc,LENGTH windows_p384_montjmixadd_mc); (p1,144); (p2,96)] /\
         ALL (nonoverlapping (p3,144))
-            [(word pc,0x3bda); (word_sub stackpointer (word 368),376)]
+            [(word pc,LENGTH windows_p384_montjmixadd_mc); (word_sub stackpointer (word 368),376)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p384_montjmixadd_mc /\
                   read RIP s = word pc /\

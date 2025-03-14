@@ -96,7 +96,7 @@ let BIGNUM_TOLEBYTES_P521_CORRECT = prove
 let BIGNUM_TOLEBYTES_P521_SUBROUTINE_CORRECT = prove
  (`!z x n pc stackpointer returnaddress.
       nonoverlapping (stackpointer,8) (z,66) /\
-      nonoverlapping (word pc,0x47) (z,66) /\
+      nonoverlapping (word pc,LENGTH bignum_tolebytes_p521_mc) (z,66) /\
       (x = z \/ nonoverlapping (x,8 * 9) (z,66))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_tolebytes_p521_mc /\
@@ -125,9 +125,9 @@ let windows_bignum_tolebytes_p521_mc = define_trimmed "windows_bignum_tolebytes_
 let WINDOWS_BIGNUM_TOLEBYTES_P521_SUBROUTINE_CORRECT = prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x51); (x,8 * 9)] /\
+            [(word pc,LENGTH windows_bignum_tolebytes_p521_mc); (x,8 * 9)] /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,66) /\
-      nonoverlapping (word pc,0x51) (z,66) /\
+      nonoverlapping (word pc,LENGTH windows_bignum_tolebytes_p521_mc) (z,66) /\
       (x = z \/ nonoverlapping (x,8 * 9) (z,66))
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_tolebytes_p521_mc /\

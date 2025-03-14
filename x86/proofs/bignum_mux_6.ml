@@ -84,7 +84,7 @@ let BIGNUM_MUX_6_CORRECT = prove
 
 let BIGNUM_MUX_6_SUBROUTINE_CORRECT = prove
  (`!p z x y m n pc stackpointer returnaddress.
-     nonoverlapping (word pc,0x61) (z,8 * 6) /\
+     nonoverlapping (word pc,LENGTH bignum_mux_6_mc) (z,8 * 6) /\
      nonoverlapping (stackpointer,8) (z,8 * 6) /\
      (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6)) /\
      (y = z \/ nonoverlapping (y,8 * 6) (z,8 * 6))
@@ -116,8 +116,8 @@ let windows_bignum_mux_6_mc = define_trimmed "windows_bignum_mux_6_mc" windows_b
 let WINDOWS_BIGNUM_MUX_6_SUBROUTINE_CORRECT = prove
  (`!p z x y m n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x71); (x,8 * 6); (y,8 * 6)] /\
-     nonoverlapping (word pc,0x71) (z,8 * 6) /\
+            [(word pc,LENGTH windows_bignum_mux_6_mc); (x,8 * 6); (y,8 * 6)] /\
+     nonoverlapping (word pc,LENGTH windows_bignum_mux_6_mc) (z,8 * 6) /\
      nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 6) /\
      (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6)) /\
      (y = z \/ nonoverlapping (y,8 * 6) (z,8 * 6))

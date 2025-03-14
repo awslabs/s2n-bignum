@@ -282,7 +282,7 @@ let BIGNUM_SHR_SMALL_CORRECT = prove
 
 let BIGNUM_SHR_SMALL_SUBROUTINE_CORRECT = prove
  (`!p z n x a c pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x4e) (z,8 * val p) /\
+        nonoverlapping (word pc,LENGTH bignum_shr_small_mc) (z,8 * val p) /\
         nonoverlapping (stackpointer,8) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86
@@ -313,8 +313,8 @@ let windows_bignum_shr_small_mc = define_trimmed "windows_bignum_shr_small_mc" w
 let WINDOWS_BIGNUM_SHR_SMALL_SUBROUTINE_CORRECT = prove
  (`!p z n x a c pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x63); (x,8 * val n)] /\
-        nonoverlapping (word pc,0x63) (z,8 * val p) /\
+            [(word pc,LENGTH windows_bignum_shr_small_mc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_shr_small_mc) (z,8 * val p) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86

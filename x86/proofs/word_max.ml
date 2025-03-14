@@ -69,7 +69,7 @@ let windows_word_max_mc = define_trimmed "windows_word_max_mc" windows_word_max_
 
 let WINDOWS_WORD_MAX_SUBROUTINE_CORRECT = prove
  (`!a b pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0x15)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_max_mc)
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_word_max_mc /\
                    read RIP s = word pc /\

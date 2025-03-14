@@ -3116,7 +3116,7 @@ let BIGNUM_COPRIME_SUBROUTINE_CORRECT = prove
         ALLPAIRS nonoverlapping
          [(w,8 * 2 * MAX (val m) (val n));
           (word_sub stackpointer (word 96),96)]
-         [(word pc,0x33e); (x,8 * val m); (y,8 * val n)] /\
+         [(word pc,LENGTH bignum_coprime_mc); (x,8 * val m); (y,8 * val n)] /\
         val m < 2 EXP 57 /\ val n < 2 EXP 57
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_coprime_mc /\
@@ -3151,7 +3151,7 @@ let WINDOWS_BIGNUM_COPRIME_SUBROUTINE_CORRECT = prove
         ALLPAIRS nonoverlapping
          [(w,8 * 2 * MAX (val m) (val n));
           (word_sub stackpointer (word 112),112)]
-         [(word pc,0x353); (x,8 * val m); (y,8 * val n)] /\
+         [(word pc,LENGTH windows_bignum_coprime_mc); (x,8 * val m); (y,8 * val n)] /\
         val m < 2 EXP 57 /\ val n < 2 EXP 57
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_coprime_mc /\

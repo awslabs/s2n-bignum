@@ -453,7 +453,7 @@ let BIGNUM_NORMALIZE_CORRECT = time prove
 
 let BIGNUM_NORMALIZE_SUBROUTINE_CORRECT = time prove
  (`!k z n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x7f) (z,8 * val k) /\
+        nonoverlapping (word pc,LENGTH bignum_normalize_mc) (z,8 * val k) /\
         nonoverlapping (stackpointer,8) (z,8 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_normalize_mc /\
@@ -482,9 +482,9 @@ let windows_bignum_normalize_mc = define_trimmed "windows_bignum_normalize_mc" w
 
 let WINDOWS_BIGNUM_NORMALIZE_SUBROUTINE_CORRECT = time prove
  (`!k z n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x89) (z,8 * val k) /\
+        nonoverlapping (word pc,LENGTH windows_bignum_normalize_mc) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 16),24))
-            [(word pc,0x89);  (z,8 * val k)]
+            [(word pc,LENGTH windows_bignum_normalize_mc);  (z,8 * val k)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_normalize_mc /\
                   read RIP s = word pc /\

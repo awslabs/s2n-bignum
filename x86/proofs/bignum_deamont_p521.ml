@@ -296,8 +296,8 @@ let BIGNUM_DEAMONT_P521_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 9) (word_sub stackpointer (word 32),40) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,0xe6); (x,8 * 9)] /\
-        nonoverlapping (word pc,0xe6) (z,8 * 9)
+            [(word pc,LENGTH bignum_deamont_p521_mc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_p521_mc) (z,8 * 9)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_deamont_p521_mc /\
                   read RIP s = word pc /\
@@ -329,8 +329,8 @@ let WINDOWS_BIGNUM_DEAMONT_P521_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 9) (word_sub stackpointer (word 48),56) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,0xf0); (x,8 * 9)] /\
-        nonoverlapping (word pc,0xf0) (z,8 * 9)
+            [(word pc,LENGTH windows_bignum_deamont_p521_mc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_deamont_p521_mc) (z,8 * 9)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_deamont_p521_mc /\
                   read RIP s = word pc /\

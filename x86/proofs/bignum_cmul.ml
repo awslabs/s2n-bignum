@@ -362,7 +362,7 @@ let BIGNUM_CMUL_CORRECT = prove
 
 let BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
  (`!p z c n x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x6a) (z,8 * val p) /\
+        nonoverlapping (word pc,LENGTH bignum_cmul_mc) (z,8 * val p) /\
         nonoverlapping (stackpointer,8) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86
@@ -394,8 +394,8 @@ let windows_bignum_cmul_mc = define_trimmed "windows_bignum_cmul_mc" windows_big
 let WINDOWS_BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
  (`!p z c n x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x7f); (x,8 * val n)] /\
-        nonoverlapping (word pc,0x7f) (z,8 * val p) /\
+            [(word pc,LENGTH windows_bignum_cmul_mc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_cmul_mc) (z,8 * val p) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86

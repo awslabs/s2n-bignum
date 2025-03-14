@@ -3853,9 +3853,9 @@ let P256_MONTJADD_ALT_CORRECT = time prove
 let P256_MONTJADD_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 272),272))
-            [(word pc,0x2768); (p1,96); (p2,96)] /\
+            [(word pc,LENGTH p256_montjadd_alt_mc); (p1,96); (p2,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x2768); (word_sub stackpointer (word 272),280)]
+            [(word pc,LENGTH p256_montjadd_alt_mc); (word_sub stackpointer (word 272),280)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p256_montjadd_alt_mc /\
                   read RIP s = word pc /\
@@ -3888,9 +3888,9 @@ let windows_p256_montjadd_alt_mc = define_trimmed "windows_p256_montjadd_alt_mc"
 let WINDOWS_P256_MONTJADD_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 288),288))
-            [(word pc,0x2775); (p1,96); (p2,96)] /\
+            [(word pc,LENGTH windows_p256_montjadd_alt_mc); (p1,96); (p2,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x2775); (word_sub stackpointer (word 288),296)]
+            [(word pc,LENGTH windows_p256_montjadd_alt_mc); (word_sub stackpointer (word 288),296)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p256_montjadd_alt_mc /\
                   read RIP s = word pc /\

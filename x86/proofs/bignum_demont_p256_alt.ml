@@ -149,7 +149,7 @@ let BIGNUM_DEMONT_P256_ALT_CORRECT = time prove
 
 let BIGNUM_DEMONT_P256_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0xbf) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_demont_p256_alt_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_demont_p256_alt_mc /\
@@ -180,8 +180,8 @@ let windows_bignum_demont_p256_alt_mc = define_trimmed "windows_bignum_demont_p2
 let WINDOWS_BIGNUM_DEMONT_P256_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0xc9); (x,8 * 4)] /\
-        nonoverlapping (word pc,0xc9) (z,8 * 4) /\
+            [(word pc,LENGTH windows_bignum_demont_p256_alt_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_demont_p256_alt_mc) (z,8 * 4) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_demont_p256_alt_mc /\

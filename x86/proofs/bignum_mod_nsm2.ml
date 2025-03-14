@@ -464,8 +464,8 @@ let BIGNUM_MOD_NSM2_SUBROUTINE_CORRECT = time prove
  (`!z k x n pc stackpointer returnaddress.
       nonoverlapping (word_sub stackpointer (word 16),24) (z,32) /\
       ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-          [(word pc,0x166); (x, 8 * val k)] /\
-      nonoverlapping (word pc,0x166) (z,32)
+          [(word pc,LENGTH bignum_mod_nsm2_mc); (x, 8 * val k)] /\
+      nonoverlapping (word pc,LENGTH bignum_mod_nsm2_mc) (z,32)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_mod_nsm2_mc /\
                 read RIP s = word pc /\
@@ -511,8 +511,8 @@ let WINDOWS_BIGNUM_MOD_NSM2_SUBROUTINE_CORRECT = time prove
  (`!z k x n pc stackpointer returnaddress.
       nonoverlapping (word_sub stackpointer (word 32),40) (z,32) /\
       ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-          [(word pc,0x173); (x, 8 * val k)] /\
-      nonoverlapping (word pc,0x173) (z,32)
+          [(word pc,LENGTH windows_bignum_mod_nsm2_mc); (x, 8 * val k)] /\
+      nonoverlapping (word pc,LENGTH windows_bignum_mod_nsm2_mc) (z,32)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_mod_nsm2_mc /\
                 read RIP s = word pc /\

@@ -241,8 +241,8 @@ let BIGNUM_SQR_6_12_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 48),56) (z,8 * 12) /\
      ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-         [(word pc,0x220); (x,8 * 6)] /\
-     nonoverlapping (word pc,0x220) (z,8 * 12) /\
+         [(word pc,LENGTH bignum_sqr_6_12_mc); (x,8 * 6)] /\
+     nonoverlapping (word pc,LENGTH bignum_sqr_6_12_mc) (z,8 * 12) /\
      (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 12))
      ==> ensures x86
           (\s. bytes_loaded s (word pc) bignum_sqr_6_12_mc /\
@@ -273,8 +273,8 @@ let WINDOWS_BIGNUM_SQR_6_12_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 64),72) (z,8 * 12) /\
      ALL (nonoverlapping (word_sub stackpointer (word 64),64))
-         [(word pc,0x22a); (x,8 * 6)] /\
-     nonoverlapping (word pc,0x22a) (z,8 * 12) /\
+         [(word pc,LENGTH windows_bignum_sqr_6_12_mc); (x,8 * 6)] /\
+     nonoverlapping (word pc,LENGTH windows_bignum_sqr_6_12_mc) (z,8 * 12) /\
      (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 12))
      ==> ensures x86
           (\s. bytes_loaded s (word pc) windows_bignum_sqr_6_12_mc /\

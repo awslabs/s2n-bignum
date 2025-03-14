@@ -191,7 +191,7 @@ let windows_bignum_ctd_mc = define_trimmed "windows_bignum_ctd_mc" windows_bignu
 let WINDOWS_BIGNUM_CTD_SUBROUTINE_CORRECT = prove
  (`!k a x pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x30); (a,8 * val k)]
+            [(word pc,LENGTH windows_bignum_ctd_mc); (a,8 * val k)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_ctd_mc /\
                   read RIP s = word pc /\

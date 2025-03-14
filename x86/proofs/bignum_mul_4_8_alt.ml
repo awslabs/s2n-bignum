@@ -152,7 +152,7 @@ let BIGNUM_MUL_4_8_ALT_CORRECT = time prove
 let BIGNUM_MUL_4_8_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
      ALL (nonoverlapping (z,8 * 8))
-         [(word pc,0x13c); (x,8 * 4); (y,8 * 4); (stackpointer,8)]
+         [(word pc,LENGTH bignum_mul_4_8_alt_mc); (x,8 * 4); (y,8 * 4); (stackpointer,8)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) bignum_mul_4_8_alt_mc /\
                read RIP s = word pc /\
@@ -181,9 +181,9 @@ let windows_bignum_mul_4_8_alt_mc = define_trimmed "windows_bignum_mul_4_8_alt_m
 let WINDOWS_BIGNUM_MUL_4_8_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-         [(word pc,0x149); (x,8 * 4); (y,8 * 4)] /\
+         [(word pc,LENGTH windows_bignum_mul_4_8_alt_mc); (x,8 * 4); (y,8 * 4)] /\
      ALL (nonoverlapping (z,8 * 8))
-         [(word pc,0x149); (x,8 * 4); (y,8 * 4);
+         [(word pc,LENGTH windows_bignum_mul_4_8_alt_mc); (x,8 * 4); (y,8 * 4);
           (word_sub stackpointer (word 16),24)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) windows_bignum_mul_4_8_alt_mc /\

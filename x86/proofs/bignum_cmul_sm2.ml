@@ -220,7 +220,7 @@ let BIGNUM_CMUL_SM2_CORRECT = time prove
 
 let BIGNUM_CMUL_SM2_SUBROUTINE_CORRECT = time prove
  (`!z c x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0xb8) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_cmul_sm2_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_cmul_sm2_mc /\
@@ -249,8 +249,8 @@ let windows_bignum_cmul_sm2_mc = define_trimmed "windows_bignum_cmul_sm2_mc" win
 let WINDOWS_BIGNUM_CMUL_SM2_SUBROUTINE_CORRECT = time prove
  (`!z c x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0xb8); (x,8 * 4)] /\
-        nonoverlapping (word pc,0xb8) (z,8 * 4) /\
+            [(word pc,LENGTH windows_bignum_cmul_sm2_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_cmul_sm2_mc) (z,8 * 4) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_cmul_sm2_mc /\

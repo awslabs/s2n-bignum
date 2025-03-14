@@ -78,7 +78,7 @@ let windows_word_clz_mc = define_trimmed "windows_word_clz_mc" windows_word_clz_
 
 let WINDOWS_WORD_CLZ_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0x1c)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_clz_mc)
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_word_clz_mc /\
                    read RIP s = word pc /\

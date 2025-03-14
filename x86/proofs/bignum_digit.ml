@@ -130,7 +130,7 @@ let windows_bignum_digit_mc = define_trimmed "windows_bignum_digit_mc" windows_b
 let WINDOWS_BIGNUM_DIGIT_SUBROUTINE_CORRECT = prove
  (`!k x n a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x2c); (x,8 * val k)]
+            [(word pc,LENGTH windows_bignum_digit_mc); (x,8 * val k)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_digit_mc /\
                   read RIP s = word pc /\

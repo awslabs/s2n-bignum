@@ -4764,10 +4764,10 @@ let BIGNUM_MODINV_SUBROUTINE_CORRECT = prove
  (`!k z x a y b w pc stackpointer returnaddress.
         nonoverlapping (w,8 * 3 * val k) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 128),128))
-            [(word pc,0x550); (x,8 * val k); (y,8 * val k)] /\
+            [(word pc,LENGTH bignum_modinv_mc); (x,8 * val k); (y,8 * val k)] /\
         ALLPAIRS nonoverlapping
          [(w,8 * 3 * val k); (z,8 * val k)]
-         [(word pc,0x550); (word_sub stackpointer (word 128),136);
+         [(word pc,LENGTH bignum_modinv_mc); (word_sub stackpointer (word 128),136);
           (x,8 * val k); (y,8 * val k)] /\
         val k < 2 EXP 57
         ==> ensures x86
@@ -4803,10 +4803,10 @@ let WINDOWS_BIGNUM_MODINV_SUBROUTINE_CORRECT = prove
  (`!k z x a y b w pc stackpointer returnaddress.
         nonoverlapping (w,8 * 3 * val k) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 144),144))
-            [(word pc,0x565); (x,8 * val k); (y,8 * val k)] /\
+            [(word pc,LENGTH windows_bignum_modinv_mc); (x,8 * val k); (y,8 * val k)] /\
         ALLPAIRS nonoverlapping
          [(w,8 * 3 * val k); (z,8 * val k)]
-         [(word pc,0x565); (word_sub stackpointer (word 144),152);
+         [(word pc,LENGTH windows_bignum_modinv_mc); (word_sub stackpointer (word 144),152);
           (x,8 * val k); (y,8 * val k)] /\
         val k < 2 EXP 57
         ==> ensures x86

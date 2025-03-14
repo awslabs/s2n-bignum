@@ -2001,10 +2001,10 @@ let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
      ALL (nonoverlapping (word_sub stackpointer (word 56),64))
          [(z,8 * 64); (t,8 * 72)] /\
      ALL (nonoverlapping (word_sub stackpointer (word 56),56))
-         [(word pc,0x1646); (x,8 * 32)] /\
+         [(word pc,LENGTH bignum_ksqr_32_64_mc); (x,8 * 32)] /\
      nonoverlapping (z,8 * 64) (t,8 * 72) /\
      ALLPAIRS nonoverlapping
-         [(z,8 * 64); (t,8 * 72)] [(word pc,0x1646); (x,8 * 32)]
+         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH bignum_ksqr_32_64_mc); (x,8 * 32)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_mc /\
                read RIP s = word pc /\
@@ -2018,6 +2018,7 @@ let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 72);
                       memory :> bytes(word_sub stackpointer (word 56),56)])`,
+  REWRITE_TAC[fst BIGNUM_KSQR_32_64_EXEC] THEN
   REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `t:int64`; `a:num`; `pc:num`] THEN
   WORD_FORALL_OFFSET_TAC 56 THEN
@@ -2078,10 +2079,10 @@ let WINDOWS_BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
      ALL (nonoverlapping (word_sub stackpointer (word 72),80))
          [(z,8 * 64); (t,8 * 72)] /\
      ALL (nonoverlapping (word_sub stackpointer (word 72),72))
-         [(word pc,0x1653); (x,8 * 32)] /\
+         [(word pc,LENGTH windows_bignum_ksqr_32_64_mc); (x,8 * 32)] /\
      nonoverlapping (z,8 * 64) (t,8 * 72) /\
      ALLPAIRS nonoverlapping
-         [(z,8 * 64); (t,8 * 72)] [(word pc,0x1653); (x,8 * 32)]
+         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH windows_bignum_ksqr_32_64_mc); (x,8 * 32)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) windows_bignum_ksqr_32_64_mc /\
                read RIP s = word pc /\
@@ -2095,6 +2096,7 @@ let WINDOWS_BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 72);
                       memory :> bytes(word_sub stackpointer (word 72),72)])`,
+  REWRITE_TAC[fst WINDOWS_BIGNUM_KSQR_32_64_EXEC] THEN
   REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `t:int64`; `a:num`; `pc:num`] THEN
   WORD_FORALL_OFFSET_TAC 72 THEN

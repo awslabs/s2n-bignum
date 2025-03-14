@@ -317,8 +317,8 @@ let BIGNUM_DEAMONT_P384_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 6) (word_sub stackpointer (word 16),24) /\
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x258); (x,8 * 6)] /\
-        nonoverlapping (word pc,0x258) (z,8 * 6)
+            [(word pc,LENGTH bignum_deamont_p384_alt_mc); (x,8 * 6)] /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_p384_alt_mc) (z,8 * 6)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_deamont_p384_alt_mc /\
                   read RIP s = word pc /\
@@ -350,8 +350,8 @@ let WINDOWS_BIGNUM_DEAMONT_P384_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 6) (word_sub stackpointer (word 32),40) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,0x262); (x,8 * 6)] /\
-        nonoverlapping (word pc,0x262) (z,8 * 6)
+            [(word pc,LENGTH windows_bignum_deamont_p384_alt_mc); (x,8 * 6)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_deamont_p384_alt_mc) (z,8 * 6)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_deamont_p384_alt_mc /\
                   read RIP s = word pc /\

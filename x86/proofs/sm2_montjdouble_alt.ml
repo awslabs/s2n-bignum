@@ -2997,9 +2997,9 @@ let SM2_MONTJDOUBLE_ALT_CORRECT = time prove
 let SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 232),232))
-            [(word pc,0x1481); (p1,96)] /\
+            [(word pc,LENGTH sm2_montjdouble_alt_mc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x1481); (word_sub stackpointer (word 232),240)]
+            [(word pc,LENGTH sm2_montjdouble_alt_mc); (word_sub stackpointer (word 232),240)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) sm2_montjdouble_alt_mc /\
                   read RIP s = word pc /\
@@ -3030,9 +3030,9 @@ let windows_sm2_montjdouble_alt_mc = define_trimmed "windows_sm2_montjdouble_alt
 let WINDOWS_SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 248),248))
-            [(word pc,0x148b); (p1,96)] /\
+            [(word pc,LENGTH windows_sm2_montjdouble_alt_mc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x148b); (word_sub stackpointer (word 248),256)]
+            [(word pc,LENGTH windows_sm2_montjdouble_alt_mc); (word_sub stackpointer (word 248),256)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_sm2_montjdouble_alt_mc /\
                   read RIP s = word pc /\

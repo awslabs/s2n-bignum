@@ -4470,9 +4470,9 @@ let BIGNUM_INV_P521_CORRECT = time prove
 let BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 408),408))
-            [(word pc,0x1be6); (x,8 * 9)] /\
+            [(word pc,LENGTH bignum_inv_p521_mc); (x,8 * 9)] /\
         ALL (nonoverlapping (z,8 * 9))
-            [(word_sub stackpointer (word 408),416); (word pc,0x1be6)]
+            [(word_sub stackpointer (word 408),416); (word pc,LENGTH bignum_inv_p521_mc)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_inv_p521_mc /\
                   read RIP s = word pc /\
@@ -4503,9 +4503,9 @@ let windows_bignum_inv_p521_mc = define_trimmed "windows_bignum_inv_p521_mc" win
 let WINDOWS_BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 424),424))
-            [(word pc,0x1bf0); (x,8 * 9)] /\
+            [(word pc,LENGTH windows_bignum_inv_p521_mc); (x,8 * 9)] /\
         ALL (nonoverlapping (z,8 * 9))
-            [(word_sub stackpointer (word 424),432); (word pc,0x1bf0)]
+            [(word_sub stackpointer (word 424),432); (word pc,LENGTH windows_bignum_inv_p521_mc)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_inv_p521_mc /\
                   read RIP s = word pc /\

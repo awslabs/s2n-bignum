@@ -126,7 +126,7 @@ let BIGNUM_DOUBLE_P521_CORRECT = time prove
 
 let BIGNUM_DOUBLE_P521_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x6e) (z,8 * 9) /\
+        nonoverlapping (word pc,LENGTH bignum_double_p521_mc) (z,8 * 9) /\
         nonoverlapping (stackpointer,8) (z,8 * 9) /\
         (x = z \/ nonoverlapping (x,8 * 9) (z,8 * 9))
         ==> ensures x86
@@ -157,8 +157,8 @@ let windows_bignum_double_p521_mc = define_trimmed "windows_bignum_double_p521_m
 let WINDOWS_BIGNUM_DOUBLE_P521_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x78); (x,8 * 9)] /\
-        nonoverlapping (word pc,0x78) (z,8 * 9) /\
+            [(word pc,LENGTH windows_bignum_double_p521_mc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_double_p521_mc) (z,8 * 9) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 9) /\
         (x = z \/ nonoverlapping (x,8 * 9) (z,8 * 9))
         ==> ensures x86

@@ -301,8 +301,8 @@ let BIGNUM_MONTMUL_SM2_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 40),48) /\
         ALL (nonoverlapping (word_sub stackpointer (word 40),40))
-            [(word pc,0x21e); (x,8 * 4); (y,8 * 4)] /\
-        nonoverlapping (word pc,0x21e) (z,8 * 4)
+            [(word pc,LENGTH bignum_montmul_sm2_alt_mc); (x,8 * 4); (y,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH bignum_montmul_sm2_alt_mc) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_montmul_sm2_alt_mc /\
                   read RIP s = word pc /\
@@ -432,8 +432,8 @@ let BIGNUM_AMONTMUL_SM2_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 40),48) /\
         ALL (nonoverlapping (word_sub stackpointer (word 40),40))
-            [(word pc,0x21e); (x,8 * 4); (y,8 * 4)] /\
-        nonoverlapping (word pc,0x21e) (z,8 * 4)
+            [(word pc,LENGTH bignum_montmul_sm2_alt_mc); (x,8 * 4); (y,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH bignum_montmul_sm2_alt_mc) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_montmul_sm2_alt_mc /\
                   read RIP s = word pc /\
@@ -466,8 +466,8 @@ let WINDOWS_BIGNUM_MONTMUL_SM2_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 56),64) /\
         ALL (nonoverlapping (word_sub stackpointer (word 56),56))
-            [(word pc,0x22b); (x,8 * 4); (y,8 * 4)] /\
-        nonoverlapping (word pc,0x22b) (z,8 * 4)
+            [(word pc,LENGTH windows_bignum_montmul_sm2_alt_mc); (x,8 * 4); (y,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_montmul_sm2_alt_mc) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_montmul_sm2_alt_mc /\
                   read RIP s = word pc /\
@@ -492,8 +492,8 @@ let WINDOWS_BIGNUM_AMONTMUL_SM2_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 56),64) /\
         ALL (nonoverlapping (word_sub stackpointer (word 56),56))
-            [(word pc,0x22b); (x,8 * 4); (y,8 * 4)] /\
-        nonoverlapping (word pc,0x22b) (z,8 * 4)
+            [(word pc,LENGTH windows_bignum_montmul_sm2_alt_mc); (x,8 * 4); (y,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_montmul_sm2_alt_mc) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_montmul_sm2_alt_mc /\
                   read RIP s = word pc /\

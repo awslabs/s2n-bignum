@@ -170,7 +170,7 @@ let BIGNUM_CMUL_P256K1_CORRECT = time prove
 
 let BIGNUM_CMUL_P256K1_SUBROUTINE_CORRECT = time prove
  (`!z c x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x70) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_cmul_p256k1_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_cmul_p256k1_mc /\
@@ -200,8 +200,8 @@ let windows_bignum_cmul_p256k1_mc = define_trimmed "windows_bignum_cmul_p256k1_m
 let WINDOWS_BIGNUM_CMUL_P256K1_SUBROUTINE_CORRECT = time prove
  (`!z c x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x7d); (x,8 * 4)] /\
-        nonoverlapping (word pc,0x7d) (z,8 * 4) /\
+            [(word pc,LENGTH windows_bignum_cmul_p256k1_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_cmul_p256k1_mc) (z,8 * 4) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_cmul_p256k1_mc /\

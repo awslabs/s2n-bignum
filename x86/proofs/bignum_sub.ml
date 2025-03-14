@@ -727,7 +727,7 @@ let BIGNUM_SUB_CORRECT = prove
 
 let BIGNUM_SUB_SUBROUTINE_CORRECT = prove
  (`!p z m x a n y b pc stackpointer returnaddress.
-        nonoverlapping (word pc,0xa6) (z,8 * val p) /\
+        nonoverlapping (word pc,LENGTH bignum_sub_mc) (z,8 * val p) /\
         nonoverlapping (stackpointer,8) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val m) (z,8 * val p)) /\
         (y = z \/ nonoverlapping(y,8 * val n) (z,8 * val p))
@@ -789,8 +789,8 @@ let WINDOWS_BIGNUM_SUB_CORRECT = prove
 let WINDOWS_BIGNUM_SUB_SUBROUTINE_CORRECT = prove
  (`!p z m x a n y b pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0xc2); (x,8 * val m); (y,8 * val n)] /\
-        nonoverlapping (word pc,0xc2) (z,8 * val p) /\
+            [(word pc,LENGTH windows_bignum_sub_mc); (x,8 * val m); (y,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_sub_mc) (z,8 * val p) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val m) (z,8 * val p)) /\
         (y = z \/ nonoverlapping(y,8 * val n) (z,8 * val p))

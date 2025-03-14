@@ -216,7 +216,7 @@ let BIGNUM_SQR_6_12_ALT_CORRECT = time prove
 let BIGNUM_SQR_6_12_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
      ALL (nonoverlapping (z,8 * 12))
-         [(word pc,0x224); (x,8 * 6); (stackpointer,8)]
+         [(word pc,LENGTH bignum_sqr_6_12_alt_mc); (x,8 * 6); (stackpointer,8)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) bignum_sqr_6_12_alt_mc /\
                read RIP s = word pc /\
@@ -244,9 +244,9 @@ let windows_bignum_sqr_6_12_alt_mc = define_trimmed "windows_bignum_sqr_6_12_alt
 let WINDOWS_BIGNUM_SQR_6_12_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x22e); (x,8 * 6)] /\
+            [(word pc,LENGTH windows_bignum_sqr_6_12_alt_mc); (x,8 * 6)] /\
      ALL (nonoverlapping (z,8 * 12))
-         [(word pc,0x22e); (x,8 * 6); (word_sub stackpointer (word 16),24)]
+         [(word pc,LENGTH windows_bignum_sqr_6_12_alt_mc); (x,8 * 6); (word_sub stackpointer (word 16),24)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) windows_bignum_sqr_6_12_alt_mc /\
                read RIP s = word pc /\

@@ -7630,9 +7630,9 @@ let P521_JSCALARMUL_CORRECT = time prove
 let P521_JSCALARMUL_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 4736),4736))
-            [(word pc,0x3f0a); (scalar,72); (point,216)] /\
+            [(word pc,LENGTH p521_jscalarmul_mc); (scalar,72); (point,216)] /\
         ALL (nonoverlapping (res,216))
-            [(word pc,0x3f0a); (word_sub stackpointer (word 4736),4744)]
+            [(word pc,LENGTH p521_jscalarmul_mc); (word_sub stackpointer (word 4736),4744)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p521_jscalarmul_mc /\
                   read RIP s = word pc /\
@@ -7666,9 +7666,9 @@ let windows_p521_jscalarmul_mc = define_trimmed "windows_p521_jscalarmul_mc" win
 let WINDOWS_P521_JSCALARMUL_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 4760),4760))
-            [(word pc,0x3f1d); (scalar,72); (point,216)] /\
+            [(word pc,LENGTH windows_p521_jscalarmul_mc); (scalar,72); (point,216)] /\
         ALL (nonoverlapping (res,216))
-            [(word pc,0x3f1d); (word_sub stackpointer (word 4760),4768)]
+            [(word pc,LENGTH windows_p521_jscalarmul_mc); (word_sub stackpointer (word 4760),4768)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p521_jscalarmul_mc /\
                   read RIP s = word pc /\
@@ -7696,6 +7696,7 @@ let WINDOWS_P521_JSCALARMUL_SUBROUTINE_CORRECT = time prove
   let subth =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
      (REWRITE_RULE[bignum_triple_from_memory] baseth) in
+  REWRITE_TAC[fst WINDOWS_P521_JSCALARMUL_EXEC] THEN
   REPLICATE_TAC 6 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 4760 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN

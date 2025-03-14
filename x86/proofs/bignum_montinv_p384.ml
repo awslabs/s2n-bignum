@@ -4329,9 +4329,9 @@ let BIGNUM_MONTINV_P384_CORRECT = time prove
 let BIGNUM_MONTINV_P384_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 384),384))
-            [(word pc,0x19cd); (x,8 * 6)] /\
+            [(word pc,LENGTH bignum_montinv_p384_mc); (x,8 * 6)] /\
         ALL (nonoverlapping (z,8 * 6))
-            [(word_sub stackpointer (word 384),392); (word pc,0x19cd)]
+            [(word_sub stackpointer (word 384),392); (word pc,LENGTH bignum_montinv_p384_mc)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_montinv_p384_mc /\
                   read RIP s = word pc /\
@@ -4363,9 +4363,9 @@ let windows_bignum_montinv_p384_mc = define_trimmed "windows_bignum_montinv_p384
 let WINDOWS_BIGNUM_MONTINV_P384_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 400),400))
-            [(word pc,0x19d7); (x,8 * 6)] /\
+            [(word pc,LENGTH windows_bignum_montinv_p384_mc); (x,8 * 6)] /\
         ALL (nonoverlapping (z,8 * 6))
-            [(word_sub stackpointer (word 400),408); (word pc,0x19d7)]
+            [(word_sub stackpointer (word 400),408); (word pc,LENGTH windows_bignum_montinv_p384_mc)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_montinv_p384_mc /\
                   read RIP s = word pc /\

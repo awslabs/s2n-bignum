@@ -8281,8 +8281,8 @@ let CURVE25519_X25519_CORRECT = time prove
 let CURVE25519_X25519_SUBROUTINE_CORRECT = time prove
  (`!res scalar n point X pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 464),464))
-        [(word pc,0x51d2); (point,32); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x51d2) /\
+        [(word pc,LENGTH curve25519_x25519_mc); (point,32); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,LENGTH curve25519_x25519_mc) /\
     nonoverlapping (res,32) (word_sub stackpointer (word 464),472)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) curve25519_x25519_mc /\
@@ -8305,8 +8305,8 @@ let CURVE25519_X25519_SUBROUTINE_CORRECT = time prove
 let CURVE25519_X25519_BYTE_SUBROUTINE_CORRECT = prove
  (`!res scalar n point X pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 464),464))
-        [(word pc,0x51d2); (point,32); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x51d2) /\
+        [(word pc,LENGTH curve25519_x25519_mc); (point,32); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,LENGTH curve25519_x25519_mc) /\
     nonoverlapping (res,32) (word_sub stackpointer (word 464),472)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) curve25519_x25519_mc /\
@@ -8339,8 +8339,8 @@ let windows_curve25519_x25519_mc = define_trimmed "windows_curve25519_x25519_mc"
 let WINDOWS_CURVE25519_X25519_SUBROUTINE_CORRECT = time prove
  (`!res scalar n point X pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 480),480))
-        [(word pc,0x51df); (point,32); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x51df) /\
+        [(word pc,LENGTH windows_curve25519_x25519_mc); (point,32); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,LENGTH windows_curve25519_x25519_mc) /\
     nonoverlapping (res,32) (word_sub stackpointer (word 480),488)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) windows_curve25519_x25519_mc /\
@@ -8364,8 +8364,8 @@ let WINDOWS_CURVE25519_X25519_SUBROUTINE_CORRECT = time prove
 let WINDOWS_CURVE25519_X25519_BYTE_SUBROUTINE_CORRECT = prove
  (`!res scalar n point X pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 480),480))
-        [(word pc,0x51df); (point,32); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x51df) /\
+        [(word pc,LENGTH windows_curve25519_x25519_mc); (point,32); (scalar,32)] /\
+    nonoverlapping (res,32) (word pc,LENGTH windows_curve25519_x25519_mc) /\
     nonoverlapping (res,32) (word_sub stackpointer (word 480),488)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) windows_curve25519_x25519_mc /\

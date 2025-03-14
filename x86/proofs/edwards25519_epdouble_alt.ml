@@ -2152,8 +2152,8 @@ let EDWARDS25519_EPDOUBLE_ALT_CORRECT = time prove
 let EDWARDS25519_EPDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 T1 pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 200),200))
-        [(word pc,0xfb3); (p1,96)] /\
-    nonoverlapping (p3,128) (word pc,0xfb3) /\
+        [(word pc,LENGTH edwards25519_epdouble_alt_mc); (p1,96)] /\
+    nonoverlapping (p3,128) (word pc,LENGTH edwards25519_epdouble_alt_mc) /\
     nonoverlapping (p3,128) (word_sub stackpointer (word 200),208)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) edwards25519_epdouble_alt_mc /\
@@ -2189,8 +2189,8 @@ let windows_edwards25519_epdouble_alt_mc = define_trimmed "windows_edwards25519_
 let WINDOWS_EDWARDS25519_EPDOUBLE_ALT_SUBROUTINE_CORRECT = prove
  (`!p3 p1 T1 pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 216),216))
-        [(word pc,0xfbd); (p1,96)] /\
-    nonoverlapping (p3,128) (word pc,0xfbd) /\
+        [(word pc,LENGTH windows_edwards25519_epdouble_alt_mc); (p1,96)] /\
+    nonoverlapping (p3,128) (word pc,LENGTH windows_edwards25519_epdouble_alt_mc) /\
     nonoverlapping (p3,128) (word_sub stackpointer (word 216),224)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) windows_edwards25519_epdouble_alt_mc /\

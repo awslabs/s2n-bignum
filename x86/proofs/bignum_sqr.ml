@@ -580,7 +580,7 @@ let BIGNUM_SQR_SUBROUTINE_CORRECT = prove
      nonoverlapping (z,8 * val p) (word_sub stackpointer (word 48),56) /\
      ALLPAIRS nonoverlapping
               [(z,8 * val p); (word_sub stackpointer (word 48),56)]
-              [(word pc,0xbe); (x,8 * val n)]
+              [(word pc,LENGTH bignum_sqr_mc); (x,8 * val n)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) bignum_sqr_mc /\
                read RIP s = word pc /\
@@ -611,7 +611,7 @@ let WINDOWS_BIGNUM_SQR_SUBROUTINE_CORRECT = prove
      nonoverlapping (z,8 * val p) (word_sub stackpointer (word 64),72) /\
      ALLPAIRS nonoverlapping
               [(z,8 * val p); (word_sub stackpointer (word 64),72)]
-              [(word pc,0xce); (x,8 * val n)]
+              [(word pc,LENGTH windows_bignum_sqr_mc); (x,8 * val n)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) windows_bignum_sqr_mc /\
                read RIP s = word pc /\

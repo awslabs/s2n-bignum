@@ -13280,9 +13280,9 @@ let P384_MONTJSCALARMUL_ALT_CORRECT = time prove
 let P384_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 3144),3144))
-            [(word pc,0xa310); (scalar,48); (point,144)] /\
+            [(word pc,LENGTH p384_montjscalarmul_alt_mc); (scalar,48); (point,144)] /\
         ALL (nonoverlapping (res,144))
-            [(word pc,0xa310); (word_sub stackpointer (word 3144),3152)]
+            [(word pc,LENGTH p384_montjscalarmul_alt_mc); (word_sub stackpointer (word 3144),3152)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p384_montjscalarmul_alt_mc /\
                   read RIP s = word pc /\
@@ -13316,9 +13316,9 @@ let windows_p384_montjscalarmul_alt_mc = define_trimmed "windows_p384_montjscala
 let WINDOWS_P384_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
  (`!res scalar point n xyz pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 3168),3168))
-            [(word pc,0xa323); (scalar,48); (point,144)] /\
+            [(word pc,LENGTH windows_p384_montjscalarmul_alt_mc); (scalar,48); (point,144)] /\
         ALL (nonoverlapping (res,144))
-            [(word pc,0xa323); (word_sub stackpointer (word 3168),3176)]
+            [(word pc,LENGTH windows_p384_montjscalarmul_alt_mc); (word_sub stackpointer (word 3168),3176)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p384_montjscalarmul_alt_mc /\
                   read RIP s = word pc /\
@@ -13346,6 +13346,7 @@ let WINDOWS_P384_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
   let subth =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
      (REWRITE_RULE[bignum_triple_from_memory] baseth) in
+  REWRITE_TAC[fst WINDOWS_P384_MONTJSCALARMUL_ALT_EXEC] THEN
   REPLICATE_TAC 6 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 3168 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN

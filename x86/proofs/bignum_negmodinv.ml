@@ -648,8 +648,8 @@ let BIGNUM_NEGMODINV_SUBROUTINE_CORRECT = prove
  (`!k z x m pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x112);(x,8 * val k)] /\
-        nonoverlapping (word pc,0x112) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_negmodinv_mc);(x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_negmodinv_mc) (z,8 * val k) /\
         nonoverlapping (x,8 * val k) (z,8 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_negmodinv_mc /\
@@ -682,8 +682,8 @@ let WINDOWS_BIGNUM_NEGMODINV_SUBROUTINE_CORRECT = prove
  (`!k z x m pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 32),40) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,0x11f);(x,8 * val k)] /\
-        nonoverlapping (word pc,0x11f) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_negmodinv_mc);(x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_negmodinv_mc) (z,8 * val k) /\
         nonoverlapping (x,8 * val k) (z,8 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_negmodinv_mc /\

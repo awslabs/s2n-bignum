@@ -3092,7 +3092,7 @@ let BIGNUM_MONTIFIER_SUBROUTINE_CORRECT = time prove
             [(z,8 * val k); (t,8 * val k)] /\
         ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
                                  (word_sub stackpointer (word 32),32)]
-                                [(word pc,0x3bf); (m,8 * val k)]
+                                [(word pc,LENGTH bignum_montifier_mc); (m,8 * val k)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_montifier_mc /\
                   read RIP s = word pc /\
@@ -3128,7 +3128,7 @@ let WINDOWS_BIGNUM_MONTIFIER_SUBROUTINE_CORRECT = time prove
             [(z,8 * val k); (t,8 * val k)] /\
         ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
                                  (word_sub stackpointer (word 48),48)]
-                                [(word pc,0x3cf); (m,8 * val k)]
+                                [(word pc,LENGTH windows_bignum_montifier_mc); (m,8 * val k)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_montifier_mc /\
                   read RIP s = word pc /\

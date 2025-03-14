@@ -1643,9 +1643,9 @@ let BIGNUM_INVSQRT_P25519_ALT_CORRECT = time prove
 let BIGNUM_INVSQRT_P25519_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 232),232))
-            [(word pc,0x7c2); (z,8 * 4); (x,8 * 4)] /\
+            [(word pc,LENGTH bignum_invsqrt_p25519_alt_mc); (z,8 * 4); (x,8 * 4)] /\
         ALL (nonoverlapping (z,8 * 4))
-            [(word pc,0x7c2); (word_sub stackpointer (word 232),240)]
+            [(word pc,LENGTH bignum_invsqrt_p25519_alt_mc); (word_sub stackpointer (word 232),240)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_invsqrt_p25519_alt_mc /\
                   read RIP s = word pc /\
@@ -1681,9 +1681,9 @@ let windows_bignum_invsqrt_p25519_alt_mc = define_trimmed "windows_bignum_invsqr
 let WINDOWS_BIGNUM_INVSQRT_P25519_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 256),256))
-            [(word pc,0x7d2); (z,8 * 4); (x,8 * 4)] /\
+            [(word pc,LENGTH windows_bignum_invsqrt_p25519_alt_mc); (z,8 * 4); (x,8 * 4)] /\
         ALL (nonoverlapping (z,8 * 4))
-            [(word pc,0x7d2); (word_sub stackpointer (word 256),264)]
+            [(word pc,LENGTH windows_bignum_invsqrt_p25519_alt_mc); (word_sub stackpointer (word 256),264)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_invsqrt_p25519_alt_mc /\
                   read RIP s = word pc /\
@@ -1705,10 +1705,13 @@ let WINDOWS_BIGNUM_INVSQRT_P25519_ALT_SUBROUTINE_CORRECT = time prove
   let WINDOWS_BIGNUM_INVSQRT_P25519_ALT_EXEC =
     X86_MK_EXEC_RULE windows_bignum_invsqrt_p25519_alt_mc
   and subth =
-   X86_SIMD_SHARPEN_RULE BIGNUM_INVSQRT_P25519_ALT_SUBROUTINE_CORRECT
-   (X86_ADD_RETURN_STACK_TAC
-     BIGNUM_INVSQRT_P25519_ALT_EXEC BIGNUM_INVSQRT_P25519_ALT_CORRECT
-     `[RBX; RBP; R12; R13; R14; R15]` 232) in
+   X86_SIMD_SHARPEN_RULE
+    (REWRITE_RULE[fst BIGNUM_INVSQRT_P25519_ALT_EXEC]
+        BIGNUM_INVSQRT_P25519_ALT_SUBROUTINE_CORRECT)
+    (X86_ADD_RETURN_STACK_TAC
+      BIGNUM_INVSQRT_P25519_ALT_EXEC BIGNUM_INVSQRT_P25519_ALT_CORRECT
+      `[RBX; RBP; R12; R13; R14; R15]` 232) in
+  REWRITE_TAC[fst WINDOWS_BIGNUM_INVSQRT_P25519_ALT_EXEC] THEN
   REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 256 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS; C_RETURN;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN

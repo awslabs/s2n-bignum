@@ -506,8 +506,8 @@ let BIGNUM_TOMONT_P384_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 6) (word_sub stackpointer (word 40),48) /\
         ALL (nonoverlapping (word_sub stackpointer (word 40),40))
-            [(word pc,0x455); (x,8 * 6)] /\
-        nonoverlapping (word pc,0x455) (z,8 * 6)
+            [(word pc,LENGTH bignum_tomont_p384_alt_mc); (x,8 * 6)] /\
+        nonoverlapping (word pc,LENGTH bignum_tomont_p384_alt_mc) (z,8 * 6)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_tomont_p384_alt_mc /\
                   read RIP s = word pc /\
@@ -538,8 +538,8 @@ let WINDOWS_BIGNUM_TOMONT_P384_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 6) (word_sub stackpointer (word 56),64) /\
         ALL (nonoverlapping (word_sub stackpointer (word 56),56))
-            [(word pc,0x45f); (x,8 * 6)] /\
-        nonoverlapping (word pc,0x45f) (z,8 * 6)
+            [(word pc,LENGTH windows_bignum_tomont_p384_alt_mc); (x,8 * 6)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_tomont_p384_alt_mc) (z,8 * 6)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_tomont_p384_alt_mc /\
                   read RIP s = word pc /\

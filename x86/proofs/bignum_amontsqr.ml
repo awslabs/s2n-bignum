@@ -846,7 +846,7 @@ let BIGNUM_AMONTSQR_SUBROUTINE_CORRECT = time prove
        nonoverlapping (z,8 * val k) (word_sub stackpointer (word 48),56) /\
        ALLPAIRS nonoverlapping
            [(z,8 * val k); (word_sub stackpointer (word 48),48)]
-           [(word pc,0x151); (x,8 * val k); (m,8 * val k)]
+           [(word pc,LENGTH bignum_amontsqr_mc); (x,8 * val k); (m,8 * val k)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_amontsqr_mc /\
                 read RIP s = word pc /\
@@ -880,7 +880,7 @@ let WINDOWS_BIGNUM_AMONTSQR_SUBROUTINE_CORRECT = time prove
        nonoverlapping (z,8 * val k) (word_sub stackpointer (word 64),72) /\
        ALLPAIRS nonoverlapping
            [(z,8 * val k); (word_sub stackpointer (word 64),64)]
-           [(word pc,0x161); (x,8 * val k); (m,8 * val k)]
+           [(word pc,LENGTH windows_bignum_amontsqr_mc); (x,8 * val k); (m,8 * val k)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc) windows_bignum_amontsqr_mc /\
                 read RIP s = word pc /\

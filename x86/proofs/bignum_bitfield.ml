@@ -283,7 +283,7 @@ let windows_bignum_bitfield_mc = define_trimmed "windows_bignum_bitfield_mc" win
 let WINDOWS_BIGNUM_BITFIELD_SUBROUTINE_CORRECT = prove
  (`!k x n l a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x73); (x,8 * val k)]
+            [(word pc,LENGTH windows_bignum_bitfield_mc); (x,8 * val k)]
         ==> ensures x86
                (\s. bytes_loaded s (word pc) windows_bignum_bitfield_mc /\
                     read RIP s = word pc /\

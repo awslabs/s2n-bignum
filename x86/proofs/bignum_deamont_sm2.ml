@@ -178,7 +178,7 @@ let BIGNUM_DEAMONT_SM2_CORRECT = time prove
 
 let BIGNUM_DEAMONT_SM2_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0xf2) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_sm2_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_deamont_sm2_mc /\
@@ -209,8 +209,8 @@ let WINDOWS_BIGNUM_DEAMONT_SM2_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 16),24) /\
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0xfc); (x,8 * 4)] /\
-        nonoverlapping (word pc,0xfc) (z,8 * 4)
+            [(word pc,LENGTH windows_bignum_deamont_sm2_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_deamont_sm2_mc) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_deamont_sm2_mc /\
                   read RIP s = word pc /\

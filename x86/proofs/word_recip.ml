@@ -733,7 +733,7 @@ let windows_word_recip_mc = define_trimmed "windows_word_recip_mc" windows_word_
 
 let WINDOWS_WORD_RECIP_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0xd1)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_recip_mc)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_word_recip_mc /\
                   read RIP s = word pc /\

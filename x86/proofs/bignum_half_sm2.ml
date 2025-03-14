@@ -131,7 +131,7 @@ let BIGNUM_HALF_SM2_CORRECT = time prove
 
 let BIGNUM_HALF_SM2_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x61) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_half_sm2_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_half_sm2_mc /\
@@ -162,8 +162,8 @@ let windows_bignum_half_sm2_mc = define_trimmed "windows_bignum_half_sm2_mc" win
 let WINDOWS_BIGNUM_HALF_SM2_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x6b); (x,8 * 4)] /\
-        nonoverlapping (word pc,0x6b) (z,8 * 4) /\
+            [(word pc,LENGTH windows_bignum_half_sm2_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH windows_bignum_half_sm2_mc) (z,8 * 4) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_bignum_half_sm2_mc /\

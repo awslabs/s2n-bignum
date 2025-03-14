@@ -6072,9 +6072,9 @@ let P256_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
  (`!res scalar blocksize tab n len tabulation pc stackpointer returnaddress.
         2 <= val blocksize /\ val blocksize <= 31 /\
         ALL (nonoverlapping (word_sub stackpointer (word 696),696))
-            [(word pc,0x3bae); (scalar,32); (tab,len)] /\
+            [(word pc,LENGTH p256_scalarmulbase_mc); (scalar,32); (tab,len)] /\
         ALL (nonoverlapping (res,64))
-            [(word pc,0x3bae); (word_sub stackpointer (word 696),704)]
+            [(word pc,LENGTH p256_scalarmulbase_mc); (word_sub stackpointer (word 696),704)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p256_scalarmulbase_mc /\
                   read RIP s = word pc /\
@@ -6110,9 +6110,9 @@ let WINDOWS_P256_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
  (`!res scalar blocksize tab n len tabulation pc stackpointer returnaddress.
         2 <= val blocksize /\ val blocksize <= 31 /\
         ALL (nonoverlapping (word_sub stackpointer (word 728),728))
-            [(word pc,0x3bc4); (scalar,32); (tab,len)] /\
+            [(word pc,LENGTH windows_p256_scalarmulbase_mc); (scalar,32); (tab,len)] /\
         ALL (nonoverlapping (res,64))
-            [(word pc,0x3bc4); (word_sub stackpointer (word 728),736)]
+            [(word pc,LENGTH windows_p256_scalarmulbase_mc); (word_sub stackpointer (word 728),736)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_p256_scalarmulbase_mc /\
                   read RIP s = word pc /\
@@ -6141,6 +6141,7 @@ let WINDOWS_P256_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
   let subth =
     CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
      (REWRITE_RULE[bignum_pair_from_memory] baseth) in
+  REWRITE_TAC[fst WINDOWS_P256_SCALARMULBASE_EXEC] THEN
   REPLICATE_TAC 8 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 728 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN

@@ -267,7 +267,7 @@ let BIGNUM_MUX16_CORRECT = prove
 
 let BIGNUM_MUX16_SUBROUTINE_CORRECT = prove
  (`!k z xs i n pc stackpointer returnaddress.
-     nonoverlapping (word pc,0x102) (z,8 * val k) /\
+     nonoverlapping (word pc,LENGTH bignum_mux16_mc) (z,8 * val k) /\
      nonoverlapping (stackpointer,8) (z,8 * val k) /\
      nonoverlapping (xs,8 * 16 * val k) (z,8 * val k)
      ==> ensures x86
@@ -298,8 +298,8 @@ let windows_bignum_mux16_mc = define_trimmed "windows_bignum_mux16_mc" windows_b
 let WINDOWS_BIGNUM_MUX16_SUBROUTINE_CORRECT = prove
  (`!k z xs i n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x112); (xs,8 * 16 * val k)] /\
-     nonoverlapping (word pc,0x112) (z,8 * val k) /\
+            [(word pc,LENGTH windows_bignum_mux16_mc); (xs,8 * 16 * val k)] /\
+     nonoverlapping (word pc,LENGTH windows_bignum_mux16_mc) (z,8 * val k) /\
      nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k) /\
      nonoverlapping (xs,8 * 16 * val k) (z,8 * val k)
      ==> ensures x86

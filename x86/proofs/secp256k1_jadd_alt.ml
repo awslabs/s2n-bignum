@@ -3330,9 +3330,9 @@ let SECP256K1_JADD_ALT_CORRECT = time prove
 let SECP256K1_JADD_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 272),272))
-            [(word pc,0x21a9); (p1,96); (p2,96)] /\
+            [(word pc,LENGTH secp256k1_jadd_alt_mc); (p1,96); (p2,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x21a9); (word_sub stackpointer (word 272),280)]
+            [(word pc,LENGTH secp256k1_jadd_alt_mc); (word_sub stackpointer (word 272),280)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) secp256k1_jadd_alt_mc /\
                   read RIP s = word pc /\
@@ -3366,9 +3366,9 @@ let windows_secp256k1_jadd_alt_mc = define_trimmed "windows_secp256k1_jadd_alt_m
 let WINDOWS_SECP256K1_JADD_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 288),288))
-            [(word pc,0x21b6); (p1,96); (p2,96)] /\
+            [(word pc,LENGTH windows_secp256k1_jadd_alt_mc); (p1,96); (p2,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x21b6); (word_sub stackpointer (word 288),296)]
+            [(word pc,LENGTH windows_secp256k1_jadd_alt_mc); (word_sub stackpointer (word 288),296)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) windows_secp256k1_jadd_alt_mc /\
                   read RIP s = word pc /\

@@ -130,7 +130,7 @@ let windows_word_negmodinv_mc = define_trimmed "windows_word_negmodinv_mc" windo
 
 let WINDOWS_WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0x60)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_negmodinv_mc)
         ==>  ensures x86
               (\s. bytes_loaded s (word pc) windows_word_negmodinv_mc /\
                    read RIP s = word pc /\

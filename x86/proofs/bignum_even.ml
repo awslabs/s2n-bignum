@@ -84,7 +84,7 @@ let windows_bignum_even_mc = define_trimmed "windows_bignum_even_mc" windows_big
 let WINDOWS_BIGNUM_EVEN_SUBROUTINE_CORRECT = prove
  (`!k a x pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x1c); (a,8 * val k)]
+            [(word pc,LENGTH windows_bignum_even_mc); (a,8 * val k)]
         ==> ensures x86
               (\s. bytes_loaded s (word pc) windows_bignum_even_mc /\
                    read RIP s = word pc /\
