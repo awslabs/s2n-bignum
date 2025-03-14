@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_coprime.o";;
  ****)
 
-let bignum_coprime_cmc =
-  define_assert_from_elf "bignum_coprime_cmc" "x86/generic/bignum_coprime.o"
+let bignum_coprime_mc =
+  define_assert_from_elf "bignum_coprime_mc" "x86/generic/bignum_coprime.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -294,9 +294,9 @@ let bignum_coprime_cmc =
   0xc3                     (* RET *)
 ];;
 
-let bignum_coprime_mc = define_trimmed "bignum_coprime_mc" bignum_coprime_cmc;;
+let bignum_coprime_tmc = define_trimmed "bignum_coprime_tmc" bignum_coprime_mc;;
 
-let BIGNUM_COPRIME_EXEC = X86_MK_CORE_EXEC_RULE bignum_coprime_mc;;
+let BIGNUM_COPRIME_EXEC = X86_MK_CORE_EXEC_RULE bignum_coprime_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -327,7 +327,7 @@ let BIGNUM_COPRIME_CORRECT = prove
              (x,8 * val m); (y,8 * val n)] /\
         val m < 2 EXP 57 /\ val n < 2 EXP 57
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_coprime_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_coprime_tmc) /\
                   read RIP s = word(pc + 0xe) /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [m;x;n;y;w] s /\
@@ -3109,6 +3109,32 @@ let BIGNUM_COPRIME_CORRECT = prove
   UNDISCH_THEN `lowdigits n0 l = n` (SUBST1_TAC o SYM) THEN
   REWRITE_TAC[HIGH_LOW_DIGITS]);;
 
+let BIGNUM_COPRIME_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!m x a n y b w pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 96),104)
+                       (w,8 * 2 * MAX (val m) (val n)) /\
+        ALLPAIRS nonoverlapping
+         [(w,8 * 2 * MAX (val m) (val n));
+          (word_sub stackpointer (word 96),96)]
+         [(word pc,LENGTH bignum_coprime_tmc); (x,8 * val m); (y,8 * val n)] /\
+        val m < 2 EXP 57 /\ val n < 2 EXP 57
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_coprime_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [m;x;n;y;w] s /\
+                  bignum_from_memory(x,val m) s = a /\
+                  bignum_from_memory(y,val n) s = b)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  C_RETURN s = if coprime(a,b) then word 1 else word 0)
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum(w,2 * MAX (val m) (val n));
+                       memory :> bytes(word_sub stackpointer (word 96),96)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_coprime_tmc BIGNUM_COPRIME_CORRECT
+   `[RBX; RBP; R12; R13; R14; R15]` 96);;
+
 let BIGNUM_COPRIME_SUBROUTINE_CORRECT = prove
  (`!m x a n y b w pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 96),104)
@@ -3132,54 +3158,28 @@ let BIGNUM_COPRIME_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(w,2 * MAX (val m) (val n));
                        memory :> bytes(word_sub stackpointer (word 96),96)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_coprime_mc BIGNUM_COPRIME_CORRECT
-   `[RBX; RBP; R12; R13; R14; R15]` 96);;
-
-let BIGNUM_COPRIME_IBT_SUBROUTINE_CORRECT = prove
- (`!m x a n y b w pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 96),104)
-                       (w,8 * 2 * MAX (val m) (val n)) /\
-        ALLPAIRS nonoverlapping
-         [(w,8 * 2 * MAX (val m) (val n));
-          (word_sub stackpointer (word 96),96)]
-         [(word pc,LENGTH bignum_coprime_cmc); (x,8 * val m); (y,8 * val n)] /\
-        val m < 2 EXP 57 /\ val n < 2 EXP 57
-        ==> ensures x86
-             (\s. bytes_loaded s (word pc) bignum_coprime_cmc /\
-                  read RIP s = word pc /\
-                  read RSP s = stackpointer /\
-                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                  C_ARGUMENTS [m;x;n;y;w] s /\
-                  bignum_from_memory(x,val m) s = a /\
-                  bignum_from_memory(y,val n) s = b)
-             (\s. read RIP s = returnaddress /\
-                  read RSP s = word_add stackpointer (word 8) /\
-                  C_RETURN s = if coprime(a,b) then word 1 else word 0)
-             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bignum(w,2 * MAX (val m) (val n));
-                       memory :> bytes(word_sub stackpointer (word 96),96)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPRIME_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPRIME_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_coprime_cmc = define_from_elf
-   "windows_bignum_coprime_cmc" "x86/generic/bignum_coprime.obj";;
+let bignum_coprime_windows_mc = define_from_elf
+   "bignum_coprime_windows_mc" "x86/generic/bignum_coprime.obj";;
 
-let windows_bignum_coprime_mc = define_trimmed "windows_bignum_coprime_mc" windows_bignum_coprime_cmc;;
+let bignum_coprime_windows_tmc = define_trimmed "bignum_coprime_windows_tmc" bignum_coprime_windows_mc;;
 
-let WINDOWS_BIGNUM_COPRIME_SUBROUTINE_CORRECT = prove
+let BIGNUM_COPRIME_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!m x a n y b w pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 112),120)
                        (w,8 * 2 * MAX (val m) (val n)) /\
         ALLPAIRS nonoverlapping
          [(w,8 * 2 * MAX (val m) (val n));
           (word_sub stackpointer (word 112),112)]
-         [(word pc,LENGTH windows_bignum_coprime_mc); (x,8 * val m); (y,8 * val n)] /\
+         [(word pc,LENGTH bignum_coprime_windows_tmc); (x,8 * val m); (y,8 * val n)] /\
         val m < 2 EXP 57 /\ val n < 2 EXP 57
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_coprime_mc /\
+             (\s. bytes_loaded s (word pc) bignum_coprime_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -3192,20 +3192,20 @@ let WINDOWS_BIGNUM_COPRIME_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(w,2 * MAX (val m) (val n));
                        memory :> bytes(word_sub stackpointer (word 112),112)])`,
-  WINDOWS_X86_WRAP_STACK_TAC windows_bignum_coprime_mc bignum_coprime_mc
+  WINDOWS_X86_WRAP_STACK_TAC bignum_coprime_windows_tmc bignum_coprime_tmc
     BIGNUM_COPRIME_CORRECT `[RBX; RBP; R12; R13; R14; R15]` 96);;
 
-let WINDOWS_BIGNUM_COPRIME_IBT_SUBROUTINE_CORRECT = prove
+let BIGNUM_COPRIME_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!m x a n y b w pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 112),120)
                        (w,8 * 2 * MAX (val m) (val n)) /\
         ALLPAIRS nonoverlapping
          [(w,8 * 2 * MAX (val m) (val n));
           (word_sub stackpointer (word 112),112)]
-         [(word pc,LENGTH windows_bignum_coprime_cmc); (x,8 * val m); (y,8 * val n)] /\
+         [(word pc,LENGTH bignum_coprime_windows_mc); (x,8 * val m); (y,8 * val n)] /\
         val m < 2 EXP 57 /\ val n < 2 EXP 57
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_coprime_cmc /\
+             (\s. bytes_loaded s (word pc) bignum_coprime_windows_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -3218,5 +3218,5 @@ let WINDOWS_BIGNUM_COPRIME_IBT_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(w,2 * MAX (val m) (val n));
                        memory :> bytes(word_sub stackpointer (word 112),112)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_COPRIME_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPRIME_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 

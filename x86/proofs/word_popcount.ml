@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/word_popcount.o";;
  ****)
 
-let word_popcount_cmc = define_assert_from_elf "word_popcount_cmc" "x86/generic/word_popcount.o"
+let word_popcount_mc = define_assert_from_elf "word_popcount_mc" "x86/generic/word_popcount.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xba; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55; 0x55;
@@ -41,9 +41,9 @@ let word_popcount_cmc = define_assert_from_elf "word_popcount_cmc" "x86/generic/
   0xc3                     (* RET *)
 ];;
 
-let word_popcount_mc = define_trimmed "word_popcount_mc" word_popcount_cmc;;
+let word_popcount_tmc = define_trimmed "word_popcount_tmc" word_popcount_mc;;
 
-let WORD_POPCOUNT_EXEC = X86_MK_CORE_EXEC_RULE word_popcount_mc;;
+let WORD_POPCOUNT_EXEC = X86_MK_CORE_EXEC_RULE word_popcount_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -52,7 +52,7 @@ let WORD_POPCOUNT_EXEC = X86_MK_CORE_EXEC_RULE word_popcount_mc;;
 let WORD_POPCOUNT_CORRECT = prove
  (`!a pc.
         ensures x86
-          (\s. bytes_loaded s (word pc) (BUTLAST word_popcount_mc) /\
+          (\s. bytes_loaded s (word pc) (BUTLAST word_popcount_tmc) /\
                read RIP s = word pc /\
                C_ARGUMENTS [a] s)
           (\s. read RIP s = word(pc + 0x59) /\
@@ -63,6 +63,20 @@ let WORD_POPCOUNT_CORRECT = prove
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   X86_SIM_TAC WORD_POPCOUNT_EXEC (1--19) THEN
   CONV_TAC BITBLAST_RULE);;
+
+let WORD_POPCOUNT_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+        ensures x86
+          (\s. bytes_loaded s (word pc) word_popcount_tmc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [a] s)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               C_RETURN s = word(word_popcount a))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC word_popcount_tmc WORD_POPCOUNT_CORRECT);;
 
 let WORD_POPCOUNT_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
@@ -76,36 +90,22 @@ let WORD_POPCOUNT_SUBROUTINE_CORRECT = prove
                read RSP s = word_add stackpointer (word 8) /\
                C_RETURN s = word(word_popcount a))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC word_popcount_mc WORD_POPCOUNT_CORRECT);;
-
-let WORD_POPCOUNT_IBT_SUBROUTINE_CORRECT = prove
- (`!a pc stackpointer returnaddress.
-        ensures x86
-          (\s. bytes_loaded s (word pc) word_popcount_cmc /\
-               read RIP s = word pc /\
-               read RSP s = stackpointer /\
-               read (memory :> bytes64 stackpointer) s = returnaddress /\
-               C_ARGUMENTS [a] s)
-          (\s. read RIP s = returnaddress /\
-               read RSP s = word_add stackpointer (word 8) /\
-               C_RETURN s = word(word_popcount a))
-          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_POPCOUNT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_POPCOUNT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_popcount_cmc = define_from_elf
-   "windows_word_popcount_cmc" "x86/generic/word_popcount.obj";;
+let word_popcount_windows_mc = define_from_elf
+   "word_popcount_windows_mc" "x86/generic/word_popcount.obj";;
 
-let windows_word_popcount_mc = define_trimmed "windows_word_popcount_mc" windows_word_popcount_cmc;;
+let word_popcount_windows_tmc = define_trimmed "word_popcount_windows_tmc" word_popcount_windows_mc;;
 
-let WINDOWS_WORD_POPCOUNT_SUBROUTINE_CORRECT = prove
+let WORD_POPCOUNT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_popcount_mc)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH word_popcount_windows_tmc)
         ==> ensures x86
-              (\s. bytes_loaded s (word pc) windows_word_popcount_mc /\
+              (\s. bytes_loaded s (word pc) word_popcount_windows_tmc /\
                    read RIP s = word pc /\
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -116,14 +116,14 @@ let WINDOWS_WORD_POPCOUNT_SUBROUTINE_CORRECT = prove
               (MAYCHANGE [RSP] ,,
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_word_popcount_mc word_popcount_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC word_popcount_windows_tmc word_popcount_tmc
     WORD_POPCOUNT_CORRECT);;
 
-let WINDOWS_WORD_POPCOUNT_IBT_SUBROUTINE_CORRECT = prove
+let WORD_POPCOUNT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH windows_word_popcount_cmc)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH word_popcount_windows_mc)
         ==> ensures x86
-              (\s. bytes_loaded s (word pc) windows_word_popcount_cmc /\
+              (\s. bytes_loaded s (word pc) word_popcount_windows_mc /\
                    read RIP s = word pc /\
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -134,5 +134,5 @@ let WINDOWS_WORD_POPCOUNT_IBT_SUBROUTINE_CORRECT = prove
               (MAYCHANGE [RSP] ,,
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_WORD_POPCOUNT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_POPCOUNT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 

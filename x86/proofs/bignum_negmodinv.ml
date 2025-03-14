@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_negmodinv.o";;
  ****)
 
-let bignum_negmodinv_cmc =
-  define_assert_from_elf "bignum_negmodinv_cmc" "x86/generic/bignum_negmodinv.o"
+let bignum_negmodinv_mc =
+  define_assert_from_elf "bignum_negmodinv_mc" "x86/generic/bignum_negmodinv.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -106,9 +106,9 @@ let bignum_negmodinv_cmc =
   0xc3                     (* RET *)
 ];;
 
-let bignum_negmodinv_mc = define_trimmed "bignum_negmodinv_mc" bignum_negmodinv_cmc;;
+let bignum_negmodinv_tmc = define_trimmed "bignum_negmodinv_tmc" bignum_negmodinv_mc;;
 
-let BIGNUM_NEGMODINV_EXEC = X86_MK_CORE_EXEC_RULE bignum_negmodinv_mc;;
+let BIGNUM_NEGMODINV_EXEC = X86_MK_CORE_EXEC_RULE bignum_negmodinv_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -142,7 +142,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
         nonoverlapping (word pc,0x112) (z,8 * val k) /\
         nonoverlapping (x,8 * val k) (z,8 * val k)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_negmodinv_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_negmodinv_tmc) /\
                   read RIP s = word (pc + 0x3) /\
                   C_ARGUMENTS [k; z; x] s /\
                   bignum_from_memory (x,val k) s = m)
@@ -644,6 +644,31 @@ let BIGNUM_NEGMODINV_CORRECT = prove
   REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN CONV_TAC REAL_RING);;
 
+let BIGNUM_NEGMODINV_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!k z x m pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+            [(word pc,LENGTH bignum_negmodinv_tmc);(x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_negmodinv_tmc) (z,8 * val k) /\
+        nonoverlapping (x,8 * val k) (z,8 * val k)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_negmodinv_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [k; z; x] s /\
+                  bignum_from_memory (x,val k) s = m)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (ODD m
+                   ==> (m * bignum_from_memory(z,val k) s + 1 == 0)
+                       (mod (2 EXP (64 * val k)))))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_negmodinv_tmc BIGNUM_NEGMODINV_CORRECT
+    `[RBX; R12]` 16);;
+
 let BIGNUM_NEGMODINV_SUBROUTINE_CORRECT = prove
  (`!k z x m pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k) /\
@@ -666,51 +691,26 @@ let BIGNUM_NEGMODINV_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * val k);
                        memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_negmodinv_mc BIGNUM_NEGMODINV_CORRECT
-    `[RBX; R12]` 16);;
-
-let BIGNUM_NEGMODINV_IBT_SUBROUTINE_CORRECT = prove
- (`!k z x m pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k) /\
-        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,LENGTH bignum_negmodinv_cmc);(x,8 * val k)] /\
-        nonoverlapping (word pc,LENGTH bignum_negmodinv_cmc) (z,8 * val k) /\
-        nonoverlapping (x,8 * val k) (z,8 * val k)
-        ==> ensures x86
-             (\s. bytes_loaded s (word pc) bignum_negmodinv_cmc /\
-                  read RIP s = word pc /\
-                  read RSP s = stackpointer /\
-                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                  C_ARGUMENTS [k; z; x] s /\
-                  bignum_from_memory (x,val k) s = m)
-             (\s. read RIP s = returnaddress /\
-                  read RSP s = word_add stackpointer (word 8) /\
-                  (ODD m
-                   ==> (m * bignum_from_memory(z,val k) s + 1 == 0)
-                       (mod (2 EXP (64 * val k)))))
-             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(z,8 * val k);
-                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_NEGMODINV_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_NEGMODINV_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_negmodinv_cmc = define_from_elf
-   "windows_bignum_negmodinv_cmc" "x86/generic/bignum_negmodinv.obj";;
+let bignum_negmodinv_windows_mc = define_from_elf
+   "bignum_negmodinv_windows_mc" "x86/generic/bignum_negmodinv.obj";;
 
-let windows_bignum_negmodinv_mc = define_trimmed "windows_bignum_negmodinv_mc" windows_bignum_negmodinv_cmc;;
+let bignum_negmodinv_windows_tmc = define_trimmed "bignum_negmodinv_windows_tmc" bignum_negmodinv_windows_mc;;
 
-let WINDOWS_BIGNUM_NEGMODINV_SUBROUTINE_CORRECT = prove
+let BIGNUM_NEGMODINV_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!k z x m pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 32),40) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,LENGTH windows_bignum_negmodinv_mc);(x,8 * val k)] /\
-        nonoverlapping (word pc,LENGTH windows_bignum_negmodinv_mc) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_negmodinv_windows_tmc);(x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_negmodinv_windows_tmc) (z,8 * val k) /\
         nonoverlapping (x,8 * val k) (z,8 * val k)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_negmodinv_mc /\
+             (\s. bytes_loaded s (word pc) bignum_negmodinv_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -724,18 +724,18 @@ let WINDOWS_BIGNUM_NEGMODINV_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * val k);
                        memory :> bytes(word_sub stackpointer (word 32),32)])`,
-  WINDOWS_X86_WRAP_STACK_TAC windows_bignum_negmodinv_mc bignum_negmodinv_mc
+  WINDOWS_X86_WRAP_STACK_TAC bignum_negmodinv_windows_tmc bignum_negmodinv_tmc
     BIGNUM_NEGMODINV_CORRECT `[RBX; R12]` 16);;
 
-let WINDOWS_BIGNUM_NEGMODINV_IBT_SUBROUTINE_CORRECT = prove
+let BIGNUM_NEGMODINV_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!k z x m pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 32),40) (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,LENGTH windows_bignum_negmodinv_cmc);(x,8 * val k)] /\
-        nonoverlapping (word pc,LENGTH windows_bignum_negmodinv_cmc) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_negmodinv_windows_mc);(x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_negmodinv_windows_mc) (z,8 * val k) /\
         nonoverlapping (x,8 * val k) (z,8 * val k)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_negmodinv_cmc /\
+             (\s. bytes_loaded s (word pc) bignum_negmodinv_windows_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -749,5 +749,5 @@ let WINDOWS_BIGNUM_NEGMODINV_IBT_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * val k);
                        memory :> bytes(word_sub stackpointer (word 32),32)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_NEGMODINV_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_NEGMODINV_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 

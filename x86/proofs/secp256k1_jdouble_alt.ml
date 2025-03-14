@@ -19,8 +19,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/secp256k1/secp256k1_jdouble_alt.o";;
  ****)
 
-let secp256k1_jdouble_alt_cmc = define_assert_from_elf
-  "secp256k1_jdouble_alt_cmc" "x86/secp256k1/secp256k1_jdouble_alt.o"
+let secp256k1_jdouble_alt_mc = define_assert_from_elf
+  "secp256k1_jdouble_alt_mc" "x86/secp256k1/secp256k1_jdouble_alt.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -1200,9 +1200,9 @@ let secp256k1_jdouble_alt_cmc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
-let secp256k1_jdouble_alt_mc = define_trimmed "secp256k1_jdouble_alt_mc" secp256k1_jdouble_alt_cmc;;
+let secp256k1_jdouble_alt_tmc = define_trimmed "secp256k1_jdouble_alt_tmc" secp256k1_jdouble_alt_mc;;
 
-let SECP256K1_JDOUBLE_ALT_EXEC = X86_MK_CORE_EXEC_RULE secp256k1_jdouble_alt_mc;;
+let SECP256K1_JDOUBLE_ALT_EXEC = X86_MK_CORE_EXEC_RULE secp256k1_jdouble_alt_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Common supporting definitions and lemmas for component proofs.            *)
@@ -1265,13 +1265,13 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SQR_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 114 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 114 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1.
     !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -1397,7 +1397,7 @@ let LOCAL_SQR_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 125 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 125 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -1405,7 +1405,7 @@ let LOCAL_MUL_P256K1_TAC =
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -1534,13 +1534,13 @@ let LOCAL_MUL_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ROUGHSQR_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 102 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 102 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1.
     !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),40)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -1610,7 +1610,7 @@ let LOCAL_ROUGHSQR_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ROUGHMUL_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 113 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 113 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -1618,7 +1618,7 @@ let LOCAL_ROUGHMUL_P256K1_TAC =
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),40)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -1691,13 +1691,13 @@ let LOCAL_ROUGHMUL_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_WEAKDOUBLE_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 19 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 19 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1.
     !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -1791,7 +1791,7 @@ let LOCAL_WEAKDOUBLE_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUBC9_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 75 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 75 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 5)) t = m
     ==>
@@ -1799,7 +1799,7 @@ let LOCAL_CMSUBC9_P256K1_TAC =
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -1968,7 +1968,7 @@ let LOCAL_CMSUBC9_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB38_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 58 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 58 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 5)) t = m
     ==>
@@ -1976,7 +1976,7 @@ let LOCAL_CMSUB38_P256K1_TAC =
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2155,7 +2155,7 @@ let LOCAL_CMSUB38_P256K1_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB41_P256K1_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_mc) 32 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE secp256k1_jdouble_alt_tmc) 32 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 5)) t = m
     ==>
@@ -2163,7 +2163,7 @@ let LOCAL_CMSUB41_P256K1_TAC =
     ==>
     nonoverlapping (word pc,0xe85) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2345,7 +2345,7 @@ let SECP256K1_JDOUBLE_ALT_CORRECT = time prove
             [(word pc,0xe85); (p1,96); (p3,96)] /\
         nonoverlapping (p3,96) (word pc,0xe85)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST secp256k1_jdouble_alt_tmc) /\
                   read RIP s = word(pc + 0x10) /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [p3; p1] s /\
@@ -2426,6 +2426,30 @@ let SECP256K1_JDOUBLE_ALT_CORRECT = time prove
   CONV_TAC INT_REM_DOWN_CONV THEN
   REPEAT CONJ_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN INT_ARITH_TAC);;
 
+let SECP256K1_JDOUBLE_ALT_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+            [(word pc,LENGTH secp256k1_jdouble_alt_tmc); (p1,96)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH secp256k1_jdouble_alt_tmc); (word_sub stackpointer (word 424),432)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) secp256k1_jdouble_alt_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1] s /\
+                  bignum_triple_from_memory (p1,4) s = t1)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. represents_p256k1 P t1
+                      ==> represents_p256k1 (group_mul p256k1_group P P)
+                            (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 424),424)])`,
+  X86_PROMOTE_RETURN_STACK_TAC secp256k1_jdouble_alt_tmc SECP256K1_JDOUBLE_ALT_CORRECT
+    `[RBX; R12; R13; R14; R15]` 424);;
+
 let SECP256K1_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 424),424))
@@ -2447,49 +2471,25 @@ let SECP256K1_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(word_sub stackpointer (word 424),424)])`,
-  X86_PROMOTE_RETURN_STACK_TAC secp256k1_jdouble_alt_mc SECP256K1_JDOUBLE_ALT_CORRECT
-    `[RBX; R12; R13; R14; R15]` 424);;
-
-let SECP256K1_JDOUBLE_ALT_IBT_SUBROUTINE_CORRECT = time prove
- (`!p3 p1 t1 pc stackpointer returnaddress.
-        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
-            [(word pc,LENGTH secp256k1_jdouble_alt_cmc); (p1,96)] /\
-        ALL (nonoverlapping (p3,96))
-            [(word pc,LENGTH secp256k1_jdouble_alt_cmc); (word_sub stackpointer (word 424),432)]
-        ==> ensures x86
-             (\s. bytes_loaded s (word pc) secp256k1_jdouble_alt_cmc /\
-                  read RIP s = word pc /\
-                  read RSP s = stackpointer /\
-                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                  C_ARGUMENTS [p3; p1] s /\
-                  bignum_triple_from_memory (p1,4) s = t1)
-             (\s. read RIP s = returnaddress /\
-                  read RSP s = word_add stackpointer (word 8) /\
-                  !P. represents_p256k1 P t1
-                      ==> represents_p256k1 (group_mul p256k1_group P P)
-                            (bignum_triple_from_memory(p3,4) s))
-          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(p3,96);
-                      memory :> bytes(word_sub stackpointer (word 424),424)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JDOUBLE_ALT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JDOUBLE_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_secp256k1_jdouble_alt_cmc = define_from_elf
-   "windows_secp256k1_jdouble_alt_cmc" "x86/secp256k1/secp256k1_jdouble_alt.obj";;
+let secp256k1_jdouble_alt_windows_mc = define_from_elf
+   "secp256k1_jdouble_alt_windows_mc" "x86/secp256k1/secp256k1_jdouble_alt.obj";;
 
-let windows_secp256k1_jdouble_alt_mc = define_trimmed "windows_secp256k1_jdouble_alt_mc" windows_secp256k1_jdouble_alt_cmc;;
+let secp256k1_jdouble_alt_windows_tmc = define_trimmed "secp256k1_jdouble_alt_windows_tmc" secp256k1_jdouble_alt_windows_mc;;
 
-let WINDOWS_SECP256K1_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
+let SECP256K1_JDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 440),440))
-            [(word pc,LENGTH windows_secp256k1_jdouble_alt_mc); (p1,96)] /\
+            [(word pc,LENGTH secp256k1_jdouble_alt_windows_tmc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,LENGTH windows_secp256k1_jdouble_alt_mc); (word_sub stackpointer (word 440),448)]
+            [(word pc,LENGTH secp256k1_jdouble_alt_windows_tmc); (word_sub stackpointer (word 440),448)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_secp256k1_jdouble_alt_mc /\
+             (\s. bytes_loaded s (word pc) secp256k1_jdouble_alt_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2504,18 +2504,18 @@ let WINDOWS_SECP256K1_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(word_sub stackpointer (word 440),440)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-    windows_secp256k1_jdouble_alt_mc secp256k1_jdouble_alt_mc
+    secp256k1_jdouble_alt_windows_tmc secp256k1_jdouble_alt_tmc
     SECP256K1_JDOUBLE_ALT_CORRECT
     `[RBX; R12; R13; R14; R15]` 424);;
 
-let WINDOWS_SECP256K1_JDOUBLE_ALT_IBT_SUBROUTINE_CORRECT = time prove
+let SECP256K1_JDOUBLE_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 440),440))
-            [(word pc,LENGTH windows_secp256k1_jdouble_alt_cmc); (p1,96)] /\
+            [(word pc,LENGTH secp256k1_jdouble_alt_windows_mc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,LENGTH windows_secp256k1_jdouble_alt_cmc); (word_sub stackpointer (word 440),448)]
+            [(word pc,LENGTH secp256k1_jdouble_alt_windows_mc); (word_sub stackpointer (word 440),448)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_secp256k1_jdouble_alt_cmc /\
+             (\s. bytes_loaded s (word pc) secp256k1_jdouble_alt_windows_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2529,5 +2529,5 @@ let WINDOWS_SECP256K1_JDOUBLE_ALT_IBT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(word_sub stackpointer (word 440),440)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_SECP256K1_JDOUBLE_ALT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 

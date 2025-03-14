@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/fastmul/bignum_ksqr_32_64.o";;
  ****)
 
-let bignum_ksqr_32_64_cmc =
-  define_assert_from_elf "bignum_ksqr_32_64_cmc" "x86/fastmul/bignum_ksqr_32_64.o"
+let bignum_ksqr_32_64_mc =
+  define_assert_from_elf "bignum_ksqr_32_64_mc" "x86/fastmul/bignum_ksqr_32_64.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
@@ -1750,32 +1750,32 @@ let bignum_ksqr_32_64_cmc =
   0xc3                     (* RET *)
 ];;
 
-let bignum_ksqr_32_64_mc = define_trimmed "bignum_ksqr_32_64_mc" bignum_ksqr_32_64_cmc;;
+let bignum_ksqr_32_64_tmc = define_trimmed "bignum_ksqr_32_64_tmc" bignum_ksqr_32_64_mc;;
 
-let BIGNUM_KSQR_32_64_EXEC = X86_MK_EXEC_RULE bignum_ksqr_32_64_mc;;
+let BIGNUM_KSQR_32_64_EXEC = X86_MK_EXEC_RULE bignum_ksqr_32_64_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* The lemma for the embedded subroutine (close to bignum_sqr_16_32).        *)
 (* ------------------------------------------------------------------------- *)
 
-let local_ksqr_16_32_mc_def = define
- `local_ksqr_16_32_mc = ITER 0x8d6 TL bignum_ksqr_32_64_mc`;;
+let local_ksqr_16_32_tmc_def = define
+ `local_ksqr_16_32_tmc = ITER 0x8d6 TL bignum_ksqr_32_64_tmc`;;
 
-let local_ksqr_16_32_mc =
+let local_ksqr_16_32_tmc =
   GEN_REWRITE_RULE DEPTH_CONV [TL]
-    (REWRITE_RULE[bignum_ksqr_32_64_mc; CONJUNCT1 ITER]
+    (REWRITE_RULE[bignum_ksqr_32_64_tmc; CONJUNCT1 ITER]
       (CONV_RULE(RAND_CONV(TOP_DEPTH_CONV
          (RATOR_CONV(LAND_CONV num_CONV) THENC GEN_REWRITE_CONV I [ITER])))
-         local_ksqr_16_32_mc_def));;
+         local_ksqr_16_32_tmc_def));;
 
-let LOCAL_KSQR_16_32_EXEC = X86_MK_EXEC_RULE local_ksqr_16_32_mc;;
+let LOCAL_KSQR_16_32_EXEC = X86_MK_EXEC_RULE local_ksqr_16_32_tmc;;
 
 let LOCAL_KSQR_16_32_CORRECT = prove
  (`!z x a pc.
      nonoverlapping (word pc,3440) (z,8 * 32) /\
      nonoverlapping (x,8 * 16) (z,8 * 32)
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) local_ksqr_16_32_mc /\
+          (\s. bytes_loaded s (word pc) local_ksqr_16_32_tmc /\
                read RIP s = word pc /\
                C_ARGUMENTS [z; x] s /\
                bignum_from_memory (x,16) s = a)
@@ -1805,7 +1805,7 @@ let LOCAL_KSQR_16_32_CORRECT = prove
 let tac mc execth pcinst =
   let maintac = X86_SUBROUTINE_SIM_TAC
    (mc,execth,dest_small_numeral(rand pcinst),
-    local_ksqr_16_32_mc,LOCAL_KSQR_16_32_CORRECT)
+    local_ksqr_16_32_tmc,LOCAL_KSQR_16_32_CORRECT)
     [`read RDI s`; `read RSI s`;
      `read (memory :> bytes (read RSI s,8 * 16)) s`;
      pcinst]
@@ -1996,17 +1996,17 @@ let tac mc execth pcinst =
 (* Proof of the standard ABI version.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
+let BIGNUM_KSQR_32_64_NOIBT_SUBROUTINE_CORRECT = time prove
  (`!z x t a pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 56),64))
          [(z,8 * 64); (t,8 * 72)] /\
      ALL (nonoverlapping (word_sub stackpointer (word 56),56))
-         [(word pc,LENGTH bignum_ksqr_32_64_mc); (x,8 * 32)] /\
+         [(word pc,LENGTH bignum_ksqr_32_64_tmc); (x,8 * 32)] /\
      nonoverlapping (z,8 * 64) (t,8 * 72) /\
      ALLPAIRS nonoverlapping
-         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH bignum_ksqr_32_64_mc); (x,8 * 32)]
+         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH bignum_ksqr_32_64_tmc); (x,8 * 32)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_mc /\
+          (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_tmc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2030,7 +2030,7 @@ let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
 
   SUBGOAL_THEN
    `ensures x86
-     (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_mc /\
+     (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_tmc /\
           read RIP s = word(pc + 0xa) /\
           read RSP s = word_add stackpointer (word 8) /\
           C_ARGUMENTS [z; x; t] s /\
@@ -2060,19 +2060,19 @@ let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
     X86_STEPS_TAC BIGNUM_KSQR_32_64_EXEC (8--14) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]] THEN
 
-  tac bignum_ksqr_32_64_mc BIGNUM_KSQR_32_64_EXEC `pc + 0x8d6`);;
+  tac bignum_ksqr_32_64_tmc BIGNUM_KSQR_32_64_EXEC `pc + 0x8d6`);;
 
-let BIGNUM_KSQR_32_64_IBT_SUBROUTINE_CORRECT = time prove
+let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
  (`!z x t a pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 56),64))
          [(z,8 * 64); (t,8 * 72)] /\
      ALL (nonoverlapping (word_sub stackpointer (word 56),56))
-         [(word pc,LENGTH bignum_ksqr_32_64_cmc); (x,8 * 32)] /\
+         [(word pc,LENGTH bignum_ksqr_32_64_mc); (x,8 * 32)] /\
      nonoverlapping (z,8 * 64) (t,8 * 72) /\
      ALLPAIRS nonoverlapping
-         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH bignum_ksqr_32_64_cmc); (x,8 * 32)]
+         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH bignum_ksqr_32_64_mc); (x,8 * 32)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_cmc /\
+          (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_mc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2084,31 +2084,31 @@ let BIGNUM_KSQR_32_64_IBT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 72);
                       memory :> bytes(word_sub stackpointer (word 56),56)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_KSQR_32_64_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_ksqr_32_64_cmc = define_from_elf
-   "windows_bignum_ksqr_32_64_cmc" "x86/fastmul/bignum_ksqr_32_64.obj";;
+let bignum_ksqr_32_64_windows_mc = define_from_elf
+   "bignum_ksqr_32_64_windows_mc" "x86/fastmul/bignum_ksqr_32_64.obj";;
 
-let windows_bignum_ksqr_32_64_mc = define_trimmed "windows_bignum_ksqr_32_64_mc" windows_bignum_ksqr_32_64_cmc;;
+let bignum_ksqr_32_64_windows_tmc = define_trimmed "bignum_ksqr_32_64_windows_tmc" bignum_ksqr_32_64_windows_mc;;
 
 let WINDOWS_BIGNUM_KSQR_32_64_EXEC =
-  X86_MK_EXEC_RULE windows_bignum_ksqr_32_64_mc;;
+  X86_MK_EXEC_RULE bignum_ksqr_32_64_windows_tmc;;
 
-let WINDOWS_BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
+let BIGNUM_KSQR_32_64_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x t a pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 72),80))
          [(z,8 * 64); (t,8 * 72)] /\
      ALL (nonoverlapping (word_sub stackpointer (word 72),72))
-         [(word pc,LENGTH windows_bignum_ksqr_32_64_mc); (x,8 * 32)] /\
+         [(word pc,LENGTH bignum_ksqr_32_64_windows_tmc); (x,8 * 32)] /\
      nonoverlapping (z,8 * 64) (t,8 * 72) /\
      ALLPAIRS nonoverlapping
-         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH windows_bignum_ksqr_32_64_mc); (x,8 * 32)]
+         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH bignum_ksqr_32_64_windows_tmc); (x,8 * 32)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) windows_bignum_ksqr_32_64_mc /\
+          (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_windows_tmc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2132,7 +2132,7 @@ let WINDOWS_BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
 
   SUBGOAL_THEN
    `ensures x86
-     (\s. bytes_loaded s (word pc) windows_bignum_ksqr_32_64_mc /\
+     (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_windows_tmc /\
           read RIP s = word(pc + 0x15) /\
           read RSP s = word_add stackpointer (word 8) /\
           C_ARGUMENTS [z; x; t] s /\
@@ -2164,20 +2164,20 @@ let WINDOWS_BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = time prove
     X86_STEPS_TAC WINDOWS_BIGNUM_KSQR_32_64_EXEC (13--21) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]] THEN
 
-  tac windows_bignum_ksqr_32_64_mc WINDOWS_BIGNUM_KSQR_32_64_EXEC
+  tac bignum_ksqr_32_64_windows_tmc WINDOWS_BIGNUM_KSQR_32_64_EXEC
    `pc + 0x8e3`);;
 
-let WINDOWS_BIGNUM_KSQR_32_64_IBT_SUBROUTINE_CORRECT = time prove
+let BIGNUM_KSQR_32_64_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x t a pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 72),80))
          [(z,8 * 64); (t,8 * 72)] /\
      ALL (nonoverlapping (word_sub stackpointer (word 72),72))
-         [(word pc,LENGTH windows_bignum_ksqr_32_64_cmc); (x,8 * 32)] /\
+         [(word pc,LENGTH bignum_ksqr_32_64_windows_mc); (x,8 * 32)] /\
      nonoverlapping (z,8 * 64) (t,8 * 72) /\
      ALLPAIRS nonoverlapping
-         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH windows_bignum_ksqr_32_64_cmc); (x,8 * 32)]
+         [(z,8 * 64); (t,8 * 72)] [(word pc,LENGTH bignum_ksqr_32_64_windows_mc); (x,8 * 32)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) windows_bignum_ksqr_32_64_cmc /\
+          (\s. bytes_loaded s (word pc) bignum_ksqr_32_64_windows_mc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2189,5 +2189,5 @@ let WINDOWS_BIGNUM_KSQR_32_64_IBT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 72);
                       memory :> bytes(word_sub stackpointer (word 72),72)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_KSQR_32_64_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 

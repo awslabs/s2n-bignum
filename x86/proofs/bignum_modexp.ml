@@ -12,8 +12,8 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/generic/bignum_modexp.o";;
  ****)
 
-let bignum_modexp_cmc =
-  define_assert_from_elf "bignum_modexp_cmc" "x86/generic/bignum_modexp.o"
+let bignum_modexp_mc =
+  define_assert_from_elf "bignum_modexp_mc" "x86/generic/bignum_modexp.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x83; 0xec; 0x48;  (* SUB (% rsp) (Imm8 (word 72)) *)
@@ -640,9 +640,9 @@ let bignum_modexp_cmc =
   0xc3                     (* RET *)
 ];;
 
-let bignum_modexp_mc = define_trimmed "bignum_modexp_mc" bignum_modexp_cmc;;
+let bignum_modexp_tmc = define_trimmed "bignum_modexp_tmc" bignum_modexp_mc;;
 
-let BIGNUM_MODEXP_EXEC = X86_MK_EXEC_RULE bignum_modexp_mc;;
+let BIGNUM_MODEXP_EXEC = X86_MK_EXEC_RULE bignum_modexp_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness for the subroutines                                           *)
@@ -658,12 +658,12 @@ let X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC (mc,ex,d,smc,cth) ins outs s n =
 needs "x86/proofs/bignum_amontifier.ml";;
 
 let LOCAL_AMONTIFIER_TAC =
-  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT
-   (X86_PROMOTE_RETURN_STACK_TAC bignum_amontifier_mc BIGNUM_AMONTIFIER_CORRECT
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_AMONTIFIER_NOIBT_SUBROUTINE_CORRECT
+   (X86_PROMOTE_RETURN_STACK_TAC bignum_amontifier_tmc BIGNUM_AMONTIFIER_CORRECT
     `[RBX; RBP; R12; R13]` 32) in
   fun s n -> X86_SUBROUTINE_SIM_ABBREV_TAC
-    (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x152,bignum_amontifier_mc,baseth)
+    (bignum_modexp_tmc,BIGNUM_MODEXP_EXEC,
+     0x152,bignum_amontifier_tmc,baseth)
     [`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`;
      `read (memory :> bytes(read RDX s,8 * k)) s`;
      `pc + 0x152`; `read RSP s`;
@@ -673,13 +673,13 @@ let LOCAL_AMONTIFIER_TAC =
 needs "x86/proofs/bignum_amontmul.ml";;
 
 let LOCAL_AMONTMUL_TAC =
-  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_AMONTMUL_SUBROUTINE_CORRECT
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_AMONTMUL_NOIBT_SUBROUTINE_CORRECT
   (X86_PROMOTE_RETURN_STACK_TAC
-    bignum_amontmul_mc BIGNUM_AMONTMUL_CORRECT
+    bignum_amontmul_tmc BIGNUM_AMONTMUL_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 56) in
   fun s n -> X86_SUBROUTINE_SIM_ABBREV_TAC
-    (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x479,bignum_amontmul_mc,baseth)
+    (bignum_modexp_tmc,BIGNUM_MODEXP_EXEC,
+     0x479,bignum_amontmul_tmc,baseth)
     [`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`; `read R8 s`;
      `read (memory :> bytes(read RDX s,8 * k)) s`;
      `read (memory :> bytes(read RCX s,8 * k)) s`;
@@ -691,12 +691,12 @@ let LOCAL_AMONTMUL_TAC =
 needs "x86/proofs/bignum_demont.ml";;
 
 let LOCAL_DEMONT_TAC =
-  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_DEMONT_SUBROUTINE_CORRECT
-  (X86_PROMOTE_RETURN_STACK_TAC bignum_demont_mc BIGNUM_DEMONT_CORRECT
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_DEMONT_NOIBT_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_STACK_TAC bignum_demont_tmc BIGNUM_DEMONT_CORRECT
    `[RBX; RBP; R12]` 24) in
   fun s n -> X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC
-    (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x5d7,bignum_demont_mc,baseth)
+    (bignum_modexp_tmc,BIGNUM_MODEXP_EXEC,
+     0x5d7,bignum_demont_tmc,baseth)
     [`read RDI s`; `read RSI s`; `read RDX s`; `read RCX s`;
      `read (memory :> bytes(read RDX s,8 * k)) s`;
      `read (memory :> bytes(read RCX s,8 * k)) s`;
@@ -707,11 +707,11 @@ let LOCAL_DEMONT_TAC =
 needs "x86/proofs/bignum_mux.ml";;
 
 let LOCAL_MUX_TAC =
-  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_MUX_SUBROUTINE_CORRECT
-  (X86_PROMOTE_RETURN_NOSTACK_TAC bignum_mux_mc BIGNUM_MUX_CORRECT) in
+  let baseth = X86_SIMD_SHARPEN_RULE BIGNUM_MUX_NOIBT_SUBROUTINE_CORRECT
+  (X86_PROMOTE_RETURN_NOSTACK_TAC bignum_mux_tmc BIGNUM_MUX_CORRECT) in
   fun s n -> X86_CASEWISE_SUBROUTINE_SIM_ABBREV_TAC
-    (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
-     0x6ed,bignum_mux_mc,baseth)
+    (bignum_modexp_tmc,BIGNUM_MODEXP_EXEC,
+     0x6ed,bignum_mux_tmc,baseth)
     [`read RDI s`; `read RSI s`; `read RCX s`; `read R8 s`; `read RDX s`;
      `read (memory :> bytes(read RCX s,8 * k)) s`;
      `read (memory :> bytes(read R8 s,8 * k)) s`;
@@ -733,7 +733,7 @@ let BIGNUM_MODEXP_CORRECT = prove
      ALL (nonoverlapping (t,24 * val k))
          [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) bignum_modexp_mc /\
+          (\s. bytes_loaded s (word pc) bignum_modexp_tmc /\
                read RIP s = word(pc + 0x4) /\
                read RSP s = stackpointer /\
                C_ARGUMENTS [k; z; a; p; m; t] s /\
@@ -900,17 +900,17 @@ let BIGNUM_MODEXP_CORRECT = prove
     MP_TAC(SPECL [`n:num`; `2 EXP (64 * k)`] INVERSE_MOD_LMUL) THEN
     ASM_REWRITE_TAC[COPRIME_REXP; COPRIME_2] THEN CONV_TAC NUMBER_RULE]);;
 
-let BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
+let BIGNUM_MODEXP_NOIBT_SUBROUTINE_CORRECT = prove
  (`!k z a x p y m n t pc stackpointer returnaddress.
      val k < 2 EXP 58 /\
      ALL (nonoverlapping (word_sub stackpointer (word 136),144))
-         [(word pc,LENGTH bignum_modexp_mc); (z,8 * val k); (t,24 * val k);
+         [(word pc,LENGTH bignum_modexp_tmc); (z,8 * val k); (t,24 * val k);
           (a,8 * val k); (p,8 * val k); (m,8 * val k)] /\
-     ALL (nonoverlapping (word pc,LENGTH bignum_modexp_mc)) [(z,8 * val k); (t,24 * val k)] /\
+     ALL (nonoverlapping (word pc,LENGTH bignum_modexp_tmc)) [(z,8 * val k); (t,24 * val k)] /\
      ALL (nonoverlapping (t,24 * val k))
          [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) bignum_modexp_mc /\
+          (\s. bytes_loaded s (word pc) bignum_modexp_tmc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -946,17 +946,17 @@ let BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
     X86_STEPS_TAC BIGNUM_MODEXP_EXEC (3--4) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]));;
 
-let BIGNUM_MODEXP_IBT_SUBROUTINE_CORRECT = prove
+let BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
  (`!k z a x p y m n t pc stackpointer returnaddress.
      val k < 2 EXP 58 /\
      ALL (nonoverlapping (word_sub stackpointer (word 136),144))
-         [(word pc,LENGTH bignum_modexp_cmc); (z,8 * val k); (t,24 * val k);
+         [(word pc,LENGTH bignum_modexp_mc); (z,8 * val k); (t,24 * val k);
           (a,8 * val k); (p,8 * val k); (m,8 * val k)] /\
-     ALL (nonoverlapping (word pc,LENGTH bignum_modexp_cmc)) [(z,8 * val k); (t,24 * val k)] /\
+     ALL (nonoverlapping (word pc,LENGTH bignum_modexp_mc)) [(z,8 * val k); (t,24 * val k)] /\
      ALL (nonoverlapping (t,24 * val k))
          [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) bignum_modexp_cmc /\
+          (\s. bytes_loaded s (word pc) bignum_modexp_mc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -971,28 +971,28 @@ let BIGNUM_MODEXP_IBT_SUBROUTINE_CORRECT = prove
            MAYCHANGE [memory :> bignum(z,val k);
                       memory :> bytes(t,24 * val k);
                       memory :> bytes(word_sub stackpointer (word 136),136)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MODEXP_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MODEXP_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_modexp_cmc = define_from_elf
-   "windows_bignum_modexp_cmc" "x86/generic/bignum_modexp.obj";;
+let bignum_modexp_windows_mc = define_from_elf
+   "bignum_modexp_windows_mc" "x86/generic/bignum_modexp.obj";;
 
-let windows_bignum_modexp_mc = define_trimmed "windows_bignum_modexp_mc" windows_bignum_modexp_cmc;;
+let bignum_modexp_windows_tmc = define_trimmed "bignum_modexp_windows_tmc" bignum_modexp_windows_mc;;
 
-let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
+let BIGNUM_MODEXP_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!k z a x p y m n t pc stackpointer returnaddress.
      val k < 2 EXP 58 /\
      ALL (nonoverlapping (word_sub stackpointer (word 160),168))
-         [(word pc,LENGTH windows_bignum_modexp_mc); (z,8 * val k); (t,24 * val k);
+         [(word pc,LENGTH bignum_modexp_windows_tmc); (z,8 * val k); (t,24 * val k);
           (a,8 * val k); (p,8 * val k); (m,8 * val k)] /\
-     ALL (nonoverlapping (word pc,LENGTH windows_bignum_modexp_mc)) [(z,8 * val k); (t,24 * val k)] /\
+     ALL (nonoverlapping (word pc,LENGTH bignum_modexp_windows_tmc)) [(z,8 * val k); (t,24 * val k)] /\
      ALL (nonoverlapping (t,24 * val k))
          [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) windows_bignum_modexp_mc /\
+          (\s. bytes_loaded s (word pc) bignum_modexp_windows_tmc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1008,11 +1008,11 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
                       memory :> bytes(t,24 * val k);
                       memory :> bytes(word_sub stackpointer (word 160),160)])`,
   let WINDOWS_BIGNUM_MODEXP_EXEC =
-    X86_MK_EXEC_RULE windows_bignum_modexp_mc
+    X86_MK_EXEC_RULE bignum_modexp_windows_tmc
   and subth =
     X86_SIMD_SHARPEN_RULE
     (REWRITE_RULE[fst BIGNUM_MODEXP_EXEC]
-      BIGNUM_MODEXP_SUBROUTINE_CORRECT)
+      BIGNUM_MODEXP_NOIBT_SUBROUTINE_CORRECT)
     (MP_TAC BIGNUM_MODEXP_CORRECT THEN
      REPLICATE_TAC 10 (MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
      DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC 136 THEN
@@ -1046,9 +1046,9 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
    (CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
   X86_STEPS_TAC WINDOWS_BIGNUM_MODEXP_EXEC (1--9) THEN
   X86_SUBROUTINE_SIM_TAC
-   (windows_bignum_modexp_mc,
+   (bignum_modexp_windows_tmc,
     WINDOWS_BIGNUM_MODEXP_EXEC,
-    0x20,bignum_modexp_mc,subth)
+    0x20,bignum_modexp_tmc,subth)
    [`read RDI s`; `read RSI s`;
     `read RDX s`; `read (memory :> bytes(read RDX s,8 * val(k:int64))) s`;
     `read RCX s`; `read (memory :> bytes(read RCX s,8 * val(k:int64))) s`;
@@ -1058,17 +1058,17 @@ let WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
   X86_STEPS_TAC WINDOWS_BIGNUM_MODEXP_EXEC (11--13) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
-let WINDOWS_BIGNUM_MODEXP_IBT_SUBROUTINE_CORRECT = prove
+let BIGNUM_MODEXP_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!k z a x p y m n t pc stackpointer returnaddress.
      val k < 2 EXP 58 /\
      ALL (nonoverlapping (word_sub stackpointer (word 160),168))
-         [(word pc,LENGTH windows_bignum_modexp_cmc); (z,8 * val k); (t,24 * val k);
+         [(word pc,LENGTH bignum_modexp_windows_mc); (z,8 * val k); (t,24 * val k);
           (a,8 * val k); (p,8 * val k); (m,8 * val k)] /\
-     ALL (nonoverlapping (word pc,LENGTH windows_bignum_modexp_cmc)) [(z,8 * val k); (t,24 * val k)] /\
+     ALL (nonoverlapping (word pc,LENGTH bignum_modexp_windows_mc)) [(z,8 * val k); (t,24 * val k)] /\
      ALL (nonoverlapping (t,24 * val k))
          [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) windows_bignum_modexp_cmc /\
+          (\s. bytes_loaded s (word pc) bignum_modexp_windows_mc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1083,5 +1083,5 @@ let WINDOWS_BIGNUM_MODEXP_IBT_SUBROUTINE_CORRECT = prove
            MAYCHANGE [memory :> bignum(z,val k);
                       memory :> bytes(t,24 * val k);
                       memory :> bytes(word_sub stackpointer (word 160),160)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_MODEXP_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MODEXP_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 

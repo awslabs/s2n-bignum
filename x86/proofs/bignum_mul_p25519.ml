@@ -12,7 +12,7 @@ needs "x86/proofs/base.ml";;
 (**** print_literal_from_elf "x86/curve25519/bignum_mul_p25519.o";;
  ****)
 
-let bignum_mul_p25519_cmc = define_assert_from_elf "bignum_mul_p25519_cmc" "x86/curve25519/bignum_mul_p25519.o"
+let bignum_mul_p25519_mc = define_assert_from_elf "bignum_mul_p25519_mc" "x86/curve25519/bignum_mul_p25519.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -176,9 +176,9 @@ let bignum_mul_p25519_cmc = define_assert_from_elf "bignum_mul_p25519_cmc" "x86/
   0xc3                     (* RET *)
 ];;
 
-let bignum_mul_p25519_mc = define_trimmed "bignum_mul_p25519_mc" bignum_mul_p25519_cmc;;
+let bignum_mul_p25519_tmc = define_trimmed "bignum_mul_p25519_tmc" bignum_mul_p25519_mc;;
 
-let BIGNUM_MUL_P25519_EXEC = X86_MK_CORE_EXEC_RULE bignum_mul_p25519_mc;;
+let BIGNUM_MUL_P25519_EXEC = X86_MK_CORE_EXEC_RULE bignum_mul_p25519_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -201,7 +201,7 @@ let BIGNUM_MUL_P25519_CORRECT = time prove
  (`!z x y m n pc.
         nonoverlapping (word pc,0x1c3) (z,8 * 4)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_mul_p25519_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_mul_p25519_tmc) /\
                   read RIP s = word(pc + 0xa) /\
                   C_ARGUMENTS [z; x; y] s /\
                   bignum_from_memory (x,4) s = m /\
@@ -419,6 +419,30 @@ let BIGNUM_MUL_P25519_CORRECT = time prove
   COND_CASES_TAC THEN ASM_REWRITE_TAC[BITVAL_CLAUSES] THEN
   CONV_TAC WORD_REDUCE_CONV THEN REAL_INTEGER_TAC);;
 
+let BIGNUM_MUL_P25519_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!z x y m n pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_mul_p25519_tmc) (z,8 * 4) /\
+        nonoverlapping (z,8 * 4) (word_sub stackpointer (word 48),56) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 48),48))
+            [(word pc,LENGTH bignum_mul_p25519_tmc); (x,8 * 4); (y,8 * 4)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_mul_p25519_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; x; y] s /\
+                  bignum_from_memory(x,4) s = m /\
+                  bignum_from_memory (y,4) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory(z,4) s = (m * n) MOD p_25519)
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 4);
+                     memory :> bytes(word_sub stackpointer (word 48),48)])`,
+  X86_PROMOTE_RETURN_STACK_TAC
+   bignum_mul_p25519_tmc BIGNUM_MUL_P25519_CORRECT
+   `[RBX; RBP; R12; R13; R14; R15]` 48);;
+
 let BIGNUM_MUL_P25519_SUBROUTINE_CORRECT = time prove
  (`!z x y m n pc stackpointer returnaddress.
         nonoverlapping (word pc,LENGTH bignum_mul_p25519_mc) (z,8 * 4) /\
@@ -439,49 +463,25 @@ let BIGNUM_MUL_P25519_SUBROUTINE_CORRECT = time prove
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * 4);
                      memory :> bytes(word_sub stackpointer (word 48),48)])`,
-  X86_PROMOTE_RETURN_STACK_TAC
-   bignum_mul_p25519_mc BIGNUM_MUL_P25519_CORRECT
-   `[RBX; RBP; R12; R13; R14; R15]` 48);;
-
-let BIGNUM_MUL_P25519_IBT_SUBROUTINE_CORRECT = time prove
- (`!z x y m n pc stackpointer returnaddress.
-        nonoverlapping (word pc,LENGTH bignum_mul_p25519_cmc) (z,8 * 4) /\
-        nonoverlapping (z,8 * 4) (word_sub stackpointer (word 48),56) /\
-        ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,LENGTH bignum_mul_p25519_cmc); (x,8 * 4); (y,8 * 4)]
-        ==> ensures x86
-             (\s. bytes_loaded s (word pc) bignum_mul_p25519_cmc /\
-                  read RIP s = word pc /\
-                  read RSP s = stackpointer /\
-                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                  C_ARGUMENTS [z; x; y] s /\
-                  bignum_from_memory(x,4) s = m /\
-                  bignum_from_memory (y,4) s = n)
-             (\s. read RIP s = returnaddress /\
-                  read RSP s = word_add stackpointer (word 8) /\
-                  bignum_from_memory(z,4) s = (m * n) MOD p_25519)
-             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(z,8 * 4);
-                     memory :> bytes(word_sub stackpointer (word 48),48)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MUL_P25519_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MUL_P25519_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_mul_p25519_cmc = define_from_elf
-   "windows_bignum_mul_p25519_cmc" "x86/curve25519/bignum_mul_p25519.obj";;
+let bignum_mul_p25519_windows_mc = define_from_elf
+   "bignum_mul_p25519_windows_mc" "x86/curve25519/bignum_mul_p25519.obj";;
 
-let windows_bignum_mul_p25519_mc = define_trimmed "windows_bignum_mul_p25519_mc" windows_bignum_mul_p25519_cmc;;
+let bignum_mul_p25519_windows_tmc = define_trimmed "bignum_mul_p25519_windows_tmc" bignum_mul_p25519_windows_mc;;
 
-let WINDOWS_BIGNUM_MUL_P25519_SUBROUTINE_CORRECT = time prove
+let BIGNUM_MUL_P25519_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x y m n pc stackpointer returnaddress.
-        nonoverlapping (word pc,LENGTH windows_bignum_mul_p25519_mc) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_mul_p25519_windows_tmc) (z,8 * 4) /\
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 64),72) /\
         ALL (nonoverlapping (word_sub stackpointer (word 64),64))
-            [(word pc,LENGTH windows_bignum_mul_p25519_mc); (x,8 * 4); (y,8 * 4)]
+            [(word pc,LENGTH bignum_mul_p25519_windows_tmc); (x,8 * 4); (y,8 * 4)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_mul_p25519_mc /\
+             (\s. bytes_loaded s (word pc) bignum_mul_p25519_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -495,17 +495,17 @@ let WINDOWS_BIGNUM_MUL_P25519_SUBROUTINE_CORRECT = time prove
               MAYCHANGE [memory :> bytes(z,8 * 4);
                      memory :> bytes(word_sub stackpointer (word 64),64)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-   windows_bignum_mul_p25519_mc bignum_mul_p25519_mc BIGNUM_MUL_P25519_CORRECT
+   bignum_mul_p25519_windows_tmc bignum_mul_p25519_tmc BIGNUM_MUL_P25519_CORRECT
    `[RBX; RBP; R12; R13; R14; R15]` 48);;
 
-let WINDOWS_BIGNUM_MUL_P25519_IBT_SUBROUTINE_CORRECT = time prove
+let BIGNUM_MUL_P25519_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x y m n pc stackpointer returnaddress.
-        nonoverlapping (word pc,LENGTH windows_bignum_mul_p25519_cmc) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_mul_p25519_windows_mc) (z,8 * 4) /\
         nonoverlapping (z,8 * 4) (word_sub stackpointer (word 64),72) /\
         ALL (nonoverlapping (word_sub stackpointer (word 64),64))
-            [(word pc,LENGTH windows_bignum_mul_p25519_cmc); (x,8 * 4); (y,8 * 4)]
+            [(word pc,LENGTH bignum_mul_p25519_windows_mc); (x,8 * 4); (y,8 * 4)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_mul_p25519_cmc /\
+             (\s. bytes_loaded s (word pc) bignum_mul_p25519_windows_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -518,5 +518,5 @@ let WINDOWS_BIGNUM_MUL_P25519_IBT_SUBROUTINE_CORRECT = time prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * 4);
                      memory :> bytes(word_sub stackpointer (word 64),64)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_BIGNUM_MUL_P25519_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MUL_P25519_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 

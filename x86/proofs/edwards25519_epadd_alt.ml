@@ -20,8 +20,8 @@ prioritize_num();;
 (**** print_literal_from_elf "x86/curve25519/edwards25519_epadd_alt.o";;
  ****)
 
-let edwards25519_epadd_alt_cmc = define_assert_from_elf
-  "edwards25519_epadd_alt_cmc" "x86/curve25519/edwards25519_epadd_alt.o"
+let edwards25519_epadd_alt_mc = define_assert_from_elf
+  "edwards25519_epadd_alt_mc" "x86/curve25519/edwards25519_epadd_alt.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
@@ -1686,9 +1686,9 @@ let edwards25519_epadd_alt_cmc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
-let edwards25519_epadd_alt_mc = define_trimmed "edwards25519_epadd_alt_mc" edwards25519_epadd_alt_cmc;;
+let edwards25519_epadd_alt_tmc = define_trimmed "edwards25519_epadd_alt_tmc" edwards25519_epadd_alt_mc;;
 
-let EDWARDS25519_EPADD_ALT_EXEC = X86_MK_CORE_EXEC_RULE edwards25519_epadd_alt_mc;;
+let EDWARDS25519_EPADD_ALT_EXEC = X86_MK_CORE_EXEC_RULE edwards25519_epadd_alt_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Abbreviations used to state the specification.                            *)
@@ -1746,7 +1746,7 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P25519_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_mc) 129 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_tmc) 129 lvs
    `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -1754,7 +1754,7 @@ let LOCAL_MUL_P25519_TAC =
       ==>
       nonoverlapping (word pc,0x13dd) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -1931,7 +1931,7 @@ let LOCAL_MUL_P25519_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_mc) 120 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_tmc) 120 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -1939,7 +1939,7 @@ let LOCAL_MUL_4_TAC =
       ==>
       nonoverlapping (word pc,0x13dd) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -2100,7 +2100,7 @@ let LOCAL_MUL_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_mc) 12 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_tmc) 12 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2110,7 +2110,7 @@ let LOCAL_ADD_4_TAC =
       nonoverlapping (p2:int64,96) (stackpointer,192) /\
       nonoverlapping (word pc,0x13dd) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -2149,7 +2149,7 @@ let LOCAL_ADD_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_DOUBLE_4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_mc) 12 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_tmc) 12 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1.
       !n. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = n
       ==>
@@ -2157,7 +2157,7 @@ let LOCAL_DOUBLE_4_TAC =
                      (word_add (read q1 t) (word n1),8 * 4) /\
       nonoverlapping (word pc,0x13dd) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -2193,7 +2193,7 @@ let LOCAL_DOUBLE_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_mc) 17 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_tmc) 17 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2201,7 +2201,7 @@ let LOCAL_SUB_4_TAC =
       ==>
       nonoverlapping (word pc,0x13dd) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -2263,7 +2263,7 @@ let LOCAL_SUB_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_TWICE4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_mc) 19 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_tmc) 19 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2271,7 +2271,7 @@ let LOCAL_ADD_TWICE4_TAC =
       ==>
       nonoverlapping (word pc,0x13dd) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -2332,7 +2332,7 @@ let LOCAL_ADD_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_TWICE4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_mc) 19 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE edwards25519_epadd_alt_tmc) 19 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -2340,7 +2340,7 @@ let LOCAL_SUB_TWICE4_TAC =
       ==>
       nonoverlapping (word pc,0x13dd) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -2411,7 +2411,7 @@ let EDWARDS25519_EPADD_ALT_CORRECT = time prove
         [(word pc,0x13dd); (p3,128); (p1,128); (p2,128)] /\
     nonoverlapping (p3,128) (word pc,0x13dd)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_epadd_alt_tmc) /\
               read RIP s = word(pc + 0x11) /\
               read RSP s = stackpointer /\
               C_ARGUMENTS [p3; p1; p2] s /\
@@ -2546,6 +2546,36 @@ let EDWARDS25519_EPADD_ALT_CORRECT = time prove
   REWRITE_TAC[PAIR_EQ] THEN CONV_TAC INT_REM_DOWN_CONV THEN
   REPEAT CONJ_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN INT_ARITH_TAC);;
 
+let EDWARDS25519_EPADD_ALT_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 Q1 p2 Q2 pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 240),240))
+        [(word pc,LENGTH edwards25519_epadd_alt_tmc); (p3,128); (p1,128); (p2,128)] /\
+    nonoverlapping (p3,128) (word pc,LENGTH edwards25519_epadd_alt_tmc) /\
+    nonoverlapping (p3,128) (word_sub stackpointer (word 240),248)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc) edwards25519_epadd_alt_tmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [p3; p1; p2] s /\
+              bignum_quadruple_from_memory (p1,4) s = Q1 /\
+              bignum_quadruple_from_memory (p2,4) s = Q2)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              !P1 P2. P1 IN group_carrier edwards25519_group /\
+                      P2 IN group_carrier edwards25519_group /\
+                      edwards25519_exprojective P1 Q1 /\
+                      edwards25519_exprojective P2 Q2
+                      ==> edwards25519_exprojective
+                           (edwards_add edwards25519 P1 P2)
+                           (bignum_quadruple_from_memory(p3,4) s))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,128);
+                      memory :> bytes(word_sub stackpointer (word 240),240)])`,
+  X86_PROMOTE_RETURN_STACK_TAC
+    edwards25519_epadd_alt_tmc EDWARDS25519_EPADD_ALT_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 240);;
+
 let EDWARDS25519_EPADD_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 Q1 p2 Q2 pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 240),240))
@@ -2572,56 +2602,26 @@ let EDWARDS25519_EPADD_ALT_SUBROUTINE_CORRECT = time prove
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,128);
                       memory :> bytes(word_sub stackpointer (word 240),240)])`,
-  X86_PROMOTE_RETURN_STACK_TAC
-    edwards25519_epadd_alt_mc EDWARDS25519_EPADD_ALT_CORRECT
-    `[RBX; RBP; R12; R13; R14; R15]` 240);;
-
-let EDWARDS25519_EPADD_ALT_IBT_SUBROUTINE_CORRECT = time prove
- (`!p3 p1 Q1 p2 Q2 pc stackpointer returnaddress.
-    ALL (nonoverlapping (word_sub stackpointer (word 240),240))
-        [(word pc,LENGTH edwards25519_epadd_alt_cmc); (p3,128); (p1,128); (p2,128)] /\
-    nonoverlapping (p3,128) (word pc,LENGTH edwards25519_epadd_alt_cmc) /\
-    nonoverlapping (p3,128) (word_sub stackpointer (word 240),248)
-    ==> ensures x86
-         (\s. bytes_loaded s (word pc) edwards25519_epadd_alt_cmc /\
-              read RIP s = word pc /\
-              read RSP s = stackpointer /\
-              read (memory :> bytes64 stackpointer) s = returnaddress /\
-              C_ARGUMENTS [p3; p1; p2] s /\
-              bignum_quadruple_from_memory (p1,4) s = Q1 /\
-              bignum_quadruple_from_memory (p2,4) s = Q2)
-         (\s. read RIP s = returnaddress /\
-              read RSP s = word_add stackpointer (word 8) /\
-              !P1 P2. P1 IN group_carrier edwards25519_group /\
-                      P2 IN group_carrier edwards25519_group /\
-                      edwards25519_exprojective P1 Q1 /\
-                      edwards25519_exprojective P2 Q2
-                      ==> edwards25519_exprojective
-                           (edwards_add edwards25519 P1 P2)
-                           (bignum_quadruple_from_memory(p3,4) s))
-         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-           MAYCHANGE [memory :> bytes(p3,128);
-                      memory :> bytes(word_sub stackpointer (word 240),240)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_EPADD_ALT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_EPADD_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_epadd_alt_cmc = define_from_elf
-  "windows_edwards25519_epadd_alt_cmc"
+let edwards25519_epadd_alt_windows_mc = define_from_elf
+  "edwards25519_epadd_alt_windows_mc"
   "x86/curve25519/edwards25519_epadd_alt.obj";;
 
-let windows_edwards25519_epadd_alt_mc = define_trimmed "windows_edwards25519_epadd_alt_mc" windows_edwards25519_epadd_alt_cmc;;
+let edwards25519_epadd_alt_windows_tmc = define_trimmed "edwards25519_epadd_alt_windows_tmc" edwards25519_epadd_alt_windows_mc;;
 
-let WINDOWS_EDWARDS25519_EPADD_ALT_SUBROUTINE_CORRECT = prove
+let EDWARDS25519_EPADD_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!p3 p1 Q1 p2 Q2 pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 256),256))
-        [(word pc,LENGTH windows_edwards25519_epadd_alt_mc); (p3,128); (p1,128); (p2,128)] /\
-    nonoverlapping (p3,128) (word pc,LENGTH windows_edwards25519_epadd_alt_mc) /\
+        [(word pc,LENGTH edwards25519_epadd_alt_windows_tmc); (p3,128); (p1,128); (p2,128)] /\
+    nonoverlapping (p3,128) (word pc,LENGTH edwards25519_epadd_alt_windows_tmc) /\
     nonoverlapping (p3,128) (word_sub stackpointer (word 256),264)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) windows_edwards25519_epadd_alt_mc /\
+         (\s. bytes_loaded s (word pc) edwards25519_epadd_alt_windows_tmc /\
               read RIP s = word pc /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2641,18 +2641,18 @@ let WINDOWS_EDWARDS25519_EPADD_ALT_SUBROUTINE_CORRECT = prove
            MAYCHANGE [memory :> bytes(p3,128);
                       memory :> bytes(word_sub stackpointer (word 256),256)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-   windows_edwards25519_epadd_alt_mc edwards25519_epadd_alt_mc
+   edwards25519_epadd_alt_windows_tmc edwards25519_epadd_alt_tmc
    EDWARDS25519_EPADD_ALT_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
 
-let WINDOWS_EDWARDS25519_EPADD_ALT_IBT_SUBROUTINE_CORRECT = prove
+let EDWARDS25519_EPADD_ALT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!p3 p1 Q1 p2 Q2 pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 256),256))
-        [(word pc,LENGTH windows_edwards25519_epadd_alt_cmc); (p3,128); (p1,128); (p2,128)] /\
-    nonoverlapping (p3,128) (word pc,LENGTH windows_edwards25519_epadd_alt_cmc) /\
+        [(word pc,LENGTH edwards25519_epadd_alt_windows_mc); (p3,128); (p1,128); (p2,128)] /\
+    nonoverlapping (p3,128) (word pc,LENGTH edwards25519_epadd_alt_windows_mc) /\
     nonoverlapping (p3,128) (word_sub stackpointer (word 256),264)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) windows_edwards25519_epadd_alt_cmc /\
+         (\s. bytes_loaded s (word pc) edwards25519_epadd_alt_windows_mc /\
               read RIP s = word pc /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2671,5 +2671,5 @@ let WINDOWS_EDWARDS25519_EPADD_ALT_IBT_SUBROUTINE_CORRECT = prove
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,128);
                       memory :> bytes(word_sub stackpointer (word 256),256)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE WINDOWS_EDWARDS25519_EPADD_ALT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_EPADD_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
