@@ -13,6 +13,7 @@ let bignum_copy_row_from_table_mc =
   define_assert_from_elf "bignum_copy_row_from_table_mc"
                          "x86/generic/bignum_copy_row_from_table.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xd2;        (* TEST (% rdx) (% rdx) *)
   0x74; 0x56;              (* JE (Imm8 (word 86)) *)
   0x48; 0x85; 0xc9;        (* TEST (% rcx) (% rcx) *)
@@ -46,8 +47,10 @@ let bignum_copy_row_from_table_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC = X86_MK_CORE_EXEC_RULE bignum_copy_row_from_table_mc;;
-let BIGNUM_COPY_ROW_FROM_TABLE_EXEC = X86_MK_EXEC_RULE bignum_copy_row_from_table_mc;;
+let bignum_copy_row_from_table_tmc = define_trimmed "bignum_copy_row_from_table_tmc" bignum_copy_row_from_table_mc;;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC = X86_MK_CORE_EXEC_RULE bignum_copy_row_from_table_tmc;;
+let BIGNUM_COPY_ROW_FROM_TABLE_EXEC = X86_MK_EXEC_RULE bignum_copy_row_from_table_tmc;;
 
 (* ARITH_RULE for proving `lp=rp` where lp and rp are pairs *)
 let PAIR_EQ_ARITH_RULE (lp:term) (rp:term) =
@@ -131,20 +134,20 @@ let READ_MEMORY_BYTES_BYTES64 = prove(`!z s.
 
 let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
   `!z table height width idx n m pc.
-    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_mc)
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_tmc)
                    (z, 8 * val width) /\
-    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_mc)
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_tmc)
                    (table, 8 * val height * val width) /\
     nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
     8 * val width < 2 EXP 64 /\
     val idx < val height
     ==> ensures x86
-      (\s. bytes_loaded s (word pc) (BUTLAST bignum_copy_row_from_table_mc) /\
+      (\s. bytes_loaded s (word pc) (BUTLAST bignum_copy_row_from_table_tmc) /\
            read RIP s = word pc /\
            C_ARGUMENTS [z; table; height; width; idx] s /\
            bignum_from_memory (table, val height * val width) s = n /\
            bignum_from_memory (word_add table (word (8 * val idx * val width)), val width) s = m)
-      (\s. read RIP s = word (pc + LENGTH (BUTLAST bignum_copy_row_from_table_mc)) /\
+      (\s. read RIP s = word (pc + LENGTH (BUTLAST bignum_copy_row_from_table_tmc)) /\
            bignum_from_memory (z, val width) s = m)
       (MAYCHANGE [RIP] ,,
        MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
@@ -647,18 +650,18 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
     ]
   ]);;
 
-let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
+let BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_SUBROUTINE_CORRECT = prove(
   `!z table height width idx n m pc stackpointer returnaddress.
-    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_mc)
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_tmc)
                    (z, 8 * val width) /\
-    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_mc)
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_tmc)
                    (table, 8 * val height * val width) /\
     nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
     nonoverlapping (z, 8 * val width) (stackpointer, 8) /\
     8 * val width < 2 EXP 64 /\
     val idx < val height
     ==> ensures x86
-      (\s. bytes_loaded s (word pc) bignum_copy_row_from_table_mc /\
+      (\s. bytes_loaded s (word pc) bignum_copy_row_from_table_tmc /\
            read RIP s = word pc /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -688,34 +691,61 @@ let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
       [fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC;
        fst BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC]
       BIGNUM_COPY_ROW_FROM_TABLE_CORRECT in
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_copy_row_from_table_mc core);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_copy_row_from_table_tmc core);;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
+  `!z table height width idx n m pc stackpointer returnaddress.
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_mc)
+                   (z, 8 * val width) /\
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_mc)
+                   (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (stackpointer, 8) /\
+    8 * val width < 2 EXP 64 /\
+    val idx < val height
+    ==> ensures x86
+      (\s. bytes_loaded s (word pc) bignum_copy_row_from_table_mc /\
+           read RIP s = word pc /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           C_ARGUMENTS [z; table; height; width; idx] s /\
+           bignum_from_memory (table, val height * val width) s = n /\
+           bignum_from_memory (word_add table (word (8 * val idx * val width)), val width) s = m)
+      (\s. read RIP s = returnaddress /\
+           read RSP s = word_add stackpointer (word 8) /\
+           bignum_from_memory (z, val width) s = m)
+      (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(z,8 * val width)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_copy_row_from_table_mc = define_from_elf
-    "windows_bignum_copy_row_from_table_mc"
+let bignum_copy_row_from_table_windows_mc = define_from_elf
+    "bignum_copy_row_from_table_windows_mc"
     "x86/generic/bignum_copy_row_from_table.obj";;
-let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_EXEC =
-    X86_MK_EXEC_RULE windows_bignum_copy_row_from_table_mc;;
+
+let bignum_copy_row_from_table_windows_tmc = define_trimmed "bignum_copy_row_from_table_windows_tmc" bignum_copy_row_from_table_windows_mc;;let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_EXEC =
+
+    X86_MK_EXEC_RULE bignum_copy_row_from_table_windows_tmc;;
 
 
-let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
+let BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
   `!z table height width idx n m pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 16), 16))
-        [(word pc, LENGTH windows_bignum_copy_row_from_table_mc);
+        [(word pc, LENGTH bignum_copy_row_from_table_windows_tmc);
          (table, 8 * val height * val width)] /\
-    nonoverlapping (word pc, LENGTH windows_bignum_copy_row_from_table_mc)
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_windows_tmc)
                    (z, 8 * val width) /\
-    nonoverlapping (word pc, LENGTH windows_bignum_copy_row_from_table_mc)
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_windows_tmc)
                    (table, 8 * val height * val width) /\
     nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
     nonoverlapping (z, 8 * val width) (word_sub stackpointer (word 16), 24) /\
     8 * val width < 2 EXP 64 /\
     val idx < val height
     ==> ensures x86
-      (\s. bytes_loaded s (word pc) windows_bignum_copy_row_from_table_mc /\
+      (\s. bytes_loaded s (word pc) bignum_copy_row_from_table_windows_tmc /\
            read RIP s = word pc /\
            read RSP s = stackpointer /\
            read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -746,5 +776,35 @@ let WINDOWS_BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
       [fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC;
        fst BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC]
       BIGNUM_COPY_ROW_FROM_TABLE_CORRECT in
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_copy_row_from_table_mc
-    bignum_copy_row_from_table_mc core);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_copy_row_from_table_windows_tmc
+    bignum_copy_row_from_table_tmc core);;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_WINDOWS_SUBROUTINE_CORRECT = prove(
+  `!z table height width idx n m pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 16), 16))
+        [(word pc, LENGTH bignum_copy_row_from_table_windows_mc);
+         (table, 8 * val height * val width)] /\
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_windows_mc)
+                   (z, 8 * val width) /\
+    nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_windows_mc)
+                   (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
+    nonoverlapping (z, 8 * val width) (word_sub stackpointer (word 16), 24) /\
+    8 * val width < 2 EXP 64 /\
+    val idx < val height
+    ==> ensures x86
+      (\s. bytes_loaded s (word pc) bignum_copy_row_from_table_windows_mc /\
+           read RIP s = word pc /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           WINDOWS_C_ARGUMENTS [z; table; height; width; idx] s /\
+           bignum_from_memory (table, val height * val width) s = n /\
+           bignum_from_memory (word_add table (word (8 * val idx * val width)), val width) s = m)
+      (\s. read RIP s = returnaddress /\
+           read RSP s = word_add stackpointer (word 8) /\
+           bignum_from_memory (z, val width) s = m)
+      (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(z,8 * val width);
+                  memory :> bytes(word_sub stackpointer (word 16), 16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPY_ROW_FROM_TABLE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

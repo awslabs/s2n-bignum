@@ -31,6 +31,7 @@ let edwards25519_scalarmulbase_alt_mc,edwards25519_scalarmulbase_alt_data =
   "edwards25519_scalarmulbase_alt_mc" "edwards25519_scalarmulbase_alt_data"
   "x86/curve25519/edwards25519_scalarmulbase_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -6724,8 +6725,10 @@ let edwards25519_scalarmulbase_alt_mc,edwards25519_scalarmulbase_alt_data =
  102; 66; 200; 66; 208; 144; 171; 227; 126; 84; 25; 127; 15; 142; 132; 235;
  185; 151; 164; 101; 208; 161; 3; 37; 95; 137; 223; 145; 17; 145; 239; 15];;
 
+let edwards25519_scalarmulbase_alt_tmc = define_trimmed "edwards25519_scalarmulbase_alt_tmc" edwards25519_scalarmulbase_alt_mc;;
+
 let EDWARDS25519_SCALARMULBASE_ALT_EXEC =
-  X86_MK_EXEC_RULE edwards25519_scalarmulbase_alt_mc;;
+  X86_MK_EXEC_RULE edwards25519_scalarmulbase_alt_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Actually proving that the tables are correct.                             *)
@@ -6887,7 +6890,7 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P25519_TAC =
-  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 129 lvs
+  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_tmc 129 lvs
    `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
@@ -6895,7 +6898,7 @@ let LOCAL_MUL_P25519_TAC =
       ==>
       nonoverlapping (word pc,0xef37) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_tmc /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RBP s = read RBP t /\
@@ -7070,7 +7073,7 @@ let LOCAL_MUL_P25519_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 120 lvs
+  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_tmc 120 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -7078,7 +7081,7 @@ let LOCAL_MUL_4_TAC =
       ==>
       nonoverlapping (word pc,0xef37) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_tmc /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RBP s = read RBP t /\
@@ -7237,7 +7240,7 @@ let LOCAL_MUL_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_TWICE4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 19 lvs
+  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_tmc 19 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -7245,7 +7248,7 @@ let LOCAL_ADD_TWICE4_TAC =
       ==>
       nonoverlapping (word pc,0xef37) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_tmc /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -7311,13 +7314,13 @@ let LOCAL_ADD_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_DOUBLE_TWICE4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 19 lvs
+  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_tmc 19 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1.
       !n. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = n
       ==>
       nonoverlapping (word pc,0xef37) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_tmc /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -7378,7 +7381,7 @@ let LOCAL_DOUBLE_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_TWICE4_TAC =
-  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 19 lvs
+  X86_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_tmc 19 lvs
    `!(t:x86state) pcin pcout q3 n3 q1 n1 q2 n2.
       !m. read(memory :> bytes(word_add (read q1 t) (word n1),8 * 4)) t = m
       ==>
@@ -7386,7 +7389,7 @@ let LOCAL_SUB_TWICE4_TAC =
       ==>
       nonoverlapping (word pc,0xef37) (word_add (read q3 t) (word n3),8 * 4)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_tmc /\
                 read RIP s = pcin /\
                 read RSP s = read RSP t /\
                 read RDI s = read RDI t /\
@@ -7459,11 +7462,11 @@ let LOCAL_SUB_TWICE4_TAC =
 
 let LOCAL_MODINV_TAC =
  X86_SUBROUTINE_SIM_TAC
-  (edwards25519_scalarmulbase_alt_mc,
+  (edwards25519_scalarmulbase_alt_tmc,
    EDWARDS25519_SCALARMULBASE_ALT_EXEC,
    0x194e,
-   (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_mc] THENC TRIM_LIST_CONV)
-   `TRIM_LIST (17,18) bignum_inv_p25519_mc`,
+   (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_tmc] THENC TRIM_LIST_CONV)
+   `TRIM_LIST (17,18) bignum_inv_p25519_tmc`,
    CORE_INV_P25519_CORRECT)
   [`read RDI s`; `read RSI s`;
    `read (memory :> bytes(read RSI s,8 * 4)) s`;
@@ -7480,7 +7483,7 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
     nonoverlapping (res,64) (word pc,0xef37)
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND edwards25519_scalarmulbase_alt_mc
+               (APPEND edwards25519_scalarmulbase_alt_tmc
                        edwards25519_scalarmulbase_alt_data) /\
               read RIP s = word(pc + 0x11) /\
               read RSP s = stackpointer /\
@@ -8280,7 +8283,7 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
   CONV_TAC INT_REM_DOWN_CONV THEN
   REWRITE_TAC[INT_REM_EQ] THEN CONV_TAC INTEGER_RULE);;
 
-let EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
+let EDWARDS25519_SCALARMULBASE_ALT_NOIBT_SUBROUTINE_CORRECT = time prove
  (`!res scalar n pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 536),536))
         [(word pc,0xef37); (scalar,32)] /\
@@ -8288,7 +8291,7 @@ let EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
     nonoverlapping (res,64) (word_sub stackpointer (word 536),544)
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND edwards25519_scalarmulbase_alt_mc
+               (APPEND edwards25519_scalarmulbase_alt_tmc
                        edwards25519_scalarmulbase_alt_data) /\
               read RIP s = word pc /\
               read RSP s = stackpointer /\
@@ -8311,18 +8314,45 @@ let EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
     EDWARDS25519_SCALARMULBASE_ALT_CORRECT)
     `[RBX; RBP; R12; R13; R14; R15]` 536);;
 
+let EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 536),536))
+        [(word pc,0xef3b); (scalar,32)] /\
+    nonoverlapping (res,64) (word pc,0xef3b) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 536),544)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND edwards25519_scalarmulbase_alt_mc
+                       edwards25519_scalarmulbase_alt_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [res; scalar] s /\
+              bignum_from_memory (scalar,4) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              bignum_pair_from_memory(res,4) s =
+              paired (modular_encode (256,p_25519))
+                     (group_pow edwards25519_group E_25519 n))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,64);
+                     memory :> bytes(word_sub stackpointer (word 536),536)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_SCALARMULBASE_ALT_NOIBT_SUBROUTINE_CORRECT));;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_scalarmulbase_alt_mc,
-    windows_edwards25519_scalarmulbase_alt_data =
-  define_coda_from_elf 0x3187
-  "windows_edwards25519_scalarmulbase_alt_mc"
-  "windows_edwards25519_scalarmulbase_alt_data"
+let edwards25519_scalarmulbase_alt_windows_mc,
+    edwards25519_scalarmulbase_alt_windows_data =
+  define_coda_from_elf 0x318b
+  "edwards25519_scalarmulbase_alt_windows_mc"
+  "edwards25519_scalarmulbase_alt_windows_data"
   "x86/curve25519/edwards25519_scalarmulbase_alt.obj";;
 
-let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
+let edwards25519_scalarmulbase_alt_windows_tmc = define_trimmed "edwards25519_scalarmulbase_alt_windows_tmc" edwards25519_scalarmulbase_alt_windows_mc;;
+
+let EDWARDS25519_SCALARMULBASE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!res scalar n pc stackpointer returnaddress.
     ALL (nonoverlapping (word_sub stackpointer (word 560),560))
         [(word pc,0xef47); (scalar,32)] /\
@@ -8330,8 +8360,8 @@ let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
     nonoverlapping (res,64) (word_sub stackpointer (word 560),568)
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND windows_edwards25519_scalarmulbase_alt_mc
-                       windows_edwards25519_scalarmulbase_alt_data) /\
+               (APPEND edwards25519_scalarmulbase_alt_windows_tmc
+                       edwards25519_scalarmulbase_alt_windows_data) /\
               read RIP s = word pc /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -8346,9 +8376,9 @@ let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
           MAYCHANGE [memory :> bytes(res,64);
                      memory :> bytes(word_sub stackpointer (word 560),560)])`,
   let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_EXEC =
-    X86_MK_EXEC_RULE windows_edwards25519_scalarmulbase_alt_mc
+    X86_MK_EXEC_RULE edwards25519_scalarmulbase_alt_windows_tmc
   and baseth =
-    X86_SIMD_SHARPEN_RULE EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT
+    X86_SIMD_SHARPEN_RULE EDWARDS25519_SCALARMULBASE_ALT_NOIBT_SUBROUTINE_CORRECT
     (REWRITE_TAC[BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
                  fst EDWARDS25519_SCALARMULBASE_ALT_EXEC] THEN
      X86_ADD_RETURN_STACK_TAC EDWARDS25519_SCALARMULBASE_ALT_EXEC
@@ -8370,8 +8400,8 @@ let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
    [bytes_loaded] THEN
   REWRITE_TAC[READ_BYTELIST_EQ_BYTES; CONV_RULE (RAND_CONV LENGTH_CONV)
      (AP_TERM `LENGTH:byte list->num`
-      windows_edwards25519_scalarmulbase_alt_data)] THEN
-  REWRITE_TAC[windows_edwards25519_scalarmulbase_alt_data] THEN
+      edwards25519_scalarmulbase_alt_windows_data)] THEN
+  REWRITE_TAC[edwards25519_scalarmulbase_alt_windows_data] THEN
   REWRITE_TAC[GSYM edwards25519_scalarmulbase_alt_data] THEN
   ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
   ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
@@ -8380,12 +8410,38 @@ let WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
   RULE_ASSUM_TAC(REWRITE_RULE
    [ARITH_RULE `pc + 0x3187 = (pc + 16) + 0x3177`]) THEN
   X86_SUBROUTINE_SIM_TAC
-    (windows_edwards25519_scalarmulbase_alt_mc,
+    (edwards25519_scalarmulbase_alt_windows_tmc,
      WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_EXEC,
-     0x10,edwards25519_scalarmulbase_alt_mc,subth)
+     0x10,edwards25519_scalarmulbase_alt_tmc,subth)
         [`read RDI s`; `read RSI s`;
          `read (memory :> bytes (read RSI s,8 * 4)) s`;
          `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]
         6 THEN
   X86_STEPS_TAC WINDOWS_EDWARDS25519_SCALARMULBASE_ALT_EXEC (7--9) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+let EDWARDS25519_SCALARMULBASE_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!res scalar n pc stackpointer returnaddress.
+    ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [(word pc,0xef4b); (scalar,32)] /\
+    nonoverlapping (res,64) (word pc,0xef4b) /\
+    nonoverlapping (res,64) (word_sub stackpointer (word 560),568)
+    ==> ensures x86
+         (\s. bytes_loaded s (word pc)
+               (APPEND edwards25519_scalarmulbase_alt_windows_mc
+                       edwards25519_scalarmulbase_alt_windows_data) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [res; scalar] s /\
+              bignum_from_memory (scalar,4) s = n)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              bignum_pair_from_memory(res,4) s =
+              paired (modular_encode (256,p_25519))
+                     (group_pow edwards25519_group E_25519 n))
+         (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(res,64);
+                     memory :> bytes(word_sub stackpointer (word 560),560)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_SCALARMULBASE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

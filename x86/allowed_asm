@@ -33,6 +33,7 @@
 : cmpq$
 : dec$
 : decq$
+: endbr64$
 : imul$
 : imulq$
 : inc$

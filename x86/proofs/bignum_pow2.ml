@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_pow2_mc =
   define_assert_from_elf "bignum_pow2_mc" "x86/generic/bignum_pow2.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
   0x74; 0x28;              (* JE (Imm8 (word 40)) *)
   0xb8; 0x01; 0x00; 0x00; 0x00;
@@ -33,7 +34,9 @@ let bignum_pow2_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_POW2_EXEC = X86_MK_CORE_EXEC_RULE bignum_pow2_mc;;
+let bignum_pow2_tmc = define_trimmed "bignum_pow2_tmc" bignum_pow2_mc;;
+
+let BIGNUM_POW2_EXEC = X86_MK_CORE_EXEC_RULE bignum_pow2_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -43,7 +46,7 @@ let BIGNUM_POW2_CORRECT = prove
  (`!k z n pc.
         nonoverlapping (word pc,0x2e) (z,8 * val k)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_pow2_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_pow2_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [k;z;n] s)
              (\s. read RIP s = word(pc + 0x2d) /\
@@ -130,9 +133,27 @@ let BIGNUM_POW2_CORRECT = prove
     REWRITE_TAC[GSYM DIVIDES_MOD] THEN MATCH_MP_TAC DIVIDES_EXP_LE_IMP THEN
     UNDISCH_TAC `i < n DIV 64` THEN ARITH_TAC]);;
 
+let BIGNUM_POW2_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!k z n pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_pow2_tmc) (z,8 * val k) /\
+        nonoverlapping (stackpointer,8) (z,8 * val k)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_pow2_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [k;z;n] s)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,val k) s =
+                  lowdigits (2 EXP (val n)) (val k))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum(z,val k)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_pow2_tmc BIGNUM_POW2_CORRECT);;
+
 let BIGNUM_POW2_SUBROUTINE_CORRECT = prove
  (`!k z n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x2e) (z,8 * val k) /\
+        nonoverlapping (word pc,LENGTH bignum_pow2_mc) (z,8 * val k) /\
         nonoverlapping (stackpointer,8) (z,8 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_pow2_mc /\
@@ -146,23 +167,25 @@ let BIGNUM_POW2_SUBROUTINE_CORRECT = prove
                   lowdigits (2 EXP (val n)) (val k))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_pow2_mc BIGNUM_POW2_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_POW2_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_pow2_mc = define_from_elf
-   "windows_bignum_pow2_mc" "x86/generic/bignum_pow2.obj";;
+let bignum_pow2_windows_mc = define_from_elf
+   "bignum_pow2_windows_mc" "x86/generic/bignum_pow2.obj";;
 
-let WINDOWS_BIGNUM_POW2_SUBROUTINE_CORRECT = prove
+let bignum_pow2_windows_tmc = define_trimmed "bignum_pow2_windows_tmc" bignum_pow2_windows_mc;;
+
+let BIGNUM_POW2_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!k z n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x3b)] /\
-        nonoverlapping (word pc,0x3b) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_pow2_windows_tmc)] /\
+        nonoverlapping (word pc,LENGTH bignum_pow2_windows_tmc) (z,8 * val k) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_pow2_mc /\
+             (\s. bytes_loaded s (word pc) bignum_pow2_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -174,5 +197,27 @@ let WINDOWS_BIGNUM_POW2_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val k);
                          memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_pow2_mc bignum_pow2_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_pow2_windows_tmc bignum_pow2_tmc
     BIGNUM_POW2_CORRECT);;
+
+let BIGNUM_POW2_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!k z n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+            [(word pc,LENGTH bignum_pow2_windows_mc)] /\
+        nonoverlapping (word pc,LENGTH bignum_pow2_windows_mc) (z,8 * val k) /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_pow2_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [k;z;n] s)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,val k) s =
+                  lowdigits (2 EXP (val n)) (val k))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum(z,val k);
+                         memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_POW2_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

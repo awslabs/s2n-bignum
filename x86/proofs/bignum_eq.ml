@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_eq_mc =
   define_assert_from_elf "bignum_eq_mc" "x86/generic/bignum_eq.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
   0x48; 0x39; 0xd7;        (* CMP (% rdi) (% rdx) *)
   0x73; 0x18;              (* JAE (Imm8 (word 24)) *)
@@ -42,7 +43,9 @@ let bignum_eq_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_EQ_EXEC = X86_MK_CORE_EXEC_RULE bignum_eq_mc;;
+let bignum_eq_tmc = define_trimmed "bignum_eq_tmc" bignum_eq_mc;;
+
+let BIGNUM_EQ_EXEC = X86_MK_CORE_EXEC_RULE bignum_eq_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -51,7 +54,7 @@ let BIGNUM_EQ_EXEC = X86_MK_CORE_EXEC_RULE bignum_eq_mc;;
 let BIGNUM_EQ_CORRECT = prove
  (`!m a x n b y pc.
         ensures x86
-          (\s. bytes_loaded s (word pc) (BUTLAST bignum_eq_mc) /\
+          (\s. bytes_loaded s (word pc) (BUTLAST bignum_eq_tmc) /\
                read RIP s = word pc /\
                C_ARGUMENTS [m;a;n;b] s /\
                bignum_from_memory(a,val m) s = x /\
@@ -272,6 +275,22 @@ let BIGNUM_EQ_CORRECT = prove
     REWRITE_TAC[VAL_EQ_0] THEN MATCH_MP_TAC WORD_EQ_0 THEN
     REWRITE_TAC[DIMINDEX_64; BIGDIGIT_BOUND]]);;
 
+let BIGNUM_EQ_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!m a x n b y pc stackpointer returnaddress.
+        ensures x86
+          (\s. bytes_loaded s (word pc) bignum_eq_tmc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [m;a;n;b] s /\
+               bignum_from_memory(a,val m) s = x /\
+               bignum_from_memory(b,val n) s = y)
+          (\s'. read RIP s' = returnaddress /\
+                read RSP s' = word_add stackpointer (word 8) /\
+                C_RETURN s' = if x = y then word 1 else word 0)
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_eq_tmc BIGNUM_EQ_CORRECT);;
+
 let BIGNUM_EQ_SUBROUTINE_CORRECT = prove
  (`!m a x n b y pc stackpointer returnaddress.
         ensures x86
@@ -286,21 +305,23 @@ let BIGNUM_EQ_SUBROUTINE_CORRECT = prove
                 read RSP s' = word_add stackpointer (word 8) /\
                 C_RETURN s' = if x = y then word 1 else word 0)
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_eq_mc BIGNUM_EQ_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_EQ_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_eq_mc = define_from_elf
-   "windows_bignum_eq_mc" "x86/generic/bignum_eq.obj";;
+let bignum_eq_windows_mc = define_from_elf
+   "bignum_eq_windows_mc" "x86/generic/bignum_eq.obj";;
 
-let WINDOWS_BIGNUM_EQ_SUBROUTINE_CORRECT = prove
+let bignum_eq_windows_tmc = define_trimmed "bignum_eq_windows_tmc" bignum_eq_windows_mc;;
+
+let BIGNUM_EQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!m a x n b y pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-         [(word pc,0x53); (a,8 * val m); (b,8 * val n)]
+         [(word pc,LENGTH bignum_eq_windows_tmc); (a,8 * val m); (b,8 * val n)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) windows_bignum_eq_mc /\
+          (\s. bytes_loaded s (word pc) bignum_eq_windows_tmc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -312,5 +333,25 @@ let WINDOWS_BIGNUM_EQ_SUBROUTINE_CORRECT = prove
                 WINDOWS_C_RETURN s' = if x = y then word 1 else word 0)
           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_eq_mc bignum_eq_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_eq_windows_tmc bignum_eq_tmc
     BIGNUM_EQ_CORRECT);;
+
+let BIGNUM_EQ_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!m a x n b y pc stackpointer returnaddress.
+     ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+         [(word pc,LENGTH bignum_eq_windows_mc); (a,8 * val m); (b,8 * val n)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) bignum_eq_windows_mc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               WINDOWS_C_ARGUMENTS [m;a;n;b] s /\
+               bignum_from_memory(a,val m) s = x /\
+               bignum_from_memory(b,val n) s = y)
+          (\s'. read RIP s' = returnaddress /\
+                read RSP s' = word_add stackpointer (word 8) /\
+                WINDOWS_C_RETURN s' = if x = y then word 1 else word 0)
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_EQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

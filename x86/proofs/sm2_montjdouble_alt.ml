@@ -22,6 +22,7 @@ prioritize_num();;
 let sm2_montjdouble_alt_mc = define_assert_from_elf
   "sm2_montjdouble_alt_mc" "x86/sm2/sm2_montjdouble_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)
@@ -1718,7 +1719,9 @@ let sm2_montjdouble_alt_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
-let SM2_MONTJDOUBLE_ALT_EXEC = X86_MK_CORE_EXEC_RULE sm2_montjdouble_alt_mc;;
+let sm2_montjdouble_alt_tmc = define_trimmed "sm2_montjdouble_alt_tmc" sm2_montjdouble_alt_mc;;
+
+let SM2_MONTJDOUBLE_ALT_EXEC = X86_MK_CORE_EXEC_RULE sm2_montjdouble_alt_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Common supporting definitions and lemmas for component proofs.            *)
@@ -1784,13 +1787,13 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTSQR_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 135 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 135 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = a
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -1892,7 +1895,7 @@ let LOCAL_MONTSQR_SM2_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTMUL_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 155 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 155 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = a
     ==>
@@ -1900,7 +1903,7 @@ let LOCAL_MONTMUL_SM2_TAC =
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2005,7 +2008,7 @@ let LOCAL_MONTMUL_SM2_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 21 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 21 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -2013,7 +2016,7 @@ let LOCAL_SUB_SM2_TAC =
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2093,7 +2096,7 @@ let LOCAL_SUB_SM2_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_WEAKADD_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 21 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 21 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -2101,7 +2104,7 @@ let LOCAL_WEAKADD_SM2_TAC =
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2185,7 +2188,7 @@ let LOCAL_WEAKADD_SM2_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 27 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 27 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -2193,7 +2196,7 @@ let LOCAL_ADD_SM2_TAC =
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2269,7 +2272,7 @@ let LOCAL_ADD_SM2_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUBC9_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 74 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 74 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -2277,7 +2280,7 @@ let LOCAL_CMSUBC9_SM2_TAC =
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2451,7 +2454,7 @@ let LOCAL_CMSUBC9_SM2_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB41_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 38 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 38 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -2459,7 +2462,7 @@ let LOCAL_CMSUB41_SM2_TAC =
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2613,7 +2616,7 @@ let LOCAL_CMSUB41_SM2_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB38_SM2_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_mc) 60 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE sm2_montjdouble_alt_tmc) 60 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -2621,7 +2624,7 @@ let LOCAL_CMSUB38_SM2_TAC =
     ==>
     nonoverlapping (word pc,0x1481) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2908,7 +2911,7 @@ let SM2_MONTJDOUBLE_ALT_CORRECT = time prove
             [(word pc,0x1481); (p1,96); (p3,96)] /\
         nonoverlapping (p3,96) (word pc,0x1481)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST sm2_montjdouble_alt_tmc) /\
                   read RIP s = word(pc + 0x10) /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [p3; p1] s /\
@@ -2991,12 +2994,36 @@ let SM2_MONTJDOUBLE_ALT_CORRECT = time prove
   CONV_TAC INT_REM_DOWN_CONV THEN
   REPEAT CONJ_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN INT_ARITH_TAC);;
 
+let SM2_MONTJDOUBLE_ALT_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 232),232))
+            [(word pc,LENGTH sm2_montjdouble_alt_tmc); (p1,96)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH sm2_montjdouble_alt_tmc); (word_sub stackpointer (word 232),240)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) sm2_montjdouble_alt_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1] s /\
+                  bignum_triple_from_memory (p1,4) s = t1)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. represents_sm2 P t1
+                      ==> represents_sm2 (group_mul sm2_group P P)
+                            (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 232),232)])`,
+  X86_PROMOTE_RETURN_STACK_TAC sm2_montjdouble_alt_tmc SM2_MONTJDOUBLE_ALT_CORRECT
+    `[RBX; R12; R13; R14; R15]` 232);;
+
 let SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 232),232))
-            [(word pc,0x1481); (p1,96)] /\
+            [(word pc,LENGTH sm2_montjdouble_alt_mc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x1481); (word_sub stackpointer (word 232),240)]
+            [(word pc,LENGTH sm2_montjdouble_alt_mc); (word_sub stackpointer (word 232),240)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) sm2_montjdouble_alt_mc /\
                   read RIP s = word pc /\
@@ -3012,24 +3039,25 @@ let SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(word_sub stackpointer (word 232),232)])`,
-  X86_PROMOTE_RETURN_STACK_TAC sm2_montjdouble_alt_mc SM2_MONTJDOUBLE_ALT_CORRECT
-    `[RBX; R12; R13; R14; R15]` 232);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SM2_MONTJDOUBLE_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_sm2_montjdouble_alt_mc = define_from_elf "windows_sm2_montjdouble_alt_mc"
+let sm2_montjdouble_alt_windows_mc = define_from_elf "sm2_montjdouble_alt_windows_mc"
       "x86/sm2/sm2_montjdouble_alt.obj";;
 
-let WINDOWS_SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
+let sm2_montjdouble_alt_windows_tmc = define_trimmed "sm2_montjdouble_alt_windows_tmc" sm2_montjdouble_alt_windows_mc;;
+
+let SM2_MONTJDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 248),248))
-            [(word pc,0x148b); (p1,96)] /\
+            [(word pc,LENGTH sm2_montjdouble_alt_windows_tmc); (p1,96)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x148b); (word_sub stackpointer (word 248),256)]
+            [(word pc,LENGTH sm2_montjdouble_alt_windows_tmc); (word_sub stackpointer (word 248),256)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_sm2_montjdouble_alt_mc /\
+             (\s. bytes_loaded s (word pc) sm2_montjdouble_alt_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -3044,6 +3072,30 @@ let WINDOWS_SM2_MONTJDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(word_sub stackpointer (word 248),248)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-    windows_sm2_montjdouble_alt_mc sm2_montjdouble_alt_mc
+    sm2_montjdouble_alt_windows_tmc sm2_montjdouble_alt_tmc
     SM2_MONTJDOUBLE_ALT_CORRECT
     `[RBX; R12; R13; R14; R15]` 232);;
+
+let SM2_MONTJDOUBLE_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 248),248))
+            [(word pc,LENGTH sm2_montjdouble_alt_windows_mc); (p1,96)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH sm2_montjdouble_alt_windows_mc); (word_sub stackpointer (word 248),256)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) sm2_montjdouble_alt_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                  bignum_triple_from_memory (p1,4) s = t1)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P. represents_sm2 P t1
+                      ==> represents_sm2 (group_mul sm2_group P P)
+                            (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 248),248)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SM2_MONTJDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

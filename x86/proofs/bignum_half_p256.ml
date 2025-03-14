@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_half_p256_mc =
   define_assert_from_elf "bignum_half_p256_mc" "x86/p256/bignum_half_p256.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0xb9; 0x01; 0x00; 0x00; 0x00;
                            (* MOV (% ecx) (Imm32 (word 1)) *)
@@ -46,7 +47,9 @@ let bignum_half_p256_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_HALF_P256_EXEC = X86_MK_CORE_EXEC_RULE bignum_half_p256_mc;;
+let bignum_half_p256_tmc = define_trimmed "bignum_half_p256_tmc" bignum_half_p256_mc;;
+
+let BIGNUM_HALF_P256_EXEC = X86_MK_CORE_EXEC_RULE bignum_half_p256_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -58,7 +61,7 @@ let BIGNUM_HALF_P256_CORRECT = time prove
  (`!z x n pc.
         nonoverlapping (word pc,0x55) (z,8 * 4)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_half_p256_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_half_p256_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [z; x] s /\
                   bignum_from_memory (x,4) s = n)
@@ -125,9 +128,30 @@ let BIGNUM_HALF_P256_CORRECT = time prove
   REWRITE_TAC[VAL_MOD_2; BIT_WORD_MASK; DIMINDEX_64] THEN
   REWRITE_TAC[GSYM VAL_MOD_2] THEN ARITH_TAC);;
 
+let BIGNUM_HALF_P256_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_half_p256_tmc) (z,8 * 4) /\
+        nonoverlapping (stackpointer,8) (z,8 * 4)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_half_p256_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,4) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (n < p_256
+                   ==> bignum_from_memory (z,4) s =
+                       (inverse_mod p_256 2 * n) MOD p_256))
+            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bignum(z,4)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_half_p256_tmc
+      BIGNUM_HALF_P256_CORRECT);;
+
 let BIGNUM_HALF_P256_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x55) (z,8 * 4) /\
+        nonoverlapping (word pc,LENGTH bignum_half_p256_mc) (z,8 * 4) /\
         nonoverlapping (stackpointer,8) (z,8 * 4)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_half_p256_mc /\
@@ -143,24 +167,25 @@ let BIGNUM_HALF_P256_SUBROUTINE_CORRECT = time prove
                        (inverse_mod p_256 2 * n) MOD p_256))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bignum(z,4)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_half_p256_mc
-      BIGNUM_HALF_P256_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_HALF_P256_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_half_p256_mc = define_from_elf
-   "windows_bignum_half_p256_mc" "x86/p256/bignum_half_p256.obj";;
+let bignum_half_p256_windows_mc = define_from_elf
+   "bignum_half_p256_windows_mc" "x86/p256/bignum_half_p256.obj";;
 
-let WINDOWS_BIGNUM_HALF_P256_SUBROUTINE_CORRECT = time prove
+let bignum_half_p256_windows_tmc = define_trimmed "bignum_half_p256_windows_tmc" bignum_half_p256_windows_mc;;
+
+let BIGNUM_HALF_P256_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x5f); (x,8 * 4)] /\
-        nonoverlapping (word pc,0x5f) (z,8 * 4) /\
+            [(word pc,LENGTH bignum_half_p256_windows_tmc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH bignum_half_p256_windows_tmc) (z,8 * 4) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_half_p256_mc /\
+             (\s. bytes_loaded s (word pc) bignum_half_p256_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -174,5 +199,29 @@ let WINDOWS_BIGNUM_HALF_P256_SUBROUTINE_CORRECT = time prove
             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bignum(z,4);
                         memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_half_p256_mc bignum_half_p256_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_half_p256_windows_tmc bignum_half_p256_tmc
       BIGNUM_HALF_P256_CORRECT);;
+
+let BIGNUM_HALF_P256_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+            [(word pc,LENGTH bignum_half_p256_windows_mc); (x,8 * 4)] /\
+        nonoverlapping (word pc,LENGTH bignum_half_p256_windows_mc) (z,8 * 4) /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * 4)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_half_p256_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,4) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (n < p_256
+                   ==> bignum_from_memory (z,4) s =
+                       (inverse_mod p_256 2 * n) MOD p_256))
+            (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bignum(z,4);
+                        memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_HALF_P256_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

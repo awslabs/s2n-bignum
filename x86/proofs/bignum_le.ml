@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_le_mc =
   define_assert_from_elf "bignum_le_mc" "x86/generic/bignum_le.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4d; 0x31; 0xc0;        (* XOR (% r8) (% r8) *)
   0x48; 0x29; 0xfa;        (* SUB (% rdx) (% rdi) *)
   0x72; 0x31;              (* JB (Imm8 (word 49)) *)
@@ -55,7 +56,9 @@ let bignum_le_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_LE_EXEC = X86_MK_EXEC_RULE bignum_le_mc;;
+let bignum_le_tmc = define_trimmed "bignum_le_tmc" bignum_le_mc;;
+
+let BIGNUM_LE_EXEC = X86_MK_EXEC_RULE bignum_le_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Common tactic for slightly different standard and Windows variants.       *)
@@ -377,7 +380,7 @@ let tac execth offset =
 let BIGNUM_LE_CORRECT = prove
  (`!m a x n b y pc.
         ensures x86
-          (\s. bytes_loaded s (word pc) bignum_le_mc /\
+          (\s. bytes_loaded s (word pc) bignum_le_tmc /\
                read RIP s = word pc /\
                C_ARGUMENTS [m;a;n;b] s /\
                bignum_from_memory(a,val m) s = x /\
@@ -388,6 +391,22 @@ let BIGNUM_LE_CORRECT = prove
           (MAYCHANGE [RIP; RDI; RDX; RAX; R8] ,,
            MAYCHANGE SOME_FLAGS)`,
   tac BIGNUM_LE_EXEC (curry mk_comb `(+) (pc:num)` o mk_small_numeral));;
+
+let BIGNUM_LE_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!m a x n b y pc stackpointer returnaddress.
+        ensures x86
+          (\s. bytes_loaded s (word pc) bignum_le_tmc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [m;a;n;b] s /\
+               bignum_from_memory(a,val m) s = x /\
+               bignum_from_memory(b,val n) s = y)
+          (\s'. read RIP s' = returnaddress /\
+                read RSP s' = word_add stackpointer (word 8) /\
+                C_RETURN s' = if x <= y then word 1 else word 0)
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_ADD_RETURN_NOSTACK_TAC BIGNUM_LE_EXEC BIGNUM_LE_CORRECT);;
 
 let BIGNUM_LE_SUBROUTINE_CORRECT = prove
  (`!m a x n b y pc stackpointer returnaddress.
@@ -403,19 +422,21 @@ let BIGNUM_LE_SUBROUTINE_CORRECT = prove
                 read RSP s' = word_add stackpointer (word 8) /\
                 C_RETURN s' = if x <= y then word 1 else word 0)
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_ADD_RETURN_NOSTACK_TAC BIGNUM_LE_EXEC BIGNUM_LE_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_LE_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_le_mc = define_from_elf
-   "windows_bignum_le_mc" "x86/generic/bignum_le.obj";;
+let bignum_le_windows_mc = define_from_elf
+   "bignum_le_windows_mc" "x86/generic/bignum_le.obj";;
 
-let WINDOWS_BIGNUM_LE_CORRECT = prove
+let bignum_le_windows_tmc = define_trimmed "bignum_le_windows_tmc" bignum_le_windows_mc;;
+
+let BIGNUM_LE_WINDOWS_CORRECT = prove
  (`!m a x n b y pc.
         ensures x86
-          (\s. bytes_loaded s (word pc) windows_bignum_le_mc /\
+          (\s. bytes_loaded s (word pc) bignum_le_windows_tmc /\
                read RIP s = word(pc + 0xe) /\
                C_ARGUMENTS [m;a;n;b] s /\
                bignum_from_memory(a,val m) s = x /\
@@ -425,16 +446,16 @@ let WINDOWS_BIGNUM_LE_CORRECT = prove
                 C_RETURN s' = if x <= y then word 1 else word 0)
           (MAYCHANGE [RIP; RDI; RDX; RAX; R8] ,,
            MAYCHANGE SOME_FLAGS)`,
-  tac (X86_MK_EXEC_RULE windows_bignum_le_mc)
+  tac (X86_MK_EXEC_RULE bignum_le_windows_tmc)
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral o
        (fun n -> if n < 0x38 then n + 14 else n + 16)));;
 
-let WINDOWS_BIGNUM_LE_SUBROUTINE_CORRECT = prove
+let BIGNUM_LE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!m a x n b y pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x7e); (a,8 * val m); (b,8 * val n)]
+            [(word pc,LENGTH bignum_le_windows_tmc); (a,8 * val m); (b,8 * val n)]
         ==> ensures x86
-              (\s. bytes_loaded s (word pc) windows_bignum_le_mc /\
+              (\s. bytes_loaded s (word pc) bignum_le_windows_tmc /\
                    read RIP s = word pc /\
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -446,5 +467,25 @@ let WINDOWS_BIGNUM_LE_SUBROUTINE_CORRECT = prove
                     WINDOWS_C_RETURN s' = if x <= y then word 1 else word 0)
               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  GEN_X86_ADD_RETURN_STACK_TAC (X86_MK_EXEC_RULE windows_bignum_le_mc)
-    WINDOWS_BIGNUM_LE_CORRECT `[RDI; RSI]` 16 (6,3));;
+  GEN_X86_ADD_RETURN_STACK_TAC (X86_MK_EXEC_RULE bignum_le_windows_tmc)
+    BIGNUM_LE_WINDOWS_CORRECT `[RDI; RSI]` 16 (6,3));;
+
+let BIGNUM_LE_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!m a x n b y pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+            [(word pc,LENGTH bignum_le_windows_mc); (a,8 * val m); (b,8 * val n)]
+        ==> ensures x86
+              (\s. bytes_loaded s (word pc) bignum_le_windows_mc /\
+                   read RIP s = word pc /\
+                   read RSP s = stackpointer /\
+                   read (memory :> bytes64 stackpointer) s = returnaddress /\
+                   WINDOWS_C_ARGUMENTS [m;a;n;b] s /\
+                   bignum_from_memory(a,val m) s = x /\
+                   bignum_from_memory(b,val n) s = y)
+              (\s'. read RIP s' = returnaddress /\
+                    read RSP s' = word_add stackpointer (word 8) /\
+                    WINDOWS_C_RETURN s' = if x <= y then word 1 else word 0)
+              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_LE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

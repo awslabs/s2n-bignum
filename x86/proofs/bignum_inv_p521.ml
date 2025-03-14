@@ -19,6 +19,7 @@ needs "Divstep/divstep_bounds.ml";;
 
 let bignum_inv_p521_mc = define_assert_from_elf "bignum_inv_p521_mc" "x86/p521/bignum_inv_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -2180,7 +2181,9 @@ let bignum_inv_p521_mc = define_assert_from_elf "bignum_inv_p521_mc" "x86/p521/b
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_INV_P521_EXEC = X86_MK_CORE_EXEC_RULE bignum_inv_p521_mc;;
+let bignum_inv_p521_tmc = define_trimmed "bignum_inv_p521_tmc" bignum_inv_p521_mc;;
+
+let BIGNUM_INV_P521_EXEC = X86_MK_CORE_EXEC_RULE bignum_inv_p521_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Do the main proof for the core that is sometimes inlined elsewhere        *)
@@ -2188,8 +2191,8 @@ let BIGNUM_INV_P521_EXEC = X86_MK_CORE_EXEC_RULE bignum_inv_p521_mc;;
 
 let CORE_INV_P521_EXEC =
     X86_MK_EXEC_RULE
-     ((GEN_REWRITE_CONV RAND_CONV [bignum_inv_p521_mc] THENC TRIM_LIST_CONV)
-      `TRIM_LIST (17,18) bignum_inv_p521_mc`);;
+     ((GEN_REWRITE_CONV RAND_CONV [bignum_inv_p521_tmc] THENC TRIM_LIST_CONV)
+      `TRIM_LIST (17,18) bignum_inv_p521_tmc`);;
 
 (* ------------------------------------------------------------------------- *)
 (* A localized form of the word_divstep59 proof, very similar but differing  *)
@@ -2574,7 +2577,7 @@ let LOCAL_WORD_DIVSTEP59_CORRECT = prove
    nonoverlapping (stackpointer,360) (word pc,0x1bc3)
    ==> ensures x86
         (\s. bytes_loaded s (word pc)
-                  (TRIM_LIST (17,18) bignum_inv_p521_mc) /\
+                  (TRIM_LIST (17,18) bignum_inv_p521_tmc) /\
              read RIP s = word(pc + 0xaae) /\
              read RSP s = stackpointer /\
              read (memory :> bytes64(word_add stackpointer (word 312))) s =
@@ -2918,7 +2921,7 @@ let CORE_INV_P521_CORRECT = time prove
         nonoverlapping (word pc,0x1bc3) (z,8 * 9)
         ==> ensures x86
              (\s. bytes_loaded s (word pc)
-                    (TRIM_LIST (17,18) bignum_inv_p521_mc) /\
+                    (TRIM_LIST (17,18) bignum_inv_p521_tmc) /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [z; x] s /\
@@ -4431,7 +4434,7 @@ let BIGNUM_INV_P521_CORRECT = time prove
             [(word pc,0x1be6); (z,8 * 9); (x,8 * 9)] /\
         nonoverlapping (word pc,0x1be6) (z,8 * 9)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_inv_p521_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_inv_p521_tmc) /\
                   read RIP s = word(pc + 0x11) /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [z; x] s /\
@@ -4451,25 +4454,49 @@ let BIGNUM_INV_P521_CORRECT = time prove
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
   X86_SUBROUTINE_SIM_TAC
-      ((GEN_REWRITE_CONV RAND_CONV [bignum_inv_p521_mc] THENC
+      ((GEN_REWRITE_CONV RAND_CONV [bignum_inv_p521_tmc] THENC
         REWRITE_CONV[BUTLAST_CLAUSES])
-       `BUTLAST bignum_inv_p521_mc`,
+       `BUTLAST bignum_inv_p521_tmc`,
        BIGNUM_INV_P521_EXEC,
        0x11,
-       (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p521_mc] THENC TRIM_LIST_CONV)
-       `TRIM_LIST (17,18) bignum_inv_p521_mc`,
+       (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p521_tmc] THENC TRIM_LIST_CONV)
+       `TRIM_LIST (17,18) bignum_inv_p521_tmc`,
        CORE_INV_P521_CORRECT)
       [`read RDI s`; `read RSI s`;
        `read (memory :> bytes(read RSI s,8 * 9)) s`;
        `pc + 0x11`; `stackpointer:int64`] 1 THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
+let BIGNUM_INV_P521_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 408),408))
+            [(word pc,LENGTH bignum_inv_p521_tmc); (x,8 * 9)] /\
+        ALL (nonoverlapping (z,8 * 9))
+            [(word_sub stackpointer (word 408),416); (word pc,LENGTH bignum_inv_p521_tmc)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_inv_p521_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory(z,9) s =
+                  (if p_521 divides n then 0 else inverse_mod p_521 n))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                    memory :> bytes(word_sub stackpointer (word 408),408)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_inv_p521_tmc
+     BIGNUM_INV_P521_CORRECT
+      `[RBX; RBP; R12; R13; R14; R15]` 408);;
+
 let BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 408),408))
-            [(word pc,0x1be6); (x,8 * 9)] /\
+            [(word pc,LENGTH bignum_inv_p521_mc); (x,8 * 9)] /\
         ALL (nonoverlapping (z,8 * 9))
-            [(word_sub stackpointer (word 408),416); (word pc,0x1be6)]
+            [(word_sub stackpointer (word 408),416); (word pc,LENGTH bignum_inv_p521_mc)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_inv_p521_mc /\
                   read RIP s = word pc /\
@@ -4484,25 +4511,25 @@ let BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                     memory :> bytes(word_sub stackpointer (word 408),408)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_inv_p521_mc
-     BIGNUM_INV_P521_CORRECT
-      `[RBX; RBP; R12; R13; R14; R15]` 408);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_INV_P521_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_inv_p521_mc = define_from_elf "windows_bignum_inv_p521_mc"
+let bignum_inv_p521_windows_mc = define_from_elf "bignum_inv_p521_windows_mc"
       "x86/p521/bignum_inv_p521.obj";;
 
-let WINDOWS_BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
+let bignum_inv_p521_windows_tmc = define_trimmed "bignum_inv_p521_windows_tmc" bignum_inv_p521_windows_mc;;
+
+let BIGNUM_INV_P521_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 424),424))
-            [(word pc,0x1bf0); (x,8 * 9)] /\
+            [(word pc,LENGTH bignum_inv_p521_windows_tmc); (x,8 * 9)] /\
         ALL (nonoverlapping (z,8 * 9))
-            [(word_sub stackpointer (word 424),432); (word pc,0x1bf0)]
+            [(word_sub stackpointer (word 424),432); (word pc,LENGTH bignum_inv_p521_windows_tmc)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_inv_p521_mc /\
+             (\s. bytes_loaded s (word pc) bignum_inv_p521_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -4516,6 +4543,30 @@ let WINDOWS_BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                     memory :> bytes(word_sub stackpointer (word 424),424)])`,
-  WINDOWS_X86_WRAP_STACK_TAC windows_bignum_inv_p521_mc bignum_inv_p521_mc
+  WINDOWS_X86_WRAP_STACK_TAC bignum_inv_p521_windows_tmc bignum_inv_p521_tmc
      BIGNUM_INV_P521_CORRECT
       `[RBX; RBP; R12; R13; R14; R15]` 408);;
+
+let BIGNUM_INV_P521_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 424),424))
+            [(word pc,LENGTH bignum_inv_p521_windows_mc); (x,8 * 9)] /\
+        ALL (nonoverlapping (z,8 * 9))
+            [(word_sub stackpointer (word 424),432); (word pc,LENGTH bignum_inv_p521_windows_mc)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_inv_p521_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory(z,9) s =
+                  (if p_521 divides n then 0 else inverse_mod p_521 n))
+             (MAYCHANGE [RSP] ,,
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                    memory :> bytes(word_sub stackpointer (word 424),424)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_INV_P521_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

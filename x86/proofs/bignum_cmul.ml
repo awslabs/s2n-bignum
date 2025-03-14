@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_cmul_mc =
   define_assert_from_elf "bignum_cmul_mc" "x86/generic/bignum_cmul.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x39; 0xcf;        (* CMP (% rdi) (% rcx) *)
   0x48; 0x0f; 0x42; 0xcf;  (* CMOVB (% rcx) (% rdi) *)
   0x4d; 0x31; 0xdb;        (* XOR (% r11) (% r11) *)
@@ -53,7 +54,9 @@ let bignum_cmul_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_CMUL_EXEC = X86_MK_CORE_EXEC_RULE bignum_cmul_mc;;
+let bignum_cmul_tmc = define_trimmed "bignum_cmul_tmc" bignum_cmul_mc;;
+
+let BIGNUM_CMUL_EXEC = X86_MK_CORE_EXEC_RULE bignum_cmul_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -64,7 +67,7 @@ let BIGNUM_CMUL_CORRECT = prove
         nonoverlapping (word pc,0x6a) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_cmul_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_cmul_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [p;z;c;n;x] s /\
                   bignum_from_memory (x,val n) s = a)
@@ -357,9 +360,31 @@ let BIGNUM_CMUL_CORRECT = prove
   ASM_SIMP_TAC[VAL_WORD_EQ; DIMINDEX_64; BIGDIGIT_BOUND] THEN
   REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN CONV_TAC REAL_RING);;
 
+let BIGNUM_CMUL_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!p z c n x a pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_cmul_tmc) (z,8 * val p) /\
+        nonoverlapping (stackpointer,8) (z,8 * val p) /\
+        (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_cmul_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p;z;c;n;x] s /\
+                  bignum_from_memory (x,val n) s = a)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,val p) s =
+                  lowdigits (val c * a) (val p) /\
+                  (p = n
+                   ==> C_RETURN s = word(highdigits (val c * a) (val p))))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum(z,val p)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_cmul_tmc BIGNUM_CMUL_CORRECT);;
+
 let BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
  (`!p z c n x a pc stackpointer returnaddress.
-        nonoverlapping (word pc,0x6a) (z,8 * val p) /\
+        nonoverlapping (word pc,LENGTH bignum_cmul_mc) (z,8 * val p) /\
         nonoverlapping (stackpointer,8) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86
@@ -377,24 +402,26 @@ let BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
                    ==> C_RETURN s = word(highdigits (val c * a) (val p))))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_cmul_mc BIGNUM_CMUL_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CMUL_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_cmul_mc = define_from_elf
-   "windows_bignum_cmul_mc" "x86/generic/bignum_cmul.obj";;
+let bignum_cmul_windows_mc = define_from_elf
+   "bignum_cmul_windows_mc" "x86/generic/bignum_cmul.obj";;
 
-let WINDOWS_BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
+let bignum_cmul_windows_tmc = define_trimmed "bignum_cmul_windows_tmc" bignum_cmul_windows_mc;;
+
+let BIGNUM_CMUL_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!p z c n x a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x7f); (x,8 * val n)] /\
-        nonoverlapping (word pc,0x7f) (z,8 * val p) /\
+            [(word pc,LENGTH bignum_cmul_windows_tmc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH bignum_cmul_windows_tmc) (z,8 * val p) /\
         nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val p) /\
         (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_cmul_mc /\
+             (\s. bytes_loaded s (word pc) bignum_cmul_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -410,5 +437,32 @@ let WINDOWS_BIGNUM_CMUL_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bignum(z,val p);
                          memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_cmul_mc bignum_cmul_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_cmul_windows_tmc bignum_cmul_tmc
     BIGNUM_CMUL_CORRECT);;
+
+let BIGNUM_CMUL_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!p z c n x a pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+            [(word pc,LENGTH bignum_cmul_windows_mc); (x,8 * val n)] /\
+        nonoverlapping (word pc,LENGTH bignum_cmul_windows_mc) (z,8 * val p) /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val p) /\
+        (x = z \/ nonoverlapping(x,8 * val n) (z,8 * val p))
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_cmul_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p;z;c;n;x] s /\
+                  bignum_from_memory (x,val n) s = a)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,val p) s =
+                  lowdigits (val c * a) (val p) /\
+                  (p = n
+                   ==> WINDOWS_C_RETURN s =
+                       word(highdigits (val c * a) (val p))))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum(z,val p);
+                         memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CMUL_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

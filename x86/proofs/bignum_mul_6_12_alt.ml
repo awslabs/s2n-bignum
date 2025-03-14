@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_mul_6_12_alt_mc =
   define_assert_from_elf "bignum_mul_6_12_alt_mc" "x86/fastmul/bignum_mul_6_12_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
   0x48; 0x8b; 0x06;        (* MOV (% rax) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0xf7; 0x21;        (* MUL2 (% rdx,% rax) (Memop Quadword (%% (rcx,0))) *)
@@ -217,7 +218,9 @@ let bignum_mul_6_12_alt_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_MUL_6_12_ALT_EXEC = X86_MK_CORE_EXEC_RULE bignum_mul_6_12_alt_mc;;
+let bignum_mul_6_12_alt_tmc = define_trimmed "bignum_mul_6_12_alt_tmc" bignum_mul_6_12_alt_mc;;
+
+let BIGNUM_MUL_6_12_ALT_EXEC = X86_MK_CORE_EXEC_RULE bignum_mul_6_12_alt_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -228,7 +231,7 @@ let BIGNUM_MUL_6_12_ALT_CORRECT = time prove
      ALL (nonoverlapping (z,8 * 12))
          [(word pc,0x2b5); (x,8 * 6); (y,8 * 6)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) (BUTLAST bignum_mul_6_12_alt_mc) /\
+          (\s. bytes_loaded s (word pc) (BUTLAST bignum_mul_6_12_alt_tmc) /\
                read RIP s = word pc /\
                C_ARGUMENTS [z; x; y] s /\
                bignum_from_memory (x,6) s = a /\
@@ -253,10 +256,30 @@ let BIGNUM_MUL_6_12_ALT_CORRECT = time prove
   ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o DECARRY_RULE) THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_ARITH_TAC);;
 
+let BIGNUM_MUL_6_12_ALT_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!z x y a b pc stackpointer returnaddress.
+     ALL (nonoverlapping (z,8 * 12))
+         [(word pc,LENGTH bignum_mul_6_12_alt_tmc); (x,8 * 6); (y,8 * 6); (stackpointer,8)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) bignum_mul_6_12_alt_tmc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [z; x; y] s /\
+               bignum_from_memory (x,6) s = a /\
+               bignum_from_memory (y,6) s = b)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               bignum_from_memory (z,12) s = a * b)
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(z,8 * 12)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_mul_6_12_alt_tmc
+     BIGNUM_MUL_6_12_ALT_CORRECT);;
+
 let BIGNUM_MUL_6_12_ALT_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
      ALL (nonoverlapping (z,8 * 12))
-         [(word pc,0x2b5); (x,8 * 6); (y,8 * 6); (stackpointer,8)]
+         [(word pc,LENGTH bignum_mul_6_12_alt_mc); (x,8 * 6); (y,8 * 6); (stackpointer,8)]
      ==> ensures x86
           (\s. bytes_loaded s (word pc) bignum_mul_6_12_alt_mc /\
                read RIP s = word pc /\
@@ -270,25 +293,26 @@ let BIGNUM_MUL_6_12_ALT_SUBROUTINE_CORRECT = time prove
                bignum_from_memory (z,12) s = a * b)
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(z,8 * 12)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_mul_6_12_alt_mc
-     BIGNUM_MUL_6_12_ALT_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MUL_6_12_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_mul_6_12_alt_mc = define_from_elf
-   "windows_bignum_mul_6_12_alt_mc" "x86/fastmul/bignum_mul_6_12_alt.obj";;
+let bignum_mul_6_12_alt_windows_mc = define_from_elf
+   "bignum_mul_6_12_alt_windows_mc" "x86/fastmul/bignum_mul_6_12_alt.obj";;
 
-let WINDOWS_BIGNUM_MUL_6_12_ALT_SUBROUTINE_CORRECT = time prove
+let bignum_mul_6_12_alt_windows_tmc = define_trimmed "bignum_mul_6_12_alt_windows_tmc" bignum_mul_6_12_alt_windows_mc;;
+
+let BIGNUM_MUL_6_12_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x y a b pc stackpointer returnaddress.
      ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-         [(word pc,0x2c2); (x,8 * 6); (y,8 * 6)] /\
+         [(word pc,LENGTH bignum_mul_6_12_alt_windows_tmc); (x,8 * 6); (y,8 * 6)] /\
      ALL (nonoverlapping (z,8 * 12))
-         [(word pc,0x2c2); (x,8 * 6); (y,8 * 6);
+         [(word pc,LENGTH bignum_mul_6_12_alt_windows_tmc); (x,8 * 6); (y,8 * 6);
           (word_sub stackpointer (word 16),24)]
      ==> ensures x86
-          (\s. bytes_loaded s (word pc) windows_bignum_mul_6_12_alt_mc /\
+          (\s. bytes_loaded s (word pc) bignum_mul_6_12_alt_windows_tmc /\
                read RIP s = word pc /\
                read RSP s = stackpointer /\
                read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -302,5 +326,29 @@ let WINDOWS_BIGNUM_MUL_6_12_ALT_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bytes(z,8 * 12);
                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
   WINDOWS_X86_WRAP_NOSTACK_TAC
-    windows_bignum_mul_6_12_alt_mc bignum_mul_6_12_alt_mc
+    bignum_mul_6_12_alt_windows_tmc bignum_mul_6_12_alt_tmc
     BIGNUM_MUL_6_12_ALT_CORRECT);;
+
+let BIGNUM_MUL_6_12_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!z x y a b pc stackpointer returnaddress.
+     ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+         [(word pc,LENGTH bignum_mul_6_12_alt_windows_mc); (x,8 * 6); (y,8 * 6)] /\
+     ALL (nonoverlapping (z,8 * 12))
+         [(word pc,LENGTH bignum_mul_6_12_alt_windows_mc); (x,8 * 6); (y,8 * 6);
+          (word_sub stackpointer (word 16),24)]
+     ==> ensures x86
+          (\s. bytes_loaded s (word pc) bignum_mul_6_12_alt_windows_mc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               WINDOWS_C_ARGUMENTS [z; x; y] s /\
+               bignum_from_memory (x,6) s = a /\
+               bignum_from_memory (y,6) s = b)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               bignum_from_memory (z,12) s = a * b)
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(z,8 * 12);
+                      memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MUL_6_12_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+
