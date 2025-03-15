@@ -287,6 +287,34 @@ let iclasses =
   "001011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
   "00101110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
 
+  (*** UMLAL2 ***)
+  "011011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
+  "01101110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
+
+  (*** SMLAL ***)
+  "000011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
+  "00001110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
+
+  (*** SMLAL2 ***)
+  "010011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
+  "01001110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
+
+  (*** UMLSL ***)
+  "001011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
+  "00101110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+
+  (*** UMLSL2 ***)
+  "011011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
+  "01101110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+
+  (*** SMLSL ***)
+  "000011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
+  "00001110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+
+  (*** SMLSL2 ***)
+  "010011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
+  "01001110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+
   (*** UMULL ***)
   "001011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
   "00101110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
@@ -294,6 +322,14 @@ let iclasses =
   (*** UMULL2 ***)
   "011011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
   "01101110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+
+  (*** SMULL ***)
+  "000011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+  "00001110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+
+  (*** SMULL2 ***)
+  "010011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+  "01001110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
 
   (*** USHR (make sure immh is nonzero) ***)
   "0x10111101xxxxxx000001xxxxxxxxxx";
