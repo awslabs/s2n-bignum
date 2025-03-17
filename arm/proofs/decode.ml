@@ -692,12 +692,44 @@ let decode = new_definition `!w:int32. decode w =
       SOME (arm_UADDLP (QREG' Rd) (QREG' Rn) (val esize))
 
   | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
-    // UMLAL (vector)
-    if q then NONE // upper part is unsupported yet
-    else if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    // UMLAL (vector, Q = 0). UMLAL2 (vector, Q=1)
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
-      SOME (arm_UMLAL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      if q then
+        SOME (arm_UMLAL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_UMLAL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+
+  | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b101000:6; Rn:5; Rd:5] ->
+    // UMLSL (vector, Q = 0). UMLSL2 (vector, Q=1)
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      if q then
+        SOME (arm_UMLSL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_UMLSL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+
+  | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
+    // SMLAL (vector, Q = 0). SMLAL2 (vector, Q=1)
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      if q then
+        SOME (arm_SMLAL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_SMLAL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+
+  | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b101000:6; Rn:5; Rd:5] ->
+    // SMSL (vector, Q = 0). SMLSL2 (vector, Q=1)
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      if q then
+        SOME (arm_SMLSL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_SMLSL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
 
   | [0:1; q; 0b001110000:9; imm5:5; 0b001111:6; Rn:5; Rd:5] ->
     // UMOV
@@ -717,6 +749,17 @@ let decode = new_definition `!w:int32. decode w =
         SOME (arm_UMULL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
       else
         SOME (arm_UMULL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
+
+  | [0:1; q; 0b001110:6; size:2; 1:1; Rm:5; 0b110000:6; Rn:5; Rd:5] ->
+    // SMULL (vector, Q = 0). SMULL2 (vector, Q = 1)
+    if size = (word 0b11:(2)word) then NONE // UNDEFINED
+    else
+      let esize = 8 * (2 EXP val size) in // the bitwidth of src elements
+      // datasize is 64. elements is datasize / esize.
+      if q then
+        SOME (arm_SMULL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
+      else
+        SOME (arm_SMULL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
 
   | [0:1; q; 0b001110:6; size:2; 0b0:1; Rm:5; 0b000110:6; Rn:5; Rd:5] ->
     // UZP1
