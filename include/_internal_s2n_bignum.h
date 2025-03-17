@@ -16,20 +16,16 @@
 #   define S2N_BN_SYM_PRIVACY_DIRECTIVE(name)  /* NO-OP: S2N_BN_SYM_PRIVACY_DIRECTIVE */
 #endif
 
-// The standard approach to enabling CET based on platform would be:
-//
-//  #ifdef __CET__
-//  #include <cet.h>
-//  #else
-//  #define _CET_ENDBR
-//  #endif
-//
-// We instead enable it by default unless disabled with -DNO_IBT
-// We also give ENDBR64 as an explicit byte sequence so the code
-// still builds on old assemblers/compilers that don't support it.
+// Enable indirect branch tracking support unless explicitly disabled
+// with -DNO_IBT. If the platform supports CET, simply inherit this from
+// the usual header. Otherwise manually define _CET_ENDBR, used at each
+// x86 entry point, to be the ENDBR64 instruction, with an explicit byte
+// sequence for compilers/assemblers that don't know about it.
 
 #if NO_IBT
 #define _CET_ENDBR
+#elif defined(__CET__)
+#include <cet.h>
 #else
 #define _CET_ENDBR .byte 0xf3,0x0f,0x1e,0xfa
 #endif
