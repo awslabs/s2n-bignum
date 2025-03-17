@@ -1599,6 +1599,146 @@ let arm_UMLAL_VEC = define
           let mlowzx = usimd8 (word_zx:(8)word->(16)word) mlow in
           (Rd := simd8 word_add (simd8 word_mul nlowzx mlowzx) d) s`;;
 
+let arm_UMLAL2_VEC = define
+ `arm_UMLAL2_VEC Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        let nhi:(64)word = word_subword n (64,64) in
+        let mhi:(64)word = word_subword m (64,64) in
+        if esize = 32 then
+          let nhizx = usimd2 (word_zx:(32)word->(64)word) nhi in
+          let mhizx = usimd2 (word_zx:(32)word->(64)word) mhi in
+          (Rd := simd2 word_add (simd2 word_mul nhizx mhizx) d) s
+        else if esize = 16 then
+          let nhizx = usimd4 (word_zx:(16)word->(32)word) nhi in
+          let mhizx = usimd4 (word_zx:(16)word->(32)word) mhi in
+          (Rd := simd4 word_add (simd4 word_mul nhizx mhizx) d) s
+        else // esize=8
+          let nhizx = usimd8 (word_zx:(8)word->(16)word) nhi in
+          let mhizx = usimd8 (word_zx:(8)word->(16)word) mhi in
+          (Rd := simd8 word_add (simd8 word_mul nhizx mhizx) d) s`;;
+
+let arm_UMLSL_VEC = define
+ `arm_UMLSL_VEC Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        let nlow:(64)word = word_subword n (0,64) in
+        let mlow:(64)word = word_subword m (0,64) in
+        if esize = 32 then
+          let nlowzx = usimd2 (word_zx:(32)word->(64)word) nlow in
+          let mlowzx = usimd2 (word_zx:(32)word->(64)word) mlow in
+          (Rd := simd2 word_sub d (simd2 word_mul nlowzx mlowzx)) s
+        else if esize = 16 then
+          let nlowzx = usimd4 (word_zx:(16)word->(32)word) nlow in
+          let mlowzx = usimd4 (word_zx:(16)word->(32)word) mlow in
+          (Rd := simd4 word_sub d (simd4 word_mul nlowzx mlowzx)) s
+        else // esize=8
+          let nlowzx = usimd8 (word_zx:(8)word->(16)word) nlow in
+          let mlowzx = usimd8 (word_zx:(8)word->(16)word) mlow in
+          (Rd := simd8 word_sub d (simd8 word_mul nlowzx mlowzx)) s`;;
+
+let arm_UMLSL2_VEC = define
+ `arm_UMLSL2_VEC Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        let nhi:(64)word = word_subword n (64,64) in
+        let mhi:(64)word = word_subword m (64,64) in
+        if esize = 32 then
+          let nhizx = usimd2 (word_zx:(32)word->(64)word) nhi in
+          let mhizx = usimd2 (word_zx:(32)word->(64)word) mhi in
+          (Rd := simd2 word_sub d (simd2 word_mul nhizx mhizx)) s
+        else if esize = 16 then
+          let nhizx = usimd4 (word_zx:(16)word->(32)word) nhi in
+          let mhizx = usimd4 (word_zx:(16)word->(32)word) mhi in
+          (Rd := simd4 word_sub d (simd4 word_mul nhizx mhizx)) s
+        else // esize=8
+          let nhizx = usimd8 (word_zx:(8)word->(16)word) nhi in
+          let mhizx = usimd8 (word_zx:(8)word->(16)word) mhi in
+          (Rd := simd8 word_sub d (simd8 word_mul nhizx mhizx)) s`;;
+
+let arm_SMLAL_VEC = define
+ `arm_SMLAL_VEC Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        let nlow:(64)word = word_subword n (0,64) in
+        let mlow:(64)word = word_subword m (0,64) in
+        if esize = 32 then
+          let nlowsx = usimd2 (word_sx:(32)word->(64)word) nlow in
+          let mlowsx = usimd2 (word_sx:(32)word->(64)word) mlow in
+          (Rd := simd2 word_add (simd2 word_mul nlowsx mlowsx) d) s
+        else if esize = 16 then
+          let nlowsx = usimd4 (word_sx:(16)word->(32)word) nlow in
+          let mlowsx = usimd4 (word_sx:(16)word->(32)word) mlow in
+          (Rd := simd4 word_add (simd4 word_mul nlowsx mlowsx) d) s
+        else // esize=8
+          let nlowsx = usimd8 (word_sx:(8)word->(16)word) nlow in
+          let mlowsx = usimd8 (word_sx:(8)word->(16)word) mlow in
+          (Rd := simd8 word_add (simd8 word_mul nlowsx mlowsx) d) s`;;
+
+let arm_SMLAL2_VEC = define
+ `arm_SMLAL2_VEC Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        let nhi:(64)word = word_subword n (64,64) in
+        let mhi:(64)word = word_subword m (64,64) in
+        if esize = 32 then
+          let nhisx = usimd2 (word_sx:(32)word->(64)word) nhi in
+          let mhisx = usimd2 (word_sx:(32)word->(64)word) mhi in
+          (Rd := simd2 word_add (simd2 word_mul nhisx mhisx) d) s
+        else if esize = 16 then
+          let nhisx = usimd4 (word_sx:(16)word->(32)word) nhi in
+          let mhisx = usimd4 (word_sx:(16)word->(32)word) mhi in
+          (Rd := simd4 word_add (simd4 word_mul nhisx mhisx) d) s
+        else // esize=8
+          let nhisx = usimd8 (word_sx:(8)word->(16)word) nhi in
+          let mhisx = usimd8 (word_sx:(8)word->(16)word) mhi in
+          (Rd := simd8 word_add (simd8 word_mul nhisx mhisx) d) s`;;
+
+let arm_SMLSL_VEC = define
+ `arm_SMLSL_VEC Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        let nlow:(64)word = word_subword n (0,64) in
+        let mlow:(64)word = word_subword m (0,64) in
+        if esize = 32 then
+          let nlowsx = usimd2 (word_sx:(32)word->(64)word) nlow in
+          let mlowsx = usimd2 (word_sx:(32)word->(64)word) mlow in
+          (Rd := simd2 word_sub d (simd2 word_mul nlowsx mlowsx)) s
+        else if esize = 16 then
+          let nlowsx = usimd4 (word_sx:(16)word->(32)word) nlow in
+          let mlowsx = usimd4 (word_sx:(16)word->(32)word) mlow in
+          (Rd := simd4 word_sub d (simd4 word_mul nlowsx mlowsx)) s
+        else // esize=8
+          let nlowsx = usimd8 (word_sx:(8)word->(16)word) nlow in
+          let mlowsx = usimd8 (word_sx:(8)word->(16)word) mlow in
+          (Rd := simd8 word_sub d (simd8 word_mul nlowsx mlowsx)) s`;;
+
+let arm_SMLSL2_VEC = define
+ `arm_SMLSL2_VEC Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        let nhi:(64)word = word_subword n (64,64) in
+        let mhi:(64)word = word_subword m (64,64) in
+        if esize = 32 then
+          let nhisx = usimd2 (word_sx:(32)word->(64)word) nhi in
+          let mhisx = usimd2 (word_sx:(32)word->(64)word) mhi in
+          (Rd := simd2 word_sub d (simd2 word_mul nhisx mhisx)) s
+        else if esize = 16 then
+          let nhisx = usimd4 (word_sx:(16)word->(32)word) nhi in
+          let mhisx = usimd4 (word_sx:(16)word->(32)word) mhi in
+          (Rd := simd4 word_sub d (simd4 word_mul nhisx mhisx)) s
+        else // esize=8
+          let nhisx = usimd8 (word_sx:(8)word->(16)word) nhi in
+          let mhisx = usimd8 (word_sx:(8)word->(16)word) mhi in
+          (Rd := simd8 word_sub d (simd8 word_mul nhisx mhisx)) s`;;
+
 let arm_UMSUBL = define
  `arm_UMSUBL Rd Rn Rm Ra =
     \s. let n:int32 = read Rn (s:armstate)
@@ -1655,6 +1795,42 @@ let arm_UMULL2_VEC = define
           let nlzx:(128)word = usimd8 (word_zx:(8)word->(16)word) nl in
           let mlzx:(128)word = usimd8 (word_zx:(8)word->(16)word) ml in
           (Rd := simd8 word_mul nlzx mlzx) s`;;
+
+let arm_SMULL_VEC = define
+ `arm_SMULL_VEC Rd Rn Rm esize =
+    \s. // Get the low halfs
+        let nl:(64)word = word_subword (read Rn s:(128)word) (0,64):(64)word in
+        let ml:(64)word = word_subword (read Rm s:(128)word) (0,64):(64)word in
+        if esize = 32 then
+          let nlsx:(128)word = usimd2 (word_sx:(32)word->(64)word) nl in
+          let mlsx:(128)word = usimd2 (word_sx:(32)word->(64)word) ml in
+          (Rd := simd2 word_mul nlsx mlsx) s
+        else if esize = 16 then
+          let nlsx:(128)word = usimd4 (word_sx:(16)word->(32)word) nl in
+          let mlsx:(128)word = usimd4 (word_sx:(16)word->(32)word) ml in
+          (Rd := simd4 word_mul nlsx mlsx) s
+        else // esize = 8
+          let nlsx:(128)word = usimd8 (word_sx:(8)word->(16)word) nl in
+          let mlsx:(128)word = usimd8 (word_sx:(8)word->(16)word) ml in
+          (Rd := simd8 word_mul nlsx mlsx) s`;;
+
+let arm_SMULL2_VEC = define
+ `arm_SMULL2_VEC Rd Rn Rm esize =
+    \s. // Get the low halfs
+        let nl:(64)word = word_subword (read Rn s:(128)word) (64,64):(64)word in
+        let ml:(64)word = word_subword (read Rm s:(128)word) (64,64):(64)word in
+        if esize = 32 then
+          let nlsx:(128)word = usimd2 (word_sx:(32)word->(64)word) nl in
+          let mlsx:(128)word = usimd2 (word_sx:(32)word->(64)word) ml in
+          (Rd := simd2 word_mul nlsx mlsx) s
+        else if esize = 16 then
+          let nlsx:(128)word = usimd4 (word_sx:(16)word->(32)word) nl in
+          let mlsx:(128)word = usimd4 (word_sx:(16)word->(32)word) ml in
+          (Rd := simd4 word_mul nlsx mlsx) s
+        else // esize = 8
+          let nlsx:(128)word = usimd8 (word_sx:(8)word->(16)word) nl in
+          let mlsx:(128)word = usimd8 (word_sx:(8)word->(16)word) ml in
+          (Rd := simd8 word_mul nlsx mlsx) s`;;
 
 let arm_USHR_VEC = define
  `arm_USHR_VEC Rd Rn amt esize datasize =
@@ -2758,12 +2934,21 @@ let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
 let arm_SSHR_VEC_ALT =   EXPAND_SIMD_RULE arm_SSHR_VEC;;
 let arm_SHRN_ALT =       EXPAND_SIMD_RULE arm_SHRN;;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
+let arm_SMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLAL_VEC;;
+let arm_SMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLAL2_VEC;;
+let arm_SMLSL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLSL_VEC;;
+let arm_SMLSL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLSL2_VEC;;
+let arm_SMULL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMULL_VEC;;
+let arm_SMULL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMULL2_VEC;;
 let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
 let arm_UADDLP_ALT =     EXPAND_SIMD_RULE arm_UADDLP;;
 let arm_UMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMLAL_VEC;;
+let arm_UMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMLAL2_VEC;;
+let arm_UMLSL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMLSL_VEC;;
+let arm_UMLSL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMLSL2_VEC;;
 let arm_UMULL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMULL_VEC;;
 let arm_UMULL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMULL2_VEC;;
 let arm_USHR_VEC_ALT =   EXPAND_SIMD_RULE arm_USHR_VEC;;
@@ -2813,13 +2998,21 @@ let ARM_OPERATION_CLAUSES =
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
-       arm_SLI_VEC_ALT; arm_SRI_VEC_ALT; arm_SMULH;
+       arm_SLI_VEC_ALT; arm_SRI_VEC_ALT;
+       arm_SMLAL_VEC_ALT; arm_SMLAL2_VEC_ALT;
+       arm_SMLSL_VEC_ALT; arm_SMLSL2_VEC_ALT;
+       arm_SMULL_VEC_ALT; arm_SMULL2_VEC_ALT;
+       arm_SMULH;
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
-       arm_UADDLP_ALT; arm_UBFM; arm_UMOV; arm_UMADDL; arm_UMLAL_VEC_ALT;
-       arm_UMSUBL; arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT; arm_UMULH;
+       arm_UADDLP_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
+       arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
+       arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
+       arm_UMSUBL;
+       arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT;
+       arm_UMULH;
        arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
        arm_UZP2_ALT;
        arm_XAR; arm_XTN_ALT;
