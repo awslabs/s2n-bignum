@@ -122,6 +122,10 @@ let iclasses =
   (*** BIT ***)
   "0x101110101xxxxx000111xxxxxxxxxx";
 
+  (*** CNT, bias to defined size = 0 ***)
+  "0x00111000100000010110xxxxxxxxxx";
+  "0x001110xx100000010110xxxxxxxxxx";
+
   (*** DUP ***)
   "01001110000x1000000011xxxxxxxxxx"; (* original DUP Vd.2d, xn *)
   "0x001110000xxxxx000011xxxxxxxxxx"; (* other variants too     *)

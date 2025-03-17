@@ -385,6 +385,12 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00011110:8; 0b01:2; 0b1:1; Rm:5; cond:4; 0b11:2; Rn:5; Rd:5] ->
     SOME (arm_FCSEL (QREG' Rd) (QREG' Rn) (QREG' Rm) (Condition cond) 64)
 
+  | [0:1; q; 0b001110:6; size:2; 0b100000010110:12; Rn:5; Rd:5] ->
+    // CNT (count bits in each byte of 64-bit or 128-bit word)
+    if ~(size = word 0b00) then NONE else
+    let datasize = if q then 128 else 64 in
+    SOME (arm_CNT (QREG' Rd) (QREG' Rn) datasize)
+
   | [0:1; q; 0b001110000:9; imm5:5; 0b000011:6; Rn:5; Rd:5] ->
     // DUP (general)
     let size = word_ctz imm5 in
