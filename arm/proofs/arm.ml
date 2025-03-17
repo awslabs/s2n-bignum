@@ -1159,3 +1159,45 @@ let BL_TARGET_CONV =
 let BL_TARGET_TAC =
   ASSUM_LIST (CONV_TAC o CHANGED_CONV o ONCE_DEPTH_CONV o BL_TARGET_CONV) THEN
   REWRITE_TAC [];;
+
+(* ------------------------------------------------------------------------- *)
+(* Handling PC-relative offsets (ADRP + ADD, which is ADRL pseudo-instr)     *)
+(* ------------------------------------------------------------------------- *)
+
+let adrp_within_bounds = new_definition (
+  `adrp_within_bounds (x:int64) (pc:int64) =
+    let xhi = word_subword x (12,54):(54)word in
+    let pchi = word_subword pc (12,54):(54)word in
+    // -2^20 <= xhi - pchi < 2^20
+    (word_uge xhi pchi /\ word_ult (word_sub xhi pchi) (word (2 EXP 20))) \/
+    (word_ult xhi pchi /\ word_ule (word_sub pchi xhi) (word (2 EXP 20)))`);;
+
+let ADRP_ADD_FOLD = prove(`forall (pc:int64) (x:int64).
+  adrp_within_bounds x pc
+  ==>
+  word_add
+    (word_add
+        (word_and pc (word 0xFFFFFFFFFFFFF000))
+        (word_sx
+            (word_join
+                (word_join
+                    (word_subword
+                        (word_sub
+                            (word_and x (word 0xFFFFFFFFFFFFF000))
+                            (word_and pc (word 0xFFFFFFFFFFFFF000)):(64)word)
+                        (14,19):(19)word)
+                    (word_subword
+                        (word_sub
+                            (word_and x (word 0xFFFFFFFFFFFFF000))
+                            (word_and pc (word 0xFFFFFFFFFFFFF000)):(64)word)
+                        (12,2):(2)word)
+                    :(21)word)
+                (word 0:(12)word)
+            :(33)word)
+        :(64)word)
+    )
+    (word (val (word_subword x (0,12):(12)word)):(64)word)
+    = x`,
+
+  REWRITE_TAC[adrp_within_bounds] THEN
+  BITBLAST_TAC);;
