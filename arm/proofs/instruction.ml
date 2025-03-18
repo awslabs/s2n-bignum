@@ -1574,6 +1574,14 @@ let arm_UADDLP = define
                           (word_zx (word_subword x (8,8):(32)word):(16)word)) n in
           (Rd := res) s`;;
 
+let arm_UADDLV = define
+ `arm_UADDLV Rd Rn elements esize =
+    \s:armstate.
+        let n:128 word = read Rn s in
+        let d = nsum (0..elements-1)
+                    (\i. val(word_subword n (esize*i,esize):int128)) in
+         (Rd := (word d:128 word)) s`;;
+
 let arm_UBFM = define
  `arm_UBFM Rd Rn immr imms =
     \s. let x:N word = read Rn (s:armstate) in
@@ -2983,6 +2991,21 @@ let arm_SQRDMULH_VEC_ALT =
 let arm_SRSHR_VEC_ALT =
   REWRITE_RULE[word_ishr_round] (EXPAND_SIMD_RULE arm_SRSHR_VEC);;
 
+let arm_UADDLV_ALT =
+  (end_itlist CONJ o
+   map (REWRITE_RULE[WORD_ADD; WORD_VAL] o
+        CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+        CONV_RULE
+         (NUM_REDUCE_CONV THENC
+          ONCE_DEPTH_CONV EXPAND_NSUM_CONV THENC
+          NUM_REDUCE_CONV) o
+        GEN_REWRITE_CONV I [arm_UADDLV]))
+  [`arm_UADDLV Rd Rn 8 8`;
+   `arm_UADDLV Rd Rn 16 8`;
+   `arm_UADDLV Rd Rn 4 16`;
+   `arm_UADDLV Rd Rn 8 16`;
+   `arm_UADDLV Rd Rn 4 32`];;
+
 (* ------------------------------------------------------------------------- *)
 (* Collection of standard forms of non-aliased instructions                  *)
 (* We separate the load/store instructions for a different treatment.        *)
@@ -3019,7 +3042,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
-       arm_UADDLP_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
+       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;
