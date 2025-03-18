@@ -144,6 +144,9 @@ let iclasses =
   "100111101010111x000000xxxxxxxxxx";
   "100111100110011x000000xxxxxxxxxx";
 
+  (*** FMOV to general, single ***)
+  "0001111000100110000000xxxxxxxxxx";
+
   (*** INS, or MOV (element) ***)
   "01101110000xxxx10xxxx1xxxxxxxxxx";
   "01101110000xxx100xxxx1xxxxxxxxxx";

@@ -1200,18 +1200,17 @@ let arm_MOVZ = define
  `arm_MOVZ (Rd:(armstate,N word)component) (imm:int16) pos =
     Rd := word (val imm * 2 EXP pos)`;;
 
+let arm_FMOV_FtoI = define
+ `arm_FMOV_FtoI Rd Rn (part:num) esize  =
+    \s. let n:(128)word = read Rn s in
+        let intval = word_subword n (part*esize,esize) in
+        (Rd := intval) s
+    `;;
+
 (* Only double precision is implemented *)
 (* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged
   due to type resolution failure *)
-let arm_FMOV_FtoI = define
- `arm_FMOV_FtoI Rd Rn (part:num) =
-    \s. let n:(128)word = read Rn s in
-        let intval:(64)word =
-          if part = 0
-          then word_subword n (0, 64)
-          else word_subword n (64, 64) in
-        (Rd := intval) s
-    `;;
+
 let arm_FMOV_ItoF = define
  `arm_FMOV_ItoF Rd Rn (part:num) =
     \s. let fltval:(64)word = read Rn s in

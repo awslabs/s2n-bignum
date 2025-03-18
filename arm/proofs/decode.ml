@@ -467,22 +467,25 @@ let decode = new_definition `!w:int32. decode w =
         SOME (arm_SRI_VEC (QREG' Rd) (QREG' Rn) shift esize datasize)
     else NONE
 
-  | [sf; 0b0011110:7; ftype:2; 0b10:2; rmode0; 0b11:2; opcode0; 0b000000:6; Rn:5; Rd:5] ->
-    // FMOV (general), double precision
-    if ftype = (word 0b10:(2)word) /\ ~rmode0 then NONE
-    else if ftype = (word 0b01:(2)word) /\ rmode0 then NONE
-    // Only double precision is implemented
-    else if ftype = (word 0b00:(2)word) \/ ftype = (word 0b11:(2)word) \/ ~sf then NONE
-    else
-      if rmode0
-      // FMOV D[1]
-      then if opcode0
-           then SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 1)
-           else SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 1)
-      // FMOV
-      else if opcode0
-           then SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 0)
-           else SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 0)
+  | [0b0001111000100110000000:22; Rn:5; Rd:5] ->
+    // FMOV (single, to general)
+    SOME (arm_FMOV_FtoI (WREG' Rd) (QREG' Rn) 0 32)
+
+  | [0b1001111001100110000000:22; Rn:5; Rd:5] ->
+    // FMOV (double, to general)
+    SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 0 64)
+
+  | [0b1001111010101110000000:22; Rn:5; Rd:5] ->
+    // FMOV (double high part, to general)
+    SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 1 64)
+
+  | [0b1001111001100111000000:22; Rn:5; Rd:5] ->
+    // FMOV (double, from general)
+    SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 0)
+
+  | [0b1001111010101111000000:22; Rn:5; Rd:5] ->
+    // FMOV (double high part, from general)
+    SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 1)
 
   | [0:1; q; 0b101111:6; sz:2; L:1; M:1; R:4; 0b0100:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MLS (by element)
