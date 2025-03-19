@@ -465,6 +465,12 @@ let check_insns () =
     (*** st1 (1 register, no Post-immediate offset) ***)
     "0x001100100111110111xxxxxxxxxxxx";
 
+    (*** ld1 (2 registers, Post-immediate offset) ***)
+    "0x001100110111111010xxxxxxxxxxxx";
+
+    (*** st1 (2 registers, Post-immediate offset) ***)
+    "0x001100100111111010xxxxxxxxxxxx";
+
     (*** ld2 (2 register, Post-immediate offset) ***)
     "0x001100110111111000xxxxxxxxxxxx";
 
