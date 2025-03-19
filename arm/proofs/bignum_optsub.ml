@@ -55,7 +55,7 @@ let BIGNUM_OPTSUB_CORRECT = prove
                    else (2 EXP (64 * val k) + m) - n) /\
                   (C_RETURN s =
                    if ~(p = word 0) /\ m < n then word 1 else word 0))
-          (MAYCHANGE [PC; X0; X3; X5; X6; X7] ,, MAYCHANGE SOME_FLAGS ,,
+          (MAYCHANGE [PC; X0; X3; X5; X6; X7] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC

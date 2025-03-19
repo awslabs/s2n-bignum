@@ -96,7 +96,7 @@ let BIGNUM_SUB_CORRECT = prove
                   2 EXP (64 * val p) * val(C_RETURN s) + lowdigits a (val p) =
                   bignum_from_memory (z,val p) s + lowdigits b (val p))
              (MAYCHANGE [PC; X0; X2; X4; X6; X7; X8] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `m:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `a:num`] THEN

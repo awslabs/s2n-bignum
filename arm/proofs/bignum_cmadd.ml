@@ -79,7 +79,7 @@ let BIGNUM_CMADD_CORRECT = prove
                   (val n <= val p
                    ==> C_RETURN s = word(highdigits (d + val c * a) (val p))))
              (MAYCHANGE [PC; X0; X3; X5; X6; X7; X8; X9] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   W64_GEN_TAC `p:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `d:num`] THEN
   W64_GEN_TAC `c:num` THEN

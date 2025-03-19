@@ -1450,7 +1450,7 @@ let LOCAL_WORD_DIVSTEP59_CORRECT = prove
               read X13 s = iword(M$2$2)))
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X7; X8; X9;
                       X10; X11; X12; X13; X14; X15; X16; X17] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY
     (fun t -> GEN_REWRITE_TAC I [FORALL_IVAL_GEN] THEN
               X_GEN_TAC t THEN STRIP_TAC)
@@ -1771,7 +1771,7 @@ let CORE_INV_P25519_CORRECT = time prove
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9;
                       X10; X11; X12; X13; X14; X15; X16; X17;
                       X19; X20; X21; X22] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(z,8 * 4);
                       memory :> bytes(stackpointer,128)])`,
   MAP_EVERY X_GEN_TAC
@@ -3293,7 +3293,7 @@ let BIGNUM_INV_P25519_CORRECT = time prove
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9;
                       X10; X11; X12; X13; X14; X15; X16; X17;
                       X19; X20; X21; X22] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(z,8 * 4);
                       memory :> bytes(stackpointer,128)])`,
   MAP_EVERY X_GEN_TAC

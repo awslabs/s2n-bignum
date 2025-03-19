@@ -525,7 +525,7 @@ let BIGNUM_MODEXP_CORRECT = prove
                (ODD n ==> bignum_from_memory(z,val k) s = (x EXP y) MOD n))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X30] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val k);
                       memory :> bytes(t,24 * val k)])`,
   W64_GEN_TAC `k:num` THEN

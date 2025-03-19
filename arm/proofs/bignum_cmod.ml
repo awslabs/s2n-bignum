@@ -114,7 +114,7 @@ let BIGNUM_CMOD_CORRECT = prove
          (\s. read PC s = word(pc + 0x140) /\
               (~(val m = 0) ==> C_RETURN s = word(a MOD val m)))
          (MAYCHANGE [PC; X0; X3; X4; X5; X6; X7; X8; X9; X10] ,,
-          MAYCHANGE SOME_FLAGS)`,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `x:int64` THEN W64_GEN_TAC `m:num` THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
@@ -191,7 +191,8 @@ let BIGNUM_CMOD_CORRECT = prove
             &2 pow 64 + &(val (read X5 s)) < &2 pow 128 / &n /\
             &2 pow 128 / &n <= &2 pow 64 + &(val (read X5 s)) + &1)
        (MAYCHANGE [PC; X5; X6; X9; X10] ,,
-        MAYCHANGE [NF; ZF; CF; VF])`
+        MAYCHANGE [NF; ZF; CF; VF] ,,
+        MAYCHANGE [events])`
     MP_TAC THENL
      [ALL_TAC;
       REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN DISCH_THEN(fun th ->

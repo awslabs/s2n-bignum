@@ -46,7 +46,7 @@ let WORD_BYTEREVERSE_CORRECT = prove
                !i. i < 8
                    ==> word_subword (C_RETURN s) (8 * i,8) :byte =
                        word_subword a (8 * (7 - i),8))
-          (MAYCHANGE [PC; X0; X1; X2])`,
+          (MAYCHANGE [PC; X0; X1; X2] ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`a:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   ARM_SIM_TAC WORD_BYTEREVERSE_EXEC (1--13) THEN

@@ -793,7 +793,7 @@ let LOCAL_MONTSQR_P256_CORRECT =
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
     SUBGOAL_THEN
       `bignum_montsqr_p256_core_mc =
         SUB_LIST (0x334, LENGTH bignum_montsqr_p256_core_mc)
@@ -825,7 +825,7 @@ let LOCAL_MONTSQR_P256_CORRECT =
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
     REWRITE_TAC[fst P256_MONTJDOUBLE_CORE_EXEC] THEN
     ARM_ADD_RETURN_NOSTACK_TAC
     P256_MONTJDOUBLE_CORE_EXEC
@@ -861,7 +861,7 @@ let LOCAL_MONTMUL_P256_CORRECT =
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
     SUBGOAL_THEN
       `bignum_montmul_p256_core_mc =
         SUB_LIST (0, LENGTH bignum_montmul_p256_core_mc) p256_montjdouble_core_mc` MP_TAC THENL [
@@ -893,7 +893,7 @@ let LOCAL_MONTMUL_P256_CORRECT =
                          X13; X14; X15; X16; X17] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
     REWRITE_TAC[fst P256_MONTJDOUBLE_CORE_EXEC] THEN
     ARM_ADD_RETURN_NOSTACK_TAC
     P256_MONTJDOUBLE_CORE_EXEC
@@ -926,7 +926,7 @@ let LOCAL_SUB_P256_CORRECT =
                   (m < p_256 /\ n < p_256
                    ==> &(bignum_from_memory (z,4) s) = (&m - &n) rem &p_256))
              (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,4)])`,
     SUBGOAL_THEN
       `bignum_sub_p256_mc = SUB_LIST (0x558, 0x48) p256_montjdouble_core_mc` MP_TAC THENL [
@@ -952,7 +952,7 @@ let LOCAL_SUB_P256_CORRECT =
                   (m < p_256 /\ n < p_256
                    ==> &(bignum_from_memory (z,4) s) = (&m - &n) rem &p_256))
           (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,4)])`,
     REWRITE_TAC[fst P256_MONTJDOUBLE_CORE_EXEC] THEN
     ARM_ADD_RETURN_NOSTACK_TAC
@@ -1001,7 +1001,7 @@ let LOCAL_WEAKADD_P256_TAC =
             (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -1080,7 +1080,7 @@ let LOCAL_ADD_P256_CORRECT =
                   (m < p_256 /\ n < p_256
                    ==> bignum_from_memory (z,4) s = (m + n) MOD p_256))
              (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,4)])`,
     SUBGOAL_THEN
       `bignum_add_p256_mc = SUB_LIST (0x5a0, 92) p256_montjdouble_core_mc` MP_TAC THENL [
@@ -1107,7 +1107,7 @@ let LOCAL_ADD_P256_CORRECT =
                   (m < p_256 /\ n < p_256
                    ==> bignum_from_memory (z,4) s = (m + n) MOD p_256))
           (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
     REWRITE_TAC[fst P256_MONTJDOUBLE_CORE_EXEC] THEN
     ARM_ADD_RETURN_NOSTACK_TAC
@@ -1155,7 +1155,7 @@ let LOCAL_CMSUBC9_P256_TAC =
                         X10; X11; X12] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -1320,7 +1320,7 @@ let LOCAL_CMSUB41_P256_TAC =
          (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8] ,,
           MAYCHANGE
             [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-           MAYCHANGE SOME_FLAGS)`
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -1481,7 +1481,7 @@ let LOCAL_CMSUB38_P256_TAC =
                         X10; X11; X12] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -1746,7 +1746,7 @@ let P256_MONTJDOUBLE_UNOPT_CORE_CORRECT = time prove
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                       X11; X12; X13; X14; X15; X16; X17; X19; X20; X30] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(stackpointer,192)])`,
   REWRITE_TAC[FORALL_PAIR_THM;fst P256_MONTJDOUBLE_CORE_EXEC] THEN
@@ -1878,7 +1878,7 @@ let equiv_goal = mk_equiv_statement
     `MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                 X11; X12; X13; X14; X15; X16; X17; X19; X20; X30] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bytes(p3,96);
                 memory :> bytes(stackpointer,192)]`
     p256_montjdouble_opt_mc 0x18 0x1778
@@ -1886,7 +1886,7 @@ let equiv_goal = mk_equiv_statement
                 X11; X12; X13; X14; X15; X16; X17; X19; X20; X21;
                 X22; X23; X24; X25; X26; X27] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bytes(p3,96);
                 memory :> bytes(stackpointer,192)]`
     (vsubst [mk_small_numeral(
@@ -2015,7 +2015,7 @@ let P256_MONTJDOUBLE_CORRECT = prove(
                       X11; X12; X13; X14; X15; X16; X17; X19; X20; X21;
                       X22; X23; X24; X25; X26; X27] ,,
            MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(stackpointer,192)])`,
 

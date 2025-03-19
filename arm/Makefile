@@ -498,7 +498,10 @@ tutorial/rel_reordertac.native: tutorial/rel_reordertac2.o
 
 unopt: $(UNOPT_OBJ)
 
-build_proofs: $(UNOPT_OBJ) $(PROOF_BINS);
+build_proofs: $(UNOPT_OBJ) $(PROOF_BINS)
+# Conservatively check that there is no redefinition of "check_axioms"
+# '-I' excludes binary files (*.native).
+	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
 build_tutorial: $(TUTORIAL_OBJ) $(TUTORIAL_PROOF_BINS);
 run_proofs: build_proofs $(PROOF_LOGS);
 
