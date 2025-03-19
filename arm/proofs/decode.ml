@@ -334,6 +334,9 @@ let decode = new_definition `!w:int32. decode w =
   // datasize = 128
   | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 16)))
+  // datasize = 128, no Postimmediate_Offset
+  | [0:1; 1:1; 0b0011000:7; is_ld; 0b000000:6; 0b0111:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 0)))
 
   // LD2/ST2 (multiple structures), 2 registers, immediate offset, Post-immediate offset, datasize = 64
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b1000:4; size:2; Rn:5; Rt:5] ->
