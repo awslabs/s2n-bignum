@@ -378,7 +378,7 @@
         cmovnbe r3, [P2+24]
 
 S2N_BN_SYMBOL(secp256k1_jadd_alt):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

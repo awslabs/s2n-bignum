@@ -44,7 +44,7 @@
 #define qshort ebp
 
 S2N_BN_SYMBOL(bignum_mod_n384_alt):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

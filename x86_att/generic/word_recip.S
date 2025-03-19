@@ -36,7 +36,7 @@
 #define h %rdx
 
 S2N_BN_SYMBOL(word_recip):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

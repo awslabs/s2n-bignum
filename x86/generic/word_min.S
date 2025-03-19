@@ -22,7 +22,7 @@
 #define b rsi
 
 S2N_BN_SYMBOL(word_min):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

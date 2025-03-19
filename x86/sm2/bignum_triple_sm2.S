@@ -46,7 +46,7 @@
 #define ashort eax
 
 S2N_BN_SYMBOL(bignum_triple_sm2):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

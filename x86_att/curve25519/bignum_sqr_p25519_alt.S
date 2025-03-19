@@ -59,7 +59,7 @@
         adcq    $0, c
 
 S2N_BN_SYMBOL(bignum_sqr_p25519_alt):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

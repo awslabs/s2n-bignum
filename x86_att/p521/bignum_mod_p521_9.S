@@ -39,7 +39,7 @@
 #define d7 %rsi
 
 S2N_BN_SYMBOL(bignum_mod_p521_9):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

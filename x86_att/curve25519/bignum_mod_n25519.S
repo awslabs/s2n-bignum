@@ -35,7 +35,7 @@
 #define q %rbx
 
 S2N_BN_SYMBOL(bignum_mod_n25519):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

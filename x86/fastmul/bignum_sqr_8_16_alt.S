@@ -92,7 +92,7 @@
         adc     c, 0
 
 S2N_BN_SYMBOL(bignum_sqr_8_16_alt):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

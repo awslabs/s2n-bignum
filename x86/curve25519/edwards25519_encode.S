@@ -41,7 +41,7 @@
 #define xb r9
 
 S2N_BN_SYMBOL(edwards25519_encode):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

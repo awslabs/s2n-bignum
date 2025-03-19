@@ -20,7 +20,11 @@
 // with -DNO_IBT. If the platform supports CET, simply inherit this from
 // the usual header. Otherwise manually define _CET_ENDBR, used at each
 // x86 entry point, to be the ENDBR64 instruction, with an explicit byte
-// sequence for compilers/assemblers that don't know about it.
+// sequence for compilers/assemblers that don't know about it. Note that
+// it is safe to use ENDBR64 on all platforms, since the encoding is by
+// design interpreted as a NOP on all pre-CET x86_64 processors. The only
+// downside is a small increase in code size and potentially a modest
+// slowdown from executing one more instruction.
 
 #if NO_IBT
 #define _CET_ENDBR

@@ -966,7 +966,7 @@
         leaq    (%rax,%rdx), %r12
 
 S2N_BN_SYMBOL(bignum_inv_p521):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

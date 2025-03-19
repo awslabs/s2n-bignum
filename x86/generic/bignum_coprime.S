@@ -96,7 +96,7 @@
 #define arg4 rcx
 
 S2N_BN_SYMBOL(bignum_coprime):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

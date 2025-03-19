@@ -1286,7 +1286,7 @@
         movq    %rbx, 64+P0
 
 S2N_BN_SYMBOL(p521_jdouble):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

@@ -19,10 +19,10 @@
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-					S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_emontredc_8n_cdiff_base)
-					S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_emontredc_8n_cdiff_base)
-					.text
-					.balign 4
+                                        S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_emontredc_8n_cdiff_base)
+                                        S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_emontredc_8n_cdiff_base)
+                                        .text
+                                        .balign 4
 
         // Silly SLOTHY limitation: It needs the loop counter to have the name 'count'
         count .req x27 // inner loop counter
@@ -247,10 +247,10 @@ bignum_emontredc_8n_cdiff_base_outerloop:
           vmul_2x_64_64_128 v21, x4, v0, v1
           mov x14, v0.d[0]
           mov x15, v0.d[1]
-          mul	x12, x4, x8
+          mul   x12, x4, x8
           adds x17, x17, x12
           umulh x12, x4, x8
-          mul	x13, x4, x9
+          mul   x13, x4, x9
           adcs x19, x19, x13
           umulh x13, x4, x9
           adcs x20, x20, x14
@@ -270,12 +270,12 @@ bignum_emontredc_8n_cdiff_base_outerloop:
           vmul_2x_64_64_128 v21, x5, v0, v1
           mov x14, v0.d[0]
           mov x15, v0.d[1]
-          mul	x12, x5, x8
-          adds	x19, x19, x12
-          umulh	x12, x5, x8
-          mul	x13, x5, x9
-          adcs	x20, x20, x13
-          umulh	x13, x5, x9
+          mul   x12, x5, x8
+          adds  x19, x19, x12
+          umulh x12, x5, x8
+          mul   x13, x5, x9
+          adcs  x20, x20, x13
+          umulh x13, x5, x9
           adcs x21, x21, x14
           adcs x22, x22, x15
           mov x14, v1.d[0]
@@ -289,49 +289,49 @@ bignum_emontredc_8n_cdiff_base_outerloop:
 
           // Montgomery step 2
 
-          mul	x6, x20, x3
+          mul   x6, x20, x3
           // NEON: Calculate x6 * (x10, x11) that does two 64x64->128-bit multiplications.
           vmul_2x_64_64_128 v21, x6, v21, v1
           mov   x14, v21.d[0]
           mov   x15, v21.d[1]
-          mul	x12, x6, x8
-          adds	x20, x20, x12
-          umulh	x12, x6, x8
-          mul	x13, x6, x9
-          adcs	x21, x21, x13
-          umulh	x13, x6, x9
+          mul   x12, x6, x8
+          adds  x20, x20, x12
+          umulh x12, x6, x8
+          mul   x13, x6, x9
+          adcs  x21, x21, x13
+          umulh x13, x6, x9
           adcs  x22, x22, x14
           adcs  x23, x23, x15
           mov   x14, v1.d[0]
           mov   x15, v1.d[1]
-          adc	x24, xzr, xzr
-          adds	x21, x21, x12
-          mul	x7, x21, x3
-          adcs	x22, x22, x13
-          adcs	x23, x23, x14
-          adc	x24, x24, x15
+          adc   x24, xzr, xzr
+          adds  x21, x21, x12
+          mul   x7, x21, x3
+          adcs  x22, x22, x13
+          adcs  x23, x23, x14
+          adc   x24, x24, x15
 
           stph x6, x7, x1, #16, t1
 
           // Montgomery step 3
 
-          mul	x12, x7, x8
-          mul	x13, x7, x9
-          mul	x14, x7, x10
-          mul	x15, x7, x11
-          adds	x21, x21, x12
-          umulh	x12, x7, x8
-          adcs	x22, x22, x13
-          umulh	x13, x7, x9
-          adcs	x23, x23, x14
-          umulh	x14, x7, x10
-          adcs	x24, x24, x15
-          umulh	x15, x7, x11
-          adc	x25, xzr, xzr
-          adds	x12, x22, x12
-          adcs	x13, x23, x13
-          adcs	x14, x24, x14
-          adc	x15, x25, x15
+          mul   x12, x7, x8
+          mul   x13, x7, x9
+          mul   x14, x7, x10
+          mul   x15, x7, x11
+          adds  x21, x21, x12
+          umulh x12, x7, x8
+          adcs  x22, x22, x13
+          umulh x13, x7, x9
+          adcs  x23, x23, x14
+          umulh x14, x7, x10
+          adcs  x24, x24, x15
+          umulh x15, x7, x11
+          adc   x25, xzr, xzr
+          adds  x12, x22, x12
+          adcs  x13, x23, x13
+          adcs  x14, x24, x14
+          adc   x15, x25, x15
 
           lsr count, x0, #5
 

@@ -19,7 +19,7 @@
         .text
 
 S2N_BN_SYMBOL(word_ctz):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

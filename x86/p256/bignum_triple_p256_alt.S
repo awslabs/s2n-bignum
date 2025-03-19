@@ -48,7 +48,7 @@
 #define dshort edx
 
 S2N_BN_SYMBOL(bignum_triple_p256_alt):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

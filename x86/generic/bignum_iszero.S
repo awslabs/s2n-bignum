@@ -23,7 +23,7 @@
 #define x rsi
 
 S2N_BN_SYMBOL(bignum_iszero):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

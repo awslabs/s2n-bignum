@@ -37,7 +37,7 @@
 
 
 S2N_BN_SYMBOL(bignum_sub_p256):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

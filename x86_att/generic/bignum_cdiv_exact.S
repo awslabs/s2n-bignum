@@ -52,7 +52,7 @@
 #define hshort %edx
 
 S2N_BN_SYMBOL(bignum_cdiv_exact):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

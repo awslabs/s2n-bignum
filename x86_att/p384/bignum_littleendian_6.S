@@ -42,7 +42,7 @@
 S2N_BN_SYMBOL(bignum_littleendian_6):
 S2N_BN_SYMBOL(bignum_fromlebytes_6):
 S2N_BN_SYMBOL(bignum_tolebytes_6):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

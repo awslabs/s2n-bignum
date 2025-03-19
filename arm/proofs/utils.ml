@@ -9,7 +9,7 @@ needs "Library/words.ml";;
    Adapted from June Lee's initial code. *)
 let EVAL thms =
   let rw = Compute.bool_compset () in
-  (* avoid folding the branches of conditional expression 
+  (* avoid folding the branches of conditional expression
      before evaluating its condition *)
   let _ = Compute.set_skip rw `COND: bool -> A -> A -> A` (Some 1) in
   let _ = num_compute_add_convs rw in

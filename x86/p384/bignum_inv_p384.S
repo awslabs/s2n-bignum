@@ -1041,7 +1041,7 @@
         lea     r12, [rax+rdx]
 
 S2N_BN_SYMBOL(bignum_inv_p384):
-	_CET_ENDBR
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi
