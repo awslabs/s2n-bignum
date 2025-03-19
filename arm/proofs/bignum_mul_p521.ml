@@ -783,7 +783,7 @@ let BIGNUM_MUL_P521_UNOPT_CORE_CORRECT = prove
              (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9;
                          X10; X11; X12; X13; X14; X15; X16; X17; X19;
                          X20; X21; X22; X23; X24; X25; X26] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9);
                          memory :> bytes(stackpointer,80)])`,
   MAP_EVERY X_GEN_TAC
@@ -1660,7 +1660,7 @@ let BIGNUM_MUL_P521_UNOPT_CORRECT = time prove
              (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9;
                          X10; X11; X12; X13; X14; X15; X16; X17; X19;
                          X20; X21; X22; X23; X24; X25; X26] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9);
                          memory :> bytes(stackpointer,80)])`,
 
@@ -2423,7 +2423,7 @@ let equiv_goal1 = mk_equiv_statement_simple
     `MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9;
                 X10; X11; X12; X13; X14; X15; X16; X17; X19;
                 X20; X21; X22; X23; X24; X25; X26] ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9);
                 memory :> bytes(stackpointer,80)]`
     bignum_mul_p521_interm1_core_mc
@@ -2431,7 +2431,7 @@ let equiv_goal1 = mk_equiv_statement_simple
                 X10; X11; X12; X13; X14; X15; X16; X17; X19;
                 X20; X21; X22; X23; X24; X25; X26] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9);
                 memory :> bytes(stackpointer,80)]`;;
 
@@ -2512,7 +2512,7 @@ let equiv_goal2 = mk_equiv_statement_simple
                 X10; X11; X12; X13; X14; X15; X16; X17; X19;
                 X20; X21; X22; X23; X24; X25; X26] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9);
                 memory :> bytes(stackpointer,80)]`
     bignum_mul_p521_core_mc
@@ -2520,7 +2520,7 @@ let equiv_goal2 = mk_equiv_statement_simple
                 X10; X11; X12; X13; X14; X15; X16; X17; X19;
                 X20; X21; X22; X23; X24; X25; X26] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9);
                 memory :> bytes(stackpointer,80)]`;;
 
@@ -2588,7 +2588,7 @@ let equiv_goal = mk_equiv_statement_simple
     `MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9;
                 X10; X11; X12; X13; X14; X15; X16; X17; X19;
                 X20; X21; X22; X23; X24; X25; X26] ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9);
                 memory :> bytes(stackpointer,80)]`
     bignum_mul_p521_core_mc
@@ -2596,7 +2596,7 @@ let equiv_goal = mk_equiv_statement_simple
                 X10; X11; X12; X13; X14; X15; X16; X17; X19;
                 X20; X21; X22; X23; X24; X25; X26] ,,
      MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-     MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bignum(z,9);
                 memory :> bytes(stackpointer,80)]`;;
 
@@ -2715,7 +2715,7 @@ let BIGNUM_MUL_P521_CORE_CORRECT = prove
                          X10; X11; X12; X13; X14; X15; X16; X17; X19;
                          X20; X21; X22; X23; X24; X25; X26] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9);
                           memory :> bytes(stackpointer,80)])`,
   REPEAT GEN_TAC THEN
@@ -2764,7 +2764,7 @@ let BIGNUM_MUL_P521_CORRECT = prove
                          X10; X11; X12; X13; X14; X15; X16; X17; X19;
                          X20; X21; X22; X23; X24; X25; X26] ,,
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9);
                           memory :> bytes(stackpointer,80)])`,
 

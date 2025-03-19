@@ -92,7 +92,7 @@ let BIGNUM_SHR_SMALL_CORRECT = prove
                   lowdigits (a DIV 2 EXP (val c MOD 64)) (val p) /\
                   C_RETURN s = word(a MOD 2 EXP (val c MOD 64)))
              (MAYCHANGE [PC; X0; X5; X6; X7; X8; X9] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `n:num` THEN X_GEN_TAC `x:int64` THEN

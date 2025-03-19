@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (** Carl Kwan: ARM SHA512 intrinsics in HOL Light **)
 
 needs "Library/words.ml";;

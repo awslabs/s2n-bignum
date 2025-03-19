@@ -7,6 +7,35 @@
 (* Simplified model of aarch64 (64-bit ARM) semantics.                       *)
 (* ========================================================================= *)
 
+(*** We start with defining an observable microarchitectural event.
+ *** This is used to describe the safety property of assembly programs such as
+ *** the constant-time property.
+ *** We define that an instruction raises an observable microarchitectural
+ *** event if its cycles/power consumption/anything that can be observed by 
+ *** a side-channel attacker can vary depending on the inputs of
+ *** the instruction. For example, instructions taking a constant number of
+ *** cycles like ADD do not raise an observable event, whereas cond branch does.
+ *** Its kinds (EventLoad/Store/...) describe the events distinguishable from
+ *** each other by the attacker, and their parameters describe the values
+ *** that are inputs and/or outputs of the instructions that will affect the
+ *** observed cycles/etc.
+ *** An opcode of instruction is not a parameter of the event, even if the
+ *** number of taken cycles may depend on opcode. This relies on an assumption
+ *** that a program is public information.
+ *** One instruction can raise multiple events (e.g., one that reads PC from
+ *** the memory and jumps to the address, even though this case will not exist
+ *** in Arm).
+ ***)
+let armevent_INDUCT, armevent_RECURSION = define_type
+  "armevent =
+    // (address, byte length)
+    EventLoad (int64#num)
+    // (address, byte length)
+    | EventStore (int64#num)
+    // (src pc, destination pc)
+    | EventJump (int64#int64)
+  ";;
+
 (*** For convenience we lump the stack pointer in as general register 31.
  *** The indexing is cleaner for a 32-bit enumeration via words, and in
  *** fact in some settings this may be interpreted correctly when register 31
@@ -26,7 +55,8 @@ let armstate_INDUCT,armstate_RECURSION,armstate_COMPONENTS =
        registers : 5 word->int64;       // 31 general-purpose registers plus SP
        simdregisters: 5 word->int128;   // 32 SIMD registers
        flags: 4 word;                   // NZCV flags
-       memory: 64 word -> byte          // memory
+       memory: 64 word -> byte;         // memory
+       events: armevent list            // Observable uarch events
      }";;
 
 let bytes_loaded = new_definition
@@ -782,7 +812,7 @@ let MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
  (new_definition `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI =
     MAYCHANGE [PC] ,, MAYCHANGE MODIFIABLE_GPRS ,,
     MAYCHANGE MODIFIABLE_SIMD_REGS ,,
-    MAYCHANGE MODIFIABLE_UPPER_SIMD_REGS ,, MAYCHANGE SOME_FLAGS`);;
+    MAYCHANGE MODIFIABLE_UPPER_SIMD_REGS ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`);;
 
 (* ------------------------------------------------------------------------- *)
 (* General register-register instructions.                                   *)
@@ -893,7 +923,10 @@ let arm_ASRV = define
 
 let arm_B = define
  `arm_B (off:28 word) =
-    \s. (PC := word_add (word_sub (read PC s) (word 4)) (word_sx off)) s`;;
+    \s. let pc = word_sub (read PC s) (word 4) in
+        let pc_next = word_add pc (word_sx off) in
+        (PC := pc_next ,,
+         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
 let arm_BFM = define
  `arm_BFM Rd Rn immr imms =
@@ -953,15 +986,20 @@ let arm_BIT = define
 
 let arm_BL = define
  `arm_BL (off:28 word) =
-    \s. let pc = read PC s in
-        (X30 := pc ,,
-         PC := word_add (word_sub pc (word 4)) (word_sx off)) s`;;
+    \s. let pc_incr = read PC s in
+        let pc = word_sub pc_incr (word 4) in
+        let pc_next = word_add pc (word_sx off) in
+        (X30 := pc_incr ,,
+         PC := pc_next ,,
+         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
 let arm_BL_ABSOLUTE = define
  `arm_BL_ABSOLUTE (target:64 word) =
-    \s. let pc = read PC s in
-        (X30 := pc ,,
-         PC := target) s`;;
+    \s. let pc_incr = read PC s in
+        let pc = word_sub pc_incr (word 4) in
+        (X30 := pc_incr ,,
+         PC := target ,,
+         events := CONS (EventJump (pc,target)) (read events s)) s`;;
 
 (*** For conditional branches, including CBZ and CBNZ the offset is       ***)
 (*** encoded as a 19-bit word that's turned into a 21-bit word multiplied ***)
@@ -969,21 +1007,30 @@ let arm_BL_ABSOLUTE = define
 
 let arm_Bcond = define
  `arm_Bcond cc (off:21 word) =
-        \s. (PC := if condition_semantics cc s
-                   then word_add (word_sub (read PC s) (word 4)) (word_sx off)
-                   else read PC s) s`;;
+        \s. let pc = word_sub (read PC s) (word 4) in
+            let pc_next = if condition_semantics cc s
+                   then word_add pc (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
 let arm_CBNZ = define
  `arm_CBNZ Rt (off:21 word) =
-        \s. (PC := if ~(read Rt s = word 0)
-                   then word_add (word_sub (read PC s) (word 4)) (word_sx off)
-                   else read PC s) s`;;
+        \s. let pc = word_sub (read PC s) (word 4) in
+            let pc_next = if ~(read Rt s = word 0)
+                   then word_add pc (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
 let arm_CBZ = define
- `arm_CBZ Rt (off:21 word) =
-        \s. (PC := if read Rt s = word 0
-                   then word_add (word_sub (read PC s) (word 4)) (word_sx off)
-                   else read PC s) s`;;
+ `arm_CBZ Rt (off:21 word)  =
+        \s. let pc = word_sub (read PC s) (word 4) in
+            let pc_next = if read Rt s = word 0
+                   then word_add pc (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
 let arm_CCMN = define
  `arm_CCMN Rm Rn (nzcv:4 word) cc =
@@ -1265,7 +1312,10 @@ let arm_ORR_VEC = define
 
 let arm_RET = define
  `arm_RET Rn =
-    \s. (PC := read Rn s) s`;;
+    \s. let pc = word_sub (read PC s) (word 4) in
+        let pc_next = read Rn s in
+        (PC := pc_next ,,
+         events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
 let arm_REV64_VEC = define
  `arm_REV64_VEC Rd Rn esize =
@@ -2108,6 +2158,8 @@ let arm_LDR = define
             (offset_writesback off ==> orthogonal_components Rt Rn)
          then
            Rt := read (memory :> wbytes addr) s ,,
+           events := CONS (EventLoad (addr,dimindex (:N) DIV 8))
+                          (read events s) ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
             else (=))
@@ -2121,6 +2173,8 @@ let arm_STR = define
             (offset_writesback off ==> orthogonal_components Rt Rn)
          then
            memory :> wbytes addr := read Rt s ,,
+           events := CONS (EventStore (addr,dimindex (:N) DIV 8))
+                          (read events s) ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
             else (=))
@@ -2134,6 +2188,7 @@ let arm_LDRB = define
             (offset_writesback off ==> orthogonal_components Rt Rn)
          then
            Rt := word_zx (read (memory :> bytes8 addr) s) ,,
+           events := CONS (EventLoad (addr,1)) (read events s) ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
             else (=))
@@ -2147,6 +2202,7 @@ let arm_STRB = define
             (offset_writesback off ==> orthogonal_components Rt Rn)
          then
            memory :> bytes8 addr := word_zx (read Rt s) ,,
+           events := CONS (EventStore (addr,1)) (read events s) ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
             else (=))
@@ -2168,6 +2224,7 @@ let arm_LDP = define
            let w = dimindex(:N) DIV 8 in
            Rt1 := read (memory :> wbytes addr) s ,,
            Rt2 := read (memory :> wbytes(word_add addr (word w))) s ,,
+           events := CONS (EventLoad (addr,2 * w)) (read events s) ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
             else (=))
@@ -2185,6 +2242,7 @@ let arm_STP = define
            let w = dimindex(:N) DIV 8 in
            memory :> wbytes addr := read Rt1 s ,,
            memory :> wbytes(word_add addr (word w)) := read Rt2 s ,,
+           events := CONS (EventStore (addr,2 * w)) (read events s) ,,
            (if offset_writesback off
             then Rn := word_add base (offset_writeback off)
             else (=))
@@ -2302,6 +2360,7 @@ let arm_LD2 = define
                 else if esize = 16 then word_deinterleave8_y tmp
                 else word_deinterleave16_y tmp in
               (Rt := x),, (Rtt := y) ,,
+              events := CONS (EventLoad (eaddr,32)) (read events s) ,,
               (if offset_writesback off
                then Rn := word_add address (offset_writeback off)
                else (=))
@@ -2316,6 +2375,7 @@ let arm_LD2 = define
                 else if esize = 16 then word_deinterleave4_y tmp
                 else word_deinterleave8_y tmp in
               (Rt := word_zx x:(128)word),, (Rtt := word_zx y:(128)word) ,,
+              events := CONS (EventLoad (eaddr,16)) (read events s) ,,
               (if offset_writesback off
                then Rn := word_add address (offset_writeback off)
                else (=)))
@@ -2345,6 +2405,7 @@ let arm_ST2 = define
                 else if esize = 16 then word_interleave4 x y
                 else word_interleave8 x y in
               memory :> wbytes eaddr := tmp) ,,
+            events := CONS (EventStore (eaddr,datasize DIV 4)) (read events s) ,,
            (if offset_writesback off
             then Rn := word_add address (offset_writeback off)
             else (=))
@@ -2378,6 +2439,7 @@ let arm_LD1R = define
                 else
                   word_duplicate ((read (memory :> wbytes addr) s):(8)word)) in
               (Rt := (word_zx replicated):(128)word)) ,,
+            events := CONS (EventLoad (addr,esize DIV 8)) (read events s) ,,
             (if offset_writesback off
              then Rn := word_add base (offset_writeback off)
              else (=))
@@ -2871,17 +2933,29 @@ let arm_SUBS_ALT = prove
 
 let arm_CBNZ_ALT = prove
  (`arm_CBNZ Rt (off:21 word) =
-        \s. (PC := if ~(val(read Rt s) = 0)
+        \s. let pc_next = if ~(val(read Rt s) = 0)
                    then word_add (word_sub (read PC s) (word 4)) (word_sx off)
-                   else read PC s) s`,
-  REWRITE_TAC[VAL_EQ_0; arm_CBNZ]);;
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump
+                (word_sub (read PC s) (word 4),pc_next))
+                (read events s)) s`,
+  REWRITE_TAC[VAL_EQ_0; arm_CBNZ] THEN
+  CONV_TAC (DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[]);;
 
 let arm_CBZ_ALT = prove
  (`arm_CBZ Rt (off:21 word) =
-        \s. (PC := if val(read Rt s) = 0
+        \s. let pc_next = if val(read Rt s) = 0
                    then word_add (word_sub (read PC s) (word 4)) (word_sx off)
-                   else read PC s) s`,
-  REWRITE_TAC[VAL_EQ_0; arm_CBZ]);;
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump
+                (word_sub (read PC s) (word 4),pc_next))
+                (read events s)) s`,
+  REWRITE_TAC[VAL_EQ_0; arm_CBZ] THEN
+  CONV_TAC (DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
 (* MOV is an alias of MOVZ when Rm is an immediate                           *)

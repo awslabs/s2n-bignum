@@ -46,7 +46,7 @@ let BIGNUM_POW2_CORRECT = prove
                   bignum_from_memory (z,val k) s =
                   lowdigits (2 EXP (val n)) (val k))
              (MAYCHANGE [PC; X2; X3; X4; X5] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `n:num` THEN X_GEN_TAC `pc:num` THEN

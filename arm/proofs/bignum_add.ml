@@ -99,7 +99,7 @@ let BIGNUM_ADD_CORRECT = prove
                   bignum_from_memory (z,val p) s =
                   lowdigits a (val p) + lowdigits b (val p))
              (MAYCHANGE [PC; X0; X2; X4; X6; X7; X8] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `m:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `a:num`] THEN

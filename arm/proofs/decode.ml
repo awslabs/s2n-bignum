@@ -1061,20 +1061,42 @@ let PURE_DECODE_CONV =
     int_compute_add_convs rw;
     num_compute_add_convs rw;
     add_thms [obind; LET_END_DEF] rw;
-    add_conv (`_BITMATCH:(N)word->(num->B->bool)->B`, 2, BITMATCH_MEMO_CONV) rw;
+    (* Do not add _BITMATCH. These will be covered by conceal_bitmatch. *)
     add_conv (`_MATCH:A->(A->B->bool)->B`, 2, MATCH_CONV) rw;
+
     (* components and instructions *)
     List.iter (fun tm -> add_conv (tm, 1, REG_CONV) rw) [`XREG'`; `WREG'`; `QREG'`; `DREG'`; `XREG_SP`; `WREG_SP`];
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
-              arm_bfmop; arm_ccop; arm_csop; arm_logop; arm_lsvop;
+              arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
-              arm_ldst2; arm_movop] rw;
+              arm_ldst2] rw;
+    (* .. that have bitmatch exprs inside *)
+    List.iter (fun def_th ->
+        let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =
+            conceal_bitmatch (concl def_th) in
+        (* bitmatch concealed under opaque_const *)
+        let concealed_def_th = GEN_REWRITE_RULE I [conceal_th] def_th in
+        add_thms [concealed_def_th] rw;
+        (* add a conversion for this *)
+        add_conv (opaque_const, opaque_arity, opaque_conv) rw
+      ) [arm_logop; arm_movop; arm_lsvop];
+
     add_thms [QLANE] rw;
     add_conv (`Condition`, 1, CONDITION_CONV) rw;
     (* decode functions *)
-    add_thms [decode; decode_encode_BL] rw;
-    add_thms [decode_shift; decode_extendtype] rw;
+    add_thms [decode_encode_BL] rw;
     add_conv (`decode_bitmask`, 3, DECODE_BITMASK_CONV) rw;
+    (* .. that have bitmatch exprs inside *)
+    List.iter (fun def_th ->
+        let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =
+            conceal_bitmatch (concl def_th) in
+        (* bitmatch concealed under opaque_const *)
+        let concealed_def_th = GEN_REWRITE_RULE I [conceal_th] def_th in
+        add_thms [concealed_def_th] rw;
+        (* add a conversion for this *)
+        add_conv (opaque_const, opaque_arity, opaque_conv) rw
+      ) [decode; decode_shift; decode_extendtype];
+
     rw in
   let the_conv = WEAK_CBV_CONV decode_rw in
   fun t ->

@@ -107,7 +107,7 @@ let BIGNUM_MOD_N521_9_CORRECT = time prove
                 bignum_from_memory (z,9) s = n MOD n_521)
           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9;
                       X10; X11; X12; X13; X14; X15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

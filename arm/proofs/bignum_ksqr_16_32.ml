@@ -629,7 +629,7 @@ let BIGNUM_KSQR_16_32_LEMMA = prove
             MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
                       Q21; Q22; Q23; Q30] ,,
             MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   REWRITE_TAC[ADD_CLAUSES] THEN
 
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`; `returnaddress:int64`] THEN

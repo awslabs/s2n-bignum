@@ -75,7 +75,7 @@ let WORD_RECIP_CORRECT = prove
             ==> &2 pow 64 + &(val(C_RETURN s)) < &2 pow 128 / &(val a) /\
                 &2 pow 128 / &(val a) <= &2 pow 64 + &(val(C_RETURN s)) + &1))
       (MAYCHANGE [PC; X0; X1; X2; X3; X4] ,,
-       MAYCHANGE SOME_FLAGS)`,
+       MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   X_GEN_TAC `a:int64` THEN X_GEN_TAC `pc:num` THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
 

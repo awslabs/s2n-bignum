@@ -988,7 +988,7 @@ let BIGNUM_KSQR_32_64_SUBLEMMA = prove
             MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
                       Q21; Q22; Q23; Q30] ,,
             MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   REWRITE_TAC[ADD_CLAUSES] THEN
 
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`; `returnaddress:int64`] THEN
@@ -1155,7 +1155,7 @@ let BIGNUM_KSQR_32_64_LEMMA = prove
                           Q21; Q22; Q23; Q30] ,,
                MAYCHANGE [memory :> bytes(z,8 * 32);
                           memory :> bytes(t,8 * 24)] ,,
-               MAYCHANGE SOME_FLAGS)`,
+               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `a:num`; `t:int64`;`pc:num`] THEN
   REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE] THEN
@@ -1353,7 +1353,7 @@ let BIGNUM_KSQR_32_64_SUBROUTINE_LEMMA = prove
                MAYCHANGE [memory :> bytes(z,8 * 32);
                           memory :> bytes(t,8 * 24);
                      memory :> bytes(word_sub stackpointer (word 64),64)] ,,
-               MAYCHANGE SOME_FLAGS)`,
+               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   REWRITE_TAC[ADD_CLAUSES] THEN
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_KSQR_32_64_EXEC BIGNUM_KSQR_32_64_LEMMA
@@ -1417,7 +1417,7 @@ let BIGNUM_KSQR_32_64_SUBROUTINE_CORRECT = prove
                 Q21; Q22; Q23; Q30] ,,
       MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 72);
                  memory :> bytes(stackpointer,64)] ,,
-      MAYCHANGE SOME_FLAGS)`
+      MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
   MP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THENL
