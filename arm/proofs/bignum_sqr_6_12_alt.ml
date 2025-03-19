@@ -137,7 +137,7 @@ let BIGNUM_SQR_6_12_ALT_CORRECT = time prove
           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9;
                       X10; X11; X12; X13; X14; X15; X16; X17; X19; X20] ,,
            MAYCHANGE [memory :> bytes(z,8 * 12)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN

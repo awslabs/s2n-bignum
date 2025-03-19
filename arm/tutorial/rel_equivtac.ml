@@ -84,9 +84,11 @@ let equiv_goal = mk_equiv_statement_simple
   eqin  (* Input state equivalence *)
   eqout (* Output state equivalence *)
   mc    (* First program machine code *)
-  `MAYCHANGE [PC; X10; X11; X12] ,, MAYCHANGE [memory :> bytes (outbuf, 8)]`
+  `MAYCHANGE [PC; X10; X11; X12] ,, MAYCHANGE [memory :> bytes (outbuf, 8)] ,,
+   MAYCHANGE [events]`
   mc2   (* Second program machine code *)
-  `MAYCHANGE [PC; X20; X21; X22] ,, MAYCHANGE [memory :> bytes (outbuf, 8)]`;;
+  `MAYCHANGE [PC; X20; X21; X22] ,, MAYCHANGE [memory :> bytes (outbuf, 8)] ,,
+   MAYCHANGE [events]`;;
 
 (* equiv_goal is:
   `forall pc pc2 inbuf outbuf.
@@ -107,11 +109,13 @@ let equiv_goal = mk_equiv_statement_simple
                 eqout (s,s2) outbuf)
            (\(s,s2) (s',s2').
                 (MAYCHANGE [PC; X10; X11; X12] ,,
-                 MAYCHANGE [memory :> bytes (outbuf,8)])
+                 MAYCHANGE [memory :> bytes (outbuf,8)] ,,
+                 MAYCHANGE [events])
                 s
                 s' /\
                 (MAYCHANGE [PC; X20; X21; X22] ,,
-                 MAYCHANGE [memory :> bytes (outbuf,8)])
+                 MAYCHANGE [memory :> bytes (outbuf,8)] ,,
+                 MAYCHANGE [events])
                 s2
                 s2')
            (\s. 4)

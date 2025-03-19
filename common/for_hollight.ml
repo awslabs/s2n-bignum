@@ -224,3 +224,129 @@ let BITMATCH_MEMO_CONV =
       failwith (sprintf "BITMATCH_MEMO_CONV: match failed: 0x%x" (Num.int_of_num nn))
     end
   | _ -> failwith "BITMATCH_MEMO_CONV";;
+
+
+(* ------------------------------------------------------------------------- *)
+(* A term rewriter for extracting out a bitmatch subexpression and defining  *)
+(* it as a new constant. This is useful when BITMATCH_MEMO_CONV does not work*)
+(* well. When the bitmatch uses the matching input variable inside its body  *)
+(* as well, BITMATCH_MEMO_CONV cannot work well because the body changes.    *)
+(* For example,                                                              *)
+(*  `bitmatch w with | [pattern] -> ...(w)... | [pattern] -> ...(w) | ...`   *)
+(* if w is instantiated with `word 0x12345678`,                              *)
+(* the result is                                                             *)
+(*  `bitmatch (word 0x12345678) with | [pattern] -> ..(word 0x12345678) | ..`*)
+(* This cannot hit the cache inside BITMATCH_MEMO_CONV unless `w` has exactly*)
+(* been instantiated as the same value in the past.                          *)
+(* ------------------------------------------------------------------------- *)
+
+(** Given a term t,
+    (1) Find the innermost bitmatch expression of t,
+    (2) Replace the innermost bitmatch expression with a new temporarily named
+        constant, and also create a definition between the constant and the
+        bitmatch expression
+    (3) create a conversion that takes "opaque_const const_word" and reduces
+        it using a decision tree of bitmatch. 
+    Returns: Some (|-t=t', opaque_def, opaque_def arity,
+                  |-opaque_def=bitmatch.., <conversion>) where t' is t with
+        the innermost bitmatch replaced iwth the opaque definition.
+**)
+let conceal_bitmatch: term -> (thm * term * int * thm * conv) option =
+  (* Find bitmatch that does not have another bitmatch as a subterm
+     If found, return (the bitmatch, bitmatch's input variable).
+  *)
+  let rec find_bitmatch (t:term): (term*term) option =
+    match t with
+    | Var(_,_) -> None
+    | Const(_,_) -> None
+    | Abs(_,y) -> find_bitmatch y
+    | Comb(x,y) -> begin
+      let t1 = find_bitmatch x in
+      if t1 <> None then t1 else
+      let t2 = find_bitmatch y in
+      if t2 <> None then t2 else
+      match x with
+      | Comb(Const("_BITMATCH", _), Var(_,_)) -> Some (t,rand x)
+      | _ -> None
+    end in
+  let fast_bitmatch_id = ref 0 in
+  fun t ->
+    match find_bitmatch t with
+    | None -> None (* No bitmatch found *)
+    | Some (bm,bvar) -> begin
+      (* Create a new opaque bitmatch definition *)
+      let newname = "__opaque_bitmatch_" ^ (string_of_int !fast_bitmatch_id) in
+      let _ = fast_bitmatch_id := !fast_bitmatch_id + 1 in
+
+      (* Collect free variables. *)
+      let the_freevars = frees bm in
+      (* Position the first input parameter of bitmatch as the first argument
+         of the new opaque constant. *)
+      let the_freevars = filter (fun t -> t <> bvar) the_freevars in
+      let args = bvar::the_freevars in
+      let argtys = map type_of args in
+
+      let newty = itlist mk_fun_ty argtys (type_of bm) in
+      let newdef_lhs = list_mk_comb (mk_var(newname,newty),args) in
+      let new_abbrev = new_definition(mk_eq(newdef_lhs, bm)) in
+
+      (* Create a pos tree (decision tree) *)
+      let _, tr = bm_build_pos_tree bm in
+
+      let bitwidth = Num.int_of_num (dest_finty (dest_word_ty (type_of bvar))) in
+
+      let new_reducer:conv = fun tm ->
+        if not (is_comb tm) then failwith "not comb" else
+        let c,args = strip_comb tm in
+        match c,args with
+        | Const(the_name,_), ((Comb(Const("word",ty),n_tm))::args')
+            when the_name = newname ->
+          let nn = dest_numeral n_tm in
+          let n = dest_small_numeral n_tm in
+          let arr = Array.init bitwidth (fun i -> Some (n land (1 lsl i) != 0)) in
+          let th = hd (snd (snd (get_dt arr tr))) in
+          begin try
+            let ls, th' = inst_bitpat_numeral (hd (hyp th)) nn in
+            (GEN_REWRITE_CONV I [new_abbrev] THENC
+             GEN_REWRITE_CONV I [PROVE_HYP th' (INST ls th)]) tm
+          with _ ->
+            failwith (sprintf "conceal_bitmatch: match failed: 0x%x" n)
+          end
+        | _ -> failwith "" in
+      Some ((REWRITE_CONV[GSYM new_abbrev] t), mk_const(newname,[]),
+            length args, new_abbrev, new_reducer)
+    end;;
+
+(* Examples:
+  let Some (th,opaqueconst,arity,oth,reducer) = conceal_bitmatch (concl arm_logop);;
+
+  Output:
+    val th : thm =
+      |- (forall opc N Rd Rn Rm.
+              arm_logop opc N Rd Rn Rm =
+              (bitmatch opc with
+                [0:2] -> SOME ((if N then arm_BIC else arm_AND) Rd Rn Rm)
+              | [1:2] -> SOME ((if N then arm_ORN else arm_ORR) Rd Rn Rm)
+              | [2:2] -> SOME ((if N then arm_EON else arm_EOR) Rd Rn Rm)
+              | [3:2] -> SOME ((if N then arm_BICS else arm_ANDS) Rd Rn Rm))) <=>
+        (forall opc N Rd Rn Rm.
+              arm_logop opc N Rd Rn Rm = __opaque_bitmatch_92 opc N Rd Rn Rm)
+    val opaqueconst : term = `__opaque_bitmatch_92`
+    val arity : int = 5
+    val oth : thm =
+      |- forall opc N Rd Rn Rm.
+            __opaque_bitmatch_92 opc N Rd Rn Rm =
+            (bitmatch opc with
+              [0:2] -> SOME ((if N then arm_BIC else arm_AND) Rd Rn Rm)
+            | [1:2] -> SOME ((if N then arm_ORN else arm_ORR) Rd Rn Rm)
+            | [2:2] -> SOME ((if N then arm_EON else arm_EOR) Rd Rn Rm)
+            | [3:2] -> SOME ((if N then arm_BICS else arm_ANDS) Rd Rn Rm))
+    val reducer : conv = <fun> (* a conversion that reduces `__opaque_bitmatch_92 ..`. *)
+
+  Other examples:
+    conceal_bitmatch (concl arm_movop);;
+    conceal_bitmatch (concl arm_lsvop);;
+    conceal_bitmatch (concl decode_shift);;
+    conceal_bitmatch (concl decode_extendtype);;
+    conceal_bitmatch (concl decode);;
+*)

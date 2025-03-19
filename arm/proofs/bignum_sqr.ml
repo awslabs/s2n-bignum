@@ -85,7 +85,7 @@ let BIGNUM_SQR_CORRECT = prove
                bignum_from_memory(z,val p) s = lowdigits (a EXP 2) (val p))
           (MAYCHANGE [PC; X4; X5; X6; X7; X8; X9;
                       X10; X11; X12; X13; X14; X15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val p)])`,
   MAP_EVERY W64_GEN_TAC [`p:num`; `n:num`] THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN

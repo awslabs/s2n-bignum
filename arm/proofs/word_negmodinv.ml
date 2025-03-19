@@ -67,7 +67,7 @@ let WORD_NEGMODINV_CORRECT = prove
           (\s. read PC s = word(pc + 0x30) /\
                (ODD(val a)
                 ==> (val a * val(C_RETURN s) + 1 == 0) (mod (2 EXP 64))))
-             (MAYCHANGE [PC; X0; X1; X2])`,
+             (MAYCHANGE [PC; X0; X1; X2] ,, MAYCHANGE [events])`,
   W64_GEN_TAC `a:num` THEN X_GEN_TAC `pc:num` THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN] THEN
   ENSURES_SEQUENCE_TAC `pc + 0xc`

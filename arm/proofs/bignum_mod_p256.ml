@@ -108,7 +108,7 @@ let BIGNUM_MOD_P256_CORRECT = time prove
                 bignum_from_memory (z,4) s = n MOD p_256)
           (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9;
                       X10; X11; X12; X13; X14] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   X_GEN_TAC `z:int64` THEN W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`x:int64`; `n:num`; `pc:num`] THEN

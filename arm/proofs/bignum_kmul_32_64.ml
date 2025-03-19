@@ -1308,7 +1308,7 @@ let LOCAL_MUL_8_16_CORRECT = prove
                         X17; X19; X20; X21; X22; X23; X24] ,,
              MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5],,
              MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
-             MAYCHANGE SOME_FLAGS)`,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   REWRITE_TAC[ADD_CLAUSES] THEN
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`; `pc:num`; `returnaddress:int64`] THEN
@@ -1621,7 +1621,7 @@ let LOCAL_KMUL_16_32_CORRECT = prove
                MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5],,
                MAYCHANGE [memory :> bytes(z,8 * 32);
                           memory :> bytes(t,8 * 32)] ,,
-               MAYCHANGE SOME_FLAGS)`,
+               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`; `t:int64`;`pc:num`] THEN
   REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE] THEN
@@ -1907,7 +1907,7 @@ let LOCAL_KMUL_16_32_SUBR_CORRECT = prove
                MAYCHANGE [memory :> bytes(z,8 * 32);
                           memory :> bytes(t,8 * 32);
                      memory :> bytes(word_sub stackpointer (word 48),48)] ,,
-               MAYCHANGE SOME_FLAGS)`,
+               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   REWRITE_TAC[ADD_CLAUSES] THEN
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_KMUL_32_64_EXEC LOCAL_KMUL_16_32_CORRECT
@@ -1977,7 +1977,7 @@ let BIGNUM_KMUL_32_64_SUBROUTINE_CORRECT = prove(
       MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5],,
       MAYCHANGE [memory :> bytes(z,8 * 64); memory :> bytes(t,8 * 96);
                  memory :> bytes(stackpointer,48)] ,,
-      MAYCHANGE SOME_FLAGS)`
+      MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
   MP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THENL

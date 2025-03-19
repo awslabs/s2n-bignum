@@ -68,7 +68,7 @@ let BIGNUM_LE_CORRECT = prove
                  read PC s' = word(pc + 0x84)) /\
                 C_RETURN s' = if x <= y then word 1 else word 0)
           (MAYCHANGE [PC; X0; X2; X4; X5; X6] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `m:num` THEN MAP_EVERY X_GEN_TAC [`a:int64`; `x:num`] THEN
   W64_GEN_TAC `n:num` THEN MAP_EVERY X_GEN_TAC [`b:int64`; `y:num`] THEN
   X_GEN_TAC `pc:num` THEN

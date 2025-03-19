@@ -126,7 +126,7 @@ let template =
                    Q20; Q21; Q22; Q23; Q24; Q25; Q26; Q27; Q28; Q29;
                    Q30; Q31] ,,
         MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
-        MAYCHANGE SOME_FLAGS)`;;
+        MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`;;
 
 let num_two_to_64 = Num.num_of_string "18446744073709551616";;
 

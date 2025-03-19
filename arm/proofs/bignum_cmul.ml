@@ -72,7 +72,7 @@ let BIGNUM_CMUL_CORRECT = prove
                   (p = n
                    ==> C_RETURN s = word(highdigits (val c * a) (val p))))
              (MAYCHANGE [PC; X0; X3; X5; X6; X7; X8] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `c:num` THEN
   W64_GEN_TAC `n:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `a:num`] THEN
