@@ -151,7 +151,7 @@ let BIGNUM_MONTREDC_CORRECT = time prove
                         lowdigits a (val k + val p)) MOD n))
              (MAYCHANGE [PC; X6; X7; X8; X9; X10; X11; X12; X13; X14] ,,
               MAYCHANGE [memory :> bytes(z,8 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `nx:num` THEN X_GEN_TAC `x:int64` THEN
   X_GEN_TAC `m:int64` THEN W64_GEN_TAC `p:num` THEN

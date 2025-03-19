@@ -193,7 +193,7 @@ let BIGNUM_CDIV_CORRECT = prove
                        C_RETURN s = word(a MOD val m)))
              (MAYCHANGE [PC; X0; X2; X3; X4; X5; X6; X7; X8; X9;
                          X10; X11; X12; X13; X14] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `n:num` THEN
   X_GEN_TAC `x:int64` THEN W64_GEN_TAC `m:num` THEN
@@ -228,7 +228,8 @@ let BIGNUM_CDIV_CORRECT = prove
             (~(m = 0) ==> read X14 s = word (a MOD m)))
        (MAYCHANGE [PC; X5; X6; X7; X8; X9; X10;
                        X11; X12; X13; X14] ,,
-        MAYCHANGE [NF; ZF; CF; VF])`
+        MAYCHANGE [NF; ZF; CF; VF] ,,
+        MAYCHANGE [events])`
     MP_TAC THENL
      [ALL_TAC;
       REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN DISCH_THEN(fun th ->
@@ -315,7 +316,8 @@ let BIGNUM_CDIV_CORRECT = prove
               &2 pow 64 + &(val (read X5 s)) < &2 pow 128 / &n /\
               &2 pow 128 / &n <= &2 pow 64 + &(val (read X5 s)) + &1)
          (MAYCHANGE [PC; X5; X7; X9; X14] ,,
-          MAYCHANGE [NF; ZF; CF; VF])`
+          MAYCHANGE [NF; ZF; CF; VF] ,,
+          MAYCHANGE [events])`
       MP_TAC THENL
        [ALL_TAC;
         REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN DISCH_THEN(fun th ->

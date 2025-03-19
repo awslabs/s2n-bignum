@@ -1427,7 +1427,7 @@ let LOCAL_SQR_P521_CORRECT = prove
                    ==> bignum_from_memory (z,9) s = (n EXP 2) MOD p_521))
              (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                          X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `n:num`; `pc:num`; `returnaddress:int64`] THEN
@@ -2122,7 +2122,7 @@ let LOCAL_MUL_P521_CORRECT = prove
              (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9;
                          X10; X11; X12; X13; X14; X15; X16; X17; X19;
                          X20; X21; X22; X23; X24; X25] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,9);
                      memory :> bignum(word_add stackpointer (word 432),9)])`,
   MAP_EVERY X_GEN_TAC
@@ -3015,7 +3015,7 @@ let LOCAL_SUB_P521_CORRECT = prove
                   (m < p_521 /\ n < p_521
                   ==> &(bignum_from_memory (z,9) s) = (&m - &n) rem &p_521))
           (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `m:num`; `n:num`;
@@ -3167,7 +3167,7 @@ let P521_JMIXADD_CORRECT = time prove
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                       X11; X12; X13; X14; X15; X16; X17; X19; X20;
                       X21; X22; X23; X24; X25; X26; X27; X28; X30] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(stackpointer,512)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
