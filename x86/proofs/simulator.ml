@@ -283,6 +283,7 @@ let template =
  `nonoverlapping (word pc,LENGTH ibytes) (stackpointer,256)
   ==> ensures x86
      (\s. bytes_loaded s (word pc) ibytes /\
+          aligned 16 stackpointer /\
           read RIP s = word pc /\
           read RSP s = stackpointer /\
           regfile s = input_state)
@@ -513,14 +514,14 @@ let run_random_regsimulation () =
    concrete value. If certain register's value depends on RSP value then the
    machine run and the instruction modeling result won't match. *)
 
-let rand_scale_index(rest) =
-  let index = if rest = 0 then 0 else Random.int (min rest 8) in
+let rand_scale_index index_bound rest =
+  let index = if rest = 0 then 0 else Random.int (min rest index_bound) in
   let log2_int = fun x -> int_of_float (Float.log2 (float_of_int x)) in
   let scale =
-    if index = 0 then Random.int 4
-    else
-      let scale_range = log2_int (rest/index) in
-        if scale_range = 0 then 0 else Random.int (min scale_range 4) in
+    (if index = 0 then Random.int 4
+     else
+       let scale_range = (log2_int (rest/index)) + 1 in
+         Random.int (min scale_range 4)) in
   let rest = rest - index * int_of_float (2.0 ** (float_of_int scale)) in
   [rest, scale, index]
 
@@ -529,15 +530,11 @@ let rand_scale_index(rest) =
    Randomized: addressing mode parameters *)
 let cosimulate_mem_full_harness(opcode) =
    (* disp8 is sign-extended *)
-   let stack_start = Random.int 128 in
-   let rest = 248 - stack_start in
-   let base = if rest = 0 then 0 else Random.int (min rest 8) in
-   let rest = rest - base in
-   let base = stack_start + base in
-   let [rest, scale, index] = rand_scale_index rest in
+   let base = Random.int 128 in
+   let rest = 248 - base in
+   let [rest, scale, index] = rand_scale_index 128 rest in
    (* disp8 is sign-extended *)
    let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
-   (* fix use of rbx and rcx *)
    let sib = scale * int_of_float (2.0**6.0) + 0b001011 in
    [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
     [0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
@@ -565,10 +562,9 @@ let cosimulate_mem_base_disp_harness(opcode) =
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
 let cosimulate_mem_rsp_harness(opcode) =
-  let [rest, scale, index] = rand_scale_index 248 in
+  let [rest, scale, index] = rand_scale_index 128 248 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
-  (* fix use of rcx and rsp *)
   let sib = scale * int_of_float (2.0**6.0) + 0b001100 in
   [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
    [0x48] @ opcode @ [0x44; sib; disp];  (* INST [rsp + scale*rcx + displacement], rax *)
@@ -579,12 +575,9 @@ let cosimulate_mem_rsp_harness(opcode) =
    Randomized: addressing mode parameters *)
 let cosimulate_mul_full_harness() =
   (* disp8 is sign-extended *)
-  let stack_start = Random.int 128 in
-  let rest = 248 - stack_start in
-  let base = if rest = 0 then 0 else Random.int (min rest 8) in
-  let rest = rest - base in
-  let base = stack_start + base in
-  let [rest, scale, index] = rand_scale_index rest in
+  let base = Random.int 128 in
+  let rest = 248 - base in
+  let [rest, scale, index] = rand_scale_index 128 rest in
   (* disp8 is sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
   let sib = scale * int_of_float (2.0**6.0) + 0b001011 in
@@ -614,10 +607,9 @@ let cosimulate_mul_base_disp_harness() =
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
 let cosimulate_mul_rsp_harness() =
-   let [rest, scale, index] = rand_scale_index 248 in
+   let [rest, scale, index] = rand_scale_index 128 248 in
    (* disp8 is a sign-extended *)
    let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
-   (* fix use of rcx and rsp *)
    let sib = scale * int_of_float (2.0**6.0) + 0b001100 in
    [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
     [0x48; 0xf7; 0x64; sib; disp];  (* MUL [rsp + scale*rcx + displacement], rax *)
@@ -641,15 +633,107 @@ let cosimulate_pop_harness() =
    [0x48; 0x8d; 0x64; 0x24; 0xE8] (* lea rsp, [rsp - 24] *)
   ];;
 
+(* Mode: base + scale*index + displacement
+   Fixed: use of registers, displacement size = 8
+   Randomized: addressing mode parameters *)
+let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) =
+   (* disp8 is sign-extended *)
+   let base = Random.int 128 in
+   let rest = 240 - base in
+   let [rest, scale, index] = rand_scale_index 128 rest in
+   (* disp8 is sign-extended *)
+   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
+   let sib = scale * int_of_float (2.0**6.0) + 0b001011 in
+   let rex = if Random.int 2 = 0 then [0x44] else [] in
+   [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
+    [0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
+    [0x48; 0x8d; 0x5c; 0x24; base]; (* LEA rbx, [rsp+base] *)
+    pfx @ rex @ opcode @ [0x4c; sib; disp];  (* INST [rbx + scale*rcx + displacement], imm1/9 *)
+    [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
+   ];;
+
+(* Mode: base + displacement
+   Fixed: use of registers, displacement size = 8
+   Randomized: addressing mode parameters
+   *)
+let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) =
+  (* disp8 is sign-extended *)
+  let stack_start = Random.int 128 in
+  let rest = 240 - stack_start in
+  let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
+  [[0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
+   [0x48; 0x8d; 0x5c; 0x24; stack_start]; (* LEA rbx, [rsp+stack_start] *)
+   pfx @ rex @ opcode @ [0x4b; disp];  (* INST [rbx + displacement], imm1/9 *)
+   [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
+  ];;
+
+(* Mode: base (rsp) + scale*index + displacement
+   Fixed: use of registers
+   Randomized: addressing mode parameters *)
+let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) =
+  let [rest, scale, index] = rand_scale_index 128 240 in
+  (* disp8 is a sign-extended *)
+  let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
+  let sib = scale * int_of_float (2.0**6.0) + 0b001100 in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
+  [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
+   pfx @ rex @ opcode @ [0x4c; sib; disp];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
+  ];;
+
+(* Mode: base + scale*index + displacement
+   Fixed: use of registers, displacement size = 8
+   Randomized: addressing mode parameters
+   Note: address should be 16-aligned *)
+let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) =
+   (* Divide 256 by 16 because the address needs to be 16bytes aligned. *)
+   let base = Random.int 8 in
+   let rest = 15 - base in
+   let [rest, scale, index] = rand_scale_index 8 rest in
+   (* disp8 is sign-extended *)
+   let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
+   let sib = scale * int_of_float (2.0**6.0) + 0b001011 in
+   let rex = if Random.int 2 = 0 then [0x44] else [] in
+   [[0x48; 0xc7; 0xc1; index*16; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
+    [0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
+    [0x48; 0x8d; 0x5c; 0x24; base*16]; (* LEA rbx, [rsp+base] *)
+    pfx @ rex @ opcode @ [0x4c; sib; disp*16];  (* INST [rbx + scale*rcx + displacement], imm1/9 *)
+    [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
+   ];;
+
+(* Mode: base + displacement
+   Fixed: use of registers, displacement size = 8
+   Randomized: addressing mode parameters
+   Note: address should be 16-aligned
+   *)
+let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) =
+  (* disp8 is sign-extended *)
+  let stack_start = Random.int 8 in
+  let rest = 15 - stack_start in
+  let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
+  [[0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
+   [0x48; 0x8d; 0x5c; 0x24; stack_start*16]; (* LEA rbx, [rsp+stack_start] *)
+   pfx @ rex @ opcode @ [0x4b; disp*16];  (* INST [rbx + displacement], imm1/9 *)
+   [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
+  ];;
+
+(* Mode: base (rsp) + scale*index + displacement
+   Fixed: use of registers
+   Randomized: addressing mode parameters
+   Note: address should be 16-aligned
+*)
+let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) =
+  let [rest, scale, index] = rand_scale_index 8 15 in
+  (* disp8 is a sign-extended *)
+  let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
+  let sib = scale * int_of_float (2.0**6.0) + 0b001100 in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
+  [[0x48; 0xc7; 0xc1; index*16; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
+   pfx @ rex @ opcode @ [0x4c; sib; disp*16];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
+  ];;
+
 let mem_iclasses = [
-  (* ADD r/m64, r64 *)
-  cosimulate_mem_full_harness([0x01]);
-  cosimulate_mem_base_disp_harness([0x01]);
-  cosimulate_mem_rsp_harness([0x01]);
-  (* ADD r64, r/m64 *)
-  cosimulate_mem_full_harness([0x03]);
-  cosimulate_mem_base_disp_harness([0x03]);
-  cosimulate_mem_rsp_harness([0x03]);
   (* ADC r/m64, r64 *)
   cosimulate_mem_full_harness([0x11]);
   cosimulate_mem_base_disp_harness([0x11]);
@@ -658,6 +742,66 @@ let mem_iclasses = [
   cosimulate_mem_full_harness([0x13]);
   cosimulate_mem_base_disp_harness([0x13]);
   cosimulate_mem_rsp_harness([0x013]);
+  (* ADD r/m64, r64 *)
+  cosimulate_mem_full_harness([0x01]);
+  cosimulate_mem_base_disp_harness([0x01]);
+  cosimulate_mem_rsp_harness([0x01]);
+  (* ADD r64, r/m64 *)
+  cosimulate_mem_full_harness([0x03]);
+  cosimulate_mem_base_disp_harness([0x03]);
+  cosimulate_mem_rsp_harness([0x03]);
+  (* CMOVA r64, r/m64 *)
+  cosimulate_mem_full_harness([0x0F; 0x47]);
+  cosimulate_mem_base_disp_harness([0x0F; 0x47]);
+  cosimulate_mem_rsp_harness([0x0F; 0x47]);
+  (* CMOVB r64, r/m64 *)
+  cosimulate_mem_full_harness([0x0F; 0x42]);
+  cosimulate_mem_base_disp_harness([0x0F; 0x42]);
+  cosimulate_mem_rsp_harness([0x0F; 0x42]);
+  (* MOV r/m64, r64 *)
+  cosimulate_mem_full_harness([0x89]);
+  cosimulate_mem_base_disp_harness([0x89]);
+  cosimulate_mem_rsp_harness([0x89]);
+  (* MOV r64, r/m64 *)
+  cosimulate_mem_full_harness([0x8B]);
+  cosimulate_mem_base_disp_harness([0x8B]);
+  cosimulate_mem_rsp_harness([0x8B]);
+  (* MOVAPS xmm1, xmm2/m128 *)
+  cosimulate_sse_mov_aligned_full_harness([], [0x0f; 0x28]);
+  cosimulate_sse_mov_aligned_base_disp_harness([], [0x0f; 0x28]);
+  cosimulate_sse_mov_aligned_rsp_harness([], [0x0f; 0x28]);
+  (* MOVAPS xmm2/m128, xmm1 *)
+  cosimulate_sse_mov_aligned_full_harness([], [0x0f; 0x29]);
+  cosimulate_sse_mov_aligned_base_disp_harness([], [0x0f; 0x29]);
+  cosimulate_sse_mov_aligned_rsp_harness([], [0x0f; 0x29]);
+  (* MOVDQA xmm1, xmm2/m128 *)
+  cosimulate_sse_mov_aligned_full_harness([0x66], [0x0f; 0x6f]);
+  cosimulate_sse_mov_aligned_base_disp_harness([0x66], [0x0f; 0x6f]);
+  cosimulate_sse_mov_aligned_rsp_harness([0x66], [0x0f; 0x6f]);
+  (* MOVDQA xmm2/m128, xmm1 *)
+  cosimulate_sse_mov_aligned_full_harness([0x66], [0x0f; 0x7f]);
+  cosimulate_sse_mov_aligned_base_disp_harness([0x66], [0x0f; 0x7f]);
+  cosimulate_sse_mov_aligned_rsp_harness([0x66], [0x0f; 0x7f]);
+  (* MOVDQU xmm1, xmm2/m128 *)
+  cosimulate_sse_mov_unaligned_full_harness([0xf3], [0x0f; 0x6f]);
+  cosimulate_sse_mov_unaligned_base_disp_harness([0xf3], [0x0f; 0x6f]);
+  cosimulate_sse_mov_unaligned_rsp_harness([0xf3], [0x0f; 0x6f]);
+  (* MOVDQU xmm2/m128, xmm1 *)
+  cosimulate_sse_mov_unaligned_full_harness([0xf3], [0x0f; 0x7f]);
+  cosimulate_sse_mov_unaligned_base_disp_harness([0xf3], [0x0f; 0x7f]);
+  cosimulate_sse_mov_unaligned_rsp_harness([0xf3], [0x0f; 0x7f]);
+  (* MOVUPS xmm1, xmm2/m128 *)
+  cosimulate_sse_mov_unaligned_full_harness([], [0x0f; 0x10]);
+  cosimulate_sse_mov_unaligned_base_disp_harness([], [0x0f; 0x10]);
+  cosimulate_sse_mov_unaligned_rsp_harness([], [0x0f; 0x10]);
+  (* MOVUPS xmm2/m128, xmm1 *)
+  cosimulate_sse_mov_unaligned_full_harness([], [0x0f; 0x11]);
+  cosimulate_sse_mov_unaligned_base_disp_harness([], [0x0f; 0x11]);
+  cosimulate_sse_mov_unaligned_rsp_harness([], [0x0f; 0x11]);
+  (* MUL r/m64 *)
+  cosimulate_mul_full_harness();
+  cosimulate_mul_base_disp_harness();
+  cosimulate_mul_rsp_harness();
   (* OR r/m64, r64 *)
   cosimulate_mem_full_harness([0x09]);
   cosimulate_mem_base_disp_harness([0x09]);
@@ -666,6 +810,10 @@ let mem_iclasses = [
   cosimulate_mem_full_harness([0x0B]);
   cosimulate_mem_base_disp_harness([0x0B]);
   cosimulate_mem_rsp_harness([0x0B]);
+  (* PUSH r64 *)
+  cosimulate_push_harness();
+  (* POP r64 *)
+  cosimulate_pop_harness();
   (* SBB r/m64, r64 *)
   cosimulate_mem_full_harness([0x19]);
   cosimulate_mem_base_disp_harness([0x19]);
@@ -690,30 +838,6 @@ let mem_iclasses = [
   cosimulate_mem_full_harness([0x33]);
   cosimulate_mem_base_disp_harness([0x33]);
   cosimulate_mem_rsp_harness([0x33]);
-  (* MOV r/m64, r64 *)
-  cosimulate_mem_full_harness([0x89]);
-  cosimulate_mem_base_disp_harness([0x89]);
-  cosimulate_mem_rsp_harness([0x89]);
-  (* MOV r64, r/m64 *)
-  cosimulate_mem_full_harness([0x8B]);
-  cosimulate_mem_base_disp_harness([0x8B]);
-  cosimulate_mem_rsp_harness([0x8B]);
-  (* CMOVA r64, r/m64 *)
-  cosimulate_mem_full_harness([0x0F; 0x47]);
-  cosimulate_mem_base_disp_harness([0x0F; 0x47]);
-  cosimulate_mem_rsp_harness([0x0F; 0x47]);
-  (* CMOVB r64, r/m64 *)
-  cosimulate_mem_full_harness([0x0F; 0x42]);
-  cosimulate_mem_base_disp_harness([0x0F; 0x42]);
-  cosimulate_mem_rsp_harness([0x0F; 0x42]);
-  (* MUL r/m64 *)
-  cosimulate_mul_full_harness();
-  cosimulate_mul_base_disp_harness();
-  cosimulate_mul_rsp_harness();
-  (* PUSH r64 *)
-  cosimulate_push_harness();
-  (* POP r64 *)
-  cosimulate_pop_harness();
   ];;
 
 let run_random_memopsimulation() =

@@ -31,6 +31,7 @@ loadt "common/for_hollight.ml";;
 loadt "common/words2.ml";;
 loadt "common/misc.ml";;
 loadt "common/components.ml";;
+loadt "common/alignment.ml";;
 loadt "common/records.ml";;
 loadt "common/relational.ml";;
 loadt "common/interval.ml";;
