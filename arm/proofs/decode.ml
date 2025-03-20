@@ -292,6 +292,10 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       (Immediate_Offset (iword (ival imm7 * &(if x then 8 else 4)))))
 
+  // NOP
+  | [0b11010101000000110010000000011111:32] ->
+    SOME ARM_NOP
+
   // SIMD ld,st operations
   // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback
   // Currently only supports sizes 128 and 64 (not 32, 16 or 8)
