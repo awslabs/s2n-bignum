@@ -1283,6 +1283,9 @@ let arm_MUL_VEC = define
             else simd8 word_mul n m in
           (Rd := word_zx d:(128)word) s`;;
 
+let arm_NOP = new_definition
+  `arm_NOP = \(s:armstate) s'. s = s'`;;
+
 let arm_ORN = define
  `arm_ORN Rd Rm Rn =
     \s. let m = read Rm s

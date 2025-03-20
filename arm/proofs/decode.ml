@@ -294,7 +294,7 @@ let decode = new_definition `!w:int32. decode w =
 
   // NOP
   | [0b11010101000000110010000000011111:32] ->
-    SOME ARM_NOP
+    SOME arm_NOP
 
   // SIMD ld,st operations
   // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback

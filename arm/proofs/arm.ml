@@ -1159,6 +1159,3 @@ let BL_TARGET_CONV =
 let BL_TARGET_TAC =
   ASSUM_LIST (CONV_TAC o CHANGED_CONV o ONCE_DEPTH_CONV o BL_TARGET_CONV) THEN
   REWRITE_TAC [];;
-
-let ARM_NOP = new_definition
-  `ARM_NOP (s:armstate) = \s'. s = s'`;;

@@ -177,6 +177,9 @@ let iclasses =
   "0x001110011xxxxx100111xxxxxxxxxx"; (* .h *)
   "0x001110101xxxxx100111xxxxxxxxxx"; (* .s *)
 
+  (*** NOP ***)
+  "11010101000000110010000000011111";
+
   (*** ORR ***)
   "0x001110101xxxxx000111xxxxxxxxxx";
 
