@@ -31,6 +31,7 @@
 #define t rcx
 
 S2N_BN_SYMBOL(bignum_ksqr_32_64):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

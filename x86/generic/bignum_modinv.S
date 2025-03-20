@@ -97,6 +97,7 @@
 #define n_nshort edx
 
 S2N_BN_SYMBOL(bignum_modinv):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

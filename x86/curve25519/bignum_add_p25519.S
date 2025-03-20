@@ -40,6 +40,7 @@
 #define c3short edx
 
 S2N_BN_SYMBOL(bignum_add_p25519):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

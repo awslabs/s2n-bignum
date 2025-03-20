@@ -16,6 +16,7 @@ needs "common/ecencoding.ml";;
 let edwards25519_encode_mc =
   define_assert_from_elf "edwards25519_encode_mc" "x86/curve25519/edwards25519_encode.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x4c; 0x8b; 0x0e;        (* MOV (% r9) (Memop Quadword (%% (rsi,0))) *)
   0x48; 0x8b; 0x46; 0x20;  (* MOV (% rax) (Memop Quadword (%% (rsi,32))) *)
   0x48; 0x8b; 0x4e; 0x28;  (* MOV (% rcx) (Memop Quadword (%% (rsi,40))) *)
@@ -32,7 +33,9 @@ let edwards25519_encode_mc =
   0xc3                     (* RET *)
 ];;
 
-let EDWARDS25519_ENCODE_EXEC = X86_MK_CORE_EXEC_RULE edwards25519_encode_mc;;
+let edwards25519_encode_tmc = define_trimmed "edwards25519_encode_tmc" edwards25519_encode_mc;;
+
+let EDWARDS25519_ENCODE_EXEC = X86_MK_CORE_EXEC_RULE edwards25519_encode_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -50,7 +53,7 @@ let EDWARDS25519_ENCODE_CORRECT = prove
  (`!z p x y pc.
       nonoverlapping (word pc,0x2f) (z,32)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_encode_mc) /\
+           (\s. bytes_loaded s (word pc) (BUTLAST edwards25519_encode_tmc) /\
                 read RIP s = word pc /\
                 C_ARGUMENTS [z; p] s /\
                 bignum_pair_from_memory(p,4) s = (x,y))
@@ -97,10 +100,31 @@ let EDWARDS25519_ENCODE_CORRECT = prove
   REWRITE_TAC[bignum_of_wordlist] THEN
   CONV_TAC WORD_BLAST);;
 
+let EDWARDS25519_ENCODE_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!z p x y pc stackpointer returnaddress.
+      nonoverlapping (stackpointer,8) (z,32) /\
+      nonoverlapping (word pc,LENGTH edwards25519_encode_tmc) (z,32)
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) edwards25519_encode_tmc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                C_ARGUMENTS [z; p] s /\
+                bignum_pair_from_memory(p,4) s = (x,y))
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                (x < p_25519 /\ y < p_25519
+                ==> read (memory :> bytelist(z,32)) s =
+                    bytelist_of_num 32 (ed25519_encode (&x,&y))))
+           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(z,32)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC edwards25519_encode_tmc
+    EDWARDS25519_ENCODE_CORRECT);;
+
 let EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
  (`!z p x y pc stackpointer returnaddress.
       nonoverlapping (stackpointer,8) (z,32) /\
-      nonoverlapping (word pc,0x2f) (z,32)
+      nonoverlapping (word pc,LENGTH edwards25519_encode_mc) (z,32)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) edwards25519_encode_mc /\
                 read RIP s = word pc /\
@@ -115,24 +139,25 @@ let EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
                     bytelist_of_num 32 (ed25519_encode (&x,&y))))
            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
             MAYCHANGE [memory :> bytes(z,32)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC edwards25519_encode_mc
-    EDWARDS25519_ENCODE_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_ENCODE_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_edwards25519_encode_mc = define_from_elf
-   "windows_edwards25519_encode_mc" "x86/curve25519/edwards25519_encode.obj";;
+let edwards25519_encode_windows_mc = define_from_elf
+   "edwards25519_encode_windows_mc" "x86/curve25519/edwards25519_encode.obj";;
 
-let WINDOWS_EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
+let edwards25519_encode_windows_tmc = define_trimmed "edwards25519_encode_windows_tmc" edwards25519_encode_windows_mc;;
+
+let EDWARDS25519_ENCODE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!z p x y pc stackpointer returnaddress.
       ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-          [(word pc,0x39); (p,8 * 8)] /\
+          [(word pc,LENGTH edwards25519_encode_windows_tmc); (p,8 * 8)] /\
       nonoverlapping (word_sub stackpointer (word 16),24) (z,32) /\
-      nonoverlapping (word pc,0x39) (z,32)
+      nonoverlapping (word pc,LENGTH edwards25519_encode_windows_tmc) (z,32)
       ==> ensures x86
-           (\s. bytes_loaded s (word pc) windows_edwards25519_encode_mc /\
+           (\s. bytes_loaded s (word pc) edwards25519_encode_windows_tmc /\
                 read RIP s = word pc /\
                 read RSP s = stackpointer /\
                 read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -147,5 +172,29 @@ let WINDOWS_EDWARDS25519_ENCODE_SUBROUTINE_CORRECT = prove
             MAYCHANGE [memory :> bytes(z,32);
                        memory :> bytes(word_sub stackpointer (word 16),16)])`,
   WINDOWS_X86_WRAP_NOSTACK_TAC
-    windows_edwards25519_encode_mc edwards25519_encode_mc
+    edwards25519_encode_windows_tmc edwards25519_encode_tmc
     EDWARDS25519_ENCODE_CORRECT);;
+
+let EDWARDS25519_ENCODE_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!z p x y pc stackpointer returnaddress.
+      ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+          [(word pc,LENGTH edwards25519_encode_windows_mc); (p,8 * 8)] /\
+      nonoverlapping (word_sub stackpointer (word 16),24) (z,32) /\
+      nonoverlapping (word pc,LENGTH edwards25519_encode_windows_mc) (z,32)
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) edwards25519_encode_windows_mc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                WINDOWS_C_ARGUMENTS [z; p] s /\
+                bignum_pair_from_memory(p,4) s = (x,y))
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                (x < p_25519 /\ y < p_25519
+                ==> read (memory :> bytelist(z,32)) s =
+                    bytelist_of_num 32 (ed25519_encode (&x,&y))))
+           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(z,32);
+                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_ENCODE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

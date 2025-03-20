@@ -36,6 +36,7 @@
         adox    high, rbx
 
 S2N_BN_SYMBOL(bignum_mul_p521):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

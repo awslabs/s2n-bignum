@@ -19,6 +19,7 @@
         .text
 
 S2N_BN_SYMBOL(bignum_even):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

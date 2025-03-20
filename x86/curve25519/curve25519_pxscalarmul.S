@@ -590,6 +590,7 @@
         mov     [P0+24], rax
 
 S2N_BN_SYMBOL(curve25519_pxscalarmul):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

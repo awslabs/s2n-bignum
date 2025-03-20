@@ -49,6 +49,7 @@
 #define qshort %ecx
 
 S2N_BN_SYMBOL(bignum_cmul_p384_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

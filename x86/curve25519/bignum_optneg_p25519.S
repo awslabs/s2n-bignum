@@ -30,6 +30,7 @@
 #define n3 r9
 
 S2N_BN_SYMBOL(bignum_optneg_p25519):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

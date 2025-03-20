@@ -267,7 +267,7 @@ let _ = prove(
     val b0 + 2 EXP 64 * val b1 + 2 EXP 128 * val b2 = n
     ==> a0 = b0 /\ a1 = b1 /\ a2 = b2`,
   REPEAT STRIP_TAC THEN
-  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN 
+  ASM_PROPAGATE_DIGIT_EQS_FROM_EXPANDED_BIGNUM_TAC THEN
   REFL_TAC);;
 
 (* Apply ENSURES2_FRAME_SUBSUMED and automatically resolve the subsumes

@@ -175,7 +175,7 @@ let tac_before memop =
   ENSURES_INIT_TAC "s0" THEN
   (if memop then
     MAP_EVERY MEMORY_SPLIT_TAC (1--4) THEN
-	  (* Remove non-"memory :> bytes8" reads because they are not necessary :) *)
+          (* Remove non-"memory :> bytes8" reads because they are not necessary :) *)
     let non_byte_read_list = [
       `read (memory :> bytes16 x) s = y`;
       `read (memory :> bytes32 x) s = y`;

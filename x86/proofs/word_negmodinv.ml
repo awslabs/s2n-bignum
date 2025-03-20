@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_negmodinv_mc = define_assert_from_elf "word_negmodinv_mc" "x86/generic/word_negmodinv.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xf9;        (* MOV (% rcx) (% rdi) *)
   0x48; 0x89; 0xf8;        (* MOV (% rax) (% rdi) *)
   0x48; 0xc1; 0xe1; 0x02;  (* SHL (% rcx) (Imm8 (word 2)) *)
@@ -44,7 +45,9 @@ let word_negmodinv_mc = define_assert_from_elf "word_negmodinv_mc" "x86/generic/
   0xc3                     (* RET *)
 ];;
 
-let WORD_NEGMODINV_EXEC = X86_MK_CORE_EXEC_RULE word_negmodinv_mc;;
+let word_negmodinv_tmc = define_trimmed "word_negmodinv_tmc" word_negmodinv_mc;;
+
+let WORD_NEGMODINV_EXEC = X86_MK_CORE_EXEC_RULE word_negmodinv_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -76,7 +79,7 @@ let WORD_NEGMODINV_SEED_LEMMA_16 = prove
 let WORD_NEGMODINV_CORRECT = prove
  (`!a pc.
         ensures x86
-          (\s. bytes_loaded s (word pc) (BUTLAST word_negmodinv_mc) /\
+          (\s. bytes_loaded s (word pc) (BUTLAST word_negmodinv_tmc) /\
                read RIP s = word pc /\
                C_ARGUMENTS [a] s)
           (\s. read RIP s = word(pc + 0x58) /\
@@ -101,6 +104,21 @@ let WORD_NEGMODINV_CORRECT = prove
     SPEC_TAC(`16`,`e:num`) THEN CONV_TAC NUM_REDUCE_CONV THEN
     CONV_TAC NUMBER_RULE]);;
 
+let WORD_NEGMODINV_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+        ensures x86
+          (\s. bytes_loaded s (word pc) word_negmodinv_tmc /\
+               read RIP s = word pc /\
+               read RSP s = stackpointer /\
+               read (memory :> bytes64 stackpointer) s = returnaddress /\
+               C_ARGUMENTS [a] s)
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+               (ODD(val a)
+                ==> (val a * val(C_RETURN s) + 1 == 0) (mod (2 EXP 64))))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC word_negmodinv_tmc WORD_NEGMODINV_CORRECT);;
+
 let WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
         ensures x86
@@ -114,20 +132,22 @@ let WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
                (ODD(val a)
                 ==> (val a * val(C_RETURN s) + 1 == 0) (mod (2 EXP 64))))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC word_negmodinv_mc WORD_NEGMODINV_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_NEGMODINV_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_negmodinv_mc = define_from_elf
-   "windows_word_negmodinv_mc" "x86/generic/word_negmodinv.obj";;
+let word_negmodinv_windows_mc = define_from_elf
+   "word_negmodinv_windows_mc" "x86/generic/word_negmodinv.obj";;
 
-let WINDOWS_WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
+let word_negmodinv_windows_tmc = define_trimmed "word_negmodinv_windows_tmc" word_negmodinv_windows_mc;;
+
+let WORD_NEGMODINV_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0x60)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH word_negmodinv_windows_tmc)
         ==>  ensures x86
-              (\s. bytes_loaded s (word pc) windows_word_negmodinv_mc /\
+              (\s. bytes_loaded s (word pc) word_negmodinv_windows_tmc /\
                    read RIP s = word pc /\
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -139,5 +159,24 @@ let WINDOWS_WORD_NEGMODINV_SUBROUTINE_CORRECT = prove
                         (mod (2 EXP 64))))
               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_word_negmodinv_mc word_negmodinv_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC word_negmodinv_windows_tmc word_negmodinv_tmc
     WORD_NEGMODINV_CORRECT);;
+
+let WORD_NEGMODINV_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH word_negmodinv_windows_mc)
+        ==>  ensures x86
+              (\s. bytes_loaded s (word pc) word_negmodinv_windows_mc /\
+                   read RIP s = word pc /\
+                   read RSP s = stackpointer /\
+                   read (memory :> bytes64 stackpointer) s = returnaddress /\
+                   WINDOWS_C_ARGUMENTS [a] s)
+              (\s. read RIP s = returnaddress /\
+                   read RSP s = word_add stackpointer (word 8) /\
+                   (ODD(val a)
+                    ==> (val a * val(WINDOWS_C_RETURN s) + 1 == 0)
+                        (mod (2 EXP 64))))
+              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_NEGMODINV_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

@@ -63,6 +63,7 @@
         sbbq    $0, d6
 
 S2N_BN_SYMBOL(bignum_demont_p384):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

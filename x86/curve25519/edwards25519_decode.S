@@ -69,6 +69,7 @@
 #define Q8 (25*N)
 
 S2N_BN_SYMBOL(edwards25519_decode):
+        _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from subroutine offsets

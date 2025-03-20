@@ -50,6 +50,7 @@
 S2N_BN_SYMBOL(bignum_bigendian_4):
 S2N_BN_SYMBOL(bignum_frombebytes_4):
 S2N_BN_SYMBOL(bignum_tobebytes_4):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

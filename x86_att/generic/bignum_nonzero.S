@@ -23,6 +23,7 @@
 #define x %rsi
 
 S2N_BN_SYMBOL(bignum_nonzero):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

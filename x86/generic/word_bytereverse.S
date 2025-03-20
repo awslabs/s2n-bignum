@@ -20,6 +20,7 @@
 // Just uses the x86 BSWAP instruction, which does the job directly
 
 S2N_BN_SYMBOL(word_bytereverse):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

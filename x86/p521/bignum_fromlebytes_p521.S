@@ -28,6 +28,7 @@
 #define a rax
 
 S2N_BN_SYMBOL(bignum_fromlebytes_p521):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

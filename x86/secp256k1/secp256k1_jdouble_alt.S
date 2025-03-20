@@ -730,6 +730,7 @@
         mov     [P0+24],r11;                    \
 
 S2N_BN_SYMBOL(secp256k1_jdouble_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

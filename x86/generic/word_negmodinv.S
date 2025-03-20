@@ -24,6 +24,7 @@
         .text
 
 S2N_BN_SYMBOL(word_negmodinv):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

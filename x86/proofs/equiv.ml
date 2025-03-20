@@ -64,7 +64,7 @@ let ENSURES_AND_EVENTUALLY_N_AT_PC_PROVES_ENSURES_N = prove(
    ADD1's hoare triple must hold on a program that ends with this
    barrier_inst, and this is due to an interesting property of
    the underlying theory of hoare logic for machine codes.
-   https://www.cl.cam.ac.uk/~mom22/mc-hoare-logic.pdf 
+   https://www.cl.cam.ac.uk/~mom22/mc-hoare-logic.pdf
 *)
 let barrier_inst_bytes = new_definition(`barrier_inst_bytes = [word 0x0F; word 0x0B]:((8)word)list`);;
 
@@ -101,7 +101,7 @@ let BYTES_LOADED_BARRIER_X86_STUCK = prove(
     DISJ_CASES_TAC (ISPEC `l:((8)word)list` list_CASES) THENL
     (** empty list **)
     [FIRST_X_ASSUM SUBST_ALL_TAC THEN
-     UNDISCH_TAC `decode [] = SOME (instr,[])` THEN 
+     UNDISCH_TAC `decode [] = SOME (instr,[])` THEN
      CONV_TAC (LAND_CONV DECODE_TO_NONE_CONV) THEN
      REWRITE_TAC[OPTION_DISTINCT]; ALL_TAC] THEN
     (** list with >=1 elem **)
@@ -124,7 +124,7 @@ let BYTES_LOADED_BARRIER_X86_STUCK = prove(
       UNDISCH_TAC `decode ([word 15]:((8)word)list) = SOME (instr,[])` THEN
       CONV_TAC (LAND_CONV DECODE_TO_NONE_CONV) THEN
       REWRITE_TAC[OPTION_DISTINCT] THEN FAIL_TAC "unfinished";
-      
+
       ALL_TAC
     ] THEN
     (** list with >=2 elems **)
@@ -134,7 +134,7 @@ let BYTES_LOADED_BARRIER_X86_STUCK = prove(
     [ REWRITE_TAC[APPEND] THEN FAIL_TAC "unfinished"; ALL_TAC ] THEN
     RULE_ASSUM_TAC (REWRITE_RULE [bytes_loaded_append]) THEN
     SPLIT_FIRST_CONJ_ASSUM_TAC THEN
-    SUBGOAL_THEN `[h;h']:((8)word)list = [word 15; word 11]` SUBST_ALL_TAC THENL 
+    SUBGOAL_THEN `[h;h']:((8)word)list = [word 15; word 11]` SUBST_ALL_TAC THENL
     [ SUBGOAL_THEN `LENGTH ([word 15;word 11]:((8)word)list) = LENGTH ([h;h']:((8)word)list)` ASSUME_TAC THENL
       [REWRITE_TAC[LENGTH] THEN ARITH_TAC;ALL_TAC] THEN
       ASM_MESON_TAC[bytes_loaded_unique];

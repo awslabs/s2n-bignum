@@ -38,6 +38,7 @@
 
 
 S2N_BN_SYMBOL(bignum_sub):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let bignum_montsqr_p521_alt_mc = define_assert_from_elf "bignum_montsqr_p521_alt_mc" "x86/p521/bignum_montsqr_p521_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)
@@ -429,7 +430,9 @@ let bignum_montsqr_p521_alt_mc = define_assert_from_elf "bignum_montsqr_p521_alt
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_MONTSQR_P521_ALT_EXEC = X86_MK_CORE_EXEC_RULE bignum_montsqr_p521_alt_mc;;
+let bignum_montsqr_p521_alt_tmc = define_trimmed "bignum_montsqr_p521_alt_tmc" bignum_montsqr_p521_alt_mc;;
+
+let BIGNUM_MONTSQR_P521_ALT_EXEC = X86_MK_CORE_EXEC_RULE bignum_montsqr_p521_alt_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -490,7 +493,7 @@ let BIGNUM_MONTSQR_P521_ALT_CORRECT = time prove
             [(word pc,0x536); (z,8 * 9); (x,8 * 9)] /\
         nonoverlapping (z,8 * 9) (word pc,0x536)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_montsqr_p521_alt_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_montsqr_p521_alt_tmc) /\
                   read RIP s = word(pc + 0xd) /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [z; x] s /\
@@ -726,12 +729,37 @@ let BIGNUM_MONTSQR_P521_ALT_CORRECT = time prove
       GEN_REWRITE_CONV I [BITVAL_CLAUSES])) THEN
     REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN REAL_INTEGER_TAC]);;
 
+let BIGNUM_MONTSQR_P521_ALT_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (z,8 * 9))
+            [(word pc,LENGTH bignum_montsqr_p521_alt_tmc); (word_sub stackpointer (word 112),128)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 112),112))
+            [(word pc,LENGTH bignum_montsqr_p521_alt_tmc); (x,8 * 9)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_montsqr_p521_alt_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (n < p_521
+                   ==> bignum_from_memory (z,9) s =
+                       (inverse_mod p_521 (2 EXP 576) * n EXP 2) MOD p_521))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                     memory :> bytes(word_sub stackpointer (word 112),112)])`,
+  X86_PROMOTE_RETURN_STACK_TAC
+   bignum_montsqr_p521_alt_tmc BIGNUM_MONTSQR_P521_ALT_CORRECT
+   `[RBX; R12; R13; R14; R15]` 112);;
+
 let BIGNUM_MONTSQR_P521_ALT_SUBROUTINE_CORRECT = prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (z,8 * 9))
-            [(word pc,0x536); (word_sub stackpointer (word 112),128)] /\
+            [(word pc,LENGTH bignum_montsqr_p521_alt_mc); (word_sub stackpointer (word 112),128)] /\
         ALL (nonoverlapping (word_sub stackpointer (word 112),112))
-            [(word pc,0x536); (x,8 * 9)]
+            [(word pc,LENGTH bignum_montsqr_p521_alt_mc); (x,8 * 9)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_montsqr_p521_alt_mc /\
                   read RIP s = word pc /\
@@ -747,25 +775,25 @@ let BIGNUM_MONTSQR_P521_ALT_SUBROUTINE_CORRECT = prove
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                      memory :> bytes(word_sub stackpointer (word 112),112)])`,
-  X86_PROMOTE_RETURN_STACK_TAC
-   bignum_montsqr_p521_alt_mc BIGNUM_MONTSQR_P521_ALT_CORRECT
-   `[RBX; R12; R13; R14; R15]` 112);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MONTSQR_P521_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_montsqr_p521_alt_mc = define_from_elf
-   "windows_bignum_montsqr_p521_alt_mc" "x86/p521/bignum_montsqr_p521_alt.obj";;
+let bignum_montsqr_p521_alt_windows_mc = define_from_elf
+   "bignum_montsqr_p521_alt_windows_mc" "x86/p521/bignum_montsqr_p521_alt.obj";;
 
-let WINDOWS_BIGNUM_MONTSQR_P521_ALT_SUBROUTINE_CORRECT = prove
+let bignum_montsqr_p521_alt_windows_tmc = define_trimmed "bignum_montsqr_p521_alt_windows_tmc" bignum_montsqr_p521_alt_windows_mc;;
+
+let BIGNUM_MONTSQR_P521_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!z x n pc stackpointer returnaddress.
         ALL (nonoverlapping (z,8 * 9))
-            [(word pc,0x540); (word_sub stackpointer (word 128),136)] /\
+            [(word pc,LENGTH bignum_montsqr_p521_alt_windows_tmc); (word_sub stackpointer (word 128),136)] /\
         ALL (nonoverlapping (word_sub stackpointer (word 128),128))
-            [(word pc,0x540); (x,8 * 9)]
+            [(word pc,LENGTH bignum_montsqr_p521_alt_windows_tmc); (x,8 * 9)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_montsqr_p521_alt_mc /\
+             (\s. bytes_loaded s (word pc) bignum_montsqr_p521_alt_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -780,5 +808,29 @@ let WINDOWS_BIGNUM_MONTSQR_P521_ALT_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(z,8 * 9);
                      memory :> bytes(word_sub stackpointer (word 128),128)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-   windows_bignum_montsqr_p521_alt_mc bignum_montsqr_p521_alt_mc
+   bignum_montsqr_p521_alt_windows_tmc bignum_montsqr_p521_alt_tmc
    BIGNUM_MONTSQR_P521_ALT_CORRECT `[RBX; R12; R13; R14; R15]` 112);;
+
+let BIGNUM_MONTSQR_P521_ALT_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!z x n pc stackpointer returnaddress.
+        ALL (nonoverlapping (z,8 * 9))
+            [(word pc,LENGTH bignum_montsqr_p521_alt_windows_mc); (word_sub stackpointer (word 128),136)] /\
+        ALL (nonoverlapping (word_sub stackpointer (word 128),128))
+            [(word pc,LENGTH bignum_montsqr_p521_alt_windows_mc); (x,8 * 9)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_montsqr_p521_alt_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (n < p_521
+                   ==> bignum_from_memory (z,9) s =
+                       (inverse_mod p_521 (2 EXP 576) * n EXP 2) MOD p_521))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                     memory :> bytes(word_sub stackpointer (word 128),128)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MONTSQR_P521_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

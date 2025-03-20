@@ -87,6 +87,7 @@
         cmovz   r9, [rsp+TAB+JACSIZE*(I-1)+88]
 
 S2N_BN_SYMBOL(p384_montjscalarmul):
+        _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.
