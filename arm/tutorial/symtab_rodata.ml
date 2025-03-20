@@ -33,10 +33,10 @@ let a_mc,a_constants_data = define_assert_relocs_from_elf "a_mc"
 
 (* Compared to the result of define_asserts_from_elf, the return value of
     define_assert_relocs_from_elf has the following differences:
-    
+
     1. It returns a_constants_data, which is a list of thm.
       Each thm describes a definition of an object in a read-only section:
-      
+
       # a_constants_data;;
 
       - : thm list =
@@ -72,7 +72,7 @@ let A_SPEC = prove(`forall pc retpc x y i.
          read X30 s = word retpc)
     (\s. read W0 s = word (3 * (1 + i)) /\
          read PC s = word retpc)
-    (MAYCHANGE [X0; X1; X2; X3; PC])`,
+    (MAYCHANGE [X0; X1; X2; X3; PC] ,, MAYCHANGE [events])`,
 
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN

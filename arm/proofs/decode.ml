@@ -1153,11 +1153,7 @@ let PURE_DECODE_CONV =
 
     add_thms [QLANE] rw;
     add_conv (`Condition`, 1, CONDITION_CONV) rw;
-    (* decode functions *)
-    add_thms [decode_encode_BL; decode_encode_ADR;
-              decode_encode_ADRP; decode_encode_ADD_rri64] rw;
-    add_conv (`decode_bitmask`, 3, DECODE_BITMASK_CONV) rw;
-    (* .. that have bitmatch exprs inside *)
+    (* decode fns that have bitmatch exprs inside *)
     List.iter (fun def_th ->
         let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =
             conceal_bitmatch (concl def_th) in
@@ -1167,6 +1163,13 @@ let PURE_DECODE_CONV =
         (* add a conversion for this *)
         add_conv (opaque_const, opaque_arity, opaque_conv) rw
       ) [decode; decode_shift; decode_extendtype];
+
+    (* decode functions *)
+    add_conv (`decode_bitmask`, 3, DECODE_BITMASK_CONV) rw;
+    (* adding decode_encode* lemmas after decode gives higher priority
+       to these rules *)
+    add_thms [decode_encode_BL; decode_encode_ADR;
+              decode_encode_ADRP; decode_encode_ADD_rri64] rw;
 
     rw in
   let the_conv = WEAK_CBV_CONV decode_rw in
@@ -1504,7 +1507,7 @@ let term_of_relocs_arm, assert_relocs =
       (encode_ADRP (word dstreg)
         (word_subword (word_sub
             (word_and (word (sym + addend)) (word 0xFFFFFFFFFFFFF000))
-            (word_and (word (pc + pcofs)) (word 0xFFFFFFFFFFFFF000)):int64) 
+            (word_and (word (pc + pcofs)) (word 0xFFFFFFFFFFFFF000)):int64)
           (14,19):(19)word)
         (word_subword (word_sub
             (word_and (word (sym + addend)) (word 0xFFFFFFFFFFFFF000))
