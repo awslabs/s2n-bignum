@@ -1098,6 +1098,7 @@
         movq    %r13, 0x28+P0
 
 S2N_BN_SYMBOL(p384_montjdouble_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

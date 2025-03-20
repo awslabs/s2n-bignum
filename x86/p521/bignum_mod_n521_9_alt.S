@@ -40,6 +40,7 @@
 #define qshort edx
 
 S2N_BN_SYMBOL(bignum_mod_n521_9_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

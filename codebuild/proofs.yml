@@ -3,7 +3,7 @@ phases:
   install:
     commands:
       - apt-get --allow-insecure-repositories update
-      - apt-get -y install ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+      - apt-get -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
       # Install OPAM
       - wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
       - chmod +x install.sh

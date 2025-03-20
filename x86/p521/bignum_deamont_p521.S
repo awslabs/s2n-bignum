@@ -40,6 +40,7 @@
 #define d8 rbp
 
 S2N_BN_SYMBOL(bignum_deamont_p521):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

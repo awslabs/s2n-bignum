@@ -69,6 +69,7 @@
 #define NSPACE (11*NUMSIZE)
 
 S2N_BN_SYMBOL(p256_scalarmulbase_alt):
+        _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.

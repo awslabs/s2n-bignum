@@ -108,6 +108,7 @@
         adc     d7, 0
 
 S2N_BN_SYMBOL(bignum_montmul_p384_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

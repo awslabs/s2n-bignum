@@ -108,6 +108,7 @@
         adcq    $0, d7
 
 S2N_BN_SYMBOL(bignum_montmul_p384_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

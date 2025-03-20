@@ -43,6 +43,7 @@
 #define ishort %r8d
 
 S2N_BN_SYMBOL(bignum_negmodinv):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

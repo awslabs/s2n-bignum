@@ -47,6 +47,7 @@
         sbbq    %rsi, d0
 
 S2N_BN_SYMBOL(bignum_demont_sm2):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

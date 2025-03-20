@@ -47,6 +47,7 @@
 #define cshort %ecx
 
 S2N_BN_SYMBOL(bignum_triple_sm2_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

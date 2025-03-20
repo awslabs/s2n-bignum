@@ -36,6 +36,7 @@
 #define VARSIZE 72
 
 S2N_BN_SYMBOL(bignum_modexp):
+        _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.

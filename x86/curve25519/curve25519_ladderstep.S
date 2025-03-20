@@ -627,6 +627,7 @@
         mov     [P1+24], rcx
 
 S2N_BN_SYMBOL(curve25519_ladderstep):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

@@ -32,6 +32,7 @@
 #define d1short %edx
 
 S2N_BN_SYMBOL(bignum_half_sm2):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

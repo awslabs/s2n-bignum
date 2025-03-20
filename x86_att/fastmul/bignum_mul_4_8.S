@@ -103,6 +103,7 @@
 
 
 S2N_BN_SYMBOL(bignum_mul_4_8):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

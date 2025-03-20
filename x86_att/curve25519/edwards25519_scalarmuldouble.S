@@ -434,6 +434,7 @@
         movq    %rax, 24+P0
 
 S2N_BN_SYMBOL(edwards25519_scalarmuldouble):
+        _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from keeping code and data together.

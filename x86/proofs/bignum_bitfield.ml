@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_bitfield_mc =
   define_assert_from_elf "bignum_bitfield_mc" "x86/generic/bignum_bitfield.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x31; 0xc0;        (* XOR (% rax) (% rax) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
   0x74; 0x5a;              (* JE (Imm8 (word 90)) *)
@@ -49,7 +50,9 @@ let bignum_bitfield_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_BITFIELD_EXEC = X86_MK_CORE_EXEC_RULE bignum_bitfield_mc;;
+let bignum_bitfield_tmc = define_trimmed "bignum_bitfield_tmc" bignum_bitfield_mc;;
+
+let BIGNUM_BITFIELD_EXEC = X86_MK_CORE_EXEC_RULE bignum_bitfield_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -58,7 +61,7 @@ let BIGNUM_BITFIELD_EXEC = X86_MK_CORE_EXEC_RULE bignum_bitfield_mc;;
 let BIGNUM_BITFIELD_CORRECT = prove
  (`!k x n l a pc.
         ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST bignum_bitfield_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST bignum_bitfield_tmc) /\
               read RIP s = word pc /\
               C_ARGUMENTS [k;x;n;l] s /\
               bignum_from_memory (x,val k) s = a)
@@ -253,6 +256,21 @@ let BIGNUM_BITFIELD_CORRECT = prove
     SIMP_TAC[GSYM MULT_ASSOC; DIV_MULT_ADD; EXP_EQ_0; ARITH]] THEN
   ARITH_TAC);;
 
+let BIGNUM_BITFIELD_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!k x n l a pc stackpointer returnaddress.
+        ensures x86
+         (\s. bytes_loaded s (word pc) bignum_bitfield_tmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [k;x;n;l] s /\
+              bignum_from_memory (x,val k) s = a)
+         (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              C_RETURN s = word((a DIV (2 EXP val n)) MOD (2 EXP val l)))
+         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_bitfield_tmc BIGNUM_BITFIELD_CORRECT);;
+
 let BIGNUM_BITFIELD_SUBROUTINE_CORRECT = prove
  (`!k x n l a pc stackpointer returnaddress.
         ensures x86
@@ -266,21 +284,23 @@ let BIGNUM_BITFIELD_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               C_RETURN s = word((a DIV (2 EXP val n)) MOD (2 EXP val l)))
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_bitfield_mc BIGNUM_BITFIELD_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_BITFIELD_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_bitfield_mc = define_from_elf
-   "windows_bignum_bitfield_mc" "x86/generic/bignum_bitfield.obj";;
+let bignum_bitfield_windows_mc = define_from_elf
+   "bignum_bitfield_windows_mc" "x86/generic/bignum_bitfield.obj";;
 
-let WINDOWS_BIGNUM_BITFIELD_SUBROUTINE_CORRECT = prove
+let bignum_bitfield_windows_tmc = define_trimmed "bignum_bitfield_windows_tmc" bignum_bitfield_windows_mc;;
+
+let BIGNUM_BITFIELD_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!k x n l a pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 16),16))
-            [(word pc,0x73); (x,8 * val k)]
+            [(word pc,LENGTH bignum_bitfield_windows_tmc); (x,8 * val k)]
         ==> ensures x86
-               (\s. bytes_loaded s (word pc) windows_bignum_bitfield_mc /\
+               (\s. bytes_loaded s (word pc) bignum_bitfield_windows_tmc /\
                     read RIP s = word pc /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -292,5 +312,25 @@ let WINDOWS_BIGNUM_BITFIELD_SUBROUTINE_CORRECT = prove
                     word((a DIV (2 EXP val n)) MOD (2 EXP val l)))
                (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_bignum_bitfield_mc bignum_bitfield_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_bitfield_windows_tmc bignum_bitfield_tmc
     BIGNUM_BITFIELD_CORRECT);;
+
+let BIGNUM_BITFIELD_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!k x n l a pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+            [(word pc,LENGTH bignum_bitfield_windows_mc); (x,8 * val k)]
+        ==> ensures x86
+               (\s. bytes_loaded s (word pc) bignum_bitfield_windows_mc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    WINDOWS_C_ARGUMENTS [k;x;n;l] s /\
+                    bignum_from_memory (x,val k) s = a)
+               (\s. read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    WINDOWS_C_RETURN s =
+                    word((a DIV (2 EXP val n)) MOD (2 EXP val l)))
+               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_BITFIELD_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

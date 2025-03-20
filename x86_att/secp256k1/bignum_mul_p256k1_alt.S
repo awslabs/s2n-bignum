@@ -60,6 +60,7 @@
         adcq    %rdx, h
 
 S2N_BN_SYMBOL(bignum_mul_p256k1_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

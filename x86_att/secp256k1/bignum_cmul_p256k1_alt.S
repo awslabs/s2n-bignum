@@ -42,6 +42,7 @@
 #define d3 %rcx
 
 S2N_BN_SYMBOL(bignum_cmul_p256k1_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

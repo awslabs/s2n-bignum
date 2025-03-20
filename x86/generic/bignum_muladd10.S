@@ -33,6 +33,7 @@
 #define tenshort r9d
 
 S2N_BN_SYMBOL(bignum_muladd10):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi
