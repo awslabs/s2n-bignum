@@ -1273,16 +1273,16 @@ let make_fn_word_list, make_fn_word_list_reloc =
           Printf.bprintf buf "  BL (mk_var(\"%s\",`:num`),%d,%d)%s\n" sym addend pc s
 
           | Some (Arm_adr_prel_lo21,sym,addend) ->
-          let dstreg = opcode land 0x31 in
+          let dstreg = opcode land 31 in
           Printf.bprintf buf "  ADR (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n" sym addend pc dstreg s
 
           | Some (Arm_adr_prel_pg_hi21,sym,addend) ->
-          let dstreg = opcode land 0x31 in
+          let dstreg = opcode land 31 in
           Printf.bprintf buf "  ADRP (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n" sym addend pc dstreg s
 
           | Some (Arm_add_abs_lo12_nc,sym,addend) ->
-          let dstreg = opcode land 0x31 in
-          let srcreg = (opcode lsr 5) land 0x31 in
+          let dstreg = opcode land 31 in
+          let srcreg = (opcode lsr 5) land 31 in
           Printf.bprintf buf "  ADD_rri64 (mk_var(\"%s\",`:num`),%d,%d,%d)%s\n"
               sym addend dstreg srcreg s
 
@@ -1541,19 +1541,19 @@ let term_of_relocs_arm, assert_relocs =
 
     else if ty = Arm_adr_prel_lo21 then
       if opcode land 0x9FFFFFE0 = 0x10000000 (* ADR with zero imm. *)
-      then append_reloc_ADR (sym,addend,pcoffset,(opcode land 0x31))
+      then append_reloc_ADR (sym,addend,pcoffset,(opcode land 31))
       else failwith "Cannot apply R_AARCH64_ADR_PREL_LO21"
 
     else if ty = Arm_adr_prel_pg_hi21 then
       if opcode land 0x9FFFFFE0 = 0x90000000 (* ADRP with zero imm. *)
-      then append_reloc_ADRP (sym,addend,pcoffset,(opcode land 0x31))
+      then append_reloc_ADRP (sym,addend,pcoffset,(opcode land 31))
       else failwith "Cannot apply R_AARCH64_ADR_PREL_PG_HI21"
 
     else if ty = Arm_add_abs_lo12_nc then
       if opcode land 0xFFFFFC00 = 0x91000000 (* ADD with zero imm. *)
       then
-        let dstreg = opcode land 0x31 in
-        let srcreg = (opcode lsr 5) land 0x31 in
+        let dstreg = opcode land 31 in
+        let srcreg = (opcode lsr 5) land 31 in
         append_reloc_ADD_rri64 (sym,addend,dstreg,srcreg)
       else failwith "Cannot apply R_AARCH64_ADD_ABS_LO12_NC"
 
@@ -1622,3 +1622,10 @@ let print_literal_relocs_from_elf (file:string) =
   let bs = load_elf_arm filebytes in
   print_string (make_fn_word_list_reloc bs
     (decode_all (snd (term_of_relocs_arm bs))));;
+
+let save_literal_relocs_from_elf (deffile:string) (objfile:string) =
+  let filebytes = load_file objfile in
+  let bs = load_elf_arm filebytes in
+  let ls = make_fn_word_list_reloc bs
+    (decode_all (snd (term_of_relocs_arm bs))) in
+  file_of_string deffile ls;;
