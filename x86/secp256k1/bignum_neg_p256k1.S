@@ -33,6 +33,7 @@
 #define qshort esi
 
 S2N_BN_SYMBOL(bignum_neg_p256k1):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

@@ -76,6 +76,7 @@
         sbbq    %rbx, d0
 
 S2N_BN_SYMBOL(bignum_montmul_sm2):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

@@ -41,6 +41,7 @@
 
 
 S2N_BN_SYMBOL(bignum_bitfield):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

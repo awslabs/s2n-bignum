@@ -1626,6 +1626,15 @@ let MULT_ADD_DIV_LT = prove(
   ASM_ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
+(* Given a theorem |- l = [x1;...xn], returns |- LENGTH l = n                *)
+(* ------------------------------------------------------------------------- *)
+
+let COMPUTE_LENGTH_RULE th =
+  let ltm = mk_const("LENGTH",
+    [hd(snd(dest_type(type_of(lhand(concl th))))),aty]) in
+  CONV_RULE(RAND_CONV LENGTH_CONV) (AP_TERM ltm th);;
+
+(* ------------------------------------------------------------------------- *)
 (* Tactics for using labeled assumtions                                      *)
 (* ------------------------------------------------------------------------- *)
 

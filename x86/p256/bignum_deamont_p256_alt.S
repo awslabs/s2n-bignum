@@ -73,6 +73,7 @@
         adc     high, rdx
 
 S2N_BN_SYMBOL(bignum_deamont_p256_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

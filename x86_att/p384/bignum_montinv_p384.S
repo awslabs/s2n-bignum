@@ -1046,6 +1046,7 @@
         leaq    (%rax,%rdx), %r12
 
 S2N_BN_SYMBOL(bignum_montinv_p384):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

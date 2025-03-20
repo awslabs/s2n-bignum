@@ -39,6 +39,7 @@
 #define c rsi
 
 S2N_BN_SYMBOL(bignum_tomont_p256k1):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

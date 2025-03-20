@@ -19,6 +19,7 @@ needs "Divstep/idivstep.ml";;
 
 let word_divstep59_mc = define_assert_from_elf "word_divstep59_mc" "x86/generic/word_divstep59.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -1032,7 +1033,9 @@ let word_divstep59_mc = define_assert_from_elf "word_divstep59_mc" "x86/generic/
   0xc3                     (* RET *)
 ];;
 
-let WORD_DIVSTEP59_EXEC = X86_MK_CORE_EXEC_RULE word_divstep59_mc;;
+let word_divstep59_tmc = define_trimmed "word_divstep59_tmc" word_divstep59_mc;;
+
+let WORD_DIVSTEP59_EXEC = X86_MK_CORE_EXEC_RULE word_divstep59_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Some not-very-general lemmas.                                             *)
@@ -1421,7 +1424,7 @@ let WORD_DIVSTEP59_CORRECT = prove
  (`!m d f g pc.
    nonoverlapping (word pc,0xd1b) (m,32)
    ==> ensures x86
-        (\s. bytes_loaded s (word pc) (BUTLAST word_divstep59_mc) /\
+        (\s. bytes_loaded s (word pc) (BUTLAST word_divstep59_tmc) /\
              read RIP s = word(pc + 0x6) /\
              C_ARGUMENTS [m; d; f; g] s)
         (\s. read RIP s = word(pc + 0xd14) /\
@@ -1684,10 +1687,38 @@ let WORD_DIVSTEP59_CORRECT = prove
    `(x:int == y) (mod p) ==> q divides p ==> (x == y) (mod q)`)) THEN
   SIMP_TAC[INT_DIVIDES_POW_LE_IMP; ARITH_LE; ARITH_LT]);;
 
+let WORD_DIVSTEP59_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!m d f g pc stackpointer returnaddress.
+     nonoverlapping (word_sub stackpointer (word 32),40) (m,32) /\
+     ALL (nonoverlapping (word pc,LENGTH word_divstep59_tmc))
+         [(word_sub stackpointer (word 32),32); (m,32)]
+   ==> ensures x86
+        (\s. bytes_loaded s (word pc) word_divstep59_tmc /\
+             read RIP s = word pc /\
+             read RSP s = stackpointer /\
+             read (memory :> bytes64 stackpointer) s = returnaddress /\
+             C_ARGUMENTS [m; d; f; g] s)
+        (\s. read RIP s = returnaddress /\
+             read RSP s = word_add stackpointer (word 8) /\
+             (ival d rem &2 = &1 /\
+              ival f rem &2 = &1 /\
+              abs(ival d) < &2 pow 62 ==>
+              C_RETURN s = iword(divstep_d 59 (ival d,ival f,ival g)) /\
+              let M = divstep_mat 59 (ival d,ival f,ival g) in
+              read (memory :> bytes64(m)) s = iword(M$1$1) /\
+              read (memory :> bytes64(word_add m (word 8))) s = iword(M$1$2) /\
+              read (memory :> bytes64(word_add m (word 16))) s = iword(M$2$1) /\
+              read (memory :> bytes64(word_add m (word 24))) s = iword(M$2$2)))
+        (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+         MAYCHANGE [memory :> bytes(m,32);
+                   memory :> bytes(word_sub stackpointer (word 32),32)])`,
+   X86_PROMOTE_RETURN_STACK_TAC word_divstep59_tmc WORD_DIVSTEP59_CORRECT
+    `[RBX; RBP; R12; R13]` 32);;
+
 let WORD_DIVSTEP59_SUBROUTINE_CORRECT = prove
  (`!m d f g pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 32),40) (m,32) /\
-     ALL (nonoverlapping (word pc,0xd1b))
+     ALL (nonoverlapping (word pc,LENGTH word_divstep59_mc))
          [(word_sub stackpointer (word 32),32); (m,32)]
    ==> ensures x86
         (\s. bytes_loaded s (word pc) word_divstep59_mc /\
@@ -1709,23 +1740,24 @@ let WORD_DIVSTEP59_SUBROUTINE_CORRECT = prove
         (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
          MAYCHANGE [memory :> bytes(m,32);
                    memory :> bytes(word_sub stackpointer (word 32),32)])`,
-   X86_PROMOTE_RETURN_STACK_TAC word_divstep59_mc WORD_DIVSTEP59_CORRECT
-    `[RBX; RBP; R12; R13]` 32);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_DIVSTEP59_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_divstep59_mc = define_from_elf "windows_word_divstep59_mc"
+let word_divstep59_windows_mc = define_from_elf "word_divstep59_windows_mc"
       "x86/generic/word_divstep59.obj";;
 
-let WINDOWS_WORD_DIVSTEP59_SUBROUTINE_CORRECT = time prove
+let word_divstep59_windows_tmc = define_trimmed "word_divstep59_windows_tmc" word_divstep59_windows_mc;;
+
+let WORD_DIVSTEP59_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!m d f g pc stackpointer returnaddress.
      nonoverlapping (word_sub stackpointer (word 48),56) (m,32) /\
-     ALL (nonoverlapping (word pc,0xd2b))
+     ALL (nonoverlapping (word pc,LENGTH word_divstep59_windows_tmc))
          [(word_sub stackpointer (word 48),48); (m,32)]
    ==> ensures x86
-        (\s. bytes_loaded s (word pc) windows_word_divstep59_mc /\
+        (\s. bytes_loaded s (word pc) word_divstep59_windows_tmc /\
              read RIP s = word pc /\
              read RSP s = stackpointer /\
              read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1745,6 +1777,34 @@ let WINDOWS_WORD_DIVSTEP59_SUBROUTINE_CORRECT = time prove
          MAYCHANGE [memory :> bytes(m,32);
                    memory :> bytes(word_sub stackpointer (word 48),48)])`,
    WINDOWS_X86_WRAP_STACK_TAC
-    windows_word_divstep59_mc word_divstep59_mc
+    word_divstep59_windows_tmc word_divstep59_tmc
     WORD_DIVSTEP59_CORRECT
     `[RBX; RBP; R12; R13]` 32);;
+
+let WORD_DIVSTEP59_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!m d f g pc stackpointer returnaddress.
+     nonoverlapping (word_sub stackpointer (word 48),56) (m,32) /\
+     ALL (nonoverlapping (word pc,LENGTH word_divstep59_windows_mc))
+         [(word_sub stackpointer (word 48),48); (m,32)]
+   ==> ensures x86
+        (\s. bytes_loaded s (word pc) word_divstep59_windows_mc /\
+             read RIP s = word pc /\
+             read RSP s = stackpointer /\
+             read (memory :> bytes64 stackpointer) s = returnaddress /\
+             WINDOWS_C_ARGUMENTS [m; d; f; g] s)
+        (\s. read RIP s = returnaddress /\
+             read RSP s = word_add stackpointer (word 8) /\
+             (ival d rem &2 = &1 /\
+              ival f rem &2 = &1 /\
+              abs(ival d) < &2 pow 62 ==>
+              C_RETURN s = iword(divstep_d 59 (ival d,ival f,ival g)) /\
+              let M = divstep_mat 59 (ival d,ival f,ival g) in
+              read (memory :> bytes64(m)) s = iword(M$1$1) /\
+              read (memory :> bytes64(word_add m (word 8))) s = iword(M$1$2) /\
+              read (memory :> bytes64(word_add m (word 16))) s = iword(M$2$1) /\
+              read (memory :> bytes64(word_add m (word 24))) s = iword(M$2$2)))
+        (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+         MAYCHANGE [memory :> bytes(m,32);
+                   memory :> bytes(word_sub stackpointer (word 48),48)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_DIVSTEP59_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

@@ -793,6 +793,7 @@
         movq    %rcx, 24+P1
 
 S2N_BN_SYMBOL(curve25519_ladderstep_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

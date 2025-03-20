@@ -652,6 +652,7 @@
         mov     [P0+0x18], r11
 
 S2N_BN_SYMBOL(p256_montjdouble_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

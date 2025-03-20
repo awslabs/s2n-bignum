@@ -1286,6 +1286,7 @@
         mov     [P0+64], rbx
 
 S2N_BN_SYMBOL(p521_jdouble):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

@@ -32,6 +32,7 @@
 #define i %r11
 
 S2N_BN_SYMBOL(bignum_modoptneg):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

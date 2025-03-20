@@ -27,7 +27,7 @@ let word_join_list_16_128 = new_definition
               ((word_join:128 word->512 word->640 word) (EL 11 lst)
                ((word_join:128 word->384 word->512 word) (EL 12 lst)
                 ((word_join:128 word->256 word->384 word) (EL 13 lst)
-                 ((word_join:128 word->128 word->256 word) (EL 14 lst) 
+                 ((word_join:128 word->128 word->256 word) (EL 14 lst)
                   (EL 15 lst))))))))))))))))`;;
 
 let word_join_list_16_8 = new_definition
@@ -232,14 +232,14 @@ let joined_FFmul_0E = new_definition `joined_FFmul_0E:2048 word =
 (* AES Intrinsics                                                            *)
 (* ========================================================================= *)
 
-let aes_sub_bytes_select = new_definition 
+let aes_sub_bytes_select = new_definition
 `aes_sub_bytes_select (GF:2048 word) (op:128 word) (i : num) : 8 word =
   let pos = (val ((word_subword:128 word->(num#num)->8 word) op (i*8, 8)))*8 in
   (word_subword:2048 word->(num#num)->8 word) GF (pos, 8)`;;
 
-(* Parameterize out GF2 so that it works both for 
+(* Parameterize out GF2 so that it works both for
    aes_sub_bytes and aes_inv_sub_bytes *)
-let aes_sub_bytes = new_definition 
+let aes_sub_bytes = new_definition
 `aes_sub_bytes (GF:2048 word) (op:(128)word) : (128)word =
   (word_join_list_16_8
     [ (aes_sub_bytes_select GF op 15)
@@ -297,7 +297,7 @@ let aes_inv_shift_rows = new_definition `aes_inv_shift_rows (op:(128)word) : (12
   ; (word_subword op (104, 8))
   ; (word_subword op (0, 8)) ]`;;
 
-let FFmul = new_definition `FFmul (joined_tb : 2048 word) (b : 8 word) : 8 word = 
+let FFmul = new_definition `FFmul (joined_tb : 2048 word) (b : 8 word) : 8 word =
   (word_subword:2048 word->(num#num)->8 word) joined_tb ((val b)*8, 8) `;;
 let FFmul02 = new_definition `FFmul02 : (8 word)->(8 word) = FFmul joined_FFmul_02`;;
 let FFmul03 = new_definition `FFmul03 : (8 word)->(8 word) = FFmul joined_FFmul_03`;;
@@ -306,7 +306,7 @@ let FFmul0B = new_definition `FFmul0B : (8 word)->(8 word) = FFmul joined_FFmul_
 let FFmul0D = new_definition `FFmul0D : (8 word)->(8 word) = FFmul joined_FFmul_0D`;;
 let FFmul0E = new_definition `FFmul0E : (8 word)->(8 word) = FFmul joined_FFmul_0E`;;
 
-let aes_mix_word = new_definition 
+let aes_mix_word = new_definition
 `aes_mix_word (op:(128)word) (a:num) (b:num) (c:num) (d:num) : (8)word =
   word_xor (FFmul02 (word_subword op (a, 8)))
     (word_xor (FFmul03 (word_subword op (b, 8)))
@@ -331,10 +331,10 @@ let aes_mix_columns = new_definition `aes_mix_columns (op:(128)word) : (128)word
     let out23 = aes_mix_word op 112 120 96 104 in
     let out33 = aes_mix_word op 120 96 104 112 in
     word_join_list_16_8
-    [out33; out23; out13; out03; out32; out22; out12; out02; 
+    [out33; out23; out13; out03; out32; out22; out12; out02;
      out31; out21; out11; out01; out30; out20; out10; out00] `;;
 
-let aes_inv_mix_word = new_definition 
+let aes_inv_mix_word = new_definition
   `aes_inv_mix_word (op:(128)word) (a:num) (b:num) (c:num) (d:num) : (8)word =
    word_xor (FFmul0E (word_subword op (a, 8)))
      (word_xor (FFmul0B (word_subword op (b, 8)))
@@ -359,7 +359,7 @@ let aes_inv_mix_columns = new_definition `aes_inv_mix_columns (op:(128)word) : (
   let out23 = aes_inv_mix_word op 112 120 96 104 in
   let out33 = aes_inv_mix_word op 120 96 104 112 in
   word_join_list_16_8
-  [out33; out23; out13; out03; out32; out22; out12; out02; 
+  [out33; out23; out13; out03; out32; out22; out12; out02;
    out31; out21; out11; out01; out30; out20; out10; out00] `;;
 
 let aese = new_definition `aese (d:128 word) (n:128 word) =
@@ -377,8 +377,8 @@ let aesimc = new_definition `aesimc (n: 128 word) = aes_inv_mix_columns n`;;
 (************************************************)
 
 (* EL_CONV is a conversion for converting EL calls.
-   We note that the EL calls in this file are for calculating word_join 
-   from constant tables. This means that the result could be precomputed 
+   We note that the EL calls in this file are for calculating word_join
+   from constant tables. This means that the result could be precomputed
    and stored as clauses before-hand. This greatly increase the conversion
    speed. The EL conversion code and idea is from John Harrison. *)
 let EL_CONV =
@@ -430,13 +430,13 @@ let JOINED_FFMUL_0D_CLAUSE = (JOINED_CONV joined_FFmul_0D FFmul_0D) `joined_FFmu
 let JOINED_FFMUL_09_CLAUSE = (JOINED_CONV joined_FFmul_09 FFmul_09) `joined_FFmul_09`;;
 
 let AES_SUB_BYTES_SELECT_CONV =
-  REWRITE_CONV [aes_sub_bytes_select] THENC 
-  (GEN_REWRITE_CONV ONCE_DEPTH_CONV [JOINED_GF2_CLAUSE; JOINED_GF2_INV_CLAUSE]) THENC 
-  TOP_DEPTH_CONV let_CONV THENC 
+  REWRITE_CONV [aes_sub_bytes_select] THENC
+  (GEN_REWRITE_CONV ONCE_DEPTH_CONV [JOINED_GF2_CLAUSE; JOINED_GF2_INV_CLAUSE]) THENC
+  TOP_DEPTH_CONV let_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 let AES_SUB_BYTES_CONV =
-  REWRITE_CONV [aes_sub_bytes] THENC 
+  REWRITE_CONV [aes_sub_bytes] THENC
   AES_SUB_BYTES_SELECT_CONV THENC
   WORD_JOIN_LIST_16_8_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
@@ -446,19 +446,19 @@ let AES_SHIFT_ROWS_COMMON_CONV FN =
   WORD_JOIN_LIST_16_8_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
-let AES_SHIFT_ROWS_CONV = 
+let AES_SHIFT_ROWS_CONV =
   AES_SHIFT_ROWS_COMMON_CONV aes_shift_rows;;
-let AES_INV_SHIFT_ROWS_CONV = 
+let AES_INV_SHIFT_ROWS_CONV =
   AES_SHIFT_ROWS_COMMON_CONV aes_inv_shift_rows;;
 
-let FFMUL_CONV FN CL = 
+let FFMUL_CONV FN CL =
   REWRITE_CONV [FN; FFmul] THENC
-  GEN_REWRITE_CONV ONCE_DEPTH_CONV [CL] THENC 
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [CL] THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
-let FFMUL02_CONV = 
+let FFMUL02_CONV =
   FFMUL_CONV FFmul02 JOINED_FFMUL_02_CLAUSE;;
-let FFMUL03_CONV = 
+let FFMUL03_CONV =
   FFMUL_CONV FFmul03 JOINED_FFMUL_03_CLAUSE;;
 let FFMUL0E_CONV =
   FFMUL_CONV FFmul0E JOINED_FFMUL_0E_CLAUSE;;
@@ -469,30 +469,30 @@ let FFMUL0D_CONV =
 let FFMUL09_CONV =
   FFMUL_CONV FFmul09 JOINED_FFMUL_09_CLAUSE;;
 
-let AES_MIX_WORD_CONV = 
-  REWRITE_CONV [aes_mix_word] THENC 
-  FFMUL02_CONV THENC 
-  FFMUL03_CONV THENC 
+let AES_MIX_WORD_CONV =
+  REWRITE_CONV [aes_mix_word] THENC
+  FFMUL02_CONV THENC
+  FFMUL03_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
-let AES_MIX_COLUMNS_CONV = 
-  REWRITE_CONV [aes_mix_columns] THENC 
-  AES_MIX_WORD_CONV THENC 
+let AES_MIX_COLUMNS_CONV =
+  REWRITE_CONV [aes_mix_columns] THENC
+  AES_MIX_WORD_CONV THENC
   WORD_JOIN_LIST_16_8_CONV THENC
-  TOP_DEPTH_CONV let_CONV THENC 
+  TOP_DEPTH_CONV let_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 let AES_INV_MIX_WORD_CONV =
-  REWRITE_CONV [aes_inv_mix_word] THENC 
-  FFMUL0E_CONV THENC 
-  FFMUL0B_CONV THENC 
+  REWRITE_CONV [aes_inv_mix_word] THENC
+  FFMUL0E_CONV THENC
+  FFMUL0B_CONV THENC
   FFMUL0D_CONV THENC
   FFMUL09_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 let AES_INV_MIX_COLUMNS_CONV =
-  REWRITE_CONV [aes_inv_mix_columns] THENC 
-  AES_INV_MIX_WORD_CONV THENC 
+  REWRITE_CONV [aes_inv_mix_columns] THENC
+  AES_INV_MIX_WORD_CONV THENC
   WORD_JOIN_LIST_16_8_CONV THENC
   TOP_DEPTH_CONV let_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
@@ -506,7 +506,7 @@ let AESE_HELPER_CONV =
 let AESMC_HELPER_CONV =
   REWRITE_CONV [aesmc] THENC AES_MIX_COLUMNS_CONV;;
 
-let AESD_HELPER_CONV = 
+let AESD_HELPER_CONV =
   REWRITE_CONV [aesd] THENC
   AES_INV_SHIFT_ROWS_CONV THENC
   AES_SUB_BYTES_CONV THENC
@@ -515,7 +515,7 @@ let AESD_HELPER_CONV =
 let AESIMC_HELPER_CONV =
   REWRITE_CONV [aesimc] THENC AES_INV_MIX_COLUMNS_CONV;;
 
-(* Stop early if unmatched. Conversions will become extremely 
+(* Stop early if unmatched. Conversions will become extremely
   expensive if we don't stop early *)
 let AESE_REDUCE_CONV tm =
     match tm with

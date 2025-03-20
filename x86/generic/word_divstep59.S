@@ -43,6 +43,7 @@
 #define m11 r11
 
 S2N_BN_SYMBOL(word_divstep59):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

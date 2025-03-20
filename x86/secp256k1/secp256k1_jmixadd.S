@@ -296,6 +296,7 @@
         mov     [P+24], r3
 
 S2N_BN_SYMBOL(secp256k1_jmixadd):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

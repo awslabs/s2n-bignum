@@ -414,6 +414,7 @@
 
 S2N_BN_SYMBOL(curve25519_x25519base_alt):
 S2N_BN_SYMBOL(curve25519_x25519base_byte_alt):
+        _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from keeping code and data together.

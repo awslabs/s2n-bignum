@@ -444,6 +444,7 @@
         cmovnbe r3, [P2+24]
 
 S2N_BN_SYMBOL(p256_montjadd_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

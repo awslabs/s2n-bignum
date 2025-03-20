@@ -22,6 +22,7 @@ prioritize_num();;
 let p256_montjmixadd_alt_mc = define_assert_from_elf
   "p256_montjmixadd_alt_mc" "x86/p256/p256_montjmixadd_alt.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -2298,7 +2299,9 @@ let p256_montjmixadd_alt_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
-let P256_MONTJMIXADD_ALT_EXEC = X86_MK_CORE_EXEC_RULE p256_montjmixadd_alt_mc;;
+let p256_montjmixadd_alt_tmc = define_trimmed "p256_montjmixadd_alt_tmc" p256_montjmixadd_alt_mc;;
+
+let P256_MONTJMIXADD_ALT_EXEC = X86_MK_CORE_EXEC_RULE p256_montjmixadd_alt_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Common supporting definitions and lemmas for component proofs.            *)
@@ -2334,13 +2337,13 @@ let lvs =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTSQR_P256_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p256_montjmixadd_alt_mc) 137 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p256_montjmixadd_alt_tmc) 137 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = a
     ==>
     nonoverlapping (word pc,0x1b84) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2443,7 +2446,7 @@ let LOCAL_MONTSQR_P256_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTMUL_P256_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p256_montjmixadd_alt_mc) 166 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p256_montjmixadd_alt_tmc) 166 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = a
     ==>
@@ -2451,7 +2454,7 @@ let LOCAL_MONTMUL_P256_TAC =
     ==>
     nonoverlapping (word pc,0x1b84) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2555,7 +2558,7 @@ let LOCAL_MONTMUL_P256_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_P256_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p256_montjmixadd_alt_mc) 21 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p256_montjmixadd_alt_tmc) 21 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
     ==>
@@ -2563,7 +2566,7 @@ let LOCAL_SUB_P256_TAC =
     ==>
     nonoverlapping (word pc,0x1b84) (word_add (read p3 t) (word n3),32)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -2762,7 +2765,7 @@ let P256_MONTJMIXADD_ALT_CORRECT = time prove
             [(word pc,0x1b84); (p1,96); (p2,64); (p3,96)] /\
         nonoverlapping (p3,96) (word pc,0x1b84)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST p256_montjmixadd_alt_tmc) /\
                   read RIP s = word(pc + 0x11) /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [p3; p1; p2] s /\
@@ -2907,12 +2910,39 @@ let P256_MONTJMIXADD_ALT_CORRECT = time prove
   CONV_TAC INT_REM_DOWN_CONV THEN
   REPEAT CONJ_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN INT_ARITH_TAC);;
 
+let P256_MONTJMIXADD_ALT_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 240),240))
+            [(word pc,LENGTH p256_montjmixadd_alt_tmc); (p1,96); (p2,64)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH p256_montjmixadd_alt_tmc); (word_sub stackpointer (word 240),248)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p256_montjmixadd_alt_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_pair_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p256 P1 t1 /\
+                          represents2_p256 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_p256 (group_mul p256_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 240),240)])`,
+  X86_PROMOTE_RETURN_STACK_TAC p256_montjmixadd_alt_tmc P256_MONTJMIXADD_ALT_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 240);;
+
 let P256_MONTJMIXADD_ALT_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 240),240))
-            [(word pc,0x1b84); (p1,96); (p2,64)] /\
+            [(word pc,LENGTH p256_montjmixadd_alt_mc); (p1,96); (p2,64)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x1b84); (word_sub stackpointer (word 240),248)]
+            [(word pc,LENGTH p256_montjmixadd_alt_mc); (word_sub stackpointer (word 240),248)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p256_montjmixadd_alt_mc /\
                   read RIP s = word pc /\
@@ -2931,24 +2961,25 @@ let P256_MONTJMIXADD_ALT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(word_sub stackpointer (word 240),240)])`,
-  X86_PROMOTE_RETURN_STACK_TAC p256_montjmixadd_alt_mc P256_MONTJMIXADD_ALT_CORRECT
-    `[RBX; RBP; R12; R13; R14; R15]` 240);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P256_MONTJMIXADD_ALT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p256_montjmixadd_alt_mc = define_from_elf "windows_p256_montjmixadd_alt_mc"
+let p256_montjmixadd_alt_windows_mc = define_from_elf "p256_montjmixadd_alt_windows_mc"
       "x86/p256/p256_montjmixadd_alt.obj";;
 
-let WINDOWS_P256_MONTJMIXADD_ALT_SUBROUTINE_CORRECT = time prove
+let p256_montjmixadd_alt_windows_tmc = define_trimmed "p256_montjmixadd_alt_windows_tmc" p256_montjmixadd_alt_windows_mc;;
+
+let P256_MONTJMIXADD_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 256),256))
-            [(word pc,0x1b91); (p1,96); (p2,64)] /\
+            [(word pc,LENGTH p256_montjmixadd_alt_windows_tmc); (p1,96); (p2,64)] /\
         ALL (nonoverlapping (p3,96))
-            [(word pc,0x1b91); (word_sub stackpointer (word 256),264)]
+            [(word pc,LENGTH p256_montjmixadd_alt_windows_tmc); (word_sub stackpointer (word 256),264)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_p256_montjmixadd_alt_mc /\
+             (\s. bytes_loaded s (word pc) p256_montjmixadd_alt_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2966,6 +2997,33 @@ let WINDOWS_P256_MONTJMIXADD_ALT_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(word_sub stackpointer (word 256),256)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-   windows_p256_montjmixadd_alt_mc p256_montjmixadd_alt_mc
+   p256_montjmixadd_alt_windows_tmc p256_montjmixadd_alt_tmc
    P256_MONTJMIXADD_ALT_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 240);;
+
+let P256_MONTJMIXADD_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 256),256))
+            [(word pc,LENGTH p256_montjmixadd_alt_windows_mc); (p1,96); (p2,64)] /\
+        ALL (nonoverlapping (p3,96))
+            [(word pc,LENGTH p256_montjmixadd_alt_windows_mc); (word_sub stackpointer (word 256),264)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p256_montjmixadd_alt_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,4) s = t1 /\
+                  bignum_pair_from_memory (p2,4) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p256 P1 t1 /\
+                          represents2_p256 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_p256 (group_mul p256_group P1 P2)
+                               (bignum_triple_from_memory(p3,4) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,96);
+                      memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P256_MONTJMIXADD_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

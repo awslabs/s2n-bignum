@@ -428,6 +428,7 @@
         movq    r3, 24+P
 
 S2N_BN_SYMBOL(sm2_montjmixadd_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

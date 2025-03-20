@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_amontifier_mc =
   define_assert_from_elf "bignum_amontifier_mc" "x86/generic/bignum_amontifier.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x55;                    (* PUSH (% rbp) *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -292,7 +293,9 @@ let bignum_amontifier_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_AMONTIFIER_EXEC = X86_MK_CORE_EXEC_RULE bignum_amontifier_mc;;
+let bignum_amontifier_tmc = define_trimmed "bignum_amontifier_tmc" bignum_amontifier_mc;;
+
+let BIGNUM_AMONTIFIER_EXEC = X86_MK_CORE_EXEC_RULE bignum_amontifier_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -351,7 +354,7 @@ let BIGNUM_AMONTIFIER_CORRECT = time prove
         ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k)]
                                 [(word pc,0x327); (m,8 * val k)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_amontifier_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_amontifier_tmc) /\
                   read RIP s = word(pc + 0x6) /\
                   C_ARGUMENTS [k; z; m; t] s /\
                   bignum_from_memory (m,val k) s = n)
@@ -2515,6 +2518,33 @@ let BIGNUM_AMONTIFIER_CORRECT = time prove
   ASM_REWRITE_TAC[LE_MULT_RCANCEL; EXP_EQ_0; ARITH_EQ] THEN
   ASM_REWRITE_TAC[ARITH_RULE `a + 1 <= b <=> a < b`]);;
 
+let BIGNUM_AMONTIFIER_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!k z m t n pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (t,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 32),40))
+            [(z,8 * val k); (t,8 * val k)] /\
+        ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
+                                 (word_sub stackpointer (word 32),32)]
+                                [(word pc,LENGTH bignum_amontifier_tmc); (m,8 * val k)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_amontifier_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [k; z; m; t] s /\
+                  bignum_from_memory (m,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (ODD n
+                   ==> (bignum_from_memory (z,val k) s ==
+                        2 EXP (128 * val k)) (mod n)))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                         memory :> bytes(t,8 * val k);
+                       memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_amontifier_tmc BIGNUM_AMONTIFIER_CORRECT
+   `[RBX; RBP; R12; R13]` 32);;
+
 let BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
  (`!k z m t n pc stackpointer returnaddress.
         nonoverlapping (z,8 * val k) (t,8 * val k) /\
@@ -2522,7 +2552,7 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
             [(z,8 * val k); (t,8 * val k)] /\
         ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
                                  (word_sub stackpointer (word 32),32)]
-                                [(word pc,0x327); (m,8 * val k)]
+                                [(word pc,LENGTH bignum_amontifier_mc); (m,8 * val k)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_amontifier_mc /\
                   read RIP s = word pc /\
@@ -2539,26 +2569,27 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
               MAYCHANGE [memory :> bytes(z,8 * val k);
                          memory :> bytes(t,8 * val k);
                        memory :> bytes(word_sub stackpointer (word 32),32)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_amontifier_mc BIGNUM_AMONTIFIER_CORRECT
-   `[RBX; RBP; R12; R13]` 32);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_AMONTIFIER_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_amontifier_mc = define_from_elf
-   "windows_bignum_amontifier_mc" "x86/generic/bignum_amontifier.obj";;
+let bignum_amontifier_windows_mc = define_from_elf
+   "bignum_amontifier_windows_mc" "x86/generic/bignum_amontifier.obj";;
 
-let WINDOWS_BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
+let bignum_amontifier_windows_tmc = define_trimmed "bignum_amontifier_windows_tmc" bignum_amontifier_windows_mc;;
+
+let BIGNUM_AMONTIFIER_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!k z m t n pc stackpointer returnaddress.
         nonoverlapping (z,8 * val k) (t,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),56))
             [(z,8 * val k); (t,8 * val k)] /\
         ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
                                  (word_sub stackpointer (word 48),48)]
-                                [(word pc,0x337); (m,8 * val k)]
+                                [(word pc,LENGTH bignum_amontifier_windows_tmc); (m,8 * val k)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_amontifier_mc /\
+             (\s. bytes_loaded s (word pc) bignum_amontifier_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -2573,5 +2604,32 @@ let WINDOWS_BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
               MAYCHANGE [memory :> bytes(z,8 * val k);
                          memory :> bytes(t,8 * val k);
                        memory :> bytes(word_sub stackpointer (word 48),48)])`,
-  WINDOWS_X86_WRAP_STACK_TAC windows_bignum_amontifier_mc bignum_amontifier_mc
+  WINDOWS_X86_WRAP_STACK_TAC bignum_amontifier_windows_tmc bignum_amontifier_tmc
     BIGNUM_AMONTIFIER_CORRECT `[RBX; RBP; R12; R13]` 32);;
+
+let BIGNUM_AMONTIFIER_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!k z m t n pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (t,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 48),56))
+            [(z,8 * val k); (t,8 * val k)] /\
+        ALLPAIRS nonoverlapping [(z,8 * val k); (t,8 * val k);
+                                 (word_sub stackpointer (word 48),48)]
+                                [(word pc,LENGTH bignum_amontifier_windows_mc); (m,8 * val k)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_amontifier_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [k; z; m; t] s /\
+                  bignum_from_memory (m,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (ODD n
+                   ==> (bignum_from_memory (z,val k) s ==
+                        2 EXP (128 * val k)) (mod n)))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                         memory :> bytes(t,8 * val k);
+                       memory :> bytes(word_sub stackpointer (word 48),48)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_AMONTIFIER_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

@@ -886,6 +886,7 @@
         movq    r5, 40+P
 
 S2N_BN_SYMBOL(p384_montjmixadd):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

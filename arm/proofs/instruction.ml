@@ -11,7 +11,7 @@
  *** This is used to describe the safety property of assembly programs such as
  *** the constant-time property.
  *** We define that an instruction raises an observable microarchitectural
- *** event if its cycles/power consumption/anything that can be observed by 
+ *** event if its cycles/power consumption/anything that can be observed by
  *** a side-channel attacker can vary depending on the inputs of
  *** the instruction. For example, instructions taking a constant number of
  *** cycles like ADD do not raise an observable event, whereas cond branch does.

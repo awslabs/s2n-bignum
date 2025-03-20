@@ -811,6 +811,7 @@
         mov     [P+40], r5
 
 S2N_BN_SYMBOL(p384_montjmixadd_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

@@ -34,6 +34,7 @@
 #define cshort ecx
 
 S2N_BN_SYMBOL(bignum_sub_p25519):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

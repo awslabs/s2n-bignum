@@ -14,6 +14,7 @@ needs "x86/proofs/base.ml";;
 
 let word_recip_mc = define_assert_from_elf "word_recip_mc" "x86/generic/word_recip.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0x89; 0xfe;        (* MOV (% rsi) (% rdi) *)
   0x48; 0xb9; 0xff; 0xff; 0xff; 0xff; 0xff; 0xff; 0x01; 0x00;
                            (* MOV (% rcx) (Imm64 (word 562949953421311)) *)
@@ -74,7 +75,9 @@ let word_recip_mc = define_assert_from_elf "word_recip_mc" "x86/generic/word_rec
   0xc3                     (* RET *)
 ];;
 
-let WORD_RECIP_EXEC = X86_MK_CORE_EXEC_RULE word_recip_mc;;
+let word_recip_tmc = define_trimmed "word_recip_tmc" word_recip_mc;;
+
+let WORD_RECIP_EXEC = X86_MK_CORE_EXEC_RULE word_recip_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
@@ -98,7 +101,7 @@ let WORD_ADD_MUL_MADD_LEMMA = prove
 let WORD_RECIP_CORRECT = prove
  (`!a pc.
     ensures x86
-      (\s. bytes_loaded s (word pc) (BUTLAST word_recip_mc) /\
+      (\s. bytes_loaded s (word pc) (BUTLAST word_recip_tmc) /\
            read RIP s = word pc /\
            C_ARGUMENTS [a] s)
       (\s. read RIP s = word(pc + 0xc9) /\
@@ -704,6 +707,21 @@ let WORD_RECIP_CORRECT = prove
   ONCE_REWRITE_TAC[COND_RAND] THEN SIMP_TAC[GSYM REAL_OF_NUM_SUB] THEN
   ASM_REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN ASM_REAL_ARITH_TAC);;
 
+let WORD_RECIP_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+    ensures x86
+      (\s. bytes_loaded s (word pc) word_recip_tmc /\
+           read RIP s = word pc /\
+           read RSP s = stackpointer /\
+           read (memory :> bytes64 stackpointer) s = returnaddress /\
+           C_ARGUMENTS [a] s)
+      (\s. read RIP s = returnaddress /\
+           (bit 63 a
+            ==> &2 pow 64 + &(val(C_RETURN s)) < &2 pow 128 / &(val a) /\
+                &2 pow 128 / &(val a) <= &2 pow 64 + &(val(C_RETURN s)) + &1))
+      (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC word_recip_tmc WORD_RECIP_CORRECT);;
+
 let WORD_RECIP_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
     ensures x86
@@ -717,20 +735,22 @@ let WORD_RECIP_SUBROUTINE_CORRECT = prove
             ==> &2 pow 64 + &(val(C_RETURN s)) < &2 pow 128 / &(val a) /\
                 &2 pow 128 / &(val a) <= &2 pow 64 + &(val(C_RETURN s)) + &1))
       (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC word_recip_mc WORD_RECIP_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_RECIP_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_word_recip_mc = define_from_elf
-   "windows_word_recip_mc" "x86/generic/word_recip.obj";;
+let word_recip_windows_mc = define_from_elf
+   "word_recip_windows_mc" "x86/generic/word_recip.obj";;
 
-let WINDOWS_WORD_RECIP_SUBROUTINE_CORRECT = prove
+let word_recip_windows_tmc = define_trimmed "word_recip_windows_tmc" word_recip_windows_mc;;
+
+let WORD_RECIP_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a pc stackpointer returnaddress.
-        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,0xd1)
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH word_recip_windows_tmc)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_word_recip_mc /\
+             (\s. bytes_loaded s (word pc) word_recip_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -743,5 +763,25 @@ let WINDOWS_WORD_RECIP_SUBROUTINE_CORRECT = prove
                        &2 pow 64 + &(val(WINDOWS_C_RETURN s)) + &1))
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC windows_word_recip_mc word_recip_mc
+  WINDOWS_X86_WRAP_NOSTACK_TAC word_recip_windows_tmc word_recip_tmc
     WORD_RECIP_CORRECT);;
+
+let WORD_RECIP_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!a pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),16) (word pc,LENGTH word_recip_windows_mc)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) word_recip_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [a] s)
+             (\s. read RIP s = returnaddress /\
+                  (bit 63 a
+                   ==> &2 pow 64 + &(val(WINDOWS_C_RETURN s)) <
+                       &2 pow 128 / &(val a) /\
+                       &2 pow 128 / &(val a) <=
+                       &2 pow 64 + &(val(WINDOWS_C_RETURN s)) + &1))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_RECIP_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

@@ -39,6 +39,7 @@
 #define c %rsi
 
 S2N_BN_SYMBOL(bignum_mod_m25519_4):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

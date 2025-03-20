@@ -246,7 +246,7 @@ let BITMATCH_MEMO_CONV =
         constant, and also create a definition between the constant and the
         bitmatch expression
     (3) create a conversion that takes "opaque_const const_word" and reduces
-        it using a decision tree of bitmatch. 
+        it using a decision tree of bitmatch.
     Returns: Some (|-t=t', opaque_def, opaque_def arity,
                   |-opaque_def=bitmatch.., <conversion>) where t' is t with
         the innermost bitmatch replaced iwth the opaque definition.

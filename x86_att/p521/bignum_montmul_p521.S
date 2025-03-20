@@ -41,6 +41,7 @@
         adoxq   %rbx, high
 
 S2N_BN_SYMBOL(bignum_montmul_p521):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

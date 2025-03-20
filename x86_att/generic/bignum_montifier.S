@@ -61,6 +61,7 @@
 
 
 S2N_BN_SYMBOL(bignum_montifier):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

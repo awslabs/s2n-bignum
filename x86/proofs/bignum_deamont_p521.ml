@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_deamont_p521_mc =
   define_assert_from_elf "bignum_deamont_p521_mc" "x86/p521/bignum_deamont_p521.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x41; 0x55;              (* PUSH (% r13) *)
@@ -89,7 +90,9 @@ let bignum_deamont_p521_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_DEAMONT_P521_EXEC = X86_MK_CORE_EXEC_RULE bignum_deamont_p521_mc;;
+let bignum_deamont_p521_tmc = define_trimmed "bignum_deamont_p521_tmc" bignum_deamont_p521_mc;;
+
+let BIGNUM_DEAMONT_P521_EXEC = X86_MK_CORE_EXEC_RULE bignum_deamont_p521_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -101,7 +104,7 @@ let BIGNUM_DEAMONT_P521_CORRECT = time prove
  (`!z x a pc.
         nonoverlapping (word pc,0xe6) (z,8 * 9)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_deamont_p521_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_deamont_p521_tmc) /\
                   read RIP s = word(pc + 0x06) /\
                   C_ARGUMENTS [z; x] s /\
                   bignum_from_memory (x,9) s = a)
@@ -289,12 +292,36 @@ let BIGNUM_DEAMONT_P521_CORRECT = time prove
   COND_CASES_TAC THEN ASM_REWRITE_TAC[BITVAL_CLAUSES] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC);;
 
+let BIGNUM_DEAMONT_P521_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!z x a pc stackpointer returnaddress.
+        nonoverlapping (z,8 * 9) (word_sub stackpointer (word 32),40) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 32),32))
+            [(word pc,LENGTH bignum_deamont_p521_tmc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_p521_tmc) (z,8 * 9)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_deamont_p521_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = a)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,9) s =
+                  (inverse_mod p_521 (2 EXP 576) * a) MOD p_521)
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                     memory :> bytes(word_sub stackpointer (word 32),32)])`,
+  X86_PROMOTE_RETURN_STACK_TAC
+   bignum_deamont_p521_tmc BIGNUM_DEAMONT_P521_CORRECT
+   `[RBX; R12; R13; RBP]` 32);;
+
 let BIGNUM_DEAMONT_P521_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 9) (word_sub stackpointer (word 32),40) /\
         ALL (nonoverlapping (word_sub stackpointer (word 32),32))
-            [(word pc,0xe6); (x,8 * 9)] /\
-        nonoverlapping (word pc,0xe6) (z,8 * 9)
+            [(word pc,LENGTH bignum_deamont_p521_mc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_p521_mc) (z,8 * 9)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_deamont_p521_mc /\
                   read RIP s = word pc /\
@@ -309,25 +336,25 @@ let BIGNUM_DEAMONT_P521_SUBROUTINE_CORRECT = time prove
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                      memory :> bytes(word_sub stackpointer (word 32),32)])`,
-  X86_PROMOTE_RETURN_STACK_TAC
-   bignum_deamont_p521_mc BIGNUM_DEAMONT_P521_CORRECT
-   `[RBX; R12; R13; RBP]` 32);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DEAMONT_P521_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_deamont_p521_mc = define_from_elf
-   "windows_bignum_deamont_p521_mc" "x86/p521/bignum_deamont_p521.obj";;
+let bignum_deamont_p521_windows_mc = define_from_elf
+   "bignum_deamont_p521_windows_mc" "x86/p521/bignum_deamont_p521.obj";;
 
-let WINDOWS_BIGNUM_DEAMONT_P521_SUBROUTINE_CORRECT = time prove
+let bignum_deamont_p521_windows_tmc = define_trimmed "bignum_deamont_p521_windows_tmc" bignum_deamont_p521_windows_mc;;
+
+let BIGNUM_DEAMONT_P521_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!z x a pc stackpointer returnaddress.
         nonoverlapping (z,8 * 9) (word_sub stackpointer (word 48),56) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,0xf0); (x,8 * 9)] /\
-        nonoverlapping (word pc,0xf0) (z,8 * 9)
+            [(word pc,LENGTH bignum_deamont_p521_windows_tmc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_p521_windows_tmc) (z,8 * 9)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_deamont_p521_mc /\
+             (\s. bytes_loaded s (word pc) bignum_deamont_p521_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -341,5 +368,28 @@ let WINDOWS_BIGNUM_DEAMONT_P521_SUBROUTINE_CORRECT = time prove
               MAYCHANGE [memory :> bytes(z,8 * 9);
                      memory :> bytes(word_sub stackpointer (word 48),48)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-   windows_bignum_deamont_p521_mc bignum_deamont_p521_mc
+   bignum_deamont_p521_windows_tmc bignum_deamont_p521_tmc
    BIGNUM_DEAMONT_P521_CORRECT `[RBX; R12; R13; RBP]` 32);;
+
+let BIGNUM_DEAMONT_P521_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!z x a pc stackpointer returnaddress.
+        nonoverlapping (z,8 * 9) (word_sub stackpointer (word 48),56) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 48),48))
+            [(word pc,LENGTH bignum_deamont_p521_windows_mc); (x,8 * 9)] /\
+        nonoverlapping (word pc,LENGTH bignum_deamont_p521_windows_mc) (z,8 * 9)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_deamont_p521_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [z; x] s /\
+                  bignum_from_memory (x,9) s = a)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  bignum_from_memory (z,9) s =
+                  (inverse_mod p_521 (2 EXP 576) * a) MOD p_521)
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * 9);
+                     memory :> bytes(word_sub stackpointer (word 48),48)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DEAMONT_P521_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

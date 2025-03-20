@@ -356,6 +356,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       read_ModRM rex l >>= \((reg,rm),l).
       let op = if s then MOVSX else MOVZX in
       SOME (op (%(gpr_adjust reg sz2)) (operand_of_RM sz rm),l)
+    | [0x1e:8] ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+         | [0xfa:8] ->
+           (match pfxs with
+            | (F, RepZ) -> SOME (ENDBR64,l)
+            | _ -> NONE)
+         | _ -> NONE)
     | _ -> NONE)
   | [0b01010:5; r:3] -> if has_pfxs pfxs then NONE else
     SOME (PUSH (%(Gpr (rex_reg (rex_B rex) r) Full_64)),l)
@@ -2220,6 +2228,18 @@ let save_literal_from_elf deffile objfile =
   let bs = array_of_bytes (load_elf_contents_x86 objfile) in
   let ls = make_fn_word_list bs (decode_all (term_of_array bs)) in
   file_of_string deffile ls;;
+
+(*** Define a variant with initial ENDBR64 trimmed away ***)
+
+let define_trimmed =
+  let trim_tm = `TRIM_LIST(4,0):byte list->byte list`
+  and bl_ty = `:byte list` in
+  fun name th ->
+    let eth = CONV_RULE(RAND_CONV TRIM_LIST_CONV) (AP_TERM trim_tm th) in
+    let ldef =
+      try mk_mconst(name,bl_ty) with Failure _ -> mk_var(name,bl_ty) in
+    let def' = mk_eq(ldef,lhand(concl eth)) in
+    TRANS (new_definition def') eth;;
 
 let mk_bytelist = C (curry mk_list) `:byte`;;
 
