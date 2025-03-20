@@ -13,20 +13,32 @@ needs "arm/proofs/base.ml";;
    "arm/tutorial/symtab_rodata.o":
 
    print_literal_relocs_from_elf "arm/tutorial/symtab_rodata.o";;
+
+   Or, you can also use
+
+   save_literal_relocs_from_elf "out.txt" "arm/tutorial/symtab_rodata.o";;
 *)
 
 let a_mc,a_constants_data = define_assert_relocs_from_elf "a_mc"
     "arm/tutorial/symtab_rodata.o"
 (fun w BL ADR ADRP ADD_rri64 -> [
   w 0xaa0003e3;         (* arm_MOV X3 X0 *)
-  ADRP (mk_var("x",`:num`),0,4,0);
-  ADD_rri64 (mk_var("x",`:num`),0,0,0);
+
+  (* NOTE: The two entries below have the names of symbols. If they appear as
+     an empty string on your custom object file, please check whether the
+     symbols are defined as global in assembly. Local symbols will not have
+     their names recorded in string table. *)
+  ADRP (mk_var("x",`:num`),0,4,10);
+  ADD_rri64 (mk_var("x",`:num`),0,10,10);
+
   w 0xaa0303e1;         (* arm_MOV X1 X3 *)
-  w 0xb8617801;         (* arm_LDR W1 X0 (Shiftreg_Offset X1 2) *)
-  ADRP (mk_var("y",`:num`),0,20,0);
-  ADD_rri64 (mk_var("y",`:num`),0,0,0);
+  w 0xb8617941;         (* arm_LDR W1 X10 (Shiftreg_Offset X1 2) *)
+
+  ADRP (mk_var("y",`:num`),0,20,11);
+  ADD_rri64 (mk_var("y",`:num`),0,11,11);
+
   w 0xaa0303e2;         (* arm_MOV X2 X3 *)
-  w 0xb8627800;         (* arm_LDR W0 X0 (Shiftreg_Offset X2 2) *)
+  w 0xb8627960;         (* arm_LDR W0 X11 (Shiftreg_Offset X2 2) *)
   w 0x0b000020;         (* arm_ADD W0 W1 W0 *)
   w 0xd65f03c0          (* arm_RET X30 *)
 ]);;
@@ -72,7 +84,7 @@ let A_SPEC = prove(`forall pc retpc x y i.
          read X30 s = word retpc)
     (\s. read W0 s = word (3 * (1 + i)) /\
          read PC s = word retpc)
-    (MAYCHANGE [X0; X1; X2; X3; PC] ,, MAYCHANGE [events])`,
+    (MAYCHANGE [X0; X1; X2; X3; X10; X11; PC] ,, MAYCHANGE [events])`,
 
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN

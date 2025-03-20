@@ -50,13 +50,13 @@ y:
   .type  f, %function
 f:
   mov x3, x0
-  adrp  x0, x
-  add  x0, x0, :lo12:x
+  adrp  x10, x
+  add  x10, x10, :lo12:x
   mov x1, x3
-  ldr  w1, [x0, x1, lsl 2]
-  adrp  x0, y
-  add  x0, x0, :lo12:y
+  ldr  w1, [x10, x1, lsl 2]
+  adrp  x11, y
+  add  x11, x11, :lo12:y
   mov x2, x3
-  ldr  w0, [x0, x2, lsl 2]
+  ldr  w0, [x11, x2, lsl 2]
   add  w0, w1, w0
   ret
