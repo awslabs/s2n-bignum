@@ -284,6 +284,10 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
   | [0b001110010:9; ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Immediate_Offset (word_zx imm12)))
+    // LDRB/STRB shifted register, no shift: option:011 S:0
+  | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011010:6; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+
   | [x; 0b010100:6; pre; 0b1:1; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)
       ((if pre then Preimmediate_Offset else Postimmediate_Offset)
@@ -323,8 +327,8 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
-  // LD1/ST1 (multiple structures), 1 register, immediate offset,
-  //   Post-immediate offset, datasize = 64
+  // LD1/ST1 (multiple structures), 1 register,
+  //   Post-immediate offset and post-register offset, and no offset.
   //
   // NOTE: On little-endian machines, LD1/ST1 with 1 register is equivalent to
   // simply loading/storing the whole word.
@@ -336,17 +340,22 @@ let decode = new_definition `!w:int32. decode w =
   //
   // Since instructions are modeled only for little-endian, the optimization
   // that reuses functions of LDR/STR for LD1/ST1 is okay.
-  | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
-    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 8)))
-  // datasize = 128
 
-  // LD1/ST1 (multiple structures), 1 register,
-  //   Post-index with register offset, datasize = 128
+  // datasize = 64
+  | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn)
+    (if val Rm = 31 then (Postimmediate_Offset (word 8))
+                    else Register_Offset (XREG' Rm)))
+  // no Postimmediate_Offset
+  | [0:1; 0:1; 0b0011000:7; is_ld; 0b000000:6; 0b0111:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) No_Offset)
+
+  // datasize = 128
   | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn)
       (if val Rm = 31 then (Postimmediate_Offset (word 16))
                       else Register_Offset (XREG' Rm)))
-  //   no Postimmediate_Offset, datasize = 128
+  // no Postimmediate_Offset
   | [0:1; 1:1; 0b0011000:7; is_ld; 0b000000:6; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) No_Offset)
 
