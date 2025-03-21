@@ -34,6 +34,7 @@
 #define n1short r10d
 
 S2N_BN_SYMBOL(bignum_double_sm2):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

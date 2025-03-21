@@ -25,9 +25,9 @@
 //
 // The output program of step 1. is as follows:
 //
-//        stp	x19, x20, [sp, #-16]!
-//        stp	x21, x22, [sp, #-16]!
-//        stp	x23, x24, [sp, #-16]!
+//        stp   x19, x20, [sp, #-16]!
+//        stp   x21, x22, [sp, #-16]!
+//        stp   x23, x24, [sp, #-16]!
 //        ldp x3, x21, [x1]
 //        ldr q30, [x1]
 //        ldp x8, x24, [x1, #16]
@@ -434,9 +434,9 @@
 //        stp x10, x5, [x0]                       // @slothy:writes=buffer0
 //        stp x24, x8, [x0, #16]                  // @slothy:writes=buffer16
 //        stp x21, x2, [x0, #32]                  // @slothy:writes=buffer32
-//        ldp	x23, x24, [sp], #16
-//        ldp	x21, x22, [sp], #16
-//        ldp	x19, x20, [sp], #16
+//        ldp   x23, x24, [sp], #16
+//        ldp   x21, x22, [sp], #16
+//        ldp   x19, x20, [sp], #16
 //        ret
 //
 // The bash script used for step 2 is as follows:

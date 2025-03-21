@@ -139,7 +139,7 @@ let BIGNUM_AMONTMUL_CORRECT = time prove
                       inverse_mod n (2 EXP (64 * val k)) * a * b) (mod n)))
            (MAYCHANGE [PC; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14] ,,
             MAYCHANGE [memory :> bytes(z,8 * val k)] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`] THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `b:num`; `n:num`; `pc:num`] THEN

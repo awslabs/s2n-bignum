@@ -36,6 +36,7 @@
 #define wshort %r10d
 
 S2N_BN_SYMBOL(bignum_divmod10):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

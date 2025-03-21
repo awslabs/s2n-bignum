@@ -126,7 +126,7 @@ let template =
                    Q20; Q21; Q22; Q23; Q24; Q25; Q26; Q27; Q28; Q29;
                    Q30; Q31] ,,
         MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
-        MAYCHANGE SOME_FLAGS)`;;
+        MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`;;
 
 let num_two_to_64 = Num.num_of_string "18446744073709551616";;
 
@@ -175,7 +175,7 @@ let tac_before memop =
   ENSURES_INIT_TAC "s0" THEN
   (if memop then
     MAP_EVERY MEMORY_SPLIT_TAC (1--4) THEN
-	  (* Remove non-"memory :> bytes8" reads because they are not necessary :) *)
+          (* Remove non-"memory :> bytes8" reads because they are not necessary :) *)
     let non_byte_read_list = [
       `read (memory :> bytes16 x) s = y`;
       `read (memory :> bytes32 x) s = y`;

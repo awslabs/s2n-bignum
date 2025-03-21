@@ -818,6 +818,7 @@
         cmovnbe r5, [P2+40]
 
 S2N_BN_SYMBOL(p384_montjadd_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

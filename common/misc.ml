@@ -15,17 +15,6 @@ needs "Library/rstc.ml";;
 needs "Library/words.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* A function that checks no axiom was introduced from s2n-bignum            *)
-(* ------------------------------------------------------------------------- *)
-
-let check_axioms () =
-  let basic_axioms = [INFINITY_AX; SELECT_AX; ETA_AX] in
-  let l = filter (fun th -> not (mem th basic_axioms)) (axioms()) in
-  if l <> [] then
-    let msg = "[" ^ (String.concat ", " (map string_of_thm l)) ^ "]" in
-    failwith ("Unknown axiom exists: " ^ msg);;
-
-(* ------------------------------------------------------------------------- *)
 (* Additional list operations and conversions on them.                       *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1635,6 +1624,15 @@ let MULT_ADD_DIV_LT = prove(
 
   IMP_REWRITE_TAC[RDIV_LT_EQ] THEN
   ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Given a theorem |- l = [x1;...xn], returns |- LENGTH l = n                *)
+(* ------------------------------------------------------------------------- *)
+
+let COMPUTE_LENGTH_RULE th =
+  let ltm = mk_const("LENGTH",
+    [hd(snd(dest_type(type_of(lhand(concl th))))),aty]) in
+  CONV_RULE(RAND_CONV LENGTH_CONV) (AP_TERM ltm th);;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics for using labeled assumtions                                      *)

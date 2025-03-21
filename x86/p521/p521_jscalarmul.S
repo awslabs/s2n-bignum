@@ -73,6 +73,7 @@
         cmovz   r12, [rsp+TAB+JACSIZE*(I-1)+64+C*NUMSIZE]
 
 S2N_BN_SYMBOL(p521_jscalarmul):
+        _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.

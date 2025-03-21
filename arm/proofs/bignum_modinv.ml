@@ -398,7 +398,7 @@ let CORE_MODINV_CORRECT = prove
                        (a * bignum_from_memory(z,val k) s == 1) (mod b)))
              (MAYCHANGE [PC; X2; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14;
                          X15; X16; X17; X19; X20; X21; X22] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k);
                          memory :> bignum(w,3 * val k)])`,
   let CORE_MODINV_EXEC =
@@ -433,7 +433,7 @@ let CORE_MODINV_CORRECT = prove
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC
    `MAYCHANGE [PC; X2; X5; X6; X7; X8; X9; X10; X11; X12; X13;
                X14; X15; X16; X17; X19; X20; X21; X22] ,,
-    MAYCHANGE [NF; ZF; CF; VF] ,,
+    MAYCHANGE [NF; ZF; CF; VF] ,, MAYCHANGE [events] ,,
     MAYCHANGE [memory :> bignum(mm,k); memory :> bignum(nn,k);
                memory :> bignum(ww,k); memory :> bignum(zz,k)]` THEN
   CONJ_TAC THENL
@@ -4850,7 +4850,7 @@ let BIGNUM_MODINV_CORRECT = prove
                        (a * bignum_from_memory(z,val k) s == 1) (mod b)))
              (MAYCHANGE [PC; X2; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14;
                          X15; X16; X17; X19; X20; X21; X22] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k);
                          memory :> bignum(w,3 * val k)])`,
   let CORE_MODINV_TAC =

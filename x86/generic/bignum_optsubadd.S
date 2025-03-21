@@ -43,6 +43,7 @@
 
 
 S2N_BN_SYMBOL(bignum_optsubadd):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

@@ -41,7 +41,7 @@ let WORD_POPCOUNT_CORRECT = prove
                C_ARGUMENTS [a] s)
           (\s. read PC s = word(pc + 0x28) /\
                C_RETURN s = word(word_popcount a))
-          (MAYCHANGE [PC; X0; X1])`,
+          (MAYCHANGE [PC; X0; X1] ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`a:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   ARM_SIM_TAC WORD_POPCOUNT_EXEC (1--10) THEN

@@ -22,6 +22,7 @@ prioritize_num();;
 let p384_montjmixadd_mc = define_assert_from_elf
   "p384_montjmixadd_mc" "x86/p384/p384_montjmixadd.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -4654,7 +4655,9 @@ let p384_montjmixadd_mc = define_assert_from_elf
   0xc3                     (* RET *)
 ];;
 
-let P384_MONTJMIXADD_EXEC = X86_MK_CORE_EXEC_RULE p384_montjmixadd_mc;;
+let p384_montjmixadd_tmc = define_trimmed "p384_montjmixadd_tmc" p384_montjmixadd_mc;;
+
+let P384_MONTJMIXADD_EXEC = X86_MK_CORE_EXEC_RULE p384_montjmixadd_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Common supporting definitions and lemmas for component proofs.            *)
@@ -4711,13 +4714,13 @@ let mmlemma = prove
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTSQR_P384_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_mc) 230 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_tmc) 230 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = a
     ==>
     nonoverlapping (word pc,0x3bcd) (word_add (read p3 t) (word n3),48)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -4848,7 +4851,7 @@ let LOCAL_MONTSQR_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MONTMUL_P384_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_mc) 263 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_tmc) 263 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = a
     ==>
@@ -4856,7 +4859,7 @@ let LOCAL_MONTMUL_P384_TAC =
     ==>
     nonoverlapping (word pc,0x3bcd) (word_add (read p3 t) (word n3),48)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -5000,7 +5003,7 @@ let LOCAL_MONTMUL_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_P384_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_mc) 32 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_tmc) 32 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
@@ -5008,7 +5011,7 @@ let LOCAL_SUB_P384_TAC =
     ==>
     nonoverlapping (word pc,0x3bcd) (word_add (read p3 t) (word n3),48)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -5092,13 +5095,13 @@ let LOCAL_SUB_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_AMONTSQR_P384_TAC =
-  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_mc) 222 lvs
+  X86_MACRO_SIM_ABBREV_TAC (X86_TRIM_EXEC_RULE p384_montjmixadd_tmc) 222 lvs
   `!(t:x86state) pcin pcout p3 n3 p1 n1.
     !a. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = a
     ==>
     nonoverlapping (word pc,0x3bcd) (word_add (read p3 t) (word n3),48)
     ==> ensures x86
-         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_mc) /\
+         (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_tmc) /\
               read RIP s = pcin /\
               read RSP s = read RSP t /\
               read RDI s = read RDI t /\
@@ -5325,7 +5328,7 @@ let P384_MONTJMIXADD_CORRECT = time prove
             [(word pc,0x3bcd); (p1,144); (p2,96); (p3,144)] /\
         nonoverlapping (p3,144) (word pc,0x3bcd)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST p384_montjmixadd_tmc) /\
                   read RIP s = word(pc + 0x11) /\
                   read RSP s = stackpointer /\
                   C_ARGUMENTS [p3; p1; p2] s /\
@@ -5472,12 +5475,39 @@ let P384_MONTJMIXADD_CORRECT = time prove
   CONV_TAC INT_REM_DOWN_CONV THEN
   REPEAT CONJ_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN INT_ARITH_TAC);;
 
+let P384_MONTJMIXADD_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 352),352))
+            [(word pc,LENGTH p384_montjmixadd_tmc); (p1,144); (p2,96)] /\
+        ALL (nonoverlapping (p3,144))
+            [(word pc,LENGTH p384_montjmixadd_tmc); (word_sub stackpointer (word 352),360)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p384_montjmixadd_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,6) s = t1 /\
+                  bignum_pair_from_memory (p2,6) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p384 P1 t1 /\
+                          represents2_p384 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_p384 (group_mul p384_group P1 P2)
+                               (bignum_triple_from_memory(p3,6) s))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,144);
+                      memory :> bytes(word_sub stackpointer (word 352),352)])`,
+  X86_PROMOTE_RETURN_STACK_TAC p384_montjmixadd_tmc P384_MONTJMIXADD_CORRECT
+    `[RBX; RBP; R12; R13; R14; R15]` 352);;
+
 let P384_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 352),352))
-            [(word pc,0x3bcd); (p1,144); (p2,96)] /\
+            [(word pc,LENGTH p384_montjmixadd_mc); (p1,144); (p2,96)] /\
         ALL (nonoverlapping (p3,144))
-            [(word pc,0x3bcd); (word_sub stackpointer (word 352),360)]
+            [(word pc,LENGTH p384_montjmixadd_mc); (word_sub stackpointer (word 352),360)]
         ==> ensures x86
              (\s. bytes_loaded s (word pc) p384_montjmixadd_mc /\
                   read RIP s = word pc /\
@@ -5496,24 +5526,25 @@ let P384_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,144);
                       memory :> bytes(word_sub stackpointer (word 352),352)])`,
-  X86_PROMOTE_RETURN_STACK_TAC p384_montjmixadd_mc P384_MONTJMIXADD_CORRECT
-    `[RBX; RBP; R12; R13; R14; R15]` 352);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJMIXADD_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_p384_montjmixadd_mc = define_from_elf "windows_p384_montjmixadd_mc"
+let p384_montjmixadd_windows_mc = define_from_elf "p384_montjmixadd_windows_mc"
       "x86/p384/p384_montjmixadd.obj";;
 
-let WINDOWS_P384_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
+let p384_montjmixadd_windows_tmc = define_trimmed "p384_montjmixadd_windows_tmc" p384_montjmixadd_windows_mc;;
+
+let P384_MONTJMIXADD_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
         ALL (nonoverlapping (word_sub stackpointer (word 368),368))
-            [(word pc,0x3bda); (p1,144); (p2,96)] /\
+            [(word pc,LENGTH p384_montjmixadd_windows_tmc); (p1,144); (p2,96)] /\
         ALL (nonoverlapping (p3,144))
-            [(word pc,0x3bda); (word_sub stackpointer (word 368),376)]
+            [(word pc,LENGTH p384_montjmixadd_windows_tmc); (word_sub stackpointer (word 368),376)]
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_p384_montjmixadd_mc /\
+             (\s. bytes_loaded s (word pc) p384_montjmixadd_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -5531,6 +5562,33 @@ let WINDOWS_P384_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bytes(p3,144);
                       memory :> bytes(word_sub stackpointer (word 368),368)])`,
   WINDOWS_X86_WRAP_STACK_TAC
-   windows_p384_montjmixadd_mc p384_montjmixadd_mc
+   p384_montjmixadd_windows_tmc p384_montjmixadd_tmc
    P384_MONTJMIXADD_CORRECT
     `[RBX; RBP; R12; R13; R14; R15]` 352);;
+
+let P384_MONTJMIXADD_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!p3 p1 t1 p2 t2 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 368),368))
+            [(word pc,LENGTH p384_montjmixadd_windows_mc); (p1,144); (p2,96)] /\
+        ALL (nonoverlapping (p3,144))
+            [(word pc,LENGTH p384_montjmixadd_windows_mc); (word_sub stackpointer (word 368),376)]
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) p384_montjmixadd_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [p3; p1; p2] s /\
+                  bignum_triple_from_memory (p1,6) s = t1 /\
+                  bignum_pair_from_memory (p2,6) s = t2)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  !P1 P2. represents_p384 P1 t1 /\
+                          represents2_p384 P2 t2 /\
+                          ~(P1 = P2)
+                          ==> represents_p384 (group_mul p384_group P1 P2)
+                               (bignum_triple_from_memory(p3,6) s))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,144);
+                      memory :> bytes(word_sub stackpointer (word 368),368)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJMIXADD_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

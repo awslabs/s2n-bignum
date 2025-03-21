@@ -31,6 +31,7 @@
 #define a %r8
 
 S2N_BN_SYMBOL(bignum_digit):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

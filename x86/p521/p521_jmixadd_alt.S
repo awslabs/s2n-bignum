@@ -1052,6 +1052,7 @@
         mov     [P0+64],rax
 
 S2N_BN_SYMBOL(p521_jmixadd_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

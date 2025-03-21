@@ -61,6 +61,7 @@
         adc     h, rdx
 
 S2N_BN_SYMBOL(bignum_mul_6_12_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

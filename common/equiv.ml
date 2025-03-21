@@ -653,7 +653,7 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
       (* If lhs is PC update, don't abbrevate it. Or, if rhs is already a
         variable, don't abbreviate it again. Don't try to prove the rhs of
         eq2. *)
-      if is_read_pc lhs || is_var rhs
+      if is_read_pc lhs || is_read_events lhs || is_var rhs
       then MAP_EVERY STRIP_ASSUME_TAC [readth;readth2]
       else
         let vname = mk_fresh_temp_name() in
@@ -706,7 +706,7 @@ let ABBREV_READ_TAC (eqth:thm) (append_to:thm list ref):tactic =
     (* eq is: `read elem s = e` *)
     let lhs,rhs = dest_eq eq in
     (* If lhs is PC update, don't abbrevate it *)
-    if is_read_pc lhs then ASSUME_TAC eqth
+    if is_read_pc lhs || is_read_events lhs then ASSUME_TAC eqth
     else
       if get_read_component lhs = None then failwith "LHS is not read ..?" else
       let vname = mk_fresh_temp_name() in

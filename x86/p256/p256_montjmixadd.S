@@ -457,6 +457,7 @@
         mov     [P+24], r3
 
 S2N_BN_SYMBOL(p256_montjmixadd):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

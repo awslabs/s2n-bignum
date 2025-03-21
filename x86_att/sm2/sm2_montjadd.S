@@ -491,6 +491,7 @@
         cmovnbe 24+P2, r3
 
 S2N_BN_SYMBOL(sm2_montjadd):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

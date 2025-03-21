@@ -22,6 +22,7 @@
         .text
 
 S2N_BN_SYMBOL(bignum_of_word):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

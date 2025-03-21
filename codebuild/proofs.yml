@@ -3,7 +3,7 @@ phases:
   install:
     commands:
       - apt-get --allow-insecure-repositories update
-      - apt-get -y install ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+      - apt-get -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
       # Install OPAM
       - wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
       - chmod +x install.sh
@@ -11,7 +11,7 @@ phases:
       - opam init --disable-sandboxing
       # Build HOL Light
       - cd ${CODEBUILD_SRC_DIR_hol_light}
-      - git checkout 4eef6f604636cea7e0a22d287cc015d8fd116b5f
+      - git checkout c5e165f85dfb340a786dabd1073a24aa421dd61b
       - make switch-5
       - eval $(opam env)
       - echo $(ocamlc -version)

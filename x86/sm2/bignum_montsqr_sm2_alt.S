@@ -77,6 +77,7 @@
         sbb     d0, rbx
 
 S2N_BN_SYMBOL(bignum_montsqr_sm2_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

@@ -32,6 +32,7 @@
 #define n1short ecx
 
 S2N_BN_SYMBOL(bignum_optneg_p256):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

@@ -15,6 +15,7 @@ needs "x86/proofs/base.ml";;
 let bignum_demont_mc =
   define_assert_from_elf "bignum_demont_mc" "x86/generic/bignum_demont.o"
 [
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -111,7 +112,9 @@ let bignum_demont_mc =
   0xc3                     (* RET *)
 ];;
 
-let BIGNUM_DEMONT_EXEC = X86_MK_CORE_EXEC_RULE bignum_demont_mc;;
+let bignum_demont_tmc = define_trimmed "bignum_demont_tmc" bignum_demont_mc;;
+
+let BIGNUM_DEMONT_EXEC = X86_MK_CORE_EXEC_RULE bignum_demont_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Proof.                                                                    *)
@@ -146,7 +149,7 @@ let BIGNUM_DEMONT_CORRECT = time prove
         nonoverlapping (m,8 * val k) (z,8 * val k) /\
         (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST bignum_demont_mc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST bignum_demont_tmc) /\
                   read RIP s = word (pc + 0x4) /\
                   C_ARGUMENTS [k; z; x; m] s /\
                   bignum_from_memory (x,val k) s = a /\
@@ -728,13 +731,41 @@ let BIGNUM_DEMONT_CORRECT = time prove
      `(n * w + 1 == 0) (mod e) ==> (z + (w * z) * n == 0) (mod e)`) THEN
     ASM_REWRITE_TAC[]]);;
 
+let BIGNUM_DEMONT_NOIBT_SUBROUTINE_CORRECT = time prove
+ (`!k z x m a n pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 24),32)
+                       (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
+            [(word pc,LENGTH bignum_demont_tmc); (m,8 * val k); (x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_demont_tmc) (z,8 * val k) /\
+        nonoverlapping (m,8 * val k) (z,8 * val k) /\
+        (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_demont_tmc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  C_ARGUMENTS [k; z; x; m] s /\
+                  bignum_from_memory (x,val k) s = a /\
+                  bignum_from_memory (m,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (ODD n
+                   ==> bignum_from_memory (z,val k) s =
+                       (inverse_mod n (2 EXP (64 * val k)) * a) MOD n))
+             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                       memory :> bytes(word_sub stackpointer (word 24),24)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_demont_tmc BIGNUM_DEMONT_CORRECT
+   `[RBX; RBP; R12]` 24);;
+
 let BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
  (`!k z x m a n pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 24),32)
                        (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 24),24))
-            [(word pc,0x116); (m,8 * val k); (x,8 * val k)] /\
-        nonoverlapping (word pc,0x116) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_demont_mc); (m,8 * val k); (x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_demont_mc) (z,8 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * val k) /\
         (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
         ==> ensures x86
@@ -753,27 +784,28 @@ let BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * val k);
                        memory :> bytes(word_sub stackpointer (word 24),24)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_demont_mc BIGNUM_DEMONT_CORRECT
-   `[RBX; RBP; R12]` 24);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DEMONT_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let windows_bignum_demont_mc = define_from_elf
-   "windows_bignum_demont_mc" "x86/generic/bignum_demont.obj";;
+let bignum_demont_windows_mc = define_from_elf
+   "bignum_demont_windows_mc" "x86/generic/bignum_demont.obj";;
 
-let WINDOWS_BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
+let bignum_demont_windows_tmc = define_trimmed "bignum_demont_windows_tmc" bignum_demont_windows_mc;;
+
+let BIGNUM_DEMONT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!k z x m a n pc stackpointer returnaddress.
         nonoverlapping (word_sub stackpointer (word 40),48)
                        (z,8 * val k) /\
         ALL (nonoverlapping (word_sub stackpointer (word 40),40))
-            [(word pc,0x126); (m,8 * val k); (x,8 * val k)] /\
-        nonoverlapping (word pc,0x126) (z,8 * val k) /\
+            [(word pc,LENGTH bignum_demont_windows_tmc); (m,8 * val k); (x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_demont_windows_tmc) (z,8 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * val k) /\
         (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) windows_bignum_demont_mc /\
+             (\s. bytes_loaded s (word pc) bignum_demont_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -788,5 +820,33 @@ let WINDOWS_BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
              (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(z,8 * val k);
                        memory :> bytes(word_sub stackpointer (word 40),40)])`,
-  WINDOWS_X86_WRAP_STACK_TAC windows_bignum_demont_mc bignum_demont_mc
+  WINDOWS_X86_WRAP_STACK_TAC bignum_demont_windows_tmc bignum_demont_tmc
     BIGNUM_DEMONT_CORRECT `[RBX; RBP; R12]` 24);;
+
+let BIGNUM_DEMONT_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!k z x m a n pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 40),48)
+                       (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 40),40))
+            [(word pc,LENGTH bignum_demont_windows_mc); (m,8 * val k); (x,8 * val k)] /\
+        nonoverlapping (word pc,LENGTH bignum_demont_windows_mc) (z,8 * val k) /\
+        nonoverlapping (m,8 * val k) (z,8 * val k) /\
+        (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) bignum_demont_windows_mc /\
+                  read RIP s = word pc /\
+                  read RSP s = stackpointer /\
+                  read (memory :> bytes64 stackpointer) s = returnaddress /\
+                  WINDOWS_C_ARGUMENTS [k; z; x; m] s /\
+                  bignum_from_memory (x,val k) s = a /\
+                  bignum_from_memory (m,val k) s = n)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  (ODD n
+                   ==> bignum_from_memory (z,val k) s =
+                       (inverse_mod n (2 EXP (64 * val k)) * a) MOD n))
+             (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes(z,8 * val k);
+                       memory :> bytes(word_sub stackpointer (word 40),40)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DEMONT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+

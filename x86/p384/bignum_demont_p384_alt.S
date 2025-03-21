@@ -63,6 +63,7 @@
         sbb     d6, 0
 
 S2N_BN_SYMBOL(bignum_demont_p384_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

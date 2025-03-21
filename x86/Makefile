@@ -506,6 +506,9 @@ tutorial/rel_simp.native: tutorial/rel_simp2.o
 
 
 build_proofs: $(PROOF_BINS);
+# Conservatively check that there is no redefinition of "check_axioms"
+# '-I' excludes binary files (*.native).
+	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
 build_tutorial: $(TUTORIAL_OBJ) $(TUTORIAL_PROOF_BINS);
 run_proofs: build_proofs $(PROOF_LOGS);
 

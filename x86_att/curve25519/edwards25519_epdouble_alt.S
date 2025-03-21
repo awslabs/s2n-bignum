@@ -397,6 +397,7 @@
         movq    %r11, 0x18+P0
 
 S2N_BN_SYMBOL(edwards25519_epdouble_alt):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         pushq   %rdi

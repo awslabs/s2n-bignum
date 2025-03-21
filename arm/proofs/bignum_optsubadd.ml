@@ -60,7 +60,7 @@ let BIGNUM_OPTSUBADD_CORRECT = prove
                   iword(int_sgn(ival p) *
                         (&a + int_sgn(ival p) * &b) div &2 pow (64 * val k)))
              (MAYCHANGE [PC; X0; X3; X5; X6; X7; X8] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC

@@ -33,6 +33,7 @@
 #define j   r10
 
 S2N_BN_SYMBOL(bignum_copy_row_from_table):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi
@@ -80,7 +81,7 @@ bignum_copy_row_from_table_innerloop_done:
         add     rax, j
         inc     i
         cmp     i, height
-				jne			bignum_copy_row_from_table_outerloop
+                                jne                     bignum_copy_row_from_table_outerloop
 
 bignum_copy_row_from_table_end:
 #if WINDOWS_ABI

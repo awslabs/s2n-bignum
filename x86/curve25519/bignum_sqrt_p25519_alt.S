@@ -59,6 +59,7 @@
 #define U8 (17*N)
 
 S2N_BN_SYMBOL(bignum_sqrt_p25519_alt):
+        _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from subroutine offsets

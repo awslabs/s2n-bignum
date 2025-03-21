@@ -71,6 +71,7 @@
         sbb     d6, 0
 
 S2N_BN_SYMBOL(bignum_deamont_p384):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

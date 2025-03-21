@@ -53,7 +53,7 @@ let BIGNUM_OPTNEG_CORRECT = prove
                  (if p = word 0 \/ a = 0 then a else 2 EXP (64 * val k) - a) /\
                  C_RETURN s = word(bitval(~(p = word 0) /\ ~(a = 0))))
             (MAYCHANGE [PC; X0; X2; X4; X5] ,,
-             MAYCHANGE SOME_FLAGS ,,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
              MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC

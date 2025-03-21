@@ -4425,7 +4425,7 @@ let LOCAL_MONTSQR_P384_TAC =
                        X11; X12; X13; X14; X15; X16; X17] ,,
               MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 6)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -4698,7 +4698,7 @@ let LOCAL_MONTMUL_P384_TAC =
                          X20; X21; X22; X23] ,,
               MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 6)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5208,7 +5208,7 @@ let LOCAL_SUB_P384_TAC =
             (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 6)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5411,7 +5411,7 @@ let P384_MONTJMIXADD_CORRECT = time prove
           (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                       X11; X12; X13; X14; X15; X16; X17; X19; X20;
                       X21; X22; X23; X24; X25; X26] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,144);
                       memory :> bytes(stackpointer,288)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN

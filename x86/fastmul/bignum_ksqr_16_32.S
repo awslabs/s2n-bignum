@@ -456,6 +456,7 @@
 
 
 S2N_BN_SYMBOL(bignum_ksqr_16_32):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

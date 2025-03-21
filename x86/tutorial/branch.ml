@@ -83,7 +83,7 @@ let branch_SPEC = prove(
     (* Let's name the hypothesis first. *)
     POP_ASSUM (LABEL_TAC "Hcond") THEN
     DISCH_TAC THEN
-    
+
     (* Do symbolic execution on the remaining two insts. *)
     X86_STEPS_TAC EXEC (3--4) THEN
     ENSURES_FINAL_STATE_TAC THEN

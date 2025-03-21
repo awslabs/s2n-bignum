@@ -30,6 +30,7 @@
 #define c rax
 
 S2N_BN_SYMBOL(bignum_half_p256k1):
+        _CET_ENDBR
 
 #if WINDOWS_ABI
         push    rdi

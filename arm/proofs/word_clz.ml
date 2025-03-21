@@ -33,7 +33,7 @@ let WORD_CLZ_CORRECT = prove
           (\s. read PC s = word(pc + 0x4) /\
                C_RETURN s = word(word_clz a))
           (MAYCHANGE [PC; X0] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`a:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   ARM_SIM_TAC WORD_CLZ_EXEC [1]);;
