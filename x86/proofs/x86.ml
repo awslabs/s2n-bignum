@@ -245,9 +245,10 @@ add_component_alias_thms
 (* Note that the treatment of XMMs within YMMs within ZMMs zero-extends      *)
 (* all writes, e.g. a 128-bit XMM operation will set the top 384 bits        *)
 (* of the ZMM register to zero. This is the specified behavior               *)
-(* *WHEN THE XMM OPERATION IS VEX-ENCODED*, which is the only                *)
-(* form of XMM operation we accept in the decoder. See section 15.5 of       *)
-(* Intel's ISA Combined Manual, "Accessing XMM, YMM and ZMM Registers"       *)
+(* *WHEN THE XMM OPERATION IS VEX-ENCODED*, which is the default form of     *)
+(* XMM operation in the decoder. See the next section for an alternative     *)
+(* behaviour for SSE and AESNI instructions. See section 15.5 of Intel's     *)
+(* ISA Combined Manual, "Accessing XMM, YMM and ZMM Registers"               *)
 (* ------------------------------------------------------------------------- *)
 
 let ZMM0  = define `ZMM0  = simdregisters :> element(word 0)`
@@ -310,6 +311,51 @@ add_component_alias_thms
  [YMM0; YMM1; YMM2; YMM3; YMM4; YMM5; YMM6; YMM7;
   YMM8; YMM9; YMM10; YMM11; YMM12; YMM13; YMM14; YMM15];;
 
+let XMM0  = define `XMM0  = YMM0  :> zerotop_128`
+and XMM1  = define `XMM1  = YMM1  :> zerotop_128`
+and XMM2  = define `XMM2  = YMM2  :> zerotop_128`
+and XMM3  = define `XMM3  = YMM3  :> zerotop_128`
+and XMM4  = define `XMM4  = YMM4  :> zerotop_128`
+and XMM5  = define `XMM5  = YMM5  :> zerotop_128`
+and XMM6  = define `XMM6  = YMM6  :> zerotop_128`
+and XMM7  = define `XMM7  = YMM7  :> zerotop_128`
+and XMM8  = define `XMM8  = YMM8  :> zerotop_128`
+and XMM9  = define `XMM9  = YMM9  :> zerotop_128`
+and XMM10 = define `XMM10 = YMM10 :> zerotop_128`
+and XMM11 = define `XMM11 = YMM11 :> zerotop_128`
+and XMM12 = define `XMM12 = YMM12 :> zerotop_128`
+and XMM13 = define `XMM13 = YMM13 :> zerotop_128`
+and XMM14 = define `XMM14 = YMM14 :> zerotop_128`
+and XMM15 = define `XMM15 = YMM15 :> zerotop_128`;;
+
+add_component_alias_thms
+ [XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7;
+  XMM8; XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15];;
+
+(*** Note that K0 is actually hardwired to all-1s              ***)
+(*** So strictly we should have left it out of the state above ***)
+
+let K0 = define `K0:(x86state,(64)word)component = rvalue(word_not(word 0))`;;
+let K1 = define `K1 = maskregisters :> element(word 1)`;;
+let K2 = define `K2 = maskregisters :> element(word 2)`;;
+let K3 = define `K3 = maskregisters :> element(word 3)`;;
+let K4 = define `K4 = maskregisters :> element(word 4)`;;
+let K5 = define `K5 = maskregisters :> element(word 5)`;;
+let K6 = define `K6 = maskregisters :> element(word 6)`;;
+let K7 = define `K7 = maskregisters :> element(word 7)`;;
+
+(* ------------------------------------------------------------------------- *)
+(* Shorthands for the SSE&AESNI SIMD registers                               *)
+(*                                                                           *)
+(* Note that when writing to the lowerhalf (XMM of YMM) of SIMD registers,   *)
+(* SSE and AESNI instructions will keep the upperhalf as is. This is         *)
+(* different from the behaviour *WHEN THE XMM OPERATION IS VEX-ENCODED*.     *)
+(* Interally, the symbolic simulation will reduce reads of SSE SIMD          *)
+(* registers to reads of VEX registers using READ_YMM_SSE_EQUIV theorems.    *)
+(* See section 15.5 of Intel's ISA Combined Manual,                          *)
+(* "Accessing XMM, YMM and ZMM Registers"                                    *)
+(* ------------------------------------------------------------------------- *)
+
 let YMM0_SSE  = define `YMM0_SSE  = ZMM0  :> bottom_256`
 and YMM1_SSE  = define `YMM1_SSE  = ZMM1  :> bottom_256`
 and YMM2_SSE  = define `YMM2_SSE  = ZMM2  :> bottom_256`
@@ -333,42 +379,6 @@ add_component_alias_thms
   YMM8_SSE; YMM9_SSE; YMM10_SSE; YMM11_SSE;
   YMM12_SSE; YMM13_SSE; YMM14_SSE; YMM15_SSE];;
 
-(* TODO: Move to HOL Light *)
-let WORD_SUBWORD_EQUAL_SUBWORD_THEN_ZX = prove
-  (`!(x:N word) (pos:num) (len1:num) (len2:num).
-    len1 >= len2 /\ len1 <= dimindex(:P) /\ len2 = dimindex(:M)
-    ==> ((word_subword x (pos,len2)):M word) =
-    word_zx ((word_subword x (pos,len1)):P word)`,
-    REPEAT STRIP_TAC THEN
-    REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_SUBWORD; BIT_WORD_ZX] THEN
-    REPEAT(STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC[] THEN
-    ASM_ARITH_TAC );;
-
-(* TODO: Move to HOL Light *)
-let WORD_SUBWORD_N_EQUAL = prove
-  (`!(x:N word). (word_subword x (0,dimindex (:N))) = x`,
-    REWRITE_TAC[word_subword] THEN
-    ASM_REWRITE_TAC(map ARITH_RULE [`2 EXP 0=1`;`x DIV 1=x`]) THEN
-    IMP_REWRITE_TAC[MOD_LT] THEN
-    REWRITE_TAC[WORD_VAL; VAL_BOUND]
-  );;
-
-let WORD_SUBWORD_EQUAL_WORD_ZX_POS0 = prove
-  (`!(x:N word) (len:num).
-    len = dimindex(:M) /\ len <= dimindex(:N)
-    ==> ((word_subword x (0,len)):M word) = word_zx x`,
-    REPEAT STRIP_TAC THEN
-    SUBGOAL_THEN `((word_subword (x:N word) (0,len)):M word) =
-      ((word_zx ((word_subword x (0,dimindex(:N))):N word)):M word)`
-    ASSUME_TAC THENL
-    [MATCH_MP_TAC(ISPECL [`x:N word`;`0:num`;`(dimindex(:N):num)`;`len:num`]
-              WORD_SUBWORD_EQUAL_SUBWORD_THEN_ZX) THEN
-     ASM_REWRITE_TAC[] THEN
-     ASM_ARITH_TAC THEN
-     ASM_REWRITE_TAC[WORD_SUBWORD_N_EQUAL]; ALL_TAC] THEN
-    ASM_REWRITE_TAC[WORD_SUBWORD_N_EQUAL]
-    );;
-
 let READ_YMM_SSE_TAC SSE_fn fn =
   STRIP_TAC THEN
   REWRITE_TAC[READ_COMPONENT_COMPOSE; SSE_fn; fn;
@@ -379,90 +389,24 @@ let READ_YMM_SSE_TAC SSE_fn fn =
   REWRITE_TAC[DIMINDEX_256; DIMINDEX_512] THEN
   CONV_TAC(NUM_REDUCE_CONV) ;;
 
-let READ_YMM0_SSE_EQUIV = prove
-  (`!s:x86state. read YMM0_SSE s = read YMM0 s`,
-   READ_YMM_SSE_TAC YMM0_SSE YMM0);;
-
-let READ_YMM1_SSE_EQUIV = prove
-  (`!s:x86state. read YMM1_SSE s = read YMM1 s`,
-   READ_YMM_SSE_TAC YMM1_SSE YMM1);;
-
-let READ_YMM2_SSE_EQUIV = prove
-  (`!s:x86state. read YMM2_SSE s = read YMM2 s`,
-   READ_YMM_SSE_TAC YMM2_SSE YMM2);;
-
-let READ_YMM3_SSE_EQUIV = prove
-  (`!s:x86state. read YMM3_SSE s = read YMM3 s`,
-   READ_YMM_SSE_TAC YMM3_SSE YMM3);;
-
-let READ_YMM4_SSE_EQUIV = prove
-  (`!s:x86state. read YMM4_SSE s = read YMM4 s`,
-   READ_YMM_SSE_TAC YMM4_SSE YMM4);;
-
-let READ_YMM5_SSE_EQUIV = prove
-  (`!s:x86state. read YMM5_SSE s = read YMM5 s`,
-   READ_YMM_SSE_TAC YMM5_SSE YMM5);;
-
-let READ_YMM6_SSE_EQUIV = prove
-  (`!s:x86state. read YMM6_SSE s = read YMM6 s`,
-   READ_YMM_SSE_TAC YMM6_SSE YMM6);;
-
-let READ_YMM7_SSE_EQUIV = prove
-  (`!s:x86state. read YMM7_SSE s = read YMM7 s`,
-   READ_YMM_SSE_TAC YMM7_SSE YMM7);;
-
-let READ_YMM8_SSE_EQUIV = prove
-  (`!s:x86state. read YMM8_SSE s = read YMM8 s`,
-   READ_YMM_SSE_TAC YMM8_SSE YMM8);;
-
-let READ_YMM9_SSE_EQUIV = prove
-  (`!s:x86state. read YMM9_SSE s = read YMM9 s`,
-   READ_YMM_SSE_TAC YMM9_SSE YMM9);;
-
-let READ_YMM10_SSE_EQUIV = prove
-  (`!s:x86state. read YMM10_SSE s = read YMM10 s`,
-   READ_YMM_SSE_TAC YMM10_SSE YMM10);;
-
-let READ_YMM11_SSE_EQUIV = prove
-  (`!s:x86state. read YMM11_SSE s = read YMM11 s`,
-   READ_YMM_SSE_TAC YMM11_SSE YMM11);;
-
-let READ_YMM12_SSE_EQUIV = prove
-  (`!s:x86state. read YMM12_SSE s = read YMM12 s`,
-   READ_YMM_SSE_TAC YMM12_SSE YMM12);;
-
-let READ_YMM13_SSE_EQUIV = prove
-  (`!s:x86state. read YMM13_SSE s = read YMM13 s`,
-   READ_YMM_SSE_TAC YMM13_SSE YMM13);;
-
-let READ_YMM14_SSE_EQUIV = prove
-  (`!s:x86state. read YMM14_SSE s = read YMM14 s`,
-   READ_YMM_SSE_TAC YMM14_SSE YMM14);;
-
-let READ_YMM15_SSE_EQUIV = prove
-  (`!s:x86state. read YMM15_SSE s = read YMM15 s`,
-   READ_YMM_SSE_TAC YMM15_SSE YMM15);;
-
-let XMM0  = define `XMM0  = YMM0  :> zerotop_128`
-and XMM1  = define `XMM1  = YMM1  :> zerotop_128`
-and XMM2  = define `XMM2  = YMM2  :> zerotop_128`
-and XMM3  = define `XMM3  = YMM3  :> zerotop_128`
-and XMM4  = define `XMM4  = YMM4  :> zerotop_128`
-and XMM5  = define `XMM5  = YMM5  :> zerotop_128`
-and XMM6  = define `XMM6  = YMM6  :> zerotop_128`
-and XMM7  = define `XMM7  = YMM7  :> zerotop_128`
-and XMM8  = define `XMM8  = YMM8  :> zerotop_128`
-and XMM9  = define `XMM9  = YMM9  :> zerotop_128`
-and XMM10 = define `XMM10 = YMM10 :> zerotop_128`
-and XMM11 = define `XMM11 = YMM11 :> zerotop_128`
-and XMM12 = define `XMM12 = YMM12 :> zerotop_128`
-and XMM13 = define `XMM13 = YMM13 :> zerotop_128`
-and XMM14 = define `XMM14 = YMM14 :> zerotop_128`
-and XMM15 = define `XMM15 = YMM15 :> zerotop_128`;;
-
-add_component_alias_thms
- [XMM0; XMM1; XMM2; XMM3; XMM4; XMM5; XMM6; XMM7;
-  XMM8; XMM9; XMM10; XMM11; XMM12; XMM13; XMM14; XMM15];;
+let READ_YMM_SSE_EQUIV:thm list = map (fun (goal,ssereg,reg) ->
+  prove(goal, READ_YMM_SSE_TAC ssereg reg))
+   [(`!s:x86state. read YMM0_SSE s = read YMM0 s`,YMM0_SSE,YMM0);
+    (`!s:x86state. read YMM1_SSE s = read YMM1 s`,YMM1_SSE,YMM1);
+    (`!s:x86state. read YMM2_SSE s = read YMM2 s`,YMM2_SSE,YMM2);
+    (`!s:x86state. read YMM3_SSE s = read YMM3 s`,YMM3_SSE,YMM3);
+    (`!s:x86state. read YMM4_SSE s = read YMM4 s`,YMM4_SSE,YMM4);
+    (`!s:x86state. read YMM5_SSE s = read YMM5 s`,YMM5_SSE,YMM5);
+    (`!s:x86state. read YMM6_SSE s = read YMM6 s`,YMM6_SSE,YMM6);
+    (`!s:x86state. read YMM7_SSE s = read YMM7 s`,YMM7_SSE,YMM7);
+    (`!s:x86state. read YMM8_SSE s = read YMM8 s`,YMM8_SSE,YMM8);
+    (`!s:x86state. read YMM9_SSE s = read YMM9 s`,YMM9_SSE,YMM9);
+    (`!s:x86state. read YMM10_SSE s = read YMM10 s`,YMM10_SSE,YMM10);
+    (`!s:x86state. read YMM11_SSE s = read YMM11 s`,YMM11_SSE,YMM11);
+    (`!s:x86state. read YMM12_SSE s = read YMM12 s`,YMM12_SSE,YMM12);
+    (`!s:x86state. read YMM13_SSE s = read YMM13 s`,YMM13_SSE,YMM13);
+    (`!s:x86state. read YMM14_SSE s = read YMM14 s`,YMM14_SSE,YMM14);
+    (`!s:x86state. read YMM15_SSE s = read YMM15 s`,YMM15_SSE,YMM15);]
 
 let XMM0_SSE  = define `XMM0_SSE  = YMM0_SSE  :> bottom_128`
 and XMM1_SSE  = define `XMM1_SSE  = YMM1_SSE  :> bottom_128`
@@ -486,18 +430,6 @@ add_component_alias_thms
   XMM4_SSE; XMM5_SSE; XMM6_SSE; XMM7_SSE;
   XMM8_SSE; XMM9_SSE; XMM10_SSE; XMM11_SSE;
   XMM12_SSE; XMM13_SSE; XMM14_SSE; XMM15_SSE];;
-
-(*** Note that K0 is actually hardwired to all-1s              ***)
-(*** So strictly we should have left it out of the state above ***)
-
-let K0 = define `K0:(x86state,(64)word)component = rvalue(word_not(word 0))`;;
-let K1 = define `K1 = maskregisters :> element(word 1)`;;
-let K2 = define `K2 = maskregisters :> element(word 2)`;;
-let K3 = define `K3 = maskregisters :> element(word 3)`;;
-let K4 = define `K4 = maskregisters :> element(word 4)`;;
-let K5 = define `K5 = maskregisters :> element(word 5)`;;
-let K6 = define `K6 = maskregisters :> element(word 6)`;;
-let K7 = define `K7 = maskregisters :> element(word 7)`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Semantics of conditions.                                                  *)
@@ -2805,16 +2737,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
    GEN_REWRITE_CONV TOP_DEPTH_CONV [SEQ_PULL_THM; BETA_THM] THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV[assign; seq; UNWIND_THM1; BETA_THM] THENC
    TRY_CONV(REWRITE_CONV[WRITE_BOTTOM_128]) THENC
-   TRY_CONV(REWRITE_CONV[
-     READ_YMM0_SSE_EQUIV; READ_YMM1_SSE_EQUIV;
-     READ_YMM2_SSE_EQUIV; READ_YMM3_SSE_EQUIV;
-     READ_YMM4_SSE_EQUIV; READ_YMM5_SSE_EQUIV;
-     READ_YMM6_SSE_EQUIV; READ_YMM7_SSE_EQUIV;
-     READ_YMM8_SSE_EQUIV; READ_YMM9_SSE_EQUIV;
-     READ_YMM10_SSE_EQUIV; READ_YMM11_SSE_EQUIV;
-     READ_YMM12_SSE_EQUIV; READ_YMM13_SSE_EQUIV;
-     READ_YMM14_SSE_EQUIV; READ_YMM15_SSE_EQUIV
-     ]) THENC
+   TRY_CONV(REWRITE_CONV READ_YMM_SSE_EQUIV) THENC
    REWRITE_CONV[] THENC REWRITE_CONV[WRITE_SHORT; READ_SHORT] THENC
    TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV THENC
    X86_FORCE_CONDITIONAL_CONV ths THENC
@@ -2873,16 +2796,7 @@ let X86_STEP_TAC (mc_length_th,decode_ths) subths sname =
     MP_TAC(end_itlist CONJ thl) THEN
     ASSEMBLER_SIMPLIFY_TAC THEN
     (* Reduce reads of YMMx_SSE into reads of YMMx *)
-    REWRITE_TAC[
-      READ_YMM0_SSE_EQUIV; READ_YMM1_SSE_EQUIV;
-      READ_YMM2_SSE_EQUIV; READ_YMM3_SSE_EQUIV;
-      READ_YMM4_SSE_EQUIV; READ_YMM5_SSE_EQUIV;
-      READ_YMM6_SSE_EQUIV; READ_YMM7_SSE_EQUIV;
-      READ_YMM8_SSE_EQUIV; READ_YMM9_SSE_EQUIV;
-      READ_YMM10_SSE_EQUIV; READ_YMM11_SSE_EQUIV;
-      READ_YMM12_SSE_EQUIV; READ_YMM13_SSE_EQUIV;
-      READ_YMM14_SSE_EQUIV; READ_YMM15_SSE_EQUIV
-    ] THEN
+    REWRITE_TAC READ_YMM_SSE_EQUIV THEN
     STRIP_TAC);;
 
 let X86_VERBOSE_STEP_TAC (exth1,exth2) sname g =
