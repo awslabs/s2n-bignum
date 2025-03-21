@@ -299,6 +299,19 @@ let VAL_BOUND_64 = prove
   GEN_TAC THEN MP_TAC(ISPEC `x:int64` VAL_BOUND) THEN
   REWRITE_TAC[DIMINDEX_64]);;
 
+let VAL_BOUND_128 = prove
+  (`!x:int128. val x < 2 EXP 128`,
+   GEN_TAC THEN MP_TAC(ISPEC `x:int128` VAL_BOUND) THEN
+   REWRITE_TAC[DIMINDEX_128]);;
+
+(* TODO: move to HOL Light *)
+new_type_abbrev("int256",`:(256)word`);;
+
+let VAL_BOUND_256 = prove
+  (`!x:int256. val x < 2 EXP 256`,
+   GEN_TAC THEN MP_TAC(ISPEC `x:int256` VAL_BOUND) THEN
+   REWRITE_TAC[DIMINDEX_256]);;
+
 let LEXICOGRAPHIC_LT = prove
  (`!B h l h' l':num.
         l < B /\ l' < B
@@ -362,6 +375,44 @@ let LEXICOGRAPHIC_EQ_INT64 = prove
  (`!h (l:int64) h' (l':int64).
         2 EXP 64 * h + val l = 2 EXP 64 * h' + val l' <=> h = h' /\ l = l'`,
   SIMP_TAC[GSYM VAL_EQ; LEXICOGRAPHIC_EQ_64; VAL_BOUND_64]);;
+
+(* ------------------------------------------------------------------------- *)
+(* More word lemmas.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+let WORD_SUBWORD_EQUAL_SUBWORD_THEN_ZX = prove
+  (`!(x:N word) (pos:num) (len1:num) (len2:num).
+    len1 >= len2 /\ len1 <= dimindex(:P) /\ len2 = dimindex(:M)
+    ==> ((word_subword x (pos,len2)):M word) =
+    word_zx ((word_subword x (pos,len1)):P word)`,
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_SUBWORD; BIT_WORD_ZX] THEN
+    REPEAT(STRIP_TAC ORELSE EQ_TAC) THEN ASM_REWRITE_TAC[] THEN
+    ASM_ARITH_TAC );;
+
+let WORD_SUBWORD_N_EQUAL = prove
+  (`!(x:N word). (word_subword x (0,dimindex (:N))) = x`,
+    REWRITE_TAC[word_subword] THEN
+    ASM_REWRITE_TAC(map ARITH_RULE [`2 EXP 0=1`;`x DIV 1=x`]) THEN
+    IMP_REWRITE_TAC[MOD_LT] THEN
+    REWRITE_TAC[WORD_VAL; VAL_BOUND]
+  );;
+
+let WORD_SUBWORD_EQUAL_WORD_ZX_POS0 = prove
+  (`!(x:N word) (len:num).
+    len = dimindex(:M) /\ len <= dimindex(:N)
+    ==> ((word_subword x (0,len)):M word) = word_zx x`,
+    REPEAT STRIP_TAC THEN
+    SUBGOAL_THEN `((word_subword (x:N word) (0,len)):M word) =
+      ((word_zx ((word_subword x (0,dimindex(:N))):N word)):M word)`
+    ASSUME_TAC THENL
+    [MATCH_MP_TAC(ISPECL [`x:N word`;`0:num`;`(dimindex(:N):num)`;`len:num`]
+              WORD_SUBWORD_EQUAL_SUBWORD_THEN_ZX) THEN
+     ASM_REWRITE_TAC[] THEN
+     ASM_ARITH_TAC THEN
+     ASM_REWRITE_TAC[WORD_SUBWORD_N_EQUAL]; ALL_TAC] THEN
+    ASM_REWRITE_TAC[WORD_SUBWORD_N_EQUAL]
+    );;
 
 (* ------------------------------------------------------------------------- *)
 (* More word lemmas needing a few other theories so not in library.          *)

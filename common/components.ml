@@ -847,6 +847,11 @@ let READ_SUBWORD = prove
  (`!(w:N word) pos len. read (subword(pos,len)) w = word_subword w (pos,len)`,
   REWRITE_TAC[word_subword; subword; read]);;
 
+let READ_BOTTOM_128 = prove
+  (`!s:A. read (c :> bottom_128) s = word_subword (read c s) (0, 128)`,
+   REWRITE_TAC[READ_COMPONENT_COMPOSE; bottom_128; bottomhalf;
+               DIMINDEX_128; READ_SUBWORD; through; read]);;
+
 let STRONGLY_VALID_COMPONENT_SUBWORD = prove
  (`!pos len.
      dimindex(:M) = len /\ pos + len <= dimindex(:N)
@@ -1013,6 +1018,22 @@ let WRITE_SUBWORD_BITWISE = prove
     SIMP_TAC[DIVISION; EXP_EQ_0; ARITH; LE_MULT_LCANCEL] THEN
     MATCH_MP_TAC(ARITH_RULE `x < y ==> x + 1 <= y`) THEN
     SIMP_TAC[DIVISION; EXP_EQ_0; ARITH_EQ]]);;
+
+let WRITE_BOTTOM_128 = prove
+  (`!s:A y. write (c :> bottom_128) y s =
+    write c ((word_join:(128)word->(128)word->(256)word)
+      ((word_subword:(256)word->num#num->(128)word)
+          (read c s) (128,128)) y) s`,
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[WRITE_COMPONENT_COMPOSE; bottom_128; bottomhalf;
+                DIMINDEX_128; through; write] THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN
+    SPEC_TAC (`read (c:(A,(256)word)component) s:256 word`,`d:256 word`) THEN
+    STRIP_TAC THEN
+    ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
+    REWRITE_TAC[WRITE_SUBWORD_BITWISE; BIT_WORD_JOIN; BIT_WORD_SUBWORD;
+      DIMINDEX_128; DIMINDEX_256] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV);;
 
 let READ_WRITE_SUBWORD = prove
  (`!y:(M)word s:(N)word pos len.

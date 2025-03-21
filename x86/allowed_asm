@@ -1,3 +1,8 @@
+: aesdec$
+: aesdeclast$
+: aesenc$
+: aesenclast$
+: aeskeygenassist$
 : adc$
 : adcl$
 : adcq$
@@ -81,6 +86,7 @@
 : subq$
 : test$
 : testq$
+: xchg$
 : xor$
 : xorl$
 : xorq$
