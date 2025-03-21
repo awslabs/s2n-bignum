@@ -177,6 +177,9 @@ let iclasses =
   "0x001110011xxxxx100111xxxxxxxxxx"; (* .h *)
   "0x001110101xxxxx100111xxxxxxxxxx"; (* .s *)
 
+  (*** NOP ***)
+  "11010101000000110010000000011111";
+
   (*** ORR ***)
   "0x001110101xxxxx000111xxxxxxxxxx";
 
@@ -458,6 +461,24 @@ let check_insns () =
 
     (*** st1 (1 register, Post-immediate offset) ***)
     "0x001100100111110111xxxxxxxxxxxx";
+
+    (*** ld1 (1 register, Post-register offset) ***)
+    "0x001100110xxxxx0111xxxxxxxxxxxx";
+
+    (*** st1 (1 register, Post-register offset) ***)
+    "0x001100100xxxxx0111xxxxxxxxxxxx";
+
+    (*** ld1 (1 register, no Post-immediate offset) ***)
+    "0x001100010000000111xxxxxxxxxxxx";
+
+    (*** st1 (1 register, no Post-immediate offset) ***)
+    "0x001100100111110111xxxxxxxxxxxx";
+
+    (*** ld1 (2 registers, Post-immediate offset) 128-bit ***)
+    "01001100110111111010xxxxxxxxxxxx";
+
+    (*** st1 (2 registers, Post-immediate offset) 128-bit ***)
+    "01001100100111111010xxxxxxxxxxxx";
 
     (*** ld2 (2 register, Post-immediate offset) ***)
     "0x001100110111111000xxxxxxxxxxxx";
