@@ -116,11 +116,21 @@ let iclasses =
   (*** AND ***)
   "0x001110001xxxxx000111xxxxxxxxxx";
 
-  (*** BIC ***)
+  (*** BIC (vector registers) ***)
   "0x001110011xxxxx000111xxxxxxxxxx";
+
+  (*** BIC (immediate, 8h) ***)
+  "0x10111100000xxx10x101xxxxxxxxxx"; (* 8h, cmode=10x0 *)
 
   (*** BIT ***)
   "0x101110101xxxxx000111xxxxxxxxxx";
+
+  (*** CMHI, vector ***)
+  "0x101110xx1xxxxx001101xxxxxxxxxx";
+
+  (*** CNT, bias to defined size = 0 ***)
+  "0x00111000100000010110xxxxxxxxxx";
+  "0x001110xx100000010110xxxxxxxxxx";
 
   (*** DUP ***)
   "01001110000x1000000011xxxxxxxxxx"; (* original DUP Vd.2d, xn *)
@@ -139,6 +149,9 @@ let iclasses =
   (*** FMOV, double precision ***)
   "100111101010111x000000xxxxxxxxxx";
   "100111100110011x000000xxxxxxxxxx";
+
+  (*** FMOV to general, single ***)
+  "0001111000100110000000xxxxxxxxxx";
 
   (*** INS, or MOV (element) ***)
   "01101110000xxxx10xxxx1xxxxxxxxxx";
@@ -299,6 +312,9 @@ let iclasses =
   (*** UADDLP ***)
   "011011100x100000001010xxxxxxxxxx"; (* src: .b, .h *)
   "0110111010100000001010xxxxxxxxxx"; (* src: .s *)
+
+  (*** UADDLV ***)
+  "0x101110xx110000001110xxxxxxxxxx";
 
   (*** UMOV (.d, .s) ***)
   "01001110000x1000001111xxxxxxxxxx";
