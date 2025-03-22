@@ -76,35 +76,36 @@
         cmovz   r15, [rsp+TAB+96*(I-1)+88]
 
 S2N_BN_SYMBOL(sm2_montjscalarmul):
+        CFI_START
         _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
-        call    sm2_montjscalarmul_standard
-        pop    rsi
-        pop    rdi
-        ret
+        CFI_CALL(sm2_montjscalarmul_standard)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
+        CFI_RET
 
 sm2_montjscalarmul_standard:
 #endif
 
 // Real start of the standard ABI code.
 
-        push    r15
-        push    r14
-        push    r13
-        push    r12
-        push    rbp
-        push    rbx
+        CFI_PUSH(r15)
+        CFI_PUSH(r14)
+        CFI_PUSH(r13)
+        CFI_PUSH(r12)
+        CFI_PUSH(rbp)
+        CFI_PUSH(rbx)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
 // Preserve the "res" and "point" input arguments. We load and process the
 // scalar immediately so we don't bother preserving that input argument.
@@ -229,34 +230,34 @@ sm2_montjscalarmul_standard:
 
         lea     rdi, [rsp+TAB+96*1]
         lea     rsi, [rsp+TAB]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
         lea     rdi, [rsp+TAB+96*2]
         lea     rsi, [rsp+TAB+96*1]
         lea     rdx, [rsp+TAB]
-        call    sm2_montjscalarmul_sm2_montjadd
+        CFI_CALL(sm2_montjscalarmul_sm2_montjadd)
 
         lea     rdi, [rsp+TAB+96*3]
         lea     rsi, [rsp+TAB+96*1]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
         lea     rdi, [rsp+TAB+96*4]
         lea     rsi, [rsp+TAB+96*3]
         lea     rdx, [rsp+TAB]
-        call    sm2_montjscalarmul_sm2_montjadd
+        CFI_CALL(sm2_montjscalarmul_sm2_montjadd)
 
         lea     rdi, [rsp+TAB+96*5]
         lea     rsi, [rsp+TAB+96*2]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
         lea     rdi, [rsp+TAB+96*6]
         lea     rsi, [rsp+TAB+96*5]
         lea     rdx, [rsp+TAB]
-        call    sm2_montjscalarmul_sm2_montjadd
+        CFI_CALL(sm2_montjscalarmul_sm2_montjadd)
 
         lea     rdi, [rsp+TAB+96*7]
         lea     rsi, [rsp+TAB+96*3]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
 // Set up accumulator as table entry for top 4 bits (constant-time indexing)
 
@@ -307,19 +308,19 @@ sm2_montjscalarmul_mainloop:
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    sm2_montjscalarmul_sm2_montjdouble
+        CFI_CALL(sm2_montjscalarmul_sm2_montjdouble)
 
         mov     rax, rbp
         shr     rax, 6
@@ -402,7 +403,7 @@ sm2_montjscalarmul_mainloop:
         lea     rdx, [rsp+TABENT]
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    sm2_montjscalarmul_sm2_montjadd
+        CFI_CALL(sm2_montjscalarmul_sm2_montjadd)
 
         test    rbp, rbp
         jne     sm2_montjscalarmul_mainloop
@@ -440,25 +441,25 @@ sm2_montjscalarmul_mainloop:
 
 // Restore stack and registers and return
 
-        add     rsp, NSPACE
-        pop     rbx
-        pop     rbp
-        pop     r12
-        pop     r13
-        pop     r14
-        pop     r15
-        ret
+        CFI_INC_RSP(NSPACE)
+        CFI_POP(rbx)
+        CFI_POP(rbp)
+        CFI_POP(r12)
+        CFI_POP(r13)
+        CFI_POP(r14)
+        CFI_POP(r15)
+        CFI_RET
 
 // Local copies of subroutines, complete clones at the moment
 
 sm2_montjscalarmul_sm2_montjadd:
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xe0
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(0xe0)
         mov     rbp, rdx
         mov     rdx, [rsi+0x40]
         mulx    r15, r8, rdx
@@ -2629,22 +2630,22 @@ sm2_montjscalarmul_sm2_montjadd:
         mov     [rdi+0x48], r13
         mov     [rdi+0x50], r14
         mov     [rdi+0x58], r15
-        add     rsp, 0xe0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_INC_RSP(0xe0)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
 
 sm2_montjscalarmul_sm2_montjdouble:
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xc0
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(0xc0)
         mov     rdx, [rsi+0x40]
         mulx    r15, r8, rdx
         mulx    r10, r9, [rsi+0x48]
@@ -3846,13 +3847,13 @@ sm2_montjscalarmul_sm2_montjdouble:
         mov     [rdi+0x30], r10
         adc     r11, rcx
         mov     [rdi+0x38], r11
-        add     rsp, 0xc0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        ret
+        CFI_INC_RSP(0xc0)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

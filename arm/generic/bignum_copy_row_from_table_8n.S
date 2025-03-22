@@ -34,6 +34,7 @@
 #define vmask v16
 
 S2N_BN_SYMBOL(bignum_copy_row_from_table_8n):
+        CFI_START
 
         cbz     height, bignum_copy_row_from_table_8n_end
         cbz     width,  bignum_copy_row_from_table_8n_end
@@ -95,7 +96,7 @@ bignum_copy_row_from_table_8n_innerloop_done:
         bne     bignum_copy_row_from_table_8n_outerloop
 
 bignum_copy_row_from_table_8n_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

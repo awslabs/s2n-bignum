@@ -551,35 +551,36 @@
         mov     [P0+24], rax
 
 S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt):
+        CFI_START
         _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from keeping code and data together.
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
         mov     rcx, r9
-        call    edwards25519_scalarmuldouble_alt_standard
-        pop     rsi
-        pop     rdi
-        ret
+        CFI_CALL(edwards25519_scalarmuldouble_alt_standard)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
+        CFI_RET
 
 edwards25519_scalarmuldouble_alt_standard:
 #endif
 
 // Save registers, make room for temps, preserve input arguments.
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, NSPACE
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(NSPACE)
 
 // Move the output pointer to a stable place
 
@@ -713,46 +714,46 @@ edwards25519_scalarmuldouble_alt_standard:
 
         lea     rdi, [rsp+TAB+1*128]
         lea     rsi, [rsp+TAB]
-        call    edwards25519_scalarmuldouble_alt_epdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Multiple 3
 
         lea     rdi, [rsp+TAB+2*128]
         lea     rsi, [rsp+TAB]
         lea     rbp, [rsp+TAB+1*128]
-        call    edwards25519_scalarmuldouble_alt_epadd
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Multiple 4
 
         lea     rdi, [rsp+TAB+3*128]
         lea     rsi, [rsp+TAB+1*128]
-        call    edwards25519_scalarmuldouble_alt_epdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Multiple 5
 
         lea     rdi, [rsp+TAB+4*128]
         lea     rsi, [rsp+TAB]
         lea     rbp, [rsp+TAB+3*128]
-        call    edwards25519_scalarmuldouble_alt_epadd
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Multiple 6
 
         lea     rdi, [rsp+TAB+5*128]
         lea     rsi, [rsp+TAB+2*128]
-        call    edwards25519_scalarmuldouble_alt_epdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Multiple 7
 
         lea     rdi, [rsp+TAB+6*128]
         lea     rsi, [rsp+TAB]
         lea     rbp, [rsp+TAB+5*128]
-        call    edwards25519_scalarmuldouble_alt_epadd
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Multiple 8
 
         lea     rdi, [rsp+TAB+7*128]
         lea     rsi, [rsp+TAB+3*128]
-        call    edwards25519_scalarmuldouble_alt_epdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Handle the initialization, starting the loop counter at i = 252
 // and initializing acc to the sum of the table entries for the
@@ -1370,7 +1371,7 @@ edwards25519_scalarmuldouble_alt_standard:
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+TABENT]
         lea     rbp, [rsp+BTABENT]
-        call    edwards25519_scalarmuldouble_alt_pepadd
+        CFI_CALL(edwards25519_scalarmuldouble_alt_pepadd)
 
 // Main loop with acc = [scalar/2^i] * point + [bscalar/2^i] * basepoint
 // Start with i = 252 for bits 248..251 and go down four at a time to 3..0
@@ -1385,7 +1386,7 @@ edwards25519_scalarmuldouble_alt_loop:
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        call    edwards25519_scalarmuldouble_alt_pdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_pdouble)
 
 // Get btable entry, first getting the adjusted bitfield...
 
@@ -2096,33 +2097,33 @@ edwards25519_scalarmuldouble_alt_loop:
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        call    edwards25519_scalarmuldouble_alt_pdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_pdouble)
 
 // Add tabent := tabent + btabent
 
         lea     rdi, [rsp+TABENT]
         lea     rsi, [rsp+TABENT]
         lea     rbp, [rsp+BTABENT]
-        call    edwards25519_scalarmuldouble_alt_pepadd
+        CFI_CALL(edwards25519_scalarmuldouble_alt_pepadd)
 
 // Double to acc' = 8 * acc
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        call    edwards25519_scalarmuldouble_alt_pdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_pdouble)
 
 // Double to acc' = 16 * acc
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        call    edwards25519_scalarmuldouble_alt_epdouble
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Add table entry, acc := acc + tabent
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
         lea     rbp, [rsp+TABENT]
-        call    edwards25519_scalarmuldouble_alt_epadd
+        CFI_CALL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Loop down
 
@@ -3503,15 +3504,15 @@ edwards25519_scalarmuldouble_alt_midloop:
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
+        CFI_INC_RSP(NSPACE)
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
 
 // ****************************************************************************
 // Localized versions of subroutines.
@@ -3520,7 +3521,7 @@ edwards25519_scalarmuldouble_alt_midloop:
 // ****************************************************************************
 
 edwards25519_scalarmuldouble_alt_epdouble:
-        sub rsp, (5*NUMSIZE)
+        CFI_DEC_RSP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
         sqr_4(t2,x_1)
@@ -3535,11 +3536,11 @@ edwards25519_scalarmuldouble_alt_epdouble:
         mul_4(z_0,t3,t2)
         mul_4(w_0,t1,t4)
         mul_4(x_0,t1,t3)
-        add rsp, (5*NUMSIZE)
-        ret
+        CFI_INC_RSP((5*NUMSIZE))
+        CFI_RET
 
 edwards25519_scalarmuldouble_alt_pdouble:
-        sub rsp, (5*NUMSIZE)
+        CFI_DEC_RSP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
         sqr_4(t2,x_1)
@@ -3553,11 +3554,11 @@ edwards25519_scalarmuldouble_alt_pdouble:
         mul_4(y_0,t2,t4)
         mul_4(z_0,t3,t2)
         mul_4(x_0,t1,t3)
-        add rsp, (5*NUMSIZE)
-        ret
+        CFI_INC_RSP((5*NUMSIZE))
+        CFI_RET
 
 edwards25519_scalarmuldouble_alt_epadd:
-        sub rsp, (6*NUMSIZE)
+        CFI_DEC_RSP((6*NUMSIZE))
         mul_4(t0,w_1,w_2)
         sub_twice4(t1,y_1,x_1)
         sub_twice4(t2,y_2,x_2)
@@ -3577,11 +3578,11 @@ edwards25519_scalarmuldouble_alt_epadd:
         mul_4(x_0,t0,t1)
         mul_4(y_0,t3,t5)
         mul_4(z_0,t1,t3)
-        add rsp, (6*NUMSIZE)
-        ret
+        CFI_INC_RSP((6*NUMSIZE))
+        CFI_RET
 
 edwards25519_scalarmuldouble_alt_pepadd:
-        sub rsp, (6*NUMSIZE)
+        CFI_DEC_RSP((6*NUMSIZE))
         double_twice4(t0,z_1);
         sub_twice4(t1,y_1,x_1);
         add_twice4(t2,y_1,x_1);
@@ -3596,8 +3597,8 @@ edwards25519_scalarmuldouble_alt_pepadd:
         mul_4(x_0,t5,t4);
         mul_4(y_0,t0,t1);
         mul_4(w_0,t5,t1);
-        add rsp, (6*NUMSIZE)
-        ret
+        CFI_INC_RSP((6*NUMSIZE))
+        CFI_RET
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same

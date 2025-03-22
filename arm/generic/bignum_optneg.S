@@ -30,6 +30,7 @@
 
 
 S2N_BN_SYMBOL(bignum_optneg):
+        CFI_START
 
 // if k = 0 do nothing. This also has the right top carry zero in x0
 
@@ -63,7 +64,7 @@ bignum_optneg_loop:
         eor     x0, x0, p
 
 bignum_optneg_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

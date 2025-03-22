@@ -30,6 +30,7 @@
 
 
 S2N_BN_SYMBOL(bignum_modsub):
+        CFI_START
 
 adds    j, k, xzr               // j = k and ZF = (k = 0)
         beq     bignum_modsub_end                     // if k = 0 do nothing
@@ -62,7 +63,7 @@ bignum_modsub_addloop:
         cbnz    j, bignum_modsub_addloop
 
 bignum_modsub_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

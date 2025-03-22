@@ -45,6 +45,7 @@
 S2N_BN_SYMBOL(bignum_littleendian_4):
 S2N_BN_SYMBOL(bignum_fromlebytes_4):
 S2N_BN_SYMBOL(bignum_tolebytes_4):
+        CFI_START
 
 // word 0
 
@@ -126,7 +127,7 @@ S2N_BN_SYMBOL(bignum_tolebytes_4):
         extr    a, d, a, #8
         str     a, [z, #24]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

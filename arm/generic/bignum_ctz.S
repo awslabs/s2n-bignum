@@ -30,6 +30,7 @@
 
 
 S2N_BN_SYMBOL(bignum_ctz):
+        CFI_START
 
 // If the bignum is zero-length, x0 is already the right answer of 0
 
@@ -66,7 +67,7 @@ bignum_ctz_loop:
         sub     x0, i, a
 
 bignum_ctz_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

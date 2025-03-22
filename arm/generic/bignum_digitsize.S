@@ -26,6 +26,7 @@
 
 
 S2N_BN_SYMBOL(bignum_digitsize):
+        CFI_START
 
 // If the bignum is zero-length, x0 is already the right answer of 0
 
@@ -45,7 +46,7 @@ bignum_digitsize_loop:
 
         mov     x0, i
 bignum_digitsize_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -32,6 +32,7 @@
 
 
 S2N_BN_SYMBOL(bignum_sub_p384):
+        CFI_START
 
 // First just subtract the numbers as [d5; d4; d3; d2; d1; d0]
 // Set a mask based on (inverted) carry indicating x < y = correction is needed
@@ -73,7 +74,7 @@ S2N_BN_SYMBOL(bignum_sub_p384):
         stp     d2, d3, [z, #16]
         stp     d4, d5, [z, #32]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

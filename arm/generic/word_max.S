@@ -20,10 +20,11 @@
 #define b x1
 
 S2N_BN_SYMBOL(word_max):
+        CFI_START
 
         cmp     a, b
         csel    x0, a, b, cs
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

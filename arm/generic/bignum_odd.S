@@ -17,13 +17,14 @@
         .balign 4
 
 S2N_BN_SYMBOL(bignum_odd):
+        CFI_START
 
 cbz     x0, bignum_odd_end                 // if k = 0, that's the return!
         ldr     x0, [x1]
         and     x0, x0, #1
 
 bignum_odd_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

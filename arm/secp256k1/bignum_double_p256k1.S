@@ -28,6 +28,7 @@
 #define l x8
 
 S2N_BN_SYMBOL(bignum_double_p256k1):
+        CFI_START
 
 // Load the inputs and double top-down as z = 2^256 * c + [d3;d2;d1;d0]
 // While doing this, create an AND dd of [d3;d2;d1] to condense comparison
@@ -69,7 +70,7 @@ S2N_BN_SYMBOL(bignum_double_p256k1):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

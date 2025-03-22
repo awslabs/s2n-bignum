@@ -72,14 +72,15 @@
 #define u16 x21
 
 S2N_BN_SYMBOL(bignum_montmul_p521_alt):
+        CFI_START
 
 // Save more registers and make space for the temporary buffer
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
-        sub     sp, sp, #64
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x26)
+        CFI_DEC_SP(64)
 
 // Load operands and set up row 0 = [u9;...;u0] = a0 * [b8;...;b0]
 
@@ -540,13 +541,13 @@ S2N_BN_SYMBOL(bignum_montmul_p521_alt):
 
 // Restore registers
 
-        add     sp, sp, #64
-        ldp     x25, x26, [sp], #16
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
+        CFI_INC_SP(64)
+        CFI_POP2(x25,x26)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

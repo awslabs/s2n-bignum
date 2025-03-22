@@ -54,7 +54,7 @@
 
 #define tab sp, #(7*NUMSIZE)
 
-#define NSPACE #(31*NUMSIZE)
+#define NSPACE (31*NUMSIZE)
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.
@@ -90,10 +90,11 @@
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(p256_montjscalarmul):
+        CFI_START
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x30, [sp, #-16]!
-        sub     sp, sp, NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x30)
+        CFI_DEC_SP(NSPACE)
 
 // Preserve the "res" and "point" input arguments. We load and process the
 // scalar immediately so we don't bother preserving that input argument.
@@ -198,34 +199,34 @@ S2N_BN_SYMBOL(p256_montjscalarmul):
 
         add     x0, tab+96*1
         add     x1, tab
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
         add     x0, tab+96*2
         add     x1, tab+96*1
         add     x2, tab
-        bl      p256_montjscalarmul_p256_montjadd
+        CFI_BL(p256_montjscalarmul_p256_montjadd)
 
         add     x0, tab+96*3
         add     x1, tab+96*1
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
         add     x0, tab+96*4
         add     x1, tab+96*3
         add     x2, tab
-        bl      p256_montjscalarmul_p256_montjadd
+        CFI_BL(p256_montjscalarmul_p256_montjadd)
 
         add     x0, tab+96*5
         add     x1, tab+96*2
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
         add     x0, tab+96*6
         add     x1, tab+96*5
         add     x2, tab
-        bl      p256_montjscalarmul_p256_montjadd
+        CFI_BL(p256_montjscalarmul_p256_montjadd)
 
         add     x0, tab+96*7
         add     x1, tab+96*3
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
 // Initialize the accumulator as a table entry for top 4 bits (unrecoded)
 
@@ -271,19 +272,19 @@ p256_montjscalarmul_mainloop:
 
         add     x0, acc
         add     x1, acc
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p256_montjscalarmul_p256_montjdouble
+        CFI_BL(p256_montjscalarmul_p256_montjdouble)
 
         lsr     x2, j, #6
         ldr     x14, [sp, x2, lsl #3]   // Exploits scalarb = sp exactly
@@ -352,7 +353,7 @@ p256_montjscalarmul_mainloop:
         add     x0, acc
         add     x1, acc
         add     x2, tabent
-        bl      p256_montjscalarmul_p256_montjadd
+        CFI_BL(p256_montjscalarmul_p256_montjadd)
 
         cbnz    j, p256_montjscalarmul_mainloop
 
@@ -374,20 +375,20 @@ p256_montjscalarmul_mainloop:
 
 // Restore stack and registers and return
 
-        add     sp, sp, NSPACE
-        ldp     x21, x30, [sp], 16
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x21,x30)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 // Local copies of subroutines, complete clones at the moment
 
 p256_montjscalarmul_p256_montjadd:
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
-        stp     x27, x30, [sp, #-16]!
-        sub     sp, sp, #0xe0
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x26)
+        CFI_PUSH2(x27,x30)
+        CFI_DEC_SP(0xe0)
         mov     x21, x0
         mov     x22, x1
         mov     x23, x2
@@ -3493,16 +3494,16 @@ p256_montjscalarmul_p256_montjadd:
         stp     x6, x7, [x21, #48]
         stp     x8, x9, [x21, #64]
         stp     x10, x11, [x21, #80]
-        add     sp, sp, #0xe0
-        ldp     x27, x30, [sp], #16
-        ldp     x25, x26, [sp], #16
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
-        ret
+        CFI_INC_SP(0xe0)
+        CFI_POP2(x27,x30)
+        CFI_POP2(x25,x26)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 p256_montjscalarmul_p256_montjdouble:
-        sub     sp, sp, #0x110
+        CFI_DEC_SP(0x110)
         stp     x19, x20, [sp, #192]
         stp     x21, x22, [sp, #208]
         stp     x23, x24, [sp, #224]
@@ -5009,8 +5010,8 @@ p256_montjscalarmul_p256_montjdouble:
         ldp     x23, x24, [sp, #224]
         ldp     x21, x22, [sp, #208]
         ldp     x19, x20, [sp, #192]
-        add     sp, sp, #0x110
-        ret
+        CFI_INC_SP(0x110)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

@@ -75,6 +75,7 @@
 S2N_BN_SYMBOL(bignum_tomont_p256):
 
 S2N_BN_SYMBOL(bignum_tomont_p256_alt):
+        CFI_START
 
 // Load the input
 
@@ -109,7 +110,7 @@ S2N_BN_SYMBOL(bignum_tomont_p256_alt):
         stp     d1, d2, [x0]
         stp     d3, d4, [x0, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

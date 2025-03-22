@@ -18,11 +18,12 @@
 
 
 S2N_BN_SYMBOL(bignum_sqr_8_16):
+        CFI_START
 
 // Save registers
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
 
 // Load registers.
         ldp     x2, x3, [x1]
@@ -412,10 +413,10 @@ mov     x21, v1.d[1]
         adc     x3, x3, xzr
         stp     x2, x3, [x0, #112]
 
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

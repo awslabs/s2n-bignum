@@ -37,15 +37,16 @@
 #define NSPACE (NUMSIZE*8)
 
 S2N_BN_SYMBOL(p384_montjadd):
+        CFI_START
 
 // Save regs and make room on stack for temporary variables
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
-        stp     x27, xzr, [sp, #-16]!
-        sub     sp, sp, NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x26)
+        CFI_PUSH2(x27,xzr)
+        CFI_DEC_SP(NSPACE)
 
         mov x24, x0
         mov x25, x1
@@ -6420,15 +6421,15 @@ S2N_BN_SYMBOL(p384_montjadd):
 
 // Restore stack and registers
 
-        add     sp, sp, NSPACE
+        CFI_INC_SP(NSPACE)
 
-        ldp     x27, xzr, [sp], 16
-        ldp     x25, x26, [sp], 16
-        ldp     x23, x24, [sp], 16
-        ldp     x21, x22, [sp], 16
-        ldp     x19, x20, [sp], 16
+        CFI_POP2(x27,xzr)
+        CFI_POP2(x25,x26)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

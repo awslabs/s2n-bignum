@@ -34,6 +34,7 @@
 
 
 S2N_BN_SYMBOL(bignum_add):
+        CFI_START
 
 // First clamp the two input sizes m := min(p,m) and n := min(p,n) since
 // we'll never need words past the p'th. Can now assume m <= p and n <= p.
@@ -72,7 +73,7 @@ bignum_add_xtoploop:
 bignum_add_xtopskip:
         cbnz    p, bignum_add_tails
         cset    x0, cs
-        ret
+        CFI_RET
 
 // The case where y is longer (p >= n > m)
 
@@ -99,7 +100,7 @@ bignum_add_ytoploop:
 bignum_add_ytopskip:
         cbnz    p, bignum_add_tails
         cset    x0, cs
-        ret
+        CFI_RET
 
 // Adding a non-trivial tail, when p > max(m,n)
 
@@ -114,7 +115,7 @@ bignum_add_tail:
         sub     p, p, #1
         cbnz    p, bignum_add_tailloop
         mov     x0, xzr
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

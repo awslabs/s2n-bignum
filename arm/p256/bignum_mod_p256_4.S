@@ -32,6 +32,7 @@
 
 
 S2N_BN_SYMBOL(bignum_mod_p256_4):
+        CFI_START
 
 // Load the three nonzero words of p_256 = [n3;0;n2;n1]
 
@@ -64,7 +65,7 @@ S2N_BN_SYMBOL(bignum_mod_p256_4):
         stp     n0, n1, [z]
         stp     n2, n3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -32,6 +32,7 @@
 #define j x7
 
 S2N_BN_SYMBOL(bignum_copy_row_from_table):
+        CFI_START
 
         cbz     height, bignum_copy_row_from_table_end
         cbz     width,  bignum_copy_row_from_table_end
@@ -74,7 +75,7 @@ bignum_copy_row_from_table_innerloop_done:
         bne     bignum_copy_row_from_table_outerloop
 
 bignum_copy_row_from_table_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

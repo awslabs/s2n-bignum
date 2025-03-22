@@ -96,11 +96,12 @@
 #define arg4 rcx
 
 S2N_BN_SYMBOL(bignum_coprime):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -110,13 +111,13 @@ S2N_BN_SYMBOL(bignum_coprime):
 
 // Save all required registers and make room on stack for all the above vars
 
-        push    rbp
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, STACKVARSIZE
+        CFI_PUSH(rbp)
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(STACKVARSIZE)
 
 // Compute k = max(m,n), and if this is zero skip to the end. Note that
 // in this case k is also in rax so serves as the right answer of "false"
@@ -499,19 +500,19 @@ bignum_coprime_finalcomb:
 // The end
 
 bignum_coprime_end:
-        add     rsp, STACKVARSIZE
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        pop     rbp
+        CFI_INC_RSP(STACKVARSIZE)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_POP(rbp)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -54,7 +54,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE #(24*N)
+#define NSPACE (24*N)
 
 // Loading large constants
 
@@ -70,21 +70,22 @@
         add     x0, dest;                                               \
         add     x1, src1;                                               \
         add     x2, src2;                                               \
-        bl      edwards25519_decode_mul_p25519
+        CFI_BL(edwards25519_decode_mul_p25519)
 
 #define nsqr(dest,n,src)                                                \
         add     x0, dest;                                               \
         mov     x1, n;                                                  \
         add     x2, src;                                                \
-        bl      edwards25519_decode_nsqr_p25519
+        CFI_BL(edwards25519_decode_nsqr_p25519)
 
 S2N_BN_SYMBOL(edwards25519_decode):
+        CFI_START
 
 // Save registers and make room for temporaries
 
-        stp     x19, x20, [sp, -16]!
-        stp     x21, x30, [sp, -16]!
-        sub     sp, sp, NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x30)
+        CFI_DEC_SP(NSPACE)
 
 // Save the return pointer for the end so we can overwrite x0 later
 
@@ -334,11 +335,11 @@ S2N_BN_SYMBOL(edwards25519_decode):
 
 // Restore stack and registers
 
-        add     sp, sp, NSPACE
+        CFI_INC_SP(NSPACE)
 
-        ldp     x21, x30, [sp], 16
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_POP2(x21,x30)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 // *************************************************************
 // Local z = x * y
@@ -525,7 +526,7 @@ edwards25519_decode_mul_p25519:
         and     x10, x10, #0x7fffffffffffffff
         stp     x7, x8, [x0]
         stp     x9, x10, [x0, #16]
-        ret
+        CFI_RET
 
 // *************************************************************
 // Local z = 2^n * x
@@ -693,7 +694,7 @@ edwards25519_decode_loop:
 
         stp     x10, x11, [x0]
         stp     x12, x13, [x0, #16]
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

@@ -26,6 +26,7 @@
 #define dshort w2
 
 S2N_BN_SYMBOL(bignum_tolebytes_p521):
+        CFI_START
 
 // word 0
 
@@ -186,7 +187,7 @@ S2N_BN_SYMBOL(bignum_tolebytes_p521):
         lsr     d, d, #8
         strb    dshort, [z, #65]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

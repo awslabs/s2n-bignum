@@ -17,6 +17,7 @@
         .balign 4
 
 S2N_BN_SYMBOL(bignum_even):
+        CFI_START
 
 cbz     x0, bignum_even_end                 // if k = 0, that's the return!
         ldr     x0, [x1]
@@ -24,7 +25,7 @@ cbz     x0, bignum_even_end                 // if k = 0, that's the return!
 
 bignum_even_end:
         eor     x0, x0, #1
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

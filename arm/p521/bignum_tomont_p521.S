@@ -33,6 +33,7 @@
 #define d8 x12
 
 S2N_BN_SYMBOL(bignum_tomont_p521):
+        CFI_START
 
 // Load top digit first and get its upper bits in h so that we
 // separate out x = 2^521 * H + L with h = H. Now x mod p_521 =
@@ -106,7 +107,7 @@ S2N_BN_SYMBOL(bignum_tomont_p521):
         stp     d3, d4, [z, #32]
         stp     d5, d6, [z, #48]
         str     d7, [z, #64]
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

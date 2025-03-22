@@ -31,6 +31,7 @@
 #define s x6
 
 S2N_BN_SYMBOL(bignum_divmod10):
+        CFI_START
 
 // If k = 0 then return; the return in x0 is indeed 0 mod 10 = 0
 
@@ -72,7 +73,7 @@ bignum_divmod10_divloop:
         mov     x0, r
 
 bignum_divmod10_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

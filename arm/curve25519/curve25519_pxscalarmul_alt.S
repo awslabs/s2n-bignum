@@ -573,12 +573,13 @@
         stp     x0, x1, [p0+16]
 
 S2N_BN_SYMBOL(curve25519_pxscalarmul_alt):
+        CFI_START
 
 // Save regs and make room for temporaries
 
-        stp     x19, x22, [sp, -16]!
-        stp     x20, x21, [sp, -16]!
-        sub     sp, sp, #NSPACE
+        CFI_PUSH2(x19,x22)
+        CFI_PUSH2(x20,x21)
+        CFI_DEC_SP(NSPACE)
 
 // Move the input arguments to stable places
 
@@ -708,11 +709,11 @@ curve25519_pxscalarmul_alt_loop:
 
 // Restore stack and registers
 
-        add     sp, sp, #NSPACE
-        ldp     x20, x21, [sp], 16
-        ldp     x19, x22, [sp], 16
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x20,x21)
+        CFI_POP2(x19,x22)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

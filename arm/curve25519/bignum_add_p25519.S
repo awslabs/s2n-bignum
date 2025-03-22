@@ -31,6 +31,7 @@
 #define c3 x10
 
 S2N_BN_SYMBOL(bignum_add_p25519):
+        CFI_START
 
 // Add as [d3; d2; d1; d0] = x + y; since we assume x, y < 2^255 - 19
 // this sum fits in 256 bits
@@ -67,7 +68,7 @@ S2N_BN_SYMBOL(bignum_add_p25519):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -49,6 +49,7 @@
 S2N_BN_SYMBOL(bignum_cmul_p384):
 
 S2N_BN_SYMBOL(bignum_cmul_p384_alt):
+        CFI_START
 
 // First do the multiply, straightforwardly, getting [h; d5; ...; d0]
 
@@ -134,7 +135,7 @@ S2N_BN_SYMBOL(bignum_cmul_p384_alt):
         stp     d2, d3, [z, #16]
         stp     d4, d5, [z, #32]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

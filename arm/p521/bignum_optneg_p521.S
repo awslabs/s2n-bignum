@@ -34,6 +34,7 @@
 #define d8 x12
 
 S2N_BN_SYMBOL(bignum_optneg_p521):
+        CFI_START
 
 // Load the 9 digits of x and generate q = the OR of them all
 
@@ -80,7 +81,7 @@ S2N_BN_SYMBOL(bignum_optneg_p521):
         stp     d4, d5, [z, #32]
         stp     d6, d7, [z, #48]
         str     d8, [z, #64]
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

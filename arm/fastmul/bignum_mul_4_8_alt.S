@@ -45,6 +45,7 @@
 #define u7 a2
 
 S2N_BN_SYMBOL(bignum_mul_4_8_alt):
+        CFI_START
 
 // Load operands and set up row 0 = [u4;...;u0] = a0 * [b3;...;b0]
 
@@ -140,7 +141,7 @@ S2N_BN_SYMBOL(bignum_mul_4_8_alt):
         stp     u4, u5, [z, #32]
         stp     u6, u7, [z, #48]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -55,6 +55,7 @@
 S2N_BN_SYMBOL(bignum_cmul_p521):
 
 S2N_BN_SYMBOL(bignum_cmul_p521_alt):
+        CFI_START
 
 // First do the multiply, getting [d9; ...; d0], and as this is done
 // accumulate an AND "dd" of digits d7,...,d1 for later use
@@ -141,7 +142,7 @@ S2N_BN_SYMBOL(bignum_cmul_p521_alt):
         stp     d6, d7, [z, #48]
         str     d8, [z, #64]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

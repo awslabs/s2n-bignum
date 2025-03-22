@@ -19,6 +19,7 @@
 // Very similar to the traditional algorithm, e.g. Hacker's Delight 5-2
 
 S2N_BN_SYMBOL(word_popcount):
+        CFI_START
 
         and     x1, x0, #0xAAAAAAAAAAAAAAAA
         sub     x0, x0, x1, lsr #1
@@ -34,7 +35,7 @@ S2N_BN_SYMBOL(word_popcount):
         mul     x0, x0, x1
         lsr     x0, x0, #56
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -38,6 +38,7 @@
 #define n11 x15
 
 S2N_BN_SYMBOL(word_divstep59):
+        CFI_START
 
 // Pack f and g into single registers with (negated) update matrices,
 // initially the identity matrix. The f_lo and g_lo are initially
@@ -316,7 +317,7 @@ S2N_BN_SYMBOL(word_divstep59):
 
         mov     x0, d
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

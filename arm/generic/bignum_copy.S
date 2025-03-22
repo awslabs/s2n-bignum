@@ -27,6 +27,7 @@
 
 
 S2N_BN_SYMBOL(bignum_copy):
+        CFI_START
 
 // Replace n with min(k,n) so we are definitely safe copying those
 // Initialize the element counter to 0
@@ -56,7 +57,7 @@ bignum_copy_padloop:
         bcc     bignum_copy_padloop
 
 bignum_copy_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

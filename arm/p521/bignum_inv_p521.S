@@ -70,7 +70,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE #(36*N)
+#define NSPACE (36*N)
 
 // Very similar to a subroutine call to the s2n-bignum word_divstep59.
 // But different in register usage and returning the final matrix in
@@ -695,12 +695,13 @@
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(bignum_inv_p521):
+        CFI_START
 
 // Save registers and make room for temporaries
 
-        stp     x19, x20, [sp, -16]!
-        stp     x21, x22, [sp, -16]!
-        sub     sp, sp, NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_DEC_SP(NSPACE)
 
 // Save the return pointer for the end so we can overwrite x0 later
 
@@ -1686,10 +1687,10 @@ bignum_inv_p521_midloop:
 
 // Restore stack and registers
 
-        add     sp, sp, NSPACE
-        ldp     x21, x22, [sp], 16
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

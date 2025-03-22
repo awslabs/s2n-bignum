@@ -28,6 +28,7 @@
 
 
 S2N_BN_SYMBOL(bignum_pow2):
+        CFI_START
 
 // If k = 0 the result is trivially zero
 
@@ -53,7 +54,7 @@ bignum_pow2_loop:
         bcc     bignum_pow2_loop
 
 bignum_pow2_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

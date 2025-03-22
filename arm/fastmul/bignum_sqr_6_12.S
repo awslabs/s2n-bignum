@@ -54,6 +54,7 @@
 #define d4 x17
 
 S2N_BN_SYMBOL(bignum_sqr_6_12):
+        CFI_START
 
 // Load in all words of the input
 
@@ -254,7 +255,7 @@ S2N_BN_SYMBOL(bignum_sqr_6_12):
         adc     a0, a0, xzr
         str     a0, [x0, #88]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

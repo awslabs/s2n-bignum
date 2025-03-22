@@ -497,13 +497,14 @@
         stp     x5, x6, [P0+16]
 
 S2N_BN_SYMBOL(curve25519_x25519base_byte):
+        CFI_START
 
 // Save regs and make room for temporaries
 
-        stp     x19, x20, [sp, -16]!
-        stp     x21, x22, [sp, -16]!
-        stp     x23, x24, [sp, -16]!
-        sub     sp, sp, #NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_DEC_SP(NSPACE)
 
 // Move the output pointer to a stable place
 
@@ -2088,12 +2089,12 @@ curve25519_x25519base_byte_invmidloop:
 
 // Restore stack and registers
 
-        add     sp, sp, #NSPACE
-        ldp     x23, x24, [sp], 16
-        ldp     x21, x22, [sp], 16
-        ldp     x19, x20, [sp], 16
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same

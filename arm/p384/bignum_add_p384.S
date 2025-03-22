@@ -31,6 +31,7 @@
 
 
 S2N_BN_SYMBOL(bignum_add_p384):
+        CFI_START
 
 // First just add the numbers as c + [d5; d4; d3; d2; d1; d0]
 
@@ -86,7 +87,7 @@ S2N_BN_SYMBOL(bignum_add_p384):
         stp     d2, d3, [z, #16]
         stp     d4, d5, [z, #32]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -29,6 +29,7 @@
 #define dd x9
 
 S2N_BN_SYMBOL(bignum_add_p256k1):
+        CFI_START
 
 // First just add the numbers as z = x + y = 2^256 * c + [d3; d2; d1; d0]
 // Also create dd = d3 AND d2 AND d1 to condense the later comparison
@@ -72,7 +73,7 @@ S2N_BN_SYMBOL(bignum_add_p256k1):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

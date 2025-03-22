@@ -36,6 +36,7 @@
 
 
 S2N_BN_SYMBOL(bignum_shl_small):
+        CFI_START
 
 // First clamp the input size n := min(p,n) since we can never need to read
 // past the p'th term of the input to generate p-digit output.
@@ -92,7 +93,7 @@ bignum_shl_small_tloop:
 bignum_shl_small_end:
 
         mov     x0, b
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

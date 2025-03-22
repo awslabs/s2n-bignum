@@ -48,6 +48,7 @@
 
 
 S2N_BN_SYMBOL(bignum_modifier):
+        CFI_START
 
 // If k = 0 the whole operation is trivial
 
@@ -451,7 +452,7 @@ bignum_modifier_corrloop:
         cbnz    a, bignum_modifier_corrloop
 
 bignum_modifier_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -17,6 +17,7 @@
         .balign 4
 
 S2N_BN_SYMBOL(word_ctz):
+        CFI_START
 
 // ARM doesn't have a direct word ctz instruction, so we emulate it via
 // ctz(w) = 64 - clz(~w & (w-1)). This is depending, for cases of the form
@@ -30,7 +31,7 @@ S2N_BN_SYMBOL(word_ctz):
         mov     x0, #64
         sub     x0, x0, x1
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

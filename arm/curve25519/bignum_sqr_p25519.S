@@ -57,6 +57,7 @@
 #define t3short w16
 
 S2N_BN_SYMBOL(bignum_sqr_p25519):
+        CFI_START
 
 // First just a near-clone of bignum_sqr_4_8 to get the square, using
 // different registers to collect full product without writeback.
@@ -223,7 +224,7 @@ S2N_BN_SYMBOL(bignum_sqr_p25519):
         stp     u0, u1, [x0]
         stp     u2, u3, [x0, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

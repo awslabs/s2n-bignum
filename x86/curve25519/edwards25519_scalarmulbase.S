@@ -336,33 +336,34 @@
         mov     [P0+0x18], r11
 
 S2N_BN_SYMBOL(edwards25519_scalarmulbase):
+        CFI_START
         _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from keeping code and data together.
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
-        call    edwards25519_scalarmulbase_standard
-        pop     rsi
-        pop     rdi
-        ret
+        CFI_CALL(edwards25519_scalarmulbase_standard)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
+        CFI_RET
 
 edwards25519_scalarmulbase_standard:
 #endif
 
 // Save registers, make room for temps, preserve input arguments.
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, NSPACE
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(NSPACE)
 
 // Move the output pointer to a stable place
 
@@ -2288,15 +2289,15 @@ edwards25519_scalarmulbase_midloop:
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
+        CFI_INC_RSP(NSPACE)
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same

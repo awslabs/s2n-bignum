@@ -60,6 +60,7 @@
 
 
 S2N_BN_SYMBOL(bignum_montmul):
+        CFI_START
 
 // If k = 0 the whole operation is trivial
 
@@ -186,7 +187,7 @@ bignum_montmul_corrloop:
         cbnz    t, bignum_montmul_corrloop
 
 bignum_montmul_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

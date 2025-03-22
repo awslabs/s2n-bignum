@@ -50,7 +50,7 @@
 #define z2 sp, #(7*NUMSIZE)
 #define z3 sp, #(8*NUMSIZE)
 
-#define NSPACE #(31*NUMSIZE)
+#define NSPACE (31*NUMSIZE)
 
 // Loading large constants
 
@@ -61,10 +61,11 @@
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(p256_scalarmul):
+        CFI_START
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x30, [sp, #-16]!
-        sub     sp, sp, NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x30)
+        CFI_DEC_SP(NSPACE)
 
 // Preserve the "res" and "point" input arguments. We load and process the
 // scalar immediately so we don't bother preserving that input argument.
@@ -129,11 +130,11 @@ S2N_BN_SYMBOL(p256_scalarmul):
 
         add     x0, tab
         mov     x1, point
-        bl      p256_scalarmul_local_tomont_p256
+        CFI_BL(p256_scalarmul_local_tomont_p256)
 
         add     x1, point, #32
         add     x0, tab+32
-        bl      p256_scalarmul_local_tomont_p256
+        CFI_BL(p256_scalarmul_local_tomont_p256)
 
         mov     x0, #0x0000000000000001
         mov     x1, #0xffffffff00000000
@@ -168,34 +169,34 @@ S2N_BN_SYMBOL(p256_scalarmul):
 
         add     x0, tab+96*1
         add     x1, tab
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
         add     x0, tab+96*2
         add     x1, tab+96*1
         add     x2, tab
-        bl      p256_scalarmul_local_p256_montjmixadd
+        CFI_BL(p256_scalarmul_local_p256_montjmixadd)
 
         add     x0, tab+96*3
         add     x1, tab+96*1
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
         add     x0, tab+96*4
         add     x1, tab+96*3
         add     x2, tab
-        bl      p256_scalarmul_local_p256_montjmixadd
+        CFI_BL(p256_scalarmul_local_p256_montjmixadd)
 
         add     x0, tab+96*5
         add     x1, tab+96*2
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
         add     x0, tab+96*6
         add     x1, tab+96*5
         add     x2, tab
-        bl      p256_scalarmul_local_p256_montjmixadd
+        CFI_BL(p256_scalarmul_local_p256_montjmixadd)
 
         add     x0, tab+96*7
         add     x1, tab+96*3
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
 // Initialize the accumulator as a table entry for top 4 bits (unrecoded)
 
@@ -256,19 +257,19 @@ p256_scalarmul_loop:
 
         add     x0, acc
         add     x1, acc
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p256_scalarmul_local_p256_montjdouble
+        CFI_BL(p256_scalarmul_local_p256_montjdouble)
 
         lsr     x2, j, #6
         ldr     x14, [sp, x2, lsl #3]   // Exploits scalarb = sp exactly
@@ -346,7 +347,7 @@ p256_scalarmul_loop:
         add     x0, acc
         add     x1, acc
         add     x2, tabent
-        bl      p256_scalarmul_local_p256_montjadd
+        CFI_BL(p256_scalarmul_local_p256_montjadd)
 
         cbnz    j, p256_scalarmul_loop
 
@@ -356,44 +357,44 @@ p256_scalarmul_loop:
 
         add     x0, z2
         add     x1, acc+64
-        bl      p256_scalarmul_local_montsqr_p256
+        CFI_BL(p256_scalarmul_local_montsqr_p256)
 
         add     x0, z3
         add     x2, z2
         add     x1, acc+64
-        bl      p256_scalarmul_local_montmul_p256
+        CFI_BL(p256_scalarmul_local_montmul_p256)
 
         add     x0, z2
         add     x1, z3
-        bl      p256_scalarmul_local_demont_p256
+        CFI_BL(p256_scalarmul_local_demont_p256)
 
         add     x0, z3
         add     x1, z2
-        bl      p256_scalarmul_local_inv_p256
+        CFI_BL(p256_scalarmul_local_inv_p256)
 
         add     x0, z2
         add     x2, z3
         add     x1, acc+64
-        bl      p256_scalarmul_local_montmul_p256
+        CFI_BL(p256_scalarmul_local_montmul_p256)
 
 // Convert back from Jacobian (X,Y,Z) |-> (X/Z^2, Y/Z^3)
 
         add     x1, acc
         add     x2, z2
         mov     x0, res
-        bl      p256_scalarmul_local_montmul_p256
+        CFI_BL(p256_scalarmul_local_montmul_p256)
 
         add     x0, res, #32
         add     x1, acc+32
         add     x2, z3
-        bl      p256_scalarmul_local_montmul_p256
+        CFI_BL(p256_scalarmul_local_montmul_p256)
 
 // Restore stack and registers and return
 
-        add     sp, sp, NSPACE
-        ldp     x21, x30, [sp], 16
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x21,x30)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 // Local copies of subroutines, complete clones at the moment
 
@@ -434,13 +435,13 @@ p256_scalarmul_local_demont_p256:
         adc     x5, x5, xzr
         stp     x2, x3, [x0]
         stp     x4, x5, [x0, #16]
-        ret
+        CFI_RET
 
 p256_scalarmul_local_inv_p256:
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        sub     sp, sp, #0xa0
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_DEC_SP(0xa0)
         mov     x20, x0
         mov     x10, #0xffffffffffffffff
         mov     x11, #0xffffffff
@@ -1507,11 +1508,11 @@ p256_scalarmul_inv_midloop:
         csel    x13, x3, x13, cc
         stp     x10, x11, [x20]
         stp     x12, x13, [x20, #16]
-        add     sp, sp, #0xa0
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
-        ret
+        CFI_INC_SP(0xa0)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 p256_scalarmul_local_montmul_p256:
         ldr q20, [x2]
@@ -1718,7 +1719,7 @@ p256_scalarmul_local_montmul_p256:
         adcs x4, x7, xzr
         adc x1, x17, x1
         stp x4, x1, [x0, #16]
-        ret
+        CFI_RET
 
 p256_scalarmul_local_montsqr_p256:
         ldr q19, [x1]
@@ -1857,7 +1858,7 @@ p256_scalarmul_local_montsqr_p256:
         csel x2, x5, x2, cs
         stp x14, x12, [x0, #16]
         stp x16, x2, [x0]
-        ret
+        CFI_RET
 
 p256_scalarmul_local_tomont_p256:
         ldp     x2, x3, [x1]
@@ -1983,15 +1984,15 @@ p256_scalarmul_local_tomont_p256:
         adc     x6, x6, x7
         stp     x3, x4, [x0]
         stp     x5, x6, [x0, #16]
-        ret
+        CFI_RET
 
 p256_scalarmul_local_p256_montjadd:
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
-        stp     x27, x30, [sp, #-16]!
-        sub     sp, sp, #0xe0
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x26)
+        CFI_PUSH2(x27,x30)
+        CFI_DEC_SP(0xe0)
         mov     x21, x0
         mov     x22, x1
         mov     x23, x2
@@ -5097,16 +5098,16 @@ p256_scalarmul_local_p256_montjadd:
         stp     x6, x7, [x21, #48]
         stp     x8, x9, [x21, #64]
         stp     x10, x11, [x21, #80]
-        add     sp, sp, #0xe0
-        ldp     x27, x30, [sp], #16
-        ldp     x25, x26, [sp], #16
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
-        ret
+        CFI_INC_SP(0xe0)
+        CFI_POP2(x27,x30)
+        CFI_POP2(x25,x26)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 p256_scalarmul_local_p256_montjdouble:
-        sub     sp, sp, #0x110
+        CFI_DEC_SP(0x110)
         stp     x19, x20, [sp, #192]
         stp     x21, x22, [sp, #208]
         stp     x23, x24, [sp, #224]
@@ -6613,12 +6614,12 @@ p256_scalarmul_local_p256_montjdouble:
         ldp     x23, x24, [sp, #224]
         ldp     x21, x22, [sp, #208]
         ldp     x19, x20, [sp, #192]
-        add     sp, sp, #0x110
-        ret
+        CFI_INC_SP(0x110)
+        CFI_RET
 
 p256_scalarmul_local_p256_montjmixadd:
-        stp     x19, x20, [sp, #-16]!
-        sub     sp, sp, #0xc0
+        CFI_PUSH2(x19,x20)
+        CFI_DEC_SP(0xc0)
         mov     x17, x0
         mov     x19, x1
         mov     x20, x2
@@ -8565,9 +8566,9 @@ p256_scalarmul_local_p256_montjmixadd:
         stp     x6, x7, [x17, #48]
         stp     x8, x9, [x17, #64]
         stp     x10, x11, [x17, #80]
-        add     sp, sp, #0xc0
-        ldp     x19, x20, [sp], #16
-        ret
+        CFI_INC_SP(0xc0)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 
 #if defined(__linux__) && defined(__ELF__)

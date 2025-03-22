@@ -27,6 +27,7 @@
 
 
 S2N_BN_SYMBOL(bignum_lt):
+        CFI_START
 
 // Zero the main index counter for both branches
 
@@ -58,7 +59,7 @@ bignum_lt_xtoploop:
         cbnz    m, bignum_lt_xtoploop
 bignum_lt_xskip:
         cset    x0, cc
-        ret
+        CFI_RET
 
 // The case where y is longer (n > m)
 // The first "adds" also makes sure CF=1 initially in this branch
@@ -82,7 +83,7 @@ bignum_lt_ytoploop:
         cbnz    n, bignum_lt_ytoploop
 
         cset    x0, cc
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

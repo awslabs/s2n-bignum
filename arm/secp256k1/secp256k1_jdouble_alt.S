@@ -56,7 +56,7 @@
 #define dx2 sp, #(NUMSIZE*8)
 #define xy2 sp, #(NUMSIZE*10)
 
-#define NSPACE #(NUMSIZE*12)
+#define NSPACE (NUMSIZE*12)
 
 // Corresponds exactly to bignum_mul_p256k1_alt except for
 // re-use of the pconst register for the constant 4294968273
@@ -591,10 +591,11 @@
         stp     x2, x3, [P0+16]
 
 S2N_BN_SYMBOL(secp256k1_jdouble_alt):
+        CFI_START
 
 // Make room on stack for temp registers
 
-        sub     sp, sp, NSPACE
+        CFI_DEC_SP(NSPACE)
 
 // Move the input arguments to stable place
 
@@ -652,8 +653,8 @@ S2N_BN_SYMBOL(secp256k1_jdouble_alt):
 
 // Restore stack and return
 
-        add     sp, sp, NSPACE
-        ret
+        CFI_INC_SP(NSPACE)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

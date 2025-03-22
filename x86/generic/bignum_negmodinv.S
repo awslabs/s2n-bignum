@@ -43,18 +43,19 @@
 #define ishort r8d
 
 S2N_BN_SYMBOL(bignum_negmodinv):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
 #endif
 
-        push    rbx
-        push    r12
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
 
 // If k = 0 do nothing (actually we could have avoiding the pushes and pops)
 
@@ -173,13 +174,13 @@ bignum_negmodinv_finale:
         mov     [z+8], a
 
 bignum_negmodinv_end:
-        pop     r12
-        pop     rbx
+        CFI_POP(r12)
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

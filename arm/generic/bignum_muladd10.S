@@ -29,6 +29,7 @@
 #define l x5
 
 S2N_BN_SYMBOL(bignum_muladd10):
+        CFI_START
 
 // If k = 0 just return the input d as the carry (out of zero digits)
 
@@ -55,7 +56,7 @@ bignum_muladd10_loop:
 
 bignum_muladd10_end:
         mov     x0, d
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

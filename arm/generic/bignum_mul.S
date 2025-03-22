@@ -40,6 +40,7 @@
 
 
 S2N_BN_SYMBOL(bignum_mul):
+        CFI_START
 
 // If p = 0 the result is trivial and nothing needs doing
 
@@ -107,7 +108,7 @@ bignum_mul_innerend:
         bcc     bignum_mul_outerloop                       // Inverted carry flag!
 
 bignum_mul_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

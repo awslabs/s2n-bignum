@@ -65,6 +65,7 @@
 S2N_BN_SYMBOL(bignum_demont_p256):
 
 S2N_BN_SYMBOL(bignum_demont_p256_alt):
+        CFI_START
 
 // Set up an initial window with the input x and an extra leading zero
 
@@ -86,7 +87,7 @@ S2N_BN_SYMBOL(bignum_demont_p256_alt):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

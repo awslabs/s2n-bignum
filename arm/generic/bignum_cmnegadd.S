@@ -38,6 +38,7 @@
 
 
 S2N_BN_SYMBOL(bignum_cmnegadd):
+        CFI_START
 
 // First clamp the input size n := min(p,n) since we can never need to read
 // past the p'th term of the input to generate p-digit output.
@@ -120,7 +121,7 @@ bignum_cmnegadd_highend:
 
 bignum_cmnegadd_end:
         mov     x0, h
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

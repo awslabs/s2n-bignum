@@ -23,6 +23,7 @@
 
 
 S2N_BN_SYMBOL(bignum_iszero):
+        CFI_START
 
 mov     c, xzr                  // c will be or of the digits
         cbz     k, bignum_iszero_end                  // if k = 0 skip the bignum_iszero_loop
@@ -36,7 +37,7 @@ bignum_iszero_loop:
 bignum_iszero_end:
         cmp     c, xzr
         cset    x0, eq
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

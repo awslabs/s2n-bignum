@@ -35,6 +35,7 @@
 
 
 S2N_BN_SYMBOL(bignum_shr_small):
+        CFI_START
 
 // Set default carry-in word to 0
 
@@ -83,7 +84,7 @@ bignum_shr_small_loop:
 
 bignum_shr_small_end:
         lsr     x0, b, d
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

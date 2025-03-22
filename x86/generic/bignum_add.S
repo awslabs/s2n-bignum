@@ -38,11 +38,12 @@
 
 
 S2N_BN_SYMBOL(bignum_add):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -94,10 +95,10 @@ bignum_add_xtest:
         test    p, p
         jnz     bignum_add_tails
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 // The case where y is longer (p >= n > m)
 
@@ -126,10 +127,10 @@ bignum_add_ytoploop:
         test    p, p
         jnz     bignum_add_tails
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 // Adding a non-trivial tail, when p > max(m,n)
 
@@ -144,10 +145,10 @@ bignum_add_tail:
         dec     p
         jnz     bignum_add_tailloop
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

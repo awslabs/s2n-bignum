@@ -886,11 +886,12 @@
         mov     [P+40], r5
 
 S2N_BN_SYMBOL(p384_montjmixadd):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -899,14 +900,14 @@ S2N_BN_SYMBOL(p384_montjmixadd):
 // Save registers and make room on stack for temporary variables
 // Put the input arguments in non-volatile places on the stack
 
-        push   rbx
-        push   rbp
-        push   r12
-        push   r13
-        push   r14
-        push   r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
         mov     input_x, rsi
         mov     input_y, rdx
@@ -986,19 +987,19 @@ S2N_BN_SYMBOL(p384_montjmixadd):
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_INC_RSP(NSPACE)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

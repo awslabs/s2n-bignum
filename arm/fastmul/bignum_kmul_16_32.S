@@ -34,15 +34,16 @@
 #define m x19
 
 S2N_BN_SYMBOL(bignum_kmul_16_32):
+        CFI_START
 
 // Save registers, including return address
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
-        stp     x27, x28, [sp, #-16]!
-        stp     x29, x30, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x26)
+        CFI_PUSH2(x27,x28)
+        CFI_PUSH2(x29,x30)
 
 // Move parameters into subroutine-safe places
 
@@ -53,7 +54,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
 
 // Compute L = x_lo * y_lo in bottom half of buffer (size 8 x 8 -> 16)
 
-        bl      bignum_kmul_16_32_local_mul_8_16
+        CFI_BL(bignum_kmul_16_32_local_mul_8_16)
 
 // Compute absolute difference [t..] = |x_lo - x_hi|
 // and the sign s = sgn(x_lo - x_hi) as a bitmask (all 1s for negative)
@@ -102,7 +103,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
         add     x0, z, #128
         add     x1, x, #64
         add     x2, y, #64
-        bl      bignum_kmul_16_32_local_mul_8_16
+        CFI_BL(bignum_kmul_16_32_local_mul_8_16)
 
 // Compute the other absolute difference [t+8..] = |y_hi - y_lo|
 // Collect the combined product sign bitmask (all 1s for negative) in s
@@ -199,7 +200,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
         add     x0, t, #128
         mov     x1, t
         add     x2, t, #64
-        bl      bignum_kmul_16_32_local_mul_8_16
+        CFI_BL(bignum_kmul_16_32_local_mul_8_16)
 
 // Add the interlocking H' and L_bot terms, storing in registers x15..x0
 // Intercept the carry at the 8 + 16 = 24 position and store it in x.
@@ -320,14 +321,14 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
 
 // Restore registers and return
 
-        ldp     x29, x30, [sp], #16
-        ldp     x27, x28, [sp], #16
-        ldp     x25, x26, [sp], #16
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x29,x30)
+        CFI_POP2(x27,x28)
+        CFI_POP2(x25,x26)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 // ----------------------------------------------------------------------------
 // Local copy of bignum_mul_8_16 without the scratch register save/restore
@@ -827,7 +828,7 @@ bignum_kmul_16_32_local_mul_8_16:
         stp x9, x10, [x0, #80]
         stp x20, x21, [x0, #96]
         stp x22, x23, [x0, #112]
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

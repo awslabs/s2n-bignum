@@ -32,18 +32,19 @@
 
 #define NUMSIZE 48
 
-#define NSPACE #(NUMSIZE*7)
+#define NSPACE (NUMSIZE*7)
 
 S2N_BN_SYMBOL(p384_montjdouble):
+        CFI_START
 
 // Save regs and make room on stack for temporary variables
 
-        sub     sp, sp, NSPACE+80
-        stp     x19, x20, [sp, NSPACE]
-        stp     x21, x22, [sp, NSPACE+16]
-        stp     x23, x24, [sp, NSPACE+32]
-        stp     x25, x26, [sp, NSPACE+48]
-        stp     x27, xzr, [sp, NSPACE+64]
+        CFI_DEC_SP(NSPACE+80)
+        stp     x19, x20, [sp, #NSPACE]
+        stp     x21, x22, [sp, #NSPACE+16]
+        stp     x23, x24, [sp, #NSPACE+32]
+        stp     x25, x26, [sp, #NSPACE+48]
+        stp     x27, xzr, [sp, #NSPACE+64]
 
         mov x25, x0
         mov x26, x1
@@ -3134,13 +3135,13 @@ S2N_BN_SYMBOL(p384_montjdouble):
 
 // Restore stack and registers
 
-        ldp     x19, x20, [sp, NSPACE]
-        ldp     x21, x22, [sp, NSPACE+16]
-        ldp     x23, x24, [sp, NSPACE+32]
-        ldp     x25, x26, [sp, NSPACE+48]
-        ldp     x27, xzr, [sp, NSPACE+64]
-        add     sp, sp, NSPACE+80
-        ret
+        ldp     x19, x20, [sp, #NSPACE]
+        ldp     x21, x22, [sp, #NSPACE+16]
+        ldp     x23, x24, [sp, #NSPACE+32]
+        ldp     x25, x26, [sp, #NSPACE+48]
+        ldp     x27, xzr, [sp, #NSPACE+64]
+        CFI_INC_SP(NSPACE+80)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

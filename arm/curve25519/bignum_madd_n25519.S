@@ -99,8 +99,9 @@
         adc     m3, m3, t2
 
 S2N_BN_SYMBOL(bignum_madd_n25519):
+        CFI_START
 
-        stp     x19, x20, [sp, -16]!
+        CFI_PUSH2(x19,x20)
 
 // Back up the result pointer so we can overwrite x0 in intermediate steps
 
@@ -276,8 +277,8 @@ S2N_BN_SYMBOL(bignum_madd_n25519):
 
 // Restore registers and return
 
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -56,6 +56,7 @@
 #define r x14
 
 S2N_BN_SYMBOL(bignum_cdiv):
+        CFI_START
 
 // Effectively the same dataflow as bignum_cmod, with some basic
 // variable changes (using n for the size not k, returning r, etc.)
@@ -271,7 +272,7 @@ bignum_cdiv_noload:
 bignum_cdiv_end:
 
         mov     x0, r
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

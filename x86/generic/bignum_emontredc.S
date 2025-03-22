@@ -58,11 +58,12 @@
 
 
 S2N_BN_SYMBOL(bignum_emontredc):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -71,10 +72,10 @@ S2N_BN_SYMBOL(bignum_emontredc):
 
 // Save registers
 
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
 
 // Initialize top carry to zero immediately to catch the k = 0 case
 
@@ -140,15 +141,15 @@ bignum_emontredc_end:
 // Put the top carry in the expected place, restore registers and return
 
         mov     rax, c
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

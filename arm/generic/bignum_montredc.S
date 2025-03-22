@@ -57,6 +57,7 @@
 
 
 S2N_BN_SYMBOL(bignum_montredc):
+        CFI_START
 
 // If k = 0 the whole operation is trivial
 
@@ -187,7 +188,7 @@ bignum_montredc_corrloop:
         cbnz    a, bignum_montredc_corrloop
 
 bignum_montredc_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

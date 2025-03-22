@@ -42,6 +42,7 @@
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(bignum_mod_m25519_4):
+        CFI_START
 
 // Load the complicated three words of m_25519 (the other being n2 = 0)
 
@@ -74,7 +75,7 @@ S2N_BN_SYMBOL(bignum_mod_m25519_4):
         stp     n0, n1, [z]
         stp     n2, n3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

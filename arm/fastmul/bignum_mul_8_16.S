@@ -18,9 +18,10 @@
         .balign 4
 
 S2N_BN_SYMBOL(bignum_mul_8_16):
-        stp x19, x20, [sp, #-16]!
-        stp x21, x22, [sp, #-16]!
-        stp x23, x24, [sp, #-16]!
+        CFI_START
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
         ldp x3, x4, [x1]
         ldr q0, [x1]
         ldp x7, x8, [x2]
@@ -514,8 +515,8 @@ S2N_BN_SYMBOL(bignum_mul_8_16):
         stp x9, x10, [x0, #80]
         stp x20, x21, [x0, #96]
         stp x22, x23, [x0, #112]
-        ldp x23, x24, [sp], #16
-        ldp x21, x22, [sp], #16
-        ldp x19, x20, [sp], #16
-        ret
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 

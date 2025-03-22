@@ -25,6 +25,7 @@
 #define l x4
 
 S2N_BN_SYMBOL(bignum_double_p521):
+        CFI_START
 
 // We can decide whether 2 * x >= p_521 just by 2 * x >= 2^521, which
 // amounts to whether the top word is >= 256
@@ -60,7 +61,7 @@ S2N_BN_SYMBOL(bignum_double_p521):
         and     c, c, #0x1FF
         str     c, [z, #64]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -92,11 +92,12 @@
 #define h b5 // same as b5
 
 S2N_BN_SYMBOL(bignum_montmul_p384_alt):
+        CFI_START
 
 // Save more registers
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
 
 // Load operands and set up row 0 = [u6;...;u0] = a0 * [b5;...;b0]
 
@@ -329,10 +330,10 @@ S2N_BN_SYMBOL(bignum_montmul_p384_alt):
 
 // Restore registers
 
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -51,6 +51,7 @@
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(bignum_mod_n25519):
+        CFI_START
 
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
@@ -161,7 +162,7 @@ bignum_mod_n25519_loop:
 bignum_mod_n25519_writeback:
         stp     m0, m1, [z]
         stp     m2, m3, [z, #16]
-        ret
+        CFI_RET
 
 // Short case: just copy the input with zero-padding
 

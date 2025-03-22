@@ -34,6 +34,7 @@
 
 
 S2N_BN_SYMBOL(bignum_add_p521):
+        CFI_START
 
 // Force carry-in to get s = [d8;d7;d6;d5;d4;d3;d2;d1;d0] = x + y + 1.
 // We ignore the carry-out, assuming inputs are reduced so there is none.
@@ -87,7 +88,7 @@ S2N_BN_SYMBOL(bignum_add_p521):
         stp     d6, d7, [z, #48]
         str     d8, [z, #64]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

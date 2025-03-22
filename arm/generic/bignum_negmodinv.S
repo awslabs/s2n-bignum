@@ -38,6 +38,7 @@
 
 
 S2N_BN_SYMBOL(bignum_negmodinv):
+        CFI_START
 
 // If k = 0 do nothing
 
@@ -128,7 +129,7 @@ bignum_negmodinv_finale:
         str     m, [z, #8]
 
 bignum_negmodinv_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

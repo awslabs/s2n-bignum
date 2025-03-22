@@ -53,6 +53,7 @@
 #define e8 x7
 
 S2N_BN_SYMBOL(bignum_cdiv_exact):
+        CFI_START
 
 // If k = 0 then there's nothing to be done
 
@@ -155,7 +156,7 @@ bignum_cdiv_exact_noload:
         bcc     bignum_cdiv_exact_loop
 
 bignum_cdiv_exact_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

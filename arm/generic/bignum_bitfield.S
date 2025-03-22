@@ -36,6 +36,7 @@
 
 
 S2N_BN_SYMBOL(bignum_bitfield):
+        CFI_START
 
 // For length zero finish immediately (the return value in x0 is 0)
 
@@ -86,7 +87,7 @@ bignum_bitfield_loop:
         sub     m, m, #1
         and     x0, a, m
 bignum_bitfield_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -32,13 +32,14 @@
 #define z x, k, lsl #4
 
 S2N_BN_SYMBOL(bignum_modexp):
+        CFI_START
 
 // Save some registers including link register
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x30, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x30)
 
 // If size is zero (which falsifies the oddness condition) do nothing
 
@@ -59,20 +60,20 @@ S2N_BN_SYMBOL(bignum_modexp):
         add     x1, z
         mov     x2, m
         add     x3, y
-        bl bignum_modexp_local_amontifier
+        CFI_BL(bignum_modexp_local_amontifier)
 
         mov     x0, k
         mov     x1, x
         add     x2, z
         mov     x3, a
         mov     x4, m
-        bl bignum_modexp_local_amontmul
+        CFI_BL(bignum_modexp_local_amontmul)
 
         mov     x0, k
         add     x1, z
         add     x2, z
         mov     x3, m
-        bl bignum_modexp_local_demont
+        CFI_BL(bignum_modexp_local_demont)
 
 // Main loop with z == 2^64k * a^(p >> 2^i) (mod m)
 
@@ -86,14 +87,14 @@ bignum_modexp_loop:
         add     x2, z
         add     x3, z
         mov     x4, m
-        bl      bignum_modexp_local_amontmul
+        CFI_BL(bignum_modexp_local_amontmul)
 
         mov     x0, k
         add     x1, z
         mov     x2, x
         add     x3, y
         mov     x4, m
-        bl      bignum_modexp_local_amontmul
+        CFI_BL(bignum_modexp_local_amontmul)
 
         lsr     x0, i, #6
         ldr     x0, [p, x0, lsl #3]
@@ -104,7 +105,7 @@ bignum_modexp_loop:
         add     x2, z
         add     x3, z
         add     x4, y
-        bl      bignum_modexp_local_mux
+        CFI_BL(bignum_modexp_local_mux)
 
         cbnz    i, bignum_modexp_loop
 
@@ -115,24 +116,24 @@ bignum_modexp_loop:
         add     x1, z
         add     x2, z
         mov     x3, m
-        bl      bignum_modexp_local_demont
+        CFI_BL(bignum_modexp_local_demont)
 
         mov     x0, xzr
         mov     x1, k
         mov     x2, res
         add     x3, z
         add     x4, z
-        bl      bignum_modexp_local_mux
+        CFI_BL(bignum_modexp_local_mux)
 
 // Restore registers and return
 
 bignum_modexp_end:
 
-        ldp     x25, x30, [sp], 16
-        ldp     x23, x24, [sp], 16
-        ldp     x21, x22, [sp], 16
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_POP2(x25,x30)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 // Local copy of bignum_amontifier
 
@@ -354,7 +355,7 @@ bignum_modexp_osloop:
         sub     x7, x5, x0
         cbnz    x7, bignum_modexp_osloop
 bignum_modexp_amontifend:
-        ret
+        CFI_RET
 
 // Local copy of bignum_amontmul
 
@@ -441,7 +442,7 @@ bignum_modexp_corrloop3:
         sub     x14, x10, x0
         cbnz    x14, bignum_modexp_corrloop3
 bignum_modexp_amomend:
-        ret
+        CFI_RET
 
 // Local copy of bignum_demont
 
@@ -518,7 +519,7 @@ bignum_modexp_corrloop:
         sub     x11, x6, x0
         cbnz    x11, bignum_modexp_corrloop
 bignum_modexp_demontend:
-        ret
+        CFI_RET
 
 // Local copy of bignum_mux
 
@@ -533,7 +534,7 @@ bignum_modexp_muxloop:
         str     x5, [x2, x1, lsl #3]
         cbnz    x1, bignum_modexp_muxloop
 bignum_modexp_muxend:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

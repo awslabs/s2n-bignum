@@ -29,16 +29,17 @@
         .balign 4
 
 #define NUMSIZE 32
-#define NSPACE #(NUMSIZE*6)
+#define NSPACE (NUMSIZE*6)
 
 S2N_BN_SYMBOL(p256_montjdouble):
+        CFI_START
 
-        sub     sp, sp, NSPACE+80
-        stp     x19, x20, [sp, NSPACE]
-        stp     x21, x22, [sp, NSPACE+16]
-        stp     x23, x24, [sp, NSPACE+32]
-        stp     x25, x26, [sp, NSPACE+48]
-        stp     x27, xzr, [sp, NSPACE+64]
+        CFI_DEC_SP(NSPACE+80)
+        stp     x19, x20, [sp, #NSPACE]
+        stp     x21, x22, [sp, #NSPACE+16]
+        stp     x23, x24, [sp, #NSPACE+32]
+        stp     x25, x26, [sp, #NSPACE+48]
+        stp     x27, xzr, [sp, #NSPACE+64]
 
         mov x19, x0
         mov x20, x1
@@ -1537,13 +1538,13 @@ S2N_BN_SYMBOL(p256_montjdouble):
         stp x3, x4, [x19, #32]
         stp x5, x6, [x19, #48]
 
-        ldp     x27, xzr, [sp, NSPACE+64]
-        ldp     x25, x26, [sp, NSPACE+48]
-        ldp     x23, x24, [sp, NSPACE+32]
-        ldp     x21, x22, [sp, NSPACE+16]
-        ldp     x19, x20, [sp, NSPACE]
-        add     sp, sp, NSPACE+80
-        ret
+        ldp     x27, xzr, [sp, #NSPACE+64]
+        ldp     x25, x26, [sp, #NSPACE+48]
+        ldp     x23, x24, [sp, #NSPACE+32]
+        ldp     x21, x22, [sp, #NSPACE+16]
+        ldp     x19, x20, [sp, #NSPACE]
+        CFI_INC_SP(NSPACE+80)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

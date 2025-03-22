@@ -24,11 +24,12 @@
         .text
 
 S2N_BN_SYMBOL(word_negmodinv):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
 #endif
 
@@ -66,10 +67,10 @@ S2N_BN_SYMBOL(word_negmodinv):
         imul    rax, rdx    // rax = x * (1 + e) * ... * * (1 + e^8)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

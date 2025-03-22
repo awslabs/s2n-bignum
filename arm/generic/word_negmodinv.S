@@ -40,6 +40,7 @@
 #define e8 x0
 
 S2N_BN_SYMBOL(word_negmodinv):
+        CFI_START
 
 // Initial magical 5-bit approximation x = (a - a<<2) xor 2
 
@@ -71,7 +72,7 @@ S2N_BN_SYMBOL(word_negmodinv):
 
         madd    x0, e8, x, x
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

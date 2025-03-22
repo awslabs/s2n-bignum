@@ -30,6 +30,7 @@
 #define n3 x10
 
 S2N_BN_SYMBOL(bignum_double_sm2):
+        CFI_START
 
 // Double the input number as 2 * x = c + [d3; d2; d1; d0]
 // It's worth considering doing this with extr...63 instead
@@ -65,7 +66,7 @@ S2N_BN_SYMBOL(bignum_double_sm2):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

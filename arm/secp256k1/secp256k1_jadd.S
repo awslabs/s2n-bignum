@@ -53,7 +53,7 @@
 #define z_3 input_z, #(2*NUMSIZE)
 
 // Pointer-offset pairs for temporaries, with some aliasing
-// NSPACE is the total stack needed for these temporaries
+// #NSPACE is the total stack needed for these temporaries
 
 #define z1sq sp, #(NUMSIZE*0)
 #define ww sp, #(NUMSIZE*0)
@@ -403,12 +403,13 @@
         stp     x7, x8, [P0+16]
 
 S2N_BN_SYMBOL(secp256k1_jadd):
+        CFI_START
 
 // Save registers and make room on stack for temporary variables
 
-        sub     sp, sp, NSPACE+32
-        stp     x19, x20, [sp, NSPACE]
-        stp     x21, x22, [sp, NSPACE+16]
+        CFI_DEC_SP(NSPACE+32)
+        stp     x19, x20, [sp, #NSPACE]
+        stp     x21, x22, [sp, #NSPACE+16]
 
 // Move the input arguments to stable place
 
@@ -539,10 +540,10 @@ S2N_BN_SYMBOL(secp256k1_jadd):
 
 // Restore stack and return
 
-        ldp     x19, x20, [sp, NSPACE]
-        ldp     x21, x22, [sp, NSPACE+16]
-        add     sp, sp, NSPACE+32
-        ret
+        ldp     x19, x20, [sp, #NSPACE]
+        ldp     x21, x22, [sp, #NSPACE+16]
+        CFI_INC_SP(NSPACE+32)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

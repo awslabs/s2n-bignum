@@ -59,8 +59,9 @@
 #define m x2
 
 S2N_BN_SYMBOL(bignum_emontredc_8n_cdiff):
+        CFI_START
 
-        sub sp, sp, #(10*16)
+        CFI_DEC_SP((10*16))
         stp x19, x20, [sp, #(9*16)]
         stp x21, x22, [sp, #(8*16)]
         stp x23, x24, [sp, #(7*16)]
@@ -73,9 +74,9 @@ S2N_BN_SYMBOL(bignum_emontredc_8n_cdiff):
         stp d8, d9, [sp, #(0*16)]
 
         // Leave space for cached differences of words of a in inner loop
-        sub sp, sp, #(6*16)
+        CFI_DEC_SP((6*16))
 
-        sub sp, sp, #32
+        CFI_DEC_SP(32)
         lsr x0, x0, #2
         mov x26, x0
         subs x12, x0, #1
@@ -639,8 +640,8 @@ bignum_emontredc_8n_cdiff_outer_loop_end:
         neg x0, x28
 
 bignum_emontredc_8n_cdiff_end:
-        add sp, sp, #32
-        add sp, sp, #(6*16)
+        CFI_INC_SP(32)
+        CFI_INC_SP((6*16))
         ldp d8, d9, [sp, #(0*16)]
         ldp d10, d11, [sp, #(1*16)]
         ldp d12, d13, [sp, #(2*16)]
@@ -651,6 +652,6 @@ bignum_emontredc_8n_cdiff_end:
         ldp x23, x24, [sp, #(7*16)]
         ldp x21, x22, [sp, #(8*16)]
         ldp x19, x20, [sp, #(9*16)]
-        add sp, sp, #(10*16)
+        CFI_INC_SP((10*16))
 
-        ret
+        CFI_RET

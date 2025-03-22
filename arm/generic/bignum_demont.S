@@ -51,6 +51,7 @@
 
 
 S2N_BN_SYMBOL(bignum_demont):
+        CFI_START
 
 // If k = 0 the whole operation is trivial
 
@@ -149,7 +150,7 @@ bignum_demont_corrloop:
         cbnz    a, bignum_demont_corrloop
 
 bignum_demont_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

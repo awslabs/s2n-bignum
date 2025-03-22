@@ -43,11 +43,12 @@
 
 
 S2N_BN_SYMBOL(bignum_mod_n384):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -55,10 +56,10 @@ S2N_BN_SYMBOL(bignum_mod_n384):
 
 // Save extra registers
 
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
 
 // If the input is already <= 5 words long, go to a trivial "copy" path
 
@@ -186,15 +187,15 @@ bignum_mod_n384_writeback:
 
 // Restore registers and return
 
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 bignum_mod_n384_shortinput:
 

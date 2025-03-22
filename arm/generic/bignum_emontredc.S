@@ -49,6 +49,7 @@
 
 
 S2N_BN_SYMBOL(bignum_emontredc):
+        CFI_START
 
 // If k = 0 the whole operation is trivial; note we also get a return of c = 0
 
@@ -102,7 +103,7 @@ bignum_emontredc_montend:
         mov     x0, c
 
 bignum_emontredc_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

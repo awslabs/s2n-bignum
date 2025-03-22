@@ -60,12 +60,13 @@
 #define regsave sp, #NSPACE
 
 S2N_BN_SYMBOL(curve25519_x25519_byte):
+        CFI_START
 
-// Save registers and make additional room NSPACE for temporaries.
+// Save registers and make additional room #NSPACE for temporaries.
 // We only need to save the low 64-bits of the Q8...Q15 registers
 // according to the ABI, so we use a save of the D8...D15 forms.
 
-        sub     sp, sp, #NSPACE+160
+        CFI_DEC_SP(NSPACE+160)
         stp     d8, d9, [regsave+0]
         stp     d10, d11, [regsave+16]
         stp     d12, d13, [regsave+32]
@@ -2768,8 +2769,8 @@ curve25519_x25519_byte_invmidloop:
         ldp     x25, x26, [regsave+112]
         ldp     x27, x28, [regsave+128]
         ldp     x29, x30, [regsave+144]
-        add     sp, sp, #NSPACE+160
-        ret
+        CFI_INC_SP(NSPACE+160)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

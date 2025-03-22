@@ -40,7 +40,7 @@
 #define z_3 input_z, #(2*NUMSIZE)
 
 // Pointer-offset pairs for temporaries, with some aliasing
-// NSPACE is the total stack needed for these temporaries
+// #NSPACE is the total stack needed for these temporaries
 
 #define z2 sp, #(NUMSIZE*0)
 #define y4 sp, #(NUMSIZE*0)
@@ -58,7 +58,7 @@
 #define x4p sp, #(NUMSIZE*5)
 #define d_ sp, #(NUMSIZE*5)
 
-#define NSPACE #(NUMSIZE*6)
+#define NSPACE (NUMSIZE*6)
 
 // Corresponds to bignum_montmul_sm2 exactly
 
@@ -589,11 +589,12 @@
         stp     x5, x6, [P0+16]
 
 S2N_BN_SYMBOL(sm2_montjdouble):
+        CFI_START
 
 // Save registers and make room on stack for temporary variables
 
-        sub     sp, sp, NSPACE+16
-        stp     x19, x20, [sp, NSPACE]
+        CFI_DEC_SP(NSPACE+16)
+        stp     x19, x20, [sp, #NSPACE]
 
 // Move the input arguments to stable places
 
@@ -654,9 +655,9 @@ S2N_BN_SYMBOL(sm2_montjdouble):
 
 // Restore registers and stack and return
 
-        ldp     x19, x20, [sp, NSPACE]
-        add     sp, sp, NSPACE+16
-        ret
+        ldp     x19, x20, [sp, #NSPACE]
+        CFI_INC_SP(NSPACE+16)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

@@ -95,11 +95,12 @@
         adc     m3, rbx
 
 S2N_BN_SYMBOL(bignum_madd_n25519):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -108,12 +109,12 @@ S2N_BN_SYMBOL(bignum_madd_n25519):
 
 // Save some additional registers for use
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
 // First compute [r15;r14;r13;r12;r11;r10;r9;r8] = x * y + c. This is
 // a multiply-add variant of an ADCX/ADOX-based schoolbook multiplier,
@@ -202,18 +203,18 @@ S2N_BN_SYMBOL(bignum_madd_n25519):
 
 // Restore registers and return
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

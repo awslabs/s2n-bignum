@@ -38,41 +38,42 @@
 #define t rcx
 
 S2N_BN_SYMBOL(bignum_kmul_32_64):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
         mov     rcx, r9
 #endif
 
-// Save callee-saved registers and also push t onto the stack; we'll
+// Save callee-saved registers and also CFI_PUSH(t) onto the stack; we'll
 // use this space to back up both t and later z. Then move the y variable
 // into its longer-term home for the first few stages.
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        push    rcx
+        CFI_PUSH(rcx)
         mov     y, rdx
 
 // Multiply the low halves
 
-        call    bignum_kmul_32_64_local_bignum_kmul_16_32
+        CFI_CALL(bignum_kmul_32_64_local_bignum_kmul_16_32)
 
 // Multiply the high halves
 
         lea     rdi,[rdi+16*K-0x40]
         lea     rsi,[rsi+8*K-0x40]
         lea     rcx,[rcx+8*K]
-        call    bignum_kmul_32_64_local_bignum_kmul_16_32
+        CFI_CALL(bignum_kmul_32_64_local_bignum_kmul_16_32)
 
 // Establish r8 as the t pointer and use the cell to back up z now
 
@@ -146,7 +147,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         mov     rcx, r8
         lea     rsi, [r8+8*K]
         lea     rdi, [r8+16*K]
-        call    bignum_kmul_32_64_local_bignum_kmul_16_32
+        CFI_CALL(bignum_kmul_32_64_local_bignum_kmul_16_32)
         mov     z, [rsp]
 
 // Compose the middle parts [2,1] + [1,0] + [3,2], saving carry in rbx.
@@ -198,22 +199,22 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         .set I,  (I+1)
         .endr
 
-// Restore and return. The first pop is not needed for the ABI but
+// Restore and return. The first CFI_POP(is) not needed for the ABI but
 // we need to adjust the stack anyway so it seems reasonable.
 
-        pop     rcx
+        CFI_POP(rcx)
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 // Local copy of half-length subroutine. This has a slightly different
 // interface, expecting y argument in rcx directly, and not doing any
@@ -1142,7 +1143,7 @@ bignum_kmul_32_64_local_bignum_kmul_16_32:
         mov    [rdi+0xa8], r13
         mov    [rdi+0xb0], r14
         mov    [rdi+0xb8], r15
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

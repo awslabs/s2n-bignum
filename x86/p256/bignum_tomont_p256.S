@@ -41,11 +41,12 @@
         adox    high, rcx
 
 S2N_BN_SYMBOL(bignum_tomont_p256):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -55,10 +56,10 @@ S2N_BN_SYMBOL(bignum_tomont_p256):
 // modulo a few registers and the change from loading y[i] to using constants.
 // Because there is no y pointer to keep, we use one register less.
 
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
 // Do row 0 computation, which is a bit different:
 // set up initial window [r12,r11,r10,r9,r8] = y[0] * x
@@ -175,16 +176,16 @@ S2N_BN_SYMBOL(bignum_tomont_p256):
 
 // Restore registers and return
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

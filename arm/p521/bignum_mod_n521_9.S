@@ -55,6 +55,7 @@
 S2N_BN_SYMBOL(bignum_mod_n521_9):
 
 S2N_BN_SYMBOL(bignum_mod_n521_9_alt):
+        CFI_START
 
 // Load the top digit first into d8.
 // The initial quotient estimate is q = h + 1 where x = 2^521 * h + t
@@ -136,7 +137,7 @@ S2N_BN_SYMBOL(bignum_mod_n521_9_alt):
         stp     d6, d7, [z, #48]
         str     d8, [z, #64]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

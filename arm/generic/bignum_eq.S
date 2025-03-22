@@ -28,6 +28,7 @@
 
 
 S2N_BN_SYMBOL(bignum_eq):
+        CFI_START
 
 // Initialize the accumulated OR of differences to zero
 
@@ -75,7 +76,7 @@ bignum_eq_loop:
 bignum_eq_end:
         cmp     c, xzr
         cset    x0, eq
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

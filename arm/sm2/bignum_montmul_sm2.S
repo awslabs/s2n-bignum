@@ -79,6 +79,7 @@
 #define s4 x2
 
 S2N_BN_SYMBOL(bignum_montmul_sm2):
+        CFI_START
 
 // Load in all words of both inputs
 
@@ -260,7 +261,7 @@ S2N_BN_SYMBOL(bignum_montmul_sm2):
         stp     d0, d1, [x0]
         stp     d2, d3, [x0, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

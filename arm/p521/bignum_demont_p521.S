@@ -39,6 +39,7 @@
 #define c x6
 
 S2N_BN_SYMBOL(bignum_demont_p521):
+        CFI_START
 
 // Rotate, as a 521-bit quantity, by 9*64 - 521 = 55 bits right.
 
@@ -63,7 +64,7 @@ S2N_BN_SYMBOL(bignum_demont_p521):
         stp     d6, d7, [z, #48]
         lsr     d8, d8, #55
         str     d8, [z, #64]
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

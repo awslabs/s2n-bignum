@@ -17,8 +17,9 @@
         .balign 4
 
 S2N_BN_SYMBOL(word_clz):
+        CFI_START
         clz     x0, x0
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

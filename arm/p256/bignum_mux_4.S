@@ -28,6 +28,7 @@
 
 
 S2N_BN_SYMBOL(bignum_mux_4):
+        CFI_START
 
 cmp     p, #0                    // Set condition codes p = 0
 
@@ -51,7 +52,7 @@ cmp     p, #0                    // Set condition codes p = 0
         csel    a, a, p, ne
         str     a, [z, #24]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

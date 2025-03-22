@@ -39,6 +39,7 @@
 #define ll x15
 
 S2N_BN_SYMBOL(bignum_sqr):
+        CFI_START
 
 // If p = 0 the result is trivial and nothing needs doing
 
@@ -133,7 +134,7 @@ bignum_sqr_innerend:
         bcc     bignum_sqr_outerloop
 
 bignum_sqr_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

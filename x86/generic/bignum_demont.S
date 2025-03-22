@@ -53,11 +53,12 @@
 
 
 S2N_BN_SYMBOL(bignum_demont):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -66,9 +67,9 @@ S2N_BN_SYMBOL(bignum_demont):
 
 // Save registers
 
-        push    rbx
-        push    rbp
-        push    r12
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
 
 // If k = 0 the whole operation is trivial
 
@@ -189,15 +190,15 @@ bignum_demont_corrloop:
         jc      bignum_demont_corrloop
 
 bignum_demont_end:
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

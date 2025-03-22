@@ -55,35 +55,36 @@
 #define NSPACE (32*NUMSIZE)
 
 S2N_BN_SYMBOL(p256_scalarmul_alt):
+        CFI_START
         _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
-        call    p256_scalarmul_alt_standard
-        pop    rsi
-        pop    rdi
-        ret
+        CFI_CALL(p256_scalarmul_alt_standard)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
+        CFI_RET
 
 p256_scalarmul_alt_standard:
 #endif
 
 // Real start of the standard ABI code.
 
-        push    r15
-        push    r14
-        push    r13
-        push    r12
-        push    rbp
-        push    rbx
+        CFI_PUSH(r15)
+        CFI_PUSH(r14)
+        CFI_PUSH(r13)
+        CFI_PUSH(r12)
+        CFI_PUSH(rbp)
+        CFI_PUSH(rbx)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
 // Preserve the "res" and "point" input arguments. We load and process the
 // scalar immediately so we don't bother preserving that input argument.
@@ -151,11 +152,11 @@ p256_scalarmul_alt_standard:
 
         lea     rdi, [rsp+TAB]
         mov     rsi, rbx
-        call    p256_scalarmul_alt_local_tomont_p256
+        CFI_CALL(p256_scalarmul_alt_local_tomont_p256)
 
         lea     rsi, [rbx+32]
         lea     rdi, [rsp+TAB+32]
-        call    p256_scalarmul_alt_local_tomont_p256
+        CFI_CALL(p256_scalarmul_alt_local_tomont_p256)
 
         mov     eax, 1
         mov     [rsp+TAB+64], rax
@@ -199,34 +200,34 @@ p256_scalarmul_alt_standard:
 
         lea     rdi, [rsp+TAB+96*1]
         lea     rsi, [rsp+TAB]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*2]
         lea     rsi, [rsp+TAB+96*1]
         lea     rdx, [rsp+TAB]
-        call    p256_scalarmul_alt_local_p256_montjmixadd
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjmixadd)
 
         lea     rdi, [rsp+TAB+96*3]
         lea     rsi, [rsp+TAB+96*1]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*4]
         lea     rsi, [rsp+TAB+96*3]
         lea     rdx, [rsp+TAB]
-        call    p256_scalarmul_alt_local_p256_montjmixadd
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjmixadd)
 
         lea     rdi, [rsp+TAB+96*5]
         lea     rsi, [rsp+TAB+96*2]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*6]
         lea     rsi, [rsp+TAB+96*5]
         lea     rdx, [rsp+TAB]
-        call    p256_scalarmul_alt_local_p256_montjmixadd
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjmixadd)
 
         lea     rdi, [rsp+TAB+96*7]
         lea     rsi, [rsp+TAB+96*3]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
 // Set up accumulator as table entry for top 4 bits (constant-time indexing)
 
@@ -286,19 +287,19 @@ p256_scalarmul_alt_loop:
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    p256_scalarmul_alt_local_p256_montjdouble
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjdouble)
 
         mov     rax, rbp
         shr     rax, 6
@@ -379,7 +380,7 @@ p256_scalarmul_alt_loop:
         lea     rdx, [rsp+TABENT]
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        call    p256_scalarmul_alt_local_p256_montjadd
+        CFI_CALL(p256_scalarmul_alt_local_p256_montjadd)
 
         test    rbp, rbp
         jne     p256_scalarmul_alt_loop
@@ -388,25 +389,25 @@ p256_scalarmul_alt_loop:
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
-        call    p256_scalarmul_alt_local_montsqr_p256
+        CFI_CALL(p256_scalarmul_alt_local_montsqr_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z2]
-        call    p256_scalarmul_alt_local_montmul_p256
+        CFI_CALL(p256_scalarmul_alt_local_montmul_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+Z3]
-        call    p256_scalarmul_alt_local_demont_p256
+        CFI_CALL(p256_scalarmul_alt_local_demont_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+Z2]
-        call    p256_scalarmul_alt_local_inv_p256
+        CFI_CALL(p256_scalarmul_alt_local_inv_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z3]
-        call    p256_scalarmul_alt_local_montmul_p256
+        CFI_CALL(p256_scalarmul_alt_local_montmul_p256)
 
 // Convert back from Jacobian (X, Y, Z) |-> (X/Z^2, Y/Z^3)
 
@@ -414,23 +415,23 @@ p256_scalarmul_alt_loop:
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+Z2]
         mov     rbx, rdi
-        call    p256_scalarmul_alt_local_montmul_p256
+        CFI_CALL(p256_scalarmul_alt_local_montmul_p256)
 
         lea     rdi, [rbx+32]
         lea     rsi, [rsp+ACC+32]
         lea     rdx, [rsp+Z3]
-        call    p256_scalarmul_alt_local_montmul_p256
+        CFI_CALL(p256_scalarmul_alt_local_montmul_p256)
 
 // Restore stack and registers and return
 
-        add     rsp, NSPACE
-        pop     rbx
-        pop     rbp
-        pop     r12
-        pop     r13
-        pop     r14
-        pop     r15
-        ret
+        CFI_INC_RSP(NSPACE)
+        CFI_POP(rbx)
+        CFI_POP(rbp)
+        CFI_POP(r12)
+        CFI_POP(r13)
+        CFI_POP(r14)
+        CFI_POP(r15)
+        CFI_RET
 
 // Local copies of subroutines, complete clones at the moment
 
@@ -494,16 +495,16 @@ p256_scalarmul_alt_local_demont_p256:
         mov     [rdi+0x8], r8
         mov     [rdi+0x10], r9
         mov     [rdi+0x18], r10
-        ret
+        CFI_RET
 
 p256_scalarmul_alt_local_inv_p256:
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xf0
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(0xf0)
         mov     [rsp+0xe0], rdi
         xor     ecx, ecx
         mov     edx, 0xffffffff
@@ -1915,21 +1916,21 @@ p256_scalarmul_alt_inv_midloop:
         mov     [rdi+0x8], rbx
         mov     [rdi+0x10], rcx
         mov     [rdi+0x18], rdx
-        add     rsp, 0xf0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_INC_RSP(0xf0)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
 
 p256_scalarmul_alt_local_montmul_p256:
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
         mov     rcx, rdx
         mov     rbx, [rcx]
         mov     rax, [rsi]
@@ -2097,19 +2098,19 @@ p256_scalarmul_alt_local_montmul_p256:
         mov     [rdi+0x8], r13
         mov     [rdi+0x10], r14
         mov     [rdi+0x18], r15
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_RET
 
 p256_scalarmul_alt_local_montsqr_p256:
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
         mov     rax, [rsi]
         mov     rbx, rax
         mul     rax
@@ -2247,19 +2248,19 @@ p256_scalarmul_alt_local_montsqr_p256:
         mov     [rdi+0x8], r13
         mov     [rdi+0x10], r14
         mov     [rdi+0x18], r15
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_RET
 
 
 p256_scalarmul_alt_local_tomont_p256:
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
         mov     ecx, 0x3
         mov     rax, [rsi]
         mul     rcx
@@ -2427,20 +2428,20 @@ p256_scalarmul_alt_local_tomont_p256:
         mov     [rdi+0x8], r13
         mov     [rdi+0x10], r14
         mov     [rdi+0x18], r15
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_RET
 
 p256_scalarmul_alt_local_p256_montjadd:
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xe0
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(0xe0)
         mov     rbp, rdx
         mov     rax, [rsi+0x40]
         mov     rbx, rax
@@ -5196,22 +5197,22 @@ p256_scalarmul_alt_local_p256_montjadd:
         mov     [rdi+0x48], r13
         mov     [rdi+0x50], r14
         mov     [rdi+0x58], r15
-        add     rsp, 0xe0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_INC_RSP(0xe0)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
 
 p256_scalarmul_alt_local_p256_montjdouble:
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xc0
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(0xc0)
         mov     rax, [rsi+0x40]
         mov     rbx, rax
         mul     rax
@@ -6681,22 +6682,22 @@ p256_scalarmul_alt_local_p256_montjdouble:
         mov     [rdi+0x30], r10
         adc     r11, rdx
         mov     [rdi+0x38], r11
-        add     rsp, 0xc0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        ret
+        CFI_INC_RSP(0xc0)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_RET
 
 p256_scalarmul_alt_local_p256_montjmixadd:
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xc0
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(0xc0)
         mov     rbp, rdx
         mov     rax, [rsi+0x40]
         mov     rbx, rax
@@ -8637,14 +8638,14 @@ p256_scalarmul_alt_local_p256_montjmixadd:
         mov     [rdi+0x48], r9
         mov     [rdi+0x50], r10
         mov     [rdi+0x58], r11
-        add     rsp, 0xc0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_INC_RSP(0xc0)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

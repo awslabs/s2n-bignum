@@ -43,6 +43,7 @@
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(bignum_mod_n384_6):
+        CFI_START
 
 // Load the complicated lower three words of n_384
 
@@ -82,7 +83,7 @@ S2N_BN_SYMBOL(bignum_mod_n384_6):
         stp     n2, n3, [z, #16]
         stp     n4, n5, [z, #32]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

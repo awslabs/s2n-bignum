@@ -28,6 +28,7 @@
 #define d3 x8
 
 S2N_BN_SYMBOL(bignum_sub_p25519):
+        CFI_START
 
 // First just subtract the numbers as [d3; d2; d1; d0] = x - y,
 // with the inverted carry flag meaning CF <=> x >= y.
@@ -61,7 +62,7 @@ S2N_BN_SYMBOL(bignum_sub_p25519):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

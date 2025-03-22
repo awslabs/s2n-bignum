@@ -67,6 +67,7 @@
 S2N_BN_SYMBOL(bignum_mod_n384):
 
 S2N_BN_SYMBOL(bignum_mod_n384_alt):
+        CFI_START
 
 // If the input is already <= 5 words long, go to a trivial "copy" path
 
@@ -170,7 +171,7 @@ bignum_mod_n384_writeback:
         stp     m2, m3, [z, #16]
         stp     m4, m5, [z, #32]
 
-        ret
+        CFI_RET
 
 // Short case: just copy the input with zero-padding
 

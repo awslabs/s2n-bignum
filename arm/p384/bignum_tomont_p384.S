@@ -64,6 +64,7 @@
 S2N_BN_SYMBOL(bignum_tomont_p384):
 
 S2N_BN_SYMBOL(bignum_tomont_p384_alt):
+        CFI_START
 
 #define d0 x2
 #define d1 x3
@@ -125,7 +126,7 @@ S2N_BN_SYMBOL(bignum_tomont_p384_alt):
         stp     d3, d4, [x0, #16]
         stp     d5, d6, [x0, #32]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

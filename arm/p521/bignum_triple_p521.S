@@ -39,6 +39,7 @@
 S2N_BN_SYMBOL(bignum_triple_p521):
 
 S2N_BN_SYMBOL(bignum_triple_p521_alt):
+        CFI_START
 
 // Pick out top bit to wrap to the zero position in the doubling step
 
@@ -108,7 +109,7 @@ S2N_BN_SYMBOL(bignum_triple_p521_alt):
         stp     d6, d7, [z, #48]
         str     d8, [z, #64]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

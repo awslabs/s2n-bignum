@@ -28,6 +28,7 @@
 #define c x7
 
 S2N_BN_SYMBOL(bignum_mod_p25519_4):
+        CFI_START
 
 // Load the inputs as [d3;d2;d1;d0]
 
@@ -65,7 +66,7 @@ S2N_BN_SYMBOL(bignum_mod_p25519_4):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

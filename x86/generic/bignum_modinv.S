@@ -97,11 +97,12 @@
 #define n_nshort edx
 
 S2N_BN_SYMBOL(bignum_modinv):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -111,13 +112,13 @@ S2N_BN_SYMBOL(bignum_modinv):
 
 // Save all required registers and make room on stack for all the above vars
 
-        push    rbp
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, STACKVARSIZE
+        CFI_PUSH(rbp)
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(STACKVARSIZE)
 
 // If k = 0 then do nothing (this is out of scope anyway)
 
@@ -690,19 +691,19 @@ bignum_modinv_fliploop:
         jnbe    bignum_modinv_outerloop
 
 bignum_modinv_end:
-        add     rsp, STACKVARSIZE
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        pop     rbp
+        CFI_INC_RSP(STACKVARSIZE)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_POP(rbp)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

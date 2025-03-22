@@ -51,6 +51,7 @@
 S2N_BN_SYMBOL(bignum_triple_sm2):
 
 S2N_BN_SYMBOL(bignum_triple_sm2_alt):
+        CFI_START
 
 // Load the inputs
 
@@ -100,7 +101,7 @@ S2N_BN_SYMBOL(bignum_triple_sm2_alt):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

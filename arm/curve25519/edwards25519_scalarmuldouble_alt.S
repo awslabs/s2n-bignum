@@ -469,14 +469,15 @@
         stp     x2, x3, [P0+16]
 
 S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt):
+        CFI_START
 
 // Save regs and make room for temporaries
 
-        stp     x19, x20, [sp, -16]!
-        stp     x21, x22, [sp, -16]!
-        stp     x23, x24, [sp, -16]!
-        stp     x25, x30, [sp, -16]!
-        sub     sp, sp, #NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x30)
+        CFI_DEC_SP(NSPACE)
 
 // Move the output pointer to a stable place
 
@@ -579,46 +580,46 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt):
 
         add     p0, tab+1*128
         add     p1, tab
-        bl      edwards25519_scalarmuldouble_alt_epdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Multiple 3
 
         add     p0, tab+2*128
         add     p1, tab
         add     p2, tab+1*128
-        bl      edwards25519_scalarmuldouble_alt_epadd
+        CFI_BL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Multiple 4
 
         add     p0, tab+3*128
         add     p1, tab+1*128
-        bl      edwards25519_scalarmuldouble_alt_epdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Multiple 5
 
         add     p0, tab+4*128
         add     p1, tab
         add     p2, tab+3*128
-        bl      edwards25519_scalarmuldouble_alt_epadd
+        CFI_BL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Multiple 6
 
         add     p0, tab+5*128
         add     p1, tab+2*128
-        bl      edwards25519_scalarmuldouble_alt_epdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Multiple 7
 
         add     p0, tab+6*128
         add     p1, tab
         add     p2, tab+5*128
-        bl      edwards25519_scalarmuldouble_alt_epadd
+        CFI_BL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Multiple 8
 
         add     p0, tab+7*128
         add     p1, tab+3*128
-        bl      edwards25519_scalarmuldouble_alt_epdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Handle the initialization, starting the loop counter at i = 252
 // and initializing acc to the sum of the table entries for the
@@ -1077,7 +1078,7 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt):
         add     p0, acc
         add     p1, tabent
         add     p2, btabent
-        bl      edwards25519_scalarmuldouble_alt_pepadd
+        CFI_BL(edwards25519_scalarmuldouble_alt_pepadd)
 
 // Main loop with acc = [scalar/2^i] * point + [bscalar/2^i] * basepoint
 // Start with i = 252 for bits 248..251 and go down four at a time to 3..0
@@ -1090,7 +1091,7 @@ edwards25519_scalarmuldouble_alt_loop:
 
         add     p0, acc
         add     p1, acc
-        bl      edwards25519_scalarmuldouble_alt_pdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_pdouble)
 
 // Get btable entry, first getting the adjusted bitfield...
 
@@ -1622,33 +1623,33 @@ edwards25519_scalarmuldouble_alt_loop:
 
         add     p0, acc
         add     p1, acc
-        bl      edwards25519_scalarmuldouble_alt_pdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_pdouble)
 
 // Add tabent := tabent + btabent
 
         add     p0, tabent
         add     p1, tabent
         add     p2, btabent
-        bl      edwards25519_scalarmuldouble_alt_pepadd
+        CFI_BL(edwards25519_scalarmuldouble_alt_pepadd)
 
 // Double to acc' = 8 * acc
 
         add     p0, acc
         add     p1, acc
-        bl      edwards25519_scalarmuldouble_alt_pdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_pdouble)
 
 // Double to acc' = 16 * acc
 
         add     p0, acc
         add     p1, acc
-        bl      edwards25519_scalarmuldouble_alt_epdouble
+        CFI_BL(edwards25519_scalarmuldouble_alt_epdouble)
 
 // Add table entry, acc := acc + tabent
 
         add     p0, acc
         add     p1, acc
         add     p2, tabent
-        bl      edwards25519_scalarmuldouble_alt_epadd
+        CFI_BL(edwards25519_scalarmuldouble_alt_epadd)
 
 // Loop down
 
@@ -2709,13 +2710,13 @@ edwards25519_scalarmuldouble_alt_invmidloop:
 
 // Restore stack and registers
 
-        add     sp, sp, #NSPACE
-        ldp     x25, x30, [sp], 16
-        ldp     x23, x24, [sp], 16
-        ldp     x21, x22, [sp], 16
-        ldp     x19, x20, [sp], 16
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x25,x30)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 // ****************************************************************************
 // Localized versions of subroutines.
@@ -2724,7 +2725,7 @@ edwards25519_scalarmuldouble_alt_invmidloop:
 // ****************************************************************************
 
 edwards25519_scalarmuldouble_alt_epdouble:
-        sub sp, sp, #(5*NUMSIZE)
+        CFI_DEC_SP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
         sqr_4(t2,x_1)
@@ -2739,11 +2740,11 @@ edwards25519_scalarmuldouble_alt_epdouble:
         mul_4(z_0,t3,t2)
         mul_4(w_0,t1,t4)
         mul_4(x_0,t1,t3)
-        add sp, sp, #(5*NUMSIZE)
-        ret
+        CFI_INC_SP((5*NUMSIZE))
+        CFI_RET
 
 edwards25519_scalarmuldouble_alt_pdouble:
-        sub sp, sp, #(5*NUMSIZE)
+        CFI_DEC_SP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
         sqr_4(t2,x_1)
@@ -2757,11 +2758,11 @@ edwards25519_scalarmuldouble_alt_pdouble:
         mul_4(y_0,t2,t4)
         mul_4(z_0,t3,t2)
         mul_4(x_0,t1,t3)
-        add sp, sp, #(5*NUMSIZE)
-        ret
+        CFI_INC_SP((5*NUMSIZE))
+        CFI_RET
 
 edwards25519_scalarmuldouble_alt_epadd:
-        sub sp, sp, #(6*NUMSIZE)
+        CFI_DEC_SP((6*NUMSIZE))
         mul_4(t0,w_1,w_2)
         sub_twice4(t1,y_1,x_1)
         sub_twice4(t2,y_2,x_2)
@@ -2781,11 +2782,11 @@ edwards25519_scalarmuldouble_alt_epadd:
         mul_4(x_0,t0,t1)
         mul_4(y_0,t3,t5)
         mul_4(z_0,t1,t3)
-        add sp, sp, #(6*NUMSIZE)
-        ret
+        CFI_INC_SP((6*NUMSIZE))
+        CFI_RET
 
 edwards25519_scalarmuldouble_alt_pepadd:
-        sub sp, sp, #(6*NUMSIZE)
+        CFI_DEC_SP((6*NUMSIZE))
         double_twice4(t0,z_1);
         sub_twice4(t1,y_1,x_1);
         add_twice4(t2,y_1,x_1);
@@ -2800,8 +2801,8 @@ edwards25519_scalarmuldouble_alt_pepadd:
         mul_4(x_0,t5,t4);
         mul_4(y_0,t0,t1);
         mul_4(w_0,t5,t1);
-        add sp, sp, #(6*NUMSIZE)
-        ret
+        CFI_INC_SP((6*NUMSIZE))
+        CFI_RET
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same

@@ -30,6 +30,7 @@
 #define c3 x9
 
 S2N_BN_SYMBOL(bignum_double_p25519):
+        CFI_START
 
 // Double by adding as [d3; d2; d1; d0] = 2 * x; since we assume
 // x < 2^255 - 19 this result fits in 256 bits
@@ -64,7 +65,7 @@ S2N_BN_SYMBOL(bignum_double_p25519):
         stp     d0, d1, [z]
         stp     d2, d3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

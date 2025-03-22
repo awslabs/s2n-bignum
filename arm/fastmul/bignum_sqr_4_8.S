@@ -78,6 +78,7 @@
 #define s3short w9
 
 S2N_BN_SYMBOL(bignum_sqr_4_8):
+        CFI_START
 
 // Load all the elements
 
@@ -137,7 +138,7 @@ S2N_BN_SYMBOL(bignum_sqr_4_8):
         stp     s4, s5, [z, 32]
         stp     s6, s7, [z, 48]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

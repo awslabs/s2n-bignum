@@ -30,6 +30,7 @@
 
 
 S2N_BN_SYMBOL(bignum_digit):
+        CFI_START
 
 // For length zero finish immediately (the return value in x0 is 0)
 
@@ -52,7 +53,7 @@ bignum_digit_loop:
         mov     x0, d
 
 bignum_digit_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

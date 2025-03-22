@@ -36,24 +36,25 @@
 #define VARSIZE 72
 
 S2N_BN_SYMBOL(bignum_modexp):
+        CFI_START
         _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
         mov     rcx, r9
         mov     r8, [rsp+56]
         mov     r9, [rsp+64]
-        call    bignum_modexp_standard
-        pop    rsi
-        pop    rdi
-        ret
+        CFI_CALL(bignum_modexp_standard)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
+        CFI_RET
 
 bignum_modexp_standard:
 #endif
@@ -61,7 +62,7 @@ bignum_modexp_standard:
 // Real start of the standard ABI code.
 // Bump down the stack to make room for local variables
 
-        sub     rsp, VARSIZE
+        CFI_DEC_RSP(VARSIZE)
 
 // If size is zero (which falsifies the oddness condition) do nothing
 
@@ -87,20 +88,20 @@ bignum_modexp_standard:
         mov     rsi, z
         mov     rdx, m
         mov     rcx, y
-        call    bignum_modexp_local_amontifier
+        CFI_CALL(bignum_modexp_local_amontifier)
 
         mov     rdi, k
         mov     rsi, x
         mov     rdx, z
         mov     rcx, a
         mov     r8, m
-        call    bignum_modexp_local_amontmul
+        CFI_CALL(bignum_modexp_local_amontmul)
 
         mov     rdi, k
         mov     rsi, z
         mov     rdx, z
         mov     rcx, m
-        call    bignum_modexp_local_demont
+        CFI_CALL(bignum_modexp_local_demont)
 
 // Main loop with z == 2^64k * a^(p >> 2^i) (mod m)
 
@@ -117,14 +118,14 @@ bignum_modexp_loop:
         mov     rdx, z
         mov     rcx, z
         mov     r8, m
-        call    bignum_modexp_local_amontmul
+        CFI_CALL(bignum_modexp_local_amontmul)
 
         mov     rdi, k
         mov     rsi, z
         mov     rdx, x
         mov     rcx, y
         mov     r8, m
-        call    bignum_modexp_local_amontmul
+        CFI_CALL(bignum_modexp_local_amontmul)
 
         mov     rdx, i
         mov     rcx, rdx
@@ -138,7 +139,7 @@ bignum_modexp_loop:
         mov     rdx, z
         mov     rcx, z
         mov     r8, y
-        call    bignum_modexp_local_mux
+        CFI_CALL(bignum_modexp_local_mux)
 
         mov     rax, i
         test    rax, rax
@@ -151,28 +152,28 @@ bignum_modexp_loop:
         mov     rsi, z
         mov     rdx, z
         mov     rcx, m
-        call    bignum_modexp_local_demont
+        CFI_CALL(bignum_modexp_local_demont)
 
         xor     edi, edi
         mov     rsi, k
         mov     rdx, res
         mov     rcx, z
         mov     r8, z
-        call    bignum_modexp_local_mux
+        CFI_CALL(bignum_modexp_local_mux)
 
 // Restore the stack pointer and return
 
 bignum_modexp_end:
-        add     rsp, VARSIZE
-        ret
+        CFI_INC_RSP(VARSIZE)
+        CFI_RET
 
 // Local copy of bignum_amontifier
 
 bignum_modexp_local_amontifier:
-         push   rbp
-         push   rbx
-         push   r12
-         push   r13
+         CFI_PUSH(rbp)
+         CFI_PUSH(rbx)
+         CFI_PUSH(r12)
+         CFI_PUSH(r13)
          mov    r12, rdx
          mov    r13, rcx
          test   rdi, rdi
@@ -425,22 +426,22 @@ bignum_modexp_osloop:
          cmp    rbp, rdi
          jb     bignum_modexp_osloop
 bignum_modexp_amontifier_end:
-         pop    r13
-         pop    r12
-         pop    rbx
-         pop    rbp
-         ret
+         CFI_POP(r13)
+         CFI_POP(r12)
+         CFI_POP(rbx)
+         CFI_POP(rbp)
+         CFI_RET
 
 // Local copy of bignum_amontmul
 
 bignum_modexp_local_amontmul:
-         push   rbx
-         push   rbp
-         push   r12
-         push   r13
-         push   r14
-         push   r15
-         sub    rsp, 0x8
+         CFI_PUSH(rbx)
+         CFI_PUSH(rbp)
+         CFI_PUSH(r12)
+         CFI_PUSH(r13)
+         CFI_PUSH(r14)
+         CFI_PUSH(r15)
+         CFI_DEC_RSP(0x8)
          test   rdi, rdi
          je     bignum_modexp_amont_end
          mov    r9, rdx
@@ -542,21 +543,21 @@ bignum_modexp_acorrloop:
          cmp    rbx, rdi
          jb     bignum_modexp_acorrloop
 bignum_modexp_amont_end:
-         add    rsp, 0x8
-         pop    r15
-         pop    r14
-         pop    r13
-         pop    r12
-         pop    rbp
-         pop    rbx
-         ret
+         CFI_INC_RSP(0x8)
+         CFI_POP(r15)
+         CFI_POP(r14)
+         CFI_POP(r13)
+         CFI_POP(r12)
+         CFI_POP(rbp)
+         CFI_POP(rbx)
+         CFI_RET
 
 // Local copy of bignum_demont
 
 bignum_modexp_local_demont:
-         push   rbx
-         push   rbp
-         push   r12
+         CFI_PUSH(rbx)
+         CFI_PUSH(rbp)
+         CFI_PUSH(r12)
          test   rdi, rdi
          je     bignum_modexp_demont_end
          mov    rax, [rcx]
@@ -643,10 +644,10 @@ bignum_modexp_dcorrloop:
          cmp    rbx, rdi
          jb     bignum_modexp_dcorrloop
 bignum_modexp_demont_end:
-         pop    r12
-         pop    rbp
-         pop    rbx
-         ret
+         CFI_POP(r12)
+         CFI_POP(rbp)
+         CFI_POP(rbx)
+         CFI_RET
 
 // Local copy of bignum_mux
 
@@ -664,7 +665,7 @@ bignum_modexp_muxloop:
          dec    rsi
          jne    bignum_modexp_muxloop
 bignum_modexp_muxend:
-         ret
+         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -49,13 +49,14 @@
 #define u15 x26
 
 S2N_BN_SYMBOL(bignum_sqr_8_16_alt):
+        CFI_START
 
 // It's convenient to have more registers to play with
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x26)
 
 // Load all the elements as [a7;a6;a5;a4;a3;a2;a1;a0], set up an initial
 // window [u8;u7;u6;u5;u4;u3;u2;u1] =  10 + 20 + 30 + 40 + 50 + 60 + 70
@@ -268,12 +269,12 @@ S2N_BN_SYMBOL(bignum_sqr_8_16_alt):
 
 // Restore registers and return
 
-        ldp     x25, x26, [sp], #16
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x25,x26)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

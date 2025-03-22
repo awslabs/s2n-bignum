@@ -70,6 +70,7 @@
 #define h a3
 
 S2N_BN_SYMBOL(bignum_montmul_sm2_alt):
+        CFI_START
 
 // Load operands and set up row 0 = [u4;...;u0] = a0 * [b3;...;b0]
 
@@ -197,7 +198,7 @@ S2N_BN_SYMBOL(bignum_montmul_sm2_alt):
         stp     u0, u1, [z]
         stp     u2, u3, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

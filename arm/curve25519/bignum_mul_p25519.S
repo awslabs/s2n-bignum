@@ -72,6 +72,7 @@
 #define qshort w17
 
 S2N_BN_SYMBOL(bignum_mul_p25519):
+        CFI_START
 
 // Multiply the low halves using Karatsuba 2x2->4 to get [u3,u2,u1,u0]
 
@@ -327,7 +328,7 @@ S2N_BN_SYMBOL(bignum_mul_p25519):
         stp     u0, u1, [x0]
         stp     u2, u3, [x0, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

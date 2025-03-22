@@ -39,11 +39,12 @@
 
 
 S2N_BN_SYMBOL(bignum_sub_p521):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -51,8 +52,8 @@ S2N_BN_SYMBOL(bignum_sub_p521):
 
 // Save more registers to play with
 
-        push    rbx
-        push    r12
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
 
 // First just subtract the numbers as [d8;d7;d6;d5;d4;d3;d2;d1;d0] = x - y
 
@@ -102,14 +103,14 @@ S2N_BN_SYMBOL(bignum_sub_p521):
 
 // Restore registers and return
 
-        pop     r12
-        pop     rbx
+        CFI_POP(r12)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

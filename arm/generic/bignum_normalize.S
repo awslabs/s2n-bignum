@@ -40,6 +40,7 @@
 
 
 S2N_BN_SYMBOL(bignum_normalize):
+        CFI_START
 
 // If k = 0 the whole operation is trivial. Otherwise initialize
 // shift count r and top digit c, but then if k = 1 skip the digitwise part
@@ -101,7 +102,7 @@ bignum_normalize_bitloop:
         mov     x0, r
 
 bignum_normalize_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

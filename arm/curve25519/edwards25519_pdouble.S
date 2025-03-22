@@ -451,11 +451,12 @@
         stp     x5, x6, [P0+16]
 
 S2N_BN_SYMBOL(edwards25519_pdouble):
+        CFI_START
 
 // Save regs and make room for temporaries
 
-        stp     x19, x20, [sp, -16]!
-        sub     sp, sp, #NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_DEC_SP(NSPACE)
 
 // Move the input arguments to stable places
 
@@ -480,9 +481,9 @@ S2N_BN_SYMBOL(edwards25519_pdouble):
 
 // Restore stack and registers
 
-        add     sp, sp, #NSPACE
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

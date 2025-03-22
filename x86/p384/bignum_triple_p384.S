@@ -40,18 +40,19 @@
 #define qshort edx
 
 S2N_BN_SYMBOL(bignum_triple_p384):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
 
 // We seem to need (just!) one extra register, which we need to save and restore
 
-        push    rbx
+        CFI_PUSH(rbx)
 
 // Multiply, accumulating the result as 2^384 * h + [d5;d4;d3;d2;d1;d0]
 // but actually immediately producing q = h + 1, our quotient approximation,
@@ -133,12 +134,12 @@ S2N_BN_SYMBOL(bignum_triple_p384):
 
 // Return
 
-        pop     rbx
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

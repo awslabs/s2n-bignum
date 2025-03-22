@@ -58,6 +58,7 @@
 #define vmask    v17
 
 S2N_BN_SYMBOL(bignum_copy_row_from_table_16):
+        CFI_START
 
     // Clear accumulator
     // Zeroing can be done via xor, but xor isn't formalized yet.
@@ -119,7 +120,7 @@ bignum_copy_row_from_table_16_end:
     str qentry6,  [z, #16*6]
     str qentry7,  [z, #16*7]
 
-    ret
+    CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

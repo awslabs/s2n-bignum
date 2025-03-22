@@ -38,6 +38,7 @@
 #define q x0
 
 S2N_BN_SYMBOL(bignum_cmod):
+        CFI_START
 
 // If the bignum is zero-length, x0 is already the right answer of 0
 
@@ -172,7 +173,7 @@ bignum_cmod_loop:
         csel    x0, x0, l, cs
 
 bignum_cmod_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

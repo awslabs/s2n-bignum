@@ -82,10 +82,11 @@
 
 
 S2N_BN_SYMBOL(bignum_coprime):
+        CFI_START
 
 // We make use of just a couple of additional registers
 
-        stp     x19, x20, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
 
 // Compute k = max(m,n), and if this is zero skip to the end. Note that
 // in this case x0 = m = 0 so we return the right answer of "false"
@@ -441,9 +442,9 @@ bignum_coprime_finalcomb:
         and     x0, x0, t1
 
 bignum_coprime_end:
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

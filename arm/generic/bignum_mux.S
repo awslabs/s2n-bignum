@@ -28,6 +28,7 @@
 
 
 S2N_BN_SYMBOL(bignum_mux):
+        CFI_START
 
 cbz     k, bignum_mux_end                  // if k = 0 skip the bignum_mux_loop
         cmp     b, #0                    // Set condition codes b = 0
@@ -43,7 +44,7 @@ bignum_mux_loop:
         cbnz    k, bignum_mux_loop
 
 bignum_mux_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

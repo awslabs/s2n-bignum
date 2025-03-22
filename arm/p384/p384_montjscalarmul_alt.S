@@ -55,7 +55,7 @@
 
 #define tab sp, #(7*NUMSIZE)
 
-#define NSPACE #(55*NUMSIZE)
+#define NSPACE (55*NUMSIZE)
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.
@@ -100,12 +100,13 @@
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(p384_montjscalarmul_alt):
+        CFI_START
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x30, [sp, #-16]!
-        sub     sp, sp, NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x30)
+        CFI_DEC_SP(NSPACE)
 
 // Preserve the "res" input argument; others get processed early.
 
@@ -166,70 +167,70 @@ S2N_BN_SYMBOL(p384_montjscalarmul_alt):
 
         add     x0, tab+JACSIZE*1
         add     x1, tab
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, tab+JACSIZE*2
         add     x1, tab+JACSIZE*1
         add     x2, tab
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         add     x0, tab+JACSIZE*3
         add     x1, tab+JACSIZE*1
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, tab+JACSIZE*4
         add     x1, tab+JACSIZE*3
         add     x2, tab
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         add     x0, tab+JACSIZE*5
         add     x1, tab+JACSIZE*2
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, tab+JACSIZE*6
         add     x1, tab+JACSIZE*5
         add     x2, tab
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         add     x0, tab+JACSIZE*7
         add     x1, tab+JACSIZE*3
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, tab+JACSIZE*8
         add     x1, tab+JACSIZE*7
         add     x2, tab
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         add     x0, tab+JACSIZE*9
         add     x1, tab+JACSIZE*4
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, tab+JACSIZE*10
         add     x1, tab+JACSIZE*9
         add     x2, tab
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         add     x0, tab+JACSIZE*11
         add     x1, tab+JACSIZE*5
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, tab+JACSIZE*12
         add     x1, tab+JACSIZE*11
         add     x2, tab
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         add     x0, tab+JACSIZE*13
         add     x1, tab+JACSIZE*6
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, tab+JACSIZE*14
         add     x1, tab+JACSIZE*13
         add     x2, tab
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         add     x0, tab+JACSIZE*15
         add     x1, tab+JACSIZE*7
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
 // Add the recoding constant sum_i(16 * 32^i) to the scalar to allow signed
 // digits. The digits of the constant, in lowest-to-highest order, are as
@@ -335,23 +336,23 @@ p384_montjscalarmul_alt_mainloop:
 
         add     x0, acc
         add     x1, acc
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        bl      p384_montjscalarmul_alt_p384_montjdouble
+        CFI_BL(p384_montjscalarmul_alt_p384_montjdouble)
 
 // Choose the bitfield and adjust it to sign and magnitude
 
@@ -460,7 +461,7 @@ p384_montjscalarmul_alt_mainloop:
         add     x0, acc
         add     x1, acc
         add     x2, tabent
-        bl      p384_montjscalarmul_alt_p384_montjadd
+        CFI_BL(p384_montjscalarmul_alt_p384_montjadd)
 
         cbnz    j, p384_montjscalarmul_alt_mainloop
 
@@ -488,21 +489,21 @@ p384_montjscalarmul_alt_mainloop:
 
 // Restore stack and registers and return
 
-        add     sp, sp, NSPACE
-        ldp     x25, x30, [sp], 16
-        ldp     x23, x24, [sp], 16
-        ldp     x21, x22, [sp], 16
-        ldp     x19, x20, [sp], 16
-        ret
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x25,x30)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 // Local copies of subroutines, complete clones at the moment
 
 p384_montjscalarmul_alt_p384_montjadd:
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        stp     x25, x26, [sp, #-16]!
-        sub     sp, sp, #336
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_PUSH2(x25,x26)
+        CFI_DEC_SP(336)
         mov     x24, x0
         mov     x25, x1
         mov     x26, x2
@@ -4876,18 +4877,18 @@ p384_montjscalarmul_alt_p384_montjadd:
         stp     x12, x13, [x24, #96]
         stp     x14, x15, [x24, #112]
         stp     x16, x17, [x24, #128]
-        add     sp, sp, #336
-        ldp     x25, x26, [sp], #16
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
-        ret
+        CFI_INC_SP(336)
+        CFI_POP2(x25,x26)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 p384_montjscalarmul_alt_p384_montjdouble:
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
-        stp     x23, x24, [sp, #-16]!
-        sub     sp, sp, #336
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_DEC_SP(336)
         mov     x23, x0
         mov     x24, x1
         ldp     x2, x3, [x24, #96]
@@ -7128,11 +7129,11 @@ p384_montjscalarmul_alt_p384_montjdouble:
         stp     x0, x1, [x23, #48]
         stp     x2, x3, [x23, #64]
         stp     x4, x5, [x23, #80]
-        add     sp, sp, #336
-        ldp     x23, x24, [sp], #16
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
-        ret
+        CFI_INC_SP(336)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

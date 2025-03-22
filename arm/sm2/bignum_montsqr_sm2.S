@@ -104,6 +104,7 @@
 #define d1short w11
 
 S2N_BN_SYMBOL(bignum_montsqr_sm2):
+        CFI_START
 
 // Load in all words of the input
 
@@ -261,7 +262,7 @@ S2N_BN_SYMBOL(bignum_montsqr_sm2):
         stp     r0, r1, [x0]
         stp     r2, r3, [x0, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

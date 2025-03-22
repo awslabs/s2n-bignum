@@ -29,6 +29,7 @@
 
 
 S2N_BN_SYMBOL(bignum_moddouble):
+        CFI_START
 
 adds    j, k, xzr               // j = k and ZF = (k = 0)
         beq     bignum_moddouble_end                     // if k = 0 do nothing
@@ -65,7 +66,7 @@ bignum_moddouble_corrloop:
         cbnz    j, bignum_moddouble_corrloop
 
 bignum_moddouble_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

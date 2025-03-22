@@ -44,6 +44,7 @@
 #define xb x6
 
 S2N_BN_SYMBOL(edwards25519_encode):
+        CFI_START
 
 // Load lowest word of x coordinate in xb and full y as [y3;y2;y1;y0].
 
@@ -124,7 +125,7 @@ S2N_BN_SYMBOL(edwards25519_encode):
 
 // Return
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

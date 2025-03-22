@@ -41,6 +41,7 @@
 
 
 S2N_BN_SYMBOL(bignum_madd):
+        CFI_START
 
 // If p = 0 the result is trivial and nothing needs doing
 // Note that fortuitously our "carry/remainder" term is still right!
@@ -117,7 +118,7 @@ bignum_madd_innerend:
         mov     x0, l
 
 bignum_madd_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

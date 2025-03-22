@@ -29,6 +29,7 @@
 
 
 S2N_BN_SYMBOL(bignum_modoptneg):
+        CFI_START
 
 // Do nothing if k = 0
 
@@ -71,7 +72,7 @@ bignum_modoptneg_mainloop:
         cbnz    a, bignum_modoptneg_mainloop
 
 bignum_modoptneg_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

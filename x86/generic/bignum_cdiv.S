@@ -56,11 +56,12 @@
 #define r r15
 
 S2N_BN_SYMBOL(bignum_cdiv):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -68,11 +69,11 @@ S2N_BN_SYMBOL(bignum_cdiv):
         mov     r8, [rsp+56]
 #endif
 
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
 // Move parameters that need a new home
 
@@ -320,16 +321,16 @@ bignum_cdiv_noload:
 bignum_cdiv_end:
         mov     rax, r
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

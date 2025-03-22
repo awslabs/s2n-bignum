@@ -56,11 +56,12 @@
 #define h d9
 
 S2N_BN_SYMBOL(bignum_cmul_p521_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -68,10 +69,10 @@ S2N_BN_SYMBOL(bignum_cmul_p521_alt):
 
 // Save additional registers to use
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
 
 // Shuffle inputs (since we want rdx for the high parts of products)
 
@@ -190,16 +191,16 @@ S2N_BN_SYMBOL(bignum_cmul_p521_alt):
 
 // Restore registers and return
 
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

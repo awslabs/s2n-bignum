@@ -33,3 +33,29 @@
 #else
 #define _CET_ENDBR .byte 0xf3,0x0f,0x1e,0xfa
 #endif
+
+// Variants of standard instructions with CFI (call frame information)
+// annotations included. Two are common to x86 and ARM:
+
+#define CFI_START
+#define CFI_RET ret
+
+// These are ARM-specific
+
+#define CFI_BL(target) bl target
+
+#define CFI_PUSH2(lo,hi) stp     lo, hi, [sp, #-16]!
+#define CFI_POP2(lo,hi) ldp     lo, hi, [sp], #16
+
+#define CFI_INC_SP(offset) add     sp, sp, #(offset)
+#define CFI_DEC_SP(offset) sub     sp, sp, #(offset)
+
+// These are x86-specific
+
+#define CFI_CALL(target) call    target
+
+#define CFI_PUSH(reg) push    reg
+#define CFI_POP(reg) pop     reg
+
+#define CFI_INC_RSP(offset) add     rsp, offset
+#define CFI_DEC_RSP(offset) sub     rsp, offset

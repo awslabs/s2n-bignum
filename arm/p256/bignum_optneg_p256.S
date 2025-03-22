@@ -33,6 +33,7 @@
 
 
 S2N_BN_SYMBOL(bignum_optneg_p256):
+        CFI_START
 
 // Load the 4 digits of x
 
@@ -77,7 +78,7 @@ S2N_BN_SYMBOL(bignum_optneg_p256):
 
 // Return
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -43,11 +43,12 @@
 
 
 S2N_BN_SYMBOL(bignum_cmadd):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -57,7 +58,7 @@ S2N_BN_SYMBOL(bignum_cmadd):
 
 // Seems hard to avoid one more register
 
-        push    rbx
+        CFI_PUSH(rbx)
 
 // First clamp the input size n := min(p,n) since we can never need to read
 // past the p'th term of the input to generate p-digit output.
@@ -132,12 +133,12 @@ bignum_cmadd_highend:
 bignum_cmadd_end:
         mov     rax, h
 
-        pop     rbx
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

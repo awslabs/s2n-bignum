@@ -24,12 +24,13 @@
 
 
 S2N_BN_SYMBOL(bignum_emontredc_8n):
-           stp x19, x20, [sp, #-16]!
-           stp x21, x22, [sp, #-16]!
-           stp x23, x24, [sp, #-16]!
-           stp x25, x26, [sp, #-16]!
-           stp x27, x28, [sp, #-16]!
-           sub sp, sp, #32
+        CFI_START
+           CFI_PUSH2(x19,x20)
+           CFI_PUSH2(x21,x22)
+           CFI_PUSH2(x23,x24)
+           CFI_PUSH2(x25,x26)
+           CFI_PUSH2(x27,x28)
+           CFI_DEC_SP(32)
            lsr x0, x0, #2
            mov x26, x0
            subs x12, x0, #1
@@ -1084,12 +1085,12 @@ bignum_emontredc_8n_madddone:
            neg x0, x28
 
 bignum_emontredc_8n_end:
-           add sp, sp, #32
+           CFI_INC_SP(32)
 
-           ldp x27, x28, [sp], #16
-           ldp x25, x26, [sp], #16
-           ldp x23, x24, [sp], #16
-           ldp x21, x22, [sp], #16
-           ldp x19, x20, [sp], #16
-           ret
+           CFI_POP2(x27,x28)
+           CFI_POP2(x25,x26)
+           CFI_POP2(x23,x24)
+           CFI_POP2(x21,x22)
+           CFI_POP2(x19,x20)
+           CFI_RET
 

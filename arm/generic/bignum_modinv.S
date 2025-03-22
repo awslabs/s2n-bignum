@@ -91,11 +91,12 @@
 #define e8 t1
 
 S2N_BN_SYMBOL(bignum_modinv):
+        CFI_START
 
 // We make use of registers beyond the modifiable
 
-        stp     x19, x20, [sp, #-16]!
-        stp     x21, x22, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
 
 // If k = 0 then do nothing (this is out of scope anyway)
 
@@ -598,10 +599,10 @@ bignum_modinv_zfliploop:
         bhi     bignum_modinv_outerloop
 
 bignum_modinv_end:
-        ldp     x21, x22, [sp], #16
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

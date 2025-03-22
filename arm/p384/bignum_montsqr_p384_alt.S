@@ -80,10 +80,11 @@
 #define h x6 // same as a4
 
 S2N_BN_SYMBOL(bignum_montsqr_p384_alt):
+        CFI_START
 
 // It's convenient to have two more registers to play with
 
-        stp     x19, x20, [sp, #-16]!
+        CFI_PUSH2(x19,x20)
 
 // Load all the elements as [a5;a4;a3;a2;a1;a0], set up an initial
 // window [u8;u7; u6;u5; u4;u3; u2;u1] = [34;05;03;01], and then
@@ -259,9 +260,9 @@ S2N_BN_SYMBOL(bignum_montsqr_p384_alt):
 
 // Restore registers
 
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

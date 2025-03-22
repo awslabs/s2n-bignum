@@ -148,8 +148,9 @@
 .endm
 
 S2N_BN_SYMBOL(bignum_mul_6_12):
+        CFI_START
 
-stp     x19, x20, [sp, #-16]!
+CFI_PUSH2(x19,x20)
 
 // Multiply the low halves using ADK 3x3->6
 
@@ -269,9 +270,9 @@ stp     x19, x20, [sp, #-16]!
 
 // Restore regs and return
 
-        ldp     x19, x20, [sp], #16
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

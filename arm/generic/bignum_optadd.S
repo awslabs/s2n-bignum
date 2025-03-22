@@ -33,6 +33,7 @@
 
 
 S2N_BN_SYMBOL(bignum_optadd):
+        CFI_START
 
 // if k = 0 do nothing. This is also the right top carry in X0
 
@@ -64,7 +65,7 @@ bignum_optadd_loop:
         adc     x0, xzr, xzr
 
 bignum_optadd_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

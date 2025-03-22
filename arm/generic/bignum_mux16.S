@@ -32,6 +32,7 @@
 
 
 S2N_BN_SYMBOL(bignum_mux16):
+        CFI_START
 
 // Copy size into decrementable counter, skip everything if k = 0
 
@@ -60,7 +61,7 @@ bignum_mux16_loop:
         bne     bignum_mux16_loop
 
 bignum_mux16_end:
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -50,6 +50,7 @@
 S2N_BN_SYMBOL(bignum_bigendian_6):
 S2N_BN_SYMBOL(bignum_frombebytes_6):
 S2N_BN_SYMBOL(bignum_tobebytes_6):
+        CFI_START
 
 // 0 and 5 words
 
@@ -168,7 +169,7 @@ S2N_BN_SYMBOL(bignum_tobebytes_6):
         str     a, [z, #24]
         str     c, [z, #16]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

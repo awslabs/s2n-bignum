@@ -71,19 +71,20 @@
         sbb     d6, 0
 
 S2N_BN_SYMBOL(bignum_deamont_p384_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
 
 // Save more registers to play with
 
-        push    r12
-        push    r13
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
 
 // Set up an initial window [r13,r12,r11,r10,r9,r8] = x
 
@@ -166,14 +167,14 @@ S2N_BN_SYMBOL(bignum_deamont_p384_alt):
 
 // Restore registers and return
 
-        pop     r13
-        pop     r12
+        CFI_POP(r13)
+        CFI_POP(r12)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
