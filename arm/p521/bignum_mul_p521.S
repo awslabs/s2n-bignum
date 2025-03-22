@@ -21,11 +21,11 @@
 //
 // The output program of step 1. is as follows:
 //
-//        CFI_PUSH2(x19,x20)
-//        CFI_PUSH2(x21,x22)
-//        CFI_PUSH2(x23,x24)
-//        CFI_PUSH2(x25,x26)
-//        CFI_DEC_SP(80)
+//        stp     x19, x20, [sp, #-16]!
+//        stp     x21, x22, [sp, #-16]!
+//        stp     x23, x24, [sp, #-16]!
+//        stp     x25, x26, [sp, #-16]!
+//        sub     sp, sp, #80
 //        ldp x15, x21, [x1]
 //        ldp x10, x17, [x1, #16]
 //        ldp x13, x16, [x2]
@@ -690,23 +690,23 @@
 //        extr x10, x16, x9, #9
 //        stp x21, x10, [x0, #48]                  // @slothy:writes=buffer48
 //        str x2, [x0, #64]                        // @slothy:writes=buffer64
-//        CFI_INC_SP(80)
-//        CFI_POP2(x25,x26)
-//        CFI_POP2(x23,x24)
-//        CFI_POP2(x21,x22)
-//        CFI_POP2(x19,x20)
-//        CFI_RET
+//        add     sp, sp, #80
+//        ldp     x25, x26, [sp], #16
+//        ldp     x23, x24, [sp], #16
+//        ldp     x21, x22, [sp], #16
+//        ldp     x19, x20, [sp], #16
+//        ret
 //
 // The bash script used for step 2 is as follows:
 //
-//        # Store the assembly instructions except the last 'CFI_RET',
+//        # Store the assembly instructions except the last 'ret',
 //        # callee-register store/loads and add/sub sp #80 as, say, 'input.S'.
 //        export OUTPUTS="[hint_buffer0,hint_buffer16,hint_buffer32,hint_buffer48,hint_buffer64]"
 //        export RESERVED_REGS="[x18,x27,x28,x29,x30,sp,q8,q9,q10,q11,q12,q13,q14,q15,v8,v9,v10,v11,v12,v13,v14,v15]"
 //        <s2n-bignum>/tools/external/slothy.sh input.S my_out_dir
 //        # my_out_dir/3.opt.s is the optimized assembly. Its output may differ
 //        # from this file since the sequence is non-deterministically chosen.
-//        # Please add 'CFI_RET' at the end of the output assembly.
+//        # Please add 'ret' at the end of the output assembly.
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mul_p521)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_mul_p521)

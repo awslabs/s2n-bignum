@@ -50,7 +50,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         mov     rcx, r9
 #endif
 
-// Save callee-saved registers and also CFI_PUSH(t) onto the stack; we'll
+// Save callee-saved registers and also push t onto the stack; we'll
 // use this space to back up both t and later z. Then move the y variable
 // into its longer-term home for the first few stages.
 
@@ -199,7 +199,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         .set I,  (I+1)
         .endr
 
-// Restore and return. The first CFI_POP(is) not needed for the ABI but
+// Restore and return. The first pop is not needed for the ABI but
 // we need to adjust the stack anyway so it seems reasonable.
 
         CFI_POP(rcx)

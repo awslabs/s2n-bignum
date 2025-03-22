@@ -364,7 +364,7 @@ S2N_BN_SYMBOL(bignum_emontredc_8n):
 
         xor     eax, eax
 
-// Divide the input k by 8, and CFI_PUSH(k8m1) = (k/8 - 1)<<6 which is used as
+// Divide the input k by 8, and push k8m1 = (k/8 - 1)<<6 which is used as
 // the scaled inner loop counter / pointer adjustment repeatedly. Also push
 // k/8 itself which is here initializing the outer loop count.
 
@@ -393,7 +393,7 @@ bignum_emontredc_8n_outerloop:
         sub     outercount, 1
         jnz     bignum_emontredc_8n_outerloop
 
-// CFI_POP(the) carry-out "p", which was stored at [rsp], put in rax for return
+// Pop the carry-out "p", which was stored at [rsp], put in rax for return
 
         CFI_POP(rax)
 
