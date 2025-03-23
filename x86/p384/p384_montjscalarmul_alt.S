@@ -105,6 +105,7 @@ S2N_BN_SYMBOL(p384_montjscalarmul_alt):
         CFI_RET
 
 p384_montjscalarmul_alt_standard:
+        CFI_START
 #endif
 
 // Real start of the standard ABI code.

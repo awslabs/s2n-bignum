@@ -425,12 +425,13 @@ S2N_BN_SYMBOL(curve25519_x25519base_byte_alt):
         CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
-        CFI_CALL(curve25519_x25519base_alt_curve25519_x25519base_alt_standard)
+        CFI_CALL(curve25519_x25519base_alt_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-curve25519_x25519base_alt_curve25519_x25519base_alt_standard:
+curve25519_x25519base_alt_standard:
+        CFI_START
 #endif
 
 // Save registers, make room for temps, preserve input arguments.

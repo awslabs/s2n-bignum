@@ -86,6 +86,7 @@ S2N_BN_SYMBOL(edwards25519_decode):
         CFI_RET
 
 edwards25519_decode_standard:
+        CFI_START
 #endif
 
 // Save registers and make room for temporaries

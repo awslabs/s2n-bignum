@@ -76,6 +76,7 @@ S2N_BN_SYMBOL(bignum_invsqrt_p25519_alt):
         CFI_RET
 
 bignum_invsqrt_p25519_alt_standard:
+        CFI_START
 #endif
 
 // Save registers and make room for temporaries

@@ -94,6 +94,7 @@ S2N_BN_SYMBOL(p256_montjscalarmul):
         CFI_RET
 
 p256_montjscalarmul_standard:
+        CFI_START
 #endif
 
 // Real start of the standard ABI code.

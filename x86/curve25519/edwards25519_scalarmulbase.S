@@ -353,6 +353,7 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase):
         CFI_RET
 
 edwards25519_scalarmulbase_standard:
+        CFI_START
 #endif
 
 // Save registers, make room for temps, preserve input arguments.

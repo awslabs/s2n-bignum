@@ -57,6 +57,7 @@ S2N_BN_SYMBOL(bignum_modexp):
         CFI_RET
 
 bignum_modexp_standard:
+        CFI_START
 #endif
 
 // Real start of the standard ABI code.

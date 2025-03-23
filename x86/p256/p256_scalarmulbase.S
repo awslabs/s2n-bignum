@@ -88,6 +88,7 @@ S2N_BN_SYMBOL(p256_scalarmulbase):
         CFI_RET
 
 p256_scalarmulbase_standard:
+        CFI_START
 #endif
 
 // Real start of the standard ABI code.

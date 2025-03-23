@@ -453,6 +453,7 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble):
         CFI_RET
 
 edwards25519_scalarmuldouble_standard:
+        CFI_START
 #endif
 
 // Save registers, make room for temps, preserve input arguments.

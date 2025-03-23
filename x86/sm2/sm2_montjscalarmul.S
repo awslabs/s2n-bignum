@@ -94,6 +94,7 @@ S2N_BN_SYMBOL(sm2_montjscalarmul):
         CFI_RET
 
 sm2_montjscalarmul_standard:
+        CFI_START
 #endif
 
 // Real start of the standard ABI code.
