@@ -45,7 +45,7 @@ S2N_BN_SYMBOL(p384_montjadd):
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
         CFI_PUSH2(x25,x26)
-        CFI_PUSH2(x27,xzr)
+        CFI_PUSH1Z(x27)
         CFI_DEC_SP(NSPACE)
 
         mov x24, x0
@@ -6423,7 +6423,7 @@ S2N_BN_SYMBOL(p384_montjadd):
 
         CFI_INC_SP(NSPACE)
 
-        CFI_POP2(x27,xzr)
+        CFI_POP1Z(x27)
         CFI_POP2(x25,x26)
         CFI_POP2(x23,x24)
         CFI_POP2(x21,x22)

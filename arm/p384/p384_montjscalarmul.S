@@ -504,7 +504,7 @@ p384_montjscalarmul_p384_montjadd:
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
         CFI_PUSH2(x25,x26)
-        CFI_PUSH2(x27,xzr)
+        CFI_PUSH1Z(x27)
         CFI_DEC_SP(0x180)
         mov     x24, x0
         mov     x25, x1
@@ -6877,7 +6877,7 @@ p384_montjscalarmul_p384_montjadd:
         stp     x14, x15, [x27, #112]
         stp     x16, x17, [x27, #128]
         CFI_INC_SP(0x180)
-        CFI_POP2(x27,xzr)
+        CFI_POP1Z(x27)
         CFI_POP2(x25,x26)
         CFI_POP2(x23,x24)
         CFI_POP2(x21,x22)

@@ -40,11 +40,11 @@ S2N_BN_SYMBOL(p384_montjdouble):
 // Save regs and make room on stack for temporary variables
 
         CFI_DEC_SP(NSPACE+80)
-        stp     x19, x20, [sp, #NSPACE]
-        stp     x21, x22, [sp, #NSPACE+16]
-        stp     x23, x24, [sp, #NSPACE+32]
-        stp     x25, x26, [sp, #NSPACE+48]
-        stp     x27, xzr, [sp, #NSPACE+64]
+        CFI_STACKSAVE2(x19,x20,NSPACE)
+        CFI_STACKSAVE2(x21,x22,NSPACE+16)
+        CFI_STACKSAVE2(x23,x24,NSPACE+32)
+        CFI_STACKSAVE2(x25,x26,NSPACE+48)
+        CFI_STACKSAVE1Z(x27,NSPACE+64)
 
         mov x25, x0
         mov x26, x1
@@ -3135,11 +3135,11 @@ S2N_BN_SYMBOL(p384_montjdouble):
 
 // Restore stack and registers
 
-        ldp     x19, x20, [sp, #NSPACE]
-        ldp     x21, x22, [sp, #NSPACE+16]
-        ldp     x23, x24, [sp, #NSPACE+32]
-        ldp     x25, x26, [sp, #NSPACE+48]
-        ldp     x27, xzr, [sp, #NSPACE+64]
+        CFI_STACKLOAD2(x19,x20,NSPACE)
+        CFI_STACKLOAD2(x21,x22,NSPACE+16)
+        CFI_STACKLOAD2(x23,x24,NSPACE+32)
+        CFI_STACKLOAD2(x25,x26,NSPACE+48)
+        CFI_STACKLOAD1Z(x27,NSPACE+64)
         CFI_INC_SP(NSPACE+80)
         CFI_RET
 

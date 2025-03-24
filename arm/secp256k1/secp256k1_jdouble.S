@@ -824,7 +824,7 @@ S2N_BN_SYMBOL(secp256k1_jdouble):
 // Save registers and make room on stack for temporary variables
 
         CFI_DEC_SP(NSPACE+16)
-        stp     x19, x20, [sp, #NSPACE]
+        CFI_STACKSAVE2(x19,x20,NSPACE)
 
 // Move the input arguments to stable place
 
@@ -882,7 +882,7 @@ S2N_BN_SYMBOL(secp256k1_jdouble):
 
 // Restore stack and return
 
-        ldp     x19, x20, [sp, #NSPACE]
+        CFI_STACKLOAD2(x19,x20,NSPACE)
         CFI_INC_SP(NSPACE+16)
         CFI_RET
 

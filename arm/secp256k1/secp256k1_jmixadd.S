@@ -405,8 +405,8 @@ S2N_BN_SYMBOL(secp256k1_jmixadd):
 // Save registers and make room on stack for temporary variables
 
         CFI_DEC_SP(NSPACE+32)
-        stp     x19, x20, [sp, #NSPACE]
-        stp     x21, x22, [sp, #NSPACE+16]
+        CFI_STACKSAVE2(x19,x20,NSPACE)
+        CFI_STACKSAVE2(x21,x22,NSPACE+16)
 
 // Move the input arguments to stable place
 
@@ -498,8 +498,8 @@ S2N_BN_SYMBOL(secp256k1_jmixadd):
 
 // Restore stack and return
 
-        ldp     x19, x20, [sp, #NSPACE]
-        ldp     x21, x22, [sp, #NSPACE+16]
+        CFI_STACKLOAD2(x19,x20,NSPACE)
+        CFI_STACKLOAD2(x21,x22,NSPACE+16)
         CFI_INC_SP(NSPACE+32)
         CFI_RET
 

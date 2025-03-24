@@ -67,16 +67,16 @@ S2N_BN_SYMBOL(curve25519_x25519_byte):
 // according to the ABI, so we use a save of the D8...D15 forms.
 
         CFI_DEC_SP(NSPACE+160)
-        stp     d8, d9, [regsave+0]
-        stp     d10, d11, [regsave+16]
-        stp     d12, d13, [regsave+32]
-        stp     d14, d15, [regsave+48]
-        stp     x19, x20, [regsave+64]
-        stp     x21, x22, [regsave+80]
-        stp     x23, x24, [regsave+96]
-        stp     x25, x26, [regsave+112]
-        stp     x27, x28, [regsave+128]
-        stp     x29, x30, [regsave+144]
+        CFI_STACKSAVE2(d8,d9,NSPACE+0)
+        CFI_STACKSAVE2(d10,d11,NSPACE+16)
+        CFI_STACKSAVE2(d12,d13,NSPACE+32)
+        CFI_STACKSAVE2(d14,d15,NSPACE+48)
+        CFI_STACKSAVE2(x19,x20,NSPACE+64)
+        CFI_STACKSAVE2(x21,x22,NSPACE+80)
+        CFI_STACKSAVE2(x23,x24,NSPACE+96)
+        CFI_STACKSAVE2(x25,x26,NSPACE+112)
+        CFI_STACKSAVE2(x27,x28,NSPACE+128)
+        CFI_STACKSAVE2(x29,x30,NSPACE+144)
 
 // Move the output pointer to a stable place
 
@@ -2759,16 +2759,16 @@ curve25519_x25519_byte_invmidloop:
 
 // Restore stack and registers (this will zero the tops of Q8...Q15).
 
-        ldp     d8, d9, [regsave+0]
-        ldp     d10, d11, [regsave+16]
-        ldp     d12, d13, [regsave+32]
-        ldp     d14, d15, [regsave+48]
-        ldp     x19, x20, [regsave+64]
-        ldp     x21, x22, [regsave+80]
-        ldp     x23, x24, [regsave+96]
-        ldp     x25, x26, [regsave+112]
-        ldp     x27, x28, [regsave+128]
-        ldp     x29, x30, [regsave+144]
+        ldp     d8, d9, [sp, #NSPACE+0]
+        CFI_STACKLOAD2(d10,d11,NSPACE+16)
+        CFI_STACKLOAD2(d12,d13,NSPACE+32)
+        CFI_STACKLOAD2(d14,d15,NSPACE+48)
+        CFI_STACKLOAD2(x19,x20,NSPACE+64)
+        CFI_STACKLOAD2(x21,x22,NSPACE+80)
+        CFI_STACKLOAD2(x23,x24,NSPACE+96)
+        CFI_STACKLOAD2(x25,x26,NSPACE+112)
+        CFI_STACKLOAD2(x27,x28,NSPACE+128)
+        CFI_STACKLOAD2(x29,x30,NSPACE+144)
         CFI_INC_SP(NSPACE+160)
         CFI_RET
 

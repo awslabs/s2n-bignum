@@ -62,16 +62,16 @@ S2N_BN_SYMBOL(bignum_emontredc_8n_cdiff):
         CFI_START
 
         CFI_DEC_SP((10*16))
-        stp x19, x20, [sp, #(9*16)]
-        stp x21, x22, [sp, #(8*16)]
-        stp x23, x24, [sp, #(7*16)]
-        stp x25, x26, [sp, #(6*16)]
-        stp x27, x28, [sp, #(5*16)]
-        stp x29, x30, [sp, #(4*16)]
-        stp d14, d15, [sp, #(3*16)]
-        stp d12, d13, [sp, #(2*16)]
-        stp d10, d11, [sp, #(1*16)]
-        stp d8, d9, [sp, #(0*16)]
+        CFI_STACKSAVE2(x19,x20,(9*16))
+        CFI_STACKSAVE2(x21,x22,(8*16))
+        CFI_STACKSAVE2(x23,x24,(7*16))
+        CFI_STACKSAVE2(x25,x26,(6*16))
+        CFI_STACKSAVE2(x27,x28,(5*16))
+        CFI_STACKSAVE2(x29,x30,(4*16))
+        CFI_STACKSAVE2(d14,d15,(3*16))
+        CFI_STACKSAVE2(d12,d13,(2*16))
+        CFI_STACKSAVE2(d10,d11,(1*16))
+        CFI_STACKSAVE2(d8,d9,(0*16))
 
         // Leave space for cached differences of words of a in inner loop
         CFI_DEC_SP((6*16))
@@ -642,16 +642,16 @@ bignum_emontredc_8n_cdiff_outer_loop_end:
 bignum_emontredc_8n_cdiff_end:
         CFI_INC_SP(32)
         CFI_INC_SP((6*16))
-        ldp d8, d9, [sp, #(0*16)]
-        ldp d10, d11, [sp, #(1*16)]
-        ldp d12, d13, [sp, #(2*16)]
-        ldp d14, d15, [sp, #(3*16)]
-        ldp x29, x30, [sp, #(4*16)]
-        ldp x27, x28, [sp, #(5*16)]
-        ldp x25, x26, [sp, #(6*16)]
-        ldp x23, x24, [sp, #(7*16)]
-        ldp x21, x22, [sp, #(8*16)]
-        ldp x19, x20, [sp, #(9*16)]
+        CFI_STACKLOAD2(d8,d9,(0*16))
+        CFI_STACKLOAD2(d10,d11,(1*16))
+        CFI_STACKLOAD2(d12,d13,(2*16))
+        CFI_STACKLOAD2(d14,d15,(3*16))
+        CFI_STACKLOAD2(x29,x30,(4*16))
+        CFI_STACKLOAD2(x27,x28,(5*16))
+        CFI_STACKLOAD2(x25,x26,(6*16))
+        CFI_STACKLOAD2(x23,x24,(7*16))
+        CFI_STACKLOAD2(x21,x22,(8*16))
+        CFI_STACKLOAD2(x19,x20,(9*16))
         CFI_INC_SP((10*16))
 
         CFI_RET

@@ -594,7 +594,7 @@ S2N_BN_SYMBOL(sm2_montjdouble):
 // Save registers and make room on stack for temporary variables
 
         CFI_DEC_SP(NSPACE+16)
-        stp     x19, x20, [sp, #NSPACE]
+        CFI_STACKSAVE2(x19,x20,NSPACE)
 
 // Move the input arguments to stable places
 
@@ -655,7 +655,7 @@ S2N_BN_SYMBOL(sm2_montjdouble):
 
 // Restore registers and stack and return
 
-        ldp     x19, x20, [sp, #NSPACE]
+        CFI_STACKLOAD2(x19,x20,NSPACE)
         CFI_INC_SP(NSPACE+16)
         CFI_RET
 
