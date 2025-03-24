@@ -498,6 +498,7 @@ S2N_BN_SYMBOL(p521_jdouble):
 // bignum_mul_p521 and bignum_sqr_p521.
 
 p521_jdouble_local_mul_p521:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -1175,6 +1176,7 @@ p521_jdouble_local_mul_p521:
         CFI_RET
 
 p521_jdouble_local_sqr_p521:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)

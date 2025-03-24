@@ -456,6 +456,7 @@ edwards25519_decode_alt_standard:
 // *************************************************************
 
 edwards25519_decode_alt_mul_p25519:
+        CFI_START
         mov     rcx, rdx
         mov     rax, [rsi]
         mul     QWORD PTR [rcx]
@@ -593,6 +594,7 @@ edwards25519_decode_alt_mul_p25519:
 // *************************************************************
 
 edwards25519_decode_alt_nsqr_p25519:
+        CFI_START
 
 // Copy input argument into q
 

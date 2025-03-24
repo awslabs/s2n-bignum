@@ -745,6 +745,7 @@ p521_jscalarmul_mainloop:
 // Local copies of subroutines, complete clones at the moment
 
 p521_jscalarmul_bignum_mod_p521_9:
+        CFI_START
         CFI_PUSH(rbx)
         mov     rax, [rsi+0x40]
         mov     edx, 0x1ff
@@ -791,6 +792,7 @@ p521_jscalarmul_bignum_mod_p521_9:
         CFI_RET
 
 p521_jscalarmul_bignum_mod_n521_9:
+        CFI_START
         mov     rdx, [rsi+0x40]
         mov     rax, 0xfffffffffffffe00
         or      rax, rdx
@@ -855,6 +857,7 @@ p521_jscalarmul_bignum_mod_n521_9:
         CFI_RET
 
 p521_jscalarmul_jadd:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)
@@ -1390,6 +1393,7 @@ p521_jscalarmul_jadd:
         CFI_RET
 
 p521_jscalarmul_jdouble:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)
@@ -1905,6 +1909,7 @@ p521_jscalarmul_jdouble:
         CFI_RET
 
 p521_jscalarmul_mul_p521:
+        CFI_START
         CFI_DEC_RSP(0x40)
         mov     rcx, rdx
         xor     ebp, ebp
@@ -2223,6 +2228,7 @@ p521_jscalarmul_mul_p521:
         CFI_RET
 
 p521_jscalarmul_sqr_p521:
+        CFI_START
         CFI_DEC_RSP(0x40)
         xor     ebp, ebp
         mov     rdx, [rsi]

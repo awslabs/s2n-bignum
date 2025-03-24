@@ -380,6 +380,7 @@ bignum_sqrt_p25519_alt_standard:
 // *************************************************************
 
 bignum_sqrt_p25519_alt_mul_p25519:
+        CFI_START
         mov     rcx, rdx
         mov     rax, [rsi]
         mul     QWORD PTR [rcx]
@@ -517,6 +518,7 @@ bignum_sqrt_p25519_alt_mul_p25519:
 // *************************************************************
 
 bignum_sqrt_p25519_alt_nsqr_p25519:
+        CFI_START
 
 // Copy input argument into u
 

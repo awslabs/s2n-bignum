@@ -456,6 +456,7 @@ edwards25519_decode_standard:
 // *************************************************************
 
 edwards25519_decode_mul_p25519:
+        CFI_START
         mov     rcx, rdx
         xor     ebp, ebp
         mov     rdx, [rcx]
@@ -553,6 +554,7 @@ edwards25519_decode_mul_p25519:
 // *************************************************************
 
 edwards25519_decode_nsqr_p25519:
+        CFI_START
 
 // Copy input argument into q
 

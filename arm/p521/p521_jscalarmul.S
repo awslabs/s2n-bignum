@@ -625,6 +625,7 @@ p521_jscalarmul_mainloop:
 // that we share multiplication and squaring between the point operations.
 
 p521_jscalarmul_bignum_mod_p521_9:
+        CFI_START
         ldr     x12, [x1, #64]
         lsr     x2, x12, #9
         cmp     xzr, xzr
@@ -660,6 +661,7 @@ p521_jscalarmul_bignum_mod_p521_9:
         CFI_RET
 
 p521_jscalarmul_bignum_mod_n521_9:
+        CFI_START
         ldr     x14, [x1, #64]
         lsr     x15, x14, #9
         add     x15, x15, #1
@@ -732,6 +734,7 @@ p521_jscalarmul_bignum_mod_n521_9:
         CFI_RET
 
 p521_jscalarmul_jadd:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -985,6 +988,7 @@ p521_jscalarmul_jadd:
         CFI_RET
 
 p521_jscalarmul_jdouble:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -1453,6 +1457,7 @@ p521_jscalarmul_jdouble:
         CFI_RET
 
 p521_jscalarmul_mul_p521:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -2130,6 +2135,7 @@ p521_jscalarmul_mul_p521:
         CFI_RET
 
 p521_jscalarmul_sqr_p521:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -2666,6 +2672,7 @@ p521_jscalarmul_sqr_p521:
         CFI_RET
 
 p521_jscalarmul_sub_p521:
+        CFI_START
         ldp     x5, x6, [x1]
         ldp     x4, x3, [x2]
         subs    x5, x5, x4

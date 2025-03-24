@@ -260,6 +260,7 @@ S2N_BN_SYMBOL(p521_jmixadd):
 // avoiding x26.
 
 p521_jmixadd_local_mul_p521:
+        CFI_START
         ldp     x3, x4, [x1]
         ldp     x5, x6, [x1, #16]
         ldp     x7, x8, [x2]
@@ -887,6 +888,7 @@ p521_jmixadd_local_mul_p521:
         CFI_RET
 
 p521_jmixadd_local_sqr_p521:
+        CFI_START
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         ldp     x6, x7, [x1, #32]
@@ -1302,6 +1304,7 @@ p521_jmixadd_local_sqr_p521:
         CFI_RET
 
 p521_jmixadd_local_sub_p521:
+        CFI_START
         ldp     x5, x6, [x1]
         ldp     x4, x3, [x2]
         subs    x5, x5, x4

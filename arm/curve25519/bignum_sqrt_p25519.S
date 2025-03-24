@@ -256,6 +256,7 @@ S2N_BN_SYMBOL(bignum_sqrt_p25519):
 // *************************************************************
 
 bignum_sqrt_p25519_mul_p25519:
+        CFI_START
         ldp     x3, x4, [x1]
         ldp     x5, x6, [x2]
         umull   x7, w3, w5
@@ -443,6 +444,7 @@ bignum_sqrt_p25519_mul_p25519:
 // *************************************************************
 
 bignum_sqrt_p25519_nsqr_p25519:
+        CFI_START
 
 // Copy input argument into [x13;x12;x11;x10]
 

@@ -385,6 +385,7 @@ sm2_montjscalarmul_mainloop:
 // Local copies of subroutines, complete clones at the moment
 
 sm2_montjscalarmul_sm2_montjadd:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_DEC_SP(0xe0)
         mov     x17, x0
@@ -3117,6 +3118,7 @@ sm2_montjscalarmul_sm2_montjadd:
         CFI_RET
 
 sm2_montjscalarmul_sm2_montjdouble:
+        CFI_START
         CFI_DEC_SP(0xd0)
         stp     x19, x20, [sp, #0xc0]
         mov     x19, x0

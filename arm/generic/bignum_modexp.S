@@ -138,6 +138,7 @@ bignum_modexp_end:
 // Local copy of bignum_amontifier
 
 bignum_modexp_local_amontifier:
+        CFI_START
         cbz     x0, bignum_modexp_amontifend
         mov     x4, xzr
 bignum_modexp_copyinloop:
@@ -360,6 +361,7 @@ bignum_modexp_amontifend:
 // Local copy of bignum_amontmul
 
 bignum_modexp_local_amontmul:
+        CFI_START
         cbz     x0, bignum_modexp_amomend
         ldr     x14, [x4]
         lsl     x5, x14, #2
@@ -447,6 +449,7 @@ bignum_modexp_amomend:
 // Local copy of bignum_demont
 
 bignum_modexp_local_demont:
+        CFI_START
         cbz     x0, bignum_modexp_demontend
         ldr     x11, [x3]
         lsl     x4, x11, #2
@@ -524,6 +527,7 @@ bignum_modexp_demontend:
 // Local copy of bignum_mux
 
 bignum_modexp_local_mux:
+        CFI_START
         cbz     x1, bignum_modexp_muxend
         cmp     x0, #0x0
 bignum_modexp_muxloop:

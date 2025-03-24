@@ -222,6 +222,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 // 0x40, which we compensate for when it is called by adjusting offsets.
 
 bignum_kmul_32_64_local_bignum_kmul_16_32:
+        CFI_START
         mov    rdx, [rcx]
         xor    ebp, ebp
         mulx   r9, rax, [rsi]

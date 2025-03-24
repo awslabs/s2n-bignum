@@ -499,6 +499,7 @@ p384_montjscalarmul_mainloop:
 // Local copies of subroutines, complete clones at the moment
 
 p384_montjscalarmul_p384_montjadd:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -6884,6 +6885,7 @@ p384_montjscalarmul_p384_montjadd:
         CFI_RET
 
 p384_montjscalarmul_p384_montjdouble:
+        CFI_START
         CFI_DEC_SP(0x1a0)
         stp     x19, x20, [sp, #336]
         stp     x21, x22, [sp, #352]

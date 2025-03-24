@@ -3405,6 +3405,7 @@ edwards25519_scalarmuldouble_midloop:
 // ****************************************************************************
 
 edwards25519_scalarmuldouble_epdouble:
+        CFI_START
         CFI_DEC_RSP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
@@ -3424,6 +3425,7 @@ edwards25519_scalarmuldouble_epdouble:
         CFI_RET
 
 edwards25519_scalarmuldouble_pdouble:
+        CFI_START
         CFI_DEC_RSP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
@@ -3442,6 +3444,7 @@ edwards25519_scalarmuldouble_pdouble:
         CFI_RET
 
 edwards25519_scalarmuldouble_epadd:
+        CFI_START
         CFI_DEC_RSP((6*NUMSIZE))
         mul_4(t0,w_1,w_2)
         sub_twice4(t1,y_1,x_1)
@@ -3466,6 +3469,7 @@ edwards25519_scalarmuldouble_epadd:
         CFI_RET
 
 edwards25519_scalarmuldouble_pepadd:
+        CFI_START
         CFI_DEC_RSP((6*NUMSIZE))
         double_twice4(t0,z_1);
         sub_twice4(t1,y_1,x_1);

@@ -399,6 +399,7 @@ p256_scalarmul_loop:
 // Local copies of subroutines, complete clones at the moment
 
 p256_scalarmul_local_demont_p256:
+        CFI_START
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         lsl     x7, x2, #32
@@ -438,6 +439,7 @@ p256_scalarmul_local_demont_p256:
         CFI_RET
 
 p256_scalarmul_local_inv_p256:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -1515,6 +1517,7 @@ p256_scalarmul_inv_midloop:
         CFI_RET
 
 p256_scalarmul_local_montmul_p256:
+        CFI_START
         ldr q20, [x2]
         ldp x7, x17, [x1]
         ldr q0, [x1]
@@ -1722,6 +1725,7 @@ p256_scalarmul_local_montmul_p256:
         CFI_RET
 
 p256_scalarmul_local_montsqr_p256:
+        CFI_START
         ldr q19, [x1]
         ldp x9, x13, [x1]
         ldr q23, [x1, #16]
@@ -1861,6 +1865,7 @@ p256_scalarmul_local_montsqr_p256:
         CFI_RET
 
 p256_scalarmul_local_tomont_p256:
+        CFI_START
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         mov     x1, #0xffffffffffffffff
@@ -1987,6 +1992,7 @@ p256_scalarmul_local_tomont_p256:
         CFI_RET
 
 p256_scalarmul_local_p256_montjadd:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -5107,6 +5113,7 @@ p256_scalarmul_local_p256_montjadd:
         CFI_RET
 
 p256_scalarmul_local_p256_montjdouble:
+        CFI_START
         CFI_DEC_SP(0x110)
         stp     x19, x20, [sp, #192]
         stp     x21, x22, [sp, #208]
@@ -6618,6 +6625,7 @@ p256_scalarmul_local_p256_montjdouble:
         CFI_RET
 
 p256_scalarmul_local_p256_montjmixadd:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_DEC_SP(0xc0)
         mov     x17, x0

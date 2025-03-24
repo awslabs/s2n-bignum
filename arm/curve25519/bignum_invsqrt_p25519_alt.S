@@ -246,6 +246,7 @@ S2N_BN_SYMBOL(bignum_invsqrt_p25519_alt):
 // *************************************************************
 
 bignum_invsqrt_p25519_alt_mul_p25519:
+        CFI_START
         ldp     x3, x4, [x1]
         ldp     x7, x8, [x2]
         mul     x12, x3, x7
@@ -353,6 +354,7 @@ bignum_invsqrt_p25519_alt_mul_p25519:
 // *************************************************************
 
 bignum_invsqrt_p25519_alt_nsqr_p25519:
+        CFI_START
 
 // Copy input argument into [x5;x4;x3;x2] (overwriting input pointer x20
 

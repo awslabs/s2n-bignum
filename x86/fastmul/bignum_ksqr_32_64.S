@@ -185,6 +185,7 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 // Local copy of the half-length subroutine
 
 bignum_ksqr_32_64_local_bignum_sqr_16_32:
+        CFI_START
         xor    ebp, ebp
         mov    rdx, [x]
         mulx   rax, r9, [x+0x8]

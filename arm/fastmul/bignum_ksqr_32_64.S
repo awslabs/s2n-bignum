@@ -503,6 +503,7 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 // This includes in turn a copy of bignum_sqr_8_16.
 
 bignum_ksqr_32_64_local_ksqr_16_32:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -681,6 +682,7 @@ bignum_ksqr_32_64_local_ksqr_16_32:
         CFI_RET
 
 bignum_ksqr_32_64_local_sqr_8_16:
+        CFI_START
 // Load registers.
         ldp     x2, x3, [x1]
 ldr     q20, [x1]

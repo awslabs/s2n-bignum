@@ -650,6 +650,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 // This includes in turn a copy of bignum_mul_8_16.
 
 bignum_kmul_32_64_local_kmul_16_32:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x30)
@@ -885,6 +886,7 @@ bignum_kmul_32_64_local_kmul_16_32:
         CFI_RET
 
 bignum_kmul_32_64_local_mul_8_16:
+        CFI_START
         ldp x3, x4, [x1]
         ldr q0, [x1]
         ldp x7, x8, [x2]

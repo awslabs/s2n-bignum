@@ -335,6 +335,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
 // ----------------------------------------------------------------------------
 
 bignum_kmul_16_32_local_mul_8_16:
+        CFI_START
         ldp x3, x4, [x1]
         ldr q0, [x1]
         ldp x7, x8, [x2]

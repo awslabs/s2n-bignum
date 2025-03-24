@@ -346,6 +346,7 @@ S2N_BN_SYMBOL(edwards25519_decode_alt):
 // *************************************************************
 
 edwards25519_decode_alt_mul_p25519:
+        CFI_START
         ldp     x3, x4, [x1]
         ldp     x7, x8, [x2]
         mul     x12, x3, x7
@@ -453,6 +454,7 @@ edwards25519_decode_alt_mul_p25519:
 // *************************************************************
 
 edwards25519_decode_alt_nsqr_p25519:
+        CFI_START
 
 // Copy input argument into [x5;x4;x3;x2] (overwriting input pointer x20
 

@@ -449,6 +449,7 @@ p256_montjscalarmul_alt_mainloop:
 // Local copies of subroutines, complete clones at the moment
 
 p256_montjscalarmul_alt_p256_montjadd:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)
@@ -3221,6 +3222,7 @@ p256_montjscalarmul_alt_p256_montjadd:
         CFI_RET
 
 p256_montjscalarmul_alt_p256_montjdouble:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(r12)
         CFI_PUSH(r13)

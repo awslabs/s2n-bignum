@@ -399,6 +399,7 @@ p256_scalarmul_alt_loop:
 // Local copies of subroutines, complete clones at the moment
 
 p256_scalarmul_alt_local_demont_p256:
+        CFI_START
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         lsl     x7, x2, #32
@@ -438,6 +439,7 @@ p256_scalarmul_alt_local_demont_p256:
         CFI_RET
 
 p256_scalarmul_alt_local_inv_p256:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -1515,6 +1517,7 @@ p256_scalarmul_alt_inv_midloop:
         CFI_RET
 
 p256_scalarmul_alt_local_montmul_p256:
+        CFI_START
         ldp     x3, x4, [x1]
         ldp     x7, x8, [x2]
         mul     x12, x3, x7
@@ -1631,6 +1634,7 @@ p256_scalarmul_alt_local_montmul_p256:
         CFI_RET
 
 p256_scalarmul_alt_local_montsqr_p256:
+        CFI_START
         ldp     x2, x3, [x1]
         mul     x9, x2, x3
         umulh   x10, x2, x3
@@ -1725,6 +1729,7 @@ p256_scalarmul_alt_local_montsqr_p256:
         CFI_RET
 
 p256_scalarmul_alt_local_tomont_p256:
+        CFI_START
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
         mov     x1, #0xffffffffffffffff
@@ -1851,6 +1856,7 @@ p256_scalarmul_alt_local_tomont_p256:
         CFI_RET
 
 p256_scalarmul_alt_local_p256_montjadd:
+        CFI_START
         CFI_DEC_SP(0xe0)
         mov     x15, x0
         mov     x16, x1
@@ -3781,6 +3787,7 @@ p256_scalarmul_alt_local_p256_montjadd:
         CFI_RET
 
 p256_scalarmul_alt_local_p256_montjdouble:
+        CFI_START
         CFI_DEC_SP(0xc0)
         mov     x15, x0
         mov     x16, x1
@@ -4822,6 +4829,7 @@ p256_scalarmul_alt_local_p256_montjdouble:
         CFI_RET
 
 p256_scalarmul_alt_local_p256_montjmixadd:
+        CFI_START
         CFI_DEC_SP(0xc0)
         mov     x15, x0
         mov     x16, x1

@@ -637,6 +637,7 @@ selectblock_xz(1)
 // Local copies of subroutines, complete clones at the moment
 
 p384_montjscalarmul_alt_p384_montjadd:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)
@@ -6468,6 +6469,7 @@ p384_montjscalarmul_alt_p384_montjadd:
         CFI_RET
 
 p384_montjscalarmul_alt_p384_montjdouble:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)

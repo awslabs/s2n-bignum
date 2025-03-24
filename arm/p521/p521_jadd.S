@@ -352,6 +352,7 @@ S2N_BN_SYMBOL(p521_jadd):
 // bignum_mul_p521, bignum_sqr_p521 and bignum_sub_p521.
 
 p521_jadd_local_mul_p521:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -1029,6 +1030,7 @@ p521_jadd_local_mul_p521:
         CFI_RET
 
 p521_jadd_local_sqr_p521:
+        CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
@@ -1565,6 +1567,7 @@ p521_jadd_local_sqr_p521:
         CFI_RET
 
 p521_jadd_local_sub_p521:
+        CFI_START
         ldp     x5, x6, [x1]
         ldp     x4, x3, [x2]
         subs    x5, x5, x4

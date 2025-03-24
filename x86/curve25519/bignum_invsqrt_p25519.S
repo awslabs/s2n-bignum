@@ -379,6 +379,7 @@ bignum_invsqrt_p25519_standard:
 // *************************************************************
 
 bignum_invsqrt_p25519_mul_p25519:
+        CFI_START
         mov     rcx, rdx
         xor     ebp, ebp
         mov     rdx, [rcx]
@@ -476,6 +477,7 @@ bignum_invsqrt_p25519_mul_p25519:
 // *************************************************************
 
 bignum_invsqrt_p25519_nsqr_p25519:
+        CFI_START
 
 // Copy input argument into u
 

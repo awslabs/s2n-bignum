@@ -171,6 +171,7 @@ bignum_modexp_end:
 // Local copy of bignum_amontifier
 
 bignum_modexp_local_amontifier:
+        CFI_START
          CFI_PUSH(rbp)
          CFI_PUSH(rbx)
          CFI_PUSH(r12)
@@ -436,6 +437,7 @@ bignum_modexp_amontifier_end:
 // Local copy of bignum_amontmul
 
 bignum_modexp_local_amontmul:
+        CFI_START
          CFI_PUSH(rbx)
          CFI_PUSH(rbp)
          CFI_PUSH(r12)
@@ -556,6 +558,7 @@ bignum_modexp_amont_end:
 // Local copy of bignum_demont
 
 bignum_modexp_local_demont:
+        CFI_START
          CFI_PUSH(rbx)
          CFI_PUSH(rbp)
          CFI_PUSH(r12)
@@ -653,6 +656,7 @@ bignum_modexp_demont_end:
 // Local copy of bignum_mux
 
 bignum_modexp_local_mux:
+        CFI_START
          test   rsi, rsi
          je     bignum_modexp_muxend
          xor    r9, r9

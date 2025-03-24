@@ -264,6 +264,7 @@ S2N_BN_SYMBOL(bignum_ksqr_16_32):
 // -----------------------------------------------------------------------------
 
 bignum_ksqr_16_32_local_sqr_8_16:
+        CFI_START
 // Load registers.
         ldp     x2, x3, [x1]
 ldr     q20, [x1]

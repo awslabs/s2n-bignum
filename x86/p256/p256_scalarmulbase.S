@@ -394,6 +394,7 @@ p256_scalarmulbase_tabloop:
 // Local copies of subroutines, complete clones at the moment
 
 p256_scalarmulbase_local_demont_p256:
+        CFI_START
         CFI_PUSH(rbx)
         mov     r8, [rsi]
         mov     r9, [rsi+0x8]
@@ -442,6 +443,7 @@ p256_scalarmulbase_local_demont_p256:
         CFI_RET
 
 p256_scalarmulbase_local_inv_p256:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)
@@ -1870,6 +1872,7 @@ p256_scalarmulbase_inv_midloop:
         CFI_RET
 
 p256_scalarmulbase_local_montmul_p256:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(r12)
         CFI_PUSH(r13)
@@ -1997,6 +2000,7 @@ p256_scalarmulbase_local_montmul_p256:
         CFI_RET
 
 p256_scalarmulbase_local_montsqr_p256:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)
@@ -2112,6 +2116,7 @@ p256_scalarmulbase_local_montsqr_p256:
         CFI_RET
 
 p256_scalarmulbase_local_p256_montjmixadd:
+        CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
         CFI_PUSH(r12)
