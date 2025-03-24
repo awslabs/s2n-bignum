@@ -109,9 +109,7 @@ let iclasses =
 
   (****** NEON INSTRUCTIONS *****)
   (*** ADD ***)
-  "01001110xx1xxxxx100001xxxxxxxxxx"; (* 128 bits *)
-  "000011100x1xxxxx100001xxxxxxxxxx"; (* 64 bits, size=0 or 1 *)
-  "00001110101xxxxx100001xxxxxxxxxx"; (* 64 bits, size=2 *)
+  "0x001110xx1xxxxx100001xxxxxxxxxx";
 
   (*** AND ***)
   "0x001110001xxxxx000111xxxxxxxxxx";
@@ -160,9 +158,7 @@ let iclasses =
   "0x101111xxxxxxxx0100x0xxxxxxxxxx";
 
   (*** MLS (vector) ***)
-  "0x101110001xxxxx100101xxxxxxxxxx"; (* .b *)
-  "0x101110011xxxxx100101xxxxxxxxxx"; (* .h *)
-  "0x101110101xxxxx100101xxxxxxxxxx"; (* .s *)
+  "0x101110xx1xxxxx100101xxxxxxxxxx";
 
   (*** MOVI ***)
   "0110111100000xxx111001xxxxxxxxxx"; (* q=1, cmode=1110 *)
@@ -173,16 +169,13 @@ let iclasses =
   "0x001111xxxxxxxx1000x0xxxxxxxxxx";
 
   (*** MUL (vector) ***)
-  "0x001110001xxxxx100111xxxxxxxxxx"; (* .b *)
-  "0x001110011xxxxx100111xxxxxxxxxx"; (* .h *)
-  "0x001110101xxxxx100111xxxxxxxxxx"; (* .s *)
+  "0x001110xx1xxxxx100111xxxxxxxxxx";
 
   (*** ORR ***)
   "0x001110101xxxxx000111xxxxxxxxxx";
 
   (*** REV64 ***)
-  "010011100x100000000010xxxxxxxxxx"; (* .h, .b *)
-  "0100111010100000000010xxxxxxxxxx"; (* .s *)
+  "01001110xx100000000010xxxxxxxxxx";
 
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
@@ -221,47 +214,33 @@ let iclasses =
   "0000111100001xxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
 
   (*** SMLAL ***)
-  "000011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
-  "00001110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
+  "00001110xx1xxxxx100000xxxxxxxxxx";
 
   (*** SMLAL2 ***)
-  "010011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
-  "01001110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
+  "01001110xx1xxxxx100000xxxxxxxxxx";
 
   (*** SMLSL ***)
-  "000011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
-  "00001110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+  "00001110xx1xxxxx101000xxxxxxxxxx";
 
   (*** SMLSL2 ***)
-  "010011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
-  "01001110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+  "01001110xx1xxxxx101000xxxxxxxxxx";
 
   (*** SMULL ***)
-  "000011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
-  "00001110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+  "00001110xx1xxxxx110000xxxxxxxxxx";
 
   (*** SMULL2 ***)
-  "010011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
-  "01001110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+  "01001110xx1xxxxx110000xxxxxxxxxx";
 
-  (*** SQDMULH (by element; focus on defined sizes) ***)
-  "0x00111101xxxxxx1100x0xxxxxxxxxx";
-  "0x00111110xxxxxx1100x0xxxxxxxxxx";
+  (*** SQDMULH ***)
   "0x001111xxxxxxxx1100x0xxxxxxxxxx";
 
-  (*** SQDMULH (vector; focus on defined sizes) ***)
-  "0x001110011xxxxx101101xxxxxxxxxx";
-  "0x001110101xxxxx101101xxxxxxxxxx";
+  (*** SQDMULH (vector) ***)
   "0x001110xx1xxxxx101101xxxxxxxxxx";
 
-  (*** SQRDMULH (by element; focus on defined sizes) ***)
-  "0x00111101xxxxxx1101x0xxxxxxxxxx";
-  "0x00111110xxxxxx1101x0xxxxxxxxxx";
+  (*** SQRDMULH (by element) ***)
   "0x001111xxxxxxxx1101x0xxxxxxxxxx";
 
-  (*** SQRDMULH (vector; focus on defined sizes) ***)
-  "0x101110011xxxxx101101xxxxxxxxxx";
-  "0x101110101xxxxx101101xxxxxxxxxx";
+  (*** SQRDMULH (vector) ***)
   "0x101110xx1xxxxx101101xxxxxxxxxx";
 
   (*** SRSHR (make sure immh is nonzero) ***)
@@ -289,16 +268,13 @@ let iclasses =
   "0x10111100001xxx010001xxxxxxxxxx"; (* immh!=0 *)
 
   (*** SUB ***)
-  "01101110xx1xxxxx100001xxxxxxxxxx"; (* 128 bits *)
-  "001011100x1xxxxx100001xxxxxxxxxx"; (* 64 bits, size=0 or 1 *)
-  "00101110101xxxxx100001xxxxxxxxxx"; (* 64 bits, size=2 *)
+  "0x101110xx1xxxxx100001xxxxxxxxxx";
 
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
 
   (*** UADDLP ***)
-  "011011100x100000001010xxxxxxxxxx"; (* src: .b, .h *)
-  "0110111010100000001010xxxxxxxxxx"; (* src: .s *)
+  "01101110xx100000001010xxxxxxxxxx";
 
   (*** UMOV (.d, .s) ***)
   "01001110000x1000001111xxxxxxxxxx";
@@ -308,28 +284,22 @@ let iclasses =
   "10011011101xxxxxxxxxxxxxxxxxxxxx";
 
   (*** UMLAL ***)
-  "001011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
-  "00101110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
+  "00101110xx1xxxxx100000xxxxxxxxxx";
 
   (*** UMLAL2 ***)
-  "011011100x1xxxxx100000xxxxxxxxxx"; (* src: .b, .h *)
-  "01101110101xxxxx100000xxxxxxxxxx"; (* src: .s *)
+  "01101110xx1xxxxx100000xxxxxxxxxx";
 
   (*** UMLSL ***)
-  "001011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
-  "00101110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+  "00101110xx1xxxxx101000xxxxxxxxxx";
 
   (*** UMLSL2 ***)
-  "011011100x1xxxxx101000xxxxxxxxxx"; (* src: .b, .h *)
-  "01101110101xxxxx101000xxxxxxxxxx"; (* src: .s *)
+  "01101110xx1xxxxx101000xxxxxxxxxx";
 
   (*** UMULL ***)
-  "001011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
-  "00101110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+  "00101110xx1xxxxx110000xxxxxxxxxx";
 
   (*** UMULL2 ***)
-  "011011100x1xxxxx110000xxxxxxxxxx"; (* size!=11 *)
-  "01101110101xxxxx110000xxxxxxxxxx"; (* size!=11 *)
+  "01101110xx1xxxxx110000xxxxxxxxxx";
 
   (*** USHR (make sure immh is nonzero) ***)
   "0x10111101xxxxxx000001xxxxxxxxxx";
@@ -350,21 +320,16 @@ let iclasses =
   "01001110xx0xxxxx000110xxxxxxxxxx";
 
   (*** UZP2 ***)
-  "01001110xx0xxxxx010110xxxxxxxxxx"; (* q=1 *)
+  "01001110xx0xxxxx010110xxxxxxxxxx";
 
   (*** XTN ***)
-  "000011100x100001001010xxxxxxxxxx"; (* size!=11 *)
-  "0000111010100001001010xxxxxxxxxx"; (* size!=11 *)
+  "00001110xx100001001010xxxxxxxxxx";
 
   (*** ZIP1 ***)
-  "01001110xx0xxxxx001110xxxxxxxxxx"; (* q=1 *)
-  "000011100x0xxxxx001110xxxxxxxxxx"; (* q=0, size!=3 *)
-  "00001110100xxxxx001110xxxxxxxxxx"; (* q=0, size!=3 *)
+  "0x001110xx0xxxxx001110xxxxxxxxxx";
 
   (*** ZIP2 ***)
-  "01001110xx0xxxxx011110xxxxxxxxxx"; (* q=1 *)
-  "000011100x0xxxxx011110xxxxxxxxxx"; (* q=0, size!=3 *)
-  "00001110100xxxxx011110xxxxxxxxxx"; (* q=0, size!=3 *)
+  "0x001110xx0xxxxx011110xxxxxxxxxx";
 
   (*** EOR3 ***)
   "11001110000xxxxx0xxxxxxxxxxxxxxx";
