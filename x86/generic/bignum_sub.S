@@ -104,7 +104,7 @@ bignum_sub_tailskip:
         CFI_POP(rsi)
         CFI_POP(rdi)
 #endif
-        CFI_RET
+        ret
 
 // The case where y is longer (p >= n > m)
 

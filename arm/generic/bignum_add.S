@@ -73,7 +73,7 @@ bignum_add_xtoploop:
 bignum_add_xtopskip:
         cbnz    p, bignum_add_tails
         cset    x0, cs
-        CFI_RET
+        ret
 
 // The case where y is longer (p >= n > m)
 
@@ -100,7 +100,7 @@ bignum_add_ytoploop:
 bignum_add_ytopskip:
         cbnz    p, bignum_add_tails
         cset    x0, cs
-        CFI_RET
+        ret
 
 // Adding a non-trivial tail, when p > max(m,n)
 

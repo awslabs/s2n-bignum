@@ -98,7 +98,7 @@ bignum_add_xtest:
         CFI_POP(rsi)
         CFI_POP(rdi)
 #endif
-        CFI_RET
+        ret
 
 // The case where y is longer (p >= n > m)
 
@@ -130,7 +130,7 @@ bignum_add_ytoploop:
         CFI_POP(rsi)
         CFI_POP(rdi)
 #endif
-        CFI_RET
+        ret
 
 // Adding a non-trivial tail, when p > max(m,n)
 

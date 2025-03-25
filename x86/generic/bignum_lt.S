@@ -77,7 +77,7 @@ bignum_lt_xtest:
         CFI_POP(rsi)
         CFI_POP(rdi)
 #endif
-        CFI_RET
+        ret
 
 // The case where y is longer (n > m)
 

@@ -37,8 +37,8 @@
 // Variants of standard instructions with CFI (call frame information)
 // annotations included. Two are common to x86 and ARM:
 
-#define CFI_START
-#define CFI_RET ret
+#define CFI_START .cfi_startproc
+#define CFI_RET ret ; .cfi_endproc
 
 // These are ARM-specific
 

@@ -59,7 +59,7 @@ bignum_gt_xtoploop:
         cbnz    n, bignum_gt_xtoploop
 bignum_gt_xskip:
         cset    x0, cc
-        CFI_RET
+        ret
 
 // The case where x is longer (m > n)
 // The first "adds" also makes sure CF=1 initially in this branch
