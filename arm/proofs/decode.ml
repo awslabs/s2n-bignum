@@ -345,7 +345,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn)
     (if val Rm = 31 then (Postimmediate_Offset (word 8))
-                    else Register_Offset (XREG' Rm)))
+                    else Postreg_Offset (XREG' Rm)))
   // no Postimmediate_Offset
   | [0:1; 0:1; 0b0011000:7; is_ld; 0b000000:6; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) No_Offset)
@@ -354,7 +354,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn)
       (if val Rm = 31 then (Postimmediate_Offset (word 16))
-                      else Register_Offset (XREG' Rm)))
+                      else Postreg_Offset (XREG' Rm)))
   // no Postimmediate_Offset
   | [0:1; 1:1; 0b0011000:7; is_ld; 0b000000:6; 0b0111:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) No_Offset)
