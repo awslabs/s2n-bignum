@@ -60,33 +60,33 @@
 // which doesn't accept repetitions, assembler macros etc.
 
 #define selectblock(I)                          \
-        cmp     x14, #(1*I);                    \
-        ldp     x12, x13, [x15];                \
-        csel    x0, x12, x0, eq;                \
-        csel    x1, x13, x1, eq;                \
-        ldp     x12, x13, [x15, #16];           \
-        csel    x2, x12, x2, eq;                \
-        csel    x3, x13, x3, eq;                \
-        ldp     x12, x13, [x15, #32];           \
-        csel    x4, x12, x4, eq;                \
-        csel    x5, x13, x5, eq;                \
-        ldp     x12, x13, [x15, #48];           \
-        csel    x6, x12, x6, eq;                \
-        csel    x7, x13, x7, eq;                \
-        ldp     x12, x13, [x15, #64];           \
-        csel    x8, x12, x8, eq;                \
-        csel    x9, x13, x9, eq;                \
-        ldp     x12, x13, [x15, #80];           \
-        csel    x10, x12, x10, eq;              \
-        csel    x11, x13, x11, eq;              \
+        cmp     x14, #(1*I) __LF                   \
+        ldp     x12, x13, [x15] __LF               \
+        csel    x0, x12, x0, eq __LF               \
+        csel    x1, x13, x1, eq __LF               \
+        ldp     x12, x13, [x15, #16] __LF          \
+        csel    x2, x12, x2, eq __LF               \
+        csel    x3, x13, x3, eq __LF               \
+        ldp     x12, x13, [x15, #32] __LF          \
+        csel    x4, x12, x4, eq __LF               \
+        csel    x5, x13, x5, eq __LF               \
+        ldp     x12, x13, [x15, #48] __LF          \
+        csel    x6, x12, x6, eq __LF               \
+        csel    x7, x13, x7, eq __LF               \
+        ldp     x12, x13, [x15, #64] __LF          \
+        csel    x8, x12, x8, eq __LF               \
+        csel    x9, x13, x9, eq __LF               \
+        ldp     x12, x13, [x15, #80] __LF          \
+        csel    x10, x12, x10, eq __LF             \
+        csel    x11, x13, x11, eq __LF             \
         add     x15, x15, #96
 
 // Loading large constants
 
 #define movbig(nn,n3,n2,n1,n0)                                      \
-        movz    nn, n0;                                             \
-        movk    nn, n1, lsl #16;                                    \
-        movk    nn, n2, lsl #32;                                    \
+        movz    nn, n0 __LF                                            \
+        movk    nn, n1, lsl #16 __LF                                   \
+        movk    nn, n2, lsl #32 __LF                                   \
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(sm2_montjscalarmul_alt):

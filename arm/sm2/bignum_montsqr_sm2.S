@@ -27,15 +27,15 @@
 // ---------------------------------------------------------------------------
 
 #define muldiffn(c,h,l, t, x,y, w,z)    \
-        subs    t, x, y;                \
-        cneg    t, t, cc;               \
-        csetm   c, cc;                  \
-        subs    h, w, z;                \
-        cneg    h, h, cc;               \
-        mul     l, t, h;                \
-        umulh   h, t, h;                \
-        cinv    c, c, cc;               \
-        eor     l, l, c;                \
+        subs    t, x, y __LF               \
+        cneg    t, t, cc __LF              \
+        csetm   c, cc __LF                 \
+        subs    h, w, z __LF               \
+        cneg    h, h, cc __LF              \
+        mul     l, t, h __LF               \
+        umulh   h, t, h __LF               \
+        cinv    c, c, cc __LF              \
+        eor     l, l, c __LF               \
         eor     h, h, c
 
 // ---------------------------------------------------------------------------
@@ -47,16 +47,16 @@
 
 #define montrede(d5, d4,d3,d2,d1,d0, t3,t2,t1,t0)                           \
 /* First let [t3;t2] = 2^32 * d0 and [t1;t0] = (2^32-1) * d0             */ \
-        lsl     t2, d0, #32;                                                \
-        lsr     t3, d0, #32;                                                \
-        subs    t0, t2, d0;                                                 \
-        sbc     t1, t3, xzr;                                                \
+        lsl     t2, d0, #32 __LF                                               \
+        lsr     t3, d0, #32 __LF                                               \
+        subs    t0, t2, d0 __LF                                                \
+        sbc     t1, t3, xzr __LF                                               \
 /* Now [d4;d3;d2;d1] := [d0;d3;d2;d1] - [t3;t2;t1;t0]                    */ \
-        subs    d1, d1, t0;                                                 \
-        sbcs    d2, d2, t1;                                                 \
-        sbcs    d3, d3, t2;                                                 \
-        sbc     t0, d0, t3;                                                 \
-        adds    d4, d4, t0;                                                 \
+        subs    d1, d1, t0 __LF                                                \
+        sbcs    d2, d2, t1 __LF                                                \
+        sbcs    d3, d3, t2 __LF                                                \
+        sbc     t0, d0, t3 __LF                                                \
+        adds    d4, d4, t0 __LF                                                \
         adc     d5, xzr, xzr
 
 // ---------------------------------------------------------------------------
@@ -69,14 +69,14 @@
 
 #define montreds(d4,d3,d2,d1,d0, t3,t2,t1,t0)                               \
 /* First let [t3;t2] = 2^32 * d0 and [t1;t0] = (2^32-1) * d0             */ \
-        lsl     t2, d0, #32;                                                \
-        lsr     t3, d0, #32;                                                \
-        subs    t0, t2, d0;                                                 \
-        sbc     t1, t3, xzr;                                                \
+        lsl     t2, d0, #32 __LF                                               \
+        lsr     t3, d0, #32 __LF                                               \
+        subs    t0, t2, d0 __LF                                                \
+        sbc     t1, t3, xzr __LF                                               \
 /* Now [d4;d3;d2;d1] := [d0;d3;d2;d1] - [t3;t2;t1;t0]                    */ \
-        subs    d1, d1, t0;                                                 \
-        sbcs    d2, d2, t1;                                                 \
-        sbcs    d3, d3, t2;                                                 \
+        subs    d1, d1, t0 __LF                                                \
+        sbcs    d2, d2, t1 __LF                                                \
+        sbcs    d3, d3, t2 __LF                                                \
         sbc     d4, d0, t3
 
 #define a0 x2

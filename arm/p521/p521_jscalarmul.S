@@ -59,29 +59,29 @@
 #define NSPACE #(55*NUMSIZE+8)
 
 #define selectblock(I)                            \
-        cmp     bf, #(1*I);                       \
-        ldp     x10, x11, [tabup];                \
-        csel    x0, x10, x0, eq;                  \
-        csel    x1, x11, x1, eq;                  \
-        ldp     x10, x11, [tabup, #16];           \
-        csel    x2, x10, x2, eq;                  \
-        csel    x3, x11, x3, eq;                  \
-        ldp     x10, x11, [tabup, #32];           \
-        csel    x4, x10, x4, eq;                  \
-        csel    x5, x11, x5, eq;                  \
-        ldp     x10, x11, [tabup, #48];           \
-        csel    x6, x10, x6, eq;                  \
-        csel    x7, x11, x7, eq;                  \
-        ldr     x10, [tabup, #64];                \
-        csel    x8, x10, x8, eq;                  \
+        cmp     bf, #(1*I) __LF                      \
+        ldp     x10, x11, [tabup] __LF               \
+        csel    x0, x10, x0, eq __LF                 \
+        csel    x1, x11, x1, eq __LF                 \
+        ldp     x10, x11, [tabup, #16] __LF          \
+        csel    x2, x10, x2, eq __LF                 \
+        csel    x3, x11, x3, eq __LF                 \
+        ldp     x10, x11, [tabup, #32] __LF          \
+        csel    x4, x10, x4, eq __LF                 \
+        csel    x5, x11, x5, eq __LF                 \
+        ldp     x10, x11, [tabup, #48] __LF          \
+        csel    x6, x10, x6, eq __LF                 \
+        csel    x7, x11, x7, eq __LF                 \
+        ldr     x10, [tabup, #64] __LF               \
+        csel    x8, x10, x8, eq __LF                 \
         add     tabup, tabup, #JACSIZE
 
 // Loading large constants
 
 #define movbig(nn,n3,n2,n1,n0)                                      \
-        movz    nn, n0;                                             \
-        movk    nn, n1, lsl #16;                                    \
-        movk    nn, n2, lsl #32;                                    \
+        movz    nn, n0 __LF                                            \
+        movk    nn, n1, lsl #16 __LF                                   \
+        movk    nn, n2, lsl #32 __LF                                   \
         movk    nn, n3, lsl #48
 
 S2N_BN_SYMBOL(p521_jscalarmul):

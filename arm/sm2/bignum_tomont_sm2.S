@@ -28,29 +28,29 @@
 /* Writing the input, with a lowest zero digit appended, as     */      \
 /* z = 2^256 * d3 + 2^192 * d2 + t, quotient approximation is   */      \
 /* MIN ((d3 * (1 + 2^32 + 2^64) + d2 + 2^64) >> 64) (2^64 - 1)  */      \
-        adds    t3, d2, d3;                                             \
-        mov     t2, #1;                                                 \
-        adc     t1, d3, t2;                                             \
-        add     t2, d3, t3, lsr #32;                                    \
-        adds    q, t1, t2, lsr #32;                                     \
-        cinv    q, q, cs;                                               \
+        adds    t3, d2, d3 __LF                                            \
+        mov     t2, #1 __LF                                                \
+        adc     t1, d3, t2 __LF                                            \
+        add     t2, d3, t3, lsr #32 __LF                                   \
+        adds    q, t1, t2, lsr #32 __LF                                    \
+        cinv    q, q, cs __LF                                              \
 /* Let t3 = q<<32 and t4 = q>>32 then [t2;t1] = 2^32 * q - q    */      \
-        lsl     t3, q, #32;                                             \
-        subs    t1, t3, q;                                              \
-        lsr     t4, q, #32;                                             \
-        sbc     t2, t4, xzr;                                            \
+        lsl     t3, q, #32 __LF                                            \
+        subs    t1, t3, q __LF                                             \
+        lsr     t4, q, #32 __LF                                            \
+        sbc     t2, t4, xzr __LF                                           \
 /* Do the basic correction [t4;t3;t2;t1;q] = 2^256 * x - q * p  */      \
-        adds    t1, t1, d0;                                             \
-        sub     d3, d3, q;                                              \
-        adcs    t2, t2, d1;                                             \
-        adcs    t3, t3, d2;                                             \
-        adc     t4, t4, d3;                                             \
+        adds    t1, t1, d0 __LF                                            \
+        sub     d3, d3, q __LF                                             \
+        adcs    t2, t2, d1 __LF                                            \
+        adcs    t3, t3, d2 __LF                                            \
+        adc     t4, t4, d3 __LF                                            \
 /* Use top word as mask to correct */                                   \
-        adds    d0, q, t4;                                              \
-        and     t0, t4, #0xffffffff00000000;                            \
-        adcs    d1, t1, t0;                                             \
-        adcs    d2, t2, t4;                                             \
-        and     t0, t4, #0xfffffffeffffffff;                            \
+        adds    d0, q, t4 __LF                                             \
+        and     t0, t4, #0xffffffff00000000 __LF                           \
+        adcs    d1, t1, t0 __LF                                            \
+        adcs    d2, t2, t4 __LF                                            \
+        and     t0, t4, #0xfffffffeffffffff __LF                           \
         adc     d3, t3, t0
 
 #define d0 x2
