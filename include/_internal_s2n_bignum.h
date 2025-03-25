@@ -44,11 +44,11 @@
 
 #define CFI_BL(target) bl target
 
-#define CFI_PUSH2(lo,hi) stp     lo, hi, [sp, #-16]!
-#define CFI_PUSH1Z(reg) stp     reg, xzr, [sp, #-16]!
+#define CFI_PUSH2(lo,hi) stp     lo, hi, [sp, #-16]! ; .cfi_adjust_cfa_offset 16
+#define CFI_PUSH1Z(reg) stp     reg, xzr, [sp, #-16]! ; .cfi_adjust_cfa_offset 16
 
-#define CFI_POP2(lo,hi) ldp     lo, hi, [sp], #16
-#define CFI_POP1Z(reg) ldp     reg, xzr, [sp], #16
+#define CFI_POP2(lo,hi) ldp     lo, hi, [sp], #16 ; .cfi_adjust_cfa_offset (-16)
+#define CFI_POP1Z(reg) ldp     reg, xzr, [sp], #16 ; .cfi_adjust_cfa_offset (-16)
 
 #define CFI_STACKSAVE2(lo,hi,offset) stp     lo, hi, [sp, #(offset)]
 #define CFI_STACKSAVE1Z(reg,offset) stp     reg, xzr, [sp, #(offset)]
@@ -56,15 +56,15 @@
 #define CFI_STACKLOAD2(lo,hi,offset) ldp     lo, hi, [sp, #(offset)]
 #define CFI_STACKLOAD1Z(reg,offset) ldp     reg, xzr, [sp, #(offset)]
 
-#define CFI_INC_SP(offset) add     sp, sp, #(offset)
-#define CFI_DEC_SP(offset) sub     sp, sp, #(offset)
+#define CFI_INC_SP(offset) add     sp, sp, #(offset) ; .cfi_adjust_cfa_offset (-(offset))
+#define CFI_DEC_SP(offset) sub     sp, sp, #(offset) ; .cfi_adjust_cfa_offset (offset)
 
 // These are x86-specific
 
 #define CFI_CALL(target) call    target
 
-#define CFI_PUSH(reg) push    reg
-#define CFI_POP(reg) pop     reg
+#define CFI_PUSH(reg) push    reg ; .cfi_adjust_cfa_offset 8
+#define CFI_POP(reg) pop     reg ; .cfi_adjust_cfa_offset (-8)
 
-#define CFI_INC_RSP(offset) add     rsp, offset
-#define CFI_DEC_RSP(offset) sub     rsp, offset
+#define CFI_INC_RSP(offset) add     rsp, offset ; .cfi_adjust_cfa_offset (-(offset))
+#define CFI_DEC_RSP(offset) sub     rsp, offset ; .cfi_adjust_cfa_offset (offset)

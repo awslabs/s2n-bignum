@@ -102,8 +102,13 @@ bignum_add_xtest:
 
 // The case where y is longer (p >= n > m)
 
-bignum_add_ylonger:
+#if WINDOWS_ABI
+  .cfi_def_cfa rsp, 24
+#else
+  .cfi_def_cfa rsp, 8
+#endif
 
+bignum_add_ylonger:
         sub     p, n
         sub     n, m
         test    m, m
