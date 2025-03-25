@@ -2,6 +2,7 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
+needs "common/aes.ml";;
 
 let aese = new_definition `aese (d:128 word) (n:128 word) =
   aes_sub_bytes joined_GF2 (aes_shift_rows (word_xor d n)) `;;

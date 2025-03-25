@@ -2,6 +2,7 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
+needs "common/aes.ml";;
 
 (* References:
    Intel 64 and IA-32 Architectures Software Developer's Manual Volume 1:
@@ -121,3 +122,34 @@ let AESKEYGENASSIST_REDUCE_CONV tm =
          Comb(Const("word",_),imm8))
     when is_numeral x && is_numeral imm8 -> AESKEYGENASSIST_HELPER_CONV tm
     | _ -> failwith "AESKEYGENASSIST_HELPER_CONV: inapplicable";;
+
+(************************************************)
+(** TESTS                                      **)
+(************************************************)
+(* From White Paper:
+  Intel Advanced Encryption Standard (AES) New Instructions Set *)
+
+prove(`aesenc (word 0x7b5b54657374566563746f725d53475d)
+              (word 0x48692853686179295b477565726f6e5d) =
+       word 0xa8311c2f9fdba3c58b104b58ded7e595`,
+       CONV_TAC(LAND_CONV AESENC_REDUCE_CONV) THEN REFL_TAC);;
+
+prove(`aesenclast (word 0x7b5b54657374566563746f725d53475d)
+                  (word 0x48692853686179295b477565726f6e5d) =
+       word 0xc7fb881e938c5964177ec42553fdc611`,
+       CONV_TAC(LAND_CONV AESENCLAST_REDUCE_CONV) THEN REFL_TAC);;
+
+prove(`aesdec (word 0x7b5b54657374566563746f725d53475d)
+              (word 0x48692853686179295b477565726f6e5d) =
+       word 0x138ac342faea2787b58eb95eb730392a`,
+       CONV_TAC(LAND_CONV AESDEC_REDUCE_CONV) THEN REFL_TAC);;
+
+prove(`aesdeclast (word 0x7b5b54657374566563746f725d53475d)
+                  (word 0x48692853686179295b477565726f6e5d) =
+       word 0xc5a391ef6b317f95d410637b72a593d0`,
+       CONV_TAC(LAND_CONV AESDECLAST_REDUCE_CONV) THEN REFL_TAC);;
+
+prove(`aeskeygenassist (word 0x3c4fcf098815f7aba6d2ae2816157e2b)
+                       (word 0x1) =
+       word 0x01eb848beb848a013424b5e524b5e434`,
+       CONV_TAC(LAND_CONV AESKEYGENASSIST_REDUCE_CONV) THEN REFL_TAC);;
