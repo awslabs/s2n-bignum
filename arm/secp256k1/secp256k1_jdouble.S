@@ -671,7 +671,7 @@
         mul     x13, x13, x10 __LF                 \
         adc     x9, x4, x13 __LF                   \
         orr     x9, x9, #0x10000000000 __LF        \
-        /* [x9 __LFx3;x2;x1;x0] = 2^40 * 2^256 + C * P1 */ \
+        /* [x9; x3;x2;x1;x0] = 2^40 * 2^256 + C * P1 */ \
         mov     x10, D __LF                        \
         ldp     x13, x14, [P2] __LF                \
         mul     x5, x14, x10 __LF                  \
@@ -692,13 +692,13 @@
         mul     x13, x13, x10 __LF                 \
         adcs    x7, x7, x12 __LF                   \
         adc     x8, x8, x13 __LF                   \
-        /* [x8 __LFx7;x6;x5;x4] = D * P2 + 2^40 * k */ \
+        /* [x8; x7;x6;x5;x4] = D * P2 + 2^40 * k */ \
         subs    x0, x0, x4 __LF                    \
         sbcs    x1, x1, x5 __LF                    \
         sbcs    x2, x2, x6 __LF                    \
         sbcs    x3, x3, x7 __LF                    \
         sbc     x4, x9, x8 __LF                    \
-        /* [x4 __LFx3;x2;x1;x0] = 2^40*p_256k1+result */ \
+        /* [x4; x3;x2;x1;x0] = 2^40*p_256k1+result */ \
         add     x10, x4, #1 __LF                   \
         /* (h + 1) is quotient estimate */      \
         mul     x4, pconst, x10 __LF               \
@@ -739,7 +739,7 @@
         mul     x13, x13, x10 __LF                 \
         adc     x9, x4, x13 __LF                   \
         orr     x9, x9, #0x10000000000 __LF        \
-        /*  [x9 __LFx3;x2;x1;x0] = 2^40 * 2^256 + 3 * P1 */ \
+        /*  [x9; x3;x2;x1;x0] = 2^40 * 2^256 + 3 * P1 */ \
         lsl     x12, pconst, #40 __LF              \
         ldp     x13, x14, [P2] __LF                \
         lsl     x4, x13, #3 __LF                   \
@@ -755,13 +755,13 @@
         adcs    x7, x7, xzr __LF                   \
         extr    x8, x13, x12, #61 __LF             \
         adc     x8, x8, xzr __LF                   \
-        /* [x8 __LFx7;x6;x5;x4] = 8 * P2 + 2^40 * k */ \
+        /* [x8; x7;x6;x5;x4] = 8 * P2 + 2^40 * k */ \
         subs    x0, x0, x4 __LF                    \
         sbcs    x1, x1, x5 __LF                    \
         sbcs    x2, x2, x6 __LF                    \
         sbcs    x3, x3, x7 __LF                    \
         sbc     x4, x9, x8 __LF                    \
-        /* [x4 __LFx3;x2;x1;x0] = 2^40*p_256k1+result */ \
+        /* [x4; x3;x2;x1;x0] = 2^40*p_256k1+result */ \
         add     x10, x4, #1 __LF                   \
         /* (h + 1) is quotient estimate */      \
         mul     x4, pconst, x10 __LF               \

@@ -55,7 +55,7 @@
         add     d0, t1, d0 __LF                                        \
 /* Now let [t2;t1] = 2^64 * w - w + w_hi where w_hi = floor(w/2^32)     */  \
 /* We need to subtract 2^32 * this, and we can ignore its lower 32      */  \
-/* bits since by design it will cancel anyway __LFwe only need the w_hi    */  \
+/* bits since by design it will cancel anyway; we only need the w_hi    */  \
 /* part to get the carry propagation going.                             */  \
         lsr     t1, d0, #32 __LF                                       \
         subs    t1, t1, d0 __LF                                        \
