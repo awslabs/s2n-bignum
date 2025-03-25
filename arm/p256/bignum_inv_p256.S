@@ -94,7 +94,7 @@
         adcs    d3, d3, t2 __LF                                        \
         mov     t0, #0x1fffffffe0000000 __LF                           \
         adc     d4, d4, t0 __LF                                        \
-/* Let w = d0, the original word we use as offset __LFd0 gets recycled */      \
+/* Let w = d0, the original word we use as offset; d0 gets recycled */      \
 /* First let [t2;t1] = 2^32 * w                                     */      \
 /* then let [d0;t0] = (2^64 - 2^32 + 1) * w (overwrite old d0)      */      \
         lsl     t1, d0, #32 __LF                                       \
