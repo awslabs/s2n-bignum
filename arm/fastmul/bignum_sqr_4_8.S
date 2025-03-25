@@ -22,27 +22,27 @@
 // ---------------------------------------------------------------------------
 
 #define sqr2(s3,s2,s1,s0, a1,a1short,a0,a0short, t2,t1,t0,t0short) \
-        umull   s0, a0short, a0short;           \
-        lsr     t0, a0, #32;                    \
-        umull   s1, t0short, t0short;           \
-        umull   t0, a0short, t0short;           \
-        adds    s0, s0, t0, lsl #33;            \
-        lsr     t0, t0, #31;                    \
-        adc     s1, s1, t0;                     \
-        umull   s2, a1short, a1short;           \
-        lsr     t0, a1, #32;                    \
-        umull   s3, t0short, t0short;           \
-        umull   t0, a1short, t0short;           \
-        mul     t1, a0, a1;                     \
-        umulh   t2, a0, a1;                     \
-        adds    s2, s2, t0, lsl #33;            \
-        lsr     t0, t0, #31;                    \
-        adc     s3, s3, t0;                     \
-        adds    t1, t1, t1;                     \
-        adcs    t2, t2, t2;                     \
-        adc     s3, s3, xzr;                    \
-        adds    s1, s1, t1;                     \
-        adcs    s2, s2, t2;                     \
+        umull   s0, a0short, a0short __LF          \
+        lsr     t0, a0, #32 __LF                   \
+        umull   s1, t0short, t0short __LF          \
+        umull   t0, a0short, t0short __LF          \
+        adds    s0, s0, t0, lsl #33 __LF           \
+        lsr     t0, t0, #31 __LF                   \
+        adc     s1, s1, t0 __LF                    \
+        umull   s2, a1short, a1short __LF          \
+        lsr     t0, a1, #32 __LF                   \
+        umull   s3, t0short, t0short __LF          \
+        umull   t0, a1short, t0short __LF          \
+        mul     t1, a0, a1 __LF                    \
+        umulh   t2, a0, a1 __LF                    \
+        adds    s2, s2, t0, lsl #33 __LF           \
+        lsr     t0, t0, #31 __LF                   \
+        adc     s3, s3, t0 __LF                    \
+        adds    t1, t1, t1 __LF                    \
+        adcs    t2, t2, t2 __LF                    \
+        adc     s3, s3, xzr __LF                   \
+        adds    s1, s1, t1 __LF                    \
+        adcs    s2, s2, t2 __LF                    \
         adc     s3, s3, xzr
 
 // Main code
