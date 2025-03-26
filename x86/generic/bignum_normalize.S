@@ -59,7 +59,7 @@ S2N_BN_SYMBOL(bignum_normalize):
         xor     r, r
         mov     i, k
         sub     i, 1
-        jc      bignum_normalize_end
+        jc      Lbignum_normalize_end
         mov     c, [z+8*i]
         jz      Lbignum_normalize_bitpart
 
@@ -113,7 +113,7 @@ Lbignum_normalize_bitloop:
         cmp     i, k
         jc      Lbignum_normalize_bitloop
 
- bignum_normalize_end:
+Lbignum_normalize_end:
 #if WINDOWS_ABI
         CFI_POP(rsi)
         CFI_POP(rdi)
