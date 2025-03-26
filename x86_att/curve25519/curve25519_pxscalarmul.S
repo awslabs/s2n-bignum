@@ -18,7 +18,7 @@
 // Standard x86-64 ABI: RDI = res, RSI = scalar, RDX = point
 // Microsoft x64 ABI:   RCX = res, RDX = scalar, R8 = point
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_pxscalarmul)
@@ -590,11 +590,12 @@
         movq    %rax, 24+P0
 
 S2N_BN_SYMBOL(curve25519_pxscalarmul):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        pushq   %rdi
-        pushq   %rsi
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
         movq    %rcx, %rdi
         movq    %rdx, %rsi
         movq    %r8, %rdx
@@ -602,13 +603,13 @@ S2N_BN_SYMBOL(curve25519_pxscalarmul):
 
 // Save registers, make room for temps, preserve input arguments.
 
-        pushq   %rbx
-        pushq   %rbp
-        pushq   %r12
-        pushq   %r13
-        pushq   %r14
-        pushq   %r15
-        subq    $NSPACE, %rsp
+        CFI_PUSH(%rbx)
+        CFI_PUSH(%rbp)
+        CFI_PUSH(%r12)
+        CFI_PUSH(%r13)
+        CFI_PUSH(%r14)
+        CFI_PUSH(%r15)
+        CFI_DEC_RSP(NSPACE)
 
 // Move the input arguments to stable places
 
@@ -647,7 +648,7 @@ S2N_BN_SYMBOL(curve25519_pxscalarmul):
         movl    $255, %eax
         movq    %rax, i
 
-curve25519_pxscalarmul_loop:
+Lcurve25519_pxscalarmul_loop:
 
 // sm = xm + zm; sn = xn + zn; dm = xm - zm; dn = xn - zn
 // The adds don't need any normalization as they're fed to muls
@@ -721,7 +722,7 @@ curve25519_pxscalarmul_loop:
         movq    i, %rax
         subq    $1, %rax
         movq    %rax, i
-        jnc     curve25519_pxscalarmul_loop
+        jnc     Lcurve25519_pxscalarmul_loop
 
 // The main loop does not handle the special input of the 2-torsion
 // point = (0,0). In that case we may get a spurious (0,0) as output
@@ -751,20 +752,20 @@ curve25519_pxscalarmul_loop:
 
 // Restore stack and registers
 
-        addq    $NSPACE, %rsp
+        CFI_INC_RSP(NSPACE)
 
-        popq    %r15
-        popq    %r14
-        popq    %r13
-        popq    %r12
-        popq    %rbp
-        popq    %rbx
+        CFI_POP(%r15)
+        CFI_POP(%r14)
+        CFI_POP(%r13)
+        CFI_POP(%r12)
+        CFI_POP(%rbp)
+        CFI_POP(%rbx)
 
 #if WINDOWS_ABI
-        popq   %rsi
-        popq   %rdi
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

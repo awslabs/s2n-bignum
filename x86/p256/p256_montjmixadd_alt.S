@@ -16,7 +16,7 @@
 // Standard x86-64 ABI: RDI = p3, RSI = p1, RDX = p2
 // Microsoft x64 ABI:   RCX = p3, RDX = p1, R8 = p2
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p256_montjmixadd_alt)

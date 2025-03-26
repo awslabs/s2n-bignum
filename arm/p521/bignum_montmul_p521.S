@@ -15,7 +15,8 @@
 //
 // Standard ARM ABI: X0 = z, X1 = x, X2 = y
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
 // bignum_montmul_p521 is functionally equivalent to
 // unopt/bignum_montmul_p521_base.

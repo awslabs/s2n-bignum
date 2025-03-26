@@ -14,7 +14,8 @@
 //
 // Standard ARM ABI: X0 = res, X1 = scalar
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_x25519base)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(curve25519_x25519base)

@@ -13,7 +13,8 @@
 //
 // Standard ARM ABI: X0 = p3, X1 = p1, X2 = p2
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
 // This is functionally equivalent to p384_montjadd in unopt/p384_montjadd.S.
 // This is the result of doing the following sequence of optimizations:

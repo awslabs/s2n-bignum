@@ -13,7 +13,7 @@
 // Microsoft x64 ABI:   RCX = k, RDX = x, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_cld)
@@ -29,11 +29,12 @@
 
 
 S2N_BN_SYMBOL(bignum_cld):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        pushq   %rdi
-        pushq   %rsi
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
         movq    %rcx, %rdi
         movq    %rdx, %rsi
 #endif
@@ -45,28 +46,28 @@ S2N_BN_SYMBOL(bignum_cld):
 // If the bignum is zero-length, just return k = 0
 
         testq   k, k
-        jz      bignum_cld_end
+        jz      Lbignum_cld_end
 
 // Run over the words j = 0..i-1, and set i := j + 1 when hitting nonzero a[j]
 
         xorq    j, j
-bignum_cld_loop:
+Lbignum_cld_loop:
         movq    (x,j,8), a
         incq    j
         testq   a, a
         cmovnzq j, i
         cmpq    k, j
-        jnz     bignum_cld_loop
+        jnz     Lbignum_cld_loop
 
         negq    %rax
         addq    %rdi, %rax
 
-bignum_cld_end:
+Lbignum_cld_end:
 #if WINDOWS_ABI
-        popq   %rsi
-        popq   %rdi
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

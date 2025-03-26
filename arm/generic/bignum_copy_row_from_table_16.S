@@ -14,7 +14,8 @@
 // Initial version written by Hanno Becker
 // Standard ARM ABI: X0 = z, X1 = table, X2 = height, X3 = idx
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_copy_row_from_table_16)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_copy_row_from_table_16)

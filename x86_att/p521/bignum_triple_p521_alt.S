@@ -12,7 +12,7 @@
 // Microsoft x64 ABI:   RCX = z, RDX = x
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_triple_p521_alt)
@@ -41,20 +41,21 @@
 #define d %rdx
 
 S2N_BN_SYMBOL(bignum_triple_p521_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        pushq   %rdi
-        pushq   %rsi
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
         movq    %rcx, %rdi
         movq    %rdx, %rsi
 #endif
 
 // Save additional registers to use
 
-        pushq   %rbx
-        pushq   %rbp
-        pushq   %r12
+        CFI_PUSH(%rbx)
+        CFI_PUSH(%rbp)
+        CFI_PUSH(%r12)
 
 // Let [d8;...;d0] = x' + x + 1 where x' is a rotation left by 1 bit
 // as a 521-bit quantity. This is == 3 * x + 1 (mod p_521) and keeps
@@ -151,15 +152,15 @@ S2N_BN_SYMBOL(bignum_triple_p521_alt):
 
 // Restore registers and return
 
-        popq    %r12
-        popq    %rbp
-        popq    %rbx
+        CFI_POP(%r12)
+        CFI_POP(%rbp)
+        CFI_POP(%rbx)
 
 #if WINDOWS_ABI
-        popq   %rsi
-        popq   %rdi
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

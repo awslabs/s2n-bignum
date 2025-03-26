@@ -11,7 +11,7 @@
 // Standard x86-64 ABI: RDI = m, RSI = d, RDX = f, RCX = g, returns RAX
 // Microsoft x64 ABI:   RCX = m, RDX = d, R8 = f, R9 = g, returns RAX
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(word_divstep59)

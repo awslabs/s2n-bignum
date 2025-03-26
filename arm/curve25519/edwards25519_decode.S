@@ -25,7 +25,8 @@
 //
 // Standard ARM ABI: X0 = z, X1 = c
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_decode)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_decode)

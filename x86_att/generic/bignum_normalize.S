@@ -16,7 +16,7 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_normalize)
@@ -43,11 +43,12 @@
 
 
 S2N_BN_SYMBOL(bignum_normalize):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        pushq   %rdi
-        pushq   %rsi
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
         movq    %rcx, %rdi
         movq    %rdx, %rsi
 #endif
@@ -60,14 +61,14 @@ S2N_BN_SYMBOL(bignum_normalize):
         subq    $1, i
         jc      bignum_normalize_end
         movq    (z,i,8), c
-        jz      bignum_normalize_bitpart
+        jz      Lbignum_normalize_bitpart
 
 // Do d rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
 // With careful binary striding this could be O(k*log(k)) instead of O(k^2)
 // while still retaining the constant-time style.
 
-bignum_normalize_normloop:
+Lbignum_normalize_normloop:
         xorq    j, j
         movq    k, b
         movq    r, d
@@ -75,23 +76,23 @@ bignum_normalize_normloop:
         negq    c
         cmovneq d, r
         movl    $0, dshort
-bignum_normalize_shufloop:
+Lbignum_normalize_shufloop:
         movq    d, c
         movq    (z,j,8), d
         cmovcq  d, c
         movq    c, (z,j,8)
         incq    j
         decq    b
-        jnz     bignum_normalize_shufloop
+        jnz     Lbignum_normalize_shufloop
         decq    i
-        jnz     bignum_normalize_normloop
+        jnz     Lbignum_normalize_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
 // now just count c's leading zeros and shift z bitwise that many bits.
 // We need to patch the bsr result for the undefined case of zero input
 
-bignum_normalize_bitpart:
+Lbignum_normalize_bitpart:
         movl    $127, dshort
         bsrq    c, c
         cmovzq  d, c
@@ -102,7 +103,7 @@ bignum_normalize_bitpart:
 
         xorq    b, b
         xorq    i, i
-bignum_normalize_bitloop:
+Lbignum_normalize_bitloop:
         movq    (z,i,8), d
         movq    d, j
         shldq   %cl, b, d
@@ -110,14 +111,14 @@ bignum_normalize_bitloop:
         movq    j, b
         incq    i
         cmpq    k, i
-        jc      bignum_normalize_bitloop
+        jc      Lbignum_normalize_bitloop
 
  bignum_normalize_end:
 #if WINDOWS_ABI
-        popq   %rsi
-        popq   %rdi
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

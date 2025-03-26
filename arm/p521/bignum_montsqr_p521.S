@@ -15,7 +15,8 @@
 //
 // Standard ARM ABI: X0 = z, X1 = x
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
 // bignum_montsqr_p521 is functionally equivalent to
 // unopt/bignum_montsqr_p521.

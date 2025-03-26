@@ -15,7 +15,8 @@
 //
 // Standard ARM ABI: X0 = p3, X1 = p1, X2 = p2
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p384_montjmixadd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p384_montjmixadd)

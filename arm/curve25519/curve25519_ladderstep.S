@@ -17,7 +17,8 @@
 //
 // Standard ARM ABI: X0 = rr, X1 = point, X2 = pp, X3 = b
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_ladderstep)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(curve25519_ladderstep)

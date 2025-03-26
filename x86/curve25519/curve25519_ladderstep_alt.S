@@ -18,7 +18,7 @@
 // Standard x86-64 ABI: RDI = rr, RSI = point, RDX = pp, RCX = b
 // Microsoft x64 ABI:   RCX = rr, RDX = point, R8 = pp, R9 = b
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_ladderstep_alt)

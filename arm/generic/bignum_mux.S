@@ -12,7 +12,8 @@
 //
 // Standard ARM ABI: X0 = p, X1 = k, X2 = z, X3 = x, X4 = y
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mux)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_mux)

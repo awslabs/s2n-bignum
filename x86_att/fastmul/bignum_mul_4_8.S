@@ -12,7 +12,7 @@
 // Microsoft x64 ABI:   RCX = z, RDX = x, R8 = y
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mul_4_8)
@@ -103,11 +103,12 @@
 
 
 S2N_BN_SYMBOL(bignum_mul_4_8):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        pushq   %rdi
-        pushq   %rsi
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
         movq    %rcx, %rdi
         movq    %rdx, %rsi
         movq    %r8, %rdx
@@ -115,8 +116,8 @@ S2N_BN_SYMBOL(bignum_mul_4_8):
 
 // Save more registers to play with
 
-        pushq   %rbp
-        pushq   %rbx
+        CFI_PUSH(%rbp)
+        CFI_PUSH(%rbx)
 
 // Copy y into a safe register to start with
 
@@ -160,14 +161,14 @@ S2N_BN_SYMBOL(bignum_mul_4_8):
 
 // Restore registers and return
 
-        popq    %rbx
-        popq    %rbp
+        CFI_POP(%rbx)
+        CFI_POP(%rbp)
 
 #if WINDOWS_ABI
-        popq   %rsi
-        popq   %rdi
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

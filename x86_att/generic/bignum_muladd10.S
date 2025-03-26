@@ -13,7 +13,7 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = d, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_muladd10)
@@ -33,11 +33,12 @@
 #define tenshort %r9d
 
 S2N_BN_SYMBOL(bignum_muladd10):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        pushq   %rdi
-        pushq   %rsi
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
         movq    %rcx, %rdi
         movq    %rdx, %rsi
         movq    %r8, %rdx
@@ -47,13 +48,13 @@ S2N_BN_SYMBOL(bignum_muladd10):
 
         movq    %rdx, d
         testq   k, k
-        jz      bignum_muladd10_end
+        jz      Lbignum_muladd10_end
 
 // Simple loop
 
         xorq    i, i
         movl    $10, tenshort
-bignum_muladd10_loop:
+Lbignum_muladd10_loop:
         movq    (z,i,8), a
         mulq    ten
         addq    d, l
@@ -62,17 +63,17 @@ bignum_muladd10_loop:
         movq    h, d
         incq    i
         cmpq    k, i
-        jc      bignum_muladd10_loop
+        jc      Lbignum_muladd10_loop
 
 // Return the final carry
 
-bignum_muladd10_end:
+Lbignum_muladd10_end:
         movq    d, %rax
 #if WINDOWS_ABI
-        popq   %rsi
-        popq   %rdi
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

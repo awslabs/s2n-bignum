@@ -14,7 +14,7 @@
 // Standard x86-64 ABI: RDI = res, RSI = scalar
 // Microsoft x64 ABI:   RCX = res, RDX = scalar
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_scalarmulbase_alt)
@@ -412,33 +412,35 @@
         movq    %r11, 0x18+P0
 
 S2N_BN_SYMBOL(edwards25519_scalarmulbase_alt):
+        CFI_START
         _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from keeping code and data together.
 
 #if WINDOWS_ABI
-        pushq   %rdi
-        pushq   %rsi
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
         movq    %rcx, %rdi
         movq    %rdx, %rsi
-        callq   edwards25519_scalarmulbase_alt_standard
-        popq    %rsi
-        popq    %rdi
-        ret
+        CFI_CALL(Ledwards25519_scalarmulbase_alt_standard)
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
+        CFI_RET
 
-edwards25519_scalarmulbase_alt_standard:
+Ledwards25519_scalarmulbase_alt_standard:
+        CFI_START
 #endif
 
 // Save registers, make room for temps, preserve input arguments.
 
-        pushq   %rbx
-        pushq   %rbp
-        pushq   %r12
-        pushq   %r13
-        pushq   %r14
-        pushq   %r15
-        subq    $NSPACE, %rsp
+        CFI_PUSH(%rbx)
+        CFI_PUSH(%rbp)
+        CFI_PUSH(%r12)
+        CFI_PUSH(%r13)
+        CFI_PUSH(%r14)
+        CFI_PUSH(%r15)
+        CFI_DEC_RSP(NSPACE)
 
 // Move the output pointer to a stable place
 
@@ -513,8 +515,8 @@ edwards25519_scalarmulbase_alt_standard:
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        leaq    edwards25519_scalarmulbase_alt_0g(%rip), %r10
-        leaq    edwards25519_scalarmulbase_alt_251g(%rip), %r11
+        leaq    Ledwards25519_scalarmulbase_alt_0g(%rip), %r10
+        leaq    Ledwards25519_scalarmulbase_alt_251g(%rip), %r11
 
         movq    (%r10), %rax
         movq    (%r11), %rcx
@@ -597,13 +599,13 @@ edwards25519_scalarmulbase_alt_standard:
 // end because we made sure bit 251 is clear in the reduced scalar.
 
         movq    $0, i
-        leaq    edwards25519_scalarmulbase_alt_gtable(%rip), %rax
+        leaq    Ledwards25519_scalarmulbase_alt_gtable(%rip), %rax
         movq    %rax, tab
         movq    $0, bias
 
 // Start of the main loop, repeated 63 times for i = 4, 8, ..., 252
 
-edwards25519_scalarmulbase_alt_scalarloop:
+Ledwards25519_scalarmulbase_alt_scalarloop:
 
 // Look at the next 4-bit field "bf", adding the previous bias as well.
 // Choose the table index "ix" as bf when bf <= 8 and 16 - bf for bf >= 9,
@@ -960,7 +962,7 @@ edwards25519_scalarmulbase_alt_scalarloop:
 
         addq    $4, i
         cmpq    $252, i
-        jc      edwards25519_scalarmulbase_alt_scalarloop
+        jc      Ledwards25519_scalarmulbase_alt_scalarloop
 
 // Insert the optional negation of the projective X coordinate, and
 // so by extension the final affine x coordinate x = X/Z and thus
@@ -1055,8 +1057,8 @@ edwards25519_scalarmulbase_alt_scalarloop:
         movq    %rax, 0x78(%rsp)
         movq    $0xa,  0x90(%rsp)
         movq    $0x1,  0x98(%rsp)
-        jmp     edwards25519_scalarmulbase_alt_midloop
-edwards25519_scalarmulbase_alt_inverseloop:
+        jmp     Ledwards25519_scalarmulbase_alt_midloop
+Ledwards25519_scalarmulbase_alt_inverseloop:
         movq    %r8, %r9
         sarq    $0x3f, %r9
         xorq    %r9, %r8
@@ -1347,7 +1349,7 @@ edwards25519_scalarmulbase_alt_inverseloop:
         shlq    $0x3f, %rax
         addq    %rax, %rsi
         movq    %rsi, 0x78(%rsp)
-edwards25519_scalarmulbase_alt_midloop:
+Ledwards25519_scalarmulbase_alt_midloop:
         movq    0x98(%rsp), %rsi
         movq    (%rsp), %rdx
         movq    0x20(%rsp), %rcx
@@ -2248,7 +2250,7 @@ edwards25519_scalarmulbase_alt_midloop:
         leaq    (%rax,%rdx), %r12
         movq    %rsi, 0x98(%rsp)
         decq     0x90(%rsp)
-        jne     edwards25519_scalarmulbase_alt_inverseloop
+        jne     Ledwards25519_scalarmulbase_alt_inverseloop
         movq    (%rsp), %rax
         movq    0x20(%rsp), %rcx
         imulq   %r8, %rax
@@ -2364,15 +2366,15 @@ edwards25519_scalarmulbase_alt_midloop:
 
 // Restore stack and registers
 
-        addq    $NSPACE, %rsp
+        CFI_INC_RSP(NSPACE)
 
-        popq    %r15
-        popq    %r14
-        popq    %r13
-        popq    %r12
-        popq    %rbp
-        popq    %rbx
-        ret
+        CFI_POP(%r15)
+        CFI_POP(%r14)
+        CFI_POP(%r13)
+        CFI_POP(%r12)
+        CFI_POP(%rbp)
+        CFI_POP(%rbx)
+        CFI_RET
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same
@@ -2385,7 +2387,7 @@ edwards25519_scalarmulbase_alt_midloop:
 // 0 * B = 0 and 2^251 * B in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
 
-edwards25519_scalarmulbase_alt_0g:
+Ledwards25519_scalarmulbase_alt_0g:
 
         .quad   0x0000000000000000
         .quad   0x0000000000000000
@@ -2402,7 +2404,7 @@ edwards25519_scalarmulbase_alt_0g:
         .quad   0x0000000000000000
         .quad   0x0000000000000000
 
-edwards25519_scalarmulbase_alt_251g:
+Ledwards25519_scalarmulbase_alt_251g:
 
         .quad   0x525f946d7c7220e7
         .quad   0x4636b0b2f1e35444
@@ -2420,7 +2422,7 @@ edwards25519_scalarmulbase_alt_251g:
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-edwards25519_scalarmulbase_alt_gtable:
+Ledwards25519_scalarmulbase_alt_gtable:
 
         // 2^0 * 1 * G
 
