@@ -50,7 +50,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 
 // Compute L = x_lo * y_lo in bottom half of buffer (size 16 x 16 -> 32)
 
-        CFI_BL(bignum_kmul_32_64_local_kmul_16_32)
+        CFI_BL(Lbignum_kmul_32_64_local_kmul_16_32)
 
 // Compute H = x_hi * y_hi in top half of buffer (size 16 x 16 -> 32)
 
@@ -58,7 +58,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         add     x1, x, #8*K
         add     x2, y, #8*K
         mov     x3, t
-        CFI_BL(bignum_kmul_32_64_local_kmul_16_32)
+        CFI_BL(Lbignum_kmul_32_64_local_kmul_16_32)
 
 // Compute absolute difference [t..] = |x_lo - x_hi|
 // and the sign x = sgn(x_lo - x_hi) as a bitmask (all 1s for negative)
@@ -351,7 +351,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         mov     x1, t
         add     x2, t, #8*K
         add     x3, t, #32*K
-        CFI_BL(bignum_kmul_32_64_local_kmul_16_32)
+        CFI_BL(Lbignum_kmul_32_64_local_kmul_16_32)
 
 // Add the interlocking H' and L_bot terms
 // Intercept the carry at the 3k position and store it in x.
@@ -649,7 +649,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 // only preserves the key registers we need to be stable in the main code.
 // This includes in turn a copy of bignum_mul_8_16.
 
-bignum_kmul_32_64_local_kmul_16_32:
+Lbignum_kmul_32_64_local_kmul_16_32:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -658,7 +658,7 @@ bignum_kmul_32_64_local_kmul_16_32:
         mov     x26, x1
         mov     x27, x2
         mov     x28, x3
-        CFI_BL(bignum_kmul_32_64_local_mul_8_16)
+        CFI_BL(Lbignum_kmul_32_64_local_mul_8_16)
         ldp     x10, x11, [x26]
         ldp     x8, x9, [x26, #64]
         subs    x10, x10, x8
@@ -700,7 +700,7 @@ bignum_kmul_32_64_local_kmul_16_32:
         add     x0, x25, #0x80
         add     x1, x26, #0x40
         add     x2, x27, #0x40
-        CFI_BL(bignum_kmul_32_64_local_mul_8_16)
+        CFI_BL(Lbignum_kmul_32_64_local_mul_8_16)
         ldp     x10, x11, [x27]
         ldp     x8, x9, [x27, #64]
         subs    x10, x8, x10
@@ -779,7 +779,7 @@ bignum_kmul_32_64_local_kmul_16_32:
         add     x0, x28, #0x80
         mov     x1, x28
         add     x2, x28, #0x40
-        CFI_BL(bignum_kmul_32_64_local_mul_8_16)
+        CFI_BL(Lbignum_kmul_32_64_local_mul_8_16)
         ldp     x0, x1, [x25]
         ldp     x16, x17, [x25, #128]
         adds    x0, x0, x16
@@ -885,7 +885,7 @@ bignum_kmul_32_64_local_kmul_16_32:
         CFI_POP2(x19,x20)
         CFI_RET
 
-bignum_kmul_32_64_local_mul_8_16:
+Lbignum_kmul_32_64_local_mul_8_16:
         CFI_START
         ldp x3, x4, [x1]
         ldr q0, [x1]

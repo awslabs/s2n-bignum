@@ -70,13 +70,13 @@
         add     x0, dest;                                               \
         add     x1, src1;                                               \
         add     x2, src2;                                               \
-        CFI_BL(edwards25519_decode_alt_mul_p25519)
+        CFI_BL(Ledwards25519_decode_alt_mul_p25519)
 
 #define nsqr(dest,n,src)                                                \
         add     x0, dest;                                               \
         mov     x1, n;                                                  \
         add     x2, src;                                                \
-        CFI_BL(edwards25519_decode_alt_nsqr_p25519)
+        CFI_BL(Ledwards25519_decode_alt_nsqr_p25519)
 
 S2N_BN_SYMBOL(edwards25519_decode_alt):
         CFI_START
@@ -345,7 +345,7 @@ S2N_BN_SYMBOL(edwards25519_decode_alt):
 // Local z = x * y
 // *************************************************************
 
-edwards25519_decode_alt_mul_p25519:
+Ledwards25519_decode_alt_mul_p25519:
         CFI_START
         ldp     x3, x4, [x1]
         ldp     x7, x8, [x2]
@@ -453,7 +453,7 @@ edwards25519_decode_alt_mul_p25519:
 // Local z = 2^n * x
 // *************************************************************
 
-edwards25519_decode_alt_nsqr_p25519:
+Ledwards25519_decode_alt_nsqr_p25519:
         CFI_START
 
 // Copy input argument into [x5;x4;x3;x2] (overwriting input pointer x20
@@ -465,7 +465,7 @@ edwards25519_decode_alt_nsqr_p25519:
 // Main squaring loop, accumulating in [x5;x4;x3;x2] consistently and
 // only ensuring the intermediates are < 2 * p_25519 = 2^256 - 38
 
-edwards25519_decode_alt_loop:
+Ledwards25519_decode_alt_loop:
         mul     x9, x2, x3
         umulh   x10, x2, x3
         mul     x11, x2, x5
@@ -538,7 +538,7 @@ edwards25519_decode_alt_loop:
 // Loop as applicable
 
         subs    x1, x1, #1
-        bne     edwards25519_decode_alt_loop
+        bne     Ledwards25519_decode_alt_loop
 
 // We know the intermediate result x < 2^256 - 38, and now we do strict
 // modular reduction mod 2^255 - 19. Note x < 2^255 - 19 <=> x + 19 < 2^255

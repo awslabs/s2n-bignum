@@ -72,7 +72,7 @@ S2N_BN_SYMBOL(bignum_cmadd):
 
         xor     h, h
         test    n, n
-        jz      bignum_cmadd_end
+        jz      Lbignum_cmadd_end
 
 // Move c into a safer register as multiplies overwrite rdx
 
@@ -86,11 +86,11 @@ S2N_BN_SYMBOL(bignum_cmadd):
         mov     h, rdx
         mov     ishort, 1
         dec     n
-        jz      bignum_cmadd_hightail
+        jz      Lbignum_cmadd_hightail
 
 // Main loop, where we always have CF + previous high part h to add in
 
-bignum_cmadd_loop:
+Lbignum_cmadd_loop:
         adc     h, [z+8*i]
         sbb     r, r
         mov     rax, [x+8*i]
@@ -101,36 +101,36 @@ bignum_cmadd_loop:
         mov     h, rdx
         inc     i
         dec     n
-        jnz     bignum_cmadd_loop
+        jnz     Lbignum_cmadd_loop
 
-bignum_cmadd_hightail:
+Lbignum_cmadd_hightail:
         adc     h, 0
 
 // Propagate the carry all the way to the end with h as extra carry word
 
-bignum_cmadd_tail:
+Lbignum_cmadd_tail:
         test    p, p
-        jz      bignum_cmadd_end
+        jz      Lbignum_cmadd_end
 
         add     [z+8*i], h
         mov     hshort, 0
         inc     i
         dec     p
-        jz      bignum_cmadd_highend
+        jz      Lbignum_cmadd_highend
 
-bignum_cmadd_tloop:
+Lbignum_cmadd_tloop:
         adc     [z+8*i], h
         inc     i
         dec     p
-        jnz     bignum_cmadd_tloop
+        jnz     Lbignum_cmadd_tloop
 
-bignum_cmadd_highend:
+Lbignum_cmadd_highend:
 
         adc     h, 0
 
 // Return the high/carry word
 
-bignum_cmadd_end:
+Lbignum_cmadd_end:
         mov     rax, h
 
         CFI_POP(rbx)

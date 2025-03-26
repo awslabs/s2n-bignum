@@ -33,32 +33,32 @@ S2N_BN_SYMBOL(bignum_modadd):
         CFI_START
 
 adds    j, k, xzr               // j = k and ZF = (k = 0)
-        beq     bignum_modadd_end                     // if k = 0 do nothing
+        beq     Lbignum_modadd_end                     // if k = 0 do nothing
         adds    i, xzr, xzr             // i = 0 and CF = 0
 
 // First just add (c::z) := x + y
 
-bignum_modadd_addloop:
+Lbignum_modadd_addloop:
         ldr     a, [x, i]
         ldr     b, [y, i]
         adcs    a, a, b
         str     a, [z, i]
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_modadd_addloop
+        cbnz    j, Lbignum_modadd_addloop
         cset    c, cs
 
 // Now do a comparison subtraction (c::z) - m, recording mask for (c::z) >= m
 
         mov     j, k
         subs    i, xzr, xzr
-bignum_modadd_cmploop:
+Lbignum_modadd_cmploop:
         ldr     a, [z, i]
         ldr     b, [m, i]
         sbcs    xzr, a, b
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_modadd_cmploop
+        cbnz    j, Lbignum_modadd_cmploop
         sbcs    c, c, xzr
         mvn     c, c
 
@@ -66,7 +66,7 @@ bignum_modadd_cmploop:
 
         mov     j, k
         subs    i, xzr, xzr
-bignum_modadd_subloop:
+Lbignum_modadd_subloop:
         ldr     a, [z, i]
         ldr     b, [m, i]
         and     b, b, c
@@ -74,9 +74,9 @@ bignum_modadd_subloop:
         str     a, [z, i]
         add     i, i, #8
         sub     j, j, #1
-        cbnz    j, bignum_modadd_subloop
+        cbnz    j, Lbignum_modadd_subloop
 
-bignum_modadd_end:
+Lbignum_modadd_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

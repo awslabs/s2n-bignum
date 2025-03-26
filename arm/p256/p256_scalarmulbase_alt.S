@@ -127,7 +127,7 @@ S2N_BN_SYMBOL(p256_scalarmulbase_alt):
 
         mov     i, xzr
 
-p256_scalarmulbase_alt_loop:
+Lp256_scalarmulbase_alt_loop:
 
 // The next raw bitfield is bf = bitfield(blocksize * i,blocksize) + cf,
 // adding in the deferred carry cf. We then shift the whole scalar right
@@ -184,7 +184,7 @@ p256_scalarmulbase_alt_loop:
         lsr     x16, x16, #1
         mov     x17, j
 
-p256_scalarmulbase_alt_tabloop:
+Lp256_scalarmulbase_alt_tabloop:
         ldp     x8, x9, [table]
         ldp     x10, x11, [table, #16]
         ldp     x12, x13, [table, #32]
@@ -203,7 +203,7 @@ p256_scalarmulbase_alt_tabloop:
         add     table, table, #64
 
         sub     x16, x16, #1
-        cbnz    x16, p256_scalarmulbase_alt_tabloop
+        cbnz    x16, Lp256_scalarmulbase_alt_tabloop
 
 // Before storing back, optionally negate the y coordinate of the table entry
 
@@ -232,7 +232,7 @@ p256_scalarmulbase_alt_tabloop:
         add     x0, nacc
         add     x1, acc
         add     x2, tabent
-        CFI_BL(p256_scalarmulbase_alt_local_p256_montjmixadd)
+        CFI_BL(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
 
 // However, only commit that update to the accumulator if j is nonzero,
 // because the mixed addition function does not handle this case directly,
@@ -281,7 +281,7 @@ p256_scalarmulbase_alt_tabloop:
         add     i, i, #1
         mul     x0, blocksize, i
         cmp     x0, #257
-        bcc     p256_scalarmulbase_alt_loop
+        bcc     Lp256_scalarmulbase_alt_loop
 
 // That's the end of the main loop, and we just need to translate
 // back from the Jacobian representation to affine. First of all,
@@ -289,37 +289,37 @@ p256_scalarmulbase_alt_tabloop:
 
         add     x0, z2
         add     x1, acc+64
-        CFI_BL(p256_scalarmulbase_alt_local_montsqr_p256)
+        CFI_BL(Lp256_scalarmulbase_alt_local_montsqr_p256)
 
         add     x0, z3
         add     x1, acc+64
         add     x2, z2
-        CFI_BL(p256_scalarmulbase_alt_local_montmul_p256)
+        CFI_BL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
         add     x0, z2
         add     x1, z3
-        CFI_BL(p256_scalarmulbase_alt_local_demont_p256)
+        CFI_BL(Lp256_scalarmulbase_alt_local_demont_p256)
 
         add     x0, z3
         add     x1, z2
-        CFI_BL(p256_scalarmulbase_alt_local_inv_p256)
+        CFI_BL(Lp256_scalarmulbase_alt_local_inv_p256)
 
         add     x0, z2
         add     x1, acc+64
         add     x2, z3
-        CFI_BL(p256_scalarmulbase_alt_local_montmul_p256)
+        CFI_BL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
 // Convert back from Jacobian (X,Y,Z) |-> (X/Z^2, Y/Z^3)
 
         mov     x0, res
         add     x1, acc
         add     x2, z2
-        CFI_BL(p256_scalarmulbase_alt_local_montmul_p256)
+        CFI_BL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
         add     x0, res, #32
         add     x1, acc+32
         add     x2, z3
-        CFI_BL(p256_scalarmulbase_alt_local_montmul_p256)
+        CFI_BL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
 // Restore stack and registers and return
 
@@ -332,7 +332,7 @@ p256_scalarmulbase_alt_tabloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-p256_scalarmulbase_alt_local_demont_p256:
+Lp256_scalarmulbase_alt_local_demont_p256:
         CFI_START
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
@@ -372,7 +372,7 @@ p256_scalarmulbase_alt_local_demont_p256:
         stp     x4, x5, [x0, #16]
         CFI_RET
 
-p256_scalarmulbase_alt_local_inv_p256:
+Lp256_scalarmulbase_alt_local_inv_p256:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -405,8 +405,8 @@ p256_scalarmulbase_alt_local_inv_p256:
         stp     xzr, xzr, [sp, #144]
         mov     x21, #0xa
         mov     x22, #0x1
-        b       p256_scalarmulbase_alt_inv_midloop
-p256_scalarmulbase_alt_inv_loop:
+        b       Lp256_scalarmulbase_alt_inv_midloop
+Lp256_scalarmulbase_alt_inv_loop:
         cmp     x10, xzr
         csetm   x14, mi
         cneg    x10, x10, mi
@@ -711,7 +711,7 @@ p256_scalarmulbase_alt_inv_loop:
         sbc     x5, x5, x10
         stp     x1, x3, [sp, #128]
         stp     x2, x5, [sp, #144]
-p256_scalarmulbase_alt_inv_midloop:
+Lp256_scalarmulbase_alt_inv_midloop:
         mov     x1, x22
         ldr     x2, [sp]
         ldr     x3, [sp, #48]
@@ -1322,7 +1322,7 @@ p256_scalarmulbase_alt_inv_midloop:
         msub    x13, x15, x17, x5
         mov     x22, x1
         subs    x21, x21, #0x1
-        bne     p256_scalarmulbase_alt_inv_loop
+        bne     Lp256_scalarmulbase_alt_inv_loop
         ldr     x0, [sp]
         ldr     x1, [sp, #48]
         mul     x0, x0, x10
@@ -1450,7 +1450,7 @@ p256_scalarmulbase_alt_inv_midloop:
         CFI_POP2(x19,x20)
         CFI_RET
 
-p256_scalarmulbase_alt_local_montmul_p256:
+Lp256_scalarmulbase_alt_local_montmul_p256:
         CFI_START
         ldp     x3, x4, [x1]
         ldp     x7, x8, [x2]
@@ -1567,7 +1567,7 @@ p256_scalarmulbase_alt_local_montmul_p256:
         stp     x14, x15, [x0, #16]
         CFI_RET
 
-p256_scalarmulbase_alt_local_montsqr_p256:
+Lp256_scalarmulbase_alt_local_montsqr_p256:
         CFI_START
         ldp     x2, x3, [x1]
         mul     x9, x2, x3
@@ -1662,7 +1662,7 @@ p256_scalarmulbase_alt_local_montsqr_p256:
         stp     x10, x11, [x0, #16]
         CFI_RET
 
-p256_scalarmulbase_alt_local_p256_montjmixadd:
+Lp256_scalarmulbase_alt_local_p256_montjmixadd:
         CFI_START
         CFI_DEC_SP(0xc0)
         mov     x15, x0

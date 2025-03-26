@@ -84,18 +84,18 @@
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        CFI_BL(p521_jmixadd_local_mul_p521)
+        CFI_BL(Lp521_jmixadd_local_mul_p521)
 
 #define sqr_p521(P0,P1)                         \
         add     x0, P0;                         \
         add     x1, P1;                         \
-        CFI_BL(p521_jmixadd_local_sqr_p521)
+        CFI_BL(Lp521_jmixadd_local_sqr_p521)
 
 #define sub_p521(P0,P1,P2)                      \
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        CFI_BL(p521_jmixadd_local_sub_p521)
+        CFI_BL(Lp521_jmixadd_local_sub_p521)
 
 S2N_BN_SYMBOL(p521_jmixadd):
         CFI_START
@@ -259,7 +259,7 @@ S2N_BN_SYMBOL(p521_jmixadd):
 // local_mul_p521, using the tmp buffer as temporary storage and
 // avoiding x26.
 
-p521_jmixadd_local_mul_p521:
+Lp521_jmixadd_local_mul_p521:
         CFI_START
         ldp     x3, x4, [x1]
         ldp     x5, x6, [x1, #16]
@@ -887,7 +887,7 @@ p521_jmixadd_local_mul_p521:
         str     x22, [x0, #64]
         CFI_RET
 
-p521_jmixadd_local_sqr_p521:
+Lp521_jmixadd_local_sqr_p521:
         CFI_START
         ldp     x2, x3, [x1]
         ldp     x4, x5, [x1, #16]
@@ -1303,7 +1303,7 @@ p521_jmixadd_local_sqr_p521:
         str     x10, [x0, #64]
         CFI_RET
 
-p521_jmixadd_local_sub_p521:
+Lp521_jmixadd_local_sub_p521:
         CFI_START
         ldp     x5, x6, [x1]
         ldp     x4, x3, [x2]

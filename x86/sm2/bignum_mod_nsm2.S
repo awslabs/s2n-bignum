@@ -58,7 +58,7 @@ S2N_BN_SYMBOL(bignum_mod_nsm2):
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
         cmp     k, 4
-        jc      bignum_mod_nsm2_shortinput
+        jc      Lbignum_mod_nsm2_shortinput
 
 // Otherwise load the top 4 digits (top-down) and reduce k by 4
 
@@ -95,9 +95,9 @@ S2N_BN_SYMBOL(bignum_mod_nsm2):
 // Now do (k-4) iterations of 5->4 word modular reduction
 
         test    k, k
-        jz      bignum_mod_nsm2_writeback
+        jz      Lbignum_mod_nsm2_writeback
 
-bignum_mod_nsm2_loop:
+Lbignum_mod_nsm2_loop:
 
 // Writing the input, with the new zeroth digit implicitly appended, as
 // z = 2^256 * m3 + 2^192 * m2 + t, our intended quotient approximation is
@@ -160,11 +160,11 @@ bignum_mod_nsm2_loop:
         mov     m0, d
 
         dec     k
-        jnz     bignum_mod_nsm2_loop
+        jnz     Lbignum_mod_nsm2_loop
 
 // Write back
 
-bignum_mod_nsm2_writeback:
+Lbignum_mod_nsm2_writeback:
 
         mov     [z], m0
         mov     [z+8], m1
@@ -181,7 +181,7 @@ bignum_mod_nsm2_writeback:
 #endif
         CFI_RET
 
-bignum_mod_nsm2_shortinput:
+Lbignum_mod_nsm2_shortinput:
 
         xor     m0, m0
         xor     m1, m1
@@ -189,15 +189,15 @@ bignum_mod_nsm2_shortinput:
         xor     m3, m3
 
         test    k, k
-        jz      bignum_mod_nsm2_writeback
+        jz      Lbignum_mod_nsm2_writeback
         mov     m0, [rdx]
         dec     k
-        jz      bignum_mod_nsm2_writeback
+        jz      Lbignum_mod_nsm2_writeback
         mov     m1, [rdx + 8]
         dec     k
-        jz      bignum_mod_nsm2_writeback
+        jz      Lbignum_mod_nsm2_writeback
         mov     m2, [rdx + 16]
-        jmp     bignum_mod_nsm2_writeback
+        jmp     Lbignum_mod_nsm2_writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

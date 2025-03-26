@@ -49,7 +49,7 @@ S2N_BN_SYMBOL(bignum_ksqr_16_32):
 
 // Compute L = x_lo * y_lo in bottom half of buffer (size 8 x 8 -> 16)
 
-        CFI_BL(bignum_ksqr_16_32_local_sqr_8_16)
+        CFI_BL(Lbignum_ksqr_16_32_local_sqr_8_16)
 
 // Compute absolute difference [t..] = |x_lo - x_hi|
 
@@ -96,7 +96,7 @@ S2N_BN_SYMBOL(bignum_ksqr_16_32):
 
         add     x0, z, #128
         add     x1, x, #64
-        CFI_BL(bignum_ksqr_16_32_local_sqr_8_16)
+        CFI_BL(Lbignum_ksqr_16_32_local_sqr_8_16)
 
 // Compute H' = H + L_top in place of H (it cannot overflow)
 // First add 8-sized block then propagate carry through next 8
@@ -149,7 +149,7 @@ S2N_BN_SYMBOL(bignum_ksqr_16_32):
 
         add     x0, t, #64
         mov     x1, t
-        CFI_BL(bignum_ksqr_16_32_local_sqr_8_16)
+        CFI_BL(Lbignum_ksqr_16_32_local_sqr_8_16)
 
 // Add the interlocking H' and L_bot terms, storing in registers x15..x0
 // Intercept the carry at the 8 + 16 = 24 position and store it in x.
@@ -263,7 +263,7 @@ S2N_BN_SYMBOL(bignum_ksqr_16_32):
 // the same as bignum_sqr_8_16 without the scratch register preservation.
 // -----------------------------------------------------------------------------
 
-bignum_ksqr_16_32_local_sqr_8_16:
+Lbignum_ksqr_16_32_local_sqr_8_16:
         CFI_START
 // Load registers.
         ldp     x2, x3, [x1]

@@ -45,19 +45,19 @@ S2N_BN_SYMBOL(bignum_mux):
         mov     r8, [rsp+56]
 #endif
         test    k, k
-        jz      bignum_mux_end                     // If length = 0 do nothing
+        jz      Lbignum_mux_end                     // If length = 0 do nothing
 
         xor     i, i
         neg     b                       // CF <=> (b != 0)
-bignum_mux_loop:
+Lbignum_mux_loop:
         mov     a, [x+8*i]
         mov     b, [y+8*i]
         cmovnc  a, b                    // CF ? a : b
         mov     [z+8*i],a
         inc     i
         dec     k
-        jnz     bignum_mux_loop
-bignum_mux_end:
+        jnz     Lbignum_mux_loop
+Lbignum_mux_end:
 #if WINDOWS_ABI
         CFI_POP(rsi)
         CFI_POP(rdi)

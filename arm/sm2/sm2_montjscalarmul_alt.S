@@ -200,34 +200,34 @@ S2N_BN_SYMBOL(sm2_montjscalarmul_alt):
 
         add     x0, tab+96*1
         add     x1, tab
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         add     x0, tab+96*2
         add     x1, tab+96*1
         add     x2, tab
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
         add     x0, tab+96*3
         add     x1, tab+96*1
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         add     x0, tab+96*4
         add     x1, tab+96*3
         add     x2, tab
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
         add     x0, tab+96*5
         add     x1, tab+96*2
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         add     x0, tab+96*6
         add     x1, tab+96*5
         add     x2, tab
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
         add     x0, tab+96*7
         add     x1, tab+96*3
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
 // Initialize the accumulator as a table entry for top 4 bits (unrecoded)
 
@@ -268,24 +268,24 @@ S2N_BN_SYMBOL(sm2_montjscalarmul_alt):
 
 // Main loop over size-4 bitfields: double 4 times then add signed digit
 
-sm2_montjscalarmul_alt_mainloop:
+Lsm2_montjscalarmul_alt_mainloop:
         sub     j, j, #4
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         lsr     x2, j, #6
         ldr     x14, [sp, x2, lsl #3]   // Exploits scalarb = sp exactly
@@ -355,9 +355,9 @@ sm2_montjscalarmul_alt_mainloop:
         add     x0, acc
         add     x1, acc
         add     x2, tabent
-        CFI_BL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_BL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
-        cbnz    j, sm2_montjscalarmul_alt_mainloop
+        cbnz    j, Lsm2_montjscalarmul_alt_mainloop
 
 // That's the end of the main loop, and we just need to copy the
 // result in "acc" to the output.
@@ -384,7 +384,7 @@ sm2_montjscalarmul_alt_mainloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-sm2_montjscalarmul_alt_sm2_montjadd:
+Lsm2_montjscalarmul_alt_sm2_montjadd:
         CFI_START
         CFI_DEC_SP(0xe0)
         mov     x15, x0
@@ -2340,7 +2340,7 @@ sm2_montjscalarmul_alt_sm2_montjadd:
         CFI_INC_SP(0xe0)
         CFI_RET
 
-sm2_montjscalarmul_alt_sm2_montjdouble:
+Lsm2_montjscalarmul_alt_sm2_montjdouble:
         CFI_START
         CFI_DEC_SP(0xc0)
         mov     x15, x0

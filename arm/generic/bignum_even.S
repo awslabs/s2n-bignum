@@ -19,11 +19,11 @@
 S2N_BN_SYMBOL(bignum_even):
         CFI_START
 
-cbz     x0, bignum_even_end                 // if k = 0, that's the return!
+cbz     x0, Lbignum_even_end                 // if k = 0, that's the return!
         ldr     x0, [x1]
         and     x0, x0, #1
 
-bignum_even_end:
+Lbignum_even_end:
         eor     x0, x0, #1
         CFI_RET
 

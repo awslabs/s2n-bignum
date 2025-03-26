@@ -50,21 +50,21 @@ S2N_BN_SYMBOL(bignum_clz):
 // If the bignum is zero-length, just return 0
 
         test    k, k
-        jz      bignum_clz_end
+        jz      Lbignum_clz_end
 
 // Use w = a[i-1] to store nonzero words in a bottom-up sweep
 // Set the initial default to be as if we had a 11...11 word directly below
 
         mov     w, -1
         xor     j, j
-bignum_clz_loop:
+Lbignum_clz_loop:
         mov     a, [x+8*j]
         inc     j
         test    a, a
         cmovnz  i, j
         cmovnz  w, a
         cmp     j, k
-        jnz     bignum_clz_loop
+        jnz     Lbignum_clz_loop
 
 // Now w = a[i-1] is the highest nonzero word, or in the zero case the
 // default of the "extra" 11...11 = a[0-1]. We now want 64*(k - i) + clz(w) =
@@ -77,7 +77,7 @@ bignum_clz_loop:
         xor     rax, 63
         add     rax, k
 
-bignum_clz_end:
+Lbignum_clz_end:
 #if WINDOWS_ABI
         CFI_POP(rsi)
         CFI_POP(rdi)

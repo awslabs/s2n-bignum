@@ -199,34 +199,34 @@ S2N_BN_SYMBOL(p256_montjscalarmul):
 
         add     x0, tab+96*1
         add     x1, tab
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
         add     x0, tab+96*2
         add     x1, tab+96*1
         add     x2, tab
-        CFI_BL(p256_montjscalarmul_p256_montjadd)
+        CFI_BL(Lp256_montjscalarmul_p256_montjadd)
 
         add     x0, tab+96*3
         add     x1, tab+96*1
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
         add     x0, tab+96*4
         add     x1, tab+96*3
         add     x2, tab
-        CFI_BL(p256_montjscalarmul_p256_montjadd)
+        CFI_BL(Lp256_montjscalarmul_p256_montjadd)
 
         add     x0, tab+96*5
         add     x1, tab+96*2
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
         add     x0, tab+96*6
         add     x1, tab+96*5
         add     x2, tab
-        CFI_BL(p256_montjscalarmul_p256_montjadd)
+        CFI_BL(Lp256_montjscalarmul_p256_montjadd)
 
         add     x0, tab+96*7
         add     x1, tab+96*3
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
 // Initialize the accumulator as a table entry for top 4 bits (unrecoded)
 
@@ -267,24 +267,24 @@ S2N_BN_SYMBOL(p256_montjscalarmul):
 
 // Main loop over size-4 bitfields: double 4 times then add signed digit
 
-p256_montjscalarmul_mainloop:
+Lp256_montjscalarmul_mainloop:
         sub     j, j, #4
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p256_montjscalarmul_p256_montjdouble)
+        CFI_BL(Lp256_montjscalarmul_p256_montjdouble)
 
         lsr     x2, j, #6
         ldr     x14, [sp, x2, lsl #3]   // Exploits scalarb = sp exactly
@@ -353,9 +353,9 @@ p256_montjscalarmul_mainloop:
         add     x0, acc
         add     x1, acc
         add     x2, tabent
-        CFI_BL(p256_montjscalarmul_p256_montjadd)
+        CFI_BL(Lp256_montjscalarmul_p256_montjadd)
 
-        cbnz    j, p256_montjscalarmul_mainloop
+        cbnz    j, Lp256_montjscalarmul_mainloop
 
 // That's the end of the main loop, and we just need to copy the
 // result in "acc" to the output.
@@ -382,7 +382,7 @@ p256_montjscalarmul_mainloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-p256_montjscalarmul_p256_montjadd:
+Lp256_montjscalarmul_p256_montjadd:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -3503,7 +3503,7 @@ p256_montjscalarmul_p256_montjadd:
         CFI_POP2(x19,x20)
         CFI_RET
 
-p256_montjscalarmul_p256_montjdouble:
+Lp256_montjscalarmul_p256_montjdouble:
         CFI_START
         CFI_DEC_SP(0x110)
         stp     x19, x20, [sp, #192]

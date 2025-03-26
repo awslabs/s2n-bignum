@@ -66,7 +66,7 @@ S2N_BN_SYMBOL(bignum_cmul):
         xor     h, h
         xor     i, i
         test    n, n
-        jz      bignum_cmul_tail
+        jz      Lbignum_cmul_tail
 
 // Move c into a safer register as multiplies overwrite rdx
 
@@ -80,11 +80,11 @@ S2N_BN_SYMBOL(bignum_cmul):
         mov     h, rdx
         inc     i
         cmp     i, n
-        jz      bignum_cmul_tail
+        jz      Lbignum_cmul_tail
 
 // Main loop doing the multiplications
 
-bignum_cmul_loop:
+Lbignum_cmul_loop:
         mov     rax, [x+8*i]
         mul     c
         add     rax, h
@@ -93,28 +93,28 @@ bignum_cmul_loop:
         mov     h, rdx
         inc     i
         cmp     i, n
-        jc      bignum_cmul_loop
+        jc      Lbignum_cmul_loop
 
 // Add a tail when the destination is longer
 
-bignum_cmul_tail:
+Lbignum_cmul_tail:
         cmp     i, p
-        jnc     bignum_cmul_end
+        jnc     Lbignum_cmul_end
         mov     [z+8*i], h
         xor     h, h
         inc     i
         cmp     i, p
-        jnc     bignum_cmul_end
+        jnc     Lbignum_cmul_end
 
-bignum_cmul_tloop:
+Lbignum_cmul_tloop:
         mov     [z+8*i], h
         inc     i
         cmp     i, p
-        jc      bignum_cmul_tloop
+        jc      Lbignum_cmul_tloop
 
 // Return the high/carry word
 
-bignum_cmul_end:
+Lbignum_cmul_end:
         mov     rax, h
 
 #if WINDOWS_ABI

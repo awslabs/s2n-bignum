@@ -19,11 +19,11 @@
 S2N_BN_SYMBOL(bignum_odd):
         CFI_START
 
-cbz     x0, bignum_odd_end                 // if k = 0, that's the return!
+cbz     x0, Lbignum_odd_end                 // if k = 0, that's the return!
         ldr     x0, [x1]
         and     x0, x0, #1
 
-bignum_odd_end:
+Lbignum_odd_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

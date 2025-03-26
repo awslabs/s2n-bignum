@@ -46,23 +46,23 @@ S2N_BN_SYMBOL(bignum_cld):
 // If the bignum is zero-length, just return k = 0
 
         test    k, k
-        jz      bignum_cld_end
+        jz      Lbignum_cld_end
 
 // Run over the words j = 0..i-1, and set i := j + 1 when hitting nonzero a[j]
 
         xor     j, j
-bignum_cld_loop:
+Lbignum_cld_loop:
         mov     a, [x+8*j]
         inc     j
         test    a, a
         cmovnz  i, j
         cmp     j, k
-        jnz     bignum_cld_loop
+        jnz     Lbignum_cld_loop
 
         neg     rax
         add     rax, rdi
 
-bignum_cld_end:
+Lbignum_cld_end:
 #if WINDOWS_ABI
         CFI_POP(rsi)
         CFI_POP(rdi)

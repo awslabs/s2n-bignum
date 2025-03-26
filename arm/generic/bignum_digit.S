@@ -34,25 +34,25 @@ S2N_BN_SYMBOL(bignum_digit):
 
 // For length zero finish immediately (the return value in x0 is 0)
 
-        cbz     k, bignum_digit_end
+        cbz     k, Lbignum_digit_end
 
 // Set default of zero, run over all the digits and take note of the n'th one
 
         mov     d, xzr
         mov     i, xzr
-bignum_digit_loop:
+Lbignum_digit_loop:
         ldr     a, [x, i, lsl #3]
         cmp     i, n
         csel    d, a, d, eq
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_digit_loop
+        bcc     Lbignum_digit_loop
 
 // Return
 
         mov     x0, d
 
-bignum_digit_end:
+Lbignum_digit_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

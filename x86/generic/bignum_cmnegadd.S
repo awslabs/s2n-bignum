@@ -71,7 +71,7 @@ S2N_BN_SYMBOL(bignum_cmnegadd):
 
         xor     h, h
         test    n, n
-        jz      bignum_cmnegadd_end
+        jz      Lbignum_cmnegadd_end
 
 // Move c into a safer register as multiplies overwrite rdx
 
@@ -88,11 +88,11 @@ S2N_BN_SYMBOL(bignum_cmnegadd):
         mov     h, rdx
         mov     ishort, 1
         dec     n
-        jz      bignum_cmnegadd_tail
+        jz      Lbignum_cmnegadd_tail
 
 // Main loop, where we always have CF + previous high part h to add in
 
-bignum_cmnegadd_loop:
+Lbignum_cmnegadd_loop:
         adc     h, [z+8*i]
         sbb     r, r
         mov     rax, [x+8*i]
@@ -104,35 +104,35 @@ bignum_cmnegadd_loop:
         mov     h, rdx
         inc     i
         dec     n
-        jnz     bignum_cmnegadd_loop
+        jnz     Lbignum_cmnegadd_loop
 
 // At this point we have 2^{64n} * (h + CF) + z' = z + c * (2^{64n} - x)
 // so z' - 2^{64n} * (c - (h + CF)) = z - c * x.
 // Since z - c * x < 2^{64n} we must have c - (h + CF) >= 0.
 // Accumulate the negative carry in h for consistency with trivial cases.
 
-bignum_cmnegadd_tail:
+Lbignum_cmnegadd_tail:
         sbb     c, h
         mov     h, c
 
 // Propagate the carry all the way to the end with h as extra carry word
 
         test    p, p
-        jz      bignum_cmnegadd_end
+        jz      Lbignum_cmnegadd_end
 
         sub     [z+8*i], h
         mov     hshort, 0
         inc     i
         dec     p
-        jz      bignum_cmnegadd_highend
+        jz      Lbignum_cmnegadd_highend
 
-bignum_cmnegadd_tloop:
+Lbignum_cmnegadd_tloop:
         sbb     [z+8*i], h
         inc     i
         dec     p
-        jnz     bignum_cmnegadd_tloop
+        jnz     Lbignum_cmnegadd_tloop
 
-bignum_cmnegadd_highend:
+Lbignum_cmnegadd_highend:
 
 // Adjust the high word with the carry from subtraction
 
@@ -140,7 +140,7 @@ bignum_cmnegadd_highend:
 
 // Return the high/carry word
 
-bignum_cmnegadd_end:
+Lbignum_cmnegadd_end:
         mov     rax, h
 
         CFI_POP(rbx)

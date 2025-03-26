@@ -1142,9 +1142,9 @@ S2N_BN_SYMBOL(bignum_inv_p384):
 
         mov     i, 15
         mov     d, 1
-        jmp     bignum_inv_p384_midloop
+        jmp     Lbignum_inv_p384_midloop
 
-bignum_inv_p384_loop:
+Lbignum_inv_p384_loop:
 
 // Separate out the matrix into sign-magnitude pairs
 
@@ -1589,7 +1589,7 @@ bignum_inv_p384_loop:
 
         amontred(v)
 
-bignum_inv_p384_midloop:
+Lbignum_inv_p384_midloop:
 
         divstep59(d,ff,gg)
         mov     d, rsi
@@ -1597,7 +1597,7 @@ bignum_inv_p384_midloop:
 // Next iteration
 
         dec     i
-        jnz     bignum_inv_p384_loop
+        jnz     Lbignum_inv_p384_loop
 
 // The 15th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the

@@ -70,12 +70,12 @@ S2N_BN_SYMBOL(bignum_invsqrt_p25519):
         CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
-        CFI_CALL(bignum_invsqrt_p25519_standard)
+        CFI_CALL(Lbignum_invsqrt_p25519_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-bignum_invsqrt_p25519_standard:
+Lbignum_invsqrt_p25519_standard:
         CFI_START
 #endif
 
@@ -127,132 +127,132 @@ bignum_invsqrt_p25519_standard:
         lea     rdi, [rsp+T]
         mov     rsi, 1
         lea     rdx, [rsp+A]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+T]
         lea     rsi, [rsp+T]
         lea     rdx, [rsp+A]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^4 - 1 = 15
 
         lea     rdi, [rsp+S]
         mov     rsi, 2
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+T]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^5 - 1 = 31
 
         lea     rdi, [rsp+S]
         mov     rsi, 1
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+B]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+A]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^10 - 1
 
         lea     rdi, [rsp+S]
         mov     rsi, 5
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+T]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^20 - 1
 
         lea     rdi, [rsp+S]
         mov     rsi, 10
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+T]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^25 - 1
 
         lea     rdi, [rsp+S]
         mov     rsi, 5
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+B]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^50 - 1
 
         lea     rdi, [rsp+S]
         mov     rsi, 25
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+T]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^100 - 1
 
         lea     rdi, [rsp+S]
         mov     rsi, 50
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+T]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^125 - 1
 
         lea     rdi, [rsp+S]
         mov     rsi, 25
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+B]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^250 - 1
 
         lea     rdi, [rsp+S]
         mov     rsi, 125
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+B]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
   // Power 2^252 - 3
 
         lea     rdi, [rsp+S]
         mov     rsi, 2
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+S]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+A]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
 // s = a^{2^252-3} is now one candidate inverse square root.
 // Generate the other one t = s * j_25519 where j_25519 = sqrt(-1)
@@ -269,19 +269,19 @@ bignum_invsqrt_p25519_standard:
         lea     rdi, [rsp+T]
         lea     rsi, [rsp+S]
         lea     rdx, [rsp+T]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
 // Now multiplex between them according to whether a * s^2 = 1
 
         lea     rdi, [rsp+B]
         mov     rsi, 1
         lea     rdx, [rsp+S]
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+B]
         lea     rsi, [rsp+A]
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
         mov     rax, [rsp+B]
         xor     rax, 1
@@ -336,12 +336,12 @@ bignum_invsqrt_p25519_standard:
 
         lea     rdi, [rsp+B]
         mov     rsi, 1
-        CFI_CALL(bignum_invsqrt_p25519_nsqr_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_nsqr_p25519)
 
         lea     rdi, [rsp+B]
         lea     rsi, [rsp+A]
         lea     rdx, [rsp+B]
-        CFI_CALL(bignum_invsqrt_p25519_mul_p25519)
+        CFI_CALL(Lbignum_invsqrt_p25519_mul_p25519)
 
         mov     rax, 1
         mov     rbp, [rsp+B]
@@ -378,7 +378,7 @@ bignum_invsqrt_p25519_standard:
 // Local z = x * y
 // *************************************************************
 
-bignum_invsqrt_p25519_mul_p25519:
+Lbignum_invsqrt_p25519_mul_p25519:
         CFI_START
         mov     rcx, rdx
         xor     ebp, ebp
@@ -476,7 +476,7 @@ bignum_invsqrt_p25519_mul_p25519:
 // Local z = 2^n * x
 // *************************************************************
 
-bignum_invsqrt_p25519_nsqr_p25519:
+Lbignum_invsqrt_p25519_nsqr_p25519:
         CFI_START
 
 // Copy input argument into u
@@ -493,7 +493,7 @@ bignum_invsqrt_p25519_nsqr_p25519:
 // Main squaring loop, accumulating in u consistently  and
 // only ensuring the intermediates are < 2 * p_25519 = 2^256 - 38
 
-bignum_invsqrt_p25519_loop:
+Lbignum_invsqrt_p25519_loop:
         mov    rdx, [rsp+U8]
         mulx   r15, r8, rdx
         mulx   r10, r9, [rsp+U8+0x8]
@@ -566,7 +566,7 @@ bignum_invsqrt_p25519_loop:
 // Loop as applicable
 
         dec     rsi
-        jnz     bignum_invsqrt_p25519_loop
+        jnz     Lbignum_invsqrt_p25519_loop
 
 // We know the intermediate result x < 2^256 - 38, and now we do strict
 // modular reduction mod 2^255 - 19. Note x < 2^255 - 19 <=> x + 19 < 2^255

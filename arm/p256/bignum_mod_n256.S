@@ -61,7 +61,7 @@ S2N_BN_SYMBOL(bignum_mod_n256_alt):
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
         cmp     k, #4
-        bcc     bignum_mod_n256_short
+        bcc     Lbignum_mod_n256_short
 
 // Otherwise load the top 4 digits (top-down) and reduce k by 4
 
@@ -90,8 +90,8 @@ S2N_BN_SYMBOL(bignum_mod_n256_alt):
 
 // Now do (k-4) iterations of 5->4 word modular reduction
 
-        cbz     k, bignum_mod_n256_writeback
-bignum_mod_n256_loop:
+        cbz     k, Lbignum_mod_n256_writeback
+Lbignum_mod_n256_loop:
 
 // Writing the input as z = 2^256 * m3 + 2^192 * m2 + t = 2^192 * h + t, our
 // intended quotient approximation is MIN ((h + h>>32 + 1)>>64) (2^64 - 1).
@@ -144,32 +144,32 @@ bignum_mod_n256_loop:
         and     d, t4, n3
         sbc     m3, t3, d
 
-        cbnz    k, bignum_mod_n256_loop
+        cbnz    k, Lbignum_mod_n256_loop
 
 // Finally write back [m3;m2;m1;m0] and return
 
-bignum_mod_n256_writeback:
+Lbignum_mod_n256_writeback:
         stp     m0, m1, [z]
         stp     m2, m3, [z, #16]
         CFI_RET
 
 // Short case: just copy the input with zero-padding
 
-bignum_mod_n256_short:
+Lbignum_mod_n256_short:
         mov     m0, xzr
         mov     m1, xzr
         mov     m2, xzr
         mov     m3, xzr
 
-        cbz     k, bignum_mod_n256_writeback
+        cbz     k, Lbignum_mod_n256_writeback
         ldr     m0, [x]
         subs    k, k, #1
-        beq     bignum_mod_n256_writeback
+        beq     Lbignum_mod_n256_writeback
         ldr     m1, [x, #8]
         subs    k, k, #1
-        beq     bignum_mod_n256_writeback
+        beq     Lbignum_mod_n256_writeback
         ldr     m2, [x, #16]
-        b       bignum_mod_n256_writeback
+        b       Lbignum_mod_n256_writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

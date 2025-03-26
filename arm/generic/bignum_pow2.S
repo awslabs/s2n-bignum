@@ -32,7 +32,7 @@ S2N_BN_SYMBOL(bignum_pow2):
 
 // If k = 0 the result is trivially zero
 
-        cbz     k, bignum_pow2_end
+        cbz     k, Lbignum_pow2_end
 
 // Create the index n at which to write the nonzero word and the word w itself
 // Note that the ARM manual explicitly says that shift counts are taken modulo
@@ -45,15 +45,15 @@ S2N_BN_SYMBOL(bignum_pow2):
 // Now in a constant-time fashion set the n'th word to w and others to zero
 
         mov     i, xzr
-bignum_pow2_loop:
+Lbignum_pow2_loop:
         cmp     i, n
         csel    a, w, xzr, eq
         str     a, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_pow2_loop
+        bcc     Lbignum_pow2_loop
 
-bignum_pow2_end:
+Lbignum_pow2_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

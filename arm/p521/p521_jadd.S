@@ -87,18 +87,18 @@
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        CFI_BL(p521_jadd_local_mul_p521)
+        CFI_BL(Lp521_jadd_local_mul_p521)
 
 #define sqr_p521(P0,P1)                         \
         add     x0, P0;                         \
         add     x1, P1;                         \
-        CFI_BL(p521_jadd_local_sqr_p521)
+        CFI_BL(Lp521_jadd_local_sqr_p521)
 
 #define sub_p521(P0,P1,P2)                      \
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        CFI_BL(p521_jadd_local_sub_p521)
+        CFI_BL(Lp521_jadd_local_sub_p521)
 
 S2N_BN_SYMBOL(p521_jadd):
         CFI_START
@@ -351,7 +351,7 @@ S2N_BN_SYMBOL(p521_jadd):
 // Local versions of the three field operations, identical to
 // bignum_mul_p521, bignum_sqr_p521 and bignum_sub_p521.
 
-p521_jadd_local_mul_p521:
+Lp521_jadd_local_mul_p521:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -1029,7 +1029,7 @@ p521_jadd_local_mul_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
-p521_jadd_local_sqr_p521:
+Lp521_jadd_local_sqr_p521:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -1566,7 +1566,7 @@ p521_jadd_local_sqr_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
-p521_jadd_local_sub_p521:
+Lp521_jadd_local_sub_p521:
         CFI_START
         ldp     x5, x6, [x1]
         ldp     x4, x3, [x2]

@@ -80,7 +80,7 @@ S2N_BN_SYMBOL(bignum_amontsqr):
 // If k = 0 the whole operation is trivial
 
         test    k, k
-        jz      bignum_amontsqr_end
+        jz      Lbignum_amontsqr_end
 
 // Move x input into its permanent home, since we need rdx for multiplications
 
@@ -125,17 +125,17 @@ S2N_BN_SYMBOL(bignum_amontsqr):
 
         xor     i, i            // Also initializes i for main loop
         xor     j, j
-bignum_amontsqr_zoop:
+Lbignum_amontsqr_zoop:
         mov     [z+8*j], i
         inc     j
         cmp     j, k
-        jc      bignum_amontsqr_zoop
+        jc      Lbignum_amontsqr_zoop
 
         xor     c0, c0
 
 // Outer loop pulling down digits d=x[i], multiplying by x and reducing
 
-bignum_amontsqr_outerloop:
+Lbignum_amontsqr_outerloop:
 
 // Multiply-add loop where we always have CF + previous high part h to add in.
 // Note that in general we do need yet one more carry in this phase and hence
@@ -147,7 +147,7 @@ bignum_amontsqr_outerloop:
         xor     c1, c1
         mov     n, k
 
-bignum_amontsqr_maddloop:
+Lbignum_amontsqr_maddloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [x+8*j]
@@ -158,7 +158,7 @@ bignum_amontsqr_maddloop:
         mov     h, rdx
         inc     j
         dec     n
-        jnz     bignum_amontsqr_maddloop
+        jnz     Lbignum_amontsqr_maddloop
         adc     c0, h
         adc     c1, c1
 
@@ -174,9 +174,9 @@ bignum_amontsqr_maddloop:
         mov     jshort, 1
         mov     n, k
         dec     n
-        jz      bignum_amontsqr_montend
+        jz      Lbignum_amontsqr_montend
 
-bignum_amontsqr_montloop:
+Lbignum_amontsqr_montloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [m+8*j]
@@ -187,9 +187,9 @@ bignum_amontsqr_montloop:
         mov     h, rdx
         inc     j
         dec     n
-        jnz     bignum_amontsqr_montloop
+        jnz     Lbignum_amontsqr_montloop
 
-bignum_amontsqr_montend:
+Lbignum_amontsqr_montend:
         adc     h, c0
         adc     c1, 0
         mov     c0, c1
@@ -199,7 +199,7 @@ bignum_amontsqr_montend:
 
         inc     i
         cmp     i, k
-        jc      bignum_amontsqr_outerloop
+        jc      Lbignum_amontsqr_outerloop
 
 // Now convert carry word, which is always in {0,1}, into a mask "d"
 // and do a masked subtraction of m for the final almost-Montgomery result.
@@ -208,7 +208,7 @@ bignum_amontsqr_montend:
         sub     d, c0
         xor     e, e
         xor     j, j
-bignum_amontsqr_corrloop:
+Lbignum_amontsqr_corrloop:
         mov     a, [m+8*j]
         and     a, d
         neg     e
@@ -216,9 +216,9 @@ bignum_amontsqr_corrloop:
         sbb     e, e
         inc     j
         cmp     j, k
-        jc      bignum_amontsqr_corrloop
+        jc      Lbignum_amontsqr_corrloop
 
-bignum_amontsqr_end:
+Lbignum_amontsqr_end:
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)

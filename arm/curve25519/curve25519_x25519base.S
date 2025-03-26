@@ -536,8 +536,8 @@ S2N_BN_SYMBOL(curve25519_x25519base):
         ldr     x0, [scalar]
         ands    xzr, x0, #8
 
-        adr     x10, curve25519_x25519base_edwards25519_0g
-        adr     x11, curve25519_x25519base_edwards25519_8g
+        adr     x10, Lcurve25519_x25519base_edwards25519_0g
+        adr     x11, Lcurve25519_x25519base_edwards25519_8g
         ldp     x0, x1, [x10]
         ldp     x2, x3, [x11]
         csel    x0, x0, x2, eq
@@ -593,12 +593,12 @@ S2N_BN_SYMBOL(curve25519_x25519base):
 // l >= 9 case cannot arise on the last iteration.
 
         mov     i, 4
-        adr     tab, curve25519_x25519base_edwards25519_gtable
+        adr     tab, Lcurve25519_x25519base_edwards25519_gtable
         mov     bias, xzr
 
 // Start of the main loop, repeated 63 times for i = 4, 8, ..., 252
 
-curve25519_x25519base_scalarloop:
+Lcurve25519_x25519base_scalarloop:
 
 // Look at the next 4-bit field "bf", adding the previous bias as well.
 // Choose the table index "ix" as bf when bf <= 8 and 16 - bf for bf >= 9,
@@ -881,7 +881,7 @@ curve25519_x25519base_scalarloop:
 
         add     i, i, 4
         cmp     i, 256
-        bcc     curve25519_x25519base_scalarloop
+        bcc     Lcurve25519_x25519base_scalarloop
 
 // Now we need to translate from Edwards curve edwards25519 back
 // to the Montgomery form curve25519. The mapping in the affine
@@ -971,8 +971,8 @@ curve25519_x25519base_scalarloop:
         stp     x12, x13, [sp, #112]
         mov     x21, #0xa
         mov     x22, #0x1
-        b       curve25519_x25519base_invmidloop
-curve25519_x25519base_invloop:
+        b       Lcurve25519_x25519base_invmidloop
+Lcurve25519_x25519base_invloop:
         cmp     x10, xzr
         csetm   x14, mi
         cneg    x10, x10, mi
@@ -1239,7 +1239,7 @@ curve25519_x25519base_invloop:
         adc     x2, x2, x5
         stp     x0, x1, [sp, #96]
         stp     x3, x2, [sp, #112]
-curve25519_x25519base_invmidloop:
+Lcurve25519_x25519base_invmidloop:
         mov     x1, x22
         ldr     x2, [sp]
         ldr     x3, [sp, #32]
@@ -1850,7 +1850,7 @@ curve25519_x25519base_invmidloop:
         msub    x13, x15, x17, x5
         mov     x22, x1
         subs    x21, x21, #0x1
-        b.ne    curve25519_x25519base_invloop
+        b.ne    Lcurve25519_x25519base_invloop
         ldr     x0, [sp]
         ldr     x1, [sp, #32]
         mul     x0, x0, x10
@@ -1981,7 +1981,7 @@ curve25519_x25519base_invmidloop:
 // 2^254 * G and (2^254 + 8) * G in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
 
-curve25519_x25519base_edwards25519_0g:
+Lcurve25519_x25519base_edwards25519_0g:
 
         .quad   0x251037f7cf4e861d
         .quad   0x10ede0fb19fb128f
@@ -1998,7 +1998,7 @@ curve25519_x25519base_edwards25519_0g:
         .quad   0x72e302a348492870
         .quad   0x1253c19e53dbe1bc
 
-curve25519_x25519base_edwards25519_8g:
+Lcurve25519_x25519base_edwards25519_8g:
 
         .quad   0x331d086e0d9abcaa
         .quad   0x1e23c96d311a10c9
@@ -2018,7 +2018,7 @@ curve25519_x25519base_edwards25519_8g:
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-curve25519_x25519base_edwards25519_gtable:
+Lcurve25519_x25519base_edwards25519_gtable:
 
         // 2^4 * 1 * G
 

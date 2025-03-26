@@ -46,37 +46,37 @@ S2N_BN_SYMBOL(bignum_normalize):
 // shift count r and top digit c, but then if k = 1 skip the digitwise part
 
         subs    i, k, #1
-        bcc     bignum_normalize_end
+        bcc     Lbignum_normalize_end
         ldr     c, [z, i, lsl #3]
         mov     r, xzr
-        beq     bignum_normalize_bitpart
+        beq     Lbignum_normalize_bitpart
 
 // Do a rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
 // With careful binary striding this could be O(k*log(k)) instead of O(k^2)
 // while still retaining the constant-time style.
 
-bignum_normalize_normloop:
+Lbignum_normalize_normloop:
         mov     j, xzr
         cmp     c, xzr
         cinc    r, r, eq
         mov     a, xzr
-bignum_normalize_shufloop:
+Lbignum_normalize_shufloop:
         mov     c, a
         ldr     a, [z, j, lsl #3]
         csel    c, c, a, eq
         str     c, [z, j, lsl #3]
         add     j, j, #1
         sub     d, j, k
-        cbnz    d, bignum_normalize_shufloop
+        cbnz    d, Lbignum_normalize_shufloop
         subs    i, i, #1
-        bne     bignum_normalize_normloop
+        bne     Lbignum_normalize_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
 // now just count c's leading zeros and shift z bitwise that many bits.
 
-bignum_normalize_bitpart:
+Lbignum_normalize_bitpart:
         lsl     r, r, #6
         clz     c, c
         add     r, r, c
@@ -86,7 +86,7 @@ bignum_normalize_bitpart:
         ands    xzr, c, #63
         csetm   l, ne
         neg     d, c
-bignum_normalize_bitloop:
+Lbignum_normalize_bitloop:
         ldr     j, [z, i, lsl #3]
         lsl     a, j, c
         orr     a, a, b
@@ -95,13 +95,13 @@ bignum_normalize_bitloop:
         str     a, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_normalize_bitloop
+        bcc     Lbignum_normalize_bitloop
 
 // Return the final shift count
 
         mov     x0, r
 
-bignum_normalize_end:
+Lbignum_normalize_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

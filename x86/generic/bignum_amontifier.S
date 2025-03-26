@@ -79,19 +79,19 @@ S2N_BN_SYMBOL(bignum_amontifier):
 // If k = 0 the whole operation is trivial
 
         test    k, k
-        jz      bignum_amontifier_end
+        jz      Lbignum_amontifier_end
 
 // Copy the input m into the temporary buffer t. The temporary register
 // c matters since we want it to hold the highest digit, ready for the
 // normalization phase.
 
         xor     i, i
-bignum_amontifier_copyinloop:
+Lbignum_amontifier_copyinloop:
         mov     c, [m+8*i]
         mov     [t+8*i], c
         inc     i
         cmp     i, k
-        jc      bignum_amontifier_copyinloop
+        jc      Lbignum_amontifier_copyinloop
 
 // Do a rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
@@ -101,22 +101,22 @@ bignum_amontifier_copyinloop:
 
         mov     i, k
         dec     i
-        jz      bignum_amontifier_normalized
-bignum_amontifier_normloop:
+        jz      Lbignum_amontifier_normalized
+Lbignum_amontifier_normloop:
         xor     j, j
         mov     h, k
         neg     c
         mov     ashort, 0
-bignum_amontifier_shufloop:
+Lbignum_amontifier_shufloop:
         mov     c, a
         mov     a, [t+8*j]
         cmovc   c, a
         mov     [t+8*j], c
         inc     j
         dec     h
-        jnz     bignum_amontifier_shufloop
+        jnz     Lbignum_amontifier_shufloop
         dec     i
-        jnz     bignum_amontifier_normloop
+        jnz     Lbignum_amontifier_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
@@ -124,14 +124,14 @@ bignum_amontifier_shufloop:
 // Note that we don't care about the result of bsr for zero inputs so
 // the simple xor-ing with 63 is safe.
 
-bignum_amontifier_normalized:
+Lbignum_amontifier_normalized:
 
         bsr     c, c
         xor     c, 63
 
         xor     b, b
         xor     i, i
-bignum_amontifier_bitloop:
+Lbignum_amontifier_bitloop:
         mov     a, [t+8*i]
         mov     j, a
         shld    a, b, cl
@@ -139,7 +139,7 @@ bignum_amontifier_bitloop:
         mov     b, j
         inc     i
         cmp     i, k
-        jc      bignum_amontifier_bitloop
+        jc      Lbignum_amontifier_bitloop
 
 // Let h be the high word of n, which in all the in-scope cases is >= 2^63.
 // Now successively form q = 2^i div h and r = 2^i mod h as i goes from
@@ -153,7 +153,7 @@ bignum_amontifier_bitloop:
         mov     r, h
         neg     r
         mov     ishort, 62
-bignum_amontifier_estloop:
+Lbignum_amontifier_estloop:
 
         add     q, q
         mov     a, h
@@ -166,7 +166,7 @@ bignum_amontifier_estloop:
         and     a, h
         sub     r, a
         dec     i
-        jnz     bignum_amontifier_estloop
+        jnz     Lbignum_amontifier_estloop
 
 // Strictly speaking the above loop doesn't quite give the true remainder
 // and quotient in the special case r = h = 2^63, so fix it up. We get
@@ -214,7 +214,7 @@ bignum_amontifier_estloop:
 
         xor     c, c
         xor     i, i
-bignum_amontifier_mulloop:
+Lbignum_amontifier_mulloop:
         mov     rax, [t+8*i]
         mul     q
         add     rax, c
@@ -223,7 +223,7 @@ bignum_amontifier_mulloop:
         mov     c, rdx
         inc     i
         cmp     i, k
-        jc      bignum_amontifier_mulloop
+        jc      Lbignum_amontifier_mulloop
 
 // Now c is the high word of the product, so subtract 2^62
 // and then turn it into a bitmask in q = h
@@ -237,7 +237,7 @@ bignum_amontifier_mulloop:
 
         xor     c, c
         xor     i, i
-bignum_amontifier_remloop:
+Lbignum_amontifier_remloop:
         mov     a, [t+8*i]
         and     a, q
         neg     c
@@ -246,7 +246,7 @@ bignum_amontifier_remloop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_amontifier_remloop
+        jc      Lbignum_amontifier_remloop
 
 // Now still need to do a couple of modular doublings to get us all the
 // way up to 2^{p+64} == r from initial 2^{p+62} == r (mod n).
@@ -254,7 +254,7 @@ bignum_amontifier_remloop:
         xor     c, c
         xor     j, j
         xor     b, b
-bignum_amontifier_dubloop1:
+Lbignum_amontifier_dubloop1:
         mov     a, [z+8*j]
         shrd    c, a, 63
         neg     b
@@ -264,12 +264,12 @@ bignum_amontifier_dubloop1:
         mov     c, a
         inc     j
         cmp     j, k
-        jc      bignum_amontifier_dubloop1
+        jc      Lbignum_amontifier_dubloop1
         shr     c, 63
         add     c, b
         xor     j, j
         xor     b, b
-bignum_amontifier_corrloop1:
+Lbignum_amontifier_corrloop1:
         mov     a, [t+8*j]
         and     a, c
         neg     b
@@ -278,7 +278,7 @@ bignum_amontifier_corrloop1:
         mov     [z+8*j], a
         inc     j
         cmp     j, k
-        jc      bignum_amontifier_corrloop1
+        jc      Lbignum_amontifier_corrloop1
 
 // This is not exactly the same: we also copy output to t giving the
 // initialization t_1 = r == 2^{p+64} mod n for the main loop next.
@@ -286,7 +286,7 @@ bignum_amontifier_corrloop1:
         xor     c, c
         xor     j, j
         xor     b, b
-bignum_amontifier_dubloop2:
+Lbignum_amontifier_dubloop2:
         mov     a, [z+8*j]
         shrd    c, a, 63
         neg     b
@@ -296,12 +296,12 @@ bignum_amontifier_dubloop2:
         mov     c, a
         inc     j
         cmp     j, k
-        jc      bignum_amontifier_dubloop2
+        jc      Lbignum_amontifier_dubloop2
         shr     c, 63
         add     c, b
         xor     j, j
         xor     b, b
-bignum_amontifier_corrloop2:
+Lbignum_amontifier_corrloop2:
         mov     a, [t+8*j]
         and     a, c
         neg     b
@@ -311,7 +311,7 @@ bignum_amontifier_corrloop2:
         mov     [t+8*j], a
         inc     j
         cmp     j, k
-        jc      bignum_amontifier_corrloop2
+        jc      Lbignum_amontifier_corrloop2
 
 // We then successively generate (k+1)-digit values satisfying
 // t_i == 2^{p+64*i} mod n, each of which is stored in h::t. Finish
@@ -335,12 +335,12 @@ bignum_amontifier_corrloop2:
 // "previous" digit (initially 0) to offset things by 1.
 
         mov     i, k
-bignum_amontifier_modloop:
+Lbignum_amontifier_modloop:
         xor     b, b
         mov     n, k
         xor     j, j
         xor     c, c
-bignum_amontifier_cmaloop:
+Lbignum_amontifier_cmaloop:
         adc     c, b
         sbb     l, l
         mov     rax, [z+8*j]
@@ -352,7 +352,7 @@ bignum_amontifier_cmaloop:
         mov     c, rdx
         inc     j
         dec     n
-        jnz     bignum_amontifier_cmaloop
+        jnz     Lbignum_amontifier_cmaloop
         adc     b, c
         mov     h, b
 
@@ -360,7 +360,7 @@ bignum_amontifier_cmaloop:
 
         xor     j, j
         xor     c, c
-bignum_amontifier_oaloop:
+Lbignum_amontifier_oaloop:
         mov     a, [t+8*j]
         mov     b, [z+8*j]
         and     b, l
@@ -370,11 +370,11 @@ bignum_amontifier_oaloop:
         mov     [t+8*j], a
         inc     j
         cmp     j, k
-        jc      bignum_amontifier_oaloop
+        jc      Lbignum_amontifier_oaloop
         sub     h, c
 
         dec     i
-        jnz     bignum_amontifier_modloop
+        jnz     Lbignum_amontifier_modloop
 
 // Now do one almost-Montgomery reduction w.r.t. the original m
 // which lops off one 2^64 from the congruence and, with the usual
@@ -416,9 +416,9 @@ bignum_amontifier_oaloop:
         mov     jshort, 1
         mov     n, k
         dec     n
-        jz      bignum_amontifier_montend
+        jz      Lbignum_amontifier_montend
 
-bignum_amontifier_montloop:
+Lbignum_amontifier_montloop:
         adc     c, [t+8*j]
         sbb     l, l
         mov     rax, [m+8*j]
@@ -429,15 +429,15 @@ bignum_amontifier_montloop:
         mov     c, rdx
         inc     j
         dec     n
-        jnz     bignum_amontifier_montloop
-bignum_amontifier_montend:
+        jnz     Lbignum_amontifier_montloop
+Lbignum_amontifier_montend:
         adc     h, c
         sbb     l, l
         mov     [t+8*k-8], h
 
         xor     j, j
         xor     c, c
-bignum_amontifier_osloop:
+Lbignum_amontifier_osloop:
         mov     a, [t+8*j]
         mov     b, [m+8*j]
         and     b, l
@@ -447,9 +447,9 @@ bignum_amontifier_osloop:
         mov     [z+8*j], a
         inc     j
         cmp     j, k
-        jc      bignum_amontifier_osloop
+        jc      Lbignum_amontifier_osloop
 
- bignum_amontifier_end:
+Lbignum_amontifier_end:
         CFI_POP(r13)
         CFI_POP(r12)
         CFI_POP(rbx)

@@ -188,7 +188,7 @@ S2N_BN_SYMBOL(curve25519_x25519):
         mov     x0, #254
         str     x0, [i]
 
-curve25519_x25519_scalarloop:
+Lcurve25519_x25519_scalarloop:
 
         lsr     x1, x0, #6
         ldr     x2, [sp, x1, lsl #3]    // Exploiting scalar = sp exactly
@@ -1257,7 +1257,7 @@ curve25519_x25519_scalarloop:
         ldr     x0, [i]
         subs    x0, x0, #1
         str     x0, [i]
-        bcs     curve25519_x25519_scalarloop
+        bcs     Lcurve25519_x25519_scalarloop
 
 // Repack X2 into the saturated representation as 256-bit value xn.
 // This does not fully normalize mod 2^255-19 but stays within 256 bits.
@@ -1397,8 +1397,8 @@ curve25519_x25519_scalarloop:
         stp     x12, x13, [sp, #112]
         mov     x21, #0xa
         mov     x22, #0x1
-        b       curve25519_x25519_invmidloop
-curve25519_x25519_invloop:
+        b       Lcurve25519_x25519_invmidloop
+Lcurve25519_x25519_invloop:
         cmp     x10, xzr
         csetm   x14, mi
         cneg    x10, x10, mi
@@ -1665,7 +1665,7 @@ curve25519_x25519_invloop:
         adc     x2, x2, x5
         stp     x0, x1, [sp, #96]
         stp     x3, x2, [sp, #112]
-curve25519_x25519_invmidloop:
+Lcurve25519_x25519_invmidloop:
         mov     x1, x22
         ldr     x2, [sp]
         ldr     x3, [sp, #32]
@@ -2276,7 +2276,7 @@ curve25519_x25519_invmidloop:
         msub    x13, x15, x17, x5
         mov     x22, x1
         subs    x21, x21, #0x1
-        b.ne    curve25519_x25519_invloop
+        b.ne    Lcurve25519_x25519_invloop
         ldr     x0, [sp]
         ldr     x1, [sp, #32]
         mul     x0, x0, x10

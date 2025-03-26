@@ -67,12 +67,12 @@ S2N_BN_SYMBOL(p256_scalarmul):
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
-        CFI_CALL(p256_scalarmul_standard)
+        CFI_CALL(Lp256_scalarmul_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-p256_scalarmul_standard:
+Lp256_scalarmul_standard:
         CFI_START
 #endif
 
@@ -153,11 +153,11 @@ p256_scalarmul_standard:
 
         lea     rdi, [rsp+TAB]
         mov     rsi, rbx
-        CFI_CALL(p256_scalarmul_local_tomont_p256)
+        CFI_CALL(Lp256_scalarmul_local_tomont_p256)
 
         lea     rsi, [rbx+32]
         lea     rdi, [rsp+TAB+32]
-        CFI_CALL(p256_scalarmul_local_tomont_p256)
+        CFI_CALL(Lp256_scalarmul_local_tomont_p256)
 
         mov     eax, 1
         mov     [rsp+TAB+64], rax
@@ -201,34 +201,34 @@ p256_scalarmul_standard:
 
         lea     rdi, [rsp+TAB+96*1]
         lea     rsi, [rsp+TAB]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*2]
         lea     rsi, [rsp+TAB+96*1]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p256_scalarmul_local_p256_montjmixadd)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjmixadd)
 
         lea     rdi, [rsp+TAB+96*3]
         lea     rsi, [rsp+TAB+96*1]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*4]
         lea     rsi, [rsp+TAB+96*3]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p256_scalarmul_local_p256_montjmixadd)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjmixadd)
 
         lea     rdi, [rsp+TAB+96*5]
         lea     rsi, [rsp+TAB+96*2]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*6]
         lea     rsi, [rsp+TAB+96*5]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p256_scalarmul_local_p256_montjmixadd)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjmixadd)
 
         lea     rdi, [rsp+TAB+96*7]
         lea     rsi, [rsp+TAB+96*3]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
 // Set up accumulator as table entry for top 4 bits (constant-time indexing)
 
@@ -283,24 +283,24 @@ p256_scalarmul_standard:
 
         mov     ebp, 252
 
-p256_scalarmul_loop:
+Lp256_scalarmul_loop:
         sub     rbp, 4
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_scalarmul_local_p256_montjdouble)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjdouble)
 
         mov     rax, rbp
         shr     rax, 6
@@ -381,34 +381,34 @@ p256_scalarmul_loop:
         lea     rdx, [rsp+TABENT]
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_scalarmul_local_p256_montjadd)
+        CFI_CALL(Lp256_scalarmul_local_p256_montjadd)
 
         test    rbp, rbp
-        jne     p256_scalarmul_loop
+        jne     Lp256_scalarmul_loop
 
 // Let z2 = 1/z^2 and z3 = 1/z^3, both without Montgomery form
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
-        CFI_CALL(p256_scalarmul_local_montsqr_p256)
+        CFI_CALL(Lp256_scalarmul_local_montsqr_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z2]
-        CFI_CALL(p256_scalarmul_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmul_local_montmul_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+Z3]
-        CFI_CALL(p256_scalarmul_local_demont_p256)
+        CFI_CALL(Lp256_scalarmul_local_demont_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+Z2]
-        CFI_CALL(p256_scalarmul_local_inv_p256)
+        CFI_CALL(Lp256_scalarmul_local_inv_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z3]
-        CFI_CALL(p256_scalarmul_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmul_local_montmul_p256)
 
 // Convert back from Jacobian (X, Y, Z) |-> (X/Z^2, Y/Z^3)
 
@@ -416,12 +416,12 @@ p256_scalarmul_loop:
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+Z2]
         mov     rbx, rdi
-        CFI_CALL(p256_scalarmul_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmul_local_montmul_p256)
 
         lea     rdi, [rbx+32]
         lea     rsi, [rsp+ACC+32]
         lea     rdx, [rsp+Z3]
-        CFI_CALL(p256_scalarmul_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmul_local_montmul_p256)
 
 // Restore stack and registers and return
 
@@ -436,7 +436,7 @@ p256_scalarmul_loop:
 
 // Local copies of subroutines, complete clones at the moment
 
-p256_scalarmul_local_demont_p256:
+Lp256_scalarmul_local_demont_p256:
         CFI_START
         CFI_PUSH(rbx)
         mov     r8, [rsi]
@@ -485,7 +485,7 @@ p256_scalarmul_local_demont_p256:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmul_local_inv_p256:
+Lp256_scalarmul_local_inv_p256:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -539,8 +539,8 @@ p256_scalarmul_local_inv_p256:
         mov     [rsp+0x90], rax
         mov     QWORD PTR [rsp+0xb0], 0xa
         mov     QWORD PTR [rsp+0xb8], 0x1
-        jmp     p256_scalarmul_inv_midloop
-p256_scalarmul_inv_loop:
+        jmp     Lp256_scalarmul_inv_midloop
+Lp256_scalarmul_inv_loop:
         mov     r9, r8
         sar     r9, 0x3f
         xor     r8, r9
@@ -865,7 +865,7 @@ p256_scalarmul_inv_loop:
         mov     [rsp+0x88], r11
         sbb     r12, rdx
         mov     [rsp+0x90], r12
-p256_scalarmul_inv_midloop:
+Lp256_scalarmul_inv_midloop:
         mov     rsi, [rsp+0xb8]
         mov     rdx, [rsp]
         mov     rcx, [rsp+0x28]
@@ -1766,7 +1766,7 @@ p256_scalarmul_inv_midloop:
         lea     r12, [rax+rdx]
         mov     [rsp+0xb8], rsi
         dec     QWORD PTR [rsp+0xb0]
-        jne     p256_scalarmul_inv_loop
+        jne     Lp256_scalarmul_inv_loop
         mov     rax, [rsp]
         mov     rcx, [rsp+0x28]
         imul    rax, r8
@@ -1914,7 +1914,7 @@ p256_scalarmul_inv_midloop:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmul_local_montmul_p256:
+Lp256_scalarmul_local_montmul_p256:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(r12)
@@ -2042,7 +2042,7 @@ p256_scalarmul_local_montmul_p256:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmul_local_montsqr_p256:
+Lp256_scalarmul_local_montsqr_p256:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -2158,7 +2158,7 @@ p256_scalarmul_local_montsqr_p256:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmul_local_tomont_p256:
+Lp256_scalarmul_local_tomont_p256:
         CFI_START
         CFI_PUSH(r12)
         CFI_PUSH(r13)
@@ -2287,7 +2287,7 @@ p256_scalarmul_local_tomont_p256:
         CFI_POP(r12)
         CFI_RET
 
-p256_scalarmul_local_p256_montjadd:
+Lp256_scalarmul_local_p256_montjadd:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -4270,7 +4270,7 @@ p256_scalarmul_local_p256_montjadd:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmul_local_p256_montjdouble:
+Lp256_scalarmul_local_p256_montjdouble:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -5388,7 +5388,7 @@ p256_scalarmul_local_p256_montjdouble:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmul_local_p256_montjmixadd:
+Lp256_scalarmul_local_p256_montjmixadd:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)

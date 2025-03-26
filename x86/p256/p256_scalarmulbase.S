@@ -82,12 +82,12 @@ S2N_BN_SYMBOL(p256_scalarmulbase):
         mov     rsi, rdx
         mov     rdx, r8
         mov     rcx, r9
-        CFI_CALL(p256_scalarmulbase_standard)
+        CFI_CALL(Lp256_scalarmulbase_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-p256_scalarmulbase_standard:
+Lp256_scalarmulbase_standard:
         CFI_START
 #endif
 
@@ -163,7 +163,7 @@ p256_scalarmulbase_standard:
 
         mov     i, rax
 
-p256_scalarmulbase_loop:
+Lp256_scalarmulbase_loop:
 
 // The next raw bitfield is bf = bitfield(blocksize * i,blocksize) + cf,
 // adding in the deferred carry cf. We then shift the whole scalar right
@@ -222,7 +222,7 @@ p256_scalarmulbase_loop:
         mov     r12, j
         mov     rbp, table
 
-p256_scalarmulbase_tabloop:
+Lp256_scalarmulbase_tabloop:
         sub     r12, 1
         cmovz   rax, [rbp]
         cmovz   rbx, [rbp+8]
@@ -235,7 +235,7 @@ p256_scalarmulbase_tabloop:
 
         add     rbp, 64
         dec     rsi
-        jnz     p256_scalarmulbase_tabloop
+        jnz     Lp256_scalarmulbase_tabloop
 
         mov     table, rbp
 
@@ -274,7 +274,7 @@ p256_scalarmulbase_tabloop:
         lea     rdi, [rsp+NACC]
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+TABENT]
-        CFI_CALL(p256_scalarmulbase_local_p256_montjmixadd)
+        CFI_CALL(Lp256_scalarmulbase_local_p256_montjmixadd)
 
 // However, only commit that update to the accumulator if j is nonzero,
 // because the mixed addition function does not handle this case directly,
@@ -339,7 +339,7 @@ p256_scalarmulbase_tabloop:
 
         imul    rax, blocksize
         cmp     rax, 257
-        jc      p256_scalarmulbase_loop
+        jc      Lp256_scalarmulbase_loop
 
 // That's the end of the main loop, and we just need to translate
 // back from the Jacobian representation to affine. First of all,
@@ -347,25 +347,25 @@ p256_scalarmulbase_tabloop:
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
-        CFI_CALL(p256_scalarmulbase_local_montsqr_p256)
+        CFI_CALL(Lp256_scalarmulbase_local_montsqr_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z2]
-        CFI_CALL(p256_scalarmulbase_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmulbase_local_montmul_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+Z3]
-        CFI_CALL(p256_scalarmulbase_local_demont_p256)
+        CFI_CALL(Lp256_scalarmulbase_local_demont_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+Z2]
-        CFI_CALL(p256_scalarmulbase_local_inv_p256)
+        CFI_CALL(Lp256_scalarmulbase_local_inv_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z3]
-        CFI_CALL(p256_scalarmulbase_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmulbase_local_montmul_p256)
 
 // Convert back from Jacobian (X, Y, Z) |-> (X/Z^2, Y/Z^3)
 
@@ -373,12 +373,12 @@ p256_scalarmulbase_tabloop:
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+Z2]
         mov     rbx, rdi
-        CFI_CALL(p256_scalarmulbase_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmulbase_local_montmul_p256)
 
         lea     rdi, [rbx+32]
         lea     rsi, [rsp+ACC+32]
         lea     rdx, [rsp+Z3]
-        CFI_CALL(p256_scalarmulbase_local_montmul_p256)
+        CFI_CALL(Lp256_scalarmulbase_local_montmul_p256)
 
 // Restore stack and registers and return
 
@@ -393,7 +393,7 @@ p256_scalarmulbase_tabloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-p256_scalarmulbase_local_demont_p256:
+Lp256_scalarmulbase_local_demont_p256:
         CFI_START
         CFI_PUSH(rbx)
         mov     r8, [rsi]
@@ -442,7 +442,7 @@ p256_scalarmulbase_local_demont_p256:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmulbase_local_inv_p256:
+Lp256_scalarmulbase_local_inv_p256:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -496,8 +496,8 @@ p256_scalarmulbase_local_inv_p256:
         mov     [rsp+0x90], rax
         mov     QWORD PTR [rsp+0xb0], 0xa
         mov     QWORD PTR [rsp+0xb8], 0x1
-        jmp     p256_scalarmulbase_inv_midloop
-p256_scalarmulbase_inv_loop:
+        jmp     Lp256_scalarmulbase_inv_midloop
+Lp256_scalarmulbase_inv_loop:
         mov     r9, r8
         sar     r9, 0x3f
         xor     r8, r9
@@ -822,7 +822,7 @@ p256_scalarmulbase_inv_loop:
         mov     [rsp+0x88], r11
         sbb     r12, rdx
         mov     [rsp+0x90], r12
-p256_scalarmulbase_inv_midloop:
+Lp256_scalarmulbase_inv_midloop:
         mov     rsi, [rsp+0xb8]
         mov     rdx, [rsp]
         mov     rcx, [rsp+0x28]
@@ -1723,7 +1723,7 @@ p256_scalarmulbase_inv_midloop:
         lea     r12, [rax+rdx]
         mov     [rsp+0xb8], rsi
         dec     QWORD PTR [rsp+0xb0]
-        jne     p256_scalarmulbase_inv_loop
+        jne     Lp256_scalarmulbase_inv_loop
         mov     rax, [rsp]
         mov     rcx, [rsp+0x28]
         imul    rax, r8
@@ -1871,7 +1871,7 @@ p256_scalarmulbase_inv_midloop:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmulbase_local_montmul_p256:
+Lp256_scalarmulbase_local_montmul_p256:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(r12)
@@ -1999,7 +1999,7 @@ p256_scalarmulbase_local_montmul_p256:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmulbase_local_montsqr_p256:
+Lp256_scalarmulbase_local_montsqr_p256:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -2115,7 +2115,7 @@ p256_scalarmulbase_local_montsqr_p256:
         CFI_POP(rbx)
         CFI_RET
 
-p256_scalarmulbase_local_p256_montjmixadd:
+Lp256_scalarmulbase_local_p256_montjmixadd:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)

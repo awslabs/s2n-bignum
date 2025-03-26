@@ -347,12 +347,12 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase):
         CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
-        CFI_CALL(edwards25519_scalarmulbase_standard)
+        CFI_CALL(Ledwards25519_scalarmulbase_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-edwards25519_scalarmulbase_standard:
+Ledwards25519_scalarmulbase_standard:
         CFI_START
 #endif
 
@@ -439,8 +439,8 @@ edwards25519_scalarmulbase_standard:
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        lea     r10, [rip+edwards25519_scalarmulbase_0g]
-        lea     r11, [rip+edwards25519_scalarmulbase_251g]
+        lea     r10, [rip+Ledwards25519_scalarmulbase_0g]
+        lea     r11, [rip+Ledwards25519_scalarmulbase_251g]
 
         mov     rax, [r10]
         mov     rcx, [r11]
@@ -523,13 +523,13 @@ edwards25519_scalarmulbase_standard:
 // end because we made sure bit 251 is clear in the reduced scalar.
 
         mov     i, 0
-        lea     rax, [rip+edwards25519_scalarmulbase_gtable]
+        lea     rax, [rip+Ledwards25519_scalarmulbase_gtable]
         mov     tab, rax
         mov     bias, 0
 
 // Start of the main loop, repeated 63 times for i = 4, 8, ..., 252
 
-edwards25519_scalarmulbase_scalarloop:
+Ledwards25519_scalarmulbase_scalarloop:
 
 // Look at the next 4-bit field "bf", adding the previous bias as well.
 // Choose the table index "ix" as bf when bf <= 8 and 16 - bf for bf >= 9,
@@ -886,7 +886,7 @@ edwards25519_scalarmulbase_scalarloop:
 
         add     i, 4
         cmp     i, 252
-        jc      edwards25519_scalarmulbase_scalarloop
+        jc      Ledwards25519_scalarmulbase_scalarloop
 
 // Insert the optional negation of the projective X coordinate, and
 // so by extension the final affine x coordinate x = X/Z and thus
@@ -981,8 +981,8 @@ edwards25519_scalarmulbase_scalarloop:
         mov     [rsp+0x78], rax
         mov     QWORD PTR [rsp+0x90], 0xa
         mov     QWORD PTR [rsp+0x98], 0x1
-        jmp     edwards25519_scalarmulbase_midloop
-edwards25519_scalarmulbase_inverseloop:
+        jmp     Ledwards25519_scalarmulbase_midloop
+Ledwards25519_scalarmulbase_inverseloop:
         mov     r9, r8
         sar     r9, 0x3f
         xor     r8, r9
@@ -1273,7 +1273,7 @@ edwards25519_scalarmulbase_inverseloop:
         shl     rax, 0x3f
         add     rsi, rax
         mov     [rsp+0x78], rsi
-edwards25519_scalarmulbase_midloop:
+Ledwards25519_scalarmulbase_midloop:
         mov     rsi, [rsp+0x98]
         mov     rdx, [rsp]
         mov     rcx, [rsp+0x20]
@@ -2174,7 +2174,7 @@ edwards25519_scalarmulbase_midloop:
         lea     r12, [rax+rdx]
         mov     [rsp+0x98], rsi
         dec     QWORD PTR [rsp+0x90]
-        jne     edwards25519_scalarmulbase_inverseloop
+        jne     Ledwards25519_scalarmulbase_inverseloop
         mov     rax, [rsp]
         mov     rcx, [rsp+0x20]
         imul    rax, r8
@@ -2311,7 +2311,7 @@ edwards25519_scalarmulbase_midloop:
 // 0 * B = 0 and 2^251 * B in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
 
-edwards25519_scalarmulbase_0g:
+Ledwards25519_scalarmulbase_0g:
 
         .quad   0x0000000000000000
         .quad   0x0000000000000000
@@ -2328,7 +2328,7 @@ edwards25519_scalarmulbase_0g:
         .quad   0x0000000000000000
         .quad   0x0000000000000000
 
-edwards25519_scalarmulbase_251g:
+Ledwards25519_scalarmulbase_251g:
 
         .quad   0x525f946d7c7220e7
         .quad   0x4636b0b2f1e35444
@@ -2346,7 +2346,7 @@ edwards25519_scalarmulbase_251g:
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-edwards25519_scalarmulbase_gtable:
+Ledwards25519_scalarmulbase_gtable:
 
         // 2^0 * 1 * G
 

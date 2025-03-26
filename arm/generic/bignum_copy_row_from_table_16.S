@@ -72,7 +72,7 @@ S2N_BN_SYMBOL(bignum_copy_row_from_table_16):
     mov ventry7.16b,  ventry0.16b
 
     mov cnt, #0
-bignum_copy_row_from_table_16_loop:
+Lbignum_copy_row_from_table_16_loop:
 
     // Compute mask: Check if current index matches target index
     subs xzr, cnt, idx
@@ -107,9 +107,9 @@ bignum_copy_row_from_table_16_loop:
 
     add cnt, cnt, #1
     subs xzr, height, cnt
-    b.ne bignum_copy_row_from_table_16_loop
+    b.ne Lbignum_copy_row_from_table_16_loop
 
-bignum_copy_row_from_table_16_end:
+Lbignum_copy_row_from_table_16_end:
 
     str qentry0,  [z, #16*0]
     str qentry1,  [z, #16*1]

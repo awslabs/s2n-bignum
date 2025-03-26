@@ -68,14 +68,14 @@
         add     x0, P0;                         \
         add     x1, P1;                         \
         add     x2, P2;                         \
-        CFI_BL(p521_jdouble_local_mul_p521)
+        CFI_BL(Lp521_jdouble_local_mul_p521)
 
 // Call local code equivalent to bignum_sqr_p521
 
 #define sqr_p521(P0,P1)                         \
         add     x0, P0;                         \
         add     x1, P1;                         \
-        CFI_BL(p521_jdouble_local_sqr_p521)
+        CFI_BL(Lp521_jdouble_local_sqr_p521)
 
 // Corresponds exactly to bignum_add_p521
 
@@ -497,7 +497,7 @@ S2N_BN_SYMBOL(p521_jdouble):
 // Local versions of the two "big" field operations, identical to
 // bignum_mul_p521 and bignum_sqr_p521.
 
-p521_jdouble_local_mul_p521:
+Lp521_jdouble_local_mul_p521:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -1175,7 +1175,7 @@ p521_jdouble_local_mul_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
-p521_jdouble_local_sqr_p521:
+Lp521_jdouble_local_sqr_p521:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)

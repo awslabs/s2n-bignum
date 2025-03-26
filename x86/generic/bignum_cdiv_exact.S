@@ -73,7 +73,7 @@ S2N_BN_SYMBOL(bignum_cdiv_exact):
 // If k = 0 then there's nothing to be done
 
         test    k, k
-        jz      bignum_cdiv_exact_end
+        jz      Lbignum_cdiv_exact_end
 
 // Move parameters that need a new home
 
@@ -139,20 +139,20 @@ S2N_BN_SYMBOL(bignum_cdiv_exact):
 
         xor     d, d
         test    n, n
-        jz      bignum_cdiv_exact_loop
+        jz      Lbignum_cdiv_exact_loop
         mov     d, [x]
         add     x, 8
         dec     n
 
-bignum_cdiv_exact_loop:
+Lbignum_cdiv_exact_loop:
 
 // Load the next digit up to get [t,d] then shift right e places
 
         xor     t, t
         cmp     i, n
-        jnc     bignum_cdiv_exact_noload
+        jnc     Lbignum_cdiv_exact_noload
         mov     t, [x+8*i]
-bignum_cdiv_exact_noload:
+Lbignum_cdiv_exact_noload:
         shrd    d, t, cl
         add     d, c
         sbb     c, c
@@ -176,9 +176,9 @@ bignum_cdiv_exact_noload:
 
         inc     i
         cmp     i, k
-        jc      bignum_cdiv_exact_loop
+        jc      Lbignum_cdiv_exact_loop
 
-bignum_cdiv_exact_end:
+Lbignum_cdiv_exact_end:
         CFI_POP(r14)
         CFI_POP(r13)
         CFI_POP(r12)

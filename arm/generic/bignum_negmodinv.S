@@ -42,7 +42,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
 
 // If k = 0 do nothing
 
-        cbz     k, bignum_negmodinv_end
+        cbz     k, Lbignum_negmodinv_end
 
 // Compute word-level negated modular inverse w for x[0].
 
@@ -64,7 +64,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
 
         str     w, [z]
         cmp     k, #1
-        beq     bignum_negmodinv_end
+        beq     Lbignum_negmodinv_end
 
 // Otherwise compute and write the other digits (1..k-1) of w * x + 1.
 // Note that at this point CF was set by the comparison (subtraction) "k - 1".
@@ -76,7 +76,7 @@ S2N_BN_SYMBOL(bignum_negmodinv):
 
         umulh   h, a, w
         mov     i, #1
-bignum_negmodinv_initloop:
+Lbignum_negmodinv_initloop:
         ldr     a, [x, i, lsl #3]
         mul     l, a, w
         adcs    l, l, h
@@ -84,7 +84,7 @@ bignum_negmodinv_initloop:
         str     l, [z, i, lsl #3]
         add     i, i, #1
         sub     a, k, i
-        cbnz    a, bignum_negmodinv_initloop
+        cbnz    a, Lbignum_negmodinv_initloop
 
 // For simpler indexing, z := z + 8 and k := k - 1 per outer iteration
 // Then we can use the same index for x and for z and effective size k.
@@ -96,9 +96,9 @@ bignum_negmodinv_initloop:
 // since we do one outer loop iteration too few.
 
         subs    k, k, #2
-        beq     bignum_negmodinv_finale
+        beq     Lbignum_negmodinv_finale
 
-bignum_negmodinv_outerloop:
+Lbignum_negmodinv_outerloop:
         add     z, z, #8
         ldr     e, [z]
         mul     m, e, w
@@ -107,7 +107,7 @@ bignum_negmodinv_outerloop:
         umulh   h, a, m
         subs    xzr, e, #1         // Effective carry from a * m + e
         mov     i, #1
-bignum_negmodinv_innerloop:
+Lbignum_negmodinv_innerloop:
         ldr     a, [x, i, lsl #3]
         ldr     e, [z, i, lsl #3]
         mul     l, a, m
@@ -118,17 +118,17 @@ bignum_negmodinv_innerloop:
         str     e, [z, i, lsl #3]
         sub     a, i, k
         add     i, i, #1
-        cbnz    a, bignum_negmodinv_innerloop
+        cbnz    a, Lbignum_negmodinv_innerloop
 
         subs    k, k, #1
-        bne     bignum_negmodinv_outerloop
+        bne     Lbignum_negmodinv_outerloop
 
-bignum_negmodinv_finale:
+Lbignum_negmodinv_finale:
         ldr     e, [z, #8]
         mul     m, e, w
         str     m, [z, #8]
 
-bignum_negmodinv_end:
+Lbignum_negmodinv_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

@@ -66,14 +66,14 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 
 // Multiply the low halves
 
-        CFI_CALL(bignum_kmul_32_64_local_bignum_kmul_16_32)
+        CFI_CALL(Lbignum_kmul_32_64_local_bignum_kmul_16_32)
 
 // Multiply the high halves
 
         lea     rdi,[rdi+16*K-0x40]
         lea     rsi,[rsi+8*K-0x40]
         lea     rcx,[rcx+8*K]
-        CFI_CALL(bignum_kmul_32_64_local_bignum_kmul_16_32)
+        CFI_CALL(Lbignum_kmul_32_64_local_bignum_kmul_16_32)
 
 // Establish r8 as the t pointer and use the cell to back up z now
 
@@ -147,7 +147,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         mov     rcx, r8
         lea     rsi, [r8+8*K]
         lea     rdi, [r8+16*K]
-        CFI_CALL(bignum_kmul_32_64_local_bignum_kmul_16_32)
+        CFI_CALL(Lbignum_kmul_32_64_local_bignum_kmul_16_32)
         mov     z, [rsp]
 
 // Compose the middle parts [2,1] + [1,0] + [3,2], saving carry in rbx.
@@ -221,7 +221,7 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 // save-restore of the other registers. It naturally moves z and x on by
 // 0x40, which we compensate for when it is called by adjusting offsets.
 
-bignum_kmul_32_64_local_bignum_kmul_16_32:
+Lbignum_kmul_32_64_local_bignum_kmul_16_32:
         CFI_START
         mov    rdx, [rcx]
         xor    ebp, ebp

@@ -27,18 +27,18 @@
 S2N_BN_SYMBOL(bignum_of_word):
         CFI_START
 
-cbz     k, bignum_of_word_end                  // if k = 0 do nothing
+cbz     k, Lbignum_of_word_end                  // if k = 0 do nothing
 
         str     n, [z]                  // Set zeroth word to n
         subs    k, k, #1                 // k := k - 1
-        beq     bignum_of_word_end                     // and if that's 0, finish
+        beq     Lbignum_of_word_end                     // and if that's 0, finish
 
-bignum_of_word_loop:
+Lbignum_of_word_loop:
         str     xzr, [z, k, lsl #3]
         subs    k, k, #1
-        bne     bignum_of_word_loop
+        bne     Lbignum_of_word_loop
 
-bignum_of_word_end:
+Lbignum_of_word_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

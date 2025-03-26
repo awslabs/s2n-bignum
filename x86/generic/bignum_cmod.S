@@ -59,7 +59,7 @@ S2N_BN_SYMBOL(bignum_cmod):
 
         xor     l, l
         test    k, k
-        jz      bignum_cmod_end
+        jz      Lbignum_cmod_end
 
 // Move m into its permanent home (also used for n).
 // Find number of leading zeros of m and let n = 2^e m so that for an
@@ -142,7 +142,7 @@ S2N_BN_SYMBOL(bignum_cmod):
 // < 2^128 so we stay inside 2 words
 
         xor     hshort, hshort
-bignum_cmod_loop:
+Lbignum_cmod_loop:
         mov     a, h
         mul     r
         add     a, [x+8*k-8]
@@ -153,7 +153,7 @@ bignum_cmod_loop:
         add     l, a
         adc     h, 0
         dec     k
-        jnz     bignum_cmod_loop
+        jnz     Lbignum_cmod_loop
 
 // Now do reciprocal multiplication to reduce the 2-word modular equivalent
 // [h;l] to the single word l. If we assume the truncations are as follows
@@ -211,7 +211,7 @@ bignum_cmod_loop:
 
         mov     a, l
         sub     l, m
-bignum_cmod_end:
+Lbignum_cmod_end:
         cmovnc  a, l
 #if WINDOWS_ABI
         CFI_POP(rsi)

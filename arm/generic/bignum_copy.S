@@ -38,25 +38,25 @@ S2N_BN_SYMBOL(bignum_copy):
 
 // If min(k,n) = 0 jump to the padding stage
 
-        cbz     n, bignum_copy_padding
+        cbz     n, Lbignum_copy_padding
 
-bignum_copy_copyloop:
+Lbignum_copy_copyloop:
         ldr     a, [x, i, lsl #3]
         str     a, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, n
-        bcc     bignum_copy_copyloop
+        bcc     Lbignum_copy_copyloop
 
-bignum_copy_padding:
+Lbignum_copy_padding:
         cmp     i, k
-        bcs     bignum_copy_end
-bignum_copy_padloop:
+        bcs     Lbignum_copy_end
+Lbignum_copy_padloop:
         str     xzr, [z, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_copy_padloop
+        bcc     Lbignum_copy_padloop
 
-bignum_copy_end:
+Lbignum_copy_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

@@ -88,12 +88,12 @@ S2N_BN_SYMBOL(sm2_montjscalarmul_alt):
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
-        CFI_CALL(sm2_montjscalarmul_alt_standard)
+        CFI_CALL(Lsm2_montjscalarmul_alt_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-sm2_montjscalarmul_alt_standard:
+Lsm2_montjscalarmul_alt_standard:
         CFI_START
 #endif
 
@@ -231,34 +231,34 @@ sm2_montjscalarmul_alt_standard:
 
         lea     rdi, [rsp+TAB+96*1]
         lea     rsi, [rsp+TAB]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         lea     rdi, [rsp+TAB+96*2]
         lea     rsi, [rsp+TAB+96*1]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
         lea     rdi, [rsp+TAB+96*3]
         lea     rsi, [rsp+TAB+96*1]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         lea     rdi, [rsp+TAB+96*4]
         lea     rsi, [rsp+TAB+96*3]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
         lea     rdi, [rsp+TAB+96*5]
         lea     rsi, [rsp+TAB+96*2]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         lea     rdi, [rsp+TAB+96*6]
         lea     rsi, [rsp+TAB+96*5]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
         lea     rdi, [rsp+TAB+96*7]
         lea     rsi, [rsp+TAB+96*3]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
 // Set up accumulator as table entry for top 4 bits (constant-time indexing)
 
@@ -304,24 +304,24 @@ sm2_montjscalarmul_alt_standard:
 
         mov     ebp, 252
 
-sm2_montjscalarmul_alt_mainloop:
+Lsm2_montjscalarmul_alt_mainloop:
         sub     rbp, 4
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjdouble)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
         mov     rax, rbp
         shr     rax, 6
@@ -404,10 +404,10 @@ sm2_montjscalarmul_alt_mainloop:
         lea     rdx, [rsp+TABENT]
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(sm2_montjscalarmul_alt_sm2_montjadd)
+        CFI_CALL(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
         test    rbp, rbp
-        jne     sm2_montjscalarmul_alt_mainloop
+        jne     Lsm2_montjscalarmul_alt_mainloop
 
 // That's the end of the main loop, and we just need to copy the
 // result in "acc" to the output.
@@ -453,7 +453,7 @@ sm2_montjscalarmul_alt_mainloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-sm2_montjscalarmul_alt_sm2_montjadd:
+Lsm2_montjscalarmul_alt_sm2_montjadd:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -3086,7 +3086,7 @@ sm2_montjscalarmul_alt_sm2_montjadd:
         CFI_POP(rbx)
         CFI_RET
 
-sm2_montjscalarmul_alt_sm2_montjdouble:
+Lsm2_montjscalarmul_alt_sm2_montjdouble:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(r12)

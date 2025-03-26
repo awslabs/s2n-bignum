@@ -1053,9 +1053,9 @@ S2N_BN_SYMBOL(bignum_inv_p25519):
 
         mov     i, 10
         mov     d, 1
-        jmp     bignum_inv_p25519_midloop
+        jmp     Lbignum_inv_p25519_midloop
 
-bignum_inv_p25519_loop:
+Lbignum_inv_p25519_loop:
 
 // Separate out the matrix into sign-magnitude pairs
 
@@ -1411,7 +1411,7 @@ bignum_inv_p25519_loop:
         add     rsi, rax
         mov     [rsp+V+3*N], rsi
 
-bignum_inv_p25519_midloop:
+Lbignum_inv_p25519_midloop:
 
         divstep59(d,ff,gg)
         mov     d, rsi
@@ -1419,7 +1419,7 @@ bignum_inv_p25519_midloop:
 // Next iteration
 
         dec     i
-        jnz     bignum_inv_p25519_loop
+        jnz     Lbignum_inv_p25519_loop
 
 // The 10th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the

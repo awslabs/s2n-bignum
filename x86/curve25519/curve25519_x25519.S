@@ -683,7 +683,7 @@ S2N_BN_SYMBOL(curve25519_x25519_byte):
         mov     eax, 253
         mov     i, rax
 
-curve25519_x25519_scalarloop:
+Lcurve25519_x25519_scalarloop:
 
 // sm = xm + zm; sn = xn + zn; dm = xm - zm; dn = xn - zn
 
@@ -753,7 +753,7 @@ curve25519_x25519_scalarloop:
         sub     rax, 1
         mov     i, rax
         cmp     rax, 3
-        jnc     curve25519_x25519_scalarloop
+        jnc     Lcurve25519_x25519_scalarloop
 
 // Multiplex directly into (xn,zn) then do three pure doubling steps;
 // this accounts for the implicit zeroing of the three lowest bits
@@ -852,8 +852,8 @@ curve25519_x25519_scalarloop:
         mov     [rsp+0x78], rax
         mov     QWORD PTR [rsp+0x90], 0xa
         mov     QWORD PTR [rsp+0x98], 0x1
-        jmp     curve25519_x25519_midloop
-curve25519_x25519_inverseloop:
+        jmp     Lcurve25519_x25519_midloop
+Lcurve25519_x25519_inverseloop:
         mov     r9, r8
         sar     r9, 0x3f
         xor     r8, r9
@@ -1144,7 +1144,7 @@ curve25519_x25519_inverseloop:
         shl     rax, 0x3f
         add     rsi, rax
         mov     [rsp+0x78], rsi
-curve25519_x25519_midloop:
+Lcurve25519_x25519_midloop:
         mov     rsi, [rsp+0x98]
         mov     rdx, [rsp]
         mov     rcx, [rsp+0x20]
@@ -2045,7 +2045,7 @@ curve25519_x25519_midloop:
         lea     r12, [rax+rdx]
         mov     [rsp+0x98], rsi
         dec     QWORD PTR [rsp+0x90]
-        jne     curve25519_x25519_inverseloop
+        jne     Lcurve25519_x25519_inverseloop
         mov     rax, [rsp]
         mov     rcx, [rsp+0x20]
         imul    rax, r8

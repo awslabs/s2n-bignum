@@ -44,7 +44,7 @@ S2N_BN_SYMBOL(bignum_mod_sm2):
 // If the input is already <= 3 words long, go to a trivial "copy" path
 
         cmp     k, #4
-        bcc     bignum_mod_sm2_short
+        bcc     Lbignum_mod_sm2_short
 
 // Otherwise load the top 4 digits (top-down) and reduce k by 4
 
@@ -73,8 +73,8 @@ S2N_BN_SYMBOL(bignum_mod_sm2):
 
 // Now do (k-4) iterations of 5->4 word modular reduction
 
-        cbz     k, bignum_mod_sm2_writeback
-bignum_mod_sm2_loop:
+        cbz     k, Lbignum_mod_sm2_writeback
+Lbignum_mod_sm2_loop:
 
 // Decrement k and load the next digit as t0. We then want to reduce
 // [m3;m2;m1;m0;t0] |-> [m3;m2;m1;m0]; the shuffling downwards is absorbed
@@ -119,32 +119,32 @@ bignum_mod_sm2_loop:
         and     t0, n3, t4
         adc     m3, t3, t0
 
-        cbnz    k, bignum_mod_sm2_loop
+        cbnz    k, Lbignum_mod_sm2_loop
 
 // Finally write back [m3;m2;m1;m0] and return
 
-bignum_mod_sm2_writeback:
+Lbignum_mod_sm2_writeback:
         stp     m0, m1, [z]
         stp     m2, m3, [z, #16]
         CFI_RET
 
 // Short case: just copy the input with zero-padding
 
-bignum_mod_sm2_short:
+Lbignum_mod_sm2_short:
         mov     m0, xzr
         mov     m1, xzr
         mov     m2, xzr
         mov     m3, xzr
 
-        cbz     k, bignum_mod_sm2_writeback
+        cbz     k, Lbignum_mod_sm2_writeback
         ldr     m0, [x]
         subs    k, k, #1
-        beq     bignum_mod_sm2_writeback
+        beq     Lbignum_mod_sm2_writeback
         ldr     m1, [x, #8]
         subs    k, k, #1
-        beq     bignum_mod_sm2_writeback
+        beq     Lbignum_mod_sm2_writeback
         ldr     m2, [x, #16]
-        b       bignum_mod_sm2_writeback
+        b       Lbignum_mod_sm2_writeback
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

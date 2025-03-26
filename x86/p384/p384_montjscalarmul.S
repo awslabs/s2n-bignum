@@ -99,12 +99,12 @@ S2N_BN_SYMBOL(p384_montjscalarmul):
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
-        CFI_CALL(p384_montjscalarmul_standard)
+        CFI_CALL(Lp384_montjscalarmul_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-p384_montjscalarmul_standard:
+Lp384_montjscalarmul_standard:
         CFI_START
 #endif
 
@@ -202,70 +202,70 @@ p384_montjscalarmul_standard:
 
         lea     rdi, [rsp+TAB+JACSIZE*1]
         lea     rsi, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rdi, [rsp+TAB+JACSIZE*2]
         lea     rsi, [rsp+TAB+JACSIZE*1]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         lea     rdi, [rsp+TAB+JACSIZE*3]
         lea     rsi, [rsp+TAB+JACSIZE*1]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rdi, [rsp+TAB+JACSIZE*4]
         lea     rsi, [rsp+TAB+JACSIZE*3]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         lea     rdi, [rsp+TAB+JACSIZE*5]
         lea     rsi, [rsp+TAB+JACSIZE*2]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rdi, [rsp+TAB+JACSIZE*6]
         lea     rsi, [rsp+TAB+JACSIZE*5]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         lea     rdi, [rsp+TAB+JACSIZE*7]
         lea     rsi, [rsp+TAB+JACSIZE*3]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rdi, [rsp+TAB+JACSIZE*8]
         lea     rsi, [rsp+TAB+JACSIZE*7]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         lea     rdi, [rsp+TAB+JACSIZE*9]
         lea     rsi, [rsp+TAB+JACSIZE*4]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rdi, [rsp+TAB+JACSIZE*10]
         lea     rsi, [rsp+TAB+JACSIZE*9]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         lea     rdi, [rsp+TAB+JACSIZE*11]
         lea     rsi, [rsp+TAB+JACSIZE*5]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rdi, [rsp+TAB+JACSIZE*12]
         lea     rsi, [rsp+TAB+JACSIZE*11]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         lea     rdi, [rsp+TAB+JACSIZE*13]
         lea     rsi, [rsp+TAB+JACSIZE*6]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rdi, [rsp+TAB+JACSIZE*14]
         lea     rsi, [rsp+TAB+JACSIZE*13]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         lea     rdi, [rsp+TAB+JACSIZE*15]
         lea     rsi, [rsp+TAB+JACSIZE*7]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
 // Add the recoding constant sum_i(16 * 32^i) to the scalar to allow signed
 // digits. The digits of the constant, in lowest-to-highest order, are as
@@ -404,28 +404,28 @@ p384_montjscalarmul_standard:
 
         mov     ebp, 380
 
-p384_montjscalarmul_mainloop:
+Lp384_montjscalarmul_mainloop:
         sub     rbp, 5
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p384_montjscalarmul_p384_montjdouble)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjdouble)
 
 // Choose the bitfield and adjust it to sign and magnitude
 
@@ -577,10 +577,10 @@ p384_montjscalarmul_mainloop:
         lea     rdx, [rsp+TABENT]
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p384_montjscalarmul_p384_montjadd)
+        CFI_CALL(Lp384_montjscalarmul_p384_montjadd)
 
         test    rbp, rbp
-        jne     p384_montjscalarmul_mainloop
+        jne     Lp384_montjscalarmul_mainloop
 
 // That's the end of the main loop, and we just need to copy the
 // result in "acc" to the output.
@@ -636,7 +636,7 @@ p384_montjscalarmul_mainloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-p384_montjscalarmul_p384_montjadd:
+Lp384_montjscalarmul_p384_montjadd:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -5052,7 +5052,7 @@ p384_montjscalarmul_p384_montjadd:
         CFI_POP(rbx)
         CFI_RET
 
-p384_montjscalarmul_p384_montjdouble:
+Lp384_montjscalarmul_p384_montjdouble:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)

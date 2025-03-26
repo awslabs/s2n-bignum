@@ -54,7 +54,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
 
 // Compute L = x_lo * y_lo in bottom half of buffer (size 8 x 8 -> 16)
 
-        CFI_BL(bignum_kmul_16_32_local_mul_8_16)
+        CFI_BL(Lbignum_kmul_16_32_local_mul_8_16)
 
 // Compute absolute difference [t..] = |x_lo - x_hi|
 // and the sign s = sgn(x_lo - x_hi) as a bitmask (all 1s for negative)
@@ -103,7 +103,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
         add     x0, z, #128
         add     x1, x, #64
         add     x2, y, #64
-        CFI_BL(bignum_kmul_16_32_local_mul_8_16)
+        CFI_BL(Lbignum_kmul_16_32_local_mul_8_16)
 
 // Compute the other absolute difference [t+8..] = |y_hi - y_lo|
 // Collect the combined product sign bitmask (all 1s for negative) in s
@@ -200,7 +200,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
         add     x0, t, #128
         mov     x1, t
         add     x2, t, #64
-        CFI_BL(bignum_kmul_16_32_local_mul_8_16)
+        CFI_BL(Lbignum_kmul_16_32_local_mul_8_16)
 
 // Add the interlocking H' and L_bot terms, storing in registers x15..x0
 // Intercept the carry at the 8 + 16 = 24 position and store it in x.
@@ -334,7 +334,7 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
 // Local copy of bignum_mul_8_16 without the scratch register save/restore
 // ----------------------------------------------------------------------------
 
-bignum_kmul_16_32_local_mul_8_16:
+Lbignum_kmul_16_32_local_mul_8_16:
         CFI_START
         ldp x3, x4, [x1]
         ldr q0, [x1]

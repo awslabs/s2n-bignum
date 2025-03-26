@@ -61,13 +61,13 @@
         add     x0, dest;                                               \
         add     x1, src1;                                               \
         add     x2, src2;                                               \
-        CFI_BL(bignum_sqrt_p25519_mul_p25519)
+        CFI_BL(Lbignum_sqrt_p25519_mul_p25519)
 
 #define nsqr(dest,n,src)                                                \
         add     x0, dest;                                               \
         mov     x1, n;                                                  \
         add     x2, src;                                                \
-        CFI_BL(bignum_sqrt_p25519_nsqr_p25519)
+        CFI_BL(Lbignum_sqrt_p25519_nsqr_p25519)
 
 S2N_BN_SYMBOL(bignum_sqrt_p25519):
         CFI_START
@@ -222,7 +222,7 @@ S2N_BN_SYMBOL(bignum_sqrt_p25519):
 
         add     x0, b
         mov     x1, #1
-        CFI_BL(bignum_sqrt_p25519_nsqr_p25519)
+        CFI_BL(Lbignum_sqrt_p25519_nsqr_p25519)
 
         ldp     x10, x11, [a]
         ldp     x14, x15, [b]
@@ -255,7 +255,7 @@ S2N_BN_SYMBOL(bignum_sqrt_p25519):
 // Local z = x * y
 // *************************************************************
 
-bignum_sqrt_p25519_mul_p25519:
+Lbignum_sqrt_p25519_mul_p25519:
         CFI_START
         ldp     x3, x4, [x1]
         ldp     x5, x6, [x2]
@@ -443,7 +443,7 @@ bignum_sqrt_p25519_mul_p25519:
 // Local z = 2^n * x
 // *************************************************************
 
-bignum_sqrt_p25519_nsqr_p25519:
+Lbignum_sqrt_p25519_nsqr_p25519:
         CFI_START
 
 // Copy input argument into [x13;x12;x11;x10]
@@ -454,7 +454,7 @@ bignum_sqrt_p25519_nsqr_p25519:
 // Main squaring loop, accumulating in [x13;x12;x11;x10] consistently and
 // only ensuring the intermediates are < 2 * p_25519 = 2^256 - 38
 
-bignum_sqrt_p25519_loop:
+Lbignum_sqrt_p25519_loop:
         umull   x2, w10, w10
         lsr     x14, x10, #32
         umull   x3, w14, w14
@@ -585,7 +585,7 @@ bignum_sqrt_p25519_loop:
 // Loop as applicable
 
         subs    x1, x1, #1
-        bne     bignum_sqrt_p25519_loop
+        bne     Lbignum_sqrt_p25519_loop
 
 // We know the intermediate result x < 2^256 - 38, and now we do strict
 // modular reduction mod 2^255 - 19. Note x < 2^255 - 19 <=> x + 19 < 2^255

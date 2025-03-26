@@ -33,14 +33,14 @@ S2N_BN_SYMBOL(bignum_odd):
 
         xor     eax, eax
         test    rdi, rdi
-        jz      bignum_odd_end
+        jz      Lbignum_odd_end
 
 // Otherwise return lowest bit of the input
 
         mov     eax, 1
         and     rax, [rsi]
 
-bignum_odd_end:
+Lbignum_odd_end:
 
 #if WINDOWS_ABI
         CFI_POP(rsi)

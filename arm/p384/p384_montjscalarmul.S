@@ -167,70 +167,70 @@ S2N_BN_SYMBOL(p384_montjscalarmul):
 
         add     x0, tab+JACSIZE*1
         add     x1, tab
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, tab+JACSIZE*2
         add     x1, tab+JACSIZE*1
         add     x2, tab
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
         add     x0, tab+JACSIZE*3
         add     x1, tab+JACSIZE*1
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, tab+JACSIZE*4
         add     x1, tab+JACSIZE*3
         add     x2, tab
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
         add     x0, tab+JACSIZE*5
         add     x1, tab+JACSIZE*2
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, tab+JACSIZE*6
         add     x1, tab+JACSIZE*5
         add     x2, tab
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
         add     x0, tab+JACSIZE*7
         add     x1, tab+JACSIZE*3
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, tab+JACSIZE*8
         add     x1, tab+JACSIZE*7
         add     x2, tab
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
         add     x0, tab+JACSIZE*9
         add     x1, tab+JACSIZE*4
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, tab+JACSIZE*10
         add     x1, tab+JACSIZE*9
         add     x2, tab
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
         add     x0, tab+JACSIZE*11
         add     x1, tab+JACSIZE*5
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, tab+JACSIZE*12
         add     x1, tab+JACSIZE*11
         add     x2, tab
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
         add     x0, tab+JACSIZE*13
         add     x1, tab+JACSIZE*6
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, tab+JACSIZE*14
         add     x1, tab+JACSIZE*13
         add     x2, tab
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
         add     x0, tab+JACSIZE*15
         add     x1, tab+JACSIZE*7
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
 // Add the recoding constant sum_i(16 * 32^i) to the scalar to allow signed
 // digits. The digits of the constant, in lowest-to-highest order, are as
@@ -331,28 +331,28 @@ S2N_BN_SYMBOL(p384_montjscalarmul):
 // At each stage we shift the scalar left by 5 bits so we can simply pick
 // the top 5 bits as the bitfield, saving some fiddle over indexing.
 
-p384_montjscalarmul_mainloop:
+Lp384_montjscalarmul_mainloop:
         sub     j, j, #5
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
         add     x0, acc
         add     x1, acc
-        CFI_BL(p384_montjscalarmul_p384_montjdouble)
+        CFI_BL(Lp384_montjscalarmul_p384_montjdouble)
 
 // Choose the bitfield and adjust it to sign and magnitude
 
@@ -461,9 +461,9 @@ p384_montjscalarmul_mainloop:
         add     x0, acc
         add     x1, acc
         add     x2, tabent
-        CFI_BL(p384_montjscalarmul_p384_montjadd)
+        CFI_BL(Lp384_montjscalarmul_p384_montjadd)
 
-        cbnz    j, p384_montjscalarmul_mainloop
+        cbnz    j, Lp384_montjscalarmul_mainloop
 
 // That's the end of the main loop, and we just need to copy the
 // result in "acc" to the output.
@@ -498,7 +498,7 @@ p384_montjscalarmul_mainloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-p384_montjscalarmul_p384_montjadd:
+Lp384_montjscalarmul_p384_montjadd:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -6884,7 +6884,7 @@ p384_montjscalarmul_p384_montjadd:
         CFI_POP2(x19,x20)
         CFI_RET
 
-p384_montjscalarmul_p384_montjdouble:
+Lp384_montjscalarmul_p384_montjdouble:
         CFI_START
         CFI_DEC_SP(0x1a0)
         stp     x19, x20, [sp, #336]

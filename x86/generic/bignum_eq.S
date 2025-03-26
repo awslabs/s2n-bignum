@@ -48,42 +48,42 @@ S2N_BN_SYMBOL(bignum_eq):
 // This will drop through for m = n
 
         cmp     m, n
-        jnc     bignum_eq_mtest
+        jnc     Lbignum_eq_mtest
 
 // Toploop for the case n > m
 
-bignum_eq_nloop:
+Lbignum_eq_nloop:
         dec     n
         or      c, [y+8*n]
         cmp     m, n
-        jnz     bignum_eq_nloop
-        jmp     bignum_eq_mmain
+        jnz     Lbignum_eq_nloop
+        jmp     Lbignum_eq_mmain
 
 // Toploop for the case m > n (or n = m which enters at "mtest")
 
-bignum_eq_mloop:
+Lbignum_eq_mloop:
         dec     m
         or      c, [x+8*m]
         cmp     m, n
-bignum_eq_mtest:
-        jnz     bignum_eq_mloop
+Lbignum_eq_mtest:
+        jnz     Lbignum_eq_mloop
 
 // Combined main loop for the min(m,n) lower words
 
-bignum_eq_mmain:
+Lbignum_eq_mmain:
         test    m, m
-        jz      bignum_eq_end
+        jz      Lbignum_eq_end
 
-bignum_eq_loop:
+Lbignum_eq_loop:
         mov     d, [x+8*m-8]
         xor     d, [y+8*m-8]
         or      c, d
         dec     m
-        jnz     bignum_eq_loop
+        jnz     Lbignum_eq_loop
 
 // Set a standard C condition based on whether c is nonzero
 
-bignum_eq_end:
+Lbignum_eq_end:
         neg     c
         sbb     c, c
         inc     c

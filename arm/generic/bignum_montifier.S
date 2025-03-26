@@ -51,19 +51,19 @@ S2N_BN_SYMBOL(bignum_montifier):
 
 // If k = 0 the whole operation is trivial
 
-        cbz     k, bignum_montifier_end
+        cbz     k, Lbignum_montifier_end
 
 // Copy the input m into the temporary buffer t. The temporary register
 // c matters since we want it to hold the highest digit, ready for the
 // normalization phase.
 
         mov     i, xzr
-bignum_montifier_copyinloop:
+Lbignum_montifier_copyinloop:
         ldr     c, [m, i, lsl #3]
         str     c, [t, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_montifier_copyinloop
+        bcc     Lbignum_montifier_copyinloop
 
 // Do a rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
@@ -72,27 +72,27 @@ bignum_montifier_copyinloop:
 // The "cmp c, xzr" sets the zeroness predicate (ZF) for the entire inner loop
 
         subs    i, k, #1
-        beq     bignum_montifier_normalized
-bignum_montifier_normloop:
+        beq     Lbignum_montifier_normalized
+Lbignum_montifier_normloop:
         mov     j, xzr
         cmp     c, xzr
         mov     a, xzr
-bignum_montifier_shufloop:
+Lbignum_montifier_shufloop:
         mov     c, a
         ldr     a, [t, j, lsl #3]
         csel    c, c, a, eq
         str     c, [t, j, lsl #3]
         add     j, j, #1
         sub     d, j, k
-        cbnz    d, bignum_montifier_shufloop
+        cbnz    d, Lbignum_montifier_shufloop
         subs    i, i, #1
-        bne     bignum_montifier_normloop
+        bne     Lbignum_montifier_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
 // now just count c's leading zeros and shift t bitwise that many bits.
 
-bignum_montifier_normalized:
+Lbignum_montifier_normalized:
         clz     c, c
 
         mov     b, xzr
@@ -100,7 +100,7 @@ bignum_montifier_normalized:
         ands    xzr, c, #63
         csetm   l, ne
         neg     d, c
-bignum_montifier_bitloop:
+Lbignum_montifier_bitloop:
         ldr     j, [t, i, lsl #3]
         lsl     a, j, c
         orr     a, a, b
@@ -109,7 +109,7 @@ bignum_montifier_bitloop:
         str     a, [t, i, lsl #3]
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_montifier_bitloop
+        bcc     Lbignum_montifier_bitloop
 
 // Let h be the high word of n, which in all the in-scope cases is >= 2^63.
 // Now successively form q = 2^i div h and r = 2^i mod h as i goes from
@@ -123,7 +123,7 @@ bignum_montifier_bitloop:
         mov     q, #1
         neg     r, h
         mov     i, #62
-bignum_montifier_estloop:
+Lbignum_montifier_estloop:
         add     q, q, q
         mov     a, h
         sub     a, a, r
@@ -134,7 +134,7 @@ bignum_montifier_estloop:
         and     a, a, h
         sub     r, r, a
         subs    i, i, #1
-        bne     bignum_montifier_estloop
+        bne     Lbignum_montifier_estloop
 
 // Strictly speaking the above loop doesn't quite give the true remainder
 // and quotient in the special case r = h = 2^63, so fix it up. We get
@@ -181,7 +181,7 @@ bignum_montifier_estloop:
 
         mov     c, xzr
         adds    i, xzr, xzr
-bignum_montifier_mulloop:
+Lbignum_montifier_mulloop:
         ldr     a, [t, i, lsl #3]
         mul     l, q, a
         adcs    l, l, c
@@ -189,7 +189,7 @@ bignum_montifier_mulloop:
         str     l, [z, i, lsl #3]
         add     i, i, #1
         sub     a, i, k
-        cbnz    a, bignum_montifier_mulloop
+        cbnz    a, Lbignum_montifier_mulloop
 
         adc     c, c, xzr
         mov     a, #0x4000000000000000
@@ -199,7 +199,7 @@ bignum_montifier_mulloop:
 // Now do [c] * n - d for our final answer
 
         subs    i, xzr, xzr
-bignum_montifier_remloop:
+Lbignum_montifier_remloop:
         ldr     a, [t, i, lsl #3]
         ldr     b, [z, i, lsl #3]
         and     a, a, q
@@ -207,14 +207,14 @@ bignum_montifier_remloop:
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     a, i, k
-        cbnz    a, bignum_montifier_remloop
+        cbnz    a, Lbignum_montifier_remloop
 
 // Now still need to do a couple of modular doublings to get us all the
 // way up to 2^{p+64} == r from the initial 2^{p+62} == r (mod n).
 
         mov     c, xzr
         subs    j, xzr, xzr
-bignum_montifier_dubloop1:
+Lbignum_montifier_dubloop1:
         ldr     a, [z, j, lsl #3]
         extr    c, a, c, #63
         ldr     b, [t, j, lsl #3]
@@ -223,11 +223,11 @@ bignum_montifier_dubloop1:
         mov     c, a
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_dubloop1
+        cbnz    a, Lbignum_montifier_dubloop1
         lsr     c, c, #63
         sbc     c, c, xzr
         adds    j, xzr, xzr
-bignum_montifier_corrloop1:
+Lbignum_montifier_corrloop1:
         ldr     a, [z, j, lsl #3]
         ldr     b, [t, j, lsl #3]
         and     b, b, c
@@ -235,14 +235,14 @@ bignum_montifier_corrloop1:
         str     a, [z, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_corrloop1
+        cbnz    a, Lbignum_montifier_corrloop1
 
 // This is not exactly the same: we also copy output to t giving the
 // initialization t_1 = r == 2^{p+64} mod n for the main loop next.
 
         mov     c, xzr
         subs    j, xzr, xzr
-bignum_montifier_dubloop2:
+Lbignum_montifier_dubloop2:
         ldr     a, [z, j, lsl #3]
         extr    c, a, c, #63
         ldr     b, [t, j, lsl #3]
@@ -251,11 +251,11 @@ bignum_montifier_dubloop2:
         mov     c, a
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_dubloop2
+        cbnz    a, Lbignum_montifier_dubloop2
         lsr     c, c, #63
         sbc     c, c, xzr
         adds    j, xzr, xzr
-bignum_montifier_corrloop2:
+Lbignum_montifier_corrloop2:
         ldr     a, [z, j, lsl #3]
         ldr     b, [t, j, lsl #3]
         and     b, b, c
@@ -264,7 +264,7 @@ bignum_montifier_corrloop2:
         str     a, [t, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_corrloop2
+        cbnz    a, Lbignum_montifier_corrloop2
 
 // We then successively generate (k+1)-digit values satisfying
 // t_i == 2^{p+64*i} mod n, each of which is stored in h::t. Finish
@@ -288,11 +288,11 @@ bignum_montifier_corrloop2:
 // "previous" digit (initially 0) to offset things by 1.
 
         add     i, k, k
-bignum_montifier_modloop:
+Lbignum_montifier_modloop:
         mov     j, xzr
         mov     b, xzr
         adds    c, xzr, xzr
-bignum_montifier_cmaloop:
+Lbignum_montifier_cmaloop:
         ldr     a, [z, j, lsl #3]
         mul     l, h, a
         adcs    b, b, c
@@ -303,14 +303,14 @@ bignum_montifier_cmaloop:
         str     l, [t, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_cmaloop
+        cbnz    a, Lbignum_montifier_cmaloop
 
         adcs    h, b, c
 
         csetm   l, cs
 
         adds    j, xzr, xzr
-bignum_montifier_oaloop:
+Lbignum_montifier_oaloop:
         ldr     a, [t, j, lsl #3]
         ldr     b, [z, j, lsl #3]
         and     b, b, l
@@ -318,11 +318,11 @@ bignum_montifier_oaloop:
         str     a, [t, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_oaloop
+        cbnz    a, Lbignum_montifier_oaloop
         adc     h, h, xzr
 
         subs    i, i, #1
-        bne     bignum_montifier_modloop
+        bne     Lbignum_montifier_modloop
 
 // Compute the negated modular inverse w (same register as i, not used again).
 
@@ -353,9 +353,9 @@ bignum_montifier_oaloop:
         mov     j, #1
         sub     a, k, #1
         adds    xzr, b, l
-        cbz     a, bignum_montifier_amontend
+        cbz     a, Lbignum_montifier_amontend
 
-bignum_montifier_amontloop:
+Lbignum_montifier_amontloop:
         ldr     a, [m, j, lsl #3]
         ldr     b, [t, j, lsl #3]
         mul     l, d, a
@@ -367,15 +367,15 @@ bignum_montifier_amontloop:
         str     b, [t, a, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_amontloop
-bignum_montifier_amontend:
+        cbnz    a, Lbignum_montifier_amontloop
+Lbignum_montifier_amontend:
         adcs    h, h, c
         csetm   l, cs
         sub     a, k, #1
         str     h, [t, a, lsl #3]
 
         subs    j, xzr, xzr
-bignum_montifier_osloop:
+Lbignum_montifier_osloop:
         ldr     a, [t, j, lsl #3]
         ldr     b, [m, j, lsl #3]
         and     b, b, l
@@ -383,7 +383,7 @@ bignum_montifier_osloop:
         str     a, [z, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_osloop
+        cbnz    a, Lbignum_montifier_osloop
 
 // So far, the code(basically a variant of bignum_amontifier) has produced
 // a k-digit value z == 2^{192k} (mod m), not necessarily fully reduced mod m.
@@ -393,7 +393,7 @@ bignum_montifier_osloop:
 
         mov     h, k
 
-bignum_montifier_montouterloop:
+Lbignum_montifier_montouterloop:
         ldr     b, [z]
         mul     d, b, w
         ldr     a, [m]
@@ -402,8 +402,8 @@ bignum_montifier_montouterloop:
         mov     j, #1
         sub     a, k, #1
         adds    xzr, b, l
-        cbz     a, bignum_montifier_montend
-bignum_montifier_montloop:
+        cbz     a, Lbignum_montifier_montend
+Lbignum_montifier_montloop:
         ldr     a, [m, j, lsl #3]
         ldr     b, [z, j, lsl #3]
         mul     l, d, a
@@ -415,32 +415,32 @@ bignum_montifier_montloop:
         str     b, [z, a, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_montloop
-bignum_montifier_montend:
+        cbnz    a, Lbignum_montifier_montloop
+Lbignum_montifier_montend:
         adc     c, c, xzr
         sub     a, k, #1
         str     c, [z, a, lsl #3]
 
         subs    h, h, #1
-        bne     bignum_montifier_montouterloop
+        bne     Lbignum_montifier_montouterloop
 
 // Now do a comparison of z with m to set a final correction mask
 // indicating that z >= m and so we need to subtract m.
 
         subs    j, xzr, xzr
-bignum_montifier_cmploop:
+Lbignum_montifier_cmploop:
         ldr     a, [z, j, lsl #3]
         ldr     b, [m, j, lsl #3]
         sbcs    xzr, a, b
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_cmploop
+        cbnz    a, Lbignum_montifier_cmploop
         csetm   h, cs
 
 // Now do a masked subtraction of m for the final reduced result.
 
         subs    j, xzr, xzr
-bignum_montifier_corrloop:
+Lbignum_montifier_corrloop:
         ldr     a, [z, j, lsl #3]
         ldr     b, [m, j, lsl #3]
         and     b, b, h
@@ -448,9 +448,9 @@ bignum_montifier_corrloop:
         str     a, [z, j, lsl #3]
         add     j, j, #1
         sub     a, j, k
-        cbnz    a, bignum_montifier_corrloop
+        cbnz    a, Lbignum_montifier_corrloop
 
-bignum_montifier_end:
+Lbignum_montifier_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

@@ -30,22 +30,22 @@ S2N_BN_SYMBOL(bignum_cld):
 
 // If the bignum is zero-length, x0 is already the right answer of k = 0
 
-        cbz     k, bignum_cld_end
+        cbz     k, Lbignum_cld_end
 
 // Run over the words j = 0..i-1, and set i := j + 1 when hitting nonzero a[j]
 
         mov     i, xzr
         mov     j, xzr
-bignum_cld_loop:
+Lbignum_cld_loop:
         ldr     a, [x, j, lsl #3]
         add     j, j, #1
         cmp     a, #0
         csel    i, j, i, ne
         cmp     j, k
-        bne     bignum_cld_loop
+        bne     Lbignum_cld_loop
 
         sub     x0, x0, i
-bignum_cld_end:
+Lbignum_cld_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

@@ -50,27 +50,27 @@ S2N_BN_SYMBOL(bignum_le):
 // Speculatively form n := n - m and do case split
 
         sub     n, m
-        jc      bignum_le_ylonger
+        jc      Lbignum_le_ylonger
 
 // The case where y is longer or of the same size (n >= m)
 
         inc     n
         test    m, m
-        jz      bignum_le_xtest
-bignum_le_xmainloop:
+        jz      Lbignum_le_xtest
+Lbignum_le_xmainloop:
         mov     a, [y+8*i]
         sbb     a, [x+8*i]
         inc     i
         dec     m
-        jnz     bignum_le_xmainloop
-        jmp     bignum_le_xtest
-bignum_le_xtoploop:
+        jnz     Lbignum_le_xmainloop
+        jmp     Lbignum_le_xtest
+Lbignum_le_xtoploop:
         mov     a, [y+8*i]
         sbb     a, 0
         inc     i
-bignum_le_xtest:
+Lbignum_le_xtest:
         dec     n
-        jnz     bignum_le_xtoploop
+        jnz     Lbignum_le_xtoploop
         sbb     a, a
         inc     a
 #if WINDOWS_ABI
@@ -81,23 +81,23 @@ bignum_le_xtest:
 
 // The case where x is longer (m > n)
 
-bignum_le_ylonger:
+Lbignum_le_ylonger:
         add     n, m
         sub     m, n
         test    n, n
-        jz      bignum_le_ytoploop
-bignum_le_ymainloop:
+        jz      Lbignum_le_ytoploop
+Lbignum_le_ymainloop:
         mov     a, [y+8*i]
         sbb     a, [x+8*i]
         inc     i
         dec     n
-        jnz     bignum_le_ymainloop
-bignum_le_ytoploop:
+        jnz     Lbignum_le_ymainloop
+Lbignum_le_ytoploop:
         mov     ashort, 0
         sbb     a, [x+8*i]
         inc     i
         dec     m
-        jnz     bignum_le_ytoploop
+        jnz     Lbignum_le_ytoploop
 
         sbb     a, a
         inc     a

@@ -48,13 +48,13 @@ S2N_BN_SYMBOL(bignum_muladd10):
 
         mov     d, rdx
         test    k, k
-        jz      bignum_muladd10_end
+        jz      Lbignum_muladd10_end
 
 // Simple loop
 
         xor     i, i
         mov     tenshort, 10
-bignum_muladd10_loop:
+Lbignum_muladd10_loop:
         mov     a, [z+8*i]
         mul     ten
         add     l, d
@@ -63,11 +63,11 @@ bignum_muladd10_loop:
         mov     d, h
         inc     i
         cmp     i, k
-        jc      bignum_muladd10_loop
+        jc      Lbignum_muladd10_loop
 
 // Return the final carry
 
-bignum_muladd10_end:
+Lbignum_muladd10_end:
         mov     rax, d
 #if WINDOWS_ABI
         CFI_POP(rsi)

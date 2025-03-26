@@ -88,12 +88,12 @@ S2N_BN_SYMBOL(p256_montjscalarmul_alt):
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
-        CFI_CALL(p256_montjscalarmul_alt_standard)
+        CFI_CALL(Lp256_montjscalarmul_alt_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-p256_montjscalarmul_alt_standard:
+Lp256_montjscalarmul_alt_standard:
         CFI_START
 #endif
 
@@ -228,34 +228,34 @@ p256_montjscalarmul_alt_standard:
 
         lea     rdi, [rsp+TAB+96*1]
         lea     rsi, [rsp+TAB]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*2]
         lea     rsi, [rsp+TAB+96*1]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjadd)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjadd)
 
         lea     rdi, [rsp+TAB+96*3]
         lea     rsi, [rsp+TAB+96*1]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*4]
         lea     rsi, [rsp+TAB+96*3]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjadd)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjadd)
 
         lea     rdi, [rsp+TAB+96*5]
         lea     rsi, [rsp+TAB+96*2]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
         lea     rdi, [rsp+TAB+96*6]
         lea     rsi, [rsp+TAB+96*5]
         lea     rdx, [rsp+TAB]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjadd)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjadd)
 
         lea     rdi, [rsp+TAB+96*7]
         lea     rsi, [rsp+TAB+96*3]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
 // Set up accumulator as table entry for top 4 bits (constant-time indexing)
 
@@ -301,24 +301,24 @@ p256_montjscalarmul_alt_standard:
 
         mov     ebp, 252
 
-p256_montjscalarmul_alt_mainloop:
+Lp256_montjscalarmul_alt_mainloop:
         sub     rbp, 4
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjdouble)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjdouble)
 
         mov     rax, rbp
         shr     rax, 6
@@ -399,10 +399,10 @@ p256_montjscalarmul_alt_mainloop:
         lea     rdx, [rsp+TABENT]
         lea     rsi, [rsp+ACC]
         lea     rdi, [rsp+ACC]
-        CFI_CALL(p256_montjscalarmul_alt_p256_montjadd)
+        CFI_CALL(Lp256_montjscalarmul_alt_p256_montjadd)
 
         test    rbp, rbp
-        jne     p256_montjscalarmul_alt_mainloop
+        jne     Lp256_montjscalarmul_alt_mainloop
 
 // That's the end of the main loop, and we just need to copy the
 // result in "acc" to the output.
@@ -448,7 +448,7 @@ p256_montjscalarmul_alt_mainloop:
 
 // Local copies of subroutines, complete clones at the moment
 
-p256_montjscalarmul_alt_p256_montjadd:
+Lp256_montjscalarmul_alt_p256_montjadd:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(rbp)
@@ -3221,7 +3221,7 @@ p256_montjscalarmul_alt_p256_montjadd:
         CFI_POP(rbx)
         CFI_RET
 
-p256_montjscalarmul_alt_p256_montjdouble:
+Lp256_montjscalarmul_alt_p256_montjdouble:
         CFI_START
         CFI_PUSH(rbx)
         CFI_PUSH(r12)

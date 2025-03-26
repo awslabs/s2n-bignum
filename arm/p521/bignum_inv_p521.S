@@ -790,9 +790,9 @@ S2N_BN_SYMBOL(bignum_inv_p521):
 
         mov     i, #21
         mov     d, #1
-        b       bignum_inv_p521_midloop
+        b       Lbignum_inv_p521_midloop
 
-bignum_inv_p521_loop:
+Lbignum_inv_p521_loop:
 
 // Separate the matrix elements into sign-magnitude pairs
 
@@ -1425,7 +1425,7 @@ bignum_inv_p521_loop:
         adc     x2, x2, x6
         str     x2, [v+64]
 
-bignum_inv_p521_midloop:
+Lbignum_inv_p521_midloop:
 
         mov     x1, d
         ldr     x2, [f]
@@ -1436,7 +1436,7 @@ bignum_inv_p521_midloop:
 // Next iteration
 
         subs    i, i, #1
-        bne     bignum_inv_p521_loop
+        bne     Lbignum_inv_p521_loop
 
 // The 21st and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the

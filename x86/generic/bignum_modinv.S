@@ -123,7 +123,7 @@ S2N_BN_SYMBOL(bignum_modinv):
 // If k = 0 then do nothing (this is out of scope anyway)
 
         test    k, k
-        jz      bignum_modinv_end
+        jz      Lbignum_modinv_end
 
 // Set up the additional two buffers m and n beyond w in temp space
 // and record all pointers m, n, w and z in stack-based variables
@@ -140,7 +140,7 @@ S2N_BN_SYMBOL(bignum_modinv):
 
         xor     r11, r11
         xor     i, i
-bignum_modinv_copyloop:
+Lbignum_modinv_copyloop:
         mov     a, [rdx+8*i]
         mov     b, [rcx+8*i]
         mov     [r10+8*i], a
@@ -149,7 +149,7 @@ bignum_modinv_copyloop:
         mov     [rsi+8*i], r11
         inc     i
         cmp     i, k
-        jc      bignum_modinv_copyloop
+        jc      Lbignum_modinv_copyloop
 
 // Tweak down w to b - 1 (this crude approach is safe as b needs to be odd
 // for it to be in scope). We have then established the congruence invariant:
@@ -207,7 +207,7 @@ bignum_modinv_copyloop:
 
 // Start of the main outer loop iterated t / CHUNKSIZE times
 
-bignum_modinv_outerloop:
+Lbignum_modinv_outerloop:
 
 // We need only bother with sharper l = min k (ceil(t/64)) digits
 // for the computations on m and n (but we still need k for w and z).
@@ -236,7 +236,7 @@ bignum_modinv_outerloop:
         mov     p1, m
         lea     p2, [p1+8*k]
         xor     i, i
-bignum_modinv_toploop:
+Lbignum_modinv_toploop:
         mov     b, [p1+8*i]
         mov     c, [p2+8*i]
         mov     c1, c2
@@ -252,7 +252,7 @@ bignum_modinv_toploop:
         sbb     c2, c2
         inc     i
         cmp     i, l
-        jc      bignum_modinv_toploop
+        jc      Lbignum_modinv_toploop
 
         mov     a, h1
         or      a, h2
@@ -312,7 +312,7 @@ bignum_modinv_toploop:
 // The actual computation computes updates before actually swapping and
 // then corrects as needed.
 
-bignum_modinv_innerloop:
+Lbignum_modinv_innerloop:
 
         xor     eax, eax
         xor     ebx, ebx
@@ -349,7 +349,7 @@ bignum_modinv_innerloop:
 // End of the inner for-loop
 
         dec     i
-        jnz     bignum_modinv_innerloop
+        jnz     Lbignum_modinv_innerloop
 
 // Unstash the temporary variables
 
@@ -384,7 +384,7 @@ bignum_modinv_innerloop:
         xor     c1, c1
         xor     c2, c2
         xor     i, i
-bignum_modinv_congloop:
+Lbignum_modinv_congloop:
 
         mov     c, [p1+8*i]
         mov     a, mat_mm
@@ -420,7 +420,7 @@ bignum_modinv_congloop:
 
         inc     i
         cmp     i, k
-        jc      bignum_modinv_congloop
+        jc      Lbignum_modinv_congloop
 
         shld    l1, c1, 64-CHUNKSIZE
         shld    l2, c2, 64-CHUNKSIZE
@@ -439,9 +439,9 @@ bignum_modinv_congloop:
         mov     ishort, 1
         mov     c, k
         dec     c
-        jz      bignum_modinv_wmontend
+        jz      Lbignum_modinv_wmontend
 
-bignum_modinv_wmontloop:
+Lbignum_modinv_wmontloop:
         adc     c1, [p1+8*i]
         sbb     b, b
         mov     a, [p2+8*i]
@@ -452,9 +452,9 @@ bignum_modinv_wmontloop:
         mov     c1, rdx
         inc     i
         dec     c
-        jnz     bignum_modinv_wmontloop
+        jnz     Lbignum_modinv_wmontloop
 
-bignum_modinv_wmontend:
+Lbignum_modinv_wmontend:
         adc     c1, l1
         mov     [p1+8*k-8], c1
         sbb     c1, c1
@@ -462,19 +462,19 @@ bignum_modinv_wmontend:
 
         mov     c, k
         xor     i, i
-bignum_modinv_wcmploop:
+Lbignum_modinv_wcmploop:
         mov     a, [p1+8*i]
         sbb     a, [p2+8*i]
         inc     i
         dec     c
-        jnz     bignum_modinv_wcmploop
+        jnz     Lbignum_modinv_wcmploop
         sbb     c1, 0
         sbb     c1, c1
         not     c1
 
         xor     c, c
         xor     i, i
-bignum_modinv_wcorrloop:
+Lbignum_modinv_wcorrloop:
         mov     a, [p1+8*i]
         mov     b, [p2+8*i]
         and     b, c1
@@ -484,7 +484,7 @@ bignum_modinv_wcorrloop:
         mov     [p1+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_modinv_wcorrloop
+        jc      Lbignum_modinv_wcorrloop
 
 // Do a Montgomery reduction of l2::z
 
@@ -500,9 +500,9 @@ bignum_modinv_wcorrloop:
         mov     ishort, 1
         mov     c, k
         dec     c
-        jz      bignum_modinv_zmontend
+        jz      Lbignum_modinv_zmontend
 
-bignum_modinv_zmontloop:
+Lbignum_modinv_zmontloop:
         adc     c2, [p1+8*i]
         sbb     b, b
         mov     a, [p2+8*i]
@@ -513,9 +513,9 @@ bignum_modinv_zmontloop:
         mov     c2, rdx
         inc     i
         dec     c
-        jnz     bignum_modinv_zmontloop
+        jnz     Lbignum_modinv_zmontloop
 
-bignum_modinv_zmontend:
+Lbignum_modinv_zmontend:
         adc     c2, l2
         mov     [p1+8*k-8], c2
         sbb     c2, c2
@@ -523,19 +523,19 @@ bignum_modinv_zmontend:
 
         mov     c, k
         xor     i, i
-bignum_modinv_zcmploop:
+Lbignum_modinv_zcmploop:
         mov     a, [p1+8*i]
         sbb     a, [p2+8*i]
         inc     i
         dec     c
-        jnz     bignum_modinv_zcmploop
+        jnz     Lbignum_modinv_zcmploop
         sbb     c2, 0
         sbb     c2, c2
         not     c2
 
         xor     c, c
         xor     i, i
-bignum_modinv_zcorrloop:
+Lbignum_modinv_zcorrloop:
         mov     a, [p1+8*i]
         mov     b, [p2+8*i]
         and     b, c2
@@ -545,7 +545,7 @@ bignum_modinv_zcorrloop:
         mov     [p1+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_modinv_zcorrloop
+        jc      Lbignum_modinv_zcorrloop
 
 // Now actually compute the updates to m and n corresponding to the matrix,
 // and correct the signs if they have gone negative. First we compute the
@@ -562,7 +562,7 @@ bignum_modinv_zcorrloop:
         xor     l1, l1
         xor     h2, h2
         xor     l2, l2
-bignum_modinv_crossloop:
+Lbignum_modinv_crossloop:
 
         mov     c, [p1+8*i]
         mov     a, mat_mm
@@ -600,16 +600,16 @@ bignum_modinv_crossloop:
 
         inc     i
         cmp     i, l
-        jc      bignum_modinv_crossloop
+        jc      Lbignum_modinv_crossloop
 
 // Now fix the signs of m and n if they have gone negative
 
         xor     i, i
         mov     c1, h1  // carry-in coded up as well
         mov     c2, h2  // carry-in coded up as well
-        xor     l1, h1  // for the bignum_modinv_end digit
-        xor     l2, h2  // for the bignum_modinv_end digit
-bignum_modinv_optnegloop:
+        xor     l1, h1  // for the Lbignum_modinv_end digit
+        xor     l2, h2  // for the Lbignum_modinv_end digit
+Lbignum_modinv_optnegloop:
         mov     a, [p1+8*i]
         xor     a, h1
         neg     c1
@@ -624,14 +624,14 @@ bignum_modinv_optnegloop:
         mov     [p2+8*i], a
         inc     i
         cmp     i, l
-        jc      bignum_modinv_optnegloop
+        jc      Lbignum_modinv_optnegloop
         sub     l1, c1
         sub     l2, c2
 
 // Now shift them right CHUNKSIZE bits
 
         mov     i, l
-bignum_modinv_shiftloop:
+Lbignum_modinv_shiftloop:
         mov     a, [p1+8*i-8]
         mov     c1, a
         shrd    a, l1, CHUNKSIZE
@@ -643,7 +643,7 @@ bignum_modinv_shiftloop:
         mov     [p2+8*i-8],a
         mov     l2, c2
         dec     i
-        jnz     bignum_modinv_shiftloop
+        jnz     Lbignum_modinv_shiftloop
 
 // Finally, use the signs h1 and h2 to do optional modular negations of
 // w and z respectively, flipping h2 to make signs work. We don't make
@@ -660,7 +660,7 @@ bignum_modinv_shiftloop:
         mov     c1, h1
         mov     c2, h2
         xor     i, i
-bignum_modinv_fliploop:
+Lbignum_modinv_fliploop:
         mov     d, h2
         mov     a, [c+8*i]
         and     d, a
@@ -679,7 +679,7 @@ bignum_modinv_fliploop:
         mov     [p2+8*i], d
         inc     i
         cmp     i, k
-        jc      bignum_modinv_fliploop
+        jc      Lbignum_modinv_fliploop
 
 // End of main loop. We can stop if t' <= 0 since then m * n < 2^0, which
 // since n is odd and m and n are coprime (in the in-scope cases) means
@@ -688,9 +688,9 @@ bignum_modinv_fliploop:
 // or the computation of the optimized digit bound l could collapse to 0.
 
         sub     t, CHUNKSIZE
-        jnbe    bignum_modinv_outerloop
+        jnbe    Lbignum_modinv_outerloop
 
-bignum_modinv_end:
+Lbignum_modinv_end:
         CFI_INC_RSP(STACKVARSIZE)
         CFI_POP(r15)
         CFI_POP(r14)

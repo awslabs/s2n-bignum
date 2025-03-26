@@ -44,14 +44,14 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 
 // Compute L = x_lo * y_lo in bottom half of buffer (size 16 x 16 -> 32)
 
-        CFI_BL(bignum_ksqr_32_64_local_ksqr_16_32)
+        CFI_BL(Lbignum_ksqr_32_64_local_ksqr_16_32)
 
 // Compute H = x_hi * y_hi in top half of buffer (size 16 x 16 -> 32)
 
         add     x0, z, #16*K
         add     x1, x, #8*K
         mov     x2, t
-        CFI_BL(bignum_ksqr_32_64_local_ksqr_16_32)
+        CFI_BL(Lbignum_ksqr_32_64_local_ksqr_16_32)
 
 // Compute H' = H + L_top in place of H (it cannot overflow)
 
@@ -242,7 +242,7 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
         add     x0, t, #8*K
         mov     x1, t
         add     x2, t, #24*K
-        CFI_BL(bignum_ksqr_32_64_local_ksqr_16_32)
+        CFI_BL(Lbignum_ksqr_32_64_local_ksqr_16_32)
 
 // Add the interlocking H' and L_bot terms
 // Intercept the carry at the 3k position and store it in x.
@@ -502,7 +502,7 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 // Local copy of bignum_ksqr_16_32, identical to main one.
 // This includes in turn a copy of bignum_sqr_8_16.
 
-bignum_ksqr_32_64_local_ksqr_16_32:
+Lbignum_ksqr_32_64_local_ksqr_16_32:
         CFI_START
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
@@ -511,7 +511,7 @@ bignum_ksqr_32_64_local_ksqr_16_32:
         mov     x23, x0
         mov     x24, x1
         mov     x25, x2
-        CFI_BL(bignum_ksqr_32_64_local_sqr_8_16)
+        CFI_BL(Lbignum_ksqr_32_64_local_sqr_8_16)
         ldp     x10, x11, [x24]
         ldp     x8, x9, [x24, #64]
         subs    x10, x10, x8
@@ -552,7 +552,7 @@ bignum_ksqr_32_64_local_ksqr_16_32:
         stp     x16, x17, [x25, #48]
         add     x0, x23, #0x80
         add     x1, x24, #0x40
-        CFI_BL(bignum_ksqr_32_64_local_sqr_8_16)
+        CFI_BL(Lbignum_ksqr_32_64_local_sqr_8_16)
         ldp     x10, x11, [x23, #128]
         ldp     x12, x13, [x23, #64]
         adds    x10, x10, x12
@@ -591,7 +591,7 @@ bignum_ksqr_32_64_local_ksqr_16_32:
         stp     x10, x11, [x23, #240]
         add     x0, x25, #0x40
         mov     x1, x25
-        CFI_BL(bignum_ksqr_32_64_local_sqr_8_16)
+        CFI_BL(Lbignum_ksqr_32_64_local_sqr_8_16)
         ldp     x0, x1, [x23]
         ldp     x16, x17, [x23, #128]
         adds    x0, x0, x16
@@ -681,7 +681,7 @@ bignum_ksqr_32_64_local_ksqr_16_32:
         CFI_POP2(x19,x20)
         CFI_RET
 
-bignum_ksqr_32_64_local_sqr_8_16:
+Lbignum_ksqr_32_64_local_sqr_8_16:
         CFI_START
 // Load registers.
         ldp     x2, x3, [x1]

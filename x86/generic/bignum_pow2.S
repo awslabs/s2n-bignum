@@ -47,7 +47,7 @@ S2N_BN_SYMBOL(bignum_pow2):
 // If k = 0 do nothing
 
         test    k, k
-        jz      bignum_pow2_end
+        jz      Lbignum_pow2_end
 
 // Create the index n at which to write the nonzero word and the word w itself
 // Note that the x86 manual explicitly says that shift counts are taken modulo
@@ -61,16 +61,16 @@ S2N_BN_SYMBOL(bignum_pow2):
 // Now in a constant-time fashion set the n'th word to w and others to zero
 
         xor     i, i
-bignum_pow2_loop:
+Lbignum_pow2_loop:
         xor     a, a
         cmp     i, n
         cmovz   a, w
         mov     [z+8*i],a
         inc     i
         cmp     i, k
-        jc      bignum_pow2_loop
+        jc      Lbignum_pow2_loop
 
-bignum_pow2_end:
+Lbignum_pow2_end:
 #if WINDOWS_ABI
         CFI_POP(rsi)
         CFI_POP(rdi)

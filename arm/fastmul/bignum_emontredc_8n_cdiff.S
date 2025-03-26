@@ -80,7 +80,7 @@ S2N_BN_SYMBOL(bignum_emontredc_8n_cdiff):
         lsr x0, x0, #2
         mov x26, x0
         subs x12, x0, #1
-        bcc bignum_emontredc_8n_cdiff_end
+        bcc Lbignum_emontredc_8n_cdiff_end
 
         // x30 = buffer holding precomputed ADK carry-differences for modulus
 
@@ -102,7 +102,7 @@ S2N_BN_SYMBOL(bignum_emontredc_8n_cdiff):
 
         mov count, x12
 
-bignum_emontredc_8n_cdiff_precomp:
+Lbignum_emontredc_8n_cdiff_precomp:
         ldp a0, a1, [m, #32]!
         ldp a2, a3, [m, #16]
 
@@ -125,7 +125,7 @@ bignum_emontredc_8n_cdiff_precomp:
         add x30, x30, #(6*16)
 
         subs count, count, #1
-        cbnz count, bignum_emontredc_8n_cdiff_precomp
+        cbnz count, Lbignum_emontredc_8n_cdiff_precomp
 
         // Set modulus pointer and buffer pointer back to its original value
         mov m, x25
@@ -142,7 +142,7 @@ bignum_emontredc_8n_cdiff_precomp:
 
         movi    v29.2d, #0x000000ffffffff
 
-bignum_emontredc_8n_cdiff_outerloop:
+Lbignum_emontredc_8n_cdiff_outerloop:
         ldp x9, x13, [x1, #0]                      // .*..................................................................................................................................................................................................................
         ldr x3, [sp]                               // *...................................................................................................................................................................................................................
         lsr x27, x0, #5                            // ......................................................................................................................................*.............................................................................
@@ -356,7 +356,7 @@ bignum_emontredc_8n_cdiff_outerloop:
         adc x15, x9, x19                           // .....................................................................................................................................*..............................................................................
         ldp x24, x10, [x30], #96                   // ..............................................................................................................................................................................................................*.....
 
-bignum_emontredc_8n_cdiff_maddloop_neon:
+Lbignum_emontredc_8n_cdiff_maddloop_neon:
 
         ldr q14, [x2, #32]!                          // e....................................................................................................................................................
         ldr q25, [x2, #16]                           // .e...................................................................................................................................................
@@ -509,8 +509,8 @@ bignum_emontredc_8n_cdiff_maddloop_neon:
         umulh x8, x9, x7                             // ...............................................................................................................e.....................................
 
         sub count, count, #1
-        cbnz count, bignum_emontredc_8n_cdiff_maddloop_neon
-bignum_emontredc_8n_cdiff_inner_loop_postamble:
+        cbnz count, Lbignum_emontredc_8n_cdiff_maddloop_neon
+Lbignum_emontredc_8n_cdiff_inner_loop_postamble:
         umulh x19, x6, x24                           // ..............*...........................................................................................................
         ldp x7, x9, [sp, #cache_a23]                 // .............*............................................................................................................
         adds x4, x21, x16                            // .*........................................................................................................................
@@ -634,12 +634,12 @@ bignum_emontredc_8n_cdiff_inner_loop_postamble:
         stp x26, xzr, [sp, #16]                      // ........................................................................................................................*.
         add x1, x1, #32                              // ......................................................................................................................*...
 
-bignum_emontredc_8n_cdiff_outer_loop_end:
+Lbignum_emontredc_8n_cdiff_outer_loop_end:
 
-        cbnz x26, bignum_emontredc_8n_cdiff_outerloop
+        cbnz x26, Lbignum_emontredc_8n_cdiff_outerloop
         neg x0, x28
 
-bignum_emontredc_8n_cdiff_end:
+Lbignum_emontredc_8n_cdiff_end:
         CFI_INC_SP(32)
         CFI_INC_SP((6*16))
         CFI_STACKLOAD2(d8,d9,(0*16))

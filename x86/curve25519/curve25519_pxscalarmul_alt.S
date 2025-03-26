@@ -814,7 +814,7 @@ S2N_BN_SYMBOL(curve25519_pxscalarmul_alt):
         mov     eax, 255
         mov     i, rax
 
-curve25519_pxscalarmul_alt_loop:
+Lcurve25519_pxscalarmul_alt_loop:
 
 // sm = xm + zm; sn = xn + zn; dm = xm - zm; dn = xn - zn
 // The adds don't need any normalization as they're fed to muls
@@ -888,7 +888,7 @@ curve25519_pxscalarmul_alt_loop:
         mov     rax, i
         sub     rax, 1
         mov     i, rax
-        jnc     curve25519_pxscalarmul_alt_loop
+        jnc     Lcurve25519_pxscalarmul_alt_loop
 
 // The main loop does not handle the special input of the 2-torsion
 // point = (0,0). In that case we may get a spurious (0,0) as output

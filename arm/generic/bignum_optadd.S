@@ -37,7 +37,7 @@ S2N_BN_SYMBOL(bignum_optadd):
 
 // if k = 0 do nothing. This is also the right top carry in X0
 
-        cbz     k, bignum_optadd_end
+        cbz     k, Lbignum_optadd_end
 
 // Convert p into a strict bitmask (same register in fact)
 
@@ -50,7 +50,7 @@ S2N_BN_SYMBOL(bignum_optadd):
 
 // Main loop
 
-bignum_optadd_loop:
+Lbignum_optadd_loop:
         ldr     a, [x, i]
         ldr     b, [y, i]
         and     b, b, m
@@ -58,13 +58,13 @@ bignum_optadd_loop:
         str     a, [z, i]
         add     i, i, #8
         sub     k, k, #1
-        cbnz    k, bignum_optadd_loop
+        cbnz    k, Lbignum_optadd_loop
 
 // Return carry flag
 
         adc     x0, xzr, xzr
 
-bignum_optadd_end:
+Lbignum_optadd_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

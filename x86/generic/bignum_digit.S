@@ -46,22 +46,22 @@ S2N_BN_SYMBOL(bignum_digit):
 
         xor     d, d
         test    k,k
-        jz      bignum_digit_end
+        jz      Lbignum_digit_end
 
 // Main loop: run over all the digits and take note of the n'th one
 
         xor     i, i
-bignum_digit_loop:
+Lbignum_digit_loop:
         mov     a, [x+8*i]
         cmp     i, n
         cmovz   d, a
         inc     i
         cmp     i, k
-        jc      bignum_digit_loop
+        jc      Lbignum_digit_loop
 
 // Return
 
-bignum_digit_end:
+Lbignum_digit_end:
 #if WINDOWS_ABI
         CFI_POP(rsi)
         CFI_POP(rdi)

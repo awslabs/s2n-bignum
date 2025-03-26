@@ -47,7 +47,7 @@ S2N_BN_SYMBOL(bignum_madd):
 // Note that fortuitously our "carry/remainder" term is still right!
 // As it's a multiply-add, could also do this if either argument is trivial
 
-        cbz     p, bignum_madd_end
+        cbz     p, Lbignum_madd_end
 
 // initialize (h,l) = 0, saving c = 0 for inside the loop
 
@@ -57,7 +57,7 @@ S2N_BN_SYMBOL(bignum_madd):
 // Iterate outer loop from k = 0 ... k = p - 1 producing result digits
 
         mov     k, xzr
-bignum_madd_outerloop:
+Lbignum_madd_outerloop:
 
 // Add the existing z[k] and (h,l) to get initial (c,h,l) combination
 
@@ -78,7 +78,7 @@ bignum_madd_outerloop:
 // Set loop count i = b - a, and skip everything if it's <= 0
 
         subs    i, b, a
-        bls     bignum_madd_innerend
+        bls     Lbignum_madd_innerend
 
 // Use temporary pointers xx = x + 8 * a and yy = y + 8 * (k - b)
 // Increment xx per iteration but just use loop counter with yy
@@ -93,7 +93,7 @@ bignum_madd_outerloop:
 
 // And index using the loop counter i = b - a, ..., i = 1
 
-bignum_madd_innerloop:
+Lbignum_madd_innerloop:
         ldr     a, [xx], #8
         ldr     b, [yy, i, lsl #3]
         mul     d, a, b
@@ -102,22 +102,22 @@ bignum_madd_innerloop:
         adcs    h, h, a
         adc     c, c, xzr
         subs    i, i, #1
-        bne     bignum_madd_innerloop
+        bne     Lbignum_madd_innerloop
 
-bignum_madd_innerend:
+Lbignum_madd_innerend:
         str     l, [z, k, lsl #3]
         mov     l, h
         mov     h, c
 
         add     k, k, #1
         cmp     k, p
-        bcc     bignum_madd_outerloop                       // Inverted carry flag!
+        bcc     Lbignum_madd_outerloop                       // Inverted carry flag!
 
 // Return the "carry/remainder" term
 
         mov     x0, l
 
-bignum_madd_end:
+Lbignum_madd_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

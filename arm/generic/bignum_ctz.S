@@ -34,7 +34,7 @@ S2N_BN_SYMBOL(bignum_ctz):
 
 // If the bignum is zero-length, x0 is already the right answer of 0
 
-        cbz     k, bignum_ctz_end
+        cbz     k, Lbignum_ctz_end
 
 // Use w = a[i] to store nonzero words in a top-down sweep
 // Set the initial default to be as if we had a 1 word directly above
@@ -42,13 +42,13 @@ S2N_BN_SYMBOL(bignum_ctz):
         mov     i, k
         mov     w, #1
 
-bignum_ctz_loop:
+Lbignum_ctz_loop:
         sub     k, k, #1
         ldr     a, [x, k, lsl #3]
         cmp     a, #0
         csel    i, k, i, ne
         csel    w, a, w, ne
-        cbnz    k, bignum_ctz_loop
+        cbnz    k, Lbignum_ctz_loop
 
 // Now w = a[i] is the lowest nonzero word, or in the zero case the
 // default of the "extra" 1 = a[k]. We now want 64*i + ctz(w).
@@ -66,7 +66,7 @@ bignum_ctz_loop:
         clz     a, w
         sub     x0, i, a
 
-bignum_ctz_end:
+Lbignum_ctz_end:
         CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)

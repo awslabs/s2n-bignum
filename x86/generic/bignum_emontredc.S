@@ -84,7 +84,7 @@ S2N_BN_SYMBOL(bignum_emontredc):
 // If k = 0 the whole operation is trivial
 
         test    k, k
-        jz      bignum_emontredc_end
+        jz      Lbignum_emontredc_end
 
 // Move m into its permanent home since we need RDX for muls
 
@@ -93,7 +93,7 @@ S2N_BN_SYMBOL(bignum_emontredc):
 // Launch into the outer loop
 
         xor     i, i
-bignum_emontredc_outerloop:
+Lbignum_emontredc_outerloop:
         mov     e, [z]
         mov     d, w
         imul    d, e
@@ -105,9 +105,9 @@ bignum_emontredc_outerloop:
         mov     jshort, 1
         mov     t, k
         dec     t
-        jz      bignum_emontredc_montend
+        jz      Lbignum_emontredc_montend
 
-bignum_emontredc_montloop:
+Lbignum_emontredc_montloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [m+8*j]
@@ -118,9 +118,9 @@ bignum_emontredc_montloop:
         mov     h, rdx
         inc     j
         dec     t
-        jnz     bignum_emontredc_montloop
+        jnz     Lbignum_emontredc_montloop
 
-bignum_emontredc_montend:
+Lbignum_emontredc_montend:
         adc     h, c
         mov     cshort, 0
         adc     c, 0
@@ -134,9 +134,9 @@ bignum_emontredc_montend:
         add     z, 8    // For simple indexing, z pointer moves
         inc     i
         cmp     i, k
-        jc      bignum_emontredc_outerloop
+        jc      Lbignum_emontredc_outerloop
 
-bignum_emontredc_end:
+Lbignum_emontredc_end:
 
 // Put the top carry in the expected place, restore registers and return
 

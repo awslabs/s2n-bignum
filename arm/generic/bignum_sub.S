@@ -45,72 +45,72 @@ S2N_BN_SYMBOL(bignum_sub):
         cmp     n, p
         csel    n, p, n, cs
         cmp     m, n
-        bcc     bignum_sub_ylonger
+        bcc     Lbignum_sub_ylonger
 
 // The case where x is longer or of the same size (p >= m >= n)
 
         sub     p, p, m
         sub     m, m, n
         subs    i, xzr, xzr
-        cbz     n, bignum_sub_xmainskip
-bignum_sub_xmainloop:
+        cbz     n, Lbignum_sub_xmainskip
+Lbignum_sub_xmainloop:
         ldr     a, [x, i, lsl #3]
         ldr     d, [y, i, lsl #3]
         sbcs    a, a, d
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     n, n, #1
-        cbnz    n, bignum_sub_xmainloop
-bignum_sub_xmainskip:
-        cbz     m, bignum_sub_xtopskip
-bignum_sub_xtoploop:
+        cbnz    n, Lbignum_sub_xmainloop
+Lbignum_sub_xmainskip:
+        cbz     m, Lbignum_sub_xtopskip
+Lbignum_sub_xtoploop:
         ldr     a, [x, i, lsl #3]
         sbcs    a, a, xzr
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     m, m, #1
-        cbnz    m, bignum_sub_xtoploop
-bignum_sub_xtopskip:
-        cbnz    p, bignum_sub_tails
+        cbnz    m, Lbignum_sub_xtoploop
+Lbignum_sub_xtopskip:
+        cbnz    p, Lbignum_sub_tails
         cset    x0, cc
         ret
 
 // The case where y is longer (p >= n > m)
 
-bignum_sub_ylonger:
+Lbignum_sub_ylonger:
         sub     p, p, n
         sub     n, n, m
         subs    i, xzr, xzr
-        cbz     m, bignum_sub_ytoploop
-bignum_sub_ymainloop:
+        cbz     m, Lbignum_sub_ytoploop
+Lbignum_sub_ymainloop:
         ldr     a, [x, i, lsl #3]
         ldr     d, [y, i, lsl #3]
         sbcs    a, a, d
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     m, m, #1
-        cbnz    m, bignum_sub_ymainloop
-bignum_sub_ytoploop:
+        cbnz    m, Lbignum_sub_ymainloop
+Lbignum_sub_ytoploop:
         ldr     a, [y, i, lsl #3]
         sbcs    a, xzr, a
         str     a, [z, i, lsl #3]
         add     i, i, #1
         sub     n, n, #1
-        cbnz    n, bignum_sub_ytoploop
-bignum_sub_ytopskip:
-        cbnz    p, bignum_sub_tails
+        cbnz    n, Lbignum_sub_ytoploop
+Lbignum_sub_ytopskip:
+        cbnz    p, Lbignum_sub_tails
         cset    x0, cc
         ret
 
 // Adding a non-trivial tail, when p > max(m,n)
 
-bignum_sub_tails:
+Lbignum_sub_tails:
         csetm   a, cc
-bignum_sub_tailloop:
+Lbignum_sub_tailloop:
         str     a, [z, i, lsl #3]
         add     i, i, #1
         subs    p, p, #1
-        bne     bignum_sub_tailloop
+        bne     Lbignum_sub_tailloop
         neg     x0, a
         CFI_RET
 

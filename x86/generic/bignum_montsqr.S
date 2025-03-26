@@ -79,7 +79,7 @@ S2N_BN_SYMBOL(bignum_montsqr):
 // If k = 0 the whole operation is trivial
 
         test    k, k
-        jz      bignum_montsqr_end
+        jz      Lbignum_montsqr_end
 
 // Move x input into its permanent home, since we need rdx for multiplications
 
@@ -124,17 +124,17 @@ S2N_BN_SYMBOL(bignum_montsqr):
 
         xor     i, i            // Also initializes i for main loop
         xor     j, j
-bignum_montsqr_zoop:
+Lbignum_montsqr_zoop:
         mov     [z+8*j], i
         inc     j
         cmp     j, k
-        jc      bignum_montsqr_zoop
+        jc      Lbignum_montsqr_zoop
 
         xor     c0, c0
 
 // Outer loop pulling down digits d=x[i], multiplying by x and reducing
 
-bignum_montsqr_outerloop:
+Lbignum_montsqr_outerloop:
 
 // Multiply-add loop where we always have CF + previous high part h to add in.
 // Note that in general we do need yet one more carry in this phase and hence
@@ -146,7 +146,7 @@ bignum_montsqr_outerloop:
         xor     c1, c1
         mov     n, k
 
-bignum_montsqr_maddloop:
+Lbignum_montsqr_maddloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [x+8*j]
@@ -157,7 +157,7 @@ bignum_montsqr_maddloop:
         mov     h, rdx
         inc     j
         dec     n
-        jnz     bignum_montsqr_maddloop
+        jnz     Lbignum_montsqr_maddloop
         adc     c0, h
         adc     c1, c1
 
@@ -173,9 +173,9 @@ bignum_montsqr_maddloop:
         mov     jshort, 1
         mov     n, k
         dec     n
-        jz      bignum_montsqr_montend
+        jz      Lbignum_montsqr_montend
 
-bignum_montsqr_montloop:
+Lbignum_montsqr_montloop:
         adc     h, [z+8*j]
         sbb     e, e
         mov     a, [m+8*j]
@@ -186,9 +186,9 @@ bignum_montsqr_montloop:
         mov     h, rdx
         inc     j
         dec     n
-        jnz     bignum_montsqr_montloop
+        jnz     Lbignum_montsqr_montloop
 
-bignum_montsqr_montend:
+Lbignum_montsqr_montend:
         adc     h, c0
         adc     c1, 0
         mov     c0, c1
@@ -198,19 +198,19 @@ bignum_montsqr_montend:
 
         inc     i
         cmp     i, k
-        jc      bignum_montsqr_outerloop
+        jc      Lbignum_montsqr_outerloop
 
 // Now do a comparison of (c0::z) with (0::m) to set a final correction mask
 // indicating that (c0::z) >= m and so we need to subtract m.
 
         xor     j, j
         mov     n, k
-bignum_montsqr_cmploop:
+Lbignum_montsqr_cmploop:
         mov     a, [z+8*j]
         sbb     a, [m+8*j]
         inc     j
         dec     n
-        jnz     bignum_montsqr_cmploop
+        jnz     Lbignum_montsqr_cmploop
 
         sbb     c0, 0
         sbb     d, d
@@ -220,7 +220,7 @@ bignum_montsqr_cmploop:
 
         xor     e, e
         xor     j, j
-bignum_montsqr_corrloop:
+Lbignum_montsqr_corrloop:
         mov     a, [m+8*j]
         and     a, d
         neg     e
@@ -228,9 +228,9 @@ bignum_montsqr_corrloop:
         sbb     e, e
         inc     j
         cmp     j, k
-        jc      bignum_montsqr_corrloop
+        jc      Lbignum_montsqr_corrloop
 
-bignum_montsqr_end:
+Lbignum_montsqr_end:
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)

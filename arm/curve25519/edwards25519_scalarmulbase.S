@@ -583,8 +583,8 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase):
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        adr     x10, edwards25519_scalarmulbase_edwards25519_0g
-        adr     x11, edwards25519_scalarmulbase_edwards25519_251g
+        adr     x10, Ledwards25519_scalarmulbase_edwards25519_0g
+        adr     x11, Ledwards25519_scalarmulbase_edwards25519_251g
         ldp     x0, x1, [x10]
         ldp     x2, x3, [x11]
         csel    x0, x0, x2, eq
@@ -639,12 +639,12 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase):
 // end because we made sure bit 251 is clear in the reduced scalar.
 
         mov     i, 0
-        adr     tab, edwards25519_scalarmulbase_edwards25519_gtable
+        adr     tab, Ledwards25519_scalarmulbase_edwards25519_gtable
         mov     bias, xzr
 
 // Start of the main loop, repeated 63 times for i = 0, 4, 8, ..., 248
 
-edwards25519_scalarmulbase_scalarloop:
+Ledwards25519_scalarmulbase_scalarloop:
 
 // Look at the next 4-bit field "bf", adding the previous bias as well.
 // Choose the table index "ix" as bf when bf <= 8 and 16 - bf for bf >= 9,
@@ -927,7 +927,7 @@ edwards25519_scalarmulbase_scalarloop:
 
         add     i, i, 4
         cmp     i, 252
-        bcc     edwards25519_scalarmulbase_scalarloop
+        bcc     Ledwards25519_scalarmulbase_scalarloop
 
 // Insert the optional negation of the projective X coordinate, and
 // so by extension the final affine x coordinate x = X/Z and thus
@@ -1014,8 +1014,8 @@ edwards25519_scalarmulbase_scalarloop:
         stp     x12, x13, [sp, #112]
         mov     x21, #0xa
         mov     x22, #0x1
-        b       edwards25519_scalarmulbase_invmidloop
-edwards25519_scalarmulbase_invloop:
+        b       Ledwards25519_scalarmulbase_invmidloop
+Ledwards25519_scalarmulbase_invloop:
         cmp     x10, xzr
         csetm   x14, mi
         cneg    x10, x10, mi
@@ -1282,7 +1282,7 @@ edwards25519_scalarmulbase_invloop:
         adc     x2, x2, x5
         stp     x0, x1, [sp, #96]
         stp     x3, x2, [sp, #112]
-edwards25519_scalarmulbase_invmidloop:
+Ledwards25519_scalarmulbase_invmidloop:
         mov     x1, x22
         ldr     x2, [sp]
         ldr     x3, [sp, #32]
@@ -1893,7 +1893,7 @@ edwards25519_scalarmulbase_invmidloop:
         msub    x13, x15, x17, x5
         mov     x22, x1
         subs    x21, x21, #0x1
-        b.ne    edwards25519_scalarmulbase_invloop
+        b.ne    Ledwards25519_scalarmulbase_invloop
         ldr     x0, [sp]
         ldr     x1, [sp, #32]
         mul     x0, x0, x10
@@ -2025,7 +2025,7 @@ edwards25519_scalarmulbase_invmidloop:
 // 0 * B = 0 and 2^251 * B in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
 
-edwards25519_scalarmulbase_edwards25519_0g:
+Ledwards25519_scalarmulbase_edwards25519_0g:
 
         .quad   0x0000000000000000
         .quad   0x0000000000000000
@@ -2042,7 +2042,7 @@ edwards25519_scalarmulbase_edwards25519_0g:
         .quad   0x0000000000000000
         .quad   0x0000000000000000
 
-edwards25519_scalarmulbase_edwards25519_251g:
+Ledwards25519_scalarmulbase_edwards25519_251g:
 
         .quad   0x525f946d7c7220e7
         .quad   0x4636b0b2f1e35444
@@ -2060,7 +2060,7 @@ edwards25519_scalarmulbase_edwards25519_251g:
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-edwards25519_scalarmulbase_edwards25519_gtable:
+Ledwards25519_scalarmulbase_edwards25519_gtable:
 
         // 2^0 * 1 * G
 

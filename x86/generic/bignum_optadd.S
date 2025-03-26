@@ -55,7 +55,7 @@ S2N_BN_SYMBOL(bignum_optadd):
 // If k = 0 do nothing
 
         test    k, k
-        jz      bignum_optadd_end
+        jz      Lbignum_optadd_end
 
 // Convert the nonzero/zero status of p into an all-1s or all-0s mask
 
@@ -65,7 +65,7 @@ S2N_BN_SYMBOL(bignum_optadd):
 // Now go round the loop for i=0...k-1, saving the carry in c each iteration
 
         xor     i, i
-bignum_optadd_loop:
+Lbignum_optadd_loop:
         mov     a, [x+8*i]
         mov     b, [y+8*i]
         and     b, p
@@ -75,13 +75,13 @@ bignum_optadd_loop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_optadd_loop
+        jc      Lbignum_optadd_loop
 
 // Return top carry
 
         neg     rax
 
-bignum_optadd_end:
+Lbignum_optadd_end:
 #if WINDOWS_ABI
         CFI_POP(rsi)
         CFI_POP(rdi)

@@ -64,7 +64,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
 // counter.
 
         mov     r, xzr
-        cbz     n, bignum_cdiv_nomodulus
+        cbz     n, Lbignum_cdiv_nomodulus
 
         clz     e, m
         lsl     f, m, e
@@ -116,7 +116,7 @@ S2N_BN_SYMBOL(bignum_cdiv):
         mov     h, xzr
         mov     l, xzr
         mov     i, n
-bignum_cdiv_modloop:
+Lbignum_cdiv_modloop:
         sub     i, i, #1
         ldr     d, [x, i, lsl #3]
         mul     a, r, h
@@ -126,7 +126,7 @@ bignum_cdiv_modloop:
         csel    l, r, xzr, cs
         adds    l, l, a
         adc     h, h, xzr
-        cbnz    i, bignum_cdiv_modloop
+        cbnz    i, Lbignum_cdiv_modloop
 
         umulh   c, w, h
         adds    c, c, h
@@ -159,11 +159,11 @@ bignum_cdiv_modloop:
         subs    r, l, m
         csel    r, r, l, cs
 
-bignum_cdiv_nomodulus:
+Lbignum_cdiv_nomodulus:
 
 // If k = 0 then there's no more to be done
 
-        cbz     k, bignum_cdiv_end
+        cbz     k, Lbignum_cdiv_end
 
 // Let e be the number of trailing zeros in m. This implementation uses
 // 63 - clz(-m & m) which is a bit slicker than the main word_ctz function
@@ -227,12 +227,12 @@ bignum_cdiv_nomodulus:
 // as the comparison i < n will always fail and the x pointer is unused.
 
         mov     d, xzr
-        cbz     n, bignum_cdiv_loop
+        cbz     n, Lbignum_cdiv_loop
         ldr     d, [x], #8
         lsr     d, d, e
         sub     n, n, 1
 
-bignum_cdiv_loop:
+Lbignum_cdiv_loop:
 
 // Load the next digit up to get [l,d] then shift right e places,
 // eventually setting d back to the other part of the newly loaded digit
@@ -240,9 +240,9 @@ bignum_cdiv_loop:
 
         mov     l, xzr
         cmp     i, n
-        bcs     bignum_cdiv_noload
+        bcs     Lbignum_cdiv_noload
         ldr     l, [x, i, lsl #3]
-bignum_cdiv_noload:
+Lbignum_cdiv_noload:
         rorv    l, l, e
         bic     a, l, f
         orr     a, d, a
@@ -265,11 +265,11 @@ bignum_cdiv_noload:
 
         add     i, i, #1
         cmp     i, k
-        bcc     bignum_cdiv_loop
+        bcc     Lbignum_cdiv_loop
 
 // And return the remainder
 
-bignum_cdiv_end:
+Lbignum_cdiv_end:
 
         mov     x0, r
         CFI_RET

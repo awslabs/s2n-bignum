@@ -447,12 +447,12 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble):
         mov     rsi, rdx
         mov     rdx, r8
         mov     rcx, r9
-        CFI_CALL(edwards25519_scalarmuldouble_standard)
+        CFI_CALL(Ledwards25519_scalarmuldouble_standard)
         CFI_POP(rsi)
         CFI_POP(rdi)
         CFI_RET
 
-edwards25519_scalarmuldouble_standard:
+Ledwards25519_scalarmuldouble_standard:
         CFI_START
 #endif
 
@@ -598,46 +598,46 @@ edwards25519_scalarmuldouble_standard:
 
         lea     rdi, [rsp+TAB+1*128]
         lea     rsi, [rsp+TAB]
-        CFI_CALL(edwards25519_scalarmuldouble_epdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epdouble)
 
 // Multiple 3
 
         lea     rdi, [rsp+TAB+2*128]
         lea     rsi, [rsp+TAB]
         lea     rbp, [rsp+TAB+1*128]
-        CFI_CALL(edwards25519_scalarmuldouble_epadd)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epadd)
 
 // Multiple 4
 
         lea     rdi, [rsp+TAB+3*128]
         lea     rsi, [rsp+TAB+1*128]
-        CFI_CALL(edwards25519_scalarmuldouble_epdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epdouble)
 
 // Multiple 5
 
         lea     rdi, [rsp+TAB+4*128]
         lea     rsi, [rsp+TAB]
         lea     rbp, [rsp+TAB+3*128]
-        CFI_CALL(edwards25519_scalarmuldouble_epadd)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epadd)
 
 // Multiple 6
 
         lea     rdi, [rsp+TAB+5*128]
         lea     rsi, [rsp+TAB+2*128]
-        CFI_CALL(edwards25519_scalarmuldouble_epdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epdouble)
 
 // Multiple 7
 
         lea     rdi, [rsp+TAB+6*128]
         lea     rsi, [rsp+TAB]
         lea     rbp, [rsp+TAB+5*128]
-        CFI_CALL(edwards25519_scalarmuldouble_epadd)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epadd)
 
 // Multiple 8
 
         lea     rdi, [rsp+TAB+7*128]
         lea     rsi, [rsp+TAB+3*128]
-        CFI_CALL(edwards25519_scalarmuldouble_epdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epdouble)
 
 // Handle the initialization, starting the loop counter at i = 252
 // and initializing acc to the sum of the table entries for the
@@ -667,7 +667,7 @@ edwards25519_scalarmuldouble_standard:
         xor     r14d, r14d
         xor     r15d, r15d
 
-        lea     rbp, [rip+edwards25519_scalarmuldouble_table]
+        lea     rbp, [rip+Ledwards25519_scalarmuldouble_table]
 
         cmp     bf, 1
         mov     rsi, [rbp]
@@ -1255,12 +1255,12 @@ edwards25519_scalarmuldouble_standard:
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+TABENT]
         lea     rbp, [rsp+BTABENT]
-        CFI_CALL(edwards25519_scalarmuldouble_pepadd)
+        CFI_CALL(Ledwards25519_scalarmuldouble_pepadd)
 
 // Main loop with acc = [scalar/2^i] * point + [bscalar/2^i] * basepoint
 // Start with i = 252 for bits 248..251 and go down four at a time to 3..0
 
-edwards25519_scalarmuldouble_loop:
+Ledwards25519_scalarmuldouble_loop:
 
         mov     rax, i
         sub     rax, 4
@@ -1270,7 +1270,7 @@ edwards25519_scalarmuldouble_loop:
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        CFI_CALL(edwards25519_scalarmuldouble_pdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_pdouble)
 
 // Get btable entry, first getting the adjusted bitfield...
 
@@ -1303,7 +1303,7 @@ edwards25519_scalarmuldouble_loop:
         xor     r14d, r14d
         xor     r15d, r15d
 
-        lea     rbp, [rip+edwards25519_scalarmuldouble_table]
+        lea     rbp, [rip+Ledwards25519_scalarmuldouble_table]
 
         cmp     bf, 1
         mov     rsi, [rbp]
@@ -1981,39 +1981,39 @@ edwards25519_scalarmuldouble_loop:
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        CFI_CALL(edwards25519_scalarmuldouble_pdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_pdouble)
 
 // Add tabent := tabent + btabent
 
         lea     rdi, [rsp+TABENT]
         lea     rsi, [rsp+TABENT]
         lea     rbp, [rsp+BTABENT]
-        CFI_CALL(edwards25519_scalarmuldouble_pepadd)
+        CFI_CALL(Ledwards25519_scalarmuldouble_pepadd)
 
 // Double to acc' = 8 * acc
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        CFI_CALL(edwards25519_scalarmuldouble_pdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_pdouble)
 
 // Double to acc' = 16 * acc
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
-        CFI_CALL(edwards25519_scalarmuldouble_epdouble)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epdouble)
 
 // Add table entry, acc := acc + tabent
 
         lea     rdi, [rsp+ACC]
         lea     rsi, [rsp+ACC]
         lea     rbp, [rsp+TABENT]
-        CFI_CALL(edwards25519_scalarmuldouble_epadd)
+        CFI_CALL(Ledwards25519_scalarmuldouble_epadd)
 
 // Loop down
 
         mov     rax, i
         test    rax, rax
-        jnz     edwards25519_scalarmuldouble_loop
+        jnz     Ledwards25519_scalarmuldouble_loop
 
 // Prepare to call the modular inverse function to get tab = 1/z
 
@@ -2075,8 +2075,8 @@ edwards25519_scalarmuldouble_loop:
         mov     [rsp+0x78], rax
         mov     QWORD PTR [rsp+0x90], 0xa
         mov     QWORD PTR [rsp+0x98], 0x1
-        jmp     edwards25519_scalarmuldouble_midloop
-edwards25519_scalarmuldouble_inverseloop:
+        jmp     Ledwards25519_scalarmuldouble_midloop
+Ledwards25519_scalarmuldouble_inverseloop:
         mov     r9, r8
         sar     r9, 0x3f
         xor     r8, r9
@@ -2367,7 +2367,7 @@ edwards25519_scalarmuldouble_inverseloop:
         shl     rax, 0x3f
         add     rsi, rax
         mov     [rsp+0x78], rsi
-edwards25519_scalarmuldouble_midloop:
+Ledwards25519_scalarmuldouble_midloop:
         mov     rsi, [rsp+0x98]
         mov     rdx, [rsp]
         mov     rcx, [rsp+0x20]
@@ -3268,7 +3268,7 @@ edwards25519_scalarmuldouble_midloop:
         lea     r12, [rax+rdx]
         mov     [rsp+0x98], rsi
         dec     QWORD PTR [rsp+0x90]
-        jne     edwards25519_scalarmuldouble_inverseloop
+        jne     Ledwards25519_scalarmuldouble_inverseloop
         mov     rax, [rsp]
         mov     rcx, [rsp+0x20]
         imul    rax, r8
@@ -3404,7 +3404,7 @@ edwards25519_scalarmuldouble_midloop:
 // but are only maintaining reduction modulo 2^256 - 38, not 2^255 - 19.
 // ****************************************************************************
 
-edwards25519_scalarmuldouble_epdouble:
+Ledwards25519_scalarmuldouble_epdouble:
         CFI_START
         CFI_DEC_RSP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
@@ -3424,7 +3424,7 @@ edwards25519_scalarmuldouble_epdouble:
         CFI_INC_RSP((5*NUMSIZE))
         CFI_RET
 
-edwards25519_scalarmuldouble_pdouble:
+Ledwards25519_scalarmuldouble_pdouble:
         CFI_START
         CFI_DEC_RSP((5*NUMSIZE))
         add_twice4(t0,x_1,y_1)
@@ -3443,7 +3443,7 @@ edwards25519_scalarmuldouble_pdouble:
         CFI_INC_RSP((5*NUMSIZE))
         CFI_RET
 
-edwards25519_scalarmuldouble_epadd:
+Ledwards25519_scalarmuldouble_epadd:
         CFI_START
         CFI_DEC_RSP((6*NUMSIZE))
         mul_4(t0,w_1,w_2)
@@ -3468,7 +3468,7 @@ edwards25519_scalarmuldouble_epadd:
         CFI_INC_RSP((6*NUMSIZE))
         CFI_RET
 
-edwards25519_scalarmuldouble_pepadd:
+Ledwards25519_scalarmuldouble_pepadd:
         CFI_START
         CFI_DEC_RSP((6*NUMSIZE))
         double_twice4(t0,z_1);
@@ -3499,7 +3499,7 @@ edwards25519_scalarmuldouble_pepadd:
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-edwards25519_scalarmuldouble_table:
+Ledwards25519_scalarmuldouble_table:
 
         // 1 * G
 
