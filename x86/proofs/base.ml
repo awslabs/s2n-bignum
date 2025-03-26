@@ -36,6 +36,22 @@ loadt "common/relational.ml";;
 loadt "common/interval.ml";;
 loadt "common/elf.ml";;
 
+(* ------------------------------------------------------------------------- *)
+(* Additional Cryptographic AES intrinsics                                   *)
+(* ------------------------------------------------------------------------- *)
+
+loadt "x86/proofs/aes.ml";;
+extra_word_CONV := [AESENC_REDUCE_CONV;
+                    AESENCLAST_REDUCE_CONV;
+                    AESDEC_REDUCE_CONV;
+                    AESDECLAST_REDUCE_CONV;
+                    AESKEYGENASSIST_REDUCE_CONV]
+                    @ (!extra_word_CONV);;
+
+(* ------------------------------------------------------------------------- *)
+(* The main x86_64 model.                                                       *)
+(* ------------------------------------------------------------------------- *)
+
 loadt "x86/proofs/instruction.ml";;
 loadt "x86/proofs/decode.ml";;
 loadt "x86/proofs/x86.ml";;
