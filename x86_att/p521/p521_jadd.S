@@ -21,6 +21,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p521_jadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(p521_jadd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p521_jadd)
         .text
 

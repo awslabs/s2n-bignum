@@ -15,6 +15,7 @@
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_even)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_even)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_even)
         .text
 

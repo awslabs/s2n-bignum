@@ -23,6 +23,7 @@
 #include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_cmul)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_cmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_cmul)
         .text
         .balign 4

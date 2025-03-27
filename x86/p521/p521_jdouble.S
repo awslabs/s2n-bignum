@@ -19,6 +19,7 @@
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p521_jdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(p521_jdouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p521_jdouble)
         .text
 

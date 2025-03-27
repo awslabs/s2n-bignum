@@ -20,6 +20,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p384_montjmixadd_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(p384_montjmixadd_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p384_montjmixadd_alt)
         .text
         .balign 4

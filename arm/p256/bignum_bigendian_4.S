@@ -27,10 +27,13 @@
 #include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_bigendian_4)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_bigendian_4)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_bigendian_4)
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_frombebytes_4)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_frombebytes_4)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_frombebytes_4)
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_tobebytes_4)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_tobebytes_4)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_tobebytes_4)
 
         .text

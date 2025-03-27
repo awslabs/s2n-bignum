@@ -25,6 +25,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_sqrt_p25519)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_sqrt_p25519)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_sqrt_p25519)
         .text
 

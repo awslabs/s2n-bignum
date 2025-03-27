@@ -22,6 +22,7 @@
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_ladderstep_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(curve25519_ladderstep_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(curve25519_ladderstep_alt)
         .text
 

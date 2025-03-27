@@ -27,10 +27,13 @@
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_littleendian_4)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_littleendian_4)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_littleendian_4)
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_fromlebytes_4)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_fromlebytes_4)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_fromlebytes_4)
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_tolebytes_4)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_tolebytes_4)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_tolebytes_4)
 
         .text

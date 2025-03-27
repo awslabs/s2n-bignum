@@ -5,6 +5,7 @@
 #endif
 
 #define S2N_BN_SYM_VISIBILITY_DIRECTIVE(name) .globl S2N_BN_SYMBOL(name)
+
 #ifdef S2N_BN_HIDE_SYMBOLS
 #   ifdef __APPLE__
 #      define S2N_BN_SYM_PRIVACY_DIRECTIVE(name) .private_extern S2N_BN_SYMBOL(name)
@@ -13,6 +14,12 @@
 #   endif
 #else
 #   define S2N_BN_SYM_PRIVACY_DIRECTIVE(name)  /* NO-OP: S2N_BN_SYM_PRIVACY_DIRECTIVE */
+#endif
+
+#ifdef __APPLE__
+#   define S2N_BN_FUNCTION_TYPE_DIRECTIVE(name) /* Not used in Mach-O */
+#else
+#   define S2N_BN_FUNCTION_TYPE_DIRECTIVE(name) .type name, %function
 #endif
 
 // Variants of instructions including CFI (call frame information) annotations

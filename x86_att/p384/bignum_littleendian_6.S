@@ -27,10 +27,13 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_littleendian_6)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_littleendian_6)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_littleendian_6)
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_fromlebytes_6)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_fromlebytes_6)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_fromlebytes_6)
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_tolebytes_6)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_tolebytes_6)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_tolebytes_6)
 
         .text

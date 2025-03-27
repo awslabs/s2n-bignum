@@ -17,6 +17,7 @@
 #include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sm2_montjdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sm2_montjdouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sm2_montjdouble)
         .text
         .balign 4

@@ -22,6 +22,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_epdouble_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_epdouble_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_epdouble_alt)
         .text
 

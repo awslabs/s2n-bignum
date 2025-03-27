@@ -18,6 +18,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mod_n256)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_mod_n256)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_mod_n256)
         .text
 

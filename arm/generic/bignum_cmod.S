@@ -15,6 +15,7 @@
 #include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_cmod)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_cmod)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_cmod)
         .text
         .balign 4

@@ -17,6 +17,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_optneg_sm2)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_optneg_sm2)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_optneg_sm2)
         .text
 

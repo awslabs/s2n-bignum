@@ -21,6 +21,7 @@
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(secp256k1_jadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(secp256k1_jadd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(secp256k1_jadd)
         .text
 

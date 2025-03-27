@@ -15,6 +15,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(word_ctz)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(word_ctz)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(word_ctz)
         .text
 

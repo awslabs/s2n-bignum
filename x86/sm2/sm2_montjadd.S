@@ -18,6 +18,7 @@
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sm2_montjadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sm2_montjadd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sm2_montjadd)
         .text
 

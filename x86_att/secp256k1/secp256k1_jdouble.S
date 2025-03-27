@@ -19,6 +19,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(secp256k1_jdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(secp256k1_jdouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(secp256k1_jdouble)
         .text
         .balign 4

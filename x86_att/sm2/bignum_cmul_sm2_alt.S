@@ -17,6 +17,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_cmul_sm2_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_cmul_sm2_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_cmul_sm2_alt)
         .text
 

@@ -19,6 +19,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_triple_p384)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_triple_p384)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_triple_p384)
         .text
 

@@ -13,6 +13,7 @@
 #include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(word_min)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(word_min)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(word_min)
         .text
         .balign 4

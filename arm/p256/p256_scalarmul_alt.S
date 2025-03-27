@@ -22,6 +22,7 @@
 #include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p256_scalarmul_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(p256_scalarmul_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p256_scalarmul_alt)
 
         .text

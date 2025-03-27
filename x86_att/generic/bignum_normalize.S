@@ -20,6 +20,7 @@
 
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_normalize)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_normalize)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_normalize)
         .text
 
@@ -59,7 +60,7 @@ S2N_BN_SYMBOL(bignum_normalize):
         xorq    r, r
         movq    k, i
         subq    $1, i
-        jc      bignum_normalize_end
+        jc      Lbignum_normalize_end
         movq    (z,i,8), c
         jz      Lbignum_normalize_bitpart
 
@@ -113,7 +114,7 @@ Lbignum_normalize_bitloop:
         cmpq    k, i
         jc      Lbignum_normalize_bitloop
 
- bignum_normalize_end:
+Lbignum_normalize_end:
 #if WINDOWS_ABI
         CFI_POP(%rsi)
         CFI_POP(%rdi)

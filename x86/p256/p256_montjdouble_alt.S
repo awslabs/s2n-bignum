@@ -18,6 +18,7 @@
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p256_montjdouble_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(p256_montjdouble_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p256_montjdouble_alt)
         .text
         .balign 4
