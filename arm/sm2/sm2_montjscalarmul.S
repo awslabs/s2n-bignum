@@ -33,6 +33,9 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(sm2_montjscalarmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sm2_montjscalarmul)
 
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjdouble)
+
         .text
         .balign 4
 

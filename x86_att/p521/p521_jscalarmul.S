@@ -32,6 +32,13 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p521_jscalarmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p521_jscalarmul)
 
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_n521_9)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_p521_9)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_jadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_jdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_mul_p521)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_sqr_p521)
+
         .text
         .balign 4
 

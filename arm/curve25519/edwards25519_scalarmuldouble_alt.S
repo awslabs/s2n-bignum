@@ -28,6 +28,11 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmuldouble_alt)
 
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
+
         .text
         .balign 4
 

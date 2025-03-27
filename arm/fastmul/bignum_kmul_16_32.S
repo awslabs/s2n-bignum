@@ -20,6 +20,9 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_kmul_16_32)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_kmul_16_32)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_kmul_16_32)
+
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_kmul_16_32_local_mul_8_16)
+
         .text
         .balign 4
 

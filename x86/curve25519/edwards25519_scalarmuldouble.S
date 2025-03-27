@@ -28,6 +28,12 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_scalarmuldouble)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_scalarmuldouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmuldouble)
+
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_epadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_epdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_pdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_pepadd)
+
         .text
 
 // Size of individual field elements

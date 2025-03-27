@@ -20,6 +20,7 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_scalarmulbase_alt)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_scalarmulbase_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmulbase_alt)
+
         .text
 
 // Size of individual field elements

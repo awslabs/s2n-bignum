@@ -33,6 +33,9 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p384_montjscalarmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p384_montjscalarmul)
 
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp384_montjscalarmul_p384_montjadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp384_montjscalarmul_p384_montjdouble)
+
         .text
         .balign 4
 

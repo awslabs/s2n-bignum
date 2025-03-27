@@ -27,6 +27,9 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_sqrt_p25519_alt)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_sqrt_p25519_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_sqrt_p25519_alt)
+
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_alt_mul_p25519)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_alt_nsqr_p25519)
         .text
 
 // Size in bytes of a 64-bit word

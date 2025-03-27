@@ -33,6 +33,12 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p256_scalarmulbase)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p256_scalarmulbase)
 
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_local_demont_p256)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_local_inv_p256)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_local_montmul_p256)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_local_montsqr_p256)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_local_p256_montjmixadd)
+
         .text
         .balign 4
 

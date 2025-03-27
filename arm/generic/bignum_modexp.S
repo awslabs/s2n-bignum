@@ -18,6 +18,11 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_modexp)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_modexp)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_modexp)
+
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_amontifier)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_amontmul)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_demont)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_mux)
         .text
         .balign 4
 

@@ -23,6 +23,10 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p521_jadd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p521_jadd)
 
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_mul_p521)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_sqr_p521)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_sub_p521)
+
         .text
         .balign 4
 
