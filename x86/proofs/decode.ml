@@ -185,7 +185,7 @@ let mmreg = new_definition
 
 let simd_of_RM = define
  `(!reg. simd_of_RM sz (RM_reg reg) =
-         Simdregister(Simdreg (word_zx reg) sz)) /\
+         %_%(Simdreg (word_zx reg) sz)) /\
   (!ea. simd_of_RM sz (RM_mem ea) = Memop (simd_to_wordsize sz) ea)`;;
 
 let read_ModRM_operand = new_definition
@@ -288,6 +288,22 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     (bitmatch b with
     | [0x38:8] -> read_byte l >>= \(b,l).
       (bitmatch b with
+      | [0xdc:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (AESENC (mmreg reg sz) (simd_of_RM sz rm), l)
+      | [0xdd:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (AESENCLAST (mmreg reg sz) (simd_of_RM sz rm), l)
+      | [0xde:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (AESDEC (mmreg reg sz) (simd_of_RM sz rm), l)
+      | [0xdf:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (AESDECLAST (mmreg reg sz) (simd_of_RM sz rm), l)
       | [0xf6:8] ->
         let sz = op_size T (rex_W rex) T pfxs in
         read_ModRM_operand rex sz l >>= \((reg,rm),l).
@@ -295,6 +311,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | (T, Rep0) -> SOME (ADCX reg rm,l)
         | (F, RepZ) -> SOME (ADOX reg rm,l)
         | _ -> NONE)
+      | _ -> NONE)
+    | [0x3a:8] -> read_byte l >>= \(b,l).
+      (bitmatch b with
+      | [0xdf:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        read_imm Byte l >>= \(imm8,l).
+        SOME (AESKEYGENASSIST (mmreg reg sz) (simd_of_RM sz rm) imm8, l)
       | _ -> NONE)
     | [0b11001:5; r:3] -> if has_pfxs pfxs then NONE else
       let sz = op_size_W rex T pfxs in
