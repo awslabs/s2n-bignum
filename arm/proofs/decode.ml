@@ -376,7 +376,7 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_BIC_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
 
   | [0:1; q; 0b101110:6; size:2; 1:1; Rm:5; 0b001101:6; Rn:5; Rd:5] ->
-    // CMHI
+    // CMHI (vector)
     if size = word 0b11 /\ ~q then NONE else
     let esize = 8 * 2 EXP val size in
     let datasize = if q then 128 else 64 in
@@ -430,7 +430,7 @@ let decode = new_definition `!w:int32. decode w =
         match imm with
         | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
         | NONE -> NONE
-      // BIC (immediate), 16-bit size only
+      // BIC (vector immediate), 16-bit size only
       else if cmode = word 0b1001 \/ cmode = word 0b1011 then
         let abcdefgh:(8)word = word_join abc defgh in
         let datasize = if q then 128 else 64 in

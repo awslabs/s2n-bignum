@@ -117,8 +117,8 @@ let iclasses =
   (*** BIC (vector registers) ***)
   "0x001110011xxxxx000111xxxxxxxxxx";
 
-  (*** BIC (immediate, 8h) ***)
-  "0x10111100000xxx10x101xxxxxxxxxx"; (* 8h, cmode=10x0 *)
+  (*** BIC (vector immediate, 8h) ***)
+  "0x10111100000xxx10x101xxxxxxxxxx"; (* 8h, cmode=10x1 *)
 
   (*** BIT ***)
   "0x101110101xxxxx000111xxxxxxxxxx";

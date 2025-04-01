@@ -1282,10 +1282,6 @@ let arm_FMOV_FtoI = define
         (Rd := intval) s
     `;;
 
-(* Only double precision is implemented *)
-(* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged
-  due to type resolution failure *)
-
 let arm_FMOV_ItoF = define
  `arm_FMOV_ItoF Rd Rn (part:num) =
     \s. let fltval:(64)word = read Rn s in
