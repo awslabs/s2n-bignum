@@ -1102,7 +1102,7 @@ let PURE_DECODE_CONV =
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
-              arm_ldst2] rw;
+              arm_ldst2; arm_ldstp_2q] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->
         let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =

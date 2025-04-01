@@ -162,7 +162,8 @@ let extra_simp_tac =
   REWRITE_TAC[WORD_RULE `word_sub x (word_add x y):N word = word_neg y`;
               WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
-              WORD_RULE `word_sub (word_add x y) y:N word = x`] THEN
+              WORD_RULE `word_sub (word_add x y) y:N word = x`;
+              WORD_ADD_0; WORD_SUB_0] THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[];;
 
 let tac_before memop =
@@ -315,30 +316,112 @@ let sub_Xn_SP_Xn rn =
   pow2 5 */ num 0b11111 +/
   num rn;;
 
+let movz_Xn_imm rd imm =
+  pow2 21 */ num_of_string "0b11010010100" +/
+  pow2 5 */ num(imm mod 65536) +/
+  num rd;;
+
+(*** The post-register and no-offset modes are exercised only for LD1/ST1
+ *** since they are not currently supported for LD2/ST2.
+ ***
+ *** The register field is forced to 0 in the no-offset case to unify
+ *** the encoding scheme, and is forced to 31 (i.e. post-immediate in
+ *** place of post-register) if any of these are true:
+ ***
+ ***  - it is LD2/ST2 (since post-register is not supported there)
+ ***  - the offset register is the same as the base (confuses test harness)
+ ***  - the base register is SP (alters final stack pointer in test harness)
+ ***  - or just on a 50-50 probability, to avoid biasing to register case
+ ***)
+
 let cosimulate_ldst_12() =
   let datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
   and rn = Random.int 32
-  and rt = Random.int 32
-  and ldst2 = Random.int 2 in
+  and rt = Random.int 32 in
+  let ldst2 = Random.int 2 in
+  let someoffset = if ldst2 = 1 then 1 else Random.int 2 in
+  let regoffr = Random.int 32 in
+  let regoff =
+    if someoffset = 0 then 0
+    else if ldst2 = 1 || regoffr = rn || rn = 31 || Random.bool() then 31
+    else regoffr in
   let stackoff =
     if rn = 31 then Random.int 14 * 16
     else Random.int 224 in
-  let stackoff' = 8 * (datasize + 1) * (ldst2 + 1) + stackoff in
+  let postinc = someoffset * 8 * (datasize + 1) * (ldst2 + 1) in
   let code =
     pow2 30 */ num datasize +/
-    pow2 23 */ num 0b0011001 +/
+    pow2 24 */ num 0b001100 +/
+    pow2 23 */ num someoffset +/
     pow2 22 */ num isld +/
-    pow2 16 */ num 0b011111 +/
+    pow2 16 */ num regoff +/
     pow2 12 */ num(if ldst2 = 1 then 0b1000 else 0b0111) +/
     pow2 10 */ num esize +/
     pow2 5 */ num rn +/
     num rt in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff']
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+
+(*** This covers LD1 and ST1 with two registers, with the
+ *** addressing modes, no-offset and post-immediate offset.
+ ***)
+
+let cosimulate_ldst_1_2reg() =
+  let someoffset = Random.int 2
+  and rn = Random.int 32
+  and isld = Random.int 2
+  and rt = Random.int 32
+  and esize = Random.int 4 in
+  let stackoff =
+    if rn = 31 then Random.int 14 * 16
+    else Random.int 224 in
+  let postinc = someoffset * 32 in
+  let code =
+    pow2 24 */ num 0b01001100 +/
+    pow2 23 */ num someoffset +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num(0b011111 * someoffset) +/
+    pow2 12 */ num 0b1010 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LDRB and STRB with unshifted register
+ *** There are several more supported addressing modes to cover.
+ ***)
+
+let cosimulate_ldstrb() =
+  let rn = Random.int 32
+  and isld = Random.int 2 in
+  let rm = (rn + 1 + Random.int 31) mod 32
+  and rt = (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then Random.int 15 * 16
+    else Random.int 256 in
+  let regoff = Random.int (256-stackoff) in
+  let code =
+    pow2 23 */ num 0b001110000 +/
+    pow2 22 */ num isld +/
+    pow2 21 +/
+    pow2 16 */ num rm +/
+    pow2 10 */ num 0b011010 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LD1R ***)
 
 let cosimulate_ld1r() =
   let q = Random.int 2
@@ -360,7 +443,8 @@ let cosimulate_ld1r() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
-let memclasses = [cosimulate_ldst_12; cosimulate_ld1r];;
+let memclasses =
+   [cosimulate_ldst_12; cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in
