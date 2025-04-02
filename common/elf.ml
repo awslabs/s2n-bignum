@@ -11,7 +11,7 @@
      integer is too large to fit in OCaml int type (63 bits) ***)
 let get_int_le (bs:bytes) a n =
   if n > 8 then failwith "get_int_le: n too big" else
-  if n = 8 && Char.code (Bytes.get bs 0) >= 128
+  if n = 8 && Char.code (Bytes.get bs 7) >= 128
   then failwith "get_int_le: does not fit in OCaml int (63 bits)" else
   let rec fn a n =
     if n = 0 then 0 else
@@ -112,14 +112,15 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
 
   (* Get the read-only data from ".rodata" section by searching
     the symbol table (".symtab"). *)
-  (try
-      (* The .rodata section *)
-      let rodata = section_contents
-          (find_section_header ".rodata" 1 (* SHT_PROGBITS *)) in
-      (* The symbol table.
+  (let find_section_contents (name,ty) =
+      section_contents (find_section_header name ty) in
+   (* The .rodata section *)
+    let rodata = catch find_section_contents (".rodata",1 (* SHT_PROGBITS *))
+    (* The symbol table.
        https://refspecs.linuxbase.org/elf/gabi4+/ch4.symtab.html *)
-      let symtab = section_contents
-          (find_section_header ".symtab" 2 (* SHT_SYMTAB *)) in
+    and symtab = catch find_section_contents (".symtab",2 (* SHT_SYMTAB *)) in
+    match (rodata,symtab) with
+    | Some rodata, Some symtab -> begin
       let sym_entrysize = 24 (* size of Elf64_Sym struct *) in
 
       (* Skim through the symbol table entries and collect readonly
@@ -148,7 +149,8 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
           ()
       done;
       !rodata_entries
-   with _ -> []),
+      end
+    | _ -> []),
 
   (* Relocation info *)
   match catch (find_section_header ".rela.text") 4 (* SHT_RELA *) with
