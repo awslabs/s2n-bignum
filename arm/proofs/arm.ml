@@ -158,6 +158,7 @@ let OFFSET_ADDRESS_CLAUSES = prove
    offset_address (Shiftreg_Offset r 2) s = word(4 * val(read r s)) /\
    offset_address (Shiftreg_Offset r 3) s = word(8 * val(read r s)) /\
    offset_address (Shiftreg_Offset r 4) s = word(16 * val(read r s)) /\
+   offset_address (Postreg_Offset r) s = word 0 /\
    offset_address (Immediate_Offset w) s = w /\
    offset_address (Preimmediate_Offset w) s = w /\
    offset_address (Postimmediate_Offset w) s = word 0`,
@@ -276,7 +277,7 @@ let ARM_EXEC_CONV =
      word_sub x (word n)`, CONV_TAC WORD_RULE) in
   ((GEN_REWRITE_CONV I ARM_LOAD_STORE_CLAUSES THENC
     REWRITE_CONV [offset_writesback; offset_writeback;
-                  OFFSET_ADDRESS_CLAUSES] THENC
+                  no_offset; OFFSET_ADDRESS_CLAUSES] THENC
     ONCE_DEPTH_CONV(EQT_INTRO o ORTHOGONAL_COMPONENTS_CONV) THENC
     REWRITE_CONV[] THENC
     ONCE_DEPTH_CONV(LAND_CONV DIMINDEX_CONV THENC NUM_DIV_CONV) THENC
