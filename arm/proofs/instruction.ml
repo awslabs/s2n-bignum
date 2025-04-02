@@ -684,8 +684,6 @@ let CONDITION_SEMANTICS_INVERT_CONDITION = prove
 
 (*** We don't support quite all the addressing modes in C1.3.3.
  *** In particular we ignore extended 32-bit registers, which we'll never use
- *** We also ignore the post-indexed register offset, which is only in SIMD
- *** mode.
  ***
  *** We have a numeric parameter in the Shiftreg_Offset but it's only
  *** allowed to be log_2(transfer_size), i.e. usually 3. We also just treat all
@@ -696,6 +694,7 @@ let offset_INDUCT,offset_RECURSION = define_type
  "offset =
     Register_Offset ((armstate,int64)component)      // [base, reg]
   | Shiftreg_Offset ((armstate,int64)component) num  // [base, reg, LSL k]
+  | Postreg_Offset ((armstate, int64)component)      // [base], [reg]
   | Immediate_Offset (64 word)                       // [base, #n] or [base]
   | Preimmediate_Offset (64 word)                    // [base, #n]!
   | Postimmediate_Offset (64 word)                   // [base], #n
@@ -708,6 +707,7 @@ let no_offset = define `No_Offset = Immediate_Offset (word 0)`;;
 let offset_address = define
  `offset_address (Register_Offset r) s = read r s /\
   offset_address (Shiftreg_Offset r k) s = word_shl (read r s) k /\
+  offset_address (Postreg_Offset r) s = word 0 /\
   offset_address (Immediate_Offset w) s = w /\
   offset_address (Preimmediate_Offset w) s = w /\
   offset_address (Postimmediate_Offset w) s = word 0`;;
@@ -715,15 +715,17 @@ let offset_address = define
 (*** This one defines the offset to add to the register ***)
 
 let offset_writeback = define
- `offset_writeback (Register_Offset r) = word 0 /\
-  offset_writeback (Shiftreg_Offset r k) = word 0 /\
-  offset_writeback (Immediate_Offset w) = word 0 /\
-  offset_writeback (Preimmediate_Offset w) = w /\
-  offset_writeback (Postimmediate_Offset w) = w`;;
+ `offset_writeback (Register_Offset r) s = word 0 /\
+  offset_writeback (Shiftreg_Offset r k) s = word 0 /\
+  offset_writeback (Postreg_Offset r) s = read r s /\
+  offset_writeback (Immediate_Offset w) s = word 0 /\
+  offset_writeback (Preimmediate_Offset w) s = w /\
+  offset_writeback (Postimmediate_Offset w) s = w`;;
 
 let offset_writesback = define
  `(offset_writesback (Register_Offset r) <=> F) /\
   (offset_writesback (Shiftreg_Offset r k) <=> F) /\
+  (offset_writesback (Postreg_Offset r) <=> T) /\
   (offset_writesback (Immediate_Offset w) <=> F) /\
   (offset_writesback (Preimmediate_Offset w) <=> T) /\
   (offset_writesback (Postimmediate_Offset w) <=> T)`;;
@@ -1282,6 +1284,9 @@ let arm_MUL_VEC = define
             else if esize = 16 then simd4 word_mul n m
             else simd8 word_mul n m in
           (Rd := word_zx d:(128)word) s`;;
+
+let arm_NOP = new_definition
+  `arm_NOP = \s s':armstate. s = s'`;;
 
 let arm_ORN = define
  `arm_ORN Rd Rm Rn =
@@ -2161,7 +2166,7 @@ let arm_LDR = define
            events := CONS (EventLoad (addr,dimindex (:N) DIV 8))
                           (read events s) ,,
            (if offset_writesback off
-            then Rn := word_add base (offset_writeback off)
+            then Rn := word_add base (offset_writeback off s)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2176,7 +2181,7 @@ let arm_STR = define
            events := CONS (EventStore (addr,dimindex (:N) DIV 8))
                           (read events s) ,,
            (if offset_writesback off
-            then Rn := word_add base (offset_writeback off)
+            then Rn := word_add base (offset_writeback off s)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2190,7 +2195,7 @@ let arm_LDRB = define
            Rt := word_zx (read (memory :> bytes8 addr) s) ,,
            events := CONS (EventLoad (addr,1)) (read events s) ,,
            (if offset_writesback off
-            then Rn := word_add base (offset_writeback off)
+            then Rn := word_add base (offset_writeback off s)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2204,7 +2209,7 @@ let arm_STRB = define
            memory :> bytes8 addr := word_zx (read Rt s) ,,
            events := CONS (EventStore (addr,1)) (read events s) ,,
            (if offset_writesback off
-            then Rn := word_add base (offset_writeback off)
+            then Rn := word_add base (offset_writeback off s)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2226,7 +2231,7 @@ let arm_LDP = define
            Rt2 := read (memory :> wbytes(word_add addr (word w))) s ,,
            events := CONS (EventLoad (addr,2 * w)) (read events s) ,,
            (if offset_writesback off
-            then Rn := word_add base (offset_writeback off)
+            then Rn := word_add base (offset_writeback off s)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2244,7 +2249,7 @@ let arm_STP = define
            memory :> wbytes(word_add addr (word w)) := read Rt2 s ,,
            events := CONS (EventStore (addr,2 * w)) (read events s) ,,
            (if offset_writesback off
-            then Rn := word_add base (offset_writeback off)
+            then Rn := word_add base (offset_writeback off s)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2362,7 +2367,7 @@ let arm_LD2 = define
               (Rt := x),, (Rtt := y) ,,
               events := CONS (EventLoad (eaddr,32)) (read events s) ,,
               (if offset_writesback off
-               then Rn := word_add address (offset_writeback off)
+               then Rn := word_add address (offset_writeback off s)
                else (=))
             else
               let tmp:(128 word) = read (memory :> wbytes eaddr) s in
@@ -2377,7 +2382,7 @@ let arm_LD2 = define
               (Rt := word_zx x:(128)word),, (Rtt := word_zx y:(128)word) ,,
               events := CONS (EventLoad (eaddr,16)) (read events s) ,,
               (if offset_writesback off
-               then Rn := word_add address (offset_writeback off)
+               then Rn := word_add address (offset_writeback off s)
                else (=)))
          else ASSIGNS entirety) s`;;
 
@@ -2407,7 +2412,7 @@ let arm_ST2 = define
               memory :> wbytes eaddr := tmp) ,,
             events := CONS (EventStore (eaddr,datasize DIV 4)) (read events s) ,,
            (if offset_writesback off
-            then Rn := word_add address (offset_writeback off)
+            then Rn := word_add address (offset_writeback off s)
             else (=))
          else ASSIGNS entirety) s`;;
 
@@ -2441,7 +2446,7 @@ let arm_LD1R = define
               (Rt := (word_zx replicated):(128)word)) ,,
             events := CONS (EventLoad (addr,esize DIV 8)) (read events s) ,,
             (if offset_writesback off
-             then Rn := word_add base (offset_writeback off)
+             then Rn := word_add base (offset_writeback off s)
              else (=))
          else ASSIGNS entirety) s`;;
 
@@ -3067,6 +3072,7 @@ let ARM_OPERATION_CLAUSES =
        arm_MLS_VEC_ALT;
        arm_MOVI; arm_MOVK_ALT; arm_MOVN; arm_MOVZ; arm_MSUB;
        arm_MUL_VEC_ALT;
+       arm_NOP;
        arm_ORN; arm_ORR; arm_ORR_VEC;
        arm_RET; arm_REV64_VEC_ALT; arm_RORV;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
