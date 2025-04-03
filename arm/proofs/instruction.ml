@@ -817,6 +817,13 @@ let MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
     MAYCHANGE MODIFIABLE_UPPER_SIMD_REGS ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`);;
 
 (* ------------------------------------------------------------------------- *)
+(* Mask-creating version of a comparison-type operation.                     *)
+(* ------------------------------------------------------------------------- *)
+
+let masking = new_definition
+ `(masking p:N word->N word->N word) x y = word_neg(word(bitval(p x y)))`;;
+
+(* ------------------------------------------------------------------------- *)
 (* General register-register instructions.                                   *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1061,6 +1068,39 @@ let arm_CLZ = define
  `arm_CLZ Rd Rn =
         \s. (Rd := (word(word_clz (read Rn s:N word)):N word)) s`;;
 
+let arm_CMHI_VEC = define
+ `arm_CMHI_VEC Rd Rn Rm esize datasize =
+    \s:armstate.
+        let n = read Rn s in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 (masking word_ugt) n m
+            else if esize = 32 then simd4 (masking word_ugt) n m
+            else if esize = 16 then simd8 (masking word_ugt) n m
+            else simd16 (masking word_ugt) n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 (masking word_ugt) n m
+            else if esize = 16 then simd4 (masking word_ugt) n m
+            else simd8 (masking word_ugt) n m in
+          (Rd := word_zx d:(128)word) s`;;
+
+let arm_CNT = define
+ `arm_CNT Rd Rn datasize =
+    \s:armstate.
+        let n = read Rn s in
+        if datasize = 128 then
+          let d:(128)word = usimd16 (word o word_popcount) n in
+          (Rd := d) s
+        else
+          let n':int64 = word_subword n (0,64) in
+          let d:int64 = usimd8 (word o word_popcount) n' in
+          (Rd := word_zx d) s`;;
+
 let arm_CSEL = define
  `arm_CSEL Rd Rn Rm cc =
         \s. (Rd := if condition_semantics cc s
@@ -1237,18 +1277,13 @@ let arm_MOVZ = define
  `arm_MOVZ (Rd:(armstate,N word)component) (imm:int16) pos =
     Rd := word (val imm * 2 EXP pos)`;;
 
-(* Only double precision is implemented *)
-(* arm_FMOV_FtoI and arm_FMOV_ItoF could not be merged
-  due to type resolution failure *)
 let arm_FMOV_FtoI = define
- `arm_FMOV_FtoI Rd Rn (part:num) =
+ `arm_FMOV_FtoI Rd Rn (part:num) esize  =
     \s. let n:(128)word = read Rn s in
-        let intval:(64)word =
-          if part = 0
-          then word_subword n (0, 64)
-          else word_subword n (64, 64) in
+        let intval = word_subword n (part*esize,esize) in
         (Rd := intval) s
     `;;
+
 let arm_FMOV_ItoF = define
  `arm_FMOV_ItoF Rd Rn (part:num) =
     \s. let fltval:(64)word = read Rn s in
@@ -1617,6 +1652,14 @@ let arm_UADDLP = define
             (\x. word_add (word_zx (word_subword x (0,8):(32)word):(16)word)
                           (word_zx (word_subword x (8,8):(32)word):(16)word)) n in
           (Rd := res) s`;;
+
+let arm_UADDLV = define
+ `arm_UADDLV Rd Rn elements esize =
+    \s:armstate.
+        let n:128 word = read Rn s in
+        let d = nsum (0..elements-1)
+                    (\i. val(word_subword n (esize*i,esize):int128)) in
+         (Rd := (word d:128 word)) s`;;
 
 let arm_UBFM = define
  `arm_UBFM Rd Rn immr imms =
@@ -2978,7 +3021,6 @@ let arm_MOVK_ALT =
   REWRITE_RULE[assign; WRITE_COMPONENT_COMPOSE; read; write; subword]
     arm_MOVK;;
 
-
 (* ------------------------------------------------------------------------- *)
 (* Alternative definitions of NEON instructions that unfold simdN/usimdN.    *)
 (* ------------------------------------------------------------------------- *)
@@ -2990,7 +3032,9 @@ let WORD_DUPLICATE_64_128 = prove
   ONCE_REWRITE_TAC[GSYM WORD_DUPLICATE_DOUBLE] THEN
   REWRITE_TAC[WORD_DUPLICATE_REFL]);;
 
-let all_simd_rules = [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;
+let all_simd_rules =
+   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;
+    o_THM; masking;
     WORD_DUPLICATE_64_128;
     word_interleave16;
     word_interleave8;word_interleave4;word_interleave2;word_split_lohi;
@@ -3005,6 +3049,8 @@ let EXPAND_SIMD_RULE =
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
 
 let arm_ADD_VEC_ALT =    EXPAND_SIMD_RULE arm_ADD_VEC;;
+let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
+let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
 let arm_DUP_GEN_ALT =    EXPAND_SIMD_RULE arm_DUP_GEN;;
 let arm_MLS_VEC_ALT =    EXPAND_SIMD_RULE arm_MLS_VEC;;
 let arm_MUL_VEC_ALT =    EXPAND_SIMD_RULE arm_MUL_VEC;;
@@ -3050,6 +3096,21 @@ let arm_SQRDMULH_VEC_ALT =
 let arm_SRSHR_VEC_ALT =
   REWRITE_RULE[word_ishr_round] (EXPAND_SIMD_RULE arm_SRSHR_VEC);;
 
+let arm_UADDLV_ALT =
+  (end_itlist CONJ o
+   map (REWRITE_RULE[WORD_ADD; WORD_VAL] o
+        CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+        CONV_RULE
+         (NUM_REDUCE_CONV THENC
+          ONCE_DEPTH_CONV EXPAND_NSUM_CONV THENC
+          NUM_REDUCE_CONV) o
+        GEN_REWRITE_CONV I [arm_UADDLV]))
+  [`arm_UADDLV Rd Rn 8 8`;
+   `arm_UADDLV Rd Rn 16 8`;
+   `arm_UADDLV Rd Rn 4 16`;
+   `arm_UADDLV Rd Rn 8 16`;
+   `arm_UADDLV Rd Rn 4 32`];;
+
 (* ------------------------------------------------------------------------- *)
 (* Collection of standard forms of non-aliased instructions                  *)
 (* We separate the load/store instructions for a different treatment.        *)
@@ -3062,8 +3123,9 @@ let ARM_OPERATION_CLAUSES =
        arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIT;
        arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
-       arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ; arm_CSEL;
-       arm_CSINC; arm_CSINV; arm_CSNEG;
+       arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
+       arm_CMHI_VEC_ALT; arm_CNT_ALT;
+       arm_CSEL; arm_CSINC; arm_CSINV; arm_CSNEG;
        arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR_VEC; arm_EOR3; arm_EXT; arm_EXTR;
        arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
@@ -3087,7 +3149,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
-       arm_UADDLP_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
+       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;

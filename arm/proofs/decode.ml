@@ -118,6 +118,10 @@ let arm_adv_simd_expand_imm = new_definition
             :(48)word)
           :(56)word) in
       SOME res
+    else if cmode = word 0b1000 \/ cmode = word 0b1001 then
+      SOME(word_duplicate (word_join (word 0:byte) abcdefgh:int16))
+    else if cmode = word 0b1010 \/ cmode = word 0b1011 then
+       SOME(word_duplicate (word_join abcdefgh (word 0:byte):int16))
     else // Other cases are uncovered.
       NONE`;;
 
@@ -404,8 +408,15 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_AND_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
 
   | [0:1; q; 0b001110011:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
-    // BIC
+    // BIC (vector)
     SOME (arm_BIC_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
+
+  | [0:1; q; 0b101110:6; size:2; 1:1; Rm:5; 0b001101:6; Rn:5; Rd:5] ->
+    // CMHI (vector)
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP val size in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_CMHI_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
 
   | [0:1; q; 0b101110001:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
     // EOR
@@ -420,6 +431,12 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_FCSEL (QREG' Rd) (QREG' Rn) (QREG' Rm) (Condition cond) 32)
   | [0b00011110:8; 0b01:2; 0b1:1; Rm:5; cond:4; 0b11:2; Rn:5; Rd:5] ->
     SOME (arm_FCSEL (QREG' Rd) (QREG' Rn) (QREG' Rm) (Condition cond) 64)
+
+  | [0:1; q; 0b001110:6; size:2; 0b100000010110:12; Rn:5; Rd:5] ->
+    // CNT (count bits in each byte of 64-bit or 128-bit word)
+    if ~(size = word 0b00) then NONE else
+    let datasize = if q then 128 else 64 in
+    SOME (arm_CNT (QREG' Rd) (QREG' Rn) datasize)
 
   | [0:1; q; 0b001110000:9; imm5:5; 0b000011:6; Rn:5; Rd:5] ->
     // DUP (general)
@@ -442,13 +459,22 @@ let decode = new_definition `!w:int32. decode w =
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI, USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
     if val immh = 0 then
-      // MOVI
-      if q then
+      // MOVI, 128-bit only
+      if cmode = word 0b1110 /\ q then
         let abcdefgh:(8)word = word_join abc defgh in
         let imm = arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode in
         match imm with
         | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
         | NONE -> NONE
+      // BIC (vector immediate), 16-bit size only
+      else if cmode = word 0b1001 \/ cmode = word 0b1011 then
+        let abcdefgh:(8)word = word_join abc defgh in
+        let datasize = if q then 128 else 64 in
+        match arm_adv_simd_expand_imm abcdefgh (word 1:(1)word) cmode with
+          SOME imm ->
+            let imm2 = if q then word_duplicate imm else word_zx imm in
+            SOME (arm_BIC_VEC (QREG' Rd) (QREG' Rd) (rvalue imm2) datasize)
+         | NONE -> NONE
       else NONE
     else if cmode = (word 0b0000:(4)word) then
       // USHR
@@ -497,22 +523,25 @@ let decode = new_definition `!w:int32. decode w =
         SOME (arm_SRI_VEC (QREG' Rd) (QREG' Rn) shift esize datasize)
     else NONE
 
-  | [sf; 0b0011110:7; ftype:2; 0b10:2; rmode0; 0b11:2; opcode0; 0b000000:6; Rn:5; Rd:5] ->
-    // FMOV (general), double precision
-    if ftype = (word 0b10:(2)word) /\ ~rmode0 then NONE
-    else if ftype = (word 0b01:(2)word) /\ rmode0 then NONE
-    // Only double precision is implemented
-    else if ftype = (word 0b00:(2)word) \/ ftype = (word 0b11:(2)word) \/ ~sf then NONE
-    else
-      if rmode0
-      // FMOV D[1]
-      then if opcode0
-           then SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 1)
-           else SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 1)
-      // FMOV
-      else if opcode0
-           then SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 0)
-           else SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 0)
+  | [0b0001111000100110000000:22; Rn:5; Rd:5] ->
+    // FMOV (single, to general)
+    SOME (arm_FMOV_FtoI (WREG' Rd) (QREG' Rn) 0 32)
+
+  | [0b1001111001100110000000:22; Rn:5; Rd:5] ->
+    // FMOV (double, to general)
+    SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 0 64)
+
+  | [0b1001111010101110000000:22; Rn:5; Rd:5] ->
+    // FMOV (double high part, to general)
+    SOME (arm_FMOV_FtoI (XREG' Rd) (QREG' Rn) 1 64)
+
+  | [0b1001111001100111000000:22; Rn:5; Rd:5] ->
+    // FMOV (double, from general)
+    SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 0)
+
+  | [0b1001111010101111000000:22; Rn:5; Rd:5] ->
+    // FMOV (double high part, from general)
+    SOME (arm_FMOV_ItoF (QREG' Rd) (XREG' Rn) 1)
 
   | [0:1; q; 0b101111:6; sz:2; L:1; M:1; R:4; 0b0100:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MLS (by element)
@@ -726,6 +755,14 @@ let decode = new_definition `!w:int32. decode w =
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
       SOME (arm_UADDLP (QREG' Rd) (QREG' Rn) (val esize))
+
+  | [0:1; q; 0b101110:6; size:2; 0b110000001110:12; Rn:5; Rd:5] ->
+    // UADDLV
+    if size = word 0b10 /\ ~q \/ size = word 0b11 then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    let elements = datasize DIV esize in
+    SOME(arm_UADDLV (QREG' Rd) (QREG' Rn) elements esize)
 
   | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
     // UMLAL (vector, Q = 0). UMLAL2 (vector, Q=1)
