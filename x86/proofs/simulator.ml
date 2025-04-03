@@ -289,7 +289,9 @@ let iclasses = iclasses @
  [0x66; 0x0f; 0x66; 0xcb]; (*PCMPGTD (%_% xmm1) (%_% xmm3) *)
  [0x66; 0x90]; (* NOP *)
  [0x0f; 0x1f; 0x4f; 0x00]; (* NOP_N (Memop Doubleword (%% (rdi,0))) *)
- [0x66; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x01; 0x02; 0x03]; (* NOP_N (Memop Word (%%%% (rax,0,rax,&50462976))) *)
+ [0x66; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
+ [0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
+ [0x66; 0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
 ];;
 
 (* ------------------------------------------------------------------------- *)
@@ -430,7 +432,7 @@ let decode_inst ibytes =
      (map (rand o rand o snd o strip_forall o concl o Option.get)
        (filter Option.is_some (Array.to_list (snd execth)))) in
   let _ = print_term decoded in
-  decoded
+  decoded;;
 
 (*** Cosimulate a list of x86_64 instruction codes against hardware.
  *** To pass, the formal simulation has to agree with the hardware,
