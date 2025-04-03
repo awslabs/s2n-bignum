@@ -24,9 +24,9 @@
 // Loading large constants
 
 #define movbig(nn,n3,n2,n1,n0)                                              \
-        movz    nn, n0;                                             \
-        movk    nn, n1, lsl #16;                                    \
-        movk    nn, n2, lsl #32;                                    \
+        movz    nn, n0 __LF                                            \
+        movk    nn, n1, lsl #16 __LF                                   \
+        movk    nn, n2, lsl #32 __LF                                   \
         movk    nn, n3, lsl #48
 
 // ---------------------------------------------------------------------------
@@ -36,15 +36,15 @@
 // ---------------------------------------------------------------------------
 
 #define muldiffn(c,h,l, t, x,y, w,z)    \
-        subs    t, x, y;                \
-        cneg    t, t, cc;               \
-        csetm   c, cc;                  \
-        subs    h, w, z;                \
-        cneg    h, h, cc;               \
-        mul     l, t, h;                \
-        umulh   h, t, h;                \
-        cinv    c, c, cc;               \
-        eor     l, l, c;                \
+        subs    t, x, y __LF               \
+        cneg    t, t, cc __LF              \
+        csetm   c, cc __LF                 \
+        subs    h, w, z __LF               \
+        cneg    h, h, cc __LF              \
+        mul     l, t, h __LF               \
+        umulh   h, t, h __LF               \
+        cinv    c, c, cc __LF              \
+        eor     l, l, c __LF               \
         eor     h, h, c
 
 // ---------------------------------------------------------------------------
@@ -55,17 +55,17 @@
 // ---------------------------------------------------------------------------
 
 #define montreds2(d5,d4,d3,d2,d1,d0)                                      \
-        movbig(t2, 0xd838, #0x091d, #0xd225, #0x3531);            \
-        mul     d4, t2, d0;                                       \
-        mov     t3, #977;                                         \
-        orr     t3, t3, #0x100000000;                             \
-        umulh   t1, d4, t3;                                       \
-        subs    d1, d1, t1;                                       \
-        mul     d5, t2, d1;                                       \
-        umulh   t1, d5, t3;                                       \
-        sbcs    d2, d2, t1;                                       \
-        sbcs    d3, d3, xzr;                                      \
-        sbcs    d4, d4, xzr;                                      \
+        movbig(t2, 0xd838, #0x091d, #0xd225, #0x3531) __LF           \
+        mul     d4, t2, d0 __LF                                      \
+        mov     t3, #977 __LF                                        \
+        orr     t3, t3, #0x100000000 __LF                            \
+        umulh   t1, d4, t3 __LF                                      \
+        subs    d1, d1, t1 __LF                                      \
+        mul     d5, t2, d1 __LF                                      \
+        umulh   t1, d5, t3 __LF                                      \
+        sbcs    d2, d2, t1 __LF                                      \
+        sbcs    d3, d3, xzr __LF                                     \
+        sbcs    d4, d4, xzr __LF                                     \
         sbc     d5, d5, xzr
 
 #define a0 x3

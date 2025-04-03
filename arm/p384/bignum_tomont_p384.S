@@ -27,38 +27,38 @@
 
 #define modstep_p384(d6,d5,d4,d3,d2,d1,d0, t1,t2,t3)                        \
 /* Initial quotient approximation q = min (h + 1) (2^64 - 1) */             \
-        adds    d6, d6, #1;                                         \
-        csetm   t3, cs;                                             \
-        add     d6, d6, t3;                                         \
-        orn     t3, xzr, t3;                                        \
-        sub     t2, d6, #1;                                         \
-        sub     t1, xzr, d6;                                        \
+        adds    d6, d6, #1 __LF                                        \
+        csetm   t3, cs __LF                                            \
+        add     d6, d6, t3 __LF                                        \
+        orn     t3, xzr, t3 __LF                                       \
+        sub     t2, d6, #1 __LF                                        \
+        sub     t1, xzr, d6 __LF                                       \
 /* Correction term [d6;t2;t1;d0] = q * (2^384 - p_384) */                   \
-        lsl     d0, t1, #32;                                        \
-        extr    t1, t2, t1, #32;                                    \
-        lsr     t2, t2, #32;                                        \
-        adds    d0, d0, d6;                                         \
-        adcs    t1, t1, xzr;                                        \
-        adcs    t2, t2, d6;                                         \
-        adc     d6, xzr, xzr;                                       \
+        lsl     d0, t1, #32 __LF                                       \
+        extr    t1, t2, t1, #32 __LF                                   \
+        lsr     t2, t2, #32 __LF                                       \
+        adds    d0, d0, d6 __LF                                        \
+        adcs    t1, t1, xzr __LF                                       \
+        adcs    t2, t2, d6 __LF                                        \
+        adc     d6, xzr, xzr __LF                                      \
 /* Addition to the initial value */                                         \
-        adds    d1, d1, t1;                                         \
-        adcs    d2, d2, t2;                                         \
-        adcs    d3, d3, d6;                                         \
-        adcs    d4, d4, xzr;                                        \
-        adcs    d5, d5, xzr;                                        \
-        adc     t3, t3, xzr;                                        \
+        adds    d1, d1, t1 __LF                                        \
+        adcs    d2, d2, t2 __LF                                        \
+        adcs    d3, d3, d6 __LF                                        \
+        adcs    d4, d4, xzr __LF                                       \
+        adcs    d5, d5, xzr __LF                                       \
+        adc     t3, t3, xzr __LF                                       \
 /* Use net top of the 7-word answer in t3 for masked correction */          \
-        mov     t1, #0x00000000ffffffff;                            \
-        and     t1, t1, t3;                                         \
-        adds    d0, d0, t1;                                         \
-        eor     t1, t1, t3;                                         \
-        adcs    d1, d1, t1;                                         \
-        mov     t1, #0xfffffffffffffffe;                            \
-        and     t1, t1, t3;                                         \
-        adcs    d2, d2, t1;                                         \
-        adcs    d3, d3, t3;                                         \
-        adcs    d4, d4, t3;                                         \
+        mov     t1, #0x00000000ffffffff __LF                           \
+        and     t1, t1, t3 __LF                                        \
+        adds    d0, d0, t1 __LF                                        \
+        eor     t1, t1, t3 __LF                                        \
+        adcs    d1, d1, t1 __LF                                        \
+        mov     t1, #0xfffffffffffffffe __LF                           \
+        and     t1, t1, t3 __LF                                        \
+        adcs    d2, d2, t1 __LF                                        \
+        adcs    d3, d3, t3 __LF                                        \
+        adcs    d4, d4, t3 __LF                                        \
         adc     d5, d5, t3
 
 S2N_BN_SYMBOL(bignum_tomont_p384):

@@ -84,20 +84,20 @@
 // and bignum_sub_p521
 
 #define mul_p521(P0,P1,P2)                      \
-        add     x0, P0;                         \
-        add     x1, P1;                         \
-        add     x2, P2;                         \
+        add     x0, P0 __LF                        \
+        add     x1, P1 __LF                        \
+        add     x2, P2 __LF                        \
         bl      p521_jadd_local_mul_p521
 
 #define sqr_p521(P0,P1)                         \
-        add     x0, P0;                         \
-        add     x1, P1;                         \
+        add     x0, P0 __LF                        \
+        add     x1, P1 __LF                        \
         bl      p521_jadd_local_sqr_p521
 
 #define sub_p521(P0,P1,P2)                      \
-        add     x0, P0;                         \
-        add     x1, P1;                         \
-        add     x2, P2;                         \
+        add     x0, P0 __LF                        \
+        add     x1, P1 __LF                        \
+        add     x2, P2 __LF                        \
         bl      p521_jadd_local_sub_p521
 
 S2N_BN_SYMBOL(p521_jadd):
