@@ -101,7 +101,7 @@ let ARM_MK_EXEC_RULE th0: thm * (thm option array) =
     REWRITE_TAC[bytelist_of_num;APPEND]) in
 
   let th0 = INST [`pc':num`,`pc:num`] (SPEC_ALL
-    (REWRITE_RULE[reloc_op_convert_th] th0)) in
+    (PURE_REWRITE_RULE[reloc_op_convert_th] th0)) in
   let th1 = AP_TERM `LENGTH:byte list->num` th0 in
   let th2 =
     (REWRITE_CONV [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
