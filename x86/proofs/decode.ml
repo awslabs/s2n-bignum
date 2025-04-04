@@ -286,6 +286,20 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     SOME (decode_binop (word_zx opc) (%(gpr_adjust (word 0) sz)) imm,l)
   | [0x0f:8] -> read_byte l >>= \(b,l).
     (bitmatch b with
+    | [0b0001000:7; d] -> if has_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      let reg = mmreg reg sz in
+      let rm = simd_of_RM sz rm in
+      let dest,src = if d then rm,reg else reg,rm in
+      SOME (MOVUPS dest src, l)
+    | [0b0010100:7; d] -> if has_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      let reg = mmreg reg sz in
+      let rm = simd_of_RM sz rm in
+      let dest,src = if d then rm,reg else reg,rm in
+      SOME (MOVAPS dest src, l)
     | [0x38:8] -> read_byte l >>= \(b,l).
       (bitmatch b with
       | [0xdc:8] -> if has_unhandled_pfxs pfxs then NONE else
@@ -328,6 +342,16 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = op_size T (rex_W rex) T pfxs in
       read_ModRM_operand rex sz l >>= \((reg,rm),l).
       SOME (CMOV (decode_condition c) reg rm,l)
+    | [0b011:3; d; 0b1111:4] ->
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      let reg = mmreg reg sz in
+      let rm = simd_of_RM sz rm in
+      let dest,src = if d then rm,reg else reg,rm in
+      (match pfxs with
+      | (T, Rep0) -> SOME (MOVDQA dest src, l)
+      | (F, RepZ) -> SOME (MOVDQU dest src, l)
+      | _ -> NONE)
     | [0x8:4; c:4] -> if has_pfxs pfxs then NONE else
       read_int32 l >>= \(imm,l).
       SOME (JUMP (decode_condition c) (Imm32 imm),l)
