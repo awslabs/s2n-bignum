@@ -1314,9 +1314,12 @@ let define_relocated_mc name (args, tm:term list * term): thm =
   let rec mk_tm_comb f A = function
   | [] -> f (name, A)
   | (v::vs) -> mk_comb (mk_tm_comb f (mk_fun_ty (type_of v) A) vs, v) in
-  try new_definition (mk_eq (mk_tm_comb mk_var `:byte list` (rev args), tm))
+  let args0,args = args,rev args in
+  try new_definition (list_mk_forall
+    (args0, mk_eq (mk_tm_comb mk_var `:byte list` args, tm)))
   with Failure _ ->
-    new_definition (mk_eq (mk_tm_comb mk_mconst `:byte list` (rev args), tm));;
+    new_definition (list_mk_forall
+      (args0, mk_eq (mk_tm_comb mk_mconst `:byte list` args, tm)));;
 
 needs "common/elf.ml";;
 
@@ -1444,6 +1447,12 @@ let N_SUBLIST_CONV =
       let th = AP_TERM f (left (n-1) tm') in
       TRANS th (pth2 (rhs (concl th))) in
     left;;
+(*
+  let test1 = new_definition `test1 = [1;2;3;4]`;;
+  N_SUBLIST_CONV test1 1 `[0;1;2;3;4;5]`;;
+
+  - : thm = |- [0; 1; 2; 3; 4; 5] = APPEND [0] (APPEND test1 [5])
+*)
 (*
 let define_trim_ret_thm name th =
   let th = SPEC_ALL th in
@@ -1668,8 +1677,14 @@ let define_assert_relocs name (tm:term list * term) printed_opcodes_fn
     :(thm(*machine code def*) * thm list(*data definitions of constants*)) =
   assert_relocs tm printed_opcodes_fn;
   let mc_def = define_relocated_mc name tm in
+  let mc_def_canonicalized =
+    (* break APPEND(4-byte list, list) to 4 consecutive CONSs. *)
+    let blth = (LAND_CONV (TOP_DEPTH_CONV num_CONV) THENC
+                REWRITE_CONV[bytelist_of_num]) `bytelist_of_num 4 x` in
+    REWRITE_RULE[APPEND; blth] mc_def in
   let datatype = `:((8)word)list` in
-  (mc_def, map (fun (name,data) ->
+  (mc_def_canonicalized,
+   map (fun (name,data) ->
       let dataterm = term_of_bytes data in (* returns (8)word list *)
       let defname = name ^ "_data" in
       (try new_definition(mk_eq(mk_var(defname,datatype), dataterm))

@@ -1,12 +1,18 @@
 /*
-  This assembly file is a cleaned version of GCC output of the following
+  This assembly file is a cleaned (and less ABI-compliant) version of GCC
+  output of the following
   C program:
 
   const int x[10] = {2, 4, 6, 8, 10, 12, 14, 16, 18, 20};
   const int y[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  const int z = 1;
 
   int f(uint64_t i) {
     return x[i] + y[i];
+  }
+
+  int g(int64_t i) {
+    return f(i + z);
   }
 */
 
@@ -44,9 +50,15 @@ y:
   .word  9
   .word  10
 
+  .global  z
+  .align  3
+  .type  z, %object
+  .size  z, 4
+z:
+  .word  1
+
 .text
   .align  2
-  .global  f
   .type  f, %function
 f:
   mov x3, x0
@@ -60,3 +72,11 @@ f:
   ldr  w0, [x11, x2, lsl 2]
   add  w0, w1, w0
   ret
+
+  .type  g, %function
+g:
+  adrp  x10, z
+  add  x10, x10, :lo12:z
+  ldr w1, [x10]
+  add x0, x1, x0
+  b f
