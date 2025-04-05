@@ -2179,7 +2179,7 @@ let arm_TRN2 = define
           (Rd := word_zx d:(128)word) s`;;
 
 let arm_TBL = define
- `arm_TBL Rd Rn Rm datasize =
+ `arm_TBL Rd [Rn] Rm datasize =
     \s:armstate.
         let n:int128 = read Rn s in
         let m = read Rm s in

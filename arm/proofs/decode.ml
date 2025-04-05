@@ -869,7 +869,7 @@ let decode = new_definition `!w:int32. decode w =
   | [0:1; q; 0b001110000:9; Rm:5; 0b000000:6; Rn:5; Rd:5] ->
     // TBL (single register, i.e. len = 0, only)
     let datasize = if q then 128 else 64 in
-    SOME(arm_TBL (QREG' Rd) (QREG' Rn) (QREG' Rm) datasize)
+    SOME(arm_TBL (QREG' Rd) [QREG' Rn] (QREG' Rm) datasize)
 
   | [0b11001110000:11; Rm:5; 0:1; Ra:5; Rn:5; Rd:5] ->
     // EOR3
