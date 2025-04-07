@@ -2488,6 +2488,70 @@ let arm_ST2 = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(* Given
+   x = [x0;x1;x2;x3;x4;x5;x6;x7],
+   y = [y0;y1;y2;y3;y4;y5;y6;y7],
+   z = [z0;z1;z2;z3;z4;z5;z6;x7]
+   return [x0;y0;z0;x1;y1;z2;...] *)
+let word64_interleave_3_8 = new_definition
+   `(word64_interleave_3_8:(64 word -> 64 word -> 64 word -> 192 word))
+        xv yv zv =
+        let x = \i. word_subword xv (i*8,8) : 8 word in
+        let y = \i. word_subword yv (i*8,8) : 8 word in
+        let z = \i. word_subword zv (i*8,8) : 8 word in
+        (word_join
+        (word_join
+          (word_join
+            (word_join
+              (word_join (x 0) (y 0) : 16 word)
+              (word_join (z 0) (x 1) : 16 word)
+            : 32 word )
+            (word_join
+              (word_join (y 1) (z 1) : 16 word)
+              (word_join (x 2) (y 2) : 16 word)
+            : 32 word )
+          : 64 word)
+          (word_join
+            (word_join
+              (word_join (z 2) (x 3) : 16 word)
+              (word_join (y 3) (z 3) : 16 word)
+            : 32 word )
+            (word_join
+              (word_join (x 4) (y 4) : 16 word)
+              (word_join (z 4) (x 5) : 16 word)
+            : 32 word )
+          : 64 word) : 128 word)
+          (word_join
+            (word_join
+              (word_join (y 5) (z 5) : 16 word)
+              (word_join (x 6) (y 6) : 16 word)
+            : 32 word )
+            (word_join
+              (word_join (z 6) (x 7) : 16 word)
+              (word_join (y 7) (z 7) : 16 word)
+            : 32 word )
+          : 64 word))`;;
+
+(* Limited to datasize=64 and esize=8 for now *)
+let arm_ST3 = define
+`arm_ST3 Rt Rtt Rttt Rn off =
+  \s. let address = read Rn s in
+      let eaddr = word_add address (offset_address off s) in
+      (if (Rn = SP ==> aligned 16 address) /\
+          (offset_writesback off ==> orthogonal_components Rt Rn)
+       then
+       let (x:64 word) = word_subword (read Rt s)   (0,64) in
+       let (y:64 word) = word_subword (read Rtt s)  (0,64) in
+       let (z:64 word) = word_subword (read Rttt s) (0,64) in
+       let (tmp: 192 word) = word64_interleave_3_8 x y z in
+       let datasize = 64 in
+       memory :> wbytes eaddr := tmp,,
+       events := CONS (EventStore (eaddr,datasize DIV 4)) (read events s) ,,
+       (if offset_writesback off
+        then Rn := word_add address (offset_writeback off s)
+        else (=))
+       else ASSIGNS entirety) s`;;
+
 let arm_LD1R = define
   `arm_LD1R (Rt:(armstate,(128)word)component) Rn off esize datasize =
     \s. let base = read Rn s in
@@ -3116,6 +3180,7 @@ let arm_ZIP1_ALT =       EXPAND_SIMD_RULE arm_ZIP1;;
 let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
 let arm_LD2_ALT =        EXPAND_SIMD_RULE arm_LD2;;
 let arm_ST2_ALT =        EXPAND_SIMD_RULE arm_ST2;;
+let arm_ST3_ALT =        EXPAND_SIMD_RULE arm_ST3;;
 
 let arm_SQDMULH_VEC_ALT =
   REWRITE_RULE[word_2smulh] (EXPAND_SIMD_RULE arm_SQDMULH_VEC);;
@@ -3214,4 +3279,4 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
-       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R];;
+       arm_LD2_ALT; arm_ST2_ALT; arm_ST3_ALT; arm_LD1R];;
