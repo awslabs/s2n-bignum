@@ -504,13 +504,12 @@ let decode = new_definition `!w:int32. decode w =
       let Rn = defgh in
       // if immh = 0, this is MOVI
       if bit 3 immh /\ ~q then NONE // "UNDEFINED"
-      else if ~q then NONE // 64-bit case is unsupported
       else
         let esize = 8 * 2 EXP (3 - word_clz immh) in
-        let datasize = 128 in
+        let datasize = if q then 128 else 64 in
         let elements = datasize DIV esize in
         let shift = val (word_join immh immb:(7)word) - esize in
-        SOME (arm_SLI_VEC (QREG' Rd) (QREG' Rn) shift esize)
+        SOME (arm_SLI_VEC (QREG' Rd) (QREG' Rn) shift datasize esize)
     else if cmode = (word 0b0100:(4)word) then
       // SRI (vector)
       let immb = abc in
