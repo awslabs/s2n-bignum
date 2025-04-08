@@ -10,9 +10,11 @@
 //
 // Standard ARM ABI: X0 = z, X1 = x
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mod_p384_6)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_mod_p384_6)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_mod_p384_6)
         .text
         .balign 4
@@ -36,6 +38,7 @@
 
 
 S2N_BN_SYMBOL(bignum_mod_p384_6):
+        CFI_START
 
 // Load the complicated lower three words of p_384 = [-1;-1;-1;n2;n1;n0]
 
@@ -75,7 +78,7 @@ S2N_BN_SYMBOL(bignum_mod_p384_6):
         stp     n2, n3, [z, #16]
         stp     n4, n5, [z, #32]
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
