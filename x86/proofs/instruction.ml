@@ -268,6 +268,10 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | MOV operand operand
    | MOVSX operand operand
    | MOVZX operand operand
+   | MOVAPS operand operand
+   | MOVDQA operand operand
+   | MOVDQU operand operand
+   | MOVUPS operand operand
    | MUL2 (operand#operand) operand
    | MULX4 (operand#operand) (operand#operand)
    | NEG operand

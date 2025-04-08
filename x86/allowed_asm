@@ -49,6 +49,10 @@
 : mov$
 : movabs$
 : movabsq$
+: movaps$
+: movdqa$
+: movdqu$
+: movups$
 : movl$
 : movq$
 : movw$
