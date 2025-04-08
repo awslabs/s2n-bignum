@@ -861,15 +861,25 @@ let x86_LZCNT = new_definition
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
 
-(* Only deal with register-register exchange *)
-let x86_XCHG = new_definition
- `x86_XCHG dest src s =
-    let temp = read dest s in
-    (dest := read src s ,, src := temp) s`;;
-
 let x86_MOV = new_definition
  `x86_MOV dest src s =
         let x = read src s in (dest := x) s`;;
+
+let x86_MOVAPS = new_definition
+ `x86_MOVAPS dest src s =
+    let x = read src s in (dest := x) s`;;
+
+let x86_MOVDQA = new_definition
+ `x86_MOVDQA dest src s =
+    let x = read src s in (dest := x) s`;;
+
+let x86_MOVDQU = new_definition
+`x86_MOVDQU dest src s =
+   let x = read src s in (dest := x) s`;;
+
+let x86_MOVUPS = new_definition
+ `x86_MOVUPS dest src s =
+    let x = read src s in (dest := x) s`;;
 
 (*** These are rare cases with distinct source and destination
  *** operand sizes. There is a 32-bit to 64-bit version of MOVSX(D),
@@ -1261,6 +1271,12 @@ let x86_VPXOR = new_definition
         let z = word_xor x y in
         (dest := (z:N word)) s`;;
 
+(* Only deal with register-register exchange *)
+let x86_XCHG = new_definition
+ `x86_XCHG dest src s =
+    let temp = read dest s in
+    (dest := read src s ,, src := temp) s`;;
+
 let x86_XOR = new_definition
  `x86_XOR dest src s =
         let x = read dest s and y = read src s in
@@ -1404,6 +1420,10 @@ let OPERAND8 = define
   OPERAND8 (Memop w ea) s =
        (if w = Byte then memory :> bytes8 (bsid_semantics ea s)
         else ARB)`;;
+
+let aligned_OPERAND128 = define
+ `(aligned_OPERAND128 (Simdregister r) s <=> T) /\
+  (aligned_OPERAND128 (Memop w ea) s <=> aligned 16 (bsid_semantics ea s))`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding                            *)
@@ -1675,18 +1695,22 @@ let x86_execute = define
         | 32 -> (OPERAND32 dest s) := word_sx(bsid_semantics bsid s)
         | 16 -> (OPERAND16 dest s) := word_sx(bsid_semantics bsid s)
         | 8 -> (OPERAND8 dest s) := word_sx(bsid_semantics bsid s)) s
-    | XCHG dest src ->
-        (match operand_size dest with
-          64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
-        | 32 -> x86_XCHG (OPERAND32 dest s) (OPERAND32 src s)
-        | 16 -> x86_XCHG (OPERAND16 dest s) (OPERAND16 src s)
-        | 8 -> x86_XCHG (OPERAND8 dest s) (OPERAND8 src s)) s
     | MOV dest src ->
         (match operand_size dest with
            64 -> x86_MOV (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_MOV (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_MOV (OPERAND16 dest s) (OPERAND16 src s)
          | 8 -> x86_MOV (OPERAND8 dest s) (OPERAND8 src s)) s
+    | MOVAPS dest src ->
+        if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
+        then x86_MOVAPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        else (\s'. F)
+    | MOVDQA dest src ->
+        if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
+        then x86_MOVDQA (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        else (\s'. F)
+    | MOVDQU dest src ->
+        x86_MOVDQU (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | MOVSX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
@@ -1696,6 +1720,8 @@ let x86_execute = define
          | (32,16) -> x86_MOVSX (OPERAND32 dest s) (OPERAND16 src s)
          | (32,8) -> x86_MOVSX (OPERAND32 dest s) (OPERAND8 src s)
          | (16,8) -> x86_MOVSX (OPERAND16 dest s) (OPERAND8 src s)) s
+    | MOVUPS dest src ->
+         x86_MOVUPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | MOVZX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,16) -> x86_MOVZX (OPERAND64 dest s) (OPERAND16 src s)
@@ -1872,6 +1898,12 @@ let x86_execute = define
         (match operand_size dest with
           256 -> x86_VPXOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPXOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | XCHG dest src ->
+        (match operand_size dest with
+          64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
+        | 32 -> x86_XCHG (OPERAND32 dest s) (OPERAND32 src s)
+        | 16 -> x86_XCHG (OPERAND16 dest s) (OPERAND16 src s)
+        | 8 -> x86_XCHG (OPERAND8 dest s) (OPERAND8 src s)) s
     | XOR dest src ->
         (match operand_size dest with
            64 -> x86_XOR (OPERAND64 dest s) (OPERAND64 src s)
@@ -2575,9 +2607,8 @@ let X86_OPERATION_CLAUSES =
     x86_AESKEYGENASSIST; x86_AND;
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
-    x86_DIV2; x86_ENDBR64;
-    x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
-    x86_MOV; x86_MOVSX; x86_MOVZX;
+    x86_DIV2; x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
+    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVSX; x86_MOVUPS; x86_MOVZX;
     x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOT; x86_OR;
     x86_POP_ALT; x86_PUSH_ALT; x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
@@ -2658,7 +2689,9 @@ let X86_UNDEFINED_CHOOSE_TAC =
 (*** This is to force more aggressive use of assumptions and
  *** simplification if we have a conditional indicative of a
  *** possible exception. Currently this only arises in the
- *** division instruction for cases we are verifying
+ *** division instruction for cases we are verifying and in
+ *** if conditions that checks for alignment in
+ *** MOVAPS and MOVDQA
  ***)
 
 let X86_FORCE_CONDITIONAL_CONV =
@@ -2671,9 +2704,10 @@ let X86_FORCE_CONDITIONAL_CONV =
          (ONCE_DEPTH_CONV DIMINDEX_CONV))) THENC
        RATOR_CONV(RATOR_CONV(LAND_CONV
          (DEPTH_CONV WORD_NUM_RED_CONV))) THENC
-       GEN_REWRITE_CONV
-        (RATOR_CONV o RATOR_CONV o LAND_CONV o TOP_DEPTH_CONV) ths THENC
-       GEN_REWRITE_CONV RATOR_CONV [COND_CLAUSES] in
+       ALIGNED_16_CONV ths THENC
+       TRY_CONV (GEN_REWRITE_CONV
+        (RATOR_CONV o RATOR_CONV o LAND_CONV o TOP_DEPTH_CONV) ths) THENC
+       TRY_CONV (GEN_REWRITE_CONV RATOR_CONV [COND_CLAUSES]) in
      let chconv t = if trigger t then baseconv t else failwith "baseconv" in
      fun tm -> if trigger tm then (REPEATC chconv THENC TRY_CONV BETA_CONV) tm
                else REFL tm;;
@@ -2718,7 +2752,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
   (K eth THENC
    REWRITE_CONV[X86_EXECUTE] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
-   REWRITE_CONV[condition_semantics] THENC
+   REWRITE_CONV[condition_semantics; aligned_OPERAND128] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
    REWRITE_CONV[OPERAND_CLAUSES] THENC
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
