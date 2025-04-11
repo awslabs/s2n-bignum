@@ -30,12 +30,12 @@
 // ---------------------------------------------------------------------------
 
 #define montreds(d4,d3,d2,d1,d0, tmp,mc)                            \
-        adds    d1, d1, d0, lsl #32;                                \
-        lsr     tmp, d0, #32;                                       \
-        adcs    d2, d2, tmp;                                        \
-        mul     tmp, d0, mc;                                        \
-        umulh   d4, d0, mc;                                         \
-        adcs    d3, d3, tmp;                                        \
+        adds    d1, d1, d0, lsl #32 __LF                               \
+        lsr     tmp, d0, #32 __LF                                      \
+        adcs    d2, d2, tmp __LF                                       \
+        mul     tmp, d0, mc __LF                                       \
+        umulh   d4, d0, mc __LF                                        \
+        adcs    d3, d3, tmp __LF                                       \
         adc     d4, d4, xzr
 
 #define z x0

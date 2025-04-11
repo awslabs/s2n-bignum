@@ -28,37 +28,37 @@
 #define modstep_p256(d4, d3,d2,d1,d0, t1,t2,t3)                             \
 /* Writing the input as z = 2^256 * h + 2^192 * l + t = 2^192 * hl + t,  */ \
 /* our quotient approximation is MIN ((hl + hl>>32 + 1)>>64) (2^64 - 1). */ \
-        subs    xzr, xzr, xzr; /* Set carry flag for +1 */          \
-        extr    t3, d4, d3, #32;                                    \
-        adcs    xzr, d3, t3;                                        \
-        lsr     t3, d4, #32;                                        \
-        adcs    t3, d4, t3;                                         \
-        csetm   d0, cs;                                             \
-        orr     t3, t3, d0;                                         \
+        subs    xzr, xzr, xzr __LF/* Set carry flag for +1 */          \
+        extr    t3, d4, d3, #32 __LF                                   \
+        adcs    xzr, d3, t3 __LF                                       \
+        lsr     t3, d4, #32 __LF                                       \
+        adcs    t3, d4, t3 __LF                                        \
+        csetm   d0, cs __LF                                            \
+        orr     t3, t3, d0 __LF                                        \
 /* First do [t2;t1] = 2^32 * q, which we use twice                       */ \
-        lsl     t1, t3, #32;                                        \
-        lsr     t2, t3, #32;                                        \
+        lsl     t1, t3, #32 __LF                                       \
+        lsr     t2, t3, #32 __LF                                       \
 /* Add 2^224 * q to sum                                                  */ \
-        adds    d3, d3, t1;                                         \
-        adc     d4, d4, t2;                                         \
+        adds    d3, d3, t1 __LF                                        \
+        adc     d4, d4, t2 __LF                                        \
 /* Accumulate [t2;t1;d0] = (2^96 - 1) * q                                */ \
-        subs    d0, xzr, t3;                                        \
-        sbcs    t1, t1, xzr;                                        \
-        sbc     t2, t2, xzr;                                        \
+        subs    d0, xzr, t3 __LF                                       \
+        sbcs    t1, t1, xzr __LF                                       \
+        sbc     t2, t2, xzr __LF                                       \
 /* Subtract (2^256 + 2^192 + 2^96 - 1) * q                               */ \
-        subs    d0, xzr, d0;                                        \
-        sbcs    d1, d1, t1;                                         \
-        sbcs    d2, d2, t2;                                         \
-        sbcs    d3, d3, t3;                                         \
-        sbcs    d4, d4, t3;                                         \
+        subs    d0, xzr, d0 __LF                                       \
+        sbcs    d1, d1, t1 __LF                                        \
+        sbcs    d2, d2, t2 __LF                                        \
+        sbcs    d3, d3, t3 __LF                                        \
+        sbcs    d4, d4, t3 __LF                                        \
 /* Use top word as mask to correct                                       */ \
-        adds    d0, d0, d4;                                         \
-        mov     t1, #0x00000000ffffffff;                            \
-        and     t1, t1, d4;                                         \
-        adcs    d1, d1, t1;                                         \
-        adcs    d2, d2, xzr;                                        \
-        mov     t1, #0xffffffff00000001;                            \
-        and     t1, t1, d4;                                         \
+        adds    d0, d0, d4 __LF                                        \
+        mov     t1, #0x00000000ffffffff __LF                           \
+        and     t1, t1, d4 __LF                                        \
+        adcs    d1, d1, t1 __LF                                        \
+        adcs    d2, d2, xzr __LF                                       \
+        mov     t1, #0xffffffff00000001 __LF                           \
+        and     t1, t1, d4 __LF                                        \
         adc     d3, d3, t1
 
 #define d0 x2
