@@ -88,7 +88,20 @@ let ARM_DECODES_THM =
       decodes;;
 
 let ARM_MK_EXEC_RULE th0: thm * (thm option array) =
-  let th0 = INST [`pc':num`,`pc:num`] (SPEC_ALL th0) in
+  let reloc_op_convert_th = prove(
+    `forall (x:num) y.
+      CONS (word (x MOD 256):(8)word)
+        (CONS (word ((x DIV 256) MOD 256):(8)word)
+          (CONS (word ((x DIV 256 DIV 256) MOD 256):(8)word)
+            (CONS (word ((x DIV 256 DIV 256 DIV 256) MOD 256):(8)word)
+              y)))
+      = APPEND (bytelist_of_num 4 x) y`,
+    REPEAT GEN_TAC THEN
+    CONV_TAC (RAND_CONV (TOP_DEPTH_CONV num_CONV)) THEN
+    REWRITE_TAC[bytelist_of_num;APPEND]) in
+
+  let th0 = INST [`pc':num`,`pc:num`] (SPEC_ALL
+    (PURE_REWRITE_RULE[reloc_op_convert_th] th0)) in
   let th1 = AP_TERM `LENGTH:byte list->num` th0 in
   let th2 =
     (REWRITE_CONV [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
@@ -664,7 +677,18 @@ let ARM_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
     let svar = mk_var(sname,`:armstate`)
     and svar0 = mk_var("s",`:armstate`) in
     let ilist = map (vsubst[svar,svar0]) ilist0 in
-    MP_TAC(TWEAK_PC_OFFSET(SPECL ilist subth)) THEN
+    let subth_specl =
+      try SPECL ilist subth with _ -> begin
+        (if (!arm_print_log) then
+          (Printf.printf "ilist and subth's forall vars do not match\n";
+           Printf.printf "ilist: [%s]\n" (end_itlist
+            (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
+           Printf.printf "subth's forall vars: [%s]\n"
+              (end_itlist (fun s s2 -> s ^ "; " ^ s2)
+                (map string_of_term (fst (strip_forall (concl subth)))))));
+        failwith "ARM_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
+      end in
+    MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
     ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
                     MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                     MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
@@ -681,7 +705,10 @@ let ARM_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
     ASM_REWRITE_TAC[] THEN
     ARM_BIGSTEP_TAC execth sname' THENL
-     [MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
+     [(* Precondition of subth *)
+      (MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC) ORELSE
+       (PRINT_GOAL_TAC THEN
+        FAIL_TAC "Could not discharge precond (subgoal after ARM_BIGSTEP_TAC)");
       ALL_TAC] THEN
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV
      (GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
@@ -1105,3 +1132,45 @@ let BL_TARGET_CONV =
 let BL_TARGET_TAC =
   ASSUM_LIST (CONV_TAC o CHANGED_CONV o ONCE_DEPTH_CONV o BL_TARGET_CONV) THEN
   REWRITE_TAC [];;
+
+(* ------------------------------------------------------------------------- *)
+(* Handling PC-relative offsets (ADRP + ADD, which is ADRL pseudo-instr)     *)
+(* ------------------------------------------------------------------------- *)
+
+let adrp_within_bounds = new_definition (
+  `adrp_within_bounds (x:int64) (pc:int64) =
+    let xhi = word_subword x (12,54):(54)word in
+    let pchi = word_subword pc (12,54):(54)word in
+    // -2^20 <= xhi - pchi < 2^20
+    (word_uge xhi pchi /\ word_ult (word_sub xhi pchi) (word (2 EXP 20))) \/
+    (word_ult xhi pchi /\ word_ule (word_sub pchi xhi) (word (2 EXP 20)))`);;
+
+let ADRP_ADD_FOLD = prove(`forall (pc:int64) (x:int64).
+  adrp_within_bounds x pc
+  ==>
+  word_add
+    (word_add
+        (word_and pc (word 0xFFFFFFFFFFFFF000))
+        (word_sx
+            (word_join
+                (word_join
+                    (word_subword
+                        (word_sub
+                            (word_and x (word 0xFFFFFFFFFFFFF000))
+                            (word_and pc (word 0xFFFFFFFFFFFFF000)):(64)word)
+                        (14,19):(19)word)
+                    (word_subword
+                        (word_sub
+                            (word_and x (word 0xFFFFFFFFFFFFF000))
+                            (word_and pc (word 0xFFFFFFFFFFFFF000)):(64)word)
+                        (12,2):(2)word)
+                    :(21)word)
+                (word 0:(12)word)
+            :(33)word)
+        :(64)word)
+    )
+    (word (val (word_subword x (0,12):(12)word)):(64)word)
+    = x`,
+
+  REWRITE_TAC[adrp_within_bounds] THEN
+  BITBLAST_TAC);;

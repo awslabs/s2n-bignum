@@ -890,6 +890,15 @@ let arm_ADR = define
     \s. let d = word_add (word_sub (read PC s) (word 4)) (word_sx off) in
         (Rd := d) s`;;
 
+let arm_ADRP = define
+ `arm_ADRP Rd (off:21 word) =
+    \s. let pc0 = word_sub (read PC s) (word 4) in
+        // get its 4KB(=2^12) page boundary
+        let pc_page = word_and pc0 (word 0xFFFFFFFFFFFFF000) in
+        let off0 = word_sx (word_join off (word 0:(12)word):(33)word) in
+        let d = word_add pc_page off0 in
+        (Rd := d) s`;;
+
 let arm_AND = define
  `arm_AND Rd Rm Rn =
     \s. let m = read Rm s
@@ -3127,7 +3136,7 @@ let ARM_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
     (*** Alphabetically sorted, new alphabet appears in the next line ***)
       [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDS_ALT; arm_ADR;
-       arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
+       arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIT;
        arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
