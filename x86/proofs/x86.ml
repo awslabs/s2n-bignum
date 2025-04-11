@@ -990,18 +990,10 @@ let x86_PADDD = new_definition
   `x86_PADDD dest src s =
     let x = read dest s in
     let y = read src s in
-    let r0 = word_add
-      ((word_subword:(128 word->num#num->32 word)) x (0,32))
-      ((word_subword:(128 word->num#num->32 word)) y (0,32)) in
-    let r1 = word_add
-      ((word_subword:(128 word->num#num->32 word)) x (32,32))
-      ((word_subword:(128 word->num#num->32 word)) y (32,32)) in
-    let r2 = word_add
-      ((word_subword:(128 word->num#num->32 word)) x (64,32))
-      ((word_subword:(128 word->num#num->32 word)) y (64,32)) in
-    let r3 = word_add
-      ((word_subword:(128 word->num#num->32 word)) x (96,32))
-      ((word_subword:(128 word->num#num->32 word)) y (96,32)) in
+    let r0 = word_add (word_subword x (0,32)) (word_subword y (0,32)) in
+    let r1 = word_add (word_subword x (32,32)) (word_subword y (32,32)) in
+    let r2 = word_add (word_subword x (64,32)) (word_subword y (64,32)) in
+    let r3 = word_add (word_subword x (96,32)) (word_subword y (96,32)) in
     let res = (word_join:(32 word->96 word->128 word)) r3
       ((word_join:(32 word->64 word->96 word)) r2
         ((word_join:(32 word->32 word->64 word)) r1 r0)) in
@@ -1011,12 +1003,8 @@ let x86_PADDQ = new_definition
   `x86_PADDQ dest src s =
     let x = read dest s in
     let y = read src s in
-    let r0 = word_add
-      ((word_subword:(128 word->num#num->64 word)) x (0,64))
-      ((word_subword:(128 word->num#num->64 word)) y (0,64)) in
-    let r1 = word_add
-      ((word_subword:(128 word->num#num->64 word)) x (64,64))
-      ((word_subword:(128 word->num#num->64 word)) y (64,64)) in
+    let r0 = word_add (word_subword x (0,64)) (word_subword y (0,64)) in
+    let r1 = word_add (word_subword x (64,64)) (word_subword y (64,64)) in
     let res = (word_join:(64 word->64 word->128 word)) r1 r0 in
     (dest := res) s`;;
 
@@ -1030,17 +1018,17 @@ let x86_PCMPGTD = new_definition
   `x86_PCMPGTD dest src s =
     let x = read dest s in
     let y = read src s in
-    let r0 = if word_igt ((word_subword:(128 word->num#num->32 word)) x (0,32))
-                         ((word_subword:(128 word->num#num->32 word)) y (0,32))
+    let r0 = if (word_igt:(32 word->32 word->bool))
+        (word_subword x (0,32)) (word_subword y (0,32))
       then (word 0xffffffff) else (word 0) in
-    let r1 = if word_igt ((word_subword:(128 word->num#num->32 word)) x (32,32))
-                         ((word_subword:(128 word->num#num->32 word)) y (32,32))
+    let r1 = if (word_igt:(32 word->32 word->bool))
+        (word_subword x (32,32)) (word_subword y (32,32))
       then (word 0xffffffff) else (word 0) in
-    let r2 = if word_igt ((word_subword:(128 word->num#num->32 word)) x (64,32))
-                         ((word_subword:(128 word->num#num->32 word)) y (64,32))
+    let r2 = if (word_igt:(32 word->32 word->bool))
+        (word_subword x (64,32)) (word_subword y (64,32))
       then (word 0xffffffff) else (word 0) in
-    let r3 = if word_igt ((word_subword:(128 word->num#num->32 word)) x (96,32))
-                         ((word_subword:(128 word->num#num->32 word)) y (96,32))
+    let r3 = if (word_igt:(32 word->32 word->bool))
+        (word_subword x (96,32)) (word_subword y (96,32))
       then (word 0xffffffff) else (word 0) in
     let res = ((word_join:(32 word->96 word->128 word)) r3
       ((word_join:(32 word->64 word->96 word)) r2
@@ -1081,13 +1069,13 @@ let x86_PSHUFD = new_definition
  `x86_PSHUFD dest src imm8 s =
     let src = read src s in
     let od = read imm8 s in
-    let d0 = (word_subword:(128 word->num#num->32 word)) src
+    let d0 = word_subword src
       ((val ((word_subword:(byte->num#num->2 word)) od (0,2)))*32,32) in
-    let d1 = (word_subword:(128 word->num#num->32 word)) src
+    let d1 = word_subword src
       ((val ((word_subword:(byte->num#num->2 word)) od (2,2)))*32,32) in
-    let d2 = (word_subword:(128 word->num#num->32 word)) src
+    let d2 = word_subword src
       ((val ((word_subword:(byte->num#num->2 word)) od (4,2)))*32,32) in
-    let d3 = (word_subword:(128 word->num#num->32 word)) src
+    let d3 = word_subword src
       ((val ((word_subword:(byte->num#num->2 word)) od (6,2)))*32,32) in
     let res = (word_join:(32 word->96 word->128 word)) d3
       ((word_join:(32 word->64 word->96 word)) d2
@@ -1099,14 +1087,10 @@ let x86_PSRAD = new_definition
     let d = read dest s in
     let count_src = val (read imm8 s) in
     let count = if count_src > 31 then 32 else count_src in
-    let r0 = word_ishr
-      ((word_subword:(128 word->num#num->32 word)) d (0,32)) count in
-    let r1 = word_ishr
-      ((word_subword:(128 word->num#num->32 word)) d (32,32)) count in
-    let r2 = word_ishr
-      ((word_subword:(128 word->num#num->32 word)) d (64,32)) count in
-    let r3 = word_ishr
-      ((word_subword:(128 word->num#num->32 word)) d (96,32)) count in
+    let r0 = word_ishr (word_subword d (0,32)) count in
+    let r1 = word_ishr (word_subword d (32,32)) count in
+    let r2 = word_ishr (word_subword d (64,32)) count in
+    let r3 = word_ishr (word_subword d (96,32)) count in
     let res = (word_join:(32 word->96 word->128 word)) r3
       ((word_join:(32 word->64 word->96 word)) r2
         ((word_join:(32 word->32 word->64 word)) r1 r0)) in
