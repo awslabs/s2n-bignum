@@ -1473,24 +1473,31 @@ let arm_SSHR_VEC = define
             else usimd8 (\x. word_ishr x amt) n in
           (Rd := word_zx d:(128)word) s`;;
 
-(* SLI (vector), Q = 1 case only (datasize = 128) *)
+(* SLI (vector) *)
 let arm_SLI_VEC = define
- `arm_SLI_VEC Rd Rn shiftamnt esize =
+ `arm_SLI_VEC Rd Rn shiftamnt datasize esize =
     \s. let n:(128)word = read Rn s
         and d:(128)word = read Rd s in
         let mask = (2 EXP shiftamnt) - 1 in
-        let d:(128)word = if esize = 64 then
-            simd2 (\ni di. word_or
-              (word_shl ni shiftamnt) (word_and di (word mask))) n d
-          else if esize = 32 then
-            simd4 (\ni di. word_or
-              (word_shl ni shiftamnt) (word_and di (word mask))) n d
-          else if esize = 16 then
-            simd8 (\ni di. word_or
-              (word_shl ni shiftamnt) (word_and di (word mask))) n d
-          else simd16 (\ni di. word_or
-              (word_shl ni shiftamnt) (word_and di (word mask))) n d in
-        (Rd := d) s`;;
+        let op8  = (\ni (di:  8 word). word_or (word_shl ni shiftamnt) (word_and di (word mask))) in
+        let op16 = (\ni (di: 16 word). word_or (word_shl ni shiftamnt) (word_and di (word mask))) in
+        let op32 = (\ni (di: 32 word). word_or (word_shl ni shiftamnt) (word_and di (word mask))) in
+        let op64 = (\ni (di: 64 word). word_or (word_shl ni shiftamnt) (word_and di (word mask))) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 op64 n d
+            else if esize = 32 then simd4 op32 n d
+            else if esize = 16 then simd8 op16 n d
+            else simd16 op8 n d in
+          (Rd := d) s
+        else
+        let n:(64)word = word_subword n (0, 64) in
+        let d:(64)word = word_subword d (0, 64) in
+          let d:(64)word =
+            if esize = 32 then simd2 op32 n d
+            else if esize = 16 then simd4 op16 n d
+            else simd8 op8 n d in
+          (Rd := word_zx d:(128)word) s`;;
 
 (* SRI (vector) *)
 let arm_SRI_VEC = define
