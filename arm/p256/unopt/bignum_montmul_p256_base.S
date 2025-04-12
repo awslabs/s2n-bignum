@@ -28,15 +28,15 @@
 // ---------------------------------------------------------------------------
 
 #define muldiffn(c,h,l, t, x,y, w,z)    \
-        subs    t, x, y;                \
-        cneg    t, t, cc;               \
-        csetm   c, cc;                  \
-        subs    h, w, z;                \
-        cneg    h, h, cc;               \
-        mul     l, t, h;                \
-        umulh   h, t, h;                \
-        cinv    c, c, cc;               \
-        eor     l, l, c;                \
+        subs    t, x, y __LF               \
+        cneg    t, t, cc __LF              \
+        csetm   c, cc __LF                 \
+        subs    h, w, z __LF               \
+        cneg    h, h, cc __LF              \
+        mul     l, t, h __LF               \
+        umulh   h, t, h __LF               \
+        cinv    c, c, cc __LF              \
+        eor     l, l, c __LF               \
         eor     h, h, c
 
 // ---------------------------------------------------------------------------
@@ -51,14 +51,14 @@
 /* Let w = d0, the original word we use as offset; d0 gets recycled      */ \
 /* First let [t2;t1] = 2^32 * w                                          */ \
 /* then let [d0;t0] = (2^64 - 2^32 + 1) * w (overwrite old d0)           */ \
-        lsl     t1, d0, #32;                                        \
-        subs    t0, d0, t1;                                         \
-        lsr     t2, d0, #32;                                        \
-        sbc     d0, d0, t2;                                         \
+        lsl     t1, d0, #32 __LF                                       \
+        subs    t0, d0, t1 __LF                                        \
+        lsr     t2, d0, #32 __LF                                       \
+        sbc     d0, d0, t2 __LF                                        \
 /* Hence [d4;..;d1] := [d3;d2;d1;0] + (2^256 - 2^224 + 2^192 + 2^96) * w */ \
-        adds    d1, d1, t1;                                         \
-        adcs    d2, d2, t2;                                         \
-        adcs    d3, d3, t0;                                         \
+        adds    d1, d1, t1 __LF                                        \
+        adcs    d2, d2, t2 __LF                                        \
+        adcs    d3, d3, t0 __LF                                        \
         adc     d4, d0, xzr
 
 #define a0 x3
