@@ -66,204 +66,204 @@
 // trivially different from a pure function call to that subroutine.
 
 #define mul_p25519(P0,P1,P2)                    \
-        ldp     x3, x4, [P1];                   \
-        ldp     x7, x8, [P2];                   \
-        mul     x12, x3, x7;                    \
-        umulh   x13, x3, x7;                    \
-        mul     x11, x3, x8;                    \
-        umulh   x14, x3, x8;                    \
-        adds    x13, x13, x11;                  \
-        ldp     x9, x10, [P2+16];               \
-        mul     x11, x3, x9;                    \
-        umulh   x15, x3, x9;                    \
-        adcs    x14, x14, x11;                  \
-        mul     x11, x3, x10;                   \
-        umulh   x16, x3, x10;                   \
-        adcs    x15, x15, x11;                  \
-        adc     x16, x16, xzr;                  \
-        ldp     x5, x6, [P1+16];                \
-        mul     x11, x4, x7;                    \
-        adds    x13, x13, x11;                  \
-        mul     x11, x4, x8;                    \
-        adcs    x14, x14, x11;                  \
-        mul     x11, x4, x9;                    \
-        adcs    x15, x15, x11;                  \
-        mul     x11, x4, x10;                   \
-        adcs    x16, x16, x11;                  \
-        umulh   x3, x4, x10;                    \
-        adc     x3, x3, xzr;                    \
-        umulh   x11, x4, x7;                    \
-        adds    x14, x14, x11;                  \
-        umulh   x11, x4, x8;                    \
-        adcs    x15, x15, x11;                  \
-        umulh   x11, x4, x9;                    \
-        adcs    x16, x16, x11;                  \
-        adc     x3, x3, xzr;                    \
-        mul     x11, x5, x7;                    \
-        adds    x14, x14, x11;                  \
-        mul     x11, x5, x8;                    \
-        adcs    x15, x15, x11;                  \
-        mul     x11, x5, x9;                    \
-        adcs    x16, x16, x11;                  \
-        mul     x11, x5, x10;                   \
-        adcs    x3, x3, x11;                    \
-        umulh   x4, x5, x10;                    \
-        adc     x4, x4, xzr;                    \
-        umulh   x11, x5, x7;                    \
-        adds    x15, x15, x11;                  \
-        umulh   x11, x5, x8;                    \
-        adcs    x16, x16, x11;                  \
-        umulh   x11, x5, x9;                    \
-        adcs    x3, x3, x11;                    \
-        adc     x4, x4, xzr;                    \
-        mul     x11, x6, x7;                    \
-        adds    x15, x15, x11;                  \
-        mul     x11, x6, x8;                    \
-        adcs    x16, x16, x11;                  \
-        mul     x11, x6, x9;                    \
-        adcs    x3, x3, x11;                    \
-        mul     x11, x6, x10;                   \
-        adcs    x4, x4, x11;                    \
-        umulh   x5, x6, x10;                    \
-        adc     x5, x5, xzr;                    \
-        umulh   x11, x6, x7;                    \
-        adds    x16, x16, x11;                  \
-        umulh   x11, x6, x8;                    \
-        adcs    x3, x3, x11;                    \
-        umulh   x11, x6, x9;                    \
-        adcs    x4, x4, x11;                    \
-        adc     x5, x5, xzr;                    \
-        mov     x7, #0x26;                      \
-        mul     x11, x7, x16;                   \
-        umulh   x9, x7, x16;                    \
-        adds    x12, x12, x11;                  \
-        mul     x11, x7, x3;                    \
-        umulh   x3, x7, x3;                     \
-        adcs    x13, x13, x11;                  \
-        mul     x11, x7, x4;                    \
-        umulh   x4, x7, x4;                     \
-        adcs    x14, x14, x11;                  \
-        mul     x11, x7, x5;                    \
-        umulh   x5, x7, x5;                     \
-        adcs    x15, x15, x11;                  \
-        cset    x16, cs;                        \
-        adds    x15, x15, x4;                   \
-        adc     x16, x16, x5;                   \
-        cmn     x15, x15;                       \
-        orr     x15, x15, #0x8000000000000000;  \
-        adc     x8, x16, x16;                   \
-        mov     x7, #0x13;                      \
-        madd    x11, x7, x8, x7;                \
-        adds    x12, x12, x11;                  \
-        adcs    x13, x13, x9;                   \
-        adcs    x14, x14, x3;                   \
-        adcs    x15, x15, xzr;                  \
-        csel    x7, x7, xzr, cc;                \
-        subs    x12, x12, x7;                   \
-        sbcs    x13, x13, xzr;                  \
-        sbcs    x14, x14, xzr;                  \
-        sbc     x15, x15, xzr;                  \
-        and     x15, x15, #0x7fffffffffffffff;  \
-        stp     x12, x13, [P0];                 \
+        ldp     x3, x4, [P1] __LF                  \
+        ldp     x7, x8, [P2] __LF                  \
+        mul     x12, x3, x7 __LF                   \
+        umulh   x13, x3, x7 __LF                   \
+        mul     x11, x3, x8 __LF                   \
+        umulh   x14, x3, x8 __LF                   \
+        adds    x13, x13, x11 __LF                 \
+        ldp     x9, x10, [P2+16] __LF              \
+        mul     x11, x3, x9 __LF                   \
+        umulh   x15, x3, x9 __LF                   \
+        adcs    x14, x14, x11 __LF                 \
+        mul     x11, x3, x10 __LF                  \
+        umulh   x16, x3, x10 __LF                  \
+        adcs    x15, x15, x11 __LF                 \
+        adc     x16, x16, xzr __LF                 \
+        ldp     x5, x6, [P1+16] __LF               \
+        mul     x11, x4, x7 __LF                   \
+        adds    x13, x13, x11 __LF                 \
+        mul     x11, x4, x8 __LF                   \
+        adcs    x14, x14, x11 __LF                 \
+        mul     x11, x4, x9 __LF                   \
+        adcs    x15, x15, x11 __LF                 \
+        mul     x11, x4, x10 __LF                  \
+        adcs    x16, x16, x11 __LF                 \
+        umulh   x3, x4, x10 __LF                   \
+        adc     x3, x3, xzr __LF                   \
+        umulh   x11, x4, x7 __LF                   \
+        adds    x14, x14, x11 __LF                 \
+        umulh   x11, x4, x8 __LF                   \
+        adcs    x15, x15, x11 __LF                 \
+        umulh   x11, x4, x9 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        adc     x3, x3, xzr __LF                   \
+        mul     x11, x5, x7 __LF                   \
+        adds    x14, x14, x11 __LF                 \
+        mul     x11, x5, x8 __LF                   \
+        adcs    x15, x15, x11 __LF                 \
+        mul     x11, x5, x9 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        mul     x11, x5, x10 __LF                  \
+        adcs    x3, x3, x11 __LF                   \
+        umulh   x4, x5, x10 __LF                   \
+        adc     x4, x4, xzr __LF                   \
+        umulh   x11, x5, x7 __LF                   \
+        adds    x15, x15, x11 __LF                 \
+        umulh   x11, x5, x8 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        umulh   x11, x5, x9 __LF                   \
+        adcs    x3, x3, x11 __LF                   \
+        adc     x4, x4, xzr __LF                   \
+        mul     x11, x6, x7 __LF                   \
+        adds    x15, x15, x11 __LF                 \
+        mul     x11, x6, x8 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        mul     x11, x6, x9 __LF                   \
+        adcs    x3, x3, x11 __LF                   \
+        mul     x11, x6, x10 __LF                  \
+        adcs    x4, x4, x11 __LF                   \
+        umulh   x5, x6, x10 __LF                   \
+        adc     x5, x5, xzr __LF                   \
+        umulh   x11, x6, x7 __LF                   \
+        adds    x16, x16, x11 __LF                 \
+        umulh   x11, x6, x8 __LF                   \
+        adcs    x3, x3, x11 __LF                   \
+        umulh   x11, x6, x9 __LF                   \
+        adcs    x4, x4, x11 __LF                   \
+        adc     x5, x5, xzr __LF                   \
+        mov     x7, #0x26 __LF                     \
+        mul     x11, x7, x16 __LF                  \
+        umulh   x9, x7, x16 __LF                   \
+        adds    x12, x12, x11 __LF                 \
+        mul     x11, x7, x3 __LF                   \
+        umulh   x3, x7, x3 __LF                    \
+        adcs    x13, x13, x11 __LF                 \
+        mul     x11, x7, x4 __LF                   \
+        umulh   x4, x7, x4 __LF                    \
+        adcs    x14, x14, x11 __LF                 \
+        mul     x11, x7, x5 __LF                   \
+        umulh   x5, x7, x5 __LF                    \
+        adcs    x15, x15, x11 __LF                 \
+        cset    x16, cs __LF                       \
+        adds    x15, x15, x4 __LF                  \
+        adc     x16, x16, x5 __LF                  \
+        cmn     x15, x15 __LF                      \
+        orr     x15, x15, #0x8000000000000000 __LF \
+        adc     x8, x16, x16 __LF                  \
+        mov     x7, #0x13 __LF                     \
+        madd    x11, x7, x8, x7 __LF               \
+        adds    x12, x12, x11 __LF                 \
+        adcs    x13, x13, x9 __LF                  \
+        adcs    x14, x14, x3 __LF                  \
+        adcs    x15, x15, xzr __LF                 \
+        csel    x7, x7, xzr, cc __LF               \
+        subs    x12, x12, x7 __LF                  \
+        sbcs    x13, x13, xzr __LF                 \
+        sbcs    x14, x14, xzr __LF                 \
+        sbc     x15, x15, xzr __LF                 \
+        and     x15, x15, #0x7fffffffffffffff __LF \
+        stp     x12, x13, [P0] __LF                \
         stp     x14, x15, [P0+16]
 
 // A version of multiplication that only guarantees output < 2 * p_25519.
 // This basically skips the +1 and final correction in quotient estimation.
 
 #define mul_4(P0,P1,P2)                         \
-        ldp     x3, x4, [P1];                   \
-        ldp     x7, x8, [P2];                   \
-        mul     x12, x3, x7;                    \
-        umulh   x13, x3, x7;                    \
-        mul     x11, x3, x8;                    \
-        umulh   x14, x3, x8;                    \
-        adds    x13, x13, x11;                  \
-        ldp     x9, x10, [P2+16];               \
-        mul     x11, x3, x9;                    \
-        umulh   x15, x3, x9;                    \
-        adcs    x14, x14, x11;                  \
-        mul     x11, x3, x10;                   \
-        umulh   x16, x3, x10;                   \
-        adcs    x15, x15, x11;                  \
-        adc     x16, x16, xzr;                  \
-        ldp     x5, x6, [P1+16];                \
-        mul     x11, x4, x7;                    \
-        adds    x13, x13, x11;                  \
-        mul     x11, x4, x8;                    \
-        adcs    x14, x14, x11;                  \
-        mul     x11, x4, x9;                    \
-        adcs    x15, x15, x11;                  \
-        mul     x11, x4, x10;                   \
-        adcs    x16, x16, x11;                  \
-        umulh   x3, x4, x10;                    \
-        adc     x3, x3, xzr;                    \
-        umulh   x11, x4, x7;                    \
-        adds    x14, x14, x11;                  \
-        umulh   x11, x4, x8;                    \
-        adcs    x15, x15, x11;                  \
-        umulh   x11, x4, x9;                    \
-        adcs    x16, x16, x11;                  \
-        adc     x3, x3, xzr;                    \
-        mul     x11, x5, x7;                    \
-        adds    x14, x14, x11;                  \
-        mul     x11, x5, x8;                    \
-        adcs    x15, x15, x11;                  \
-        mul     x11, x5, x9;                    \
-        adcs    x16, x16, x11;                  \
-        mul     x11, x5, x10;                   \
-        adcs    x3, x3, x11;                    \
-        umulh   x4, x5, x10;                    \
-        adc     x4, x4, xzr;                    \
-        umulh   x11, x5, x7;                    \
-        adds    x15, x15, x11;                  \
-        umulh   x11, x5, x8;                    \
-        adcs    x16, x16, x11;                  \
-        umulh   x11, x5, x9;                    \
-        adcs    x3, x3, x11;                    \
-        adc     x4, x4, xzr;                    \
-        mul     x11, x6, x7;                    \
-        adds    x15, x15, x11;                  \
-        mul     x11, x6, x8;                    \
-        adcs    x16, x16, x11;                  \
-        mul     x11, x6, x9;                    \
-        adcs    x3, x3, x11;                    \
-        mul     x11, x6, x10;                   \
-        adcs    x4, x4, x11;                    \
-        umulh   x5, x6, x10;                    \
-        adc     x5, x5, xzr;                    \
-        umulh   x11, x6, x7;                    \
-        adds    x16, x16, x11;                  \
-        umulh   x11, x6, x8;                    \
-        adcs    x3, x3, x11;                    \
-        umulh   x11, x6, x9;                    \
-        adcs    x4, x4, x11;                    \
-        adc     x5, x5, xzr;                    \
-        mov     x7, #0x26;                      \
-        mul     x11, x7, x16;                   \
-        umulh   x9, x7, x16;                    \
-        adds    x12, x12, x11;                  \
-        mul     x11, x7, x3;                    \
-        umulh   x3, x7, x3;                     \
-        adcs    x13, x13, x11;                  \
-        mul     x11, x7, x4;                    \
-        umulh   x4, x7, x4;                     \
-        adcs    x14, x14, x11;                  \
-        mul     x11, x7, x5;                    \
-        umulh   x5, x7, x5;                     \
-        adcs    x15, x15, x11;                  \
-        cset    x16, cs;                        \
-        adds    x15, x15, x4;                   \
-        adc     x16, x16, x5;                   \
-        cmn     x15, x15;                       \
-        bic     x15, x15, #0x8000000000000000;  \
-        adc     x8, x16, x16;                   \
-        mov     x7, #0x13;                      \
-        mul     x11, x7, x8;                    \
-        adds    x12, x12, x11;                  \
-        adcs    x13, x13, x9;                   \
-        adcs    x14, x14, x3;                   \
-        adc     x15, x15, xzr;                  \
-        stp     x12, x13, [P0];                 \
+        ldp     x3, x4, [P1] __LF                  \
+        ldp     x7, x8, [P2] __LF                  \
+        mul     x12, x3, x7 __LF                   \
+        umulh   x13, x3, x7 __LF                   \
+        mul     x11, x3, x8 __LF                   \
+        umulh   x14, x3, x8 __LF                   \
+        adds    x13, x13, x11 __LF                 \
+        ldp     x9, x10, [P2+16] __LF              \
+        mul     x11, x3, x9 __LF                   \
+        umulh   x15, x3, x9 __LF                   \
+        adcs    x14, x14, x11 __LF                 \
+        mul     x11, x3, x10 __LF                  \
+        umulh   x16, x3, x10 __LF                  \
+        adcs    x15, x15, x11 __LF                 \
+        adc     x16, x16, xzr __LF                 \
+        ldp     x5, x6, [P1+16] __LF               \
+        mul     x11, x4, x7 __LF                   \
+        adds    x13, x13, x11 __LF                 \
+        mul     x11, x4, x8 __LF                   \
+        adcs    x14, x14, x11 __LF                 \
+        mul     x11, x4, x9 __LF                   \
+        adcs    x15, x15, x11 __LF                 \
+        mul     x11, x4, x10 __LF                  \
+        adcs    x16, x16, x11 __LF                 \
+        umulh   x3, x4, x10 __LF                   \
+        adc     x3, x3, xzr __LF                   \
+        umulh   x11, x4, x7 __LF                   \
+        adds    x14, x14, x11 __LF                 \
+        umulh   x11, x4, x8 __LF                   \
+        adcs    x15, x15, x11 __LF                 \
+        umulh   x11, x4, x9 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        adc     x3, x3, xzr __LF                   \
+        mul     x11, x5, x7 __LF                   \
+        adds    x14, x14, x11 __LF                 \
+        mul     x11, x5, x8 __LF                   \
+        adcs    x15, x15, x11 __LF                 \
+        mul     x11, x5, x9 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        mul     x11, x5, x10 __LF                  \
+        adcs    x3, x3, x11 __LF                   \
+        umulh   x4, x5, x10 __LF                   \
+        adc     x4, x4, xzr __LF                   \
+        umulh   x11, x5, x7 __LF                   \
+        adds    x15, x15, x11 __LF                 \
+        umulh   x11, x5, x8 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        umulh   x11, x5, x9 __LF                   \
+        adcs    x3, x3, x11 __LF                   \
+        adc     x4, x4, xzr __LF                   \
+        mul     x11, x6, x7 __LF                   \
+        adds    x15, x15, x11 __LF                 \
+        mul     x11, x6, x8 __LF                   \
+        adcs    x16, x16, x11 __LF                 \
+        mul     x11, x6, x9 __LF                   \
+        adcs    x3, x3, x11 __LF                   \
+        mul     x11, x6, x10 __LF                  \
+        adcs    x4, x4, x11 __LF                   \
+        umulh   x5, x6, x10 __LF                   \
+        adc     x5, x5, xzr __LF                   \
+        umulh   x11, x6, x7 __LF                   \
+        adds    x16, x16, x11 __LF                 \
+        umulh   x11, x6, x8 __LF                   \
+        adcs    x3, x3, x11 __LF                   \
+        umulh   x11, x6, x9 __LF                   \
+        adcs    x4, x4, x11 __LF                   \
+        adc     x5, x5, xzr __LF                   \
+        mov     x7, #0x26 __LF                     \
+        mul     x11, x7, x16 __LF                  \
+        umulh   x9, x7, x16 __LF                   \
+        adds    x12, x12, x11 __LF                 \
+        mul     x11, x7, x3 __LF                   \
+        umulh   x3, x7, x3 __LF                    \
+        adcs    x13, x13, x11 __LF                 \
+        mul     x11, x7, x4 __LF                   \
+        umulh   x4, x7, x4 __LF                    \
+        adcs    x14, x14, x11 __LF                 \
+        mul     x11, x7, x5 __LF                   \
+        umulh   x5, x7, x5 __LF                    \
+        adcs    x15, x15, x11 __LF                 \
+        cset    x16, cs __LF                       \
+        adds    x15, x15, x4 __LF                  \
+        adc     x16, x16, x5 __LF                  \
+        cmn     x15, x15 __LF                      \
+        bic     x15, x15, #0x8000000000000000 __LF \
+        adc     x8, x16, x16 __LF                  \
+        mov     x7, #0x13 __LF                     \
+        mul     x11, x7, x8 __LF                   \
+        adds    x12, x12, x11 __LF                 \
+        adcs    x13, x13, x9 __LF                  \
+        adcs    x14, x14, x3 __LF                  \
+        adc     x15, x15, xzr __LF                 \
+        stp     x12, x13, [P0] __LF                \
         stp     x14, x15, [P0+16]
 
 // Plain 4-digit add and doubling without any normalization
@@ -271,25 +271,25 @@
 // indeed one < 2 * p_25519 for normalized inputs.
 
 #define add_4(P0,P1,P2)                         \
-        ldp     x0, x1, [P1];                   \
-        ldp     x4, x5, [P2];                   \
-        adds    x0, x0, x4;                     \
-        adcs    x1, x1, x5;                     \
-        ldp     x2, x3, [P1+16];                \
-        ldp     x6, x7, [P2+16];                \
-        adcs    x2, x2, x6;                     \
-        adc     x3, x3, x7;                     \
-        stp     x0, x1, [P0];                   \
+        ldp     x0, x1, [P1] __LF                  \
+        ldp     x4, x5, [P2] __LF                  \
+        adds    x0, x0, x4 __LF                    \
+        adcs    x1, x1, x5 __LF                    \
+        ldp     x2, x3, [P1+16] __LF               \
+        ldp     x6, x7, [P2+16] __LF               \
+        adcs    x2, x2, x6 __LF                    \
+        adc     x3, x3, x7 __LF                    \
+        stp     x0, x1, [P0] __LF                  \
         stp     x2, x3, [P0+16]
 
 #define double_4(P0,P1)                         \
-        ldp     x0, x1, [P1];                   \
-        adds    x0, x0, x0;                     \
-        adcs    x1, x1, x1;                     \
-        ldp     x2, x3, [P1+16];                \
-        adcs    x2, x2, x2;                     \
-        adc     x3, x3, x3;                     \
-        stp     x0, x1, [P0];                   \
+        ldp     x0, x1, [P1] __LF                  \
+        adds    x0, x0, x0 __LF                    \
+        adcs    x1, x1, x1 __LF                    \
+        ldp     x2, x3, [P1+16] __LF               \
+        adcs    x2, x2, x2 __LF                    \
+        adc     x3, x3, x3 __LF                    \
+        stp     x0, x1, [P0] __LF                  \
         stp     x2, x3, [P0+16]
 
 // Subtraction of a pair of numbers < p_25519 just sufficient
@@ -298,84 +298,84 @@
 // implicitly
 
 #define sub_4(P0,P1,P2)                         \
-        ldp     x5, x6, [P1];                   \
-        ldp     x4, x3, [P2];                   \
-        subs    x5, x5, x4;                     \
-        sbcs    x6, x6, x3;                     \
-        ldp     x7, x8, [P1+16];                \
-        ldp     x4, x3, [P2+16];                \
-        sbcs    x7, x7, x4;                     \
-        sbcs    x8, x8, x3;                     \
-        mov     x3, #19;                        \
-        subs    x5, x5, x3;                     \
-        sbcs    x6, x6, xzr;                    \
-        sbcs    x7, x7, xzr;                    \
-        mov     x4, #0x8000000000000000;        \
-        sbc     x8, x8, x4;                     \
-        stp     x5, x6, [P0];                   \
+        ldp     x5, x6, [P1] __LF                  \
+        ldp     x4, x3, [P2] __LF                  \
+        subs    x5, x5, x4 __LF                    \
+        sbcs    x6, x6, x3 __LF                    \
+        ldp     x7, x8, [P1+16] __LF               \
+        ldp     x4, x3, [P2+16] __LF               \
+        sbcs    x7, x7, x4 __LF                    \
+        sbcs    x8, x8, x3 __LF                    \
+        mov     x3, #19 __LF                       \
+        subs    x5, x5, x3 __LF                    \
+        sbcs    x6, x6, xzr __LF                   \
+        sbcs    x7, x7, xzr __LF                   \
+        mov     x4, #0x8000000000000000 __LF       \
+        sbc     x8, x8, x4 __LF                    \
+        stp     x5, x6, [P0] __LF                  \
         stp     x7, x8, [P0+16]
 
 // Modular subtraction with double modulus 2 * p_25519 = 2^256 - 38
 
 #define sub_twice4(P0,P1,P2)                    \
-        ldp     x5, x6, [P1];                   \
-        ldp     x4, x3, [P2];                   \
-        subs    x5, x5, x4;                     \
-        sbcs    x6, x6, x3;                     \
-        ldp     x7, x8, [P1+16];                \
-        ldp     x4, x3, [P2+16];                \
-        sbcs    x7, x7, x4;                     \
-        sbcs    x8, x8, x3;                     \
-        mov     x4, #38;                        \
-        csel    x3, x4, xzr, lo;                \
-        subs    x5, x5, x3;                     \
-        sbcs    x6, x6, xzr;                    \
-        sbcs    x7, x7, xzr;                    \
-        sbc     x8, x8, xzr;                    \
-        stp     x5, x6, [P0];                   \
+        ldp     x5, x6, [P1] __LF                  \
+        ldp     x4, x3, [P2] __LF                  \
+        subs    x5, x5, x4 __LF                    \
+        sbcs    x6, x6, x3 __LF                    \
+        ldp     x7, x8, [P1+16] __LF               \
+        ldp     x4, x3, [P2+16] __LF               \
+        sbcs    x7, x7, x4 __LF                    \
+        sbcs    x8, x8, x3 __LF                    \
+        mov     x4, #38 __LF                       \
+        csel    x3, x4, xzr, lo __LF               \
+        subs    x5, x5, x3 __LF                    \
+        sbcs    x6, x6, xzr __LF                   \
+        sbcs    x7, x7, xzr __LF                   \
+        sbc     x8, x8, xzr __LF                   \
+        stp     x5, x6, [P0] __LF                  \
         stp     x7, x8, [P0+16]
 
 // Modular addition with inputs double modulus 2 * p_25519 = 2^256 - 38
 // and in general only guaranteeing a 4-digit result, not even < 2 * p_25519.
 
 #define add_twice4(P0,P1,P2)                    \
-        ldp     x3, x4, [P1];                   \
-        ldp     x7, x8, [P2];                   \
-        adds    x3, x3, x7;                     \
-        adcs    x4, x4, x8;                     \
-        ldp     x5, x6, [P1+16];                \
-        ldp     x7, x8, [P2+16];                \
-        adcs    x5, x5, x7;                     \
-        adcs    x6, x6, x8;                     \
-        mov     x9, #38;                        \
-        csel    x9, x9, xzr, cs;                \
-        adds    x3, x3, x9;                     \
-        adcs    x4, x4, xzr;                    \
-        adcs    x5, x5, xzr;                    \
-        adc     x6, x6, xzr;                    \
-        stp     x3, x4, [P0];                   \
+        ldp     x3, x4, [P1] __LF                  \
+        ldp     x7, x8, [P2] __LF                  \
+        adds    x3, x3, x7 __LF                    \
+        adcs    x4, x4, x8 __LF                    \
+        ldp     x5, x6, [P1+16] __LF               \
+        ldp     x7, x8, [P2+16] __LF               \
+        adcs    x5, x5, x7 __LF                    \
+        adcs    x6, x6, x8 __LF                    \
+        mov     x9, #38 __LF                       \
+        csel    x9, x9, xzr, cs __LF               \
+        adds    x3, x3, x9 __LF                    \
+        adcs    x4, x4, xzr __LF                   \
+        adcs    x5, x5, xzr __LF                   \
+        adc     x6, x6, xzr __LF                   \
+        stp     x3, x4, [P0] __LF                  \
         stp     x5, x6, [P0+16]
 
 // Load the constant k_25519 = 2 * d_25519 using immediate operations
 
 #define load_k25519(P0)                         \
-        movz    x0, #0xf159;                    \
-        movz    x1, #0xb156;                    \
-        movz    x2, #0xd130;                    \
-        movz    x3, #0xfce7;                    \
-        movk    x0, #0x26b2, lsl #16;           \
-        movk    x1, #0x8283, lsl #16;           \
-        movk    x2, #0xeef3, lsl #16;           \
-        movk    x3, #0x56df, lsl #16;           \
-        movk    x0, #0x9b94, lsl #32;           \
-        movk    x1, #0x149a, lsl #32;           \
-        movk    x2, #0x80f2, lsl #32;           \
-        movk    x3, #0xd9dc, lsl #32;           \
-        movk    x0, #0xebd6, lsl #48;           \
-        movk    x1, #0x00e0, lsl #48;           \
-        movk    x2, #0x198e, lsl #48;           \
-        movk    x3, #0x2406, lsl #48;           \
-        stp     x0, x1, [P0];                   \
+        movz    x0, #0xf159 __LF                   \
+        movz    x1, #0xb156 __LF                   \
+        movz    x2, #0xd130 __LF                   \
+        movz    x3, #0xfce7 __LF                   \
+        movk    x0, #0x26b2, lsl #16 __LF          \
+        movk    x1, #0x8283, lsl #16 __LF          \
+        movk    x2, #0xeef3, lsl #16 __LF          \
+        movk    x3, #0x56df, lsl #16 __LF          \
+        movk    x0, #0x9b94, lsl #32 __LF          \
+        movk    x1, #0x149a, lsl #32 __LF          \
+        movk    x2, #0x80f2, lsl #32 __LF          \
+        movk    x3, #0xd9dc, lsl #32 __LF          \
+        movk    x0, #0xebd6, lsl #48 __LF          \
+        movk    x1, #0x00e0, lsl #48 __LF          \
+        movk    x2, #0x198e, lsl #48 __LF          \
+        movk    x3, #0x2406, lsl #48 __LF          \
+        stp     x0, x1, [P0] __LF                  \
         stp     x2, x3, [P0+16]
 
 S2N_BN_SYMBOL(edwards25519_epadd_alt):

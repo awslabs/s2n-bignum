@@ -34,24 +34,24 @@
 #define montreds(d6,d5,d4,d3,d2,d1,d0, t3,t2,t1)                            \
 /* Our correction multiplier is w = [d0 + (d0<<32)] mod 2^64            */  \
 /* Store it in d6 to make the 2^384 * w contribution already            */  \
-        lsl     t1, d0, #32;                                        \
-        add     d6, t1, d0;                                         \
+        lsl     t1, d0, #32 __LF                                       \
+        add     d6, t1, d0 __LF                                        \
 /* Now let [t3;t2;t1;-] = (2^384 - p_384) * w                    */         \
 /* We know the lowest word will cancel d0 so we don't need it    */         \
-        mov     t1, #0xffffffff00000001;                            \
-        umulh   t1, t1, d6;                                         \
-        mov     t2, #0x00000000ffffffff;                            \
-        mul     t3, t2, d6;                                         \
-        umulh   t2, t2, d6;                                         \
-        adds    t1, t1, t3;                                         \
-        adcs    t2, t2, d6;                                         \
-        adc     t3, xzr, xzr;                                       \
+        mov     t1, #0xffffffff00000001 __LF                           \
+        umulh   t1, t1, d6 __LF                                        \
+        mov     t2, #0x00000000ffffffff __LF                           \
+        mul     t3, t2, d6 __LF                                        \
+        umulh   t2, t2, d6 __LF                                        \
+        adds    t1, t1, t3 __LF                                        \
+        adcs    t2, t2, d6 __LF                                        \
+        adc     t3, xzr, xzr __LF                                      \
 /* Now add it, by subtracting from 2^384 * w + x */                         \
-        subs    d1, d1, t1;                                         \
-        sbcs    d2, d2, t2;                                         \
-        sbcs    d3, d3, t3;                                         \
-        sbcs    d4, d4, xzr;                                        \
-        sbcs    d5, d5, xzr;                                        \
+        subs    d1, d1, t1 __LF                                        \
+        sbcs    d2, d2, t2 __LF                                        \
+        sbcs    d3, d3, t3 __LF                                        \
+        sbcs    d4, d4, xzr __LF                                       \
+        sbcs    d5, d5, xzr __LF                                       \
         sbc     d6, d6, xzr
 
 
