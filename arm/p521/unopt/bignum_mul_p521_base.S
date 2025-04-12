@@ -28,18 +28,18 @@
 // ---------------------------------------------------------------------------
 
 #define muldiffnadd(b,a,x,y,w,z)        \
-        subs    t, x, y;                \
-        cneg    t, t, cc;               \
-        csetm   c, cc;                  \
-        subs    h, w, z;                \
-        cneg    h, h, cc;               \
-        mul     l, t, h;                \
-        umulh   h, t, h;                \
-        cinv    c, c, cc;               \
-        adds    xzr, c, #1;             \
-        eor     l, l, c;                \
-        adcs    a, a, l;                \
-        eor     h, h, c;                \
+        subs    t, x, y __LF               \
+        cneg    t, t, cc __LF              \
+        csetm   c, cc __LF                 \
+        subs    h, w, z __LF               \
+        cneg    h, h, cc __LF              \
+        mul     l, t, h __LF               \
+        umulh   h, t, h __LF               \
+        cinv    c, c, cc __LF              \
+        adds    xzr, c, #1 __LF            \
+        eor     l, l, c __LF               \
+        adcs    a, a, l __LF               \
+        eor     h, h, c __LF               \
         adcs    b, b, h
 
 #define z x0
@@ -80,66 +80,66 @@
 #define mul4                                                            \
 /*  First accumulate all the "simple" products as [s7,s6,s5,s4,s0] */   \
         \
-        mul     s0, a0, b0;                                     \
-        mul     s4, a1, b1;                                     \
-        mul     s5, a2, b2;                                     \
-        mul     s6, a3, b3;                                     \
+        mul     s0, a0, b0 __LF                                    \
+        mul     s4, a1, b1 __LF                                    \
+        mul     s5, a2, b2 __LF                                    \
+        mul     s6, a3, b3 __LF                                    \
         \
-        umulh   s7, a0, b0;                                     \
-        adds    s4, s4, s7;                                     \
-        umulh   s7, a1, b1;                                     \
-        adcs    s5, s5, s7;                                     \
-        umulh   s7, a2, b2;                                     \
-        adcs    s6, s6, s7;                                     \
-        umulh   s7, a3, b3;                                     \
-        adc     s7, s7, xzr;                                    \
+        umulh   s7, a0, b0 __LF                                    \
+        adds    s4, s4, s7 __LF                                    \
+        umulh   s7, a1, b1 __LF                                    \
+        adcs    s5, s5, s7 __LF                                    \
+        umulh   s7, a2, b2 __LF                                    \
+        adcs    s6, s6, s7 __LF                                    \
+        umulh   s7, a3, b3 __LF                                    \
+        adc     s7, s7, xzr __LF                                   \
         \
 /*  Multiply by B + 1 to get [s7;s6;s5;s4;s1;s0] */                     \
         \
-        adds    s1, s4, s0;                                     \
-        adcs    s4, s5, s4;                                     \
-        adcs    s5, s6, s5;                                     \
-        adcs    s6, s7, s6;                                     \
-        adc     s7, xzr, s7;                                    \
+        adds    s1, s4, s0 __LF                                    \
+        adcs    s4, s5, s4 __LF                                    \
+        adcs    s5, s6, s5 __LF                                    \
+        adcs    s6, s7, s6 __LF                                    \
+        adc     s7, xzr, s7 __LF                                   \
         \
 /*  Multiply by B^2 + 1 to get [s7;s6;s5;s4;s3;s2;s1;s0] */             \
         \
-        adds    s2, s4, s0;                                     \
-        adcs    s3, s5, s1;                                     \
-        adcs    s4, s6, s4;                                     \
-        adcs    s5, s7, s5;                                     \
-        adcs    s6, xzr, s6;                                    \
-        adc     s7, xzr, s7;                                    \
+        adds    s2, s4, s0 __LF                                    \
+        adcs    s3, s5, s1 __LF                                    \
+        adcs    s4, s6, s4 __LF                                    \
+        adcs    s5, s7, s5 __LF                                    \
+        adcs    s6, xzr, s6 __LF                                   \
+        adc     s7, xzr, s7 __LF                                   \
         \
 /*  Now add in all the "complicated" terms. */                          \
         \
-        muldiffnadd(s6,s5, a2,a3, b3,b2);                       \
-        adc     s7, s7, c;                                      \
+        muldiffnadd(s6,s5, a2,a3, b3,b2) __LF                      \
+        adc     s7, s7, c __LF                                     \
         \
-        muldiffnadd(s2,s1, a0,a1, b1,b0);                       \
-        adcs    s3, s3, c;                                      \
-        adcs    s4, s4, c;                                      \
-        adcs    s5, s5, c;                                      \
-        adcs    s6, s6, c;                                      \
-        adc     s7, s7, c;                                      \
+        muldiffnadd(s2,s1, a0,a1, b1,b0) __LF                      \
+        adcs    s3, s3, c __LF                                     \
+        adcs    s4, s4, c __LF                                     \
+        adcs    s5, s5, c __LF                                     \
+        adcs    s6, s6, c __LF                                     \
+        adc     s7, s7, c __LF                                     \
         \
-        muldiffnadd(s5,s4, a1,a3, b3,b1);                       \
-        adcs    s6, s6, c;                                      \
-        adc     s7, s7, c;                                      \
+        muldiffnadd(s5,s4, a1,a3, b3,b1) __LF                      \
+        adcs    s6, s6, c __LF                                     \
+        adc     s7, s7, c __LF                                     \
         \
-        muldiffnadd(s3,s2, a0,a2, b2,b0);                       \
-        adcs    s4, s4, c;                                      \
-        adcs    s5, s5, c;                                      \
-        adcs    s6, s6, c;                                      \
-        adc     s7, s7, c;                                      \
+        muldiffnadd(s3,s2, a0,a2, b2,b0) __LF                      \
+        adcs    s4, s4, c __LF                                     \
+        adcs    s5, s5, c __LF                                     \
+        adcs    s6, s6, c __LF                                     \
+        adc     s7, s7, c __LF                                     \
         \
-        muldiffnadd(s4,s3, a0,a3, b3,b0);                       \
-        adcs    s5, s5, c;                                      \
-        adcs    s6, s6, c;                                      \
-        adc     s7, s7, c;                                      \
-        muldiffnadd(s4,s3, a1,a2, b2,b1);                       \
-        adcs    s5, s5, c;                                      \
-        adcs    s6, s6, c;                                      \
+        muldiffnadd(s4,s3, a0,a3, b3,b0) __LF                      \
+        adcs    s5, s5, c __LF                                     \
+        adcs    s6, s6, c __LF                                     \
+        adc     s7, s7, c __LF                                     \
+        muldiffnadd(s4,s3, a1,a2, b2,b1) __LF                      \
+        adcs    s5, s5, c __LF                                     \
+        adcs    s6, s6, c __LF                                     \
         adc     s7, s7, c                                       \
 
 S2N_BN_SYMBOL(bignum_mul_p521_base):
