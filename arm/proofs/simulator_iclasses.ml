@@ -271,11 +271,11 @@ let iclasses =
   "0x0011110001xxxx000001xxxxxxxxxx";
   "0x00111100001xxx000001xxxxxxxxxx";
 
-  (*** SLI ***)
-  "0110111101xxxxxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
-  "01101111001xxxxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
-  "011011110001xxxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
-  "0110111100001xxx010101xxxxxxxxxx"; (* q=1, immh!=0 *)
+  (*** SLI (vector) ***)
+  "0x10111101xxxxxx010101xxxxxxxxxx"; (* immh!=0 *)
+  "0x101111001xxxxx010101xxxxxxxxxx"; (* immh!=0 *)
+  "0x1011110001xxxx010101xxxxxxxxxx"; (* immh!=0 *)
+  "0x10111100001xxx010101xxxxxxxxxx"; (* immh!=0 *)
 
   (*** SRI (vector) ***)
   "0x10111101xxxxxx010001xxxxxxxxxx"; (* immh!=0 *)
