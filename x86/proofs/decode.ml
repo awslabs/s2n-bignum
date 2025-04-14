@@ -2376,7 +2376,7 @@ let define_assert_relocs_from_elf name file =
   define_assert_relocs name (term_of_relocs_x86 (load_elf_x86 file));;
 
 let print_literal_relocs_from_elf file =
-  let bs = load_elf_x86 file in
+  let bstext,constants,relocs = load_elf_x86 file in
   print_string (make_fn_word_list_reloc
-    ((array_of_bytes F_F I) bs)
-    (decode_all (snd (term_of_relocs_x86 bs))));;
+    ((array_of_bytes F_F I) (bstext,relocs))
+    (decode_all (snd (term_of_relocs_x86 (bstext,constants,relocs)))));;
