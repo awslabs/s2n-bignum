@@ -10,9 +10,11 @@
 //
 // Standard ARM ABI: X0 = z, X1 = x
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_half_p521)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_half_p521)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_half_p521)
         .text
         .balign 4
@@ -35,6 +37,7 @@
 
 
 S2N_BN_SYMBOL(bignum_half_p521):
+        CFI_START
 
 // We do a 521-bit rotation one bit right, since 2^521 == 1 (mod p_521)
 
@@ -66,7 +69,7 @@ S2N_BN_SYMBOL(bignum_half_p521):
 
 // Return
 
-        ret
+        CFI_RET
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
