@@ -3116,41 +3116,17 @@ let WORD_SUBWORD_SWAR_32_32 = prove
      word_subword((word_join:int32->int32->int64) h l) (0,32) = l /\
      word_subword((word_join:int32->int32->int64) h l) (32,32) = h`]);;
 
-let SIMD_SPLIT_JOIN_CLAUSES = prove
- (`(!x. word_subword (word_subword (x:int128) (0,64):int64) (0,32):int32 =
-        word_subword (x:int128) (0,32)) /\
-   (!x. word_subword (word_subword (x:int128) (0,64):int64) (32,32):int32 =
-        word_subword (x:int128) (32,32)) /\
-   (!x. word_subword (word_subword (x:int128) (0,64):int128) (0,32):int32 =
-        word_subword (x:int128) (0,32)) /\
-   (!x. word_subword (word_subword (x:int128) (0,64):int128) (32,32):int32 =
-        word_subword (x:int128) (32,32)) /\
-   (!x. word_subword ((word_zx:int64->int128) x) (0,32):int32 =
+let EXTRA_SIMD_CLAUSES = prove
+ (`(!x. word_subword ((word_zx:int64->int128) x) (0,32):int32 =
         word_subword x (0,32)) /\
    (!x. word_subword ((word_zx:int64->int128) x) (32,32):int32 =
         word_subword x (32,32)) /\
-   (!x y. word_subword ((word_join:int32->int32->int64) x y) (0,32) = y) /\
-   (!x y. word_subword ((word_join:int32->int32->int64) x y) (32,32) = x) /\
-   (!x y. word_subword ((word_join:int64->int64->int128) x y) (0,64) = y) /\
-   (!x y. word_subword ((word_join:int64->int64->int128) x y) (64,64) = x) /\
    (!x. word_zx (word_subword (x:int128) (0,64):int64):int32 =
         word_subword x (0,32)) /\
    (!x. word_ushr (word_subword (x:int128) (0,64):int64) 32 =
         word_subword x (32,32)) /\
    (!x. word_zx (word_subword (x:int128) (32,32):int64):int32 =
-        word_subword x (32,32))`,
-  CONV_TAC WORD_BLAST);;
-
-let EXTRA_SPLIT_JOIN_CLAUSES = prove
- (`(!x y. word_subword (word_join (x:int64) (y:int64):int128) (32,32):int32 =
-          word_subword y (32,32)) /\
-   (!x y. word_subword (word_join (x:int64) (y:int64):int128) (0,32):int32 =
-          word_subword y (0,32)) /\
-   (!x y. word_subword (word_join (x:int32) (y:int32):int64) (0,32) = y) /\
-   (!x y. word_subword (word_join (x:int32) (y:int32):int64) (32,32) = x) /\
-   (!x. word_subword (x:int128) (0,128) = x) /\
-   (!x. word_subword (x:int64) (0,64) = x) /\
-   (!x. word_subword (x:int32) (0,32) = x) /\
+        word_subword x (32,32)) /\
    (!(x:int128) y.
         word_insert x (0,64)
               (word_subword (y:int128) (64,64):int128):int128 =
@@ -3169,6 +3145,12 @@ let EXTRA_SPLIT_JOIN_CLAUSES = prove
    (!x:int64. word_subword (word_ushr x 32) (0,32):int32 =
               word_subword x (32,32))`,
   CONV_TAC WORD_BLAST);;
+
+let EXTRA_SIMD_CONV ths =
+  TOP_DEPTH_CONV
+   (GEN_REWRITE_CONV I (EXTRA_SIMD_CLAUSES::ths) ORELSEC
+    WORD_SIMPLE_SUBWORD_CONV) THENC
+  REWRITE_CONV[];;
 
 let UBIGNUM_PACK_UNPACK_CLAUSES = prove
  (`(word_subword:int64->num#num->int32)
@@ -3261,8 +3243,7 @@ let ABBREVIATE_STATE_COMPONENTS_TAC =
 let ARM_NAMESTEPS_TAC execth =
   MAP_EVERY (fun n ->
     ARM_STEPS_TAC execth [n] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[SIMD_SPLIT_JOIN_CLAUSES;
-                                EXTRA_SPLIT_JOIN_CLAUSES]) THEN
+    RULE_ASSUM_TAC(CONV_RULE(EXTRA_SIMD_CONV[])) THEN
     ABBREVIATE_STATE_COMPONENTS_TAC n);;
 
 let find_abbrev s =
@@ -3341,8 +3322,7 @@ let (DEDUCE_DIGITBOUNDS_TAC:thm list->string->tactic) =
       let th =
        (conv THENC
         REWRITE_CONV[COND_RAND; COND_RATOR] THENC
-        REWRITE_CONV[SIMD_SPLIT_JOIN_CLAUSES; SIMD_MASK_CLAUSES;
-                EXTRA_SPLIT_JOIN_CLAUSES; UBIGNUM_PACK_UNPACK_CLAUSES] THENC
+        EXTRA_SIMD_CONV [SIMD_MASK_CLAUSES; UBIGNUM_PACK_UNPACK_CLAUSES] THENC
         SUBS_CONV ths THENC
         REWRITE_CONV[GSYM INT_OF_NUM_CLAUSES; INT_VAL_WORD_SUB;
                      VAL_WORD; VAL_WORD_ADD; VAL_WORD_MUL; VAL_WORD_ZX_GEN;
@@ -3419,8 +3399,9 @@ let ARITHBLOCK_TAC =
   fun ths ->
     W(MAP_EVERY (EXPAND_TAC o name_of) o frees o snd) THEN
     W(FULLEXPAND_TAC o map name_of o frees o lhand o rator o snd) THEN
-    REWRITE_TAC[ubignum_of_list; SIMD_SPLIT_JOIN_CLAUSES; SIMD_MASK_CLAUSES;
-            EXTRA_SPLIT_JOIN_CLAUSES; UBIGNUM_PACK_UNPACK_CLAUSES] THEN
+    REWRITE_TAC[ubignum_of_list] THEN
+    CONV_TAC
+     (EXTRA_SIMD_CONV [SIMD_MASK_CLAUSES; UBIGNUM_PACK_UNPACK_CLAUSES]) THEN
     CONV_TAC(SUBS_CONV ths) THEN
     REWRITE_TAC[word_simps; GSYM INT_OF_NUM_CLAUSES;
                 GSYM INT_OF_NUM_DIV; GSYM INT_OF_NUM_REM;
@@ -4523,8 +4504,8 @@ let CURVE25519_X25519_BYTE_CORRECT = time prove
     (*** Finish the simulation and throw away machine states ***)
 
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    ASM_REWRITE_TAC[SIMD_SPLIT_JOIN_CLAUSES; SIMD_MASK_CLAUSES;
-                    EXTRA_SPLIT_JOIN_CLAUSES] THEN
+    CONV_TAC
+     (EXTRA_SIMD_CONV [SIMD_MASK_CLAUSES; UBIGNUM_PACK_UNPACK_CLAUSES]) THEN
     REWRITE_TAC[WORD_BLAST
      `word_subword (word_insert (x:int128) (0,64) (y:int64):int128)
                    (0,32):int32 =
@@ -4536,7 +4517,7 @@ let CURVE25519_X25519_BYTE_CORRECT = time prove
 
     (*** Apply a few standard simplifications eagerly ***)
 
-    RULE_ASSUM_TAC(REWRITE_RULE[extra; SIMD_SPLIT_JOIN_CLAUSES;
+    RULE_ASSUM_TAC(REWRITE_RULE[extra; EXTRA_SIMD_CLAUSES;
       ADD_CLAUSES; WORD_RULE `word_add x x = word_mul (word 2) x`]) THEN
     RULE_ASSUM_TAC(REWRITE_RULE
      [WORD_BLAST
@@ -4571,7 +4552,9 @@ let CURVE25519_X25519_BYTE_CORRECT = time prove
       W(MAP_EVERY (EXPAND_TAC o name_of) o
         filter (not o (=) `:bool` o type_of) o frees o lhand o rator o snd) THEN
       REWRITE_TAC[COND_SWAP] THEN COND_CASES_TAC THEN
-      REWRITE_TAC[SIMD_SPLIT_JOIN_CLAUSES; GSYM INT_REM_EQ];
+      CONV_TAC
+        (EXTRA_SIMD_CONV [SIMD_MASK_CLAUSES; UBIGNUM_PACK_UNPACK_CLAUSES]) THEN
+      REWRITE_TAC[GSYM INT_REM_EQ];
       ALL_TAC] THEN
 
     MAP_EVERY (DEDUCE_DIGITBOUNDS_TAC []) ["a"; "b"; "c"; "d"; "f"; "g"] THEN
@@ -4709,7 +4692,7 @@ let CURVE25519_X25519_BYTE_CORRECT = time prove
                    word_zx(word_subword x (0,64):int64)`) o
        (fun n -> mk_var("ad_"^string_of_int n,`:int128`))) (0--9) @
       map (C SPEC (WORD_BLAST
-       `!x:int128. word_subword (word_subword x (64,64):int64) (0,32):int32 =
+       `!x:int128. word_subword x (64,32):int32 =
                    word_zx(word_subword x (64,64):int64)`) o
        (fun n -> mk_var("ad_"^string_of_int n,`:int128`))) (0--9) in
       [CONJ_TAC THEN ARITHBLOCK_TAC ths;
@@ -4750,7 +4733,7 @@ let CURVE25519_X25519_BYTE_CORRECT = time prove
                    word_zx(word_subword x (0,64):int64)`) o
        (fun n -> mk_var("t3_"^string_of_int n,`:int128`))) (0--9)) THEN
     REWRITE_TAC[WORD_BLAST
-     `!x:int128. word_subword (word_subword x (64,64):int64) (0,32):int32 =
+     `!x:int128. word_subword x (64,32):int32 =
                  word_zx(word_subword x (64,64):int64)`] THEN
     REWRITE_TAC[VAL_WORD_ZX_GEN; DIMINDEX_32; DIMINDEX_64] THEN
     REPEAT DEMODULATE_TAC THEN ASM_REWRITE_TAC[] THEN
