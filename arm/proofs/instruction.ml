@@ -3075,6 +3075,7 @@ let all_simd_rules =
     word_deinterleave16_x; word_deinterleave16_y];;
 
 let EXPAND_SIMD_RULE =
+  CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
 
 let arm_ADD_VEC_ALT =    EXPAND_SIMD_RULE arm_ADD_VEC;;
