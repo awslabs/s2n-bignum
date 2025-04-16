@@ -286,6 +286,9 @@ let iclasses =
   (*** SUB ***)
   "0x101110xx1xxxxx100001xxxxxxxxxx";
 
+  (*** TBL ***)
+  "0x001110000xxxxx000000xxxxxxxxxx";
+
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
 
