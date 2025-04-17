@@ -306,7 +306,8 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TZCNT operand operand
    | VPXOR operand operand operand
    | XCHG operand operand
-   | XOR operand operand";;
+   | XOR operand operand
+   | XORPS operand operand";;
 
 (* ------------------------------------------------------------------------- *)
 (* Some shorthands for addressing modes etc.                                 *)

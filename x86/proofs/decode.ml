@@ -397,6 +397,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = op_size T (rex_W rex) T pfxs in
       read_ModRM_operand rex sz l >>= \((reg,rm),l).
       SOME (CMOV (decode_condition c) reg rm,l)
+    | [0x57:8] -> if has_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (XORPS (mmreg reg sz) (simd_of_RM sz rm), l)
     | [0x66:8] -> if has_unhandled_pfxs pfxs then NONE else
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
