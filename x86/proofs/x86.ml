@@ -990,22 +990,14 @@ let x86_PADDD = new_definition
   `x86_PADDD dest src s =
     let x = read dest s in
     let y = read src s in
-    let r0 = word_add (word_subword x (0,32)) (word_subword y (0,32)) in
-    let r1 = word_add (word_subword x (32,32)) (word_subword y (32,32)) in
-    let r2 = word_add (word_subword x (64,32)) (word_subword y (64,32)) in
-    let r3 = word_add (word_subword x (96,32)) (word_subword y (96,32)) in
-    let res = (word_join:(32 word->96 word->128 word)) r3
-      ((word_join:(32 word->64 word->96 word)) r2
-        ((word_join:(32 word->32 word->64 word)) r1 r0)) in
+    let res:(128)word = simd4 word_add x y in
     (dest := res) s`;;
 
 let x86_PADDQ = new_definition
   `x86_PADDQ dest src s =
     let x = read dest s in
     let y = read src s in
-    let r0 = word_add (word_subword x (0,64)) (word_subword y (0,64)) in
-    let r1 = word_add (word_subword x (64,64)) (word_subword y (64,64)) in
-    let res = (word_join:(64 word->64 word->128 word)) r1 r0 in
+    let res:(128)word = simd2 word_add x y in
     (dest := res) s`;;
 
 let x86_PAND = new_definition
@@ -1018,21 +1010,9 @@ let x86_PCMPGTD = new_definition
   `x86_PCMPGTD dest src s =
     let x = read dest s in
     let y = read src s in
-    let r0 = if (word_igt:(32 word->32 word->bool))
-        (word_subword x (0,32)) (word_subword y (0,32))
-      then (word 0xffffffff) else (word 0) in
-    let r1 = if (word_igt:(32 word->32 word->bool))
-        (word_subword x (32,32)) (word_subword y (32,32))
-      then (word 0xffffffff) else (word 0) in
-    let r2 = if (word_igt:(32 word->32 word->bool))
-        (word_subword x (64,32)) (word_subword y (64,32))
-      then (word 0xffffffff) else (word 0) in
-    let r3 = if (word_igt:(32 word->32 word->bool))
-        (word_subword x (96,32)) (word_subword y (96,32))
-      then (word 0xffffffff) else (word 0) in
-    let res = ((word_join:(32 word->96 word->128 word)) r3
-      ((word_join:(32 word->64 word->96 word)) r2
-       ((word_join:(32 word->32 word->64 word)) r1 r0))) in
+    let res:(128)word = simd4 (\(x:32 word) (y:32 word).
+        if word_igt x y then (word 0xffffffff) else (word 0))
+        x y in
     (dest := res) s`;;
 
 (*** Push and pop are a bit odd in several ways. First of all, there is  ***)
@@ -1069,17 +1049,8 @@ let x86_PSHUFD = new_definition
  `x86_PSHUFD dest src imm8 s =
     let src = read src s in
     let od = read imm8 s in
-    let d0 = word_subword src
-      ((val ((word_subword:(byte->num#num->2 word)) od (0,2)))*32,32) in
-    let d1 = word_subword src
-      ((val ((word_subword:(byte->num#num->2 word)) od (2,2)))*32,32) in
-    let d2 = word_subword src
-      ((val ((word_subword:(byte->num#num->2 word)) od (4,2)))*32,32) in
-    let d3 = word_subword src
-      ((val ((word_subword:(byte->num#num->2 word)) od (6,2)))*32,32) in
-    let res = (word_join:(32 word->96 word->128 word)) d3
-      ((word_join:(32 word->64 word->96 word)) d2
-        ((word_join:(32 word->32 word->64 word)) d1 d0)) in
+    let res:(128)word = usimd4 (\(od:(2)word).
+        word_subword src ((val od)*32,32)) od in
     (dest := res) s`;;
 
 let x86_PSRAD = new_definition
@@ -1087,13 +1058,7 @@ let x86_PSRAD = new_definition
     let d = read dest s in
     let count_src = val (read imm8 s) in
     let count = if count_src > 31 then 32 else count_src in
-    let r0 = word_ishr (word_subword d (0,32)) count in
-    let r1 = word_ishr (word_subword d (32,32)) count in
-    let r2 = word_ishr (word_subword d (64,32)) count in
-    let r3 = word_ishr (word_subword d (96,32)) count in
-    let res = (word_join:(32 word->96 word->128 word)) r3
-      ((word_join:(32 word->64 word->96 word)) r2
-        ((word_join:(32 word->32 word->64 word)) r1 r0)) in
+    let res:(128)word = usimd4 (\x. word_ishr x count) d in
     (dest := res) s`;;
 
 let x86_PXOR = new_definition
@@ -2713,6 +2678,22 @@ let x86_RET_POP_RIP = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[]);;
 
+(*** Simplify word operations in SIMD instructions ***)
+
+let all_simd_rules =
+   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2];;
+
+let EXPAND_SIMD_RULE =
+  CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
+  CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
+
+let x86_PADDD_ALT = EXPAND_SIMD_RULE x86_PADDD;;
+let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
+let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
+let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
+let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+
+
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
    [x86_ADC_ALT; x86_ADCX_ALT; x86_ADOX_ALT; x86_ADD_ALT;
@@ -2723,8 +2704,8 @@ let X86_OPERATION_CLAUSES =
     x86_DIV2; x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVSX; x86_MOVUPS; x86_MOVZX;
     x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
-    x86_PADDD; x86_PADDQ; x86_PAND; x86_PCMPGTD; x86_POP_ALT; x86_PSHUFD; x86_PSRAD;
-    x86_PUSH_ALT; x86_PXOR;
+    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PCMPGTD_ALT; x86_POP_ALT;
+    x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
