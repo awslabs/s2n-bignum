@@ -183,13 +183,16 @@ let load_elf_code arch file =
 
 
 (*** load_macho reads an object file, and returns the "__text" section bytes
-     TODO: support relocation
+    Reference: OS X ABI Mach-O File Format Reference
 ***)
 
 let is_macho (file:bytes) =
   get_list file 0x0 4 = ['\207'; '\250'; '\237'; '\254'];;
 
-let load_macho (cputype:int) (file:bytes): bytes =
+let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
+    bytes * (* __text *)
+    (string * bytes) list (* read-only data list *) *
+    ('a * (int * string * int)) list (* relocation info *) =
 
   (* The magic number (64-bit). *)
   if not (is_macho file) then failwith "not a Mach-O file" else
@@ -209,6 +212,12 @@ let load_macho (cputype:int) (file:bytes): bytes =
   (* Now, read the following load commands *)
   let curr_file_offset = ref 0x20 in
   let sections = ref [] in (* a list of (section name, begin ofs, len) *)
+  (* a list of struct nlist_64:
+     (symbol name(string), n_type, n_sect, n_desc) *)
+  let raw_symbols = ref [] in
+  (* a list of struct relocation_info:
+     (section idx, r_address, r_data, r_symbolnum, r_pcrel, r_length, r_extern, r_type) list. *)
+  let raw_reloc_entries = ref [] in
 
   for i = 0 to num_load_commands - 1 do
     let cmd_type = get_int_le file !curr_file_offset 4 and
@@ -217,7 +226,10 @@ let load_macho (cputype:int) (file:bytes): bytes =
 
     (begin match cmd_type with
     | 0x00000019 -> begin (* Segment load (64 bit) *)
-      (* Read the following sections. *)
+      (* Command name: LC_SEGMENT_64
+         C struct: segment_command_64 *)
+
+      (* Read the following struct section_64[]. *)
       let num_sections = get_int_le file (64 + !curr_file_offset) 4 in
       (* each section info consumes 80 bytes *)
 
@@ -227,12 +239,50 @@ let load_macho (cputype:int) (file:bytes): bytes =
         let section_name = get_string file ofs in
         let file_offset = get_int_le file (48 + ofs) 4 in
         let section_size = get_int_le file (40 + ofs) 8 in
-        sections := (section_name,file_offset,section_size)::!sections
+        sections := !sections @ [(section_name,file_offset,section_size)];
+
+        (* Read struct relocation_info[]. *)
+        (* file offset and count of relocation entries *)
+        let reloc_ofs = get_int_le file (56 + ofs) 4 in
+        let num_reloc_entries = get_int_le file (60 + ofs) 4 in
+        for k = 0 to num_reloc_entries - 1 do
+          let ofs = reloc_ofs + k * 8 in
+          let r_address = get_int_le file (ofs) 4 in
+          let r_data = get_int_le file (4 + ofs) 4 in
+          let r_symbolnum = r_data land 0xFFFFFF in
+          let r_pcrel = (r_data lsr 24) land 1 in
+          let r_length = (r_data lsr 25) land 2 in
+          let r_extern = (r_data lsr 27) land 1 in
+          let r_type = (r_data lsr 28) in
+
+          raw_reloc_entries := !raw_reloc_entries @
+              [length !sections - 1, r_address, r_data, r_symbolnum, r_pcrel, r_length, r_extern, r_type]
+        done
       done
       end
     | 0x00000032 -> begin (* Minimum OS version *)
       end
     | 0x00000002 -> begin (* __LINKEDIT Symbol table *)
+      (* Command name: LC_SYMTAB
+         C struct: symtab_command *)
+      let nlist_ofs = get_int_le file (8 + !curr_file_offset) 4 in
+      let num_symbols = get_int_le file (12 + !curr_file_offset) 4 in
+      let string_table_ofs = get_int_le file (16 + !curr_file_offset) 4 in
+      let string_table_sz = get_int_le file (20 + !curr_file_offset) 4 in
+
+      (* Iterate each symbol table entry *)
+      for j = 0 to num_symbols - 1 do
+        (* struct nlist_64 *)
+        let nlist_j = nlist_ofs + 16 * j in
+        let strtable_idx = get_int_le file nlist_j 4 in
+        let symbol_name = get_string file (string_table_ofs + strtable_idx) in
+        let n_type = get_int_le file (4 + nlist_j) 1 in
+        let n_sect = get_int_le file (5 + nlist_j) 1 in
+        let n_desc = get_int_le file (6 + nlist_j) 2 in
+        let n_value = get_int_le file (8 + nlist_j) 8 in
+
+        raw_symbols := !raw_symbols @ [symbol_name, n_type, n_sect, n_desc, n_value]
+      done
       end
     | 0x0000000b -> begin (* __LINKEDIT Symbol table information *)
       end
@@ -242,23 +292,90 @@ let load_macho (cputype:int) (file:bytes): bytes =
     curr_file_offset := next_file_offset)
   done;
 
-  let res = find (fun section_name,_,_ -> section_name = "__text") !sections in
-  match res with
-  | _,beginofs,len -> Bytes.sub file beginofs len
-  | _ -> failwith "Could not find a unique \"__text\" section";;
+  (* Get the readonly symbols from raw_symbols. *)
+  let const_symbols = ref [] (* symbol name, byte offset *) in
+  List.iter (fun symbol_name, n_type, n_sect, n_desc, n_value ->
+    if n_type = 0xe (* N_SECT: The symbol is defined in a section at n_sect *) &&
+      n_sect != 0 && (n_sect - 1) < List.length !sections &&
+      (let secname,_,_ = List.nth !sections (n_sect - 1) in secname = "__const") &&
+      (* Some symbols starting with "ltmp" are auto-generated. They are ignored by
+        tools like:
+        https://github.com/microsoft/llvm-mctoll/blob/master/MachODump.cpp#L228 *)
+      not (String.starts_with ~prefix:"ltmp" symbol_name)
+    then begin
+      const_symbols := !const_symbols @ [(symbol_name, n_value(*byte offset *))]
+    end) !raw_symbols;
 
+  (* Sort the readonly symbols by their addresses.
+     This is to 'infer' the sizes of each symbol. Mach-O symbol table does not
+     have symbol sizes. *)
+  const_symbols := sort (fun (_,addr1) (_,addr2) -> addr1 < addr2)
+      !const_symbols;
+
+  (* Now get the final results *)
+  (* Helper functions *)
+  let find_section (name:string): int * bytes =
+    let res = find (fun section_name,_,_ -> section_name = name) !sections in
+    match res with
+    | _,beginofs,len -> (beginofs,Bytes.sub file beginofs len)
+    | _ -> failwith ("Could not find a unique \"" ^ name ^ "\" section") in
+  let rec extract_bytes (start_ofs:int) (end_ofs: int option) sections: bytes =
+    match sections with
+    | [] -> failwith "no available section"
+    | s::sections' ->
+      let symname,secofs,seclen = s in
+      if start_ofs < seclen then
+        let symbol_len = if end_ofs <> None
+          then (Option.get end_ofs - start_ofs)
+          else seclen - start_ofs in
+        Bytes.sub file (secofs + start_ofs) symbol_len
+      else
+        let end_ofs = Option.map (fun x -> x - seclen) end_ofs in
+        extract_bytes (start_ofs - seclen) end_ofs sections' in
+
+  (* 1. The __text section data *)
+  snd (find_section "__text"),
+
+  (* 2. The readonly constants *)
+  (if length !const_symbols = 0 then [] else begin
+    (* collect (symbol name, bytes) list *)
+    let res = ref [] in
+    for j = 0 to (length !const_symbols - 1) do
+      let sname,ofs = List.nth !const_symbols j in
+      let ofs_end = if j = length !const_symbols - 1 then None
+        else Some (snd (List.nth !const_symbols (j+1))) in
+      res := !res @ [sname, extract_bytes ofs ofs_end !sections]
+    done;
+    !res
+    end),
+
+   (* 3. Relocation entries *)
+  (let res = ref [] in
+    List.iter (fun section_idx, r_address, r_data, r_symbolnum, r_pcrel, r_length, r_extern, r_type ->
+      let symbolname,_,_,_,_ = List.nth !raw_symbols r_symbolnum in
+      res := !res @ [reloc_type r_type,
+        (r_address, symbolname, 0 (* corresponds to "addend" in ELF relocation entry *))]
+    ) !raw_reloc_entries;
+    (* sort the result *)
+    sort (fun (_,(i1,_,_)) (_,(i2,_,_)) -> i1 < i2) !res
+  );;
+
+let load_macho_code arch file =
+  let code,_,_ = load_macho arch
+    (fun _ -> failwith "MachO contains relocations") file in
+  code;;
 
 (*** TODO: rename these to "load_obj_contents_*" or something else
      because they can also recognize the Mach-O format ***)
 let load_elf_contents_x86 path =
   let file = load_file path in
-  if is_macho file then load_macho 0x01000007 file (* x86, 64-bit *)
+  if is_macho file then load_macho_code 0x01000007 file (* x86, 64-bit *)
   else if is_elf file then load_elf_code 62 file (* x86-64 *)
   else failwith "Neither ELF nor Mach-O";;
 
 let load_elf_contents_arm path =
   let file = load_file path in
-  if is_macho file then load_macho 0x0100000C file (* ARM, 64-bit *)
+  if is_macho file then load_macho_code 0x0100000C file (* ARM, 64-bit *)
   else if is_elf file then load_elf_code 183 file (* ARM AARCH64 *)
   else failwith "Neither ELF nor Mach-O";;
 
@@ -273,26 +390,38 @@ let load_elf_x86 = load_elf (62 (* x86-64 *))
   https://github.com/lattera/glibc/blob/master/elf/elf.h#L2731.
   Their meanings can be found from 5.7.3. Relocation types in
   https://github.com/ARM-software/abi-aa/blob/main/aaelf64/aaelf64.rst#5733relocation-operations.
+
+  The naming of these constructors follow those of ELF.
 *)
 type arm_reloc =
     | Arm_condbr19 (* conditional branches *)
     | Arm_call26 (* BL *)
     | Arm_adr_prel_lo21 (* ADR *)
-    | Arm_adr_prel_pg_hi21 (* ADRP *)
-    | Arm_add_abs_lo12_nc (* ADD *);;
+    | Arm_adr_prel_pg_hi21 (* ADRP; this is ARM64_RELOC_PAGE21 in Mach-O *)
+    | Arm_add_abs_lo12_nc (* ADD; this is ARM64_RELOC_PAGEOFF12 in Mach-O  *);;
+
 let load_elf_arm (bs:bytes):
   bytes * (string * bytes) list * (arm_reloc * (int * string * int)) list =
-  load_elf (183 (* ARM AARCH64 *))
-    (function
-    (* See the full list from:
-        https://github.com/lattera/glibc/blob/master/elf/elf.h#L2731 *)
-    | 274 (* R_AARCH64_ADR_PREL_LO21 *) -> Arm_adr_prel_lo21
-    | 275 (* R_AARCH64_ADR_PREL_PG_HI21  *) -> Arm_adr_prel_pg_hi21
-    | 277 (* R_AARCH64_ADD_ABS_LO12_NC  *) -> Arm_add_abs_lo12_nc
-    | 280 (* R_AARCH64_CONDBR19 *) -> Arm_condbr19
-    | 283 (* R_AARCH64_CALL26 *) -> Arm_call26
-    | n -> failwith (sprintf "unexpected relocation type: %d" n))
-    bs;;
+  if is_macho bs then
+    load_macho 0x0100000C (function
+      (* See the full list from:
+         https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/MachO.h *)
+      | 3 (* ARM64_RELOC_PAGE21 *) -> Arm_adr_prel_pg_hi21
+      | 4 (* ARM64_RELOC_PAGEOFF12 *) -> Arm_add_abs_lo12_nc
+      | n -> failwith (sprintf "unexpected relocation type: %d" n))
+      bs
+  else
+    load_elf (183 (* ARM AARCH64 *))
+      (function
+      (* See the full list from:
+          https://github.com/lattera/glibc/blob/master/elf/elf.h#L2731 *)
+      | 274 (* R_AARCH64_ADR_PREL_LO21 *) -> Arm_adr_prel_lo21
+      | 275 (* R_AARCH64_ADR_PREL_PG_HI21  *) -> Arm_adr_prel_pg_hi21
+      | 277 (* R_AARCH64_ADD_ABS_LO12_NC  *) -> Arm_add_abs_lo12_nc
+      | 280 (* R_AARCH64_CONDBR19 *) -> Arm_condbr19
+      | 283 (* R_AARCH64_CALL26 *) -> Arm_call26
+      | n -> failwith (sprintf "unexpected relocation type: %d" n))
+      bs;;
 
 let term_of_list_int,app_term_of_int_fun,term_of_int_fun =
   let word = `word:num->byte`
