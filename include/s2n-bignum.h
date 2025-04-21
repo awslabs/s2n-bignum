@@ -668,7 +668,7 @@ extern void bignum_mux_6 (uint64_t p, uint64_t z[S2N_BIGNUM_STATIC 6],const uint
 
 // Select element from 16-element table, z := xs[k*i]
 // Inputs xs[16*k], i; output z[k]
-extern void bignum_mux16 (uint64_t k, uint64_t *z, uint64_t *xs, uint64_t i);
+extern void bignum_mux16 (uint64_t k, uint64_t *z, const uint64_t *xs, uint64_t i);
 
 // Negate modulo p_25519, z := (-x) mod p_25519, assuming x reduced
 // Input x[4]; output z[4]
@@ -941,8 +941,8 @@ extern void curve25519_x25519base_byte_alt(uint8_t res[S2N_BIGNUM_STATIC 32],con
 
 // Decode compressed 256-bit form of edwards25519 point
 // Input c[32] (bytes); output function return and z[8]
-extern uint64_t edwards25519_decode(uint64_t z[S2N_BIGNUM_STATIC 8], const const uint8_t c[S2N_BIGNUM_STATIC 32]);
-extern uint64_t edwards25519_decode_alt(uint64_t z[S2N_BIGNUM_STATIC 8], const const uint8_t c[S2N_BIGNUM_STATIC 32]);
+extern uint64_t edwards25519_decode(uint64_t z[S2N_BIGNUM_STATIC 8], const uint8_t c[S2N_BIGNUM_STATIC 32]);
+extern uint64_t edwards25519_decode_alt(uint64_t z[S2N_BIGNUM_STATIC 8], const uint8_t c[S2N_BIGNUM_STATIC 32]);
 
 // Encode edwards25519 point into compressed form as 256-bit number
 // Input p[8]; output z[32] (bytes)
