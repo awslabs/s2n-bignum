@@ -4,7 +4,7 @@
 // ----------------------------------------------------------------------------
 // Point doubling on SECG curve secp256k1 in Jacobian coordinates
 //
-//    extern void secp256k1_montjdouble
+//    extern void secp256k1_jdouble
 //      (uint64_t p3[static 12],uint64_t p1[static 12]);
 //
 // Does p3 := 2 * p1 where all points are regarded as Jacobian triples.
