@@ -150,9 +150,7 @@ let BYTES_LOADED_BARRIER_X86_STUCK = prove(
 (* Tactics for simulating a program whose postcondition is eventually_n.     *)
 (* ------------------------------------------------------------------------- *)
 
-(* A variant of X86_BASIC_STEP_TAC, but
-   - targets eventually_n
-   - preserves 'x86 s sname' at assumption *)
+(* A variant of X86_BASIC_STEP_TAC, but targets eventually_n *)
 let X86_N_BASIC_STEP_TAC =
   let x86_tm = `x86` and x86_ty = `:x86state` and one = `1:num` in
   fun decode_th sname store_inst_term_to (asl,w) ->
@@ -694,15 +692,38 @@ let X86_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
 (* Functions that create statements that are related to program equivalence. *)
 (* ------------------------------------------------------------------------- *)
 
+(* mk_equiv_statement creates a term
+   `!pc pc2 <other quantifiers>.
+      assum ==> ensures2 x86
+        (\(s,s2). bytes_loaded s (word pc) mc1 /\
+                  read RIP s = word (pc+pc_ofs1) /\
+                  bytes_loaded s2 (word pc2) mc2 /\
+                  read RIP s2 = word (pc2+pc_ofs2) /\
+                  equiv_in (s,s2))
+        (\(s,s2). bytes_loaded s (word pc) mc1 /\
+                  read RIP s = word (pc+pc_ofs1_to) /\
+                  bytes_loaded s2 (word pc2) mc2 /\
+                  read RIP s2 = word (pc2+pc_ofs2_to) /\
+                  equiv_out (s,s2))
+        (\(s,s2) (s',s2'). maychange1 s s' /\ maychange2 s2 s2')
+        fnsteps1
+        fnsteps2`
+  equiv_in and equiv_out's first two universal quantifiers must be state_ty.
+
+  Enable equiv_print_log := true for debugging.
+
+  mc1_data and mc2_data are set to 'Some ...' if mc1 or mc2 has constant data
+  appended at the text section after mc1 and mc2.
+*)
 let mk_equiv_statement
     (assum:term) (equiv_in:thm) (equiv_out:thm)
-    (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
-    (mc2:thm) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
+    (mc1:thm) (data1:thm option) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
+    (mc2:thm) (data2:thm option) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
     (fnsteps1:term) (fnsteps2:term):term =
   mk_equiv_statement_template `:x86state` `x86` `bytes_loaded` `RIP`
     assum equiv_in equiv_out
-    mc1 pc_ofs1 pc_ofs1_to maychange1
-    mc2 pc_ofs2 pc_ofs2_to maychange2
+    mc1 data1 pc_ofs1 pc_ofs1_to maychange1
+    mc2 data2 pc_ofs2 pc_ofs2_to maychange2
     fnsteps1 fnsteps2;;
 
 (* Program equivalence between two straight-line programs,
@@ -719,7 +740,7 @@ let mk_equiv_statement_simple (assum:term) (equiv_in:thm) (equiv_out:thm)
   let mc1_length = Array.length (snd exec1) in
   let mc2_length = Array.length (snd exec2) in
   mk_equiv_statement assum equiv_in equiv_out
-    mc1 0 mc1_length maychange1
-    mc2 0 mc2_length maychange2
+    mc1 None 0 mc1_length maychange1
+    mc2 None 0 mc2_length maychange2
     (mk_abs (`s:x86state`,mk_small_numeral(count_num_insts (snd exec1))))
     (mk_abs (`s:x86state`,mk_small_numeral(count_num_insts (snd exec2))));;

@@ -412,9 +412,7 @@ let ALIGNED_BYTES_LOADED_BARRIER_ARM_STUCK = prove(
 (* Tactics for simulating a program whose postcondition is eventually_n.     *)
 (* ------------------------------------------------------------------------- *)
 
-(* A variant of ARM_BASIC_STEP_TAC, but
-   - targets eventually_n
-   - preserves 'arm s sname' at assumption *)
+(* A variant of ARM_BASIC_STEP_TAC, but targets eventually_n *)
 let ARM_N_BASIC_STEP_TAC =
   let arm_tm = `arm` and arm_ty = `:armstate` and one = `1:num` in
   fun decode_th sname store_inst_term_to (asl,w) ->
@@ -2095,15 +2093,18 @@ let mk_eventually_n_at_pc_statement_simple
         fnsteps1
         fnsteps2`
   equiv_in and equiv_out's first two universal quantifiers must be armstates.
+
+  mc1_data and mc2_data are set to 'Some ...' if mc1 or mc2 has constant data
+  appended at the text section after mc1 and mc2.
 *)
 let mk_equiv_statement (assum:term) (equiv_in:thm) (equiv_out:thm)
-    (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
-    (mc2:thm) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
+    (mc1:thm) (data1:thm option) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
+    (mc2:thm) (data2:thm option) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
     (fnsteps1:term) (fnsteps2:term):term =
   mk_equiv_statement_template `:armstate` `arm` `aligned_bytes_loaded` `PC`
     assum equiv_in equiv_out
-    mc1 pc_ofs1 pc_ofs1_to maychange1
-    mc2 pc_ofs2 pc_ofs2_to maychange2
+    mc1 data1 pc_ofs1 pc_ofs1_to maychange1
+    mc2 data2 pc_ofs2 pc_ofs2_to maychange2
     fnsteps1 fnsteps2;;
 
 (* Program equivalence between two straight-line programs,
@@ -2114,8 +2115,8 @@ let mk_equiv_statement_simple (assum:term) (equiv_in:thm) (equiv_out:thm)
   let mc1_length = get_bytelist_length (rhs (concl mc1)) in
   let mc2_length = get_bytelist_length (rhs (concl mc2)) in
   mk_equiv_statement assum equiv_in equiv_out
-    mc1 0 mc1_length maychange1
-    mc2 0 mc2_length maychange2
+    mc1 None 0 mc1_length maychange1
+    mc2 None 0 mc2_length maychange2
     (mk_abs (`s:armstate`,mk_small_numeral(mc1_length / 4)))
     (mk_abs (`s:armstate`,mk_small_numeral(mc2_length / 4)));;
 

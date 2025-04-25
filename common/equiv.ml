@@ -999,6 +999,9 @@ let PROVE_CONJ_OF_EQ_READS_TAC execth =
   equiv_in and equiv_out's first two universal quantifiers must be state_ty.
 
   Enable equiv_print_log := true for debugging.
+
+  mc1_data and mc2_data are set to 'Some ...' if mc1 or mc2 has constant data
+  appended at the text section after mc1 and mc2.
 *)
 let mk_equiv_statement_template
     (* These inputs are architecture-specific *)
@@ -1006,8 +1009,10 @@ let mk_equiv_statement_template
     (pc_reg_comp:term)
 
     (assum:term) (equiv_in:thm) (equiv_out:thm)
-    (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
-    (mc2:thm) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
+    (mc1:thm) (data1:thm option) (pc_ofs1:int) (pc_ofs1_to:int)
+    (maychange1:term)
+    (mc2:thm) (data2:thm option) (pc_ofs2:int) (pc_ofs2_to:int)
+    (maychange2:term)
     (fnsteps1:term) (fnsteps2:term):term =
   let maychange_ty = itlist mk_fun_ty [state_ty;state_ty] `:bool` in
   let _ = List.map2 type_check
@@ -1036,9 +1041,14 @@ let mk_equiv_statement_template
       (List.map string_of_term quants)) in
 
   (* Now build 'ensures2' *)
-  let mk_bytes_loaded (s:term) (pc_var:term) (mc:term) =
+  let mk_bytes_loaded (s:term) (pc_var:term) (mc:term) (data:term option) =
     let _ = List.map2 type_check [s;pc_var;mc] [state_ty;`:num`;`:((8)word)list`] in
-    list_mk_comb (bytes_loaded_const,[s;mk_comb(`word:num->(64)word`,pc_var);mc])
+    let mc_all = if data = None then mc else
+      let data = Option.get data in
+      let _ = type_check data `:((8)word)list` in
+      list_mk_icomb "APPEND" [mc;data]
+    in
+    list_mk_comb (bytes_loaded_const,[s;mk_comb(`word:num->(64)word`,pc_var);mc_all])
   in
   let mk_read_pc (s:term) (pc_var:term) (pc_ofs:int):term =
     let _ = List.map2 type_check [s;pc_var] [state_ty;`:num`] in
@@ -1056,19 +1066,21 @@ let mk_equiv_statement_template
   let equiv_in_pred = fst (strip_comb (fst (dest_eq equiv_in_body))) in
   let equiv_out_pred = fst (strip_comb (fst (dest_eq equiv_out_body))) in
 
+  let data1_name = Option.map (fun x -> (lhs (concl x))) data1 in
+  let data2_name = Option.map (fun x -> (lhs (concl x))) data2 in
   let precond = mk_gabs (spair,
     (list_mk_conj [
-      mk_bytes_loaded s pc (lhs (concl mc1));
+      mk_bytes_loaded s pc (lhs (concl mc1)) data1_name;
       mk_read_pc s pc pc_ofs1;
-      mk_bytes_loaded s2 pc2 (lhs (concl mc2));
+      mk_bytes_loaded s2 pc2 (lhs (concl mc2)) data2_name;
       mk_read_pc s2 pc2 pc_ofs2;
       list_mk_comb (equiv_in_pred, (spair::quants_in))
     ])) in
   let postcond = mk_gabs (spair,
     (list_mk_conj [
-      mk_bytes_loaded s pc (lhs (concl mc1));
+      mk_bytes_loaded s pc (lhs (concl mc1)) data1_name;
       mk_read_pc s pc pc_ofs1_to;
-      mk_bytes_loaded s2 pc2 (lhs (concl mc2));
+      mk_bytes_loaded s2 pc2 (lhs (concl mc2)) data2_name;
       mk_read_pc s2 pc2 pc_ofs2_to;
       list_mk_comb (equiv_out_pred, (spair::quants_out))
     ])) in
