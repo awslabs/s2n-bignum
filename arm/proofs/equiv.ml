@@ -2100,84 +2100,11 @@ let mk_equiv_statement (assum:term) (equiv_in:thm) (equiv_out:thm)
     (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
     (mc2:thm) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
     (fnsteps1:term) (fnsteps2:term):term =
-  let _ = List.map2 type_check
-      [assum;maychange1;maychange2]
-      [`:bool`;`:armstate->armstate->bool`;`:armstate->armstate->bool`] in
-  let quants_in,equiv_in_body = strip_forall (concl equiv_in) in
-  let quants_out,equiv_out_body = strip_forall (concl equiv_out) in
-  let _ = if !arm_print_log then
-    Printf.printf "quants_in: %s\nquants_out: %s\n%!"
-      (String.concat ", " (List.map string_of_term quants_in))
-      (String.concat ", " (List.map string_of_term quants_out)) in
-  (* equiv_in and equiv_out's first two universal quantifiers must be armstates. *)
-  let quants_in_states,quants_in = takedrop 2 quants_in in
-  let quants_out_states,quants_out = takedrop 2 quants_out in
-  let _ = List.map2 type_check
-    (quants_in_states @ quants_out_states)
-    [`:armstate`;`:armstate`;`:armstate`;`:armstate`] in
-  let quants = union quants_in quants_out in
-  let quants = [`pc:num`;`pc2:num`] @ quants in
-  (* There might be more free variables in 'assum'. Let's add them too. *)
-  let quants = quants @
-    (List.filter (fun t -> not (mem t quants)) (frees assum)) in
-  let _ = if !arm_print_log then
-    Printf.printf "quantifiers: %s\n%!" (String.concat ", "
-      (List.map string_of_term quants)) in
-
-  (* Now build 'ensures2' *)
-  let mk_aligned_bytes_loaded (s:term) (pc_var:term) (mc:term) =
-    let _ = List.map2 type_check [s;pc_var;mc] [`:armstate`;`:num`;`:((8)word)list`] in
-    let template = `aligned_bytes_loaded s (word pc) mc` in
-    subst [s,`s:armstate`;mc,`mc:((8)word)list`;pc_var,`pc:num`] template
-  in
-  let mk_read_pc (s:term) (pc_var:term) (pc_ofs:int):term =
-    let _ = List.map2 type_check [s;pc_var] [`:armstate`;`:num`] in
-    if pc_ofs = 0 then
-      let template = `read PC s = word pc` in
-      subst [s,`s:armstate`;pc_var,`pc:num`] template
-    else
-      let template = `read PC s = word (pc+pc_ofs)` in
-      subst [s,`s:armstate`;pc_var,`pc:num`;mk_small_numeral(pc_ofs),`pc_ofs:num`]
-            template
-  in
-  let s = `s:armstate` and s2 = `s2:armstate` in
-  let pc = `pc:num` and pc2 = `pc2:num` in
-  let equiv_in_pred = fst (strip_comb (fst (dest_eq equiv_in_body))) in
-  let equiv_out_pred = fst (strip_comb (fst (dest_eq equiv_out_body))) in
-
-  let precond = mk_gabs (`(s:armstate,s2:armstate)`,
-    (list_mk_conj [
-      mk_aligned_bytes_loaded s pc (lhs (concl mc1));
-      mk_read_pc s pc pc_ofs1;
-      mk_aligned_bytes_loaded s2 pc2 (lhs (concl mc2));
-      mk_read_pc s2 pc2 pc_ofs2;
-      list_mk_comb (equiv_in_pred, (`(s:armstate,s2:armstate)`::quants_in))
-    ])) in
-  let postcond = mk_gabs (`(s:armstate,s2:armstate)`,
-    (list_mk_conj [
-      mk_aligned_bytes_loaded s pc (lhs (concl mc1));
-      mk_read_pc s pc pc_ofs1_to;
-      mk_aligned_bytes_loaded s2 pc2 (lhs (concl mc2));
-      mk_read_pc s2 pc2 pc_ofs2_to;
-      list_mk_comb (equiv_out_pred, (`(s:armstate,s2:armstate)`::quants_out))
-    ])) in
-  let maychange = list_mk_gabs (
-    [`(s:armstate,s2:armstate)`;`(s':armstate,s2':armstate)`],
-    mk_conj
-      (list_mk_comb (maychange1,[`s:armstate`;`s':armstate`]),
-       list_mk_comb (maychange2,[`s2:armstate`;`s2':armstate`]))) in
-
-  let _ = List.iter (fun t -> Printf.printf "\t%s\n" (string_of_term t))
-    [precond;postcond;maychange;fnsteps1;fnsteps2] in
-  let ensures2_pred = list_mk_comb
-    (`ensures2:
-      (armstate->armstate->bool)->(armstate#armstate->bool)
-      ->(armstate#armstate->bool)
-      ->(armstate#armstate->armstate#armstate->bool)
-      ->(armstate->num)->(armstate->num)->bool`,
-     [`arm`;precond;postcond;maychange;fnsteps1;fnsteps2]) in
-  let imp = mk_imp (assum,ensures2_pred) in
-  list_mk_forall (quants, imp);;
+  mk_equiv_statement_template `:armstate` `arm` `aligned_bytes_loaded` `PC`
+    assum equiv_in equiv_out
+    mc1 pc_ofs1 pc_ofs1_to maychange1
+    mc2 pc_ofs2 pc_ofs2_to maychange2
+    fnsteps1 fnsteps2;;
 
 (* Program equivalence between two straight-line programs,
    starting from its begin to end. *)

@@ -974,3 +974,115 @@ let PROVE_CONJ_OF_EQ_READS_TAC execth =
       REWRITE_TAC([LENGTH_APPEND;fst execth] @ !prove_conj_of_eq_reads_unfold_rules) THEN
       ARITH_TAC) in
   TRY (main_tac ORELSE (MATCH_MP_TAC EQ_SYM THEN main_tac));;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Functions that create statements that are related to program equivalence. *)
+(* ------------------------------------------------------------------------- *)
+
+(* mk_equiv_statement creates a term
+   `!pc pc2 <other quantifiers>.
+      assum ==> ensures2 [opsem_const]
+        (\(s,s2). [bytes_loaded_pred] s (word pc) mc1 /\
+                  read [pc_component] s = word (pc+pc_ofs1) /\
+                  [bytes_loaded_pred] s2 (word pc2) mc2 /\
+                  read [pc_component] s2 = word (pc2+pc_ofs2) /\
+                  equiv_in (s,s2))
+        (\(s,s2). [bytes_loaded_pred] s (word pc) mc1 /\
+                  read [pc_component] s = word (pc+pc_ofs1_to) /\
+                  [bytes_loaded_pred] s2 (word pc2) mc2 /\
+                  read [pc_component] s2 = word (pc2+pc_ofs2_to) /\
+                  equiv_out (s,s2))
+        (\(s,s2) (s',s2'). maychange1 s s' /\ maychange2 s2 s2')
+        fnsteps1
+        fnsteps2`
+  equiv_in and equiv_out's first two universal quantifiers must be state_ty.
+
+  Enable equiv_print_log := true for debugging.
+*)
+let mk_equiv_statement_template
+    (* These inputs are architecture-specific *)
+    (state_ty:hol_type) (opsem_const:term) (bytes_loaded_const:term)
+    (pc_reg_comp:term)
+
+    (assum:term) (equiv_in:thm) (equiv_out:thm)
+    (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
+    (mc2:thm) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
+    (fnsteps1:term) (fnsteps2:term):term =
+  let maychange_ty = itlist mk_fun_ty [state_ty;state_ty] `:bool` in
+  let _ = List.map2 type_check
+      [assum;maychange1;maychange2]
+      [`:bool`;maychange_ty;maychange_ty] in
+
+  let quants_in,equiv_in_body = strip_forall (concl equiv_in) in
+  let quants_out,equiv_out_body = strip_forall (concl equiv_out) in
+  let _ = if !equiv_print_log then
+    Printf.printf "quants_in: %s\nquants_out: %s\n%!"
+      (String.concat ", " (List.map string_of_term quants_in))
+      (String.concat ", " (List.map string_of_term quants_out)) in
+  (* equiv_in and equiv_out's first two universal quantifiers must be states. *)
+  let quants_in_states,quants_in = takedrop 2 quants_in in
+  let quants_out_states,quants_out = takedrop 2 quants_out in
+  let _ = List.map2 type_check
+    (quants_in_states @ quants_out_states)
+    [state_ty;state_ty;state_ty;state_ty] in
+  let quants = union quants_in quants_out in
+  let quants = [`pc:num`;`pc2:num`] @ quants in
+  (* There might be more free variables in 'assum'. Let's add them too. *)
+  let quants = quants @
+    (List.filter (fun t -> not (mem t quants)) (frees assum)) in
+  let _ = if !equiv_print_log then
+    Printf.printf "quantifiers: %s\n%!" (String.concat ", "
+      (List.map string_of_term quants)) in
+
+  (* Now build 'ensures2' *)
+  let mk_bytes_loaded (s:term) (pc_var:term) (mc:term) =
+    let _ = List.map2 type_check [s;pc_var;mc] [state_ty;`:num`;`:((8)word)list`] in
+    list_mk_comb (bytes_loaded_const,[s;mk_comb(`word:num->(64)word`,pc_var);mc])
+  in
+  let mk_read_pc (s:term) (pc_var:term) (pc_ofs:int):term =
+    let _ = List.map2 type_check [s;pc_var] [state_ty;`:num`] in
+    if pc_ofs = 0 then
+      mk_eq (list_mk_icomb "read" [pc_reg_comp;s],
+             mk_comb(`word:num->(64)word`,pc_var))
+    else
+      mk_eq (list_mk_icomb "read" [pc_reg_comp;s],
+             mk_comb(`word:num->(64)word`,
+              mk_binary "+" (pc_var,mk_small_numeral(pc_ofs))))
+  in
+  let s = mk_var("s",state_ty) and s2 = mk_var("s2",state_ty) in
+  let spair = mk_pair(s,s2) in
+  let pc = `pc:num` and pc2 = `pc2:num` in
+  let equiv_in_pred = fst (strip_comb (fst (dest_eq equiv_in_body))) in
+  let equiv_out_pred = fst (strip_comb (fst (dest_eq equiv_out_body))) in
+
+  let precond = mk_gabs (spair,
+    (list_mk_conj [
+      mk_bytes_loaded s pc (lhs (concl mc1));
+      mk_read_pc s pc pc_ofs1;
+      mk_bytes_loaded s2 pc2 (lhs (concl mc2));
+      mk_read_pc s2 pc2 pc_ofs2;
+      list_mk_comb (equiv_in_pred, (spair::quants_in))
+    ])) in
+  let postcond = mk_gabs (spair,
+    (list_mk_conj [
+      mk_bytes_loaded s pc (lhs (concl mc1));
+      mk_read_pc s pc pc_ofs1_to;
+      mk_bytes_loaded s2 pc2 (lhs (concl mc2));
+      mk_read_pc s2 pc2 pc_ofs2_to;
+      list_mk_comb (equiv_out_pred, (spair::quants_out))
+    ])) in
+  let s' = mk_var("s'",state_ty) and s2' = mk_var("s2'",state_ty) in
+  let maychange = list_mk_gabs (
+    [spair;mk_pair(s',s2')],
+    mk_conj
+      (list_mk_comb (maychange1,[s;s']),
+       list_mk_comb (maychange2,[s2;s2']))) in
+
+  let _ = List.iter (fun t -> Printf.printf "\t%s\n" (string_of_term t))
+    [precond;postcond;maychange;fnsteps1;fnsteps2] in
+  let ensures2_pred = list_mk_icomb
+      "ensures2"
+     [opsem_const;precond;postcond;maychange;fnsteps1;fnsteps2] in
+  let imp = mk_imp (assum,ensures2_pred) in
+  list_mk_forall (quants, imp);;
