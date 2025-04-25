@@ -639,6 +639,12 @@ let mk_fresh_temp_name =
    Note that forget_expr is rarely false; it is false in special cases
    like when `c` is the SP register.
    For flag reads, which are simply `|- read ...`, just assumes them.
+
+   If e1 is not equal to e2, but e1 is `word_join x e1'` and e2 is `word_join y
+   e2'`, try to solve `e1' = e2'` and abbreviate `e1' = freshvar`. This happens
+   in the cases like SSE registers whose updates only affect the lower bits and
+   a user only wants to state that equivalence of upper bits in their inputs is
+   not guaranteed.
 *)
 let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
   W(fun (asl,g) ->
@@ -662,22 +668,36 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
             (string_of_term rhs) (string_of_term lhs) vname forget_expr
           in
 
-        let readth2 =
-          (if rhs2 = rhs then readth2 else
+        (* Abbreviate the RHS of readth2 *)
+        let readth2,abbreviating_expr =
+          (if rhs2 = rhs then readth2,rhs else
           try
             let r = WORD_RULE (mk_eq(rhs2,rhs)) in
             let _ = if !equiv_print_log then
               Printf.printf "\t- Abbreviating `%s` as \"%s\" as well\n"
                 (string_of_term rhs2) vname in
-            REWRITE_RULE[r] readth2
+            (REWRITE_RULE[r] readth2),rhs
+          with _ ->
+            (* Inspect if this is the result of updating lower bits of the
+               registers. *)
+          (try
+            let wj1,whi1::wlo1::[] = strip_ncomb 2 rhs in
+            let wj2,whi2::wlo2::[] = strip_ncomb 2 rhs2 in
+            if wj1 <> wj2 then failwith "" else
+            if wlo1 = wlo2 then readth2,wlo1 else
+            let r = WORD_RULE (mk_eq(wlo2,wlo1)) in
+            let _ = if !equiv_print_log then
+              Printf.printf "\t- Abbreviating `%s` as \"%s\" instead\n"
+                (string_of_term wlo2) vname in
+            (REWRITE_RULE[r] readth2),wlo1
           with _ ->
             Printf.printf "\t- Error: WORD_RULE could not prove `%s = %s`\n"
               (string_of_term rhs2) (string_of_term rhs);
-            failwith "ABBREV_READS_TAC") in
+            failwith "ABBREV_READS_TAC")) in
         (* Now introduce abbreviated writes, eventually *)
-        let fresh_var = mk_var (vname,type_of rhs) in
-        let abbrev_th = prove(mk_exists(fresh_var,mk_eq(rhs,fresh_var)),
-          EXISTS_TAC rhs THEN REFL_TAC) in
+        let fresh_var = mk_var (vname,type_of abbreviating_expr) in
+        let abbrev_th = prove(mk_exists(fresh_var,mk_eq(abbreviating_expr,fresh_var)),
+          EXISTS_TAC abbreviating_expr THEN REFL_TAC) in
         CHOOSE_THEN (fun abbrev_th ->
             ASSUME_TAC (REWRITE_RULE[abbrev_th] readth) THEN
             ASSUME_TAC (REWRITE_RULE[abbrev_th] readth2) THEN
