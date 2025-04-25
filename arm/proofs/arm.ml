@@ -395,7 +395,7 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
        likely to be true. *)
     let the_mc:term option = Option.bind decode_ths.(0)
       (fun th ->
-        (* th is `forall .., bytes_loaded ... _mc ==> x86_decode ..`. *)
+        (* th is `forall .., bytes_loaded ... _mc ==> arm_decode ..`. *)
         let t = concl th in
         let bytes_loaded_term = fst (dest_imp (snd (strip_forall t))) in
         let the_mc = last (snd (strip_comb bytes_loaded_term)) in
