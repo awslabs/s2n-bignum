@@ -542,7 +542,7 @@ let rand_scale_index index_bound rest =
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, operand size = 64, displacement size = 8
    Randomized: addressing mode parameters *)
-let cosimulate_mem_full_harness(opcode) =
+let cosimulate_mem_full_harness(opcode) = fun () ->
    (* disp8 is sign-extended *)
    let base = Random.int 128 in
    let rest = 248 - base in
@@ -561,7 +561,7 @@ let cosimulate_mem_full_harness(opcode) =
    Fixed: use of registers, operand size = 64, displacement size = 8
    Randomized: addressing mode parameters
    *)
-let cosimulate_mem_base_disp_harness(opcode) =
+let cosimulate_mem_base_disp_harness(opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 128 in
   let rest = 248 - stack_start in
@@ -575,7 +575,7 @@ let cosimulate_mem_base_disp_harness(opcode) =
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
-let cosimulate_mem_rsp_harness(opcode) =
+let cosimulate_mem_rsp_harness(opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 128 248 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
@@ -587,7 +587,7 @@ let cosimulate_mem_rsp_harness(opcode) =
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
-let cosimulate_mul_full_harness() =
+let cosimulate_mul_full_harness() = fun () ->
   (* disp8 is sign-extended *)
   let base = Random.int 128 in
   let rest = 248 - base in
@@ -606,7 +606,7 @@ let cosimulate_mul_full_harness() =
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters
   *)
-let cosimulate_mul_base_disp_harness() =
+let cosimulate_mul_base_disp_harness() = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 128 in
   let rest = 248 - stack_start in
@@ -620,7 +620,7 @@ let cosimulate_mul_base_disp_harness() =
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
-let cosimulate_mul_rsp_harness() =
+let cosimulate_mul_rsp_harness() = fun () ->
    let [rest, scale, index] = rand_scale_index 128 248 in
    (* disp8 is a sign-extended *)
    let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
@@ -630,7 +630,7 @@ let cosimulate_mul_rsp_harness() =
    ];;
 
 (* Fixed: operand size = 64 *)
-let cosimulate_push_harness() =
+let cosimulate_push_harness() = fun () ->
   let reg = Random.int 6 in
   let push_inst = 0x50 + reg in
   if reg = 4 then
@@ -648,7 +648,7 @@ let cosimulate_push_harness() =
     ];;
 
 (* Fixed: operand size = 64 *)
-let cosimulate_pop_harness() =
+let cosimulate_pop_harness() = fun () ->
   let reg = Random.int 6 in
   let pop_inst = 0x58 + reg in
   if reg = 4 then
@@ -668,7 +668,7 @@ let cosimulate_pop_harness() =
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters *)
-let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) =
+let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) = fun () ->
    (* disp8 is sign-extended *)
    let base = Random.int 128 in
    let rest = 240 - base in
@@ -688,7 +688,7 @@ let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) =
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters
    *)
-let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) =
+let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 128 in
   let rest = 240 - stack_start in
@@ -703,7 +703,7 @@ let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) =
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers
    Randomized: addressing mode parameters *)
-let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) =
+let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 128 240 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
@@ -717,7 +717,7 @@ let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) =
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters
    Note: address should be 16-aligned *)
-let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) =
+let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) = fun () ->
    (* Divide 256 by 16 because the address needs to be 16bytes aligned. *)
    let base = Random.int 8 in
    let rest = 15 - base in
@@ -738,7 +738,7 @@ let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) =
    Randomized: addressing mode parameters
    Note: address should be 16-aligned
    *)
-let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) =
+let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 8 in
   let rest = 15 - stack_start in
@@ -755,7 +755,7 @@ let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) =
    Randomized: addressing mode parameters
    Note: address should be 16-aligned
 *)
-let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) =
+let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 8 15 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
@@ -768,7 +768,9 @@ let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) =
 (* Each mem simulation is a pair consists of a list of instructions
   to execute and a bool representing whether additional assumptions
   are needed. Currently the additional assumption is for stack
-  alignment for certain instructions. *)
+  alignment for certain instructions. To make the tests more diverse
+  the evaluation of harnesses are deferred until an instruction is 
+  chosen from mem_iclasses *)
 let mem_iclasses = [
   (* ADC r/m64, r64 *)
   (cosimulate_mem_full_harness([0x11]), false);
@@ -877,7 +879,8 @@ let mem_iclasses = [
   ];;
 
 let run_random_memopsimulation() =
-  let icodes,add_assum = el (Random.int (length mem_iclasses)) mem_iclasses in
+  let deferred_icodes,add_assum = el (Random.int (length mem_iclasses)) mem_iclasses in
+  let icodes = deferred_icodes() in
   let l = length icodes in
   let _ = assert (l >= 2) in
   let memop_index = if l >= 6 then l - 4 else l - 2 in
