@@ -237,10 +237,10 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | ADCX operand operand
    | ADD operand operand
    | ADOX operand operand
-   | AESENC operand operand
-   | AESENCLAST operand operand
    | AESDEC operand operand
    | AESDECLAST operand operand
+   | AESENC operand operand
+   | AESENCLAST operand operand
    | AESKEYGENASSIST operand operand operand
    | AND operand operand
    | BSF operand operand
@@ -276,10 +276,18 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | MULX4 (operand#operand) (operand#operand)
    | NEG operand
    | NOP
+   | NOP_N operand
    | NOT operand
    | OR operand operand
+   | PADDD operand operand
+   | PADDQ operand operand
+   | PAND operand operand
+   | PCMPGTD operand operand
    | POP operand
+   | PSHUFD operand operand operand
+   | PSRAD operand operand
    | PUSH operand
+   | PXOR operand operand
    | RCL operand operand
    | RCR operand operand
    | RET

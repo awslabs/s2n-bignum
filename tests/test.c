@@ -3427,7 +3427,7 @@ int test_bignum_copy(void)
 
 int test_bignum_copy_row_from_table_specific(const char *name, uint64_t fixed_width,
     int width_multiple_of_8,
-    void (*f)(uint64_t*, uint64_t*, uint64_t, uint64_t, uint64_t))
+    void (*f)(uint64_t*, const uint64_t*, uint64_t, uint64_t, uint64_t))
 { uint64_t i, t;
   // The height, width, height*width of table
   uint64_t h, w, n;
@@ -3495,7 +3495,7 @@ int test_bignum_copy_row_from_table_16(void)
 { return 1;
 }
 #else
-void _bignum_copy_row_from_table_16_wrapper(uint64_t *z, uint64_t *table,
+void _bignum_copy_row_from_table_16_wrapper(uint64_t *z, const uint64_t *table,
                                                  uint64_t height,
                                                  uint64_t width,
                                                  uint64_t index) {
@@ -3515,7 +3515,7 @@ int test_bignum_copy_row_from_table_32(void)
 { return 1;
 }
 #else
-void _bignum_copy_row_from_table_32_wrapper(uint64_t *z, uint64_t *table,
+void _bignum_copy_row_from_table_32_wrapper(uint64_t *z, const uint64_t *table,
                                                  uint64_t height,
                                                  uint64_t width,
                                                  uint64_t index) {
@@ -4344,7 +4344,7 @@ int test_bignum_double_sm2(void)
 
 int test_bignum_emontredc_specific(const char *name, int is_8n, int ge_16,
                                    uint64_t (*f)(uint64_t, uint64_t *,
-                                                 uint64_t *, uint64_t)) {
+                                                 const uint64_t *, uint64_t)) {
   uint64_t t, k, w, tc;
   printf("Testing %s with %d cases\n", name, tests);
 
@@ -4403,8 +4403,8 @@ int test_bignum_emontredc_8n(void)
 }
 
 #ifndef __x86_64__
-uint64_t bignum_emontredc_8n_cdiff_wrapper (uint64_t k, uint64_t *z, uint64_t *m,
-                                          uint64_t w) {
+uint64_t bignum_emontredc_8n_cdiff_wrapper (uint64_t k, uint64_t *z,
+                                            const uint64_t *m, uint64_t w) {
   // b12 is a buffer that is not used by bignum_emontredc_specific.
   return bignum_emontredc_8n_cdiff(k, z, m, w, b12);
 }
@@ -5266,7 +5266,7 @@ int test_bignum_iszero(void)
 
 int test_bignum_kmul_specific
   (uint64_t p,uint64_t m,uint64_t n, char *name,
-   void (*f)(uint64_t *,uint64_t *,uint64_t *,uint64_t *))
+   void (*f)(uint64_t *,const uint64_t *, const uint64_t *,uint64_t *))
 { uint64_t i, j;
   printf("Testing %s with %d cases\n",name,tests);
   int c;
@@ -5305,7 +5305,7 @@ int test_bignum_kmul_32_64(void)
 
 int test_bignum_ksqr_specific
   (uint64_t p,uint64_t n, char *name,
-   void (*f)(uint64_t *,uint64_t *,uint64_t *))
+   void (*f)(uint64_t *,const uint64_t *,uint64_t *))
 { uint64_t i, j;
   printf("Testing %s with %d cases\n",name,tests);
   int c;
@@ -6854,7 +6854,7 @@ int test_bignum_montmul(void)
 }
 
 int test_bignum_montmul_p256_specific(
-    const char *name, void (*f)(uint64_t *, uint64_t *, uint64_t *))
+    const char *name, void (*f)(uint64_t *, const uint64_t *, const uint64_t *))
 { uint64_t t;
   printf("Testing %s with %d cases\n",name,tests);
 
@@ -6961,7 +6961,7 @@ int test_bignum_montmul_p256k1_alt(void)
 }
 
 int test_bignum_montmul_p384_specific(const char *name,
-    void (*f)(uint64_t *z, uint64_t *x, uint64_t *y))
+    void (*f)(uint64_t *z, const uint64_t *x, const uint64_t *y))
 { uint64_t t;
   printf("Testing %s with %d cases\n",name,tests);
 
@@ -7004,8 +7004,8 @@ int test_bignum_montmul_p384_alt(void) {
 }
 
 int test_bignum_montmul_p521_specific(const char *name,
-                                      void (*f)(uint64_t *z, uint64_t *x,
-                                                uint64_t *y)) {
+                                      void (*f)(uint64_t *z, const uint64_t *x,
+                                                const uint64_t *y)) {
   uint64_t t;
   printf("Testing %s with %d cases\n",name,tests);
 
@@ -7205,7 +7205,7 @@ int test_bignum_montsqr(void)
 }
 
 int test_bignum_montsqr_p256_specific(const char *name,
-    void (*f)(uint64_t *z, uint64_t *x))
+    void (*f)(uint64_t *z, const uint64_t *x))
 { uint64_t t;
   printf("Testing %s with %d cases\n",name,tests);
 
@@ -7306,7 +7306,7 @@ int test_bignum_montsqr_p256k1_alt(void)
 }
 
 int test_bignum_montsqr_p384_specific(const char *name,
-    void (*f)(uint64_t *z, uint64_t *x))
+    void (*f)(uint64_t *z, const uint64_t *x))
 { uint64_t t;
   printf("Testing %s with %d cases\n",name,tests);
 
@@ -7347,7 +7347,7 @@ int test_bignum_montsqr_p384_alt(void) {
 }
 
 int test_bignum_montsqr_p521_specific(const char *name,
-                                      void (*f)(uint64_t *z, uint64_t *x)) {
+                                      void (*f)(uint64_t *z, const uint64_t *x)) {
   uint64_t t;
   printf("Testing %s with %d cases\n",name,tests);
 
@@ -7480,7 +7480,7 @@ int test_bignum_mul(void)
 
 int test_bignum_mul_specific
   (uint64_t p,uint64_t m,uint64_t n, char *name,
-   void (*f)(uint64_t *,uint64_t *,uint64_t *))
+   void (*f)(uint64_t *,const uint64_t *,const uint64_t *))
 { uint64_t i, j;
   printf("Testing %s with %d cases\n",name,tests);
   int c;
@@ -7670,7 +7670,8 @@ int test_bignum_mul_p256k1_alt(void)
 }
 
 int test_bignum_mul_p521_specific(const char *name,
-                                  void (*f)(uint64_t *z, uint64_t *x, uint64_t *y))
+                                  void (*f)(uint64_t *z, const uint64_t *x,
+                                            const uint64_t *y))
 { uint64_t i, k;
   printf("Testing %s with %d cases\n",name,tests);
   uint64_t c;
@@ -8771,7 +8772,7 @@ int test_bignum_sqr(void)
 
 int test_bignum_sqr_specific
   (uint64_t p,uint64_t n, char *name,
-   void (*f)(uint64_t *,uint64_t *))
+   void (*f)(uint64_t *, const uint64_t *))
 { uint64_t i, j;
   printf("Testing %s with %d cases\n",name,tests);
   int c;
@@ -8955,7 +8956,7 @@ int test_bignum_sqr_p256k1_alt(void)
   return 0;
 }
 
-int test_bignum_sqr_p521_specific(const char *name, void (*f)(uint64_t*, uint64_t*))
+int test_bignum_sqr_p521_specific(const char *name, void (*f)(uint64_t*, const uint64_t*))
 { uint64_t i, k;
   printf("Testing %s with %d cases\n",name,tests);
   uint64_t c;

@@ -273,6 +273,25 @@ let iclasses = iclasses @
  [0x66; 0x0f; 0x3a; 0xdf; 0xc8; 0x01]; (*AESKEYGENASSIST (%_% xmm1) (%_% xmm0) (Imm8 (word 1)) *)
  [0x66; 0x0f; 0x3a; 0xdf; 0xf8; 0xff]; (*AESKEYGENASSIST (%_% xmm15) (%_% xmm0) (Imm8 (word 255)) *)
  [0x66; 0x0f; 0x3a; 0xdf; 0xdc; 0x19]; (*AESKEYGENASSIST (%_% xmm3) (%_% xmm12) (Imm8 (word 25)) *)
+ [0x66; 0x0f; 0x70; 0xc9; 0x55]; (*PSHUFD (%_% xmm1) (%_% xmm1) (Imm8 (word 85)) *)
+ [0x66; 0x44; 0x0f; 0x70; 0xca; 0x5f]; (*PSHUFD (%_% xmm9) (%_% xmm2) (Imm8 (word 95)) *)
+ [0x66; 0x0f; 0xef; 0xd3]; (*PXOR (%_% xmm2) (%_% xmm3) *)
+ [0x66; 0x41; 0x0f; 0xef; 0xff]; (*PXOR (%_% xmm7) (%_% xmm15) *)
+ [0x66; 0x0f; 0xdb; 0xd3]; (*PAND (%_% xmm2) (%_% xmm3) *)
+ [0x66; 0x41; 0x0f; 0xdb; 0xff]; (*PAND (%_% xmm7) (%_% xmm15) *)
+ [0x66; 0x0f; 0xfe; 0xd3]; (*PADDD (%_% xmm2) (%_% xmm3) *)
+ [0x66; 0x41; 0x0f; 0xfe; 0xff]; (*PADDD (%_% xmm7) (%_% xmm15) *)
+ [0x66; 0x0f; 0xd4; 0xd3]; (*PADDQ (%_% xmm2) (%_% xmm3) *)
+ [0x66; 0x41; 0x0f; 0xd4; 0xff]; (*PADDQ (%_% xmm7) (%_% xmm15) *)
+ [0x66; 0x0f; 0x72; 0xe1; 0x1f]; (*PSRAD (%_% xmm1) (Imm8 (word 31)) *)
+ [0x66; 0x41; 0x0f; 0x72; 0xe4; 0x38]; (*PSRAD (%_% xmm12) (Imm8 (word 56)) *)
+ [0x66; 0x45; 0x0f; 0x66; 0xfe]; (*PCMPGTD (%_% xmm15) (%_% xmm14) *)
+ [0x66; 0x0f; 0x66; 0xcb]; (*PCMPGTD (%_% xmm1) (%_% xmm3) *)
+ [0x66; 0x90]; (* NOP *)
+ [0x0f; 0x1f; 0x4f; 0x00]; (* NOP_N (Memop Doubleword (%% (rdi,0))) *)
+ [0x66; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
+ [0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
+ [0x66; 0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
 ];;
 
 (* ------------------------------------------------------------------------- *)
@@ -360,17 +379,7 @@ let tac_before memop =
    `read RSP s = stackpointer /\ P (read RSP s) s <=>
     read RSP s = stackpointer /\ P stackpointer s`] THEN
   ENSURES_INIT_TAC "s0" THEN
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) THEN
-    (* Remove non-"memory :> bytes8" reads because they are not necessary :) *)
-    let non_byte_read_list = [
-      `read (memory :> bytes16 x) s = y`;
-      `read (memory :> bytes32 x) s = y`;
-      `read (memory :> bytes64 x) s = y`;
-      `read (memory :> bytes128 x) s = y`;
-      `read (memory :> bytes256 x) s = y`
-    ] in
-    DISCARD_MATCHING_ASSUMPTIONS non_byte_read_list
-  else ALL_TAC)
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC)
 and tac_main (memopidx: int option) mc states =
   begin match memopidx with
   | Some idx ->
@@ -413,7 +422,7 @@ let decode_inst ibytes =
      (map (rand o rand o snd o strip_forall o concl o Option.get)
        (filter Option.is_some (Array.to_list (snd execth)))) in
   let _ = print_term decoded in
-  decoded
+  decoded;;
 
 (*** Cosimulate a list of x86_64 instruction codes against hardware.
  *** To pass, the formal simulation has to agree with the hardware,
@@ -533,7 +542,7 @@ let rand_scale_index index_bound rest =
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, operand size = 64, displacement size = 8
    Randomized: addressing mode parameters *)
-let cosimulate_mem_full_harness(opcode) =
+let cosimulate_mem_full_harness(opcode) = fun () ->
    (* disp8 is sign-extended *)
    let base = Random.int 128 in
    let rest = 248 - base in
@@ -552,7 +561,7 @@ let cosimulate_mem_full_harness(opcode) =
    Fixed: use of registers, operand size = 64, displacement size = 8
    Randomized: addressing mode parameters
    *)
-let cosimulate_mem_base_disp_harness(opcode) =
+let cosimulate_mem_base_disp_harness(opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 128 in
   let rest = 248 - stack_start in
@@ -566,7 +575,7 @@ let cosimulate_mem_base_disp_harness(opcode) =
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
-let cosimulate_mem_rsp_harness(opcode) =
+let cosimulate_mem_rsp_harness(opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 128 248 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
@@ -578,7 +587,7 @@ let cosimulate_mem_rsp_harness(opcode) =
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
-let cosimulate_mul_full_harness() =
+let cosimulate_mul_full_harness() = fun () ->
   (* disp8 is sign-extended *)
   let base = Random.int 128 in
   let rest = 248 - base in
@@ -597,7 +606,7 @@ let cosimulate_mul_full_harness() =
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters
   *)
-let cosimulate_mul_base_disp_harness() =
+let cosimulate_mul_base_disp_harness() = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 128 in
   let rest = 248 - stack_start in
@@ -611,7 +620,7 @@ let cosimulate_mul_base_disp_harness() =
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers, operand size = 64
    Randomized: addressing mode parameters *)
-let cosimulate_mul_rsp_harness() =
+let cosimulate_mul_rsp_harness() = fun () ->
    let [rest, scale, index] = rand_scale_index 128 248 in
    (* disp8 is a sign-extended *)
    let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
@@ -621,27 +630,45 @@ let cosimulate_mul_rsp_harness() =
    ];;
 
 (* Fixed: operand size = 64 *)
-let cosimulate_push_harness() =
+let cosimulate_push_harness() = fun () ->
   let reg = Random.int 6 in
   let push_inst = 0x50 + reg in
-  [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
-   [push_inst]; (* push REG *)
-   [0x48; 0x8d; 0x64; 0x24; 0xf8] (* lea rsp, [rsp - 8] *)
-  ];;
+  if reg = 4 then
+    [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
+     [0x48; 0x8b; 0x44; 0x24; 0xf8]; (* mov rax, [rsp - 8] *)
+     [push_inst]; (* push rsp *)
+     [0x48; 0x8b; 0x24; 0x24]; (* mov rsp, [rsp] *)
+     [0x48; 0x89; 0x44; 0x24; 0xf8]; (* mov [rsp - 8], rax *)
+     [0x48; 0x8d; 0x64; 0x24; 0xf0]; (* lea rsp, [rsp - 16] *)
+    ]
+  else
+    [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
+     [push_inst]; (* push REG *)
+     [0x48; 0x8d; 0x64; 0x24; 0xf8] (* lea rsp, [rsp - 8] *)
+    ];;
 
 (* Fixed: operand size = 64 *)
-let cosimulate_pop_harness() =
+let cosimulate_pop_harness() = fun () ->
   let reg = Random.int 6 in
   let pop_inst = 0x58 + reg in
-  [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
-   [pop_inst]; (* pop REG *)
-   [0x48; 0x8d; 0x64; 0x24; 0xE8] (* lea rsp, [rsp - 24] *)
-  ];;
+  if reg = 4 then
+    [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
+     [0x48; 0x8b; 0x04; 0x24]; (* mov rax, [rsp] *)
+     [0x48; 0x89; 0x24; 0x24]; (* mov [rsp], rsp *)
+     [pop_inst]; (* pop rsp *)
+     [0x48; 0x89; 0x04; 0x24]; (* mov [rsp], rax *)
+     [0x48; 0x8d; 0x64; 0x24; 0xf0] (* lea rsp, [rsp - 16] *)
+    ]
+  else
+    [[0x48; 0x8d; 0x64; 0x24; 0x10]; (* lea rsp, [rsp + 16] *)
+     [pop_inst]; (* pop REG *)
+     [0x48; 0x8d; 0x64; 0x24; 0xe8] (* lea rsp, [rsp - 24] *)
+    ];;
 
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters *)
-let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) =
+let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) = fun () ->
    (* disp8 is sign-extended *)
    let base = Random.int 128 in
    let rest = 240 - base in
@@ -661,7 +688,7 @@ let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) =
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters
    *)
-let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) =
+let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 128 in
   let rest = 240 - stack_start in
@@ -676,7 +703,7 @@ let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) =
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers
    Randomized: addressing mode parameters *)
-let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) =
+let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 128 240 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
@@ -690,7 +717,7 @@ let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) =
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters
    Note: address should be 16-aligned *)
-let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) =
+let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) = fun () ->
    (* Divide 256 by 16 because the address needs to be 16bytes aligned. *)
    let base = Random.int 8 in
    let rest = 15 - base in
@@ -711,7 +738,7 @@ let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) =
    Randomized: addressing mode parameters
    Note: address should be 16-aligned
    *)
-let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) =
+let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 8 in
   let rest = 15 - stack_start in
@@ -728,7 +755,7 @@ let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) =
    Randomized: addressing mode parameters
    Note: address should be 16-aligned
 *)
-let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) =
+let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 8 15 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
@@ -741,7 +768,9 @@ let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) =
 (* Each mem simulation is a pair consists of a list of instructions
   to execute and a bool representing whether additional assumptions
   are needed. Currently the additional assumption is for stack
-  alignment for certain instructions. *)
+  alignment for certain instructions. To make the tests more diverse
+  the evaluation of harnesses are deferred until an instruction is 
+  chosen from mem_iclasses *)
 let mem_iclasses = [
   (* ADC r/m64, r64 *)
   (cosimulate_mem_full_harness([0x11]), false);
@@ -850,9 +879,11 @@ let mem_iclasses = [
   ];;
 
 let run_random_memopsimulation() =
-  let icodes,add_assum = el (Random.int (length mem_iclasses)) mem_iclasses in
-  let _ = assert (length icodes >= 2) in
-  let memop_index = length icodes - 2 in
+  let deferred_icodes,add_assum = el (Random.int (length mem_iclasses)) mem_iclasses in
+  let icodes = deferred_icodes() in
+  let l = length icodes in
+  let _ = assert (l >= 2) in
+  let memop_index = if l >= 6 then l - 4 else l - 2 in
   cosimulate_instructions (Some memop_index) add_assum icodes;;
 
 (* ------------------------------------------------------------------------- *)
