@@ -20,7 +20,7 @@
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
 //
-// extern void mlkem_keccak_f1600(uint64_t a[25],uint64_t rc[24]);
+// extern void mlkem_keccak_f1600(uint64_t a[25],const uint64_t rc[24]);
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
