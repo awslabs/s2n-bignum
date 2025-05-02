@@ -6,8 +6,8 @@
 // Given table: uint64_t[height*width], copy table[idx*width...(idx+1)*width-1]
 // into z[0..width-1].
 //
-//    extern void bignum_copy_from_table
-//     (uint64_t *z, uint64_t *table, uint64_t height, uint64_t width,
+//    extern void bignum_copy_row_from_table
+//     (uint64_t *z, const uint64_t *table, uint64_t height, uint64_t width,
 //      uint64_t idx);
 //
 // Standard x86-64 ABI: RDI = z, RSI = table, RDX = height, RCX = width,

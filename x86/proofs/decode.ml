@@ -10,30 +10,66 @@
 let rep_pfx_INDUCTION,rep_pfx_RECURSION = define_type
   "rep_pfx = Rep0 | RepZ | RepNZ";;
 
-new_type_abbrev("pfxs",`:bool # rep_pfx`);;
+(*
+  We only model segment override values that
+  could be used for extending NOP for alignment.
 
-let has_pfxs = new_definition `has_pfxs pfxs <=> ~(pfxs = (F, Rep0))`;;
+  See "Optimizing subroutines in assembly language
+   An optimization guide for x86 platforms."
+  Chap 10.6 "Making instructions longer for the sake of alignment"
+ *)
+let seg_pfx_INDUCTION,seg_pfx_RECURSION = define_type
+  "seg_pfx = SG0 | CS | SS | DS | ES";;
+
+new_type_abbrev("pfxs",`:bool # rep_pfx # seg_pfx`);;
+
+let has_pfxs = new_definition `has_pfxs pfxs <=> ~(pfxs = (F, Rep0, SG0))`;;
 
 let has_unhandled_pfxs = new_definition
- `has_unhandled_pfxs (pfxs:pfxs) <=> ~(SND pfxs = Rep0)`;;
+ `has_unhandled_pfxs (pfxs:pfxs)
+   <=> ~(FST (SND pfxs) = Rep0) \/ ~(SND (SND pfxs) = SG0)`;;
 
 let has_operand_override = new_definition
   `has_operand_override (pfxs:pfxs) = FST pfxs`;;
 
-(* The operation override prefix,
-   also a mandatory prefix on some instructions *)
-let pfxs_set_opo = new_definition `pfxs_set_opo (opo, rep) =
-  if opo then NONE else SOME (T, rep)`;;
+(*
+  The operation override prefix,
+  also a mandatory prefix on some instructions.
+
+  For extending an instruction for the sake of alignment,
+  multiple 66H prefix could be added to the instruction.
+  Therefore we allow an arbitrary number of 66H prefix to be set.
+*)
+let pfxs_set_opo = new_definition `pfxs_set_opo (opo, rep, seg) =
+  SOME (T, rep, seg)`;;
 
 (* The REPZ prefix,
    also a mandatory prefix on some instructions *)
-let pfxs_set_repz = new_definition `pfxs_set_repz (opo, rep) =
-  if rep = Rep0 then SOME (opo, RepZ) else NONE`;;
+let pfxs_set_repz = new_definition `pfxs_set_repz (opo, rep, seg) =
+  if rep = Rep0 then SOME (opo, RepZ, seg) else NONE`;;
 
 (* The REPNZ prefix,
    also a mandatory prefix on some instructions *)
-let pfxs_set_repnz = new_definition `pfxs_set_repnz (opo, rep) =
-  if rep = Rep0 then SOME (opo, RepNZ) else NONE`;;
+let pfxs_set_repnz = new_definition `pfxs_set_repnz (opo, rep, seg) =
+  if rep = Rep0 then SOME (opo, RepNZ, seg) else NONE`;;
+
+(* The CS segment override prefix,
+   also branch not taken (used only with Jcc instructions) prefix. *)
+let pfxs_set_cs = new_definition `pfxs_set_cs (opo, rep, seg) =
+  if seg = SG0 then SOME (opo, rep, CS) else NONE`;;
+
+(* The DS segment override prefix,
+   also branch taken (used only with Jcc instructions) prefix. *)
+let pfxs_set_ds = new_definition `pfxs_set_ds (opo, rep, seg) =
+  if seg = SG0 then SOME (opo, rep, DS) else NONE`;;
+
+(* The ES segment override prefix *)
+let pfxs_set_es = new_definition `pfxs_set_es (opo, rep, seg) =
+  if seg = SG0 then SOME (opo, rep, ES) else NONE`;;
+
+(* The SS segment override prefix *)
+let pfxs_set_ss = new_definition `pfxs_set_ss (opo, rep, seg) =
+  if seg = SG0 then SOME (opo, rep, SS) else NONE`;;
 
 let read_prefixes = new_recursive_definition list_RECURSION
   `(!p. read_prefixes [] p = NONE) /\
@@ -42,14 +78,14 @@ let read_prefixes = new_recursive_definition list_RECURSION
     | [0x66:8] -> pfxs_set_opo p >>= read_prefixes l
     | [0xf2:8] -> pfxs_set_repnz p >>= read_prefixes l
     | [0xf3:8] -> pfxs_set_repz p >>= read_prefixes l
+    | [0x2e:8] -> pfxs_set_cs p >>= read_prefixes l
+    | [0x36:8] -> pfxs_set_ss p >>= read_prefixes l
+    | [0x3e:8] -> pfxs_set_ds p >>= read_prefixes l
+    | [0x26:8] -> pfxs_set_es p >>= read_prefixes l
     // Even though we are not using any of these prefixes,
     // we need to know that they are prefix bytes to avoid
     // misinterpreting them as another instruction.
     | [0xf0:8] -> NONE // LOCK prefix
-    | [0x2e:8] -> NONE // CS segment prefix / branch not taken hint
-    | [0x36:8] -> NONE // SS segment prefix
-    | [0x3e:8] -> NONE // DS segment prefix / branch taken hint
-    | [0x26:8] -> NONE // ES segment prefix
     | [0x64:8] -> NONE // FS segment prefix
     | [0x65:8] -> NONE // GS segment prefix
     | [0x67:8] -> NONE // address override prefix
@@ -143,12 +179,12 @@ let read_SIB = define
  `read_SIB rex md [] = NONE /\
   (!b l. read_SIB rex md (CONS b l) =
    bitmatch b:byte with
-   | [SS:2; ix:3; bs:3] ->
+   | [ss:2; ix:3; bs:3] ->
      let bs = rex_reg (rex_B rex) bs in
      let ix = rex_reg (rex_X rex) ix in
      let s,i =
        if ix = word 4 then word 0,NONE
-       else SS,SOME (Gpr ix Full_64) in
+       else ss,SOME (Gpr ix Full_64) in
      read_sib_displacement md bs l >>= \((d,b),l).
      SOME(Bsid b i s d, l))`;;
 
@@ -214,15 +250,15 @@ let read_VEXM = new_definition `read_VEXM (m:5 word) =
 
 let read_VEXP = new_definition `read_VEXP (p:2 word) =
   bitmatch p with
-  | [0:2] -> (F, Rep0)
-  | [1:2] -> (T, Rep0)
-  | [2:2] -> (F, RepZ)
-  | [3:2] -> (F, RepNZ)`;;
+  | [0:2] -> (F, Rep0, SG0)
+  | [1:2] -> (T, Rep0, SG0)
+  | [2:2] -> (F, RepZ, SG0)
+  | [3:2] -> (F, RepNZ, SG0)`;;
 
 let read_VEX = define
  `(!l. read_VEX T l =
    read_byte l >>= \(b,l). bitmatch b with [r:1; v:4; L; p:2] ->
-   SOME((SOME(word_zx (word_not r)), VEXM_0F, word_not v, L, (F, Rep0)), l)) /\
+   SOME((SOME(word_zx (word_not r)), VEXM_0F, word_not v, L, (F, Rep0, SG0)), l)) /\
   (!l. read_VEX F l =
    read_byte l >>= \(b,l). bitmatch b with [rxb:3; m:5] ->
    read_byte l >>= \(b,l). bitmatch b with [w; v:4; L; p:2] ->
@@ -293,6 +329,29 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let rm = simd_of_RM sz rm in
       let dest,src = if d then rm,reg else reg,rm in
       SOME (MOVUPS dest src, l)
+    | [0x1e:8] ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+         | [0xfa:8] ->
+           (match pfxs with
+            | (F, RepZ, SG0) -> SOME (ENDBR64,l)
+            | _ -> NONE)
+         | _ -> NONE)
+    | [0x1f:8] ->
+      let sz = op_size_W rex T pfxs in
+      read_ModRM_operand rex sz l >>= \((_,rm),l).
+      (match pfxs with
+        | (F, Rep0, SG0) -> SOME (NOP_N rm,l)
+        | (F, Rep0, CS) -> SOME (NOP_N rm,l)
+        | (F, Rep0, DS) -> SOME (NOP_N rm,l)
+        | (F, Rep0, ES) -> SOME (NOP_N rm,l)
+        | (F, Rep0, SS) -> SOME (NOP_N rm,l)
+        | (T, Rep0, SG0) -> SOME (NOP_N rm,l)
+        | (T, Rep0, CS) -> SOME (NOP_N rm,l)
+        | (T, Rep0, DS) -> SOME (NOP_N rm,l)
+        | (T, Rep0, ES) -> SOME (NOP_N rm,l)
+        | (T, Rep0, SS) -> SOME (NOP_N rm,l)
+        | _ -> NONE)
     | [0b0010100:7; d] -> if has_pfxs pfxs then NONE else
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
@@ -322,8 +381,8 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         let sz = op_size T (rex_W rex) T pfxs in
         read_ModRM_operand rex sz l >>= \((reg,rm),l).
         (match pfxs with
-        | (T, Rep0) -> SOME (ADCX reg rm,l)
-        | (F, RepZ) -> SOME (ADOX reg rm,l)
+        | (T, Rep0, SG0) -> SOME (ADCX reg rm,l)
+        | (F, RepZ, SG0) -> SOME (ADOX reg rm,l)
         | _ -> NONE)
       | _ -> NONE)
     | [0x3a:8] -> read_byte l >>= \(b,l).
@@ -334,14 +393,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         read_imm Byte l >>= \(imm8,l).
         SOME (AESKEYGENASSIST (mmreg reg sz) (simd_of_RM sz rm) imm8, l)
       | _ -> NONE)
-    | [0b11001:5; r:3] -> if has_pfxs pfxs then NONE else
-      let sz = op_size_W rex T pfxs in
-      let reg = rex_reg (rex_B rex) r in
-      SOME (BSWAP (%(gpr_adjust reg sz)),l)
     | [0x4:4; c:4] -> if has_pfxs pfxs then NONE else
       let sz = op_size T (rex_W rex) T pfxs in
       read_ModRM_operand rex sz l >>= \((reg,rm),l).
       SOME (CMOV (decode_condition c) reg rm,l)
+    | [0x66:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (PCMPGTD (mmreg reg sz) (simd_of_RM sz rm), l)
     | [0b011:3; d; 0b1111:4] ->
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
@@ -349,9 +408,23 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let rm = simd_of_RM sz rm in
       let dest,src = if d then rm,reg else reg,rm in
       (match pfxs with
-      | (T, Rep0) -> SOME (MOVDQA dest src, l)
-      | (F, RepZ) -> SOME (MOVDQU dest src, l)
+      | (T, Rep0, SG0) -> SOME (MOVDQA dest src, l)
+      | (F, RepZ, SG0) -> SOME (MOVDQU dest src, l)
       | _ -> NONE)
+    | [0x70:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      read_imm Byte l >>= \(imm8,l).
+      SOME (PSHUFD (mmreg reg sz) (simd_of_RM sz rm) imm8, l)
+    | [0x72:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      (read_ModRM rex l >>= \((reg,rm),l).
+       match rm with
+       | RM_reg _ -> if (word_zx reg):(3 word) = word 0b100 then
+         (read_imm Byte l >>= \(imm8,l).
+          SOME (PSRAD (simd_of_RM sz rm) imm8, l))
+         else NONE
+       | _ -> NONE)
     | [0x8:4; c:4] -> if has_pfxs pfxs then NONE else
       read_int32 l >>= \(imm,l).
       SOME (JUMP (decode_condition c) (Imm32 imm),l)
@@ -388,15 +461,15 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = op_size_W rex T pfxs in
       read_ModRM_operand rex sz l >>= \((reg,rm),l).
       (match pfxs with
-      | (F, Rep0) -> SOME (BSF reg rm,l)
-      | (F, RepZ) -> SOME (TZCNT reg rm,l)
+      | (F, Rep0, SG0) -> SOME (BSF reg rm,l)
+      | (F, RepZ, SG0) -> SOME (TZCNT reg rm,l)
       | _ -> NONE)
     | [0xbd:8] ->
       let sz = op_size_W rex T pfxs in
       read_ModRM_operand rex sz l >>= \((reg,rm),l).
       (match pfxs with
-      | (F, Rep0) -> SOME (BSR reg rm,l)
-      | (F, RepZ) -> SOME (LZCNT reg rm,l)
+      | (F, Rep0, SG0) -> SOME (BSR reg rm,l)
+      | (F, RepZ, SG0) -> SOME (LZCNT reg rm,l)
       | _ -> NONE)
     | [0xb:4; s; 0b11:2; v] -> if has_pfxs pfxs then NONE else
       let sz2 = op_size_W rex T pfxs in
@@ -404,14 +477,26 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       read_ModRM rex l >>= \((reg,rm),l).
       let op = if s then MOVSX else MOVZX in
       SOME (op (%(gpr_adjust reg sz2)) (operand_of_RM sz rm),l)
-    | [0x1e:8] ->
-        read_byte l >>= \(b,l).
-        (bitmatch b with
-         | [0xfa:8] ->
-           (match pfxs with
-            | (F, RepZ) -> SOME (ENDBR64,l)
-            | _ -> NONE)
-         | _ -> NONE)
+    | [0b11001:5; r:3] -> if has_pfxs pfxs then NONE else
+      let sz = op_size_W rex T pfxs in
+      let reg = rex_reg (rex_B rex) r in
+      SOME (BSWAP (%(gpr_adjust reg sz)),l)
+    | [0xd4:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (PADDQ (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0xdb:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (PAND (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0xef:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (PXOR (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0xfe:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (PADDD (mmreg reg sz) (simd_of_RM sz rm), l)
     | _ -> NONE)
   | [0b01010:5; r:3] -> if has_pfxs pfxs then NONE else
     SOME (PUSH (%(Gpr (rex_reg (rex_B rex) r) Full_64)),l)
@@ -467,7 +552,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     if opc = word 0 then
       SOME (POP rm,l)
     else NONE
-  | [0x90:8] -> if has_pfxs pfxs then NONE else
+  | [0x90:8] -> if has_unhandled_pfxs pfxs then NONE else
     SOME (NOP,l)
   | [0b1010100:7; v] -> if has_pfxs pfxs then NONE else
     let sz = op_size T (rex_W rex) v pfxs in
@@ -497,7 +582,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           let sz = op_size_W rex T pfxs in
           read_ModRM_operand rex sz l >>= \((reg,rm),l).
           (match pfxs with
-          | (F, RepNZ) ->
+          | (F, RepNZ, SG0) ->
             SOME (MULX4 (reg, %(Gpr v sz)) (%(Gpr (word 2) sz), rm), l)
           | _ -> NONE)
         | _ -> NONE)
@@ -540,7 +625,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
   | _ -> NONE`;;
 
 let decode = new_definition `decode l =
-  read_prefixes l (F, Rep0) >>= \(p,l).
+  read_prefixes l (F, Rep0, SG0) >>= \(p,l).
   let rex,l = read_REX_prefix l in
   decode_aux p rex l`;;
 
@@ -635,11 +720,22 @@ let HAS_OPERAND_OVERRIDE_CONV =
 
 let HAS_UNHANDLED_PFXS_CONV =
   let pth = prove
-   (`(has_unhandled_pfxs(p,Rep0) <=> F) /\
-     (has_unhandled_pfxs(p,RepZ) <=> T) /\
-     (has_unhandled_pfxs(p,RepNZ) <=> T)`,
+   (`(has_unhandled_pfxs(p,Rep0,SG0) <=> F) /\
+     (has_unhandled_pfxs(p,Rep0,CS) <=> T) /\
+     (has_unhandled_pfxs(p,Rep0,DS) <=> T) /\
+     (has_unhandled_pfxs(p,Rep0,ES) <=> T) /\
+     (has_unhandled_pfxs(p,Rep0,SS) <=> T) /\
+     (has_unhandled_pfxs(p,RepZ,CS) <=> T) /\
+     (has_unhandled_pfxs(p,RepZ,DS) <=> T) /\
+     (has_unhandled_pfxs(p,RepZ,ES) <=> T) /\
+     (has_unhandled_pfxs(p,RepZ,SS) <=> T) /\
+     (has_unhandled_pfxs(p,RepNZ,CS) <=> T) /\
+     (has_unhandled_pfxs(p,RepNZ,DS) <=> T) /\
+     (has_unhandled_pfxs(p,RepNZ,ES) <=> T) /\
+     (has_unhandled_pfxs(p,RepNZ,SS) <=> T)`,
     REWRITE_TAC[has_unhandled_pfxs] THEN
-    REWRITE_TAC[distinctness "rep_pfx"]) in
+    REWRITE_TAC[distinctness "rep_pfx"] THEN
+    REWRITE_TAC[distinctness "seg_pfx"]) in
   GEN_REWRITE_CONV I [pth];;
 
 let READ_VEXM_CONV =
@@ -1007,7 +1103,7 @@ let decode' = new_definition `decode' p rex l =
   let rex,l = read_REX_prefix l in
   decode_aux p rex l`;;
 
-let decode_eq_decode' = prove (`decode = decode' (F, Rep0) NONE`,
+let decode_eq_decode' = prove (`decode = decode' (F, Rep0, SG0) NONE`,
   REWRITE_TAC [FUN_EQ_THM; decode'; decode; is_some]);;
 
 let decode'_read_prefix = prove
@@ -1016,28 +1112,60 @@ let decode'_read_prefix = prove
   DISCH_THEN (fun th -> REWRITE_TAC [decode'; is_some; th]));;
 
 let decode'_opo = prove
- (`decode' (F, rep) NONE (CONS (word 0x66) l) =
-   decode' (T, rep) NONE l`,
+ (`decode' (opo, rep, seg) NONE (CONS (word 0x66) l) =
+   decode' (T, rep, seg) NONE l`,
   MATCH_MP_TAC decode'_read_prefix THEN
   REWRITE_TAC [read_prefixes] THEN
   CONV_TAC (LAND_CONV BITMATCH_CONV) THEN
   REWRITE_TAC [pfxs_set_opo; obind]);;
 
 let decode'_repz = prove
- (`decode' (opo, Rep0) NONE (CONS (word 0xf3) l) =
-   decode' (opo, RepZ) NONE l`,
+ (`decode' (opo, Rep0, seg) NONE (CONS (word 0xf3) l) =
+   decode' (opo, RepZ, seg) NONE l`,
   MATCH_MP_TAC decode'_read_prefix THEN
   REWRITE_TAC [read_prefixes] THEN
   CONV_TAC (LAND_CONV BITMATCH_CONV) THEN
   REWRITE_TAC [pfxs_set_repz; obind]);;
 
 let decode'_repnz = prove
- (`decode' (opo, Rep0) NONE (CONS (word 0xf2) l) =
-   decode' (opo, RepNZ) NONE l`,
+ (`decode' (opo, Rep0, seg) NONE (CONS (word 0xf2) l) =
+   decode' (opo, RepNZ, seg) NONE l`,
   MATCH_MP_TAC decode'_read_prefix THEN
   REWRITE_TAC [read_prefixes] THEN
   CONV_TAC (LAND_CONV BITMATCH_CONV) THEN
   REWRITE_TAC [pfxs_set_repnz; obind]);;
+
+let decode'_cs = prove
+ (`decode' (opo, rep, SG0) NONE (CONS (word 0x2e) l) =
+   decode' (opo, rep, CS) NONE l`,
+  MATCH_MP_TAC decode'_read_prefix THEN
+  REWRITE_TAC [read_prefixes] THEN
+  CONV_TAC (LAND_CONV BITMATCH_CONV) THEN
+  REWRITE_TAC [pfxs_set_cs; obind]);;
+
+let decode'_ds = prove
+ (`decode' (opo, rep, SG0) NONE (CONS (word 0x3e) l) =
+   decode' (opo, rep, DS) NONE l`,
+  MATCH_MP_TAC decode'_read_prefix THEN
+  REWRITE_TAC [read_prefixes] THEN
+  CONV_TAC (LAND_CONV BITMATCH_CONV) THEN
+  REWRITE_TAC [pfxs_set_ds; obind]);;
+
+let decode'_es = prove
+ (`decode' (opo, rep, SG0) NONE (CONS (word 0x26) l) =
+   decode' (opo, rep, ES) NONE l`,
+  MATCH_MP_TAC decode'_read_prefix THEN
+  REWRITE_TAC [read_prefixes] THEN
+  CONV_TAC (LAND_CONV BITMATCH_CONV) THEN
+  REWRITE_TAC [pfxs_set_es; obind]);;
+
+let decode'_ss = prove
+ (`decode' (opo, rep, SG0) NONE (CONS (word 0x36) l) =
+   decode' (opo, rep, SS) NONE l`,
+  MATCH_MP_TAC decode'_read_prefix THEN
+  REWRITE_TAC [read_prefixes] THEN
+  CONV_TAC (LAND_CONV BITMATCH_CONV) THEN
+  REWRITE_TAC [pfxs_set_ss; obind]);;
 
 let decode'_rex = prove
  (`pat_set (BITPAT [0x4:4; rex:4]) (val a) ==>
@@ -1113,6 +1241,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     constructors_of instruction_INDUCTION @
     constructors_of operand_INDUCTION @
     constructors_of rep_pfx_INDUCTION @
+    constructors_of seg_pfx_INDUCTION @
     constructors_of RM_INDUCTION @
     constructors_of VEXM_INDUCTION @
     constructors_of regsize_INDUCT @
@@ -1138,9 +1267,9 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   and pth_cond_F = (UNDISCH o prove)
    (`p = F ==> (if p then a else b:A) = b`,
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [])
-  and pfxs0 = `F, Rep0`
+  and pfxs0 = `F, Rep0, SG0`
   and pth_has_pfxs = (UNDISCH o prove)
-   (`pfxs = (F, Rep0) ==> (if has_pfxs pfxs then NONE else a) = a: A option`,
+   (`pfxs = (F, Rep0, SG0) ==> (if has_pfxs pfxs then NONE else a) = a: A option`,
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [has_pfxs])
   and pth_rmo =
     let th = SPEC_ALL read_ModRM_operand in
@@ -1155,6 +1284,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     let Comb(Comb(_,rex),l) = lhs (concl th) in
     fun rex' l' -> INST [rex',rex; l',l] th
   and rep_pfx_constructors = [`Rep0`; `RepZ`; `RepNZ`]
+  and seg_pfx_constructors = [`SG0`; `CS`; `SS`; `DS`; `ES`]
   and VEXM_constructors = [`VEXM_0F`; `VEXM_0F38`; `VEXM_0F3A`] in
 
   let rec eval_prod = function
@@ -1270,7 +1400,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
      "#remove_printer pp_print_qterm;;". This can be enabled by
      "#disable_printer pp_print_qterm;;" again. *)
 
-  let rec evaluate t (F:thm->(term*term)list->thm) = match t with
+  let rec evaluate t (F:thm->(term*term)list->thm) =
+    match t with
   | Comb(Comb(Const(">>=",_),f),g) ->
     evaluate f (fun th ->
       match rhs (concl th) with
@@ -1365,20 +1496,20 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       let gs = bool_split (fun a ->
         let rec go = function
         | [] -> []
-        | b::bs ->
-          let ls = go bs in
-          let e' = mk_pair (a, b) in
+        | (b, c)::bcs ->
+          let ls = go bcs in
+          let e' = mk_pair (a, (mk_pair (b, c))) in
           let th1 = AP_THM (AP_TERM f (ASSUME (mk_eq (e, e')))) cs in
           let th = TRANS th1 (REPEATC MATCH_CONV (rhs (concl th1))) in
           match rhs (concl th) with
           | Const("NONE",_) -> ls
-          | r -> try (b, evaluate r (F o TRANS th)) :: ls
+          | r -> try ((b, c), evaluate r (F o TRANS th)) :: ls
                  with Failure _ -> ls in
-        C assoc (go rep_pfx_constructors)) in
+        C assoc (go (allpairs (fun x y -> (x, y)) rep_pfx_constructors seg_pfx_constructors))) in
       fun ls ->
         (match rev_assoc e ls with
-        | Comb(Comb(Const(",",_),a),b) as e2 ->
-          let g = try gs a b with Failure _ -> failwith "match pfxs failed" in
+        | Comb(Comb(Const(",",_),a),Comb(Comb(Const(",",_),b),c)) as e2 ->
+          let g = try gs a (b, c) with Failure _ -> failwith "match pfxs failed" in
           PROVE_HYP (REFL e2) (g ls)
         | _ -> failwith "match pfxs failed")
     else if ty = `:VEXM` then
@@ -1616,29 +1747,75 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | _ -> failwith "decode: not a CONS" in
 
   let () =
-    let rep,l,T = `rep:rep_pfx`,`l:byte list`,`T` in
+    let opo,rep,seg,l,T = `opo:bool`,`rep:rep_pfx`,`seg:seg_pfx`,`l:byte list`,`T` in
     decode_table.(0x66) <- function
-    | Comb(Comb((Const(",",_) as p),Const("F",_)),rep'),
+    | Comb(Comb((Const(",",_) as p),opo'),
+        Comb(Comb((Const(",",_) as q),rep'),seg')),
       (Const("NONE",_) as rex), l' ->
-      TRANS (INST [rep',rep; l',l] decode'_opo)
-        (decoder (mk_comb (mk_comb (p, T), rep')) rex l')
+      TRANS (INST [opo',opo; rep',rep; seg',seg; l',l] decode'_opo)
+        (decoder (mk_comb (mk_comb (p, T),
+                           mk_comb (mk_comb (q, rep'), seg'))) rex l')
     | _ -> failwith "decode 0x66 failed" in
   let () =
-    let opo,l,repz = `opo:bool`,`l:byte list`,`RepZ` in
+    let opo,seg,l,repz = `opo:bool`,`seg:seg_pfx`,`l:byte list`,`RepZ` in
     decode_table.(0xf3) <- function
-    | Comb(Comb((Const(",",_) as p),opo'),Const("Rep0",_)),
+    | Comb(Comb((Const(",",_) as p),opo'),
+        Comb(Comb((Const(",",_) as q),Const("Rep0",_)),seg')),
       (Const("NONE",_) as rex), l' ->
-      TRANS (INST [opo',opo; l',l] decode'_repz)
-        (decoder (mk_comb (mk_comb (p, opo'), repz)) rex l')
+      TRANS (INST [opo',opo; seg',seg; l',l] decode'_repz)
+        (decoder (mk_comb (mk_comb (p, opo'),
+                           mk_comb (mk_comb (q, repz), seg'))) rex l')
     | _ -> failwith "decode 0xf3 failed" in
   let () =
-    let opo,l,repnz = `opo:bool`,`l:byte list`,`RepNZ` in
+    let opo,seg,l,repnz = `opo:bool`,`seg:seg_pfx`,`l:byte list`,`RepNZ` in
     decode_table.(0xf2) <- function
-    | Comb(Comb((Const(",",_) as p),opo'),Const("Rep0",_)),
+    | Comb(Comb((Const(",",_) as p),opo'),
+        Comb(Comb((Const(",",_) as q),Const("Rep0",_)),seg')),
       (Const("NONE",_) as rex), l' ->
-      TRANS (INST [opo',opo; l',l] decode'_repnz)
-        (decoder (mk_comb (mk_comb (p, opo'), repnz)) rex l')
+      TRANS (INST [opo',opo; seg',seg; l',l] decode'_repnz)
+        (decoder (mk_comb (mk_comb (p, opo'),
+                           mk_comb (mk_comb (q, repnz), seg'))) rex l')
     | _ -> failwith "decode 0xf2 failed" in
+  let () =
+    let opo,rep,l,cs = `opo:bool`,`rep:rep_pfx`,`l:byte list`,`CS` in
+    decode_table.(0x2e) <- function
+    | Comb(Comb((Const(",",_) as p),opo'),
+        Comb(Comb((Const(",",_) as q),rep'),Const("SG0",_))),
+      (Const("NONE",_) as rex), l' ->
+      TRANS (INST [opo',opo; rep',rep; l',l] decode'_cs)
+        (decoder (mk_comb (mk_comb (p, opo'),
+                           mk_comb (mk_comb (q, rep'), cs))) rex l')
+    | _ -> failwith "decode 0x2e failed" in
+  let () =
+    let opo,rep,l,ss = `opo:bool`,`rep:rep_pfx`,`l:byte list`,`SS` in
+    decode_table.(0x36) <- function
+    | Comb(Comb((Const(",",_) as p),opo'),
+        Comb(Comb((Const(",",_) as q),rep'),Const("SG0",_))),
+      (Const("NONE",_) as rex), l' ->
+      TRANS (INST [opo',opo; rep',rep; l',l] decode'_ss)
+        (decoder (mk_comb (mk_comb (p, opo'),
+                           mk_comb (mk_comb (q, rep'), ss))) rex l')
+    | _ -> failwith "decode 0x36 failed" in
+  let () =
+    let opo,rep,l,ds = `opo:bool`,`rep:rep_pfx`,`l:byte list`,`DS` in
+    decode_table.(0x3e) <- function
+    | Comb(Comb((Const(",",_) as p),opo'),
+        Comb(Comb((Const(",",_) as q),rep'),Const("SG0",_))),
+      (Const("NONE",_) as rex), l' ->
+      TRANS (INST [opo',opo; rep',rep; l',l] decode'_ds)
+        (decoder (mk_comb (mk_comb (p, opo'),
+                           mk_comb (mk_comb (q, rep'), ds))) rex l')
+    | _ -> failwith "decode 0x3e failed" in
+  let () =
+    let opo,rep,l,es = `opo:bool`,`rep:rep_pfx`,`l:byte list`,`ES` in
+    decode_table.(0x26) <- function
+    | Comb(Comb((Const(",",_) as p),opo'),
+        Comb(Comb((Const(",",_) as q),rep'),Const("SG0",_))),
+      (Const("NONE",_) as rex), l' ->
+      TRANS (INST [opo',opo; rep',rep; l',l] decode'_ds)
+        (decoder (mk_comb (mk_comb (p, opo'),
+                           mk_comb (mk_comb (q, rep'), es))) rex l')
+    | _ -> failwith "decode 0x26 failed" in
   let () =
     let pth = UNDISCH decode'_rex in
     let ps = hd (hyp pth) in let p = lhand ps in
@@ -1659,7 +1836,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     done in
 
   let DECODE_CONV =
-    let pfxs0,rex0 = `F, Rep0`,`NONE:(4 word)option` in
+    let pfxs0,rex0 = `F, Rep0, SG0`,`NONE:(4 word)option` in
     function
     | Comb(Comb(Comb(Const("decode'",_),pfxs),rex),l) -> decoder pfxs rex l
     | Comb(Const("decode",_),l) ->
@@ -1720,7 +1897,7 @@ let read_prefixes_eq_cons = prove
     REWRITE_TAC [read_prefixes; OPTION_DISTINCT; OPTION_INJ; PAIR_EQ] THENL
     let t = REWRITE_TAC [obind_eq_some] THEN
       REPEAT STRIP_TAC THEN POP_ASSUM (ACCEPT_TAC o MATCH_MP th) in
-    [t; t; t; METIS_TAC []]));;
+    [t; t; t; t; t; t; t; METIS_TAC []]));;
 
 let list_linear_read_prefixes = prove
  (`!p b c. list_linear (\l1 l2. read_prefixes l1 p = SOME (b, CONS c l2))`,
@@ -1741,7 +1918,7 @@ let list_linear_read_prefixes = prove
       DISCH_THEN (fun th -> REWRITE_TAC [GSYM th]) THEN
       EXISTS_TAC `[h:byte]` THEN REWRITE_TAC [APPEND; read_prefixes] THEN
       GEN_TAC THEN tac THEN REFL_TAC in
-    [t1; t1; t1; t2; t2; t2; t2; t2; t2; t2; t2; t3]));;
+    [t1; t1; t1; t1; t1; t1; t1; t2; t2; t2; t2; t3]));;
 
 let list_linear_read_REX_prefix = prove
  (`!a rex b. list_linear (\l1 l2.
@@ -1960,10 +2137,10 @@ let list_linear_decode = prove (`list_linear_f decode`,
   GEN_TAC THEN REWRITE_TAC [] THEN
   CONV_TAC (ONCE_DEPTH_CONV GEN_BETA_CONV) THEN
   SUBGOAL_THEN
-  `!l1 l2. (?l. read_prefixes l1 (F,Rep0) = SOME (p1,l) /\
+  `!l1 l2. (?l. read_prefixes l1 (F,Rep0,SG0) = SOME (p1,l) /\
     (let rex,l' = read_REX_prefix l in decode_aux p1 rex l') =
       SOME (b,l2)) <=>
-  (?a rex c l3. read_prefixes l1 (F,Rep0) = SOME (p1,CONS a l3) /\
+  (?a rex c l3. read_prefixes l1 (F,Rep0,SG0) = SOME (p1,CONS a l3) /\
     (?l4. read_REX_prefix (CONS a l3) = rex, CONS c l4 /\
           decode_aux p1 rex (CONS c l4) = SOME (b,l2)))`
   (fun th -> REWRITE_TAC [th] THEN
