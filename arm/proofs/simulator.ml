@@ -164,7 +164,8 @@ let extra_simp_tac =
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
               WORD_RULE `word_sub (word_add x y) y:N word = x`;
               WORD_ADD_0; WORD_SUB_0] THEN
-  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[];;
+  CONV_TAC(DEPTH_CONV
+   (WORD_NUM_RED_CONV ORELSEC apply_extra_word_convs)) THEN REWRITE_TAC[];;
 
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
@@ -443,8 +444,40 @@ let cosimulate_ld1r() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+let cosimulate_ld3() =
+  let datasize = Random.int 2
+  and isld = 1
+  and esize = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let someoffset = 1 in
+  let regoffr = Random.int 32 in
+  let regoff =
+    if regoffr = rn || rn = 31 || Random.bool() then 31
+    else regoffr in
+  let stackoff =
+    if rn = 31 then Random.int 13 * 16
+    else Random.int 208 in
+  let postinc = 24 * (datasize + 1)  in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 23 */ num someoffset +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num regoff +/
+    pow2 12 */ num 0b0100 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
-   [cosimulate_ldst_12; cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r];;
+   [cosimulate_ldst_12; cosimulate_ldst_1_2reg;
+    cosimulate_ldstrb; cosimulate_ld1r;
+    cosimulate_ld3];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in

@@ -1985,6 +1985,15 @@ let wbytes = new_definition
  `wbytes a :((A word->byte),N word)component =
     bytes(a,dimindex(:N) DIV 8) :> asword`;;
 
+let VAL_READ_WBYTES = prove
+ (`!(a:int64) s.
+        val(read (wbytes a) s:N word) = read (bytes(a,dimindex(:N) DIV 8)) s`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[wbytes; asword; through; read; READ_COMPONENT_COMPOSE] THEN
+  MATCH_MP_TAC VAL_WORD_EQ THEN
+  TRANS_TAC LTE_TRANS `2 EXP (8 * dimindex(:N) DIV 8)` THEN
+  REWRITE_TAC[READ_BYTES_BOUND; LE_EXP] THEN ARITH_TAC);;
+
 (* ------------------------------------------------------------------------- *)
 (* Specifically sized versions of "bytes" returning words.                   *)
 (* These are currently forced to 64-bit addresses; it can be generalized but *)
@@ -2331,6 +2340,27 @@ let READ_MEMORY_BYTESIZED_UNSPLIT = prove
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC CONJ_ACI_RULE);;
+
+let READ_MEMORY_TRIPLES_SPLIT = prove
+ (`(!m x s:S.
+        read (m :> wbytes x) s :192 word =
+        word_join (read (m :> bytes64 (word_add x (word 16))) s)
+                  (word_join (read (m :> bytes64 (word_add x (word 8))) s)
+                             (read (m :> bytes64 x) s):int128)) /\
+   (!m x s:S.
+        read (m :> wbytes x) s :384 word =
+        word_join (read (m :> bytes128 (word_add x (word 32))) s)
+                  (word_join (read (m :> bytes128 (word_add x (word 16))) s)
+                             (read (m :> bytes128 x) s):int256))`,
+  REWRITE_TAC[GSYM VAL_EQ] THEN
+  SIMP_TAC[VAL_WORD_JOIN_SIMPLE; DIMINDEX_64; DIMINDEX_128; DIMINDEX_256;
+   ARITH; DIMINDEX_CONV `dimindex(:192)`; DIMINDEX_CONV `dimindex(:384)`] THEN
+  REWRITE_TAC[BYTES64_WBYTES; BYTES128_WBYTES] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; VAL_READ_WBYTES] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `24 = 8 + 8 + 8 /\ 48 = 16 + 16 + 16`] THEN
+  REWRITE_TAC[READ_BYTES_COMBINE] THEN REWRITE_TAC[GSYM WORD_ADD_ASSOC] THEN
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* State component corresponding to the head of a stack/list.                *)

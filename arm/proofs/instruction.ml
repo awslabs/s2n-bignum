@@ -2522,6 +2522,32 @@ let arm_LD1R = define
              else (=))
          else ASSIGNS entirety) s`;;
 
+let arm_LD3 = define
+ `arm_LD3 [Rt1;Rt2;Rt3] Rn off datasize esize =
+    \s:armstate.
+        let address = read Rn s in
+        let eaddr = word_add address (offset_address off s) in
+        (if Rn = SP ==> aligned 16 address then
+           if datasize = 128 then
+             let raw:384 word = read (memory :> wbytes eaddr) s in
+             let [il1;il2;il3]:int128 list = word_deinterleave 3 esize raw in
+             (Rt1 := il1) ,, (Rt2 := il2) ,, (Rt3 := il3) ,,
+             events := CONS (EventLoad (eaddr,48)) (read events s) ,,
+             (if offset_writesback off
+              then Rn := word_add address (offset_writeback off s)
+              else (=))
+           else
+             let raw:192 word = read (memory :> wbytes eaddr) s in
+             let [il1;il2;il3]:int64 list = word_deinterleave 3 esize raw in
+             (Rt1 := word_zx il1) ,,
+             (Rt2 := word_zx il2) ,,
+             (Rt3 := word_zx il3) ,,
+             events := CONS (EventLoad (eaddr,24)) (read events s) ,,
+             (if offset_writesback off
+              then Rn := word_add address (offset_writeback off s)
+              else (=))
+         else ASSIGNS entirety) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* SHA-related SIMD operations                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -3141,6 +3167,11 @@ let arm_UADDLV_ALT =
    `arm_UADDLV Rd Rn 8 16`;
    `arm_UADDLV Rd Rn 4 32`];;
 
+let arm_LD3_ALT =
+  EXPAND_SIMD_RULE
+   (REWRITE_RULE[WORD_DEINTERLEAVE_CLAUSES; READ_MEMORY_TRIPLES_SPLIT]
+                 arm_LD3);;
+
 (* ------------------------------------------------------------------------- *)
 (* Collection of standard forms of non-aliased instructions                  *)
 (* We separate the load/store instructions for a different treatment.        *)
@@ -3214,4 +3245,4 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
-       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R];;
+       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT];;

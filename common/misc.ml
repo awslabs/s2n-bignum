@@ -18,6 +18,21 @@ needs "Library/words.ml";;
 (* Additional list operations and conversions on them.                       *)
 (* ------------------------------------------------------------------------- *)
 
+let LIST_OF_FUN = define
+ `LIST_OF_FUN 0 (f:num->A) = [] /\
+  LIST_OF_FUN (SUC n) f = APPEND (LIST_OF_FUN n f) [f n]`;;
+
+let LIST_OF_FUN_CLAUSES = prove
+ (`(!(f:num->A). LIST_OF_FUN 0 f = []) /\
+   (!(f:num->A). LIST_OF_FUN 1 f = [f 0]) /\
+   (!(f:num->A). LIST_OF_FUN 2 f = [f 0; f 1]) /\
+   (!(f:num->A). LIST_OF_FUN 3 f = [f 0; f 1; f 2]) /\
+   (!(f:num->A). LIST_OF_FUN 4 f = [f 0; f 1; f 2; f 3])`,
+  REPEAT STRIP_TAC THEN
+  CONV_TAC(LAND_CONV(TOP_DEPTH_CONV num_CONV)) THEN
+  REWRITE_TAC[LIST_OF_FUN; APPEND] THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
 let SUB_LIST = define
  `SUB_LIST (0,0) l = [] /\
   SUB_LIST (SUC m,n) [] = [] /\
@@ -1383,6 +1398,71 @@ let ASSERT_USING_UNDISCH_AND_ARITH_TAC t t' =
    assumes t *)
 let ASSERT_USING_ASM_ARITH_TAC t =
   SUBGOAL_THEN t ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC];;
+
+(* ------------------------------------------------------------------------- *)
+(* General interleaving and de-interleaving functions on words.              *)
+(* These are poorly supported at the moment, but useful for stating some     *)
+(* more intricate SIMD operations.                                           *)
+(* ------------------------------------------------------------------------- *)
+
+let word_interleave = define
+ `(word_interleave:num->(N word)list->M word) n inps =
+    let l = LENGTH inps in
+    word_of_bits { i | let q = i DIV n and r = i MOD n in
+                       bit (n * q DIV l + r) (EL (q MOD l) inps)}`;;
+
+let word_subdeinterleave = define
+ `(word_subdeinterleave:num->num->M word->num->N word) l n z j =
+        word_of_bits {i | let q = i DIV n and r = i MOD n in
+                          bit ((l * q + j) * n + r) z}`;;
+
+let word_deinterleave = define
+ `(word_deinterleave:num->num->M word->(N word)list) l n z =
+    LIST_OF_FUN l (word_subdeinterleave l n z)`;;
+
+let WORD_DEINTERLEAVE_CLAUSES = prove
+ (`(word_deinterleave:num->num->M word->(N word)list) 2 n z =
+   [word_subdeinterleave 2 n z 0; word_subdeinterleave 2 n z 1] /\
+   (word_deinterleave:num->num->M word->(N word)list) 3 n z =
+   [word_subdeinterleave 3 n z 0;
+    word_subdeinterleave 3 n z 1;
+    word_subdeinterleave 3 n z 2]`,
+  REWRITE_TAC[word_deinterleave; LIST_OF_FUN_CLAUSES]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Conversion for word_subdeinterleave (could be made much more efficient).  *)
+(* ------------------------------------------------------------------------- *)
+
+let WORD_OF_BITS_AS_WORD_ALT = prove
+ (`!s. word_of_bits s : N word =
+       word(nsum (0..dimindex (:N) - 1) (\i. 2 EXP i * bitval(i IN s)))`,
+  REWRITE_TAC[bitval; COND_RAND; MULT_CLAUSES; GSYM NSUM_RESTRICT_SET] THEN
+  REWRITE_TAC[WORD_OF_BITS_AS_WORD] THEN
+  SIMP_TAC[IN_NUMSEG; LE_0; DIMINDEX_NONZERO;
+           ARITH_RULE `~(d = 0) ==> (i <= d - 1 <=> i < d)`]);;
+
+let WORD_SUBDEINTERLEAVE_CONV =
+  let pth = prove
+   (`!P. word_of_bits {i | P i}:N word =
+         word(nsum (0..dimindex (:N) - 1) (\i. 2 EXP i * bitval(P i)))`,
+    REWRITE_TAC[WORD_OF_BITS_AS_WORD_ALT; IN_ELIM_THM]) in
+  let conv =
+    GEN_REWRITE_CONV I [word_subdeinterleave] THENC
+    GEN_REWRITE_CONV I [pth] THENC
+    ONCE_DEPTH_CONV let_CONV THENC
+    RAND_CONV(LAND_CONV(RAND_CONV
+      (LAND_CONV DIMINDEX_CONV THENC NUM_SUB_CONV))) THENC
+    RAND_CONV EXPAND_NSUM_CONV THENC
+    DEPTH_CONV WORD_NUM_RED_CONV in
+  fun tm ->
+    match tm with
+      Comb(Comb(Comb(Comb(Const("word_subdeinterleave",_),e),n),
+                Comb(Const("word",_),w)),j) ->
+      if is_numeral e && is_numeral n && is_numeral w && is_numeral j
+      then conv tm else failwith "WORD_SUBDEINTERLEAVE_CONV"
+    | _ -> failwith "WORD_SUBDEINTERLEAVE_CONV";;
+
+extra_word_CONV := WORD_SUBDEINTERLEAVE_CONV::(!extra_word_CONV);;
 
 (* ------------------------------------------------------------------------- *)
 (* A few more lemmas about words.                                            *)
