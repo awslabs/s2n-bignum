@@ -693,6 +693,11 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
           with _ ->
             Printf.printf "\t- Error: WORD_RULE could not prove `%s = %s`\n"
               (string_of_term rhs2) (string_of_term rhs);
+            Printf.printf "If the two expressions seem semantically equivalent,";
+            Printf.printf " please consider adding a conversion or rewrite rule";
+            Printf.printf " to extra_word_CONV:\n";
+            Printf.printf "e.g.,  extra_word_CONV := [GEN_REWRITE_CONV I [my_thm]] @ !extra_word_CONV;;\n";
+            Printf.printf "e.g.2, extra_word_CONV := [WORD_SIMPLE_SUBWORD_CONV] @ !extra_word_CONV;;\n";
             failwith "ABBREV_READS_TAC")) in
         (* Now introduce abbreviated writes, eventually *)
         let fresh_var = mk_var (vname,type_of abbreviating_expr) in
