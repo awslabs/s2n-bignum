@@ -1199,6 +1199,12 @@ let EQUIV_STEP_TAC action execth1 execth2
     match x with
     | None -> []
     | Some arr -> arr.(i) in
+  let run_tac (tac:tactic) (msg:string):tactic =
+    fun (asl,w) ->
+      try tac (asl,w)
+      with Failure s ->
+        (PRINT_TAC (msg ^ ": reason: " ^ s)
+         THEN PRINT_GOAL_TAC THEN NO_TAC) (asl,w) in
 
   match action with
   | ("equal",lstart,lend,rstart,rend) ->
@@ -1217,26 +1223,26 @@ let EQUIV_STEP_TAC action execth1 execth2
     else begin
       (if rend - rstart > 50 then
         Printf.printf "Warning: too many instructions: insert %d~%d\n" rstart rend);
-      ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right
-        ORELSE (PRINT_TAC "insert failed" THEN PRINT_GOAL_TAC THEN NO_TAC)
+      run_tac (ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right)
+        "insert failed"
     end
   | ("delete",lstart,lend,rstart,rend) ->
     if rstart <> rend then failwith "delete's rstart and rend must be equal"
     else begin
       (if lend - lstart > 50 then
         Printf.printf "Warning: too many instructions: delete %d~%d\n" lstart lend);
-      ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left
-        ORELSE (PRINT_TAC "delete failed" THEN PRINT_GOAL_TAC THEN NO_TAC)
+      run_tac (ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left)
+        "delete failed"
     end
   | ("replace",lstart,lend,rstart,rend) ->
     (if lend - lstart > 50 || rend - rstart > 50 then
       Printf.printf "Warning: too many instructions: replace %d~%d %d~%d\n"
           lstart lend rstart rend);
-    ((ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left
-     ORELSE (PRINT_TAC "replace failed: stuttering left" THEN PRINT_GOAL_TAC THEN NO_TAC))
+    (run_tac (ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left)
+        "replace failed: stuttering left"
      THEN
-     (ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right
-      ORELSE (PRINT_TAC "replace failed: stuttering right" THEN PRINT_GOAL_TAC THEN NO_TAC)))
+     run_tac (ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right)
+        "replace failed: stuttering right")
   | (s,_,_,_,_) -> failwith ("Unknown action: " ^ s);;
 
 
