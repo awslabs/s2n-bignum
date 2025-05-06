@@ -320,7 +320,10 @@ let decode = new_definition `!w:int32. decode w =
   // Post-immediate offset, size 128 only
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
-
+  // Shifted register, size 128 only, no extensions (i.e. only UXTX)
+  | [0b00:2; 0b1111001:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2;  Rn:5; Rt:5] ->
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 4 else Register_Offset (XREG' Rm)))
   // LDP/STP (signed offset, SIMD&FP), only sizes 128 and 64
   | [0b10:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)

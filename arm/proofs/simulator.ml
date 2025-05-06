@@ -199,7 +199,9 @@ and tac_after memop =
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
    else ALL_TAC) THEN
-  ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 WORD_ADD_0; WORD_SUB_0]) THEN
+  ASM_REWRITE_TAC[CONJUNCT1 WORD_ADD_0; WORD_SUB_0] THEN
+  extra_simp_tac THEN
   PRINT_GOAL_TAC THEN NO_TAC;;
 
 (*** Cosimulate a list of ARM instruction codes against hardware.
@@ -321,6 +323,51 @@ let movz_Xn_imm rd imm =
   pow2 21 */ num_of_string "0b11010010100" +/
   pow2 5 */ num(imm mod 65536) +/
   num rd;;
+
+(*** This covers scalar (32-bit or 64-bit) and simd (128-bit only)
+ *** LDR and STR with either a register or shifted register offset,
+ *** but no non-trivial register extensions, only UXTX.
+ ***)
+
+let cosimulate_ldstr() =
+  let simd = Random.int 2
+  and rn = Random.int 32
+  and isld = Random.int 2 in
+  let full = if simd = 1 then 1 else Random.int 2 in
+  let rm = (rn + 1 + Random.int 31) mod 32
+  and rt =
+    if simd = 1 then Random.int 32
+    else (rn + 1 + Random.int 31) mod 32 in
+  let headroom =
+    if simd = 1 then 16
+    else if full = 1 then 8 else 4 in
+  let rawstackoff = Random.int (256 - headroom) in
+  let stackoff =
+    if rn = 31 then 16 * (rawstackoff / 16)
+    else rawstackoff in
+  let shift =
+    if Random.bool() then 0
+    else if simd = 1 then 4
+    else if full = 1 then 3 else 2 in
+  let shifted = if shift = 0 then 0 else 1 in
+  let extraoff = Random.int (256-headroom-stackoff) in
+  let regoff = extraoff lsr shift in
+  let code =
+    pow2 30 */ num(if simd = 1 then 0b00 else 0b10 + full) +/
+    pow2 24 */ num 0b111000 +/
+    pow2 23 */ num (9 * simd) +/
+    pow2 22 */ num isld +/
+    pow2 21 +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num 0b011 +/
+    pow2 12 */ num shifted +/
+    pow2 10 */ num 0b10 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_Xn rn];;
 
 (*** The post-register and no-offset modes are exercised only for LD1/ST1
  *** since they are not currently supported for LD2/ST2.
@@ -475,9 +522,8 @@ let cosimulate_ld3() =
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
 let memclasses =
-   [cosimulate_ldst_12; cosimulate_ldst_1_2reg;
-    cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ld3];;
+   [cosimulate_ldstr; cosimulate_ldst_12; cosimulate_ldst_1_2reg;
+    cosimulate_ldstrb; cosimulate_ld1r; cosimulate_ld3];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in
