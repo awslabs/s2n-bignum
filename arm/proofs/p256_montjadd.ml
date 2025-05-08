@@ -1140,7 +1140,7 @@ let equiv_goal = mk_equiv_statement
         (word pc2,LENGTH p256_montjadd_opt_mc)]`
     p256_montjadd_eqin
     p256_montjadd_eqout
-    p256_montjadd_core_mc 0x5b0 0x808
+    p256_montjadd_core_mc None 0x5b0 0x808
     `MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                 X11; X12; X13; X14; X15; X16; X17; X19; X20; X21;
                 X22; X23; X30] ,,
@@ -1148,7 +1148,7 @@ let equiv_goal = mk_equiv_statement
      MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bytes(p3,96);
                 memory :> bytes(stackpointer,224)]`
-    p256_montjadd_opt_mc 0x18 0x309c
+    p256_montjadd_opt_mc None 0x18 0x309c
     `MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                 X11; X12; X13; X14; X15; X16; X17; X19; X20; X21;
                 X22; X23; X24; X25; X26; X27; X30] ,,

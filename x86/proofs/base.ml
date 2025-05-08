@@ -50,12 +50,14 @@ extra_word_CONV := [AESENC_REDUCE_CONV;
                     @ (!extra_word_CONV);;
 
 (* ------------------------------------------------------------------------- *)
-(* The main x86_64 model.                                                       *)
+(* The main x86_64 model.                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 loadt "x86/proofs/instruction.ml";;
 loadt "x86/proofs/decode.ml";;
 loadt "x86/proofs/x86.ml";;
+(* Reduce reads of YMMx_SSE into reads of YMMx by default *)
+extra_word_CONV := [GEN_REWRITE_CONV I READ_YMM_SSE_EQUIV] @ !extra_word_CONV;;
 
 prioritize_int();;
 prioritize_real();;

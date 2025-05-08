@@ -3445,11 +3445,11 @@ let equiv_goal1 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step2_body_eqin
     step2_body_eqout
-    outerloop_step2_mc
+    outerloop_step2_mc None
     (fst (assoc "maddloop_rotated" outerloop_step2_labels))
     (fst (assoc "maddloop_rotated" outerloop_step2_labels))
     step2_body_maychanges
-    outerloop_step3_mc
+    outerloop_step3_mc None
     (fst (assoc "maddloop_neon" outerloop_step3_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step3_labels))
     step2_body_maychanges
@@ -3757,11 +3757,11 @@ let equiv_goal2 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step2_prolog_eqin
     step2_prolog_eqout
-    outerloop_step2_mc
+    outerloop_step2_mc None
     (fst (assoc "maddloop_neon" outerloop_step2_labels))
     (fst (assoc "maddloop_rotated" outerloop_step2_labels))
     step2_prolog_maychanges
-    outerloop_step3_mc
+    outerloop_step3_mc None
     (fst (assoc "maddloop_prologue" outerloop_step3_labels))
     (fst (assoc "maddloop_neon" outerloop_step3_labels))
     step2_prolog_maychanges
@@ -3923,11 +3923,11 @@ let equiv_goal3 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step2_epilog_eqin
     step2_epilog_eqout
-    outerloop_step2_mc
+    outerloop_step2_mc None
     (fst (assoc "maddloop_rotated" outerloop_step2_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step2_labels))
     step2_epilog_maychanges_left
-    outerloop_step3_mc
+    outerloop_step3_mc None
     (fst (assoc "inner_loop_postamble" outerloop_step3_labels))
     (fst (assoc "inner_loop_postamble_noepilogue" outerloop_step3_labels))
     step2_epilog_maychanges_right
@@ -4096,11 +4096,11 @@ let equiv_goal4 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step2_outerloop_eqin
     step2_outerloop_eqout
-    outerloop_step2_mc
+    outerloop_step2_mc None
     0x0
     (fst (assoc "maddloop_neon" outerloop_step2_labels))
     step2_outerloop_maychanges
-    outerloop_step3_mc
+    outerloop_step3_mc None
     0x0
     (fst (assoc "maddloop_prologue" outerloop_step3_labels))
     step2_outerloop_maychanges
@@ -4299,11 +4299,11 @@ let equiv_goal5 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step2_inner_loop_postamble_eqin
     step2_inner_loop_postamble_eqout
-    outerloop_step2_mc
+    outerloop_step2_mc None
     (fst (assoc "inner_loop_postamble" outerloop_step2_labels))
     (Array.length (snd (OUTERLOOP_STEP2_EXEC)))
     step2_inner_loop_postamble_maychanges
-    outerloop_step3_mc
+    outerloop_step3_mc None
     (fst (assoc "inner_loop_postamble_noepilogue" outerloop_step3_labels))
     (Array.length (snd (OUTERLOOP_STEP3_EXEC)))
     step2_inner_loop_postamble_maychanges
@@ -4477,11 +4477,11 @@ let equiv_goal1 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step3_maddloop_eqin
     step3_maddloop_eqout
-    outerloop_step3_mc
+    outerloop_step3_mc None
     (fst (assoc "maddloop_neon" outerloop_step3_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step3_labels))
     step2_body_maychanges
-    bignum_emontredc_8n_cdiff_mc
+    bignum_emontredc_8n_cdiff_mc None
     (fst (assoc "maddloop_neon" bignum_emontredc_8n_cdiff_labels))
     (fst (assoc "inner_loop_postamble" bignum_emontredc_8n_cdiff_labels))
     step2_body_maychanges
@@ -4840,11 +4840,11 @@ let equiv_goal2 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step3_outerloop_eqin
     step3_outerloop_eqout
-    outerloop_step3_mc
+    outerloop_step3_mc None
     0x0
     (fst (assoc "maddloop_neon" outerloop_step3_labels))
     step3_outerloop_maychanges_left
-    bignum_emontredc_8n_cdiff_mc
+    bignum_emontredc_8n_cdiff_mc None
     (fst (assoc "outerloop" bignum_emontredc_8n_cdiff_labels))
     (fst (assoc "maddloop_neon" bignum_emontredc_8n_cdiff_labels))
     step3_outerloop_maychanges_right
@@ -5111,11 +5111,11 @@ let equiv_goal3 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step3_inner_loop_postamble_eqin
     step3_inner_loop_postamble_eqout
-    outerloop_step3_mc
+    outerloop_step3_mc None
     (fst (assoc "inner_loop_postamble" outerloop_step3_labels))
     (Array.length (snd (OUTERLOOP_STEP3_EXEC)))
     step3_inner_loop_postamble_maychanges_left
-    bignum_emontredc_8n_cdiff_mc
+    bignum_emontredc_8n_cdiff_mc None
     (fst (assoc "inner_loop_postamble" bignum_emontredc_8n_cdiff_labels))
     (fst (assoc "outerloop_end" bignum_emontredc_8n_cdiff_labels))
     step3_inner_loop_postamble_maychanges_right
@@ -5335,11 +5335,11 @@ let equiv_goal1 = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step2_maddloop_x30_eqin
     step2_maddloop_x30_eqout
-    maddloop_step2_x30_mc
+    maddloop_step2_x30_mc None
     0
     (Array.length (snd MADDLOOP_STEP2_X30_EXEC))
     step2_maddloop_x30_maychanges
-    outerloop_step2_mc
+    outerloop_step2_mc None
     (fst (assoc "maddloop_neon" outerloop_step2_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step2_labels))
     step2_maddloop_x30_maychanges
@@ -5676,11 +5676,11 @@ let equiv_goal = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step1_maddloop_eqin
     step1_maddloop_eqout
-    outerloop_step1_mc
+    outerloop_step1_mc None
     (fst (assoc "maddloop_neon" outerloop_step1_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step1_labels))
     step1_maddloop_maychanges_left
-    maddloop_step2_x30_mc
+    maddloop_step2_x30_mc None
     0
     (Array.length (snd MADDLOOP_STEP2_X30_EXEC))
     step1_maddloop_maychanges_right
@@ -5949,11 +5949,11 @@ let equiv_goal = mk_equiv_statement
      k < 2 EXP 32`
     step1_maddloop_eqin
     step1_maddloop_eqout
-    outerloop_step1_mc
+    outerloop_step1_mc None
     (fst (assoc "maddloop_neon" outerloop_step1_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step1_labels))
     step1_maddloop_maychanges_left
-    outerloop_step2_mc
+    outerloop_step2_mc None
     (fst (assoc "maddloop_neon" outerloop_step2_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step2_labels))
     step2_maddloop_x30_maychanges
@@ -6105,11 +6105,11 @@ let equiv_goal = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step1_outerloop_eqin
     step1_outerloop_eqout
-    outerloop_step1_mc
+    outerloop_step1_mc None
     0x0
     (fst (assoc "maddloop_neon" outerloop_step1_labels))
     step1_outerloop_maychanges
-    outerloop_step2_mc
+    outerloop_step2_mc None
     0x0
     (fst (assoc "maddloop_neon" outerloop_step2_labels))
     step1_outerloop_maychanges
@@ -6325,11 +6325,11 @@ let equiv_goal = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     step1_inner_loop_postamble_eqin
     step1_inner_loop_postamble_eqout
-    outerloop_step1_mc
+    outerloop_step1_mc None
     (fst (assoc "inner_loop_postamble" outerloop_step1_labels))
     (Array.length (snd (OUTERLOOP_STEP1_EXEC)))
     step1_inner_loop_postamble_maychanges
-    outerloop_step2_mc
+    outerloop_step2_mc None
     (fst (assoc "inner_loop_postamble" outerloop_step2_labels))
     (Array.length (snd (OUTERLOOP_STEP2_EXEC)))
     step1_inner_loop_postamble_maychanges
@@ -6681,11 +6681,11 @@ let equiv_goal = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     original_maddloop_eqin
     original_maddloop_eqout
-    bignum_emontredc_8n_mc
+    bignum_emontredc_8n_mc None
     (fst (assoc "maddloop" bignum_emontredc_8n_labels))
     (fst (assoc "madddone" bignum_emontredc_8n_labels))
     original_maddloop_maychanges_left
-    outerloop_step1_mc
+    outerloop_step1_mc None
     (fst (assoc "maddloop_neon" outerloop_step1_labels))
     (fst (assoc "inner_loop_postamble" outerloop_step1_labels))
     original_maddloop_maychanges_right
@@ -7079,11 +7079,11 @@ let equiv_goal = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     original_outerloop_eqin
     original_maddloop_eqin
-    bignum_emontredc_8n_mc
+    bignum_emontredc_8n_mc None
     (fst (assoc "outerloop" bignum_emontredc_8n_labels))
     (fst (assoc "maddloop" bignum_emontredc_8n_labels))
     original_outerloop_maychanges_left
-    outerloop_step1_mc
+    outerloop_step1_mc None
     0
     (fst (assoc "maddloop_neon" outerloop_step1_labels))
     original_outerloop_maychanges_right
@@ -7387,11 +7387,11 @@ let equiv_goal = mk_equiv_statement
      aligned 16 (sp:int64) /\ 8 divides k /\ 16 <= k /\ k < 2 EXP 61`
     original_inner_loop_postamble_eqin
     original_inner_loop_postamble_eqout
-    bignum_emontredc_8n_mc
+    bignum_emontredc_8n_mc None
     (fst (assoc "madddone" bignum_emontredc_8n_labels))
     (fst (assoc "outerloop_end" bignum_emontredc_8n_labels))
     original_inner_loop_postamble_maychanges_left
-    outerloop_step1_mc
+    outerloop_step1_mc None
     (fst (assoc "inner_loop_postamble" outerloop_step1_labels))
     (Array.length (snd OUTERLOOP_STEP1_EXEC))
     original_inner_loop_postamble_maychanges_right
@@ -7647,11 +7647,11 @@ let equiv_goal = mk_equiv_statement
      k < 2 EXP 32`
     outerloop_eqin
     outerloop_eqout
-    bignum_emontredc_8n_mc
+    bignum_emontredc_8n_mc None
     (fst (assoc "outerloop" bignum_emontredc_8n_labels))
     (fst (assoc "outerloop_end" bignum_emontredc_8n_labels))
     (get_maychange OUTERLOOP_FULL_ORIGINAL_STEP1_EQUIV true)
-    outerloop_step2_mc
+    outerloop_step2_mc None
     0
     (Array.length (snd OUTERLOOP_STEP2_EXEC))
     (get_maychange OUTERLOOP_FULL_STEP1_STEP2_EQUIV false)
@@ -7797,11 +7797,11 @@ let equiv_goal = mk_equiv_statement
      k < 2 EXP 32`
     outerloop_eqin
     outerloop_eqout
-    bignum_emontredc_8n_mc
+    bignum_emontredc_8n_mc None
     (fst (assoc "outerloop" bignum_emontredc_8n_labels))
     (fst (assoc "outerloop_end" bignum_emontredc_8n_labels))
     (get_maychange OUTERLOOP_FULL_ORIGINAL_STEP2_EQUIV true)
-    outerloop_step3_mc
+    outerloop_step3_mc None
     0
     (Array.length (snd OUTERLOOP_STEP3_EXEC))
     (get_maychange OUTERLOOP_FULL_STEP2_STEP3_EQUIV_EXT false)
@@ -7941,11 +7941,11 @@ let equiv_goal = mk_equiv_statement
      k < 2 EXP 32`
     outerloop_eqin
     outerloop_eqout
-    bignum_emontredc_8n_mc
+    bignum_emontredc_8n_mc None
     (fst (assoc "outerloop" bignum_emontredc_8n_labels))
     (fst (assoc "outerloop_end" bignum_emontredc_8n_labels))
     (get_maychange OUTERLOOP_FULL_ORIGINAL_STEP3_EQUIV true)
-    bignum_emontredc_8n_cdiff_mc
+    bignum_emontredc_8n_cdiff_mc None
     (fst (assoc "outerloop" bignum_emontredc_8n_cdiff_labels))
     (fst (assoc "outerloop_end" bignum_emontredc_8n_cdiff_labels))
     (get_maychange OUTERLOOP_FULL_STEP3_STEP4_EQUIV_EXT false)
@@ -8201,7 +8201,7 @@ let equiv_goal = mk_equiv_statement
      k < 2 EXP 32`
     mainloop_eqin
     mainloop_eqout
-    bignum_emontredc_8n_mc
+    bignum_emontredc_8n_mc None
     (fst (assoc "main" bignum_emontredc_8n_labels))
     (fst (assoc "main_end" bignum_emontredc_8n_labels))
     (`MAYCHANGE
@@ -8209,7 +8209,7 @@ let equiv_goal = mk_equiv_statement
       X17; X19; X20; X21; X22; X23; X24; X25; X26; X27; X28] ,,
       MAYCHANGE [memory :> bytes (z,8 * 2 * k)] ,,
       MAYCHANGE [NF; ZF; CF; VF] ,, MAYCHANGE [events]`)
-    bignum_emontredc_8n_cdiff_mc
+    bignum_emontredc_8n_cdiff_mc None
     (fst (assoc "precomp_loop_end" bignum_emontredc_8n_cdiff_labels))
     (fst (assoc "main_end" bignum_emontredc_8n_cdiff_labels))
     (`MAYCHANGE
