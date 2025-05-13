@@ -182,42 +182,6 @@ let mlkem_keccak2_f1600_mc = define_assert_from_elf
 let MLKEM_KECCAK2_F1600_EXEC = ARM_MK_EXEC_RULE mlkem_keccak2_f1600_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* Some general stuff for fiddling with the chunksize for memory             *)
-(* ------------------------------------------------------------------------- *)
-
-let READ_MEMORY_MERGE_CONV =
-  let baseconv =
-    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT] THENC
-    LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
-     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
-               RAND_CONV WORD_ADD_CONV))))) in
-  let rec conv n tm =
-    if n = 0 then REFL tm else
-    (baseconv THENC BINOP_CONV (conv(n - 1))) tm in
-  conv;;
-
-let MEMORY_128_FROM_64_TAC =
-  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
-  and pat = `read (memory :> bytes128(word_add a (word n))) s0` in
-  fun v boff n ->
-    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
-    let f i =
-      let itm = mk_small_numeral(boff + 16*i) in
-      READ_MEMORY_MERGE_CONV 1 (subst[itm,n_tm] pat') in
-    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
-
-let READ_MEMORY_SPLIT_CONV =
-  let baseconv =
-    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_UNSPLIT] THENC
-    BINOP_CONV(LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
-     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
-               RAND_CONV WORD_ADD_CONV)))))) in
-  let rec conv n tm =
-    if n = 0 then REFL tm else
-    (baseconv THENC BINOP_CONV (conv(n - 1))) tm in
-  conv;;
-
-(* ------------------------------------------------------------------------- *)
 (* Convenient constructs to state and prove correctness. Should possibly     *)
 (* introduce a full state component for word lists eventually.               *)
 (* ------------------------------------------------------------------------- *)
@@ -242,16 +206,6 @@ let WORDLIST_FROM_MEMORY_CONV =
     GEN_REWRITE_CONV TOP_DEPTH_CONV [APPEND]
   and filt = can (term_match [] `wordlist_from_memory(a,NUMERAL n) s`) in
   conv o check filt;;
-
-(*** Evaluate EL in concrete instances ***)
-
-let EL_CONV =
-  let conv0 = GEN_REWRITE_CONV I [CONJUNCT1 EL] THENC GEN_REWRITE_CONV I [HD]
-  and conv1 = GEN_REWRITE_CONV I [CONJUNCT2 EL]
-  and convt = GEN_REWRITE_CONV I [TL] in
-  let convs = LAND_CONV num_CONV THENC conv1 THENC RAND_CONV convt in
-  let rec conv tm = (conv0 ORELSEC (convs THENC conv)) tm in
-  conv;;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof                                                         *)

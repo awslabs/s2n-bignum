@@ -15,8 +15,13 @@ needs "Library/rstc.ml";;
 needs "Library/words.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* Additional list operations and conversions on them.                       *)
+(* Additional list lemmas, operations and conversions.                       *)
 (* ------------------------------------------------------------------------- *)
+
+let LENGTH_FILTER = prove
+ (`!P l:A list. LENGTH(FILTER P l) <= LENGTH l`,
+  GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[FILTER; LE_REFL] THEN
+  COND_CASES_TAC THEN REWRITE_TAC[LENGTH] THEN ASM_ARITH_TAC);;
 
 let LIST_OF_FUN = define
  `LIST_OF_FUN 0 (f:num->A) = [] /\
@@ -125,10 +130,39 @@ let SUB_LIST_MIN = prove(
     ]
   ]);;
 
+let SUB_LIST_REFL = prove
+ (`!(l:A list) n. LENGTH l <= n ==> SUB_LIST(0,n) l = l`,
+  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SUB_LIST_CLAUSES] THEN
+  INDUCT_TAC THEN ASM_SIMP_TAC[SUB_LIST_CLAUSES; LE_SUC; LENGTH] THEN
+  ARITH_TAC);;
 
+let SUB_LIST_1 = prove
+ (`!(l:A list) n. SUB_LIST(n,1) l = if n < LENGTH l then [EL n l] else []`,
+  MATCH_MP_TAC list_INDUCT THEN
+  REWRITE_TAC[LENGTH; CONJUNCT1 LT; SUB_LIST_CLAUSES] THEN
+  MAP_EVERY X_GEN_TAC [`h:A`; `t:A list`] THEN DISCH_TAC THEN
+  MATCH_MP_TAC num_INDUCTION THEN
+  REWRITE_TAC[SUB_LIST_CLAUSES; LT_0; num_CONV `1`; EL; TL] THEN
+  ASM_REWRITE_TAC[GSYM(num_CONV `1`); LT_SUC; HD]);;
+
+let SUB_LIST_APPEND_LEFT = prove
+ (`!(l:A list) m n.
+        n <= LENGTH l ==> SUB_LIST(0,n) (APPEND l m) = SUB_LIST(0,n) l`,
+  LIST_INDUCT_TAC THEN
+  SIMP_TAC[LENGTH; CONJUNCT1 LE; SUB_LIST_CLAUSES] THEN
+  ONCE_REWRITE_TAC[SWAP_FORALL_THM] THEN
+  INDUCT_TAC THEN ASM_SIMP_TAC[SUB_LIST_CLAUSES; APPEND; LE_SUC]);;
 
 let TRIM_LIST = define
  `TRIM_LIST (h,t) l = SUB_LIST (h,LENGTH l - (h + t)) l`;;
+
+let EL_CONV =
+  let conv0 = GEN_REWRITE_CONV I [CONJUNCT1 EL] THENC GEN_REWRITE_CONV I [HD]
+  and conv1 = GEN_REWRITE_CONV I [CONJUNCT2 EL]
+  and convt = GEN_REWRITE_CONV I [TL] in
+  let convs = LAND_CONV num_CONV THENC conv1 THENC RAND_CONV convt in
+  let rec conv tm = (conv0 ORELSEC (convs THENC conv)) tm in
+  conv;;
 
 let rec LENGTH_CONV =
   let conv0 = GEN_REWRITE_CONV I [CONJUNCT1 LENGTH]

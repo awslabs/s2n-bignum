@@ -133,25 +133,6 @@ let num_two_to_64 = Num.num_of_string "18446744073709551616";;
 (* This makes MESON quiet. *)
 verbose := false;;
 
-
-let READ_MEMORY_MERGE_CONV =
-  let baseconv =
-    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT] THENC
-    LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
-     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
-               RAND_CONV WORD_ADD_CONV))))) in
-  let rec conv tm =
-    (baseconv THENC BINOP_CONV(TRY_CONV conv)) tm in
-  conv;;
-
-let MEMORY_SPLIT_TAC k =
-  let tac =
-    STRIP_ASSUME_TAC o
-    CONV_RULE (BINOP_CONV(BINOP2_CONV
-       (ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) WORD_REDUCE_CONV)) o
-    GEN_REWRITE_RULE I [el k (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] in
-  EVERY_ASSUM (fun th -> try tac th with Failure _ -> ALL_TAC);;
-
 (*** Before and after tactics for goals that either do or don't involve
  *** memory operations (memop = they do). Non-memory ones are simpler and
  *** quicker; the memory ones do some more elaborate fiddling with format
@@ -197,7 +178,7 @@ and tac_main (memopidx: int option) mc states =
 and tac_after memop =
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
+  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 WORD_ADD_0; WORD_SUB_0]) THEN
   ASM_REWRITE_TAC[CONJUNCT1 WORD_ADD_0; WORD_SUB_0] THEN

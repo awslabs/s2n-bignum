@@ -153,16 +153,6 @@ let WORDLIST_FROM_MEMORY_CONV =
   and filt = can (term_match [] `wordlist_from_memory(a,NUMERAL n) s`) in
   conv o check filt;;
 
-(*** Evaluate EL in concrete instances ***)
-
-let EL_CONV =
-  let conv0 = GEN_REWRITE_CONV I [CONJUNCT1 EL] THENC GEN_REWRITE_CONV I [HD]
-  and conv1 = GEN_REWRITE_CONV I [CONJUNCT2 EL]
-  and convt = GEN_REWRITE_CONV I [TL] in
-  let convs = LAND_CONV num_CONV THENC conv1 THENC RAND_CONV convt in
-  let rec conv tm = (conv0 ORELSEC (convs THENC conv)) tm in
-  conv;;
-
 (*** Introduce ghost variables for Qn given Dn register reads in a list ***)
 
 let GHOST_SUBREGLIST_TAC =

@@ -116,28 +116,6 @@ let overall_lemma = prove
   REWRITE_TAC[MATCH_MP lemma_rem (CONGBOUND_RULE `barred x`)] THEN
   BITBLAST_TAC);;
 
-let READ_MEMORY_MERGE_CONV =
-  let baseconv =
-    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT] THENC
-    LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
-     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
-               RAND_CONV WORD_ADD_CONV))))) in
-  let rec conv n tm =
-    if n = 0 then REFL tm else
-    (baseconv THENC BINOP_CONV (conv(n - 1))) tm in
-  conv;;
-
-let READ_MEMORY_SPLIT_CONV =
-  let baseconv =
-    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_UNSPLIT] THENC
-    BINOP_CONV(LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
-     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
-               RAND_CONV WORD_ADD_CONV)))))) in
-  let rec conv n tm =
-    if n = 0 then REFL tm else
-    (baseconv THENC BINOP_CONV (conv(n - 1))) tm in
-  conv;;
-
 let SIMD_SIMPLIFY_CONV =
   TOP_DEPTH_CONV
    (REWR_CONV WORD_SUBWORD_AND ORELSEC WORD_SIMPLE_SUBWORD_CONV) THENC
