@@ -1300,6 +1300,74 @@ let x86_SUB = new_definition
          AF := ~(&(val(word_zx x:nybble)) - &(val(word_zx y:nybble)):int =
                  &(val(word_zx z:nybble)))) s`;;
 
+let x86_VPADDW_256 = new_definition
+  `x86_VPADDW_256 dest src1 src2 s =
+      let (x:256 word) = read src1 s
+      and (y:256 word) = read src2 s in
+      let res:(256)word =
+          simd16 (\(x:16 word) (y:16 word). word_add x y) x y in
+      (dest := res) s`;;
+
+let x86_VPADDW_128 = new_definition
+  `x86_VPADDW_128 dest src1 src2 s =
+      let (x:128 word) = read src1 s
+      and (y:128 word) = read src2 s in
+      let res:(128)word =
+          simd8 (\(x:16 word) (y:16 word). word_add x y) x y in
+      (dest := res) s`;;
+
+let x86_VPMULHW_256 = new_definition
+  `x86_VPMULHW_256 dest src1 src2 s =
+      let (x:256 word) = read src1 s
+      and (y:256 word) = read src2 s in
+      let res:(256)word =
+          simd16 (\(x:16 word) (y:16 word).
+            word_subword (word_mul ((word_sx x):int32) ((word_sx y):int32)) (16,16))
+            x y in
+      (dest := res) s`;;
+
+let x86_VPMULHW_128 = new_definition
+  `x86_VPMULHW_128 dest src1 src2 s =
+      let (x:128 word) = read src1 s
+      and (y:128 word) = read src2 s in
+      let res:(128)word =
+          simd8 (\(x:16 word) (y:16 word).
+            word_subword (word_mul ((word_sx x):int32) ((word_sx y):int32)) (16,16))
+            x y in
+      (dest := res) s`;;
+
+let x86_VPMULLW_256 = new_definition
+  `x86_VPMULLW_256 dest src1 src2 s =
+      let (x:256 word) = read src1 s
+      and (y:256 word) = read src2 s in
+      let res:(256)word =
+          simd16 (\(x:16 word) (y:16 word). word_mul x y) x y in
+      (dest := res) s`;;
+
+let x86_VPMULLW_128 = new_definition
+  `x86_VPMULLW_128 dest src1 src2 s =
+      let (x:128 word) = read src1 s
+      and (y:128 word) = read src2 s in
+      let res:(128)word =
+          simd8 (\(x:16 word) (y:16 word). word_mul x y) x y in
+      (dest := word_join ((word 0):128 word) res) s`;;
+
+let x86_VPSUBW_256 = new_definition
+  `x86_VPSUBW_256 dest src1 src2 s =
+      let (x:256 word) = read src1 s
+      and (y:256 word) = read src2 s in
+      let res:(256)word =
+          simd16 (\(x:16 word) (y:16 word). word_sub x y) x y in
+      (dest := res) s`;;
+
+let x86_VPSUBW_128 = new_definition
+  `x86_VPSUBW_128 dest src1 src2 s =
+      let (x:128 word) = read src1 s
+      and (y:128 word) = read src2 s in
+      let res:(128)word =
+          simd8 (\(x:16 word) (y:16 word). word_sub x y) x y in
+      (dest := res) s`;;
+
 (*** This is roughly AND just for some condition codes ***)
 
 let x86_TEST = new_definition
@@ -1970,6 +2038,22 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+    | VPADDW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPADDW_256 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPADDW_128 (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPMULHW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPMULHW_256 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPMULHW_128 (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPMULLW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPMULLW_256 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPMULLW_128 (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPSUBW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPSUBW_256 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPSUBW_128 (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | VPXOR dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPXOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
@@ -2692,6 +2776,14 @@ let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+let x86_VPADDW_128_ALT = EXPAND_SIMD_RULE x86_VPADDW_128;;
+let x86_VPADDW_256_ALT = EXPAND_SIMD_RULE x86_VPADDW_256;;
+let x86_VPMULHW_128_ALT = EXPAND_SIMD_RULE x86_VPMULHW_128;;
+let x86_VPMULHW_256_ALT = EXPAND_SIMD_RULE x86_VPMULHW_256;;
+let x86_VPMULLW_128_ALT = EXPAND_SIMD_RULE x86_VPMULLW_128;;
+let x86_VPMULLW_256_ALT = EXPAND_SIMD_RULE x86_VPMULLW_256;;
+let x86_VPSUBW_128_ALT = EXPAND_SIMD_RULE x86_VPSUBW_128;;
+let x86_VPSUBW_256_ALT = EXPAND_SIMD_RULE x86_VPSUBW_256;;
 
 
 let X86_OPERATION_CLAUSES =
@@ -2710,7 +2802,10 @@ let X86_OPERATION_CLAUSES =
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
-    x86_VPXOR;
+    x86_VPADDW_128_ALT; x86_VPADDW_256_ALT;
+    x86_VPMULHW_128_ALT; x86_VPMULHW_256_ALT;
+    x86_VPMULLW_128_ALT; x86_VPMULLW_256_ALT;
+    x86_VPSUBW_128_ALT; x86_VPSUBW_256_ALT; x86_VPXOR;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
