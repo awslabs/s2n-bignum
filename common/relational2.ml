@@ -863,6 +863,25 @@ let ENSURES2_MAYCHANGE_PRESERVED_LEFT = prove
     ] THEN
     ASM_MESON_TAC[PAIR]);;
 
+let ENSURES2_MAYCHANGE_EXISTING_PRESERVED_LEFT = prove
+  (`!(c:(A,B)component) (t:A->A->bool) P Q R fn1 fn2.
+          extensionally_valid_component c /\
+          (!s s'. R s s' ==> read c (FST s') = read c (FST s)) /\
+          (!s. P s ==> read c (FST s) = d) /\
+          (!d. ensures2 t
+              P
+              (\s. Q s /\ read c (FST s) = d)
+              (R ,, (\s0 s. MAYCHANGE [c] (FST s0) (FST s) /\ SND s0 = SND s))
+              fn1 fn2)
+          ==> ensures2 t P Q R fn1 fn2`,
+
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES2_MAYCHANGE_PRESERVED_LEFT THEN
+    EXISTS_TAC `c:(A,B)component` THEN ASM_REWRITE_TAC[] THEN
+    ONCE_REWRITE_TAC[TAUT `p /\ q <=> ~(p ==> ~q)`] THEN
+    ASM_SIMP_TAC[] THEN X_GEN_TAC `e:B` THEN
+    ASM_CASES_TAC `e:B = d` THEN
+    ASM_REWRITE_TAC[NOT_IMP; ETA_AX] THEN MESON_TAC[ensures2]);;
+
 let ENSURES2_MAYCHANGE_PRESERVED_RIGHT = prove
   (`!(c:(A,B)component) (t:A->A->bool) P Q R fn1 fn2.
           extensionally_valid_component c /\
@@ -902,3 +921,22 @@ let ENSURES2_MAYCHANGE_PRESERVED_RIGHT = prove
       ALL_TAC
     ] THEN
     ASM_MESON_TAC[PAIR]);;
+
+let ENSURES2_MAYCHANGE_EXISTING_PRESERVED_RIGHT = prove
+  (`!(c:(A,B)component) (t:A->A->bool) P Q R fn1 fn2.
+        extensionally_valid_component c /\
+        (!s s'. R s s' ==> read c (SND s') = read c (SND s)) /\
+        (!s. P s ==> read c (SND s) = d) /\
+        (!d. ensures2 t
+            P
+            (\s. Q s /\ read c (SND s) = d)
+            (R ,, (\s0 s. MAYCHANGE [c] (SND s0) (SND s) /\ FST s0 = FST s))
+            fn1 fn2)
+        ==> ensures2 t P Q R fn1 fn2`,
+
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES2_MAYCHANGE_PRESERVED_RIGHT THEN
+    EXISTS_TAC `c:(A,B)component` THEN ASM_REWRITE_TAC[] THEN
+    ONCE_REWRITE_TAC[TAUT `p /\ q <=> ~(p ==> ~q)`] THEN
+    ASM_SIMP_TAC[] THEN X_GEN_TAC `e:B` THEN
+    ASM_CASES_TAC `e:B = d` THEN
+    ASM_REWRITE_TAC[NOT_IMP; ETA_AX] THEN MESON_TAC[ensures2]);;
