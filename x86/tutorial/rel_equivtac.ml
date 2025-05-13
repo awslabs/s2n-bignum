@@ -5,7 +5,7 @@
 
 (******************************************************************************
         An example that proves equivalence of two straight-line codes
-                  accessing memory using EQUIV_STEPS_TAC.
+        accessing memory or vector registers using EQUIV_STEPS_TAC.
 ******************************************************************************)
 
 (* Please copy this file to the root directory of
@@ -197,3 +197,96 @@ let EQUIV = prove(equiv_goal,
     extra_word_CONV := (GEN_REWRITE_CONV I [<your_word_thm>])::org_convs;;
     ```
 *)
+
+
+
+(* The second example that uses the SSE registers and vector operations.
+   The following `pxor_mc` program has a couple of PXOR instructions. PXOR
+   leaves the upper half bits of the YMM registers untouched. We will show that,
+   given the equalities on the lower half of YMM registers (Which are `read
+   XMM{n}_SSE ..`), after running the two PXOR instructions the YMM registers
+   will still result in equalities of their lower halfs.
+ *)
+
+let pxor_mc = define_assert_from_elf "pxor_mc" "x86/tutorial/rel_equivtac_sse.o" [
+  0x66; 0x0f; 0xef; 0xca;  (* PXOR (%_% xmm1) (%_% xmm2) *)
+  0x66; 0x0f; 0xef; 0xcb   (* PXOR (%_% xmm1) (%_% xmm3) *)
+];;
+
+let PXOR_EXEC = X86_MK_EXEC_RULE pxor_mc;;
+
+(* Define the equality between the state components. *)
+let pxor_eq = new_definition
+  `forall s1 s1'.
+    (pxor_eq:(x86state#x86state)->bool) (s1,s1') <=>
+     ((exists n. read XMM1_SSE s1 = n /\ read XMM1_SSE s1' = n) /\
+      (exists n. read XMM2_SSE s1 = n /\ read XMM2_SSE s1' = n) /\
+      (exists n. read XMM3_SSE s1 = n /\ read XMM3_SSE s1' = n))`;;
+
+let equiv_goal = mk_equiv_statement_simple
+  `true` (* no global preconditions *)
+  pxor_eq  (* Input state equivalence *)
+  pxor_eq (* Output state equivalence *)
+  pxor_mc PXOR_EXEC  (* First program machine code *)
+  `MAYCHANGE [RIP] ,, MAYCHANGE [YMM1_SSE]`
+  pxor_mc PXOR_EXEC (* Second program machine code *)
+  `MAYCHANGE [RIP] ,, MAYCHANGE [YMM1_SSE]`;;
+
+
+(* Given `read XMM{n}_SSE s0 = rhs`, this rule proves
+   `exists x. read YMM{n} s0 = word_join x rhs`. *)
+let EXPAND_READ_XMM_SSE_RULE th =
+  try
+    let th' = REWRITE_RULE ([XMM0_SSE; XMM1_SSE; XMM2_SSE; XMM3_SSE;
+        XMM4_SSE; XMM5_SSE; XMM6_SSE; XMM7_SSE;
+        XMM8_SSE; XMM9_SSE; XMM10_SSE; XMM11_SSE;
+        XMM12_SSE; XMM13_SSE; XMM14_SSE; XMM15_SSE;
+        READ_BOTTOM_128] @ READ_YMM_SSE_EQUIV) th in
+    let the_lhs,rhs = dest_eq (concl th') in
+    let c_word_subword,read_ymm::idx::[] = strip_comb (the_lhs) in
+    let c_read,the_ymm::statevar::[] = strip_comb read_ymm in
+    let upperbits_var = mk_var ("x",`:(128)word`) in
+    let new_goal = mk_exists(upperbits_var, mk_eq(read_ymm,
+        list_mk_comb (`word_join:(128)word->(128)word->(256)word`,
+                      [upperbits_var;rhs]))) in
+    TAC_PROOF((["",th],new_goal),
+        EXISTS_TAC (list_mk_comb
+          (`word_subword:(256)word->(num#num)->(128)word`,
+          [read_ymm;`(128,128)`])) THEN
+        GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [GSYM th'] THEN
+        CONV_TAC WORD_BLAST)
+  with _ -> failwith ("Could not expand " ^ (string_of_thm th));;
+
+
+let org_extra_word_conv = !extra_word_CONV;;
+
+(* Enable simplification of word_subwords by default *)
+extra_word_CONV := [WORD_SIMPLE_SUBWORD_CONV] @ !extra_word_CONV;;
+
+(* Now, let's prove the program equivalence. *)
+let EQUIV = prove(equiv_goal,
+
+  REWRITE_TAC[fst PXOR_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+
+  (** Initialize **)
+  EQUIV_INITIATE_TAC pxor_eq THEN
+  REPEAT (FIRST_X_ASSUM
+    (fun th -> MP_TAC (EXPAND_READ_XMM_SSE_RULE th) THEN STRIP_TAC)) THEN
+
+  EQUIV_STEPS_TAC [
+    ("equal",0,2,0,2);
+  ] PXOR_EXEC PXOR_EXEC THEN
+
+  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  (* Prove remaining clauses from the postcondition *)
+  ASM_REWRITE_TAC[] THEN
+
+  (* No CONJ_TAC this time, because MAYCHANGE part was already discharged! *)
+  ASM_REWRITE_TAC([pxor_eq] @ [XMM1_SSE; XMM2_SSE; XMM3_SSE; READ_BOTTOM_128] @
+      READ_YMM_SSE_EQUIV) THEN
+  CONV_TAC (ONCE_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  MESON_TAC[]);;
+
+
+extra_word_CONV := org_extra_word_conv;;

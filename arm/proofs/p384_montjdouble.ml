@@ -2566,7 +2566,7 @@ let equiv_goal = mk_equiv_statement
         (word pc2,LENGTH p384_montjdouble_opt_mc)]`
     p384_montjdouble_eqin
     p384_montjdouble_eqout
-    p384_montjdouble_core_mc 0xc6c 0x10bc
+    p384_montjdouble_core_mc None 0xc6c 0x10bc
     `MAYCHANGE [PC; SP; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                 X11; X12; X13; X14; X15; X16; X17; X19; X20;
                 X21; X22; X23; X24; X25; X26; X30] ,,
@@ -2574,7 +2574,7 @@ let equiv_goal = mk_equiv_statement
      MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bytes(p3,144);
                 memory :> bytes(stackpointer,384)]`
-    p384_montjdouble_opt_mc 0x18 0x3050
+    p384_montjdouble_opt_mc None 0x18 0x3050
     `MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                 X11; X12; X13; X14; X15; X16; X17; X19; X20; X21;
                 X22; X23; X24; X25; X26; X27] ,,

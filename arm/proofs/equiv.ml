@@ -412,9 +412,7 @@ let ALIGNED_BYTES_LOADED_BARRIER_ARM_STUCK = prove(
 (* Tactics for simulating a program whose postcondition is eventually_n.     *)
 (* ------------------------------------------------------------------------- *)
 
-(* A variant of ARM_BASIC_STEP_TAC, but
-   - targets eventually_n
-   - preserves 'arm s sname' at assumption *)
+(* A variant of ARM_BASIC_STEP_TAC, but targets eventually_n *)
 let ARM_N_BASIC_STEP_TAC =
   let arm_tm = `arm` and arm_ty = `:armstate` and one = `1:num` in
   fun decode_th sname store_inst_term_to (asl,w) ->
@@ -1201,6 +1199,12 @@ let EQUIV_STEP_TAC action execth1 execth2
     match x with
     | None -> []
     | Some arr -> arr.(i) in
+  let run_tac (tac:tactic) (msg:string):tactic =
+    fun (asl,w) ->
+      try tac (asl,w)
+      with Failure s ->
+        (PRINT_TAC (msg ^ ": reason: " ^ s)
+         THEN PRINT_GOAL_TAC THEN NO_TAC) (asl,w) in
 
   match action with
   | ("equal",lstart,lend,rstart,rend) ->
@@ -1219,26 +1223,26 @@ let EQUIV_STEP_TAC action execth1 execth2
     else begin
       (if rend - rstart > 50 then
         Printf.printf "Warning: too many instructions: insert %d~%d\n" rstart rend);
-      ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right
-        ORELSE (PRINT_TAC "insert failed" THEN PRINT_GOAL_TAC THEN NO_TAC)
+      run_tac (ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right)
+        "insert failed"
     end
   | ("delete",lstart,lend,rstart,rend) ->
     if rstart <> rend then failwith "delete's rstart and rend must be equal"
     else begin
       (if lend - lstart > 50 then
         Printf.printf "Warning: too many instructions: delete %d~%d\n" lstart lend);
-      ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left
-        ORELSE (PRINT_TAC "delete failed" THEN PRINT_GOAL_TAC THEN NO_TAC)
+      run_tac (ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left)
+        "delete failed"
     end
   | ("replace",lstart,lend,rstart,rend) ->
     (if lend - lstart > 50 || rend - rstart > 50 then
       Printf.printf "Warning: too many instructions: replace %d~%d %d~%d\n"
           lstart lend rstart rend);
-    ((ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left
-     ORELSE (PRINT_TAC "replace failed: stuttering left" THEN PRINT_GOAL_TAC THEN NO_TAC))
+    (run_tac (ARM_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend) dead_value_info_left)
+        "replace failed: stuttering left"
      THEN
-     (ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right
-      ORELSE (PRINT_TAC "replace failed: stuttering right" THEN PRINT_GOAL_TAC THEN NO_TAC)))
+     run_tac (ARM_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'" dead_value_info_right)
+        "replace failed: stuttering right")
   | (s,_,_,_,_) -> failwith ("Unknown action: " ^ s);;
 
 
@@ -2095,89 +2099,19 @@ let mk_eventually_n_at_pc_statement_simple
         fnsteps1
         fnsteps2`
   equiv_in and equiv_out's first two universal quantifiers must be armstates.
+
+  mc1_data and mc2_data are set to 'Some ...' if mc1 or mc2 has constant data
+  appended at the text section after mc1 and mc2.
 *)
 let mk_equiv_statement (assum:term) (equiv_in:thm) (equiv_out:thm)
-    (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
-    (mc2:thm) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
+    (mc1:thm) (data1:thm option) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
+    (mc2:thm) (data2:thm option) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
     (fnsteps1:term) (fnsteps2:term):term =
-  let _ = List.map2 type_check
-      [assum;maychange1;maychange2]
-      [`:bool`;`:armstate->armstate->bool`;`:armstate->armstate->bool`] in
-  let quants_in,equiv_in_body = strip_forall (concl equiv_in) in
-  let quants_out,equiv_out_body = strip_forall (concl equiv_out) in
-  let _ = if !arm_print_log then
-    Printf.printf "quants_in: %s\nquants_out: %s\n%!"
-      (String.concat ", " (List.map string_of_term quants_in))
-      (String.concat ", " (List.map string_of_term quants_out)) in
-  (* equiv_in and equiv_out's first two universal quantifiers must be armstates. *)
-  let quants_in_states,quants_in = takedrop 2 quants_in in
-  let quants_out_states,quants_out = takedrop 2 quants_out in
-  let _ = List.map2 type_check
-    (quants_in_states @ quants_out_states)
-    [`:armstate`;`:armstate`;`:armstate`;`:armstate`] in
-  let quants = union quants_in quants_out in
-  let quants = [`pc:num`;`pc2:num`] @ quants in
-  (* There might be more free variables in 'assum'. Let's add them too. *)
-  let quants = quants @
-    (List.filter (fun t -> not (mem t quants)) (frees assum)) in
-  let _ = if !arm_print_log then
-    Printf.printf "quantifiers: %s\n%!" (String.concat ", "
-      (List.map string_of_term quants)) in
-
-  (* Now build 'ensures2' *)
-  let mk_aligned_bytes_loaded (s:term) (pc_var:term) (mc:term) =
-    let _ = List.map2 type_check [s;pc_var;mc] [`:armstate`;`:num`;`:((8)word)list`] in
-    let template = `aligned_bytes_loaded s (word pc) mc` in
-    subst [s,`s:armstate`;mc,`mc:((8)word)list`;pc_var,`pc:num`] template
-  in
-  let mk_read_pc (s:term) (pc_var:term) (pc_ofs:int):term =
-    let _ = List.map2 type_check [s;pc_var] [`:armstate`;`:num`] in
-    if pc_ofs = 0 then
-      let template = `read PC s = word pc` in
-      subst [s,`s:armstate`;pc_var,`pc:num`] template
-    else
-      let template = `read PC s = word (pc+pc_ofs)` in
-      subst [s,`s:armstate`;pc_var,`pc:num`;mk_small_numeral(pc_ofs),`pc_ofs:num`]
-            template
-  in
-  let s = `s:armstate` and s2 = `s2:armstate` in
-  let pc = `pc:num` and pc2 = `pc2:num` in
-  let equiv_in_pred = fst (strip_comb (fst (dest_eq equiv_in_body))) in
-  let equiv_out_pred = fst (strip_comb (fst (dest_eq equiv_out_body))) in
-
-  let precond = mk_gabs (`(s:armstate,s2:armstate)`,
-    (list_mk_conj [
-      mk_aligned_bytes_loaded s pc (lhs (concl mc1));
-      mk_read_pc s pc pc_ofs1;
-      mk_aligned_bytes_loaded s2 pc2 (lhs (concl mc2));
-      mk_read_pc s2 pc2 pc_ofs2;
-      list_mk_comb (equiv_in_pred, (`(s:armstate,s2:armstate)`::quants_in))
-    ])) in
-  let postcond = mk_gabs (`(s:armstate,s2:armstate)`,
-    (list_mk_conj [
-      mk_aligned_bytes_loaded s pc (lhs (concl mc1));
-      mk_read_pc s pc pc_ofs1_to;
-      mk_aligned_bytes_loaded s2 pc2 (lhs (concl mc2));
-      mk_read_pc s2 pc2 pc_ofs2_to;
-      list_mk_comb (equiv_out_pred, (`(s:armstate,s2:armstate)`::quants_out))
-    ])) in
-  let maychange = list_mk_gabs (
-    [`(s:armstate,s2:armstate)`;`(s':armstate,s2':armstate)`],
-    mk_conj
-      (list_mk_comb (maychange1,[`s:armstate`;`s':armstate`]),
-       list_mk_comb (maychange2,[`s2:armstate`;`s2':armstate`]))) in
-
-  let _ = List.iter (fun t -> Printf.printf "\t%s\n" (string_of_term t))
-    [precond;postcond;maychange;fnsteps1;fnsteps2] in
-  let ensures2_pred = list_mk_comb
-    (`ensures2:
-      (armstate->armstate->bool)->(armstate#armstate->bool)
-      ->(armstate#armstate->bool)
-      ->(armstate#armstate->armstate#armstate->bool)
-      ->(armstate->num)->(armstate->num)->bool`,
-     [`arm`;precond;postcond;maychange;fnsteps1;fnsteps2]) in
-  let imp = mk_imp (assum,ensures2_pred) in
-  list_mk_forall (quants, imp);;
+  mk_equiv_statement_template `:armstate` `arm` `aligned_bytes_loaded` `PC`
+    assum equiv_in equiv_out
+    mc1 data1 pc_ofs1 pc_ofs1_to maychange1
+    mc2 data2 pc_ofs2 pc_ofs2_to maychange2
+    fnsteps1 fnsteps2;;
 
 (* Program equivalence between two straight-line programs,
    starting from its begin to end. *)
@@ -2187,8 +2121,8 @@ let mk_equiv_statement_simple (assum:term) (equiv_in:thm) (equiv_out:thm)
   let mc1_length = get_bytelist_length (rhs (concl mc1)) in
   let mc2_length = get_bytelist_length (rhs (concl mc2)) in
   mk_equiv_statement assum equiv_in equiv_out
-    mc1 0 mc1_length maychange1
-    mc2 0 mc2_length maychange2
+    mc1 None 0 mc1_length maychange1
+    mc2 None 0 mc2_length maychange2
     (mk_abs (`s:armstate`,mk_small_numeral(mc1_length / 4)))
     (mk_abs (`s:armstate`,mk_small_numeral(mc2_length / 4)));;
 

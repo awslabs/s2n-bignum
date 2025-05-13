@@ -639,6 +639,12 @@ let mk_fresh_temp_name =
    Note that forget_expr is rarely false; it is false in special cases
    like when `c` is the SP register.
    For flag reads, which are simply `|- read ...`, just assumes them.
+
+   If e1 is not equal to e2, but e1 is `word_join x e1'` and e2 is `word_join y
+   e2'`, try to solve `e1' = e2'` and abbreviate `e1' = freshvar`. This happens
+   in the cases like SSE registers whose updates only affect the lower bits and
+   a user only wants to state that equivalence of upper bits in their inputs is
+   not guaranteed.
 *)
 let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
   W(fun (asl,g) ->
@@ -662,22 +668,41 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
             (string_of_term rhs) (string_of_term lhs) vname forget_expr
           in
 
-        let readth2 =
-          (if rhs2 = rhs then readth2 else
+        (* Abbreviate the RHS of readth2 *)
+        let readth2,abbreviating_expr =
+          (if rhs2 = rhs then readth2,rhs else
           try
             let r = WORD_RULE (mk_eq(rhs2,rhs)) in
             let _ = if !equiv_print_log then
               Printf.printf "\t- Abbreviating `%s` as \"%s\" as well\n"
                 (string_of_term rhs2) vname in
-            REWRITE_RULE[r] readth2
+            (REWRITE_RULE[r] readth2),rhs
+          with _ ->
+            (* Inspect if this is the result of updating lower bits of the
+               registers. *)
+          (try
+            let wj1,whi1::wlo1::[] = strip_ncomb 2 rhs in
+            let wj2,whi2::wlo2::[] = strip_ncomb 2 rhs2 in
+            if wj1 <> wj2 then failwith "" else
+            if wlo1 = wlo2 then readth2,wlo1 else
+            let r = WORD_RULE (mk_eq(wlo2,wlo1)) in
+            let _ = if !equiv_print_log then
+              Printf.printf "\t- Abbreviating `%s` as \"%s\" instead\n"
+                (string_of_term wlo2) vname in
+            (REWRITE_RULE[r] readth2),wlo1
           with _ ->
             Printf.printf "\t- Error: WORD_RULE could not prove `%s = %s`\n"
               (string_of_term rhs2) (string_of_term rhs);
-            failwith "ABBREV_READS_TAC") in
+            Printf.printf "If the two expressions seem semantically equivalent,";
+            Printf.printf " please consider adding a conversion or rewrite rule";
+            Printf.printf " to extra_word_CONV:\n";
+            Printf.printf "e.g.,  extra_word_CONV := [GEN_REWRITE_CONV I [my_thm]] @ !extra_word_CONV;;\n";
+            Printf.printf "e.g.2, extra_word_CONV := [WORD_SIMPLE_SUBWORD_CONV] @ !extra_word_CONV;;\n";
+            failwith "ABBREV_READS_TAC")) in
         (* Now introduce abbreviated writes, eventually *)
-        let fresh_var = mk_var (vname,type_of rhs) in
-        let abbrev_th = prove(mk_exists(fresh_var,mk_eq(rhs,fresh_var)),
-          EXISTS_TAC rhs THEN REFL_TAC) in
+        let fresh_var = mk_var (vname,type_of abbreviating_expr) in
+        let abbrev_th = prove(mk_exists(fresh_var,mk_eq(abbreviating_expr,fresh_var)),
+          EXISTS_TAC abbreviating_expr THEN REFL_TAC) in
         CHOOSE_THEN (fun abbrev_th ->
             ASSUME_TAC (REWRITE_RULE[abbrev_th] readth) THEN
             ASSUME_TAC (REWRITE_RULE[abbrev_th] readth2) THEN
@@ -954,3 +979,127 @@ let PROVE_CONJ_OF_EQ_READS_TAC execth =
       REWRITE_TAC([LENGTH_APPEND;fst execth] @ !prove_conj_of_eq_reads_unfold_rules) THEN
       ARITH_TAC) in
   TRY (main_tac ORELSE (MATCH_MP_TAC EQ_SYM THEN main_tac));;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Functions that create statements that are related to program equivalence. *)
+(* ------------------------------------------------------------------------- *)
+
+(* mk_equiv_statement creates a term
+   `!pc pc2 <other quantifiers>.
+      assum ==> ensures2 [opsem_const]
+        (\(s,s2). [bytes_loaded_pred] s (word pc) mc1 /\
+                  read [pc_component] s = word (pc+pc_ofs1) /\
+                  [bytes_loaded_pred] s2 (word pc2) mc2 /\
+                  read [pc_component] s2 = word (pc2+pc_ofs2) /\
+                  equiv_in (s,s2))
+        (\(s,s2). [bytes_loaded_pred] s (word pc) mc1 /\
+                  read [pc_component] s = word (pc+pc_ofs1_to) /\
+                  [bytes_loaded_pred] s2 (word pc2) mc2 /\
+                  read [pc_component] s2 = word (pc2+pc_ofs2_to) /\
+                  equiv_out (s,s2))
+        (\(s,s2) (s',s2'). maychange1 s s' /\ maychange2 s2 s2')
+        fnsteps1
+        fnsteps2`
+  equiv_in and equiv_out's first two universal quantifiers must be state_ty.
+
+  Enable equiv_print_log := true for debugging.
+
+  mc1_data and mc2_data are set to 'Some ...' if mc1 or mc2 has constant data
+  appended at the text section after mc1 and mc2.
+*)
+let mk_equiv_statement_template
+    (* These inputs are architecture-specific *)
+    (state_ty:hol_type) (opsem_const:term) (bytes_loaded_const:term)
+    (pc_reg_comp:term)
+
+    (assum:term) (equiv_in:thm) (equiv_out:thm)
+    (mc1:thm) (data1:thm option) (pc_ofs1:int) (pc_ofs1_to:int)
+    (maychange1:term)
+    (mc2:thm) (data2:thm option) (pc_ofs2:int) (pc_ofs2_to:int)
+    (maychange2:term)
+    (fnsteps1:term) (fnsteps2:term):term =
+  let maychange_ty = itlist mk_fun_ty [state_ty;state_ty] `:bool` in
+  let _ = List.map2 type_check
+      [assum;maychange1;maychange2]
+      [`:bool`;maychange_ty;maychange_ty] in
+
+  let quants_in,equiv_in_body = strip_forall (concl equiv_in) in
+  let quants_out,equiv_out_body = strip_forall (concl equiv_out) in
+  let _ = if !equiv_print_log then
+    Printf.printf "quants_in: %s\nquants_out: %s\n%!"
+      (String.concat ", " (List.map string_of_term quants_in))
+      (String.concat ", " (List.map string_of_term quants_out)) in
+  (* equiv_in and equiv_out's first two universal quantifiers must be states. *)
+  let quants_in_states,quants_in = takedrop 2 quants_in in
+  let quants_out_states,quants_out = takedrop 2 quants_out in
+  let _ = List.map2 type_check
+    (quants_in_states @ quants_out_states)
+    [state_ty;state_ty;state_ty;state_ty] in
+  let quants = union quants_in quants_out in
+  let quants = [`pc:num`;`pc2:num`] @ quants in
+  (* There might be more free variables in 'assum'. Let's add them too. *)
+  let quants = quants @
+    (List.filter (fun t -> not (mem t quants)) (frees assum)) in
+  let _ = if !equiv_print_log then
+    Printf.printf "quantifiers: %s\n%!" (String.concat ", "
+      (List.map string_of_term quants)) in
+
+  (* Now build 'ensures2' *)
+  let mk_bytes_loaded (s:term) (pc_var:term) (mc:term) (data:term option) =
+    let _ = List.map2 type_check [s;pc_var;mc] [state_ty;`:num`;`:((8)word)list`] in
+    let mc_all = if data = None then mc else
+      let data = Option.get data in
+      let _ = type_check data `:((8)word)list` in
+      list_mk_icomb "APPEND" [mc;data]
+    in
+    list_mk_comb (bytes_loaded_const,[s;mk_comb(`word:num->(64)word`,pc_var);mc_all])
+  in
+  let mk_read_pc (s:term) (pc_var:term) (pc_ofs:int):term =
+    let _ = List.map2 type_check [s;pc_var] [state_ty;`:num`] in
+    if pc_ofs = 0 then
+      mk_eq (list_mk_icomb "read" [pc_reg_comp;s],
+             mk_comb(`word:num->(64)word`,pc_var))
+    else
+      mk_eq (list_mk_icomb "read" [pc_reg_comp;s],
+             mk_comb(`word:num->(64)word`,
+              mk_binary "+" (pc_var,mk_small_numeral(pc_ofs))))
+  in
+  let s = mk_var("s",state_ty) and s2 = mk_var("s2",state_ty) in
+  let spair = mk_pair(s,s2) in
+  let pc = `pc:num` and pc2 = `pc2:num` in
+  let equiv_in_pred = fst (strip_comb (fst (dest_eq equiv_in_body))) in
+  let equiv_out_pred = fst (strip_comb (fst (dest_eq equiv_out_body))) in
+
+  let data1_name = Option.map (fun x -> (lhs (concl x))) data1 in
+  let data2_name = Option.map (fun x -> (lhs (concl x))) data2 in
+  let precond = mk_gabs (spair,
+    (list_mk_conj [
+      mk_bytes_loaded s pc (lhs (concl mc1)) data1_name;
+      mk_read_pc s pc pc_ofs1;
+      mk_bytes_loaded s2 pc2 (lhs (concl mc2)) data2_name;
+      mk_read_pc s2 pc2 pc_ofs2;
+      list_mk_comb (equiv_in_pred, (spair::quants_in))
+    ])) in
+  let postcond = mk_gabs (spair,
+    (list_mk_conj [
+      mk_bytes_loaded s pc (lhs (concl mc1)) data1_name;
+      mk_read_pc s pc pc_ofs1_to;
+      mk_bytes_loaded s2 pc2 (lhs (concl mc2)) data2_name;
+      mk_read_pc s2 pc2 pc_ofs2_to;
+      list_mk_comb (equiv_out_pred, (spair::quants_out))
+    ])) in
+  let s' = mk_var("s'",state_ty) and s2' = mk_var("s2'",state_ty) in
+  let maychange = list_mk_gabs (
+    [spair;mk_pair(s',s2')],
+    mk_conj
+      (list_mk_comb (maychange1,[s;s']),
+       list_mk_comb (maychange2,[s2;s2']))) in
+
+  let _ = List.iter (fun t -> Printf.printf "\t%s\n" (string_of_term t))
+    [precond;postcond;maychange;fnsteps1;fnsteps2] in
+  let ensures2_pred = list_mk_icomb
+      "ensures2"
+     [opsem_const;precond;postcond;maychange;fnsteps1;fnsteps2] in
+  let imp = mk_imp (assum,ensures2_pred) in
+  list_mk_forall (quants, imp);;
