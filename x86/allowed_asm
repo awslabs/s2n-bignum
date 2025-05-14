@@ -119,6 +119,10 @@
 : test$
 : testq$
 : vpxor$
+: vpaddw$
+: vpmulhw$
+: vpmullw$
+: vpsubw$
 : xchg$
 : xor$
 : xorl$

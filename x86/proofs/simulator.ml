@@ -292,6 +292,10 @@ let iclasses = iclasses @
  [0x66; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
  [0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
  [0x66; 0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
+ [0xc5; 0x85; 0xf9; 0xf6]; (* VPSUBW (%_% ymm6) (%_% ymm15) (%_% ymm6) *)
+ [0xc4; 0x41; 0x45; 0xfd; 0xdb]; (* VPADDW (%_% ymm11) (%_% ymm7) (%_% ymm11) *)
+ [0xc5; 0x7d; 0xd5; 0xc9]; (* VPMULLW (%_% ymm1) (%_% ymm0) (%_% ymm9) *)
+ [0xc5; 0x45; 0xe5; 0xfb]; (* VPMULHW (%_% ymm15) (%_% ymm7) (%_% ymm3) *)
 ];;
 
 (* ------------------------------------------------------------------------- *)
@@ -769,7 +773,7 @@ let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) = fun () ->
   to execute and a bool representing whether additional assumptions
   are needed. Currently the additional assumption is for stack
   alignment for certain instructions. To make the tests more diverse
-  the evaluation of harnesses are deferred until an instruction is 
+  the evaluation of harnesses are deferred until an instruction is
   chosen from mem_iclasses *)
 let mem_iclasses = [
   (* ADC r/m64, r64 *)
