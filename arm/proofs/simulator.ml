@@ -472,9 +472,9 @@ let cosimulate_ld1r() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
-let cosimulate_ld3() =
+let cosimulate_ldst3() =
   let datasize = Random.int 2
-  and isld = 1
+  and isld = Random.int 2
   and esize = Random.int 4
   and rn = Random.int 32
   and rt = Random.int 32 in
@@ -504,7 +504,7 @@ let cosimulate_ld3() =
 
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldst_12; cosimulate_ldst_1_2reg;
-    cosimulate_ldstrb; cosimulate_ld1r; cosimulate_ld3];;
+    cosimulate_ldstrb; cosimulate_ld1r; cosimulate_ldst3];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in

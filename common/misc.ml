@@ -1464,7 +1464,8 @@ let WORD_DEINTERLEAVE_CLAUSES = prove
   REWRITE_TAC[word_deinterleave; LIST_OF_FUN_CLAUSES]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Conversion for word_subdeinterleave (could be made much more efficient).  *)
+(* Conversion for word_subdeinterleave and word_interleave. These are very   *)
+(* naively implemented and could be made much more efficient.                *)
 (* ------------------------------------------------------------------------- *)
 
 let WORD_OF_BITS_AS_WORD_ALT = prove
@@ -1496,7 +1497,34 @@ let WORD_SUBDEINTERLEAVE_CONV =
       then conv tm else failwith "WORD_SUBDEINTERLEAVE_CONV"
     | _ -> failwith "WORD_SUBDEINTERLEAVE_CONV";;
 
-extra_word_CONV := WORD_SUBDEINTERLEAVE_CONV::(!extra_word_CONV);;
+let WORD_INTERLEAVE_CONV =
+  let pth = prove
+   (`!P. word_of_bits {i | P i}:N word =
+         word(nsum (0..dimindex (:N) - 1) (\i. 2 EXP i * bitval(P i)))`,
+    REWRITE_TAC[WORD_OF_BITS_AS_WORD_ALT; IN_ELIM_THM]) in
+  let conv =
+    GEN_REWRITE_CONV I [word_interleave] THENC
+    ONCE_DEPTH_CONV LENGTH_CONV THENC let_CONV THENC
+    GEN_REWRITE_CONV I [pth] THENC
+    ONCE_DEPTH_CONV let_CONV THENC
+    RAND_CONV(LAND_CONV(RAND_CONV
+      (LAND_CONV DIMINDEX_CONV THENC NUM_SUB_CONV))) THENC
+    RAND_CONV EXPAND_NSUM_CONV THENC
+    DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC EL_CONV) in
+  let is_wordlit t =
+   match t with
+     Comb(Const("word",_),n) -> is_numeral n
+   | _ -> false in
+  let is_wordlist t = is_list t && forall is_wordlit (dest_list t) in
+  fun tm ->
+    match tm with
+      Comb(Comb(Const("word_interleave",_),n),l) ->
+        if is_numeral n && is_wordlist l then conv tm
+        else failwith "WORD_INTERLEAVE_CONV"
+    | _ -> failwith "WORD_INTERLEAVE_CONV";;
+
+extra_word_CONV :=
+  WORD_INTERLEAVE_CONV::WORD_SUBDEINTERLEAVE_CONV::(!extra_word_CONV);;
 
 (* ------------------------------------------------------------------------- *)
 (* A few more lemmas about words.                                            *)

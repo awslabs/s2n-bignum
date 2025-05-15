@@ -94,10 +94,10 @@ let arm_ldstp_2q = new_definition `arm_ldstp_2q ld Rt =
 let arm_ldst2 = new_definition `arm_ldst2 ld Rt =
   let Rtt:(5 word) = word ((val Rt + 1) MOD 32) in
   (if ld then arm_LD2 else arm_ST2) (QREG' Rt) (QREG' Rtt)`;;
-let arm_ld3 = new_definition `arm_ld3 Rt1 =
+let arm_ldst3 = new_definition `arm_ldst3 ld Rt1 =
   let Rt2:(5 word) = word ((val Rt1 + 1) MOD 32) in
   let Rt3:(5 word) = word ((val Rt1 + 2) MOD 32) in
-  arm_LD3 [QREG' Rt1; QREG' Rt2; QREG' Rt3]`;;
+  (if ld then arm_LD3 else arm_ST3) [QREG' Rt1; QREG' Rt2; QREG' Rt3]`;;
 
 (* The 'AdvSimdExpandImm' shared function in the A64 ISA specification.
    This definition takes one 8-bit word and expands it to 64 bit according to
@@ -402,13 +402,13 @@ let decode = new_definition `!w:int32. decode w =
     let off = word (esize DIV 8) in
     SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize)
 
-  // LD3 (multiple structures), 3 registers, Post-immediate and register offset
-  | [0:1; q; 0b0011001:7; 1:1; 0:1; Rm:5; 0b0100:4; size:2; Rn:5; Rt:5] ->
+  // LD3/ST3 (multiple structures), 3 registers, Post-immediate and register offset
+  | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0100:4; size:2; Rn:5; Rt:5] ->
     if size = word 0b11 /\ ~q then NONE else
     let esize = 8 * 2 EXP (val size) in
     let datasize = if q then 128 else 64 in
     let offset = if q then word 48 else word 24 in
-    SOME (arm_ld3 Rt (XREG_SP Rn)
+    SOME (arm_ldst3 is_ld Rt (XREG_SP Rn)
            (if val Rm = 31 then (Postimmediate_Offset offset)
                            else Postreg_Offset (XREG' Rm))
            datasize esize)
@@ -1234,7 +1234,7 @@ let PURE_DECODE_CONV =
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
-              arm_ldst2; arm_ldstp_2q; arm_ld3] rw;
+              arm_ldst2; arm_ldstp_2q; arm_ldst3] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->
         let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =
