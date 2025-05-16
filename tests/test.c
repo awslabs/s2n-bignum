@@ -11834,6 +11834,47 @@ uint64_t t, i;
 #endif
 }
 
+int test_mlkem_poly_tobytes(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t t, i;
+  int16_t a[256];
+  uint8_t c[384];
+  printf("Testing mlkem_poly_tobytes with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i) a[i] = random64() % 3329;
+     mlkem_poly_tobytes(c,a);
+     for (i = 0; i < 256; ++i)
+      { uint64_t j = (12 * i) / 8;
+        uint64_t k = (12 * i) % 8;
+        uint64_t c0 = c[j];
+        uint64_t c1 = c[j+1];
+        uint64_t c01 = ((c0 + (c1<<8))>>k) & UINT64_C(0xFFF);
+        if (c01 != a[i])
+         { printf("Error in mlkem_poly_tobytes; element i = %"PRIu64
+                  "; packed output for input[i] = 0x%03"PRIx64
+                  " while input[i] = 0x%03"PRIx16"\n",
+                  i,c01,a[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK:mlkem_poly_tobytes[0x%03"PRIx16",0x%03"PRIx16",...,"
+               "0x%03"PRIx16",0x%03"PRIx16"] = "
+               "[0x%02"PRIx8",0x%02"PRIx8",...,"
+               "0x%02"PRIx8",0x%02"PRIx8"]\n",
+               a[0],a[1],a[254],a[255],
+               c[0], c[1],c[382],c[383]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_mlkem_rej_uniform(void)
 {
 #ifdef __x86_64__
@@ -14780,6 +14821,7 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"mlkem_keccak4_f1600_alt2",test_mlkem_keccak4_f1600_alt2);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
     functionaltest(arm,"mlkem_poly_reduce",test_mlkem_poly_reduce);
+    functionaltest(arm,"mlkem_poly_tobytes",test_mlkem_poly_tobytes);
     functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   }
 

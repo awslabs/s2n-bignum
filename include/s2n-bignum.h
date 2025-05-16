@@ -1006,6 +1006,10 @@ extern void mlkem_ntt(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z_01234[S2N
 // Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
 extern void mlkem_poly_reduce(int16_t a[S2N_BIGNUM_STATIC 256]);
 
+// Pack ML-KEM polynomial coefficients as 12-bit numbers
+// Input a[256] (signed 16-bit words); output r[384] (bytes)
+extern void mlkem_poly_tobytes(uint8_t r[S2N_BIGNUM_STATIC 384],const int16_t a[S2N_BIGNUM_STATIC 256]);
+
 // Uniform rejection sampling for ML-KEM
 // Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 16-bit words), return
 extern uint64_t mlkem_rej_uniform_VARIABLE_TIME(int16_t r[S2N_BIGNUM_STATIC 256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
