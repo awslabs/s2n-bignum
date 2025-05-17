@@ -32,6 +32,7 @@ OBJ = mlkem_intt.o \
       mlkem_ntt.o \
       mlkem_poly_reduce.o \
       mlkem_poly_tobytes.o \
+      mlkem_poly_tomont.o \
       mlkem_rej_uniform_VARIABLE_TIME.o
 
 %.o : %.S ; $(CC) -E -I../../include $< | $(GAS) -o $@ -

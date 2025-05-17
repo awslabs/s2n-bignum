@@ -11875,6 +11875,45 @@ uint64_t t, i;
 #endif
 }
 
+int test_mlkem_poly_tomont(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t t, i;
+  int16_t a[256], b[256];
+  printf("Testing mlkem_poly_tomont with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+        b[i] = a[i] = (int16_t) (random64() % 65536) - 32768;
+     mlkem_poly_tomont(b);
+     for (i = 0; i < 256; ++i)
+      { int16_t r = (int16_t)
+         ((UINT64_C(65536) * mod_3329(a[i])) % UINT64_C(3329));
+        if ((mod_3329(b[i]) != mod_3329(r)) ||
+            b[i] <= -3329 || b[i] >= 3329)
+         { printf("Error in mlkem_poly_tomont; element i = %"PRIu64
+                  "; code[i] = 0x%04"PRIx16
+                  " while expected[i] = 0x%04"PRIx16" or 0x%04"PRIx16"\n",
+                  i,b[i],r,r-3329);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK:mlkem_poly_tomont[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"] = "
+               "[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"]\n",
+               a[0],a[1],a[254],a[255],
+               b[0],b[1],b[254],b[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_mlkem_rej_uniform(void)
 {
 #ifdef __x86_64__
@@ -14822,6 +14861,7 @@ int main(int argc, char *argv[])
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
     functionaltest(arm,"mlkem_poly_reduce",test_mlkem_poly_reduce);
     functionaltest(arm,"mlkem_poly_tobytes",test_mlkem_poly_tobytes);
+    functionaltest(arm,"mlkem_poly_tomont",test_mlkem_poly_tomont);
     functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   }
 
