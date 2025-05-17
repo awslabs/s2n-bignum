@@ -2838,13 +2838,43 @@ let is_read_events (t:term) = false;;
  ***)
 
 let X86_CONV (decode_ths:thm option array) ths tm =
-  let pc_th = find
+  (* Find `read RIP .. = ..` from ths (assumptions). *)
+  let pc_th = try find
     (fun th ->
       let c = concl th in
       is_eq c && is_read_rip (fst (dest_eq c)))
-    ths in
+    ths with _ ->
+      failwith "X86_CONV: can't find `read RIP .. = ..` from ths" in
+
+  (* Find `bytes_loaded ..`. *)
+  let bytes_loaded_mc_ths:thm list =
+    (* Pick the _mc const from decode_ths, if decode_ths[0] != None, which is
+       likely to be true. *)
+    let the_mc:term option = Option.bind decode_ths.(0)
+      (fun th ->
+        (* th is `forall .., bytes_loaded ... _mc ==> x86_decode ..`. *)
+        let t = concl th in
+        let bytes_loaded_term = fst (dest_imp (snd (strip_forall t))) in
+        let the_mc = last (snd (strip_comb bytes_loaded_term)) in
+        (* if _mc contains relocations, the_mc is `.._mc args`. In this
+           case, return None. *)
+        if is_const the_mc then Some the_mc else None) in
+    let bytes_loaded_tm = `bytes_loaded` in
+    let res = filter (fun th ->
+        let cc = concl th in is_comb cc && (
+        let c,args = strip_comb (concl th) in
+        c = bytes_loaded_tm &&
+          (the_mc = None || last args = Option.get the_mc)))
+      ths in
+    if res = [] then failwith
+        ("X86_CONV: can't find `bytes_loaded .. .. " ^
+          (if the_mc <> None then string_of_term (Option.get the_mc) else "..")
+          ^ "` from ths")
+    else res in
+
   let eth = tryfind (fun loaded_mc_th ->
-      GEN_REWRITE_CONV I [X86_THM decode_ths loaded_mc_th pc_th] tm) ths in
+      GEN_REWRITE_CONV I [X86_THM decode_ths loaded_mc_th pc_th] tm)
+    bytes_loaded_mc_ths in
   (K eth THENC
    REWRITE_CONV[X86_EXECUTE] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
@@ -2925,8 +2955,6 @@ let X86_STEP_TAC (mc_length_th,decode_ths) subths sname =
     if thl = [] then ALL_TAC else
     MP_TAC(end_itlist CONJ thl) THEN
     ASSEMBLER_SIMPLIFY_TAC THEN
-    (* Reduce reads of YMMx_SSE into reads of YMMx *)
-    REWRITE_TAC READ_YMM_SSE_EQUIV THEN
     STRIP_TAC);;
 
 let X86_VERBOSE_STEP_TAC (exth1,exth2) sname g =
