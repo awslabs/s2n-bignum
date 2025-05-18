@@ -1347,6 +1347,12 @@ let x86_XOR = new_definition
          OF := F ,,
          UNDEFINED_VALUES[AF]) s`;;
 
+let x86_XORPS = new_definition
+  `x86_XORPS dest src s =
+    let x = read src s in
+    let y = read dest s in
+    (dest := word_xor x y) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* State components of various sizes corresponding to GPRs.                  *)
 (* We also have a generic one "GPR" mapping to a number in all cases.        *)
@@ -1986,6 +1992,8 @@ let x86_execute = define
          | 32 -> x86_XOR (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_XOR (OPERAND16 dest s) (OPERAND16 src s)
          | 8 -> x86_XOR (OPERAND8 dest s) (OPERAND8 src s)) s
+    | XORPS dest src ->
+         x86_XORPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | _ -> (\s'. F)`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -2708,7 +2716,7 @@ let X86_OPERATION_CLAUSES =
     x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
-    x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
+    x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR; x86_XORPS;
     (*** AVX2 instructions ***)
     x86_VPXOR;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
