@@ -54,7 +54,7 @@ Resources:
             Type: PLAINTEXT
             Value: x86
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
-      TimeoutInMinutes: 60
+      TimeoutInMinutes: 480
       QueuedTimeoutInMinutes: 480
       EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
       BadgeEnabled: true
@@ -180,7 +180,7 @@ Resources:
             Type: PLAINTEXT
             Value: arm
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
-      TimeoutInMinutes: 60
+      TimeoutInMinutes: 480
       QueuedTimeoutInMinutes: 480
       EncryptionKey: !Sub "arn:aws:kms:${AWS::Region}:${AWS::AccountId}:alias/aws/s3"
       BadgeEnabled: true
