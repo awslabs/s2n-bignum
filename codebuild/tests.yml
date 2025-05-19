@@ -27,5 +27,7 @@ phases:
       - GITHUB_REPOSITORY=${CODEBUILD_RUNNER_OWNER}/${CODEBUILD_RUNNER_REPO} GITHUB_TARGET=${CODEBUILD_SOURCE_VERSION} ./import.sh
       - cd ../..
       - mkdir aws-lc-build && cd aws-lc-build
-      - cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo ../aws-lc
+      - cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
+      - ninja-build run_tests
+      - cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=Off ../aws-lc
       - ninja-build run_tests
