@@ -47,7 +47,7 @@ go: test; ./test +100 | grep -v OK
 
 complete: test ctCheck; $(VALGRIND) ./test +500
 
-test: test.c known_value_tests_p384.h tweetnacl_excerpt.c ../include/s2n-bignum.h ../$(ARCH)/libs2nbignum.a; gcc -Wall -std=gnu99 -o test test.c -L../$(ARCH) -ls2nbignum
+test: test.c known_value_tests_p384.h tweetnacl_excerpt.c ../include/s2n-bignum.h ../$(ARCH)/libs2nbignum.a; $(CC) -Wall -std=gnu99 -o test test.c -L../$(ARCH) -ls2nbignum -lm
 
 clean: ;
 	rm -f test
