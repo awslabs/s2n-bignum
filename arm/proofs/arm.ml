@@ -382,14 +382,43 @@ let is_read_events t =
  ***)
 
 let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
-  let pc_th = find
+  (* Find `read PC .. = ..` from ths (assumptions). *)
+  let pc_th = try find
     (fun th -> (* do not use term_match because it is slow. *)
       let c = concl th in
       is_eq c && is_read_pc (fst (dest_eq c)))
-    ths in
+    ths with _ -> failwith "ARM_CONV: can't find `read PC .. = ..` from ths" in
+
+  (* Find `aligned_bytes_loaded ..`. *)
+  let aligned_bytes_loaded_mc_ths:thm list =
+    (* Pick the _mc const from decode_ths, if decode_ths[0] != None, which is
+       likely to be true. *)
+    let the_mc:term option = Option.bind decode_ths.(0)
+      (fun th ->
+        (* th is `forall .., bytes_loaded ... _mc ==> arm_decode ..`. *)
+        let t = concl th in
+        let bytes_loaded_term = fst (dest_imp (snd (strip_forall t))) in
+        let the_mc = last (snd (strip_comb bytes_loaded_term)) in
+        (* if _mc contains relocations, the_mc is `.._mc args`. In this
+           case, return None. *)
+        if is_const the_mc then Some the_mc else None) in
+    let aligned_bytes_loaded_tm = `aligned_bytes_loaded` in
+    let res = filter (fun th ->
+        let cc = concl th in is_comb cc && (
+        let c,args = strip_comb (concl th) in
+        c = aligned_bytes_loaded_tm &&
+          (the_mc = None || last args = Option.get the_mc)))
+      ths in
+    if res = [] then failwith
+        ("ARM_CONV: can't find `aligned_bytes_loaded .. .. " ^
+          (if the_mc <> None then string_of_term (Option.get the_mc) else "..")
+          ^ "` from ths")
+    else res in
+
   let eth = try
     tryfind (fun loaded_mc_th ->
-      GEN_REWRITE_CONV I [ARM_THM decode_ths loaded_mc_th pc_th] tm) ths
+      GEN_REWRITE_CONV I [ARM_THM decode_ths loaded_mc_th pc_th] tm)
+      aligned_bytes_loaded_mc_ths
     with Failure s ->
       let pcstr = string_of_term (concl pc_th) in
       failwith ("ARM_CONV: can't find aligned_bytes_loaded (pc: `" ^
