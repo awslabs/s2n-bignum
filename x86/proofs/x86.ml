@@ -1367,6 +1367,13 @@ let x86_TZCNT = new_definition
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
 
+let x86_VPAND = new_definition
+ `x86_VPAND dest src1 src2 (s:x86state) =
+        let x = read src1 s
+        and y = read src2 s in
+        let z = word_and x y in
+        (dest := (z:N word)) s`;;
+
 let x86_VPXOR = new_definition
  `x86_VPXOR dest src1 src2 (s:x86state) =
         let x = read src1 s
@@ -2035,6 +2042,10 @@ let x86_execute = define
         (match operand_size dest with
           256 -> x86_VPXOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPXOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPAND dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | XCHG dest src ->
         (match operand_size dest with
           64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
@@ -2776,7 +2787,7 @@ let X86_OPERATION_CLAUSES =
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLW_ALT; x86_VPSUBW_ALT;
-    x86_VPXOR;
+    x86_VPXOR; x86_VPAND;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
