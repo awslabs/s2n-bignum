@@ -304,6 +304,10 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | SUB operand operand
    | TEST operand operand
    | TZCNT operand operand
+   | VPADDW operand operand operand
+   | VPMULHW operand operand operand
+   | VPMULLW operand operand operand
+   | VPSUBW operand operand operand
    | VPXOR operand operand operand
    | XCHG operand operand
    | XOR operand operand";;
