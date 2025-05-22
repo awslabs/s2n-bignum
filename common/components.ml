@@ -1529,6 +1529,13 @@ let VALID_COMPONENT_ZEROTOP_32 = prove
 
 add_valid_component_thms [VALID_COMPONENT_ZEROTOP_32];;
 
+let WEAKLY_VALID_COMPONENT_ZEROTOP_32 = prove
+ (`weakly_valid_component(zerotop_32)`,
+  MATCH_MP_TAC VALID_IMP_WEAKLY_VALID_COMPONENT THEN
+  REWRITE_TAC[VALID_COMPONENT_ZEROTOP_32]);;
+
+add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_32];;
+
 add_component_read_write_thms
  [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_32)];;
 
@@ -1557,6 +1564,13 @@ let VALID_COMPONENT_ZEROTOP_64 = prove
 
 add_valid_component_thms [VALID_COMPONENT_ZEROTOP_64];;
 
+let WEAKLY_VALID_COMPONENT_ZEROTOP_64 = prove
+  (`weakly_valid_component(zerotop_64)`,
+   MATCH_MP_TAC VALID_IMP_WEAKLY_VALID_COMPONENT THEN
+   REWRITE_TAC[VALID_COMPONENT_ZEROTOP_64]);;
+
+add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_64];;
+
 add_component_read_write_thms
  [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_64)];;
 
@@ -1580,6 +1594,13 @@ let VALID_COMPONENT_ZEROTOP_16 = prove
 
 add_valid_component_thms [VALID_COMPONENT_ZEROTOP_16];;
 
+let WEAKLY_VALID_COMPONENT_ZEROTOP_16 = prove
+  (`weakly_valid_component(zerotop_16)`,
+   MATCH_MP_TAC VALID_IMP_WEAKLY_VALID_COMPONENT THEN
+   REWRITE_TAC[VALID_COMPONENT_ZEROTOP_16]);;
+
+add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_16];;
+
 add_component_read_write_thms
  [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_16)];;
 
@@ -1602,6 +1623,13 @@ let VALID_COMPONENT_ZEROTOP_8 = prove
   REWRITE_TAC[DIMINDEX_8; DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV);;
 
 add_valid_component_thms [VALID_COMPONENT_ZEROTOP_8];;
+
+let WEAKLY_VALID_COMPONENT_ZEROTOP_8 = prove
+  (`weakly_valid_component(zerotop_8)`,
+   MATCH_MP_TAC VALID_IMP_WEAKLY_VALID_COMPONENT THEN
+   REWRITE_TAC[VALID_COMPONENT_ZEROTOP_8]);;
+
+add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_8];;
 
 add_component_read_write_thms
  [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_8)];;
@@ -1631,6 +1659,13 @@ let VALID_COMPONENT_ZEROTOP_128 = prove
 
 add_valid_component_thms [VALID_COMPONENT_ZEROTOP_128];;
 
+let WEAKLY_VALID_COMPONENT_ZEROTOP_128 = prove
+  (`weakly_valid_component(zerotop_128)`,
+   MATCH_MP_TAC VALID_IMP_WEAKLY_VALID_COMPONENT THEN
+   REWRITE_TAC[VALID_COMPONENT_ZEROTOP_128]);;
+
+add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_128];;
+
 add_component_read_write_thms
  [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_128)];;
 
@@ -1653,6 +1688,13 @@ let VALID_COMPONENT_ZEROTOP_256 = prove
   REWRITE_TAC[DIMINDEX_256; DIMINDEX_512] THEN CONV_TAC NUM_REDUCE_CONV);;
 
 add_valid_component_thms [VALID_COMPONENT_ZEROTOP_256];;
+
+let WEAKLY_VALID_COMPONENT_ZEROTOP_256 = prove
+  (`weakly_valid_component(zerotop_256)`,
+   MATCH_MP_TAC VALID_IMP_WEAKLY_VALID_COMPONENT THEN
+   REWRITE_TAC[VALID_COMPONENT_ZEROTOP_256]);;
+
+add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_256];;
 
 add_component_read_write_thms
  [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_256)];;
