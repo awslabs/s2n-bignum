@@ -162,7 +162,7 @@ let BYTES_LOADED_BARRIER_X86_STUCK = prove(
 let X86_N_STEP_TAC (mc_length_th,decode_ths) subths sname
                   (store_update_to:(thm list * thm list) ref option)
                   (store_inst_term_to: term ref option)  =
-  X86_STEP_TAC (mc_length_th,decode_th) subths sname store_inst_term_to
+  X86_STEP_TAC (mc_length_th,decode_ths) subths sname store_inst_term_to
     (fun th ->
       let has_auxmems = ref false in
       (** If there is an 'unsimplified' memory read on the right hand side,
