@@ -47,6 +47,14 @@ let tomont_3329 = define
  `tomont_3329 (a:num->int) = \i. (&2 pow 16 * a i) rem &3329`;;
 
 (* ------------------------------------------------------------------------- *)
+(* The multiplication cache for fast base multiplication                     *)
+(* ------------------------------------------------------------------------- *)
+
+let mulcache = define
+ `mulcache f k =
+   (f (2 * k + 1) * (&17 pow (2 * (bitreverse7 k) + 1))) rem &3329`;;
+
+(* ------------------------------------------------------------------------- *)
 (* The precise specs of the actual ARM code.                                 *)
 (* ------------------------------------------------------------------------- *)
 
@@ -460,3 +468,20 @@ let rec GEN_CONGBOUND_RULE aboths tm =
           with Failure _ -> CONCL_BOUNDS_RULE(ISPEC tm CONGBOUND_ATOM));;
 
 let CONGBOUND_RULE = GEN_CONGBOUND_RULE [];;
+
+(* ------------------------------------------------------------------------- *)
+(* Simplify SIMD cruft and fold abbreviations when encountered.              *)
+(* ------------------------------------------------------------------------- *)
+
+let SIMD_SIMPLIFY_CONV unfold_defs =
+  TOP_DEPTH_CONV
+   (REWR_CONV WORD_SUBWORD_AND ORELSEC WORD_SIMPLE_SUBWORD_CONV) THENC
+  DEPTH_CONV WORD_NUM_RED_CONV THENC
+  REWRITE_CONV (map GSYM unfold_defs);;
+
+let SIMD_SIMPLIFY_TAC unfold_defs =
+  let simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  TRY(FIRST_X_ASSUM
+   (ASSUME_TAC o
+    CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o
+    check (simdable o concl)));;

@@ -992,6 +992,10 @@ extern void mlkem_keccak4_f1600(uint64_t a[100],uint64_t rc[24]);
 extern void mlkem_keccak4_f1600_alt(uint64_t a[100],uint64_t rc[24]);
 extern void mlkem_keccak4_f1600_alt2(uint64_t a[100],uint64_t rc[24]);
 
+/* Precompute the mulcache data for a polynomial in the NTT domain */
+/* Inputs a[256], z[128] and t[128] (signed 16-bit words); output x[128] (signed 16-bit words) */
+extern void mlkem_mulcache_compute(int16_t x[128],int16_t a[256],int16_t z[128],int16_t t[128]);
+
 /* Forward number-theoretic transform from ML-KEM */
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_ntt(int16_t a[256],int16_t z_01234[80],int16_t z_56[384]);

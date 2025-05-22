@@ -834,6 +834,7 @@ void call_mlkem_keccak2_f1600_alt(void) {}
 void call_mlkem_keccak4_f1600(void) {}
 void call_mlkem_keccak4_f1600_alt(void) {}
 void call_mlkem_keccak4_f1600_alt2(void) {}
+void call_mlkem_mulcache_compute(void) {}
 void call_mlkem_ntt(void) {}
 void call_mlkem_poly_reduce(void) {}
 void call_mlkem_poly_tobytes(void) {}
@@ -1124,6 +1125,7 @@ void call_mlkem_keccak2_f1600_alt(void) repeat(mlkem_keccak2_f1600_alt(b0,b1))
 void call_mlkem_keccak4_f1600(void) repeat(mlkem_keccak4_f1600(b0,b1))
 void call_mlkem_keccak4_f1600_alt(void) repeat(mlkem_keccak4_f1600_alt(b0,b1))
 void call_mlkem_keccak4_f1600_alt2(void) repeat(mlkem_keccak4_f1600_alt2(b0,b1))
+void call_mlkem_mulcache_compute(void) repeat(mlkem_mulcache_compute((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 void call_mlkem_poly_reduce(void) repeat(mlkem_poly_reduce((int16_t*)b0))
 void call_mlkem_poly_tobytes(void) repeat(mlkem_poly_tobytes((uint8_t*)b0,(int16_t*)b1))
@@ -1519,6 +1521,7 @@ int main(int argc, char *argv[])
   timingtest(sha3,"mlkem_keccak4_f1600",call_mlkem_keccak4_f1600);
   timingtest(sha3,"mlkem_keccak4_f1600_alt",call_mlkem_keccak4_f1600_alt);
   timingtest(sha3,"mlkem_keccak4_f1600_alt2",call_mlkem_keccak4_f1600_alt2);
+  timingtest(arm,"mlkem_mulcache_compute",call_mlkem_mulcache_compute);
   timingtest(arm,"mlkem_ntt",call_mlkem_ntt);
   timingtest(arm,"mlkem_poly_reduce",call_mlkem_poly_reduce);
   timingtest(arm,"mlkem_poly_tobytes",call_mlkem_poly_tobytes);

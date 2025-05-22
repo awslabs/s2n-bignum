@@ -74,23 +74,6 @@ let mlkem_poly_tomont_mc = define_assert_from_elf
 let MLKEM_POLY_TOMONT_EXEC = ARM_MK_EXEC_RULE mlkem_poly_tomont_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* Some lemmas, tactics etc.                                                 *)
-(* ------------------------------------------------------------------------- *)
-
-let SIMD_SIMPLIFY_CONV unfold_defs =
-  TOP_DEPTH_CONV
-   (REWR_CONV WORD_SUBWORD_AND ORELSEC WORD_SIMPLE_SUBWORD_CONV) THENC
-  DEPTH_CONV WORD_NUM_RED_CONV THENC
-  REWRITE_CONV (map GSYM unfold_defs);;
-
-let SIMD_SIMPLIFY_TAC unfold_defs =
-  let simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
-  TRY(FIRST_X_ASSUM
-   (ASSUME_TAC o
-    CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o
-    check (simdable o concl)));;
-
-(* ------------------------------------------------------------------------- *)
 (* The proof, taken directly with only minor style and formatting changes    *)
 (* from mlkem-native (see proofs/hol_light/arm/proofs/mlkem_poly_tomont.ml). *)
 (* ------------------------------------------------------------------------- *)
@@ -136,7 +119,7 @@ let MLKEM_POLY_TOMONT_CORRECT = prove
      This reduces the proof time *)
   STRIP_TAC THEN
   MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_POLY_TOMONT_EXEC [n] THEN
-             (SIMD_SIMPLIFY_TAC [barmul]))
+                      SIMD_SIMPLIFY_TAC[barmul])
             (1--184) THEN
   ENSURES_FINAL_STATE_TAC THEN
   REPEAT CONJ_TAC THEN

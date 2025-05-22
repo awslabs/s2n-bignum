@@ -259,6 +259,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mlkem/mlkem_keccak4_f1600.o \
              mlkem/mlkem_keccak4_f1600_alt.o \
              mlkem/mlkem_keccak4_f1600_alt2.o \
+             mlkem/mlkem_mulcache_compute.o \
              mlkem/mlkem_ntt.o \
              mlkem/mlkem_poly_reduce.o \
              mlkem/mlkem_poly_tobytes.o \

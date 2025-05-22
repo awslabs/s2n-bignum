@@ -116,18 +116,6 @@ let overall_lemma = prove
   REWRITE_TAC[MATCH_MP lemma_rem (CONGBOUND_RULE `barred x`)] THEN
   BITBLAST_TAC);;
 
-let SIMD_SIMPLIFY_CONV =
-  TOP_DEPTH_CONV
-   (REWR_CONV WORD_SUBWORD_AND ORELSEC WORD_SIMPLE_SUBWORD_CONV) THENC
-  DEPTH_CONV WORD_NUM_RED_CONV THENC
-  GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM barred];;
-
-let SIMD_SIMPLIFY_TAC =
-  let simdable = can (term_match [] `read X s:int128 = whatever`) in
-  RULE_ASSUM_TAC(fun th ->
-    if simdable(concl th) then CONV_RULE(RAND_CONV SIMD_SIMPLIFY_CONV) th
-    else th);;
-
 let MLKEM_POLY_REDUCE_CORRECT = prove
  (`!a x pc.
         nonoverlapping (word pc,0x124) (a,512)
@@ -172,15 +160,15 @@ let MLKEM_POLY_REDUCE_CORRECT = prove
 
   (*** Do a full simulation with no breakpoints, unrolling the loop ***)
 
-  MAP_EVERY (fun n ->
-   ARM_STEPS_TAC MLKEM_POLY_REDUCE_EXEC [n] THEN SIMD_SIMPLIFY_TAC)
-  (1--276) THEN
+  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_POLY_REDUCE_EXEC [n] THEN
+                      SIMD_SIMPLIFY_TAC[barred])
+            (1--276) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   (*** Reverse the restructuring by splitting the 128-bit words up ***)
 
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
-   CONV_RULE SIMD_SIMPLIFY_CONV o
+   CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
    CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
    check (can (term_match [] `read qqq s:int128 = xxx`) o concl))) THEN
 

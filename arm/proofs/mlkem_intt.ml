@@ -462,23 +462,6 @@ let intt_constants = define
                  iword(EL i intt_zetas_layer56))`;;
 
 (* ------------------------------------------------------------------------- *)
-(* Some convenient proof tools.                                              *)
-(* ------------------------------------------------------------------------- *)
-
-let SIMD_SIMPLIFY_CONV =
-  TOP_DEPTH_CONV
-   (REWR_CONV WORD_SUBWORD_AND ORELSEC WORD_SIMPLE_SUBWORD_CONV) THENC
-  DEPTH_CONV WORD_NUM_RED_CONV THENC
-  REWRITE_CONV[GSYM barred; GSYM barmul];;
-
-let SIMD_SIMPLIFY_TAC =
-  let simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
-  TRY(FIRST_X_ASSUM
-   (ASSUME_TAC o
-    CONV_RULE(RAND_CONV SIMD_SIMPLIFY_CONV) o
-    check (simdable o concl)));;
-
-(* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -536,14 +519,15 @@ let MLKEM_INTT_CORRECT = prove
 
   (*** Simulate all the way to the end, in effect unrolling loops ***)
 
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_INTT_EXEC [n] THEN SIMD_SIMPLIFY_TAC)
+  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_INTT_EXEC [n] THEN
+                      SIMD_SIMPLIFY_TAC[barred; barmul])
             (1--1157) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   (*** Reverse the restructuring by splitting the 128-bit words up ***)
 
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
-   CONV_RULE SIMD_SIMPLIFY_CONV o
+   CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
    CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
    check (can (term_match [] `read qqq s:int128 = xxx`) o concl))) THEN
 
