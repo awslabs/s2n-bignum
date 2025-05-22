@@ -258,7 +258,8 @@ let read_VEXP = new_definition `read_VEXP (p:2 word) =
 let read_VEX = define
  `(!l. read_VEX T l =
    read_byte l >>= \(b,l). bitmatch b with [r:1; v:4; L; p:2] ->
-   SOME((SOME(word_zx (word_not r)), VEXM_0F, word_not v, L, (F, Rep0, SG0)), l)) /\
+   SOME((SOME(word_shl (word_zx (word_not r)) 2), 
+     VEXM_0F, word_not v, L, (F, Rep0, SG0)), l)) /\
   (!l. read_VEX F l =
    read_byte l >>= \(b,l). bitmatch b with [rxb:3; m:5] ->
    read_byte l >>= \(b,l). bitmatch b with [w; v:4; L; p:2] ->
@@ -589,10 +590,26 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     | VEXM_0F ->
         read_byte l >>= \(b,l).
         (bitmatch b with
+        | [0xd5:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VPMULLW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
+        | [0xe5:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VPMULHW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
         | [0xef:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
             SOME (VPXOR (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
+        | [0xf9:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VPSUBW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
+        | [0xfd:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VPADDW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
         | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
@@ -1624,6 +1641,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     evaluate (rhs (concl th)) (F o TRANS th)
   | Comb(Const("@",_),_) -> failwith "ARB"
   | Const("ARB",_) -> failwith "ARB"
+  | Comb(Comb((Const("word_shl",_) as f),a),b) -> eval_binary f a b F WORD_SHL_CONV
   | Comb(Comb((Const("=",_) as f),a),b) -> eval_binary f a b F WORD_RED_CONV
   | Comb(Comb((Const("/\\",_) as f),a),b) ->
     eval_binary f a b F (GEN_REWRITE_CONV I [AND_CLAUSES])
@@ -1643,6 +1661,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       let th2 = TRANS th1 (let_CONV (rhs (concl th1))) in
       evaluate (rhs (concl th2)) (F o TRANS th2))
   | Comb(Const("word",_),a) when is_numeral a -> F (REFL t)
+  | Comb(Const("NUMERAL",_),a) when is_numeral t -> F (REFL t)
   | Comb(f,a) ->
     evaluate f (fun th -> evaluate a (fun th' -> F (MK_COMB (th, th'))))
   | Const(s,_) -> if mem s constructors then F (REFL t) else
