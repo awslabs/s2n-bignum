@@ -296,6 +296,7 @@ let iclasses = iclasses @
  [0xc4; 0x41; 0x45; 0xfd; 0xdb]; (* VPADDW (%_% ymm11) (%_% ymm7) (%_% ymm11) *)
  [0xc5; 0x7d; 0xd5; 0xc9]; (* VPMULLW (%_% ymm1) (%_% ymm0) (%_% ymm9) *)
  [0xc5; 0x45; 0xe5; 0xfb]; (* VPMULHW (%_% ymm15) (%_% ymm7) (%_% ymm3) *)
+ [0xc5; 0xa5; 0xdb; 0xd2]; (* VPAND (%_% ymm2) (%_% ymm11) (%_% ymm2) *)
 ];;
 
 (* ------------------------------------------------------------------------- *)
