@@ -24,7 +24,7 @@ needs "common/components.ml";;
 parse_as_infix(",,",(13,"right"));;
 
 let seq = new_definition
- `(r1 ,, r2) = \s0 s2:A. ?s1. r1 s0 s1 /\ r2 s1 s2`;;
+ `((r1:B->C->bool) ,, r2) = \s0 s2:A. ?s1. r1 s0 s1 /\ r2 s1 s2`;;
 
 let SEQ_ASSOC = prove
  (`!r1 r2 r3. r1 ,, (r2 ,, r3) = (r1 ,, r2) ,, r3`,
@@ -33,6 +33,10 @@ let SEQ_ASSOC = prove
 let SEQ_ID = prove
  (`(!r. (=) ,, r = r) /\ (!r. r ,, (=) = r)`,
   REWRITE_TAC[FUN_EQ_THM; seq] THEN MESON_TAC[]);;
+
+let SEQ_TRIVIAL = prove
+  (`!r. ((\a:A b:B. T) ,, (\a:B b:C. T)) = (\a:A b:C. T)`,
+   REWRITE_TAC [FUN_EQ_THM; seq]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Subsumption of relations, basically just curried subset                   *)
@@ -870,18 +874,23 @@ let ASSIGNS_SEQ_IDEMPOT_CONV tm =
 (* of ASSIGNS and CHANGES statements.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-let MAYCHANGE_IDEMPOT_TAC (asl,w as gl) =
-  match w with
-    Comb(Comb(Const("=",_) as etm,Comb(Comb(Const(",,",_) as ctm,ltm),rtm)),stm)
-        when ltm = stm && rtm = stm ->
-      let th1 = MAYCHANGE_CANON_CONV stm in
-      let th2 = MK_BINOP ctm (th1,th1) in
-      let th3 = MK_BINOP etm (th2,th1) in
-      let th4 = if is_const(rand(concl th1))
-                then ISPEC (rand(concl th1)) (CONJUNCT1 SEQ_ID)
-                else ASSIGNS_SEQ_IDEMPOT_CONV(lhand(rand(concl th3))) in
-        ACCEPT_TAC (EQ_MP (SYM th3) th4) gl
-  | _ -> failwith "MAYCHANGE_IDEMPOT_TAC";;
+let MAYCHANGE_IDEMPOT_TAC =
+  let the_truth = `true` in
+  fun (asl,w as gl) ->
+    match w with
+      Comb(Comb(Const("=",_) as etm,Comb(Comb(Const(",,",_) as ctm,ltm),rtm)),stm)
+          when ltm = stm && rtm = stm ->
+        if is_gabs ltm && snd (strip_gabs ltm) = the_truth then
+          MATCH_ACCEPT_TAC SEQ_TRIVIAL gl
+        else
+          let th1 = MAYCHANGE_CANON_CONV stm in
+          let th2 = MK_BINOP ctm (th1,th1) in
+          let th3 = MK_BINOP etm (th2,th1) in
+          let th4 = if is_const(rand(concl th1))
+                    then ISPEC (rand(concl th1)) (CONJUNCT1 SEQ_ID)
+                    else ASSIGNS_SEQ_IDEMPOT_CONV(lhand(rand(concl th3))) in
+          ACCEPT_TAC (EQ_MP (SYM th3) th4) gl
+    | _ -> failwith "MAYCHANGE_IDEMPOT_TAC";;
 
 (*** Examples
 

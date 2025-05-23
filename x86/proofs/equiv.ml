@@ -150,31 +150,6 @@ let BYTES_LOADED_BARRIER_X86_STUCK = prove(
 (* Tactics for simulating a program whose postcondition is eventually_n.     *)
 (* ------------------------------------------------------------------------- *)
 
-(* A variant of X86_BASIC_STEP_TAC, but targets eventually_n *)
-let X86_N_BASIC_STEP_TAC =
-  let x86_tm = `x86` and x86_ty = `:x86state` and one = `1:num` in
-  fun decode_th sname store_inst_term_to (asl,w) ->
-    (* w = `eventually_n _ {stepn} _ {sv}` *)
-    let sv = rand w and sv' = mk_var(sname,x86_ty) in
-    let atm = mk_comb(mk_comb(x86_tm,sv),sv') in
-    let eth = X86_CONV decode_th (map snd asl) atm in
-    (* store the decoded instruction at store_inst_term_to *)
-    (match store_inst_term_to with | Some r -> r := rhs (concl eth) | None -> ());
-    let stepn = dest_numeral(rand(rator(rator w))) in
-    let stepn_decr = stepn -/ num 1 in
-    (* stepn = 1+{stepn-1}*)
-    let stepn_thm = GSYM (NUM_ADD_CONV (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
-    (GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
-      GEN_REWRITE_TAC I [EVENTUALLY_N_STEP] THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
-      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
-       (PRINT_GOAL_TAC THEN
-        FAIL_TAC ("Equality between two states is ill-formed." ^
-                  " Did you forget extra condition like pointer alignment?")));
-      X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth] THEN
-      REPEAT X86_UNDEFINED_CHOOSE_TAC]) (asl,w);;
-
-
 (* A variant of X86_STEP_TAC for equivalence checking.
 
    If 'store_update_to' is Some ref, a list of
@@ -187,58 +162,30 @@ let X86_N_BASIC_STEP_TAC =
 let X86_N_STEP_TAC (mc_length_th,decode_ths) subths sname
                   (store_update_to:(thm list * thm list) ref option)
                   (store_inst_term_to: term ref option)  =
-  (*** This does the basic decoding setup ***)
+  X86_STEP_TAC (mc_length_th,decode_ths) subths sname store_inst_term_to
+    (fun th ->
+      let has_auxmems = ref false in
+      (** If there is an 'unsimplified' memory read on the right hand side,
+          try to synthesize an expression using bigdigit and use it. **)
+      DISCH_THEN (fun simplified_th (asl,w) ->
+        let res_th,newmems_th = DIGITIZE_MEMORY_READS simplified_th th (asl,w) in
+        (* MP_TAC res_th and newmems_th first, to drop their assumptions. *)
+        (MP_TAC res_th THEN
+        (match newmems_th with
+        | None -> (has_auxmems := false; ALL_TAC)
+        | Some ths -> (has_auxmems := true; MP_TAC ths))) (asl,w))
+      THEN
 
-  X86_N_BASIC_STEP_TAC decode_ths sname store_inst_term_to THEN
-
-  (*** This part shows the code isn't self-modifying ***)
-
-  NONSELFMODIFYING_STATE_UPDATE_TAC (MATCH_MP bytes_loaded_update mc_length_th) THEN
-
-  (*** Attempt also to show subroutines aren't modified, if applicable ***)
-
-  MAP_EVERY (TRY o NONSELFMODIFYING_STATE_UPDATE_TAC o
-    MATCH_MP bytes_loaded_update o CONJUNCT1) subths THEN
-
-  (*** This part produces any updated versions of existing asms ***)
-
-  ASSUMPTION_STATE_UPDATE_TAC THEN
-
-  (*** Produce updated "MAYCHANGE" assumption ***)
-
-  MAYCHANGE_STATE_UPDATE_TAC THEN
-
-  (*** This adds state component theorems for the updates ***)
-  (*** Could also assume th itself but I throw it away   ***)
-
-  DISCH_THEN(fun th ->
-    let thl = STATE_UPDATE_NEW_RULE th in
-    if thl = [] then ALL_TAC else
-    MP_TAC(end_itlist CONJ thl) THEN
-    ASSEMBLER_SIMPLIFY_TAC THEN
-
-    let has_auxmems = ref false in
-    (** If there is an 'unsimplified' memory read on the right hand side,
-        try to synthesize an expression using bigdigit and use it. **)
-    DISCH_THEN (fun simplified_th (asl,w) ->
-      let res_th,newmems_th = DIGITIZE_MEMORY_READS simplified_th th (asl,w) in
-      (* MP_TAC res_th and newmems_th first, to drop their assumptions. *)
-      (MP_TAC res_th THEN
-      (match newmems_th with
-       | None -> (has_auxmems := false; ALL_TAC)
-       | Some ths -> (has_auxmems := true; MP_TAC ths))) (asl,w))
-    THEN
-
-    (* store it to a reference, or make them assumptions *)
-    W (fun _ ->
-      match store_update_to with
-      | None -> STRIP_TAC THEN (if !has_auxmems then STRIP_TAC else ALL_TAC)
-      | Some to_ref ->
-        if !has_auxmems then
-          DISCH_THEN (fun auxmems -> DISCH_THEN (fun res ->
-            to_ref := (CONJUNCTS res, CONJUNCTS auxmems); ALL_TAC))
-        else
-          DISCH_THEN (fun res -> to_ref := (CONJUNCTS res, []); ALL_TAC)));;
+      (* store it to a reference, or make them assumptions *)
+      W (fun _ ->
+        match store_update_to with
+        | None -> STRIP_TAC THEN (if !has_auxmems then STRIP_TAC else ALL_TAC)
+        | Some to_ref ->
+          if !has_auxmems then
+            DISCH_THEN (fun auxmems -> DISCH_THEN (fun res ->
+              to_ref := (CONJUNCTS res, CONJUNCTS auxmems); ALL_TAC))
+          else
+            DISCH_THEN (fun res -> to_ref := (CONJUNCTS res, []); ALL_TAC)));;
 
 (* A variant of X86_STEPS_TAC but uses DISCARD_OLDSTATE_AGGRESSIVELY_TAC
    instead.
