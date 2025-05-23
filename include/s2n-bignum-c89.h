@@ -972,6 +972,10 @@ extern void edwards25519_scalarmulbase_alt(uint64_t res[8],uint64_t scalar[4]);
 extern void edwards25519_scalarmuldouble(uint64_t res[8],uint64_t scalar[4], uint64_t point[8],uint64_t bscalar[4]);
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[8],uint64_t scalar[4], uint64_t point[8],uint64_t bscalar[4]);
 
+/* Scalar product of 2-element polynomial vectors in NTT domain, with mulcache */
+/* Inputs a[512], b[512], btable[256] (signed 16-bit words); output r[256] (signed 16-bit words) */
+extern void mlkem_basemul_k2(int16_t r[256],const int16_t a[512],const int16_t b[512],const int16_t btable[256]);
+
 /* Inverse number-theoretic transform from ML-KEM */
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_intt(int16_t a[256],int16_t z_01234[80],int16_t z_56[384]);

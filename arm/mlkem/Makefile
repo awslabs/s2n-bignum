@@ -21,7 +21,8 @@ endif
 
 # List of object files
 
-OBJ = mlkem_intt.o \
+OBJ = mlkem_basemul_k2.o \
+      mlkem_intt.o \
       mlkem_keccak_f1600.o \
       mlkem_keccak_f1600_alt.o \
       mlkem_keccak2_f1600.o \

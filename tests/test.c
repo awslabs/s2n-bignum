@@ -2413,6 +2413,36 @@ void reference_mulcache_compute(int16_t x[128],int16_t a[256])
       x[k] = (mod_3329(a[2 * k + 1]) * pow_3329(17,bitreverse_pairs(2 * k + 1))) % 3329;
 }
 
+// Base multiplication, which is the following operation
+//
+// (a0 + a1 * X) * (b0 + b1 * X) mod (X^2 - zeta)
+// = (a0 * b0 + a1 * b1 * zeta) + (a0 * b1 + a1 * b0) * X
+//
+// We scale by 169 = 2^-16 mod 3329 since it's all
+// assumed to be in Montgomery form
+
+void reference_basemul(int16_t z[256],int16_t a[256],int16_t b[256])
+{ uint64_t k;
+  for (k = 0; k < 128; ++k)
+   { z[2 * k] = (169 * (mod_3329(a[2 * k]) * mod_3329(b[2 * k]) +
+                        mod_3329(a[2 * k + 1]) * mod_3329(b[2 * k + 1]) *
+                 pow_3329(17,bitreverse_pairs(2 * k + 1)))) % 3329;
+     z[2 * k + 1] = (169 * (mod_3329(a[2 * k]) * mod_3329(b[2 * k + 1]) +
+                            mod_3329(a[2 * k + 1]) * mod_3329(b[2 * k]))) % 3329;
+   }
+}
+
+// 2-wide scalar product of basemuls
+
+void reference_basemul2(int16_t z[256],int16_t a[512],int16_t b[512])
+{ uint64_t k;
+  int16_t t0[256], t1[256];
+  reference_basemul(t0,a,b);
+  reference_basemul(t1,a+256,b+256);
+  for (k = 0; k < 256; ++k)
+     z[k] = (t0[k] + t1[k]) % 3329;
+}
+
 // Keccak-f1600 reference.
 // https://keccak.team/files/Keccak-reference-3.0.pdf
 
@@ -11502,6 +11532,46 @@ int test_edwards25519_scalarmuldouble_alt(void)
   return 0;
 }
 
+int test_mlkem_basemul_k2(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t t, i;
+  int16_t a[512], b[512], x[256], y[256], bt[256];
+  printf("Testing mlkem_basemul_k2 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+        a[i] = (int16_t) (random64() % 4097),
+        b[i] = (int16_t) (random64() % 4097); // Assumed <= 2^12
+     reference_basemul2(y,a,b);
+     reference_mulcache_compute(bt,b);
+     reference_mulcache_compute(bt+128,b+256);
+     mlkem_basemul_k2(x,a,b,bt);
+     for (i = 0; i < 256; ++i)
+      { if (rem_3329(x[i]) != rem_3329(y[i]))
+         { printf("Error in basemul_k2 element i = %"PRIu64"; code[i] = 0x%04"PRIx16
+                  " while reference[i] = 0x%04"PRIx16"\n",
+                  i,x[i],y[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: basemul_k2[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"] = "
+               "[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"]\n",
+               a[0],a[1],a[254],a[255],
+               x[0],x[1],x[254],x[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+
 int test_mlkem_intt(void)
 {
 #ifdef __x86_64__
@@ -14929,6 +14999,7 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_16",test_bignum_copy_row_from_table_16);
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
+    functionaltest(arm,"mlkem_basemul_k2",test_mlkem_basemul_k2);
     functionaltest(arm,"mlkem_intt",test_mlkem_intt);
     functionaltest(arm,"mlkem_keccak_f1600",test_mlkem_keccak_f1600);
     functionaltest(sha3,"mlkem_keccak_f1600_alt",test_mlkem_keccak_f1600_alt);
