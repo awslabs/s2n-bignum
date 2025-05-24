@@ -107,53 +107,6 @@ let mlkem_poly_tobytes_mc = define_assert_from_elf
 let MLKEM_POLY_TOBYTES_EXEC = ARM_MK_EXEC_RULE mlkem_poly_tobytes_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* A construct handy to expand out some lists explicitly. The conversion     *)
-(* is a bit stupid (quadratic) but good enough for this application.         *)
-(* ------------------------------------------------------------------------- *)
-
-let LIST_OF_FUN = define
- `LIST_OF_FUN 0 (f:num->A) = [] /\
-  LIST_OF_FUN (SUC n) f = APPEND (LIST_OF_FUN n f) [f n]`;;
-
-let LENGTH_LIST_OF_FUN = prove
- (`!(f:num->A) n. LENGTH (LIST_OF_FUN n f) = n`,
-  GEN_TAC THEN INDUCT_TAC THEN
-  ASM_REWRITE_TAC[LIST_OF_FUN; LENGTH; LENGTH_APPEND; ADD_CLAUSES]);;
-
-let MAP_LIST_OF_FUN = prove
- (`!f (g:A->B) n. MAP g (LIST_OF_FUN n f) = LIST_OF_FUN n (g o f)`,
-  GEN_TAC THEN GEN_TAC THEN
-  INDUCT_TAC THEN ASM_REWRITE_TAC[MAP; LIST_OF_FUN; MAP_APPEND; o_THM]);;
-
-let EL_LIST_OF_FUN = prove
- (`!(f:num->A) n i. i < n ==> EL i (LIST_OF_FUN n f) = f i`,
-  GEN_TAC THEN INDUCT_TAC THEN ASM_SIMP_TAC[LT; LIST_OF_FUN; EL_APPEND] THEN
-  X_GEN_TAC `i:num` THEN REWRITE_TAC[LENGTH_LIST_OF_FUN] THEN
-  DISCH_THEN(DISJ_CASES_THEN2 SUBST_ALL_TAC ASSUME_TAC) THEN
-  ASM_SIMP_TAC[SUB_REFL; EL; HD; LT_REFL]);;
-
-let LIST_OF_FUN_ALT = prove
- (`(!(f:num->A). LIST_OF_FUN 0 f = []) /\
-   (!(f:num->A) n.
-        LIST_OF_FUN (SUC n) f = CONS (f 0) (LIST_OF_FUN n (f o SUC)))`,
-  REWRITE_TAC[CONJUNCT1 LIST_OF_FUN] THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[LIST_EQ; LENGTH_LIST_OF_FUN; LENGTH; EL_CONS] THEN
-  INDUCT_TAC THEN ASM_SIMP_TAC[NOT_SUC; EL_LIST_OF_FUN] THEN
-  ASM_SIMP_TAC[LT_SUC; SUC_SUB1; EL_LIST_OF_FUN; o_THM]);;
-
-let LIST_OF_FUN_EQ_SELF = prove
- (`!l:A list. LIST_OF_FUN (LENGTH l) (\i. EL i l) = l`,
-  SIMP_TAC[LIST_EQ; LENGTH_LIST_OF_FUN; EL_LIST_OF_FUN]);;
-
-let LIST_OF_FUN_CONV =
-  let baseconv = GEN_REWRITE_CONV I [CONJUNCT1 LIST_OF_FUN]
-  and stepconv = GEN_REWRITE_CONV I [CONJUNCT2 LIST_OF_FUN] in
-  let rec conv tm =
-    try baseconv tm with Failure _ ->
-    (LAND_CONV num_CONV THENC stepconv THENC LAND_CONV conv) tm in
-  conv THENC GEN_REWRITE_CONV TOP_DEPTH_CONV [APPEND];;
-
-(* ------------------------------------------------------------------------- *)
 (* Main proof.                                                               *)
 (* ------------------------------------------------------------------------- *)
 
@@ -197,9 +150,9 @@ let MLKEM_POLY_TOBYTES_CORRECT = prove
   UNDISCH_TAC
    `read(memory :> bytes(a,512)) s0 = num_of_wordlist(l:int16 list)` THEN
   GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o RAND_CONV)
-   [GSYM LIST_OF_FUN_EQ_SELF] THEN
+   [GSYM LIST_OF_SEQ_EQ_SELF] THEN
   ASM_REWRITE_TAC[] THEN
-  CONV_TAC(LAND_CONV(RAND_CONV(RAND_CONV LIST_OF_FUN_CONV))) THEN
+  CONV_TAC(LAND_CONV(RAND_CONV(RAND_CONV LIST_OF_SEQ_CONV))) THEN
   REWRITE_TAC[] THEN
   REPLICATE_TAC 3
    (GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV)
@@ -222,9 +175,9 @@ let MLKEM_POLY_TOBYTES_CORRECT = prove
   REWRITE_TAC[ARITH_RULE `384 = 8 * 48`] THEN
   CONV_TAC(LAND_CONV BIGNUM_LEXPAND_CONV) THEN
   ASM_REWRITE_TAC[] THEN
-  GEN_REWRITE_TAC (funpow 3 RAND_CONV) [GSYM LIST_OF_FUN_EQ_SELF] THEN
+  GEN_REWRITE_TAC (funpow 3 RAND_CONV) [GSYM LIST_OF_SEQ_EQ_SELF] THEN
   ASM_REWRITE_TAC[] THEN
-  CONV_TAC(funpow 3 RAND_CONV (LIST_OF_FUN_CONV)) THEN
+  CONV_TAC(funpow 3 RAND_CONV (LIST_OF_SEQ_CONV)) THEN
   REWRITE_TAC[MAP] THEN
   REWRITE_TAC[num_of_wordlist; VAL] THEN
 
