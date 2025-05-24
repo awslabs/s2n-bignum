@@ -2443,6 +2443,31 @@ void reference_basemul2(int16_t z[256],int16_t a[512],int16_t b[512])
      z[k] = (t0[k] + t1[k]) % 3329;
 }
 
+// 3-wide scalar product of basemuls
+
+void reference_basemul3(int16_t z[256],int16_t a[768],int16_t b[768])
+{ uint64_t k;
+  int16_t t0[256], t1[256], t2[256];
+  reference_basemul(t0,a,b);
+  reference_basemul(t1,a+256,b+256);
+  reference_basemul(t2,a+512,b+512);
+  for (k = 0; k < 256; ++k)
+     z[k] = (t0[k] + t1[k] + t2[k]) % 3329;
+}
+
+// 4-wide scalar product of basemuls
+
+void reference_basemul4(int16_t z[256],int16_t a[1024],int16_t b[1024])
+{ uint64_t k;
+  int16_t t0[256], t1[256], t2[256], t3[256];
+  reference_basemul(t0,a,b);
+  reference_basemul(t1,a+256,b+256);
+  reference_basemul(t2,a+512,b+512);
+  reference_basemul(t3,a+768,b+768);
+  for (k = 0; k < 256; ++k)
+     z[k] = (t0[k] + t1[k] + t2[k] + t3[k]) % 3329;
+}
+
 // Keccak-f1600 reference.
 // https://keccak.team/files/Keccak-reference-3.0.pdf
 
@@ -11542,7 +11567,7 @@ uint64_t t, i;
   printf("Testing mlkem_basemul_k2 with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
-   { for (i = 0; i < 256; ++i)
+   { for (i = 0; i < 512; ++i)
         a[i] = (int16_t) (random64() % 4097),
         b[i] = (int16_t) (random64() % 4097); // Assumed <= 2^12
      reference_basemul2(y,a,b);
@@ -11562,7 +11587,7 @@ uint64_t t, i;
                "0x%04"PRIx16",0x%04"PRIx16"] = "
                "[0x%04"PRIx16",0x%04"PRIx16",...,"
                "0x%04"PRIx16",0x%04"PRIx16"]\n",
-               a[0],a[1],a[254],a[255],
+               a[0],a[1],a[510],a[511],
                x[0],x[1],x[254],x[255]);
       }
    }
@@ -11571,6 +11596,87 @@ uint64_t t, i;
 #endif
 }
 
+int test_mlkem_basemul_k3(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t t, i;
+  int16_t a[768], b[768], x[256], y[256], bt[384];
+  printf("Testing mlkem_basemul_k3 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 768; ++i)
+        a[i] = (int16_t) (random64() % 4097),
+        b[i] = (int16_t) (random64() % 4097); // Assumed <= 2^12
+     reference_basemul3(y,a,b);
+     reference_mulcache_compute(bt,b);
+     reference_mulcache_compute(bt+128,b+256);
+     reference_mulcache_compute(bt+256,b+512);
+     mlkem_basemul_k3(x,a,b,bt);
+     for (i = 0; i < 256; ++i)
+      { if (rem_3329(x[i]) != rem_3329(y[i]))
+         { printf("Error in basemul_k3 element i = %"PRIu64"; code[i] = 0x%04"PRIx16
+                  " while reference[i] = 0x%04"PRIx16"\n",
+                  i,x[i],y[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: basemul_k3[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"] = "
+               "[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"]\n",
+               a[0],a[1],a[766],a[767],
+               x[0],x[1],x[254],x[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+
+int test_mlkem_basemul_k4(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t t, i;
+  int16_t a[1024], b[1024], x[256], y[256], bt[512];
+  printf("Testing mlkem_basemul_k4 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 1024; ++i)
+        a[i] = (int16_t) (random64() % 4097),
+        b[i] = (int16_t) (random64() % 4097); // Assumed <= 2^12
+     reference_basemul4(y,a,b);
+     reference_mulcache_compute(bt,b);
+     reference_mulcache_compute(bt+128,b+256);
+     reference_mulcache_compute(bt+256,b+512);
+     reference_mulcache_compute(bt+384,b+768);
+     mlkem_basemul_k4(x,a,b,bt);
+     for (i = 0; i < 256; ++i)
+      { if (rem_3329(x[i]) != rem_3329(y[i]))
+         { printf("Error in basemul_k4 element i = %"PRIu64"; code[i] = 0x%04"PRIx16
+                  " while reference[i] = 0x%04"PRIx16"\n",
+                  i,x[i],y[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: basemul_k4[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"] = "
+               "[0x%04"PRIx16",0x%04"PRIx16",...,"
+               "0x%04"PRIx16",0x%04"PRIx16"]\n",
+               a[0],a[1],a[1022],a[1023],
+               x[0],x[1],x[254],x[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
 
 int test_mlkem_intt(void)
 {
@@ -15000,6 +15106,8 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
     functionaltest(arm,"mlkem_basemul_k2",test_mlkem_basemul_k2);
+    functionaltest(arm,"mlkem_basemul_k3",test_mlkem_basemul_k3);
+    functionaltest(arm,"mlkem_basemul_k4",test_mlkem_basemul_k4);
     functionaltest(arm,"mlkem_intt",test_mlkem_intt);
     functionaltest(arm,"mlkem_keccak_f1600",test_mlkem_keccak_f1600);
     functionaltest(sha3,"mlkem_keccak_f1600_alt",test_mlkem_keccak_f1600_alt);

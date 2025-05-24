@@ -218,8 +218,6 @@ let basemul2_odd = define
               (x1 (2 * i)) (x1 (2 * i + 1))
               (y1 (2 * i + 1)) (y1 (2 * i))`;;
 
-let MLKEM_BASEMUL_K2_EXEC = ARM_MK_EXEC_RULE mlkem_basemul_k2_mc;;
-
 (* ------------------------------------------------------------------------- *)
 (* Hacky tweaking conversion to write away non-free state component reads.   *)
 (* ------------------------------------------------------------------------- *)

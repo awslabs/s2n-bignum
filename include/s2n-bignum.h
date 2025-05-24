@@ -979,8 +979,16 @@ extern void edwards25519_scalarmuldouble(uint64_t res[S2N_BIGNUM_STATIC 8],const
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[S2N_BIGNUM_STATIC 8],const uint64_t scalar[S2N_BIGNUM_STATIC 4], const uint64_t point[S2N_BIGNUM_STATIC 8],const uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 
 // Scalar product of 2-element polynomial vectors in NTT domain, with mulcache
-// Inputs a[512], b[512], btable[256] (signed 16-bit words); output r[256] (signed 16-bit words)
-extern void mlkem_basemul_k2(int16_t r[S2N_BIGNUM_STATIC 256],const int16_t a[S2N_BIGNUM_STATIC 512],const int16_t b[S2N_BIGNUM_STATIC 512],const int16_t btable[S2N_BIGNUM_STATIC 256]);
+// Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words)
+extern void mlkem_basemul_k2(int16_t r[S2N_BIGNUM_STATIC 256],const int16_t a[S2N_BIGNUM_STATIC 512],const int16_t b[S2N_BIGNUM_STATIC 512],const int16_t bt[S2N_BIGNUM_STATIC 256]);
+
+// Scalar product of 3-element polynomial vectors in NTT domain, with mulcache
+// Inputs a[768], b[768], bt[384] (signed 16-bit words); output r[256] (signed 16-bit words)
+extern void mlkem_basemul_k3(int16_t r[S2N_BIGNUM_STATIC 256],const int16_t a[S2N_BIGNUM_STATIC 768],const int16_t b[S2N_BIGNUM_STATIC 768],const int16_t bt[S2N_BIGNUM_STATIC 384]);
+
+// Scalar product of 4-element polynomial vectors in NTT domain, with mulcache
+// Inputs a[1024], b[1024], bt[512] (signed 16-bit words); output r[256] (signed 16-bit words)
+extern void mlkem_basemul_k4(int16_t r[S2N_BIGNUM_STATIC 256],const int16_t a[S2N_BIGNUM_STATIC 1024],const int16_t b[S2N_BIGNUM_STATIC 1024],const int16_t bt[S2N_BIGNUM_STATIC 512]);
 
 // Inverse number-theoretic transform from ML-KEM
 // Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words)

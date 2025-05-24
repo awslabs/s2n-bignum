@@ -4,29 +4,29 @@
 
 // ----------------------------------------------------------------------------
 // Scalar product of 2-element polynomial vectors in NTT domain, with mulcache
-// Inputs a[512], b[512], btable[256] (signed 16-bit words); output r[256] (signed 16-bit words)
+// Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words)
 //
 // The inputs a and b are considered as 2-element vectors of linear
-// polynomials in the NTT domain (in Montgomery form), and the btable
+// polynomials in the NTT domain (in Montgomery form), and the bt
 // argument an analogous 2-element vector of mulcaches for the bi:
 //
 //   a0 = a[0..255], a1 = a[256..511]
 //   b0 = b[0..255], b1 = b[256..511]
-//   btable0 = btable[0..127], btable1 = btable[128..255]
+//   bt0 = bt[0..127], bt1 = bt[128..255]
 //
 // Scalar multiplication of those 2-element vectors is performed,
 // with base multiplication in Fq[X]/(X^2-zeta^i'), with zeta^i'
 // being a power of zeta = 17, with i bit-reversed as used for NTTs,
 // making use of the mulcache for optimization.
 //
-// All input elements are assumed <= 2^12 and the btables are
+// All input elements are assumed <= 2^12 and the bts are
 // assumed to be as computed by mlkem_mulcache_compute.
 //
 // extern void mlkem_basemul_k2
 //      (int16_t r[256],const int16_t a[512],const int16_t b[512],
-//       const int16_t btable[256])
+//       const int16_t bt[256])
 //
-// Standard ARM ABI: X0 = r, X1 = a, X2 = b, X3 = btable
+// Standard ARM ABI: X0 = r, X1 = a, X2 = b, X3 = bt
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
@@ -45,14 +45,14 @@ S2N_BN_SYMBOL(mlkem_basemul_k2):
         stp     d10, d11, [sp, #0x10]
         stp     d12, d13, [sp, #0x20]
         stp     d14, d15, [sp, #0x30]
-        mov     w14, #0xd01             // =3329
+        mov     w14, #0xd01
         dup     v0.8h, w14
-        mov     w14, #0xcff             // =3327
+        mov     w14, #0xcff
         dup     v2.8h, w14
         add     x4, x1, #0x200
         add     x5, x2, #0x200
         add     x6, x3, #0x100
-        mov     x13, #0x10              // =16
+        mov     x13, #0x10
         ldr     q9, [x4], #0x20
         ldur    q5, [x4, #-0x10]
         ldr     q11, [x5], #0x20
