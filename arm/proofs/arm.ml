@@ -448,19 +448,49 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
  ) tm;;
 
 let ARM_BASIC_STEP_TAC =
-  let arm_tm = `arm` and arm_ty = `:armstate` in
-  fun (decode_ths: thm option array) sname (asl,w) ->
+  let arm_tm = `arm` and arm_ty = `:armstate` and one = `1:num` in
+  fun (decode_ths: thm option array) sname (store_inst_term_to:term ref option)
+      (asl,w) ->
     let sv = rand w and sv' = mk_var(sname,arm_ty) in
     let atm = mk_comb(mk_comb(arm_tm,sv),sv') in
     let eth = ARM_CONV decode_ths (map snd asl) atm in
-    (GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ2_TAC THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN CONV_TAC EXISTS_NONTRIVIAL_CONV;
+
+    (* store the decoded instruction at store_inst_term_to *)
+    (match store_inst_term_to with
+     | Some r -> r := rhs (concl eth)
+     | None -> ());
+
+    (* prepare a tactic for progressing to a next step. *)
+    let progress_tac =
+      let c,_ = strip_comb w in
+      if name_of c = "eventually" then
+        GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ2_TAC
+      else if name_of c = "eventually_n" then
+        let stepn = dest_numeral(rand(rator(rator w))) in
+        let stepn_decr = stepn -/ num 1 in
+        (* stepn = 1+{stepn-1}*)
+        let stepn_thm = GSYM (NUM_ADD_CONV
+          (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
+        GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
+        GEN_REWRITE_TAC I [EVENTUALLY_N_STEP]
+      else failwith "ARM_BASIC_STEP_TAC: neither eventually nor eventually_n"
+      in
+
+    (progress_tac THEN CONJ_TAC THENL
+     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
+      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
+        (PRINT_GOAL_TAC THEN
+        FAIL_TAC ("ARM_BASIC_STEP_TAC: Equality between two states is " ^
+                  "ill-formed. Did you forget to assume an extra condition" ^
+                  " like pointer alignment?")));
       X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth]]) (asl,w);;
 
-let ARM_STEP_TAC (mc_length_th,decode_ths) (subths:thm list) sname =
+let ARM_STEP_TAC (mc_length_th,decode_ths) (subths:thm list) sname
+      (store_inst_term_to: term ref option)
+      (strip_component_tac: thm_tactic) =
   (*** This does the basic decoding setup ***)
 
-  ARM_BASIC_STEP_TAC decode_ths sname THEN
+  ARM_BASIC_STEP_TAC decode_ths sname store_inst_term_to THEN
 
   (*** This part shows the code isn't self-modifying ***)
 
@@ -488,15 +518,15 @@ let ARM_STEP_TAC (mc_length_th,decode_ths) (subths:thm list) sname =
     if thl = [] then ALL_TAC else
     MP_TAC(end_itlist CONJ thl) THEN
     ASSEMBLER_SIMPLIFY_TAC THEN
-    STRIP_TAC);;
+    strip_component_tac th);;
 
 let ARM_VERBOSE_STEP_TAC (exth1,exth2) sname g =
   Format.print_string("Stepping to state "^sname); Format.print_newline();
-  ARM_STEP_TAC (exth1,exth2) [] sname g;;
+  ARM_STEP_TAC (exth1,exth2) [] sname None (K STRIP_TAC) g;;
 
 let ARM_VERBOSE_SUBSTEP_TAC (exth1,exth2) subths sname g =
   Format.print_string("Stepping to state "^sname); Format.print_newline();
-  ARM_STEP_TAC (exth1,exth2) subths sname g;;
+  ARM_STEP_TAC (exth1,exth2) subths sname None (K STRIP_TAC) g;;
 
 (* ------------------------------------------------------------------------- *)
 (* Throw away assumptions according to patterns.                             *)
