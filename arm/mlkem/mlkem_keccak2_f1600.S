@@ -2,7 +2,7 @@
 // Copyright (c) 2021-2022 Arm Limited
 // Copyright (c) 2022 Matthias Kannwischer
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT
 
 // ----------------------------------------------------------------------------
 // Keccak-f1600 permutation for SHA3, batch of two independent operations

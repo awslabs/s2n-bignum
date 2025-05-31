@@ -1,6 +1,6 @@
 // Copyright (c) 2024 The mlkem-native project authors
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT
 
 // ----------------------------------------------------------------------------
 // Precompute the mulcache data for a polynomial in the NTT domain
