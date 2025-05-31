@@ -120,6 +120,7 @@
 : testq$
 : vpxor$
 : vpaddw$
+: vpand$
 : vpmulhw$
 : vpmullw$
 : vpsubw$
