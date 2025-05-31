@@ -229,32 +229,6 @@ let mlkem_keccak2_f1600_alt_mc = define_assert_from_elf
 let MLKEM_KECCAK2_F1600_ALT_EXEC = ARM_MK_EXEC_RULE mlkem_keccak2_f1600_alt_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* Convenient constructs to state and prove correctness. Should possibly     *)
-(* introduce a full state component for word lists eventually.               *)
-(* ------------------------------------------------------------------------- *)
-
-let wordlist_from_memory = define
- `wordlist_from_memory(a,0) s = [] /\
-  wordlist_from_memory(a,SUC n) s =
-  APPEND (wordlist_from_memory(a,n) s)
-         [read (memory :> bytes64(word_add a (word(8 * n)))) s]`;;
-
-(*** This is very naive and should be done more efficiently ***)
-
-let WORDLIST_FROM_MEMORY_CONV =
-  let uconv =
-    (LAND_CONV(RAND_CONV num_CONV) THENC
-     GEN_REWRITE_CONV I [CONJUNCT2 wordlist_from_memory]) ORELSEC
-     GEN_REWRITE_CONV I [CONJUNCT1 wordlist_from_memory] in
-  let conv =
-    TOP_DEPTH_CONV uconv THENC
-    ONCE_DEPTH_CONV NUM_MULT_CONV THENC
-    GEN_REWRITE_CONV ONCE_DEPTH_CONV [WORD_ADD_0] THENC
-    GEN_REWRITE_CONV TOP_DEPTH_CONV [APPEND]
-  and filt = can (term_match [] `wordlist_from_memory(a,NUMERAL n) s`) in
-  conv o check filt;;
-
-(* ------------------------------------------------------------------------- *)
 (* Correctness proof                                                         *)
 (* ------------------------------------------------------------------------- *)
 
@@ -310,7 +284,7 @@ let MLKEM_KECCAK2_F1600_ALT_CORRECT = prove
     (*** Initial holding of the invariant ***)
 
     REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s`] THEN
+     WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`] THEN
     ENSURES_INIT_TAC "s0" THEN
     BIGNUM_DIGITIZE_TAC "A_" `read (memory :> bytes (a,8 * 50)) s0` THEN
     REPEAT(FIRST_X_ASSUM
@@ -331,7 +305,7 @@ let MLKEM_KECCAK2_F1600_ALT_CORRECT = prove
 
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
     REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s`] THEN
+     WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`] THEN
     MP_TAC(ISPECL [`A:int64 list`; `i:num`] LENGTH_KECCAK) THEN
     MP_TAC(ISPECL [`A':int64 list`; `i:num`] LENGTH_KECCAK) THEN
     ASM_REWRITE_TAC[IMP_IMP] THEN REWRITE_TAC[LENGTH_EQ_25] THEN
@@ -359,13 +333,13 @@ let MLKEM_KECCAK2_F1600_ALT_CORRECT = prove
 
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC;
-    WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s`] THEN
+     WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`] THEN
     ARM_SIM_TAC MLKEM_KECCAK2_F1600_ALT_EXEC [1] THEN
     VAL_INT64_TAC `i:num` THEN
     ASM_REWRITE_TAC[] THEN CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
     ASM_SIMP_TAC[LT_IMP_NE];
 
-    (*** The tail of deferred rotations and writeback ***)
+    (*** The writeback tail ***)
 
     MP_TAC(ISPECL [`A:int64 list`; `24`] LENGTH_KECCAK) THEN
     MP_TAC(ISPECL [`A':int64 list`; `24`] LENGTH_KECCAK) THEN

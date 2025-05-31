@@ -803,30 +803,8 @@ let mlkem_keccak4_f1600_mc = define_assert_from_elf
 let MLKEM_KECCAK4_F1600_EXEC = ARM_MK_EXEC_RULE mlkem_keccak4_f1600_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* Convenient constructs to state and prove correctness. Should possibly     *)
-(* introduce a full state component for word lists eventually.               *)
+(* Additional definition used in the proof.                                  *)
 (* ------------------------------------------------------------------------- *)
-
-let wordlist_from_memory = define
- `wordlist_from_memory(a,0) s = [] /\
-  wordlist_from_memory(a,SUC n) s =
-  APPEND (wordlist_from_memory(a,n) s)
-         [read (memory :> bytes64(word_add a (word(8 * n)))) s]`;;
-
-(*** This is very naive and should be done more efficiently ***)
-
-let WORDLIST_FROM_MEMORY_CONV =
-  let uconv =
-    (LAND_CONV(RAND_CONV num_CONV) THENC
-     GEN_REWRITE_CONV I [CONJUNCT2 wordlist_from_memory]) ORELSEC
-     GEN_REWRITE_CONV I [CONJUNCT1 wordlist_from_memory] in
-  let conv =
-    TOP_DEPTH_CONV uconv THENC
-    ONCE_DEPTH_CONV NUM_MULT_CONV THENC
-    GEN_REWRITE_CONV ONCE_DEPTH_CONV [WORD_ADD_0] THENC
-    GEN_REWRITE_CONV TOP_DEPTH_CONV [APPEND]
-  and filt = can (term_match [] `wordlist_from_memory(a,NUMERAL n) s`) in
-  conv o check filt;;
 
 (*** Additional lazy/deferred rotations in the implementation, row-major ***)
 
@@ -900,7 +878,7 @@ let MLKEM_KECCAK4_F1600_CORRECT = prove
    `\i s.
       (read SP s = stackpointer /\
        wordlist_from_memory(rc,24) s = round_constants /\
-       wordlist_from_memory(word_add a (word 600),25) s = A4 /\
+       wordlist_from_memory(word_add a (word 600),25) s:int64 list = A4 /\
        read (memory :> bytes64 stackpointer) s = a /\
        read (memory :> bytes64 (word_add stackpointer (word 8))) s = rc /\
        read (memory :> bytes64 (word_add stackpointer (word 16))) s =
@@ -927,7 +905,7 @@ let MLKEM_KECCAK4_F1600_CORRECT = prove
     (*** Initial holding of the invariant ***)
 
     REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC;
-                WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s`] THEN
+     WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`] THEN
     ENSURES_INIT_TAC "s0" THEN
     BIGNUM_DIGITIZE_TAC "A_" `read (memory :> bytes (a,8 * 100)) s0` THEN
     REPEAT(FIRST_X_ASSUM

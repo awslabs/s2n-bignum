@@ -216,13 +216,19 @@ let WORD_BIGDIGIT_DIV = prove
   REWRITE_TAC[BIGDIGIT_DIV]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Mapping a little-endian word list into a number (general size).           *)
+(* Mapping little-endian word list to/from natural number (general size).    *)
 (* ------------------------------------------------------------------------- *)
 
 let num_of_wordlist = define
- `num_of_wordlist [] = 0 /\
+ `num_of_wordlist ([]:(N word) list) = 0 /\
   num_of_wordlist (CONS (h:N word) t) =
      val h + 2 EXP dimindex(:N) * num_of_wordlist t`;;
+
+let wordlist_of_num = define
+ `(wordlist_of_num 0 n :(N word)list = []) /\
+  (wordlist_of_num (SUC k) n =
+     CONS (word(n MOD 2 EXP dimindex(:N)):N word)
+          (wordlist_of_num k (n DIV 2 EXP dimindex(:N))))`;;
 
 let NUM_OF_WORDLIST_SING = prove
  (`!h:N word. num_of_wordlist [h] = val h`,
@@ -263,6 +269,102 @@ let NUM_OF_WORDLIST_BOUND_GEN = prove
     lhand o snd) THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] LTE_TRANS) THEN
   ASM_REWRITE_TAC[LE_EXP] THEN ARITH_TAC);;
+
+let NUM_OF_WORDLIST_DIV = prove
+ (`!(w:N word) ws.
+        num_of_wordlist (CONS w ws) DIV 2 EXP dimindex(:N) =
+        num_of_wordlist ws`,
+  SIMP_TAC[num_of_wordlist; DIV_MULT_ADD; EXP_EQ_0; ARITH_EQ] THEN
+  SIMP_TAC[DIV_LT; VAL_BOUND; ADD_CLAUSES]);;
+
+let NUM_OF_WORDLIST_MOD = prove
+ (`!(w:N word) ws.
+        num_of_wordlist (CONS w ws) MOD 2 EXP dimindex(:N) = val w`,
+  REWRITE_TAC[num_of_wordlist; MOD_MULT_ADD] THEN
+  SIMP_TAC[MOD_LT; VAL_BOUND]);;
+
+let NUM_OF_WORDLIST_ZAP = prove
+ (`!l:(N word)list.
+        2 EXP dimindex(:N) * num_of_wordlist l =
+        num_of_wordlist(CONS (word 0) l)`,
+  REWRITE_TAC[num_of_wordlist; VAL_WORD_0; ADD_CLAUSES]);;
+
+let LENGTH_WORDLIST_OF_NUM = prove
+ (`!k n. LENGTH(wordlist_of_num k n:(N word)list) = k`,
+  INDUCT_TAC THEN ASM_REWRITE_TAC[wordlist_of_num; LENGTH]);;
+
+let NUM_OF_WORDLIST_BOUND = prove
+ (`!l:(N word)list. num_of_wordlist l < 2 EXP (dimindex(:N) * LENGTH l)`,
+  MATCH_MP_TAC list_INDUCT THEN
+  REWRITE_TAC[LENGTH; num_of_wordlist; ARITH; EXP; MULT_CLAUSES] THEN
+  MAP_EVERY X_GEN_TAC [`h:N word`; `t:(N word)list`] THEN DISCH_TAC THEN
+  REWRITE_TAC[EXP_ADD] THEN  MATCH_MP_TAC(ARITH_RULE
+     `h < n /\ n * (t + 1) <= n * e
+      ==> h + n * t < n * e`) THEN
+  REWRITE_TAC[VAL_BOUND; LE_MULT_LCANCEL] THEN ASM_ARITH_TAC);;
+
+let WORDLIST_OF_NUM_OF_WORDLIST = prove
+ (`!l:(N word)list. wordlist_of_num (LENGTH l) (num_of_wordlist l) = l`,
+  LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC[num_of_wordlist; wordlist_of_num; LENGTH] THEN FIRST_X_ASSUM
+   (fun th -> GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [SYM th]) THEN
+  SIMP_TAC[CONS_11; MOD_MULT_ADD; DIV_MULT_ADD; ARITH_EQ; WORD_VAL_GALOIS;
+           EXP_EQ_0; MOD_MOD_REFL; MOD_EQ_SELF] THEN
+  SIMP_TAC[VAL_BOUND; DIV_LT; ADD_CLAUSES]);;
+
+let NUM_OF_WORDLIST_OF_NUM_0 = prove
+ (`!k. num_of_wordlist(wordlist_of_num k 0:(N word)list) = 0`,
+  INDUCT_TAC THEN SIMP_TAC[num_of_wordlist; wordlist_of_num] THEN
+  ASM_REWRITE_TAC[VAL_WORD_0; DIV_0; MOD_0; MULT_CLAUSES; ADD_CLAUSES]);;
+
+let NUM_OF_WORDLIST_OF_NUM = prove
+ (`!k n. num_of_wordlist(wordlist_of_num k n:(N word)list) =
+         n MOD 2 EXP (dimindex(:N) * k)`,
+  INDUCT_TAC THEN REWRITE_TAC[num_of_wordlist] THENL
+   [REWRITE_TAC[wordlist_of_num; num_of_wordlist; EXP; MOD_1; MULT_CLAUSES];
+    ALL_TAC] THEN
+  X_GEN_TAC `n:num` THEN ASM_REWRITE_TAC[wordlist_of_num; num_of_wordlist] THEN
+  REWRITE_TAC[EXP_ADD; ARITH_RULE `n * SUC k = n + n * k`; MOD_MULT_MOD] THEN
+  REWRITE_TAC[VAL_WORD; MOD_MOD_REFL] THEN ARITH_TAC);;
+
+let WORDLIST_OF_NUM_MOD = prove
+ (`!k n. wordlist_of_num k (n MOD 2 EXP (dimindex(:N) * k)):(N word)list =
+         wordlist_of_num k n`,
+  REPEAT GEN_TAC THEN REWRITE_TAC [GSYM NUM_OF_WORDLIST_OF_NUM] THEN
+  REWRITE_TAC [REWRITE_RULE [LENGTH_WORDLIST_OF_NUM]
+    (SPEC `wordlist_of_num k n:(N word)list` WORDLIST_OF_NUM_OF_WORDLIST)]);;
+
+let NUM_OF_WORDLIST_OF_NUM_EQ_SELF = prove
+ (`!k n. n < 2 EXP (dimindex(:N) * k)
+         ==> num_of_wordlist(wordlist_of_num k n:(N word)list) = n`,
+  SIMP_TAC[NUM_OF_WORDLIST_OF_NUM; MOD_LT]);;
+
+let NUM_OF_WORDLIST_LT = prove
+ (`!(m0:N word) m1 (n0:N word) n1.
+        num_of_wordlist(CONS m0 m1) < num_of_wordlist(CONS n0 n1) <=>
+        num_of_wordlist m1 < num_of_wordlist n1 \/
+        num_of_wordlist m1 = num_of_wordlist n1 /\ val m0 < val n0`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[num_of_wordlist] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
+  MATCH_MP_TAC LEXICOGRAPHIC_LT THEN REWRITE_TAC[VAL_BOUND]);;
+
+let NUM_OF_WORDLIST_LE = prove
+ (`!(m0:N word) m1 (n0:N word) n1.
+        num_of_wordlist(CONS m0 m1) <= num_of_wordlist(CONS n0 n1) <=>
+        num_of_wordlist m1 < num_of_wordlist n1 \/
+        num_of_wordlist m1 = num_of_wordlist n1 /\ val m0 <= val n0`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[num_of_wordlist] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
+  MATCH_MP_TAC LEXICOGRAPHIC_LE THEN REWRITE_TAC[VAL_BOUND]);;
+
+let NUM_OF_WORDLIST_EQ = prove
+ (`!(m0:N word) m1 (n0:N word) n1.
+        num_of_wordlist(CONS m0 m1) = num_of_wordlist(CONS n0 n1) <=>
+        m0 = n0 /\ num_of_wordlist m1 = num_of_wordlist n1`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[num_of_wordlist] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
+  ONCE_REWRITE_TAC[CONJ_SYM] THEN
+  MATCH_MP_TAC LEXICOGRAPHIC_EQ THEN REWRITE_TAC[VAL_BOUND]);;
 
 let NUM_OF_WORDLIST_SUB_LIST_0 = prove
  (`!(l:(N word)list) n.
@@ -305,16 +407,31 @@ let NUM_OF_WORDLIST_SUB_LIST = prove
   SIMP_TAC[DIV_LT; VAL_BOUND; ADD_CLAUSES]);;
 
 let NUM_OF_WORDLIST_EL = prove
- (`!(l:(N word)list) m.
-        (num_of_wordlist l DIV 2 EXP (dimindex(:N) * m)) MOD
+ (`!(l:(N word)list) n.
+        (num_of_wordlist l DIV 2 EXP (dimindex(:N) * n)) MOD
         2 EXP (dimindex(:N)) =
-        if m < LENGTH l then val(EL m l) else 0`,
+        if n < LENGTH l then val(EL n l) else 0`,
   REPEAT GEN_TAC THEN
-  MP_TAC(SPECL [`l:(N word)list`; `m:num`; `1`]
+  MP_TAC(SPECL [`l:(N word)list`; `n:num`; `1`]
    NUM_OF_WORDLIST_SUB_LIST) THEN
   REWRITE_TAC[SUB_LIST_1; MULT_CLAUSES] THEN
   DISCH_THEN(SUBST1_TAC o SYM) THEN COND_CASES_TAC THEN
   REWRITE_TAC[NUM_OF_WORDLIST_SING; num_of_wordlist]);;
+
+let EL_NUM_OF_WORDLIST = prove
+ (`!(l:(N word)list) n.
+        n < LENGTH l
+        ==> EL n l = word(num_of_wordlist l DIV 2 EXP (dimindex(:N) * n))`,
+  REPEAT STRIP_TAC THEN CONV_TAC SYM_CONV THEN
+  MP_TAC(ISPECL [`l:(N word)list`; `n:num`] NUM_OF_WORDLIST_EL) THEN
+  ASM_REWRITE_TAC[WORD_VAL_GALOIS]);;
+
+let LISTS_NUM_OF_WORDLIST_EQ = prove
+ (`!l1 l2:(N word)list.
+        l1 = l2 <=>
+        LENGTH l1 = LENGTH l2 /\
+        num_of_wordlist l1 = num_of_wordlist l2`,
+  MESON_TAC[WORDLIST_OF_NUM_OF_WORDLIST]);;
 
 let BYTES_EQ_NUM_OF_WORDLIST_EXPAND = prove
  (`!m (a:int64) len (s:S) (h:((((N)tybit0)tybit0)tybit0) word) t.
@@ -379,32 +496,6 @@ let BYTES_EQ_NUM_OF_WORDLIST_EXPAND_CONV =
                               NUM_SUB_CONV))))))) ath in
     CONV_RULE(RAND_CONV(RAND_CONV conv)) bth in
   conv;;
-
-(* ------------------------------------------------------------------------- *)
-(* Pairing up elements of a word list, relation with above value             *)
-(* ------------------------------------------------------------------------- *)
-
-let pair_wordlist = define
- `(!hi (lo:N word) rest.
-     pair_wordlist (CONS lo (CONS hi rest)) =
-     CONS (word_join hi lo:((N)tybit0)word) (pair_wordlist rest)) /\
-  (!w. pair_wordlist [w] = [word_join (word 0:N word) w]) /\
-  pair_wordlist [] = []`;;
-
-let NUM_OF_PAIR_WORDLIST = prove
- (`!l:(N word)list. num_of_wordlist (pair_wordlist l) = num_of_wordlist l`,
-  GEN_TAC THEN WF_INDUCT_TAC `LENGTH(l:(N word)list)` THEN
-  POP_ASSUM MP_TAC THEN SPEC_TAC(`l:(N word)list`,`l:(N word)list`) THEN
-  MATCH_MP_TAC list_INDUCT THEN
-  REWRITE_TAC[pair_wordlist; num_of_wordlist] THEN
-  MAP_EVERY X_GEN_TAC [`lo:N word`; `med:(N word)list`] THEN
-  DISCH_THEN(K ALL_TAC) THEN
-  SPEC_TAC(`med:(N word)list`,`med:(N word)list`) THEN
-  MATCH_MP_TAC list_INDUCT THEN
-  REWRITE_TAC[pair_wordlist; num_of_wordlist] THEN
-  SIMP_TAC[MULT_CLAUSES; ADD_CLAUSES; VAL_WORD_JOIN_SIMPLE; DIMINDEX_TYBIT0;
-           VAL_WORD_0; GSYM MULT_2; LENGTH; ARITH_RULE `n < SUC(SUC n)`] THEN
-  REWRITE_TAC[MULT_2; EXP_ADD] THEN ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* Mapping a little-endian word list into a number (64-bit case of above).   *)
@@ -572,6 +663,166 @@ let BIGDIGIT_BIGNUM_OF_WORDLIST = prove(`forall l i.
       ASM_ARITH_TAC
     ]
   ]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Reading a general word list from memory. This may be somewhat incoherent  *)
+(* unless the total number of bits dimindex(:N) * n is a multiple of 8.      *)
+(* ------------------------------------------------------------------------- *)
+
+let wordlist_from_memory = define
+ `wordlist_from_memory(a,n) s:(N word)list =
+    wordlist_of_num n
+     (read (memory :> bytes(a,(dimindex(:N) * n + 7) DIV 8)) s)`;;
+
+let WORDLIST_FROM_MEMORY = prove
+ (`!a n s. wordlist_from_memory(a,n) s:((((N tybit0)tybit0)tybit0)word)list =
+           wordlist_of_num n (read(memory :> bytes(a,dimindex(:N) * n)) s)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[wordlist_from_memory] THEN
+  REWRITE_TAC[DIMINDEX_TYBIT0; DIMINDEX_TYBIT1] THEN
+  AP_TERM_TAC THEN AP_THM_TAC THEN REPLICATE_TAC 4 AP_TERM_TAC THEN
+  ARITH_TAC);;
+
+let LENGTH_WORDLIST_FROM_MEMORY = prove
+ (`!a n s. LENGTH(wordlist_from_memory(a,n) s:(N word)list) = n`,
+  REWRITE_TAC[wordlist_from_memory; LENGTH_WORDLIST_OF_NUM]);;
+
+let NUM_OF_WORDLIST_FROM_MEMORY_GEN = prove
+ (`!n m a s.
+        dimindex(:N) * n = 8 * m
+        ==> num_of_wordlist(wordlist_from_memory(a,n) s:(N word)list) =
+            read(memory :> bytes(a,m)) s`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[wordlist_from_memory] THEN
+  ASM_REWRITE_TAC[ARITH_RULE `(8 * m + 7) DIV 8 = m`] THEN
+  MATCH_MP_TAC NUM_OF_WORDLIST_OF_NUM_EQ_SELF THEN
+  ASM_REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_BOUND]);;
+
+let NUM_OF_WORDLIST_FROM_MEMORY = prove
+ (`!a n s.
+        num_of_wordlist
+         (wordlist_from_memory(a,n) s:((((N tybit0)tybit0)tybit0)word)list) =
+        read(memory :> bytes(a,dimindex(:N) * n)) s`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC NUM_OF_WORDLIST_FROM_MEMORY_GEN THEN
+  REWRITE_TAC[DIMINDEX_TYBIT0; DIMINDEX_TYBIT1] THEN ARITH_TAC);;
+
+let WORDLIST_FROM_MEMORY_CLAUSES = prove
+ (`(!a s. wordlist_from_memory(a,0) s:(N word)list = []) /\
+   (!a n s.
+     wordlist_from_memory(a,SUC n) s :((((N tybit0)tybit0)tybit0)word)list =
+     APPEND (wordlist_from_memory(a,n) s)
+            [read (memory :> wbytes(word_add a (word(dimindex(:N) * n)))) s])`,
+  CONJ_TAC THENL
+   [REWRITE_TAC[wordlist_from_memory; MULT_CLAUSES; ADD_CLAUSES] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_TRIVIAL] THEN
+    REWRITE_TAC[wordlist_of_num];
+    REPEAT GEN_TAC] THEN
+  REWRITE_TAC[LISTS_NUM_OF_WORDLIST_EQ] THEN
+  REWRITE_TAC[LENGTH_WORDLIST_FROM_MEMORY; LENGTH_APPEND; LENGTH; ADD_CLAUSES;
+              NUM_OF_WORDLIST_FROM_MEMORY; wordlist_of_num;
+              NUM_OF_WORDLIST_APPEND; DIMINDEX_TYBIT0; DIMINDEX_TYBIT1] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; NUM_OF_WORDLIST_SING] THEN
+  REWRITE_TAC[ARITH_RULE `x * SUC y = x * y + x`; READ_BYTES_COMBINE] THEN
+  REWRITE_TAC[VAL_READ_WBYTES; DIMINDEX_TYBIT0; DIMINDEX_TYBIT1] THEN
+  REWRITE_TAC[GSYM MULT_ASSOC; ARITH_RULE `2 * 2 * 2 * x = 8 * x`] THEN
+  REWRITE_TAC[ARITH_RULE `(8 * n) DIV 8 = n`]);;
+
+let WORDLIST_FROM_MEMORY_CONV =
+  let pthc = prove
+   (`l:((((N tybit0)tybit0)tybit0)word)list = APPEND l [] /\
+     APPEND (wordlist_from_memory(a,0) s) l = l /\
+     APPEND (wordlist_from_memory(a,SUC n) s) l =
+     APPEND (wordlist_from_memory(a,n) s)
+     (CONS (read(memory :> wbytes(word_add a (word(dimindex(:N) * n)))) s) l)`,
+    REWRITE_TAC[WORDLIST_FROM_MEMORY_CLAUSES] THEN
+    REWRITE_TAC[APPEND_NIL; APPEND; GSYM APPEND_ASSOC]) in
+  let pths = CONJUNCTS pthc
+  and avars = sort (<) (frees(concl pthc))
+  and timfn = type_match (type_of(lhand(lhand(concl pthc))))
+  and prule =
+       (PURE_REWRITE_RULE o map GSYM)
+       [BYTES8_WBYTES; BYTES16_WBYTES; BYTES32_WBYTES; BYTES64_WBYTES;
+        BYTES128_WBYTES; BYTES256_WBYTES] in
+  fun tm ->
+    match tm with
+      Comb(Comb(Const("wordlist_from_memory",_),
+                Comb(Comb(Const(",",_),_),n)),_) when is_numeral n ->
+      let tyin = timfn (type_of tm) [] in
+      let [a_tm;l_tm;n_tm;s_tm] = map (inst tyin) avars
+      and [pth_init;pth_base;pth_step] =
+        map (CONV_RULE(ONCE_DEPTH_CONV DIMINDEX_CONV) o INST_TYPE tyin) pths in
+      let rule_base = GEN_REWRITE_RULE RAND_CONV [pth_base]
+      and rule_step =
+        CONV_RULE(RAND_CONV(LAND_CONV(LAND_CONV(RAND_CONV num_CONV)) THENC
+                  GEN_REWRITE_CONV I [pth_step] THENC
+                  RAND_CONV(LAND_CONV(LAND_CONV (funpow 2 RAND_CONV
+                    (funpow 2 RAND_CONV NUM_MULT_CONV THENC
+                     TRY_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC
+                     GEN_REWRITE_CONV TRY_CONV
+                      [WORD_RULE `word_add z (word 0):int64 = z`])))))) in
+      let rec conv th =
+        try rule_base th with Failure _ ->
+        let th' = rule_step th in conv th' in
+      prule(conv (INST [tm,l_tm] pth_init))
+    | _ -> failwith "WORDLIST_FROM_MEMORY_CONV";;
+
+(* ------------------------------------------------------------------------- *)
+(* Pairing up elements of a word list, relation with above value             *)
+(* ------------------------------------------------------------------------- *)
+
+let pair_wordlist = define
+ `(!hi (lo:N word) rest.
+     pair_wordlist (CONS lo (CONS hi rest)) =
+     CONS (word_join hi lo:((N)tybit0)word) (pair_wordlist rest)) /\
+  (!w. pair_wordlist [w] = [word_join (word 0:N word) w]) /\
+  pair_wordlist [] = []`;;
+
+let LENGTH_PAIR_WORDLIST = prove
+ (`!l:(N word)list. LENGTH(pair_wordlist l) = (LENGTH l + 1) DIV 2`,
+  GEN_TAC THEN WF_INDUCT_TAC `LENGTH(l:(N word)list)` THEN
+  POP_ASSUM MP_TAC THEN SPEC_TAC(`l:(N word)list`,`l:(N word)list`) THEN
+  MATCH_MP_TAC list_INDUCT THEN
+  REWRITE_TAC[pair_wordlist; LENGTH] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  GEN_TAC THEN MATCH_MP_TAC list_INDUCT THEN
+  REWRITE_TAC[pair_wordlist; LENGTH] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT GEN_TAC THEN DISCH_THEN(K ALL_TAC) THEN
+  ASM_SIMP_TAC[ARITH_RULE `n < SUC(SUC n)`] THEN ARITH_TAC);;
+
+let NUM_OF_PAIR_WORDLIST = prove
+ (`!l:(N word)list. num_of_wordlist (pair_wordlist l) = num_of_wordlist l`,
+  GEN_TAC THEN WF_INDUCT_TAC `LENGTH(l:(N word)list)` THEN
+  POP_ASSUM MP_TAC THEN SPEC_TAC(`l:(N word)list`,`l:(N word)list`) THEN
+  MATCH_MP_TAC list_INDUCT THEN
+  REWRITE_TAC[pair_wordlist; num_of_wordlist] THEN
+  MAP_EVERY X_GEN_TAC [`lo:N word`; `med:(N word)list`] THEN
+  DISCH_THEN(K ALL_TAC) THEN
+  SPEC_TAC(`med:(N word)list`,`med:(N word)list`) THEN
+  MATCH_MP_TAC list_INDUCT THEN
+  REWRITE_TAC[pair_wordlist; num_of_wordlist] THEN
+  SIMP_TAC[MULT_CLAUSES; ADD_CLAUSES; VAL_WORD_JOIN_SIMPLE; DIMINDEX_TYBIT0;
+           VAL_WORD_0; GSYM MULT_2; LENGTH; ARITH_RULE `n < SUC(SUC n)`] THEN
+  REWRITE_TAC[MULT_2; EXP_ADD] THEN ARITH_TAC);;
+
+let WORDLIST_FROM_MEMORY_PAIR_GEN = prove
+ (`!a n s. 4 divides (dimindex(:N) * n)
+           ==> wordlist_from_memory(a,n) s =
+               pair_wordlist(wordlist_from_memory(a,2*n) s:(N word)list)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[LISTS_NUM_OF_WORDLIST_EQ] THEN
+  ASM_REWRITE_TAC[LENGTH_PAIR_WORDLIST; LENGTH_WORDLIST_FROM_MEMORY] THEN
+  REWRITE_TAC[NUM_OF_PAIR_WORDLIST] THEN
+  CONJ_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  FIRST_X_ASSUM(X_CHOOSE_TAC `m:num` o REWRITE_RULE[divides]) THEN
+  TRANS_TAC EQ_TRANS `read(memory :> bytes(a,m)) s` THEN
+  CONJ_TAC THENL [ALL_TAC; CONV_TAC SYM_CONV] THEN
+  MATCH_MP_TAC NUM_OF_WORDLIST_FROM_MEMORY_GEN THEN
+  REWRITE_TAC[DIMINDEX_TYBIT0] THEN POP_ASSUM MP_TAC THEN CONV_TAC NUM_RING);;
+
+let WORDLIST_FROM_MEMORY_PAIR = prove
+ (`!a n s. wordlist_from_memory(a,n) s =
+           pair_wordlist
+             (wordlist_from_memory(a,2*n) s:(((N tybit0)tybit0)word)list)`,
+  REPEAT GEN_TAC THEN MATCH_MP_TAC WORDLIST_FROM_MEMORY_PAIR_GEN THEN
+  REWRITE_TAC[DIMINDEX_TYBIT0; ARITH_RULE `2 * 2 * n = n * 4`] THEN
+  NUMBER_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* Extracting a bignum from memory.                                          *)
