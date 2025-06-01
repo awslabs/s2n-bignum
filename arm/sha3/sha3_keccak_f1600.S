@@ -20,14 +20,14 @@
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
 //
-// extern void mlkem_keccak_f1600(uint64_t a[25],const uint64_t rc[24]);
+// extern void sha3_keccak_f1600(uint64_t a[25],const uint64_t rc[24]);
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_keccak_f1600)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_keccak_f1600)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak_f1600)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak_f1600)
         .text
         .balign 4
 
@@ -39,7 +39,7 @@
 // The only change is the use of simple 64-bit addressing in place of
 // the unnecessary down-and-upcasting arising from [x9, w25, uxtw #3]
 
-S2N_BN_SYMBOL(mlkem_keccak_f1600):
+S2N_BN_SYMBOL(sha3_keccak_f1600):
         sub     sp, sp, #0x80
         stp     x19, x20, [sp, #32]
         stp     x21, x22, [sp, #48]
@@ -48,7 +48,7 @@ S2N_BN_SYMBOL(mlkem_keccak_f1600):
         stp     x27, x28, [sp, #96]
         stp     x29, x30, [sp, #112]
 
-mlkem_keccak_f1600_initial:
+sha3_keccak_f1600_initial:
         mov     x26, x1
         str     x26, [sp, #8]
         ldp     x1, x6, [x0]
@@ -178,7 +178,7 @@ mlkem_keccak_f1600_initial:
 // shifted operands, the total number of rotation instructions is reduced
 // relative to a naive implementation.
 
-mlkem_keccak_f1600_loop:
+sha3_keccak_f1600_loop:
         eor     x0, x15, x11, ror #52
         eor     x0, x0, x13, ror #48
         eor     x26, x8, x9, ror #57
@@ -291,7 +291,7 @@ mlkem_keccak_f1600_loop:
         bic     x3, x0, x30, ror #5
         eor     x23, x3, x26, ror #52
         eor     x3, x29, x30, ror #24
-        ble     mlkem_keccak_f1600_loop
+        ble     sha3_keccak_f1600_loop
 
 // Final rotations
 

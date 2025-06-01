@@ -5,13 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT
 
 // ----------------------------------------------------------------------------
-// Keccak-f1600 permutation for SHA3, batch of two independent operations
-// Input a[50], rc[24]; output a[50]
+// Keccak-f1600 permutation for SHA3
+// Input a[25], rc[24]; output a[25]
 //
-// The input/output argument is in effect two 25-element Keccak arrays
-// a[0...24] and a[25..49], which could be considered as type a[25][2].
-//
-// Thinking of each such input/output array as a row-major flattening of a
+// Thinking of the input/output array a as a row-major flattening of a
 // 5x5 matrix of 64-bit words, this performs the Keccak-f1600 permutation,
 // all 24 rounds with the distinct round constants rc[i] for each one. For
 // correct operation, the input pointer rc should point at the standard
@@ -23,25 +20,27 @@
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
 //
-// extern void mlkem_keccak2_f1600(uint64_t a[50],const uint64_t rc[24]);
+// extern void sha3_keccak_f1600_alt(uint64_t a[25],const uint64_t rc[24]);
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_keccak2_f1600)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_keccak2_f1600)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak_f1600_alt)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak_f1600_alt)
         .text
         .balign 4
 
-// This is similar to the code in the mlkem-native repository here:
+// This is very similar to the vector code in the mlkem-native
+// repository here:
 //
-//   mlkem/fips202/native/aarch64/src/keccak_f1600_x2_v84a_asm.S
+// https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/fips202/native/aarch64/src/keccak_f1600_x1_v84a_asm.S
 //
-// The main difference is the avoidance of ld2/st2 in favour of explicit
-// transposition operations and conventional loads and stores.
+// The main difference is the use of ldp/stp dx,dy in place of
+// ld2, the variant used being currently unsupported by the
+// s2n-bignum formal model.
 
-S2N_BN_SYMBOL(mlkem_keccak2_f1600):
+S2N_BN_SYMBOL(sha3_keccak_f1600_alt):
 
         sub     sp, sp, #0x40
         stp     d8, d9, [sp]
@@ -49,61 +48,27 @@ S2N_BN_SYMBOL(mlkem_keccak2_f1600):
         stp     d12, d13, [sp, #0x20]
         stp     d14, d15, [sp, #0x30]
 
-// Load the Keccak initial state into upper and lower parts of Q0..Q24
+// Load the Keccak initial state into registers Q0..Q24
 
-        add     x2, x0, #0xc8
-
-        ldp     q24, q25, [x0]
-        ldp     q26, q27, [x2]
-        trn1    v0.2d, v24.2d, v26.2d
-        trn2    v1.2d, v24.2d, v26.2d
-        trn1    v2.2d, v25.2d, v27.2d
-        trn2    v3.2d, v25.2d, v27.2d
-
-        ldp     q24, q25, [x0, #0x20]
-        ldp     q26, q27, [x2, #0x20]
-        trn1    v4.2d, v24.2d, v26.2d
-        trn2    v5.2d, v24.2d, v26.2d
-        trn1    v6.2d, v25.2d, v27.2d
-        trn2    v7.2d, v25.2d, v27.2d
-
-        ldp     q24, q25, [x0, #0x40]
-        ldp     q26, q27, [x2, #0x40]
-        trn1    v8.2d, v24.2d, v26.2d
-        trn2    v9.2d, v24.2d, v26.2d
-        trn1    v10.2d, v25.2d, v27.2d
-        trn2    v11.2d, v25.2d, v27.2d
-
-        ldp     q24, q25, [x0, #0x60]
-        ldp     q26, q27, [x2, #0x60]
-        trn1    v12.2d, v24.2d, v26.2d
-        trn2    v13.2d, v24.2d, v26.2d
-        trn1    v14.2d, v25.2d, v27.2d
-        trn2    v15.2d, v25.2d, v27.2d
-
-        ldp     q24, q25, [x0, #0x80]
-        ldp     q26, q27, [x2, #0x80]
-        trn1    v16.2d, v24.2d, v26.2d
-        trn2    v17.2d, v24.2d, v26.2d
-        trn1    v18.2d, v25.2d, v27.2d
-        trn2    v19.2d, v25.2d, v27.2d
-
-        ldp     q24, q25, [x0, #0xa0]
-        ldp     q26, q27, [x2, #0xa0]
-        trn1    v20.2d, v24.2d, v26.2d
-        trn2    v21.2d, v24.2d, v26.2d
-        trn1    v22.2d, v25.2d, v27.2d
-        trn2    v23.2d, v25.2d, v27.2d
-
+        ldp     d0, d1, [x0]
+        ldp     d2, d3, [x0, #0x10]
+        ldp     d4, d5, [x0, #0x20]
+        ldp     d6, d7, [x0, #0x30]
+        ldp     d8, d9, [x0, #0x40]
+        ldp     d10, d11, [x0, #0x50]
+        ldp     d12, d13, [x0, #0x60]
+        ldp     d14, d15, [x0, #0x70]
+        ldp     d16, d17, [x0, #0x80]
+        ldp     d18, d19, [x0, #0x90]
+        ldp     d20, d21, [x0, #0xa0]
+        ldp     d22, d23, [x0, #0xb0]
         ldr     d24, [x0, #0xc0]
-        ldr     d25, [x2, #0xc0]
-        trn1    v24.2d, v24.2d, v25.2d
 
 // Now 24 rounds of the iteration
 
         mov     x2, #24
 
-mlkem_keccak2_f1600_loop:
+sha3_keccak_f1600_alt_loop:
         eor3    v30.16b, v0.16b, v5.16b, v10.16b
         eor3    v29.16b, v1.16b, v6.16b, v11.16b
         eor3    v28.16b, v2.16b, v7.16b, v12.16b
@@ -172,57 +137,23 @@ mlkem_keccak2_f1600_loop:
         bcax    v4.16b, v4.16b, v27.16b, v30.16b
         eor     v0.16b, v0.16b, v31.16b
         sub     x2, x2, #0x1
-        cbnz    x2, mlkem_keccak2_f1600_loop
+        cbnz    x2, sha3_keccak_f1600_alt_loop
 
 // Store back the state
 
-        add     x2, x0, #0xc8
-
-        trn1    v25.2d, v0.2d, v1.2d
-        trn1    v26.2d, v2.2d, v3.2d
-        stp     q25, q26, [x0]
-        trn2    v25.2d, v0.2d, v1.2d
-        trn2    v26.2d, v2.2d, v3.2d
-        stp     q25, q26, [x2]
-
-        trn1    v25.2d, v4.2d, v5.2d
-        trn1    v26.2d, v6.2d, v7.2d
-        stp     q25, q26, [x0, #0x20]
-        trn2    v25.2d, v4.2d, v5.2d
-        trn2    v26.2d, v6.2d, v7.2d
-        stp     q25, q26, [x2, #0x20]
-
-        trn1    v25.2d, v8.2d, v9.2d
-        trn1    v26.2d, v10.2d, v11.2d
-        stp     q25, q26, [x0, #0x40]
-        trn2    v25.2d, v8.2d, v9.2d
-        trn2    v26.2d, v10.2d, v11.2d
-        stp     q25, q26, [x2, #0x40]
-
-        trn1    v25.2d, v12.2d, v13.2d
-        trn1    v26.2d, v14.2d, v15.2d
-        stp     q25, q26, [x0, #0x60]
-        trn2    v25.2d, v12.2d, v13.2d
-        trn2    v26.2d, v14.2d, v15.2d
-        stp     q25, q26, [x2, #0x60]
-
-        trn1    v25.2d, v16.2d, v17.2d
-        trn1    v26.2d, v18.2d, v19.2d
-        stp     q25, q26, [x0, #0x80]
-        trn2    v25.2d, v16.2d, v17.2d
-        trn2    v26.2d, v18.2d, v19.2d
-        stp     q25, q26, [x2, #0x80]
-
-        trn1    v25.2d, v20.2d, v21.2d
-        trn1    v26.2d, v22.2d, v23.2d
-        stp     q25, q26, [x0, #0xa0]
-        trn2    v25.2d, v20.2d, v21.2d
-        trn2    v26.2d, v22.2d, v23.2d
-        stp     q25, q26, [x2, #0xa0]
-
+        stp     d0, d1, [x0]
+        stp     d2, d3, [x0, #0x10]
+        stp     d4, d5, [x0, #0x20]
+        stp     d6, d7, [x0, #0x30]
+        stp     d8, d9, [x0, #0x40]
+        stp     d10, d11, [x0, #0x50]
+        stp     d12, d13, [x0, #0x60]
+        stp     d14, d15, [x0, #0x70]
+        stp     d16, d17, [x0, #0x80]
+        stp     d18, d19, [x0, #0x90]
+        stp     d20, d21, [x0, #0xa0]
+        stp     d22, d23, [x0, #0xb0]
         str     d24, [x0, #0xc0]
-        trn2    v24.2d, v24.2d, v24.2d
-        str     d24, [x2, #0xc0]
 
 // Restore registers and return
 

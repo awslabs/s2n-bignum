@@ -24,14 +24,14 @@
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
 //
-// extern void mlkem_keccak4_f1600(uint64_t a[100],const uint64_t rc[24]);
+// extern void sha3_keccak4_f1600(uint64_t a[100],const uint64_t rc[24]);
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_keccak4_f1600)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_keccak4_f1600)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak4_f1600)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak4_f1600)
         .text
         .balign 4
 
@@ -42,7 +42,7 @@
 // The main difference is the avoidance of ld2/st2 in favour of explicit
 // transposition operations and conventional loads and stores.
 
-S2N_BN_SYMBOL(mlkem_keccak4_f1600):
+S2N_BN_SYMBOL(sha3_keccak4_f1600):
 
         sub     sp, sp, #0xe0
         stp     x19, x20, [sp, #0x30]
@@ -126,7 +126,7 @@ S2N_BN_SYMBOL(mlkem_keccak4_f1600):
         ldr     x25, [x0, #0xc0]
         sub     x0, x0, #0x190
 
-mlkem_keccak4_f1600_initial:
+sha3_keccak4_f1600_initial:
         eor     x30, x24, x25
         eor     x27, x9, x10
         eor     x0, x30, x21
@@ -416,7 +416,7 @@ mlkem_keccak4_f1600_initial:
         bcax    v4.16b, v4.16b, v27.16b, v30.16b
         eor     v0.16b, v0.16b, v28.16b
 
-mlkem_keccak4_f1600_loop:
+sha3_keccak4_f1600_loop:
         eor     x0, x15, x11, ror #52
         eor     x0, x0, x13, ror #48
         eor     x26, x8, x9, ror #57
@@ -710,7 +710,7 @@ mlkem_keccak4_f1600_loop:
         ld1r    { v28.2d }, [x30], #8
         str     x30, [sp, #0x10]
         eor     v0.16b, v0.16b, v28.16b
-        ble     mlkem_keccak4_f1600_loop
+        ble     sha3_keccak4_f1600_loop
 
         ror     x2, x2, #0x3d
         ror     x3, x3, #0x27
@@ -738,7 +738,7 @@ mlkem_keccak4_f1600_loop:
         ldr     x30, [sp, #0x20]
         cmp     x30, #0x1
 
-        beq     mlkem_keccak4_f1600_done
+        beq     sha3_keccak4_f1600_done
         mov     x30, #0x1
         str     x30, [sp, #0x20]
         ldr     x0, [sp]
@@ -772,10 +772,10 @@ mlkem_keccak4_f1600_loop:
         ldp     x15, x20, [x0, #0xb0]
         ldr     x25, [x0, #0xc0]
         sub     x0, x0, #0x258
-        b       mlkem_keccak4_f1600_initial
+        b       sha3_keccak4_f1600_initial
 
 
-mlkem_keccak4_f1600_done:
+sha3_keccak4_f1600_done:
         ldr     x0, [sp]
         add     x0, x0, #0x258
         stp     x1, x6, [x0]

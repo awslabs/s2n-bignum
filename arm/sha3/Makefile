@@ -21,16 +21,13 @@ endif
 
 # List of object files
 
-OBJ = mlkem_basemul_k2.o \
-      mlkem_basemul_k3.o \
-      mlkem_basemul_k4.o \
-      mlkem_intt.o \
-      mlkem_mulcache_compute.o \
-      mlkem_ntt.o \
-      mlkem_poly_reduce.o \
-      mlkem_poly_tobytes.o \
-      mlkem_poly_tomont.o \
-      mlkem_rej_uniform_VARIABLE_TIME.o
+OBJ = sha3_keccak_f1600.o \
+      sha3_keccak_f1600_alt.o \
+      sha3_keccak2_f1600.o \
+      sha3_keccak2_f1600_alt.o \
+      sha3_keccak4_f1600.o \
+      sha3_keccak4_f1600_alt.o \
+      sha3_keccak4_f1600_alt2.o
 
 %.o : %.S ; $(CC) -E -I../../include $< | $(GAS) -o $@ -
 

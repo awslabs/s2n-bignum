@@ -10,11 +10,11 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/keccak_spec.ml";;
 
-(**** print_literal_from_elf "arm/mlkem/mlkem_keccak_f1600.o";;
+(**** print_literal_from_elf "arm/sha3/sha3_keccak_f1600.o";;
  ****)
 
-let mlkem_keccak_f1600_mc = define_assert_from_elf
-  "mlkem_keccak_f1600_mc" "arm/mlkem/mlkem_keccak_f1600.o"
+let sha3_keccak_f1600_mc = define_assert_from_elf
+  "sha3_keccak_f1600_mc" "arm/sha3/sha3_keccak_f1600.o"
 [
   0xd10203ff;       (* arm_SUB SP SP (rvalue (word 128)) *)
   0xa90253f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&32))) *)
@@ -306,7 +306,7 @@ let mlkem_keccak_f1600_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let MLKEM_KECCAK_F1600_EXEC = ARM_MK_EXEC_RULE mlkem_keccak_f1600_mc;;
+let SHA3_KECCAK_F1600_EXEC = ARM_MK_EXEC_RULE sha3_keccak_f1600_mc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Additional definitions and tactics used in proof.                         *)
@@ -335,7 +335,7 @@ let GHOST_REGLIST_TAC =
 (* Correctness proof                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-let MLKEM_KECCAK_F1600_CORRECT = prove
+let SHA3_KECCAK_F1600_CORRECT = prove
  (`!a rc A pc stackpointer.
       aligned 16 stackpointer /\
       nonoverlapping (a,200) (stackpointer,32) /\
@@ -343,7 +343,7 @@ let MLKEM_KECCAK_F1600_CORRECT = prove
                [(a,200); (stackpointer,32)]
                [(word pc,0x480); (rc,192)]
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) mlkem_keccak_f1600_mc /\
+           (\s. aligned_bytes_loaded s (word pc) sha3_keccak_f1600_mc /\
                 read PC s = word (pc + 0x1c) /\
                 read SP s = stackpointer /\
                 C_ARGUMENTS [a; rc] s /\
@@ -358,7 +358,7 @@ let MLKEM_KECCAK_F1600_CORRECT = prove
                        memory :> bytes(stackpointer,32)])`,
   MAP_EVERY X_GEN_TAC
    [`a:int64`; `rc:int64`; `A:int64 list`; `pc:num`; `stackpointer:int64`] THEN
-  REWRITE_TAC[fst MLKEM_KECCAK_F1600_EXEC] THEN
+  REWRITE_TAC[fst SHA3_KECCAK_F1600_EXEC] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -393,7 +393,7 @@ let MLKEM_KECCAK_F1600_CORRECT = prove
     FIRST_ASSUM(MP_TAC o CONV_RULE(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
     ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
 
-    ARM_STEPS_TAC MLKEM_KECCAK_F1600_EXEC (1--123) THEN
+    ARM_STEPS_TAC SHA3_KECCAK_F1600_EXEC (1--123) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
     EXPAND_TAC "A" THEN
@@ -423,7 +423,7 @@ let MLKEM_KECCAK_F1600_CORRECT = prove
       CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
       ALL_TAC] THEN
 
-    ARM_STEPS_TAC MLKEM_KECCAK_F1600_EXEC (1--112) THEN
+    ARM_STEPS_TAC SHA3_KECCAK_F1600_EXEC (1--112) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     CONJ_TAC THENL [CONV_TAC WORD_ARITH; ALL_TAC] THEN CONJ_TAC THENL
      [ALL_TAC;
@@ -444,20 +444,20 @@ let MLKEM_KECCAK_F1600_CORRECT = prove
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC;
      WORDLIST_FROM_MEMORY_CONV `wordlist_from_memory(rc,24) s:int64 list`] THEN
-    ARM_SIM_TAC MLKEM_KECCAK_F1600_EXEC [1] THEN
+    ARM_SIM_TAC SHA3_KECCAK_F1600_EXEC [1] THEN
     ASM_REWRITE_TAC[ARITH_RULE `i <= 23 <=> i < 24`];
 
     (*** The tail of deferred rotations and writeback ***)
 
     GHOST_REGLIST_TAC THEN
-    ARM_SIM_TAC MLKEM_KECCAK_F1600_EXEC (1--38) THEN
+    ARM_SIM_TAC SHA3_KECCAK_F1600_EXEC (1--38) THEN
     CONV_TAC(LAND_CONV WORDLIST_FROM_MEMORY_CONV) THEN
     ASM_REWRITE_TAC[] THEN
     FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC RAND_CONV [SYM th]) THEN
     REWRITE_TAC[deferred_rotates; MAP2; CONS_11] THEN
     REPEAT CONJ_TAC THEN BITBLAST_TAC]);;
 
-let MLKEM_KECCAK_F1600_SUBROUTINE_CORRECT = prove
+let SHA3_KECCAK_F1600_SUBROUTINE_CORRECT = prove
  (`!a rc A pc stackpointer returnaddress.
       aligned 16 stackpointer /\
       nonoverlapping (a,200) (word_sub stackpointer (word 128),128) /\
@@ -465,7 +465,7 @@ let MLKEM_KECCAK_F1600_SUBROUTINE_CORRECT = prove
                [(a,200); (word_sub stackpointer (word 128),128)]
                [(word pc,0x480); (rc,192)]
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) mlkem_keccak_f1600_mc /\
+           (\s. aligned_bytes_loaded s (word pc) sha3_keccak_f1600_mc /\
                 read PC s = word pc /\
                 read SP s = stackpointer /\
                 read X30 s = returnaddress /\
@@ -479,6 +479,6 @@ let MLKEM_KECCAK_F1600_SUBROUTINE_CORRECT = prove
                        memory :> bytes(word_sub stackpointer (word 128),128)])`,
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
   CONV_TAC TWEAK_CONV THEN
-  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(7,7) MLKEM_KECCAK_F1600_EXEC
-        (CONV_RULE TWEAK_CONV MLKEM_KECCAK_F1600_CORRECT)
+  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(7,7) SHA3_KECCAK_F1600_EXEC
+        (CONV_RULE TWEAK_CONV SHA3_KECCAK_F1600_CORRECT)
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 128);;

@@ -988,22 +988,6 @@ extern void mlkem_basemul_k4(int16_t r[256],const int16_t a[1024],const int16_t 
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_intt(int16_t a[256],int16_t z_01234[80],int16_t z_56[384]);
 
-/* Keccak-f1600 permutation for SHA3 */
-/* Inputs a[25], rc[24]; output a[25] */
-extern void mlkem_keccak_f1600(uint64_t a[25],uint64_t rc[24]);
-extern void mlkem_keccak_f1600_alt(uint64_t a[25],uint64_t rc[24]);
-
-/* Batched 2-way Keccak-f1600 permutation for SHA3 */
-/* Inputs a[50], rc[24]; output a[50] */
-extern void mlkem_keccak2_f1600(uint64_t a[50],uint64_t rc[24]);
-extern void mlkem_keccak2_f1600_alt(uint64_t a[50],uint64_t rc[24]);
-
-/* Batched 4-way Keccak-f1600 permutation for SHA3 */
-/* Inputs a[100], rc[24]; output a[100] */
-extern void mlkem_keccak4_f1600(uint64_t a[100],uint64_t rc[24]);
-extern void mlkem_keccak4_f1600_alt(uint64_t a[100],uint64_t rc[24]);
-extern void mlkem_keccak4_f1600_alt2(uint64_t a[100],uint64_t rc[24]);
-
 /* Precompute the mulcache data for a polynomial in the NTT domain */
 /* Inputs a[256], z[128] and t[128] (signed 16-bit words); output x[128] (signed 16-bit words) */
 extern void mlkem_mulcache_compute(int16_t x[128],int16_t a[256],int16_t z[128],int16_t t[128]);
@@ -1112,6 +1096,22 @@ extern void secp256k1_jdouble_alt(uint64_t p3[12],uint64_t p1[12]);
 /* Inputs p1[12], p2[8]; output p3[12] */
 extern void secp256k1_jmixadd(uint64_t p3[12],uint64_t p1[12],uint64_t p2[8]);
 extern void secp256k1_jmixadd_alt(uint64_t p3[12],uint64_t p1[12],uint64_t p2[8]);
+
+/* Keccak-f1600 permutation for SHA3 */
+/* Inputs a[25], rc[24]; output a[25] */
+extern void sha3_keccak_f1600(uint64_t a[25],uint64_t rc[24]);
+extern void sha3_keccak_f1600_alt(uint64_t a[25],uint64_t rc[24]);
+
+/* Batched 2-way Keccak-f1600 permutation for SHA3 */
+/* Inputs a[50], rc[24]; output a[50] */
+extern void sha3_keccak2_f1600(uint64_t a[50],uint64_t rc[24]);
+extern void sha3_keccak2_f1600_alt(uint64_t a[50],uint64_t rc[24]);
+
+/* Batched 4-way Keccak-f1600 permutation for SHA3 */
+/* Inputs a[100], rc[24]; output a[100] */
+extern void sha3_keccak4_f1600(uint64_t a[100],uint64_t rc[24]);
+extern void sha3_keccak4_f1600_alt(uint64_t a[100],uint64_t rc[24]);
+extern void sha3_keccak4_f1600_alt2(uint64_t a[100],uint64_t rc[24]);
 
 /* Point addition on CC curve SM2 in Montgomery-Jacobian coordinates */
 /* Inputs p1[12], p2[12]; output p3[12] */

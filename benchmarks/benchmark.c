@@ -830,19 +830,19 @@ void call_mlkem_basemul_k2(void) {}
 void call_mlkem_basemul_k3(void) {}
 void call_mlkem_basemul_k4(void) {}
 void call_mlkem_intt(void) {}
-void call_mlkem_keccak_f1600(void) {}
-void call_mlkem_keccak_f1600_alt(void) {}
-void call_mlkem_keccak2_f1600(void) {}
-void call_mlkem_keccak2_f1600_alt(void) {}
-void call_mlkem_keccak4_f1600(void) {}
-void call_mlkem_keccak4_f1600_alt(void) {}
-void call_mlkem_keccak4_f1600_alt2(void) {}
 void call_mlkem_mulcache_compute(void) {}
 void call_mlkem_ntt(void) {}
 void call_mlkem_poly_reduce(void) {}
 void call_mlkem_poly_tobytes(void) {}
 void call_mlkem_poly_tomont(void) {}
 void call_mlkem_rej_uniform(void) {}
+void call_sha3_keccak_f1600(void) {}
+void call_sha3_keccak_f1600_alt(void) {}
+void call_sha3_keccak2_f1600(void) {}
+void call_sha3_keccak2_f1600_alt(void) {}
+void call_sha3_keccak4_f1600(void) {}
+void call_sha3_keccak4_f1600_alt(void) {}
+void call_sha3_keccak4_f1600_alt2(void) {}
 
 #else
 
@@ -1124,19 +1124,19 @@ void call_mlkem_basemul_k2(void) repeat(mlkem_basemul_k2((int16_t*)b0,(int16_t*)
 void call_mlkem_basemul_k3(void) repeat(mlkem_basemul_k3((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_basemul_k4(void) repeat(mlkem_basemul_k4((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
-void call_mlkem_keccak_f1600(void) repeat(mlkem_keccak_f1600(b0,b1))
-void call_mlkem_keccak_f1600_alt(void) repeat(mlkem_keccak_f1600_alt(b0,b1))
-void call_mlkem_keccak2_f1600(void) repeat(mlkem_keccak2_f1600(b0,b1))
-void call_mlkem_keccak2_f1600_alt(void) repeat(mlkem_keccak2_f1600_alt(b0,b1))
-void call_mlkem_keccak4_f1600(void) repeat(mlkem_keccak4_f1600(b0,b1))
-void call_mlkem_keccak4_f1600_alt(void) repeat(mlkem_keccak4_f1600_alt(b0,b1))
-void call_mlkem_keccak4_f1600_alt2(void) repeat(mlkem_keccak4_f1600_alt2(b0,b1))
 void call_mlkem_mulcache_compute(void) repeat(mlkem_mulcache_compute((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 void call_mlkem_poly_reduce(void) repeat(mlkem_poly_reduce((int16_t*)b0))
 void call_mlkem_poly_tobytes(void) repeat(mlkem_poly_tobytes((uint8_t*)b0,(int16_t*)b1))
 void call_mlkem_poly_tomont(void) repeat(mlkem_poly_tomont((int16_t*)b0))
 void call_mlkem_rej_uniform(void) repeat(mlkem_rej_uniform_VARIABLE_TIME((int16_t*)b0,(uint8_t*)b1,1200,mlkem_rej_uniform_table))
+void call_sha3_keccak_f1600(void) repeat(sha3_keccak_f1600(b0,b1))
+void call_sha3_keccak_f1600_alt(void) repeat(sha3_keccak_f1600_alt(b0,b1))
+void call_sha3_keccak2_f1600(void) repeat(sha3_keccak2_f1600(b0,b1))
+void call_sha3_keccak2_f1600_alt(void) repeat(sha3_keccak2_f1600_alt(b0,b1))
+void call_sha3_keccak4_f1600(void) repeat(sha3_keccak4_f1600(b0,b1))
+void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1))
+void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
 #endif
 
@@ -1523,13 +1523,6 @@ int main(int argc, char *argv[])
   timingtest(arm,"mlkem_basemul_k3",call_mlkem_basemul_k3);
   timingtest(arm,"mlkem_basemul_k4",call_mlkem_basemul_k4);
   timingtest(arm,"mlkem_intt",call_mlkem_intt);
-  timingtest(arm,"mlkem_keccak_f1600",call_mlkem_keccak_f1600);
-  timingtest(sha3,"mlkem_keccak_f1600_alt",call_mlkem_keccak_f1600_alt);
-  timingtest(sha3,"mlkem_keccak2_f1600",call_mlkem_keccak2_f1600);
-  timingtest(sha3,"mlkem_keccak2_f1600_alt",call_mlkem_keccak2_f1600_alt);
-  timingtest(sha3,"mlkem_keccak4_f1600",call_mlkem_keccak4_f1600);
-  timingtest(sha3,"mlkem_keccak4_f1600_alt",call_mlkem_keccak4_f1600_alt);
-  timingtest(sha3,"mlkem_keccak4_f1600_alt2",call_mlkem_keccak4_f1600_alt2);
   timingtest(arm,"mlkem_mulcache_compute",call_mlkem_mulcache_compute);
   timingtest(arm,"mlkem_ntt",call_mlkem_ntt);
   timingtest(arm,"mlkem_poly_reduce",call_mlkem_poly_reduce);
@@ -1574,6 +1567,13 @@ int main(int argc, char *argv[])
   timingtest(all,"secp256k1_jdouble_alt",call_secp256k1_jdouble_alt);
   timingtest(bmi,"secp256k1_jmixadd",call_secp256k1_jmixadd);
   timingtest(all,"secp256k1_jmixadd_alt",call_secp256k1_jmixadd_alt);
+  timingtest(arm,"sha3_keccak_f1600",call_sha3_keccak_f1600);
+  timingtest(sha3,"sha3_keccak_f1600_alt",call_sha3_keccak_f1600_alt);
+  timingtest(sha3,"sha3_keccak2_f1600",call_sha3_keccak2_f1600);
+  timingtest(sha3,"sha3_keccak2_f1600_alt",call_sha3_keccak2_f1600_alt);
+  timingtest(sha3,"sha3_keccak4_f1600",call_sha3_keccak4_f1600);
+  timingtest(sha3,"sha3_keccak4_f1600_alt",call_sha3_keccak4_f1600_alt);
+  timingtest(sha3,"sha3_keccak4_f1600_alt2",call_sha3_keccak4_f1600_alt2);
   timingtest(bmi,"sm2_montjadd",call_sm2_montjadd);
   timingtest(all,"sm2_montjadd_alt",call_sm2_montjadd_alt);
   timingtest(bmi,"sm2_montjdouble",call_sm2_montjdouble);

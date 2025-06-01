@@ -11717,269 +11717,6 @@ int test_mlkem_intt(void)
 #endif
 }
 
-int test_mlkem_keccak_f1600(void)
-{
-#ifdef __x86_64__
-  return 1;
-#else
-  uint64_t t, i;
-  uint64_t a[25], b[25], c[25];
-  printf("Testing mlkem_keccak_f1600 with %d cases\n",tests);
-
-  for (t = 0; t < tests; ++t)
-   { random_bignum(25,a);
-     for (i = 0; i < 25; ++i) c[i] = a[i];
-     reference_keccak_f1600(b,a);
-     mlkem_keccak_f1600(c,keccak_RC);
-     for (i = 0; i < 25; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in keccak_f1600 element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64">\n",
-                  i,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: keccak_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-#endif
-}
-
-int test_mlkem_keccak_f1600_alt(void)
-{
-#ifdef __x86_64__
-  return 1;
-#else
-  uint64_t t, i;
-  uint64_t a[25], b[25], c[25];
-  printf("Testing mlkem_keccak_f1600_alt with %d cases\n",tests);
-
-  for (t = 0; t < tests; ++t)
-   { random_bignum(25,a);
-     for (i = 0; i < 25; ++i) c[i] = a[i];
-     reference_keccak_f1600(b,a);
-     mlkem_keccak_f1600_alt(c,keccak_RC);
-     for (i = 0; i < 25; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in keccak_f1600 element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64">\n",
-                  i,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: keccak_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-#endif
-}
-
-int test_mlkem_keccak2_f1600(void)
-{
-#ifdef __x86_64__
-  return 1;
-#else
-  uint64_t t, i;
-  uint64_t a[50], b[50], c[50];
-  printf("Testing mlkem_keccak2_f1600 with %d cases\n",tests);
-
-  for (t = 0; t < tests; ++t)
-   { random_bignum(50,a);
-     for (i = 0; i < 50; ++i) c[i] = a[i];
-     reference_keccak_f1600(b,a);
-     reference_keccak_f1600(b+25,a+25);
-     mlkem_keccak2_f1600(c,keccak_RC);
-     for (i = 0; i < 50; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in keccak2_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
-                  i/25,i%25,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: keccak2_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-#endif
-}
-
-int test_mlkem_keccak2_f1600_alt(void)
-{
-#ifdef __x86_64__
-  return 1;
-#else
-  uint64_t t, i;
-  uint64_t a[50], b[50], c[50];
-  printf("Testing mlkem_keccak2_f1600_alt with %d cases\n",tests);
-
-  for (t = 0; t < tests; ++t)
-   { random_bignum(50,a);
-     for (i = 0; i < 50; ++i) c[i] = a[i];
-     reference_keccak_f1600(b,a);
-     reference_keccak_f1600(b+25,a+25);
-     mlkem_keccak2_f1600_alt(c,keccak_RC);
-     for (i = 0; i < 50; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in keccak2_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
-                  i/25,i%25,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: keccak2_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-#endif
-}
-
-int test_mlkem_keccak4_f1600(void)
-{
-#ifdef __x86_64__
-  return 1;
-#else
-  uint64_t t, i;
-  uint64_t a[100], b[100], c[100];
-  printf("Testing mlkem_keccak4_f1600 with %d cases\n",tests);
-
-  for (t = 0; t < tests; ++t)
-   { random_bignum(100,a);
-     for (i = 0; i < 100; ++i) c[i] = a[i];
-     reference_keccak_f1600(b,a);
-     reference_keccak_f1600(b+25,a+25);
-     reference_keccak_f1600(b+50,a+50);
-     reference_keccak_f1600(b+75,a+75);
-     mlkem_keccak4_f1600(c,keccak_RC);
-     for (i = 0; i < 100; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in keccak4_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
-                  i/25,i%25,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: keccak4_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-#endif
-}
-
-int test_mlkem_keccak4_f1600_alt(void)
-{
-#ifdef __x86_64__
-  return 1;
-#else
-  uint64_t t, i;
-  uint64_t a[100], b[100], c[100];
-  printf("Testing mlkem_keccak4_f1600_alt with %d cases\n",tests);
-
-  for (t = 0; t < tests; ++t)
-   { random_bignum(100,a);
-     for (i = 0; i < 100; ++i) c[i] = a[i];
-     reference_keccak_f1600(b,a);
-     reference_keccak_f1600(b+25,a+25);
-     reference_keccak_f1600(b+50,a+50);
-     reference_keccak_f1600(b+75,a+75);
-     mlkem_keccak4_f1600_alt(c,keccak_RC);
-     for (i = 0; i < 100; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in keccak4_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
-                  i/25,i%25,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: keccak4_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-#endif
-}
-
-int test_mlkem_keccak4_f1600_alt2(void)
-{
-#ifdef __x86_64__
-  return 1;
-#else
-  uint64_t t, i;
-  uint64_t a[100], b[100], c[100];
-  printf("Testing mlkem_keccak4_f1600_alt2 with %d cases\n",tests);
-
-  for (t = 0; t < tests; ++t)
-   { random_bignum(100,a);
-     for (i = 0; i < 100; ++i) c[i] = a[i];
-     reference_keccak_f1600(b,a);
-     reference_keccak_f1600(b+25,a+25);
-     reference_keccak_f1600(b+50,a+50);
-     reference_keccak_f1600(b+75,a+75);
-     mlkem_keccak4_f1600_alt2(c,keccak_RC);
-     for (i = 0; i < 100; ++i)
-      { if (b[i] != c[i])
-         { printf("Error in keccak4_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
-                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
-                  i/25,i%25,c[i],b[i]);
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK: keccak4_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"] = "
-               "[0x%016"PRIx64",0x%016"PRIx64",...,"
-               "0x%016"PRIx64",0x%016"PRIx64"]\n",
-               a[0],a[1],a[23],a[24],
-               c[0],c[1],c[23],c[24]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
-#endif
-}
-
 int test_mlkem_mulcache_compute(void)
 {
 #ifdef __x86_64__
@@ -13648,6 +13385,269 @@ int test_secp256k1_jmixadd_alt(void)
   return 0;
 }
 
+int test_sha3_keccak_f1600(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[25], b[25], c[25];
+  printf("Testing sha3_keccak_f1600 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(25,a);
+     for (i = 0; i < 25; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     sha3_keccak_f1600(c,keccak_RC);
+     for (i = 0; i < 25; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak_f1600 element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64">\n",
+                  i,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_sha3_keccak_f1600_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[25], b[25], c[25];
+  printf("Testing sha3_keccak_f1600_alt with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(25,a);
+     for (i = 0; i < 25; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     sha3_keccak_f1600_alt(c,keccak_RC);
+     for (i = 0; i < 25; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak_f1600 element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64">\n",
+                  i,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_sha3_keccak2_f1600(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[50], b[50], c[50];
+  printf("Testing sha3_keccak2_f1600 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(50,a);
+     for (i = 0; i < 50; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     reference_keccak_f1600(b+25,a+25);
+     sha3_keccak2_f1600(c,keccak_RC);
+     for (i = 0; i < 50; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak2_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
+                  i/25,i%25,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak2_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_sha3_keccak2_f1600_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[50], b[50], c[50];
+  printf("Testing sha3_keccak2_f1600_alt with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(50,a);
+     for (i = 0; i < 50; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     reference_keccak_f1600(b+25,a+25);
+     sha3_keccak2_f1600_alt(c,keccak_RC);
+     for (i = 0; i < 50; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak2_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
+                  i/25,i%25,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak2_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_sha3_keccak4_f1600(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[100], b[100], c[100];
+  printf("Testing sha3_keccak4_f1600 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(100,a);
+     for (i = 0; i < 100; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     reference_keccak_f1600(b+25,a+25);
+     reference_keccak_f1600(b+50,a+50);
+     reference_keccak_f1600(b+75,a+75);
+     sha3_keccak4_f1600(c,keccak_RC);
+     for (i = 0; i < 100; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak4_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
+                  i/25,i%25,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak4_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_sha3_keccak4_f1600_alt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[100], b[100], c[100];
+  printf("Testing sha3_keccak4_f1600_alt with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(100,a);
+     for (i = 0; i < 100; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     reference_keccak_f1600(b+25,a+25);
+     reference_keccak_f1600(b+50,a+50);
+     reference_keccak_f1600(b+75,a+75);
+     sha3_keccak4_f1600_alt(c,keccak_RC);
+     for (i = 0; i < 100; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak4_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
+                  i/25,i%25,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak4_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_sha3_keccak4_f1600_alt2(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[100], b[100], c[100];
+  printf("Testing sha3_keccak4_f1600_alt2 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(100,a);
+     for (i = 0; i < 100; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     reference_keccak_f1600(b+25,a+25);
+     reference_keccak_f1600(b+50,a+50);
+     reference_keccak_f1600(b+75,a+75);
+     sha3_keccak4_f1600_alt2(c,keccak_RC);
+     for (i = 0; i < 100; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak4_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64"\n",
+                  i/25,i%25,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak4_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_sm2_montjadd(void)
 { uint64_t t, k;
   printf("Testing sm2_montjadd with %d cases\n",tests);
@@ -15109,19 +15109,20 @@ int main(int argc, char *argv[])
     functionaltest(arm,"mlkem_basemul_k3",test_mlkem_basemul_k3);
     functionaltest(arm,"mlkem_basemul_k4",test_mlkem_basemul_k4);
     functionaltest(arm,"mlkem_intt",test_mlkem_intt);
-    functionaltest(arm,"mlkem_keccak_f1600",test_mlkem_keccak_f1600);
-    functionaltest(sha3,"mlkem_keccak_f1600_alt",test_mlkem_keccak_f1600_alt);
-    functionaltest(sha3,"mlkem_keccak2_f1600",test_mlkem_keccak2_f1600);
-    functionaltest(sha3,"mlkem_keccak2_f1600_alt",test_mlkem_keccak2_f1600_alt);
-    functionaltest(sha3,"mlkem_keccak4_f1600",test_mlkem_keccak4_f1600);
-    functionaltest(sha3,"mlkem_keccak4_f1600_alt",test_mlkem_keccak4_f1600_alt);
-    functionaltest(sha3,"mlkem_keccak4_f1600_alt2",test_mlkem_keccak4_f1600_alt2);
     functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
     functionaltest(arm,"mlkem_poly_reduce",test_mlkem_poly_reduce);
     functionaltest(arm,"mlkem_poly_tobytes",test_mlkem_poly_tobytes);
     functionaltest(arm,"mlkem_poly_tomont",test_mlkem_poly_tomont);
     functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
+    functionaltest(arm,"sha3_keccak_f1600",test_sha3_keccak_f1600);
+    functionaltest(sha3,"sha3_keccak_f1600_alt",test_sha3_keccak_f1600_alt);
+    functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
+    functionaltest(sha3,"sha3_keccak2_f1600_alt",test_sha3_keccak2_f1600_alt);
+    functionaltest(sha3,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
+    functionaltest(sha3,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
+    functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
+    
   }
 
   if (extrastrigger) function_to_test = "_";

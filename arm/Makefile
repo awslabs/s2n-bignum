@@ -255,13 +255,6 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mlkem/mlkem_basemul_k3.o \
              mlkem/mlkem_basemul_k4.o \
              mlkem/mlkem_intt.o \
-             mlkem/mlkem_keccak_f1600.o \
-             mlkem/mlkem_keccak_f1600_alt.o \
-             mlkem/mlkem_keccak2_f1600.o \
-             mlkem/mlkem_keccak2_f1600_alt.o \
-             mlkem/mlkem_keccak4_f1600.o \
-             mlkem/mlkem_keccak4_f1600_alt.o \
-             mlkem/mlkem_keccak4_f1600_alt2.o \
              mlkem/mlkem_mulcache_compute.o \
              mlkem/mlkem_ntt.o \
              mlkem/mlkem_poly_reduce.o \
@@ -363,6 +356,13 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              secp256k1/bignum_sub_p256k1.o \
              secp256k1/bignum_tomont_p256k1.o \
              secp256k1/bignum_triple_p256k1.o \
+             sha3/sha3_keccak_f1600.o \
+             sha3/sha3_keccak_f1600_alt.o \
+             sha3/sha3_keccak2_f1600.o \
+             sha3/sha3_keccak2_f1600_alt.o \
+             sha3/sha3_keccak4_f1600.o \
+             sha3/sha3_keccak4_f1600_alt.o \
+             sha3/sha3_keccak4_f1600_alt2.o \
              sm2/bignum_add_sm2.o \
              sm2/bignum_cmul_sm2.o \
              sm2/bignum_deamont_sm2.o \
