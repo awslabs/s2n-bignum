@@ -408,33 +408,27 @@ let ntt_zetas_layer56 = define
    -- &1175; -- &1175; &11930; &11930; &10129; &10129; -- &3878; -- &3878;
    -- &11566; -- &11566]`;;
 
-let ntt_constants = define
- `ntt_constants z_01234 z_56 s <=>
-        (!i. i < 80
-             ==> read(memory :> bytes16(word_add z_01234 (word(2 * i)))) s =
-                 iword(EL i ntt_zetas_layer01234)) /\
-        (!i. i < 384
-             ==> read(memory :> bytes16(word_add z_56 (word(2 * i)))) s =
-                 iword(EL i ntt_zetas_layer56))`;;
-
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_NTT_CORRECT = prove
- (`!a z_01234 z_56 x pc.
+ (`!a z_01234 z_56 (zetas_01234:int16 list) (zetas_56:int16 list) x pc.
       ALL (nonoverlapping (a,512))
           [(word pc,0x504); (z_01234,160); (z_56,768)]
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) mlkem_ntt_mc /\
                 read PC s = word (pc + 0x14) /\
                 C_ARGUMENTS [a; z_01234; z_56] s /\
-                ntt_constants z_01234 z_56 s /\
+                wordlist_from_memory(z_01234,80) s = zetas_01234 /\
+                wordlist_from_memory(z_56,384) s = zetas_56 /\
                 !i. i < 256
                     ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                         x i)
            (\s. read PC s = word(pc + 0x4ec) /\
-                ((!i. i < 256 ==> abs(ival(x i)) <= &8191)
+                (zetas_01234 = MAP iword ntt_zetas_layer01234 /\
+                 zetas_56 = MAP iword ntt_zetas_layer56 /\
+                 (!i. i < 256 ==> abs(ival(x i)) <= &8191)
                  ==> !i. i < 256
                          ==> let zi =
                         read(memory :> bytes16(word_add a (word(2 * i)))) s in
@@ -444,20 +438,32 @@ let MLKEM_NTT_CORRECT = prove
             MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
             MAYCHANGE [memory :> bytes(a,512)])`,
   MAP_EVERY X_GEN_TAC
-   [`a:int64`; `z_01234:int64`; `z_56:int64`; `x:num->int16`; `pc:num`] THEN
+   [`a:int64`; `z_01234:int64`; `z_56:int64`; `zetas_01234:int16 list`;
+    `zetas_56:int16 list`; `x:num->int16`; `pc:num`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               NONOVERLAPPING_CLAUSES; ALL] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
+  (*** Globalize the assumptions on zeta constants by case splitting ***)
+
+  ASM_CASES_TAC
+   `zetas_01234:int16 list = MAP iword ntt_zetas_layer01234 /\
+    zetas_56:int16 list = MAP iword ntt_zetas_layer56` THEN
+  ASM_REWRITE_TAC[CONJ_ASSOC] THEN REWRITE_TAC[GSYM CONJ_ASSOC] THENL
+   [FIRST_X_ASSUM(CONJUNCTS_THEN SUBST1_TAC);
+    ARM_QUICKSIM_TAC MLKEM_NTT_EXEC
+     [`read X0 s = a`; `read X1 s = z`; `read X2 s = w`;
+      `read X3 s = i`; `read X4 s = i`]
+     (1--904)] THEN
+
   (*** Manually expand the cases in the hypotheses ***)
 
-  REWRITE_TAC[ntt_constants] THEN
   CONV_TAC(RATOR_CONV(LAND_CONV(ONCE_DEPTH_CONV
    (EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV)))) THEN
+  CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
   REWRITE_TAC[ntt_zetas_layer01234; ntt_zetas_layer56] THEN
-  CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
-  CONV_TAC(ONCE_DEPTH_CONV WORD_IWORD_CONV) THEN REWRITE_TAC[WORD_ADD_0] THEN
-  ENSURES_INIT_TAC "s0" THEN
+  REWRITE_TAC[MAP; CONS_11] THEN CONV_TAC(ONCE_DEPTH_CONV WORD_IWORD_CONV) THEN
+  REWRITE_TAC[WORD_ADD_0] THEN ENSURES_INIT_TAC "s0" THEN
 
   (*** Manually restructure to match the 128-bit loads. It would be nicer
    *** if the simulation machinery did this automatically.
@@ -521,7 +527,7 @@ let MLKEM_NTT_CORRECT = prove
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 
 let MLKEM_NTT_SUBROUTINE_CORRECT = prove
- (`!a z_01234 z_56 x pc stackpointer returnaddress.
+ (`!a z_01234 z_56 zetas_01234 zetas_56 x pc stackpointer returnaddress.
       aligned 16 stackpointer /\
       ALLPAIRS nonoverlapping
        [(a,512); (word_sub stackpointer (word 64),64)]
@@ -533,12 +539,15 @@ let MLKEM_NTT_SUBROUTINE_CORRECT = prove
                 read SP s = stackpointer /\
                 read X30 s = returnaddress /\
                 C_ARGUMENTS [a; z_01234; z_56] s /\
-                ntt_constants z_01234 z_56 s /\
+                wordlist_from_memory(z_01234,80) s:int16 list = zetas_01234 /\
+                wordlist_from_memory(z_56,384) s:int16 list = zetas_56 /\
                 !i. i < 256
                     ==> read(memory :> bytes16(word_add a (word(2 * i)))) s =
                         x i)
            (\s. read PC s = returnaddress /\
-                ((!i. i < 256 ==> abs(ival(x i)) <= &8191)
+                (zetas_01234 = MAP iword ntt_zetas_layer01234 /\
+                 zetas_56 = MAP iword ntt_zetas_layer56 /\
+                 (!i. i < 256 ==> abs(ival(x i)) <= &8191)
                  ==> !i. i < 256
                          ==> let zi =
                         read(memory :> bytes16(word_add a (word(2 * i)))) s in
@@ -548,8 +557,8 @@ let MLKEM_NTT_SUBROUTINE_CORRECT = prove
             MAYCHANGE [memory :> bytes(a,512);
                        memory :> bytes(word_sub stackpointer (word 64),64)])`,
   let TWEAK_CONV =
-    REWRITE_CONV[ntt_constants] THENC
     ONCE_DEPTH_CONV let_CONV THENC
+    ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV THENC
     ONCE_DEPTH_CONV EXPAND_CASES_CONV THENC
     ONCE_DEPTH_CONV NUM_MULT_CONV THENC
     PURE_REWRITE_CONV [WORD_ADD_0] in
