@@ -752,8 +752,22 @@ let ENSURES2_WHILE_PAUP_TAC =
       nsteps_pre1 nsteps_pre2
       nsteps_post1 nsteps_post2
       nsteps_backedge1 nsteps_backedge2 ->
-    MATCH_MP_TAC pth THEN
-    MAP_EVERY EXISTS_TAC [a;b;pc1_head;pc1_backedge;pc2_head;pc2_backedge;
+    (MATCH_MP_TAC pth ORELSE
+     (fun (asl,w) ->
+      let t = snd (dest_imp (snd (strip_forall (concl pth)))) in
+      Printf.printf "ENSURES2_WHILE_PAUP_TAC: the conclusion does not match\n";
+      print_qterm t;
+      FAIL_TAC "ENSURES2_WHILE_PAUP_TAC: input goal state ill-formed" (asl,w)))
+    THEN
+    MAP_EVERY (fun t ->
+        W (fun (asl,w) ->
+          EXISTS_TAC t ORELSE
+          let v = fst (dest_exists w) in
+          FAIL_TAC ("ENSURES2_WHILE_PAUP_TAC: var `" ^ (string_of_term v)
+              ^ ":" ^ (string_of_type (type_of v)) ^ "` does not match "
+              ^ "expression `" ^ (string_of_term t) ^ ":"
+              ^ (string_of_type (type_of t)) ^ "`")))
+      [a;b;pc1_head;pc1_backedge;pc2_head;pc2_backedge;
       loopinv;flagcond1;flagcond2;
       f_nsteps1;f_nsteps2;nsteps_pre1;nsteps_pre2;nsteps_post1;nsteps_post2;
       nsteps_backedge1;nsteps_backedge2] THEN
