@@ -674,6 +674,20 @@ let wordlist_from_memory = define
     wordlist_of_num n
      (read (memory :> bytes(a,(dimindex(:N) * n + 7) DIV 8)) s)`;;
 
+let WORDLIST_FROM_MEMORY_GEN = prove
+ (`!n m a s.
+        dimindex(:N) * n <= 8 * m
+        ==> wordlist_from_memory(a,n) s:(N word)list =
+            wordlist_of_num n (read(memory :> bytes(a,m)) s)`,
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[wordlist_from_memory] THEN
+  ONCE_REWRITE_TAC[GSYM WORDLIST_OF_NUM_MOD] THEN AP_TERM_TAC THEN
+  SUBGOAL_THEN
+   `(dimindex (:N) * n + 7) DIV 8 = MIN m ((dimindex (:N) * n + 7) DIV 8)`
+  SUBST1_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; GSYM READ_BYTES_MOD] THEN
+  REWRITE_TAC[MOD_MOD_EXP_MIN] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[ARITH_RULE `MIN a b = b <=> b <= a`] THEN ARITH_TAC);;
+
 let WORDLIST_FROM_MEMORY = prove
  (`!a n s. wordlist_from_memory(a,n) s:((((N tybit0)tybit0)tybit0)word)list =
            wordlist_of_num n (read(memory :> bytes(a,dimindex(:N) * n)) s)`,
@@ -703,6 +717,22 @@ let NUM_OF_WORDLIST_FROM_MEMORY = prove
         read(memory :> bytes(a,dimindex(:N) * n)) s`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC NUM_OF_WORDLIST_FROM_MEMORY_GEN THEN
   REWRITE_TAC[DIMINDEX_TYBIT0; DIMINDEX_TYBIT1] THEN ARITH_TAC);;
+
+let WORDLIST_FROM_MEMORY_EQ_ALT = prove
+ (`!addr len size l s.
+        dimindex(:N) * len = 8 * size
+        ==> (wordlist_from_memory(addr,len) s:(N word)list = l <=>
+             LENGTH l = len /\
+             read (memory :> bytes(addr,size)) s = num_of_wordlist l)`,
+  REPEAT STRIP_TAC THEN
+  ASM_CASES_TAC `LENGTH(l:(N word)list) = len` THENL
+   [ASM_REWRITE_TAC[]; ASM_MESON_TAC[LENGTH_WORDLIST_FROM_MEMORY]] THEN
+  EQ_TAC THENL [ASM_MESON_TAC[NUM_OF_WORDLIST_FROM_MEMORY_GEN]; ALL_TAC] THEN
+  DISCH_THEN(MP_TAC o AP_TERM `wordlist_of_num len:num->(N word)list`) THEN
+  MATCH_MP_TAC EQ_IMP THEN
+  BINOP_TAC THENL [ALL_TAC; ASM_MESON_TAC[WORDLIST_OF_NUM_OF_WORDLIST]] THEN
+  CONV_TAC SYM_CONV THEN MATCH_MP_TAC WORDLIST_FROM_MEMORY_GEN THEN
+  ASM_REWRITE_TAC[LE_REFL]);;
 
 let WORDLIST_FROM_MEMORY_CLAUSES = prove
  (`(!a s. wordlist_from_memory(a,0) s:(N word)list = []) /\

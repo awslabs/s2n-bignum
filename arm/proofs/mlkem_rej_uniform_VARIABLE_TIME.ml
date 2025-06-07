@@ -434,7 +434,7 @@ let mlkem_rej_uniform_table = (REWRITE_RULE[MAP] o define)
      0;  1;  2;  3;  4;  5;  6;  7;  8;  9;  10; 11; 12; 13; 14; 15]`;;
 
 (* ------------------------------------------------------------------------- *)
-(* An abbreviation used to state the specification.                          *)
+(* An abbreviation used within the proof, though expanded in the spec.       *)
 (* ------------------------------------------------------------------------- *)
 
 let REJ_SAMPLE = define
@@ -459,30 +459,29 @@ let DIMINDEX_384 = DIMINDEX_CONV `dimindex(:384)`;;
 
 let MLKEM_REJ_UNIFORM_CORRECT = prove
  (`!res buf buflen table (inlist:(12 word)list) pc stackpointer.
-        24 divides val buflen /\
-        8 * val buflen = 12 * LENGTH inlist /\
-        ALL (nonoverlapping (stackpointer,576))
-            [(word pc,0x258); (buf,val buflen); (table,4096)] /\
-        ALL (nonoverlapping (res,512))
-            [(word pc,0x258); (stackpointer,576)]
-        ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) mlkem_rej_uniform_mc /\
-                  read PC s = word(pc + 0x4) /\
-                  read SP s = stackpointer /\
-                  C_ARGUMENTS [res;buf;buflen;table] s /\
-                  read(memory :> bytes(table,4096)) s =
-                  num_of_wordlist mlkem_rej_uniform_table /\
-                  read(memory :> bytes(buf,val buflen)) s =
-                  num_of_wordlist inlist)
-             (\s. read PC s = word(pc + 0x250) /\
-                  let outlist = SUB_LIST(0,256) (REJ_SAMPLE inlist) in
-                  let outlen = LENGTH outlist in
-                  C_RETURN s = word outlen /\
-                  read(memory :> bytes(res,2 * outlen)) s =
-                  num_of_wordlist outlist)
-             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-              MAYCHANGE [memory :> bytes(res,512);
-                         memory :> bytes(stackpointer,576)])`,
+      24 divides val buflen /\
+      8 * val buflen = 12 * LENGTH inlist /\
+      ALL (nonoverlapping (stackpointer,576))
+          [(word pc,0x258); (buf,val buflen); (table,4096)] /\
+      ALL (nonoverlapping (res,512))
+          [(word pc,0x258); (stackpointer,576)]
+      ==> ensures arm
+           (\s. aligned_bytes_loaded s (word pc) mlkem_rej_uniform_mc /\
+                read PC s = word(pc + 0x4) /\
+                read SP s = stackpointer /\
+                C_ARGUMENTS [res;buf;buflen;table] s /\
+                wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
+                wordlist_from_memory(buf,LENGTH inlist) s = inlist)
+           (\s. read PC s = word(pc + 0x250) /\
+                let inlist' = MAP (word_zx:12 word->16 word) inlist in
+                let outlist =
+                  SUB_LIST (0,256) (FILTER (\x. val x < 3329) inlist') in
+                let outlen = LENGTH outlist in
+                C_RETURN s = word outlen /\
+                wordlist_from_memory(res,outlen) s = outlist)
+           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+            MAYCHANGE [memory :> bytes(res,512);
+                       memory :> bytes(stackpointer,576)])`,
   MAP_EVERY X_GEN_TAC [`res:int64`; `buf:int64`] THEN
   W64_GEN_TAC `buflen:num` THEN
   MAP_EVERY X_GEN_TAC
@@ -490,6 +489,19 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               ALL; C_RETURN; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** Modify the precondition style a little bit ***)
+
+  MP_TAC(ISPECL
+   [`table:int64`; `4096`; `4096`; `mlkem_rej_uniform_table`]
+   (INST_TYPE [`:8`,`:N`] WORDLIST_FROM_MEMORY_EQ_ALT)) THEN
+  REWRITE_TAC[DIMINDEX_8] THEN DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  MP_TAC(ISPECL
+   [`buf:int64`; `LENGTH(inlist:(12 word)list)`;
+    `buflen:num`; `inlist:(12 word)list`]
+   (INST_TYPE [`:12`,`:N`] WORDLIST_FROM_MEMORY_EQ_ALT)) THEN
+  ASM_REWRITE_TAC[DIMINDEX_12] THEN DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  GLOBALIZE_PRECONDITION_TAC THEN
 
   (*** First split off and handle the writeback tail once and for all ***)
 
@@ -507,7 +519,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
   CONJ_TAC THENL
    [ALL_TAC;
 
-    (*** Just be lazy and unroll the writeback loop for now ***)
+    (*** Be lazy and unroll the writeback loop completely ***)
 
     ENSURES_INIT_TAC "s0" THEN
     FIRST_X_ASSUM(X_CHOOSE_THEN `n:num` MP_TAC) THEN
@@ -522,6 +534,14 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
     ASM_REWRITE_TAC[WORD_ADD_0] THEN STRIP_TAC THEN
     ARM_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (1--94) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ASM_REWRITE_TAC[GSYM REJ_SAMPLE] THEN
+    MP_TAC(ISPECL
+     [`res:int64`; `LENGTH(SUB_LIST (0,256) (REJ_SAMPLE inlist))`;
+      `2 * LENGTH(SUB_LIST (0,256) (REJ_SAMPLE inlist))`;
+      `SUB_LIST (0,256) (REJ_SAMPLE inlist)`]
+     (INST_TYPE [`:16`,`:N`] WORDLIST_FROM_MEMORY_EQ_ALT)) THEN
+    ASM_REWRITE_TAC[ARITH_RULE `8 * 2 * n = 16 * n`; DIMINDEX_16] THEN
+    DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
     SUBGOAL_THEN
      `read (memory :> bytes (res,2 * MIN 256 outlen)) s94 =
       num_of_wordlist (SUB_LIST (0,256) outlist:int16 list)`
@@ -1617,20 +1637,22 @@ let MLKEM_REJ_UNIFORM_SUBROUTINE_CORRECT = prove
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [res;buf;buflen;table] s /\
-                  read(memory :> bytes(table,4096)) s =
-                  num_of_wordlist mlkem_rej_uniform_table /\
-                  read(memory :> bytes(buf,val buflen)) s =
-                  num_of_wordlist inlist)
+                  wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
+                  wordlist_from_memory(buf,LENGTH inlist) s = inlist)
              (\s. read PC s = returnaddress /\
-                  let outlist = SUB_LIST(0,256) (REJ_SAMPLE inlist) in
+                  let inlist' = MAP (word_zx:12 word->16 word) inlist in
+                  let outlist =
+                    SUB_LIST (0,256) (FILTER (\x. val x < 3329) inlist') in
                   let outlen = LENGTH outlist in
                   C_RETURN s = word outlen /\
-                  read(memory :> bytes(res,2 * outlen)) s =
-                  num_of_wordlist outlist)
+                  wordlist_from_memory(res,outlen) s = outlist)
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(res,512);
                          memory :> bytes(word_sub stackpointer (word 576),576)])`,
-  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  let TWEAK_CONV =
+    TOP_DEPTH_CONV let_CONV THENC
+    REWRITE_CONV[wordlist_from_memory] in
+  CONV_TAC TWEAK_CONV THEN
   ARM_ADD_RETURN_STACK_TAC MLKEM_REJ_UNIFORM_EXEC
-   (CONV_RULE (TOP_DEPTH_CONV let_CONV) MLKEM_REJ_UNIFORM_CORRECT)
+   (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_CORRECT)
     `[]:int64 list` 576);;
