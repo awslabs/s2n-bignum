@@ -618,7 +618,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           let sz = vexL_size L in
           read_ModRM rex l >>= (\((reg,rm),l).
           read_imm Byte l >>= (\(imm8,l).
-            SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)))
+          if (word_zx reg):(3 word) = word 0b010 then
+           SOME (VPSRLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+          else
+            if (word_zx reg):(3 word) = word 0b100 then
+              SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+            else
+              NONE))
         | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else

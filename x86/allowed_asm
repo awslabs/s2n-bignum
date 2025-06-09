@@ -125,6 +125,7 @@
 : vpmullw$
 : vpsubw$
 : vpsraw$
+: vpsrlw$
 : xchg$
 : xor$
 : xorl$
