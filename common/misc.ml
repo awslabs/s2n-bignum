@@ -1070,16 +1070,6 @@ let MASK_AND_VALUE_FROM_CARRY_LT = prove
   MATCH_MP_TAC MASK_AND_VALUE_FROM_CARRY_REAL_LT THEN ASM_REWRITE_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Useful for showing that a call is accessible.                             *)
-(* ------------------------------------------------------------------------- *)
-
-let WORD32_ADD_SUB_OF_LT = prove
- (`!pc tgt. pc <= 2 EXP 31 /\ tgt < 2 EXP 31 ==>
-  word_add (word pc) (word_sx (iword (&tgt - &pc):int32)):int64 = word tgt`,
-  IMP_REWRITE_TAC [word_sx; IVAL_IWORD; WORD_IWORD; GSYM IWORD_INT_ADD;
-    INT_SUB_ADD2; DIMINDEX_32] THEN ARITH_TAC);;
-
-(* ------------------------------------------------------------------------- *)
 (* Transformation for a slightly different way multiplication can be done.   *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1683,7 +1673,10 @@ let MULT_ADD_DIV_LT = prove(
 let COMPUTE_LENGTH_RULE th =
   let ltm = mk_const("LENGTH",
     [hd(snd(dest_type(type_of(lhand(concl th))))),aty]) in
-  CONV_RULE(RAND_CONV LENGTH_CONV) (AP_TERM ltm th);;
+  CONV_RULE(RAND_CONV
+    (REWRITE_CONV [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
+        LENGTH; LENGTH_APPEND] THENC NUM_REDUCE_CONV))
+    (AP_TERM ltm th);;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics for using labeled assumtions                                      *)

@@ -1334,7 +1334,7 @@ needs "common/elf.ml";;
 let make_fn_word_list, make_fn_word_list_reloc =
   let print_list rhs_col =
     let indent = "\n" ^ String.make rhs_col ' ' in
-    fun rels start end_ head bs dec ->
+    fun next_rel start end_ head bs dec ->
       let buf = Buffer.create 1024 in
       Buffer.add_string buf start;
       let rec go pc prev_inst_printer = function
@@ -1344,7 +1344,7 @@ let make_fn_word_list, make_fn_word_list_reloc =
         go (pc + 4) (fun s ->
           (* s is either "" or ";" *)
           let opcode = get_int_le bs pc 4 in
-          match rels pc with
+          match next_rel pc with
           | None ->
           (Printf.bprintf buf "  %s0x%08x%s" head opcode s;
             let space_size = String.length head + String.length s + 12 in
@@ -1378,13 +1378,13 @@ let make_fn_word_list, make_fn_word_list_reloc =
   let print_list_reloc = print_list 24 in
   fun (bstext, constants, rels) ->
     let r = ref rels in
-    let f i = match !r with
+    let next_rel i = match !r with
     | (ty,(off,sym,add)) :: rels when off = i -> r := rels; Some (ty,sym,add)
     | _ -> None in
     (* The input argument of function X must match that of append_reloc_X.
      * ex) BL: append_reloc_BL
      *)
-    print_list_reloc f "(fun w BL ADR ADRP ADD_rri64 -> [\n" "]);;\n" "w " bstext;;
+    print_list_reloc next_rel "(fun w BL ADR ADRP ADD_rri64 -> [\n" "]);;\n" "w " bstext;;
 (*
 let trim_ret_core dec =
   let m1 = Array.length dec - 1 in
@@ -1663,7 +1663,8 @@ let term_of_relocs_arm, assert_relocs =
         pc+4, next_insns
       with _ -> failwith ("could not check opcode " ^ (string_of_term reloc_opcode)) in
 
-    (* opcode_fn is the large OCaml function printed by print_literal_relocs_from_elf *)
+    (* opcode_fn is the large OCaml function printed by
+       print_literal_relocs_from_elf *)
     fun (args,tm) opcode_fn ->
       let opcode_fn_implemented = opcode_fn
           (* This order should match the fn args printed by
