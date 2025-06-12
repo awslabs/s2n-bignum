@@ -258,7 +258,7 @@ let read_VEXP = new_definition `read_VEXP (p:2 word) =
 let read_VEX = define
  `(!l. read_VEX T l =
    read_byte l >>= \(b,l). bitmatch b with [r:1; v:4; L; p:2] ->
-   SOME((SOME(word_shl (word_zx (word_not r)) 2), 
+   SOME((SOME(word_shl (word_zx (word_not r)) 2),
      VEXM_0F, word_not v, L, (F, Rep0, SG0)), l)) /\
   (!l. read_VEX F l =
    read_byte l >>= \(b,l). bitmatch b with [rxb:3; m:5] ->
@@ -618,13 +618,11 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           let sz = vexL_size L in
           read_ModRM rex l >>= (\((reg,rm),l).
           read_imm Byte l >>= (\(imm8,l).
-          if (word_zx reg):(3 word) = word 0b010 then
-           SOME (VPSRLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
-          else
-            if (word_zx reg):(3 word) = word 0b100 then
-              SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
-            else
-              NONE))
+          (let reg3:3 word = word_zx reg in
+           bitmatch reg3 with
+           | [0b010:3] -> SOME (VPSRLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+           | [0b100:3] -> SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+           | _ -> NONE)))
         | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
@@ -1484,20 +1482,25 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       fun ls ->
         let ls', th' = fn (dest_numeral (rand (vsubst ls e))) in
         PROVE_HYP th' (g (ls' @ ls))
-    else if ty = `:byte` then
-      let _,tr = bm_build_pos_tree t in
-      let gs = Array.init 256 (fun n -> try
-        let A = Array.init 8 (fun i -> Some (n land (1 lsl i) != 0)) in
+    else
+     (match ty with
+        Tyapp("word",[wty]) ->
+        let w = try Num.int_of_num(dest_finty wty) with Failure _ -> 1000 in
+        if w > 12 then raise (Invalid_argument
+          ("Unsupported bitmatch size > 12 in " ^ string_of_term t)) else
+        let _,tr = bm_build_pos_tree t in
+        let gs = Array.init (1 lsl w) (fun n -> try
+        let A = Array.init w (fun i -> Some (n land (1 lsl i) != 0)) in
         let th = hd (snd (snd (get_dt A tr))) in
         let ls, th1 = inst_bitpat_numeral (hd (hyp th)) (num n) in
         let th2 = PROVE_HYP th1 (INST ls th) in
         let e' = fst (hd ls) in
         let th = TRANS (AP_THM (AP_TERM f (ASSUME (mk_eq (e, e')))) cs) th2 in
         PROVE_HYP (REFL e') o evaluate (rhs (concl th)) (F o TRANS th)
-      with Failure _ as e -> fun _ -> raise e) in
-      fun ls -> gs.(Num.int_of_num (dest_numeral (rand (rev_assoc e ls)))) ls
-    else
-      raise (Invalid_argument ("Unknown " ^ string_of_term t))
+        with Failure _ as e -> fun _ -> raise e) in
+        fun ls -> gs.(Num.int_of_num (dest_numeral (rand (rev_assoc e ls)))) ls
+      | _ -> raise (Invalid_argument ("Unknown " ^ string_of_term t)))
+
   | Comb(Comb((Const("_MATCH",_) as f),e),cs) ->
     if not (is_var e) then
       let th = CHANGED_CONV MATCH_CONV t in
