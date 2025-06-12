@@ -8237,6 +8237,7 @@ int test_bignum_mux16(void)
      i = rand() & 15;
      reference_copy(k,b1,k,bs+k*i);
      bignum_mux16(k,b2,bs,i);
+     free(bs);
 
      c = reference_compare(k,b2,k,b1);
 
@@ -15122,7 +15123,7 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
     functionaltest(sha3,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
-    
+
   }
 
   if (extrastrigger) function_to_test = "_";
