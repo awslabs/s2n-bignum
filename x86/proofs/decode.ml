@@ -617,13 +617,16 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x71:8] ->
           let sz = vexL_size L in
           read_ModRM rex l >>= (\((reg,rm),l).
-          read_imm Byte l >>= (\(imm8,l).
-          (let reg3:3 word = word_zx reg in
-           bitmatch reg3 with
-           | [0b010:3] -> SOME (VPSRLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
-           | [0b100:3] -> SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
-           | _ -> NONE)))
-        | _ -> NONE)
+            match rm with
+            | RM_reg _ ->
+              read_imm Byte l >>= (\(imm8,l).
+              (let r3:3 word = word_zx reg in
+               bitmatch r3 with
+               | [0b010:3] -> SOME (VPSRLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | [0b100:3] -> SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | _ -> NONE))
+            | _ -> NONE)
+          | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
@@ -2037,8 +2040,10 @@ let add_ll_tac,LL_TAC =
         match type_of e with
         | Tyapp("RM",[]) ->
           SPEC_TAC (e, mk_var("x", type_of e)) THEN
-          MATCH_MP_TAC RM_INDUCTION THEN CONV_TAC MATCH_CONV'
-        | _ -> CONV_TAC MATCH_CONV');
+          MATCH_MP_TAC RM_INDUCTION THEN
+          CONV_TAC (BINOP2_CONV ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV'')
+                                ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV''))
+        | _ -> CONV_TAC ((RAND_CONV o BINDER_CONV) MATCH_CONV''));
      `a >>= b`, MATCH_MP_TAC list_linear_obind1]
     empty_net) in
   (fun tm tac -> net := enter [] (tm,tac) !net),
