@@ -189,6 +189,10 @@ let iclasses =
 
   (*** ORR ***)
   "0x001110101xxxxx000111xxxxxxxxxx";
+  
+  (*** REV, 32 and 64 bits ***)
+  "0101101011000000000010xxxxxxxxxx";
+  "1101101011000000000011xxxxxxxxxx";
 
   (*** REV64 ***)
   "01001110xx100000000010xxxxxxxxxx";
