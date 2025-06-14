@@ -385,13 +385,6 @@ let aes_subword = new_definition `aes_subword (op:(32)word) : (32)word =
    from constant tables. This means that the result could be precomputed
    and stored as clauses before-hand. This greatly increase the conversion
    speed. The EL conversion code and idea is from John Harrison. *)
-let EL_CONV =
-  let conv0 = GEN_REWRITE_CONV I [CONJUNCT1 EL] THENC GEN_REWRITE_CONV I [HD]
-  and conv1 = GEN_REWRITE_CONV I [CONJUNCT2 EL]
-  and convt = GEN_REWRITE_CONV I [TL] in
-  let convs = LAND_CONV num_CONV THENC conv1 THENC RAND_CONV convt in
-  let rec conv tm = (conv0 ORELSEC (convs THENC conv)) tm in
-  conv;;
 (* Precalculate the conversion of EL n xxx when the list is of 16x(128 word) *)
 let EL_16_128_CLAUSES =
   let pat = `EL n [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15]:128 word` in
