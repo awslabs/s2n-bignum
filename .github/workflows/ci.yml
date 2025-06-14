@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  s2n-bignum-arm-tests:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install valgrind
+
+    - name: Run tests
+      run: |
+        cd arm
+        make
+        cd ../tests
+        make complete
+        make ctCheck
+        cd ../benchmarks
+        make
+
+  s2n-bignum-x86-tests:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run tests
+      run: |
+        cd x86
+        make
+        cd ../x86_att && make clobber && make && git diff --exit-code .
+        cd ../tests
+        make complete
+        make ctCheck
+        cd ../benchmarks
+        make
