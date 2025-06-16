@@ -43,12 +43,6 @@ let UNETA_TAC = function
   ONCE_REWRITE_TAC [SYM (ETA_CONV (mk_abs (x, t)))]
 | _ -> failwith "UNETA_TAC";;
 
-let MATCH_CONV' =
-  let ifif = prove
-    (`(if p then if p then a:A else b else c) = if p then a else c`,
-     COND_CASES_TAC THEN REWRITE_TAC []) in
-  REDEPTH_CONV MATCH_CONV THENC REWRITE_CONV [ifif];;
-
 let rec REPEAT_MATCH_CONV ifif tm =
   try let th = MATCH_CONV tm in
       let tm' = rand(concl th) in
@@ -62,8 +56,7 @@ let rec REPEAT_MATCH_CONV ifif tm =
       else th
   with Failure _ -> REFL tm;;
 
-(* TODO: replace use of MATCH_CONV' with MATCH_CONV'' *)
-let MATCH_CONV'' =
+let MATCH_CONV' =
   let ifif = prove
     (`(if p then if p then a:A else b else c) = if p then a else c`,
      COND_CASES_TAC THEN REWRITE_TAC []) in

@@ -793,7 +793,7 @@ let READ_VEXP_CONV =
 
 let DECODE_BT_CONV =
   let pths =
-    let th = CONV_RULE MATCH_CONV' decode_BT in
+    let th = CONV_RULE (BINDER_CONV(RAND_CONV MATCH_CONV')) decode_BT in
     Array.init 4 (fun i ->
       let n = mk_comb (`word:num->2 word`, mk_numeral (num i)) in
       let th = SPEC n th in
@@ -808,7 +808,7 @@ let DECODE_BT_CONV =
 
 let DECODE_BINOP_CONV =
   let pths =
-    let th = CONV_RULE MATCH_CONV' decode_binop in
+    let th = CONV_RULE (BINDER_CONV(RAND_CONV MATCH_CONV')) decode_binop in
     Array.init 16 (fun i ->
       let n = mk_comb (`word:num->4 word`, mk_numeral (num i)) in
       let th = SPEC n th in
@@ -823,7 +823,7 @@ let DECODE_BINOP_CONV =
 
 let CONDITION_ALIAS_thms,DECODE_CONDITION_CONV =
   let pths =
-    let th = CONV_RULE MATCH_CONV' decode_condition in
+    let th = CONV_RULE (BINDER_CONV(RAND_CONV MATCH_CONV')) decode_condition in
     Array.init 16 (fun i ->
       let n = mk_comb (`word:num->4 word`, mk_numeral (num i)) in
       let th = SPEC n th in
@@ -1219,7 +1219,7 @@ let decode'_of_aux = prove
 
 let read_disp_thms =
   let word2 = mk_const ("word", [`:2`,`:N`]) in
-  let th = CONV_RULE MATCH_CONV' read_displacement in
+  let th = CONV_RULE (BINDER_CONV(BINDER_CONV(RAND_CONV MATCH_CONV'))) read_displacement in
   let A = Array.init 3 (fun md ->
     let md' = mk_comb (word2, mk_numeral (num md)) in
     let th = SPEC_ALL (SPEC md' th) in
@@ -2041,9 +2041,9 @@ let add_ll_tac,LL_TAC =
         | Tyapp("RM",[]) ->
           SPEC_TAC (e, mk_var("x", type_of e)) THEN
           MATCH_MP_TAC RM_INDUCTION THEN
-          CONV_TAC (BINOP2_CONV ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV'')
-                                ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV''))
-        | _ -> CONV_TAC ((RAND_CONV o BINDER_CONV) MATCH_CONV''));
+          CONV_TAC (BINOP2_CONV ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV')
+                                ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV'))
+        | _ -> CONV_TAC ((RAND_CONV o BINDER_CONV) MATCH_CONV'));
      `a >>= b`, MATCH_MP_TAC list_linear_obind1]
     empty_net) in
   (fun tm tac -> net := enter [] (tm,tac) !net),
