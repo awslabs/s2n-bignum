@@ -421,6 +421,31 @@ let cosimulate_ldstrb() =
   else
     [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LDURB/STURB, and LDUR/STUR for 64-bit and 32-bit values ***)
+let cosimulate_ldstu() =
+  let is_not_b = Random.int 2 in
+  let x = if is_not_b = 1 then Random.int 2 else 0 in
+  let isld = Random.int 2
+  and rn = Random.int 32 in
+  let rt = (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then Random.int 15 * 16
+    else Random.int 249 in
+    (* May load/store at most 8 bytes. 256 - 8 + 1 = 249 *)
+  let off = Random.int (249-stackoff) in
+  let code =
+    pow2 31 */ num is_not_b +/
+    pow2 30 */ num x +/
+    pow2 23 */ num 0b1110000 +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num off +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 (*** This covers LD1R ***)
 
 let cosimulate_ld1r() =
@@ -444,7 +469,7 @@ let cosimulate_ld1r() =
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
 let memclasses =
-   [cosimulate_ldst_12; cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r];;
+   [cosimulate_ldst_12; cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r; cosimulate_ldstu];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in
