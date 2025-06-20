@@ -34,6 +34,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install valgrind
+
     - name: Run tests
       run: |
         cd x86
