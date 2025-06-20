@@ -3256,7 +3256,18 @@ let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
     let svar = mk_var(sname,`:x86state`)
     and svar0 = mk_var("s",`:x86state`) in
     let ilist = map (vsubst[svar,svar0]) ilist0 in
-    MP_TAC(TWEAK_PC_OFFSET(SPECL ilist subth)) THEN
+    let subth_specl =
+      try SPECL ilist subth with _ -> begin
+        (if (!x86_print_log) then
+          (Printf.printf "ilist and subth's forall vars do not match\n";
+           Printf.printf "ilist: [%s]\n" (end_itlist
+            (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
+           Printf.printf "subth's forall vars: [%s]\n"
+              (end_itlist (fun s s2 -> s ^ "; " ^ s2)
+                (map string_of_term (fst (strip_forall (concl subth)))))));
+        failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
+      end in
+    MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
     REWRITE_TAC[COMPUTE_LENGTH_RULE submachinecode] THEN
     ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
                     MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
@@ -3274,7 +3285,10 @@ let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
     ASM_REWRITE_TAC[] THEN
     X86_BIGSTEP_TAC execth sname' THENL
-     [MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
+     [(* Precondition of subth *)
+     (MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC) ORELSE
+     (PRINT_GOAL_TAC THEN
+      FAIL_TAC "Could not discharge precond (subgoal after X86_BIGSTEP_TAC)");
       ALL_TAC] THEN
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV
    (GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
