@@ -28,8 +28,8 @@ jobs:
         cd ../benchmarks
         CC=gcc make
         CC=clang make
-        # AWS-LC test
         cd ..
+    - name: Run AWS-LC integration test
         git clone https://github.com/aws/aws-lc.git --depth=1
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
@@ -60,8 +60,8 @@ jobs:
         cd ../benchmarks
         CC=gcc make
         CC=clang make
-        # AWS-LC test
         cd ..
+    - name: Run AWS-LC integration test
         git clone https://github.com/aws/aws-lc.git --depth=1
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
