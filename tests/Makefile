@@ -11,7 +11,7 @@
 # setting: ARCH=x86 or ARCH=arm as appropriate
 
 ARCH=unknown_architecture
-VALGRIND=
+VALGRIND=valgrind --
 
 UNAME_RESULT=$(shell uname -m)
 

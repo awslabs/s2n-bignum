@@ -14743,13 +14743,11 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 
 int main(int argc, char *argv[])
 { int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
-  int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
+  int sha3 = get_arch_name() == ARCH_AARCH64; // && supports_arm_sha3();
   int arm = get_arch_name() == ARCH_AARCH64;
   int all = 1;
   int extrastrigger = 1;
 
-  printf("supports_arm_sha3: %d\n", sha3);
-  return 0;
   char *argending;
   long negreps;
   function_to_test = "";

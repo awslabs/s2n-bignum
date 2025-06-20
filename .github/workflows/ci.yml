@@ -14,7 +14,8 @@ jobs:
 
     - name: Install dependent packages
       run: |
-        echo "--"
+        sudo apt update
+        sudo apt install valgrind
 
     - name: Run tests
       run: |
