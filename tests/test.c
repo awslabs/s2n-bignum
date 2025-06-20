@@ -14742,7 +14742,7 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 // as a wildcard "*", e.g. "bignum_add_p_"
 
 int main(int argc, char *argv[])
-{ int bmi = true; //get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
+{ int bmi = 1; //get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
   int sha3 = get_arch_name() == ARCH_AARCH64; // && supports_arm_sha3();
   int arm = get_arch_name() == ARCH_AARCH64;
   int all = 1;
