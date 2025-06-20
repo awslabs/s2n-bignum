@@ -1366,6 +1366,12 @@ let arm_RET = define
         (PC := pc_next ,,
          events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
+let arm_REV = define
+ `arm_REV Rd Rn =
+    \s. let n = read Rn s in
+        let d = word_bytereverse n in
+        (Rd := d) s`;;
+
 let arm_REV64_VEC = define
  `arm_REV64_VEC Rd Rn esize =
     \s. let n:(128)word = read Rn (s:armstate) in
@@ -3166,7 +3172,7 @@ let ARM_OPERATION_CLAUSES =
        arm_MUL_VEC_ALT;
        arm_NOP;
        arm_ORN; arm_ORR; arm_ORR_VEC;
-       arm_RET; arm_REV64_VEC_ALT; arm_RORV;
+       arm_RET; arm_REV; arm_REV64_VEC_ALT; arm_RORV;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
