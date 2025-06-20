@@ -14748,6 +14748,8 @@ int main(int argc, char *argv[])
   int all = 1;
   int extrastrigger = 1;
 
+  printf("supports_arm_sha3: %d\n", sha3);
+  return 0;
   char *argending;
   long negreps;
   function_to_test = "";
