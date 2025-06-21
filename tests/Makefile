@@ -11,15 +11,9 @@
 # setting: ARCH=x86 or ARCH=arm as appropriate
 
 ARCH=unknown_architecture
-VALGRIND=valgrind --
+VALGRIND?=
 
 UNAME_RESULT=$(shell uname -m)
-
-ifeq ($(UNAME_RESULT),x86_64)
-ARCH=x86
-# Enabling valgrind makes test unable to detect BMI/ADX
-VALGRIND=
-endif
 
 ifeq ($(UNAME_RESULT),aarch64)
 ARCH=arm

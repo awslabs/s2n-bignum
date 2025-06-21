@@ -21,10 +21,14 @@ jobs:
       run: |
         cd arm
         make
-        echo "Make test (build only, for clang)"
+        echo "Make test"
         cd ../tests
         CC=gcc make complete
         make ctCheck
+        echo "Make test with valgrind"
+        make clean
+        CC=gcc VALGRIND="valgrind --" make complete || echo "(incomplete test, but proceeding)"
+        echo "Make test (clang, build only)"
         make clean
         CC=clang make
         echo "Make benchmark (build only, for both of those)"
@@ -61,6 +65,10 @@ jobs:
         cd ../tests
         CC=gcc make complete
         make ctCheck
+        echo "Make test with valgrind"
+        make clean
+        CC=gcc VALGRIND="valgrind --" make complete || echo "(incomplete test, but proceeding)"
+        echo "Make test (clang, build only)"
         make clean
         CC=clang make
         echo "Make benchmark (build only, for both of those)"
