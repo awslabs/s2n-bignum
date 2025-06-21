@@ -16,6 +16,8 @@ jobs:
       run: |
         sudo apt update
         sudo apt install valgrind cmake golang ninja-build
+        which ninja
+        ln -s /usr/bin/ninja /usr/bin/ninja-build
         which cmake
         ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
 
@@ -62,6 +64,8 @@ jobs:
       run: |
         sudo apt update
         sudo apt install valgrind cmake golang ninja-build
+        which ninja
+        ln -s /usr/bin/ninja /usr/bin/ninja-build
         which cmake
         ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
         cd x86
