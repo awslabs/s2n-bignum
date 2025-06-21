@@ -17,7 +17,7 @@ jobs:
         sudo apt update
         sudo apt install valgrind cmake golang
         which cmake
-        ln -s /usr/bin/cmake3 /usr/bin/cmake
+        ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
 
     - name: Run tests
       run: |
@@ -63,7 +63,7 @@ jobs:
         sudo apt update
         sudo apt install valgrind cmake golang
         which cmake
-        ln -s /usr/bin/cmake3 /usr/bin/cmake
+        ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
         cd x86
         make
         cd ../x86_att && make clobber && make && git diff --exit-code .
