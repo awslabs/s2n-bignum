@@ -15,6 +15,10 @@ VALGRIND?=
 
 UNAME_RESULT=$(shell uname -m)
 
+ifeq ($(UNAME_RESULT),x86_64)
+ARCH=x86
+endif
+
 ifeq ($(UNAME_RESULT),aarch64)
 ARCH=arm
 endif
