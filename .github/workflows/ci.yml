@@ -15,7 +15,7 @@ jobs:
     - name: Install dependent packages
       run: |
         sudo apt update
-        sudo apt install valgrind
+        sudo apt install valgrind cmake golang
 
     - name: Run tests
       run: |
@@ -58,6 +58,8 @@ jobs:
 
     - name: Run tests
       run: |
+        sudo apt update
+        sudo apt install valgrind cmake golang
         cd x86
         make
         cd ../x86_att && make clobber && make && git diff --exit-code .
