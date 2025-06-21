@@ -44,7 +44,7 @@ jobs:
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
         GITHUB_REPOSITORY=${{ github.event.pull_request.head.repo.full_name }}.git GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
-        cd ../..
+        cd ../../../
         mkdir aws-lc-build && cd aws-lc-build
         cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
         ninja-build run_tests
@@ -88,7 +88,7 @@ jobs:
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
         GITHUB_REPOSITORY=${{ github.event.pull_request.head.repo.full_name }}.git GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
-        cd ../..
+        cd ../../../
         mkdir aws-lc-build && cd aws-lc-build
         cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
         ninja-build run_tests
