@@ -15,7 +15,7 @@ jobs:
     - name: Install dependent packages
       run: |
         sudo apt update
-        sudo apt install valgrind cmake golang
+        sudo apt install valgrind cmake golang ninja-build
         which cmake
         ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
 
@@ -61,7 +61,7 @@ jobs:
     - name: Run tests
       run: |
         sudo apt update
-        sudo apt install valgrind cmake golang
+        sudo apt install valgrind cmake golang ninja-build
         which cmake
         ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
         cd x86
