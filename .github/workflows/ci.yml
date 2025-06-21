@@ -21,19 +21,23 @@ jobs:
       run: |
         cd arm
         make
+        echo "Make test (build only, for clang)"
         cd ../tests
         CC=gcc make complete
-        CC=clang make complete
         make ctCheck
+        make clean
+        CC=clang make
+        echo "Make benchmark (build only, for both of those)"
         cd ../benchmarks
         CC=gcc make
+        make clean
         CC=clang make
+        echo "Run AWS-LC integration test (GITHUB_REPOSITORY: $GITHUB_REPOSITORY, GITHUB_TARGET: $GITHUB_TARGET)"
         cd ..
-        echo "Run AWS-LC integration test"
         git clone https://github.com/aws/aws-lc.git --depth=1
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
-        GITHUB_REPOSITORY=$GITHUB_REPOSITORY GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
+        GITHUB_REPOSITORY=${GITHUB_REPOSITORY}.git GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
         cd ../..
         mkdir aws-lc-build && cd aws-lc-build
         cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
@@ -53,19 +57,23 @@ jobs:
         cd x86
         make
         cd ../x86_att && make clobber && make && git diff --exit-code .
+        echo "Make test (build only, for clang)"
         cd ../tests
         CC=gcc make complete
-        CC=clang make complete
         make ctCheck
+        make clean
+        CC=clang make
+        echo "Make benchmark (build only, for both of those)"
         cd ../benchmarks
         CC=gcc make
+        make clean
         CC=clang make
+        echo "Run AWS-LC integration test (GITHUB_REPOSITORY: $GITHUB_REPOSITORY, GITHUB_TARGET: $GITHUB_TARGET)"
         cd ..
-        echo "Run AWS-LC integration test"
         git clone https://github.com/aws/aws-lc.git --depth=1
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
-        GITHUB_REPOSITORY=$GITHUB_REPOSITORY GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
+        GITHUB_REPOSITORY=${GITHUB_REPOSITORY}.git GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
         cd ../..
         mkdir aws-lc-build && cd aws-lc-build
         cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
