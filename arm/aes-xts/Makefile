@@ -11,12 +11,19 @@
 #
 #  sudo apt-get install binutils-aarch64-linux-gnu
 
-UNAME_RESULT=$(shell uname -p)
+#UNAME_RESULT=$(shell uname -p)
+OSTYPE_RESULT=$(shell uname -s)
+ARCHTYPE_RESULT=$(shell uname -m)
 
-ifeq ($(UNAME_RESULT),aarch64)
+ifeq ($(ARCHTYPE_RESULT),aarch64)
 GAS=as
 else
+ifeq ($(OSTYPE_RESULT),Darwin)
+GAS=as -arch arm64
+OBJDUMP=otool -tvV
+else
 GAS=aarch64-linux-gnu-as
+endif
 endif
 
 # List of object files
