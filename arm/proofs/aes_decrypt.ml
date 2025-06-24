@@ -64,21 +64,34 @@ let AES256_DECRYPT_CORRECT = prove(
            read(memory :> bytes128 (word_add key (word 224))) s = k14)
       // postcondition
       (\s. read PC s = word (pc + LENGTH aes256_decrypt_mc) /\
-           read (memory :> bytes128 plaintext) s = 
+           read (memory :> bytes128 plaintext) s =
              aes256_decrypt ib [k0; k1; k2; k3; k4; k5; k6; k7; k8; k9; k10; k11; k12; k13; k14]
         )
       // MAYCHANGE
-      (MAYCHANGE [PC])`,
+      (MAYCHANGE [PC;X6;X2] ,, MAYCHANGE [Q0; Q1; Q6],,
+       MAYCHANGE [memory :> bytes128 plaintext],,
+       MAYCHANGE SOME_FLAGS,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
-   [`plaintext:int64`; `ciphertext:int64`; `key:int64`; 
-    `ib:int128`; `k0:int128`; `k1:int128`; `k2:int128`; 
-    `k3:int128`; `k4:int128`; `k5:int128`; `k6:int128`; 
-    `k7:int128`; `k8:int128`; `k9:int128`; `k10:int128`; 
+   [`plaintext:int64`; `ciphertext:int64`; `key:int64`;
+    `ib:int128`; `k0:int128`; `k1:int128`; `k2:int128`;
+    `k3:int128`; `k4:int128`; `k5:int128`; `k6:int128`;
+    `k7:int128`; `k8:int128`; `k9:int128`; `k10:int128`;
     `k11:int128`; `k12:int128`; `k13:int128`; `k14:int128`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS;NONOVERLAPPING_CLAUSES] THEN
   REWRITE_TAC [(REWRITE_CONV [aes256_decrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_decrypt_mc`] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ENSURES_INIT_TAC "s0" THEN
   ARM_ACCSTEPS_TAC AES256_DECRYPT_EXEC [] (1--59) THEN
-  CHEAT_TAC
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+
+  CONJ_TAC THENL
+  [ REWRITE_TAC [aes256_decrypt] THEN 
+    REWRITE_TAC EL_15_128_CLAUSES THEN
+    REWRITE_TAC [aes256_decrypt_round] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+    (*do sth about let*)
+    REWRITE_TAC [aesd;aesimc] THEN
+    GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+    REFL_TAC
+    ]
 );;
