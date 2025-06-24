@@ -28,7 +28,7 @@ Loop_dec:
 
 	aesd	v6.16b,v0.16b
 	aesimc	v6.16b,v6.16b
-	ld1	{v0.4s},[x4]
+	ld1	{v0.4s},[x2]
 	aesd	v6.16b,v1.16b
 	eor	v6.16b,v6.16b,v0.16b
 	st1 {v6.4s},[x0]
