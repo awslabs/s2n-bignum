@@ -4,6 +4,16 @@
 # TODO: figure out copyright
 #############################################################################
 
+// ----------------------------------------------------------------------------
+// AES_XTS_DECRYPT (256-bit)
+//
+// void aes_hw_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
+//                const AES_KEY *key1, const AES_KEY *key2,
+//                const uint8_t iv[16]);
+//
+// Standard ARM ABI: X0 = in, X1 = out, X2 = length, X3 = key1, X4 = key2, X5 = iv, returns X1
+// ----------------------------------------------------------------------------
+
 #include "_internal_s2n_bignum.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(aes_hw_xts_decrypt)

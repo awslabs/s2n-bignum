@@ -8,7 +8,7 @@ use_file_raise_failure := true;;
 needs "arm/proofs/base.ml";;
 
 (* print_literal_from_elf "arm/aes-xts/aes_xts_decrypt_armv8.o";; *)
-let aes_xts_decrypt_mc = define_assert_from_elf "aes_hw_xts_decrypt" "arm/aes-xts/aes_xts_decrypt_armv8.o"
+let aes_xts_decrypt_mc = define_assert_from_elf "aes_hw_xts_decrypt_mc" "arm/aes-xts/aes_xts_decrypt_armv8.o"
 [
   0xd10103ff;       (* arm_SUB SP SP (rvalue (word 64)) *)
   0x6d0027e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&0))) *)
@@ -722,3 +722,56 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_hw_xts_decrypt" "arm/aes-xt
   0x910103ff;       (* arm_ADD SP SP (rvalue (word 64)) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
+
+let AES_XTS_DECRYPT_EXEC = ARM_MK_EXEC_RULE aes_xts_decrypt_mc;;
+
+let AES_XTS_DECRYPT_CORRECT = prove(
+  `!ct_ptr pt_ptr len key0_ptr key1_ptr iv_ptr ib iv
+    k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e
+    k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e
+    pc.
+    nonoverlapping (word pc, LENGTH aes_xts_decrypt_mc) (pt_ptr, val len)
+    ==> ensures arm
+    (\s. aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
+         read PC s = word pc /\
+         C_ARGUMENTS [ct_ptr; pt_ptr; len; key0_ptr; key1_ptr; iv_ptr] s /\
+         read(memory :> bytes128 ct_ptr) s = ib /\
+         read(memory :> bytes128 iv_ptr) s = iv /\
+         read(memory :> bytes128 key0_ptr) s = k00 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 16))) s = k01 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 32))) s = k02 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 48))) s = k03 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 64))) s = k04 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 80))) s = k05 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 96))) s = k06 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 112))) s = k07 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 128))) s = k08 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 144))) s = k09 /\
+         read(memory :> bytes128 (word_add key0_ptr (word 160))) s = k0a /\
+         read(memory :> bytes128 (word_add key0_ptr (word 176))) s = k0b /\
+         read(memory :> bytes128 (word_add key0_ptr (word 192))) s = k0c /\
+         read(memory :> bytes128 (word_add key0_ptr (word 208))) s = k0d /\
+         read(memory :> bytes128 (word_add key0_ptr (word 224))) s = k0e /\
+         read(memory :> bytes32 (word_add key0_ptr (word 240))) s = word 14 /\
+         read(memory :> bytes128 key1_ptr) s = k10 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 16))) s = k11 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 32))) s = k12 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 48))) s = k13 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 64))) s = k14 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 80))) s = k15 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 96))) s = k16 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 112))) s = k17 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 128))) s = k18 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 144))) s = k19 /\
+         read(memory :> bytes128 (word_add key1_ptr (word 160))) s = k1a /\
+         read(memory :> bytes128 (word_add key1_ptr (word 176))) s = k1b /\
+         read(memory :> bytes128 (word_add key1_ptr (word 192))) s = k1c /\
+         read(memory :> bytes128 (word_add key1_ptr (word 208))) s = k1d /\
+         read(memory :> bytes128 (word_add key1_ptr (word 224))) s = k1e /\
+         read(memory :> bytes32 (word_add key1_ptr (word 240))) s = word 14
+         )
+    (\s. read PC s = word (pc + LENGTH aes_xts_decrypt_mc))
+    (MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 pt_ptr])
+    `,
+  CHEAT_TAC
+);;
