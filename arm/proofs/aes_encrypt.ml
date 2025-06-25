@@ -38,8 +38,8 @@ let AES256_ENCRYPT_CORRECT = prove(
       (\s. aligned_bytes_loaded s (word pc) aes256_encrypt_mc /\
            read PC s = word pc /\
            C_ARGUMENTS [ciphertext; plaintext; key] s /\
-           read(memory :> bytes(plaintext, 16)) s = ib /\
-           read(memory :> bytes(word_add key (word 240), 4)) s = 14 /\
+           read(memory :> bytes128 plaintext) s = ib /\
+           read(memory :> bytes32 (word_add key (word 240))) s = word 14 /\
            read(memory :> bytes128 key) s = k0 /\
            read(memory :> bytes128 (word_add key (word 16))) s = k1 /\
            read(memory :> bytes128 (word_add key (word 32))) s = k2 /\
@@ -61,9 +61,31 @@ let AES256_ENCRYPT_CORRECT = prove(
       // hint: use the aes256_encrypt from aes_encrypt_spec
       (\s. read PC s = word (pc + LENGTH aes256_encrypt_mc) /\
            read(memory :> bytes128 ciphertext) s =
-              aes256_encrypt (word ib)
+              aes256_encrypt ib
                 [k0; k1; k2; k3; k4; k5; k6; k7; k8; k9; k10; k11; k12; k13; k14]
       )
-      (MAYCHANGE [PC;X2],, MAYCHANGE [Q0;Q1;Q6],, MAYCHANGE [W6])`,
-  CHEAT_TAC
+      (MAYCHANGE [PC;X2;X6],, MAYCHANGE [Q0;Q1;Q6],, MAYCHANGE [events],,
+       MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 ciphertext])`,
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
+  REWRITE_TAC [(REWRITE_CONV [aes256_encrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_encrypt_mc`] THEN
+  REPEAT STRIP_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (1--5) THEN
+  (* 1 loop iteration is 8 steps *)
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (6--13) THEN
+  (* 5 more iterations = 8*5 = 40 steps *)
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (14--53) THEN
+  (* 6 final steps *)
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (54--58) THEN
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (59--59) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC [aes256_encrypt] THEN
+  REWRITE_TAC EL_15_128_CLAUSES THEN
+  REWRITE_TAC [aes256_encrypt_round; aese; aesmc]
+  CONV_TAC (TOP_DEPTH_CONV let_CONV) THEN
+  BITBLAST_TAC
+  (* Alternatively, use the XOR symmetry
+  GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+    REFL_TAC *)
 );;
