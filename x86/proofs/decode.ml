@@ -614,7 +614,19 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
             SOME (VPADDW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
-        | _ -> NONE)
+        | [0x71:8] ->
+          let sz = vexL_size L in
+          read_ModRM rex l >>= (\((reg,rm),l).
+            match rm with
+            | RM_reg _ ->
+              read_imm Byte l >>= (\(imm8,l).
+              (let r3:3 word = word_zx reg in
+               bitmatch r3 with
+               | [0b010:3] -> SOME (VPSRLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | [0b100:3] -> SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | _ -> NONE))
+            | _ -> NONE)
+          | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
@@ -781,7 +793,7 @@ let READ_VEXP_CONV =
 
 let DECODE_BT_CONV =
   let pths =
-    let th = CONV_RULE MATCH_CONV' decode_BT in
+    let th = CONV_RULE (BINDER_CONV(RAND_CONV MATCH_CONV')) decode_BT in
     Array.init 4 (fun i ->
       let n = mk_comb (`word:num->2 word`, mk_numeral (num i)) in
       let th = SPEC n th in
@@ -796,7 +808,7 @@ let DECODE_BT_CONV =
 
 let DECODE_BINOP_CONV =
   let pths =
-    let th = CONV_RULE MATCH_CONV' decode_binop in
+    let th = CONV_RULE (BINDER_CONV(RAND_CONV MATCH_CONV')) decode_binop in
     Array.init 16 (fun i ->
       let n = mk_comb (`word:num->4 word`, mk_numeral (num i)) in
       let th = SPEC n th in
@@ -811,7 +823,7 @@ let DECODE_BINOP_CONV =
 
 let CONDITION_ALIAS_thms,DECODE_CONDITION_CONV =
   let pths =
-    let th = CONV_RULE MATCH_CONV' decode_condition in
+    let th = CONV_RULE (BINDER_CONV(RAND_CONV MATCH_CONV')) decode_condition in
     Array.init 16 (fun i ->
       let n = mk_comb (`word:num->4 word`, mk_numeral (num i)) in
       let th = SPEC n th in
@@ -1207,7 +1219,7 @@ let decode'_of_aux = prove
 
 let read_disp_thms =
   let word2 = mk_const ("word", [`:2`,`:N`]) in
-  let th = CONV_RULE MATCH_CONV' read_displacement in
+  let th = CONV_RULE (BINDER_CONV(BINDER_CONV(RAND_CONV MATCH_CONV'))) read_displacement in
   let A = Array.init 3 (fun md ->
     let md' = mk_comb (word2, mk_numeral (num md)) in
     let th = SPEC_ALL (SPEC md' th) in
@@ -1473,20 +1485,25 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       fun ls ->
         let ls', th' = fn (dest_numeral (rand (vsubst ls e))) in
         PROVE_HYP th' (g (ls' @ ls))
-    else if ty = `:byte` then
-      let _,tr = bm_build_pos_tree t in
-      let gs = Array.init 256 (fun n -> try
-        let A = Array.init 8 (fun i -> Some (n land (1 lsl i) != 0)) in
+    else
+     (match ty with
+        Tyapp("word",[wty]) ->
+        let w = try Num.int_of_num(dest_finty wty) with Failure _ -> 1000 in
+        if w > 12 then raise (Invalid_argument
+          ("Unsupported bitmatch size > 12 in " ^ string_of_term t)) else
+        let _,tr = bm_build_pos_tree t in
+        let gs = Array.init (1 lsl w) (fun n -> try
+        let A = Array.init w (fun i -> Some (n land (1 lsl i) != 0)) in
         let th = hd (snd (snd (get_dt A tr))) in
         let ls, th1 = inst_bitpat_numeral (hd (hyp th)) (num n) in
         let th2 = PROVE_HYP th1 (INST ls th) in
         let e' = fst (hd ls) in
         let th = TRANS (AP_THM (AP_TERM f (ASSUME (mk_eq (e, e')))) cs) th2 in
         PROVE_HYP (REFL e') o evaluate (rhs (concl th)) (F o TRANS th)
-      with Failure _ as e -> fun _ -> raise e) in
-      fun ls -> gs.(Num.int_of_num (dest_numeral (rand (rev_assoc e ls)))) ls
-    else
-      raise (Invalid_argument ("Unknown " ^ string_of_term t))
+        with Failure _ as e -> fun _ -> raise e) in
+        fun ls -> gs.(Num.int_of_num (dest_numeral (rand (rev_assoc e ls)))) ls
+      | _ -> raise (Invalid_argument ("Unknown " ^ string_of_term t)))
+
   | Comb(Comb((Const("_MATCH",_) as f),e),cs) ->
     if not (is_var e) then
       let th = CHANGED_CONV MATCH_CONV t in
@@ -2028,8 +2045,10 @@ let add_ll_tac,LL_TAC =
         match type_of e with
         | Tyapp("RM",[]) ->
           SPEC_TAC (e, mk_var("x", type_of e)) THEN
-          MATCH_MP_TAC RM_INDUCTION THEN CONV_TAC MATCH_CONV'
-        | _ -> CONV_TAC MATCH_CONV');
+          MATCH_MP_TAC RM_INDUCTION THEN
+          CONV_TAC (BINOP2_CONV ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV')
+                                ((BINDER_CONV o RAND_CONV o BINDER_CONV) MATCH_CONV'))
+        | _ -> CONV_TAC ((RAND_CONV o BINDER_CONV) MATCH_CONV'));
      `a >>= b`, MATCH_MP_TAC list_linear_obind1]
     empty_net) in
   (fun tm tac -> net := enter [] (tm,tac) !net),
