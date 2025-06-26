@@ -2656,8 +2656,9 @@ let print_literal_relocs_from_elf (file:string) =
 let save_literal_relocs_from_elf (deffile:string) (objfile:string) =
   let filebytes = load_file objfile in
   let bs = load_elf_x86 filebytes in
-  print_string (make_fn_word_list_reloc bs
-    (decode_all (snd (term_of_relocs_x86 bs))));;
+  let ls = make_fn_word_list_reloc bs
+   (decode_all (snd (term_of_relocs_x86 bs))) in
+  file_of_string deffile ls;;
 
 (* ------------------------------------------------------------------------- *)
 (* A very specific form of lemma for simplifying expression representing     *)
