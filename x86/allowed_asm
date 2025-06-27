@@ -124,6 +124,7 @@
 : vpand$
 : vpmulhw$
 : vpmullw$
+: vpsrad$
 : vpsubw$
 : vpsraw$
 : vpsrlw$
