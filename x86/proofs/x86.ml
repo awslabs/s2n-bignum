@@ -1345,6 +1345,18 @@ let x86_VPSUBW = new_definition
         let res:(128)word = simd8 word_sub (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
+(* Only VPSRAD version where shift count is an immediate value is supported *)
+let x86_VPSRAD = new_definition
+  `x86_VPSRAD dest src imm8 (s:x86state) =
+      let (x:N word) = read src s in
+      let count = val (read imm8 s) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd8 (\z. word_ishr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = usimd4 (\z. word_ishr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s`;;
+
 (* Only VPSRAW version where shift count is an immediate value is supported *)
 let x86_VPSRAW = new_definition
   `x86_VPSRAW dest src imm8 (s:x86state) =
@@ -2078,6 +2090,10 @@ let x86_execute = define
         (match operand_size dest with
           256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPSRAD dest src imm8 ->
+        (match operand_size dest with
+          256 -> x86_VPSRAD (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRAD (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
     | XCHG dest src ->
         (match operand_size dest with
           64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
@@ -2800,6 +2816,7 @@ let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
 let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
 let x86_VPMULLW_ALT = EXPAND_SIMD_RULE x86_VPMULLW;;
 let x86_VPSUBW_ALT = EXPAND_SIMD_RULE x86_VPSUBW;;
+let x86_VPSRAD_ALT = EXPAND_SIMD_RULE x86_VPSRAD;;
 let x86_VPSRAW_ALT = EXPAND_SIMD_RULE x86_VPSRAW;;
 let x86_VPSRLW_ALT = EXPAND_SIMD_RULE x86_VPSRLW;;
 
@@ -2821,7 +2838,7 @@ let X86_OPERATION_CLAUSES =
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLW_ALT; x86_VPSUBW_ALT;
-    x86_VPXOR; x86_VPAND; x86_VPSRAW_ALT; x86_VPSRLW_ALT;
+    x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLW_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
