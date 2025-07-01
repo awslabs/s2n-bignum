@@ -121,7 +121,6 @@ Loop_iv_enc:
         ld1 {v20.4s,v21.4s},[x7], #32
         ld1 {v22.4s,v23.4s},[x7], #32
         ld1 {v7.4s},        [x7]
-        // add x7, x3, #32
 
 // decryption
 Lxts_dec:

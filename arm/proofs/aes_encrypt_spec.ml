@@ -19,19 +19,14 @@ AddRoundKey(state, w[0, Nb-1]) // See Sec. 5.1.4
 for round = 1 step 1 to Nr–1
 
 SubBytes(state) // See Sec. 5.1.1
-
 ShiftRows(state) // See Sec. 5.1.2
-
 MixColumns(state) // See Sec. 5.1.3
-
 AddRoundKey(state, w[round*Nb, (round+1)*Nb-1])
 
 end for
 
 SubBytes(state)
-
 ShiftRows(state)
-
 AddRoundKey(state, w[Nr*Nb, (Nr+1)*Nb-1])
 
 out = state
@@ -75,37 +70,30 @@ let aes256_encrypt = new_definition
      word_xor res15 (EL 14 key_schedule)
   `;;
 
-let PRINT_TERM_CONV t = Format.printf "%a\n" pp_print_qterm t; ALL_CONV t;;
-
 let AESENC_ROUND_HELPER_CONV =
-    PRINT_TERM_CONV THENC
   REWRITE_CONV [aes256_encrypt_round] THENC
-  (*PRINT_TERM_CONV THENC*)
   AES_SHIFT_ROWS_CONV THENC
-  (*PRINT_TERM_CONV THENC*)
   AES_SUB_BYTES_CONV THENC
-    PRINT_TERM_CONV THENC
   AES_MIX_COLUMNS_CONV THENC
-    PRINT_TERM_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
-let AESENC_REDUCE_CONV tm =
+let AESENC_ROUND_REDUCE_CONV tm =
   match tm with
     Comb(Comb(Const("aes256_encrypt_round",_),
          Comb(Const("word",_),state)),
          Comb(Const("word",_),roundkey))
     when is_numeral state && is_numeral roundkey -> AESENC_ROUND_HELPER_CONV tm
-    | _ -> failwith "AESENC_REDUCE_CONV: inapplicable";;
+    | _ -> failwith "AESENC_ROUND_REDUCE_CONV: inapplicable";;
 
 prove(`aes256_encrypt_round (word 0x7b5b54657374566563746f725d53475d)
               (word 0x48692853686179295b477565726f6e5d) =
        word 0xa8311c2f9fdba3c58b104b58ded7e595`,
-       CONV_TAC(LAND_CONV AESENC_REDUCE_CONV) THEN REFL_TAC);;
+       CONV_TAC(LAND_CONV AESENC_ROUND_REDUCE_CONV) THEN REFL_TAC);;
 
 prove(`aes256_encrypt_round (word 0xAB60EEF6E1D04EC228EE8A3BF255FC0B)
               (word 0xF4DF1409A310982DD708613B072C351F) =
        word 0x416EAD9670A2C6D71CFE3FCCB03F10D9`,
-       CONV_TAC(LAND_CONV AESENC_REDUCE_CONV) THEN REFL_TAC);;
+       CONV_TAC(LAND_CONV AESENC_ROUND_REDUCE_CONV) THEN REFL_TAC);;
 
 (*
 https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core256.pdf
@@ -162,60 +150,20 @@ let EL_15_128_CLAUSES =
   let pat = `EL n [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14]:128 word` in
   map (fun n -> EL_CONV(subst [mk_small_numeral n,`n:num`] pat)) (0--14);;
 
-REWRITE_CONV [ROUND_KEYS]
-  `let res0 =
-     word_xor (word 143233380420387077518460912116591433514) (EL 0 ROUND_KEYS) in
-  let res1 = aes256_encrypt_round res0 (EL 1 ROUND_KEYS) in
-  let res2 = aes256_encrypt_round res1 (EL 2 ROUND_KEYS) in
-  let res3 = aes256_encrypt_round res2 (EL 3 ROUND_KEYS) in
-  let res4 = aes256_encrypt_round res3 (EL 4 ROUND_KEYS) in
-  let res5 = aes256_encrypt_round res4 (EL 5 ROUND_KEYS) in
-  let res6 = aes256_encrypt_round res5 (EL 6 ROUND_KEYS) in
-  let res7 = aes256_encrypt_round res6 (EL 7 ROUND_KEYS) in
-  let res8 = aes256_encrypt_round res7 (EL 8 ROUND_KEYS) in
-  let res9 = aes256_encrypt_round res8 (EL 9 ROUND_KEYS) in
-  let res10 = aes256_encrypt_round res9 (EL 10 ROUND_KEYS) in
-  let res11 = aes256_encrypt_round res10 (EL 11 ROUND_KEYS) in
-  let res12 = aes256_encrypt_round res11 (EL 12 ROUND_KEYS) in
-  let res13 = aes256_encrypt_round res12 (EL 13 ROUND_KEYS) in
-  let res14 = aes_shift_rows res13 in
-  let res15 = aes_sub_bytes joined_GF2 res14 in
-  word_xor res15 (EL 14 ROUND_KEYS)`;;
-
-let AESENC_HELPER_CONV =
-  PRINT_TERM_CONV THENC
-  REWR_CONV aes256_encrypt THENC
-(*  PRINT_TERM_CONV THENC *)
-  REWRITE_CONV [ROUND_KEYS] THENC
-(*  PRINT_TERM_CONV THENC *)
+let AESENC_HELPER_CONV KEYS =
+  REWRITE_CONV [aes256_encrypt] THENC
+  REWRITE_CONV [KEYS] THENC
   REWRITE_CONV EL_15_128_CLAUSES THENC
-(*  PRINT_TERM_CONV THENC *)
   REPEATC let_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
-  DEPTH_CONV AESENC_REDUCE_CONV THENC
+  DEPTH_CONV AESENC_ROUND_REDUCE_CONV THENC
   AES_SHIFT_ROWS_CONV THENC
   AES_SUB_BYTES_CONV THENC
-  PRINT_TERM_CONV THENC
-  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV)
-  ;;
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (*
-(* This proof works and takes about half a minute on an M3 *)
-let tmp = AESENC_HELPER_CONV
-  `aes256_encrypt
-    (word 0x2A179373117E3DE9969F402EE2BEC16B)
-    ROUND_KEYS`;;
-
-prove(list_mk_comb (`(=):((128)word->(128)word->bool)`,
-      [rand (concl tmp);`(word 0xf881b13d7e5a4b063ca0d2b5bdd1eef3):(128)word`]),
-      REFL_TAC);;
-*)
-
-(*
-(* This other form of the proof works as well in half a minute *)
 time prove (`aes256_encrypt
     (word 0x2A179373117E3DE9969F402EE2BEC16B)
     ROUND_KEYS = word 0xF881B13D7E5A4B063CA0D2B5BDD1EEF3`,
     CONV_TAC(LAND_CONV AESENC_HELPER_CONV) THEN REFL_TAC);;
 *)
-

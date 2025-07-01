@@ -61,13 +61,13 @@ let AESDEC_ROUND_HELPER_CONV =
   AES_INV_MIX_COLUMNS_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
-let AESDEC_REDUCE_CONV tm =
+let AESDEC_ROUND_REDUCE_CONV tm =
   match tm with
     Comb(Comb(Const("aes256_decrypt_round",_),
          Comb(Const("word",_),state)),
          Comb(Const("word",_),roundkey))
     when is_numeral state && is_numeral roundkey -> AESDEC_ROUND_HELPER_CONV tm
-    | _ -> failwith "AESDEC_REDUCE_CONV: inapplicable";;
+    | _ -> failwith "AESDEC_ROUND_REDUCE_CONV: inapplicable";;
 
 (*
 Test case from AWS-LC
@@ -119,13 +119,13 @@ let EL_15_128_CLAUSES =
   let pat = `EL n [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14]:128 word` in
   map (fun n -> EL_CONV(subst [mk_small_numeral n,`n:num`] pat)) (0--14);;
 
-let AESDEC_HELPER_CONV =
+let AESDEC_HELPER_CONV KEYS =
   REWR_CONV aes256_decrypt THENC
-  REWRITE_CONV [DEC_ROUND_KEYS] THENC
+  REWRITE_CONV [KEYS] THENC
   REWRITE_CONV EL_15_128_CLAUSES THENC
   REPEATC let_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
-  DEPTH_CONV AESDEC_REDUCE_CONV THENC
+  DEPTH_CONV AESDEC_ROUND_REDUCE_CONV THENC
   AES_INV_SHIFT_ROWS_CONV THENC
   AES_SUB_BYTES_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV)
@@ -135,5 +135,5 @@ let AESDEC_HELPER_CONV =
 time prove (`aes256_decrypt
     (word 0x8960494b9049fceabf456751cab7a28e)
     DEC_ROUND_KEYS = word 0xffeeddccbbaa99887766554433221100`,
-    CONV_TAC(LAND_CONV AESDEC_HELPER_CONV) THEN REFL_TAC);;
+    CONV_TAC(LAND_CONV (AESDEC_HELPER_CONV DEC_ROUND_KEYS)) THEN REFL_TAC);;
 *)
