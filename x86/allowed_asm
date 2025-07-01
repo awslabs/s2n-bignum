@@ -121,6 +121,7 @@
 : vpxor$
 : vpaddw$
 : vpand$
+: vpbroadcastd$
 : vpmulhw$
 : vpmullw$
 : vpsrad$
