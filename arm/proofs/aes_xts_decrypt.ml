@@ -4,11 +4,13 @@
  *)
 
 use_file_raise_failure := true;;
+arm_print_log := true;;
 
 needs "arm/proofs/base.ml";;
+loadt "arm/proofs/aes_xts_decrypt_spec.ml";;
 
 (* print_literal_from_elf "arm/aes-xts/aes_xts_decrypt_armv8.o";; *)
-let aes_xts_decrypt_mc = define_assert_from_elf "aes_hw_xts_decrypt_mc" "arm/aes-xts/aes_xts_decrypt_armv8.o"
+let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xts/aes_xts_decrypt_armv8.o"
 [
   0xd10103ff;       (* arm_SUB SP SP (rvalue (word 64)) *)
   0x6d0027e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&0))) *)
@@ -725,53 +727,113 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_hw_xts_decrypt_mc" "arm/aes
 
 let AES_XTS_DECRYPT_EXEC = ARM_MK_EXEC_RULE aes_xts_decrypt_mc;;
 
+(** Definitions **)
+
+let set_key_schedule = new_definition
+  `set_key_schedule (s:armstate) (key_ptr:int64) (k0:int128)
+     (k1:int128) (k2:int128) (k3:int128) (k4:int128) (k5:int128)
+     (k6:int128) (k7:int128) (k8:int128) (k9:int128) (ka:int128)
+     (kb:int128) (kc:int128) (kd:int128) (ke:int128) : bool =
+     (read(memory :> bytes128 key_ptr) s = k0 /\
+      read(memory :> bytes128 (word_add key_ptr (word 16))) s = k1 /\
+      read(memory :> bytes128 (word_add key_ptr (word 32))) s = k2 /\
+      read(memory :> bytes128 (word_add key_ptr (word 48))) s = k3 /\
+      read(memory :> bytes128 (word_add key_ptr (word 64))) s = k4 /\
+      read(memory :> bytes128 (word_add key_ptr (word 80))) s = k5 /\
+      read(memory :> bytes128 (word_add key_ptr (word 96))) s = k6 /\
+      read(memory :> bytes128 (word_add key_ptr (word 112))) s = k7 /\
+      read(memory :> bytes128 (word_add key_ptr (word 128))) s = k8 /\
+      read(memory :> bytes128 (word_add key_ptr (word 144))) s = k9 /\
+      read(memory :> bytes128 (word_add key_ptr (word 160))) s = ka /\
+      read(memory :> bytes128 (word_add key_ptr (word 176))) s = kb /\
+      read(memory :> bytes128 (word_add key_ptr (word 192))) s = kc /\
+      read(memory :> bytes128 (word_add key_ptr (word 208))) s = kd /\
+      read(memory :> bytes128 (word_add key_ptr (word 224))) s = ke /\
+      read(memory :> bytes32 (word_add key_ptr (word 240))) s = word 14)`;;
+
+(** Tactics **)
+
+let AESENC_TAC =
+  REWRITE_TAC [aes256_encrypt] THEN
+  REWRITE_TAC EL_15_128_CLAUSES THEN
+  REWRITE_TAC [aes256_encrypt_round] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC [aese;aesmc] THEN
+  GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+  REFL_TAC;;
+
+let AESDEC_TAC =
+  REWRITE_TAC [aes256_decrypt] THEN
+  REWRITE_TAC EL_15_128_CLAUSES THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC [aes256_decrypt_round] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC [aesd;aesimc] THEN
+  (* NOTE: BITBLAST_TAC couldn't handle this goal *)
+  GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN
+  GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REPLICATE_TAC 13 (AP_THM_TAC THEN (REPLICATE_TAC 4 AP_TERM_TAC)) THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN
+  GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN REFL_TAC;;
+
+(** Proof **)
+
 let AES_XTS_DECRYPT_CORRECT = prove(
-  `!ct_ptr pt_ptr len key0_ptr key1_ptr iv_ptr ib iv
+  `!ct_ptr pt_ptr key0_ptr key1_ptr iv_ptr ib iv
     k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e
     k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e
     pc.
-    nonoverlapping (word pc, LENGTH aes_xts_decrypt_mc) (pt_ptr, val len)
+    nonoverlapping (word pc, LENGTH aes_xts_decrypt_mc) (pt_ptr, 16)
     ==> ensures arm
     (\s. aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
-         read PC s = word pc /\
-         C_ARGUMENTS [ct_ptr; pt_ptr; len; key0_ptr; key1_ptr; iv_ptr] s /\
+         read PC s = word (pc + 20) /\
+         C_ARGUMENTS [ct_ptr; pt_ptr; word 16; key0_ptr; key1_ptr; iv_ptr] s /\
          read(memory :> bytes128 ct_ptr) s = ib /\
          read(memory :> bytes128 iv_ptr) s = iv /\
-         read(memory :> bytes128 key0_ptr) s = k00 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 16))) s = k01 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 32))) s = k02 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 48))) s = k03 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 64))) s = k04 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 80))) s = k05 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 96))) s = k06 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 112))) s = k07 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 128))) s = k08 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 144))) s = k09 /\
-         read(memory :> bytes128 (word_add key0_ptr (word 160))) s = k0a /\
-         read(memory :> bytes128 (word_add key0_ptr (word 176))) s = k0b /\
-         read(memory :> bytes128 (word_add key0_ptr (word 192))) s = k0c /\
-         read(memory :> bytes128 (word_add key0_ptr (word 208))) s = k0d /\
-         read(memory :> bytes128 (word_add key0_ptr (word 224))) s = k0e /\
-         read(memory :> bytes32 (word_add key0_ptr (word 240))) s = word 14 /\
-         read(memory :> bytes128 key1_ptr) s = k10 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 16))) s = k11 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 32))) s = k12 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 48))) s = k13 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 64))) s = k14 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 80))) s = k15 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 96))) s = k16 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 112))) s = k17 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 128))) s = k18 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 144))) s = k19 /\
-         read(memory :> bytes128 (word_add key1_ptr (word 160))) s = k1a /\
-         read(memory :> bytes128 (word_add key1_ptr (word 176))) s = k1b /\
-         read(memory :> bytes128 (word_add key1_ptr (word 192))) s = k1c /\
-         read(memory :> bytes128 (word_add key1_ptr (word 208))) s = k1d /\
-         read(memory :> bytes128 (word_add key1_ptr (word 224))) s = k1e /\
-         read(memory :> bytes32 (word_add key1_ptr (word 240))) s = word 14
+         set_key_schedule s key0_ptr k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e /\
+         set_key_schedule s key1_ptr k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e)
+    (\s. read PC s = word (pc + 0xb04) /\
+         read(memory :> bytes128 pt_ptr) s =
+           aes256_xts_decrypt_1block ib iv
+           [k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d; k0e]
+           [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]
          )
-    (\s. read PC s = word (pc + LENGTH aes_xts_decrypt_mc))
-    (MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 pt_ptr])
+    (MAYCHANGE [PC] ,, MAYCHANGE [events] ,,
+     MAYCHANGE [X21;X2;X6;X4;X9;X10;X19;X22;X11;X7;X0;X1] ,,
+     MAYCHANGE [Q6;Q1;Q0;Q8;Q16;Q17;Q12;Q13;Q14;Q15;Q4;Q5;Q18;Q19;Q20;Q21;Q22;Q23;Q7;Q29;Q24] ,,
+     MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 pt_ptr])
     `,
-  CHEAT_TAC
+  REWRITE_TAC [(REWRITE_CONV [aes_xts_decrypt_mc] THENC LENGTH_CONV) `LENGTH aes_xts_decrypt_mc`] THEN
+  REWRITE_TAC[set_key_schedule; C_ARGUMENTS; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
+  REPEAT STRIP_TAC THEN
+
+  (* Start symbolic simulation*)
+  ENSURES_INIT_TAC "s0" THEN
+  (* Simulate until the first tweak and verify the first tweak equiv the spec *)
+  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (1--64) THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC
+    `(aes256_encrypt iv [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]):int128`
+    o  MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
+
+  (* Simulating until finish decrypting one block *)
+  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (65--118) THEN
+  FIRST_X_ASSUM(MP_TAC o
+    SPEC `(aes256_xts_decrypt_1block ib iv
+       [k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d; k0e]
+       [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]):int128`
+    o  MATCH_MP (MESON[] `read Q24 s = a ==> !a'. a = a' ==> read Q24 s = a'`)) THEN
+  ANTS_TAC THENL [
+    REWRITE_TAC [aes256_xts_decrypt_1block] THEN
+    REWRITE_TAC [xts_init_tweak] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+    REWRITE_TAC [aes256_xts_decrypt_round] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+    AESDEC_TAC; DISCH_TAC] THEN
+
+    (* Simulate to the end *)
+    ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (119--130) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC []
 );;
