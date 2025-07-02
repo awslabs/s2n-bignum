@@ -638,6 +638,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                | _ -> NONE))
             | _ -> NONE)
           | _ -> NONE)
+    | VEXM_0F3A ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0x02:8] -> if has_unhandled_pfxs pfxs then NONE else
+          let sz = vexL_size L in
+          read_ModRM rex l >>= \((reg,rm),l).
+          read_imm Byte l >>= \(imm8,l).
+            SOME (VPBLENDD (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8, l)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
