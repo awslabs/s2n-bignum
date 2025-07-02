@@ -1300,6 +1300,23 @@ let x86_SUB = new_definition
          AF := ~(&(val(word_zx x:nybble)) - &(val(word_zx y:nybble)):int =
                  &(val(word_zx z:nybble)))) s`;;
 
+let x86_VMOVSHDUP = new_definition
+  `x86_VMOVSHDUP dest src (s:x86state) =
+      let (x:N word) = read src s in
+      if dimindex(:N) = 256 then
+        let w1 = word_extract (32,32) x in
+        let w3 = word_extract (96,32) x in
+        let w5 = word_extract (160,32) x in
+        let w7 = word_extract (224,32) x in
+        let res = word_concat (word_concat (word_concat (word_concat 
+                  (word_concat (word_concat (word_concat w7 w7) w5) w5) w3) w3) w1) w1 in
+        (dest := (word_zx res):N word) s
+      else
+        let w1 = word_extract (32,32) x in
+        let w3 = word_extract (96,32) x in
+        let res = word_concat (word_concat (word_concat w3 w3) w1) w1 in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPADDW = new_definition
   `x86_VPADDW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -2058,6 +2075,10 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+    | VMOVSHDUP dest src ->
+        (match operand_size dest with
+          256 -> x86_VMOVSHDUP (OPERAND256 dest s) (OPERAND256 src s)
+        | 128 -> x86_VMOVSHDUP (OPERAND128 dest s) (OPERAND128 src s)) s
     | VPADDW dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
@@ -2812,6 +2833,7 @@ let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+let x86_VMOVSHDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSHDUP;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
 let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
 let x86_VPMULLW_ALT = EXPAND_SIMD_RULE x86_VPMULLW;;
@@ -2839,6 +2861,7 @@ let X86_OPERATION_CLAUSES =
     (*** AVX2 instructions ***)
     x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLW_ALT; x86_VPSUBW_ALT;
     x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLW_ALT;
+    x86_VMOVSHDUP_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;

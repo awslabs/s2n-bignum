@@ -118,6 +118,7 @@
 : subq$
 : test$
 : testq$
+: vmovshdup$
 : vpxor$
 : vpaddw$
 : vpand$
