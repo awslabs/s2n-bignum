@@ -1311,6 +1311,32 @@ let x86_VPADDW = new_definition
         let res:(128)word = simd8 word_add (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
+let x86_VPBLENDD = new_definition
+  `x86_VPBLENDD dest src1 src2 imm8 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s
+      and mask = val(read imm8 s) in
+      if dimindex(:N) = 256 then
+        let blend_dword i =
+            if bit i (word mask) then
+              word_extract (i*32,32) y
+            else
+              word_extract (i*32,32) x in
+        let res = word_concat (word_concat (word_concat (word_concat
+                  (word_concat (word_concat (word_concat 
+                  (blend_dword 7) (blend_dword 6)) (blend_dword 5)) (blend_dword 4))
+                  (blend_dword 3)) (blend_dword 2)) (blend_dword 1)) (blend_dword 0) in
+        (dest := (word_zx res):N word) s
+      else
+        let blend_dword i =
+            if bit i (word mask) then
+              word_extract (i*32,32) y
+            else
+              word_extract (i*32,32) x in
+        let res = word_concat (word_concat (word_concat
+                  (blend_dword 3) (blend_dword 2)) (blend_dword 1)) (blend_dword 0) in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPMULHW = new_definition
   `x86_VPMULHW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -2062,6 +2088,10 @@ let x86_execute = define
         (match operand_size dest with
           256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPBLENDD dest src1 src2 imm8 ->
+        (match operand_size dest with
+          256 -> x86_VPBLENDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPBLENDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s
     | VPMULHW dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPMULHW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
@@ -2813,6 +2843,7 @@ let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
+let x86_VPBLENDD_ALT = EXPAND_SIMD_RULE x86_VPBLENDD;;
 let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
 let x86_VPMULLW_ALT = EXPAND_SIMD_RULE x86_VPMULLW;;
 let x86_VPSUBW_ALT = EXPAND_SIMD_RULE x86_VPSUBW;;
@@ -2839,6 +2870,7 @@ let X86_OPERATION_CLAUSES =
     (*** AVX2 instructions ***)
     x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLW_ALT; x86_VPSUBW_ALT;
     x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLW_ALT;
+    x86_VPBLENDD_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
