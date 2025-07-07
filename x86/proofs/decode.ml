@@ -641,7 +641,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     | VEXM_0F3A ->
         read_byte l >>= \(b,l).
         (bitmatch b with
-        | [0x4A:8] ->
+        | [0x02:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
             read_imm Byte l >>= \(imm8,l).
