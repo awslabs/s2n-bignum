@@ -572,9 +572,9 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     SOME (decode_binop (rex_reg T opc) rm (Imm8 b),l)
   | [0xc3:8] -> if has_pfxs pfxs then NONE else
     SOME (RET,l)
-  | [0b1100010:7; vl] -> if has_pfxs pfxs then NONE else
+  | [0b11001:5; vex_type:2; vl] -> if has_pfxs pfxs then NONE else
     if is_some rex then NONE else
-    read_VEX vl l >>= \((rex,m,v,L,pfxs),l).
+    read_VEX (vex_type = word 0) l >>= \((rex,m,v,L,pfxs),l).
     (match m with
       VEXM_0F38 ->
         read_byte l >>= \(b,l).
