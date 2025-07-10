@@ -1316,14 +1316,30 @@ let x86_VPMULDQ = new_definition
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s in
       if dimindex(:N) = 256 then
-        let f = (\(x:32 word) (y:32 word).
-            word_mul ((word_sx x):int64) ((word_sx y):int64)) in
-        let res:(256)word = simd4 f (word_zx x) (word_zx y) in
+        (* 256-bit: extract elements 0,2,4,6 from each source *)
+        let x0 = word_sx (word_subword x (0,32):32 word):int64
+        and x2 = word_sx (word_subword x (64,32):32 word):int64  
+        and x4 = word_sx (word_subword x (128,32):32 word):int64
+        and x6 = word_sx (word_subword x (192,32):32 word):int64
+        and y0 = word_sx (word_subword y (0,32):32 word):int64
+        and y2 = word_sx (word_subword y (64,32):32 word):int64
+        and y4 = word_sx (word_subword y (128,32):32 word):int64  
+        and y6 = word_sx (word_subword y (192,32):32 word):int64 in
+        let r0 = word_mul x0 y0
+        and r1 = word_mul x2 y2
+        and r2 = word_mul x4 y4
+        and r3 = word_mul x6 y6 in
+        let res = word_join (word_join r3 r2) (word_join r1 r0) in
         (dest := (word_zx res):N word) s
       else
-        let f = (\(x:32 word) (y:32 word).
-            word_mul ((word_sx x):int64) ((word_sx y):int64)) in
-        let res:(128)word = simd2 f (word_zx x) (word_zx y) in
+        (* 128-bit: extract elements 0,2 from each source *)
+        let x0 = word_sx (word_subword x (0,32):32 word):int64
+        and x2 = word_sx (word_subword x (64,32):32 word):int64
+        and y0 = word_sx (word_subword y (0,32):32 word):int64
+        and y2 = word_sx (word_subword y (64,32):32 word):int64 in
+        let r0 = word_mul x0 y0
+        and r1 = word_mul x2 y2 in
+        let res = word_join r1 r0 in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHW = new_definition
