@@ -1316,14 +1316,14 @@ let x86_VPMULDQ = new_definition
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s in
       if dimindex(:N) = 256 then
-        let f = (\(x:32 word) (y:32 word). 
-                  word_mul ((word_sx x):int64) ((word_sx y):int64)) in
-        let res:(256)word = simd4_alt f (word_zx x) (word_zx y) in
+        let f = (\(x:32 word) (y:32 word).
+            word_mul ((word_sx x):int64) ((word_sx y):int64)) in
+        let res:(256)word = simd4 f (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s
       else
-        let f = (\(x:32 word) (y:32 word). 
-                  word_mul ((word_sx x):int64) ((word_sx y):int64)) in
-        let res:(128)word = simd2_alt f (word_zx x) (word_zx y) in
+        let f = (\(x:32 word) (y:32 word).
+            word_mul ((word_sx x):int64) ((word_sx y):int64)) in
+        let res:(128)word = simd2 f (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHW = new_definition
