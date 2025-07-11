@@ -99,18 +99,6 @@ jobs:
         CC=gcc make
         make clean
         CC=clang make
-        echo "Run AWS-LC integration test (GITHUB_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}, GITHUB_TARGET: $GITHUB_HEAD_REF)"
-        cd ..
-        git clone https://github.com/aws/aws-lc.git --depth=1
-        cd aws-lc/third_party/s2n-bignum
-        rm -rf ./s2n-bignum-imported
-        GITHUB_REPOSITORY=${{ github.event.pull_request.head.repo.full_name }}.git GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
-        cd ../../../
-        mkdir aws-lc-build && cd aws-lc-build
-        cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
-        ninja-build run_tests
-        cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=Off ../aws-lc
-        ninja-build run_tests
 
   s2n-bignum-x86-aws-lc-integration:
     runs-on: ubuntu-24.04
