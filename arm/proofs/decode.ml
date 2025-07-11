@@ -344,6 +344,14 @@ let decode = new_definition `!w:int32. decode w =
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
+  // LDUR/STUR, only sizes 64 and 32
+  | [0b1:1; x; 0b1110000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst is_ld x Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+
+  // LDURB/STURB
+  | [0b001110000:9; is_ld; 0:1; imm9:9; 0:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstb is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+
   // LD1/ST1 (multiple structures), 1 register,
   //   Post-immediate offset and post-register offset, and no offset.
   //
