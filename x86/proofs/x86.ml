@@ -1326,29 +1326,15 @@ let x86_VPMULDQ = new_definition
   `x86_VPMULDQ dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s in
+      let f =
+        \x y. word_mul
+          (word_sx ((word_subword:int64->num#num->int32) x (0,32))) 
+          (word_sx ((word_subword:int64->num#num->int32) y (0,32))) in
       if dimindex(:N) = 256 then
-        let x0 = word_subword x (0,32)
-        and x2 = word_subword x (64,32)
-        and x4 = word_subword x (128,32)
-        and x6 = word_subword x (192,32)
-        and y0 = word_subword y (0,32) 
-        and y2 = word_subword y (64,32)
-        and y4 = word_subword y (128,32) 
-        and y6 = word_subword y (192,32) in
-        let r0 = word_mul (word_sx x0) (word_sx y0)
-        and r1 = word_mul (word_sx x2) (word_sx y2)
-        and r2 = word_mul (word_sx x4) (word_sx y4)
-        and r3 = word_mul (word_sx x6) (word_sx y6) in
-        let res = word_join (word_join r3 r2) (word_join r1 r0) in
+        let res:(256)word = simd4 f (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s
       else
-        let x0 = word_subword x (0,32) 
-        and x2 = word_subword x (64,32)
-        and y0 = word_subword y (0,32) 
-        and y2 = word_subword y (64,32) in
-        let r0 = word_mul (word_sx x0) (word_sx y0)
-        and r1 = word_mul (word_sx x2) (word_sx y2) in
-        let res = word_join r1 r0 in
+        let res:(128)word = simd2 f (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHW = new_definition
