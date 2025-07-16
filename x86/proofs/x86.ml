@@ -1304,17 +1304,24 @@ let x86_VMOVSHDUP = new_definition
   `x86_VMOVSHDUP dest src (s:x86state) =
       let (x:N word) = read src s in
       if dimindex(:N) = 256 then
-        let w1 = word_extract (32,32) x in
-        let w3 = word_extract (96,32) x in
-        let w5 = word_extract (160,32) x in
-        let w7 = word_extract (224,32) x in
-        let res = word_concat (word_concat (word_concat (word_concat 
-                  (word_concat (word_concat (word_concat w7 w7) w5) w5) w3) w3) w1) w1 in
+        let w1 = (word_subword:int256->num#num->int32) (word_zx x) (32,32) in
+        let w3 = (word_subword:int256->num#num->int32) (word_zx x) (96,32) in
+        let w5 = (word_subword:int256->num#num->int32) (word_zx x) (160,32) in
+        let w7 = (word_subword:int256->num#num->int32) (word_zx x) (224,32) in
+        let pair0 = (word_join:int32->int32->int64) w1 w1 in
+        let pair1 = (word_join:int32->int32->int64) w3 w3 in
+        let pair2 = (word_join:int32->int32->int64) w5 w5 in
+        let pair3 = (word_join:int32->int32->int64) w7 w7 in
+        let low128 = (word_join:int64->int64->int128) pair1 pair0 in
+        let high128 = (word_join:int64->int64->int128) pair3 pair2 in
+        let res:(256)word = (word_join:int128->int128->int256) high128 low128 in
         (dest := (word_zx res):N word) s
       else
-        let w1 = word_extract (32,32) x in
-        let w3 = word_extract (96,32) x in
-        let res = word_concat (word_concat (word_concat w3 w3) w1) w1 in
+        let w1 = (word_subword:int128->num#num->int32) (word_zx x) (32,32) in
+        let w3 = (word_subword:int128->num#num->int32) (word_zx x) (96,32) in
+        let pair0 = (word_join:int32->int32->int64) w1 w1 in
+        let pair1 = (word_join:int32->int32->int64) w3 w3 in
+        let res:(128)word = (word_join:int64->int64->int128) pair1 pair0 in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPADDW = new_definition
