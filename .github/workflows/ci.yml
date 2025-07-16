@@ -15,11 +15,7 @@ jobs:
     - name: Install dependent packages
       run: |
         sudo apt update
-        sudo apt install valgrind cmake golang ninja-build
-        which ninja
-        sudo ln -s /usr/bin/ninja /usr/bin/ninja-build
-        which cmake
-        ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
+        sudo apt install valgrind
 
     - name: Run tests
       run: |
@@ -40,8 +36,26 @@ jobs:
         CC=gcc make
         make clean
         CC=clang make
+
+  s2n-bignum-arm-aws-lc-integration:
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install valgrind cmake golang ninja-build
+        which ninja
+        sudo ln -s /usr/bin/ninja /usr/bin/ninja-build
+        which cmake
+        ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
+
+    - name: Run tests
+      run: |
         echo "Run AWS-LC integration test (GITHUB_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}, GITHUB_TARGET: $GITHUB_HEAD_REF)"
-        cd ..
         git clone https://github.com/aws/aws-lc.git --depth=1
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
@@ -60,14 +74,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Run tests
+    - name: Install dependent packages
       run: |
         sudo apt update
-        sudo apt install valgrind cmake golang ninja-build
-        which ninja
-        sudo ln -s /usr/bin/ninja /usr/bin/ninja-build
-        which cmake
-        ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
+        sudo apt install valgrind
+
+    - name: Run tests
+      run: |
         cd x86
         make
         cd ../x86_att && make clobber && make && git diff --exit-code .
@@ -86,8 +99,26 @@ jobs:
         CC=gcc make
         make clean
         CC=clang make
+
+  s2n-bignum-x86-aws-lc-integration:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install valgrind cmake golang ninja-build
+        which ninja
+        sudo ln -s /usr/bin/ninja /usr/bin/ninja-build
+        which cmake
+        ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
+
+    - name: Run tests
+      run: |
         echo "Run AWS-LC integration test (GITHUB_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}, GITHUB_TARGET: $GITHUB_HEAD_REF)"
-        cd ..
         git clone https://github.com/aws/aws-lc.git --depth=1
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
