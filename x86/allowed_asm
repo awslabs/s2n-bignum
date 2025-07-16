@@ -122,6 +122,7 @@
 : vpaddw$
 : vpaddd$
 : vpand$
+: vpmuldq$
 : vpmulhw$
 : vpmullw$
 : vpsrad$
