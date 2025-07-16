@@ -1326,12 +1326,15 @@ let x86_VPBROADCASTD = new_definition
   `x86_VPBROADCASTD dest src (s:x86state) =
       let (x:N word) = read src s in
       if dimindex(:N) = 256 then
-        let dw = word_extract (0,32) x in
-        let res:(256)word = word_replicate 8 32 dw in
+        let dw = word_subword x (0,32) in
+        let dw64 = word_join (dw:32 word) (dw:32 word):64 word in
+        let dw128 = word_join dw64 dw64:128 word in
+        let res:(256)word = word_join dw128 dw128 in
         (dest := (word_zx res):N word) s
       else
-        let dw = word_extract (0,32) x in
-        let res:(128)word = word_replicate 4 32 dw in
+        let dw = word_subword x (0,32) in
+        let dw64 = word_join (dw:32 word) (dw:32 word):64 word in
+        let res:(128)word = word_join dw64 dw64 in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHW = new_definition
