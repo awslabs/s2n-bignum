@@ -121,10 +121,12 @@
 : vmovshdup$
 : vpxor$
 : vpaddw$
+: vpaddd$
 : vpand$
 : vpmulhw$
 : vpmullw$
 : vpsrad$
+: vpsubd$
 : vpsubw$
 : vpsraw$
 : vpsrlw$
