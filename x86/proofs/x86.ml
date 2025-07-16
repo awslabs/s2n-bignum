@@ -1316,25 +1316,22 @@ let x86_VPBLENDD = new_definition
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s
       and mask = val(read imm8 s) in
+      let f = \i (x:32 word) (y:32 word). if bit i (word mask) then y else x in
       if dimindex(:N) = 256 then
-        let blend_dword i =
-            if bit i (word mask) then
-              word_extract (i*32,32) y
-            else
-              word_extract (i*32,32) x in
-        let res = word_concat (word_concat (word_concat (word_concat
-                  (word_concat (word_concat (word_concat 
-                  (blend_dword 7) (blend_dword 6)) (blend_dword 5)) (blend_dword 4))
-                  (blend_dword 3)) (blend_dword 2)) (blend_dword 1)) (blend_dword 0) in
+        let res:(256)word = simd8 (f 0) (word_zx x) (word_zx y) in
+        let res:(256)word = simd8 (f 1) res (word_zx y) in
+        let res:(256)word = simd8 (f 2) res (word_zx y) in
+        let res:(256)word = simd8 (f 3) res (word_zx y) in
+        let res:(256)word = simd8 (f 4) res (word_zx y) in
+        let res:(256)word = simd8 (f 5) res (word_zx y) in
+        let res:(256)word = simd8 (f 6) res (word_zx y) in
+        let res:(256)word = simd8 (f 7) res (word_zx y) in
         (dest := (word_zx res):N word) s
       else
-        let blend_dword i =
-            if bit i (word mask) then
-              word_extract (i*32,32) y
-            else
-              word_extract (i*32,32) x in
-        let res = word_concat (word_concat (word_concat
-                  (blend_dword 3) (blend_dword 2)) (blend_dword 1)) (blend_dword 0) in
+        let res:(128)word = simd4 (f 0) (word_zx x) (word_zx y) in
+        let res:(128)word = simd4 (f 1) res (word_zx y) in
+        let res:(128)word = simd4 (f 2) res (word_zx y) in
+        let res:(128)word = simd4 (f 3) res (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHW = new_definition
