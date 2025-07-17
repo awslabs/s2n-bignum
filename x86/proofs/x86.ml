@@ -1315,25 +1315,20 @@ let x86_VPBLENDD = new_definition
   `x86_VPBLENDD dest src1 src2 imm8 (s:x86state) =
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s
-      and mask = val(read imm8 s) in
-      let f = \i (x:32 word) (y:32 word). if bit i (word mask) then y else x in
+      and mask_val = val(read imm8 s) in
       if dimindex(:N) = 256 then
-        let res:(256)word = simd8 (f 0) (word_zx x) (word_zx y) in
-        let res:(256)word = simd8 (f 1) res (word_zx y) in
-        let res:(256)word = simd8 (f 2) res (word_zx y) in
-        let res:(256)word = simd8 (f 3) res (word_zx y) in
-        let res:(256)word = simd8 (f 4) res (word_zx y) in
-        let res:(256)word = simd8 (f 5) res (word_zx y) in
-        let res:(256)word = simd8 (f 6) res (word_zx y) in
-        let res:(256)word = simd8 (f 7) res (word_zx y) in
+        let res:(256)word = usimd8 (\(i:(3)word). 
+          let x_elem = word_subword (word_zx x) ((val i)*32, 32)
+          and y_elem = word_subword (word_zx y) ((val i)*32, 32) in
+          if bit (val i) (word mask_val) then y_elem else x_elem) (word_zx x) in
         (dest := (word_zx res):N word) s
       else
-        let res:(128)word = simd4 (f 0) (word_zx x) (word_zx y) in
-        let res:(128)word = simd4 (f 1) res (word_zx y) in
-        let res:(128)word = simd4 (f 2) res (word_zx y) in
-        let res:(128)word = simd4 (f 3) res (word_zx y) in
+        let res:(128)word = usimd4 (\(i:(2)word). 
+          let x_elem = word_subword (word_zx x) ((val i)*32, 32)
+          and y_elem = word_subword (word_zx y) ((val i)*32, 32) in
+          if bit (val i) (word mask_val) then y_elem else x_elem) (word_zx x) in
         (dest := (word_zx res):N word) s`;;
-
+        
 let x86_VPMULHW = new_definition
   `x86_VPMULHW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
