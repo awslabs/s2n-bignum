@@ -133,25 +133,6 @@ let num_two_to_64 = Num.num_of_string "18446744073709551616";;
 (* This makes MESON quiet. *)
 verbose := false;;
 
-
-let READ_MEMORY_MERGE_CONV =
-  let baseconv =
-    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT] THENC
-    LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
-     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
-               RAND_CONV WORD_ADD_CONV))))) in
-  let rec conv tm =
-    (baseconv THENC BINOP_CONV(TRY_CONV conv)) tm in
-  conv;;
-
-let MEMORY_SPLIT_TAC k =
-  let tac =
-    STRIP_ASSUME_TAC o
-    CONV_RULE (BINOP_CONV(BINOP2_CONV
-       (ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) WORD_REDUCE_CONV)) o
-    GEN_REWRITE_RULE I [el k (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] in
-  EVERY_ASSUM (fun th -> try tac th with Failure _ -> ALL_TAC);;
-
 (*** Before and after tactics for goals that either do or don't involve
  *** memory operations (memop = they do). Non-memory ones are simpler and
  *** quicker; the memory ones do some more elaborate fiddling with format
@@ -164,7 +145,8 @@ let extra_simp_tac =
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
               WORD_RULE `word_sub (word_add x y) y:N word = x`;
               WORD_ADD_0; WORD_SUB_0] THEN
-  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[];;
+  CONV_TAC(DEPTH_CONV
+   (WORD_NUM_RED_CONV ORELSEC apply_extra_word_convs)) THEN REWRITE_TAC[];;
 
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
@@ -196,9 +178,11 @@ and tac_main (memopidx: int option) mc states =
 and tac_after memop =
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
+  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
-  ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 WORD_ADD_0; WORD_SUB_0]) THEN
+  ASM_REWRITE_TAC[CONJUNCT1 WORD_ADD_0; WORD_SUB_0] THEN
+  extra_simp_tac THEN
   PRINT_GOAL_TAC THEN NO_TAC;;
 
 (*** Cosimulate a list of ARM instruction codes against hardware.
@@ -320,6 +304,51 @@ let movz_Xn_imm rd imm =
   pow2 21 */ num_of_string "0b11010010100" +/
   pow2 5 */ num(imm mod 65536) +/
   num rd;;
+
+(*** This covers scalar (32-bit or 64-bit) and simd (128-bit only)
+ *** LDR and STR with either a register or shifted register offset,
+ *** but no non-trivial register extensions, only UXTX.
+ ***)
+
+let cosimulate_ldstr() =
+  let simd = Random.int 2
+  and rn = Random.int 32
+  and isld = Random.int 2 in
+  let full = if simd = 1 then 1 else Random.int 2 in
+  let rm = (rn + 1 + Random.int 31) mod 32
+  and rt =
+    if simd = 1 then Random.int 32
+    else (rn + 1 + Random.int 31) mod 32 in
+  let headroom =
+    if simd = 1 then 16
+    else if full = 1 then 8 else 4 in
+  let rawstackoff = Random.int (256 - headroom) in
+  let stackoff =
+    if rn = 31 then 16 * (rawstackoff / 16)
+    else rawstackoff in
+  let shift =
+    if Random.bool() then 0
+    else if simd = 1 then 4
+    else if full = 1 then 3 else 2 in
+  let shifted = if shift = 0 then 0 else 1 in
+  let extraoff = Random.int (256-headroom-stackoff) in
+  let regoff = extraoff lsr shift in
+  let code =
+    pow2 30 */ num(if simd = 1 then 0b00 else 0b10 + full) +/
+    pow2 24 */ num 0b111000 +/
+    pow2 23 */ num (9 * simd) +/
+    pow2 22 */ num isld +/
+    pow2 21 +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num 0b011 +/
+    pow2 12 */ num shifted +/
+    pow2 10 */ num 0b10 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_Xn rn];;
 
 (*** The post-register and no-offset modes are exercised only for LD1/ST1
  *** since they are not currently supported for LD2/ST2.
@@ -468,8 +497,39 @@ let cosimulate_ld1r() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+let cosimulate_ldst3() =
+  let datasize = Random.int 2
+  and isld = Random.int 2
+  and esize = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let someoffset = 1 in
+  let regoffr = Random.int 32 in
+  let regoff =
+    if regoffr = rn || rn = 31 || Random.bool() then 31
+    else regoffr in
+  let stackoff =
+    if rn = 31 then Random.int 13 * 16
+    else Random.int 208 in
+  let postinc = 24 * (datasize + 1)  in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 23 */ num someoffset +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num regoff +/
+    pow2 12 */ num 0b0100 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
-   [cosimulate_ldst_12; cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r; cosimulate_ldstu];;
+   [cosimulate_ldstr; cosimulate_ldst_12; cosimulate_ldst_1_2reg;
+    cosimulate_ldstrb; cosimulate_ld1r; cosimulate_ldst3; cosimulate_ldstu];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in
