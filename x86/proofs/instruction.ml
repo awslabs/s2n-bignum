@@ -305,6 +305,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TEST operand operand
    | TZCNT operand operand
    | VPADDW operand operand operand
+   | VPADDD operand operand operand
    | VPAND operand operand operand
    | VPBLENDD operand operand operand operand
    | VPMULHW operand operand operand
@@ -312,6 +313,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSRAD operand operand operand
    | VPSRAW operand operand operand
    | VPSRLW operand operand operand
+   | VPSUBD operand operand operand
    | VPSUBW operand operand operand
    | VPXOR operand operand operand
    | XCHG operand operand

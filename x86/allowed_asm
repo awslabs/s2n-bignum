@@ -120,11 +120,13 @@
 : testq$
 : vpxor$
 : vpaddw$
+: vpaddd$
 : vpand$
 : vpblendd$
 : vpmulhw$
 : vpmullw$
 : vpsrad$
+: vpsubd$
 : vpsubw$
 : vpsraw$
 : vpsrlw$
