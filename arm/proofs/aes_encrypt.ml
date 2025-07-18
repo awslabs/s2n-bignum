@@ -57,8 +57,6 @@ let AES256_ENCRYPT_CORRECT = prove(
            read(memory :> bytes128 (word_add key (word 224))) s = k14
       )
       // postcondition
-      // TODO: Nevine will figure out the post condition for output
-      // hint: use the aes256_encrypt from aes_encrypt_spec
       (\s. read PC s = word (pc + LENGTH aes256_encrypt_mc) /\
            read(memory :> bytes128 ciphertext) s =
               aes256_encrypt ib
@@ -82,7 +80,7 @@ let AES256_ENCRYPT_CORRECT = prove(
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC [aes256_encrypt] THEN
   REWRITE_TAC EL_15_128_CLAUSES THEN
-  REWRITE_TAC [aes256_encrypt_round; aese; aesmc]
+  REWRITE_TAC [aes256_encrypt_round; aese; aesmc] THEN
   CONV_TAC (TOP_DEPTH_CONV let_CONV) THEN
   BITBLAST_TAC
   (* Alternatively, use the XOR symmetry

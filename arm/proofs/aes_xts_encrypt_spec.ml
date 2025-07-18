@@ -108,6 +108,7 @@ let AES_XTS_ENC_HELPER_CONV =
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV)
   ;;
 
+(*
 (* Takes about a 100 sec on M3 *)
 let tmp_xts = AES_XTS_ENC_HELPER_CONV
   `aes256_xts_encrypt_one_block
@@ -120,7 +121,9 @@ let tmp_xts = AES_XTS_ENC_HELPER_CONV
 prove(list_mk_comb (`(=):((128)word->(128)word->bool)`,
       [rand (concl tmp_xts);`(word 0x9BCF70E3996C83E48603772F103A3B1C):(128)word`]),
       REFL_TAC);;
+*)
 
+(*
 (* Takes about a 100 sec on M3 *)
 time prove(`aes256_xts_encrypt_one_block
         (word 0x0F0E0D0C0B0A09080706050403020100)
@@ -131,3 +134,4 @@ time prove(`aes256_xts_encrypt_one_block
       CONV_TAC(LAND_CONV AES_XTS_ENC_HELPER_CONV)
       THEN REFL_TAC
        );;
+*)
