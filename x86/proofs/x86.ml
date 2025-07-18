@@ -1300,6 +1300,17 @@ let x86_SUB = new_definition
          AF := ~(&(val(word_zx x:nybble)) - &(val(word_zx y:nybble)):int =
                  &(val(word_zx z:nybble)))) s`;;
 
+let x86_VPADDD = new_definition
+  `x86_VPADDD dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd8 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd4 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPADDW = new_definition
   `x86_VPADDW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -1311,15 +1322,37 @@ let x86_VPADDW = new_definition
         let res:(128)word = simd8 word_add (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
-let x86_VPADDD = new_definition
-  `x86_VPADDD dest src1 src2 (s:x86state) =
+(* TODO: move to HOL Light *)
+let msimd2 = new_definition
+ `(msimd2:(M word->N word->N word->N word)->
+        ((M)tybit0)word->((N)tybit0)word->((N)tybit0) word->((N)tybit0) word) f m x y =
+    word_join (f (word_subword m (dimindex(:M),dimindex(:M)))
+                 (word_subword x (dimindex(:N),dimindex(:N)))
+                 (word_subword y (dimindex(:N),dimindex(:N))))
+              (f (word_subword m (0,dimindex(:M)))
+                 (word_subword x (0,dimindex(:N)))
+                 (word_subword y (0,dimindex(:N))))`;;
+
+let msimd4 = new_definition
+ `msimd4 (f:M word->N word->N word->N word) = msimd2 (msimd2 f)`;;
+
+let msimd8 = new_definition
+ `msimd8 (f:M word->N word->N word->N word) = msimd2 (msimd4 f)`;;
+
+let msimd16 = new_definition
+ `msimd16 (f:M word->N word->N word->N word) = msimd2 (msimd8 f)`;;
+
+let x86_VPBLENDD = new_definition
+  `x86_VPBLENDD dest src1 src2 imm8 (s:x86state) =
       let (x:N word) = read src1 s
-      and (y:N word) = read src2 s in
+      and (y:N word) = read src2 s
+      and imm8 = read imm8 s in
+      let fn = \(i:(1)word) (x:int32) (y:int32). if i = word 1 then x else y in
       if dimindex(:N) = 256 then
-        let res:(256)word = simd8 word_add (word_zx x) (word_zx y) in
+        let res:(256)word = msimd8 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s
       else
-        let res:(128)word = simd4 word_add (word_zx x) (word_zx y) in
+        let res:(128)word = msimd4 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHW = new_definition
@@ -2080,14 +2113,18 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
-    | VPADDW dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | VPADDD dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPADDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPADDW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPBLENDD dest src1 src2 imm8 ->
+        (match operand_size dest with
+          256 -> x86_VPBLENDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPBLENDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s
     | VPMULHW dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPMULHW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
@@ -2831,7 +2868,7 @@ let x86_RET_POP_RIP = prove
 (*** Simplify word operations in SIMD instructions ***)
 
 let all_simd_rules =
-   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2];;
+   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
@@ -2844,6 +2881,7 @@ let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
 let x86_VPADDD_ALT = EXPAND_SIMD_RULE x86_VPADDD;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
+let x86_VPBLENDD_ALT = EXPAND_SIMD_RULE x86_VPBLENDD;;
 let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
 let x86_VPMULLW_ALT = EXPAND_SIMD_RULE x86_VPMULLW;;
 let x86_VPSUBD_ALT = EXPAND_SIMD_RULE x86_VPSUBD;;
@@ -2869,7 +2907,7 @@ let X86_OPERATION_CLAUSES =
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
-    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT;
+    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPBLENDD_ALT; x86_VPMULHW_ALT; x86_VPMULLW_ALT;
     x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLW_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
