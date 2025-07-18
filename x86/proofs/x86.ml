@@ -1311,24 +1311,39 @@ let x86_VPADDW = new_definition
         let res:(128)word = simd8 word_add (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
+(* TODO: move to HOL Light *)
+let msimd2 = new_definition
+ `(msimd2:(M word->N word->N word->N word)->
+        ((M)tybit0)word->((N)tybit0)word->((N)tybit0) word->((N)tybit0) word) f m x y =
+    word_join (f (word_subword m (dimindex(:M),dimindex(:M)))
+                 (word_subword x (dimindex(:N),dimindex(:N)))
+                 (word_subword y (dimindex(:N),dimindex(:N))))
+              (f (word_subword m (0,dimindex(:M)))
+                 (word_subword x (0,dimindex(:N)))
+                 (word_subword y (0,dimindex(:N))))`;;
+
+let msimd4 = new_definition
+ `msimd4 (f:M word->N word->N word->N word) = msimd2 (msimd2 f)`;;
+
+let msimd8 = new_definition
+ `msimd8 (f:M word->N word->N word->N word) = msimd2 (msimd4 f)`;;
+
+let msimd16 = new_definition
+ `msimd16 (f:M word->N word->N word->N word) = msimd2 (msimd8 f)`;;
+
 let x86_VPBLENDD = new_definition
   `x86_VPBLENDD dest src1 src2 imm8 (s:x86state) =
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s
-      and mask_val = val(read imm8 s) in
+      and imm8 = read imm8 s in
+      let fn = \(i:(1)word) (x:int32) (y:int32). if i = word 1 then x else y in
       if dimindex(:N) = 256 then
-        let res:(256)word = usimd8 (\(i:(3)word). 
-          let x_elem = word_subword (word_zx x) ((val i)*32, 32)
-          and y_elem = word_subword (word_zx y) ((val i)*32, 32) in
-          if bit (val i) (word mask_val) then y_elem else x_elem) (word_zx x) in
+        let res:(256)word = msimd8 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s
       else
-        let res:(128)word = usimd4 (\(i:(2)word). 
-          let x_elem = word_subword (word_zx x) ((val i)*32, 32)
-          and y_elem = word_subword (word_zx y) ((val i)*32, 32) in
-          if bit (val i) (word mask_val) then y_elem else x_elem) (word_zx x) in
+        let res:(128)word = msimd4 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
-        
+
 let x86_VPMULHW = new_definition
   `x86_VPMULHW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -2823,7 +2838,7 @@ let x86_RET_POP_RIP = prove
 (*** Simplify word operations in SIMD instructions ***)
 
 let all_simd_rules =
-   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2];;
+   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
