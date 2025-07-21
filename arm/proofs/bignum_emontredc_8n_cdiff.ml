@@ -517,134 +517,6 @@ let lemma2 = prove
 (*          Prove the ensures_n version of the mainloop correctness.         *)
 (* ========================================================================= *)
 
-(* A few ensures_n variants of tactics...
-   Q: Having this ensures_n variant of symbolic simulation tactics introduces
-      a lot of redundancy... One possible solution would be, to update
-      existing symbolic simulation tactics to detect whether the goal is
-      using ensures or ensures_n, and properly apply corresponding lemmas. *)
-
-let ENSURES_N_BIGNUM_TERMRANGE_TAC =
-  let pth = prove
-   (`!k m. m < 2 EXP (64 * k) \/ !s x. ~(bignum_from_memory (x,k) s = m)`,
-    MESON_TAC[BIGNUM_FROM_MEMORY_BOUND]) in
-  fun k m ->
-    DISJ_CASES_THEN2
-     ASSUME_TAC
-     (fun th -> REWRITE_TAC[th; ENSURES_N_TRIVIAL] THEN NO_TAC)
-     (SPECL [k; m] pth);;
-
-
-let ENSURES_N_CONSTANT_PRECONDITION = prove
- (`!step p (q:A->bool) r n.
-        ensures_n step (\s. p) q r n <=> p ==> ensures_n step (\s. T) q r n`,
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `p:bool` THEN
-  ASM_REWRITE_TAC[ENSURES_N_TRIVIAL]);;
-
-let ENSURES_N_CONSTANT_PRECONDITION_CONJUNCTS = prove
- (`(!step p p' (q:A->bool) r n.
-        ensures_n step (\s. p /\ p' s) q r n <=>
-        p ==> ensures_n step (\s. p' s) q r n) /\
-   (!step p p' (q:A->bool) r n.
-        ensures_n step (\s. p' s /\ p) q r n <=>
-        p ==> ensures_n step (\s. p' s) q r n)`,
-  REPEAT STRIP_TAC THEN ASM_CASES_TAC `p:bool` THEN
-  ASM_REWRITE_TAC[ENSURES_N_TRIVIAL]);;
-
-let (ENSURES_N_GLOBALIZE_PRECONDITION_TAC:tactic) =
-  let tac1 = GEN_REWRITE_TAC I [ENSURES_N_CONSTANT_PRECONDITION] THEN
-             DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)
-  and tac2 = GEN_REWRITE_TAC I
-              [CONJUNCT2 ENSURES_N_CONSTANT_PRECONDITION_CONJUNCTS] THEN
-             DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) in
-  fun (_,w as gl) ->
-    let mom,nstep = dest_comb w in
-    let pap,fra = dest_comb mom in
-    let enp,pos = dest_comb pap in
-    let ens,pre = dest_comb enp in
-    let sv,pbod = dest_abs pre in
-    let cjs1,cjs2 = partition (free_in sv) (conjuncts pbod) in
-    if cjs1 = [] then tac1 gl else if cjs2 = [] then ALL_TAC gl else
-    let th1 = CONJ_ACI_RULE
-     (mk_eq(pbod,mk_conj(list_mk_conj cjs1,list_mk_conj cjs2))) in
-    let th2 = AP_THM (AP_THM (AP_THM (AP_TERM ens (ABS sv th1)) pos) fra) nstep in
-    (CONV_TAC(K th2) THEN tac2) gl;;
-
-let ARM_N_SIM_TAC execth stnames =
-  REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_N_INIT_TAC "s0" THEN
-  ARM_N_STEPS_TAC execth stnames "" [] None THEN
-  ENSURES_N_FINAL_STATE_TAC THEN
-  ASM_REWRITE_TAC[];;
-
-let ENSURES_N_FORGET_COMPONENTS_TAC =
-  let lemma = prove
-   (`!p' q'. ensures_n step p' q' c n /\
-             (!s. p s ==> p' s) /\ (!s s'. p s /\ q' s' /\ c s s' ==> q s')
-             ==> ensures_n step p q c n`,
-    REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[IMP_CONJ_ALT] THEN STRIP_TAC THEN
-    MATCH_MP_TAC ENSURES_N_SUBLEMMA_THM THEN
-    ASM_REWRITE_TAC[SUBSUMED_REFL]) in
-  fun ctm ->
-    let rec funch tm =
-      match tm with
-        Comb(Const("read",_),c) -> mem c ctm
-      | Comb(s,t) -> funch s && funch t
-      | Abs(x,t) -> funch t
-      | Const("bytes_loaded",_) -> false
-      | Const("aligned_bytes_loaded",_) -> false
-      | _ -> true in
-    fun (_,w as gl) ->
-      let mom,nsteps = dest_comb w in
-      let pap,fra = dest_comb mom in
-      let enp,pos = dest_comb pap in
-      let ens,pre = dest_comb enp in
-      let sv,pbod = dest_abs pre
-      and tv,qbod = dest_abs pos in
-      let pcjs = filter (not o funch) (conjuncts pbod)
-      and qcjs = filter (not o funch) (conjuncts qbod) in
-     (MATCH_MP_TAC lemma THEN
-      EXISTS_TAC(mk_abs(sv,list_mk_conj pcjs)) THEN
-      EXISTS_TAC(mk_abs(tv,list_mk_conj qcjs)) THEN
-      CONJ_TAC THENL
-       [ALL_TAC;
-        CONJ_TAC THENL
-         [REWRITE_TAC[] THEN GEN_TAC THEN STRIP_TAC THEN
-          ASM_REWRITE_TAC[] THEN NO_TAC;
-          REWRITE_TAC[] THEN REPEAT GEN_TAC THEN
-          REPLICATE_TAC 2 (DISCH_THEN(CONJUNCTS_THEN2
-           (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) MP_TAC)) THEN
-          REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
-          REWRITE_TAC[GSYM SEQ_ASSOC] THEN
-          REWRITE_TAC[ASSIGNS_SEQ] THEN REWRITE_TAC[ASSIGNS_THM] THEN
-          REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
-          ASSUMPTION_STATE_UPDATE_TAC THEN ASM_REWRITE_TAC[] THEN
-          NO_TAC]]) gl;;
-
-
-
-let ARM_N_VERBOSE_STEP_TAC (exth1,exth2) sname g =
-  Format.print_string("Stepping to state "^sname); Format.print_newline();
-  ARM_N_STEP_TAC (exth1,exth2) [] sname None None g;;
-
-let ARM_N_SINGLE_STEP_TAC th s =
-  time (ARM_N_VERBOSE_STEP_TAC th s) THEN
-  DISCARD_OLDSTATE_TAC s THEN
-  CLARIFY_TAC;;
-
-let ARM_N_XACCSTEP_TAC th excs aflag s =
-  ARM_N_SINGLE_STEP_TAC th s THEN
-  (if aflag then TRY(ACCUMULATEX_ARITH_TAC excs s THEN CLARIFY_TAC)
-   else ALL_TAC);;
-
-let ARM_N_XACCSTEPS_TAC th excs anums snums =
-  MAP_EVERY
-   (fun n -> ARM_N_XACCSTEP_TAC th excs (mem n anums) ("s"^string_of_int n))
-   snums;;
-
-let ARM_N_ACCSTEPS_TAC th anums snums =
-  ARM_N_XACCSTEPS_TAC th [`SP`] anums snums;;
-
-
 (* BIGNUM_EMONTREDC_8N_MAINLOOP_CORRECT, but its ensures_n version. The proof
    is copied from BIGNUM_EMONTREDC_8N_MAINLOOP_CORRECT and properly updated
    to use the tactics of ensures_n version and additionally reason about
@@ -723,7 +595,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
                bignum_from_memory(z,4 * i) s * n + lowdigits a (k + 4 * i)))`
    `\(i:num). 93 + (k4 - 1) * 143` `2` `1` `2`  THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_N_INIT_TAC "s0" THEN
+   [REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
     MP_TAC(ISPECL [`z:int64`; `2 * k`; `k:num`; `s0:armstate`]
         HIGHDIGITS_BIGNUM_FROM_MEMORY) THEN
     MP_TAC(ISPECL [`z:int64`; `2 * k`; `k:num`; `s0:armstate`]
@@ -732,7 +604,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     REWRITE_TAC[ARITH_RULE `MIN (2 * k) k = k /\ 2 * k - k = k`] THEN
     REPLICATE_TAC 2 (DISCH_THEN(ASSUME_TAC o SYM)) THEN
     ARM_N_STEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (1--2) "" [] None THEN
-    ENSURES_N_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; SUB_0; WORD_NEG_0] THEN
     REWRITE_TAC[WORD_ADD_0; MULT_CLAUSES; VAL_WORD_0; ADD_CLAUSES; EXP] THEN
     REWRITE_TAC[BIGNUM_FROM_MEMORY_TRIVIAL] THEN
@@ -742,15 +614,15 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     ALL_TAC; (*** This is the main loop invariant: save for later ***)
 
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-    ARM_N_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [1] THEN
+    ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [1] THEN
     COND_CASES_TAC THENL [REFL_TAC; ALL_TAC] THEN
     FIRST_X_ASSUM MP_TAC THEN
     MP_TAC (ASSUME `val (word i:int64) = i`) THEN
     REWRITE_TAC[VAL_WORD_EQ_EQ;DIMINDEX_64] THEN
     IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
 
-    ENSURES_N_GHOST_INTRO_TAC `ncout:int64` `read X28` THEN
-    ARM_N_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC (1--2) THEN
+    GHOST_INTRO_TAC `ncout:int64` `read X28` THEN
+    ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC (1--2) THEN
     DISCH_TAC THEN
     ASM_SIMP_TAC[LOWDIGITS_SELF; GSYM MULT_2; WORD_SUB_LZERO] THEN
     REWRITE_TAC[MULT_SYM];
@@ -775,7 +647,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     word_add z (word (8 * (k + 4)))`] THEN
   REWRITE_TAC[ARITH_RULE `2 * k - (k  + i) = k - i`] THEN
 
-  ENSURES_N_GHOST_INTRO_TAC `cout:num` `\s. val (word_neg (read X28 s))` THEN
+  GHOST_INTRO_TAC `cout:num` `\s. val (word_neg (read X28 s))` THEN
   REWRITE_TAC[VAL_WORD_GALOIS; DIMINDEX_64] THEN
   REWRITE_TAC[WORD_RULE `word_neg x = y <=> x = word_neg y`] THEN
 
@@ -827,11 +699,11 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     MATCH_ACCEPT_TAC CONJ_SYM;
     ALL_TAC] THEN
 
-  ENSURES_N_GHOST_INTRO_TAC `z1:num` `bignum_from_memory(z',k+4)` THEN
-  ENSURES_N_BIGNUM_TERMRANGE_TAC `k + 4` `z1:num` THEN
-  ENSURES_N_GHOST_INTRO_TAC `q1:num` `bignum_from_memory(z,4 * i)` THEN
-  ENSURES_N_BIGNUM_TERMRANGE_TAC `4 * i` `q1:num` THEN
-  ENSURES_N_GLOBALIZE_PRECONDITION_TAC THEN
+  GHOST_INTRO_TAC `z1:num` `bignum_from_memory(z',k+4)` THEN
+  BIGNUM_TERMRANGE_TAC `k + 4` `z1:num` THEN
+  GHOST_INTRO_TAC `q1:num` `bignum_from_memory(z,4 * i)` THEN
+  BIGNUM_TERMRANGE_TAC `4 * i` `q1:num` THEN
+  GLOBALIZE_PRECONDITION_TAC THEN
 
   ENSURES_N_SEQUENCE_TAC `pc + 0x3dc`
    `\s. read X2 s = m /\
@@ -854,7 +726,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
   REPEAT CONJ_TAC THENL
    [ALL_TAC;
 
-    ARM_N_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [] THEN
+    ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [] THEN
     DISCH_THEN(fun th ->
      REPEAT(FIRST_X_ASSUM(ASSUME_TAC o C MATCH_MP th))) THEN
     REWRITE_TAC[EXP_ADD; ARITH_RULE
@@ -898,7 +770,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     STRIP_TAC] THEN
 
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
-  ENSURES_N_FORGET_COMPONENTS_TAC
+  ENSURES_FORGET_COMPONENTS_TAC
    [`memory :> bytes (z,8 * 4 * i)`;
     `memory :>
      bytes (word_add z' (word (8 * (k + 4))),8 * (k - 4 * (i + 1)))`] THEN
@@ -943,7 +815,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
               2 EXP (64 * k) * cout + z1)` `89 + (k4 - 1) * 143` `4` THEN
   REPEAT CONJ_TAC THENL
    [ALL_TAC;
-    ARM_N_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC (1--4) THEN REPEAT CONJ_TAC THENL
+    ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC (1--4) THEN REPEAT CONJ_TAC THENL
      [CONV_TAC WORD_RULE;
       REWRITE_TAC[ARITH_RULE `k - (j + 1) = k - j - 1`] THEN
       GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN
@@ -986,7 +858,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
              bignum_from_memory(z,4) s * lowdigits n 4 + lowdigits a 4)`
     `78` `11 + (k4 - 1) * 143` THEN
   REPEAT CONJ_TAC THENL
-  [ REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_N_INIT_TAC "s0" THEN
+  [ REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
     SUBGOAL_THEN
       `highdigits (bignum_from_memory(z,k+4) s0) 4 = highdigits a 4`
     MP_TAC THENL
@@ -1014,8 +886,8 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD_0] THEN
     STRIP_TAC THEN
-    ARM_N_ACCSTEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (1--78) (1--78) THEN
-    ENSURES_N_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ARM_ACCSTEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (1--78) (1--78) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES] THEN
     REWRITE_TAC[BIGDIGIT_BIGNUM_FROM_MEMORY] THEN
     CONV_TAC(ONCE_DEPTH_CONV NUM_LT_CONV) THEN
@@ -1053,8 +925,8 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
 
   (*** Shared tail to handle the final carry chaining in k4 = 1 too ***)
 
-  ENSURES_N_GHOST_INTRO_TAC `q:num` `bignum_from_memory(z,4)` THEN
-  ENSURES_N_BIGNUM_TERMRANGE_TAC `4` `q:num` THEN
+  GHOST_INTRO_TAC `q:num` `bignum_from_memory(z,4)` THEN
+  BIGNUM_TERMRANGE_TAC `4` `q:num` THEN
 
   (*** Set up a version with the whole z buffer ***)
 
@@ -1079,10 +951,10 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
   REPEAT CONJ_TAC THENL
    [ALL_TAC;
 
-    ENSURES_N_GHOST_INTRO_TAC `g8:int64` `read X12` THEN
-    ENSURES_N_GHOST_INTRO_TAC `g9:int64` `read X13` THEN
-    ENSURES_N_GHOST_INTRO_TAC `g10:int64` `read X14` THEN
-    ENSURES_N_GHOST_INTRO_TAC `g11:int64` `read X15` THEN
+    GHOST_INTRO_TAC `g8:int64` `read X12` THEN
+    GHOST_INTRO_TAC `g9:int64` `read X13` THEN
+    GHOST_INTRO_TAC `g10:int64` `read X14` THEN
+    GHOST_INTRO_TAC `g11:int64` `read X15` THEN
 
     (*** Rebase once again to avoid indexing messiness a bit ***)
 
@@ -1108,7 +980,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
       REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC;
       STRIP_TAC] THEN
 
-    REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_N_INIT_TAC "s0" THEN
+    REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
     SUBGOAL_THEN
       `!j. j < 4
           ==> bigdigit (bignum_from_memory(z',4) s0) j =
@@ -1138,8 +1010,8 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
         [MAP_EVERY UNDISCH_TAC [`4 * k4 = k`; `~(k4 = 0)`] THEN ARITH_TAC;
         CONV_TAC WORD_RULE];
       ALL_TAC] THEN
-    ARM_N_ACCSTEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (4--7) (1--10) THEN
-    ENSURES_N_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    ARM_ACCSTEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (4--7) (1--10) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
     DISCH_THEN(fun th ->
       REPEAT(FIRST_X_ASSUM(ASSUME_TAC o C MATCH_MP th)) THEN
@@ -1227,7 +1099,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[ARITH_RULE `1 < k <=> ~(k = 0) /\ ~(k = 1)`];
 
-    ARM_N_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC (1--1) THEN
+    ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC (1--1) THEN
     ASM_REWRITE_TAC[MULT_CLAUSES; ADD_SUB] THEN
     ASM_REWRITE_TAC[ADD_ASSOC; EQ_ADD_RCANCEL] THEN
     CONV_TAC WORD_RULE;
@@ -1235,9 +1107,9 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     ALL_TAC; (*** The main loop invariant preservation ***)
 
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-    ARM_N_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [1];
+    ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [1];
 
-    ARM_N_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [1] THEN
+    ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [1] THEN
     ASM_SIMP_TAC[LOWDIGITS_SELF] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[ADD_SUB2]) THEN
     ASM_REWRITE_TAC[] THEN
@@ -1288,13 +1160,13 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
    [EXPAND_TAC "z'" THEN SUBSUMED_MAYCHANGE_TAC;
     ALL_TAC] THEN
 
-  ENSURES_N_GHOST_INTRO_TAC `g8:int64` `read X12` THEN
-  ENSURES_N_GHOST_INTRO_TAC `g9:int64` `read X13` THEN
-  ENSURES_N_GHOST_INTRO_TAC `g10:int64` `read X14` THEN
-  ENSURES_N_GHOST_INTRO_TAC `g11:int64` `read X15` THEN
-  ENSURES_N_GHOST_INTRO_TAC `zlo:num` `bignum_from_memory (z,4 * i)` THEN
+  GHOST_INTRO_TAC `g8:int64` `read X12` THEN
+  GHOST_INTRO_TAC `g9:int64` `read X13` THEN
+  GHOST_INTRO_TAC `g10:int64` `read X14` THEN
+  GHOST_INTRO_TAC `g11:int64` `read X15` THEN
+  GHOST_INTRO_TAC `zlo:num` `bignum_from_memory (z,4 * i)` THEN
 
-  REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_N_INIT_TAC "s0" THEN
+  REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
 
   ABBREV_TAC `z'':int64 = word_add z (word (32 * (i + 1)))` THEN
 
@@ -1346,7 +1218,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
    `word_add (word_sub x (word 32)) (word 32) = x`]) THEN
 
-  ARM_N_ACCSTEPS_TAC BIGNUM_EMONTREDC_8N_EXEC
+  ARM_ACCSTEPS_TAC BIGNUM_EMONTREDC_8N_EXEC
    ((5--8) @ [10;12;14;16;18;19] @ (21--42) @
     [48;53;55;56;62;67] @ (69--74) @
     [80;85;87;88;89] @
@@ -1354,7 +1226,7 @@ let BIGNUM_EMONTREDC_8N_MAINLOOP_ENSURES_N = prove(
     [112;117;119;120;121;122] @
     [128;133;135;136;137;138])
    (3--142) THEN
-  ENSURES_N_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
   CONJ_TAC THENL
    [SUBST1_TAC(SYM(ASSUME `word_add z (word (32 * (i + 1))):int64 = z''`)) THEN
@@ -3535,7 +3407,7 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
     REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_RIGHT_TAC OUTERLOOP_STEP3_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     SUBGOAL_THEN `~(val (word (k4 - (i + 1)):int64) = 0)` MP_TAC THENL [
       IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN ASM_ARITH_TAC;
       ALL_TAC
@@ -3562,7 +3434,7 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
     REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_RIGHT_TAC OUTERLOOP_STEP3_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     CONJ_TAC THENL [
       SUBGOAL_THEN `(val (word (k4 - (k4 - 1 + 1)):int64) = 0)`
         (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
@@ -3649,7 +3521,7 @@ let MADDLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal1,
     ("equal",151,152,149,150)] OUTERLOOP_STEP2_EXEC OUTERLOOP_STEP3_EXEC THEN
   ARM_N_STUTTER_RIGHT_TAC OUTERLOOP_STEP3_EXEC [151] "'" None THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MESON[]`forall (a:A). exists x. a = x`] THEN
@@ -3799,7 +3671,7 @@ let PROLOG_STEP2_STEP3_EQUIV = prove(equiv_goal2,
       ("replace",40,44,40,44)]
     OUTERLOOP_STEP2_EXEC OUTERLOOP_STEP3_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [
@@ -3980,7 +3852,7 @@ let EPILOG_STEP2_STEP3_EQUIV = prove(equiv_goal3,
       ("delete",105,107,105,105) (* exit the branch of the maddloop (step2) *)]
     OUTERLOOP_STEP2_EXEC OUTERLOOP_STEP3_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [
@@ -4150,7 +4022,7 @@ let OUTERLOOP_STEP2_STEP3_EQUIV = prove(equiv_goal4,
       ("equal",135,167,136,168)]
     OUTERLOOP_STEP2_EXEC OUTERLOOP_STEP3_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN
   CONJ_TAC THENL [
@@ -4367,7 +4239,7 @@ let INNER_LOOP_POSTAMBLE_STEP2_STEP3_EQUIV = prove(equiv_goal5,
   SUBGOAL_THEN `8 * (4 * k4 - 4) + 56 = 8 * 4 * k4 + 24` SUBST_ALL_TAC THENL
   [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [
@@ -4607,7 +4479,7 @@ let MADDLOOP_STEP3_STEP4_EQUIV = prove(equiv_goal1,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC OUTERLOOP_STEP3_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     SUBGOAL_THEN `~(val (word (k4 - (i + 1)):int64) = 0)` MP_TAC THENL [
       IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
       ALL_TAC
@@ -4635,7 +4507,7 @@ let MADDLOOP_STEP3_STEP4_EQUIV = prove(equiv_goal1,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC OUTERLOOP_STEP3_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     CONJ_TAC THENL [
       SUBGOAL_THEN `(val (word (k4 - (k4 - 1 + 1)):int64) = 0)`
         (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
@@ -4702,7 +4574,7 @@ let MADDLOOP_STEP3_STEP4_EQUIV = prove(equiv_goal1,
   ARM_N_STEPS_AND_REWRITE_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC
     (1--(List.length inst_map)) inst_map state_to_abbrevs (Some regs_no_abbrev_right) THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MESON[]`forall (a:A). exists x. a = x`] THEN
@@ -4930,7 +4802,7 @@ let OUTERLOOP_STEP3_STEP4_EQUIV = prove(equiv_goal2,
     (1--(List.length inst_map)) inst_map state_to_abbrevs (Some regs_no_abbrev_right) THEN
 
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN
   CONJ_TAC THENL [
@@ -5213,7 +5085,7 @@ let INNER_LOOP_POSTAMBLE_STEP3_STEP4_EQUIV = prove(equiv_goal3,
   SUBGOAL_THEN `8 * (4 * k4 - 4) + 56 = 8 * 4 * k4 + 24` SUBST_ALL_TAC THENL
   [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN
   CONJ_TAC THENL [
@@ -5449,7 +5321,7 @@ let MADDLOOP_STEP2_X30_STEP2_EQUIV = prove(equiv_goal1,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC MADDLOOP_STEP2_X30_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC OUTERLOOP_STEP2_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     SUBGOAL_THEN `~(val (word (k4 - (i+1)):int64) = 0)` MP_TAC THENL [
       IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
       ALL_TAC
@@ -5478,7 +5350,7 @@ let MADDLOOP_STEP2_X30_STEP2_EQUIV = prove(equiv_goal1,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC MADDLOOP_STEP2_X30_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC OUTERLOOP_STEP2_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     CONJ_TAC THENL [
       SUBGOAL_THEN `(val (word (k4 - (k4 - 1 + 1)):int64) = 0)`
         (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
@@ -5547,7 +5419,7 @@ let MADDLOOP_STEP2_X30_STEP2_EQUIV = prove(equiv_goal1,
      word_add z (word (8 * 4 * i + 32))`]) THEN
   EQUIV_STEPS_TAC actions2 MADDLOOP_STEP2_X30_EXEC OUTERLOOP_STEP2_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MESON[]`forall (a:A). exists x. a = x`] THEN
@@ -5809,7 +5681,7 @@ let MADDLOOP_STEP1_STEP2_X30_EQUIV = prove(equiv_goal,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC OUTERLOOP_STEP1_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC MADDLOOP_STEP2_X30_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     SUBGOAL_THEN `~(val (word (k4 - (i+1)):int64) = 0)` MP_TAC THENL [
       IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
       ALL_TAC
@@ -5838,7 +5710,7 @@ let MADDLOOP_STEP1_STEP2_X30_EQUIV = prove(equiv_goal,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC OUTERLOOP_STEP1_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC MADDLOOP_STEP2_X30_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     CONJ_TAC THENL [
       SUBGOAL_THEN `(val (word (k4 - (k4 - 1 + 1)):int64) = 0)`
         (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
@@ -5905,7 +5777,7 @@ let MADDLOOP_STEP1_STEP2_X30_EQUIV = prove(equiv_goal,
     (1--length inst_map) inst_map state_to_abbrevs
     (Some regs_no_abbrev_right) THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MESON[]`forall (a:A). exists x. a = x`] THEN
@@ -6179,7 +6051,7 @@ let OUTERLOOP_STEP1_STEP2_EQUIV = prove(equiv_goal,
     (1--(List.length inst_map)) inst_map state_to_abbrevs (Some regs_no_abbrev) THEN
 
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN
   CONJ_TAC THENL [
@@ -6412,7 +6284,7 @@ let INNER_LOOP_POSTAMBLE_STEP1_STEP2_EQUIV = prove(equiv_goal,
   SUBGOAL_THEN `8 * (4 * k4 - 4) + 56 = 8 * 4 * k4 + 24` SUBST_ALL_TAC THENL
   [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN
   CONJ_TAC THENL [
@@ -6839,7 +6711,7 @@ let MADDLOOP_ORIGINAL_STEP1_EQUIV = prove(equiv_goal,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC BIGNUM_EMONTREDC_8N_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC OUTERLOOP_STEP1_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     SUBGOAL_THEN `~(val (word (k4 - (i+1)):int64) = 0) /\ ~(i = k4 - 1)` MP_TAC THENL [
       IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
       ALL_TAC
@@ -6866,7 +6738,7 @@ let MADDLOOP_ORIGINAL_STEP1_EQUIV = prove(equiv_goal,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     ARM_N_STUTTER_LEFT_TAC BIGNUM_EMONTREDC_8N_EXEC [1] None THEN
     ARM_N_STUTTER_RIGHT_TAC OUTERLOOP_STEP1_EXEC [1] "'" None THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     CONJ_TAC THENL [
       SUBGOAL_THEN `(val (word (k4 - (k4 - 1 + 1)):int64) = 0)`
         (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THENL
@@ -6938,7 +6810,7 @@ let MADDLOOP_ORIGINAL_STEP1_EQUIV = prove(equiv_goal,
 
   EQUIV_STEPS_TAC actions BIGNUM_EMONTREDC_8N_EXEC OUTERLOOP_STEP1_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[MESON[]`forall (a:A). exists x. a = x`] THEN
@@ -7188,7 +7060,7 @@ let OUTERLOOP_ORIGINAL_STEP1_EQUIV = prove(equiv_goal,
   EQUIV_STEPS_TAC actions BIGNUM_EMONTREDC_8N_EXEC OUTERLOOP_STEP1_EXEC THEN
 
   (* here. we will need taint analysis again. *)
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN
   CONJ_TAC THENL [
@@ -7468,7 +7340,7 @@ let INNER_LOOP_POSTAMBLE_ORIGINAL_STEP1_EQUIV = prove(equiv_goal,
   SUBGOAL_THEN `8 * (4 * k4 - 4) + 56 = 8 * 4 * k4 + 24` SUBST_ALL_TAC THENL
   [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN
   CONJ_TAC THENL [
@@ -8290,7 +8162,7 @@ let MAINLOOP_EQUIV = prove(equiv_goal,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     EQUIV_STEPS_TAC ["replace",0,2,0,5] BIGNUM_EMONTREDC_8N_EXEC
         BIGNUM_EMONTREDC_8N_CDIFF_EXEC THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[SUB_0; MULT_0; WORD_ADD_0] THEN
     CONJ_TAC THENL [
@@ -8405,7 +8277,7 @@ let MAINLOOP_EQUIV = prove(equiv_goal,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     EQUIV_STEPS_TAC ["replace",0,1,0,1] BIGNUM_EMONTREDC_8N_EXEC
           BIGNUM_EMONTREDC_8N_CDIFF_EXEC THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[SUB_0; MULT_0; WORD_ADD_0] THEN
     SUBGOAL_THEN `~(val (word (k4 - i):int64) = 0)` (fun th -> REWRITE_TAC[th]) THENL [
@@ -8425,7 +8297,7 @@ let MAINLOOP_EQUIV = prove(equiv_goal,
     DESTRUCT_EXISTS_ASSUMS_TAC THEN
     EQUIV_STEPS_TAC ["replace",0,2,0,2] BIGNUM_EMONTREDC_8N_EXEC
           BIGNUM_EMONTREDC_8N_CDIFF_EXEC THEN
-    REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+    REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
     ASM_REWRITE_TAC[MESON[]`exists (k:A). x = k`] THEN
     MONOTONE_MAYCHANGE_CONJ_TAC;
 

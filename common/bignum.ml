@@ -759,7 +759,10 @@ let BIGNUM_TERMRANGE_TAC =
   fun k m ->
     DISJ_CASES_THEN2
      ASSUME_TAC
-     (fun th -> REWRITE_TAC[th; ENSURES_TRIVIAL] THEN NO_TAC)
+     (fun th ->
+        ENSURES_OR_ENSURES_N_TAC
+            (REWRITE_TAC[th; ENSURES_TRIVIAL])
+            (REWRITE_TAC[th; ENSURES_N_TRIVIAL]) THEN NO_TAC)
      (SPECL [k; m] pth);;
 
 let BIGNUM_RANGE_TAC =

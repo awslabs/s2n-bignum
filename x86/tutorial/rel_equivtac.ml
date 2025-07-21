@@ -162,7 +162,7 @@ let EQUIV = prove(equiv_goal,
     ("equal",4,5,4,5)
   ] EXEC EXEC2 THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   (* This tactic below is typically fixed and probably you will want to reuse. :) *)
@@ -278,7 +278,7 @@ let EQUIV = prove(equiv_goal,
     ("equal",0,2,0,2);
   ] PXOR_EXEC PXOR_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
 
