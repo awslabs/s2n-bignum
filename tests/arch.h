@@ -22,6 +22,11 @@ enum arch_name get_arch_name()
 { return ARCH_X86_64;
 }
 
+int supports_arm_sha3(void)
+{ // Not an ARM machine at all
+  return 0;
+}
+
 #else
 
 int supports_bmi2_and_adx(void)
@@ -29,9 +34,29 @@ int supports_bmi2_and_adx(void)
   return 0;
 }
 
+#if __linux__
+  #include <sys/auxv.h>
+  #include <asm/hwcap.h>
+  int supports_arm_sha3(void)
+  {
+    long hwcaps = getauxval(AT_HWCAP);
+    return (hwcaps & HWCAP_SHA3) != 0;
+  }
+
+#else
+
+  int supports_arm_sha3(void)
+  {
+  #if __ARM_FEATURE_SHA3
+    return 1;
+  #else
+    return 0;
+  #endif
+  }
+#endif
+
 enum arch_name get_arch_name()
 { return ARCH_AARCH64;
 }
 
 #endif
-
