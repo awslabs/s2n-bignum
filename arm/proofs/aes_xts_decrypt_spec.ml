@@ -138,3 +138,147 @@ time prove (`aes256_xts_decrypt_1block
   KEY1 KEY2 = word 0x0f0e0d0c0b0a09080706050403020100`,
   CONV_TAC(LAND_CONV XTSDEC_1BLOCK_HELPER_CONV) THEN REFL_TAC);;
 *)
+
+(*******************************************)
+(* AES-XTS decryption full *)
+(* Note: the implementation sequences the calculation of the tweak
+   for each block, however, the specification will calculate the tweak
+   from the very beginning for each block. We write the specification
+   in the sequenced version for proof simplicity.
+*)
+
+(* Helper functions derived from Amanda's code:
+  https://github.com/amanda-zx/s2n-bignum/blob/sha512/arm/sha512/sha512_specs.ml#L360
+*)
+let bytes_to_int128 = define
+  `bytes_to_int128 (bs : byte list) : int128 =
+    word_join
+      (word_join
+        (word_join (word_join (EL 7 bs) (EL 6 bs) : int16) (word_join (EL 5 bs) (EL 4 bs) : int16) : int32)
+        (word_join (word_join (EL 3 bs) (EL 2 bs) : int16) (word_join (EL 1 bs) (EL 8 bs) : int16) : int32) : int64)
+      (word_join
+        (word_join (word_join (EL 7 bs) (EL 6 bs) : int16) (word_join (EL 5 bs) (EL 4 bs) : int16) : int32)
+        (word_join (word_join (EL 3 bs) (EL 2 bs) : int16) (word_join (EL 1 bs) (EL 0 bs) : int16) : int32) : int64)`;;
+
+let int128_to_bytes = define
+  `int128_to_bytes (w : int128) : byte list =
+    [word_subword w (0, 1);
+     word_subword w (1, 1);
+     word_subword w (2, 1);
+     word_subword w (3, 1);
+     word_subword w (4, 1);
+     word_subword w (5, 1);
+     word_subword w (6, 1);
+     word_subword w (7, 1);
+     word_subword w (8, 1);
+     word_subword w (9, 1);
+     word_subword w (10, 1);
+     word_subword w (11, 1);
+     word_subword w (12, 1);
+     word_subword w (13, 1);
+     word_subword w (14, 1);
+     word_subword w (15, 1)]`;;
+
+(* Multiplication by the primitive element \alpha in GF(2^128) *)
+let GF_128_mult_by_primitive = new_definition
+  `GF_128_mult_by_primitive
+    (tweak:(128)word) =
+    let shifted = word_shl tweak 1 in
+    let mask = word_ishr tweak 127 in
+    word_xor (word_and mask (word 0x87)) shifted`;;
+
+let FST3 = define
+  `FST3 (x:a#b#c) = FST x`;;
+let SND3 = define
+  `SND3 (x:a#b#c) = FST (SND x)`;;
+let THD3 = define
+  `THD3 (x:a#b#c) = SND (SND x)`;;
+
+let eth = prove_general_recursive_function_exists
+ `?aes256_xts_decrypt_rec.
+    ! (i:num) (m:num) (C:byte list) (iv:int128) (key1:int128 list) (key2:int128 list).
+    aes256_xts_decrypt_rec i m C iv key1 key2 : (byte list)#int128#num =
+    if m < i then ([], iv, i)
+    else
+      let current_block = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
+      let curr = int128_to_bytes (aes256_xts_decrypt_round current_block iv key1) in
+      let iv = GF_128_mult_by_primitive iv in
+      let res = aes256_xts_decrypt_rec (i + 1) m C iv key1 key2 in
+      (APPEND curr (FST3 res), SND3 res, THD3 res)`;;
+
+let wfth = prove(hd(hyp eth),
+  EXISTS_TAC `MEASURE (\(i:num,m:num,C:byte list,iv:int128,key1:int128 list,key2:int128 list). (m + 1) - i)` THEN
+  REWRITE_TAC[WF_MEASURE; MEASURE] THEN ARITH_TAC);;
+
+let exists_lemma = PROVE_HYP wfth eth;;
+
+(* Note: results are stored in LSByte to MSByte *)
+let aes256_xts_decrypt_rec = new_specification ["aes256_xts_decrypt_rec"] exists_lemma;;
+
+(* Note: last block is padded to make it suitable for int128_to_bytes *)
+let cipher_stealing = new_definition
+  `cipher_stealing (block:int128) (tail:int128) (tail_len:num) (iv:int128) : int128#int128 =
+    let iv_last = GF_128_mult_by_primitive iv in
+    let PP = aes256_xts_decrypt_round block iv_last key1 in
+    let Pm = word_subword PP (0, tail_len) in
+    let CP = word_subword PP (tail_len, 16 - tail_len) in
+    let CC = word_join (word_subword tail (0,tail_len)) CP in
+    let Pm1 = aes256_xts_decrypt_round CC iv key1 in
+    (Pm1, (word_zx Pm))`;;
+
+(* Depending on the tail, either do one block decryption or do cipher stealing *)
+let aes256_xts_decrypt_tail = new_definition
+  `aes256_xts_decrypt_tail (i:num) (m:num) (tail:num) 
+    (C:byte list) (iv:int128) (key1:int128 list) (key2:int128 list) : byte list =
+    if tail = 0 then
+      let Cm1 = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
+      int128_to_bytes (aes256_xts_decrypt_round Cm1 iv key1)
+    else
+      let Cm1 = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
+      let padded_tail = APPEND (SUB_LIST ((i + 1) * 16, tail) C) (REPLICATE (16 - tail) (word 0)) in
+      let Ctail = bytes_to_int128 padded_tail in
+
+      let res_cs = cipher_stealing Cm1 Ctail tail iv in
+      let Pm1 = int128_to_bytes (FST res_cs) in
+      let Ptail = SUB_LIST (0, tail) (int128_to_bytes (SND res_cs)) in
+      APPEND Pm1 Ptail`;;
+
+(* The main decryption function *)
+(* Note: the specification does not handle the case of len < 16, which is
+   handled in the implementation. *)
+
+(* AES256-XTS assumes there is at least one block in input *)
+(*
+   C: Input ciphertext represented as a byte list
+   len: Length of C
+   iv: Initialization vector (tweak) as an int128
+   key1: Key schedule for AES-256 decryption
+   key2: Key schedule for AES-256 encryption for the tweak
+   P_error: Error output plaintext in case of invalid input length
+
+   return: Output plaintext as a byte list
+
+   When input len < 16, the function returns P_error,
+   which will be the initial value stored in output address.
+*)
+(* TODO: Challenge lemma: proving that the output is of same length as input *)
+(* TODO: Double check if NIST spec talks about the error case len < 16 *)
+(* TODO: Double check the pseudo code in the spec for tweak caculation in ANEX c *)
+let aes256_xts_decrypt = new_definition
+  `aes256_xts_decrypt
+    (C:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (P_error:byte list) : byte list =
+    if len < 16 then
+      P_error
+    else
+      let tail = len MOD 16 in
+      let m = (len - tail) DIV 16 in
+      let i = 0 in
+
+      let iv = xts_init_tweak iv key2 in
+      if m < 2 then
+        aes256_xts_decrypt_tail i m tail C iv key1 key2
+      else
+        let res = aes256_xts_decrypt_rec 0 (m - 2) C iv key1 key2 in
+        let Ptail = aes256_xts_decrypt_tail (THD3 res) m tail C (SND3 res) key1 key2 in
+        APPEND (FST3 res) Ptail`;;
+      `;;
