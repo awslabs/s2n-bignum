@@ -2629,7 +2629,7 @@ let P384_MONTJDOUBLE_EQUIV = time prove(equiv_goal,
     ~dead_value_info_right:p384_montjdouble_dead_value_info
     actions_merged P384_MONTJDOUBLE_CORE_EXEC P384_MONTJDOUBLE_OPT_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [

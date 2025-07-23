@@ -34,7 +34,6 @@ loadt "common/components.ml";;
 loadt "common/alignment.ml";;
 loadt "common/records.ml";;
 loadt "common/relational.ml";;
-loadt "common/relational_n.ml";;
 loadt "common/interval.ml";;
 loadt "common/elf.ml";;
 

@@ -1205,7 +1205,7 @@ let P256_MONTJADD_EQUIV = time prove(equiv_goal,
     ~dead_value_info_right:p256_montjadd_dead_value_info
     actions_merged P256_MONTJADD_CORE_EXEC P256_MONTJADD_OPT_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [
