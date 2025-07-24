@@ -4,9 +4,16 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  HOLLIGHT_COMMIT: "157c99b7bb3a485116dc2bfc4ef3ad00912d883b"
+
 jobs:
-  s2n-bignum-arm-tests:
-    runs-on: ubuntu-24.04-arm
+  s2n-bignum-tests:
+    strategy:
+      matrix:
+        arch: [arm, x86]
+
+    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || matrix.arch == 'x86' && 'ubuntu-24.04' }}
 
     steps:
     - name: Checkout code
@@ -19,28 +26,131 @@ jobs:
 
     - name: Run tests
       run: |
-        cd arm
+        cd ${{ matrix.arch }}
         make
+        ${{ matrix.arch == 'x86' && 'cd ../x86_att && make clobber && make && git diff --exit-code .' || true}}
+        echo "Make test"
         cd ../tests
-        make complete
+        CC=gcc make complete
         make ctCheck
+        echo "Make test with valgrind"
+        make clean
+        CC=gcc VALGRIND="valgrind --" make complete || echo "(incomplete test, but proceeding)"
+        echo "Make test (clang, build only)"
+        make clean
+        CC=clang make
+        echo "Make benchmark (build only, for both of those)"
         cd ../benchmarks
-        make
+        CC=gcc make
+        make clean
+        CC=clang make
 
-  s2n-bignum-x86-tests:
-    runs-on: ubuntu-24.04
+  s2n-bignum-aws-lc-integration:
+    strategy:
+      matrix:
+        arch: [arm, x86]
+
+    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || matrix.arch == 'x86' && 'ubuntu-24.04' }}
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install valgrind cmake golang ninja-build
+        which ninja
+        sudo ln -s /usr/bin/ninja /usr/bin/ninja-build
+        which cmake
+        ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
+
     - name: Run tests
       run: |
-        cd x86
-        make
-        cd ../x86_att && make clobber && make && git diff --exit-code .
-        cd ../tests
-        make complete
-        make ctCheck
-        cd ../benchmarks
-        make
+        echo "Run AWS-LC integration test (GITHUB_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}, GITHUB_TARGET: $GITHUB_HEAD_REF)"
+        git clone https://github.com/aws/aws-lc.git --depth=1
+        cd aws-lc/third_party/s2n-bignum
+        rm -rf ./s2n-bignum-imported
+        GITHUB_REPOSITORY=${{ github.event.pull_request.head.repo.full_name }}.git GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
+        cd ../../../
+        mkdir aws-lc-build && cd aws-lc-build
+        cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
+        ninja-build run_tests
+        cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=Off ../aws-lc
+        ninja-build run_tests
+
+  s2n-bignum-sematest:
+    strategy:
+      matrix:
+        arch: [arm, x86]
+
+    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || matrix.arch == 'x86' && 'ubuntu-24.04' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl libgmp-dev xdot
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh
+        opam init --disable-sandboxing
+
+    - name: Install HOL Light
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
+    - name: Run tests
+      run: |
+        export HOLDIR=`pwd`/hol-light
+        cd ${{ matrix.arch }}
+        make sematest
+
+  s2n-bignum-tutorial:
+    strategy:
+      matrix:
+        arch: [arm, x86]
+
+    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || matrix.arch == 'x86' && 'ubuntu-24.04' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl libgmp-dev xdot
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh
+        opam init --disable-sandboxing
+
+    - name: Install HOL Light
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
+    - name: Run tutorial
+      run: |
+        export HOLDIR=`pwd`/hol-light
+        cd ${{ matrix.arch }}
+        make tutorial
