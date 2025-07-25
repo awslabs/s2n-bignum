@@ -139,6 +139,21 @@ time prove (`aes256_xts_decrypt_1block
   CONV_TAC(LAND_CONV XTSDEC_1BLOCK_HELPER_CONV) THEN REFL_TAC);;
 *)
 
+(* Compute not working, takes longer time than hand written conv *)
+needs "Library/words.ml";;
+let rw = Compute.bool_compset();;
+word_compute_add_convs rw;;
+num_compute_add_convs rw;;
+Compute.add_thms [aes256_xts_decrypt_1block;aes256_xts_decrypt_round;xts_init_tweak;
+  aes256_encrypt;KEY1;KEY2;EL_CONS;LET_END_DEF;aes256_decrypt;aes_sub_bytes;aes_inv_shift_rows;
+  aes256_decrypt_round] rw;;
+let my_conv = Compute.WEAK_CBV_CONV rw;;
+
+my_conv `aes256_xts_decrypt_1block
+  (word 0x88c87a8644e587dc7e3057edf2a80cc3)
+  (word 0x0000000000000000000000123456789a)
+  KEY1 KEY2`;;
+
 (*******************************************)
 (* AES-XTS decryption full *)
 (* Note: the implementation sequences the calculation of the tweak
@@ -281,4 +296,32 @@ let aes256_xts_decrypt = new_definition
         let res = aes256_xts_decrypt_rec 0 (m - 2) C iv key1 key2 in
         let Ptail = aes256_xts_decrypt_tail (THD3 res) m tail C (SND3 res) key1 key2 in
         APPEND (FST3 res) Ptail`;;
-      `;;
+
+(*******************************************)
+(* Conversions *)
+
+let ciphertext = new_definition
+  `[word 0xc3; word 0x0c; word 0xa8; word 0xf2
+  ; word 0xed; word 0x57; word 0x30; word 0x7e
+  ; word 0xdc; word 0x87; word 0xe5; word 0x44
+  ; word 0x86; word 0x7a; word 0xc8; word 0x88] : byte list`;;
+let iv = new_definition
+  `(word 0x0000000000000000000000123456789a) : int128`;;
+let P_error = new_definition
+  `[ word 0; word 0; word 0; word 0
+   ; word 0; word 0; word 0; word 0
+   ; word 0; word 0; word 0; word 0
+   ; word 0; word 0; word 0; word 0] : byte list`;;
+let plaintext = new_definition
+  `[word 0x0f; word 0x0e; word 0x0d; word 0x0c
+   ; word 0x0b; word 0x0a; word 0x09; word 0x08
+   ; word 0x07; word 0x06; word 0x05; word 0x04
+   ; word 0x03; word 0x02; word 0x01; word 0x00] : byte list`;;
+
+let rw = Compute.bool_compset();;
+word_compute_add_convs rw;;
+num_compute_add_convs rw;;
+Compute.add_thms [aes256_xts_decrypt;KEY1;KEY2;ciphertext;iv;P_error;plaintext] rw;;
+let my_conv = Compute.WEAK_CBV_CONV rw;;
+
+my_conv `aes256_xts_decrypt C 16 iv KEY1 KEY2 P_error`;;
