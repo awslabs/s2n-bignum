@@ -11,18 +11,18 @@
 // This is intended for use when that array represents polynomial
 // coefficients for ML-KEM, but that is not relevant to its operation.
 //
-// extern void mlkem_poly_reduce(int16_t a[256]);
+// extern void mlkem_reduce(int16_t a[256]);
 //
 // Standard ARM ABI: X0 = a
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_poly_reduce)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_poly_reduce)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_reduce)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_reduce)
         .text
         .balign 4
 
-S2N_BN_SYMBOL(mlkem_poly_reduce):
+S2N_BN_SYMBOL(mlkem_reduce):
 
 // This matches the code in the mlkem-native repository
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/native/aarch64/src/poly_reduce_asm.S
@@ -49,7 +49,7 @@ S2N_BN_SYMBOL(mlkem_poly_reduce):
         add     v16.8h, v23.8h, v7.8h
         sub     x1, x1, #0x1
 
-mlkem_poly_reduce_loop:
+mlkem_reduce_loop:
         ldr     q6, [x0], #0x40
         ldr     q30, [x0, #0x20]
         sqdmulh v31.8h, v6.8h, v4.h[0]
@@ -83,7 +83,7 @@ mlkem_poly_reduce_loop:
         and     v27.16b, v3.16b, v18.16b
         add     v16.8h, v2.8h, v27.8h
         sub     x1, x1, #0x1
-        cbnz    x1, mlkem_poly_reduce_loop
+        cbnz    x1, mlkem_reduce_loop
         sqdmulh v20.8h, v5.8h, v4.h[0]
         ldr     q24, [x0], #0x40
         stur    q21, [x0, #-0x20]

@@ -10,11 +10,11 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/mlkem.ml";;
 
-(**** print_literal_from_elf "arm/mlkem/mlkem_poly_reduce.o";;
+(**** print_literal_from_elf "arm/mlkem/mlkem_reduce.o";;
  ****)
 
-let mlkem_poly_reduce_mc = define_assert_from_elf
-  "mlkem_poly_reduce_mc" "arm/mlkem/mlkem_poly_reduce.o"
+let mlkem_reduce_mc = define_assert_from_elf
+  "mlkem_reduce_mc" "arm/mlkem/mlkem_reduce.o"
 [
   0x5281a022;       (* arm_MOV W2 (rvalue (word 3329)) *)
   0x4e020c43;       (* arm_DUP_GEN Q3 X2 16 128 *)
@@ -91,7 +91,7 @@ let mlkem_poly_reduce_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let MLKEM_POLY_REDUCE_EXEC = ARM_MK_EXEC_RULE mlkem_poly_reduce_mc;;
+let MLKEM_POLY_REDUCE_EXEC = ARM_MK_EXEC_RULE mlkem_reduce_mc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Some lemmas, tactics etc.                                                 *)
@@ -120,7 +120,7 @@ let MLKEM_POLY_REDUCE_CORRECT = prove
  (`!a x pc.
         nonoverlapping (word pc,0x124) (a,512)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) mlkem_poly_reduce_mc /\
+             (\s. aligned_bytes_loaded s (word pc) mlkem_reduce_mc /\
                   read PC s = word pc /\
                   C_ARGUMENTS [a] s /\
                   !i. i < 256
@@ -182,7 +182,7 @@ let MLKEM_POLY_REDUCE_SUBROUTINE_CORRECT = prove
  (`!a x pc returnaddress.
         nonoverlapping (word pc,0x124) (a,512)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) mlkem_poly_reduce_mc /\
+             (\s. aligned_bytes_loaded s (word pc) mlkem_reduce_mc /\
                   read PC s = word pc /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [a] s /\

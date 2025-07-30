@@ -10,21 +10,21 @@
 // 0 <= a[i] < 2^12 (typically they will be < 3329, the ML-KEM prime).
 // It packs them into the output array as 12-bit unsigned numbers.
 //
-// extern void mlkem_poly_tobytes(uint8_t r[384],const int16_t a[256]);
+// extern void mlkem_tobytes(uint8_t r[384],const int16_t a[256]);
 //
 // Standard ARM ABI: X0 = r, X1 = a
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_poly_tobytes)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_poly_tobytes)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_tobytes)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_tobytes)
         .text
         .balign 4
 
 // This code is essentially a verbatim copy of the mlkem-native version
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/native/aarch64/src/poly_tobytes_asm.S
 
-S2N_BN_SYMBOL(mlkem_poly_tobytes):
+S2N_BN_SYMBOL(mlkem_tobytes):
         mov     x2, #0x10
         ldr     q6, [x1], #0x20
         ldur    q24, [x1, #-0x10]
@@ -37,7 +37,7 @@ S2N_BN_SYMBOL(mlkem_poly_tobytes):
         lsr     x2, x2, #2
         sub     x2, x2, #0x1
 
-mlkem_poly_tobytes_asm_asm_loop_start:
+mlkem_tobytes_asm_asm_loop_start:
         uzp1    v25.8h, v6.8h, v24.8h
         uzp2    v6.8h, v6.8h, v24.8h
         xtn     v24.8b, v25.8h
@@ -79,7 +79,7 @@ mlkem_poly_tobytes_asm_asm_loop_start:
         ldr     q19, [x1], #0x20
         ldur    q4, [x1, #-0x10]
         sub     x2, x2, #0x1
-        cbnz    x2, mlkem_poly_tobytes_asm_asm_loop_start
+        cbnz    x2, mlkem_tobytes_asm_asm_loop_start
         uzp1    v25.8h, v30.8h, v22.8h
         uzp2    v18.8h, v30.8h, v22.8h
         uzp1    v30.8h, v6.8h, v24.8h

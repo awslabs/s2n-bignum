@@ -10,11 +10,11 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/mlkem.ml";;
 
-(**** print_literal_from_elf "arm/mlkem/mlkem_poly_tomont.o";;
+(**** print_literal_from_elf "arm/mlkem/mlkem_tomont.o";;
  ****)
 
-let mlkem_poly_tomont_mc = define_assert_from_elf
-  "mlkem_poly_tomont_mc" "arm/mlkem/mlkem_poly_tomont.o"
+let mlkem_tomont_mc = define_assert_from_elf
+  "mlkem_tomont_mc" "arm/mlkem/mlkem_tomont.o"
 [
   0x5281a022;       (* arm_MOV W2 (rvalue (word 3329)) *)
   0x4e020c44;       (* arm_DUP_GEN Q4 X2 16 128 *)
@@ -71,18 +71,18 @@ let mlkem_poly_tomont_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let MLKEM_POLY_TOMONT_EXEC = ARM_MK_EXEC_RULE mlkem_poly_tomont_mc;;
+let MLKEM_POLY_TOMONT_EXEC = ARM_MK_EXEC_RULE mlkem_tomont_mc;;
 
 (* ------------------------------------------------------------------------- *)
 (* The proof, taken directly with only minor style and formatting changes    *)
-(* from mlkem-native (see proofs/hol_light/arm/proofs/mlkem_poly_tomont.ml). *)
+(* from mlkem-native (see proofs/hol_light/arm/proofs/mlkem_tomont.ml). *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_POLY_TOMONT_CORRECT = prove
  (`!ptr x pc.
-      nonoverlapping (word pc,LENGTH mlkem_poly_tomont_mc) (ptr,512)
+      nonoverlapping (word pc,LENGTH mlkem_tomont_mc) (ptr,512)
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) mlkem_poly_tomont_mc /\
+           (\s. aligned_bytes_loaded s (word pc) mlkem_tomont_mc /\
                 read PC s = word pc /\
                 C_ARGUMENTS [ptr] s /\
                 !i. i < 256
@@ -179,11 +179,11 @@ let MLKEM_POLY_TOMONT_CORRECT = prove
 
 let MLKEM_POLY_TOMONT_SUBROUTINE_CORRECT = prove
  (`!ptr x pc returnaddress.
-    nonoverlapping (word pc, LENGTH mlkem_poly_tomont_mc) (ptr, 512)
+    nonoverlapping (word pc, LENGTH mlkem_tomont_mc) (ptr, 512)
     ==>
     ensures arm
       (\s. // Assert that poly_tomont is loaded at PC
-           aligned_bytes_loaded s (word pc) mlkem_poly_tomont_mc /\
+           aligned_bytes_loaded s (word pc) mlkem_tomont_mc /\
            read PC s = word pc  /\
            // Remember LR as point-to-stop
            read X30 s = returnaddress /\

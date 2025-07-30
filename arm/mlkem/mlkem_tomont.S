@@ -11,18 +11,18 @@
 // satisfying (output[i] == 2^16 * input[i]) (mod 3329), without full
 // modular reduction but with |output[i]| < 3329 guaranteed.
 //
-// extern void mlkem_poly_tomont(int16_t a[256]);
+// extern void mlkem_tomont(int16_t a[256]);
 //
 // Standard ARM ABI: X0 = a
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_poly_tomont)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_poly_tomont)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_tomont)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_tomont)
         .text
         .balign 4
 
-S2N_BN_SYMBOL(mlkem_poly_tomont):
+S2N_BN_SYMBOL(mlkem_tomont):
 
 // This matches the code in the mlkem-native repository
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/native/aarch64/src/poly_tomont_asm.S
@@ -43,7 +43,7 @@ S2N_BN_SYMBOL(mlkem_poly_tomont):
         ldr     q27, [x0, #0x20]
         sub     x1, x1, #0x1
 
-mlkem_poly_tomont_loop:
+mlkem_tomont_loop:
         mls     v17.8h, v7.8h, v4.h[0]
         sqrdmulh v5.8h, v23.8h, v3.8h
         ldr     q7, [x0], #0x40
@@ -65,7 +65,7 @@ mlkem_poly_tomont_loop:
         ldr     q27, [x0, #0x20]
         stur    q26, [x0, #-0x20]
         sub     x1, x1, #0x1
-        cbnz    x1, mlkem_poly_tomont_loop
+        cbnz    x1, mlkem_tomont_loop
 
         mls     v17.8h, v7.8h, v4.h[0]
         sqrdmulh v7.8h, v23.8h, v3.8h
