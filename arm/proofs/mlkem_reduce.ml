@@ -91,7 +91,7 @@ let mlkem_reduce_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let MLKEM_POLY_REDUCE_EXEC = ARM_MK_EXEC_RULE mlkem_reduce_mc;;
+let MLKEM_REDUCE_EXEC = ARM_MK_EXEC_RULE mlkem_reduce_mc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Some lemmas, tactics etc.                                                 *)
@@ -116,7 +116,7 @@ let overall_lemma = prove
   REWRITE_TAC[MATCH_MP lemma_rem (CONGBOUND_RULE `barred x`)] THEN
   BITBLAST_TAC);;
 
-let MLKEM_POLY_REDUCE_CORRECT = prove
+let MLKEM_REDUCE_CORRECT = prove
  (`!a x pc.
         nonoverlapping (word pc,0x124) (a,512)
         ==> ensures arm
@@ -160,7 +160,7 @@ let MLKEM_POLY_REDUCE_CORRECT = prove
 
   (*** Do a full simulation with no breakpoints, unrolling the loop ***)
 
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_POLY_REDUCE_EXEC [n] THEN
+  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_REDUCE_EXEC [n] THEN
                       SIMD_SIMPLIFY_TAC[barred])
             (1--276) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -178,7 +178,7 @@ let MLKEM_POLY_REDUCE_CORRECT = prove
   ASM_REWRITE_TAC[WORD_ADD_0] THEN DISCARD_STATE_TAC "s276" THEN
   REWRITE_TAC[GSYM barred; overall_lemma]);;
 
-let MLKEM_POLY_REDUCE_SUBROUTINE_CORRECT = prove
+let MLKEM_REDUCE_SUBROUTINE_CORRECT = prove
  (`!a x pc returnaddress.
         nonoverlapping (word pc,0x124) (a,512)
         ==> ensures arm
@@ -201,5 +201,5 @@ let MLKEM_POLY_REDUCE_SUBROUTINE_CORRECT = prove
     ONCE_DEPTH_CONV NUM_MULT_CONV THENC
     PURE_REWRITE_CONV [WORD_ADD_0] in
   CONV_TAC TWEAK_CONV THEN
-  ARM_ADD_RETURN_NOSTACK_TAC MLKEM_POLY_REDUCE_EXEC
-   (CONV_RULE TWEAK_CONV MLKEM_POLY_REDUCE_CORRECT));;
+  ARM_ADD_RETURN_NOSTACK_TAC MLKEM_REDUCE_EXEC
+   (CONV_RULE TWEAK_CONV MLKEM_REDUCE_CORRECT));;

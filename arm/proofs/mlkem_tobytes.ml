@@ -104,7 +104,7 @@ let mlkem_tobytes_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let MLKEM_POLY_TOBYTES_EXEC = ARM_MK_EXEC_RULE mlkem_tobytes_mc;;
+let MLKEM_TOBYTES_EXEC = ARM_MK_EXEC_RULE mlkem_tobytes_mc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Main proof.                                                               *)
@@ -119,7 +119,7 @@ let lemma =
   CONV_RULE(EXPAND_CASES_CONV THENC
             DEPTH_CONV (NUM_RED_CONV ORELSEC EL_CONV)) th';;
 
-let MLKEM_POLY_TOBYTES_CORRECT = prove
+let MLKEM_TOBYTES_CORRECT = prove
  (`!r a (l:int16 list) pc.
         ALL (nonoverlapping (r,384)) [(word pc,0x158); (a,512)]
         ==> ensures arm
@@ -142,7 +142,7 @@ let MLKEM_POLY_TOBYTES_CORRECT = prove
 
   ASM_CASES_TAC `LENGTH(l:int16 list) = 256` THENL
    [ASM_REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0";
-    ARM_QUICKSIM_TAC MLKEM_POLY_TOBYTES_EXEC
+    ARM_QUICKSIM_TAC MLKEM_TOBYTES_EXEC
      [`read X0 s = a`; `read X1 s = z`; `read X2 s = i`] (1--169)] THEN
 
   (*** Digitize and tweak the input digits to match 128-bit load size  ****)
@@ -165,7 +165,7 @@ let MLKEM_POLY_TOBYTES_CORRECT = prove
   (*** Unroll and simulate to the end ***)
 
   MAP_EVERY (fun n ->
-    ARM_STEPS_TAC MLKEM_POLY_TOBYTES_EXEC [n] THEN
+    ARM_STEPS_TAC MLKEM_TOBYTES_EXEC [n] THEN
     RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)))
    (1--169) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -195,7 +195,7 @@ let MLKEM_POLY_TOBYTES_CORRECT = prove
   REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN
   ABBREV_TAC `twae = &2:real` THEN REAL_ARITH_TAC);;
 
-let MLKEM_POLY_TOBYTES_SUBROUTINE_CORRECT = prove
+let MLKEM_TOBYTES_SUBROUTINE_CORRECT = prove
  (`!r a (l:int16 list) pc returnaddress.
         ALL (nonoverlapping (r,384)) [(word pc,0x158); (a,512)]
         ==> ensures arm
@@ -210,5 +210,5 @@ let MLKEM_POLY_TOBYTES_SUBROUTINE_CORRECT = prove
                        num_of_wordlist (MAP word_zx l:(12 word)list)))
              (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(r,384)])`,
-  ARM_ADD_RETURN_NOSTACK_TAC MLKEM_POLY_TOBYTES_EXEC
-   MLKEM_POLY_TOBYTES_CORRECT);;
+  ARM_ADD_RETURN_NOSTACK_TAC MLKEM_TOBYTES_EXEC
+   MLKEM_TOBYTES_CORRECT);;

@@ -71,14 +71,14 @@ let mlkem_tomont_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let MLKEM_POLY_TOMONT_EXEC = ARM_MK_EXEC_RULE mlkem_tomont_mc;;
+let MLKEM_TOMONT_EXEC = ARM_MK_EXEC_RULE mlkem_tomont_mc;;
 
 (* ------------------------------------------------------------------------- *)
 (* The proof, taken directly with only minor style and formatting changes    *)
 (* from mlkem-native (see proofs/hol_light/arm/proofs/mlkem_tomont.ml). *)
 (* ------------------------------------------------------------------------- *)
 
-let MLKEM_POLY_TOMONT_CORRECT = prove
+let MLKEM_TOMONT_CORRECT = prove
  (`!ptr x pc.
       nonoverlapping (word pc,LENGTH mlkem_tomont_mc) (ptr,512)
       ==> ensures arm
@@ -97,7 +97,7 @@ let MLKEM_POLY_TOMONT_CORRECT = prove
            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
             MAYCHANGE [memory :> bytes(ptr,512)])`,
   REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-    NONOVERLAPPING_CLAUSES; C_ARGUMENTS; fst MLKEM_POLY_TOMONT_EXEC] THEN
+    NONOVERLAPPING_CLAUSES; C_ARGUMENTS; fst MLKEM_TOMONT_EXEC] THEN
   REPEAT STRIP_TAC THEN
 
   (* Split quantified assumptions into separate cases *)
@@ -118,7 +118,7 @@ let MLKEM_POLY_TOMONT_CORRECT = prove
      Note that we simplify eagerly after every step.
      This reduces the proof time *)
   STRIP_TAC THEN
-  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_POLY_TOMONT_EXEC [n] THEN
+  MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_TOMONT_EXEC [n] THEN
                       SIMD_SIMPLIFY_TAC[barmul])
             (1--184) THEN
   ENSURES_FINAL_STATE_TAC THEN
@@ -177,7 +177,7 @@ let MLKEM_POLY_TOMONT_CORRECT = prove
   ])
 );;
 
-let MLKEM_POLY_TOMONT_SUBROUTINE_CORRECT = prove
+let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove
  (`!ptr x pc returnaddress.
     nonoverlapping (word pc, LENGTH mlkem_tomont_mc) (ptr, 512)
     ==>
@@ -209,10 +209,10 @@ let MLKEM_POLY_TOMONT_SUBROUTINE_CORRECT = prove
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(ptr, 512)])`,
  let TWEAK_CONV =
-    REWRITE_CONV[fst MLKEM_POLY_TOMONT_EXEC] THENC
+    REWRITE_CONV[fst MLKEM_TOMONT_EXEC] THENC
     ONCE_DEPTH_CONV EXPAND_CASES_CONV THENC
     ONCE_DEPTH_CONV NUM_MULT_CONV THENC
     PURE_REWRITE_CONV [WORD_ADD_0] in
   CONV_TAC TWEAK_CONV THEN
-  ARM_ADD_RETURN_NOSTACK_TAC MLKEM_POLY_TOMONT_EXEC
-   (CONV_RULE TWEAK_CONV MLKEM_POLY_TOMONT_CORRECT));;
+  ARM_ADD_RETURN_NOSTACK_TAC MLKEM_TOMONT_EXEC
+   (CONV_RULE TWEAK_CONV MLKEM_TOMONT_CORRECT));;
