@@ -10,11 +10,11 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/mlkem.ml";;
 
-(**** print_literal_from_elf "arm/mlkem/mlkem_poly_tobytes.o";;
+(**** print_literal_from_elf "arm/mlkem/mlkem_tobytes.o";;
  ****)
 
-let mlkem_poly_tobytes_mc = define_assert_from_elf
-  "mlkem_poly_tobytes_mc" "arm/mlkem/mlkem_poly_tobytes.o"
+let mlkem_tobytes_mc = define_assert_from_elf
+  "mlkem_tobytes_mc" "arm/mlkem/mlkem_tobytes.o"
 [
   0xd2800202;       (* arm_MOV X2 (rvalue (word 16)) *)
   0x3cc20426;       (* arm_LDR Q6 X1 (Postimmediate_Offset (word 32)) *)
@@ -104,7 +104,7 @@ let mlkem_poly_tobytes_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let MLKEM_POLY_TOBYTES_EXEC = ARM_MK_EXEC_RULE mlkem_poly_tobytes_mc;;
+let MLKEM_POLY_TOBYTES_EXEC = ARM_MK_EXEC_RULE mlkem_tobytes_mc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Main proof.                                                               *)
@@ -123,7 +123,7 @@ let MLKEM_POLY_TOBYTES_CORRECT = prove
  (`!r a (l:int16 list) pc.
         ALL (nonoverlapping (r,384)) [(word pc,0x158); (a,512)]
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) mlkem_poly_tobytes_mc /\
+             (\s. aligned_bytes_loaded s (word pc) mlkem_tobytes_mc /\
                   read PC s = word pc /\
                   C_ARGUMENTS [r;a] s /\
                   read (memory :> bytes(a,512)) s = num_of_wordlist l)
@@ -199,7 +199,7 @@ let MLKEM_POLY_TOBYTES_SUBROUTINE_CORRECT = prove
  (`!r a (l:int16 list) pc returnaddress.
         ALL (nonoverlapping (r,384)) [(word pc,0x158); (a,512)]
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) mlkem_poly_tobytes_mc /\
+             (\s. aligned_bytes_loaded s (word pc) mlkem_tobytes_mc /\
                   read PC s = word pc /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [r;a] s /\

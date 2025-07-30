@@ -998,15 +998,15 @@ extern void mlkem_ntt(int16_t a[256],int16_t z_01234[80],int16_t z_56[384]);
 
 /* Canonical modular reduction of polynomial coefficients for ML-KEM */
 /* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */
-extern void mlkem_poly_reduce(int16_t a[256]);
+extern void mlkem_reduce(int16_t a[256]);
 
 /* Pack ML-KEM polynomial coefficients as 12-bit numbers */
 /* Input a[256] (signed 16-bit words); output r[384] (bytes) */
-extern void mlkem_poly_tobytes(uint8_t r[384],int16_t a[256]);
+extern void mlkem_tobytes(uint8_t r[384],int16_t a[256]);
 
 /* Conversion of ML-KEM polynomial coefficients to Montgomery form */
 /* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */
-extern void mlkem_poly_tomont(int16_t a[256]);
+extern void mlkem_tomont(int16_t a[256]);
 
 /* Uniform rejection sampling for ML-KEM */
 /* Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 16-bit words), return */
