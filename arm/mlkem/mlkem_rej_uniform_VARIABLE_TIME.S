@@ -28,7 +28,7 @@
 // Standard ARM ABI: X0 = buf, X1 = r, X2 = buflen, X3 = table
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)

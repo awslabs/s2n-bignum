@@ -14,7 +14,7 @@
 //
 // Standard ARM ABI: X0 = r, X1 = a
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_tobytes)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_tobytes)
