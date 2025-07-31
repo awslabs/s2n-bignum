@@ -23,7 +23,7 @@
 //
 // Standard ARM ABI: X0 = x, X1 = a, X2 = z, X3 = t
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_mulcache_compute)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_mulcache_compute)

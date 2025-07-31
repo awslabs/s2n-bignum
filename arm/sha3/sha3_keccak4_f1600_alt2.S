@@ -29,7 +29,7 @@
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak4_f1600_alt2)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak4_f1600_alt2)
