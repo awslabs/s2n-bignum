@@ -2854,7 +2854,7 @@ let ORTHOGONAL_COMPONENTS_CONV tm =
     end
   with _ -> failwith "ORTHOGONAL_COMPONENTS_CONV: unknown term";;
 
-let ORTHOGONAL_COMPONENTS_RULE tm1 tm2 =
+let ORTHOGONAL_COMPONENTS_RULE2 tm1 tm2 =
   ORTHOGONAL_COMPONENTS_CONV(list_mk_icomb "orthogonal_components" [tm1;tm2]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -2904,18 +2904,6 @@ let COMPONENT_WRITE_OVER_WRITE_CONV =
    fun tm ->
     (let th = rule tm in
      MP th (VALID_COMPONENT_CONV(lhand(concl th))));;
-
-(* ------------------------------------------------------------------------- *)
-(* A more restrictive rule that only uses orthogonality.                     *)
-(* ------------------------------------------------------------------------- *)
-
-let COMPONENT_READ_OVER_WRITE_ORTHOGONAL_CONV =
-  let pth_orth = prove
-   (`orthogonal_components c d ==> read c (write d y s) = read c s`,
-    SIMP_TAC[orthogonal_components]) in
-  let rule_orth = PART_MATCH (lhand o rand) pth_orth in
-  fun tm -> let th = rule_orth tm in
-            MP th (ORTHOGONAL_COMPONENTS_CONV(lhand(concl th)));;
 
 (* ------------------------------------------------------------------------- *)
 (* Slightly ad hoc tactic to do "simple" linear arithmetic: pick out         *)
@@ -2989,472 +2977,411 @@ let NONOVERLAPPING_MODULO_64_OFFSET_BOTH = prove
   ASM_REWRITE_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Automatically prove nonoverlapping of regions                             *)
+(* Eliminate nonoverlapping_modulo in favour of nonoverlapping.              *)
+(* Evetually we'll restructure all the proofs to keep this anyway.           *)
 (* ------------------------------------------------------------------------- *)
 
-let (NONOVERLAPPING_TAC:tactic) =
-  let cache = ref ([]:thm list) in
-
-  let prove_le_fallback (((asl,t) as g):goal) =
-    let rec go = function
-    | c::cs, e ->
-      if concl c = t then
-        match catch TAC_PROOF (g, ACCEPT_TAC c) with
-        | Some th -> th
-        | None -> e [] (fun cs -> cache := cs)
-      else go (cs, fun cs' -> e (c::cs'))
-    | [], e -> e [] (K ()) in
-    go (!cache, fun cs f -> f cs;
-      let th =
-        try snd (find ((=) t o concl o snd) asl)
-        with Failure _ ->
-        try TAC_PROOF (g, SIMPLE_ARITH_TAC)
-        with Failure _ ->
-          failwith ("NONOVERLAPPING_TAC: cannot prove `" ^ (string_of_term t) ^ "`")
-        in
-      cache := th::!cache; th) in
-
-  let num_ty = `:num`
-  and ap_tm = `a':num`
-  and a1_tm = `a1:num`
-  and a2_tm = `a2:num`
-  and ai_tm = `a:int64`
-  and a_tm = `a:num`
-  and bp_tm = `b':num`
-  and bi_tm = `b:int64`
-  and b_tm = `b:num`
-  and i1_tm = `i1:num`
-  and i2_tm = `i2:num`
-  and mle_tm = `m <= 2 EXP 64`
-  and m_tm = `m:num`
-  and n1_tm = `n1:num`
-  and n2_tm = `n2:num`
-  and n_tm = `n:num`
-  and nx_tm = `nx:num`
-  and ny_tm = `ny:num`
-  and ppp_tm = `p':num#num`
-  and p1_tm = `p1:num#num`
-  and p2_tm = `p2:num#num`
-  and pp_tm = `p:num#num`
-  and p_tm = `p:num`
-  and x_tm = `x:int64`
-  and y_tm = `y:int64` in
-
-  let prove_le =
-    let ADD_0_CONV = REWRITE_CONV [
-      (EQT_ELIM o REWRITE_CONV [ADD_CLAUSES]) `x + 0 = x /\ 0 + x = x`]
-    and ADD_1_LE_CONV = REWRITE_CONV [
-      REWRITE_RULE [ADD1] (SPEC_ALL LE_SUC_LT);
-      ARITH_RULE `1 <= n <=> 0 < n`]
-    and MULT_ASSOC4 = (EQT_ELIM o REWRITE_CONV [MULT_AC])
-      `(a * b) * (c * d):num = (a * c) * (b * d)`
-    and MULT_1 = (EQT_ELIM o REWRITE_CONV [MULT_CLAUSES]) `x = 1 * x`
-    and mul_tm = `( * ):num->num->num`
-    and true_tm = `T` in
-    let FACTOR_CONV t =
-      let rec factor = function
-      | Comb(Comb(Const("<=",_),t1),t2) -> gcd (factor t1) (factor t2)
-      | Comb(Comb(Const("+",_),t1),t2) -> gcd (factor t1) (factor t2)
-      | Comb(Comb(Const("*",_),t1),t2) -> factor t1 * factor t2
-      | t -> try Num.int_of_num (dest_numeral t) with Failure _ -> 1 in
-      let rec mk_theorem n = function
-      | Comb(Comb(Const("<=",_),_),_) as t ->
-        (BINOP_CONV (mk_theorem n) THENC
-          PART_MATCH lhs LE_MULT_LCANCEL THENC
-          LAND_CONV NUM_EQ_CONV THENC REWRITE_CONV []) t
-      | Comb(Comb(Const("+",_),t1),t2) as t ->
-        (BINOP_CONV (mk_theorem n) THENC
-          PART_MATCH lhs (SYM (SPEC_ALL LEFT_ADD_DISTRIB))) t
-      | Comb(Comb(Const("*",_),t1),t2) as t ->
-        if try dest_numeral t1 = num n with _ -> false then REFL t else
-        let n1 = gcd n (factor t1) in let n2 = n / n1 in
-        (BINOP2_CONV (mk_theorem n1) (mk_theorem n2) THENC
-          PART_MATCH lhs MULT_ASSOC4 THENC LAND_CONV NUM_MULT_CONV) t
-      | t ->
-        let i = factor t in
-        if i = 1 then PART_MATCH lhs MULT_1 t else
-        SYM (NUM_MULT_CONV (
-          mk_comb (mk_comb (mul_tm, mk_small_numeral n),
-            mk_small_numeral (i / n)))) in
-      mk_theorem (factor t) t in
-    let AFTER th k = EQ_MP (SYM th) (k (rhs (concl th))) in
-    fun (asl:(string*thm)list) t ->
-      AFTER (ADD_0_CONV t) (function
-      | Comb(Comb(Const("<=",_),_),_) as t ->
-       (try PART_MATCH I LE_REFL t with Failure _ ->
-        try PART_MATCH I LE_0 t with Failure _ ->
-        AFTER (NUM_REDUCE_CONV t) (fun t ->
-        if t = true_tm then TRUTH else
-        AFTER (FACTOR_CONV t) (fun t ->
-        try PART_MATCH I LE_REFL t with Failure _ ->
-        AFTER (ADD_1_LE_CONV t) (curry prove_le_fallback asl))))
-      | _ -> failwith "prove_le") in
-
-  let normalize =
-    let pth_num = SPECL [a_tm; `2 EXP 64`] CONG_REFL
-    and pth_int64 = prove
-     (`(a:int64) = word (val a)`, REWRITE_TAC [WORD_VAL])
-    and pth_val = (UNDISCH_ALL o prove)
-     (`(a:int64) = word b ==> (val a == b) (mod (2 EXP 64))`,
-      DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [
-        REWRITE_RULE [DIMINDEX_64] (INST_TYPE [`:64`,`:N`] VAL_WORD_CONG)])
-    and pth_word = (UNDISCH_ALL o prove)
-     (`(a == b) (mod (2 EXP 64)) ==> (word a:int64) = word b`,
-      REWRITE_TAC [WORD_EQ; DIMINDEX_64])
-    and pth_word_add = (UNDISCH_ALL o prove)
-     (`a = word a' ==> b = word b' ==> (word_add a b:int64) = word (a' + b')`,
-      REPEAT (DISCH_THEN SUBST1_TAC) THEN REWRITE_TAC [WORD_ADD])
-    and pth_word_sub = (UNDISCH_ALL o prove)
-      (`a = word a' ==> b = word b' ==> b' <= a' ==>
-      (word_sub a b:int64) = word (a' - b')`, MESON_TAC [WORD_SUB])
-    and pth_add = (UNDISCH_ALL o prove)
-     (`(a == a') (mod (2 EXP 64)) ==> (a + b == a' + b) (mod (2 EXP 64))`,
-      REWRITE_TAC [CONG_ADD_RCANCEL_EQ]) in
-
-    let rec norm asl = function
-    | Comb(Const("val",_),t) ->
-      let th = norm asl t in
-      PROVE_HYP th (INST [t,ai_tm; rand(rand(concl th)),b_tm] pth_val)
-    | Comb(Const("word",_),t) ->
-      let th = norm asl t in
-      PROVE_HYP th (INST [t,a_tm; rand(rator(concl th)),b_tm] pth_word)
-    | Comb(Comb(Const("word_add",_),t1),t2) ->
-      let th1 = norm asl t1 and th2 = norm asl t2 in
-      (PROVE_HYP th1 o PROVE_HYP th2)
-        (INST [t1,ai_tm; rand(rand(concl th1)),ap_tm;
-               t2,bi_tm; rand(rand(concl th2)),bp_tm] pth_word_add)
-    | Comb(Comb(Const("word_sub",_),t1),t2) as t ->
-      (try
-        (* normalize word_sub (word x) (word y) to word (x-y) only if
-           prove_le can prove y <= x *)
-        let th1 = norm asl t1 and th2 = norm asl t2 in
-        let aprime = rand(rand(concl th1)) and bprime = rand(rand(concl th2)) in
-        let the_le = prove_le asl (mk_binary "<=" (bprime,aprime)) in
-        (PROVE_HYP th1 o PROVE_HYP th2 o PROVE_HYP the_le)
-          (INST [t1,ai_tm; aprime,ap_tm;
-                 t2,bi_tm; bprime,bp_tm] pth_word_sub)
-       with _ ->
-        (* should be equivalent to the default branch of this large match
-           statement *)
-        INST [t,ai_tm] pth_int64)
-    | Comb(Comb(Const("+",_),t),b) ->
-      let th = norm asl t in
-      let t' = rand (rator (concl th)) in
-      PROVE_HYP th (INST [t,a_tm; t',ap_tm; b,b_tm] pth_add)
-    | t when type_of t = num_ty -> INST [t,a_tm] pth_num
-    | t -> INST [t,ai_tm] pth_int64 in
-
-    let pth1 = SYM (SPEC_ALL ADD_ASSOC)
-    and pth2 = SYM (SPEC_ALL ADD_0) in
-    let rec split_base = function
-    | Comb(Comb(Const("+",_),Comb(Comb(Const("+",_),t1),t2)),t3) ->
-      CONV_RHS_RULE split_base (INST [t1,m_tm; t2,n_tm; t3,p_tm] pth1)
-    | Comb(Comb(Const("+",_),_),_) as t -> REFL t
-    | t -> INST [t,m_tm] pth2 in
-    fun asl t -> CONV_RULE (RATOR_CONV (RAND_CONV split_base)) (norm asl t) in
-
-  let is_le = is_binop `(<=):num->num->bool` in
-  let prove_hyps f th = itlist (fun h ->
-    if is_le h then PROVE_HYP (f h) else I) (hyp th) th in
-  let prove_les asl = prove_hyps (prove_le asl) in
-
-  let prove_contains =
-    let pth = (UNDISCH_ALL o prove)
-     (`(a1 == a + i1) (mod (2 EXP 64)) ==>
-       (a2 == a + i2) (mod (2 EXP 64)) ==>
-       i2 <= i1 ==> i1 + n1 <= i2 + n2 ==>
-       contained_modulo (2 EXP 64) (a1,n1) (a2,n2)`,
-      REWRITE_TAC[contained_modulo; CONG] THEN
-      ONCE_REWRITE_TAC[GSYM MOD_ADD_MOD] THEN
-      REPLICATE_TAC 2 (DISCH_THEN SUBST1_TAC) THEN
-      CONV_TAC MOD_DOWN_CONV THEN
-      GEN_REWRITE_TAC LAND_CONV [LE_EXISTS] THEN
-      DISCH_THEN(X_CHOOSE_THEN `d:num` SUBST1_TAC) THEN
-      DISCH_TAC THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
-      EXISTS_TAC `i + d:num` THEN
-      CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-      AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC) in
-    fun asl p1 p2 ->
-      let a1,n1 = dest_pair p1 and a2,n2 = dest_pair p2 in
-      let th1 = normalize asl a1 and th2 = normalize asl a2 in
-      let a,i1 = (rand F_F I) (dest_comb (rand (rator (concl th1))))
-      and i2 = rand (rand (rator (concl th2))) in
-      let th = INST [a,a_tm; a1,a1_tm; a2,a2_tm;
-        i1,i1_tm; i2,i2_tm; n1,n1_tm; n2,n2_tm] pth in
-      PROVE_HYP th1 (PROVE_HYP th2 (prove_les asl th)) in
-
-  let base =
-    let vl = curry mk_comb `val:int64->num` in
-    let rec base f = function
-    | Comb(Const("val",_),t) -> base vl t
-    | Comb(Const("word",_),t) -> base I t
-    | Comb(Comb(Const("word_add",_),t),_) -> base vl t
-    | Comb(Comb(Const("+",_),t),_) -> base I t
-    | t -> f t in base I in
-  let pth_l,pth_r = W f_f_ (UNDISCH_ALL o
-    MESON [NONOVERLAPPING_MODULO_SUBREGIONS; CONTAINED_MODULO_REFL; LE_REFL;
-      PAIR_SURJECTIVE])
-   (`nonoverlapping_modulo (2 EXP 64) p p2 ==>
-     contained_modulo (2 EXP 64) p' p ==>
-     nonoverlapping_modulo (2 EXP 64) p' p2`,
-    `nonoverlapping_modulo (2 EXP 64) p1 p ==>
-     contained_modulo (2 EXP 64) p' p ==>
-     nonoverlapping_modulo (2 EXP 64) p1 p'`) in
-
-  let pth_lt,pth_gt =
-    let th = prove
-     (`(a1 == a + i1) (mod (2 EXP 64)) ==>
-       (a2 == a + i2) (mod (2 EXP 64)) ==>
-       i1 + n1 <= i2 ==> i2 + n2 <= 2 EXP 64 ==>
-       nonoverlapping_modulo (2 EXP 64) (a1,n1) (a2,n2)`,
-      REWRITE_TAC [CONG] THEN REPEAT STRIP_TAC THEN
-      ONCE_REWRITE_TAC [GSYM NONOVERLAPPING_MODULO_MOD2] THEN
-      ASM_REWRITE_TAC [] THEN REWRITE_TAC [NONOVERLAPPING_MODULO_MOD2] THEN
-      MATCH_MP_TAC NONOVERLAPPING_MODULO_OFFSET_SIMPLE_BOTH THEN
-      DISJ1_TAC THEN ASM_ARITH_TAC) in
-    UNDISCH_ALL th, (UNDISCH_ALL o prove)
-     (`(a1 == a + i1) (mod (2 EXP 64)) ==>
-       (a2 == a + i2) (mod (2 EXP 64)) ==>
-       i2 + n2 <= i1 ==> i1 + n1 <= 2 EXP 64 ==>
-       nonoverlapping_modulo (2 EXP 64) (a1,n1) (a2,n2)`,
-      ONCE_REWRITE_TAC [NONOVERLAPPING_MODULO_SYM] THEN MESON_TAC [th]) in
-
-  let dth_lt2,dth_gt2 =
-    let th = prove
-     (`(a1 == val (x:int64) + i1) (mod (2 EXP 64)) ==>
-       (a2 == val y + i2) (mod (2 EXP 64)) ==>
-       i1 + n1 <= nx ==> i1 + n1 <= i2 ==>
-       i2 + n2 <= ny ==> i2 + n2 <= 2 EXP 64 ==>
-       x = y \/ nonoverlapping_modulo (2 EXP 64) (val x,nx) (val y,ny) ==>
-       nonoverlapping_modulo (2 EXP 64) (a1,n1) (a2,n2)`,
-      REWRITE_TAC [CONG] THEN REPEAT STRIP_TAC THEN
-      ONCE_REWRITE_TAC [GSYM NONOVERLAPPING_MODULO_MOD2] THEN
-      ASM_REWRITE_TAC [] THEN REWRITE_TAC [NONOVERLAPPING_MODULO_MOD2] THENL
-       [POP_ASSUM SUBST1_TAC THEN
-        MATCH_MP_TAC NONOVERLAPPING_MODULO_OFFSET_SIMPLE_BOTH THEN
-        DISJ1_TAC THEN ASM_ARITH_TAC;
-        POP_ASSUM (MATCH_MP_TAC o MATCH_MP (ONCE_REWRITE_RULE [IMP_CONJ]
-          NONOVERLAPPING_MODULO_SUBREGIONS)) THEN
-        CONJ_TAC THEN MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN
-        ASM_ARITH_TAC]) in
-    UNDISCH_ALL th, (UNDISCH_ALL o prove)
-     (`(a1 == val (x:int64) + i1) (mod (2 EXP 64)) ==>
-       (a2 == val y + i2) (mod (2 EXP 64)) ==>
-       i1 + n1 <= nx ==> i1 + n1 <= 2 EXP 64 ==>
-       i2 + n2 <= ny ==> i2 + n2 <= i1 ==>
-       x = y \/ nonoverlapping_modulo (2 EXP 64) (val x,nx) (val y,ny) ==>
-       nonoverlapping_modulo (2 EXP 64) (a1,n1) (a2,n2)`,
-      ONCE_REWRITE_TAC [NONOVERLAPPING_MODULO_SYM] THEN MESON_TAC [th]) in
-
-  let dth_lt = PROVE_HYP (UNDISCH_ALL (ARITH_RULE
-    `i2 + n2 <= ny ==> ny <= 2 EXP 64 ==> i2 + n2 <= 2 EXP 64`)) dth_lt2
-  and dth_gt = PROVE_HYP (UNDISCH_ALL (ARITH_RULE
-    `i1 + n1 <= nx ==> nx <= 2 EXP 64 ==> i1 + n1 <= 2 EXP 64`)) dth_gt2 in
-
-  let eq_or_numeral_lt (t1:term) (t2:term) =
-    t1 = t2 || (try let n1 = dest_numeral t1 and n2 = dest_numeral t2 in
-      n1 < n2 with Failure _ -> false) in
-
-  (* Returns true if v1 <= v2, false if v2 <= v1.
-     Can return anything if v1 = v2.
-     If the result is unknown, raise a failure. *)
-  let rec cmp asl v1 v2 = match v1,v2 with
-  | Comb(Const("val",_),v1),Comb(Const("val",_),v2) -> cmp asl v1 v2
-  | Comb(Const("word",_),v1),Comb(Const("word",_),v2) -> cmp asl v1 v2
-  | Comb(Comb(Const("word_add",_),a1),b1),
-    Comb(Comb(Const("word_add",_),a2),b2) when a1 = a2 -> cmp asl b1 b2
-  | Comb(Comb(Const("word_add",_),a1),b1),a2 when a1 = a2 -> false
-  | a1,Comb(Comb(Const("word_add",_),a2),b2) when a1 = a2 -> true
-  | Comb(Comb(Const("+",_),a1),b1),
-    Comb(Comb(Const("+",_),a2),b2) when a1 = a2 -> cmp asl b1 b2
-  | Comb(Comb(Const("+",_),a1),b1),a2 when eq_or_numeral_lt a2 a1 ||
-    eq_or_numeral_lt a2 b1 -> false
-  | a1,Comb(Comb(Const("+",_),a2),b2) when eq_or_numeral_lt a1 a2 ||
-    eq_or_numeral_lt a1 b2 -> true
-  | Comb(Comb(Const("-",_),a1),b1),
-    Comb(Comb(Const("-",_),a2),b2) when a1 = a2 -> cmp asl b2 b1
-  | Comb(Comb(Const("-",_),a1),b1),
-    Comb(Comb(Const("-",_),a2),b2) when b1 = b2 -> cmp asl a1 a2
-  | Comb(Comb(Const("-",_),a1),b1),a2 when eq_or_numeral_lt a1 a2 -> true
-  | a1,Comb(Comb(Const("-",_),a2),b2) when eq_or_numeral_lt a2 a1 -> false
-  | Comb(Comb(Const("word_mul",_),a1),b1),
-    Comb(Comb(Const("word_mul",_),a2),b2) when a1 = a2 -> cmp asl b1 b2
-  | Comb(Comb(Const("*",_),a1),b1),
-    Comb(Comb(Const("*",_),a2),b2) when a1 = a2 -> cmp asl b1 b2
-  | Comb(Comb(Const("*",_),a1),b1),
-    Comb(Comb(Const("*",_),a2),b2) when b1 = b2 -> cmp asl a1 a2
-  | Comb(_,Const("_0",_)),_ -> true
-  | _,Comb(_,Const("_0",_)) -> false
-  | e1,e2 ->
-    try let n1 = dest_numeral e1 and n2 = dest_numeral e2 in n1 < n2
-    with Failure _ ->
-      (* rely on prove_le. *)
-      try let _ = prove_le asl (mk_binary "<=" (e1,e2)) in true with _->
-      try let _ = prove_le asl (mk_binary "<=" (e2,e1)) in false with _ ->
-      failwith (let s1, s2 = string_of_term e1, string_of_term e2 in
-        "NONOVERLAPPING_TAC: cmp: `" ^ s1 ^ "` and `" ^ s2 ^ "`")
-    in
-
-  let LE_TRANS' = UNDISCH_ALL (REWRITE_RULE [IMP_CONJ]
-    (SPECL [m_tm; n_tm; `2 EXP 64`] LE_TRANS))
-  and DISJ_NONOVERLAPPING_MODULO_SYM = MESON [NONOVERLAPPING_MODULO_SYM]
-   `x = y \/ nonoverlapping_modulo n (val x,k) (val y,l) <=>
-    y = x \/ nonoverlapping_modulo n (val y,l) (val x,k)` in
-
-  let NONOVERLAPPING_TAC (asl,w) = match w with
-  | Comb(Comb(Comb(Const("nonoverlapping_modulo",_),_),
-      (Comb(Comb(_,e1),n1) as p1)),
-      (Comb(Comb(_,e2),n2) as p2)) ->
-    if p1 = p2 then failwith "NONOVERLAPPING_TAC: overlapping self" else
-    let b1 = base e1 and b2 = base e2 in
-    let th = if b1 = b2 then
-      let th1 = normalize asl e1 and th2 = normalize asl e2 in
-      let i1,i2 = W f_f_ (rand o rand o rator o concl) (th1,th2) in
-      let th = INST [e1,a1_tm; e2,a2_tm; i1,i1_tm; i2,i2_tm;
-        n1,n1_tm; n2,n2_tm; b1,a_tm]
-          (if cmp asl i1 i2 then pth_lt else pth_gt) in
-      let f h = try
-        let n = tryfind (fun _,h ->
-          match concl h with
-          | Comb(Comb(Comb(Const("nonoverlapping_modulo",_),_),
-              Comb(Comb(_,e1'),n1')),Comb(Comb(_,e2'),n2')) ->
-            if base e1' = b1 then n1' else
-            if base e2' = b1 then n2' else fail ()
-          | _ -> fail ()) asl
-        and _,ls,_ = term_match [] mle_tm h in
-        prove_les asl (INST ((n,n_tm)::ls) LE_TRANS')
-      with Failure _ -> prove_le asl h in
-      PROVE_HYP th1 (PROVE_HYP th2 (prove_hyps f th))
-    else
-      let disj,h = tryfind (fun _,h ->
-        match concl h with
-        | Comb(Comb(Comb(Const("nonoverlapping_modulo",_),_),
-            Comb(Comb(_,e1'),_)),Comb(Comb(_,e2'),_)) ->
-          let b1' = base e1' and b2' = base e2' in
-          false,
-          if b1 = b1' && b2 = b2' then h else
-          if b2 = b1' && b1 = b2' then
-            CONV_RULE (REWR_CONV NONOVERLAPPING_MODULO_SYM) h
-          else fail ()
-        | Comb(Comb(Const("\\/",_),_),
-            Comb(Comb(Comb(Const("nonoverlapping_modulo",_),_),
-              Comb(Comb(_,b1'),_)),Comb(Comb(_,b2'),_))) ->
-          true,
-          if b1 = b1' && b2 = b2' then h else
-          if b2 = b1' && b1 = b2' then
-            CONV_RULE (REWR_CONV DISJ_NONOVERLAPPING_MODULO_SYM) h
-          else fail ()
-        | t -> fail ()) asl in
-      if disj then
-        let th1 = normalize asl e1 and th2 = normalize asl e2 in
-        let (x,i1),(y,i2) = W f_f_ ((rand o rand F_F I) o
-          dest_comb o rand o rator o concl) (th1,th2) in
-        if i1 = i2 then failwith "NONOVERLAPPING_TAC: same offset" else
-        let nx,ny = (rand o rand F_F rand) (dest_comb (rand (concl h))) in
-        let f = prove_les asl o INST [e1,a1_tm; e2,a2_tm;
-          i1,i1_tm; i2,i2_tm; n1,n1_tm; n2,n2_tm;
-          nx,nx_tm; ny,ny_tm; x,x_tm; y,y_tm] in
-        let th = if cmp asl i1 i2
-          then try f dth_lt with Failure _ -> f dth_lt2
-          else try f dth_gt with Failure _ -> f dth_gt2 in
-        itlist PROVE_HYP [th1; th2; h] th
-      else
-        let h =
-          let p1' = lhand (concl h) in
-          if p1 = p1' then h else
-          let th = INST [p1',pp_tm; p1,ppp_tm;
-            rand (concl h),p2_tm] pth_l in
-          let th = PROVE_HYP h th in
-          PROVE_HYP (prove_contains asl p1 p1') th in
-        let h =
-          let p2' = rand (concl h) in
-          if p2 = p2' then h else
-          let th = INST [p2',pp_tm; p2,ppp_tm;
-            lhand (concl h),p1_tm] pth_r in
-          let th = PROVE_HYP h th in
-          PROVE_HYP (prove_contains asl p2 p2') th in
-        h in
-    ACCEPT_TAC th (asl,w)
-  | _ -> failwith "NONOVERLAPPING_TAC" in
-
-  let OVERRIDDEN_NONOVERLAPPING_TAC =
-    let twfn = GEN_REWRITE_RULE I [NONOVERLAPPING_MODULO_SYM] in
-    fun ((asl,w) as gl) ->
-      let _ = cache := [] in
-      match w with
-        Comb(Comb(Comb(Const("nonoverlapping_modulo",_),_) as ntm,p1),p2) ->
-          (try let w' = mk_comb(mk_comb(ntm,p2),p1) in
-               let th = tryfind
-                 (fun (_,th) ->
-                    let t = concl th in
-                    if t = w then th
-                    else if t = w' then twfn th
-                    else fail()) asl in
-                ACCEPT_TAC th gl
-          with Failure _ -> try NONOVERLAPPING_TAC gl with Failure s ->
-            failwith (Printf.sprintf
-              "NONOVERLAPPING_TAC: cannot prove `%s`: reason: %s"
-              (string_of_term w) s))
-        | Comb(Comb(Const("orthogonal_components", _), p1), p2) when p1 = p2 ->
-          failwith "NONOVERLAPPING_TAC: orthogonal_components with identical operands"
-        | _ -> failwith ("NONOVERLAPPING_TAC: inapplicable goal: " ^
-                         (string_of_term w)) in
-
-  OVERRIDDEN_NONOVERLAPPING_TAC;;
-
-(* ------------------------------------------------------------------------- *)
-(* Automatically prove component orthogonality including memory.             *)
-(* ------------------------------------------------------------------------- *)
-
-let ORTHOGONAL_COMPONENTS_TAC =
+let NONOVERLAP_REVERT_CONV =
   let pth = prove
-   (`((orthogonal_components (bytes(a,32)) c
-       ==> orthogonal_components (bytes256 a) c) /\
-      (orthogonal_components d (bytes(a,32))
-       ==> orthogonal_components d (bytes256 a)) /\
-      (orthogonal_components (bytes(a,16)) c
-       ==> orthogonal_components (bytes128 a) c) /\
-      (orthogonal_components d (bytes(a,16))
-       ==> orthogonal_components d (bytes128 a)) /\
-      (orthogonal_components (bytes(a,8)) c
-       ==> orthogonal_components (bytes64 a) c) /\
-      (orthogonal_components d (bytes(a,8))
-       ==> orthogonal_components d (bytes64 a)) /\
-      (orthogonal_components (bytes(a,1)) c
-       ==> orthogonal_components (bytes8 a) c) /\
-      (orthogonal_components d (bytes(a,1))
-       ==> orthogonal_components d (bytes8 a)) /\
-      (orthogonal_components (bytes(a,2)) c
-       ==> orthogonal_components (bytes16 a) c) /\
-      (orthogonal_components d (bytes(a,2))
-       ==> orthogonal_components d (bytes16 a)) /\
-      (orthogonal_components (bytes(a,4)) c
-       ==> orthogonal_components (bytes32 a) c) /\
-      (orthogonal_components d (bytes(a,4))
-       ==> orthogonal_components d (bytes32 a)) /\
-      (orthogonal_components (bytes(a,k)) c
-       ==> orthogonal_components (bytelist(a,k)) c) /\
-      (orthogonal_components d (bytes(a,k))
-       ==> orthogonal_components d (bytelist(a,k)))) /\
-     (nonoverlapping_modulo (2 EXP 64) (val a1,l1) (val a2,l2)
-      ==> orthogonal_components
-           (bytes(a1:int64,l1)) (bytes (a2:int64,l2)))`,
+   (`!(base1:int64) base2 len1 len2.
+        nonoverlapping_modulo (2 EXP 64) (val base1,len1) (val base2,len2) <=>
+        nonoverlapping (base1,len1) (base2,len2)`,
+     REWRITE_TAC[nonoverlapping; DIMINDEX_64])
+  and qth = prove
+   (`!base1 base2 len1 len2.
+        nonoverlapping_modulo (2 EXP 64) (base1,len1) (base2,len2) <=>
+        nonoverlapping (word base1:int64,len1) (word base2:int64,len2)`,
+    REWRITE_TAC[nonoverlapping; NONOVERLAPPING_CLAUSES; DIMINDEX_64]) in
+  GEN_REWRITE_CONV I [pth] ORELSEC
+  (GEN_REWRITE_CONV I [qth] THENC
+   GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Normalize as word_add base (iword x), even by introduceing iword(&0).     *)
+(* ------------------------------------------------------------------------- *)
+
+let INORMALIZE_RELATIVE_ADDRESS_CONV =
+  let trivconv = GEN_REWRITE_CONV I
+    [WORD_RULE `z:int64 = word_add z (iword(&0))`]
+  and initconv =
+   GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [WORD_ADD; IWORD_INT_ADD; WORD_VAL; GSYM WORD_ADD_ASSOC;
+      WORD_RULE `word_sub x y:int64 = word_add x (word_neg y)`]
+  and mainconv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [GSYM IWORD_INT_ADD; WORD_IWORD;
+      GSYM IWORD_INT_NEG; GSYM IWORD_INT_MUL] THENC
+    GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM INT_OF_NUM_CLAUSES] in
+  let postconv tm =
+    match tm with
+      Var(_,_)
+    | Comb(Const("word",_),_) -> trivconv tm
+    | Comb(Comb(Const("word_add",_),_),_) -> RAND_CONV mainconv tm
+    | _ -> mainconv tm in
+  initconv THENC postconv;;
+
+(* ------------------------------------------------------------------------- *)
+(* Derive nonoverlapping-justifying reductions to arithmetic from a          *)
+(* given context of nonoverlapping hypotheses, if any. In all cases          *)
+(* add a theorem for the case where both regions have the same base.         *)
+(* ------------------------------------------------------------------------- *)
+
+let NONOVERLAPPING_DRIVERS =
+  let pth = prove
+   (`!(base1:int64) base2 off1 off2 len1 len2 off1' off2' len1' len2'.
+          nonoverlapping (word_add base1 (iword off1),len1)
+                         (word_add base2 (iword off2),len2)
+          ==> (0 < len1'
+               ==> &0 <= off1' - off1 /\ (off1' - off1) + &len1' <= &len1) /\
+              (0 < len2'
+               ==> &0 <= off2' - off2 /\ (off2' - off2) + &len2' <= &len2)
+              ==> nonoverlapping (word_add base1 (iword off1'),len1')
+                                 (word_add base2 (iword off2'),len2')`,
+    REPEAT GEN_TAC THEN DISCH_THEN(fun th -> DISCH_TAC THEN MP_TAC th) THEN
+    MATCH_MP_TAC(ONCE_REWRITE_RULE
+     [TAUT `p /\ q /\ r ==> s <=> q /\ r ==> p ==> s`]
+          NONOVERLAPPING_SUBREGIONS) THEN
+    CONJ_TAC THEN MATCH_MP_TAC CONTAINED_SIMPLE_64 THEN
+    ASM_REWRITE_TAC[]) in
+  let pth' = prove
+   (`!(base1:int64) base2 off1 off2 len1 len2 off1' off2' len1' len2'.
+          word_add base1 (iword off1) = word_add base2 (iword off2) \/
+          nonoverlapping (word_add base1 (iword off1),len1)
+                         (word_add base2 (iword off2),len2)
+          ==> (0 < len1'
+               ==> &0 <= off1' - off1 /\ (off1' - off1) + &len1' <= &len1) /\
+              (0 < len2'
+               ==> &0 <= off2' - off2 /\ (off2' - off2) + &len2' <= &len2) /\
+              (0 < len1' /\ 0 < len2'
+               ==> &len2' <= off1' - (off1 - off2 + off2') /\
+                    off1' - (off1 - off2 + off2') + &len1'
+                    <= &18446744073709551616 \/
+                   &len1' <= (off1 - off2 + off2') - off1' /\
+                   (off1 - off2 + off2') - off1' + &len2'
+                   <= &18446744073709551616)
+              ==> nonoverlapping (word_add base1 (iword off1'),len1')
+                                 (word_add base2 (iword off2'),len2')`,
+    REPEAT GEN_TAC THEN STRIP_TAC THEN DISCH_TAC THENL
+     [ALL_TAC; ASM_MESON_TAC[pth]] THEN
+    FIRST_X_ASSUM(SUBST1_TAC o MATCH_MP (WORD_RULE
+     `word_add b1 (iword off1) = word_add b2 (iword off2)
+      ==> b2 = word_add b1 (iword(off1 - off2))`)) THEN
+    REWRITE_TAC[WORD_RULE
+     `word_add (word_add b (iword x)) (iword y) =
+      word_add b (iword(x + y))`] THEN
+    MATCH_MP_TAC NONOVERLAPPING_SIMPLE_64 THEN ASM_REWRITE_TAC[]) in
+  let pat1 =
+   can (term_match [] `nonoverlapping (a:int64,m) (b,n)`)
+  and pat2 =
+   can (term_match [] `a = b \/ nonoverlapping (a:int64,m) (b,n)`)
+  and rule1 = MATCH_MP pth
+  and rule2 = MATCH_MP pth'
+  and postrule =
+    GEN_REWRITE_RULE TOP_DEPTH_CONV
+     [GSYM INT_OF_NUM_MUL; GSYM INT_OF_NUM_POW; GSYM INT_OF_NUM_ADD;
+      INT_SUB_RZERO; INT_ADD_LID; INT_ADD_RID] in
+  let OVERLAPPING_DRIVER th =
+    let th1 = CONV_RULE (ONCE_DEPTH_CONV NONOVERLAP_REVERT_CONV) th in
+    let tm = concl th1 in
+    let th2 =
+      if pat1 tm then
+          rule1 (CONV_RULE
+           (BINOP_CONV (LAND_CONV INORMALIZE_RELATIVE_ADDRESS_CONV)) th1)
+      else if pat2 tm then
+          rule2 (CONV_RULE
+           (BINOP2_CONV (BINOP_CONV INORMALIZE_RELATIVE_ADDRESS_CONV)
+              (BINOP_CONV (LAND_CONV INORMALIZE_RELATIVE_ADDRESS_CONV))) th1)
+      else failwith "OVERLAPPING_DRIVER" in
+    postrule th2 in
+  fun thl ->
+    let ths = mapfilter OVERLAPPING_DRIVER thl in
+    let ths' = map (PURE_ONCE_REWRITE_RULE[NONOVERLAPPING_SYM]) ths in
+    NONOVERLAPPING_SIMPLE_64 :: ths @ ths';;
+
+(* ------------------------------------------------------------------------- *)
+(* Simple conversion to integer versus natural number properties.            *)
+(* ------------------------------------------------------------------------- *)
+
+let INT_OF_NUM_CONV =
+  GEN_REWRITE_CONV TOP_DEPTH_CONV
+   [DIMINDEX_64; NUM_REDUCE_CONV `2 EXP 64`;
+    ARITH_RULE `~(n = 0) <=> 1 <= n`] THENC
+  GEN_REWRITE_CONV TOP_DEPTH_CONV
+   [LT_MULT; ARITH_RULE `c:num < a - b <=> c + b < a`] THENC
+  GEN_REWRITE_CONV TOP_DEPTH_CONV
+   [GSYM INT_OF_NUM_DIV; GSYM INT_OF_NUM_REM; GSYM INT_OF_NUM_SUC;
+    ARITH_RULE `!m n. &(m - n):int = max (&0) (&m - &n)`;
+    ARITH_RULE `!n. &(PRE n):int = max (&0) (&n - &1)`;
+    GSYM INT_OF_NUM_CLAUSES] THENC
+  NUM_REDUCE_CONV;;
+
+(* ------------------------------------------------------------------------- *)
+(* Filter away assumptions other than natural number predictes and any       *)
+(* involving various other constructs, notably the "read" function. The idea *)
+(* is to keep only those that might be involved in address calculation. When *)
+(* a theorem passes the filter, normalize arithmetic to be on Z not N.       *)
+(* ------------------------------------------------------------------------- *)
+
+let FILTER_CANONIZE_ASSUMPTIONS =
+  let numty = `:num` in
+  let is_num_relop tm =
+    exists (fun op -> is_binary op tm &&
+                      (let x,_ = dest_binary op tm in type_of x = numty))
+           ["=";"<";"<=";">";">="]
+  and avoiders = ["lowdigits"; "highdigits"; "bigdigit";
+                  "read"; "write"; "word"] in
+  let avoiderp tm =
+    match tm with
+      Comb(Comb(Const("DIV",_),_),m) -> not(is_numeral m)
+    | Comb(Comb(Const("MOD",_),_),m) -> not(is_numeral m)
+    | Comb(Comb(Const("EXP",_),_),m) -> not(frees m = [])
+    | Const(n,_) -> mem n avoiders
+    | _ -> false in
+  let filtered tm =
+    (is_num_relop tm || (is_neg tm && is_num_relop(rand tm))) &&
+    not(can (find_term avoiderp) tm) in
+  let FILTER_CANONIZE_ASSUMPTION th =
+    if filtered(concl th) then CONV_RULE INT_OF_NUM_CONV th
+    else failwith "FILTER_CANONIZE_ASSUMPTION" in
+  mapfilter FILTER_CANONIZE_ASSUMPTION;;
+
+(* ------------------------------------------------------------------------- *)
+(* Automatically prove nonoverlapping of regions. In the rule version, the   *)
+(* first argument is a pair: the contextual lemmas driving backchaining,     *)
+(* and the current arithmetical assumptions.                                 *)
+(* ------------------------------------------------------------------------- *)
+
+let NONOVERLAPPING_RULE =
+  let SIMPLE_INT_POS_RULE =
+    let rule_mul = PART_MATCH rand INT_LE_MUL
+    and rule_add = PART_MATCH rand INT_LE_ADD
+    and rule_max = PART_MATCH I (INT_ARITH `&0:int <= max (&0) x`)
+    and rule_num = PART_MATCH I INT_POS in
+    let rec rule tm =
+      try rule_max tm with Failure _ ->
+      try rule_num tm with Failure _ ->
+      let ith = (try rule_mul tm with Failure _ -> rule_add tm) in
+      let ltm,rtm = dest_conj(lhand(concl ith)) in
+      MP ith (CONJ (rule ltm) (rule rtm)) in
+    rule in
+  let CONTEXT_INT_ARITH ths tm =
+    try SIMPLE_INT_POS_RULE tm with Failure _ ->
+    try INT_ARITH tm with Failure _ ->
+    if ths = [] then failwith "CONTEXT_INT_ARITH_RULE" else
+    let tm' = itlist (curry mk_imp o concl) ths tm in
+    rev_itlist (C MP) ths (INT_ARITH tm') in
+  let pth_mul = prove
+   (`0 < a * b <=> &(a * b):int = &a * &b /\ 0 < a /\ 0 < b`,
+    REWRITE_TAC[INT_OF_NUM_CLAUSES; LT_MULT])
+  and pth_sub = prove
+   (`c < a - b <=> &(a - b):int = &a - &b /\ c + b < a`,
+    ARITH_TAC) in
+  let rule_mul = GEN_REWRITE_RULE I [pth_mul]
+  and rule_sub = GEN_REWRITE_RULE I [pth_sub] in
+  let rec DECOMP_LT (dun,eqs,todo) =
+    match todo with
+      [] -> (map (CONV_RULE INT_OF_NUM_CONV) dun,eqs)
+    | th::oths ->
+       (try let th' = rule_mul th in
+            let eth,rth = CONJ_PAIR th' in
+            let th1,th2 = CONJ_PAIR rth in
+            DECOMP_LT (dun,eth::eqs,th1::th2::oths)
+        with Failure _ -> try
+            let th' = rule_sub th in
+            let eth,rth = CONJ_PAIR th' in
+            DECOMP_LT (dun,eth::eqs,rth::oths)
+        with Failure _ -> DECOMP_LT (th::dun,eqs,oths)) in
+  let rec CORE_SPECIAL_ARITH_RULE ths tm =
+    if is_conj tm then
+      CONJ (CORE_SPECIAL_ARITH_RULE ths (lhand tm))
+           (CORE_SPECIAL_ARITH_RULE ths (rand tm))
+    else CONTEXT_INT_ARITH ths tm in
+  let rec SPECIAL_ARITH_RULE ths tm =
+    if is_conj tm then
+      CONJ (SPECIAL_ARITH_RULE ths (lhand tm))
+           (SPECIAL_ARITH_RULE ths (rand tm))
+    else if is_imp tm then
+      let atm,btm = dest_imp tm in
+      let (aths,eqs) = DECOMP_LT ([],[],[ASSUME atm]) in
+      let eth = (SUBS_CONV eqs THENC INT_OF_NUM_CONV) btm in
+      let th = CORE_SPECIAL_ARITH_RULE (aths@ths) (rand(concl eth)) in
+      DISCH atm (EQ_MP (SYM eth) th)
+    else
+      let eth = INT_OF_NUM_CONV tm in
+      let th = CORE_SPECIAL_ARITH_RULE ths (rand(concl eth)) in
+      EQ_MP (SYM eth) th in
+  fun (drivers,ariths) ->
+    let convs = map (PART_MATCH rand) drivers
+    and arule = SPECIAL_ARITH_RULE ariths in
+    let match_arith_rule tm =
+      tryfind (fun cfn -> let ith = cfn tm in MP ith (arule(lhand(concl ith))))
+              convs in
+    let rec rule tm =
+      if is_conj tm then CONJ (rule(lhand tm)) (rule(rand tm)) else
+      let eth =
+        (TRY_CONV NONOVERLAP_REVERT_CONV THENC
+         BINOP_CONV (LAND_CONV INORMALIZE_RELATIVE_ADDRESS_CONV)) tm in
+      EQ_MP (SYM eth) (match_arith_rule(rand(concl eth))) in
+    rule;;
+
+let NONOVERLAPPING_TAC gl =
+  let thl = map snd (fst gl) and w = snd gl in
+  let drivers = NONOVERLAPPING_DRIVERS thl
+  and ariths = FILTER_CANONIZE_ASSUMPTIONS thl in
+  let th = NONOVERLAPPING_RULE(drivers,ariths) w in
+  ACCEPT_TAC th gl;;
+
+(* ------------------------------------------------------------------------- *)
+(* Prove orthogonality of components.                                        *)
+(* ------------------------------------------------------------------------- *)
+
+let ORTHOGONAL_COMPONENTS_RULE =
+  let pth,qth = (CONJ_PAIR o prove)
+   (`(nonoverlapping (a1,l1) (a2,l2)
+      ==> orthogonal_components (bytes(a1,l1)) (bytes(a2,l2))) /\
+     (orthogonal_components (bytes(a,32)) c
+      ==> orthogonal_components (bytes256 a) c) /\
+     (orthogonal_components d (bytes(a,32))
+      ==> orthogonal_components d (bytes256 a)) /\
+     (orthogonal_components (bytes(a,16)) c
+      ==> orthogonal_components (bytes128 a) c) /\
+     (orthogonal_components d (bytes(a,16))
+      ==> orthogonal_components d (bytes128 a)) /\
+     (orthogonal_components (bytes(a,8)) c
+      ==> orthogonal_components (bytes64 a) c) /\
+     (orthogonal_components d (bytes(a,8))
+      ==> orthogonal_components d (bytes64 a)) /\
+     (orthogonal_components (bytes(a,1)) c
+      ==> orthogonal_components (bytes8 a) c) /\
+     (orthogonal_components d (bytes(a,1))
+      ==> orthogonal_components d (bytes8 a)) /\
+     (orthogonal_components (bytes(a,2)) c
+      ==> orthogonal_components (bytes16 a) c) /\
+     (orthogonal_components d (bytes(a,2))
+      ==> orthogonal_components d (bytes16 a)) /\
+     (orthogonal_components (bytes(a,4)) c
+      ==> orthogonal_components (bytes32 a) c) /\
+     (orthogonal_components d (bytes(a,4))
+      ==> orthogonal_components d (bytes32 a)) /\
+     (orthogonal_components (bytes(a,k)) c
+      ==> orthogonal_components (bytelist(a,k)) c) /\
+     (orthogonal_components d (bytes(a,k))
+      ==> orthogonal_components d (bytelist(a,k)))`,
     CONJ_TAC THENL
-     [REWRITE_TAC[bytes256; bytes128; bytes64; bytes32; bytes16; bytes8;
+     [REWRITE_TAC[NONOVERLAPPING_MODULO; ORTHOGONAL_COMPONENTS_BYTES] THEN
+      REWRITE_TAC[WORD_VAL];
+      REWRITE_TAC[bytes256; bytes128; bytes64; bytes32; bytes16; bytes8;
                   bytelist; COMPONENT_COMPOSE_ASSOC] THEN
       REWRITE_TAC[ORTHOGONAL_COMPONENTS_SUB_LEFT;
-                  ORTHOGONAL_COMPONENTS_SUB_RIGHT];
-      DISCH_TAC THEN
-      ASM_REWRITE_TAC[ORTHOGONAL_COMPONENTS_BYTES; DIMINDEX_64]]) in
+                  ORTHOGONAL_COMPONENTS_SUB_RIGHT]]) in
+  let baseconv = PART_MATCH rand pth
+  and stepconvs = map (PART_MATCH rand) (CONJUNCTS qth)
+  and breakconv = PART_MATCH (rand o rand)
+   (REWRITE_RULE[IMP_CONJ] ORTHOGONAL_COMPONENTS_COMPOSE_RIGHT)
+  and redconv = BINOP_CONV(LAND_CONV(DEPTH_CONV WORD_NUM_RED_CONV)) in
+  fun cxt ->
+    let novrule = NONOVERLAPPING_RULE cxt in
+    let mainrule tm =
+      let th = baseconv tm in
+      let ith = CONV_RULE (LAND_CONV redconv) th in
+      let rth = novrule (lhand(concl ith)) in
+      MP ith rth in
+    let rec midrule tm =
+      try let ith = tryfind (fun f -> f tm) stepconvs in
+          let rth = midrule(lhand(concl ith)) in
+          MP ith rth
+      with Failure _ -> mainrule tm in
+    let rec toprule tm =
+      try let th = breakconv tm in
+          let ith = MP th (VALID_COMPONENT_CONV(lhand(concl th))) in
+          let rth = toprule(lhand(concl ith)) in
+          MP ith rth
+      with Failure _ -> midrule tm in
+    fun tm -> try ORTHOGONAL_COMPONENTS_CONV tm with Failure _ -> toprule tm;;
+
+let ORTHOGONAL_COMPONENTS_TAC =
   CONV_TAC ORTHOGONAL_COMPONENTS_CONV ORELSE
-  (REPEAT(MATCH_MP_TAC ORTHOGONAL_COMPONENTS_COMPOSE_RIGHT THEN CONJ_TAC THENL
-           [CONV_TAC(EQT_INTRO o VALID_COMPONENT_CONV); ALL_TAC]) THEN
-   REPEAT(FIRST(map MATCH_MP_TAC (CONJUNCTS pth))) THEN
-   CONV_TAC(BINOP_CONV(LAND_CONV(DEPTH_CONV WORD_NUM_RED_CONV))) THEN
-   NONOVERLAPPING_TAC);;
+  (fun gl ->
+   let thl = map snd (fst gl) and w = snd gl in
+   let drivers = NONOVERLAPPING_DRIVERS thl
+   and ariths = FILTER_CANONIZE_ASSUMPTIONS thl in
+   let th = ORTHOGONAL_COMPONENTS_RULE(drivers,ariths) w in
+   ACCEPT_TAC th gl);;
 
 (* ------------------------------------------------------------------------- *)
-(* Now specific read-over-write of orthogonal components.                    *)
+(* Convert read c (write d y s) to read c s where c and d are orthogonal.    *)
+(* The unpluralized one doesn't use a context and applies at a single level. *)
+(* The second one is more general, using a context and applying at depth.    *)
+(* ------------------------------------------------------------------------- *)
+
+let COMPONENT_READ_OVER_WRITE_ORTHOGONAL_CONV =
+  let pth_orth = prove
+   (`orthogonal_components c d ==> read c (write d y s) = read c s`,
+    SIMP_TAC[orthogonal_components]) in
+  let rule_orth = PART_MATCH (lhand o rand) pth_orth in
+  fun tm -> let th = rule_orth tm in
+            MP th (ORTHOGONAL_COMPONENTS_CONV(lhand(concl th)));;
+
+let COMPONENTS_READ_OVER_WRITE_ORTHOGONAL_CONV =
+  let pth = prove
+   (`orthogonal_components c d ==> read c (write d y s) = read c s`,
+    SIMP_TAC[orthogonal_components]) in
+  let rwconv = PART_MATCH (lhand o rand) pth
+  and imprule = MATCH_MP
+   (TAUT `(p ==> (q <=> q')) ==> (p ==> q <=> p ==> q')`)
+  and conjrule = MATCH_MP
+   (TAUT `(p ==> (q <=> q')) ==> (p /\ q <=> p /\ q')`) in
+  let singleconv cxt tm =
+    let th = rwconv tm in
+    MP th (ORTHOGONAL_COMPONENTS_RULE cxt (lhand(concl th))) in
+  let rec repconv cxt tm =
+    match tm with
+      Comb(Comb(Const("read",_),_),
+           Comb(Comb(Comb(Const("write",_),_),_),_)) ->
+      let th = singleconv cxt tm in
+      CONV_RULE (RAND_CONV(repconv cxt)) th
+    | _ -> REFL tm in
+  fun (drivers,ariths) ->
+    let rec conv ths tm =
+      match tm with
+        Comb(Comb(Const("read",_),_),
+             Comb(Comb(Comb(Const("write",_),_),_),_)) ->
+          repconv (drivers,ths) tm
+      | Abs(x,p) ->
+          let x' = genvar(type_of x) in
+          let p' = vsubst[x',x] p in
+          CONV_RULE (BINOP_CONV(ALPHA_CONV x)) (ABS x' (conv ths p'))
+      | Comb(Comb(Const("/\\",_) as op,l),r) ->
+         (try let lth = conv ths l in
+              try let rth = conv ths r in
+                  MK_COMB(AP_TERM op lth,rth)
+              with Unchanged -> AP_THM (AP_TERM op lth) r
+          with Unchanged ->
+              let ths' = ths @
+                FILTER_CANONIZE_ASSUMPTIONS(CONJUNCTS(ASSUME l)) in
+              let rth = DISCH l (conv ths' r) in
+              conjrule rth)
+      | Comb(Comb(Const("==>",_) as op,l),r) ->
+         (try let lth = conv ths l in
+              try let rth = conv ths r in
+                  MK_COMB(AP_TERM op lth,rth)
+              with Unchanged -> AP_THM (AP_TERM op lth) r
+          with Unchanged ->
+              let ths' = ths @
+                FILTER_CANONIZE_ASSUMPTIONS(CONJUNCTS(ASSUME l)) in
+              let rth = DISCH l (conv ths' r) in
+              imprule rth)
+      | Comb(l,r) ->
+         (try let lth = conv ths l in
+              try let rth = conv ths r in MK_COMB(lth,rth)
+              with Unchanged -> AP_THM lth r
+          with Unchanged ->
+              AP_TERM l (conv ths r))
+      | _ -> raise Unchanged in
+  fun tm -> try conv ariths tm with Unchanged -> REFL tm;;
+
+(* ------------------------------------------------------------------------- *)
+(* Tactic versions, the latter allowing identical components too.            *)
 (* ------------------------------------------------------------------------- *)
 
 let READ_OVER_WRITE_ORTHOGONAL_TAC =
@@ -3467,10 +3394,6 @@ let READ_OVER_WRITE_ORTHOGONAL_TAC =
    (REFL_TAC ORELSE
     (tac_orth THEN CONJ_TAC THENL [ORTHOGONAL_COMPONENTS_TAC; tac])) g in
   tac;;
-
-(* ------------------------------------------------------------------------- *)
-(* Similar but allows the "easy" case of identical components and result.    *)
-(* ------------------------------------------------------------------------- *)
 
 let READ_OVER_WRITE_TAC =
   let tac_same = (MATCH_MP_TAC o prove)
@@ -3488,54 +3411,26 @@ let READ_OVER_WRITE_TAC =
   ASM_REWRITE_TAC[] THEN tac;;
 
 (* ------------------------------------------------------------------------- *)
-(* Rule to apply a state update theorem                                      *)
-(* uth |- (c1 := t1) (... (cn := tn) s) = s'                                 *)
-(* to a theorem involving terms "read d s"                                   *)
-(* and attempts to derive a corresponding theorem with s'.                   *)
-(* Fails if the exact same theorem doesn't hold.                             *)
+(* Rule applying a state update theorem of the form                          *)
+(* uth |- (write c1 t1) (... (write cn tn) s) = s'                           *)
+(* to a theorem involving terms of the form "read d s" and attempting to     *)
+(* derive a corresponding theorem with s' replacing s. It fails unless       *)
+(* the same theorem is derivable, but also if the original theorem doesn't   *)
+(* involve the old state variable s anyway.                                  *)
 (* ------------------------------------------------------------------------- *)
 
-let STATE_UPDATE_RULE uth th =
-  let s = repeat rand(lhand(concl uth)) in
-  let is_stateread tm =
-    match tm with
-     Comb(Comb(Const("read",_),_),t) -> t = s
-    | _ -> false in
-  let transform tm =
-    let th1 = AP_TERM (rator tm) uth in
-    let th2 = CONV_RULE
-     (LAND_CONV(REPEATC COMPONENT_READ_OVER_WRITE_ORTHOGONAL_CONV)) th1 in
-    if lhand(concl th2) = tm then th2 else failwith "transform" in
-  let rtms = find_terms is_stateread (concl th) in
-  if rtms = [] then failwith "STATE_UPDATE_RULE" else
-  let eqths = map transform rtms in PURE_REWRITE_RULE eqths th;;
-
-(* ------------------------------------------------------------------------- *)
-(* More sophisticated version using assumptions.                             *)
-(* ------------------------------------------------------------------------- *)
-
-let STATE_UPDATE_TAC uth =
-  let utm,s' = dest_eq(concl uth) in
+let STATE_UPDATE_RULE cxt uth th =
+  let utm,s' = dest_eq(concl uth)
+  and tm = concl th in
   let s = repeat rand utm in
-  let is_stateread tm =
-    match tm with
-     Comb(Comb(Const("read",_),_),t) -> t = s
-    | _ -> false in
-  let thack rtm ttac th =
-    let rtm' = mk_comb(rator rtm,utm) in
-    SUBGOAL_THEN (mk_eq(rtm',rtm)) MP_TAC THENL
-     [READ_OVER_WRITE_ORTHOGONAL_TAC; ALL_TAC] THEN
-    DISCH_THEN(fun oth ->
-       MP_TAC(TRANS (SYM oth) (AP_TERM (rator rtm) uth))) THEN
-    DISCH_THEN(fun oth -> ttac(SUBS[oth] th)) in
-  fun th ->
-    let rtms = find_terms is_stateread (concl th) in
-    if rtms = [] then ALL_TAC
-    else EVERY_TCL (map thack rtms) ASSUME_TAC th;;
+  if not(free_in s tm) then failwith "STATE_UPDATE_RULE" else
+  let th0 = SUBS_CONV[uth] (vsubst[utm,s] (concl th)) in
+  let th1 = CONV_RULE(LAND_CONV
+    (COMPONENTS_READ_OVER_WRITE_ORTHOGONAL_CONV cxt)) th0 in
+  EQ_MP th1 th;;
 
 (* ------------------------------------------------------------------------- *)
-(* Create conjunction of new clauses for state update (should do a           *)
-(* dual form where we prove no effect on any others).                        *)
+(* Create conjunction of newly arising clauses for state update.             *)
 (* ------------------------------------------------------------------------- *)
 
 let STATE_UPDATE_NEW_RULE th =
@@ -3555,20 +3450,14 @@ let STATE_UPDATE_NEW_RULE th =
 (* Works from antecedent in the goal, which is retained after its use.       *)
 (* ------------------------------------------------------------------------- *)
 
-let ASSUMPTION_STATE_UPDATE_TAC =
-  DISCH_THEN(fun uth ->
-    let update_tac = STATE_UPDATE_TAC uth in
-    MP_TAC uth THEN
-    ASSUM_LIST(MAP_EVERY (fun th g ->
-      try update_tac th g
-      with Failure s ->
-        if !components_print_log then
-          if s = "NONOVERLAPPING_TAC: orthogonal_components with identical operands"
-          then ALL_TAC g (* Exactly overwrites, e.g., orthogonal_components PC PC *)
-          else (Printf.printf
-            "Info: assumption `%s` is erased.\n    - Reason: %s\n"
-            (string_of_term (concl th)) s; ALL_TAC g)
-        else ALL_TAC g)));;
+let ASSUMPTION_STATE_UPDATE_TAC gl =
+  (DISCH_THEN(fun uth ->
+   let thl = map snd (fst gl) in
+   let drivers = NONOVERLAPPING_DRIVERS thl
+   and ariths = FILTER_CANONIZE_ASSUMPTIONS thl in
+   let update_rule = STATE_UPDATE_RULE (drivers,ariths) uth in
+   let newthms = mapfilter update_rule thl in
+   MP_TAC uth THEN MAP_EVERY ASSUME_TAC newthms)) gl;;
 
 (* ------------------------------------------------------------------------- *)
 (* Rule for "non-selfmodification" when supplied with std exec theorem       *)
