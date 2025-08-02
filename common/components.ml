@@ -3423,7 +3423,7 @@ let STATE_UPDATE_RULE cxt uth th =
   let utm,s' = dest_eq(concl uth)
   and tm = concl th in
   let s = repeat rand utm in
-  if not(free_in s tm) then failwith "STATE_UPDATE_RULE" else
+  if not(vfree_in s tm) then failwith "STATE_UPDATE_RULE" else
   let th0 = SUBS_CONV[uth] (vsubst[utm,s] (concl th)) in
   let th1 = CONV_RULE(LAND_CONV
     (COMPONENTS_READ_OVER_WRITE_ORTHOGONAL_CONV cxt)) th0 in
@@ -3450,13 +3450,25 @@ let STATE_UPDATE_NEW_RULE th =
 (* Works from antecedent in the goal, which is retained after its use.       *)
 (* ------------------------------------------------------------------------- *)
 
-let ASSUMPTION_STATE_UPDATE_TAC gl =
-  (DISCH_THEN(fun uth ->
-   let thl = map snd (fst gl) in
-   let drivers = NONOVERLAPPING_DRIVERS thl
-   and ariths = FILTER_CANONIZE_ASSUMPTIONS thl in
-   let update_rule = STATE_UPDATE_RULE (drivers,ariths) uth in
-   let newthms = mapfilter update_rule thl in
+let ASSUMPTION_STATE_UPDATE_TAC =
+  let rec memorable tm =
+    match tm with
+      Var(_,_) -> false
+    | Abs(_,b) -> memorable b
+    | Const(n,_) -> n = "memory"
+    | Comb(s,t) -> memorable s || memorable t in
+  fun gl -> (DISCH_THEN(fun uth ->
+   let utm = lhand(concl uth)
+   and thl = map snd (fst gl) in
+   let s = repeat rand utm in
+   let newthms =
+     if memorable utm then
+       let thy,thn = partition (vfree_in s o concl) thl in
+       let cxt = (NONOVERLAPPING_DRIVERS thn,FILTER_CANONIZE_ASSUMPTIONS thn) in
+       mapfilter (STATE_UPDATE_RULE cxt uth) thy
+     else
+       let thy = filter (vfree_in s o concl) thl in
+       mapfilter (STATE_UPDATE_RULE ([],[]) uth) thy in
    MP_TAC uth THEN MAP_EVERY ASSUME_TAC newthms)) gl;;
 
 (* ------------------------------------------------------------------------- *)
