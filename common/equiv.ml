@@ -509,7 +509,8 @@ let DIGITIZE_MEMORY_READS th state_update_th =
 
     (* new_memory_reads will still use the 'previous' state. update it. *)
     new_memory_reads := map
-      (fun th -> try STATE_UPDATE_RULE state_update_th th with _ -> th)
+      (fun th -> try STATE_UPDATE_RULE ([NONOVERLAPPING_SIMPLE_64],[])
+                         state_update_th th with _ -> th)
       !new_memory_reads;
 
     let res_th = end_itlist CONJ ths in
