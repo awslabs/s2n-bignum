@@ -1799,7 +1799,7 @@ let BIGNUM_SQR_P521_CORE_EQUIV1 = time prove(equiv_goal1,
     BIGNUM_SQR_P521_UNOPT_CORE_EXEC
     BIGNUM_SQR_P521_INTERM1_CORE_EXEC THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [
@@ -1886,7 +1886,7 @@ let BIGNUM_SQR_P521_CORE_EQUIV2 = time prove(
   ARM_N_STEPS_AND_REWRITE_TAC BIGNUM_SQR_P521_CORE_EXEC
     (1--(List.length inst_map)) inst_map state_to_abbrevs None THEN
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [
