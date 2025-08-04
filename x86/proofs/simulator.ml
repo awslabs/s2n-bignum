@@ -344,6 +344,22 @@ let iclasses = iclasses @
  [0xc4; 0x43; 0x09; 0x02; 0xf7; 0x03]; (* VPBLENDD xmm14, xmm14, xmm15, 0x03 *)
  [0xc5; 0x45; 0xe5; 0xfb]; (* VPMULHW (%_% ymm15) (%_% ymm7) (%_% ymm3) *)
  [0xc5; 0x41; 0xe5; 0xfb]; (* VPMULHW (%_% xmm15) (%_% xmm7) (%_% xmm3) *)
+ [0xc4; 0xe2; 0x7d; 0x40; 0xc1]; (* VPMULLD ymm0, ymm0, ymm1 *)
+ [0xc4; 0xe2; 0x75; 0x40; 0xca]; (* VPMULLD ymm1, ymm1, ymm2 *)
+ [0xc4; 0xe2; 0x6d; 0x40; 0xd3]; (* VPMULLD ymm2, ymm2, ymm3 *)
+ [0xc4; 0xe2; 0x65; 0x40; 0xdc]; (* VPMULLD ymm3, ymm3, ymm4 *)
+ [0xc4; 0xe2; 0x79; 0x40; 0xc1]; (* VPMULLD xmm0, xmm0, xmm1 *)
+ [0xc4; 0xe2; 0x71; 0x40; 0xca]; (* VPMULLD xmm1, xmm1, xmm2 *)
+ [0xc4; 0xe2; 0x69; 0x40; 0xd3]; (* VPMULLD xmm2, xmm2, xmm3 *)
+ [0xc4; 0xe2; 0x61; 0x40; 0xdc]; (* VPMULLD xmm3, xmm3, xmm4 *)
+ [0xc4; 0x42; 0x3d; 0x40; 0xc1]; (* VPMULLD ymm8, ymm8, ymm9 *)
+ [0xc4; 0x42; 0x2d; 0x40; 0xd3]; (* VPMULLD ymm10, ymm10, ymm11 *)
+ [0xc4; 0x42; 0x1d; 0x40; 0xe5]; (* VPMULLD ymm12, ymm12, ymm13 *)
+ [0xc4; 0x42; 0x0d; 0x40; 0xf7]; (* VPMULLD ymm14, ymm14, ymm15 *)
+ [0xc4; 0x42; 0x39; 0x40; 0xc1]; (* VPMULLD xmm8, xmm8, xmm9 *)
+ [0xc4; 0x42; 0x29; 0x40; 0xd3]; (* VPMULLD xmm10, xmm10, xmm11 *)
+ [0xc4; 0x42; 0x19; 0x40; 0xe5]; (* VPMULLD xmm12, xmm12, xmm13 *)
+ [0xc4; 0x42; 0x09; 0x40; 0xf7]; (* VPMULLD xmm14, xmm14, xmm15 *)
  [0xc4; 0xc1; 0x7d; 0xd5; 0xc9]; (* VPMULLW (%_% ymm1) (%_% ymm0) (%_% ymm9) *)
  [0xc4; 0xc1; 0x79; 0xd5; 0xc9]; (* VPMULLW (%_% xmm1) (%_% xmm0) (%_% xmm9) *)
  [0xc5; 0xa1; 0xdb; 0xd2]; (* VPAND (%_% xmm2) (%_% xmm11) (%_% xmm2) *)
@@ -418,25 +434,6 @@ let only_undefinedness =
 (* This makes MESON quiet. *)
 verbose := false;;
 
-
-let READ_MEMORY_MERGE_CONV =
-  let baseconv =
-    GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT] THENC
-    LAND_CONV(LAND_CONV(RAND_CONV(RAND_CONV
-     (TRY_CONV(GEN_REWRITE_CONV I [GSYM WORD_ADD_ASSOC] THENC
-               RAND_CONV WORD_ADD_CONV))))) in
-  let rec conv tm =
-    (baseconv THENC BINOP_CONV(TRY_CONV conv)) tm in
-  conv;;
-
-let MEMORY_SPLIT_TAC k =
-  let tac =
-    STRIP_ASSUME_TAC o
-    CONV_RULE (BINOP_CONV(BINOP2_CONV
-       (ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) WORD_REDUCE_CONV)) o
-    GEN_REWRITE_RULE I [el k (CONJUNCTS READ_MEMORY_BYTESIZED_UNSPLIT)] in
-  EVERY_ASSUM (fun th -> try tac th with Failure _ -> ALL_TAC);;
-
 (*** Before and after tactics for goals that either do or don't involve
  *** memory operations (memop = they do). Non-memory ones are simpler and
  *** quicker; the memory ones do some more elaborate fiddling with format
@@ -474,20 +471,20 @@ and tac_after memop =
    (for example, ADD for byte64) will not be splitted out into bytes by
    MEMORY_SPLIT_TAC. Instead, the flag expression is only treated until
    it gets into the goal. After it gets into the goal, the first
-   READ_MEMORY_MERGE_CONV will split the memory read in the goal that
+   READ_MEMORY_FULLMERGE_CONV will split the memory read in the goal that
    represents the flag changes. After that we simplify/rewrite the goal.
    Given that the MEMORY_SPLIT_TAC splits out the memory write to the stack,
    the rewrites pick that up and turn the memory read in the flag expression
    into its RHS, which again isn't in byte form (but rather byte64 for the ADD
-   example). To further assist, we will perform the READ_MEMORY_MERGE_CONV
+   example). To further assist, we will perform the READ_MEMORY_FULLMERGE_CONV
    and rewrite/simplification again for spliting out the memory read and
    simplify the goal. *)
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
+  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
   ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
-  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_MERGE_CONV)
+  (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
   ASM_REWRITE_TAC[] THEN extra_simp_tac THEN
   ALL_TAC;;
