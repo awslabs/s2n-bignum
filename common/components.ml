@@ -3279,8 +3279,18 @@ let ORTHOGONAL_COMPONENTS_RULE =
   and breakconv = PART_MATCH (rand o rand)
    (REWRITE_RULE[IMP_CONJ] ORTHOGONAL_COMPONENTS_COMPOSE_RIGHT)
   and redconv = BINOP_CONV(LAND_CONV(DEPTH_CONV WORD_NUM_RED_CONV)) in
+  (* The terms that NONOVERLAPPING_RULE could not prove.
+     This is for logging, and resets whenever ORTHOGONAL_COMPONENTS_RULE is called. *)
+  let unproven_nov_terms = ref [] in
   fun cxt ->
-    let novrule = NONOVERLAPPING_RULE cxt in
+    let novrule = fun tm ->
+      try
+        NONOVERLAPPING_RULE cxt tm
+      with f ->
+        (if !components_print_log then
+          unproven_nov_terms := tm::!unproven_nov_terms);
+        raise f
+    in
     let mainrule tm =
       let th = baseconv tm in
       let ith = CONV_RULE (LAND_CONV redconv) th in
@@ -3297,7 +3307,15 @@ let ORTHOGONAL_COMPONENTS_RULE =
           let rth = toprule(lhand(concl ith)) in
           MP ith rth
       with Failure _ -> midrule tm in
-    fun tm -> try ORTHOGONAL_COMPONENTS_CONV tm with Failure _ -> toprule tm;;
+    fun tm -> try ORTHOGONAL_COMPONENTS_CONV tm with Failure _ ->
+      unproven_nov_terms := [];
+      try toprule tm
+      with f ->
+        if !components_print_log && !unproven_nov_terms <> [] then
+          failwith ("NONOVERLAPPING_RULE: could not prove one of:\n" ^
+            (String.concat "\n" (List.map
+            (fun tm -> "  * `" ^ (string_of_term tm) ^ "`") !unproven_nov_terms)))
+        else raise f;;
 
 let ORTHOGONAL_COMPONENTS_TAC =
   CONV_TAC ORTHOGONAL_COMPONENTS_CONV ORELSE
@@ -3465,7 +3483,15 @@ let ASSUMPTION_STATE_UPDATE_TAC =
      if memorable utm then
        let thy,thn = partition (vfree_in s o concl) thl in
        let cxt = (NONOVERLAPPING_DRIVERS thn,FILTER_CANONIZE_ASSUMPTIONS thn) in
-       mapfilter (STATE_UPDATE_RULE cxt uth) thy
+       mapfilter (fun thi ->
+          try
+            STATE_UPDATE_RULE cxt uth thi
+          with Failure failmsg ->
+            (if !components_print_log &&
+                String.starts_with ~prefix:"NONOVERLAPPING_RULE" failmsg then
+              (Printf.printf "Info: assumption `%s` is erased.\n"  (string_of_term (concl thi));
+               Printf.printf "- Reason: %s\n" failmsg));
+            failwith failmsg) thy
      else
        let thy = filter (vfree_in s o concl) thl in
        mapfilter (STATE_UPDATE_RULE ([],[]) uth) thy in

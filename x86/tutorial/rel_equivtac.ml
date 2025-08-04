@@ -126,8 +126,7 @@ let equiv_goal = mk_equiv_statement_simple
 let EQUIV = prove(equiv_goal,
 
   (* Rewrite SOME_FLAGS, ALL, nonoverlapping, and LENGTH * *)
-  REWRITE_TAC[SOME_FLAGS; ALL;NONOVERLAPPING_CLAUSES;
-              fst EXEC; fst EXEC2] THEN
+  REWRITE_TAC[SOME_FLAGS; ALL; fst EXEC; fst EXEC2] THEN
   REPEAT STRIP_TAC THEN
 
   (** Initialize **)
