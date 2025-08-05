@@ -2116,8 +2116,8 @@ let x86_execute = define
         | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | VPBROADCASTD dest src ->
         (match operand_size dest with
-          256 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND32 src s)
-        | 128 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND32 src s)) s
+          256 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND256 src s)
+        | 128 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND128 src s)) s
     | VPMULHW dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPMULHW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
