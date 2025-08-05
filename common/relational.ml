@@ -2483,7 +2483,7 @@ let (WRITE_MERGE_CONV:conv), (READ_WRITE_CONV:conv),
         let rec push_conv (c'::cs) t = if c = c' then
           (if cs = [] then conv else conv_assoc THENC LAND_CONV conv) t
         else
-          ((C MP (ORTHOGONAL_COMPONENTS_RULE c c') o swap_conv) THENC
+          ((C MP (ORTHOGONAL_COMPONENTS_RULE2 c c') o swap_conv) THENC
             RAND_CONV (push_conv cs)) t in
         push_conv cs t
       with Failure _ -> REFL t
@@ -2513,7 +2513,7 @@ let (WRITE_MERGE_CONV:conv), (READ_WRITE_CONV:conv),
        RAND_CONV (read_conv c cs)) in
     (if cs = [] then conv else conv_odef THENC conv) t
   | c'::cs ->
-    let cth = C MP (ORTHOGONAL_COMPONENTS_RULE c c') in
+    let cth = C MP (ORTHOGONAL_COMPONENTS_RULE2 c c') in
     let conv =
      ((cth o conv_rwo) ORELSEC (cth o conv_rmo)) THENC read_conv c cs in
     (if cs = [] then conv else conv_odef THENC conv) t in
@@ -2550,7 +2550,7 @@ let (WRITE_MERGE_CONV:conv), (READ_WRITE_CONV:conv),
       | _ -> th in
       let mkth c = match type_of c with
       | Tyapp(_,[S;V]) as ty -> (S,V),
-        itlist (PROVE_HYP o ORTHOGONAL_COMPONENTS_RULE c) hs
+        itlist (PROVE_HYP o ORTHOGONAL_COMPONENTS_RULE2 c) hs
           (INST [c,mk_var ("c",ty)] (INST_TYPE [V,`:V`] th))
       | _ -> fail () in
       let t = rhs (concl th) in
@@ -2763,7 +2763,7 @@ let (VIA_CONV:bool->conv) =
               if cv then pth_svv t else pth_sva t else
               if cv then pth_sav t else pth_saa t in
             CONV_RHS_RULE' (LAND_CONV' swaps)
-              (MP pth (ORTHOGONAL_COMPONENTS_RULE d c))
+              (MP pth (ORTHOGONAL_COMPONENTS_RULE2 d c))
           | _ -> conv_at sym c cv t in
         swaps t
       else conv_at sym c cv t

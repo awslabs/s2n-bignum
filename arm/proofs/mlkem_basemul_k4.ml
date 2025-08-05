@@ -339,68 +339,6 @@ let basemul4_odd = define
             (y3 (2 * i + 1)) (y3 (2 * i))`;;
 
 (* ------------------------------------------------------------------------- *)
-(* Hacky tweaking conversion to write away non-free state component reads.   *)
-(* ------------------------------------------------------------------------- *)
-
-let lemma = prove
- (`!base size s n.
-        n + 2 <= size
-        ==> read(memory :> bytes16(word_add base (word n))) s =
-            word((read (memory :> bytes(base,size)) s DIV 2 EXP (8 * n)))`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[READ_COMPONENT_COMPOSE] THEN
-  SPEC_TAC(`read memory s`,`m:int64->byte`) THEN GEN_TAC THEN
-  REWRITE_TAC[READ_BYTES_DIV] THEN
-  REWRITE_TAC[bytes16; READ_COMPONENT_COMPOSE; asword; through; read] THEN
-  ONCE_REWRITE_TAC[GSYM WORD_MOD_SIZE] THEN REWRITE_TAC[DIMINDEX_16] THEN
-  REWRITE_TAC[ARITH_RULE `16 = 8 * 2`; READ_BYTES_MOD] THEN
-  ASM_SIMP_TAC[ARITH_RULE `n + 2 <= size ==> MIN (size - n) 2 = MIN 2 2`]);;
-
-let BOUNDED_QUANT_READ_MEM = prove
- (`(!x base s.
-     (!i. i < n
-          ==> read(memory :> bytes16(word_add base (word(2 * i)))) s =
-              x i) <=>
-     (!i. i < n
-          ==> word((read(memory :> bytes(base,2 * n)) s DIV 2 EXP (16 * i))) =
-              x i)) /\
-   (!x p base s.
-     (!i. i < n
-          ==> (ival(read(memory :> bytes16(word_add base (word(2 * i)))) s) ==
-               x i) (mod p)) <=>
-     (!i. i < n
-          ==> (ival(word((read(memory :> bytes(base,2 * n)) s DIV
-                          2 EXP (16 * i))):int16) ==
-               x i) (mod p))) /\
-   (!x p c base s.
-     (!i. i < n /\ c i
-          ==> (ival(read(memory :> bytes16(word_add base (word(2 * i)))) s) ==
-               x i) (mod p)) <=>
-     (!i. i < n /\ c i
-          ==> (ival(word((read(memory :> bytes(base,2 * n)) s DIV
-                          2 EXP (16 * i))):int16) ==
-               x i) (mod p)))`,
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`base:int64`; `2 * n`] lemma) THEN
-  SIMP_TAC[ARITH_RULE `2 * i + 2 <= 2 * n <=> i < n`] THEN
-  REWRITE_TAC[ARITH_RULE `8 * 2 * i = 16 * i`]);;
-
-let even_odd_split_lemma = prove
- (`(!i. i < 128 ==> P (4 * i) i /\ Q(4 * i + 2) i) <=>
-   (!i. i < 256 /\ EVEN i ==> P(2 * i) (i DIV 2)) /\
-   (!i. i < 256 /\ ODD i ==> Q(2 * i) (i DIV 2))`,
-  REWRITE_TAC[IMP_CONJ] THEN
-  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  CONV_TAC CONJ_ACI_RULE);;
-
-let TWEAK_CONV =
-  REWRITE_CONV[even_odd_split_lemma] THENC
-  GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_RULE
-    `word_add x (word(a + b)) = word_add (word_add x (word a)) (word b)`] THENC
-  REWRITE_CONV[BOUNDED_QUANT_READ_MEM] THENC
-  NUM_REDUCE_CONV;;
-
-(* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -618,9 +556,7 @@ let MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT = prove
        (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(dst, 512);
                   memory :> bytes(word_sub stackpointer (word 64),64)])`,
-   REWRITE_TAC[fst MLKEM_BASEMUL_K4_EXEC] THEN
-   CONV_TAC TWEAK_CONV THEN
    ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(5,5) MLKEM_BASEMUL_K4_EXEC
-      (REWRITE_RULE[fst MLKEM_BASEMUL_K4_EXEC] (CONV_RULE TWEAK_CONV MLKEM_BASEMUL_K4_CORRECT))
+      (REWRITE_RULE[fst MLKEM_BASEMUL_K4_EXEC] MLKEM_BASEMUL_K4_CORRECT)
        `[D8; D9; D10; D11; D12; D13; D14; D15]` 64  THEN
     WORD_ARITH_TAC);;

@@ -54,9 +54,8 @@ let memory_SPEC = prove(
      // The memory locations may change. Record this.
      MAYCHANGE [memory :> bytes64 (word loc0); memory :> bytes64 (word loc1)])`,
 
-  (* Convert 'nonoverlapping' into 'nonoverlapping_modulo' and rewrite 'LENGTH memory_mc'
-     with the concrete number. *)
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES;fst EXEC] THEN
+  (* Rewrite 'LENGTH memory_mc' with the concrete number. *)
+  REWRITE_TAC[fst EXEC] THEN
   (* Strips the assumption and outermost universal quantifier from the conclusion of a goal *)
   REPEAT STRIP_TAC THEN
 
