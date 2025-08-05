@@ -33,9 +33,13 @@
 
         .arch armv8.4-a+sha3
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak4_f1600_alt2)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sha3_keccak4_f1600_alt2)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak4_f1600_alt2)
         .text
         .balign 4
+
+S2N_BN_SYMBOL(sha3_keccak4_f1600_alt2):
+        CFI_START
 
 // This is similar to the code in the mlkem-native repository here:
 //
@@ -44,19 +48,17 @@
 // The main difference is the avoidance of ld2/st2 in favour of explicit
 // transposition operations and conventional loads and stores.
 
-S2N_BN_SYMBOL(sha3_keccak4_f1600_alt2):
-
-        sub     sp, sp, #0xe0
-        stp     x19, x20, [sp, #0x30]
-        stp     x21, x22, [sp, #0x40]
-        stp     x23, x24, [sp, #0x50]
-        stp     x25, x26, [sp, #0x60]
-        stp     x27, x28, [sp, #0x70]
-        stp     x29, x30, [sp, #0x80]
-        stp     d8, d9, [sp, #0x90]
-        stp     d10, d11, [sp, #0xa0]
-        stp     d12, d13, [sp, #0xb0]
-        stp     d14, d15, [sp, #0xc0]
+        CFI_DEC_SP(0xe0)
+        CFI_STACKSAVE2(x19,x20,0x30)
+        CFI_STACKSAVE2(x21,x22,0x40)
+        CFI_STACKSAVE2(x23,x24,0x50)
+        CFI_STACKSAVE2(x25,x26,0x60)
+        CFI_STACKSAVE2(x27,x28,0x70)
+        CFI_STACKSAVE2(x29,x30,0x80)
+        CFI_STACKSAVE2(d8,d9,0x90)
+        CFI_STACKSAVE2(d10,d11,0xa0)
+        CFI_STACKSAVE2(d12,d13,0xb0)
+        CFI_STACKSAVE2(d14,d15,0xc0)
         mov     x29, x1
         mov     x30, #0x0
         str     x30, [sp, #0x20]
@@ -128,7 +130,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600_alt2):
         ldr     x25, [x0, #0xc0]
         sub     x0, x0, #0x190
 
-sha3_keccak4_f1600_alt2_initial:
+Lsha3_keccak4_f1600_alt2_initial:
         eor     x30, x24, x25
         eor     x27, x9, x10
         eor3    v30.16b, v0.16b, v5.16b, v10.16b
@@ -464,7 +466,7 @@ sha3_keccak4_f1600_alt2_initial:
         str     x30, [sp, #0x10]
         eor     v0.16b, v0.16b, v28.16b
 
-sha3_keccak4_f1600_alt2_loop:
+Lsha3_keccak4_f1600_alt2_loop:
         eor     x0, x15, x11, ror #52
         eor     x0, x0, x13, ror #48
         eor3    v30.16b, v0.16b, v5.16b, v10.16b
@@ -804,7 +806,7 @@ sha3_keccak4_f1600_alt2_loop:
         ld1r    { v28.2d }, [x30], #8
         str     x30, [sp, #0x10]
         eor     v0.16b, v0.16b, v28.16b
-        b.le    sha3_keccak4_f1600_alt2_loop
+        b.le    Lsha3_keccak4_f1600_alt2_loop
         ror     x2, x2, #0x3d
         ror     x3, x3, #0x27
         ror     x4, x4, #0x36
@@ -830,7 +832,7 @@ sha3_keccak4_f1600_alt2_loop:
         ror     x25, x25, #0x9
         ldr     x30, [sp, #0x20]
         cmp     x30, #0x1
-        b.eq    sha3_keccak4_f1600_alt2_done
+        b.eq    Lsha3_keccak4_f1600_alt2_done
         mov     x30, #0x1
         str     x30, [sp, #0x20]
         ldr     x0, [sp]
@@ -864,9 +866,9 @@ sha3_keccak4_f1600_alt2_loop:
         ldp     x15, x20, [x0, #0xb0]
         ldr     x25, [x0, #0xc0]
         sub     x0, x0, #0x258
-        b       sha3_keccak4_f1600_alt2_initial
+        b       Lsha3_keccak4_f1600_alt2_initial
 
-sha3_keccak4_f1600_alt2_done:
+Lsha3_keccak4_f1600_alt2_done:
         ldr     x0, [sp]
         add     x0, x0, #0x258
         stp     x1, x6, [x0]
@@ -932,15 +934,19 @@ sha3_keccak4_f1600_alt2_done:
         trn2    v24.2d, v24.2d, v24.2d
         str     d24, [x2, #0xc0]
 
-        ldp     d14, d15, [sp, #0xc0]
-        ldp     d12, d13, [sp, #0xb0]
-        ldp     d10, d11, [sp, #0xa0]
-        ldp     d8, d9, [sp, #0x90]
-        ldp     x19, x20, [sp, #0x30]
-        ldp     x21, x22, [sp, #0x40]
-        ldp     x23, x24, [sp, #0x50]
-        ldp     x25, x26, [sp, #0x60]
-        ldp     x27, x28, [sp, #0x70]
-        ldp     x29, x30, [sp, #0x80]
-        add     sp, sp, #0xe0
-        ret
+        CFI_STACKLOAD2(d14,d15,0xc0)
+        CFI_STACKLOAD2(d12,d13,0xb0)
+        CFI_STACKLOAD2(d10,d11,0xa0)
+        CFI_STACKLOAD2(d8,d9,0x90)
+        CFI_STACKLOAD2(x19,x20,0x30)
+        CFI_STACKLOAD2(x21,x22,0x40)
+        CFI_STACKLOAD2(x23,x24,0x50)
+        CFI_STACKLOAD2(x25,x26,0x60)
+        CFI_STACKLOAD2(x27,x28,0x70)
+        CFI_STACKLOAD2(x29,x30,0x80)
+        CFI_INC_SP(0xe0)
+        CFI_RET
+
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif

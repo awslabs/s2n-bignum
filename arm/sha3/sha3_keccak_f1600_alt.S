@@ -28,9 +28,13 @@
 
         .arch armv8.4-a+sha3
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak_f1600_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sha3_keccak_f1600_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak_f1600_alt)
         .text
         .balign 4
+
+S2N_BN_SYMBOL(sha3_keccak_f1600_alt):
+        CFI_START
 
 // This is very similar to the vector code in the mlkem-native
 // repository here:
@@ -41,13 +45,11 @@
 // ld2, the variant used being currently unsupported by the
 // s2n-bignum formal model.
 
-S2N_BN_SYMBOL(sha3_keccak_f1600_alt):
-
-        sub     sp, sp, #0x40
-        stp     d8, d9, [sp]
-        stp     d10, d11, [sp, #0x10]
-        stp     d12, d13, [sp, #0x20]
-        stp     d14, d15, [sp, #0x30]
+        CFI_DEC_SP(0x40)
+        CFI_STACKSAVE2(d8,d9,0)
+        CFI_STACKSAVE2(d10,d11,0x10)
+        CFI_STACKSAVE2(d12,d13,0x20)
+        CFI_STACKSAVE2(d14,d15,0x30)
 
 // Load the Keccak initial state into registers Q0..Q24
 
@@ -69,7 +71,7 @@ S2N_BN_SYMBOL(sha3_keccak_f1600_alt):
 
         mov     x2, #24
 
-sha3_keccak_f1600_alt_loop:
+Lsha3_keccak_f1600_alt_loop:
         eor3    v30.16b, v0.16b, v5.16b, v10.16b
         eor3    v29.16b, v1.16b, v6.16b, v11.16b
         eor3    v28.16b, v2.16b, v7.16b, v12.16b
@@ -138,7 +140,7 @@ sha3_keccak_f1600_alt_loop:
         bcax    v4.16b, v4.16b, v27.16b, v30.16b
         eor     v0.16b, v0.16b, v31.16b
         sub     x2, x2, #0x1
-        cbnz    x2, sha3_keccak_f1600_alt_loop
+        cbnz    x2, Lsha3_keccak_f1600_alt_loop
 
 // Store back the state
 
@@ -158,9 +160,13 @@ sha3_keccak_f1600_alt_loop:
 
 // Restore registers and return
 
-        ldp     d8, d9, [sp]
-        ldp     d10, d11, [sp, #0x10]
-        ldp     d12, d13, [sp, #0x20]
-        ldp     d14, d15, [sp, #0x30]
-        add     sp, sp, #0x40
-        ret
+        CFI_STACKLOAD2(d8,d9,0)
+        CFI_STACKLOAD2(d10,d11,0x10)
+        CFI_STACKLOAD2(d12,d13,0x20)
+        CFI_STACKLOAD2(d14,d15,0x30)
+        CFI_INC_SP(0x40)
+        CFI_RET
+
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
