@@ -125,8 +125,8 @@ let equiv_goal = mk_equiv_statement_simple
 (* Now, let's prove the program equivalence. *)
 let EQUIV = prove(equiv_goal,
 
-  (* Rewrite ALL, nonoverlapping, and LENGTH * *)
-  REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES; fst EXEC; fst EXEC2] THEN
+  (* Rewrite ALL and LENGTH * *)
+  REWRITE_TAC[ALL; fst EXEC; fst EXEC2] THEN
   REPEAT STRIP_TAC THEN
 
   (** Initialize **)
