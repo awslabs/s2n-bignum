@@ -1132,6 +1132,7 @@ void call_mlkem_tomont(void) repeat(mlkem_tomont((int16_t*)b0))
 void call_mlkem_rej_uniform(void) repeat(mlkem_rej_uniform_VARIABLE_TIME((int16_t*)b0,(uint8_t*)b1,1200,mlkem_rej_uniform_table))
 void call_sha3_keccak_f1600(void) repeat(sha3_keccak_f1600(b0,b1))
 void call_sha3_keccak_f1600_alt(void) repeat(sha3_keccak_f1600_alt(b0,b1))
+void call_sha3_keccak_f1600_alt2(void) repeat(sha3_keccak_f1600_alt2(b0,b1))
 void call_sha3_keccak2_f1600(void) repeat(sha3_keccak2_f1600(b0,b1))
 void call_sha3_keccak2_f1600_alt(void) repeat(sha3_keccak2_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600(void) repeat(sha3_keccak4_f1600(b0,b1))
@@ -1569,6 +1570,7 @@ int main(int argc, char *argv[])
   timingtest(all,"secp256k1_jmixadd_alt",call_secp256k1_jmixadd_alt);
   timingtest(arm,"sha3_keccak_f1600",call_sha3_keccak_f1600);
   timingtest(sha3,"sha3_keccak_f1600_alt",call_sha3_keccak_f1600_alt);
+  timingtest(arm,"sha3_keccak_f1600_alt2",call_sha3_keccak_f1600_alt2);
   timingtest(sha3,"sha3_keccak2_f1600",call_sha3_keccak2_f1600);
   timingtest(sha3,"sha3_keccak2_f1600_alt",call_sha3_keccak2_f1600_alt);
   timingtest(sha3,"sha3_keccak4_f1600",call_sha3_keccak4_f1600);
