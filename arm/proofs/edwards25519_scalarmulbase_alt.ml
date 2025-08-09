@@ -2413,46 +2413,48 @@ let GE25519_GROUPER =
      (MATCH_MP pth (CONJ th1 th2));;
 
 let BYTES_LOADED_DATA = prove
- (`bytes_loaded s (word (pc + 0x2420)) edwards25519_scalarmulbase_alt_data <=>
-   read (memory :> bytes(word (pc + 0x2420),48576)) s =
-   num_of_bytelist edwards25519_scalarmulbase_alt_data`,
+ (`bytes_loaded s tab edwards25519_scalarmulbase_alt_constant_data <=>
+   read (memory :> bytes(tab,48576)) s =
+   num_of_bytelist edwards25519_scalarmulbase_alt_constant_data`,
   REWRITE_TAC[bytes_loaded; READ_BYTELIST_EQ_BYTES;
     CONV_RULE (RAND_CONV LENGTH_CONV)
-     (AP_TERM `LENGTH:byte list->num` edwards25519_scalarmulbase_alt_data)]);;
+     (AP_TERM `LENGTH:byte list->num` edwards25519_scalarmulbase_alt_constant_data)]);;
 
 let EDWARDS25519BASE_TABLE_LEMMA = prove
- (`read (memory :> bytes(word (pc + 0x2420),48576)) s =
-   num_of_bytelist edwards25519_scalarmulbase_alt_data
+ (`read (memory :> bytes(wpc,48576)) s =
+   num_of_bytelist edwards25519_scalarmulbase_alt_constant_data
    ==> edwards25519_exprojective
-        (group_pow edwards25519_group E_25519 0)
-        (bignum_from_memory(word(pc + 0x2420),4) s,
-         bignum_from_memory(word(pc + 0x2440),4) s,
+        (group_pow edwards25519_group E_25519 (2 EXP 254))
+        (bignum_from_memory(wpc,4) s,
+         bignum_from_memory(word_add wpc (word 0x20),4) s,
          1,
-         bignum_from_memory(word(pc + 0x2460),4) s) /\
+         bignum_from_memory(word_add wpc (word 0x40),4) s) /\
        edwards25519_exprojective
-        (group_pow edwards25519_group E_25519 (2 EXP 251))
-        (bignum_from_memory(word(pc + 0x2480),4) s,
-         bignum_from_memory(word(pc + 0x24a0),4) s,
+        (group_pow edwards25519_group E_25519 (2 EXP 254 + 8))
+        (bignum_from_memory(word_add wpc (word 0x60),4) s,
+         bignum_from_memory(word_add wpc (word 0x80),4) s,
          1,
-         bignum_from_memory(word(pc + 0x24c0),4) s) /\
+         bignum_from_memory(word_add wpc (word 0xa0),4) s) /\
        !i. i < 63
            ==> !j. j < 8
                    ==> edwards25519_epprojective
                         (group_pow edwards25519_group E_25519
-                           (2 EXP (4 * i) * (j + 1)))
-         (bignum_from_memory(word(pc + 0x24e0 + 768 * i + 96 * j),4) s,
-          bignum_from_memory(word(pc + 0x24e0 + 768 * i + 96 * j + 32),4) s,
-          bignum_from_memory(word(pc + 0x24e0 + 768 * i + 96 * j + 64),4) s) /\
-         ~(bignum_from_memory(word(pc + 0x24e0 + 768 * i + 96 * j + 64),4) s =
+                           (2 EXP (4 * (i + 1)) * (j + 1)))
+         (bignum_from_memory(word_add wpc (word(0xc0 + 768 * i + 96 * j)),4) s,
+          bignum_from_memory(word_add wpc (word(0xc0 + 768 * i + 96 * j + 32)),4) s,
+          bignum_from_memory(word_add wpc (word(0xc0 + 768 * i + 96 * j + 64)),4) s) /\
+         ~(bignum_from_memory(word_add wpc (word(0xc0 + 768 * i + 96 * j + 64)),4) s =
            0)`,
   let GE25519_POWERS =
     end_itlist CONJ
-     (funpow 62 (fun l -> let x = W GE25519_GROUPER (hd l) in
+     (funpow 63 (fun l -> let x = W GE25519_GROUPER (hd l) in
                         funpow 7 (fun l -> GE25519_GROUPER x (hd l)::l) (x::l))
-                (funpow 7 (fun l -> GE25519_GROUPER GE25519_POW_1 (hd l)::l)
-                          [GE25519_POW_1])) in
-  REWRITE_TAC[GSYM BYTES_LOADED_DATA; edwards25519_scalarmulbase_alt_data] THEN
-  CONV_TAC(LAND_CONV DATA64_CONV) THEN STRIP_TAC THEN
+                [funpow 3 (W GE25519_GROUPER) GE25519_POW_1]) in
+  REWRITE_TAC[GSYM BYTES_LOADED_DATA; edwards25519_scalarmulbase_alt_constant_data] THEN
+  SUBST1_TAC(WORD_RULE `wpc:int64 = word(val wpc + 0)`) THEN
+  SPEC_TAC(`val(wpc:int64)`,`pc:num`) THEN GEN_TAC THEN
+  CONV_TAC(LAND_CONV DATA64_CONV) THEN
+  REWRITE_TAC[GSYM WORD_ADD; ADD_CLAUSES; bytes_loaded_nil] THEN STRIP_TAC THEN
   CONV_TAC(funpow 2 RAND_CONV (BINDER_CONV (RAND_CONV EXPAND_CASES_CONV))) THEN
   CONV_TAC(funpow 2 RAND_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[WORD_ADD] THEN
@@ -2460,8 +2462,9 @@ let EDWARDS25519BASE_TABLE_LEMMA = prove
   REWRITE_TAC[GSYM WORD_ADD] THEN ASM_REWRITE_TAC[] THEN
   POP_ASSUM_LIST(K ALL_TAC) THEN REWRITE_TAC[bignum_of_wordlist] THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
-  REWRITE_TAC[GE25519_POWERS; ECGROUP_POW_CONV
-   `group_pow edwards25519_group E_25519 0`] THEN
+  REWRITE_TAC[GE25519_POWERS;
+   GE25519_GROUPER (el 4 (CONJUNCTS GE25519_POWERS))
+                   (last (CONJUNCTS GE25519_POWERS))] THEN
   REWRITE_TAC[p_25519; edwards25519_exprojective; edwards25519_epprojective;
               exprojective; d_25519] THEN
   CONV_TAC(DEPTH_CONV INTEGER_MOD_RING_RED_CONV) THEN
@@ -2497,20 +2500,27 @@ let lvs =
   "t5",[`SP`;`416`]];;
 
 (* ------------------------------------------------------------------------- *)
+(* We will use this in macros and subroutines, with specific variables.      *)
+(* ------------------------------------------------------------------------- *)
+
+let edwards25519_scalarmulbase_alt_mc' =
+  SPECL [`pc:num`; `tables:num`] edwards25519_scalarmulbase_alt_mc;;
+
+(* ------------------------------------------------------------------------- *)
 (* Instances of mul_p25519.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_P25519_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 100 lvs
+  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc' 100 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0xe1e0) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x2420) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. aligned_bytes_loaded s (word pc) (edwards25519_scalarmulbase_alt_mc pc tables) /\
                 read PC s = pcin /\
                 read SP s = read SP t /\
                 read X23 s = read X23 t /\
@@ -2664,16 +2674,16 @@ let LOCAL_MUL_P25519_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_MUL_4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 94 lvs
+  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc' 94 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0xe1e0) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x2420) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. aligned_bytes_loaded s (word pc) (edwards25519_scalarmulbase_alt_mc pc tables) /\
                 read PC s = pcin /\
                 read SP s = read SP t /\
                 read X23 s = read X23 t /\
@@ -2818,16 +2828,16 @@ let LOCAL_MUL_4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_ADD_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 16 lvs
+  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc' 16 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0xe1e0) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x2420) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. aligned_bytes_loaded s (word pc) (edwards25519_scalarmulbase_alt_mc pc tables) /\
                 read PC s = pcin /\
                 read SP s = read SP t /\
                 read X23 s = read X23 t /\
@@ -2891,14 +2901,14 @@ let LOCAL_ADD_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_DOUBLE_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 14 lvs
+  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc' 14 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1.
       !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0xe1e0) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x2420) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. aligned_bytes_loaded s (word pc) (edwards25519_scalarmulbase_alt_mc pc tables) /\
                 read PC s = pcin /\
                 read SP s = read SP t /\
                 read X23 s = read X23 t /\
@@ -2958,16 +2968,16 @@ let LOCAL_DOUBLE_TWICE4_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_SUB_TWICE4_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc 16 lvs
+  ARM_MACRO_SIM_ABBREV_TAC edwards25519_scalarmulbase_alt_mc' 16 lvs
    `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
       !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = m
       ==>
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0xe1e0) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x2420) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
-           (\s. aligned_bytes_loaded s (word pc) edwards25519_scalarmulbase_alt_mc /\
+           (\s. aligned_bytes_loaded s (word pc) (edwards25519_scalarmulbase_alt_mc pc tables) /\
                 read PC s = pcin /\
                 read SP s = read SP t /\
                 read X23 s = read X23 t /\
@@ -3038,7 +3048,7 @@ let LOCAL_SUB_TWICE4_TAC =
 
 let LOCAL_MODINV_TAC =
   ARM_SUBROUTINE_SIM_TAC
-   (edwards25519_scalarmulbase_alt_mc,EDWARDS25519_SCALARMULBASE_ALT_EXEC,
+   (edwards25519_scalarmulbase_alt_mc',EDWARDS25519_SCALARMULBASE_ALT_EXEC,
     0x10e4,
     (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_mc] THENC TRIM_LIST_CONV)
     `TRIM_LIST (12,16) bignum_inv_p25519_mc`,
@@ -3055,8 +3065,8 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
  (`!res scalar n pc stackpointer.
     aligned 16 stackpointer /\
     ALL (nonoverlapping (stackpointer,448))
-        [(word pc,0xe1e0); (res,64); (scalar,32)] /\
-    nonoverlapping (res,64) (word pc,0xe1e0)
+        [(word pc,0x2420); (res,64); (scalar,32)] /\
+    nonoverlapping (res,64) (word pc,0x2420)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
                (APPEND edwards25519_scalarmulbase_alt_mc
@@ -3155,7 +3165,7 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
       RULE_ASSUM_TAC(REWRITE_RULE[SYM th]) THEN ASSUME_TAC th) THEN
     SUBGOAL_THEN
      `nonoverlapping_modulo (2 EXP 64) (val(stackpointer:int64),448)
-                                       (val(wpc:int64),0xe1e0)`
+                                       (val(wpc:int64),0x2420)`
     ASSUME_TAC THENL
      [EXPAND_TAC "wpc" THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
@@ -3852,8 +3862,8 @@ let EDWARDS25519_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
  (`!res scalar n pc stackpointer returnaddress.
     aligned 16 stackpointer /\
     ALL (nonoverlapping (word_sub stackpointer (word 496),496))
-        [(word pc,0xe1e0); (res,64); (scalar,32)] /\
-    nonoverlapping (res,64) (word pc,0xe1e0)
+        [(word pc,0x2420); (res,64); (scalar,32)] /\
+    nonoverlapping (res,64) (word pc,0x2420)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
                (APPEND edwards25519_scalarmulbase_alt_mc
