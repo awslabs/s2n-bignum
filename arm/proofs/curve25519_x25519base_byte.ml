@@ -4363,16 +4363,18 @@ let LOCAL_MODINV_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let CURVE25519_X25519BASE_BYTE_CORRECT = time prove
- (`!res scalar n pc stackpointer.
+ (`!tables res scalar n pc stackpointer.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x118)) /\
     ALL (nonoverlapping (stackpointer,448))
-        [(word pc,0x2dfc); (res,32); (scalar,32)] /\
+        [(word pc,0x2dfc); (word tables,48576); (res,32); (scalar,32)] /\
     nonoverlapping (res,32) (word pc,0x2dfc)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_byte_mc
-                       curve25519_x25519base_byte_data) /\
+                (curve25519_x25519base_byte_mc pc tables) /\
               read PC s = word(pc + 0x10) /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_byte_constant_data /\
               read SP s = stackpointer /\
               C_ARGUMENTS [res; scalar] s /\
               read (memory :> bytes(scalar,32)) s = n)
@@ -4386,7 +4388,7 @@ let CURVE25519_X25519BASE_BYTE_CORRECT = time prove
                       memory :> bytes(stackpointer,448)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
   MAP_EVERY X_GEN_TAC
-   [`res:int64`; `scalar:int64`; `n_input:num`;
+   [`tables:num`; `res:int64`; `scalar:int64`; `n_input:num`;
     `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
@@ -5151,16 +5153,18 @@ let CURVE25519_X25519BASE_BYTE_CORRECT = time prove
   CONV_TAC INTEGER_RULE);;
 
 let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = time prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x118)) /\
     ALL (nonoverlapping (word_sub stackpointer (word 496),496))
-        [(word pc,0x2dfc); (res,32); (scalar,32)] /\
+        [(word pc,0x2dfc); (word tables,48576); (res,32); (scalar,32)] /\
     nonoverlapping (res,32) (word pc,0x2dfc)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_byte_mc
-                       curve25519_x25519base_byte_data) /\
-              read PC s = word pc /\
+                (curve25519_x25519base_byte_mc pc tables) /\
+              read PC s = word(pc + 0x10) /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_byte_constant_data /\
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS [res; scalar] s /\

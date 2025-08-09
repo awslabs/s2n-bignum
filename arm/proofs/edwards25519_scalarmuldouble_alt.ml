@@ -6582,33 +6582,37 @@ let LOCAL_SUB_TWICE4_TAC =
 let LOCAL_MODINV_TAC =
   ARM_SUBROUTINE_SIM_TAC
    (edwards25519_scalarmuldouble_alt_mc',
-    EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,0x112c,
+    EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,0x1130,
     (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_mc] THENC TRIM_LIST_CONV)
     `TRIM_LIST (12,16) bignum_inv_p25519_mc`,
     CORE_INV_P25519_CORRECT)
    [`read X0 s`; `read X1 s`;
     `read (memory :> bytes(read X1 s,8 * 4)) s`;
-    `pc + 0x112c`; `word_add stackpointer (word 192):int64`];;
+    `pc + 0x1130`; `word_add stackpointer (word 192):int64`];;
 
 (* ------------------------------------------------------------------------- *)
 (* Embedded subroutine correctness.                                          *)
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_EPDOUBLE_CORRECT = time prove
- (`!p3 p1 T1 pc stackpointer.
+ (`!tables p3 p1 T1 pc stackpointer.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x310)) /\
+    adrp_within_bounds (word tables) (word(pc + 0x9c4)) /\
     ALL (nonoverlapping (stackpointer,160))
-        [(word pc,0x56a8); (p3,128); (p1,96)] /\
+        [(word pc,0x56a8); (word tables,768); (p3,128); (p1,96)] /\
     nonoverlapping (p3,128) (word pc,0x56a8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-                 edwards25519_scalarmuldouble_alt_mc /\
-              read PC s = word(pc + 0x2484) /\
+                (edwards25519_scalarmuldouble_alt_mc pc tables) /\
+              read PC s = word(pc + 0x14) /\
+              bytes_loaded s (word tables)
+                edwards25519_scalarmuldouble_alt_constant_data /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
               read X23 s = p1 /\
               bignum_triple_from_memory(p1,4) s = T1)
-         (\s. read PC s = word (pc + 0x305c) /\
+         (\s. read PC s = word (pc + 0x2470) /\
               !P1. P1 IN group_carrier edwards25519_group /\
                    edwards25519_projective2 P1 T1
                       ==> edwards25519_exprojective2

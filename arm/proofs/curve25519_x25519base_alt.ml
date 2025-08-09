@@ -2946,16 +2946,18 @@ let LOCAL_MODINV_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let CURVE25519_X25519BASE_ALT_CORRECT = time prove
- (`!res scalar n pc stackpointer.
+ (`!tables res scalar n pc stackpointer.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x30)) /\
     ALL (nonoverlapping (stackpointer,448))
-        [(word pc,0x2254); (res,32); (scalar,32)] /\
+        [(word pc,0x2254); (word tables,48576); (res,32); (scalar,32)] /\
     nonoverlapping (res,32) (word pc,0x2254)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_alt_mc
-                       curve25519_x25519base_alt_data) /\
+                (curve25519_x25519base_alt_mc pc tables) /\
               read PC s = word(pc + 0x10) /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_alt_constant_data /\
               read SP s = stackpointer /\
               C_ARGUMENTS [res; scalar] s /\
               bignum_from_memory (scalar,4) s = n)
@@ -2969,7 +2971,7 @@ let CURVE25519_X25519BASE_ALT_CORRECT = time prove
                       memory :> bytes(stackpointer,448)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
   MAP_EVERY X_GEN_TAC
-   [`res:int64`; `scalar:int64`; `n_input:num`;
+   [`tables:num`; `res:int64`; `scalar:int64`; `n_input:num`;
     `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN

@@ -9922,20 +9922,24 @@ let LOCAL_MODINV_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_EPDOUBLE_CORRECT = time prove
- (`!p3 p1 T1 pc stackpointer.
+ (`!tables p3 p1 T1 pc stackpointer.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x448)) /\
+    adrp_within_bounds (word tables) (word(pc + 0xafc)) /\
     ALL (nonoverlapping (stackpointer,160))
-        [(word pc,0x7da8); (p3,128); (p1,96)] /\
+        [(word pc,0x7da8); (word tables,768); (p3,128); (p1,96)] /\
     nonoverlapping (p3,128) (word pc,0x7da8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-                 edwards25519_scalarmuldouble_mc /\
-              read PC s = word(pc + 0x283c) /\
+                (edwards25519_scalarmuldouble_mc pc tables) /\
+              read PC s = word(pc + 0x14) /\
+              bytes_loaded s (word tables)
+                edwards25519_scalarmuldouble_constant_data /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
               read X23 s = p1 /\
               bignum_triple_from_memory(p1,4) s = T1)
-         (\s. read PC s = word (pc + 0x3c94) /\
+         (\s. read PC s = word (pc + 0x2828) /\
               !P1. P1 IN group_carrier edwards25519_group /\
                    edwards25519_projective2 P1 T1
                       ==> edwards25519_exprojective2
@@ -9948,7 +9952,7 @@ let LOCAL_EPDOUBLE_CORRECT = time prove
                       memory :> bytes(stackpointer,160)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
   MAP_EVERY X_GEN_TAC
-   [`p3:int64`; `p1:int64`; `X_1:num`; `Y_1:num`; `Z_1:num`;
+   [`tables:num`; `p3:int64`; `p1:int64`; `X_1:num`; `Y_1:num`; `Z_1:num`;
     `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; PAIR_EQ;
