@@ -3111,11 +3111,11 @@ let CURVE25519_X25519BASE_BYTE_ALT_CORRECT = time prove
 
   ENSURES_WHILE_AUP_TAC `1` `64` `pc + 0x1b0` `pc + 0x1100`
    `\i s.
-      read (memory :> bytes(word(pc + 0x2434),48576)) s =
-      num_of_bytelist curve25519_x25519base_byte_alt_data /\
+      read (memory :> bytes(word tables,48576)) s =
+      num_of_bytelist curve25519_x25519base_byte_alt_constant_data /\
       read SP s = stackpointer /\
       read X23 s = res /\
-      read X19 s = word(pc + 0x24f4 + 768 * (i - 1)) /\
+      read X19 s = word(tables + 0xc0 + 768 * (i - 1)) /\
       read X20 s = word (4 * i) /\
       val(read X21 s) <= 1 /\
       (i >= 64 ==> val(read X21 s) < 1) /\
@@ -3139,47 +3139,46 @@ let CURVE25519_X25519BASE_BYTE_ALT_CORRECT = time prove
     FIRST_ASSUM(MP_TAC o MATCH_MP X25519BASE_TABLE_LEMMA) THEN
 
     GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [WORD_ADD] THEN
-    ABBREV_TAC `wpc:int64 = word pc` THEN POP_ASSUM(fun th ->
-      RULE_ASSUM_TAC(REWRITE_RULE[SYM th]) THEN ASSUME_TAC th) THEN
+    ABBREV_TAC `wpc:int64 = word tables` THEN
+
     SUBGOAL_THEN
-     `nonoverlapping_modulo (2 EXP 64) (val(stackpointer:int64),448)
-                                       (val(wpc:int64),0x2434)`
-    ASSUME_TAC THENL
-     [EXPAND_TAC "wpc" THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
+     `!c n. nonoverlapping_modulo (2 EXP 64) c (tables,n) <=>
+            nonoverlapping_modulo (2 EXP 64) c (val(wpc:int64),n)`
+    MP_TAC THENL
+     [EXPAND_TAC "wpc" THEN
+      REWRITE_TAC[FORALL_PAIR_THM; NONOVERLAPPING_CLAUSES];
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
     DISCH_THEN(K ALL_TAC) THEN
     BIGNUM_LDIGITIZE_TAC "x0_"
-      `bignum_from_memory(word_add wpc (word 0x2434),4) s0` THEN
+      `bignum_from_memory(wpc,4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "y0_"
-      `bignum_from_memory(word_add wpc (word 0x2454),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 32),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "t0_"
-      `bignum_from_memory(word_add wpc (word 0x2474),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 64),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "x1_"
-      `bignum_from_memory(word_add wpc (word 0x2494),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 96),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "y1_"
-      `bignum_from_memory(word_add wpc (word 0x24b4),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 128),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "t1_"
-      `bignum_from_memory(word_add wpc (word 0x24d4),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 160),4) s0` THEN
 
     ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_ALT_EXEC (1--68) THEN
 
-    FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[WORD_ADD]
-     `read X10 s = word(a + b)
-      ==> read X10 s = word_add (word a) (word b)`)) THEN
-    FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[WORD_ADD]
-     `read X11 s = word(a + b)
-      ==> read X11 s = word_add (word a) (word b)`)) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN DISCH_TAC THEN
+    FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD) THEN
 
     ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_ALT_EXEC (69--104) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     CONV_TAC(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV) THEN
     ASM_REWRITE_TAC[] THEN
-    UNDISCH_THEN `word pc:int64 = wpc` (SUBST1_TAC o SYM) THEN
+    UNDISCH_THEN `word tables:int64 = wpc` (SUBST1_TAC o SYM) THEN
     ASM_REWRITE_TAC[] THEN
 
     REPLICATE_TAC 4
-     (CONJ_TAC THENL [CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV); ALL_TAC]) THEN
+     (CONJ_TAC THENL
+      [CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN CONV_TAC WORD_RULE;
+       ALL_TAC]) THEN
     CONJ_TAC THENL
      [MAP_EVERY EXPAND_TAC ["nn'"; "n_input"] THEN MATCH_MP_TAC(ARITH_RULE
        `m + 2 EXP 254 * n DIV 2 EXP 254 = n
@@ -3272,10 +3271,11 @@ let CURVE25519_X25519BASE_BYTE_ALT_CORRECT = time prove
       MATCH_MP X25519BASE_TABLE_LEMMA) THEN
     DISCH_THEN(MP_TAC o SPEC `i - 1`) THEN ASM_SIMP_TAC[SUB_ADD] THEN
     ASM_SIMP_TAC[ARITH_RULE `i < 64 ==> i - 1 < 63`] THEN
-    REWRITE_TAC[ARITH_RULE
-      `pc + off + 768 * (i - 1) + jre = (pc + off + 768 * (i - 1)) + jre`] THEN
+    REWRITE_TAC[GSYM WORD_ADD; ARITH_RULE
+      `tables + off + 768 * (i - 1) + jre =
+       (tables + off + 768 * (i - 1)) + jre`] THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD] THEN
-    ABBREV_TAC `tab:int64 = word(pc + 0x24f4 + 768 * (i - 1))` THEN
+    ABBREV_TAC `tab:int64 = word(tables + 0xc0 + 768 * (i - 1))` THEN
     CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
     CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN
     GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [WORD_ADD_0] THEN

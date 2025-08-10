@@ -4300,7 +4300,8 @@ let CURVE25519_X25519BASE_CORRECT = time prove
      `!c n. nonoverlapping_modulo (2 EXP 64) c (tables,n) <=>
             nonoverlapping_modulo (2 EXP 64) c (val(wpc:int64),n)`
     MP_TAC THENL
-     [EXPAND_TAC "wpc" THEN REWRITE_TAC[FORALL_PAIR_THM; NONOVERLAPPING_CLAUSES];
+     [EXPAND_TAC "wpc" THEN
+      REWRITE_TAC[FORALL_PAIR_THM; NONOVERLAPPING_CLAUSES];
       DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
 
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
@@ -4331,7 +4332,8 @@ let CURVE25519_X25519BASE_CORRECT = time prove
 
     REPLICATE_TAC 4
      (CONJ_TAC THENL
-      [CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN CONV_TAC WORD_RULE; ALL_TAC]) THEN
+      [CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN CONV_TAC WORD_RULE;
+       ALL_TAC]) THEN
     CONJ_TAC THENL
      [MAP_EVERY EXPAND_TAC ["nn'"; "n_input"] THEN MATCH_MP_TAC(ARITH_RULE
        `m + 2 EXP 254 * n DIV 2 EXP 254 = n
@@ -4396,7 +4398,8 @@ let CURVE25519_X25519BASE_CORRECT = time prove
     DISCH_THEN(MP_TAC o SPEC `i - 1`) THEN ASM_SIMP_TAC[SUB_ADD] THEN
     ASM_SIMP_TAC[ARITH_RULE `i < 64 ==> i - 1 < 63`] THEN
     REWRITE_TAC[GSYM WORD_ADD; ARITH_RULE
-      `tables + off + 768 * (i - 1) + jre = (tables + off + 768 * (i - 1)) + jre`] THEN
+      `tables + off + 768 * (i - 1) + jre =
+       (tables + off + 768 * (i - 1)) + jre`] THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD] THEN
     ABBREV_TAC `tab:int64 = word(tables + 0xc0 + 768 * (i - 1))` THEN
     CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN

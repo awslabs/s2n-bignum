@@ -3134,11 +3134,11 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
 
   ENSURES_WHILE_UP_TAC `63` `pc + 0x144` `pc + 0x1094`
    `\i s.
-      read (memory :> bytes(word(pc + 0x2420),48576)) s =
-      num_of_bytelist edwards25519_scalarmulbase_alt_data /\
+      read (memory :> bytes(word tables,48576)) s =
+      num_of_bytelist edwards25519_scalarmulbase_alt_constant_data /\
       read SP s = stackpointer /\
       read X23 s = res /\
-      read X19 s = word(pc + 0x24e0 + 768 * i) /\
+      read X19 s = word(tables + 0xc0 + 768 * (i - 1)) /\
       read X20 s = word (4 * i) /\
       val(read X21 s) <= 1 /\
       (i >= 63 ==> val(read X21 s) < 1) /\
@@ -3162,28 +3162,31 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
 
     FIRST_ASSUM(MP_TAC o MATCH_MP EDWARDS25519BASE_TABLE_LEMMA) THEN
 
-    GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [WORD_ADD] THEN
-    ABBREV_TAC `wpc:int64 = word pc` THEN POP_ASSUM(fun th ->
-      RULE_ASSUM_TAC(REWRITE_RULE[SYM th]) THEN ASSUME_TAC th) THEN
+  GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [WORD_ADD] THEN
+    ABBREV_TAC `wpc:int64 = word tables` THEN
+
     SUBGOAL_THEN
-     `nonoverlapping_modulo (2 EXP 64) (val(stackpointer:int64),448)
-                                       (val(wpc:int64),0x2420)`
-    ASSUME_TAC THENL
-     [EXPAND_TAC "wpc" THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
+     `!c n. nonoverlapping_modulo (2 EXP 64) c (tables,n) <=>
+            nonoverlapping_modulo (2 EXP 64) c (val(wpc:int64),n)`
+    MP_TAC THENL
+     [EXPAND_TAC "wpc" THEN
+      REWRITE_TAC[FORALL_PAIR_THM; NONOVERLAPPING_CLAUSES];
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
     DISCH_THEN(K ALL_TAC) THEN
     BIGNUM_LDIGITIZE_TAC "x0_"
-      `bignum_from_memory(word_add wpc (word 0x2420),4) s0` THEN
+      `bignum_from_memory(wpc,4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "y0_"
-      `bignum_from_memory(word_add wpc (word 0x2440),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 32),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "t0_"
-      `bignum_from_memory(word_add wpc (word 0x2460),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 64),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "x1_"
-      `bignum_from_memory(word_add wpc (word 0x2480),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 96),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "y1_"
-      `bignum_from_memory(word_add wpc (word 0x24a0),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 128),4) s0` THEN
     BIGNUM_LDIGITIZE_TAC "t1_"
-      `bignum_from_memory(word_add wpc (word 0x24c0),4) s0` THEN
+      `bignum_from_memory(word_add wpc (word 160),4) s0` THEN
 
     ARM_ACCSTEPS_TAC EDWARDS25519_SCALARMULBASE_ALT_EXEC
      [13;14;17;18;20;21;22;23;27;29;31;33] (1--41) THEN
@@ -3243,24 +3246,18 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
       DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC;
       ACCUMULATOR_POP_ASSUM_LIST(K ALL_TAC)] THEN
 
-    FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[WORD_ADD]
-     `read X10 s = word(a + b)
-      ==> read X10 s = word_add (word a) (word b)`)) THEN
-    FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[WORD_ADD]
-     `read X11 s = word(a + b)
-      ==> read X11 s = word_add (word a) (word b)`)) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN DISCH_TAC THEN
+    FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD) THEN
 
     ARM_STEPS_TAC EDWARDS25519_SCALARMULBASE_ALT_EXEC (42--77) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     CONV_TAC(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV) THEN
     ASM_REWRITE_TAC[] THEN
-    UNDISCH_THEN `word pc:int64 = wpc` (SUBST1_TAC o SYM) THEN
+    UNDISCH_THEN `word tables:int64 = wpc` (SUBST1_TAC o SYM) THEN
     ASM_REWRITE_TAC[] THEN
-
     REPLICATE_TAC 4
-     (CONJ_TAC THENL [CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV); ALL_TAC]) THEN
-
+     (CONJ_TAC THENL
+      [CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN CONV_TAC WORD_RULE;
+       ALL_TAC]) THEN
     REWRITE_TAC[COND_SWAP] THEN
     COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
     CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
@@ -3335,10 +3332,11 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
     FIRST_ASSUM(MP_TAC o last o CONJUNCTS o
       MATCH_MP EDWARDS25519BASE_TABLE_LEMMA) THEN
     DISCH_THEN(MP_TAC o SPEC `i:num`) THEN ASM_SIMP_TAC[SUB_ADD] THEN
-    REWRITE_TAC[ARITH_RULE
-      `pc + off + 768 * i + jre = (pc + off + 768 * i) + jre`] THEN
+    REWRITE_TAC[GSYM WORD_ADD; ARITH_RULE
+      `tables + off + 768 * (i - 1) + jre =
+       (tables + off + 768 * (i - 1)) + jre`] THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD] THEN
-    ABBREV_TAC `tab:int64 = word(pc + 0x24e0 + 768 * i)` THEN
+    ABBREV_TAC `tab:int64 = word(tables + 0xc0 + 768 * (i - 1))` THEN
     CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
     CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN
     GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [WORD_ADD_0] THEN
