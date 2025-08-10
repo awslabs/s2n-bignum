@@ -2424,13 +2424,13 @@ let EDWARDS25519BASE_TABLE_LEMMA = prove
  (`read (memory :> bytes(wpc,48576)) s =
    num_of_bytelist edwards25519_scalarmulbase_alt_constant_data
    ==> edwards25519_exprojective
-        (group_pow edwards25519_group E_25519 (2 EXP 254))
+        (group_pow edwards25519_group E_25519 0)
         (bignum_from_memory(wpc,4) s,
          bignum_from_memory(word_add wpc (word 0x20),4) s,
          1,
          bignum_from_memory(word_add wpc (word 0x40),4) s) /\
        edwards25519_exprojective
-        (group_pow edwards25519_group E_25519 (2 EXP 254 + 8))
+        (group_pow edwards25519_group E_25519 (2 EXP 251))
         (bignum_from_memory(word_add wpc (word 0x60),4) s,
          bignum_from_memory(word_add wpc (word 0x80),4) s,
          1,
@@ -2439,7 +2439,7 @@ let EDWARDS25519BASE_TABLE_LEMMA = prove
            ==> !j. j < 8
                    ==> edwards25519_epprojective
                         (group_pow edwards25519_group E_25519
-                           (2 EXP (4 * (i + 1)) * (j + 1)))
+                           (2 EXP (4 * i) * (j + 1)))
          (bignum_from_memory(word_add wpc (word(0xc0 + 768 * i + 96 * j)),4) s,
           bignum_from_memory(word_add wpc (word(0xc0 + 768 * i + 96 * j + 32)),4) s,
           bignum_from_memory(word_add wpc (word(0xc0 + 768 * i + 96 * j + 64)),4) s) /\
@@ -2447,9 +2447,10 @@ let EDWARDS25519BASE_TABLE_LEMMA = prove
            0)`,
   let GE25519_POWERS =
     end_itlist CONJ
-     (funpow 63 (fun l -> let x = W GE25519_GROUPER (hd l) in
+     (funpow 62 (fun l -> let x = W GE25519_GROUPER (hd l) in
                         funpow 7 (fun l -> GE25519_GROUPER x (hd l)::l) (x::l))
-                [funpow 3 (W GE25519_GROUPER) GE25519_POW_1]) in
+                (funpow 7 (fun l -> GE25519_GROUPER GE25519_POW_1 (hd l)::l)
+                          [GE25519_POW_1])) in
   REWRITE_TAC[GSYM BYTES_LOADED_DATA; edwards25519_scalarmulbase_alt_constant_data] THEN
   SUBST1_TAC(WORD_RULE `wpc:int64 = word(val wpc + 0)`) THEN
   SPEC_TAC(`val(wpc:int64)`,`pc:num`) THEN GEN_TAC THEN
