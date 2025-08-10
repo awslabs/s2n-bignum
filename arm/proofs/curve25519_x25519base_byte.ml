@@ -4413,7 +4413,7 @@ let CURVE25519_X25519BASE_BYTE_CORRECT = time prove
       read SP s = stackpointer /\
       read X23 s = res /\
       read X19 s = word(tables + 0xc0 + 768 * (i - 1)) /\
-cd       read X20 s = word (4 * i) /\
+      read X20 s = word (4 * i) /\
       val(read X21 s) <= 1 /\
       (i >= 64 ==> val(read X21 s) < 1) /\
       bignum_from_memory (stackpointer,4) s = nn' /\
@@ -5162,7 +5162,7 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = time prove
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
                 (curve25519_x25519base_byte_mc pc tables) /\
-              read PC s = word(pc + 0x10) /\
+              read PC s = word pc /\
               bytes_loaded s (word tables)
                 curve25519_x25519base_byte_constant_data /\
               read SP s = stackpointer /\
@@ -5174,10 +5174,8 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(res,32);
                       memory :> bytes(word_sub stackpointer (word 496),496)])`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst CURVE25519_X25519BASE_BYTE_EXEC] THEN
+  REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_BYTE_EXEC] THEN
   ARM_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_BYTE_EXEC
-    (REWRITE_RULE[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst CURVE25519_X25519BASE_BYTE_EXEC]
+    (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_BYTE_EXEC]
      CURVE25519_X25519BASE_BYTE_CORRECT)
     `[X19; X20; X21; X22; X23; X24]` 496);;

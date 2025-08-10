@@ -3689,16 +3689,18 @@ let CURVE25519_X25519BASE_ALT_CORRECT = time prove
   CONV_TAC INTEGER_RULE);;
 
 let CURVE25519_X25519BASE_ALT_SUBROUTINE_CORRECT = time prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x30)) /\
     ALL (nonoverlapping (word_sub stackpointer (word 496),496))
-        [(word pc,0x2254); (res,32); (scalar,32)] /\
+        [(word pc,0x2254); (word tables,48576); (res,32); (scalar,32)] /\
     nonoverlapping (res,32) (word pc,0x2254)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_alt_mc
-                       curve25519_x25519base_alt_data) /\
+                (curve25519_x25519base_alt_mc pc tables) /\
               read PC s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_alt_constant_data /\
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS [res; scalar] s /\
@@ -3708,10 +3710,8 @@ let CURVE25519_X25519BASE_ALT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(res,32);
                       memory :> bytes(word_sub stackpointer (word 496),496)])`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst CURVE25519_X25519BASE_ALT_EXEC] THEN
+  REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_ALT_EXEC] THEN
   ARM_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_ALT_EXEC
-    (REWRITE_RULE[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst CURVE25519_X25519BASE_ALT_EXEC]
+    (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_ALT_EXEC]
      CURVE25519_X25519BASE_ALT_CORRECT)
     `[X19; X20; X21; X22; X23; X24]` 496);;
