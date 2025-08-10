@@ -3089,7 +3089,7 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
                       memory :> bytes(stackpointer,448)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
   MAP_EVERY X_GEN_TAC
-   [`tables`; `res:int64`; `scalar:int64`; `n_input:num`;
+   [`tables:num`; `res:int64`; `scalar:int64`; `n_input:num`;
     `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
@@ -3138,7 +3138,7 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
       num_of_bytelist edwards25519_scalarmulbase_alt_constant_data /\
       read SP s = stackpointer /\
       read X23 s = res /\
-      read X19 s = word(tables + 0xc0 + 768 * (i - 1)) /\
+      read X19 s = word(tables + 0xc0 + 768 * i) /\
       read X20 s = word (4 * i) /\
       val(read X21 s) <= 1 /\
       (i >= 63 ==> val(read X21 s) < 1) /\
@@ -3333,10 +3333,10 @@ let EDWARDS25519_SCALARMULBASE_ALT_CORRECT = time prove
       MATCH_MP EDWARDS25519BASE_TABLE_LEMMA) THEN
     DISCH_THEN(MP_TAC o SPEC `i:num`) THEN ASM_SIMP_TAC[SUB_ADD] THEN
     REWRITE_TAC[GSYM WORD_ADD; ARITH_RULE
-      `tables + off + 768 * (i - 1) + jre =
-       (tables + off + 768 * (i - 1)) + jre`] THEN
+      `tables + off + 768 * i + jre =
+       (tables + off + 768 * i) + jre`] THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD] THEN
-    ABBREV_TAC `tab:int64 = word(tables + 0xc0 + 768 * (i - 1))` THEN
+    ABBREV_TAC `tab:int64 = word(tables + 0xc0 + 768 * i)` THEN
     CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
     CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN
     GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [WORD_ADD_0] THEN

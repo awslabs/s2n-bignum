@@ -6595,24 +6595,22 @@ let LOCAL_MODINV_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_EPDOUBLE_CORRECT = time prove
- (`!tables p3 p1 T1 pc stackpointer.
+ (`!p3 p1 T1 pc stackpointer.
     aligned 16 stackpointer /\
-    adrp_within_bounds (word tables) (word(pc + 0x310)) /\
-    adrp_within_bounds (word tables) (word(pc + 0x9c4)) /\
     ALL (nonoverlapping (stackpointer,160))
-        [(word pc,0x56a8); (word tables,768); (p3,128); (p1,96)] /\
+        [(word pc,0x56a8); (p3,128); (p1,96)] /\
     nonoverlapping (p3,128) (word pc,0x56a8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
                 (edwards25519_scalarmuldouble_alt_mc pc tables) /\
-              read PC s = word(pc + 0x14) /\
+              read PC s = word(pc + 0x248c) /\
               bytes_loaded s (word tables)
                 edwards25519_scalarmuldouble_alt_constant_data /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
               read X23 s = p1 /\
               bignum_triple_from_memory(p1,4) s = T1)
-         (\s. read PC s = word (pc + 0x2470) /\
+         (\s. read PC s = word (pc + 0x3064) /\
               !P1. P1 IN group_carrier edwards25519_group /\
                    edwards25519_projective2 P1 T1
                       ==> edwards25519_exprojective2
@@ -6714,12 +6712,12 @@ let LOCAL_PDOUBLE_CORRECT = time prove
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
                  edwards25519_scalarmuldouble_alt_mc /\
-              read PC s = word(pc + 0x3068) /\
+              read PC s = word(pc + 0x3070) /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
               read X23 s = p1 /\
               bignum_triple_from_memory(p1,4) s = T1)
-         (\s. read PC s = word (pc + 0x3ac8) /\
+         (\s. read PC s = word (pc + 0x3ad0) /\
               !P1. P1 IN group_carrier edwards25519_group /\
                    edwards25519_projective2 P1 T1
                       ==> edwards25519_projective2
@@ -6824,14 +6822,14 @@ let LOCAL_EPADD_CORRECT = time prove
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
                  edwards25519_scalarmuldouble_alt_mc /\
-              read PC s = word(pc + 0x3ad4) /\
+              read PC s = word(pc + 0x3adc) /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
               read X23 s = p1 /\
               read X24 s = p2 /\
               bignum_quadruple_from_memory(p1,4) s = Q1 /\
               bignum_quadruple_from_memory(p2,4) s = Q2)
-         (\s. read PC s = word (pc + 0x4a8c) /\
+         (\s. read PC s = word (pc + 0x4a94) /\
               !P1 P2. P1 IN group_carrier edwards25519_group /\
                       P2 IN group_carrier edwards25519_group /\
                       edwards25519_exprojective2 P1 Q1 /\
@@ -6972,14 +6970,14 @@ let LOCAL_PEPADD_CORRECT = time prove
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
                  edwards25519_scalarmuldouble_alt_mc /\
-              read PC s = word(pc + 0x4a98) /\
+              read PC s = word(pc + 0x4aa0) /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
               read X23 s = p1 /\
               read X24 s = p2 /\
               bignum_quadruple_from_memory(p1,4) s = Q1 /\
               bignum_triple_from_memory(p2,4) s = T2)
-         (\s. read PC s = word (pc + 0x5698) /\
+         (\s. read PC s = word (pc + 0x56a0) /\
               !P1 P2. P1 IN group_carrier edwards25519_group /\
                       P2 IN group_carrier edwards25519_group /\
                       edwards25519_exprojective2w P1 Q1 /\
@@ -7106,22 +7104,26 @@ let LOCAL_PEPADD_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
- (`!res scalar point bscalar n xy m pc stackpointer.
+ (`!tables res scalar point bscalar n xy m pc stackpointer.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x310)) /\
+    adrp_within_bounds (word tables) (word(pc + 0x9c4)) /\
     ALL (nonoverlapping (stackpointer,1632))
-        [(word pc,0x56a8); (res,64); (scalar,32); (point,64); (bscalar,32)] /\
+        [(word pc,0x56a8); (word tables,768);
+         (res,64); (scalar,32); (point,64); (bscalar,32)] /\
     nonoverlapping (res,64) (word pc,0x56a8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-               (APPEND edwards25519_scalarmuldouble_alt_mc
-                       edwards25519_scalarmuldouble_alt_data) /\
+                (edwards25519_scalarmuldouble_alt_mc pc tables) /\
               read PC s = word(pc + 0x14) /\
+              bytes_loaded s (word tables)
+                edwards25519_scalarmuldouble_alt_constant_data /\
               read SP s = word_add stackpointer (word 192)/\
               C_ARGUMENTS [res; scalar; point; bscalar] s /\
               bignum_from_memory (scalar,4) s = n /\
               bignum_pair_from_memory (point,4) s = xy /\
               bignum_from_memory (bscalar,4) s = m)
-         (\s. read PC s = word (pc + 0x2468) /\
+         (\s. read PC s = word (pc + 0x2470) /\
               !P. P IN group_carrier edwards25519_group /\
                   paired (modular_decode (256,p_25519)) xy = P
                   ==> bignum_pair_from_memory(res,4) s =
@@ -7137,7 +7139,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
                       memory :> bytes(stackpointer,1632)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
   MAP_EVERY X_GEN_TAC
-   [`res:int64`; `scalar:int64`; `point:int64`; `bscalar:int64`;
+   [`tables:num`; `res:int64`; `scalar:int64`; `point:int64`; `bscalar:int64`;
     `n_input:num`; `x:num`; `y:num`; `m_input:num`;
     `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
@@ -7201,10 +7203,10 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   (*** Setup of the main loop ***)
 
-  ENSURES_WHILE_DOWN_TAC `63` `pc + 0x990` `pc + 0x111c`
+  ENSURES_WHILE_DOWN_TAC `63` `pc + 0x994` `pc + 0x1124`
    `\i s.
-      read (memory :> bytes(word(pc + 0x56a0),768)) s =
-      num_of_bytelist edwards25519_scalarmuldouble_alt_data /\
+      bytes_loaded s (word tables)
+                     edwards25519_scalarmuldouble_alt_constant_data /\
       read SP s = word_add stackpointer (word 192) /\
       read X25 s = res /\
       read X19 s = word (4 * i) /\
@@ -8410,16 +8412,20 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
         GENERATOR_IN_GROUP_CARRIER_EDWARDS25519]);;
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
- (`!res scalar point bscalar n xy m pc stackpointer returnaddress.
+ (`!tables res scalar point bscalar n xy m pc stackpointer returnaddress.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0x310)) /\
+    adrp_within_bounds (word tables) (word(pc + 0x9c4)) /\
     ALL (nonoverlapping (word_sub stackpointer (word 1696),1696))
-        [(word pc,0x56a8); (res,64); (scalar,32); (point,64); (bscalar,32)] /\
+        [(word pc,0x56a8); (word tables,768);
+         (res,64); (scalar,32); (point,64); (bscalar,32)] /\
     nonoverlapping (res,64) (word pc,0x56a8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-               (APPEND edwards25519_scalarmuldouble_alt_mc
-                       edwards25519_scalarmuldouble_alt_data) /\
+                (edwards25519_scalarmuldouble_alt_mc pc tables) /\
               read PC s = word pc /\
+              bytes_loaded s (word tables)
+                edwards25519_scalarmuldouble_alt_constant_data /\
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS [res; scalar; point; bscalar] s /\
