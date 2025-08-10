@@ -4492,8 +4492,6 @@ let EDWARDS25519_SCALARMULBASE_CORRECT = time prove
    `\i s.
       read (memory :> bytes(word tables,48576)) s =
       num_of_bytelist edwards25519_scalarmulbase_constant_data /\
-      read (memory :> bytes(word(pc + 0x2f28),48576)) s =
-      num_of_bytelist edwards25519_scalarmulbase_data /\
       read SP s = stackpointer /\
       read X23 s = res /\
       read X19 s = word(tables + 0xc0 + 768 * (i - 1)) /\
@@ -5217,16 +5215,18 @@ let EDWARDS25519_SCALARMULBASE_CORRECT = time prove
   REWRITE_TAC[INT_REM_EQ] THEN CONV_TAC INTEGER_RULE);;
 
 let EDWARDS25519_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
     aligned 16 stackpointer /\
+    adrp_within_bounds (word tables) (word(pc + 0xac)) /\
     ALL (nonoverlapping (word_sub stackpointer (word 496),496))
-        [(word pc,0x2f28); (res,64); (scalar,32)] /\
+        [(word pc,0x2f28); (word tables,48576); (res,64); (scalar,32)] /\
     nonoverlapping (res,64) (word pc,0x2f28)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-               (APPEND edwards25519_scalarmulbase_mc
-                       edwards25519_scalarmulbase_data) /\
+                (edwards25519_scalarmulbase_mc pc tables) /\
               read PC s = word pc /\
+              bytes_loaded s (word tables)
+                edwards25519_scalarmulbase_constant_data /\
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS [res; scalar] s /\
@@ -5238,10 +5238,8 @@ let EDWARDS25519_SCALARMULBASE_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(res,64);
                       memory :> bytes(word_sub stackpointer (word 496),496)])`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst EDWARDS25519_SCALARMULBASE_EXEC] THEN
+  REWRITE_TAC[BYTES_LOADED_DATA; fst EDWARDS25519_SCALARMULBASE_EXEC] THEN
   ARM_ADD_RETURN_STACK_TAC EDWARDS25519_SCALARMULBASE_EXEC
-    (REWRITE_RULE[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst EDWARDS25519_SCALARMULBASE_EXEC]
+    (REWRITE_RULE[BYTES_LOADED_DATA; fst EDWARDS25519_SCALARMULBASE_EXEC]
      EDWARDS25519_SCALARMULBASE_CORRECT)
     `[X19; X20; X21; X22; X23; X24]` 496);;
