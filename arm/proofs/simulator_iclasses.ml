@@ -189,7 +189,7 @@ let iclasses =
 
   (*** ORR ***)
   "0x001110101xxxxx000111xxxxxxxxxx";
-  
+
   (*** REV, 32 and 64 bits ***)
   "0101101011000000000010xxxxxxxxxx";
   "1101101011000000000011xxxxxxxxxx";
@@ -403,6 +403,9 @@ let check_insns () =
   let skipping_iclasses = [
     (*** adr ***)
     "0xx10000xxxxxxxxxxxxxxxxxxxxxxxx";
+
+    (*** adrp ***)
+    "1xx10000xxxxxxxxxxxxxxxxxxxxxxxx";
 
     (*** b ***)
     "000101xxxxxxxxxxxxxxxxxxxxxxxxxx";

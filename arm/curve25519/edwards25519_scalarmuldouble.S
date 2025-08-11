@@ -26,6 +26,15 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_scalarmuldouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmuldouble)
 
+#if defined(__linux__) && defined(__ELF__)
+.type edwards25519_scalarmuldouble, %function
+.size edwards25519_scalarmuldouble, 32168
+
+.global edwards25519_scalarmuldouble_constant
+.type edwards25519_scalarmuldouble_constant, %object
+.size edwards25519_scalarmuldouble_constant, 768
+#endif
+
         .text
         .balign 4
 
@@ -849,7 +858,13 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble):
 
 // ...and constant-time indexing based on that index
 
-        adr     x14, edwards25519_scalarmuldouble_table
+#if defined(__linux__) && defined(__ELF__)
+        adrp    x14, edwards25519_scalarmuldouble_constant
+        add     x14, x14, :lo12:edwards25519_scalarmuldouble_constant
+#else
+        adrp    x14, edwards25519_scalarmuldouble_constant@PAGE
+        add     x14, x14, edwards25519_scalarmuldouble_constant@PAGEOFF
+#endif
 
         mov     x0, #1
         mov     x1, xzr
@@ -1321,7 +1336,13 @@ edwards25519_scalarmuldouble_loop:
 
 // ... then doing constant-time lookup with the appropriate index...
 
-        adr     x14, edwards25519_scalarmuldouble_table
+#if defined(__linux__) && defined(__ELF__)
+        adrp    x14, edwards25519_scalarmuldouble_constant
+        add     x14, x14, :lo12:edwards25519_scalarmuldouble_constant
+#else
+        adrp    x14, edwards25519_scalarmuldouble_constant@PAGE
+        add     x14, x14, edwards25519_scalarmuldouble_constant@PAGEOFF
+#endif
 
         mov     x0, #1
         mov     x1, xzr
@@ -3019,18 +3040,24 @@ edwards25519_scalarmuldouble_pepadd:
         add sp, sp, #(6*NUMSIZE)
         ret
 
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
+
 // ****************************************************************************
-// The precomputed data (all read-only). This is currently part of the same
-// text section, which gives position-independent code with simple PC-relative
-// addressing. However it could be put in a separate section via something like
-//
-// .section .rodata
+// The precomputed data (all read-only).
 // ****************************************************************************
+
+#if defined(__linux__) && defined(__ELF__)
+.section .rodata
+#elif defined(__APPLE__)
+.const_data
+#endif
 
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-edwards25519_scalarmuldouble_table:
+edwards25519_scalarmuldouble_constant:
 
         // 1 * G
 
@@ -3151,7 +3178,3 @@ edwards25519_scalarmuldouble_table:
         .quad   0xb8a371788bcca7d7
         .quad   0x636412190eb62a32
         .quad   0x26907c5c2ecc4e95
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack, "", %progbits
-#endif

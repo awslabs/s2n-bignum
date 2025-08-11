@@ -19,6 +19,15 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_x25519base)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(curve25519_x25519base)
 
+#if defined(__linux__) && defined(__ELF__)
+.type curve25519_x25519base, %function
+.size curve25519_x25519base, 11292
+
+.global curve25519_x25519base_constant
+.type curve25519_x25519base_constant, %object
+.size curve25519_x25519base_constant, 48576
+#endif
+
         .text
         .balign 4
 
@@ -535,28 +544,34 @@ S2N_BN_SYMBOL(curve25519_x25519base):
         ldr     x0, [scalar]
         ands    xzr, x0, #8
 
-        adr     x10, curve25519_x25519base_edwards25519_0g
-        adr     x11, curve25519_x25519base_edwards25519_8g
-        ldp     x0, x1, [x10]
-        ldp     x2, x3, [x11]
+#if defined(__linux__) && defined(__ELF__)
+        adrp    tab, curve25519_x25519base_constant
+        add     tab, tab, :lo12:curve25519_x25519base_constant
+#else
+        adrp    tab, curve25519_x25519base_constant@PAGE
+        add     tab, tab, curve25519_x25519base_constant@PAGEOFF
+#endif
+
+        ldp     x0, x1, [tab]
+        ldp     x2, x3, [tab, #96]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc]
 
-        ldp     x0, x1, [x10, 1*16]
-        ldp     x2, x3, [x11, 1*16]
+        ldp     x0, x1, [tab, #1*16]
+        ldp     x2, x3, [tab, #96+1*16]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+1*16]
 
-        ldp     x0, x1, [x10, 2*16]
-        ldp     x2, x3, [x11, 2*16]
+        ldp     x0, x1, [tab, #2*16]
+        ldp     x2, x3, [tab, #96+2*16]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+2*16]
 
-        ldp     x0, x1, [x10, 3*16]
-        ldp     x2, x3, [x11, 3*16]
+        ldp     x0, x1, [tab, #3*16]
+        ldp     x2, x3, [tab, #96+3*16]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+3*16]
@@ -565,14 +580,14 @@ S2N_BN_SYMBOL(curve25519_x25519base):
         stp     x0, xzr, [acc+4*16]
         stp     xzr, xzr, [acc+5*16]
 
-        ldp     x0, x1, [x10, 4*16]
-        ldp     x2, x3, [x11, 4*16]
+        ldp     x0, x1, [tab, #4*16]
+        ldp     x2, x3, [tab, #96+4*16]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+6*16]
 
-        ldp     x0, x1, [x10, 5*16]
-        ldp     x2, x3, [x11, 5*16]
+        ldp     x0, x1, [tab, #5*16]
+        ldp     x2, x3, [tab, #96+5*16]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+7*16]
@@ -592,7 +607,7 @@ S2N_BN_SYMBOL(curve25519_x25519base):
 // l >= 9 case cannot arise on the last iteration.
 
         mov     i, 4
-        adr     tab, curve25519_x25519base_edwards25519_gtable
+        add     tab, tab, #192
         mov     bias, xzr
 
 // Start of the main loop, repeated 63 times for i = 4, 8, ..., 252
@@ -1969,46 +1984,48 @@ curve25519_x25519base_invmidloop:
 
         ret
 
+
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
+
 // ****************************************************************************
-// The precomputed data (all read-only). This is currently part of the same
-// text section, which gives position-independent code with simple PC-relative
-// addressing. However it could be put in a separate section via something like
-//
-// .section .rodata
+// The precomputed data (all read-only).
 // ****************************************************************************
+
+#if defined(__linux__) && defined(__ELF__)
+.section .rodata
+#elif defined(__APPLE__)
+.const_data
+#endif
+
+curve25519_x25519base_constant:
 
 // 2^254 * G and (2^254 + 8) * G in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
-
-curve25519_x25519base_edwards25519_0g:
 
         .quad   0x251037f7cf4e861d
         .quad   0x10ede0fb19fb128f
         .quad   0x96c033b175f5e2c8
         .quad   0x055f070d6c15fb0d
-
         .quad   0x7c52af2c97473e69
         .quad   0x022f82391bad8378
         .quad   0x9991e1b02adb476f
         .quad   0x511144a03a99b855
-
         .quad   0x5fafc3b88ff2e4ae
         .quad   0x855e4ff0de1230ff
         .quad   0x72e302a348492870
         .quad   0x1253c19e53dbe1bc
 
-curve25519_x25519base_edwards25519_8g:
 
         .quad   0x331d086e0d9abcaa
         .quad   0x1e23c96d311a10c9
         .quad   0x96d0f95e58c13478
         .quad   0x2f72f7384fcfcc59
-
         .quad   0x39a6cd1cfd7d87c9
         .quad   0x9867a0abd8ae153a
         .quad   0xa49d2a5f35986745
         .quad   0x57012940cdfe82e1
-
         .quad   0x5046a6532ec5544a
         .quad   0x6d674004739ff6c9
         .quad   0x9bbaa44b234a70e3
@@ -2016,8 +2033,6 @@ curve25519_x25519base_edwards25519_8g:
 
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
-
-curve25519_x25519base_edwards25519_gtable:
 
         // 2^4 * 1 * G
 
@@ -9578,7 +9593,3 @@ curve25519_x25519base_edwards25519_gtable:
         .quad   0x3d0987990aff3f7a
         .quad   0xd09ef36267daba45
         .quad   0x7761455e7b1c669c
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack, "", %progbits
-#endif
