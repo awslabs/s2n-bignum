@@ -6604,8 +6604,6 @@ let LOCAL_EPDOUBLE_CORRECT = time prove
          (\s. aligned_bytes_loaded s (word pc)
                 (edwards25519_scalarmuldouble_alt_mc pc tables) /\
               read PC s = word(pc + 0x248c) /\
-              bytes_loaded s (word tables)
-                edwards25519_scalarmuldouble_alt_constant_data /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
               read X23 s = p1 /\
@@ -6695,8 +6693,8 @@ let LOCAL_EPDOUBLE_TAC =
       (REWRITE_RULE[bignum_triple_from_memory; bignum_quadruple_from_memory]
          LOCAL_EPDOUBLE_CORRECT) in
   ARM_SUBROUTINE_SIM_TAC
-   (edwards25519_scalarmuldouble_alt_mc,EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
-    0x0,edwards25519_scalarmuldouble_alt_mc,th)
+   (edwards25519_scalarmuldouble_alt_mc',EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
+    0x0,edwards25519_scalarmuldouble_alt_mc',th)
   [`read X22 s`; `read X23 s`;
    `read(memory :> bytes(read X23 s,8 * 4)) s,
     read(memory :> bytes(word_add (read X23 s) (word 32),8 * 4)) s,
@@ -6711,7 +6709,7 @@ let LOCAL_PDOUBLE_CORRECT = time prove
     nonoverlapping (p3,96) (word pc,0x56a8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-                 edwards25519_scalarmuldouble_alt_mc /\
+                 (edwards25519_scalarmuldouble_alt_mc pc tables) /\
               read PC s = word(pc + 0x3070) /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
@@ -6805,8 +6803,8 @@ let LOCAL_PDOUBLE_TAC =
       (REWRITE_RULE[bignum_triple_from_memory]
          LOCAL_PDOUBLE_CORRECT) in
   ARM_SUBROUTINE_SIM_TAC
-   (edwards25519_scalarmuldouble_alt_mc,EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
-    0x0,edwards25519_scalarmuldouble_alt_mc,th)
+   (edwards25519_scalarmuldouble_alt_mc',EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
+    0x0,edwards25519_scalarmuldouble_alt_mc',th)
   [`read X22 s`; `read X23 s`;
    `read(memory :> bytes(read X23 s,8 * 4)) s,
     read(memory :> bytes(word_add (read X23 s) (word 32),8 * 4)) s,
@@ -6821,7 +6819,7 @@ let LOCAL_EPADD_CORRECT = time prove
     nonoverlapping (p3,128) (word pc,0x56a8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-                 edwards25519_scalarmuldouble_alt_mc /\
+                 (edwards25519_scalarmuldouble_alt_mc pc tables) /\
               read PC s = word(pc + 0x3adc) /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
@@ -6947,8 +6945,8 @@ let LOCAL_EPADD_TAC =
       (REWRITE_RULE[bignum_triple_from_memory; bignum_quadruple_from_memory]
          LOCAL_EPADD_CORRECT) in
   ARM_SUBROUTINE_SIM_TAC
-   (edwards25519_scalarmuldouble_alt_mc,EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
-    0x0,edwards25519_scalarmuldouble_alt_mc,th)
+   (edwards25519_scalarmuldouble_alt_mc',EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
+    0x0,edwards25519_scalarmuldouble_alt_mc',th)
   [`read X22 s`; `read X23 s`;
    `read(memory :> bytes(read X23 s,8 * 4)) s,
     read(memory :> bytes(word_add (read X23 s) (word 32),8 * 4)) s,
@@ -6969,7 +6967,7 @@ let LOCAL_PEPADD_CORRECT = time prove
     nonoverlapping (p3,128) (word pc,0x56a8)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc)
-                 edwards25519_scalarmuldouble_alt_mc /\
+                 (edwards25519_scalarmuldouble_alt_mc pc tables) /\
               read PC s = word(pc + 0x4aa0) /\
               read SP s = stackpointer /\
               read X22 s = p3 /\
@@ -7086,8 +7084,8 @@ let LOCAL_PEPADD_TAC =
       (REWRITE_RULE[bignum_triple_from_memory; bignum_quadruple_from_memory]
          LOCAL_PEPADD_CORRECT) in
   ARM_SUBROUTINE_SIM_TAC
-   (edwards25519_scalarmuldouble_alt_mc,EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
-    0x0,edwards25519_scalarmuldouble_alt_mc,th)
+   (edwards25519_scalarmuldouble_alt_mc',EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
+    0x0,edwards25519_scalarmuldouble_alt_mc',th)
   [`read X22 s`; `read X23 s`;
    `read(memory :> bytes(read X23 s,8 * 4)) s,
     read(memory :> bytes(word_add (read X23 s) (word 32),8 * 4)) s,
@@ -7648,24 +7646,29 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
     FIRST_ASSUM(MP_TAC o
       MATCH_MP EDWARDS25519DOUBLEBASE_TABLE_LEMMA) THEN
-    REWRITE_TAC[ARITH_RULE `pc + 0x56a0 + x = (pc + 0x56a0) + x`] THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD] THEN
-    ABBREV_TAC `wpc:int64 = word(pc + 0x56a0)` THEN
+    ABBREV_TAC `wpc:int64 = word tables` THEN
+
+    SUBGOAL_THEN
+     `!c n. nonoverlapping_modulo (2 EXP 64) c (tables,n) <=>
+            nonoverlapping_modulo (2 EXP 64) c (val(wpc:int64),n)`
+    MP_TAC THENL
+     [EXPAND_TAC "wpc" THEN
+      REWRITE_TAC[FORALL_PAIR_THM; NONOVERLAPPING_CLAUSES];
+      DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+
     CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
     CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD_0] THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV)) THEN
     BIGNUM_LDIGITIZE_TAC "tab_" `read(memory :> bytes(wpc,8 * 96)) s127` THEN
     CLARIFY_TAC THEN STRIP_TAC THEN
-    SUBGOAL_THEN
-     `nonoverlapping_modulo (2 EXP 64) (val(stackpointer:int64),1632)
-                                       (val(wpc:int64),768)`
-    ASSUME_TAC THENL [EXPAND_TAC "wpc" THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
 
     (*** Constant-time indexing into the precomputed table ***)
 
     ABBREV_TAC `ix = m DIV 2 EXP 252` THEN
     ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (128--304) THEN
+    REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)) THEN
     MAP_EVERY ABBREV_TAC
      [`XPY = read(memory :> bytes(word_add stackpointer (word 256),8 * 4)) s304`;
       `YMX = read(memory :> bytes(word_add stackpointer (word 288),8 * 4)) s304`;
@@ -7984,23 +7987,28 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   FIRST_ASSUM(MP_TAC o
     MATCH_MP EDWARDS25519DOUBLEBASE_TABLE_LEMMA) THEN
-  REWRITE_TAC[ARITH_RULE `pc + 0x56a0 + x = (pc + 0x56a0) + x`] THEN
   GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD] THEN
-  ABBREV_TAC `wpc:int64 = word(pc + 0x56a0)` THEN
+  ABBREV_TAC `wpc:int64 = word tables` THEN
+
+  SUBGOAL_THEN
+     `!c n. nonoverlapping_modulo (2 EXP 64) c (tables,n) <=>
+            nonoverlapping_modulo (2 EXP 64) c (val(wpc:int64),n)`
+  MP_TAC THENL
+   [EXPAND_TAC "wpc" THEN
+    REWRITE_TAC[FORALL_PAIR_THM; NONOVERLAPPING_CLAUSES];
+    DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
+
   CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN
   GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD_0] THEN
   CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV)) THEN
   BIGNUM_LDIGITIZE_TAC "tab_" `read(memory :> bytes(wpc,8 * 96)) s17` THEN
   CLARIFY_TAC THEN STRIP_TAC THEN
-  SUBGOAL_THEN
-   `nonoverlapping_modulo (2 EXP 64) (val(stackpointer:int64),1632)
-                                     (val(wpc:int64),768)`
-  ASSUME_TAC THENL [EXPAND_TAC "wpc" THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
 
   (*** Constant-time indexing into the precomputed table ***)
 
   ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (18--188) THEN
+  REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)) THEN
   MAP_EVERY REABBREV_TAC
    [`tab0 = read X0 s188`;
     `tab1 = read X1 s188`;
