@@ -7203,8 +7203,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   ENSURES_WHILE_DOWN_TAC `63` `pc + 0x994` `pc + 0x1124`
    `\i s.
-      bytes_loaded s (word tables)
-                     edwards25519_scalarmuldouble_alt_constant_data /\
+      read (memory :> bytes (word tables,768)) s =
+      num_of_bytelist edwards25519_scalarmuldouble_alt_constant_data /\
       read SP s = word_add stackpointer (word 192) /\
       read X25 s = res /\
       read X19 s = word (4 * i) /\
@@ -7631,7 +7631,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
     (*** Top nybble of bscalar ***)
 
-    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (124--127) THEN
+    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (124--128) THEN
     FIRST_X_ASSUM(MP_TAC o SPEC `m DIV 2 EXP 252` o MATCH_MP (MESON[]
      `read X20 s = x ==> !m. x = word m ==> read X20 s = word m`)) THEN
     ANTS_TAC THENL
@@ -7644,6 +7644,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
     (*** Address the precomputed table separately ***)
 
+    REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)) THEN
     FIRST_ASSUM(MP_TAC o
       MATCH_MP EDWARDS25519DOUBLEBASE_TABLE_LEMMA) THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD] THEN
@@ -7658,21 +7659,20 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
       DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
 
     CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
-    CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN
+    CONV_TAC(LAND_CONV(DEPTH_CONV WORD_NUM_RED_CONV)) THEN
     GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD_0] THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV)) THEN
-    BIGNUM_LDIGITIZE_TAC "tab_" `read(memory :> bytes(wpc,8 * 96)) s127` THEN
+    BIGNUM_LDIGITIZE_TAC "tab_" `read(memory :> bytes(wpc,8 * 96)) s128` THEN
     CLARIFY_TAC THEN STRIP_TAC THEN
 
     (*** Constant-time indexing into the precomputed table ***)
 
     ABBREV_TAC `ix = m DIV 2 EXP 252` THEN
-    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (128--304) THEN
-    REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)) THEN
+    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (129--305) THEN
     MAP_EVERY ABBREV_TAC
-     [`XPY = read(memory :> bytes(word_add stackpointer (word 256),8 * 4)) s304`;
-      `YMX = read(memory :> bytes(word_add stackpointer (word 288),8 * 4)) s304`;
-      `KXY = read(memory :> bytes(word_add stackpointer (word 320),8 * 4)) s304`]
+     [`XPY = read(memory :> bytes(word_add stackpointer (word 256),8 * 4)) s305`;
+      `YMX = read(memory :> bytes(word_add stackpointer (word 288),8 * 4)) s305`;
+      `KXY = read(memory :> bytes(word_add stackpointer (word 320),8 * 4)) s305`]
     THEN
     SUBGOAL_THEN
      `edwards25519_epprojective (group_pow edwards25519_group E_25519 ix)
@@ -7700,7 +7700,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
     (*** Top nybble of scalar ***)
 
-    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (305--307) THEN
+    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (306--308) THEN
     FIRST_X_ASSUM(MP_TAC o SPEC `n DIV 2 EXP 252` o MATCH_MP (MESON[]
      `read X20 s = x ==> !m. x = word m ==> read X20 s = word m`)) THEN
     ANTS_TAC THENL
@@ -7715,14 +7715,14 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
     ABBREV_TAC `iy = n DIV 2 EXP 252` THEN
     BIGNUM_LDIGITIZE_TAC "fab_"
-     `read(memory :> bytes(word_add stackpointer (word 608),8 * 128)) s307` THEN
+     `read(memory :> bytes(word_add stackpointer (word 608),8 * 128)) s308` THEN
     CLARIFY_TAC THEN
-    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (308--538) THEN
+    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (309--539) THEN
     MAP_EVERY ABBREV_TAC
-     [`Xt = read(memory :> bytes(word_add stackpointer (word 480),8 * 4)) s538`;
-      `Yt = read(memory :> bytes(word_add stackpointer (word 512),8 * 4)) s538`;
-      `Zt = read(memory :> bytes(word_add stackpointer (word 544),8 * 4)) s538`;
-      `Wt = read(memory :> bytes(word_add stackpointer (word 576),8 * 4)) s538`]
+     [`Xt = read(memory :> bytes(word_add stackpointer (word 480),8 * 4)) s539`;
+      `Yt = read(memory :> bytes(word_add stackpointer (word 512),8 * 4)) s539`;
+      `Zt = read(memory :> bytes(word_add stackpointer (word 544),8 * 4)) s539`;
+      `Wt = read(memory :> bytes(word_add stackpointer (word 576),8 * 4)) s539`]
     THEN
     SUBGOAL_THEN
      `!P. P IN group_carrier edwards25519_group /\
@@ -7763,9 +7763,9 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
     (*** The table entry addition ***)
 
-    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (539--543) THEN
-    LOCAL_PEPADD_TAC 544 THEN
-    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (545--546) THEN
+    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (540--544) THEN
+    LOCAL_PEPADD_TAC 545 THEN
+    ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (546--547) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
     (*** Final proof of the invariant ***)
@@ -7946,7 +7946,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   (*** Recoding offset to get indexing and negation flag ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (9--17) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (9--18) THEN
   ABBREV_TAC `bf = (m DIV (2 EXP (4 * i))) MOD 16` THEN
   SUBGOAL_THEN
    `word_and
@@ -7981,9 +7981,11 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
    [EXPAND_TAC "ix" THEN REWRITE_TAC[GSYM NOT_LT; COND_SWAP] THEN
     REWRITE_TAC[WORD_NEG_SUB] THEN POP_ASSUM_LIST(K ALL_TAC) THEN
     COND_CASES_TAC THEN ASM_REWRITE_TAC[WORD_SUB] THEN ASM_ARITH_TAC;
-    DISCH_TAC] THEN
+    DISCH_TAC]);;
 
   (*** Address the precomputed table separately ***)
+
+  REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)) THEN
 
   FIRST_ASSUM(MP_TAC o
     MATCH_MP EDWARDS25519DOUBLEBASE_TABLE_LEMMA) THEN
@@ -7999,29 +8001,28 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
     DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))] THEN
 
   CONV_TAC(LAND_CONV EXPAND_CASES_CONV) THEN
-  CONV_TAC(LAND_CONV NUM_REDUCE_CONV) THEN
+  CONV_TAC(LAND_CONV(DEPTH_CONV WORD_NUM_RED_CONV)) THEN
   GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [WORD_ADD_0] THEN
   CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV)) THEN
-  BIGNUM_LDIGITIZE_TAC "tab_" `read(memory :> bytes(wpc,8 * 96)) s17` THEN
+  BIGNUM_LDIGITIZE_TAC "tab_" `read(memory :> bytes(wpc,8 * 96)) s18` THEN
   CLARIFY_TAC THEN STRIP_TAC THEN
 
   (*** Constant-time indexing into the precomputed table ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (18--188) THEN
-  REPEAT(FIRST_X_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD)) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (19--189) THEN
   MAP_EVERY REABBREV_TAC
-   [`tab0 = read X0 s188`;
-    `tab1 = read X1 s188`;
-    `tab2 = read X2 s188`;
-    `tab3 = read X3 s188`;
-    `tab4 = read X4 s188`;
-    `tab5 = read X5 s188`;
-    `tab6 = read X6 s188`;
-    `tab7 = read X7 s188`;
-    `tab8 = read X8 s188`;
-    `tab9 = read X9 s188`;
-    `tab10 = read X10 s188`;
-    `tab11 = read X11 s188`] THEN
+   [`tab0 = read X0 s189`;
+    `tab1 = read X1 s189`;
+    `tab2 = read X2 s189`;
+    `tab3 = read X3 s189`;
+    `tab4 = read X4 s189`;
+    `tab5 = read X5 s189`;
+    `tab6 = read X6 s189`;
+    `tab7 = read X7 s189`;
+    `tab8 = read X8 s189`;
+    `tab9 = read X9 s189`;
+    `tab10 = read X10 s189`;
+    `tab11 = read X11 s189`] THEN
   SUBGOAL_THEN
    `edwards25519_epprojective (group_pow edwards25519_group E_25519 ix)
      (bignum_of_wordlist[tab0; tab1; tab2; tab3],
@@ -8047,11 +8048,11 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   (*** Optional negation of the table entry ***)
 
-  ARM_ACCSTEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (204--207) (189--213) THEN
+  ARM_ACCSTEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (205--208) (190--214) THEN
   MAP_EVERY ABBREV_TAC
-   [`XPY = read(memory :> bytes(word_add stackpointer (word 256),8 * 4)) s213`;
-    `YMX = read(memory :> bytes(word_add stackpointer (word 288),8 * 4)) s213`;
-    `KXY = read(memory :> bytes(word_add stackpointer (word 320),8 * 4)) s213`]
+   [`XPY = read(memory :> bytes(word_add stackpointer (word 256),8 * 4)) s214`;
+    `YMX = read(memory :> bytes(word_add stackpointer (word 288),8 * 4)) s214`;
+    `KXY = read(memory :> bytes(word_add stackpointer (word 320),8 * 4)) s214`]
   THEN
   SUBGOAL_THEN
    `edwards25519_epprojectivew
@@ -8111,7 +8112,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   SUBGOAL_THEN
    `read(memory :> bytes64 (word_add stackpointer
-         (word(192 + 8 * val(word_ushr (word (4 * i)) 6:int64))))) s213 =
+         (word(192 + 8 * val(word_ushr (word (4 * i)) 6:int64))))) s214 =
     word(n DIV 2 EXP (64 * (4 * i) DIV 64) MOD 2 EXP (64 * 1))`
   ASSUME_TAC THENL
    [EXPAND_TAC "n" THEN
@@ -8130,7 +8131,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   (*** Recoding offset to get indexing and negation flag ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (214--221) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (215--222) THEN
   ABBREV_TAC `cf = (n DIV (2 EXP (4 * i))) MOD 16` THEN
   SUBGOAL_THEN
    `word_and
@@ -8170,26 +8171,26 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
   (*** Constant-time indexing in the fresh-point table ***)
 
   BIGNUM_LDIGITIZE_TAC "fab_"
-   `read(memory :> bytes(word_add stackpointer (word 608),8 * 128)) s221` THEN
+   `read(memory :> bytes(word_add stackpointer (word 608),8 * 128)) s222` THEN
   CLARIFY_TAC THEN
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (222--444) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (223--445) THEN
   MAP_EVERY REABBREV_TAC
-   [`fab0 = read X0 s444`;
-    `fab1 = read X1 s444`;
-    `fab2 = read X2 s444`;
-    `fab3 = read X3 s444`;
-    `fab4 = read X4 s444`;
-    `fab5 = read X5 s444`;
-    `fab6 = read X6 s444`;
-    `fab7 = read X7 s444`;
-    `fab8 = read X8 s444`;
-    `fab9 = read X9 s444`;
-    `fab10 = read X10 s444`;
-    `fab11 = read X11 s444`;
-    `fab12 = read X12 s444`;
-    `fab13 = read X13 s444`;
-    `fab14 = read X14 s444`;
-    `fab15 = read X15 s444`] THEN
+   [`fab0 = read X0 s445`;
+    `fab1 = read X1 s445`;
+    `fab2 = read X2 s445`;
+    `fab3 = read X3 s445`;
+    `fab4 = read X4 s445`;
+    `fab5 = read X5 s445`;
+    `fab6 = read X6 s445`;
+    `fab7 = read X7 s445`;
+    `fab8 = read X8 s445`;
+    `fab9 = read X9 s445`;
+    `fab10 = read X10 s445`;
+    `fab11 = read X11 s445`;
+    `fab12 = read X12 s445`;
+    `fab13 = read X13 s445`;
+    `fab14 = read X14 s445`;
+    `fab15 = read X15 s445`] THEN
   SUBGOAL_THEN
    `!P. P IN group_carrier edwards25519_group /\
         paired (modular_decode (256,p_25519)) (x,y) = P
@@ -8226,12 +8227,12 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
   (*** Optional negation of the table entry ***)
 
   ARM_ACCSTEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC
-    [451;452;453;454;459;460;461;462] (445--470) THEN
+    [452;453;454;455;460;461;462;463] (446--471) THEN
   MAP_EVERY ABBREV_TAC
-   [`Xb = read(memory :> bytes(word_add stackpointer (word 480),8 * 4)) s470`;
-    `Yb = read(memory :> bytes(word_add stackpointer (word 512),8 * 4)) s470`;
-    `Zb = read(memory :> bytes(word_add stackpointer (word 544),8 * 4)) s470`;
-    `Wb = read(memory :> bytes(word_add stackpointer (word 576),8 * 4)) s470`]
+   [`Xb = read(memory :> bytes(word_add stackpointer (word 480),8 * 4)) s471`;
+    `Yb = read(memory :> bytes(word_add stackpointer (word 512),8 * 4)) s471`;
+    `Zb = read(memory :> bytes(word_add stackpointer (word 544),8 * 4)) s471`;
+    `Wb = read(memory :> bytes(word_add stackpointer (word 576),8 * 4)) s471`]
   THEN
   SUBGOAL_THEN
    `!P. P IN group_carrier edwards25519_group /\
@@ -8283,56 +8284,56 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
   (*** Doubling to acc' = 4 * acc ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (471--474) THEN
-  LOCAL_PDOUBLE_TAC 475 THEN MAP_EVERY ABBREV_TAC
-   [`X4a = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s475`;
-    `Y4a = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s475`;
-    `Z4a = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s475`
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (472--475) THEN
+  LOCAL_PDOUBLE_TAC 476 THEN MAP_EVERY ABBREV_TAC
+   [`X4a = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s476`;
+    `Y4a = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s476`;
+    `Z4a = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s476`
    ] THEN
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (476--477) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (477--478) THEN
 
   (*** Addition of precomputed and fresh table entries ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (478--482) THEN
-  LOCAL_PEPADD_TAC 483 THEN MAP_EVERY ABBREV_TAC
-   [`Xc = read(memory :> bytes(word_add stackpointer (word 480),8 * 4)) s483`;
-    `Yc = read(memory :> bytes(word_add stackpointer (word 512),8 * 4)) s483`;
-    `Zc = read(memory :> bytes(word_add stackpointer (word 544),8 * 4)) s483`;
-    `Wc = read(memory :> bytes(word_add stackpointer (word 576),8 * 4)) s483`
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (479--483) THEN
+  LOCAL_PEPADD_TAC 484 THEN MAP_EVERY ABBREV_TAC
+   [`Xc = read(memory :> bytes(word_add stackpointer (word 480),8 * 4)) s484`;
+    `Yc = read(memory :> bytes(word_add stackpointer (word 512),8 * 4)) s484`;
+    `Zc = read(memory :> bytes(word_add stackpointer (word 544),8 * 4)) s484`;
+    `Wc = read(memory :> bytes(word_add stackpointer (word 576),8 * 4)) s484`
    ] THEN
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (484--485) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (485--486) THEN
 
   (*** Doubling to acc' = 8 * acc ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (486--489) THEN
-  LOCAL_PDOUBLE_TAC 490 THEN MAP_EVERY ABBREV_TAC
-   [`X8a = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s490`;
-    `Y8a = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s490`;
-    `Z8a = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s490`
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (487--490) THEN
+  LOCAL_PDOUBLE_TAC 491 THEN MAP_EVERY ABBREV_TAC
+   [`X8a = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s491`;
+    `Y8a = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s491`;
+    `Z8a = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s491`
    ] THEN
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (491--492) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (492--493) THEN
 
   (*** Doubling to acc' = 16 * acc ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (493--496) THEN
-  LOCAL_EPDOUBLE_TAC 497 THEN MAP_EVERY ABBREV_TAC
-   [`Xha = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s497`;
-    `Yha = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s497`;
-    `Zha = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s497`;
-    `Wha = read(memory :> bytes(word_add stackpointer (word 448),8 * 4)) s497`
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (494--497) THEN
+  LOCAL_EPDOUBLE_TAC 498 THEN MAP_EVERY ABBREV_TAC
+   [`Xha = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s498`;
+    `Yha = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s498`;
+    `Zha = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s498`;
+    `Wha = read(memory :> bytes(word_add stackpointer (word 448),8 * 4)) s498`
    ] THEN
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (498--499) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (499--500) THEN
 
   (*** The final addition acc' = 16 * acc + tables ***)
 
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (500--504) THEN
-  LOCAL_EPADD_TAC 505 THEN MAP_EVERY ABBREV_TAC
-   [`Xf = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s505`;
-    `Yf = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s505`;
-    `Zf = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s505`;
-    `Wf = read(memory :> bytes(word_add stackpointer (word 448),8 * 4)) s505`
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (501--505) THEN
+  LOCAL_EPADD_TAC 506 THEN MAP_EVERY ABBREV_TAC
+   [`Xf = read(memory :> bytes(word_add stackpointer (word 352),8 * 4)) s506`;
+    `Yf = read(memory :> bytes(word_add stackpointer (word 384),8 * 4)) s506`;
+    `Zf = read(memory :> bytes(word_add stackpointer (word 416),8 * 4)) s506`;
+    `Wf = read(memory :> bytes(word_add stackpointer (word 448),8 * 4)) s506`
    ] THEN
-  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (506--507) THEN
+  ARM_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (507--508) THEN
 
   (*** The final mathematics of adding the points up ***)
 
@@ -8347,7 +8348,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
   CONV_TAC NUM_REDUCE_CONV THEN
   CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
   ASM_REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ASM_SIMP_TAC[] THEN
-  DISCARD_STATE_TAC "s507" THEN
+  DISCARD_STATE_TAC "s508" THEN
   X_GEN_TAC `P:int#int` THEN STRIP_TAC THEN
   REPEAT(FIRST_X_ASSUM(MP_TAC o check (is_forall o concl))) THEN
   REWRITE_TAC[REWRITE_RULE[GSYM edwards25519]
@@ -8451,10 +8452,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(res,64);
                     memory :> bytes(word_sub stackpointer (word 1696),1696)])`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-              fst EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC] THEN
+  REWRITE_TAC[BYTES_LOADED_DATA; fst EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC] THEN
   ARM_ADD_RETURN_STACK_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC
-   (REWRITE_RULE[ALIGNED_BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                fst EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC]
+   (REWRITE_RULE[BYTES_LOADED_DATA; fst EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC]
     EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT)
    `[X19; X20; X21; X22; X23; X24; X25; X30]` 1696);;
