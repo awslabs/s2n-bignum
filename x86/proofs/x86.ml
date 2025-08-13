@@ -1325,7 +1325,7 @@ let x86_VPADDD = new_definition
 let x86_VPBROADCASTD = new_definition
   `x86_VPBROADCASTD (dest:(x86state,(N)word)component) src (s:x86state) =
       let (x:128 word) = read src s in
-      let dw = word_subword x (0,32) in
+      let dw = word_subword x (0,32):(32)word in
       let res:N word = word_duplicate dw in
       (dest := res) s`;;
 
