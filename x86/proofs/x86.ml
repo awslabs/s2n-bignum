@@ -1325,9 +1325,17 @@ let x86_VPADDD = new_definition
 let x86_VPBROADCASTD = new_definition
   `x86_VPBROADCASTD (dest:(x86state,(N)word)component) src (s:x86state) =
       let (x:128 word) = read src s in
-      let dw = word_subword x (0,32):(32)word in
-      let res:N word = word_duplicate dw in
-      (dest := res) s`;;
+      if dimindex(:N) = 256 then
+        let dw = word_subword x (0,32) in
+        let dw64 = word_join (dw:32 word) (dw:32 word):64 word in
+        let dw128 = word_join dw64 dw64:128 word in
+        let res:(256)word = word_join dw128 dw128 in
+        (dest := word_zx res) s
+      else
+        let dw = word_subword x (0,32) in
+        let dw64 = word_join (dw:32 word) (dw:32 word):64 word in
+        let res:(128)word = word_join dw64 dw64 in
+        (dest := word_zx res) s`;;
 
 let x86_VPMULHW = new_definition
   `x86_VPMULHW dest src1 src2 (s:x86state) =
