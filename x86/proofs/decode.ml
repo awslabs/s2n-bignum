@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
+let decode_log = ref false;;
+
 (* ========================================================================= *)
 (* x86 instruction decoding.                                                 *)
 (* ========================================================================= *)
@@ -579,6 +581,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       VEXM_0F38 ->
         read_byte l >>= \(b,l).
         (bitmatch b with
+        | [0x58:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VPBROADCASTD (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l))
         | [0x40:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -1445,6 +1451,51 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       [sz,`sz:wordsize`; v,`v:bool`; rm,`rm:operand`; l,`l:byte list`]
   | _ -> failwith "DECODE_HI_CONV" in
 
+  (* A wrapper function of the 'evaluate' function defined below.
+     If decode_log reference variable is assigned true, this will print the
+     current evaluation context and the term that is being reduced. *)
+  let log_step =
+    let print_assignments (ls:(term * term) list): unit =
+      Printf.printf "  (assignments: [\n%s])\n%!"
+        (String.concat "\n" (List.map
+            (fun (t,x) ->
+              "    - " ^ (string_of_term x) ^ " -> " ^ (string_of_term t))
+              ls))
+    in
+    let eval_fresh_id = ref 0 in
+
+    (* The main logger function.
+      - 'op' is the current evaluation context and fn will print it
+      - 'evaluate' must be the 'evaluate' function defined later.
+      - 't_focus' and 'F' are the two arguments that the 'evaluate' function
+        receive. *)
+    let fn (op:string) (evaluate:term -> (thm -> (term * term) list -> thm)
+                                      -> (term * term) list -> thm)
+        (t_focus:term) (F:thm -> (term * term) list -> thm) =
+      let eval_id = !eval_fresh_id in
+      let _ = eval_fresh_id := 1 + eval_id in
+
+      let eval_simplified = evaluate t_focus (fun th ->
+        let f_partialeval = F th in
+        fun ls ->
+          if not !decode_log then f_partialeval ls else
+          let _ = Printf.printf "decode: evaluate (\"%s\", eval id %d):"
+            op eval_id in
+          let _ = Printf.printf " evaluated to (assigns deferred): `%s`\n%!"
+            (string_of_term (rhs (concl th))) in
+          let _ = print_assignments ls in
+          f_partialeval ls) in
+      fun ls ->
+        if not !decode_log then eval_simplified ls else
+        let _ = Printf.printf "decode: evaluate (\"%s\", eval id %d):"
+            op eval_id in
+        let _ = Printf.printf " evaluating: `%s`\n%!"
+            (string_of_term t_focus) in
+        let _ = print_assignments ls in
+        eval_simplified ls
+    in fn
+  in
+
  (* Evaluates term t in a continuation-passing style. The continuation
      'F thm binding' takes (1) thm: a rewrite rule that describes the
      equality `e = v` where `e` was the previous expression and `v` is the
@@ -1460,40 +1511,46 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
      "#remove_printer pp_print_qterm;;". This can be enabled by
      "#disable_printer pp_print_qterm;;" again. *)
 
-  let rec evaluate t (F:thm->(term*term)list->thm) =
+  let rec evaluate t (F:thm->(term*term)list->thm): (term * term) list -> thm =
     match t with
   | Comb(Comb(Const(">>=",_),f),g) ->
-    evaluate f (fun th ->
+    log_step "[e1] >>= e2" evaluate f (fun th ->
       match rhs (concl th) with
       | Comb(Const("SOME",_),a) ->
         let A,B = match type_of g with
         | Tyapp(_,[A;Tyapp(_,[B])]) -> A,B | _ -> fail() in
         let th' = PROVE_HYP th (PINST [A,aty; B,bty]
           [f,`f:A option`; a,`a:A`; g,`g:A->B option`] pth_obind) in
-        evaluate (rhs (concl th')) (F o TRANS th')
+        log_step "v1 >>= [e2]" evaluate (rhs (concl th')) (F o TRANS th')
       | _ -> failwith "evaluate >>= did not get SOME a")
   | Comb(Comb(Comb(Const("COND",_),
       Comb(Const("has_pfxs",_),pfxs)),Const("NONE",Tyapp(_,[A]))),a) ->
     let th = PINST [A,aty] [pfxs,`pfxs:pfxs`; a,`a:A option`] pth_has_pfxs in
-    let g = evaluate a (F o TRANS th) in
+    let g = log_step "if has_pfxs pfxs then NONE else [ ]"
+                     evaluate a (F o TRANS th) in
     fun ls ->
       if vsubst ls pfxs = pfxs0 then
         PROVE_HYP (REFL pfxs0) (g ls)
       else failwith "evaluate 'if has_pfxs pfxs then NONE...' failed"
   | Comb(Comb(Comb(Const("COND",_),e),a),b) ->
-    evaluate e (fun th ->
+    log_step "if [e1] then e2 else e3" evaluate e (fun th ->
       let A = type_of a in
       let inst = PINST [A, aty] [e,`p:bool`; a,`a:A`; b,`b:A`] in
       match rhs (concl th) with
-      | Const("T",_) -> evaluate a (F o TRANS (PROVE_HYP th (inst pth_cond_T)))
-      | Const("F",_) -> evaluate b (F o TRANS (PROVE_HYP th (inst pth_cond_F)))
+      | Const("T",_) ->
+        log_step "if T then [e2] else e3" evaluate a
+            (F o TRANS (PROVE_HYP th (inst pth_cond_T)))
+      | Const("F",_) ->
+        log_step "if F then e2 else [e3]" evaluate b
+            (F o TRANS (PROVE_HYP th (inst pth_cond_F)))
       | e' ->
         let gT,gF =
-          let gi rhs r pth =
+          let gi (op:string) rhs r pth =
             let th = PROVE_HYP (TRANS th (ASSUME (mk_eq (e',r)))) (inst pth) in
-            try evaluate rhs (F o TRANS th)
+            try log_step op evaluate rhs (F o TRANS th)
             with Failure _ as e -> fun _ -> raise e in
-          gi a `T` pth_cond_T, gi b `F` pth_cond_F in
+          gi "if T then [e2] else e3" a `T` pth_cond_T,
+          gi "if F then e2 else [e3]" b `F` pth_cond_F in
         fun ls ->
           let th' = TRY_CONV WORD_RED_CONV (vsubst ls e') in
           match rhs (concl th') with
@@ -1508,7 +1565,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     if one_pattern cs then
       let th = BM_FIRST_CASE_CONV t in
       let fn = inst_bitpat_numeral (hd (hyp th)) in
-      let g = evaluate (rhs (concl th)) (F o TRANS th) in
+      let g = log_step "[bitmatch .. with | ..]"
+                evaluate (rhs (concl th)) (F o TRANS th) in
       fun ls ->
         let ls', th' = fn (dest_numeral (rand (vsubst ls e))) in
         PROVE_HYP th' (g (ls' @ ls))
@@ -1526,7 +1584,9 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
         let th2 = PROVE_HYP th1 (INST ls th) in
         let e' = fst (hd ls) in
         let th = TRANS (AP_THM (AP_TERM f (ASSUME (mk_eq (e, e')))) cs) th2 in
-        PROVE_HYP (REFL e') o evaluate (rhs (concl th)) (F o TRANS th)
+        PROVE_HYP (REFL e') o
+            log_step "[bitmatch .. with | ..]"
+              evaluate (rhs (concl th)) (F o TRANS th)
         with Failure _ as e -> fun _ -> raise e) in
         fun ls -> gs.(Num.int_of_num (dest_numeral (rand (rev_assoc e ls)))) ls
       | _ -> raise (Invalid_argument ("Unknown " ^ string_of_term t)))
@@ -1534,7 +1594,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb(Comb((Const("_MATCH",_) as f),e),cs) ->
     if not (is_var e) then
       let th = CHANGED_CONV MATCH_CONV t in
-      evaluate (rhs (concl th)) (F o TRANS th) else
+      log_step "[match .. with | ..]"
+          evaluate (rhs (concl th)) (F o TRANS th) else
     let one_pattern = function
     | Comb(Comb(Const("_SEQPATTERN",_),_),cs) ->
       (match cs with
@@ -1551,7 +1612,8 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           Comb(Comb(Const("GEQ",_),p),_)),_) ->
         let th = AP_THM (AP_TERM f (ASSUME (mk_eq (e, p)))) cs in
         let th = TRANS th (MATCH_CONV (rhs (concl th))) in
-        let g = evaluate (rhs (concl th)) (F o TRANS th) in
+        let g = log_step "[match .. with | ..]"
+                  evaluate (rhs (concl th)) (F o TRANS th) in
         fun ls ->
           let e' = vsubst ls e in
           let _,ls',_ = term_unify (frees p) p e' in
@@ -1568,8 +1630,9 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           let th = TRANS th1 (REPEATC MATCH_CONV (rhs (concl th1))) in
           match rhs (concl th) with
           | Const("NONE",_) -> ls
-          | r -> try ((b, c), evaluate r (F o TRANS th)) :: ls
-                 with Failure _ -> ls in
+          | r -> try
+              ((b, c), (*todo: log_step*) evaluate r (F o TRANS th)) :: ls
+            with Failure _ -> ls in
         C assoc (go (allpairs (fun x y -> (x, y)) rep_pfx_constructors seg_pfx_constructors))) in
       fun ls ->
         (match rev_assoc e ls with
@@ -1586,7 +1649,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           let th = TRANS th1 (REPEATC MATCH_CONV (rhs (concl th1))) in
           match rhs (concl th) with
           | Const("NONE",_) -> ls
-          | r -> try (b, evaluate r (F o TRANS th)) :: ls
+          | r -> try (b, (*todo: log_step*)evaluate r (F o TRANS th)) :: ls
                  with Failure _ -> ls in
       let gs = C assoc (go VEXM_constructors) in
       fun ls ->
@@ -1612,7 +1675,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb((Const("word_sx",_) as f),a) -> eval_unary f a F WORD_SX_CONV
   | Comb((Const("word_not",_) as f),a) -> eval_unary f a F WORD_NOT_CONV
   | Comb((Const("regsize8",_) as f),a) ->
-    evaluate a (fun th ->
+    log_step "regsize8 [e]" evaluate a (fun th ->
       let th = AP_TERM f th in
       delay_if true (rhs (concl th)) (F o TRANS th) REGSIZE8_CONV)
   | Comb((Const("is_some",_) as f),a) ->
@@ -1622,7 +1685,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb(Const("has_unhandled_pfxs",_) as f,a) ->
     eval_unary f a F HAS_UNHANDLED_PFXS_CONV
   | Comb(Comb(Comb((Comb(Const("op_size",_),_) as f),w),v),p) ->
-    evaluate w (fun th ->
+    log_step "op_size .. [ ] .. .." evaluate w (fun th ->
       let th = AP_THM (AP_THM (AP_TERM f th) v) p in
       delay_if true (rhs (concl th)) (F o TRANS th) OP_SIZE_CONV)
   | Comb(Comb(Comb((Const("op_size_W",_) as f),a),b),c) ->
@@ -1636,7 +1699,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb(Comb(Const("read_VEX",_),_),_) -> eval_opt t F READ_VEX_CONV
   | Comb(Comb(Comb(Comb((Comb(Comb(Const("decode_hi",_),_),_)
       as f),sz),opc),rm),l) ->
-    evaluate sz (fun th ->
+    log_step "decode_hi .. .. [ ] .. .. .." evaluate sz (fun th ->
       let th = AP_THM (AP_THM (AP_THM (AP_TERM f th) opc) rm) l in
       eval_opt (rhs (concl th)) (F o TRANS th) DECODE_HI_CONV)
   | Comb(Const("read_byte",_),_) -> eval_opt t F READ_WORD_CONV
@@ -1644,11 +1707,11 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb(Const("read_int32",_),_) -> eval_opt t F READ_WORD_CONV
   | Comb(Const("read_int64",_),_) -> eval_opt t F READ_WORD_CONV
   | Comb(Comb((Const("read_imm",_) as f),a),l) ->
-    evaluate a (fun th ->
+    log_step "read_imm [ ] .." evaluate a (fun th ->
       let th = AP_THM (AP_TERM f th) l in
       eval_opt (rhs (concl th)) (F o TRANS th) READ_IMM_CONV)
   | Comb(Comb((Const("read_full_imm",_) as f),a),l) ->
-    evaluate a (fun th ->
+    log_step "read_full_imm [ ] .." evaluate a (fun th ->
       let th = AP_THM (AP_TERM f th) l in
       eval_opt (rhs (concl th)) (F o TRANS th) READ_IMM_CONV)
   | Comb(Comb(Const("read_displacement",_),_),_) -> eval_opt t F READ_DISP_CONV
@@ -1664,7 +1727,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb(Comb((Const("Simdreg",_) as f),a),b) ->
     eval_binary f a b F SIMDREG_CONV
   | Comb(Comb(Comb((Comb(Const("Bsid",_),_) as f),a),b),c) ->
-    evaluate a (fun th ->
+    log_step "Bsid .. [ ] .. .." evaluate a (fun th ->
       let th = AP_THM (AP_THM (AP_TERM f th) b) c in
       delay_if true (rhs (concl th)) (F o TRANS th) BSID_CONV)
   | Comb(Const("Riprel",_) as f,a) -> eval_unary f a F ALL_CONV
@@ -1690,7 +1753,13 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb(Const("@",_),_) -> failwith "ARB"
   | Const("ARB",_) -> failwith "ARB"
   | Comb(Comb((Const("word_shl",_) as f),a),b) -> eval_binary f a b F WORD_SHL_CONV
-  | Comb(Comb((Const("=",_) as f),a),b) -> eval_binary f a b F WORD_RED_CONV
+  | Comb(Comb((Const("=",_) as f),a),b) ->
+   (let ty = type_of a in
+    match ty with
+    | Tyapp("word",_) -> eval_binary f a b F WORD_RED_CONV
+    | Tyapp(tyname,_) ->
+      let inequalities = CONJUNCTS(distinctness tyname) in
+      eval_binary f a b F (GEN_REWRITE_CONV I (REFL_CLAUSE::inequalities)))
   | Comb(Comb((Const("/\\",_) as f),a),b) ->
     eval_binary f a b F (GEN_REWRITE_CONV I [AND_CLAUSES])
   | Comb((Const("val",_) as f),a) -> eval_unary f a F WORD_VAL_CONV
@@ -1699,43 +1768,48 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     | Comb(Const("GABS",_),_) -> true
     | Abs(_,_) -> true
     | _ -> false) ->
-    evaluate a (fun th ->
+    log_step "(\x. e) [e2]" evaluate a (fun th ->
       let th1 = AP_TERM f th in
       let th2 = TRANS th1 (GEN_BETA_CONV (rhs (concl th1))) in
-      evaluate (rhs (concl th2)) (F o TRANS th2))
+      log_step "[(\x. e) v]" evaluate (rhs (concl th2)) (F o TRANS th2))
   | Comb((Comb(Const("LET",_),_) as f),a) ->
-    evaluate a (fun th ->
+    log_step "let x = [e1] in e2" evaluate a (fun th ->
       let th1 = AP_TERM f th in
       let th2 = TRANS th1 (let_CONV (rhs (concl th1))) in
-      evaluate (rhs (concl th2)) (F o TRANS th2))
+      log_step "[let x = v1 in e2]" evaluate (rhs (concl th2)) (F o TRANS th2))
   | Comb(Const("word",_),a) when is_numeral a -> F (REFL t)
   | Comb(Const("NUMERAL",_),a) when is_numeral t -> F (REFL t)
   | Comb(f,a) ->
-    evaluate f (fun th -> evaluate a (fun th' -> F (MK_COMB (th, th'))))
+    log_step "[e1] e2" evaluate f (fun th ->
+      log_step "(\x. e) [e2]" evaluate a (fun th' -> F (MK_COMB (th, th'))))
   | Const(s,_) -> if mem s constructors then F (REFL t) else
     raise (Invalid_argument ("evaluate: unknown function " ^ s))
   | Var(_,_) -> F (REFL t)
   | Abs(_,_) -> F (REFL t)
   and eval_unary' f a F conv =
-    evaluate a (fun th ->
+    log_step "unary_op [e]" evaluate a (fun th ->
       let th1 = f th in
       let tm = rhs (concl th1) in
       delay_if (is_var (rand tm)) tm (F o TRANS th1) conv)
   and eval_unary f a F conv = eval_unary' (AP_TERM f) a F conv
   and eval_binary f a b F conv =
-    evaluate a (fun tha -> evaluate b (fun thb ->
-      let th1 = MK_COMB (AP_TERM f tha, thb) in
-      let tm = rhs (concl th1) in
-      delay_if (is_var (lhand tm) || is_var (rand tm))
-        tm (F o TRANS th1) conv))
-  and eval_ternary f a b c F conv =
-    evaluate a (fun tha -> evaluate b (fun thb -> evaluate c (fun thc ->
+    log_step "[e1] binop e2" evaluate a (fun tha ->
+      log_step "v1 binop [e2]" evaluate b (fun thb ->
         let th1 = MK_COMB (AP_TERM f tha, thb) in
         let tm = rhs (concl th1) in
-        let th2 = MK_COMB(th1,thc) in
-        let tm' = rhs (concl th2) in
-        delay_if (is_var (lhand tm) || is_var (rand tm) || is_var(rand(concl thc)))
-          tm' (F o TRANS th2) conv))) in
+        delay_if (is_var (lhand tm) || is_var (rand tm))
+          tm (F o TRANS th1) conv))
+  and eval_ternary f a b c F conv =
+    log_step "ternary_op ([e1], e2, e3)" evaluate a (fun tha ->
+      log_step "ternary_op (v1, [e2], e3)" evaluate b (fun thb ->
+        log_step "ternary_op (v1, v2, [e3])" evaluate c (fun thc ->
+          let th1 = MK_COMB (AP_TERM f tha, thb) in
+          let tm = rhs (concl th1) in
+          let th2 = MK_COMB(th1,thc) in
+          let tm' = rhs (concl th2) in
+          delay_if (is_var (lhand tm) || is_var (rand tm)
+                                      || is_var(rand(concl thc)))
+            tm' (F o TRANS th2) conv))) in
   let () =
     let mk_pths th =
       let f th =
