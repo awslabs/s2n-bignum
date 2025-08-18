@@ -448,19 +448,19 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase_alt):
         stp     x0, x1, [acc]
 
         ldp     x0, x1, [tab, #1*16]
-        ldp     x2, x3, [tab, #96+1*16]
+        ldp     x2, x3, [tab, #(96+1*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+1*16]
 
         ldp     x0, x1, [tab, #2*16]
-        ldp     x2, x3, [tab, #96+2*16]
+        ldp     x2, x3, [tab, #(96+2*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+2*16]
 
         ldp     x0, x1, [tab, #3*16]
-        ldp     x2, x3, [tab, #96+3*16]
+        ldp     x2, x3, [tab, #(96+3*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+3*16]
@@ -470,13 +470,13 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase_alt):
         stp     xzr, xzr, [acc+5*16]
 
         ldp     x0, x1, [tab, #4*16]
-        ldp     x2, x3, [tab, #96+4*16]
+        ldp     x2, x3, [tab, #(96+4*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+6*16]
 
         ldp     x0, x1, [tab, #5*16]
-        ldp     x2, x3, [tab, #96+5*16]
+        ldp     x2, x3, [tab, #(96+5*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+7*16]
