@@ -34,15 +34,6 @@ let contained_modulo = new_definition
                 ==> ?j. j < len2 /\ (addr1 + i == addr2 + j) (mod n)`;;
 
 (* ------------------------------------------------------------------------- *)
-(* It is actually much more natural to use this variant for toplevel specs.  *)
-(* ------------------------------------------------------------------------- *)
-
-let nonoverlapping = new_definition
- `nonoverlapping (base1:N word,len1) (base2:N word,len2) <=>
-        nonoverlapping_modulo (2 EXP dimindex(:N))
-                              (val base1,len1) (val base2,len2)`;;
-
-(* ------------------------------------------------------------------------- *)
 (* Basic properties and interrelations.                                      *)
 (* ------------------------------------------------------------------------- *)
 
@@ -295,20 +286,6 @@ let NONOVERLAPPING_MODULO_OFFSET_LEFT = prove
   REPEAT GEN_TAC THEN REWRITE_TAC[nonoverlapping_modulo] THEN
   AP_TERM_TAC THEN REPEAT(AP_TERM_TAC THEN ABS_TAC) THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC NUMBER_RULE);;
-
-let NONOVERLAPPING_CLAUSES = prove
- (`(nonoverlapping (word n1:int64,l1) (a2,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (n1,l1) (val a2,l2)) /\
-   (nonoverlapping (a1:int64,l1) (word n2:int64,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (val a1,l1) (n2,l2)) /\
-   (nonoverlapping (a1:int64,l1) (a2,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (val a1,l1) (val a2,l2)) /\
-   (nonoverlapping_modulo (2 EXP 64) (val(word n1:int64),l1) (n2,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (n1,l1) (n2,l2)) /\
-   (nonoverlapping_modulo (2 EXP 64) (n1,l1) (val(word n2:int64),l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (n1,l1) (n2,l2))`,
-  REWRITE_TAC[nonoverlapping; DIMINDEX_64; VAL_WORD] THEN
-  REWRITE_TAC[NONOVERLAPPING_MODULO_LMOD; NONOVERLAPPING_MODULO_RMOD]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Other misc lemmas we might want.                                          *)
@@ -694,3 +671,220 @@ let NONOVERLAPPING_SIMPLE = prove
   ONCE_REWRITE_TAC[ADD_SYM] THEN
   REWRITE_TAC[GSYM numseg; GSYM NUMSEG_OFFSET_IMAGE] THEN
   REWRITE_TAC[DISJOINT_NUMSEG] THEN ASM_ARITH_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+(* Word-based versions of containment and nonoverlap, with nicer theorems.   *)
+(* ------------------------------------------------------------------------- *)
+
+let nonoverlapping = new_definition
+ `nonoverlapping (base1:N word,len1) (base2:N word,len2) <=>
+        nonoverlapping_modulo (2 EXP dimindex(:N))
+                              (val base1,len1) (val base2,len2)`;;
+
+let contained = new_definition
+ `contained (base1:N word,len1) (base2:N word,len2) <=>
+        contained_modulo (2 EXP dimindex(:N))
+                         (val base1,len1) (val base2,len2)`;;
+
+let NONOVERLAPPING = prove
+ (`!(base1:N word) base2 len1 len2.
+        nonoverlapping (base1,len1) (base2,len2) <=>
+        ~(?i j. i < len1 /\ j < len2 /\
+                word_add base1 (word i) = word_add base2 (word j))`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[nonoverlapping; nonoverlapping_modulo] THEN
+  REWRITE_TAC[GSYM WORD_EQ; WORD_ADD; WORD_VAL]);;
+
+let CONTAINED = prove
+ (`!(base1:N word) base2 len1 len2.
+        contained (base1,len1) (base2,len2) <=>
+        !i. i < len1
+            ==> ?j. j < len2 /\
+                    word_add base1 (word i) = word_add base2 (word j)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[contained; contained_modulo] THEN
+  REWRITE_TAC[GSYM WORD_EQ; WORD_ADD; WORD_VAL]);;
+
+let NONOVERLAPPING_MODULO = prove
+ (`!base1 base2 len1 len2.
+      nonoverlapping_modulo (2 EXP dimindex(:N)) (base1,len1) (base2,len2) <=>
+      nonoverlapping(word base1:N word,len1) (word base2:N word,len2)`,
+  REWRITE_TAC[nonoverlapping; nonoverlapping_modulo] THEN
+  REWRITE_TAC[VAL_WORD; CONG] THEN CONV_TAC MOD_DOWN_CONV THEN
+  REWRITE_TAC[]);;
+
+let CONTAINED_MODULO = prove
+ (`!base1 base2 len1 len2.
+      contained_modulo (2 EXP dimindex(:N)) (base1,len1) (base2,len2) <=>
+      contained(word base1:N word,len1) (word base2:N word,len2)`,
+  REWRITE_TAC[contained; contained_modulo] THEN
+  REWRITE_TAC[VAL_WORD; CONG] THEN CONV_TAC MOD_DOWN_CONV THEN
+  REWRITE_TAC[]);;
+
+let NONOVERLAPPING_SYM = prove
+ (`!(base1:N word) base2 len1 len2.
+        nonoverlapping (base1,len1) (base2,len2) <=>
+        nonoverlapping (base2,len2) (base1,len1)`,
+  REWRITE_TAC[nonoverlapping; NONOVERLAPPING_MODULO_SYM]);;
+
+let CONTAINED_TRIVIAL = prove
+ (`!(base1:N word) base2 len2. contained (base1,0) (base2,len2)`,
+  REWRITE_TAC[contained; CONTAINED_MODULO_TRIVIAL]);;
+
+let NONOVERLAPPING_TRIVIAL = prove
+ (`!(base1:N word) base2 len1 len2.
+        len1 = 0 \/ len2 = 0
+         ==> nonoverlapping (base1,len1) (base2,len2)`,
+  SIMP_TAC[nonoverlapping; NONOVERLAPPING_MODULO_TRIVIAL]);;
+
+let NONOVERLAPPING_SUBREGIONS = prove
+ (`!(base1:N word) len1 base2 len2 base1' len1' base2' len2'.
+        nonoverlapping (base1,len1) (base2,len2) /\
+        contained (base1',len1') (base1,len1) /\
+        contained (base2',len2') (base2,len2)
+        ==> nonoverlapping (base1',len1') (base2',len2')`,
+  REWRITE_TAC[nonoverlapping; contained; NONOVERLAPPING_MODULO_SUBREGIONS]);;
+
+let NONOVERLAPPING_QFREE = prove
+ (`!(base1:N word) base2 len1 len2.
+        nonoverlapping (base1,len1) (base2,len2) <=>
+        0 < len1 /\ 0 < len2
+        ==> len2 <= val(word_sub base1 base2) /\
+            val(word_sub base1 base2) + len1 <= 2 EXP dimindex(:N)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING] THEN
+  REWRITE_TAC[WORD_RULE
+   `word_add b x:N word = word_add c y <=> word_sub y x = word_sub b c`] THEN
+  SPEC_TAC(`word_sub base1 base2:N word`,`d:N word`) THEN GEN_TAC THEN
+  ASM_CASES_TAC `len1 = 0` THEN ASM_SIMP_TAC[CONJUNCT1 LT; LE_1] THEN
+  ASM_CASES_TAC `len2 = 0` THEN ASM_SIMP_TAC[CONJUNCT1 LT; LE_1] THEN
+  REWRITE_TAC[WORD_RULE `word_sub a b:N word = c <=> a = word_add c b`] THEN
+  REWRITE_TAC[WORD_VAL_GALOIS; RIGHT_EXISTS_AND_THM] THEN
+  MP_TAC(SPEC `2 EXP dimindex(:N)` (MESON[MOD_LE; LET_TRANS; MOD_LT; MOD_LT_EQ]
+   `!n P len. ~(n = 0)
+             ==> ((?i. i < len /\ P(i MOD n)) <=>
+                  (?i. i < n /\ i < len /\ P i))`)) THEN
+  REWRITE_TAC[EXP_EQ_0; ARITH_EQ] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  REWRITE_TAC[UNWIND_THM2; VAL_BOUND; ARITH_RULE
+     `j:num < a /\ j < b /\ j = c <=> j = c /\ c < a /\ c < b`] THEN
+  ASM_CASES_TAC `len2 < 2 EXP dimindex(:N)` THEN ASM_REWRITE_TAC[] THENL
+   [ALL_TAC; ASM_MESON_TAC[VAL_BOUND; NOT_LT; LE_1; LTE_TRANS]] THEN
+  REWRITE_TAC[VAL_WORD_ADD; VAL_WORD] THEN CONV_TAC MOD_DOWN_CONV THEN
+  REWRITE_TAC[GSYM NOT_LT; GSYM DE_MORGAN_THM] THEN
+  AP_TERM_TAC THEN EQ_TAC THENL
+   [DISCH_THEN(X_CHOOSE_THEN `i:num` (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
+    ASM_CASES_TAC `val(d:N word) + i < 2 EXP dimindex(:N)` THEN
+    ASM_SIMP_TAC[MOD_LT] THEN ASM_ARITH_TAC;
+    STRIP_TAC THENL
+     [EXISTS_TAC `0` THEN ASM_SIMP_TAC[ADD_CLAUSES; VAL_MOD_REFL; LE_1];
+      EXISTS_TAC `2 EXP dimindex(:N) - val(d:N word)` THEN
+      CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+      SIMP_TAC[VAL_BOUND; ARITH_RULE `a:num < b ==> a + b - a = b`] THEN
+      ASM_SIMP_TAC[MOD_REFL; LE_1]]]);;
+
+let NONOVERLAPPING_QFREE' = prove
+ (`!(base1:N word) base2 len1 len2.
+        nonoverlapping (base1,len1) (base2,len2) <=>
+        0 < len1 /\ 0 < len2
+        ==> len2 <= val(word_sub base1 base2) /\
+            len1 <= val(word_sub base2 base1)`,
+  REWRITE_TAC[NONOVERLAPPING_QFREE] THEN WORD_ARITH_TAC);;
+
+let CONTAINED_QFREE = prove
+ (`!(base1:N word) base2 len1 len2.
+        contained (base1,len1) (base2,len2) <=>
+        0 < len1 /\ len2 < 2 EXP dimindex(:N)
+        ==> val(word_sub base1 base2) + len1 <= len2`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[CONTAINED] THEN
+  REWRITE_TAC[WORD_RULE
+   `word_add b x:N word = word_add c y <=> word_sub y x = word_sub b c`] THEN
+  SPEC_TAC(`word_sub base1 base2:N word`,`d:N word`) THEN GEN_TAC THEN
+  ASM_CASES_TAC `len1 = 0` THEN ASM_SIMP_TAC[CONJUNCT1 LT; LE_1] THEN
+  REWRITE_TAC[WORD_RULE `word_sub a b:N word = c <=> a = word_add c b`] THEN
+  REWRITE_TAC[WORD_VAL_GALOIS] THEN
+  MP_TAC(SPEC `2 EXP dimindex(:N)` (MESON[MOD_LE; LET_TRANS; MOD_LT; MOD_LT_EQ]
+   `!n P len. ~(n = 0)
+             ==> ((?i. i < len /\ P(i MOD n)) <=>
+                  (?i. i < n /\ i < len /\ P i))`)) THEN
+  REWRITE_TAC[EXP_EQ_0; ARITH_EQ] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  REWRITE_TAC[UNWIND_THM2; VAL_BOUND; ARITH_RULE
+     `j:num < a /\ j < b /\ j = c <=> j = c /\ c < a /\ c < b`] THEN
+  ASM_CASES_TAC `len2 < 2 EXP dimindex(:N)` THEN ASM_REWRITE_TAC[] THENL
+   [ALL_TAC; ASM_MESON_TAC[VAL_BOUND; NOT_LT; LTE_TRANS]] THEN
+  REWRITE_TAC[VAL_WORD_ADD; VAL_WORD] THEN CONV_TAC MOD_DOWN_CONV THEN
+  EQ_TAC THENL
+   [DISCH_THEN(MP_TAC o SPEC
+     `MIN len1 (2 EXP dimindex(:N) - val(d:N word)) - 1`) THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    W(MP_TAC o PART_MATCH (lhand o rand) MOD_LT o lhand o lhand o snd) THEN
+    MP_TAC(ISPEC `d:N word` VAL_BOUND) THEN ASM_ARITH_TAC;
+    DISCH_TAC THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+    W(MP_TAC o PART_MATCH lhand MOD_LE o lhand o snd) THEN ASM_ARITH_TAC]);;
+
+let NONOVERLAPPING_SIMPLE_LEFT = prove
+ (`!(base:N word) off1 off2 len1 len2.
+      (0 < len1 /\ 0 < len2
+       ==> &len2 <= off1 - off2 /\ (off1 - off2) + &len1 <= &2 pow dimindex(:N))
+      ==> nonoverlapping (word_add base (iword off1),len1)
+                         (word_add base (iword off2),len2)`,
+  REPEAT GEN_TAC THEN
+  ASM_CASES_TAC `len1 = 0` THEN ASM_SIMP_TAC[NONOVERLAPPING_TRIVIAL; LE_1] THEN
+  ASM_CASES_TAC `len2 = 0` THEN ASM_SIMP_TAC[NONOVERLAPPING_TRIVIAL; LE_1] THEN
+  REWRITE_TAC[NONOVERLAPPING_QFREE; WORD_RULE
+  `word_sub (word_add b (iword x)) (word_add b (iword y)) = iword(x - y)`] THEN
+  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) [MESON[INT_POS; INT_LE_TRANS]
+    `&len:int <= y <=> &0 <= y /\ &len <= y`] THEN
+  SPEC_TAC(`off1 - off2:int`,`y:int`) THEN
+  REWRITE_TAC[IMP_CONJ; GSYM INT_FORALL_POS] THEN X_GEN_TAC `n:num` THEN
+  REWRITE_TAC[GSYM WORD_IWORD] THEN REPEAT DISCH_TAC THEN
+  SUBGOAL_THEN `val(word n:N word) = n` SUBST1_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ; ALL_TAC] THEN
+  REPEAT(POP_ASSUM MP_TAC) THEN REWRITE_TAC[GSYM INT_OF_NUM_CLAUSES] THEN
+  INT_ARITH_TAC);;
+
+let NONOVERLAPPING_SIMPLE = prove
+ (`!(base:N word) off1 off2 len1 len2.
+       (0 < len1 /\ 0 < len2
+        ==> &len2 <= off1 - off2 /\
+            (off1 - off2) + &len1 <= &2 pow dimindex(:N) \/
+            &len1 <= off2 - off1 /\
+            (off2 - off1) + &len2 <= &2 pow dimindex(:N))
+        ==> nonoverlapping (word_add base (iword off1),len1)
+                           (word_add base (iword off2),len2)`,
+  MESON_TAC[NONOVERLAPPING_SIMPLE_LEFT; NONOVERLAPPING_SYM]);;
+
+let NONOVERLAPPING_SIMPLE_64 =
+  CONV_RULE INT_REDUCE_CONV
+   (REWRITE_RULE[DIMINDEX_64] (INST_TYPE [`:64`,`:N`] NONOVERLAPPING_SIMPLE));;
+
+let CONTAINED_SIMPLE = prove
+ (`!(base:N word) off1 off2 len1 len2.
+        (0 < len1 ==> &0 <= off1 - off2 /\ (off1 - off2) + &len1 <= &len2)
+        ==> contained (word_add base (iword off1),len1)
+                      (word_add base (iword off2),len2)`,
+  REPEAT GEN_TAC THEN
+  ASM_CASES_TAC `len1 = 0` THEN ASM_SIMP_TAC[CONTAINED_TRIVIAL; LE_1] THEN
+  REWRITE_TAC[CONTAINED_QFREE; WORD_RULE
+  `word_sub (word_add b (iword x)) (word_add b (iword y)) = iword(x - y)`] THEN
+  SPEC_TAC(`off1 - off2:int`,`y:int`) THEN
+  REWRITE_TAC[IMP_CONJ; GSYM INT_FORALL_POS] THEN X_GEN_TAC `n:num` THEN
+  REWRITE_TAC[GSYM WORD_IWORD] THEN REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC(ARITH_RULE
+   `val(word n:N word) <= n /\ n + l1 <= l2
+    ==> val(word n:N word) + l1 <= l2`) THEN
+  SIMP_TAC[VAL_WORD_LE; LE_REFL] THEN ASM_ARITH_TAC);;
+
+let CONTAINED_SIMPLE_64 = INST_TYPE [`:64`,`:N`] CONTAINED_SIMPLE;;
+
+let NONOVERLAPPING_CLAUSES = prove
+ (`(nonoverlapping (word n1:int64,l1) (a2,l2) <=>
+        nonoverlapping_modulo (2 EXP 64) (n1,l1) (val a2,l2)) /\
+   (nonoverlapping (a1:int64,l1) (word n2:int64,l2) <=>
+        nonoverlapping_modulo (2 EXP 64) (val a1,l1) (n2,l2)) /\
+   (nonoverlapping (a1:int64,l1) (a2,l2) <=>
+        nonoverlapping_modulo (2 EXP 64) (val a1,l1) (val a2,l2)) /\
+   (nonoverlapping_modulo (2 EXP 64) (val(word n1:int64),l1) (n2,l2) <=>
+        nonoverlapping_modulo (2 EXP 64) (n1,l1) (n2,l2)) /\
+   (nonoverlapping_modulo (2 EXP 64) (n1,l1) (val(word n2:int64),l2) <=>
+        nonoverlapping_modulo (2 EXP 64) (n1,l1) (n2,l2))`,
+  REWRITE_TAC[nonoverlapping; DIMINDEX_64; VAL_WORD] THEN
+  REWRITE_TAC[NONOVERLAPPING_MODULO_LMOD; NONOVERLAPPING_MODULO_RMOD]);;
