@@ -1036,10 +1036,16 @@ first xor to make it aes256_encrypt?
        k1_12))
       k1_13))`]
 
+
+RULE_ASSUM_TAC(REWRITE_RULE[GSYM specth])
+
 Why the REPEAT line in the following doesn't return back?
 let AESXTS_ENC_ONE_BLOCK_TAC =
   REWRITE_TAC [aes256_xts_encrypt_one_block] THEN
   CONV_TAC (TOP_DEPTH_CONV let_CONV) THEN
   REPEAT (GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] ORELSE AP_THM_TAC ORELSE AP_TERM_TAC) THEN
   BITBLAST_TAC;;
+
+  REWRITE_TAC may just repeat (without REPEAT) would arrive at a canonical form
+  June: TARGET_REWRITE_TAC
 *)
