@@ -123,6 +123,7 @@
 : vpaddd$
 : vpand$
 : vpblendd$
+: vpbroadcastd$
 : vpmulhw$
 : vpmulld$
 : vpmullw$
