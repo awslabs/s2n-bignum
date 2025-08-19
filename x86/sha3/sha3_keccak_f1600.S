@@ -26,54 +26,54 @@ S2N_BN_SYMBOL(sha3_keccak_f1600):
 		
 		sub    rsp, 0xd0
 		
-		not    QWORD PTR [rdi+0x64-0x5c]
-		not    QWORD PTR [rdi+0x64-0x54]
-		not    QWORD PTR [rdi+0x64-0x24]
-		not    QWORD PTR [rdi+0x64-0x4]
-		not    QWORD PTR [rdi+0x64+0x24]
-		not    QWORD PTR [rdi+0x64+0x3c]
+		not    QWORD PTR [rdi+0x08]
+		not    QWORD PTR [rdi+0x10]
+		not    QWORD PTR [rdi+0x40]
+		not    QWORD PTR [rdi+0x60]
+		not    QWORD PTR [rdi+0x88]
+		not    QWORD PTR [rdi+0xa0]
 
 		lea    r15, [rsp]
-		mov    rax, QWORD PTR [rdi+0x64+0x3c]
-		mov    rbx, QWORD PTR [rdi+0x64+0x44]
-		mov    rcx, QWORD PTR [rdi+0x64+0x4c]
-		mov    rdx, QWORD PTR [rdi+0x64+0x54]
-		mov    rbp, QWORD PTR [rdi+0x64+0x5c]
+		mov    rax, QWORD PTR [rdi+0xa0]
+		mov    rbx, QWORD PTR [rdi+0xa8]
+		mov    rcx, QWORD PTR [rdi+0xb0]
+		mov    rdx, QWORD PTR [rdi+0xb8]
+		mov    rbp, QWORD PTR [rdi+0xc0]
 		mov r8, 0x0
 loop_keccak:
 		 mov    QWORD PTR [rsp + 0xc8], r8
 	     mov    r8, QWORD PTR [rdi]
-		 mov    r9, QWORD PTR [rdi+0x64-0x34]
-		 mov    r10, QWORD PTR [rdi+0x64-0x4]
-		 mov    r11, QWORD PTR [rdi+0x64+0x2c]
-		 xor    rcx, QWORD PTR [rdi+0x64-0x54]
-		 xor    rdx, QWORD PTR [rdi+0x64-0x4c]
+		 mov    r9, QWORD PTR [rdi+0x30]
+		 mov    r10, QWORD PTR [rdi+0x60]
+		 mov    r11, QWORD PTR [rdi+0x90]
+		 xor    rcx, QWORD PTR [rdi+0x10]
+		 xor    rdx, QWORD PTR [rdi+0x18]
 		 xor    rax, r8
-		 xor    rbx, QWORD PTR [rdi+0x64-0x5c]
-		 xor    rcx, QWORD PTR [rdi+0x64-0x2c]
-		 xor    rax, QWORD PTR [rdi+0x64-0x3c]
+		 xor    rbx, QWORD PTR [rdi+0x08]
+		 xor    rcx, QWORD PTR [rdi+0x38]
+		 xor    rax, QWORD PTR [rdi+0x28]
 		 mov    r12, rbp
-		 xor    rbp, QWORD PTR [rdi+0x64-0x44]
+		 xor    rbp, QWORD PTR [rdi+0x20]
 		 xor    rcx, r10
-		 xor    rax, QWORD PTR [rdi+0x64-0x14]
-		 xor    rdx, QWORD PTR [rdi+0x64-0x24]
+		 xor    rax, QWORD PTR [rdi+0x50]
+		 xor    rdx, QWORD PTR [rdi+0x40]
 		 xor    rbx, r9
-		 xor    rbp, QWORD PTR [rdi+0x64-0x1c]
-		 xor    rcx, QWORD PTR [rdi+0x64+0x24]
-		 xor    rax, QWORD PTR [rdi+0x64+0x14]
-		 xor    rdx, QWORD PTR [rdi+0x64+0x4]
-		 xor    rbx, QWORD PTR [rdi+0x64-0xc]
-		 xor    rbp, QWORD PTR [rdi+0x64+0xc]
+		 xor    rbp, QWORD PTR [rdi+0x48]
+		 xor    rcx, QWORD PTR [rdi+0x88]
+		 xor    rax, QWORD PTR [rdi+0x78]
+		 xor    rdx, QWORD PTR [rdi+0x68]
+		 xor    rbx, QWORD PTR [rdi+0x58]
+		 xor    rbp, QWORD PTR [rdi+0x70]
 		 mov    r13, rcx
 		 rol    rcx, 1
 		 xor    rcx, rax
 		 xor    rdx, r11
 		 rol    rax, 1
 		 xor    rax, rdx
-		 xor    rbx, QWORD PTR [rdi+0x64+0x1c]
+		 xor    rbx, QWORD PTR [rdi+0x80]
 		 rol    rdx, 1
 		 xor    rdx, rbx
-		 xor    rbp, QWORD PTR [rdi+0x64+0x34]
+		 xor    rbp, QWORD PTR [rdi+0x98]
 		 rol    rbx, 1
 		 xor    rbx, rbp
 		 rol    rbp, 1
@@ -96,21 +96,21 @@ loop_keccak:
 		 mov    QWORD PTR [r15], r9
 		 xor    r12, r10
 		 not    r10
-		 mov    QWORD PTR [r15+0x64-0x54], r12
+		 mov    QWORD PTR [r15+0x10], r12
 		 or     r10, r11
-		 mov    r12, QWORD PTR [rdi+0x64+0x4c]
+		 mov    r12, QWORD PTR [rdi+0xb0]
 		 xor    r10, r13
-		 mov    QWORD PTR [r15+0x64-0x5c], r10
+		 mov    QWORD PTR [r15+0x08], r10
 		 and    r13, r8
-		 mov    r9, QWORD PTR [rdi+0x64-0x1c]
+		 mov    r9, QWORD PTR [rdi+0x48]
 		 xor    r13, r14
-		 mov    r10, QWORD PTR [rdi+0x64-0x14]
-		 mov    QWORD PTR [r15+0x64-0x44], r13
+		 mov    r10, QWORD PTR [rdi+0x50]
+		 mov    QWORD PTR [r15+0x20], r13
 		 or     r14, r8
-		 mov    r8, QWORD PTR [rdi+0x64-0x4c]
+		 mov    r8, QWORD PTR [rdi+0x18]
 		 xor    r14, r11
-		 mov    r11, QWORD PTR [rdi+0x64+0x1c]
-		 mov    QWORD PTR [r15+0x64-0x4c], r14
+		 mov    r11, QWORD PTR [rdi+0x80]
+		 mov    QWORD PTR [r15+0x18], r14
 		 xor    r8, rbp
 		 xor    r12, rdx
 		 rol    r8, 0x1c
@@ -124,26 +124,26 @@ loop_keccak:
 		 or     r8, r12
 		 rol    r10, 0x3
 		 xor    r8, r11
-		 mov    QWORD PTR [r15+0x64-0x24], r8
+		 mov    QWORD PTR [r15+0x40], r8
 		 mov    r14, r9
 		 and    r9, r13
-		 mov    r8, QWORD PTR [rdi+0x64-0x5c]
+		 mov    r8, QWORD PTR [rdi+0x08]
 		 xor    r9, r12
 		 not    r12
-		 mov    QWORD PTR [r15+0x64-0x1c], r9
+		 mov    QWORD PTR [r15+0x48], r9
 		 or     r12, r11
-		 mov    r9, QWORD PTR [rdi+0x64-0x2c]
+		 mov    r9, QWORD PTR [rdi+0x38]
 		 xor    r12, r10
-		 mov    QWORD PTR [r15+0x64-0x2c], r12
+		 mov    QWORD PTR [r15+0x38], r12
 		 and    r11, r10
-		 mov    r12, QWORD PTR [rdi+0x64+0x3c]
+		 mov    r12, QWORD PTR [rdi+0xa0]
 		 xor    r11, r14
-		 mov    QWORD PTR [r15+0x64-0x34], r11
+		 mov    QWORD PTR [r15+0x30], r11
 		 or     r14, r10
-		 mov    r10, QWORD PTR [rdi+0x64+0x4]
+		 mov    r10, QWORD PTR [rdi+0x68]
 		 xor    r14, r13
-		 mov    r11, QWORD PTR [rdi+0x64+0x34]
-		 mov    QWORD PTR [r15+0x64-0x3c], r14
+		 mov    r11, QWORD PTR [rdi+0x98]
+		 mov    QWORD PTR [r15+0x28], r14
 		 xor    r10, rbp
 		 xor    r11, rax
 		 rol    r10, 0x19
@@ -158,25 +158,25 @@ loop_keccak:
 		 rol    r8, 1
 		 not    r11
 		 xor    r10, r9
-		 mov    QWORD PTR [r15+0x64-0xc], r10
+		 mov    QWORD PTR [r15+0x58], r10
 		 mov    r14, r12
 		 and    r12, r11
-		 mov    r10, QWORD PTR [rdi+0x64-0xc]
+		 mov    r10, QWORD PTR [rdi+0x58]
 		 xor    r12, r13
-		 mov    QWORD PTR [r15+0x64-0x4], r12
+		 mov    QWORD PTR [r15+0x60], r12
 		 or     r13, r9
-		 mov    r12, QWORD PTR [rdi+0x64+0x54]
+		 mov    r12, QWORD PTR [rdi+0xb8]
 		 xor    r13, r8
-		 mov    QWORD PTR [r15+0x64-0x14], r13
+		 mov    QWORD PTR [r15+0x50], r13
 		 and    r9, r8
 		 xor    r9, r14
-		 mov    QWORD PTR [r15+0x64+0xc], r9
+		 mov    QWORD PTR [r15+0x70], r9
 		 or     r14, r8
-		 mov    r9, QWORD PTR [rdi+0x64-0x3c]
+		 mov    r9, QWORD PTR [rdi+0x28]
 		 xor    r14, r11
-		 mov    r11, QWORD PTR [rdi+0x64+0x24]
-		 mov    QWORD PTR [r15+0x64+0x4], r14
-		 mov    r8, QWORD PTR [rdi+0x64-0x44]
+		 mov    r11, QWORD PTR [rdi+0x88]
+		 mov    QWORD PTR [r15+0x68], r14
+		 mov    r8, QWORD PTR [rdi+0x20]
 		 xor    r10, rcx
 		 xor    r11, rdx
 		 rol    r10, 0xa
@@ -191,28 +191,28 @@ loop_keccak:
 		 rol    r8, 0x1b
 		 not    r11
 		 xor    r10, r9
-		 mov    QWORD PTR [r15+0x64+0x1c], r10
+		 mov    QWORD PTR [r15+0x80], r10
 		 mov    r14, r12
 		 or     r12, r11
 		 xor    r12, r13
-		 mov    QWORD PTR [r15+0x64+0x24], r12
+		 mov    QWORD PTR [r15+0x88], r12
 		 and    r13, r9
 		 xor    r13, r8
-		 mov    QWORD PTR [r15+0x64+0x14], r13
+		 mov    QWORD PTR [r15+0x78], r13
 		 or     r9, r8
 		 xor    r9, r14
-		 mov    QWORD PTR [r15+0x64+0x34], r9
+		 mov    QWORD PTR [r15+0x98], r9
 		 and    r8, r14
 		 xor    r8, r11
-		 mov    QWORD PTR [r15+0x64+0x2c], r8
-		 xor    rdx, QWORD PTR [rdi+0x64-0x54]
-		 xor    rbp, QWORD PTR [rdi+0x64-0x24]
+		 mov    QWORD PTR [r15+0x90], r8
+		 xor    rdx, QWORD PTR [rdi+0x10]
+		 xor    rbp, QWORD PTR [rdi+0x40]
 		 rol    rdx, 0x3e
-		 xor    rcx, QWORD PTR [rdi+0x64+0x44]
+		 xor    rcx, QWORD PTR [rdi+0xa8]
 		 rol    rbp, 0x37
-		 xor    rax, QWORD PTR [rdi+0x64+0xc]
+		 xor    rax, QWORD PTR [rdi+0x70]
 		 rol    rcx, 0x2
-		 xor    rbx, QWORD PTR [rdi+0x64+0x14]
+		 xor    rbx, QWORD PTR [rdi+0x78]
 		 xchg   rdi, r15
 		 rol    rax, 0x27
 		 rol    rbx, 0x29
@@ -220,55 +220,55 @@ loop_keccak:
 		 and    rdx, rbp
 		 not    rbp
 		 xor    rdx, rcx
-		 mov    QWORD PTR [rdi+0x64+0x5c], rdx
+		 mov    QWORD PTR [rdi+0xc0], rdx
 		 mov    r14, rax
 		 and    rax, rbp
 		 xor    rax, r13
-		 mov    QWORD PTR [rdi+0x64+0x3c], rax
+		 mov    QWORD PTR [rdi+0xa0], rax
 		 or     r13, rcx
 		 xor    r13, rbx
-		 mov    QWORD PTR [rdi+0x64+0x54], r13
+		 mov    QWORD PTR [rdi+0xb8], r13
 		 and    rcx, rbx
 		 xor    rcx, r14
-		 mov    QWORD PTR [rdi+0x64+0x4c], rcx
+		 mov    QWORD PTR [rdi+0xb0], rcx
 		 or     rbx, r14
 		 xor    rbx, rbp
-		 mov    QWORD PTR [rdi+0x64+0x44], rbx
+		 mov    QWORD PTR [rdi+0xa8], rbx
 		 mov    rbp, rdx
 		 mov    rdx, r13
 		 lea    rsi, [rsi+0x8]     // Second loop
 		 mov    r8, QWORD PTR [rdi]
-		 mov    r9, QWORD PTR [rdi+0x64-0x34]
-		 mov    r10, QWORD PTR [rdi+0x64-0x4]
-		 mov    r11, QWORD PTR [rdi+0x64+0x2c]
-		 xor    rcx, QWORD PTR [rdi+0x64-0x54]
-		 xor    rdx, QWORD PTR [rdi+0x64-0x4c]
+		 mov    r9, QWORD PTR [rdi+0x30]
+		 mov    r10, QWORD PTR [rdi+0x60]
+		 mov    r11, QWORD PTR [rdi+0x90]
+		 xor    rcx, QWORD PTR [rdi+0x10]
+		 xor    rdx, QWORD PTR [rdi+0x18]
 		 xor    rax, r8
-		 xor    rbx, QWORD PTR [rdi+0x64-0x5c]
-		 xor    rcx, QWORD PTR [rdi+0x64-0x2c]
-		 xor    rax, QWORD PTR [rdi+0x64-0x3c]
+		 xor    rbx, QWORD PTR [rdi+0x08]
+		 xor    rcx, QWORD PTR [rdi+0x38]
+		 xor    rax, QWORD PTR [rdi+0x28]
 		 mov    r12, rbp
-		 xor    rbp, QWORD PTR [rdi+0x64-0x44]
+		 xor    rbp, QWORD PTR [rdi+0x20]
 		 xor    rcx, r10
-		 xor    rax, QWORD PTR [rdi+0x64-0x14]
-		 xor    rdx, QWORD PTR [rdi+0x64-0x24]
+		 xor    rax, QWORD PTR [rdi+0x50]
+		 xor    rdx, QWORD PTR [rdi+0x40]
 		 xor    rbx, r9
-		 xor    rbp, QWORD PTR [rdi+0x64-0x1c]
-		 xor    rcx, QWORD PTR [rdi+0x64+0x24]
-		 xor    rax, QWORD PTR [rdi+0x64+0x14]
-		 xor    rdx, QWORD PTR [rdi+0x64+0x4]
-		 xor    rbx, QWORD PTR [rdi+0x64-0xc]
-		 xor    rbp, QWORD PTR [rdi+0x64+0xc]
+		 xor    rbp, QWORD PTR [rdi+0x48]
+		 xor    rcx, QWORD PTR [rdi+0x88]
+		 xor    rax, QWORD PTR [rdi+0x78]
+		 xor    rdx, QWORD PTR [rdi+0x68]
+		 xor    rbx, QWORD PTR [rdi+0x58]
+		 xor    rbp, QWORD PTR [rdi+0x70]
 		 mov    r13, rcx
 		 rol    rcx, 1
 		 xor    rcx, rax
 		 xor    rdx, r11
 		 rol    rax, 1
 		 xor    rax, rdx
-		 xor    rbx, QWORD PTR [rdi+0x64+0x1c]
+		 xor    rbx, QWORD PTR [rdi+0x80]
 		 rol    rdx, 1
 		 xor    rdx, rbx
-		 xor    rbp, QWORD PTR [rdi+0x64+0x34]
+		 xor    rbp, QWORD PTR [rdi+0x98]
 		 rol    rbx, 1
 		 xor    rbx, rbp
 		 rol    rbp, 1
@@ -291,21 +291,21 @@ loop_keccak:
 		 mov    QWORD PTR [r15], r9
 		 xor    r12, r10
 		 not    r10
-		 mov    QWORD PTR [r15+0x64-0x54], r12
+		 mov    QWORD PTR [r15+0x10], r12
 		 or     r10, r11
-		 mov    r12, QWORD PTR [rdi+0x64+0x4c]
+		 mov    r12, QWORD PTR [rdi+0xb0]
 		 xor    r10, r13
-		 mov    QWORD PTR [r15+0x64-0x5c], r10
+		 mov    QWORD PTR [r15+0x08], r10
 		 and    r13, r8
-		 mov    r9, QWORD PTR [rdi+0x64-0x1c]
+		 mov    r9, QWORD PTR [rdi+0x48]
 		 xor    r13, r14
-		 mov    r10, QWORD PTR [rdi+0x64-0x14]
-		 mov    QWORD PTR [r15+0x64-0x44], r13
+		 mov    r10, QWORD PTR [rdi+0x50]
+		 mov    QWORD PTR [r15+0x20], r13
 		 or     r14, r8
-		 mov    r8, QWORD PTR [rdi+0x64-0x4c]
+		 mov    r8, QWORD PTR [rdi+0x18]
 		 xor    r14, r11
-		 mov    r11, QWORD PTR [rdi+0x64+0x1c]
-		 mov    QWORD PTR [r15+0x64-0x4c], r14
+		 mov    r11, QWORD PTR [rdi+0x80]
+		 mov    QWORD PTR [r15+0x18], r14
 		 xor    r8, rbp
 		 xor    r12, rdx
 		 rol    r8, 0x1c
@@ -319,26 +319,26 @@ loop_keccak:
 		 or     r8, r12
 		 rol    r10, 0x3
 		 xor    r8, r11
-		 mov    QWORD PTR [r15+0x64-0x24], r8
+		 mov    QWORD PTR [r15+0x40], r8
 		 mov    r14, r9
 		 and    r9, r13
-		 mov    r8, QWORD PTR [rdi+0x64-0x5c]
+		 mov    r8, QWORD PTR [rdi+0x08]
 		 xor    r9, r12
 		 not    r12
-		 mov    QWORD PTR [r15+0x64-0x1c], r9
+		 mov    QWORD PTR [r15+0x48], r9
 		 or     r12, r11
-		 mov    r9, QWORD PTR [rdi+0x64-0x2c]
+		 mov    r9, QWORD PTR [rdi+0x38]
 		 xor    r12, r10
-		 mov    QWORD PTR [r15+0x64-0x2c], r12
+		 mov    QWORD PTR [r15+0x38], r12
 		 and    r11, r10
-		 mov    r12, QWORD PTR [rdi+0x64+0x3c]
+		 mov    r12, QWORD PTR [rdi+0xa0]
 		 xor    r11, r14
-		 mov    QWORD PTR [r15+0x64-0x34], r11
+		 mov    QWORD PTR [r15+0x30], r11
 		 or     r14, r10
-		 mov    r10, QWORD PTR [rdi+0x64+0x4]
+		 mov    r10, QWORD PTR [rdi+0x68]
 		 xor    r14, r13
-		 mov    r11, QWORD PTR [rdi+0x64+0x34]
-		 mov    QWORD PTR [r15+0x64-0x3c], r14
+		 mov    r11, QWORD PTR [rdi+0x98]
+		 mov    QWORD PTR [r15+0x28], r14
 		 xor    r10, rbp
 		 xor    r11, rax
 		 rol    r10, 0x19
@@ -353,25 +353,25 @@ loop_keccak:
 		 rol    r8, 1
 		 not    r11
 		 xor    r10, r9
-		 mov    QWORD PTR [r15+0x64-0xc], r10
+		 mov    QWORD PTR [r15+0x58], r10
 		 mov    r14, r12
 		 and    r12, r11
-		 mov    r10, QWORD PTR [rdi+0x64-0xc]
+		 mov    r10, QWORD PTR [rdi+0x58]
 		 xor    r12, r13
-		 mov    QWORD PTR [r15+0x64-0x4], r12
+		 mov    QWORD PTR [r15+0x60], r12
 		 or     r13, r9
-		 mov    r12, QWORD PTR [rdi+0x64+0x54]
+		 mov    r12, QWORD PTR [rdi+0xb8]
 		 xor    r13, r8
-		 mov    QWORD PTR [r15+0x64-0x14], r13
+		 mov    QWORD PTR [r15+0x50], r13
 		 and    r9, r8
 		 xor    r9, r14
-		 mov    QWORD PTR [r15+0x64+0xc], r9
+		 mov    QWORD PTR [r15+0x70], r9
 		 or     r14, r8
-		 mov    r9, QWORD PTR [rdi+0x64-0x3c]
+		 mov    r9, QWORD PTR [rdi+0x28]
 		 xor    r14, r11
-		 mov    r11, QWORD PTR [rdi+0x64+0x24]
-		 mov    QWORD PTR [r15+0x64+0x4], r14
-		 mov    r8, QWORD PTR [rdi+0x64-0x44]
+		 mov    r11, QWORD PTR [rdi+0x88]
+		 mov    QWORD PTR [r15+0x68], r14
+		 mov    r8, QWORD PTR [rdi+0x20]
 		 xor    r10, rcx
 		 xor    r11, rdx
 		 rol    r10, 0xa
@@ -386,28 +386,28 @@ loop_keccak:
 		 rol    r8, 0x1b
 		 not    r11
 		 xor    r10, r9
-		 mov    QWORD PTR [r15+0x64+0x1c], r10
+		 mov    QWORD PTR [r15+0x80], r10
 		 mov    r14, r12
 		 or     r12, r11
 		 xor    r12, r13
-		 mov    QWORD PTR [r15+0x64+0x24], r12
+		 mov    QWORD PTR [r15+0x88], r12
 		 and    r13, r9
 		 xor    r13, r8
-		 mov    QWORD PTR [r15+0x64+0x14], r13
+		 mov    QWORD PTR [r15+0x78], r13
 		 or     r9, r8
 		 xor    r9, r14
-		 mov    QWORD PTR [r15+0x64+0x34], r9
+		 mov    QWORD PTR [r15+0x98], r9
 		 and    r8, r14
 		 xor    r8, r11
-		 mov    QWORD PTR [r15+0x64+0x2c], r8
-		 xor    rdx, QWORD PTR [rdi+0x64-0x54]
-		 xor    rbp, QWORD PTR [rdi+0x64-0x24]
+		 mov    QWORD PTR [r15+0x90], r8
+		 xor    rdx, QWORD PTR [rdi+0x10]
+		 xor    rbp, QWORD PTR [rdi+0x40]
 		 rol    rdx, 0x3e
-		 xor    rcx, QWORD PTR [rdi+0x64+0x44]
+		 xor    rcx, QWORD PTR [rdi+0xa8]
 		 rol    rbp, 0x37
-		 xor    rax, QWORD PTR [rdi+0x64+0xc]
+		 xor    rax, QWORD PTR [rdi+0x70]
 		 rol    rcx, 0x2
-		 xor    rbx, QWORD PTR [rdi+0x64+0x14]
+		 xor    rbx, QWORD PTR [rdi+0x78]
 		 xchg   rdi, r15
 		 rol    rax, 0x27
 		 rol    rbx, 0x29
@@ -415,20 +415,20 @@ loop_keccak:
 		 and    rdx, rbp
 		 not    rbp
 		 xor    rdx, rcx
-		 mov    QWORD PTR [rdi+0x64+0x5c], rdx
+		 mov    QWORD PTR [rdi+0xc0], rdx
 		 mov    r14, rax
 		 and    rax, rbp
 		 xor    rax, r13
-		 mov    QWORD PTR [rdi+0x64+0x3c], rax
+		 mov    QWORD PTR [rdi+0xa0], rax
 		 or     r13, rcx
 		 xor    r13, rbx
-		 mov    QWORD PTR [rdi+0x64+0x54], r13
+		 mov    QWORD PTR [rdi+0xb8], r13
 		 and    rcx, rbx
 		 xor    rcx, r14
-		 mov    QWORD PTR [rdi+0x64+0x4c], rcx
+		 mov    QWORD PTR [rdi+0xb0], rcx
 		 or     rbx, r14
 		 xor    rbx, rbp
-		 mov    QWORD PTR [rdi+0x64+0x44], rbx
+		 mov    QWORD PTR [rdi+0xa8], rbx
 		 mov    rbp, rdx
 		 mov    rdx, r13
 		 lea    rsi, [rsi+0x8]
@@ -437,12 +437,12 @@ loop_keccak:
 		cmp r8,  24
 		jne    loop_keccak
 		lea    rsi, [rsi-0xc0]
-		not    QWORD PTR [rdi+0x64-0x5c]
-		not    QWORD PTR [rdi+0x64-0x54]
-		not    QWORD PTR [rdi+0x64-0x24]
-		not    QWORD PTR [rdi+0x64-0x4]
-		not    QWORD PTR [rdi+0x64+0x24]
-		not    QWORD PTR [rdi+0x64+0x3c]
+		not    QWORD PTR [rdi+0x08]
+		not    QWORD PTR [rdi+0x10]
+		not    QWORD PTR [rdi+0x40]
+		not    QWORD PTR [rdi+0x60]
+		not    QWORD PTR [rdi+0x88]
+		not    QWORD PTR [rdi+0xa0]
 		add    rsp, 0xd0
 		pop    r15
 		pop    r14
