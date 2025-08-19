@@ -81,7 +81,7 @@ out: 88c87a8644e587dc7e3057edf2a80cc3
 in: 0f0e0d0c0b0a09080706050403020100
  *)
 
- let KEY1 = new_definition `KEY1:int128 list =
+let KEY1 = new_definition `KEY1:int128 list =
   [ word 0xc70a951e84370d1836bdd387607e94e5
   ; word 0x7ead95d6f74bf6b3103340cce21b473d
   ; word 0x298c296cdf3241d53d0757ddbebda060
@@ -230,33 +230,30 @@ let exists_lemma = PROVE_HYP wfth eth;;
 (* Note: results are stored in LSByte to MSByte *)
 let aes256_xts_decrypt_rec = new_specification ["aes256_xts_decrypt_rec"] exists_lemma;;
 
-(* Note: last block is padded to make it suitable for int128_to_bytes *)
 let cipher_stealing = new_definition
-  `cipher_stealing (block:int128) (tail:int128) (tail_len:num) (iv:int128) : int128#int128 =
+  `cipher_stealing (block:byte list) (tail:byte list) (tail_len:num) (iv:int128) (key1:int128 list): (byte list)#(byte list) =
     let iv_last = GF_128_mult_by_primitive iv in
-    let PP = aes256_xts_decrypt_round block iv_last key1 in
-    let Pm = word_subword PP (0, tail_len) in
-    let CP = word_subword PP (tail_len, 16 - tail_len) in
-    let CC = word_join (word_subword tail (0,tail_len)) CP in
-    let Pm1 = aes256_xts_decrypt_round CC iv key1 in
-    (Pm1, (word_zx Pm))`;;
+    let PP = int128_to_bytes (aes256_xts_decrypt_round (bytes_to_int128 block) iv_last key1) in
+    let len = tail_len * 8 in
+    let Pm = SUB_LIST (0, tail_len) PP in
+    let CP = SUB_LIST (tail_len, 16 - tail_len) PP in
+    let CC = bytes_to_int128 (APPEND tail CP) in
+    let Pm1 = int128_to_bytes (aes256_xts_decrypt_round CC iv key1) in
+    (Pm1, Pm)`;;
 
 (* Depending on the tail, either do one block decryption or do cipher stealing *)
 let aes256_xts_decrypt_tail = new_definition
-  `aes256_xts_decrypt_tail (i:num) (m:num) (tail:num) 
+  `aes256_xts_decrypt_tail (i:num) (m:num) (tail_len:num) 
     (C:byte list) (iv:int128) (key1:int128 list) (key2:int128 list) : byte list =
-    if tail = 0 then
+    if tail_len = 0 then
       let Cm1 = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
       int128_to_bytes (aes256_xts_decrypt_round Cm1 iv key1)
     else
-      let Cm1 = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
-      let padded_tail = APPEND (SUB_LIST ((i + 1) * 16, tail) C) (REPLICATE (16 - tail) (word 0)) in
-      let Ctail = bytes_to_int128 padded_tail in
+      let Cm1 = SUB_LIST (i * 16, 16) C in
+      let Ctail = SUB_LIST ((i + 1) * 16, tail_len) C in
 
-      let res_cs = cipher_stealing Cm1 Ctail tail iv in
-      let Pm1 = int128_to_bytes (FST res_cs) in
-      let Ptail = SUB_LIST (0, tail) (int128_to_bytes (SND res_cs)) in
-      APPEND Pm1 Ptail`;;
+      let res_cs = cipher_stealing Cm1 Ctail tail_len iv key1 in
+      APPEND (FST res_cs) (SND res_cs)`;;
 
 (* The main decryption function *)
 (* Note: the specification does not handle the case of len < 16, which is
