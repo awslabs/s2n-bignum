@@ -124,6 +124,7 @@
 : vpand$
 : vpblendd$
 : vpbroadcastd$
+: vpmuldq$
 : vpmulhw$
 : vpmulld$
 : vpmullw$
