@@ -877,9 +877,15 @@ let x86_MOVDQU = new_definition
 `x86_MOVDQU dest src s =
    let x = read src s in (dest := x) s`;;
 
-let x86_MOVD = new_definition
- `x86_MOVD dest src s =
-        let (x:M word) = read src s in (dest := x) s`;;
+let x86_MOVD_32_128 = new_definition
+ `x86_MOVD_32_128 dest src s =
+        let (x:32 word) = read src s in
+        (dest := word_zx x) s`;;
+
+let x86_MOVD_128_32 = new_definition
+ `x86_MOVD_128_32 dest src s =
+        let (x:128 word) = read src s in
+        (dest := word_subword x (0,32)) s`;;
 
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
@@ -1918,13 +1924,10 @@ let x86_execute = define
         x86_MOVDQU (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | MOVD dest src ->
         (match (operand_size dest, operand_size src) with
-           (128, 32) -> 
-             let x = read (OPERAND32 src s) s in
-             (OPERAND128_SSE dest s := word_zx x) s
-         | (32, 128) -> 
-             let x = read (OPERAND128_SSE src s) s in
-             (OPERAND32 dest s := word_subword x (0,32)) s
-         | _ -> (\s'. F))
+          (32, 128) -> 
+            x86_MOVD_128_32 (OPERAND32 dest s) (OPERAND128_SSE src s) s
+        | (128, 32) -> 
+            x86_MOVD_32_128 (OPERAND128_SSE dest s) (OPERAND32 src s) s)
     | MOVSX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
