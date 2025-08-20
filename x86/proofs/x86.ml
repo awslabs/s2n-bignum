@@ -1918,12 +1918,13 @@ let x86_execute = define
         x86_MOVDQU (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | MOVD dest src ->
         (match (operand_size dest, operand_size src) with
-        (128, 32) -> 
-        let x = read (OPERAND32 src s) s in
-        (OPERAND128_SSE dest s := word_zx x) s
-        | (32, 128) -> 
-        let x = read (OPERAND128_SSE src s) s in
-        (OPERAND32 dest s := word_subword x (0,32)) s)
+           (128, 32) -> 
+             let x = read (OPERAND32 src s) s in
+             (OPERAND128_SSE dest s := word_zx x) s
+         | (32, 128) -> 
+             let x = read (OPERAND128_SSE src s) s in
+             (OPERAND32 dest s := word_subword x (0,32)) s
+         | _ -> (\s'. F)) s
     | MOVSX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
