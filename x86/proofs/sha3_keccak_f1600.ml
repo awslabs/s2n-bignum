@@ -3,12 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
- (* Sys.chdir "/home/ubuntu/hol/my_s2n-bignum-dev/s2n-08-18/s2n-bignum";; *)
  needs "x86/proofs/base.ml";;
  needs "x86/proofs/utils/keccak_spec.ml";;
-
- x86_print_log := true;;
- components_print_log := true;;
 
 (**** print_literal_from_elf "x86/sha3/sha3_keccak_f1600.o";;
 ****)
@@ -785,3 +781,71 @@ let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
   CONV_TAC TWEAK_CONV THEN
   MATCH_ACCEPT_TAC(ADD_IBT_RULE 
     (CONV_RULE TWEAK_CONV KECCAK_NOIBT_SUBROUTINE_CORRECT)));;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness of Windows ABI version.                                       *)
+(* ------------------------------------------------------------------------- *)
+
+let sha3_keccak_f1600_windows_mc = define_from_elf
+  "sha3_keccak_f1600_windows_mc" "x86/sha3/sha3_keccak_f1600.obj";;
+
+let sha3_keccak_f1600_windows_tmc = define_trimmed "sha3_keccak_f1600_windows_tmc" sha3_keccak_f1600_windows_mc;;
+
+let KECCAK_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
+ nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val (word_sub stackpointer (word 272)), 272) /\
+ nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val bitstate_in, 200) /\
+ nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val rc_pointer, 192) /\
+ nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val rc_pointer,192) /\
+ nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val (word_sub stackpointer (word 272)), 280) /\
+ nonoverlapping_modulo (2 EXP 64) (val (word_sub stackpointer (word 272)), 272) (val rc_pointer,192)
+ ==> ensures x86
+         (\s. bytes_loaded s (word pc) (sha3_keccak_f1600_windows_tmc) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              read RSI s = rc_pointer /\
+              WINDOWS_C_ARGUMENTS [bitstate_in; rc_pointer] s /\
+              wordlist_from_memory(rc_pointer,24) s = rc_table /\
+              wordlist_from_memory(bitstate_in,25) s = A)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  wordlist_from_memory(bitstate_in,25) s = keccak 24 A)
+         (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes (bitstate_in, 200);
+                     memory :> bytes(word_sub stackpointer (word 272),272)])`,
+let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  WINDOWS_X86_WRAP_STACK_TAC
+    sha3_keccak_f1600_windows_tmc sha3_keccak_f1600_tmc
+    ((CONV_RULE TWEAK_CONV SHA3_KECCAK_F1600_CORRECT))
+    `[RBX; RBP; R12; R13; R14; R15]` 256);;
+
+let KECCAK_SUBROUTINE_WINDOWS_CORRECT = prove
+ (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
+ nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val (word_sub stackpointer (word 272)), 272) /\
+ nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val bitstate_in, 200) /\
+ nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val rc_pointer, 192) /\
+ nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val rc_pointer,192) /\
+ nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val (word_sub stackpointer (word 272)), 280) /\
+ nonoverlapping_modulo (2 EXP 64) (val (word_sub stackpointer (word 272)), 272) (val rc_pointer,192)
+ ==> ensures x86
+         (\s. bytes_loaded s (word pc) (sha3_keccak_f1600_windows_mc) /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              read RSI s = rc_pointer /\
+              WINDOWS_C_ARGUMENTS [bitstate_in; rc_pointer] s /\
+              wordlist_from_memory(rc_pointer,24) s = rc_table /\
+              wordlist_from_memory(bitstate_in,25) s = A)
+             (\s. read RIP s = returnaddress /\
+                  read RSP s = word_add stackpointer (word 8) /\
+                  wordlist_from_memory(bitstate_in,25) s = keccak 24 A)
+         (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [memory :> bytes (bitstate_in, 200);
+                     memory :> bytes(word_sub stackpointer (word 272),272)])`,
+let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE 
+  (CONV_RULE TWEAK_CONV KECCAK_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;
