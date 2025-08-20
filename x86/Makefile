@@ -533,4 +533,4 @@ FORCE: ;
 # A portable way of getting the number of max. cores:
 # https://stackoverflow.com/a/23569003/1488216
 NUM_CORES_FOR_SEMATEST = $(shell getconf _NPROCESSORS_ONLN)
-sematest: x86-insns.ml FORCE proofs/simulator.native; cat x86-insns.ml; ../tools/run-sematest.sh x86 $(NUM_CORES_FOR_SEMATEST)
+sematest: FORCE proofs/simulator.native; cat x86-insns.ml; ../tools/run-sematest.sh x86 $(NUM_CORES_FOR_SEMATEST)
