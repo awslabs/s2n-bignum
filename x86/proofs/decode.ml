@@ -404,6 +404,20 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
       SOME (PCMPGTD (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0x6e:8] ->
+      read_ModRM rex l >>= \((reg,rm),l).
+      let dest = mmreg reg Lower_128 in
+      let src = operand_of_RM Lower_32 rm in
+      (match pfxs with
+      | (T, Rep0, SG0) -> SOME (MOVD dest src, l)
+      | _ -> NONE)
+    | [0x7e:8] ->
+      read_ModRM rex l >>= \((reg,rm),l).
+      let dest = operand_of_RM Lower_32 rm in
+      let src = mmreg reg Lower_128 in
+      (match pfxs with
+      | (T, Rep0, SG0) -> SOME (MOVD dest src, l)
+      | _ -> NONE)
     | [0b011:3; d; 0b1111:4] ->
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).

@@ -266,6 +266,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | LEA operand bsid
    | LZCNT operand operand
    | MOV operand operand
+   | MOVD operand operand
    | MOVSX operand operand
    | MOVZX operand operand
    | MOVAPS operand operand
