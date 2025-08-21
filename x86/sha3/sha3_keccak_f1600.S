@@ -475,7 +475,7 @@ sha3_keccak_f1600_loop:
         pop    rsi
         pop    rdi
 #endif
-        retq
+        ret
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,  "",  %progbits
