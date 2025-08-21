@@ -1306,6 +1306,11 @@ let x86_SUB = new_definition
          AF := ~(&(val(word_zx x:nybble)) - &(val(word_zx y:nybble)):int =
                  &(val(word_zx z:nybble)))) s`;;
 
+let x86_VMOVDQA = new_definition
+  `x86_VMOVDQA dest src (s:x86state) =
+      let (x:N word) = read src s in
+      (dest := (word_zx x):N word) s`;;
+
 let x86_VPADDW = new_definition
   `x86_VPADDW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -1631,6 +1636,10 @@ let OPERAND8 = define
 let aligned_OPERAND128 = define
  `(aligned_OPERAND128 (Simdregister r) s <=> T) /\
   (aligned_OPERAND128 (Memop w ea) s <=> aligned 16 (bsid_semantics ea s))`;;
+
+let aligned_OPERAND256 = define
+ `(aligned_OPERAND256 (Simdregister r) s <=> T) /\
+  (aligned_OPERAND256 (Memop w ea) s <=> aligned 32 (bsid_semantics ea s))`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding                            *)
@@ -2123,6 +2132,14 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+    | VMOVDQA dest src ->
+        (match operand_size dest with
+          256 -> if aligned_OPERAND256 src s /\ aligned_OPERAND256 dest s
+                then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s) s
+                else (\s'. F)
+        | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
+                then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
+                else (\s'. F))
     | VPADDW dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
@@ -2899,6 +2916,7 @@ let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
 let x86_VPADDD_ALT = EXPAND_SIMD_RULE x86_VPADDD;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
 let x86_VPBROADCASTD_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTD;;
@@ -2931,7 +2949,7 @@ let X86_OPERATION_CLAUSES =
     (*** AVX2 instructions ***)
     x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLD_ALT; x86_VPMULLW_ALT;
     x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
-    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPMULDQ_ALT;
+    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPMULDQ_ALT; x86_VMOVDQA_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
@@ -3099,7 +3117,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
   (K eth THENC
    REWRITE_CONV[X86_EXECUTE] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
-   REWRITE_CONV[condition_semantics; aligned_OPERAND128] THENC
+   REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
    REWRITE_CONV[OPERAND_CLAUSES] THENC
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC

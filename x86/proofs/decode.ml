@@ -618,6 +618,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     | VEXM_0F ->
         read_byte l >>= \(b,l).
         (bitmatch b with
+        | [0x6f:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l))
+        | [0x7f:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VMOVDQA (simd_of_RM sz rm) (mmreg reg sz),l))
         | [0xd5:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
