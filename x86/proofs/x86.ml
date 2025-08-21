@@ -1922,8 +1922,8 @@ let x86_execute = define
         x86_MOVDQU (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | MOVD dest src ->
         (match (operand_size dest, operand_size src) with
-          (32, 128) -> x86_MOVD (OPERAND32 dest s) (OPERAND128_SSE src s)
-        | (128, 32) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND32 src s)) s
+          (32,128) -> x86_MOVD (OPERAND32 dest s) (OPERAND128_SSE src s)
+        | (128,32) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND32 src s)) s
     | MOVSX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
@@ -2349,6 +2349,8 @@ let OPERAND_SIZE_CASES = prove
    (match 32 with 64 -> a | 32 -> b) = b /\
    (match 32 with 32 -> a | 16 -> b) = a /\
    (match 16 with 32 -> a | 16 -> b) = b /\
+   (match (32,128) with (32,128) -> a | (128,32) -> b) = a /\
+   (match (128,32) with (32,128) -> a | (128,32) -> b) = b /\
    (match (64,32) with
       (64,32) -> a  | (64,16) -> b  | (64,8) -> c | (32,32) -> d
     | (32,16) -> e | (32,8) -> f  | (16,8) -> g) = a /\
