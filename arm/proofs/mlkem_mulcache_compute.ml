@@ -236,3 +236,43 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
   CONV_TAC TWEAK_CONV THEN
   ARM_ADD_RETURN_NOSTACK_TAC MLKEM_MULCACHE_COMPUTE_EXEC
    (CONV_RULE TWEAK_CONV MLKEM_MULCACHE_COMPUTE_CORRECT));;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec = mk_safety_spec
+    (assoc "mlkem_mulcache_compute" subroutine_signatures)
+    MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT
+    MLKEM_MULCACHE_COMPUTE_EXEC;;
+
+let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall dst src zetas zetas_twisted pc returnaddress.
+           ALL (nonoverlapping (dst,256))
+           [word pc,LENGTH mlkem_mulcache_compute_mc; src,512; zetas,256;
+            zetas_twisted,256]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    mlkem_mulcache_compute_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [dst; src; zetas; zetas_twisted] s /\
+                    read events s = e)
+               (\s.
+                    exists e2.
+                        read PC s = returnaddress /\
+                        read events s = APPEND e2 e /\
+                        e2 =
+                        f_events src zetas zetas_twisted dst pc returnaddress /\
+                        memaccess_inbounds e2
+                        [src,512; zetas,256; zetas_twisted,256; dst,256]
+                        [dst,256])
+               (\s s'. true)`,
+  ASSERT_GOAL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC MLKEM_MULCACHE_COMPUTE_EXEC);;

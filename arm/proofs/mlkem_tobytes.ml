@@ -212,3 +212,37 @@ let MLKEM_TOBYTES_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(r,384)])`,
   ARM_ADD_RETURN_NOSTACK_TAC MLKEM_TOBYTES_EXEC
    MLKEM_TOBYTES_CORRECT);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec = mk_safety_spec
+    (assoc "mlkem_tobytes" subroutine_signatures)
+    MLKEM_TOBYTES_SUBROUTINE_CORRECT
+    MLKEM_TOBYTES_EXEC;;
+
+let MLKEM_TOBYTES_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall r a pc returnaddress.
+           ALL (nonoverlapping (r,384)) [word pc,344; a,512]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) mlkem_tobytes_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [r; a] s /\
+                    read events s = e)
+               (\s.
+                    exists e2.
+                        read PC s = returnaddress /\
+                        read events s = APPEND e2 e /\
+                        e2 = f_events a r pc returnaddress /\
+                        memaccess_inbounds e2 [a,512; r,384] [r,384])
+               (\s s'. true)`,
+  ASSERT_GOAL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC MLKEM_TOBYTES_EXEC);;
