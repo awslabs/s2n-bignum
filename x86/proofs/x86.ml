@@ -880,9 +880,7 @@ let x86_MOVDQU = new_definition
 let x86_MOVD = new_definition
  `x86_MOVD dest src s =
     let (x:M word) = read src s in
-    let (x':N word) = if dimindex(:M) < dimindex(:N) 
-                      then word_zx x 
-                      else word_subword x (0,dimindex(:N)) in
+    let (x':N word) = word_zx x in
     (dest := x') s`;;
 
 let x86_MOVUPS = new_definition
