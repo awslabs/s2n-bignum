@@ -49,18 +49,18 @@ SPLIT=tr ';' '\n'
 #  sudo apt-get install binutils-aarch64-linux-gnu
 
 ifeq ($(ARCHTYPE_RESULT),aarch64)
-ASSEMBLE=as
+ASSEMBLE=as -march=armv8.2-a+sha3
 OBJDUMP=objdump -d
 else
 ifeq ($(ARCHTYPE_RESULT),arm64)
-ASSEMBLE=as
+ASSEMBLE=as -march=armv8.2-a+sha3
 OBJDUMP=objdump -d
 else
 ifeq ($(OSTYPE_RESULT),Darwin)
-ASSEMBLE=as -arch arm64
+ASSEMBLE=as -arch arm64 -march=armv8.2-a+sha3
 OBJDUMP=otool -tvV
 else
-ASSEMBLE=aarch64-linux-gnu-as
+ASSEMBLE=aarch64-linux-gnu-as -march=armv8.2-a+sha3
 OBJDUMP=aarch64-linux-gnu-objdump -d
 endif
 endif
@@ -251,6 +251,16 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              generic/word_negmodinv.o \
              generic/word_popcount.o \
              generic/word_recip.o \
+             mlkem/mlkem_basemul_k2.o \
+             mlkem/mlkem_basemul_k3.o \
+             mlkem/mlkem_basemul_k4.o \
+             mlkem/mlkem_intt.o \
+             mlkem/mlkem_mulcache_compute.o \
+             mlkem/mlkem_ntt.o \
+             mlkem/mlkem_reduce.o \
+             mlkem/mlkem_tobytes.o \
+             mlkem/mlkem_tomont.o \
+             mlkem/mlkem_rej_uniform_VARIABLE_TIME.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \
              p256/bignum_cmul_p256.o \
@@ -346,6 +356,13 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              secp256k1/bignum_sub_p256k1.o \
              secp256k1/bignum_tomont_p256k1.o \
              secp256k1/bignum_triple_p256k1.o \
+             sha3/sha3_keccak_f1600.o \
+             sha3/sha3_keccak_f1600_alt.o \
+             sha3/sha3_keccak2_f1600.o \
+             sha3/sha3_keccak2_f1600_alt.o \
+             sha3/sha3_keccak4_f1600.o \
+             sha3/sha3_keccak4_f1600_alt.o \
+             sha3/sha3_keccak4_f1600_alt2.o \
              sm2/bignum_add_sm2.o \
              sm2/bignum_cmul_sm2.o \
              sm2/bignum_deamont_sm2.o \
@@ -398,7 +415,7 @@ TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_loop2.o tutorial/rel_simp2
 # x18 should not be used for Apple platforms. Check this using grep.
 
 %.o : %.S
-	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+.quad\s+0x[0-9a-f]+$$' | $(ASSEMBLE) -o $@ -
+	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+\.(quad|hword)\s+(0x|-)?[0-9a-f]+$$' | $(ASSEMBLE) -o $@ -
 	$(OBJDUMP) $@ | ( ( ! grep --ignore-case -E 'w18|[^0]x18' ) || ( rm $@ ; exit 1 ) )
 	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -o $@ -
 
@@ -418,6 +435,13 @@ clean:; rm -f libs2nbignum.a */*.o */*/*.o */*.correct */*.native
 # in your home directory, and do "make" inside the subdirectory hol-light,
 # then the following HOLDIR setting should be right:
 
+# TODO: exhaustively list all files. Do we need ocamldep-equivalent tool for HOL Light?
+BASE_ML=proofs/arm.ml \
+        proofs/base.ml \
+        proofs/decode.ml \
+        proofs/instruction.ml \
+        proofs/subroutine_signatures.ml
+
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
@@ -428,10 +452,15 @@ TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
 # Build precompiled native binaries of HOL Light proofs
 
-proofs/simulator.native: proofs/simulator.ml ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+proofs/simulator.native: proofs/simulator.ml $(BASE_ML) proofs/simulator_iclasses.ml ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+
+# For constant-time property and memory safety, collect input/output/temporary
+# buffers from function signatures in s2n-bignum.h .
+
+proofs/subroutine_signatures.ml: ../include/s2n-bignum.h ; cd .. && python3 tools/collect-signatures.py
 
 .SECONDEXPANSION:
-%.native: proofs/$$(*F).ml %.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+%.native: proofs/$$(*F).ml $(BASE_ML) %.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
 # Run them and print the standard output+error at *.correct
 

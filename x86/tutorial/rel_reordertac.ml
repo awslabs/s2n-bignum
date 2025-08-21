@@ -148,8 +148,8 @@ let state_to_abbrevs: (int * thm) list ref = ref [];;
 (* Now, let's prove the program equivalence. *)
 let EQUIV = prove(equiv_goal,
 
-  (* Rewrite ALL, nonoverlapping, and LENGTH * *)
-  REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES;SOME_FLAGS; fst EXEC; fst EXEC2] THEN
+  (* Rewrite ALL and LENGTH * *)
+  REWRITE_TAC[ALL; SOME_FLAGS; fst EXEC; fst EXEC2] THEN
   REPEAT STRIP_TAC THEN
 
   (** Initialize **)
@@ -173,7 +173,7 @@ let EQUIV = prove(equiv_goal,
      The whole proof ("prove(...)") will still run okay.
   *)
 
-  REPEAT_N 2 ENSURES_N_FINAL_STATE_TAC THEN
+  REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[] THEN
   (* This tactic below is typically fixed and probably you will want to reuse. :) *)

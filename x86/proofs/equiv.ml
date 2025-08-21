@@ -150,33 +150,6 @@ let BYTES_LOADED_BARRIER_X86_STUCK = prove(
 (* Tactics for simulating a program whose postcondition is eventually_n.     *)
 (* ------------------------------------------------------------------------- *)
 
-(* A variant of X86_BASIC_STEP_TAC, but
-   - targets eventually_n
-   - preserves 'x86 s sname' at assumption *)
-let X86_N_BASIC_STEP_TAC =
-  let x86_tm = `x86` and x86_ty = `:x86state` and one = `1:num` in
-  fun decode_th sname store_inst_term_to (asl,w) ->
-    (* w = `eventually_n _ {stepn} _ {sv}` *)
-    let sv = rand w and sv' = mk_var(sname,x86_ty) in
-    let atm = mk_comb(mk_comb(x86_tm,sv),sv') in
-    let eth = X86_CONV decode_th (map snd asl) atm in
-    (* store the decoded instruction at store_inst_term_to *)
-    (match store_inst_term_to with | Some r -> r := rhs (concl eth) | None -> ());
-    let stepn = dest_numeral(rand(rator(rator w))) in
-    let stepn_decr = stepn -/ num 1 in
-    (* stepn = 1+{stepn-1}*)
-    let stepn_thm = GSYM (NUM_ADD_CONV (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
-    (GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
-      GEN_REWRITE_TAC I [EVENTUALLY_N_STEP] THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
-      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
-       (PRINT_GOAL_TAC THEN
-        FAIL_TAC ("Equality between two states is ill-formed." ^
-                  " Did you forget extra condition like pointer alignment?")));
-      X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth] THEN
-      REPEAT X86_UNDEFINED_CHOOSE_TAC]) (asl,w);;
-
-
 (* A variant of X86_STEP_TAC for equivalence checking.
 
    If 'store_update_to' is Some ref, a list of
@@ -189,58 +162,30 @@ let X86_N_BASIC_STEP_TAC =
 let X86_N_STEP_TAC (mc_length_th,decode_ths) subths sname
                   (store_update_to:(thm list * thm list) ref option)
                   (store_inst_term_to: term ref option)  =
-  (*** This does the basic decoding setup ***)
+  X86_STEP_TAC (mc_length_th,decode_ths) subths sname store_inst_term_to
+    (fun th ->
+      let has_auxmems = ref false in
+      (** If there is an 'unsimplified' memory read on the right hand side,
+          try to synthesize an expression using bigdigit and use it. **)
+      DISCH_THEN (fun simplified_th (asl,w) ->
+        let res_th,newmems_th = DIGITIZE_MEMORY_READS simplified_th th (asl,w) in
+        (* MP_TAC res_th and newmems_th first, to drop their assumptions. *)
+        (MP_TAC res_th THEN
+        (match newmems_th with
+        | None -> (has_auxmems := false; ALL_TAC)
+        | Some ths -> (has_auxmems := true; MP_TAC ths))) (asl,w))
+      THEN
 
-  X86_N_BASIC_STEP_TAC decode_ths sname store_inst_term_to THEN
-
-  (*** This part shows the code isn't self-modifying ***)
-
-  NONSELFMODIFYING_STATE_UPDATE_TAC (MATCH_MP bytes_loaded_update mc_length_th) THEN
-
-  (*** Attempt also to show subroutines aren't modified, if applicable ***)
-
-  MAP_EVERY (TRY o NONSELFMODIFYING_STATE_UPDATE_TAC o
-    MATCH_MP bytes_loaded_update o CONJUNCT1) subths THEN
-
-  (*** This part produces any updated versions of existing asms ***)
-
-  ASSUMPTION_STATE_UPDATE_TAC THEN
-
-  (*** Produce updated "MAYCHANGE" assumption ***)
-
-  MAYCHANGE_STATE_UPDATE_TAC THEN
-
-  (*** This adds state component theorems for the updates ***)
-  (*** Could also assume th itself but I throw it away   ***)
-
-  DISCH_THEN(fun th ->
-    let thl = STATE_UPDATE_NEW_RULE th in
-    if thl = [] then ALL_TAC else
-    MP_TAC(end_itlist CONJ thl) THEN
-    ASSEMBLER_SIMPLIFY_TAC THEN
-
-    let has_auxmems = ref false in
-    (** If there is an 'unsimplified' memory read on the right hand side,
-        try to synthesize an expression using bigdigit and use it. **)
-    DISCH_THEN (fun simplified_th (asl,w) ->
-      let res_th,newmems_th = DIGITIZE_MEMORY_READS simplified_th th (asl,w) in
-      (* MP_TAC res_th and newmems_th first, to drop their assumptions. *)
-      (MP_TAC res_th THEN
-      (match newmems_th with
-       | None -> (has_auxmems := false; ALL_TAC)
-       | Some ths -> (has_auxmems := true; MP_TAC ths))) (asl,w))
-    THEN
-
-    (* store it to a reference, or make them assumptions *)
-    W (fun _ ->
-      match store_update_to with
-      | None -> STRIP_TAC THEN (if !has_auxmems then STRIP_TAC else ALL_TAC)
-      | Some to_ref ->
-        if !has_auxmems then
-          DISCH_THEN (fun auxmems -> DISCH_THEN (fun res ->
-            to_ref := (CONJUNCTS res, CONJUNCTS auxmems); ALL_TAC))
-        else
-          DISCH_THEN (fun res -> to_ref := (CONJUNCTS res, []); ALL_TAC)));;
+      (* store it to a reference, or make them assumptions *)
+      W (fun _ ->
+        match store_update_to with
+        | None -> STRIP_TAC THEN (if !has_auxmems then STRIP_TAC else ALL_TAC)
+        | Some to_ref ->
+          if !has_auxmems then
+            DISCH_THEN (fun auxmems -> DISCH_THEN (fun res ->
+              to_ref := (CONJUNCTS res, CONJUNCTS auxmems); ALL_TAC))
+          else
+            DISCH_THEN (fun res -> to_ref := (CONJUNCTS res, []); ALL_TAC)));;
 
 (* A variant of X86_STEPS_TAC but uses DISCARD_OLDSTATE_AGGRESSIVELY_TAC
    instead.
@@ -423,6 +368,12 @@ let EQUIV_STEP_TAC action execth1 execth2: tactic =
     match x with
     | None -> []
     | Some arr -> arr.(i) in
+  let run_tac (tac:tactic) (msg:string):tactic =
+    fun (asl,w) ->
+      try tac (asl,w)
+      with Failure s ->
+        (PRINT_TAC (msg ^ ": reason: " ^ s)
+         THEN PRINT_GOAL_TAC THEN NO_TAC) (asl,w) in
 
   match action with
   | ("equal",lstart,lend,rstart,rend) ->
@@ -438,26 +389,26 @@ let EQUIV_STEP_TAC action execth1 execth2: tactic =
     else begin
       (if rend - rstart > 50 then
         Printf.printf "Warning: too many instructions: insert %d~%d\n" rstart rend);
-      X86_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'"
-        ORELSE (PRINT_TAC "insert failed" THEN PRINT_GOAL_TAC THEN NO_TAC)
+      run_tac (X86_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'")
+        "insert failed"
     end
   | ("delete",lstart,lend,rstart,rend) ->
     if rstart <> rend then failwith "delete's rstart and rend must be equal"
     else begin
       (if lend - lstart > 50 then
         Printf.printf "Warning: too many instructions: delete %d~%d\n" lstart lend);
-      X86_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend)
-        ORELSE (PRINT_TAC "delete failed" THEN PRINT_GOAL_TAC THEN NO_TAC)
+      run_tac (X86_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend))
+        "delete failed"
     end
   | ("replace",lstart,lend,rstart,rend) ->
     (if lend - lstart > 50 || rend - rstart > 50 then
       Printf.printf "Warning: too many instructions: replace %d~%d %d~%d\n"
           lstart lend rstart rend);
-    ((X86_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend)
-     ORELSE (PRINT_TAC "replace failed: stuttering left" THEN PRINT_GOAL_TAC THEN NO_TAC))
+    (run_tac (X86_N_STUTTER_LEFT_TAC execth1 ((lstart+1)--lend))
+       "replace failed: stuttering left"
      THEN
-     (X86_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'"
-      ORELSE (PRINT_TAC "replace failed: stuttering right" THEN PRINT_GOAL_TAC THEN NO_TAC)))
+     run_tac (X86_N_STUTTER_RIGHT_TAC execth2 ((rstart+1)--rend) "'")
+       "replace failed: stuttering right")
   | (s,_,_,_,_) -> failwith ("Unknown action: " ^ s);;
 
 
@@ -710,90 +661,23 @@ let X86_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
         (\(s,s2) (s',s2'). maychange1 s s' /\ maychange2 s2 s2')
         fnsteps1
         fnsteps2`
-  equiv_in and equiv_out's first two universal quantifiers must be x86states.
+  equiv_in and equiv_out's first two universal quantifiers must be state_ty.
+
+  Enable equiv_print_log := true for debugging.
+
+  mc1_data and mc2_data are set to 'Some ...' if mc1 or mc2 has constant data
+  appended at the text section after mc1 and mc2.
 *)
-let mk_equiv_statement (assum:term) (equiv_in:thm) (equiv_out:thm)
-    (mc1:thm) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
-    (mc2:thm) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
+let mk_equiv_statement
+    (assum:term) (equiv_in:thm) (equiv_out:thm)
+    (mc1:thm) (data1:thm option) (pc_ofs1:int) (pc_ofs1_to:int) (maychange1:term)
+    (mc2:thm) (data2:thm option) (pc_ofs2:int) (pc_ofs2_to:int) (maychange2:term)
     (fnsteps1:term) (fnsteps2:term):term =
-  let _ = List.map2 type_check
-      [assum;maychange1;maychange2]
-      [`:bool`;`:x86state->x86state->bool`;`:x86state->x86state->bool`] in
-  let quants_in,equiv_in_body = strip_forall (concl equiv_in) in
-  let quants_out,equiv_out_body = strip_forall (concl equiv_out) in
-  let _ = if !x86_print_log then
-    Printf.printf "quants_in: %s\nquants_out: %s\n%!"
-      (String.concat ", " (List.map string_of_term quants_in))
-      (String.concat ", " (List.map string_of_term quants_out)) in
-  (* equiv_in and equiv_out's first two universal quantifiers must be x86states. *)
-  let quants_in_states,quants_in = takedrop 2 quants_in in
-  let quants_out_states,quants_out = takedrop 2 quants_out in
-  let _ = List.map2 type_check
-    (quants_in_states @ quants_out_states)
-    [`:x86state`;`:x86state`;`:x86state`;`:x86state`] in
-  let quants = union quants_in quants_out in
-  let quants = [`pc:num`;`pc2:num`] @ quants in
-  (* There might be more free variables in 'assum'. Let's add them too. *)
-  let quants = quants @
-    (List.filter (fun t -> not (mem t quants)) (frees assum)) in
-  let _ = if !x86_print_log then
-    Printf.printf "quantifiers: %s\n%!" (String.concat ", "
-      (List.map string_of_term quants)) in
-
-  (* Now build 'ensures2' *)
-  let mk_bytes_loaded (s:term) (pc_var:term) (mc:term) =
-    let _ = List.map2 type_check [s;pc_var;mc] [`:x86state`;`:num`;`:((8)word)list`] in
-    let template = `bytes_loaded s (word pc) mc` in
-    subst [s,`s:x86state`;mc,`mc:((8)word)list`;pc_var,`pc:num`] template
-  in
-  let mk_read_pc (s:term) (pc_var:term) (pc_ofs:int):term =
-    let _ = List.map2 type_check [s;pc_var] [`:x86state`;`:num`] in
-    if pc_ofs = 0 then
-      let template = `read RIP s = word pc` in
-      subst [s,`s:x86state`;pc_var,`pc:num`] template
-    else
-      let template = `read RIP s = word (pc+pc_ofs)` in
-      subst [s,`s:x86state`;pc_var,`pc:num`;mk_small_numeral(pc_ofs),`pc_ofs:num`]
-            template
-  in
-  let s = `s:x86state` and s2 = `s2:x86state` in
-  let pc = `pc:num` and pc2 = `pc2:num` in
-  let equiv_in_pred = fst (strip_comb (fst (dest_eq equiv_in_body))) in
-  let equiv_out_pred = fst (strip_comb (fst (dest_eq equiv_out_body))) in
-
-  let precond = mk_gabs (`(s:x86state,s2:x86state)`,
-    (list_mk_conj [
-      mk_bytes_loaded s pc (lhs (concl mc1));
-      mk_read_pc s pc pc_ofs1;
-      mk_bytes_loaded s2 pc2 (lhs (concl mc2));
-      mk_read_pc s2 pc2 pc_ofs2;
-      list_mk_comb (equiv_in_pred, (`(s:x86state,s2:x86state)`::quants_in))
-    ])) in
-  let postcond = mk_gabs (`(s:x86state,s2:x86state)`,
-    (list_mk_conj [
-      mk_bytes_loaded s pc (lhs (concl mc1));
-      mk_read_pc s pc pc_ofs1_to;
-      mk_bytes_loaded s2 pc2 (lhs (concl mc2));
-      mk_read_pc s2 pc2 pc_ofs2_to;
-      list_mk_comb (equiv_out_pred, (`(s:x86state,s2:x86state)`::quants_out))
-    ])) in
-  let maychange = list_mk_gabs (
-    [`(s:x86state,s2:x86state)`;`(s':x86state,s2':x86state)`],
-    mk_conj
-      (list_mk_comb (maychange1,[`s:x86state`;`s':x86state`]),
-       list_mk_comb (maychange2,[`s2:x86state`;`s2':x86state`]))) in
-
-  let _ = List.iter (fun t -> Printf.printf "\t%s\n" (string_of_term t))
-    [precond;postcond;maychange;fnsteps1;fnsteps2] in
-  let ensures2_pred = list_mk_comb
-    (`ensures2:
-      (x86state->x86state->bool)->(x86state#x86state->bool)
-      ->(x86state#x86state->bool)
-      ->(x86state#x86state->x86state#x86state->bool)
-      ->(x86state->num)->(x86state->num)->bool`,
-     [`x86`;precond;postcond;maychange;fnsteps1;fnsteps2]) in
-  let imp = mk_imp (assum,ensures2_pred) in
-  list_mk_forall (quants, imp);;
+  mk_equiv_statement_template `:x86state` `x86` `bytes_loaded` `RIP`
+    assum equiv_in equiv_out
+    mc1 data1 pc_ofs1 pc_ofs1_to maychange1
+    mc2 data2 pc_ofs2 pc_ofs2_to maychange2
+    fnsteps1 fnsteps2;;
 
 (* Program equivalence between two straight-line programs,
    starting from its begin to end. *)
@@ -809,7 +693,7 @@ let mk_equiv_statement_simple (assum:term) (equiv_in:thm) (equiv_out:thm)
   let mc1_length = Array.length (snd exec1) in
   let mc2_length = Array.length (snd exec2) in
   mk_equiv_statement assum equiv_in equiv_out
-    mc1 0 mc1_length maychange1
-    mc2 0 mc2_length maychange2
+    mc1 None 0 mc1_length maychange1
+    mc2 None 0 mc2_length maychange2
     (mk_abs (`s:x86state`,mk_small_numeral(count_num_insts (snd exec1))))
     (mk_abs (`s:x86state`,mk_small_numeral(count_num_insts (snd exec2))));;

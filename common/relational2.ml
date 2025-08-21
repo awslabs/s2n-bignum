@@ -752,8 +752,22 @@ let ENSURES2_WHILE_PAUP_TAC =
       nsteps_pre1 nsteps_pre2
       nsteps_post1 nsteps_post2
       nsteps_backedge1 nsteps_backedge2 ->
-    MATCH_MP_TAC pth THEN
-    MAP_EVERY EXISTS_TAC [a;b;pc1_head;pc1_backedge;pc2_head;pc2_backedge;
+    (MATCH_MP_TAC pth ORELSE
+     (fun (asl,w) ->
+      let t = snd (dest_imp (snd (strip_forall (concl pth)))) in
+      Printf.printf "ENSURES2_WHILE_PAUP_TAC: the conclusion does not match\n";
+      print_qterm t;
+      FAIL_TAC "ENSURES2_WHILE_PAUP_TAC: input goal state ill-formed" (asl,w)))
+    THEN
+    MAP_EVERY (fun t ->
+        W (fun (asl,w) ->
+          EXISTS_TAC t ORELSE
+          let v = fst (dest_exists w) in
+          FAIL_TAC ("ENSURES2_WHILE_PAUP_TAC: var `" ^ (string_of_term v)
+              ^ ":" ^ (string_of_type (type_of v)) ^ "` does not match "
+              ^ "expression `" ^ (string_of_term t) ^ ":"
+              ^ (string_of_type (type_of t)) ^ "`")))
+      [a;b;pc1_head;pc1_backedge;pc2_head;pc2_backedge;
       loopinv;flagcond1;flagcond2;
       f_nsteps1;f_nsteps2;nsteps_pre1;nsteps_pre2;nsteps_post1;nsteps_post2;
       nsteps_backedge1;nsteps_backedge2] THEN
@@ -818,3 +832,125 @@ let MONOTONE_MAYCHANGE_CONJ_TAC =
       (* for MAYCHANGE s s' where s = s' *)
       (ASSUME_TAC (ISPECL [s0'] MAYCHANGE_STARTER) THEN MONOTONE_MAYCHANGE_TAC)
     ]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Scrub a "preserved" component from the MAYCHANGE list.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let ENSURES2_MAYCHANGE_PRESERVED_LEFT = prove
+  (`!(c:(A,B)component) (t:A->A->bool) P Q R fn1 fn2.
+          extensionally_valid_component c /\
+          (!s s'. R s s' ==> read c (FST s') = read c (FST s)) /\
+          (!d. ensures2 t
+              (\s. P s /\ read c (FST s) = d)
+              (\s. Q s /\ read c (FST s) = d)
+              (R ,, (\s0 s. MAYCHANGE [c] (FST s0) (FST s) /\ SND s0 = SND s))
+              fn1 fn2)
+          ==> ensures2 t P Q R fn1 fn2`,
+    REPEAT GEN_TAC THEN REWRITE_TAC[ensures2; EXTENSIONALLY_VALID_COMPONENT] THEN
+    STRIP_TAC THEN MAP_EVERY X_GEN_TAC [`s0:A`;`s0':A`] THEN DISCH_TAC THEN
+    RULE_ASSUM_TAC (REWRITE_RULE[FST]) THEN
+    ABBREV_TAC `d = read (c:(A,B)component) s0` THEN
+    FIRST_X_ASSUM(MP_TAC o SPECL [`d:B`; `s0:A`; `s0':A`]) THEN
+    ASM_REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
+    REWRITE_TAC[ASSIGNS_THM; seq] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `(s0,s0'):A#A`) THEN
+    ABBREV_TAC `fr = (R:A#A->A#A->bool) (s0,s0')` THEN DISCH_TAC THEN
+    MATCH_MP_TAC EVENTUALLY_N_MONO THEN
+    REWRITE_TAC[] THEN
+    X_GEN_TAC `sfinal:A` THEN
+    MATCH_MP_TAC EVENTUALLY_N_MONO THEN
+    REWRITE_TAC[] THEN
+    X_GEN_TAC `sfinal':A` THEN
+
+    DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
+    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
+    X_GEN_TAC `s1:A#A` THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC `y:B`) ASSUME_TAC) THEN
+    SUBGOAL_THEN `read (c:(A,B)component) (FST (s1:A#A)) = d` ASSUME_TAC THENL [
+      ASM_MESON_TAC[FST];
+      ALL_TAC
+    ] THEN
+    SUBGOAL_THEN `FST (s1:A#A) = sfinal /\ SND s1 = sfinal'` ASSUME_TAC THENL [
+      ASM_MESON_TAC[];
+      ALL_TAC
+    ] THEN
+    ASM_MESON_TAC[PAIR]);;
+
+let ENSURES2_MAYCHANGE_EXISTING_PRESERVED_LEFT = prove
+  (`!(c:(A,B)component) (t:A->A->bool) P Q R fn1 fn2.
+          extensionally_valid_component c /\
+          (!s s'. R s s' ==> read c (FST s') = read c (FST s)) /\
+          (!s. P s ==> read c (FST s) = d) /\
+          (!d. ensures2 t
+              P
+              (\s. Q s /\ read c (FST s) = d)
+              (R ,, (\s0 s. MAYCHANGE [c] (FST s0) (FST s) /\ SND s0 = SND s))
+              fn1 fn2)
+          ==> ensures2 t P Q R fn1 fn2`,
+
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES2_MAYCHANGE_PRESERVED_LEFT THEN
+    EXISTS_TAC `c:(A,B)component` THEN ASM_REWRITE_TAC[] THEN
+    ONCE_REWRITE_TAC[TAUT `p /\ q <=> ~(p ==> ~q)`] THEN
+    ASM_SIMP_TAC[] THEN X_GEN_TAC `e:B` THEN
+    ASM_CASES_TAC `e:B = d` THEN
+    ASM_REWRITE_TAC[NOT_IMP; ETA_AX] THEN MESON_TAC[ensures2]);;
+
+let ENSURES2_MAYCHANGE_PRESERVED_RIGHT = prove
+  (`!(c:(A,B)component) (t:A->A->bool) P Q R fn1 fn2.
+          extensionally_valid_component c /\
+          (!s s'. R s s' ==> read c (SND s') = read c (SND s)) /\
+          (!d. ensures2 t
+              (\s. P s /\ read c (SND s) = d)
+              (\s. Q s /\ read c (SND s) = d)
+              (R ,, (\s0 s. MAYCHANGE [c] (SND s0) (SND s) /\ FST s0 = FST s))
+              fn1 fn2)
+          ==> ensures2 t P Q R fn1 fn2`,
+    REPEAT GEN_TAC THEN REWRITE_TAC[ensures2; EXTENSIONALLY_VALID_COMPONENT] THEN
+    STRIP_TAC THEN MAP_EVERY X_GEN_TAC [`s0:A`;`s0':A`] THEN DISCH_TAC THEN
+    RULE_ASSUM_TAC (REWRITE_RULE[SND]) THEN
+    ABBREV_TAC `d = read (c:(A,B)component) s0'` THEN
+    FIRST_X_ASSUM(MP_TAC o SPECL [`d:B`; `s0:A`; `s0':A`]) THEN
+    ASM_REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
+    REWRITE_TAC[ASSIGNS_THM; seq] THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `(s0,s0'):A#A`) THEN
+    ABBREV_TAC `fr = (R:A#A->A#A->bool) (s0,s0')` THEN DISCH_TAC THEN
+    MATCH_MP_TAC EVENTUALLY_N_MONO THEN
+    REWRITE_TAC[] THEN
+    X_GEN_TAC `sfinal:A` THEN
+    MATCH_MP_TAC EVENTUALLY_N_MONO THEN
+    REWRITE_TAC[] THEN
+    X_GEN_TAC `sfinal':A` THEN
+
+    DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
+    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
+    X_GEN_TAC `s1:A#A` THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC `y:B`) ASSUME_TAC) THEN
+    SUBGOAL_THEN `read (c:(A,B)component) (SND (s1:A#A)) = d` ASSUME_TAC THENL [
+      ASM_MESON_TAC[SND];
+      ALL_TAC
+    ] THEN
+    SUBGOAL_THEN `FST (s1:A#A) = sfinal /\ SND s1 = sfinal'` ASSUME_TAC THENL [
+      ASM_MESON_TAC[];
+      ALL_TAC
+    ] THEN
+    ASM_MESON_TAC[PAIR]);;
+
+let ENSURES2_MAYCHANGE_EXISTING_PRESERVED_RIGHT = prove
+  (`!(c:(A,B)component) (t:A->A->bool) P Q R fn1 fn2.
+        extensionally_valid_component c /\
+        (!s s'. R s s' ==> read c (SND s') = read c (SND s)) /\
+        (!s. P s ==> read c (SND s) = d) /\
+        (!d. ensures2 t
+            P
+            (\s. Q s /\ read c (SND s) = d)
+            (R ,, (\s0 s. MAYCHANGE [c] (SND s0) (SND s) /\ FST s0 = FST s))
+            fn1 fn2)
+        ==> ensures2 t P Q R fn1 fn2`,
+
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES2_MAYCHANGE_PRESERVED_RIGHT THEN
+    EXISTS_TAC `c:(A,B)component` THEN ASM_REWRITE_TAC[] THEN
+    ONCE_REWRITE_TAC[TAUT `p /\ q <=> ~(p ==> ~q)`] THEN
+    ASM_SIMP_TAC[] THEN X_GEN_TAC `e:B` THEN
+    ASM_CASES_TAC `e:B = d` THEN
+    ASM_REWRITE_TAC[NOT_IMP; ETA_AX] THEN MESON_TAC[ensures2]);;

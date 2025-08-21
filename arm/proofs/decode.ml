@@ -94,6 +94,10 @@ let arm_ldstp_2q = new_definition `arm_ldstp_2q ld Rt =
 let arm_ldst2 = new_definition `arm_ldst2 ld Rt =
   let Rtt:(5 word) = word ((val Rt + 1) MOD 32) in
   (if ld then arm_LD2 else arm_ST2) (QREG' Rt) (QREG' Rtt)`;;
+let arm_ldst3 = new_definition `arm_ldst3 ld Rt1 =
+  let Rt2:(5 word) = word ((val Rt1 + 1) MOD 32) in
+  let Rt3:(5 word) = word ((val Rt1 + 2) MOD 32) in
+  (if ld then arm_LD3 else arm_ST3) [QREG' Rt1; QREG' Rt2; QREG' Rt3]`;;
 
 (* The 'AdvSimdExpandImm' shared function in the A64 ISA specification.
    This definition takes one 8-bit word and expands it to 64 bit according to
@@ -262,6 +266,10 @@ let decode = new_definition `!w:int32. decode w =
                   (WREG' Rd) (WREG' Rn) (WREG' Rm) (WREG' Ra))
   | [0b1101011001011111000000:22; Rn:5; 0:5] ->
     SOME (arm_RET (XREG' Rn))
+  | [sf; 0b10110101100000000001:20; N; Rn:5; Rd:5] ->
+    if ~(sf <=> N) then NONE
+    else SOME (if sf then arm_REV (XREG' Rd) (XREG' Rn)
+               else arm_REV (WREG' Rd) (WREG' Rn))
   | [0b10011011010:11; Rm:5; 0b011111:6; Rn:5; Rd:5] ->
     SOME (arm_SMULH (XREG' Rd) (XREG' Rn) (XREG' Rm))
   | [0b10011011110:11; Rm:5; 0b011111:6; Rn:5; Rd:5] ->
@@ -316,7 +324,10 @@ let decode = new_definition `!w:int32. decode w =
   // Post-immediate offset, size 128 only
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
-
+  // Shifted register, size 128 only, no extensions (i.e. only UXTX)
+  | [0b00:2; 0b1111001:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2;  Rn:5; Rt:5] ->
+    SOME (arm_ldst_q is_ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (XREG' Rm) 4 else Register_Offset (XREG' Rm)))
   // LDP/STP (signed offset, SIMD&FP), only sizes 128 and 64
   | [0b10:2; 0b1011010:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
@@ -332,6 +343,14 @@ let decode = new_definition `!w:int32. decode w =
   // LDUR/STUR, only size 128
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+
+  // LDUR/STUR, only sizes 64 and 32
+  | [0b1:1; x; 0b1110000:7; is_ld; 0:1; imm9:9; 0b00:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst is_ld x Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
+
+  // LDURB/STURB
+  | [0b001110000:9; is_ld; 0:1; imm9:9; 0:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstb is_ld Rt (XREG_SP Rn) (Immediate_Offset (word_sx imm9)))
 
   // LD1/ST1 (multiple structures), 1 register,
   //   Post-immediate offset and post-register offset, and no offset.
@@ -394,6 +413,17 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     let off = word (esize DIV 8) in
     SOME (arm_LD1R (QREG' Rt) (XREG_SP Rn) (Postimmediate_Offset off) esize datasize)
+
+  // LD3/ST3 (multiple structures), 3 registers, Post-immediate and register offset
+  | [0:1; q; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0100:4; size:2; Rn:5; Rt:5] ->
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    let offset = if q then word 48 else word 24 in
+    SOME (arm_ldst3 is_ld Rt (XREG_SP Rn)
+           (if val Rm = 31 then (Postimmediate_Offset offset)
+                           else Postreg_Offset (XREG' Rm))
+           datasize esize)
 
   // SIMD operations
   | [0:1; q; u; 0b01110:5; size:2; 1:1; Rm:5; 0b100001:6; Rn:5; Rd:5] ->
@@ -1216,7 +1246,7 @@ let PURE_DECODE_CONV =
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
-              arm_ldst2; arm_ldstp_2q] rw;
+              arm_ldst2; arm_ldstp_2q; arm_ldst3] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->
         let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =

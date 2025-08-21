@@ -1300,6 +1300,147 @@ let x86_SUB = new_definition
          AF := ~(&(val(word_zx x:nybble)) - &(val(word_zx y:nybble)):int =
                  &(val(word_zx z:nybble)))) s`;;
 
+let x86_VMOVDQA = new_definition
+  `x86_VMOVDQA dest src (s:x86state) =
+      let (x:N word) = read src s in
+      (dest := (word_zx x):N word) s`;;
+
+let x86_VPADDW = new_definition
+  `x86_VPADDW dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd16 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd8 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPADDD = new_definition
+  `x86_VPADDD dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd8 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd4 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+        
+let x86_VPBROADCASTD = new_definition
+  `x86_VPBROADCASTD (dest:(x86state,(N)word)component) src (s:x86state) =
+      let (x:128 word) = read src s in
+      let dw = word_subword x (0,32):(32)word in
+      let res:N word = word_duplicate dw in
+      (dest := res) s`;;
+
+let x86_VPMULDQ = new_definition
+  `x86_VPMULDQ dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      let f =
+        \x y. word_mul
+          (word_sx ((word_subword:int64->num#num->int32) x (0,32))) 
+          (word_sx ((word_subword:int64->num#num->int32) y (0,32))) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd4 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd2 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPMULHW = new_definition
+  `x86_VPMULHW dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      let f = (\(x:16 word) (y:16 word). word_subword (word_mul ((word_sx x):int32) ((word_sx y):int32)) (16,16)) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd16 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd8 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPMULLD = new_definition
+  `x86_VPMULLD dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd8 word_mul (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd4 word_mul (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPMULLW = new_definition
+  `x86_VPMULLW dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd16 word_mul (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd8 word_mul (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPSUBD = new_definition
+  `x86_VPSUBD dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd8 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd4 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPSUBW = new_definition
+  `x86_VPSUBW dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd16 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd8 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+(* Only VPSRAD version where shift count is an immediate value is supported *)
+let x86_VPSRAD = new_definition
+  `x86_VPSRAD dest src imm8 (s:x86state) =
+      let (x:N word) = read src s in
+      let count = val (read imm8 s) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd8 (\z. word_ishr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = usimd4 (\z. word_ishr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s`;;
+
+(* Only VPSRAW version where shift count is an immediate value is supported *)
+let x86_VPSRAW = new_definition
+  `x86_VPSRAW dest src imm8 (s:x86state) =
+      let (x:N word) = read src s in
+      let count = val (read imm8 s) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd16 (\z. word_ishr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = usimd8 (\z. word_ishr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s`;;
+
+(* Only VPSRLW version where shift count is an immediate value is supported *)
+let x86_VPSRLW = new_definition
+  `x86_VPSRLW dest src imm8 (s:x86state) =
+      let (x:N word) = read src s in
+      let count = val (read imm8 s) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd16 (\z. word_ushr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = usimd8 (\z. word_ushr z count) (word_zx x) in
+        (dest := (word_zx res):N word) s`;;
+
 (*** This is roughly AND just for some condition codes ***)
 
 let x86_TEST = new_definition
@@ -1321,6 +1462,13 @@ let x86_TZCNT = new_definition
          CF := (val x = 0) ,,
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
+
+let x86_VPAND = new_definition
+ `x86_VPAND dest src1 src2 (s:x86state) =
+        let x = read src1 s
+        and y = read src2 s in
+        let z = word_and x y in
+        (dest := (z:N word)) s`;;
 
 let x86_VPXOR = new_definition
  `x86_VPXOR dest src1 src2 (s:x86state) =
@@ -1482,6 +1630,10 @@ let OPERAND8 = define
 let aligned_OPERAND128 = define
  `(aligned_OPERAND128 (Simdregister r) s <=> T) /\
   (aligned_OPERAND128 (Memop w ea) s <=> aligned 16 (bsid_semantics ea s))`;;
+
+let aligned_OPERAND256 = define
+ `(aligned_OPERAND256 (Simdregister r) s <=> T) /\
+  (aligned_OPERAND256 (Memop w ea) s <=> aligned 32 (bsid_semantics ea s))`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding                            *)
@@ -1970,10 +2122,70 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+    | VMOVDQA dest src ->
+        (match operand_size dest with
+          256 -> if aligned_OPERAND256 src s /\ aligned_OPERAND256 dest s
+                then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s) s
+                else (\s'. F)
+        | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
+                then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
+                else (\s'. F))
+    | VPADDW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPADDD dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPADDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPBROADCASTD dest src ->
+        (match operand_size dest with
+          256 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND128 src s)
+        | 128 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND128 src s)) s
+    | VPMULDQ dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPMULDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPMULDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPMULHW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPMULHW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPMULHW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPMULLD dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPMULLD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPMULLD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPMULLW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPMULLW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPMULLW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPSUBD dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPSUBD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPSUBD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPSUBW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPSUBW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPSUBW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPSRAW dest src imm8 ->
+        (match operand_size dest with
+          256 -> x86_VPSRAW (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRAW (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+    | VPSRLW dest src imm8 ->
+        (match operand_size dest with
+          256 -> x86_VPSRLW (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRLW (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
     | VPXOR dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPXOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPXOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPAND dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPSRAD dest src imm8 ->
+        (match operand_size dest with
+          256 -> x86_VPSRAD (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRAD (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
     | XCHG dest src ->
         (match operand_size dest with
           64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
@@ -2692,6 +2904,19 @@ let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
+let x86_VPADDD_ALT = EXPAND_SIMD_RULE x86_VPADDD;;
+let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
+let x86_VPBROADCASTD_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTD;;
+let x86_VPMULDQ_ALT = EXPAND_SIMD_RULE x86_VPMULDQ;;
+let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
+let x86_VPMULLD_ALT = EXPAND_SIMD_RULE x86_VPMULLD;;
+let x86_VPMULLW_ALT = EXPAND_SIMD_RULE x86_VPMULLW;;
+let x86_VPSUBD_ALT = EXPAND_SIMD_RULE x86_VPSUBD;;
+let x86_VPSUBW_ALT = EXPAND_SIMD_RULE x86_VPSUBW;;
+let x86_VPSRAD_ALT = EXPAND_SIMD_RULE x86_VPSRAD;;
+let x86_VPSRAW_ALT = EXPAND_SIMD_RULE x86_VPSRAW;;
+let x86_VPSRLW_ALT = EXPAND_SIMD_RULE x86_VPSRLW;;
 
 
 let X86_OPERATION_CLAUSES =
@@ -2710,7 +2935,9 @@ let X86_OPERATION_CLAUSES =
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
-    x86_VPXOR;
+    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLD_ALT; x86_VPMULLW_ALT;
+    x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
+    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPMULDQ_ALT; x86_VMOVDQA_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
@@ -2838,17 +3065,47 @@ let is_read_events (t:term) = false;;
  ***)
 
 let X86_CONV (decode_ths:thm option array) ths tm =
-  let pc_th = find
+  (* Find `read RIP .. = ..` from ths (assumptions). *)
+  let pc_th = try find
     (fun th ->
       let c = concl th in
       is_eq c && is_read_rip (fst (dest_eq c)))
-    ths in
+    ths with _ ->
+      failwith "X86_CONV: can't find `read RIP .. = ..` from ths" in
+
+  (* Find `bytes_loaded ..`. *)
+  let bytes_loaded_mc_ths:thm list =
+    (* Pick the _mc const from decode_ths, if decode_ths[0] != None, which is
+       likely to be true. *)
+    let the_mc:term option = Option.bind decode_ths.(0)
+      (fun th ->
+        (* th is `forall .., bytes_loaded ... _mc ==> x86_decode ..`. *)
+        let t = concl th in
+        let bytes_loaded_term = fst (dest_imp (snd (strip_forall t))) in
+        let the_mc = last (snd (strip_comb bytes_loaded_term)) in
+        (* if _mc contains relocations, the_mc is `.._mc args`. In this
+           case, return None. *)
+        if is_const the_mc then Some the_mc else None) in
+    let bytes_loaded_tm = `bytes_loaded` in
+    let res = filter (fun th ->
+        let cc = concl th in is_comb cc && (
+        let c,args = strip_comb (concl th) in
+        c = bytes_loaded_tm &&
+          (the_mc = None || last args = Option.get the_mc)))
+      ths in
+    if res = [] then failwith
+        ("X86_CONV: can't find `bytes_loaded .. .. " ^
+          (if the_mc <> None then string_of_term (Option.get the_mc) else "..")
+          ^ "` from ths")
+    else res in
+
   let eth = tryfind (fun loaded_mc_th ->
-      GEN_REWRITE_CONV I [X86_THM decode_ths loaded_mc_th pc_th] tm) ths in
+      GEN_REWRITE_CONV I [X86_THM decode_ths loaded_mc_th pc_th] tm)
+    bytes_loaded_mc_ths in
   (K eth THENC
    REWRITE_CONV[X86_EXECUTE] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
-   REWRITE_CONV[condition_semantics; aligned_OPERAND128] THENC
+   REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
    REWRITE_CONV[OPERAND_CLAUSES] THENC
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
@@ -2884,20 +3141,49 @@ let X86_CONV (decode_ths:thm option array) ths tm =
  ) tm;;
 
 let X86_BASIC_STEP_TAC =
-  let x86_tm = `x86` and x86_ty = `:x86state` in
-  fun (decode_ths: thm option array) sname (asl,w) ->
+  let x86_tm = `x86` and x86_ty = `:x86state` and one = `1:num` in
+  fun (decode_ths: thm option array) sname store_inst_term_to (asl,w) ->
     let sv = rand w and sv' = mk_var(sname,x86_ty) in
     let atm = mk_comb(mk_comb(x86_tm,sv),sv') in
     let eth = X86_CONV decode_ths (map snd asl) atm in
-    (GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ2_TAC THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN CONV_TAC EXISTS_NONTRIVIAL_CONV;
+
+    (* store the decoded instruction at store_inst_term_to *)
+    (match store_inst_term_to with
+     | Some r -> r := rhs (concl eth)
+     | None -> ());
+
+    (* prepare a tactic for progressing to a next step. *)
+    let progress_tac =
+      let c,_ = strip_comb w in
+      if name_of c = "eventually" then
+        GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ2_TAC
+      else if name_of c = "eventually_n" then
+        let stepn = dest_numeral(rand(rator(rator w))) in
+        let stepn_decr = stepn -/ num 1 in
+        (* stepn = 1+{stepn-1}*)
+        let stepn_thm = GSYM (NUM_ADD_CONV
+          (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
+        GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
+        GEN_REWRITE_TAC I [EVENTUALLY_N_STEP]
+      else failwith "X86_BASIC_STEP_TAC: neither eventually nor eventually_n"
+      in
+
+    (progress_tac THEN CONJ_TAC THENL
+     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
+      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
+        (PRINT_GOAL_TAC THEN
+        FAIL_TAC ("X86_BASIC_STEP_TAC: Equality between two states is " ^
+                  "ill-formed. Did you forget to assume an extra condition" ^
+                  " like pointer alignment?")));
       X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth] THEN
       REPEAT X86_UNDEFINED_CHOOSE_TAC]) (asl,w);;
 
-let X86_STEP_TAC (mc_length_th,decode_ths) subths sname =
+let X86_STEP_TAC (mc_length_th,decode_ths) subths sname
+      (store_inst_term_to: term ref option)
+      (strip_component_tac: thm_tactic) =
   (*** This does the basic decoding setup ***)
 
-  X86_BASIC_STEP_TAC decode_ths sname THEN
+  X86_BASIC_STEP_TAC decode_ths sname store_inst_term_to THEN
 
   (*** This part shows the code isn't self-modifying ***)
 
@@ -2925,17 +3211,15 @@ let X86_STEP_TAC (mc_length_th,decode_ths) subths sname =
     if thl = [] then ALL_TAC else
     MP_TAC(end_itlist CONJ thl) THEN
     ASSEMBLER_SIMPLIFY_TAC THEN
-    (* Reduce reads of YMMx_SSE into reads of YMMx *)
-    REWRITE_TAC READ_YMM_SSE_EQUIV THEN
-    STRIP_TAC);;
+    strip_component_tac th);;
 
 let X86_VERBOSE_STEP_TAC (exth1,exth2) sname g =
   Format.print_string("Stepping to state "^sname); Format.print_newline();
-  X86_STEP_TAC (exth1,exth2) [] sname g;;
+  X86_STEP_TAC (exth1,exth2) [] sname None (K STRIP_TAC) g;;
 
 let X86_VERBOSE_SUBSTEP_TAC (exth1,exth2) subths sname g =
   Format.print_string("Stepping to state "^sname); Format.print_newline();
-  X86_STEP_TAC (exth1,exth2) subths sname g;;
+  X86_STEP_TAC (exth1,exth2) subths sname None (K STRIP_TAC) g;;
 
 (* ------------------------------------------------------------------------- *)
 (* Throw away assumptions according to patterns.                             *)
@@ -3303,7 +3587,9 @@ let X86_ADD_RETURN_NOSTACK_TAC =
       REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
       REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
       REWRITE_TAC[GSYM SEQ_ASSOC] THEN
-      REWRITE_TAC[ASSIGNS_SEQ] THEN REWRITE_TAC[ASSIGNS_THM] THEN
+      PURE_REWRITE_TAC[ASSIGNS_SEQ] THEN
+      CONV_TAC (TOP_DEPTH_CONV BETA_CONV) THEN
+      REWRITE_TAC[ASSIGNS_THM] THEN
       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
       NONSELFMODIFYING_STATE_UPDATE_TAC
        (MATCH_MP bytes_loaded_update (fst execth)) THEN

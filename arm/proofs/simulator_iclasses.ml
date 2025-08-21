@@ -189,6 +189,10 @@ let iclasses =
 
   (*** ORR ***)
   "0x001110101xxxxx000111xxxxxxxxxx";
+  
+  (*** REV, 32 and 64 bits ***)
+  "0101101011000000000010xxxxxxxxxx";
+  "1101101011000000000011xxxxxxxxxx";
 
   (*** REV64 ***)
   "01001110xx100000000010xxxxxxxxxx";
@@ -435,6 +439,9 @@ let check_insns () =
     (*** ldr (register ofs) ***)
     "1x111000011xxxxxxxxx10xxxxxxxxxx";
 
+    (*** ldr / str, shifted register, size 128 no extensions ***)
+    "001111001x1xxxxx011x10xxxxxxxxxx";
+
     (*** ldrb (immediate ofs) ***)
     "00111000010xxxxxxxxx01xxxxxxxxxx";
     "00111000010xxxxxxxxx11xxxxxxxxxx";
@@ -472,6 +479,12 @@ let check_insns () =
 
     (*** ld1r (post immediate ofs) ***)
     "0x001101110111111100xxxxxxxxxxxx";
+
+    (*** ldur / stur, immediate, size 128 only ***)
+    "001111001x0xxxxxxxxx00xxxxxxxxxx";
+
+    (*** ld3 / st3, multiple structures, 3 reg, post-imm and register ***)
+    "0x0011001x0xxxxx0100xxxxxxxxxxxx";
 
     (*** stp ***)
     "x010100010xxxxxxxxxxxxxxxxxxxxxx";
