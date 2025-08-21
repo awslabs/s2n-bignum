@@ -799,7 +799,7 @@ let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
     ((CONV_RULE TWEAK_CONV SHA3_KECCAK_F1600_CORRECT))
     `[RBX; RBP; R12; R13; R14; R15]` 256);;
 
-let SHA3_KECCAK_F1600_SUBROUTINE_WINDOWS_CORRECT = prove
+let SHA3_KECCAK_F1600_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!rc_pointer:int64 bitstate_in:int64 A pc:num stackpointer:int64 returnaddress.
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val (word_sub stackpointer (word 272)), 272) /\
  nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val bitstate_in, 200) /\
