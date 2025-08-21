@@ -2960,6 +2960,15 @@ let X86_THM =
       with Failure _ ->
         failwith ("X86_THM: Cannot decompose PC expression: " ^
                   string_of_term (concl pc_th)) in
+    let _ = if !x86_print_log then
+      let opt = Option.get execth2.(pc_ofs) in
+      (* opt: |- forall ... bytes_loaded .. ==> x86_decode .. (INST ..) *)
+      let t = snd (strip_forall (concl (opt))) in
+      let t = snd (dest_imp t) in
+      let term = snd (dest_comb t) in
+      Printf.printf "Instruction at `pc + %d`: `%s`\n" pc_ofs
+          (string_of_term term)
+    in
     CONV_RULE
       (ONCE_DEPTH_CONV
         (REWR_CONV (GSYM ADD_ASSOC) THENC RAND_CONV NUM_REDUCE_CONV))
