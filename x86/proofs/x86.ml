@@ -1631,6 +1631,10 @@ let aligned_OPERAND128 = define
  `(aligned_OPERAND128 (Simdregister r) s <=> T) /\
   (aligned_OPERAND128 (Memop w ea) s <=> aligned 16 (bsid_semantics ea s))`;;
 
+let aligned_OPERAND256 = define
+ `(aligned_OPERAND256 (Simdregister r) s <=> T) /\
+  (aligned_OPERAND256 (Memop w ea) s <=> aligned 32 (bsid_semantics ea s))`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding                            *)
 (* ------------------------------------------------------------------------- *)
@@ -2120,8 +2124,12 @@ let x86_execute = define
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
     | VMOVDQA dest src ->
         (match operand_size dest with
-          256 -> x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s)
-        | 128 -> x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s)) s
+          256 -> if aligned_OPERAND256 src s /\ aligned_OPERAND256 dest s
+                then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s) s
+                else (\s'. F)
+        | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
+                then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
+                else (\s'. F))
     | VPADDW dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
@@ -3097,7 +3105,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
   (K eth THENC
    REWRITE_CONV[X86_EXECUTE] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
-   REWRITE_CONV[condition_semantics; aligned_OPERAND128] THENC
+   REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
    REWRITE_CONV[OPERAND_CLAUSES] THENC
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
