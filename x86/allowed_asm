@@ -61,6 +61,7 @@
 : movaps$
 : movdqa$
 : movdqu$
+: movd$
 : movups$
 : mul$
 : mulq$
