@@ -658,3 +658,5 @@ Lbignum_emontredc_8n_cdiff_end:
         CFI_INC_SP((10*16))
 
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_emontredc_8n_cdiff)

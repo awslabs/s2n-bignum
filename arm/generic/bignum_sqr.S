@@ -137,6 +137,8 @@ Lbignum_sqr_innerend:
 Lbignum_sqr_end:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_sqr)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

@@ -506,6 +506,8 @@ S2N_BN_SYMBOL(secp256k1_jmixadd):
         CFI_INC_SP(NSPACE+32)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(secp256k1_jmixadd)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

@@ -603,6 +603,8 @@ Lbignum_invsqrt_p25519_loop:
         stp     x12, x13, [x0, #16]
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_invsqrt_p25519)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

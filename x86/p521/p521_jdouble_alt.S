@@ -1863,6 +1863,8 @@ S2N_BN_SYMBOL(p521_jdouble_alt):
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jdouble_alt)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

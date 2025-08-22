@@ -994,6 +994,8 @@ Lcurve25519_pxscalarmul_loop:
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(curve25519_pxscalarmul)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

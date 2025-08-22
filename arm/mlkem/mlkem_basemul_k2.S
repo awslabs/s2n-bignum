@@ -211,6 +211,8 @@ Lmlkem_basemul_k2_loop:
         CFI_INC_SP(0x40)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(mlkem_basemul_k2)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

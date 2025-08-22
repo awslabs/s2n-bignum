@@ -718,6 +718,8 @@ Lcurve25519_pxscalarmul_alt_loop:
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(curve25519_pxscalarmul_alt)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

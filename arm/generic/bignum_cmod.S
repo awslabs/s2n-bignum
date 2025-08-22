@@ -177,6 +177,8 @@ Lbignum_cmod_loop:
 Lbignum_cmod_end:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_cmod)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

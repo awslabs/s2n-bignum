@@ -177,6 +177,8 @@ Lbignum_mod_p256_writeback:
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mod_p256)
+
 Lbignum_mod_p256_shortinput:
 
         xor     m0, m0

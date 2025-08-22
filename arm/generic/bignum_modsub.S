@@ -67,6 +67,8 @@ Lbignum_modsub_addloop:
 Lbignum_modsub_end:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_modsub)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

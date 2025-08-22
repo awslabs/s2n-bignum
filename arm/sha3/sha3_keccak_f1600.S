@@ -345,6 +345,8 @@ Lsha3_keccak_f1600_loop:
         CFI_INC_SP(0x80)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(sha3_keccak_f1600)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

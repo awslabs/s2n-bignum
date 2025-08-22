@@ -86,6 +86,8 @@ mlkem_tomont_loop:
         stur    q23, [x0, #-0x40]
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(mlkem_tomont)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

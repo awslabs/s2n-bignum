@@ -2263,6 +2263,9 @@ Lcurve25519_x25519base_midloop:
         CFI_POP(rbx)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base)
+S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base_byte)
+
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same
 // text section, which gives position-independent code with simple PC-relative

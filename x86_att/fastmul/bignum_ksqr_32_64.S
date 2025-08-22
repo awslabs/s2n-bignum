@@ -799,6 +799,8 @@ Lbignum_ksqr_32_64_local_bignum_sqr_16_32:
         movq   %rbx, 0xf8(z)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_32_64)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

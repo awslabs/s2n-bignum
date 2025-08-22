@@ -3495,6 +3495,8 @@ Ledwards25519_scalarmuldouble_pepadd:
         CFI_INC_RSP((6*NUMSIZE))
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble)
+
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same
 // text section, which gives position-independent code with simple PC-relative

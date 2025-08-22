@@ -4529,6 +4529,8 @@ Lsm2_montjscalarmul_alt_sm2_montjdouble:
         CFI_POP(rbx)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(sm2_montjscalarmul_alt)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

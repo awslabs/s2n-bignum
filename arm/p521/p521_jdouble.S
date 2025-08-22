@@ -1716,6 +1716,8 @@ Lp521_jdouble_local_sqr_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jdouble)
+
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

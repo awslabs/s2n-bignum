@@ -6433,6 +6433,8 @@ S2N_BN_SYMBOL(p384_montjadd):
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p384_montjadd)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

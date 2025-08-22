@@ -42,6 +42,8 @@ S2N_BN_SYMBOL(word_max):
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(word_max)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

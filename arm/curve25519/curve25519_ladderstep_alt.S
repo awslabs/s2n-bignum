@@ -684,6 +684,8 @@ S2N_BN_SYMBOL(curve25519_ladderstep_alt):
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(curve25519_ladderstep_alt)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

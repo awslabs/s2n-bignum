@@ -100,6 +100,8 @@ Lbignum_copy_row_from_table_8n_innerloop_done:
 Lbignum_copy_row_from_table_8n_end:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_copy_row_from_table_8n)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

@@ -3360,6 +3360,8 @@ Lp256_montjscalarmul_alt_p256_montjdouble:
         CFI_INC_SP(0xc0)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p256_montjscalarmul_alt)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

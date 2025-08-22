@@ -22,6 +22,12 @@
 #   define S2N_BN_FUNCTION_TYPE_DIRECTIVE(name) .type name, %function
 #endif
 
+#ifdef __APPLE__
+#   define S2N_BN_SIZE_DIRECTIVE(name) /* Not used in Mach-O */
+#else
+#   define S2N_BN_SIZE_DIRECTIVE(name) .size S2N_BN_SYMBOL(name), .-S2N_BN_SYMBOL(name)
+#endif
+
 // Enable indirect branch tracking support unless explicitly disabled
 // with -DNO_IBT. If the platform supports CET, simply inherit this from
 // the usual header. Otherwise manually define _CET_ENDBR, used at each

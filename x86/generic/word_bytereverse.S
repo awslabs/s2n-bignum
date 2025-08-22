@@ -38,6 +38,8 @@ S2N_BN_SYMBOL(word_bytereverse):
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(word_bytereverse)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

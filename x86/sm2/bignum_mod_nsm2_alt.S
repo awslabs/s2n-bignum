@@ -190,6 +190,8 @@ Lbignum_mod_nsm2_alt_writeback:
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mod_nsm2_alt)
+
 Lbignum_mod_nsm2_alt_shortinput:
 
         xor     m0, m0

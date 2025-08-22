@@ -1610,6 +1610,8 @@ Lp521_jadd_local_sub_p521:
         str     x13, [x0, #64]
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jadd)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

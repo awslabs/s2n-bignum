@@ -28,6 +28,8 @@ cbz     x0, Lbignum_odd_end                 // if k = 0, that's the return!
 Lbignum_odd_end:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_odd)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

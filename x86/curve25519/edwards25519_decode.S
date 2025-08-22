@@ -675,6 +675,8 @@ Ledwards25519_decode_loop:
         mov     [rdi+24], rdx
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_decode)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

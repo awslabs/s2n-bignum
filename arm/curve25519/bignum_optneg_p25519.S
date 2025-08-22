@@ -73,6 +73,8 @@ S2N_BN_SYMBOL(bignum_optneg_p25519):
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_optneg_p25519)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

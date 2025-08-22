@@ -209,6 +209,8 @@ Lmlkem_rej_uniform_return:
         CFI_INC_SP(0x240)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

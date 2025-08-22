@@ -60,6 +60,8 @@ Lbignum_copy_padloop:
 Lbignum_copy_end:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_copy)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

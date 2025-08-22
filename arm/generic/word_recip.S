@@ -117,6 +117,8 @@ S2N_BN_SYMBOL(word_recip):
         csel    x0, x, t, cs
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(word_recip)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

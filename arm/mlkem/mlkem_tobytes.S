@@ -117,6 +117,8 @@ mlkem_tobytes_asm_asm_loop_start:
         st3     { v22.8b, v23.8b, v24.8b }, [x0], #24
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(mlkem_tobytes)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

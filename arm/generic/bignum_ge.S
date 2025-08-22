@@ -87,6 +87,8 @@ Lbignum_ge_ytoploop:
         cset    x0, cs
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_ge)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

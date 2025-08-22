@@ -538,6 +538,8 @@ S2N_BN_SYMBOL(bignum_ksqr_16_32):
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_16_32)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

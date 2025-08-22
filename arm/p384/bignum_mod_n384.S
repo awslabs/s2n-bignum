@@ -176,6 +176,8 @@ Lbignum_mod_n384_writeback:
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mod_n384)
+
 // Short case: just copy the input with zero-padding
 
 Lbignum_mod_n384_short:

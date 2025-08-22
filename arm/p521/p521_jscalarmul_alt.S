@@ -2115,6 +2115,8 @@ Lp521_jscalarmul_alt_sub_p521:
         str     x13, [x0, #64]
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul_alt)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

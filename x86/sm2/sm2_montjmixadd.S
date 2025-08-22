@@ -592,6 +592,8 @@ S2N_BN_SYMBOL(sm2_montjmixadd):
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(sm2_montjmixadd)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

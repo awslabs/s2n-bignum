@@ -176,6 +176,8 @@ Lbignum_mod_sm2_writeback:
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mod_sm2)
+
 Lbignum_mod_sm2_shortinput:
 
         xor     m0, m0

@@ -111,6 +111,8 @@ S2N_BN_SYMBOL(bignum_triple_p256_alt):
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_triple_p256)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

@@ -198,6 +198,8 @@ Lbignum_mod_n384_writeback:
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mod_n384)
+
 Lbignum_mod_n384_shortinput:
 
         xorq    m0, m0

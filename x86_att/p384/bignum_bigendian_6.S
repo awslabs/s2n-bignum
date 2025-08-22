@@ -96,6 +96,10 @@ S2N_BN_SYMBOL(bignum_tobebytes_6):
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_bigendian_6)
+S2N_BN_SIZE_DIRECTIVE(bignum_frombebytes_6)
+S2N_BN_SIZE_DIRECTIVE(bignum_tobebytes_6)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

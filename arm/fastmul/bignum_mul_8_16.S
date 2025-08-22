@@ -522,3 +522,5 @@ S2N_BN_SYMBOL(bignum_mul_8_16):
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mul_8_16)
+

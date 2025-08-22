@@ -2472,6 +2472,8 @@ Lp521_jscalarmul_sqr_p521:
         CFI_INC_RSP(0x40)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

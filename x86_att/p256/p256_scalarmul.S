@@ -6808,6 +6808,8 @@ Lp256_scalarmul_local_p256_montjmixadd:
         CFI_POP(%rbx)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p256_scalarmul)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

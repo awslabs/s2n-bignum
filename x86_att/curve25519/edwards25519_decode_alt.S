@@ -755,6 +755,8 @@ Ledwards25519_decode_alt_loop:
         movq    %rdx, 24(%rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_decode_alt)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

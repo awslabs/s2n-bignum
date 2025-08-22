@@ -182,6 +182,8 @@ Lbignum_mod_nsm2_writeback:
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mod_nsm2)
+
 Lbignum_mod_nsm2_shortinput:
 
         xorq    m0, m0

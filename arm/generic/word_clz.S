@@ -23,6 +23,8 @@ S2N_BN_SYMBOL(word_clz):
         clz     x0, x0
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(word_clz)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

@@ -28,6 +28,8 @@ S2N_BN_SYMBOL(word_max):
         csel    x0, a, b, cs
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(word_max)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

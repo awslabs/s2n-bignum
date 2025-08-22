@@ -57,6 +57,8 @@ Lbignum_digit_loop:
 Lbignum_digit_end:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_digit)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif

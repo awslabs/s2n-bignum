@@ -2085,6 +2085,8 @@ Lbignum_inv_p521_midloop:
 #endif
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_inv_p521)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

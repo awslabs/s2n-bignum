@@ -300,6 +300,8 @@ S2N_BN_SYMBOL(bignum_mul_p256k1):
         stp     u2, u3, [x0, #16]
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_mul_p256k1)
+
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif
