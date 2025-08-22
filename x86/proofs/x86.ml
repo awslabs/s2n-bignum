@@ -2996,7 +2996,7 @@ let X86_THM =
       let t = snd (strip_forall (concl (opt))) in
       let t = snd (dest_imp t) in
       let term = snd (dest_comb t) in
-      Printf.printf "Instruction at `pc + %d`: `%s`\n" pc_ofs
+      Printf.printf "Instruction at `pc + %d (%#x)`: `%s`\n" pc_ofs pc_ofs
           (string_of_term term)
     in
     CONV_RULE
