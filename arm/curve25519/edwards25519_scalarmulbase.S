@@ -18,6 +18,15 @@
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_scalarmulbase)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmulbase)
 
+#if defined(__linux__) && defined(__ELF__)
+.type edwards25519_scalarmulbase, %function
+.size edwards25519_scalarmulbase, 12072
+
+.global edwards25519_scalarmulbase_constant
+.type edwards25519_scalarmulbase_constant, %object
+.size edwards25519_scalarmulbase_constant, 48576
+#endif
+
         .text
         .balign 4
 
@@ -582,28 +591,34 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase):
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        adr     x10, edwards25519_scalarmulbase_edwards25519_0g
-        adr     x11, edwards25519_scalarmulbase_edwards25519_251g
-        ldp     x0, x1, [x10]
-        ldp     x2, x3, [x11]
+#if defined(__linux__) && defined(__ELF__)
+        adrp    tab, edwards25519_scalarmulbase_constant
+        add     tab, tab, :lo12:edwards25519_scalarmulbase_constant
+#else
+        adrp    tab, edwards25519_scalarmulbase_constant@PAGE
+        add     tab, tab, edwards25519_scalarmulbase_constant@PAGEOFF
+#endif
+
+        ldp     x0, x1, [tab]
+        ldp     x2, x3, [tab, #96]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc]
 
-        ldp     x0, x1, [x10, 1*16]
-        ldp     x2, x3, [x11, 1*16]
+        ldp     x0, x1, [tab, #1*16]
+        ldp     x2, x3, [tab, #(96+1*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+1*16]
 
-        ldp     x0, x1, [x10, 2*16]
-        ldp     x2, x3, [x11, 2*16]
+        ldp     x0, x1, [tab, #2*16]
+        ldp     x2, x3, [tab, #(96+2*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+2*16]
 
-        ldp     x0, x1, [x10, 3*16]
-        ldp     x2, x3, [x11, 3*16]
+        ldp     x0, x1, [tab, #3*16]
+        ldp     x2, x3, [tab, #(96+3*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+3*16]
@@ -612,14 +627,14 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase):
         stp     x0, xzr, [acc+4*16]
         stp     xzr, xzr, [acc+5*16]
 
-        ldp     x0, x1, [x10, 4*16]
-        ldp     x2, x3, [x11, 4*16]
+        ldp     x0, x1, [tab, #4*16]
+        ldp     x2, x3, [tab, #(96+4*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+6*16]
 
-        ldp     x0, x1, [x10, 5*16]
-        ldp     x2, x3, [x11, 5*16]
+        ldp     x0, x1, [tab, #5*16]
+        ldp     x2, x3, [tab, #(96+5*16)]
         csel    x0, x0, x2, eq
         csel    x1, x1, x3, eq
         stp     x0, x1, [acc+7*16]
@@ -638,7 +653,7 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase):
 // end because we made sure bit 251 is clear in the reduced scalar.
 
         mov     i, 0
-        adr     tab, edwards25519_scalarmulbase_edwards25519_gtable
+        add     tab, tab, #192
         mov     bias, xzr
 
 // Start of the main loop, repeated 63 times for i = 0, 4, 8, ..., 248
@@ -2013,35 +2028,37 @@ edwards25519_scalarmulbase_invmidloop:
 
         ret
 
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
+
 // ****************************************************************************
-// The precomputed data (all read-only). This is currently part of the same
-// text section, which gives position-independent code with simple PC-relative
-// addressing. However it could be put in a separate section via something like
-//
-// .section .rodata
+// The precomputed data (all read-only).
 // ****************************************************************************
+
+#if defined(__linux__) && defined(__ELF__)
+.section .rodata
+#elif defined(__APPLE__)
+.const_data
+#endif
+
+edwards25519_scalarmulbase_constant:
 
 // 0 * B = 0 and 2^251 * B in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
 
-edwards25519_scalarmulbase_edwards25519_0g:
-
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
-
         .quad   0x0000000000000001
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
-
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
         .quad   0x0000000000000000
-
-edwards25519_scalarmulbase_edwards25519_251g:
 
         .quad   0x525f946d7c7220e7
         .quad   0x4636b0b2f1e35444
@@ -2058,8 +2075,6 @@ edwards25519_scalarmulbase_edwards25519_251g:
 
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
-
-edwards25519_scalarmulbase_edwards25519_gtable:
 
         // 2^0 * 1 * G
 
@@ -9620,7 +9635,3 @@ edwards25519_scalarmulbase_edwards25519_gtable:
         .quad   0xeb848e0f7f19547e
         .quad   0x2503a1d065a497b9
         .quad   0x0fef911191df895f
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack, "", %progbits
-#endif
