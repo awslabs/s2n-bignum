@@ -13,10 +13,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = x, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_cld)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_cld)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_cld)
         .text
 
@@ -29,11 +30,12 @@
 
 
 S2N_BN_SYMBOL(bignum_cld):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -45,28 +47,30 @@ S2N_BN_SYMBOL(bignum_cld):
 // If the bignum is zero-length, just return k = 0
 
         test    k, k
-        jz      bignum_cld_end
+        jz      Lbignum_cld_end
 
 // Run over the words j = 0..i-1, and set i := j + 1 when hitting nonzero a[j]
 
         xor     j, j
-bignum_cld_loop:
+Lbignum_cld_loop:
         mov     a, [x+8*j]
         inc     j
         test    a, a
         cmovnz  i, j
         cmp     j, k
-        jnz     bignum_cld_loop
+        jnz     Lbignum_cld_loop
 
         neg     rax
         add     rax, rdi
 
-bignum_cld_end:
+Lbignum_cld_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_cld)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -12,10 +12,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = x, R9 = m
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_moddouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_moddouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_moddouble)
         .text
 
@@ -29,11 +30,12 @@
 #define b r10
 
 S2N_BN_SYMBOL(bignum_moddouble):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -43,7 +45,7 @@ S2N_BN_SYMBOL(bignum_moddouble):
 // If k = 0 do nothing
 
         test    k, k
-        jz      bignum_moddouble_end
+        jz      Lbignum_moddouble_end
 
 // Do (_::z) = 2 * x - m and generate a mask in c for 2 * x < m
 
@@ -51,7 +53,7 @@ S2N_BN_SYMBOL(bignum_moddouble):
         xor     i, i
         xor     b, b
 
-bignum_moddouble_dubloop:
+Lbignum_moddouble_dubloop:
         mov     a, [x+8*i]
         shrd    c, a, 63
         neg     b
@@ -61,7 +63,7 @@ bignum_moddouble_dubloop:
         mov     c, a
         inc     i
         cmp     i, k
-        jc      bignum_moddouble_dubloop
+        jc      Lbignum_moddouble_dubloop
         shr     c, 63
 
         add     c, b
@@ -70,7 +72,7 @@ bignum_moddouble_dubloop:
 
         xor     i, i
         xor     b, b
-bignum_moddouble_corrloop:
+Lbignum_moddouble_corrloop:
         mov     a, [m+8*i]
         and     a, c
         neg     b
@@ -79,14 +81,16 @@ bignum_moddouble_corrloop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_moddouble_corrloop
+        jc      Lbignum_moddouble_corrloop
 
-bignum_moddouble_end:
+Lbignum_moddouble_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_moddouble)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

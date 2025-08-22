@@ -12,10 +12,11 @@
 // Microsoft x64 ABI:   RCX = m, RDX = x, R8 = n, R9 = y, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_lt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_lt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_lt)
         .text
 
@@ -31,11 +32,12 @@
 
 
 S2N_BN_SYMBOL(bignum_lt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -49,62 +51,64 @@ S2N_BN_SYMBOL(bignum_lt):
 // Speculatively form m := m - n and do case split
 
         sub     m, n
-        jc      bignum_lt_ylonger
+        jc      Lbignum_lt_ylonger
 
 // The case where x is longer or of the same size (m >= n)
 
         inc     m
         test    n, n
-        jz      bignum_lt_xtest
-bignum_lt_xmainloop:
+        jz      Lbignum_lt_xtest
+Lbignum_lt_xmainloop:
         mov     a, [x+8*i]
         sbb     a, [y+8*i]
         inc     i
         dec     n
-        jnz     bignum_lt_xmainloop
-        jmp     bignum_lt_xtest
-bignum_lt_xtoploop:
+        jnz     Lbignum_lt_xmainloop
+        jmp     Lbignum_lt_xtest
+Lbignum_lt_xtoploop:
         mov     a, [x+8*i]
         sbb     a, 0
         inc     i
-bignum_lt_xtest:
+Lbignum_lt_xtest:
         dec     m
-        jnz     bignum_lt_xtoploop
+        jnz     Lbignum_lt_xtoploop
         sbb     a, a
         neg     a
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
         ret
 
 // The case where y is longer (n > m)
 
-bignum_lt_ylonger:
+Lbignum_lt_ylonger:
         add     m, n
         sub     n, m
         test    m, m
-        jz      bignum_lt_ytoploop
-bignum_lt_ymainloop:
+        jz      Lbignum_lt_ytoploop
+Lbignum_lt_ymainloop:
         mov     a, [x+8*i]
         sbb     a, [y+8*i]
         inc     i
         dec     m
-        jnz     bignum_lt_ymainloop
-bignum_lt_ytoploop:
+        jnz     Lbignum_lt_ymainloop
+Lbignum_lt_ytoploop:
         mov     ashort, 0
         sbb     a, [y+8*i]
         inc     i
         dec     n
-        jnz     bignum_lt_ytoploop
+        jnz     Lbignum_lt_ytoploop
 
         sbb     a, a
         neg     a
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_lt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

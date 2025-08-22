@@ -13,10 +13,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = d, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_muladd10)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_muladd10)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_muladd10)
         .text
 
@@ -33,11 +34,12 @@
 #define tenshort r9d
 
 S2N_BN_SYMBOL(bignum_muladd10):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -47,13 +49,13 @@ S2N_BN_SYMBOL(bignum_muladd10):
 
         mov     d, rdx
         test    k, k
-        jz      bignum_muladd10_end
+        jz      Lbignum_muladd10_end
 
 // Simple loop
 
         xor     i, i
         mov     tenshort, 10
-bignum_muladd10_loop:
+Lbignum_muladd10_loop:
         mov     a, [z+8*i]
         mul     ten
         add     l, d
@@ -62,17 +64,19 @@ bignum_muladd10_loop:
         mov     d, h
         inc     i
         cmp     i, k
-        jc      bignum_muladd10_loop
+        jc      Lbignum_muladd10_loop
 
 // Return the final carry
 
-bignum_muladd10_end:
+Lbignum_muladd10_end:
         mov     rax, d
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_muladd10)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

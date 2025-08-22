@@ -13,10 +13,11 @@
 // Microsoft x64 ABI:   RCX = z, RDX = x, R8 = y
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mul_p521_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_mul_p521_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_mul_p521_alt)
         .text
 
@@ -54,11 +55,12 @@
         adc     h, rdx
 
 S2N_BN_SYMBOL(bignum_mul_p521_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -66,11 +68,11 @@ S2N_BN_SYMBOL(bignum_mul_p521_alt):
 
 // Make more registers available and make temporary space on stack
 
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 72
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(72)
 
 // Copy y into a safe register to start with
 
@@ -301,16 +303,18 @@ S2N_BN_SYMBOL(bignum_mul_p521_alt):
 
 // Restore registers and return
 
-        add     rsp, 72
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
+        CFI_INC_RSP(72)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_mul_p521_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

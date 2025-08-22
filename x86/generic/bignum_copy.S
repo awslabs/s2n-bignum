@@ -11,10 +11,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = n, R9 = x
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_copy)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_copy)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_copy)
         .text
 
@@ -29,11 +30,12 @@
 
 
 S2N_BN_SYMBOL(bignum_copy):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -50,32 +52,34 @@ S2N_BN_SYMBOL(bignum_copy):
 // If min(k,n) = 0 jump to the padding stage
 
         test    n, n
-        jz      bignum_copy_padding
+        jz      Lbignum_copy_padding
 
-bignum_copy_copyloop:
+Lbignum_copy_copyloop:
         mov     a, [x+8*i]
         mov     [z+8*i], a
         inc     i
         cmp     i, n
-        jc      bignum_copy_copyloop
+        jc      Lbignum_copy_copyloop
 
-bignum_copy_padding:
+Lbignum_copy_padding:
         cmp     i, k
-        jnc     bignum_copy_end
+        jnc     Lbignum_copy_end
         xor     a, a
 
-bignum_copy_padloop:
+Lbignum_copy_padloop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_copy_padloop
+        jc      Lbignum_copy_padloop
 
-bignum_copy_end:
+Lbignum_copy_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_copy)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

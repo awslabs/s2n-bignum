@@ -15,10 +15,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = m, R9 = x, [RSP+40] = n, [RSP+48] = y
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mul)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_mul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_mul)
         .text
 
@@ -47,11 +48,12 @@
 
 
 S2N_BN_SYMBOL(bignum_mul):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -62,12 +64,12 @@ S2N_BN_SYMBOL(bignum_mul):
 
 // We use too many registers, and also we need rax:rdx for multiplications
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
         mov     m, rdx
 
 // If the result size is zero, do nothing
@@ -76,7 +78,7 @@ S2N_BN_SYMBOL(bignum_mul):
 // If we did a multiply-add variant, however, then we could
 
         test    p, p
-        jz      bignum_mul_end
+        jz      Lbignum_mul_end
 
 // Set initial 2-part sum to zero (we zero c inside the body)
 
@@ -87,7 +89,7 @@ S2N_BN_SYMBOL(bignum_mul):
 
         xor     k, k
 
-bignum_mul_outerloop:
+Lbignum_mul_outerloop:
 
 // Zero our carry term first; we eventually want it and a zero is useful now
 // Set a =  max 0 (k + 1 - n), i = min (k + 1) m
@@ -113,11 +115,11 @@ bignum_mul_outerloop:
         mov     d, k
         sub     d, i
         sub     i, a
-        jbe     bignum_mul_innerend
+        jbe     Lbignum_mul_innerend
         lea     x,[rcx+8*a]
         lea     y,[r9+8*d-8]
 
-bignum_mul_innerloop:
+Lbignum_mul_innerloop:
         mov     rax, [y+8*i]
         mul     QWORD PTR  [x]
         add     x, 8
@@ -125,9 +127,9 @@ bignum_mul_innerloop:
         adc     h, rdx
         adc     c, 0
         dec     i
-        jnz     bignum_mul_innerloop
+        jnz     Lbignum_mul_innerloop
 
-bignum_mul_innerend:
+Lbignum_mul_innerend:
 
         mov     [z], l
         mov     l, h
@@ -135,20 +137,22 @@ bignum_mul_innerend:
         add     z, 8
 
         cmp     k, p
-        jc      bignum_mul_outerloop
+        jc      Lbignum_mul_outerloop
 
-bignum_mul_end:
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+Lbignum_mul_end:
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_mul)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
