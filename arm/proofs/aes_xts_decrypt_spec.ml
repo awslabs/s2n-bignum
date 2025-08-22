@@ -161,9 +161,9 @@ let aes256_xts_decrypt_tail = new_definition
 (* TODO: Double check the pseudo code in the spec for tweak caculation in ANEX c *)
 let aes256_xts_decrypt = new_definition
   `aes256_xts_decrypt
-    (C:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (perror:byte list) : byte list =
+    (C:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (err:byte list) : byte list =
     if len < 16 then
-      perror
+      err
     else
       let tail = len MOD 16 in
       let m = (len - tail) DIV 16 in
@@ -291,7 +291,7 @@ let iv_tweak = new_definition
   `iv_tweak = (word 0x0000000000000000000000123456789a) : int128`;;
 
 let perror = new_definition
-  `perorr = [ word 0; word 0; word 0; word 0
+  `perror = [ word 0; word 0; word 0; word 0
    ; word 0; word 0; word 0; word 0
    ; word 0; word 0; word 0; word 0
    ; word 0; word 0; word 0; word 0] : byte list`;;
@@ -514,7 +514,6 @@ let AES256_XTS_DECRYPT_CONV tm =
   | _ -> failwith "AES256_XTS_DECRYPT_CONV: inapplicable";;
 
 (*
-(* TODO: figure out why perror isn't expanded out ??*)
 (REWRITE_CONV [perror] THENC AES256_XTS_DECRYPT_CONV)
   `aes256_xts_decrypt c0 5 iv_tweak KEY1 KEY2 perror`;;
 
