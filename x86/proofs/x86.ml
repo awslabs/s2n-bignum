@@ -1305,7 +1305,7 @@ let x86_SUB = new_definition
          OF := ~(ival x - ival y = ival z) ,,
          AF := ~(&(val(word_zx x:nybble)) - &(val(word_zx y:nybble)):int =
                  &(val(word_zx z:nybble)))) s`;;
-                 
+
 let x86_VMOVDQA = new_definition
   `x86_VMOVDQA dest src (s:x86state) =
       let (x:N word) = read src s in
@@ -2156,7 +2156,7 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
-     | VMOVDQA dest src ->
+    | VMOVDQA dest src ->
         (match operand_size dest with
           256 -> if aligned_OPERAND256 src s /\ aligned_OPERAND256 dest s
                 then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s) s
