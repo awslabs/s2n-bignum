@@ -36,8 +36,8 @@ You can get the above OCaml list data structure from
 "<.o file>"`.
 *)
 
-(* X86_MK_EXEC_RULE decodes the byte sequence into conjunction of
-  equalities between the bytes and instructions. *)
+(* X86_MK_EXEC_RULE decodes the byte sequence into an OCaml array of
+  theorems describing the instruction decoded at each PC. *)
 let EXEC = X86_MK_EXEC_RULE simple_mc;;
 
 (*
@@ -106,4 +106,16 @@ let SIMPLE_SPEC = prove(
    To list which instructions are discarded by the simulation tactic.
    set:
     x86_print_log := true;;
-   This flag will also print helpful informations that are useful. *)
+   This flag will also print helpful informations that are useful.
+
+   Setting this flag to true will also print the executing instructions as well
+   as their PCs.
+   For the above example, it will print:
+
+    Stepping to state s1
+    Instruction at `pc + 0 (0)`: `3,ADD (% rbx) (% rax)`
+    CPU time (user): 0.071801
+    Stepping to state s2
+    Instruction at `pc + 3 (0x3)`: `3,SUB (% rbx) (% rax)`
+    CPU time (user): 0.093077
+*)
