@@ -877,6 +877,12 @@ let x86_MOVDQU = new_definition
 `x86_MOVDQU dest src s =
    let x = read src s in (dest := x) s`;;
 
+let x86_MOVD = new_definition
+ `x86_MOVD dest src s =
+    let (x:M word) = read src s in
+    let (x':N word) = word_zx x in
+    (dest := x') s`;;
+
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
     let x = read src s in (dest := x) s`;;
@@ -1299,6 +1305,11 @@ let x86_SUB = new_definition
          OF := ~(ival x - ival y = ival z) ,,
          AF := ~(&(val(word_zx x:nybble)) - &(val(word_zx y:nybble)):int =
                  &(val(word_zx z:nybble)))) s`;;
+                 
+let x86_VMOVDQA = new_definition
+  `x86_VMOVDQA dest src (s:x86state) =
+      let (x:N word) = read src s in
+      (dest := (word_zx x):N word) s`;;
 
 let x86_VMOVSHDUP = new_definition
   `x86_VMOVSHDUP dest src (s:x86state) =
@@ -1650,6 +1661,10 @@ let aligned_OPERAND128 = define
  `(aligned_OPERAND128 (Simdregister r) s <=> T) /\
   (aligned_OPERAND128 (Memop w ea) s <=> aligned 16 (bsid_semantics ea s))`;;
 
+let aligned_OPERAND256 = define
+ `(aligned_OPERAND256 (Simdregister r) s <=> T) /\
+  (aligned_OPERAND256 (Memop w ea) s <=> aligned 32 (bsid_semantics ea s))`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding                            *)
 (* ------------------------------------------------------------------------- *)
@@ -1936,6 +1951,10 @@ let x86_execute = define
         else (\s'. F)
     | MOVDQU dest src ->
         x86_MOVDQU (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | MOVD dest src ->
+        (match (operand_size dest, operand_size src) with
+          (32,128) -> x86_MOVD (OPERAND32 dest s) (OPERAND128_SSE src s)
+        | (128,32) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND32 src s)) s
     | MOVSX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
@@ -2137,6 +2156,14 @@ let x86_execute = define
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+     | VMOVDQA dest src ->
+        (match operand_size dest with
+          256 -> if aligned_OPERAND256 src s /\ aligned_OPERAND256 dest s
+                then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s) s
+                else (\s'. F)
+        | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
+                then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
+                else (\s'. F))
     | VMOVSHDUP dest src ->
         (match operand_size dest with
           256 -> x86_VMOVSHDUP (OPERAND256 dest s) (OPERAND256 src s)
@@ -2365,6 +2392,8 @@ let OPERAND_SIZE_CASES = prove
    (match 32 with 64 -> a | 32 -> b) = b /\
    (match 32 with 32 -> a | 16 -> b) = a /\
    (match 16 with 32 -> a | 16 -> b) = b /\
+   (match (32,128) with (32,128) -> a | (128,32) -> b) = a /\
+   (match (128,32) with (32,128) -> a | (128,32) -> b) = b /\
    (match (64,32) with
       (64,32) -> a  | (64,16) -> b  | (64,8) -> c | (32,32) -> d
     | (32,16) -> e | (32,8) -> f  | (16,8) -> g) = a /\
@@ -2915,6 +2944,7 @@ let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
 let x86_VMOVSHDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSHDUP;;
 let x86_VPADDD_ALT = EXPAND_SIMD_RULE x86_VPADDD;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
@@ -2938,8 +2968,8 @@ let X86_OPERATION_CLAUSES =
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_DIV2; x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
-    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVSX; x86_MOVUPS; x86_MOVZX;
-    x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
+    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVSX; x86_MOVUPS; 
+    x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PCMPGTD_ALT; x86_POP_ALT;
     x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
@@ -2948,7 +2978,8 @@ let X86_OPERATION_CLAUSES =
     (*** AVX2 instructions ***)
     x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLD_ALT; x86_VPMULLW_ALT;
     x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
-    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT;
+    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPMULDQ_ALT; x86_VMOVDQA_ALT;
+    x86_VMOVSHDUP_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
@@ -3116,7 +3147,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
   (K eth THENC
    REWRITE_CONV[X86_EXECUTE] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
-   REWRITE_CONV[condition_semantics; aligned_OPERAND128] THENC
+   REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
    REWRITE_CONV[OPERAND_CLAUSES] THENC
    ONCE_DEPTH_CONV BSID_SEMANTICS_CONV THENC
@@ -3392,25 +3423,89 @@ let (X86_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
     (asl,w);;
 
 (* ------------------------------------------------------------------------- *)
+(* Go from |- bytes_loaded s (word pc) mc or the equivalent                  *)
+(*         |- bytes_loaded s (word(pc + 0)) mc                               *)
+(* to      |- bytes_loaded s (word(pc + n)) mc'                              *)
+(* where mc' is an appropriate sublist of the list mc.                       *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTES_LOADED_OFFSET_RULE =
+  let pth = prove
+   (`bytes_loaded s (word(pc + n)) (CONS h t)
+     ==> bytes_loaded s (word(pc + SUC n)) t`,
+    ONCE_REWRITE_TAC[GSYM APPEND_SING] THEN
+    SIMP_TAC[bytes_loaded_append; LENGTH; GSYM WORD_ADD; ADD_CLAUSES]) in
+  let rule1 = CONV_RULE (LAND_CONV(RAND_CONV(RAND_CONV NUM_SUC_CONV))) o
+              MATCH_MP pth in
+  let rec rule offset th =
+    if offset >= 1 then rule (offset - 1) (rule1 th)
+    else th in
+  fun n th ->
+    try rule n (CONV_RULE (TRY_CONV TWEAK_PC_OFFSET_CONV) th)
+    with Failure _ -> failwith "BYTES_LOADED_OFFSET_RULE: code too short";;
+
+(* ------------------------------------------------------------------------- *)
+(* Prove |- bytes_loaded s wpc mc ==> bytes_loaded s wpc mc' where           *)
+(* mc' is a sublist of mc, modulo arithmetic simplifications.                *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTES_LOADED_SUBLIST_RULE =
+  let prule = (PART_MATCH rand o prove)
+   (`(?r. l = APPEND t r)
+     ==> bytes_loaded s wpc l ==> bytes_loaded s wpc t`,
+    SIMP_TAC[LEFT_IMP_EXISTS_THM; bytes_loaded_append]) in
+  fun tm1 tm2 ->
+    let th = prule(mk_imp(tm1,tm2)) in
+    MP th (BYTELIST_SUBLIST_CONV(lhand(concl th)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Given two machine code definitions of the form                            *)
+(* |- [forall pc, args1] mc1 pc args1 = [b1; ...; bn]                        *)
+(* |- [forall pc, args2] mc2 pc args2 = [b1; ...; bn]                        *)
+(* and an offset value, creates a theorem of the form                        *)
+(* |- bytes_loaded (word pc) (mc1 pc args1)                                  *)
+(*    ==> bytes_loaded (word(pc + offset)) (mc2 s args2)                     *)
+(* If the input theorems are not quantified, it's assumed that               *)
+(* the left-hand sides are already fully instantiated.                       *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTES_LOADED_SUBPROGRAM_RULE =
+  let abl_tm = `bytes_loaded s`
+  and wpc_tm = `word pc:int64`
+  and pc_tm = `pc:num`
+  and pcp_tm = `(+) (pc:num)`
+  and wd_tm = `word:num->int64`
+  and s_tm = `s:armstate` in
+  let topvars = [s_tm; pc_tm] in
+  fun mc1 mc2 offset ->
+    let nptm = mk_comb(pcp_tm,mk_small_numeral offset) in
+    let wnptm = mk_comb(wd_tm,nptm) in
+    let th1 = if is_forall(concl mc1) then SPEC_ALL(SPEC pc_tm mc1) else mc1
+    and th2 =
+      if is_forall(concl mc2) then
+      SPEC_ALL(SPEC nptm mc2) else mc2 in
+    let eth1 = AP_TERM (mk_comb(abl_tm,wpc_tm)) th1
+    and eth2 = AP_TERM (mk_comb(abl_tm,wnptm)) th2 in
+    let ath1 = UNDISCH(fst(EQ_IMP_RULE eth1)) in
+    let oth1 = BYTES_LOADED_OFFSET_RULE offset ath1 in
+    let sth =  BYTES_LOADED_SUBLIST_RULE (concl oth1) (rand(concl eth2)) in
+    let ith = DISCH_ALL(EQ_MP (SYM eth2) (MP sth oth1)) in
+    let avs = subtract (frees(concl ith)) topvars in
+    GENL (topvars @ avs) ith;;
+
+(* ------------------------------------------------------------------------- *)
 (* Simulate a subroutine, instantiating it from the state.                   *)
 (* ------------------------------------------------------------------------- *)
 
-let TWEAK_PC_OFFSET =
-  let conv =
-   GEN_REWRITE_CONV (RAND_CONV o RAND_CONV) [ARITH_RULE `pc = pc + 0`]
-  and tweakneeded tm =
-    match tm with
-      Comb(Comb(Const("bytes_loaded",_),Var(_,_)),
-           Comb(Const("word",_),Var("pc",_))) -> true
-    | _ -> false in
-  CONV_RULE(ONCE_DEPTH_CONV(conv o check tweakneeded));;
+let RIP_PLUS_CONV =
+  GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
+      `read RIP s = word((pc + m) + n) <=>
+       read RIP s = word(pc + m + n)`] THENC
+  funpow 3 RAND_CONV NUM_ADD_CONV;;
 
 let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
   let subimpth =
-    CONV_RULE NUM_REDUCE_CONV (REWRITE_RULE [LENGTH]
-      (MATCH_MP bytes_loaded_of_append3
-        (TRANS machinecode (N_SUBLIST_CONV (SPEC_ALL submachinecode) offset
-           (rhs(concl machinecode)))))) in
+      BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset in
   fun ilist0 n ->
     let sname = "s"^string_of_int(n-1)
     and sname' = "s"^string_of_int n in
@@ -3433,15 +3528,15 @@ let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
        DISJ2_TAC THEN NONOVERLAPPING_TAC);
       ALL_TAC]) THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
+    CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV RIP_PLUS_CONV)) THEN
     ASM_REWRITE_TAC[] THEN
     X86_BIGSTEP_TAC execth sname' THENL
-     [MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
+     [(* Precondition of subth *)
+      FIRST_X_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP subimpth) ORELSE
+      (PRINT_GOAL_TAC THEN FAIL_TAC
+        "Could not discharge precond (subgoal after X86_BIGSTEP_TAC)");
       ALL_TAC] THEN
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV
-   (GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
-     `read RIP s = word((pc + m) + n) <=>
-      read RIP s = word(pc + m + n)`] THENC
-    funpow 3 RAND_CONV NUM_ADD_CONV)));;
+    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV));;
 
 let X86_SUBROUTINE_SIM_ABBREV_TAC tupper ilist0 =
   let tac = X86_SUBROUTINE_SIM_TAC tupper ilist0 in
