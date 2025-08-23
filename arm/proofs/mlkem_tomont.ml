@@ -212,3 +212,37 @@ let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove
   CONV_TAC TWEAK_CONV THEN
   ARM_ADD_RETURN_NOSTACK_TAC MLKEM_TOMONT_EXEC
    (CONV_RULE TWEAK_CONV MLKEM_TOMONT_CORRECT));;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec = mk_safety_spec
+    (assoc "mlkem_tomont" subroutine_signatures)
+    MLKEM_TOMONT_SUBROUTINE_CORRECT
+    MLKEM_TOMONT_EXEC;;
+
+let MLKEM_TOMONT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall ptr pc returnaddress.
+           nonoverlapping (word pc,LENGTH mlkem_tomont_mc) (ptr,512)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) mlkem_tomont_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [ptr] s /\
+                    read events s = e)
+               (\s.
+                    exists e2.
+                        read PC s = returnaddress /\
+                        read events s = APPEND e2 e /\
+                        e2 = f_events ptr pc returnaddress /\
+                        memaccess_inbounds e2 [ptr,512; ptr,512] [ptr,512])
+               (\s s'. true)`,
+  ASSERT_GOAL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC MLKEM_TOMONT_EXEC);;

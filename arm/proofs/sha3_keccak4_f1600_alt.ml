@@ -1453,3 +1453,48 @@ let SHA3_KECCAK4_F1600_ALT_SUBROUTINE_CORRECT = prove
    (CONV_RULE TWEAK_CONV SHA3_KECCAK4_F1600_ALT_CORRECT)
   `[D8; D9; D10; D11; D12; D13; D14; D15;
     X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 224);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec = mk_safety_spec
+    (assoc "sha3_keccak4_f1600_alt" subroutine_signatures)
+    SHA3_KECCAK4_F1600_ALT_SUBROUTINE_CORRECT
+    SHA3_KECCAK4_F1600_ALT_EXEC;;
+
+let SHA3_KECCAK4_F1600_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall a rc pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           nonoverlapping (a,800) (word_sub stackpointer (word 224),224) /\
+           ALLPAIRS nonoverlapping
+           [a,800; word_sub stackpointer (word 224),224]
+           [word pc,3872; rc,192]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    sha3_keccak4_f1600_alt_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [a; rc] s /\
+                    read events s = e)
+               (\s.
+                    exists e2.
+                        read PC s = returnaddress /\
+                        read events s = APPEND e2 e /\
+                        e2 =
+                        f_events rc a pc (word_sub stackpointer (word 224))
+                        returnaddress /\
+                        memaccess_inbounds e2
+                        [a,800; rc,192; a,800;
+                         word_sub stackpointer (word 224),224]
+                        [a,800; word_sub stackpointer (word 224),224])
+               (\s s'. true)`,
+  ASSERT_GOAL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC SHA3_KECCAK4_F1600_ALT_EXEC);;
