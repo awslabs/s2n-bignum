@@ -354,6 +354,16 @@ let ARM_THM =
         dest_small_numeral ofs
       with Failure _ ->
         failwith ("ARM_THM: Cannot decompose PC expression: " ^ (string_of_term (concl pc_th))) in
+    let _ = if !arm_print_log then
+      let opt = Option.get execth2.(pc_ofs) in
+      (* opt: |- forall ... aligned_bytes_loaded ..
+                 ==> arm_decode .. (arm_INST ..) *)
+      let t = snd (strip_forall (concl (opt))) in
+      let t = snd (dest_imp t) in
+      let term = snd (dest_comb t) in
+      Printf.printf "Instruction at `pc + %d (%#x)`: `%s`\n" pc_ofs pc_ofs
+          (string_of_term term)
+    in
     MATCH_MP th (MATCH_MP (Option.get execth2.(pc_ofs)) loaded_mc_th);;
 
 let ARM_ENSURES_SUBLEMMA_TAC =

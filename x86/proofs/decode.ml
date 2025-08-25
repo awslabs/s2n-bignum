@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-let decode_log = ref false;;
+let decode_print_log = ref false;;
 
 (* ========================================================================= *)
 (* x86 instruction decoding.                                                 *)
@@ -1474,7 +1474,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | _ -> failwith "DECODE_HI_CONV" in
 
   (* A wrapper function of the 'evaluate' function defined below.
-     If decode_log reference variable is assigned true, this will print the
+     If decode_print_log reference variable is assigned true, this will print the
      current evaluation context and the term that is being reduced. *)
   let log_step =
     let print_assignments (ls:(term * term) list): unit =
@@ -1500,7 +1500,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       let eval_simplified = evaluate t_focus (fun th ->
         let f_partialeval = F th in
         fun ls ->
-          if not !decode_log then f_partialeval ls else
+          if not !decode_print_log then f_partialeval ls else
           let _ = Printf.printf "decode: evaluate (\"%s\", eval id %d):"
             op eval_id in
           let _ = Printf.printf " evaluated to (assigns deferred): `%s`\n%!"
@@ -1508,7 +1508,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           let _ = print_assignments ls in
           f_partialeval ls) in
       fun ls ->
-        if not !decode_log then eval_simplified ls else
+        if not !decode_print_log then eval_simplified ls else
         let _ = Printf.printf "decode: evaluate (\"%s\", eval id %d):"
             op eval_id in
         let _ = Printf.printf " evaluating: `%s`\n%!"
