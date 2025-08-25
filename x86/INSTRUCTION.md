@@ -68,6 +68,12 @@ There are two sources of instructions tested. The *x86/x86-insns.ml* file is a g
 
 Note that lots of x86_64 instructions can take memory operands. And they are tested in a slightly different way. This is because accessing random memory locations is not permitted by the OS. As a workaround, the cosimulation testing framework allocates a 256-byte memory on the stack for the purpose of testing instructions with memory operands. Special harness functions need to be defined for pointing memory address to the right location in the 256-byte memory on stack. Check *x86/proofs/simulator.ml* for detail.
 
+### Constant Time
+
+[Location: x86/proofs/allowed_asm](allowed_asm)
+
+To assist constant time verification, the `allowed_asm` file contains instructions that are known to be constant time. We refer to the [Data Operand Independent Timing instructions table](https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/resources/data-operand-independent-timing-instructions.html) from Intel for deciding whether an instruction is constant time.
+
 ### Examples
 
 Here are some examples of adding instructions:
