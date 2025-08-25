@@ -627,9 +627,9 @@ let SIMD_SIMPLIFY_CONV unfold_defs =
   REWRITE_CONV (map GSYM unfold_defs);;
 
 let SIMD_SIMPLIFY_TAC unfold_defs =
-  (* Need to support both ARM (armstate:int128) and x86 (x86state:int256) patterns *)
-  (*let simdable = can (term_match [] `read X (s:x86state):int256 = whatever`) in *)
-  let simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  let arm_simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  let x86_simdable = can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm in
   TRY(FIRST_X_ASSUM
    (ASSUME_TAC o
     CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o
