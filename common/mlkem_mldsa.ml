@@ -183,6 +183,27 @@ let montred = define
      (16,16)`;;
 
 (* ------------------------------------------------------------------------- *)
+(* Analogous ML-DSA idioms.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let mldsa_barred = define
+ `(mldsa_barred:int32->int32) x =
+  word_sub x
+   (word_mul
+    (word_ishr (word_add x (word 4194304)) 23)
+    (word 8380417))`;;
+
+let mldsa_montred = define
+   `(mldsa_montred:int64->int32) x =
+    word_subword
+     (word_add
+       (word_mul ((word_sx:int32->int64)
+                    (word_mul (word_subword x (0,32)) (word 58728449)))
+                 (word 8380417))
+       x)
+     (32,32)`;;
+
+(* ------------------------------------------------------------------------- *)
 (* From |- (x == y) (mod m) /\ P   to   |- (x == y) (mod n) /\ P             *)
 (* ------------------------------------------------------------------------- *)
 
@@ -510,6 +531,29 @@ let CONGBOUND_MONTRED = prove
    `(a * p + x:int == y) (mod p) <=> (x == y) (mod p)`] THEN
   ASM_INT_ARITH_TAC);;
 
+let CONGBOUND_MLDSA_BARRED = prove
+ (`!a a' l u.
+        ((ival a == a') (mod &8380417) /\ l <= ival a /\ ival a <= u)
+        ==> u <= &0x7fbfffff
+            ==> (ival(mldsa_barred a) == a') (mod &8380417) /\
+                --(&6283009) <= ival(mldsa_barred a) /\
+                ival(mldsa_barred a) <= &6283008`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+  MP_TAC(ISPEC `a:int32` (BITBLAST_RULE
+     `!a:int32.
+        let ML_DSA_Q = &8380417 in
+        let t = word_ishr (word_add a (word 4194304)) 23 in
+        let r = word_sub a (word_mul t (word 8380417)) in
+        ival(a) < &0x7fc00000
+        ==> ival(a) - ML_DSA_Q * ival t = ival r /\
+            --(&6283009) <= ival r /\ ival r <= &6283008`)) THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  ASM_REWRITE_TAC[GSYM mldsa_barred] THEN
+  ANTS_TAC THENL [ASM_INT_ARITH_TAC; ALL_TAC] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
+  ASM_REWRITE_TAC[INTEGER_RULE
+   `(x - p * q:int == y) (mod p) <=> (x == y) (mod p)`]);;
+
 let CONCL_BOUNDS_RULE =
   CONV_RULE(BINOP2_CONV
           (LAND_CONV(RAND_CONV DIMINDEX_INT_REDUCE_CONV))
@@ -545,6 +589,9 @@ let GEN_CONGBOUND_RULE aboths =
     | Comb(Const("montred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MONTRED th1))
+    | Comb(Const("mldsa_barred",_),t) ->
+        let th1 = WEAKEN_INTCONG_RULE (num 8380417) (rule t) in
+        CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_BARRED th1))
     | Comb(Const("word_sx",_),t) ->
         let th0 = rule t in
         let tyin = type_match
