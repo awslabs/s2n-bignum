@@ -17,7 +17,9 @@ let bytesize = define
  `bytesize Byte = 8 /\
   bytesize Word = 16 /\
   bytesize Doubleword = 32 /\
-  bytesize Quadword = 64`;;
+  bytesize Quadword = 64 /\
+  bytesize Word128 = 128 /\
+  bytesize Word256 = 256`;;
 
 let regsize = define
  `regsize Full_64 = 64 /\
@@ -2990,6 +2992,15 @@ let X86_THM =
       with Failure _ ->
         failwith ("X86_THM: Cannot decompose PC expression: " ^
                   string_of_term (concl pc_th)) in
+    let _ = if !x86_print_log then
+      let opt = Option.get execth2.(pc_ofs) in
+      (* opt: |- forall ... bytes_loaded .. ==> x86_decode .. (INST ..) *)
+      let t = snd (strip_forall (concl (opt))) in
+      let t = snd (dest_imp t) in
+      let term = snd (dest_comb t) in
+      Printf.printf "Instruction at `pc + %d (%#x)`: `%s`\n" pc_ofs pc_ofs
+          (string_of_term term)
+    in
     CONV_RULE
       (ONCE_DEPTH_CONV
         (REWR_CONV (GSYM ADD_ASSOC) THENC RAND_CONV NUM_REDUCE_CONV))
@@ -3039,7 +3050,7 @@ let X86_FORCE_CONDITIONAL_CONV =
          (ONCE_DEPTH_CONV DIMINDEX_CONV))) THENC
        RATOR_CONV(RATOR_CONV(LAND_CONV
          (DEPTH_CONV WORD_NUM_RED_CONV))) THENC
-       ALIGNED_16_CONV ths THENC
+       ALIGNED_WORD_CONV ths THENC
        TRY_CONV (GEN_REWRITE_CONV
         (RATOR_CONV o RATOR_CONV o LAND_CONV o TOP_DEPTH_CONV) ths) THENC
        TRY_CONV (GEN_REWRITE_CONV RATOR_CONV [COND_CLAUSES]) in
@@ -3393,25 +3404,89 @@ let (X86_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
     (asl,w);;
 
 (* ------------------------------------------------------------------------- *)
+(* Go from |- bytes_loaded s (word pc) mc or the equivalent                  *)
+(*         |- bytes_loaded s (word(pc + 0)) mc                               *)
+(* to      |- bytes_loaded s (word(pc + n)) mc'                              *)
+(* where mc' is an appropriate sublist of the list mc.                       *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTES_LOADED_OFFSET_RULE =
+  let pth = prove
+   (`bytes_loaded s (word(pc + n)) (CONS h t)
+     ==> bytes_loaded s (word(pc + SUC n)) t`,
+    ONCE_REWRITE_TAC[GSYM APPEND_SING] THEN
+    SIMP_TAC[bytes_loaded_append; LENGTH; GSYM WORD_ADD; ADD_CLAUSES]) in
+  let rule1 = CONV_RULE (LAND_CONV(RAND_CONV(RAND_CONV NUM_SUC_CONV))) o
+              MATCH_MP pth in
+  let rec rule offset th =
+    if offset >= 1 then rule (offset - 1) (rule1 th)
+    else th in
+  fun n th ->
+    try rule n (CONV_RULE (TRY_CONV TWEAK_PC_OFFSET_CONV) th)
+    with Failure _ -> failwith "BYTES_LOADED_OFFSET_RULE: code too short";;
+
+(* ------------------------------------------------------------------------- *)
+(* Prove |- bytes_loaded s wpc mc ==> bytes_loaded s wpc mc' where           *)
+(* mc' is a sublist of mc, modulo arithmetic simplifications.                *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTES_LOADED_SUBLIST_RULE =
+  let prule = (PART_MATCH rand o prove)
+   (`(?r. l = APPEND t r)
+     ==> bytes_loaded s wpc l ==> bytes_loaded s wpc t`,
+    SIMP_TAC[LEFT_IMP_EXISTS_THM; bytes_loaded_append]) in
+  fun tm1 tm2 ->
+    let th = prule(mk_imp(tm1,tm2)) in
+    MP th (BYTELIST_SUBLIST_CONV(lhand(concl th)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Given two machine code definitions of the form                            *)
+(* |- [forall pc, args1] mc1 pc args1 = [b1; ...; bn]                        *)
+(* |- [forall pc, args2] mc2 pc args2 = [b1; ...; bn]                        *)
+(* and an offset value, creates a theorem of the form                        *)
+(* |- bytes_loaded (word pc) (mc1 pc args1)                                  *)
+(*    ==> bytes_loaded (word(pc + offset)) (mc2 s args2)                     *)
+(* If the input theorems are not quantified, it's assumed that               *)
+(* the left-hand sides are already fully instantiated.                       *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTES_LOADED_SUBPROGRAM_RULE =
+  let abl_tm = `bytes_loaded s`
+  and wpc_tm = `word pc:int64`
+  and pc_tm = `pc:num`
+  and pcp_tm = `(+) (pc:num)`
+  and wd_tm = `word:num->int64`
+  and s_tm = `s:armstate` in
+  let topvars = [s_tm; pc_tm] in
+  fun mc1 mc2 offset ->
+    let nptm = mk_comb(pcp_tm,mk_small_numeral offset) in
+    let wnptm = mk_comb(wd_tm,nptm) in
+    let th1 = if is_forall(concl mc1) then SPEC_ALL(SPEC pc_tm mc1) else mc1
+    and th2 =
+      if is_forall(concl mc2) then
+      SPEC_ALL(SPEC nptm mc2) else mc2 in
+    let eth1 = AP_TERM (mk_comb(abl_tm,wpc_tm)) th1
+    and eth2 = AP_TERM (mk_comb(abl_tm,wnptm)) th2 in
+    let ath1 = UNDISCH(fst(EQ_IMP_RULE eth1)) in
+    let oth1 = BYTES_LOADED_OFFSET_RULE offset ath1 in
+    let sth =  BYTES_LOADED_SUBLIST_RULE (concl oth1) (rand(concl eth2)) in
+    let ith = DISCH_ALL(EQ_MP (SYM eth2) (MP sth oth1)) in
+    let avs = subtract (frees(concl ith)) topvars in
+    GENL (topvars @ avs) ith;;
+
+(* ------------------------------------------------------------------------- *)
 (* Simulate a subroutine, instantiating it from the state.                   *)
 (* ------------------------------------------------------------------------- *)
 
-let TWEAK_PC_OFFSET =
-  let conv =
-   GEN_REWRITE_CONV (RAND_CONV o RAND_CONV) [ARITH_RULE `pc = pc + 0`]
-  and tweakneeded tm =
-    match tm with
-      Comb(Comb(Const("bytes_loaded",_),Var(_,_)),
-           Comb(Const("word",_),Var("pc",_))) -> true
-    | _ -> false in
-  CONV_RULE(ONCE_DEPTH_CONV(conv o check tweakneeded));;
+let RIP_PLUS_CONV =
+  GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
+      `read RIP s = word((pc + m) + n) <=>
+       read RIP s = word(pc + m + n)`] THENC
+  funpow 3 RAND_CONV NUM_ADD_CONV;;
 
 let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
   let subimpth =
-    CONV_RULE NUM_REDUCE_CONV (REWRITE_RULE [LENGTH]
-      (MATCH_MP bytes_loaded_of_append3
-        (TRANS machinecode (N_SUBLIST_CONV (SPEC_ALL submachinecode) offset
-           (rhs(concl machinecode)))))) in
+      BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset in
   fun ilist0 n ->
     let sname = "s"^string_of_int(n-1)
     and sname' = "s"^string_of_int n in
@@ -3434,15 +3509,15 @@ let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
        DISJ2_TAC THEN NONOVERLAPPING_TAC);
       ALL_TAC]) THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
+    CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV RIP_PLUS_CONV)) THEN
     ASM_REWRITE_TAC[] THEN
     X86_BIGSTEP_TAC execth sname' THENL
-     [MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
+     [(* Precondition of subth *)
+      FIRST_X_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP subimpth) ORELSE
+      (PRINT_GOAL_TAC THEN FAIL_TAC
+        "Could not discharge precond (subgoal after X86_BIGSTEP_TAC)");
       ALL_TAC] THEN
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV
-   (GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
-     `read RIP s = word((pc + m) + n) <=>
-      read RIP s = word(pc + m + n)`] THENC
-    funpow 3 RAND_CONV NUM_ADD_CONV)));;
+    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV));;
 
 let X86_SUBROUTINE_SIM_ABBREV_TAC tupper ilist0 =
   let tac = X86_SUBROUTINE_SIM_TAC tupper ilist0 in

@@ -641,7 +641,13 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt):
 
 // ...and constant-time indexing based on that index
 
-        adr     x14, Ledwards25519_scalarmuldouble_alt_table
+#if defined(__linux__) && defined(__ELF__)
+        adrp    x14, S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)
+        add     x14, x14, :lo12:S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)
+#else
+        adrp    x14, S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)@PAGE
+        add     x14, x14, S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)@PAGEOFF
+#endif
 
         mov     x0, #1
         mov     x1, xzr
@@ -1113,7 +1119,13 @@ Ledwards25519_scalarmuldouble_alt_loop:
 
 // ... then doing constant-time lookup with the appropriate index...
 
-        adr     x14, Ledwards25519_scalarmuldouble_alt_table
+#if defined(__linux__) && defined(__ELF__)
+        adrp    x14, S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)
+        add     x14, x14, :lo12:S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)
+#else
+        adrp    x14, S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)@PAGE
+        add     x14, x14, S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)@PAGEOFF
+#endif
 
         mov     x0, #1
         mov     x1, xzr
@@ -2817,18 +2829,28 @@ Ledwards25519_scalarmuldouble_alt_pepadd:
 
 S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
 
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
+
 // ****************************************************************************
-// The precomputed data (all read-only). This is currently part of the same
-// text section, which gives position-independent code with simple PC-relative
-// addressing. However it could be put in a separate section via something like
-//
-// .section .rodata
+// The precomputed data (all read-only).
 // ****************************************************************************
+
+#if defined(__linux__) && defined(__ELF__)
+.section .rodata
+.type S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant), %object
+.size S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant), 768
+#elif defined(__APPLE__)
+.const_data
+#endif
 
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-Ledwards25519_scalarmuldouble_alt_table:
+S2N_BN_SYM_VISIBILITY_DIRECTIVE (edwards25519_scalarmuldouble_alt_constant)
+
+S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant):
 
         // 1 * G
 
@@ -2949,7 +2971,3 @@ Ledwards25519_scalarmuldouble_alt_table:
         .quad   0xb8a371788bcca7d7
         .quad   0x636412190eb62a32
         .quad   0x26907c5c2ecc4e95
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack, "", %progbits
-#endif
