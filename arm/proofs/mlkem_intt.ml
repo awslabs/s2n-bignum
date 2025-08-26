@@ -8,7 +8,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
-needs "arm/proofs/utils/mlkem.ml";;
+needs "common/mlkem_mldsa.ml";;
 
 (**** print_literal_from_elf "arm/mlkem/mlkem_intt.o";;
  ****)
