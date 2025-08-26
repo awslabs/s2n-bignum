@@ -387,6 +387,8 @@ Lsm2_montjscalarmul_alt_mainloop:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(sm2_montjscalarmul_alt)
+
 // Local copies of subroutines, complete clones at the moment
 
 Lsm2_montjscalarmul_alt_sm2_montjadd:
@@ -3407,8 +3409,6 @@ Lsm2_montjscalarmul_alt_sm2_montjdouble:
         stp     x5, x6, [x15, #0x30]
         CFI_INC_SP(0xc0)
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(sm2_montjscalarmul_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

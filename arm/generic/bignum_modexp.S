@@ -143,6 +143,8 @@ Lbignum_modexp_end:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_modexp)
+
 // Local copy of bignum_amontifier
 
 Lbignum_modexp_local_amontifier:
@@ -547,8 +549,6 @@ Lbignum_modexp_muxloop:
         cbnz    x1, Lbignum_modexp_muxloop
 Lbignum_modexp_muxend:
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(bignum_modexp)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -2953,6 +2953,8 @@ Ledwards25519_scalarmuldouble_invmidloop:
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble)
+
 // ****************************************************************************
 // Localized versions of subroutines.
 // These are close to the standalone functions "edwards25519_epdouble" etc.,
@@ -3042,8 +3044,6 @@ Ledwards25519_scalarmuldouble_pepadd:
         mul_4(w_0,t5,t1);
         CFI_INC_SP((6*NUMSIZE))
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

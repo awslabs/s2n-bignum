@@ -246,6 +246,8 @@ S2N_BN_SYMBOL(bignum_invsqrt_p25519_alt):
         CFI_POP2(x19,x30)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_invsqrt_p25519_alt)
+
 // *************************************************************
 // Local z = x * y
 // *************************************************************
@@ -465,8 +467,6 @@ Lbignum_invsqrt_p25519_alt_loop:
         stp     x2, x3, [x0]
         stp     x4, x5, [x0, #16]
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(bignum_invsqrt_p25519_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

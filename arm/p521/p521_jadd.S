@@ -354,6 +354,8 @@ S2N_BN_SYMBOL(p521_jadd):
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jadd)
+
 // Local versions of the three field operations, identical to
 // bignum_mul_p521, bignum_sqr_p521 and bignum_sub_p521.
 
@@ -1609,8 +1611,6 @@ Lp521_jadd_local_sub_p521:
         stp     x11, x12, [x0, #48]
         str     x13, [x0, #64]
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(p521_jadd)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

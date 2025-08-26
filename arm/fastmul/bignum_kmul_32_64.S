@@ -651,6 +651,8 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_kmul_32_64)
+
 // Local copy of bignum_kmul_16_32, identical to main one except that it
 // only preserves the key registers we need to be stable in the main code.
 // This includes in turn a copy of bignum_mul_8_16.
@@ -1388,11 +1390,6 @@ Lbignum_kmul_32_64_local_mul_8_16:
         stp x22, x23, [x0, #112]
         CFI_RET
 
-S2N_BN_SIZE_DIRECTIVE(bignum_kmul_32_64)
-
-
-
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif
-

@@ -338,6 +338,8 @@ Lp256_scalarmulbase_tabloop:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p256_scalarmulbase)
+
 // Local copies of subroutines, complete clones at the moment
 
 Lp256_scalarmulbase_local_demont_p256:
@@ -3759,8 +3761,6 @@ Lp256_scalarmulbase_local_p256_montjmixadd:
         CFI_INC_SP(0xc0)
         CFI_POP2(x19,x20)
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(p256_scalarmulbase)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

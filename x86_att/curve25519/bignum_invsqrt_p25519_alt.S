@@ -380,6 +380,8 @@ Lbignum_invsqrt_p25519_alt_standard:
         CFI_POP(%rbx)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_invsqrt_p25519_alt)
+
 // *************************************************************
 // Local z = x * y
 // *************************************************************
@@ -679,8 +681,6 @@ Lbignum_invsqrt_p25519_alt_loop:
         movq    %rcx, 16(%rdi)
         movq    %rdx, 24(%rdi)
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(bignum_invsqrt_p25519_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

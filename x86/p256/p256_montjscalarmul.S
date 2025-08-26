@@ -450,6 +450,8 @@ Lp256_montjscalarmul_mainloop:
         CFI_POP(r15)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p256_montjscalarmul)
+
 // Local copies of subroutines, complete clones at the moment
 
 Lp256_montjscalarmul_p256_montjadd:
@@ -3552,8 +3554,6 @@ Lp256_montjscalarmul_p256_montjdouble:
         CFI_POP(rbp)
         CFI_POP(rbx)
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(p256_montjscalarmul)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

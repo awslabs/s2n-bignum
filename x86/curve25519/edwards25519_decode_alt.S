@@ -455,6 +455,8 @@ Ledwards25519_decode_alt_standard:
         CFI_POP(rbx)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_decode_alt)
+
 // *************************************************************
 // Local z = x * y
 // *************************************************************
@@ -754,8 +756,6 @@ Ledwards25519_decode_alt_loop:
         mov     [rdi+16], rcx
         mov     [rdi+24], rdx
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(edwards25519_decode_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

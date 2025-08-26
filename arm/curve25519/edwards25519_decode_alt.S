@@ -346,6 +346,8 @@ S2N_BN_SYMBOL(edwards25519_decode_alt):
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_decode_alt)
+
 // *************************************************************
 // Local z = x * y
 // *************************************************************
@@ -565,8 +567,6 @@ Ledwards25519_decode_alt_loop:
         stp     x2, x3, [x0]
         stp     x4, x5, [x0, #16]
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(edwards25519_decode_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

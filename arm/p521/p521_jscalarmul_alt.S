@@ -631,6 +631,8 @@ Lp521_jscalarmul_alt_mainloop:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul_alt)
+
 // Local copies of subroutines, complete clones at the moment except
 // that we share multiplication and squaring between the point operations.
 
@@ -2114,8 +2116,6 @@ Lp521_jscalarmul_alt_sub_p521:
         stp     x11, x12, [x0, #48]
         str     x13, [x0, #64]
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

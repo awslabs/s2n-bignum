@@ -336,6 +336,8 @@ S2N_BN_SYMBOL(bignum_kmul_16_32):
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_kmul_16_32)
+
 // ----------------------------------------------------------------------------
 // Local copy of bignum_mul_8_16 without the scratch register save/restore
 // ----------------------------------------------------------------------------
@@ -837,9 +839,6 @@ Lbignum_kmul_16_32_local_mul_8_16:
         stp x22, x23, [x0, #112]
         CFI_RET
 
-S2N_BN_SIZE_DIRECTIVE(bignum_kmul_16_32)
-
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif
-

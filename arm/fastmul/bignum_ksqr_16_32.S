@@ -263,6 +263,8 @@ S2N_BN_SYMBOL(bignum_ksqr_16_32):
 
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_16_32)
+
 // -----------------------------------------------------------------------------
 // Local 8x8->16 squaring routine, shared to reduce code size. Effectively
 // the same as bignum_sqr_8_16 without the scratch register preservation.
@@ -659,8 +661,6 @@ mov     x21, v1.d[1]
         stp     x2, x3, [x0, #112]
 
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_16_32)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

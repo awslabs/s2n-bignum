@@ -638,6 +638,8 @@ selectblock_xz(1)
         CFI_POP(%r15)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p384_montjscalarmul_alt)
+
 // Local copies of subroutines, complete clones at the moment
 
 Lp384_montjscalarmul_alt_p384_montjadd:
@@ -9418,8 +9420,6 @@ Lp384_montjscalarmul_alt_p384_montjdouble:
         CFI_POP(%rbp)
         CFI_POP(%rbx)
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(p384_montjscalarmul_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

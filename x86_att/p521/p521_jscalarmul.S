@@ -750,6 +750,8 @@ Lp521_jscalarmul_mainloop:
         CFI_POP(%r15)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul)
+
 // Local copies of subroutines, complete clones at the moment
 
 Lp521_jscalarmul_bignum_mod_p521_9:
@@ -2471,8 +2473,6 @@ Lp521_jscalarmul_sqr_p521:
         movq    %rbp, 0x40(%rdi)
         CFI_INC_RSP(0x40)
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

@@ -81,6 +81,8 @@ S2N_BN_SYMBOL(bignum_invsqrt_p25519):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_invsqrt_p25519)
+
 Lbignum_invsqrt_p25519_standard:
         CFI_START
 #endif
@@ -598,8 +600,6 @@ Lbignum_invsqrt_p25519_loop:
         mov     [rdi+16], rcx
         mov     [rdi+24], rdx
         CFI_RET
-
-S2N_BN_SIZE_DIRECTIVE(bignum_invsqrt_p25519)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
