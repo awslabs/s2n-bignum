@@ -97,6 +97,10 @@ S2N_BN_SYMBOL(sm2_montjscalarmul_alt):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(sm2_montjscalarmul_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_alt_standard)
+
 Lsm2_montjscalarmul_alt_standard:
         CFI_START
 #endif
@@ -455,7 +459,11 @@ Lsm2_montjscalarmul_alt_mainloop:
         CFI_POP(r15)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lsm2_montjscalarmul_alt_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(sm2_montjscalarmul_alt)
+#endif
 
 // Local copies of subroutines, complete clones at the moment
 

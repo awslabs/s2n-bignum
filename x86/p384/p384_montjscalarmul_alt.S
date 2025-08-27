@@ -108,6 +108,10 @@ S2N_BN_SYMBOL(p384_montjscalarmul_alt):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p384_montjscalarmul_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp384_montjscalarmul_alt_standard)
+
 Lp384_montjscalarmul_alt_standard:
         CFI_START
 #endif
@@ -638,7 +642,11 @@ selectblock_xz(1)
         CFI_POP(r15)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lp384_montjscalarmul_alt_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(p384_montjscalarmul_alt)
+#endif
 
 // Local copies of subroutines, complete clones at the moment
 

@@ -98,6 +98,10 @@ S2N_BN_SYMBOL(p521_jscalarmul):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_standard)
+
 Lp521_jscalarmul_standard:
         CFI_START
 #endif
@@ -750,7 +754,11 @@ Lp521_jscalarmul_mainloop:
         CFI_POP(r15)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul)
+#endif
 
 // Local copies of subroutines, complete clones at the moment
 

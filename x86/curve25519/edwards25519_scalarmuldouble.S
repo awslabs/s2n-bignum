@@ -459,6 +459,10 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_standard)
+
 Ledwards25519_scalarmuldouble_standard:
         CFI_START
 #endif
@@ -3404,6 +3408,12 @@ Ledwards25519_scalarmuldouble_midloop:
         CFI_POP(rbp)
         CFI_POP(rbx)
         CFI_RET
+
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_standard)
+#else
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble)
+#endif
 
 // ****************************************************************************
 // Localized versions of subroutines.

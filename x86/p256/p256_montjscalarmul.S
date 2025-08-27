@@ -97,6 +97,10 @@ S2N_BN_SYMBOL(p256_montjscalarmul):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(p256_montjscalarmul)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_montjscalarmul_standard)
+
 Lp256_montjscalarmul_standard:
         CFI_START
 #endif
@@ -450,7 +454,11 @@ Lp256_montjscalarmul_mainloop:
         CFI_POP(r15)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lp256_montjscalarmul_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(p256_montjscalarmul)
+#endif
 
 // Local copies of subroutines, complete clones at the moment
 

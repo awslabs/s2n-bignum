@@ -64,6 +64,10 @@ S2N_BN_SYMBOL(bignum_modexp):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_modexp)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_standard)
+
 Lbignum_modexp_standard:
         CFI_START
 #endif
@@ -176,7 +180,11 @@ Lbignum_modexp_end:
         CFI_INC_RSP(VARSIZE)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lbignum_modexp_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(bignum_modexp)
+#endif
 
 // Local copy of bignum_amontifier
 

@@ -90,6 +90,10 @@ S2N_BN_SYMBOL(edwards25519_decode):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_decode)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_standard)
+
 Ledwards25519_decode_standard:
         CFI_START
 #endif
@@ -456,7 +460,11 @@ Ledwards25519_decode_standard:
         CFI_POP(rbx)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_decode_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(edwards25519_decode)
+#endif
 
 // *************************************************************
 // Local z = x * y

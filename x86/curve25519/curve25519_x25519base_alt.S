@@ -433,6 +433,10 @@ S2N_BN_SYMBOL(curve25519_x25519base_byte_alt):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lcurve25519_x25519base_alt_standard)
+
 Lcurve25519_x25519base_alt_standard:
         CFI_START
 #endif
@@ -2339,8 +2343,11 @@ Lcurve25519_x25519base_alt_midloop:
         CFI_POP(rbx)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lcurve25519_x25519base_alt_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base_alt)
-S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base_byte_alt)
+#endif
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same

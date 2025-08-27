@@ -81,6 +81,10 @@ S2N_BN_SYMBOL(bignum_sqrt_p25519):
         CFI_POP(rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(bignum_sqrt_p25519)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_standard)
+
 Lbignum_sqrt_p25519_standard:
         CFI_START
 #endif
@@ -381,7 +385,11 @@ Lbignum_sqrt_p25519_standard:
         CFI_POP(rbx)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lbignum_sqrt_p25519_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(bignum_sqrt_p25519)
+#endif
 
 // *************************************************************
 // Local z = x * y
