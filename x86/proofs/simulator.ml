@@ -793,7 +793,7 @@ let cosimulate_pop_harness() = fun () ->
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters *)
-let cosimulate_vec_mov_unaligned_full_harness(pfx, rvex, opcode) = fun () ->
+let cosimulate_sse_mov_unaligned_full_harness(pfx, opcode) = fun () ->
    (* disp8 is sign-extended *)
    let base = Random.int 128 in
    let rest = 240 - base in
@@ -801,10 +801,11 @@ let cosimulate_vec_mov_unaligned_full_harness(pfx, rvex, opcode) = fun () ->
    (* disp8 is sign-extended *)
    let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
    let sib = scale * int_of_float (2.0**6.0) + 0b001011 in
+   let rex = if Random.int 2 = 0 then [0x44] else [] in
    [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
     [0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
     [0x48; 0x8d; 0x5c; 0x24; base]; (* LEA rbx, [rsp+base] *)
-    pfx @ rvex @ opcode @ [0x4c; sib; disp];  (* INST [rbx + scale*rcx + displacement], imm1/9 *)
+    pfx @ rex @ opcode @ [0x4c; sib; disp];  (* INST [rbx + scale*rcx + displacement], imm1/9 *)
     [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
    ];;
 
@@ -812,34 +813,36 @@ let cosimulate_vec_mov_unaligned_full_harness(pfx, rvex, opcode) = fun () ->
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters
    *)
-let cosimulate_vec_mov_unaligned_base_disp_harness(pfx, rvex, opcode) = fun () ->
+let cosimulate_sse_mov_unaligned_base_disp_harness(pfx, opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 128 in
   let rest = 240 - stack_start in
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
   [[0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
    [0x48; 0x8d; 0x5c; 0x24; stack_start]; (* LEA rbx, [rsp+stack_start] *)
-   pfx @ rvex @ opcode @ [0x4b; disp];  (* INST [rbx + displacement], imm1/9 *)
+   pfx @ rex @ opcode @ [0x4b; disp];  (* INST [rbx + displacement], imm1/9 *)
    [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
   ];;
 
 (* Mode: base (rsp) + scale*index + displacement
    Fixed: use of registers
    Randomized: addressing mode parameters *)
-let cosimulate_vec_mov_unaligned_rsp_harness(pfx, rvex, opcode) = fun () ->
+let cosimulate_sse_mov_unaligned_rsp_harness(pfx, opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 128 240 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 128 rest) in
   let sib = scale * int_of_float (2.0**6.0) + 0b001100 in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
   [[0x48; 0xc7; 0xc1; index; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
-   pfx @ rvex @ opcode @ [0x4c; sib; disp];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
+   pfx @ rex @ opcode @ [0x4c; sib; disp];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
   ];;
 
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters
    Note: address should be 16-aligned *)
-let cosimulate_vec_mov_aligned_full_harness(pfx, rvex, opcode) = fun () ->
+let cosimulate_sse_mov_aligned_full_harness(pfx, opcode) = fun () ->
    (* Divide 256 by 16 because the address needs to be 16bytes aligned. *)
    let base = Random.int 8 in
    let rest = 15 - base in
@@ -847,10 +850,11 @@ let cosimulate_vec_mov_aligned_full_harness(pfx, rvex, opcode) = fun () ->
    (* disp8 is sign-extended *)
    let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
    let sib = scale * int_of_float (2.0**6.0) + 0b001011 in
+   let rex = if Random.int 2 = 0 then [0x44] else [] in
    [[0x48; 0xc7; 0xc1; index*16; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
     [0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
     [0x48; 0x8d; 0x5c; 0x24; base*16]; (* LEA rbx, [rsp+base] *)
-    pfx @ rvex @ opcode @ [0x4c; sib; disp*16];  (* INST [rbx + scale*rcx + displacement], imm1/9 *)
+    pfx @ rex @ opcode @ [0x4c; sib; disp*16];  (* INST [rbx + scale*rcx + displacement], imm1/9 *)
     [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
    ];;
 
@@ -859,14 +863,15 @@ let cosimulate_vec_mov_aligned_full_harness(pfx, rvex, opcode) = fun () ->
    Randomized: addressing mode parameters
    Note: address should be 16-aligned
    *)
-let cosimulate_vec_mov_aligned_base_disp_harness(pfx, rvex, opcode) = fun () ->
+let cosimulate_sse_mov_aligned_base_disp_harness(pfx, opcode) = fun () ->
   (* disp8 is sign-extended *)
   let stack_start = Random.int 8 in
   let rest = 15 - stack_start in
   let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
   [[0x48; 0x89; 0xda]; (* MOV rdx, rbx *)
    [0x48; 0x8d; 0x5c; 0x24; stack_start*16]; (* LEA rbx, [rsp+stack_start] *)
-   pfx @ rvex @ opcode @ [0x4b; disp*16];  (* INST [rbx + displacement], imm1/9 *)
+   pfx @ rex @ opcode @ [0x4b; disp*16];  (* INST [rbx + displacement], imm1/9 *)
    [0x48; 0x89; 0xd3]; (* MOV rbx, rdx *)
   ];;
 
@@ -875,13 +880,14 @@ let cosimulate_vec_mov_aligned_base_disp_harness(pfx, rvex, opcode) = fun () ->
    Randomized: addressing mode parameters
    Note: address should be 16-aligned
 *)
-let cosimulate_vec_mov_aligned_rsp_harness(pfx, rvex, opcode) = fun () ->
+let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) = fun () ->
   let [rest, scale, index] = rand_scale_index 8 15 in
   (* disp8 is a sign-extended *)
   let disp = if rest = 0 then 0 else Random.int (min 8 rest) in
   let sib = scale * int_of_float (2.0**6.0) + 0b001100 in
+  let rex = if Random.int 2 = 0 then [0x44] else [] in
   [[0x48; 0xc7; 0xc1; index*16; 0x00; 0x00; 0x00]; (* MOV rcx, index *)
-   pfx @ rvex @ opcode @ [0x4c; sib; disp*16];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
+   pfx @ rex @ opcode @ [0x4c; sib; disp*16];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
   ];;
 
 (* Each mem simulation is a pair consists of a list of instructions
@@ -892,7 +898,7 @@ let cosimulate_vec_mov_aligned_rsp_harness(pfx, rvex, opcode) = fun () ->
   chosen from mem_iclasses *)
 let mem_iclasses = [
   (* ADC r/m64, r64 *)
-  (* (cosimulate_mem_full_harness([0x11]), false);
+  (cosimulate_mem_full_harness([0x11]), false);
   (cosimulate_mem_base_disp_harness([0x11]), false);
   (cosimulate_mem_rsp_harness([0x11]), false);
   (* ADC r64, r/m64 *)
@@ -924,62 +930,37 @@ let mem_iclasses = [
   (cosimulate_mem_base_disp_harness([0x8B]), false);
   (cosimulate_mem_rsp_harness([0x8B]), false);
   (* MOVAPS xmm1, xmm2/m128 *)
-  (cosimulate_vec_mov_aligned_full_harness([], [], [0x0f; 0x28]), true);
-  (cosimulate_vec_mov_aligned_full_harness([], [0x44], [0x0f; 0x28]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0x0f; 0x28]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [], [0x0f; 0x28]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0x44], [0x0f; 0x28]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [], [0x0f; 0x28]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0x44], [0x0f; 0x28]), true);
+  (cosimulate_sse_mov_aligned_full_harness([], [0x0f; 0x28]), true);
+  (cosimulate_sse_mov_aligned_base_disp_harness([], [0x0f; 0x28]), true);
+  (cosimulate_sse_mov_aligned_rsp_harness([], [0x0f; 0x28]), true);
   (* MOVAPS xmm2/m128, xmm1 *)
-  (cosimulate_vec_mov_aligned_full_harness([], [], [0x0f; 0x29]), true);
-  (cosimulate_vec_mov_aligned_full_harness([], [0x44], [0x0f; 0x29]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [], [0x0f; 0x29]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0x44], [0x0f; 0x29]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [], [0x0f; 0x29]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0x44], [0x0f; 0x29]), true);
+  (cosimulate_sse_mov_aligned_full_harness([], [0x0f; 0x29]), true);
+  (cosimulate_sse_mov_aligned_base_disp_harness([], [0x0f; 0x29]), true);
+  (cosimulate_sse_mov_aligned_rsp_harness([], [0x0f; 0x29]), true);
   (* MOVDQA xmm1, xmm2/m128 *)
-  (cosimulate_vec_mov_aligned_full_harness([0x66], [], [0x0f; 0x6f]), true);
-  (cosimulate_vec_mov_aligned_full_harness([0x66], [0x44], [0x0f; 0x6f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([0x66], [], [0x0f; 0x6f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([0x66], [0x44], [0x0f; 0x6f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([0x66], [], [0x0f; 0x6f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([0x66], [0x44], [0x0f; 0x6f]), true);
+  (cosimulate_sse_mov_aligned_full_harness([0x66], [0x0f; 0x6f]), true);
+  (cosimulate_sse_mov_aligned_base_disp_harness([0x66], [0x0f; 0x6f]), true);
+  (cosimulate_sse_mov_aligned_rsp_harness([0x66], [0x0f; 0x6f]), true);
   (* MOVDQA xmm2/m128, xmm1 *)
-  (cosimulate_vec_mov_aligned_full_harness([0x66], [], [0x0f; 0x7f]), true);
-  (cosimulate_vec_mov_aligned_full_harness([0x66], [0x44], [0x0f; 0x7f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([0x66], [], [0x0f; 0x7f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([0x66], [0x44], [0x0f; 0x7f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([0x66], [], [0x0f; 0x7f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([0x66], [0x44], [0x0f; 0x7f]), true);
+  (cosimulate_sse_mov_aligned_full_harness([0x66], [0x0f; 0x7f]), true);
+  (cosimulate_sse_mov_aligned_base_disp_harness([0x66], [0x0f; 0x7f]), true);
+  (cosimulate_sse_mov_aligned_rsp_harness([0x66], [0x0f; 0x7f]), true);
   (* MOVDQU xmm1, xmm2/m128 *)
-  (cosimulate_vec_mov_unaligned_full_harness([0xf3], [], [0x0f; 0x6f]), false);
-  (cosimulate_vec_mov_unaligned_full_harness([0xf3], [0x44], [0x0f; 0x6f]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([0xf3], [], [0x0f; 0x6f]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([0xf3], [0x44], [0x0f; 0x6f]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([0xf3], [], [0x0f; 0x6f]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([0xf3], [0x44], [0x0f; 0x6f]), false);
+  (cosimulate_sse_mov_unaligned_full_harness([0xf3], [0x0f; 0x6f]), false);
+  (cosimulate_sse_mov_unaligned_base_disp_harness([0xf3], [0x0f; 0x6f]), false);
+  (cosimulate_sse_mov_unaligned_rsp_harness([0xf3], [0x0f; 0x6f]), false);
   (* MOVDQU xmm2/m128, xmm1 *)
-  (cosimulate_vec_mov_unaligned_full_harness([0xf3], [], [0x0f; 0x7f]), false);
-  (cosimulate_vec_mov_unaligned_full_harness([0xf3], [0x44], [0x0f; 0x7f]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([0xf3], [], [0x0f; 0x7f]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([0xf3], [0x44], [0x0f; 0x7f]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([0xf3], [], [0x0f; 0x7f]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([0xf3], [0x44], [0x0f; 0x7f]), false);
+  (cosimulate_sse_mov_unaligned_full_harness([0xf3], [0x0f; 0x7f]), false);
+  (cosimulate_sse_mov_unaligned_base_disp_harness([0xf3], [0x0f; 0x7f]), false);
+  (cosimulate_sse_mov_unaligned_rsp_harness([0xf3], [0x0f; 0x7f]), false);
   (* MOVUPS xmm1, xmm2/m128 *)
-  (cosimulate_vec_mov_unaligned_full_harness([], [], [0x0f; 0x10]), false);
-  (cosimulate_vec_mov_unaligned_full_harness([], [0x44], [0x0f; 0x10]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([], [], [0x0f; 0x10]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([], [0x44], [0x0f; 0x10]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([], [], [0x0f; 0x10]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([], [0x44], [0x0f; 0x10]), false);
+  (cosimulate_sse_mov_unaligned_full_harness([], [0x0f; 0x10]), false);
+  (cosimulate_sse_mov_unaligned_base_disp_harness([], [0x0f; 0x10]), false);
+  (cosimulate_sse_mov_unaligned_rsp_harness([], [0x0f; 0x10]), false);
   (* MOVUPS xmm2/m128, xmm1 *)
-  (cosimulate_vec_mov_unaligned_full_harness([], [], [0x0f; 0x11]), false);
-  (cosimulate_vec_mov_unaligned_full_harness([], [0x44], [0x0f; 0x11]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([], [], [0x0f; 0x11]), false);
-  (cosimulate_vec_mov_unaligned_base_disp_harness([], [0x44], [0x0f; 0x11]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([], [], [0x0f; 0x11]), false);
-  (cosimulate_vec_mov_unaligned_rsp_harness([], [0x44], [0x0f; 0x11]), false);
+  (cosimulate_sse_mov_unaligned_full_harness([], [0x0f; 0x11]), false);
+  (cosimulate_sse_mov_unaligned_base_disp_harness([], [0x0f; 0x11]), false);
+  (cosimulate_sse_mov_unaligned_rsp_harness([], [0x0f; 0x11]), false);
   (* MUL r/m64 *)
   (cosimulate_mul_full_harness(), false);
   (cosimulate_mul_base_disp_harness(), false);
@@ -1011,43 +992,15 @@ let mem_iclasses = [
   (* SUB r64, r/m64 *)
   (cosimulate_mem_full_harness([0x2B]), false);
   (cosimulate_mem_base_disp_harness([0x2B]), false);
-  (cosimulate_mem_rsp_harness([0x2B]), false); *)
-  (* VMOVDQA xmm1, xmm2/m128 *)
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc5; 0xf9], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc4; 0x41; 0x79], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc5; 0xf9], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc4; 0x41; 0x79], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc5; 0xf9], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc4; 0x41; 0x79], [0x6f]), true);
-  (* VMOVDQA xmm2/m128, xmm1 *)
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc5; 0xf9], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc4; 0x41; 0x79], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc5; 0xf9], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc4; 0x41; 0x79], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc5; 0xf9], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc4; 0x41; 0x79], [0x7f]), true);
-  (* VMOVDQA xmm1, xmm2/m256 *)
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc5; 0xfd], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc4; 0x41; 0x7d], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc5; 0xfd], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc4; 0x41; 0x7d], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc5; 0xfd], [0x6f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc4; 0x41; 0x7d], [0x6f]), true);
-  (* VMOVDQA xmm2/m256, xmm1 *)
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc5; 0xfd], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_full_harness([], [0xc4; 0x41; 0x7d], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc5; 0xfd], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_base_disp_harness([], [0xc4; 0x41; 0x7d], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc5; 0xfd], [0x7f]), true);
-  (cosimulate_vec_mov_aligned_rsp_harness([], [0xc4; 0x41; 0x7d], [0x7f]), true);
-  (* (* XOR r/m64, r64 *)
+  (cosimulate_mem_rsp_harness([0x2B]), false);
+  (* XOR r/m64, r64 *)
   (cosimulate_mem_full_harness([0x31]), false);
   (cosimulate_mem_base_disp_harness([0x31]), false);
   (cosimulate_mem_rsp_harness([0x31]), false);
   (* XOR r64, r/m64 *)
   (cosimulate_mem_full_harness([0x33]), false);
   (cosimulate_mem_base_disp_harness([0x33]), false);
-  (cosimulate_mem_rsp_harness([0x33]), false); *)
+  (cosimulate_mem_rsp_harness([0x33]), false);
   ];;
 
 let run_random_memopsimulation() =
@@ -1063,7 +1016,7 @@ let run_random_memopsimulation() =
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 0 then
+  if Random.int 100 < 90 then
     let decoded, result = run_random_regsimulation() in
     decoded,result,true
   else
