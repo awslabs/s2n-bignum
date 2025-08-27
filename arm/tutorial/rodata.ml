@@ -5,6 +5,7 @@
 
 (******************************************************************************
           Verifying a program that reads constant data from .rodata
+                            and calls a function.
 ******************************************************************************)
 
 needs "arm/proofs/base.ml";;
@@ -22,7 +23,7 @@ needs "arm/proofs/base.ml";;
 let a_mc,a_constants_data = define_assert_relocs_from_elf "a_mc"
     "arm/tutorial/rodata.o"
 (fun w BL ADR ADRP ADD_rri64 -> [
-(* int f(int) *)
+(* int f(uint64_t) *)
   w 0xaa0003e3;         (* arm_MOV X3 X0 *)
 
   (* NOTE: The two entries below have the names of symbols. If they appear as
@@ -43,7 +44,7 @@ let a_mc,a_constants_data = define_assert_relocs_from_elf "a_mc"
   w 0x0b000020;         (* arm_ADD W0 W1 W0 *)
   w 0xd65f03c0;         (* arm_RET X30 *)
 
-(* int g(int) *)
+(* int g(uint64_t) *)
   ADRP (mk_var("z",`:num`),0,44,10);
   ADD_rri64 (mk_var("z",`:num`),0,10,10);
   w 0xb9400141;         (* arm_LDR W1 X10 (Immediate_Offset (word 0)) *)
@@ -60,18 +61,18 @@ let a_mc,a_constants_data = define_assert_relocs_from_elf "a_mc"
       # a_constants_data;;
 
       - : thm list =
-      [|- z_data = [word 30; word 0; word 0; word 0];
+      [|- z_data = [word 1; word 0; word 0; word 0];
        |- y_data = [word 1; word 0; word 0; word 0; ...];
        |- x_data = [word 2; word 0; word 0; word 0; ...]]
 
-    2. The returned a_mc is a function that takes the addresses of pc, x, y and
-       (x and y are the addresses of the two constant arrays) and returns
+    2. The returned a_mc is a function that takes the addresses of pc, x, y, z
+       (x, y and z are the addresses of the constant arrays) and returns
        the corresponding machine code.
 
       # a_mc;;
 
       - : thm =
-      |- forall x pc y. a_mc pc x y = CONS (word 227) (...)
+      |- forall pc x y z. a_mc pc x y z = CONS (word 227) (...)
 *)
 
 let EXEC = ARM_MK_EXEC_RULE a_mc;;
