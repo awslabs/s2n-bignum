@@ -32,11 +32,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p256_scalarmulbase_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p256_scalarmulbase_alt)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_demont_p256)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_inv_p256)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montmul_p256)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montsqr_p256)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
 
         .text
         .balign 4
@@ -342,6 +337,8 @@ S2N_BN_SIZE_DIRECTIVE(p256_scalarmulbase_alt)
 
 // Local copies of subroutines, complete clones at the moment
 
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_demont_p256)
+
 Lp256_scalarmulbase_alt_local_demont_p256:
         CFI_START
         ldp     x2, x3, [x1]
@@ -381,6 +378,10 @@ Lp256_scalarmulbase_alt_local_demont_p256:
         stp     x2, x3, [x0]
         stp     x4, x5, [x0, #16]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_demont_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_inv_p256)
 
 Lp256_scalarmulbase_alt_local_inv_p256:
         CFI_START
@@ -1460,6 +1461,10 @@ Lp256_scalarmulbase_alt_inv_midloop:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_inv_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montmul_p256)
+
 Lp256_scalarmulbase_alt_local_montmul_p256:
         CFI_START
         ldp     x3, x4, [x1]
@@ -1577,6 +1582,10 @@ Lp256_scalarmulbase_alt_local_montmul_p256:
         stp     x14, x15, [x0, #16]
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montmul_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montsqr_p256)
+
 Lp256_scalarmulbase_alt_local_montsqr_p256:
         CFI_START
         ldp     x2, x3, [x1]
@@ -1671,6 +1680,10 @@ Lp256_scalarmulbase_alt_local_montsqr_p256:
         stp     x8, x9, [x0]
         stp     x10, x11, [x0, #16]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montsqr_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
 
 Lp256_scalarmulbase_alt_local_p256_montjmixadd:
         CFI_START
@@ -3036,6 +3049,8 @@ Lp256_scalarmulbase_alt_local_p256_montjmixadd:
         stp     x10, x11, [x15, #80]
         CFI_INC_SP(0xc0)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

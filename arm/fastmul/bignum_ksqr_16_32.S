@@ -21,7 +21,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_ksqr_16_32)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_ksqr_16_32)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_16_32_local_sqr_8_16)
         .text
         .balign 4
 
@@ -269,6 +268,8 @@ S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_16_32)
 // Local 8x8->16 squaring routine, shared to reduce code size. Effectively
 // the same as bignum_sqr_8_16 without the scratch register preservation.
 // -----------------------------------------------------------------------------
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_16_32_local_sqr_8_16)
 
 Lbignum_ksqr_16_32_local_sqr_8_16:
         CFI_START
@@ -661,6 +662,8 @@ mov     x21, v1.d[1]
         stp     x2, x3, [x0, #112]
 
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_ksqr_16_32_local_sqr_8_16)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

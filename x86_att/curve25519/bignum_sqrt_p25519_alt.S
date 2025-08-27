@@ -29,8 +29,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_sqrt_p25519_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_sqrt_p25519_alt)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_alt_mul_p25519)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_alt_nsqr_p25519)
         .text
 
 // Size in bytes of a 64-bit word
@@ -79,6 +77,10 @@ S2N_BN_SYMBOL(bignum_sqrt_p25519_alt):
         CFI_POP(%rsi)
         CFI_POP(%rdi)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_sqrt_p25519_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_alt_standard)
 
 Lbignum_sqrt_p25519_alt_standard:
         CFI_START
@@ -380,11 +382,17 @@ Lbignum_sqrt_p25519_alt_standard:
         CFI_POP(%rbx)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lbignum_sqrt_p25519_alt_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(bignum_sqrt_p25519_alt)
+#endif
 
 // *************************************************************
 // Local z = x * y
 // *************************************************************
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_alt_mul_p25519)
 
 Lbignum_sqrt_p25519_alt_mul_p25519:
         CFI_START
@@ -520,9 +528,13 @@ Lbignum_sqrt_p25519_alt_mul_p25519:
         movq    %r11, 0x18(%rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lbignum_sqrt_p25519_alt_mul_p25519)
+
 // *************************************************************
 // Local z = 2^n * x
 // *************************************************************
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_alt_nsqr_p25519)
 
 Lbignum_sqrt_p25519_alt_nsqr_p25519:
         CFI_START
@@ -681,6 +693,8 @@ Lbignum_sqrt_p25519_alt_loop:
         movq    %rcx, 16(%rdi)
         movq    %rdx, 24(%rdi)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_sqrt_p25519_alt_nsqr_p25519)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

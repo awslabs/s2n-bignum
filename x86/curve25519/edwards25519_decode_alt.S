@@ -33,8 +33,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_decode_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_decode_alt)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_alt_mul_p25519)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_alt_nsqr_p25519)
         .text
 
 // Size in bytes of a 64-bit word
@@ -469,6 +467,8 @@ S2N_BN_SIZE_DIRECTIVE(edwards25519_decode_alt)
 // Local z = x * y
 // *************************************************************
 
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_alt_mul_p25519)
+
 Ledwards25519_decode_alt_mul_p25519:
         CFI_START
         mov     rcx, rdx
@@ -603,9 +603,13 @@ Ledwards25519_decode_alt_mul_p25519:
         mov     [rdi+0x18], r11
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_decode_alt_mul_p25519)
+
 // *************************************************************
 // Local z = 2^n * x
 // *************************************************************
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_alt_nsqr_p25519)
 
 Ledwards25519_decode_alt_nsqr_p25519:
         CFI_START
@@ -764,6 +768,8 @@ Ledwards25519_decode_alt_loop:
         mov     [rdi+16], rcx
         mov     [rdi+24], rdx
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_decode_alt_nsqr_p25519)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

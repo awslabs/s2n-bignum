@@ -23,9 +23,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p521_jadd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p521_jadd)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_mul_p521)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_sqr_p521)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_sub_p521)
 
         .text
         .balign 4
@@ -358,6 +355,8 @@ S2N_BN_SIZE_DIRECTIVE(p521_jadd)
 
 // Local versions of the three field operations, identical to
 // bignum_mul_p521, bignum_sqr_p521 and bignum_sub_p521.
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_mul_p521)
 
 Lp521_jadd_local_mul_p521:
         CFI_START
@@ -1037,6 +1036,10 @@ Lp521_jadd_local_mul_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp521_jadd_local_mul_p521)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_sqr_p521)
+
 Lp521_jadd_local_sqr_p521:
         CFI_START
         CFI_PUSH2(x19,x20)
@@ -1574,6 +1577,10 @@ Lp521_jadd_local_sqr_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp521_jadd_local_sqr_p521)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jadd_local_sub_p521)
+
 Lp521_jadd_local_sub_p521:
         CFI_START
         ldp     x5, x6, [x1]
@@ -1611,6 +1618,8 @@ Lp521_jadd_local_sub_p521:
         stp     x11, x12, [x0, #48]
         str     x13, [x0, #64]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp521_jadd_local_sub_p521)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

@@ -34,8 +34,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p256_montjscalarmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p256_montjscalarmul)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_montjscalarmul_p256_montjadd)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_montjscalarmul_p256_montjdouble)
 
         .text
         .balign 4
@@ -96,6 +94,10 @@ S2N_BN_SYMBOL(p256_montjscalarmul):
         CFI_POP(%rsi)
         CFI_POP(%rdi)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(p256_montjscalarmul)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_montjscalarmul_standard)
 
 Lp256_montjscalarmul_standard:
         CFI_START
@@ -450,9 +452,15 @@ Lp256_montjscalarmul_mainloop:
         CFI_POP(%r15)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lp256_montjscalarmul_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(p256_montjscalarmul)
+#endif
 
 // Local copies of subroutines, complete clones at the moment
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_montjscalarmul_p256_montjadd)
 
 Lp256_montjscalarmul_p256_montjadd:
         CFI_START
@@ -2437,6 +2445,10 @@ Lp256_montjscalarmul_p256_montjadd:
         CFI_POP(%rbx)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp256_montjscalarmul_p256_montjadd)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_montjscalarmul_p256_montjdouble)
+
 Lp256_montjscalarmul_p256_montjdouble:
         CFI_START
         CFI_PUSH(%rbx)
@@ -3554,6 +3566,8 @@ Lp256_montjscalarmul_p256_montjdouble:
         CFI_POP(%rbp)
         CFI_POP(%rbx)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp256_montjscalarmul_p256_montjdouble)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

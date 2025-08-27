@@ -28,10 +28,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmuldouble_alt)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epadd)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epdouble)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pdouble)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
 
         .text
         .balign 4
@@ -2745,6 +2741,8 @@ S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
 // but are only maintaining reduction modulo 2^256 - 38, not 2^255 - 19.
 // ****************************************************************************
 
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epdouble)
+
 Ledwards25519_scalarmuldouble_alt_epdouble:
         CFI_START
         CFI_DEC_SP((5*NUMSIZE))
@@ -2765,6 +2763,10 @@ Ledwards25519_scalarmuldouble_alt_epdouble:
         CFI_INC_SP((5*NUMSIZE))
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epdouble)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pdouble)
+
 Ledwards25519_scalarmuldouble_alt_pdouble:
         CFI_START
         CFI_DEC_SP((5*NUMSIZE))
@@ -2783,6 +2785,10 @@ Ledwards25519_scalarmuldouble_alt_pdouble:
         mul_4(x_0,t1,t3)
         CFI_INC_SP((5*NUMSIZE))
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pdouble)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epadd)
 
 Ledwards25519_scalarmuldouble_alt_epadd:
         CFI_START
@@ -2809,6 +2815,10 @@ Ledwards25519_scalarmuldouble_alt_epadd:
         CFI_INC_SP((6*NUMSIZE))
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epadd)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
+
 Ledwards25519_scalarmuldouble_alt_pepadd:
         CFI_START
         CFI_DEC_SP((6*NUMSIZE))
@@ -2828,6 +2838,8 @@ Ledwards25519_scalarmuldouble_alt_pepadd:
         mul_4(w_0,t5,t1);
         CFI_INC_SP((6*NUMSIZE))
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

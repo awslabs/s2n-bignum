@@ -31,13 +31,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p521_jscalarmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p521_jscalarmul)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_n521_9)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_p521_9)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_jadd)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_jdouble)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_mul_p521)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_sqr_p521)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_sub_p521)
 
         .text
         .balign 4
@@ -636,6 +629,8 @@ S2N_BN_SIZE_DIRECTIVE(p521_jscalarmul)
 // Local copies of subroutines, complete clones at the moment except
 // that we share multiplication and squaring between the point operations.
 
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_p521_9)
+
 Lp521_jscalarmul_bignum_mod_p521_9:
         CFI_START
         ldr     x12, [x1, #64]
@@ -671,6 +666,10 @@ Lp521_jscalarmul_bignum_mod_p521_9:
         stp     x10, x11, [x0, #48]
         str     x12, [x0, #64]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_p521_9)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_n521_9)
 
 Lp521_jscalarmul_bignum_mod_n521_9:
         CFI_START
@@ -744,6 +743,10 @@ Lp521_jscalarmul_bignum_mod_n521_9:
         stp     x12, x13, [x0, #48]
         str     x14, [x0, #64]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_bignum_mod_n521_9)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_jadd)
 
 Lp521_jscalarmul_jadd:
         CFI_START
@@ -998,6 +1001,10 @@ Lp521_jscalarmul_jadd:
         CFI_POP2(x21,x22)
         CFI_POP2(x19,x20)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_jadd)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_jdouble)
 
 Lp521_jscalarmul_jdouble:
         CFI_START
@@ -1467,6 +1474,10 @@ Lp521_jscalarmul_jdouble:
         CFI_POP2(x21,x22)
         CFI_POP2(x19,x20)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_jdouble)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_mul_p521)
 
 Lp521_jscalarmul_mul_p521:
         CFI_START
@@ -2146,6 +2157,10 @@ Lp521_jscalarmul_mul_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_mul_p521)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_sqr_p521)
+
 Lp521_jscalarmul_sqr_p521:
         CFI_START
         CFI_PUSH2(x19,x20)
@@ -2683,6 +2698,10 @@ Lp521_jscalarmul_sqr_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_sqr_p521)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_sub_p521)
+
 Lp521_jscalarmul_sub_p521:
         CFI_START
         ldp     x5, x6, [x1]
@@ -2720,6 +2739,8 @@ Lp521_jscalarmul_sub_p521:
         stp     x11, x12, [x0, #48]
         str     x13, [x0, #64]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_sub_p521)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

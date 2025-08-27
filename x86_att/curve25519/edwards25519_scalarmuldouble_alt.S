@@ -29,10 +29,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmuldouble_alt)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epadd)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epdouble)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pdouble)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
 
         .text
 
@@ -575,6 +571,10 @@ S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt):
         CFI_POP(%rsi)
         CFI_POP(%rdi)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_standard)
 
 Ledwards25519_scalarmuldouble_alt_standard:
         CFI_START
@@ -3522,11 +3522,19 @@ Ledwards25519_scalarmuldouble_alt_midloop:
         CFI_POP(%rbx)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_standard)
+#else
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
+#endif
+
 // ****************************************************************************
 // Localized versions of subroutines.
 // These are close to the standalone functions "edwards25519_epdouble" etc.,
 // but are only maintaining reduction modulo 2^256 - 38, not 2^255 - 19.
 // ****************************************************************************
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epdouble)
 
 Ledwards25519_scalarmuldouble_alt_epdouble:
         CFI_START
@@ -3548,6 +3556,10 @@ Ledwards25519_scalarmuldouble_alt_epdouble:
         CFI_INC_RSP((5*NUMSIZE))
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epdouble)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pdouble)
+
 Ledwards25519_scalarmuldouble_alt_pdouble:
         CFI_START
         CFI_DEC_RSP((5*NUMSIZE))
@@ -3566,6 +3578,10 @@ Ledwards25519_scalarmuldouble_alt_pdouble:
         mul_4(x_0,t1,t3)
         CFI_INC_RSP((5*NUMSIZE))
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pdouble)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epadd)
 
 Ledwards25519_scalarmuldouble_alt_epadd:
         CFI_START
@@ -3592,6 +3608,10 @@ Ledwards25519_scalarmuldouble_alt_epadd:
         CFI_INC_RSP((6*NUMSIZE))
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_epadd)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
+
 Ledwards25519_scalarmuldouble_alt_pepadd:
         CFI_START
         CFI_DEC_RSP((6*NUMSIZE))
@@ -3611,6 +3631,8 @@ Ledwards25519_scalarmuldouble_alt_pepadd:
         mul_4(w_0,t5,t1);
         CFI_INC_RSP((6*NUMSIZE))
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
 
 S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmuldouble_alt)
 

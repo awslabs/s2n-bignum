@@ -430,6 +430,10 @@ S2N_BN_SYMBOL(edwards25519_scalarmulbase_alt):
         CFI_POP(%rdi)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmulbase_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmulbase_alt_standard)
+
 Ledwards25519_scalarmulbase_alt_standard:
         CFI_START
 #endif
@@ -2378,7 +2382,11 @@ Ledwards25519_scalarmulbase_alt_midloop:
         CFI_POP(%rbx)
         CFI_RET
 
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmulbase_alt_standard)
+#else
 S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmulbase_alt)
+#endif
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same

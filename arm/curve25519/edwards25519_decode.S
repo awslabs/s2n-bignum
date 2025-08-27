@@ -32,8 +32,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_decode)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_decode)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_mul_p25519)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_nsqr_p25519)
 
         .text
         .balign 4
@@ -352,6 +350,8 @@ S2N_BN_SIZE_DIRECTIVE(edwards25519_decode)
 // Local z = x * y
 // *************************************************************
 
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_mul_p25519)
+
 Ledwards25519_decode_mul_p25519:
         CFI_START
         ldp     x3, x4, [x1]
@@ -536,9 +536,13 @@ Ledwards25519_decode_mul_p25519:
         stp     x9, x10, [x0, #16]
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_decode_mul_p25519)
+
 // *************************************************************
 // Local z = 2^n * x
 // *************************************************************
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_decode_nsqr_p25519)
 
 Ledwards25519_decode_nsqr_p25519:
         CFI_START
@@ -704,6 +708,8 @@ Ledwards25519_decode_loop:
         stp     x10, x11, [x0]
         stp     x12, x13, [x0, #16]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_decode_nsqr_p25519)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

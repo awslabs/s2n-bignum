@@ -26,7 +26,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_kmul_32_64)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_kmul_32_64)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_kmul_32_64_local_bignum_kmul_16_32)
 
         .text
 
@@ -225,6 +224,8 @@ S2N_BN_SYMBOL(bignum_kmul_32_64):
 // interface, expecting y argument in rcx directly, and not doing any
 // save-restore of the other registers. It naturally moves z and x on by
 // 0x40, which we compensate for when it is called by adjusting offsets.
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_kmul_32_64_local_bignum_kmul_16_32)
 
 Lbignum_kmul_32_64_local_bignum_kmul_16_32:
         CFI_START
@@ -1150,6 +1151,8 @@ Lbignum_kmul_32_64_local_bignum_kmul_16_32:
         mov    [rdi+0xb0], r14
         mov    [rdi+0xb8], r15
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_kmul_32_64_local_bignum_kmul_16_32)
 
 S2N_BN_SIZE_DIRECTIVE(bignum_kmul_32_64)
 

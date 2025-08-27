@@ -29,8 +29,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_sqrt_p25519)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_sqrt_p25519)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_mul_p25519)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_nsqr_p25519)
 
         .text
 
@@ -395,6 +393,8 @@ S2N_BN_SIZE_DIRECTIVE(bignum_sqrt_p25519)
 // Local z = x * y
 // *************************************************************
 
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_mul_p25519)
+
 Lbignum_sqrt_p25519_mul_p25519:
         CFI_START
         mov     rcx, rdx
@@ -489,9 +489,13 @@ Lbignum_sqrt_p25519_mul_p25519:
         mov     [rdi+0x18], r11
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lbignum_sqrt_p25519_mul_p25519)
+
 // *************************************************************
 // Local z = 2^n * x
 // *************************************************************
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_sqrt_p25519_nsqr_p25519)
 
 Lbignum_sqrt_p25519_nsqr_p25519:
         CFI_START
@@ -609,6 +613,8 @@ Lbignum_sqrt_p25519_loop:
         mov     [rdi+16], rcx
         mov     [rdi+24], rdx
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_sqrt_p25519_nsqr_p25519)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

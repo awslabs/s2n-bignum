@@ -25,7 +25,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_ksqr_32_64)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_ksqr_32_64)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
         .text
 
 #define K 16
@@ -187,6 +186,8 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
         CFI_RET
 
 // Local copy of the half-length subroutine
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
 
 Lbignum_ksqr_32_64_local_bignum_sqr_16_32:
         CFI_START
@@ -798,6 +799,8 @@ Lbignum_ksqr_32_64_local_bignum_sqr_16_32:
         adox   rbx, rbp
         mov    [z+0xf8], rbx
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
 
 S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_32_64)
 

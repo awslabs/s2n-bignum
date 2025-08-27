@@ -20,10 +20,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_modexp)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_modexp)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_amontifier)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_amontmul)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_demont)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_mux)
         .text
         .balign 4
 
@@ -146,6 +142,8 @@ Lbignum_modexp_end:
 S2N_BN_SIZE_DIRECTIVE(bignum_modexp)
 
 // Local copy of bignum_amontifier
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_amontifier)
 
 Lbignum_modexp_local_amontifier:
         CFI_START
@@ -368,7 +366,11 @@ Lbignum_modexp_osloop:
 Lbignum_modexp_amontifend:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lbignum_modexp_local_amontifier)
+
 // Local copy of bignum_amontmul
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_amontmul)
 
 Lbignum_modexp_local_amontmul:
         CFI_START
@@ -456,7 +458,11 @@ Lbignum_modexp_corrloop3:
 Lbignum_modexp_amomend:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lbignum_modexp_local_amontmul)
+
 // Local copy of bignum_demont
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_demont)
 
 Lbignum_modexp_local_demont:
         CFI_START
@@ -534,7 +540,11 @@ Lbignum_modexp_corrloop:
 Lbignum_modexp_demontend:
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lbignum_modexp_local_demont)
+
 // Local copy of bignum_mux
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_modexp_local_mux)
 
 Lbignum_modexp_local_mux:
         CFI_START
@@ -549,6 +559,8 @@ Lbignum_modexp_muxloop:
         cbnz    x1, Lbignum_modexp_muxloop
 Lbignum_modexp_muxend:
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_modexp_local_mux)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

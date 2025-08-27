@@ -21,8 +21,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_ksqr_32_64)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_ksqr_32_64)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_32_64_local_ksqr_16_32)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_32_64_local_sqr_8_16)
         .text
         .balign 4
 
@@ -510,6 +508,8 @@ S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_32_64)
 // Local copy of bignum_ksqr_16_32, identical to main one.
 // This includes in turn a copy of bignum_sqr_8_16.
 
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_32_64_local_ksqr_16_32)
+
 Lbignum_ksqr_32_64_local_ksqr_16_32:
         CFI_START
         CFI_PUSH2(x19,x20)
@@ -688,6 +688,10 @@ Lbignum_ksqr_32_64_local_ksqr_16_32:
         CFI_POP2(x21,x22)
         CFI_POP2(x19,x20)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_ksqr_32_64_local_ksqr_16_32)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_32_64_local_sqr_8_16)
 
 Lbignum_ksqr_32_64_local_sqr_8_16:
         CFI_START
@@ -1080,6 +1084,8 @@ mov     x21, v1.d[1]
         stp     x2, x3, [x0, #112]
 
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_ksqr_32_64_local_sqr_8_16)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

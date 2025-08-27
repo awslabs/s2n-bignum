@@ -20,8 +20,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(p521_jdouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p521_jdouble)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jdouble_local_mul_p521)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jdouble_local_sqr_p521)
 
         .text
         .balign 4
@@ -502,6 +500,8 @@ S2N_BN_SIZE_DIRECTIVE(p521_jdouble)
 
 // Local versions of the two "big" field operations, identical to
 // bignum_mul_p521 and bignum_sqr_p521.
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jdouble_local_mul_p521)
 
 Lp521_jdouble_local_mul_p521:
         CFI_START
@@ -1181,6 +1181,10 @@ Lp521_jdouble_local_mul_p521:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lp521_jdouble_local_mul_p521)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jdouble_local_sqr_p521)
+
 Lp521_jdouble_local_sqr_p521:
         CFI_START
         CFI_PUSH2(x19,x20)
@@ -1717,6 +1721,8 @@ Lp521_jdouble_local_sqr_p521:
         CFI_POP2(x21,x22)
         CFI_POP2(x19,x20)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp521_jdouble_local_sqr_p521)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

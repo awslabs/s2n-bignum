@@ -33,8 +33,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(sm2_montjscalarmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sm2_montjscalarmul)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjadd)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjdouble)
 
         .text
         .balign 4
@@ -390,6 +388,8 @@ Lsm2_montjscalarmul_mainloop:
 S2N_BN_SIZE_DIRECTIVE(sm2_montjscalarmul)
 
 // Local copies of subroutines, complete clones at the moment
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjadd)
 
 Lsm2_montjscalarmul_sm2_montjadd:
         CFI_START
@@ -3124,6 +3124,10 @@ Lsm2_montjscalarmul_sm2_montjadd:
         CFI_POP2(x19,x20)
         CFI_RET
 
+S2N_BN_SIZE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjadd)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjdouble)
+
 Lsm2_montjscalarmul_sm2_montjdouble:
         CFI_START
         CFI_DEC_SP(0xd0)
@@ -4502,6 +4506,8 @@ Lsm2_montjscalarmul_sm2_montjdouble:
         ldp     x19, x20, [sp, #0xc0]
         CFI_INC_SP(0xd0)
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lsm2_montjscalarmul_sm2_montjdouble)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

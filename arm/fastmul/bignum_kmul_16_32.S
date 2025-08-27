@@ -22,7 +22,6 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_kmul_16_32)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_kmul_16_32)
 
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_kmul_16_32_local_mul_8_16)
 
         .text
         .balign 4
@@ -341,6 +340,8 @@ S2N_BN_SIZE_DIRECTIVE(bignum_kmul_16_32)
 // ----------------------------------------------------------------------------
 // Local copy of bignum_mul_8_16 without the scratch register save/restore
 // ----------------------------------------------------------------------------
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_kmul_16_32_local_mul_8_16)
 
 Lbignum_kmul_16_32_local_mul_8_16:
         CFI_START
@@ -838,6 +839,8 @@ Lbignum_kmul_16_32_local_mul_8_16:
         stp x20, x21, [x0, #96]
         stp x22, x23, [x0, #112]
         CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_kmul_16_32_local_mul_8_16)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
