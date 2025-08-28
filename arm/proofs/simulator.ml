@@ -350,6 +350,50 @@ let cosimulate_ldstr() =
   else
     [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers simd (128-bit or 64-bit) LDP and STP with
+ *** post-index, pre-index and signed offset.
+ ***)
+
+let cosimulate_ldstp() =
+  let size_rd = Random.int 2 in
+  let size = if size_rd = 0 then 0b01 else 0b10 in
+  let scale = 2 + size in
+  let index_rd = Random.int 3 in
+  let index_mode =
+    if index_rd = 0 then 0b001 else if index_rd = 1 then 0b011 else 0b010 in
+  let isld = Random.int 2 in
+  let rt2 = Random.int 32 in
+  let rt = (rt2 + 1 + Random.int 31) mod 32 in
+  let rn = Random.int 32 in
+  let headroom = if size_rd = 0 then 8*2 else 16*2 in
+  let rawstackoff = Random.int (256 - headroom) in
+  let stackoff =
+    if rn = 31 then 16 * (rawstackoff / 16)
+    else rawstackoff in
+  (* immediate could be negative or positive *)
+  let extraoff_neg = if stackoff = 0 then 0 else - (Random.int stackoff) in
+  let extraoff_pos = Random.int (256-headroom-stackoff) in
+  let extraoff_rd = Random.int 2 in
+  let extraoff = if extraoff_rd = 0 then extraoff_neg else extraoff_pos in
+  let regoff = extraoff / Num.int_of_num (pow2 scale) in
+  let unsigned_regoff = if regoff < 0 then 128 + regoff else regoff in
+  (* signed offset doesn't write back *)
+  let postinc = if index_rd = 2 then 0 else regoff lsl scale in
+  let code =
+    pow2 30 */ num size +/
+    pow2 26 */ num 0b1011 +/
+    pow2 23 */ num index_mode +/
+    pow2 22 */ num isld +/
+    pow2 15 */ num unsigned_regoff +/
+    pow2 10 */ num rt2 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+
 (*** The post-register and no-offset modes are exercised only for LD1/ST1
  *** since they are not currently supported for LD2/ST2.
  ***
@@ -528,8 +572,10 @@ let cosimulate_ldst3() =
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
 let memclasses =
-   [cosimulate_ldstr; cosimulate_ldst_12; cosimulate_ldst_1_2reg;
-    cosimulate_ldstrb; cosimulate_ld1r; cosimulate_ldst3; cosimulate_ldstu];;
+   [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
+    cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
+    cosimulate_ldst3; cosimulate_ldstu
+    ];;
 
 let run_random_memopsimulation() =
   let icodes = el (Random.int (length memclasses)) memclasses () in
