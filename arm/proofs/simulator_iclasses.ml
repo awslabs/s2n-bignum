@@ -89,9 +89,6 @@ let iclasses =
   (*** LSLV, LSRV ***)
   "x0011010110xxxxx0010xxxxxxxxxxxx";
 
-  (*** UDIV ***)
-  "x0011010110xxxxx000010xxxxxxxxxx";
-
   (*** UBFM, SBFM ***)
   "xx0100110xxxxxxxxxxxxxxxxxxxxxxx";
 

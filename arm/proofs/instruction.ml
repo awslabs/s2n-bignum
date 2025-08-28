@@ -1691,14 +1691,6 @@ let arm_UBFM = define
           else word_shl (word_subword x (0,imms+1)) (dimindex(:N) - immr) in
         (Rd := y) s`;;
 
-let arm_UDIV = define
-  `arm_UDIV Rd Rn Rm =
-    \s. let x:N word = read Rn (s:armstate) in
-        let y:N word = read Rm s in
-        let res:N word =
-          if y = (word 0) then (word 0) else word ((val x) DIV (val y)) in
-        (Rd := res) s`;;
-
 let arm_UMADDL = define
  `arm_UMADDL Rd Rn Rm Ra =
     \s. let n:int32 = read Rn (s:armstate)
@@ -3271,8 +3263,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TBL_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
-       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UBFM; arm_UDIV;
-       arm_UMOV; arm_UMADDL;
+       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;

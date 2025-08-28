@@ -243,9 +243,6 @@ let decode = new_definition `!w:int32. decode w =
     else if sf then SOME (arm_EXTR (XREG' Rd) (XREG' Rn) (XREG' Rm) (val imms))
     else if val imms >= 32 then NONE
     else SOME (arm_EXTR (WREG' Rd) (WREG' Rn) (WREG' Rm) (val imms))
-  | [sf; 0b0011010110:10; Rm:5; 0b000010:6; Rn:5; Rd:5] ->
-    if sf then SOME (arm_UDIV (XREG' Rd) (XREG' Rn) (XREG' Rm))
-          else SOME (arm_UDIV (WREG' Rd) (WREG' Rn) (WREG' Rm))
   | [sf; 0b0011010110:10; Rm:5; 0b0010:4; op2:2; Rn:5; Rd:5] ->
     if sf then arm_lsvop op2 (XREG' Rd) (XREG' Rn) (XREG' Rm)
           else arm_lsvop op2 (WREG' Rd) (WREG' Rn) (WREG' Rm)
