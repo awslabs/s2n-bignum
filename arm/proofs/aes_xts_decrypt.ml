@@ -12,17 +12,24 @@ loadt "arm/proofs/aes_xts_decrypt_spec.ml";;
 (* print_literal_from_elf "arm/aes-xts/aes_xts_decrypt_armv8.o";; *)
 let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xts/aes_xts_decrypt_armv8.o"
 [
-  0xd10103ff;       (* arm_SUB SP SP (rvalue (word 0x40)) *)
-  0x6d0027e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&0x0))) *)
-  0x6d012fea;       (* arm_STP D10 D11 SP (Immediate_Offset (iword (&0x10))) *)
-  0xa90253f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0x20))) *)
-  0xa9035bf5;       (* arm_STP X21 X22 SP (Immediate_Offset (iword (&0x30))) *)
+  0xd10183ff;       (* arm_SUB SP SP (rvalue (word 0x60)) *)
+  0x6d0227e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&0x20))) *)
+  0x6d032fea;       (* arm_STP D10 D11 SP (Immediate_Offset (iword (&0x30))) *)
+  0x6d0437ec;       (* arm_STP D12 D13 SP (Immediate_Offset (iword (&0x40))) *)
+  0x6d053fee;       (* arm_STP D14 D15 SP (Immediate_Offset (iword (&0x50))) *)
+  0xa90053f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0x0))) *)
+  0xa9015bf5;       (* arm_STP X21 X22 SP (Immediate_Offset (iword (&0x10))) *)
   0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
-  0x540055cb;       (* arm_BLT (word 0xab8) *)
+  0x5400570b;       (* arm_BLT (word 0xae0) *)
+  0xd503201f;       (* arm_NOP *)
+  0xd503201f;       (* arm_NOP *)
+  0xd503201f;       (* arm_NOP *)
+  0xd503201f;       (* arm_NOP *)
+  0xd503201f;       (* arm_NOP *)
+  0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
   0x92400c55;       (* arm_AND X21 X2 (rvalue (word 0xf)) *)
   0x927cec42;       (* arm_AND X2 X2 (rvalue (word 0xfffffffffffffff0)) *)
-  0xf1004042;       (* arm_SUBS X2 X2 (rvalue (word 0x10)) *)
   0xb940f086;       (* arm_LDR W6 X4 (Immediate_Offset (word 0xf0)) *)
   0x4cdf7880;       (* arm_LDR Q0 X4 (Postimmediate_Offset (word 0x10)) *)
   0x4c4070a6;       (* arm_LDR Q6 X5 No_Offset *)
@@ -62,34 +69,39 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xt
   0xf2400ebf;       (* arm_TST X21 (rvalue (word 0xf)) *)
   0x54000080;       (* arm_BEQ (word 0x10) *)
   0xf1004042;       (* arm_SUBS X2 X2 (rvalue (word 0x10)) *)
-  0xf100005f;       (* arm_CMP X2 (rvalue (word 0x0)) *)
-  0x5400488b;       (* arm_BLT (word 0x910) *)
   0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
-  0x54004323;       (* arm_BCC (word 0x864) *)
-  0xf1008042;       (* arm_SUBS X2 X2 (rvalue (word 0x20)) *)
-  0x54003a03;       (* arm_BCC (word 0x740) *)
+  0x5400492b;       (* arm_BLT (word 0x924) *)
+  0xb202e7e8;       (* arm_MOV X8 (rvalue (word 0xcccccccccccccccc)) *)
+  0xf29999a8;       (* arm_MOVK X8 (word 0xcccd) 0x0 *)
+  0x9bc87c48;       (* arm_UMULH X8 X2 X8 *)
+  0xd346fd08;       (* arm_LSR X8 X8 0x6 *)
+  0xf100805f;       (* arm_CMP X2 (rvalue (word 0x20)) *)
+  0x54004343;       (* arm_BCC (word 0x868) *)
+  0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
+  0x54003a23;       (* arm_BCC (word 0x744) *)
   0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
   0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
   0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e670129;       (* arm_FMOV_ItoF Q9 X9 0x0 *)
   0x9eaf0149;       (* arm_FMOV_ItoF Q9 X10 0x1 *)
-  0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
-  0x54002c23;       (* arm_BCC (word 0x584) *)
+  0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
+  0x54002c43;       (* arm_BCC (word 0x588) *)
   0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
   0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
   0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e67012a;       (* arm_FMOV_ItoF Q10 X9 0x0 *)
   0x9eaf014a;       (* arm_FMOV_ItoF Q10 X10 0x1 *)
-  0xf1008042;       (* arm_SUBS X2 X2 (rvalue (word 0x20)) *)
-  0x54001a23;       (* arm_BCC (word 0x344) *)
+  0xf101405f;       (* arm_CMP X2 (rvalue (word 0x50)) *)
+  0x54001a43;       (* arm_BCC (word 0x348) *)
   0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
   0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
   0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e67012b;       (* arm_FMOV_ItoF Q11 X9 0x0 *)
   0x9eaf014b;       (* arm_FMOV_ItoF Q11 X10 0x1 *)
+  0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
   0xacc28400;       (* arm_LDP Q0 Q1 X0 (Postimmediate_Offset (iword (&0x50))) *)
@@ -279,17 +291,17 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xt
   0xad3ee438;       (* arm_STP Q24 Q25 X1 (Immediate_Offset (iword (-- &0x30))) *)
   0x3c9f003a;       (* arm_STR Q26 X1 (Immediate_Offset (word 0xfffffffffffffff0)) *)
   0xf1014042;       (* arm_SUBS X2 X2 (rvalue (word 0x50)) *)
-  0x54ffe8a2;       (* arm_BCS (word 0x1ffd14) *)
-  0xb100405f;       (* arm_CMN X2 (rvalue (word 0x10)) *)
-  0x54000160;       (* arm_BEQ (word 0x2c) *)
-  0x91014042;       (* arm_ADD X2 X2 (rvalue (word 0x50)) *)
-  0xb4002d02;       (* arm_CBZ X2 (word 0x5a0) *)
-  0xf1008042;       (* arm_SUBS X2 X2 (rvalue (word 0x20)) *)
-  0x540027a3;       (* arm_BCC (word 0x4f4) *)
-  0xf1004042;       (* arm_SUBS X2 X2 (rvalue (word 0x10)) *)
-  0x54001e83;       (* arm_BCC (word 0x3d0) *)
-  0x1400008c;       (* arm_B (word 0x230) *)
-  0xd503201f;       (* arm_NOP *)
+  0xf1000508;       (* arm_SUBS X8 X8 (rvalue (word 0x1)) *)
+  0xb5ffe888;       (* arm_CBNZ X8 (word 0x1ffd10) *)
+  0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
+  0x54000140;       (* arm_BEQ (word 0x28) *)
+  0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
+  0x54001200;       (* arm_BEQ (word 0x240) *)
+  0xf100805f;       (* arm_CMP X2 (rvalue (word 0x20)) *)
+  0x54001ea0;       (* arm_BEQ (word 0x3d4) *)
+  0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
+  0x54002740;       (* arm_BEQ (word 0x4e8) *)
+  0x14000162;       (* arm_B (word 0x588) *)
   0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
   0x4cdfa000;       (* arm_LDP Q0 Q1 X0 (Postimmediate_Offset (word 0x20)) *)
@@ -704,11 +716,13 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xt
   0x6e201f5a;       (* arm_EOR_VEC Q26 Q26 Q0 0x80 *)
   0x6e261f5a;       (* arm_EOR_VEC Q26 Q26 Q6 0x80 *)
   0x4c00703a;       (* arm_STR Q26 X1 No_Offset *)
-  0x6d4027e8;       (* arm_LDP D8 D9 SP (Immediate_Offset (iword (&0x0))) *)
-  0x6d412fea;       (* arm_LDP D10 D11 SP (Immediate_Offset (iword (&0x10))) *)
-  0xa94253f3;       (* arm_LDP X19 X20 SP (Immediate_Offset (iword (&0x20))) *)
-  0xa9435bf5;       (* arm_LDP X21 X22 SP (Immediate_Offset (iword (&0x30))) *)
-  0x910103ff;       (* arm_ADD SP SP (rvalue (word 0x40)) *)
+  0x6d4227e8;       (* arm_LDP D8 D9 SP (Immediate_Offset (iword (&0x20))) *)
+  0x6d432fea;       (* arm_LDP D10 D11 SP (Immediate_Offset (iword (&0x30))) *)
+  0x6d4437ec;       (* arm_LDP D12 D13 SP (Immediate_Offset (iword (&0x40))) *)
+  0x6d453fee;       (* arm_LDP D14 D15 SP (Immediate_Offset (iword (&0x50))) *)
+  0xa94053f3;       (* arm_LDP X19 X20 SP (Immediate_Offset (iword (&0x0))) *)
+  0xa9415bf5;       (* arm_LDP X21 X22 SP (Immediate_Offset (iword (&0x10))) *)
+  0x910183ff;       (* arm_ADD SP SP (rvalue (word 0x60)) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
@@ -775,20 +789,20 @@ let AES_XTS_DECRYPT_CORRECT = prove(
     nonoverlapping (word pc, LENGTH aes_xts_decrypt_mc) (pt_ptr, 16)
     ==> ensures arm
     (\s. aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
-         read PC s = word (pc + 20) /\
+         read PC s = word (pc + 0x1c) /\
          C_ARGUMENTS [ct_ptr; pt_ptr; word 16; key0_ptr; key1_ptr; iv_ptr] s /\
          read(memory :> bytes128 ct_ptr) s = ib /\
          read(memory :> bytes128 iv_ptr) s = iv /\
          set_key_schedule s key0_ptr k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e /\
          set_key_schedule s key1_ptr k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e)
-    (\s. read PC s = word (pc + 0xad0) /\
+    (\s. read PC s = word (pc + 0xa10) /\
          read(memory :> bytes128 pt_ptr) s =
            aes256_xts_decrypt_1block ib iv
            [k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d; k0e]
            [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]
          )
     (MAYCHANGE [PC] ,, MAYCHANGE [events] ,,
-     MAYCHANGE [X21;X2;X6;X4;X9;X10;X19;X22;X11;X7;X0;X1] ,,
+     MAYCHANGE [X21;X2;X6;X4;X9;X10;X19;X22;X11;X7;X0;X1;X8] ,,
      MAYCHANGE [Q6;Q1;Q0;Q8;Q16;Q17;Q12;Q13;Q14;Q15;Q4;Q5;Q18;Q19;Q20;Q21;Q22;Q23;Q7;Q29;Q24] ,,
      MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 pt_ptr])
     `,
@@ -799,14 +813,14 @@ let AES_XTS_DECRYPT_CORRECT = prove(
   (* Start symbolic simulation*)
   ENSURES_INIT_TAC "s0" THEN
   (* Simulate until the first tweak and verify the first tweak equiv the spec *)
-  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (1--64) THEN
+  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (1--69) THEN
   FIRST_X_ASSUM(MP_TAC o SPEC
     `(aes256_encrypt iv [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]):int128`
     o  MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
 
   (* Simulating until finish decrypting one block *)
-  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (65--117) THEN
+  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (70--126) THEN
   FIRST_X_ASSUM(MP_TAC o
     SPEC `(aes256_xts_decrypt_1block ib iv
        [k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d; k0e]
@@ -821,6 +835,6 @@ let AES_XTS_DECRYPT_CORRECT = prove(
     AESDEC_TAC; DISCH_TAC] THEN
 
     (* Simulate to the end *)
-    ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (118--129) THEN
+    ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (127--137) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC []
 );;
