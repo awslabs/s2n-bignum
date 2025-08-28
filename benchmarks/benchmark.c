@@ -839,6 +839,7 @@ void call_mlkem_tobytes(void) {}
 void call_mlkem_tomont(void) {}
 void call_mlkem_rej_uniform(void) {}
 void call_sha3_keccak_f1600_alt(void) {}
+void call_sha3_keccak_f1600_alt2(void) {}
 void call_sha3_keccak2_f1600(void) {}
 void call_sha3_keccak2_f1600_alt(void) {}
 void call_sha3_keccak4_f1600(void) {}

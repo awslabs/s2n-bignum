@@ -17,7 +17,8 @@
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
 //
-// extern void sha3_keccak_f1600_alt2(uint64_t a[25],const uint64_t rc[24]);
+// extern void sha3_keccak_f1600_alt2(uint64_t a[static 25],
+//                                    const uint64_t rc[static 24]);
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
