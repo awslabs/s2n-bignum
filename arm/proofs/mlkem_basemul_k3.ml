@@ -476,3 +476,49 @@ let MLKEM_BASEMUL_K3_SUBROUTINE_CORRECT = prove
       (REWRITE_RULE[fst MLKEM_BASEMUL_K3_EXEC] MLKEM_BASEMUL_K3_CORRECT)
        `[D8; D9; D10; D11; D12; D13; D14; D15]` 64  THEN
     WORD_ARITH_TAC);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec = mk_safety_spec
+    (assoc "mlkem_basemul_k3" subroutine_signatures)
+    MLKEM_BASEMUL_K3_SUBROUTINE_CORRECT
+    MLKEM_BASEMUL_K3_EXEC;;
+
+let MLKEM_BASEMUL_K3_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall srcA srcB srcBt dst pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           ALLPAIRS nonoverlapping
+           [dst,512; word_sub stackpointer (word 64),64]
+           [word pc,LENGTH mlkem_basemul_k3_mc; srcA,1536; srcB,1536;
+            srcBt,768] /\
+           nonoverlapping (dst,512) (word_sub stackpointer (word 64),64)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) mlkem_basemul_k3_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [dst; srcA; srcB; srcBt] s /\
+                    read events s = e)
+               (\s.
+                    exists e2.
+                        read PC s = returnaddress /\
+                        read events s = APPEND e2 e /\
+                        e2 =
+                        f_events srcA srcB srcBt dst pc
+                        (word_sub stackpointer (word 64))
+                        returnaddress /\
+                        memaccess_inbounds e2
+                        [srcA,1536; srcB,1536; srcBt,768; dst,512;
+                         word_sub stackpointer (word 64),64]
+                        [dst,512; word_sub stackpointer (word 64),64])
+               (\s s'. true)`,
+  ASSERT_GOAL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC MLKEM_BASEMUL_K3_EXEC);;

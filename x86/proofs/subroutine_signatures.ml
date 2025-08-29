@@ -5299,6 +5299,23 @@ let subroutine_signatures = [
    ])
 );
 
+("sha3_keccak_f1600",
+  ([(*args*)
+     ("a", "uint64_t[25]", (*is const?*)"false");
+     ("rc", "uint64_t[24]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "25"(* num elems *), 8(* elem bytesize *));
+    ("rc", "24"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "25"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("sm2_montjadd",
   ([(*args*)
      ("p3", "uint64_t[static 12]", (*is const?*)"false");

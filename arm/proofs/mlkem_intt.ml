@@ -604,3 +604,48 @@ let MLKEM_INTT_SUBROUTINE_CORRECT = prove
   ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(5,5) MLKEM_INTT_EXEC
    (REWRITE_RULE[fst MLKEM_INTT_EXEC] (CONV_RULE TWEAK_CONV MLKEM_INTT_CORRECT))
     `[D8; D9; D10; D11; D12; D13; D14; D15]` 64);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec = mk_safety_spec
+    (assoc "mlkem_intt" subroutine_signatures)
+    MLKEM_INTT_SUBROUTINE_CORRECT
+    MLKEM_INTT_EXEC;;
+
+let MLKEM_INTT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall a z_01234 z_56 pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           ALLPAIRS nonoverlapping
+           [a,512; word_sub stackpointer (word 64),64]
+           [word pc,1464; z_01234,160; z_56,768] /\
+           nonoverlapping (a,512) (word_sub stackpointer (word 64),64)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) mlkem_intt_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [a; z_01234; z_56] s /\
+                    read events s = e)
+               (\s.
+                    exists e2.
+                        read PC s = returnaddress /\
+                        read events s = APPEND e2 e /\
+                        e2 =
+                        f_events z_01234 z_56 a pc
+                        (word_sub stackpointer (word 64))
+                        returnaddress /\
+                        memaccess_inbounds e2
+                        [a,512; z_01234,160; z_56,768; a,512;
+                         word_sub stackpointer (word 64),64]
+                        [a,512; word_sub stackpointer (word 64),64])
+               (\s s'. true)`,
+  ASSERT_GOAL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC MLKEM_INTT_EXEC);;
