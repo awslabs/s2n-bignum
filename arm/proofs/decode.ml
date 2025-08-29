@@ -1576,14 +1576,19 @@ define_assert_from_elf "bignum_madd_subroutine" "arm/generic/bignum_madd.o" [
 let bignum_madd_mc = define_word_list "bignum_madd_mc"
   (trim_ret' (rhs (concl bignum_madd_subroutine)));; *)
 
-(*** term_of_relocs_arm returns a pair
-    (a list of new HOL Light variables that represent the symbolic addresses,
-     a HOL Light term that represents the 'symbolic' byte list).
+(*** term_of_relocs_arm takes a tuple
+    (.text bytes,
+      (readonly symbol name, its bytes) list,
+      relocation entries list)
+    The function returns a pair:
+      (a list of new HOL Light variables that represent the symbolic addresses,
+       a HOL Light term that represents the 'symbolic' byte list).
 
     assert_relocs takes a pair
     (a list of HOL Light vars for the symbolic addresses,
      the symbolic byte list term)
-    as well as the large OCaml function printed by print_literal_relocs_from_elf, and checks whether the OCaml function
+    as well as the large OCaml function printed by
+    print_literal_relocs_from_elf, and checks whether the OCaml function
     matches the symbolic byte list term.
  ***)
 let term_of_relocs_arm, assert_relocs =
@@ -1685,7 +1690,14 @@ let term_of_relocs_arm, assert_relocs =
         (* Reproduce the symbolic opcode using the append_reloc fn and
            compare whether it is syntactically equal to the already
            embedded one *)
-        append_reloc_fn arg next_insns = reloc_opcode;
+        let lhs, _ = dest_comb (append_reloc_fn arg next_insns) in
+        let _ = if not (lhs = reloc_opcode) then
+         (Printf.eprintf "assertion failed: symbolic opcodes are not equal\n";
+          Printf.eprintf "  actual opcode: `%s`\n" (string_of_term reloc_opcode);
+          Printf.eprintf "  asserting opcode: `%s`\n" (string_of_term lhs);
+          Printf.eprintf "  PC: %d (0x%x)\n" pc pc;
+          assert false)
+        in
         pc+4, next_insns
       with _ -> failwith ("could not check opcode " ^ (string_of_term reloc_opcode)) in
 
@@ -1720,34 +1732,58 @@ let define_assert_relocs name (tm:term list * term) printed_opcodes_fn
   (mc_def_canonicalized,
    map (fun (name,data) ->
       let dataterm = term_of_bytes data in (* returns (8)word list *)
-      let defname = name ^ "_data" in
-      (try new_definition(mk_eq(mk_var(defname,datatype), dataterm))
+      (try new_definition(mk_eq(mk_var(name,datatype), dataterm))
         with Failure _ ->
-            new_definition(mk_eq(mk_mconst(defname,datatype), dataterm)))
+            new_definition(mk_eq(mk_mconst(name,datatype), dataterm)))
     ) constants);;
 
-let assert_relocs_from_elf (file:string) printed_opcodes_fn =
+let assert_relocs_from_elf
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    (file:string) printed_opcodes_fn =
   let filebytes = load_file file in
   let text,constants,rel = load_elf_arm filebytes in
-  assert_relocs (term_of_relocs_arm (text,constants,rel)) printed_opcodes_fn;;
 
-let define_assert_relocs_from_elf name (file:string) printed_opcodes_fn =
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
+  assert_relocs (term_of_relocs_arm (text,constants,rel))
+      printed_opcodes_fn;;
+
+let define_assert_relocs_from_elf
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    name (file:string) printed_opcodes_fn =
   let filebytes = load_file file in
   let text,constants,rel = load_elf_arm filebytes in
+
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
   let mc_def,constants_data_defs = define_assert_relocs
       name (term_of_relocs_arm (text,constants,rel)) printed_opcodes_fn
       constants in
   (mc_def,constants_data_defs);;
 
-let print_literal_relocs_from_elf (file:string) =
+let print_literal_relocs_from_elf
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    (file:string) =
   let filebytes = load_file file in
-  let bs = load_elf_arm filebytes in
-  print_string (make_fn_word_list_reloc bs
-    (decode_all (snd (term_of_relocs_arm bs))));;
+  let text,constants,rel = load_elf_arm filebytes in
 
-let save_literal_relocs_from_elf (deffile:string) (objfile:string) =
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
+  print_string (make_fn_word_list_reloc (text,constants,rel)
+    (decode_all (snd (term_of_relocs_arm (text,constants,rel)))));;
+
+let save_literal_relocs_from_elf 
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    (deffile:string) (objfile:string) =
   let filebytes = load_file objfile in
-  let bs = load_elf_arm filebytes in
-  let ls = make_fn_word_list_reloc bs
-    (decode_all (snd (term_of_relocs_arm bs))) in
+  let text,constants,rel = load_elf_arm filebytes in
+
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
+  let ls = make_fn_word_list_reloc (text,constants,rel)
+    (decode_all (snd (term_of_relocs_arm (text,constants,rel)))) in
   file_of_string deffile ls;;

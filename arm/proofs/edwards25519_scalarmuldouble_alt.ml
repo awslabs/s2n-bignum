@@ -27,9 +27,15 @@ prioritize_num();;
 (**** print_literal_relocs_from_elf  "arm/curve25519/edwards25519_scalarmuldouble_alt.o";;
  ****)
 
-let edwards25519_scalarmuldouble_alt_mc,[edwards25519_scalarmuldouble_alt_constant_data] =
-  define_assert_relocs_from_elf "edwards25519_scalarmuldouble_alt_mc"
-  "arm/curve25519/edwards25519_scalarmuldouble_alt.o"
+let edwards25519_scalarmuldouble_alt_mc,const_data_list =
+  define_assert_relocs_from_elf
+    ~map_symbol_name:(function
+      | "WHOLE_READONLY" | "ltmp1" (* MacOS *)
+      | "edwards25519_scalarmuldouble_alt_constant"
+        -> "edwards25519_scalarmuldouble_alt_constant_data"
+      | s -> failwith ("unknown symbol: " ^ s))
+    "edwards25519_scalarmuldouble_alt_mc"
+    "arm/curve25519/edwards25519_scalarmuldouble_alt.o"
 (fun w BL ADR ADRP ADD_rri64 -> [
   w 0xa9bf53f3;         (* arm_STP X19 X20 SP (Preimmediate_Offset (iword (-- &16))) *)
   w 0xa9bf5bf5;         (* arm_STP X21 X22 SP (Preimmediate_Offset (iword (-- &16))) *)
@@ -227,8 +233,8 @@ let edwards25519_scalarmuldouble_alt_mc,[edwards25519_scalarmuldouble_alt_consta
   w 0xd2801f93;         (* arm_MOV X19 (rvalue (word 252)) *)
   w 0xf9401fe0;         (* arm_LDR X0 SP (Immediate_Offset (word 56)) *)
   w 0xd37cfc14;         (* arm_LSR X20 X0 60 *)
-  ADRP (mk_var("edwards25519_scalarmuldouble_alt_constant",`:num`),0,784,14);
-  ADD_rri64 (mk_var("edwards25519_scalarmuldouble_alt_constant",`:num`),0,14,14);
+  ADRP (mk_var("edwards25519_scalarmuldouble_alt_constant_data",`:num`),0,784,14);
+  ADD_rri64 (mk_var("edwards25519_scalarmuldouble_alt_constant_data",`:num`),0,14,14);
   w 0xd2800020;         (* arm_MOV X0 (rvalue (word 1)) *)
   w 0xaa1f03e1;         (* arm_MOV X1 XZR *)
   w 0xaa1f03e2;         (* arm_MOV X2 XZR *)
@@ -656,8 +662,8 @@ let edwards25519_scalarmuldouble_alt_mc,[edwards25519_scalarmuldouble_alt_consta
   w 0xf1002014;         (* arm_SUBS X20 X0 (rvalue (word 8)) *)
   w 0xda942694;         (* arm_CNEG X20 X20 Condition_CC *)
   w 0xda9f23f5;         (* arm_CSETM X21 Condition_CC *)
-  ADRP (mk_var("edwards25519_scalarmuldouble_alt_constant",`:num`),0,2500,14);
-  ADD_rri64 (mk_var("edwards25519_scalarmuldouble_alt_constant",`:num`),0,14,14);
+  ADRP (mk_var("edwards25519_scalarmuldouble_alt_constant_data",`:num`),0,2500,14);
+  ADD_rri64 (mk_var("edwards25519_scalarmuldouble_alt_constant_data",`:num`),0,14,14);
   w 0xd2800020;         (* arm_MOV X0 (rvalue (word 1)) *)
   w 0xaa1f03e1;         (* arm_MOV X1 XZR *)
   w 0xaa1f03e2;         (* arm_MOV X2 XZR *)
@@ -5578,6 +5584,8 @@ let edwards25519_scalarmuldouble_alt_mc,[edwards25519_scalarmuldouble_alt_consta
   w 0x910303ff;         (* arm_ADD SP SP (rvalue (word 192)) *)
   w 0xd65f03c0          (* arm_RET X30 *)
 ]);;
+
+let edwards25519_scalarmuldouble_alt_constant_data = last const_data_list;;
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC =
   ARM_MK_EXEC_RULE edwards25519_scalarmuldouble_alt_mc;;
