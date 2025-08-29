@@ -83,13 +83,12 @@ S2N_BN_SYMBOL(aes_hw_xts_decrypt):
 
         cmp    x2,#16
         // Original input data size bigger than 16, jump to big size processing.
-        b.lt    Lxts_dec_abort
+        b.lt    .Lxts_dec_abort
 
 .align 5
-Lxts_dec_big_size:  // decrypt input size >= 16 bytes
+.Lxts_dec_big_size:  // decrypt input size >= 16 bytes
         and  x21, x2, #0xf    // store the tail value of length%16
         and  x2, x2, #-16    // len &= 0x1..110000, now divisible by 16
-        // subs x2, x2, #16
 
         // Firstly, encrypt the iv with key2, as the first iv of XEX.
         ldr  w6, [x4,#240]
@@ -98,13 +97,13 @@ Lxts_dec_big_size:  // decrypt input size >= 16 bytes
         sub  w6, w6, #2
         ld1  {v1.4s}, [x4], #16
 
-Loop_dec_iv_enc:
+.Loop_dec_iv_enc:
         aesr(v6.16b, v0.16b)
         ld1  {v0.4s}, [x4], #16
         subs w6, w6, #2
         aesr(v6.16b, v1.16b)
         ld1  {v1.4s}, [x4], #16
-        b.gt Loop_dec_iv_enc
+        b.gt .Loop_dec_iv_enc
 
         aesr(v6.16b, v0.16b)
         ld1  {v0.4s}, [x4]
@@ -130,40 +129,40 @@ Loop_dec_iv_enc:
         ld1 {v7.4s},        [x7]
 
 // decryption
-Lxts_dec:
+.Lxts_dec:
         tst x21,#0xf
-        b.eq Lxts_dec_begin
+        b.eq .Lxts_dec_begin
         subs x2,x2,#16
         cmp x2, #16
-        b.lt Lxts_dec_done   // There is one block and a tail, go directy to cipher-stealing
+        b.lt .Lxts_dec_done   // There is one block and a tail, go directy to cipher-stealing
 
-Lxts_dec_begin:
+.Lxts_dec_begin:
 
         udiv_by_80(x2, x8) // Number of 5x-unrolled iterations
 
         cmp x2, #0x20
-        b.lo Lxts_dec_tail1x   // when input = 1 with another block and a tail
+        b.lo .Lxts_dec_tail1x   // when input = 1 with another block and a tail
 
         cmp  x2,#0x30         // bias
-        b.lo  Lxts_dec_tail2x    // when input size  = 2 with another block and a tail
+        b.lo  .Lxts_dec_tail2x    // when input size  = 2 with another block and a tail
 
         // The iv for third block
         tweak(d9,v9.d[1])
 
         cmp  x2,#0x40
-        b.lo  Lxts_dec_tail3x // when input size  = 3 with another block and a tail
+        b.lo  .Lxts_dec_tail3x // when input size  = 3 with another block and a tail
 
         // The iv for fourth block
         tweak(d10,v10.d[1])
 
         cmp x2,#0x50
-        b.lo  Lxts_dec_tail4x // when input size  = 4 with another block and a tail
+        b.lo  .Lxts_dec_tail4x // when input size  = 4 with another block and a tail
 
         // The iv for fifth block
         tweak(d11,v11.d[1])
 
 .align  4
-Loop5x_xts_dec:
+.Loop5x_xts_dec:
         ldp q0, q1, [x0], #0x50
         ldp q24, q25, [x0, #-0x30]
         ldr q26, [x0, #-0x10]
@@ -289,25 +288,25 @@ Loop5x_xts_dec:
 
         subs x2,x2,#0x50
         subs x8,x8,#1
-        cbnz x8, Loop5x_xts_dec
+        cbnz x8, .Loop5x_xts_dec
 
-Loop5x_dec_after:
+.Loop5x_dec_after:
         cmp  x2,#0x40
-        b.eq  Lxts_dec_tail4x  // 4 blocks left + 1block and a tail
+        b.eq  .Lxts_dec_tail4x  // 4 blocks left + 1block and a tail
 
         cmp  x2,#0x30
-        b.eq  Lxts_dec_tail3x    // 3 blocks left + 1block and a tail
+        b.eq  .Lxts_dec_tail3x    // 3 blocks left + 1block and a tail
 
         cmp  x2,#0x20
-        b.eq  Lxts_dec_tail2x    // 2 block left + 1block and a tail
+        b.eq  .Lxts_dec_tail2x    // 2 block left + 1block and a tail
 
         cmp  x2,#0x10
-        b.eq  Lxts_dec_tail1x  // 1 blocks left + 1block and a tail
+        b.eq  .Lxts_dec_tail1x  // 1 blocks left + 1block and a tail
 
-        b  Lxts_dec_done  // no blocks left + 1block and a tail
+        b  .Lxts_dec_done  // no blocks left + 1block and a tail
 
 .align  4
-Lxts_dec_tail4x:
+.Lxts_dec_tail4x:
         ld1  {v0.16b,v1.16b}, [x0],#32              // the first and second blocks
         ld1  {v24.16b,v25.16b}, [x0],#32           // the third and fourth blocks
 
@@ -405,10 +404,10 @@ Lxts_dec_tail4x:
         st1  {v0.16b,v1.16b},[x1],#32
         st1  {v24.16b,v25.16b},[x1],#32
 
-        b  Lxts_dec_done
+        b  .Lxts_dec_done
 
 .align  4
-Lxts_dec_tail3x:
+.Lxts_dec_tail3x:
         ld1  {v0.16b,v1.16b}, [x0],#32
         ld1  {v24.16b}, [x0],#16
 
@@ -496,9 +495,9 @@ Lxts_dec_tail3x:
 
         st1  {v0.16b,v1.16b},[x1],#32
         st1  {v24.16b},[x1],#16
-        b Lxts_dec_done  // done processing three blocks
+        b .Lxts_dec_done  // done processing three blocks
 
-Lxts_dec_tail2x:
+.Lxts_dec_tail2x:
         ld1  {v0.16b,v1.16b},[x0],#32  // the first block
 
         eor  v0.16b,v0.16b,v6.16b
@@ -566,9 +565,9 @@ Lxts_dec_tail2x:
         fmov  x9,d8
         fmov  x10,v8.d[1]
         tweak(d6,v6.d[1])
-        b  Lxts_dec_done
+        b  .Lxts_dec_done
 
-Lxts_dec_tail1x:
+.Lxts_dec_tail1x:
         ld1  {v0.16b}, [x0],#16  // the first block
 
         eor  v0.16b,v0.16b,v6.16b
@@ -615,11 +614,11 @@ Lxts_dec_tail1x:
         fmov  x9,d6
         fmov  x10,v6.d[1]
         tweak(d6,v6.d[1])
-        b  Lxts_dec_done
+        b  .Lxts_dec_done
 
-Lxts_dec_done:
+.Lxts_dec_done:
         tst    x21,#0xf
-        b.eq    Lxts_dec_abort
+        b.eq    .Lxts_dec_abort
         // Processing the last 1 block and a tail with cipher stealing.
         // At this point, we know there is 1 block+tail
         // We need two tweaks, one is already calculated and stored in v6
@@ -696,7 +695,7 @@ Lxts_dec_done:
         eor    v26.16b,v26.16b,v6.16b
         st1    {v26.16b},[x1]
 
-Lxts_dec_abort:
+.Lxts_dec_abort:
         restore_vregs
         restore_regs
         add sp, sp, #STACK_SIZE
