@@ -42,12 +42,7 @@ let aes256_xts_decrypt_1block = new_definition
     aes256_xts_decrypt_round C tk key1`;;
 
 (*******************************************)
-(* AES-XTS decryption full *)
-(* Note: the implementation sequences the calculation of the tweak
-   for each block, however, the specification will calculate the tweak
-   from the very beginning for each block. We write the specification
-   in the sequenced version for proof simplicity.
-*)
+(* AES-XTS decryption *)
 
 (* Helper functions derived from Amanda's code:
   https://github.com/amanda-zx/s2n-bignum/blob/sha512/arm/sha512/sha512_specs.ml#L360
@@ -89,24 +84,25 @@ let GF_128_mult_by_primitive = new_definition
     let mask = word_ishr tweak 127 in
     word_xor (word_and mask (word 0x87)) shifted`;;
 
-let FST3 = define `FST3 (x:a#b#c) = FST x`;;
-let SND3 = define `SND3 (x:a#b#c) = FST (SND x)`;;
-let THD3 = define `THD3 (x:a#b#c) = SND (SND x)`;;
+let calculate_tweak = new_recursive_definition num_RECURSION
+  `calculate_tweak 0 (iv:(128)word) (key2:int128 list) = xts_init_tweak iv key2 /\
+   calculate_tweak (SUC n) (iv:(128)word) (key2:int128 list) =
+     GF_128_mult_by_primitive (calculate_tweak n iv key2)`;;
 
 let eth = prove_general_recursive_function_exists
  `?aes256_xts_decrypt_rec.
-    ! (i:num) (m:num) (C:byte list) (iv:int128) (key1:int128 list).
-    aes256_xts_decrypt_rec i m C iv key1 : (byte list)#int128#num =
-    if m < i then ([], iv, i)
+    ! (i:num) (m:num) (C:byte list) (iv:int128) (key1:int128 list) (key2:int128 list).
+    aes256_xts_decrypt_rec i m C iv key1 key2: (byte list)#num =
+    if m < i then ([], i)
     else
       let current_block = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
-      let curr = int128_to_bytes (aes256_xts_decrypt_round current_block iv key1) in
-      let iv = GF_128_mult_by_primitive iv in
-      let res = aes256_xts_decrypt_rec (i + 1) m C iv key1 in
-      (APPEND curr (FST3 res), SND3 res, THD3 res)`;;
+      let twk = calculate_tweak i iv key2 in
+      let curr = int128_to_bytes (aes256_xts_decrypt_round current_block twk key1) in
+      let res = aes256_xts_decrypt_rec (i + 1) m C iv key1 key2 in
+      (APPEND curr (FST res), SND res)`;;
 
 let wfth = prove(hd(hyp eth),
-  EXISTS_TAC `MEASURE (\(i:num,m:num,C:byte list,iv:int128,key1:int128 list). (m + 1) - i)` THEN
+  EXISTS_TAC `MEASURE (\(i:num,m:num,C:byte list,iv:int128,key1:int128 list,key2:int128 list). (m + 1) - i)` THEN
   REWRITE_TAC[WF_MEASURE; MEASURE] THEN ARITH_TAC);;
 
 let exists_lemma = PROVE_HYP wfth eth;;
@@ -116,7 +112,8 @@ let aes256_xts_decrypt_rec = new_specification ["aes256_xts_decrypt_rec"] exists
 
 let cipher_stealing = new_definition
   `cipher_stealing (block:byte list) (tail:byte list) (tail_len:num)
-    (iv:int128) (key1:int128 list): (byte list)#(byte list) =
+    (iv:int128) (i:num) (key1:int128 list) (key2:int128 list): (byte list)#(byte list) =
+    let iv = calculate_tweak i iv key2 in
     let iv_last = GF_128_mult_by_primitive iv in
     let PP = int128_to_bytes (aes256_xts_decrypt_round (bytes_to_int128 block) iv_last key1) in
     let Pm = SUB_LIST (0, tail_len) PP in
@@ -127,15 +124,16 @@ let cipher_stealing = new_definition
 
 (* Depending on the tail, either do one block decryption or do cipher stealing *)
 let aes256_xts_decrypt_tail = new_definition
-  `aes256_xts_decrypt_tail (i:num) (tail_len:num) (C:byte list) (iv:int128) (key1:int128 list) : byte list =
+  `aes256_xts_decrypt_tail (i:num) (tail_len:num) (C:byte list) (iv:int128) (key1:int128 list) (key2:int128 list) : byte list =
     if tail_len = 0 then
       let Cm1 = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
+      let iv = calculate_tweak i iv key2 in
       int128_to_bytes (aes256_xts_decrypt_round Cm1 iv key1)
     else
       let Cm1 = SUB_LIST (i * 16, 16) C in
       let Ctail = SUB_LIST ((i + 1) * 16, tail_len) C in
 
-      let res_cs = cipher_stealing Cm1 Ctail tail_len iv key1 in
+      let res_cs = cipher_stealing Cm1 Ctail tail_len iv i key1 key2 in
       APPEND (FST res_cs) (SND res_cs)`;;
 
 (* The main decryption function *)
@@ -158,24 +156,20 @@ let aes256_xts_decrypt_tail = new_definition
 *)
 (* TODO: Challenge lemma: proving that the output is of same length as input *)
 (* TODO: Double check if IEEE and NIST spec talks about the error case len < 16 *)
-(* TODO: Double check the pseudo code in the spec for tweak caculation in ANEX c *)
 let aes256_xts_decrypt = new_definition
   `aes256_xts_decrypt
     (C:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (err:byte list) : byte list =
     if len < 16 then
       err
     else
-      let tail = len MOD 16 in
-      let m = (len - tail) DIV 16 in
-      let i = 0 in
-
-      let iv = xts_init_tweak iv key2 in
+      let tail_len = len MOD 16 in
+      let m = (len - tail_len) DIV 16 in
       if m < 2 then
-        aes256_xts_decrypt_tail i tail C iv key1
+        aes256_xts_decrypt_tail 0 tail_len C iv key1 key2
       else
-        let res = aes256_xts_decrypt_rec 0 (m - 2) C iv key1 in
-        let Ptail = aes256_xts_decrypt_tail (THD3 res) tail C (SND3 res) key1 in
-        APPEND (FST3 res) Ptail`;;
+        let res = aes256_xts_decrypt_rec 0 (m - 2) C iv key1 key2 in
+        let Ptail = aes256_xts_decrypt_tail (SND res) tail_len C iv key1 key2 in
+        APPEND (FST res) Ptail`;;
 
 (*******************************************)
 (* Test vectors *)
@@ -337,8 +331,10 @@ let KEY2 = new_definition `KEY2:int128 list =
 let XTS_INIT_TWEAK_CONV =
   REWR_CONV xts_init_tweak THENC AESENC_HELPER_CONV;;
 
-(* (REWRITE_CONV [iv_tweak;KEY2] THENC XTS_INIT_TWEAK_CONV)
-  `xts_init_tweak iv_tweak KEY2`;; *)
+(*
+(REWRITE_CONV [iv_tweak;KEY2] THENC XTS_INIT_TWEAK_CONV)
+  `xts_init_tweak iv_tweak KEY2`;;
+  *)
 
 let AES256_XTS_DECRYPT_ROUND_CONV =
   REWRITE_CONV [aes256_xts_decrypt_round] THENC
@@ -390,6 +386,33 @@ let GF_128_MULT_BY_PRIMITIVE_CONV =
 (* GF_128_MULT_BY_PRIMITIVE_CONV
   `GF_128_mult_by_primitive (word 0xffffffffffffffffffffffffffffffff)`;; *)
 
+let rec CALCULATE_TWEAK_CONV tm =
+  let BASE_CONV =
+    ONCE_REWRITE_CONV [calculate_tweak] THENC
+    XTS_INIT_TWEAK_CONV in
+  let INDUCT_CONV =
+    RATOR_CONV(LAND_CONV num_CONV) THENC
+    ONCE_REWRITE_CONV [CONJUNCT2 calculate_tweak] THENC
+    RAND_CONV CALCULATE_TWEAK_CONV THENC
+    GF_128_MULT_BY_PRIMITIVE_CONV in
+  match tm with
+  | Comb
+     (Comb
+       (Comb
+         (Const ("calculate_tweak",_), n),
+       _),
+     _) ->
+    if dest_numeral n =/ num 0
+    then BASE_CONV tm
+    else INDUCT_CONV tm
+  | _ -> failwith "CALCULATE_TWEAK_CONV: inapplicable";;
+
+(*
+(REWRITE_CONV [iv_tweak;KEY2] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 0 iv_tweak KEY2`;;
+
+(REWRITE_CONV [iv_tweak;KEY2] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 1 iv_tweak KEY2`;;
+*)
+
 let rec AES256_XTS_DECRYPT_REC_CONV tm =
   let BASE_CONV =
     REWR_CONV aes256_xts_decrypt_rec THENC
@@ -399,20 +422,22 @@ let rec AES256_XTS_DECRYPT_REC_CONV tm =
     DEPTH_CONV NUM_RED_CONV THENC
     ONCE_DEPTH_CONV SUB_LIST_CONV THENC
     ONCE_DEPTH_CONV BYTES_TO_INT128_CONV THENC let_CONV THENC
+    SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
     SUBLET_CONV (RAND_CONV AES256_XTS_DECRYPT_ROUND_CONV) THENC
     SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV THENC
-    SUBLET_CONV GF_128_MULT_BY_PRIMITIVE_CONV THENC let_CONV THENC
     SUBLET_CONV AES256_XTS_DECRYPT_REC_CONV THENC let_CONV THENC
-    REWRITE_CONV [FST3;SND3;THD3;APPEND] in
+    REWRITE_CONV [FST;SND;APPEND] in
   match tm with
   | Comb
+      (Comb
        (Comb
          (Comb
            (Comb
              (Comb (Const ("aes256_xts_decrypt_rec", _), i), m),
             _),
           _),
-        _) ->
+        _),
+      _) ->
     if dest_numeral m </ dest_numeral i
     then BASE_CONV tm
     else INDUCT_CONV tm
@@ -420,11 +445,12 @@ let rec AES256_XTS_DECRYPT_REC_CONV tm =
 
 (*
 (REWRITE_CONV [iv_tweak;KEY1;KEY2;c0] THENC AES256_XTS_DECRYPT_REC_CONV)
-  `aes256_xts_decrypt_rec 0 0 c0 iv_tweak KEY1`;;
+  `aes256_xts_decrypt_rec 0 0 c0 iv_tweak KEY1 KEY2`;;
   *)
 
 let CIPHER_STEALING_CONV =
   REWRITE_CONV [cipher_stealing] THENC
+  SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
   SUBLET_CONV GF_128_MULT_BY_PRIMITIVE_CONV THENC let_CONV THENC
   SUBLET_CONV (ONCE_DEPTH_CONV BYTES_TO_INT128_CONV) THENC
   SUBLET_CONV (RAND_CONV AES256_XTS_DECRYPT_ROUND_CONV) THENC
@@ -438,9 +464,9 @@ let CIPHER_STEALING_CONV =
   SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV;;
 
 (*
-(REWRITE_CONV [c0;iv_tweak;KEY1] THENC CIPHER_STEALING_CONV)
-  `cipher_stealing c0 [(word 0x0)] 1 iv_tweak KEY1`;;
-  *)
+(REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC CIPHER_STEALING_CONV)
+  `cipher_stealing c0 [(word 0x0)] 1 iv_tweak 0 KEY1 KEY2`;;
+*)
 
 let AES256_XTS_DECRYPT_TAIL_CONV tm =
   let ONE_BLOCK_CONV =
@@ -448,6 +474,7 @@ let AES256_XTS_DECRYPT_TAIL_CONV tm =
     DEPTH_CONV NUM_RED_CONV THENC
     SUBLET_CONV (RAND_CONV SUB_LIST_CONV) THENC
     SUBLET_CONV BYTES_TO_INT128_CONV THENC let_CONV THENC
+    SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
     RAND_CONV AES256_XTS_DECRYPT_ROUND_CONV THENC
     INT128_TO_BYTES_CONV in
   let ONE_BLOCK_AND_TAIL_CONV =
@@ -459,6 +486,7 @@ let AES256_XTS_DECRYPT_TAIL_CONV tm =
     REWRITE_CONV [FST;SND] THENC REWRITE_CONV [APPEND] in
   match tm with
   | Comb
+      (Comb
        (Comb
          (Comb
            (Comb
@@ -466,7 +494,8 @@ let AES256_XTS_DECRYPT_TAIL_CONV tm =
                (Const ("aes256_xts_decrypt_tail", _), _), tail_len),
             _),
           _),
-        _) ->
+        _),
+      _) ->
     if dest_numeral tail_len =/ num 0
     then ONE_BLOCK_CONV tm
     else ONE_BLOCK_AND_TAIL_CONV tm
@@ -474,10 +503,10 @@ let AES256_XTS_DECRYPT_TAIL_CONV tm =
 
 (*
 (REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_TAIL_CONV)
-  `aes256_xts_decrypt_tail 0 0 c0 iv_tweak KEY1`;;
+  `aes256_xts_decrypt_tail 0 0 c0 iv_tweak KEY1 KEY2`;;
 
 (REWRITE_CONV [c1;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_TAIL_CONV)
-  `aes256_xts_decrypt_tail 0 6 c1 iv_tweak KEY1`;;
+  `aes256_xts_decrypt_tail 0 6 c1 iv_tweak KEY1 KEY2`;;
 *)
 
 let AES256_XTS_DECRYPT_CONV tm =
@@ -485,29 +514,28 @@ let AES256_XTS_DECRYPT_CONV tm =
     REWR_CONV aes256_xts_decrypt THENC
     DEPTH_CONV NUM_RED_CONV in
   let MORE_THAN_2_CONV =
-    REWRITE_CONV [FST3;SND3;THD3] THENC
     SUBLET_CONV AES256_XTS_DECRYPT_REC_CONV THENC let_CONV THENC
+    REWRITE_CONV [FST;SND] THENC
     SUBLET_CONV AES256_XTS_DECRYPT_TAIL_CONV THENC let_CONV THENC
     REWRITE_CONV [APPEND] in
   let BODY_CONV =
     REWR_CONV aes256_xts_decrypt THENC
     DEPTH_CONV NUM_RED_CONV THENC let_CONV THENC
-    DEPTH_CONV NUM_RED_CONV THENC let_CONV THENC let_CONV THENC
-    SUBLET_CONV XTS_INIT_TWEAK_CONV THENC let_CONV THENC
+    DEPTH_CONV NUM_RED_CONV THENC let_CONV THENC
     DEPTH_CONV NUM_RED_CONV THENC
     (AES256_XTS_DECRYPT_TAIL_CONV ORELSEC MORE_THAN_2_CONV) in
   match tm with
   | Comb
-   (Comb
      (Comb
        (Comb
          (Comb
            (Comb
-             (Const ("aes256_xts_decrypt", _), _), len),
+             (Comb
+               (Const ("aes256_xts_decrypt", _), _), len),
+           _),
          _),
        _),
-     _),
-   _) ->
+     _) ->
     if dest_numeral len </ num 16
     then ERROR_CONV tm
     else BODY_CONV tm
@@ -520,7 +548,6 @@ let AES256_XTS_DECRYPT_CONV tm =
 (REWRITE_CONV [c0;iv_tweak;KEY1;KEY2;perror] THENC AES256_XTS_DECRYPT_CONV)
   `aes256_xts_decrypt c0 16 iv_tweak KEY1 KEY2 perror`;;
 
-(* 165 seconds *)
 time (REWRITE_CONV [iv_tweak;KEY1;KEY2;perror] THENC AES256_XTS_DECRYPT_CONV)
   `aes256_xts_decrypt [word 0xc3; word 0x0c; word 0xa8; word 0xf2
   ; word 0xed; word 0x57; word 0x30; word 0x7e
