@@ -38,13 +38,17 @@ let get_string bs (a:int): string =
 
 
 (*** load_elf reads an object file, and returns
-      (the ".text" section bytes, relocations info)
+  (the ".text" section bytes,
+   read-only symbol names and their bytes
+     (which will include ("WHOLE_READONLY", whole rodata section)),
+   relocations info)
 ***)
 let is_elf (file:bytes) = get_list file 0x0 4 = ['\x7f'; 'E'; 'L'; 'F'];;
+let is_elf_file (filename:string) = is_elf (load_file filename);;
 
 let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
       bytes * (* .text *)
-      (string * bytes) list * (* read-only data list *)
+      (string * bytes) list * (* name and data for each global rodata symbol *)
       ('a * (int * string * int)) list (* relocation info *)
   =
 
@@ -77,49 +81,83 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
   and check_section_type sec_header ty =
     if get_int_le sec_header 0x4 4 = ty then ()
     else failwith "unexpected section type" in
+
   (* Get the section contents of a section header *)
-  let section_contents sec_header =
-    Bytes.sub file (section_offset sec_header) (section_len sec_header)
-  and get_string_from_table sec_ndx =
-    let off = section_offset section_headers.(sec_ndx) in
-    fun i -> get_string file (off + i) in
-  let from_section_string_table =
-    let shstrndx = get_int_le file 0x3e 2 in
-    if shstrndx = 0xffff then failwith "no string table" else
-    fun entry_idx -> get_string_from_table shstrndx entry_idx in
-  let section_name sec_header =
+  let section_contents (sec_header:bytes): bytes =
+    Bytes.sub file (section_offset sec_header) (section_len sec_header) in
+
+  (* Get the section name from a section header *)
+  let section_name (sec_header:bytes) =
+    (* From .shstrtab (section header string table) extract a string whose byte
+      offset starts from chridx. *)
+    let from_section_string_table =
+      let shstrndx = get_int_le file 0x3e 2 in
+      if shstrndx = 0xffff then failwith "no section header string table" else
+      let get_string_from_table sec_ndx =
+        let off = section_offset section_headers.(sec_ndx) in
+        fun i -> get_string file (off + i)
+      in
+      fun entry_idx -> get_string_from_table shstrndx entry_idx
+    in
     from_section_string_table (get_int_le sec_header 0 4) in
 
-  (* Find a section header from section header table *)
+  (* Find a section header from the section header table *)
   let find_section_header =
-    let secs = Array.to_list section_headers in
+    let headers = Array.to_list section_headers in
     (* ty stands for the type of a section. Figure 4-9 of
        https://refspecs.linuxbase.org/elf/gabi4+/ch4.sheader.html
        has a table for their integer values, and  Figure 4-14
        has types for special sections such as .text . *)
-    fun name ty ->
-      let sec = find (fun sec -> section_name sec = name) secs in
-      check_section_type sec ty; sec in
+    fun name ty:bytes ->
+      let hdr = find (fun header -> section_name header = name) headers in
+      check_section_type hdr ty; hdr in
 
-  let from_symbol_string_table =
+  let find_section_contents (name,ty):bytes =
+      section_contents (find_section_header name ty) in
+
+  (* From .strtab (string table) extract a string whose byte offset starts from
+     chridx. *)
+  let from_string_table =
     try let the_table = section_contents
         (find_section_header ".strtab" 3 (* SHT_STRTAB *)) in
-      fun stridx -> get_string the_table stridx
-    with _ -> fun (stridx:int) -> "" in
+      fun chridx -> get_string the_table chridx
+    with _ -> fun (chridx:int) -> "" in
+
+  (* The .rodata section (None if nonexistent) *)
+  let rodata_contents:bytes option = catch
+      find_section_contents (".rodata",1 (* SHT_PROGBITS *)) in
+  (* The symbol table.
+      https://refspecs.linuxbase.org/elf/gabi4+/ch4.symtab.html
+     (None if nonexistent) *)
+  let symtab_contents:bytes option = catch
+      find_section_contents (".symtab",2 (* SHT_SYMTAB *)) in
+
+  let symbol_name (symtab_idx:int): string =
+    let symtab = Option.get symtab_contents in
+    let sym_entrysize = 24 (* size of Elf64_Sym struct *) in
+    let char_idx = get_int_le symtab (symtab_idx * sym_entrysize) 4 in
+    from_string_table char_idx
+  in
+  (* The "st_shndx" field *)
+  let symbol_sectionidx (symtab_idx:int): int =
+    let symtab = Option.get symtab_contents in
+    let sym_entrysize = 24 in
+    get_int_le symtab (symtab_idx * sym_entrysize + 6) 2
+  in
+  (* Least-significant 4 bits of the "st_info" field *)
+  let symbol_type (symtab_idx:int): int =
+    let symtab = Option.get symtab_contents in
+    let sym_entrysize = 24 in
+    let symbol_info = get_int_le symtab (symtab_idx * sym_entrysize + 4) 1 in
+    symbol_info land 0xf
+  in
 
   (* The ".text" section contents. *)
   section_contents (find_section_header ".text" 1 (* SHT_PROGBITS *)),
 
   (* Get the read-only data from ".rodata" section by searching
     the symbol table (".symtab"). *)
-  (let find_section_contents (name,ty) =
-      section_contents (find_section_header name ty) in
-   (* The .rodata section *)
-    let rodata = catch find_section_contents (".rodata",1 (* SHT_PROGBITS *))
-    (* The symbol table.
-       https://refspecs.linuxbase.org/elf/gabi4+/ch4.symtab.html *)
-    and symtab = catch find_section_contents (".symtab",2 (* SHT_SYMTAB *)) in
-    match (rodata,symtab) with
+  (match (rodata_contents,symtab_contents) with
     | Some rodata, Some symtab -> begin
       let sym_entrysize = 24 (* size of Elf64_Sym struct *) in
 
@@ -128,19 +166,11 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
       let rodata_entries = ref [] in
       for i = 0 to (Bytes.length symtab) / sym_entrysize - 1 do
         let symtab_entry = Bytes.sub symtab (i * sym_entrysize) sym_entrysize in
-        (* The "st_shndx" field *)
-        let symbol_sectionidx = get_int_le symtab_entry 6 2 in
-        (* Least-significant 4 bits of the "st_info" field *)
-        let symbol_type =
-          let symbol_info = get_int_le symtab_entry 4 1 in
-          symbol_info land 0xf in
-        if symbol_type = 1 (* 1 = STT_OBJECT: a data object, such as a variable,
+        if symbol_type i = 1 (* 1 = STT_OBJECT: a data object, such as a variable,
               an array, and so on. *) &&
-            section_name (section_headers.(symbol_sectionidx)) = ".rodata"
+            section_name (section_headers.(symbol_sectionidx i)) = ".rodata"
         then (* Found a .rodata entry *)
-          let symbol_name =
-            let char_index = get_int_le symtab_entry 0 4 in
-            from_symbol_string_table char_index in
+          let symbol_name = symbol_name i in
           let symbol_size = get_int_le symtab_entry 16 8 in
           let symbol_addr = get_int_le symtab_entry 8 8 in
           let data = Bytes.sub rodata symbol_addr symbol_size in
@@ -148,7 +178,7 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
         else
           ()
       done;
-      !rodata_entries
+      (!rodata_entries @ ["WHOLE_READONLY", rodata]) 
       end
     | _ -> []),
 
@@ -156,21 +186,23 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
   match catch (find_section_header ".rela.text") 4 (* SHT_RELA *) with
   | None -> []
   | Some rel_sec ->
-    let symbol =
-      let symtab_sec = section_headers.(section_link rel_sec) in
-      let symtab_off = section_offset symtab_sec in
-      get_string_from_table (section_link symtab_sec) o
-      fun i -> get_int_le file (symtab_off + i * 0x18) 4 in
     let rel_pos = section_offset rel_sec in
     let rel_end = rel_pos + section_len rel_sec in
     let rec relocs off =
       if off = rel_end then [] else
+
+      let symtab_idx = get_int_le file (off + 0xc) 4 in
+      let r_offset = get_int_le file off 8 in
       ((* The relocation type; ELF64_R_TYPE *)
        reloc_type (get_int_le file (off + 0x8) 4),
         ((* r_offset *)
-          get_int_le file off 8,
+          r_offset,
           (* The symbol name (string) *)
-          symbol (get_int_le file (off + 0xc) 4),
+          (if symbol_type symtab_idx = 3 (* STT_SECTION *) &&
+              section_name (section_headers.(symbol_sectionidx symtab_idx))
+              = ".rodata"
+           then "WHOLE_READONLY"
+           else symbol_name symtab_idx),
           (* r_addend. Assume that this value is *)
           get_int_le file (off + 0x10) 8)) ::
       relocs (off + 0x18) in
@@ -336,8 +368,9 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
   (* 1. The __text section data *)
   snd (find_section "__text"),
 
-  (* 2. The readonly constants *)
-  (if length !const_symbols = 0 then [] else begin
+  (* 2. The readonly constants for each symbol, followed by "WHOLE_READONLY" and
+        its whole byte contents *)
+  (let consts = if length !const_symbols = 0 then [] else begin
     (* collect (symbol name, bytes) list *)
     let res = ref [] in
     for j = 0 to (length !const_symbols - 1) do
@@ -346,16 +379,34 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
         else Some (snd (List.nth !const_symbols (j+1))) in
       res := !res @ [sname, extract_bytes ofs ofs_end !sections]
     done;
-    !res
-    end),
+    !res end in
+    consts @ (match catch find_section "__const" with
+    | Some (_, b) -> ["WHOLE_READONLY", b]
+    | None -> [])),
 
-   (* 3. Relocation entries *)
+  (* 3. Relocation entries *)
   (let res = ref [] in
     List.iter (fun section_idx, r_address, r_data, r_symbolnum, r_pcrel, r_length, r_extern, r_type ->
-      let symbolname,_,_,_,_ = List.nth !raw_symbols r_symbolnum in
-      res := !res @ [reloc_type r_type,
-        (r_address, symbolname, 0 (* corresponds to "addend" in ELF relocation entry *))]
-    ) !raw_reloc_entries;
+      if r_type = 10 then
+        (* ARM64_RELOC_ADDEND "Must be followed by ARM64_RELOC_PAGE21 or
+           ARM64_RELOC_PAGEOFF12" (per llvm/include/llvm/BinaryFormat/MachO.h)*)
+        let relty,(addr,symbolname,addend) = last !res in
+        if addend <> 0 then
+          failwith "ARM64_RELOC_ADDEND but previous addend nonzero!"
+        else
+          let new_addend = r_symbolnum in
+          res := (butlast !res) @ [relty,(addr,symbolname,new_addend)]
+
+      else
+        let symbolname,_,_,_,_ = List.nth !raw_symbols r_symbolnum in
+        res := !res @ [reloc_type r_type,
+          (r_address, symbolname,
+           0 (* corresponds to "addend" in ELF relocation entry. This will be
+                filled by the following ARM64_RELOC_ADDEND if exists. *))]
+      )
+      (* order of raw_reloc_entries matters because ARM64_RELOC_ADDEND
+         depends on it. *)
+      (rev !raw_reloc_entries);
     (* sort the result *)
     sort (fun (_,(i1,_,_)) (_,(i2,_,_)) -> i1 < i2) !res
   );;
@@ -398,10 +449,14 @@ type arm_reloc =
     | Arm_call26 (* BL *)
     | Arm_adr_prel_lo21 (* ADR *)
     | Arm_adr_prel_pg_hi21 (* ADRP; this is ARM64_RELOC_PAGE21 in Mach-O *)
-    | Arm_add_abs_lo12_nc (* ADD; this is ARM64_RELOC_PAGEOFF12 in Mach-O  *);;
+    | Arm_add_abs_lo12_nc (* ADD; this is ARM64_RELOC_PAGEOFF12 in Mach-O  *)
+(* Note: there is no ARM64_RELOC_ADDEND in this list! It is immediately
+   processed by load_macho. *)
+;;
 
 let load_elf_arm (bs:bytes):
-  bytes * (string * bytes) list * (arm_reloc * (int * string * int)) list =
+    bytes(*.text*) *
+    (string * bytes) list * (arm_reloc * (int * string * int)) list =
   if is_macho bs then
     load_macho 0x0100000C (function
       (* See the full list from:
@@ -442,7 +497,12 @@ let term_of_list_int,app_term_of_int_fun,term_of_int_fun =
 
   - : term =
   `[word 20; word 22; word 24; word 26; word 28; word 30; word 32; word 34;
-    word 36; word 38]` *)
+    word 36; word 38]`
+
+  # app_term_of_int_fun (fun x -> x+10) 1 5 `[word 0; word 1]:byte list`;;
+
+  - : term = `[word 11; word 12; word 13; word 14; word 0; word 1]`
+*)
 
 let term_of_bytes bs =
   term_of_int_fun (Char.code o Bytes.get bs) 0 (Bytes.length bs);;
@@ -451,6 +511,11 @@ let term_of_array bs =
 let array_of_bytes bs =
   Array.init (Bytes.length bs) (Char.code o Bytes.get bs);;
 
+(* term_of_relocs returns:
+  (a list of HOL Light variables that are used to represent addresses of
+   relocatable symbols,
+   a symbolic byte list in term type)
+*)
 let term_of_relocs reloc_fn (bstext,constants,rels) =
   let rec go = function
   | [], start ->

@@ -28,9 +28,15 @@ prioritize_num();;
 (**** print_literal_relocs_from_elf "arm/curve25519/curve25519_x25519base_byte_alt.o";;
  ****)
 
-let curve25519_x25519base_byte_alt_mc,[curve25519_x25519base_byte_alt_constant_data] =
-  define_assert_relocs_from_elf "curve25519_x25519base_byte_alt_mc"
-  "arm/curve25519/curve25519_x25519base_byte_alt.o"
+let curve25519_x25519base_byte_alt_mc,const_data_list =
+  define_assert_relocs_from_elf
+    ~map_symbol_name:(function
+      | "WHOLE_READONLY" | "ltmp1" (* MacOS *)
+      | "curve25519_x25519base_byte_alt_constant"
+        -> "curve25519_x25519base_byte_alt_constant_data"
+      | s -> failwith ("unknown symbol: " ^ s))
+    "curve25519_x25519base_byte_alt_mc"
+    "arm/curve25519/curve25519_x25519base_byte_alt.o"
 (fun w BL ADR ADRP ADD_rri64 -> [
   w 0xa9bf53f3;         (* arm_STP X19 X20 SP (Preimmediate_Offset (iword (-- &16))) *)
   w 0xa9bf5bf5;         (* arm_STP X21 X22 SP (Preimmediate_Offset (iword (-- &16))) *)
@@ -102,8 +108,8 @@ let curve25519_x25519base_byte_alt_mc,[curve25519_x25519base_byte_alt_constant_d
   w 0xa90137ec;         (* arm_STP X12 X13 SP (Immediate_Offset (iword (&16))) *)
   w 0xf94003e0;         (* arm_LDR X0 SP (Immediate_Offset (word 0)) *)
   w 0xf27d001f;         (* arm_TST X0 (rvalue (word 8)) *)
-  ADRP (mk_var("curve25519_x25519base_byte_alt_constant",`:num`),0,280,19);
-  ADD_rri64 (mk_var("curve25519_x25519base_byte_alt_constant",`:num`),0,19,19);
+  ADRP (mk_var("curve25519_x25519base_byte_alt_constant_data",`:num`),0,280,19);
+  ADD_rri64 (mk_var("curve25519_x25519base_byte_alt_constant_data",`:num`),0,19,19);
   w 0xa9400660;         (* arm_LDP X0 X1 X19 (Immediate_Offset (iword (&0))) *)
   w 0xa9460e62;         (* arm_LDP X2 X3 X19 (Immediate_Offset (iword (&96))) *)
   w 0x9a820000;         (* arm_CSEL X0 X0 X2 Condition_EQ *)
@@ -2350,6 +2356,8 @@ let curve25519_x25519base_byte_alt_mc,[curve25519_x25519base_byte_alt_constant_d
   w 0xa8c153f3;         (* arm_LDP X19 X20 SP (Postimmediate_Offset (iword (&16))) *)
   w 0xd65f03c0          (* arm_RET X30 *)
 ]);;
+
+let curve25519_x25519base_byte_alt_constant_data = last const_data_list;;
 
 let CURVE25519_X25519BASE_BYTE_ALT_EXEC =
   ARM_MK_EXEC_RULE curve25519_x25519base_byte_alt_mc;;
