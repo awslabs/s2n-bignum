@@ -2983,7 +2983,7 @@ let curve25519_x25519base_byte_mc,const_data_list =
   w 0xd65f03c0          (* arm_RET X30 *)
 ]);;
 
-let curve25519_x25519base_byte_constant_data = const_data_list;;
+let curve25519_x25519base_byte_constant_data = last const_data_list;;
 
 let CURVE25519_X25519BASE_BYTE_EXEC =
   ARM_MK_EXEC_RULE curve25519_x25519base_byte_mc;;
