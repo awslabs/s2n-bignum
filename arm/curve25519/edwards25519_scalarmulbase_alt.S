@@ -22,7 +22,6 @@
 .type edwards25519_scalarmulbase_alt, %function
 .size edwards25519_scalarmulbase_alt, 9248
 
-.global edwards25519_scalarmulbase_alt_constant
 .type edwards25519_scalarmulbase_alt_constant, %object
 .size edwards25519_scalarmulbase_alt_constant, 48576
 #endif
