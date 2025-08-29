@@ -167,6 +167,7 @@ jobs:
     - name: Install dependent packages
       run: |
         brew install opam
+        opam init -a
 
     - name: Install HOL Light
       run: |
