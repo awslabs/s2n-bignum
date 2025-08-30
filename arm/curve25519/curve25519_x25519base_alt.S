@@ -23,7 +23,6 @@
 .type curve25519_x25519base_alt, %function
 .size curve25519_x25519base_alt, 8788
 
-.global curve25519_x25519base_alt_constant
 .type curve25519_x25519base_alt_constant, %object
 .size curve25519_x25519base_alt_constant, 48576
 #endif

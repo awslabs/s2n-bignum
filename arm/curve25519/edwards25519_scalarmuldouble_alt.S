@@ -30,7 +30,6 @@
 .type edwards25519_scalarmuldouble_alt, %function
 .size edwards25519_scalarmuldouble_alt, 22184
 
-.global edwards25519_scalarmuldouble_alt_constant
 .type edwards25519_scalarmuldouble_alt_constant, %object
 .size edwards25519_scalarmuldouble_alt_constant, 768
 #endif
