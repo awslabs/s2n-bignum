@@ -34,7 +34,7 @@
 
 #define NUMSIZE 48
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 
 S2N_BN_SYMBOL(p384_montjdouble):
         CFI_START

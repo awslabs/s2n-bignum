@@ -74,7 +74,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (14*NUMSIZE)
+#define NSPACE 14*NUMSIZE
 
 // Load 64-bit immediate into a register
 

@@ -62,7 +62,7 @@
 #define z2 sp, #(4*NUMSIZE)
 #define z3 sp, #(5*NUMSIZE)
 
-#define NSPACE (9*NUMSIZE)
+#define NSPACE 9*NUMSIZE
 
 // Loading large constants
 
@@ -388,7 +388,7 @@ Lp256_scalarmulbase_alt_local_inv_p256:
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
-        CFI_DEC_SP(0xa0)
+        CFI_DEC_SP(160)
         mov     x20, x0
         mov     x10, #0xffffffffffffffff
         mov     x11, #0xffffffff
@@ -1455,7 +1455,7 @@ Lp256_scalarmulbase_alt_inv_midloop:
         csel    x13, x3, x13, cc
         stp     x10, x11, [x20]
         stp     x12, x13, [x20, #16]
-        CFI_INC_SP(0xa0)
+        CFI_INC_SP(160)
         CFI_POP2(x23,x24)
         CFI_POP2(x21,x22)
         CFI_POP2(x19,x20)
@@ -1687,7 +1687,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
 
 Lp256_scalarmulbase_alt_local_p256_montjmixadd:
         CFI_START
-        CFI_DEC_SP(0xc0)
+        CFI_DEC_SP(192)
         mov     x15, x0
         mov     x16, x1
         mov     x17, x2
@@ -3047,7 +3047,7 @@ Lp256_scalarmulbase_alt_local_p256_montjmixadd:
         stp     x6, x7, [x15, #48]
         stp     x8, x9, [x15, #64]
         stp     x10, x11, [x15, #80]
-        CFI_INC_SP(0xc0)
+        CFI_INC_SP(192)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_p256_montjmixadd)

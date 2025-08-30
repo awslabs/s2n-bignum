@@ -53,7 +53,7 @@
 
 #define res [rsp+(31*NUMSIZE)]
 
-#define NSPACE (32*NUMSIZE)
+#define NSPACE 32*NUMSIZE
 
 S2N_BN_SYMBOL(p256_scalarmul):
         CFI_START
@@ -504,7 +504,7 @@ Lp256_scalarmul_local_inv_p256:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0xf0)
+        CFI_DEC_RSP(240)
         mov     [rsp+0xe0], rdi
         xor     ecx, ecx
         mov     edx, 0xffffffff
@@ -1916,7 +1916,7 @@ Lp256_scalarmul_inv_midloop:
         mov     [rdi+0x8], rbx
         mov     [rdi+0x10], rcx
         mov     [rdi+0x18], rdx
-        CFI_INC_RSP(0xf0)
+        CFI_INC_RSP(240)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)
@@ -2306,7 +2306,7 @@ Lp256_scalarmul_local_p256_montjadd:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0xe0)
+        CFI_DEC_RSP(224)
         mov     rbp, rdx
         mov     rdx, [rsi+0x40]
         mulx    r15, r8, rdx
@@ -4272,7 +4272,7 @@ Lp256_scalarmul_local_p256_montjadd:
         mov     [rdi+0x48], r13
         mov     [rdi+0x50], r14
         mov     [rdi+0x58], r15
-        CFI_INC_RSP(0xe0)
+        CFI_INC_RSP(224)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)
@@ -4289,7 +4289,7 @@ Lp256_scalarmul_local_p256_montjdouble:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0xc0)
+        CFI_DEC_RSP(192)
         mov     rdx, [rsi+0x40]
         mulx    r15, r8, rdx
         mulx    r10, r9, [rsi+0x48]
@@ -5390,7 +5390,7 @@ Lp256_scalarmul_local_p256_montjdouble:
         mov     [rdi+0x30], r10
         adc     r11, rcx
         mov     [rdi+0x38], r11
-        CFI_INC_RSP(0xc0)
+        CFI_INC_RSP(192)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)
@@ -5407,7 +5407,7 @@ Lp256_scalarmul_local_p256_montjmixadd:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0xc0)
+        CFI_DEC_RSP(192)
         mov     rbp, rdx
         mov     rdx, [rsi+0x40]
         mulx    r15, r8, rdx
@@ -6809,7 +6809,7 @@ Lp256_scalarmul_local_p256_montjmixadd:
         mov     [rdi+0x48], r9
         mov     [rdi+0x50], r10
         mov     [rdi+0x58], r11
-        CFI_INC_RSP(0xc0)
+        CFI_INC_RSP(192)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)

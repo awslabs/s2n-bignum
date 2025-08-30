@@ -68,7 +68,7 @@
 #define cf (9*NUMSIZE+40)(%rsp)
 #define j (9*NUMSIZE+48)(%rsp)
 
-#define NSPACE (11*NUMSIZE)
+#define NSPACE 11*NUMSIZE
 
 S2N_BN_SYMBOL(p256_scalarmulbase):
         CFI_START
@@ -468,7 +468,7 @@ Lp256_scalarmulbase_local_inv_p256:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0xf0)
+        CFI_DEC_RSP(240)
         movq    %rdi, 0xe0(%rsp)
         xorl    %ecx, %ecx
         movl    $0xffffffff, %edx
@@ -1880,7 +1880,7 @@ Lp256_scalarmulbase_inv_midloop:
         movq    %rbx, 0x8(%rdi)
         movq    %rcx, 0x10(%rdi)
         movq    %rdx, 0x18(%rdi)
-        CFI_INC_RSP(0xf0)
+        CFI_INC_RSP(240)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)
@@ -2153,7 +2153,7 @@ Lp256_scalarmulbase_local_p256_montjmixadd:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0xc0)
+        CFI_DEC_RSP(192)
         movq    %rdx, %rbp
         movq    0x40(%rsi), %rdx
         mulxq   %rdx, %r8, %r15
@@ -3555,7 +3555,7 @@ Lp256_scalarmulbase_local_p256_montjmixadd:
         movq    %r9, 0x48(%rdi)
         movq    %r10, 0x50(%rdi)
         movq    %r11, 0x58(%rdi)
-        CFI_INC_RSP(0xc0)
+        CFI_INC_RSP(192)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)

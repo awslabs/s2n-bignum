@@ -59,7 +59,7 @@
 
 // Round up to maintain stack alignment
 
-#define NSPACE (55*NUMSIZE+8)
+#define NSPACE 3968
 
 #define selectblock(I)                            \
         cmp     bf, #(1*I) __LF                      \
@@ -756,7 +756,7 @@ Lp521_jscalarmul_alt_jadd:
         CFI_PUSH2(x25,x26)
         CFI_PUSH2(x27,x28)
         CFI_PUSH2(x29,x30)
-        CFI_DEC_SP(0x240)
+        CFI_DEC_SP(576)
         mov     x27, x0
         mov     x28, x1
         mov     x29, x2
@@ -993,7 +993,7 @@ Lp521_jscalarmul_alt_jadd:
         stp     x4, x5, [x27, #176]
         stp     x6, x7, [x27, #192]
         str     x8, [x27, #208]
-        CFI_INC_SP(0x240)
+        CFI_INC_SP(576)
         CFI_POP2(x29,x30)
         CFI_POP2(x27,x28)
         CFI_POP2(x25,x26)
@@ -1014,7 +1014,7 @@ Lp521_jscalarmul_alt_jdouble:
         CFI_PUSH2(x25,x26)
         CFI_PUSH2(x27,x28)
         CFI_PUSH2(x29,x30)
-        CFI_DEC_SP(0x200)
+        CFI_DEC_SP(512)
         mov     x27, x0
         mov     x28, x1
         mov     x0, sp
@@ -1466,7 +1466,7 @@ Lp521_jscalarmul_alt_jdouble:
         stp     x7, x8, [x27, #104]
         stp     x9, x10, [x27, #120]
         str     x11, [x27, #136]
-        CFI_INC_SP(0x200)
+        CFI_INC_SP(512)
         CFI_POP2(x29,x30)
         CFI_POP2(x27,x28)
         CFI_POP2(x25,x26)

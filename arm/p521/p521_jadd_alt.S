@@ -51,7 +51,7 @@
 #define z_3 input_z, #(2*NUMSIZE)
 
 // Pointer-offset pairs for temporaries, with some aliasing
-// #NSPACE is the total stack needed for these temporaries
+// NSPACE is the total stack needed for these temporaries
 
 #define z1sq sp, #(NUMSIZE*0)
 #define ww sp, #(NUMSIZE*0)
@@ -79,7 +79,7 @@
 
 // NUMSIZE*7 is not 16-aligned so we round it up
 
-#define NSPACE (NUMSIZE*7+8)
+#define NSPACE 512
 
 // Corresponds exactly to bignum_mul_p521_alt
 

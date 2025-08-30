@@ -61,7 +61,7 @@
 
 // NUMSIZE*7 is not 16-aligned so we round it up
 
-#define NSPACE (NUMSIZE*7+8)
+#define NSPACE 512
 
 // Corresponds exactly to bignum_mul_p521_alt
 

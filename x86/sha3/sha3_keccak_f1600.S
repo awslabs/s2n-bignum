@@ -45,7 +45,7 @@ S2N_BN_SYMBOL(sha3_keccak_f1600):
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0xd0)
+        CFI_DEC_RSP(208)
 
         not    QWORD PTR [rdi+0x08]
         not    QWORD PTR [rdi+0x10]
@@ -465,7 +465,7 @@ Lsha3_keccak_f1600_loop:
         not    QWORD PTR [rdi+0x88]
         not    QWORD PTR [rdi+0xa0]
 
-        CFI_INC_RSP(0xd0)
+        CFI_INC_RSP(208)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)

@@ -72,7 +72,7 @@
 #define xd sp, #(NUMSIZE*5)
 #define resz sp, #(NUMSIZE*5)
 
-#define NSPACE (NUMSIZE*6)
+#define NSPACE NUMSIZE*6
 
 // Corresponds to bignum_montmul_sm2_alt except for registers
 

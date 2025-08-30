@@ -49,7 +49,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (16*N)
+#define NSPACE 16*N
 
 // Loading large constants
 

@@ -62,7 +62,7 @@
 
 #define tmp (NUMSIZE*7)(%rsp)
 
-#define NSPACE (NUMSIZE*7+64)
+#define NSPACE 568
 
 // Corresponds exactly to bignum_mul_p521
 

@@ -80,7 +80,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (20*N)
+#define NSPACE 20*N
 
 // ---------------------------------------------------------------------------
 // Core signed almost-Montgomery reduction macro. Takes input in

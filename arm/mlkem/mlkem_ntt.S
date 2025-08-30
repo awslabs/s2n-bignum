@@ -37,7 +37,7 @@ S2N_BN_SYMBOL(mlkem_ntt):
 //
 // in the mlkem-native repository.
 
-        CFI_DEC_SP(0x40)
+        CFI_DEC_SP(64)
         CFI_STACKSAVE2(d8,d9,0)
         CFI_STACKSAVE2(d10,d11,16)
         CFI_STACKSAVE2(d12,d13,32)
@@ -362,7 +362,7 @@ Lmlkem_ntt_layer4567_start:
         CFI_STACKLOAD2(d10,d11,16)
         CFI_STACKLOAD2(d12,d13,32)
         CFI_STACKLOAD2(d14,d15,48)
-        CFI_INC_SP(0x40)
+        CFI_INC_SP(64)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(mlkem_ntt)

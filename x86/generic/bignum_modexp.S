@@ -464,7 +464,7 @@ Lbignum_modexp_local_amontmul:
          CFI_PUSH(r13)
          CFI_PUSH(r14)
          CFI_PUSH(r15)
-         CFI_DEC_RSP(0x8)
+         CFI_DEC_RSP(8)
          test   rdi, rdi
          je     Lbignum_modexp_amont_end
          mov    r9, rdx
@@ -566,7 +566,7 @@ Lbignum_modexp_acorrloop:
          cmp    rbx, rdi
          jb     Lbignum_modexp_acorrloop
 Lbignum_modexp_amont_end:
-         CFI_INC_RSP(0x8)
+         CFI_INC_RSP(8)
          CFI_POP(r15)
          CFI_POP(r14)
          CFI_POP(r13)

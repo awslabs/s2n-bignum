@@ -64,7 +64,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (6*NUMSIZE)
+#define NSPACE 6*NUMSIZE
 
 // Macro wrapping up the basic field operation bignum_mul_p25519, only
 // trivially different from a pure function call to that subroutine.

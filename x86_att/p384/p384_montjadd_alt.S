@@ -82,7 +82,7 @@
 #define input_x (NUMSIZE*7)(%rsp)
 #define input_y (NUMSIZE*7+8)(%rsp)
 
-#define NSPACE (NUMSIZE*7+16)
+#define NSPACE 352
 
 // Corresponds exactly to bignum_montmul_p384_alt
 

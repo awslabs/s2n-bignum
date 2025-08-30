@@ -80,7 +80,7 @@
 
 #define tmp rsp+(NUMSIZE*7)
 
-#define NSPACE (NUMSIZE*8)
+#define NSPACE NUMSIZE*8
 
 // Corresponds exactly to bignum_mul_p521_alt except temp storage
 

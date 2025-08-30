@@ -52,7 +52,7 @@
 #define dx2 rsp+(NUMSIZE*8)
 #define xy2 rsp+(NUMSIZE*10)
 
-#define NSPACE (NUMSIZE*12)
+#define NSPACE NUMSIZE*12
 
 // Corresponds to bignum_mul_p256k1_alt except rsi -> rbx
 

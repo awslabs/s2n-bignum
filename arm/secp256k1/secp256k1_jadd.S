@@ -81,7 +81,7 @@
 
 #define y1a sp, #(NUMSIZE*6)
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 
 // Corresponds exactly to bignum_mul_p256k1 except for registers and
 // re-use of the pconst register for the constant 4294968273

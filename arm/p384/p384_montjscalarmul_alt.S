@@ -58,7 +58,7 @@
 
 #define tab sp, #(7*NUMSIZE)
 
-#define NSPACE (55*NUMSIZE)
+#define NSPACE 55*NUMSIZE
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.

@@ -53,7 +53,7 @@
 #define z2 sp, #(7*NUMSIZE)
 #define z3 sp, #(8*NUMSIZE)
 
-#define NSPACE (31*NUMSIZE)
+#define NSPACE 31*NUMSIZE
 
 // Loading large constants
 
@@ -454,7 +454,7 @@ Lp256_scalarmul_local_inv_p256:
         CFI_PUSH2(x19,x20)
         CFI_PUSH2(x21,x22)
         CFI_PUSH2(x23,x24)
-        CFI_DEC_SP(0xa0)
+        CFI_DEC_SP(160)
         mov     x20, x0
         mov     x10, #0xffffffffffffffff
         mov     x11, #0xffffffff
@@ -1521,7 +1521,7 @@ Lp256_scalarmul_inv_midloop:
         csel    x13, x3, x13, cc
         stp     x10, x11, [x20]
         stp     x12, x13, [x20, #16]
-        CFI_INC_SP(0xa0)
+        CFI_INC_SP(160)
         CFI_POP2(x23,x24)
         CFI_POP2(x21,x22)
         CFI_POP2(x19,x20)
@@ -2025,7 +2025,7 @@ Lp256_scalarmul_local_p256_montjadd:
         CFI_PUSH2(x23,x24)
         CFI_PUSH2(x25,x26)
         CFI_PUSH2(x27,x30)
-        CFI_DEC_SP(0xe0)
+        CFI_DEC_SP(224)
         mov     x21, x0
         mov     x22, x1
         mov     x23, x2
@@ -5131,7 +5131,7 @@ Lp256_scalarmul_local_p256_montjadd:
         stp     x6, x7, [x21, #48]
         stp     x8, x9, [x21, #64]
         stp     x10, x11, [x21, #80]
-        CFI_INC_SP(0xe0)
+        CFI_INC_SP(224)
         CFI_POP2(x27,x30)
         CFI_POP2(x25,x26)
         CFI_POP2(x23,x24)
@@ -5145,7 +5145,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmul_local_p256_montjdouble)
 
 Lp256_scalarmul_local_p256_montjdouble:
         CFI_START
-        CFI_DEC_SP(0x110)
+        CFI_DEC_SP(272)
         stp     x19, x20, [sp, #192]
         stp     x21, x22, [sp, #208]
         stp     x23, x24, [sp, #224]
@@ -6652,7 +6652,7 @@ Lp256_scalarmul_local_p256_montjdouble:
         ldp     x23, x24, [sp, #224]
         ldp     x21, x22, [sp, #208]
         ldp     x19, x20, [sp, #192]
-        CFI_INC_SP(0x110)
+        CFI_INC_SP(272)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmul_local_p256_montjdouble)
@@ -6662,7 +6662,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmul_local_p256_montjmixadd)
 Lp256_scalarmul_local_p256_montjmixadd:
         CFI_START
         CFI_PUSH2(x19,x20)
-        CFI_DEC_SP(0xc0)
+        CFI_DEC_SP(192)
         mov     x17, x0
         mov     x19, x1
         mov     x20, x2
@@ -8609,7 +8609,7 @@ Lp256_scalarmul_local_p256_montjmixadd:
         stp     x6, x7, [x17, #48]
         stp     x8, x9, [x17, #64]
         stp     x10, x11, [x17, #80]
-        CFI_INC_SP(0xc0)
+        CFI_INC_SP(192)
         CFI_POP2(x19,x20)
         CFI_RET
 

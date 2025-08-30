@@ -44,7 +44,7 @@ S2N_BN_SYMBOL(sha3_keccak_f1600):
 // The only change is the use of simple 64-bit addressing in place of
 // the unnecessary down-and-upcasting arising from [x9, w25, uxtw #3]
 
-        CFI_DEC_SP(0x80)
+        CFI_DEC_SP(128)
         CFI_STACKSAVE2(x19,x20,32)
         CFI_STACKSAVE2(x21,x22,48)
         CFI_STACKSAVE2(x23,x24,64)
@@ -342,7 +342,7 @@ Lsha3_keccak_f1600_loop:
         CFI_STACKLOAD2(x25,x26,80)
         CFI_STACKLOAD2(x27,x28,96)
         CFI_STACKLOAD2(x29,x30,112)
-        CFI_INC_SP(0x80)
+        CFI_INC_SP(128)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(sha3_keccak_f1600)

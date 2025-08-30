@@ -36,7 +36,7 @@
 
 // 7 NUMSIZEs for the point operation, one extra NUMSIZE for field operations
 
-#define NSPACE (NUMSIZE*8)
+#define NSPACE NUMSIZE*8
 
 S2N_BN_SYMBOL(p384_montjadd):
         CFI_START

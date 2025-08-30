@@ -75,7 +75,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (9*NUMSIZE)
+#define NSPACE 9*NUMSIZE
 
 // Macros wrapping up the basic field operations bignum_mul_p25519_alt
 // and bignum_sqr_p25519_alt, only trivially different from pure function

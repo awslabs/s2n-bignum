@@ -59,7 +59,7 @@
 
 #define res [rsp+(55*NUMSIZE)]
 
-#define NSPACE (56*NUMSIZE)
+#define NSPACE 56*NUMSIZE
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.
@@ -658,7 +658,7 @@ Lp384_montjscalarmul_p384_montjadd:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0x160)
+        CFI_DEC_RSP(352)
         mov     [rsp+0x150], rsi
         mov     [rsp+0x158], rdx
         mov     rdx, [rsi+0x60]
@@ -5057,7 +5057,7 @@ Lp384_montjscalarmul_p384_montjadd:
         mov     [rdi+0x78], r11
         mov     [rdi+0x80], rbx
         mov     [rdi+0x88], rbp
-        CFI_INC_RSP(0x160)
+        CFI_INC_RSP(352)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)
@@ -5078,7 +5078,7 @@ Lp384_montjscalarmul_p384_montjdouble:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0x158)
+        CFI_DEC_RSP(344)
         mov     [rsp+0x150], rdi
         mov     rdx, [rsi+0x60]
         mulx    r10, r9, [rsi+0x68]
@@ -7402,7 +7402,7 @@ Lp384_montjscalarmul_p384_montjdouble:
         mov     [rdi+0x50], r12
         sbb     r13, 0x0
         mov     [rdi+0x58], r13
-        CFI_INC_RSP(0x158)
+        CFI_INC_RSP(344)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)

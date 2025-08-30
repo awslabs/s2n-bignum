@@ -60,7 +60,7 @@
 #define x4p sp, #(NUMSIZE*5)
 #define d_ sp, #(NUMSIZE*5)
 
-#define NSPACE (NUMSIZE*6)
+#define NSPACE NUMSIZE*6
 
 // Corresponds to bignum_montmul_sm2 exactly
 

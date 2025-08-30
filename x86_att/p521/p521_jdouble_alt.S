@@ -63,7 +63,7 @@
 
 #define tmp (NUMSIZE*7)(%rsp)
 
-#define NSPACE (NUMSIZE*7+72)
+#define NSPACE 576
 
 // Corresponds to bignum_mul_p521_alt except temp storage location
 

@@ -52,7 +52,7 @@
 #define dx2 (NUMSIZE*8)(%rsp)
 #define xy2 (NUMSIZE*10)(%rsp)
 
-#define NSPACE (NUMSIZE*12)
+#define NSPACE NUMSIZE*12
 
 // Corresponds exactly to bignum_mul_p256k1
 

@@ -58,7 +58,7 @@
 #define d sp, #(NUMSIZE*6)
 #define x4p sp, #(NUMSIZE*6)
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 
 // Corresponds exactly to bignum_montmul_p384_alt
 

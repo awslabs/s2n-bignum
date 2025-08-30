@@ -61,7 +61,7 @@
 
 // NUMSIZE*7 is not 16-aligned so we round it up
 
-#define NSPACE (NUMSIZE*7+8)
+#define NSPACE 512
 
 // For the two "big" field operations, we use subroutines not inlining.
 // Call local code very close to bignum_mul_p521 and bignum_sqr_p521.

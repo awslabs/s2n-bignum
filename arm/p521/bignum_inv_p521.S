@@ -72,7 +72,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (36*N)
+#define NSPACE 36*N
 
 // Very similar to a subroutine call to the s2n-bignum word_divstep59.
 // But different in register usage and returning the final matrix in

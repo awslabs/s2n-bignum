@@ -58,7 +58,7 @@
 
 #define tab sp, #(7*NUMSIZE)
 
-#define NSPACE (55*NUMSIZE)
+#define NSPACE 55*NUMSIZE
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.
@@ -512,7 +512,7 @@ Lp384_montjscalarmul_p384_montjadd:
         CFI_PUSH2(x23,x24)
         CFI_PUSH2(x25,x26)
         CFI_PUSH1Z(x27)
-        CFI_DEC_SP(0x180)
+        CFI_DEC_SP(384)
         mov     x24, x0
         mov     x25, x1
         mov     x26, x2
@@ -6883,7 +6883,7 @@ Lp384_montjscalarmul_p384_montjadd:
         stp     x12, x13, [x27, #96]
         stp     x14, x15, [x27, #112]
         stp     x16, x17, [x27, #128]
-        CFI_INC_SP(0x180)
+        CFI_INC_SP(384)
         CFI_POP1Z(x27)
         CFI_POP2(x25,x26)
         CFI_POP2(x23,x24)
@@ -6897,7 +6897,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp384_montjscalarmul_p384_montjdouble)
 
 Lp384_montjscalarmul_p384_montjdouble:
         CFI_START
-        CFI_DEC_SP(0x1a0)
+        CFI_DEC_SP(416)
         stp     x19, x20, [sp, #336]
         stp     x21, x22, [sp, #352]
         stp     x23, x24, [sp, #368]
@@ -9994,7 +9994,7 @@ Lp384_montjscalarmul_p384_montjdouble:
         ldp     x23, x24, [sp, #368]
         ldp     x25, x26, [sp, #384]
         ldp     x27, xzr, [sp, #400]
-        CFI_INC_SP(0x1a0)
+        CFI_INC_SP(416)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lp384_montjscalarmul_p384_montjdouble)

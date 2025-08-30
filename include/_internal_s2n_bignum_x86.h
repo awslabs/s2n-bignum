@@ -57,7 +57,7 @@
 #define CFI_CALL(target) call    target
 
 #define CFI_PUSH(reg) push    reg ; .cfi_adjust_cfa_offset 8 ; .cfi_rel_offset reg, 0
-#define CFI_POP(reg) pop     reg ; .cfi_adjust_cfa_offset (-8) ; .cfi_restore reg
+#define CFI_POP(reg) pop     reg ; .cfi_adjust_cfa_offset -8 ; .cfi_restore reg
 
-#define CFI_INC_RSP(offset) add     rsp, offset ; .cfi_adjust_cfa_offset (-(offset))
-#define CFI_DEC_RSP(offset) sub     rsp, offset ; .cfi_adjust_cfa_offset (offset)
+#define CFI_INC_RSP(offset) add     rsp, offset ; .cfi_adjust_cfa_offset -offset
+#define CFI_DEC_RSP(offset) sub     rsp, offset ; .cfi_adjust_cfa_offset offset

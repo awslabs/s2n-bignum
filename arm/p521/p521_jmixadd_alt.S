@@ -75,7 +75,7 @@
 #define xd sp, #(NUMSIZE*5)
 #define resz sp, #(NUMSIZE*5)
 
-#define NSPACE (NUMSIZE*6)
+#define NSPACE NUMSIZE*6
 
 // Corresponds exactly to bignum_mul_p521_alt
 

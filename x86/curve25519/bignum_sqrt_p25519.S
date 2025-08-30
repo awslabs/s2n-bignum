@@ -47,7 +47,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (22*N)
+#define NSPACE 22*N
 
 // Corrupted versions when stack is down 8 more
 

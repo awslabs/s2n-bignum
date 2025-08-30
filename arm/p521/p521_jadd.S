@@ -80,7 +80,7 @@
 
 #define y1a sp, #(NUMSIZE*7)
 
-#define NSPACE (NUMSIZE*8)
+#define NSPACE NUMSIZE*8
 
 // For the three field operations, we use subroutines not inlining.
 // Call local code very close to bignum_mul_p521 and bignum_sqr_p521

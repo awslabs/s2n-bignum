@@ -58,7 +58,7 @@
 #define dx2 sp, #(NUMSIZE*8)
 #define xy2 sp, #(NUMSIZE*10)
 
-#define NSPACE (NUMSIZE*12)
+#define NSPACE NUMSIZE*12
 
 // Corresponds exactly to bignum_mul_p256k1_alt except for
 // re-use of the pconst register for the constant 4294968273

@@ -90,7 +90,7 @@
 // This includes space for the 3 other variables above
 // and rounds up to a multiple of 32
 
-#define NSPACE (13*NUMSIZE)
+#define NSPACE 13*NUMSIZE
 
 // Macro wrapping up the basic field operation bignum_mul_p25519_alt, only
 // trivially different from a pure function call to that subroutine.

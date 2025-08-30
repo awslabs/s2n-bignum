@@ -61,7 +61,7 @@
 
 #define input_z (NUMSIZE*7)(%rsp)
 
-#define NSPACE (NUMSIZE*7+8)
+#define NSPACE 344
 
 // Corresponds exactly to bignum_montmul_p384
 

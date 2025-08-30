@@ -47,7 +47,7 @@ S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
 // Xnn instead of the mixed use of 32-bit counterparts Wnn in most
 // settings where that is applicable.
 
-        CFI_DEC_SP(0x240)
+        CFI_DEC_SP(576)
         mov     x7, #0x1
         movk    x7, #0x2, lsl #16
         movk    x7, #0x4, lsl #32
@@ -206,7 +206,7 @@ Lmlkem_rej_uniform_final_copy:
         b       Lmlkem_rej_uniform_return
 
 Lmlkem_rej_uniform_return:
-        CFI_INC_SP(0x240)
+        CFI_INC_SP(576)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)

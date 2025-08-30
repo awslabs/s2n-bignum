@@ -42,7 +42,7 @@ S2N_BN_SYMBOL(mlkem_basemul_k2):
 // This matches the code in the mlkem-native repository
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/native/aarch64/src/polyvec_basemul_acc_montgomery_cached_asm_k2.S
 
-        CFI_DEC_SP(0x40)
+        CFI_DEC_SP(64)
         CFI_STACKSAVE2(d8,d9,0)
         CFI_STACKSAVE2(d10,d11,0x10)
         CFI_STACKSAVE2(d12,d13,0x20)
@@ -208,7 +208,7 @@ Lmlkem_basemul_k2_loop:
         CFI_STACKLOAD2(d10,d11,0x10)
         CFI_STACKLOAD2(d12,d13,0x20)
         CFI_STACKLOAD2(d14,d15,0x30)
-        CFI_INC_SP(0x40)
+        CFI_INC_SP(64)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(mlkem_basemul_k2)

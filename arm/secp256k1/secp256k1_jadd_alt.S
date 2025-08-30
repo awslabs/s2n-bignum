@@ -78,7 +78,7 @@
 
 #define y1a sp, #(NUMSIZE*6)
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 
 // Corresponds exactly to bignum_mul_p256k1_alt
 

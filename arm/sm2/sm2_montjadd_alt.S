@@ -75,7 +75,7 @@
 
 #define y1a sp, #(NUMSIZE*6)
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 
 // Corresponds to bignum_montmul_sm2_alt except for registers
 

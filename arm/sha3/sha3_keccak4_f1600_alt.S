@@ -48,7 +48,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600_alt):
 // The main difference is the avoidance of ld2/st2 in favour of explicit
 // transposition operations and conventional loads and stores.
 
-        CFI_DEC_SP(0xe0)
+        CFI_DEC_SP(224)
         CFI_STACKSAVE2(x19,x20,0x30)
         CFI_STACKSAVE2(x21,x22,0x40)
         CFI_STACKSAVE2(x23,x24,0x50)
@@ -1038,7 +1038,7 @@ Lsha3_keccak4_f1600_alt_done:
         CFI_STACKLOAD2(x25,x26,0x60)
         CFI_STACKLOAD2(x27,x28,0x70)
         CFI_STACKLOAD2(x29,x30,0x80)
-        CFI_INC_SP(0xe0)
+        CFI_INC_SP(224)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(sha3_keccak4_f1600_alt)

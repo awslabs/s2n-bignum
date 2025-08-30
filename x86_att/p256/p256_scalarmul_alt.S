@@ -53,7 +53,7 @@
 
 #define res (31*NUMSIZE)(%rsp)
 
-#define NSPACE (32*NUMSIZE)
+#define NSPACE 32*NUMSIZE
 
 S2N_BN_SYMBOL(p256_scalarmul_alt):
         CFI_START
@@ -518,7 +518,7 @@ Lp256_scalarmul_alt_local_inv_p256:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0xf0)
+        CFI_DEC_RSP(240)
         movq    %rdi, 0xe0(%rsp)
         xorl    %ecx, %ecx
         movl    $0xffffffff, %edx
@@ -1930,7 +1930,7 @@ Lp256_scalarmul_alt_inv_midloop:
         movq    %rbx, 0x8(%rdi)
         movq    %rcx, 0x10(%rdi)
         movq    %rdx, 0x18(%rdi)
-        CFI_INC_RSP(0xf0)
+        CFI_INC_RSP(240)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)
@@ -2459,7 +2459,7 @@ Lp256_scalarmul_alt_local_p256_montjadd:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0xe0)
+        CFI_DEC_RSP(224)
         movq    %rdx, %rbp
         movq    0x40(%rsi), %rax
         movq    %rax, %rbx
@@ -5215,7 +5215,7 @@ Lp256_scalarmul_alt_local_p256_montjadd:
         movq    %r13, 0x48(%rdi)
         movq    %r14, 0x50(%rdi)
         movq    %r15, 0x58(%rdi)
-        CFI_INC_RSP(0xe0)
+        CFI_INC_RSP(224)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)
@@ -5231,7 +5231,7 @@ Lp256_scalarmul_alt_local_p256_montjdouble:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0xc0)
+        CFI_DEC_RSP(192)
         movq    0x40(%rsi), %rax
         movq    %rax, %rbx
         mulq    %rax
@@ -6701,7 +6701,7 @@ Lp256_scalarmul_alt_local_p256_montjdouble:
         movq    %r10, 0x30(%rdi)
         adcq    %rdx, %r11
         movq    %r11, 0x38(%rdi)
-        CFI_INC_RSP(0xc0)
+        CFI_INC_RSP(192)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)
@@ -6717,7 +6717,7 @@ Lp256_scalarmul_alt_local_p256_montjmixadd:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0xc0)
+        CFI_DEC_RSP(192)
         movq    %rdx, %rbp
         movq    0x40(%rsi), %rax
         movq    %rax, %rbx
@@ -8658,7 +8658,7 @@ Lp256_scalarmul_alt_local_p256_montjmixadd:
         movq    %r9, 0x48(%rdi)
         movq    %r10, 0x50(%rdi)
         movq    %r11, 0x58(%rdi)
-        CFI_INC_RSP(0xc0)
+        CFI_INC_RSP(192)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)

@@ -47,7 +47,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (30*N)
+#define NSPACE 30*N
 
 // Syntactic variants to make x86_att version simpler to generate
 

@@ -57,7 +57,7 @@
 
 #define res [rsp+(55*NUMSIZE)]
 
-#define NSPACE (56*NUMSIZE)
+#define NSPACE 56*NUMSIZE
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.
@@ -886,7 +886,7 @@ Lp521_jscalarmul_jadd:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0x210)
+        CFI_DEC_RSP(528)
         mov     [rsp+0x1f8], rdi
         mov     [rsp+0x200], rsi
         mov     [rsp+0x208], rdx
@@ -1405,7 +1405,7 @@ Lp521_jscalarmul_jadd:
         mov     [rdi+0xc8], rax
         mov     rax, [rsp+0x1a8]
         mov     [rdi+0xd0], rax
-        CFI_INC_RSP(0x210)
+        CFI_INC_RSP(528)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)
@@ -1426,7 +1426,7 @@ Lp521_jscalarmul_jdouble:
         CFI_PUSH(r13)
         CFI_PUSH(r14)
         CFI_PUSH(r15)
-        CFI_DEC_RSP(0x208)
+        CFI_DEC_RSP(520)
         mov     [rsp+0x1f8], rdi
         mov     [rsp+0x200], rsi
         mov     rdi, [rsp+0x200]
@@ -1925,7 +1925,7 @@ Lp521_jscalarmul_jdouble:
         adc     rbx, rcx
         and     rbx, 0x1ff
         mov     [rdi+0x88], rbx
-        CFI_INC_RSP(0x208)
+        CFI_INC_RSP(520)
         CFI_POP(r15)
         CFI_POP(r14)
         CFI_POP(r13)
@@ -1940,7 +1940,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_mul_p521)
 
 Lp521_jscalarmul_mul_p521:
         CFI_START
-        CFI_DEC_RSP(0x40)
+        CFI_DEC_RSP(64)
         mov     rcx, rdx
         xor     ebp, ebp
         mov     rdx, [rcx]
@@ -2254,7 +2254,7 @@ Lp521_jscalarmul_mul_p521:
         sbb     rbp, 0x0
         and     rbp, 0x1ff
         mov     [rdi+0x40], rbp
-        CFI_INC_RSP(0x40)
+        CFI_INC_RSP(64)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_mul_p521)
@@ -2263,7 +2263,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_sqr_p521)
 
 Lp521_jscalarmul_sqr_p521:
         CFI_START
-        CFI_DEC_RSP(0x40)
+        CFI_DEC_RSP(64)
         xor     ebp, ebp
         mov     rdx, [rsi]
         mulx    rax, r9, [rsi+0x8]
@@ -2495,7 +2495,7 @@ Lp521_jscalarmul_sqr_p521:
         sbb     rbp, 0x0
         and     rbp, 0x1ff
         mov     [rdi+0x40], rbp
-        CFI_INC_RSP(0x40)
+        CFI_INC_RSP(64)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_sqr_p521)

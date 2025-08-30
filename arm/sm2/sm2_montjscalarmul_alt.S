@@ -57,7 +57,7 @@
 
 #define tab sp, #(7*NUMSIZE)
 
-#define NSPACE (31*NUMSIZE)
+#define NSPACE 31*NUMSIZE
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.
@@ -393,7 +393,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_alt_sm2_montjadd)
 
 Lsm2_montjscalarmul_alt_sm2_montjadd:
         CFI_START
-        CFI_DEC_SP(0xe0)
+        CFI_DEC_SP(224)
         mov     x15, x0
         mov     x16, x1
         mov     x17, x2
@@ -2344,7 +2344,7 @@ Lsm2_montjscalarmul_alt_sm2_montjadd:
         stp     x6, x7, [x15, #0x30]
         stp     x8, x9, [x15, #0x40]
         stp     x10, x11, [x15, #0x50]
-        CFI_INC_SP(0xe0)
+        CFI_INC_SP(224)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lsm2_montjscalarmul_alt_sm2_montjadd)
@@ -2353,7 +2353,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lsm2_montjscalarmul_alt_sm2_montjdouble)
 
 Lsm2_montjscalarmul_alt_sm2_montjdouble:
         CFI_START
-        CFI_DEC_SP(0xc0)
+        CFI_DEC_SP(192)
         mov     x15, x0
         mov     x16, x1
         ldp     x2, x3, [x16, #0x40]
@@ -3411,7 +3411,7 @@ Lsm2_montjscalarmul_alt_sm2_montjdouble:
         adc     x6, x6, x8
         stp     x3, x4, [x15, #0x20]
         stp     x5, x6, [x15, #0x30]
-        CFI_INC_SP(0xc0)
+        CFI_INC_SP(192)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lsm2_montjscalarmul_alt_sm2_montjdouble)

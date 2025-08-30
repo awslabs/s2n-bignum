@@ -77,7 +77,7 @@
 
 #define tmp rsp+(NUMSIZE*6)
 
-#define NSPACE (NUMSIZE*6+64)
+#define NSPACE 496
 
 // Corresponds exactly to bignum_mul_p521
 

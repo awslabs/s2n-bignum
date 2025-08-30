@@ -60,7 +60,7 @@
 #define x4p sp, #(NUMSIZE*5)
 #define d sp, #(NUMSIZE*5)
 
-#define NSPACE (NUMSIZE*6)
+#define NSPACE NUMSIZE*6
 
 // Corresponds exactly to bignum_montmul_p256_alt except registers
 

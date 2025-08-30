@@ -57,7 +57,7 @@
 
 #define res (55*NUMSIZE)(%rsp)
 
-#define NSPACE (56*NUMSIZE)
+#define NSPACE 56*NUMSIZE
 
 // Avoid using .rep for the sake of the BoringSSL/AWS-LC delocator,
 // which doesn't accept repetitions, assembler macros etc.
@@ -895,7 +895,7 @@ Lp521_jscalarmul_alt_jadd:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0x210)
+        CFI_DEC_RSP(528)
         movq    %rdi, 0x1f8(%rsp)
         movq    %rsi, 0x200(%rsp)
         movq    %rdx, 0x208(%rsp)
@@ -1414,7 +1414,7 @@ Lp521_jscalarmul_alt_jadd:
         movq    %rax, 0xc8(%rdi)
         movq    0x1a8(%rsp), %rax
         movq    %rax, 0xd0(%rdi)
-        CFI_INC_RSP(0x210)
+        CFI_INC_RSP(528)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)
@@ -1435,7 +1435,7 @@ Lp521_jscalarmul_alt_jdouble:
         CFI_PUSH(%r13)
         CFI_PUSH(%r14)
         CFI_PUSH(%r15)
-        CFI_DEC_RSP(0x208)
+        CFI_DEC_RSP(520)
         movq    %rdi, 0x1f8(%rsp)
         movq    %rsi, 0x200(%rsp)
         movq    0x200(%rsp), %rdi
@@ -1995,7 +1995,7 @@ Lp521_jscalarmul_alt_jdouble:
         adcq    %rcx, %rbx
         andq    $0x1ff, %rbx
         movq    %rbx, 0x88(%rdi)
-        CFI_INC_RSP(0x208)
+        CFI_INC_RSP(520)
         CFI_POP(%r15)
         CFI_POP(%r14)
         CFI_POP(%r13)
@@ -2010,7 +2010,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_alt_mul_p521)
 
 Lp521_jscalarmul_alt_mul_p521:
         CFI_START
-        CFI_DEC_RSP(0x48)
+        CFI_DEC_RSP(72)
         movq    %rdx, %rcx
         movq    (%rsi), %rax
         mulq     (%rcx)
@@ -2477,7 +2477,7 @@ Lp521_jscalarmul_alt_mul_p521:
         sbbq    $0x0, %rdx
         andq    $0x1ff, %rdx
         movq    %rdx, 0x40(%rdi)
-        CFI_INC_RSP(0x48)
+        CFI_INC_RSP(72)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_alt_mul_p521)
@@ -2486,7 +2486,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp521_jscalarmul_alt_sqr_p521)
 
 Lp521_jscalarmul_alt_sqr_p521:
         CFI_START
-        CFI_DEC_RSP(0x48)
+        CFI_DEC_RSP(72)
         movq    (%rsi), %rax
         mulq    %rax
         movq    %rax, (%rsp)
@@ -2840,7 +2840,7 @@ Lp521_jscalarmul_alt_sqr_p521:
         sbbq    $0x0, %rdx
         andq    $0x1ff, %rdx
         movq    %rdx, 0x40(%rdi)
-        CFI_INC_RSP(0x48)
+        CFI_INC_RSP(72)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Lp521_jscalarmul_alt_sqr_p521)

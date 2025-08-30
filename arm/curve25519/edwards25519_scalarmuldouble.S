@@ -72,7 +72,7 @@
 
 // Total size to reserve on the stack (excluding local subroutines)
 
-#define NSPACE (45*NUMSIZE)
+#define NSPACE 45*NUMSIZE
 
 // Sub-references used in local subroutines with local stack
 
@@ -2960,7 +2960,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_epdouble)
 
 Ledwards25519_scalarmuldouble_epdouble:
         CFI_START
-        CFI_DEC_SP((5*NUMSIZE))
+        CFI_DEC_SP(5*NUMSIZE)
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
         sqr_4(t2,x_1)
@@ -2975,7 +2975,7 @@ Ledwards25519_scalarmuldouble_epdouble:
         mul_4(z_0,t3,t2)
         mul_4(w_0,t1,t4)
         mul_4(x_0,t1,t3)
-        CFI_INC_SP((5*NUMSIZE))
+        CFI_INC_SP(5*NUMSIZE)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_epdouble)
@@ -2984,7 +2984,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_pdouble)
 
 Ledwards25519_scalarmuldouble_pdouble:
         CFI_START
-        CFI_DEC_SP((5*NUMSIZE))
+        CFI_DEC_SP(5*NUMSIZE)
         add_twice4(t0,x_1,y_1)
         sqr_4(t1,z_1)
         sqr_4(t2,x_1)
@@ -2998,7 +2998,7 @@ Ledwards25519_scalarmuldouble_pdouble:
         mul_4(y_0,t2,t4)
         mul_4(z_0,t3,t2)
         mul_4(x_0,t1,t3)
-        CFI_INC_SP((5*NUMSIZE))
+        CFI_INC_SP(5*NUMSIZE)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_pdouble)
@@ -3007,7 +3007,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_epadd)
 
 Ledwards25519_scalarmuldouble_epadd:
         CFI_START
-        CFI_DEC_SP((6*NUMSIZE))
+        CFI_DEC_SP(6*NUMSIZE)
         mul_4(t0,w_1,w_2)
         sub_twice4(t1,y_1,x_1)
         sub_twice4(t2,y_2,x_2)
@@ -3027,7 +3027,7 @@ Ledwards25519_scalarmuldouble_epadd:
         mul_4(x_0,t0,t1)
         mul_4(y_0,t3,t5)
         mul_4(z_0,t1,t3)
-        CFI_INC_SP((6*NUMSIZE))
+        CFI_INC_SP(6*NUMSIZE)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_epadd)
@@ -3036,7 +3036,7 @@ S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmuldouble_pepadd)
 
 Ledwards25519_scalarmuldouble_pepadd:
         CFI_START
-        CFI_DEC_SP((6*NUMSIZE))
+        CFI_DEC_SP(6*NUMSIZE)
         double_twice4(t0,z_1);
         sub_twice4(t1,y_1,x_1);
         add_twice4(t2,y_1,x_1);
@@ -3051,7 +3051,7 @@ Ledwards25519_scalarmuldouble_pepadd:
         mul_4(x_0,t5,t4);
         mul_4(y_0,t0,t1);
         mul_4(w_0,t5,t1);
-        CFI_INC_SP((6*NUMSIZE))
+        CFI_INC_SP(6*NUMSIZE)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_pepadd)

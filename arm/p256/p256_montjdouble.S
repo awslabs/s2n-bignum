@@ -31,7 +31,7 @@
         .balign 4
 
 #define NUMSIZE 32
-#define NSPACE (NUMSIZE*6)
+#define NSPACE NUMSIZE*6
 
 S2N_BN_SYMBOL(p256_montjdouble):
         CFI_START

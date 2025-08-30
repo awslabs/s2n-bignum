@@ -73,7 +73,7 @@
 
 #define y1a (NUMSIZE*6)(%rsp)
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 
 // Corresponds exactly to bignum_montmul_p256_alt
 

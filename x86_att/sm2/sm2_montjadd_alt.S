@@ -72,7 +72,7 @@
 
 #define y1a (NUMSIZE*6)(%rsp)
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 // Corresponds to bignum_montmul_sm2_alt except for registers
 
 #define montmul_sm2(P0,P1,P2)                   \
