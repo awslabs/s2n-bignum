@@ -9,7 +9,7 @@
 // Keccak-f1600 permutation for SHA3
 // Input a[25], rc[24]; output a[25]
 //
-// Keccak-f1600 permutation operation is at the core of SHA3 and SHAKE 
+// Keccak-f1600 permutation operation is at the core of SHA3 and SHAKE
 // and is fully specified here:
 //
 //   https://keccak.team/files/Keccak-reference-3.0.pdf
@@ -20,32 +20,33 @@
 // Microsoft x64 ABI:   RCX = a, RDX = rc
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak_f1600)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sha3_keccak_f1600)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak_f1600)
-        .text    
+        .text
 
 S2N_BN_SYMBOL(sha3_keccak_f1600):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
 
-        push   rbx
-        push   rbp
-        push   r12
-        push   r13
-        push   r14
-        push   r15 
-        
-        sub    rsp, 0xd0
-        
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(208)
+
         not    QWORD PTR [rdi+0x08]
         not    QWORD PTR [rdi+0x10]
         not    QWORD PTR [rdi+0x40]
@@ -60,7 +61,7 @@ S2N_BN_SYMBOL(sha3_keccak_f1600):
         mov    rdx, QWORD PTR [rdi+0xb8]
         mov    rbp, QWORD PTR [rdi+0xc0]
         mov r8, 0x0
-sha3_keccak_f1600_loop:
+Lsha3_keccak_f1600_loop:
         mov    QWORD PTR [rsp + 0xc8], r8
         mov    r8, QWORD PTR [rdi]
         mov    r9, QWORD PTR [rdi+0x30]
@@ -112,7 +113,7 @@ sha3_keccak_f1600_loop:
         rol    r12, 0xe
         xor    r9, QWORD PTR [rsi]
         mov    r14, r12
-        and    r12, r11         
+        and    r12, r11
         mov    QWORD PTR [r15], r9
         xor    r12, r10
         not    r10
@@ -307,7 +308,7 @@ sha3_keccak_f1600_loop:
         rol    r12, 0xe
         xor    r9, QWORD PTR [rsi]
         mov    r14, r12
-        and    r12, r11         
+        and    r12, r11
         mov    QWORD PTR [r15], r9
         xor    r12, r10
         not    r10
@@ -455,7 +456,7 @@ sha3_keccak_f1600_loop:
         mov   r8,  QWORD PTR [rsp + 0xc8]
         add r8, 0x2
         cmp r8,  24
-        jne    sha3_keccak_f1600_loop
+        jne    Lsha3_keccak_f1600_loop
         lea    rsi, [rsi-0xc0]
         not    QWORD PTR [rdi+0x08]
         not    QWORD PTR [rdi+0x10]
@@ -463,19 +464,22 @@ sha3_keccak_f1600_loop:
         not    QWORD PTR [rdi+0x60]
         not    QWORD PTR [rdi+0x88]
         not    QWORD PTR [rdi+0xa0]
-        add    rsp, 0xd0
-        pop    r15
-        pop    r14
-        pop    r13
-        pop    r12
-        pop    rbp
-        pop    rbx
-        
+
+        CFI_INC_RSP(208)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(sha3_keccak_f1600)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,  "",  %progbits

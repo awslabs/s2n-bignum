@@ -14,10 +14,11 @@
 // Standard x86-64 ABI: RDI = z, RSI = x
 // Microsoft x64 ABI:   RCX = z, RDX = x
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_inv_p25519)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_inv_p25519)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_inv_p25519)
         .text
 
@@ -44,7 +45,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (26*N)
+#define NSPACE 26*N
 
 // Syntactic variants to make x86_att version simpler to generate
 
@@ -966,25 +967,26 @@
         lea     r12, [rax+rdx]
 
 S2N_BN_SYMBOL(bignum_inv_p25519):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
 
 // Save registers and make room for temporaries
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
 // Save the return pointer for the end so we can overwrite rdi later
 
@@ -1052,9 +1054,9 @@ S2N_BN_SYMBOL(bignum_inv_p25519):
 
         mov     i, 10
         mov     d, 1
-        jmp     bignum_inv_p25519_midloop
+        jmp     Lbignum_inv_p25519_midloop
 
-bignum_inv_p25519_loop:
+Lbignum_inv_p25519_loop:
 
 // Separate out the matrix into sign-magnitude pairs
 
@@ -1410,7 +1412,7 @@ bignum_inv_p25519_loop:
         add     rsi, rax
         mov     [rsp+V+3*N], rsi
 
-bignum_inv_p25519_midloop:
+Lbignum_inv_p25519_midloop:
 
         divstep59(d,ff,gg)
         mov     d, rsi
@@ -1418,7 +1420,7 @@ bignum_inv_p25519_midloop:
 // Next iteration
 
         dec     i
-        jnz     bignum_inv_p25519_loop
+        jnz     Lbignum_inv_p25519_loop
 
 // The 10th and last iteration does not need anything except the
 // u value and the sign of f; the latter can be obtained from the
@@ -1567,20 +1569,22 @@ bignum_inv_p25519_midloop:
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
+        CFI_INC_RSP(NSPACE)
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_inv_p25519)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

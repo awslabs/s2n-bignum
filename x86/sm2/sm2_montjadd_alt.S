@@ -15,10 +15,11 @@
 // Standard x86-64 ABI: RDI = p3, RSI = p1, RDX = p2
 // Microsoft x64 ABI:   RCX = p3, RDX = p1, R8 = p2
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sm2_montjadd_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sm2_montjadd_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sm2_montjadd_alt)
         .text
 
@@ -71,7 +72,7 @@
 
 #define y1a rsp+(NUMSIZE*6)
 
-#define NSPACE (NUMSIZE*7)
+#define NSPACE NUMSIZE*7
 // Corresponds to bignum_montmul_sm2_alt except for registers
 
 #define montmul_sm2(P0,P1,P2)                   \
@@ -430,11 +431,12 @@
         cmovnbe r3, [P2+24]
 
 S2N_BN_SYMBOL(sm2_montjadd_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -443,14 +445,14 @@ S2N_BN_SYMBOL(sm2_montjadd_alt):
 // Save registers and make room on stack for temporary variables
 // Put the input y in rbp where it lasts throughout the main code.
 
-        push   rbx
-        push   rbp
-        push   r12
-        push   r13
-        push   r14
-        push   r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
         mov     rbp, rdx
 
@@ -541,19 +543,21 @@ S2N_BN_SYMBOL(sm2_montjadd_alt):
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_INC_RSP(NSPACE)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(sm2_montjadd_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

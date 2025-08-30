@@ -14,10 +14,11 @@
 // Standard x86-64 ABI: RDI = p3, RSI = p1
 // Microsoft x64 ABI:   RCX = p3, RDX = p1
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p384_montjdouble_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(p384_montjdouble_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p384_montjdouble_alt)
         .text
         .balign 4
@@ -60,7 +61,7 @@
 
 #define input_z [rsp+(NUMSIZE*7)]
 
-#define NSPACE (NUMSIZE*7+8)
+#define NSPACE 344
 
 // Corresponds exactly to bignum_montmul_p384_alt
 
@@ -1098,11 +1099,12 @@
         mov     [P0+0x28],r13
 
 S2N_BN_SYMBOL(p384_montjdouble_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -1111,14 +1113,14 @@ S2N_BN_SYMBOL(p384_montjdouble_alt):
 // Save the output pointer rdi which gets overwritten in earlier
 // operations before it is used.
 
-        push   rbx
-        push   rbp
-        push   r12
-        push   r13
-        push   r14
-        push   r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
         mov     input_z, rdi
 
@@ -1178,19 +1180,21 @@ S2N_BN_SYMBOL(p384_montjdouble_alt):
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_INC_RSP(NSPACE)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(p384_montjdouble_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

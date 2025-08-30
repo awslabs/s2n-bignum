@@ -16,10 +16,11 @@
 // Microsoft x64 ABI:   RCX = p, RDX = z, R8 = m, R9 = x, [RSP+40] = n, [RSP+48] = y, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_add)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_add)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_add)
         .text
 
@@ -37,11 +38,12 @@
 
 
 S2N_BN_SYMBOL(bignum_add):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -63,7 +65,7 @@ S2N_BN_SYMBOL(bignum_add):
         cmp     p, n
         cmovc   n, p
         cmp     m, n
-        jc      bignum_add_ylonger
+        jc      Lbignum_add_ylonger
 
 // The case where x is longer or of the same size (p >= m >= n)
 
@@ -71,82 +73,89 @@ S2N_BN_SYMBOL(bignum_add):
         sub     m, n
         inc     m
         test    n, n
-        jz      bignum_add_xtest
-bignum_add_xmainloop:
+        jz      Lbignum_add_xtest
+Lbignum_add_xmainloop:
         mov     a, [x+8*i]
         adc     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     n
-        jnz     bignum_add_xmainloop
-        jmp     bignum_add_xtest
-bignum_add_xtoploop:
+        jnz     Lbignum_add_xmainloop
+        jmp     Lbignum_add_xtest
+Lbignum_add_xtoploop:
         mov     a, [x+8*i]
         adc     a, 0
         mov     [z+8*i],a
         inc     i
-bignum_add_xtest:
+Lbignum_add_xtest:
         dec     m
-        jnz     bignum_add_xtoploop
+        jnz     Lbignum_add_xtoploop
         mov     ashort, 0
         adc     a, 0
         test    p, p
-        jnz     bignum_add_tails
+        jnz     Lbignum_add_tails
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
         ret
 
 // The case where y is longer (p >= n > m)
 
-bignum_add_ylonger:
+#if WINDOWS_ABI
+  .cfi_def_cfa rsp, 24
+#else
+  .cfi_def_cfa rsp, 8
+#endif
 
+Lbignum_add_ylonger:
         sub     p, n
         sub     n, m
         test    m, m
-        jz      bignum_add_ytoploop
-bignum_add_ymainloop:
+        jz      Lbignum_add_ytoploop
+Lbignum_add_ymainloop:
         mov     a, [x+8*i]
         adc     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     m
-        jnz     bignum_add_ymainloop
-bignum_add_ytoploop:
+        jnz     Lbignum_add_ymainloop
+Lbignum_add_ytoploop:
         mov     a, [y+8*i]
         adc     a, 0
         mov     [z+8*i],a
         inc     i
         dec     n
-        jnz     bignum_add_ytoploop
+        jnz     Lbignum_add_ytoploop
         mov     ashort, 0
         adc     a, 0
         test    p, p
-        jnz     bignum_add_tails
+        jnz     Lbignum_add_tails
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
         ret
 
 // Adding a non-trivial tail, when p > max(m,n)
 
-bignum_add_tails:
+Lbignum_add_tails:
         mov     [z+8*i],a
         xor     a, a
-        jmp     bignum_add_tail
-bignum_add_tailloop:
+        jmp     Lbignum_add_tail
+Lbignum_add_tailloop:
         mov     [z+8*i],a
-bignum_add_tail:
+Lbignum_add_tail:
         inc     i
         dec     p
-        jnz     bignum_add_tailloop
+        jnz     Lbignum_add_tailloop
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_add)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

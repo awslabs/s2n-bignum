@@ -26,11 +26,13 @@
 // Microsoft x64 ABI:   RCX = res, RDX = scalar, R8 = blocksize, R9 = table
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(p256_scalarmulbase_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(p256_scalarmulbase_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p256_scalarmulbase_alt)
+
 
         .text
         .balign 4
@@ -66,39 +68,45 @@
 #define cf [rsp+(9*NUMSIZE+40)]
 #define j [rsp+(9*NUMSIZE+48)]
 
-#define NSPACE (11*NUMSIZE)
+#define NSPACE 11*NUMSIZE
 
 S2N_BN_SYMBOL(p256_scalarmulbase_alt):
+        CFI_START
         _CET_ENDBR
 
 // The Windows version literally calls the standard ABI version.
 // This simplifies the proofs since subroutine offsets are fixed.
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
         mov     rcx, r9
-        call    p256_scalarmulbase_alt_standard
-        pop    rsi
-        pop    rdi
-        ret
+        CFI_CALL(Lp256_scalarmulbase_alt_standard)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
+        CFI_RET
 
-p256_scalarmulbase_alt_standard:
+S2N_BN_SIZE_DIRECTIVE(p256_scalarmulbase_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_standard)
+
+Lp256_scalarmulbase_alt_standard:
+        CFI_START
 #endif
 
 // Real start of the standard ABI code.
 
-        push    r15
-        push    r14
-        push    r13
-        push    r12
-        push    rbp
-        push    rbx
+        CFI_PUSH(r15)
+        CFI_PUSH(r14)
+        CFI_PUSH(r13)
+        CFI_PUSH(r12)
+        CFI_PUSH(rbp)
+        CFI_PUSH(rbx)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
 // Preserve the input arguments except the scalar, since that gets absorbed
 // immediately. The "table" value subsequently gets shifted up each iteration
@@ -161,7 +169,7 @@ p256_scalarmulbase_alt_standard:
 
         mov     i, rax
 
-p256_scalarmulbase_alt_loop:
+Lp256_scalarmulbase_alt_loop:
 
 // The next raw bitfield is bf = bitfield(blocksize * i,blocksize) + cf,
 // adding in the deferred carry cf. We then shift the whole scalar right
@@ -220,7 +228,7 @@ p256_scalarmulbase_alt_loop:
         mov     r12, j
         mov     rbp, table
 
-p256_scalarmulbase_alt_tabloop:
+Lp256_scalarmulbase_alt_tabloop:
         sub     r12, 1
         cmovz   rax, [rbp]
         cmovz   rbx, [rbp+8]
@@ -233,7 +241,7 @@ p256_scalarmulbase_alt_tabloop:
 
         add     rbp, 64
         dec     rsi
-        jnz     p256_scalarmulbase_alt_tabloop
+        jnz     Lp256_scalarmulbase_alt_tabloop
 
         mov     table, rbp
 
@@ -272,7 +280,7 @@ p256_scalarmulbase_alt_tabloop:
         lea     rdi, [rsp+NACC]
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+TABENT]
-        call    p256_scalarmulbase_alt_local_p256_montjmixadd
+        CFI_CALL(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
 
 // However, only commit that update to the accumulator if j is nonzero,
 // because the mixed addition function does not handle this case directly,
@@ -337,7 +345,7 @@ p256_scalarmulbase_alt_tabloop:
 
         imul    rax, blocksize
         cmp     rax, 257
-        jc      p256_scalarmulbase_alt_loop
+        jc      Lp256_scalarmulbase_alt_loop
 
 // That's the end of the main loop, and we just need to translate
 // back from the Jacobian representation to affine. First of all,
@@ -345,25 +353,25 @@ p256_scalarmulbase_alt_tabloop:
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
-        call    p256_scalarmulbase_alt_local_montsqr_p256
+        CFI_CALL(Lp256_scalarmulbase_alt_local_montsqr_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z2]
-        call    p256_scalarmulbase_alt_local_montmul_p256
+        CFI_CALL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+Z3]
-        call    p256_scalarmulbase_alt_local_demont_p256
+        CFI_CALL(Lp256_scalarmulbase_alt_local_demont_p256)
 
         lea     rdi, [rsp+Z3]
         lea     rsi, [rsp+Z2]
-        call    p256_scalarmulbase_alt_local_inv_p256
+        CFI_CALL(Lp256_scalarmulbase_alt_local_inv_p256)
 
         lea     rdi, [rsp+Z2]
         lea     rsi, [rsp+ACC+64]
         lea     rdx, [rsp+Z3]
-        call    p256_scalarmulbase_alt_local_montmul_p256
+        CFI_CALL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
 // Convert back from Jacobian (X, Y, Z) |-> (X/Z^2, Y/Z^3)
 
@@ -371,27 +379,36 @@ p256_scalarmulbase_alt_tabloop:
         lea     rsi, [rsp+ACC]
         lea     rdx, [rsp+Z2]
         mov     rbx, rdi
-        call    p256_scalarmulbase_alt_local_montmul_p256
+        CFI_CALL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
         lea     rdi, [rbx+32]
         lea     rsi, [rsp+ACC+32]
         lea     rdx, [rsp+Z3]
-        call    p256_scalarmulbase_alt_local_montmul_p256
+        CFI_CALL(Lp256_scalarmulbase_alt_local_montmul_p256)
 
 // Restore stack and registers and return
 
-        add     rsp, NSPACE
-        pop     rbx
-        pop     rbp
-        pop     r12
-        pop     r13
-        pop     r14
-        pop     r15
-        ret
+        CFI_INC_RSP(NSPACE)
+        CFI_POP(rbx)
+        CFI_POP(rbp)
+        CFI_POP(r12)
+        CFI_POP(r13)
+        CFI_POP(r14)
+        CFI_POP(r15)
+        CFI_RET
+
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_standard)
+#else
+S2N_BN_SIZE_DIRECTIVE(p256_scalarmulbase_alt)
+#endif
 
 // Local copies of subroutines, complete clones at the moment
 
-p256_scalarmulbase_alt_local_demont_p256:
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_demont_p256)
+
+Lp256_scalarmulbase_alt_local_demont_p256:
+        CFI_START
         mov     r8, [rsi]
         mov     r9, [rsi+0x8]
         mov     r10, [rsi+0x10]
@@ -451,16 +468,21 @@ p256_scalarmulbase_alt_local_demont_p256:
         mov     [rdi+0x8], r8
         mov     [rdi+0x10], r9
         mov     [rdi+0x18], r10
-        ret
+        CFI_RET
 
-p256_scalarmulbase_alt_local_inv_p256:
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xf0
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_demont_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_inv_p256)
+
+Lp256_scalarmulbase_alt_local_inv_p256:
+        CFI_START
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(240)
         mov     [rsp+0xe0], rdi
         xor     ecx, ecx
         mov     edx, 0xffffffff
@@ -506,8 +528,8 @@ p256_scalarmulbase_alt_local_inv_p256:
         mov     [rsp+0x90], rax
         mov     QWORD PTR [rsp+0xb0], 0xa
         mov     QWORD PTR [rsp+0xb8], 0x1
-        jmp     p256_scalarmulbase_alt_inv_midloop
-p256_scalarmulbase_alt_inv_loop:
+        jmp     Lp256_scalarmulbase_alt_inv_midloop
+Lp256_scalarmulbase_alt_inv_loop:
         mov     r9, r8
         sar     r9, 0x3f
         xor     r8, r9
@@ -832,7 +854,7 @@ p256_scalarmulbase_alt_inv_loop:
         mov     [rsp+0x88], r11
         sbb     r12, rdx
         mov     [rsp+0x90], r12
-p256_scalarmulbase_alt_inv_midloop:
+Lp256_scalarmulbase_alt_inv_midloop:
         mov     rsi, [rsp+0xb8]
         mov     rdx, [rsp]
         mov     rcx, [rsp+0x28]
@@ -1733,7 +1755,7 @@ p256_scalarmulbase_alt_inv_midloop:
         lea     r12, [rax+rdx]
         mov     [rsp+0xb8], rsi
         dec     QWORD PTR [rsp+0xb0]
-        jne     p256_scalarmulbase_alt_inv_loop
+        jne     Lp256_scalarmulbase_alt_inv_loop
         mov     rax, [rsp]
         mov     rcx, [rsp+0x28]
         imul    rax, r8
@@ -1872,21 +1894,26 @@ p256_scalarmulbase_alt_inv_midloop:
         mov     [rdi+0x8], rbx
         mov     [rdi+0x10], rcx
         mov     [rdi+0x18], rdx
-        add     rsp, 0xf0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_INC_RSP(240)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
 
-p256_scalarmulbase_alt_local_montmul_p256:
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_inv_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montmul_p256)
+
+Lp256_scalarmulbase_alt_local_montmul_p256:
+        CFI_START
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
         mov     rcx, rdx
         mov     rbx, [rcx]
         mov     rax, [rsi]
@@ -2054,19 +2081,24 @@ p256_scalarmulbase_alt_local_montmul_p256:
         mov     [rdi+0x8], r13
         mov     [rdi+0x10], r14
         mov     [rdi+0x18], r15
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_RET
 
-p256_scalarmulbase_alt_local_montsqr_p256:
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montmul_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montsqr_p256)
+
+Lp256_scalarmulbase_alt_local_montsqr_p256:
+        CFI_START
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
         mov     rax, [rsi]
         mov     rbx, rax
         mul     rax
@@ -2204,21 +2236,26 @@ p256_scalarmulbase_alt_local_montsqr_p256:
         mov     [rdi+0x8], r13
         mov     [rdi+0x10], r14
         mov     [rdi+0x18], r15
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_RET
 
-p256_scalarmulbase_alt_local_p256_montjmixadd:
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, 0xc0
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_montsqr_p256)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
+
+Lp256_scalarmulbase_alt_local_p256_montjmixadd:
+        CFI_START
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(192)
         mov     rbp, rdx
         mov     rax, [rsi+0x40]
         mov     rbx, rax
@@ -4159,14 +4196,16 @@ p256_scalarmulbase_alt_local_p256_montjmixadd:
         mov     [rdi+0x48], r9
         mov     [rdi+0x50], r10
         mov     [rdi+0x58], r11
-        add     rsp, 0xc0
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_INC_RSP(192)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lp256_scalarmulbase_alt_local_p256_montjmixadd)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

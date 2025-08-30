@@ -18,10 +18,11 @@
 // Standard x86-64 ABI: RDI = rr, RSI = point, RDX = pp, RCX = b
 // Microsoft x64 ABI:   RCX = rr, RDX = point, R8 = pp, R9 = b
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_ladderstep_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(curve25519_ladderstep_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(curve25519_ladderstep_alt)
         .text
 
@@ -81,7 +82,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (13*NUMSIZE)
+#define NSPACE 13*NUMSIZE
 
 // Macros wrapping up the basic field operation calls
 // bignum_mul_p25519_alt and bignum_sqr_p25519_alt.
@@ -793,11 +794,12 @@
         mov     [P1+24], rcx
 
 S2N_BN_SYMBOL(curve25519_ladderstep_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -806,14 +808,14 @@ S2N_BN_SYMBOL(curve25519_ladderstep_alt):
 
 // Save registers, make room for temps, preserve input arguments.
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
         mov     rr, rdi
         mov     point, rsi
@@ -889,20 +891,22 @@ S2N_BN_SYMBOL(curve25519_ladderstep_alt):
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
+        CFI_INC_RSP(NSPACE)
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(curve25519_ladderstep_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

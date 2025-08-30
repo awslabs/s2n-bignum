@@ -16,10 +16,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = x, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_clz)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_clz)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_clz)
         .text
 
@@ -33,11 +34,12 @@
 
 
 S2N_BN_SYMBOL(bignum_clz):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -49,21 +51,21 @@ S2N_BN_SYMBOL(bignum_clz):
 // If the bignum is zero-length, just return 0
 
         test    k, k
-        jz      bignum_clz_end
+        jz      Lbignum_clz_end
 
 // Use w = a[i-1] to store nonzero words in a bottom-up sweep
 // Set the initial default to be as if we had a 11...11 word directly below
 
         mov     w, -1
         xor     j, j
-bignum_clz_loop:
+Lbignum_clz_loop:
         mov     a, [x+8*j]
         inc     j
         test    a, a
         cmovnz  i, j
         cmovnz  w, a
         cmp     j, k
-        jnz     bignum_clz_loop
+        jnz     Lbignum_clz_loop
 
 // Now w = a[i-1] is the highest nonzero word, or in the zero case the
 // default of the "extra" 11...11 = a[0-1]. We now want 64*(k - i) + clz(w) =
@@ -76,12 +78,14 @@ bignum_clz_loop:
         xor     rax, 63
         add     rax, k
 
-bignum_clz_end:
+Lbignum_clz_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_clz)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

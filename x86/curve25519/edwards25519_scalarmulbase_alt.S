@@ -14,11 +14,13 @@
 // Standard x86-64 ABI: RDI = res, RSI = scalar
 // Microsoft x64 ABI:   RCX = res, RDX = scalar
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_scalarmulbase_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_scalarmulbase_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmulbase_alt)
+
         .text
 
 // Size of individual field elements
@@ -70,7 +72,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (15*NUMSIZE+8)
+#define NSPACE 488
 
 // Syntactic variants to make x86_att version simpler to generate
 
@@ -412,33 +414,39 @@
         mov     [P0+0x18], r11
 
 S2N_BN_SYMBOL(edwards25519_scalarmulbase_alt):
+        CFI_START
         _CET_ENDBR
 
 // In this case the Windows form literally makes a subroutine call.
 // This avoids hassle arising from keeping code and data together.
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
-        call    edwards25519_scalarmulbase_alt_standard
-        pop     rsi
-        pop     rdi
-        ret
+        CFI_CALL(Ledwards25519_scalarmulbase_alt_standard)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
+        CFI_RET
 
-edwards25519_scalarmulbase_alt_standard:
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmulbase_alt)
+
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Ledwards25519_scalarmulbase_alt_standard)
+
+Ledwards25519_scalarmulbase_alt_standard:
+        CFI_START
 #endif
 
 // Save registers, make room for temps, preserve input arguments.
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
-        sub     rsp, NSPACE
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
+        CFI_DEC_RSP(NSPACE)
 
 // Move the output pointer to a stable place
 
@@ -513,8 +521,8 @@ edwards25519_scalarmulbase_alt_standard:
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        lea     r10, [rip+edwards25519_scalarmulbase_alt_0g]
-        lea     r11, [rip+edwards25519_scalarmulbase_alt_251g]
+        lea     r10, [rip+Ledwards25519_scalarmulbase_alt_0g]
+        lea     r11, [rip+Ledwards25519_scalarmulbase_alt_251g]
 
         mov     rax, [r10]
         mov     rcx, [r11]
@@ -597,13 +605,13 @@ edwards25519_scalarmulbase_alt_standard:
 // end because we made sure bit 251 is clear in the reduced scalar.
 
         mov     i, 0
-        lea     rax, [rip+edwards25519_scalarmulbase_alt_gtable]
+        lea     rax, [rip+Ledwards25519_scalarmulbase_alt_gtable]
         mov     tab, rax
         mov     bias, 0
 
 // Start of the main loop, repeated 63 times for i = 4, 8, ..., 252
 
-edwards25519_scalarmulbase_alt_scalarloop:
+Ledwards25519_scalarmulbase_alt_scalarloop:
 
 // Look at the next 4-bit field "bf", adding the previous bias as well.
 // Choose the table index "ix" as bf when bf <= 8 and 16 - bf for bf >= 9,
@@ -960,7 +968,7 @@ edwards25519_scalarmulbase_alt_scalarloop:
 
         add     i, 4
         cmp     i, 252
-        jc      edwards25519_scalarmulbase_alt_scalarloop
+        jc      Ledwards25519_scalarmulbase_alt_scalarloop
 
 // Insert the optional negation of the projective X coordinate, and
 // so by extension the final affine x coordinate x = X/Z and thus
@@ -1055,8 +1063,8 @@ edwards25519_scalarmulbase_alt_scalarloop:
         mov     [rsp+0x78], rax
         mov     QWORD PTR [rsp+0x90], 0xa
         mov     QWORD PTR [rsp+0x98], 0x1
-        jmp     edwards25519_scalarmulbase_alt_midloop
-edwards25519_scalarmulbase_alt_inverseloop:
+        jmp     Ledwards25519_scalarmulbase_alt_midloop
+Ledwards25519_scalarmulbase_alt_inverseloop:
         mov     r9, r8
         sar     r9, 0x3f
         xor     r8, r9
@@ -1347,7 +1355,7 @@ edwards25519_scalarmulbase_alt_inverseloop:
         shl     rax, 0x3f
         add     rsi, rax
         mov     [rsp+0x78], rsi
-edwards25519_scalarmulbase_alt_midloop:
+Ledwards25519_scalarmulbase_alt_midloop:
         mov     rsi, [rsp+0x98]
         mov     rdx, [rsp]
         mov     rcx, [rsp+0x20]
@@ -2248,7 +2256,7 @@ edwards25519_scalarmulbase_alt_midloop:
         lea     r12, [rax+rdx]
         mov     [rsp+0x98], rsi
         dec     QWORD PTR [rsp+0x90]
-        jne     edwards25519_scalarmulbase_alt_inverseloop
+        jne     Ledwards25519_scalarmulbase_alt_inverseloop
         mov     rax, [rsp]
         mov     rcx, [rsp+0x20]
         imul    rax, r8
@@ -2364,15 +2372,21 @@ edwards25519_scalarmulbase_alt_midloop:
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
+        CFI_INC_RSP(NSPACE)
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
-        ret
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
+        CFI_RET
+
+#if WINDOWS_ABI
+S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmulbase_alt_standard)
+#else
+S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmulbase_alt)
+#endif
 
 // ****************************************************************************
 // The precomputed data (all read-only). This is currently part of the same
@@ -2385,7 +2399,7 @@ edwards25519_scalarmulbase_alt_midloop:
 // 0 * B = 0 and 2^251 * B in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
 
-edwards25519_scalarmulbase_alt_0g:
+Ledwards25519_scalarmulbase_alt_0g:
 
         .quad   0x0000000000000000
         .quad   0x0000000000000000
@@ -2402,7 +2416,7 @@ edwards25519_scalarmulbase_alt_0g:
         .quad   0x0000000000000000
         .quad   0x0000000000000000
 
-edwards25519_scalarmulbase_alt_251g:
+Ledwards25519_scalarmulbase_alt_251g:
 
         .quad   0x525f946d7c7220e7
         .quad   0x4636b0b2f1e35444
@@ -2420,7 +2434,7 @@ edwards25519_scalarmulbase_alt_251g:
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-edwards25519_scalarmulbase_alt_gtable:
+Ledwards25519_scalarmulbase_alt_gtable:
 
         // 2^0 * 1 * G
 
