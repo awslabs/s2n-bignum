@@ -76,6 +76,8 @@ jobs:
         mkdir aws-lc-build && cd aws-lc-build
         cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
         ninja-build run_tests
+        cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=Off -DBUILD_SHARED_LIBS=1 ../aws-lc
+        ninja-build run_tests
         cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=Off ../aws-lc
         ninja-build run_tests
 
@@ -153,4 +155,34 @@ jobs:
       run: |
         export HOLDIR=`pwd`/hol-light
         cd ${{ matrix.arch }}
-        make tutorial
+        make tutorial -j
+
+  s2n-bignum-tutorial-macos-arm:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        brew install opam
+        opam init -a
+
+    - name: Install HOL Light
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
+    - name: Run tutorial
+      run: |
+        export HOLDIR=`pwd`/hol-light
+        cd arm
+        make tutorial -j

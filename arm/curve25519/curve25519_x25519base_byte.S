@@ -23,7 +23,6 @@
 .type curve25519_x25519base_byte, %function
 .size curve25519_x25519base_byte, 11772
 
-.global curve25519_x25519base_byte_constant
 .type curve25519_x25519base_byte_constant, %object
 .size curve25519_x25519base_byte_constant, 48576
 #endif
