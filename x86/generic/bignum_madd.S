@@ -16,10 +16,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = m, R9 = x, [RSP+40] = n, [RSP+48] = y, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_madd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_madd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_madd)
         .text
 
@@ -48,11 +49,12 @@
 
 
 S2N_BN_SYMBOL(bignum_madd):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -63,12 +65,12 @@ S2N_BN_SYMBOL(bignum_madd):
 
 // We use too many registers, and also we need rax:rdx for multiplications
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
         mov     m, rdx
 
 // If the result size is zero, just return rax = 0
@@ -76,7 +78,7 @@ S2N_BN_SYMBOL(bignum_madd):
 
         xor     rax, rax
         test    p, p
-        jz      bignum_madd_end
+        jz      Lbignum_madd_end
 
 // Set initial 2-part sum to zero (we zero c inside the body)
 
@@ -87,7 +89,7 @@ S2N_BN_SYMBOL(bignum_madd):
 
         xor     k, k
 
-bignum_madd_outerloop:
+Lbignum_madd_outerloop:
 
 // Zero our carry term first; we eventually want it and a zero is useful now
 // Set a =  max 0 (k + 1 - n), i = min (k + 1) m
@@ -113,11 +115,11 @@ bignum_madd_outerloop:
         mov     d, k
         sub     d, i
         sub     i, a
-        jbe     bignum_madd_innerend
+        jbe     Lbignum_madd_innerend
         lea     x,[rcx+8*a]
         lea     y,[r9+8*d-8]
 
-bignum_madd_innerloop:
+Lbignum_madd_innerloop:
         mov     rax, [y+8*i]
         mul     QWORD PTR  [x]
         add     x, 8
@@ -125,9 +127,9 @@ bignum_madd_innerloop:
         adc     h, rdx
         adc     c, 0
         dec     i
-        jnz     bignum_madd_innerloop
+        jnz     Lbignum_madd_innerloop
 
-bignum_madd_innerend:
+Lbignum_madd_innerend:
 
         add     [z], l
         adc     h, 0
@@ -137,24 +139,26 @@ bignum_madd_innerend:
         add     z, 8
 
         cmp     k, p
-        jc      bignum_madd_outerloop
+        jc      Lbignum_madd_outerloop
 
 // Move the carry term into the return value
 
         mov     rax, l
 
-bignum_madd_end:
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+Lbignum_madd_end:
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_madd)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

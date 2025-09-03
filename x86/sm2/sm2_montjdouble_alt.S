@@ -14,10 +14,11 @@
 // Standard x86-64 ABI: RDI = p3, RSI = p1
 // Microsoft x64 ABI:   RCX = p3, RDX = p1
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sm2_montjdouble_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sm2_montjdouble_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sm2_montjdouble_alt)
         .text
         .balign 4
@@ -57,7 +58,7 @@
 #define x4p rsp+(NUMSIZE*5)
 #define d rsp+(NUMSIZE*5)
 
-#define NSPACE (NUMSIZE*6)
+#define NSPACE NUMSIZE*6
 
 // Corresponds to bignum_montmul_sm2_alt except for registers
 
@@ -636,24 +637,25 @@
         mov     [P0+0x18], r11
 
 S2N_BN_SYMBOL(sm2_montjdouble_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
 
 // Save registers and make room on stack for temporary variables
 
-        push   rbx
-        push   r12
-        push   r13
-        push   r14
-        push   r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
 // Main code, just a sequence of basic field operations
 
@@ -709,18 +711,20 @@ S2N_BN_SYMBOL(sm2_montjdouble_alt):
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+        CFI_INC_RSP(NSPACE)
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(sm2_montjdouble_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

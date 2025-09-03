@@ -11,19 +11,21 @@
 // Microsoft x64 ABI:   RCX = k, RDX = x, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_even)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_even)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_even)
         .text
 
 S2N_BN_SYMBOL(bignum_even):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -32,20 +34,22 @@ S2N_BN_SYMBOL(bignum_even):
 
         mov     eax, 1
         test    rdi, rdi
-        jz      bignum_even_end
+        jz      Lbignum_even_end
 
 // Otherwise XOR that initial 1 with the lowest bit of the input
 
         xor     rax, [rsi]
         and     rax, 1
 
-bignum_even_end:
+Lbignum_even_end:
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_even)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

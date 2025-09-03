@@ -15,10 +15,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = xs, R9 = i
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_mux16)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_mux16)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_mux16)
         .text
 
@@ -40,11 +41,12 @@
 
 
 S2N_BN_SYMBOL(bignum_mux16):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -55,7 +57,7 @@ S2N_BN_SYMBOL(bignum_mux16):
 // Copy size into decrementable counter, or skip everything if k = 0
 
         test    k, k
-        jz      bignum_mux16_end                     // If length = 0 do nothing
+        jz      Lbignum_mux16_end                     // If length = 0 do nothing
         mov     n, k
 
 // Multiply i by k so we can compare pointer offsets directly with it
@@ -66,7 +68,7 @@ S2N_BN_SYMBOL(bignum_mux16):
 
 // Main loop
 
-bignum_mux16_loop:
+Lbignum_mux16_loop:
         mov     a, [x]
         mov     j, k
 .rep 15
@@ -79,14 +81,16 @@ bignum_mux16_loop:
         add     z, 8
         add     x, 8
         dec     n
-        jnz     bignum_mux16_loop
+        jnz     Lbignum_mux16_loop
 
-bignum_mux16_end:
+Lbignum_mux16_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_mux16)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

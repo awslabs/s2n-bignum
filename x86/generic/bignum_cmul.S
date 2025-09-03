@@ -21,10 +21,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = c, R9 = n, [RSP+40] = y, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_cmul)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_cmul)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_cmul)
         .text
 
@@ -40,11 +41,12 @@
 
 
 S2N_BN_SYMBOL(bignum_cmul):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -65,7 +67,7 @@ S2N_BN_SYMBOL(bignum_cmul):
         xor     h, h
         xor     i, i
         test    n, n
-        jz      bignum_cmul_tail
+        jz      Lbignum_cmul_tail
 
 // Move c into a safer register as multiplies overwrite rdx
 
@@ -79,11 +81,11 @@ S2N_BN_SYMBOL(bignum_cmul):
         mov     h, rdx
         inc     i
         cmp     i, n
-        jz      bignum_cmul_tail
+        jz      Lbignum_cmul_tail
 
 // Main loop doing the multiplications
 
-bignum_cmul_loop:
+Lbignum_cmul_loop:
         mov     rax, [x+8*i]
         mul     c
         add     rax, h
@@ -92,35 +94,37 @@ bignum_cmul_loop:
         mov     h, rdx
         inc     i
         cmp     i, n
-        jc      bignum_cmul_loop
+        jc      Lbignum_cmul_loop
 
 // Add a tail when the destination is longer
 
-bignum_cmul_tail:
+Lbignum_cmul_tail:
         cmp     i, p
-        jnc     bignum_cmul_end
+        jnc     Lbignum_cmul_end
         mov     [z+8*i], h
         xor     h, h
         inc     i
         cmp     i, p
-        jnc     bignum_cmul_end
+        jnc     Lbignum_cmul_end
 
-bignum_cmul_tloop:
+Lbignum_cmul_tloop:
         mov     [z+8*i], h
         inc     i
         cmp     i, p
-        jc      bignum_cmul_tloop
+        jc      Lbignum_cmul_tloop
 
 // Return the high/carry word
 
-bignum_cmul_end:
+Lbignum_cmul_end:
         mov     rax, h
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_cmul)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
