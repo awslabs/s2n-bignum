@@ -156,12 +156,12 @@ let GF_128_mult_by_primitive = new_definition
      let mask = word_ishr tweak 127 in
      word_xor (word_and mask (word 0x87)) shifted`;;
 
-let FST3 = define `FST3 (x:a#b#c) = FST x`;;
-let SND3 = define `SND3 (x:a#b#c) = FST (SND x)`;;
-let THD3 = define `THD3 (x:a#b#c) = SND (SND x)`;;
-
 (* TODO: put it in a common place to be used with decrypt
      End *)
+let calculate_tweak = new_recursive_definition num_RECURSION
+  `calculate_tweak 0 (iv:(128)word) (key2:int128 list) = xts_init_tweak iv key2 /\
+   calculate_tweak (SUC n) (iv:(128)word) (key2:int128 list) =
+     GF_128_mult_by_primitive (calculate_tweak n iv key2)`;;
 
 (* AES-XTS encryption round function *)
 let aes256_xts_encrypt_round = new_definition
@@ -180,14 +180,14 @@ let aes256_xts_encrypt_1block = new_definition
 let eth = prove_general_recursive_function_exists
   `?aes256_xts_encrypt_rec.
      ! (i:num) (m:num) (P:byte list) (iv:int128) (key1:int128 list) (key2:int128 list).
-       aes256_xts_encrypt_rec i m P iv key1 key2 : (byte list)#int128#num =
-         if m < i then ([], iv, i)
+       aes256_xts_encrypt_rec i m P iv key1 key2 : (byte list)#num =
+         if m < i then ([], i)
          else
            let current_block = bytes_to_int128 (SUB_LIST (i * 16, 16) P) in
-           let curr = int128_to_bytes (aes256_xts_encrypt_round current_block iv key1) in
-           let iv = GF_128_mult_by_primitive iv in
+           let twk = calculate_tweak i iv key2 in
+           let curr = int128_to_bytes (aes256_xts_encrypt_round current_block twk key1) in
            let res = aes256_xts_encrypt_rec (i + 1) m P iv key1 key2 in
-           (APPEND curr (FST3 res), SND3 res, THD3 res)`;;
+           (APPEND curr (FST res), SND res)`;;
 
 let wfth = prove(hd(hyp eth),
   EXISTS_TAC `MEASURE (\(i:num,m:num,P:byte list,iv:int128,key1:int128 list,key2:int128 list). (m + 1) - i)` THEN
@@ -198,30 +198,35 @@ let exists_lemma = PROVE_HYP wfth eth;;
 (* Note: results are stored in LSByte to MSByte *)
 let aes256_xts_encrypt_rec = new_specification ["aes256_xts_encrypt_rec"] exists_lemma;;
 
-(* Cipher stealing for encryption (note: encryption cipher stealing is different from decryption) *)
+(* Cipher stealing for encryption (note: encryption cipher stealing is different from decryption)
+  Pm1 : last full block; P_{m-1} in the standard
+  Pm  : tail; P_m
+*)
 let cipher_stealing_encrypt = new_definition
-  `cipher_stealing_encrypt (block:int128) (tail:int128) (tail_len:num) (iv:int128) (key1:int128 list) : int128#int128 =
-     let CC = aes256_xts_encrypt_round block iv key1 in
-     let Cm = word_subword CC (0,  tail_len * 8) in
-     let CP = word_subword CC (tail_len * 8, (16 - tail_len) * 8) in
-     let PP = word_join (word_subword tail (0, tail_len * 8)) CP in
+  `cipher_stealing_encrypt (Pm1:byte list) (Pm:byte list) (tail_len:num)
+     (iv:int128) (i:num) (key1:int128 list) (key2:int128 list): (byte list)#(byte list) =
+     let twk = calculate_tweak i iv key2 in
+     let CC = int128_to_bytes (aes256_xts_encrypt_round (bytes_to_int128 Pm1) twk key1) in
+     let Cm = SUB_LIST (0, tail_len) CC in
+     let CP = SUB_LIST (tail_len, 16 - tail_len) CC in
+     let PP = bytes_to_int128 (APPEND Pm CP) in
      let iv_last = GF_128_mult_by_primitive iv in
-     let Cm1 = aes256_xts_encrypt_round PP iv_last key1 in
-     (Cm1, (word_zx Cm))`;;
+     let Cm1 = int128_to_bytes (aes256_xts_encrypt_round PP iv_last key1) in
+     (Cm1, Cm)`;;
 
 (* Encryption tail handling - either single block or cipher stealing *)
 let aes256_xts_encrypt_tail = new_definition
-  `aes256_xts_encrypt_tail (i:num) (m:num) (tail:num) (P:byte list) (iv:int128) (key1:int128 list) (key2:int128 list) : byte list =
-     let Pm1 = bytes_to_int128 (SUB_LIST (i * 16, 16) P) in
-     if tail = 0 then
-       int128_to_bytes (aes256_xts_encrypt_round Pm1 iv key1)
+  `aes256_xts_encrypt_tail (i:num) (tail_len:num) (P:byte list) (iv:int128)
+    (key1:int128 list) (key2:int128 list) : byte list =
+     if tail_len = 0 then
+       let Pm1 = bytes_to_int128 (SUB_LIST (i * 16, 16) P) in
+       let twk = calculate_tweak i iv key2 in
+       int128_to_bytes (aes256_xts_encrypt_round Pm1 twk key1)
      else
-       let padded_tail = APPEND (SUB_LIST ((i + 1) * 16, tail) P) (REPLICATE (16 - tail) (word 0)) in
-       let Ptail = bytes_to_int128 padded_tail in
-       let res_cs = cipher_stealing_encrypt Pm1 Ptail tail iv key1 in
-       let Cm1 = int128_to_bytes (FST res_cs) in
-       let Ctail = SUB_LIST (0, tail) (int128_to_bytes (SND res_cs)) in
-       APPEND Cm1 Ctail`;;
+       let Pm1 = SUB_LIST (i * 16, 16) P in
+       let Pm = SUB_LIST ((i + 1) * 16, tail_len) P in
+       let res_cs = cipher_stealing_encrypt Pm1 Pm tail_len iv i key1 key2 in
+       APPEND (FST res_cs) (SND res_cs)`;;
 
 (* The main encryption function *)
 (* Note: the specification does not handle the case of len < 16, which is
@@ -243,20 +248,18 @@ let aes256_xts_encrypt_tail = new_definition
 (* TODO: Double check the pseudo code in the spec for tweak calculation in ANEX c *)
 let aes256_xts_encrypt = new_definition
   `aes256_xts_encrypt
-     (P:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (C_error:byte list) : byte list =
+     (P:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (err:byte list) : byte list =
      if len < 16 then
-       C_error
+       err
      else
-       let tail = len MOD 16 in
-       let m = (len - tail) DIV 16 in
-       let i = 0 in
-       let iv = xts_init_tweak iv key2 in
+       let tail_len = len MOD 16 in
+       let m = (len - tail_len) DIV 16 in
        if m < 2 then
-         aes256_xts_encrypt_tail i m tail P iv key1 key2
+         aes256_xts_encrypt_tail 0 tail_len P iv key1 key2
        else
          let res = aes256_xts_encrypt_rec 0 (m - 2) P iv key1 key2 in
-         let Ctail = aes256_xts_encrypt_tail (THD3 res) m tail P (SND3 res) key1 key2 in
-         APPEND (FST3 res) Ctail`;;
+         let Ctail = aes256_xts_encrypt_tail (SND res) tail_len P iv key1 key2 in
+         APPEND (FST res) Ctail`;;
 
 (****)
 (* Conversions and test vectors *)
