@@ -45,12 +45,12 @@ S2N_BN_SYMBOL(sha3_keccak_f1600):
 // the unnecessary down-and-upcasting arising from [x9, w25, uxtw #3]
 
         CFI_DEC_SP(128)
-        CFI_STACKSAVE2(x19,x20,32)
-        CFI_STACKSAVE2(x21,x22,48)
-        CFI_STACKSAVE2(x23,x24,64)
-        CFI_STACKSAVE2(x25,x26,80)
-        CFI_STACKSAVE2(x27,x28,96)
-        CFI_STACKSAVE2(x29,x30,112)
+        CFI_STACKSAVE2X(x19,x20,32,40)
+        CFI_STACKSAVE2X(x21,x22,48,56)
+        CFI_STACKSAVE2X(x23,x24,64,72)
+        CFI_STACKSAVE2X(x25,x26,80,88)
+        CFI_STACKSAVE2X(x27,x28,96,104)
+        CFI_STACKSAVE2X(x29,x30,112,120)
 
 Lsha3_keccak_f1600_initial:
         mov     x26, x1

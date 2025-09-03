@@ -48,10 +48,13 @@
 #define CFI_POP1Z(reg) ldp     reg, xzr, [sp], #16 __LF .cfi_adjust_cfa_offset -16 __LF .cfi_restore reg
 
 #define CFI_STACKSAVE2(lo,hi,offset) stp     lo, hi, [sp, #(offset)] __LF .cfi_rel_offset lo, offset __LF .cfi_rel_offset hi, offset+8
-#define CFI_STACKSAVE1Z(reg,offset) stp     reg, xzr, [sp, #(offset)] __LF .cfi_rel_offset reg, offset
 
-#define CFI_STACKLOAD2(lo,hi,offset) ldp     lo, hi, [sp, #(offset)] __LF .cfi_restore lo __LF .cfi_restore hi
-#define CFI_STACKLOAD1Z(reg,offset) ldp     reg, xzr, [sp, #(offset)] __LF .cfi_restore reg
+#define CFI_STACKSAVE2X(lo,hi,offset,offset8) stp     lo, hi, [sp, #(offset+0)] __LF .cfi_rel_offset lo, offset __LF .cfi_rel_offset hi, offset8
 
-#define CFI_INC_SP(offset) add     sp, sp, #(offset) __LF .cfi_adjust_cfa_offset -offset
-#define CFI_DEC_SP(offset) sub     sp, sp, #(offset) __LF .cfi_adjust_cfa_offset offset
+#define CFI_STACKSAVE1Z(reg,offset) stp     reg, xzr, [sp, #(offset+0)] __LF .cfi_rel_offset reg, offset
+
+#define CFI_STACKLOAD2(lo,hi,offset) ldp     lo, hi, [sp, #(offset+0)] __LF .cfi_restore lo __LF .cfi_restore hi
+#define CFI_STACKLOAD1Z(reg,offset) ldp     reg, xzr, [sp, #(offset+0)] __LF .cfi_restore reg
+
+#define CFI_INC_SP(offset) add     sp, sp, #(offset+0) __LF .cfi_adjust_cfa_offset -offset
+#define CFI_DEC_SP(offset) sub     sp, sp, #(offset+0) __LF .cfi_adjust_cfa_offset offset

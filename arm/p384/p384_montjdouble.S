@@ -41,12 +41,12 @@ S2N_BN_SYMBOL(p384_montjdouble):
 
 // Save regs and make room on stack for temporary variables
 
-        CFI_DEC_SP(NSPACE+80)
-        CFI_STACKSAVE2(x19,x20,NSPACE)
-        CFI_STACKSAVE2(x21,x22,NSPACE+16)
-        CFI_STACKSAVE2(x23,x24,NSPACE+32)
-        CFI_STACKSAVE2(x25,x26,NSPACE+48)
-        CFI_STACKSAVE1Z(x27,NSPACE+64)
+        CFI_DEC_SP(304)
+        CFI_STACKSAVE2X(x19,x20,224,232)
+        CFI_STACKSAVE2X(x21,x22,240,248)
+        CFI_STACKSAVE2X(x23,x24,256,264)
+        CFI_STACKSAVE2X(x25,x26,272,280)
+        CFI_STACKSAVE1Z(x27,288)
 
         mov x25, x0
         mov x26, x1
@@ -3137,12 +3137,12 @@ S2N_BN_SYMBOL(p384_montjdouble):
 
 // Restore stack and registers
 
-        CFI_STACKLOAD2(x19,x20,NSPACE)
-        CFI_STACKLOAD2(x21,x22,NSPACE+16)
-        CFI_STACKLOAD2(x23,x24,NSPACE+32)
-        CFI_STACKLOAD2(x25,x26,NSPACE+48)
-        CFI_STACKLOAD1Z(x27,NSPACE+64)
-        CFI_INC_SP(NSPACE+80)
+        CFI_STACKLOAD2(x19,x20,224)
+        CFI_STACKLOAD2(x21,x22,240)
+        CFI_STACKLOAD2(x23,x24,256)
+        CFI_STACKLOAD2(x25,x26,272)
+        CFI_STACKLOAD1Z(x27,288)
+        CFI_INC_SP(304)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(p384_montjdouble)

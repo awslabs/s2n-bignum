@@ -50,16 +50,17 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600_alt2):
 // transposition operations and conventional loads and stores.
 
         CFI_DEC_SP(224)
-        CFI_STACKSAVE2(x19,x20,0x30)
-        CFI_STACKSAVE2(x21,x22,0x40)
-        CFI_STACKSAVE2(x23,x24,0x50)
-        CFI_STACKSAVE2(x25,x26,0x60)
-        CFI_STACKSAVE2(x27,x28,0x70)
-        CFI_STACKSAVE2(x29,x30,0x80)
-        CFI_STACKSAVE2(d8,d9,0x90)
-        CFI_STACKSAVE2(d10,d11,0xa0)
-        CFI_STACKSAVE2(d12,d13,0xb0)
-        CFI_STACKSAVE2(d14,d15,0xc0)
+        CFI_STACKSAVE2X(x19,x20,48,56)
+        CFI_STACKSAVE2X(x21,x22,64,72)
+        CFI_STACKSAVE2X(x23,x24,80,88)
+        CFI_STACKSAVE2X(x25,x26,96,104)
+        CFI_STACKSAVE2X(x27,x28,112,120)
+        CFI_STACKSAVE2X(x29,x30,128,136)
+        CFI_STACKSAVE2X(d8,d9,144,152)
+        CFI_STACKSAVE2X(d10,d11,160,168)
+        CFI_STACKSAVE2X(d12,d13,176,184)
+        CFI_STACKSAVE2X(d14,d15,192,200)
+
         mov     x29, x1
         mov     x30, #0x0
         str     x30, [sp, #0x20]
@@ -935,16 +936,16 @@ Lsha3_keccak4_f1600_alt2_done:
         trn2    v24.2d, v24.2d, v24.2d
         str     d24, [x2, #0xc0]
 
-        CFI_STACKLOAD2(d14,d15,0xc0)
-        CFI_STACKLOAD2(d12,d13,0xb0)
-        CFI_STACKLOAD2(d10,d11,0xa0)
-        CFI_STACKLOAD2(d8,d9,0x90)
-        CFI_STACKLOAD2(x19,x20,0x30)
-        CFI_STACKLOAD2(x21,x22,0x40)
-        CFI_STACKLOAD2(x23,x24,0x50)
-        CFI_STACKLOAD2(x25,x26,0x60)
-        CFI_STACKLOAD2(x27,x28,0x70)
-        CFI_STACKLOAD2(x29,x30,0x80)
+        CFI_STACKLOAD2(d14,d15,192)
+        CFI_STACKLOAD2(d12,d13,176)
+        CFI_STACKLOAD2(d10,d11,160)
+        CFI_STACKLOAD2(d8,d9,144)
+        CFI_STACKLOAD2(x19,x20,48)
+        CFI_STACKLOAD2(x21,x22,64)
+        CFI_STACKLOAD2(x23,x24,80)
+        CFI_STACKLOAD2(x25,x26,96)
+        CFI_STACKLOAD2(x27,x28,112)
+        CFI_STACKLOAD2(x29,x30,128)
         CFI_INC_SP(224)
         CFI_RET
 

@@ -47,10 +47,10 @@ S2N_BN_SYMBOL(sha3_keccak_f1600_alt):
 // s2n-bignum formal model.
 
         CFI_DEC_SP(64)
-        CFI_STACKSAVE2(d8,d9,0)
-        CFI_STACKSAVE2(d10,d11,0x10)
-        CFI_STACKSAVE2(d12,d13,0x20)
-        CFI_STACKSAVE2(d14,d15,0x30)
+        CFI_STACKSAVE2X(d8,d9,0,8)
+        CFI_STACKSAVE2X(d10,d11,16,24)
+        CFI_STACKSAVE2X(d12,d13,32,40)
+        CFI_STACKSAVE2X(d14,d15,48,56)
 
 // Load the Keccak initial state into registers Q0..Q24
 
@@ -162,9 +162,9 @@ Lsha3_keccak_f1600_alt_loop:
 // Restore registers and return
 
         CFI_STACKLOAD2(d8,d9,0)
-        CFI_STACKLOAD2(d10,d11,0x10)
-        CFI_STACKLOAD2(d12,d13,0x20)
-        CFI_STACKLOAD2(d14,d15,0x30)
+        CFI_STACKLOAD2(d10,d11,16)
+        CFI_STACKLOAD2(d12,d13,32)
+        CFI_STACKLOAD2(d14,d15,48)
         CFI_INC_SP(64)
         CFI_RET
 

@@ -69,17 +69,17 @@ S2N_BN_SYMBOL(curve25519_x25519_byte):
 // We only need to save the low 64-bits of the Q8...Q15 registers
 // according to the ABI, so we use a save of the D8...D15 forms.
 
-        CFI_DEC_SP(NSPACE+160)
-        CFI_STACKSAVE2(d8,d9,NSPACE+0)
-        CFI_STACKSAVE2(d10,d11,NSPACE+16)
-        CFI_STACKSAVE2(d12,d13,NSPACE+32)
-        CFI_STACKSAVE2(d14,d15,NSPACE+48)
-        CFI_STACKSAVE2(x19,x20,NSPACE+64)
-        CFI_STACKSAVE2(x21,x22,NSPACE+80)
-        CFI_STACKSAVE2(x23,x24,NSPACE+96)
-        CFI_STACKSAVE2(x25,x26,NSPACE+112)
-        CFI_STACKSAVE2(x27,x28,NSPACE+128)
-        CFI_STACKSAVE2(x29,x30,NSPACE+144)
+        CFI_DEC_SP(384)
+        CFI_STACKSAVE2X(d8,d9,224,232)
+        CFI_STACKSAVE2X(d10,d11,240,248)
+        CFI_STACKSAVE2X(d12,d13,256,264)
+        CFI_STACKSAVE2X(d14,d15,272,280)
+        CFI_STACKSAVE2X(x19,x20,288,296)
+        CFI_STACKSAVE2X(x21,x22,304,312)
+        CFI_STACKSAVE2X(x23,x24,320,328)
+        CFI_STACKSAVE2X(x25,x26,336,344)
+        CFI_STACKSAVE2X(x27,x28,352,360)
+        CFI_STACKSAVE2X(x29,x30,368,376)
 
 // Move the output pointer to a stable place
 
@@ -2762,17 +2762,17 @@ Lcurve25519_x25519_byte_invmidloop:
 
 // Restore stack and registers (this will zero the tops of Q8...Q15).
 
-        ldp     d8, d9, [sp, #NSPACE+0]
-        CFI_STACKLOAD2(d10,d11,NSPACE+16)
-        CFI_STACKLOAD2(d12,d13,NSPACE+32)
-        CFI_STACKLOAD2(d14,d15,NSPACE+48)
-        CFI_STACKLOAD2(x19,x20,NSPACE+64)
-        CFI_STACKLOAD2(x21,x22,NSPACE+80)
-        CFI_STACKLOAD2(x23,x24,NSPACE+96)
-        CFI_STACKLOAD2(x25,x26,NSPACE+112)
-        CFI_STACKLOAD2(x27,x28,NSPACE+128)
-        CFI_STACKLOAD2(x29,x30,NSPACE+144)
-        CFI_INC_SP(NSPACE+160)
+        CFI_STACKLOAD2(d8,d9,224)
+        CFI_STACKLOAD2(d10,d11,240)
+        CFI_STACKLOAD2(d12,d13,256)
+        CFI_STACKLOAD2(d14,d15,272)
+        CFI_STACKLOAD2(x19,x20,288)
+        CFI_STACKLOAD2(x21,x22,304)
+        CFI_STACKLOAD2(x23,x24,320)
+        CFI_STACKLOAD2(x25,x26,336)
+        CFI_STACKLOAD2(x27,x28,352)
+        CFI_STACKLOAD2(x29,x30,368)
+        CFI_INC_SP(384)
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(curve25519_x25519_byte)
