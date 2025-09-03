@@ -658,7 +658,7 @@ S2N_BN_SYMBOL(sm2_montjdouble):
 // Restore registers and stack and return
 
         CFI_STACKLOAD2(x19,x20,NSPACE)
-        CFI_INC_SP(NSPACE+16)
+        CFI_INC_SP((NSPACE+16))
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(sm2_montjdouble)

@@ -885,7 +885,7 @@ S2N_BN_SYMBOL(secp256k1_jdouble):
 // Restore stack and return
 
         CFI_STACKLOAD2(x19,x20,NSPACE)
-        CFI_INC_SP(NSPACE+16)
+        CFI_INC_SP((NSPACE+16))
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(secp256k1_jdouble)

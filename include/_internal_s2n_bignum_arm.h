@@ -49,12 +49,24 @@
 
 #define CFI_STACKSAVE2(lo,hi,offset) stp     lo, hi, [sp, #(offset)] __LF .cfi_rel_offset lo, offset __LF .cfi_rel_offset hi, offset+8
 
+// This is an alternative to CFI_STACKSAVE2 to work around delocator problems
+// in the AWS-LC FIPS build, avoiding certain composite expressions. It is
+// expected that offset8 = offset+8 as in an invocation of CFI_STACKSAVE2.
+// Likewise the (offset+0) oddities in the following macros are driven by
+// delocator problems.
+
 #define CFI_STACKSAVE2X(lo,hi,offset,offset8) stp     lo, hi, [sp, #(offset+0)] __LF .cfi_rel_offset lo, offset __LF .cfi_rel_offset hi, offset8
 
 #define CFI_STACKSAVE1Z(reg,offset) stp     reg, xzr, [sp, #(offset+0)] __LF .cfi_rel_offset reg, offset
 
 #define CFI_STACKLOAD2(lo,hi,offset) ldp     lo, hi, [sp, #(offset+0)] __LF .cfi_restore lo __LF .cfi_restore hi
 #define CFI_STACKLOAD1Z(reg,offset) ldp     reg, xzr, [sp, #(offset+0)] __LF .cfi_restore reg
+
+// It would be better to use -(offset) not -offset, but again there seem
+// to be delocator issues. We adopt a discipline of not using dangerous
+// composite expressions in this macro, e.g. parenthesizing the argument
+// or just using numeric constants or products where the association is
+// not a problem.
 
 #define CFI_INC_SP(offset) add     sp, sp, #(offset+0) __LF .cfi_adjust_cfa_offset -offset
 #define CFI_DEC_SP(offset) sub     sp, sp, #(offset+0) __LF .cfi_adjust_cfa_offset offset

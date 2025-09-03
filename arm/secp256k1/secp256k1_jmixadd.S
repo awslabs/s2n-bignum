@@ -503,7 +503,7 @@ S2N_BN_SYMBOL(secp256k1_jmixadd):
 
         CFI_STACKLOAD2(x19,x20,NSPACE)
         CFI_STACKLOAD2(x21,x22,NSPACE+16)
-        CFI_INC_SP(NSPACE+32)
+        CFI_INC_SP((NSPACE+32))
         CFI_RET
 
 S2N_BN_SIZE_DIRECTIVE(secp256k1_jmixadd)
