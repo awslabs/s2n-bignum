@@ -2122,8 +2122,6 @@ S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base_byte)
 .const_data
 #endif
 
-S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_x25519base_byte_constant)
-
 S2N_BN_SYMBOL(curve25519_x25519base_byte_constant):
 
 // 2^254 * G and (2^254 + 8) * G in extended-projective coordinates

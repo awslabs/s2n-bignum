@@ -2040,8 +2040,6 @@ S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmulbase)
 .const_data
 #endif
 
-S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_scalarmulbase_constant)
-
 S2N_BN_SYMBOL(edwards25519_scalarmulbase_constant):
 
 // 0 * B = 0 and 2^251 * B in extended-projective coordinates

@@ -2859,8 +2859,6 @@ S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmuldouble_alt_pepadd)
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
 
-S2N_BN_SYM_VISIBILITY_DIRECTIVE (edwards25519_scalarmuldouble_alt_constant)
-
 S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant):
 
         // 1 * G
