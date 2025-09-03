@@ -1815,17 +1815,23 @@ let BYTELIST_SUBLIST_CONV =
    (`CONS h t1 = APPEND (CONS h t2) r <=>
       t1:byte list = APPEND t2 r`,
     REWRITE_TAC[APPEND; CONS_11])
+  and pth_largestep = prove
+   (`APPEND h t1 = APPEND (APPEND h t2) r <=>
+      t1:byte list = APPEND t2 r`,
+    REWRITE_TAC[GSYM APPEND_ASSOC;APPEND_LCANCEL])
   and pth_fin = prove
    (`(?r:byte list. l = r) <=> T`,
     MESON_TAC[]) in
   let baseconv = GEN_REWRITE_CONV I [pth_base]
   and stepconv = GEN_REWRITE_CONV I [pth_step]
+  and largestepconv = GEN_REWRITE_CONV I [pth_largestep]
   and simpconv = ONCE_DEPTH_CONV NORMALIZE_ADD_ADD_CONV THENC
                  GEN_REWRITE_CONV ONCE_DEPTH_CONV
                    [ARITH_RULE `n + 0 = n /\ 0 + n = n`]
   and finrule = GEN_REWRITE_RULE RAND_CONV [pth_fin] in
   let simpstep_conv =
     stepconv ORELSEC
+    largestepconv ORELSEC
     (BINOP2_CONV (LAND_CONV simpconv) (LAND_CONV(LAND_CONV simpconv)) THENC
      stepconv) in
   let rec rule th =
