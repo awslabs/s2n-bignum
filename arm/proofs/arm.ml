@@ -354,6 +354,16 @@ let ARM_THM =
         dest_small_numeral ofs
       with Failure _ ->
         failwith ("ARM_THM: Cannot decompose PC expression: " ^ (string_of_term (concl pc_th))) in
+    let _ = if !arm_print_log then
+      let opt = Option.get execth2.(pc_ofs) in
+      (* opt: |- forall ... aligned_bytes_loaded ..
+                 ==> arm_decode .. (arm_INST ..) *)
+      let t = snd (strip_forall (concl (opt))) in
+      let t = snd (dest_imp t) in
+      let term = snd (dest_comb t) in
+      Printf.printf "Instruction at `pc + %d (%#x)`: `%s`\n" pc_ofs pc_ofs
+          (string_of_term term)
+    in
     MATCH_MP th (MATCH_MP (Option.get execth2.(pc_ofs)) loaded_mc_th);;
 
 let ARM_ENSURES_SUBLEMMA_TAC =
@@ -426,7 +436,7 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
  (K eth THENC
   ONCE_DEPTH_CONV ARM_EXEC_CONV THENC
   REWRITE_CONV[XREG_NE_SP; SEQ; condition_semantics] THENC
-  ALIGNED_16_CONV ths THENC
+  ALIGNED_WORD_CONV ths THENC
   REWRITE_CONV[SEQ; condition_semantics] THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [assign] THENC
   REWRITE_CONV[] THENC
@@ -824,7 +834,7 @@ let ARM_SUBROUTINE_SIM_TAC =
       REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
       TRY(ANTS_TAC THENL
        [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
-        ALIGNED_16_TAC THEN REPEAT CONJ_TAC THEN
+        ALIGNED_WORD_TAC THEN REPEAT CONJ_TAC THEN
         TRY(CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN NO_TAC) THEN
         (NONOVERLAPPING_TAC ORELSE
          DISJ1_TAC THEN NONOVERLAPPING_TAC ORELSE
@@ -1035,7 +1045,7 @@ let ARM_ADD_RETURN_NOSTACK_TAC =
       MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
     TRY(ANTS_TAC THENL
-     [REPEAT CONJ_TAC THEN ALIGNED_16_TAC THEN
+     [REPEAT CONJ_TAC THEN ALIGNED_WORD_TAC THEN
       TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
     MATCH_MP_TAC lemma2 THEN REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
@@ -1099,7 +1109,7 @@ let ARM_ADD_RETURN_STACK_TAC =
       MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
     TRY(ANTS_TAC THENL
-     [REPEAT CONJ_TAC THEN ALIGNED_16_TAC THEN
+     [REPEAT CONJ_TAC THEN ALIGNED_WORD_TAC THEN
       TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
     DISCH_THEN(fun th ->

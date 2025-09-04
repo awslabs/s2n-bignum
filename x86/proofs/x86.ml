@@ -17,7 +17,9 @@ let bytesize = define
  `bytesize Byte = 8 /\
   bytesize Word = 16 /\
   bytesize Doubleword = 32 /\
-  bytesize Quadword = 64`;;
+  bytesize Quadword = 64 /\
+  bytesize Word128 = 128 /\
+  bytesize Word256 = 256`;;
 
 let regsize = define
  `regsize Full_64 = 64 /\
@@ -3029,6 +3031,15 @@ let X86_THM =
       with Failure _ ->
         failwith ("X86_THM: Cannot decompose PC expression: " ^
                   string_of_term (concl pc_th)) in
+    let _ = if !x86_print_log then
+      let opt = Option.get execth2.(pc_ofs) in
+      (* opt: |- forall ... bytes_loaded .. ==> x86_decode .. (INST ..) *)
+      let t = snd (strip_forall (concl (opt))) in
+      let t = snd (dest_imp t) in
+      let term = snd (dest_comb t) in
+      Printf.printf "Instruction at `pc + %d (%#x)`: `%s`\n" pc_ofs pc_ofs
+          (string_of_term term)
+    in
     CONV_RULE
       (ONCE_DEPTH_CONV
         (REWR_CONV (GSYM ADD_ASSOC) THENC RAND_CONV NUM_REDUCE_CONV))
@@ -3078,7 +3089,7 @@ let X86_FORCE_CONDITIONAL_CONV =
          (ONCE_DEPTH_CONV DIMINDEX_CONV))) THENC
        RATOR_CONV(RATOR_CONV(LAND_CONV
          (DEPTH_CONV WORD_NUM_RED_CONV))) THENC
-       ALIGNED_16_CONV ths THENC
+       ALIGNED_WORD_CONV ths THENC
        TRY_CONV (GEN_REWRITE_CONV
         (RATOR_CONV o RATOR_CONV o LAND_CONV o TOP_DEPTH_CONV) ths) THENC
        TRY_CONV (GEN_REWRITE_CONV RATOR_CONV [COND_CLAUSES]) in

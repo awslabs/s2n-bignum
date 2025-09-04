@@ -16,10 +16,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = n, R9 = x, [RSP+40] = c, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_shr_small)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_shr_small)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_shr_small)
         .text
 
@@ -43,11 +44,12 @@
 
 
 S2N_BN_SYMBOL(bignum_shr_small):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -67,47 +69,49 @@ S2N_BN_SYMBOL(bignum_shr_small):
 // First, if p > n then pad output on the left with p-n zeros
 
         cmp     n, p
-        jnc     bignum_shr_small_nopad
-bignum_shr_small_padloop:
+        jnc     Lbignum_shr_small_nopad
+Lbignum_shr_small_padloop:
         dec     p
         mov     [z+8*p],b
         cmp     n, p
-        jc      bignum_shr_small_padloop
-bignum_shr_small_nopad:
+        jc      Lbignum_shr_small_padloop
+Lbignum_shr_small_nopad:
 
 // We now know that p <= n. If in fact p < n let carry word = x[p] instead of 0
 
-        jz      bignum_shr_small_shiftstart
+        jz      Lbignum_shr_small_shiftstart
         mov     b,[x+8*p]
-bignum_shr_small_shiftstart:
+Lbignum_shr_small_shiftstart:
         test    p, p
-        jz      bignum_shr_small_trivial
+        jz      Lbignum_shr_small_trivial
 
 // Now the main loop
 
-bignum_shr_small_loop:
+Lbignum_shr_small_loop:
         mov     a, [x+8*p-8]
         mov     t, a
         shrd    a, b, cl
         mov     [z+8*p-8],a
         mov     b, t
         dec     p
-        jnz     bignum_shr_small_loop
+        jnz     Lbignum_shr_small_loop
 
 // Mask the carry word and return with that as RAX = b
 
-bignum_shr_small_trivial:
+Lbignum_shr_small_trivial:
         mov     ashort, 1
         shl     a, cl
         dec     a
         and     b, a
 
-bignum_shr_small_end:
+Lbignum_shr_small_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_shr_small)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
