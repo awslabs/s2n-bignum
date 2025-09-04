@@ -183,11 +183,123 @@ let montred = define
      (16,16)`;;
 
 (* ------------------------------------------------------------------------- *)
+(* Analogous ML-DSA idioms.                                                  *)
+(* ------------------------------------------------------------------------- *)
+
+let mldsa_barred = define
+ `(mldsa_barred:int32->int32) x =
+  word_sub x
+   (word_mul
+    (word_ishr (word_add x (word 4194304)) 23)
+    (word 8380417))`;;
+
+let mldsa_montred = define
+   `(mldsa_montred:int64->int32) x =
+    word_subword
+     (word_add
+       (word_mul ((word_sx:int32->int64)
+                    (word_mul (word_subword x (0,32)) (word 58728449)))
+                 (word 8380417))
+       x)
+     (32,32)`;;
+
+(* ------------------------------------------------------------------------- *)
+(* From |- (x == y) (mod m) /\ P   to   |- (x == y) (mod n) /\ P             *)
+(* ------------------------------------------------------------------------- *)
+
+let WEAKEN_INTCONG_RULE =
+  let prule = (MATCH_MP o prove)
+   (`(x:int == y) (mod m) ==> !n. m rem n = &0 ==> (x == y) (mod n)`,
+    REWRITE_TAC[INT_REM_EQ_0] THEN INTEGER_TAC)
+  and conv = GEN_REWRITE_CONV I [INT_REM_ZERO; INT_REM_REFL] ORELSEC
+             INT_REM_CONV
+  and zth = REFL `&0:int` in
+  let lrule n th =
+    let th1 = SPEC (mk_intconst n) (prule th) in
+    let th2 = LAND_CONV conv (lhand(concl th1)) in
+    MP th1 (EQ_MP (SYM th2) zth) in
+  fun n th ->
+    let th1,th2 = CONJ_PAIR th in
+    CONJ (lrule n th1) th2;;
+
+(* ------------------------------------------------------------------------- *)
+(* Unify modulus and conjoin a pair of (x == y) (mod m) /\ P thoerems.       *)
+(* ------------------------------------------------------------------------- *)
+
+let UNIFY_INTCONG_RULE th1 th2 =
+  let p1 = dest_intconst (rand(rand(lhand(concl th1))))
+  and p2 = dest_intconst (rand(rand(lhand(concl th2)))) in
+  let d = gcd_num p1 p2 in
+  CONJ (WEAKEN_INTCONG_RULE d th1) (WEAKEN_INTCONG_RULE d th2);;
+
+(* ------------------------------------------------------------------------- *)
+(* Process list of ineqequality into standard congbounds for atomic terms.   *)
+(* ------------------------------------------------------------------------- *)
+
+let DIMINDEX_INT_REDUCE_CONV =
+  DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC DIMINDEX_CONV) THENC
+  INT_REDUCE_CONV;;
+
+let PROCESS_BOUND_ASSUMPTIONS =
+  let cth = prove
+   (`(ival x <= b <=>
+      --(&2 pow (dimindex(:N) - 1)) <= ival x /\ ival x <= b) /\
+     (b <= ival x <=>
+      b <= ival x /\ ival x <= &2 pow (dimindex(:N) - 1) - &1) /\
+     (ival(x:N word) > b <=>
+      b + &1 <= ival x /\ ival x <= &2 pow (dimindex(:N) - 1) - &1) /\
+     (b > ival(x:N word) <=>
+      --(&2 pow (dimindex(:N) - 1)) <= ival x /\ ival x <= b - &1) /\
+     (ival(x:N word) >= b <=>
+      b <= ival x /\ ival x <= &2 pow (dimindex(:N) - 1) - &1) /\
+     (b >= ival(x:N word) <=>
+      --(&2 pow (dimindex(:N) - 1)) <= ival x /\ ival x <= b) /\
+     (ival(x:N word) < b <=>
+      --(&2 pow (dimindex(:N) - 1)) <= ival x /\ ival x <= b - &1) /\
+     (b < ival(x:N word) <=>
+     b + &1 <= ival x /\ ival x <= &2 pow (dimindex(:N) - 1) - &1) /\
+     (abs(ival(x:N word)) <= b <=>
+      --b <= ival x /\ ival x <= b) /\
+     (abs(ival(x:N word)) < b <=>
+      &1 - b <= ival x /\ ival x <= b - &1)`,
+    REWRITE_TAC[IVAL_BOUND; INT_ARITH `x:int <= y - &1 <=> x < y`] THEN
+    INT_ARITH_TAC)
+  and pth = prove
+   (`!l u (x:N word).
+          l <= ival x /\ ival x <= u
+          ==> (ival x == ival x) (mod &0) /\ l <= ival x /\ ival x <= u`,
+    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN INTEGER_TAC) in
+  let rule =
+    MATCH_MP pth o
+    CONV_RULE (BINOP2_CONV (LAND_CONV DIMINDEX_INT_REDUCE_CONV)
+                           (RAND_CONV DIMINDEX_INT_REDUCE_CONV)) o
+    GEN_REWRITE_RULE I [cth] in
+  let rec process lfn ths =
+    match ths with
+      [] -> lfn
+    | th::oths ->
+          let lfn' =
+            try let th' = rule th in
+                let tm = rand(concl th') in
+                if is_intconst (rand(rand tm)) && is_intconst (lhand(lhand tm))
+                then (rand(lhand(rand tm)) |-> th') lfn
+                else lfn
+            with Failure _ -> lfn in
+          process lfn' oths in
+  process undefined;;
+
+(* ------------------------------------------------------------------------- *)
 (* Congruence-and-bound propagation, just recursion on the expression tree.  *)
 (* ------------------------------------------------------------------------- *)
 
+let CONGBOUND_CONST = prove
+ (`!(x:N word) n.
+        ival x = n
+        ==> (ival x == n) (mod &0) /\ n <= ival x /\ ival x <= n`,
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[INT_LE_REFL] THEN INTEGER_TAC);;
+
 let CONGBOUND_ATOM = prove
- (`!x:N word. (ival x == ival x) (mod &3329) /\
+ (`!x:N word. (ival x == ival x) (mod &0) /\
               --(&2 pow (dimindex(:N) - 1)) <= ival x /\
               ival x <= &2 pow (dimindex(:N) - 1) - &1`,
   GEN_TAC THEN REWRITE_TAC[INT_ARITH `x:int <= y - &1 <=> x < y`] THEN
@@ -195,34 +307,38 @@ let CONGBOUND_ATOM = prove
 
 let CONGBOUND_ATOM_GEN = prove
  (`!x:N word. abs(ival x) <= n
-              ==> (ival x == ival x) (mod &3329) /\ --n <= ival x /\ ival x <= n`,
+              ==> (ival x == ival x) (mod &0) /\
+                  --n <= ival x /\ ival x <= n`,
   REWRITE_TAC[INTEGER_RULE `(x:int == x) (mod n)`] THEN INT_ARITH_TAC);;
 
 let CONGBOUND_IWORD = prove
- (`!x. ((x == x') (mod &3329) /\ l <= x /\ x <= u)
-       ==> --(&2 pow (dimindex(:N) - 1)) <= l /\ u <= &2 pow (dimindex(:N) - 1) - &1
-           ==> (ival(iword x:N word) == x') (mod &3329) /\
+ (`!x. ((x == x') (mod p) /\ l <= x /\ x <= u)
+       ==> --(&2 pow (dimindex(:N) - 1)) <= l /\
+           u <= &2 pow (dimindex(:N) - 1) - &1
+           ==> (ival(iword x:N word) == x') (mod p) /\
                l <= ival(iword x:N word) /\ ival(iword x:N word) <= u`,
   GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN REWRITE_TAC[word_sx] THEN
-  W(MP_TAC o PART_MATCH (lhand o rand) IVAL_IWORD o lhand o rand o rand o snd) THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) IVAL_IWORD o
+    lhand o rand o rand o snd) THEN
   ANTS_TAC THENL [ASM_INT_ARITH_TAC; DISCH_THEN SUBST1_TAC] THEN
   ASM_REWRITE_TAC[]);;
 
 let CONGBOUND_WORD_SX = prove
  (`!x:M word.
-        ((ival x == x') (mod &3329) /\ l <= ival x /\ ival x <= u)
-        ==> --(&2 pow (dimindex(:N) - 1)) <= l /\ u <= &2 pow (dimindex(:N) - 1) - &1
-            ==> (ival(word_sx x:N word) == x') (mod &3329) /\
+        ((ival x == x') (mod p) /\ l <= ival x /\ ival x <= u)
+        ==> --(&2 pow (dimindex(:N) - 1)) <= l /\
+            u <= &2 pow (dimindex(:N) - 1) - &1
+            ==> (ival(word_sx x:N word) == x') (mod p) /\
                 l <= ival(word_sx x:N word) /\ ival(word_sx x:N word) <= u`,
   REWRITE_TAC[word_sx; CONGBOUND_IWORD]);;
 
 let CONGBOUND_WORD_ADD = prove
  (`!x y:N word.
-        ((ival x == x') (mod &3329) /\ lx <= ival x /\ ival x <= ux) /\
-        ((ival y == y') (mod &3329) /\ ly <= ival y /\ ival y <= uy)
+        ((ival x == x') (mod p) /\ lx <= ival x /\ ival x <= ux) /\
+        ((ival y == y') (mod p) /\ ly <= ival y /\ ival y <= uy)
         ==> --(&2 pow (dimindex(:N) - 1)) <= lx + ly /\
             ux + uy <= &2 pow (dimindex(:N) - 1) - &1
-            ==> (ival(word_add x y) == x' + y') (mod &3329) /\
+            ==> (ival(word_add x y) == x' + y') (mod p) /\
                 lx + ly <= ival(word_add x y) /\
                 ival(word_add x y) <= ux + uy`,
   REPEAT GEN_TAC THEN REWRITE_TAC[WORD_ADD_IMODULAR; imodular] THEN
@@ -232,11 +348,11 @@ let CONGBOUND_WORD_ADD = prove
 
 let CONGBOUND_WORD_SUB = prove
  (`!x y:N word.
-        ((ival x == x') (mod &3329) /\ lx <= ival x /\ ival x <= ux) /\
-        ((ival y == y') (mod &3329) /\ ly <= ival y /\ ival y <= uy)
+        ((ival x == x') (mod p) /\ lx <= ival x /\ ival x <= ux) /\
+        ((ival y == y') (mod p) /\ ly <= ival y /\ ival y <= uy)
         ==> --(&2 pow (dimindex(:N) - 1)) <= lx - uy /\
             ux - ly <= &2 pow (dimindex(:N) - 1) - &1
-            ==> (ival(word_sub x y) == x' - y') (mod &3329) /\
+            ==> (ival(word_sub x y) == x' - y') (mod p) /\
                 lx - uy <= ival(word_sub x y) /\
                 ival(word_sub x y) <= ux - ly`,
   REPEAT GEN_TAC THEN REWRITE_TAC[WORD_SUB_IMODULAR; imodular] THEN
@@ -246,13 +362,13 @@ let CONGBOUND_WORD_SUB = prove
 
 let CONGBOUND_WORD_MUL = prove
  (`!x y:N word.
-        ((ival x == x') (mod &3329) /\ lx <= ival x /\ ival x <= ux) /\
-        ((ival y == y') (mod &3329) /\ ly <= ival y /\ ival y <= uy)
+        ((ival x == x') (mod p) /\ lx <= ival x /\ ival x <= ux) /\
+        ((ival y == y') (mod p) /\ ly <= ival y /\ ival y <= uy)
         ==> --(&2 pow (dimindex(:N) - 1))
             <= min (lx * ly) (min (lx * uy) (min (ux * ly) (ux * uy))) /\
             max (lx * ly) (max (lx * uy) (max (ux * ly) (ux * uy)))
             <= &2 pow (dimindex(:N) - 1) - &1
-            ==> (ival(word_mul x y) == x' * y') (mod &3329) /\
+            ==> (ival(word_mul x y) == x' * y') (mod p) /\
                 min (lx * ly) (min (lx * uy) (min (ux * ly) (ux * uy)))
                 <= ival(word_mul x y) /\
                 ival(word_mul x y)
@@ -415,9 +531,28 @@ let CONGBOUND_MONTRED = prove
    `(a * p + x:int == y) (mod p) <=> (x == y) (mod p)`] THEN
   ASM_INT_ARITH_TAC);;
 
-let DIMINDEX_INT_REDUCE_CONV =
-  DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC DIMINDEX_CONV) THENC
-  INT_REDUCE_CONV;;
+let CONGBOUND_MLDSA_BARRED = prove
+ (`!a a' l u.
+        ((ival a == a') (mod &8380417) /\ l <= ival a /\ ival a <= u)
+        ==> u <= &0x7fbfffff
+            ==> (ival(mldsa_barred a) == a') (mod &8380417) /\
+                --(&6283009) <= ival(mldsa_barred a) /\
+                ival(mldsa_barred a) <= &6283008`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+  MP_TAC(ISPEC `a:int32` (BITBLAST_RULE
+     `!a:int32.
+        let ML_DSA_Q = &8380417 in
+        let t = word_ishr (word_add a (word 4194304)) 23 in
+        let r = word_sub a (word_mul t (word 8380417)) in
+        ival(a) < &0x7fc00000
+        ==> ival(a) - ML_DSA_Q * ival t = ival r /\
+            --(&6283009) <= ival r /\ ival r <= &6283008`)) THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  ASM_REWRITE_TAC[GSYM mldsa_barred] THEN
+  ANTS_TAC THENL [ASM_INT_ARITH_TAC; ALL_TAC] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
+  ASM_REWRITE_TAC[INTEGER_RULE
+   `(x - p * q:int == y) (mod p) <=> (x == y) (mod p)`]);;
 
 let CONCL_BOUNDS_RULE =
   CONV_RULE(BINOP2_CONV
@@ -429,43 +564,55 @@ let CONCL_BOUNDS_RULE =
 let SIDE_ELIM_RULE th =
   MP th (EQT_ELIM(DIMINDEX_INT_REDUCE_CONV(lhand(concl th))));;
 
-let rec GEN_CONGBOUND_RULE aboths tm =
-  match tm with
-    Comb(Comb(Const("barmul",_),kb),t) ->
-        let ktm,btm = dest_pair kb and th0 = GEN_CONGBOUND_RULE aboths t in
-        let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_BARMUL th0) in
+let GEN_CONGBOUND_RULE aboths =
+  let lfn = PROCESS_BOUND_ASSUMPTIONS aboths in
+  let rec rule tm =
+    try apply lfn tm with Failure _ ->
+    match tm with
+      Comb(Const("word",_),n) when is_numeral n ->
+        let th1 = ISPEC tm CONGBOUND_CONST in
+        let th2 = WORD_RED_CONV(lhand(lhand(snd(strip_forall(concl th1))))) in
+        MATCH_MP th1 th2
+    | Comb(Const("iword",_),n) when is_intconst n ->
+        let th0 = WORD_IWORD_CONV tm in
+        let th1 = ISPEC (rand(concl th0)) CONGBOUND_CONST in
+        let th2 = WORD_RED_CONV(lhand(lhand(snd(strip_forall(concl th1))))) in
+        SUBS[SYM th0] (MATCH_MP th1 th2)
+    | Comb(Comb(Const("barmul",_),kb),t) ->
+        let ktm,btm = dest_pair kb and th0 = rule t in
+        let th0' = WEAKEN_INTCONG_RULE (num 3329) th0 in
+        let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_BARMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
-  | Comb(Const("barred",_),t) ->
-        let th1 = GEN_CONGBOUND_RULE aboths t in
+    | Comb(Const("barred",_),t) ->
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         MATCH_MP CONGBOUND_BARRED th1
-  | Comb(Const("montred",_),t) ->
-        let th1 = GEN_CONGBOUND_RULE aboths t in
+    | Comb(Const("montred",_),t) ->
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MONTRED th1))
-  | Comb(Const("word_sx",_),t) ->
-        let th0 = GEN_CONGBOUND_RULE aboths t in
+    | Comb(Const("mldsa_barred",_),t) ->
+        let th1 = WEAKEN_INTCONG_RULE (num 8380417) (rule t) in
+        CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_BARRED th1))
+    | Comb(Const("word_sx",_),t) ->
+        let th0 = rule t in
         let tyin = type_match
          (type_of(rator(rand(lhand(funpow 4 rand (snd(dest_forall
             (concl CONGBOUND_WORD_SX)))))))) (type_of(rator tm)) [] in
         let th1 = MATCH_MP (INST_TYPE tyin CONGBOUND_WORD_SX) th0 in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
-  | Comb(Comb(Const("word_add",_),ltm),rtm) ->
-        let lth = GEN_CONGBOUND_RULE aboths ltm
-        and rth = GEN_CONGBOUND_RULE aboths rtm in
-        let th1 = MATCH_MP CONGBOUND_WORD_ADD (CONJ lth rth) in
+    | Comb(Comb(Const("word_add",_),ltm),rtm) ->
+        let lth = rule ltm and rth = rule rtm in
+        let th1 = MATCH_MP CONGBOUND_WORD_ADD (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
-  | Comb(Comb(Const("word_sub",_),ltm),rtm) ->
-        let lth = GEN_CONGBOUND_RULE aboths ltm
-        and rth = GEN_CONGBOUND_RULE aboths rtm in
-        let th1 = MATCH_MP CONGBOUND_WORD_SUB (CONJ lth rth) in
+    | Comb(Comb(Const("word_sub",_),ltm),rtm) ->
+        let lth = rule ltm and rth = rule rtm in
+        let th1 = MATCH_MP CONGBOUND_WORD_SUB (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
-  | Comb(Comb(Const("word_mul",_),ltm),rtm) ->
-        let lth = GEN_CONGBOUND_RULE aboths ltm
-        and rth = GEN_CONGBOUND_RULE aboths rtm in
-        let th1 = MATCH_MP CONGBOUND_WORD_MUL (CONJ lth rth) in
+    | Comb(Comb(Const("word_mul",_),ltm),rtm) ->
+        let lth = rule ltm and rth = rule rtm in
+        let th1 = MATCH_MP CONGBOUND_WORD_MUL (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
-  | _ -> (try MATCH_MP CONGBOUND_ATOM_GEN
-               (find ((=) tm o rand o rand o lhand o concl) aboths)
-          with Failure _ -> CONCL_BOUNDS_RULE(ISPEC tm CONGBOUND_ATOM));;
+    | _ -> CONCL_BOUNDS_RULE(ISPEC tm CONGBOUND_ATOM) in
+  rule;;
 
 let CONGBOUND_RULE = GEN_CONGBOUND_RULE [];;
 
@@ -480,7 +627,9 @@ let SIMD_SIMPLIFY_CONV unfold_defs =
   REWRITE_CONV (map GSYM unfold_defs);;
 
 let SIMD_SIMPLIFY_TAC unfold_defs =
-  let simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  let arm_simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  let x86_simdable = can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm in
   TRY(FIRST_X_ASSUM
    (ASSUME_TAC o
     CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o

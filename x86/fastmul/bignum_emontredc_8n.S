@@ -15,10 +15,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = m, R9 = w, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_emontredc_8n)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_emontredc_8n)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_emontredc_8n)
         .text
 
@@ -299,9 +300,9 @@
 
         mov     rax, k8m1
         test    rax, rax
-        jz      bignum_emontredc_8n_innerend
+        jz      Lbignum_emontredc_8n_innerend
         mov     innercount, rax
-bignum_emontredc_8n_innerloop:
+Lbignum_emontredc_8n_innerloop:
         add     zz, 64
         add     m, 64
         addrow 0
@@ -313,10 +314,10 @@ bignum_emontredc_8n_innerloop:
         addrow 6
         addrow 7
         sub     innercount, 64
-        jnz     bignum_emontredc_8n_innerloop
+        jnz     Lbignum_emontredc_8n_innerloop
 
         mov     rax, k8m1
-bignum_emontredc_8n_innerend:
+Lbignum_emontredc_8n_innerend:
         sub     m, rax
 
         mov     rbx, carry
@@ -339,11 +340,12 @@ bignum_emontredc_8n_innerend:
 // -----------------------------------------------------------------------------
 
 S2N_BN_SYMBOL(bignum_emontredc_8n):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -352,12 +354,12 @@ S2N_BN_SYMBOL(bignum_emontredc_8n):
 
 // Save more registers to play with
 
-        push    rbp
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbp)
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
 // Pre-initialize the return value to 0 just in case of early exit below
 
@@ -368,16 +370,16 @@ S2N_BN_SYMBOL(bignum_emontredc_8n):
 // k/8 itself which is here initializing the outer loop count.
 
         shr     rdi, 3
-        jz      bignum_emontredc_8n_end
+        jz      Lbignum_emontredc_8n_end
 
         lea     rbx, [rdi-1]
         shl     rbx, 6
-        push    rbx
-        push    rdi
+        CFI_PUSH(rbx)
+        CFI_PUSH(rdi)
 
 // Make space for two more variables, and set between-stages carry to 0
 
-        sub     rsp, 16
+        CFI_DEC_RSP(16)
         mov     carry, 0
 
 // Copy m into its main home
@@ -386,36 +388,38 @@ S2N_BN_SYMBOL(bignum_emontredc_8n):
 
 // Now just systematically add in the rows
 
-bignum_emontredc_8n_outerloop:
+Lbignum_emontredc_8n_outerloop:
         addrows
         add     z, 64
         sub     outercount, 1
-        jnz     bignum_emontredc_8n_outerloop
+        jnz     Lbignum_emontredc_8n_outerloop
 
 // Pop the carry-out "p", which was stored at [rsp], put in rax for return
 
-        pop     rax
+        CFI_POP(rax)
 
 // Adjust the stack
 
-        add     rsp, 24
+        CFI_INC_RSP(24)
 
 // Reset of epilog
 
-bignum_emontredc_8n_end:
+Lbignum_emontredc_8n_end:
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
-        pop     rbp
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_POP(rbp)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_emontredc_8n)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
