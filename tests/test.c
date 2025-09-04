@@ -2472,16 +2472,14 @@ void reference_basemul4(int16_t z[256],int16_t a[1024],int16_t b[1024])
 // References for ML-DSA operations, lots of mod-8380417 stuff
 // ****************************************************************************
 
-// Proper nonnegative remainder regardless of C's handling of negative x
-
-int32_t rem_8380417(int32_t x)
-{ return (x % 8380417 + 8380417) % 8380417;
-}
-
-// Combine that with a promotion from int32_t to uint64_t
-
-uint64_t mod_8380417(int32_t x)
-{ return (uint64_t) (rem_8380417(x));
+// Reference function implementing ML-DSA centered reduction
+int32_t reference_poly_reduce(int32_t a)
+{
+    const int32_t MLDSA_Q = 8380417;
+    int32_t t;
+    t = (a + (1 << 22)) >> 23;
+    t = a - t * MLDSA_Q;
+    return t;
 }
 
 // Keccak-f1600 reference.
@@ -11968,36 +11966,43 @@ int test_mlkem_rej_uniform(void)
 int test_mldsa_poly_reduce(void)
 {
 #ifdef __x86_64__
-uint64_t t, i;
-  int32_t a[256], b[256];
-  printf("Testing mldsa_poly_reduce with %d cases\n",tests);
+    uint64_t t, i;
+    // 32-byte alignment for AVX2 vmovdqa instructions
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t b[256] __attribute__((aligned(32)));
+    
+    printf("Testing mldsa_poly_reduce with %d cases\n", tests);
 
-  for (t = 0; t < tests; ++t)
-   { for (i = 0; i < 256; ++i)
-        b[i] = a[i] = (int32_t) (random64() % 4294967296ULL) - 2147483648LL;
-     mldsa_poly_reduce(b);
-     for (i = 0; i < 256; ++i)
-      { if (rem_8380417(a[i]) != b[i])
-         { printf("Error in mldsa_poly_reduce; element i = %"PRIu64
-                  "; code[i] = 0x%08"PRIx32
-                  " while reference[i] = 0x%08"PRIx32"\n",
-                  i,b[i],rem_8380417(a[i]));
-           return 1;
-         }
-      }
-     if (VERBOSE)
-      { printf("OK:mldsa_poly_reduce[0x%08"PRIx32",0x%08"PRIx32",...,"
-               "0x%08"PRIx32",0x%08"PRIx32"] = "
-               "[0x%08"PRIx32",0x%08"PRIx32",...,"
-               "0x%08"PRIx32",0x%08"PRIx32"]\n",
-               a[0],a[1],a[254],a[255],
-               b[0],b[1],b[254],b[255]);
-      }
-   }
-  printf("All OK\n");
-  return 0;
+    for (t = 0; t < tests; ++t) {
+        for (i = 0; i < 256; ++i)
+            // Generate random int32_t values across full range [-2^31, 2^31-1]
+            b[i] = a[i] = (int32_t) (random64() % 4294967296ULL) - 2147483648LL;
+        
+        mldsa_poly_reduce(b);
+        
+        for (i = 0; i < 256; ++i) {
+            if (reference_poly_reduce(a[i]) != b[i]) {
+                printf("Error in mldsa_poly_reduce; element i = %"PRIu64
+                       "; code[i] = 0x%08"PRIx32
+                       " while reference[i] = 0x%08"PRIx32"\n",
+                       i, b[i], reference_poly_reduce(a[i]));
+                return 1;
+            }
+        }
+        
+        if (VERBOSE) {
+            printf("OK:mldsa_poly_reduce[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"] = "
+                   "[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"]\n",
+                   a[0], a[1], a[254], a[255],
+                   b[0], b[1], b[254], b[255]);
+        }
+    }
+    printf("All OK\n");
+    return 0;
 #else
-  return 1;
+    return 1;
 #endif
 }
 
