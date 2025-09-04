@@ -155,7 +155,7 @@ jobs:
       run: |
         export HOLDIR=`pwd`/hol-light
         cd ${{ matrix.arch }}
-        make tutorial -j
+        make tutorial -j2
 
   s2n-bignum-tutorial-macos-arm:
     runs-on: macos-latest
@@ -185,4 +185,4 @@ jobs:
       run: |
         export HOLDIR=`pwd`/hol-light
         cd arm
-        make tutorial -j
+        make tutorial -j2

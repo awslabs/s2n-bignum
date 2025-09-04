@@ -17,10 +17,11 @@
 // Microsoft x64 ABI:   RCX = z, RDX = x, R8 = y
 // -----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_montmul_p384_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_montmul_p384_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_montmul_p384_alt)
         .text
 
@@ -109,11 +110,12 @@
         adc     d7, 0
 
 S2N_BN_SYMBOL(bignum_montmul_p384_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -121,12 +123,12 @@ S2N_BN_SYMBOL(bignum_montmul_p384_alt):
 
 // Save more registers to play with
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
 // Copy y into a safe register to start with
 
@@ -294,18 +296,20 @@ S2N_BN_SYMBOL(bignum_montmul_p384_alt):
 
 // Restore registers and return
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_montmul_p384_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
