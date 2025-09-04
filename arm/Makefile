@@ -358,6 +358,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              secp256k1/bignum_triple_p256k1.o \
              sha3/sha3_keccak_f1600.o \
              sha3/sha3_keccak_f1600_alt.o \
+             sha3/sha3_keccak_f1600_alt2.o \
              sha3/sha3_keccak2_f1600.o \
              sha3/sha3_keccak2_f1600_alt.o \
              sha3/sha3_keccak4_f1600.o \
