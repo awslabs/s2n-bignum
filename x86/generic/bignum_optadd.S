@@ -15,10 +15,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = x, R9 = p, [RSP+40] = y, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_optadd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_optadd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_optadd)
         .text
 
@@ -35,11 +36,12 @@
 
 
 S2N_BN_SYMBOL(bignum_optadd):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -54,7 +56,7 @@ S2N_BN_SYMBOL(bignum_optadd):
 // If k = 0 do nothing
 
         test    k, k
-        jz      bignum_optadd_end
+        jz      Lbignum_optadd_end
 
 // Convert the nonzero/zero status of p into an all-1s or all-0s mask
 
@@ -64,7 +66,7 @@ S2N_BN_SYMBOL(bignum_optadd):
 // Now go round the loop for i=0...k-1, saving the carry in c each iteration
 
         xor     i, i
-bignum_optadd_loop:
+Lbignum_optadd_loop:
         mov     a, [x+8*i]
         mov     b, [y+8*i]
         and     b, p
@@ -74,18 +76,20 @@ bignum_optadd_loop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_optadd_loop
+        jc      Lbignum_optadd_loop
 
 // Return top carry
 
         neg     rax
 
-bignum_optadd_end:
+Lbignum_optadd_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_optadd)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

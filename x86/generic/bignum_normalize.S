@@ -16,10 +16,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_normalize)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_normalize)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_normalize)
         .text
 
@@ -43,11 +44,12 @@
 
 
 S2N_BN_SYMBOL(bignum_normalize):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -58,16 +60,16 @@ S2N_BN_SYMBOL(bignum_normalize):
         xor     r, r
         mov     i, k
         sub     i, 1
-        jc      bignum_normalize_end
+        jc      Lbignum_normalize_end
         mov     c, [z+8*i]
-        jz      bignum_normalize_bitpart
+        jz      Lbignum_normalize_bitpart
 
 // Do d rather stupid but constant-time digit normalization, conditionally
 // shifting left (k-1) times based on whether the top word is zero.
 // With careful binary striding this could be O(k*log(k)) instead of O(k^2)
 // while still retaining the constant-time style.
 
-bignum_normalize_normloop:
+Lbignum_normalize_normloop:
         xor     j, j
         mov     b, k
         mov     d, r
@@ -75,23 +77,23 @@ bignum_normalize_normloop:
         neg     c
         cmovne  r, d
         mov     dshort, 0
-bignum_normalize_shufloop:
+Lbignum_normalize_shufloop:
         mov     c, d
         mov     d, [z+8*j]
         cmovc   c, d
         mov     [z+8*j], c
         inc     j
         dec     b
-        jnz     bignum_normalize_shufloop
+        jnz     Lbignum_normalize_shufloop
         dec     i
-        jnz     bignum_normalize_normloop
+        jnz     Lbignum_normalize_normloop
 
 // We now have the top digit nonzero, assuming the input was nonzero,
 // and as per the invariant of the loop above, c holds that digit. So
 // now just count c's leading zeros and shift z bitwise that many bits.
 // We need to patch the bsr result for the undefined case of zero input
 
-bignum_normalize_bitpart:
+Lbignum_normalize_bitpart:
         mov     dshort, 127
         bsr     c, c
         cmovz   c, d
@@ -102,7 +104,7 @@ bignum_normalize_bitpart:
 
         xor     b, b
         xor     i, i
-bignum_normalize_bitloop:
+Lbignum_normalize_bitloop:
         mov     d, [z+8*i]
         mov     j, d
         shld    d, b, cl
@@ -110,14 +112,16 @@ bignum_normalize_bitloop:
         mov     b, j
         inc     i
         cmp     i, k
-        jc      bignum_normalize_bitloop
+        jc      Lbignum_normalize_bitloop
 
- bignum_normalize_end:
+Lbignum_normalize_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_normalize)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

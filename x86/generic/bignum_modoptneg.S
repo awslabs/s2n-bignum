@@ -13,10 +13,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = p, R9 = x, [RSP+40] = m
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_modoptneg)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_modoptneg)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_modoptneg)
         .text
 
@@ -32,11 +33,12 @@
 #define i r11
 
 S2N_BN_SYMBOL(bignum_modoptneg):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -47,18 +49,18 @@ S2N_BN_SYMBOL(bignum_modoptneg):
 // Do nothing if k = 0
 
         test    k, k
-        jz      bignum_modoptneg_end
+        jz      Lbignum_modoptneg_end
 
 // Make an additional check for zero input, and force p to zero in this case.
 // This can be skipped if the input is known not to be zero a priori.
 
         xor     i, i
         xor     a, a
-bignum_modoptneg_cmploop:
+Lbignum_modoptneg_cmploop:
         or      a, [x+8*i]
         inc     i
         cmp     i, k
-        jc      bignum_modoptneg_cmploop
+        jc      Lbignum_modoptneg_cmploop
 
         cmp     a, 0
         cmovz   p, a
@@ -72,7 +74,7 @@ bignum_modoptneg_cmploop:
 
         xor     i, i
         mov     c, p
-bignum_modoptneg_mainloop:
+Lbignum_modoptneg_mainloop:
         mov     a, [m+8*i]
         and     a, p
         mov     b, [x+8*i]
@@ -83,14 +85,16 @@ bignum_modoptneg_mainloop:
         mov     [z+8*i], a
         inc     i
         cmp     i, k
-        jc      bignum_modoptneg_mainloop
+        jc      Lbignum_modoptneg_mainloop
 
-bignum_modoptneg_end:
+Lbignum_modoptneg_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_modoptneg)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

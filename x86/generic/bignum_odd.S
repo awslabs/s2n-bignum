@@ -11,19 +11,21 @@
 // Microsoft x64 ABI:   RCX = k, RDX = x, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_odd)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_odd)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_odd)
         .text
 
 S2N_BN_SYMBOL(bignum_odd):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -32,20 +34,22 @@ S2N_BN_SYMBOL(bignum_odd):
 
         xor     eax, eax
         test    rdi, rdi
-        jz      bignum_odd_end
+        jz      Lbignum_odd_end
 
 // Otherwise return lowest bit of the input
 
         mov     eax, 1
         and     rax, [rsi]
 
-bignum_odd_end:
+Lbignum_odd_end:
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_odd)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
