@@ -22,9 +22,10 @@
 //
 // Standard ARM ABI: X0 = a, X1 = rc
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(sha3_keccak_f1600_alt2)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(sha3_keccak_f1600_alt2)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(sha3_keccak_f1600_alt2)
         .text
         .balign 4
@@ -33,23 +34,27 @@
 // gcc -O3 -mcpu=cortex-a72 -ffixed-x18 -c sha3_keccak_f1600_alt2.c
 
 S2N_BN_SYMBOL(sha3_keccak_f1600_alt2):
+        CFI_START
         stp     x29, x30, [sp, #-208]!
+        .cfi_adjust_cfa_offset 208
+        .cfi_rel_offset x29, 0
+        .cfi_rel_offset x30, 8
         mov     x2, x0
         mov     x29, sp
         ldr     x0, [x0]
         ldp     x6, x15, [x2, #48]
-        stp     x19, x20, [sp, #16]
+        CFI_STACKSAVE2(x19,x20,16)
         str     x0, [sp, #112]
         ldr     x0, [x2, #8]
-        stp     x21, x22, [sp, #32]
+        CFI_STACKSAVE2(x21,x22,32)
         ldr     x30, [x2, #24]
         str     x0, [sp, #152]
         ldr     x0, [x2, #16]
-        stp     x23, x24, [sp, #48]
-        stp     x25, x26, [sp, #64]
+        CFI_STACKSAVE2(x23,x24,48)
+        CFI_STACKSAVE2(x25,x26,64)
         str     x0, [sp, #160]
         ldr     x0, [x2, #32]
-        stp     x27, x28, [sp, #80]
+        CFI_STACKSAVE2(x27,x28,80)
         ldr     x25, [x2, #72]
         str     x0, [sp, #120]
         ldr     x0, [x2, #40]
@@ -82,7 +87,7 @@ S2N_BN_SYMBOL(sha3_keccak_f1600_alt2):
         mov     x28, x25
         mov     x25, x13
 
-sha3_keccak_f1600_alt2_loop:
+Lsha3_keccak_f1600_alt2_loop:
         ldp     x17, x21, [sp, #144]
         eor     x11, x15, x26
         eor     x12, x5, x30
@@ -240,7 +245,7 @@ sha3_keccak_f1600_alt2_loop:
         eor     x7, x7, x20
         eor     x27, x27, x13
         eor     x4, x4, x10
-        b.ne    sha3_keccak_f1600_alt2_loop
+        b.ne    Lsha3_keccak_f1600_alt2_loop
 
         ldr     x0, [sp, #112]
         mov     x10, x4
@@ -273,10 +278,19 @@ sha3_keccak_f1600_alt2_loop:
         str     x27, [x2, #184]
         str     x0, [x2, #64]
         str     x7, [x2, #192]
-        ldp     x19, x20, [sp, #16]
-        ldp     x21, x22, [sp, #32]
-        ldp     x23, x24, [sp, #48]
-        ldp     x25, x26, [sp, #64]
-        ldp     x27, x28, [sp, #80]
+        CFI_STACKLOAD2(x19,x20,16)
+        CFI_STACKLOAD2(x21,x22,32)
+        CFI_STACKLOAD2(x23,x24,48)
+        CFI_STACKLOAD2(x25,x26,64)
+        CFI_STACKLOAD2(x27,x28,80)
         ldp     x29, x30, [sp], #208
-        ret
+        .cfi_adjust_cfa_offset -208
+        .cfi_restore x29
+        .cfi_restore x30
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(sha3_keccak_f1600_alt2)
+
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
