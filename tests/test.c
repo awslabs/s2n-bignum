@@ -2468,6 +2468,22 @@ void reference_basemul4(int16_t z[256],int16_t a[1024],int16_t b[1024])
      z[k] = (t0[k] + t1[k] + t2[k] + t3[k]) % 3329;
 }
 
+// ****************************************************************************
+// References for ML-DSA operations, lots of mod-8380417 stuff
+// ****************************************************************************
+
+// Proper nonnegative remainder regardless of C's handling of negative x
+
+int32_t rem_8380417(int32_t x)
+{ return (x % 8380417 + 8380417) % 8380417;
+}
+
+// Combine that with a promotion from int32_t to uint64_t
+
+uint64_t mod_8380417(int32_t x)
+{ return (uint64_t) (rem_8380417(x));
+}
+
 // Keccak-f1600 reference.
 // https://keccak.team/files/Keccak-reference-3.0.pdf
 
@@ -11949,6 +11965,43 @@ int test_mlkem_rej_uniform(void)
 #endif
 }
 
+int test_mldsa_poly_reduce(void)
+{
+#ifdef __x86_64__
+uint64_t t, i;
+  int32_t a[256], b[256];
+  printf("Testing mldsa_poly_reduce with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+        b[i] = a[i] = (int32_t) (random64() % 4294967296ULL) - 2147483648LL;
+     mldsa_poly_reduce(b);
+     for (i = 0; i < 256; ++i)
+      { if (rem_8380417(a[i]) != b[i])
+         { printf("Error in mldsa_poly_reduce; element i = %"PRIu64
+                  "; code[i] = 0x%08"PRIx32
+                  " while reference[i] = 0x%08"PRIx32"\n",
+                  i,b[i],rem_8380417(a[i]));
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK:mldsa_poly_reduce[0x%08"PRIx32",0x%08"PRIx32",...,"
+               "0x%08"PRIx32",0x%08"PRIx32"] = "
+               "[0x%08"PRIx32",0x%08"PRIx32",...,"
+               "0x%08"PRIx32",0x%08"PRIx32"]\n",
+               a[0],a[1],a[254],a[255],
+               b[0],b[1],b[254],b[255]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#else
+  return 1;
+#endif
+}
+
+
 int test_p256_montjadd(void)
 { uint64_t t, k;
   printf("Testing p256_montjadd with %d cases\n",tests);
@@ -15044,6 +15097,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmulbase_alt",test_edwards25519_scalarmulbase_alt);
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
+  functionaltest(bmi,"mldsa_poly_reduce",test_mldsa_poly_reduce);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
