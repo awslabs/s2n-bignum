@@ -14,18 +14,12 @@
 //
 // Standard ARM ABI: X0 = res, X1 = scalar
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+
+#include "_internal_s2n_bignum_arm.h"
 
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(curve25519_x25519base_byte)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(curve25519_x25519base_byte)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(curve25519_x25519base_byte)
-
-#if defined(__linux__) && defined(__ELF__)
-.type curve25519_x25519base_byte, %function
-.size curve25519_x25519base_byte, 11772
-
-.type curve25519_x25519base_byte_constant, %object
-.size curve25519_x25519base_byte_constant, 48576
-#endif
 
         .text
         .balign 4
@@ -80,7 +74,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (14*NUMSIZE)
+#define NSPACE 14*NUMSIZE
 
 // Macro wrapping up the basic field operation bignum_mul_p25519, only
 // trivially different from a pure function call to that subroutine.
@@ -505,13 +499,14 @@
         stp     x5, x6, [P0+16]
 
 S2N_BN_SYMBOL(curve25519_x25519base_byte):
+        CFI_START
 
 // Save regs and make room for temporaries
 
-        stp     x19, x20, [sp, -16]!
-        stp     x21, x22, [sp, -16]!
-        stp     x23, x24, [sp, -16]!
-        sub     sp, sp, #NSPACE
+        CFI_PUSH2(x19,x20)
+        CFI_PUSH2(x21,x22)
+        CFI_PUSH2(x23,x24)
+        CFI_DEC_SP(NSPACE)
 
 // Move the output pointer to a stable place
 
@@ -603,11 +598,11 @@ S2N_BN_SYMBOL(curve25519_x25519base_byte):
         ands    xzr, x0, #8
 
 #if defined(__linux__) && defined(__ELF__)
-        adrp    tab, curve25519_x25519base_byte_constant
-        add     tab, tab, :lo12:curve25519_x25519base_byte_constant
+        adrp    tab, S2N_BN_SYMBOL(curve25519_x25519base_byte_constant)
+        add     tab, tab, :lo12:S2N_BN_SYMBOL(curve25519_x25519base_byte_constant)
 #else
-        adrp    tab, curve25519_x25519base_byte_constant@PAGE
-        add     tab, tab, curve25519_x25519base_byte_constant@PAGEOFF
+        adrp    tab, S2N_BN_SYMBOL(curve25519_x25519base_byte_constant)@PAGE
+        add     tab, tab, S2N_BN_SYMBOL(curve25519_x25519base_byte_constant)@PAGEOFF
 #endif
 
         ldp     x0, x1, [tab]
@@ -670,7 +665,7 @@ S2N_BN_SYMBOL(curve25519_x25519base_byte):
 
 // Start of the main loop, repeated 63 times for i = 4, 8, ..., 252
 
-curve25519_x25519base_byte_scalarloop:
+Lcurve25519_x25519base_byte_scalarloop:
 
 // Look at the next 4-bit field "bf", adding the previous bias as well.
 // Choose the table index "ix" as bf when bf <= 8 and 16 - bf for bf >= 9,
@@ -953,7 +948,7 @@ curve25519_x25519base_byte_scalarloop:
 
         add     i, i, 4
         cmp     i, 256
-        bcc     curve25519_x25519base_byte_scalarloop
+        bcc     Lcurve25519_x25519base_byte_scalarloop
 
 // Now we need to translate from Edwards curve edwards25519 back
 // to the Montgomery form curve25519. The mapping in the affine
@@ -1043,8 +1038,8 @@ curve25519_x25519base_byte_scalarloop:
         stp     x12, x13, [sp, #112]
         mov     x21, #0xa
         mov     x22, #0x1
-        b       curve25519_x25519base_byte_invmidloop
-curve25519_x25519base_byte_invloop:
+        b       Lcurve25519_x25519base_byte_invmidloop
+Lcurve25519_x25519base_byte_invloop:
         cmp     x10, xzr
         csetm   x14, mi
         cneg    x10, x10, mi
@@ -1311,7 +1306,7 @@ curve25519_x25519base_byte_invloop:
         adc     x2, x2, x5
         stp     x0, x1, [sp, #96]
         stp     x3, x2, [sp, #112]
-curve25519_x25519base_byte_invmidloop:
+Lcurve25519_x25519base_byte_invmidloop:
         mov     x1, x22
         ldr     x2, [sp]
         ldr     x3, [sp, #32]
@@ -1922,7 +1917,7 @@ curve25519_x25519base_byte_invmidloop:
         msub    x13, x15, x17, x5
         mov     x22, x1
         subs    x21, x21, #0x1
-        b.ne    curve25519_x25519base_byte_invloop
+        b.ne    Lcurve25519_x25519base_byte_invloop
         ldr     x0, [sp]
         ldr     x1, [sp, #32]
         mul     x0, x0, x10
@@ -2101,12 +2096,14 @@ curve25519_x25519base_byte_invmidloop:
 
 // Restore stack and registers
 
-        add     sp, sp, #NSPACE
-        ldp     x23, x24, [sp], 16
-        ldp     x21, x22, [sp], 16
-        ldp     x19, x20, [sp], 16
+        CFI_INC_SP(NSPACE)
+        CFI_POP2(x23,x24)
+        CFI_POP2(x21,x22)
+        CFI_POP2(x19,x20)
 
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base_byte)
 
 
 #if defined(__linux__) && defined(__ELF__)
@@ -2119,11 +2116,13 @@ curve25519_x25519base_byte_invmidloop:
 
 #if defined(__linux__) && defined(__ELF__)
 .section .rodata
+.type S2N_BN_SYMBOL(curve25519_x25519base_byte_constant), %object
+.size S2N_BN_SYMBOL(curve25519_x25519base_byte_constant), 48576
 #elif defined(__APPLE__)
 .const_data
 #endif
 
-curve25519_x25519base_byte_constant:
+S2N_BN_SYMBOL(curve25519_x25519base_byte_constant):
 
 // 2^254 * G and (2^254 + 8) * G in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
@@ -2140,7 +2139,6 @@ curve25519_x25519base_byte_constant:
         .quad   0x855e4ff0de1230ff
         .quad   0x72e302a348492870
         .quad   0x1253c19e53dbe1bc
-
 
         .quad   0x331d086e0d9abcaa
         .quad   0x1e23c96d311a10c9

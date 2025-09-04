@@ -16,10 +16,11 @@
 // Microsoft x64 ABI:   RCX = p, RDX = z, R8 = m, R9 = x, [RSP+40] = n, [RSP+48] = y, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_sub)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_sub)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_sub)
         .text
 
@@ -37,11 +38,12 @@
 
 
 S2N_BN_SYMBOL(bignum_sub):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -63,7 +65,7 @@ S2N_BN_SYMBOL(bignum_sub):
         cmp     p, n
         cmovc   n, p
         cmp     m, n
-        jc      bignum_sub_ylonger
+        jc      Lbignum_sub_ylonger
 
 // The case where x is longer or of the same size (p >= m >= n)
 
@@ -71,70 +73,72 @@ S2N_BN_SYMBOL(bignum_sub):
         sub     m, n
         inc     m
         test    n, n
-        jz      bignum_sub_xtest
-bignum_sub_xmainloop:
+        jz      Lbignum_sub_xtest
+Lbignum_sub_xmainloop:
         mov     a, [x+8*i]
         sbb     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     n
-        jnz     bignum_sub_xmainloop
-        jmp     bignum_sub_xtest
-bignum_sub_xtoploop:
+        jnz     Lbignum_sub_xmainloop
+        jmp     Lbignum_sub_xtest
+Lbignum_sub_xtoploop:
         mov     a, [x+8*i]
         sbb     a, 0
         mov     [z+8*i],a
         inc     i
-bignum_sub_xtest:
+Lbignum_sub_xtest:
         dec     m
-        jnz     bignum_sub_xtoploop
+        jnz     Lbignum_sub_xtoploop
         sbb     a, a
         test    p, p
-        jz      bignum_sub_tailskip
-bignum_sub_tailloop:
+        jz      Lbignum_sub_tailskip
+Lbignum_sub_tailloop:
         mov     [z+8*i],a
         inc     i
         dec     p
-        jnz     bignum_sub_tailloop
-bignum_sub_tailskip:
+        jnz     Lbignum_sub_tailloop
+Lbignum_sub_tailskip:
         neg     a
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
         ret
 
 // The case where y is longer (p >= n > m)
 
-bignum_sub_ylonger:
+Lbignum_sub_ylonger:
 
         sub     p, n
         sub     n, m
         test    m, m
-        jz      bignum_sub_ytoploop
-bignum_sub_ymainloop:
+        jz      Lbignum_sub_ytoploop
+Lbignum_sub_ymainloop:
         mov     a, [x+8*i]
         sbb     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     m
-        jnz     bignum_sub_ymainloop
-bignum_sub_ytoploop:
+        jnz     Lbignum_sub_ymainloop
+Lbignum_sub_ytoploop:
         mov     ashort, 0
         sbb     a, [y+8*i]
         mov     [z+8*i],a
         inc     i
         dec     n
-        jnz     bignum_sub_ytoploop
+        jnz     Lbignum_sub_ytoploop
         sbb     a, a
         test    p, p
-        jnz     bignum_sub_tailloop
+        jnz     Lbignum_sub_tailloop
         neg     a
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_sub)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
