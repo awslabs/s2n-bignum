@@ -15102,7 +15102,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmulbase_alt",test_edwards25519_scalarmulbase_alt);
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
-  functionaltest(bmi,"mldsa_poly_reduce",test_mldsa_poly_reduce);
+  functionaltest(all,"mldsa_poly_reduce",test_mldsa_poly_reduce);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
