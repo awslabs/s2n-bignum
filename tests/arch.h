@@ -43,6 +43,21 @@ int supports_bmi2_and_adx(void)
     return (hwcaps & HWCAP_SHA3) != 0;
   }
 
+#elif __FreeBSD__ || __OpenBSD__
+
+  #include <elf.h>
+  #include <sys/auxv.h>
+
+  int supports_arm_sha3(void)
+  {
+    unsigned long hwcaps;
+    if (elf_aux_info(AT_HWCAP, &hwcaps, sizeof(hwcaps)) != 0)
+     { printf("Warning: Failed to read AT_HWCAP\n");
+       return 0;
+     }
+    return (hwcaps & HWCAP_SHA3) != 0;
+  }
+
 #else
 
   int supports_arm_sha3(void)
