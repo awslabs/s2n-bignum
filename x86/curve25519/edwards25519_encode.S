@@ -25,10 +25,11 @@
 // Microsoft x64 ABI:   RCX = z, RDX = p
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_encode)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_encode)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_encode)
         .text
 
@@ -41,11 +42,12 @@
 #define xb r9
 
 S2N_BN_SYMBOL(edwards25519_encode):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -72,10 +74,12 @@ S2N_BN_SYMBOL(edwards25519_encode):
         mov     [z+24], y3
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(edwards25519_encode)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

@@ -11,19 +11,21 @@
 // Microsoft x64 ABI:   RCX = a, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(word_clz)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(word_clz)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(word_clz)
         .text
 
 S2N_BN_SYMBOL(word_clz):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
 #endif
 
@@ -39,10 +41,12 @@ S2N_BN_SYMBOL(word_clz):
         cmove   rax, rdx
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(word_clz)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

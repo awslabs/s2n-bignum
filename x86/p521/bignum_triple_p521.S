@@ -12,10 +12,11 @@
 // Microsoft x64 ABI:   RCX = z, RDX = x
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_triple_p521)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_triple_p521)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_triple_p521)
         .text
 
@@ -40,19 +41,20 @@
 
 
 S2N_BN_SYMBOL(bignum_triple_p521):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
 
 // Save more registers to play with
 
-        push    rbx
-        push    r12
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
 
 // Load the top (short) word first to compute the initial carry-in
 // Set OF according to bit 520, but *always* set CF to get a +1 bump
@@ -144,14 +146,16 @@ S2N_BN_SYMBOL(bignum_triple_p521):
 
 // Restore registers and return
 
-        pop     r12
-        pop     rbx
+        CFI_POP(r12)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_triple_p521)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

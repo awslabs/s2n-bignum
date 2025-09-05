@@ -16,10 +16,11 @@
 // Microsoft x64 ABI:   RCX = k, RDX = z, R8 = n, R9 = x, [RSP+40] = c, returns RAX
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_shl_small)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_shl_small)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_shl_small)
         .text
 
@@ -42,11 +43,12 @@
 
 
 S2N_BN_SYMBOL(bignum_shl_small):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -67,7 +69,7 @@ S2N_BN_SYMBOL(bignum_shl_small):
         xor     i, i
 
         test    n, n
-        jz      bignum_shl_small_tail
+        jz      Lbignum_shl_small_tail
 
 // Reshuffle registers to put the shift count into CL
 
@@ -76,7 +78,7 @@ S2N_BN_SYMBOL(bignum_shl_small):
 
 // Now the main loop
 
-bignum_shl_small_loop:
+Lbignum_shl_small_loop:
         mov     a, [x+8*i]
         mov     t, a
         shld    a, b, cl
@@ -84,7 +86,7 @@ bignum_shl_small_loop:
         mov     b, t
         inc     i
         cmp     i, n
-        jc      bignum_shl_small_loop
+        jc      Lbignum_shl_small_loop
 
 // Shift the top word correspondingly. Using shld one more time is easier
 // than carefully producing a complementary shift with care over the zero case
@@ -95,29 +97,31 @@ bignum_shl_small_loop:
 
 // If we are at the end, finish, otherwise write carry word then zeros
 
-bignum_shl_small_tail:
+Lbignum_shl_small_tail:
         cmp     i, p
-        jnc     bignum_shl_small_end
+        jnc     Lbignum_shl_small_end
         mov     [z+8*i],b
         xor     b, b
         inc     i
         cmp     i, p
-        jnc     bignum_shl_small_end
+        jnc     Lbignum_shl_small_end
 
-bignum_shl_small_tloop:
+Lbignum_shl_small_tloop:
         mov     [z+8*i],b
         inc     i
         cmp     i, p
-        jc      bignum_shl_small_tloop
+        jc      Lbignum_shl_small_tloop
 
 // Return, with RAX = b as the top word
 
-bignum_shl_small_end:
+Lbignum_shl_small_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_shl_small)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
