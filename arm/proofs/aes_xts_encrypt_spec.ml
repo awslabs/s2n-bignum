@@ -31,53 +31,6 @@ let aes256_xts_encrypt_one_block = new_definition
      let encrypted = aes256_encrypt pre_encrypt data_key_schedule in
      word_xor encrypted T`;;
 
-(* Test case: Basic XTS encryption *)
-(*
-Test Vector:
-Plaintext:  000102030405060708090a0b0c0d0e0f
-Data Key:   2718281828459045235360287471352662497757247093699959574966967627
-Tweak Key:  3141592653589793238462643383279502884197169399375105820974944592
-Tweak:      FF000000000000000000000000000000
-Expected:   1C3B3A102F770386E4836C99E370CF9B
-
-The test vector values appear in reverse byte order to be little endian.
-*)
-(* Test vectors based on our Python implementation results *)
-let data_key_schedule = new_definition `data_key_schedule:int128 list =
-  [ word 0x26357174286053234590452818281827
-  ; word 0x27769666495759996993702457774962
-  ; word 0x602147C9461436BD6E74659E2BE420B6
-  ; word 0x80385664A74EC002EE19999B878AE9BF
-  ; word 0x206833EF40497426065D429B68292705
-  ; word 0xF9A0259D799873F9DED6B3FB30CF2A60
-  ; word 0x50CCC26C70A4F18330ED85A536B0C73E
-  ; word 0x3D6AEAAFC4CACF32BD52BCCB63840F30
-  ; word 0x5F1273FB0FDEB1977F7A40144F97C5B1
-  ; word 0xE8BF1969D5D5F3C6111F3CF4AC4D803F
-  ; word 0x99BA4F0DC6A83CF6C9768D61B60CCD75
-  ; word 0x6ECCD2B38673CBDA53A6381C42B904E8
-  ; word 0x4DF7787AD44D377712E50B81DB9386E0
-  ; word 0x1AC8994774044BF4F277802EA1D1B832
-  ; word 0xF06E2AC2BD9952B869D465CF7B316E4E
-  ]`;;
-
-let tweak_key_schedule = new_definition `tweak_key_schedule:int128 list =
-  [ word 0x95278333646284239397585326594131
-  ; word 0x92459474098205513799931697418802
-  ; word 0xD6C4705143E3F36227817741B4162F12
-  ; word 0xCD03DBE05F464F9456C44AC5615DD9D3
-  ; word 0xE70DA0DB31C9D08A722A23E855AB54A9
-  ; word 0x310BE7DBFC083C3BA34E73AFF58A396A
-  ; word 0x48822C80AF8F8C5B9E465CD1EC6C7F39
-  ; word 0xC9D4E0E8F8DF073304D73B08A79948A7
-  ; word 0x0EFACBDA4678E75AE9F76B0177B137D0
-  ; word 0x39688B23F0BC6BCB08636CF80CB457F0
-  ; word 0xF0D6357CFE2CFEA6B85419FC51A372FD
-  ; word 0x41F54DF0789DC6D38821AD188042C1E0
-  ; word 0x6B8E46189B58736465748DC2DD20943E
-  ; word 0x4E12BD760FE7F086777A3655FF5B9B4D
-  ; word 0x70ADE5BA1B23A3A2807BD0C6E50F5D04
-  ]`;;
 
 (*
 AES-256-XTS Encryption Algorithm for Any Input Length
@@ -121,8 +74,8 @@ For partial final blocks, ciphertext stealing is used as per Section 5.3.2.
 (* TODO: put it in a common place to be used with decrypt
      Start *)
 let xts_init_tweak = new_definition
-  `xts_init_tweak (iv:int128) (key_schedule:int128 list) =
-     aes256_encrypt iv key_schedule`;;
+  `xts_init_tweak (iv:int128) (key2:int128 list) =
+     aes256_encrypt iv key2`;;
 
 let bytes_to_int128 = define
   `bytes_to_int128 (bs : byte list) : int128 =
@@ -165,9 +118,9 @@ let calculate_tweak = new_recursive_definition num_RECURSION
 
 (* AES-XTS encryption round function *)
 let aes256_xts_encrypt_round = new_definition
-  `aes256_xts_encrypt_round (P:int128) (tk:int128) (key_schedule:int128 list) =
+  `aes256_xts_encrypt_round (P:int128) (tk:int128) (key1:int128 list) =
      let PP = word_xor P tk in
-     let CC = aes256_encrypt PP key_schedule in
+     let CC = aes256_encrypt PP key1 in
      word_xor CC tk`;;
 
 (* Single block AES-XTS encryption *)
@@ -261,8 +214,115 @@ let aes256_xts_encrypt = new_definition
          let Ctail = aes256_xts_encrypt_tail (SND res) tail_len P iv key1 key2 in
          APPEND (FST res) Ctail`;;
 
-(****)
+(***********************************************)
 (* Conversions and test vectors *)
+(* Test case: Basic XTS encryption *)
+(*
+Test Vector:
+Plaintext:  000102030405060708090a0b0c0d0e0f
+Data Key:   2718281828459045235360287471352662497757247093699959574966967627
+Tweak Key:  3141592653589793238462643383279502884197169399375105820974944592
+Tweak:      FF000000000000000000000000000000
+Expected:   1C3B3A102F770386E4836C99E370CF9B
+
+The test vector values appear in reverse byte order to be little endian.
+*)
+(* Test vectors based on our Python implementation results *)
+let data_key_schedule = new_definition `data_key_schedule:int128 list =
+  [ word 0x26357174286053234590452818281827
+  ; word 0x27769666495759996993702457774962
+  ; word 0x602147C9461436BD6E74659E2BE420B6
+  ; word 0x80385664A74EC002EE19999B878AE9BF
+  ; word 0x206833EF40497426065D429B68292705
+  ; word 0xF9A0259D799873F9DED6B3FB30CF2A60
+  ; word 0x50CCC26C70A4F18330ED85A536B0C73E
+  ; word 0x3D6AEAAFC4CACF32BD52BCCB63840F30
+  ; word 0x5F1273FB0FDEB1977F7A40144F97C5B1
+  ; word 0xE8BF1969D5D5F3C6111F3CF4AC4D803F
+  ; word 0x99BA4F0DC6A83CF6C9768D61B60CCD75
+  ; word 0x6ECCD2B38673CBDA53A6381C42B904E8
+  ; word 0x4DF7787AD44D377712E50B81DB9386E0
+  ; word 0x1AC8994774044BF4F277802EA1D1B832
+  ; word 0xF06E2AC2BD9952B869D465CF7B316E4E
+  ]`;;
+
+let tweak_key_schedule = new_definition `tweak_key_schedule:int128 list =
+  [ word 0x95278333646284239397585326594131
+  ; word 0x92459474098205513799931697418802
+  ; word 0xD6C4705143E3F36227817741B4162F12
+  ; word 0xCD03DBE05F464F9456C44AC5615DD9D3
+  ; word 0xE70DA0DB31C9D08A722A23E855AB54A9
+  ; word 0x310BE7DBFC083C3BA34E73AFF58A396A
+  ; word 0x48822C80AF8F8C5B9E465CD1EC6C7F39
+  ; word 0xC9D4E0E8F8DF073304D73B08A79948A7
+  ; word 0x0EFACBDA4678E75AE9F76B0177B137D0
+  ; word 0x39688B23F0BC6BCB08636CF80CB457F0
+  ; word 0xF0D6357CFE2CFEA6B85419FC51A372FD
+  ; word 0x41F54DF0789DC6D38821AD188042C1E0
+  ; word 0x6B8E46189B58736465748DC2DD20943E
+  ; word 0x4E12BD760FE7F086777A3655FF5B9B4D
+  ; word 0x70ADE5BA1B23A3A2807BD0C6E50F5D04
+  ]`;;
+
+(*
+  Two-block test vector (same key and tweak as single block)
+  Plaintext:  000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
+  Data Key:   2718281828459045235360287471352662497757247093699959574966967627
+  Tweak Key:  3141592653589793238462643383279502884197169399375105820974944592
+  Tweak:      FF000000000000000000000000000000
+  Ciphertext: 1C3B3A102F770386E4836C99E370CF9BEA00803F5E482357A4AE12D414A3E63B
+  Plaintext (reversed):  1F1E1D1C1B1A191817161514131211100F0E0D0C0B0A09080706050403020100
+  Ciphertext (reversed): 3BE6A314D412AEA45723485E3F8000EA9BCF70E3996C83E48603772F103A3B1C
+*)
+
+(* Convert reversed plaintext and ciphertext to byte lists using int128_to_bytes *)
+let plaintext = new_definition
+  `plaintext =
+   int128_to_bytes (word 0x0F0E0D0C0B0A09080706050403020100 : int128)`;;
+
+let ciphertext = new_definition
+  `ciphertext =
+   int128_to_bytes (word 0x9BCF70E3996C83E48603772F103A3B1C : int128 )`;;
+
+let cerr = new_definition
+  `cerr =
+   int128_to_bytes (word 0x0)`;;
+
+let iv = new_definition
+  `iv = (word 0x000000000000000000000000000000FF) : int128`;;
+
+let plaintext2 = new_definition
+  `plaintext2 =
+   APPEND (int128_to_bytes (word 0x0F0E0D0C0B0A09080706050403020100))
+          (int128_to_bytes (word 0x1F1E1D1C1B1A19181716151413121110))`;;
+
+(REWR_CONV plaintext2 THENC
+ RAND_CONV INT128_TO_BYTES_CONV THENC
+ RATOR_CONV(RAND_CONV INT128_TO_BYTES_CONV) THENC
+ REWRITE_CONV [APPEND]) `plaintext2`;;
+
+ (REWR_CONV plaintext2 THENC
+ DEPTH_CONV INT128_TO_BYTES_CONV THENC
+ (*RATOR_CONV(RAND_CONV INT128_TO_BYTES_CONV) THENC*)
+ REWRITE_CONV [APPEND]) `plaintext2`;;
+
+
+(* Common with decrypt *)
+let XTS_INIT_TWEAK_CONV =
+  REWR_CONV xts_init_tweak THENC AESENC_HELPER_CONV;;
+(*
+let tmp_xts_tweak = (REWRITE_CONV [iv; tweak_key_schedule] THENC XTS_INIT_TWEAK_CONV)
+    `xts_init_tweak iv
+            tweak_key_schedule`;;
+(* Or the following: 33 sec *)
+time prove(`xts_init_tweak iv
+            tweak_key_schedule
+            = word 0x8b2b4a71228e98aed6aa0ca97775261a`,
+            CONV_TAC(REWRITE_CONV [iv; tweak_key_schedule] THENC LAND_CONV XTS_INIT_TWEAK_CONV)
+            THEN REFL_TAC
+          );;
+*)
+
 let AES_XTS_ENC_1BLK_HELPER_CONV =
 (*    PRINT_TERM_CONV THENC *)
   REWR_CONV aes256_xts_encrypt_1block THENC
@@ -275,7 +335,6 @@ let AES_XTS_ENC_1BLK_HELPER_CONV =
   DEPTH_CONV AESENC_HELPER_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV)
   ;;
-
 (*
 (* Proven in about 100 sec on M3 *)
 time prove(`aes256_xts_encrypt_1block
@@ -302,60 +361,179 @@ prove(list_mk_comb (`(=):((128)word->(128)word->bool)`,
       REFL_TAC);;
 *)
 
-(*
-  Two-block test vector (same key and tweak as single block)
-  Plaintext:  000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
-  Data Key:   2718281828459045235360287471352662497757247093699959574966967627
-  Tweak Key:  3141592653589793238462643383279502884197169399375105820974944592
-  Tweak:      FF000000000000000000000000000000
-  Ciphertext: 1C3B3A102F770386E4836C99E370CF9BEA00803F5E482357A4AE12D414A3E63B
-  Plaintext (reversed):  1F1E1D1C1B1A191817161514131211100F0E0D0C0B0A09080706050403020100
-  Ciphertext (reversed): 3BE6A314D412AEA45723485E3F8000EA9BCF70E3996C83E48603772F103A3B1C
-*)
-
-(* Convert reversed plaintext and ciphertext to byte lists using int128_to_bytes *)
-let plaintext = new_definition
-  `plaintext =
-   int128_to_bytes (word 0x1F1E1D1C1B1A191817161514131211100F0E0D0C0B0A09080706050403020100)`;;
-
-let ciphertext = new_definition
-  `ciphertext =
-   int128_to_bytes (word 0x3BE6A314D412AEA45723485E3F8000EA9BCF70E3996C83E48603772F103A3B1C)`;;
-
-let cerr = new_definition
-  `cerr =
-   int128_to_bytes (word 0x0)`;;
-
-(* Generated by Cline but not needed
-(* Two-block plaintext for testing *)
-let two_block_plaintext = new_definition
-  `two_block_plaintext =
-   APPEND (int128_to_bytes (word 0x0F0E0D0C0B0A09080706050403020100))
-          (int128_to_bytes (word 0x1F1E1D1C1B1A19181716151413121110))`;;
-*)
-
-(* This was generated by Cline, to review *)
-(* Conversion for aes256_xts_encrypt using the byte lists *)
-let AES_XTS_ENC_HELPER_CONV =
-(*    PRINT_TERM_CONV THENC *)
-  REWR_CONV aes256_xts_encrypt THENC
-    PRINT_TERM_CONV THENC
-  REWRITE_CONV [data_key_schedule; tweak_key_schedule; plaintext; ciphertext; C_err] THENC
-   (* PRINT_TERM_CONV THENC *)
-  REWRITE_CONV [xts_init_tweak; aes256_xts_encrypt_round; aes256_xts_encrypt_tail;
-                aes256_xts_encrypt_rec; cipher_stealing_encrypt] THENC
-  REWRITE_CONV [int128_to_bytes; bytes_to_int128; SUB_LIST; APPEND; EL] THENC
+let AES256_XTS_ENCRYPT_ROUND_CONV =
+  REWR_CONV aes256_xts_encrypt_round THENC
   REPEATC let_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
   DEPTH_CONV AESENC_HELPER_CONV THENC
-  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV)
-  ;;
-
-  let tmp_xts_enc = AES_XTS_ENC_HELPER_CONV
-    `aes256_xts_encrypt plaintext 32 (word 0x000000000000000000000000000000FF)
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+(*(* 32 sec *)
+time prove(`aes256_xts_encrypt_round
+            (word 0x0F0E0D0C0B0A09080706050403020100)
+            (word 0x8b2b4a71228e98aed6aa0ca97775261a)
             data_key_schedule
-            tweak_key_schedule C_error
-    `;;
+            = word 0x9BCF70E3996C83E48603772F103A3B1C`,
+            CONV_TAC(REWRITE_CONV[data_key_schedule] THENC LAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV) THEN
+            REFL_TAC
+          );; *)
+
+(* Common with decrypt *)
+let EL_16_8_CLAUSES =
+  let pat = `EL n [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15]:byte` in
+  map (fun n -> EL_CONV(subst [mk_small_numeral n,`n:num`] pat)) (0--15);;
+
+let BYTES_TO_INT128_CONV =
+  REWR_CONV bytes_to_int128 THENC
+  REWRITE_CONV EL_16_8_CLAUSES THENC
+  DEPTH_CONV WORD_RED_CONV;;
+(*
+time prove(`bytes_to_int128 plaintext
+            = (word 0x0f0e0d0c0b0a09080706050403020100 :int128)`,
+            CONV_TAC(REWRITE_CONV [plaintext;int128_to_bytes] THENC
+               LAND_CONV BYTES_TO_INT128_CONV) THEN
+            REFL_TAC
+          );;
+*)
+
+(* Common with decrypt *)
+let INT128_TO_BYTES_CONV =
+  REWRITE_CONV [int128_to_bytes] THENC
+  DEPTH_CONV WORD_RED_CONV;;
+(* INT128_TO_BYTES_CONV `int128_to_bytes (word 0x0102030405060708090a0b0c0d0e0f)`;; *)
+
+(* Common with decrypt *)
+let GF_128_MULT_BY_PRIMITIVE_CONV =
+  REWRITE_CONV [GF_128_mult_by_primitive] THENC
+  REPEATC let_CONV THENC
+  DEPTH_CONV WORD_RED_CONV;;
+(* GF_128_MULT_BY_PRIMITIVE_CONV
+  `GF_128_mult_by_primitive (word 0x8b2b4a71228e98aed6aa0ca97775261a)`;; *)
+time prove(`GF_128_mult_by_primitive (word 0x8b2b4a71228e98aed6aa0ca97775261a)
+            = (word 0x165694e2451d315dad541952eeea4cb3 : int128)`,
+            CONV_TAC(LAND_CONV GF_128_MULT_BY_PRIMITIVE_CONV) THEN REFL_TAC
+          );;
+
+let rec CALCULATE_TWEAK_CONV tm =
+  let BASE_CONV =
+    ONCE_REWRITE_CONV [calculate_tweak] THENC
+    XTS_INIT_TWEAK_CONV in
+  let INDUCT_CONV =
+    RATOR_CONV(LAND_CONV num_CONV) THENC (* ((calculate_tweak 1) iv_tweak) KEY2 *)
+        (* PRINT_TERM_CONV THENC*)
+    ONCE_REWRITE_CONV [CONJUNCT2 calculate_tweak] THENC
+    RAND_CONV CALCULATE_TWEAK_CONV THENC
+    GF_128_MULT_BY_PRIMITIVE_CONV in
+  match tm with
+  | Comb
+     (Comb
+       (Comb
+         (Const ("calculate_tweak",_), n),
+       _),
+     _) ->
+    if dest_numeral n =/ num 0
+    then BASE_CONV tm
+    else INDUCT_CONV tm
+  | _ -> failwith "CALCULATE_TWEAK_CONV: inapplicable";;
+
+(REWRITE_CONV [iv;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 0 iv tweak_key_schedule`;;
+
+(REWRITE_CONV [iv;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 1 iv tweak_key_schedule`;;
+
+let rec AES256_XTS_ENCRYPT_REC_CONV tm =
+  let BASE_CONV =
+    REWR_CONV aes256_xts_encrypt_rec THENC
+    DEPTH_CONV NUM_RED_CONV in
+  let INDUCT_CONV =
+    REWR_CONV aes256_xts_encrypt_rec THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    ONCE_DEPTH_CONV SUB_LIST_CONV THENC
+    ONCE_DEPTH_CONV BYTES_TO_INT128_CONV THENC let_CONV THENC
+    SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
+    SUBLET_CONV (RAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV) THENC
+    SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV THENC
+    SUBLET_CONV AES256_XTS_ENCRYPT_REC_CONV THENC let_CONV THENC
+    REWRITE_CONV [FST;SND;APPEND] in
+  match tm with
+  | Comb
+      (Comb
+       (Comb
+         (Comb
+           (Comb
+             (Comb (Const ("aes256_xts_encrypt_rec", _), i), m),
+            _),
+          _),
+        _),
+      _) ->
+    if dest_numeral m </ dest_numeral i
+    then BASE_CONV tm
+    else INDUCT_CONV tm
+  | _ -> failwith "AES256_XTS_ENCRYPT_REC_CONV: inapplicable";;
+
+(REWRITE_CONV [iv; data_key_schedule; tweak_key_schedule; plaintext; int128_to_bytes] THENC
+      AES256_XTS_ENCRYPT_REC_CONV)
+  `aes256_xts_encrypt_rec 0 0 plaintext iv data_key_schedule tweak_key_schedule`;;
+
+let CIPHER_STEALING_ENCRYPT_CONV =
+  REWRITE_CONV [cipher_stealing_encrypt] THENC
+  SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
+  SUBLET_CONV (ONCE_DEPTH_CONV BYTES_TO_INT128_CONV) THENC
+  SUBLET_CONV (RAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV) THENC
+  SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV THENC
+  SUBLET_CONV SUB_LIST_CONV THENC let_CONV THENC
+  SUBLET_CONV (DEPTH_CONV NUM_RED_CONV) THENC (* For evaluating 16 - tail_len *)
+  SUBLET_CONV SUB_LIST_CONV THENC let_CONV THENC
+  SUBLET_CONV (ONCE_DEPTH_CONV (REWRITE_CONV [APPEND])) THENC
+  SUBLET_CONV BYTES_TO_INT128_CONV THENC let_CONV THENC
+  SUBLET_CONV GF_128_MULT_BY_PRIMITIVE_CONV THENC let_CONV THENC
+  SUBLET_CONV (RAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV) THENC
+  SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV;;
+
+(REWRITE_CONV [plaintext; int128_to_bytes; iv; data_key_schedule; tweak_key_schedule] THENC CIPHER_STEALING_ENCRYPT_CONV)
+  `cipher_stealing_encrypt plaintext [(word 0x0)] 1 iv 0 data_key_schedule tweak_key_schedule`;;
+
+let AES256_XTS_ENCRYPT_TAIL_CONV tm =
+  let ONE_BLOCK_CONV =
+    REWR_CONV aes256_xts_encrypt_tail THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    SUBLET_CONV (RAND_CONV SUB_LIST_CONV) THENC
+    SUBLET_CONV BYTES_TO_INT128_CONV THENC let_CONV THENC
+    SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
+    RAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV THENC
+    INT128_TO_BYTES_CONV in
+  let ONE_BLOCK_AND_TAIL_CONV =
+    REWR_CONV aes256_xts_encrypt_tail THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    SUBLET_CONV SUB_LIST_CONV THENC let_CONV THENC
+    SUBLET_CONV SUB_LIST_CONV THENC let_CONV THENC
+    SUBLET_CONV CIPHER_STEALING_ENCRYPT_CONV THENC let_CONV THENC
+    REWRITE_CONV [FST;SND] THENC REWRITE_CONV [APPEND] in
+  match tm with
+  | Comb
+      (Comb
+       (Comb
+         (Comb
+           (Comb
+             (Comb
+               (Const ("aes256_xts_encrypt_tail", _), _), tail_len),
+            _),
+          _),
+        _),
+      _) ->
+    if dest_numeral tail_len =/ num 0
+    then ONE_BLOCK_CONV tm
+    else ONE_BLOCK_AND_TAIL_CONV tm
+  | _ -> failwith "AES256_XTS_ENCRYPT_TAIL_CONV: inapplicable";;
+
+
+(REWRITE_CONV [plaintext; int128_to_bytes; iv; data_key_schedule; tweak_key_schedule] THENC AES256_XTS_ENCRYPT_TAIL_CONV)
+  `aes256_xts_encrypt_tail 0 0 plaintext iv data_key_schedule tweak_key_schedule`;;
+
+(* The following values were sent to the REPL from aes_xts_decrypt_spec.ml *)
+(REWRITE_CONV [p1;iv_tweak;KEY1;KEY2] THENC AES256_XTS_ENCRYPT_TAIL_CONV)
+  `aes256_xts_encrypt_tail 0 6 p1 iv_tweak KEY1 KEY2`;;
+
+(REWRITE_CONV [p0;iv_tweak;KEY1;KEY2] THENC AES256_XTS_ENCRYPT_TAIL_CONV)
+  `aes256_xts_encrypt_tail 0 0 p0 iv_tweak KEY1 KEY2`;;
 (*****************************************)
 (* Test key schedules from the decryption spec *)
 
