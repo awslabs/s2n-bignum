@@ -396,7 +396,9 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
 
-TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_simp2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o
+TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_simp2.o \
+    tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o \
+    tutorial/rodata_local.o
 
 .PHONY: bmi clean clobber
 
@@ -511,6 +513,7 @@ sm2/sm2_montjscalarmul_alt.native: sm2/sm2_montjadd_alt.native sm2/sm2_montjdoub
 .SECONDEXPANSION:
 tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 # Additional dependencies on .o files
+tutorial/rodata.native: tutorial/rodata_local.o
 tutorial/rel_simp.native: tutorial/rel_simp2.o
 tutorial/rel_equivtac.native: tutorial/rel_equivtac2.o tutorial/rel_equivtac_sse.o
 tutorial/rel_reordertac.native: tutorial/rel_reordertac2.o
