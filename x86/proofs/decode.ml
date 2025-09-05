@@ -2495,7 +2495,7 @@ let make_fn_word_list, make_fn_word_list_reloc =
 
           | Some (X86_64_pc32,sym,addend) ->
           (prev_inst_printer "";
-            Printf.bprintf buf "]; ADDR \"%s\"; b[" sym;
+            Printf.bprintf buf "]; ADDR (\"%s\",(%d)); b[" sym addend;
             col := !col + String.length sym + 16;
             bytes (i+4) (fun _ -> ()))
 
@@ -2685,6 +2685,14 @@ let define_coda_literal_from_elf codename dataname file codelist datalist =
   let ddef = define_word_list dataname dt in
   cdef,ddef;;
 
+let mk_small_int =
+  let caster = `(&):num->int`
+  and negator = `(--):int->int` in
+  fun (i:int) ->
+    if i > 0
+    then mk_comb (caster,(mk_small_numeral i))
+    else mk_comb (negator,(mk_comb (caster, mk_small_numeral (-i))));;
+
 (* Usage:
 Use
   print_literal_from_elf "x86/generic/bignum_madd.o";;
@@ -2712,9 +2720,12 @@ let bignum_madd_mc = define_word_list "bignum_madd_mc"
  ***)
 let term_of_relocs_x86, assert_relocs =
   (* X86_64_PC32 *)
-  let reloc = `APPEND (bytelist_of_int 4 (&v - &(pc + i)))` in
+  let reloc = `APPEND (bytelist_of_int 4 (&v - (x:int)))` in
+  let tm_plus = `(+):int->int->int` in
   let append_reloc (sym, add) = curry mk_comb (vsubst
-      [sym,`v:num`; mk_numeral (num add),`i:num`] reloc) in
+      [sym,`v:num`;
+       (mk_binop tm_plus `&(pc:num):int` (mk_small_int add)),
+      `x:int`] reloc) in
 
   ((* term_of_relocs_x86 *)
    term_of_relocs (fun bstext,ty,off,sym,add ->
@@ -2722,10 +2733,7 @@ let term_of_relocs_x86, assert_relocs =
       failwith "unexpected data in relocation" else
     4,
     if ty = X86_64_pc32 then
-       (if add <> -4 && add <> 0 then
-        failwith "X86_64_pc32's addend must be either 0 (MachO) or -4 (ELF)"
-        else
-        append_reloc (sym, off + 4))
+      append_reloc (sym, off - add)
 
     else failwith "unsupported relocation kind")),
 
@@ -2736,13 +2744,31 @@ let term_of_relocs_x86, assert_relocs =
       | pc, Comb(Comb(Const("CONS",_),Comb(Const("word",_),a)),tm)
         when 0 <= n && n <= 255 && dest_numeral a = num n ->
         consume_bytes ls (pc+1,tm)
-      | _ -> failwith "assert_relocs" in
-    let ptm = `bytelist_of_int 4 (&v - &(pc + i))` in
-    let rec consume_reloc sym = function
-      | pc, Comb(Comb(Const("APPEND",_),v),tm)
-        when v = vsubst [mk_var(sym,`:num`),`v:num`;
-          mk_numeral (num (pc+4)),`i:num`] ptm -> (pc+4,tm)
-      | _ -> failwith "assert_relocs" in
+      | pc, unknown_term ->
+          let _ = if !decode_print_log then
+           (Format.printf "assert_relocs: const byte mismatch from";
+            Format.printf " pc 0x%x\n" pc;
+            Format.printf "  remaining bytes: `%a`\n" pp_print_colored_term
+                unknown_term)
+          in failwith
+            (Printf.sprintf
+              "assert_relocs: const byte mismatch from pc 0x%x" pc) in
+
+    let ptm = `bytelist_of_int 4 (&v - (&pc + i))` in
+    let rec consume_reloc (sym,addend) = function
+      | pc, Comb(Comb(Const("APPEND",_),v),tm) when
+          v = vsubst [mk_var(sym,`:num`),`v:num`;
+            mk_small_int (pc - addend),`i:int`] ptm ->
+        (* pass *) (pc+4,tm)
+      | pc, unknown_term ->
+          let _ = if !decode_print_log then
+           (Format.printf "assert_relocs: relocation info mismatch from";
+            Format.printf " pc 0x%x\n" pc;
+            Format.printf "  remaining bytes: `%a`\n" pp_print_colored_term
+                unknown_term)
+          in failwith
+            (Printf.sprintf
+              "assert_relocs: relocation info mismatch from pc 0x%x" pc) in
     (* opcode_fn is the large OCaml function printed by
        print_literal_relocs_from_elf *)
     fun (args,tm) opcode_fn ->
@@ -2770,36 +2796,59 @@ let define_assert_relocs name (tm:term list * term) printed_opcodes_fn
   (mc_def,
    map (fun (name,data) ->
       let dataterm = term_of_bytes data in (* returns (8)word list *)
-      let defname = name ^ "_data" in
-      (try new_definition(mk_eq(mk_var(defname,datatype), dataterm))
+      (try new_definition(mk_eq(mk_var(name,datatype), dataterm))
         with Failure _ ->
-            new_definition(mk_eq(mk_mconst(defname,datatype), dataterm)))
+            new_definition(mk_eq(mk_mconst(name,datatype), dataterm)))
     ) constants);;
 
-let assert_relocs_from_elf (file:string) printed_opcodes_fn =
+let assert_relocs_from_elf
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    (file:string) printed_opcodes_fn =
   let filebytes = load_file file in
   let text,constants,rel = load_elf_x86 filebytes in
+
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
   assert_relocs (term_of_relocs_x86 (text,constants,rel)) printed_opcodes_fn;;
 
-let define_assert_relocs_from_elf name (file:string) printed_opcodes_fn =
+let define_assert_relocs_from_elf
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    name (file:string) printed_opcodes_fn =
   let filebytes = load_file file in
   let text,constants,rel = load_elf_x86 filebytes in
+
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
   let mc_def,constants_data_defs = define_assert_relocs
       name (term_of_relocs_x86 (text,constants,rel)) printed_opcodes_fn
       constants in
   (mc_def,constants_data_defs);;
 
-let print_literal_relocs_from_elf (file:string) =
+let print_literal_relocs_from_elf
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    (file:string) =
   let filebytes = load_file file in
-  let bs = load_elf_x86 filebytes in
-  print_string (make_fn_word_list_reloc bs
-    (decode_all (snd (term_of_relocs_x86 bs))));;
+  let text,constants,rel = load_elf_x86 filebytes in
 
-let save_literal_relocs_from_elf (deffile:string) (objfile:string) =
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
+  print_string (make_fn_word_list_reloc (text,constants,rel)
+    (decode_all (snd (term_of_relocs_x86 (text,constants,rel)))));;
+
+let save_literal_relocs_from_elf
+    ?(map_symbol_name=(fun str -> str ^ "_data"))
+    (deffile:string) (objfile:string) =
   let filebytes = load_file objfile in
-  let bs = load_elf_x86 filebytes in
-  let ls = make_fn_word_list_reloc bs
-   (decode_all (snd (term_of_relocs_x86 bs))) in
+  let text,constants,rel = load_elf_x86 filebytes in
+
+  let constants = map (fun (name,y) -> (map_symbol_name name, y)) constants in
+  let rel = map (fun (a,(b,name,c)) -> (a,(b,map_symbol_name name,c))) rel in
+
+  let ls = make_fn_word_list_reloc (text,constants,rel)
+   (decode_all (snd (term_of_relocs_x86 (text,constants,rel)))) in
   file_of_string deffile ls;;
 
 (* ------------------------------------------------------------------------- *)
@@ -2821,15 +2870,36 @@ let WORD32_ADD_SUB_OF_LT = prove
     CONV_TAC INT_REDUCE_CONV);;
 
 let RIP_REL_ADDR_FOLD = prove
- (`!pc ofs tgt.
+ (`forall pc ofs ofs2 tgt.
   // For LEA
   (riprel32_within_bounds tgt (pc + ofs) ==>
     word (
       val (word (pc+ofs):(64)word) +
-      val (word_sx (iword (&tgt - &(pc+ofs)):int32):(64)word)):int64 =
+      val (word_sx (iword (&tgt - (&pc + &ofs)):int32):(64)word)):int64 =
     word tgt) /\
+  // For LEA when referencing a local symbol
+  (riprel32_within_bounds (tgt + (ofs + ofs2)) (pc + ofs) ==>
+    word (
+      val (word (pc+ofs):(64)word) +
+      val (word_sx (iword (&tgt - (&pc + -- &ofs2)):int32):(64)word)):int64 =
+    word (tgt + (ofs + ofs2))) /\
   // For calls
   (riprel32_within_bounds tgt pc ==>
    word_add (word pc) (word_sx (iword (&tgt - &pc):int32)):int64 = word tgt)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[WORD32_ADD_SUB_OF_LT] THEN
-  MESON_TAC[WORD_ADD;WORD_VAL;WORD32_ADD_SUB_OF_LT]);;
+
+  CONJ_TAC THENL [
+    REWRITE_TAC[INT_OF_NUM_ADD] THEN
+    MESON_TAC[WORD_ADD;WORD_VAL;WORD32_ADD_SUB_OF_LT];
+
+    REWRITE_TAC[riprel32_within_bounds] THEN
+    REWRITE_TAC[GSYM INT_OF_NUM_ADD;WORD_ADD;WORD_VAL] THEN
+    REWRITE_TAC[word_sx;WORD_IWORD] THEN
+    IMP_REWRITE_TAC[IVAL_IWORD] THEN
+    REWRITE_TAC[GSYM IWORD_INT_ADD;DIMINDEX_32] THEN
+    CONV_TAC (NUM_REDUCE_CONV THENC INT_REDUCE_CONV) THEN
+    REWRITE_TAC[INT_ARITH`((x:int) + y + z) - (w + y) = x + z - w`;
+        INT_ARITH`((x:int) - (y + -- z)) = x + z - y`] THEN
+    DISCH_THEN (fun th -> REWRITE_TAC[th]) THEN 
+    AP_TERM_TAC THEN INT_ARITH_TAC
+  ]);;
