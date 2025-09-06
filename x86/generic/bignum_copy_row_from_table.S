@@ -16,10 +16,11 @@
 //                      [RSP+40] = idx
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_copy_row_from_table)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_copy_row_from_table)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_copy_row_from_table)
         .text
 
@@ -33,11 +34,12 @@
 #define j   r10
 
 S2N_BN_SYMBOL(bignum_copy_row_from_table):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -46,25 +48,25 @@ S2N_BN_SYMBOL(bignum_copy_row_from_table):
 #endif
 
         test    height, height
-        jz      bignum_copy_row_from_table_end
+        jz      Lbignum_copy_row_from_table_end
         test    width, width
-        jz      bignum_copy_row_from_table_end
+        jz      Lbignum_copy_row_from_table_end
         mov     rax, z
         mov     i, width
 
-bignum_copy_row_from_table_initzero:
+Lbignum_copy_row_from_table_initzero:
         mov     QWORD PTR [rax], 0
         add     rax, 8
         dec     i
-        jnz     bignum_copy_row_from_table_initzero
+        jnz     Lbignum_copy_row_from_table_initzero
 
         mov     i, 0
         mov     rax, table
 
-bignum_copy_row_from_table_outerloop:
+Lbignum_copy_row_from_table_outerloop:
         mov     j, 0
 
-bignum_copy_row_from_table_innerloop:
+Lbignum_copy_row_from_table_innerloop:
         xor     r11, r11
         cmp      i, idx
         // cmov always read the memory address
@@ -74,21 +76,23 @@ bignum_copy_row_from_table_innerloop:
 
         inc     j
         cmp     j, width
-        jne     bignum_copy_row_from_table_innerloop
+        jne     Lbignum_copy_row_from_table_innerloop
 
-bignum_copy_row_from_table_innerloop_done:
+Lbignum_copy_row_from_table_innerloop_done:
         lea     j, [width*8]
         add     rax, j
         inc     i
         cmp     i, height
-                                jne                     bignum_copy_row_from_table_outerloop
+                                jne                     Lbignum_copy_row_from_table_outerloop
 
-bignum_copy_row_from_table_end:
+Lbignum_copy_row_from_table_end:
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_copy_row_from_table)
 
 
 #if defined(__linux__) && defined(__ELF__)

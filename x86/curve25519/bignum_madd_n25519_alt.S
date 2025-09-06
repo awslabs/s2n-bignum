@@ -19,10 +19,11 @@
 // Microsoft x64 ABI:   RCX = z, RDX = x, R8 = y, R9 = c
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_madd_n25519_alt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_madd_n25519_alt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_madd_n25519_alt)
         .text
 
@@ -96,11 +97,12 @@
         adc     m3, rbx
 
 S2N_BN_SYMBOL(bignum_madd_n25519_alt):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -109,12 +111,12 @@ S2N_BN_SYMBOL(bignum_madd_n25519_alt):
 
 // Save some additional registers for use
 
-        push    rbx
-        push    rbp
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(rbp)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
 // First compute [r15;r14;r13;r12;r11;r10;r9;r8] = x * y + c. This inserts
 // some addition terms for c into a core Comba multiplier similar to
@@ -229,18 +231,20 @@ S2N_BN_SYMBOL(bignum_madd_n25519_alt):
 
 // Restore registers and return
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbp
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbp)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(bignum_madd_n25519_alt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
