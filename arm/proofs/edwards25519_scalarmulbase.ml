@@ -32,6 +32,7 @@ let edwards25519_scalarmulbase_mc,const_data_list =
     ~map_symbol_name:(function
       | "WHOLE_READONLY" | "ltmp1" (* MacOS *)
       | "edwards25519_scalarmulbase_constant"
+      | "_edwards25519_scalarmulbase_constant"
         -> "edwards25519_scalarmulbase_constant_data"
       | s -> failwith ("unknown symbol: " ^ s))
     "edwards25519_scalarmulbase_mc"
