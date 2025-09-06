@@ -33,6 +33,7 @@ let curve25519_x25519base_byte_mc,const_data_list =
     ~map_symbol_name:(function
       | "WHOLE_READONLY" | "ltmp1" (* MacOS *)
       | "curve25519_x25519base_byte_constant"
+      | "_curve25519_x25519base_byte_constant"
         -> "curve25519_x25519base_byte_constant_data"
       | s -> failwith ("unknown symbol: " ^ s))
     "curve25519_x25519base_byte_mc"

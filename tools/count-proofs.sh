@@ -19,12 +19,12 @@ export LC_ALL=C
 # Count the number of *_SUBROUTINE_CORRECT theorems that must be proven
 num_correct_ans=`cat proofs/specifications.txt | wc -l`
 # Print & count the *_SUBROUTINE_CORRECT theorems that are actually proven
-num_correct_out=`grep 'SUBROUTINE_CORRECT : thm' */*.correct  | cut -f2 -d' ' | sort | uniq | wc -l`
+num_correct_out=`grep -e 'SUBROUTINE_CORRECT : thm' -e 'SUBROUTINE_SAFE : thm' */*.correct  | cut -f2 -d' ' | sort | uniq | wc -l`
 
 # Print the *_SUBROUTINE_CORRECT theorems that are actually proven
 proven_thms_log=`mktemp`
-echo "Proven *_SUBROUTINE_CORRECT theorems ($num_correct_out):"
-grep 'SUBROUTINE_CORRECT : thm' */*.correct  | cut -f2 -d' ' | sort | uniq > $proven_thms_log
+echo "Proven *_SUBROUTINE_{CORRECT,SAFE} theorems ($num_correct_out):"
+grep -e 'SUBROUTINE_CORRECT : thm' -e 'SUBROUTINE_SAFE : thm' */*.correct  | cut -f2 -d' ' | sort | uniq > $proven_thms_log
 cat $proven_thms_log
 
 echo "Total # SUBROUTINE_CORRECT: ${num_correct_out}/${num_correct_ans}"

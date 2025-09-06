@@ -397,6 +397,12 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
           let new_addend = r_symbolnum in
           res := (butlast !res) @ [relty,(addr,symbolname,new_addend)]
 
+      else if r_type = 0 || r_type = 1 then
+        (* 0: ARM64_RELOC_UNSIGNED.
+           1: ARM64_RELOC_SUBTRACTOR.
+           These relocation entry types are used by CFI. *)
+        ()
+
       else
         let symbolname,_,_,_,_ = List.nth !raw_symbols r_symbolnum in
         res := !res @ [reloc_type r_type,
