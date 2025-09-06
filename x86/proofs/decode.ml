@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-let decode_log = ref false;;
+let decode_print_log = ref false;;
 
 (* ========================================================================= *)
 (* x86 instruction decoding.                                                 *)
@@ -404,6 +404,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
       SOME (PCMPGTD (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0x6e:8] ->
+      read_ModRM rex l >>= \((reg,rm),l).
+      let dest = mmreg reg Lower_128 in
+      let src = operand_of_RM Lower_32 rm in
+      (match pfxs with
+      | (T, Rep0, SG0) -> SOME (MOVD dest src, l)
+      | _ -> NONE)
     | [0b011:3; d; 0b1111:4] ->
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
@@ -428,6 +435,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           SOME (PSRAD (simd_of_RM sz rm) imm8, l))
          else NONE
        | _ -> NONE)
+    | [0x7e:8] ->
+      read_ModRM rex l >>= \((reg,rm),l).
+      let dest = operand_of_RM Lower_32 rm in
+      let src = mmreg reg Lower_128 in
+      (match pfxs with
+      | (T, Rep0, SG0) -> SOME (MOVD dest src, l)
+      | _ -> NONE)
     | [0x8:4; c:4] -> if has_pfxs pfxs then NONE else
       read_int32 l >>= \(imm,l).
       SOME (JUMP (decode_condition c) (Imm32 imm),l)
@@ -581,6 +595,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       VEXM_0F38 ->
         read_byte l >>= \(b,l).
         (bitmatch b with
+        | [0x28:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+          SOME (VPMULDQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
         | [0x58:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -600,6 +618,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     | VEXM_0F ->
         read_byte l >>= \(b,l).
         (bitmatch b with
+        | [0x6f:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l))
+        | [0x7f:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+            SOME (VMOVDQA (simd_of_RM sz rm) (mmreg reg sz),l))
         | [0xd5:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -1459,7 +1485,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | _ -> failwith "DECODE_HI_CONV" in
 
   (* A wrapper function of the 'evaluate' function defined below.
-     If decode_log reference variable is assigned true, this will print the
+     If decode_print_log reference variable is assigned true, this will print the
      current evaluation context and the term that is being reduced. *)
   let log_step =
     let print_assignments (ls:(term * term) list): unit =
@@ -1485,7 +1511,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
       let eval_simplified = evaluate t_focus (fun th ->
         let f_partialeval = F th in
         fun ls ->
-          if not !decode_log then f_partialeval ls else
+          if not !decode_print_log then f_partialeval ls else
           let _ = Printf.printf "decode: evaluate (\"%s\", eval id %d):"
             op eval_id in
           let _ = Printf.printf " evaluated to (assigns deferred): `%s`\n%!"
@@ -1493,7 +1519,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
           let _ = print_assignments ls in
           f_partialeval ls) in
       fun ls ->
-        if not !decode_log then eval_simplified ls else
+        if not !decode_print_log then eval_simplified ls else
         let _ = Printf.printf "decode: evaluate (\"%s\", eval id %d):"
             op eval_id in
         let _ = Printf.printf " evaluating: `%s`\n%!"

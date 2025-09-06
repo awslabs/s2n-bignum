@@ -15,10 +15,11 @@
 // Standard x86-64 ABI: RDI = p3, RSI = p1
 // Microsoft x64 ABI:   RCX = p3, RDX = p1
 // ----------------------------------------------------------------------------
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(edwards25519_pdouble)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(edwards25519_pdouble)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_pdouble)
         .text
 
@@ -52,7 +53,7 @@
 
 // Total size to reserve on the stack
 
-#define NSPACE (5*NUMSIZE)
+#define NSPACE 5*NUMSIZE
 
 // Macro wrapping up the basic field multiplication, only trivially
 // different from a pure function call to bignum_mul_p25519.
@@ -314,24 +315,25 @@
         mov     [P0+0x18], r11
 
 S2N_BN_SYMBOL(edwards25519_pdouble):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
 
 // Save registers, make room for temps, preserve input arguments.
 
-        push    rbx
-        push    r12
-        push    r13
-        push    r14
-        push    r15
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
-        sub     rsp, NSPACE
+        CFI_DEC_RSP(NSPACE)
 
 // Main sequence
 
@@ -351,19 +353,21 @@ S2N_BN_SYMBOL(edwards25519_pdouble):
 
 // Restore stack and registers
 
-        add     rsp, NSPACE
+        CFI_INC_RSP(NSPACE)
 
-        pop     r15
-        pop     r14
-        pop     r13
-        pop     r12
-        pop     rbx
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(edwards25519_pdouble)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits

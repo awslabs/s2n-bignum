@@ -364,6 +364,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              secp256k1/bignum_tomont_p256k1_alt.o \
              secp256k1/bignum_triple_p256k1.o \
              secp256k1/bignum_triple_p256k1_alt.o \
+             sha3/sha3_keccak_f1600.o \
              sm2/bignum_add_sm2.o \
              sm2/bignum_cmul_sm2.o \
              sm2/bignum_cmul_sm2_alt.o \
@@ -438,6 +439,13 @@ clobber: clean ; rm -f yesbmi_functions nonbmi_functions
 # in your home directory, and do "make" inside the subdirectory hol-light,
 # then the following HOLDIR setting should be right:
 
+# TODO: exhaustively list all files. Do we need ocamldep-equivalent tool for HOL Light?
+BASE_ML=proofs/base.ml \
+        proofs/decode.ml \
+        proofs/instruction.ml \
+        proofs/subroutine_signatures.ml \
+        proofs/x86.ml
+
 HOLDIR?=$(HOME)/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
@@ -448,10 +456,15 @@ TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
 # Build precompiled native binaries of HOL Light proofs
 
-proofs/simulator.native: proofs/simulator.ml ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+proofs/simulator.native: proofs/simulator.ml $(BASE_ML) x86-insns.ml ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+
+# For constant-time property and memory safety, collect input/output/temporary
+# buffers from function signatures in s2n-bignum.h .
+
+proofs/subroutine_signatures.ml: ../include/s2n-bignum.h ; cd .. && python3 tools/collect-signatures.py
 
 .SECONDEXPANSION:
-%.native: proofs/$$(*F).ml %.o %.obj ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+%.native: proofs/$$(*F).ml $(BASE_ML) %.o %.obj ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
 # Run them and print the standard output+error at *.correct
 
@@ -521,4 +534,4 @@ FORCE: ;
 # A portable way of getting the number of max. cores:
 # https://stackoverflow.com/a/23569003/1488216
 NUM_CORES_FOR_SEMATEST = $(shell getconf _NPROCESSORS_ONLN)
-sematest: x86-insns.ml FORCE proofs/simulator.native; cat x86-insns.ml; ../tools/run-sematest.sh x86 $(NUM_CORES_FOR_SEMATEST)
+sematest: FORCE proofs/simulator.native; cat x86-insns.ml; ../tools/run-sematest.sh x86 $(NUM_CORES_FOR_SEMATEST)

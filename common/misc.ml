@@ -162,6 +162,24 @@ let TRIM_LIST_CONV =
     NUM_SUB_CONV)) THENC
   SUB_LIST_CONV;;
 
+let CONS_TO_APPEND_CONV (t:term) =
+  let elems = ref [] in
+  let rec strip_cons (t:term):term = begin
+    try
+      let the_cons,(itm::tail::[]) = strip_comb t in
+      if name_of the_cons <> "CONS" then failwith "" else
+      elems := itm::!elems;
+      strip_cons tail
+    with _ -> t
+  end in
+  let tail = strip_cons t in
+  let new_list = mk_list (rev (!elems), type_of (hd !elems)) in
+  prove(mk_eq(t, list_mk_icomb "APPEND" [new_list; tail]),
+    REWRITE_TAC[APPEND]);;
+
+(* - : thm = |- CONS 1 (CONS 2 e) = APPEND [1; 2] e *)
+CONS_TO_APPEND_CONV `CONS 1 (CONS 2 e)`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Combined word and number and a few other things reduction.                *)
 (* ------------------------------------------------------------------------- *)
@@ -1380,6 +1398,11 @@ let rec REPEAT_I_N (i:int) (n:int) (t:int->tactic):tactic =
   if i = n then ALL_TAC
   else (t i) THEN (REPEAT_I_N (i+1) n t);;
 
+let REPEAT_I (t:int->tactic):tactic =
+  let rec f (i:int) g =
+    ((t i THEN f (i+1)) ORELSE ALL_TAC) g in
+  f 0;;
+
 (* ------------------------------------------------------------------------- *)
 (* Tactics that break a conjunction/disjunction in assumptions               *)
 (* ------------------------------------------------------------------------- *)
@@ -1801,6 +1824,70 @@ let COMPUTE_LENGTH_RULE th =
   CONV_RULE(RAND_CONV LENGTH_CONV) (AP_TERM ltm th);;
 
 (* ------------------------------------------------------------------------- *)
+(* Normalize (x + m) + n -> x + [m+n] for numerals m and n                   *)
+(* ------------------------------------------------------------------------- *)
+
+let NORMALIZE_ADD_ADD_CONV =
+  GEN_REWRITE_CONV I [ARITH_RULE
+   `(pc + NUMERAL m) + NUMERAL n = pc + NUMERAL m + NUMERAL n`] THENC
+  RAND_CONV NUM_ADD_CONV;;
+
+(* ------------------------------------------------------------------------- *)
+(* Prove byte list l2 is an initial sublist of l1, as `?r. l1 = APPEND l2 r` *)
+(* modulo some normalization of arithmetic subexpressions if necessary.      *)
+(* ------------------------------------------------------------------------- *)
+
+let BYTELIST_SUBLIST_CONV =
+  let pth_base = prove
+   (`l:byte list = APPEND [] r <=> l = r`,
+    REWRITE_TAC[APPEND])
+  and pth_step = prove
+   (`CONS h t1 = APPEND (CONS h t2) r <=>
+      t1:byte list = APPEND t2 r`,
+    REWRITE_TAC[APPEND; CONS_11])
+  and pth_fin = prove
+   (`(?r:byte list. l = r) <=> T`,
+    MESON_TAC[]) in
+  let baseconv = GEN_REWRITE_CONV I [pth_base]
+  and stepconv = GEN_REWRITE_CONV I [pth_step]
+  and simpconv = ONCE_DEPTH_CONV NORMALIZE_ADD_ADD_CONV THENC
+                 GEN_REWRITE_CONV ONCE_DEPTH_CONV
+                   [ARITH_RULE `n + 0 = n /\ 0 + n = n`]
+  and finrule = GEN_REWRITE_RULE RAND_CONV [pth_fin] in
+  let simpstep_conv =
+    stepconv ORELSEC
+    (BINOP2_CONV (LAND_CONV simpconv) (LAND_CONV(LAND_CONV simpconv)) THENC
+     stepconv) in
+  let rec rule th =
+    try CONV_RULE(RAND_CONV baseconv) th with Failure _ ->
+    let th' = CONV_RULE(RAND_CONV simpstep_conv) th in
+    rule th' in
+  fun tm ->
+    let ev,bod = dest_exists tm in
+    let th1 = rule(REFL bod) in
+    let th2 = AP_TERM (rator tm) (ABS ev th1) in
+    EQT_ELIM(finrule th2);;
+
+(* ------------------------------------------------------------------------- *)
+(* Tweak [aligned_]bytes_loaded s (word pc) mc to use word(pc + 0)           *)
+(* ------------------------------------------------------------------------- *)
+
+let TWEAK_PC_OFFSET_CONV =
+  let conv =
+   GEN_REWRITE_CONV (LAND_CONV o RAND_CONV) [ARITH_RULE `pc = pc + 0`] in
+  fun tm ->
+  match tm with
+    Comb(Comb(Comb(Const("bytes_loaded",_),Var(_,_)),
+              Comb(Const("word",_),Var(_,_))),_) ->
+        conv tm
+  | Comb(Comb(Comb(Const("aligned_bytes_loaded",_),Var(_,_)),
+              Comb(Const("word",_),Var(_,_))),_) ->
+        conv tm
+  | _ -> failwith "TWEAK_PC_OFFSET_CONV";;
+
+let TWEAK_PC_OFFSET = CONV_RULE(ONCE_DEPTH_CONV TWEAK_PC_OFFSET_CONV);;
+
+(* ------------------------------------------------------------------------- *)
 (* Tactics for using labeled assumtions                                      *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1826,20 +1913,31 @@ let PRINT_TAC (s:string): tactic =
 (* ------------------------------------------------------------------------- *)
 
 (* Equality version of UNIFY_ACCEPT_TAC.
-   w must be `expr = x` where x is a meta variable *)
-let UNIFY_REFL_TAC (asl,w:goal): goalstate =
-  let w_lhs,w_rhs = dest_eq w in
-  if not (is_var w_rhs) then
-    failwith ("UNIFY_REFL_TAC: RHS isn't a variable: " ^ (string_of_term w_rhs))
-  else if vfree_in w_rhs w_lhs then
-    failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w)) else
-
-  let insts = term_unify [w_rhs] w_lhs w_rhs in
-  ([],insts),[],
-  let th_refl = REFL w_lhs in
-  fun i [] -> INSTANTIATE i th_refl;;
+   The conclusion ust be `expr = x` where x is a meta variable.
+   It can be `expr = f x y z` where f is a meta variable as well.
+ *)
+let UNIFY_REFL_TAC: tactic =
+  fun (asl,w:goal) ->
+    let w_lhs,w_rhs = dest_eq w in
+    if is_var w_rhs then
+      if vfree_in w_rhs w_lhs then
+        failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w))
+      else
+        UNIFY_ACCEPT_TAC [w_rhs] (REFL w_lhs) (asl,w)
+    else
+      let constr,rargs = strip_comb w_rhs in
+      if not (is_var constr) then failwith "UNIFY_REFL_TAC: not variable" else
+      if vfree_in constr w_lhs then
+        failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w))
+      else
+        let f = list_mk_abs (rargs,w_lhs) in
+        let the_goal = mk_eq (w_lhs, list_mk_comb (f,rargs)) in
+        let th = prove(the_goal, REWRITE_TAC[]) in
+        UNIFY_ACCEPT_TAC [constr] th (asl,w);;
 
 let UNIFY_REFL_TAC_TEST = prove(`?x. 1 = x`, META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
+let UNIFY_REFL_TAC_TEST2 = prove(`?f. y + z = f y z`,
+		META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
 
 (* Given `?x1 x2 ... . t` where t is a conjunction of equalities,
    HINT_EXISTS_REFL_TAC infers an assignment for the outermost quantfier x1.

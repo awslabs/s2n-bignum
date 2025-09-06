@@ -354,6 +354,16 @@ let ARM_THM =
         dest_small_numeral ofs
       with Failure _ ->
         failwith ("ARM_THM: Cannot decompose PC expression: " ^ (string_of_term (concl pc_th))) in
+    let _ = if !arm_print_log then
+      let opt = Option.get execth2.(pc_ofs) in
+      (* opt: |- forall ... aligned_bytes_loaded ..
+                 ==> arm_decode .. (arm_INST ..) *)
+      let t = snd (strip_forall (concl (opt))) in
+      let t = snd (dest_imp t) in
+      let term = snd (dest_comb t) in
+      Printf.printf "Instruction at `pc + %d (%#x)`: `%s`\n" pc_ofs pc_ofs
+          (string_of_term term)
+    in
     MATCH_MP th (MATCH_MP (Option.get execth2.(pc_ofs)) loaded_mc_th);;
 
 let ARM_ENSURES_SUBLEMMA_TAC =
@@ -426,7 +436,7 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
  (K eth THENC
   ONCE_DEPTH_CONV ARM_EXEC_CONV THENC
   REWRITE_CONV[XREG_NE_SP; SEQ; condition_semantics] THENC
-  ALIGNED_16_CONV ths THENC
+  ALIGNED_WORD_CONV ths THENC
   REWRITE_CONV[SEQ; condition_semantics] THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [assign] THENC
   REWRITE_CONV[] THENC
@@ -696,84 +706,150 @@ let (ARM_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
     (asl,w);;
 
 (* ------------------------------------------------------------------------- *)
+(* Go from |- aligned_bytes_loaded s (word pc) mc or the equivalent          *)
+(*         |- aligned_bytes_loaded s (word(pc + 0)) mc                       *)
+(* to      |- aligned_bytes_loaded s (word(pc + n)) mc'                      *)
+(* where mc' is an appropriate sublist of the list mc.                       *)
+(* ------------------------------------------------------------------------- *)
+
+let ALIGNED_BYTES_LOADED_OFFSET_RULE =
+  let pth = prove
+   (`aligned_bytes_loaded s (word(pc + n))
+      (CONS h0 (CONS h1 (CONS h2 (CONS h3 t))))
+     ==> aligned_bytes_loaded s (word(pc + n + 4)) t`,
+    ONCE_REWRITE_TAC[GSYM(REWRITE_CONV[APPEND] `APPEND [h0;h1;h2;h3] t`)] THEN
+    W(MP_TAC o PART_MATCH (lhand o rand)
+      aligned_bytes_loaded_append o lhand o snd) THEN
+    REWRITE_TAC[LENGTH; ARITH; DIVIDES_REFL] THEN SIMP_TAC[WORD_RULE
+     `word_add (word(pc + n)) (word 4) = word(pc + n + 4)`]) in
+  let rule4 = CONV_RULE (LAND_CONV(RAND_CONV(RAND_CONV NUM_ADD_CONV))) o
+              MATCH_MP pth in
+  let rec rule offset th =
+    if offset >= 4 then rule (offset - 4) (rule4 th)
+    else th in
+  fun n th ->
+    if n mod 4 <> 0 then
+    failwith "ALIGNED_BYTES_LOADED_OFFSET_RULE: offset not multiple of 4" else
+    try rule n (CONV_RULE (TRY_CONV TWEAK_PC_OFFSET_CONV) th)
+    with Failure _ ->
+      failwith "ALIGNED_BYTES_LOADED_OFFSET_RULE: code too short";;
+
+(* ------------------------------------------------------------------------- *)
+(* Prove |- aligned_bytes_loaded s wpc mc ==> aligned_bytes_loaded s wpc mc' *)
+(*  where  mc' is a sublist of mc, modulo arithmetic simplifications.        *)
+(* ------------------------------------------------------------------------- *)
+
+let ALIGNED_BYTES_LOADED_SUBLIST_RULE =
+  let prule = (PART_MATCH rand o prove)
+   (`(?r. l = APPEND t r)
+     ==> aligned_bytes_loaded s wpc l ==> aligned_bytes_loaded s wpc t`,
+    SIMP_TAC[LEFT_IMP_EXISTS_THM; aligned_bytes_loaded; bytes_loaded_append]) in
+  fun tm1 tm2 ->
+    let th = prule(mk_imp(tm1,tm2)) in
+    MP th (BYTELIST_SUBLIST_CONV(lhand(concl th)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Given two machine code definitions of the form                            *)
+(* |- [forall pc, args1] mc1 pc args1 = [b1; ...; bn]                        *)
+(* |- [forall pc, args2] mc2 pc args2 = [b1; ...; bn]                        *)
+(* and an offset value, creates a theorem of the form                        *)
+(* |- aligned_bytes_loaded (word pc) (mc1 pc args1)                          *)
+(*    ==> aligned_bytes_loaded (word(pc + offset)) (mc2 s args2)             *)
+(* If the input theorems are not quantified, it's assumed that               *)
+(* the left-hand sides are already fully instantiated.                       *)
+(* ------------------------------------------------------------------------- *)
+
+let ALIGNED_BYTES_LOADED_SUBPROGRAM_RULE =
+  let abl_tm = `aligned_bytes_loaded s`
+  and wpc_tm = `word pc:int64`
+  and pc_tm = `pc:num`
+  and pcp_tm = `(+) (pc:num)`
+  and wd_tm = `word:num->int64`
+  and s_tm = `s:armstate` in
+  let topvars = [s_tm; pc_tm] in
+  fun mc1 mc2 offset ->
+    let nptm = mk_comb(pcp_tm,mk_small_numeral offset) in
+    let wnptm = mk_comb(wd_tm,nptm) in
+    let th1 = if is_forall(concl mc1) then SPEC_ALL(SPEC pc_tm mc1) else mc1
+    and th2 =
+      if is_forall(concl mc2) then
+      SPEC_ALL(SPEC nptm mc2) else mc2 in
+    let eth1 = AP_TERM (mk_comb(abl_tm,wpc_tm)) th1
+    and eth2 = AP_TERM (mk_comb(abl_tm,wnptm)) th2 in
+    let ath1 = UNDISCH(fst(EQ_IMP_RULE eth1)) in
+    let oth1 = ALIGNED_BYTES_LOADED_OFFSET_RULE offset ath1 in
+    let sth = ALIGNED_BYTES_LOADED_SUBLIST_RULE
+               (concl oth1) (rand(concl eth2)) in
+    let ith = DISCH_ALL(EQ_MP (SYM eth2) (MP sth oth1)) in
+    let avs = subtract (frees(concl ith)) topvars in
+    GENL (topvars @ avs) ith;;
+
+(* ------------------------------------------------------------------------- *)
 (* Simulate a subroutine, instantiating it from the state.                   *)
 (* ------------------------------------------------------------------------- *)
 
-let TWEAK_PC_OFFSET =
-  let conv =
-   GEN_REWRITE_CONV (RAND_CONV o RAND_CONV) [ARITH_RULE `pc = pc + 0`]
-  and tweakneeded tm =
-    match tm with
-      Comb(Comb(Const("aligned_bytes_loaded",_),Var(_,_)),
-           Comb(Const("word",_),Var("pc",_))) -> true
-    | _ -> false in
-  CONV_RULE(ONCE_DEPTH_CONV(conv o check tweakneeded));;
+let PC_PLUS_CONV =
+  GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
+      `read PC s = word((pc + m) + n) <=>
+       read PC s = word(pc + m + n)`] THENC
+  funpow 3 RAND_CONV NUM_ADD_CONV;;
 
-let ARM_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
-  let subimpth =
-    let th = MATCH_MP aligned_bytes_loaded_of_append3
-      (TRANS machinecode
-         (N_SUBLIST_CONV (SPEC_ALL submachinecode) offset
-                         (rhs(concl machinecode)))) in
-    let len = rand (lhand (concl th)) in
-    let th = REWRITE_RULE [
-      (REWRITE_CONV [LENGTH] THENC NUM_REDUCE_CONV) len] th in
-    MP th (EQT_ELIM (NUM_DIVIDES_CONV (lhand (concl th)))) in
-  (* Replace 'LENGTH .._mc' with its actual constant. This frequently appears
-     at nonoverlapping criteria of subth. *)
-  let subth =
-    if is_const (fst (dest_eq (concl submachinecode))) then
-      let auxth = METIS[]
-          `(a:(A)list) = b /\ LENGTH b = n ==> LENGTH a = n` in
+let ARM_SUBROUTINE_SIM_TAC =
+  let auxth = METIS[] `(a:(A)list) = b /\ LENGTH b = n ==> LENGTH a = n`
+  and len_tm = `LENGTH:((8)word)list->num` in
+  fun (machinecode,execth,offset,submachinecode,subth) ->
+    let subimpth =
+      ALIGNED_BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset in
+    (* Replace 'LENGTH .._mc' with its actual constant. This frequently appears
+       at nonoverlapping criteria of subth. *)
+    let subth =
+      if is_const (fst (dest_eq (concl submachinecode))) then
       let len_submc_th = LENGTH_CONV
-        (mk_comb (`LENGTH:((8)word)list->num`,snd (dest_eq (concl submachinecode)))) in
+        (mk_comb (len_tm,snd (dest_eq (concl submachinecode)))) in
       let main_th = MATCH_MP auxth (CONJ submachinecode len_submc_th) in
       REWRITE_RULE[main_th] subth
     else subth in
-  fun ilist0 n ->
-    let sname = "s"^string_of_int(n-1)
-    and sname' = "s"^string_of_int n in
-    let svar = mk_var(sname,`:armstate`)
-    and svar0 = mk_var("s",`:armstate`) in
-    let ilist = map (vsubst[svar,svar0]) ilist0 in
-    let subth_specl =
-      try SPECL ilist subth with _ -> begin
-        (if (!arm_print_log) then
-          (Printf.printf "ilist and subth's forall vars do not match\n";
-           Printf.printf "ilist: [%s]\n" (end_itlist
-            (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
-           Printf.printf "subth's forall vars: [%s]\n"
-              (end_itlist (fun s s2 -> s ^ "; " ^ s2)
-                (map string_of_term (fst (strip_forall (concl subth)))))));
-        failwith "ARM_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
-      end in
-    MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
-    ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
-                    MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-                    MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
-                    MODIFIABLE_UPPER_SIMD_REGS; fst execth] THEN
-    REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
-    TRY(ANTS_TAC THENL
-     [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
-      ALIGNED_16_TAC THEN REPEAT CONJ_TAC THEN
-      TRY(CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN NO_TAC) THEN
-      (NONOVERLAPPING_TAC ORELSE
-       DISJ1_TAC THEN NONOVERLAPPING_TAC ORELSE
-       DISJ2_TAC THEN NONOVERLAPPING_TAC);
-      ALL_TAC]) THEN
-    CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
-    ASM_REWRITE_TAC[] THEN
-    ARM_BIGSTEP_TAC execth sname' THENL
-     [(* Precondition of subth *)
-      (MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC) ORELSE
-       (PRINT_GOAL_TAC THEN
-        FAIL_TAC "Could not discharge precond (subgoal after ARM_BIGSTEP_TAC)");
-      ALL_TAC] THEN
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV
-     (GEN_REWRITE_CONV I [MESON[ADD_ASSOC]
-      `read PC s = word((pc + m) + n) <=>
-       read PC s = word(pc + m + n)`] THENC
-     funpow 3 RAND_CONV NUM_ADD_CONV)));;
+    fun ilist0 n ->
+      let sname = "s"^string_of_int(n-1)
+      and sname' = "s"^string_of_int n in
+      let svar = mk_var(sname,`:armstate`)
+      and svar0 = mk_var("s",`:armstate`) in
+      let ilist = map (vsubst[svar,svar0]) ilist0 in
+      let subth_specl =
+        try SPECL ilist subth with _ -> begin
+          (if (!arm_print_log) then
+            (Printf.printf "ilist and subth's forall vars do not match\n";
+            Printf.printf "ilist: [%s]\n" (end_itlist
+              (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
+             Printf.printf "subth's forall vars: [%s]\n"
+                (end_itlist (fun s s2 -> s ^ "; " ^ s2)
+                  (map string_of_term (fst (strip_forall (concl subth)))))));
+          failwith "ARM_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
+        end in
+      MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
+      ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
+                      MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                      MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
+                      MODIFIABLE_UPPER_SIMD_REGS; fst execth] THEN
+      REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+      TRY(ANTS_TAC THENL
+       [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+        ALIGNED_WORD_TAC THEN REPEAT CONJ_TAC THEN
+        TRY(CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN NO_TAC) THEN
+        (NONOVERLAPPING_TAC ORELSE
+         DISJ1_TAC THEN NONOVERLAPPING_TAC ORELSE
+         DISJ2_TAC THEN NONOVERLAPPING_TAC);
+        ALL_TAC]) THEN
+      CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
+      CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV PC_PLUS_CONV)) THEN
+      ASM_REWRITE_TAC[] THEN
+      ARM_BIGSTEP_TAC execth sname' THENL
+       [(* Precondition of subth *)
+        FIRST_X_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP subimpth) ORELSE
+        (PRINT_GOAL_TAC THEN FAIL_TAC
+          "Could not discharge precond (subgoal after ARM_BIGSTEP_TAC)");
+        ALL_TAC] THEN
+      RULE_ASSUM_TAC(CONV_RULE(TRY_CONV PC_PLUS_CONV));;
 
 let ARM_SUBROUTINE_SIM_ABBREV_TAC tupper ilist0 =
   let tac = ARM_SUBROUTINE_SIM_TAC tupper ilist0 in
@@ -969,7 +1045,7 @@ let ARM_ADD_RETURN_NOSTACK_TAC =
       MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
     TRY(ANTS_TAC THENL
-     [REPEAT CONJ_TAC THEN ALIGNED_16_TAC THEN
+     [REPEAT CONJ_TAC THEN ALIGNED_WORD_TAC THEN
       TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
     MATCH_MP_TAC lemma2 THEN REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
@@ -1033,7 +1109,7 @@ let ARM_ADD_RETURN_STACK_TAC =
       MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
     TRY(ANTS_TAC THENL
-     [REPEAT CONJ_TAC THEN ALIGNED_16_TAC THEN
+     [REPEAT CONJ_TAC THEN ALIGNED_WORD_TAC THEN
       TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
     DISCH_THEN(fun th ->
@@ -1235,3 +1311,27 @@ let ADRP_ADD_FOLD = prove(`forall (pc:int64) (x:int64).
 
   REWRITE_TAC[adrp_within_bounds] THEN
   BITBLAST_TAC);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* In-bound-ness of memory access                                            *)
+(* ------------------------------------------------------------------------- *)
+
+let memaccess_inbounds = new_definition `
+  memaccess_inbounds (e2:(armevent)list) (readable_ranges:(int64#num)list)
+                  (writable_ranges:(int64#num)list) <=>
+    ALL (\(e:armevent). match e with
+      | EventLoad (adr,sz) ->
+        EX (\range. contained_modulo
+            (2 EXP 64) (val adr, sz) (val (FST range), SND range))
+           readable_ranges
+      | EventStore (adr,sz) ->
+        EX (\range. contained_modulo
+            (2 EXP 64) (val adr, sz) (val (FST range), SND range))
+           writable_ranges
+      | _ -> true) e2`;;
+
+let MEMACCESS_INBOUNDS_APPEND = prove(
+  `forall e1 e2 rr wr. memaccess_inbounds (APPEND e1 e2) rr wr
+    <=> memaccess_inbounds e1 rr wr /\ memaccess_inbounds e2 rr wr`,
+  REWRITE_TAC[memaccess_inbounds;ALL_APPEND]);;

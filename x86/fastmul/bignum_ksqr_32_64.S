@@ -18,11 +18,13 @@
 // Microsoft x64 ABI:   RCX = z, RDX = x, R8 = t
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(bignum_ksqr_32_64)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(bignum_ksqr_32_64)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(bignum_ksqr_32_64)
+
         .text
 
 #define K 16
@@ -32,11 +34,12 @@
 #define t rcx
 
 S2N_BN_SYMBOL(bignum_ksqr_32_64):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -45,12 +48,12 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 // Save callee-preserved registers once and for all at the outset
 // Later we further reshuffle the input arguments to avoid extra saves
 
-        push   rbp
-        push   rbx
-        push   r12
-        push   r13
-        push   r14
-        push   r15
+        CFI_PUSH(rbp)
+        CFI_PUSH(rbx)
+        CFI_PUSH(r12)
+        CFI_PUSH(r13)
+        CFI_PUSH(r14)
+        CFI_PUSH(r15)
 
 // Move the temp space pointer since we need rdx for multiplications
 
@@ -58,13 +61,13 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 
 // Square the low half
 
-        call    bignum_ksqr_32_64_local_bignum_sqr_16_32
+        CFI_CALL(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
 
 // Square the high half; from here on x and z are modified
 
         lea     x,[x+8*K]               // input at x+8*K
         lea     z,[z+16*K]             // result at z+16*K
-        call    bignum_ksqr_32_64_local_bignum_sqr_16_32
+        CFI_CALL(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
 
 // Form |x_lo - x_hi|, stored at t
 
@@ -128,7 +131,7 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
         mov     x, t
         lea     t, [z-16*K]
         lea     z, [x+16*K]
-        call    bignum_ksqr_32_64_local_bignum_sqr_16_32
+        CFI_CALL(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
 
 // Subtract M, pausing at the 3k position to bump down accumulated carry.
 // The carry cannot go negative since it's the top word of a value
@@ -169,22 +172,25 @@ S2N_BN_SYMBOL(bignum_ksqr_32_64):
 
 // Restore registers and return
 
-        pop    r15
-        pop    r14
-        pop    r13
-        pop    r12
-        pop    rbx
-        pop    rbp
+        CFI_POP(r15)
+        CFI_POP(r14)
+        CFI_POP(r13)
+        CFI_POP(r12)
+        CFI_POP(rbx)
+        CFI_POP(rbp)
 
 #if WINDOWS_ABI
-        pop    rsi
-        pop    rdi
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
-        ret
+        CFI_RET
 
 // Local copy of the half-length subroutine
 
-bignum_ksqr_32_64_local_bignum_sqr_16_32:
+S2N_BN_FUNCTION_TYPE_DIRECTIVE(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
+
+Lbignum_ksqr_32_64_local_bignum_sqr_16_32:
+        CFI_START
         xor    ebp, ebp
         mov    rdx, [x]
         mulx   rax, r9, [x+0x8]
@@ -792,7 +798,11 @@ bignum_ksqr_32_64_local_bignum_sqr_16_32:
         adcx   rbx, rbp
         adox   rbx, rbp
         mov    [z+0xf8], rbx
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(Lbignum_ksqr_32_64_local_bignum_sqr_16_32)
+
+S2N_BN_SIZE_DIRECTIVE(bignum_ksqr_32_64)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

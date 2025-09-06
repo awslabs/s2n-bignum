@@ -809,6 +809,8 @@ void call_secp256k1_jdouble_alt(void) repeat(secp256k1_jdouble_alt(b1,b2))
 void call_secp256k1_jmixadd(void) repeat(secp256k1_jmixadd(b1,b2,b3))
 void call_secp256k1_jmixadd_alt(void) repeat(secp256k1_jmixadd_alt(b1,b2,b3))
 
+void call_sha3_keccak_f1600(void) repeat(sha3_keccak_f1600(b0,b1))
+
 void call_sm2_montjadd(void) repeat(sm2_montjadd(b1,b2,b3))
 void call_sm2_montjadd_alt(void) repeat(sm2_montjadd_alt(b1,b2,b3))
 void call_sm2_montjdouble(void) repeat(sm2_montjdouble(b1,b2))
@@ -836,7 +838,6 @@ void call_mlkem_reduce(void) {}
 void call_mlkem_tobytes(void) {}
 void call_mlkem_tomont(void) {}
 void call_mlkem_rej_uniform(void) {}
-void call_sha3_keccak_f1600(void) {}
 void call_sha3_keccak_f1600_alt(void) {}
 void call_sha3_keccak2_f1600(void) {}
 void call_sha3_keccak2_f1600_alt(void) {}
@@ -1130,7 +1131,6 @@ void call_mlkem_reduce(void) repeat(mlkem_reduce((int16_t*)b0))
 void call_mlkem_tobytes(void) repeat(mlkem_tobytes((uint8_t*)b0,(int16_t*)b1))
 void call_mlkem_tomont(void) repeat(mlkem_tomont((int16_t*)b0))
 void call_mlkem_rej_uniform(void) repeat(mlkem_rej_uniform_VARIABLE_TIME((int16_t*)b0,(uint8_t*)b1,1200,mlkem_rej_uniform_table))
-void call_sha3_keccak_f1600(void) repeat(sha3_keccak_f1600(b0,b1))
 void call_sha3_keccak_f1600_alt(void) repeat(sha3_keccak_f1600_alt(b0,b1))
 void call_sha3_keccak2_f1600(void) repeat(sha3_keccak2_f1600(b0,b1))
 void call_sha3_keccak2_f1600_alt(void) repeat(sha3_keccak2_f1600_alt(b0,b1))
@@ -1567,7 +1567,7 @@ int main(int argc, char *argv[])
   timingtest(all,"secp256k1_jdouble_alt",call_secp256k1_jdouble_alt);
   timingtest(bmi,"secp256k1_jmixadd",call_secp256k1_jmixadd);
   timingtest(all,"secp256k1_jmixadd_alt",call_secp256k1_jmixadd_alt);
-  timingtest(arm,"sha3_keccak_f1600",call_sha3_keccak_f1600);
+  timingtest(all,"sha3_keccak_f1600",call_sha3_keccak_f1600);
   timingtest(sha3,"sha3_keccak_f1600_alt",call_sha3_keccak_f1600_alt);
   timingtest(sha3,"sha3_keccak2_f1600",call_sha3_keccak2_f1600);
   timingtest(sha3,"sha3_keccak2_f1600_alt",call_sha3_keccak2_f1600_alt);
