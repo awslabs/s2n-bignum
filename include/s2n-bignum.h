@@ -978,6 +978,10 @@ extern void edwards25519_scalarmulbase_alt(uint64_t res[S2N_BIGNUM_STATIC 8],con
 extern void edwards25519_scalarmuldouble(uint64_t res[S2N_BIGNUM_STATIC 8],const uint64_t scalar[S2N_BIGNUM_STATIC 4], const uint64_t point[S2N_BIGNUM_STATIC 8],const uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[S2N_BIGNUM_STATIC 8],const uint64_t scalar[S2N_BIGNUM_STATIC 4], const uint64_t point[S2N_BIGNUM_STATIC 8],const uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 
+// Canonical reduction of polynomial coefficients for ML-DSA
+// Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
+extern void mldsa_poly_reduce(int32_t a[S2N_BIGNUM_STATIC 256]);
+
 // Scalar product of 2-element polynomial vectors in NTT domain, with mulcache
 // Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words)
 extern void mlkem_basemul_k2(int16_t r[S2N_BIGNUM_STATIC 256],const int16_t a[S2N_BIGNUM_STATIC 512],const int16_t b[S2N_BIGNUM_STATIC 512],const int16_t bt[S2N_BIGNUM_STATIC 256]);
