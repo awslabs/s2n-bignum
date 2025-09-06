@@ -62,7 +62,7 @@ let EDWARDS25519_ENCODE_CORRECT = prove
                 ==> read (memory :> bytelist(z,32)) s =
                     bytelist_of_num 32 (ed25519_encode (&x,&y))))
            (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9] ,,
-            MAYCHANGE SOME_FLAGS ,,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
             MAYCHANGE [memory :> bytes(z,32)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `p:int64`; `x:num`; `y:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;

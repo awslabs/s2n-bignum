@@ -189,7 +189,7 @@ let BIGNUM_AMONTMUL_CORRECT = time prove
                        R10; R11; R12; R13; R14; R15] ,,
             MAYCHANGE [memory :> bytes(z,8 * val k);
                        memory :> bytes(stackpointer,8)] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`] THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `b:num`; `n:num`; `pc:num`] THEN

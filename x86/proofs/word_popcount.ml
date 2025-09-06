@@ -58,7 +58,7 @@ let WORD_POPCOUNT_CORRECT = prove
           (\s. read RIP s = word(pc + 0x59) /\
                C_RETURN s = word(word_popcount a))
           (MAYCHANGE [RIP; RAX; RDX; RDI] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`a:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   X86_SIM_TAC WORD_POPCOUNT_EXEC (1--19) THEN

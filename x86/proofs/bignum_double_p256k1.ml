@@ -72,7 +72,7 @@ let BIGNUM_DOUBLE_P256K1_CORRECT = time prove
                   (n < p_256k1
                    ==> bignum_from_memory (z,4) s = (2 * n) MOD p_256k1))
             (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; R8; R9; R10] ,,
-             MAYCHANGE SOME_FLAGS ,,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
              MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

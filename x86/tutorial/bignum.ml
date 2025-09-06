@@ -82,7 +82,8 @@ let BIGNUM_SPEC = prove(
          read RSP s = word_add stackpointer (word 8) /\
          read RAX s = word (if a = b then 1 else 0))
     // Registers (and memory locations) that may change after execution
-    (MAYCHANGE [RSP;RIP;RAX;RCX;RDX;RDI;RSI] ,, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [RSP;RIP;RAX;RCX;RDX;RDI;RSI] ,, MAYCHANGE SOME_FLAGS ,,
+     MAYCHANGE [events])`,
 
   REPEAT STRIP_TAC THEN
   (* Convert 'bignum_from_memory' into 'memory :> bytes (..)'.

@@ -85,7 +85,7 @@ let BIGNUM_ADD_P384_CORRECT = time prove
                   (m < p_384 /\ n < p_384
                    ==> bignum_from_memory (z,6) s = (m + n) MOD p_384))
           (MAYCHANGE [RIP; RSI; RAX; RCX; RDX; R8; R9; R10; R11] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `m:num`; `n:num`; `pc:num`] THEN

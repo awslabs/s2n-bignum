@@ -61,7 +61,7 @@ let BIGNUM_OPTADD_CORRECT = prove
                   C_RETURN s =
                   word(highdigits (a + bitval(~(p = word 0)) * b) (val k)))
              (MAYCHANGE [RIP; RAX; RCX; R9; R10; R11] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC

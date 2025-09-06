@@ -210,7 +210,7 @@ let BIGNUM_MUL_P25519_CORRECT = time prove
                   bignum_from_memory (z,4) s = (m * n) MOD p_25519)
          (MAYCHANGE [RIP; RAX; RBX; RCX; RDX; RBP;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `m:num`; `n:num`; `pc:num`] THEN

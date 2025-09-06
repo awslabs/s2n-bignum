@@ -67,7 +67,7 @@ let BIGNUM_NEG_P256_CORRECT = time prove
                   (n <= p_256
                    ==> bignum_from_memory (z,4) s = (p_256 - n) MOD p_256))
           (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9; R10; R11] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

@@ -454,7 +454,7 @@ let BIGNUM_MONTMUL_P384_ALT_CORRECT = time prove
              (MAYCHANGE [RIP; RAX; RBP; RBX; RCX; RDX;
                          R8; R9; R10; R11; R12; R13; R14; R15] ,,
               MAYCHANGE [memory :> bytes(z,8 * 6)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
@@ -638,7 +638,7 @@ let BIGNUM_AMONTMUL_P384_ALT_CORRECT = time prove
              (MAYCHANGE [RIP; RAX; RBP; RBX; RCX; RDX;
                          R8; R9; R10; R11; R12; R13; R14; R15] ,,
               MAYCHANGE [memory :> bytes(z,8 * 6)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

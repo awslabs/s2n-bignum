@@ -112,7 +112,7 @@ let BIGNUM_TRIPLE_P384_ALT_CORRECT = time prove
              (\s. read RIP s = word (pc + 0xcd) /\
                   bignum_from_memory (z,6) s = (3 * n) MOD p_384)
              (MAYCHANGE [RIP; RSI; RAX; RCX; RDX; R8; R9; R10; R11; RBX] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,6)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN

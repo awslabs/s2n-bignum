@@ -56,7 +56,7 @@ let BIGNUM_MULADD10_CORRECT = time prove
                   lowdigits (10 * n + val d) (val k) /\
                   C_RETURN s = word(highdigits (10 * n + val d) (val k)))
               (MAYCHANGE [RIP; RDI; RAX; RCX; RDX; R8; R9] ,,
-               MAYCHANGE SOME_FLAGS ,,
+               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
                MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `d:num` THEN
   MAP_EVERY X_GEN_TAC [`n:num`; `pc:num`] THEN

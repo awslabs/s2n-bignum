@@ -337,7 +337,7 @@ let BIGNUM_COPRIME_CORRECT = prove
                   C_RETURN s = if coprime(a,b) then word 1 else word 0)
              (MAYCHANGE [RIP; RAX; RBX; RCX; RDX; RBP; RDI; RSI;
                          R9; R10; R11; R12; R13; R14; R15] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(w,2 * MAX (val m) (val n));
                          memory :> bytes(stackpointer,48)])`,
   W64_GEN_TAC `m:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `a:num`] THEN

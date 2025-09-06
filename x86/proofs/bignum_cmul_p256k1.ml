@@ -81,7 +81,7 @@ let BIGNUM_CMUL_P256K1_CORRECT = time prove
                   (a < p_256k1
                    ==> bignum_from_memory (z,4) s = (val c * a) MOD p_256k1))
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; R8; R9; R10] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `c:int64`; `x:int64`; `a:num`; `pc:num`] THEN

@@ -70,7 +70,7 @@ let BIGNUM_DOUBLE_SM2_CORRECT = time prove
                   (n < p_sm2
                    ==> bignum_from_memory (z,4) s = (2 * n) MOD p_sm2))
             (MAYCHANGE [RIP; RAX; RDX; RCX; R8; R9; R10; R11] ,,
-             MAYCHANGE SOME_FLAGS ,,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
              MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

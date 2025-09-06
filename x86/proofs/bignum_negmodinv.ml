@@ -153,7 +153,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
              (MAYCHANGE [RIP; RDI; RSI; RAX; RDX; RCX; R8; R9; R10; R11;
                          RBX; R12] ,,
               MAYCHANGE [memory :> bytes(z,8 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`] THEN
   MAP_EVERY X_GEN_TAC [`m:num`; `pc:num`] THEN
   REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN
