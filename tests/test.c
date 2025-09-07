@@ -15,8 +15,11 @@
 #include <inttypes.h>
 #include <math.h>
 #include <time.h>
-#include <alloca.h>
 #include <string.h>
+
+#if (__linux__)
+  #include <alloca.h>
+#endif
 
 // Prototypes for the assembler implementations
 
