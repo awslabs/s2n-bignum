@@ -15,31 +15,33 @@
 // Microsoft x64 ABI:   RCX = a
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_poly_reduce)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_poly_reduce)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_poly_reduce)
         .text
 
 #define a rdi
 
 S2N_BN_SYMBOL(mldsa_poly_reduce):
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        sub     rsp, 176
-        movups  [rsp], xmm6
-        movups  [rsp+16], xmm7
-        movups  [rsp+32], xmm8
-        movups  [rsp+48], xmm9
-        movups  [rsp+64], xmm10
-        movups  [rsp+80], xmm11
-        movups  [rsp+96], xmm12
-        movups  [rsp+112], xmm13
-        movups  [rsp+128], xmm14
-        movups  [rsp+144], xmm15
-        mov     [rsp+160], rdi
+        CFI_DEC_RSP(176)
+        CFI_STACKSAVEU(xmm6,0)
+        CFI_STACKSAVEU(xmm7,16)
+        CFI_STACKSAVEU(xmm8,32)
+        CFI_STACKSAVEU(xmm9,48)
+        CFI_STACKSAVEU(xmm10,64)
+        CFI_STACKSAVEU(xmm11,80)
+        CFI_STACKSAVEU(xmm12,96)
+        CFI_STACKSAVEU(xmm13,112)
+        CFI_STACKSAVEU(xmm14,128)
+        CFI_STACKSAVEU(xmm15,144)
+        CFI_STACKSAVE(rdi,160)
         mov     rdi, rcx
 #endif
 
@@ -276,20 +278,22 @@ S2N_BN_SYMBOL(mldsa_poly_reduce):
         vmovdqa [rdi+992], ymm11                  // Store f31
 
 #if WINDOWS_ABI
-        movups  xmm6, [rsp]
-        movups  xmm7, [rsp+16]
-        movups  xmm8, [rsp+32]
-        movups  xmm9, [rsp+48]
-        movups  xmm10, [rsp+64]
-        movups  xmm11, [rsp+80]
-        movups  xmm12, [rsp+96]
-        movups  xmm13, [rsp+112]
-        movups  xmm14, [rsp+128]
-        movups  xmm15, [rsp+144]
-        mov     rdi, [rsp+160]
-        add     rsp, 176
+        CFI_STACKLOADU(xmm6,0)
+        CFI_STACKLOADU(xmm7,16)
+        CFI_STACKLOADU(xmm8,32)
+        CFI_STACKLOADU(xmm9,48)
+        CFI_STACKLOADU(xmm10,64)
+        CFI_STACKLOADU(xmm11,80)
+        CFI_STACKLOADU(xmm12,96)
+        CFI_STACKLOADU(xmm13,112)
+        CFI_STACKLOADU(xmm14,128)
+        CFI_STACKLOADU(xmm15,144)
+        CFI_STACKLOAD(rdi,160)
+        CFI_INC_RSP(176)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(mldsa_poly_reduce)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
