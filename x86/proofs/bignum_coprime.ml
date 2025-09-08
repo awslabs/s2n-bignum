@@ -402,7 +402,7 @@ let BIGNUM_COPRIME_CORRECT = prove
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN EXISTS_TAC
    `MAYCHANGE [RIP; RAX; RBX; RCX; RDX; RBP; RDI; RSI;
                R9; R10; R11; R12; R13; R14; R15] ,,
-    MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+    MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
     MAYCHANGE [memory :> bignum(mm,k); memory :> bignum(nn,k);
                memory :> bytes (stackpointer,48)]` THEN
   CONJ_TAC THENL

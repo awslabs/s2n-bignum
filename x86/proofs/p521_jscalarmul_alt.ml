@@ -6268,7 +6268,7 @@ let LOCAL_JDOUBLE_SUBR_CORRECT = time prove
           (MAYCHANGE [RSP] ,,
            MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(word_sub stackpointer (word 648),648)])`,
   X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_ALT_EXEC LOCAL_JDOUBLE_CORRECT
@@ -6489,7 +6489,7 @@ let LOCAL_JADD_SUBR_CORRECT = time prove
           (MAYCHANGE [RSP] ,,
            MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(word_sub stackpointer (word 656),656)])`,
   X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_ALT_EXEC LOCAL_JADD_CORRECT
@@ -6612,7 +6612,7 @@ let P521_JSCALARMUL_ALT_CORRECT = time prove
                             (bignum_triple_from_memory(res,9) s))
           (MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(res,216);
                       memory :> bytes(stackpointer,4696)])`,
