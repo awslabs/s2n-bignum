@@ -1311,11 +1311,16 @@ let x86_SUB = new_definition
 let x86_VMOVSLDUP = new_definition
   `x86_VMOVSLDUP dest src (s:x86state) =
       let (x:N word) = read src s in
-      let res = if dimindex(:N) = 256 then
-        usimd4 (\pair. word_duplicate (word_subword pair (0,32))) (word_zx x)
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd4 (\(pair:64 word).
+          word_duplicate (word_subword pair (0,32):(32)word):(64)word)
+          (word_zx x) in
+        (dest := (word_zx res):N word) s
       else
-        usimd2 (\pair. word_duplicate (word_subword pair (0,32))) (word_zx x) in
-      (dest := (word_zx res):N word) s`;;
+        let res:(128)word = usimd2 (\(pair:64 word).
+          word_duplicate (word_subword pair (0,32):(32)word):(64)word)
+          (word_zx x) in
+        (dest := (word_zx res):N word) s`;;
 
 let x86_VMOVDQA = new_definition
   `x86_VMOVDQA dest src (s:x86state) =
