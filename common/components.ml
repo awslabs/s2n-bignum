@@ -3507,7 +3507,8 @@ let NONSELFMODIFYING_STATE_UPDATE_TAC bth =
     MP_TAC th THEN
     FIRST_X_ASSUM (MP_TAC o SPEC (lhand (concl th)) o MATCH_MP bth) THEN
     ANTS_TAC THENL
-     [READ_OVER_WRITE_ORTHOGONAL_TAC;
+     [READ_OVER_WRITE_ORTHOGONAL_TAC ORELSE
+      FAIL_TAC "could not prove that updates will not modify the program code";
       GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [th] THEN
       DISCH_TAC]);;
 
