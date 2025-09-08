@@ -162,6 +162,24 @@ let TRIM_LIST_CONV =
     NUM_SUB_CONV)) THENC
   SUB_LIST_CONV;;
 
+let CONS_TO_APPEND_CONV (t:term) =
+  let elems = ref [] in
+  let rec strip_cons (t:term):term = begin
+    try
+      let the_cons,(itm::tail::[]) = strip_comb t in
+      if name_of the_cons <> "CONS" then failwith "" else
+      elems := itm::!elems;
+      strip_cons tail
+    with _ -> t
+  end in
+  let tail = strip_cons t in
+  let new_list = mk_list (rev (!elems), type_of (hd !elems)) in
+  prove(mk_eq(t, list_mk_icomb "APPEND" [new_list; tail]),
+    REWRITE_TAC[APPEND]);;
+
+(* - : thm = |- CONS 1 (CONS 2 e) = APPEND [1; 2] e *)
+CONS_TO_APPEND_CONV `CONS 1 (CONS 2 e)`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Combined word and number and a few other things reduction.                *)
 (* ------------------------------------------------------------------------- *)
@@ -1380,6 +1398,11 @@ let rec REPEAT_I_N (i:int) (n:int) (t:int->tactic):tactic =
   if i = n then ALL_TAC
   else (t i) THEN (REPEAT_I_N (i+1) n t);;
 
+let REPEAT_I (t:int->tactic):tactic =
+  let rec f (i:int) g =
+    ((t i THEN f (i+1)) ORELSE ALL_TAC) g in
+  f 0;;
+
 (* ------------------------------------------------------------------------- *)
 (* Tactics that break a conjunction/disjunction in assumptions               *)
 (* ------------------------------------------------------------------------- *)
@@ -1890,20 +1913,31 @@ let PRINT_TAC (s:string): tactic =
 (* ------------------------------------------------------------------------- *)
 
 (* Equality version of UNIFY_ACCEPT_TAC.
-   w must be `expr = x` where x is a meta variable *)
-let UNIFY_REFL_TAC (asl,w:goal): goalstate =
-  let w_lhs,w_rhs = dest_eq w in
-  if not (is_var w_rhs) then
-    failwith ("UNIFY_REFL_TAC: RHS isn't a variable: " ^ (string_of_term w_rhs))
-  else if vfree_in w_rhs w_lhs then
-    failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w)) else
-
-  let insts = term_unify [w_rhs] w_lhs w_rhs in
-  ([],insts),[],
-  let th_refl = REFL w_lhs in
-  fun i [] -> INSTANTIATE i th_refl;;
+   The conclusion ust be `expr = x` where x is a meta variable.
+   It can be `expr = f x y z` where f is a meta variable as well.
+ *)
+let UNIFY_REFL_TAC: tactic =
+  fun (asl,w:goal) ->
+    let w_lhs,w_rhs = dest_eq w in
+    if is_var w_rhs then
+      if vfree_in w_rhs w_lhs then
+        failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w))
+      else
+        UNIFY_ACCEPT_TAC [w_rhs] (REFL w_lhs) (asl,w)
+    else
+      let constr,rargs = strip_comb w_rhs in
+      if not (is_var constr) then failwith "UNIFY_REFL_TAC: not variable" else
+      if vfree_in constr w_lhs then
+        failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w))
+      else
+        let f = list_mk_abs (rargs,w_lhs) in
+        let the_goal = mk_eq (w_lhs, list_mk_comb (f,rargs)) in
+        let th = prove(the_goal, REWRITE_TAC[]) in
+        UNIFY_ACCEPT_TAC [constr] th (asl,w);;
 
 let UNIFY_REFL_TAC_TEST = prove(`?x. 1 = x`, META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
+let UNIFY_REFL_TAC_TEST2 = prove(`?f. y + z = f y z`,
+		META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
 
 (* Given `?x1 x2 ... . t` where t is a conjunction of equalities,
    HINT_EXISTS_REFL_TAC infers an assignment for the outermost quantfier x1.
