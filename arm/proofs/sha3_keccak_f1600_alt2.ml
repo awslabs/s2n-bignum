@@ -281,7 +281,7 @@ let GHOST_STATELIST_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT = prove
- (`!a rc A pc stackpointer.
+ (`!a rc A pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         ALL (nonoverlapping (word_sub stackpointer (word 208),208))
             [(word pc,0x3d0); (a,200); (rc,192)] /\
@@ -302,6 +302,7 @@ let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT = prove
   MAP_EVERY X_GEN_TAC
    [`a:int64`; `rc:int64`; `A:int64 list`; `pc:num`] THEN
   WORD_FORALL_OFFSET_TAC 208 THEN X_GEN_TAC `stackpointer:int64` THEN
+  STRIP_TAC THEN
 
   REWRITE_TAC[fst SHA3_KECCAK_F1600_ALT2_EXEC] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
@@ -440,3 +441,46 @@ let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT = prove
     ARM_SIM_TAC SHA3_KECCAK_F1600_ALT2_EXEC (1--39) THEN
     CONV_TAC(LAND_CONV WORDLIST_FROM_MEMORY_CONV) THEN
     ASM_REWRITE_TAC[]]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec = mk_safety_spec
+    (assoc "sha3_keccak_f1600_alt2" subroutine_signatures)
+    SHA3_KECCAK_F1600_ALT2_SUBROUTINE_CORRECT
+    SHA3_KECCAK_F1600_ALT2_EXEC;;
+
+let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall a rc pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (word_sub stackpointer (word 208),208))
+           [word pc,976; a,200; rc,192] /\
+           nonoverlapping (a,200) (word pc,976)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    sha3_keccak_f1600_alt2_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [a; rc] s /\
+                    read events s = e)
+               (\s.
+                    exists e2.
+                        read PC s = returnaddress /\
+                        read events s = APPEND e2 e /\
+                        e2 =
+                        f_events rc a pc (word_sub stackpointer (word 208))
+                        returnaddress /\
+                        memaccess_inbounds e2
+                        [a,200; rc,192; a,200;
+                         word_sub stackpointer (word 208),208]
+                        [a,200; word_sub stackpointer (word 208),208])
+               (\s s'. true)`,
+  ASSERT_GOAL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC SHA3_KECCAK_F1600_ALT2_EXEC);;
