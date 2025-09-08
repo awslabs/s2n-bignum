@@ -3276,9 +3276,11 @@ let is_read_rip t =
 (* For compatibility with is_read_pc in Arm *)
 let is_read_pc = is_read_rip;;
 
-(* returns true if t is `read events <state>`.
-   Currently this always returns false because x86 does not have events. *)
-let is_read_events (t:term) = false;;
+(* returns true if t is `read events <state>`. *)
+let is_read_events t =
+  match t with
+  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
+  | _ -> false;;
 
 (*** decode_ths is an array from int offset i to
  ***   Some `|- !s pc. bytes_loaded s pc *_mc
