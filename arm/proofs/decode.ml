@@ -336,6 +336,22 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
      (Immediate_Offset (iword (ival imm7 * &8))))
 
+  // LDP/STP (pre-index, SIMD&FP), only sizes 128 and 64
+  | [0b10:2; 0b1011011:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
+     (Preimmediate_Offset (iword (ival imm7 * &16))))
+  | [0b01:2; 0b1011011:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
+     (Preimmediate_Offset (iword (ival imm7 * &8))))
+
+  // LDP/STP (post-index, SIMD&FP), only sizes 128 and 64
+  | [0b10:2; 0b1011001:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_q is_ld Rt Rt2 (XREG_SP Rn)
+     (Postimmediate_Offset (iword (ival imm7 * &16))))
+  | [0b01:2; 0b1011001:7; is_ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_d is_ld Rt Rt2 (XREG_SP Rn)
+     (Postimmediate_Offset (iword (ival imm7 * &8))))
+
   // LDR/STR (immediate, SIMD&FP), Pre-index (has writeback)
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b11:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Preimmediate_Offset (word_sx imm9)))
