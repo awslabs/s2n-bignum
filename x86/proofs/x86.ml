@@ -4149,7 +4149,7 @@ let X86_SIMD_SHARPEN_RULE =
   let subfn = subst
    [`MAYCHANGE [RIP] ,,
      MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-     MAYCHANGE [CF; PF; AF; ZF; SF; OF]`,
+     MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events]`,
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`] in
   fun stdthm tac ->
     let stdthm' = subfn(concl stdthm) in prove(stdthm',tac);;
