@@ -1423,12 +1423,10 @@ let x86_VPERMQ = new_definition
       and od = read imm8 s in
       if dimindex(:N) = 256 then
         let res:(256)word = usimd4 (\(od:(2)word).
-            word_subword (word_zx x) ((val od)*64,64)) od in
+            (word_subword:int256->num#num->int64) (word_zx x) ((val od)*64,64)) od in
         (dest := (word_zx res):N word) s
       else
-        let res:(128)word = usimd2 (\(od:(1)word).
-            word_subword (word_zx x) ((val od)*64,64)) (word_zx od:(2)word) in
-        (dest := (word_zx res):N word) s`;;
+        raise_exception x86_Exception_UD s`;;
 
 let x86_VPSUBD = new_definition
   `x86_VPSUBD dest src1 src2 (s:x86state) =
