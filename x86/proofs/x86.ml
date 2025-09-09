@@ -1419,8 +1419,8 @@ let x86_VPSLLQ = new_definition
 
 let x86_VPERMQ = new_definition
   `x86_VPERMQ dest src imm8 (s:x86state) =
-      let (x:N word) = read src s in
-      let od = read imm8 s in
+      let (x:N word) = read src s
+      and od = read imm8 s in
       if dimindex(:N) = 256 then
         let res:(256)word = usimd4 (\(od:(2)word).
             word_subword (word_zx x) ((val od)*64,64)) od in
