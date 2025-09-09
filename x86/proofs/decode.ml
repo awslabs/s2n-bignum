@@ -670,6 +670,17 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                | [0b100:3] -> SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
                | _ -> NONE))
             | _ -> NONE)
+        | [0x73:8] ->
+          let sz = vexL_size L in
+          read_ModRM rex l >>= (\((reg,rm),l).
+            match rm with
+            | RM_reg _ ->
+              read_imm Byte l >>= (\(imm8,l).
+              (let r3:3 word = word_zx reg in
+               bitmatch r3 with
+               | [0b010:3] -> SOME (VPSRLQ (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | _ -> NONE))
+            | _ -> NONE)
         | [0x72:8] ->
           let sz = vexL_size L in
           read_ModRM rex l >>= (\((reg,rm),l).
