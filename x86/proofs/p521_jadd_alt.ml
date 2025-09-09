@@ -11005,7 +11005,7 @@ let P521_JADD_ALT_CORRECT = time prove
                                (bignum_triple_from_memory(p3,9) s))
           (MAYCHANGE [RIP; RAX; RBX; RCX; RDX; RBP; R8; R9;
                       R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(stackpointer,576)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
