@@ -306,6 +306,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TEST operand operand
    | TZCNT operand operand
    | VMOVDQA operand operand
+   | VMOVSHDUP operand operand
    | VMOVSLDUP operand operand
    | VPADDW operand operand operand
    | VPADDD operand operand operand
