@@ -54,7 +54,7 @@ let BIGNUM_MUX_CORRECT = prove
                 bignum_from_memory (z,val k) s =
                   if ~(b = word 0) then m else n)
           (MAYCHANGE [RIP; RAX; RDI; RSI; R9] ,, MAYCHANGE SOME_FLAGS ,,
-           MAYCHANGE [memory :> bignum(z,val k)])`,
+           MAYCHANGE [memory :> bignum(z,val k)] ,, MAYCHANGE [events])`,
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; fst BIGNUM_MUX_EXEC] THEN
   MAP_EVERY W64_GEN_TAC [`b:num`; `k:num`] THEN
