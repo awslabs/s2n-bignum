@@ -2286,13 +2286,13 @@ let x86_execute = define
     | VMOVDQA dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
-        (\s. (match operand_size dest with
+        (\s. match operand_size dest with
           256 -> if aligned_OPERAND256 src s /\ aligned_OPERAND256 dest s
-                then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s)
-                else (\s' s''. F)
+                then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s) s
+                else (\s'. F)
         | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
-                then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s)
-                else (\s' s''. F)) s)) s
+                then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
+                else (\s'. F))) s
     | VMOVSHDUP dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
