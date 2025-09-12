@@ -18,7 +18,9 @@ let mk_safety_spec
 
   let fnspec:term = concl subroutine_correct_th in
   let fnspec_quants,t = strip_forall fnspec in
-  assert (name_of (last fnspec_quants) = "returnaddress");
+  if name_of (last fnspec_quants) <> "returnaddress"
+  then failwith "spec's last forall quantifier isn't 'returnaddress'?"
+  else begin
   let (fnspec_globalasms:term),(fnspec_ensures:term) =
       if is_imp t then dest_imp t else `true`,t in
 
@@ -142,7 +144,8 @@ let mk_safety_spec
     let fvars = frees spec_without_quantifiers in
     List.filter (fun t -> mem t fvars) fnspec_quants in
   mk_exists(f_events,
-    list_mk_forall(fnspec_quants_filtered, spec_without_quantifiers));;
+    list_mk_forall(fnspec_quants_filtered, spec_without_quantifiers))
+  end;;
 
 let REPEAT_GEN_AND_OFFSET_STACKPTR_TAC =
   W (fun (asl,w) ->
