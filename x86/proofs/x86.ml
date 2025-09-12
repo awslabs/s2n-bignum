@@ -1375,7 +1375,7 @@ let x86_VPBLENDD = new_definition
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s
       and imm8 = read imm8 s in
-      let fn = \(i:(1)word) (x:int32) (y:int32). if i = word 1 then x else y in
+      let fn = \(i:1 word) (x:32 word) (y:32 word). if i = word 1 then y else x in
       if dimindex(:N) = 256 then
         let res:(256)word = msimd8 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s
