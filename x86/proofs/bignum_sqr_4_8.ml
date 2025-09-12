@@ -130,7 +130,7 @@ let BIGNUM_SQR_4_8_CORRECT = time prove
           (MAYCHANGE [RIP; RAX; RBP; RCX; RDX;
                       R8; R9; R10; R11; R12; R13] ,,
            MAYCHANGE [memory :> bytes(z,8 * 8)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN

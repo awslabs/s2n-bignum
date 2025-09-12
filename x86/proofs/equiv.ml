@@ -577,7 +577,9 @@ let X86_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
            separately. *)
         let new_state_eqs_norewrite,new_state_eqs =
           List.partition
-            (fun th -> not (is_eq (concl th)) || (is_read_pc (lhs (concl th))))
+            (fun th -> not (is_eq (concl th))
+                       || (is_read_pc (lhs (concl th)))
+                       || (is_read_events (lhs (concl th))))
           new_state_eqs in
 
         (* filter out regs from new_state_eqs that are regs_to_avoid_abbrev.

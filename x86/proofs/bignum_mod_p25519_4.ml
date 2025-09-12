@@ -68,7 +68,7 @@ let BIGNUM_MOD_P25519_4_CORRECT = time prove
            (\s. read RIP s = word (pc + 0x58) /\
                 bignum_from_memory (z,4) s = n MOD p_25519)
           (MAYCHANGE [RIP; RAX; RDX; RCX; R8; R9; R10] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

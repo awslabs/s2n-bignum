@@ -50,7 +50,7 @@ let loop_SPEC = prove(
          read RSP s = word_add stackpointer (word 8) /\
          read RAX s = word 20)
     // Registers (and memory locations) that may change after execution
-    (MAYCHANGE [RSP;RIP;RAX;RBX] ,, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [RSP;RIP;RAX;RBX] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   (* Unfold flag registers! *)
   REWRITE_TAC[SOME_FLAGS] THEN
   REPEAT STRIP_TAC THEN

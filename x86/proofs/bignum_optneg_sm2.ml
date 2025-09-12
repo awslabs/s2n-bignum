@@ -73,7 +73,7 @@ let BIGNUM_OPTNEG_SM2_CORRECT = time prove
                    ==> (bignum_from_memory (z,4) s =
                         if ~(q = word 0) then (p_sm2 - n) MOD p_sm2 else n)))
           (MAYCHANGE [RIP; RSI; RAX; RCX; R8; R9] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `q:int64`; `x:int64`; `n:num`; `pc:num`] THEN

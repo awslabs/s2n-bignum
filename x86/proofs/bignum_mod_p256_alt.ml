@@ -423,7 +423,7 @@ let BIGNUM_MOD_P256_ALT_CORRECT = time prove
            (\s. read RIP s = word (pc + 0x102) /\
                 bignum_from_memory (z,4) s = n MOD p_256)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; R8; R9; R10; R11; R12] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   tac BIGNUM_MOD_P256_ALT_EXEC
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral));;
@@ -491,7 +491,7 @@ let BIGNUM_MOD_P256_ALT_WINDOWS_CORRECT = time prove
            (\s. read RIP s = word (pc + 0x10d) /\
                 bignum_from_memory (z,4) s = n MOD p_256)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; R8; R9; R10; R11; R12] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   tac (X86_MK_EXEC_RULE bignum_mod_p256_alt_windows_tmc)
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral o (fun n -> n+11)));;

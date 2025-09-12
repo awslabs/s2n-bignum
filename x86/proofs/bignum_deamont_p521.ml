@@ -114,7 +114,7 @@ let BIGNUM_DEAMONT_P521_CORRECT = time prove
              (MAYCHANGE [RIP; RAX; RCX; RDX;
                          R8; R9; R10; R11; RBX; RBP; R12; R13] ,,
               MAYCHANGE [memory :> bytes(z,8 * 9)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN

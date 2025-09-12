@@ -59,7 +59,7 @@ let BIGNUM_FROMLEBYTES_P521_CORRECT = prove
                 bignum_from_memory(z,9) s = num_of_bytelist l)
           (MAYCHANGE [RIP; RAX] ,,
            MAYCHANGE [memory :> bignum(z,9)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `l:byte list`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN

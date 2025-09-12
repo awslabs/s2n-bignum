@@ -151,7 +151,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
            bignum_from_memory (z, val width) s = m)
       (MAYCHANGE [RIP] ,,
        MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-       MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+       MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
        MAYCHANGE [memory :> bytes(z,8 * val width)])`,
 
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
@@ -214,7 +214,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
     EXISTS_TAC `MAYCHANGE [RIP] ,,
                 MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * (val (width:int64) - (i + 1))))]` THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     CONJ_TAC THENL [
@@ -377,7 +377,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
     EXISTS_TAC `MAYCHANGE [RIP] ,,
                 MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * i'))]` THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     CONJ_TAC THENL [

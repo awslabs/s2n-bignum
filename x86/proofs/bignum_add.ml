@@ -660,7 +660,7 @@ let BIGNUM_ADD_CORRECT = prove
                   bignum_from_memory (z,val p) s =
                   lowdigits a (val p) + lowdigits b (val p))
              (MAYCHANGE [RIP; RAX; RDI; RDX; R8; R10] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   tac BIGNUM_ADD_EXEC
    `\s. (read RIP s = word(pc + 0x5c) \/
@@ -747,7 +747,7 @@ let BIGNUM_ADD_WINDOWS_CORRECT = prove
                   bignum_from_memory (z,val p) s =
                   lowdigits a (val p) + lowdigits b (val p))
              (MAYCHANGE [RIP; RAX; RDI; RDX; R8; R10] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   tac (X86_MK_EXEC_RULE bignum_add_windows_tmc)
    `\s. (read RIP s = word(pc + 0x74) \/

@@ -472,7 +472,7 @@ let BIGNUM_MOD_N25519_CORRECT = time prove
                 bignum_from_memory (z,4) s = n MOD n_25519)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; RBP;
                       R8; R9; R10; R11; R12] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   tac BIGNUM_MOD_N25519_EXEC
    (curry mk_comb `(+) (pc:num)` o mk_small_numeral));;
@@ -541,7 +541,7 @@ let BIGNUM_MOD_N25519_WINDOWS_CORRECT = time prove
                 bignum_from_memory (z,4) s = n MOD n_25519)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; RBP;
                       R8; R9; R10; R11; R12] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   tac (X86_MK_EXEC_RULE bignum_mod_n25519_windows_tmc)
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral o (fun n -> n+11)));;

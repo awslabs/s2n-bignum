@@ -10898,7 +10898,7 @@ let P256_SCALARMUL_CORRECT = time prove
                             (group_pow p256_group P n))
           (MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(res,64);
                       memory :> bytes(stackpointer,1320)])`,

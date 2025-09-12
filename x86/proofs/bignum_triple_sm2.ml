@@ -102,7 +102,7 @@ let BIGNUM_TRIPLE_SM2_CORRECT = time prove
              (\s. read RIP s = word (pc + 0xb3) /\
                   bignum_from_memory (z,4) s = (3 * n) MOD p_sm2)
           (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9; R10; R11] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN

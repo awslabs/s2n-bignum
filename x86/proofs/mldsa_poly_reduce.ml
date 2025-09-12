@@ -402,7 +402,9 @@ let MLDSA_REDUCE_CORRECT = prove
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
                           ival(mldsa_barred (x i)))
-             (MAYCHANGE [RIP] ,, MAYCHANGE [ZMM0; ZMM1; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+             (MAYCHANGE [RIP] ,, MAYCHANGE [events] ,,
+              MAYCHANGE [ZMM0; ZMM1; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10;
+                         ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
               MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
 

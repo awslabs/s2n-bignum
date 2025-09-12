@@ -1033,7 +1033,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
                        R10; R11; R12; R13; R14; R15] ,,
             MAYCHANGE [memory :> bytes(z,8 * 2 * val k);
                        memory :> bytes(word_sub stackpointer (word 32),32)] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`] THEN
   W64_GEN_TAC `w:num` THEN
@@ -1121,7 +1121,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       R8; R9; R10; R11; R12; R13; R14; R15] ,,
     MAYCHANGE [memory :> bytes (z,8 * 2 * k');
                memory :> bytes (stackpointer,32)] ,,
-    MAYCHANGE [CF; PF; AF; ZF; SF; OF]` THEN
+    MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events]` THEN
   CONJ_TAC THENL
    [REPEAT(MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
     MAP_EVERY EXPAND_TAC ["k'"; "k8"] THEN SUBSUMED_MAYCHANGE_TAC;
@@ -1333,7 +1333,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       R8; R9; R10; R11; R12; R13; R14; R15] ,,
     MAYCHANGE [memory :> bytes(z',8 * (k + 8));
                memory :> bytes (stackpointer,32)] ,,
-    MAYCHANGE [CF; PF; AF; ZF; SF; OF]` THEN
+    MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events]` THEN
   CONJ_TAC THENL
    [EXPAND_TAC "z'" THEN SUBSUMED_MAYCHANGE_TAC;
     ALL_TAC] THEN
@@ -1744,7 +1744,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       R8; R9; R10; R11; R12; R13; R14; R15] ,,
     MAYCHANGE [memory :> bytes (z',8 * 8);
                memory :> bytes (stackpointer,32)] ,,
-    MAYCHANGE [CF; PF; AF; ZF; SF; OF]` THEN
+    MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events]` THEN
   CONJ_TAC THENL
    [EXPAND_TAC "z'" THEN SUBSUMED_MAYCHANGE_TAC;
     ALL_TAC] THEN

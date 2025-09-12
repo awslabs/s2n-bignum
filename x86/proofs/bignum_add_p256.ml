@@ -70,7 +70,7 @@ let BIGNUM_ADD_P256_CORRECT = time prove
                   (m < p_256 /\ n < p_256
                    ==> bignum_from_memory (z,4) s = (m + n) MOD p_256))
           (MAYCHANGE [RIP; RAX; RDX; RCX; R8; R9; R10; R11] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `m:num`; `n:num`; `pc:num`] THEN

@@ -98,7 +98,7 @@ let BIGNUM_TRIPLE_P256K1_CORRECT = time prove
                   bignum_from_memory (z,4) s = (3 * a) MOD p_256k1)
              (MAYCHANGE [RIP; RAX; RDX; RCX; R8; R9; R10; R11] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN

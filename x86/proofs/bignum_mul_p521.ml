@@ -625,7 +625,7 @@ let BIGNUM_MUL_P521_CORRECT = prove
                          R8; R9; R10; R11; R12; R13; R14; R15] ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                          memory :> bytes(stackpointer,64)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`;
      `pc:num`; `stackpointer:int64`] THEN

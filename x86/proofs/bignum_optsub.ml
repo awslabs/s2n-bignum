@@ -63,7 +63,7 @@ let BIGNUM_OPTSUB_CORRECT = prove
                   (C_RETURN s =
                    if ~(p = word 0) /\ m < n then word 1 else word 0))
           (MAYCHANGE [RIP; RAX; RCX; R9; R10; R11] ,, MAYCHANGE SOME_FLAGS ,,
-           MAYCHANGE [memory :> bignum(z,val k)])`,
+           MAYCHANGE [memory :> bignum(z,val k)] ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `b:int64`; `y:int64`;

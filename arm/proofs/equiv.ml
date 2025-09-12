@@ -26,12 +26,6 @@ let get_bytelist_length (ls:term): int =
     failwith (Printf.sprintf
       "get_bytelist_length: cannot get the length of `%s`" (string_of_term ls));;
 
-(* returns true if t is `read events <state>`. *)
-let is_read_events t =
-  match t with
-  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
-  | _ -> false;;
-
 let define_mc_from_intlist (newname:string) (ops:int list) =
   let charlist = List.concat_map
     (fun op32 ->

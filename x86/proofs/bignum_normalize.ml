@@ -81,7 +81,7 @@ let BIGNUM_NORMALIZE_CORRECT = time prove
                   C_RETURN s = word(64 * val k - bitsize n))
              (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9; R10] ,,
               MAYCHANGE [memory :> bytes(z,8 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN

@@ -2134,7 +2134,7 @@ let LOCAL_WORD_DIVSTEP59_CORRECT = prove
           (MAYCHANGE [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(word_add stackpointer (word 192),32)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY
     (fun t -> GEN_REWRITE_TAC I [FORALL_IVAL_GEN] THEN
               X_GEN_TAC t THEN STRIP_TAC)
@@ -2474,7 +2474,7 @@ let CORE_MONTINV_P256_CORRECT = time prove
                    else (2 EXP 512 * inverse_mod p_256 n) MOD p_256))
           (MAYCHANGE [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(z,8 * 4);
                       memory :> bytes(stackpointer,240)])`,
   MAP_EVERY X_GEN_TAC
@@ -3915,7 +3915,7 @@ let BIGNUM_MONTINV_P256_CORRECT = time prove
                    else (2 EXP 512 * inverse_mod p_256 n) MOD p_256))
           (MAYCHANGE [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(z,8 * 4);
                       memory :> bytes(stackpointer,240)])`,
   MAP_EVERY X_GEN_TAC

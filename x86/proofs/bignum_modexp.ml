@@ -744,7 +744,7 @@ let BIGNUM_MODEXP_CORRECT = prove
                (ODD n ==> bignum_from_memory(z,val k) s = (x EXP y) MOD n))
           (MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val k);
                       memory :> bytes(t,24 * val k);
                       memory :> bytes(word_sub stackpointer (word 64),136)])`,

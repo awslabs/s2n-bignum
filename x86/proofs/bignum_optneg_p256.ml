@@ -73,7 +73,7 @@ let BIGNUM_OPTNEG_P256_CORRECT = time prove
                    ==> (bignum_from_memory (z,4) s =
                         if ~(q = word 0) then (p_256 - n) MOD p_256 else n)))
           (MAYCHANGE [RIP; RSI; RAX; RCX; R8; R9] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `q:int64`; `x:int64`; `n:num`; `pc:num`] THEN

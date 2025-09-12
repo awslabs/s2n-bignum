@@ -9241,7 +9241,7 @@ let LOCAL_MUL_P25519_TAC =
          (MAYCHANGE [RIP; RSI; RAX; RBX; RCX; RDX;
                      R8; R9; R10; R11; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(word_add (read q3 t) (word n3),8 * 4)] ,,
-           MAYCHANGE SOME_FLAGS)`
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s1" THEN
@@ -9434,7 +9434,7 @@ let LOCAL_MUL_4_TAC =
            (MAYCHANGE [RIP; RAX; RBX; RCX; RDX;
                        R8; R9; R10; R11; R12; R13; R14; R15] ,,
             MAYCHANGE [memory :> bytes(word_add (read q3 t) (word n3),8 * 4)] ,,
-            MAYCHANGE SOME_FLAGS)`
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s1" THEN
@@ -9610,7 +9610,7 @@ let LOCAL_SQR_4_TAC =
                     R8; R9; R10; R11; R12; R13; R14; R15] ,,
          MAYCHANGE
           [memory :> bytes(word_add (read p3 t) (word n3),8 * 4)] ,,
-         MAYCHANGE SOME_FLAGS)`
+         MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
@@ -9776,7 +9776,7 @@ let LOCAL_ADD_TWICE4_TAC =
                       m + n) (mod p_25519)))
         (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10; R11] ,,
          MAYCHANGE [memory :> bytes(word_add (read q3 t) (word n3),8 * 4)] ,,
-         MAYCHANGE SOME_FLAGS)`
+         MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
@@ -9848,7 +9848,7 @@ let LOCAL_DOUBLE_TWICE4_TAC =
                       2 * n) (mod p_25519)))
         (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10; R11] ,,
          MAYCHANGE [memory :> bytes(word_add (read q3 t) (word n3),8 * 4)] ,,
-         MAYCHANGE SOME_FLAGS)`
+         MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
@@ -9924,7 +9924,7 @@ let LOCAL_SUB_TWICE4_TAC =
                       &m - &n) (mod (&p_25519))))
         (MAYCHANGE [RIP; RAX; RBX; RCX; R8; R9; R10] ,,
          MAYCHANGE [memory :> bytes(word_add (read q3 t) (word n3),8 * 4)] ,,
-         MAYCHANGE SOME_FLAGS)`
+         MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
@@ -10015,7 +10015,7 @@ let LOCAL_EPDOUBLE_CORRECT = time prove
                            (bignum_quadruple_from_memory(p3,4) s))
           (MAYCHANGE [RIP;  RAX; RBX; RCX; RDX;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,128);
                       memory :> bytes(stackpointer,160)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
@@ -10120,7 +10120,7 @@ let LOCAL_PDOUBLE_CORRECT = time prove
                            (bignum_triple_from_memory(p3,4) s))
           (MAYCHANGE [RIP;  RAX; RBX; RCX; RDX;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,96);
                       memory :> bytes(stackpointer,160)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
@@ -10232,7 +10232,7 @@ let LOCAL_EPADD_CORRECT = time prove
                            (bignum_quadruple_from_memory(p3,4) s))
           (MAYCHANGE [RIP;  RAX; RBX; RCX; RDX;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,128);
                       memory :> bytes(stackpointer,192)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
@@ -10378,7 +10378,7 @@ let LOCAL_PEPADD_CORRECT = time prove
                            (bignum_quadruple_from_memory(p3,4) s))
           (MAYCHANGE [RIP;  RAX; RBX; RCX; RDX;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,128);
                       memory :> bytes(stackpointer,192)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
@@ -10518,7 +10518,7 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
                                  (group_pow edwards25519_group E_25519 m)))
          (MAYCHANGE [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP;
                      R8; R9; R10; R11; R12; R13; R14; R15] ,,
-          MAYCHANGE SOME_FLAGS ,,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
           MAYCHANGE [memory :> bytes(res,64);
                      memory :> bytes(stackpointer,1672)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN

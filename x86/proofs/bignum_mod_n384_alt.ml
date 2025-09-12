@@ -482,7 +482,7 @@ let BIGNUM_MOD_N384_ALT_CORRECT = time prove
                 bignum_from_memory (z,6) s = n MOD n_384)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; RBP; R8; R9;
                       R10; R11; R12; R13; R14] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   tac BIGNUM_MOD_N384_ALT_EXEC
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral));;
@@ -551,7 +551,7 @@ let BIGNUM_MOD_N384_ALT_WINDOWS_CORRECT = time prove
                 bignum_from_memory (z,6) s = n MOD n_384)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; RBP; R8; R9;
                       R10; R11; R12; R13; R14] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   tac (X86_MK_EXEC_RULE bignum_mod_n384_alt_windows_tmc)
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral o (fun n -> n + 11)));;

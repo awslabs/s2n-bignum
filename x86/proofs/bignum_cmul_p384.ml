@@ -125,7 +125,7 @@ let BIGNUM_CMUL_P384_CORRECT = time prove
                    ==> bignum_from_memory (z,6) s = (val c * a) MOD p_384))
              (MAYCHANGE [RIP; RSI; RAX; RCX; RDX; R8; R9; R10; R11; R12] ,,
               MAYCHANGE [memory :> bytes(z,8 * 6)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `c:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

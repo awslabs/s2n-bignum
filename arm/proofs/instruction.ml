@@ -7,35 +7,6 @@
 (* Simplified model of aarch64 (64-bit ARM) semantics.                       *)
 (* ========================================================================= *)
 
-(*** We start with defining an observable microarchitectural event.
- *** This is used to describe the safety property of assembly programs such as
- *** the constant-time property.
- *** We define that an instruction raises an observable microarchitectural
- *** event if its cycles/power consumption/anything that can be observed by
- *** a side-channel attacker can vary depending on the inputs of
- *** the instruction. For example, instructions taking a constant number of
- *** cycles like ADD do not raise an observable event, whereas cond branch does.
- *** Its kinds (EventLoad/Store/...) describe the events distinguishable from
- *** each other by the attacker, and their parameters describe the values
- *** that are inputs and/or outputs of the instructions that will affect the
- *** observed cycles/etc.
- *** An opcode of instruction is not a parameter of the event, even if the
- *** number of taken cycles may depend on opcode. This relies on an assumption
- *** that a program is public information.
- *** One instruction can raise multiple events (e.g., one that reads PC from
- *** the memory and jumps to the address, even though this case will not exist
- *** in Arm).
- ***)
-let armevent_INDUCT, armevent_RECURSION = define_type
-  "armevent =
-    // (address, byte length)
-    EventLoad (int64#num)
-    // (address, byte length)
-    | EventStore (int64#num)
-    // (src pc, destination pc)
-    | EventJump (int64#int64)
-  ";;
-
 (*** For convenience we lump the stack pointer in as general register 31.
  *** The indexing is cleaner for a 32-bit enumeration via words, and in
  *** fact in some settings this may be interpreted correctly when register 31
@@ -56,7 +27,7 @@ let armstate_INDUCT,armstate_RECURSION,armstate_COMPONENTS =
        simdregisters: 5 word->int128;   // 32 SIMD registers
        flags: 4 word;                   // NZCV flags
        memory: 64 word -> byte;         // memory
-       events: armevent list            // Observable uarch events
+       events: uarch_event list            // Observable uarch events
      }";;
 
 let bytes_loaded = new_definition

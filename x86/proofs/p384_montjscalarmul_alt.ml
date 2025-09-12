@@ -12325,7 +12325,7 @@ let P384_MONTJSCALARMUL_ALT_CORRECT = time prove
                             (bignum_triple_from_memory(res,6) s))
           (MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(res,144);
                       memory :> bytes(stackpointer,3096)])`,
