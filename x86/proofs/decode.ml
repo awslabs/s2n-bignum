@@ -625,11 +625,21 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x6f:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-            SOME (VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l))
+            (match pfxs with
+            | (F, RepZ, SG0) ->
+              SOME (VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l)
+            | (F, RepNZ, SG0) ->
+              SOME (VMOVDQU (mmreg reg sz) (simd_of_RM sz rm),l)
+            | _ -> NONE))
         | [0x7f:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-            SOME (VMOVDQA (simd_of_RM sz rm) (mmreg reg sz),l))
+            (match pfxs with
+            | (F, RepZ, SG0) ->
+              SOME (VMOVDQA (simd_of_RM sz rm) (mmreg reg sz),l)
+            | (F, RepNZ, SG0) ->
+              SOME (VMOVDQU (simd_of_RM sz rm) (mmreg reg sz),l)
+            | _ -> NONE))
         | [0xd5:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).

@@ -127,6 +127,7 @@
 : vpbroadcastd$
 : vpmuldq$
 : vmovdqa$
+: vmovdqu$
 : vpmulhw$
 : vpmulld$
 : vpmullw$
