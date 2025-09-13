@@ -1312,18 +1312,7 @@ let x86_VMOVDQA = new_definition
   `x86_VMOVDQA dest src (s:x86state) =
       let (x:N word) = read src s in
       (dest := (word_zx x):N word) s`;;
-
-let x86_VPADDD = new_definition
-  `x86_VPADDD dest src1 src2 (s:x86state) =
-      let (x:N word) = read src1 s
-      and (y:N word) = read src2 s in
-      if dimindex(:N) = 256 then
-        let res:(256)word = simd8 word_add (word_zx x) (word_zx y) in
-        (dest := (word_zx res):N word) s
-      else
-        let res:(128)word = simd4 word_add (word_zx x) (word_zx y) in
-        (dest := (word_zx res):N word) s`;;
-        
+       
 let x86_VMOVSHDUP = new_definition
   `x86_VMOVSHDUP dest src (s:x86state) =
       let (x:N word) = read src s in
@@ -1338,7 +1327,17 @@ let x86_VMOVSHDUP = new_definition
           (word_zx x) in
         (dest := (word_zx res):N word) s`;;
 
-
+let x86_VPADDD = new_definition
+  `x86_VPADDD dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd8 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd4 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+ 
 let x86_VPADDW = new_definition
   `x86_VPADDW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -1349,26 +1348,6 @@ let x86_VPADDW = new_definition
       else
         let res:(128)word = simd8 word_add (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
-
-(* TODO: move to HOL Light *)
-let msimd2 = new_definition
- `(msimd2:(M word->N word->N word->N word)->
-        ((M)tybit0)word->((N)tybit0)word->((N)tybit0) word->((N)tybit0) word) f m x y =
-    word_join (f (word_subword m (dimindex(:M),dimindex(:M)))
-                 (word_subword x (dimindex(:N),dimindex(:N)))
-                 (word_subword y (dimindex(:N),dimindex(:N))))
-              (f (word_subword m (0,dimindex(:M)))
-                 (word_subword x (0,dimindex(:N)))
-                 (word_subword y (0,dimindex(:N))))`;;
-
-let msimd4 = new_definition
- `msimd4 (f:M word->N word->N word->N word) = msimd2 (msimd2 f)`;;
-
-let msimd8 = new_definition
- `msimd8 (f:M word->N word->N word->N word) = msimd2 (msimd4 f)`;;
-
-let msimd16 = new_definition
- `msimd16 (f:M word->N word->N word->N word) = msimd2 (msimd8 f)`;;
 
 let x86_VPBLENDD = new_definition
   `x86_VPBLENDD dest src1 src2 imm8 (s:x86state) =
@@ -2201,14 +2180,14 @@ let x86_execute = define
         | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
                 then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
                 else (\s'. F))
-    | VPADDD dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPADDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | VMOVSHDUP dest src ->
         (match operand_size dest with
           256 -> x86_VMOVSHDUP (OPERAND256 dest s) (OPERAND256 src s)
         | 128 -> x86_VMOVSHDUP (OPERAND128 dest s) (OPERAND128 src s)) s
+    | VPADDD dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPADDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | VPADDW dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
