@@ -1316,7 +1316,7 @@ let x86_VMOVDQA = new_definition
 let x86_VMOVDQU = new_definition
   `x86_VMOVDQU dest src (s:x86state) =
       let (x:N word) = read src s in
-      (dest := (word_zx x):N word) s`;;
+      (dest := x) s`;;
 
 let x86_VMOVSHDUP = new_definition
   `x86_VMOVSHDUP dest src (s:x86state) =
