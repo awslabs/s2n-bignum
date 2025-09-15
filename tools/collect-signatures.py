@@ -325,6 +325,7 @@ onlyInX86 = [
   "bignum_triple_p384_alt",
   "bignum_triple_p521_alt",
   "bignum_triple_sm2_alt",
+  "mldsa_poly_reduce",
 ]
 
 for arch in ["arm","x86"]:
