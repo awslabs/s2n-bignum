@@ -595,7 +595,7 @@ let run_random_simulation() =
     let decoded, result = run_random_memopsimulation() in
     decoded,result,false;;
 
-let time_limit_sec = 1800.0;;
+let time_limit_sec = 2400.0;;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 
