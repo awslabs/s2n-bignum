@@ -429,3 +429,26 @@ let READ_WORD_CONV =
   | Comb(Const("read_int64",_),l') ->
     let ls,f = prove_hyps 8 l' in f (INST ls pthi8)
   | _ -> failwith "READ_WORD_CONV";;
+
+(* ------------------------------------------------------------------------- *)
+(* Extension of the simd function family to 3 operands.                      *)
+(* ------------------------------------------------------------------------- *)
+
+let msimd2 = new_definition
+ `(msimd2:(M word->N word->N word->N word)->
+        ((M)tybit0)word->((N)tybit0)word->((N)tybit0) word->((N)tybit0) word) f m x y =
+    word_join (f (word_subword m (dimindex(:M),dimindex(:M)))
+                 (word_subword x (dimindex(:N),dimindex(:N)))
+                 (word_subword y (dimindex(:N),dimindex(:N))))
+              (f (word_subword m (0,dimindex(:M)))
+                 (word_subword x (0,dimindex(:N)))
+                 (word_subword y (0,dimindex(:N))))`;;
+
+let msimd4 = new_definition
+ `msimd4 (f:M word->N word->N word->N word) = msimd2 (msimd2 f)`;;
+
+let msimd8 = new_definition
+ `msimd8 (f:M word->N word->N word->N word) = msimd2 (msimd4 f)`;;
+
+let msimd16 = new_definition
+ `msimd16 (f:M word->N word->N word->N word) = msimd2 (msimd8 f)`;;

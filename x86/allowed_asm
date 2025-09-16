@@ -119,10 +119,12 @@
 : subq$
 : test$
 : testq$
+: vmovshdup$
 : vpxor$
 : vpaddw$
 : vpaddd$
 : vpand$
+: vpblendd$
 : vpbroadcastd$
 : vpmuldq$
 : vmovdqa$

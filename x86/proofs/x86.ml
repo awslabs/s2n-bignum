@@ -1312,16 +1312,19 @@ let x86_VMOVDQA = new_definition
   `x86_VMOVDQA dest src (s:x86state) =
       let (x:N word) = read src s in
       (dest := (word_zx x):N word) s`;;
-
-let x86_VPADDW = new_definition
-  `x86_VPADDW dest src1 src2 (s:x86state) =
-      let (x:N word) = read src1 s
-      and (y:N word) = read src2 s in
+       
+let x86_VMOVSHDUP = new_definition
+  `x86_VMOVSHDUP dest src (s:x86state) =
+      let (x:N word) = read src s in
       if dimindex(:N) = 256 then
-        let res:(256)word = simd16 word_add (word_zx x) (word_zx y) in
+        let res:(256)word = usimd4 (\(pair:64 word).
+          word_duplicate (word_subword pair (32,32):(32)word):(64)word)
+          (word_zx x) in
         (dest := (word_zx res):N word) s
       else
-        let res:(128)word = simd8 word_add (word_zx x) (word_zx y) in
+        let res:(128)word = usimd2 (\(pair:64 word).
+          word_duplicate (word_subword pair (32,32):(32)word):(64)word)
+          (word_zx x) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPADDD = new_definition
@@ -1333,6 +1336,30 @@ let x86_VPADDD = new_definition
         (dest := (word_zx res):N word) s
       else
         let res:(128)word = simd4 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+ 
+let x86_VPADDW = new_definition
+  `x86_VPADDW dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd16 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd8 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPBLENDD = new_definition
+  `x86_VPBLENDD dest src1 src2 imm8 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s
+      and imm8 = read imm8 s in
+      let fn = \(i:1 word) (x:32 word) (y:32 word). if i = word 1 then y else x in
+      if dimindex(:N) = 256 then
+        let res:(256)word = msimd8 fn (word_zx imm8) (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = msimd4 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
         
 let x86_VPBROADCASTD = new_definition
@@ -2153,14 +2180,22 @@ let x86_execute = define
         | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
                 then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
                 else (\s'. F))
-    | VPADDW dest src1 src2 ->
+    | VMOVSHDUP dest src ->
         (match operand_size dest with
-          256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+          256 -> x86_VMOVSHDUP (OPERAND256 dest s) (OPERAND256 src s)
+        | 128 -> x86_VMOVSHDUP (OPERAND128 dest s) (OPERAND128 src s)) s
     | VPADDD dest src1 src2 ->
         (match operand_size dest with
           256 -> x86_VPADDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPADDW dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPBLENDD dest src1 src2 imm8 ->
+        (match operand_size dest with
+          256 -> x86_VPBLENDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPBLENDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s
     | VPBROADCASTD dest src ->
         (match operand_size dest with
           256 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND128 src s)
@@ -2922,7 +2957,7 @@ let x86_RET_POP_RIP = prove
 (*** Simplify word operations in SIMD instructions ***)
 
 let all_simd_rules =
-   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2];;
+   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
@@ -2934,8 +2969,10 @@ let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
 let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
+let x86_VMOVSHDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSHDUP;;
 let x86_VPADDD_ALT = EXPAND_SIMD_RULE x86_VPADDD;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
+let x86_VPBLENDD_ALT = EXPAND_SIMD_RULE x86_VPBLENDD;;
 let x86_VPBROADCASTD_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTD;;
 let x86_VPMULDQ_ALT = EXPAND_SIMD_RULE x86_VPMULDQ;;
 let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
@@ -2968,6 +3005,7 @@ let X86_OPERATION_CLAUSES =
     x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLD_ALT; x86_VPMULLW_ALT;
     x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
     x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPSLLQ_ALT; x86_VMOVDQA_ALT; x86_VPMULDQ_ALT;
+    x86_VMOVSHDUP_ALT; x86_VPBLENDD_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
