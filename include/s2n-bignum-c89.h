@@ -1105,6 +1105,7 @@ extern void secp256k1_jmixadd_alt(uint64_t p3[12],uint64_t p1[12],uint64_t p2[8]
 /* Inputs a[25], rc[24]; output a[25] */
 extern void sha3_keccak_f1600(uint64_t a[25],uint64_t rc[24]);
 extern void sha3_keccak_f1600_alt(uint64_t a[25],uint64_t rc[24]);
+extern void sha3_keccak_f1600_alt2(uint64_t a[25],uint64_t rc[24]);
 
 /* Batched 2-way Keccak-f1600 permutation for SHA3 */
 /* Inputs a[50], rc[24]; output a[50] */

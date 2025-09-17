@@ -692,9 +692,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
             | RM_reg _ ->
               read_imm Byte l >>= (\(imm8,l).
               (let r3:3 word = word_zx reg in
-              bitmatch r3 with
-              | [0b110:3] -> SOME (VPSLLQ (mmreg v sz) (simd_of_RM sz rm) imm8,l)
-              | _ -> NONE))
+               bitmatch r3 with
+               | [0b010:3] -> SOME (VPSRLQ (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | [0b110:3] -> SOME (VPSLLQ (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | _ -> NONE))
             | _ -> NONE)
           | _ -> NONE)
     | VEXM_0F3A ->
