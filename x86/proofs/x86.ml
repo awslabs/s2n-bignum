@@ -1519,6 +1519,13 @@ let x86_VPAND = new_definition
         let z = word_and x y in
         (dest := (z:N word)) s`;;
 
+let x86_VPOR = new_definition
+ `x86_VPOR dest src1 src2 (s:x86state) =
+        let x = read src1 s
+        and y = read src2 s in
+        let z = word_or x y in
+        (dest := (z:N word)) s`;;
+
 let x86_VPXOR = new_definition
  `x86_VPXOR dest src1 src2 (s:x86state) =
         let x = read src1 s
@@ -2251,6 +2258,10 @@ let x86_execute = define
         (match operand_size dest with
           256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPOR dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | VPSRAD dest src imm8 ->
         (match operand_size dest with
           256 -> x86_VPSRAD (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
@@ -3011,7 +3022,7 @@ let X86_OPERATION_CLAUSES =
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLD_ALT; x86_VPMULLW_ALT;
-    x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
+    x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
     x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPSLLQ_ALT; x86_VMOVDQA_ALT; x86_VMOVDQU_ALT;
     x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VPBLENDD_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)

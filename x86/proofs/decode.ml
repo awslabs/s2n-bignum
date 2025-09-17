@@ -648,6 +648,12 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
             SOME (VPMULHW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l))
+        | [0xeb:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+             (T, Rep0, SG0) -> SOME (VPOR (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
         | [0xef:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
