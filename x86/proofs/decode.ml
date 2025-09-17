@@ -606,7 +606,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x7C:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-            SOME (VPBROADCASTQ (mmreg reg sz) (simd_of_RM Lower_128 rm),l))
+            SOME (VPBROADCASTQ (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l))
         | [0x40:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
