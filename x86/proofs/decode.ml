@@ -684,6 +684,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                bitmatch r3 with
                | [0b010:3] -> SOME (VPSRLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
                | [0b100:3] -> SOME (VPSRAW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | [0b110:3] -> SOME (VPSLLW (mmreg v sz) (simd_of_RM sz rm) imm8,l)
                | _ -> NONE))
             | _ -> NONE)
         | [0x72:8] ->
