@@ -13518,6 +13518,42 @@ int test_sha3_keccak_f1600_alt(void)
 #endif
 }
 
+int test_sha3_keccak_f1600_alt2(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t, i;
+  uint64_t a[25], b[25], c[25];
+  printf("Testing sha3_keccak_f1600_alt2 with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { random_bignum(25,a);
+     for (i = 0; i < 25; ++i) c[i] = a[i];
+     reference_keccak_f1600(b,a);
+     sha3_keccak_f1600_alt2(c,keccak_RC);
+     for (i = 0; i < 25; ++i)
+      { if (b[i] != c[i])
+         { printf("Error in keccak_f1600 element i = %"PRIu64"; "
+                  "code[i] = 0x%016"PRIx64" while reference[i] = 0x%016"PRIx64">\n",
+                  i,c[i],b[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: keccak_f1600[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"] = "
+               "[0x%016"PRIx64",0x%016"PRIx64",...,"
+               "0x%016"PRIx64",0x%016"PRIx64"]\n",
+               a[0],a[1],a[23],a[24],
+               c[0],c[1],c[23],c[24]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
 int test_sha3_keccak2_f1600(void)
 {
 #ifdef __x86_64__
@@ -15179,10 +15215,11 @@ int main(int argc, char *argv[])
     functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);
     functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
     functionaltest(sha3,"sha3_keccak_f1600_alt",test_sha3_keccak_f1600_alt);
+    functionaltest(arm,"sha3_keccak_f1600_alt2",test_sha3_keccak_f1600_alt2);
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
     functionaltest(sha3,"sha3_keccak2_f1600_alt",test_sha3_keccak2_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
-    functionaltest(sha3,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
+    functionaltest(arm,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
 
   }

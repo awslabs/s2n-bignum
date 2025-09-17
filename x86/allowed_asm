@@ -138,6 +138,7 @@
 : vpsubd$
 : vpsubw$
 : vpsraw$
+: vpsrlq$
 : vpsrlw$
 : xchg$
 : xor$
