@@ -261,7 +261,7 @@ let read_VEX = define
  `(!l. read_VEX T l =
    read_byte l >>= \(b,l). bitmatch b with [r:1; v:4; L; p:2] ->
    SOME((SOME(word_shl (word_zx (word_not r)) 2),
-     VEXM_0F, word_not v, L, (F, Rep0, SG0)), l)) /\
+     VEXM_0F, word_not v, L, read_VEXP p), l)) /\
   (!l. read_VEX F l =
    read_byte l >>= \(b,l). bitmatch b with [rxb:3; m:5] ->
    read_byte l >>= \(b,l). bitmatch b with [w; v:4; L; p:2] ->
@@ -625,11 +625,17 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x6f:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-            SOME (VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l))
+           match pfxs with
+             (T, Rep0, SG0) -> SOME(VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l)
+           | (F, RepZ, SG0) -> SOME(VMOVDQU (mmreg reg sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
         | [0x7f:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-            SOME (VMOVDQA (simd_of_RM sz rm) (mmreg reg sz),l))
+           match pfxs with
+             (T, Rep0, SG0) -> SOME(VMOVDQA (simd_of_RM sz rm) (mmreg reg sz),l)
+           | (F, RepZ, SG0) -> SOME(VMOVDQU (simd_of_RM sz rm) (mmreg reg sz),l)
+           | _ -> NONE)
         | [0xd5:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
