@@ -141,6 +141,8 @@
 : vpsraw$
 : vpsrlq$
 : vpsrlw$
+: vpunpckhqdq$
+: vpunpcklqdq$
 : xchg$
 : xor$
 : xorl$
