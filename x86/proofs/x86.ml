@@ -1399,6 +1399,13 @@ let x86_VPBROADCASTD = new_definition
       let res:N word = word_duplicate dw in
       (dest := res) s`;;
 
+let x86_VPBROADCASTQ = new_definition
+  `x86_VPBROADCASTQ (dest:(x86state,(N)word)component) src (s:x86state) =
+      let (x:128 word) = read src s in
+      let qw = word_subword x (0,64):(64)word in
+      let res:N word = word_duplicate qw in
+      (dest := res) s`;;
+
 let x86_VPMULDQ = new_definition
   `x86_VPMULDQ dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -2370,6 +2377,10 @@ let x86_execute = define
         (match operand_size dest with
           256 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND128 src s)
         | 128 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND128 src s)) s
+    | VPBROADCASTQ dest src ->
+        (match operand_size dest with
+          256 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND128 src s)
+        | 128 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND128 src s)) s
     | VPERMD dest src1 src2 ->
         (match operand_size dest with
            256 -> x86_VPERMD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
@@ -3187,6 +3198,7 @@ let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
 let x86_VPBLENDD_ALT = EXPAND_SIMD_RULE x86_VPBLENDD;;
 let x86_VPBLENDW_ALT = EXPAND_SIMD_RULE x86_VPBLENDW;;
 let x86_VPBROADCASTD_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTD;;
+let x86_VPBROADCASTQ_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTQ;;
 let x86_VPERMD_ALT = EXPAND_SIMD_RULE x86_VPERMD;;
 let x86_VPERMQ_ALT = EXPAND_SIMD_RULE x86_VPERMQ;;
 let x86_VPMULDQ_ALT = EXPAND_SIMD_RULE x86_VPMULDQ;;
@@ -3231,7 +3243,7 @@ let X86_OPERATION_CLAUSES =
     x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT; x86_VMOVDQA_ALT; x86_VMOVDQU_ALT;
     x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
-    x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT;
+    x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;

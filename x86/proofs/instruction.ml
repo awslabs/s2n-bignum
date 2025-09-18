@@ -315,6 +315,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPBLENDD operand operand operand operand
    | VPBLENDW operand operand operand operand
    | VPBROADCASTD operand operand
+   | VPBROADCASTQ operand operand
    | VPERMD operand operand operand
    | VPERMQ operand operand operand
    | VPMULDQ operand operand operand
