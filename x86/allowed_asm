@@ -120,12 +120,14 @@
 : test$
 : testq$
 : vmovshdup$
+: vmovsldup$
 : vpxor$
 : vpaddw$
 : vpaddd$
 : vpand$
 : vpblendd$
 : vpbroadcastd$
+: vpermq$
 : vpmuldq$
 : vmovdqa$
 : vpmulhw$

@@ -307,11 +307,13 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TZCNT operand operand
    | VMOVDQA operand operand
    | VMOVSHDUP operand operand
+   | VMOVSLDUP operand operand
    | VPADDW operand operand operand
    | VPADDD operand operand operand
    | VPAND operand operand operand
    | VPBLENDD operand operand operand operand
    | VPBROADCASTD operand operand
+   | VPERMQ operand operand operand
    | VPMULDQ operand operand operand
    | VPMULHW operand operand operand
    | VPMULLD operand operand operand
