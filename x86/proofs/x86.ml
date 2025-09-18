@@ -1469,7 +1469,7 @@ let x86_VPERM2I128 = new_definition
       if dimindex(:N) = 256 then
         let res:(256)word = usimd2 (\(od:(4)word).
             let sel = val od in
-            let zero_flag = (sel DIV 16) MOD 2 = 1 in
+            let zero_flag = (sel DIV 8) MOD 2 = 1 in
             if zero_flag then (word 0):int128
             else
               let lane_sel = sel MOD 4 in
