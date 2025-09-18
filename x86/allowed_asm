@@ -129,6 +129,7 @@
 : vpbroadcastd$
 : vpbroadcastq$
 : vpermq$
+: vperm2i128$
 : vpmuldq$
 : vmovdqa$
 : vpmulhw$
