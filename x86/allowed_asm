@@ -120,6 +120,7 @@
 : test$
 : testq$
 : vmovshdup$
+: vmovsldup$
 : vpxor$
 : vpaddw$
 : vpaddd$
@@ -127,6 +128,7 @@
 : vpblendd$
 : vpbroadcastd$
 : vpbroadcastq$
+: vpermq$
 : vpmuldq$
 : vmovdqa$
 : vpmulhw$
