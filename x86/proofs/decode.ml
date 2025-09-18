@@ -611,11 +611,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x58:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-            SOME (VPBROADCASTD (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l))
+           if rex_W rex then NONE else
+           SOME (VPBROADCASTD (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l))
         | [0x59:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-            SOME (VPBROADCASTQ (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l))
+           if rex_W rex then NONE else
+           SOME (VPBROADCASTQ (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l))
         | [0x40:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -744,8 +746,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x00:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-          read_imm Byte l >>= \(imm8,l).
-          SOME (VPERMQ (mmreg reg sz) (simd_of_RM sz rm) imm8,l))
+           read_imm Byte l >>= \(imm8,l).
+           if rex_W rex
+           then SOME (VPERMQ (mmreg reg sz) (simd_of_RM sz rm) imm8,l)
+           else NONE)
         | [0x02:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -760,8 +764,9 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x46:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-          read_imm Byte l >>= \(imm8,l).
-          SOME (VPERM2I128 (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l))
+           read_imm Byte l >>= \(imm8,l).
+           if rex_W rex then NONE else
+           SOME (VPERM2I128 (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l))
         | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
