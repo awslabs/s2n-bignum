@@ -1600,6 +1600,44 @@ let x86_VPSRLW = new_definition
         let res:(128)word = usimd8 (\z. word_ushr z count) (word_zx x) in
         (dest := (word_zx res):N word) s`;;
 
+let x86_VPUNPCKHQDQ = new_definition
+  `x86_VPUNPCKHQDQ dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let x_low_high = (word_subword:int256->num#num->int64) (word_zx x) (64,64)
+        and x_high_high = (word_subword:int256->num#num->int64) (word_zx x) (192,64)
+        and y_low_high = (word_subword:int256->num#num->int64) (word_zx y) (64,64)
+        and y_high_high = (word_subword:int256->num#num->int64) (word_zx y) (192,64) in
+        let res = (word_join:int128->int128->int256)
+          ((word_join:int64->int64->int128) y_high_high x_high_high)
+          ((word_join:int64->int64->int128) y_low_high x_low_high) in
+        (dest := (word_zx res):N word) s
+      else
+        let x_high = (word_subword:int128->num#num->int64) (word_zx x) (64,64)
+        and y_high = (word_subword:int128->num#num->int64) (word_zx y) (64,64) in
+        let res = (word_join:int64->int64->int128) y_high x_high in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPUNPCKLQDQ = new_definition
+  `x86_VPUNPCKLQDQ dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let x_low = (word_subword:int256->num#num->int64) (word_zx x) (0,64)
+        and x_high = (word_subword:int256->num#num->int64) (word_zx x) (128,64)
+        and y_low = (word_subword:int256->num#num->int64) (word_zx y) (0,64)
+        and y_high = (word_subword:int256->num#num->int64) (word_zx y) (128,64) in
+        let res = (word_join:int128->int128->int256)
+          ((word_join:int64->int64->int128) y_high x_high)
+          ((word_join:int64->int64->int128) y_low x_low) in
+        (dest := (word_zx res):N word) s
+      else
+        let x_low = (word_subword:int128->num#num->int64) (word_zx x) (0,64)
+        and y_low = (word_subword:int128->num#num->int64) (word_zx y) (0,64) in
+        let res = (word_join:int64->int64->int128) y_low x_low in
+        (dest := (word_zx res):N word) s`;;
+
 (*** This is roughly AND just for some condition codes ***)
 
 let x86_TEST = new_definition
@@ -2412,6 +2450,14 @@ let x86_execute = define
         (match operand_size dest with
           256 -> x86_VPSRAD (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
         | 128 -> x86_VPSRAD (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+    | VPUNPCKHQDQ dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPUNPCKHQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPUNPCKHQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+    | VPUNPCKLQDQ dest src1 src2 ->
+        (match operand_size dest with
+          256 -> x86_VPUNPCKLQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPUNPCKLQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
     | XCHG dest src ->
         (match operand_size dest with
           64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
@@ -3158,6 +3204,8 @@ let x86_VPSRLD_ALT = EXPAND_SIMD_RULE x86_VPSRLD;;
 let x86_VPSRLQ_ALT = EXPAND_SIMD_RULE x86_VPSRLQ;;
 let x86_VPSRAW_ALT = EXPAND_SIMD_RULE x86_VPSRAW;;
 let x86_VPSRLW_ALT = EXPAND_SIMD_RULE x86_VPSRLW;;
+let x86_VPUNPCKHQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKHQDQ;;
+let x86_VPUNPCKLQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKLQDQ;;
 
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
@@ -3183,6 +3231,7 @@ let X86_OPERATION_CLAUSES =
     x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT; x86_VMOVDQA_ALT; x86_VMOVDQU_ALT;
     x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
+    x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
