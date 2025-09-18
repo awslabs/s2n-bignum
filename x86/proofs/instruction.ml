@@ -316,7 +316,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPERMQ operand operand operand
    | VPMULDQ operand operand operand
    | VPMULHW operand operand operand
-   | VPMULLD operand operand operand 
+   | VPMULLD operand operand operand
    | VPMULLW operand operand operand
    | VPSLLQ operand operand operand
    | VPSRAD operand operand operand
@@ -325,6 +325,8 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSRLW operand operand operand
    | VPSUBD operand operand operand
    | VPSUBW operand operand operand
+   | VPUNPCKHQDQ operand operand operand
+   | VPUNPCKLQDQ operand operand operand
    | VPXOR operand operand operand
    | XCHG operand operand
    | XOR operand operand";;
