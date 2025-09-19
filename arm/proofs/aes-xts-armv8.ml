@@ -10,7 +10,7 @@ needs "arm/proofs/aes_encrypt_spec.ml";;
 needs "arm/proofs/aes_xts_encrypt_spec.ml";;
 
 (* print_literal_from_elf "arm/aes-xts/aes-xts-armv8.o";; *)
-(* save_literal_from_elf "arm/aes-xts/aes-xts-armv8.txt" "arm/aes-xts/aes-xts-armv8.o";;*)
+(* save_literal_from_elf "arm/aes-xts/aes-xts-armv8.txt" "arm/aes-xts/aes-xts-armv8.o";; *)
 
 (* let aes_xts_armv8 = define_assert_from_elf "aes_xts_armv8" "arm/aes-xts/aes-xts-armv8.o" ..*)
 
@@ -33,13 +33,17 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x6d053fee;       (* arm_STP D14 D15 SP (Immediate_Offset (iword (&0x50))) *)
   0xa90053f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0x0))) *)
   0xa9015bf5;       (* arm_STP X21 X22 SP (Immediate_Offset (iword (&0x10))) *)
+  0xb202e7e8;       (* arm_MOV X8 (rvalue (word 0xcccccccccccccccc)) *)
+  0xf29999a8;       (* arm_MOVK X8 (word 0xcccd) 0x0 *)
+  0x9bc87c48;       (* arm_UMULH X8 X2 X8 *)
+  0xd346fd08;       (* arm_LSR X8 X8 0x6 *)
   0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
-  0x5400520b;       (* arm_BLT (word 0xa40) *)
+  0x5400518b;       (* arm_BLT (word 0xa30) *)
   0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
 
-  (* // Lxts_enc_big_size: *)
+(* // Lxts_enc_big_size: *)
   0x92400c55;       (* arm_AND X21 X2 (rvalue (word 0xf)) *)
   0x927cec42;       (* arm_AND X2 X2 (rvalue (word 0xfffffffffffffff0)) *)
 
@@ -64,7 +68,7 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x6e201cc6;       (* arm_EOR_VEC Q6 Q6 Q0 0x80 *)
 
   (* iv for second block *)
-  (* pc + 0x80 *)
+  (* pc + 0x90 *)
   0x9e6600c9;       (* arm_FMOV_FtoI X9 Q6 0x0 0x40 *)
   0x9eae00ca;       (* arm_FMOV_FtoI X10 Q6 0x1 0x40 *)
   0x528010f3;       (* arm_MOV W19 (rvalue (word 0x87)) *)
@@ -76,7 +80,7 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x9eaf0148;       (* arm_FMOV_ItoF Q8 X10 0x1 *)
 
   (* Load key schedule *)
-  (* pc + 0xa4 *)
+  (* pc + 0xb4 *)
   0xaa0303e7;       (* arm_MOV X7 X3 *)
   0x4cdfa8f0;       (* arm_LDP Q16 Q17 X7 (Postimmediate_Offset (word 0x20)) *)
   0x4cdfa8ec;       (* arm_LDP Q12 Q13 X7 (Postimmediate_Offset (word 0x20)) *)
@@ -88,7 +92,7 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x4c4078e7;       (* arm_LDR Q7 X7 No_Offset *)
 
   (* Lxts_enc: *)
-  (* pc + 0xc8 *)
+  (* pc + 0xd8 *)
   0xf100805f;       (* arm_CMP X2 (rvalue (word 0x20)) *)
   0x540042e3;       (* arm_BCC (word 0x85c) *) (* b.lo Lxts_enc_tail1x   // when input = 1 with tail *)
 
@@ -302,20 +306,20 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xac828420;       (* arm_STP Q0 Q1 X1 (Postimmediate_Offset (iword (&0x50))) *)
   0xad3ee438;       (* arm_STP Q24 Q25 X1 (Immediate_Offset (iword (-- &0x30))) *)
   0x3c9f003a;       (* arm_STR Q26 X1 (Immediate_Offset (word 0xfffffffffffffff0)) *)
-  0xf1014042;       (* arm_SUBS X2 X2 (rvalue (word 0x50)) *)
-  0xf101405f;       (* arm_CMP X2 (rvalue (word 0x50)) *)
-  0x54000043;       (* arm_BCC (word 0x8) *)
-  0x54ffe862;       (* arm_BCS (word 0x1ffd0c) *)
-  0xf100005f;       (* arm_CMP X2 (rvalue (word 0x0)) *)
-  0x54002da0;       (* arm_BEQ (word 0x5b4) *)
-  0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
-  0x540027a0;       (* arm_BEQ (word 0x4f4) *)
-  0xf100805f;       (* arm_CMP X2 (rvalue (word 0x20)) *)
-  0x54001e80;       (* arm_BEQ (word 0x3d0) *)
-  0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
-  0x54001160;       (* arm_BEQ (word 0x22c) *)
+  0xd1014042;       (* arm_SUB X2 X2 (rvalue (word 0x50)) *)
+  0xf1000508;       (* arm_SUBS X8 X8 (rvalue (word 0x1)) *)
+  0xb5ffe888;       (* arm_CBNZ X8 (word 0x1ffd10) *)
   0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
-  0x54000020;       (* arm_BEQ (word 0x4) *)
+  0x54000140;       (* arm_BEQ (word 0x28) *)
+  0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
+  0x54001200;       (* arm_BEQ (word 0x240) *)
+  0xf100805f;       (* arm_CMP X2 (rvalue (word 0x20)) *)
+  0x54001ea0;       (* arm_BEQ (word 0x3d4) *)
+  0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
+  0x54002740;       (* arm_BEQ (word 0x4e8) *)
+  0x14000163;       (* arm_B (word 0x58c) *)
+  0xd503201f;       (* arm_NOP *)
+  0xd503201f;       (* arm_NOP *)
   0x4cdf7000;       (* arm_LDR Q0 X0 (Postimmediate_Offset (word 0x10)) *)
   0x4cdf7001;       (* arm_LDR Q1 X0 (Postimmediate_Offset (word 0x10)) *)
   0x4cdf7018;       (* arm_LDR Q24 X0 (Postimmediate_Offset (word 0x10)) *)
@@ -450,7 +454,7 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e670126;       (* arm_FMOV_ItoF Q6 X9 0x0 *)
   0x9eaf0146;       (* arm_FMOV_ItoF Q6 X10 0x1 *)
-  0x140000de;       (* arm_B (word 0x378) *)
+  0x140000da;       (* arm_B (word 0x368) *)
   0xd503201f;       (* arm_NOP *)
   0x4cdfa000;       (* arm_LDP Q0 Q1 X0 (Postimmediate_Offset (word 0x20)) *)
   0x4cdf7018;       (* arm_LDR Q24 X0 (Postimmediate_Offset (word 0x10)) *)
@@ -554,7 +558,7 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e670126;       (* arm_FMOV_ItoF Q6 X9 0x0 *)
   0x9eaf0146;       (* arm_FMOV_ItoF Q6 X10 0x1 *)
-  0x14000076;       (* arm_B (word 0x1d8) *)
+  0x14000072;       (* arm_B (word 0x1c8) *)
   0x4cdfa000;       (* arm_LDP Q0 Q1 X0 (Postimmediate_Offset (word 0x20)) *)
   0x6e261c00;       (* arm_EOR_VEC Q0 Q0 Q6 0x80 *)
   0x6e281c21;       (* arm_EOR_VEC Q1 Q1 Q8 0x80 *)
@@ -625,9 +629,10 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e670126;       (* arm_FMOV_ItoF Q6 X9 0x0 *)
   0x9eaf0146;       (* arm_FMOV_ItoF Q6 X10 0x1 *)
-  0x1400002f;       (* arm_B (word 0xbc) *)
+  0x1400002b;       (* arm_B (word 0xac) *)
 
   (* Lxts_enc_tail1x: *)
+  (* pc + 0x938 *)
   0x4cdf7000;       (* arm_LDR Q0 X0 (Postimmediate_Offset (word 0x10)) *)
   0x6e261c00;       (* arm_EOR_VEC Q0 Q0 Q6 0x80 *)
   0x4e284a00;       (* arm_AESE Q0 Q16 *)
@@ -668,11 +673,7 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e670126;       (* arm_FMOV_ItoF Q6 X9 0x0 *)
   0x9eaf0146;       (* arm_FMOV_ItoF Q6 X10 0x1 *)
-  0x14000006;       (* arm_B (word 0x18) *)
-  0xd503201f;       (* arm_NOP *)
-  0xd503201f;       (* arm_NOP *)
-  0xd503201f;       (* arm_NOP *)
-  0xd503201f;       (* arm_NOP *)
+  0x14000002;       (* arm_B (word 0x8) *)
   0xd503201f;       (* arm_NOP *)
 
   (* Lxts_enc_done: *)
@@ -729,7 +730,8 @@ let AESENC_TAC =
   BITBLAST_TAC;;
 
 let AESXTS_ENC_ONE_BLOCK_TAC =
-  REWRITE_TAC [aes256_xts_encrypt_one_block] THEN
+  REWRITE_TAC [aes256_xts_encrypt_1block] THEN
+  REWRITE_TAC [xts_init_tweak; aes256_xts_encrypt_round] THEN
   CONV_TAC (TOP_DEPTH_CONV let_CONV) THEN
   GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
   REPEAT (AP_THM_TAC THEN AP_TERM_TAC) THEN
@@ -743,7 +745,7 @@ void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
 (* for stack pointer alignment and nonoverlapping examples, I looked at shigoel's sha512_block_data_order_hw.ml
    and bignum_invsqrt_p25519_alt.ml *)
 let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
-  `! plaintext ciphertext key1 key2 iv
+  `! ptxt ctxt key1 key2 iv
      in_pt tweak
      k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14
      k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14
@@ -752,7 +754,7 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
            PAIRWISE nonoverlapping
            [(stackpointer, 6*16);
             (word pc, LENGTH aes256_xts_encrypt_mc);
-            (ciphertext, 16);
+            (ctxt, 16);
             (key1, 244);
             (key2, 244)]
     ==> ensures arm
@@ -760,8 +762,8 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
       (\s. aligned_bytes_loaded s (word pc) aes256_xts_encrypt_mc /\
            read PC s = word (pc + 28) /\
            read SP s = stackpointer /\
-           C_ARGUMENTS [plaintext; ciphertext; word 16; key1; key2; iv] s /\
-           read(memory :> bytes128 plaintext) s = in_pt /\
+           C_ARGUMENTS [ptxt; ctxt; word 16; key1; key2; iv] s /\
+           read(memory :> bytes128 ptxt) s = in_pt /\
            read(memory :> bytes128 iv) s = tweak /\
            read(memory :> bytes32 (word_add key1 (word 240))) s = word 14 /\
            read(memory :> bytes128 key1) s = k1_0 /\
@@ -798,15 +800,14 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
       )
       // postcondition
       (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
-           read(memory :> bytes128 ciphertext) s =
-              aes256_xts_encrypt_one_block in_pt
+           read(memory :> bytes128 ctxt) s =
+              aes256_xts_encrypt_1block in_pt tweak
                 [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]
                 [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14]
-                tweak
       )
-      (MAYCHANGE [PC;X0;X1;X2;X4;X6;X7;X9;X10;X11;X19;X20;X21;X22],,
+      (MAYCHANGE [PC;X0;X1;X2;X4;X6;X7;X8;X9;X10;X11;X19;X20;X21;X22],,
        MAYCHANGE [Q0;Q1;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26],,
-       MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 ciphertext],,
+       MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 ctxt],,
        MAYCHANGE [events])`
        (* ,,
        MAYCHANGE [memory :> bytes(stackpointer, 160) *),
@@ -823,7 +824,7 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (7--25) THEN
 
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (26--56) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (57--65) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (57--69) THEN
 
 (*  FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN *)
   FIRST_X_ASSUM(MP_TAC o SPEC
@@ -831,15 +832,15 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
     o  MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
 
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (66--74) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (75--83) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (84--85) THEN
+   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (70--70) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (71--78) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (79--87) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (88--89) THEN
 
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (86--86) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (87--87) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (88--115) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (90--90) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (91--119) THEN
 
-  (*  FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[] `read Q0 s = a ==> !a'. a = a' ==> read Q0 s = a'`)) THEN *)
+(*  FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[] `read Q0 s = a ==> !a'. a = a' ==> read Q0 s = a'`)) THEN *)
   FIRST_X_ASSUM(MP_TAC o SPEC
     `(aes256_encrypt
        (word_xor
@@ -852,42 +853,30 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
     o  MATCH_MP (MESON[] `read Q0 s = a ==> !a'. a = a' ==> read Q0 s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
 
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (116--116) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (120--120) THEN
 
-(*
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (121--121) THEN
   FIRST_X_ASSUM(MP_TAC o SPEC
-    `(aes256_xts_encrypt_one_block
+    `(aes256_xts_encrypt_1block
         (in_pt:int128)
+        (tweak:int128)
         [k1_0:int128; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10;
          k1_11; k1_12; k1_13; k1_14]
         [k2_0:int128; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
-         k2_11; k2_12; k2_13; k2_14]
-        (tweak:int128)):int128`
-      o MATCH_MP (MESON[] `read Q0 s = a ==> !a'. a = a' ==> read Q0 s = a'`)) THEN
-  ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESXTS_ENC_ONE_BLOCK_TAC; DISCH_TAC] THEN
-*)
-
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (117--117) THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC
-    `(aes256_xts_encrypt_one_block
-        (in_pt:int128)
-        [k1_0:int128; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10;
-         k1_11; k1_12; k1_13; k1_14]
-        [k2_0:int128; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
-         k2_11; k2_12; k2_13; k2_14]
-        (tweak:int128)):int128`
-      o MATCH_MP (MESON[] `read (memory :> bytes128 ciphertext) s = a ==> !a'. a = a'
-                               ==> read (memory :> bytes128 ciphertext) s = a'`)) THEN
+         k2_11; k2_12; k2_13; k2_14]):int128`
+      o MATCH_MP (MESON[] `read (memory :> bytes128 ctxt) s = a ==> !a'. a = a'
+                               ==> read (memory :> bytes128 ctxt) s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESXTS_ENC_ONE_BLOCK_TAC; DISCH_TAC] THEN
 
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (118--122) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (123--128) THEN
-  (* ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (128--136) THEN *)
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (122--126) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (127--132) THEN
 
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   ARITH_TAC
 );;
+
+
 
   (*
   `word_xor
@@ -983,7 +972,7 @@ If I don't make the second FIRST_X_ASSUM before XORING with the tweak,
 How can I go within this term to do it later in the second argument of the
 first xor to make it aes256_encrypt?
 
- 83 [`read (memory :> bytes128 ciphertext) s117 =
+ 83 [`read (memory :> bytes128 ctxt) s117 =
       word_xor
       (aes256_encrypt tweak
       [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
