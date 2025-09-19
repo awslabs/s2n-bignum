@@ -267,6 +267,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | LZCNT operand operand
    | MOV operand operand
    | MOVD operand operand
+   | MOVQ operand operand
    | MOVSX operand operand
    | MOVZX operand operand
    | MOVAPS operand operand
