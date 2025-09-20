@@ -1066,7 +1066,7 @@ let x86_PINSRQ = new_definition
 let x86_PMOVMSKB = new_definition
  `x86_PMOVMSKB dest src (s:x86state) =
     let x:int128 = read src s in
-    let res:int16 = usimd2 (usimd8 word_sx) x in
+    let res:int16 = usimd2 (usimd8 (\x. if bit 7 x then word 1 else word 0)) x in
     (dest := word_zx res:N word) s`;;
 
 (*** Push and pop are a bit odd in several ways. First of all, there is  ***)
