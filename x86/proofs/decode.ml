@@ -364,6 +364,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       SOME (MOVAPS dest src, l)
     | [0x38:8] -> read_byte l >>= \(b,l).
       (bitmatch b with
+      | [0x00:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (PSHUFB (mmreg reg sz) (simd_of_RM sz rm), l)
       | [0xdc:8] -> if has_unhandled_pfxs pfxs then NONE else
         let sz = Lower_128 in
         read_ModRM rex l >>= \((reg,rm),l).

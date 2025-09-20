@@ -1068,6 +1068,16 @@ let x86_PUSH = new_definition
         (RSP := p' ,,
          memory :> bytes(p',n) := x) s`;;
 
+let x86_PSHUFB = new_definition
+  `x86_PSHUFB dest src (s:x86state) =
+      let x:int128 = read dest s
+      and ix = read src s in
+      let f8 = (\i:byte.
+        if bit 7 i then word 0
+        else word_subword x (8 * val(word_subword i (0,4):nybble),8)) in
+      let res = usimd16 f8 ix in
+      (dest := res) s`;;
+
 let x86_PSHUFD = new_definition
  `x86_PSHUFD dest src imm8 s =
     let src = read src s in
@@ -2170,6 +2180,8 @@ let x86_execute = define
         (match operand_size dest with
            64 -> x86_POP (OPERAND64 dest s)
          | 16 -> x86_POP (OPERAND16 dest s)) s
+    | PSHUFB dest src ->
+        x86_PSHUFB (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | PSHUFD dest src imm8 ->
         x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
     | PSRAD dest imm8 ->
@@ -3128,6 +3140,7 @@ let x86_PADDD_ALT = EXPAND_SIMD_RULE x86_PADDD;;
 let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PCMPGTW_ALT = EXPAND_SIMD_RULE x86_PCMPGTW;;
+let x86_PSHUFB_ALT = EXPAND_SIMD_RULE x86_PSHUFB;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
 let x86_PSRLW_ALT = EXPAND_SIMD_RULE x86_PSRLW;;
@@ -3167,7 +3180,7 @@ let X86_OPERATION_CLAUSES =
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_MOVSX; x86_MOVUPS;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT; x86_POP_ALT;
-    x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
+    x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
