@@ -539,6 +539,11 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
       SOME (PADDQ (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0xd7:8] -> if has_unhandled_pfxs pfxs then NONE else
+      read_ModRM rex l >>= \((reg,rm),l).
+      let dest = %(gpr_adjust reg Lower_32) in
+      let src = simd_of_RM Lower_128 rm in
+      SOME (PMOVMSKB dest src, l)
     | [0xdb:8] -> if has_unhandled_pfxs pfxs then NONE else
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
