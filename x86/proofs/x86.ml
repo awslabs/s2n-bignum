@@ -1020,6 +1020,15 @@ let x86_PAND = new_definition
     let y = read src s in
     (dest := word_and x y) s`;;
 
+let x86_PBLENDW = new_definition
+ `x86_PBLENDW dest src imm8 (s:x86state) =
+     let x:int128 = read dest s
+     and y:int128 = read src s
+     and imm8:byte = read imm8 s in
+     let fn = \(i:1 word) (x:16 word) (y:16 word). if i = word 1 then y else x in
+     let res = msimd8 fn imm8 x y in
+     (dest := res) s`;;
+
 let x86_PCMPGTD = new_definition
   `x86_PCMPGTD dest src s =
     let x = read dest s in
@@ -2172,6 +2181,8 @@ let x86_execute = define
         x86_PADDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | PAND dest src ->
         x86_PAND (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | PBLENDW dest src imm8 ->
+        x86_PBLENDW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
     | PCMPGTD dest src ->
         x86_PCMPGTD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | PCMPGTW dest src ->
