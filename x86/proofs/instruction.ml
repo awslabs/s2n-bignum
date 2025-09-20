@@ -287,6 +287,8 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PBLENDW operand operand operand
    | PCMPGTD operand operand
    | PCMPGTW operand operand
+   | PINSRD operand operand operand
+   | PINSRQ operand operand operand
    | POP operand
    | PSHUFB operand operand
    | PSHUFD operand operand operand

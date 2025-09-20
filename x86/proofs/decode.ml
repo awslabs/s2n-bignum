@@ -399,6 +399,17 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         read_ModRM rex l >>= \((reg,rm),l).
         read_imm Byte l >>= \(imm8,l).
         SOME (PBLENDW (mmreg reg sz) (simd_of_RM sz rm) imm8, l)
+      | [0x22:8] -> if has_unhandled_pfxs pfxs then NONE else
+        read_ModRM rex l >>= \((reg,rm),l).
+        read_imm Byte l >>= \(imm8,l).
+        let dest = mmreg reg Lower_128 in
+        let sz = if rex_W rex then Full_64 else Lower_32 in
+        let src = operand_of_RM sz rm in
+        (match pfxs with
+         | (T, Rep0, SG0) ->
+           if rex_W rex then SOME (PINSRQ dest src imm8, l)
+           else SOME (PINSRD dest src imm8, l)
+         | _ -> NONE)
       | [0xdf:8] -> if has_unhandled_pfxs pfxs then NONE else
         let sz = Lower_128 in
         read_ModRM rex l >>= \((reg,rm),l).
