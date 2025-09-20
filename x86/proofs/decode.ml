@@ -432,6 +432,15 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       read_ModRM rex l >>= \((reg,rm),l).
       read_imm Byte l >>= \(imm8,l).
       SOME (PSHUFD (mmreg reg sz) (simd_of_RM sz rm) imm8, l)
+    | [0x71:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      (read_ModRM rex l >>= \((reg,rm),l).
+       match rm with
+       | RM_reg _ -> if (word_zx reg):(3 word) = word 0b010 then
+         (read_imm Byte l >>= \(imm8,l).
+          SOME (PSRLW (simd_of_RM sz rm) imm8, l))
+         else NONE
+       | _ -> NONE)
     | [0x72:8] -> if has_unhandled_pfxs pfxs then NONE else
       let sz = Lower_128 in
       (read_ModRM rex l >>= \((reg,rm),l).

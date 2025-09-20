@@ -289,6 +289,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | POP operand
    | PSHUFD operand operand operand
    | PSRAD operand operand
+   | PSRLW operand operand
    | PUSH operand
    | PXOR operand operand
    | RCL operand operand

@@ -1079,9 +1079,15 @@ let x86_PSHUFD = new_definition
 let x86_PSRAD = new_definition
   `x86_PSRAD dest imm8 s =
     let d = read dest s in
-    let count_src = val (read imm8 s) in
-    let count = if count_src > 31 then 32 else count_src in
+    let count = val (read imm8 s) in
     let res:(128)word = usimd4 (\x. word_ishr x count) d in
+    (dest := res) s`;;
+
+let x86_PSRLW = new_definition
+  `x86_PSRLW dest imm8 s =
+    let d = read dest s in
+    let count = val (read imm8 s) in
+    let res:(128)word = usimd8 (\x. word_ushr x count) d in
     (dest := res) s`;;
 
 let x86_PXOR = new_definition
@@ -2090,8 +2096,8 @@ let x86_execute = define
         | (128,32) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND32 src s)) s
     | MOVQ dest src ->
         (match (operand_size dest, operand_size src) with
-          (64,128) -> x86_MOVD (OPERAND64 dest s) (OPERAND128_SSE src s)
-        | (128,64) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND64 src s)) s
+          (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128_SSE src s)
+        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)) s
     | MOVSX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
@@ -2168,6 +2174,8 @@ let x86_execute = define
         x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
     | PSRAD dest imm8 ->
         x86_PSRAD (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s
+    | PSRLW dest imm8 ->
+        x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s
     | PUSH src ->
         (match operand_size src with
            64 -> x86_PUSH (OPERAND64 src s)
@@ -2569,6 +2577,8 @@ let OPERAND_SIZE_CASES = prove
    (match 16 with 32 -> a | 16 -> b) = b /\
    (match (32,128) with (32,128) -> a | (128,32) -> b) = a /\
    (match (128,32) with (32,128) -> a | (128,32) -> b) = b /\
+   (match (64,128) with (64,128) -> a | (128,64) -> b) = a /\
+   (match (128,64) with (64,128) -> a | (128,64) -> b) = b /\
    (match (64,32) with
       (64,32) -> a  | (64,16) -> b  | (64,8) -> c | (32,32) -> d
     | (32,16) -> e | (32,8) -> f  | (16,8) -> g) = a /\
@@ -3120,6 +3130,7 @@ let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
 let x86_PCMPGTW_ALT = EXPAND_SIMD_RULE x86_PCMPGTW;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+let x86_PSRLW_ALT = EXPAND_SIMD_RULE x86_PSRLW;;
 let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
 let x86_VMOVSHDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSHDUP;;
 let x86_VMOVSLDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSLDUP;;
@@ -3156,7 +3167,7 @@ let X86_OPERATION_CLAUSES =
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_MOVSX; x86_MOVUPS;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT; x86_POP_ALT;
-    x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PUSH_ALT; x86_PXOR;
+    x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
