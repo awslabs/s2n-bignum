@@ -284,6 +284,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PADDQ operand operand
    | PAND operand operand
    | PCMPGTD operand operand
+   | PEXT operand operand operand
    | POP operand
    | POPCNT operand operand
    | PSHUFD operand operand operand
