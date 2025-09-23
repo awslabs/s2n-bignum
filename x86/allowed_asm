@@ -127,7 +127,9 @@
 : vpand$
 : vpblendd$
 : vpbroadcastd$
+: vpbroadcastq$
 : vpermq$
+: vperm2i128$
 : vpmuldq$
 : vmovdqa$
 : vpmulhw$
@@ -140,6 +142,8 @@
 : vpsraw$
 : vpsrlq$
 : vpsrlw$
+: vpunpckhqdq$
+: vpunpcklqdq$
 : xchg$
 : xor$
 : xorl$
