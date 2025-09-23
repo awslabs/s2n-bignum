@@ -31,7 +31,7 @@ class FnDecl:
     print(f"- Return type: {self.return_ty}")
     print("- Args:")
     for (argname, argtype, isconst) in self.args:
-      print(f"  - {argname}: {"const " if isconst else ""}{argtype}")
+      print(f"  - {argname}: {'const ' if isconst else ''}{argtype}")
 
 
 class FnMemInputOutput:
