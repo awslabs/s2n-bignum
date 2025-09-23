@@ -1023,6 +1023,16 @@ let x86_PCMPGTD = new_definition
         x y in
     (dest := res) s`;;
 
+let x86_PEXT = new_definition
+  `x86_PEXT dest src1 src2 (s:x86state) =
+    let x:N word = read src1 s
+    and y:N word = read src2 s in
+    let res:N word =
+      word(nsum (0..dimindex(:N)-1)
+                (\i. 2 EXP word_popcount(word_and y (word(2 EXP i - 1))) *
+                     bitval(bit i (word_and x y)))) in
+    (dest := res) s`;;
+
 (*** Push and pop are a bit odd in several ways. First of all, there is  ***)
 (*** an implicit memory operand so this doesn't have quite the same      ***)
 (*** "shallowness": we refer to the memory component explicitly. And we  ***)
@@ -1043,6 +1053,18 @@ let x86_POP = new_definition
         let p' = word_add p (word n) in
         (RSP := p' ,,
          dest := x) s`;;
+
+let x86_POPCNT = new_definition
+ `x86_POPCNT dest src s =
+        let x:N word = read src s in
+        let z:N word = word(word_popcount x) in
+        (dest := (z:N word) ,,
+         OF := F ,,
+         SF := F ,,
+         AF := F ,,
+         CF := F ,,
+         PF := F ,,
+         ZF := (val x = 0)) s`;;
 
 let x86_PUSH = new_definition
  `x86_PUSH src s =
@@ -1326,7 +1348,7 @@ let x86_VMOVDQA = new_definition
   `x86_VMOVDQA dest src (s:x86state) =
       let (x:N word) = read src s in
       (dest := (word_zx x):N word) s`;;
-       
+
 let x86_VMOVSHDUP = new_definition
   `x86_VMOVSHDUP dest src (s:x86state) =
       let (x:N word) = read src s in
@@ -1351,7 +1373,7 @@ let x86_VPADDD = new_definition
       else
         let res:(128)word = simd4 word_add (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
- 
+
 let x86_VPADDW = new_definition
   `x86_VPADDW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -1375,7 +1397,7 @@ let x86_VPBLENDD = new_definition
       else
         let res:(128)word = msimd4 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
-        
+
 let x86_VPBROADCASTD = new_definition
   `x86_VPBROADCASTD (dest:(x86state,(N)word)component) src (s:x86state) =
       let (x:128 word) = read src s in
@@ -1396,7 +1418,7 @@ let x86_VPMULDQ = new_definition
       and (y:N word) = read src2 s in
       let f =
         \x y. word_mul
-          (word_sx ((word_subword:int64->num#num->int32) x (0,32))) 
+          (word_sx ((word_subword:int64->num#num->int32) x (0,32)))
           (word_sx ((word_subword:int64->num#num->int32) y (0,32))) in
       if dimindex(:N) = 256 then
         let res:(256)word = simd4 f (word_zx x) (word_zx y) in
@@ -2139,10 +2161,19 @@ let x86_execute = define
         x86_PAND (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | PCMPGTD dest src ->
         x86_PCMPGTD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | PEXT dest src1 src2 ->
+        (match operand_size dest with
+          64 -> x86_PEXT (OPERAND64 dest s) (OPERAND64 src1 s) (OPERAND64 src2 s)
+        | 32 -> x86_PEXT (OPERAND32 dest s) (OPERAND32 src1 s) (OPERAND32 src2 s)) s
     | POP dest ->
         (match operand_size dest with
            64 -> x86_POP (OPERAND64 dest s)
          | 16 -> x86_POP (OPERAND16 dest s)) s
+    | POPCNT dest src ->
+        (match operand_size dest with
+           64 -> x86_POPCNT (OPERAND64 dest s) (OPERAND64 src s)
+         | 32 -> x86_POPCNT (OPERAND32 dest s) (OPERAND32 src s)
+         | 16 -> x86_POPCNT (OPERAND16 dest s) (OPERAND16 src s)) s
     | PSHUFD dest src imm8 ->
         x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
     | PSRAD dest imm8 ->
@@ -3096,6 +3127,15 @@ let EXPAND_SIMD_RULE =
 let x86_PADDD_ALT = EXPAND_SIMD_RULE x86_PADDD;;
 let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
+
+let x86_PEXT_ALT =
+  (end_itlist CONJ o map
+    (CONV_RULE NUM_REDUCE_CONV o
+     CONV_RULE(ONCE_DEPTH_CONV EXPAND_NSUM_CONV) o
+     (REWRITE_RULE[DIMINDEX_32; DIMINDEX_64; ARITH])))
+  [INST_TYPE[`:32`,`:N`] x86_PEXT;
+   INST_TYPE[`:64`,`:N`] x86_PEXT];;
+
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
 let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
@@ -3122,7 +3162,6 @@ let x86_VPSRLW_ALT = EXPAND_SIMD_RULE x86_VPSRLW;;
 let x86_VPUNPCKHQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKHQDQ;;
 let x86_VPUNPCKLQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKLQDQ;;
 
-
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
    [x86_ADC_ALT; x86_ADCX_ALT; x86_ADOX_ALT; x86_ADD_ALT;
@@ -3131,9 +3170,10 @@ let X86_OPERATION_CLAUSES =
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_DIV2; x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
-    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVSX; x86_MOVUPS; 
+    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVSX; x86_MOVUPS;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
-    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PCMPGTD_ALT; x86_POP_ALT;
+    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PCMPGTD_ALT;
+    x86_PEXT_ALT; x86_POP_ALT; x86_POPCNT;
     x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
