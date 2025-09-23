@@ -267,6 +267,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | LZCNT operand operand
    | MOV operand operand
    | MOVD operand operand
+   | MOVQ operand operand
    | MOVSX operand operand
    | MOVZX operand operand
    | MOVAPS operand operand
@@ -283,10 +284,17 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PADDD operand operand
    | PADDQ operand operand
    | PAND operand operand
+   | PBLENDW operand operand operand
    | PCMPGTD operand operand
+   | PCMPGTW operand operand
+   | PINSRD operand operand operand
+   | PINSRQ operand operand operand
+   | PMOVMSKB operand operand
    | POP operand
+   | PSHUFB operand operand
    | PSHUFD operand operand operand
    | PSRAD operand operand
+   | PSRLW operand operand
    | PUSH operand
    | PXOR operand operand
    | RCL operand operand
