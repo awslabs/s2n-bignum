@@ -120,6 +120,9 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e67012b;       (* arm_FMOV_ItoF Q11 X9 0x0 *)
   0x9eaf014b;       (* arm_FMOV_ItoF Q11 X10 0x1 *)
+
+  (* .Loop5x_xts_enc *)
+  (* pc + 0x140 *)
   0xacc28400;       (* arm_LDP Q0 Q1 X0 (Postimmediate_Offset (iword (&0x50))) *)
   0xad7ee418;       (* arm_LDP Q24 Q25 X0 (Immediate_Offset (iword (-- &0x30))) *)
   0x3cdf001a;       (* arm_LDR Q26 X0 (Immediate_Offset (word 0xfffffffffffffff0)) *)
@@ -309,6 +312,9 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xd1014042;       (* arm_SUB X2 X2 (rvalue (word 0x50)) *)
   0xf1000508;       (* arm_SUBS X8 X8 (rvalue (word 0x1)) *)
   0xb5ffe888;       (* arm_CBNZ X8 (word 0x1ffd10) *)
+
+  (* .Loop5x_enc_after: *)
+  (* pc + 0x434 *)
   0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
   0x54000140;       (* arm_BEQ (word 0x28) *)
   0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
@@ -719,6 +725,31 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
+(** Definitions **)
+
+(* same as in aes_xts_decrypt.ml *)
+let set_key_schedule = new_definition
+  `set_key_schedule (s:armstate) (key_ptr:int64) (k0:int128)
+     (k1:int128) (k2:int128) (k3:int128) (k4:int128) (k5:int128)
+     (k6:int128) (k7:int128) (k8:int128) (k9:int128) (ka:int128)
+     (kb:int128) (kc:int128) (kd:int128) (ke:int128) : bool =
+     (read(memory :> bytes128 key_ptr) s = k0 /\
+      read(memory :> bytes128 (word_add key_ptr (word 16))) s = k1 /\
+      read(memory :> bytes128 (word_add key_ptr (word 32))) s = k2 /\
+      read(memory :> bytes128 (word_add key_ptr (word 48))) s = k3 /\
+      read(memory :> bytes128 (word_add key_ptr (word 64))) s = k4 /\
+      read(memory :> bytes128 (word_add key_ptr (word 80))) s = k5 /\
+      read(memory :> bytes128 (word_add key_ptr (word 96))) s = k6 /\
+      read(memory :> bytes128 (word_add key_ptr (word 112))) s = k7 /\
+      read(memory :> bytes128 (word_add key_ptr (word 128))) s = k8 /\
+      read(memory :> bytes128 (word_add key_ptr (word 144))) s = k9 /\
+      read(memory :> bytes128 (word_add key_ptr (word 160))) s = ka /\
+      read(memory :> bytes128 (word_add key_ptr (word 176))) s = kb /\
+      read(memory :> bytes128 (word_add key_ptr (word 192))) s = kc /\
+      read(memory :> bytes128 (word_add key_ptr (word 208))) s = kd /\
+      read(memory :> bytes128 (word_add key_ptr (word 224))) s = ke /\
+      read(memory :> bytes32 (word_add key_ptr (word 240))) s = word 14)`;;
+
 
 let AES256_XTS_ENCRYPT_EXEC = ARM_MK_EXEC_RULE aes256_xts_encrypt_mc;;
 
@@ -745,98 +776,61 @@ void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
 (* for stack pointer alignment and nonoverlapping examples, I looked at shigoel's sha512_block_data_order_hw.ml
    and bignum_invsqrt_p25519_alt.ml *)
 let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
-  `! ptxt ctxt key1 key2 iv
-     in_pt tweak
-     k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14
+  `! ptxt_p ctxt_p key1_p key2_p iv_p
+     pt_in iv
+     (k1_0:int128) k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14
      k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14
      pc stackpointer.
      aligned 16 stackpointer /\
            PAIRWISE nonoverlapping
            [(stackpointer, 6*16);
             (word pc, LENGTH aes256_xts_encrypt_mc);
-            (ctxt, 16);
-            (key1, 244);
-            (key2, 244)]
+            (ctxt_p, 16);
+            (key1_p, 244);
+            (key2_p, 244)]
     ==> ensures arm
       // precondition
       (\s. aligned_bytes_loaded s (word pc) aes256_xts_encrypt_mc /\
            read PC s = word (pc + 28) /\
            read SP s = stackpointer /\
-           C_ARGUMENTS [ptxt; ctxt; word 16; key1; key2; iv] s /\
-           read(memory :> bytes128 ptxt) s = in_pt /\
-           read(memory :> bytes128 iv) s = tweak /\
-           read(memory :> bytes32 (word_add key1 (word 240))) s = word 14 /\
-           read(memory :> bytes128 key1) s = k1_0 /\
-           read(memory :> bytes128 (word_add key1 (word 16))) s = k1_1 /\
-           read(memory :> bytes128 (word_add key1 (word 32))) s = k1_2 /\
-           read(memory :> bytes128 (word_add key1 (word 48))) s = k1_3 /\
-           read(memory :> bytes128 (word_add key1 (word 64))) s = k1_4 /\
-           read(memory :> bytes128 (word_add key1 (word 80))) s = k1_5 /\
-           read(memory :> bytes128 (word_add key1 (word 96))) s = k1_6 /\
-           read(memory :> bytes128 (word_add key1 (word 112))) s = k1_7 /\
-           read(memory :> bytes128 (word_add key1 (word 128))) s = k1_8 /\
-           read(memory :> bytes128 (word_add key1 (word 144))) s = k1_9 /\
-           read(memory :> bytes128 (word_add key1 (word 160))) s = k1_10 /\
-           read(memory :> bytes128 (word_add key1 (word 176))) s = k1_11 /\
-           read(memory :> bytes128 (word_add key1 (word 192))) s = k1_12 /\
-           read(memory :> bytes128 (word_add key1 (word 208))) s = k1_13 /\
-           read(memory :> bytes128 (word_add key1 (word 224))) s = k1_14 /\
-           read(memory :> bytes32 (word_add key2 (word 240))) s = word 14 /\
-           read(memory :> bytes128 key2) s = k2_0 /\
-           read(memory :> bytes128 (word_add key2 (word 16))) s = k2_1 /\
-           read(memory :> bytes128 (word_add key2 (word 32))) s = k2_2 /\
-           read(memory :> bytes128 (word_add key2 (word 48))) s = k2_3 /\
-           read(memory :> bytes128 (word_add key2 (word 64))) s = k2_4 /\
-           read(memory :> bytes128 (word_add key2 (word 80))) s = k2_5 /\
-           read(memory :> bytes128 (word_add key2 (word 96))) s = k2_6 /\
-           read(memory :> bytes128 (word_add key2 (word 112))) s = k2_7 /\
-           read(memory :> bytes128 (word_add key2 (word 128))) s = k2_8 /\
-           read(memory :> bytes128 (word_add key2 (word 144))) s = k2_9 /\
-           read(memory :> bytes128 (word_add key2 (word 160))) s = k2_10 /\
-           read(memory :> bytes128 (word_add key2 (word 176))) s = k2_11 /\
-           read(memory :> bytes128 (word_add key2 (word 192))) s = k2_12 /\
-           read(memory :> bytes128 (word_add key2 (word 208))) s = k2_13 /\
-           read(memory :> bytes128 (word_add key2 (word 224))) s = k2_14
+           C_ARGUMENTS [ptxt_p; ctxt_p; word 16; key1_p; key2_p; iv_p] s /\
+           read(memory :> bytes128 ptxt_p) s = pt_in /\
+           read(memory :> bytes128 iv_p) s = iv /\
+           set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
+           set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14
       )
       // postcondition
       (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
-           read(memory :> bytes128 ctxt) s =
-              aes256_xts_encrypt_1block in_pt tweak
+           read(memory :> bytes128 ctxt_p) s =
+              aes256_xts_encrypt_1block pt_in iv
                 [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]
                 [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14]
       )
       (MAYCHANGE [PC;X0;X1;X2;X4;X6;X7;X8;X9;X10;X11;X19;X20;X21;X22],,
        MAYCHANGE [Q0;Q1;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26],,
-       MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 ctxt],,
-       MAYCHANGE [events])`
-       (* ,,
-       MAYCHANGE [memory :> bytes(stackpointer, 160) *),
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS; PAIRWISE; ALL] THEN
+       MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 ctxt_p],,
+       MAYCHANGE [events])`,
   REWRITE_TAC [(REWRITE_CONV [aes256_xts_encrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_xts_encrypt_mc`] THEN
+  REWRITE_TAC[set_key_schedule; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS; PAIRWISE; ALL] THEN
   REPEAT STRIP_TAC THEN
+  (* Start symbolic simulation *)
   ENSURES_INIT_TAC "s0" THEN
 
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--1) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (2--2) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (3--3) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (4--4) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (5--6) THEN
+  (* Simulate until the iv encryption and verify it against AES encryption spec *)
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--6) THEN
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (7--25) THEN
-
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (26--56) THEN
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (57--69) THEN
 
 (*  FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN *)
   FIRST_X_ASSUM(MP_TAC o SPEC
-    `(aes256_encrypt (tweak:int128) [k2_0:int128; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14]):int128`
+    `(aes256_encrypt (iv:int128) [k2_0:int128; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14]):int128`
     o  MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
 
-   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (70--70) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (71--78) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (79--87) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (88--89) THEN
-
+  (* Simulate until the one-block input encryption until before XORing the iv with the output. *)
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (70--78) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (79--89) THEN
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (90--90) THEN
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (91--119) THEN
 
@@ -845,27 +839,29 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
     `(aes256_encrypt
        (word_xor
           (aes256_encrypt
-             tweak
+             iv
              [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8;
               k2_9; k2_10; k2_11; k2_12; k2_13; k2_14])
-          in_pt:int128)
+          pt_in:int128)
        [k1_0:int128; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]):int128`
     o  MATCH_MP (MESON[] `read Q0 s = a ==> !a'. a = a' ==> read Q0 s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
 
+  (* XOR the tweak with the output in Q0 *)
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (120--120) THEN
 
+  (* Write it to the ciphertext output *)
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (121--121) THEN
   FIRST_X_ASSUM(MP_TAC o SPEC
     `(aes256_xts_encrypt_1block
-        (in_pt:int128)
-        (tweak:int128)
+        (pt_in:int128)
+        (iv:int128)
         [k1_0:int128; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10;
          k1_11; k1_12; k1_13; k1_14]
         [k2_0:int128; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
          k2_11; k2_12; k2_13; k2_14]):int128`
-      o MATCH_MP (MESON[] `read (memory :> bytes128 ctxt) s = a ==> !a'. a = a'
-                               ==> read (memory :> bytes128 ctxt) s = a'`)) THEN
+      o MATCH_MP (MESON[] `read (memory :> bytes128 ctxt_p) s = a ==> !a'. a = a'
+                               ==> read (memory :> bytes128 ctxt_p) s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESXTS_ENC_ONE_BLOCK_TAC; DISCH_TAC] THEN
 
   ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (122--126) THEN
@@ -876,30 +872,506 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
   ARITH_TAC
 );;
 
+(*******************************************)
+(* Full proof *)
+
+let byte_list_l_at = define
+  `byte_list_l_at (m : byte list) (l:num) (m_p : int64) s =
+    ! i. i < l ==> read (memory :> bytes8(word_add m_p (word i))) s = EL i m`;;
+
+let word_split_lemma = prove(
+  `!len:int64. word_add (word_and len (word 0xf))
+      (word_and len (word 0xfffffffffffffff0)) = len`,
+  BITBLAST_TAC);;
+
+let LEN_FULL_BLOCKS_LO_BOUND_THM = prove(
+  `!(len:int64) len_full_blocks. word_and len (word 0xfffffffffffffff0) = len_full_blocks
+   ==> ~(val len < 0x50)
+   ==> ~(val len_full_blocks < 0x50)`,
+   BITBLAST_TAC);;
+
+let LEN_FULL_BLOCKS_HI_BOUND_THM = prove(
+  `!(len:int64) len_full_blocks. word_and len (word 0xfffffffffffffff0) = len_full_blocks
+   ==> val len <= 2 EXP 24
+   ==> val len_full_blocks <= 2 EXP 24`,
+   BITBLAST_TAC);;
+
+   let TAIL_LEN_BOUND_THM = prove(
+  `!(len:int64) tail_len. word_and len (word 0xf) = tail_len
+   ==> val tail_len < 0x10`,
+   BITBLAST_TAC);;
+
+let NUM_5BLOCKS_LO_BOUND_THM = prove(
+  `!(len_full_blocks:int64) (num_5blocks:int64).
+    val len_full_blocks <= 2 EXP 24
+    ==> ~(val len_full_blocks < 0x50)
+    ==> word (val len_full_blocks DIV 0x50) = num_5blocks
+    ==> 0x0 < val num_5blocks`,
+  REPEAT STRIP_TAC THEN
+  EXPAND_TAC "num_5blocks" THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+  UNDISCH_TAC `~(val (len_full_blocks:int64) < 0x50)` THEN
+  ABBREV_TAC `n = val (len_full_blocks:int64)` THEN
+  SUBGOAL_THEN `n DIV 0x50 < 2 EXP 64` ASSUME_TAC THENL
+  [ ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_SIMP_TAC[MOD_LT] THEN
+  ARITH_TAC
+);;
+(*
+void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
+                        const AES_KEY *key1, const AES_KEY *key2,
+                        const uint8_t iv[16])
+*)
+
+let AES256_XTS_ENCRYPT_CORRECT = prove(
+  `!ptxt_p ctxt_p len key1_p key2_p iv_p ct_org
+    pt_in iv
+    k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14
+    k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14
+    pc stackpointer.
+    aligned 16 stackpointer /\
+    PAIRWISE nonoverlapping
+    [(stackpointer, 6*16);
+    (word pc, LENGTH aes256_xts_encrypt_mc);
+    (ctxt_p, val len);
+    (key1_p, 244);
+    (key2_p, 244)] /\
+    val len >= 16 /\ val len <= 2 EXP 24 /\ LENGTH pt_in = val len
+  ==> ensures arm
+      // precondition
+      (\s. aligned_bytes_loaded s (word pc) aes256_xts_encrypt_mc /\
+           read PC s = word (pc + 28) /\
+           read SP s = stackpointer /\
+           C_ARGUMENTS [ptxt_p; ctxt_p; len; key1_p; key2_p; iv_p] s /\
+           byte_list_l_at pt_in (val len) ptxt_p s /\
+           byte_list_l_at ct_err 15 ct_org s /\
+           read(memory :> bytes128 ctxt_p) s = err /\
+           read(memory :> bytes128 iv_p) s = iv /\
+           set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
+           set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14
+      )
+      // postcondition
+      (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
+           byte_list_l_at (aes256_xts_encrypt pt_in (val len) iv
+                [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]
+                [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14] ct_err)
+                (val len) ctxt_p s
+      )
+      (MAYCHANGE [PC;X0;X1;X2;X4;X6;X7;X8;X9;X10;X11;X19;X20;X21;X22],,
+       MAYCHANGE [Q0;Q1;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26],,
+       MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 ctxt_p],,
+       MAYCHANGE [events])`,
+
+  REWRITE_TAC [(REWRITE_CONV [aes256_xts_encrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_xts_encrypt_mc`] THEN
+  REWRITE_TAC[byte_list_l_at; set_key_schedule; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS; PAIRWISE; ALL] THEN
+  REPEAT STRIP_TAC THEN
+
+  (* Break len into full blocks and tail *)
+  SUBGOAL_THEN `word_add (word_and len (word 0xf))
+    (word_and len (word 0xfffffffffffffff0)) = len:int64` ASSUME_TAC THENL
+  [REWRITE_TAC[word_split_lemma]; ALL_TAC] THEN
+  ABBREV_TAC `len_full_blocks:int64 = word_and len (word 0xfffffffffffffff0)` THEN
+  ABBREV_TAC `tail_len:int64 = word_and len (word 0xf)` THEN
+
+  ABBREV_TAC `key1_lst:int128 list = [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]` THEN
+  ABBREV_TAC `key2_lst:int128 list = [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14]` THEN
+
+  (* Case splits on length:
+    len < 16 -- error case
+    len < 32 -- one block, or one block and a tail
+    len < 48 -- two blocks, or two blocks and a tail
+    len < 64 -- three blocks, or three blocks and a tail
+    len < 80 -- four blocks, or four blocks and a tail
+    len >= 80 -- five blocks and up => at least one big loop iteration
+
+    Note: for encrypt, in cipherstealing, the tail is directly processed since the last
+          tweak is available from prior calculations. The order of the tweaks is not flipped,
+          as in the case of decrypt, between the last block and the tail.
+    *)
+  ASM_CASES_TAC `val (len:int64) < 0x50` THENL [CHEAT_TAC; ALL_TAC] THEN
+
+  ABBREV_TAC `num_5blocks = (word (val (len_full_blocks:int64) DIV 0x50)):int64` THEN
+
+  SUBGOAL_THEN `~(val (len_full_blocks:int64) < 0x50)` ASSUME_TAC THENL
+  [ UNDISCH_TAC `~(val (len:int64) < 0x50)` THEN
+    UNDISCH_TAC `word_and len (word 0xfffffffffffffff0) = (len_full_blocks:int64)` THEN
+    MP_TAC (SPECL [`len:int64`; `len_full_blocks:int64`] LEN_FULL_BLOCKS_LO_BOUND_THM) THEN
+    SIMP_TAC[]; ALL_TAC] THEN
+  SUBGOAL_THEN `val (len_full_blocks:int64) <= 0x2 EXP 24` ASSUME_TAC THENL
+  [ UNDISCH_TAC `val (len:int64) <= 0x2 EXP 24` THEN
+    UNDISCH_TAC `word_and len (word 0xfffffffffffffff0) = (len_full_blocks:int64)` THEN
+    MP_TAC (SPECL [`len:int64`; `len_full_blocks:int64`] LEN_FULL_BLOCKS_HI_BOUND_THM) THEN
+    SIMP_TAC[]; ALL_TAC] THEN
+  SUBGOAL_THEN `0 < val (num_5blocks:int64)` ASSUME_TAC THENL
+  [ UNDISCH_TAC `word (val (len_full_blocks:int64) DIV 0x50) = (num_5blocks:int64)` THEN
+    UNDISCH_TAC `~(val (len_full_blocks:int64) < 0x50)` THEN
+    UNDISCH_TAC `val (len_full_blocks:int64) <= 0x2 EXP 24` THEN
+    MP_TAC (SPECL [`len_full_blocks:int64`; `num_5blocks:int64`]
+      NUM_5BLOCKS_LO_BOUND_THM) THEN SIMP_TAC[]
+    ; ALL_TAC] THEN
+
+  (* Verify properties of the program until the beginning of the loop.
+     This saves work in the second subgoal of the loop invariant and brings it here.
+     Up to the loop:
+     - First 5 tweaks are calculated from the iv
+     - X2 contains len_full_blocks
+     - X8 contains num_5_blocks
+     - key1 schedule is loaded in Q registers *)
+    ENSURES_SEQUENCE_TAC
+    `pc + 0x140`
+    `\s.
+        read X0 s = ptxt_p /\
+        read X1 s = ctxt_p /\
+        read X2 s = len_full_blocks /\
+        read X8 s = num_5blocks /\
+        read X21 s = tail_len /\
+        read Q6 s = calculate_tweak 0 iv key2 /\
+        read Q8 s = calculate_tweak 1 iv key2 /\
+        read Q9 s = calculate_tweak 2 iv key2 /\
+        read Q10 s = calculate_tweak 3 iv key2 /\
+        read Q11 s = calculate_tweak 4 iv key2 /\
+        read X19 s = word 0x87 /\
+              ` THEN
+
+  (* Loop invariant *)
+  ENSURES_WHILE_PAUP_TAC
+    `0` (* counter begin number *)
+    `val (num_5blocks:int64)` (* counter end number *)
+    `pc + 0x140` (* loop body start PC *)
+    `pc + 0x430` (* loop backedge branch PC *)
+    `\i s.
+         // loop invariant at the end of the loop
+         (read X8 s = word_sub num_5blocks (word i) /\
+          read X0 s = word_add ptxt_p (word_mul (word 0x50) (word i)) /\
+          read X1 s = word_add ctxt_p (word_mul (word 0x50) (word i)) /\
+          byte_list_l_at (aes256_xts_encrypt pt_in (i * 0x50) iv key1_lst key2_lst ct_err)
+                          (i * 0x50) ptxt_p s) /\
+          // loop backedge condition
+          (read ZF s <=> i = val (num_5blocks:int64))` THEN
+    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
+    [
+      (* Subgoal 1.
+        0 < `val (num_5blocks:int64)``
+        automatically discharged by asm *)
+
+      (* Subgoal 2. *)
+      REWRITE_TAC[byte_list_l_at] THEN
+      ENSURES_INIT_TAC "s0" THEN
+      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+      REPEAT CONJ_TAC THENL
+      (*
+  `aligned_bytes_loaded s0 (word pc) aes256_xts_encrypt_mc /\
+ read PC s0 = word (pc + 0x140) /\
+ read X8 s0 = word_sub num_5blocks (word 0x0) /\
+ read X0 s0 = word_add ptxt_p (word_mul (word 0x50) (word 0x0)) /\
+ read X1 s0 = word_add ctxt_p (word_mul (word 0x50) (word 0x0)) /\
+ (forall i.
+      i < 0x0 * 0x50
+      ==> read (memory :> bytes8 (word_add ptxt_p (word i))) s0 =
+          EL i
+          (aes256_xts_encrypt pt_in (0x0 * 0x50) iv key1_lst key2_lst ct_err))`
+
+`eventually arm
+ (\s'.
+      (aligned_bytes_loaded s' (word pc) aes256_xts_encrypt_mc /\
+       read PC s' = word (pc + 0x140) /\
+       read X8 s' = word_sub num_5blocks (word 0x0) /\
+       read X0 s' = word_add ptxt_p (word_mul (word 0x50) (word 0x0)) /\
+       read X1 s' = word_add ctxt_p (word_mul (word 0x50) (word 0x0)) /\
+       (forall i.
+            i < 0x0 * 0x50
+            ==> read (memory :> bytes8 (word_add ptxt_p (word i))) s' =
+                EL i
+                (aes256_xts_encrypt pt_in (0x0 * 0x50) iv key1_lst key2_lst
+                ct_err))) /\
+      (MAYCHANGE
+       [PC; X0; X1; X2; X4; X6; X7; X8; X9; X10; X11; X19; X20; X21; X22] ,,
+       MAYCHANGE
+       [Q0; Q1; Q4; Q5; Q6; Q7; Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15; Q16;
+        Q17; Q18; Q19; Q20; Q21; Q22; Q23; Q24; Q25; Q26] ,,
+       MAYCHANGE [NF; ZF; CF; VF] ,,
+       MAYCHANGE [memory :> bytes128 ctxt_p] ,,
+       MAYCHANGE [events])
+      s0
+      s')
+ s0`
 
 
+       0 [`aligned 0x10 stackpointer`]
+  1 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
+      (pc,0xa80)`]
+  2 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
+      (val ctxt_p,val len)`]
+  3 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
+      (val key1_p,0xf4)`]
+  4 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
+      (val key2_p,0xf4)`]
+  5 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xa80) (val ctxt_p,val len)`]
+  6 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xa80) (val key1_p,0xf4)`]
+  7 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xa80) (val key2_p,0xf4)`]
+  8 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ctxt_p,val len)
+      (val key1_p,0xf4)`]
+  9 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ctxt_p,val len)
+      (val key2_p,0xf4)`]
+ 10 [`nonoverlapping_modulo (0x2 EXP 0x40) (val key1_p,0xf4)
+      (val key2_p,0xf4)`]
+ 11 [`val len >= 0x10`]
+ 12 [`val len <= 0x2 EXP 0x18`]
+ 13 [`LENGTH pt_in = val len`]
+ 14 [`word_add tail_len len_full_blocks = len`]
+ 15 [`word_and len (word 0xfffffffffffffff0) = len_full_blocks`]
+ 16 [`word_and len (word 0xf) = tail_len`]
+ 17 [`[k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10;
+       k1_11; k1_12; k1_13; k1_14] =
+      key1_lst`]
+ 18 [`[k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
+       k2_11; k2_12; k2_13; k2_14] =
+      key2_lst`]
+ 19 [`~(val len < 0x50)`]
+ 20 [`word (val len_full_blocks DIV 0x50) = num_5blocks`]
+ 21 [`~(val len_full_blocks < 0x50)`]
+ 22 [`val len_full_blocks <= 0x2 EXP 0x18`]
+ 23 [`0x0 < val num_5blocks`]
+
+`ensures arm
+ (\s.
+      aligned_bytes_loaded s (word pc) aes256_xts_encrypt_mc /\
+      read PC s = word (pc + 0x1c) /\
+      read SP s = stackpointer /\
+      (read X0 s = ptxt_p /\
+       read X1 s = ctxt_p /\
+       read X2 s = len /\
+       read X3 s = key1_p /\
+       read X4 s = key2_p /\
+       read X5 s = iv_p) /\
+      (forall i.
+           i < val len
+           ==> read (memory :> bytes8 (word_add ptxt_p (word i))) s =
+               EL i pt_in) /\
+      (forall i.
+           i < 0xf
+           ==> read (memory :> bytes8 (word_add ct_org (word i))) s =
+               EL i ct_err) /\
+      read (memory :> bytes128 ctxt_p) s = err /\
+      read (memory :> bytes128 iv_p) s = iv /\
+      (read (memory :> bytes128 key1_p) s = k1_0 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x10))) s = k1_1 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x20))) s = k1_2 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x30))) s = k1_3 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x40))) s = k1_4 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x50))) s = k1_5 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x60))) s = k1_6 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x70))) s = k1_7 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x80))) s = k1_8 /\
+       read (memory :> bytes128 (word_add key1_p (word 0x90))) s = k1_9 /\
+       read (memory :> bytes128 (word_add key1_p (word 0xa0))) s = k1_10 /\
+       read (memory :> bytes128 (word_add key1_p (word 0xb0))) s = k1_11 /\
+       read (memory :> bytes128 (word_add key1_p (word 0xc0))) s = k1_12 /\
+       read (memory :> bytes128 (word_add key1_p (word 0xd0))) s = k1_13 /\
+       read (memory :> bytes128 (word_add key1_p (word 0xe0))) s = k1_14 /\
+       read (memory :> bytes32 (word_add key1_p (word 0xf0))) s = word 0xe) /\
+      read (memory :> bytes128 key2_p) s = k2_0 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x10))) s = k2_1 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x20))) s = k2_2 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x30))) s = k2_3 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x40))) s = k2_4 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x50))) s = k2_5 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x60))) s = k2_6 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x70))) s = k2_7 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x80))) s = k2_8 /\
+      read (memory :> bytes128 (word_add key2_p (word 0x90))) s = k2_9 /\
+      read (memory :> bytes128 (word_add key2_p (word 0xa0))) s = k2_10 /\
+      read (memory :> bytes128 (word_add key2_p (word 0xb0))) s = k2_11 /\
+      read (memory :> bytes128 (word_add key2_p (word 0xc0))) s = k2_12 /\
+      read (memory :> bytes128 (word_add key2_p (word 0xd0))) s = k2_13 /\
+      read (memory :> bytes128 (word_add key2_p (word 0xe0))) s = k2_14 /\
+      read (memory :> bytes32 (word_add key2_p (word 0xf0))) s = word 0xe)
+ (\s.
+      aligned_bytes_loaded s (word pc) aes256_xts_encrypt_mc /\
+      read PC s = word (pc + 0x140) /\
+      read X8 s = word_sub num_5blocks (word 0x0) /\
+      read X0 s = word_add ptxt_p (word_mul (word 0x50) (word 0x0)) /\
+      read X1 s = word_add ctxt_p (word_mul (word 0x50) (word 0x0)) /\
+      byte_list_l_at
+      (aes256_xts_encrypt pt_in (0x0 * 0x50) iv key1_lst key2_lst ct_err)
+      (0x0 * 0x50)
+      ptxt_p
+      s)
+ (MAYCHANGE
+  [PC; X0; X1; X2; X4; X6; X7; X8; X9; X10; X11; X19; X20; X21; X22] ,,
+  MAYCHANGE
+  [Q0; Q1; Q4; Q5; Q6; Q7; Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15; Q16; Q17;
+   Q18; Q19; Q20; Q21; Q22; Q23; Q24; Q25; Q26] ,,
+  MAYCHANGE [NF; ZF; CF; VF] ,,
+  MAYCHANGE [memory :> bytes128 ctxt_p] ,,
+  MAYCHANGE [events])`
+
+
+(*
+  Decrypt Subgoal 2 without the ENSURES_SEQUENCE_TAC before the loop invariant
+
+    0 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xb20) (val pt_ptr,val len)`]
+  1 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ct_ptr,val len)
+      (val pt_ptr,val len)`]
+  2 [`val len >= 0x10`]
+  3 [`val len <= 0x2 EXP 0x18`]
+  4 [`LENGTH ct = val len`]
+  5 [`word_add tail_len num_blocks = len`]
+  6 [`word_and len (word 0xfffffffffffffff0) = num_blocks`]
+  7 [`word_and len (word 0xf) = tail_len`]
+  8 [`[k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d;
+       k0e] =
+      key1`]
+  9 [`[k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d;
+       k1e] =
+      key2`]
+ 10 [`~(val len < 0x60)`]
+ 11 [`(if val tail_len = 0x0
+       then num_blocks
+       else word_sub num_blocks (word 0x10)) =
+      num_blocks_adjusted`]
+ 12 [`word (val num_blocks_adjusted DIV 0x50) = num_5blocks_adjusted`]
+ 13 [`~(val num_blocks < 0x60)`]
+ 14 [`val num_blocks <= 0x2 EXP 0x18`]
+ 15 [`~(val num_blocks_adjusted < 0x50)`]
+ 16 [`val num_blocks_adjusted <= 0x2 EXP 0x18`]
+ 17 [`0x0 < val num_5blocks_adjusted`]
+
+`ensures arm
+ (\s.
+      aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
+      read PC s = word (pc + 0x1c) /\
+      (read X0 s = ct_ptr /\
+       read X1 s = pt_ptr /\
+       read X2 s = len /\
+       read X3 s = key1_ptr /\
+       read X4 s = key2_ptr /\
+       read X5 s = iv_ptr) /\
+      (forall i.
+           i < val len
+           ==> read (memory :> bytes8 (word_add ct_ptr (word i))) s = EL i ct) /\
+      (forall i.
+           i < LENGTH pt_init
+           ==> read (memory :> bytes8 (word_add pt_ptr (word i))) s =
+               EL i pt_init) /\
+      read (memory :> bytes128 iv_ptr) s = iv /\
+      (read (memory :> bytes128 key1_ptr) s = k00 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x10))) s = k01 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x20))) s = k02 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x30))) s = k03 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x40))) s = k04 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x50))) s = k05 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x60))) s = k06 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x70))) s = k07 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x80))) s = k08 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0x90))) s = k09 /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0xa0))) s = k0a /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0xb0))) s = k0b /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0xc0))) s = k0c /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0xd0))) s = k0d /\
+       read (memory :> bytes128 (word_add key1_ptr (word 0xe0))) s = k0e /\
+       read (memory :> bytes32 (word_add key1_ptr (word 0xf0))) s = word 0xe) /\
+      read (memory :> bytes128 key2_ptr) s = k10 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x10))) s = k11 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x20))) s = k12 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x30))) s = k13 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x40))) s = k14 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x50))) s = k15 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x60))) s = k16 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x70))) s = k17 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x80))) s = k18 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0x90))) s = k19 /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0xa0))) s = k1a /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0xb0))) s = k1b /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0xc0))) s = k1c /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0xd0))) s = k1d /\
+      read (memory :> bytes128 (word_add key2_ptr (word 0xe0))) s = k1e /\
+      read (memory :> bytes32 (word_add key2_ptr (word 0xf0))) s = word 0xe)
+ (\s.
+      aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
+      read PC s = word (pc + 0x170) /\
+      read X0 s = word_add ct_ptr (word_mul (word 0x50) (word 0x0)) /\
+      read X1 s = word_add pt_ptr (word_mul (word 0x50) (word 0x0)) /\
+      read X3 s = key1_ptr /\
+      read X21 s = tail_len /\
+      read X2 s =
+      word_sub num_blocks_adjusted (word_mul (word 0x50) (word 0x0)) /\
+      read X8 s = word_sub num_5blocks_adjusted (word 0x0) /\
+      read Q6 s = calculate_tweak (0x0 * 0x5) iv key2 /\
+      read Q8 s = calculate_tweak (0x0 * 0x5 + 0x1) iv key2 /\
+      read Q9 s = calculate_tweak (0x0 * 0x5 + 0x2) iv key2 /\
+      read Q10 s = calculate_tweak (0x0 * 0x5 + 0x3) iv key2 /\
+      read Q11 s = calculate_tweak (0x0 * 0x5 + 0x4) iv key2 /\
+      read X19 s = word 0x87 /\
+      read X10 s =
+      word_subword (calculate_tweak (0x0 * 0x5 + 0x4) iv key2) (0x40,0x40) /\
+      read X9 s = word_zx (calculate_tweak (0x0 * 0x5 + 0x4) iv key2) /\
+      read Q16 s = k00 /\
+      read Q17 s = k01 /\
+      read Q12 s = k02 /\
+      read Q13 s = k03 /\
+      read Q14 s = k04 /\
+      read Q15 s = k05 /\
+      read Q4 s = k06 /\
+      read Q5 s = k07 /\
+      read Q18 s = k08 /\
+      read Q19 s = k09 /\
+      read Q20 s = k0a /\
+      read Q21 s = k0b /\
+      read Q22 s = k0c /\
+      read Q23 s = k0d /\
+      read Q7 s = k0e /\
+      byte_list_at ct ct_ptr s /\
+      byte_list_at
+      (aes256_xts_decrypt ct (0x0 * 0x5 * 0x10) iv key1 key2 pt_init)
+      pt_ptr
+      s)
+ (MAYCHANGE [PC] ,,
+  MAYCHANGE [events] ,,
+  MAYCHANGE [X21; X2; X6; X4; X9; X10; X19; X22; X11; X7; X0; X1; X8] ,,
+  MAYCHANGE
+  [Q6; Q1; Q0; Q8; Q9; Q10; Q11; Q16; Q17; Q12; Q13; Q14; Q15; Q4; Q5; Q18;
+   Q19; Q20; Q21; Q22; Q23; Q7; Q29; Q24; Q25; Q26] ,,
+  MAYCHANGE [NF; ZF; CF; VF] ,,
+  MAYCHANGE [memory :> bytes (pt_ptr,val len)])`
+*)
+
+(* loop.ml subgoal 2 *)
+`ensures arm
+ (\s.
+      aligned_bytes_loaded s (word pc) loop_mc /\
+      read PC s = word pc /\
+      read X30 s = word retpc)
+ (\s.
+      aligned_bytes_loaded s (word pc) loop_mc /\
+      read PC s = word (pc + 0x8) /\
+      read X1 s = word 0x0 /\
+      read X0 s = word (0x0 * 0x2) /\
+      read X30 s = word retpc)
+ (MAYCHANGE [PC; X0; X1] ,, MAYCHANGE [NF; ZF; CF; VF] ,, MAYCHANGE [events])`
+      *)
   (*
   `word_xor
  (aes256_encrypt
   (word_xor
-   (aes256_encrypt tweak
+   (aes256_encrypt iv
    [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
     k2_12; k2_13; k2_14])
-  in_pt)
+  pt_in)
  [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11;
   k1_12; k1_13; k1_14])
- (aes256_encrypt tweak
+ (aes256_encrypt iv
  [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
   k2_12; k2_13; k2_14]) =
  word_xor
  (aes256_encrypt
-  (word_xor in_pt
-  (aes256_encrypt tweak
+  (word_xor pt_in
+  (aes256_encrypt iv
   [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
    k2_12; k2_13; k2_14]))
  [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11;
   k1_12; k1_13; k1_14])
- (aes256_encrypt tweak
+ (aes256_encrypt iv
  [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
   k2_12; k2_13; k2_14])`
 
@@ -908,16 +1380,16 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
   `word_xor
  (aes256_encrypt
   (word_xor
-   (aes256_encrypt tweak
+   (aes256_encrypt iv
    [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
     k2_12; k2_13; k2_14])
-  in_pt)
+  pt_in)
  [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11;
   k1_12; k1_13; k1_14]) =
  word_xor
  (aes256_encrypt
-  (word_xor in_pt
-  (aes256_encrypt tweak
+  (word_xor pt_in
+  (aes256_encrypt iv
   [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
    k2_12; k2_13; k2_14]))
  [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11;
@@ -927,15 +1399,15 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
 
 `aes256_encrypt
  (word_xor
-  (aes256_encrypt tweak
+  (aes256_encrypt iv
   [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
    k2_12; k2_13; k2_14])
- in_pt)
+ pt_in)
  [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11;
   k1_12; k1_13; k1_14] =
  aes256_encrypt
- (word_xor in_pt
- (aes256_encrypt tweak
+ (word_xor pt_in
+ (aes256_encrypt iv
  [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
   k2_12; k2_13; k2_14]))
  [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11;
@@ -944,24 +1416,24 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
 # e(AP_THM_TAC);;
   `aes256_encrypt
  (word_xor
-  (aes256_encrypt tweak
+  (aes256_encrypt iv
   [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
    k2_12; k2_13; k2_14])
- in_pt) =
+ pt_in) =
  aes256_encrypt
- (word_xor in_pt
- (aes256_encrypt tweak
+ (word_xor pt_in
+ (aes256_encrypt iv
  [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
   k2_12; k2_13; k2_14]))`
 
 # e(AP_TERM_TAC);;
 `word_xor
- (aes256_encrypt tweak
+ (aes256_encrypt iv
  [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
   k2_12; k2_13; k2_14])
- in_pt =
- word_xor in_pt
- (aes256_encrypt tweak
+ pt_in =
+ word_xor pt_in
+ (aes256_encrypt iv
  [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11;
   k2_12; k2_13; k2_14])`
 *)
@@ -974,7 +1446,7 @@ first xor to make it aes256_encrypt?
 
  83 [`read (memory :> bytes128 ctxt) s117 =
       word_xor
-      (aes256_encrypt tweak
+      (aes256_encrypt iv
       [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
        k2_11; k2_12; k2_13; k2_14])
       (word_xor k1_14
@@ -1006,10 +1478,10 @@ first xor to make it aes256_encrypt?
                    (aesmc
                    (aese
                     (word_xor
-                     (aes256_encrypt tweak
+                     (aes256_encrypt iv
                      [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8;
                       k2_9; k2_10; k2_11; k2_12; k2_13; k2_14])
-                    in_pt)
+                    pt_in)
                    k1_0))
                   k1_1))
                  k1_2))
