@@ -5,6 +5,7 @@
 
 use_file_raise_failure := true;;
 arm_print_log := true;;
+components_print_log := true;;
 
 needs "arm/proofs/base.ml";;
 loadt "arm/proofs/aes_xts_decrypt_spec.ml";;
@@ -1453,6 +1454,15 @@ let NUM_BLOCKS_ADJUSTED_LT_LEN_THM = prove(
     BITBLAST_TAC
 );;
 
+let BYTE_LIST_TO_NUM_THM = prove(
+  `!len (bl:byte list) s.
+    (forall i. i < len
+      ==> read (memory :> bytes8 (word_add pt_ptr (word i))) s = EL i bl)
+    <=>
+    (read (memory :> bytes (pt_ptr, len)) s = num_of_bytelist bl)`,
+    CHEAT_TAC
+);;
+
 let AES_XTS_DECRYPT_CORRECT = prove(
   `!ct_ptr pt_ptr ct pt_init key1_ptr key2_ptr iv_ptr iv len
     k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e
@@ -1912,10 +1922,8 @@ let AES_XTS_DECRYPT_CORRECT = prove(
       CONJ_TAC THENL [
         REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
                 MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
-        REWRITE_TAC [ARITH_RULE `0x50 * i = i * 0x50`] THEN
-        (* SUBSUMED_MAYCHANGE_TAC *)
-        CHEAT_TAC
-       ; ALL_TAC] THEN
+        ABBREV_TAC `vallen = val (len:int64)` THEN
+        SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
 
       (* ===> Symbolic Simulation: Start symbolic simulation*)
       ASM_REWRITE_TAC[byte_list_at] THEN
@@ -1957,8 +1965,13 @@ let AES_XTS_DECRYPT_CORRECT = prove(
       RULE_ASSUM_TAC(REWRITE_RULE
         [WORD_RULE `word_mul (word 0x50) (word i):int64 = word(0x50 * i)`]) THEN
 
+      (* Rewrite to help reasoning about nonoverlapping
+         so that the universally quantified assumption stays. *)
+      SUBGOAL_THEN `val ((word (0x50 * i)):int64) = 0x50 * i` ASSUME_TAC THENL [
+        IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+      POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+
       (* Simulate until end of loop *)
-      (* TODO: previous pt_ptr blocks are removed from hypotheses!!!! *)
       ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (184--188) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
       REPEAT CONJ_TAC THENL
@@ -1976,7 +1989,24 @@ let AES_XTS_DECRYPT_CORRECT = prove(
         REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x4 = i * 0x5 + 0x9`];
         REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x4 = i * 0x5 + 0x9`];
         REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x4 = i * 0x5 + 0x9`];
-        CHEAT_TAC;
+        (* WIP *)
+        REWRITE_TAC[ARITH_RULE `0x50 * (i + 0x1) = 0x50 * i + 0x50`] THEN
+        SUBGOAL_THEN `val ((word (0x50 * i + 0x50)):int64) = 0x50 * i + 0x50` ASSUME_TAC THENL [
+          IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+          UNDISCH_TAC `i * 0x50 + 0x50 <= val (len:int64)` THEN
+          UNDISCH_TAC `val (len:int64) <= 2 EXP 24` THEN
+          ARITH_TAC; ALL_TAC] THEN
+        ASM_REWRITE_TAC[] THEN
+
+        UNDISCH_TAC
+        `forall i'.
+          i' < 0x50 * i
+          ==> read (memory :> bytes8 (word_add pt_ptr (word i'))) s188 =
+              EL i' (aes256_xts_decrypt ct (0x50 * i) iv key1 key2 pt_init)` THEN
+        REWRITE_TAC[BYTE_LIST_TO_NUM_THM] THEN
+
+        CHEAT_TAC
+        ;
         SUBGOAL_THEN  `i + 1 < 2 EXP 64` ASSUME_TAC THENL
         [ UNDISCH_TAC `i < val (num_5blocks_adjusted:int64)` THEN
           EXPAND_TAC "num_5blocks_adjusted" THEN
@@ -2111,8 +2141,14 @@ let AES_XTS_DECRYPT_CORRECT = prove(
           ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
           CHEAT_TAC;
           ALL_TAC] THEN
-        (* Cipher stealing branch *)
-        CHEAT_TAC;
+
+        (* WIP: Cipher stealing branch *)
+        DISCH_TAC THEN
+        ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (139--147) THEN
+        TWEAK_TAC `Q8:(armstate,int128)component` `val (num_5blocks_adjusted:int64) * 0x5 + 0x5` `val (num_5blocks_adjusted:int64) * 0x5 + 0x4` THEN
+        ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (148--148) THEN
+        CHEAT_TAC
+        ;
         ALL_TAC
       ] THEN
 
