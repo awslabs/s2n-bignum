@@ -92,14 +92,14 @@ let calculate_tweak = new_recursive_definition num_RECURSION
 let eth = prove_general_recursive_function_exists
  `?aes256_xts_decrypt_rec.
     ! (i:num) (m:num) (C:byte list) (iv:int128) (key1:int128 list) (key2:int128 list).
-    aes256_xts_decrypt_rec i m C iv key1 key2: (byte list)#num =
-    if m < i then ([], i)
+    aes256_xts_decrypt_rec i m C iv key1 key2: byte list =
+    if m < i then []
     else
       let current_block = bytes_to_int128 (SUB_LIST (i * 16, 16) C) in
       let twk = calculate_tweak i iv key2 in
       let curr = int128_to_bytes (aes256_xts_decrypt_round current_block twk key1) in
       let res = aes256_xts_decrypt_rec (i + 1) m C iv key1 key2 in
-      (APPEND curr (FST res), SND res)`;;
+      APPEND curr res`;;
 
 let wfth = prove(hd(hyp eth),
   EXISTS_TAC `MEASURE (\(i:num,m:num,C:byte list,iv:int128,key1:int128 list,key2:int128 list). (m + 1) - i)` THEN
@@ -168,8 +168,8 @@ let aes256_xts_decrypt = new_definition
         aes256_xts_decrypt_tail 0 tail_len C iv key1 key2
       else
         let res = aes256_xts_decrypt_rec 0 (m - 2) C iv key1 key2 in
-        let Ptail = aes256_xts_decrypt_tail (SND res) tail_len C iv key1 key2 in
-        APPEND (FST res) Ptail`;;
+        let Ptail = aes256_xts_decrypt_tail (m - 1) tail_len C iv key1 key2 in
+        APPEND res Ptail`;;
 
 (*******************************************)
 (* Test vectors printed from AWS-LC *)
@@ -430,7 +430,7 @@ let rec AES256_XTS_DECRYPT_REC_CONV tm =
     SUBLET_CONV (RAND_CONV AES256_XTS_DECRYPT_ROUND_CONV) THENC
     SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV THENC
     SUBLET_CONV AES256_XTS_DECRYPT_REC_CONV THENC let_CONV THENC
-    REWRITE_CONV [FST;SND;APPEND] in
+    REWRITE_CONV [APPEND] in
   match tm with
   | Comb
       (Comb
@@ -450,7 +450,7 @@ let rec AES256_XTS_DECRYPT_REC_CONV tm =
 (*
 (REWRITE_CONV [iv_tweak;KEY1;KEY2;c0] THENC AES256_XTS_DECRYPT_REC_CONV)
   `aes256_xts_decrypt_rec 0 0 c0 iv_tweak KEY1 KEY2`;;
-  *)
+*)
 
 let CIPHER_STEALING_CONV =
   REWRITE_CONV [cipher_stealing] THENC
@@ -519,7 +519,6 @@ let AES256_XTS_DECRYPT_CONV tm =
     DEPTH_CONV NUM_RED_CONV in
   let MORE_THAN_2_CONV =
     SUBLET_CONV AES256_XTS_DECRYPT_REC_CONV THENC let_CONV THENC
-    REWRITE_CONV [FST;SND] THENC
     SUBLET_CONV AES256_XTS_DECRYPT_TAIL_CONV THENC let_CONV THENC
     REWRITE_CONV [APPEND] in
   let BODY_CONV =
