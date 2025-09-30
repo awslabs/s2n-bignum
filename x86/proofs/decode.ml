@@ -226,6 +226,10 @@ let simd_of_RM = define
          %_%(Simdreg (word_zx reg) sz)) /\
   (!ea. simd_of_RM sz (RM_mem ea) = Memop (simd_to_wordsize sz) ea)`;;
 
+let is_memop = define
+ `(!reg. is_memop (RM_reg reg) = F) /\
+  (!ea. is_memop (RM_mem ea) = T)`;;
+
 let read_ModRM_operand = new_definition
  `read_ModRM_operand rex sz l =
   read_ModRM rex l >>= \((reg,rm),l).
@@ -619,14 +623,20 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           (read_ModRM rex l >>= \((reg,rm),l).
            if rex_W rex then NONE else
            match pfxs with
-           | (T, Rep0, SG0) -> SOME (VPBROADCASTD (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l)
+           | (T, Rep0, SG0) ->
+             let sop = if is_memop rm then operand_of_RM Lower_32 rm
+                       else simd_of_RM Lower_128 rm in
+             SOME (VPBROADCASTD (mmreg reg sz) sop,l)
            | _ -> NONE)
         | [0x59:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
            if rex_W rex then NONE else
-           match pfxs with
-           | (T, Rep0, SG0) -> SOME (VPBROADCASTQ (mmreg reg sz) (simd_of_RM (if sz = Lower_256 then Lower_128 else sz) rm),l)
+          match pfxs with
+           | (T, Rep0, SG0) ->
+             let sop = if is_memop rm then operand_of_RM Full_64 rm
+                       else simd_of_RM Lower_128 rm in
+             SOME (VPBROADCASTQ (mmreg reg sz) sop,l)
            | _ -> NONE)
         | [0x40:8] ->
           let sz = vexL_size L in
@@ -1316,6 +1326,8 @@ let SIMD_OF_RM_CONV =
     conv2 tm
   | _ -> failwith "OPERAND_OF_RM_CONV";;
 
+let IS_MEMOP_CONV = GEN_REWRITE_CONV I [is_memop];;
+
 let MMREG_CONV =
   let conv =
     GEN_REWRITE_CONV I [mmreg] THENC
@@ -1896,6 +1908,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
   | Comb((Const("vexL_size",_) as f),a) -> eval_unary f a F VEXL_SIZE_CONV
   | Comb((Const("simd_to_wordsize",_) as f),a) -> eval_unary f a F SIMD_TO_WORDSIZE_CONV
   | Comb((Const("adx",_) as f),a) -> eval_unary f a F ADX_CONV
+  | Comb((Const("is_memop",_) as f),a) -> eval_unary f a F IS_MEMOP_CONV
   | Comb(Comb((Const("operand_of_RM",_) as f),a),b) ->
     eval_binary f a b F OPERAND_OF_RM_CONV
   | Comb(Comb((Const("mmreg",_) as f),a),b) ->

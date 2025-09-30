@@ -1394,14 +1394,14 @@ let x86_VPBLENDW = new_definition
 
 let x86_VPBROADCASTD = new_definition
   `x86_VPBROADCASTD (dest:(x86state,(N)word)component) src (s:x86state) =
-      let (x:128 word) = read src s in
+      let (x:M word) = read src s in
       let dw = word_subword x (0,32):(32)word in
       let res:N word = word_duplicate dw in
       (dest := res) s`;;
 
 let x86_VPBROADCASTQ = new_definition
   `x86_VPBROADCASTQ (dest:(x86state,(N)word)component) src (s:x86state) =
-      let (x:128 word) = read src s in
+      let (x:M word) = read src s in
       let qw = word_subword x (0,64):(64)word in
       let res:N word = word_duplicate qw in
       (dest := res) s`;;
@@ -2395,8 +2395,20 @@ let x86_execute = define
         | 128 -> x86_VPBLENDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s
     | VPBROADCASTD dest src ->
         (match operand_size dest with
-          256 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND128 src s)
-        | 128 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND128 src s)) s
+          256 -> (match operand_size src with
+                    128 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND128 src s)
+                  |  32 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND32 src s))
+         | 128 -> (match operand_size src with
+                    128 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND128 src s)
+                  |  32 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND32 src s))) s
+    | VPBROADCASTQ dest src ->
+        (match operand_size dest with
+          256 -> (match operand_size src with
+                    128 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND128 src s)
+                  |  64 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND64 src s))
+         | 128 -> (match operand_size src with
+                    128 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND128 src s)
+                  |  64 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND64 src s))) s
     | VPBROADCASTQ dest src ->
         (match operand_size dest with
           256 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND128 src s)
@@ -2650,6 +2662,10 @@ let WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
 let OPERAND_SIZE_CASES = prove
  (`(match 256 with 256 -> a | 128 -> b) = a /\
    (match 128 with 256 -> a | 128 -> b) = b /\
+   (match 128 with 128 -> a | 64 -> b) = a /\
+   (match 64 with 128 -> a | 64 -> b) = b /\
+   (match 128 with 128 -> a | 32 -> b) = a /\
+   (match 32 with 128 -> a | 32 -> b) = b /\
    (match 64 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = a /\
    (match 32 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = b /\
    (match 16 with 64 -> a | 32 -> b | 16 -> c | 8 -> d) = c /\
