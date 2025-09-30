@@ -649,7 +649,8 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           read_ModRM_operand rex sz l >>= \((reg,rm),l).
           (match pfxs with
            | (F, RepNZ, SG0) ->
-             SOME (MULX4 (reg, %(Gpr v sz)) (%(Gpr (word 2) sz), rm), l)
+             if L then NONE
+             else SOME (MULX4 (reg, %(Gpr v sz)) (%(Gpr (word 2) sz), rm), l)
            | _ -> NONE)
         | _ -> NONE)
     | VEXM_0F ->
