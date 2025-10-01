@@ -655,7 +655,8 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           read_ModRM_operand rex sz l >>= \((reg,rm),l).
           (match pfxs with
           | (F, RepZ, SG0) ->
-            SOME (PEXT reg (%(Gpr v sz)) rm, l)
+             if L then NONE
+             else SOME (PEXT reg (%(Gpr v sz)) rm, l)
           | _ -> NONE)
         | [0xf6:8] ->
           let sz = op_size_W rex T pfxs in
