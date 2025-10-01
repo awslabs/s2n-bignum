@@ -76,10 +76,17 @@
 : paddd$
 : paddq$
 : pand$
+: pblendw$
+: pcmpgtw$
+: pinsrd$
+: pinsrq$
+: pmovmskb$
 : pop$
 : popq$
+: pshufb$
 : pshufd$
 : psrad$
+: psrlw$
 : push$
 : pushq$
 : pxor$
