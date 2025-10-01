@@ -885,6 +885,12 @@ let x86_MOVD = new_definition
     let (x':N word) = word_zx x in
     (dest := x') s`;;
 
+let x86_MOVQ = new_definition
+ `x86_MOVQ dest src s =
+    let (x:M word) = read src s in
+    let (x':N word) = word_zx x in
+    (dest := x') s`;;
+
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
     let x = read src s in (dest := x) s`;;
@@ -1014,6 +1020,15 @@ let x86_PAND = new_definition
     let y = read src s in
     (dest := word_and x y) s`;;
 
+let x86_PBLENDW = new_definition
+ `x86_PBLENDW dest src imm8 (s:x86state) =
+     let x:int128 = read dest s
+     and y:int128 = read src s
+     and imm8:byte = read imm8 s in
+     let fn = \(i:1 word) (x:16 word) (y:16 word). if i = word 1 then y else x in
+     let res = msimd8 fn imm8 x y in
+     (dest := res) s`;;
+
 let x86_PCMPGTD = new_definition
   `x86_PCMPGTD dest src s =
     let x = read dest s in
@@ -1022,6 +1037,37 @@ let x86_PCMPGTD = new_definition
         if word_igt x y then (word 0xffffffff) else (word 0))
         x y in
     (dest := res) s`;;
+
+let x86_PCMPGTW = new_definition
+  `x86_PCMPGTW dest src s =
+    let x = read dest s in
+    let y = read src s in
+    let res:(128)word = simd8 (\(x:16 word) (y:16 word).
+        if word_igt x y then (word 0xffff) else (word 0))
+        x y in
+    (dest := res) s`;;
+
+let x86_PINSRD = new_definition
+ `x86_PINSRD dest src imm8 (s:x86state) =
+    let x:int128 = read dest s
+    and w:int32 = read src s
+    and sel = val(read imm8 s:byte) MOD 4 in
+    let res = word_insert x (32 * sel,32) w in
+    (dest := res) s`;;
+
+let x86_PINSRQ = new_definition
+ `x86_PINSRQ dest src imm8 (s:x86state) =
+    let x:int128 = read dest s
+    and w:int64 = read src s
+    and sel = val(read imm8 s:byte) MOD 2 in
+    let res = word_insert x (64 * sel,64) w in
+    (dest := res) s`;;
+
+let x86_PMOVMSKB = new_definition
+ `x86_PMOVMSKB dest src (s:x86state) =
+    let x:int128 = read src s in
+    let res:int16 = usimd2 (usimd8 (\x. if bit 7 x then word 1 else word 0)) x in
+    (dest := word_zx res:N word) s`;;
 
 (*** Push and pop are a bit odd in several ways. First of all, there is  ***)
 (*** an implicit memory operand so this doesn't have quite the same      ***)
@@ -1053,6 +1099,16 @@ let x86_PUSH = new_definition
         (RSP := p' ,,
          memory :> bytes(p',n) := x) s`;;
 
+let x86_PSHUFB = new_definition
+  `x86_PSHUFB dest src (s:x86state) =
+      let x:int128 = read dest s
+      and ix = read src s in
+      let f8 = (\i:byte.
+        if bit 7 i then word 0
+        else word_subword x (8 * val(word_subword i (0,4):nybble),8)) in
+      let res = usimd16 f8 ix in
+      (dest := res) s`;;
+
 let x86_PSHUFD = new_definition
  `x86_PSHUFD dest src imm8 s =
     let src = read src s in
@@ -1064,9 +1120,15 @@ let x86_PSHUFD = new_definition
 let x86_PSRAD = new_definition
   `x86_PSRAD dest imm8 s =
     let d = read dest s in
-    let count_src = val (read imm8 s) in
-    let count = if count_src > 31 then 32 else count_src in
+    let count = val (read imm8 s) in
     let res:(128)word = usimd4 (\x. word_ishr x count) d in
+    (dest := res) s`;;
+
+let x86_PSRLW = new_definition
+  `x86_PSRLW dest imm8 s =
+    let d = read dest s in
+    let count = val (read imm8 s) in
+    let res:(128)word = usimd8 (\x. word_ushr x count) d in
     (dest := res) s`;;
 
 let x86_PXOR = new_definition
@@ -2156,6 +2218,10 @@ let x86_execute = define
         (match (operand_size dest, operand_size src) with
           (32,128) -> x86_MOVD (OPERAND32 dest s) (OPERAND128_SSE src s)
         | (128,32) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND32 src s)) s
+    | MOVQ dest src ->
+        (match (operand_size dest, operand_size src) with
+          (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128_SSE src s)
+        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)) s
     | MOVSX dest src ->
         (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
@@ -2220,16 +2286,32 @@ let x86_execute = define
         x86_PADDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | PAND dest src ->
         x86_PAND (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | PBLENDW dest src imm8 ->
+        x86_PBLENDW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
     | PCMPGTD dest src ->
         x86_PCMPGTD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | PCMPGTW dest src ->
+        x86_PCMPGTW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+    | PINSRD dest src imm8 ->
+        x86_PINSRD (OPERAND128_SSE dest s) (OPERAND32 src s) (OPERAND8 imm8 s) s
+    | PINSRQ dest src imm8 ->
+        x86_PINSRQ (OPERAND128_SSE dest s) (OPERAND64 src s) (OPERAND8 imm8 s) s
+    | PMOVMSKB dest src ->
+        (match operand_size dest with
+           64 -> x86_PMOVMSKB (OPERAND64 dest s) (OPERAND128_SSE src s)
+         | 32  -> x86_PMOVMSKB (OPERAND32 dest s) (OPERAND128_SSE src s)) s
     | POP dest ->
         (match operand_size dest with
            64 -> x86_POP (OPERAND64 dest s)
          | 16 -> x86_POP (OPERAND16 dest s)) s
+    | PSHUFB dest src ->
+        x86_PSHUFB (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
     | PSHUFD dest src imm8 ->
         x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
     | PSRAD dest imm8 ->
         x86_PSRAD (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s
+    | PSRLW dest imm8 ->
+        x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s
     | PUSH src ->
         (match operand_size src with
            64 -> x86_PUSH (OPERAND64 src s)
@@ -2679,6 +2761,8 @@ let OPERAND_SIZE_CASES = prove
    (match 16 with 32 -> a | 16 -> b) = b /\
    (match (32,128) with (32,128) -> a | (128,32) -> b) = a /\
    (match (128,32) with (32,128) -> a | (128,32) -> b) = b /\
+   (match (64,128) with (64,128) -> a | (128,64) -> b) = a /\
+   (match (128,64) with (64,128) -> a | (128,64) -> b) = b /\
    (match (64,32) with
       (64,32) -> a  | (64,16) -> b  | (64,8) -> c | (32,32) -> d
     | (32,16) -> e | (32,8) -> f  | (16,8) -> g) = a /\
@@ -3226,9 +3310,14 @@ let EXPAND_SIMD_RULE =
 
 let x86_PADDD_ALT = EXPAND_SIMD_RULE x86_PADDD;;
 let x86_PADDQ_ALT = EXPAND_SIMD_RULE x86_PADDQ;;
+let x86_PBLENDW_ALT = EXPAND_SIMD_RULE x86_PBLENDW;;
 let x86_PCMPGTD_ALT = EXPAND_SIMD_RULE x86_PCMPGTD;;
+let x86_PCMPGTW_ALT = EXPAND_SIMD_RULE x86_PCMPGTW;;
+let x86_PMOVMSKB_ALT = EXPAND_SIMD_RULE x86_PMOVMSKB;;
+let x86_PSHUFB_ALT = EXPAND_SIMD_RULE x86_PSHUFB;;
 let x86_PSHUFD_ALT = EXPAND_SIMD_RULE x86_PSHUFD;;
 let x86_PSRAD_ALT = EXPAND_SIMD_RULE x86_PSRAD;;
+let x86_PSRLW_ALT = EXPAND_SIMD_RULE x86_PSRLW;;
 let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
 let x86_VMOVDQU_ALT = EXPAND_SIMD_RULE x86_VMOVDQU;;
 let x86_VMOVSHDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSHDUP;;
@@ -3270,10 +3359,11 @@ let X86_OPERATION_CLAUSES =
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_DIV2; x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
-    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVSX; x86_MOVUPS;
+    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_MOVSX; x86_MOVUPS;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
-    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PCMPGTD_ALT; x86_POP_ALT;
-    x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PUSH_ALT; x86_PXOR;
+    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
+    x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT;
+    x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
