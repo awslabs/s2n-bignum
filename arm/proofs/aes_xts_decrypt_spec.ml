@@ -147,20 +147,17 @@ let aes256_xts_decrypt_tail = new_definition
    iv: Initialization vector (tweak) as an int128
    key1: Key schedule for AES-256 decryption
    key2: Key schedule for AES-256 encryption for the tweak
-   perror: Error output plaintext in case of invalid input length
 
    return: Output plaintext as a byte list
 
-   When input len < 16, the function returns perror,
-   which will be the initial value stored in output address.
+   When input len < 16, the function returns [].
 *)
-(* TODO: Challenge lemma: proving that the output is of same length as input *)
 (* TODO: Double check if IEEE and NIST spec talks about the error case len < 16 *)
 let aes256_xts_decrypt = new_definition
   `aes256_xts_decrypt
-    (C:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (err:byte list) : byte list =
+    (C:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) : byte list =
     if len < 16 then
-      err
+      []
     else
       let tail_len = len MOD 16 in
       let m = (len - tail_len) DIV 16 in
@@ -287,12 +284,6 @@ let p2 = new_definition
 
 let iv_tweak = new_definition
   `iv_tweak = (word 0x0000000000000000000000123456789a) : int128`;;
-
-let perror = new_definition
-  `perror = [ word 0; word 0; word 0; word 0
-   ; word 0; word 0; word 0; word 0
-   ; word 0; word 0; word 0; word 0
-   ; word 0; word 0; word 0; word 0] : byte list`;;
 
 let KEY1 = new_definition `KEY1:int128 list =
   [ word 0xc70a951e84370d1836bdd387607e94e5
@@ -529,29 +520,27 @@ let AES256_XTS_DECRYPT_CONV tm =
     (AES256_XTS_DECRYPT_TAIL_CONV ORELSEC MORE_THAN_2_CONV) in
   match tm with
   | Comb
-     (Comb
-       (Comb
-         (Comb
-           (Comb
-             (Comb
-               (Const ("aes256_xts_decrypt", _), _), len),
-           _),
-         _),
-       _),
-     _) ->
+      (Comb
+        (Comb
+          (Comb
+            (Comb
+              (Const ("aes256_xts_decrypt", _), _), len),
+          _),
+        _),
+      _) ->
     if dest_numeral len </ num 16
     then ERROR_CONV tm
     else BODY_CONV tm
   | _ -> failwith "AES256_XTS_DECRYPT_CONV: inapplicable";;
 
 (*
-(REWRITE_CONV [perror] THENC AES256_XTS_DECRYPT_CONV)
-  `aes256_xts_decrypt c0 5 iv_tweak KEY1 KEY2 perror`;;
+AES256_XTS_DECRYPT_CONV
+  `aes256_xts_decrypt c0 5 iv_tweak KEY1 KEY2`;;
 
-(REWRITE_CONV [c0;iv_tweak;KEY1;KEY2;perror] THENC AES256_XTS_DECRYPT_CONV)
-  `aes256_xts_decrypt c0 16 iv_tweak KEY1 KEY2 perror`;;
+(REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
+  `aes256_xts_decrypt c0 16 iv_tweak KEY1 KEY2`;;
 
-time (REWRITE_CONV [iv_tweak;KEY1;KEY2;perror] THENC AES256_XTS_DECRYPT_CONV)
+time (REWRITE_CONV [iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)
   `aes256_xts_decrypt [word 0xc3; word 0x0c; word 0xa8; word 0xf2
   ; word 0xed; word 0x57; word 0x30; word 0x7e
   ; word 0xdc; word 0x87; word 0xe5; word 0x44
@@ -561,7 +550,7 @@ time (REWRITE_CONV [iv_tweak;KEY1;KEY2;perror] THENC AES256_XTS_DECRYPT_CONV)
   ; word 0xdc; word 0x87; word 0xe5; word 0x44
   ; word 0x86; word 0x7a; word 0xc8; word 0x88
   ; word 0x00]
-  33 iv_tweak KEY1 KEY2 perror`;;
+  33 iv_tweak KEY1 KEY2`;;
 *)
 
 (*******************************************)
@@ -569,17 +558,17 @@ time (REWRITE_CONV [iv_tweak;KEY1;KEY2;perror] THENC AES256_XTS_DECRYPT_CONV)
 
 (*
 (* 1 block : 81 second *)
-time prove (`aes256_xts_decrypt c0 16 iv_tweak KEY1 KEY2 perror = p0`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [c0;iv_tweak;KEY1;KEY2;perror] THENC AES256_XTS_DECRYPT_CONV)) THEN
+time prove (`aes256_xts_decrypt c0 16 iv_tweak KEY1 KEY2 = p0`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [c0;iv_tweak;KEY1;KEY2] THENC AES256_XTS_DECRYPT_CONV)) THEN
   REWRITE_TAC [p0] THEN REFL_TAC);;
 
 (* 1 block + 6 bytes : 121 seconds *)
-time prove(`aes256_xts_decrypt c1 22 iv_tweak KEY1 KEY2 perror = p1`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [c1;iv_tweak;KEY1;KEY2;perror;p1] THENC AES256_XTS_DECRYPT_CONV)) THEN
+time prove(`aes256_xts_decrypt c1 22 iv_tweak KEY1 KEY2 = p1`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [c1;iv_tweak;KEY1;KEY2;p1] THENC AES256_XTS_DECRYPT_CONV)) THEN
   REWRITE_TAC [p1] THEN REFL_TAC);;
 
 (* 3 blocks + 3 bytes : 273 seconds *)
-time prove(`aes256_xts_decrypt c2 51 iv_tweak KEY1 KEY2 perror = p2`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [c2;iv_tweak;KEY1;KEY2;perror;p2] THENC AES256_XTS_DECRYPT_CONV)) THEN
+time prove(`aes256_xts_decrypt c2 51 iv_tweak KEY1 KEY2 = p2`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [c2;iv_tweak;KEY1;KEY2;p2] THENC AES256_XTS_DECRYPT_CONV)) THEN
   REWRITE_TAC [p2] THEN REFL_TAC);;
 *)
