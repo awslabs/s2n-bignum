@@ -49,13 +49,36 @@ let aes256_xts_decrypt_1block = new_definition
 *)
 let bytes_to_int128 = define
   `bytes_to_int128 (bs : byte list) : int128 =
-    word_join
-      (word_join
-        (word_join (word_join (EL 15 bs) (EL 14 bs) : int16) (word_join (EL 13 bs) (EL 12 bs) : int16) : int32)
-        (word_join (word_join (EL 11 bs) (EL 10 bs) : int16) (word_join (EL 9 bs) (EL 8 bs) : int16) : int32) : int64)
-      (word_join
-        (word_join (word_join (EL 7 bs) (EL 6 bs) : int16) (word_join (EL 5 bs) (EL 4 bs) : int16) : int32)
-        (word_join (word_join (EL 3 bs) (EL 2 bs) : int16) (word_join (EL 1 bs) (EL 0 bs) : int16) : int32) : int64)`;;
+  (word_join:120 word->8 word->int128)
+    ((word_join:112 word->8 word->120 word)
+      ((word_join:104 word->8 word->112 word)
+        ((word_join:96 word->8 word->104 word)
+          ((word_join:88 word->8 word->96 word)
+            ((word_join:80 word->8 word->88 word)
+              ((word_join:72 word->8 word->80 word)
+                ((word_join:64 word->8 word->72 word)
+                  ((word_join:56 word->8 word->64 word)
+                    ((word_join:48 word->8 word->56 word)
+                      ((word_join:40 word->8 word->48 word)
+                        ((word_join:32 word->8 word->40 word)
+                          ((word_join:24 word->8 word->32 word)
+                            ((word_join:16 word->8 word->24 word)
+                              ((word_join:8 word->8 word->16 word)
+                                (EL 15 bs) (EL 14 bs))
+                              (EL 13 bs))
+                            (EL 12 bs))
+                          (EL 11 bs))
+                        (EL 10 bs))
+                      (EL 9 bs))
+                    (EL 8 bs))
+                  (EL 7 bs))
+                (EL 6 bs))
+              (EL 5 bs))
+            (EL 4 bs))
+          (EL 3 bs))
+        (EL 2 bs))
+      (EL 1 bs))
+    (EL 0 bs)`;;
 
 let int128_to_bytes = define
   `int128_to_bytes (w : int128) : byte list =
