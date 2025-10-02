@@ -507,6 +507,12 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = op_size_W rex T pfxs in
       read_ModRM_operand rex sz l >>= \((reg,rm),l).
       SOME (IMUL reg rm,l)
+    | [0xb8:8] ->
+      let sz = op_size_W rex T pfxs in
+      read_ModRM_operand rex sz l >>= \((reg,rm),l).
+      (match pfxs with
+      | (F, RepZ, SG0) -> SOME (POPCNT reg rm,l)
+      | _ -> NONE)
     | [0xba:8] -> if has_pfxs pfxs then NONE else
       let sz = op_size_W rex T pfxs in
       read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).
@@ -686,6 +692,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPMULLD (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0xf5:8] ->
+          let sz = op_size_W rex T pfxs in
+          read_ModRM_operand rex sz l >>= \((reg,rm),l).
+          (match pfxs with
+          | (F, RepZ, SG0) ->
+             if L then NONE
+             else SOME (PEXT reg (%(Gpr v sz)) rm, l)
+          | _ -> NONE)
         | [0xf6:8] ->
           let sz = op_size_W rex T pfxs in
           read_ModRM_operand rex sz l >>= \((reg,rm),l).
