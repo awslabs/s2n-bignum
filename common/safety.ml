@@ -36,6 +36,14 @@ let uarch_event_INDUCT, uarch_event_RECURSION = define_type
     | EventStore (int64#num)
     // (src pc, destination pc)
     | EventJump (int64#int64)
+
+    // Instructions in X86 that are not in the DOIT list
+    // (Data Operand Independent Timing Instructions)
+  
+    // PEXT (src1, src2, bitwidth)
+    | EventX86PEXT (int64#int64#num)
+    // POPCNT (src, bitwidth)
+    | EventX86POPCNT (int64#num)
   ";;
 
 (* ------------------------------------------------------------------------- *)

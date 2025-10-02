@@ -266,6 +266,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | LZCNT operand operand
    | MOV operand operand
    | MOVD operand operand
+   | MOVQ operand operand
    | MOVSX operand operand
    | MOVZX operand operand
    | MOVAPS operand operand
@@ -282,10 +283,19 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PADDD operand operand
    | PADDQ operand operand
    | PAND operand operand
+   | PBLENDW operand operand operand
    | PCMPGTD operand operand
+   | PCMPGTW operand operand
+   | PEXT operand operand operand
+   | PINSRD operand operand operand
+   | PINSRQ operand operand operand
+   | PMOVMSKB operand operand
    | POP operand
+   | POPCNT operand operand
+   | PSHUFB operand operand
    | PSHUFD operand operand operand
    | PSRAD operand operand
+   | PSRLW operand operand
    | PUSH operand
    | PXOR operand operand
    | RCL operand operand
@@ -305,21 +315,37 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TEST operand operand
    | TZCNT operand operand
    | VMOVDQA operand operand
-   | VMOVSHDUP operand operand 
+   | VMOVDQU operand operand
+   | VMOVSHDUP operand operand
+   | VMOVSLDUP operand operand
    | VPADDW operand operand operand
    | VPADDD operand operand operand
    | VPAND operand operand operand
+   | VPBLENDD operand operand operand operand
+   | VPBLENDW operand operand operand operand
    | VPBROADCASTD operand operand
+   | VPBROADCASTQ operand operand
+   | VPERMD operand operand operand
+   | VPERMQ operand operand operand
+   | VPERM2I128 operand operand operand operand
    | VPMULDQ operand operand operand
    | VPMULHW operand operand operand
-   | VPMULLD operand operand operand 
+   | VPMULLD operand operand operand
    | VPMULLW operand operand operand
+   | VPOR operand operand operand
+   | VPSHUFB operand operand operand
+   | VPSLLD operand operand operand
    | VPSLLQ operand operand operand
+   | VPSLLW operand operand operand
    | VPSRAD operand operand operand
    | VPSRAW operand operand operand
+   | VPSRLD operand operand operand
+   | VPSRLQ operand operand operand
    | VPSRLW operand operand operand
    | VPSUBD operand operand operand
    | VPSUBW operand operand operand
+   | VPUNPCKHQDQ operand operand operand
+   | VPUNPCKLQDQ operand operand operand
    | VPXOR operand operand operand
    | XCHG operand operand
    | XOR operand operand";;
