@@ -1051,10 +1051,7 @@ let x86_PEXT = new_definition
   `x86_PEXT dest src1 src2 (s:x86state) =
     let x:N word = read src1 s
     and y:N word = read src2 s in
-    let res:N word =
-      word(nsum (0..dimindex(:N)-1)
-                (\i. 2 EXP word_popcount(word_and y (word(2 EXP i - 1))) *
-                     bitval(bit i (word_and x y)))) in
+    let res = word_condense x y in
     (dest := res) s`;;
 
 let x86_PINSRD = new_definition
