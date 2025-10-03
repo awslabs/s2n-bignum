@@ -4,6 +4,8 @@
  *)
 
 use_file_raise_failure := true;;
+arm_print_log := true;;
+components_print_log := true;;
 
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/aes_encrypt_spec.ml";;
@@ -858,9 +860,9 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
 
 (* The following definitions that precede the proof are the same as
    the decrypt proof except where stated *)
-let byte_list_l_at = define
-  `byte_list_l_at (m : byte list) (l:num) (m_p : int64) s =
-    ! i. i < l ==> read (memory :> bytes8(word_add m_p (word i))) s = EL i m`;;
+let byte_list_at = define
+  `byte_list_at (m : byte list) (m_p : int64) (len:int64) s =
+    ! i. i < val len ==> read (memory :> bytes8(word_add m_p (word i))) s = EL i m`;;
 
 let word_split_lemma = prove(
   `!len:int64. word_add (word_and len (word 0xf))
@@ -990,8 +992,8 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
            read PC s = word (pc + 28) /\
            read SP s = stackpointer /\
            C_ARGUMENTS [ptxt_p; ctxt_p; len; key1_p; key2_p; iv_p] s /\
-           byte_list_l_at pt_in (val len) ptxt_p s /\
-           byte_list_l_at ct_err 15 ct_org s /\
+           byte_list_at pt_in ptxt_p len s /\
+           byte_list_at ct_err ct_org (word 15) s /\
            read(memory :> bytes128 ctxt_p) s = err /\
            read(memory :> bytes128 iv_p) s = iv /\
            set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
@@ -999,10 +1001,10 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
       )
       // postcondition
       (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
-           byte_list_l_at (aes256_xts_encrypt pt_in (val len) iv
+           byte_list_at (aes256_xts_encrypt pt_in (val len) iv
                 [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]
                 [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14] ct_err)
-                (val len) ctxt_p s
+                ctxt_p len s
       )
       (MAYCHANGE [PC;X0;X1;X2;X4;X6;X7;X8;X9;X10;X11;X19;X20;X21;X22],,
        MAYCHANGE [Q0;Q1;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26],,
@@ -1010,7 +1012,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
        MAYCHANGE [events])`,
 
   REWRITE_TAC [(REWRITE_CONV [aes256_xts_encrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_xts_encrypt_mc`] THEN
-  REWRITE_TAC[byte_list_l_at; set_key_schedule; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS; PAIRWISE; ALL] THEN
+  REWRITE_TAC[byte_list_at; set_key_schedule; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS; PAIRWISE; ALL] THEN
   REPEAT STRIP_TAC THEN
 
   (* Break len into full blocks and tail *)
@@ -1163,16 +1165,10 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
           MP_TAC (SPECL [`val (len_full_blocks:int64)`] UDIV_OPT_THM) THEN SIMP_TAC[]
           ; ALL_TAC] THEN
         POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
-(*
-         43 [`read X8 s113 =
-      word_ushr (word ((val len * 0xcccccccccccccccd) DIV 0x2 EXP 0x40)) 0x6`]
-      20 [`word (val len_full_blocks DIV 0x50) = num_5blocks`]
-      105 [`word_ushr
-      (word ((val len_full_blocks * 0xcccccccccccccccd) DIV 0x2 EXP 0x40))
-      0x6 =
-      word (val len_full_blocks DIV 0x50)`] *)
-        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-      ]
+
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];
+        ALL_TAC
+      ] THEN
 
   (* Loop invariant *)
   ENSURES_WHILE_PAUP_TAC
@@ -1181,12 +1177,14 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
     `pc + 0x140` (* loop body start PC *)
     `pc + 0x430` (* loop backedge branch PC *)
     `\i s.
-         // loop invariant at the end of the loop
-         (read X8 s = word_sub num_5blocks (word i) /\
-          read X0 s = word_add ptxt_p (word_mul (word 0x50) (word i)) /\
+          // loop invariant at the end of the loop
+         (read X0 s = word_add ptxt_p (word_mul (word 0x50) (word i)) /\
           read X1 s = word_add ctxt_p (word_mul (word 0x50) (word i)) /\
-          byte_list_l_at (aes256_xts_encrypt pt_in (i * 0x50) iv key1_lst key2_lst ct_err)
-                          (i * 0x50) ptxt_p s) /\
+          read X21 s = tail_len /\
+          read X2 s = word_sub len_full_blocks (word_mul (word 0x50) (word i)) /\
+          read X8 s = word_sub num_5blocks (word i) /\
+          byte_list_at (aes256_xts_encrypt pt_in (i * 0x50) iv key1_lst key2_lst ct_err)
+                          ptxt_p val (i * 0x50) s) /\
           // loop backedge condition
           (read ZF s <=> i = val (num_5blocks:int64))` THEN
     ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
