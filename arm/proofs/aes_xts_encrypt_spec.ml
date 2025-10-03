@@ -39,30 +39,41 @@ For partial final blocks, ciphertext stealing is used as per Section 5.3.2.
 (* Helper functions derived from Amanda's code:
    https://github.com/amanda-zx/s2n-bignum/blob/sha512/arm/sha512/sha512_specs.ml#L360 *)
 
-(* XTS tweak initialization - encrypt the IV with key2 *)
 (* TODO: put it in a common place to be used with decrypt
      Start *)
-let xts_init_tweak = new_definition
-  `xts_init_tweak (iv:int128) (key2:int128 list) =
-     aes256_encrypt iv key2`;;
 
 let bytes_to_int128 = define
   `bytes_to_int128 (bs : byte list) : int128 =
-     word_join
-       (word_join
-         (word_join
-           (word_join (EL 15 bs) (EL 14 bs) : int16)
-           (word_join (EL 13 bs) (EL 12 bs) : int16) : int32)
-         (word_join
-           (word_join (EL 11 bs) (EL 10 bs) : int16)
-           (word_join (EL 9 bs) (EL 8 bs) : int16) : int32) : int64)
-       (word_join
-         (word_join
-           (word_join (EL 7 bs) (EL 6 bs) : int16)
-           (word_join (EL 5 bs) (EL 4 bs) : int16) : int32)
-         (word_join
-           (word_join (EL 3 bs) (EL 2 bs) : int16)
-           (word_join (EL 1 bs) (EL 0 bs) : int16) : int32) : int64)`;;
+  (word_join:120 word->8 word->int128)
+    ((word_join:112 word->8 word->120 word)
+      ((word_join:104 word->8 word->112 word)
+        ((word_join:96 word->8 word->104 word)
+          ((word_join:88 word->8 word->96 word)
+            ((word_join:80 word->8 word->88 word)
+              ((word_join:72 word->8 word->80 word)
+                ((word_join:64 word->8 word->72 word)
+                  ((word_join:56 word->8 word->64 word)
+                    ((word_join:48 word->8 word->56 word)
+                      ((word_join:40 word->8 word->48 word)
+                        ((word_join:32 word->8 word->40 word)
+                          ((word_join:24 word->8 word->32 word)
+                            ((word_join:16 word->8 word->24 word)
+                              ((word_join:8 word->8 word->16 word)
+                                (EL 15 bs) (EL 14 bs))
+                              (EL 13 bs))
+                            (EL 12 bs))
+                          (EL 11 bs))
+                        (EL 10 bs))
+                      (EL 9 bs))
+                    (EL 8 bs))
+                  (EL 7 bs))
+                (EL 6 bs))
+              (EL 5 bs))
+            (EL 4 bs))
+          (EL 3 bs))
+        (EL 2 bs))
+      (EL 1 bs))
+    (EL 0 bs)`;;
 
 let int128_to_bytes = define
   `int128_to_bytes (w : int128) : byte list =
@@ -71,6 +82,11 @@ let int128_to_bytes = define
       word_subword w (64, 8); word_subword w (72, 8); word_subword w (80, 8); word_subword w (88, 8);
       word_subword w (96, 8); word_subword w (104, 8); word_subword w (112, 8); word_subword w (120, 8)]`;;
 
+(* XTS tweak initialization - encrypt the IV with key2 *)
+let xts_init_tweak = new_definition
+  `xts_init_tweak (iv:int128) (key2:int128 list) =
+     aes256_encrypt iv key2`;;
+
 (* Multiplication by the primitive element \alpha in GF(2^128) *)
 let GF_128_mult_by_primitive = new_definition
   `GF_128_mult_by_primitive (tweak:(128)word) =
@@ -78,13 +94,13 @@ let GF_128_mult_by_primitive = new_definition
      let mask = word_ishr tweak 127 in
      word_xor (word_and mask (word 0x87)) shifted`;;
 
-(* TODO: put it in a common place to be used with decrypt
-     End *)
 let calculate_tweak = new_recursive_definition num_RECURSION
   `calculate_tweak 0 (iv:(128)word) (key2:int128 list) = xts_init_tweak iv key2 /\
    calculate_tweak (SUC n) (iv:(128)word) (key2:int128 list) =
      GF_128_mult_by_primitive (calculate_tweak n iv key2)`;;
 
+(* TODO: put it in a common place to be used with decrypt
+     End *)
 (* AES-XTS encryption round function *)
 let aes256_xts_encrypt_round = new_definition
   `aes256_xts_encrypt_round (P:int128) (tk:int128) (key1:int128 list) =
@@ -102,14 +118,14 @@ let aes256_xts_encrypt_1block = new_definition
 let eth = prove_general_recursive_function_exists
   `?aes256_xts_encrypt_rec.
      ! (i:num) (m:num) (P:byte list) (iv:int128) (key1:int128 list) (key2:int128 list).
-       aes256_xts_encrypt_rec i m P iv key1 key2 : (byte list)#num =
-         if m < i then ([], i)
+       aes256_xts_encrypt_rec i m P iv key1 key2 : (byte list) =
+         if m < i then []
          else
            let current_block = bytes_to_int128 (SUB_LIST (i * 16, 16) P) in
            let twk = calculate_tweak i iv key2 in
            let curr = int128_to_bytes (aes256_xts_encrypt_round current_block twk key1) in
            let res = aes256_xts_encrypt_rec (i + 1) m P iv key1 key2 in
-           (APPEND curr (FST res), SND res)`;;
+           APPEND curr res`;;
 
 let wfth = prove(hd(hyp eth),
   EXISTS_TAC `MEASURE (\(i:num,m:num,P:byte list,iv:int128,key1:int128 list,key2:int128 list). (m + 1) - i)` THEN
@@ -160,19 +176,16 @@ let aes256_xts_encrypt_tail = new_definition
   iv: Initialization vector (tweak) as an int128
   key1: Key schedule for AES-256 encryption
   key2: Key schedule for AES-256 encryption for the tweak
-  C_error: Error output ciphertext in case of invalid input length
   return: Output ciphertext as a byte list
-  When input len < 16, the function returns C_error,
-  which will be the initial value stored in output address.
+  When input len < 16, the function returns [].
 *)
-(* TODO: Challenge lemma: proving that the output is of same length as input *)
 (* TODO: Double check if NIST spec talks about the error case len < 16 *)
 (* TODO: Double check the pseudo code in the spec for tweak calculation in ANEX c *)
 let aes256_xts_encrypt = new_definition
   `aes256_xts_encrypt
-     (P:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) (err:byte list) : byte list =
+     (P:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) : byte list =
      if len < 16 then
-       err
+       []
      else
        let tail_len = len MOD 16 in
        let m = (len - tail_len) DIV 16 in
@@ -180,8 +193,8 @@ let aes256_xts_encrypt = new_definition
          aes256_xts_encrypt_tail 0 tail_len P iv key1 key2
        else
          let res = aes256_xts_encrypt_rec 0 (m - 2) P iv key1 key2 in
-         let Ctail = aes256_xts_encrypt_tail (SND res) tail_len P iv key1 key2 in
-         APPEND (FST res) Ctail`;;
+         let Ctail = aes256_xts_encrypt_tail (m - 1) tail_len P iv key1 key2 in
+         APPEND res Ctail`;;
 
 (***********************************************)
 (* Conversions and test vectors *)
@@ -254,10 +267,6 @@ let ptext = new_definition
 let ctext = new_definition
   `ctext =
    int128_to_bytes (word 0x9BCF70E3996C83E48603772F103A3B1C : int128 )`;;
-
-let cerr = new_definition
-  `cerr =
-   int128_to_bytes (word 0x0)`;;
 
 let iv1 = new_definition
   `iv1 = (word 0x000000000000000000000000000000FF) : int128`;;
@@ -594,7 +603,7 @@ let rec AES256_XTS_ENCRYPT_REC_CONV tm =
     SUBLET_CONV (RAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV) THENC
     SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV THENC
     SUBLET_CONV AES256_XTS_ENCRYPT_REC_CONV THENC let_CONV THENC
-    REWRITE_CONV [FST;SND;APPEND] in
+    REWRITE_CONV [APPEND] in
   match tm with
   | Comb
       (Comb
@@ -626,22 +635,6 @@ let rec AES256_XTS_ENCRYPT_REC_CONV tm =
   `aes256_xts_encrypt_rec 0 1 ptext2 iv1 data_key_schedule tweak_key_schedule`;;
 *)
 
-(*
-let CIPHER_STEALING_ENCRYPT_CONV =
-  REWRITE_CONV [cipher_stealing_encrypt] THENC
-  SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
-  SUBLET_CONV (ONCE_DEPTH_CONV BYTES_TO_INT128_CONV) THENC
-  SUBLET_CONV (RAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV) THENC
-  SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV THENC
-  SUBLET_CONV SUB_LIST_CONV THENC let_CONV THENC
-  SUBLET_CONV (DEPTH_CONV NUM_RED_CONV) THENC (* For evaluating 16 - tail_len *)
-  SUBLET_CONV SUB_LIST_CONV THENC let_CONV THENC
-  SUBLET_CONV (ONCE_DEPTH_CONV (REWRITE_CONV [APPEND])) THENC
-  SUBLET_CONV BYTES_TO_INT128_CONV THENC let_CONV THENC
-  SUBLET_CONV GF_128_MULT_BY_PRIMITIVE_CONV THENC let_CONV THENC
-  SUBLET_CONV (RAND_CONV AES256_XTS_ENCRYPT_ROUND_CONV) THENC
-  SUBLET_CONV INT128_TO_BYTES_CONV THENC let_CONV;;
-*)
 let CIPHER_STEALING_ENCRYPT_CONV =
   REWR_CONV cipher_stealing_encrypt THENC
   SUBLET_CONV CALCULATE_TWEAK_CONV THENC let_CONV THENC
@@ -713,7 +706,6 @@ let AES256_XTS_ENCRYPT_CONV tm =
     DEPTH_CONV NUM_RED_CONV in
   let MORE_THAN_2_CONV =
     SUBLET_CONV AES256_XTS_ENCRYPT_REC_CONV THENC let_CONV THENC
-    REWRITE_CONV [FST;SND] THENC
     SUBLET_CONV AES256_XTS_ENCRYPT_TAIL_CONV THENC let_CONV THENC
     REWRITE_CONV [APPEND] in
   let BODY_CONV =
@@ -728,9 +720,7 @@ let AES256_XTS_ENCRYPT_CONV tm =
        (Comb
          (Comb
            (Comb
-             (Comb
-               (Const ("aes256_xts_encrypt", _), _), len),
-           _),
+             (Const ("aes256_xts_encrypt", _), _), len),
          _),
        _),
      _) ->
@@ -740,27 +730,27 @@ let AES256_XTS_ENCRYPT_CONV tm =
   | _ -> failwith "AES256_XTS_ENCRYPT_CONV: inapplicable";;
 
 (*
-(REWRITE_CONV [cerr; int128_to_bytes] THENC AES256_XTS_ENCRYPT_CONV)
-  `aes256_xts_encrypt p0 5 iv_tweak key_1 key_2 cerr`;;
+(REWRITE_CONV [int128_to_bytes] THENC AES256_XTS_ENCRYPT_CONV)
+  `aes256_xts_encrypt p0 5 iv_tweak key_1 key_2`;;
 
-(*(REWRITE_CONV [ptext; cerr; int128_to_bytes; iv_tweak; key_1; key_2] THENC AES256_XTS_ENCRYPT_CONV)
-  `aes256_xts_encrypt ptext 16 iv_tweak key_1 key_2 cerr`;;*)
+(*(REWRITE_CONV [ptext; int128_to_bytes; iv_tweak; key_1; key_2] THENC AES256_XTS_ENCRYPT_CONV)
+  `aes256_xts_encrypt ptext 16 iv_tweak key_1 key_2`;;*)
 
-(* 1 block : 68 sec on M3 *)
-time prove (`aes256_xts_encrypt ptext 16 iv_tweak key_1 key_2 cerr = c0`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [ptext; cerr; int128_to_bytes; iv_tweak; key_1; key_2]
+(* 1 block : 70 sec on M3 *)
+time prove (`aes256_xts_encrypt ptext 16 iv_tweak key_1 key_2 = c0`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [ptext; int128_to_bytes; iv_tweak; key_1; key_2]
            THENC AES256_XTS_ENCRYPT_CONV)) THEN
   REWRITE_TAC [c0] THEN REFL_TAC);;
 
-(* 1 block + 6 bytes : 102 sec on M3 *)
-time prove (`aes256_xts_encrypt p1 22 iv_tweak key_1 key_2 cerr = c1`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [p1; cerr; int128_to_bytes; iv_tweak; key_1; key_2]
+(* 1 block + 6 bytes : 104 sec on M3 *)
+time prove (`aes256_xts_encrypt p1 22 iv_tweak key_1 key_2 = c1`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [p1; int128_to_bytes; iv_tweak; key_1; key_2]
            THENC AES256_XTS_ENCRYPT_CONV)) THEN
   REWRITE_TAC [c1] THEN REFL_TAC);;
 
-(* 3 blocks + 3 bytes : 240 sec on M3 *)
-time prove (`aes256_xts_encrypt p2 51 iv_tweak key_1 key_2 cerr = c2`,
-  CONV_TAC(LAND_CONV (REWRITE_CONV [p2; cerr; int128_to_bytes; iv_tweak; key_1; key_2]
+(* 3 blocks + 3 bytes : 243 sec on M3 *)
+time prove (`aes256_xts_encrypt p2 51 iv_tweak key_1 key_2 = c2`,
+  CONV_TAC(LAND_CONV (REWRITE_CONV [p2; int128_to_bytes; iv_tweak; key_1; key_2]
            THENC AES256_XTS_ENCRYPT_CONV)) THEN
   REWRITE_TAC [c2] THEN REFL_TAC);;
 *)
