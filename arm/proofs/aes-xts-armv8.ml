@@ -33,17 +33,13 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x6d053fee;       (* arm_STP D14 D15 SP (Immediate_Offset (iword (&0x50))) *)
   0xa90053f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0x0))) *)
   0xa9015bf5;       (* arm_STP X21 X22 SP (Immediate_Offset (iword (&0x10))) *)
-  0xb202e7e8;       (* arm_MOV X8 (rvalue (word 0xcccccccccccccccc)) *)
-  0xf29999a8;       (* arm_MOVK X8 (word 0xcccd) 0x0 *)
-  0x9bc87c48;       (* arm_UMULH X8 X2 X8 *)
-  0xd346fd08;       (* arm_LSR X8 X8 0x6 *)
   0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
-  0x5400518b;       (* arm_BLT (word 0xa30) *)
+  0x5400520b;       (* arm_BLT (word 0xa40) *)
   0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
   0xd503201f;       (* arm_NOP *)
 
-(* // Lxts_enc_big_size: *)
+  (* // Lxts_enc_big_size: *)
   0x92400c55;       (* arm_AND X21 X2 (rvalue (word 0xf)) *)
   0x927cec42;       (* arm_AND X2 X2 (rvalue (word 0xfffffffffffffff0)) *)
 
@@ -67,20 +63,8 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x4e284826;       (* arm_AESE Q6 Q1 *)
   0x6e201cc6;       (* arm_EOR_VEC Q6 Q6 Q0 0x80 *)
 
-  (* iv for second block *)
-  (* pc + 0x90 *)
-  0x9e6600c9;       (* arm_FMOV_FtoI X9 Q6 0x0 0x40 *)
-  0x9eae00ca;       (* arm_FMOV_FtoI X10 Q6 0x1 0x40 *)
-  0x528010f3;       (* arm_MOV W19 (rvalue (word 0x87)) *)
-  0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
-  0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
-  0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
-  0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
-  0x9e670128;       (* arm_FMOV_ItoF Q8 X9 0x0 *)
-  0x9eaf0148;       (* arm_FMOV_ItoF Q8 X10 0x1 *)
-
   (* Load key schedule *)
-  (* pc + 0xb4 *)
+  (* pc + 0x80 *)
   0xaa0303e7;       (* arm_MOV X7 X3 *)
   0x4cdfa8f0;       (* arm_LDP Q16 Q17 X7 (Postimmediate_Offset (word 0x20)) *)
   0x4cdfa8ec;       (* arm_LDP Q12 Q13 X7 (Postimmediate_Offset (word 0x20)) *)
@@ -92,12 +76,20 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x4c4078e7;       (* arm_LDR Q7 X7 No_Offset *)
 
   (* Lxts_enc: *)
-  (* pc + 0xd8 *)
+  (* pc + 0xa4 *)
   0xf100805f;       (* arm_CMP X2 (rvalue (word 0x20)) *)
-  0x540042e3;       (* arm_BCC (word 0x85c) *) (* b.lo Lxts_enc_tail1x   // when input = 1 with tail *)
-
+  0x54004483;       (* arm_BCC (word 0x890) *)
+  0x9e6600c9;       (* arm_FMOV_FtoI X9 Q6 0x0 0x40 *)
+  0x9eae00ca;       (* arm_FMOV_FtoI X10 Q6 0x1 0x40 *)
+  0x528010f3;       (* arm_MOV W19 (rvalue (word 0x87)) *)
+  0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
+  0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
+  0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
+  0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
+  0x9e670128;       (* arm_FMOV_ItoF Q8 X9 0x0 *)
+  0x9eaf0148;       (* arm_FMOV_ItoF Q8 X10 0x1 *)
   0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
-  0x540039c3;       (* arm_BCC (word 0x738) *)
+  0x54003a43;       (* arm_BCC (word 0x748) *)
   0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
   0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
   0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
@@ -105,7 +97,7 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x9e670129;       (* arm_FMOV_ItoF Q9 X9 0x0 *)
   0x9eaf0149;       (* arm_FMOV_ItoF Q9 X10 0x1 *)
   0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
-  0x54002be3;       (* arm_BCC (word 0x57c) *)
+  0x54002c63;       (* arm_BCC (word 0x58c) *)
   0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
   0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
   0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
@@ -113,16 +105,17 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x9e67012a;       (* arm_FMOV_ItoF Q10 X9 0x0 *)
   0x9eaf014a;       (* arm_FMOV_ItoF Q10 X10 0x1 *)
   0xf101405f;       (* arm_CMP X2 (rvalue (word 0x50)) *)
-  0x540019e3;       (* arm_BCC (word 0x33c) *)
+  0x54001a63;       (* arm_BCC (word 0x34c) *)
   0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
   0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
   0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
   0xca090569;       (* arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1) *)
   0x9e67012b;       (* arm_FMOV_ItoF Q11 X9 0x0 *)
   0x9eaf014b;       (* arm_FMOV_ItoF Q11 X10 0x1 *)
-
-  (* .Loop5x_xts_enc *)
-  (* pc + 0x140 *)
+  0xb202e7e8;       (* arm_MOV X8 (rvalue (word 0xcccccccccccccccc)) *)
+  0xf29999a8;       (* arm_MOVK X8 (word 0xcccd) 0x0 *)
+  0x9bc87c48;       (* arm_UMULH X8 X2 X8 *)
+  0xd346fd08;       (* arm_LSR X8 X8 0x6 *)
   0xacc28400;       (* arm_LDP Q0 Q1 X0 (Postimmediate_Offset (iword (&0x50))) *)
   0xad7ee418;       (* arm_LDP Q24 Q25 X0 (Immediate_Offset (iword (-- &0x30))) *)
   0x3cdf001a;       (* arm_LDR Q26 X0 (Immediate_Offset (word 0xfffffffffffffff0)) *)
@@ -312,9 +305,6 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xd1014042;       (* arm_SUB X2 X2 (rvalue (word 0x50)) *)
   0xf1000508;       (* arm_SUBS X8 X8 (rvalue (word 0x1)) *)
   0xb5ffe888;       (* arm_CBNZ X8 (word 0x1ffd10) *)
-
-  (* .Loop5x_enc_after: *)
-  (* pc + 0x434 *)
   0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
   0x54000140;       (* arm_BEQ (word 0x28) *)
   0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
@@ -638,7 +628,6 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0x1400002b;       (* arm_B (word 0xac) *)
 
   (* Lxts_enc_tail1x: *)
-  (* pc + 0x938 *)
   0x4cdf7000;       (* arm_LDR Q0 X0 (Postimmediate_Offset (word 0x10)) *)
   0x6e261c00;       (* arm_EOR_VEC Q0 Q0 Q6 0x80 *)
   0x4e284a00;       (* arm_AESE Q0 Q16 *)
@@ -725,6 +714,8 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
+let AES256_XTS_ENCRYPT_EXEC = ARM_MK_EXEC_RULE aes256_xts_encrypt_mc;;
+
 (** Definitions **)
 
 (* same as in aes_xts_decrypt.ml *)
@@ -749,9 +740,6 @@ let set_key_schedule = new_definition
       read(memory :> bytes128 (word_add key_ptr (word 208))) s = kd /\
       read(memory :> bytes128 (word_add key_ptr (word 224))) s = ke /\
       read(memory :> bytes32 (word_add key_ptr (word 240))) s = word 14)`;;
-
-
-let AES256_XTS_ENCRYPT_EXEC = ARM_MK_EXEC_RULE aes256_xts_encrypt_mc;;
 
 let AESENC_TAC =
   REWRITE_TAC [aes256_encrypt] THEN
@@ -817,10 +805,7 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
   ENSURES_INIT_TAC "s0" THEN
 
   (* Simulate until the iv encryption and verify it against AES encryption spec *)
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--6) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (7--25) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (26--56) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (57--69) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--65) THEN
 
 (*  FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN *)
   FIRST_X_ASSUM(MP_TAC o SPEC
@@ -829,10 +814,7 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
 
   (* Simulate until the one-block input encryption until before XORing the iv with the output. *)
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (70--78) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (79--89) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (90--90) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (91--119) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (66--106) THEN
 
 (*  FIRST_X_ASSUM(MP_TAC o MATCH_MP (MESON[] `read Q0 s = a ==> !a'. a = a' ==> read Q0 s = a'`)) THEN *)
   FIRST_X_ASSUM(MP_TAC o SPEC
@@ -848,10 +830,10 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
 
   (* XOR the tweak with the output in Q0 *)
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (120--120) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (107--107) THEN
 
   (* Write it to the ciphertext output *)
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (121--121) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (108--108) THEN
   FIRST_X_ASSUM(MP_TAC o SPEC
     `(aes256_xts_encrypt_1block
         (pt_in:int128)
@@ -864,8 +846,7 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
                                ==> read (memory :> bytes128 ctxt_p) s = a'`)) THEN
   ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESXTS_ENC_ONE_BLOCK_TAC; DISCH_TAC] THEN
 
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (122--126) THEN
-  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (127--132) THEN
+  ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (109--119) THEN
 
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
@@ -875,6 +856,8 @@ let AES256_ENCRYPT_ONE_BLOCK_CORRECT = prove(
 (*******************************************)
 (* Full proof *)
 
+(* The following definitions that precede the proof are the same as
+   the decrypt proof except where stated *)
 let byte_list_l_at = define
   `byte_list_l_at (m : byte list) (l:num) (m_p : int64) s =
     ! i. i < l ==> read (memory :> bytes8(word_add m_p (word i))) s = EL i m`;;
@@ -896,7 +879,7 @@ let LEN_FULL_BLOCKS_HI_BOUND_THM = prove(
    ==> val len_full_blocks <= 2 EXP 24`,
    BITBLAST_TAC);;
 
-   let TAIL_LEN_BOUND_THM = prove(
+let TAIL_LEN_BOUND_THM = prove(
   `!(len:int64) tail_len. word_and len (word 0xf) = tail_len
    ==> val tail_len < 0x10`,
    BITBLAST_TAC);;
@@ -917,6 +900,70 @@ let NUM_5BLOCKS_LO_BOUND_THM = prove(
   ASM_SIMP_TAC[MOD_LT] THEN
   ARITH_TAC
 );;
+
+let TWEAK_UPDATE_CONV =
+  let ADD_SUC_1 = ARITH_RULE `!n. n + 1 = SUC(n)` in
+  let ADD_SUC_2 = ARITH_RULE `!n. n + 2 = SUC(n + 1)` in
+  let ADD_SUC_3 = ARITH_RULE `!n. n + 3 = SUC(n + 2)` in
+  let ADD_SUC_4 = ARITH_RULE `!n. n + 4 = SUC(n + 3)` in
+  let ADD_SUC_5 = ARITH_RULE `!n. n + 5 = SUC(n + 4)` in
+  let ADD_SUC_6 = ARITH_RULE `!n. n + 6 = SUC(n + 5)` in
+  let ADD_SUC_7 = ARITH_RULE `!n. n + 7 = SUC(n + 6)` in
+  let ADD_SUC_8 = ARITH_RULE `!n. n + 8 = SUC(n + 7)` in
+  let ADD_SUC_9 = ARITH_RULE `!n. n + 9 = SUC(n + 8)` in
+  NUM_REDUCE_CONV THENC
+  RATOR_CONV (LAND_CONV (num_CONV ORELSEC
+    FIRST_CONV
+    [ CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_1]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_2]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_3]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_4]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_5]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_6]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_7]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_8]);
+      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_9]);])) THENC
+  REWRITE_CONV [CONJUNCT2 calculate_tweak] THENC
+  GF_128_MULT_BY_PRIMITIVE_CONV;;
+
+(* differs from the Decrypt definition in using key2_lst instead of key2 *)
+let TWEAK_TAC reg ind indm1 =
+  let lower_term = subst [ind,`ind:num`] `(word_zx:int128->int64) (calculate_tweak ind iv key2_lst)` in
+  let upper_term = subst [ind,`ind:num`] `(word_subword:int128->num#num->int64) (calculate_tweak ind iv key2_lst) (64,64)` in
+  let full_term = subst [ind,`ind:num`] `calculate_tweak ind iv key2_lst` in
+  let full_lemma = subst [reg,`reg:(armstate,int128)component`] `read (reg:(armstate,int128)component) (s:armstate) = a ==> !a'. a = a' ==> read reg s = a'` in
+  let abbrev_term = subst [indm1,`indm1:num`] `tweak_pre:int128 = (calculate_tweak indm1 iv key2_lst)` in
+  FIRST_X_ASSUM(MP_TAC o SPEC lower_term
+    o  MATCH_MP (MESON[] `read X9 s = a ==> !a'. a = a' ==> read X9 s = a'`)) THEN
+    ANTS_TAC THENL [CONV_TAC (RAND_CONV (RAND_CONV TWEAK_UPDATE_CONV)) THEN
+      ABBREV_TAC abbrev_term THEN
+      BITBLAST_TAC; DISCH_TAC] THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC upper_term
+    o  MATCH_MP (MESON[] `read X10 s = a ==> !a'. a = a' ==> read X10 s = a'`)) THEN
+    ANTS_TAC THENL [CONV_TAC (RAND_CONV (RATOR_CONV (RAND_CONV TWEAK_UPDATE_CONV))) THEN
+      ABBREV_TAC abbrev_term THEN
+      BITBLAST_TAC; DISCH_TAC] THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC full_term
+    o  MATCH_MP (MESON[] full_lemma)) THEN
+    ANTS_TAC THENL [CONV_TAC (RAND_CONV TWEAK_UPDATE_CONV) THEN
+      ABBREV_TAC abbrev_term THEN
+      BITBLAST_TAC; DISCH_TAC];;
+
+  let UDIV_OPT_THM = prove(`!n:num. n < 0x2 EXP 0x40
+  ==> (word (val ((word ((n * 0xcccccccccccccccd) DIV 0x2 EXP 0x40)):int64) DIV 0x2 EXP 0x6)):int64 = word (n DIV 0x50)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+  SUBGOAL_THEN `!p n:num. ~(p = 0) /\ n < p * p ==> n DIV p MOD p = n DIV p`
+    (MP_TAC o SPECL [`0x2 EXP 0x40`; `n * 0xcccccccccccccccd`]) THENL
+  [ REPEAT STRIP_TAC THEN
+    REWRITE_TAC[DIV_MOD] THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN
+    MATCH_MP_TAC MOD_LT THEN
+    ASM_ARITH_TAC; ALL_TAC] THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC;ALL_TAC] THEN
+  DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
+  AP_TERM_TAC THEN ASM_ARITH_TAC);;
+
 (*
 void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
                         const AES_KEY *key1, const AES_KEY *key2,
@@ -971,6 +1018,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
     (word_and len (word 0xfffffffffffffff0)) = len:int64` ASSUME_TAC THENL
   [REWRITE_TAC[word_split_lemma]; ALL_TAC] THEN
   ABBREV_TAC `len_full_blocks:int64 = word_and len (word 0xfffffffffffffff0)` THEN
+  ABBREV_TAC `num_5blocks = (word (val (len_full_blocks:int64) DIV 0x50)):int64` THEN
   ABBREV_TAC `tail_len:int64 = word_and len (word 0xf)` THEN
 
   ABBREV_TAC `key1_lst:int128 list = [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]` THEN
@@ -989,8 +1037,6 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
           as in the case of decrypt, between the last block and the tail.
     *)
   ASM_CASES_TAC `val (len:int64) < 0x50` THENL [CHEAT_TAC; ALL_TAC] THEN
-
-  ABBREV_TAC `num_5blocks = (word (val (len_full_blocks:int64) DIV 0x50)):int64` THEN
 
   SUBGOAL_THEN `~(val (len_full_blocks:int64) < 0x50)` ASSUME_TAC THENL
   [ UNDISCH_TAC `~(val (len:int64) < 0x50)` THEN
@@ -1023,15 +1069,110 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
         read X0 s = ptxt_p /\
         read X1 s = ctxt_p /\
         read X2 s = len_full_blocks /\
-        read X8 s = num_5blocks /\
         read X21 s = tail_len /\
-        read Q6 s = calculate_tweak 0 iv key2 /\
-        read Q8 s = calculate_tweak 1 iv key2 /\
-        read Q9 s = calculate_tweak 2 iv key2 /\
-        read Q10 s = calculate_tweak 3 iv key2 /\
-        read Q11 s = calculate_tweak 4 iv key2 /\
+        read X8 s = num_5blocks /\
+        read Q6 s = calculate_tweak 0 iv key2_lst /\
+        read Q8 s = calculate_tweak 1 iv key2_lst  /\
+        read Q9 s = calculate_tweak 2 iv key2_lst  /\
+        read Q10 s = calculate_tweak 3 iv key2_lst  /\
+        read Q11 s = calculate_tweak 4 iv key2_lst  /\
         read X19 s = word 0x87 /\
-              ` THEN
+        read Q16 s = k1_0 /\ read Q17 s = k1_1 /\ read Q12 s = k1_2 /\ read Q13 s = k1_3 /\
+        read Q14 s = k1_4 /\ read Q15 s = k1_5 /\ read Q4 s = k1_6 /\ read Q5 s = k1_7 /\
+        read Q18 s = k1_8 /\ read Q19 s = k1_9 /\ read Q20 s = k1_10 /\ read Q21 s = k1_11 /\
+        read Q22 s = k1_12 /\ read Q23 s = k1_13 /\ read Q7 s = k1_14
+    ` THEN
+      CONJ_TAC THENL
+      [
+        (* ===> Symbolic Simulation: Start symbolic simulation*)
+        ENSURES_INIT_TAC "s0" THEN
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--2) THEN
+
+        (* Discharge if condition *)
+        SUBGOAL_THEN
+          `ival (word_sub (len:int64) (word 0x10)) < &0x0
+            <=> ~(ival (len:int64) - &0x10 = ival (word_sub (len:int64) (word 0x10)))` MP_TAC THENL
+        [ MP_TAC (BITBLAST_RULE
+            `val (len:int64) >= 0x10 ==> val len <= 2 EXP 0x18 ==>
+             ival (word_sub len (word 0x10)) >= &0x0`) THEN
+          ASM_REWRITE_TAC[] THEN
+          MP_TAC (BITBLAST_RULE
+            `val (len:int64)  >= 0x10 ==> val len <= 2 EXP 0x18 ==>
+             ival (len:int64) - &0x10 = ival (word_sub len (word 0x10))`) THEN
+          ASM_REWRITE_TAC[] THEN
+          ARITH_TAC;(* works on the goal; that's why we bring the assumptions we want as antecedants of the goal *)
+          ALL_TAC
+        ] THEN
+        ASM_REWRITE_TAC[] THEN
+        DISCH_TAC THEN POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+        (* Try DISCH_THEN(RULE_ASSUM_TAC o REWRITE_RULE o CONJUNCTS) *)
+
+        (* ===> Symbolic Simulation: Symbolic execution for initialization of tweak *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (3--65) THEN
+        (* Prove Q6 stores initial tweak *)
+        FIRST_X_ASSUM(MP_TAC o SPEC `(calculate_tweak 0 iv key2_lst)`
+            o  MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN
+          ANTS_TAC THENL
+          [REWRITE_TAC[CONJUNCT1 calculate_tweak; xts_init_tweak] THEN
+           EXPAND_TAC "key2_lst" THEN AESENC_TAC; DISCH_TAC] THEN
+
+        (* ===> Symbolic Simulation: Symbolic simulating untill next branch:
+                  - iv for second block
+                  - load key schedule *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (66--76) THEN
+        (* Branching on x2 *)
+        (* Eliminate 1 block case *)
+        SUBGOAL_THEN `~(val (len_full_blocks:int64) < 0x20)` MP_TAC THENL
+        [ UNDISCH_TAC `~(val (len_full_blocks:int64) < 0x50)` THEN ARITH_TAC;
+          DISCH_THEN(RULE_ASSUM_TAC o REWRITE_RULE o CONJUNCTS)] THEN
+
+        (* Prove x9, x10 store lower and upper halves of tweak 1 and Q8 stores the full tweak 1 *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (77--85) THEN
+        TWEAK_TAC `Q8:(armstate,int128)component` `1:num` `0:num` THEN
+
+        (* Eliminate 2 blocks case *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (86--87) THEN
+        SUBGOAL_THEN `~(val (len_full_blocks:int64) < 0x30)` MP_TAC THENL
+        [ UNDISCH_TAC `~(val (len_full_blocks:int64) < 0x50)` THEN ARITH_TAC;
+          DISCH_THEN(RULE_ASSUM_TAC o REWRITE_RULE o CONJUNCTS)] THEN
+        (* prove Q9 stores tweak of 3rd block (index 2) *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (88--93) THEN
+        TWEAK_TAC `Q9:(armstate,int128)component` `2:num` `0:num` THEN
+        (* Eliminate 3 blocks case *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (94--95) THEN
+        SUBGOAL_THEN `~(val (len_full_blocks:int64) < 0x40)` MP_TAC THENL
+        [ UNDISCH_TAC `~(val (len_full_blocks:int64) < 0x50)` THEN ARITH_TAC;
+          DISCH_THEN(RULE_ASSUM_TAC o REWRITE_RULE o CONJUNCTS)] THEN
+        (* prove Q10 stores tweak of 4th block (index 3) *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (96--101) THEN
+        TWEAK_TAC `Q10:(armstate,int128)component` `3:num` `0:num` THEN
+        (* Eliminate 4 blocks case, proven by the assumption ~(len_full_blocks < 0x50)*)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (102--103) THEN
+        (* prove Q11 stores tweak of 5th block (index 4) *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (105--110) THEN
+        TWEAK_TAC `Q11:(armstate,int128)component` `4:num` `0:num` THEN
+
+        (* Prove the optimized udiv is basically udiv *)
+        ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (111--114) THEN
+        SUBGOAL_THEN `word_ushr
+            ((word ((val (len_full_blocks:int64) * 0xcccccccccccccccd) DIV 0x2 EXP 0x40)):int64)
+            0x6 =
+          word ((val len_full_blocks) DIV 0x50)` ASSUME_TAC THENL
+        [ MP_TAC (BITBLAST_RULE `val (len_full_blocks:int64) < 2 EXP 64`) THEN
+          REWRITE_TAC[word_ushr] THEN
+          MP_TAC (SPECL [`val (len_full_blocks:int64)`] UDIV_OPT_THM) THEN SIMP_TAC[]
+          ; ALL_TAC] THEN
+        POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+(*
+         43 [`read X8 s113 =
+      word_ushr (word ((val len * 0xcccccccccccccccd) DIV 0x2 EXP 0x40)) 0x6`]
+      20 [`word (val len_full_blocks DIV 0x50) = num_5blocks`]
+      105 [`word_ushr
+      (word ((val len_full_blocks * 0xcccccccccccccccd) DIV 0x2 EXP 0x40))
+      0x6 =
+      word (val len_full_blocks DIV 0x50)`] *)
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+      ]
 
   (* Loop invariant *)
   ENSURES_WHILE_PAUP_TAC
