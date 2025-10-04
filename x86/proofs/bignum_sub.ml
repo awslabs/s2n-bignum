@@ -716,7 +716,7 @@ let BIGNUM_SUB_CORRECT = prove
                   2 EXP (64 * val p) * val(C_RETURN s) + lowdigits a (val p) =
                   bignum_from_memory (z,val p) s + lowdigits b (val p))
              (MAYCHANGE [RIP; RAX; RDI; RDX; R8; R10] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   tac BIGNUM_SUB_EXEC
    `\s. (read RIP s = word(pc + 0x65) \/
@@ -800,7 +800,7 @@ let BIGNUM_SUB_WINDOWS_CORRECT = prove
                   2 EXP (64 * val p) * val(C_RETURN s) + lowdigits a (val p) =
                   bignum_from_memory (z,val p) s + lowdigits b (val p))
              (MAYCHANGE [RIP; RAX; RDI; RDX; R8; R10] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   tac (X86_MK_EXEC_RULE bignum_sub_windows_tmc)
    `\s. (read RIP s = word(pc + 0x7d) \/

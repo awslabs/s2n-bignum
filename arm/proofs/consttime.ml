@@ -86,7 +86,7 @@ let mk_safety_spec
        let baseptr = subst [mk_small_numeral sz,`n:num`] `word_sub stackpointer (word n):int64` in
        [`pc:num`;baseptr;`returnaddress:int64`]) in
   let f_events = mk_var("f_events",
-    itlist mk_fun_ty (map type_of f_events_args) `:(armevent)list`) in
+    itlist mk_fun_ty (map type_of f_events_args) `:(uarch_event)list`) in
 
   (* memreads,memwrites with stackpointer as well as pc :) *)
   let memreads,memwrites =
@@ -123,7 +123,7 @@ let mk_safety_spec
   let postcond = mk_gabs(s,
     let mr = mk_list (map mk_pair memreads,`:int64#num`) in
     let mw = mk_list (map mk_pair memwrites,`:int64#num`) in
-    let e2 = mk_var("e2",`:(armevent)list`) in
+    let e2 = mk_var("e2",`:(uarch_event)list`) in
     mk_exists(e2,
       list_mk_conj [
         `read PC s = returnaddress`;
@@ -283,7 +283,7 @@ let PROVE_SAFETY_SPEC exec:tactic =
     ASM_REWRITE_TAC[] THEN
     W (fun (asl,w) -> REWRITE_TAC(map GSYM !stored_abbrevs)) THEN
 
-    X_META_EXISTS_TAC `e2:(armevent)list` THEN
+    X_META_EXISTS_TAC `e2:(uarch_event)list` THEN
     CONJ_TAC THENL [
       AP_THM_TAC THEN AP_TERM_TAC THEN
       REWRITE_TAC[APPEND] THEN UNIFY_REFL_TAC;

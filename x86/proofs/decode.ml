@@ -306,7 +306,7 @@ let decode_hi = new_definition `decode_hi x v sz (opc:3 word) rm l =
   | F,_,3 -> SOME (NEG rm,l)
   | F,_,4 -> SOME (MUL2 (adx sz) rm,l)
   | F,_,5 -> SOME (IMUL2 (adx sz) rm,l)
-  | F,_,6 -> let hi,lo = adx sz in SOME (DIV2 (lo,hi) (hi,lo) rm,l)
+  // | F,_,6 -> let hi,lo = adx sz in SOME (DIV2 (lo,hi) (hi,lo) rm,l)
   // | F,_,7 -> SOME (IDIV rm,l)
   | T,_,0 -> SOME (INC rm,l)
   | T,_,1 -> SOME (DEC rm,l)

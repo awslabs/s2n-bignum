@@ -100,7 +100,7 @@ let BIGNUM_DEMONT_P256K1_CORRECT = time prove
                        (inverse_mod p_256k1 (2 EXP 256) * a) MOD p_256k1))
              (MAYCHANGE [RIP; RSI; RAX; RCX; RDX; R8; R9; R10; R11] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

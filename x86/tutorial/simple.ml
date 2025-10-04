@@ -79,7 +79,7 @@ let SIMPLE_SPEC = prove(
     (\s. read RIP s = word (pc+6) /\
          read RBX s = word b)
     // Registers (and memory locations) that may change after execution
-    (MAYCHANGE [RIP;RBX] ,, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [RIP;RBX] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   (* Strips the outermost universal quantifier from the conclusion of a goal *)
   REPEAT STRIP_TAC THEN

@@ -62,7 +62,7 @@ let BIGNUM_EQ_CORRECT = prove
           (\s'. read RIP s' = word (pc + 0x42) /\
                 C_RETURN s' = if x = y then word 1 else word 0)
           (MAYCHANGE [RIP; RDI; RDX; RCX; RAX] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `m:num` THEN MAP_EVERY X_GEN_TAC [`a:int64`; `x:num`] THEN
   W64_GEN_TAC `n:num` THEN MAP_EVERY X_GEN_TAC [`b:int64`; `y:num`] THEN
   X_GEN_TAC `pc:num` THEN

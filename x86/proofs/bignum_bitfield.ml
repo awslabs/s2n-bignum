@@ -68,7 +68,7 @@ let BIGNUM_BITFIELD_CORRECT = prove
          (\s. read RIP s = word(pc + 0x62) /\
               C_RETURN s = word((a DIV (2 EXP val n)) MOD (2 EXP val l)))
          (MAYCHANGE [RIP; RDX; RCX; RAX; R8; R9; R10; R11] ,,
-          MAYCHANGE SOME_FLAGS)`,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `x:int64` THEN
   MAP_EVERY W64_GEN_TAC [`n:num`; `l:num`] THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `pc:num`] THEN

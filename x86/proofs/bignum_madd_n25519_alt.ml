@@ -327,7 +327,7 @@ let BIGNUM_MADD_N25519_ALT_CORRECT = time prove
                 bignum_from_memory (z,4) s = (m * n + r) MOD n_25519)
          (MAYCHANGE [RIP; RAX; RDX; RCX; RBX; RBP;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `m:num`; `y:int64`; `n:num`;

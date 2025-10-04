@@ -86,7 +86,7 @@ let BIGNUM_OPTNEG_P384_CORRECT = time prove
                    ==> (bignum_from_memory (z,6) s =
                         if ~(q = word 0) then (p_384 - n) MOD p_384 else n)))
           (MAYCHANGE [RIP; RSI; RAX; RCX; R8; R9; R10; R11] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `q:int64`; `x:int64`; `n:num`; `pc:num`] THEN

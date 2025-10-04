@@ -56,6 +56,7 @@ let BIGNUM_COPY_CORRECT = prove
            (\s. read RIP s = word (pc + 0x33) /\
                 bignum_from_memory (z,val k) s = lowdigits a (val k))
           (MAYCHANGE [RIP; RAX; RDX; R8] ,, MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; fst BIGNUM_COPY_EXEC] THEN

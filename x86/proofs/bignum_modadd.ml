@@ -74,7 +74,7 @@ let BIGNUM_MODADD_CORRECT = prove
              (\s. read RIP s = word(pc + 0x5f) /\
                   bignum_from_memory (z,val k) s = (a + b) MOD n)
              (MAYCHANGE [RIP; RAX; R9; R10; R11] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`] THEN

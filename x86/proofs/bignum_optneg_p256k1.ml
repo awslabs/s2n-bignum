@@ -69,7 +69,7 @@ let BIGNUM_OPTNEG_P256K1_CORRECT = time prove
                         if ~(q = word 0) then (p_256k1 - n) MOD p_256k1
                         else n)))
           (MAYCHANGE [RIP; RSI; RAX; RCX; R8; R9; R10] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `q:int64`; `x:int64`; `n:num`; `pc:num`] THEN

@@ -4604,7 +4604,7 @@ let LOCAL_SQR_P521_CORRECT = time prove
                    ==> bignum_from_memory (z,9) s = (n EXP 2) MOD p_521))
           (MAYCHANGE [RIP; RAX; RBP; RCX; RDX;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9);
                       memory :> bytes(stackpointer,64)])`,
   MAP_EVERY X_GEN_TAC
@@ -4824,7 +4824,7 @@ let LOCAL_SQR_P521_SUBR_CORRECT = prove
                    ==> bignum_from_memory (z,9) s = n EXP 2 MOD p_521))
              (MAYCHANGE [RIP; RSP; RAX; RBP; RCX; RDX; R8; R9;
                          R10; R11; R12; R13; R14; R15] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                      memory :> bytes(word_sub stackpointer (word 64),64)])`,
   X86_ADD_RETURN_STACK_TAC  P521_JSCALARMUL_EXEC
@@ -4849,7 +4849,7 @@ let LOCAL_MUL_P521_CORRECT = prove
                          R8; R9; R10; R11; R12; R13; R14; R15] ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                          memory :> bytes(stackpointer,64)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`;
      `pc:num`; `stackpointer:int64`] THEN
@@ -5045,7 +5045,7 @@ let LOCAL_MUL_P521_SUBR_CORRECT = prove
                    ==> bignum_from_memory (z,9) s = (a * b) MOD p_521))
              (MAYCHANGE [RIP; RSP; RAX; RBP; RBX; RCX; RDX; R8; R9;
                          R10; R11; R12; R13; R14; R15] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bytes(z,8 * 9);
                        memory :> bytes(word_sub stackpointer (word 64),64)])`,
   X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_EXEC
@@ -5130,7 +5130,7 @@ let LOCAL_ADD_P521_TAC =
          (MAYCHANGE [RIP; RAX; RDX; R8; R9; R10; R11; RBX; R12; R13; R14] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5249,7 +5249,7 @@ let GENERAL_SUB_P521_TAC localvars =
          (MAYCHANGE [RIP; RAX; RDX; R8; R9; R10; R11; RBX; R12; R13; R14] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5339,7 +5339,7 @@ let LOCAL_CMSUBC9_P521_TAC =
                         R10; R11; R12; R13; R14; R15] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
 
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -5613,7 +5613,7 @@ let LOCAL_CMSUB41_P521_TAC =
                         R10; R11; R12; R13; R14; R15] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
 
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -5921,7 +5921,7 @@ let LOCAL_CMSUB38_P521_TAC =
                         R10; R11; R12; R13; R14; R15] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
 
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -6266,7 +6266,7 @@ let LOCAL_JDOUBLE_CORRECT = time prove
                             (bignum_triple_from_memory(p3,9) s))
           (MAYCHANGE [RIP; RDI; RSI; RAX; RBX; RBP; RCX; RDX; R8; R9;
                       R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(stackpointer,592)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
@@ -6351,7 +6351,7 @@ let LOCAL_JDOUBLE_SUBR_CORRECT = time prove
           (MAYCHANGE [RSP] ,,
            MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(word_sub stackpointer (word 640),640)])`,
   X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_EXEC LOCAL_JDOUBLE_CORRECT
@@ -6407,7 +6407,7 @@ let LOCAL_JADD_CORRECT = time prove
                                (bignum_triple_from_memory(p3,9) s))
           (MAYCHANGE [RIP; RDI; RSI; RAX; RBP; RBX; RCX; RDX; RBP; R8; R9;
                       R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(stackpointer,600)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
@@ -6572,7 +6572,7 @@ let LOCAL_JADD_SUBR_CORRECT = time prove
           (MAYCHANGE [RSP] ,,
            MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(word_sub stackpointer (word 648),648)])`,
   X86_ADD_RETURN_STACK_TAC P521_JSCALARMUL_EXEC LOCAL_JADD_CORRECT
@@ -6695,7 +6695,7 @@ let P521_JSCALARMUL_CORRECT = time prove
                             (bignum_triple_from_memory(res,9) s))
           (MAYCHANGE [RIP] ,,
            MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+           MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
            MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(res,216);
                       memory :> bytes(stackpointer,4688)])`,
