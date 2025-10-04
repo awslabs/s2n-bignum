@@ -67,11 +67,12 @@ let x86state_INDUCT,x86state_RECURSION,x86state_COMPONENTS =
        simdregisters: (5)word->(512)word; // 2^5=32 ZMM registers, 512 bits each
        maskregisters: (3)word->(64)word;  // 2^3=8 opmasks, can be up to 64-bit
        rflags : int64;                    // rflags register (top 32 reserved)
-       memory : int64 -> byte             // Memory
+       memory : int64 -> byte;            // Memory
+       events: uarch_event list           // Observable uarch events
      }";;
 
 let FORALL_X86STATE = prove
- (`!P. (!i r z k f m. P(x86state_RECORD i r z k f m)) <=> (!s. P s)`,
+ (`!P. (!i r z k f m l. P(x86state_RECORD i r z k f m l)) <=> (!s. P s)`,
   GEN_TAC THEN EQ_TAC THEN SIMP_TAC[] THEN
   REWRITE_TAC[x86state_INDUCT]);;
 
@@ -752,27 +753,6 @@ let x86_DEC = new_definition
          AF := ~(&(val(word_zx x:nybble)) - &1:int =
                  &(val(word_zx z:nybble)))) s`;;
 
-(*** Again we make the operands explicit in this function. In the
- *** final dispatch most of the sources and destinations are implicit
- *** and drawn from RAX / RDX and its shorter versions
- ***)
-
-let x86_DIV2 = new_definition
- `x86_DIV2 (dest_quo,dest_rem) (src_hi,src_lo) divisor s =
-        let x = 2 EXP dimindex(:N) * val(read src_hi s:N word) +
-                val(read src_lo s:N word)
-        and y = val(read divisor s:N word) in
-        if y = 0 then
-          raise_exception x86_Exception_DE s
-        else
-          let q = x DIV y and r = x MOD y in
-          if 2 EXP dimindex(:N) <= q then
-            raise_exception x86_Exception_DE s
-          else
-           (dest_quo := (word q:N word) ,,
-            dest_rem := (word r:N word) ,,
-            UNDEFINED_VALUES [CF;ZF;ZF; PF;OF;ZF]) s`;;
-
 (*** This is the ENDBR64 instruction, which is treated as a NOP. On
  *** machines without CET enabled, including older machines from
  *** before the feature existed, this is indeed how it behaves. We
@@ -1052,7 +1032,9 @@ let x86_PEXT = new_definition
     let x:N word = read src1 s
     and y:N word = read src2 s in
     let res = word_condense x y in
-    (dest := res) s`;;
+    (events := CONS (EventX86PEXT(word_zx x, word_zx y, dimindex(:N)))
+                    (read events s) ,,
+     dest := res) s`;;
 
 let x86_PINSRD = new_definition
  `x86_PINSRD dest src imm8 (s:x86state) =
@@ -1099,15 +1081,17 @@ let x86_POP = new_definition
 
 let x86_POPCNT = new_definition
  `x86_POPCNT dest src s =
-        let x:N word = read src s in
-        let z:N word = word(word_popcount x) in
-        (dest := (z:N word) ,,
-         OF := F ,,
-         SF := F ,,
-         AF := F ,,
-         CF := F ,,
-         PF := F ,,
-         ZF := (val x = 0)) s`;;
+    let x:N word = read src s in
+    let z:N word = word(word_popcount x) in
+     (events := CONS (EventX86POPCNT(word_zx x, dimindex(:N)))
+                     (read events s) ,,
+      dest := (z:N word) ,,
+      OF := F ,,
+      SF := F ,,
+      AF := F ,,
+      CF := F ,,
+      PF := F ,,
+      ZF := (val x = 0)) s`;;
 
 let x86_PUSH = new_definition
  `x86_PUSH src s =
@@ -1159,8 +1143,10 @@ let x86_PXOR = new_definition
 (*** Out of alphabetical order as PUSH is a subroutine ***)
 
 let x86_CALL = new_definition
- `x86_CALL target =
-    x86_PUSH RIP ,, RIP := target`;;
+ `x86_CALL target s =
+    (events := CONS (EventJump (read RIP s, target)) (read events s) ,,
+     x86_PUSH RIP ,,
+     RIP := target) s`;;
 
 (*** We don't distinguish near/far and don't have the form with the ***)
 (*** additional "release more bytes" argument, so it's quite simple ***)
@@ -1170,7 +1156,8 @@ let x86_RET = new_definition
         let p = read RSP s in
         let p' = word_add p (word 8)
         and ip' = read (memory :> bytes64 p) s in
-        (RSP := p' ,, RIP := ip') s`;;
+        (events := CONS (EventJump (read RIP s, ip')) (read events s) ,,
+         RSP := p' ,, RIP := ip') s`;;
 
 (*** Shift and rotate operations mask to 5 bits, or 6 bits in 64-bit     ***)
 (*** Actually it's even more complicated for RCL and RCR in general:     ***)
@@ -2046,6 +2033,28 @@ let X86_MK_EXEC_RULE th0 =
   (execth1,decode_arr);;
 
 (* ------------------------------------------------------------------------- *)
+(* Helper functions for adding microarchitectural events.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let add_store_event = define
+  `(add_store_event: operand->x86state->x86state->x86state->bool) =
+    \(op:operand) (s:x86state) (s0:x86state).
+      match op with
+      Memop w (bs:bsid) ->
+        (events := CONS (EventStore (bsid_semantics bs s, (bytesize w) DIV 8))
+                        (read events s0)) s0
+      | _ -> (=) s0`;;
+
+let add_load_event = define
+  `(add_load_event: operand->x86state->x86state->x86state->bool) =
+    \(op:operand) (s:x86state) (s0:x86state).
+      match op with
+      Memop w (bs:bsid) ->
+        (events := CONS (EventLoad (bsid_semantics bs s, (bytesize w) DIV 8))
+                        (read events s0)) s0
+      | _ -> (=) s0`;;
+
+(* ------------------------------------------------------------------------- *)
 (* Execution of a single instruction.                                        *)
 (* ------------------------------------------------------------------------- *)
 
@@ -2057,79 +2066,115 @@ let x86_execute = define
  `x86_execute instr s =
     match instr with
       ADC dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_ADC (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_ADC (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_ADC (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_ADC (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_ADC (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | ADCX dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_ADCX (OPERAND64 dest s) (OPERAND64 src s)
-         | 32 -> x86_ADCX (OPERAND32 dest s) (OPERAND32 src s)) s
+         | 32 -> x86_ADCX (OPERAND32 dest s) (OPERAND32 src s)) s)) s
     | ADD dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_ADD (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_ADD (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_ADD (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_ADD (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_ADD (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | ADOX dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_ADOX (OPERAND64 dest s) (OPERAND64 src s)
-         | 32 -> x86_ADOX (OPERAND32 dest s) (OPERAND32 src s)) s
+         | 32 -> x86_ADOX (OPERAND32 dest s) (OPERAND32 src s)) s)) s
     | AESDEC dest src ->
-        x86_AESDEC (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (x86_AESDEC (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
     | AESDECLAST dest src ->
-        x86_AESDECLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (x86_AESDECLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s))
+        s
     | AESENC dest src ->
-        x86_AESENC (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (x86_AESENC (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
     | AESENCLAST dest src ->
-        x86_AESENCLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (x86_AESENCLAST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s))
+        s
     | AESKEYGENASSIST dest src imm8 ->
-        x86_AESKEYGENASSIST (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (x86_AESKEYGENASSIST (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                                  (OPERAND8 imm8 s)) s)) s
     | AND dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_AND (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_AND (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_AND (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_AND (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_AND (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | BSF dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_BSF (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_BSF (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_BSF (OPERAND16 dest s) (OPERAND16 src s)) s
+         | 16 -> x86_BSF (OPERAND16 dest s) (OPERAND16 src s)) s)) s
     | BSR dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_BSR (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_BSR (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_BSR (OPERAND16 dest s) (OPERAND16 src s)) s
+         | 16 -> x86_BSR (OPERAND16 dest s) (OPERAND16 src s)) s)) s
     | BSWAP dest ->
-        (match operand_size dest with
+        (add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_BSWAP (OPERAND64 dest s)
-         | 32 -> x86_BSWAP (OPERAND32 dest s)) s
+         | 32 -> x86_BSWAP (OPERAND32 dest s)) s)) s
     | BT dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+        (\s. (match operand_size dest with
            64 -> x86_BT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_BT (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_BT (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_BT (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_BT (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | BTC dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_BTC (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_BTC (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_BTC (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_BTC (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_BTC (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | BTR dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_BTR (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_BTR (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_BTR (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_BTR (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_BTR (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | BTS dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_BTS (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_BTS (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_BTS (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_BTS (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_BTS (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | CALL off ->
         (let ip' = word_add (read RIP s)
                             (read (OPERAND64 off s) s) in
@@ -2141,41 +2186,36 @@ let x86_execute = define
     | CMC ->
         x86_CMC s
     | CMOV cc dest src ->
-        (match operand_size dest with
+        // "If the source operand is a memory operand, then it is always read,
+        // regardless of whether or not the condition is met."
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_CMOV cc (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_CMOV cc (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_CMOV cc (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_CMOV cc (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_CMOV cc (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | CMP dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+        (\s. (match operand_size dest with
            64 -> x86_CMP (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_CMP (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_CMP (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_CMP (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_CMP (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | DEC dest ->
-        (match operand_size dest with
+        (add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_DEC (OPERAND64 dest s)
          | 32 -> x86_DEC (OPERAND32 dest s)
          | 16 -> x86_DEC (OPERAND16 dest s)
-         | 8 -> x86_DEC (OPERAND8 dest s)) s
-    | DIV2 (dest1,dest2) (src1,src2) src3 ->
-        (match operand_size dest1 with
-           64 -> x86_DIV2 (OPERAND64 dest1 s,OPERAND64 dest2 s)
-                          (OPERAND64 src1 s,OPERAND64 src2 s)
-                          (OPERAND64 src3 s)
-         | 32 -> x86_DIV2 (OPERAND32 dest1 s,OPERAND32 dest2 s)
-                          (OPERAND32 src1 s,OPERAND32 src2 s)
-                          (OPERAND32 src3 s)
-         | 16 -> x86_DIV2 (OPERAND16 dest1 s,OPERAND16 dest2 s)
-                          (OPERAND16 src1 s,OPERAND16 src2 s)
-                          (OPERAND16 src3 s)
-         | 8 -> x86_DIV2 (OPERAND8 dest1 s,OPERAND8 dest2 s)
-                         (OPERAND8 src1 s,OPERAND8 src2 s)
-                         (OPERAND8 src3 s)) s
+         | 8 -> x86_DEC (OPERAND8 dest s)) s)) s
     | ENDBR64 ->
         x86_ENDBR64 s
     | IMUL3 dest (src1,src2) ->
-        (match operand_size dest with
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_IMUL3 (OPERAND64 dest s)
                            (OPERAND64 src1 s,OPERAND64 src2 s)
          | 32 -> x86_IMUL3 (OPERAND32 dest s)
@@ -2183,9 +2223,11 @@ let x86_execute = define
          | 16 -> x86_IMUL3 (OPERAND16 dest s)
                            (OPERAND16 src1 s,OPERAND16 src2 s)
          | 8 -> x86_IMUL3 (OPERAND8 dest s)
-                          (OPERAND8 src1 s,OPERAND8 src2 s)) s
+                          (OPERAND8 src1 s,OPERAND8 src2 s)) s)) s
     | IMUL2 (dest1,dest2) src ->
-        (match operand_size dest2 with
+        (add_load_event dest1 s ,, add_load_event src s ,,
+         add_store_event dest1 s ,, add_store_event dest2 s ,,
+        (\s. (match operand_size dest2 with
            64 -> x86_IMUL2 (OPERAND64 dest1 s,OPERAND64 dest2 s)
                           (OPERAND64 src s)
          | 32 -> x86_IMUL2 (OPERAND32 dest1 s,OPERAND32 dest2 s)
@@ -2193,74 +2235,109 @@ let x86_execute = define
          | 16 -> x86_IMUL2 (OPERAND16 dest1 s,OPERAND16 dest2 s)
                           (OPERAND16 src s)
          | 8 -> x86_IMUL2 (OPERAND8 dest1 s,OPERAND8 dest2 s)
-                          (OPERAND8 src s)) s
+                          (OPERAND8 src s)) s)) s
     | INC dest ->
-        (match operand_size dest with
+        (add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_INC (OPERAND64 dest s)
          | 32 -> x86_INC (OPERAND32 dest s)
          | 16 -> x86_INC (OPERAND16 dest s)
-         | 8 -> x86_INC (OPERAND8 dest s)) s
+         | 8 -> x86_INC (OPERAND8 dest s)) s)) s
     | JUMP cc off ->
-        (RIP :=
+        (events := CONS
+          (EventJump
+            (read RIP s,
+              (if condition_semantics cc s
+               then word_add (read RIP s)
+                             (read (OPERAND64 off s) s)
+               else read RIP s)))
+          (read events s) ,,
+         RIP :=
            if condition_semantics cc s
            then word_add (read RIP s)
                          (read (OPERAND64 off s) s)
            else read RIP s) s
     | LEA dest bsid ->
-        (match operand_size dest with
+        (add_store_event dest s ,,
+        (\s. (match operand_size dest with
           64 -> (OPERAND64 dest s) := (bsid_semantics bsid s)
         | 32 -> (OPERAND32 dest s) := word_sx(bsid_semantics bsid s)
         | 16 -> (OPERAND16 dest s) := word_sx(bsid_semantics bsid s)
-        | 8 -> (OPERAND8 dest s) := word_sx(bsid_semantics bsid s)) s
+        | 8 -> (OPERAND8 dest s) := word_sx(bsid_semantics bsid s)) s)) s
     | LZCNT dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_LZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_LZCNT (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_LZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+         | 16 -> x86_LZCNT (OPERAND16 dest s) (OPERAND16 src s)) s)) s
     | MOV dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_MOV (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_MOV (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_MOV (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_MOV (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_MOV (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | MOVAPS dest src ->
         if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
-        then x86_MOVAPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        then
+          (add_load_event src s ,,
+           add_store_event dest s ,,
+          (\s. x86_MOVAPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
         else (\s'. F)
     | MOVDQA dest src ->
         if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
-        then x86_MOVDQA (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        then
+          (add_load_event src s ,,
+           add_store_event dest s ,,
+          (\s. x86_MOVDQA (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
         else (\s'. F)
     | MOVDQU dest src ->
-        x86_MOVDQU (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. x86_MOVDQU (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | MOVD dest src ->
-        (match (operand_size dest, operand_size src) with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest, operand_size src) with
           (32,128) -> x86_MOVD (OPERAND32 dest s) (OPERAND128_SSE src s)
-        | (128,32) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND32 src s)) s
+        | (128,32) -> x86_MOVD (OPERAND128_SSE dest s) (OPERAND32 src s)) s)) s
     | MOVQ dest src ->
-        (match (operand_size dest, operand_size src) with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest, operand_size src) with
           (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128_SSE src s)
-        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)) s
+        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)) s)) s
     | MOVSX dest src ->
-        (match (operand_size dest,operand_size src) with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest,operand_size src) with
            (64,32) -> x86_MOVSX (OPERAND64 dest s) (OPERAND32 src s)
          | (64,16) -> x86_MOVSX (OPERAND64 dest s) (OPERAND16 src s)
          | (64,8) -> x86_MOVSX (OPERAND64 dest s) (OPERAND8 src s)
          | (32,32) -> x86_MOVSX (OPERAND32 dest s) (OPERAND32 src s)
          | (32,16) -> x86_MOVSX (OPERAND32 dest s) (OPERAND16 src s)
          | (32,8) -> x86_MOVSX (OPERAND32 dest s) (OPERAND8 src s)
-         | (16,8) -> x86_MOVSX (OPERAND16 dest s) (OPERAND8 src s)) s
+         | (16,8) -> x86_MOVSX (OPERAND16 dest s) (OPERAND8 src s)) s)) s
     | MOVUPS dest src ->
-         x86_MOVUPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. x86_MOVUPS (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | MOVZX dest src ->
-        (match (operand_size dest,operand_size src) with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest,operand_size src) with
            (64,16) -> x86_MOVZX (OPERAND64 dest s) (OPERAND16 src s)
          | (64,8) -> x86_MOVZX (OPERAND64 dest s) (OPERAND8 src s)
          | (32,16) -> x86_MOVZX (OPERAND32 dest s) (OPERAND16 src s)
          | (32,8) -> x86_MOVZX (OPERAND32 dest s) (OPERAND8 src s)
-         | (16,8) -> x86_MOVZX (OPERAND16 dest s) (OPERAND8 src s)) s
+         | (16,8) -> x86_MOVZX (OPERAND16 dest s) (OPERAND8 src s)) s)) s
     | MUL2 (dest1,dest2) src ->
-        (match operand_size dest2 with
+        (add_load_event src s ,, add_load_event dest2 s ,,
+         add_store_event dest1 s ,, add_store_event dest2 s ,,
+        (\s. (match operand_size dest2 with
            64 -> x86_MUL2 (OPERAND64 dest1 s,OPERAND64 dest2 s)
                          (OPERAND64 src s)
          | 32 -> x86_MUL2 (OPERAND32 dest1 s,OPERAND32 dest2 s)
@@ -2268,19 +2345,23 @@ let x86_execute = define
          | 16 -> x86_MUL2 (OPERAND16 dest1 s,OPERAND16 dest2 s)
                          (OPERAND16 src s)
          | 8 -> x86_MUL2 (OPERAND8 dest1 s,OPERAND8 dest2 s)
-                         (OPERAND8 src s)) s
+                         (OPERAND8 src s)) s)) s
     | MULX4 (dest1,dest2) (src1,src2) ->
-        (match operand_size dest2 with
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest1 s ,, add_store_event dest2 s ,,
+        (\s. (match operand_size dest2 with
            64 -> x86_MULX4 (OPERAND64 dest1 s,OPERAND64 dest2 s)
                            (OPERAND64 src1 s,OPERAND64 src2 s)
          | 32 -> x86_MULX4 (OPERAND32 dest1 s,OPERAND32 dest2 s)
-                           (OPERAND32 src1 s,OPERAND32 src2 s)) s
+                           (OPERAND32 src1 s,OPERAND32 src2 s)) s)) s
     | NEG dest ->
-        (match operand_size dest with
+        (add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_NEG (OPERAND64 dest s)
          | 32 -> x86_NEG (OPERAND32 dest s)
          | 16 -> x86_NEG (OPERAND16 dest s)
-         | 8 -> x86_NEG (OPERAND8 dest s)) s
+         | 8 -> x86_NEG (OPERAND8 dest s)) s)) s
     | NOP ->
         x86_NOP s
     | NOP_N dest ->
@@ -2288,66 +2369,109 @@ let x86_execute = define
            32 -> x86_NOP_N (OPERAND32 dest s)
          | 16 -> x86_NOP_N (OPERAND16 dest s)) s
     | NOT dest ->
-        (match operand_size dest with
+        (add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_NOT (OPERAND64 dest s)
          | 32 -> x86_NOT (OPERAND32 dest s)
          | 16 -> x86_NOT (OPERAND16 dest s)
-         | 8 -> x86_NOT (OPERAND8 dest s)) s
+         | 8 -> x86_NOT (OPERAND8 dest s)) s)) s
     | OR dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_OR (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_OR (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_OR (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_OR (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_OR (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | PADDD dest src ->
-        x86_PADDD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PADDD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | PADDQ dest src ->
-        x86_PADDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PADDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | PAND dest src ->
-        x86_PAND (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PAND (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | PBLENDW dest src imm8 ->
-        x86_PBLENDW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PBLENDW (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                        (OPERAND8 imm8 s) s)) s
     | PCMPGTD dest src ->
-        x86_PCMPGTD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PCMPGTD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | PCMPGTW dest src ->
-        x86_PCMPGTW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PCMPGTW (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | PEXT dest src1 src2 ->
-        (match operand_size dest with
+       (add_load_event src1 s ,, add_load_event src2 s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
           64 -> x86_PEXT (OPERAND64 dest s) (OPERAND64 src1 s) (OPERAND64 src2 s)
-        | 32 -> x86_PEXT (OPERAND32 dest s) (OPERAND32 src1 s) (OPERAND32 src2 s)) s
+        | 32 -> x86_PEXT (OPERAND32 dest s) (OPERAND32 src1 s) (OPERAND32 src2 s))
+          s)) s
     | PINSRD dest src imm8 ->
-        x86_PINSRD (OPERAND128_SSE dest s) (OPERAND32 src s) (OPERAND8 imm8 s) s
+       (add_load_event src s ,, add_load_event dest s ,,
+        add_store_event dest s ,,
+       (\s. x86_PINSRD (OPERAND128_SSE dest s) (OPERAND32 src s)
+                       (OPERAND8 imm8 s) s)) s
     | PINSRQ dest src imm8 ->
-        x86_PINSRQ (OPERAND128_SSE dest s) (OPERAND64 src s) (OPERAND8 imm8 s) s
+       (add_load_event src s ,, add_load_event dest s ,,
+        add_store_event dest s ,,
+       (\s. x86_PINSRQ (OPERAND128_SSE dest s) (OPERAND64 src s)
+                       (OPERAND8 imm8 s) s)) s
     | PMOVMSKB dest src ->
-        (match operand_size dest with
+       (add_load_event src s ,, add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_PMOVMSKB (OPERAND64 dest s) (OPERAND128_SSE src s)
-         | 32  -> x86_PMOVMSKB (OPERAND32 dest s) (OPERAND128_SSE src s)) s
+         | 32  -> x86_PMOVMSKB (OPERAND32 dest s) (OPERAND128_SSE src s)) s)) s
     | POP dest ->
-        (match operand_size dest with
+       // reading/writing to the RSP register is not an event
+       (add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_POP (OPERAND64 dest s)
-         | 16 -> x86_POP (OPERAND16 dest s)) s
+         | 16 -> x86_POP (OPERAND16 dest s)) s)) s
     | POPCNT dest src ->
-        (match operand_size dest with
+       (add_load_event src s ,, add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_POPCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_POPCNT (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_POPCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+         | 16 -> x86_POPCNT (OPERAND16 dest s) (OPERAND16 src s)) s)) s
     | PSHUFB dest src ->
-        x86_PSHUFB (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+       (add_load_event src s ,, add_load_event dest s ,,
+        add_store_event dest s ,,
+       (\s. x86_PSHUFB (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | PSHUFD dest src imm8 ->
-        x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s) (OPERAND8 imm8 s) s
+       (add_load_event src s ,, add_load_event dest s ,,
+        add_store_event dest s ,,
+       (\s. x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                       (OPERAND8 imm8 s) s)) s
     | PSRAD dest imm8 ->
-        x86_PSRAD (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_PSRAD (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
     | PSRLW dest imm8 ->
-        x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
     | PUSH src ->
-        (match operand_size src with
+       // reading/writing to the RSP register is not an event
+       (add_load_event src s ,,
+       (\s. (match operand_size src with
            64 -> x86_PUSH (OPERAND64 src s)
-         | 16 -> x86_PUSH (OPERAND16 src s)) s
+         | 16 -> x86_PUSH (OPERAND16 src s)) s)) s
     | PXOR dest src ->
-        x86_PXOR (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PXOR (OPERAND128_SSE dest s) (OPERAND128_SSE src s) s)) s
     | RCL dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_RCL (OPERAND64 dest s)
                          (val(read (OPERAND8 src s) s) MOD 64)
          | 32 -> x86_RCL (OPERAND32 dest s)
@@ -2355,9 +2479,11 @@ let x86_execute = define
          | 16 -> x86_RCL (OPERAND16 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_RCL (OPERAND8 dest s)
-                        (val(read (OPERAND8 src s) s) MOD 32)) s
+                        (val(read (OPERAND8 src s) s) MOD 32)) s)) s
     | RCR dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_RCR (OPERAND64 dest s)
                         (val(read (OPERAND8 src s) s) MOD 64)
          | 32 -> x86_RCR (OPERAND32 dest s)
@@ -2365,11 +2491,13 @@ let x86_execute = define
          | 16 -> x86_RCR (OPERAND16 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_RCR (OPERAND8 dest s)
-                        (val(read (OPERAND8 src s) s) MOD 32)) s
+                        (val(read (OPERAND8 src s) s) MOD 32)) s)) s
     | RET ->
         x86_RET s
     | ROL dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_ROL (OPERAND64 dest s)
                          (val(read (OPERAND8 src s) s) MOD 64)
          | 32 -> x86_ROL (OPERAND32 dest s)
@@ -2377,9 +2505,11 @@ let x86_execute = define
          | 16 -> x86_ROL (OPERAND16 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_ROL (OPERAND8 dest s)
-                        (val(read (OPERAND8 src s) s) MOD 32)) s
+                        (val(read (OPERAND8 src s) s) MOD 32)) s)) s
     | ROR dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_ROR (OPERAND64 dest s)
                         (val(read (OPERAND8 src s) s) MOD 64)
          | 32 -> x86_ROR (OPERAND32 dest s)
@@ -2387,9 +2517,11 @@ let x86_execute = define
          | 16 -> x86_ROR (OPERAND16 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_ROR (OPERAND8 dest s)
-                        (val(read (OPERAND8 src s) s) MOD 32)) s
+                        (val(read (OPERAND8 src s) s) MOD 32)) s)) s
     | SAR dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_SAR (OPERAND64 dest s)
                         (val(read (OPERAND8 src s) s) MOD 64)
          | 32 -> x86_SAR (OPERAND32 dest s)
@@ -2397,19 +2529,24 @@ let x86_execute = define
          | 16 -> x86_SAR (OPERAND16 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_SAR (OPERAND8 dest s)
-                        (val(read (OPERAND8 src s) s) MOD 32)) s
+                        (val(read (OPERAND8 src s) s) MOD 32)) s)) s
     | SBB dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_SBB (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_SBB (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_SBB (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_SBB (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_SBB (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | SET cc dest ->
-        (match operand_size dest with
+       (add_store_event dest s ,,
+       (\s. (match operand_size dest with
            8 -> x86_SET cc (OPERAND8 dest s)
-         | _ -> ARB) s
+         | _ -> ARB) s)) s
     | SHL dest src ->
-        (match operand_size dest with
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. (match operand_size dest with
            64 -> x86_SHL (OPERAND64 dest s)
                         (val(read (OPERAND8 src s) s) MOD 64)
          | 32 -> x86_SHL (OPERAND32 dest s)
@@ -2417,9 +2554,11 @@ let x86_execute = define
          | 16 -> x86_SHL (OPERAND16 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_SHL (OPERAND8 dest s)
-                        (val(read (OPERAND8 src s) s) MOD 32)) s
+                        (val(read (OPERAND8 src s) s) MOD 32)) s)) s
     | SHLD dest src c ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_SHLD (OPERAND64 dest s) (OPERAND64 src s)
                           (val(read (OPERAND8 c s) s) MOD 64)
          | 32 -> x86_SHLD (OPERAND32 dest s) (OPERAND32 src s)
@@ -2427,9 +2566,11 @@ let x86_execute = define
          | 16 -> x86_SHLD (OPERAND16 dest s) (OPERAND16 src s)
                           (val(read (OPERAND8 c s) s) MOD 32)
          | 8 -> x86_SHLD (OPERAND8 dest s) (OPERAND8 src s)
-                         (val(read (OPERAND8 c s) s) MOD 32)) s
+                         (val(read (OPERAND8 c s) s) MOD 32)) s)) s
     | SHR dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_SHR (OPERAND64 dest s)
                         (val(read (OPERAND8 src s) s) MOD 64)
          | 32 -> x86_SHR (OPERAND32 dest s)
@@ -2437,9 +2578,11 @@ let x86_execute = define
          | 16 -> x86_SHR (OPERAND16 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_SHR (OPERAND8 dest s)
-                        (val(read (OPERAND8 src s) s) MOD 32)) s
+                        (val(read (OPERAND8 src s) s) MOD 32)) s)) s
     | SHRD dest src c ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_SHRD (OPERAND64 dest s) (OPERAND64 src s)
                           (val(read (OPERAND8 c s) s) MOD 64)
          | 32 -> x86_SHRD (OPERAND32 dest s) (OPERAND32 src s)
@@ -2447,186 +2590,289 @@ let x86_execute = define
          | 16 -> x86_SHRD (OPERAND16 dest s) (OPERAND16 src s)
                           (val(read (OPERAND8 c s) s) MOD 32)
          | 8 -> x86_SHRD (OPERAND8 dest s) (OPERAND8 src s)
-                         (val(read (OPERAND8 c s) s) MOD 32)) s
+                         (val(read (OPERAND8 c s) s) MOD 32)) s)) s
     | STCF ->
         x86_STC s
     | SUB dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_SUB (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_SUB (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_SUB (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_SUB (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_SUB (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | TEST dest src ->
-        (match operand_size dest with
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_TEST (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TEST (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_TEST (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_TEST (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_TEST (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | TZCNT dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_TZCNT (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TZCNT (OPERAND32 dest s) (OPERAND32 src s)
-         | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s
+         | 16 -> x86_TZCNT (OPERAND16 dest s) (OPERAND16 src s)) s)) s
     | VMOVDQA dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. match operand_size dest with
           256 -> if aligned_OPERAND256 src s /\ aligned_OPERAND256 dest s
                 then x86_VMOVDQA (OPERAND256 dest s) (OPERAND256 src s) s
                 else (\s'. F)
         | 128 -> if aligned_OPERAND128 src s /\ aligned_OPERAND128 dest s
                 then x86_VMOVDQA (OPERAND128 dest s) (OPERAND128 src s) s
-                else (\s'. F))
+                else (\s'. F))) s
     | VMOVDQU dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> x86_VMOVDQU (OPERAND256 dest s) (OPERAND256 src s) s
-        | 128 -> x86_VMOVDQU (OPERAND128 dest s) (OPERAND128 src s) s)
+        | 128 -> x86_VMOVDQU (OPERAND128 dest s) (OPERAND128 src s) s))) s
     | VMOVSHDUP dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> x86_VMOVSHDUP (OPERAND256 dest s) (OPERAND256 src s)
-        | 128 -> x86_VMOVSHDUP (OPERAND128 dest s) (OPERAND128 src s)) s
+        | 128 -> x86_VMOVSHDUP (OPERAND128 dest s) (OPERAND128 src s)) s)) s
     | VMOVSLDUP dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> x86_VMOVSLDUP (OPERAND256 dest s) (OPERAND256 src s)
-        | 128 -> x86_VMOVSLDUP (OPERAND128 dest s) (OPERAND128 src s)) s
+        | 128 -> x86_VMOVSLDUP (OPERAND128 dest s) (OPERAND128 src s)) s)) s
     | VPADDD dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPADDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPADDD (OPERAND256 dest s) (OPERAND256 src1 s)
+                            (OPERAND256 src2 s)
+        | 128 -> x86_VPADDD (OPERAND128 dest s) (OPERAND128 src1 s)
+                            (OPERAND128 src2 s)) s)) s
     | VPADDW dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPADDW (OPERAND256 dest s) (OPERAND256 src1 s)
+                            (OPERAND256 src2 s)
+        | 128 -> x86_VPADDW (OPERAND128 dest s) (OPERAND128 src1 s)
+                            (OPERAND128 src2 s)) s)) s
     | VPBLENDD dest src1 src2 imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPBLENDD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPBLENDD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPBLENDD (OPERAND256 dest s) (OPERAND256 src1 s)
+                              (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPBLENDD (OPERAND128 dest s) (OPERAND128 src1 s)
+                              (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
     | VPBLENDW dest src1 src2 imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPBLENDW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPBLENDW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPBLENDW (OPERAND256 dest s) (OPERAND256 src1 s)
+                              (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPBLENDW (OPERAND128 dest s) (OPERAND128 src1 s)
+                              (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
     | VPBROADCASTD dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> (match operand_size src with
                     128 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND128 src s)
                   |  32 -> x86_VPBROADCASTD (OPERAND256 dest s) (OPERAND32 src s))
          | 128 -> (match operand_size src with
                     128 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND128 src s)
-                  |  32 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND32 src s))) s
+                  |  32 -> x86_VPBROADCASTD (OPERAND128 dest s) (OPERAND32 src s))) s)) s
     | VPBROADCASTQ dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> (match operand_size src with
                     128 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND128 src s)
                   |  64 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND64 src s))
          | 128 -> (match operand_size src with
                     128 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND128 src s)
-                  |  64 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND64 src s))) s
-    | VPBROADCASTQ dest src ->
-        (match operand_size dest with
-          256 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND128 src s)
-        | 128 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND128 src s)) s
+                  |  64 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND64 src s))) s)) s
     | VPERMD dest src1 src2 ->
-        (match operand_size dest with
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            256 -> x86_VPERMD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-         | 128 -> (\s s'. F)) s
+         | 128 -> (\s s'. F)) s)) s
     | VPERMQ dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPERMQ (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPERMQ (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPERMQ (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPERMQ (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPERM2I128 dest src1 src2 imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPERM2I128 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPERM2I128 (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPERM2I128 (OPERAND256 dest s) (OPERAND256 src1 s)
+                                (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPERM2I128 (OPERAND128 dest s) (OPERAND128 src1 s)
+                                (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
     | VPMULDQ dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPMULDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPMULDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPMULDQ (OPERAND256 dest s) (OPERAND256 src1 s)
+                             (OPERAND256 src2 s)
+        | 128 -> x86_VPMULDQ (OPERAND128 dest s) (OPERAND128 src1 s)
+                             (OPERAND128 src2 s)) s)) s
     | VPMULHW dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPMULHW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPMULHW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPMULHW (OPERAND256 dest s) (OPERAND256 src1 s)
+                             (OPERAND256 src2 s)
+        | 128 -> x86_VPMULHW (OPERAND128 dest s) (OPERAND128 src1 s)
+                             (OPERAND128 src2 s)) s)) s
     | VPMULLD dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPMULLD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPMULLD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPMULLD (OPERAND256 dest s) (OPERAND256 src1 s)
+                             (OPERAND256 src2 s)
+        | 128 -> x86_VPMULLD (OPERAND128 dest s) (OPERAND128 src1 s)
+                             (OPERAND128 src2 s)) s)) s
     | VPMULLW dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPMULLW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPMULLW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPMULLW (OPERAND256 dest s) (OPERAND256 src1 s)
+                             (OPERAND256 src2 s)
+        | 128 -> x86_VPMULLW (OPERAND128 dest s) (OPERAND128 src1 s)
+                             (OPERAND128 src2 s)) s)) s
     | VPSHUFB dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPSHUFB (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPSHUFB (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSHUFB (OPERAND256 dest s) (OPERAND256 src1 s)
+                             (OPERAND256 src2 s)
+        | 128 -> x86_VPSHUFB (OPERAND128 dest s) (OPERAND128 src1 s)
+                             (OPERAND128 src2 s)) s)) s
     | VPSLLD dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPSLLD (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSLLD (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSLLD (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPSLLD (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPSLLQ dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPSLLQ (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSLLQ (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSLLQ (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPSLLQ (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPSLLW dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPSLLW (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSLLW (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSLLW (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPSLLW (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPSUBD dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPSUBD (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPSUBD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSUBD (OPERAND256 dest s) (OPERAND256 src1 s)
+                            (OPERAND256 src2 s)
+        | 128 -> x86_VPSUBD (OPERAND128 dest s) (OPERAND128 src1 s)
+                            (OPERAND128 src2 s)) s)) s
     | VPSUBW dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPSUBW (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPSUBW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSUBW (OPERAND256 dest s) (OPERAND256 src1 s)
+                            (OPERAND256 src2 s)
+        | 128 -> x86_VPSUBW (OPERAND128 dest s) (OPERAND128 src1 s)
+                            (OPERAND128 src2 s)) s)) s
     | VPSRAW dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPSRAW (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSRAW (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSRAW (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRAW (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPSRLD dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPSRLD (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSRLD (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSRLD (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRLD (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPSRLQ dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPSRLQ (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSRLQ (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSRLQ (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRLQ (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPSRLW dest src imm8 ->
-        (match operand_size dest with
-          256 -> x86_VPSRLW (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSRLW (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSRLW (OPERAND256 dest s) (OPERAND256 src s)
+                            (OPERAND8 imm8 s)
+        | 128 -> x86_VPSRLW (OPERAND128 dest s) (OPERAND128 src s)
+                            (OPERAND8 imm8 s)) s)) s
     | VPXOR dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPXOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPXOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPXOR (OPERAND256 dest s) (OPERAND256 src1 s)
+                           (OPERAND256 src2 s)
+        | 128 -> x86_VPXOR (OPERAND128 dest s) (OPERAND128 src1 s)
+                           (OPERAND128 src2 s)) s)) s
     | VPAND dest src1 src2 ->
-        (match operand_size dest with
-          256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s)
+                           (OPERAND256 src2 s)
+        | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s)
+                           (OPERAND128 src2 s)) s)) s
     | VPOR dest src1 src2 ->
-        (match operand_size dest with
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> x86_VPOR (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        | 128 -> x86_VPOR (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s)) s
     | VPSRAD dest src imm8 ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> x86_VPSRAD (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)
-        | 128 -> x86_VPSRAD (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s
+        | 128 -> x86_VPSRAD (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s)) s)) s
     | VPUNPCKHQDQ dest src1 src2 ->
-        (match operand_size dest with
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> x86_VPUNPCKHQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPUNPCKHQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        | 128 -> x86_VPUNPCKHQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s)) s
     | VPUNPCKLQDQ dest src1 src2 ->
-        (match operand_size dest with
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
           256 -> x86_VPUNPCKLQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
-        | 128 -> x86_VPUNPCKLQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s
+        | 128 -> x86_VPUNPCKLQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s)) s
     | XCHG dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,, add_store_event src s ,,
+        (\s. (match operand_size dest with
           64 -> x86_XCHG (OPERAND64 dest s) (OPERAND64 src s)
         | 32 -> x86_XCHG (OPERAND32 dest s) (OPERAND32 src s)
         | 16 -> x86_XCHG (OPERAND16 dest s) (OPERAND16 src s)
-        | 8 -> x86_XCHG (OPERAND8 dest s) (OPERAND8 src s)) s
+        | 8 -> x86_XCHG (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | XOR dest src ->
-        (match operand_size dest with
+        (add_load_event src s ,, add_load_event dest s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
            64 -> x86_XOR (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_XOR (OPERAND32 dest s) (OPERAND32 src s)
          | 16 -> x86_XOR (OPERAND16 dest s) (OPERAND16 src s)
-         | 8 -> x86_XOR (OPERAND8 dest s) (OPERAND8 src s)) s
+         | 8 -> x86_XOR (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | _ -> (\s'. F)`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -2698,7 +2944,7 @@ let MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
     [SOME_FLAGS; MODIFIABLE_GPRS; MODIFIABLE_ZMMS]
  (new_definition `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI =
     MAYCHANGE [RIP] ,, MAYCHANGE MODIFIABLE_GPRS ,,
-    MAYCHANGE MODIFIABLE_ZMMS ,, MAYCHANGE SOME_FLAGS`);;
+    MAYCHANGE MODIFIABLE_ZMMS ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`);;
 
 (* ------------------------------------------------------------------------- *)
 (* Microsoft x86 fastcall ABI (the return value is in fact the same).        *)
@@ -2763,7 +3009,7 @@ let WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI = REWRITE_RULE
     MAYCHANGE WINDOWS_MODIFIABLE_ZMMS ,,
     MAYCHANGE WINDOWS_MODIFIABLE_UPPER_ZMMS ,,
     MAYCHANGE WINDOWS_MODIFIABLE_UPPER_YMMS ,,
-    MAYCHANGE SOME_FLAGS`);;
+    MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`);;
 
 (* ------------------------------------------------------------------------- *)
 (* Clausal theorems and other execution assistance.                          *)
@@ -3243,16 +3489,22 @@ let x86_PUSH_ALT = prove
 let x86_CALL_ALT = prove
  (`x86_CALL target s =
         let p = read RSP s
-        and x = read RIP s in
+        and x = read RIP s
+        and e0 = read events s in
         let p' = word_sub p (word 8) in
-        (RSP := p' ,,
+        (events := CONS (EventJump (x, target)) e0 ,,
+         RSP := p' ,,
          memory :> bytes64 p' := x ,,
          RIP := target) s`,
   REWRITE_TAC[x86_CALL] THEN
-  GEN_REWRITE_TAC (LAND_CONV o RATOR_CONV o LAND_CONV) [GSYM ETA_AX] THEN
+  GEN_REWRITE_TAC (LAND_CONV o RATOR_CONV o RAND_CONV o LAND_CONV) [GSYM ETA_AX] THEN
   REWRITE_TAC[x86_PUSH_ALT] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-  REWRITE_TAC[FUN_EQ_THM; seq; assign] THEN MESON_TAC[]);;
+  REWRITE_TAC[FUN_EQ_THM; seq; assign] THEN
+  STRIP_TAC THEN
+  REWRITE_TAC[METIS[] `(exists (x:A). y = x /\ Q x) <=> Q y`] THEN
+  CONV_TAC (ONCE_DEPTH_CONV COMPONENT_READ_OVER_WRITE_ORTHOGONAL_CONV) THEN
+  REFL_TAC);;
 
 (*** More alternatives that are nicer to work with ***)
 
@@ -3316,16 +3568,6 @@ let x86_BTS_ALT = prove
   REWRITE_TAC[MOD_LT_EQ; DIMINDEX_NONZERO] THEN
   REWRITE_TAC[ARITH_RULE `j <= i /\ i - j = 0 <=> i = j`] THEN
   MESON_TAC[]);;
-
-(*** Just a conceptual observation, not actually used ***)
-
-let x86_RET_POP_RIP = prove
- (`x86_RET = x86_POP RIP`,
-  GEN_REWRITE_TAC I [FUN_EQ_THM] THEN
-  X_GEN_TAC `s:x86state` THEN
-  REWRITE_TAC[x86_POP_ALT; x86_RET] THEN
-  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-  REWRITE_TAC[]);;
 
 (*** Simplify word operations in SIMD instructions ***)
 
@@ -3395,7 +3637,7 @@ let X86_OPERATION_CLAUSES =
     x86_AESKEYGENASSIST; x86_AND;
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
-    x86_DIV2; x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
+    x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_MOVSX; x86_MOVUPS;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
@@ -3537,9 +3779,11 @@ let is_read_rip t =
 (* For compatibility with is_read_pc in Arm *)
 let is_read_pc = is_read_rip;;
 
-(* returns true if t is `read events <state>`.
-   Currently this always returns false because x86 does not have events. *)
-let is_read_events (t:term) = false;;
+(* returns true if t is `read events <state>`. *)
+let is_read_events t =
+  match t with
+  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
+  | _ -> false;;
 
 (*** decode_ths is an array from int offset i to
  ***   Some `|- !s pc. bytes_loaded s pc *_mc
@@ -3587,6 +3831,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
     bytes_loaded_mc_ths in
   (K eth THENC
    REWRITE_CONV[X86_EXECUTE] THENC
+   REWRITE_CONV[add_store_event;add_load_event;SEQ_ID] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
    REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
    REWRITE_CONV[OPERAND_SIZE_CASES] THENC
@@ -4407,7 +4652,7 @@ let X86_SIMD_SHARPEN_RULE =
   let subfn = subst
    [`MAYCHANGE [RIP] ,,
      MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-     MAYCHANGE [CF; PF; AF; ZF; SF; OF]`,
+     MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events]`,
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`] in
   fun stdthm tac ->
     let stdthm' = subfn(concl stdthm) in prove(stdthm',tac);;

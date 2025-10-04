@@ -61,8 +61,10 @@ let SIMP1_SIMP2_EQUIV = prove(`forall pc pc2.
         simp_equiv_states (s,s2))
     // State components that may change in the two programs.
     (\(s,s2) (s',s2').
-      (MAYCHANGE [RIP;RAX] ,, MAYCHANGE SOME_FLAGS) s s' /\
-      (MAYCHANGE [RIP;RAX;RCX] ,, MAYCHANGE SOME_FLAGS) s2 s2')
+      (MAYCHANGE [RIP;RAX] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]) s s'
+      /\
+      (MAYCHANGE [RIP;RAX;RCX] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])
+      s2 s2')
     // The number of small steps of the 'left' program and 'right' program.
     // 'ensures2' needs the number of small steps taken to reach at the
     // postcondition. Similarly, 'ensures_n' is a unary predicate similar to

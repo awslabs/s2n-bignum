@@ -59,7 +59,7 @@ let BIGNUM_MUX_4_CORRECT = prove
                 bignum_from_memory (z,4) s =
                   if ~(p = word 0) then m else n)
           (MAYCHANGE [RIP; RAX; R8] ,, MAYCHANGE SOME_FLAGS ,,
-           MAYCHANGE [memory :> bignum(z,4)])`,
+           MAYCHANGE [events] ,, MAYCHANGE [memory :> bignum(z,4)])`,
   MAP_EVERY X_GEN_TAC
    [`p:int64`; `z:int64`; `x:int64`; `y:int64`;
     `m:num`; `n:num`; `pc:num`] THEN

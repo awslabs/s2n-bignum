@@ -61,7 +61,7 @@ let sequence_SPEC = prove(
     (\s. read RIP s = word (pc+0x11) /\
          read RBX s = word ((a + b) * 2))
     // Registers (and memory locations) that may change after execution
-    (MAYCHANGE [RIP;RBX;RCX;RDX] ,, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [RIP;RBX;RCX;RDX] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   (* ENSURES_FINAL_STATE_TAC does not understand SOME_FLAGS in MAYCHANGE. Let's
      unfold this in advance. *)
   REWRITE_TAC [SOME_FLAGS] THEN

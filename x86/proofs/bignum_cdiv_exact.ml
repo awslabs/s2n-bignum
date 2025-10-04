@@ -135,7 +135,7 @@ let BIGNUM_CDIV_EXACT_CORRECT = prove
                        lowdigits (a DIV val m) (val k)))
              (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9; R10; R11;
                          RBX; R12; R13; R14] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `n:num` THEN
   X_GEN_TAC `x:int64` THEN W64_GEN_TAC `m:num` THEN

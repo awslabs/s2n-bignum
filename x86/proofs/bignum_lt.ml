@@ -390,7 +390,7 @@ let BIGNUM_LT_CORRECT = prove
                  read RIP s' = word(pc + 0x6b)) /\
                 C_RETURN s' = if x < y then word 1 else word 0)
           (MAYCHANGE [RIP; RDI; RDX; RAX; R8] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   tac BIGNUM_LT_EXEC (curry mk_comb `(+) (pc:num)` o mk_small_numeral));;
 
 let BIGNUM_LT_NOIBT_SUBROUTINE_CORRECT = prove
@@ -446,7 +446,7 @@ let BIGNUM_LT_WINDOWS_CORRECT = prove
                  read RIP s' = word(pc + 0x7b)) /\
                 C_RETURN s' = if x < y then word 1 else word 0)
           (MAYCHANGE [RIP; RDI; RDX; RAX; R8] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   tac (X86_MK_EXEC_RULE bignum_lt_windows_tmc)
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral o
        (fun n -> if n < 0x38 then n + 14 else n + 16)));;

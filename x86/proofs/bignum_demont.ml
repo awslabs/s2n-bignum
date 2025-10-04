@@ -160,7 +160,7 @@ let BIGNUM_DEMONT_CORRECT = time prove
                        (inverse_mod n (2 EXP (64 * val k)) * a) MOD n))
              (MAYCHANGE [RIP; RAX; RBX; RBP; RDX; R8; R9; R10; R11; R12] ,,
               MAYCHANGE [memory :> bytes(z,8 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `m:int64`] THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `n:num`; `pc:num`] THEN

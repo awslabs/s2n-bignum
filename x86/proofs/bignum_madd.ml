@@ -96,7 +96,7 @@ let BIGNUM_MADD_CORRECT = prove
                     bignum_from_memory(z,val p) s = a * b + c))
           (MAYCHANGE [RIP; R10; R11; R12; R13; R14; R15;
                       RAX; RBP; RBX; RDI; RDX; RSI] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val p)])`,
   MAP_EVERY W64_GEN_TAC [`p:num`; `m:num`; `n:num`] THEN
   MAP_EVERY X_GEN_TAC

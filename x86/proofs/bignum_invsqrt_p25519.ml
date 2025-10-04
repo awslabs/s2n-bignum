@@ -725,7 +725,7 @@ let LOCAL_MUL_P25519_CORRECT = time prove
         (MAYCHANGE [RIP; RAX; RBX; RCX; RDX; RBP;
                     R8; R9; R10; R11; R12; R13; R14; R15] ,,
            MAYCHANGE [memory :> bytes(z,8 * 4)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `m:num`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
@@ -960,7 +960,7 @@ let LOCAL_NSQR_P25519_CORRECT = time prove
                     R8; R9; R10; R11; R12; R13; R14; R15] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4);
                 memory :> bytes(word_add stackpointer (word 136),8*4)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   X_GEN_TAC `z:int64` THEN W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`x:int64`; `n:num`; `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[C_ARGUMENTS; ALL; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
@@ -1350,7 +1350,7 @@ let BIGNUM_INVSQRT_P25519_CORRECT = time prove
                        (mod p_25519)))
              (MAYCHANGE [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP;
                          R8; R9; R10; R11; R12; R13; R14; R15] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bytes(z,8 * 4);
                          memory :> bytes(stackpointer,184)])`,
   MAP_EVERY X_GEN_TAC

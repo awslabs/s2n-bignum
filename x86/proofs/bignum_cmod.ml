@@ -162,7 +162,7 @@ let BIGNUM_CMOD_CORRECT = prove
          (\s. read RIP s = word(pc + 0x16d) /\
               (~(val m = 0) ==> C_RETURN s = word(a MOD val m)))
          (MAYCHANGE [RIP; RDI; RAX; RCX; RDX; R8; R9; R10; R11] ,,
-          MAYCHANGE SOME_FLAGS)`,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `x:int64` THEN W64_GEN_TAC `m:num` THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN

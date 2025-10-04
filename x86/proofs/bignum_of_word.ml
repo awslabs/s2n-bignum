@@ -47,6 +47,7 @@ let BIGNUM_OF_WORD_CORRECT = prove
                   bignum_from_memory (z,val k) s =
                   val n MOD (2 EXP (64 * val k)))
          (MAYCHANGE [RIP; RDX; RDI] ,, MAYCHANGE SOME_FLAGS ,,
+          MAYCHANGE [events] ,,
           MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `n:num` THEN X_GEN_TAC `pc:num` THEN

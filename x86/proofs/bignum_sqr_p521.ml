@@ -468,7 +468,7 @@ let BIGNUM_SQR_P521_CORRECT = time prove
                    ==> bignum_from_memory (z,9) s = (n EXP 2) MOD p_521))
           (MAYCHANGE [RIP; RAX; RBP; RCX; RDX;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9);
                       memory :> bytes(stackpointer,64)])`,
   MAP_EVERY X_GEN_TAC

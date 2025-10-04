@@ -133,7 +133,7 @@ let BIGNUM_MUL_4_8_ALT_CORRECT = time prove
                bignum_from_memory (z,8) s = a * b)
           (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9; R10] ,,
            MAYCHANGE [memory :> bytes(z,8 * 8)] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `a:num`; `b:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; ALL; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN

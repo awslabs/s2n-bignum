@@ -50,7 +50,7 @@ let memory_SPEC = prove(
          read (memory :> bytes64 (word loc1)) s = word a)
     // Registers (and memory locations) that may change after execution.
     // ',,' is composition of relations.
-    (MAYCHANGE [RIP;RCX;RDX] ,,
+    (MAYCHANGE [RIP;RCX;RDX] ,, MAYCHANGE [events] ,,
      // The memory locations may change. Record this.
      MAYCHANGE [memory :> bytes64 (word loc0); memory :> bytes64 (word loc1)])`,
 
