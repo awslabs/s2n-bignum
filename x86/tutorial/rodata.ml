@@ -130,7 +130,7 @@ let F_SPEC = prove(
       (\s. read EAX s = word (3 * (1 + val i)) /\
           read RIP s = returnaddress /\
           read RSP s = word_add stackpointer (word 8))
-      (MAYCHANGE [RSP; RAX; RCX; RIP],, MAYCHANGE SOME_FLAGS)`,
+      (MAYCHANGE [RSP; RAX; RCX; RIP],, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS;SOME_FLAGS] THEN
@@ -210,7 +210,8 @@ let G_SPEC = prove(
           read RIP s = returnaddress /\
           read RSP s = word_add stackpointer (word 8))
       (MAYCHANGE [RSP; RAX; RDX; RDI; RIP; RCX],, MAYCHANGE SOME_FLAGS ,,
-      MAYCHANGE [memory :> bytes64 (word_sub stackpointer (word 8))])`,
+      MAYCHANGE [memory :> bytes64 (word_sub stackpointer (word 8))] ,,
+      MAYCHANGE [events])`,
 
   REPEAT_N 5 GEN_TAC THEN
   (* rebase stackpointer so that 'word_sub' does not appear. This helps
@@ -368,7 +369,7 @@ let F_LOCAL_SPEC = prove(`forall rodata_addr i pc stackpointer returnaddress.
     (\s. read EAX s = word (3 * (1 + val i)) /\
         read RIP s = returnaddress /\
         read RSP s = word_add stackpointer (word 8))
-    (MAYCHANGE [RSP; RAX; RCX; RIP],, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [RSP; RAX; RCX; RIP],, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
 
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS;SOME_FLAGS] THEN
@@ -449,7 +450,8 @@ let G_LOCAL_SPEC = prove(`forall rodata_addr i pc stackpointer returnaddress.
           read RIP s = returnaddress /\
           read RSP s = word_add stackpointer (word 8))
       (MAYCHANGE [RSP; RAX; RDX; RDI; RIP; RCX],, MAYCHANGE SOME_FLAGS ,,
-      MAYCHANGE [memory :> bytes64 (word_sub stackpointer (word 8))])`,
+      MAYCHANGE [memory :> bytes64 (word_sub stackpointer (word 8))] ,,
+      MAYCHANGE [events])`,
 
   REPEAT_N 3 GEN_TAC THEN
   (* rebase stackpointer so that 'word_sub' does not appear. This helps
