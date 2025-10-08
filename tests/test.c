@@ -5959,6 +5959,34 @@ int test_bignum_madd_n25519_alt(void)
   return 0;
 }
 
+int test_bignum_mod_m25519(void)
+{ uint64_t t, k;
+  printf("Testing bignum_mod_m25519 with %d cases\n",tests);
+  int c;
+  for (t = 0; t < tests; ++t)
+   { k = (unsigned) rand() % MAXSIZE;
+     random_bignum(k,b0);
+     reference_copy(k,b1,4,m_25519);
+     reference_mod(k,b3,b0,b1);
+     bignum_mod_m25519(b4,k,b0);
+     c = reference_compare(k,(k < 4) ? b0 : b3,4,b4);
+     if (c != 0)
+      { printf("### Disparity: [size %4"PRIu64" -> %4"PRIu64"] "
+               "0x%016"PRIx64"...%016"PRIx64" mod m_25519 = "
+               "0x%016"PRIx64"...%016"PRIx64" not 0x%016"PRIx64"...%016"PRIx64"\n",
+               k,UINT64_C(4),b0[k-1],b0[0],b4[3],b4[0],b3[3],b3[0]);
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: [size %4"PRIu64" -> %4"PRIu64"] 0x%016"PRIx64"...%016"PRIx64" mod m_25519 = "
+               "0x%016"PRIx64"...%016"PRIx64"\n",
+               k,UINT64_C(4),b0[k-1],b0[0],b4[3],b4[0]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+}
+
 int test_bignum_mod_m25519_4(void)
 { uint64_t t;
   printf("Testing bignum_mod_m25519_4 with %d cases\n",tests);
@@ -6006,13 +6034,13 @@ int test_bignum_mod_n25519(void)
      c = reference_compare(k,(k < 4) ? b0 : b3,4,b4);
      if (c != 0)
       { printf("### Disparity: [size %4"PRIu64" -> %4"PRIu64"] "
-               "0x%016"PRIx64"...%016"PRIx64" mod n_256 = "
+               "0x%016"PRIx64"...%016"PRIx64" mod n_25519 = "
                "0x%016"PRIx64"...%016"PRIx64" not 0x%016"PRIx64"...%016"PRIx64"\n",
                k,UINT64_C(4),b0[k-1],b0[0],b4[3],b4[0],b3[3],b3[0]);
         return 1;
       }
      else if (VERBOSE)
-      { printf("OK: [size %4"PRIu64" -> %4"PRIu64"] 0x%016"PRIx64"...%016"PRIx64" mod n_256 = "
+      { printf("OK: [size %4"PRIu64" -> %4"PRIu64"] 0x%016"PRIx64"...%016"PRIx64" mod n_25519 = "
                "0x%016"PRIx64"...%016"PRIx64"\n",
                k,UINT64_C(4),b0[k-1],b0[0],b4[3],b4[0]);
       }
@@ -11978,16 +12006,16 @@ int test_mldsa_poly_reduce(void)
     // 32-byte alignment for AVX2 vmovdqa instructions
     int32_t a[256] __attribute__((aligned(32)));
     int32_t b[256] __attribute__((aligned(32)));
-    
+
     printf("Testing mldsa_poly_reduce with %d cases\n", tests);
 
     for (t = 0; t < tests; ++t) {
         for (i = 0; i < 256; ++i)
             // Generate random int32_t values across full range [-2^31, 2^31-1]
             b[i] = a[i] = (int32_t) (random64() % 4294967296ULL) - 2147483648LL;
-        
+
         mldsa_poly_reduce(b);
-        
+
         for (i = 0; i < 256; ++i) {
             if (reference_poly_reduce(a[i]) != b[i]) {
                 printf("Error in mldsa_poly_reduce; element i = %"PRIu64
@@ -11997,7 +12025,7 @@ int test_mldsa_poly_reduce(void)
                 return 1;
             }
         }
-        
+
         if (VERBOSE) {
             printf("OK:mldsa_poly_reduce[0x%08"PRIx32",0x%08"PRIx32",...,"
                    "0x%08"PRIx32",0x%08"PRIx32"] = "
@@ -14969,6 +14997,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"bignum_madd",test_bignum_madd);
   functionaltest(bmi,"bignum_madd_n25519",test_bignum_madd_n25519);
   functionaltest(all,"bignum_madd_n25519_alt",test_bignum_madd_n25519_alt);
+  functionaltest(all,"bignum_mod_m25519",test_bignum_mod_m25519);
   functionaltest(all,"bignum_mod_m25519_4",test_bignum_mod_m25519_4);
   functionaltest(all,"bignum_mod_n25519",test_bignum_mod_n25519);
   functionaltest(all,"bignum_mod_n25519_4",test_bignum_mod_n25519_4);

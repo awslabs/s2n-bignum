@@ -420,6 +420,10 @@ extern void bignum_madd_n25519 (uint64_t z[4], const uint64_t x[4], const uint64
 extern void bignum_madd_n25519_alt (uint64_t z[4], const uint64_t x[4], const uint64_t y[4], const uint64_t c[4]);
 
 /* Reduce modulo group order, z := x mod m_25519 */
+/* Input x[k]; output z[4] */
+extern void bignum_mod_m25519 (uint64_t z[4], uint64_t k, const uint64_t *x);
+
+/* Reduce modulo group order, z := x mod m_25519 */
 /* Input x[4]; output z[4] */
 extern void bignum_mod_m25519_4 (uint64_t z[4], const uint64_t x[4]);
 
