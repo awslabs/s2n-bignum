@@ -2434,6 +2434,11 @@ let WRITE_MEMORY_TRIPLES_SPLIT = prove
     (h < 2 EXP 128 /\ l < 2 EXP 128 ==> l + 2 EXP 128 * h < 2 EXP 256)`] THEN
   CONV_TAC WORD_BLAST);;
 
+let READ_MEMORY_BYTES_TRIVIAL = prove(
+  `forall (z:int64) (s:A) m. read (m :> bytes (z,0)) s = 0`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[READ_BYTES_TRIVIAL]);;
+
 (* ------------------------------------------------------------------------- *)
 (* State component corresponding to the head of a stack/list.                *)
 (* ------------------------------------------------------------------------- *)

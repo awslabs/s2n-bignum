@@ -298,8 +298,8 @@ let SHA3_KECCAK_F1600_ALT_SUBROUTINE_SAFE = time prove
                     C_ARGUMENTS [a; rc] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 =
                         f_events rc a pc (word_sub stackpointer (word 64))

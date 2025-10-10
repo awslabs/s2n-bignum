@@ -265,8 +265,8 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
                     C_ARGUMENTS [dst; src; zetas; zetas_twisted] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 =
                         f_events src zetas zetas_twisted dst pc returnaddress /\

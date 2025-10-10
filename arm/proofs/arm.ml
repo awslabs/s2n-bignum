@@ -648,11 +648,15 @@ let ARM_QUICKSIM_TAC execth pats snums =
 (* More convenient wrappings of basic simulation flow.                       *)
 (* ------------------------------------------------------------------------- *)
 
-let ARM_SIM_TAC execth snums =
+let ARM_SIM_TAC ?(preprocess_tac=ALL_TAC) ?(canonicalize_pc_diff=true)
+    execth snums =
   REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_INIT_TAC "s0" THEN ARM_STEPS_TAC execth snums THEN
+  ENSURES_INIT_TAC "s0" THEN preprocess_tac THEN
+  ARM_STEPS_TAC execth snums THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[];;
+  (if canonicalize_pc_diff then
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[]
+   else ALL_TAC);;
 
 let ARM_ACCSIM_TAC execth anums snums =
   REWRITE_TAC(!simulation_precanon_thms) THEN

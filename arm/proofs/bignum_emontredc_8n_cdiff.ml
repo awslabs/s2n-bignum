@@ -408,11 +408,6 @@ let VAL_WORD_EQ_ZERO = prove (`!i. i < 2 EXP 64 ==> (val (word i:int64) = 0 <=> 
   REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
   SUBGOAL_THEN `i MOD 2 EXP 64 = i` (fun thm -> REWRITE_TAC[thm]) THEN IMP_REWRITE_TAC[MOD_LT]);;
 
-let READ_MEMORY_BYTES_0 = prove(`forall z s.
-    read (memory :> bytes (z,0)) s = 0`,
-  TARGET_REWRITE_TAC[ARITH_RULE`0 = 8*0`;GSYM BIGNUM_FROM_MEMORY_BYTES]
-      BIGNUM_FROM_MEMORY_TRIVIAL);;
-
 let BIGNUM_FROM_MEMORY_EQ_SPLIT = prove(
   `!(z:int64) (n:num) (idx:num) (s:armstate) (s2:armstate).
       idx <= n ==>
@@ -1601,7 +1596,8 @@ let BIGNUM_EMONTREDC_8N_CDIFF_PRECALCLOOP = prove(
     (* to header *)
     ARM_SIM_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--4) THEN
     REPEAT CONJ_TAC THEN TRY (CONV_TAC WORD_RULE) THEN
-    ASM_SIMP_TAC[get_m_precalc;ARITH_RULE`8*12*0=0`;READ_MEMORY_BYTES_0] THEN
+    ASM_SIMP_TAC[get_m_precalc;ARITH_RULE`8*12*0=0`;READ_MEMORY_BYTES_TRIVIAL]
+    THEN
     FAIL_TAC "fail0";
 
     (* loop body *)
