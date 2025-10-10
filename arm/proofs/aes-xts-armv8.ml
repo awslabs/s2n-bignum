@@ -118,6 +118,9 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xf29999a8;       (* arm_MOVK X8 (word 0xcccd) 0x0 *)
   0x9bc87c48;       (* arm_UMULH X8 X2 X8 *)
   0xd346fd08;       (* arm_LSR X8 X8 0x6 *)
+
+  (* .Loop5x_xts_enc: *)
+  (* pc + 0x140 *)
   0xacc28400;       (* arm_LDP Q0 Q1 X0 (Postimmediate_Offset (iword (&0x50))) *)
   0xad7ee418;       (* arm_LDP Q24 Q25 X0 (Immediate_Offset (iword (-- &0x30))) *)
   0x3cdf001a;       (* arm_LDR Q26 X0 (Immediate_Offset (word 0xfffffffffffffff0)) *)
@@ -307,6 +310,8 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
   0xd1014042;       (* arm_SUB X2 X2 (rvalue (word 0x50)) *)
   0xf1000508;       (* arm_SUBS X8 X8 (rvalue (word 0x1)) *)
   0xb5ffe888;       (* arm_CBNZ X8 (word 0x1ffd10) *)
+
+  (* .Loop5x_enc_after: *)
   0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
   0x54000140;       (* arm_BEQ (word 0x28) *)
   0xf100c05f;       (* arm_CMP X2 (rvalue (word 0x30)) *)
@@ -869,7 +874,6 @@ let word_split_lemma = prove(
       (word_and len (word 0xfffffffffffffff0)) = len`,
   BITBLAST_TAC);;
 
-
 let BYTE_LIST_AT_ADD_ASSUM_TAC new_pos bound =
   let rule = subst [new_pos, `new_pos:num`; bound, `bound:num`]
     `(pos:num) + bound <= LENGTH (bl:byte list) ==> new_pos < LENGTH bl` in
@@ -880,6 +884,7 @@ let BYTE_LIST_AT_ADD_ASSUM_TAC new_pos bound =
   USE_THEN "tmp" (fun th -> REWRITE_TAC[th]) THEN
   POP_ASSUM (K ALL_TAC);;
 
+(* is this needed? *)
 let WORD_JOIN_16_8_ASSOC = WORD_BLAST
   `!(x0:byte) (x1:byte) (x2:byte) (x3:byte)
     (x4:byte) (x5:byte) (x6:byte) (x7:byte)
@@ -951,6 +956,112 @@ let BYTES128_TO_BYTES8_THM = prove(
   REFL_TAC
 );;
 
+let SUB_LIST_SUCSPLIT = prove(
+  `!(l:A list) n p. SUB_LIST(p,SUC n) l = APPEND (SUB_LIST(p,1) l) (SUB_LIST(p+1,n) l)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC [ARITH_RULE `SUC n = 1 + n`] THEN
+  REWRITE_TAC [SUB_LIST_SPLIT]
+);;
+
+let SUB_LIST_16_TAC n exp =
+  let subgoal = subst [exp, `exp:num`] `exp < LENGTH (l:A list)` in
+  CONV_TAC(RAND_CONV (REWRITE_CONV[num_CONV n; SUB_LIST_SUCSPLIT])) THEN
+  SUBGOAL_THEN subgoal ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[SUB_LIST_1] THEN ASM_SIMP_TAC[GSYM ADD_ASSOC] THEN NUM_REDUCE_TAC;;
+
+let SUB_LIST_16 = prove(
+  `!(l:A list) n. n + 16 <= LENGTH l ==>
+    [ EL (n + 0) l; EL (n + 1) l; EL (n + 2) l; EL (n + 3) l;
+      EL (n + 4) l; EL (n + 5) l; EL (n + 6) l; EL (n + 7) l;
+      EL (n + 8) l; EL (n + 9) l; EL (n + 10) l; EL (n + 11) l;
+      EL (n + 12) l; EL (n + 13) l; EL (n + 14) l; EL (n + 15) l
+    ] = SUB_LIST (n,16) l`,
+  REPEAT STRIP_TAC THEN
+  MAP_EVERY (fun i ->
+    if i == 0
+    then SUB_LIST_16_TAC `0x10` `n:num`
+    else SUB_LIST_16_TAC (mk_numeral (num (16 - i)))
+    (mk_binop (mk_const("+", [`:num`, `:A`])) (mk_var("n", `:num`))
+      (mk_numeral (num i)))) (0--14) THEN
+  SUBGOAL_THEN `n + 15 < LENGTH (l:A list)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_SIMP_TAC[APPEND; ARITH_RULE `n + 0 = n`]
+);;
+
+let BYTE_LIST_AT_5BLOCKS = prove(
+  `! pos bl bl_ptr len s.
+    byte_list_at bl bl_ptr len s
+    ==> LENGTH bl = val len
+    ==> pos + 0x50 <= LENGTH bl
+    ==> (read (memory :> bytes128 (word_add bl_ptr (word pos))) s =
+         bytes_to_int128 (SUB_LIST (pos, 0x10) bl) /\
+         read (memory :> bytes128 (word_add (word_add bl_ptr (word pos)) (word 0x10))) s =
+         bytes_to_int128 (SUB_LIST (pos + 0x10, 0x10) bl) /\
+         read (memory :> bytes128 (word_add (word_add bl_ptr (word pos)) (word 0x20))) s =
+         bytes_to_int128 (SUB_LIST (pos + 0x20, 0x10) bl) /\
+         read (memory :> bytes128 (word_add (word_add bl_ptr (word pos)) (word 0x30))) s =
+         bytes_to_int128 (SUB_LIST (pos + 0x30, 0x10) bl) /\
+         read (memory :> bytes128 (word_add (word_add bl_ptr (word pos)) (word 0x40))) s =
+         bytes_to_int128 (SUB_LIST (pos + 0x40, 0x10) bl))`,
+  REWRITE_TAC[byte_list_at] THEN
+  REPEAT STRIP_TAC THENL
+  [ (* Subgoal1 *)
+     MAP_EVERY (fun i -> BYTE_LIST_AT_ADD_ASSUM_TAC
+      (mk_binop (mk_const("+", [`:num`, `:A`])) (mk_var("pos", `:num`))
+        (mk_numeral (num i))) `0x50`) (0--15) THEN
+    REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN
+    REPEAT STRIP_TAC THEN
+    ASM_REWRITE_TAC[BYTES128_TO_BYTES8_THM; GSYM ADD_ASSOC] THEN
+    NUM_REDUCE_TAC THEN ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
+    MP_TAC (ISPECL [`bl:byte list`; `pos:num`] SUB_LIST_16) THEN
+    REWRITE_TAC[GSYM ADD_ASSOC] THEN NUM_REDUCE_TAC THEN
+    DISCH_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    (* Subgoal2 *)
+    MAP_EVERY (fun i -> BYTE_LIST_AT_ADD_ASSUM_TAC
+      (mk_binop (mk_const("+", [`:num`, `:A`])) (mk_var("pos", `:num`))
+        (mk_numeral (num i))) `0x50`) (16--31) THEN
+    REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN
+    REPEAT STRIP_TAC THEN
+    ASM_REWRITE_TAC[BYTES128_TO_BYTES8_THM; GSYM ADD_ASSOC] THEN
+    NUM_REDUCE_TAC THEN ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
+    MP_TAC (ISPECL [`bl:byte list`; `(pos+0x10):num`] SUB_LIST_16) THEN
+    REWRITE_TAC[GSYM ADD_ASSOC] THEN NUM_REDUCE_TAC THEN
+    DISCH_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    (* Subgoal3 *)
+    MAP_EVERY (fun i -> BYTE_LIST_AT_ADD_ASSUM_TAC
+      (mk_binop (mk_const("+", [`:num`, `:A`])) (mk_var("pos", `:num`))
+        (mk_numeral (num i))) `0x50`) (32--47) THEN
+    REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN
+    REPEAT STRIP_TAC THEN
+    ASM_REWRITE_TAC[BYTES128_TO_BYTES8_THM; GSYM ADD_ASSOC] THEN
+    NUM_REDUCE_TAC THEN ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
+    MP_TAC (ISPECL [`bl:byte list`; `(pos+0x20):num`] SUB_LIST_16) THEN
+    REWRITE_TAC[GSYM ADD_ASSOC] THEN NUM_REDUCE_TAC THEN
+    DISCH_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    (* Subgoal4 *)
+    MAP_EVERY (fun i -> BYTE_LIST_AT_ADD_ASSUM_TAC
+      (mk_binop (mk_const("+", [`:num`, `:A`])) (mk_var("pos", `:num`))
+        (mk_numeral (num i))) `0x50`) (48--63) THEN
+    REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN
+    REPEAT STRIP_TAC THEN
+    ASM_REWRITE_TAC[BYTES128_TO_BYTES8_THM; GSYM ADD_ASSOC] THEN
+    NUM_REDUCE_TAC THEN ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
+    MP_TAC (ISPECL [`bl:byte list`; `(pos+0x30):num`] SUB_LIST_16) THEN
+    REWRITE_TAC[GSYM ADD_ASSOC] THEN NUM_REDUCE_TAC THEN
+    DISCH_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    (* Subgoal 5 *)
+    MAP_EVERY (fun i -> BYTE_LIST_AT_ADD_ASSUM_TAC
+      (mk_binop (mk_const("+", [`:num`, `:A`])) (mk_var("pos", `:num`))
+        (mk_numeral (num i))) `0x50`) (64--79) THEN
+    REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN
+    REPEAT STRIP_TAC THEN
+    ASM_REWRITE_TAC[BYTES128_TO_BYTES8_THM; GSYM ADD_ASSOC] THEN
+    NUM_REDUCE_TAC THEN ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
+    MP_TAC (ISPECL [`bl:byte list`; `(pos+0x40):num`] SUB_LIST_16) THEN
+    REWRITE_TAC[GSYM ADD_ASSOC] THEN NUM_REDUCE_TAC THEN
+    DISCH_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC
+  ]
+);;
+
 (* Different from decrypt in using len_full_blocks *)
 let LEN_FULL_BLOCKS_LO_BOUND_THM = prove(
   `!(len:int64) len_full_blocks. word_and len (word 0xfffffffffffffff0) = len_full_blocks
@@ -991,7 +1102,6 @@ let NUM_5BLOCKS_LO_BOUND_THM = prove(
   ASM_SIMP_TAC[MOD_LT] THEN
   ARITH_TAC
 );;
-
 
 let TWEAK_UPDATE_CONV =
   let ADD_SUC_1 = ARITH_RULE `!n. n + 1 = SUC(n)` in
@@ -1041,6 +1151,25 @@ let TWEAK_TAC reg ind indm1 =
       ABBREV_TAC abbrev_term THEN
       BITBLAST_TAC; DISCH_TAC];;
 
+let XTSENC_TAC reg ind ind_tweak =
+  let tm = subst [ind, `ind:num`; ind_tweak, `ind_tweak:num`]
+            `aes256_xts_encrypt_round (bytes_to_int128 (SUB_LIST (ind,0x10) (pt_in:byte list)))
+              (calculate_tweak (ind_tweak) iv key2_lst) key1_lst` in
+  let lemma = subst [reg, `reg:(armstate,int128)component`]
+            `read (reg:(armstate,int128)component) (s:armstate) = a ==> !a'. a = a' ==> read reg s = a'` in
+  let _ = print_term tm in
+  let _ = print_term lemma in
+  FIRST_X_ASSUM(MP_TAC o SPEC tm o  MATCH_MP (MESON[] lemma)) THEN
+      ANTS_TAC THENL
+      [ EXPAND_TAC "key1_lst" THEN
+        CONV_TAC (RAND_CONV (
+          REWRITE_CONV [aes256_xts_encrypt_round] THENC
+          DEPTH_CONV let_CONV)) THEN
+        GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+        REPEAT (AP_THM_TAC THEN AP_TERM_TAC) THEN
+        GEN_REWRITE_TAC ONCE_DEPTH_CONV [WORD_XOR_SYM] THEN
+        AESENC_TAC; DISCH_TAC ];;
+
   let UDIV_OPT_THM = prove(`!n:num. n < 0x2 EXP 0x40
   ==> (word (val ((word ((n * 0xcccccccccccccccd) DIV 0x2 EXP 0x40)):int64) DIV 0x2 EXP 0x6)):int64 = word (n DIV 0x50)`,
   REPEAT STRIP_TAC THEN
@@ -1056,7 +1185,7 @@ let TWEAK_TAC reg ind indm1 =
   DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   AP_TERM_TAC THEN ASM_ARITH_TAC);;
 
-(* Copied from Decrypt proof because it will be instantiated for ptxt_p *)
+(* Copied from Decrypt proof without change because it can be instantiated for ptxt_p *)
 let READ_CT_LEMMA = prove(
   `!ct_ptr i (len:int64) (ct:byte list) s.
     (forall j. j < val len ==> read (memory :> bytes8 (word_add ct_ptr (word j))) s = EL j ct)
@@ -1098,6 +1227,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
     PAIRWISE nonoverlapping
     [(stackpointer, 6*16);
     (word pc, LENGTH aes256_xts_encrypt_mc);
+    (ptxt_p, val len);
     (ctxt_p, val len);
     (key1_p, 244);
     (key2_p, 244)] /\
@@ -1346,7 +1476,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
         CONV_TAC NUM_REDUCE_CONV;
         CONV_TAC NUM_REDUCE_CONV;
         CONV_TAC NUM_REDUCE_CONV;
-        CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[VAL_WORD_0] THEN ARITH_TAC  ]
+        CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[VAL_WORD_0] THEN ARITH_TAC ];
 
       (* Subgoal 3: loop body *)
       REPEAT STRIP_TAC THEN
@@ -1356,16 +1486,16 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
         SUBGOAL_THEN `i + 1 <= val (num_5blocks:int64)` MP_TAC THENL
           [ ASM_ARITH_TAC; ALL_TAC ] THEN
         SUBGOAL_THEN `val (len_full_blocks:int64) <= val (len:int64)` ASSUME_TAC THENL
-          [ EXPAND_TAC "len_full_blocks" THEN SIMP_TAC[LEN_FULL_BLOCKS_LT_LEN_THM] ]
+          [ EXPAND_TAC "len_full_blocks" THEN SIMP_TAC[LEN_FULL_BLOCKS_LT_LEN_THM]; ALL_TAC ] THEN
         SUBGOAL_THEN `val (num_5blocks:int64) * 0x50 <= val (len:int64)` ASSUME_TAC THENL
           [ EXPAND_TAC "num_5blocks" THEN
             REWRITE_TAC [VAL_WORD; DIMINDEX_64] THEN
             UNDISCH_TAC `val (len_full_blocks:int64) <= val (len:int64)` THEN
-            ARITH_TAC; ALL_TAC ]
+            ARITH_TAC; ALL_TAC ] THEN
         SUBGOAL_THEN `(i + 1) * 0x50 <= val (len:int64)` MP_TAC THENL
           [ ASM_ARITH_TAC; ALL_TAC ] THEN
         ARITH_TAC; ALL_TAC
-      ]
+      ] THEN
 
       MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
       EXISTS_TAC `MAYCHANGE
@@ -1384,100 +1514,90 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
                 MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
         (* see https://hol-light.zulipchat.com/#narrow/channel/474190-s2n-bignum/topic/.E2.9C.94.20SUBSUMED_MAYCHANGE.20proof/near/541307474 *)
         ABBREV_TAC `vallen = val (len:int64)` THEN
-        SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
-      ]
+        SUBSUMED_MAYCHANGE_TAC; ALL_TAC
+      ] THEN
 
       (* ===> Symbolic Simulation: Start symbolic simulation*)
       ASM_REWRITE_TAC[byte_list_at] THEN
       ENSURES_INIT_TAC "s0" THEN
 
+      (* List values for ptxt_p + [0 .. 0x40] *)
+      MP_TAC (SPECL [`ptxt_p:int64`; `i:num`; `len:int64`; `pt_in:byte list`; `s0:armstate`] READ_CT_LEMMA) THEN
+      ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THEN
+      (* Prove Q0, Q1, Q24, Q25, Q26 stores correct plaintext *)
+      (* and prove Q6, Q8, Q9, Q10, Q11 stores correct tweak: *)
+      (* Run simulation until after every ciphertext block and new tweak are calculated
+         and prove they're correct in their registers *)
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--151) THEN
+      XTSENC_TAC `Q0:(armstate,int128)component` `i * 0x50` `i * 0x5` THEN
+      TWEAK_TAC `Q6:(armstate,int128)component` `i * 5 + 5` `i * 5 + 4` THEN
+
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (152--159) THEN
+      XTSENC_TAC `Q1:(armstate,int128)component` `i * 0x50 + 0x10` `i * 0x5 + 0x1` THEN
+      TWEAK_TAC `Q8:(armstate,int128)component` `i * 5 + 6` `i * 5 + 5` THEN
+
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (160--167) THEN
+      XTSENC_TAC `Q24:(armstate,int128)component` `i * 0x50 + 0x20` `i * 0x5 + 0x2` THEN
+      TWEAK_TAC `Q9:(armstate,int128)component` `i * 5 + 7` `i * 5 + 6` THEN
+
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (168--175) THEN
+      XTSENC_TAC `Q25:(armstate,int128)component` `i * 0x50 + 0x30` `i * 0x5 + 0x3` THEN
+      TWEAK_TAC `Q10:(armstate,int128)component` `i * 5 + 8` `i * 5 + 7` THEN
+
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (176--183) THEN
+      XTSENC_TAC `Q26:(armstate,int128)component` `i * 0x50 + 0x40` `i * 0x5 + 0x4` THEN
+      TWEAK_TAC `Q11:(armstate,int128)component` `i * 5 + 9` `i * 5 + 8` THEN
+
+      (* The following lemmas are for NONSELFMODIFYING_STATE_UPDATE_TAC when store back to pt_ptr,
+         and for the MAYCHANGE clauses *)
+      RULE_ASSUM_TAC(REWRITE_RULE
+        [WORD_RULE `word_mul (word 0x50) (word i):int64 = word(0x50 * i)`]) THEN
+
+      (* Rewrite to help reasoning about nonoverlapping
+         so that the universally quantified assumption stays.
+         See: https://hol-light.zulipchat.com/#narrow/channel/474190-s2n-bignum/topic/.E2.9C.94.20Symbolic.20simulation.20removed.20assumption/with/541554894 *)
+      SUBGOAL_THEN `val ((word (i * 0x50)):int64) = 0x50 * i` MP_TAC THENL [
+        IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+      DISCH_THEN(RULE_ASSUM_TAC o REWRITE_RULE o CONJUNCTS) THEN
+
+      (* Simulate until end of loop *)
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (184--188) THEN
+      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+      REPEAT CONJ_TAC THENL
+      [ REWRITE_TAC[WORD_RULE `word_mul (word 0x50) (word (i + 1)):int64 = word_add (word(0x50 * i)) (word 0x50)`] THEN
+        REWRITE_TAC[WORD_ADD_ASSOC];
+        REWRITE_TAC[WORD_RULE `word_mul (word 0x50) (word (i + 1)):int64 = word_add (word(0x50 * i)) (word 0x50)`] THEN
+        REWRITE_TAC[WORD_ADD_ASSOC];
+        REWRITE_TAC[WORD_RULE `word_mul (word 0x50) (word (i + 1)):int64 = word_add (word(0x50 * i)) (word 0x50)`] THEN
+        REWRITE_TAC[WORD_ADD_ASSOC];
+        CONV_TAC WORD_RULE;
+        CONV_TAC WORD_RULE;
+        REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x4 = i * 0x5 + 0x9`];
+        REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x4 = i * 0x5 + 0x9`];
+        REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 = i * 0x5 + 0x5`];
+        REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x1 = i * 0x5 + 0x6`];
+        REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x2 = i * 0x5 + 0x7`];
+        REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x3 = i * 0x5 + 0x8`];
+        REWRITE_TAC[WORD_RULE `(i + 0x1) * 0x5 + 0x4 = i * 0x5 + 0x9`];
+
+        (* The following is the main proof for inductive step *)
+        REWRITE_TAC[ARITH_RULE `(i + 0x1) * 0x50 = 0x50 * i + 0x50`] THEN
+        SUBGOAL_THEN `val ((word (0x50 * i + 0x50)):int64) = 0x50 * i + 0x50` ASSUME_TAC THENL [
+          IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+          UNDISCH_TAC `i * 0x50 + 0x50 <= val (len:int64)` THEN
+          UNDISCH_TAC `val (len:int64) <= 2 EXP 24` THEN
+          ARITH_TAC; ALL_TAC] THEN
+        ASM_REWRITE_TAC[] THEN
+
+        (* Remove quantifier over reading one byte at a time, i'*)
+        UNDISCH_TAC
+        `forall i'.
+          i' < 0x50 * i
+          ==> read (memory :> bytes8 (word_add ctxt_p (word i'))) s188 =
+              EL i' (aes256_xts_encrypt pt_in (i * 0x50) iv key1_lst key2_lst)` THEN
+
+      ]
+
+
     ]
-
-(*
-# e(CONV_TAC NUM_REDUCE_CONV);;
-val it : goalstack = 1 subgoal (4 total)
-
-  0 [`aligned 0x10 stackpointer`]
-  1 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
-      (pc,0xa80)`]
-  2 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
-      (val ctxt_p,val len)`]
-  3 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
-      (val key1_p,0xf4)`]
-  4 [`nonoverlapping_modulo (0x2 EXP 0x40) (val stackpointer,0x6 * 0x10)
-      (val key2_p,0xf4)`]
-  5 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xa80) (val ctxt_p,val len)`]
-  6 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xa80) (val key1_p,0xf4)`]
-  7 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xa80) (val key2_p,0xf4)`]
-  8 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ctxt_p,val len)
-      (val key1_p,0xf4)`]
-  9 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ctxt_p,val len)
-      (val key2_p,0xf4)`]
- 10 [`nonoverlapping_modulo (0x2 EXP 0x40) (val key1_p,0xf4)
-      (val key2_p,0xf4)`]
- 11 [`val len >= 0x10`]
- 12 [`val len <= 0x2 EXP 0x18`]
- 13 [`LENGTH pt_in = val len`]
- 14 [`word_add tail_len len_full_blocks = len`]
- 15 [`word_and len (word 0xfffffffffffffff0) = len_full_blocks`]
- 16 [`word (val len_full_blocks DIV 0x50) = num_5blocks`]
- 17 [`word_and len (word 0xf) = tail_len`]
- 18 [`[k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10;
-       k1_11; k1_12; k1_13; k1_14] =
-      key1_lst`]
- 19 [`[k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
-       k2_11; k2_12; k2_13; k2_14] =
-      key2_lst`]
- 20 [`~(val len < 0x50)`]
- 21 [`~(val len_full_blocks < 0x50)`]
- 22 [`val len_full_blocks <= 0x2 EXP 0x18`]
- 23 [`0x0 < val num_5blocks`]
- 24 [`aligned_bytes_loaded s0 (word pc) aes256_xts_encrypt_mc`]
- 25 [`read PC s0 = word (pc + 0x140)`]
- 26 [`read X0 s0 = ptxt_p`]
- 27 [`read X1 s0 = ctxt_p`]
- 28 [`read X2 s0 = len_full_blocks`]
- 29 [`read X21 s0 = tail_len`]
- 30 [`read X8 s0 = num_5blocks`]
- 31 [`read X9 s0 = word_zx (calculate_tweak 0x4 iv key2_lst)`]
- 32 [`read X10 s0 =
-      word_subword (calculate_tweak 0x4 iv key2_lst) (0x40,0x40)`]
- 33 [`read Q6 s0 = calculate_tweak 0x0 iv key2_lst`]
- 34 [`read Q8 s0 = calculate_tweak 0x1 iv key2_lst`]
- 35 [`read Q9 s0 = calculate_tweak 0x2 iv key2_lst`]
- 36 [`read Q10 s0 = calculate_tweak 0x3 iv key2_lst`]
- 37 [`read Q11 s0 = calculate_tweak 0x4 iv key2_lst`]
- 38 [`read X19 s0 = word 0x87`]
- 39 [`read Q16 s0 = k1_0`]
- 40 [`read Q17 s0 = k1_1`]
- 41 [`read Q12 s0 = k1_2`]
- 42 [`read Q13 s0 = k1_3`]
- 43 [`read Q14 s0 = k1_4`]
- 44 [`read Q15 s0 = k1_5`]
- 45 [`read Q4 s0 = k1_6`]
- 46 [`read Q5 s0 = k1_7`]
- 47 [`read Q18 s0 = k1_8`]
- 48 [`read Q19 s0 = k1_9`]
- 49 [`read Q20 s0 = k1_10`]
- 50 [`read Q21 s0 = k1_11`]
- 51 [`read Q22 s0 = k1_12`]
- 52 [`read Q23 s0 = k1_13`]
- 53 [`read Q7 s0 = k1_14`]
- 54 [`forall i.
-          i < val len
-          ==> read (memory :> bytes8 (word_add ptxt_p (word i))) s0 =
-              EL i pt_in`]
- 55 [`forall i.
-          i < val (word 0x0)
-          ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s0 =
-              EL i (aes256_xts_encrypt pt_in 0x0 iv key1_lst key2_lst)`]
- 56 [`(MAYCHANGE:((armstate,?275580)component)list->armstate->armstate->bool)
-      []
-      s0
-      s0`]
-
-`forall i.
-     i < val (word 0x0)
-     ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s0 =
-         EL i (aes256_xts_encrypt pt_in 0x0 iv key1_lst key2_lst)`
-*)
+);;
