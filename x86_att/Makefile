@@ -138,6 +138,7 @@ OBJ = curve25519/bignum_add_p25519.o \
       generic/word_popcount.o \
       generic/word_recip.o \
       mldsa/mldsa_poly_reduce.o \
+      mlkem/mlkem_reduce.o \
       p256/bignum_add_p256.o \
       p256/bignum_bigendian_4.o \
       p256/bignum_cmul_p256.o \
@@ -341,6 +342,8 @@ secp256k1/%.S :: ../x86/secp256k1/%.S   ; (cat $< | sed -E -f ./attrofy.sed >$@)
 sha3/%.S :: ../x86/sha3/%.S               ; (cat $< | sed -E -f ./attrofy.sed >$@) && ($(CC) -E -I../include -DWINDOWS_ABI=0 $@ | as -o /tmp/translated_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $@ | as -o /tmp/translated_object.obj) ; ($(CC) -E -I../include -DWINDOWS_ABI=0 $< | as -o /tmp/original_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $< | as -o /tmp/original_object.obj) ; (cmp -s /tmp/translated_object.o /tmp/original_object.o && cmp -s /tmp/translated_object.obj /tmp/original_object.obj)
 sm2/%.S :: ../x86/sm2/%.S               ; (cat $< | sed -E -f ./attrofy.sed >$@) && ($(CC) -E -I../include -DWINDOWS_ABI=0 $@ | as -o /tmp/translated_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $@ | as -o /tmp/translated_object.obj) ; ($(CC) -E -I../include -DWINDOWS_ABI=0 $< | as -o /tmp/original_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $< | as -o /tmp/original_object.obj) ; (cmp -s /tmp/translated_object.o /tmp/original_object.o && cmp -s /tmp/translated_object.obj /tmp/original_object.obj)
 mldsa/%.S :: ../x86/mldsa/%.S           ; (cat $< | sed -E -f ./attrofy.sed >$@) && ($(CC) -E -I../include -DWINDOWS_ABI=0 $@ | as -o /tmp/translated_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $@ | as -o /tmp/translated_object.obj) ; ($(CC) -E -I../include -DWINDOWS_ABI=0 $< | as -o /tmp/original_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $< | as -o /tmp/original_object.obj) ; (cmp -s /tmp/translated_object.o /tmp/original_object.o && cmp -s /tmp/translated_object.obj /tmp/original_object.obj)
+mlkem/%.S :: ../x86/mlkem/%.S           ; (cat $< | sed -E -f ./attrofy.sed >$@) && ($(CC) -E -I../include -DWINDOWS_ABI=0 $@ | as -o /tmp/translated_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $@ | as -o /tmp/translated_object.obj) ; ($(CC) -E -I../include -DWINDOWS_ABI=0 $< | as -o /tmp/original_object.o) ; ($(CC) -E -I../include -DWINDOWS_ABI=1 $< | as -o /tmp/original_object.obj) ; (cmp -s /tmp/translated_object.o /tmp/original_object.o && cmp -s /tmp/translated_object.obj /tmp/original_object.obj)
+
 
 clean:; rm -f */*.o
 

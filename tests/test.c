@@ -11810,11 +11810,8 @@ uint64_t t, i;
 
 int test_mlkem_reduce(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[256], b[256];
+  int16_t a[256], b[256] __attribute__((aligned(32)));
   printf("Testing mlkem_reduce with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -11841,7 +11838,6 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_tobytes(void)
@@ -15146,6 +15142,7 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_poly_reduce",test_mldsa_poly_reduce);
+  functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
@@ -15210,7 +15207,6 @@ int main(int argc, char *argv[])
     functionaltest(arm,"mlkem_intt",test_mlkem_intt);
     functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);
-    functionaltest(arm,"mlkem_reduce",test_mlkem_reduce);
     functionaltest(arm,"mlkem_tobytes",test_mlkem_tobytes);
     functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);
     functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
