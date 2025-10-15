@@ -166,6 +166,18 @@ let barred = define
      &2048))
    (word 3329))`;;
 
+let barred_x86 = define
+ `(barred_x86:int16->int16) x =
+  word_sub
+   (x)
+   (word_mul
+     (word_ishr
+       (word_subword
+         (word_mul ((word_sx x):int32) (word 20159))
+         (16,16))
+       (10))
+     (word 3329))`;;
+
 let barmul = define
  `barmul (k,b) (a:int16):int16 =
   word_sub (word_mul a b)
@@ -422,6 +434,39 @@ let CONGBOUND_BARRED = prove
     REPEAT STRIP_TAC THEN MATCH_MP_TAC IVAL_IWORD] THEN
   REWRITE_TAC[DIMINDEX_16; ARITH] THEN ASM_INT_ARITH_TAC);;
 
+let CONGBOUND_BARRED_X86 = prove
+ (`!a a' l u.
+        ((ival a == a') (mod &3329) /\ l <= ival a /\ ival a <= u)
+        ==> (ival(barred_x86 a) == a') (mod &3329) /\
+            &0 <= ival(barred_x86 a) /\ ival(barred_x86 a) < &6658`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[barred_x86] THEN
+  REWRITE_TAC[WORD_BLAST
+   `word_ishr (word_subword (x:int32) (16,16):int16) 10 =
+    word_sx(word_ishr x 26)`] THEN
+  REWRITE_TAC[WORD_RULE
+   `word_sub a (word_mul b (word n)) = iword(ival a - ival b * &n)`] THEN
+  REWRITE_TAC[BITBLAST_RULE
+   `ival(word_sx(word_ishr (x:int32) 26):int16) = ival(word_ishr x 26)`] THEN
+  REWRITE_TAC[WORD_MUL_IMODULAR; imodular; IVAL_WORD_ISHR] THEN
+  SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_16; ARITH] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN
+  SUBGOAL_THEN
+   `ival(iword(ival(a:int16) * &20159):int32) = ival a * &20159`
+  SUBST1_TAC THENL
+   [MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_32] THEN BOUNDER_TAC[];
+    ALL_TAC] THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) IVAL_IWORD o
+    lhand o rator o lhand o snd) THEN
+  ANTS_TAC THENL
+   [MP_TAC(ISPEC `a:int16` IVAL_BOUND) THEN REWRITE_TAC[DIMINDEX_16] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN INT_ARITH_TAC;
+    DISCH_THEN SUBST1_TAC] THEN
+  ASM_REWRITE_TAC[INTEGER_RULE
+   `(a - x * p:int == a') (mod p) <=> (a == a') (mod p)`] THEN
+  MP_TAC(ISPEC `a:int16` IVAL_BOUND) THEN REWRITE_TAC[DIMINDEX_16] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN INT_ARITH_TAC
+ );;
+
 let CONGBOUND_BARMUL = prove
  (`!a a' l u.
         ((ival a == a') (mod &3329) /\ l <= ival a /\ ival a <= u)
@@ -586,6 +631,9 @@ let GEN_CONGBOUND_RULE aboths =
     | Comb(Const("barred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         MATCH_MP CONGBOUND_BARRED th1
+    | Comb(Const("barred_x86",_),t) ->
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
+        MATCH_MP CONGBOUND_BARRED_X86 th1
     | Comb(Const("montred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MONTRED th1))
