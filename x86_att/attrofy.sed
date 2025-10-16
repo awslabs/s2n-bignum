@@ -129,9 +129,9 @@ s/ xor  / xorq /g
 s/q(  .*zeroe)/l\1/
 s/q(  .*plus2e)/l\1/
 s/q(  .*short)/l\1/
-s/q(  .*%e)/l\1/
-s/q(  .*%r[0-9]+d)/l\1/
-s/q(  .*%ax)/w\1/
+s/q( .*%e)/l\1/
+s/q( .*%r[0-9]+d)/l\1/
+s/q( .*%ax)/w\1/
 
 # Eliminate any trailing spaces, just to be tidy
 

@@ -765,6 +765,8 @@ void call_edwards25519_scalarmulbase_alt(void) repeatfewer(10,edwards25519_scala
 void call_edwards25519_scalarmuldouble(void) repeatfewer(10,edwards25519_scalarmuldouble(b0,b1,b2,b3))
 void call_edwards25519_scalarmuldouble_alt(void) repeatfewer(10,edwards25519_scalarmuldouble_alt(b0,b1,b2,b3))
 
+void call_mlkem_reduce(void) repeat(mlkem_reduce((int16_t*)b0))
+
 void call_p256_montjadd(void) repeat(p256_montjadd(b1,b2,b3))
 void call_p256_montjadd_alt(void) repeat(p256_montjadd_alt(b1,b2,b3))
 void call_p256_montjdouble(void) repeat(p256_montjdouble(b1,b2))
@@ -836,7 +838,6 @@ void call_mlkem_basemul_k4(void) {}
 void call_mlkem_intt(void) {}
 void call_mlkem_mulcache_compute(void) {}
 void call_mlkem_ntt(void) {}
-void call_mlkem_reduce(void) {}
 void call_mlkem_tobytes(void) {}
 void call_mlkem_tomont(void) {}
 void call_mlkem_rej_uniform(void) {}
@@ -1132,7 +1133,6 @@ void call_mlkem_basemul_k4(void) repeat(mlkem_basemul_k4((int16_t*)b0,(int16_t*)
 void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
 void call_mlkem_mulcache_compute(void) repeat(mlkem_mulcache_compute((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_ntt(void) repeat(mlkem_ntt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
-void call_mlkem_reduce(void) repeat(mlkem_reduce((int16_t*)b0))
 void call_mlkem_tobytes(void) repeat(mlkem_tobytes((uint8_t*)b0,(int16_t*)b1))
 void call_mlkem_tomont(void) repeat(mlkem_tomont((int16_t*)b0))
 void call_mlkem_rej_uniform(void) repeat(mlkem_rej_uniform_VARIABLE_TIME((int16_t*)b0,(uint8_t*)b1,1200,mlkem_rej_uniform_table))
@@ -1531,7 +1531,7 @@ int main(int argc, char *argv[])
   timingtest(arm,"mlkem_intt",call_mlkem_intt);
   timingtest(arm,"mlkem_mulcache_compute",call_mlkem_mulcache_compute);
   timingtest(arm,"mlkem_ntt",call_mlkem_ntt);
-  timingtest(arm,"mlkem_reduce",call_mlkem_reduce);
+  timingtest(all,"mlkem_reduce",call_mlkem_reduce);
   timingtest(arm,"mlkem_tobytes",call_mlkem_tobytes);
   timingtest(arm,"mlkem_tomont",call_mlkem_tomont);
   timingtest(arm,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
