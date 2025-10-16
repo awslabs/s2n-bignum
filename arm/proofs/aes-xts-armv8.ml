@@ -2299,6 +2299,119 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
           ASM_REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN CONV_TAC NUM_REDUCE_CONV
         ] THEN
 
+        (* Reduce the goal to contain 0x50 * i + 0x30 *)
+        IMP_REWRITE_TAC[ARITH_RULE `0x50 * i + 0x40 = (0x50 * i + 0x30) + 0x10`; READ_BYTES_AND_BYTE128_SPLIT] THEN
+        EXISTS_TAC `(aes256_xts_encrypt pt_in (0x50 * i + 0x40) iv key1_lst key2_lst)` THEN
+        REPEAT CONJ_TAC THENL [
+          REWRITE_TAC [ARITH_RULE `(0x50 * i + 0x30) + 0x10 = 0x50 * i + 0x40`];
+
+          MP_TAC (SPECL [`0x5 * i + 0x4:num`; `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`;
+                         `key2_lst:int128 list`] LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS) THEN
+          REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC; GSYM ADD_ASSOC] THEN
+          CONV_TAC NUM_REDUCE_CONV THEN DISCH_TAC THEN
+          IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES];
+
+          MP_TAC (SPECL [`0x5 * i + 0x4:num`; `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`;
+                         `key2_lst:int128 list`] LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS) THEN
+          REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC; GSYM ADD_ASSOC] THEN
+          CONV_TAC NUM_REDUCE_CONV THEN DISCH_TAC THEN
+          IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES] THEN
+          ARITH_TAC;
+
+          (* Establish that one xts decrypt round is the same as
+             selecting one block of bytes from calling the top-level function. *)
+          REWRITE_TAC[aes256_xts_encrypt] THEN
+          SIMP_TAC[ARITH_RULE `~(0x50 * i + 0x40 < 0x10)`] THEN
+          SUBGOAL_THEN `(0x50 * i + 0x40) MOD 0x10 = 0` SUBST1_TAC THENL
+          [ REWRITE_TAC[ARITH_RULE `80 * i + 64 = 16 * (5 * i + 4)`] THEN
+            REWRITE_TAC[MOD_MULT]
+           ; ALL_TAC] THEN
+          CONV_TAC (DEPTH_CONV let_CONV) THEN
+          REWRITE_TAC[SUB_0; ARITH_RULE `(0x50 * i + 0x40) DIV 0x10 = 0x5 * i + 0x4`] THEN
+          SIMP_TAC[ARITH_RULE `~(0x5 * i + 0x4 < 0x2)`;
+                   ARITH_RULE `(0x5 * i + 0x4) - 0x2 = 0x5 * i + 0x2`;
+                   ARITH_RULE `(0x5 * i + 0x4) - 0x1 = 0x5 * i + 0x3`] THEN
+
+          MP_TAC (SPECL [`0`;`5 * i + 2:num`; `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`; `key2_lst:int128 list`]
+                  LENGTH_OF_AES256_XTS_ENCRYPT_REC) THEN
+          SIMP_TAC[ARITH_RULE `~(5 * i + 2 < 0)`;
+                   ARITH_RULE `((0x5 * i + 0x2) - 0x0 + 0x1) * 0x10 = 0x50 * i + 0x30`] THEN
+          IMP_REWRITE_TAC[SUB_LIST_APPEND_RIGHT_LEMMA] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`5 * i + 3:num`; `0x0:num`; `pt_in:byte list`; `iv:int128`;
+                         `key1_lst:int128 list`; `key2_lst:int128 list`]
+                  LENGTH_OF_AES256_XTS_ENCRYPT_TAIL) THEN
+          CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[ADD_0] THEN DISCH_TAC THEN
+          IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES] THEN
+
+          REWRITE_TAC[AES256_XTS_ENCRYPT_TAIL_WHEN_1BLOCK] THEN
+          SIMP_TAC[ARITH_RULE `i * 0x50 + 0x30 = (i * 0x5 + 0x3) * 0x10`;
+                   ARITH_RULE `i * 0x5 = 0x5 * i`];
+
+          (* Proving that reading previous bytes is the same as the spec *)
+          REWRITE_TAC[ARITH_RULE `0x50 * i + 0x30 = 0x10 * (5 * i + 3)`;
+                      ARITH_RULE `0x50 * i + 0x40 = 0x10 * (5 * i + 3) + 0x10`] THEN
+          REWRITE_TAC[SUB_LIST_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS] THEN
+          ASM_REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN CONV_TAC NUM_REDUCE_CONV
+        ] THEN
+
+        (* Reduce the goal to contain 0x50 * i + 0x20 *)
+        IMP_REWRITE_TAC[ARITH_RULE `0x50 * i + 0x30 = (0x50 * i + 0x20) + 0x10`; READ_BYTES_AND_BYTE128_SPLIT] THEN
+        EXISTS_TAC `(aes256_xts_encrypt pt_in (0x50 * i + 0x30) iv key1_lst key2_lst)` THEN
+        REPEAT CONJ_TAC THENL [
+          REWRITE_TAC [ARITH_RULE `(0x50 * i + 0x20) + 0x10 = 0x50 * i + 0x30`];
+
+          MP_TAC (SPECL [`0x5 * i + 0x3:num`; `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`;
+                         `key2_lst:int128 list`] LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS) THEN
+          REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC; GSYM ADD_ASSOC] THEN
+          CONV_TAC NUM_REDUCE_CONV THEN DISCH_TAC THEN
+          IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES];
+
+          MP_TAC (SPECL [`0x5 * i + 0x3:num`; `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`;
+                         `key2_lst:int128 list`] LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS) THEN
+          REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC; GSYM ADD_ASSOC] THEN
+          CONV_TAC NUM_REDUCE_CONV THEN
+          DISCH_TAC THEN
+          ASM_REWRITE_TAC[] THEN
+          ARITH_TAC;
+
+          (* Establish that one xts decrypt round is the same as
+             selecting one block of bytes from calling the top-level function. *)
+          REWRITE_TAC[aes256_xts_encrypt] THEN
+          SIMP_TAC[ARITH_RULE `~(0x50 * i + 0x30 < 0x10)`] THEN
+          SUBGOAL_THEN `(0x50 * i + 0x30) MOD 0x10 = 0` SUBST1_TAC THENL
+          [ REWRITE_TAC[ARITH_RULE `80 * i + 48 = 16 * (5 * i + 3)`] THEN
+            REWRITE_TAC[MOD_MULT]
+           ; ALL_TAC] THEN
+          CONV_TAC (DEPTH_CONV let_CONV) THEN
+          REWRITE_TAC[SUB_0; ARITH_RULE `(0x50 * i + 0x30) DIV 0x10 = 0x5 * i + 0x3`] THEN
+          SIMP_TAC[ARITH_RULE `~(0x5 * i + 0x3 < 0x2)`;
+                   ARITH_RULE `(0x5 * i + 0x3) - 0x2 = 0x5 * i + 0x1`;
+                   ARITH_RULE `(0x5 * i + 0x3) - 0x1 = 0x5 * i + 0x2`] THEN
+
+          MP_TAC (SPECL [`0`;`5 * i + 1:num`; `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`; `key2_lst:int128 list`]
+                  LENGTH_OF_AES256_XTS_ENCRYPT_REC) THEN
+          SIMP_TAC[ARITH_RULE `~(5 * i + 1 < 0)`;
+                   ARITH_RULE `((0x5 * i + 0x1) - 0x0 + 0x1) * 0x10 = 0x50 * i + 0x20`] THEN
+          IMP_REWRITE_TAC[SUB_LIST_APPEND_RIGHT_LEMMA] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`5 * i + 2:num`; `0x0:num`; `pt_in:byte list`; `iv:int128`;
+                         `key1_lst:int128 list`; `key2_lst:int128 list`]
+                  LENGTH_OF_AES256_XTS_ENCRYPT_TAIL) THEN
+          CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[ADD_0] THEN DISCH_TAC THEN
+          IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES] THEN
+
+          REWRITE_TAC[AES256_XTS_ENCRYPT_TAIL_WHEN_1BLOCK] THEN
+          SIMP_TAC[ARITH_RULE `i * 0x50 + 0x20 = (i * 0x5 + 0x2) * 0x10`;
+                   ARITH_RULE `i * 0x5 = 0x5 * i`];
+
+          (* Proving that reading previous bytes is the same as the spec *)
+          REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = 0x10 * (5 * i + 2)`;
+                      ARITH_RULE `0x50 * i + 0x30 = 0x10 * (5 * i + 2) + 0x10`] THEN
+          REWRITE_TAC[SUB_LIST_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS] THEN
+          ASM_REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN CONV_TAC NUM_REDUCE_CONV
+        ] THEN
+
       ]
 
 
