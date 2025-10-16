@@ -1365,11 +1365,17 @@ let define_relocated_mc name (args, tm:term list * term): thm =
   | [] -> f (name, A)
   | (v::vs) -> mk_comb (mk_tm_comb f (mk_fun_ty (type_of v) A) vs, v) in
   let args0,args = args,rev args in
-  try new_definition (list_mk_forall
-    (args0, mk_eq (mk_tm_comb mk_var `:byte list` args, tm)))
-  with Failure _ ->
-    new_definition (list_mk_forall
-      (args0, mk_eq (mk_tm_comb mk_mconst `:byte list` args, tm)));;
+  let mc_def =
+    try new_definition (list_mk_forall
+      (args0, mk_eq (mk_tm_comb mk_var `:byte list` args, tm)))
+    with Failure _ ->
+      new_definition (list_mk_forall
+        (args0, mk_eq (mk_tm_comb mk_mconst `:byte list` args, tm))) in
+  (* break APPEND(4-byte list, list) to 4 consecutive CONSs. *)
+  let blth = (LAND_CONV (TOP_DEPTH_CONV num_CONV) THENC
+              REWRITE_CONV[bytelist_of_num]) `bytelist_of_num 4 x` in
+  REWRITE_RULE[APPEND; blth] mc_def;;
+
 
 needs "common/elf.ml";;
 
@@ -1503,16 +1509,6 @@ let N_SUBLIST_CONV =
 
   - : thm = |- [0; 1; 2; 3; 4; 5] = APPEND [0] (APPEND test1 [5])
 *)
-(*
-let define_trim_ret_thm name th =
-  let th = SPEC_ALL th in
-  let df,tm1 = dest_eq (concl th) in
-  let n, tm = trim_ret_off tm1 in
-  let rec args ls = function
-  | Comb(f,v) -> args (v::ls) f
-  | _ -> ls in
-  let defn = define_relocated_mc name (args [] df, tm) in
-  defn, TRANS th (N_SUBLIST_CONV (SPEC_ALL defn) n tm1);; *)
 
 let define_from_elf name file =
   define_word_list name (term_of_bytes (load_elf_contents_arm file));;
@@ -1739,12 +1735,7 @@ let define_assert_relocs name (tm:term list * term) printed_opcodes_fn
     (constants:(string * bytes) list)
     :(thm(*machine code def*) * thm list(*data definitions of constants*)) =
   assert_relocs tm printed_opcodes_fn;
-  let mc_def = define_relocated_mc name tm in
-  let mc_def_canonicalized =
-    (* break APPEND(4-byte list, list) to 4 consecutive CONSs. *)
-    let blth = (LAND_CONV (TOP_DEPTH_CONV num_CONV) THENC
-                REWRITE_CONV[bytelist_of_num]) `bytelist_of_num 4 x` in
-    REWRITE_RULE[APPEND; blth] mc_def in
+  let mc_def_canonicalized = define_relocated_mc name tm in
   let datatype = `:((8)word)list` in
   (mc_def_canonicalized,
    map (fun (name,data) ->

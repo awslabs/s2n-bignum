@@ -2667,11 +2667,17 @@ let define_relocated_mc name (args, tm:term list * term): thm =
   | [] -> f (name, A)
   | (v::vs) -> mk_comb (mk_tm_comb f (mk_fun_ty (type_of v) A) vs, v) in
   let args0,args = args,rev args in
-  try new_definition (list_mk_forall
-    (args0, mk_eq (mk_tm_comb mk_var `:byte list` args, tm)))
-  with Failure _ ->
-    new_definition (list_mk_forall
-      (args0, mk_eq (mk_tm_comb mk_mconst `:byte list` args, tm)));;
+  let mc_def =
+    try new_definition (list_mk_forall
+      (args0, mk_eq (mk_tm_comb mk_var `:byte list` args, tm)))
+    with Failure _ ->
+      new_definition (list_mk_forall
+        (args0, mk_eq (mk_tm_comb mk_mconst `:byte list` args, tm))) in
+  (* break APPEND(4-byte list, list) to 4 consecutive CONSs. *)
+  let blth = (LAND_CONV (TOP_DEPTH_CONV num_CONV) THENC
+      REWRITE_CONV[bytelist_of_int;bytelist_of_num])
+      `bytelist_of_int 4 x` in
+  REWRITE_RULE[APPEND; blth] mc_def;;
 
 needs "common/elf.ml";;
 
@@ -2998,9 +3004,6 @@ let define_assert_relocs name (tm:term list * term) printed_opcodes_fn
     :(thm(*machine code def*) * thm list(*data definitions of constants*)) =
   assert_relocs tm printed_opcodes_fn;
   let mc_def = define_relocated_mc name tm in
-  (* Unlike ARM, do not canonicalize APPEND (bytelist_of_{num,int}) .. into
-     CONS because x86 tactics can already deal with the original form well
-     (and not with its CONS form). *)
   let datatype = `:((8)word)list` in
   (mc_def,
    map (fun (name,data) ->
