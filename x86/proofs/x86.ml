@@ -2036,7 +2036,7 @@ let X86_DECODES_THM =
     | Const("NIL",_) -> [CONJUNCT1 th',pcofs]
     | _ -> let dth,bth = CONJ_PAIR th' in (dth,pcofs)::(go bth) in
   fun th ->
-    let th = REWRITE_RULE[BYTELIST_OF_INT_APPEND] th in
+    let th = PURE_REWRITE_RULE[BYTELIST_OF_INT_APPEND] th in
     let decodes:(thm*term) list = (go o
       (fun dth -> EQ_MP dth (ASSUME (lhs (concl dth)))) o
       AP_TERM `bytes_loaded s (word pc)`) th in
