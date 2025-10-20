@@ -2472,7 +2472,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
           ASM_REWRITE_TAC[LEFT_ADD_DISTRIB; MULT_ASSOC] THEN CONV_TAC NUM_REDUCE_CONV
         ] THEN
 
-        (** Reduce the goal to ?? **)
+        (** Reduce the goal to 0x50 * i **)
         (*
         `read (memory :> bytes (ctxt_p,0x50 * i + 0x10)) s188 =
           num_of_bytelist
@@ -2581,6 +2581,17 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
           REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0; WORD_VAL]
         ]
       ];
+
+      (** Subgoal 4 of main loop invariant:
+         prove backedge is taken if i != val num_5blocks **)
+      REPEAT STRIP_TAC THEN
+      REWRITE_TAC[byte_list_at] THEN
+      ENSURES_INIT_TAC "s0" THEN
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--1) THEN
+      SUBGOAL_THEN `~(val (word_sub (num_5blocks:int64) (word i)) = 0x0)` ASSUME_TAC THENL
+      [ UNDISCH_TAC `i < val (num_5blocks:int64)` THEN WORD_ARITH_TAC; ALL_TAC] THEN
+      POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+      ENSURES_FINAL_STATE_TAC THEN ASM_SIMP_TAC[];
 
 
     ]
