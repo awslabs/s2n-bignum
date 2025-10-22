@@ -3338,7 +3338,6 @@ let TAIL_SWAP_CASE_TAC case =
   (* Simplify so that symbolic execution could match up, but couldn't use
      CONV_TAC NUM_REDUCE_CONV because of non-overlapping *)
   RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE r1]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `curr_len + 0x10 + 0x1 = curr_len + 0x11`]) THEN
   ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (1--5) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[GSYM ADD_ASSOC]) THEN
   RULE_ASSUM_TAC (CONV_RULE NUM_REDUCE_CONV) THEN
@@ -3361,6 +3360,8 @@ let TAIL_SWAP_CASE_TAC case =
       CIPHER_STEALING_BYTE_EQUAL) THEN
     CONV_TAC NUM_REDUCE_CONV THEN
     REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
     STRIP_TAC THEN
 
     MAP_EVERY (fun i -> CONJ_TAC THENL
@@ -3371,6 +3372,7 @@ let TAIL_SWAP_CASE_TAC case =
     MP_TAC (SPECL [`pt_ptr:int64`; case; `val (tail_len:int64)`;
       `curr_len:num`; `(int128_to_bytes PP):byte list`; `s5:armstate`]
       BYTE_LIST_AT_SPLIT_BACKWARDS) THEN
+    REWRITE_TAC[LENGTH_OF_INT128_TO_BYTES] THEN
     CONV_TAC NUM_REDUCE_CONV THEN
     ASM_SIMP_TAC[] THEN
     ANTS_TAC THENL
@@ -3403,7 +3405,8 @@ let TAIL_SWAP_ASM_CASES_TAC case =
 
 let BREAK_DATA_INTO_PARTS = prove(
  `!curr_len (tail_len:int64) (pt_ptr:int64) (s:armstate).
- ((forall i. i < curr_len
+ ((curr_len + 0x10 + val tail_len <= LENGTH bl) /\
+  (forall i. i < curr_len
     ==> read (memory :> bytes8 (word_add pt_ptr (word i))) s = EL i bl) /\
   (forall i. i < 16
     ==> read (memory :> bytes8 (word_add (word_add pt_ptr (word curr_len)) (word i))) s =
@@ -3416,8 +3419,9 @@ let BREAK_DATA_INTO_PARTS = prove(
      i < curr_len + 0x10 + val tail_len
      ==> read (memory :> bytes8 (word_add pt_ptr (word i))) s = EL i bl`,
   REPEAT GEN_TAC THEN
-  DISCH_THEN (CONJUNCTS_THEN2 (LABEL_TAC "H1")
-    (CONJUNCTS_THEN2 (LABEL_TAC "H2") (LABEL_TAC "H3"))) THEN
+  DISCH_THEN (CONJUNCTS_THEN2 (LABEL_TAC "H")
+    (CONJUNCTS_THEN2 (LABEL_TAC "H1")
+      (CONJUNCTS_THEN2 (LABEL_TAC "H2") (LABEL_TAC "H3")))) THEN
   REPEAT STRIP_TAC THEN
 
   ASM_CASES_TAC `i < curr_len` THENL
@@ -3463,6 +3467,7 @@ let BREAK_DATA_INTO_PARTS = prove(
 
   ASM_ARITH_TAC
 );;
+
 
 let AES_XTS_DECRYPT_CORRECT = time prove(
   `!ct_ptr pt_ptr ct key1_ptr key2_ptr iv_ptr iv len
@@ -6229,6 +6234,9 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
       MATCH_MP_TAC BREAK_DATA_INTO_PARTS THEN
       REPEAT CONJ_TAC THENL
       [
+        (* 0. Trivial *)
+        IMP_REWRITE_TAC[LENGTH_OF_AES256_XTS_DECRYPT] THEN ARITH_TAC;
+
         (* 1. Result correct up to curr_len *)
         UNDISCH_TAC `forall i.
           i < 16 * curr_blocks
