@@ -4,8 +4,8 @@
  *)
 
 use_file_raise_failure := true;;
-arm_print_log := false;;
-components_print_log := false;;
+arm_print_log := true;;
+components_print_log := true;;
 
 needs "arm/proofs/base.ml";;
 loadt "arm/proofs/aes_xts_decrypt_spec.ml";;
@@ -4466,10 +4466,12 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
         TWEAK_TAC `Q6:(armstate,int128)component` `val (num_5blocks_adjusted:int64) * 0x5 + 0x4` `val (num_5blocks_adjusted:int64) * 0x5 + 0x3` THEN
 
         (* The following lemmas are for NONSELFMODIFYING_STATE_UPDATE_TAC when store back to pt_ptr *)
-        RULE_ASSUM_TAC(REWRITE_RULE
-          [WORD_RULE `word_mul (word 0x50) num_5blocks_adjusted:int64 = word(0x50 * val num_5blocks_adjusted)`]) THEN
+        CHANGED_TAC (RULE_ASSUM_TAC(REWRITE_RULE
+          [WORD_RULE `word_mul (word 0x50) num_5blocks_adjusted:int64 = word(0x50 * val num_5blocks_adjusted)`])) THEN
+        CHANGED_TAC (RULE_ASSUM_TAC(REWRITE_RULE
+          [WORD_RULE `!base m n. word_add (word_add base (word m)) (word n) = word_add base (word(m + n))`])) THEN
 
-        (* TODO: there is a non-overlapping issue in the symbolic simulation that the third block is missing *)
+        (* TODO: Still have the same problem *)
         ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (134--136) THEN
         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
         REPEAT CONJ_TAC THENL
