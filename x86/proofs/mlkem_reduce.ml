@@ -370,12 +370,9 @@ let MLKEM_REDUCE_CORRECT = prove(
   STRIP_TAC THEN
 
 
-  (let lemma = WORD_BLAST
-  `(word_zx:int256->int128) x = word_subword x (0,128)` in
   MAP_EVERY (fun n -> X86_STEPS_TAC mlkem_reduce_TMC_EXEC [n] THEN
-                      RULE_ASSUM_TAC(REWRITE_RULE[lemma]) THEN
                       SIMD_SIMPLIFY_TAC_LOCAL[barred_x86])
-            (1--166)) THEN
+            (1--166) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
@@ -451,12 +448,12 @@ print_literal_from_elf "x86/mlkem/mlkem_reduce.obj";;
 
 let mlkem_reduce_windows_mc = define_from_elf
     "mlkem_reduce_windows_mc" "x86/mlkem/mlkem_reduce.obj";;
- 
+
 let mlkem_reduce_windows_tmc = define_trimmed
     "mlkem_reduce_windows_tmc" mlkem_reduce_windows_mc;;
 
 let mlkem_reduce_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_reduce_windows_tmc;;
- 
+
 let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
