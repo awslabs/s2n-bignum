@@ -3809,18 +3809,18 @@ let CIPHER_STEALING_CORRECT = time prove(
     X1 points to starting of last full block of pt
     X13 points to tail of pt
     X20 points to tail of ct
-    X21 holds tail_len
+    X21 holds decreasing tail_len
     Q6 holds second to last tweak
     Q16 ... Q7 holds the key schedule for encryption
 
     Memory: ct_ptr points to the input
-    Memory: Up to the last block, the output matches the specification
+    Memory: Up to the second to last block, the output matches the specification
     Memory: For the last block, for each byte
-      [0,i) -- previous decrption result
-      [i,tail_len) -- equal corresponding ct tail bytes
+      [0,i) -- previous decryption result
+      [i,tail_len) -- equal corresponding ct tail bytes, Cm
       [tail_len,16] -- previous decryption result
     Memory: For the tail, for each byte
-      [i,tail_len) -- copied over from last pt block
+      [i,tail_len) -- copied over from Pm block
   *)
   ENSURES_WHILE_PADOWN_TAC
     `val (tail_len:int64)`
@@ -4012,8 +4012,9 @@ let CIPHER_STEALING_CORRECT = time prove(
       ; ALL_TAC] THEN
     POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
 
-    (* case analysis based on i = 0 ... 14, this is unavoidable because symbolic execution
-       needs to know which byte is being overwritten in pt_ptr to properly update the state. *)
+    (* case analysis based on i = 0 ... 14, because symbolic execution
+       needs to know which byte is being overwritten in pt_ptr to properly update the state.
+       TODO: Think about a way to avoid the case split *)
     MAP_EVERY (fun i -> TAIL_SWAP_ASM_CASES_TAC (mk_numeral (num i))) (0--14) THEN
     UNDISCH_TAC `15 <= i` THEN
     UNDISCH_TAC `i < val (tail_len:int64)` THEN
@@ -6191,22 +6192,6 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
       NONOVERLAPPING_CLAUSES; byte_list_at;
       MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     REPEAT STRIP_TAC THEN
-
-    (* These are for top-level wrapper function
-    (* Add values for preserved registers *)
-    ENSURES_PRESERVED_TAC "x19_init" `X19` THEN
-    ENSURES_PRESERVED_TAC "x20_init" `X20` THEN
-    ENSURES_PRESERVED_TAC "x21_init" `X21` THEN
-    ENSURES_PRESERVED_TAC "x22_init" `X22` THEN
-    ENSURES_PRESERVED_DREG_TAC "d8_init" `D8` THEN
-    ENSURES_PRESERVED_DREG_TAC "d9_init" `D9` THEN
-    ENSURES_PRESERVED_DREG_TAC "d10_init" `D10` THEN
-    ENSURES_PRESERVED_DREG_TAC "d11_init" `D11` THEN
-    ENSURES_PRESERVED_DREG_TAC "d12_init" `D12` THEN
-    ENSURES_PRESERVED_DREG_TAC "d13_init" `D13` THEN
-    ENSURES_PRESERVED_DREG_TAC "d14_init" `D14` THEN
-    ENSURES_PRESERVED_DREG_TAC "d15_init" `D15` THEN
-*)
 
     (* Break len into full blocks and tail *)
     SUBGOAL_THEN `word_add (word_and len (word 0xf))
@@ -8461,3 +8446,50 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
   EXISTS_TAC `num_blocks:int64` THEN
   ASM_SIMP_TAC[]
 );;
+
+
+let AES_XTS_DECRYPT_SUBROUTINE_CORRECT = time prove
+ (`!ct_ptr pt_ptr ct key1_ptr key2_ptr iv_ptr iv len
+    k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e
+    k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e
+    pc stackpointer returnaddress.
+    aligned 16 stackpointer
+    /\ ALL (nonoverlapping (word_sub stackpointer (word 96), 96))
+        [ (word pc, LENGTH aes_xts_decrypt_mc);
+          (ct_ptr, val len); (key1_ptr, 260);
+          (key2_ptr, 260); (iv_ptr, 16);
+          (pt_ptr, val len)]
+    /\ nonoverlapping (word pc, LENGTH aes_xts_decrypt_mc) (pt_ptr, val len)
+    /\ nonoverlapping (ct_ptr, val len) (pt_ptr, val len)
+    /\ nonoverlapping (key1_ptr, 260) (pt_ptr, val len)
+    /\ val len >= 16 /\ val len <= 2 EXP 24 /\ LENGTH ct = val len
+    ==> ensures arm
+    (\s. aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
+         read PC s = word pc /\
+         read SP s = stackpointer /\
+         read X30 s = returnaddress /\
+         C_ARGUMENTS [ct_ptr; pt_ptr; len; key1_ptr; key2_ptr; iv_ptr] s /\
+         byte_list_at ct ct_ptr len s /\
+         read(memory :> bytes128 iv_ptr) s = iv /\
+         set_key_schedule s key1_ptr k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e /\
+         set_key_schedule s key2_ptr k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e)
+    (\s. read PC s = returnaddress /\
+         byte_list_at (aes256_xts_decrypt ct (val len) iv
+              [k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d; k0e]
+              [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e])
+              pt_ptr len s
+         )
+    (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
+     MAYCHANGE [memory :> bytes(pt_ptr, val len);
+                memory :> bytes(word_sub stackpointer (word 96), 96)])`,
+  REWRITE_TAC[byte_list_at; set_key_schedule;
+    fst AES_XTS_DECRYPT_EXEC] THEN
+  (* ~pre_post_nsteps:(7,7): 7 instructions before and after program body
+      for handling stack.
+    96: the byte size occupied on stack for storing preserved registers *)
+  ARM_ADD_RETURN_STACK_TAC
+    ~pre_post_nsteps:(7,7) AES_XTS_DECRYPT_EXEC
+    (REWRITE_RULE[byte_list_at; set_key_schedule;
+      fst AES_XTS_DECRYPT_EXEC] AES_XTS_DECRYPT_CORRECT)
+   `[X19; X20; X21; X22; D8; D9; D10; D11; D12; D13; D14; D15]` 96
+  );;
