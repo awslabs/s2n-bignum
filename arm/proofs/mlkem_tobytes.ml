@@ -221,14 +221,14 @@ let MLKEM_TOBYTES_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
     (assoc "mlkem_tobytes" subroutine_signatures)
     MLKEM_TOBYTES_SUBROUTINE_CORRECT
     MLKEM_TOBYTES_EXEC;;
 
 let MLKEM_TOBYTES_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall r a pc returnaddress.
+       forall e r a pc returnaddress.
            ALL (nonoverlapping (r,384)) [word pc,344; a,512]
            ==> ensures arm
                (\s.
@@ -244,5 +244,5 @@ let MLKEM_TOBYTES_SUBROUTINE_SAFE = time prove
                         e2 = f_events a r pc returnaddress /\
                         memaccess_inbounds e2 [a,512; r,384] [r,384])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC MLKEM_TOBYTES_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC ~public_vars:public_vars MLKEM_TOBYTES_EXEC);;
