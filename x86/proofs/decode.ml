@@ -736,12 +736,38 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPUNPCKHQDQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0x6e:8] ->
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) ->
+             if rex_W rex then
+               let dst = mmreg reg Lower_128 in
+               let src = operand_of_RM Full_64 rm in
+               SOME (VMOVQ dst src, l)
+             else
+               let dst = mmreg reg Lower_128 in
+               let src = operand_of_RM Lower_32 rm in
+               SOME (VMOVD dst src, l)
+           | _ -> NONE)
         | [0x6f:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
            match pfxs with
            | (T, Rep0, SG0) -> SOME(VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l)
            | (F, RepZ, SG0) -> SOME(VMOVDQU (mmreg reg sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
+        | [0x7e:8] ->
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) ->
+             if rex_W rex then
+               let src = mmreg reg Lower_128 in
+               let dst = operand_of_RM Full_64 rm in
+               SOME (VMOVQ dst src, l)
+             else
+               let src = mmreg reg Lower_128 in
+               let dst = operand_of_RM Lower_32 rm in
+               SOME (VMOVD dst src, l)
            | _ -> NONE)
         | [0x7f:8] ->
           let sz = vexL_size L in
