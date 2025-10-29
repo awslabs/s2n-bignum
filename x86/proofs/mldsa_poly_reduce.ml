@@ -436,12 +436,10 @@ let MLDSA_REDUCE_CORRECT = prove
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
   STRIP_TAC THEN
 
-  (let lemma = WORD_BLAST `(word_zx:int256->int128) x = word_subword x (0,128)` in
    MAP_EVERY (fun n ->
       X86_STEPS_TAC MLDSA_POLY_REDUCE_TMC_EXEC [n] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[lemma]) THEN
       SIMD_SIMPLIFY_TAC[mldsa_barred])
-             (1--198)) THEN
+             (1--198) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
