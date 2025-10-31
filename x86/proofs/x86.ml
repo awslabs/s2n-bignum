@@ -871,6 +871,18 @@ let x86_MOVQ = new_definition
     let (x':N word) = word_zx x in
     (dest := x') s`;;
 
+let x86_VMOVD = new_definition
+ `x86_MOVD dest src s =
+    let (x:M word) = read src s in
+    let (x':N word) = word_zx x in
+    (dest := x') s`;;
+
+let x86_VMOVQ = new_definition
+ `x86_MOVQ dest src s =
+    let (x:M word) = read src s in
+    let (x':N word) = word_zx x in
+    (dest := x') s`;;
+
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
     let x = read src s in (dest := x) s`;;
@@ -1762,6 +1774,13 @@ let x86_VPAND = new_definition
         let z = word_and x y in
         (dest := (z:N word)) s`;;
 
+let x86_VPANDN = new_definition
+ `x86_VPANDN dest src1 src2 (s:x86state) =
+        let x = read src1 s
+        and y = read src2 s in
+        let z = word_and (word_not x) y in
+        (dest := (z:N word)) s`;;
+
 let x86_VPOR = new_definition
  `x86_VPOR dest src1 src2 (s:x86state) =
         let x = read src1 s
@@ -2310,6 +2329,18 @@ let x86_execute = define
         (\s. (match (operand_size dest, operand_size src) with
           (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128_SSE src s)
         | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)) s)) s
+    | VMOVD dest src ->
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest, operand_size src) with
+          (32,128) -> x86_MOVD (OPERAND32 dest s) (OPERAND128 src s)
+        | (128,32) -> x86_MOVD (OPERAND128 dest s) (OPERAND32 src s)) s)) s
+    | VMOVQ dest src ->
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest, operand_size src) with
+          (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128 src s)
+        | (128,64) -> x86_MOVQ (OPERAND128 dest s) (OPERAND64 src s)) s)) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -2833,6 +2864,14 @@ let x86_execute = define
           256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s)
                            (OPERAND256 src2 s)
         | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s)
+                           (OPERAND128 src2 s)) s)) s
+    | VPANDN dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPANDN (OPERAND256 dest s) (OPERAND256 src1 s)
+                           (OPERAND256 src2 s)
+        | 128 -> x86_VPANDN (OPERAND128 dest s) (OPERAND128 src1 s)
                            (OPERAND128 src2 s)) s)) s
     | VPOR dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
@@ -3638,7 +3677,7 @@ let X86_OPERATION_CLAUSES =
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
-    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_MOVSX; x86_MOVUPS;
+    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ; x86_MOVSX; x86_MOVUPS;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
@@ -3648,8 +3687,8 @@ let X86_OPERATION_CLAUSES =
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLD_ALT; x86_VPMULLW_ALT;
-    x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
-    x86_VPSRLD_ALT; x86_VPSRLQ_ALT; x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT;
+    x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT;
+    x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLQ_ALT; x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT;
     x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT; x86_VMOVDQA_ALT; x86_VMOVDQU_ALT;
     x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;

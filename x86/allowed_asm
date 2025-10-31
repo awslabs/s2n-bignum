@@ -133,6 +133,7 @@
 : vpaddd$
 : vpaddw$
 : vpand$
+: vpandn$
 : vpblendd$
 : vpblendw$
 : vpbroadcastd$
