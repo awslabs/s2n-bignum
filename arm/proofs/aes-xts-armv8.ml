@@ -1960,6 +1960,53 @@ let DIVISION_BY_80_LEMMA = prove(
   (* Finally conclude b * 0x50 = a *)
   ASM_ARITH_TAC
 );;
+
+let WORD_AND_MASK16 = prove(
+  `word_and (len:int64) (word 0xfffffffffffffff0) = word_sub len (word_and len (word 0xf))`,
+  BITBLAST_TAC
+);;
+
+(* Same as Decrypt proof with a different name *)
+let LEN_FULL_BLOCKS_TO_VAL = prove(
+  `!(len:int64). word_and len (word 0xfffffffffffffff0) = word (16 * (val len DIV 16))`,
+  GEN_TAC THEN
+  REWRITE_TAC[WORD_AND_MASK16] THEN
+  REWRITE_TAC[GSYM VAL_EQ] THEN
+  SUBGOAL_THEN `16 * val (len:int64) DIV 16 = val len - (val len MOD 16)` SUBST1_TAC THENL
+  [REWRITE_TAC[DIVISION_SIMP] THEN ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `0xf = 2 EXP 4 - 1`] THEN
+  REWRITE_TAC[WORD_AND_MASK_WORD] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+
+  REWRITE_TAC[VAL_WORD_SUB] THEN
+  SUBGOAL_THEN `val (len:int64) >= val ((word (val len MOD 0x10)):int64)` ASSUME_TAC THENL [
+    REWRITE_TAC[VAL_WORD; DIMINDEX_64; GE] THEN
+    MP_TAC (SPECL [`val (len:int64) MOD 0x10`; `0x2 EXP 0x40`] MOD_LE) THEN
+    ARITH_TAC;
+    ALL_TAC
+  ] THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+
+  SUBGOAL_THEN `val (len:int64) MOD 0x10 < 0x2 EXP 0x40` ASSUME_TAC THENL
+  [ TRANS_TAC LET_TRANS `val (len:int64)` THEN
+    REWRITE_TAC[VAL_BOUND_64; MOD_LE]; ALL_TAC] THEN
+
+  SUBGOAL_THEN `val (len:int64) MOD 0x10 MOD 0x2 EXP 0x40 = val len MOD 0x10` ASSUME_TAC THENL
+  [ MP_TAC (SPECL [`val (len:int64) MOD 0x10`; `0x2 EXP 0x40`] MOD_LT) THEN
+    ASM_SIMP_TAC[]; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+
+  MP_TAC (SPECL [`val (len:int64)`; `0x2 EXP 0x40`; `val (len:int64) MOD 0x10`]
+    (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+  ANTS_TAC THENL [ REWRITE_TAC[MOD_LE]; ALL_TAC] THEN
+  ANTS_TAC THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_SIMP_TAC[] THEN DISCH_TAC THEN
+
+  MP_TAC (SPECL [`1`; `0x2 EXP 0x40`; `val (len:int64) - val len MOD 0x10`]
+    (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+  CONV_TAC NUM_REDUCE_CONV
+  );;
+
 (* ********************************************************** *)
 (* Properties that we prove about the specification functions *)
 (* Similar to the Decrypt ones but specified for Encrypt *)
@@ -4410,10 +4457,177 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
             REWRITE_TAC[SUB_LIST_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS] THEN
             IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES] THEN
             REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS]
+          ]
+        ] ; ALL_TAC
+      ] THEN (* 2 total *)
 
-        ]
+      (* Case: len % 0x50 = 0 *)
+      DISCH_TAC THEN
+      SUBGOAL_THEN `val (num_5blocks:int64) * 0x50 = val (len_full_blocks:int64)` ASSUME_TAC THENL
+      [ MATCH_MP_TAC (SPECL [`val (len_full_blocks:int64)`; `val (num_5blocks:int64)`]
+                            DIVISION_BY_80_LEMMA) THEN
+        REPEAT CONJ_TAC THENL
+        [
+          EXPAND_TAC "num_5blocks" THEN
+          IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+          UNDISCH_TAC `val (len_full_blocks:int64) <= 0x2 EXP 0x18` THEN
+          ARITH_TAC;
 
-      ]
+          EXPAND_TAC "len_full_blocks" THEN
+          REWRITE_TAC[LEN_FULL_BLOCKS_TO_VAL] THEN
+          IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT; DIVIDES_RMUL; DIVIDES_REFL] THEN
+          UNDISCH_TAC `val (len:int64) <= 0x2 EXP 0x18` THEN
+          ARITH_TAC;
+
+          UNDISCH_TAC `~(val (word_sub
+            (word_sub (len_full_blocks:int64)
+              (word_mul (word 0x50) (num_5blocks:int64)))
+            (word 0x10)) = 0x0)` THEN
+          REWRITE_TAC[CONTRAPOS_THM] THEN
+          REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x10 MOD 0x2 EXP 0x40 = 0x10`] THEN
+          REWRITE_TAC[VAL_WORD_SUB; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x50 MOD 0x2 EXP 0x40 = 0x50`] THEN
+
+          SUBGOAL_THEN `0x50 * val (num_5blocks:int64) < 2 EXP 64` ASSUME_TAC THENL
+          [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val  (len_full_blocks:int64)` THEN
+            UNDISCH_TAC `val (len_full_blocks:int64) <= 2 EXP 24` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          MP_TAC (SPECL [`0x50 * val (num_5blocks:int64)`; `2 EXP 64`] MOD_LT) THEN
+          ANTS_TAC THENL [ASM_SIMP_TAC[]; ALL_TAC] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`val (len_full_blocks:int64)`; `0x2 EXP 0x40`;
+            `0x50 * val (num_5blocks:int64)`]
+            (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val (len_full_blocks:int64)` THEN
+            SIMP_TAC[MULT_SYM]; ALL_TAC] THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `0x50 * val (num_5blocks:int64) < 2 EXP 64` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          ASM_SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`1`; `0x2 EXP 0x40`;
+            `val (len_full_blocks:int64) - 0x50 * val (num_5blocks:int64)`]
+            (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+          REWRITE_TAC[ARITH_RULE `1 * 2 EXP 64 = 2 EXP 64`] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+          SIMP_TAC[MULT_SYM] THEN DISCH_TAC THEN
+          CONV_TAC NUM_REDUCE_CONV;
+
+          UNDISCH_TAC `~(val (word_sub
+            (word_sub (len_full_blocks:int64)
+              (word_mul (word 0x50) (num_5blocks:int64)))
+            (word 0x20)) = 0x0)` THEN
+          REWRITE_TAC[CONTRAPOS_THM] THEN
+          REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x10 MOD 0x2 EXP 0x40 = 0x10`] THEN
+          REWRITE_TAC[VAL_WORD_SUB; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x50 MOD 0x2 EXP 0x40 = 0x50`] THEN
+
+          SUBGOAL_THEN `0x50 * val (num_5blocks:int64) < 2 EXP 64` ASSUME_TAC THENL
+          [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val  (len_full_blocks:int64)` THEN
+            UNDISCH_TAC `val (len_full_blocks:int64) <= 2 EXP 24` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          MP_TAC (SPECL [`0x50 * val (num_5blocks:int64)`; `2 EXP 64`] MOD_LT) THEN
+          ANTS_TAC THENL [ASM_SIMP_TAC[]; ALL_TAC] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`val (len_full_blocks:int64)`; `0x2 EXP 0x40`;
+            `0x50 * val (num_5blocks:int64)`]
+            (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val (len_full_blocks:int64)` THEN
+            SIMP_TAC[MULT_SYM]; ALL_TAC] THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `0x50 * val (num_5blocks:int64) < 2 EXP 64` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          ASM_SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`1`; `0x2 EXP 0x40`;
+            `val (len_full_blocks:int64) - 0x50 * val (num_5blocks:int64)`]
+            (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+          REWRITE_TAC[ARITH_RULE `1 * 2 EXP 64 = 2 EXP 64`] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+          SIMP_TAC[MULT_SYM] THEN DISCH_TAC THEN
+          CONV_TAC NUM_REDUCE_CONV;
+
+          UNDISCH_TAC `~(val (word_sub
+            (word_sub (len_full_blocks:int64)
+              (word_mul (word 0x50) (num_5blocks:int64)))
+            (word 0x30)) = 0x0)` THEN
+          REWRITE_TAC[CONTRAPOS_THM] THEN
+          REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x10 MOD 0x2 EXP 0x40 = 0x10`] THEN
+          REWRITE_TAC[VAL_WORD_SUB; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x50 MOD 0x2 EXP 0x40 = 0x50`] THEN
+
+          SUBGOAL_THEN `0x50 * val (num_5blocks:int64) < 2 EXP 64` ASSUME_TAC THENL
+          [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val  (len_full_blocks:int64)` THEN
+            UNDISCH_TAC `val (len_full_blocks:int64) <= 2 EXP 24` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          MP_TAC (SPECL [`0x50 * val (num_5blocks:int64)`; `2 EXP 64`] MOD_LT) THEN
+          ANTS_TAC THENL [ASM_SIMP_TAC[]; ALL_TAC] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`val (len_full_blocks:int64)`; `0x2 EXP 0x40`;
+            `0x50 * val (num_5blocks:int64)`]
+            (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val (len_full_blocks:int64)` THEN
+            SIMP_TAC[MULT_SYM]; ALL_TAC] THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `0x50 * val (num_5blocks:int64) < 2 EXP 64` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          ASM_SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`1`; `0x2 EXP 0x40`;
+            `val (len_full_blocks:int64) - 0x50 * val (num_5blocks:int64)`]
+            (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+          REWRITE_TAC[ARITH_RULE `1 * 2 EXP 64 = 2 EXP 64`] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+          SIMP_TAC[MULT_SYM] THEN DISCH_TAC THEN
+          CONV_TAC NUM_REDUCE_CONV;
+
+          UNDISCH_TAC `~(val (word_sub
+            (word_sub (len_full_blocks:int64)
+              (word_mul (word 0x50) (num_5blocks:int64)))
+            (word 0x40)) = 0x0)` THEN
+          REWRITE_TAC[CONTRAPOS_THM] THEN
+          REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x10 MOD 0x2 EXP 0x40 = 0x10`] THEN
+          REWRITE_TAC[VAL_WORD_SUB; VAL_WORD_MUL; VAL_WORD; DIMINDEX_64;
+            ARITH_RULE `0x50 MOD 0x2 EXP 0x40 = 0x50`] THEN
+
+          SUBGOAL_THEN `0x50 * val (num_5blocks:int64) < 2 EXP 64` ASSUME_TAC THENL
+          [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val  (len_full_blocks:int64)` THEN
+            UNDISCH_TAC `val (len_full_blocks:int64) <= 2 EXP 24` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          MP_TAC (SPECL [`0x50 * val (num_5blocks:int64)`; `2 EXP 64`] MOD_LT) THEN
+          ANTS_TAC THENL [ASM_SIMP_TAC[]; ALL_TAC] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`val (len_full_blocks:int64)`; `0x2 EXP 0x40`;
+            `0x50 * val (num_5blocks:int64)`]
+            (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `val (num_5blocks:int64) * 0x50 <= val (len_full_blocks:int64)` THEN
+            SIMP_TAC[MULT_SYM]; ALL_TAC] THEN
+          ANTS_TAC THENL [
+            UNDISCH_TAC `0x50 * val (num_5blocks:int64) < 2 EXP 64` THEN
+            ARITH_TAC; ALL_TAC] THEN
+          ASM_SIMP_TAC[] THEN DISCH_TAC THEN
+
+          MP_TAC (SPECL [`1`; `0x2 EXP 0x40`;
+            `val (len_full_blocks:int64) - 0x50 * val (num_5blocks:int64)`]
+            (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+          REWRITE_TAC[ARITH_RULE `1 * 2 EXP 64 = 2 EXP 64`] THEN
+          SIMP_TAC[] THEN DISCH_TAC THEN
+          SIMP_TAC[MULT_SYM] THEN DISCH_TAC THEN
+          CONV_TAC NUM_REDUCE_CONV;
+        ] ; ALL_TAC
+      ] THEN
     ]
   ]
 );;
