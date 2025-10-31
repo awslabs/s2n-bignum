@@ -138,9 +138,10 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
     vmovdqa YMMWORD PTR [rsp+0x280],ymm1
     vmovdqa YMMWORD PTR [rsp+0x2a0],ymm2
     vmovdqa YMMWORD PTR [rsp+0x2c0],ymm3
-    // vmovq  xmm1,QWORD PTR [rdi+0xc0]
-    vpinsrq xmm1,xmm1,QWORD PTR [rdi+0x188],0x1
-    // vmovq  xmm2,QWORD PTR [rdi+0x250]
+   //  vmovq xmm1,QWORD PTR [rdi+0xc0]
+
+    // vpinsrq xmm1,xmm1,QWORD PTR [rdi+0x188],0x1
+    // vmovq xmm2,QWORD PTR [rdi+0x250]
     // vpinsrq xmm2,xmm2,QWORD PTR [rdi+0x318],0x1
     // vinserti128 ymm3,ymm1,xmm2,0x1
     vmovdqa YMMWORD PTR [rsp+0x2e0],ymm3
@@ -516,9 +517,12 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
     vmovdqa ymm3,YMMWORD PTR [rsp+0x2e0]
     // vextracti128 xmm0,ymm3,0x0
     // vextracti128 xmm1,ymm3,0x1
-    // vmovq  QWORD PTR [rdi+0xc0],xmm0
+
+    // TEST UNCOMMENT THESE 2 INSRUCTIONS
+    // vmovq QWORD PTR [rdi+0xc0],xmm0
     // vpextrq QWORD PTR [rdi+0x188],xmm0,0x1
-    // vmovq  QWORD PTR [rdi+0x250],xmm1
+
+    // vmovq QWORD PTR [rdi+0x250],xmm1
     // vpextrq QWORD PTR [rdi+0x318],xmm1,0x1
    mov    rsp,rbp
    pop    rbp

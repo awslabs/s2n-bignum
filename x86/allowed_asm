@@ -143,6 +143,8 @@
 : vpermq$
 : vpinsrd$
 : vpinsrq$
+: vpextrd$
+: vpextrq$
 : vpmuldq$
 : vpmulhw$
 : vpmulld$
