@@ -141,6 +141,8 @@
 : vperm2i128$
 : vpermd$
 : vpermq$
+: vpinsrd$
+: vpinsrq$
 : vpmuldq$
 : vpmulhw$
 : vpmulld$

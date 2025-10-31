@@ -653,6 +653,18 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPSHUFB (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0x22:8] -> if has_unhandled_pfxs pfxs then NONE else
+          read_ModRM rex l >>= \((reg,rm),l).
+          read_imm Byte l >>= \(imm8,l).
+          let dest = mmreg reg Lower_128 in
+          let src1 = mmreg reg Lower_128 in
+          let sz = if rex_W rex then Full_64 else Lower_32 in
+          let src2 = operand_of_RM sz rm in
+          (match pfxs with
+          | (T, Rep0, SG0) ->
+            if rex_W rex then SOME (VPINSRQ dest src1 src2 imm8, l)
+            else SOME (VPINSRD dest src1 src2 imm8, l)
+          | _ -> NONE)
         | [0x28:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
