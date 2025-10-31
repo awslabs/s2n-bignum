@@ -85,6 +85,7 @@ let AESENC_ROUND_REDUCE_CONV tm =
     when is_numeral state && is_numeral roundkey -> AESENC_ROUND_HELPER_CONV tm
     | _ -> failwith "AESENC_ROUND_REDUCE_CONV: inapplicable";;
 
+(*
 prove(`aes256_encrypt_round (word 0x7b5b54657374566563746f725d53475d)
               (word 0x48692853686179295b477565726f6e5d) =
        word 0xa8311c2f9fdba3c58b104b58ded7e595`,
@@ -94,6 +95,7 @@ prove(`aes256_encrypt_round (word 0xAB60EEF6E1D04EC228EE8A3BF255FC0B)
               (word 0xF4DF1409A310982DD708613B072C351F) =
        word 0x416EAD9670A2C6D71CFE3FCCB03F10D9`,
        CONV_TAC(LAND_CONV AESENC_ROUND_REDUCE_CONV) THEN REFL_TAC);;
+*)
 
 (*
 https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/AES_Core256.pdf

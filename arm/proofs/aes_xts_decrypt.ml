@@ -4,8 +4,8 @@
  *)
 
 use_file_raise_failure := true;;
-arm_print_log := false;;
-components_print_log := false;;
+arm_print_log := true;;
+components_print_log := true;;
 
 needs "arm/proofs/base.ml";;
 loadt "arm/proofs/aes_xts_decrypt_spec.ml";;
@@ -4013,8 +4013,7 @@ let CIPHER_STEALING_CORRECT = time prove(
     POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
 
     (* case analysis based on i = 0 ... 14, because symbolic execution
-       needs to know which byte is being overwritten in pt_ptr to properly update the state.
-       TODO: Think about a way to avoid the case split *)
+       needs to know which byte is being overwritten in pt_ptr to properly update the state. *)
     MAP_EVERY (fun i -> TAIL_SWAP_ASM_CASES_TAC (mk_numeral (num i))) (0--14) THEN
     UNDISCH_TAC `15 <= i` THEN
     UNDISCH_TAC `i < val (tail_len:int64)` THEN
@@ -6656,7 +6655,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
       (* Subgoal 3: loop body *)
       REPEAT STRIP_TAC THEN
 
-      (* TODO: add a comment explaining what this bound is for *)
+      (* An arithmetic rule for discharging subgoal in the following ENSURES_FRAME_SUBSUMED tactic *)
       SUBGOAL_THEN `i * 0x50 + 0x50 <= val (len:int64)` ASSUME_TAC THENL
       [ SUBGOAL_THEN `i + 1 <= val (num_5blocks_adjusted:int64)` MP_TAC THENL
           [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -7212,8 +7211,11 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
         CHANGED_TAC (RULE_ASSUM_TAC(REWRITE_RULE
           [WORD_RULE `!base m n. word_add (word_add base (word m)) (word n) = word_add base (word(m + n))`])) THEN
 
-        (* TODO: Still have the same problem *)
-        ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (134--136) THEN
+        ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (134--134) THEN
+        (* Need to simplify the expression for X1 after the first store instruction *)
+        CHANGED_TAC (RULE_ASSUM_TAC(REWRITE_RULE
+          [WORD_RULE `!base m n. word_add (word_add base (word m)) (word n) = word_add base (word(m + n))`])) THEN
+        ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (135--136) THEN
         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
         REPEAT CONJ_TAC THENL
         [
@@ -7229,22 +7231,6 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
             UNDISCH_TAC `val (len:int64) <= 0x2 EXP 0x18` THEN
             ARITH_TAC; ALL_TAC] THEN
           POP_ASSUM(fun th -> REWRITE_TAC[th]) THEN
-
-          (* TODO: Manually add the assumption as a temporary fix *)
-          SUBGOAL_THEN `read
-          (memory :>
-            bytes128
-            (word_add (pt_ptr:int64) (word (0x50 * val (num_5blocks_adjusted:int64) + 0x20))))
-            s136 =
-          aes256_xts_decrypt_round
-            (bytes_to_int128
-              (SUB_LIST (val num_5blocks_adjusted * 0x50 + 0x20,0x10) ct))
-            (calculate_tweak (val num_5blocks_adjusted * 0x5 + 0x2) iv key2)
-            key1` ASSUME_TAC THENL [CHEAT_TAC; ALL_TAC] THEN
-          (* TODO: ??? *)
-          RULE_ASSUM_TAC(REWRITE_RULE
-          [WORD_RULE `(word_add (word_add pt_ptr (word (0x50 * val num_5blocks_adjusted)))
-              (word 0x30)) = (word_add (pt_ptr:int64) (word (0x50 * val (num_5blocks_adjusted:int64) + 0x30)))`]) THEN
 
           (* Remove quantifier *)
           UNDISCH_TAC
