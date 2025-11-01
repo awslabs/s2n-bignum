@@ -245,14 +245,14 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
     (assoc "mlkem_mulcache_compute" subroutine_signatures)
     MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT
     MLKEM_MULCACHE_COMPUTE_EXEC;;
 
 let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall dst src zetas zetas_twisted pc returnaddress.
+       forall e dst src zetas zetas_twisted pc returnaddress.
            ALL (nonoverlapping (dst,256))
            [word pc,LENGTH mlkem_mulcache_compute_mc; src,512; zetas,256;
             zetas_twisted,256]
@@ -274,5 +274,5 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
                         [src,512; zetas,256; zetas_twisted,256; dst,256]
                         [dst,256])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC MLKEM_MULCACHE_COMPUTE_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC ~public_vars:public_vars MLKEM_MULCACHE_COMPUTE_EXEC);;
