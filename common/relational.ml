@@ -27,15 +27,17 @@ let seq = new_definition
  `((r1:B->C->bool) ,, r2) = \s0 s2:A. ?s1. r1 s0 s1 /\ r2 s1 s2`;;
 
 let SEQ_ASSOC = prove
- (`!r1 r2 r3. r1 ,, (r2 ,, r3) = (r1 ,, r2) ,, r3`,
+ (`forall (r1:A->B->bool) (r2:B->C->bool) (r3:C->D->bool).
+    r1 ,, (r2 ,, r3) = (r1 ,, r2) ,, r3`,
   REWRITE_TAC[FUN_EQ_THM; seq] THEN MESON_TAC[]);;
 
 let SEQ_ID = prove
- (`(!r. (=) ,, r = r) /\ (!r. r ,, (=) = r)`,
+ (`(forall (r:A->B->bool). (=) ,, r = r) /\
+   (forall (r:A->B->bool). r ,, (=) = r)`,
   REWRITE_TAC[FUN_EQ_THM; seq] THEN MESON_TAC[]);;
 
 let SEQ_TRIVIAL = prove
-  (`!r. ((\a:A b:B. T) ,, (\a:B b:C. T)) = (\a:A b:C. T)`,
+  (`((\a:A b:B. T) ,, (\a:B b:C. T)) = (\a:A b:C. T)`,
    REWRITE_TAC [FUN_EQ_THM; seq]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -45,16 +47,16 @@ let SEQ_TRIVIAL = prove
 parse_as_infix("subsumed",(12,"right"));;
 
 let subsumed = new_definition
- `R subsumed R' <=> !x y. R x y ==> R' x y`;;
+ `(R:A->B->bool) subsumed R' <=> !x y. R x y ==> R' x y`;;
 
 let SUBSUMED_SEQ = prove
- (`!C1 C2 D1 D2.
+ (`forall (C1:A->B->bool) (C2:B->C->bool) D1 D2.
         C1 subsumed D1 /\ C2 subsumed D2
         ==> (C1 ,, C2) subsumed (D1 ,, D2)`,
   REWRITE_TAC[subsumed; seq] THEN MESON_TAC[]);;
 
 let SUBSUMED_FOR_SEQ = prove
- (`!C1 C2 D.
+ (`forall (C1:A->A->bool) C2 D.
         D ,, D = D /\
         C1 subsumed D /\
         C2 subsumed D
@@ -62,21 +64,22 @@ let SUBSUMED_FOR_SEQ = prove
   REWRITE_TAC[FUN_EQ_THM; seq; subsumed] THEN MESON_TAC[]);;
 
 let SUBSUMED_ID_SEQ = prove
- (`!R R'. (=) subsumed R /\ (=) subsumed R' ==> (=) subsumed (R ,, R')`,
+ (`forall (R:A->A->bool) R'.
+    (=) subsumed R /\ (=) subsumed R' ==> (=) subsumed (R ,, R')`,
   REWRITE_TAC[subsumed; seq] THEN MESON_TAC[]);;
 
 let SUBSUMED_REFL = prove
- (`!R. R subsumed R`,
+ (`forall (R:A->B->bool). R subsumed R`,
   REWRITE_TAC[subsumed] THEN MESON_TAC[]);;
 
 let SUBSUMED_SEQ_LEFT = prove
- (`!C D1 D2.
+ (`forall (C:A->B->bool) D1 D2.
      C subsumed D1 /\ (=) subsumed D2
      ==> C subsumed (D1 ,, D2)`,
   REWRITE_TAC[FUN_EQ_THM; seq; subsumed] THEN MESON_TAC[]);;
 
 let SUBSUMED_SEQ_RIGHT = prove
- (`!C D1 D2.
+ (`forall (C:A->B->bool) D1 D2.
      (=) subsumed D1 /\ C subsumed D2
      ==> C subsumed (D1 ,, D2)`,
   REWRITE_TAC[FUN_EQ_THM; seq; subsumed] THEN MESON_TAC[]);;
@@ -88,34 +91,34 @@ let SUBSUMED_SEQ_RIGHT = prove
 parse_as_infix(":=",(14,"right"));;
 
 let assign = new_definition
- `(c := y) = \s s'. write c y s = s'`;;
+ `(c := y) = \(s:A) s'. write c (y:V) s = s'`;;
 
 let SEQ = prove
- (`((c := y) ,, r) s = r (write c y s)`,
+ (`((c := (y:V)) ,, (r:A->B->bool)) (s:A) = r (write c y s)`,
   REWRITE_TAC[assign; seq; FUN_EQ_THM] THEN MESON_TAC[]);;
 
 let ASSIGN_ZEROTOP_8 = prove
- (`!c y. ((c :> zerotop_8) := y) = (c := word_zx y)`,
+ (`forall c y. ((c :> zerotop_8) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_8]);;
 
 let ASSIGN_ZEROTOP_16 = prove
- (`!c y. ((c :> zerotop_16) := y) = (c := word_zx y)`,
+ (`forall c y. ((c :> zerotop_16) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_16]);;
 
 let ASSIGN_ZEROTOP_32 = prove
- (`!c y. ((c :> zerotop_32) := y) = (c := word_zx y)`,
+ (`forall c y. ((c :> zerotop_32) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_32]);;
 
 let ASSIGN_ZEROTOP_64 = prove
- (`!c y. ((c :> zerotop_64) := y) = (c := word_zx y)`,
+ (`forall c y. ((c :> zerotop_64) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_64]);;
 
 let ASSIGN_ZEROTOP_128 = prove
- (`!c y. ((c :> zerotop_128) := y) = (c := word_zx y)`,
+ (`forall c y. ((c :> zerotop_128) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_128]);;
 
 let ASSIGN_ZEROTOP_256 = prove
- (`!c y. ((c :> zerotop_256) := y) = (c := word_zx y)`,
+ (`forall c y. ((c :> zerotop_256) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_256]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -123,53 +126,55 @@ let ASSIGN_ZEROTOP_256 = prove
 (* ------------------------------------------------------------------------- *)
 
 let ASSIGNS = new_definition
- `ASSIGNS (c:(A,B)component) s s' <=> ?y. (c := y) s s'`;;
+ `ASSIGNS (c:(A,B)component) s s' <=> exists y. (c := y) s s'`;;
 
 let ASSIGNS_THM = prove
- (`ASSIGNS c = \s s'. ?y. write c y s = s'`,
+ (`ASSIGNS c = \(s:A) s'. exists (y:V). write c y s = s'`,
   REWRITE_TAC[FUN_EQ_THM; ASSIGNS; assign]);;
 
 let ASSIGNS_SEQ = prove
- (`(ASSIGNS c ,, r) = \s s'. ?y. r (write c y s) s'`,
+ (`(ASSIGNS c ,, (r:A->B->bool)) = \(s:A) s'. exists (y:V). r (write c y s) s'`,
   REWRITE_TAC[ASSIGNS; assign; seq; FUN_EQ_THM] THEN MESON_TAC[]);;
 
 let SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT = prove
- (`!c:(S,A)component.
+ (`forall c:(S,A)component.
         extensionally_valid_component c ==> (=) subsumed (ASSIGNS c)`,
   REWRITE_TAC[subsumed; ASSIGNS_THM; extensionally_valid_component] THEN
   MESON_TAC[]);;
 
 let SUBSUMED_ASSIGNS_SUBCOMPONENTS = prove
- (`!c d1 d2. ASSIGNS d1 subsumed ASSIGNS d2
+ (`forall (c:(A,B)component) (d1:(B,C)component) (d2:(B,D)component).
+    ASSIGNS d1 subsumed ASSIGNS d2
              ==> ASSIGNS (c :> d1) subsumed ASSIGNS (c :> d2)`,
   REWRITE_TAC[subsumed; ASSIGNS_THM; READ_COMPONENT_COMPOSE;
               WRITE_COMPONENT_COMPOSE] THEN
   MESON_TAC[]);;
 
 let SUBSUMED_ASSIGNS_SUBCOMPONENT = prove
- (`!c d. ASSIGNS (c :> d) subsumed ASSIGNS c`,
+ (`forall (c:(A,B)component) (d:(B,C)component).
+    ASSIGNS (c :> d) subsumed ASSIGNS c`,
   REWRITE_TAC[subsumed; ASSIGNS_THM; READ_COMPONENT_COMPOSE;
               WRITE_COMPONENT_COMPOSE] THEN
   MESON_TAC[]);;
 
 let ASSIGNS_PULL_THM = prove
- (`((if P then ASSIGNS c else c := y) =
-    (\s s'. ?d. (c := if P then d else y) s s')) /\
+ (`((if P then ASSIGNS (c:(A,B)component) else c := y) =
+    (\s s'. exists d. (c := if P then d else y) s s')) /\
    ((if P then c := y else ASSIGNS c) =
-    (\s s'. ?d. (c := if P then y else d) s s')) /\
-   ((if P then c := y else \s s'. ?d. (c := f d s) s s') =
-    \s s'. ?d. (c := (if P then y else f d s)) s s') /\
-   ((if P then \s s'. ?d. (c := f d s) s s' else c := y) =
-    \s s'. ?d. (c := (if P then f d s else y)) s s')`,
+    (\s s'. exists d. (c := if P then y else d) s s')) /\
+   ((if P then c := y else \s s'. exists (d:V). (c := f d s) s s') =
+    \s s'. exists d. (c := (if P then y else f d s)) s s') /\
+   ((if P then \s s'. exists d. (c := f d s) s s' else c := y) =
+    \s s'. exists d. (c := (if P then f d s else y)) s s')`,
   REWRITE_TAC[ASSIGNS_THM; assign; FUN_EQ_THM] THEN MESON_TAC[]);;
 
 let SEQ_PULL_THM = prove
- (`((\s s'. ?y. Q y s s') ,, R = \s s'. ?y. (Q y ,, R) s s') /\
-   (R ,, (\s s'. ?y. Q y s s') = \s s'. ?y. (R ,, Q y) s s')`,
+ (`((\(s:A) (s':B). exists (y:V). Q y s s') ,, R = \s s'. exists y. (Q y ,, R) s s') /\
+   (R ,, (\s s'. exists y. Q y s s') = \s s'. exists y. (R ,, Q y) s s')`,
   REWRITE_TAC[seq; FUN_EQ_THM] THEN MESON_TAC[]);;
 
 let ASSIGNS_ASSIGN = prove
- (`ASSIGNS c = \s s'. ?y. (c := y) s s'`,
+ (`ASSIGNS c = \(s:A) s'. exists (y:V). (c := y) s s'`,
   REWRITE_TAC[FUN_EQ_THM; ASSIGNS; assign] THEN MESON_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -177,37 +182,38 @@ let ASSIGNS_ASSIGN = prove
 (* ------------------------------------------------------------------------- *)
 
 let ASSIGNS_ABSORB_SAME_COMPONENTS = prove
- (`!c:(A,B)component.
+ (`forall c:(A,B)component.
         weakly_valid_component c
         ==> ASSIGNS c ,, ASSIGNS c = ASSIGNS c`,
   SIMP_TAC[ASSIGNS_SEQ; ASSIGNS_THM; weakly_valid_component]);;
 
 let ASSIGNS_ABSORB_BITELEMENT = prove
- (`!i. ASSIGNS(bitelement i) ,, ASSIGNS(bitelement i) =
+ (`forall i.
+    ASSIGNS(bitelement i:((N)word,bool)component) ,, ASSIGNS(bitelement i) =
        ASSIGNS(bitelement i)`,
   REWRITE_TAC[ASSIGNS_SEQ; ASSIGNS_THM; WRITE_WRITE_BITELEMENT]);;
 
 let ASSIGNS_ABSORB_ENTIRETY_R = prove
- (`!(c:(A,B)component).
+ (`forall (c:(A,B)component).
         ASSIGNS c ,, ASSIGNS entirety = ASSIGNS entirety`,
   REWRITE_TAC[ASSIGNS_SEQ; ASSIGNS_THM; WRITE_ENTIRETY]);;
 
 let ASSIGNS_ABSORB_ENTIRETY_L = prove
- (`!(c:(A,B)component).
+ (`forall (c:(A,B)component).
         extensionally_valid_component c
         ==> ASSIGNS entirety ,, ASSIGNS c = ASSIGNS entirety`,
   SIMP_TAC[FUN_EQ_THM; ASSIGNS_SEQ; ASSIGNS_THM; WRITE_ENTIRETY] THEN
   REWRITE_TAC[extensionally_valid_component] THEN MESON_TAC[]);;
 
 let ASSIGNS_ABSORB_SUBCOMPONENT_R = prove
- (`!(c:(A,B)component) (d:(B,C)component).
+ (`forall (c:(A,B)component) (d:(B,C)component).
         valid_component c
         ==> ASSIGNS (c :> d) ,, ASSIGNS c = ASSIGNS c`,
   SIMP_TAC[FUN_EQ_THM; ASSIGNS_SEQ; ASSIGNS_THM; WRITE_COMPONENT_COMPOSE] THEN
   REWRITE_TAC[valid_component] THEN MESON_TAC[]);;
 
 let ASSIGNS_ABSORB_SUBCOMPONENT_L = prove
- (`!(c:(A,B)component) (d:(B,C)component).
+ (`forall (c:(A,B)component) (d:(B,C)component).
         extensionally_valid_component c /\
         extensionally_valid_component d
         ==> ASSIGNS c ,, ASSIGNS (c :> d) = ASSIGNS c`,
@@ -215,14 +221,18 @@ let ASSIGNS_ABSORB_SUBCOMPONENT_L = prove
   REWRITE_TAC[extensionally_valid_component] THEN MESON_TAC[]);;
 
 let ASSIGNS_RVALUE = prove
- (`!y. ASSIGNS(rvalue y) = (=)`,
+ (`forall (y:V). ASSIGNS(rvalue y):A->A->bool = (=)`,
   REWRITE_TAC[FUN_EQ_THM; ASSIGNS_THM; READ_WRITE_RVALUE]);;
 
 let ASSIGNS_ABSORB_RVALUE = prove
- (`(!c y. ASSIGNS c ,, ASSIGNS (rvalue y) = ASSIGNS c) /\
-   (!c y. ASSIGNS (rvalue y) ,, ASSIGNS c = ASSIGNS c) /\
-   (!c d y. ASSIGNS c ,, ASSIGNS (rvalue y :> d ) = ASSIGNS c) /\
-   (!c d y. ASSIGNS (rvalue y :> d) ,, ASSIGNS c = ASSIGNS c)`,
+ (`(forall (c:(A,B)component) (y:V).
+      ASSIGNS c ,, ASSIGNS (rvalue y) = ASSIGNS c) /\
+   (forall (c:(A,B)component) (y:V).
+      ASSIGNS (rvalue y) ,, ASSIGNS c = ASSIGNS c) /\
+   (forall (c:(A,B)component) (d:(V,V2)component) (y:V).
+      ASSIGNS c ,, ASSIGNS (rvalue y :> d ) = ASSIGNS c) /\
+   (forall (c:(A,B)component) (d:(V,V2)component) (y:V).
+      ASSIGNS (rvalue y :> d) ,, ASSIGNS c = ASSIGNS c)`,
   REWRITE_TAC[COMPONENT_COMPOSE_RVALUE; ASSIGNS_RVALUE] THEN
   REWRITE_TAC[SEQ_ID]);;
 
@@ -232,7 +242,7 @@ let ASSIGNS_ABSORB_RVALUE = prove
 (* ------------------------------------------------------------------------- *)
 
 let ASSIGNS_SWAP_ORTHOGONAL_COMPONENTS = prove
- (`!(c:(A,B)component) (d:(A,C)component).
+ (`forall (c:(A,B)component) (d:(A,C)component).
         orthogonal_components c d
         ==> ASSIGNS c ,, ASSIGNS d = ASSIGNS d ,, ASSIGNS c`,
   REWRITE_TAC[orthogonal_components; seq] THEN
@@ -240,7 +250,7 @@ let ASSIGNS_SWAP_ORTHOGONAL_COMPONENTS = prove
   MESON_TAC[]);;
 
 let ASSIGNS_SWAP_ELEMENTS = prove
- (`!i j:K. ASSIGNS (element i) ,, ASSIGNS (element j) =
+ (`forall i j:K. ASSIGNS (element i) ,, ASSIGNS (element j) =
            ASSIGNS (element j) ,, ASSIGNS (element i)`,
   REPEAT GEN_TAC THEN ASM_CASES_TAC `i:K = j` THEN
   ASM_SIMP_TAC[ASSIGNS_ABSORB_SAME_COMPONENTS; VALID_COMPONENT_ELEMENT] THEN
@@ -248,7 +258,7 @@ let ASSIGNS_SWAP_ELEMENTS = prove
   ASM_SIMP_TAC[ORTHOGONAL_COMPONENTS_ELEMENT]);;
 
 let ASSIGNS_SWAP_BITELEMENTS = prove
- (`!i j. ASSIGNS (bitelement i) ,, ASSIGNS (bitelement j) =
+ (`forall i j. ASSIGNS (bitelement i) ,, ASSIGNS (bitelement j) =
          ASSIGNS (bitelement j) ,, ASSIGNS (bitelement i)`,
   REPEAT GEN_TAC THEN ASM_CASES_TAC `i:num = j` THEN
   ASM_REWRITE_TAC[ASSIGNS_ABSORB_BITELEMENT] THEN
@@ -256,7 +266,7 @@ let ASSIGNS_SWAP_BITELEMENTS = prove
   ASM_SIMP_TAC[ORTHOGONAL_COMPONENTS_BITELEMENT]);;
 
 let ASSIGNS_SWAP_SUBCOMPONENTS = prove
- (`!(c:(A,B)component) (d:(B,C)component) (d':(B,D)component).
+ (`forall (c:(A,B)component) (d:(B,C)component) (d':(B,D)component).
         valid_component c /\
         ASSIGNS d ,, ASSIGNS d' = ASSIGNS d' ,, ASSIGNS d
         ==> ASSIGNS (c :> d) ,, ASSIGNS (c :> d') =
@@ -268,7 +278,7 @@ let ASSIGNS_SWAP_SUBCOMPONENTS = prove
   REWRITE_TAC[UNWIND_THM1] THEN SIMP_TAC[] THEN MESON_TAC[]);;
 
 let ASSIGNS_SWAP_SUBCOMPONENTS_L = prove
- (`!(c:(A,B)component) (d:(B,C)component).
+ (`forall (c:(A,B)component) (d:(B,C)component).
         valid_component c /\
         extensionally_valid_component d
         ==> ASSIGNS (c :> d) ,, ASSIGNS c =
@@ -280,7 +290,7 @@ let ASSIGNS_SWAP_SUBCOMPONENTS_L = prove
   ASM_SIMP_TAC[ASSIGNS_ABSORB_ENTIRETY_R; ASSIGNS_ABSORB_ENTIRETY_L]);;
 
 let ASSIGNS_SWAP_SUBCOMPONENTS_R = prove
- (`!(c:(A,B)component) (d:(B,C)component).
+ (`forall (c:(A,B)component) (d:(B,C)component).
         valid_component c /\
         extensionally_valid_component d
         ==> ASSIGNS c ,, ASSIGNS (c :> d) =
@@ -288,8 +298,8 @@ let ASSIGNS_SWAP_SUBCOMPONENTS_R = prove
   MATCH_ACCEPT_TAC(GSYM ASSIGNS_SWAP_SUBCOMPONENTS_L));;
 
 let ASSIGNS_BYTES = prove
- (`(!a:A word. ASSIGNS (bytes(a,0)) = (=)) /\
-   (!(a:A word) k.
+ (`(forall a:A word. ASSIGNS (bytes(a,0)) = (=)) /\
+   (forall (a:A word) k.
        ASSIGNS (bytes(a,SUC k)) =
        ASSIGNS (element (word_add a (word k))) ,, ASSIGNS (bytes(a,k)))`,
   REPEAT STRIP_TAC THEN
@@ -309,7 +319,7 @@ let ASSIGNS_BYTES = prove
   MATCH_MP_TAC MOD_LT THEN REWRITE_TAC[VAL_BOUND; GSYM DIMINDEX_8]);;
 
 let ASSIGNS_SWAP_ELEMENT_BYTES = prove
- (`!(a:A word) b k.
+ (`forall (a:A word) b k.
         ASSIGNS (element a) ,, ASSIGNS (bytes(b,k)) =
         ASSIGNS (bytes(b,k)) ,, ASSIGNS (element a)`,
   GEN_TAC THEN GEN_TAC THEN MATCH_MP_TAC num_INDUCTION THEN
@@ -319,7 +329,7 @@ let ASSIGNS_SWAP_ELEMENT_BYTES = prove
   ASM_REWRITE_TAC[GSYM SEQ_ASSOC]);;
 
 let ASSIGNS_SWAP_BYTES = prove
- (`!(a:A word) k b j.
+ (`forall (a:A word) k b j.
         ASSIGNS (bytes(a,k)) ,, ASSIGNS (bytes(b,j)) =
         ASSIGNS (bytes(b,j)) ,, ASSIGNS (bytes(a,k))`,
   GEN_TAC THEN MATCH_MP_TAC num_INDUCTION THEN
@@ -329,7 +339,7 @@ let ASSIGNS_SWAP_BYTES = prove
   MATCH_ACCEPT_TAC ASSIGNS_SWAP_ELEMENT_BYTES);;
 
 let ASSIGNS_BYTES_ASWORD = prove
- (`!(a:A word) k.
+ (`forall (a:A word) k.
         8 * k <= dimindex(:N)
         ==> ASSIGNS (bytes(a,k) :> (asword:(num,N word)component)) =
             ASSIGNS (bytes(a,k))`,
@@ -341,49 +351,49 @@ let ASSIGNS_BYTES_ASWORD = prove
   ASM_REWRITE_TAC[ARITH_RULE `MIN a b = if b <= a then b else a`]);;
 
 let ASSIGNS_BYTES8 = prove
- (`!a. ASSIGNS (bytes8 a) = ASSIGNS(bytes(a,1))`,
+ (`forall a. ASSIGNS (bytes8 a) = ASSIGNS(bytes(a,1))`,
   GEN_TAC THEN REWRITE_TAC[bytes8] THEN
   MATCH_MP_TAC ASSIGNS_BYTES_ASWORD THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let ASSIGNS_BYTES16 = prove
- (`!a. ASSIGNS (bytes16 a) = ASSIGNS(bytes(a,2))`,
+ (`forall a. ASSIGNS (bytes16 a) = ASSIGNS(bytes(a,2))`,
   GEN_TAC THEN REWRITE_TAC[bytes16] THEN
   MATCH_MP_TAC ASSIGNS_BYTES_ASWORD THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let ASSIGNS_BYTES32 = prove
- (`!a. ASSIGNS (bytes32 a) = ASSIGNS(bytes(a,4))`,
+ (`forall a. ASSIGNS (bytes32 a) = ASSIGNS(bytes(a,4))`,
   GEN_TAC THEN REWRITE_TAC[bytes32] THEN
   MATCH_MP_TAC ASSIGNS_BYTES_ASWORD THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let ASSIGNS_BYTES64 = prove
- (`!a. ASSIGNS (bytes64 a) = ASSIGNS(bytes(a,8))`,
+ (`forall a. ASSIGNS (bytes64 a) = ASSIGNS(bytes(a,8))`,
   GEN_TAC THEN REWRITE_TAC[bytes64] THEN
   MATCH_MP_TAC ASSIGNS_BYTES_ASWORD THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let ASSIGNS_BYTES128 = prove
- (`!a. ASSIGNS (bytes128 a) = ASSIGNS(bytes(a,16))`,
+ (`forall a. ASSIGNS (bytes128 a) = ASSIGNS(bytes(a,16))`,
   GEN_TAC THEN REWRITE_TAC[bytes128] THEN
   MATCH_MP_TAC ASSIGNS_BYTES_ASWORD THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let ASSIGNS_BYTES256 = prove
- (`!a. ASSIGNS (bytes256 a) = ASSIGNS(bytes(a,32))`,
+ (`forall a. ASSIGNS (bytes256 a) = ASSIGNS(bytes(a,32))`,
   GEN_TAC THEN REWRITE_TAC[bytes256] THEN
   MATCH_MP_TAC ASSIGNS_BYTES_ASWORD THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
 let SUBSUMED_ASSIGNS_BYTES = prove
- (`!a1 (a2:int64) k1 k2.
+ (`forall a1 (a2:int64) k1 k2.
         contained_modulo (2 EXP 64) (val a1,k1) (val a2,k2)
         ==> ASSIGNS (bytes(a1,k1)) subsumed ASSIGNS (bytes(a2,k2))`,
   REWRITE_TAC[GSYM DIMINDEX_64; CONTAINED_MODULO_WORDWISE] THEN
@@ -413,7 +423,7 @@ let SUBSUMED_ASSIGNS_BYTES = prove
     REWRITE_TAC[EXTENSIONALLY_VALID_COMPONENT_ELEMENT]]);;
 
 let ASSIGNS_BYTES_SPLIT = prove
- (`!(a:N word) m n.
+ (`forall (a:N word) m n.
      ASSIGNS(bytes(a,m + n)) =
      ASSIGNS(bytes(a,m)) ,, ASSIGNS(bytes(word_add a (word m),n))`,
   GEN_TAC THEN GEN_TAC THEN INDUCT_TAC THEN
@@ -423,7 +433,7 @@ let ASSIGNS_BYTES_SPLIT = prove
   AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
 let ASSIGNS_BYTES_MONO = prove
- (`!(a:N word) m n.
+ (`forall (a:N word) m n.
         m <= n ==> ASSIGNS(bytes(a,m)) subsumed ASSIGNS(bytes(a,n))`,
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `n:num = m + (n - m)` SUBST1_TAC THENL
@@ -433,7 +443,7 @@ let ASSIGNS_BYTES_MONO = prove
   REWRITE_TAC[EXTENSIONALLY_VALID_COMPONENT_BYTES]);;
 
 let ASSIGNS_BYTES_SUBSUMED_SPLIT = prove
- (`!k n (a:N word).
+ (`forall k n (a:N word).
      ASSIGNS(bytes(a,n)) subsumed
      ASSIGNS(bytes(a,k)) ,, ASSIGNS(bytes(word_add a (word k),n - k))`,
   REPEAT GEN_TAC THEN ASM_CASES_TAC `n:num <= k` THENL
@@ -455,40 +465,42 @@ let VIA = define
     \s1 s2. ?y. R (read c s1) y /\ (c := y) s1 s2`;;
 
 let VIA_COMPOSE = prove
- (`!c1 c2 R. VIA (c1 :> c2) R = VIA c1 (VIA c2 R)`,
+ (`forall c1 c2 R. VIA (c1 :> c2) R = VIA c1 (VIA c2 R)`,
   REWRITE_TAC[FUN_EQ_THM; FORALL_COMPONENT; VIA; assign;
     component_compose; read; write; o_DEF; GSYM LEFT_EXISTS_AND_THM] THEN
   REPEAT GEN_TAC THEN CONV_TAC (ONCE_DEPTH_CONV UNWIND_CONV) THEN REFL_TAC);;
 
 let VIA_SUBSUMED_ASSIGNS = prove
- (`!c:(S,V)component R. VIA c R subsumed ASSIGNS c`,
+ (`forall c:(S,V)component R. VIA c R subsumed ASSIGNS c`,
   REWRITE_TAC[VIA; subsumed; ASSIGNS] THEN MESON_TAC[]);;
 
 let SUBSUMED_VIA = prove
- (`!c:(S,V)component R S. R subsumed S ==> VIA c R subsumed VIA c S`,
+ (`forall c:(S,V)component R S. R subsumed S ==> VIA c R subsumed VIA c S`,
   REWRITE_TAC[VIA; subsumed; ASSIGNS] THEN MESON_TAC[]);;
 
 let VIA_ASSIGN = prove
- (`!c:(S,V)component y. VIA c1 (c2 := y) = (c1 :> c2 := y)`,
+ (`forall c:(S,V)component (y:V).
+    VIA (c1:(A,B)component) (c2 := y) = (c1 :> c2 := y)`,
   REWRITE_TAC[FUN_EQ_THM; VIA; assign; WRITE_COMPONENT_COMPOSE] THEN
   REPEAT GEN_TAC THEN CONV_TAC (ONCE_DEPTH_CONV UNWIND_CONV) THEN REFL_TAC);;
 
 let VIA_ASSIGNS = prove
- (`!c1 c2. VIA c1 (ASSIGNS c2) = ASSIGNS (c1 :> c2)`,
+ (`forall (c1:(A,B)component) (c2:(B,C)component).
+    VIA c1 (ASSIGNS c2) = ASSIGNS (c1 :> c2)`,
   REWRITE_TAC[FUN_EQ_THM; VIA; ASSIGNS; GSYM VIA_ASSIGN] THEN MESON_TAC[]);;
 
 let VIA_ENTIRETY = prove
- (`!c. VIA c (ASSIGNS entirety) = ASSIGNS c`,
+ (`forall (c:(A,B)component). VIA c (ASSIGNS entirety) = ASSIGNS c`,
   REWRITE_TAC[VIA_ASSIGNS; COMPOSE_ENTIRETY]);;
 
 let VIA_ID = prove
- (`!c:(S,V)component. extensionally_valid_component c ==> VIA c (=) = (=)`,
+ (`forall c:(S,V)component. extensionally_valid_component c ==> VIA c (=) = (=)`,
   REWRITE_TAC[FUN_EQ_THM; VIA; assign; extensionally_valid_component] THEN
   REPEAT STRIP_TAC THEN CONV_TAC (ONCE_DEPTH_CONV UNWIND_CONV) THEN
   ASM_REWRITE_TAC[]);;
 
 let VIA_SEQ = prove
- (`!c:(S,V)component R1 R2. strongly_valid_component c ==>
+ (`forall c:(S,V)component R1 R2. strongly_valid_component c ==>
    VIA c (R1 ,, R2) = VIA c R1 ,, VIA c R2`,
   REWRITE_TAC[FUN_EQ_THM; VIA; seq; assign; GSYM LEFT_EXISTS_AND_THM;
     strongly_valid_component] THEN
@@ -500,18 +512,18 @@ let VIA_SEQ = prove
   ASM_REWRITE_TAC[]);;
 
 let VIA_SYM = prove
- (`!c:(S,V)component d:(S,W)component A B. orthogonal_components c d ==>
+ (`forall c:(S,V)component d:(S,W)component A B. orthogonal_components c d ==>
    VIA c A ,, VIA d B = VIA d B ,, VIA c A`,
   REWRITE_TAC[FUN_EQ_THM; VIA; seq; assign; orthogonal_components;
     GSYM LEFT_EXISTS_AND_THM; GSYM RIGHT_EXISTS_AND_THM] THEN
   CONV_TAC (ONCE_DEPTH_CONV UNWIND_CONV) THEN MESON_TAC[]);;
 
 let VIA_ASSIGNS_SYM = MESON [VIA_SYM; VIA_ENTIRETY]
- `!c:(S,V)component d:(S,W)component A. orthogonal_components c d ==>
+ `forall c:(S,V)component d:(S,W)component A. orthogonal_components c d ==>
   VIA c A ,, ASSIGNS d = ASSIGNS d ,, VIA c A`;;
 
 let ASSIGNS_VIA_SYM = MESON [VIA_SYM; VIA_ENTIRETY]
- `!c:(S,V)component d:(S,W)component A. orthogonal_components c d ==>
+ `forall c:(S,V)component d:(S,W)component A. orthogonal_components c d ==>
   ASSIGNS c ,, VIA d A = VIA d A ,, ASSIGNS c`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -588,7 +600,8 @@ let READ_MODIFY_VALID_COMPONENT = prove
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]);;
 
 let READ_MODIFY_ORTHOGONAL_COMPONENTS = prove
- (`!c d f s. orthogonal_components c d ==> read c (modify d f s) = read c s`,
+ (`forall (c:(A,B)component) (d:(A,C)component) f (s:A).
+    orthogonal_components c d ==> read c (modify d f s) = read c s`,
   REWRITE_TAC[orthogonal_components; modify] THEN MESON_TAC[]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -596,23 +609,24 @@ let READ_MODIFY_ORTHOGONAL_COMPONENTS = prove
 (* ------------------------------------------------------------------------- *)
 
 let MAYCHANGE = define
- `MAYCHANGE [] = (=) /\
+ `(MAYCHANGE:((A,B)component)list->A->A->bool) [] = (=) /\
   MAYCHANGE (CONS c cs) = ASSIGNS c ,, MAYCHANGE cs`;;
 
 let MAYCHANGE_SING = prove
- (`!c:(S,V)component. MAYCHANGE [c] = ASSIGNS c`,
+ (`forall c:(S,V)component. MAYCHANGE [c] = ASSIGNS c`,
   REWRITE_TAC[MAYCHANGE; SEQ_ID]);;
 
 let MAYCHANGE_STARTER = prove
- (`!s:A. MAYCHANGE [] s s`,
+ (`forall s:A. (MAYCHANGE:((A,B)component)list->A->A->bool) [] s s`,
   REWRITE_TAC[MAYCHANGE]);;
 
 let MAYCHANGE_WRITE = prove
- (`R s0 s1 ==> !c y. (R ,, MAYCHANGE [c]) s0 (write c y s1)`,
+ (`(R:A->B->bool) s0 s1 ==>
+    forall c (y:V). (R ,, MAYCHANGE [c]) s0 (write c y s1)`,
   REWRITE_TAC[MAYCHANGE_SING; ASSIGNS; seq; assign] THEN MESON_TAC[]);;
 
 let MAYCHANGE_LID = prove
- (`MAYCHANGE [] ,, R = R`,
+ (`(MAYCHANGE:((A,B)component)list->A->A->bool) [] ,, (R:A->C->bool) = R`,
   REWRITE_TAC[MAYCHANGE; SEQ_ID]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -620,10 +634,10 @@ let MAYCHANGE_LID = prove
 (* ------------------------------------------------------------------------- *)
 
 let UNDEFINED_VALUE = new_definition
- `UNDEFINED_VALUE = ASSIGNS`;;
+ `(UNDEFINED_VALUE:(A,B)component->A->A->bool) = ASSIGNS`;;
 
 let UNDEFINED_VALUES = define
- `UNDEFINED_VALUES [] = (=) /\
+ `(UNDEFINED_VALUES:((A,B)component)list->A->A->bool) [] = (=) /\
   UNDEFINED_VALUES (CONS c cs) = ASSIGNS c ,, UNDEFINED_VALUES cs`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -1002,26 +1016,32 @@ let MAYCHANGE_STATE_UPDATE_TAC =
 
 let eventually_RULES,eventually_INDUCT,eventually_CASES =
   new_inductive_definition
-   `(!s. P s ==> eventually step P s) /\
-    (!s. (?s'. step s s') /\
-         (!s'. step s s' ==> eventually step P s') ==> eventually step P s)`;;
+   `(forall s.
+        P s ==> (eventually:(A->A->bool)->(A->bool)->A->bool) step P s) /\
+    (forall s.
+        (exists s'. step s s') /\
+        (forall s'. step s s' ==> eventually step P s')
+          ==> eventually step P s)`;;
 
 let EVENTUALLY_MONO = prove
- (`!step P Q. (!s. P s ==> Q s)
-              ==> (!s. eventually step P s ==> eventually step Q s)`,
+ (`forall (step:A->A->bool) P Q.
+          (forall s. P s ==> Q s)
+          ==> (forall s. eventually step P s ==> eventually step Q s)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   MATCH_MP_TAC eventually_INDUCT THEN
   ASM_MESON_TAC[eventually_RULES]);;
 
 let EVENTUALLY_IMP_EVENTUALLY = prove
- (`!step P Q. (!s. eventually step P s ==> eventually step Q s) <=>
-              (!s. P s ==> eventually step Q s)`,
+ (`forall (step:A->A->bool) P Q.
+          (forall s. eventually step P s ==> eventually step Q s) <=>
+          (forall s. P s ==> eventually step Q s)`,
   REPEAT GEN_TAC THEN EQ_TAC THENL [MESON_TAC[eventually_RULES]; ALL_TAC] THEN
   DISCH_TAC THEN MATCH_MP_TAC eventually_INDUCT THEN
   ASM_REWRITE_TAC[eventually_RULES]);;
 
 let EVENTUALLY_EVENTUALLY = prove
- (`!step P. eventually step (eventually step P) = eventually step P`,
+ (`forall (step:A->A->bool) P.
+          eventually step (eventually step P) = eventually step P`,
   GEN_TAC THEN REWRITE_TAC[FUN_EQ_THM; FORALL_AND_THM; TAUT
    `(p <=> q) <=> (p ==> q) /\ (q ==> p)`] THEN
   REWRITE_TAC[eventually_RULES] THEN
@@ -1029,43 +1049,44 @@ let EVENTUALLY_EVENTUALLY = prove
 
 
 let EVENTUALLY_P_INOUT = prove(
-  `!(s0:S). P /\ eventually step (\s. Q s) s0 <=>
+  `forall (s0:S). P /\ eventually step (\s. Q s) s0 <=>
             eventually step (\s. P /\ Q s) s0`,
   ASM_CASES_TAC `P:bool` THEN ASM_REWRITE_TAC[] THEN
   ONCE_REWRITE_TAC[TAUT`~p <=> (p ==> F)`] THEN
   MATCH_MP_TAC eventually_INDUCT THEN MESON_TAC[]);;
 
 let EVENTUALLY_DISJ1 = prove(
-  `!(step:S->S->bool) P Q s.
+  `forall (step:S->S->bool) P Q s.
     eventually step (\s. P s) s ==> eventually step (\s. P s \/ Q s) s`,
   REPEAT_N 3 GEN_TAC THEN MATCH_MP_TAC EVENTUALLY_MONO THEN MESON_TAC[]);;
 
 let EVENTUALLY_DISJ2 = prove(
-  `!(step:S->S->bool) P Q s.
+  `forall (step:S->S->bool) P Q s.
     eventually step (\s. Q s) s ==> eventually step (\s. P s \/ Q s) s`,
   REPEAT_N 3 GEN_TAC THEN MATCH_MP_TAC EVENTUALLY_MONO THEN MESON_TAC[]);;
 
 let EVENTUALLY_TRIVIAL = prove(
-  `!(step:S->S->bool) s. eventually step (\s.T) s`,
+  `forall (step:S->S->bool) s. eventually step (\s.T) s`,
   MESON_TAC[eventually_CASES]);;
 
-let EVENTUALLY_CONSTANT = prove(`!(s0:S). eventually step (\s. P) s0 <=> P`,
+let EVENTUALLY_CONSTANT = prove(
+  `forall (s0:S). eventually step (\s. P) s0 <=> P`,
   ONCE_REWRITE_TAC[TAUT `(\(s:S). P) = \(s:S). (P /\ (\(s2:S). T) s)`] THEN
   REWRITE_TAC[GSYM EVENTUALLY_P_INOUT] THEN
   STRIP_TAC THEN ASM_CASES_TAC `P:bool` THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC (CONJUNCT1 (ISPECL [`step:S->S->bool`;`\(s:S). T`] eventually_RULES)) THEN MESON_TAC[]);;
 
 let EVENTUALLY_EXISTS = prove(
-  `!(step:S->S->bool) (P:S->T->bool) (s:S).
-    (?x. eventually step (\s'. P s' x) s) ==>
-    eventually step (\s'. ?x. P s' x) s`,
+  `forall (step:S->S->bool) (P:S->T->bool) (s:S).
+    (exists x. eventually step (\s'. P s' x) s) ==>
+    eventually step (\s'. exists x. P s' x) s`,
   REPEAT STRIP_TAC THEN
   UNDISCH_TAC `eventually (step:S->S->bool) (\s'. P s' (x:T)) s` THEN
   SPEC_TAC (`s:S`,`s:S`) THEN
   MATCH_MP_TAC EVENTUALLY_MONO THEN MESON_TAC[]);;
 
 let EVENTUALLY_IMP_INOUT = prove(
-  `!(step:S->S->bool) P (Q:S->bool) s.
+  `forall (step:S->S->bool) P (Q:S->bool) s.
     (P ==> eventually step (\s'. Q s') s) <=>
     (P ==> eventually step (\s'. P /\ Q s') s)`,
   REPEAT STRIP_TAC THEN EQ_TAC THENL [
@@ -1134,15 +1155,15 @@ let EVENTUALLY_SEQUENTIALLY = prove
 (* ------------------------------------------------------------------------- *)
 
 let hoare = define
- `hoare step pre post <=> !s. pre s ==> eventually step post s`;;
+ `hoare (step:A->A->bool) pre post <=> !s. pre s ==> eventually step post s`;;
 
 let HOARE_PRECONDITION = prove
- (`!step pre pre' post.
+ (`forall (step:A->A->bool) pre pre' post.
       hoare step pre post /\ (!s. pre' s ==> pre s) ==> hoare step pre' post`,
   REWRITE_TAC[hoare] THEN MESON_TAC[]);;
 
 let HOARE_POSTCONDITION = prove
- (`!step pre post post'.
+ (`forall (step:A->A->bool) pre post post'.
         hoare step pre post /\ (!s. post s ==> post' s)
         ==> hoare step pre post'`,
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
@@ -1151,7 +1172,7 @@ let HOARE_POSTCONDITION = prove
   FIRST_ASSUM(MP_TAC o MATCH_MP EVENTUALLY_MONO) THEN SIMP_TAC[ETA_AX]);;
 
 let HOARE = prove
- (`!step pre post:A->bool.
+ (`forall step pre post:A->bool.
         hoare step pre post <=>
         !s. eventually step pre s ==> eventually step post s`,
   REPEAT GEN_TAC THEN REWRITE_TAC[hoare] THEN EQ_TAC THENL
@@ -1161,7 +1182,7 @@ let HOARE = prove
     MESON_TAC[eventually_RULES]]);;
 
 let HOARE_TRANS = prove
- (`!step pre mid post.
+ (`forall (step:A->A->bool) pre mid post.
       hoare step pre mid /\ hoare step mid post ==> hoare step pre post`,
   REPEAT GEN_TAC THEN GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [HOARE] THEN
   REWRITE_TAC[hoare] THEN MESON_TAC[]);;
@@ -1171,16 +1192,16 @@ let HOARE_TRANS = prove
 (* ------------------------------------------------------------------------- *)
 
 let ensures = define
- `ensures step precondition postcondition frame <=>
-        !s. precondition s
+ `ensures (step:A->A->bool) precondition postcondition frame <=>
+        forall s. precondition s
             ==> eventually step (\s'. postcondition s' /\ frame s s') s`;;
 
 let ENSURES_TRIVIAL = prove
- (`!step q f. ensures step (\x. F) q f`,
+ (`forall (step:A->A->bool) q f. ensures step (\x. F) q f`,
   REWRITE_TAC[ensures]);;
 
 let ENSURES_ALREADY = prove
- (`!step p q r.
+ (`forall (step:A->A->bool) p q r.
         (!x. p x ==> q x) /\ (=) subsumed r ==> ensures step p q r`,
   REWRITE_TAC[ensures; subsumed] THEN MESON_TAC[eventually_CASES]);;
 
@@ -1239,7 +1260,7 @@ let simulation_precanon_thms = ref ([]:thm list);;
 (* ------------------------------------------------------------------------- *)
 
 let ENSURES_PRECONDITION_THM_GEN = prove
- (`!P P' C C' Q.
+ (`forall (P:A->bool) P' C C' Q.
         (!x. P' x ==> P x) /\
         (!x y. C x y ==> C' x y) /\
         ensures step P Q C
@@ -1253,7 +1274,7 @@ let ENSURES_PRECONDITION_THM_GEN = prove
   ASM_SIMP_TAC[]);;
 
 let ENSURES_PRECONDITION_THM = prove
- (`!P P' C Q.
+ (`forall (P:A->bool) P' C Q.
         (!x. P' x ==> P x) /\
         ensures step P Q C
         ==> ensures step P' Q C`,
@@ -1272,11 +1293,11 @@ let ENSURES_PRECONDITION_TAC p' =
   EXISTS_TAC p';;
 
 let ENSURES_POSTCONDITION_THM_GEN = prove
- (`!P C C' Q Q'.
-        (!x. Q x ==> Q' x) /\
-        (!x y. C x y ==> C' x y) /\
-        ensures step P Q C
-        ==> ensures step P Q' C'`,
+ (`forall (P:A->bool) C C' Q Q'.
+    (forall x. Q x ==> Q' x) /\
+    (forall x y. C x y ==> C' x y) /\
+    ensures step P Q C
+    ==> ensures step P Q' C'`,
   REPEAT GEN_TAC THEN
   REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
   REWRITE_TAC[ensures] THEN MATCH_MP_TAC MONO_FORALL THEN GEN_TAC THEN
@@ -1286,8 +1307,8 @@ let ENSURES_POSTCONDITION_THM_GEN = prove
   ASM_SIMP_TAC[]);;
 
 let ENSURES_POSTCONDITION_THM = prove
- (`!P C Q Q'.
-        (!x. Q x ==> Q' x) /\
+ (`forall (P:A->bool) C Q Q'.
+        (forall x. Q x ==> Q' x) /\
         ensures step P Q C
         ==> ensures step P Q' C`,
   REPEAT GEN_TAC THEN
@@ -1305,8 +1326,8 @@ let ENSURES_POSTCONDITION_TAC q' =
   EXISTS_TAC q';;
 
 let ENSURES_PREPOSTCONDITION_THM = prove
- (`!P P' C Q Q'.
-        (!x. P' x ==> P x) /\ (!x. Q x ==> Q' x) /\
+ (`forall (P:A->bool) P' C Q Q'.
+        (forall x. P' x ==> P x) /\ (!x. Q x ==> Q' x) /\
         ensures step P Q C
         ==> ensures step P' Q' C`,
   REPEAT GEN_TAC THEN REWRITE_TAC[ensures] THEN
@@ -1322,7 +1343,7 @@ let ENSURES_PREPOSTCONDITION_THM = prove
 (* ------------------------------------------------------------------------- *)
 
 let ENSURES_FRAME_MONO = prove
- (`!P Q C C'.
+ (`forall (P:A->bool) Q C C'.
         (!x y. C x y ==> C' x y) /\
         ensures step P Q C
         ==> ensures step P Q C'`,
@@ -1335,7 +1356,7 @@ let ENSURES_FRAME_MONO = prove
   ASM_SIMP_TAC[]);;
 
 let ENSURES_FRAME_SUBSUMED = prove
- (`!P Q C C'.
+ (`forall (P:A->bool) Q C C'.
         C subsumed C' /\
         ensures step P Q C
         ==> ensures step P Q C'`,
@@ -1346,7 +1367,7 @@ let ENSURES_FRAME_SUBSUMED = prove
 (* ------------------------------------------------------------------------- *)
 
 let ENSURES_TRANS = prove
- (`!step P Q R C1 C2:A->A->bool.
+ (`forall step P Q R C1 C2:A->A->bool.
         ensures step P Q C1 /\ ensures step Q R C2
         ==> ensures step P R (C1 ,, C2)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[ensures] THEN DISCH_TAC THEN
@@ -1367,7 +1388,7 @@ let ENSURES_TRANS = prove
     DISCH_THEN MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);;
 
 let ENSURES_TRANS_SIMPLE = prove
- (`!P Q R C.
+ (`forall (P:A->bool) Q R C.
         C ,, C = C /\
         ensures step P Q C /\ ensures step Q R C
         ==> ensures step P R C`,
@@ -1375,7 +1396,7 @@ let ENSURES_TRANS_SIMPLE = prove
 
 let ENSURES_SEQUENCE_TAC =
   let pth = prove
-   (`!program_decodes pcounter pc' Q.
+   (`forall program_decodes pcounter pc' Q.
         C ,, C = C /\
         ensures step (\s. program_decodes s /\
                           read pcounter s = word pc'' /\
@@ -1937,6 +1958,198 @@ let ENSURES_WHILE_PUP_TAC,ENSURES_WHILE_PDOWN_TAC,
      MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; piv; qiv] THEN
      BETA_TAC THEN
      CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]));;
+
+(* ------------------------------------------------------------------------- *)
+(* A variant of the above WHILE loop tactics where the backedge-taken and    *)
+(* untaken cases are combined. pc2 is supposed to be the destination PC when *)
+(* the backedge is finally not taken.                                        *)
+(* ------------------------------------------------------------------------- *)
+
+let ENSURES_WHILE_UP2_TAC, ENSURES_WHILE_DOWN2_TAC,
+    ENSURES_WHILE_AUP2_TAC, ENSURES_WHILE_ADOWN2_TAC =
+  let pth = prove(
+    `forall k pc1 pc2 (loopinv:num->A->bool) C precond postcond
+        (pcounter:(A,(N)word)component).
+      C ,, C = C /\ ~(k = 0) /\
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinv 0 s)
+        C /\
+      (forall i. i < k /\ ~(i = k) /\ ~(k = 0) /\ 0 < k
+        ==>
+        ensures step
+          (\s. program_decodes s /\ read pcounter s = word pc1 /\
+               loopinv i s)
+          (\s. program_decodes s /\
+               read pcounter s = word (if i + 1 < k then pc1 else pc2) /\
+               loopinv (i + 1) s)
+          C) /\
+      ensures step
+          (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinv k s)
+          postcond C
+      ==>
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        postcond C`,
+    REPEAT GEN_TAC THEN
+    INTRO_TAC "HC HK HPRE HLOOP HPOST" THEN
+    (* The post part *)
+    MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
+    USE_THEN "HC" (fun th -> REWRITE_TAC[th]) THEN
+    META_EXISTS_TAC THEN CONJ_TAC THENL
+    [ALL_TAC; USE_THEN "HPOST" (UNIFY_ACCEPT_TAC [`Q:A->bool`])] THEN
+    REMOVE_THEN "HPOST" (K ALL_TAC) THEN
+    (* The main loop + precond part *)
+    (* Peel off the last iteration *)
+    MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
+    USE_THEN "HC" (fun th -> REWRITE_TAC[th]) THEN
+    EXISTS_TAC `(\(s:A). program_decodes s /\
+                         read pcounter s = (word pc1:(N)word) /\
+                         loopinv (k - 1) s)` THEN
+    CONJ_TAC THENL [
+      ALL_TAC;
+      USE_THEN "HLOOP" (fun th -> MP_TAC (SPEC `(k-1)` th)) THEN
+      ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+      SUBGOAL_THEN `k - 1 + 1 = k` SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC]
+      THEN
+      REWRITE_TAC[LT_REFL]
+    ] THEN
+    (* the main iterations *)
+    SUBGOAL_THEN `k - 1 < k` MP_TAC THENL [ASM_ARITH_TAC;ALL_TAC] THEN
+    SPEC_TAC (`k - 1`,`j:num`) THEN INDUCT_TAC THENL [
+      ASM_REWRITE_TAC[] THEN NO_TAC;
+
+      FIRST_X_ASSUM (fun th -> DISCH_TAC THEN MP_TAC th) THEN
+      ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+      DISCH_THEN (LABEL_TAC "HPREVLOOP") THEN
+      MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
+      USE_THEN "HC" (fun th -> REWRITE_TAC[th]) THEN
+      META_EXISTS_TAC THEN CONJ_TAC THENL
+      [USE_THEN "HPREVLOOP" (UNIFY_ACCEPT_TAC [`Q:A->bool`]); ALL_TAC] THEN
+      USE_THEN "HLOOP" (fun th -> MP_TAC (SPEC `j:num` th)) THEN
+      ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+      ASM_REWRITE_TAC[GSYM ADD1] THEN NO_TAC
+    ]) in
+  let qth = prove(
+    `forall k pc1 pc2 (loopinv:num->A->bool) precond postcond
+        (pcounter:(A,(N)word)component).
+      C ,, C = C /\ ~(k = 0) /\
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinv k s)
+        C /\
+      (forall i. i < k /\ ~(i = k) /\ ~(k = 0) /\ 0 < k
+        ==>
+        ensures step
+          (\s. program_decodes s /\ read pcounter s = word pc1 /\
+               loopinv (i + 1) s)
+          (\s. program_decodes s /\
+               read pcounter s = word (if i > 0 then pc1 else pc2) /\
+               loopinv i s)
+          C) /\
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinv 0 s)
+        postcond C
+      ==>
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        postcond C`,
+    REPEAT GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC pth THEN
+    MAP_EVERY EXISTS_TAC [`k:num`; `pc1:num`; `pc2:num`;
+        `\i. (loopinv:num->A->bool) (k - i)`] THEN
+    POP_ASSUM MP_TAC THEN REWRITE_TAC[SUB_0; SUB_REFL] THEN
+    REPEAT (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THEN REWRITE_TAC[]) THEN
+    DISCH_TAC THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+    FIRST_X_ASSUM (MP_TAC o SPEC `k - (i + 1)`) THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[ARITH_RULE
+      `i < k ==> k - (i + 1) + 1 = k - i /\ (k - (i + 1) > 0 <=> i + 1 < k)`]) in
+  let rth = prove(
+    `forall a b pc1 pc2 (loopinv:num->A->bool) precond postcond
+        (pcounter:(A,(N)word)component).
+      C ,, C = C /\ a < b /\
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinv a s)
+        C /\
+      (forall i. a <= i /\ i < b /\ ~(i = b) /\ ~(b = 0) /\ 0 < b
+        ==>
+        ensures step
+          (\s. program_decodes s /\ read pcounter s = word pc1 /\
+               loopinv i s)
+          (\s. program_decodes s /\
+               read pcounter s = word (if i + 1 < b then pc1 else pc2) /\
+               loopinv (i + 1) s)
+          C) /\
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinv b s)
+        postcond C
+      ==>
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        postcond C`,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC pth THEN
+    MAP_EVERY EXISTS_TAC [`b:num - a`; `pc1:num`; `pc2:num`;
+        `\i. (loopinv:num->A->bool) (a + i)`] THEN
+    ASM_REWRITE_TAC [SUB_EQ_0; NOT_LE; ADD_CLAUSES] THEN
+    ASM_SIMP_TAC [ARITH_RULE `a:num < b ==> a + b - a = b`] THEN
+    REWRITE_TAC [ADD_ASSOC] THEN REPEAT STRIP_TAC THEN
+    FIRST_X_ASSUM (MP_TAC o SPEC `(a:num) + i`) THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    REWRITE_TAC[ARITH_RULE `(a + i) + 1 < b <=> i + 1 < b - a`]) in
+  let sth = prove(
+    `forall a b pc1 pc2 (loopinv:num->A->bool) precond postcond
+        (pcounter:(A,(N)word)component).
+      C ,, C = C /\ a < b /\
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinv b s)
+        C /\
+      (forall i. a <= i /\ i < b /\ ~(i = b) /\ ~(b = 0) /\ 0 < b
+        ==>
+        ensures step
+          (\s. program_decodes s /\ read pcounter s = word pc1 /\
+               loopinv (i + 1) s)
+          (\s. program_decodes s /\
+               read pcounter s = word (if i > a then pc1 else pc2) /\
+               loopinv i s)
+          C) /\
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinv a s)
+        postcond C
+      ==>
+      ensures step
+        (\s. program_decodes s /\ read pcounter s = word pc /\ precond s)
+        postcond C`,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC qth THEN
+    MAP_EVERY EXISTS_TAC [`b:num - a`; `pc1:num`; `pc2:num`;
+        `\i. (loopinv:num->A->bool) (a + i)`] THEN
+    ASM_REWRITE_TAC [SUB_EQ_0; NOT_LE; ADD_CLAUSES] THEN
+    ASM_SIMP_TAC [ARITH_RULE `a:num < b ==> a + b - a = b`] THEN
+    REWRITE_TAC [ADD_ASSOC] THEN REPEAT STRIP_TAC THEN
+    FIRST_X_ASSUM (MP_TAC o SPEC `(a:num) + i`) THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC;ALL_TAC] THEN
+    REWRITE_TAC[ARITH_RULE `a + i > a <=> i > 0`]) in
+  (fun k pc1 pc2 iv ->
+    MATCH_MP_TAC pth THEN
+    MAP_EVERY EXISTS_TAC [k; pc1; pc2; iv] THEN
+    BETA_TAC THEN
+    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]),
+  (fun k pc1 pc2 iv ->
+    MATCH_MP_TAC qth THEN
+    MAP_EVERY EXISTS_TAC [k; pc1; pc2; iv] THEN
+    BETA_TAC THEN
+    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]),
+  (fun a b pc1 pc2 iv ->
+    MATCH_MP_TAC rth THEN
+    MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; iv] THEN
+    BETA_TAC THEN
+    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]),
+  (fun b a pc1 pc2 iv ->
+    MATCH_MP_TAC sth THEN
+    MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; iv] THEN
+    BETA_TAC THEN
+    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactic to show |- ASSIGNS c subsumed ASSIGNS d for two components.        *)
@@ -3269,181 +3482,5 @@ let ENSURES_N_WHILE_PUP_TAC,ENSURES_N_WHILE_PDOWN_TAC,
   (fun b a pc1 pc2 p q f_nsteps nsteps_pre nsteps_post ->
     MATCH_MP_TAC sth THEN
     MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; p; q; nsteps_pre; f_nsteps; nsteps_post] THEN
-    BETA_TAC THEN
-    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]);;
-
-(* ------------------------------------------------------------------------- *)
-(* Induction, a variant of the above WHILE loop tactics where the loop body  *)
-(* and backedge proofs are combined.                                         *)
-(* ------------------------------------------------------------------------- *)
-
-let ENSURES_N_WHILE_UP2_TAC, ENSURES_N_WHILE_DOWN2_TAC,
-    ENSURES_N_WHILE_AUP2_TAC, ENSURES_N_WHILE_ADOWN2_TAC =
-  let pth = prove(
-    `!k pc1 pc2 (loopinvariant:num->A->bool) nsteps_pre f_nsteps nsteps_post.
-      C ,, C = C /\ ~(k = 0) /\
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant 0 s)
-        C (\s. nsteps_pre) /\
-      (!i. i < k /\ ~(i = k) /\ ~(k = 0) /\ 0 < k
-        ==>
-        ensures_n step
-          (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant i s)
-          (\s. program_decodes s /\ read pcounter s = word (if i + 1 < k then pc1 else pc2) /\ loopinvariant (i + 1) s)
-          C (\s. f_nsteps i)) /\
-      ensures_n step
-          (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinvariant k s)
-          postcondition C (\s. nsteps_post) /\
-      nsteps = nsteps_pre + nsum (0..(k-1)) (\i. f_nsteps i) + nsteps_post
-      ==>
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        postcondition C (\s. nsteps)`,
-    REPEAT STRIP_TAC THEN
-    IMP_REWRITE_TAC [ENSURES_N_TRANS_SIMPLE] THEN
-    DISJ_CASES_TAC (SPEC `k = 0 + 1` EXCLUDED_MIDDLE) THENL [
-      ASM_REWRITE_TAC[ARITH_RULE `(0 + 1) - 1 = 0`; NSUM_CLAUSES_NUMSEG] THEN
-      FIRST_X_ASSUM (MP_TAC o SPEC `0`) THEN
-      ASM_REWRITE_TAC[ARITH_RULE `0 < 0 + 1 /\ ~(0 + 1 < 0 + 1)`];
-      ALL_TAC] THEN
-    SUBGOAL_THEN `k - 1 = SUC (k - 1 - 1)` SUBST1_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `0 <= SUC (k - 1 - 1)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    ASM_REWRITE_TAC[NSUM_CLAUSES_NUMSEG] THEN
-    IMP_REWRITE_TAC [ENSURES_N_TRANS_SIMPLE] THEN
-    META_EXISTS_TAC THEN CONJ_TAC THENL [
-      ALL_TAC;
-      FIRST_X_ASSUM (MP_TAC o SPEC `k:num - 1`) THEN
-      SUBGOAL_THEN `k - 1 < k /\ 0 < k /\ ~(k - 1 = k) /\ k - 1 + 1 = k /\ ~(k < k) /\ SUC (k - 1 - 1) = k - 1` (fun th -> ASM_REWRITE_TAC[th]) THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-      DISCH_THEN (UNIFY_ACCEPT_TAC [`Q:A->bool`])] THEN
-    SUBGOAL_THEN `k - 1 - 1 = k - 2 /\ k - 1 = (k - 2) + 1` (fun th -> ONCE_REWRITE_TAC[th]) THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `k - 2 < k - 1` MP_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    SPEC_TAC (`k - 2:num`,`j:num`) THEN
-    INDUCT_TAC THENL [
-      STRIP_TAC THEN REWRITE_TAC[NSUM_SING_NUMSEG; ADD_0; MULT] THEN
-      SUBGOAL_THEN `0 < k /\ 0 + 1 < k` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-      FIRST_X_ASSUM (MP_TAC o SPEC `0`) THEN ASM_REWRITE_TAC[];
-      STRIP_TAC THEN ASM_REWRITE_TAC[NSUM_CLAUSES_NUMSEG; ADD1; ARITH_RULE `0 <= j + 1`] THEN
-      IMP_REWRITE_TAC [ENSURES_N_TRANS_SIMPLE] THEN
-      META_EXISTS_TAC THEN CONJ_TAC THENL [
-        UNDISCH_THEN `SUC j < k - 1` (MP_TAC o MP (ARITH_RULE `SUC j < k - 1 ==> j < k - 1`)) THEN
-        FIRST_X_ASSUM (UNIFY_ACCEPT_TAC [`Q:A->bool`]);
-        FIRST_X_ASSUM (MP_TAC o SPEC `j + 1`) THEN
-        SUBGOAL_THEN `(j + 1) + 1 < k /\ j + 1 < k /\ ~(j + 1 = k) /\ 0 < k` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-        ASM_REWRITE_TAC[]]]) in
-  let qth = prove(
-    `!k pc1 pc2 (loopinvariant:num->A->bool) nsteps_pre f_nsteps nsteps_post.
-      C ,, C = C /\ ~(k = 0) /\
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant k s)
-        C (\s. nsteps_pre) /\
-      (!i. i < k /\ ~(i = k) /\ ~(k = 0) /\ 0 < k
-        ==>
-        ensures_n step
-          (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant (i + 1) s)
-          (\s. program_decodes s /\ read pcounter s = word (if i > 0 then pc1 else pc2) /\ loopinvariant i s)
-          C (\s. f_nsteps i)) /\
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinvariant 0 s)
-        postcondition C (\s. nsteps_post) /\
-      nsteps = nsteps_pre + nsum (0..(k-1)) (\i. f_nsteps i) + nsteps_post
-      ==>
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        postcondition C (\s. nsteps)`,
-    REPEAT GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC pth THEN
-    MAP_EVERY EXISTS_TAC [`k:num`; `pc1:num`; `pc2:num`; `\i. (loopinvariant:num->A->bool) (k - i)`; `nsteps_pre:num`; `\i. (f_nsteps:num->num) (k - (i + 1))`; `nsteps_post:num`] THEN
-    POP_ASSUM MP_TAC THEN REWRITE_TAC[SUB_0; SUB_REFL] THEN
-    REPEAT (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THEN REWRITE_TAC[]) THENL [
-      DISCH_TAC THEN X_GEN_TAC `i:num` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM (MP_TAC o SPEC `k - (i + 1)`) THEN
-      ASM_SIMP_TAC[ARITH_RULE `i < k ==> k - (i + 1) + 1 = k - i /\ (k - (i + 1) > 0 <=> i + 1 < k)`] THEN
-      DISCH_THEN MATCH_MP_TAC THEN ASM_ARITH_TAC;
-      ASM_REWRITE_TAC[ARITH_RULE `k - (i + 1) = (k - 1) - i`; NSUM_REFLECT'; ETA_AX]]) in
-  let rth = prove(
-    `!a b pc1 pc2 (loopinvariant:num->A->bool) nsteps_pre f_nsteps nsteps_post.
-      C ,, C = C /\ a < b /\
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant a s)
-        C (\s. nsteps_pre) /\
-      (!i. a <= i /\ i < b /\ ~(i = b) /\ ~(b = 0) /\ 0 < b
-        ==>
-        ensures_n step
-          (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant i s)
-          (\s. program_decodes s /\ read pcounter s = word (if i + 1 < b then pc1 else pc2) /\ loopinvariant (i + 1) s)
-          C (\s. f_nsteps i)) /\
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinvariant b s)
-        postcondition C (\s. nsteps_post) /\
-      nsteps = nsteps_pre + nsum(a..(b-1)) (\i. f_nsteps i) + nsteps_post
-      ==>
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        postcondition C (\s. nsteps)`,
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC pth THEN
-    MAP_EVERY EXISTS_TAC [`b:num - a`; `pc1:num`; `pc2:num`; `\i. (loopinvariant:num->A->bool) (a + i)`; `nsteps_pre:num`; `\i. (f_nsteps:num->num) (a + i)`; `nsteps_post:num`] THEN
-    ASM_REWRITE_TAC [SUB_EQ_0; NOT_LE; ADD_CLAUSES] THEN
-    ASM_SIMP_TAC [ARITH_RULE `a:num < b ==> a + b - a = b`] THEN
-    REWRITE_TAC [ADD_ASSOC] THEN STRIP_TAC THENL [
-      GEN_TAC THEN FIRST_X_ASSUM (MP_TAC o SPEC `(a:num) + i`) THEN
-      REWRITE_TAC[ARITH_RULE `(a + i) + 1 < b <=> i + 1 < b - a`] THEN
-      DISCH_THEN (fun th -> IMP_REWRITE_TAC[th]) THEN ASM_ARITH_TAC;
-      REWRITE_TAC [ARITH_RULE `b - a - 1 = b - 1 - a`] THEN
-      ONCE_ASM_REWRITE_TAC [MATCH_MP NSUM_OFFSET_0 (MP (ARITH_RULE `a < b ==> a <= b - 1`)
-          (ASSUME `a:num < b`))] THEN
-      ASM_REWRITE_TAC [ADD_SYM]]) in
-  let sth = prove(
-    `!a b pc1 pc2 (loopinvariant:num->A->bool) nsteps_pre f_nsteps nsteps_post.
-      C ,, C = C /\ a < b /\
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant b s)
-        C (\s. nsteps_pre) /\
-      (!i. a <= i /\ i < b /\ ~(i = b) /\ ~(b = 0) /\ 0 < b
-        ==>
-        ensures_n step
-          (\s. program_decodes s /\ read pcounter s = word pc1 /\ loopinvariant (i + 1) s)
-          (\s. program_decodes s /\ read pcounter s = word (if i > a then pc1 else pc2) /\ loopinvariant i s)
-          C (\s. f_nsteps i)) /\
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc2 /\ loopinvariant a s)
-        postcondition C (\s. nsteps_post) /\
-      nsteps = nsteps_pre + nsum(a..(b-1)) (\i. f_nsteps i) + nsteps_post
-      ==>
-      ensures_n step
-        (\s. program_decodes s /\ read pcounter s = word pc /\ precondition s)
-        postcondition C (\s. nsteps)`,
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC qth THEN
-    MAP_EVERY EXISTS_TAC [`b:num - a`; `pc1:num`; `pc2:num`; `\i. (loopinvariant:num->A->bool) (a + i)`; `nsteps_pre:num`; `\i. (f_nsteps:num->num) (a + i)`; `nsteps_post:num`] THEN
-    ASM_REWRITE_TAC [SUB_EQ_0; NOT_LE; ADD_CLAUSES] THEN
-    ASM_SIMP_TAC [ARITH_RULE `a:num < b ==> a + b - a = b`] THEN
-    REWRITE_TAC [ADD_ASSOC] THEN STRIP_TAC THENL [
-      GEN_TAC THEN FIRST_X_ASSUM (MP_TAC o SPEC `(a:num) + i`) THEN
-      REWRITE_TAC[ARITH_RULE `a + i > a <=> i > 0`] THEN
-      DISCH_THEN (fun th -> IMP_REWRITE_TAC[th]) THEN ASM_ARITH_TAC;
-      REWRITE_TAC [ARITH_RULE `b - a - 1 = b - 1 - a`] THEN
-      ONCE_ASM_REWRITE_TAC [MATCH_MP NSUM_OFFSET_0 (MP (ARITH_RULE `a < b ==> a <= b - 1`)
-          (ASSUME `a:num < b`))] THEN
-      ASM_REWRITE_TAC [ADD_SYM]]) in
-  (fun k pc1 pc2 iv f_nsteps nsteps_pre nsteps_post ->
-    MATCH_MP_TAC pth THEN
-    MAP_EVERY EXISTS_TAC [k; pc1; pc2; iv; nsteps_pre; f_nsteps; nsteps_post] THEN
-    BETA_TAC THEN
-    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]),
-  (fun k pc1 pc2 iv f_nsteps nsteps_pre nsteps_post ->
-    MATCH_MP_TAC qth THEN
-    MAP_EVERY EXISTS_TAC [k; pc1; pc2; iv; nsteps_pre; f_nsteps; nsteps_post] THEN
-    BETA_TAC THEN
-    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]),
-  (fun a b pc1 pc2 iv f_nsteps nsteps_pre nsteps_post ->
-    MATCH_MP_TAC rth THEN
-    MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; iv; nsteps_pre; f_nsteps; nsteps_post] THEN
-    BETA_TAC THEN
-    CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]),
-  (fun b a pc1 pc2 iv f_nsteps nsteps_pre nsteps_post ->
-    MATCH_MP_TAC sth THEN
-    MAP_EVERY EXISTS_TAC [a; b; pc1; pc2; iv; nsteps_pre; f_nsteps; nsteps_post] THEN
     BETA_TAC THEN
     CONJ_TAC THENL [MAYCHANGE_IDEMPOT_TAC; ALL_TAC]);;
