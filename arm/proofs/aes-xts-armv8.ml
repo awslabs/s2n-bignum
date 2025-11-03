@@ -2709,8 +2709,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
       XTSENC_TAC `Q26:(armstate,int128)component` `i * 0x50 + 0x40` `i * 0x5 + 0x4` THEN
       TWEAK_TAC `Q11:(armstate,int128)component` `i * 5 + 9` `i * 5 + 8` THEN
 
-      (* [TODO: update comment]
-      The following lemmas are for NONSELFMODIFYING_STATE_UPDATE_TAC when store back to pt_ptr,
+      (* The following lemmas are for NONSELFMODIFYING_STATE_UPDATE_TAC when store back to ctxt_p,
          and for the MAYCHANGE clauses *)
       RULE_ASSUM_TAC(REWRITE_RULE
         [WORD_RULE `word_mul (word 0x50) (word i):int64 = word(0x50 * i)`]) THEN
@@ -4628,8 +4627,53 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
           CONV_TAC NUM_REDUCE_CONV;
         ] ; ALL_TAC
       ] THEN
-    ]
-  ]
+
+      SUBGOAL_THEN `~(val (num_5blocks:int64) * 0x50 + 0x40 = val (len_full_blocks:int64))` ASSUME_TAC THENL
+      [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 = val (len_full_blocks:int64)` THEN
+        ARITH_TAC; ALL_TAC] THEN
+      SUBGOAL_THEN `~(val (num_5blocks:int64) * 0x50 + 0x30 = val (len_full_blocks:int64))` ASSUME_TAC THENL
+      [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 = val (len_full_blocks:int64)` THEN
+        ARITH_TAC; ALL_TAC] THEN
+      SUBGOAL_THEN `~(val (num_5blocks:int64) * 0x50 + 0x20 = val (len_full_blocks:int64))` ASSUME_TAC THENL
+      [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 = val (len_full_blocks:int64)` THEN
+        ARITH_TAC; ALL_TAC] THEN
+      SUBGOAL_THEN `~(val (num_5blocks:int64) * 0x50 + 0x10 = val (len_full_blocks:int64))` ASSUME_TAC THENL
+      [ UNDISCH_TAC `val (num_5blocks:int64) * 0x50 = val (len_full_blocks:int64)` THEN
+        ARITH_TAC; ALL_TAC] THEN
+
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (10--10) THEN
+      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+      REPEAT CONJ_TAC THENL [
+        REWRITE_TAC[acc_len] THEN ASM_SIMP_TAC[] THEN CONV_TAC WORD_RULE;
+        REWRITE_TAC[acc_len] THEN ASM_SIMP_TAC[] THEN CONV_TAC WORD_RULE;
+        REWRITE_TAC[acc_blocks] THEN ASM_SIMP_TAC[] THEN CONV_TAC WORD_RULE;
+        REWRITE_TAC[acc_blocks] THEN ASM_SIMP_TAC[] THEN CONV_TAC WORD_RULE;
+        REWRITE_TAC[acc_blocks] THEN ASM_SIMP_TAC[] THEN CONV_TAC WORD_RULE;
+
+        REWRITE_TAC[acc_len] THEN ASM_SIMP_TAC[] THEN
+
+              (* Rewrite to help reasoning about nonoverlapping
+         so that the universally quantified assumption stays.
+         See: https://hol-light.zulipchat.com/#narrow/channel/474190-s2n-bignum/topic/.E2.9C.94.20Symbolic.20simulation.20removed.20assumption/with/541554894 *)
+      SUBGOAL_THEN `val (word (0x50 * val (num_5blocks:int64)):int64) = 0x50 * val num_5blocks` MP_TAC THENL [
+        IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+        UNDISCH_TAC `val (num_5blocks:int64) * 0x50 < 0x2 EXP 0x40` THEN
+        ARITH_TAC; ALL_TAC] THEN
+      DISCH_THEN (fun th -> REWRITE_TAC[th]) THEN
+
+        UNDISCH_TAC
+        `forall i.
+          i < 0x50 * val (num_5blocks:int64)
+          ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s10 =
+              EL i
+              (aes256_xts_encrypt pt_in (val num_5blocks * 0x50) iv key1_lst
+              key2_lst)` THEN
+        REWRITE_TAC[ARITH_RULE `i * 0x50 = 0x50 * i`]
+      ]
+    ] (* End of loop invariant proof *)
+    ; ALL_TAC
+  ] THEN
+
 );;
 
 
