@@ -10,6 +10,27 @@
 needs "Library/words.ml";;
 needs "Library/isum.ml";;
 
+
+
+let montmul_x86 = define
+  `montmul_x86 (x : int16) (y :int16) =
+   word_sub
+     (word_subword (word_mul (word_sx y : int32) (word_sx x)) (16,16) : int16)
+     (word_subword
+        (word_mul (word 3329) (word_sx (word_mul y (word_mul (word 62209) x)) : int32))
+        (16,16))
+  `;;
+
+let montmul_odd_x86 = prove
+ (`word_neg(montmul_x86 x y) =
+   word_sub
+     (word_subword
+        (word_mul (word 3329) (word_sx (word_mul y (word_mul (word 62209) x)) : int32))
+        (16,16))
+     (word_subword (word_mul (word_sx y : int32) (word_sx x)) (16,16) : int16)`,
+
+  REWRITE_TAC[montmul_x86] THEN CONV_TAC WORD_RULE);;
+
 (* ------------------------------------------------------------------------- *)
 (* The pure forms of forward and inverse NTT with no reordering.             *)
 (* ------------------------------------------------------------------------- *)
@@ -344,6 +365,20 @@ let CONGBOUND_WORD_SX = prove
                 l <= ival(word_sx x:N word) /\ ival(word_sx x:N word) <= u`,
   REWRITE_TAC[word_sx; CONGBOUND_IWORD]);;
 
+let CONGBOUND_WORD_NEG = prove
+ (`!x:N word.
+        ((ival x == x') (mod p) /\ lx <= ival x /\ ival x <= ux)
+        ==> --lx <= &2 pow (dimindex(:N) - 1) - &1
+            ==> (ival(word_neg x) == --x') (mod p) /\
+                --ux <= ival(word_neg x) /\
+                ival(word_neg x) <= --lx`,
+  GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN `ival(word_neg x:N word) = --(ival x)` SUBST1_TAC THENL
+   [REPEAT(POP_ASSUM MP_TAC) THEN WORD_ARITH_TAC;
+    ASM_SIMP_TAC[INTEGER_RULE
+     `(x:int == x') (mod p) ==> (--x == --x') (mod p)`] THEN
+    ASM_ARITH_TAC]);;
+
 let CONGBOUND_WORD_ADD = prove
  (`!x y:N word.
         ((ival x == x') (mod p) /\ lx <= ival x /\ ival x <= ux) /\
@@ -520,6 +555,95 @@ let CONGBOUND_BARMUL = prove
    `l:int <= x /\ x <= u ==> abs x <= max (abs l) (abs u)`] THEN
   CONV_TAC INT_ARITH);;
 
+let CONGBOUND_MONTMUL_X86 = prove
+ (`!x y. ((ival x == x') (mod &3329) /\ lx <= ival x /\ ival x <= ux) /\
+         ((ival y == y') (mod &3329) /\ ly <= ival y /\ ival y <= uy)
+         ==> (ival(montmul_x86 x y) ==
+              &(inverse_mod 3329 65536) * x' * y') (mod &3329) /\
+             (min (lx * ly) (min (lx * uy) (min (ux * ly) (ux * uy))) -
+              &109081343) div &65536 <= ival(montmul_x86 x y) /\
+             ival(montmul_x86 x y)
+             <= (max (lx * ly) (max (lx * uy) (max (ux * ly) (ux * uy))) +
+                 &109150207) div &65536`,
+  let lemma = prove
+   (`l:int <= x /\ x <= u
+     ==> !a. a * l <= a * x /\ a * x <= a * u \/
+             a * u <= a * x /\ a * x <= a * l`,
+    MESON_TAC[INT_LE_NEGTOTAL; INT_LE_LMUL;
+              INT_ARITH `a * x:int <= a * y <=> --a * y <= --a * x`])
+  and ilemma = prove
+   (`!x:int32. ival(word_subword x (16,16):int16) = ival x div &2 pow 16`,
+    REWRITE_TAC[GSYM DIMINDEX_16; GSYM IVAL_WORD_ISHR] THEN
+    GEN_TAC THEN REWRITE_TAC[DIMINDEX_16] THEN BITBLAST_TAC) in
+  let mainlemma = prove
+   (`!x:int32 y:int32.
+          (ival x == ival y) (mod (&2 pow 16))
+          ==> &2 pow 16 *
+              ival(word_sub (word_subword x (16,16))
+                            (word_subword y (16,16)):int16) =
+              ival(word_sub x y)`,
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC(INT_ARITH
+     `b rem &2 pow 16 = &0 /\ a = &2 pow 16 * b div &2 pow 16 ==> a = b`) THEN
+    CONJ_TAC THENL
+     [REWRITE_TAC[WORD_SUB_IMODULAR; imodular; INT_REM_EQ_0] THEN
+      SIMP_TAC[INT_DIVIDES_IVAL_IWORD; DIMINDEX_32; ARITH] THEN
+      POP_ASSUM MP_TAC THEN CONV_TAC INTEGER_RULE;
+      AP_TERM_TAC THEN REWRITE_TAC[GSYM ilemma] THEN AP_TERM_TAC] THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I [GSYM INT_REM_EQ]) THEN
+    SIMP_TAC[INT_REM_IVAL; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
+    BITBLAST_TAC) in
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC(ONCE_DEPTH_CONV INVERSE_MOD_CONV) THEN
+  MP_TAC(SPECL [`&169:int`; `(&2:int) pow 16`; `&3329:int`] (INTEGER_RULE
+ `!d e n:int. (e * d == &1) (mod n)
+              ==> !x y. ((x == d * y) (mod n) <=> (e * x == y) (mod n))`)) THEN
+  ANTS_TAC THENL
+   [REWRITE_TAC[GSYM INT_REM_EQ] THEN INT_ARITH_TAC;
+    DISCH_THEN(fun th -> REWRITE_TAC[th])] THEN
+  ONCE_REWRITE_TAC[INT_ARITH
+   `l:int <= x <=> &2 pow 16 * l <= &2 pow 16 * x`] THEN
+  REWRITE_TAC[montmul_x86] THEN
+  REWRITE_TAC[WORD_MUL_IMODULAR; imodular] THEN
+  SIMP_TAC[IVAL_WORD_SX; DIMINDEX_16; DIMINDEX_32; ARITH] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN
+  REWRITE_TAC[WORD_RULE
+   `!x:int16 y:int16.
+        iword(ival y * ival(iword(c * ival x):int16)):int16 =
+        iword(c * ival x * ival y)`] THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) mainlemma o
+   lhand o rator o lhand o snd) THEN
+  ANTS_TAC THENL
+   [SIMP_TAC[GSYM INT_REM_EQ; INT_REM_IVAL_IWORD; DIMINDEX_32; ARITH] THEN
+    ONCE_REWRITE_TAC[GSYM INT_MUL_REM] THEN
+    SIMP_TAC[INT_REM_IVAL_IWORD; DIMINDEX_16; ARITH; DIMINDEX_32] THEN
+    REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REM_DOWN_CONV THEN
+    REWRITE_TAC[INT_REM_EQ] THEN MATCH_MP_TAC(INTEGER_RULE
+     `(a * b:int == &1) (mod p) ==> (y * x == a * b * x * y) (mod p)`) THEN
+    REWRITE_TAC[GSYM INT_REM_EQ] THEN INT_ARITH_TAC;
+    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[GSYM IWORD_INT_SUB]] THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) IVAL_IWORD o
+    lhand o rator o lhand o snd) THEN
+  ANTS_TAC THENL
+   [REWRITE_TAC[DIMINDEX_32; ARITH] THEN BOUNDER_TAC[];
+    DISCH_THEN SUBST1_TAC] THEN
+  ONCE_REWRITE_TAC[INT_ARITH `ival x * ival y = ival y * ival x`] THEN
+  ASM_SIMP_TAC[INTEGER_RULE
+   `(x:int == x') (mod p) /\ (y == y') (mod p)
+    ==> (x * y - p * z == x' * y') (mod p)`] THEN
+  MATCH_MP_TAC(INT_ARITH
+  `(l <= p /\ p <= u) /\ (&65535 - c <= q /\ q <= b)
+   ==> &2 pow 16 * (l - b) div &65536 <= p - q /\
+       p - q <= &2 pow 16 * (u + c) div &65536`) THEN
+  CONJ_TAC THENL [ALL_TAC; BOUNDER_TAC[]] THEN
+  FIRST_X_ASSUM(CONJUNCTS_THEN(MP_TAC o CONJUNCT2)) THEN
+  DISCH_THEN(ASSUME_TAC o SPEC `ival(x:int16)` o MATCH_MP lemma) THEN
+  DISCH_THEN(MP_TAC o MATCH_MP lemma) THEN DISCH_THEN(fun th ->
+        ASSUME_TAC(SPEC `ly:int` th) THEN ASSUME_TAC(SPEC `uy:int` th)) THEN
+  ASM_INT_ARITH_TAC);;
+
+
+
+
 let MONTRED_LEMMA = prove
  (`!x. &2 pow 16 * ival(montred x) =
        ival(word_add
@@ -628,6 +752,12 @@ let GEN_CONGBOUND_RULE aboths =
         let th0' = WEAKEN_INTCONG_RULE (num 3329) th0 in
         let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_BARMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
+    | Comb(Comb(Const("montmul_x86",_),ltm),rtm) ->
+        let lth = WEAKEN_INTCONG_RULE (num 3329) (rule ltm)
+        and rth = WEAKEN_INTCONG_RULE (num 3329) (rule rtm) in
+        let th1 = MATCH_MP CONGBOUND_MONTMUL_X86
+                   (UNIFY_INTCONG_RULE lth rth) in
+        CONCL_BOUNDS_RULE(th1)
     | Comb(Const("barred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         MATCH_MP CONGBOUND_BARRED th1
@@ -646,6 +776,10 @@ let GEN_CONGBOUND_RULE aboths =
          (type_of(rator(rand(lhand(funpow 4 rand (snd(dest_forall
             (concl CONGBOUND_WORD_SX)))))))) (type_of(rator tm)) [] in
         let th1 = MATCH_MP (INST_TYPE tyin CONGBOUND_WORD_SX) th0 in
+        CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
+    | Comb(Const("word_neg",_),t) ->
+        let th0 = rule t in
+        let th1 = MATCH_MP CONGBOUND_WORD_NEG th0 in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("word_add",_),ltm),rtm) ->
         let lth = rule ltm and rth = rule rtm in

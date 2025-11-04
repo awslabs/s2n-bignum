@@ -765,6 +765,7 @@ void call_edwards25519_scalarmulbase_alt(void) repeatfewer(10,edwards25519_scala
 void call_edwards25519_scalarmuldouble(void) repeatfewer(10,edwards25519_scalarmuldouble(b0,b1,b2,b3))
 void call_edwards25519_scalarmuldouble_alt(void) repeatfewer(10,edwards25519_scalarmuldouble_alt(b0,b1,b2,b3))
 
+void call_mlkem_basemul_k2(void) repeat(mlkem_basemul_k2((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_reduce(void) repeat(mlkem_reduce((int16_t*)b0))
 
 void call_p256_montjadd(void) repeat(p256_montjadd(b1,b2,b3))
@@ -832,7 +833,6 @@ void call_bignum_copy_row_from_table_16__32(void) {}
 void call_bignum_copy_row_from_table_32__32(void) {}
 
 void call_bignum_emontredc_8n_cdiff__32(void) {}
-void call_mlkem_basemul_k2(void) {}
 void call_mlkem_basemul_k3(void) {}
 void call_mlkem_basemul_k4(void) {}
 void call_mlkem_intt(void) {}
@@ -1127,7 +1127,6 @@ void call_bignum_copy_row_from_table_32__32(void) \
 
 void call_bignum_emontredc_8n_cdiff__32(void) repeat(bignum_emontredc_8n_cdiff(32,b0,b1,b2[0],b3))
 
-void call_mlkem_basemul_k2(void) repeat(mlkem_basemul_k2((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_basemul_k3(void) repeat(mlkem_basemul_k3((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_basemul_k4(void) repeat(mlkem_basemul_k4((int16_t*)b0,(int16_t*)b1,(int16_t*)b2,(int16_t*)b3))
 void call_mlkem_intt(void) repeat(mlkem_intt((int16_t*)b0,(int16_t*)b1,(int16_t*)b2))
@@ -1525,7 +1524,7 @@ int main(int argc, char *argv[])
   timingtest(all,"edwards25519_scalarmulbase_alt",call_edwards25519_scalarmulbase_alt);
   timingtest(bmi,"edwards25519_scalarmuldouble",call_edwards25519_scalarmuldouble);
   timingtest(all,"edwards25519_scalarmuldouble_alt",call_edwards25519_scalarmuldouble_alt);
-  timingtest(arm,"mlkem_basemul_k2",call_mlkem_basemul_k2);
+  timingtest(all,"mlkem_basemul_k2",call_mlkem_basemul_k2);
   timingtest(arm,"mlkem_basemul_k3",call_mlkem_basemul_k3);
   timingtest(arm,"mlkem_basemul_k4",call_mlkem_basemul_k4);
   timingtest(arm,"mlkem_intt",call_mlkem_intt);
