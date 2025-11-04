@@ -768,6 +768,11 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                let src = mmreg reg Lower_128 in
                let dst = operand_of_RM Lower_32 rm in
                SOME (VMOVD dst src, l)
+          | (F, RepZ, SG0) ->
+               let src = if is_memop rm then operand_of_RM Full_64 rm
+                       else simd_of_RM Lower_128 rm in
+               let dst = mmreg reg Lower_128 in
+               SOME (VMOVQ dst src, l)
           | _ -> NONE)
         | [0x7f:8] ->
           let sz = vexL_size L in
