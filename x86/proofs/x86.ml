@@ -2785,11 +2785,11 @@ let x86_execute = define
                        (OPERAND8 imm8 s) s)) s
     | VPEXTRD dest src imm8 ->
        (add_load_event src s ,, add_store_event dest s ,,
-       (\s. x86_VPEXTRD (OPERAND32 dest s) (OPERAND128 src1 s)
+       (\s. x86_VPEXTRD (OPERAND32 dest s) (OPERAND128 src s)
                        (OPERAND8 imm8 s) s)) s
     | VPEXTRQ dest src imm8 ->
        (add_load_event src s ,, add_store_event dest s ,,
-       (\s. x86_VPEXTRQ (OPERAND64 dest s) (OPERAND128 src2 s)
+       (\s. x86_VPEXTRQ (OPERAND64 dest s) (OPERAND128 src s)
                        (OPERAND8 imm8 s) s)) s
     | VPMULDQ dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,

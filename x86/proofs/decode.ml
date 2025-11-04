@@ -911,7 +911,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
             match pfxs with
             | (T, Rep0, SG0) -> SOME (VPBLENDW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
             | _ -> NONE)
-        | [0x16:8] -> if has_unhandled_pfxs pfxs then NONE else
+        | [0x16:8] ->
             read_ModRM rex l >>= \((reg,rm),l).
             read_imm Byte l >>= \(imm8,l).
             let src = mmreg reg Lower_128 in
@@ -922,7 +922,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
               if rex_W rex then SOME (VPEXTRQ dest src imm8, l)
               else SOME (VPEXTRD dest src imm8, l)
             | _ -> NONE)
-        | [0x22:8] -> if has_unhandled_pfxs pfxs then NONE else
+        | [0x22:8] ->
             read_ModRM rex l >>= \((reg,rm),l).
             read_imm Byte l >>= \(imm8,l).
             let dest = mmreg reg Lower_128 in
