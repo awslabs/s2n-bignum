@@ -2370,8 +2370,7 @@ let x86_execute = define
          add_store_event dest s ,,
         (\s. (match (operand_size dest, operand_size src) with
           (64,128) -> x86_VMOVQ (OPERAND64 dest s) (OPERAND128 src s)
-        | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)
-        | (128,128) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND128 src s)) s)) s
+        | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)) s)) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
