@@ -10,14 +10,15 @@
 // transforming from coefficient representation to NTT representation. The input
 // polynomial a is a 256-element array of signed 32-bit integers representing
 // coefficients in normal order, assumed to be coefficient-wise bound by MLDSA_Q
-// in absolute value. The zetas parameter points to precomputed twiddle factors
-// (roots of unity and their Montgomery inverses) required for the NTT computation.
-// The output polynomial is in bitreversed order and coefficient-wise bound
-// by MLD_NTT_BOUND in absolute value.
+// (8380417) in absolute value. The zetas parameter points to precomputed twiddle
+// factors (roots of unity and their Montgomery inverses) required for the NTT
+// computation. The output polynomial is in bitreversed order and coefficient-wise
+// bound by 42035261 (just over 5*Q) in absolute value. Output coefficients are
+// congruent to the mathematical NTT result modulo Q but are not fully reduced.
 //
 // The implementation uses Montgomery arithmetic for efficient modular reduction
-// modulo q = 8380417, maintaining constant-time execution for side-channel
-// resistance. The transform operates in the ring R_q = Z_q[x]/(x^256 + 1).
+// modulo Q = 8380417, maintaining constant-time execution for side-channel
+// resistance. The transform operates in the ring R_Q = Z_Q[x]/(x^256 + 1).
 //
 // extern void mldsa_ntt(int32_t a[static 256], const int32_t *zetas);
 //
