@@ -872,13 +872,13 @@ let x86_MOVQ = new_definition
     (dest := x') s`;;
 
 let x86_VMOVD = new_definition
- `x86_MOVD dest src s =
+ `x86_VMOVD dest src s =
     let (x:M word) = read src s in
     let (x':N word) = word_zx x in
     (dest := x') s`;;
 
 let x86_VMOVQ = new_definition
- `x86_MOVQ dest src s =
+ `x86_VMOVQ dest src s =
     let (x:M word) = read src s in
     let (x':N word) = word_zx x in
     (dest := x') s`;;
@@ -2363,14 +2363,15 @@ let x86_execute = define
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (match (operand_size dest, operand_size src) with
-          (32,128) -> x86_MOVD (OPERAND32 dest s) (OPERAND128 src s)
-        | (128,32) -> x86_MOVD (OPERAND128 dest s) (OPERAND32 src s)) s)) s
+          (32,128) -> x86_VMOVD (OPERAND32 dest s) (OPERAND128 src s)
+        | (128,32) -> x86_VMOVD (OPERAND128 dest s) (OPERAND32 src s)) s)) s
     | VMOVQ dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
         (\s. (match (operand_size dest, operand_size src) with
-          (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128 src s)
-        | (128,64) -> x86_MOVQ (OPERAND128 dest s) (OPERAND64 src s)) s)) s
+          (64,128) -> x86_VMOVQ (OPERAND64 dest s) (OPERAND128 src s)
+        | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)
+        | (128,128) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND128 src s)) s)) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,

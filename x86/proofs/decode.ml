@@ -474,7 +474,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           SOME (PSRAD (simd_of_RM sz rm) imm8, l))
          else NONE
        | _ -> NONE)
-    | [0x7e:8] -> if has_unhandled_pfxs pfxs then NONE else
+    | [0x7e:8] ->
       read_ModRM rex l >>= \((reg,rm),l).
       let sz = if rex_W rex then Full_64 else Lower_32 in
       let dest = operand_of_RM sz rm in
@@ -883,6 +883,15 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                   | _ -> NONE)
                | _ -> NONE))
             | _ -> NONE)
+        | [0xd6:8] ->
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) ->
+               let src = mmreg reg Lower_128 in
+               let dst = if is_memop rm then operand_of_RM Full_64 rm
+                       else simd_of_RM Lower_128 rm in
+               SOME (VMOVQ dst src, l)
+           | _ -> NONE)
           | _ -> NONE)
     | VEXM_0F3A ->
         read_byte l >>= \(b,l).
