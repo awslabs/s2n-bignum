@@ -242,7 +242,7 @@ S2N_BN_SYMBOL(mldsa_ntt):
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        CFI_DEC_RSP(176)
+        CFI_DEC_RSP(184)
         CFI_STACKSAVEU(xmm6,0)
         CFI_STACKSAVEU(xmm7,16)
         CFI_STACKSAVEU(xmm8,32)
@@ -254,6 +254,7 @@ S2N_BN_SYMBOL(mldsa_ntt):
         CFI_STACKSAVEU(xmm14,128)
         CFI_STACKSAVEU(xmm15,144)
         CFI_STACKSAVE(rdi,160)
+        CFI_STACKSAVE(rsi,168)
         mov     rdi, rcx
         mov     rsi, rdx
 #endif
@@ -282,7 +283,8 @@ S2N_BN_SYMBOL(mldsa_ntt):
         CFI_STACKLOADU(xmm14,128)
         CFI_STACKLOADU(xmm15,144)
         CFI_STACKLOAD(rdi,160)
-        CFI_INC_RSP(176)
+        CFI_STACKLOAD(rsi,168)
+        CFI_INC_RSP(184)
 #endif
         CFI_RET
 
