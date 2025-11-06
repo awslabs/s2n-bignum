@@ -99,21 +99,21 @@ vmovdqa		640+32*\off(%rdi),%ymm9
 vmovdqa		768+32*\off(%rdi),%ymm10
 vmovdqa		896+32*\off(%rdi),%ymm11
 
-butterfly	4,8
-butterfly	5,9
-butterfly	6,10
-butterfly	7,11
+butterfly       4,8
+butterfly       5,9
+butterfly       6,10
+butterfly       7,11
 
 /* level 1 */
 vpbroadcastd	(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+2)*4(%rsi),%ymm1
 vpbroadcastd	(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+2)*4(%rsi),%ymm2
-butterfly	4,6
-butterfly	5,7
+butterfly       4,6
+butterfly       5,7
 
 vpbroadcastd	(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+3)*4(%rsi),%ymm1
 vpbroadcastd	(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+3)*4(%rsi),%ymm2
-butterfly	8,10
-butterfly	9,11
+butterfly       8,10
+butterfly       9,11
 
 vmovdqa		%ymm4,0+32*\off(%rdi)
 vmovdqa		%ymm5,128+32*\off(%rdi)
@@ -138,43 +138,43 @@ vmovdqa		256*\off+224(%rdi),%ymm11
 vpbroadcastd	(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+4+\off)*4(%rsi),%ymm1
 vpbroadcastd	(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+4+\off)*4(%rsi),%ymm2
 
-butterfly	4,8
-butterfly	5,9
-butterfly	6,10
-butterfly	7,11
+butterfly       4,8
+butterfly       5,9
+butterfly       6,10
+butterfly       7,11
 
-shuffle8	4,8,3,8
-shuffle8	5,9,4,9
-shuffle8	6,10,5,10
-shuffle8	7,11,6,11
+shuffle8        4,8,3,8
+shuffle8        5,9,4,9
+shuffle8        6,10,5,10
+shuffle8        7,11,6,11
 
 /* level 3 */
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+8+8*\off)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+8+8*\off)*4(%rsi),%ymm2
 
-butterfly	3,5
-butterfly	8,10
-butterfly	4,6
-butterfly	9,11
+butterfly       3,5
+butterfly       8,10
+butterfly       4,6
+butterfly       9,11
 
-shuffle4	3,5,7,5
-shuffle4	8,10,3,10
-shuffle4	4,6,8,6
-shuffle4	9,11,4,11
+shuffle4        3,5,7,5
+shuffle4        8,10,3,10
+shuffle4        4,6,8,6
+shuffle4        9,11,4,11
 
 /* level 4 */
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+40+8*\off)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+40+8*\off)*4(%rsi),%ymm2
 
-butterfly	7,8
-butterfly	5,6
-butterfly	3,4
-butterfly	10,11
+butterfly       7,8
+butterfly       5,6
+butterfly       3,4
+butterfly       10,11
 
-shuffle2	7,8,9,8
-shuffle2	5,6,7,6
-shuffle2	3,4,5,4
-shuffle2	10,11,3,11
+shuffle2        7,8,9,8
+shuffle2        5,6,7,6
+shuffle2        3,4,5,4
+shuffle2        10,11,3,11
 
 /* level 5 */
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+72+8*\off)*4(%rsi),%ymm1
@@ -182,50 +182,50 @@ vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+72+8*\off)*4(%rsi),%ymm2
 vpsrlq		$32,%ymm1,%ymm10
 vmovshdup	%ymm2,%ymm15
 
-butterfly	9,5,1,10,2,15
-butterfly	8,4,1,10,2,15
-butterfly	7,3,1,10,2,15
-butterfly	6,11,1,10,2,15
+butterfly       9,5,1,10,2,15
+butterfly       8,4,1,10,2,15
+butterfly       7,3,1,10,2,15
+butterfly       6,11,1,10,2,15
 
 /* level 6 */
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+104+8*\off)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+104+8*\off)*4(%rsi),%ymm2
 vpsrlq		$32,%ymm1,%ymm10
 vmovshdup	%ymm2,%ymm15
-butterfly	9,7,1,10,2,15
-butterfly	8,6,1,10,2,15
+butterfly       9,7,1,10,2,15
+butterfly       8,6,1,10,2,15
 
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+104+8*\off+32)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+104+8*\off+32)*4(%rsi),%ymm2
 vpsrlq		$32,%ymm1,%ymm10
 vmovshdup	%ymm2,%ymm15
-butterfly	5,3,1,10,2,15
-butterfly	4,11,1,10,2,15
+butterfly       5,3,1,10,2,15
+butterfly       4,11,1,10,2,15
 
 /* level 7 */
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+168+8*\off)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+168+8*\off)*4(%rsi),%ymm2
 vpsrlq		$32,%ymm1,%ymm10
 vmovshdup	%ymm2,%ymm15
-butterfly	9,8,1,10,2,15
+butterfly       9,8,1,10,2,15
 
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+168+8*\off+32)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+168+8*\off+32)*4(%rsi),%ymm2
 vpsrlq		$32,%ymm1,%ymm10
 vmovshdup	%ymm2,%ymm15
-butterfly	7,6,1,10,2,15
+butterfly       7,6,1,10,2,15
 
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+168+8*\off+64)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+168+8*\off+64)*4(%rsi),%ymm2
 vpsrlq		$32,%ymm1,%ymm10
 vmovshdup	%ymm2,%ymm15
-butterfly	5,4,1,10,2,15
+butterfly       5,4,1,10,2,15
 
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+168+8*\off+96)*4(%rsi),%ymm1
 vmovdqa		(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+168+8*\off+96)*4(%rsi),%ymm2
 vpsrlq		$32,%ymm1,%ymm10
 vmovshdup	%ymm2,%ymm15
-butterfly	3,11,1,10,2,15
+butterfly       3,11,1,10,2,15
 
 vmovdqa		%ymm9,256*\off+0(%rdi)
 vmovdqa		%ymm8,256*\off+32(%rdi)
@@ -242,7 +242,7 @@ S2N_BN_SYMBOL(mldsa_ntt):
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        CFI_DEC_RSP(184)
+        CFI_DEC_RSP(176)
         CFI_STACKSAVEU(%xmm6,0)
         CFI_STACKSAVEU(%xmm7,16)
         CFI_STACKSAVEU(%xmm8,32)
@@ -284,7 +284,7 @@ S2N_BN_SYMBOL(mldsa_ntt):
         CFI_STACKLOADU(%xmm15,144)
         CFI_STACKLOAD(%rdi,160)
         CFI_STACKLOAD(%rsi,168)
-        CFI_INC_RSP(184)
+        CFI_INC_RSP(176)
 #endif
         CFI_RET
 

@@ -4419,11 +4419,11 @@ let MLDSA_NTT_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_ntt_tmc;;
 (* ------------------------------------------------------------------------- *)
 
 (*** ML-DSA NTT zeta array: 624 elements total
- *** - [0-31]: ML-DSA constants (q=8380417, qinv=58728449, etc.)  
+ *** - [0-31]: ML-DSA constants (q=8380417, qinv=58728449, etc.)
  *** - [32-39]: Initial twiddle factors
  *** - [40-367]: 4x replicated twiddles for SIMD (82 unique values × 4 copies)
  *** - [368-623]: Final twiddle section with 2x replication (128 unique values × 2 copies)
- *** Follows bit-reversed indexing per FIPS 204 Appendix B with AVX2 optimization 
+ *** Follows bit-reversed indexing per FIPS 204 Appendix B with AVX2 optimization
  ***)
 let mldsa_complete_qdata = define
  `mldsa_complete_qdata:int list =
@@ -4503,14 +4503,14 @@ let mldsa_complete_qdata = define
    &819034; -- &522500; &3207046; -- &3595838; &4108315; &203044; &1265009; &1595974; -- &3548272; -- &1050970;
    -- &1430225; -- &1962642; -- &1374803; &3406031; -- &1846953; -- &3776993; -- &164721; -- &1207385; &3014001;
    -- &1799107; &269760; &472078; &1910376; -- &3833893; -- &2286327; -- &3545687; -- &1362209; &1976782
-   ]`;; 
-   
+   ]`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-(*** 
- *** Currently, there is a discrepency when compiling the asmb on x86 machines vs Arm 
+(***
+ *** Currently, there is a discrepency when compiling the asmb on x86 machines vs Arm
  *** As such, the produced mldsa_ntt_tmc has different lengths. When on ARM 0x3049
  *** when on x86 0x3079.
  ***)
@@ -4733,36 +4733,34 @@ let MLDSA_NTT_SUBROUTINE_CORRECT = prove
           MAYCHANGE [memory :> bytes(a,1024)])`,
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
   CONV_TAC TWEAK_CONV THEN
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE 
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
   (CONV_RULE TWEAK_CONV MLDSA_NTT_NOIBT_SUBROUTINE_CORRECT)));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let mldsa_ntt_windows_mc3 = define_from_elf
-    "mldsa_ntt_windows_mc3" "x86/mldsa/mldsa_ntt.obj";;
+let mldsa_ntt_windows_mc = define_from_elf
+    "mldsa_ntt_windows_mc" "x86/mldsa/mldsa_ntt.obj";;
 
-let mldsa_ntt_windows_tmc3 = define_trimmed
-    "mldsa_ntt_windows_tmc3" mldsa_ntt_windows_mc3;;
+let mldsa_ntt_windows_tmc = define_trimmed
+    "mldsa_ntt_windows_tmc" mldsa_ntt_windows_mc;;
 
-let MLDSA_NTT_WINDOWS_TMC_EXEC = X86_MK_EXEC_RULE mldsa_ntt_windows_tmc3;;
+let MLDSA_NTT_WINDOWS_TMC_EXEC = X86_MK_EXEC_RULE mldsa_ntt_windows_tmc;;
 
-(* ------------------------------------------------------------------------- *)
-(* Goal version for construction purposes                                    *)
-(* ------------------------------------------------------------------------- *)
-g(`!a zetas (zetas_list:int32 list) x pc stackpointer returnaddress.
+let MLDSA_NTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!a zetas (zetas_list:int32 list) x pc stackpointer returnaddress.
         aligned 32 a /\
         aligned 32 zetas /\
-        nonoverlapping (word pc,LENGTH mldsa_ntt_windows_tmc3) (a, 1024) /\
-        nonoverlapping (word pc,LENGTH mldsa_ntt_windows_tmc3) (zetas, 2496) /\
+        nonoverlapping (word pc,LENGTH mldsa_ntt_windows_tmc) (a, 1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_ntt_windows_tmc) (zetas, 2496) /\
         nonoverlapping (a, 1024) (zetas, 2496) /\
-        nonoverlapping (word_sub stackpointer (word 184),184) (a, 1024) /\
-        nonoverlapping (word_sub stackpointer (word 184),184) (zetas, 2496) /\
-        nonoverlapping (word pc,LENGTH mldsa_ntt_windows_tmc3)
-                       (word_sub stackpointer (word 184),184)
+        nonoverlapping (word_sub stackpointer (word 176),184) (a, 1024) /\
+        nonoverlapping (word_sub stackpointer (word 176),176) (zetas, 2496) /\
+        nonoverlapping (word pc,LENGTH mldsa_ntt_windows_tmc)
+                       (word_sub stackpointer (word 176),176)
         ==> ensures x86
-              (\s. bytes_loaded s (word pc) mldsa_ntt_windows_tmc3 /\
+              (\s. bytes_loaded s (word pc) mldsa_ntt_windows_tmc /\
                    read RIP s = word pc /\
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -4781,24 +4779,24 @@ g(`!a zetas (zetas_list:int32 list) x pc stackpointer returnaddress.
                            abs(ival zi) <= &42035261))
               (MAYCHANGE [RSP] ,,
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 184),184)] ,,
-               MAYCHANGE [memory :> bytes(a,1024)])`);;
+               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
+               MAYCHANGE [memory :> bytes(a,1024)])`,
 
-(*** Step 0: Expand away the wordlist_from_memory ****)
-e(CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV));;
+(*** Expand away the wordlist_from_memory ****)
+  CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
 
-(*** Step 1: Handle initial quantifiers and set up stack offset management ***)
-e(REPLICATE_TAC 5 GEN_TAC THEN
-  WORD_FORALL_OFFSET_TAC 184 THEN REPEAT GEN_TAC);;
+(*** Handle initial quantifiers and set up stack offset management ***)
+  REPLICATE_TAC 5 GEN_TAC THEN
+  WORD_FORALL_OFFSET_TAC 176 THEN REPEAT GEN_TAC THEN
 
-(*** Step 2: Set up basic Windows ABI framework and rewrite with Windows calling convention ***)
-e(REWRITE_TAC[fst MLDSA_NTT_WINDOWS_TMC_EXEC] THEN
+(*** Set up basic Windows ABI framework and rewrite with Windows calling convention ***)
+  REWRITE_TAC[fst MLDSA_NTT_WINDOWS_TMC_EXEC] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
-  REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]);;
+  REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
 
-(*** Step 3: Set up register preservation for Windows ABI compliance
+(*** Set up register preservation for Windows ABI compliance
  *** Windows ABI requires preserving RDI, RSI, and XMM6-XMM15 across function calls ***)
-e(ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
   ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
   ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm7" `ZMM7 :> bottomhalf :> bottomhalf` THEN
@@ -4809,16 +4807,16 @@ e(ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
   ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm13" `ZMM13 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf`);;
+  ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
 
-(*** Step 4: Handle the ZMM/YMM register notation conversion ***)
-e(REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
+(*** Handle the ZMM/YMM register notation conversion ***)
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
   REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]));;
+    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
 
-(*** Step 5: Introduce ghost variables for initial XMM register values
+(*** Introduce ghost variables for initial XMM register values
  *** These will track the register states for restoration in the epilogue ***)
-e(GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
+  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
   GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
   GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
   GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
@@ -4827,62 +4825,62 @@ e(GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
   GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
   GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
   GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15`);;
+  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
 
-(*** Step 6: Globalize preconditions and substitute preserved register values ***)
-e(GLOBALIZE_PRECONDITION_TAC THEN
-  REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)));;
+(*** Globalize preconditions and substitute preserved register values ***)
+  GLOBALIZE_PRECONDITION_TAC THEN
+  REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
 
-(*** Step 7: Initialize execution and simulate the prologue (register saves)
+(*** Initialize execution and simulate the prologue (register saves)
  *** Steps 1-15 cover the Windows prologue that saves XMM registers to stack ***)
-e(ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_NTT_WINDOWS_TMC_EXEC (1--15));;
+  ENSURES_INIT_TAC "s0" THEN
+  X86_STEPS_TAC MLDSA_NTT_WINDOWS_TMC_EXEC (1--15) THEN
 
-(*** Step 8: Apply the main Unix correctness theorem to the core NTT computation ***)
-e(MP_TAC(SPECL [`a:int64`; `zetas:int64`; `zetas_list:int32 list`; `x:num->int32`; `pc + 92`]
+(*** Apply the main Unix correctness theorem to the core NTT computation ***)
+  MP_TAC(SPECL [`a:int64`; `zetas:int64`; `zetas_list:int32 list`; `x:num->int32`; `pc + 92`]
     MLDSA_NTT_CORRECT) THEN
   ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC]);;
+  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
 
-(*** Step 8a: expand wordlist_from_memory again ****)
-e(CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV)));;
+(*** Expand wordlist_from_memory again ****)
+  CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
 
-(*** Step 8b: expand MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ****)
-e(REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]);;
+(*** Expand MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ****)
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
 
-(*** Step 9: Execute the main NTT computation as a single big step
+(*** Execute the main NTT computation as a single big step
  *** This handles the core algorithm while preserving the register save/restore wrapper ***)
-e(X86_BIGSTEP_TAC MLDSA_NTT_WINDOWS_TMC_EXEC "s15" THENL
+  X86_BIGSTEP_TAC MLDSA_NTT_WINDOWS_TMC_EXEC "s16" THENL
    [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_ntt_windows_tmc3
+     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_ntt_windows_tmc
      (REWRITE_RULE[BUTLAST_CLAUSES]
       (AP_TERM `BUTLAST:byte list->byte list` mldsa_ntt_tmc))
      92));
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))]);;
+    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
-(*** Step 10: Capture the final YMM register states after main computation ***)
-e(MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s15`;
-    `ymm7_epilog = read YMM7 s15`;
-    `ymm8_epilog = read YMM8 s15`;
-    `ymm9_epilog = read YMM9 s15`;
-    `ymm10_epilog = read YMM10 s15`;
-    `ymm11_epilog = read YMM11 s15`;
-    `ymm12_epilog = read YMM12 s15`;
-    `ymm13_epilog = read YMM13 s15`;
-    `ymm14_epilog = read YMM14 s15`;
-    `ymm15_epilog = read YMM15 s15`]);;
+(*** Capture the final YMM register states after main computation ***)
+  MAP_EVERY ABBREV_TAC
+   [`ymm6_epilog = read YMM6 s16`;
+    `ymm7_epilog = read YMM7 s16`;
+    `ymm8_epilog = read YMM8 s16`;
+    `ymm9_epilog = read YMM9 s16`;
+    `ymm10_epilog = read YMM10 s16`;
+    `ymm11_epilog = read YMM11 s16`;
+    `ymm12_epilog = read YMM12 s16`;
+    `ymm13_epilog = read YMM13 s16`;
+    `ymm14_epilog = read YMM14 s16`;
+    `ymm15_epilog = read YMM15 s16`] THEN
 
-(*** Step 11: Simulate the epilogue (register restoration and return)
- *** Steps 16-29 cover the Windows epilogue that restores XMM registers from stack ***)
-e(X86_STEPS_TAC MLDSA_NTT_WINDOWS_TMC_EXEC (16--29));;
+(*** Simulate the epilogue (register restoration and return)
+ *** Steps 17-30 cover the Windows epilogue that restores XMM registers from stack ***)
+  X86_STEPS_TAC MLDSA_NTT_WINDOWS_TMC_EXEC (17--30) THEN
 
-(*** Step 12: Handle the MAYCHANGE clauses for ZMM register components ***)
-e(RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]));;
+(*** Handle the MAYCHANGE clauses for ZMM register components ***)
+  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
 
-(*** Step 13: Finalize the proof by establishing the final state conditions ***)
-e(ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+(***Finalize the proof by establishing the final state conditions ***)
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_NTT_WINDOWS_SUBROUTINE_CORRECT = prove
@@ -4892,7 +4890,7 @@ let MLDSA_NTT_WINDOWS_SUBROUTINE_CORRECT = prove
         nonoverlapping (word pc,LENGTH mldsa_ntt_windows_mc) (a, 1024) /\
         nonoverlapping (word pc,LENGTH mldsa_ntt_windows_mc) (zetas, 2496) /\
         nonoverlapping (a, 1024) (zetas, 2496) /\
-        nonoverlapping (word_sub stackpointer (word 176),176) (a, 1024) /\
+        nonoverlapping (word_sub stackpointer (word 176),184) (a, 1024) /\
         nonoverlapping (word_sub stackpointer (word 176),176) (zetas, 2496) /\
         nonoverlapping (word pc,LENGTH mldsa_ntt_windows_mc)
                        (word_sub stackpointer (word 176),176)
@@ -4917,4 +4915,7 @@ let MLDSA_NTT_WINDOWS_SUBROUTINE_CORRECT = prove
               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_NTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+  let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+  (CONV_RULE TWEAK_CONV MLDSA_NTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;
