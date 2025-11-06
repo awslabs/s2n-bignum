@@ -912,6 +912,8 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
             | (T, Rep0, SG0) -> SOME (VPBLENDW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
             | _ -> NONE)
         | [0x16:8] ->
+           if word_not v = (word 0b1111:4 word) then
+           (if L then NONE else
             read_ModRM rex l >>= \((reg,rm),l).
             read_imm Byte l >>= \(imm8,l).
             let src = mmreg reg Lower_128 in
@@ -921,12 +923,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
             | (T, Rep0, SG0) ->
               if rex_W rex then SOME (VPEXTRQ dest src imm8, l)
               else SOME (VPEXTRD dest src imm8, l)
-            | _ -> NONE)
+            | _ -> NONE))
+          else NONE
         | [0x22:8] ->
+            if L then NONE else
             read_ModRM rex l >>= \((reg,rm),l).
             read_imm Byte l >>= \(imm8,l).
             let dest = mmreg reg Lower_128 in
-            let src1 = mmreg reg Lower_128 in
+            let src1 = mmreg v Lower_128 in
             let sz = if rex_W rex then Full_64 else Lower_32 in
             let src2 = operand_of_RM sz rm in
             (match pfxs with
