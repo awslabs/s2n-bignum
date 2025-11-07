@@ -977,7 +977,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
               read_imm Byte l >>= \(imm8,l).
               if rex_W rex then NONE else
               let dest = mmreg reg sz in
-              let src1 = mmreg reg sz in
+              let src1 = mmreg v sz in
               let src2 = simd_of_RM Lower_128 rm in
               match pfxs with
               | (T, Rep0, SG0) ->
