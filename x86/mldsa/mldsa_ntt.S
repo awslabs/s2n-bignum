@@ -20,7 +20,7 @@
 // modulo Q = 8380417, maintaining constant-time execution for side-channel
 // resistance. The transform operates in the ring R_Q = Z_Q[x]/(x^256 + 1).
 //
-// extern void mldsa_ntt(int32_t a[static 256], const int32_t *zetas);
+// extern void mldsa_ntt(int32_t a[static 256], const int32_t zetas[static 624]);
 //
 // Standard x86-64 ABI: RDI = a, RSI = zetas
 // Microsoft x64 ABI:   RCX = a, RDX = zetas

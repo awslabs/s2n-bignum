@@ -974,8 +974,8 @@ extern void edwards25519_scalarmuldouble(uint64_t res[8],const uint64_t scalar[4
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[8],const uint64_t scalar[4], const uint64_t point[8],const uint64_t bscalar[4]);
 
 /* Forward number-theoretic transform for ML-DSA */
-/* Input a[256], zetas (signed 32-bit words); output a[256] (signed 32-bit words) */
-extern void mldsa_ntt(int32_t a[256], const int32_t *zetas);
+/* Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words) */
+extern void mldsa_ntt(int32_t a[256], const int32_t zetas[624]);
 
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
