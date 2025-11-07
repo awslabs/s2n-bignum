@@ -1519,6 +1519,17 @@ let MEMORY_128_FROM_64_TAC =
       READ_MEMORY_MERGE_CONV 1 (subst[itm,n_tm] pat') in
     MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
 
+let MEMORY_256_FROM_16_TAC =
+  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
+  and pat = `read (memory :> bytes256(word_add a (word n))) s0` in
+  fun v n ->
+    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
+    let f i =
+      let itm = mk_small_numeral(32*i) in
+      READ_MEMORY_MERGE_CONV 4 (subst[itm,n_tm] pat') in
+    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
+
+
 let READ_MEMORY_SPLIT_CONV =
   let baseconv =
     GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_UNSPLIT] THENC
