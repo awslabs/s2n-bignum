@@ -298,7 +298,6 @@ onlyInArm = [
   "curve25519_x25519_byte",
   "curve25519_x25519_byte_alt",
   "sha3_",
-  "mlkem_basemul_k3",
   "mlkem_basemul_k4",
   "mlkem_intt",
   "mlkem_mulcache_compute",
