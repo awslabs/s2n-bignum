@@ -4,12 +4,13 @@
  *)
 
 use_file_raise_failure := true;;
-arm_print_log := true;;
-components_print_log := true;;
 
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/aes_encrypt_spec.ml";;
 needs "arm/proofs/aes_xts_encrypt_spec.ml";;
+
+arm_print_log := true;;
+components_print_log := true;;
 
 (* print_literal_from_elf "arm/aes-xts/aes-xts-armv8.o";; *)
 (* save_literal_from_elf "arm/aes-xts/aes-xts-armv8.txt" "arm/aes-xts/aes-xts-armv8.o";; *)
@@ -2887,6 +2888,7 @@ let CIPHER_STEALING_ENC_INV_SIMP_TAC i =
     IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
     ASM_ARITH_TAC);;
 
+(* TODO: change to match encrypt *)
 let TAIL_SWAP_CASE_TAC case =
   let c_tm = `case:num` in
   let v_tm = `v:num` in
@@ -3091,10 +3093,6 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
     UNDISCH_TAC `word_and len (word 0xfffffffffffffff0) = (len_full_blocks:int64)` THEN
     MP_TAC (SPECL [`len:int64`; `len_full_blocks:int64`] LEN_FULL_BLOCKS_HI_BOUND_THM) THEN
     SIMP_TAC[]; ALL_TAC] THEN
-  (*
-  SUBGOAL_THEN `~(val (len_full_blocks:int64) < 0)` ASSUME_TAC THENL
-  [ UNDISCH_TAC `~(val (len_full_blocks:int64) < 0x10)` THEN
-  *)
 
   SUBGOAL_THEN `val (tail_len:int64) < 16` ASSUME_TAC THENL
   [ EXPAND_TAC "tail_len" THEN
@@ -3183,8 +3181,7 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
   ] THEN
 
   (* The cipher stealing branch *)
-  (* Break the rest of the program into two parts: before byte-swap and after.
-     This is because byte-swap needs another invariant proof. *)
+  (* The byte-swap needs another invariant proof. *)
   ABBREV_TAC `curr_len = (acc_len (num_5blocks:int64) (len_full_blocks:int64)):num` THEN
   ABBREV_TAC `curr_blocks = (acc_blocks (num_5blocks:int64) (len_full_blocks:int64) T):num` THEN
 
@@ -3305,7 +3302,7 @@ ENSURES_WHILE_PADOWN_TAC
         DISCH_TAC THEN
         IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES; LENGTH_OF_INT128_TO_BYTES]
         ; ALL_TAC] THEN
-      REWRITE_TAC[BYTES_TO_INT128_OF_INT128_TO_BYTES];
+      REWRITE_TAC[BYTES_TO_INT128_OF_INT128_TO_BYTES] THEN
 
       REWRITE_TAC[VAL_WORD_0] THEN ARITH_TAC;
     ];
@@ -3327,6 +3324,27 @@ ENSURES_WHILE_PADOWN_TAC
       REWRITE_TAC[VAL_WORD_ADD;DIMINDEX_64] THEN
       IMP_REWRITE_TAC[MOD_LT] THEN
       ASM_ARITH_TAC ; ALL_TAC ] THEN
+
+
+    SUBGOAL_THEN `curr_len >= 16` ASSUME_TAC THENL
+    [
+      REWRITE_TAC[GSYM (ASSUME `acc_len num_5blocks len_full_blocks = curr_len`)] THEN
+      MP_TAC (SPECL [`num_5blocks:int64`; `len_full_blocks:int64`] VALUE_OF_ACC_LEN) THEN
+      REPEAT_N 3 (ANTS_TAC THENL [ASM_ARITH_TAC ORELSE ASM_SIMP_TAC[]; ALL_TAC]) THEN
+      SIMP_TAC[] THEN DISCH_TAC THEN
+      UNDISCH_TAC `word_add (tail_len:int64) (len_full_blocks:int64) = len` THEN
+      ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+      REWRITE_TAC[VAL_WORD_ADD;DIMINDEX_64] THEN
+      IMP_REWRITE_TAC[MOD_LT] THEN
+      ASM_ARITH_TAC; ALL TAC ] THEN
+
+    SUBGOAL_THEN `(word_add (word_add (ctxt_p:int64) (word_sub (word curr_len) (word 0x10))) (word i)) =
+      word_add (ctxt_p:int64) (word (curr_len - 0x10 + i))` ASSUME_TAC THEN
+    REWRITE_TAC[GSYM WORD_ADD_ASSOC] THEN
+    AP_TERM_TAC THEN
+    REWRITE_TAC[WORD_ADD;WORD_SUB] THEN
+    ASM_ARITH_TAC THEN
+
 
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
     EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -3379,16 +3397,11 @@ ENSURES_WHILE_PADOWN_TAC
         WORD_ARITH_TAC]
       ; ALL_TAC] THEN
 
-    CHANGED_TAC (RULE_ASSUM_TAC(REWRITE_RULE
-      [WORD_RULE `!base m n. (word m) >= (word 0x10) => word_add (word_add base (word_sub (word m)(word 0x10))) (word n) =
-                             word_add base (word(m - 0x10 + n))`])) THEN
-
-    ASSUME_TAC (WORD_ARITH
-      `(word_add (word_add ctxt_p (word_sub (word curr_len) (word 0x10))) (word i)) =
-      word_add ctxt_p (word (curr_len - 0x10 + i))`) THEN
 
 
-    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--3) THEN
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--5) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THENL
   ]
 
 );;
@@ -5443,7 +5456,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
           EXISTS_TAC `iv:int128` THEN EXISTS_TAC `key1_lst:int128 list` THEN
           EXISTS_TAC `key2_lst:int128 list` THEN EXISTS_TAC `pt_in:byte list` THEN
           REPEAT CONJ_TAC THENL [
-            REFL_TAC THEN
+            REFL_TAC;
 
             MP_TAC (SPECL [`0x5 * val (num_5blocks:int64) + 0x1:num`;
               `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`;
