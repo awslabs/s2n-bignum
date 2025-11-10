@@ -3310,6 +3310,85 @@ ENSURES_WHILE_PADOWN_TAC
       REWRITE_TAC[VAL_WORD_0] THEN ARITH_TAC;
     ];
 
+    (* Subgoal 3: inductive step *)
+    REPEAT STRIP_TAC THEN
+
+    (* For non-overlapping and MAYCHANGE address reasoning *)
+    SUBGOAL_THEN `curr_len + i < val (len:int64)` ASSUME_TAC THENL
+    [ REWRITE_TAC[GSYM (ASSUME `acc_len num_5blocks len_full_blocks = curr_len`)] THEN
+      MP_TAC (SPECL [`num_5blocks:int64`; `len_full_blocks:int64`] VALUE_OF_ACC_LEN) THEN
+      REPEAT_N 3 (ANTS_TAC THENL [ASM_ARITH_TAC ORELSE ASM_SIMP_TAC[]; ALL_TAC]) THEN
+      SIMP_TAC[] THEN DISCH_TAC THEN
+
+      UNDISCH_TAC `word_add (tail_len:int64) (len_full_blocks:int64) = len` THEN
+      UNDISCH_TAC `i < val (tail_len:int64)` THEN
+
+      ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+      REWRITE_TAC[VAL_WORD_ADD;DIMINDEX_64] THEN
+      IMP_REWRITE_TAC[MOD_LT] THEN
+      ASM_ARITH_TAC ; ALL_TAC ] THEN
+
+    MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+    EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+        MAYCHANGE [X19; X20; X21; X22],,
+        MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+        MAYCHANGE [memory :> bytes8 (word_add ctxt_p (word (curr_len - 0x10 + i)))],,
+        MAYCHANGE [memory :> bytes8 (word_add ctxt_p (word (curr_len + i)))]` THEN
+    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    CONJ_TAC THENL [
+      REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
+              MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
+      ABBREV_TAC `vallen = val (len:int64)` THEN
+      SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
+
+    REWRITE_TAC[byte_list_at] THEN
+    UNDISCH_THEN `val ((word curr_len):int64) = curr_len`
+        (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THEN
+    ENSURES_INIT_TAC "s0" THEN
+
+    SUBGOAL_THEN `val ((word (val (tail_len:int64) - i)):int64) = val tail_len - i` SUBST_ALL_TAC THENL
+    [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+      UNDISCH_TAC `i < val (tail_len:int64)` THEN
+      UNDISCH_TAC `val (tail_len:int64) < 0x10` THEN
+      ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `val ((word (val (tail_len:int64) - (i + 0x1))):int64) = val tail_len - (i + 1)` SUBST_ALL_TAC THENL
+    [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+      UNDISCH_TAC `i < val (tail_len:int64)` THEN
+      UNDISCH_TAC `val (tail_len:int64) < 0x10` THEN
+      ARITH_TAC; ALL_TAC] THEN
+
+    SUBGOAL_THEN `word_sub ((word (i + 0x1)):int64) (word 0x1) = word i` ASSUME_TAC THENL
+    [ REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUB; DIMINDEX_64] THEN
+      MP_TAC (SPECL [`val ((word (i + 0x1)):int64)`; `0x2 EXP 0x40`; `val ((word 0x1):int64)`]
+        (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+      ANTS_TAC THENL [
+        IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN ASM_ARITH_TAC
+        ; ALL_TAC] THEN
+      ANTS_TAC THENL [ WORD_ARITH_TAC; ALL_TAC] THEN
+      SIMP_TAC[] THEN DISCH_TAC THEN
+      MP_TAC (SPECL [`1`; `0x2 EXP 0x40`; `val ((word (i + 0x1)):int64) - val ((word 0x1):int64)`]
+        (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+      SIMP_TAC[ARITH_RULE `!x. 1 * x = x`] THEN DISCH_TAC THEN
+      IMP_REWRITE_TAC[MOD_LT] THEN
+      CONJ_TAC THENL
+      [ SUBGOAL_THEN `i + 1 < 2 EXP 64` MP_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+        IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+        ARITH_TAC;
+        UNDISCH_TAC `i < val (tail_len:int64)` THEN
+        UNDISCH_TAC `val (tail_len:int64) < 0x10` THEN
+        WORD_ARITH_TAC]
+      ; ALL_TAC] THEN
+
+    CHANGED_TAC (RULE_ASSUM_TAC(REWRITE_RULE
+      [WORD_RULE `!base m n. (word m) >= (word 0x10) => word_add (word_add base (word_sub (word m)(word 0x10))) (word n) =
+                             word_add base (word(m - 0x10 + n))`])) THEN
+
+    ASSUME_TAC (WORD_ARITH
+      `(word_add (word_add ctxt_p (word_sub (word curr_len) (word 0x10))) (word i)) =
+      word_add ctxt_p (word (curr_len - 0x10 + i))`) THEN
+
+
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--3) THEN
   ]
 
 );;
