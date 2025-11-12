@@ -46,7 +46,7 @@ sed -e 's/\[.*\]/MEMORY_CELL/' /tmp/fullmemory_instructions | grep -vwi rsp | gr
 
 # Now turn them into the syntax for the simulator OCaml input
 
-echo 'let iclasses = [' > "$outfile"
+echo 'let iclasses_regreg = [' > "$outfile"
 $ASSEMBLE -c /tmp/register_instructions -o /tmp/register.o
 $OBJDUMP -M intel --no-addresses -d /tmp/register.o | grep '^\s' | sed -E -e 's/^( |\t)*/ /' | sed -E -e 's/( |\t)( |\t).*//' >/tmp/register_codings
 sed -E -e 's/([0-9a-f][0-9a-f])/0x\1;/g' /tmp/register_codings | sed -e 's/^ /\[/' | sed -e 's/;$/];/' >/tmp/register_paste1
