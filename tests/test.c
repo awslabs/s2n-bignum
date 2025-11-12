@@ -825,6 +825,138 @@ uint8_t mlkem_rej_uniform_table[] =
   0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15   // 255
 };
 
+// ***************************************************************************
+// ML-DSA zeta constants
+// ***************************************************************************
+
+// MLDSA zeta constants array (from mldsa-native/mldsa/zetas.inc)
+// Used for C reference implementation
+static int32_t mldsa_zetas[256] = {
+         0,    25847, -2608894,  -518909,   237124,  -777960,  -876248,   466468,
+   1826347,  2353451,  -359251, -2091905,  3119733, -2884855,  3111497,  2680103,
+   2725464,  1024112, -1079900,  3585928,  -549488, -1119584,  2619752, -2108549,
+  -2118186, -3859737, -1399561, -3277672,  1757237,   -19422,  4010497,   280005,
+   2706023,    95776,  3077325,  3530437, -1661693, -3592148, -2537516,  3915439,
+  -3861115, -3043716,  3574422, -2867647,  3539968,  -300467,  2348700,  -539299,
+  -1699267, -1643818,  3505694, -3821735,  3507263, -2140649, -1600420,  3699596,
+    811944,   531354,   954230,  3881043,  3900724, -2556880,  2071892, -2797779,
+  -3930395, -1528703, -3677745, -3041255, -1452451,  3475950,  2176455, -1585221,
+  -1257611,  1939314, -4083598, -1000202, -3190144, -3157330, -3632928,   126922,
+   3412210,  -983419,  2147896,  2715295, -2967645, -3693493,  -411027, -2477047,
+   -671102, -1228525,   -22981, -1308169,  -381987,  1349076,  1852771, -1430430,
+  -3343383,   264944,   508951,  3097992,    44288, -1100098,   904516,  3958618,
+  -3724342,    -8578,  1653064, -3249728,  2389356,  -210977,   759969, -1316856,
+    189548, -3553272,  3159746, -1851402, -2409325,  -177440,  1315589,  1341330,
+   1285669, -1584928,  -812732, -1439742, -3019102, -3881060, -3628969,  3839961,
+   2091667,  3407706,  2316500,  3817976, -3342478,  2244091, -2446433, -3562462,
+    266997,  2434439, -1235728,  3513181, -3520352, -3759364, -1197226, -3193378,
+    900702,  1859098,   909542,   819034,   495491, -1613174,   -43260,  -522500,
+   -655327, -3122442,  2031748,  3207046, -3556995,  -525098,  -768622, -3595838,
+    342297,   286988, -2437823,  4108315,  3437287, -3342277,  1735879,   203044,
+   2842341,  2691481, -2590150,  1265009,  4055324,  1247620,  2486353,  1595974,
+  -3767016,  1250494,  2635921, -3548272, -2994039,  1869119,  1903435, -1050970,
+  -1333058,  1237275, -3318210, -1430225,  -451100,  1312455,  3306115, -1962642,
+  -1279661,  1917081, -2546312, -1374803,  1500165,   777191,  2235880,  3406031,
+   -542412, -2831860, -1671176, -1846953, -2584293, -3724270,   594136, -3776993,
+  -2013608,  2432395,  2454455, -164721,  1957272,  3369112,   185531, -1207385,
+  -3183426,   162844,  1616392,  3014001,   810149,  1652634, -3694233, -1799107,
+  -3038916,  3523897,  3866901,   269760,  2213111, -975884,  1717735,   472078,
+   -426683,  1723600, -1803090,  1910376, -1667432, -1104333,  -260646, -3833893,
+  -2939036, -2235985, -420899, -2286327,   183443, -976891,  1612842, -3545687,
+  -554416,  3919660, -48306, -1362209,  3937738,  1400424, -846154,  1976782
+};
+
+// Complete AVX2 data structure for x86 MLDSA assembly (624 int32_t elements)
+// Based on mldsa-native consts.c structure and reference Dilithium AVX2
+// https://github.com/pq-crystals/dilithium/blob/master/avx2/consts.c
+static int32_t __attribute__((aligned(32))) mldsa_avx2_data[624] = {
+    // Offset 0-7: 8XQ (8 copies of MLDSA_Q = 8380417)
+    8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417,
+    
+    // Offset 8-15: 8XQINV (8 copies of MLDSA_QINV = 58728449)
+    58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449,
+    
+    // Offset 16-23: 8XDIV_QINV (8 copies of -8395782)
+    -8395782, -8395782, -8395782, -8395782, -8395782, -8395782, -8395782, -8395782,
+    
+    // Offset 24-31: 8XDIV (8 copies of 41978)
+    41978, 41978, 41978, 41978, 41978, 41978, 41978, 41978,
+    
+    // Offset 32-327: ZETAS_QINV (Montgomery form zetas, 296 elements)
+    -151046689,
+    1830765815, -1929875198, -1927777021, 1640767044, 1477910808, 1612161320, 1640734244, 308362795,
+    308362795, 308362795, 308362795, -1815525077, -1815525077, -1815525077, -1815525077,
+    -1374673747, -1374673747, -1374673747, -1374673747, -1091570561, -1091570561, -1091570561,
+    -1091570561, -1929495947, -1929495947, -1929495947, -1929495947, 515185417, 515185417,
+    515185417, 515185417, -285697463, -285697463, -285697463, -285697463, 625853735, 625853735,
+    625853735, 625853735, 1727305304, 1727305304, 2082316400, 2082316400, -1364982364, -1364982364,
+    858240904, 858240904, 1806278032, 1806278032, 222489248, 222489248, -346752664, -346752664,
+    684667771, 684667771, 1654287830, 1654287830, -878576921, -878576921, -1257667337, -1257667337,
+    -748618600, -748618600, 329347125, 329347125, 1837364258, 1837364258, -1443016191, -1443016191,
+    -1170414139, -1170414139, -1846138265, -1631226336, -1404529459, 1838055109, 1594295555,
+    -1076973524, -1898723372, -594436433, -202001019, -475984260, -561427818, 1797021249,
+    -1061813248, 2059733581, -1661512036, -1104976547, -1750224323, -901666090, 418987550,
+    1831915353, -1925356481, 992097815, 879957084, 2024403852, 1484874664, -1636082790, -285388938,
+    -1983539117, -1495136972, -950076368, -1714807468, -952438995, -1574918427, 1350681039,
+    -2143979939, 1599739335, -1285853323, -993005454, -1440787840, 568627424, -783134478,
+    -588790216, 289871779, -1262003603, 2135294594, -1018755525, -889861155, 1665705315, 1321868265,
+    1225434135, -1784632064, 666258756, 675310538, -1555941048, -1999506068, -1499481951,
+    -695180180, -1375177022, 1777179795, 334803717, -178766299, -518252220, 1957047970, 1146323031,
+    -654783359, -1974159335, 1651689966, 140455867, -1039411342, 1955560694, 1529189038,
+    -2131021878, -247357819, 1518161567, -86965173, 1708872713, 1787797779, 1638590967, -120646188,
+    -1669960606, -916321552, 1155548552, 2143745726, 1210558298, -1261461890, -318346816, 628664287,
+    -1729304568, 1422575624, 1424130038, -1185330464, 235321234, 168022240, 1206536194, 985155484,
+    -894060583, -898413, -1363460238, -605900043, 2027833504, 14253662, 1014493059, 863641633,
+    1819892093, 2124962073, -1223601433, -1920467227, -1637785316, -1536588520, 694382729,
+    235104446, -1045062172, 831969619, -300448763, 756955444, -260312805, 1554794072, 1339088280,
+    -2040058690, -853476187, -2047270596, -1723816713, -1591599803, -440824168, 1119856484,
+    1544891539, 155290192, -973777462, 991903578, 912367099, -44694137, 1176904444, -421552614,
+    -818371958, 1747917558, -325927722, 908452108, 1851023419, -1176751719, -1354528380, -72690498,
+    -314284737, 985022747, 963438279, -1078959975, 604552167, -1021949428, 608791570, 173440395,
+    -2126092136, -1316619236, -1039370342, 6087993, -110126092, 565464272, -1758099917, -1600929361,
+    879867909, -1809756372, 400711272, 1363007700, 30313375, -326425360, 1683520342, -517299994,
+    2027935492, -1372618620, 128353682, -1123881663, 137583815, -635454918, -642772911, 45766801,
+    671509323, -2070602178, 419615363, 1216882040, -270590488, -1276805128, 371462360, -1357098057,
+    -384158533, 827959816, -596344473, 702390549, -279505433, -260424530, -71875110, -1208667171,
+    -1499603926, 2036925262, -540420426, 746144248, -1420958686, 2032221021, 1904936414, 1257750362,
+    1926727420, 1931587462, 1258381762, 885133339, 1629985060, 1967222129, 6363718, -1287922800,
+    1136965286, 1779436847, 1116720494, 1042326957, 1405999311, 713994583, 940195359, -1542497137,
+    2061661095, -883155599, 1726753853, -1547952704, 394851342, 283780712, 776003547, 1123958025,
+    201262505, 1934038751, 374860238,
+    
+    // Offset 328-623: ZETAS (Regular zetas, 296 elements)
+    -3975713, 25847, -2608894, -518909, 237124, -777960, -876248, 466468, 1826347, 1826347, 1826347,
+    1826347, 2353451, 2353451, 2353451, 2353451, -359251, -359251, -359251, -359251, -2091905,
+    -2091905, -2091905, -2091905, 3119733, 3119733, 3119733, 3119733, -2884855, -2884855, -2884855,
+    -2884855, 3111497, 3111497, 3111497, 3111497, 2680103, 2680103, 2680103, 2680103, 2725464,
+    2725464, 1024112, 1024112, -1079900, -1079900, 3585928, 3585928, -549488, -549488, -1119584,
+    -1119584, 2619752, 2619752, -2108549, -2108549, -2118186, -2118186, -3859737, -3859737,
+    -1399561, -1399561, -3277672, -3277672, 1757237, 1757237, -19422, -19422, 4010497, 4010497,
+    280005, 280005, 2706023, 95776, 3077325, 3530437, -1661693, -3592148, -2537516, 3915439,
+    -3861115, -3043716, 3574422, -2867647, 3539968, -300467, 2348700, -539299, -1699267, -1643818,
+    3505694, -3821735, 3507263, -2140649, -1600420, 3699596, 811944, 531354, 954230, 3881043,
+    3900724, -2556880, 2071892, -2797779, -3930395, -3677745, -1452451, 2176455, -1257611, -4083598,
+    -3190144, -3632928, 3412210, 2147896, -2967645, -411027, -671102, -22981, -381987, 1852771,
+    -3343383, 508951, 44288, 904516, -3724342, 1653064, 2389356, 759969, 189548, 3159746, -2409325,
+    1315589, 1285669, -812732, -3019102, -3628969, -1528703, -3041255, 3475950, -1585221, 1939314,
+    -1000202, -3157330, 126922, -983419, 2715295, -3693493, -2477047, -1228525, -1308169, 1349076,
+    -1430430, 264944, 3097992, -1100098, 3958618, -8578, -3249728, -210977, -1316856, -3553272,
+    -1851402, -177440, 1341330, -1584928, -1439742, -3881060, 3839961, 2091667, -3342478, 266997,
+    -3520352, 900702, 495491, -655327, -3556995, 342297, 3437287, 2842341, 4055324, -3767016,
+    -2994039, -1333058, -451100, -1279661, 1500165, -542412, -2584293, -2013608, 1957272, -3183426,
+    810149, -3038916, 2213111, -426683, -1667432, -2939036, 183443, -554416, 3937738, 3407706,
+    2244091, 2434439, -3759364, 1859098, -1613174, -3122442, -525098, 286988, -3342277, 2691481,
+    1247620, 1250494, 1869119, 1237275, 1312455, 1917081, 777191, -2831860, -3724270, 2432395,
+    3369112, 162844, 1652634, 3523897, -975884, 1723600, -1104333, -2235985, -976891, 3919660,
+    1400424, 2316500, -2446433, -1235728, -1197226, 909542, -43260, 2031748, -768622, -2437823,
+    1735879, -2590150, 2486353, 2635921, 1903435, -3318210, 3306115, -2546312, 2235880, -1671176,
+    594136, 2454455, 185531, 1616392, -3694233, 3866901, 1717735, -1803090, -260646, -420899,
+    1612842, -48306, -846154, 3817976, -3562462, 3513181, -3193378, 819034, -522500, 3207046,
+    -3595838, 4108315, 203044, 1265009, 1595974, -3548272, -1050970, -1430225, -1962642, -1374803,
+    3406031, -1846953, -3776993, -164721, -1207385, 3014001, -1799107, 269760, 472078, 1910376,
+    -3833893, -2286327, -3545687, -1362209, 1976782
+};
+
 // ****************************************************************************
 // Reference implementations, basic and stupid ones in C
 // ****************************************************************************
@@ -2483,6 +2615,113 @@ int32_t reference_poly_reduce(int32_t a)
     t = (a + (1 << 22)) >> 23;
     t = a - t * MLDSA_Q;
     return t;
+}
+
+// Reference Montgomery reduction for ML-DSA
+// MLDSA_QINV = 58728449 which is q^(-1) mod 2^32
+int32_t reference_mldsa_reduce(int64_t a)
+{
+    int32_t t;
+    t = (int32_t)((a * 58728449) & 0xFFFFFFFF);
+    t = (a - (int64_t)t * 8380417) >> 32;
+    return t;
+}
+
+// Reference bit-reversal for 8-bit integers (FIPS 204 Algorithm 43)
+uint8_t reference_bitrev8(uint8_t x)
+{
+    uint8_t result = 0;
+    for (int i = 0; i < 8; i++) {
+        result = (result << 1) | (x & 1);
+        x >>= 1;
+    }
+    return result;
+}
+
+// AVX2 NTT ordering function
+// avx2_ntt_order i = bitreverse8(64 * (i DIV 64) + ((i MOD 64) DIV 8) + 8 * (i MOD 8))
+uint8_t avx2_ntt_order(uint8_t i)
+{
+    uint8_t temp = 64 * (i / 64) + ((i % 64) / 8) + 8 * (i % 8);
+    return reference_bitrev8(temp);
+}
+
+// Reference bit-reversal for ML-DSA coefficient reordering
+void reference_mldsa_bitreverse(int32_t a[256])
+{
+    int32_t temp[256];
+    for (int i = 0; i < 256; i++) {
+        temp[i] = a[i];
+    }
+    for (int i = 0; i < 256; i++) {
+        a[i] = temp[reference_bitrev8(i)];
+    }
+}
+
+// Raise number to power: x^n mod 8380417
+uint64_t pow_8380417(uint64_t x, uint64_t n)
+{
+    uint64_t t;
+    if (n == 0) return 1;
+    t = pow_8380417(x, n >> 1);
+    t = (t * t) % 8380417;
+    if (n % 2 == 0) return t;
+    else return (x * t) % 8380417;
+}
+
+// Pure forward ML-DSA NTT
+// NTT[k] = sum_{j=0..255} a[j] * 1753^((2 * avx2_ntt_order(k) + 1) * j) mod 8380417
+// where avx2_ntt_order(k) = bitreverse8(64*(k/64) + (k%64)/8 + 8*(k%8))
+void reference_mldsa_forward_ntt_spec(int32_t a[256])
+{
+    int32_t result[256];
+    
+    for (int k = 0; k < 256; k++) {
+        uint64_t sum = 0;
+        uint8_t order_k = avx2_ntt_order(k);
+        
+        for (int j = 0; j < 256; j++) {
+            // Properly normalize input to [0, MLDSA_Q) range
+            int64_t normalized_aj = ((int64_t)a[j] % 8380417 + 8380417) % 8380417;
+            
+            uint64_t power = ((uint64_t)(2 * order_k + 1) * j) % 16760832; // Reduce exponent mod (q-1)*2
+            uint64_t zeta_power = pow_8380417(1753, power);
+            
+            uint64_t term = ((uint64_t)normalized_aj * zeta_power) % 8380417;
+            sum = (sum + term) % 8380417;
+        }
+        
+        result[k] = (int32_t)sum;
+    }
+    
+    // Copy result back
+    for (int i = 0; i < 256; i++) {
+        a[i] = result[i];
+    }
+}
+
+// Reference forward NTT for ML-DSA (matching mldsa-native C algorithm)
+void reference_mldsa_forward_ntt(int32_t a[256])
+{
+    unsigned int layer;
+    
+    for (layer = 1; layer < 9; layer++) {
+        unsigned start, k, len;
+        // Twiddle factors for layer n are at indices 2^(n-1)..2^n-1
+        k = 1u << (layer - 1);
+        len = 256u >> layer;
+        
+        for (start = 0; start < 256; start += 2 * len) {
+            int32_t zeta = mldsa_zetas[k++];
+            unsigned j;
+            
+            for (j = start; j < start + len; j++) {
+                int32_t t = reference_mldsa_reduce((int64_t)zeta * a[j + len]);
+                a[j + len] = a[j] - t;
+                a[j] = a[j] + t;
+            }
+        }
+    }
 }
 
 // Keccak-f1600 reference.
@@ -11575,13 +11814,57 @@ int test_edwards25519_scalarmuldouble_alt(void)
   return 0;
 }
 
+#ifdef __x86_64__
+static void mlkem_poly_to_avx2_layout(int16_t a[256])
+{
+  int16_t b[256];
+  uint64_t i, j;
+  for (i = 0; i < 8; i++)
+    for (j = 0; j < 16; j++)
+      b[16*i+j] = a[8*j+i];
+
+  for (i = 0; i < 8; i++)
+    for (j = 0; j < 16; j++)
+      b[128+16*i+j] = a[128+8*j+i];
+
+  for (i = 0; i < 256; i++)
+    a[i] = b[i];
+}
+
+static void mlkem_polyvec_to_avx2_layout(int16_t *a, int k)
+{
+  uint64_t i;
+  for (i = 0; i < k; i++)
+    mlkem_poly_to_avx2_layout(&a[i*256]);
+}
+
+static void mlkem_poly_mulcache_to_avx2_layout(int16_t a[128])
+{
+  int16_t b[128];
+  uint64_t i, j;
+
+  for (i = 0; i < 4; i++)
+    for (j = 0; j < 16; j++)
+      b[16*i+j] = (i & 1) ? -a[4*j+i] : a[4*j+i];
+
+  for (i = 0; i < 4; i++)
+    for (j = 0; j < 16; j++)
+      b[64+16*i+j] = (i & 1) ? -a[64+4*j+i] : a[64+4*j+i];
+
+  for (i = 0; i < 128; i++)
+    a[i] = b[i];
+
+}
+#endif
+
 int test_mlkem_basemul_k2(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[512], b[512], x[256], y[256], bt[256];
+  int16_t a[512] __attribute__((aligned(32)));
+  int16_t b[512] __attribute__((aligned(32)));
+  int16_t x[256] __attribute__((aligned(32)));
+  int16_t y[256] __attribute__((aligned(32)));
+  int16_t bt[256] __attribute__((aligned(32)));
   printf("Testing mlkem_basemul_k2 with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -11591,7 +11874,20 @@ uint64_t t, i;
      reference_basemul2(y,a,b);
      reference_mulcache_compute(bt,b);
      reference_mulcache_compute(bt+128,b+256);
+
+#ifdef __x86_64__
+     mlkem_polyvec_to_avx2_layout(a, 2);
+     mlkem_polyvec_to_avx2_layout(b, 2);
+     mlkem_poly_mulcache_to_avx2_layout(bt);
+     mlkem_poly_mulcache_to_avx2_layout(bt+128);
+#endif
+
      mlkem_basemul_k2(x,a,b,bt);
+
+#ifdef __x86_64__
+     mlkem_poly_to_avx2_layout(y);
+#endif
+
      for (i = 0; i < 256; ++i)
       { if (rem_3329(x[i]) != rem_3329(y[i]))
          { printf("Error in basemul_k2 element i = %"PRIu64"; code[i] = 0x%04"PRIx16
@@ -11611,16 +11907,16 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_basemul_k3(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[768], b[768], x[256], y[256], bt[384];
+  int16_t a[768] __attribute__((aligned(32)));
+  int16_t b[768] __attribute__((aligned(32)));
+  int16_t x[256] __attribute__((aligned(32)));
+  int16_t y[256] __attribute__((aligned(32)));
+  int16_t bt[384] __attribute__((aligned(32)));
   printf("Testing mlkem_basemul_k3 with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -11631,7 +11927,21 @@ uint64_t t, i;
      reference_mulcache_compute(bt,b);
      reference_mulcache_compute(bt+128,b+256);
      reference_mulcache_compute(bt+256,b+512);
+
+#ifdef __x86_64__
+     mlkem_polyvec_to_avx2_layout(a, 3);
+     mlkem_polyvec_to_avx2_layout(b, 3);
+     mlkem_poly_mulcache_to_avx2_layout(bt);
+     mlkem_poly_mulcache_to_avx2_layout(bt+128);
+     mlkem_poly_mulcache_to_avx2_layout(bt+256);
+#endif
+
      mlkem_basemul_k3(x,a,b,bt);
+
+#ifdef __x86_64__
+     mlkem_poly_to_avx2_layout(y);
+#endif
+
      for (i = 0; i < 256; ++i)
       { if (rem_3329(x[i]) != rem_3329(y[i]))
          { printf("Error in basemul_k3 element i = %"PRIu64"; code[i] = 0x%04"PRIx16
@@ -11651,17 +11961,17 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 
 int test_mlkem_basemul_k4(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[1024], b[1024], x[256], y[256], bt[512];
+  int16_t a[1024] __attribute__((aligned(32)));
+  int16_t b[1024] __attribute__((aligned(32)));
+  int16_t x[256] __attribute__((aligned(32)));
+  int16_t y[256] __attribute__((aligned(32)));
+  int16_t bt[512] __attribute__((aligned(32)));
   printf("Testing mlkem_basemul_k4 with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -11673,7 +11983,22 @@ uint64_t t, i;
      reference_mulcache_compute(bt+128,b+256);
      reference_mulcache_compute(bt+256,b+512);
      reference_mulcache_compute(bt+384,b+768);
+
+#ifdef __x86_64__
+     mlkem_polyvec_to_avx2_layout(a, 4);
+     mlkem_polyvec_to_avx2_layout(b, 4);
+     mlkem_poly_mulcache_to_avx2_layout(bt);
+     mlkem_poly_mulcache_to_avx2_layout(bt+128);
+     mlkem_poly_mulcache_to_avx2_layout(bt+256);
+     mlkem_poly_mulcache_to_avx2_layout(bt+384);
+#endif
+
      mlkem_basemul_k4(x,a,b,bt);
+
+#ifdef __x86_64__
+     mlkem_poly_to_avx2_layout(y);
+#endif
+
      for (i = 0; i < 256; ++i)
       { if (rem_3329(x[i]) != rem_3329(y[i]))
          { printf("Error in basemul_k4 element i = %"PRIu64"; code[i] = 0x%04"PRIx16
@@ -11693,7 +12018,6 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_intt(void)
@@ -12003,6 +12327,69 @@ int test_mldsa_poly_reduce(void)
                    b[0], b[1], b[254], b[255]);
         }
     }
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;  // Fallback for non-x86_64 compile-time environments
+#endif
+}
+
+int test_mldsa_ntt(void)
+{
+    // Skip test on non-x86_64 architectures
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+
+#ifdef __x86_64__
+    uint64_t t, i;
+    // 32-byte alignment for AVX2 vmovdqa instructions
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t b[256] __attribute__((aligned(32)));
+    
+    printf("Testing mldsa_ntt with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        // Generate random input polynomial coefficients (like MLKEM does)
+        for (i = 0; i < 256; ++i) {
+            a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
+            b[i] = a[i];  // Copy for assembly implementation
+        }
+        
+        // Call the x86 assembly implementation with complete AVX2 data structure
+        mldsa_ntt(b, mldsa_avx2_data);
+        
+        // Test against HOL-Light specification implementation
+        reference_mldsa_forward_ntt_spec(a);
+        
+        // Compare results (apply reduction to both values for comparison)
+        for (i = 0; i < 256; ++i) {
+            int32_t reduced_a = reference_poly_reduce(a[i]);
+            int32_t reduced_b = reference_poly_reduce(b[i]);
+            
+            // Also check if they're congruent modulo MLDSA_Q
+            if (reduced_a != reduced_b) {
+                // Check if they differ by a multiple of MLDSA_Q
+                int64_t diff = (int64_t)a[i] - (int64_t)b[i];
+                if (diff % 8380417 != 0) {
+                    printf("Error in mldsa_ntt element i = %"PRIu64"; "
+                           "code[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32") while reference[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32")\n",
+                           i, i, b[i], reduced_b, i, a[i], reduced_a);
+                    return 1;
+                }
+            }
+        }
+        
+        if (VERBOSE) {
+            printf("OK: mldsa_ntt[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"] = "
+                   "[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"]\n",
+                   a[0], a[1], a[254], a[255],
+                   b[0], b[1], b[254], b[255]);
+        }
+    }
+    
     printf("All OK\n");
     return 0;
 #else
@@ -15141,7 +15528,11 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmulbase_alt",test_edwards25519_scalarmulbase_alt);
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
+  functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_poly_reduce",test_mldsa_poly_reduce);
+  functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
+  functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
+  functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
@@ -15201,9 +15592,6 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_16",test_bignum_copy_row_from_table_16);
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
-    functionaltest(arm,"mlkem_basemul_k2",test_mlkem_basemul_k2);
-    functionaltest(arm,"mlkem_basemul_k3",test_mlkem_basemul_k3);
-    functionaltest(arm,"mlkem_basemul_k4",test_mlkem_basemul_k4);
     functionaltest(arm,"mlkem_intt",test_mlkem_intt);
     functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
     functionaltest(arm,"mlkem_ntt",test_mlkem_ntt);

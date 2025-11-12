@@ -298,7 +298,6 @@ onlyInArm = [
   "curve25519_x25519_byte",
   "curve25519_x25519_byte_alt",
   "sha3_",
-  "mlkem_basemul_",
   "mlkem_intt",
   "mlkem_mulcache_compute",
   "mlkem_ntt",
@@ -331,6 +330,7 @@ onlyInX86 = [
   "bignum_triple_p384_alt",
   "bignum_triple_p521_alt",
   "bignum_triple_sm2_alt",
+  "mldsa_ntt",
   "mldsa_poly_reduce",
 ]
 
