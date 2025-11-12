@@ -821,7 +821,7 @@ let decode_inst ibytes =
  *** it can be modified in between.
  ***)
 
-let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list =
+let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
   let icodes = map ibyte_to_icode_fn ibytes_list in
@@ -862,8 +862,9 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
     let output_state = output_state_raw in
 
     let add_assum_subst =
-      if add_assum
-      then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      if add_assum = 32
+      then `aligned 32 stackpointer /\ aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      else if add_assum = 16 then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
       else `T:bool`,`additional_assumptions:bool` in
     let goal = subst
       [ibyteterm,`ibytes:byte list`;
@@ -906,7 +907,7 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
 
 let run_random_regsimulation () =
   let ibytes:int list = random_instruction iclasses in
-  cosimulate_instructions None false [ibytes];;
+  cosimulate_instructions None 0 [ibytes];;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for memory accessing instructions.   *)
@@ -1274,7 +1275,7 @@ let run_random_memopsimulation() =
   let l = length icodes in
   let _ = assert (l >= 2) in
   let memop_index = if l >= 6 then l - 4 else l - 2 in
-  cosimulate_instructions (Some memop_index) add_assum icodes;;
+  cosimulate_instructions (Some memop_index)  (if add_assum then 16 else 0) icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Cosimulation of simple memory instructions with uniform [rsp+32] address  *)
@@ -1306,7 +1307,7 @@ let run_random_simplememopsimulation() =
     el (Random.int (length simplemem_iclasses)) simplemem_iclasses in
   let icodes = deferred_icodes() in
   let memop_index = 0 in
-  cosimulate_instructions (Some memop_index) add_assum icodes;;
+  cosimulate_instructions (Some memop_index) 32 icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
