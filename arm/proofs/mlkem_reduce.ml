@@ -206,14 +206,14 @@ let MLKEM_REDUCE_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
     (assoc "mlkem_reduce" subroutine_signatures)
     MLKEM_REDUCE_SUBROUTINE_CORRECT
     MLKEM_REDUCE_EXEC;;
 
 let MLKEM_REDUCE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall a pc returnaddress.
+       forall e a pc returnaddress.
            nonoverlapping (word pc,292) (a,512)
            ==> ensures arm
                (\s.
@@ -229,5 +229,5 @@ let MLKEM_REDUCE_SUBROUTINE_SAFE = time prove
                         e2 = f_events a pc returnaddress /\
                         memaccess_inbounds e2 [a,512; a,512] [a,512])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC MLKEM_REDUCE_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC ~public_vars:public_vars MLKEM_REDUCE_EXEC);;

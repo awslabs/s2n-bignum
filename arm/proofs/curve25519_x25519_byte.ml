@@ -3117,11 +3117,7 @@ let WORD_SUBWORD_SWAR_32_32 = prove
      word_subword((word_join:int32->int32->int64) h l) (32,32) = h`]);;
 
 let EXTRA_SIMD_CLAUSES = prove
- (`(!x. word_subword ((word_zx:int64->int128) x) (0,32):int32 =
-        word_subword x (0,32)) /\
-   (!x. word_subword ((word_zx:int64->int128) x) (32,32):int32 =
-        word_subword x (32,32)) /\
-   (!x. word_zx (word_subword (x:int128) (0,64):int64):int32 =
+ (`(!x. word_zx (word_subword (x:int128) (0,64):int64):int32 =
         word_subword x (0,32)) /\
    (!x. word_ushr (word_subword (x:int128) (0,64):int64) 32 =
         word_subword x (32,32)) /\
@@ -3146,11 +3142,18 @@ let EXTRA_SIMD_CLAUSES = prove
               word_subword x (32,32))`,
   CONV_TAC WORD_BLAST);;
 
+let WORD_SUBWORD_32_ZX = prove
+ (`!(x:N word) d.
+        word_subword x (d,32):int64 = word_zx (word_subword x (d,32):int32)`,
+  SIMP_TAC[GSYM VAL_EQ; VAL_WORD_ZX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
+  REWRITE_TAC[VAL_WORD_SUBWORD; DIMINDEX_32; DIMINDEX_64] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[]);;
+
 let EXTRA_SIMD_CONV ths =
   TOP_DEPTH_CONV
    (GEN_REWRITE_CONV I (EXTRA_SIMD_CLAUSES::ths) ORELSEC
     WORD_SIMPLE_SUBWORD_CONV) THENC
-  REWRITE_CONV[];;
+  REWRITE_CONV[WORD_SUBWORD_32_ZX];;
 
 let UBIGNUM_PACK_UNPACK_CLAUSES = prove
  (`(word_subword:int64->num#num->int32)

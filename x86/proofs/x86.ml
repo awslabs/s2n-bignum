@@ -865,11 +865,29 @@ let x86_MOVD = new_definition
     let (x':N word) = word_zx x in
     (dest := x') s`;;
 
+(*** The intermediate forcing to 64 bits is for MOVQ xmmM, xmmN  ***)
+
 let x86_MOVQ = new_definition
  `x86_MOVQ dest src s =
     let (x:M word) = read src s in
+    let (x':64 word) = word_zx x in
+    let (x'':N word) = word_zx x' in
+    (dest := x'') s`;;
+
+let x86_VMOVD = new_definition
+ `x86_VMOVD dest src s =
+    let (x:M word) = read src s in
     let (x':N word) = word_zx x in
     (dest := x') s`;;
+
+(*** The intermediate forcing to 64 bits is for VMOVQ xmmM, xmmN  ***)
+
+let x86_VMOVQ = new_definition
+ `x86_VMOVQ dest src s =
+    let (x:M word) = read src s in
+    let (x':64 word) = word_zx x in
+    let (x'':N word) = word_zx x' in
+    (dest := x'') s`;;
 
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
@@ -1055,7 +1073,7 @@ let x86_PINSRQ = new_definition
 let x86_PMOVMSKB = new_definition
  `x86_PMOVMSKB dest src (s:x86state) =
     let x:int128 = read src s in
-    let res:int16 = usimd2 (usimd8 (\x. if bit 7 x then word 1 else word 0)) x in
+    let res:int16 = usimd16 (\x. if bit 7 x then word 1 else word 0) x in
     (dest := word_zx res:N word) s`;;
 
 (*** Push and pop are a bit odd in several ways. First of all, there is  ***)
@@ -1597,6 +1615,36 @@ let x86_VPERM2I128 = new_definition
       else
         raise_exception x86_Exception_UD s`;;
 
+let x86_VPINSRD = new_definition
+ `x86_VPINSRD dest src1 src2 imm8 (s:x86state) =
+    let x:int128 = read src1 s
+    and w:int32 = read src2 s
+    and sel = val(read imm8 s:byte) MOD 4 in
+    let res = word_insert x (32 * sel,32) w in
+    (dest := res) s`;;
+
+let x86_VPINSRQ = new_definition
+ `x86_VPINSRQ dest src1 src2 imm8 (s:x86state) =
+    let x:int128 = read src1 s
+    and w:int64 = read src2 s
+    and sel = val(read imm8 s:byte) MOD 2 in
+    let res = word_insert x (64 * sel,64) w in
+    (dest := res) s`;;
+
+let x86_VPEXTRD = new_definition
+ `x86_VPEXTRD dest src imm8 (s:x86state) =
+    let x:int128 = read src s
+    and sel = val(read imm8 s:byte) MOD 4 in
+    let res = word_subword x (32 * sel, 32) in
+    (dest := res) s`;;
+
+let x86_VPEXTRQ = new_definition
+ `x86_VPEXTRQ dest src imm8 (s:x86state) =
+    let x:int128 = read src s
+    and sel = val(read imm8 s:byte) MOD 2 in
+    let res = word_subword x (64 * sel, 64) in
+    (dest := res) s`;;
+
 let x86_VPSHUFB = new_definition
   `x86_VPSHUFB dest src1 src2 (s:x86state) =
       let x:N word = read src1 s
@@ -1760,6 +1808,13 @@ let x86_VPAND = new_definition
         let x = read src1 s
         and y = read src2 s in
         let z = word_and x y in
+        (dest := (z:N word)) s`;;
+
+let x86_VPANDN = new_definition
+ `x86_VPANDN dest src1 src2 (s:x86state) =
+        let x = read src1 s
+        and y = read src2 s in
+        let z = word_and (word_not x) y in
         (dest := (z:N word)) s`;;
 
 let x86_VPOR = new_definition
@@ -2309,7 +2364,21 @@ let x86_execute = define
          add_store_event dest s ,,
         (\s. (match (operand_size dest, operand_size src) with
           (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128_SSE src s)
-        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)) s)) s
+        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)
+        | (128,128) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
+    | VMOVD dest src ->
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest, operand_size src) with
+          (32,128) -> x86_VMOVD (OPERAND32 dest s) (OPERAND128 src s)
+        | (128,32) -> x86_VMOVD (OPERAND128 dest s) (OPERAND32 src s)) s)) s
+    | VMOVQ dest src ->
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest, operand_size src) with
+          (64,128) -> x86_VMOVQ (OPERAND64 dest s) (OPERAND128 src s)
+        | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)
+        | (128,128) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND128 src s)) s)) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -2712,6 +2781,24 @@ let x86_execute = define
                                 (OPERAND256 src2 s) (OPERAND8 imm8 s)
         | 128 -> x86_VPERM2I128 (OPERAND128 dest s) (OPERAND128 src1 s)
                                 (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
+    | VPINSRD dest src1 src2 imm8 ->
+       (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+       (\s. x86_VPINSRD (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND32 src2 s)
+                       (OPERAND8 imm8 s) s)) s
+    | VPINSRQ dest src1 src2 imm8 ->
+       (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+       (\s. x86_VPINSRQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND64 src2 s)
+                       (OPERAND8 imm8 s) s)) s
+    | VPEXTRD dest src imm8 ->
+       (add_load_event src s ,, add_store_event dest s ,,
+       (\s. x86_VPEXTRD (OPERAND32 dest s) (OPERAND128 src s)
+                       (OPERAND8 imm8 s) s)) s
+    | VPEXTRQ dest src imm8 ->
+       (add_load_event src s ,, add_store_event dest s ,,
+       (\s. x86_VPEXTRQ (OPERAND64 dest s) (OPERAND128 src s)
+                       (OPERAND8 imm8 s) s)) s
     | VPMULDQ dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -2833,6 +2920,14 @@ let x86_execute = define
           256 -> x86_VPAND (OPERAND256 dest s) (OPERAND256 src1 s)
                            (OPERAND256 src2 s)
         | 128 -> x86_VPAND (OPERAND128 dest s) (OPERAND128 src1 s)
+                           (OPERAND128 src2 s)) s)) s
+    | VPANDN dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPANDN (OPERAND256 dest s) (OPERAND256 src1 s)
+                           (OPERAND256 src2 s)
+        | 128 -> x86_VPANDN (OPERAND128 dest s) (OPERAND128 src1 s)
                            (OPERAND128 src2 s)) s)) s
     | VPOR dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
@@ -3037,6 +3132,9 @@ let OPERAND_SIZE_CASES = prove
    (match (128,32) with (32,128) -> a | (128,32) -> b) = b /\
    (match (64,128) with (64,128) -> a | (128,64) -> b) = a /\
    (match (128,64) with (64,128) -> a | (128,64) -> b) = b /\
+   (match (64,128) with (64,128) -> a | (128,64) -> b | (128,128) -> c) = a /\
+   (match (128,64) with (64,128) -> a | (128,64) -> b | (128,128) -> c) = b /\
+   (match (128,128) with (64,128) -> a | (128,64) -> b | (128,128) -> c) = c /\
    (match (64,32) with
       (64,32) -> a  | (64,16) -> b  | (64,8) -> c | (32,32) -> d
     | (32,16) -> e | (32,8) -> f  | (16,8) -> g) = a /\
@@ -3638,7 +3736,7 @@ let X86_OPERATION_CLAUSES =
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
-    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_MOVSX; x86_MOVUPS;
+    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ; x86_MOVSX; x86_MOVUPS;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
@@ -3647,11 +3745,11 @@ let X86_OPERATION_CLAUSES =
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
-    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPMULLD_ALT; x86_VPMULLW_ALT;
-    x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT;
-    x86_VPSRLD_ALT; x86_VPSRLQ_ALT; x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT;
-    x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT; x86_VMOVDQA_ALT; x86_VMOVDQU_ALT;
-    x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
+    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPEXTRD; x86_VPEXTRQ;
+    x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPANDN;
+    x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLQ_ALT; x86_VPSRLW_ALT;
+    x86_VPBROADCASTD_ALT; x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT; x86_VMOVDQA_ALT;
+    x86_VMOVDQU_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
@@ -4762,3 +4860,112 @@ let ADD_IBT_RULE th =
     | _ -> if tm = trimctm then  fullmctm else tm in
   prove(adjust (concl th),
         ADD_IBT_TAC fullmc trimc th);;
+
+let READ_ZMM_BOTTOM_QUARTER = prove
+ (`!zmmx:(S,512 word)component s.
+     read (zmmx :> bottomhalf :> bottomhalf) s = word_zx (read zmmx s)`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; bottomhalf; READ_SUBWORD] THEN
+  REWRITE_TAC[DIMINDEX_512; DIMINDEX_256; DIMINDEX_128] THEN
+  CONV_TAC WORD_BLAST);;
+
+let READ_ZMM_BOTTOM_QUARTER' = prove
+ (`!zmmx:(S,512 word)component s.
+     read (zmmx :> bottomhalf :> bottomhalf) s =
+     word_zx (read (zmmx :> zerotop_256) s)`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; bottomhalf; READ_SUBWORD;
+              READ_ZEROTOP_256] THEN
+  REWRITE_TAC[DIMINDEX_512; DIMINDEX_256; DIMINDEX_128] THEN
+  CONV_TAC WORD_BLAST);;
+
+let MAYCHANGE_ZMM_QUARTER = prove
+ (`MAYCHANGE [ZMM6] =
+   MAYCHANGE [ZMM6 :> tophalf] ,,
+   MAYCHANGE [ZMM6 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM6 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [ZMM7] =
+   MAYCHANGE [ZMM7 :> tophalf] ,,
+   MAYCHANGE [ZMM7 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM7 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM8] =
+   MAYCHANGE [ZMM8 :> tophalf] ,,
+   MAYCHANGE [ZMM8 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM8 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM9] =
+   MAYCHANGE [ZMM9 :> tophalf] ,,
+   MAYCHANGE [ZMM9 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM9 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM10] =
+   MAYCHANGE [ZMM10 :> tophalf] ,,
+   MAYCHANGE [ZMM10 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM10 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM11] =
+   MAYCHANGE [ZMM11 :> tophalf] ,,
+   MAYCHANGE [ZMM11 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM11 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM12] =
+   MAYCHANGE [ZMM12 :> tophalf] ,,
+   MAYCHANGE [ZMM12 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM12 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM13] =
+   MAYCHANGE [ZMM13 :> tophalf] ,,
+   MAYCHANGE [ZMM13 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM13 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM14] =
+   MAYCHANGE [ZMM14 :> tophalf] ,,
+   MAYCHANGE [ZMM14 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM14 :> bottomhalf :> bottomhalf] /\
+  MAYCHANGE [ZMM15] =
+   MAYCHANGE [ZMM15 :> tophalf] ,,
+   MAYCHANGE [ZMM15 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM15 :> bottomhalf :> bottomhalf]`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[MAYCHANGE_SING] THEN
+  (W(MP_TAC o PART_MATCH (rand o rand) ASSIGNS_TOPHALF_BOTTOMHALF o
+    lhand o snd) THEN
+  ANTS_TAC THENL
+   [CONV_TAC VALID_COMPONENT_CONV ; DISCH_THEN(SUBST1_TAC o SYM)] THEN
+  AP_TERM_TAC THEN
+  W(MP_TAC o PART_MATCH (rand o rand) ASSIGNS_TOPHALF_BOTTOMHALF o
+    lhand o snd) THEN
+  ANTS_TAC THENL
+   [CONV_TAC VALID_COMPONENT_CONV ; DISCH_THEN(SUBST1_TAC o SYM)] THEN
+  REWRITE_TAC[COMPONENT_COMPOSE_ASSOC]));;
+
+let MAYCHANGE_YMM_SSE_QUARTER = prove
+ (`MAYCHANGE [YMM6_SSE] =
+   MAYCHANGE [ZMM6 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM6 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM7_SSE] =
+   MAYCHANGE [ZMM7 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM7 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM8_SSE] =
+   MAYCHANGE [ZMM8 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM8 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM9_SSE] =
+   MAYCHANGE [ZMM9 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM9 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM10_SSE] =
+   MAYCHANGE [ZMM10 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM10 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM11_SSE] =
+   MAYCHANGE [ZMM11 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM11 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM12_SSE] =
+   MAYCHANGE [ZMM12 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM12 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM13_SSE] =
+   MAYCHANGE [ZMM13 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM13 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM14_SSE] =
+   MAYCHANGE [ZMM14 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM14 :> bottomhalf :> bottomhalf] /\
+   MAYCHANGE [YMM15_SSE] =
+   MAYCHANGE [ZMM15 :> bottomhalf :> tophalf] ,,
+   MAYCHANGE [ZMM15 :> bottomhalf :> bottomhalf]`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[bottom_256; YMM6_SSE; YMM7_SSE; YMM8_SSE; YMM9_SSE;
+    YMM10_SSE; YMM11_SSE; YMM12_SSE; YMM13_SSE;
+    YMM14_SSE; YMM15_SSE] THEN
+  CONV_TAC SYM_CONV THEN
+  REWRITE_TAC[MAYCHANGE_SING; COMPONENT_COMPOSE_ASSOC] THEN
+  MATCH_MP_TAC ASSIGNS_TOPHALF_BOTTOMHALF THEN
+  CONV_TAC VALID_COMPONENT_CONV);;

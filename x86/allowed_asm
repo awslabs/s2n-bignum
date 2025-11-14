@@ -126,6 +126,8 @@
 : subq$
 : test$
 : testq$
+: vmovd$
+: vmovq$
 : vmovdqa$
 : vmovdqu$
 : vmovshdup$
@@ -133,6 +135,7 @@
 : vpaddd$
 : vpaddw$
 : vpand$
+: vpandn$
 : vpblendd$
 : vpblendw$
 : vpbroadcastd$
@@ -140,6 +143,10 @@
 : vperm2i128$
 : vpermd$
 : vpermq$
+: vpinsrd$
+: vpinsrq$
+: vpextrd$
+: vpextrq$
 : vpmuldq$
 : vpmulhw$
 : vpmulld$

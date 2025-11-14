@@ -297,8 +297,13 @@ onlyInArm = [
   "bignum_emontredc_8n_cdiff",
   "curve25519_x25519_byte",
   "curve25519_x25519_byte_alt",
-  "mlkem_",
   "sha3_",
+  "mlkem_intt",
+  "mlkem_mulcache_compute",
+  "mlkem_ntt",
+  "mlkem_rej_uniform_VARIABLE_TIME",
+  "mlkem_tobytes",
+  "mlkem_tomont",
 ]
 onlyInX86 = [
   "bignum_cmul_p25519_alt",
@@ -325,6 +330,7 @@ onlyInX86 = [
   "bignum_triple_p384_alt",
   "bignum_triple_p521_alt",
   "bignum_triple_sm2_alt",
+  "mldsa_ntt",
   "mldsa_poly_reduce",
 ]
 

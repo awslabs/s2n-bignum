@@ -276,14 +276,14 @@ let SHA3_KECCAK_F1600_ALT_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
     (assoc "sha3_keccak_f1600_alt" subroutine_signatures)
     SHA3_KECCAK_F1600_ALT_SUBROUTINE_CORRECT
     SHA3_KECCAK_F1600_ALT_EXEC;;
 
 let SHA3_KECCAK_F1600_ALT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall a rc pc stackpointer returnaddress.
+       forall e a rc pc stackpointer returnaddress.
            aligned 16 stackpointer /\
            nonoverlapping (a,200) (word_sub stackpointer (word 64),64) /\
            ALLPAIRS nonoverlapping
@@ -293,8 +293,8 @@ let SHA3_KECCAK_F1600_ALT_SUBROUTINE_SAFE = time prove
                (\s.
                     aligned_bytes_loaded s (word pc) sha3_keccak_f1600_alt_mc /\
                     read PC s = word pc /\
-                    read X30 s = returnaddress /\
                     read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
                     C_ARGUMENTS [a; rc] s /\
                     read events s = e)
                (\s.
@@ -309,5 +309,5 @@ let SHA3_KECCAK_F1600_ALT_SUBROUTINE_SAFE = time prove
                          word_sub stackpointer (word 64),64]
                         [a,200; word_sub stackpointer (word 64),64])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC SHA3_KECCAK_F1600_ALT_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC ~public_vars:public_vars SHA3_KECCAK_F1600_ALT_EXEC);;

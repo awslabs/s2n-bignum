@@ -474,15 +474,24 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           SOME (PSRAD (simd_of_RM sz rm) imm8, l))
          else NONE
        | _ -> NONE)
-    | [0x7e:8] -> if has_unhandled_pfxs pfxs then NONE else
-      read_ModRM rex l >>= \((reg,rm),l).
-      let sz = if rex_W rex then Full_64 else Lower_32 in
-      let dest = operand_of_RM sz rm in
-      let src = mmreg reg Lower_128 in
-      (match pfxs with
+    | [0x7e:8] ->
+      (read_ModRM rex l >>= \((reg,rm),l).
+      match pfxs with
       | (T, Rep0, SG0) ->
-        if rex_W rex then SOME (MOVQ dest src, l) else SOME (MOVD dest src, l)
-      | _ -> NONE)
+        if rex_W rex then
+          let src = mmreg reg Lower_128 in
+          let dst = operand_of_RM Full_64 rm in
+          SOME (MOVQ dst src, l)
+        else
+          let src = mmreg reg Lower_128 in
+          let dst = operand_of_RM Lower_32 rm in
+          SOME (MOVD dst src, l)
+    | (F, RepZ, SG0) ->
+          let src = if is_memop rm then operand_of_RM Full_64 rm
+                  else simd_of_RM Lower_128 rm in
+          let dst = mmreg reg Lower_128 in
+          SOME (MOVQ dst src, l)
+        | _ -> NONE)
     | [0x8:4; c:4] -> if has_pfxs pfxs then NONE else
       read_int32 l >>= \(imm,l).
       SOME (JUMP (decode_condition c) (Imm32 imm),l)
@@ -549,6 +558,15 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
       SOME (PADDQ (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0xd6:8] ->
+      (read_ModRM rex l >>= \((reg,rm),l).
+        match pfxs with
+        | (T, Rep0, SG0) ->
+            let src = mmreg reg Lower_128 in
+            let dst = if is_memop rm then operand_of_RM Full_64 rm
+                    else simd_of_RM Lower_128 rm in
+            SOME (MOVQ dst src, l)
+        | _ -> NONE)
     | [0xd7:8] -> if has_unhandled_pfxs pfxs then NONE else
       read_ModRM rex l >>= \((reg,rm),l).
       let dest = %(gpr_adjust reg Lower_32) in
@@ -736,6 +754,21 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPUNPCKHQDQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0x6e:8] ->  if word_not v = (word 0b1111:4 word) then
+          (if L then NONE else
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) ->
+             if rex_W rex then
+               let dst = mmreg reg Lower_128 in
+               let src = operand_of_RM Full_64 rm in
+               SOME (VMOVQ dst src, l)
+             else
+               let dst = mmreg reg Lower_128 in
+               let src = operand_of_RM Lower_32 rm in
+               SOME (VMOVD dst src, l)
+           | _ -> NONE))
+          else NONE
         | [0x6f:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -743,6 +776,26 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            | (T, Rep0, SG0) -> SOME(VMOVDQA (mmreg reg sz) (simd_of_RM sz rm),l)
            | (F, RepZ, SG0) -> SOME(VMOVDQU (mmreg reg sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0x7e:8] -> if word_not v = (word 0b1111:4 word) then
+          (if L then NONE else
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) ->
+             if rex_W rex then
+               let src = mmreg reg Lower_128 in
+               let dst = operand_of_RM Full_64 rm in
+               SOME (VMOVQ dst src, l)
+             else
+               let src = mmreg reg Lower_128 in
+               let dst = operand_of_RM Lower_32 rm in
+               SOME (VMOVD dst src, l)
+          | (F, RepZ, SG0) ->
+               let src = if is_memop rm then operand_of_RM Full_64 rm
+                       else simd_of_RM Lower_128 rm in
+               let dst = mmreg reg Lower_128 in
+               SOME (VMOVQ dst src, l)
+          | _ -> NONE))
+        else NONE
         | [0x7f:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -761,6 +814,12 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
           (read_ModRM rex l >>= \((reg,rm),l).
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPAND (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
+        | [0xdf:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPANDN (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
         | [0xe5:8] ->
           let sz = vexL_size L in
@@ -851,7 +910,18 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                   | _ -> NONE)
                | _ -> NONE))
             | _ -> NONE)
-          | _ -> NONE)
+        | [0xd6:8] -> (if word_not v = (word 0b1111:4 word) then
+          (if L then NONE else
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) ->
+              let src = mmreg reg Lower_128 in
+              let dst = if is_memop rm then operand_of_RM Full_64 rm
+                      else simd_of_RM Lower_128 rm in
+              SOME (VMOVQ dst src, l)
+           | _ -> NONE))
+        else NONE)
+      | _ -> NONE)
     | VEXM_0F3A ->
         read_byte l >>= \(b,l).
         (bitmatch b with
@@ -878,6 +948,33 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
             read_imm Byte l >>= \(imm8,l).
             match pfxs with
             | (T, Rep0, SG0) -> SOME (VPBLENDW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+            | _ -> NONE)
+        | [0x16:8] ->
+           if word_not v = (word 0b1111:4 word) then
+           (if L then NONE else
+            read_ModRM rex l >>= \((reg,rm),l).
+            read_imm Byte l >>= \(imm8,l).
+            let src = mmreg reg Lower_128 in
+            let sz = if rex_W rex then Full_64 else Lower_32 in
+            let dest = operand_of_RM sz rm in
+            (match pfxs with
+            | (T, Rep0, SG0) ->
+              if rex_W rex then SOME (VPEXTRQ dest src imm8, l)
+              else SOME (VPEXTRD dest src imm8, l)
+            | _ -> NONE))
+          else NONE
+        | [0x22:8] ->
+            if L then NONE else
+            read_ModRM rex l >>= \((reg,rm),l).
+            read_imm Byte l >>= \(imm8,l).
+            let dest = mmreg reg Lower_128 in
+            let src1 = mmreg v Lower_128 in
+            let sz = if rex_W rex then Full_64 else Lower_32 in
+            let src2 = operand_of_RM sz rm in
+            (match pfxs with
+            | (T, Rep0, SG0) ->
+              if rex_W rex then SOME (VPINSRQ dest src1 src2 imm8, l)
+              else SOME (VPINSRD dest src1 src2 imm8, l)
             | _ -> NONE)
         | [0x46:8] ->
           let sz = vexL_size L in

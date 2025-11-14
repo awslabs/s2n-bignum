@@ -4716,6 +4716,81 @@ let subroutine_signatures = [
    ])
 );
 
+("mlkem_basemul_k2",
+  ([(*args*)
+     ("r", "int16_t[static 256]", (*is const?*)"false");
+     ("a", "int16_t[static 512]", (*is const?*)"true");
+     ("b", "int16_t[static 512]", (*is const?*)"true");
+     ("bt", "int16_t[static 256]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "512"(* num elems *), 2(* elem bytesize *));
+    ("b", "512"(* num elems *), 2(* elem bytesize *));
+    ("bt", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mlkem_basemul_k3",
+  ([(*args*)
+     ("r", "int16_t[static 256]", (*is const?*)"false");
+     ("a", "int16_t[static 768]", (*is const?*)"true");
+     ("b", "int16_t[static 768]", (*is const?*)"true");
+     ("bt", "int16_t[static 384]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "768"(* num elems *), 2(* elem bytesize *));
+    ("b", "768"(* num elems *), 2(* elem bytesize *));
+    ("bt", "384"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mlkem_basemul_k4",
+  ([(*args*)
+     ("r", "int16_t[static 256]", (*is const?*)"false");
+     ("a", "int16_t[static 1024]", (*is const?*)"true");
+     ("b", "int16_t[static 1024]", (*is const?*)"true");
+     ("bt", "int16_t[static 512]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "1024"(* num elems *), 2(* elem bytesize *));
+    ("b", "1024"(* num elems *), 2(* elem bytesize *));
+    ("bt", "512"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mlkem_reduce",
+  ([(*args*)
+     ("a", "int16_t[static 256]", (*is const?*)"false");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("p256_montjadd",
   ([(*args*)
      ("p3", "uint64_t[static 12]", (*is const?*)"false");
