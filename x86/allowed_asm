@@ -126,6 +126,8 @@
 : subq$
 : test$
 : testq$
+: vmovd$
+: vmovq$
 : vmovdqa$
 : vmovdqu$
 : vmovshdup$
