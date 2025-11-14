@@ -865,11 +865,14 @@ let x86_MOVD = new_definition
     let (x':N word) = word_zx x in
     (dest := x') s`;;
 
+(*** The intermediate forcing to 64 bits is for MOVQ xmmM, xmmN  ***)
+
 let x86_MOVQ = new_definition
  `x86_MOVQ dest src s =
     let (x:M word) = read src s in
-    let (x':N word) = word_zx x in
-    (dest := x') s`;;
+    let (x':64 word) = word_zx x in
+    let (x'':N word) = word_zx x' in
+    (dest := x'') s`;;
 
 let x86_VMOVD = new_definition
  `x86_VMOVD dest src s =
@@ -877,11 +880,14 @@ let x86_VMOVD = new_definition
     let (x':N word) = word_zx x in
     (dest := x') s`;;
 
+(*** The intermediate forcing to 64 bits is for VMOVQ xmmM, xmmN  ***)
+
 let x86_VMOVQ = new_definition
  `x86_VMOVQ dest src s =
     let (x:M word) = read src s in
-    let (x':N word) = word_zx x in
-    (dest := x') s`;;
+    let (x':64 word) = word_zx x in
+    let (x'':N word) = word_zx x' in
+    (dest := x'') s`;;
 
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
@@ -2358,7 +2364,8 @@ let x86_execute = define
          add_store_event dest s ,,
         (\s. (match (operand_size dest, operand_size src) with
           (64,128) -> x86_MOVQ (OPERAND64 dest s) (OPERAND128_SSE src s)
-        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)) s)) s
+        | (128,64) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND64 src s)
+        | (128,128) -> x86_MOVQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s)) s)) s
     | VMOVD dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -2370,7 +2377,8 @@ let x86_execute = define
          add_store_event dest s ,,
         (\s. (match (operand_size dest, operand_size src) with
           (64,128) -> x86_VMOVQ (OPERAND64 dest s) (OPERAND128 src s)
-        | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)) s)) s
+        | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)
+        | (128,128) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND128 src s)) s)) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -3124,6 +3132,9 @@ let OPERAND_SIZE_CASES = prove
    (match (128,32) with (32,128) -> a | (128,32) -> b) = b /\
    (match (64,128) with (64,128) -> a | (128,64) -> b) = a /\
    (match (128,64) with (64,128) -> a | (128,64) -> b) = b /\
+   (match (64,128) with (64,128) -> a | (128,64) -> b | (128,128) -> c) = a /\
+   (match (128,64) with (64,128) -> a | (128,64) -> b | (128,128) -> c) = b /\
+   (match (128,128) with (64,128) -> a | (128,64) -> b | (128,128) -> c) = c /\
    (match (64,32) with
       (64,32) -> a  | (64,16) -> b  | (64,8) -> c | (32,32) -> d
     | (32,16) -> e | (32,8) -> f  | (16,8) -> g) = a /\
