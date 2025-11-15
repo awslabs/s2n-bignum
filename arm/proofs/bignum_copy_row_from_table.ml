@@ -57,10 +57,6 @@ let PAIR_EQ_ARITH_RULE (lp:term) (rp:term) =
 let REWRITE_ASSUMES_TAC (t:term) =
     UNDISCH_THEN t (fun thm -> RULE_ASSUM_TAC (REWRITE_RULE [thm]) THEN ASSUME_TAC thm);;
 
-let READ_MEMORY_BYTES_0 = prove(`read (memory :> bytes (z,0)) s = 0`,
-    REWRITE_TAC[PAIR_EQ_ARITH_RULE `(x:int64,0)` `(x:int64, 8*0)`] THEN
-    REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; BIGNUM_FROM_MEMORY_TRIVIAL]);;
-
 let LT_WORD_64 = prove(`!x (y:int64). x < val y ==> x < 2 EXP 64`,
   REPEAT STRIP_TAC THEN
   TRANS_TAC LT_TRANS `val (y:int64)` THEN
@@ -123,7 +119,6 @@ let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
     nonoverlapping (word pc, LENGTH bignum_copy_row_from_table_mc)
                    (table, 8 * val height * val width) /\
     nonoverlapping (z, 8 * val width) (table, 8 * val height * val width) /\
-    8 * val width < 2 EXP 64 /\
     val idx < val height
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) bignum_copy_row_from_table_mc /\
@@ -143,19 +138,21 @@ let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
               MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT STRIP_TAC THEN
 
-  ASM_CASES_TAC `val (height:(64)word) = 0` THENL [
-    UNDISCH_TAC `val (idx:int64) < val (height:int64)` THEN
-    ASM_REWRITE_TAC[] THEN REWRITE_TAC[LT] THEN ENSURES_INIT_TAC "s0" THEN ITAUT_TAC;
+  (*** Get basic bounds from the nonoverlapping assumptions ***)
+
+  SUBGOAL_THEN `8 * val (width:int64) < 2 EXP 64` STRIP_ASSUME_TAC THENL
+   [EVERY_ASSUM(fun th ->
+      try MP_TAC
+       (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th)
+      with Failure _ -> ALL_TAC) THEN ARITH_TAC;
     ALL_TAC] THEN
-  ASM_CASES_TAC `width = (word 0):(64)word` THENL [
-    ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[VAL_WORD_0; MULT_0; WORD_ADD_0] THEN
+
+  ASM_CASES_TAC `val (height:(64)word) = 0` THENL [
+    ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_CASES_TAC `val (width:int64) = 0` THENL [
+    ASM_REWRITE_TAC[MULT_0; WORD_ADD_0] THEN
     ARM_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_EXEC [1;2;3] THEN
     ASM_MESON_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; BIGNUM_FROM_MEMORY_TRIVIAL];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `~(val (width:64 word) = 0)` ASSUME_TAC THENL [
-    UNDISCH_TAC `~(width = word 0:64 word)` THEN
-    REWRITE_TAC[VAL_EQ_0];
     ALL_TAC] THEN
 
   ENSURES_SEQUENCE_TAC `pc + 0x10`
@@ -321,13 +318,13 @@ let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
         REWRITE_TAC[ASSUME `i > val (idx:int64)`] THEN
         REWRITE_ASSUMES_TAC `i > val (idx:int64)` THEN
         REWRITE_ASSUMES_TAC `~(i <= val (idx:int64))` THEN
-        ASM_REWRITE_TAC[READ_MEMORY_BYTES_0; LOWDIGITS_0; HIGHDIGITS_0];
+        ASM_REWRITE_TAC[READ_MEMORY_BYTES_TRIVIAL; LOWDIGITS_0; HIGHDIGITS_0];
 
         SUBGOAL_THEN `i <= val (idx:int64)` ASSUME_TAC THENL
           [UNDISCH_TAC `~(i > val (idx:int64))` THEN ARITH_TAC; ALL_TAC] THEN
         REWRITE_ASSUMES_TAC `i <= val (idx:int64)` THEN
         REWRITE_ASSUMES_TAC `~(i > val (idx:int64))` THEN
-        ASM_REWRITE_TAC[ASSUME `~(i > val (idx:int64))`; LOWDIGITS_0; READ_MEMORY_BYTES_0] THEN
+        ASM_REWRITE_TAC[ASSUME `~(i > val (idx:int64))`; LOWDIGITS_0; READ_MEMORY_BYTES_TRIVIAL] THEN
         UNDISCH_TAC `i <= val (idx:int64)` THEN
         ARITH_TAC]];
 
@@ -622,3 +619,261 @@ let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT = prove(
     ]
   ]);;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    (assoc "bignum_copy_row_from_table" subroutine_signatures)
+    BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_CORRECT
+    BIGNUM_COPY_ROW_FROM_TABLE_EXEC;;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_SUBROUTINE_SAFE = prove(
+  `exists f_events.
+       forall e z table height width idx pc returnaddress.
+           nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_mc)
+           (z,8 * val width) /\
+           nonoverlapping (word pc,LENGTH bignum_copy_row_from_table_mc)
+           (table,8 * val height * val width) /\
+           nonoverlapping (z,8 * val width)
+           (table,8 * val height * val width) /\
+           val idx < val height
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    bignum_copy_row_from_table_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; table; height; width; idx] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events table z width height pc returnaddress /\
+                         memaccess_inbounds e2
+                         [table,(val height * val width) * 8; z,val width * 8]
+                         [z,val width * 8]))
+               (\s s'. true)`,
+
+  ASSERT_CONCL_TAC full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(table:int64) (z:int64) (width:int64) (height:int64) (pc:num)
+        (returnaddress:int64).
+      if val width = 0 then
+        f_ev_width0 table z width height pc returnaddress
+      else
+        APPEND
+          (APPEND
+            (APPEND
+              (f_ev_outerloop_epil table z width height pc returnaddress)
+              (APPEND
+                (ENUMERATEL (val height) (\i.
+                  (APPEND
+                    (f_ev_innerloop_epil table z width height pc returnaddress i)
+                    (APPEND
+                      (ENUMERATEL (val width) (\j.
+                        f_ev_innerloop table z width height pc returnaddress i j))
+                      (f_ev_innerloop_prol table z width height pc returnaddress i))
+                  )
+                ))
+                (f_ev_outerloop_prol table z width height pc returnaddress))
+            )
+            (APPEND
+              (ENUMERATEL (val width)
+                (\i. f_ev_initzero table z width height pc returnaddress i))
+              (f_ev_initzero_prol table z width height pc returnaddress)))
+          (f_ev_begin  table z width height pc returnaddress)
+    :(uarch_event)list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC (* e2 *) THEN
+
+  REPEAT_N 2 GEN_TAC THEN
+  MAP_EVERY W64_GEN_TAC [`h:num`;`w:num`;`idx:num`] THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              fst BIGNUM_COPY_ROW_FROM_TABLE_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+
+  (*** Get basic bounds from the nonoverlapping assumptions ***)
+
+  SUBGOAL_THEN `8 * w < 2 EXP 64` STRIP_ASSUME_TAC THENL
+   [EVERY_ASSUM(fun th ->
+      try MP_TAC
+       (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th)
+      with Failure _ -> ALL_TAC) THEN ARITH_TAC;
+    ALL_TAC] THEN
+
+  ASM_CASES_TAC `h = 0` THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_CASES_TAC `w = 0` THENL [
+    ASM_REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC [1;2;3] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC] THEN
+
+  ASM_REWRITE_TAC[] THEN
+
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x10`
+      `\s. read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
+          read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
+          read X5 s = word w /\ read X6 s = z` THEN CONJ_TAC THENL [
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC (1--4) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC] THEN
+
+  REWRITE_TAC[] THEN
+
+  (* bignum_copy_row_from_table_initzero *)
+  ENSURES_EVENTS_WHILE_UP2_TAC
+    `w:num` `pc + 0x10` `pc + 0x20`
+    `\i s.  read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
+            read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
+            read X5 s = word (w - i) /\
+            read X6 s = word_add z (word (8 * i))` THEN REPEAT CONJ_TAC THENL [
+    SIMPLE_ARITH_TAC;
+
+    (* precond *)
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC [] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (* main loop *)
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC (1--4) THEN
+    CONJ_TAC THENL [
+      MAP_EVERY VAL_INT64_TAC [`w - i`;`1`] THEN
+      ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+      SIMPLE_ARITH_TAC; ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [
+      REWRITE_TAC[WORD_SUB] THEN
+      (REPEAT COND_CASES_TAC THEN TRY SIMPLE_ARITH_TAC) THEN
+      CONV_TAC WORD_RULE; ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (* postcond *)
+    ALL_TAC
+  ] THEN
+
+  REWRITE_TAC[] THEN
+  REWRITE_TAC[METIS[APPEND_ASSOC]
+      `(exists e2. P e2 /\
+        e2 = APPEND (APPEND (APPEND epil (APPEND loop prol)) tail) tail2 /\
+        Q e2)
+       <=>
+       (exists e2. P e2 /\
+        e2 = APPEND (APPEND epil (APPEND loop prol)) (APPEND tail tail2) /\
+        Q e2)`] THEN
+  ASM_REWRITE_TAC[] (* to simplify word w in precondition... *) THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `h:num` `pc + 0x28` `pc + 0x68`
+    `\i s.  read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
+            read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
+            read X5 s = word i /\ read X8 s = word_add table (word (8 * i * w))`
+  THEN REPEAT CONJ_TAC THENL [
+    SIMPLE_ARITH_TAC;
+
+    (* loop start *)
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC (1--2) THEN
+    CONJ_TAC THENL [REWRITE_TAC[MULT_CLAUSES;ADD_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (* loop body *)
+    ALL_TAC;
+
+    (* loop postcond *)
+    REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC (1--1) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]
+  THEN
+
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[] THEN
+  REWRITE_TAC [ENUMERATEL_ADD1] THEN
+  REWRITE_TAC[METIS[APPEND_ASSOC]
+      `(exists e2. P e2 /\
+        e2 = APPEND (APPEND (APPEND epil (APPEND loop prol)) tail) tail2 /\
+        Q e2)
+       <=>
+       (exists e2. P e2 /\
+        e2 = APPEND (APPEND epil (APPEND loop prol)) (APPEND tail tail2) /\
+        Q e2)`] THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `w:num` `pc + 0x38` `pc + 0x5c`
+    `\j s.  read X30 s = returnaddress /\ read X0 s = z /\ read X1 s = table /\
+            read X2 s = word h /\ read X3 s = word w /\ read X4 s = word idx /\
+            read X5 s = word i /\ read X7 s = word (w - j) /\
+            // pointers
+            read X8 s = word_add table (word (8 * (i * w + j))) /\
+            read X9 s = word_add z (word (8 * j))`
+  THEN REPEAT CONJ_TAC THENL [
+    SIMPLE_ARITH_TAC;
+
+    (* loop start *)
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC (1--4) THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN NO_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL [REWRITE_TAC[ADD_0] THEN NO_TAC; ALL_TAC] THEN
+    CONJ_TAC THENL [REWRITE_TAC[MULT_CLAUSES;WORD_ADD_0] THEN NO_TAC; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (* loop body *)
+    ALL_TAC;
+
+    (* loop postcond *)
+    REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC (1--3) THEN
+    CONJ_TAC THENL [
+      REWRITE_TAC[VAL_WORD_SUB_EQ_0;VAL_WORD_ADD;DIMINDEX_64] THEN
+      MAP_EVERY VAL_INT64_TAC [`i:num`;`1`;`h:num`] THEN
+      ASM_REWRITE_TAC[] THEN IMP_REWRITE_TAC[MOD_LT] THEN
+      SIMPLE_ARITH_TAC; ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+    CONJ_TAC THENL [AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]
+
+  THEN
+  REWRITE_TAC[] THEN REPEAT STRIP_TAC THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_EXEC (1--9) THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0;VAL_WORD_ADD;DIMINDEX_64] THEN
+    MAP_EVERY VAL_INT64_TAC [`w - i'`;`1`] THEN
+    ASM_REWRITE_TAC[] THEN
+    SIMPLE_ARITH_TAC; ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+    [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+    ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC THEN
+  (* one contained_modul remains *)
+  DISJ1_TAC THEN
+  SUBGOAL_THEN `i * w + i' < h * w` ASSUME_TAC THENL [
+    TRANS_TAC LTE_TRANS `i * w + w` THEN CONJ_TAC THENL [
+      SIMPLE_ARITH_TAC; ALL_TAC
+    ] THEN
+    TRANS_TAC LE_TRANS `(h-1) * w + w` THEN CONJ_TAC THENL [
+      REWRITE_TAC[LE_ADD_RCANCEL] THEN REWRITE_TAC[LE_MULT_RCANCEL] THEN
+      SIMPLE_ARITH_TAC; ALL_TAC
+    ] THEN
+    MATCH_MP_TAC LE_MULT_ADD THEN SIMPLE_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+  CONTAINED_TAC);;

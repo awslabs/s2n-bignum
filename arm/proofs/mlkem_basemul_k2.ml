@@ -423,8 +423,8 @@ let MLKEM_BASEMUL_K2_SUBROUTINE_SAFE = time prove
                     C_ARGUMENTS [dst; srcA; srcB; srcBt] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 =
                         f_events srcA srcB srcBt dst pc
