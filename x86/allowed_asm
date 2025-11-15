@@ -147,6 +147,8 @@
 : vpinsrq$
 : vpextrd$
 : vpextrq$
+: vinserti128$
+: vextracti128$
 : vpmuldq$
 : vpmulhw$
 : vpmulld$

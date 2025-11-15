@@ -335,6 +335,8 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPEXTRQ operand operand operand
    | VPINSRD operand operand operand operand
    | VPINSRQ operand operand operand operand
+   | VEXTRACTI128 operand operand operand
+   | VINSERTI128 operand operand operand operand
    | VPMULDQ operand operand operand
    | VPMULHW operand operand operand
    | VPMULLD operand operand operand
