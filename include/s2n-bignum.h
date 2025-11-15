@@ -858,7 +858,7 @@ extern void bignum_tolebytes_4 (uint8_t z[S2N_BIGNUM_STATIC 32], const uint64_t 
 extern void bignum_tolebytes_6 (uint8_t z[S2N_BIGNUM_STATIC 48], const uint64_t x[S2N_BIGNUM_STATIC 6]);
 
 // Convert 9-digit 528-bit bignum to little-endian bytes
-// Input x[6]; output z[66] (bytes)
+// Input x[9]; output z[66] (bytes)
 extern void bignum_tolebytes_p521 (uint8_t z[S2N_BIGNUM_STATIC 66], const uint64_t x[S2N_BIGNUM_STATIC 9]);
 
 // Convert to Montgomery form z := (2^256 * x) mod p_256

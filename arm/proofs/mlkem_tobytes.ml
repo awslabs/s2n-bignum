@@ -238,8 +238,8 @@ let MLKEM_TOBYTES_SUBROUTINE_SAFE = time prove
                     C_ARGUMENTS [r; a] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 = f_events a r pc returnaddress /\
                         memaccess_inbounds e2 [a,512; r,384] [r,384])

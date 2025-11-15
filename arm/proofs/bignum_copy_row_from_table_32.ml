@@ -364,3 +364,97 @@ let BIGNUM_COPY_ROW_FROM_TABLE_32_SUBROUTINE_CORRECT = prove(
     ] THEN
     ASM_REWRITE_TAC[]
   ]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    (assoc "bignum_copy_row_from_table_32" subroutine_signatures)
+    BIGNUM_COPY_ROW_FROM_TABLE_32_SUBROUTINE_CORRECT
+    BIGNUM_COPY_ROW_FROM_TABLE_32_EXEC;;
+
+let BIGNUM_COPY_ROW_FROM_TABLE_32_SUBROUTINE_SAFE = prove(
+  `exists f_events.
+      forall e z table height idx pc returnaddress.
+          nonoverlapping (word pc,292) (z,8 * 32) /\
+          nonoverlapping (word pc,292) (table,8 * val height * 32) /\
+          nonoverlapping (z,8 * 16) (table,8 * val height * 32) /\
+          val idx < val height
+          ==> ensures arm
+              (\s.
+                  aligned_bytes_loaded s (word pc)
+                  bignum_copy_row_from_table_32_mc /\
+                  read PC s = word pc /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [z; table; height; idx] s /\
+                  read events s = e)
+              (\s.
+                  read PC s = returnaddress /\
+                  (exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 = f_events table z height pc returnaddress /\
+                        memaccess_inbounds e2
+                        [table,(val height * 32) * 8; z,256]
+                        [z,256]))
+              (\s s'. true)`,
+
+  ASSERT_CONCL_TAC full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(table:int64) (z:int64) (height:int64) (pc:num) (returnaddress:int64).
+      APPEND
+        (f_ev_epil table z height pc returnaddress)
+        (APPEND
+          (ENUMERATEL (val height) (\i.
+            f_ev_loop table z height pc returnaddress i))
+          (f_ev_prol table z height pc returnaddress))
+    :(uarch_event)list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC (* e2 *) THEN
+
+  REPEAT_N 2 GEN_TAC THEN
+  MAP_EVERY W64_GEN_TAC [`h:num`;`idx:num`] THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
+              fst BIGNUM_COPY_ROW_FROM_TABLE_32_EXEC] THEN
+  REPEAT STRIP_TAC THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `h:num` `pc + 0x44` `pc + 0xe0`
+    `\i s.  read X30 s = returnaddress /\ read X0 s = z /\ read X2 s = word h /\
+            read X3 s = word idx /\ read X6 s = word i /\
+            read X1 s = word_add table (word (8 * 32 * i))`
+  THEN REPEAT CONJ_TAC THENL [
+    SIMPLE_ARITH_TAC;
+
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_32_EXEC (1--17)
+    THEN
+    CONJ_TAC THENL [REWRITE_TAC[MULT_0; WORD_ADD_0]; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC;
+
+    REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_32_EXEC (1--17)
+    THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+  ] THEN
+
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[] THEN
+  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_COPY_ROW_FROM_TABLE_32_EXEC (1--39)
+  THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0;VAL_WORD_ADD;DIMINDEX_64] THEN
+    MAP_EVERY VAL_INT64_TAC [`i:num`;`1`;`h:num`] THEN
+    ASM_REWRITE_TAC[] THEN IMP_REWRITE_TAC[MOD_LT] THEN
+    SIMPLE_ARITH_TAC; ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
