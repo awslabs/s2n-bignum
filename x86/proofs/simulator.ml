@@ -196,7 +196,7 @@ let random_instruction iclasses =
 
 loadt "x86/x86-insns.ml";;
 
-let iclasses = iclasses @
+let iclasses = iclasses_regreg @
 
 (*** The elements here were added manually for additional checks. ***)
 
@@ -826,7 +826,7 @@ let decode_inst ibytes =
  *** it can be modified in between.
  ***)
 
-let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list =
+let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
   let icodes = map ibyte_to_icode_fn ibytes_list in
@@ -867,8 +867,9 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
     let output_state = output_state_raw in
 
     let add_assum_subst =
-      if add_assum
-      then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      if add_assum = 32
+      then `aligned 32 stackpointer /\ aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      else if add_assum = 16 then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
       else `T:bool`,`additional_assumptions:bool` in
     let goal = subst
       [ibyteterm,`ibytes:byte list`;
@@ -911,7 +912,7 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
 
 let run_random_regsimulation () =
   let ibytes:int list = random_instruction iclasses in
-  cosimulate_instructions None false [ibytes];;
+  cosimulate_instructions None 0 [ibytes];;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for memory accessing instructions.   *)
@@ -1279,19 +1280,55 @@ let run_random_memopsimulation() =
   let l = length icodes in
   let _ = assert (l >= 2) in
   let memop_index = if l >= 6 then l - 4 else l - 2 in
-  cosimulate_instructions (Some memop_index) add_assum icodes;;
+  cosimulate_instructions (Some memop_index)  (if add_assum then 16 else 0) icodes;;
+
+(* ------------------------------------------------------------------------- *)
+(* Cosimulation of simple memory instructions with uniform [rsp+32] address  *)
+(* ------------------------------------------------------------------------- *)
+
+let simple_memory_iclasses = iclasses_simplemem @
+[
+  (*** these were added manually for extra checks ***)
+
+  [0x66; 0x0f; 0x3a; 0x22; 0x7c; 0x24; 0x07; 0x04];
+  [0x66; 0x44; 0x0f; 0x3a; 0x22; 0x74; 0x24; 0x06; 0x63];
+  [0x66; 0x48; 0x0f; 0x3a; 0x22; 0x44; 0x24; 0x05; 0x2a];
+  [0x66; 0x4c; 0x0f; 0x3a; 0x22; 0x44; 0x24; 0x04; 0x0d];
+  [0xc4; 0xe3; 0x69; 0x22; 0x4c; 0x24; 0x07; 0xff];
+  [0xc4; 0x63; 0x79; 0x22; 0x74; 0x24; 0x06; 0x0c];
+  [0xc4; 0xe3; 0x99; 0x22; 0x74; 0x24; 0x05; 0x0b];
+  [0xc4; 0x63; 0xb9; 0x22; 0x44; 0x24; 0x04; 0x05];
+  [0xc4; 0x63; 0x79; 0x16; 0x5c; 0x24; 0x03; 0x13];
+  [0xc4; 0xe3; 0x79; 0x16; 0x4c; 0x24; 0x02; 0x07];
+  [0xc4; 0xe3; 0xf9; 0x16; 0x74; 0x24; 0x01; 0x13];
+  [0xc4; 0x63; 0xf9; 0x16; 0x3c; 0x24; 0x07]
+];;
+
+let simplemem_iclasses =
+  map (fun l -> (fun () -> [l]),true) simple_memory_iclasses;;
+
+let run_random_simplememopsimulation() =
+  let deferred_icodes,add_assum =
+    el (Random.int (length simplemem_iclasses)) simplemem_iclasses in
+  let icodes = deferred_icodes() in
+  let memop_index = 0 in
+  cosimulate_instructions (Some memop_index) 32 icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 90 then
+  let rn = Random.int 99 in
+  if rn < 33 then
     let decoded, result = run_random_regsimulation() in
     decoded,result,true
-  else
+  else if rn < 66 then
     let decoded, result = run_random_memopsimulation() in
-    decoded,result,false;;
+    decoded,result,false
+  else
+    let decoded, result = run_random_simplememopsimulation() in
+    decoded,result,false
 
 let time_limit_sec = 2400.0;;
 let tested_reg_instances = ref 0;;

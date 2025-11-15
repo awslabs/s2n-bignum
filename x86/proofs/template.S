@@ -50,17 +50,24 @@
 harness:
 _harness:
 
-// Save non-modifiable input registers and input arguments on the stack
+// Force the stack to be 32-aligned
 
+        mov     rax, 0x1F
+        and     rax, rsp
+        xor     rsp, rax
+        or      rax, rsp
+
+// Save the original stack pointer (now in rax), the non-modifiable
+// registers rbx, rbp, r12, ..., r15, and the input argument rdi.
+// We subtract 64 from the stack pointer and hence maintain alignment.
+
+        push    rax
         push    rbx
         push    rbp
         push    r12
         push    r13
         push    r14
         push    r15
-
-// Also save the "rdi" pointer rdi
-
         push    rdi
 
 // Create little 256-byte buffer and copy in the contents
@@ -212,7 +219,15 @@ modinst:
         pop     rbp
         pop     rbx
 
+// Finally restore the original stack pointer
+
+        pop     rsp
+
 // Also return rax from the instruction
 
         mov     rax, [rdi+0*8]
         ret
+
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack,"",%progbits
+#endif
