@@ -1645,6 +1645,21 @@ let x86_VPEXTRQ = new_definition
     let res = word_subword x (64 * sel, 64) in
     (dest := res) s`;;
 
+let x86_VINSERTI128 = new_definition
+ `x86_VINSERTI128 dest src1 src2 imm8 (s:x86state) =
+    let x:int256 = read src1 s
+    and w:int128 = read src2 s
+    and sel = val(read imm8 s:byte) MOD 2 in
+    let res = word_insert x (128 * sel,128) w in
+    (dest := res) s`;;
+
+let x86_VEXTRACTI128 = new_definition
+ `x86_VEXTRACTI128 dest src imm8 (s:x86state) =
+    let x:int256 = read src s
+    and sel = val(read imm8 s:byte) MOD 2 in
+    let res = word_subword x (128 * sel, 128) in
+    (dest := res) s`;;
+
 let x86_VPSHUFB = new_definition
   `x86_VPSHUFB dest src1 src2 (s:x86state) =
       let x:N word = read src1 s
@@ -2799,6 +2814,14 @@ let x86_execute = define
        (add_load_event src s ,, add_store_event dest s ,,
        (\s. x86_VPEXTRQ (OPERAND64 dest s) (OPERAND128 src s)
                        (OPERAND8 imm8 s) s)) s
+    | VINSERTI128 dest src1 src2 imm8 ->
+       (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+       (\s. x86_VINSERTI128 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND128 src2 s)
+                       (OPERAND8 imm8 s) s)) s
+    | VEXTRACTI128 dest src imm8 ->
+       (add_load_event src s ,, add_store_event dest s ,,
+       (\s. x86_VEXTRACTI128 (OPERAND128 dest s) (OPERAND256 src s) (OPERAND8 imm8 s) s)) s
     | VPMULDQ dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -3745,11 +3768,11 @@ let X86_OPERATION_CLAUSES =
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
-    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPEXTRD; x86_VPEXTRQ;
-    x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR; x86_VPAND; x86_VPANDN;
-    x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLQ_ALT; x86_VPSRLW_ALT;
-    x86_VPBROADCASTD_ALT; x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT; x86_VMOVDQA_ALT;
-    x86_VMOVDQU_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
+    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VINSERTI128; x86_VEXTRACTI128;
+    x86_VPEXTRD; x86_VPEXTRQ; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR;
+    x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLQ_ALT;
+    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
+    x86_VMOVDQA_ALT; x86_VMOVDQU_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
