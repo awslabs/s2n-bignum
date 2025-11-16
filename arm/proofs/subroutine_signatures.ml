@@ -3747,7 +3747,7 @@ let subroutine_signatures = [
    ],
    "void",
    [(* input buffers *)
-    ("x", "6"(* num elems *), 8(* elem bytesize *));
+    ("x", "9"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("z", "66"(* num elems *), 1(* elem bytesize *));
