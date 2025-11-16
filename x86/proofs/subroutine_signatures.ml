@@ -3938,7 +3938,7 @@ let subroutine_signatures = [
    ],
    "void",
    [(* input buffers *)
-    ("x", "6"(* num elems *), 8(* elem bytesize *));
+    ("x", "9"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("z", "66"(* num elems *), 1(* elem bytesize *));
@@ -4696,6 +4696,23 @@ let subroutine_signatures = [
    ],
    [(* output buffers *)
     ("res", "8"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_ntt",
+  ([(*args*)
+     ("a", "int32_t[static 256]", (*is const?*)"false");
+     ("zetas", "int32_t[static 624]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+    ("zetas", "624"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])

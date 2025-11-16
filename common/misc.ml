@@ -1404,7 +1404,7 @@ let REPEAT_I (t:int->tactic):tactic =
   f 0;;
 
 (* ------------------------------------------------------------------------- *)
-(* Tactics that break a conjunction/disjunction in assumptions               *)
+(* Tactics that break a conjunction/disjunction/etc in assumptions           *)
 (* ------------------------------------------------------------------------- *)
 
 let SPLIT_FIRST_CONJ_ASSUM_TAC =
@@ -1414,6 +1414,9 @@ let SPLIT_FIRST_CONJ_ASSUM_TAC =
 let CASES_FIRST_DISJ_ASSUM_TAC =
     FIRST_X_ASSUM (fun thm ->
       if is_disj (concl thm) then DISJ_CASES_TAC thm else failwith "");;
+
+let STRIP_EXISTS_ASSUM_TAC =
+    FIRST_X_ASSUM (STRIP_ASSUME_TAC o (check (is_exists o concl)));;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics that prove a subgoal using {ASM_}ARITH_TAC.                       *)
@@ -2056,13 +2059,22 @@ let UNIFY_REFL_TAC: tactic =
       if vfree_in constr w_lhs then
         failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w))
       else
-        let f = list_mk_abs (rargs,w_lhs) in
+        (* replace non-variable arguments of the RHS function with temporary
+           variables. *)
+        let rargs_vars = map
+          (fun v -> if is_var v then v else
+            let _ = Printf.printf
+              "UNIFY_REFL_TAC: warning: this isn't var: %s\n"
+              (string_of_term v) in genvar (type_of v)) rargs in
+        let f = list_mk_abs (rargs_vars,w_lhs) in
         let the_goal = mk_eq (w_lhs, list_mk_comb (f,rargs)) in
         let th = prove(the_goal, REWRITE_TAC[]) in
         UNIFY_ACCEPT_TAC [constr] th (asl,w);;
 
 let UNIFY_REFL_TAC_TEST = prove(`?x. 1 = x`, META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
 let UNIFY_REFL_TAC_TEST2 = prove(`?f. y + z = f y z`,
+                META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
+let UNIFY_REFL_TAC_TEST3 = prove(`?f. y + 1 = f y 0`,
                 META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
 
 (* Given `?x1 x2 ... . t` where t is a conjunction of equalities,
@@ -2089,6 +2101,36 @@ let HINT_EXISTS_REFL_TAC: tactic =
     | [] -> failwith ("Cannot find a hint for " ^ (string_of_term qvar_to_match))
     | (Some t)::_ -> EXISTS_TAC t (asl,g);;
 
+(* 'Safe' versions of META_EXISTS_TAC and UNIFY_REFL_TAC.
+   SAFE_META_EXISTS_TAC receives a reference to list of variables that are
+   available when META_EXISTS_TAC is run.
+   The reference is then passed to SAFE_UNIFY_REFL_TAC, which checks whether
+   any unallowed variable is used during instantiation. *)
+let SAFE_META_EXISTS_TAC (freevars:term list ref): tactic =
+  fun (asl,w) ->
+    let fvs = freesl (w::(map (concl o snd) asl)) in
+    let _ = freevars := fvs in
+    META_EXISTS_TAC (asl,w);;
+
+let SAFE_UNIFY_REFL_TAC (allowed_vars_ref:term list ref): tactic =
+  fun (asl,w) ->
+    let allowed_vars = !allowed_vars_ref in
+    let w_lhs,w_rhs = dest_eq w in
+    let vars_to_exclude =
+      if is_var w_rhs then []
+      else snd (strip_comb w_rhs) in
+    let lhs_vars = subtract (frees w_lhs) vars_to_exclude in
+    if subset lhs_vars allowed_vars then
+      UNIFY_REFL_TAC (asl,w)
+    else
+     (let diff = subtract lhs_vars allowed_vars in
+      Printf.printf "SAFE_UNIFY_REFL_TAC: uses unaccepted variable(s)\n";
+      Printf.printf "Allowed vars: %s\n"
+        (String.concat ", " (map string_of_term allowed_vars));
+      Printf.printf "Disallowed vars that are used: %s\n"
+        (String.concat ", " (map string_of_term diff));
+      failwith "SAFE_UNIFY_REFL_TAC");;
+
 (* ------------------------------------------------------------------------- *)
 (* A tiny checker function printing an informative diagnostic message        *)
 (* ------------------------------------------------------------------------- *)
@@ -2102,9 +2144,27 @@ let type_check (t:term) (ty:hol_type): unit =
     ();;
 
 (* ------------------------------------------------------------------------- *)
+(* Extra definitions for list                                                *)
+(* ------------------------------------------------------------------------- *)
+
+let ENUMERATEL =
+  define
+    `(ENUMERATEL 0 (f:num->A list) = []) /\
+     (ENUMERATEL (SUC n) f = APPEND (f n) (ENUMERATEL n f))`;;
+
+let ENUMERATEL_ADD1 = prove(
+  `forall n f:num->A list. ENUMERATEL (n + 1) f = APPEND (f n) (ENUMERATEL n f)`,
+  REWRITE_TAC [GSYM ADD1; ENUMERATEL]);;
+
+let ENUMERATEL_APPEND_ZERO = prove(
+  `forall f:num->A list l.
+    APPEND (ENUMERATEL 0 f) l = l /\
+    APPEND l (ENUMERATEL 0 f) = l`,
+  REWRITE_TAC [ENUMERATEL;APPEND;APPEND_NIL]);;
+
+(* ------------------------------------------------------------------------- *)
 (* OCaml functions to merge diffs (called 'actions') that are used for       *)
 (* equivalence checking, specifically EQUIV_STEPS_TAC.                       *)
 (* ------------------------------------------------------------------------- *)
 
 needs "common/actions_merger.ml";;
-

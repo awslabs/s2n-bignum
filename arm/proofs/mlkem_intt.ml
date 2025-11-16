@@ -635,8 +635,8 @@ let MLKEM_INTT_SUBROUTINE_SAFE = time prove
                     C_ARGUMENTS [a; z_01234; z_56] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 =
                         f_events z_01234 z_56 a pc

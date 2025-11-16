@@ -976,6 +976,34 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
               if rex_W rex then SOME (VPINSRQ dest src1 src2 imm8, l)
               else SOME (VPINSRD dest src1 src2 imm8, l)
             | _ -> NONE)
+         | [0x38:8] ->
+            (if L then
+              let sz = vexL_size L in
+              (read_ModRM rex l >>= \((reg,rm),l).
+              read_imm Byte l >>= \(imm8,l).
+              if rex_W rex then NONE else
+              let dest = mmreg reg sz in
+              let src1 = mmreg v sz in
+              let src2 = simd_of_RM Lower_128 rm in
+              match pfxs with
+              | (T, Rep0, SG0) ->
+                SOME (VINSERTI128 dest src1 src2 imm8, l)
+              | _ -> NONE)
+          else NONE)
+        | [0x39:8] ->
+          (if word_not v = (word 0b1111:4 word) then
+            (if L then
+              (let sz = vexL_size L in
+              read_ModRM rex l >>= \((reg,rm),l).
+              read_imm Byte l >>= \(imm8,l).
+              if rex_W rex then NONE else
+              let src = mmreg reg sz in
+              let dest = simd_of_RM Lower_128 rm in
+              match pfxs with
+              | (T, Rep0, SG0) -> SOME (VEXTRACTI128 dest src imm8, l)
+              | _ -> NONE)
+              else NONE)
+          else NONE)
         | [0x46:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
