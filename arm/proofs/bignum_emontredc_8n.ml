@@ -1101,10 +1101,10 @@ let PROVE_IT = REWRITE_TAC[bignum_of_wordlist] THEN
        FAIL_TAC "REAL_INTEGER failed"));;
 
 let BIGNUM_EMONTREDC_8N_CORRECT = time prove
-  (`!k z m w a n pc stackpointer.
+  (`forall k z m w a n pc stackpointer.
         aligned 16 stackpointer /\
         ALLPAIRS nonoverlapping
-          [(word pc,3468); (m,8 * val k)]
+          [(word pc,LENGTH bignum_emontredc_8n_mc); (m,8 * val k)]
           [(z,8 * 2 * val k); (word_sub stackpointer (word 32), 32)] /\
         nonoverlapping (z,8 * 2 * val k) (word_sub stackpointer (word 32), 32) /\
         8 divides val k
@@ -1130,8 +1130,9 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`] THEN
   W64_GEN_TAC `w:num` THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `n:num`; `pc:num`; `stackpointer:int64`] THEN
-  REWRITE_TAC[ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REWRITE_TAC[ALL; ALLPAIRS; C_ARGUMENTS; C_RETURN; SOME_FLAGS;
+    MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+    fst BIGNUM_EMONTREDC_8N_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   BIGNUM_TERMRANGE_TAC `2 * k` `a:num` THEN
   BIGNUM_TERMRANGE_TAC `k:num` `n:num` THEN
@@ -1226,7 +1227,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
                    (word pc, 3468) /\
     nonoverlapping (word_sub stackpointer (word 32):int64, 32)
                    (z:int64, 8 * 2 * k')`
-  MP_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES] THENL
+  MP_TAC THENL
    [MAP_EVERY EXPAND_TAC ["k'"; "k4"] THEN
     REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC;
     STRIP_TAC] THEN
@@ -1255,9 +1256,9 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       [REWRITE_TAC[DIV_DIV; ARITH_RULE `4 * 2 = 8`]; ALL_TAC] THEN
     SUBGOAL_THEN `k DIV 4 DIV 2 * 8 = 0` SUBST_ALL_TAC THENL
       [REWRITE_TAC[ASSUME `k DIV 4 = 1`; ARITH_RULE `1 DIV 2 = 0`] THEN ARITH_TAC;
-       ASM_ARITH_TAC];
+       SIMPLE_ARITH_TAC];
     ALL_TAC] THEN
-  SUBGOAL_THEN `8 <= k'` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `8 <= k'` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
 
   REPEAT(FIRST_X_ASSUM(K ALL_TAC o check (vfree_in `a:num`) o concl)) THEN
   REPEAT(FIRST_X_ASSUM(K ALL_TAC o check (vfree_in `n:num`) o concl)) THEN
@@ -1276,9 +1277,8 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     ASM_REWRITE_TAC[];
     ALL_TAC] THEN
 
-  MP_TAC(ASSUME
-   `nonoverlapping_modulo (2 EXP 64)
-     (val(z:int64),8 * 2 * k) (val(m:int64),8 * k)`) THEN
+  MP_TAC(REWRITE_RULE[NONOVERLAPPING_CLAUSES](ASSUME
+   `nonoverlapping ((z:int64),8 * 2 * k) ((m:int64),8 * k)`)) THEN
   DISCH_THEN(MP_TAC o MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ]
     NONOVERLAPPING_IMP_SMALL_2)) THEN
   ANTS_TAC THENL [UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC; DISCH_TAC] THEN
@@ -1294,8 +1294,11 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
            read X0 s = word(32 * (k4 - 1)) /\
            read X1 s = word_add z (word(8 * 4 * i)) /\
            read SP s = word_sub stackpointer (word 32) /\
-           read (memory :> bytes64 (word_add (word_sub stackpointer (word 32)) (word 16))) s = word (k4 - i) /\ // X26
-           read (memory :> bytes64 (word_sub stackpointer (word 32))) s = word w /\ // X3
+           read (memory :> bytes64
+              (word_add (word_sub stackpointer (word 32)) (word 16))) s
+              = word (k4 - i) /\ // X26
+           read (memory :> bytes64 (word_sub stackpointer (word 32))) s
+              = word w /\ // X3
            aligned 16 stackpointer /\
            bignum_from_memory(word_add z (word(8 * (k + 4 * i))),
                               2 * k - (k + 4 * i)) s =
@@ -1358,8 +1361,8 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
   REWRITE_TAC[WORD_RULE `word_neg x = y <=> x = word_neg y`] THEN
 
   SUBGOAL_THEN
-   `!s. bignum_from_memory(z',k) s =
-        lowdigits (bignum_from_memory(z',k+4) s) k`
+   `forall s. bignum_from_memory(z',k) s =
+              lowdigits (bignum_from_memory(z',k+4) s) k`
    (fun th -> REWRITE_TAC[th])
   THENL
    [REWRITE_TAC[LOWDIGITS_BIGNUM_FROM_MEMORY] THEN
@@ -1367,7 +1370,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     ALL_TAC] THEN
 
   SUBGOAL_THEN
-   `!s. bignum_from_memory (z,4 * (i + 1)) s =
+   `forall s. bignum_from_memory (z,4 * (i + 1)) s =
         2 EXP (64 * 4 * i) * bignum_from_memory(z',4) s +
         bignum_from_memory(z,4 * i) s`
    (fun th -> REWRITE_TAC[th])
@@ -1377,7 +1380,8 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     ALL_TAC] THEN
 
   SUBGOAL_THEN
-   `!s. bignum_from_memory (word_add z' (word (8 * k)),k - 4 * i) s =
+   `forall s.
+        bignum_from_memory (word_add z' (word (8 * k)),k - 4 * i) s =
         highdigits a (k + 4 * i) <=>
         highdigits (bignum_from_memory(z',k+4) s) k =
         lowdigits (highdigits a (k + 4 * i)) 4 /\
@@ -1418,8 +1422,11 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
         (read ZF s <=> i + 1 = k4) /\
         read X1 s = word_add z' (word (8 * 4)) /\
         read SP s = word_sub stackpointer (word 32) /\
-        read (memory :> bytes64 (word_add (word_sub stackpointer (word 32)) (word 16))) s = word (k4 - (i + 1)) /\ // X26
-        read (memory :> bytes64 (word_sub stackpointer (word 32))) s = word w /\ // X3
+        read (memory :> bytes64
+            (word_add (word_sub stackpointer (word 32)) (word 16))) s
+            = word (k4 - (i + 1)) /\ // X26
+        read (memory :> bytes64 (word_sub stackpointer (word 32))) s
+            = word w /\ // X3
         aligned 16 stackpointer /\
         bignum_from_memory (word_add z' (word (8 * (k + 4))),k - 4 * (i + 1))
         s =
@@ -1432,7 +1439,8 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
               bignum_from_memory(word_add z' (word(8 * 4)),k) s) =
              bignum_from_memory(z',4) s * n + 2 EXP (64 * k) * cout + z1)` THEN
   CONJ_TAC THENL
-  [ALL_TAC;
+  [ ALL_TAC;
+
     ARM_SIM_TAC BIGNUM_EMONTREDC_8N_EXEC [] THEN
     DISCH_THEN(fun th ->
      REPEAT(FIRST_X_ASSUM(ASSUME_TAC o C MATCH_MP th))) THEN
@@ -2016,20 +2024,83 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     ALL_TAC] THEN
 
   (* Jump to maddloop_neon_firstitr *)
-  (fun (asl,concl) -> ENSURES_SEQUENCE_TAC `pc + 0x548`
+  (* The statement below is equivalent to:
+      (fun (asl,w) -> ENSURES_SEQUENCE_TAC `pc + 0x548`
       (strip_mc_and_pc_conds (mk_hoare_cond_conj
-        (get_hoare_precond concl, `read X27 s = word (32 * (k4 - 1))`))) (asl,concl))
-      THEN CONJ_TAC THENL [
+        (get_hoare_precond w, `read X27 s = word (32 * (k4 - 1))`))) (asl,w)) *)
+  ENSURES_SEQUENCE_TAC `pc + 0x548`
+    `\s.
+      read X27 s = word (32 * (k4 - 1)) /\
+      read X2 s = m /\
+      bignum_from_memory (m,k) s = n /\
+      read X0 s = word (32 * (k4 - 1)) /\
+      read X1 s = z /\
+      read X28 s = word_neg (word cout) /\
+      read SP s = word_sub stackpointer (word 32) /\
+      read (memory :> bytes64 (word_sub stackpointer (word 32))) s = word w /\
+      read
+      (memory :>
+        bytes64 (word_add (word_sub stackpointer (word 32)) (word 16)))
+      s =
+      wouter /\
+      bignum_from_memory (word_add z (word (8 * 4)),k) s = highdigits a 4 /\
+      read X4 s = word (bigdigit q 0) /\
+      read X5 s = word (bigdigit q 1) /\
+      read X6 s = word (bigdigit q 2) /\
+      read X7 s = word (bigdigit q 3) /\
+      read X8 s = word (bigdigit n 4) /\
+      read X9 s = word (bigdigit n 5) /\
+      read X10 s = word (bigdigit n 6) /\
+      read X11 s = word (bigdigit n 7) /\
+      read Q20 s = word_join (word (bigdigit q 1):int64)
+                             (word (bigdigit q 0):int64) /\
+      read Q21 s = word_join (word (bigdigit q 3):int64)
+                             (word (bigdigit q 2):int64) /\
+      read Q22 s = word_join (word (bigdigit n 5):int64)
+                             (word (bigdigit n 4):int64) /\
+      read Q23 s = word_join (word (bigdigit n 7):int64)
+                             (word (bigdigit n 6):int64) /\
+      read Q24 s =
+      word_join
+      (word (0 + val (word (bigdigit q 1):int64) *
+                 val (word (bigdigit n 5):int64)):int64)
+      (word (0 + val (word (bigdigit q 0):int64) *
+                 val (word (bigdigit n 4):int64)):int64) /\
+      read Q26 s =
+      word_join
+      (word (0 + val (word (bigdigit q 3):int64) *
+                 val (word (bigdigit n 7):int64)):int64)
+      (word (0 + val (word (bigdigit q 2):int64) *
+                 val (word (bigdigit n 6):int64)):int64) /\
+      read Q25 s =
+      word_join
+      (word
+      ((val (word (bigdigit q 1):int64) *
+        val (word (bigdigit n 5):int64)) DIV 2 EXP 64):int64)
+      (word
+      ((val (word (bigdigit q 0):int64) *
+        val (word (bigdigit n 4):int64)) DIV 2 EXP 64):int64) /\
+      read Q27 s =
+      word_join
+      (word
+      ((val (word (bigdigit q 3):int64) *
+        val (word (bigdigit n 7):int64)) DIV 2 EXP 64):int64)
+      (word
+      ((val (word (bigdigit q 2):int64) *
+        val (word (bigdigit n 6):int64)) DIV 2 EXP 64):int64) /\
+      ((n * w + 1 == 0) (mod (2 EXP 64))
+        ==> 2 EXP (64 * 4) *
+            bignum_of_wordlist [read X12 s; read X13 s; read X14 s; read X15 s] =
+            q * lowdigits n 4 + lowdigits a 4) /\
+      bignum_from_memory (z,4) s = q` THEN
+  THEN CONJ_TAC THENL [
     REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
     ENSURES_INIT_TAC "s0" THEN
     ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (1--1) THEN
     SUBGOAL_THEN `val (word (32 * (k4 - 1)):(64)word) = 0 <=> F`
         SUBST_ALL_TAC THENL
       [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN
-       DISCARD_MATCHING_ASSUMPTIONS
-          [`read a b = c`; `nonoverlapping_modulo x y z`;
-          `bignum_from_memory a b = c`] THEN
-       ASM_ARITH_TAC;
+       SIMPLE_ARITH_TAC;
        ALL_TAC] THEN
     RULE_ASSUM_TAC (REWRITE_RULE [COND_CLAUSES]) THEN
     ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_EXEC (2--4) THEN
@@ -2039,22 +2110,19 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       REWRITE_TAC[VAL_WORD_SUB] THEN
       REWRITE_TAC[DIMINDEX_64; VAL_WORD] THEN
       REWRITE_TAC[ARITH_RULE `32 MOD 2 EXP 64 = 32`] THEN
-      DISCARD_MATCHING_ASSUMPTIONS
-        [`read a b = c`; `nonoverlapping_modulo x y z`;
-         `bignum_from_memory a b = c`] THEN
       SUBGOAL_THEN `(32 * (k4 - 1)) MOD 2 EXP 64 = 32 * (k4 - 1)`
           SUBST_ALL_TAC THENL [
         IMP_REWRITE_TAC[MOD_LT] THEN
-        ASM_ARITH_TAC; ALL_TAC] THEN
+        SIMPLE_ARITH_TAC; ALL_TAC] THEN
       SUBGOAL_THEN
         `32 * (k4 - 1) + 2 EXP 64 - 32 = (32 * (k4 - 1) - 32) + 2 EXP 64`
-          SUBST_ALL_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+          SUBST_ALL_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
       REWRITE_TAC[CONJUNCT1 (SPECL
           [`32 * (k4 - 1) - 32:num`; `2 EXP 64:num`; `2 EXP 64`]
           (GSYM ADD_MOD_MOD_REFL));
           MOD_REFL; ADD_CLAUSES] THEN
       IMP_REWRITE_TAC[MOD_LT] THEN
-      ASM_ARITH_TAC;
+      SIMPLE_ARITH_TAC;
 
       ALL_TAC] THEN
     RULE_ASSUM_TAC (REWRITE_RULE [NOT_CLAUSES]) THEN
@@ -2084,14 +2152,14 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       REWRITE_TAC[BIGDIGIT_BIGNUM_FROM_MEMORY] THEN
       CONV_TAC (ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
       SUBGOAL_THEN `8 + 0 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN `8 + 1 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN `8 + 2 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN `8 + 3 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      REWRITE_TAC[COND_CLAUSES] THEN
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN SUBGOAL_THEN `8 + 1 < k <=> T` SUBST_ALL_TAC THENL
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN SUBGOAL_THEN `8 + 2 < k <=> T` SUBST_ALL_TAC THENL
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN SUBGOAL_THEN `8 + 3 < k <=> T` SUBST_ALL_TAC THENL
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN REWRITE_TAC[COND_CLAUSES] THEN
       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
          [VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; AND_CLAUSES] THEN
       CONV_TAC (LAND_CONV NUM_REDUCE_CONV) THEN
@@ -2114,14 +2182,14 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       REWRITE_TAC[BIGDIGIT_BIGNUM_FROM_MEMORY] THEN
       CONV_TAC (ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
       SUBGOAL_THEN `0 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN `1 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN `2 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN `3 < k <=> T` SUBST_ALL_TAC THENL
-        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-      REWRITE_TAC[COND_CLAUSES] THEN
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN SUBGOAL_THEN `1 < k <=> T` SUBST_ALL_TAC THENL
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN SUBGOAL_THEN `2 < k <=> T` SUBST_ALL_TAC THENL
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN SUBGOAL_THEN `3 < k <=> T` SUBST_ALL_TAC THENL
+        [DISCARD_MATCHING_ASSUMPTIONS [`read`] THEN SIMPLE_ARITH_TAC; ALL_TAC]
+      THEN REWRITE_TAC[COND_CLAUSES] THEN
         GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
            [VAL_WORD_GALOIS; DIMINDEX_64; BIGDIGIT_BOUND; AND_CLAUSES;
             WORD_ADD_ASSOC_CONSTS] THEN
@@ -2154,7 +2222,8 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
         `nonoverlapping (word_add z (word 32):(64)word,32)
                         (word_add z (word 64):(64)word,8 * (k-4))`
       ASSUME_TAC THENL
-      [REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
+      [REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN NONOVERLAPPING_TAC; ALL_TAC]
+    THEN
 
     ARM_REWRITE_ASSUM_AND_XACCSTEPS_TAC2 BIGNUM_EMONTREDC_8N_EXEC
       ((1--8) @ (112--115) @ [176;177;183;184])
@@ -2173,15 +2242,15 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
           ARITH_RULE `4 * 2 + 1 = 9`;
           ARITH_RULE `4 * 2 + 2 = 10`;
           ARITH_RULE `4 * 2 + 3 = 11`] THEN
-    SUBGOAL_THEN `word_sub (word (32 * (k4 - 1))) (word 32):(64)word = word (32 * (k4 - 2))`
-        SUBST_ALL_TAC THENL [
-          REWRITE_TAC[ARITH_RULE `32 * (k4-2) = 32*(k4-1)-32`; WORD_SUB] THEN
-          IMP_REWRITE_TAC[TAUT `(c <=> T) ==> (if c then t1 else t2) = t1`] THEN
-          DISCARD_NONMATCHING_ASSUMPTIONS
-          [`8 <= k`; `4 * k4 = k`] THEN ASM_ARITH_TAC;
+    SUBGOAL_THEN `word_sub (word (32 * (k4 - 1))) (word 32):(64)word =
+                  word (32 * (k4 - 2))`
+    SUBST_ALL_TAC THENL [
+      REWRITE_TAC[ARITH_RULE `32 * (k4-2) = 32*(k4-1)-32`; WORD_SUB] THEN
+      IMP_REWRITE_TAC[TAUT `(c <=> T) ==> (if c then t1 else t2) = t1`] THEN
+      SIMPLE_ARITH_TAC;
 
-          ALL_TAC
-        ] THEN
+      ALL_TAC
+    ] THEN
     REWRITE_TAC[WORD_BITMANIP_SIMP_LEMMAS; WORD_RULE
         `word_sub (word_add p (word (32*2):(64)word)) (word 32) =
          word_add p (word 32)`] THEN
@@ -2259,7 +2328,10 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
       ARITH_RULE `~(2 EXP (64*4) = 0)`] THEN
 
     (* Prove it! *)
+    DISCARD_READ_QREGS THEN
     PROVE_IT;
+    (* After PROVE_IT succeeds, try DISCARD_READ_QREGS
+       Okay, running with DISCARD_READ_QREGS. If this works, can we discard flags as well? *)
 
     ALL_TAC] THEN
 
@@ -2501,8 +2573,10 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
     SUBGOAL_THEN `val (word (0 + bitval carry_s25):64 word) = bitval carry_s25`
       (fun thm -> RULE_ASSUM_TAC (REWRITE_RULE[thm])) THENL
       [REWRITE_TAC[ADD_CLAUSES; VAL_WORD_BITVAL]; ALL_TAC] THEN
+    DISCARD_READ_QREGS THEN
     PROVE_IT
   ] THEN
+  (* here *)
 
   ASM_CASES_TAC `k4 = 3` THENL [
     SUBST_ALL_TAC (ASSUME `k4 = 3`) THEN
@@ -2518,7 +2592,7 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
   ENSURES_WHILE_PAUP_TAC `2` `k4-1:num` `pc + 0x834` `pc + 0xb08`
       inner_loop_invariant_with_flag THEN ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL [
     (* 1. 2 < k-1 *)
-    ASM_ARITH_TAC;
+    SIMPLE_ARITH_TAC;
 
     (* 2. 0x82c -> loop begin *)
     REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
@@ -2532,14 +2606,14 @@ let BIGNUM_EMONTREDC_8N_CORRECT = time prove
         REWRITE_TAC[ARITH_RULE `32 * (k4-3) = 32*(k4-2)-32`; WORD_SUB] THEN
         IMP_REWRITE_TAC[TAUT `(c <=> T) ==> (if c then t1 else t2) = t1`] THEN
         DISCARD_NONMATCHING_ASSUMPTIONS
-        [`~(k4 = 0)`;`~(k4 = 1)`;`~(k4 = 2)`;`~(k4 = 3)`] THEN ASM_ARITH_TAC;
+        [`~(k4 = 0)`;`~(k4 = 1)`;`~(k4 = 2)`;`~(k4 = 3)`] THEN SIMPLE_ARITH_TAC;
 
         ALL_TAC
       ] THEN
     VAL_INT64_TAC `32 * (k4 - 3)` THEN
     ASM_REWRITE_TAC[] THEN
     DISCARD_NONMATCHING_ASSUMPTIONS
-        [`~(k4 = 0)`;`~(k4 = 1)`;`~(k4 = 2)`;`~(k4 = 3)`] THEN ASM_ARITH_TAC;
+        [`~(k4 = 0)`;`~(k4 = 1)`;`~(k4 = 2)`;`~(k4 = 3)`] THEN SIMPLE_ARITH_TAC;
 
     ALL_TAC; (* 3. The main loop invariant preservation *)
 
@@ -2845,11 +2919,11 @@ let BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
  (`!k z m w a n pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         ALLPAIRS nonoverlapping
-          [(word pc,3468); (m,8 * val k)]
+          [(word pc,LENGTH bignum_emontredc_8n_mc); (m,8 * val k)]
           [(z,8 * 2 * val k); (word_sub stackpointer (word 112), 112)] /\
         nonoverlapping (z,8 * 2 * val k)
                        (word_sub stackpointer (word 112),112) /\
-        8 divides val k
+      8 divides val k
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) bignum_emontredc_8n_mc /\
                   read PC s = word pc /\
@@ -2868,71 +2942,11 @@ let BIGNUM_EMONTREDC_8N_SUBROUTINE_CORRECT = time prove
             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes(z,8 * 2 * val k);
                         memory :> bytes(word_sub stackpointer (word 112),112)])`,
-  let execth = BIGNUM_EMONTREDC_8N_EXEC in
-  let coreth = BIGNUM_EMONTREDC_8N_CORRECT in
-  let regs = dest_list `[X19;X20;X21;X22;X23;X24;X25;X26;X27;X28]` in
-  let sp_tm = `SP` in
-  let mono2lemma = MESON[]
-   `(!x. (!y. P x y) ==> (!y. Q x y)) ==> (!x y. P x y) ==> (!x y. Q x y)` in
-  MP_TAC BIGNUM_EMONTREDC_8N_CORRECT THEN
-  REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC) THEN
-  DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC 80 THEN MP_TAC th) THEN
-  MATCH_MP_TAC MONO_FORALL THEN GEN_TAC THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; PAIRWISE; ALLPAIRS; ALL] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-  DISCH_THEN(fun th ->
-      REPEAT GEN_TAC THEN
-      TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
-      MP_TAC th) THEN
-  ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `word_add stackpointer (word 18446744073709551584):(64)word =
-                word_sub stackpointer (word 32)` SUBST_ALL_TAC THENL
-    [CONV_TAC WORD_BLAST;ALL_TAC] THEN
-  TRY(ANTS_TAC THENL
-     [REPEAT CONJ_TAC THEN ALIGNED_WORD_TAC THEN
-      TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
-      ALL_TAC]) THEN
-
-  (* Make nonoverlapping reasoning happy *)
-  ABBREV_TAC `stackpointer':64 word = word_sub stackpointer (word 32)` THEN
-  SUBGOAL_THEN `stackpointer:64 word = word_add stackpointer' (word 32)`
-          SUBST_ALL_TAC THENL [EXPAND_TAC "stackpointer'" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  SUBGOAL_THEN `word_add (word_add stackpointer' (word 32)) (word 80) =
-                    word_add stackpointer' (word 112):64 word`
-          SUBST_ALL_TAC THENL [CONV_TAC WORD_BLAST; ALL_TAC] THEN
-
-  DISCH_THEN(fun th ->
-      ENSURES_EXISTING_PRESERVED_TAC sp_tm THEN
-      MAP_EVERY (fun c -> ENSURES_PRESERVED_TAC ("init_"^fst(dest_const c)) c) regs THEN
-      REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-      ARM_STEPS_TAC execth (1--5) THEN
-      MP_TAC th) THEN
-
-  (* convert back to the original stackpointer definition to use
-     ARM_BIGSTEP_TAC *)
-  ABBREV_TAC `stackpointer'':64 word = word_add stackpointer' (word 32)` THEN
-  SUBGOAL_THEN `stackpointer':64 word = word_sub stackpointer'' (word 32)`
-          SUBST_ALL_TAC THENL [EXPAND_TAC "stackpointer''" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-
-  (* ARM_BIGSTEP_TAC erases 'read (memory :> ...) = X27'.
-     This replacement prevents that from happening.
-     Probably this is again related to the issue in nonoverlapping... *)
-  SUBGOAL_THEN
-    `read (memory :> bytes64 stackpointer'') s5 =
-     read (memory :> bytes64 (word_add (word_sub stackpointer'' (word 32))
-                                       (word 32))) s5` SUBST_ALL_TAC THENL
-    [ AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-      CONV_TAC WORD_BLAST; ALL_TAC ] THEN
-  ARM_BIGSTEP_TAC execth ("s"^string_of_int(6)) THEN
-
-  (* Again introduce the stackpointer - 32 form *)
-  ABBREV_TAC `stackpointer''':64 word = word_sub stackpointer'' (word 32)` THEN
-  SUBGOAL_THEN `stackpointer'':64 word = word_add stackpointer''' (word 32)`
-          SUBST_ALL_TAC THENL [EXPAND_TAC "stackpointer'''" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  DISCARD_MATCHING_ASSUMPTIONS [`stackpointer''' = stackpointer''':64 word`] THEN
-
-  REWRITE_TAC(!simulation_precanon_thms) THEN
-  ARM_STEPS_TAC execth (7--12) THEN
-  ENSURES_FINAL_STATE_TAC THEN
-  ASM_REWRITE_TAC[]);;
+  let correct_th = SPECL
+    [`k:int64`;`z:int64`;`m:int64`;`w:int64`;`a:num`;`n:num`;`pc:num`]
+    BIGNUM_EMONTREDC_8N_CORRECT in
+  let correct_th = WORD_FORALL_OFFSET_RULE 32 correct_th in
+  REPEAT_N 7 GEN_TAC THEN
+  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(5,5)
+    BIGNUM_EMONTREDC_8N_EXEC correct_th
+    `[X19;X20;X21;X22;X23;X24;X25;X26;X27;X28]` 112);;
