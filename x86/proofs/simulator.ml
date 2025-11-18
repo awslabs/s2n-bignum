@@ -1305,12 +1305,11 @@ let simple_memory_iclasses = iclasses_simplemem @
 ];;
 
 let simplemem_iclasses =
-  map (fun l -> (fun () -> [l]),true) simple_memory_iclasses;;
+  map (fun l -> [l],true) simple_memory_iclasses;;
 
 let run_random_simplememopsimulation() =
-  let deferred_icodes,add_assum =
+  let icodes,add_assum =
     el (Random.int (length simplemem_iclasses)) simplemem_iclasses in
-  let icodes = deferred_icodes() in
   let memop_index = 0 in
   cosimulate_instructions (Some memop_index) 32 icodes;;
 
@@ -1319,35 +1318,37 @@ let run_random_simplememopsimulation() =
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  let rn = Random.int 99 in
-  if rn < 33 then
+  let rn = Random.int 100 in
+  if rn < 80 then
     let decoded, result = run_random_regsimulation() in
-    decoded,result,true
-  else if rn < 66 then
+    decoded,result,0
+  else if rn < 90 then
     let decoded, result = run_random_memopsimulation() in
-    decoded,result,false
+    decoded,result,1
   else
     let decoded, result = run_random_simplememopsimulation() in
-    decoded,result,false
+    decoded,result,2;;
 
 let time_limit_sec = 2400.0;;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
+let tested_smp_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result,isreg = run_random_simulation() in
+  let decoded,result,simty = run_random_simulation() in
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
+    tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+    tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+    tested_smp_instances := !tested_smp_instances + (if simty = 2 then 1 else 0);
     let fey = if is_numeral decoded
               then " (fails correctly) instruction code " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
     let now_t = Sys.time() in
     if now_t -. start_t > time_limit_sec then
-      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
-          time_limit_sec !tested_reg_instances !tested_mem_instances
-          (!tested_reg_instances + !tested_mem_instances) in
+      let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, total: %d)\n"
+          time_limit_sec !tested_reg_instances !tested_mem_instances !tested_smp_instances
+          (!tested_reg_instances + !tested_mem_instances + !tested_smp_instances) in
       None
     else run_random_simulations start_t
   end

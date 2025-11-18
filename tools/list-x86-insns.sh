@@ -27,7 +27,7 @@ fi
 
 for i in [a-oq-z]*/*.S p[235]*/*.S
 do
-  egrep -v '\.quad|\.word' $i | gcc -E -I ../include  -xassembler-with-cpp -DWINDOWS_ABI=0 - >/tmp/source_nodata.S
+  egrep -v '\.quad|\.word' $i | gcc -E -I ../include  -xassembler-with-cpp -DWINDOWS_ABI=1 - >/tmp/source_nodata.S
   $ASSEMBLE -c /tmp/source_nodata.S -o /tmp/objcode_nodata.o
   $OBJDUMP -M intel --no-addresses --no-show-raw-insn -d /tmp/objcode_nodata.o
 done  >/tmp/all_disassembly
