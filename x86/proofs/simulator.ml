@@ -196,7 +196,7 @@ let random_instruction iclasses =
 
 loadt "x86/x86-insns.ml";;
 
-let iclasses = iclasses @
+let iclasses = iclasses_regreg @
 
 (*** The elements here were added manually for additional checks. ***)
 
@@ -288,6 +288,7 @@ let iclasses = iclasses @
  [0x66; 0x49; 0x0f; 0x7e; 0xe3]; (* MOVQ (% r11) (%_% xmm4) *)
  [0x66; 0x4c; 0x0f; 0x7e; 0xd2]; (* MOVQ (% rdx) (%_% xmm10) *)
  [0x66; 0x4d; 0x0f; 0x7e; 0xf4]; (* MOVQ (% r12) (%_% xmm14) *)
+ [0x66; 0x41; 0x0f; 0xd6; 0xc7]; (* MOVQ (%_% xmm15) (%_% xmm0) [nonstandard encoding] *)
  [0xc5; 0xe9; 0xeb; 0xcb];       (* VPOR (%_% xmm1) (%_% xmm2) (%_% xmm3) *)
  [0xc5; 0xd5; 0xeb; 0xe6];       (* VPOR (%_% ymm4) (%_% ymm5) (%_% ymm6) *)
  [0xc4; 0xc1; 0x39; 0xeb; 0xf9]; (* VPOR (%_% xmm7) (%_% xmm8) (%_% xmm9) *)
@@ -826,7 +827,7 @@ let decode_inst ibytes =
  *** it can be modified in between.
  ***)
 
-let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list =
+let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
   let icodes = map ibyte_to_icode_fn ibytes_list in
@@ -867,8 +868,9 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
     let output_state = output_state_raw in
 
     let add_assum_subst =
-      if add_assum
-      then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      if add_assum = 32
+      then `aligned 32 stackpointer /\ aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      else if add_assum = 16 then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
       else `T:bool`,`additional_assumptions:bool` in
     let goal = subst
       [ibyteterm,`ibytes:byte list`;
@@ -911,7 +913,7 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
 
 let run_random_regsimulation () =
   let ibytes:int list = random_instruction iclasses in
-  cosimulate_instructions None false [ibytes];;
+  cosimulate_instructions None 0 [ibytes];;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for memory accessing instructions.   *)
@@ -1279,38 +1281,87 @@ let run_random_memopsimulation() =
   let l = length icodes in
   let _ = assert (l >= 2) in
   let memop_index = if l >= 6 then l - 4 else l - 2 in
-  cosimulate_instructions (Some memop_index) add_assum icodes;;
+  cosimulate_instructions (Some memop_index)  (if add_assum then 16 else 0) icodes;;
+
+(* ------------------------------------------------------------------------- *)
+(* Cosimulation of simple memory instructions with uniform [rsp+32] address  *)
+(* ------------------------------------------------------------------------- *)
+
+let simple_memory_iclasses = iclasses_simplemem @
+[
+  (*** these were added manually for extra checks ***)
+
+  [0x66; 0x0f; 0x3a; 0x22; 0x7c; 0x24; 0x07; 0x04]; (* pinsrd xmm7, [rsp + 0x7], 0x4 *)
+  [0x66; 0x44; 0x0f; 0x3a; 0x22; 0x74; 0x24; 0x06; 0x63]; (* pinsrd xmm14, [rsp + 0x6], 0x63 *)
+  [0x66; 0x48; 0x0f; 0x3a; 0x22; 0x44; 0x24; 0x05; 0x2a]; (* pinsrq xmm0, [rsp + 0x5], 0x2a *)
+  [0x66; 0x4c; 0x0f; 0x3a; 0x22; 0x44; 0x24; 0x04; 0x0d]; (* pinsrq xmm8, [rsp + 0x4], 0xd *)
+  [0xc4; 0xe3; 0x69; 0x22; 0x4c; 0x24; 0x07; 0xff]; (* vpinsrd xmm1, xmm2, [rsp + 0x7], 0xff *)
+  [0xc4; 0x63; 0x79; 0x22; 0x74; 0x24; 0x06; 0x0c]; (* vpinsrd xmm14, xmm0, [rsp + 0x6], 0xc *)
+  [0xc4; 0xe3; 0x99; 0x22; 0x74; 0x24; 0x05; 0x0b]; (* vpinsrq xmm6, xmm12, [rsp + 0x5], 0xb *)
+  [0xc4; 0x63; 0xb9; 0x22; 0x44; 0x24; 0x04; 0x05]; (* vpinsrq xmm8, xmm8, [rsp + 0x4], 0x5 *)
+  [0xc4; 0x63; 0x79; 0x16; 0x5c; 0x24; 0x03; 0x13]; (* vpextrd [rsp + 0x3], xmm11, 0x13 *)
+  [0xc4; 0xe3; 0x79; 0x16; 0x4c; 0x24; 0x02; 0x07]; (* vpextrd [rsp + 0x2], xmm1, 0x7 *)
+  [0xc4; 0xe3; 0xf9; 0x16; 0x74; 0x24; 0x01; 0x13]; (* vpextrq [rsp + 0x1], xmm6, 0x13 *)
+  [0xc4; 0x63; 0xf9; 0x16; 0x3c; 0x24; 0x07]; (* vpextrq [rsp], xmm15, 0x7 *)
+  [0x66; 0x0f; 0x6e; 0x0c; 0x24]; (* movd xmm1, [rsp] *)
+  [0x66; 0x0f; 0x7e; 0x0c; 0x24]; (* movd [rsp], xmm1 *)
+  [0xf3; 0x0f; 0x7e; 0x0c; 0x24]; (* movq xmm1, [rsp] *)
+  [0x66; 0x48; 0x0f; 0x7e; 0x0c; 0x24]; (* movq [rsp], xmm1 [nonstandard encoding] *)
+  [0xc5; 0xf9; 0x6e; 0x0c; 0x24]; (* vmovd xmm1, [rsp] *)
+  [0xc5; 0xf9; 0x7e; 0x0c; 0x24]; (* vmovd [rsp], xmm1 *)
+  [0xc5; 0xfa; 0x7e; 0x0c; 0x24]; (* vmovq xmm1, [rsp] *)
+  [0xc4; 0xe1; 0xf9; 0x7e; 0x0c; 0x24]; (* vmovq [rsp], xmm1 [nonstandard encoding] *)
+  [0x66; 0x44; 0x0f; 0xd6; 0x3c; 0x24]; (* movq [rsp], xmm15 *)
+  [0xf3; 0x44; 0x0f; 0x7e; 0x3c; 0x24]; (* movq xmm15, [rsp] *)
+  [0xc5; 0xf9; 0xd6; 0x04; 0x24]; (* vmovq [rsp], xmm0 *)
+  [0xc5; 0xfa; 0x7e; 0x04; 0x24]; (* vmovq xmm0, [rsp] *)
+];;
+
+let simplemem_iclasses =
+  map (fun l -> [l],true) simple_memory_iclasses;;
+
+let run_random_simplememopsimulation() =
+  let icodes,add_assum =
+    el (Random.int (length simplemem_iclasses)) simplemem_iclasses in
+  let memop_index = 0 in
+  cosimulate_instructions (Some memop_index) 32 icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 90 then
+  let rn = Random.int 100 in
+  if rn < 80 then
     let decoded, result = run_random_regsimulation() in
-    decoded,result,true
-  else
+    decoded,result,0
+  else if rn < 90 then
     let decoded, result = run_random_memopsimulation() in
-    decoded,result,false;;
+    decoded,result,1
+  else
+    let decoded, result = run_random_simplememopsimulation() in
+    decoded,result,2;;
 
 let time_limit_sec = 2400.0;;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
+let tested_smp_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result,isreg = run_random_simulation() in
+  let decoded,result,simty = run_random_simulation() in
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
+    tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+    tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+    tested_smp_instances := !tested_smp_instances + (if simty = 2 then 1 else 0);
     let fey = if is_numeral decoded
               then " (fails correctly) instruction code " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
     let now_t = Sys.time() in
     if now_t -. start_t > time_limit_sec then
-      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
-          time_limit_sec !tested_reg_instances !tested_mem_instances
-          (!tested_reg_instances + !tested_mem_instances) in
+      let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, total: %d)\n"
+          time_limit_sec !tested_reg_instances !tested_mem_instances !tested_smp_instances
+          (!tested_reg_instances + !tested_mem_instances + !tested_smp_instances) in
       None
     else run_random_simulations start_t
   end

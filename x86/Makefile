@@ -533,7 +533,7 @@ proofs: run_proofs ; ../tools/count-proofs.sh .
 tutorial: build_tutorial $(TUTORIAL_PROOF_LOGS);
 
 
-x86-insns.ml: $(OBJ) $(WINOBJ); ../tools/list-x86-insns.sh x86-insns.ml
+x86-insns.ml: ; ../tools/list-x86-insns.sh x86-insns.ml
 # Always run sematest regardless of dependency check
 FORCE: ;
 # Always use max. # of cores because in Makefile one cannot get the passed number of -j.
