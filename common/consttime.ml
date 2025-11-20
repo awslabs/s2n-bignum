@@ -498,7 +498,11 @@ let CONCRETIZE_F_EVENTS_TAC (concrete_f_events:term): tactic =
     ]) (asl,w);;
 
 (* Given a goal
-  `.. |- ensures _ (\s. ..)
+  `.. |- ensures _
+          (\s. .. /\ exists e2.
+              read events s = APPEND e2 e /\
+              e2 = e_tail /\
+              memaccess_inbounds e2 [..])
           (\s. .. /\ exists e2.
               read events s = APPEND e2 e /\
               e2 = APPEND e_back (APPEND e_front e_tail) /\
@@ -513,33 +517,47 @@ let CONCRETIZE_F_EVENTS_TAC (concrete_f_events:term): tactic =
          memaccess_inbounds e2 [...]`
 *)
 let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
+  let var_e2 = mk_var("e2",`:(uarch_event)list`) in
+  let find_e2_def (pred:term) : term*term*term =
+    let t_exists_e2 = find_term
+      (fun t -> is_exists t && fst (dest_exists t) = var_e2)
+      pred in
+    let clause1::e2_equals::clause3::[] =
+      conjuncts (snd (dest_exists t_exists_e2)) in
+
+    if not (is_eq e2_equals)
+    then failwith ("expected `e2 = ...`, but got " ^
+                   (string_of_term e2_equals)) else
+    let the_def = rhs e2_equals in
+    (clause1,the_def,clause3)
+  and is_nil (t:term): bool = is_const t && name_of t = "NIL" in
+
   fun (asl,w) ->
     let t_ensures,args = strip_comb w in
     if name_of t_ensures <> "ensures" then failwith "not ensures" else
     let t_arm::precond::postcond::_::[] = args in
 
     (* extract the 'e2 = APPEND ...' subterm, from 'exists e2. ...'. *)
-    let var_e2 = mk_var("e2",`:(uarch_event)list`) in
-    let t_exists_e2 = find_term
-      (fun t -> is_exists t && fst (dest_exists t) = var_e2)
-      postcond in
-    let clause1::e2_equals::clause3::[] =
-      conjuncts (snd (dest_exists t_exists_e2)) in
+    let clause1,e2_def_post,clause3 = find_e2_def postcond in
 
-    (* Now getting "e2 = APPEND e_back e_front"! *)
-    if not (is_eq e2_equals)
-    then failwith ("expected `e2 = APPEND ...`, but got " ^
-                   (string_of_term e2_equals)) else
-    let the_append = rhs e2_equals in
-    if not (is_comb the_append) ||
-        name_of (fst (strip_comb the_append)) <> "APPEND"
-    then failwith ("expected `e2 = APPEND ...`, but got " ^
-                   (string_of_term e2_equals)) else
-    let e_back::e_front::[] = snd (strip_comb the_append) in
+    if not (is_comb e2_def_post) ||
+        name_of (fst (strip_comb e2_def_post)) <> "APPEND"
+    then failwith ("expected `e2 = APPEND ..`, but got " ^
+        (string_of_term e2_def_post)) else
+
+    let e_back::e_front_tail::[] = snd (strip_comb e2_def_post) in
+
+    let e2_def_pre = try Some (find_e2_def precond) with _ -> None in
+    let _ = match e2_def_pre with
+      | Some (_,e2_def_pre,_) ->
+        if not (is_nil e2_def_pre ||
+          (is_binary "APPEND" e_front_tail && rand e_front_tail = e2_def_pre))
+        then failwith ("e2 in postcond must start with e2 in precond!")
+      | None -> () in
 
     (* Let's discard e_back, and use e_front to reconstruct 'exists e2. ...'! *)
     let new_exists_e2 = mk_exists (var_e2,
-      list_mk_conj [clause1;mk_eq(var_e2,e_front);clause3]) in
+      list_mk_conj [clause1;mk_eq(var_e2,e_front_tail);clause3]) in
     let new_inv = let bvar,body = dest_abs inv in
       mk_abs(bvar,mk_conj(body,new_exists_e2)) in
     ENSURES_SEQUENCE_TAC pc new_inv (asl,w);;
@@ -672,57 +690,150 @@ let UNIFY_F_EVENTS_TAC =
       let eq_val = mk_eq (x,mk_icomb(`val:(N)word->num`,new_v)) in (* wx = val (x) *)
       ABBREV_TAC (mk_eq (new_v,t)) THEN
       SUBGOAL_THEN eq_val SUBST_ALL_TAC THENL
-      [ ASM_SIMP_TAC[WORD_VAL] THEN NO_TAC; ALL_TAC ]) word_args)
+      [ ASM_SIMP_TAC[WORD_VAL] THEN
+        FAIL_TAC ("This variable may not fit in bitwidth of word: " ^
+            (string_of_term x)); ALL_TAC ]) word_args)
   THEN
-  SAFE_UNIFY_REFL_TAC (ref []);;
+  (SAFE_UNIFY_REFL_TAC (ref []) ORELSE
+    (PRINT_GOAL_TAC THEN FAIL_TAC "UNIFY_F_EVENTS_TAC"));;
+
+let FULL_UNIFY_F_EVENTS_TAC:tactic =
+  (* If t is `APPEND a b`, return Some (a,b) *)
+  let dest_append (t:term):(term*term) option =
+    let c,args = strip_comb t in
+    if name_of c = "APPEND" then let l::r::[] = args in Some (l,r) else None
+  (* If t is `ENUMERATEL a b`, return Some (a,b) *)
+  and dest_enumeratel (t:term):(term*term) option =
+    let c,args = strip_comb t in
+    if name_of c = "ENUMERATEL"
+    then let l::r::[] = args in Some (l,r) else None
+  (* If t is `f_events a b c ...`, return true *)
+  and is_f_events_comb (t:term): bool =
+    let c,args = strip_comb t in
+    is_var c in
+
+  let do_fail msg =
+    failwith ("FULL_UNIFY_F_EVENTS_TAC: could not instantiate f_ev*: " ^ msg)
+    in
+
+  PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
+  fun (asl,w) ->
+    let l,r = dest_eq w in
+    (* When the goal is `x = f_events ...` *)
+    if is_f_events_comb r then UNIFY_F_EVENTS_TAC (asl,w) else
+
+    (* Simple case: when RHS is APPEND, and LHS can be anything *)
+    try match (dest_append r) with
+    | None -> do_fail "simple case failed."
+    | Some (r1,r2) ->
+      begin match (dest_enumeratel r1, dest_append r2) with
+      | Some (cnt,_), Some (r21,r22) when
+          cnt = `0` && is_f_events_comb r21 && r22 = l ->
+        (* l = APPEND (ENUMERATEL 0 ..) (APPEND f_ev l) *)
+        (REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
+        MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL
+        [REFL_TAC; UNIFY_F_EVENTS_TAC])
+
+      | Some (cnt,_), None when cnt = `0` && is_f_events_comb r2 ->
+        (* l = APPEND (ENUMERATEL 0 ..) f_ev` *)
+        (REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN UNIFY_F_EVENTS_TAC)
+
+      | None, _ when is_f_events_comb r1 && l = r2 ->
+        (* l = APPEND (f_events_.. ..) l *)
+        (MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL
+        [REFL_TAC; UNIFY_F_EVENTS_TAC])
+
+      | _, _ -> failwith "simple case failed"
+      end (asl,w)
+    with Failure _ ->
+
+    (* If LHS is 'APPEND _ _', do more. *)
+    (match (dest_append l, dest_append r) with
+    | None, _ -> do_fail "LHS is not APPEND whereas RHS is APPEND"
+    | Some (l1,l2), Some (r1,r2) ->
+      if l2 = r2 && is_f_events_comb r1 then
+        (* APPEND t x = APPEND (f_events_.. ..) x *)
+        (AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC)
+
+      else
+        (* APPEND [..] x = APPEND (ENUMERATEL 0 ..) (APPEND f_ev x) *)
+        begin match (dest_enumeratel r1, dest_append r2) with
+        | Some (cnt,_), Some (r21,r22) when
+            cnt = `0` && is_f_events_comb r21 && r22 = l2 ->
+          (REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN AP_THM_TAC THEN
+          AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC)
+        | _, _ ->
+
+        begin match (dest_append l2, dest_append r1) with
+        | Some (l21, l22), Some (r11, r12) ->
+          if is_f_events_comb r11 && dest_append r12 = Some (l1, l21) &&
+            r2 = l22 then
+            (* APPEND l1 (APPEND l21 l22) =
+              APPEND (APPEND f_ev (APPEND l1 l21)) l22
+              f_ev = []!
+            *)
+            (REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+            MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL
+            [REFL_TAC; UNIFY_F_EVENTS_TAC])
+          else if is_f_events_comb r11 && r12 = l21 && r2 = l22 then
+            (* APPEND l1 (APPEND l21 l22) = APPEND (APPEND f_ev l21) l22
+              f_ev = l1
+            *)
+            (REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+            AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC)
+          else if is_f_events_comb r11 &&
+              (match dest_append l22 with
+               | None -> false
+               | Some (l221,l222) -> dest_append r12 = Some (l21,l221)
+                  && l222 = r2) then
+            (* APPEND l1 (APPEND l21 (APPEND l221 l222)) =
+               APPEND (APPEND f_ev (APPEND l21 l221)) l222
+              f_ev = l1
+            *)
+            (REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+            AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC)
+          else
+            do_fail "Unknown 'APPEND _ (APPEND _ _) = APPEND (APPEND _ _) _' case"
+
+        | Some (l21, l22), None ->
+          begin match (dest_enumeratel l21, dest_enumeratel r1) with
+          | Some (lcnt,lbody), Some (rcnt,rbody) ->
+            if rcnt = mk_binary "+" (lcnt,`1`) && lbody = rbody &&
+              l22 = r2 then
+              (* APPEND l1 (APPEND (ENUMERATEL i loop) l22) =
+                APPEND (ENUMERATEL (i + 1) loop) l22
+                loop is l1
+              *)
+              (GEN_REWRITE_TAC LAND_CONV [APPEND_ASSOC] THEN
+              AP_THM_TAC THEN AP_TERM_TAC THEN
+              REWRITE_TAC[ENUMERATEL_ADD1] THEN
+              AP_THM_TAC THEN AP_TERM_TAC THEN
+              UNIFY_F_EVENTS_TAC)
+            else do_fail "Unknown 'APPEND _ (APPEND _ _) = APPEND _ _' case"
+          | _, _ -> do_fail "Unknown 'APPEND _ (APPEND _ _) = APPEND _ _' case"
+          end
+
+        | _, _ ->
+          do_fail "Unknown case"
+        end
+      end
+    | Some (l1,l2), None ->
+      begin match (dest_enumeratel l2, dest_enumeratel r) with
+      | Some (lcnt,lbody), Some (rcnt,rbody) when
+          lbody = rbody && rcnt = mk_binary "+" (lcnt,`1`) ->
+        (* APPEND l1 (APPEND (ENUMERATEL i loop) l22) =
+          ENUMERATEL (i + 1) loop
+        *)
+        GEN_REWRITE_TAC RAND_CONV [ENUMERATEL_ADD1] THEN
+        AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
+        UNIFY_F_EVENTS_TAC
+      | _, _ -> do_fail "Unknown 'APPEND _ _ = _' case"
+      end) (asl,w);;
 
 (* The input goal: 'exists e2. ....' *)
 let DISCHARGE_SAFETY_PROPERTY_TAC =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
-  CONJ_TAC THENL [
-    (* When the goal is `x = f_events ...` *)
-    UNIFY_F_EVENTS_TAC ORELSE
-    (* When the goal is `x = APPEND (f_events_.. ..) x`! *)
-   (MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL
-    [REFL_TAC; UNIFY_F_EVENTS_TAC]) ORELSE
-    (* When the goal is `APPEND t x = APPEND (f_events_.. ..) x` *)
-   (AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC) ORELSE
-    (* When the goal is
-      `APPEND t (APPEND a b) = APPEND (APPEND f_ev a) b` *)
-   (REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC) ORELSE
-    (* When the goal is
-      `APPEND t1 (APPEND t2 t3) = APPEND (APPEND f_ev (APPEND t1 t2)) t3` *)
-   (REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL
-    [REFL_TAC; UNIFY_F_EVENTS_TAC]) ORELSE
-
-   (* When the goal is:
-      `APPEND a (APPEND (ENUMERATEL i loop) b) =
-      APPEND (ENUMERATEL (i + 1) loop) b` *)
-   (GEN_REWRITE_TAC LAND_CONV [APPEND_ASSOC] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN
-    REWRITE_TAC[ENUMERATEL_ADD1] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN
-    UNIFY_F_EVENTS_TAC) ORELSE
-   (* When the goal is:
-      `APPEND [..] x = APPEND (ENUMERATEL 0 ..) (APPEND f_ev x)` *)
-   (REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-    UNIFY_F_EVENTS_TAC) ORELSE
-    (* When the goal is: `x = APPEND (ENUMERATEL 0 ..) (APPEND f_ev x)` *)
-   (REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
-    MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL
-    [(* this is sometimes helpful *)
-     PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND]
-     THEN REFL_TAC;
-     UNIFY_F_EVENTS_TAC]) ORELSE
-    (* When the goal is: `x = APPEND (ENUMERATEL 0 ..) f_ev` *)
-   (REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN UNIFY_F_EVENTS_TAC) ORELSE
-
-   (PRINT_GOAL_TAC THEN
-    FAIL_TAC "DISCHARGE_SAFETY_PROPERTY_TAC: could not instantiate metavar");
-
-    ALL_TAC] THEN
+  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+  CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
   (* Prove memaccess_inbounds predicates *)
   DISCHARGE_MEMACCESS_INBOUNDS_TAC;;
