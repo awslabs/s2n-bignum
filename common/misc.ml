@@ -1226,6 +1226,15 @@ let (WORD_FORALL_OFFSET_TAC:int->tactic) =
   fun n -> MATCH_MP_TAC lemma THEN EXISTS_TAC (mk_small_numeral n) THEN
            CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV);;
 
+(* A rule version of WORD_FORALL_OFFSET_TAC. *)
+let (WORD_FORALL_OFFSET_RULE:int->thm->thm) =
+  let lemma = prove
+   (`!a (P:N word->bool). (!x. P x) ==> (!x. P(word_add x (word a)))`,
+    MESON_TAC[WORD_RULE `word_add (word_sub x a) (a:N word) = x`]) in
+  fun n th ->
+    let th0 = MATCH_MP (SPEC (mk_small_numeral n) lemma) th in
+    CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV) th0;;
+
 (* ------------------------------------------------------------------------- *)
 (* Do some limited simplification in association with symbolic execution.    *)
 (* ------------------------------------------------------------------------- *)
