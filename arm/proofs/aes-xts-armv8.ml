@@ -3124,13 +3124,27 @@ let BREAK_DATA_INTO_PARTS = prove(
   ASM_ARITH_TAC
 );;
 
+(*
+ `forall i.
+          i < curr_len
+          ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s5 =
+              EL i (aes256_xts_encrypt pt_in curr_len iv key1_lst key2_lst)
+==>
+ (forall i.
+      i < val (word (curr_len - 0x10))
+      ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s5 =
+          EL i
+          (aes256_xts_encrypt pt_in (curr_len - 0x10) iv key1_lst key2_lst)) /\
+ read (memory :> bytes128 (word_add ctxt_p (word (curr_len - 0x10)))) s5 =
+ cipher_stealing_enc_inv (val tail_len) curr_len (val tail_len) CC pt_in``
+*)
 (* ************************************** *)
 (* Assembly proofs *)
 
 (* Proof: Cipher stealing *)
 let CIPHER_STEALING_ENC_CORRECT = time prove(
   `!ptxt_p ctxt_p len key1_p
-    pt_in iv tail_len len_full_blocks num_5_blocks
+    pt_in iv tail_len len_full_blocks num_5blocks
     k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14
     pc.
     PAIRWISE nonoverlapping
@@ -3158,7 +3172,7 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
          read Q16 s = k1_0 /\ read Q17 s = k1_1 /\ read Q12 s = k1_2 /\ read Q13 s = k1_3 /\
          read Q14 s = k1_4 /\ read Q15 s = k1_5 /\ read Q4 s = k1_6 /\ read Q5 s = k1_7 /\
          read Q18 s = k1_8 /\ read Q19 s = k1_9 /\ read Q20 s = k1_10 /\ read Q21 s = k1_11 /\
-         read Q22 s = k1_12 /\ read Q23 s = k1_13 /\ read Q7 s = k1_14 /\ byte_list_at pt_in ptxt_p len s /\
+         read Q22 s = k1_12 /\ read Q23 s = k1_13 /\ read Q7 s = k1_14 /\
          byte_list_at pt_in ptxt_p len s /\
          byte_list_at (aes256_xts_encrypt pt_in (acc_len num_5blocks len_full_blocks) iv key1_lst key2_lst)
          ctxt_p (word (acc_len num_5blocks len_full_blocks)) s)
@@ -3365,7 +3379,7 @@ ENSURES_WHILE_PADOWN_TAC
           byte_list_at (aes256_xts_encrypt pt_in (curr_len-0x10) iv key1_lst key2_lst)
                           ctxt_p (word (curr_len-0x10)) s /\
           // Contents of CC at each i
-          read (memory :> bytes128 (word_add ctxt_p (word (curr_len - 0x10)))) s =
+          read (memory :> bytes128 (word_add ctxt_p (word (curr_len-0x10)))) s =
             cipher_stealing_enc_inv i curr_len (val (tail_len:int64)) CC pt_in /\
 
           // bytes of Cm at offset i to (tail_len -i) in CC
