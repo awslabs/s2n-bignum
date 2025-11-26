@@ -251,10 +251,11 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              generic/word_recip.o \
              mldsa/mldsa_ntt.o \
              mldsa/mldsa_poly_reduce.o \
-             mlkem/mlkem_reduce.o \
              mlkem/mlkem_basemul_k2.o \
              mlkem/mlkem_basemul_k3.o \
              mlkem/mlkem_basemul_k4.o \
+             mlkem/mlkem_ntt.o \
+             mlkem/mlkem_reduce.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \
              p256/bignum_cmul_p256.o \
