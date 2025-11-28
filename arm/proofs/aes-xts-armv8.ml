@@ -3314,6 +3314,68 @@ let CIPHER_STEALING_INV_SIMP_TAC i =
     IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
     ASM_ARITH_TAC);;
 
+let ENC_TAIL_SWAP_CASE_0_TAC =
+      POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THEN
+      (* Simplify so that symbolic execution could match up, but couldn't use
+      CONV_TAC NUM_REDUCE_CONV because of non-overlapping *)
+
+      RULE_ASSUM_TAC(REWRITE_RULE[ADD_0]) THEN
+
+      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--5) THEN
+
+      RULE_ASSUM_TAC(REWRITE_RULE[GSYM ADD_ASSOC]) THEN
+      RULE_ASSUM_TAC (CONV_RULE NUM_REDUCE_CONV) THEN
+      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+
+      REPEAT CONJ_TAC THENL
+      [ MATCH_MP_TAC (snd (EQ_IMP_RULE (SPECL [`(word_add ctxt_p (word l1_curr_len)):int64`; `s5:armstate`;
+                                               `(cipher_stealing_inv 0x0 l1_curr_len (val (tail_len:int64)) CC pt_in):int128`]
+                           BREAK_ONE_BLOCK_INTO_BYTES))) THEN
+        CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+        ASM_REWRITE_TAC[] THEN
+
+        MP_TAC (SPECL [`0x0`; `l1_curr_len:num`; `tail_len:int64`; `CC:int128`; `pt_in:byte list`]
+                  CIPHER_STEALING_BYTE_EQUAL) THEN
+        CHANGED_TAC(CONV_TAC NUM_REDUCE_CONV) THEN
+        REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
+        ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+
+        ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+        STRIP_TAC THEN
+
+        (* The case for 0 needed to be separated out and simplified from CIPHER_STEALING_INV_SIMP_TAC *)
+        CONJ_TAC THENL
+        [ ASM_REWRITE_TAC[] THEN
+          IMP_REWRITE_TAC[WORD_ZX_ZX; WORD_ZX_TRIVIAL] THEN
+          REWRITE_TAC[DIMINDEX_8; DIMINDEX_32; DIMINDEX_64] THEN
+          ASM_ARITH_TAC ; ALL_TAC] THEN
+
+        MAP_EVERY (fun i -> CONJ_TAC THENL
+          [CIPHER_STEALING_INV_SIMP_TAC (mk_numeral (num i)); ALL_TAC]) (1--0xe) THEN
+        CIPHER_STEALING_INV_SIMP_TAC `0xf:num`;
+
+        MP_TAC (SPECL [`ctxt_p:int64`; `0x0`; `val (tail_len:int64)`;
+          `l1_curr_len:num`; `(int128_to_bytes CC):byte list`; `s5:armstate`]
+          BYTE_LIST_AT_SPLIT_BACKWARDS) THEN
+        REWRITE_TAC[LENGTH_OF_INT128_TO_BYTES] THEN
+        CONV_TAC NUM_REDUCE_CONV THEN
+        CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+        ASM_SIMP_TAC[] THEN
+        ANTS_TAC THENL
+        [ IMP_REWRITE_TAC[WORD_ZX_ZX] THEN
+          REWRITE_TAC[DIMINDEX_8; DIMINDEX_32; DIMINDEX_64] THEN
+          MP_TAC (SPECL [`0x0`; `l1_curr_len:num`; `tail_len:int64`; `CC:int128`; `pt_in:byte list`]
+            CIPHER_STEALING_INV_SELECT) THEN
+          CONV_TAC NUM_REDUCE_CONV THEN
+          ASM_SIMP_TAC[] ; ALL_TAC ] THEN
+        REWRITE_TAC[ADD_ASSOC; ARITH_RULE `((l1_curr_len + 0x10) + 0x0) = (l1_curr_len + 0x10)`]; (* will need replacement with v *)
+
+        WORD_ARITH_TAC;
+        WORD_ARITH_TAC;
+];;
+
+
+
 let ENC_TAIL_SWAP_CASE_TAC case =
   let c_tm = `case:num` in
   let v_tm = `v:num` in
@@ -3327,15 +3389,15 @@ let ENC_TAIL_SWAP_CASE_TAC case =
   RULE_ASSUM_TAC(REWRITE_RULE[GSYM ADD_ASSOC]) THEN
   RULE_ASSUM_TAC (CONV_RULE NUM_REDUCE_CONV) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    (* For case = 0x3
-       `read (memory :> bytes128 (word_add ctxt_p (word l1_curr_len))) s5 =
-        cipher_stealing_inv 0x3 l1_curr_len (val tail_len) CC pt_in /\
-        (forall i'.
-              i' < val tail_len - 0x3
-              ==> read (memory :> bytes8 (word_add (word_add ctxt_p (word (l1_curr_len + 0x10 + 0x3))) (word i')))
-                  s5 = EL i' (SUB_LIST (0x3,val tail_len - 0x3) (int128_to_bytes CC))) /\
-        ~(0x3 = 0x0) /\  ~(ival (word 0x3) < &0x0) /\ ival (word (0x3 + 0x1)) - &0x1 = ival (word 0x3)`      *)
-  REPEAT CONJ_TAC THENL (* 5 subgoals *)
+    (* For case = 0x1
+     `read (memory :> bytes128 (word_add ctxt_p (word l1_curr_len))) s5 =
+      cipher_stealing_inv 0x1 l1_curr_len (val tail_len) CC pt_in /\
+      (forall i'.
+            i' < val tail_len - 0x1
+            ==> read (memory :> bytes8 (word_add (word_add ctxt_p (word (l1_curr_len + 0x10 + 0x1))) (word i'))) s5 =
+                EL i' (SUB_LIST (0x1,val tail_len - 0x1) (int128_to_bytes CC))) /\
+      ~(ival (word 0x1) < &0x0) /\ ival (word (0x1 + 0x1)) - &0x1 = ival (word 0x1)`   *)
+  REPEAT CONJ_TAC THENL (* 4 subgoals *)
   [ MATCH_MP_TAC (snd (EQ_IMP_RULE (SPECL [`(word_add ctxt_p (word l1_curr_len)):int64`;
       `s5:armstate`; t1] BREAK_ONE_BLOCK_INTO_BYTES))) THEN
     CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
@@ -3370,7 +3432,6 @@ let ENC_TAIL_SWAP_CASE_TAC case =
       ASM_SIMP_TAC[] ; ALL_TAC ] THEN
     REWRITE_TAC[ADD_ASSOC; ARITH_RULE r1];
 
-    ARITH_TAC;
     WORD_ARITH_TAC;
     WORD_ARITH_TAC
 ];;
@@ -3378,7 +3439,7 @@ let ENC_TAIL_SWAP_CASE_TAC case =
 let ENC_TAIL_SWAP_ASM_CASES_TAC case =
   let c_tm = `case:num` in
   let asm_case = subst [case, c_tm] `(i:num) = case` in
-  ASM_CASES_TAC asm_case THENL [ ENC_TAIL_SWAP_CASE_TAC case; ALL_TAC] (* THEN
+  ASM_CASES_TAC asm_case THENL [ ENC_TAIL_SWAP_CASE_TAC case; ALL_TAC] THEN
   MP_TAC (SPECL [case; `i:num`] LE_LT) THEN
   ASM_SIMP_TAC[] THEN
   DISCH_TAC THEN
@@ -3386,7 +3447,7 @@ let ENC_TAIL_SWAP_ASM_CASES_TAC case =
   ASM_SIMP_TAC[] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   ASM_SIMP_TAC[] THEN
-  DISCH_TAC*);;
+  DISCH_TAC;;
 
 
 let BREAK_DATA_INTO_PARTS = prove(
@@ -4101,157 +4162,29 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
     ; ALL_TAC] THEN
     DISCH_THEN(RULE_ASSUM_TAC o REWRITE_RULE o CONJUNCTS) THEN
 
-  (* case analysis based on i = 0 ... 14, because symbolic execution
-       needs to know which byte is being overwritten in pt_ptr to properly update the state. *)
-    ASM_CASES_TAC `i:num = 0` THENL
-    [
-      POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THEN
-      (* Simplify so that symbolic execution could match up, but couldn't use
-      CONV_TAC NUM_REDUCE_CONV because of non-overlapping *)
-
- (* let v = rand (concl (NUM_RED_CONV (`0x10 + 0x3`))) in
-      let ith = ARITH_RULE (subst [v,`v:num`] `l1_curr_len + 0x10 + 0x3 = l1_curr_len + v`) in
-      let ith2 = ARITH_RULE (subst [v,`v:num`] `(l1_curr_len + 0x10) + 0x3 = l1_curr_len + v`) in
-      (*let ith2 = ARITH_RULE (subst [v,`v:num`] `0x10 + 0x3 = v`) in
-      FIRST_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP ith th; ith2])) THEN*)
-      RULE_ASSUM_TAC(REWRITE_RULE[ith;ith2]) THEN *)
-
-      (* From John: see if they will fix symbolic simulation even when
-        SUBGOAL_THEN `word_add (ptxt_p:int64) (word_add (word (l1_curr_len+0x10)) (word i)) =
-        word_add ptxt_p (word ((l1_curr_len + 16) + i))` doesn't have the () around l1_curr_len + 16 *)
-      (*
-      RULE_ASSUM_TAC(CONV_RULE(DEPTH_CONV NUM_ADD_CONV)) THEN
-      RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN *)
-      RULE_ASSUM_TAC(REWRITE_RULE[ADD_0]) THEN
-   (*
-      let v = rand (concl (NUM_RED_CONV (`0x10 - 0x3`))) in
-      let vreplace = subst [v,`v:num`] in
-      SUBGOAL_THEN (vreplace`word_sub ((word (curr_len:num)):int64) (word v) = word (curr_len - v)`) ASSUME_TAC THENL
-      [ UNDISCH_TAC `curr_len >= 0x10` THEN
-        SIMP_TAC[WORD_SUB; GE; ARITH_RULE (vreplace`0x10 <= curr_len ==> 0xd <= curr_len`)]
-      ; ALL_TAC ] THEN
-    *)
-      ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--5) THEN
-
-      (* Benign messages
-      Stepping to state s5
-      Instruction at `pc + 2564 (0xa04)`: `arm_STRB W14 X1 (Register_Offset X21)`
-      Info: assumption `read (memory :> bytes128 (word_add ctxt_p (word l1_curr_len))) s4 =
-      cipher_stealing_inv (0x3 + 0x1) l1_curr_len (val tail_len) CC pt_in` is erased.
-      - Reason: NONOVERLAPPING_RULE: could not prove one of:
-        * `nonoverlapping (word_add ctxt_p (word l1_curr_len),0x10)
-      (word_add ctxt_p (word (l1_curr_len + 0x3)),0x1)`
-      Info: assumption `read (memory :> bytes8 (word_add ctxt_p (word (l1_curr_len + 0x3)))) s4 =
-      EL 0x3
-      (int128_to_bytes
-      (cipher_stealing_inv (0x3 + 0x1) l1_curr_len (val tail_len) CC pt_in))` is erased.
-      - Reason: NONOVERLAPPING_RULE: could not prove one of:
-        * `nonoverlapping (word_add ctxt_p (word (l1_curr_len + 0x3)),0x1)
-      (word_add ctxt_p (word (l1_curr_len + 0x3)),0x1)`
-      Info: assumption `read (memory :> bytes8 (word_add ctxt_p (word (l1_curr_len + 0x3)))) s4 =
-      EL 0x3
-      (int128_to_bytes
-      (cipher_stealing_inv (0x3 + 0x1) l1_curr_len (val tail_len) CC pt_in))` is erased.
-      - Reason: NONOVERLAPPING_RULE: could not prove one of:
-        * `nonoverlapping (word_add ctxt_p (word (l1_curr_len + 0x3)),0x1)
-      (word_add ctxt_p (word (l1_curr_len + 0x3)),0x1)`
-      CPU time (user): 1.119391
-      Info: assumption `read events s5 =
-      CONS
-      (EventStore (word_add (word_add ctxt_p (word l1_curr_len)) (word 0x3),0x1))
-      (read events s4)` is erased, but it might have contained useful information
-      *)
-      RULE_ASSUM_TAC(REWRITE_RULE[GSYM ADD_ASSOC]) THEN
-      RULE_ASSUM_TAC (CONV_RULE NUM_REDUCE_CONV) THEN
-      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-      (*`read (memory :> bytes128 (word_add ctxt_p (word l1_curr_len))) s5 =
-        cipher_stealing_inv 0x3 l1_curr_len (val tail_len) CC pt_in /\
-        (forall i'.
-              i' < val tail_len - 0x3
-              ==> read
-                  (memory :>
-                  bytes8
-                  (word_add (word_add ctxt_p (word (l1_curr_len + 0x10 + 0x3)))
-                  (word i')))
-                  s5 =
-                  EL i' (SUB_LIST (0x3,val tail_len - 0x3) (int128_to_bytes CC))) /\
-        ~(0x3 = 0x0) /\
-        ~(ival (word 0x3) < &0x0) /\
-        ival (word (0x3 + 0x1)) - &0x1 = ival (word 0x3)`      *)
-      REPEAT CONJ_TAC THENL
-      [ let t1 = (*subst [case,c_tm] *) `(cipher_stealing_inv 0x0 l1_curr_len (val (tail_len:int64)) CC pt_in):int128` in
-        MATCH_MP_TAC (snd (EQ_IMP_RULE (SPECL [`(word_add ctxt_p (word l1_curr_len)):int64`;
-                          `s5:armstate`; t1] BREAK_ONE_BLOCK_INTO_BYTES))) THEN
-        CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
-        ASM_REWRITE_TAC[] THEN
-
-        MP_TAC (SPECL [`0x0`; `l1_curr_len:num`; `tail_len:int64`; `CC:int128`; `pt_in:byte list`]
-                  CIPHER_STEALING_BYTE_EQUAL) THEN
-        CHANGED_TAC(CONV_TAC NUM_REDUCE_CONV) THEN
-        REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
-        ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-
-        ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-        STRIP_TAC THEN
-
-        MAP_EVERY (fun i -> CONJ_TAC THENL
-          [CIPHER_STEALING_INV_SIMP_TAC (mk_numeral (num i)); ALL_TAC]) (0--0xe) THEN
-        CIPHER_STEALING_INV_SIMP_TAC `0xf:num`;
-
-        MP_TAC (SPECL [`ctxt_p:int64`; `0x0`; `val (tail_len:int64)`;
-          `l1_curr_len:num`; `(int128_to_bytes CC):byte list`; `s5:armstate`]
-          BYTE_LIST_AT_SPLIT_BACKWARDS) THEN
-        REWRITE_TAC[LENGTH_OF_INT128_TO_BYTES] THEN
-        CONV_TAC NUM_REDUCE_CONV THEN
-        CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
-        ASM_SIMP_TAC[] THEN
-        ANTS_TAC THENL
-        [ IMP_REWRITE_TAC[WORD_ZX_ZX] THEN
-          REWRITE_TAC[DIMINDEX_8; DIMINDEX_32; DIMINDEX_64] THEN
-          MP_TAC (SPECL [`0x0`; `l1_curr_len:num`; `tail_len:int64`; `CC:int128`; `pt_in:byte list`]
-            CIPHER_STEALING_INV_SELECT) THEN
-          CONV_TAC NUM_REDUCE_CONV THEN
-          ASM_SIMP_TAC[] ; ALL_TAC ] THEN
-        REWRITE_TAC[ADD_ASSOC; ARITH_RULE `((l1_curr_len + 0x10) + 0x0) = (l1_curr_len + 0x10)`]; (* will need replacement with v *)
-
-        ARITH_TAC;
-        WORD_ARITH_TAC;
-        WORD_ARITH_TAC;
-      ]
-
-    ; ALL_TAC]
-
     (* case analysis based on i = 0 ... 14, because symbolic execution
        needs to know which byte is being overwritten in pt_ptr to properly update the state. *)
-    MAP_EVERY (fun i -> ENC_TAIL_SWAP_ASM_CASES_TAC (mk_numeral (num i))) (0--0) THEN
+    (* Case 0 needed its own tactic *)
+    ASM_CASES_TAC `i:num = 0` THENL
+    [ ENC_TAIL_SWAP_CASE_0_TAC; ALL_TAC ] THEN
+
+    MP_TAC (SPECL [`0`; `i:num`] LE_LT) THEN
+    ASM_SIMP_TAC[] THEN
+    DISCH_TAC THEN
+    MP_TAC (SPECL [`0`; `i:num`] LE_SUC_LT) THEN
+    ASM_SIMP_TAC[] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    ASM_SIMP_TAC[] THEN
+    DISCH_TAC THEN
+
+    MAP_EVERY (fun i -> ENC_TAIL_SWAP_ASM_CASES_TAC (mk_numeral (num i))) (1--14) THEN
     UNDISCH_TAC `15 <= i` THEN
     UNDISCH_TAC `i < val (tail_len:int64)` THEN
     UNDISCH_TAC `val (tail_len:int64) < 16` THEN
     ARITH_TAC;
 
+    (* Subgoal 4: Prove backedge is taken when i > 0 *)
 
-    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--2) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN (* 3 total *)
-    (* `((forall i.
-              i < curr_len
-              ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s5
-                  = EL i (aes256_xts_encrypt pt_in curr_len iv key1_lst key2_lst)) /\
-          read (memory :> bytes128 (word_sub (word_add ctxt_p (word curr_len)) (word 0x10))) s5
-          = cipher_stealing_enc_inv i curr_len (val tail_len) CC pt_in /\
-          (forall i'.
-              i' < val tail_len - i
-              ==> read (memory :> bytes8 (word_add (word_add ctxt_p (word (curr_len + i))) (word i'))) s5
-                  = EL i' (SUB_LIST (i,val tail_len - i) (int128_to_bytes CC))) /\
-          (val (word i) = 0x0 <=> i = 0x0)) /\
-        ((MAYCHANGE [PC] ,, ...)  s0 s5`
-    *)
-    REPEAT CONJ_TAC THENL (* 5 subgoals (7 total) *)
-    [
-      (* `forall i.
-            i < curr_len
-            ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s5
-                = EL i (aes256_xts_encrypt pt_in curr_len iv key1_lst key2_lst)` *)
-    ]
   ]
 );;
 
