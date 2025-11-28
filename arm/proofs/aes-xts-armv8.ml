@@ -2549,6 +2549,19 @@ let SELECT_ONE_BYTE_FROM_FORALL = prove(
     REWRITE_TAC[WORD_VAL]
 );;
 
+let IVAL_WORD_LT = prove(
+  `!i. i < 2 EXP 63 ==> ival ((word i):int64) = &i`,
+  GEN_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[ival; DIMINDEX_64; ARITH_RULE `64 - 1 = 63`] THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+  SUBGOAL_THEN `i < 2 EXP 64` ASSUME_TAC THENL
+  [ TRANS_TAC LT_TRANS `2 EXP 63` THEN
+    ASM_REWRITE_TAC[] THEN
+    CONV_TAC NUM_REDUCE_CONV;
+    ALL_TAC] THEN
+  ASM_SIMP_TAC[MOD_LT]
+);;
+
 (* ********************************************************** *)
 (* Properties that we prove about the specification functions *)
 (* Similar to the Decrypt ones but specified for Encrypt *)
@@ -4184,7 +4197,28 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
     ARITH_TAC;
 
     (* Subgoal 4: Prove backedge is taken when i > 0 *)
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[byte_list_at] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--1) THEN
+    SUBGOAL_THEN `ival ((word i):int64) < &0x0 <=>
+        ~(ival ((word (i + 0x1)):int64) - &0x1 = ival ((word i):int64))` ASSUME_TAC THENL
+    [ SUBGOAL_THEN `ival ((word i):int64) = &i` ASSUME_TAC THENL
+      [ MATCH_MP_TAC IVAL_WORD_LT THEN
+        UNDISCH_TAC `i < val (tail_len:int64)` THEN
+        UNDISCH_TAC `val (tail_len:int64) < 0x10` THEN
+        ARITH_TAC; ALL_TAC] THEN
+      SUBGOAL_THEN `ival ((word (i + 0x1)):int64) = &(i + 1)` ASSUME_TAC THENL
+      [ MATCH_MP_TAC IVAL_WORD_LT THEN
+        UNDISCH_TAC `i < val (tail_len:int64)` THEN
+        UNDISCH_TAC `val (tail_len:int64) < 0x10` THEN
+        ARITH_TAC; ALL_TAC] THEN
+      ASM_REWRITE_TAC[] THEN
+      ARITH_TAC; ALL_TAC] THEN
+    POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_SIMP_TAC[];
 
+     (* Subgoal 5: *)
   ]
 );;
 
