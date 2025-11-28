@@ -1682,6 +1682,34 @@ let EL_SUB_LIST = prove(
   ]
 );;
 
+let EL_SUB_LIST_GENERAL = prove(
+  `!p (l:A list) i n. i >= p /\ i < p + n /\ p + n <= LENGTH l ==>
+    EL (i - p) (SUB_LIST (p, n) l) = EL i l`,
+  INDUCT_TAC THENL
+  [ IMP_REWRITE_TAC[ADD; SUB_0; EL_SUB_LIST];
+    ALL_TAC
+  ] THEN
+  LIST_INDUCT_TAC THENL
+  [ REWRITE_TAC[SUB_LIST_CLAUSES; LENGTH] THEN
+    REPEAT STRIP_TAC THEN
+    ASM_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+  REWRITE_TAC[LENGTH] THEN
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[SUB_LIST_CLAUSES] THEN
+  SUBGOAL_THEN `EL i (CONS h (t:A list)) = EL (i - 1) t` SUBST1_TAC THENL
+  [ SUBGOAL_THEN `i = SUC (i - 1)` SUBST1_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC] THEN
+    REWRITE_TAC[EL; TL] THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN
+    ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[ARITH_RULE `i - SUC p = i - 1 - p`] THEN
+  FIRST_X_ASSUM (fun th -> MP_TAC (SPECL [`t:A list`; `(i - 1):num`; `n:num`] th)) THEN
+  ANTS_TAC THENL [ ASM_ARITH_TAC; ALL_TAC ] THEN
+  SIMP_TAC[]
+);;
+
 let EL_SUB_LIST_SHIFT = prove(
   `!(i:num) p (l:A list) n. 0 < i /\ i < n /\ n <= LENGTH l - p ==>
     EL (i - 1) (SUB_LIST (p + 1, n - 1) l) = EL i (SUB_LIST (p, n) l)`,
@@ -2699,6 +2727,61 @@ let LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS = prove(
   ASM_ARITH_TAC
 );;
 
+let LENGTH_OF_AES256_XTS_ENCRYPT = prove(
+  `! (i:num) (tail_len:num) (pt:byte list) (iv:int128) (key1:int128 list) (key2:int128 list).
+  ~(tail_len = 0) /\ tail_len < 16 ==>
+  LENGTH(aes256_xts_encrypt pt (16 * i + 16 + tail_len) iv key1 key2) = 16 * i + 16 + tail_len`,
+  REPEAT STRIP_TAC THEN
+  (* Case 1: i = 0 *)
+  ASM_CASES_TAC `i = 0` THENL
+  [
+    ASM_SIMP_TAC[ADD_ASSOC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[aes256_xts_encrypt] THEN
+    SUBGOAL_THEN `~(0x10 + tail_len < 0x10)` ASSUME_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `(0x10 + tail_len) MOD 0x10 = tail_len` ASSUME_TAC THENL
+    [ REWRITE_TAC[ARITH_RULE `0x10 + tail_len = 1 * 16 + tail_len`] THEN
+      IMP_REWRITE_TAC[MOD_MULT_ADD; MOD_LT]; ALL_TAC] THEN
+    ASM_SIMP_TAC[] THEN
+    REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
+    SUBGOAL_THEN `((0x10 + tail_len) - tail_len) DIV 0x10 = 1` SUBST1_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC ] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT_TAIL] THEN
+    ASM_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+
+  (* Case 2: i >= 1 *)
+  ASM_CASES_TAC `i >= 1` THENL
+  [
+    REWRITE_TAC[aes256_xts_encrypt] THEN
+    SUBGOAL_THEN `(0x10 * i + 0x10 + tail_len) MOD 0x10 = tail_len` SUBST1_TAC THENL
+    [ REWRITE_TAC[ADD_ASSOC; ARITH_RULE `0x10 * i + 0x10 = 16 * (i + 1)`] THEN
+      IMP_REWRITE_TAC[MOD_MULT_ADD; MOD_LT]; ALL_TAC] THEN
+    SUBGOAL_THEN `~(0x10 * i + 0x10 + tail_len < 0x10)` ASSUME_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[] THEN
+    REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
+    SUBGOAL_THEN `((0x10 * i + 0x10 + tail_len) - tail_len) DIV 0x10 = i + 1` SUBST1_TAC THENL
+    [ REWRITE_TAC[ARITH_RULE `(0x10 * i + 0x10 + tail_len) - tail_len = 16 * (i + 1)`] THEN
+      IMP_REWRITE_TAC[DIV_MULT] THEN
+      ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `~(i + 1 < 2)` ASSUME_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[] THEN
+    IMP_REWRITE_TAC[ARITH_RULE `(i + 1) - 2 = i - 1`; ADD_SUB] THEN
+    REWRITE_TAC[LENGTH_APPEND] THEN
+    IMP_REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT_REC] THEN
+    IMP_REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT_TAIL] THEN
+    ASM_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+
+  ASM_ARITH_TAC
+);;
+
 let BYTES_TO_INT128_OF_INT128_TO_BYTES = prove(
   `!x. bytes_to_int128 (int128_to_bytes x) = x`,
   GEN_TAC THEN
@@ -2820,6 +2903,93 @@ let SUB_LIST_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS = prove(
   ASM_ARITH_TAC
 );;
 
+let SUB_LIST_OF_AES256_XTS_ENCRYPT = prove(
+  `!(i:num) (tail_len:num) (pt:byte list) (iv:int128) (key1:int128 list) (key2:int128 list).
+    ~(tail_len = 0) /\ tail_len < 16 ==>
+    (SUB_LIST (0,16 * i)
+      (aes256_xts_encrypt pt (16 * i + 16 + tail_len) iv key1 key2))
+    = aes256_xts_encrypt pt (16 * i) iv key1 key2`,
+  REPEAT STRIP_TAC THEN
+  (* Case 1: i = 0 *)
+  ASM_CASES_TAC `i = 0` THENL
+  [
+    ASM_REWRITE_TAC[] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[ADD; SUB_LIST_CLAUSES; aes256_xts_encrypt] THEN
+    CONV_TAC NUM_REDUCE_CONV;
+    ALL_TAC
+  ] THEN
+  (* Case 2: i = 1 *)
+  ASM_CASES_TAC `i = 1` THENL
+  [
+    ASM_REWRITE_TAC[] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[aes256_xts_encrypt; ADD_ASSOC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    SUBGOAL_THEN `~(0x20 + tail_len < 0x10)` ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    SUBGOAL_THEN `(0x20 + tail_len) MOD 0x10 = tail_len` ASSUME_TAC THENL
+    [ ASM_SIMP_TAC[ARITH_RULE `32 = 2 * 16`; MOD_MULT_ADD] THEN
+      IMP_REWRITE_TAC[MOD_LT]
+      ; ALL_TAC] THEN
+    SUBGOAL_THEN `((0x20 + tail_len) - (0x20 + tail_len) MOD 0x10) DIV 0x10 = 0x2` ASSUME_TAC THENL
+    [ ASM_REWRITE_TAC[ADD_ASSOC; ADD_SUB] THEN
+      ARITH_TAC ; ALL_TAC] THEN
+    ASM_SIMP_TAC[] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    ASM_REWRITE_TAC[] THEN
+    MP_TAC (SPECL [`pt:byte list`; `iv:int128`; `key1:int128 list`; `key2:int128 list`] LENGTH_OF_AES256_XTS_ENCRYPT_REC_TRIVIAL) THEN
+    DISCH_TAC THEN IMP_REWRITE_TAC[SUB_LIST_APPEND_LEFT] THEN
+    REWRITE_TAC[AES256_XTS_ENCRYPT_REC_EQ_TAIL_TRIVIAL] THEN
+    MP_TAC (SPECL [`pt:byte list`; `iv:int128`; `key1:int128 list`; `key2:int128 list`] LENGTH_OF_AES256_XTS_ENCRYPT_TAIL_TRIVIAL) THEN
+    DISCH_TAC THEN IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES] THEN
+    ARITH_TAC;
+    ALL_TAC
+  ] THEN
+
+  (* Case 3: i >= 2 *)
+  ASM_CASES_TAC `i >= 2` THENL
+  [
+    ASM_REWRITE_TAC[ADD_ASSOC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[aes256_xts_encrypt] THEN
+    SUBGOAL_THEN `~(0x10 * i < 0x10)` ASSUME_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `~((0x10 * i + 0x10) + tail_len < 0x10)` ASSUME_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[LET_DEF; LET_END_DEF] THEN
+    SUBGOAL_THEN `((0x10 * i + 0x10) + tail_len) MOD 0x10 = tail_len` SUBST1_TAC THENL
+    [ REWRITE_TAC[ARITH_RULE `0x10 * i + 0x10 = 16 * (i + 1)`] THEN
+      IMP_REWRITE_TAC[MOD_MULT_ADD; MOD_LT]
+      ; ALL_TAC] THEN
+    REWRITE_TAC[ADD_SUB; MOD_MULT; SUB_0;
+      ARITH_RULE `0x10 * i + 0x10 = 16 * (i + 1)`] THEN
+    IMP_REWRITE_TAC[DIV_MULT] THEN
+    SUBGOAL_THEN `~(i + 1 < 2)` ASSUME_TAC THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `~(i < 2)` ASSUME_TAC THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[ADD_SUB; ARITH_RULE `(i + 1) - 2 = i - 1`] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    MP_TAC (SPECL [`0:num`; `(i - 1):num`; `pt:byte list`; `iv:int128`;
+      `key1:int128 list`; `key2:int128 list`] LENGTH_OF_AES256_XTS_ENCRYPT_REC) THEN
+    SUBGOAL_THEN `~((i - 1) < 0)` ASSUME_TAC THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+    IMP_REWRITE_TAC[ARITH_RULE `i >= 2 ==> i - 0x1 - 0x0 + 0x1 = i`] THEN
+    IMP_REWRITE_TAC[SUB_LIST_APPEND_LEFT] THEN
+    SIMP_TAC[ARITH_RULE `16 * i <= i * 16`] THEN
+    IMP_REWRITE_TAC[SUB_LIST_LENGTH_IMPLIES] THEN
+    SIMP_TAC[ARITH_RULE `i * 16 = 16 * i`] THEN
+    DISCH_TAC THEN
+    MP_TAC (SPECL [`0`; `(i-2):num`; `pt:byte list`; `iv:int128`;
+      `key1:int128 list`; `key2:int128 list`] AES256_XTS_ENCRYPT_REC_EQ_TAIL) THEN
+    ANTS_TAC THENL [ ASM_ARITH_TAC; ALL_TAC ] THEN
+    IMP_REWRITE_TAC[ARITH_RULE `i >= 2 ==> i - 0x2 + 0x1 = i - 1`];
+    ALL_TAC
+  ] THEN
+
+  ASM_ARITH_TAC
+);;
 
 let acc_len = new_definition
 `acc_len (i:int64) (len:int64) : num =
@@ -3470,7 +3640,7 @@ let BREAK_DATA_INTO_PARTS = prove(
     ==> read (memory :> bytes8 (word_add pt_ptr (word i))) s = EL i bl) /\
   (forall i. i < 16
     ==> read (memory :> bytes8 (word_add (word_add pt_ptr (word curr_len)) (word i))) s =
-        EL i (SUB_LIST (curr_len, 16 + val tail_len) bl)) /\
+        EL i (SUB_LIST (curr_len, 16) bl)) /\
   (forall i. i < val tail_len
     ==> read (memory :> bytes8
           (word_add (word_add pt_ptr (word (curr_len + 0x10))) (word i))) s =
@@ -4218,8 +4388,152 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
     POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_SIMP_TAC[];
 
-     (* Subgoal 5: *)
-  ]
+    (* Subgoal 5: *)
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[byte_list_at] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    REWRITE_TAC[cipher_stealing_inv; CONJUNCT1 SUB_LIST; CONJUNCT1 APPEND] THEN
+    REWRITE_TAC[SUB_0] THEN
+    ASM_REWRITE_TAC[] THEN
+    SUBGOAL_THEN `val ((word (val (tail_len:int64))):int64) = val tail_len` SUBST1_TAC THENL
+    [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `(SUB_LIST (0x0,val (tail_len:int64)) (SUB_LIST (l1_curr_len + 16,val tail_len) (pt_in:byte list))) =
+      (SUB_LIST (l1_curr_len + 16,val tail_len) pt_in)` SUBST1_TAC THENL
+    [ IMP_REWRITE_TAC[SUB_LIST_REFL] THEN
+      ASM_REWRITE_TAC[LENGTH_SUB_LIST; MIN] THEN
+      ASM_ARITH_TAC; ALL_TAC] THEN
+
+    MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+    EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+        MAYCHANGE [X19; X20; X21; X22],,
+        MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+        MAYCHANGE [memory :> bytes128 (word_add ctxt_p (word l1_curr_len))]` THEN
+    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    CONJ_TAC THENL [
+      REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
+              MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
+      ABBREV_TAC `vallen = val (len:int64)` THEN
+      SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
+
+    ABBREV_TAC `curr_blocks = (acc_blocks (num_5blocks:int64) (len_full_blocks:int64) T):num` THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--32) THEN
+
+    ABBREV_TAC `combinedCC = bytes_to_int128
+                  (APPEND (SUB_LIST (l1_curr_len + 0x10,val (tail_len:int64)) (pt_in:byte list))
+                  (SUB_LIST (val tail_len,0x10 - val tail_len)
+                  (int128_to_bytes (CC:int128))))` THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `aes256_xts_encrypt_round combinedCC
+      (calculate_tweak curr_blocks iv key2_lst) key1_lst` o  MATCH_MP (MESON[]
+      `read (Q26:(armstate,int128)component) (s:armstate) = a ==> !a'. a = a' ==> read Q26 s = a'`)) THEN
+    ANTS_TAC THENL
+    [ EXPAND_TAC "key1_lst" THEN
+      CONV_TAC (RAND_CONV (
+      REWRITE_CONV [aes256_xts_encrypt_round] THENC
+      DEPTH_CONV let_CONV)) THEN
+      GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+      AP_THM_TAC THEN
+      REWRITE_TAC [aes256_encrypt] THEN
+      REWRITE_TAC EL_15_128_CLAUSES THEN
+      REWRITE_TAC [aes256_encrypt_round; aese; aesmc] THEN
+      CONV_TAC (TOP_DEPTH_CONV let_CONV) THEN
+      AP_TERM_TAC THEN
+      GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+      REPEAT (AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+      GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+      REFL_TAC; DISCH_TAC ] THEN
+
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (33--33) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_SIMP_TAC[] THEN
+
+    UNDISCH_THEN `l1_curr_len + 16 + val (tail_len:int64) = val (len:int64)`
+      (fun th -> SUBST1_TAC (GSYM th)) THEN
+    REWRITE_TAC[GSYM (ASSUME `0x10 * l1_curr_blocks = l1_curr_len`)] THEN
+
+    (* `forall i.
+        i < l1_curr_len + 0x10 + val tail_len
+        ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s33 =
+            EL i (aes256_xts_encrypt pt_in (l1_curr_len + 0x10 + val tail_len) iv key1_lst key2_lst)`*)
+    MATCH_MP_TAC (SPECL [`l1_curr_len:num`; `tail_len:int64`; `ctxt_p:int64`; `s33:armstate`]
+                  BREAK_DATA_INTO_PARTS) THEN
+    REPEAT CONJ_TAC THENL (* 4 subgoals *)
+    [ (* `0x10 * l1_curr_blocks + 0x10 + val tail_len <=
+          LENGTH (aes256_xts_encrypt pt_in (0x10 * l1_curr_blocks + 0x10 + val tail_len) iv key1_lst key2_lst)`*)
+      IMP_REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT] THEN ARITH_TAC;
+
+      (* `forall i.
+          i < 0x10 * l1_curr_blocks
+          ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s33 =
+              EL i (aes256_xts_encrypt pt_in (0x10 * l1_curr_blocks + 0x10 + val tail_len) iv key1_lst key2_lst)` *)
+      UNDISCH_TAC `forall i.
+          i < l1_curr_len
+          ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s33 =
+              EL i (aes256_xts_encrypt pt_in l1_curr_len iv key1_lst key2_lst)` THEN
+      REWRITE_TAC[GSYM (ASSUME `0x10 * l1_curr_blocks = l1_curr_len`)] THEN
+      MP_TAC (SPECL [`0x10 * l1_curr_blocks:num`; `ctxt_p:int64`;
+                `(aes256_xts_encrypt pt_in (0x10 * l1_curr_blocks + 0x10 + val (tail_len:int64)) iv key1_lst key2_lst):byte list`;
+                `s33:armstate`] BYTE_LIST_TO_NUM_THM) THEN
+      ANTS_TAC THENL [
+        IMP_REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT] THEN
+        ARITH_TAC; ALL_TAC] THEN
+      DISCH_THEN (fun th -> REWRITE_TAC[th]) THEN
+      MP_TAC (SPECL [`0x10 * l1_curr_blocks:num`; `ctxt_p:int64`;
+                      `(aes256_xts_encrypt pt_in (0x10 * l1_curr_blocks) iv key1_lst key2_lst):byte list`;
+                      `s33:armstate`] BYTE_LIST_TO_NUM_THM) THEN
+      ANTS_TAC THENL [
+        IMP_REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS] THEN
+        ARITH_TAC; ALL_TAC] THEN
+      DISCH_THEN (fun th -> REWRITE_TAC[th]) THEN
+
+      DISCH_THEN (fun th -> REWRITE_TAC[th]) THEN
+      AP_TERM_TAC THEN
+      MP_TAC(SPECL [`l1_curr_blocks:num`; `pt_in:byte list`; `iv:int128`; `key1_lst:int128 list`; `key2_lst:int128 list`]
+                    LENGTH_OF_AES256_XTS_ENCRYPT_FULL_BLOCKS) THEN
+      DISCH_TAC THEN
+      IMP_REWRITE_TAC[SUB_LIST_OF_AES256_XTS_ENCRYPT] THEN
+      REWRITE_TAC[GSYM (ASSUME `0x10 * l1_curr_blocks = l1_curr_len`)] THEN
+      ASM_SIMP_TAC[SUB_LIST_LENGTH_IMPLIES];
+
+      (* `forall i.
+          i < 0x10
+          ==> read (memory :> bytes8 (word_add (word_add ctxt_p (word (0x10 * l1_curr_blocks))) (word i)))
+              s33 =  EL i (SUB_LIST (0x10 * l1_curr_blocks,0x10)
+                            (aes256_xts_encrypt pt_in (0x10 * l1_curr_blocks + 0x10 + val tail_len) iv key1_lst key2_lst))` *)
+      MP_TAC (SPECL [`0x10:num`; `(word_add ctxt_p (word (0x10 * l1_curr_blocks))):int64`;
+                ` (SUB_LIST (0x10 * l1_curr_blocks,0x10)
+                  (aes256_xts_encrypt pt_in (0x10 * l1_curr_blocks + 0x10 + val (tail_len:int64))
+                   iv key1_lst key2_lst)):byte list`;
+                `s33:armstate`] BYTE_LIST_TO_NUM_THM) THEN
+      ANTS_TAC THENL [
+        REWRITE_TAC[LENGTH_SUB_LIST] THEN
+        IMP_REWRITE_TAC[LENGTH_OF_AES256_XTS_ENCRYPT] THEN
+        ARITH_TAC; ALL_TAC] THEN
+      REWRITE_TAC[SUB_LIST_MIN_RIGHT; MIN] THEN
+      DISCH_THEN (fun th -> REWRITE_TAC[th]) THEN
+
+      REWRITE_TAC[READ_MEMORY_BYTES_BYTES128] THEN
+      ASM_REWRITE_TAC[] THEN
+      SIMP_TAC[ARITH_RULE `0x10 <= 0x10`] THEN
+      REWRITE_TAC[aes256_xts_encrypt] THEN
+      SIMP_TAC[ARITH_RULE `!x y. ~(x + 16 + y < 16)`] THEN
+      REWRITE_TAC[GSYM (ASSUME `0x10 * l1_curr_blocks = l1_curr_len`);
+                  ARITH_RULE `0x10 * l1_curr_blocks + 0x10 + val tail_len =
+                      0x10 * (l1_curr_blocks + 1) + val tail_len`] THEN
+      REWRITE_TAC[MOD_MULT_ADD] THEN
+      ASM_SIMP_TAC[MOD_LT] THEN
+      REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
+      REWRITE_TAC[ARITH_RULE
+        `((0x10 * (l1_curr_blocks + 0x1) + val tail_len) - val tail_len) DIV 0x10 =
+         (0x10 * (l1_curr_blocks + 0x1)) DIV 0x10`] THEN
+      IMP_REWRITE_TAC[DIV_MULT; ARITH_RULE `~(16 = 0)`] THEN
+      COND_CASES_TAC THENL
+      [
+      ]
+
+    ]
+
+
+  ] (* end of loop invariant proof. *)
 );;
 
 (* Proof: Less than 2 blocks *)
