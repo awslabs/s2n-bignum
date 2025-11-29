@@ -256,6 +256,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mlkem/mlkem_basemul_k4.o \
              mlkem/mlkem_ntt.o \
              mlkem/mlkem_reduce.o \
+             mlkem/mlkem_rej_uniform_VARIABLE_TIME.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \
              p256/bignum_cmul_p256.o \
