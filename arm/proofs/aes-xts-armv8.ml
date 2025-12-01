@@ -3977,10 +3977,20 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
   SUBGOAL_THEN `1 <= acc_blocks (num_5blocks:int64) (len_full_blocks:int64) true` ASSUME_TAC THENL
   [ REWRITE_TAC[acc_blocks] THEN
     REPEAT_N 4 (COND_CASES_TAC THENL [SIMP_TAC[] THEN ARITH_TAC; ALL_TAC] THEN SIMP_TAC[]) THEN
-    EXPAND_TAC "num_5blocks" THEN
-    REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
-
-  ]
+    SUBGOAL_THEN `val (num_5blocks:int64) * 0x50 = val (len_full_blocks:int64)` ASSUME_TAC THENL
+    [ MATCH_MP_TAC (SPECL [`val (len_full_blocks:int64)`; `val (num_5blocks:int64)`] DIVISION_BY_80_LEMMA) THEN
+        REPEAT CONJ_TAC THENL
+        [
+          ASM_SIMP_TAC[];
+          ASM_SIMP_TAC[];
+          UNDISCH_TAC `~(val (num_5blocks:int64) * 0x50 + 0x10 = val (len_full_blocks:int64))` THEN ARITH_TAC;
+          UNDISCH_TAC `~(val (num_5blocks:int64) * 0x50 + 0x20 = val (len_full_blocks:int64))` THEN ARITH_TAC;
+          UNDISCH_TAC `~(val (num_5blocks:int64) * 0x50 + 0x30 = val (len_full_blocks:int64))` THEN ARITH_TAC;
+          UNDISCH_TAC `~(val (num_5blocks:int64) * 0x50 + 0x40 = val (len_full_blocks:int64))` THEN ARITH_TAC ]
+        ; ALL_TAC] THEN
+    SUBGOAL_THEN `0x10 <= val (num_5blocks:int64) * 0x50` ASSUME_TAC THENL
+    [ ASM_ARITH_TAC; ALL_TAC ] THEN
+    ASM_ARITH_TAC; ALL_TAC ]
 
   SUBGOAL_THEN `l1_curr_len + 0x10 + val (tail_len:int64) = val (len:int64)` ASSUME_TAC THENL
   [ REWRITE_TAC[GSYM (ASSUME `acc_len num_5blocks len_full_blocks - 0x10 = l1_curr_len`)] THEN
@@ -4482,18 +4492,11 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
       SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
 
     ABBREV_TAC `curr_blocks = (acc_blocks (num_5blocks:int64) (len_full_blocks:int64) T):num` THEN
+
     SUBGOAL_THEN `curr_blocks = l1_curr_blocks + 0x1` ASSUME_TAC THENL
     [ REWRITE_TAC[GSYM (ASSUME `curr_blocks - 0x1 = l1_curr_blocks`)] THEN
       EXPAND_TAC "curr_blocks" THEN
-      REWRITE_TAC[acc_blocks] THEN
-      REPEAT_N 4 (COND_CASES_TAC THENL [SIMP_TAC[] THEN ARITH_TAC; ALL_TAC] THEN SIMP_TAC[]) THEN
-      EXPAND_TAC "num_5blocks" THEN
-      REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
-      UNDISCH_TAC `val (len_full_blocks:int64) <= 0x2 EXP 0x18` THEN
-      ASM_SIMP_TAC[ MOD_LT; ARITH_RULE `~(val (len_full_blocks:int64) < 0x10) ==> val len_full_blocks <= 0x2 EXP 0x18 ==>
-                            val len_full_blocks DIV 0x50 <= 0x2 EXP 0x40`] THEN
-      ASM_ARITH_TAC THEN
-    ]
+      ASM_ARITH_TAC; ALL_TAC ]
 
     ENSURES_INIT_TAC "s0" THEN
     ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (1--32) THEN
