@@ -35,82 +35,86 @@
         .balign 4
 
 // This code is effectively the same as the original here:
-// https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/src/native/x86_64/src/rej_uniform_asm.S 
+// https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/src/native/x86_64/src/rej_uniform_asm.S
+//
+// There are just a few minor changes:
+//
+// * Use xmm3 in place of xmm6, so we don't need to save/restore it for Windows
+// * Directly test for null input (buflen = 0), and skip body and return 0
+// * Use movsw instead of movsb, which saves a single shift(!)
 
 S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
         CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        CFI_DEC_RSP(96)
-        CFI_STACKSAVEU(xmm6,0)
-        CFI_STACKSAVEU(xmm7,16)
-        CFI_STACKSAVEU(xmm8,32)
-        CFI_STACKSAVEU(xmm9,48)
-        CFI_STACKSAVEU(xmm12,64)
-        CFI_STACKSAVE(rdi,80)
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
+        mov     rsi, rdx
+        mov     rdx, r8
 #endif
 
         CFI_DEC_RSP(0x210)
 
-        movabs rax, 0xd010d010d010d01
-        movq   xmm0, rax
-        pinsrq xmm0, rax, 0x1
-        movabs rax, 0xfff0fff0fff0fff
-        movq   xmm5, rax
-        pinsrq xmm5, rax, 0x1
-        movabs rax, 0x504040302010100
-        movq   xmm4, rax
-        movabs rax, 0xb0a0a0908070706
-        pinsrq xmm4, rax, 0x1
-        mov    rax, 0x0
-        mov    r8, 0x0
-        mov    r9, 0x5555
+
+        xor     eax, eax
+        test    rdx, rdx
+        jz      Lmlkem_rej_uniform_VARIABLE_TIME_end
+
+        movabs  rax, 0xd010d010d010d01
+        movq    xmm0, rax
+        pinsrq  xmm0, rax, 0x1
+        movabs  rax, 0xfff0fff0fff0fff
+        movq    xmm5, rax
+        pinsrq  xmm5, rax, 0x1
+        movabs  rax, 0x504040302010100
+        movq    xmm4, rax
+        movabs  rax, 0xb0a0a0908070706
+        pinsrq  xmm4, rax, 0x1
+        mov     rax, 0x0
+        mov     r8, 0x0
+        mov     r9, 0x5555
 
 Lmlkem_rej_uniform_VARIABLE_TIME_loop:
-        movdqu xmm2, XMMWORD PTR [rsi+r8*1]
-        pshufb xmm2, xmm4
-        movdqa xmm6, xmm2
-        psrlw  xmm6, 0x4
-        pblendw xmm2, xmm6, 0xaa
-        pand   xmm2, xmm5
-        movdqa xmm1, xmm0
+        movdqu  xmm2, XMMWORD PTR [rsi+r8*1]
+        pshufb  xmm2, xmm4
+        movdqa  xmm3, xmm2
+        psrlw   xmm3, 0x4
+        pblendw xmm2, xmm3, 0xaa
+        pand    xmm2, xmm5
+        movdqa  xmm1, xmm0
         pcmpgtw xmm1, xmm2
         pmovmskb r11d, xmm1
-        pext   r11, r11, r9
-        mov    r10, r11
-        shl    r10, 0x4
-        movdqu xmm3, XMMWORD PTR [rcx+r10*1]
-        pshufb xmm2, xmm3
-        movdqu XMMWORD PTR [rsp+rax*2], xmm2
-        popcnt r11, r11
-        add    rax, r11
-        cmp    rax, 0x100
-        jae    Lmlkem_rej_uniform_VARIABLE_TIME_final_copy
-        add    r8, 0xc
-        cmp    rdx, r8
-        ja     Lmlkem_rej_uniform_VARIABLE_TIME_loop
+        pext    r11, r11, r9
+        mov     r10, r11
+        shl     r10, 0x4
+        movdqu  xmm3, XMMWORD PTR [rcx+r10*1]
+        pshufb  xmm2, xmm3
+        movdqu  XMMWORD PTR [rsp+rax*2], xmm2
+        popcnt  r11, r11
+        add     rax, r11
+        cmp     rax, 0x100
+        jae     Lmlkem_rej_uniform_VARIABLE_TIME_final_copy
+        add     r8, 0xc
+        cmp     rdx, r8
+        ja      Lmlkem_rej_uniform_VARIABLE_TIME_loop
 
 Lmlkem_rej_uniform_VARIABLE_TIME_final_copy:
-        mov    rcx, 0x100
-        cmp    rax, 0x100
-        cmova  rax, rcx
-        mov    rsi, rsp
-        mov    rcx, rax
-        shl    rcx, 1
-        rep movs BYTE PTR es:[rdi],BYTE PTR ds:[rsi]
+        mov     rcx, 0x100
+        cmp     rax, 0x100
+        cmova   rax, rcx
+        mov     rsi, rsp
+        mov     rcx, rax
+        rep movsw
+
+Lmlkem_rej_uniform_VARIABLE_TIME_end:
 
         CFI_INC_RSP(0x210)
 
 #if WINDOWS_ABI
-        CFI_STACKLOADU(xmm6,0)
-        CFI_STACKLOADU(xmm7,16)
-        CFI_STACKLOADU(xmm8,32)
-        CFI_STACKLOADU(xmm9,48)
-        CFI_STACKLOADU(xmm12,64)
-        CFI_STACKLOAD(rdi,80)
-        CFI_INC_RSP(96)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
         CFI_RET
 
