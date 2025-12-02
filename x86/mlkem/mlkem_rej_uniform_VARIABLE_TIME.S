@@ -37,11 +37,10 @@
 // This code is effectively the same as the original here:
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/src/native/x86_64/src/rej_uniform_asm.S
 //
-// There are just a few minor changes:
+// There are just a couple of minor changes:
 //
 // * Use xmm3 in place of xmm6, so we don't need to save/restore it for Windows
 // * Directly test for null input (buflen = 0), and skip body and return 0
-// * Use movsw instead of movsb, which saves a single shift(!)
 
 S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
         CFI_START
@@ -106,10 +105,10 @@ Lmlkem_rej_uniform_VARIABLE_TIME_final_copy:
         cmova   rax, rcx
         mov     rsi, rsp
         mov     rcx, rax
-        rep movsw
+        shl     rcx, 1
+        repz  movsb
 
 Lmlkem_rej_uniform_VARIABLE_TIME_end:
-
         CFI_INC_RSP(0x210)
 
 #if WINDOWS_ABI

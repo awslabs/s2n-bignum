@@ -153,6 +153,9 @@ let BYTES_LOADED_APPEND_CLAUSE = prove
 (*** Note: this does not build in the conception that some bits
  *** (e.g. 1) are "reserved" and always 0 or 1. That could be added
  *** to the semantics of any instructions operating on the flags register.
+ ***
+ *** We include DF because in principle it affects the MOVSB semantics;
+ *** no instruction actually sets it and usual ABIs assume it is clear.
  ***)
 
 let CF = define `CF = rflags :> bitelement 0`;;
@@ -167,7 +170,9 @@ let SF = define `SF = rflags :> bitelement 7`;;
 
 let OF = define `OF = rflags :> bitelement 11`;;
 
-add_component_alias_thms [CF; PF; AF; ZF; SF; OF];;
+let DF = define `DF = rflags :> bitelement 10`;;
+
+add_component_alias_thms [CF; PF; AF; ZF; SF; OF; DF];;
 
 (* ------------------------------------------------------------------------- *)
 (* Shorthands for the general-purpose registers.                             *)
@@ -892,6 +897,21 @@ let x86_VMOVQ = new_definition
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
     let x = read src s in (dest := x) s`;;
+
+(*** This is a tricky one. We should really give it an iterative
+ *** semantics to handle overlapping regions. We currently just
+ *** assume the regions don't overlap for sensible results
+ ***)
+
+let x86_MOVSB = new_definition
+ `x86_MOVSB dest src size s =
+    let sptr = read src s
+    and dptr = read dest s
+    and n = val(read size s:int64) in
+    if nonoverlapping (dptr,n) (sptr,n) then
+       let x = read (memory :> bytes(sptr,n)) s in
+       (memory :> bytes(dptr,n) := x) s
+    else ASSIGNS entirety s`;;
 
 (*** These are rare cases with distinct source and destination
  *** operand sizes. There is a 32-bit to 64-bit version of MOVSX(D),
@@ -2394,6 +2414,10 @@ let x86_execute = define
           (64,128) -> x86_VMOVQ (OPERAND64 dest s) (OPERAND128 src s)
         | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)
         | (128,128) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND128 src s)) s)) s
+    | MOVSB dest src size ->
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+         x86_MOVSB (OPERAND64 dest s) (OPERAND64 src s) (OPERAND64 size s)) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -3760,6 +3784,7 @@ let X86_OPERATION_CLAUSES =
     x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ; x86_MOVSX; x86_MOVUPS;
+    x86_MOVSB;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
