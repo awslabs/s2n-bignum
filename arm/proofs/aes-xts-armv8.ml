@@ -80,11 +80,11 @@ let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/
 
   (* Lxts_enc: *)
   (* pc + 0xa4 *)
+  0x528010f3;       (* arm_MOV W19 (rvalue (word 0x87)) *)
   0xf100805f;       (* arm_CMP X2 (rvalue (word 0x20)) *)
-  0x54004483;       (* arm_BCC (word 0x890) *)
+  0x54004463;       (* arm_BCC (word 0x88c) *)
   0x9e6600c9;       (* arm_FMOV_FtoI X9 Q6 0x0 0x40 *)
   0x9eae00ca;       (* arm_FMOV_FtoI X10 Q6 0x1 0x40 *)
-  0x528010f3;       (* arm_MOV W19 (rvalue (word 0x87)) *)
   0x93ca8156;       (* arm_ROR X22 X10 0x20 *)
   0x93c9fd4a;       (* arm_EXTR X10 X10 X9 0x3f *)
   0x0a967e6b;       (* arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f) *)
@@ -5008,7 +5008,7 @@ let AES_XTS_DECRYPT_LT_2BLOCK_CORRECT = time prove(
     SUBGOAL_THEN
       `ival (word_sub (len:int64) (word 0x10)) < &0x0
       <=> ~(ival (len:int64) - &0x10 = ival (word_sub (len:int64) (word 0x10)))` MP_TAC THENL
-    [ MP_TAC (BITBLAST_RULE. (* put in tips doc. Q: When to use it vs. ARITH_RULE? *)
+    [ MP_TAC (BITBLAST_RULE (* put in tips doc. Q: When to use it vs. ARITH_RULE? *)
         `val (len:int64)  >= 0x10 ==> val len < 0x20 ==>
         ival (word_sub len (word 0x10)) >= &0x0`) THEN
       ASM_REWRITE_TAC[] THEN
@@ -5033,93 +5033,65 @@ let AES_XTS_DECRYPT_LT_2BLOCK_CORRECT = time prove(
       EXPAND_TAC "key2_lst" THEN AESENC_TAC; DISCH_TAC] THEN
 
     (* Simulating until branching into tail1x *)
-    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (66--76) THEN
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (66--77) THEN
     (* Simulate AES-XTS encryption of block in Q0 *)
-    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (77--107) THEN
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (78--108) THEN
     XTSENC_TAC `Q0:(armstate,int128)component` `0` `0` THEN
 
-    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (108--116) THEN
-    TWEAK_TAC `Q6:(armstate,int128)component` `1:num` `0:num` THEN (* Fails *)
-      FIRST_X_ASSUM(MP_TAC o SPEC `(word_zx:int128->int64) (calculate_tweak 0 iv key2_lst)`
-    o  MATCH_MP (MESON[] `read X9 s = a ==> !a'. a = a' ==> read X9 s = a'`)) THEN (* Fails *)
+    ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (109--117) THEN
+    TWEAK_TAC `Q6:(armstate,int128)component` `1:num` `0:num` THEN
 
 (*
-With the misplaced `mov w19, #0x87` bug (being after `b.lo .Lxts_enc_tail1x` rather than before it),
-fixed in https://github.com/aws/aws-lc/commit/3f282aa6fd16f6afce9e7d0d10ed5d9fdb713efa
-trying to calculate the tweak for the tail in tail1x assumptions are erased starting from state s113
-which contains read X19 s112, because the contents of X19 are not know,
-hence read X19 s112 is not in the assumptions. The following is the output of the symbolic simulation:
+# With `mov w19, #0x87` before `b.lo .Lxts_enc_tail1x` rather than after it,
+# fixed in https://github.com/aws/aws-lc/commit/3f282aa6fd16f6afce9e7d0d10ed5d9fdb713efa
+# The assumptions contain:
+ 21 [`read X19 s108 = word 0x87`]
 
-1 subgoal (2 total) # e(ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (108--116));;
-Stepping to state s108
+# The following is the output of the symbolic simulation:
+
+1 subgoal (2 total) # e(ARM_ACCSTEPS_TAC AES256_XTS_ENCRYPT_EXEC [] (109--117));;
+Stepping to state s109
 Instruction at `pc + 2484 (0x9b4)`: `arm_STR Q0 X1 (Postimmediate_Offset (word 0x10))`
-Info: assumption `read (memory :> bytes128 iv_p) s107 = iv` is erased.
+Info: assumption `read (memory :> bytes128 iv_p) s108 = iv` is erased.
 - Reason: NONOVERLAPPING_RULE: could not prove one of:
   * `nonoverlapping (iv_p,0x10) (ctxt_p,0x10)`
-CPU time (user): 0.472655
-Info: assumption `read events s108 = CONS (EventStore (ctxt_p,0x10)) (read events s107)` is erased, but it might have contained useful information
-Stepping to state s109
-Instruction at `pc + 2488 (0x9b8)`: `arm_FMOV_FtoI X9 Q6 0x0 0x40`
-CPU time (user): 0.0751340000002
+CPU time (user): 0.471508000001
+Info: assumption `read events s109 = CONS (EventStore (ctxt_p,0x10)) (read events s108)` is erased, but it might have contained useful information
 Stepping to state s110
-Instruction at `pc + 2492 (0x9bc)`: `arm_FMOV_FtoI X10 Q6 0x1 0x40`
-CPU time (user): 0.0737959999997
+Instruction at `pc + 2488 (0x9b8)`: `arm_FMOV_FtoI X9 Q6 0x0 0x40`
+CPU time (user): 0.0778439999999
 Stepping to state s111
-Instruction at `pc + 2496 (0x9c0)`: `arm_EXTR X22 X10 X10 0x20`
-CPU time (user): 0.0790890000003
+Instruction at `pc + 2492 (0x9bc)`: `arm_FMOV_FtoI X10 Q6 0x1 0x40`
+CPU time (user): 0.0805559999999
 Stepping to state s112
-Instruction at `pc + 2500 (0x9c4)`: `arm_EXTR X10 X10 X9 0x3f`
-CPU time (user): 0.0734319999997
+Instruction at `pc + 2496 (0x9c0)`: `arm_EXTR X22 X10 X10 0x20`
+CPU time (user): 0.0796230000001
 Stepping to state s113
-Instruction at `pc + 2504 (0x9c8)`: `arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f)`
-CPU time (user): 0.078387
-Info: assumption `read X11 s113 =
-word_zx
-(word_and (word_zx (read X19 s112))
-(word_ishr
- (word_zx
- (word_subword
-  (word_join (word_subword (calculate_tweak 0x0 iv key2_lst) (0x40,0x40))
-  (word_subword (calculate_tweak 0x0 iv key2_lst) (0x40,0x40)))
- (0x20,0x40)))
-0x1f))` is erased, but it might have contained useful information
+Instruction at `pc + 2500 (0x9c4)`: `arm_EXTR X10 X10 X9 0x3f`
+CPU time (user): 0.0763620000002
 Stepping to state s114
-Instruction at `pc + 2508 (0x9cc)`: `arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1)`
-CPU time (user): 0.0678280000006
-Info: assumption `read X9 s114 =
-word_xor (read X11 s113)
-(word_shl (word_subword (calculate_tweak 0x0 iv key2_lst) (0x0,0x40)) 0x1)` is erased, but it might have contained useful information
+Instruction at `pc + 2504 (0x9c8)`: `arm_AND W11 W19 (Shiftedreg W22 ASR 0x1f)`
+CPU time (user): 0.0847099999996
 Stepping to state s115
-Instruction at `pc + 2512 (0x9d0)`: `arm_FMOV_ItoF Q6 X9 0x0`
-CPU time (user): 0.0701379999996
-Info: assumption `read Q6 s115 = word_zx (read X9 s114)` is erased, but it might have contained useful information
+Instruction at `pc + 2508 (0x9cc)`: `arm_EOR X9 X11 (Shiftedreg X9 LSL 0x1)`
+CPU time (user): 0.0757570000001
 Stepping to state s116
+Instruction at `pc + 2512 (0x9d0)`: `arm_FMOV_ItoF Q6 X9 0x0`
+CPU time (user): 0.0816250000003
+Stepping to state s117
 Instruction at `pc + 2516 (0x9d4)`: `arm_FMOV_ItoF Q6 X10 0x1`
-CPU time (user): 0.0717420000005
-Info: assumption `read Q6 s116 =
-word_insert (read Q6 s115) (0x40,0x40)
-(word_subword
- (word_join (word_subword (calculate_tweak 0x0 iv key2_lst) (0x40,0x40))
- (word_subword (calculate_tweak 0x0 iv key2_lst) (0x0,0x40)))
-(0x3f,0x40))` is erased, but it might have contained useful information
-*)
-(*
-The following tactics fail:
+CPU time (user): 0.082042
 
+# The following tactic succeeds:
 1 subgoal (2 total) # e(TWEAK_TAC `Q6:(armstate,int128)component` `1:num` `0:num`);;
 0..0..solved at 2
 0..0..solved at 2
 0..0..solved at 2
 
-Exception: Failure "tryfind".
-1 subgoal (2 total) # e(FIRST_X_ASSUM(MP_TAC o SPEC `(word_zx:int128->int64) (calculate_tweak 1 iv key2_lst)`
-    o  MATCH_MP (MESON[] `read X9 s = a ==> !a'. a = a' ==> read X9 s = a'`)));;
-0..0..solved at 2
+val it : goalstack = 1 subgoal (2 total)
 
-Exception: Failure "tryfind".
-1 subgoal (2 total) # e(FIRST_X_ASSUM(MP_TAC o SPEC `(word_zx:int128->int64) (calculate_tweak 0 iv key2_lst)`
-    o  MATCH_MP (MESON[] `read X9 s = a ==> !a'. a = a' ==> read X9 s = a'`)));;
-0..0..solved at 2
+# and adds the following assumption:
+ 93 [`read Q6 s117 = calculate_tweak 0x1 iv key2_lst`]
 *)
 
 (*
