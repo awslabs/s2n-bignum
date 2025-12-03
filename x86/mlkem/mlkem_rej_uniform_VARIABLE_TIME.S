@@ -8,21 +8,25 @@
 //
 // extern uint64_t mlkem_rej_uniform_VARIABLE_TIME
 //                     (int16_t r[S2N_BIGNUM_STATIC 256],
-//                      const uint8_t *buf,uint64_t buflen)
+//                      const uint8_t *buf,uint64_t buflen,
+//                      const uint8_t *table);
 //
 // Interprets the input buffer as packed 12-bit numbers with a length of
 // buflen bytes, assumed to be a multiple of 24. Fills the output array
 // with those numbers from the packed buffer that are < 3329, in the order
 // of appearance, returning the total number of entries written, with a
-// maximum of 256.
+// maximum of 256. The table argument is a specific precomputed table of
+// constants that is defined in this file (see also our test code):
+//
+//   https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/native/aarch64/src/rej_uniform_table.c
 //
 // Unique (at the moment) among s2n-bignum functions this is *not* a
 // constant-time function. The time taken depends not only on the
 // buffer size "buflen", but also how many elements of the buffer are
 // needed to provide the 256 entries for the output.
 //
-// Standard x86-64 ABI: RDI = r, RSI = buf, RDX = buflen
-// Microsoft x64 ABI:   RCX = r, RDX = buf, R8 = buflen
+// Standard x86-64 ABI: RDI = r, RSI = buf, RDX = buflen, RCX = table
+// Microsoft x64 ABI:   RCX = r, RDX = buf, R8 = buflen, R9 = table
 // ----------------------------------------------------------------------------
 
 #include "_internal_s2n_bignum_x86.h"
@@ -52,10 +56,10 @@ S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
+        mov     rcx, r9
 #endif
 
         CFI_DEC_RSP(0x210)
-
 
         xor     eax, eax
         test    rdx, rdx
