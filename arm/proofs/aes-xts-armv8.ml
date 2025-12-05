@@ -3637,7 +3637,7 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
          byte_list_at (aes256_xts_encrypt pt_in (acc_len num_5blocks len_full_blocks) iv key1_lst key2_lst)
          ctxt_p (word (acc_len num_5blocks len_full_blocks)) s)
     (\s.
-        read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
+        read PC s = word (pc + 0xa8c) /\ //LENGTH aes256_xts_encrypt_mc - 8*4 = 0xaac - 0x8 * 0x4
         byte_list_at (aes256_xts_encrypt pt_in (val len) iv key1_lst key2_lst) ctxt_p len s )
     ( MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
       MAYCHANGE [X19; X20; X21; X22] ,,
@@ -4603,7 +4603,6 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
       REWRITE_TAC[GSYM (ASSUME `0x10 * l1_curr_blocks = l1_curr_len`)] THEN
       REWRITE_TAC[ARITH_RULE `l1_curr_blocks * 0x10 = 0x10 * l1_curr_blocks`]
     ]
-
   ] (* end of loop invariant proof. *)
 );;
 
@@ -4902,7 +4901,7 @@ let AES_XTS_ENCRYPT_LT_2BLOCK_CORRECT = time prove(
            read(memory :> bytes128 iv_p) s = iv /\
            set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
            set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14)
-      (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
+      (\s. read PC s = word (pc + 0xa8c) /\ //LENGTH aes256_xts_encrypt_mc - 8*4 = 0xaac - 0x8 * 0x4
            byte_list_at (aes256_xts_encrypt pt_in (val len) iv key1_lst key2_lst) ctxt_p len s
       )
     (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
@@ -5077,7 +5076,7 @@ let AES_XTS_ENCRYPT_LT_3BLOCK_CORRECT = time prove(
            read(memory :> bytes128 iv_p) s = iv /\
            set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
            set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14)
-      (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
+      (\s. read PC s = word (pc + 0xa8c) /\ //LENGTH aes256_xts_encrypt_mc - 8*4 = 0xaac - 0x8 * 0x4
            byte_list_at (aes256_xts_encrypt pt_in (val len) iv key1_lst key2_lst) ctxt_p len s
       )
     (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
@@ -5246,7 +5245,7 @@ let AES_XTS_ENCRYPT_LT_4BLOCK_CORRECT = time prove(
            read(memory :> bytes128 iv_p) s = iv /\
            set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
            set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14)
-      (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
+      (\s. read PC s = word (pc + 0xa8c) /\ //LENGTH aes256_xts_encrypt_mc - 8*4 = 0xaac - 0x8 * 0x4
            byte_list_at (aes256_xts_encrypt pt_in (val len) iv key1_lst key2_lst) ctxt_p len s
       )
     (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
@@ -5419,7 +5418,7 @@ let AES_XTS_ENCRYPT_LT_5BLOCK_CORRECT = time prove(
            read(memory :> bytes128 iv_p) s = iv /\
            set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
            set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14)
-      (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
+      (\s. read PC s = word (pc + 0xa8c) /\ //LENGTH aes256_xts_encrypt_mc - 8*4 = 0xaac - 0x8 * 0x4
            byte_list_at (aes256_xts_encrypt pt_in (val len) iv key1_lst key2_lst) ctxt_p len s
       )
     (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
@@ -5576,7 +5575,6 @@ void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
                         const AES_KEY *key1, const AES_KEY *key2,
                         const uint8_t iv[16])
 *)
-
 let AES256_XTS_ENCRYPT_CORRECT = prove(
   `!ptxt_p ctxt_p len key1_p key2_p iv_p
     pt_in iv
@@ -5601,7 +5599,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
            set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14
       )
       // postcondition
-      (\s. read PC s = word (pc + LENGTH aes256_xts_encrypt_mc - 8*4) /\
+      (\s. read PC s = word (pc + 0xa8c) /\ //LENGTH aes256_xts_encrypt_mc - 8*4 = 0xaac - 0x8 * 0x4
            byte_list_at (aes256_xts_encrypt pt_in (val len) iv
                 [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]
                 [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14])
@@ -7894,7 +7892,51 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
   ASM_SIMP_TAC[]
 );;
 
-
+let AES256_XTS_ENCRYPT_SUBROUTINE_CORRECT = prove(
+  `!ptxt_p ctxt_p len key1_p key2_p iv_p
+    pt_in iv
+    k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14
+    k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14
+    pc stackpointer returnaddress.
+    aligned 16 stackpointer /\
+    PAIRWISE nonoverlapping
+    [(word_sub stackpointer (word 96), 96);
+     (word pc, LENGTH aes256_xts_encrypt_mc);
+     (ptxt_p, val len);
+     (ctxt_p, val len);
+     (iv_p, 16);
+     (key1_p, 244);
+     (key2_p, 244)] /\
+    val len >= 16 /\ val len <= 2 EXP 24 /\ LENGTH pt_in = val len
+  ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aes256_xts_encrypt_mc /\
+           read PC s = word pc /\
+           read SP s = stackpointer /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS [ptxt_p; ctxt_p; len; key1_p; key2_p; iv_p] s /\
+           byte_list_at pt_in ptxt_p len s /\
+           read(memory :> bytes128 iv_p) s = iv /\
+           set_key_schedule s key1_p k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14 /\
+           set_key_schedule s key2_p k2_0 k2_1 k2_2 k2_3 k2_4 k2_5 k2_6 k2_7 k2_8 k2_9 k2_10 k2_11 k2_12 k2_13 k2_14 )
+      (\s. read PC s = returnaddress /\
+           byte_list_at (aes256_xts_encrypt pt_in (val len) iv
+                [k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10; k1_11; k1_12; k1_13; k1_14]
+                [k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10; k2_11; k2_12; k2_13; k2_14])
+                ctxt_p len s )
+    (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
+     MAYCHANGE [memory :> bytes(ctxt_p, val len);
+                memory :> bytes(word_sub stackpointer (word 96), 96)])`,
+  REWRITE_TAC[byte_list_at; set_key_schedule;
+    fst AES256_XTS_ENCRYPT_EXEC] THEN
+  (* ~pre_post_nsteps:(7,7): 7 instructions before and after program body
+      for handling stack.
+    96: the byte size occupied on stack for storing preserved registers *)
+  ARM_ADD_RETURN_STACK_TAC
+    ~pre_post_nsteps:(7,7) AES256_XTS_ENCRYPT_EXEC
+    (REWRITE_RULE[byte_list_at; set_key_schedule;
+      fst AES256_XTS_ENCRYPT_EXEC] AES256_XTS_ENCRYPT_CORRECT)
+   `[X19; X20; X21; X22; D8; D9; D10; D11; D12; D13; D14; D15]` 96
+  );;
 (*
 val it : goalstack = 1 subgoal (1 total)
 
