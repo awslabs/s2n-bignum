@@ -32,6 +32,7 @@ s/_internal_s2n_bignum_x86/_internal_s2n_bignum_x86_att/
 /^\.endm/b
 
 # 4-operand instructions: dest,src1,src2,imm -> $imm,%src2,%src1,%dest
+s/[ \t]*vperm2i128[ \t]+ymm([a-z_0-9]+),ymm([a-z_0-9]+),ymm([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\3,%ymm\2,%ymm\1/
 s/^vperm2i128[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\\\3,%ymm\\\2,%ymm\\\1/
 s/^vpblendd[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\\\3,%ymm\\\2,%ymm\\\1/
 
@@ -220,7 +221,8 @@ s/^vmovshdup[ \t]+ymm([0-9]+),%ymm\\([a-z_0-9]+)$/vmovshdup\t%ymm\\\2,%ymm\1/
 # Fix missing % prefixes on regular registers in butterfly macro
 s/^vpmuldq[ \t]+ymm([0-9]+),/vpmuldq\t\t%ymm\1,/
 s/^vmovshdup[ \t]+ymm([0-9]+),/vmovshdup\t%ymm\1,/
-s/^vpblendd[ \t]+ymm([0-9]+),/vpblendd\t%ymm\1,/
+s/[ \t]*vpblendd[ \t]+ymm([0-9]+),/vpblendd\t%ymm\1,/
+s/[ \t]*vpblendw[ \t]+ymm([0-9]+),/vpblendw\t%ymm\1,/
 
 # Fix specific operand order issues that got reversed by general rules
 # vpsrlq should be: vpsrlq $32,%ymm1,%ymm10 not vpsrlq ymm10,%ymm1,32
@@ -231,8 +233,9 @@ s/^vpsrlq[ \t]+%ymm([0-9]+),%ymm([0-9]+),([0-9]+)$/vpsrlq\t\t$\3,%ymm\2,%ymm\1/
 s/^vmovshdup[ \t]+%ymm([0-9]+),%ymm([0-9]+)$/vmovshdup\t%ymm\2,%ymm\1/
 
 # vpblendd should be: vpblendd $0xAA,%ymm12,%ymm\h,%ymm\h not vpblendd %ymm\h,%ymm\h,%ymm12,0xAA
-s/^vpblendd[ \t]+%ymm\\([a-z_0-9]+),%ymm\\([a-z_0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\3,%ymm\\\2,%ymm\\\1/
-s/^vpblendd[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\3,%ymm\2,%ymm\1/
+s/[ \t]*vpblendd[ \t]+%ymm\\([a-z_0-9]+),%ymm\\([a-z_0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\3,%ymm\\\2,%ymm\\\1/
+s/[ \t]*vpblendd[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\3,%ymm\2,%ymm\1/
+s/[ \t]*vpblendw[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendw\t$\4,%ymm\3,%ymm\2,%ymm\1/
 
 # Fix remaining butterfly macro operand order issues
 # vpmuldq %ymm14,%ymm12,%ymm\zl1 should be vpmuldq %ymm\zl1,%ymm12,%ymm14
