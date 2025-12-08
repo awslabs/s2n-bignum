@@ -198,3 +198,166 @@ let EDWARDS25519_ENCODE_WINDOWS_SUBROUTINE_CORRECT = prove
                        memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_ENCODE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "edwards25519_encode" subroutine_signatures)
+    EDWARDS25519_ENCODE_CORRECT
+    EDWARDS25519_ENCODE_EXEC;;
+
+let EDWARDS25519_ENCODE_SAFE = time prove
+ (`exists f_events.
+       forall e z p pc.
+           nonoverlapping (word pc,47) (z,32)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc)
+                    (BUTLAST edwards25519_encode_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [z; p] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 46) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p z pc /\
+                         memaccess_inbounds e2 [p,64; z,32] [z,32]))
+               (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bytes (z,32)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars EDWARDS25519_ENCODE_EXEC);;
+
+let EDWARDS25519_ENCODE_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z p pc stackpointer returnaddress.
+        nonoverlapping (stackpointer,8) (z,32) /\
+        nonoverlapping (word pc,LENGTH edwards25519_encode_tmc) (z,32)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_encode_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; p] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events p z pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [p,64; z,32; stackpointer,8]
+                      [z,32; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (z,32)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC edwards25519_encode_tmc
+    EDWARDS25519_ENCODE_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let EDWARDS25519_ENCODE_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z p pc stackpointer returnaddress.
+        nonoverlapping (stackpointer,8) (z,32) /\
+        nonoverlapping (word pc,LENGTH edwards25519_encode_mc) (z,32)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_encode_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; p] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events p z pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [p,64; z,32; stackpointer,8]
+                      [z,32; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (z,32)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_ENCODE_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let EDWARDS25519_ENCODE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z p pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH edwards25519_encode_windows_tmc; p,8 * 8] /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,32) /\
+        nonoverlapping (word pc,LENGTH edwards25519_encode_windows_tmc)
+        (z,32)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_encode_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; p] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p z pc (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p,64; z,32; word_sub stackpointer (word 16),24]
+                      [z,32; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,32);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  WINDOWS_X86_WRAP_NOSTACK_TAC
+    edwards25519_encode_windows_tmc edwards25519_encode_tmc
+    EDWARDS25519_ENCODE_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let EDWARDS25519_ENCODE_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z p pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH edwards25519_encode_windows_mc; p,8 * 8] /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,32) /\
+        nonoverlapping (word pc,LENGTH edwards25519_encode_windows_mc) (z,32)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_encode_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; p] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p z pc (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p,64; z,32; word_sub stackpointer (word 16),24]
+                      [z,32; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,32);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_ENCODE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

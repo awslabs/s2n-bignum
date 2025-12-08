@@ -7055,7 +7055,6 @@ let OUTERLOOP_ORIGINAL_STEP1_EQUIV = prove(equiv_goal,
 
   EQUIV_STEPS_TAC actions BIGNUM_EMONTREDC_8N_EXEC OUTERLOOP_STEP1_EXEC THEN
 
-  (* here. we will need taint analysis again. *)
   REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
   ASM_REWRITE_TAC[MESON[] `!(x:A). exists y. x = y`] THEN

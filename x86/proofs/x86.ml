@@ -1094,7 +1094,8 @@ let x86_POP = new_definition
         let p = read RSP s in
         let x:N word = word(read (memory :> bytes(p,n)) s) in
         let p' = word_add p (word n) in
-        (RSP := p' ,,
+        (events := CONS (EventLoad (p, n)) (read events s) ,,
+         RSP := p' ,,
          dest := x) s`;;
 
 let x86_POPCNT = new_definition
@@ -1117,7 +1118,8 @@ let x86_PUSH = new_definition
         let p = read RSP s
         and x = val(read src s:N word) in
         let p' = word_sub p (word n) in
-        (RSP := p' ,,
+        (events := CONS (EventStore (p', n)) (read events s) ,,
+         RSP := p' ,,
          memory :> bytes(p',n) := x) s`;;
 
 let x86_PSHUFB = new_definition
@@ -1174,7 +1176,8 @@ let x86_RET = new_definition
         let p = read RSP s in
         let p' = word_add p (word 8)
         and ip' = read (memory :> bytes64 p) s in
-        (events := CONS (EventJump (read RIP s, ip')) (read events s) ,,
+        (events := CONS (EventJump (read RIP s, ip'))
+            (CONS (EventLoad (p,8)) (read events s)) ,,
          RSP := p' ,, RIP := ip') s`;;
 
 (*** Shift and rotate operations mask to 5 bits, or 6 bits in 64-bit     ***)
@@ -2516,7 +2519,6 @@ let x86_execute = define
            64 -> x86_PMOVMSKB (OPERAND64 dest s) (OPERAND128_SSE src s)
          | 32  -> x86_PMOVMSKB (OPERAND32 dest s) (OPERAND128_SSE src s)) s)) s
     | POP dest ->
-       // reading/writing to the RSP register is not an event
        (add_store_event dest s ,,
        (\s. (match operand_size dest with
            64 -> x86_POP (OPERAND64 dest s)
@@ -2543,7 +2545,6 @@ let x86_execute = define
        (add_load_event dest s ,, add_store_event dest s ,,
        (\s. x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
     | PUSH src ->
-       // reading/writing to the RSP register is not an event
        (add_load_event src s ,,
        (\s. (match operand_size src with
            64 -> x86_PUSH (OPERAND64 src s)
@@ -3588,7 +3589,8 @@ let x86_POP_ALT = prove
         let p = read RSP s in
         let x = read (memory :> bytes64 p) s in
         let p' = word_add p (word 8) in
-        (RSP := p' ,,
+        (events := CONS (EventLoad (p, 8)) (read events s) ,,
+         RSP := p' ,,
          dest := x) s`,
   REWRITE_TAC[x86_POP; DIMINDEX_64; bytes64] THEN CONV_TAC NUM_REDUCE_CONV THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
@@ -3599,7 +3601,8 @@ let x86_PUSH_ALT = prove
         let p = read RSP s
         and x = read src s in
         let p' = word_sub p (word 8) in
-        (RSP := p' ,,
+        (events := CONS (EventStore (p', 8)) (read events s) ,,
+         RSP := p' ,,
          memory :> bytes64 p' := x) s`,
   REWRITE_TAC[x86_PUSH; DIMINDEX_64; bytes64] THEN
   CONV_TAC NUM_REDUCE_CONV THEN
@@ -3613,7 +3616,7 @@ let x86_CALL_ALT = prove
         and x = read RIP s
         and e0 = read events s in
         let p' = word_sub p (word 8) in
-        (events := CONS (EventJump (x, target)) e0 ,,
+        (events := CONS (EventStore (p', 8)) (CONS (EventJump (x, target)) e0) ,,
          RSP := p' ,,
          memory :> bytes64 p' := x ,,
          RIP := target) s`,
@@ -3625,6 +3628,8 @@ let x86_CALL_ALT = prove
   STRIP_TAC THEN
   REWRITE_TAC[METIS[] `(exists (x:A). y = x /\ Q x) <=> Q y`] THEN
   CONV_TAC (ONCE_DEPTH_CONV COMPONENT_READ_OVER_WRITE_ORTHOGONAL_CONV) THEN
+  CONV_TAC (ONCE_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
+  CONV_TAC (ONCE_DEPTH_CONV COMPONENT_WRITE_OVER_WRITE_CONV) THEN
   REFL_TAC);;
 
 (*** More alternatives that are nicer to work with ***)
@@ -4534,15 +4539,53 @@ let X86_ADD_RETURN_NOSTACK_TAC =
 (* Version with register save/restore and stack adjustment.                  *)
 (* ------------------------------------------------------------------------- *)
 
+(* Useful lemmas *)
+let swap_forall = MESON[]
+   `(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
+    (forall y e_stack_spill. P e_stack_spill y)` and
+  swap_forall3 = MESON[]
+   `(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
+    (forall y e_stack_spill z. P e_stack_spill y z)` and
+  append_lemma = MESON[APPEND_EXISTS]
+    `(forall (e:(A)list). P e) <=>
+      (forall e_stack_spill e. P (APPEND e_stack_spill e))` and
+  exists_stack_spill_ev_lemma = METIS[]
+    `(exists (e_stack_spill:A). (P e_stack_spill ==> Q)) ==>
+      ((forall e_stack_spill. P e_stack_spill) ==> Q)` and
+  mono2lemma = MESON[]
+   `(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z)) ==> (!x y. P x y) ==> (!x z. Q x z)` and
+  mono3lemma = MESON[]
+   `(!(x:A). (!(y:B) (y':C). P x y y') ==> (!(z:D) (z':E). Q x z z')) ==>
+    (!x y y'. P x y y') ==> (!x z z'. Q x z z')`;;
+
+
 let GEN_X86_ADD_RETURN_STACK_TAC =
-  let mono2lemma = MESON[]
-   `(!x. (!y. P x y) ==> (!y. Q x y)) ==> (!x y. P x y) ==> (!x y. Q x y)` in
   fun execth coreth reglist stackoff (n,m) ->
     let regs = dest_list reglist in
-    MP_TAC coreth THEN REWRITE_TAC[fst execth] THEN
+    (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
+    let is_coreth_safety = is_exists (concl coreth) in
+    (if is_coreth_safety then
+      ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
+      (* f_events of the current goal will have additional args, compared to
+         f_events of coreth: returnaddress and stackpointer. This will be
+         filled in later. *)
+      META_EXISTS_TAC THEN
+      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th))
+     else
+      (* th is functional correctness *) MP_TAC coreth) THEN
+
+    REWRITE_TAC[fst execth] THEN
     REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                  WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-    REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC) THEN
+    (if is_coreth_safety then
+      (* push e_stack_spill to the innermost var of forall *)
+      REPEAT(CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])) THEN
+             MATCH_MP_TAC mono3lemma THEN GEN_TAC)
+     else
+      REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC)) THEN
+    (if is_coreth_safety then
+      CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
+     else ALL_TAC) THEN
     (if vfree_in `RSP` (concl coreth) then
       DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th) THEN
       MATCH_MP_TAC MONO_FORALL THEN GEN_TAC
@@ -4558,6 +4601,13 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
       TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
       MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
+    (if is_coreth_safety then
+      (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
+         'exists e_stack_spill. .. ==> ...' *)
+      MATCH_MP_TAC exists_stack_spill_ev_lemma THEN
+      META_EXISTS_TAC
+     else
+      ALL_TAC) THEN
     TRY(ANTS_TAC THENL
      [REPEAT CONJ_TAC THEN TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
@@ -4568,6 +4618,13 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
       X86_STEPS_TAC execth (1--n) THEN
       MP_TAC th) THEN
     X86_BIGSTEP_TAC execth ("s"^string_of_int(n+1)) THEN
+    (* X86_BIGSTEP_TAC may leave an additional subgoal about precondition.
+       If the precondition is about event trace, solve here. *)
+    (if is_coreth_safety then
+     TRY (CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV) THEN
+         BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+         NO_TAC)
+     else ALL_TAC) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN
     X86_STEPS_TAC execth ((n+2)--(m+n+1)) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
@@ -4672,9 +4729,7 @@ let WINDOWS_ABI_STACK_THM = prove
   REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN MESON_TAC[]);;
 
 let WINDOWS_X86_WRAP_NOSTACK_TAC =
-  let mono2lemma = MESON[]
-     `(!x. (!y. P x y) ==> (!y. Q x y)) ==> (!x y. P x y) ==> (!x y. Q x y)`
-  and pcofflemma = MESON[]
+  let pcofflemma = MESON[]
     `!n:num. (!x. P(x + n) ==> Q x) ==> (!x. P x) ==> (!x. Q x)`
   and pcplusplus_conv =
     GEN_REWRITE_CONV I
@@ -4699,12 +4754,30 @@ let WINDOWS_X86_WRAP_NOSTACK_TAC =
              (SPEC_ALL (X86_TRIM_EXEC_RULE stdmc)) pcoff
              (rhs(concl winmc))))))
     and winexecth = X86_MK_EXEC_RULE winmc in
+    (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
+    let is_coreth_safety = is_exists (concl coreth) in
     let coreth = REWRITE_RULE
       [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] coreth in
    (REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     PURE_REWRITE_TAC[WINDOWS_ABI_STACK_THM] THEN
-    MP_TAC coreth THEN REWRITE_TAC[fst winexecth] THEN
-    REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC) THEN
+    (if is_coreth_safety then
+      ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
+      (* f_events of the current goal will have additional args, compared to
+         f_events of coreth: returnaddress and stackpointer. This will be
+         filled in later. *)
+      META_EXISTS_TAC THEN
+      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th))
+     else
+      (* th is functional correctness *) MP_TAC coreth) THEN
+
+    REWRITE_TAC[fst winexecth] THEN
+    (if is_coreth_safety then
+      (* push e_stack_spill to the innermost var of forall *)
+      REPEAT(CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])) THEN
+             MATCH_MP_TAC mono3lemma THEN GEN_TAC) THEN
+      CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
+     else
+      REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC)) THEN
     MATCH_MP_TAC pcofflemma THEN
     EXISTS_TAC (mk_small_numeral pcoff) THEN GEN_TAC THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV pcplusplus_conv)) THEN
@@ -4717,6 +4790,13 @@ let WINDOWS_X86_WRAP_NOSTACK_TAC =
         TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
         MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
+    (if is_coreth_safety then
+      (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
+         'exists e_stack_spill. .. ==> ...' *)
+      MATCH_MP_TAC exists_stack_spill_ev_lemma THEN
+      META_EXISTS_TAC
+     else
+      ALL_TAC) THEN
     TRY(ANTS_TAC THENL
      [REPEAT CONJ_TAC THEN TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
@@ -4728,7 +4808,13 @@ let WINDOWS_X86_WRAP_NOSTACK_TAC =
         X86_STEPS_TAC winexecth (1--prolog_len) THEN
         MP_TAC th) THEN
     X86_BIGSTEP_TAC winexecth interstate THENL
-     [MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
+     [(if is_coreth_safety then
+        CONJ_TAC THENL [ALL_TAC;
+          TRY (CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV) THEN
+            BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+            NO_TAC)]
+        else ALL_TAC) THEN
+      MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
       ALL_TAC] THEN
     X86_STEPS_TAC winexecth ((prolog_len+2)--(prolog_len+epilog_len+1)) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]) (asl,w);;
@@ -4766,14 +4852,37 @@ let WINDOWS_X86_WRAP_STACK_TAC =
              (SPEC_ALL (X86_TRIM_EXEC_RULE stdmc)) pcoff
              (rhs(concl winmc))))))
     and winexecth = X86_MK_EXEC_RULE winmc in
+    (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
+    let is_coreth_safety = is_exists (concl coreth) in
    (REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     PURE_REWRITE_TAC[WINDOWS_ABI_STACK_THM] THEN
-    MP_TAC coreth THEN REWRITE_TAC[fst winexecth] THEN
-    REPEAT(MATCH_MP_TAC monopsrlemma THEN GEN_TAC) THEN
+    (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
+    (if is_coreth_safety then
+      ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
+      (* f_events of the current goal will have additional args, compared to
+         f_events of coreth: returnaddress and stackpointer. This will be
+         filled in later. *)
+      META_EXISTS_TAC THEN
+      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th))
+     else
+      (* th is functional correctness *) MP_TAC coreth) THEN
+
+    REWRITE_TAC[fst winexecth] THEN
+    REPEAT((if is_coreth_safety then
+          (* push e_stack_spill to the innermost var of forall *)
+          (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])))
+        else ALL_TAC) THEN
+      MATCH_MP_TAC monopsrlemma THEN GEN_TAC) THEN
+    (if is_coreth_safety then
+          (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])))
+        else ALL_TAC) THEN
     MATCH_MP_TAC pcofflemma THEN
     EXISTS_TAC (mk_small_numeral pcoff) THEN GEN_TAC THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV pcplusplus_conv)) THEN
     (if vfree_in `RSP` (concl coreth) then
+      (if is_coreth_safety then
+        CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
+      else ALL_TAC) THEN
      DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th) THEN
      MATCH_MP_TAC MONO_FORALL THEN GEN_TAC
     else
@@ -4787,6 +4896,13 @@ let WINDOWS_X86_WRAP_STACK_TAC =
         TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
         MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
+    (if is_coreth_safety then
+      (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
+         'exists e_stack_spill. .. ==> ...' *)
+      MATCH_MP_TAC exists_stack_spill_ev_lemma THEN
+      META_EXISTS_TAC
+     else
+      ALL_TAC) THEN
     TRY(ANTS_TAC THENL
      [REPEAT CONJ_TAC THEN TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
       ALL_TAC]) THEN
@@ -4798,7 +4914,13 @@ let WINDOWS_X86_WRAP_STACK_TAC =
       X86_STEPS_TAC winexecth (1--prolog_len) THEN
       MP_TAC th) THEN
     X86_BIGSTEP_TAC winexecth interstate THENL
-     [MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
+     [(if is_coreth_safety then
+        CONJ_TAC THENL [ALL_TAC;
+          TRY (CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV) THEN
+            BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+            NO_TAC)]
+        else ALL_TAC) THEN
+      MATCH_MP_TAC subimpth THEN FIRST_X_ASSUM ACCEPT_TAC;
       ALL_TAC] THEN
     X86_STEPS_TAC winexecth ((prolog_len+2)--(prolog_len+epilog_len+1)) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]) (asl,w);;

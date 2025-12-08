@@ -180,6 +180,10 @@ let CONS_TO_APPEND_CONV (t:term) =
 (* - : thm = |- CONS 1 (CONS 2 e) = APPEND [1; 2] e *)
 CONS_TO_APPEND_CONV `CONS 1 (CONS 2 e)`;;
 
+let APPEND_EXISTS = prove(
+ `forall (x:(A)list). exists (x1:(A)list) x2. x = APPEND x1 x2`,
+    STRIP_TAC THEN EXISTS_TAC `[]:(A)list` THEN MESON_TAC[APPEND]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Combined word and number and a few other things reduction.                *)
 (* ------------------------------------------------------------------------- *)
