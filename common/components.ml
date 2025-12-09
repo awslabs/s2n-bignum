@@ -3002,10 +3002,11 @@ let NONOVERLAP_REVERT_CONV =
    GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Normalize as word_add base (iword x), even by introduceing iword(&0).     *)
+(* Normalize as word_add base (iword x), even by introducing iword(&0).      *)
 (* ------------------------------------------------------------------------- *)
 
 let INORMALIZE_RELATIVE_ADDRESS_CONV =
+  let CHECK_REMAINDERED_CONV = ALL_CONV o check(vfree_in `rem`) in
   let trivconv = GEN_REWRITE_CONV I
     [WORD_RULE `z:int64 = word_add z (iword(&0))`]
   and initconv =
@@ -3013,10 +3014,16 @@ let INORMALIZE_RELATIVE_ADDRESS_CONV =
      [WORD_ADD; IWORD_INT_ADD; WORD_VAL; GSYM WORD_ADD_ASSOC;
       WORD_RULE `word_sub x y:int64 = word_add x (word_neg y)`]
   and mainconv =
+    GEN_REWRITE_CONV DEPTH_CONV [VAL_WORD] THENC
     GEN_REWRITE_CONV TOP_DEPTH_CONV
      [GSYM IWORD_INT_ADD; WORD_IWORD;
       GSYM IWORD_INT_NEG; GSYM IWORD_INT_MUL] THENC
-    GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM INT_OF_NUM_CLAUSES] in
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [GSYM INT_OF_NUM_CLAUSES; GSYM INT_OF_NUM_REM] THENC
+    TRY_CONV(CHECK_REMAINDERED_CONV THENC
+             GEN_REWRITE_CONV I [GSYM IWORD_REM_SIZE] THENC
+             RAND_CONV INT_REM_DOWN_CONV THENC
+             GEN_REWRITE_CONV I [IWORD_REM_SIZE]) in
   let postconv tm =
     match tm with
       Var(_,_)
