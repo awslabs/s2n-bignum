@@ -39,7 +39,7 @@ let uarch_event_INDUCT, uarch_event_RECURSION = define_type
 
     // Instructions in X86 that are not in the DOIT list
     // (Data Operand Independent Timing Instructions)
-  
+
     // PEXT (src1, src2, bitwidth)
     | EventX86PEXT (int64#int64#num)
     // POPCNT (src, bitwidth)
@@ -68,3 +68,52 @@ let MEMACCESS_INBOUNDS_APPEND = prove(
   `forall e1 e2 rr wr. memaccess_inbounds (APPEND e1 e2) rr wr
     <=> memaccess_inbounds e1 rr wr /\ memaccess_inbounds e2 rr wr`,
   REWRITE_TAC[memaccess_inbounds;ALL_APPEND]);;
+
+let MEMACCESS_INBOUNDS_MEM = prove(
+  `forall e rr rr' wr wr'.
+    ALL (\r. MEM r rr') rr /\ ALL (\w. MEM w wr') wr
+    ==> memaccess_inbounds e rr wr
+    ==> memaccess_inbounds e rr' wr'`,
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[memaccess_inbounds;ALL];
+
+    CONV_TAC (ONCE_DEPTH_CONV
+      (CONS_TO_APPEND_CONV)) THEN
+    REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
+    REPEAT STRIP_TAC THENL [
+
+      UNDISCH_TAC `ALL (\(r:int64#num). MEM r rr') rr` THEN
+      UNDISCH_TAC `ALL (\(w:int64#num). MEM w wr') wr` THEN
+      UNDISCH_TAC `memaccess_inbounds [h] rr wr` THEN
+      REWRITE_TAC[memaccess_inbounds;ALL] THEN
+      SPEC_TAC (`(h:uarch_event)`,`(h:uarch_event)`) THEN
+      MATCH_MP_TAC uarch_event_INDUCT THEN
+      REWRITE_TAC[] THEN CONJ_TAC THENL [
+        REWRITE_TAC[FORALL_PAIR_THM] THEN
+        REPEAT GEN_TAC THEN
+        MESON_TAC [EX_SUBSET_LIST];
+
+        REWRITE_TAC[FORALL_PAIR_THM] THEN
+        REPEAT GEN_TAC THEN
+        MESON_TAC [EX_SUBSET_LIST];
+      ];
+
+      ASM_METIS_TAC[];
+    ]
+  ]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Helper tactics for subroutines                                            *)
+(* ------------------------------------------------------------------------- *)
+
+(* Do ASSUME_TAC for safety proof which is `exists f_events. ...` after
+  stripping the exists f_events part. *)
+let ASSUME_CALLEE_SAFETY_TAC =
+  let fresh_f_events_var_counter = ref 0 in
+  fun (callee_safety_proof:thm) (asmname:string) :tactic ->
+    let f_events_var_type = type_of (fst (dest_exists (concl callee_safety_proof))) in
+    let f_events_callee =
+      let _ = fresh_f_events_var_counter := 1 + !fresh_f_events_var_counter in
+      mk_var("f_events_callee" ^ (string_of_int !fresh_f_events_var_counter),
+              f_events_var_type) in
+    (X_CHOOSE_THEN f_events_callee (LABEL_TAC asmname)) callee_safety_proof;;

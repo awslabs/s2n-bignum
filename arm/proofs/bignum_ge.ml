@@ -366,6 +366,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "bignum_ge" subroutine_signatures)
     BIGNUM_GE_SUBROUTINE_CORRECT
     BIGNUM_GE_EXEC;;

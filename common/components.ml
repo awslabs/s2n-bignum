@@ -367,7 +367,7 @@ add_strongly_valid_component_thms [STRONGLY_VALID_COMPONENT_ENTIRETY];;
 (* ------------------------------------------------------------------------- *)
 
 let extensionally_valid_component = define
- `extensionally_valid_component c <=>
+ `extensionally_valid_component (c:(S,A)component) <=>
         (?f. !y s. read c (write c y s) = f y) /\
         (!s. write c (read c s) s = s) /\
         (!y z s. write c z (write c y s) = write c z s)`;;
@@ -2279,9 +2279,9 @@ let VALID_COMPONENT_BYTES256 = prove
            STRONGLY_VALID_COMPONENT_BYTES256]);;
 
 let WEAKLY_VALID_COMPONENT_BYTES256 = prove
- (`!a:int64. weakly_valid_component (bytes128 a)`,
+ (`!a:int64. weakly_valid_component (bytes256 a)`,
   SIMP_TAC[VALID_IMP_WEAKLY_VALID_COMPONENT;
-           VALID_COMPONENT_BYTES128]);;
+           VALID_COMPONENT_BYTES256]);;
 
 add_valid_component_thms
   [VALID_COMPONENT_BYTES8; VALID_COMPONENT_BYTES16;
@@ -3509,6 +3509,10 @@ let ASSUMPTION_STATE_UPDATE_TAC =
 
 let NONSELFMODIFYING_STATE_UPDATE_TAC bth =
   DISCH_THEN(fun th ->
+    (if not (is_eq (concl th)) then failwith
+      ("NONSELFMODIFYING_STATE_UPDATE_TAC: the goal must have " ^
+       "`write ... = ... ==> ...` as conclusion, but got `" ^
+       (string_of_term (concl th)) ^ " ==> ...`") else ());
     MP_TAC th THEN
     FIRST_X_ASSUM (MP_TAC o SPEC (lhand (concl th)) o MATCH_MP bth) THEN
     ANTS_TAC THENL
