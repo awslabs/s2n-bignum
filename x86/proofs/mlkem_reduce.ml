@@ -293,7 +293,7 @@ extra_word_CONV := [WORD_SIMPLE_SUBWORD_CONV] @ !extra_word_CONV;;
 
 let lemma_rem = prove
  (`(y == x) (mod &3329) /\
-   &0 <= y /\ y < &6658
+   &0 <= y /\ y <= &6657
    ==> x rem &3329 = if y >= &3329 then y - &3329 else y`,
   REPEAT STRIP_TAC THEN REWRITE_TAC[INT_REM_UNIQUE] THEN
   CONV_TAC INT_REDUCE_CONV THEN

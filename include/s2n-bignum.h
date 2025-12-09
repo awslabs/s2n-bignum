@@ -1002,6 +1002,10 @@ extern void mlkem_basemul_k4(int16_t r[S2N_BIGNUM_STATIC 256],const int16_t a[S2
 // Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words)
 extern void mlkem_intt(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z_01234[S2N_BIGNUM_STATIC 80],const int16_t z_56[S2N_BIGNUM_STATIC 384]);
 
+// Inverse number-theoretic transform from ML-KEM
+// Input a[256] (signed 16-bit words), qdata[624]; output a[256] (signed 16-bit words)
+extern void mlkem_intt_x86(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[S2N_BIGNUM_STATIC 624]);
+
 // Precompute the mulcache data for a polynomial in the NTT domain
 // Inputs a[256], z[128] and t[128] (signed 16-bit words); output x[128] (signed 16-bit words)
 extern void mlkem_mulcache_compute(int16_t x[S2N_BIGNUM_STATIC 128],const int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z[S2N_BIGNUM_STATIC 128],const int16_t t[S2N_BIGNUM_STATIC 128]);

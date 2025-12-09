@@ -1,0 +1,1456 @@
+needs "x86/proofs/base.ml";;
+needs "common/mlkem_mldsa.ml";;
+
+(* print_literal_from_elf "x86/mlkem/mlkem_intt.o";; *)
+
+let mlkem_intt_mc = define_assert_from_elf "mlkem_intt_mc" "x86/mlkem/mlkem_intt.o"
+[
+  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
+  0xb8; 0x01; 0x0d; 0x01; 0x0d;
+                           (* MOV (% eax) (Imm32 (word 218172673)) *)
+  0xc5; 0xf9; 0x6e; 0xc0;  (* VMOVD (%_% xmm0) (% eax) *)
+  0xc4; 0xe2; 0x7d; 0x58; 0xc0;
+                           (* VPBROADCASTD (%_% ymm0) (%_% xmm0) *)
+  0xb8; 0xa1; 0xd8; 0xa1; 0xd8;
+                           (* MOV (% eax) (Imm32 (word 3634485409)) *)
+  0xc5; 0xf9; 0x6e; 0xd0;  (* VMOVD (%_% xmm2) (% eax) *)
+  0xc4; 0xe2; 0x7d; 0x58; 0xd2;
+                           (* VPBROADCASTD (%_% ymm2) (%_% xmm2) *)
+  0xb8; 0xa1; 0x05; 0xa1; 0x05;
+                           (* MOV (% eax) (Imm32 (word 94438817)) *)
+  0xc5; 0xf9; 0x6e; 0xd8;  (* VMOVD (%_% xmm3) (% eax) *)
+  0xc4; 0xe2; 0x7d; 0x58; 0xdb;
+                           (* VPBROADCASTD (%_% ymm3) (%_% xmm3) *)
+  0xc5; 0xfd; 0x6f; 0x27;  (* VMOVDQA (%_% ymm4) (Memop Word256 (%% (rdi,0))) *)
+  0xc5; 0xfd; 0x6f; 0x77; 0x40;
+                           (* VMOVDQA (%_% ymm6) (Memop Word256 (%% (rdi,64))) *)
+  0xc5; 0xfd; 0x6f; 0x6f; 0x20;
+                           (* VMOVDQA (%_% ymm5) (Memop Word256 (%% (rdi,32))) *)
+  0xc5; 0xfd; 0x6f; 0x7f; 0x60;
+                           (* VMOVDQA (%_% ymm7) (Memop Word256 (%% (rdi,96))) *)
+  0xc5; 0x5d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm4) (%_% ymm2) *)
+  0xc5; 0xdd; 0xe5; 0xe3;  (* VPMULHW (%_% ymm4) (%_% ymm4) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x5d; 0xf9; 0xe4;
+                           (* VPSUBW (%_% ymm4) (%_% ymm4) (%_% ymm12) *)
+  0xc5; 0x4d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm6) (%_% ymm2) *)
+  0xc5; 0xcd; 0xe5; 0xf3;  (* VPMULHW (%_% ymm6) (%_% ymm6) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x4d; 0xf9; 0xf4;
+                           (* VPSUBW (%_% ymm6) (%_% ymm6) (%_% ymm12) *)
+  0xc5; 0x55; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm5) (%_% ymm2) *)
+  0xc5; 0xd5; 0xe5; 0xeb;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x55; 0xf9; 0xec;
+                           (* VPSUBW (%_% ymm5) (%_% ymm5) (%_% ymm12) *)
+  0xc5; 0x45; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm7) (%_% ymm2) *)
+  0xc5; 0xc5; 0xe5; 0xfb;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x45; 0xf9; 0xfc;
+                           (* VPSUBW (%_% ymm7) (%_% ymm7) (%_% ymm12) *)
+  0xc5; 0x7d; 0x6f; 0x87; 0x80; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm8) (Memop Word256 (%% (rdi,128))) *)
+  0xc5; 0x7d; 0x6f; 0x97; 0xc0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm10) (Memop Word256 (%% (rdi,192))) *)
+  0xc5; 0x7d; 0x6f; 0x8f; 0xa0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm9) (Memop Word256 (%% (rdi,160))) *)
+  0xc5; 0x7d; 0x6f; 0x9f; 0xe0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm11) (Memop Word256 (%% (rdi,224))) *)
+  0xc5; 0x3d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm8) (%_% ymm2) *)
+  0xc5; 0x3d; 0xe5; 0xc3;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x3d; 0xf9; 0xc4;
+                           (* VPSUBW (%_% ymm8) (%_% ymm8) (%_% ymm12) *)
+  0xc5; 0x2d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm10) (%_% ymm2) *)
+  0xc5; 0x2d; 0xe5; 0xd3;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x2d; 0xf9; 0xd4;
+                           (* VPSUBW (%_% ymm10) (%_% ymm10) (%_% ymm12) *)
+  0xc5; 0x35; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm9) (%_% ymm2) *)
+  0xc5; 0x35; 0xe5; 0xcb;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x35; 0xf9; 0xcc;
+                           (* VPSUBW (%_% ymm9) (%_% ymm9) (%_% ymm12) *)
+  0xc5; 0x25; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm11) (%_% ymm2) *)
+  0xc5; 0x25; 0xe5; 0xdb;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x25; 0xf9; 0xdc;
+                           (* VPSUBW (%_% ymm11) (%_% ymm11) (%_% ymm12) *)
+  0xc4; 0x63; 0xfd; 0x00; 0xbe; 0xa0; 0x03; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm15) (Memop Word256 (%% (rsi,928))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x8e; 0x60; 0x03; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm1) (Memop Word256 (%% (rsi,864))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0xc0; 0x03; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,960))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x9e; 0x80; 0x03; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm3) (Memop Word256 (%% (rsi,896))) (Imm8 (word 78)) *)
+  0xc5; 0x7d; 0x6f; 0x26;  (* VMOVDQA (%_% ymm12) (Memop Word256 (%% (rsi,0))) *)
+  0xc4; 0x42; 0x05; 0x00; 0xfc;
+                           (* VPSHUFB (%_% ymm15) (%_% ymm15) (%_% ymm12) *)
+  0xc4; 0xc2; 0x75; 0x00; 0xcc;
+                           (* VPSHUFB (%_% ymm1) (%_% ymm1) (%_% ymm12) *)
+  0xc4; 0xc2; 0x6d; 0x00; 0xd4;
+                           (* VPSHUFB (%_% ymm2) (%_% ymm2) (%_% ymm12) *)
+  0xc4; 0xc2; 0x65; 0x00; 0xdc;
+                           (* VPSHUFB (%_% ymm3) (%_% ymm3) (%_% ymm12) *)
+  0xc5; 0x4d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm12) (%_% ymm6) (%_% ymm4) *)
+  0xc5; 0xdd; 0xfd; 0xe6;  (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm6) *)
+  0xc5; 0x45; 0xf9; 0xed;  (* VPSUBW (%_% ymm13) (%_% ymm7) (%_% ymm5) *)
+  0xc4; 0xc1; 0x1d; 0xd5; 0xf7;
+                           (* VPMULLW (%_% ymm6) (%_% ymm12) (%_% ymm15) *)
+  0xc5; 0xd5; 0xfd; 0xef;  (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm7) *)
+  0xc4; 0x41; 0x2d; 0xf9; 0xf0;
+                           (* VPSUBW (%_% ymm14) (%_% ymm10) (%_% ymm8) *)
+  0xc4; 0xc1; 0x15; 0xd5; 0xff;
+                           (* VPMULLW (%_% ymm7) (%_% ymm13) (%_% ymm15) *)
+  0xc4; 0x41; 0x3d; 0xfd; 0xc2;
+                           (* VPADDW (%_% ymm8) (%_% ymm8) (%_% ymm10) *)
+  0xc4; 0x41; 0x25; 0xf9; 0xf9;
+                           (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm9) *)
+  0xc5; 0x0d; 0xd5; 0xd1;  (* VPMULLW (%_% ymm10) (%_% ymm14) (%_% ymm1) *)
+  0xc4; 0x41; 0x35; 0xfd; 0xcb;
+                           (* VPADDW (%_% ymm9) (%_% ymm9) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xd9;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm1) *)
+  0xc5; 0x1d; 0xe5; 0xe2;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0x15; 0xe5; 0xea;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm2) *)
+  0xc5; 0x0d; 0xe5; 0xf3;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm3) *)
+  0xc5; 0x05; 0xe5; 0xfb;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm3) *)
+  0xc5; 0xcd; 0xe5; 0xf0;  (* VPMULHW (%_% ymm6) (%_% ymm6) (%_% ymm0) *)
+  0xc5; 0xc5; 0xe5; 0xf8;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm6) (%_% ymm12) (%_% ymm6) *)
+  0xc5; 0x95; 0xf9; 0xff;  (* VPSUBW (%_% ymm7) (%_% ymm13) (%_% ymm7) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0x20; 0x03; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,800))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x9e; 0x40; 0x03; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm3) (Memop Word256 (%% (rsi,832))) (Imm8 (word 78)) *)
+  0xc5; 0xfd; 0x6f; 0x0e;  (* VMOVDQA (%_% ymm1) (Memop Word256 (%% (rsi,0))) *)
+  0xc4; 0xe2; 0x6d; 0x00; 0xd1;
+                           (* VPSHUFB (%_% ymm2) (%_% ymm2) (%_% ymm1) *)
+  0xc4; 0xe2; 0x65; 0x00; 0xd9;
+                           (* VPSHUFB (%_% ymm3) (%_% ymm3) (%_% ymm1) *)
+  0xc5; 0x3d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm12) (%_% ymm8) (%_% ymm4) *)
+  0xc4; 0xc1; 0x5d; 0xfd; 0xe0;
+                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm8) *)
+  0xc5; 0x35; 0xf9; 0xed;  (* VPSUBW (%_% ymm13) (%_% ymm9) (%_% ymm5) *)
+  0xc5; 0x1d; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm12) (%_% ymm2) *)
+  0xc4; 0xc1; 0x55; 0xfd; 0xe9;
+                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm9) *)
+  0xc5; 0x2d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm10) (%_% ymm6) *)
+  0xc5; 0x15; 0xd5; 0xca;  (* VPMULLW (%_% ymm9) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf2;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm10) *)
+  0xc5; 0x25; 0xf9; 0xff;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm7) *)
+  0xc5; 0x0d; 0xd5; 0xd2;  (* VPMULLW (%_% ymm10) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x45; 0xfd; 0xfb;
+                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc5; 0x1d; 0xe5; 0xe3;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm3) *)
+  0xc5; 0x15; 0xe5; 0xeb;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm3) *)
+  0xc5; 0x0d; 0xe5; 0xf3;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm3) *)
+  0xc5; 0x05; 0xe5; 0xfb;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm3) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0x35; 0xe5; 0xc8;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm0) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc4; 0x41; 0x1d; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm12) (%_% ymm8) *)
+  0xc4; 0x41; 0x15; 0xf9; 0xc9;
+                           (* VPSUBW (%_% ymm9) (%_% ymm13) (%_% ymm9) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0xe5; 0x72; 0xf5; 0x10;
+                           (* VPSLLD (%_% ymm3) (%_% ymm5) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x5d; 0x0e; 0xdb; 0xaa;
+                           (* VPBLENDW (%_% ymm3) (%_% ymm4) (%_% ymm3) (Imm8 (word 170)) *)
+  0xc5; 0xdd; 0x72; 0xd4; 0x10;
+                           (* VPSRLD (%_% ymm4) (%_% ymm4) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x5d; 0x0e; 0xed; 0xaa;
+                           (* VPBLENDW (%_% ymm5) (%_% ymm4) (%_% ymm5) (Imm8 (word 170)) *)
+  0xc5; 0xdd; 0x72; 0xf7; 0x10;
+                           (* VPSLLD (%_% ymm4) (%_% ymm7) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x4d; 0x0e; 0xe4; 0xaa;
+                           (* VPBLENDW (%_% ymm4) (%_% ymm6) (%_% ymm4) (Imm8 (word 170)) *)
+  0xc5; 0xcd; 0x72; 0xd6; 0x10;
+                           (* VPSRLD (%_% ymm6) (%_% ymm6) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x4d; 0x0e; 0xff; 0xaa;
+                           (* VPBLENDW (%_% ymm7) (%_% ymm6) (%_% ymm7) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x4d; 0x72; 0xf1; 0x10;
+                           (* VPSLLD (%_% ymm6) (%_% ymm9) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x3d; 0x0e; 0xf6; 0xaa;
+                           (* VPBLENDW (%_% ymm6) (%_% ymm8) (%_% ymm6) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x3d; 0x72; 0xd0; 0x10;
+                           (* VPSRLD (%_% ymm8) (%_% ymm8) (Imm8 (word 16)) *)
+  0xc4; 0x43; 0x3d; 0x0e; 0xc9; 0xaa;
+                           (* VPBLENDW (%_% ymm9) (%_% ymm8) (%_% ymm9) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x3d; 0x72; 0xf3; 0x10;
+                           (* VPSLLD (%_% ymm8) (%_% ymm11) (Imm8 (word 16)) *)
+  0xc4; 0x43; 0x2d; 0x0e; 0xc0; 0xaa;
+                           (* VPBLENDW (%_% ymm8) (%_% ymm10) (%_% ymm8) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x2d; 0x72; 0xd2; 0x10;
+                           (* VPSRLD (%_% ymm10) (%_% ymm10) (Imm8 (word 16)) *)
+  0xc4; 0x43; 0x2d; 0x0e; 0xdb; 0xaa;
+                           (* VPBLENDW (%_% ymm11) (%_% ymm10) (%_% ymm11) (Imm8 (word 170)) *)
+  0xc5; 0x7d; 0x6f; 0x66; 0x20;
+                           (* VMOVDQA (%_% ymm12) (Memop Word256 (%% (rsi,32))) *)
+  0xc4; 0xe2; 0x1d; 0x36; 0x96; 0xe0; 0x02; 0x00; 0x00;
+                           (* VPERMD (%_% ymm2) (%_% ymm12) (Memop Word256 (%% (rsi,736))) *)
+  0xc4; 0x62; 0x1d; 0x36; 0x96; 0x00; 0x03; 0x00; 0x00;
+                           (* VPERMD (%_% ymm10) (%_% ymm12) (Memop Word256 (%% (rsi,768))) *)
+  0xc5; 0x55; 0xf9; 0xe3;  (* VPSUBW (%_% ymm12) (%_% ymm5) (%_% ymm3) *)
+  0xc5; 0xe5; 0xfd; 0xdd;  (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm5) *)
+  0xc5; 0x45; 0xf9; 0xec;  (* VPSUBW (%_% ymm13) (%_% ymm7) (%_% ymm4) *)
+  0xc5; 0x9d; 0xd5; 0xea;  (* VPMULLW (%_% ymm5) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0xdd; 0xfd; 0xe7;  (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm7) *)
+  0xc5; 0x35; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm9) (%_% ymm6) *)
+  0xc5; 0x95; 0xd5; 0xfa;  (* VPMULLW (%_% ymm7) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf1;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm9) *)
+  0xc4; 0x41; 0x25; 0xf9; 0xf8;
+                           (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm8) *)
+  0xc5; 0x0d; 0xd5; 0xca;  (* VPMULLW (%_% ymm9) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0x41; 0x3d; 0xfd; 0xc3;
+                           (* VPADDW (%_% ymm8) (%_% ymm8) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc4; 0x41; 0x1d; 0xe5; 0xe2;
+                           (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm10) *)
+  0xc4; 0x41; 0x15; 0xe5; 0xea;
+                           (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm10) *)
+  0xc4; 0x41; 0x0d; 0xe5; 0xf2;
+                           (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xe5; 0xfa;
+                           (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm10) *)
+  0xc5; 0xd5; 0xe5; 0xe8;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
+  0xc5; 0xc5; 0xe5; 0xf8;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
+  0xc5; 0x35; 0xe5; 0xc8;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xed;  (* VPSUBW (%_% ymm5) (%_% ymm12) (%_% ymm5) *)
+  0xc5; 0x95; 0xf9; 0xff;  (* VPSUBW (%_% ymm7) (%_% ymm13) (%_% ymm7) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xc9;
+                           (* VPSUBW (%_% ymm9) (%_% ymm14) (%_% ymm9) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xb8; 0xbf; 0x4e; 0xbf; 0x4e;
+                           (* MOV (% eax) (Imm32 (word 1321160383)) *)
+  0xc5; 0xf9; 0x6e; 0xc8;  (* VMOVD (%_% xmm1) (% eax) *)
+  0xc4; 0xe2; 0x7d; 0x58; 0xc9;
+                           (* VPBROADCASTD (%_% ymm1) (%_% xmm1) *)
+  0xc5; 0x65; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm3) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x65; 0xf9; 0xdc;
+                           (* VPSUBW (%_% ymm3) (%_% ymm3) (%_% ymm12) *)
+  0xc5; 0x7e; 0x12; 0xd4;  (* VMOVSLDUP (%_% ymm10) (%_% ymm4) *)
+  0xc4; 0x43; 0x65; 0x02; 0xd2; 0xaa;
+                           (* VPBLENDD (%_% ymm10) (%_% ymm3) (%_% ymm10) (Imm8 (word 170)) *)
+  0xc5; 0xe5; 0x73; 0xd3; 0x20;
+                           (* VPSRLQ (%_% ymm3) (%_% ymm3) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x65; 0x02; 0xe4; 0xaa;
+                           (* VPBLENDD (%_% ymm4) (%_% ymm3) (%_% ymm4) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x7e; 0x12; 0xd8;
+                           (* VMOVSLDUP (%_% ymm3) (%_% ymm8) *)
+  0xc4; 0xe3; 0x4d; 0x02; 0xdb; 0xaa;
+                           (* VPBLENDD (%_% ymm3) (%_% ymm6) (%_% ymm3) (Imm8 (word 170)) *)
+  0xc5; 0xcd; 0x73; 0xd6; 0x20;
+                           (* VPSRLQ (%_% ymm6) (%_% ymm6) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x4d; 0x02; 0xc0; 0xaa;
+                           (* VPBLENDD (%_% ymm8) (%_% ymm6) (%_% ymm8) (Imm8 (word 170)) *)
+  0xc5; 0xfe; 0x12; 0xf7;  (* VMOVSLDUP (%_% ymm6) (%_% ymm7) *)
+  0xc4; 0xe3; 0x55; 0x02; 0xf6; 0xaa;
+                           (* VPBLENDD (%_% ymm6) (%_% ymm5) (%_% ymm6) (Imm8 (word 170)) *)
+  0xc5; 0xd5; 0x73; 0xd5; 0x20;
+                           (* VPSRLQ (%_% ymm5) (%_% ymm5) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x55; 0x02; 0xff; 0xaa;
+                           (* VPBLENDD (%_% ymm7) (%_% ymm5) (%_% ymm7) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x7e; 0x12; 0xeb;
+                           (* VMOVSLDUP (%_% ymm5) (%_% ymm11) *)
+  0xc4; 0xe3; 0x35; 0x02; 0xed; 0xaa;
+                           (* VPBLENDD (%_% ymm5) (%_% ymm9) (%_% ymm5) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x35; 0x73; 0xd1; 0x20;
+                           (* VPSRLQ (%_% ymm9) (%_% ymm9) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x35; 0x02; 0xdb; 0xaa;
+                           (* VPBLENDD (%_% ymm11) (%_% ymm9) (%_% ymm11) (Imm8 (word 170)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0xa0; 0x02; 0x00; 0x00; 0x1b;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,672))) (Imm8 (word 27)) *)
+  0xc4; 0x63; 0xfd; 0x00; 0x8e; 0xc0; 0x02; 0x00; 0x00; 0x1b;
+                           (* VPERMQ (%_% ymm9) (Memop Word256 (%% (rsi,704))) (Imm8 (word 27)) *)
+  0xc4; 0x41; 0x5d; 0xf9; 0xe2;
+                           (* VPSUBW (%_% ymm12) (%_% ymm4) (%_% ymm10) *)
+  0xc5; 0x2d; 0xfd; 0xd4;  (* VPADDW (%_% ymm10) (%_% ymm10) (%_% ymm4) *)
+  0xc5; 0x3d; 0xf9; 0xeb;  (* VPSUBW (%_% ymm13) (%_% ymm8) (%_% ymm3) *)
+  0xc5; 0x9d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm4) (%_% ymm12) (%_% ymm2) *)
+  0xc4; 0xc1; 0x65; 0xfd; 0xd8;
+                           (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm8) *)
+  0xc5; 0x45; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm7) (%_% ymm6) *)
+  0xc5; 0x15; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm13) (%_% ymm2) *)
+  0xc5; 0xcd; 0xfd; 0xf7;  (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm7) *)
+  0xc5; 0x25; 0xf9; 0xfd;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm5) *)
+  0xc5; 0x8d; 0xd5; 0xfa;  (* VPMULLW (%_% ymm7) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x55; 0xfd; 0xeb;
+                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc4; 0x41; 0x1d; 0xe5; 0xe1;
+                           (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm9) *)
+  0xc4; 0x41; 0x15; 0xe5; 0xe9;
+                           (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm9) *)
+  0xc4; 0x41; 0x0d; 0xe5; 0xf1;
+                           (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm9) *)
+  0xc4; 0x41; 0x05; 0xe5; 0xf9;
+                           (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm9) *)
+  0xc5; 0xdd; 0xe5; 0xe0;  (* VPMULHW (%_% ymm4) (%_% ymm4) (%_% ymm0) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0xc5; 0xe5; 0xf8;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm4) (%_% ymm12) (%_% ymm4) *)
+  0xc4; 0x41; 0x15; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm13) (%_% ymm8) *)
+  0xc5; 0x8d; 0xf9; 0xff;  (* VPSUBW (%_% ymm7) (%_% ymm14) (%_% ymm7) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0x2d; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm10) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x2d; 0xf9; 0xd4;
+                           (* VPSUBW (%_% ymm10) (%_% ymm10) (%_% ymm12) *)
+  0xc5; 0x2d; 0x6c; 0xcb;  (* VPUNPCKLQDQ (%_% ymm9) (%_% ymm10) (%_% ymm3) *)
+  0xc5; 0xad; 0x6d; 0xdb;  (* VPUNPCKHQDQ (%_% ymm3) (%_% ymm10) (%_% ymm3) *)
+  0xc5; 0x4d; 0x6c; 0xd5;  (* VPUNPCKLQDQ (%_% ymm10) (%_% ymm6) (%_% ymm5) *)
+  0xc5; 0xcd; 0x6d; 0xed;  (* VPUNPCKHQDQ (%_% ymm5) (%_% ymm6) (%_% ymm5) *)
+  0xc4; 0xc1; 0x5d; 0x6c; 0xf0;
+                           (* VPUNPCKLQDQ (%_% ymm6) (%_% ymm4) (%_% ymm8) *)
+  0xc4; 0x41; 0x5d; 0x6d; 0xc0;
+                           (* VPUNPCKHQDQ (%_% ymm8) (%_% ymm4) (%_% ymm8) *)
+  0xc4; 0xc1; 0x45; 0x6c; 0xe3;
+                           (* VPUNPCKLQDQ (%_% ymm4) (%_% ymm7) (%_% ymm11) *)
+  0xc4; 0x41; 0x45; 0x6d; 0xdb;
+                           (* VPUNPCKHQDQ (%_% ymm11) (%_% ymm7) (%_% ymm11) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0x60; 0x02; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,608))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0xbe; 0x80; 0x02; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm7) (Memop Word256 (%% (rsi,640))) (Imm8 (word 78)) *)
+  0xc4; 0x41; 0x65; 0xf9; 0xe1;
+                           (* VPSUBW (%_% ymm12) (%_% ymm3) (%_% ymm9) *)
+  0xc5; 0x35; 0xfd; 0xcb;  (* VPADDW (%_% ymm9) (%_% ymm9) (%_% ymm3) *)
+  0xc4; 0x41; 0x55; 0xf9; 0xea;
+                           (* VPSUBW (%_% ymm13) (%_% ymm5) (%_% ymm10) *)
+  0xc5; 0x9d; 0xd5; 0xda;  (* VPMULLW (%_% ymm3) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0x2d; 0xfd; 0xd5;  (* VPADDW (%_% ymm10) (%_% ymm10) (%_% ymm5) *)
+  0xc5; 0x3d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm8) (%_% ymm6) *)
+  0xc5; 0x95; 0xd5; 0xea;  (* VPMULLW (%_% ymm5) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf0;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm8) *)
+  0xc5; 0x25; 0xf9; 0xfc;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm4) *)
+  0xc5; 0x0d; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x5d; 0xfd; 0xe3;
+                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc5; 0x1d; 0xe5; 0xe7;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm7) *)
+  0xc5; 0x15; 0xe5; 0xef;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm7) *)
+  0xc5; 0x0d; 0xe5; 0xf7;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm7) *)
+  0xc5; 0x05; 0xe5; 0xff;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm7) *)
+  0xc5; 0xe5; 0xe5; 0xd8;  (* VPMULHW (%_% ymm3) (%_% ymm3) (%_% ymm0) *)
+  0xc5; 0xd5; 0xe5; 0xe8;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xdb;  (* VPSUBW (%_% ymm3) (%_% ymm12) (%_% ymm3) *)
+  0xc5; 0x95; 0xf9; 0xed;  (* VPSUBW (%_% ymm5) (%_% ymm13) (%_% ymm5) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm14) (%_% ymm8) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0x35; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm9) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x35; 0xf9; 0xcc;
+                           (* VPSUBW (%_% ymm9) (%_% ymm9) (%_% ymm12) *)
+  0xc4; 0xc3; 0x35; 0x46; 0xfa; 0x20;
+                           (* VPERM2I128 (%_% ymm7) (%_% ymm9) (%_% ymm10) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x35; 0x46; 0xd2; 0x31;
+                           (* VPERM2I128 (%_% ymm10) (%_% ymm9) (%_% ymm10) (Imm8 (word 49)) *)
+  0xc4; 0x63; 0x4d; 0x46; 0xcc; 0x20;
+                           (* VPERM2I128 (%_% ymm9) (%_% ymm6) (%_% ymm4) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x4d; 0x46; 0xe4; 0x31;
+                           (* VPERM2I128 (%_% ymm4) (%_% ymm6) (%_% ymm4) (Imm8 (word 49)) *)
+  0xc4; 0xe3; 0x65; 0x46; 0xf5; 0x20;
+                           (* VPERM2I128 (%_% ymm6) (%_% ymm3) (%_% ymm5) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x65; 0x46; 0xed; 0x31;
+                           (* VPERM2I128 (%_% ymm5) (%_% ymm3) (%_% ymm5) (Imm8 (word 49)) *)
+  0xc4; 0xc3; 0x3d; 0x46; 0xdb; 0x20;
+                           (* VPERM2I128 (%_% ymm3) (%_% ymm8) (%_% ymm11) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x3d; 0x46; 0xdb; 0x31;
+                           (* VPERM2I128 (%_% ymm11) (%_% ymm8) (%_% ymm11) (Imm8 (word 49)) *)
+  0xc5; 0xfd; 0x6f; 0x96; 0x20; 0x02; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm2) (Memop Word256 (%% (rsi,544))) *)
+  0xc5; 0x7d; 0x6f; 0x86; 0x40; 0x02; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm8) (Memop Word256 (%% (rsi,576))) *)
+  0xc5; 0x2d; 0xf9; 0xe7;  (* VPSUBW (%_% ymm12) (%_% ymm10) (%_% ymm7) *)
+  0xc4; 0xc1; 0x45; 0xfd; 0xfa;
+                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm10) *)
+  0xc4; 0x41; 0x5d; 0xf9; 0xe9;
+                           (* VPSUBW (%_% ymm13) (%_% ymm4) (%_% ymm9) *)
+  0xc5; 0x1d; 0xd5; 0xd2;  (* VPMULLW (%_% ymm10) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0x35; 0xfd; 0xcc;  (* VPADDW (%_% ymm9) (%_% ymm9) (%_% ymm4) *)
+  0xc5; 0x55; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm5) (%_% ymm6) *)
+  0xc5; 0x95; 0xd5; 0xe2;  (* VPMULLW (%_% ymm4) (%_% ymm13) (%_% ymm2) *)
+  0xc5; 0xcd; 0xfd; 0xf5;  (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm5) *)
+  0xc5; 0x25; 0xf9; 0xfb;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm3) *)
+  0xc5; 0x8d; 0xd5; 0xea;  (* VPMULLW (%_% ymm5) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x65; 0xfd; 0xdb;
+                           (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc4; 0x41; 0x1d; 0xe5; 0xe0;
+                           (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm8) *)
+  0xc4; 0x41; 0x15; 0xe5; 0xe8;
+                           (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm8) *)
+  0xc4; 0x41; 0x0d; 0xe5; 0xf0;
+                           (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm8) *)
+  0xc4; 0x41; 0x05; 0xe5; 0xf8;
+                           (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm8) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0xdd; 0xe5; 0xe0;  (* VPMULHW (%_% ymm4) (%_% ymm4) (%_% ymm0) *)
+  0xc5; 0xd5; 0xe5; 0xe8;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc4; 0x41; 0x1d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm12) (%_% ymm10) *)
+  0xc5; 0x95; 0xf9; 0xe4;  (* VPSUBW (%_% ymm4) (%_% ymm13) (%_% ymm4) *)
+  0xc5; 0x8d; 0xf9; 0xed;  (* VPSUBW (%_% ymm5) (%_% ymm14) (%_% ymm5) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0x45; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm7) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x45; 0xf9; 0xfc;
+                           (* VPSUBW (%_% ymm7) (%_% ymm7) (%_% ymm12) *)
+  0xc5; 0xfd; 0x7f; 0x3f;  (* VMOVDQA (Memop Word256 (%% (rdi,0))) (%_% ymm7) *)
+  0xc5; 0x7d; 0x7f; 0x4f; 0x20;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,32))) (%_% ymm9) *)
+  0xc5; 0xfd; 0x7f; 0x77; 0x40;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,64))) (%_% ymm6) *)
+  0xc5; 0xfd; 0x7f; 0x5f; 0x60;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,96))) (%_% ymm3) *)
+  0xc5; 0x7d; 0x7f; 0x97; 0x80; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,128))) (%_% ymm10) *)
+  0xc5; 0xfd; 0x7f; 0xa7; 0xa0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,160))) (%_% ymm4) *)
+  0xc5; 0xfd; 0x7f; 0xaf; 0xc0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,192))) (%_% ymm5) *)
+  0xc5; 0x7d; 0x7f; 0x9f; 0xe0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,224))) (%_% ymm11) *)
+  0xb8; 0xa1; 0xd8; 0xa1; 0xd8;
+                           (* MOV (% eax) (Imm32 (word 3634485409)) *)
+  0xc5; 0xf9; 0x6e; 0xd0;  (* VMOVD (%_% xmm2) (% eax) *)
+  0xc4; 0xe2; 0x7d; 0x58; 0xd2;
+                           (* VPBROADCASTD (%_% ymm2) (%_% xmm2) *)
+  0xb8; 0xa1; 0x05; 0xa1; 0x05;
+                           (* MOV (% eax) (Imm32 (word 94438817)) *)
+  0xc5; 0xf9; 0x6e; 0xd8;  (* VMOVD (%_% xmm3) (% eax) *)
+  0xc4; 0xe2; 0x7d; 0x58; 0xdb;
+                           (* VPBROADCASTD (%_% ymm3) (%_% xmm3) *)
+  0xc5; 0xfd; 0x6f; 0xa7; 0x00; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm4) (Memop Word256 (%% (rdi,256))) *)
+  0xc5; 0xfd; 0x6f; 0xb7; 0x40; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm6) (Memop Word256 (%% (rdi,320))) *)
+  0xc5; 0xfd; 0x6f; 0xaf; 0x20; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm5) (Memop Word256 (%% (rdi,288))) *)
+  0xc5; 0xfd; 0x6f; 0xbf; 0x60; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm7) (Memop Word256 (%% (rdi,352))) *)
+  0xc5; 0x5d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm4) (%_% ymm2) *)
+  0xc5; 0xdd; 0xe5; 0xe3;  (* VPMULHW (%_% ymm4) (%_% ymm4) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x5d; 0xf9; 0xe4;
+                           (* VPSUBW (%_% ymm4) (%_% ymm4) (%_% ymm12) *)
+  0xc5; 0x4d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm6) (%_% ymm2) *)
+  0xc5; 0xcd; 0xe5; 0xf3;  (* VPMULHW (%_% ymm6) (%_% ymm6) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x4d; 0xf9; 0xf4;
+                           (* VPSUBW (%_% ymm6) (%_% ymm6) (%_% ymm12) *)
+  0xc5; 0x55; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm5) (%_% ymm2) *)
+  0xc5; 0xd5; 0xe5; 0xeb;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x55; 0xf9; 0xec;
+                           (* VPSUBW (%_% ymm5) (%_% ymm5) (%_% ymm12) *)
+  0xc5; 0x45; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm7) (%_% ymm2) *)
+  0xc5; 0xc5; 0xe5; 0xfb;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x45; 0xf9; 0xfc;
+                           (* VPSUBW (%_% ymm7) (%_% ymm7) (%_% ymm12) *)
+  0xc5; 0x7d; 0x6f; 0x87; 0x80; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm8) (Memop Word256 (%% (rdi,384))) *)
+  0xc5; 0x7d; 0x6f; 0x97; 0xc0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm10) (Memop Word256 (%% (rdi,448))) *)
+  0xc5; 0x7d; 0x6f; 0x8f; 0xa0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm9) (Memop Word256 (%% (rdi,416))) *)
+  0xc5; 0x7d; 0x6f; 0x9f; 0xe0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm11) (Memop Word256 (%% (rdi,480))) *)
+  0xc5; 0x3d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm8) (%_% ymm2) *)
+  0xc5; 0x3d; 0xe5; 0xc3;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x3d; 0xf9; 0xc4;
+                           (* VPSUBW (%_% ymm8) (%_% ymm8) (%_% ymm12) *)
+  0xc5; 0x2d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm10) (%_% ymm2) *)
+  0xc5; 0x2d; 0xe5; 0xd3;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x2d; 0xf9; 0xd4;
+                           (* VPSUBW (%_% ymm10) (%_% ymm10) (%_% ymm12) *)
+  0xc5; 0x35; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm9) (%_% ymm2) *)
+  0xc5; 0x35; 0xe5; 0xcb;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x35; 0xf9; 0xcc;
+                           (* VPSUBW (%_% ymm9) (%_% ymm9) (%_% ymm12) *)
+  0xc5; 0x25; 0xd5; 0xe2;  (* VPMULLW (%_% ymm12) (%_% ymm11) (%_% ymm2) *)
+  0xc5; 0x25; 0xe5; 0xdb;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm3) *)
+  0xc5; 0x1d; 0xe5; 0xe0;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x25; 0xf9; 0xdc;
+                           (* VPSUBW (%_% ymm11) (%_% ymm11) (%_% ymm12) *)
+  0xc4; 0x63; 0xfd; 0x00; 0xbe; 0xe0; 0x01; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm15) (Memop Word256 (%% (rsi,480))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x8e; 0xa0; 0x01; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm1) (Memop Word256 (%% (rsi,416))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0x00; 0x02; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,512))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x9e; 0xc0; 0x01; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm3) (Memop Word256 (%% (rsi,448))) (Imm8 (word 78)) *)
+  0xc5; 0x7d; 0x6f; 0x26;  (* VMOVDQA (%_% ymm12) (Memop Word256 (%% (rsi,0))) *)
+  0xc4; 0x42; 0x05; 0x00; 0xfc;
+                           (* VPSHUFB (%_% ymm15) (%_% ymm15) (%_% ymm12) *)
+  0xc4; 0xc2; 0x75; 0x00; 0xcc;
+                           (* VPSHUFB (%_% ymm1) (%_% ymm1) (%_% ymm12) *)
+  0xc4; 0xc2; 0x6d; 0x00; 0xd4;
+                           (* VPSHUFB (%_% ymm2) (%_% ymm2) (%_% ymm12) *)
+  0xc4; 0xc2; 0x65; 0x00; 0xdc;
+                           (* VPSHUFB (%_% ymm3) (%_% ymm3) (%_% ymm12) *)
+  0xc5; 0x4d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm12) (%_% ymm6) (%_% ymm4) *)
+  0xc5; 0xdd; 0xfd; 0xe6;  (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm6) *)
+  0xc5; 0x45; 0xf9; 0xed;  (* VPSUBW (%_% ymm13) (%_% ymm7) (%_% ymm5) *)
+  0xc4; 0xc1; 0x1d; 0xd5; 0xf7;
+                           (* VPMULLW (%_% ymm6) (%_% ymm12) (%_% ymm15) *)
+  0xc5; 0xd5; 0xfd; 0xef;  (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm7) *)
+  0xc4; 0x41; 0x2d; 0xf9; 0xf0;
+                           (* VPSUBW (%_% ymm14) (%_% ymm10) (%_% ymm8) *)
+  0xc4; 0xc1; 0x15; 0xd5; 0xff;
+                           (* VPMULLW (%_% ymm7) (%_% ymm13) (%_% ymm15) *)
+  0xc4; 0x41; 0x3d; 0xfd; 0xc2;
+                           (* VPADDW (%_% ymm8) (%_% ymm8) (%_% ymm10) *)
+  0xc4; 0x41; 0x25; 0xf9; 0xf9;
+                           (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm9) *)
+  0xc5; 0x0d; 0xd5; 0xd1;  (* VPMULLW (%_% ymm10) (%_% ymm14) (%_% ymm1) *)
+  0xc4; 0x41; 0x35; 0xfd; 0xcb;
+                           (* VPADDW (%_% ymm9) (%_% ymm9) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xd9;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm1) *)
+  0xc5; 0x1d; 0xe5; 0xe2;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0x15; 0xe5; 0xea;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm2) *)
+  0xc5; 0x0d; 0xe5; 0xf3;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm3) *)
+  0xc5; 0x05; 0xe5; 0xfb;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm3) *)
+  0xc5; 0xcd; 0xe5; 0xf0;  (* VPMULHW (%_% ymm6) (%_% ymm6) (%_% ymm0) *)
+  0xc5; 0xc5; 0xe5; 0xf8;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm6) (%_% ymm12) (%_% ymm6) *)
+  0xc5; 0x95; 0xf9; 0xff;  (* VPSUBW (%_% ymm7) (%_% ymm13) (%_% ymm7) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0x60; 0x01; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,352))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x9e; 0x80; 0x01; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm3) (Memop Word256 (%% (rsi,384))) (Imm8 (word 78)) *)
+  0xc5; 0xfd; 0x6f; 0x0e;  (* VMOVDQA (%_% ymm1) (Memop Word256 (%% (rsi,0))) *)
+  0xc4; 0xe2; 0x6d; 0x00; 0xd1;
+                           (* VPSHUFB (%_% ymm2) (%_% ymm2) (%_% ymm1) *)
+  0xc4; 0xe2; 0x65; 0x00; 0xd9;
+                           (* VPSHUFB (%_% ymm3) (%_% ymm3) (%_% ymm1) *)
+  0xc5; 0x3d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm12) (%_% ymm8) (%_% ymm4) *)
+  0xc4; 0xc1; 0x5d; 0xfd; 0xe0;
+                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm8) *)
+  0xc5; 0x35; 0xf9; 0xed;  (* VPSUBW (%_% ymm13) (%_% ymm9) (%_% ymm5) *)
+  0xc5; 0x1d; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm12) (%_% ymm2) *)
+  0xc4; 0xc1; 0x55; 0xfd; 0xe9;
+                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm9) *)
+  0xc5; 0x2d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm10) (%_% ymm6) *)
+  0xc5; 0x15; 0xd5; 0xca;  (* VPMULLW (%_% ymm9) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf2;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm10) *)
+  0xc5; 0x25; 0xf9; 0xff;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm7) *)
+  0xc5; 0x0d; 0xd5; 0xd2;  (* VPMULLW (%_% ymm10) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x45; 0xfd; 0xfb;
+                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc5; 0x1d; 0xe5; 0xe3;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm3) *)
+  0xc5; 0x15; 0xe5; 0xeb;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm3) *)
+  0xc5; 0x0d; 0xe5; 0xf3;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm3) *)
+  0xc5; 0x05; 0xe5; 0xfb;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm3) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0x35; 0xe5; 0xc8;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm0) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc4; 0x41; 0x1d; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm12) (%_% ymm8) *)
+  0xc4; 0x41; 0x15; 0xf9; 0xc9;
+                           (* VPSUBW (%_% ymm9) (%_% ymm13) (%_% ymm9) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0xe5; 0x72; 0xf5; 0x10;
+                           (* VPSLLD (%_% ymm3) (%_% ymm5) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x5d; 0x0e; 0xdb; 0xaa;
+                           (* VPBLENDW (%_% ymm3) (%_% ymm4) (%_% ymm3) (Imm8 (word 170)) *)
+  0xc5; 0xdd; 0x72; 0xd4; 0x10;
+                           (* VPSRLD (%_% ymm4) (%_% ymm4) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x5d; 0x0e; 0xed; 0xaa;
+                           (* VPBLENDW (%_% ymm5) (%_% ymm4) (%_% ymm5) (Imm8 (word 170)) *)
+  0xc5; 0xdd; 0x72; 0xf7; 0x10;
+                           (* VPSLLD (%_% ymm4) (%_% ymm7) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x4d; 0x0e; 0xe4; 0xaa;
+                           (* VPBLENDW (%_% ymm4) (%_% ymm6) (%_% ymm4) (Imm8 (word 170)) *)
+  0xc5; 0xcd; 0x72; 0xd6; 0x10;
+                           (* VPSRLD (%_% ymm6) (%_% ymm6) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x4d; 0x0e; 0xff; 0xaa;
+                           (* VPBLENDW (%_% ymm7) (%_% ymm6) (%_% ymm7) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x4d; 0x72; 0xf1; 0x10;
+                           (* VPSLLD (%_% ymm6) (%_% ymm9) (Imm8 (word 16)) *)
+  0xc4; 0xe3; 0x3d; 0x0e; 0xf6; 0xaa;
+                           (* VPBLENDW (%_% ymm6) (%_% ymm8) (%_% ymm6) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x3d; 0x72; 0xd0; 0x10;
+                           (* VPSRLD (%_% ymm8) (%_% ymm8) (Imm8 (word 16)) *)
+  0xc4; 0x43; 0x3d; 0x0e; 0xc9; 0xaa;
+                           (* VPBLENDW (%_% ymm9) (%_% ymm8) (%_% ymm9) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x3d; 0x72; 0xf3; 0x10;
+                           (* VPSLLD (%_% ymm8) (%_% ymm11) (Imm8 (word 16)) *)
+  0xc4; 0x43; 0x2d; 0x0e; 0xc0; 0xaa;
+                           (* VPBLENDW (%_% ymm8) (%_% ymm10) (%_% ymm8) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x2d; 0x72; 0xd2; 0x10;
+                           (* VPSRLD (%_% ymm10) (%_% ymm10) (Imm8 (word 16)) *)
+  0xc4; 0x43; 0x2d; 0x0e; 0xdb; 0xaa;
+                           (* VPBLENDW (%_% ymm11) (%_% ymm10) (%_% ymm11) (Imm8 (word 170)) *)
+  0xc5; 0x7d; 0x6f; 0x66; 0x20;
+                           (* VMOVDQA (%_% ymm12) (Memop Word256 (%% (rsi,32))) *)
+  0xc4; 0xe2; 0x1d; 0x36; 0x96; 0x20; 0x01; 0x00; 0x00;
+                           (* VPERMD (%_% ymm2) (%_% ymm12) (Memop Word256 (%% (rsi,288))) *)
+  0xc4; 0x62; 0x1d; 0x36; 0x96; 0x40; 0x01; 0x00; 0x00;
+                           (* VPERMD (%_% ymm10) (%_% ymm12) (Memop Word256 (%% (rsi,320))) *)
+  0xc5; 0x55; 0xf9; 0xe3;  (* VPSUBW (%_% ymm12) (%_% ymm5) (%_% ymm3) *)
+  0xc5; 0xe5; 0xfd; 0xdd;  (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm5) *)
+  0xc5; 0x45; 0xf9; 0xec;  (* VPSUBW (%_% ymm13) (%_% ymm7) (%_% ymm4) *)
+  0xc5; 0x9d; 0xd5; 0xea;  (* VPMULLW (%_% ymm5) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0xdd; 0xfd; 0xe7;  (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm7) *)
+  0xc5; 0x35; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm9) (%_% ymm6) *)
+  0xc5; 0x95; 0xd5; 0xfa;  (* VPMULLW (%_% ymm7) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf1;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm9) *)
+  0xc4; 0x41; 0x25; 0xf9; 0xf8;
+                           (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm8) *)
+  0xc5; 0x0d; 0xd5; 0xca;  (* VPMULLW (%_% ymm9) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0x41; 0x3d; 0xfd; 0xc3;
+                           (* VPADDW (%_% ymm8) (%_% ymm8) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc4; 0x41; 0x1d; 0xe5; 0xe2;
+                           (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm10) *)
+  0xc4; 0x41; 0x15; 0xe5; 0xea;
+                           (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm10) *)
+  0xc4; 0x41; 0x0d; 0xe5; 0xf2;
+                           (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xe5; 0xfa;
+                           (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm10) *)
+  0xc5; 0xd5; 0xe5; 0xe8;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
+  0xc5; 0xc5; 0xe5; 0xf8;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
+  0xc5; 0x35; 0xe5; 0xc8;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xed;  (* VPSUBW (%_% ymm5) (%_% ymm12) (%_% ymm5) *)
+  0xc5; 0x95; 0xf9; 0xff;  (* VPSUBW (%_% ymm7) (%_% ymm13) (%_% ymm7) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xc9;
+                           (* VPSUBW (%_% ymm9) (%_% ymm14) (%_% ymm9) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xb8; 0xbf; 0x4e; 0xbf; 0x4e;
+                           (* MOV (% eax) (Imm32 (word 1321160383)) *)
+  0xc5; 0xf9; 0x6e; 0xc8;  (* VMOVD (%_% xmm1) (% eax) *)
+  0xc4; 0xe2; 0x7d; 0x58; 0xc9;
+                           (* VPBROADCASTD (%_% ymm1) (%_% xmm1) *)
+  0xc5; 0x65; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm3) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x65; 0xf9; 0xdc;
+                           (* VPSUBW (%_% ymm3) (%_% ymm3) (%_% ymm12) *)
+  0xc5; 0x7e; 0x12; 0xd4;  (* VMOVSLDUP (%_% ymm10) (%_% ymm4) *)
+  0xc4; 0x43; 0x65; 0x02; 0xd2; 0xaa;
+                           (* VPBLENDD (%_% ymm10) (%_% ymm3) (%_% ymm10) (Imm8 (word 170)) *)
+  0xc5; 0xe5; 0x73; 0xd3; 0x20;
+                           (* VPSRLQ (%_% ymm3) (%_% ymm3) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x65; 0x02; 0xe4; 0xaa;
+                           (* VPBLENDD (%_% ymm4) (%_% ymm3) (%_% ymm4) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x7e; 0x12; 0xd8;
+                           (* VMOVSLDUP (%_% ymm3) (%_% ymm8) *)
+  0xc4; 0xe3; 0x4d; 0x02; 0xdb; 0xaa;
+                           (* VPBLENDD (%_% ymm3) (%_% ymm6) (%_% ymm3) (Imm8 (word 170)) *)
+  0xc5; 0xcd; 0x73; 0xd6; 0x20;
+                           (* VPSRLQ (%_% ymm6) (%_% ymm6) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x4d; 0x02; 0xc0; 0xaa;
+                           (* VPBLENDD (%_% ymm8) (%_% ymm6) (%_% ymm8) (Imm8 (word 170)) *)
+  0xc5; 0xfe; 0x12; 0xf7;  (* VMOVSLDUP (%_% ymm6) (%_% ymm7) *)
+  0xc4; 0xe3; 0x55; 0x02; 0xf6; 0xaa;
+                           (* VPBLENDD (%_% ymm6) (%_% ymm5) (%_% ymm6) (Imm8 (word 170)) *)
+  0xc5; 0xd5; 0x73; 0xd5; 0x20;
+                           (* VPSRLQ (%_% ymm5) (%_% ymm5) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x55; 0x02; 0xff; 0xaa;
+                           (* VPBLENDD (%_% ymm7) (%_% ymm5) (%_% ymm7) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x7e; 0x12; 0xeb;
+                           (* VMOVSLDUP (%_% ymm5) (%_% ymm11) *)
+  0xc4; 0xe3; 0x35; 0x02; 0xed; 0xaa;
+                           (* VPBLENDD (%_% ymm5) (%_% ymm9) (%_% ymm5) (Imm8 (word 170)) *)
+  0xc4; 0xc1; 0x35; 0x73; 0xd1; 0x20;
+                           (* VPSRLQ (%_% ymm9) (%_% ymm9) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x35; 0x02; 0xdb; 0xaa;
+                           (* VPBLENDD (%_% ymm11) (%_% ymm9) (%_% ymm11) (Imm8 (word 170)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0xe0; 0x00; 0x00; 0x00; 0x1b;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,224))) (Imm8 (word 27)) *)
+  0xc4; 0x63; 0xfd; 0x00; 0x8e; 0x00; 0x01; 0x00; 0x00; 0x1b;
+                           (* VPERMQ (%_% ymm9) (Memop Word256 (%% (rsi,256))) (Imm8 (word 27)) *)
+  0xc4; 0x41; 0x5d; 0xf9; 0xe2;
+                           (* VPSUBW (%_% ymm12) (%_% ymm4) (%_% ymm10) *)
+  0xc5; 0x2d; 0xfd; 0xd4;  (* VPADDW (%_% ymm10) (%_% ymm10) (%_% ymm4) *)
+  0xc5; 0x3d; 0xf9; 0xeb;  (* VPSUBW (%_% ymm13) (%_% ymm8) (%_% ymm3) *)
+  0xc5; 0x9d; 0xd5; 0xe2;  (* VPMULLW (%_% ymm4) (%_% ymm12) (%_% ymm2) *)
+  0xc4; 0xc1; 0x65; 0xfd; 0xd8;
+                           (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm8) *)
+  0xc5; 0x45; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm7) (%_% ymm6) *)
+  0xc5; 0x15; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm13) (%_% ymm2) *)
+  0xc5; 0xcd; 0xfd; 0xf7;  (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm7) *)
+  0xc5; 0x25; 0xf9; 0xfd;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm5) *)
+  0xc5; 0x8d; 0xd5; 0xfa;  (* VPMULLW (%_% ymm7) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x55; 0xfd; 0xeb;
+                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc4; 0x41; 0x1d; 0xe5; 0xe1;
+                           (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm9) *)
+  0xc4; 0x41; 0x15; 0xe5; 0xe9;
+                           (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm9) *)
+  0xc4; 0x41; 0x0d; 0xe5; 0xf1;
+                           (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm9) *)
+  0xc4; 0x41; 0x05; 0xe5; 0xf9;
+                           (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm9) *)
+  0xc5; 0xdd; 0xe5; 0xe0;  (* VPMULHW (%_% ymm4) (%_% ymm4) (%_% ymm0) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0xc5; 0xe5; 0xf8;  (* VPMULHW (%_% ymm7) (%_% ymm7) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm4) (%_% ymm12) (%_% ymm4) *)
+  0xc4; 0x41; 0x15; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm13) (%_% ymm8) *)
+  0xc5; 0x8d; 0xf9; 0xff;  (* VPSUBW (%_% ymm7) (%_% ymm14) (%_% ymm7) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0x2d; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm10) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x2d; 0xf9; 0xd4;
+                           (* VPSUBW (%_% ymm10) (%_% ymm10) (%_% ymm12) *)
+  0xc5; 0x2d; 0x6c; 0xcb;  (* VPUNPCKLQDQ (%_% ymm9) (%_% ymm10) (%_% ymm3) *)
+  0xc5; 0xad; 0x6d; 0xdb;  (* VPUNPCKHQDQ (%_% ymm3) (%_% ymm10) (%_% ymm3) *)
+  0xc5; 0x4d; 0x6c; 0xd5;  (* VPUNPCKLQDQ (%_% ymm10) (%_% ymm6) (%_% ymm5) *)
+  0xc5; 0xcd; 0x6d; 0xed;  (* VPUNPCKHQDQ (%_% ymm5) (%_% ymm6) (%_% ymm5) *)
+  0xc4; 0xc1; 0x5d; 0x6c; 0xf0;
+                           (* VPUNPCKLQDQ (%_% ymm6) (%_% ymm4) (%_% ymm8) *)
+  0xc4; 0x41; 0x5d; 0x6d; 0xc0;
+                           (* VPUNPCKHQDQ (%_% ymm8) (%_% ymm4) (%_% ymm8) *)
+  0xc4; 0xc1; 0x45; 0x6c; 0xe3;
+                           (* VPUNPCKLQDQ (%_% ymm4) (%_% ymm7) (%_% ymm11) *)
+  0xc4; 0x41; 0x45; 0x6d; 0xdb;
+                           (* VPUNPCKHQDQ (%_% ymm11) (%_% ymm7) (%_% ymm11) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0x96; 0xa0; 0x00; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm2) (Memop Word256 (%% (rsi,160))) (Imm8 (word 78)) *)
+  0xc4; 0xe3; 0xfd; 0x00; 0xbe; 0xc0; 0x00; 0x00; 0x00; 0x4e;
+                           (* VPERMQ (%_% ymm7) (Memop Word256 (%% (rsi,192))) (Imm8 (word 78)) *)
+  0xc4; 0x41; 0x65; 0xf9; 0xe1;
+                           (* VPSUBW (%_% ymm12) (%_% ymm3) (%_% ymm9) *)
+  0xc5; 0x35; 0xfd; 0xcb;  (* VPADDW (%_% ymm9) (%_% ymm9) (%_% ymm3) *)
+  0xc4; 0x41; 0x55; 0xf9; 0xea;
+                           (* VPSUBW (%_% ymm13) (%_% ymm5) (%_% ymm10) *)
+  0xc5; 0x9d; 0xd5; 0xda;  (* VPMULLW (%_% ymm3) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0x2d; 0xfd; 0xd5;  (* VPADDW (%_% ymm10) (%_% ymm10) (%_% ymm5) *)
+  0xc5; 0x3d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm8) (%_% ymm6) *)
+  0xc5; 0x95; 0xd5; 0xea;  (* VPMULLW (%_% ymm5) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf0;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm8) *)
+  0xc5; 0x25; 0xf9; 0xfc;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm4) *)
+  0xc5; 0x0d; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x5d; 0xfd; 0xe3;
+                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc5; 0x1d; 0xe5; 0xe7;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm7) *)
+  0xc5; 0x15; 0xe5; 0xef;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm7) *)
+  0xc5; 0x0d; 0xe5; 0xf7;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm7) *)
+  0xc5; 0x05; 0xe5; 0xff;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm7) *)
+  0xc5; 0xe5; 0xe5; 0xd8;  (* VPMULHW (%_% ymm3) (%_% ymm3) (%_% ymm0) *)
+  0xc5; 0xd5; 0xe5; 0xe8;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc5; 0x9d; 0xf9; 0xdb;  (* VPSUBW (%_% ymm3) (%_% ymm12) (%_% ymm3) *)
+  0xc5; 0x95; 0xf9; 0xed;  (* VPSUBW (%_% ymm5) (%_% ymm13) (%_% ymm5) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm14) (%_% ymm8) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0x35; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm9) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0x41; 0x35; 0xf9; 0xcc;
+                           (* VPSUBW (%_% ymm9) (%_% ymm9) (%_% ymm12) *)
+  0xc4; 0xc3; 0x35; 0x46; 0xfa; 0x20;
+                           (* VPERM2I128 (%_% ymm7) (%_% ymm9) (%_% ymm10) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x35; 0x46; 0xd2; 0x31;
+                           (* VPERM2I128 (%_% ymm10) (%_% ymm9) (%_% ymm10) (Imm8 (word 49)) *)
+  0xc4; 0x63; 0x4d; 0x46; 0xcc; 0x20;
+                           (* VPERM2I128 (%_% ymm9) (%_% ymm6) (%_% ymm4) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x4d; 0x46; 0xe4; 0x31;
+                           (* VPERM2I128 (%_% ymm4) (%_% ymm6) (%_% ymm4) (Imm8 (word 49)) *)
+  0xc4; 0xe3; 0x65; 0x46; 0xf5; 0x20;
+                           (* VPERM2I128 (%_% ymm6) (%_% ymm3) (%_% ymm5) (Imm8 (word 32)) *)
+  0xc4; 0xe3; 0x65; 0x46; 0xed; 0x31;
+                           (* VPERM2I128 (%_% ymm5) (%_% ymm3) (%_% ymm5) (Imm8 (word 49)) *)
+  0xc4; 0xc3; 0x3d; 0x46; 0xdb; 0x20;
+                           (* VPERM2I128 (%_% ymm3) (%_% ymm8) (%_% ymm11) (Imm8 (word 32)) *)
+  0xc4; 0x43; 0x3d; 0x46; 0xdb; 0x31;
+                           (* VPERM2I128 (%_% ymm11) (%_% ymm8) (%_% ymm11) (Imm8 (word 49)) *)
+  0xc5; 0xfd; 0x6f; 0x56; 0x60;
+                           (* VMOVDQA (%_% ymm2) (Memop Word256 (%% (rsi,96))) *)
+  0xc5; 0x7d; 0x6f; 0x86; 0x80; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm8) (Memop Word256 (%% (rsi,128))) *)
+  0xc5; 0x2d; 0xf9; 0xe7;  (* VPSUBW (%_% ymm12) (%_% ymm10) (%_% ymm7) *)
+  0xc4; 0xc1; 0x45; 0xfd; 0xfa;
+                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm10) *)
+  0xc4; 0x41; 0x5d; 0xf9; 0xe9;
+                           (* VPSUBW (%_% ymm13) (%_% ymm4) (%_% ymm9) *)
+  0xc5; 0x1d; 0xd5; 0xd2;  (* VPMULLW (%_% ymm10) (%_% ymm12) (%_% ymm2) *)
+  0xc5; 0x35; 0xfd; 0xcc;  (* VPADDW (%_% ymm9) (%_% ymm9) (%_% ymm4) *)
+  0xc5; 0x55; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm5) (%_% ymm6) *)
+  0xc5; 0x95; 0xd5; 0xe2;  (* VPMULLW (%_% ymm4) (%_% ymm13) (%_% ymm2) *)
+  0xc5; 0xcd; 0xfd; 0xf5;  (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm5) *)
+  0xc5; 0x25; 0xf9; 0xfb;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm3) *)
+  0xc5; 0x8d; 0xd5; 0xea;  (* VPMULLW (%_% ymm5) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x65; 0xfd; 0xdb;
+                           (* VPADDW (%_% ymm3) (%_% ymm3) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc4; 0x41; 0x1d; 0xe5; 0xe0;
+                           (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm8) *)
+  0xc4; 0x41; 0x15; 0xe5; 0xe8;
+                           (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm8) *)
+  0xc4; 0x41; 0x0d; 0xe5; 0xf0;
+                           (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm8) *)
+  0xc4; 0x41; 0x05; 0xe5; 0xf8;
+                           (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm8) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0xdd; 0xe5; 0xe0;  (* VPMULHW (%_% ymm4) (%_% ymm4) (%_% ymm0) *)
+  0xc5; 0xd5; 0xe5; 0xe8;  (* VPMULHW (%_% ymm5) (%_% ymm5) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc4; 0x41; 0x1d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm12) (%_% ymm10) *)
+  0xc5; 0x95; 0xf9; 0xe4;  (* VPSUBW (%_% ymm4) (%_% ymm13) (%_% ymm4) *)
+  0xc5; 0x8d; 0xf9; 0xed;  (* VPSUBW (%_% ymm5) (%_% ymm14) (%_% ymm5) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0x45; 0xe5; 0xe1;  (* VPMULHW (%_% ymm12) (%_% ymm7) (%_% ymm1) *)
+  0xc4; 0xc1; 0x1d; 0x71; 0xe4; 0x0a;
+                           (* VPSRAW (%_% ymm12) (%_% ymm12) (Imm8 (word 10)) *)
+  0xc5; 0x1d; 0xd5; 0xe0;  (* VPMULLW (%_% ymm12) (%_% ymm12) (%_% ymm0) *)
+  0xc4; 0xc1; 0x45; 0xf9; 0xfc;
+                           (* VPSUBW (%_% ymm7) (%_% ymm7) (%_% ymm12) *)
+  0xc5; 0xfd; 0x7f; 0xbf; 0x00; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,256))) (%_% ymm7) *)
+  0xc5; 0x7d; 0x7f; 0x8f; 0x20; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,288))) (%_% ymm9) *)
+  0xc5; 0xfd; 0x7f; 0xb7; 0x40; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,320))) (%_% ymm6) *)
+  0xc5; 0xfd; 0x7f; 0x9f; 0x60; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,352))) (%_% ymm3) *)
+  0xc5; 0x7d; 0x7f; 0x97; 0x80; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,384))) (%_% ymm10) *)
+  0xc5; 0xfd; 0x7f; 0xa7; 0xa0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,416))) (%_% ymm4) *)
+  0xc5; 0xfd; 0x7f; 0xaf; 0xc0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,448))) (%_% ymm5) *)
+  0xc5; 0x7d; 0x7f; 0x9f; 0xe0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,480))) (%_% ymm11) *)
+  0xc5; 0xfd; 0x6f; 0x27;  (* VMOVDQA (%_% ymm4) (Memop Word256 (%% (rdi,0))) *)
+  0xc5; 0x7d; 0x6f; 0x87; 0x00; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm8) (Memop Word256 (%% (rdi,256))) *)
+  0xc5; 0xfd; 0x6f; 0x6f; 0x20;
+                           (* VMOVDQA (%_% ymm5) (Memop Word256 (%% (rdi,32))) *)
+  0xc5; 0x7d; 0x6f; 0x8f; 0x20; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm9) (Memop Word256 (%% (rdi,288))) *)
+  0xc4; 0xe2; 0x7d; 0x59; 0x56; 0x40;
+                           (* VPBROADCASTQ (%_% ymm2) (Memop Quadword (%% (rsi,64))) *)
+  0xc5; 0xfd; 0x6f; 0x77; 0x40;
+                           (* VMOVDQA (%_% ymm6) (Memop Word256 (%% (rdi,64))) *)
+  0xc5; 0x7d; 0x6f; 0x97; 0x40; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm10) (Memop Word256 (%% (rdi,320))) *)
+  0xc5; 0xfd; 0x6f; 0x7f; 0x60;
+                           (* VMOVDQA (%_% ymm7) (Memop Word256 (%% (rdi,96))) *)
+  0xc5; 0x7d; 0x6f; 0x9f; 0x60; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm11) (Memop Word256 (%% (rdi,352))) *)
+  0xc4; 0xe2; 0x7d; 0x59; 0x5e; 0x48;
+                           (* VPBROADCASTQ (%_% ymm3) (Memop Quadword (%% (rsi,72))) *)
+  0xc5; 0x3d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm12) (%_% ymm8) (%_% ymm4) *)
+  0xc4; 0xc1; 0x5d; 0xfd; 0xe0;
+                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm8) *)
+  0xc5; 0x35; 0xf9; 0xed;  (* VPSUBW (%_% ymm13) (%_% ymm9) (%_% ymm5) *)
+  0xc5; 0x1d; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm12) (%_% ymm2) *)
+  0xc4; 0xc1; 0x55; 0xfd; 0xe9;
+                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm9) *)
+  0xc5; 0x2d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm10) (%_% ymm6) *)
+  0xc5; 0x15; 0xd5; 0xca;  (* VPMULLW (%_% ymm9) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf2;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm10) *)
+  0xc5; 0x25; 0xf9; 0xff;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm7) *)
+  0xc5; 0x0d; 0xd5; 0xd2;  (* VPMULLW (%_% ymm10) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x45; 0xfd; 0xfb;
+                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc5; 0x1d; 0xe5; 0xe3;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm3) *)
+  0xc5; 0x15; 0xe5; 0xeb;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm3) *)
+  0xc5; 0x0d; 0xe5; 0xf3;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm3) *)
+  0xc5; 0x05; 0xe5; 0xfb;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm3) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0x35; 0xe5; 0xc8;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm0) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc4; 0x41; 0x1d; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm12) (%_% ymm8) *)
+  0xc4; 0x41; 0x15; 0xf9; 0xc9;
+                           (* VPSUBW (%_% ymm9) (%_% ymm13) (%_% ymm9) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0xfd; 0x7f; 0x27;  (* VMOVDQA (Memop Word256 (%% (rdi,0))) (%_% ymm4) *)
+  0xc5; 0xfd; 0x7f; 0x6f; 0x20;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,32))) (%_% ymm5) *)
+  0xc5; 0xfd; 0x7f; 0x77; 0x40;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,64))) (%_% ymm6) *)
+  0xc5; 0xfd; 0x7f; 0x7f; 0x60;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,96))) (%_% ymm7) *)
+  0xc5; 0x7d; 0x7f; 0x87; 0x00; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,256))) (%_% ymm8) *)
+  0xc5; 0x7d; 0x7f; 0x8f; 0x20; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,288))) (%_% ymm9) *)
+  0xc5; 0x7d; 0x7f; 0x97; 0x40; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,320))) (%_% ymm10) *)
+  0xc5; 0x7d; 0x7f; 0x9f; 0x60; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,352))) (%_% ymm11) *)
+  0xc5; 0xfd; 0x6f; 0xa7; 0x80; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm4) (Memop Word256 (%% (rdi,128))) *)
+  0xc5; 0x7d; 0x6f; 0x87; 0x80; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm8) (Memop Word256 (%% (rdi,384))) *)
+  0xc5; 0xfd; 0x6f; 0xaf; 0xa0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm5) (Memop Word256 (%% (rdi,160))) *)
+  0xc5; 0x7d; 0x6f; 0x8f; 0xa0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm9) (Memop Word256 (%% (rdi,416))) *)
+  0xc4; 0xe2; 0x7d; 0x59; 0x56; 0x40;
+                           (* VPBROADCASTQ (%_% ymm2) (Memop Quadword (%% (rsi,64))) *)
+  0xc5; 0xfd; 0x6f; 0xb7; 0xc0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm6) (Memop Word256 (%% (rdi,192))) *)
+  0xc5; 0x7d; 0x6f; 0x97; 0xc0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm10) (Memop Word256 (%% (rdi,448))) *)
+  0xc5; 0xfd; 0x6f; 0xbf; 0xe0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm7) (Memop Word256 (%% (rdi,224))) *)
+  0xc5; 0x7d; 0x6f; 0x9f; 0xe0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (%_% ymm11) (Memop Word256 (%% (rdi,480))) *)
+  0xc4; 0xe2; 0x7d; 0x59; 0x5e; 0x48;
+                           (* VPBROADCASTQ (%_% ymm3) (Memop Quadword (%% (rsi,72))) *)
+  0xc5; 0x3d; 0xf9; 0xe4;  (* VPSUBW (%_% ymm12) (%_% ymm8) (%_% ymm4) *)
+  0xc4; 0xc1; 0x5d; 0xfd; 0xe0;
+                           (* VPADDW (%_% ymm4) (%_% ymm4) (%_% ymm8) *)
+  0xc5; 0x35; 0xf9; 0xed;  (* VPSUBW (%_% ymm13) (%_% ymm9) (%_% ymm5) *)
+  0xc5; 0x1d; 0xd5; 0xc2;  (* VPMULLW (%_% ymm8) (%_% ymm12) (%_% ymm2) *)
+  0xc4; 0xc1; 0x55; 0xfd; 0xe9;
+                           (* VPADDW (%_% ymm5) (%_% ymm5) (%_% ymm9) *)
+  0xc5; 0x2d; 0xf9; 0xf6;  (* VPSUBW (%_% ymm14) (%_% ymm10) (%_% ymm6) *)
+  0xc5; 0x15; 0xd5; 0xca;  (* VPMULLW (%_% ymm9) (%_% ymm13) (%_% ymm2) *)
+  0xc4; 0xc1; 0x4d; 0xfd; 0xf2;
+                           (* VPADDW (%_% ymm6) (%_% ymm6) (%_% ymm10) *)
+  0xc5; 0x25; 0xf9; 0xff;  (* VPSUBW (%_% ymm15) (%_% ymm11) (%_% ymm7) *)
+  0xc5; 0x0d; 0xd5; 0xd2;  (* VPMULLW (%_% ymm10) (%_% ymm14) (%_% ymm2) *)
+  0xc4; 0xc1; 0x45; 0xfd; 0xfb;
+                           (* VPADDW (%_% ymm7) (%_% ymm7) (%_% ymm11) *)
+  0xc5; 0x05; 0xd5; 0xda;  (* VPMULLW (%_% ymm11) (%_% ymm15) (%_% ymm2) *)
+  0xc5; 0x1d; 0xe5; 0xe3;  (* VPMULHW (%_% ymm12) (%_% ymm12) (%_% ymm3) *)
+  0xc5; 0x15; 0xe5; 0xeb;  (* VPMULHW (%_% ymm13) (%_% ymm13) (%_% ymm3) *)
+  0xc5; 0x0d; 0xe5; 0xf3;  (* VPMULHW (%_% ymm14) (%_% ymm14) (%_% ymm3) *)
+  0xc5; 0x05; 0xe5; 0xfb;  (* VPMULHW (%_% ymm15) (%_% ymm15) (%_% ymm3) *)
+  0xc5; 0x3d; 0xe5; 0xc0;  (* VPMULHW (%_% ymm8) (%_% ymm8) (%_% ymm0) *)
+  0xc5; 0x35; 0xe5; 0xc8;  (* VPMULHW (%_% ymm9) (%_% ymm9) (%_% ymm0) *)
+  0xc5; 0x2d; 0xe5; 0xd0;  (* VPMULHW (%_% ymm10) (%_% ymm10) (%_% ymm0) *)
+  0xc5; 0x25; 0xe5; 0xd8;  (* VPMULHW (%_% ymm11) (%_% ymm11) (%_% ymm0) *)
+  0xc4; 0x41; 0x1d; 0xf9; 0xc0;
+                           (* VPSUBW (%_% ymm8) (%_% ymm12) (%_% ymm8) *)
+  0xc4; 0x41; 0x15; 0xf9; 0xc9;
+                           (* VPSUBW (%_% ymm9) (%_% ymm13) (%_% ymm9) *)
+  0xc4; 0x41; 0x0d; 0xf9; 0xd2;
+                           (* VPSUBW (%_% ymm10) (%_% ymm14) (%_% ymm10) *)
+  0xc4; 0x41; 0x05; 0xf9; 0xdb;
+                           (* VPSUBW (%_% ymm11) (%_% ymm15) (%_% ymm11) *)
+  0xc5; 0xfd; 0x7f; 0xa7; 0x80; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,128))) (%_% ymm4) *)
+  0xc5; 0xfd; 0x7f; 0xaf; 0xa0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,160))) (%_% ymm5) *)
+  0xc5; 0xfd; 0x7f; 0xb7; 0xc0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,192))) (%_% ymm6) *)
+  0xc5; 0xfd; 0x7f; 0xbf; 0xe0; 0x00; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,224))) (%_% ymm7) *)
+  0xc5; 0x7d; 0x7f; 0x87; 0x80; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,384))) (%_% ymm8) *)
+  0xc5; 0x7d; 0x7f; 0x8f; 0xa0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,416))) (%_% ymm9) *)
+  0xc5; 0x7d; 0x7f; 0x97; 0xc0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,448))) (%_% ymm10) *)
+  0xc5; 0x7d; 0x7f; 0x9f; 0xe0; 0x01; 0x00; 0x00;
+                           (* VMOVDQA (Memop Word256 (%% (rdi,480))) (%_% ymm11) *)
+  0xc3                     (* RET *)
+];;
+
+let mlkem_intt_tmc = define_trimmed "mlkem_intt_tmc" mlkem_intt_mc;;
+let MLKEM_INTT_TMC_EXEC = X86_MK_CORE_EXEC_RULE mlkem_intt_tmc;;
+
+let qdata_full = define
+`qdata_full:int list =
+   [&3854; &3340; &2826; &2312; &1798; &1284; &770; &256;
+    &3854; &3340; &2826; &2312; &1798; &1284; &770; &256;
+    &7;    &0;    &6;    &0;    &5;    &0;    &4;   &0;
+    &3;    &0;    &2;    &0;    &1;    &0;    &0;   &0;
+&31498; &31498; &31498; &31498; -- &758; -- &758; -- &758; -- &758; &0; &0; &0; &0; &0; &0; &0; &0;
+    &14745; &14745; &14745; &14745; &14745; &14745; &14745; &14745; &14745; &14745; &14745;
+    &14745; &14745; &14745; &14745; &14745; -- &359; -- &359; -- &359; -- &359; -- &359; -- &359; -- &359;
+    -- &359; -- &359; -- &359; -- &359; -- &359; -- &359; -- &359; -- &359; -- &359; &13525; &13525; &13525;
+    &13525; &13525; &13525; &13525; &13525; -- &12402; -- &12402; -- &12402; -- &12402; -- &12402;
+    -- &12402; -- &12402; -- &12402; &1493; &1493; &1493; &1493; &1493; &1493; &1493; &1493;
+    &1422; &1422; &1422; &1422; &1422; &1422; &1422; &1422; -- &20907; -- &20907; -- &20907;
+    -- &20907; &27758; &27758; &27758; &27758; -- &3799; -- &3799; -- &3799; -- &3799; -- &15690;
+    -- &15690; -- &15690; -- &15690; -- &171; -- &171; -- &171; -- &171; &622; &622; &622; &622; &1577;
+    &1577; &1577; &1577; &182; &182; &182; &182; -- &5827; -- &5827; &17363; &17363; -- &26360;
+    -- &26360; -- &29057; -- &29057; &5571; &5571; -- &1102; -- &1102; &21438; &21438; -- &26242;
+    -- &26242; &573; &573; -- &1325; -- &1325; &264; &264; &383; &383; -- &829; -- &829; &1458; &1458;
+    -- &1602; -- &1602; -- &130; -- &130; -- &5689; -- &6516; &1496; &30967; -- &23565; &20179; &20710;
+    &25080; -- &12796; &26616; &16064; -- &12442; &9134; -- &650; -- &25986; &27837; &1223; &652;
+    -- &552; &1015; -- &1293; &1491; -- &282; -- &1544; &516; -- &8; -- &320; -- &666; -- &1618; -- &1162;
+    &126; &1469; -- &335; -- &11477; -- &32227; &20494; -- &27738; &945; -- &14883; &6182; &32010;
+    &10631; &29175; -- &28762; -- &18486; &17560; -- &14430; -- &5276; -- &1103; &555; -- &1251; &1550;
+    &422; &177; -- &291; &1574; -- &246; &1159; -- &777; -- &602; -- &1590; -- &872; &418; -- &156; &11182;
+    &13387; -- &14233; -- &21655; &13131; -- &4587; &23092; &5493; -- &32502; &30317; -- &18741;
+    &12639; &20100; &18525; &19529; -- &12619; &430; &843; &871; &105; &587; -- &235; -- &460;
+    &1653; &778; -- &147; &1483; &1119; &644; &349; &329; -- &75; &787; &787; &787; &787; &787;
+    &787; &787; &787; &787; &787; &787; &787; &787; &787; &787; &787; -- &1517; -- &1517; -- &1517;
+    -- &1517; -- &1517; -- &1517; -- &1517; -- &1517; -- &1517; -- &1517; -- &1517; -- &1517; -- &1517; -- &1517;
+    -- &1517; -- &1517; &28191; &28191; &28191; &28191; &28191; &28191; &28191; &28191;
+    -- &16694; -- &16694; -- &16694; -- &16694; -- &16694; -- &16694; -- &16694; -- &16694; &287; &287;
+    &287; &287; &287; &287; &287; &287; &202; &202; &202; &202; &202; &202; &202; &202; &10690;
+    &10690; &10690; &10690; &1358; &1358; &1358; &1358; -- &11202; -- &11202; -- &11202; -- &11202;
+    &31164; &31164; &31164; &31164; &962; &962; &962; &962; -- &1202; -- &1202; -- &1202; -- &1202;
+    -- &1474; -- &1474; -- &1474; -- &1474; &1468; &1468; &1468; &1468; -- &28073; -- &28073; &24313;
+    &24313; -- &10532; -- &10532; &8800; &8800; &18426; &18426; &8859; &8859; &26675; &26675;
+    -- &16163; -- &16163; -- &681; -- &681; &1017; &1017; &732; &732; &608; &608; -- &1542; -- &1542;
+    &411; &411; -- &205; -- &205; -- &1571; -- &1571; &19883; -- &28250; -- &15887; -- &8898; -- &28309;
+    &9075; -- &30199; &18249; &13426; &14017; -- &29156; -- &12757; &16832; &4311; -- &24155;
+    -- &17915; -- &853; -- &90; -- &271; &830; &107; -- &1421; -- &247; -- &951; -- &398; &961; -- &1508;
+    -- &725; &448; -- &1065; &677; -- &1275; -- &31183; &25435; -- &7382; &24391; -- &20927; &10946;
+    &24214; &16989; &10335; -- &7934; -- &22502; &10906; &31636; &28644; &23998; -- &17422; &817;
+    &603; &1322; -- &1465; -- &1215; &1218; -- &874; -- &1187; -- &1185; -- &1278; -- &1510; -- &870; -- &108;
+    &996; &958; &1522; &20297; &2146; &15355; -- &32384; -- &6280; -- &14903; -- &11044; &14469;
+    -- &21498; -- &20198; &23210; -- &17442; -- &23860; -- &20257; &7756; &23132; &1097; &610;
+    -- &1285; &384; -- &136; -- &1335; &220; -- &1659; -- &1530; &794; -- &854; &478; -- &308; &991;
+    -- &1460; &1628;
+ -- &1103;
+    &555; -- &1251; &1550; &422; &177; -- &291; &1574; -- &246; &1159; -- &777; -- &602; -- &1590; -- &872;
+    &418; -- &156; &430; &843; &871; &105; &587; -- &235; -- &460; &1653; &778; -- &147; &1483; &1119;
+    &644; &349; &329; -- &75; &817; &603; &1322; -- &1465; -- &1215; &1218; -- &874; -- &1187; -- &1185;
+    -- &1278; -- &1510; -- &870; -- &108; &996; &958; &1522; &1097; &610; -- &1285; &384; -- &136;
+    -- &1335; &220; -- &1659; -- &1530; &794; -- &854; &478; -- &308; &991; -- &1460; &1628; -- &335;
+    -- &11477; -- &32227; &20494; -- &27738; &945; -- &14883; &6182; &32010; &10631; &29175;
+    -- &28762; -- &18486; &17560; -- &14430; -- &5276; &11182; &13387; -- &14233; -- &21655; &13131;
+    -- &4587; &23092; &5493; -- &32502; &30317; -- &18741; &12639; &20100; &18525; &19529;
+    -- &12619; -- &31183; &25435; -- &7382; &24391; -- &20927; &10946; &24214; &16989; &10335;
+    -- &7934; -- &22502; &10906; &31636; &28644; &23998; -- &17422; &20297; &2146; &15355;
+    -- &32384; -- &6280; -- &14903; -- &11044; &14469; -- &21498; -- &20198; &23210; -- &17442; -- &23860;
+    -- &20257; &7756; &23132]`;;
+
+let MLKEM_INTT_CORRECT = prove
+  (`!a zetas (zetas_list:int16 list) x pc.
+    aligned 32 a /\
+    aligned 32 zetas /\
+    nonoverlapping (word pc, 3341) (a, 512) /\
+    nonoverlapping (word pc, 3341) (zetas, 1248) /\
+    nonoverlapping (a, 512) (zetas, 1248)
+    ==> ensures x86
+          (\s. bytes_loaded s (word pc) (BUTLAST mlkem_intt_tmc) /\
+              read RIP s = word pc /\
+              C_ARGUMENTS [a; zetas] s /\
+              wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
+              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+          (\s. read RIP s = word(pc + 3341) /\
+              (!i. i < 256
+                        ==> let zi =
+                      read(memory :> bytes16(word_add a (word(2 * i)))) s in
+                      (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
+                      abs(ival zi) <= &26632))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI  ,,
+           MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8;
+                      ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+           MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE [memory :> bytes(a, 512)])`,
+
+  MAP_EVERY X_GEN_TAC
+   [`a:int64`; `zetas:int64`; `zetas_list:int16 list`; `x:num->int16`; `pc:num`] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
+              NONOVERLAPPING_CLAUSES; ALL] THEN
+
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  CONV_TAC(RATOR_CONV(LAND_CONV(ONCE_DEPTH_CONV EXPAND_CASES_CONV))) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT STRIP_TAC THEN
+
+  REWRITE_TAC [SOME_FLAGS; fst MLKEM_INTT_TMC_EXEC] THEN
+
+  GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
+  GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
+  GHOST_INTRO_TAC `init_ymm2:int256` `read YMM2` THEN
+  GHOST_INTRO_TAC `init_ymm3:int256` `read YMM3` THEN
+
+  ENSURES_INIT_TAC "s0" THEN
+
+  MEMORY_256_FROM_16_TAC "a" 16 THEN
+  ASM_REWRITE_TAC[WORD_ADD_0] THEN
+  DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes16 a) s = x`] THEN
+  CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
+
+
+  FIRST_X_ASSUM(MP_TAC o CONV_RULE (LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
+  REWRITE_TAC[qdata_full; MAP; CONS_11] THEN
+  STRIP_TAC THEN
+
+  MP_TAC(end_itlist CONJ (map (fun n -> READ_MEMORY_MERGE_CONV 4
+            (subst[mk_small_numeral(32*n),`n:num`]
+                  `read (memory :> bytes256(word_add zetas (word n))) s0`))
+            (0--38))) THEN
+  ASM_REWRITE_TAC[WORD_ADD_0] THEN
+  DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes16 a) s = x`] THEN
+  CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
+
+  FIRST_ASSUM(MP_TAC o check
+   (can (term_match [] `read (memory :> bytes256 (word_add zetas (word 64))) s0 = xxx`) o concl)) THEN
+  CONV_TAC(LAND_CONV(READ_MEMORY_SPLIT_CONV 2)) THEN
+  CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
+
+  MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_INTT_TMC_EXEC [n] THEN
+                      SIMD_SIMPLIFY_TAC[ntt_montmul; ntt_montmul_add; ntt_montmul_sub; barred_x86])
+        (1--663) THEN
+
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+
+  REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+  CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
+  CONV_RULE(READ_MEMORY_SPLIT_CONV 4) o
+  check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
+
+  CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC
+           DEPTH_CONV NUM_ADD_CONV) THEN
+  REWRITE_TAC[INT_ABS_BOUNDS; WORD_ADD_0] THEN
+  ASM_REWRITE_TAC[WORD_ADD_0] THEN
+
+  ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s663" THEN
+
+  REWRITE_TAC[WORD_BLAST `word_subword (x:int32) (0, 32) = x`] THEN
+  REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0, 64) = x`] THEN
+  REWRITE_TAC[WORD_BLAST
+   `word_subword (word_ushr (word_join (h:int16) (l:int16):int32) 16) (0, 16) = h`] THEN
+  REWRITE_TAC[WORD_BLAST
+   `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0, 32) = h`] THEN
+  REWRITE_TAC[WORD_BLAST
+    `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0, 16):int16 =
+     word_subword h (0, 16)`] THEN
+  REWRITE_TAC[WORD_BLAST
+    `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (16, 16):int16 =
+     word_subword h (16, 16)`] THEN
+  REWRITE_TAC[WORD_BLAST
+    `word_subword (word_shl (word_subword (x:int32) (0, 32):int32) 16:int32) (16, 16):int16 =
+     word_subword x (0, 16)`] THEN
+  REWRITE_TAC[WORD_BLAST
+    `word_subword (word_shl (word_subword (x:int32) (0, 32):int32) 16:int32) (16, 16):int16 =
+     word_subword x (0, 16)`] THEN
+  REWRITE_TAC[WORD_BLAST
+    `word_subword (word_shl (x:int32) 16:int32) (16, 16):int16 =
+     word_subword x (0, 16)`] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[GSYM CONJ_ASSOC] THEN
+  REPEAT(GEN_REWRITE_TAC I
+   [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
+  POP_ASSUM_LIST(K ALL_TAC) THEN
+  (W(MP_TAC o CONGBOUND_RULE o rand o lhand o rator o lhand o snd) THEN
+   MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+   [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`] THEN
+    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
+    CONV_TAC(ONCE_DEPTH_CONV AVX2_INVERSE_NTT_CONV) THEN
+    REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
+    REWRITE_TAC[INT_REM_EQ] THEN
+    REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
+    REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
+    CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
+    MATCH_MP_TAC(INT_ARITH
+     `l':int <= l /\ u <= u'
+      ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
+    CONV_TAC INT_REDUCE_CONV])
+);;
+
+let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
+  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+    aligned 32 a /\
+    aligned 32 zetas /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_tmc) (a, 512) /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_tmc) (zetas, 1248) /\
+    nonoverlapping (a, 512) (zetas, 1248) /\
+    nonoverlapping (a, 512) (stackpointer, 8) /\
+    nonoverlapping (zetas, 1248) (stackpointer, 8)
+    ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_intt_tmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [a; zetas] s /\
+              wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
+              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+              (!i. i < 256
+                        ==> let zi =
+                      read(memory :> bytes16(word_add a (word(2 * i)))) s in
+                      (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
+                      abs(ival zi) <= &26632))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(a, 512)])`,
+  let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_intt_tmc (CONV_RULE TWEAK_CONV MLKEM_INTT_CORRECT));;
+
+let MLKEM_INTT_SUBROUTINE_CORRECT  = prove
+  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+    aligned 32 a /\
+    aligned 32 zetas /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_mc) (a, 512) /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_mc) (zetas, 1248) /\
+    nonoverlapping (a, 512) (zetas, 1248) /\
+    nonoverlapping (a, 512) (stackpointer, 8) /\
+    nonoverlapping (zetas, 1248) (stackpointer, 8)
+    ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_intt_mc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [a; zetas] s /\
+              wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
+              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+              (!i. i < 256
+                        ==> let zi =
+                      read(memory :> bytes16(word_add a (word(2 * i)))) s in
+                      (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
+                      abs(ival zi) <= &26632))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(a, 512)])`,
+  let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+  (CONV_RULE TWEAK_CONV MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness of Windows ABI version.                                       *)
+(* ------------------------------------------------------------------------- *)
+
+let mlkem_intt_windows_mc = define_from_elf
+    "mlkem_intt_windows_mc" "x86/mlkem/mlkem_intt.obj";;
+
+let mlkem_intt_windows_tmc = define_trimmed
+    "mlkem_intt_windows_tmc" mlkem_intt_windows_mc;;
+
+let MLKEM_INTT_WINDOWS_TMC_EXEC = X86_MK_EXEC_RULE mlkem_intt_windows_tmc;;
+
+let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
+  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+    aligned 32 a /\
+    aligned 32 zetas /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_windows_tmc) (a, 512) /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_windows_tmc) (zetas, 1248) /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_windows_tmc)
+                   (word_sub stackpointer (word 176), 184)  /\
+    nonoverlapping (a, 512) (zetas, 1248) /\
+    nonoverlapping (a, 512) (word_sub stackpointer (word 176), 184) /\
+    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184) 
+    ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_intt_windows_tmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [a; zetas] s /\
+              wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
+              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+              (!i. i < 256
+                        ==> let zi =
+                      read(memory :> bytes16(word_add a (word(2 * i)))) s in
+                      (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
+                      abs(ival zi) <= &26632))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
+           MAYCHANGE [memory :> bytes(a, 512)])`,
+
+(** Expand away the wordlist_from_memory ****)
+  CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+
+(*** Handle initial quantifiers and set up stack offset management ***)
+  REPLICATE_TAC 5 GEN_TAC THEN
+  WORD_FORALL_OFFSET_TAC 176 THEN REPEAT GEN_TAC THEN
+
+(*** Set up basic Windows ABI framework and rewrite with Windows calling convention ***)
+  REWRITE_TAC[fst MLKEM_INTT_WINDOWS_TMC_EXEC] THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
+  REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+
+(*** Set up register preservation for Windows ABI compliance
+ *** Windows ABI requires preserving RDI, RSI, and XMM6-XMM15 across function calls ***)
+  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+  ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm7" `ZMM7 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm8" `ZMM8 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm9" `ZMM9 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm10" `ZMM10 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm11" `ZMM11 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm13" `ZMM13 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
+  ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
+
+(*** Handle the ZMM/YMM register notation conversion ***)
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
+  REWRITE_TAC(map GSYM
+    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
+
+(*** Introduce ghost variables for initial XMM register values
+ *** These will track the register states for restoration in the epilogue ***)
+  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
+  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
+  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
+  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
+  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
+  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
+  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
+  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
+  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
+  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
+
+(*** Globalize preconditions and substitute preserved register values ***)
+  GLOBALIZE_PRECONDITION_TAC THEN
+  REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
+
+(*** Initialize execution and simulate the prologue (register saves)
+ *** Steps 1-15 cover the Windows prologue that saves XMM registers to stack ***)
+  ENSURES_INIT_TAC "s0" THEN
+  X86_STEPS_TAC MLKEM_INTT_WINDOWS_TMC_EXEC (1--15) THEN
+
+(*** Apply the main Unix correctness theorem to the core NTT computation ***)
+  MP_TAC(SPECL [`a:int64`; `zetas:int64`; `zetas_list:int16 list`; `x:num->int16`; `pc + 92`]
+    MLKEM_INTT_CORRECT) THEN
+  ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
+  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
+
+(*** Expand wordlist_from_memory again ****)
+  CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
+
+(*** Expand MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ****)
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+
+(*** Execute the main NTT computation as a single big step
+ *** This handles the core algorithm while preserving the register save/restore wrapper ***)
+  X86_BIGSTEP_TAC MLKEM_INTT_WINDOWS_TMC_EXEC "s16" THENL
+   [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
+     (BYTES_LOADED_SUBPROGRAM_RULE mlkem_intt_windows_tmc
+     (REWRITE_RULE[BUTLAST_CLAUSES]
+      (AP_TERM `BUTLAST:byte list->byte list` mlkem_intt_tmc))
+     92));
+    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
+
+    (*** Capture the final YMM register states after main computation ***)
+  MAP_EVERY ABBREV_TAC
+   [`ymm6_epilog = read YMM6 s16`;
+    `ymm7_epilog = read YMM7 s16`;
+    `ymm8_epilog = read YMM8 s16`;
+    `ymm9_epilog = read YMM9 s16`;
+    `ymm10_epilog = read YMM10 s16`;
+    `ymm11_epilog = read YMM11 s16`;
+    `ymm12_epilog = read YMM12 s16`;
+    `ymm13_epilog = read YMM13 s16`;
+    `ymm14_epilog = read YMM14 s16`;
+    `ymm15_epilog = read YMM15 s16`] THEN
+
+(*** Simulate the epilogue (register restoration and return)
+ *** Steps 17-30 cover the Windows epilogue that restores XMM registers from stack ***)
+  X86_STEPS_TAC MLKEM_INTT_WINDOWS_TMC_EXEC (17--30) THEN
+
+(*** Handle the MAYCHANGE clauses for ZMM register components ***)
+  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
+
+(***Finalize the proof by establishing the final state conditions ***)
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
+
+let MLKEM_INTT_WINDOWS_SUBROUTINE_CORRECT  = prove
+  (`!a zetas (zetas_list:int16 list) x pc stackpointer returnaddress.
+    aligned 32 a /\
+    aligned 32 zetas /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_windows_mc) (a, 512) /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_windows_mc) (zetas, 1248) /\
+    nonoverlapping (word pc, LENGTH mlkem_intt_windows_mc)
+                   (word_sub stackpointer (word 176), 184)  /\
+    nonoverlapping (a, 512) (zetas, 1248) /\
+    nonoverlapping (a, 512) (word_sub stackpointer (word 176), 184) /\
+    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184) 
+    ==> ensures x86
+          (\s. bytes_loaded s (word pc) mlkem_intt_windows_mc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              WINDOWS_C_ARGUMENTS [a; zetas] s /\
+              wordlist_from_memory(zetas, 624) s = MAP (iword: int -> 16 word) qdata_full /\
+              (!i. i < 256 ==> read(memory :> bytes16(word_add a (word(2 * i)))) s = x i))
+          (\s. read RIP s = returnaddress /\
+               read RSP s = word_add stackpointer (word 8) /\
+              (!i. i < 256
+                        ==> let zi =
+                      read(memory :> bytes16(word_add a (word(2 * i)))) s in
+                      (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
+                      abs(ival zi) <= &26632))
+          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
+           MAYCHANGE [memory :> bytes(a, 512)])`,
+  let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+  (CONV_RULE TWEAK_CONV MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;

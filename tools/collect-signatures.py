@@ -333,6 +333,7 @@ onlyInX86 = [
   "mldsa_ntt",
   "mldsa_poly_reduce",
   "mlkem_ntt_x86",
+  "mlkem_intt_x86",
 ]
 
 for arch in ["arm","x86"]:
