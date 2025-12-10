@@ -12261,24 +12261,31 @@ uint64_t t, i;
 
 int test_mlkem_tobytes(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[256];
-  uint8_t c[384];
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  uint8_t c[384] __attribute__((aligned(32)));
   printf("Testing mlkem_tobytes with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
-   { for (i = 0; i < 256; ++i) a[i] = random64() % 3329;
+   { for (i = 0; i < 256; ++i)
+      { a[i] = random64() % 3329;
+        b[i] = a[i];
+      }
+
+#ifdef __x86_64__
+     mlkem_poly_to_avx2_layout(a);
+#endif
+
      mlkem_tobytes(c,a);
+
      for (i = 0; i < 256; ++i)
       { uint64_t j = (12 * i) / 8;
         uint64_t k = (12 * i) % 8;
         uint64_t c0 = c[j];
         uint64_t c1 = c[j+1];
         uint64_t c01 = ((c0 + (c1<<8))>>k) & UINT64_C(0xFFF);
-        if (c01 != a[i])
+        if (c01 != b[i])
          { printf("Error in mlkem_tobytes; element i = %"PRIu64
                   "; packed output for input[i] = 0x%03"PRIx64
                   " while input[i] = 0x%03"PRIx16"\n",
@@ -12297,7 +12304,6 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_tomont(void)
@@ -15631,6 +15637,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_intt",test_mlkem_intt);
   functionaltest(all,"mlkem_ntt",test_mlkem_ntt);
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
+  functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
@@ -15690,7 +15697,6 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
     functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
-    functionaltest(arm,"mlkem_tobytes",test_mlkem_tobytes);
     functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);
     functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
     functionaltest(sha3,"sha3_keccak_f1600_alt",test_sha3_keccak_f1600_alt);
