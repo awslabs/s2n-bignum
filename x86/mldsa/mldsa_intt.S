@@ -1,27 +1,5 @@
-/*
- * Copyright (c) The mlkem-native project authors
- * Copyright (c) The mldsa-native project authors
- * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT
- */
-/*
- * This file is derived from the public domain
- * AVX2 Dilithium implementation @[REF_AVX2].
- */
-
-/* References
- * ==========
- *
- * - [REF_AVX2]
- *   CRYSTALS-Dilithium optimized AVX2 implementation
- *   Bai, Ducas, Kiltz, Lepoint, Lyubashevsky, Schwabe, Seiler, Stehlé
- *   https://github.com/pq-crystals/dilithium/tree/master/avx2
- */
-
-
-/*
- * WARNING: This file is auto-derived from the mldsa-native source file
- *   dev/x86_64/src/intt.S using scripts/simpasm. Do not modify it directly.
- */
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT
 
 // ----------------------------------------------------------------------------
 // Inverse number-theoretic transform for ML-DSA
@@ -47,2282 +25,390 @@
 // Microsoft x64 ABI:   RCX = a, RDX = zetas
 // ----------------------------------------------------------------------------
 
-.text
-.balign 4
-#ifdef __APPLE__
-.global _PQCP_MLDSA_NATIVE_MLDSA44_invntt_avx2
-_PQCP_MLDSA_NATIVE_MLDSA44_invntt_avx2:
-#else
-.global PQCP_MLDSA_NATIVE_MLDSA44_invntt_avx2
-PQCP_MLDSA_NATIVE_MLDSA44_invntt_avx2:
+#include "_internal_s2n_bignum_x86.h"
+
+        .intel_syntax noprefix
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_intt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_intt)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_intt)
+        .text
+
+#define a rdi
+#define zetas rsi
+
+#define MLD_AVX2_BACKEND_DATA_OFFSET_8XQ 0
+#define MLD_AVX2_BACKEND_DATA_OFFSET_8XQINV 8
+#define MLD_AVX2_BACKEND_DATA_OFFSET_8XDIV_QINV 16
+#define MLD_AVX2_BACKEND_DATA_OFFSET_8XDIV 24
+#define MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV 32
+#define MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS 328
+
+.macro shuffle8 r0,r1,r2,r3
+vperm2i128      ymm\r2,ymm\r0,ymm\r1,0x20
+vperm2i128      ymm\r3,ymm\r0,ymm\r1,0x31
+.endm
+
+.macro shuffle4 r0,r1,r2,r3
+vpunpcklqdq     ymm\r2,ymm\r0,ymm\r1
+vpunpckhqdq     ymm\r3,ymm\r0,ymm\r1
+.endm
+
+.macro shuffle2 r0,r1,r2,r3
+vmovsldup       ymm\r2,ymm\r1
+vpblendd        ymm\r2,ymm\r0,ymm\r2,0xAA
+vpsrlq          ymm\r0,ymm\r0,32
+vpblendd        ymm\r3,ymm\r0,ymm\r1,0xAA
+.endm
+
+/*
+ * Compute l' = l + h, h' = montmul(h - l, zh)
+ *
+ * Bounds: |l'| <= |l| + |h|
+ *         |h'| < MONTMUL_BOUND
+ *         (See the end of this file for the exact value of MONTMUL_BOUND)
+ */
+.macro butterfly l,h,zl0=1,zl1=1,zh0=2,zh1=2
+vpsubd          ymm12,ymm\l,ymm\h
+vpaddd          ymm\l,ymm\h,ymm\l
+
+vpmuldq         ymm13,ymm12,ymm\zl0
+vmovshdup       ymm\h,ymm12
+vpmuldq         ymm14,ymm\h,ymm\zl1
+
+vpmuldq         ymm12,ymm12,ymm\zh0
+vpmuldq         ymm\h,ymm\h,ymm\zh1
+
+vpmuldq         ymm13,ymm13,ymm0
+vpmuldq         ymm14,ymm14,ymm0
+
+vpsubd          ymm12,ymm12,ymm13
+vpsubd          ymm\h,ymm\h,ymm14
+
+vmovshdup       ymm12,ymm12
+vpblendd        ymm\h,ymm12,ymm\h,0xAA
+.endm
+
+.macro levels0t5 off
+vmovdqa         ymm4,[rdi+256*\off+0]
+vmovdqa         ymm5,[rdi+256*\off+32]
+vmovdqa         ymm6,[rdi+256*\off+64]
+vmovdqa         ymm7,[rdi+256*\off+96]
+vmovdqa         ymm8,[rdi+256*\off+128]
+vmovdqa         ymm9,[rdi+256*\off+160]
+vmovdqa         ymm10,[rdi+256*\off+192]
+vmovdqa         ymm11,[rdi+256*\off+224]
+
+/* Bounds: |ymm{i}| < q for i in 4...11 */
+
+/* level 0 */
+vpermq          ymm3,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+296-8*\off-8)*4],0x1B
+vpermq          ymm15,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+296-8*\off-8)*4],0x1B
+vmovshdup       ymm1,ymm3
+vmovshdup       ymm2,ymm15
+butterfly       4,5,1,3,2,15
+
+vpermq          ymm3,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+296-8*\off-40)*4],0x1B
+vpermq          ymm15,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+296-8*\off-40)*4],0x1B
+vmovshdup       ymm1,ymm3
+vmovshdup       ymm2,ymm15
+butterfly       6,7,1,3,2,15
+
+vpermq          ymm3,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+296-8*\off-72)*4],0x1B
+vpermq          ymm15,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+296-8*\off-72)*4],0x1B
+vmovshdup       ymm1,ymm3
+vmovshdup       ymm2,ymm15
+butterfly       8,9,1,3,2,15
+
+vpermq          ymm3,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+296-8*\off-104)*4],0x1B
+vpermq          ymm15,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+296-8*\off-104)*4],0x1B
+vmovshdup       ymm1,ymm3
+vmovshdup       ymm2,ymm15
+butterfly       10,11,1,3,2,15
+
+/*
+ * Bounds: |ymm{i}| < 2q            for i in 4, 6, 8, 10
+ *                  < MONTMUL_BOUND for i in 5, 7, 9, 11
+ *
+ * Note that since 2^31 / q > 256, the sum of all 256 coefficients does not
+ * overflow. This allows us to greatly simplify the range analysis by relaxing
+ * and unifying the bounds of all coefficients on the same layer. As a concrete
+ * example, here we relax the bounds on 5, 7, 9, 11 and conclude that (for all
+ * relevant i)
+ *
+ * Bounds: |ymm{i}| < 2q
+ *
+ * In all but last of the following levels of butterflies, we do the same
+ * relaxation without explicit mention.
+ */
+
+/* level 1 */
+vpermq          ymm3,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+168-8*\off-8)*4],0x1B
+vpermq          ymm15,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+168-8*\off-8)*4],0x1B
+vmovshdup       ymm1,ymm3
+vmovshdup       ymm2,ymm15
+butterfly       4,6,1,3,2,15
+butterfly       5,7,1,3,2,15
+
+vpermq          ymm3,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+168-8*\off-40)*4],0x1B
+vpermq          ymm15,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+168-8*\off-40)*4],0x1B
+vmovshdup       ymm1,ymm3
+vmovshdup       ymm2,ymm15
+butterfly       8,10,1,3,2,15
+butterfly       9,11,1,3,2,15
+
+/* Bounds: |ymm{i}| < 4q */
+
+/* level 2 */
+vpermq          ymm3,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+104-8*\off-8)*4],0x1B
+vpermq          ymm15,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+104-8*\off-8)*4],0x1B
+vmovshdup       ymm1,ymm3
+vmovshdup       ymm2,ymm15
+butterfly       4,8,1,3,2,15
+butterfly       5,9,1,3,2,15
+butterfly       6,10,1,3,2,15
+butterfly       7,11,1,3,2,15
+
+/* Bounds: |ymm{i}| < 8q */
+
+/* level 3 */
+shuffle2        4,5,3,5
+shuffle2        6,7,4,7
+shuffle2        8,9,6,9
+shuffle2        10,11,8,11
+
+vpermq          ymm1,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+72-8*\off-8)*4],0x1B
+vpermq          ymm2,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+72-8*\off-8)*4],0x1B
+butterfly       3,5
+butterfly       4,7
+butterfly       6,9
+butterfly       8,11
+
+/* Bounds: |ymm{i}| < 16q */
+
+/* level 4 */
+shuffle4        3,4,10,4
+shuffle4        6,8,3,8
+shuffle4        5,7,6,7
+shuffle4        9,11,5,11
+
+vpermq          ymm1,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+40-8*\off-8)*4],0x1B
+vpermq          ymm2,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+40-8*\off-8)*4],0x1B
+butterfly       10,4
+butterfly       3,8
+butterfly       6,7
+butterfly       5,11
+
+/* Bounds: |ymm{i}| < 32q */
+
+/* level 5 */
+shuffle8        10,3,9,3
+shuffle8        6,5,10,5
+shuffle8        4,8,6,8
+shuffle8        7,11,4,11
+
+vpbroadcastd    ymm1,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+7-\off)*4]
+vpbroadcastd    ymm2,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+7-\off)*4]
+butterfly       9,3
+butterfly       10,5
+butterfly       6,8
+butterfly       4,11
+
+/* Bounds: |ymm{i}| < 64q */
+
+vmovdqa         [rdi+256*\off+0],ymm9
+vmovdqa         [rdi+256*\off+32],ymm10
+vmovdqa         [rdi+256*\off+64],ymm6
+vmovdqa         [rdi+256*\off+96],ymm4
+vmovdqa         [rdi+256*\off+128],ymm3
+vmovdqa         [rdi+256*\off+160],ymm5
+vmovdqa         [rdi+256*\off+192],ymm8
+vmovdqa         [rdi+256*\off+224],ymm11
+.endm
+
+.macro levels6t7 off
+vmovdqa         ymm4,[rdi+0+32*\off]
+vmovdqa         ymm5,[rdi+128+32*\off]
+vmovdqa         ymm6,[rdi+256+32*\off]
+vmovdqa         ymm7,[rdi+384+32*\off]
+vmovdqa         ymm8,[rdi+512+32*\off]
+vmovdqa         ymm9,[rdi+640+32*\off]
+vmovdqa         ymm10,[rdi+768+32*\off]
+vmovdqa         ymm11,[rdi+896+32*\off]
+
+/* level 6 */
+vpbroadcastd    ymm1,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+3)*4]
+vpbroadcastd    ymm2,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+3)*4]
+butterfly       4,6
+butterfly       5,7
+
+vpbroadcastd    ymm1,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+2)*4]
+vpbroadcastd    ymm2,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+2)*4]
+butterfly       8,10
+butterfly       9,11
+
+/* Bounds: |ymm{i}| < 128q */
+
+/* level 7 */
+vpbroadcastd    ymm1,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS_QINV+0)*4]
+vpbroadcastd    ymm2,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_ZETAS+0)*4]
+
+butterfly       4,8
+butterfly       5,9
+butterfly       6,10
+butterfly       7,11
+
+/*
+ * Bounds: |ymm{i}| < 256q          for i in 4...7
+ *                  < MONTMUL_BOUND for i in 8...11
+ */
+
+vmovdqa         [rdi+512+32*\off],ymm8
+vmovdqa         [rdi+640+32*\off],ymm9
+vmovdqa         [rdi+768+32*\off],ymm10
+vmovdqa         [rdi+896+32*\off],ymm11
+
+/*
+ * In order to (a) remove the factor of 256 arising from the 256-point INTT
+ * butterflies and (b) transform the output into Montgomery domain, we need to
+ * multiply all coefficients by 2^32/256.
+ *
+ * For ymm{8,9,10,11}, the scaling has been merged into the last butterfly, so
+ * only ymm{4,5,6,7} need to be scaled explicitly.
+ *
+ * The scaling is achieved by computing montmul(-, MLD_AVX2_DIV).
+ *
+ * Bounds: |ymm{i}| < 256q for i in 4...7
+ */
+
+vmovdqa         ymm1,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_8XDIV_QINV)*4]
+vmovdqa         ymm2,[rsi+(MLD_AVX2_BACKEND_DATA_OFFSET_8XDIV)*4]
+vpmuldq         ymm12,ymm4,ymm1
+vpmuldq         ymm13,ymm5,ymm1
+vmovshdup       ymm8,ymm4
+vmovshdup       ymm9,ymm5
+vpmuldq         ymm14,ymm8,ymm1
+vpmuldq         ymm15,ymm9,ymm1
+vpmuldq         ymm4,ymm4,ymm2
+vpmuldq         ymm5,ymm5,ymm2
+vpmuldq         ymm8,ymm8,ymm2
+vpmuldq         ymm9,ymm9,ymm2
+vpmuldq         ymm12,ymm12,ymm0
+vpmuldq         ymm13,ymm13,ymm0
+vpmuldq         ymm14,ymm14,ymm0
+vpmuldq         ymm15,ymm15,ymm0
+vpsubd          ymm4,ymm4,ymm12
+vpsubd          ymm5,ymm5,ymm13
+vpsubd          ymm8,ymm8,ymm14
+vpsubd          ymm9,ymm9,ymm15
+vmovshdup       ymm4,ymm4
+vmovshdup       ymm5,ymm5
+vpblendd        ymm4,ymm4,ymm8,0xAA
+vpblendd        ymm5,ymm5,ymm9,0xAA
+
+vpmuldq         ymm12,ymm6,ymm1
+vpmuldq         ymm13,ymm7,ymm1
+vmovshdup       ymm8,ymm6
+vmovshdup       ymm9,ymm7
+vpmuldq         ymm14,ymm8,ymm1
+vpmuldq         ymm15,ymm9,ymm1
+vpmuldq         ymm6,ymm6,ymm2
+vpmuldq         ymm7,ymm7,ymm2
+vpmuldq         ymm8,ymm8,ymm2
+vpmuldq         ymm9,ymm9,ymm2
+vpmuldq         ymm12,ymm12,ymm0
+vpmuldq         ymm13,ymm13,ymm0
+vpmuldq         ymm14,ymm14,ymm0
+vpmuldq         ymm15,ymm15,ymm0
+vpsubd          ymm6,ymm6,ymm12
+vpsubd          ymm7,ymm7,ymm13
+vpsubd          ymm8,ymm8,ymm14
+vpsubd          ymm9,ymm9,ymm15
+vmovshdup       ymm6,ymm6
+vmovshdup       ymm7,ymm7
+vpblendd        ymm6,ymm6,ymm8,0xAA
+vpblendd        ymm7,ymm7,ymm9,0xAA
+
+/* Bounds: |ymm{i}| < MONTMUL_BOUND for i in 4...7 */
+
+/*
+ * In the following we show that |montmul(a, b)| < MONTMUL_BOUND := ceil(3q/4),
+ * given that a fits inside int32_t (thus |a| <= R/2) and b is signed canonical
+ * (in the range -(Q-1)/2...(Q-1)/2).
+ *
+ * In Section 2.2 of https://eprint.iacr.org/2023/1962, they showed that b being
+ * signed canonical implies:
+ *
+ *   |montmul(a, b)| <= (|a| (q/2) + (R/2) q) / R = (q/2) (1 + |a|/R).
+ *
+ * From this, simple computation gives |montmul(a, b)| <= 3q/4 < ceil(3q/4).
+ *
+ * See test/test_bounds.py for more empirical evidence (and some minor technical
+ * details).
+ *
+ * TODO: Use proper citation. Currently, citations within asm can cause linter
+ *       to complain about unused citation, because comments are not preserved
+ *       after simpasm.
+ */
+
+vmovdqa         [rdi+0+32*\off],ymm4
+vmovdqa         [rdi+128+32*\off],ymm5
+vmovdqa         [rdi+256+32*\off],ymm6
+vmovdqa         [rdi+384+32*\off],ymm7
+.endm
+
+S2N_BN_SYMBOL(mldsa_intt):
+        CFI_START
+        _CET_ENDBR
+
+#if WINDOWS_ABI
+        CFI_DEC_RSP(176)
+        CFI_STACKSAVEU(xmm6,0)
+        CFI_STACKSAVEU(xmm7,16)
+        CFI_STACKSAVEU(xmm8,32)
+        CFI_STACKSAVEU(xmm9,48)
+        CFI_STACKSAVEU(xmm10,64)
+        CFI_STACKSAVEU(xmm11,80)
+        CFI_STACKSAVEU(xmm12,96)
+        CFI_STACKSAVEU(xmm13,112)
+        CFI_STACKSAVEU(xmm14,128)
+        CFI_STACKSAVEU(xmm15,144)
+        CFI_STACKSAVE(rdi,160)
+        CFI_STACKSAVE(rsi,168)
+        mov     rdi, rcx
+        mov     rsi, rdx
 #endif
 
-        .cfi_startproc
-        endbr64
-        vmovdqa	(%rsi), %ymm0
-        vmovdqa	(%rdi), %ymm4
-        vmovdqa	0x20(%rdi), %ymm5
-        vmovdqa	0x40(%rdi), %ymm6
-        vmovdqa	0x60(%rdi), %ymm7
-        vmovdqa	0x80(%rdi), %ymm8
-        vmovdqa	0xa0(%rdi), %ymm9
-        vmovdqa	0xc0(%rdi), %ymm10
-        vmovdqa	0xe0(%rdi), %ymm11
-        vpermq	$0x1b, 0x500(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x9a0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpermq	$0x1b, 0x480(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x920(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x400(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x8a0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpermq	$0x1b, 0x380(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x820(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm10, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x300(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x7a0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x280(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x720(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x200(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x6a0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovsldup	%ymm5, %ymm3    # ymm3 = ymm5[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm3, %ymm4, %ymm3 # ymm3 = ymm4[0],ymm3[1],ymm4[2],ymm3[3],ymm4[4],ymm3[5],ymm4[6],ymm3[7]
-        vpsrlq	$0x20, %ymm4, %ymm4
-        vpblendd	$0xaa, %ymm5, %ymm4, %ymm5 # ymm5 = ymm4[0],ymm5[1],ymm4[2],ymm5[3],ymm4[4],ymm5[5],ymm4[6],ymm5[7]
-        vmovsldup	%ymm7, %ymm4    # ymm4 = ymm7[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm4, %ymm6, %ymm4 # ymm4 = ymm6[0],ymm4[1],ymm6[2],ymm4[3],ymm6[4],ymm4[5],ymm6[6],ymm4[7]
-        vpsrlq	$0x20, %ymm6, %ymm6
-        vpblendd	$0xaa, %ymm7, %ymm6, %ymm7 # ymm7 = ymm6[0],ymm7[1],ymm6[2],ymm7[3],ymm6[4],ymm7[5],ymm6[6],ymm7[7]
-        vmovsldup	%ymm9, %ymm6    # ymm6 = ymm9[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm6, %ymm8, %ymm6 # ymm6 = ymm8[0],ymm6[1],ymm8[2],ymm6[3],ymm8[4],ymm6[5],ymm8[6],ymm6[7]
-        vpsrlq	$0x20, %ymm8, %ymm8
-        vpblendd	$0xaa, %ymm9, %ymm8, %ymm9 # ymm9 = ymm8[0],ymm9[1],ymm8[2],ymm9[3],ymm8[4],ymm9[5],ymm8[6],ymm9[7]
-        vmovsldup	%ymm11, %ymm8   # ymm8 = ymm11[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm8, %ymm10, %ymm8 # ymm8 = ymm10[0],ymm8[1],ymm10[2],ymm8[3],ymm10[4],ymm8[5],ymm10[6],ymm8[7]
-        vpsrlq	$0x20, %ymm10, %ymm10
-        vpblendd	$0xaa, %ymm11, %ymm10, %ymm11 # ymm11 = ymm10[0],ymm11[1],ymm10[2],ymm11[3],ymm10[4],ymm11[5],ymm10[6],ymm11[7]
-        vpermq	$0x1b, 0x180(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x620(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm3, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm4, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm6, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm8, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpunpcklqdq	%ymm4, %ymm3, %ymm10 # ymm10 = ymm3[0],ymm4[0],ymm3[2],ymm4[2]
-        vpunpckhqdq	%ymm4, %ymm3, %ymm4 # ymm4 = ymm3[1],ymm4[1],ymm3[3],ymm4[3]
-        vpunpcklqdq	%ymm8, %ymm6, %ymm3 # ymm3 = ymm6[0],ymm8[0],ymm6[2],ymm8[2]
-        vpunpckhqdq	%ymm8, %ymm6, %ymm8 # ymm8 = ymm6[1],ymm8[1],ymm6[3],ymm8[3]
-        vpunpcklqdq	%ymm7, %ymm5, %ymm6 # ymm6 = ymm5[0],ymm7[0],ymm5[2],ymm7[2]
-        vpunpckhqdq	%ymm7, %ymm5, %ymm7 # ymm7 = ymm5[1],ymm7[1],ymm5[3],ymm7[3]
-        vpunpcklqdq	%ymm11, %ymm9, %ymm5 # ymm5 = ymm9[0],ymm11[0],ymm9[2],ymm11[2]
-        vpunpckhqdq	%ymm11, %ymm9, %ymm11 # ymm11 = ymm9[1],ymm11[1],ymm9[3],ymm11[3]
-        vpermq	$0x1b, 0x100(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x5a0(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm10, %ymm4, %ymm12
-        vpaddd	%ymm4, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm4   # ymm4 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm4, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm4, %ymm4
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm4, %ymm12, %ymm4 # ymm4 = ymm12[0],ymm4[1],ymm12[2],ymm4[3],ymm12[4],ymm4[5],ymm12[6],ymm4[7]
-        vpsubd	%ymm3, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm5, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vperm2i128	$0x20, %ymm3, %ymm10, %ymm9 # ymm9 = ymm10[0,1],ymm3[0,1]
-        vperm2i128	$0x31, %ymm3, %ymm10, %ymm3 # ymm3 = ymm10[2,3],ymm3[2,3]
-        vperm2i128	$0x20, %ymm5, %ymm6, %ymm10 # ymm10 = ymm6[0,1],ymm5[0,1]
-        vperm2i128	$0x31, %ymm5, %ymm6, %ymm5 # ymm5 = ymm6[2,3],ymm5[2,3]
-        vperm2i128	$0x20, %ymm8, %ymm4, %ymm6 # ymm6 = ymm4[0,1],ymm8[0,1]
-        vperm2i128	$0x31, %ymm8, %ymm4, %ymm8 # ymm8 = ymm4[2,3],ymm8[2,3]
-        vperm2i128	$0x20, %ymm11, %ymm7, %ymm4 # ymm4 = ymm7[0,1],ymm11[0,1]
-        vperm2i128	$0x31, %ymm11, %ymm7, %ymm11 # ymm11 = ymm7[2,3],ymm11[2,3]
-        vpbroadcastd	0x9c(%rsi), %ymm1
-        vpbroadcastd	0x53c(%rsi), %ymm2
-        vpsubd	%ymm9, %ymm3, %ymm12
-        vpaddd	%ymm3, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm3   # ymm3 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm3, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm3, %ymm3
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm3, %ymm3
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm3, %ymm12, %ymm3 # ymm3 = ymm12[0],ymm3[1],ymm12[2],ymm3[3],ymm12[4],ymm3[5],ymm12[6],ymm3[7]
-        vpsubd	%ymm10, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm6, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm4, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm9, (%rdi)
-        vmovdqa	%ymm10, 0x20(%rdi)
-        vmovdqa	%ymm6, 0x40(%rdi)
-        vmovdqa	%ymm4, 0x60(%rdi)
-        vmovdqa	%ymm3, 0x80(%rdi)
-        vmovdqa	%ymm5, 0xa0(%rdi)
-        vmovdqa	%ymm8, 0xc0(%rdi)
-        vmovdqa	%ymm11, 0xe0(%rdi)
-        vmovdqa	0x100(%rdi), %ymm4
-        vmovdqa	0x120(%rdi), %ymm5
-        vmovdqa	0x140(%rdi), %ymm6
-        vmovdqa	0x160(%rdi), %ymm7
-        vmovdqa	0x180(%rdi), %ymm8
-        vmovdqa	0x1a0(%rdi), %ymm9
-        vmovdqa	0x1c0(%rdi), %ymm10
-        vmovdqa	0x1e0(%rdi), %ymm11
-        vpermq	$0x1b, 0x4e0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x980(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpermq	$0x1b, 0x460(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x900(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x3e0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x880(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpermq	$0x1b, 0x360(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x800(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm10, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x2e0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x780(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x260(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x700(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x1e0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x680(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovsldup	%ymm5, %ymm3    # ymm3 = ymm5[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm3, %ymm4, %ymm3 # ymm3 = ymm4[0],ymm3[1],ymm4[2],ymm3[3],ymm4[4],ymm3[5],ymm4[6],ymm3[7]
-        vpsrlq	$0x20, %ymm4, %ymm4
-        vpblendd	$0xaa, %ymm5, %ymm4, %ymm5 # ymm5 = ymm4[0],ymm5[1],ymm4[2],ymm5[3],ymm4[4],ymm5[5],ymm4[6],ymm5[7]
-        vmovsldup	%ymm7, %ymm4    # ymm4 = ymm7[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm4, %ymm6, %ymm4 # ymm4 = ymm6[0],ymm4[1],ymm6[2],ymm4[3],ymm6[4],ymm4[5],ymm6[6],ymm4[7]
-        vpsrlq	$0x20, %ymm6, %ymm6
-        vpblendd	$0xaa, %ymm7, %ymm6, %ymm7 # ymm7 = ymm6[0],ymm7[1],ymm6[2],ymm7[3],ymm6[4],ymm7[5],ymm6[6],ymm7[7]
-        vmovsldup	%ymm9, %ymm6    # ymm6 = ymm9[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm6, %ymm8, %ymm6 # ymm6 = ymm8[0],ymm6[1],ymm8[2],ymm6[3],ymm8[4],ymm6[5],ymm8[6],ymm6[7]
-        vpsrlq	$0x20, %ymm8, %ymm8
-        vpblendd	$0xaa, %ymm9, %ymm8, %ymm9 # ymm9 = ymm8[0],ymm9[1],ymm8[2],ymm9[3],ymm8[4],ymm9[5],ymm8[6],ymm9[7]
-        vmovsldup	%ymm11, %ymm8   # ymm8 = ymm11[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm8, %ymm10, %ymm8 # ymm8 = ymm10[0],ymm8[1],ymm10[2],ymm8[3],ymm10[4],ymm8[5],ymm10[6],ymm8[7]
-        vpsrlq	$0x20, %ymm10, %ymm10
-        vpblendd	$0xaa, %ymm11, %ymm10, %ymm11 # ymm11 = ymm10[0],ymm11[1],ymm10[2],ymm11[3],ymm10[4],ymm11[5],ymm10[6],ymm11[7]
-        vpermq	$0x1b, 0x160(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x600(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm3, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm4, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm6, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm8, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpunpcklqdq	%ymm4, %ymm3, %ymm10 # ymm10 = ymm3[0],ymm4[0],ymm3[2],ymm4[2]
-        vpunpckhqdq	%ymm4, %ymm3, %ymm4 # ymm4 = ymm3[1],ymm4[1],ymm3[3],ymm4[3]
-        vpunpcklqdq	%ymm8, %ymm6, %ymm3 # ymm3 = ymm6[0],ymm8[0],ymm6[2],ymm8[2]
-        vpunpckhqdq	%ymm8, %ymm6, %ymm8 # ymm8 = ymm6[1],ymm8[1],ymm6[3],ymm8[3]
-        vpunpcklqdq	%ymm7, %ymm5, %ymm6 # ymm6 = ymm5[0],ymm7[0],ymm5[2],ymm7[2]
-        vpunpckhqdq	%ymm7, %ymm5, %ymm7 # ymm7 = ymm5[1],ymm7[1],ymm5[3],ymm7[3]
-        vpunpcklqdq	%ymm11, %ymm9, %ymm5 # ymm5 = ymm9[0],ymm11[0],ymm9[2],ymm11[2]
-        vpunpckhqdq	%ymm11, %ymm9, %ymm11 # ymm11 = ymm9[1],ymm11[1],ymm9[3],ymm11[3]
-        vpermq	$0x1b, 0xe0(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x580(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm10, %ymm4, %ymm12
-        vpaddd	%ymm4, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm4   # ymm4 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm4, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm4, %ymm4
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm4, %ymm12, %ymm4 # ymm4 = ymm12[0],ymm4[1],ymm12[2],ymm4[3],ymm12[4],ymm4[5],ymm12[6],ymm4[7]
-        vpsubd	%ymm3, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm5, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vperm2i128	$0x20, %ymm3, %ymm10, %ymm9 # ymm9 = ymm10[0,1],ymm3[0,1]
-        vperm2i128	$0x31, %ymm3, %ymm10, %ymm3 # ymm3 = ymm10[2,3],ymm3[2,3]
-        vperm2i128	$0x20, %ymm5, %ymm6, %ymm10 # ymm10 = ymm6[0,1],ymm5[0,1]
-        vperm2i128	$0x31, %ymm5, %ymm6, %ymm5 # ymm5 = ymm6[2,3],ymm5[2,3]
-        vperm2i128	$0x20, %ymm8, %ymm4, %ymm6 # ymm6 = ymm4[0,1],ymm8[0,1]
-        vperm2i128	$0x31, %ymm8, %ymm4, %ymm8 # ymm8 = ymm4[2,3],ymm8[2,3]
-        vperm2i128	$0x20, %ymm11, %ymm7, %ymm4 # ymm4 = ymm7[0,1],ymm11[0,1]
-        vperm2i128	$0x31, %ymm11, %ymm7, %ymm11 # ymm11 = ymm7[2,3],ymm11[2,3]
-        vpbroadcastd	0x98(%rsi), %ymm1
-        vpbroadcastd	0x538(%rsi), %ymm2
-        vpsubd	%ymm9, %ymm3, %ymm12
-        vpaddd	%ymm3, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm3   # ymm3 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm3, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm3, %ymm3
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm3, %ymm3
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm3, %ymm12, %ymm3 # ymm3 = ymm12[0],ymm3[1],ymm12[2],ymm3[3],ymm12[4],ymm3[5],ymm12[6],ymm3[7]
-        vpsubd	%ymm10, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm6, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm4, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm9, 0x100(%rdi)
-        vmovdqa	%ymm10, 0x120(%rdi)
-        vmovdqa	%ymm6, 0x140(%rdi)
-        vmovdqa	%ymm4, 0x160(%rdi)
-        vmovdqa	%ymm3, 0x180(%rdi)
-        vmovdqa	%ymm5, 0x1a0(%rdi)
-        vmovdqa	%ymm8, 0x1c0(%rdi)
-        vmovdqa	%ymm11, 0x1e0(%rdi)
-        vmovdqa	0x200(%rdi), %ymm4
-        vmovdqa	0x220(%rdi), %ymm5
-        vmovdqa	0x240(%rdi), %ymm6
-        vmovdqa	0x260(%rdi), %ymm7
-        vmovdqa	0x280(%rdi), %ymm8
-        vmovdqa	0x2a0(%rdi), %ymm9
-        vmovdqa	0x2c0(%rdi), %ymm10
-        vmovdqa	0x2e0(%rdi), %ymm11
-        vpermq	$0x1b, 0x4c0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x960(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpermq	$0x1b, 0x440(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x8e0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x3c0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x860(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpermq	$0x1b, 0x340(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x7e0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm10, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x2c0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x760(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x240(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x6e0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x1c0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x660(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovsldup	%ymm5, %ymm3    # ymm3 = ymm5[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm3, %ymm4, %ymm3 # ymm3 = ymm4[0],ymm3[1],ymm4[2],ymm3[3],ymm4[4],ymm3[5],ymm4[6],ymm3[7]
-        vpsrlq	$0x20, %ymm4, %ymm4
-        vpblendd	$0xaa, %ymm5, %ymm4, %ymm5 # ymm5 = ymm4[0],ymm5[1],ymm4[2],ymm5[3],ymm4[4],ymm5[5],ymm4[6],ymm5[7]
-        vmovsldup	%ymm7, %ymm4    # ymm4 = ymm7[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm4, %ymm6, %ymm4 # ymm4 = ymm6[0],ymm4[1],ymm6[2],ymm4[3],ymm6[4],ymm4[5],ymm6[6],ymm4[7]
-        vpsrlq	$0x20, %ymm6, %ymm6
-        vpblendd	$0xaa, %ymm7, %ymm6, %ymm7 # ymm7 = ymm6[0],ymm7[1],ymm6[2],ymm7[3],ymm6[4],ymm7[5],ymm6[6],ymm7[7]
-        vmovsldup	%ymm9, %ymm6    # ymm6 = ymm9[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm6, %ymm8, %ymm6 # ymm6 = ymm8[0],ymm6[1],ymm8[2],ymm6[3],ymm8[4],ymm6[5],ymm8[6],ymm6[7]
-        vpsrlq	$0x20, %ymm8, %ymm8
-        vpblendd	$0xaa, %ymm9, %ymm8, %ymm9 # ymm9 = ymm8[0],ymm9[1],ymm8[2],ymm9[3],ymm8[4],ymm9[5],ymm8[6],ymm9[7]
-        vmovsldup	%ymm11, %ymm8   # ymm8 = ymm11[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm8, %ymm10, %ymm8 # ymm8 = ymm10[0],ymm8[1],ymm10[2],ymm8[3],ymm10[4],ymm8[5],ymm10[6],ymm8[7]
-        vpsrlq	$0x20, %ymm10, %ymm10
-        vpblendd	$0xaa, %ymm11, %ymm10, %ymm11 # ymm11 = ymm10[0],ymm11[1],ymm10[2],ymm11[3],ymm10[4],ymm11[5],ymm10[6],ymm11[7]
-        vpermq	$0x1b, 0x140(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x5e0(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm3, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm4, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm6, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm8, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpunpcklqdq	%ymm4, %ymm3, %ymm10 # ymm10 = ymm3[0],ymm4[0],ymm3[2],ymm4[2]
-        vpunpckhqdq	%ymm4, %ymm3, %ymm4 # ymm4 = ymm3[1],ymm4[1],ymm3[3],ymm4[3]
-        vpunpcklqdq	%ymm8, %ymm6, %ymm3 # ymm3 = ymm6[0],ymm8[0],ymm6[2],ymm8[2]
-        vpunpckhqdq	%ymm8, %ymm6, %ymm8 # ymm8 = ymm6[1],ymm8[1],ymm6[3],ymm8[3]
-        vpunpcklqdq	%ymm7, %ymm5, %ymm6 # ymm6 = ymm5[0],ymm7[0],ymm5[2],ymm7[2]
-        vpunpckhqdq	%ymm7, %ymm5, %ymm7 # ymm7 = ymm5[1],ymm7[1],ymm5[3],ymm7[3]
-        vpunpcklqdq	%ymm11, %ymm9, %ymm5 # ymm5 = ymm9[0],ymm11[0],ymm9[2],ymm11[2]
-        vpunpckhqdq	%ymm11, %ymm9, %ymm11 # ymm11 = ymm9[1],ymm11[1],ymm9[3],ymm11[3]
-        vpermq	$0x1b, 0xc0(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x560(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm10, %ymm4, %ymm12
-        vpaddd	%ymm4, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm4   # ymm4 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm4, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm4, %ymm4
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm4, %ymm12, %ymm4 # ymm4 = ymm12[0],ymm4[1],ymm12[2],ymm4[3],ymm12[4],ymm4[5],ymm12[6],ymm4[7]
-        vpsubd	%ymm3, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm5, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vperm2i128	$0x20, %ymm3, %ymm10, %ymm9 # ymm9 = ymm10[0,1],ymm3[0,1]
-        vperm2i128	$0x31, %ymm3, %ymm10, %ymm3 # ymm3 = ymm10[2,3],ymm3[2,3]
-        vperm2i128	$0x20, %ymm5, %ymm6, %ymm10 # ymm10 = ymm6[0,1],ymm5[0,1]
-        vperm2i128	$0x31, %ymm5, %ymm6, %ymm5 # ymm5 = ymm6[2,3],ymm5[2,3]
-        vperm2i128	$0x20, %ymm8, %ymm4, %ymm6 # ymm6 = ymm4[0,1],ymm8[0,1]
-        vperm2i128	$0x31, %ymm8, %ymm4, %ymm8 # ymm8 = ymm4[2,3],ymm8[2,3]
-        vperm2i128	$0x20, %ymm11, %ymm7, %ymm4 # ymm4 = ymm7[0,1],ymm11[0,1]
-        vperm2i128	$0x31, %ymm11, %ymm7, %ymm11 # ymm11 = ymm7[2,3],ymm11[2,3]
-        vpbroadcastd	0x94(%rsi), %ymm1
-        vpbroadcastd	0x534(%rsi), %ymm2
-        vpsubd	%ymm9, %ymm3, %ymm12
-        vpaddd	%ymm3, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm3   # ymm3 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm3, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm3, %ymm3
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm3, %ymm3
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm3, %ymm12, %ymm3 # ymm3 = ymm12[0],ymm3[1],ymm12[2],ymm3[3],ymm12[4],ymm3[5],ymm12[6],ymm3[7]
-        vpsubd	%ymm10, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm6, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm4, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm9, 0x200(%rdi)
-        vmovdqa	%ymm10, 0x220(%rdi)
-        vmovdqa	%ymm6, 0x240(%rdi)
-        vmovdqa	%ymm4, 0x260(%rdi)
-        vmovdqa	%ymm3, 0x280(%rdi)
-        vmovdqa	%ymm5, 0x2a0(%rdi)
-        vmovdqa	%ymm8, 0x2c0(%rdi)
-        vmovdqa	%ymm11, 0x2e0(%rdi)
-        vmovdqa	0x300(%rdi), %ymm4
-        vmovdqa	0x320(%rdi), %ymm5
-        vmovdqa	0x340(%rdi), %ymm6
-        vmovdqa	0x360(%rdi), %ymm7
-        vmovdqa	0x380(%rdi), %ymm8
-        vmovdqa	0x3a0(%rdi), %ymm9
-        vmovdqa	0x3c0(%rdi), %ymm10
-        vmovdqa	0x3e0(%rdi), %ymm11
-        vpermq	$0x1b, 0x4a0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x940(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpermq	$0x1b, 0x420(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x8c0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x3a0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x840(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpermq	$0x1b, 0x320(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x7c0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm10, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x2a0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x740(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpermq	$0x1b, 0x220(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x6c0(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpermq	$0x1b, 0x1a0(%rsi), %ymm3 # ymm3 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x640(%rsi), %ymm15 # ymm15 = mem[3,2,1,0]
-        vmovshdup	%ymm3, %ymm1    # ymm1 = ymm3[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm15, %ymm2   # ymm2 = ymm15[1,1,3,3,5,5,7,7]
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm3, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm15, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovsldup	%ymm5, %ymm3    # ymm3 = ymm5[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm3, %ymm4, %ymm3 # ymm3 = ymm4[0],ymm3[1],ymm4[2],ymm3[3],ymm4[4],ymm3[5],ymm4[6],ymm3[7]
-        vpsrlq	$0x20, %ymm4, %ymm4
-        vpblendd	$0xaa, %ymm5, %ymm4, %ymm5 # ymm5 = ymm4[0],ymm5[1],ymm4[2],ymm5[3],ymm4[4],ymm5[5],ymm4[6],ymm5[7]
-        vmovsldup	%ymm7, %ymm4    # ymm4 = ymm7[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm4, %ymm6, %ymm4 # ymm4 = ymm6[0],ymm4[1],ymm6[2],ymm4[3],ymm6[4],ymm4[5],ymm6[6],ymm4[7]
-        vpsrlq	$0x20, %ymm6, %ymm6
-        vpblendd	$0xaa, %ymm7, %ymm6, %ymm7 # ymm7 = ymm6[0],ymm7[1],ymm6[2],ymm7[3],ymm6[4],ymm7[5],ymm6[6],ymm7[7]
-        vmovsldup	%ymm9, %ymm6    # ymm6 = ymm9[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm6, %ymm8, %ymm6 # ymm6 = ymm8[0],ymm6[1],ymm8[2],ymm6[3],ymm8[4],ymm6[5],ymm8[6],ymm6[7]
-        vpsrlq	$0x20, %ymm8, %ymm8
-        vpblendd	$0xaa, %ymm9, %ymm8, %ymm9 # ymm9 = ymm8[0],ymm9[1],ymm8[2],ymm9[3],ymm8[4],ymm9[5],ymm8[6],ymm9[7]
-        vmovsldup	%ymm11, %ymm8   # ymm8 = ymm11[0,0,2,2,4,4,6,6]
-        vpblendd	$0xaa, %ymm8, %ymm10, %ymm8 # ymm8 = ymm10[0],ymm8[1],ymm10[2],ymm8[3],ymm10[4],ymm8[5],ymm10[6],ymm8[7]
-        vpsrlq	$0x20, %ymm10, %ymm10
-        vpblendd	$0xaa, %ymm11, %ymm10, %ymm11 # ymm11 = ymm10[0],ymm11[1],ymm10[2],ymm11[3],ymm10[4],ymm11[5],ymm10[6],ymm11[7]
-        vpermq	$0x1b, 0x120(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x5c0(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm3, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm4, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm6, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm8, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpunpcklqdq	%ymm4, %ymm3, %ymm10 # ymm10 = ymm3[0],ymm4[0],ymm3[2],ymm4[2]
-        vpunpckhqdq	%ymm4, %ymm3, %ymm4 # ymm4 = ymm3[1],ymm4[1],ymm3[3],ymm4[3]
-        vpunpcklqdq	%ymm8, %ymm6, %ymm3 # ymm3 = ymm6[0],ymm8[0],ymm6[2],ymm8[2]
-        vpunpckhqdq	%ymm8, %ymm6, %ymm8 # ymm8 = ymm6[1],ymm8[1],ymm6[3],ymm8[3]
-        vpunpcklqdq	%ymm7, %ymm5, %ymm6 # ymm6 = ymm5[0],ymm7[0],ymm5[2],ymm7[2]
-        vpunpckhqdq	%ymm7, %ymm5, %ymm7 # ymm7 = ymm5[1],ymm7[1],ymm5[3],ymm7[3]
-        vpunpcklqdq	%ymm11, %ymm9, %ymm5 # ymm5 = ymm9[0],ymm11[0],ymm9[2],ymm11[2]
-        vpunpckhqdq	%ymm11, %ymm9, %ymm11 # ymm11 = ymm9[1],ymm11[1],ymm9[3],ymm11[3]
-        vpermq	$0x1b, 0xa0(%rsi), %ymm1 # ymm1 = mem[3,2,1,0]
-        vpermq	$0x1b, 0x540(%rsi), %ymm2 # ymm2 = mem[3,2,1,0]
-        vpsubd	%ymm10, %ymm4, %ymm12
-        vpaddd	%ymm4, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm4   # ymm4 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm4, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm4, %ymm4
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm4, %ymm12, %ymm4 # ymm4 = ymm12[0],ymm4[1],ymm12[2],ymm4[3],ymm12[4],ymm4[5],ymm12[6],ymm4[7]
-        vpsubd	%ymm3, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm3, %ymm3
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm6, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpsubd	%ymm5, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vperm2i128	$0x20, %ymm3, %ymm10, %ymm9 # ymm9 = ymm10[0,1],ymm3[0,1]
-        vperm2i128	$0x31, %ymm3, %ymm10, %ymm3 # ymm3 = ymm10[2,3],ymm3[2,3]
-        vperm2i128	$0x20, %ymm5, %ymm6, %ymm10 # ymm10 = ymm6[0,1],ymm5[0,1]
-        vperm2i128	$0x31, %ymm5, %ymm6, %ymm5 # ymm5 = ymm6[2,3],ymm5[2,3]
-        vperm2i128	$0x20, %ymm8, %ymm4, %ymm6 # ymm6 = ymm4[0,1],ymm8[0,1]
-        vperm2i128	$0x31, %ymm8, %ymm4, %ymm8 # ymm8 = ymm4[2,3],ymm8[2,3]
-        vperm2i128	$0x20, %ymm11, %ymm7, %ymm4 # ymm4 = ymm7[0,1],ymm11[0,1]
-        vperm2i128	$0x31, %ymm11, %ymm7, %ymm11 # ymm11 = ymm7[2,3],ymm11[2,3]
-        vpbroadcastd	0x90(%rsi), %ymm1
-        vpbroadcastd	0x530(%rsi), %ymm2
-        vpsubd	%ymm9, %ymm3, %ymm12
-        vpaddd	%ymm3, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm3   # ymm3 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm3, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm3, %ymm3
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm3, %ymm3
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm3, %ymm12, %ymm3 # ymm3 = ymm12[0],ymm3[1],ymm12[2],ymm3[3],ymm12[4],ymm3[5],ymm12[6],ymm3[7]
-        vpsubd	%ymm10, %ymm5, %ymm12
-        vpaddd	%ymm5, %ymm10, %ymm10
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm5   # ymm5 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm5, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm5, %ymm5
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm5, %ymm12, %ymm5 # ymm5 = ymm12[0],ymm5[1],ymm12[2],ymm5[3],ymm12[4],ymm5[5],ymm12[6],ymm5[7]
-        vpsubd	%ymm6, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm4, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm9, 0x300(%rdi)
-        vmovdqa	%ymm10, 0x320(%rdi)
-        vmovdqa	%ymm6, 0x340(%rdi)
-        vmovdqa	%ymm4, 0x360(%rdi)
-        vmovdqa	%ymm3, 0x380(%rdi)
-        vmovdqa	%ymm5, 0x3a0(%rdi)
-        vmovdqa	%ymm8, 0x3c0(%rdi)
-        vmovdqa	%ymm11, 0x3e0(%rdi)
-        vmovdqa	(%rdi), %ymm4
-        vmovdqa	0x80(%rdi), %ymm5
-        vmovdqa	0x100(%rdi), %ymm6
-        vmovdqa	0x180(%rdi), %ymm7
-        vmovdqa	0x200(%rdi), %ymm8
-        vmovdqa	0x280(%rdi), %ymm9
-        vmovdqa	0x300(%rdi), %ymm10
-        vmovdqa	0x380(%rdi), %ymm11
-        vpbroadcastd	0x8c(%rsi), %ymm1
-        vpbroadcastd	0x52c(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpbroadcastd	0x88(%rsi), %ymm1
-        vpbroadcastd	0x528(%rsi), %ymm2
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpbroadcastd	0x80(%rsi), %ymm1
-        vpbroadcastd	0x520(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm8, 0x200(%rdi)
-        vmovdqa	%ymm9, 0x280(%rdi)
-        vmovdqa	%ymm10, 0x300(%rdi)
-        vmovdqa	%ymm11, 0x380(%rdi)
-        vmovdqa	0x40(%rsi), %ymm1
-        vmovdqa	0x60(%rsi), %ymm2
-        vpmuldq	%ymm1, %ymm4, %ymm12
-        vpmuldq	%ymm1, %ymm5, %ymm13
-        vmovshdup	%ymm4, %ymm8    # ymm8 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm9    # ymm9 = ymm5[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm4, %ymm4
-        vpsubd	%ymm13, %ymm5, %ymm5
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm4, %ymm4    # ymm4 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm5    # ymm5 = ymm5[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm4, %ymm4 # ymm4 = ymm4[0],ymm8[1],ymm4[2],ymm8[3],ymm4[4],ymm8[5],ymm4[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm5, %ymm5 # ymm5 = ymm5[0],ymm9[1],ymm5[2],ymm9[3],ymm5[4],ymm9[5],ymm5[6],ymm9[7]
-        vpmuldq	%ymm1, %ymm6, %ymm12
-        vpmuldq	%ymm1, %ymm7, %ymm13
-        vmovshdup	%ymm6, %ymm8    # ymm8 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm9    # ymm9 = ymm7[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm6, %ymm6
-        vpsubd	%ymm13, %ymm7, %ymm7
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm6, %ymm6    # ymm6 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm7    # ymm7 = ymm7[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm6, %ymm6 # ymm6 = ymm6[0],ymm8[1],ymm6[2],ymm8[3],ymm6[4],ymm8[5],ymm6[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm7, %ymm7 # ymm7 = ymm7[0],ymm9[1],ymm7[2],ymm9[3],ymm7[4],ymm9[5],ymm7[6],ymm9[7]
-        vmovdqa	%ymm4, (%rdi)
-        vmovdqa	%ymm5, 0x80(%rdi)
-        vmovdqa	%ymm6, 0x100(%rdi)
-        vmovdqa	%ymm7, 0x180(%rdi)
-        vmovdqa	0x20(%rdi), %ymm4
-        vmovdqa	0xa0(%rdi), %ymm5
-        vmovdqa	0x120(%rdi), %ymm6
-        vmovdqa	0x1a0(%rdi), %ymm7
-        vmovdqa	0x220(%rdi), %ymm8
-        vmovdqa	0x2a0(%rdi), %ymm9
-        vmovdqa	0x320(%rdi), %ymm10
-        vmovdqa	0x3a0(%rdi), %ymm11
-        vpbroadcastd	0x8c(%rsi), %ymm1
-        vpbroadcastd	0x52c(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpbroadcastd	0x88(%rsi), %ymm1
-        vpbroadcastd	0x528(%rsi), %ymm2
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpbroadcastd	0x80(%rsi), %ymm1
-        vpbroadcastd	0x520(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm8, 0x220(%rdi)
-        vmovdqa	%ymm9, 0x2a0(%rdi)
-        vmovdqa	%ymm10, 0x320(%rdi)
-        vmovdqa	%ymm11, 0x3a0(%rdi)
-        vmovdqa	0x40(%rsi), %ymm1
-        vmovdqa	0x60(%rsi), %ymm2
-        vpmuldq	%ymm1, %ymm4, %ymm12
-        vpmuldq	%ymm1, %ymm5, %ymm13
-        vmovshdup	%ymm4, %ymm8    # ymm8 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm9    # ymm9 = ymm5[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm4, %ymm4
-        vpsubd	%ymm13, %ymm5, %ymm5
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm4, %ymm4    # ymm4 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm5    # ymm5 = ymm5[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm4, %ymm4 # ymm4 = ymm4[0],ymm8[1],ymm4[2],ymm8[3],ymm4[4],ymm8[5],ymm4[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm5, %ymm5 # ymm5 = ymm5[0],ymm9[1],ymm5[2],ymm9[3],ymm5[4],ymm9[5],ymm5[6],ymm9[7]
-        vpmuldq	%ymm1, %ymm6, %ymm12
-        vpmuldq	%ymm1, %ymm7, %ymm13
-        vmovshdup	%ymm6, %ymm8    # ymm8 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm9    # ymm9 = ymm7[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm6, %ymm6
-        vpsubd	%ymm13, %ymm7, %ymm7
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm6, %ymm6    # ymm6 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm7    # ymm7 = ymm7[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm6, %ymm6 # ymm6 = ymm6[0],ymm8[1],ymm6[2],ymm8[3],ymm6[4],ymm8[5],ymm6[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm7, %ymm7 # ymm7 = ymm7[0],ymm9[1],ymm7[2],ymm9[3],ymm7[4],ymm9[5],ymm7[6],ymm9[7]
-        vmovdqa	%ymm4, 0x20(%rdi)
-        vmovdqa	%ymm5, 0xa0(%rdi)
-        vmovdqa	%ymm6, 0x120(%rdi)
-        vmovdqa	%ymm7, 0x1a0(%rdi)
-        vmovdqa	0x40(%rdi), %ymm4
-        vmovdqa	0xc0(%rdi), %ymm5
-        vmovdqa	0x140(%rdi), %ymm6
-        vmovdqa	0x1c0(%rdi), %ymm7
-        vmovdqa	0x240(%rdi), %ymm8
-        vmovdqa	0x2c0(%rdi), %ymm9
-        vmovdqa	0x340(%rdi), %ymm10
-        vmovdqa	0x3c0(%rdi), %ymm11
-        vpbroadcastd	0x8c(%rsi), %ymm1
-        vpbroadcastd	0x52c(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpbroadcastd	0x88(%rsi), %ymm1
-        vpbroadcastd	0x528(%rsi), %ymm2
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpbroadcastd	0x80(%rsi), %ymm1
-        vpbroadcastd	0x520(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm8, 0x240(%rdi)
-        vmovdqa	%ymm9, 0x2c0(%rdi)
-        vmovdqa	%ymm10, 0x340(%rdi)
-        vmovdqa	%ymm11, 0x3c0(%rdi)
-        vmovdqa	0x40(%rsi), %ymm1
-        vmovdqa	0x60(%rsi), %ymm2
-        vpmuldq	%ymm1, %ymm4, %ymm12
-        vpmuldq	%ymm1, %ymm5, %ymm13
-        vmovshdup	%ymm4, %ymm8    # ymm8 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm9    # ymm9 = ymm5[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm4, %ymm4
-        vpsubd	%ymm13, %ymm5, %ymm5
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm4, %ymm4    # ymm4 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm5    # ymm5 = ymm5[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm4, %ymm4 # ymm4 = ymm4[0],ymm8[1],ymm4[2],ymm8[3],ymm4[4],ymm8[5],ymm4[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm5, %ymm5 # ymm5 = ymm5[0],ymm9[1],ymm5[2],ymm9[3],ymm5[4],ymm9[5],ymm5[6],ymm9[7]
-        vpmuldq	%ymm1, %ymm6, %ymm12
-        vpmuldq	%ymm1, %ymm7, %ymm13
-        vmovshdup	%ymm6, %ymm8    # ymm8 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm9    # ymm9 = ymm7[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm6, %ymm6
-        vpsubd	%ymm13, %ymm7, %ymm7
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm6, %ymm6    # ymm6 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm7    # ymm7 = ymm7[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm6, %ymm6 # ymm6 = ymm6[0],ymm8[1],ymm6[2],ymm8[3],ymm6[4],ymm8[5],ymm6[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm7, %ymm7 # ymm7 = ymm7[0],ymm9[1],ymm7[2],ymm9[3],ymm7[4],ymm9[5],ymm7[6],ymm9[7]
-        vmovdqa	%ymm4, 0x40(%rdi)
-        vmovdqa	%ymm5, 0xc0(%rdi)
-        vmovdqa	%ymm6, 0x140(%rdi)
-        vmovdqa	%ymm7, 0x1c0(%rdi)
-        vmovdqa	0x60(%rdi), %ymm4
-        vmovdqa	0xe0(%rdi), %ymm5
-        vmovdqa	0x160(%rdi), %ymm6
-        vmovdqa	0x1e0(%rdi), %ymm7
-        vmovdqa	0x260(%rdi), %ymm8
-        vmovdqa	0x2e0(%rdi), %ymm9
-        vmovdqa	0x360(%rdi), %ymm10
-        vmovdqa	0x3e0(%rdi), %ymm11
-        vpbroadcastd	0x8c(%rsi), %ymm1
-        vpbroadcastd	0x52c(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm6, %ymm12
-        vpaddd	%ymm6, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm6   # ymm6 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm6, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm6, %ymm6
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm6, %ymm12, %ymm6 # ymm6 = ymm12[0],ymm6[1],ymm12[2],ymm6[3],ymm12[4],ymm6[5],ymm12[6],ymm6[7]
-        vpsubd	%ymm5, %ymm7, %ymm12
-        vpaddd	%ymm7, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm7   # ymm7 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm7, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm7, %ymm7
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm7, %ymm12, %ymm7 # ymm7 = ymm12[0],ymm7[1],ymm12[2],ymm7[3],ymm12[4],ymm7[5],ymm12[6],ymm7[7]
-        vpbroadcastd	0x88(%rsi), %ymm1
-        vpbroadcastd	0x528(%rsi), %ymm2
-        vpsubd	%ymm8, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm8, %ymm8
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm9, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm9, %ymm9
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vpbroadcastd	0x80(%rsi), %ymm1
-        vpbroadcastd	0x520(%rsi), %ymm2
-        vpsubd	%ymm4, %ymm8, %ymm12
-        vpaddd	%ymm8, %ymm4, %ymm4
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm8   # ymm8 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm12, %ymm8 # ymm8 = ymm12[0],ymm8[1],ymm12[2],ymm8[3],ymm12[4],ymm8[5],ymm12[6],ymm8[7]
-        vpsubd	%ymm5, %ymm9, %ymm12
-        vpaddd	%ymm9, %ymm5, %ymm5
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm9   # ymm9 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm9, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm9, %ymm9
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm9, %ymm12, %ymm9 # ymm9 = ymm12[0],ymm9[1],ymm12[2],ymm9[3],ymm12[4],ymm9[5],ymm12[6],ymm9[7]
-        vpsubd	%ymm6, %ymm10, %ymm12
-        vpaddd	%ymm10, %ymm6, %ymm6
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm10  # ymm10 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm10, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm10, %ymm10
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm10, %ymm10
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm10, %ymm12, %ymm10 # ymm10 = ymm12[0],ymm10[1],ymm12[2],ymm10[3],ymm12[4],ymm10[5],ymm12[6],ymm10[7]
-        vpsubd	%ymm7, %ymm11, %ymm12
-        vpaddd	%ymm11, %ymm7, %ymm7
-        vpmuldq	%ymm1, %ymm12, %ymm13
-        vmovshdup	%ymm12, %ymm11  # ymm11 = ymm12[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm11, %ymm14
-        vpmuldq	%ymm2, %ymm12, %ymm12
-        vpmuldq	%ymm2, %ymm11, %ymm11
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpsubd	%ymm13, %ymm12, %ymm12
-        vpsubd	%ymm14, %ymm11, %ymm11
-        vmovshdup	%ymm12, %ymm12  # ymm12 = ymm12[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm11, %ymm12, %ymm11 # ymm11 = ymm12[0],ymm11[1],ymm12[2],ymm11[3],ymm12[4],ymm11[5],ymm12[6],ymm11[7]
-        vmovdqa	%ymm8, 0x260(%rdi)
-        vmovdqa	%ymm9, 0x2e0(%rdi)
-        vmovdqa	%ymm10, 0x360(%rdi)
-        vmovdqa	%ymm11, 0x3e0(%rdi)
-        vmovdqa	0x40(%rsi), %ymm1
-        vmovdqa	0x60(%rsi), %ymm2
-        vpmuldq	%ymm1, %ymm4, %ymm12
-        vpmuldq	%ymm1, %ymm5, %ymm13
-        vmovshdup	%ymm4, %ymm8    # ymm8 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm9    # ymm9 = ymm5[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm4, %ymm4
-        vpmuldq	%ymm2, %ymm5, %ymm5
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm4, %ymm4
-        vpsubd	%ymm13, %ymm5, %ymm5
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm4, %ymm4    # ymm4 = ymm4[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm5, %ymm5    # ymm5 = ymm5[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm4, %ymm4 # ymm4 = ymm4[0],ymm8[1],ymm4[2],ymm8[3],ymm4[4],ymm8[5],ymm4[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm5, %ymm5 # ymm5 = ymm5[0],ymm9[1],ymm5[2],ymm9[3],ymm5[4],ymm9[5],ymm5[6],ymm9[7]
-        vpmuldq	%ymm1, %ymm6, %ymm12
-        vpmuldq	%ymm1, %ymm7, %ymm13
-        vmovshdup	%ymm6, %ymm8    # ymm8 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm9    # ymm9 = ymm7[1,1,3,3,5,5,7,7]
-        vpmuldq	%ymm1, %ymm8, %ymm14
-        vpmuldq	%ymm1, %ymm9, %ymm15
-        vpmuldq	%ymm2, %ymm6, %ymm6
-        vpmuldq	%ymm2, %ymm7, %ymm7
-        vpmuldq	%ymm2, %ymm8, %ymm8
-        vpmuldq	%ymm2, %ymm9, %ymm9
-        vpmuldq	%ymm0, %ymm12, %ymm12
-        vpmuldq	%ymm0, %ymm13, %ymm13
-        vpmuldq	%ymm0, %ymm14, %ymm14
-        vpmuldq	%ymm0, %ymm15, %ymm15
-        vpsubd	%ymm12, %ymm6, %ymm6
-        vpsubd	%ymm13, %ymm7, %ymm7
-        vpsubd	%ymm14, %ymm8, %ymm8
-        vpsubd	%ymm15, %ymm9, %ymm9
-        vmovshdup	%ymm6, %ymm6    # ymm6 = ymm6[1,1,3,3,5,5,7,7]
-        vmovshdup	%ymm7, %ymm7    # ymm7 = ymm7[1,1,3,3,5,5,7,7]
-        vpblendd	$0xaa, %ymm8, %ymm6, %ymm6 # ymm6 = ymm6[0],ymm8[1],ymm6[2],ymm8[3],ymm6[4],ymm8[5],ymm6[6],ymm8[7]
-        vpblendd	$0xaa, %ymm9, %ymm7, %ymm7 # ymm7 = ymm7[0],ymm9[1],ymm7[2],ymm9[3],ymm7[4],ymm9[5],ymm7[6],ymm9[7]
-        vmovdqa	%ymm4, 0x60(%rdi)
-        vmovdqa	%ymm5, 0xe0(%rdi)
-        vmovdqa	%ymm6, 0x160(%rdi)
-        vmovdqa	%ymm7, 0x1e0(%rdi)
-        retq
-        .cfi_endproc
+        vmovdqa ymm0,[rsi+MLD_AVX2_BACKEND_DATA_OFFSET_8XQ*4]
+
+        levels0t5 0
+        levels0t5 1
+        levels0t5 2
+        levels0t5 3
+
+        levels6t7 0
+        levels6t7 1
+        levels6t7 2
+        levels6t7 3
+
+#if WINDOWS_ABI
+        CFI_STACKLOADU(xmm6,0)
+        CFI_STACKLOADU(xmm7,16)
+        CFI_STACKLOADU(xmm8,32)
+        CFI_STACKLOADU(xmm9,48)
+        CFI_STACKLOADU(xmm10,64)
+        CFI_STACKLOADU(xmm11,80)
+        CFI_STACKLOADU(xmm12,96)
+        CFI_STACKLOADU(xmm13,112)
+        CFI_STACKLOADU(xmm14,128)
+        CFI_STACKLOADU(xmm15,144)
+        CFI_STACKLOAD(rdi,160)
+        CFI_STACKLOAD(rsi,168)
+        CFI_INC_RSP(176)
+#endif
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(mldsa_intt)
+
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack,"",%progbits
+#endif
