@@ -23,6 +23,29 @@
  *   dev/x86_64/src/intt.S using scripts/simpasm. Do not modify it directly.
  */
 
+// ----------------------------------------------------------------------------
+// Inverse number-theoretic transform for ML-DSA
+// Input a[256], zetas (all signed 32-bit words); output a[256] (signed 32-bit words)
+//
+// The transform is in-place with input and output a[256]. Computes the inverse
+// NTT of a polynomial in place, transforming from NTT representation to coefficient
+// representation. The input polynomial a is a 256-element array of signed 32-bit
+// integers representing coefficients in bitreversed order, assumed to be 
+// coefficient-wise bound by a reasonable multiple of MLDSA_Q (8380417) in absolute
+// value. The zetas parameter points to precomputed twiddle factors (roots of unity
+// and their Montgomery inverses) required for the inverse NTT computation.
+// The output polynomial is in normal order and the coefficients are in Montgomery
+// form, coefficient-wise bound by MONTMUL_BOUND in absolute value.
+//
+// The implementation uses Montgomery arithmetic for efficient modular reduction
+// modulo Q = 8380417, maintaining constant-time execution for side-channel
+// resistance. The transform operates in the ring R_Q = Z_Q[x]/(x^256 + 1).
+//
+// extern void mldsa_intt(int32_t a[static 256], const int32_t zetas[static 624]);
+//
+// Standard x86-64 ABI: RDI = a, RSI = zetas
+// Microsoft x64 ABI:   RCX = a, RDX = zetas
+// ----------------------------------------------------------------------------
 
 .text
 .balign 4

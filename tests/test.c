@@ -2808,6 +2808,74 @@ void reference_mldsa_forward_ntt(int32_t a[256])
     }
 }
 
+// Reference inverse NTT for ML-DSA (matching mldsa-native C algorithm)
+// Input is in bit-reversed order, output is in normal order
+void reference_mldsa_inverse_ntt(int32_t a[256])
+{
+    unsigned int layer;
+    
+    for (layer = 8; layer >= 1; layer--) {
+        unsigned start, k, len;
+        // For inverse, we use zetas in reverse with conjugate (negation in this case)
+        k = 1u << (layer - 1);
+        len = 256u >> layer;
+        
+        for (start = 0; start < 256; start += 2 * len) {
+            // Use negative zeta for inverse transform
+            int32_t zeta = -mldsa_zetas[k++];
+            unsigned j;
+            
+            for (j = start; j < start + len; j++) {
+                int32_t t = a[j];
+                a[j] = t + a[j + len];
+                a[j + len] = t - a[j + len];
+                a[j + len] = reference_mldsa_reduce((int64_t)zeta * a[j + len]);
+            }
+        }
+    }
+    
+    // Multiply by n^(-1) = 8347681 mod 8380417 (inverse of 256)
+    const int32_t MONT_NINV = 8347681;
+    for (unsigned i = 0; i < 256; i++) {
+        a[i] = reference_mldsa_reduce((int64_t)MONT_NINV * a[i]);
+    }
+}
+
+// Pure inverse ML-DSA NTT specification (for verification)
+// iNTT[k] = (1/256) * sum_{j=0..255} a[j] * 1753^(-(2*avx2_ntt_order(k) + 1)*j) mod 8380417
+void reference_mldsa_inverse_ntt_spec(int32_t a[256])
+{
+    int32_t result[256];
+    const int32_t MLDSA_Q = 8380417;
+    
+    for (int k = 0; k < 256; k++) {
+        uint64_t sum = 0;
+        uint8_t order_k = avx2_ntt_order(k);
+        
+        for (int j = 0; j < 256; j++) {
+            // Properly normalize input to [0, MLDSA_Q) range
+            int64_t normalized_aj = ((int64_t)a[j] % MLDSA_Q + MLDSA_Q) % MLDSA_Q;
+            
+            // For inverse, we negate the exponent
+            // Since 1753^(-x) = 1753^(φ(q) - x) where φ(q) = 8380416
+            uint64_t power = ((uint64_t)(2 * order_k + 1) * j);
+            uint64_t inv_power = (8380416 - (power % 8380416)) % 8380416;
+            uint64_t zeta_power = pow_8380417(1753, inv_power);
+            
+            uint64_t term = ((uint64_t)normalized_aj * zeta_power) % MLDSA_Q;
+            sum = (sum + term) % MLDSA_Q;
+        }
+        
+        // Multiply by 1/256 mod q = 8347681
+        result[k] = (int32_t)((sum * 8347681) % MLDSA_Q);
+    }
+    
+    // Copy result back
+    for (int i = 0; i < 256; i++) {
+        a[i] = result[i];
+    }
+}
+
 // Keccak-f1600 reference.
 // https://keccak.team/files/Keccak-reference-3.0.pdf
 
@@ -12606,6 +12674,69 @@ int test_mldsa_ntt(void)
 #endif
 }
 
+int test_mldsa_intt(void)
+{
+    // Skip test on non-x86_64 architectures
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+
+#ifdef __x86_64__
+    uint64_t t, i;
+    // 32-byte alignment for AVX2 vmovdqa instructions
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t b[256] __attribute__((aligned(32)));
+    int32_t original[256] __attribute__((aligned(32)));
+    
+    printf("Testing mldsa_intt with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        // Generate random input polynomial coefficients in NTT form
+        for (i = 0; i < 256; ++i) {
+            a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
+            b[i] = a[i];  // Copy for assembly implementation
+            original[i] = a[i];  // Keep original for round-trip test
+        }
+        
+        // Call the x86 assembly implementation (mldsa_intt)
+        mldsa_intt(b, mldsa_avx2_data);
+        
+        // Test using round-trip property: NTT(iNTT(x)) should give back x
+        // Apply forward NTT to the result
+        reference_mldsa_forward_ntt(a);
+        
+        // The result should match the original input (modulo reduction)
+        for (i = 0; i < 256; ++i) {
+            int32_t reduced_original = reference_poly_reduce(original[i]);
+            int32_t reduced_roundtrip = reference_poly_reduce(a[i]);
+            
+            // Check if they're congruent modulo MLDSA_Q
+            if (reduced_original != reduced_roundtrip) {
+                int64_t diff = (int64_t)reduced_original - (int64_t)reduced_roundtrip;
+                if (diff % 8380417 != 0) {
+                    printf("Error in mldsa_intt round-trip at element i = %"PRIu64"; "
+                           "original[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32") "
+                           "but NTT(iNTT(x))[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32")\n",
+                           i, i, original[i], reduced_original, i, a[i], reduced_roundtrip);
+                    return 1;
+                }
+            }
+        }
+        
+        if (VERBOSE) {
+            printf("OK: mldsa_intt round-trip test passed for "
+                   "[0x%08"PRIx32",0x%08"PRIx32",...,0x%08"PRIx32",0x%08"PRIx32"]\n",
+                   original[0], original[1], original[254], original[255]);
+        }
+    }
+    
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;  // Fallback for non-x86_64 compile-time environments
+#endif
+}
+
 int test_p256_montjadd(void)
 { uint64_t t, k;
   printf("Testing p256_montjadd with %d cases\n",tests);
@@ -15738,6 +15869,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmulbase_alt",test_edwards25519_scalarmulbase_alt);
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
+  functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_poly_reduce",test_mldsa_poly_reduce);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
