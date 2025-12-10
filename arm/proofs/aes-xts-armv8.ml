@@ -4453,7 +4453,7 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
         MP_TAC (SPECL [`(SUB_LIST (0,0x10) pt_in):byte list`;
           `(SUB_LIST (0x10,val (tail_len:int64)) pt_in):byte list`;
           `val (tail_len:int64)`; `iv:int128`; `0:num`; `key1_lst:int128 list`;
-          `key2_lst:int128 list`] LENGTH_OF_FST_OF_CIPHER_STEALING) THEN
+          `key2_lst:int128 list`] LENGTH_OF_FST_OF_ENC_CIPHER_STEALING) THEN
         DISCH_TAC THEN
         IMP_REWRITE_TAC[SUB_LIST_APPEND_LEFT; ARITH_RULE `16 <= 16`] THEN
 
@@ -4486,7 +4486,7 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
       MP_TAC (SPECL [`(SUB_LIST (l1_curr_blocks * 0x10,0x10) pt_in):byte list`;
         `(SUB_LIST ((l1_curr_blocks + 0x1) * 0x10,val (tail_len:int64)) pt_in):byte list`;
         `val (tail_len:int64)`; `iv:int128`; `l1_curr_blocks:num`; `key1_lst:int128 list`;
-        `key2_lst:int128 list`] LENGTH_OF_FST_OF_CIPHER_STEALING) THEN
+        `key2_lst:int128 list`] LENGTH_OF_FST_OF_ENC_CIPHER_STEALING) THEN
       DISCH_TAC THEN
       IMP_REWRITE_TAC[SUB_LIST_APPEND_LEFT; ARITH_RULE `16 <= 16`] THEN
 
@@ -4558,7 +4558,7 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
         MP_TAC (SPECL [`(SUB_LIST (0,0x10) pt_in):byte list`;
           `(SUB_LIST (0x10,val (tail_len:int64)) pt_in):byte list`;
           `val (tail_len:int64)`; `iv:int128`; `0:num`; `key1_lst:int128 list`;
-          `key2_lst:int128 list`] LENGTH_OF_FST_OF_CIPHER_STEALING) THEN
+          `key2_lst:int128 list`] LENGTH_OF_FST_OF_ENC_CIPHER_STEALING) THEN
         REWRITE_TAC[GSYM (ASSUME `0x10 * 0x0 = l1_curr_len`)] THEN
         DISCH_TAC THEN
         IMP_REWRITE_TAC[SUB_LIST_APPEND_RIGHT_LEMMA; ARITH_RULE `16 <= 16`] THEN
@@ -4594,7 +4594,7 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
       MP_TAC (SPECL [`(SUB_LIST (l1_curr_blocks * 0x10,0x10) pt_in):byte list`;
         `(SUB_LIST ((l1_curr_blocks + 0x1) * 0x10,val (tail_len:int64)) pt_in):byte list`;
         `val (tail_len:int64)`; `iv:int128`; `l1_curr_blocks:num`; `key1_lst:int128 list`;
-        `key2_lst:int128 list`] LENGTH_OF_FST_OF_CIPHER_STEALING) THEN
+        `key2_lst:int128 list`] LENGTH_OF_FST_OF_ENC_CIPHER_STEALING) THEN
       DISCH_TAC THEN
       IMP_REWRITE_TAC[SUB_LIST_APPEND_RIGHT_LEMMA; ARITH_RULE `16 <= 16`] THEN
 
