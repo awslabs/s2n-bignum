@@ -156,7 +156,7 @@ modinst:
 
         pushfq
         pop     rax
-        and     rax, 0b100011010101
+        and     rax, 0b110011010101
         mov     [rdi+4*8], rax
 
         vmovdqu [rdi+16*8],  ymm0
