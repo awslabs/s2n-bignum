@@ -14,7 +14,7 @@ let regfile = new_definition
    [val(read RAX s); val(read RCX s); val(read RDX s); val(read RBX s);
     bitval(read CF s) +  4 * bitval(read PF s) + 16 * bitval(read AF s) +
     64 * bitval(read ZF s) + 128 * bitval(read SF s) +
-    2048 * bitval(read OF s);
+    1024 * bitval(read DF s) + 2048 * bitval(read OF s);
     val(read RBP s); val(read RSI s); val(read RDI s); val(read R8 s);
     val(read R9 s); val(read R10 s); val(read R11 s); val(read R12 s);
     val(read R13 s); val(read R14 s); val(read R15 s);
@@ -118,7 +118,7 @@ let regfile = new_definition
 
 let FLAGENCODING_11 = prove
  (`bitval b0 + 4 * bitval b1 + 16 * bitval b2 +
-   64 * bitval b3 + 128 * bitval b4 + 2048 * bitval b5 = n <=>
+   64 * bitval b3 + 128 * bitval b4 + 1024 * bitval b5 + 2048 * bitval b6 = n <=>
    n < 4096 /\
    (b0 <=> ODD n) /\
    ~ODD(n DIV 2) /\
@@ -130,8 +130,8 @@ let FLAGENCODING_11 = prove
    (b4 <=> ODD(n DIV 128)) /\
    ~ODD(n DIV 256) /\
    ~ODD(n DIV 512) /\
-   ~ODD(n DIV 1024) /\
-   (b5 <=> ODD(n DIV 2048))`,
+   (b5 <=> ODD(n DIV 1024)) /\
+   (b6 <=> ODD(n DIV 2048))`,
   REWRITE_TAC[bitval] THEN
   REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
   (EQ_TAC THENL [DISCH_THEN(SUBST1_TAC o SYM) THEN ARITH_TAC; ALL_TAC]) THEN
