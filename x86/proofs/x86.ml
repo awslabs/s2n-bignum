@@ -953,6 +953,10 @@ let x86_CLC = new_definition
  `x86_CLC s =
         (CF := F) s`;;
 
+let x86_CLD = new_definition
+ `x86_CLD s =
+        (DF := F) s`;;
+
 let x86_CMC = new_definition
  `x86_CMC s =
         let c = read CF s in
@@ -1632,6 +1636,10 @@ let x86_SHRD = new_definition
 let x86_STC = new_definition
  `x86_STC s =
         (CF := T) s`;;
+
+let x86_STD = new_definition
+ `x86_STD s =
+        (DF := T) s`;;
 
 let x86_SUB = new_definition
  `x86_SUB dest src s =
@@ -2505,6 +2513,8 @@ let x86_execute = define
         x86_CALL target s
     | CLC ->
         x86_CLC s
+    | CLD ->
+        x86_CLD s
     | CMC ->
         x86_CMC s
     | CMOV cc dest src ->
@@ -2933,6 +2943,8 @@ let x86_execute = define
                          (val(read (OPERAND8 c s) s) MOD 32)) s)) s
     | STCF ->
         x86_STC s
+    | STD ->
+        x86_STD s
     | SUB dest src ->
         (add_load_event dest s ,, add_load_event src s ,,
          add_store_event dest s ,,
@@ -4031,7 +4043,7 @@ let X86_OPERATION_CLAUSES =
     x86_AESDEC; x86_AESDECLAST; x86_AESENC; x86_AESENCLAST;
     x86_AESKEYGENASSIST; x86_AND;
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
-    x86_CALL_ALT; x86_CLC; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
+    x86_CALL_ALT; x86_CLC; x86_CLD; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ; x86_MOVSX; x86_MOVUPS;
     x86_MOVSB_ALT;
@@ -4041,7 +4053,7 @@ let X86_OPERATION_CLAUSES =
     x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
-    x86_STC; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
+    x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VINSERTI128; x86_VEXTRACTI128;
     x86_VPEXTRD; x86_VPEXTRQ; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR;

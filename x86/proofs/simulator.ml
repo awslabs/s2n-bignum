@@ -707,6 +707,9 @@ let iclasses = iclasses_regreg @
  [0xc5; 0xf1; 0x6c; 0xca]; (* VPUNPCKLQDQ xmm1, xmm1, xmm2 *)
  [0xc5; 0xe9; 0x6c; 0xd3]; (* VPUNPCKLQDQ xmm2, xmm2, xmm3 *)
  [0xc4; 0x41; 0x79; 0x6c; 0xc1]; (* VPUNPCKLQDQ xmm8, xmm8, xmm9 *)
+ [0xf8]; (* CLC *)
+ [0xfc]; (* CLD *)
+ [0xfd]; (* STD *)
 ];;
 
 (* ------------------------------------------------------------------------- *)

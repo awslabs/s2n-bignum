@@ -1043,6 +1043,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     SOME (CLC,l)
   | [0xf9:8] -> if has_pfxs pfxs then NONE else
     SOME (STCF,l)
+  | [0xfc:8] -> if has_pfxs pfxs then NONE else
+    SOME (CLD,l)
+  | [0xfd:8] -> if has_pfxs pfxs then NONE else
+    SOME (STD,l)
   | [0xf:4; x; 0b11:2; v] -> if has_pfxs pfxs then NONE else
     let sz = op_size_W rex v pfxs in
     read_opcode_ModRM_operand rex sz l >>= \((opc,rm),l).

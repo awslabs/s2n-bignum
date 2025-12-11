@@ -253,6 +253,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | CALL operand
    | CALL_ABSOLUTE (64 word)
    | CLC
+   | CLD
    | CMC
    | CMOV condition operand operand
    | CMP operand operand
@@ -312,6 +313,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | SHLD operand operand operand
    | SHRD operand operand operand
    | STCF
+   | STD
    | SUB operand operand
    | TEST operand operand
    | TZCNT operand operand
