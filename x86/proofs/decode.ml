@@ -643,9 +643,9 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     SOME (NOP,l)
   | [0xa4:8] ->
     (match pfxs with
-     | (F, Rep0, SG0) -> SOME (MOVSB (%rdi) (%rsi) (Imm8(word 1)),l)
-     | (F, RepZ, SG0) -> SOME (MOVSB (%rdi) (%rsi) (%rcx),l)
-     | (F, RepNZ, SG0) -> SOME (MOVSB (%rdi) (%rsi) (%rcx),l)
+     | (F, Rep0, SG0) -> SOME (MOVSB F (%rdi) (%rsi) (Imm8(word 1)),l)
+     | (F, RepZ, SG0) -> SOME (MOVSB T (%rdi) (%rsi) (%rcx),l)
+     | (F, RepNZ, SG0) -> SOME (MOVSB T (%rdi) (%rsi) (%rcx),l)
      | _ -> NONE)
   | [0b1010100:7; v] -> if has_pfxs pfxs then NONE else
     let sz = op_size T (rex_W rex) v pfxs in

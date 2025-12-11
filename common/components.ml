@@ -2060,6 +2060,28 @@ let bytes128 = define
 let bytes256 = define
  `bytes256 addr :((int64->byte),256 word)component = bytes(addr,32) :> asword`;;
 
+let BYTES8_ELEMENT = prove
+ (`bytes8 = element`,
+  REWRITE_TAC[FUN_EQ_THM; COMPONENT_EQ] THEN
+  REWRITE_TAC[bytes8; READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[READ_BYTES_1; WRITE_BYTES_1] THEN
+  REWRITE_TAC[asword; write; through; read] THEN
+  REWRITE_TAC[GSYM DIMINDEX_8; VAL_MOD_REFL; WORD_VAL; READ_ELEMENT]);;
+
+let READ_BYTES_BYTES8 = prove
+ (`!a s. read (bytes(a,1)) s = val(read (bytes8 a) s)`,
+  REWRITE_TAC[READ_BYTES_1; BYTES8_ELEMENT; READ_ELEMENT]);;
+
+let READ_MEMORY_BYTES_BYTES8 = prove
+ (`!m a s. read (m :> bytes(a,1)) s = val(read (m :> bytes8 a) s)`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_BYTES8]);;
+
+let READ_ELEMENT_WRITE_BYTES8 = prove
+ (`!a b w m.
+        read (element b) (write (bytes8 a) w m) =
+        if b = a then w else read (element b) m`,
+  REWRITE_TAC[BYTES8_ELEMENT; READ_WRITE_ELEMENT]);;
+
 let BYTES8_WBYTES = prove
  (`bytes8 = wbytes`,
   REWRITE_TAC[FUN_EQ_THM; wbytes; bytes8] THEN
@@ -2438,6 +2460,90 @@ let READ_MEMORY_BYTES_TRIVIAL = prove(
   `forall (z:int64) (s:A) m. read (m :> bytes (z,0)) s = 0`,
   REWRITE_TAC[READ_COMPONENT_COMPOSE] THEN
   REWRITE_TAC[READ_BYTES_TRIVIAL]);;
+
+let PREFIX_BYTES_AS_SUBCOMPONENT = prove
+ (`!(a:N word) m n.
+        m <= n ==> ?c. bytes(a,m) = bytes(a,n) :> c`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[COMPONENT_EQ; EXISTS_COMPONENT] THEN
+  EXISTS_TAC `\x. x MOD 2 EXP (8 * m)` THEN
+  EXISTS_TAC
+   `\y s. y MOD 2 EXP (8 * m) + 2 EXP (8 * m) * s DIV 2 EXP (8 * m) ` THEN
+  CONJ_TAC THENL
+   [ALL_TAC; GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `y:num`] THEN
+  GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `s:N word->byte` THEN
+  ASM_SIMP_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE; read; write;
+               READ_BYTES_MOD; ARITH_RULE `m <= n ==> MIN n m = m`] THEN
+  FIRST_X_ASSUM(X_CHOOSE_THEN `d:num` SUBST1_TAC o
+    GEN_REWRITE_RULE I [LE_EXISTS]) THEN
+  REWRITE_TAC[WRITE_BYTES_COMBINE] THEN
+  REWRITE_TAC[READ_BYTES_DIV; ADD_SUB2] THEN
+  REWRITE_TAC[REWRITE_RULE[extensionally_valid_component]
+        EXTENSIONALLY_VALID_COMPONENT_BYTES]);;
+
+let CONTAINED_BYTES_AS_SUBCOMPONENT_GEN = prove
+ (`!(a:N word) b m n.
+        val (word_sub a b) + m <= n /\
+        n <= 2 EXP dimindex(:N)
+        ==> ?c. bytes(a,m) = bytes(b,n) :> c`,
+  let lemma = prove
+   (`!(a:N word) m n.
+          m + n <= 2 EXP dimindex(:N)
+          ==> ?c. bytes(word_add a (word m),n) = bytes(a,m+n) :> c`,
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[COMPONENT_EQ; EXISTS_COMPONENT] THEN
+    EXISTS_TAC `\x. x DIV 2 EXP (8 * m)` THEN
+    EXISTS_TAC
+     `\y:num s:num. s MOD 2 EXP (8 * m) + 2 EXP (8 * m) * y` THEN
+    CONJ_TAC THENL
+     [ALL_TAC; GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `y:num`] THEN
+    GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `s:N word->byte` THEN
+    ASM_SIMP_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE; read; write;
+                 READ_BYTES_DIV; ADD_SUB2] THEN
+    ONCE_REWRITE_TAC[GSYM MOD_MOD_REFL] THEN
+    REWRITE_TAC[WRITE_BYTES_COMBINE] THEN
+    REWRITE_TAC[READ_BYTES_MOD; ARITH_RULE `MIN (m + n) m = m`] THEN
+    MATCH_MP_TAC(MESON[]
+     `read c s = read c s' /\ write c (read c s') s' = s'
+      ==> s' = write c (read c s) s'`) THEN
+    REWRITE_TAC[REWRITE_RULE[extensionally_valid_component]
+          EXTENSIONALLY_VALID_COMPONENT_BYTES] THEN
+    MATCH_MP_TAC(GSYM READ_WRITE_ORTHOGONAL_COMPONENTS) THEN
+    REWRITE_TAC[ORTHOGONAL_COMPONENTS_BYTES] THEN
+    REWRITE_TAC[NONOVERLAPPING_MODULO] THEN
+    ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN
+    REWRITE_TAC[NONOVERLAPPING_QFREE; WORD_VAL] THEN
+    REWRITE_TAC[WORD_RULE `word_sub (word_add x y) x = y`] THEN
+    STRIP_TAC THEN REWRITE_TAC[VAL_WORD] THEN
+    SUBGOAL_THEN `m < 2 EXP dimindex(:N)` ASSUME_TAC THENL
+     [ASM_ARITH_TAC; ASM_SIMP_TAC[MOD_LT] THEN ASM_ARITH_TAC]) in
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`b:N word`; `val(word_sub a b:N word)`; `m:num`] lemma) THEN
+  REWRITE_TAC[WORD_VAL; WORD_RULE `word_add b (word_sub a b) = a`] THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
+  X_GEN_TAC `d:(num,num)component` THEN DISCH_THEN SUBST1_TAC THEN
+  MP_TAC(ISPECL [`b:N word`; `val(word_sub a b:N word) + m`; `n:num`]
+        PREFIX_BYTES_AS_SUBCOMPONENT) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(X_CHOOSE_THEN `c:(num,num)component` SUBST1_TAC) THEN
+  REWRITE_TAC[GSYM COMPONENT_COMPOSE_ASSOC] THEN MESON_TAC[]);;
+
+let CONTAINED_BYTES_AS_SUBCOMPONENT = prove
+ (`!(a:N word) b m n.
+        n < 2 EXP dimindex(:N) /\
+        contained (a,m) (b,n)
+        ==> ?c. bytes(a,m) = bytes(b,n) :> c`,
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `m = 0` THENL
+   [STRIP_TAC THEN
+    ASM_REWRITE_TAC[COMPONENT_EQ; bytes; FUN_EQ_THM;
+                    READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+    EXISTS_TAC `rvalue 0:(num,num)component` THEN
+    REWRITE_TAC[READ_RVALUE; WRITE_RVALUE] THEN
+    REWRITE_TAC[REWRITE_RULE[extensionally_valid_component]
+        EXTENSIONALLY_VALID_COMPONENT_BYTES];
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    ASM_SIMP_TAC[LE_1; CONTAINED_QFREE] THEN STRIP_TAC THEN
+    ASM_SIMP_TAC[CONTAINED_BYTES_AS_SUBCOMPONENT_GEN; LT_IMP_LE]]);;
 
 (* ------------------------------------------------------------------------- *)
 (* State component corresponding to the head of a stack/list.                *)

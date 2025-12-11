@@ -455,6 +455,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
                 read RIP s = word(pc + 0x7) /\
                 read RSP s = stackpointer /\
                 C_ARGUMENTS [res;buf;buflen;table] s /\
+                (read DF s <=> false) /\
                 wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
                 wordlist_from_memory(buf,LENGTH inlist) s = inlist)
            (\s. read RIP s = word(pc + 0xef) /\
@@ -529,6 +530,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
 
   ENSURES_WHILE_UP2_TAC `N:num` `pc + 0x73` `pc + 0xd3`
    `\i s. read RSP s = stackpointer /\
+          ~read DF s /\
           read (memory :> bytes (buf,buflen)) s = num_of_wordlist inlist /\
           read(memory :> bytes(table,4096)) s =
           num_of_wordlist mlkem_rej_uniform_table /\
@@ -726,12 +728,9 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
       REWRITE_TAC[num_of_wordlist] THEN CONV_TAC WORD_BLAST;
       DISCARD_MATCHING_ASSUMPTIONS [`read YMM2 s = x`] THEN STRIP_TAC] THEN
 
-    (*** DONK: this step shouldn't be needed; flaw in NONOVERLAPPING_TAC ***)
-
-    VAL_INT64_TAC `curlen:num` THEN
-
     (*** The writeback and popcount ***)
 
+    VAL_INT64_TAC `curlen:num` THEN
     X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (15--16) THEN
     RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV (WORD_SIMPLE_SUBWORD_CONV))) THEN
 
@@ -893,4 +892,56 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
 (* DONK: todo!                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-    ALL_TAC]);;
+
+    CONV_TAC(RATOR_CONV(LAND_CONV(TOP_DEPTH_CONV let_CONV))) THEN
+    MAP_EVERY ABBREV_TAC
+     [`outlist = REJ_SAMPLE (SUB_LIST (0,8 * N) inlist)`;
+      `outlen = LENGTH(outlist:int16 list)`] THEN
+    SUBGOAL_THEN `outlen < 264` ASSUME_TAC THENL
+     [FIRST_X_ASSUM(MP_TAC o SPEC `N - 1`) THEN
+      ASM_REWRITE_TAC[ARITH_RULE `n - 1 < n <=> ~(n = 0)`] THEN
+      MATCH_MP_TAC(ARITH_RULE
+       `l' <= l + 8 ==> ~(b < x) /\ l < 256 ==> l' < 264`) THEN
+      MP_TAC(ISPECL [`inlist:(12 word)list`; `8 * (N - 1)`; `8`; `0`]
+          SUB_LIST_SPLIT) THEN
+      ASM_SIMP_TAC[ARITH_RULE `~(N = 0) ==> 8 * (N - 1) + 8 = 8 * N`] THEN
+      MAP_EVERY EXPAND_TAC ["outlen"; "outlist"] THEN
+      DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[REJ_SAMPLE_APPEND] THEN
+      REWRITE_TAC[LENGTH_APPEND; LE_ADD_LCANCEL; ADD_CLAUSES] THEN
+      REWRITE_TAC[REJ_SAMPLE] THEN
+      W(MP_TAC o PART_MATCH lhand LENGTH_FILTER o lhand o snd) THEN
+      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] LE_TRANS) THEN
+      REWRITE_TAC[LENGTH_MAP; LENGTH_SUB_LIST] THEN ARITH_TAC;
+      MAP_EVERY VAL_INT64_TAC [`outlen:num`; `MIN 256 outlen`]] THEN
+
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (1--3) THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `word(MIN 256 outlen):int64` o MATCH_MP
+     (MESON[] `read RAX s = x ==> !x'. x = x' ==> read RAX s = x'`)) THEN
+    ANTS_TAC THENL
+     [REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0] THEN
+      ONCE_REWRITE_TAC[GSYM COND_RAND] THEN AP_TERM_TAC THEN
+      ASM_REWRITE_TAC[GSYM VAL_EQ] THEN CONV_TAC WORD_REDUCE_CONV THEN
+      ARITH_TAC;
+      DISCH_TAC] THEN
+
+    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (4--6) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
+     `word_shl (word n) 1 = word(2 * n)`]) THEN
+
+    VAL_INT64_TAC `2 * MIN 256 outlen` THEN
+    X86_VSTEPS_TAC MLKEM_REJ_UNIFORM_EXEC [7] THEN
+    FIRST_X_ASSUM(MP_TAC o check
+      (can (term_match [] `z = read c (write c y s)`) o concl)) THEN
+    SIMP_TAC[READ_WRITE_X86_STRINGCOPY; ARITH_RULE
+        `2 * MIN 256 l < 2 EXP 64`] THEN
+    W(MP_TAC o PART_MATCH (lhand o rand) X86_STRINGCOPY_NONOVERLAPPING o
+      rand o lhand o snd) THEN
+    ANTS_TAC THENL
+     [CONJ_TAC THENL [ARITH_TAC; NONOVERLAPPING_TAC];
+      DISCH_THEN SUBST1_TAC] THEN
+
+(* ------------------------------------------------------------------------- *)
+(* DONK; now relatively easy                                                 *)
+(* ------------------------------------------------------------------------- *)
