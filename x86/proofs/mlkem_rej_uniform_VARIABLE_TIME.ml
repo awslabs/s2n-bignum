@@ -465,7 +465,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
                 let outlen = LENGTH outlist in
                 C_RETURN s = word outlen /\
                 wordlist_from_memory(res,outlen) s = outlist)
-           (MAYCHANGE [RIP; RSI; RAX; RCX; RDX; R8; R9; R10; R11] ,,
+           (MAYCHANGE [RIP; RDI; RSI; RAX; RCX; RDX; R8; R9; R10; R11] ,,
             MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
             MAYCHANGE [memory :> bytes(res,512);
@@ -888,10 +888,7 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
           CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
           ASM_REWRITE_TAC[GSYM WORD_ADD] THEN CONV_TAC WORD_RULE]]];
 
-(* ------------------------------------------------------------------------- *)
-(* DONK: todo!                                                               *)
-(* ------------------------------------------------------------------------- *)
-
+    (*** The copying to the output and final reasoning ***)
 
     CONV_TAC(RATOR_CONV(LAND_CONV(TOP_DEPTH_CONV let_CONV))) THEN
     MAP_EVERY ABBREV_TAC
@@ -913,8 +910,6 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
       MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] LE_TRANS) THEN
       REWRITE_TAC[LENGTH_MAP; LENGTH_SUB_LIST] THEN ARITH_TAC;
       MAP_EVERY VAL_INT64_TAC [`outlen:num`; `MIN 256 outlen`]] THEN
-
-
     ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (1--3) THEN
     FIRST_X_ASSUM(MP_TAC o SPEC `word(MIN 256 outlen):int64` o MATCH_MP
@@ -925,11 +920,9 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
       ASM_REWRITE_TAC[GSYM VAL_EQ] THEN CONV_TAC WORD_REDUCE_CONV THEN
       ARITH_TAC;
       DISCH_TAC] THEN
-
     X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (4--6) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
      `word_shl (word n) 1 = word(2 * n)`]) THEN
-
     VAL_INT64_TAC `2 * MIN 256 outlen` THEN
     X86_VSTEPS_TAC MLKEM_REJ_UNIFORM_EXEC [7] THEN
     FIRST_X_ASSUM(MP_TAC o check
@@ -940,8 +933,71 @@ let MLKEM_REJ_UNIFORM_CORRECT = prove
       rand o lhand o snd) THEN
     ANTS_TAC THENL
      [CONJ_TAC THENL [ARITH_TAC; NONOVERLAPPING_TAC];
-      DISCH_THEN SUBST1_TAC] THEN
-
-(* ------------------------------------------------------------------------- *)
-(* DONK; now relatively easy                                                 *)
-(* ------------------------------------------------------------------------- *)
+      DISCH_THEN SUBST1_TAC THEN DISCH_TAC] THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+    ASM_REWRITE_TAC[GSYM REJ_SAMPLE] THEN
+    MP_TAC(ISPECL
+     [`res:int64`; `LENGTH(SUB_LIST (0,256) (REJ_SAMPLE inlist))`;
+      `2 * LENGTH(SUB_LIST (0,256) (REJ_SAMPLE inlist))`;
+      `SUB_LIST (0,256) (REJ_SAMPLE inlist)`]
+     (INST_TYPE [`:16`,`:N`] WORDLIST_FROM_MEMORY_EQ_ALT)) THEN
+    ASM_REWRITE_TAC[ARITH_RULE `8 * 2 * n = 16 * n`; DIMINDEX_16] THEN
+    DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+    SUBGOAL_THEN
+     `read (memory :> bytes (stackpointer,2 * MIN 256 outlen)) s6 =
+      num_of_wordlist (SUB_LIST (0,256) outlist:int16 list)`
+    SUBST_ALL_TAC THENL
+     [DISCARD_STATE_TAC "s7" THEN
+      REWRITE_TAC[NUM_OF_WORDLIST_SUB_LIST_0; DIMINDEX_16] THEN
+      FIRST_X_ASSUM(fun th ->
+        GEN_REWRITE_TAC (RAND_CONV o LAND_CONV) [SYM th]) THEN
+      REWRITE_TAC[ARITH_RULE `2 * MIN 256 l = MIN (2 * l) 512`] THEN
+      REWRITE_TAC[ARITH_RULE `16 * 256 = 8 * 512`] THEN
+      REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_MOD] THEN
+      ONCE_REWRITE_TAC[ARITH_RULE `MIN a b = MIN b a`] THEN
+      REWRITE_TAC[GSYM READ_BYTES_MOD] THEN
+      AP_THM_TAC THEN AP_TERM_TAC THEN
+      REWRITE_TAC[GSYM READ_COMPONENT_COMPOSE] THEN
+      REWRITE_TAC[ARITH_RULE `512 = 8 * 64`] THEN
+      CONV_TAC(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV) THEN
+      RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV(READ_MEMORY_SPLIT_CONV 1))) THEN
+      ASM_REWRITE_TAC[];
+      ALL_TAC] THEN
+    FIRST_X_ASSUM DISJ_CASES_TAC THENL
+     [SUBGOAL_THEN `SUB_LIST (0,8 * N) (inlist:(12 word)list) = inlist`
+      SUBST_ALL_TAC THENL
+       [MATCH_MP_TAC SUB_LIST_REFL THEN FIRST_X_ASSUM(MATCH_MP_TAC o
+        MATCH_MP
+         (ARITH_RULE `8 * b = 12 * l ==> b <= 12 * N ==> l <= 8 * N`)) THEN
+        UNDISCH_TAC `buflen < 12 * (N + 1)` THEN
+        FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE I [divides]) THEN
+        SIMP_TAC[LEFT_IMP_EXISTS_THM; LE_MULT_LCANCEL; LT_MULT_LCANCEL] THEN
+        ARITH_TAC;
+        ASM_REWRITE_TAC[LENGTH_SUB_LIST; SUB_0]];
+      ASM_REWRITE_TAC[GSYM NOT_LE; LENGTH_SUB_LIST; SUB_0] THEN
+      ASM_SIMP_TAC[ARITH_RULE `256 <= n ==> MIN 256 n = 256`] THEN
+      MATCH_MP_TAC(MESON[]
+       `y = x /\ (y = x ==> P) ==> word x = word y /\ P`) THEN
+      CONJ_TAC THENL
+       [REWRITE_TAC[ARITH_RULE `MIN a b = a <=> a <= b`] THEN
+        TRANS_TAC LE_TRANS `outlen:num` THEN ASM_REWRITE_TAC[] THEN
+        SUBST1_TAC(SYM(ASSUME `LENGTH(outlist:int16 list) = outlen`)) THEN
+        EXPAND_TAC "outlist" THEN
+        MP_TAC(ISPECL [`inlist:(12 word)list`; `8 * N`]
+          SUB_LIST_TOPSPLIT) THEN
+        DISCH_THEN(fun th ->
+          GEN_REWRITE_TAC (funpow 3 RAND_CONV) [SYM th]) THEN
+        REWRITE_TAC[REJ_SAMPLE_APPEND; LENGTH_APPEND; LE_ADD];
+        DISCH_THEN SUBST1_TAC] THEN
+      SUBGOAL_THEN
+       `SUB_LIST (0,256) (REJ_SAMPLE inlist) = SUB_LIST (0,256) outlist`
+      SUBST1_TAC THENL
+       [MP_TAC(ISPECL [`inlist:(12 word)list`; `8 * N`]
+          SUB_LIST_TOPSPLIT) THEN
+        DISCH_THEN(fun th -> ONCE_REWRITE_TAC[SYM th]) THEN
+        ASM_SIMP_TAC[REJ_SAMPLE_APPEND; SUB_LIST_APPEND_LEFT];
+        ALL_TAC] THEN
+      FIRST_ASSUM(SUBST1_TAC o MATCH_MP (ARITH_RULE
+       `256 <= l ==> 2 * 256 = 2 * MIN 256 l`)) THEN
+      FIRST_ASSUM ACCEPT_TAC]]);;
