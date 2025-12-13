@@ -1244,7 +1244,7 @@ let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) = fun () ->
 let cosimulate_movsb_full_harness() = fun () ->
   let src = 64 + Random.int 32
   and dest = 64 + Random.int 32
-  and count = Random.int 4
+  and count = Random.int 8
   and rep = Random.int 3 in
   [[0x48; 0x8d; 0x7c; 0x24; dest]; (* LEA rdi, [rsp+dest] *)
    [0x48; 0x8d; 0x74; 0x24; src]; (* LEA rsi, [rsp+src] *)
@@ -1375,13 +1375,13 @@ let mem_iclasses = [
   ];;
 
 let run_random_memopsimulation() =
-  let deferred_icodes,add_assum = 
+  let deferred_icodes,add_assum =
     el (Random.int (length mem_iclasses)) mem_iclasses in
   let icodes = deferred_icodes() in
   let l = length icodes in
   let _ = assert (l >= 2) in
   let memop_index = if l = 8 then 3 else if l >= 6 then l - 4 else l - 2 in
-  cosimulate_instructions 
+  cosimulate_instructions
      (Some memop_index)  (if add_assum then 16 else 0) icodes;;
 
 (* ------------------------------------------------------------------------- *)
