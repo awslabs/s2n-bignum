@@ -678,7 +678,7 @@ let X86_STRINGCOPY_BOUND,READ_X86_MOVSB =
                   (read (memory :> bytes(b,n)) s))`,
     X_CHOOSE_TAC `f:bool->int64->int64->num->num->num->num`
      (GSYM lemma3) THEN
-    EXISTS_TAC 
+    EXISTS_TAC
       `\(df:bool) (a:int64) (b:int64) n (abuf:num) (bbuf:num).
         (f df a b n abuf bbuf) MOD 2 EXP (8 * n)` THEN
     SIMP_TAC[MOD_LT_EQ; EXP_EQ_0; ARITH_EQ] THEN
@@ -1160,7 +1160,9 @@ let x86_MOVSB = new_definition
         and df = read DF s in
         let sbuf = if df then word_sub sptr (word_sub n (word 1)) else sptr
         and dbuf = if df then word_sub dptr (word_sub n (word 1)) else dptr in
-        ((\s s'. x86_movsb df sbuf dbuf (val n) s = s') ,,
+        (events := CONS (EventStore(dbuf,val n))
+                        (CONS (EventLoad(sbuf,val n)) (read events s)) ,,
+         (\s s'. x86_movsb df sbuf dbuf (val n) s = s') ,,
          src := (if df then word_sub sptr n else word_add sptr n) ,,
          dest := (if df then word_sub dptr n else word_add dptr n) ,,
          (if rept then size := word 0 else (=))) s`;;
@@ -2673,9 +2675,7 @@ let x86_execute = define
         | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)
         | (128,128) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND128 src s)) s)) s
     | MOVSB rept dest src size ->
-        (add_load_event src s ,,
-         add_store_event dest s ,,
-         (\s. x86_MOVSB rept (OPERAND64 dest s) (OPERAND64 src s) (OPERAND64 size s) s)) s
+        (\s. x86_MOVSB rept (OPERAND64 dest s) (OPERAND64 src s) (OPERAND64 size s) s) s
     | MOVSX dest src ->
         (add_load_event src s ,,
          add_store_event dest s ,,
@@ -3982,10 +3982,12 @@ let x86_MOVSB_ALT = prove
         and df = read DF s in
         let sbuf = if df then word_sub sptr (word_sub n (word 1)) else sptr
         and dbuf = if df then word_sub dptr (word_sub n (word 1)) else dptr in
-        let sbytes = read (memory :> bytes (sbuf,val n)) s
-        and dbytes = read (memory :> bytes (dbuf,val n)) s in
-        (memory :> bytes (dbuf,val n) :=
-         x86_stringcopy df sbuf dbuf (val n) sbytes dbytes ,,
+        (events := CONS (EventStore (dbuf,val n))
+                        (CONS (EventLoad (sbuf,val n)) (read events s)) ,,
+         (\s. (memory :> bytes (dbuf,val n) :=
+                 x86_stringcopy df sbuf dbuf (val n)
+                   (read (memory :> bytes (sbuf,val n)) s)
+                   (read (memory :> bytes (dbuf,val n)) s)) s) ,,
          src := (if df then word_sub sptr n else word_add sptr n) ,,
          dest := (if df then word_sub dptr n else word_add dptr n) ,,
          (if rept then size := word 0 else (=))) s`,
