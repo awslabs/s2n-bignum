@@ -84,6 +84,10 @@ let SUBSUMED_SEQ_RIGHT = prove
      ==> C subsumed (D1 ,, D2)`,
   REWRITE_TAC[FUN_EQ_THM; seq; subsumed] THEN MESON_TAC[]);;
 
+let SUBSUMED_TRIVIAL = prove
+ (`forall (R:A->B->bool). R subsumed (\s s'. true)`,
+  REWRITE_TAC[subsumed] THEN MESON_TAC[]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Assignment to a state component as a (functional) relation.               *)
 (* ------------------------------------------------------------------------- *)
@@ -2190,12 +2194,14 @@ let SUBSUMED_MAYCHANGE_TAC =
     (MATCH_MP_TAC SUBSUMED_SEQ_RIGHT THEN CONJ_TAC THENL
       [SUBSUMED_ID_MAYCHANGE_TAC; tac]) ORELSE
     SUBSUMED_ASSIGNS_TAC) gl in
+  (* Anything is subsumed by (\s s'. true) *)
+  MATCH_ACCEPT_TAC SUBSUMED_TRIVIAL ORELSE (
   CONV_TAC(BINOP_CONV MAYCHANGE_CANON_CONV) THEN
   TRY(MATCH_MP_TAC lemma_start THEN CONJ_TAC THENL
        [MAYCHANGE_IDEMPOT_TAC THEN NO_TAC; CONJ_TAC] THEN
       REPEAT(MATCH_MP_TAC lemma_step THEN CONJ_TAC) THEN
       DISCH_THEN(K ALL_TAC)) THEN
-  ((POP_ASSUM_LIST(K ALL_TAC) THEN tac) ORELSE tac);;
+  ((POP_ASSUM_LIST(K ALL_TAC) THEN tac) ORELSE tac));;
 
 
 (*** Example
