@@ -32,6 +32,12 @@ let pure_forward_ntt_mldsa = define
                        &1753 pow ((2 * k DIV 2 + 1) * j))
     rem &8380417`;;
 
+let pure_inverse_ntt_mldsa = define
+ `pure_inverse_ntt_mldsa f k =
+    (&8347681 * isum (0..127) (\j. f(2 * j + k MOD 2) *
+                                &8347681 pow ((2 * j + 1) * k DIV 2)))
+    rem &8380417`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Bit-reversing order as used in the standard/default order.                *)
 (* ------------------------------------------------------------------------- *)
@@ -170,6 +176,13 @@ let mldsa_forward_ntt = define
     isum (0..255) (\j. f j * &1753 pow ((2 * mldsa_avx2_ntt_order k + 1) * j))
     rem &8380417`;;
 
+let mldsa_inverse_ntt = define
+ `mldsa_inverse_ntt f k =
+    (&8347681 * isum (0..255)
+                 (\j. f j *
+                      &8347681 pow ((2 * j + 1) * mldsa_avx2_ntt_order k)))
+    rem &8380417`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Show how these relate to the "pure" ones.                                 *)
 (* ------------------------------------------------------------------------- *)
@@ -215,6 +228,13 @@ let MLDSA_FORWARD_NTT = prove
  (`mldsa_forward_ntt f k =
    isum (0..255) (\j. f j * &1753 pow ((2 * mldsa_avx2_ntt_order k + 1) * j)) rem &8380417`,
   REWRITE_TAC[mldsa_forward_ntt]);;
+
+let MLDSA_INVERSE_NTT = prove
+ (`mldsa_inverse_ntt f k =
+   (&8347681 * isum (0..255)
+                 (\j. f j * &8347681 pow ((2 * j + 1) * mldsa_avx2_ntt_order k)))
+    rem &8380417`,
+  REWRITE_TAC[mldsa_inverse_ntt]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Explicit computation rules to evaluate mod-3329 powers/sums less naively. *)
@@ -375,6 +395,33 @@ let MLDSA_FORWARD_NTT_ALT = prove
 
 let MLDSA_FORWARD_NTT_CONV =
   GEN_REWRITE_CONV I [MLDSA_FORWARD_NTT_ALT] THENC
+  LAND_CONV EXPAND_ISUM_CONV THENC
+  DEPTH_CONV NUM_RED_CONV THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [MLDSA_AVX2_NTT_ORDER_CLAUSES] THENC
+  DEPTH_CONV NUM_RED_CONV THENC
+  GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
+  ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
+
+let MLDSA_INVERSE_NTT_ALT = prove
+ (`mldsa_inverse_ntt f k =
+   isum (0..255)
+        (\j. f j *
+             (&8347681 *
+              (&8347681 pow ((2 * j + 1) * mldsa_avx2_ntt_order k)) rem &8380417)
+             rem &8380417)
+    rem &8380417`,
+  REWRITE_TAC[mldsa_inverse_ntt; GSYM ISUM_LMUL] THEN
+  MATCH_MP_TAC (REWRITE_RULE[] (ISPEC
+      `(\x y. x rem &8380417 = y rem &8380417)` ISUM_RELATED)) THEN
+  REWRITE_TAC[INT_REM_EQ; FINITE_NUMSEG; INT_CONG_ADD] THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_REM; GSYM INT_OF_NUM_CLAUSES;
+              GSYM INT_REM_EQ] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC INT_ARITH);;
+
+let MLDSA_INVERSE_NTT_CONV =
+  GEN_REWRITE_CONV I [MLDSA_INVERSE_NTT_ALT] THENC
   LAND_CONV EXPAND_ISUM_CONV THENC
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [MLDSA_AVX2_NTT_ORDER_CLAUSES] THENC
