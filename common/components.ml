@@ -2969,54 +2969,6 @@ let ORTHOGONAL_COMPONENTS_RULE2 tm1 tm2 =
   ORTHOGONAL_COMPONENTS_CONV(list_mk_icomb "orthogonal_components" [tm1;tm2]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Tool to attempt to reduce "read c (write d y s)", either by showing       *)
-(* c=d or that the two components c and d are orthogonal.                    *)
-(* ------------------------------------------------------------------------- *)
-
-let COMPONENT_READ_OVER_WRITE_CONV =
-  let pth_same = prove
-   (`valid_component c ==> read c (write c y s) = y`,
-    SIMP_TAC[valid_component])
-  and pth_orth = prove
-   (`orthogonal_components c d ==> read c (write d y s) = read c s`,
-    SIMP_TAC[orthogonal_components]) in
-  let rule_same = PART_MATCH (lhand o rand) pth_same
-  and rule_orth = PART_MATCH (lhand o rand) pth_orth in
-  fun tm ->
-   let rule_same_matched, rule_orth_matched = ref false, ref false in
-   (try let th = rule_same tm in
-        rule_same_matched := true;
-        MP th (VALID_COMPONENT_CONV(lhand(concl th)))
-    with _ ->
-      try let th = rule_orth tm in
-          rule_orth_matched := true;
-          MP th (ORTHOGONAL_COMPONENTS_CONV(lhand(concl th)))
-      with _ ->
-        (* If tm was of the form `read _ (write _ _ _)`, this failure is from
-           *_COMPONENT{S}_CONV which were supposed to prove either fully
-           overlapping or orthogonal aliasing relation between the reads and
-           writes in tm. This fact might be helpful to the user. *)
-        (if !components_print_log && (!rule_same_matched || !rule_orth_matched) then
-          Printf.printf
-            "Info: could not prove whether the reads and writes of `%s` are fully overlapping or orthogonal.\n"
-            (string_of_term tm)
-        else ());
-        failwith "COMPONENT_READ_OVER_WRITE_CONV");;
-
-(* ------------------------------------------------------------------------- *)
-(* Similar tool for "write c y (write c z s)"                                *)
-(* ------------------------------------------------------------------------- *)
-
-let COMPONENT_WRITE_OVER_WRITE_CONV =
-  let pth = prove
-   (`valid_component c ==> write c y (write c z s) = write c y s`,
-    SIMP_TAC[valid_component]) in
-  let rule = PART_MATCH (lhand o rand) pth in
-   fun tm ->
-    (let th = rule tm in
-     MP th (VALID_COMPONENT_CONV(lhand(concl th))));;
-
-(* ------------------------------------------------------------------------- *)
 (* Slightly ad hoc tactic to do "simple" linear arithmetic: pick out         *)
 (* "environmental" assumptions with relevance to natural number arithmetic.  *)
 (* ------------------------------------------------------------------------- *)
@@ -3515,6 +3467,55 @@ let COMPONENTS_READ_OVER_WRITE_ORTHOGONAL_CONV =
               AP_TERM l (conv ths r))
       | _ -> raise Unchanged in
   fun tm -> try conv ariths tm with Unchanged -> REFL tm;;
+
+(* ------------------------------------------------------------------------- *)
+(* This one attempts to reduce "read c (write d y s)", either by showing     *)
+(* c=d or that the two components c and d are orthogonal.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let COMPONENT_READ_OVER_WRITE_CONV =
+  let pth_same = prove
+   (`valid_component c ==> read c (write c y s) = y`,
+    SIMP_TAC[valid_component])
+  and pth_orth = prove
+   (`orthogonal_components c d ==> read c (write d y s) = read c s`,
+    SIMP_TAC[orthogonal_components]) in
+  let rule_same = PART_MATCH (lhand o rand) pth_same
+  and rule_orth = PART_MATCH (lhand o rand) pth_orth
+  and orth_rule = ORTHOGONAL_COMPONENTS_RULE(NONOVERLAPPING_DRIVERS[],[]) in
+  fun tm ->
+   let rule_same_matched, rule_orth_matched = ref false, ref false in
+   (try let th = rule_same tm in
+        rule_same_matched := true;
+        MP th (VALID_COMPONENT_CONV(lhand(concl th)))
+    with _ ->
+      try let th = rule_orth tm in
+          rule_orth_matched := true;
+          MP th (orth_rule(lhand(concl th)))
+      with _ ->
+        (* If tm was of the form `read _ (write _ _ _)`, this failure is from
+           *_COMPONENT{S}_CONV which were supposed to prove either fully
+           overlapping or orthogonal aliasing relation between the reads and
+           writes in tm. This fact might be helpful to the user. *)
+        (if !components_print_log && (!rule_same_matched || !rule_orth_matched) then
+          Printf.printf
+            "Info: could not prove whether the reads and writes of `%s` are fully overlapping or orthogonal.\n"
+            (string_of_term tm)
+        else ());
+        failwith "COMPONENT_READ_OVER_WRITE_CONV");;
+
+(* ------------------------------------------------------------------------- *)
+(* Similar tool for "write c y (write c z s)"                                *)
+(* ------------------------------------------------------------------------- *)
+
+let COMPONENT_WRITE_OVER_WRITE_CONV =
+  let pth = prove
+   (`valid_component c ==> write c y (write c z s) = write c y s`,
+    SIMP_TAC[valid_component]) in
+  let rule = PART_MATCH (lhand o rand) pth in
+   fun tm ->
+    (let th = rule tm in
+     MP th (VALID_COMPONENT_CONV(lhand(concl th))));;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactic versions, the latter allowing identical components too.            *)

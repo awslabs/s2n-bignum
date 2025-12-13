@@ -619,7 +619,7 @@ let READ_ORTHOGONAL_COMPONENT_MOVSB = prove
    DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN REWRITE_TAC[GSYM ADD1] THEN
    ASM_SIMP_TAC[COMPONENT_COMPOSE_ASSOC; ORTHOGONAL_COMPONENTS_SUB_RIGHT]));;
 
-let READ_X86_MOVSB =
+let X86_STRINGCOPY_BOUND,READ_X86_MOVSB =
   let lemma1 = prove
    (`!df a b n m s s'.
           m < n /\ n < 2 EXP 64 /\
@@ -653,7 +653,7 @@ let READ_X86_MOVSB =
     REPLICATE_TAC 3 GEN_TAC THEN INDUCT_TAC THEN
     ASM_SIMP_TAC[x86_movsb; I_THM; o_THM] THEN
     REWRITE_TAC[LE_SUC_LT] THEN ASM_MESON_TAC[lemma1; LT_IMP_LE]) in
-  let th = prove
+  let lemma3 = prove
    (`?f. !df a b n s.
           n < 2 EXP 64
           ==> read (memory :> bytes(b,n)) (x86_movsb df a b n s) =
@@ -668,7 +668,23 @@ let READ_X86_MOVSB =
     GEN_REWRITE_TAC (BINDER_CONV o BINOP_CONV) [GSYM o_DEF] THEN
     REWRITE_TAC[GSYM FUNCTION_FACTORS_LEFT] THEN
     REWRITE_TAC[o_DEF; PAIR_EQ] THEN ASM_MESON_TAC[lemma2; LE_REFL]) in
-  new_specification ["x86_stringcopy"] th;;
+  let th = prove
+   (`?f. (!df a b n abuf bbuf. f df a b n abuf bbuf < 2 EXP (8 * n)) /\
+         (!df a b n s.
+            n < 2 EXP 64
+            ==> read (memory :> bytes(b,n)) (x86_movsb df a b n s) =
+                f df a b n
+                  (read (memory :> bytes(a,n)) s)
+                  (read (memory :> bytes(b,n)) s))`,
+    X_CHOOSE_TAC `f:bool->int64->int64->num->num->num->num`
+     (GSYM lemma3) THEN
+    EXISTS_TAC 
+      `\(df:bool) (a:int64) (b:int64) n (abuf:num) (bbuf:num).
+        (f df a b n abuf bbuf) MOD 2 EXP (8 * n)` THEN
+    SIMP_TAC[MOD_LT_EQ; EXP_EQ_0; ARITH_EQ] THEN
+    ASM_SIMP_TAC[] THEN
+    REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_MOD_LEN]) in
+  CONJ_PAIR(new_specification ["x86_stringcopy"] th);;
 
 let x86_stringcopy = prove
  (`!df a b n s.
