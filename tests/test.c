@@ -12106,26 +12106,33 @@ uint64_t t, i;
 
 int test_mlkem_intt(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
   uint64_t t, i;
-  int16_t a[256], b[256], c[256];
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  int16_t c[256] __attribute__((aligned(32)));
   printf("Testing mlkem_intt with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
    { for (i = 0; i < 256; ++i)
         a[i] = (int16_t) (random64()); // any int16_t inputs allowed
      for (i = 0; i < 256; ++i) b[i] = a[i];
+#ifdef __x86_64__
+     mlkem_poly_to_avx2_layout(b);
+     mlkem_intt_x86(b,mlkem_qdata);
+#else
      mlkem_intt(b,intt_zetas_layer01234,intt_zetas_layer56);
+#endif
+
      reference_bitreverse(c,a);
      reference_inverse_ntt(c,c);
      reference_tomont3329(c,c);
+
+
      for (i = 0; i < 256; ++i)
       { if (rem_3329(b[i]) != rem_3329(c[i]))
          { printf("Error in iNTT element i = %"PRIu64"; code[i] = 0x%04"PRIx16
                   " while reference[i] = 0x%04"PRIx16"\n",
-                  i,b[i],c[i]);
+                  i,rem_3329(b[i]),rem_3329(c[i]));
            return 1;
          }
       }
@@ -12140,7 +12147,6 @@ int test_mlkem_intt(void)
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_mulcache_compute(void)
@@ -15618,6 +15624,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
   functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
+  functionaltest(all,"mlkem_intt",test_mlkem_intt);
   functionaltest(all,"mlkem_ntt",test_mlkem_ntt);
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
   functionaltest(all,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
@@ -15679,7 +15686,6 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_16",test_bignum_copy_row_from_table_16);
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
-    functionaltest(arm,"mlkem_intt",test_mlkem_intt);
     functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
     functionaltest(arm,"mlkem_tobytes",test_mlkem_tobytes);
     functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);

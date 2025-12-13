@@ -347,6 +347,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "bignum_copy_row_from_table_16" subroutine_signatures)
     BIGNUM_COPY_ROW_FROM_TABLE_16_SUBROUTINE_CORRECT
     BIGNUM_COPY_ROW_FROM_TABLE_16_EXEC;;
