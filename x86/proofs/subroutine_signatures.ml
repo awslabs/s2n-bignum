@@ -4793,6 +4793,40 @@ let subroutine_signatures = [
    ])
 );
 
+("mlkem_intt_x86",
+  ([(*args*)
+     ("a", "int16_t[static 256]", (*is const?*)"false");
+     ("qdata", "int16_t[static 624]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 2(* elem bytesize *));
+    ("qdata", "624"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mlkem_ntt_x86",
+  ([(*args*)
+     ("a", "int16_t[static 256]", (*is const?*)"false");
+     ("qdata", "int16_t[static 624]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 2(* elem bytesize *));
+    ("qdata", "624"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mlkem_reduce",
   ([(*args*)
      ("a", "int16_t[static 256]", (*is const?*)"false");

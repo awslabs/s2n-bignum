@@ -3965,6 +3965,7 @@ let X86_CONV (decode_ths:thm option array) ths tm =
                 READ_BOTTOM_128] THENC
    DEPTH_CONV WORD_NUM_RED_CONV THENC
    REWRITE_CONV[SEQ; condition_semantics] THENC
+   REWRITE_CONV[bytesize] THENC (* bytesize in add_{load,store}_event *)
    GEN_REWRITE_CONV TOP_DEPTH_CONV
     [UNDEFINED_VALUE; UNDEFINED_VALUES; SEQ_ID] THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV
@@ -4481,7 +4482,18 @@ let X86_ADD_RETURN_NOSTACK_TAC =
       REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
       coreth in
     REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-    MP_TAC coreth THEN REWRITE_TAC[fst execth] THEN
+    (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
+    (if is_exists (concl coreth) then
+      ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
+      (* f_events of the current goal will have additional args, compared to
+         f_events of coreth: returnaddress and stackpointer. This will be
+         filled in later. *)
+      META_EXISTS_TAC THEN
+      FIRST_X_ASSUM MP_TAC
+     else
+      (* th is functional correctness *) MP_TAC coreth) THEN
+
+    REWRITE_TAC[fst execth] THEN
     REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
     REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALLPAIRS; ALL] THEN
     REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
@@ -4497,6 +4509,8 @@ let X86_ADD_RETURN_NOSTACK_TAC =
      [SUBSUMED_MAYCHANGE_TAC;
       MAYCHANGE_IDEMPOT_TAC;
       REPEAT GEN_TAC THEN REWRITE_TAC(!simulation_precanon_thms) THEN
+      (* Strip all clauses of conjunctions in the LHS of ==> other than the
+         last MAYCHANGE predicate *)
       REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
       REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
       REWRITE_TAC[GSYM SEQ_ASSOC] THEN
@@ -4511,6 +4525,8 @@ let X86_ADD_RETURN_NOSTACK_TAC =
       REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
       REPEAT(FIRST_X_ASSUM(DISJ_CASES_TAC o check
        (can (term_match [] `read PC s = a \/ Q` o concl)))) THEN
+      (* Break 'exists e2. ...' for safety proofs *)
+      REPEAT(STRIP_EXISTS_ASSUM_TAC) THEN
       X86_STEPS_TAC execth [1] THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]];;
 
@@ -4586,10 +4602,36 @@ let X86_CORE_PROMOTE =
     REWRITE_TAC[BYTES_LOADED_BUTLAST]) in
   let rule1 = MATCH_MP(CONJUNCT1 lemma)
   and rule2 = MATCH_MP(CONJUNCT2 lemma) in
-  fun th -> let avs,bod = strip_forall(concl th) in
-            let sth = SPECL avs th in
-            let gth = try rule2 sth with Failure _ -> rule1 sth in
-            GENL avs gth;;
+  fun th ->
+    (* If th is a functional correctness property *)
+    if is_forall (concl th) then
+      let avs,bod = strip_forall(concl th) in
+      let sth = SPECL avs th in
+      let gth = try rule2 sth with Failure _ -> rule1 sth in
+      GENL avs gth
+    else
+      if not (is_exists (concl th))
+      then failwith ("X86_CORE_PROMOTE: th is neither forall " ^
+          "(functional correctness) nor exists (safety property)") else
+      (* th is a safety property *)
+      let the_goal = concl th in
+      let ex_var,body = dest_exists the_goal in (* ex_var is f_events *)
+      let univ_vars,body = strip_forall body in
+      let new_body:term =
+        concl (try rule2 (ASSUME body) with Failure _ -> rule1 (ASSUME body)) in
+      let new_goal = mk_exists (ex_var, list_mk_forall (univ_vars,new_body)) in
+      prove(new_goal,
+        MP_TAC th THEN STRIP_TAC THEN
+        (* exists f_events ... *)
+        EXISTS_TAC ex_var THEN
+        (* unify all forall x.. *)
+        FIRST_X_ASSUM MP_TAC THEN
+        REPEAT (MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
+        STRIP_TAC THEN
+        (* The interesting part *)
+        ((MATCH_MP_TAC (CONJUNCT2 lemma)) ORELSE
+         (MATCH_MP_TAC (CONJUNCT1 lemma))) THEN FIRST_X_ASSUM ACCEPT_TAC);;
+
 
 let X86_PROMOTE_RETURN_NOSTACK_TAC mc core =
   X86_ADD_RETURN_NOSTACK_TAC (X86_MK_EXEC_RULE mc) (X86_CORE_PROMOTE core);;
@@ -4832,11 +4874,39 @@ let ADD_IBT_TAC =
     fun fullmc trimc ->
      GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [GSYM trimc]
      (GEN_REWRITE_RULE RAND_CONV [pth] fullmc) in
+  (* If the goal is 'exists f_events. ..', instantiate f_events using
+     the f_events in th_noexists. pc is replaced with 'pc + 4'. *)
+  let witness_f_events_tac (th_noexists:thm): tactic =
+    W (fun (asl,w) ->
+      if not (is_exists w) then ALL_TAC else
+      let f_events_term = find_term (fun t ->
+        is_comb t && name_of(fst(strip_comb t)) = "f_events")
+        (concl th_noexists) in
+
+      let f_events,args = strip_comb f_events_term in
+
+      let new_argdecls,new_args = unzip (map (fun t ->
+        if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
+        else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
+      let new_f_events = list_mk_abs
+        (new_argdecls,list_mk_comb(f_events,new_args)) in
+      EXISTS_TAC new_f_events
+    ) in
   fun fullmc trimc th ->
     let expth = EXPAND_TRIMMED_RULE fullmc trimc in
-    W(fun (asl,w) ->
-          let avs = fst(strip_forall w) in
-          MAP_EVERY X_GEN_TAC avs THEN MP_TAC(SPECL (map tweak avs) th)) THEN
+    MP_TAC th THEN
+    (* If th is a safety property, it has 'exists f_events. ...'. *)
+    (if is_exists (concl th) then
+      STRIP_TAC (*strip exists *) THEN FIRST_X_ASSUM MP_TAC
+    else ALL_TAC) THEN
+    DISCH_THEN (fun th_noexists ->
+        witness_f_events_tac th_noexists THEN MP_TAC th_noexists) THEN
+    (* Now the path is irrelevant to whether th is safety or functional
+      correctness proof *)
+    DISCH_THEN (fun th -> W(fun (asl,w) ->
+      let avs = fst(strip_forall w) in
+      MAP_EVERY X_GEN_TAC avs THEN
+      MP_TAC(SPECL (map tweak avs) th))) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN
     REWRITE_TAC[C_ARGUMENTS; C_RETURN;
                 MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
@@ -4863,9 +4933,13 @@ let ADD_IBT_TAC =
       FIRST_X_ASSUM ACCEPT_TAC];;
 
 let ADD_IBT_RULE th =
+  let the_concl = concl th in
+  (* If th is safety property, it starts with `exists f_events. ...` *)
+  let the_concl = if is_exists the_concl then
+    snd (dest_exists the_concl) else the_concl in
   let bldat =
    rand(lhand(body(lhand(rator
-    (repeat (snd o dest_imp) (snd(strip_forall(concl th)))))))) in
+    (repeat (snd o dest_imp) (snd(strip_forall(the_concl)))))))) in
   let trimctm = if is_const bldat then bldat else lhand bldat in
   let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
   let fullmctm = rand(rand(concl trimcd)) in
