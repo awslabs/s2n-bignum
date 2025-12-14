@@ -1075,3 +1075,94 @@ let MLKEM_REJ_UNIFORM_SUBROUTINE_CORRECT = prove
   CONV_TAC TWEAK_CONV THEN
   MATCH_ACCEPT_TAC(ADD_IBT_RULE
    (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_CORRECT)));;
+
+(* ------------------------------------------------------------------------- *)
+(* Correctness of Windows ABI version.                                       *)
+(* ------------------------------------------------------------------------- *)
+
+let mlkem_rej_uniform_windows_mc = define_from_elf "mlkem_rej_uniform_windows_mc"
+      "x86/mlkem/mlkem_rej_uniform_VARIABLE_TIME.obj";;
+
+let mlkem_rej_uniform_windows_tmc =
+  define_trimmed "mlkem_rej_uniform_windows_tmc" mlkem_rej_uniform_windows_mc;;
+
+let MLKEM_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
+      12 divides val buflen /\
+      8 * val buflen = 12 * LENGTH inlist /\
+      ALL (nonoverlapping (word_sub stackpointer (word 544),544))
+          [(word pc,LENGTH mlkem_rej_uniform_windows_tmc);
+           (buf,val buflen); (table,4096)] /\
+      ALL (nonoverlapping (res,512))
+          [(word pc,LENGTH mlkem_rej_uniform_windows_tmc);
+           (word_sub stackpointer (word 544),552)]
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) mlkem_rej_uniform_windows_tmc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                WINDOWS_C_ARGUMENTS [res;buf;buflen;table] s /\
+                (read DF s <=> false) /\
+                wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
+                wordlist_from_memory(buf,LENGTH inlist) s = inlist)
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                let inlist' = MAP (word_zx:12 word->16 word) inlist in
+                let outlist =
+                  SUB_LIST (0,256) (FILTER (\x. val x < 3329) inlist') in
+                let outlen = LENGTH outlist in
+                C_RETURN s = word outlen /\
+                wordlist_from_memory(res,outlen) s = outlist)
+          (MAYCHANGE [RSP] ,,
+           WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,512);
+                      memory :> bytes(word_sub stackpointer (word 544),544)])`,
+  let TWEAK_CONV =
+    TOP_DEPTH_CONV let_CONV THENC
+    REWRITE_CONV[wordlist_from_memory] THENC
+    TOP_DEPTH_CONV DIMINDEX_CONV THENC
+    ONCE_REWRITE_CONV [ARITH_RULE `x = 12 * y <=> 12 * y = x`] THENC
+    SIMP_CONV[] THENC NUM_REDUCE_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  WINDOWS_X86_WRAP_STACK_TAC
+    mlkem_rej_uniform_windows_tmc mlkem_rej_uniform_tmc
+    (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_CORRECT)
+    `[]` 528);;
+
+let MLKEM_REJ_UNIFORM_WINDOWS_SUBROUTINE_CORRECT = time prove
+ (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress.
+      12 divides val buflen /\
+      8 * val buflen = 12 * LENGTH inlist /\
+      ALL (nonoverlapping (word_sub stackpointer (word 544),544))
+          [(word pc,LENGTH mlkem_rej_uniform_windows_mc);
+           (buf,val buflen); (table,4096)] /\
+      ALL (nonoverlapping (res,512))
+          [(word pc,LENGTH mlkem_rej_uniform_windows_mc);
+           (word_sub stackpointer (word 544),552)]
+      ==> ensures x86
+           (\s. bytes_loaded s (word pc) mlkem_rej_uniform_windows_mc /\
+                read RIP s = word pc /\
+                read RSP s = stackpointer /\
+                read (memory :> bytes64 stackpointer) s = returnaddress /\
+                WINDOWS_C_ARGUMENTS [res;buf;buflen;table] s /\
+                (read DF s <=> false) /\
+                wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
+                wordlist_from_memory(buf,LENGTH inlist) s = inlist)
+           (\s. read RIP s = returnaddress /\
+                read RSP s = word_add stackpointer (word 8) /\
+                let inlist' = MAP (word_zx:12 word->16 word) inlist in
+                let outlist =
+                  SUB_LIST (0,256) (FILTER (\x. val x < 3329) inlist') in
+                let outlen = LENGTH outlist in
+                C_RETURN s = word outlen /\
+                wordlist_from_memory(res,outlen) s = outlist)
+          (MAYCHANGE [RSP] ,,
+           WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(res,512);
+                      memory :> bytes(word_sub stackpointer (word 544),544)])`,
+  let TWEAK_CONV =
+    TOP_DEPTH_CONV let_CONV THENC
+    REWRITE_CONV[wordlist_from_memory] in
+  CONV_TAC TWEAK_CONV THEN
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+   (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;
