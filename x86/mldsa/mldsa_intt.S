@@ -69,7 +69,32 @@ vpblendd        ymm\r3,ymm\r0,ymm\r1,0xAA
  */
 .macro butterfly l,h,zl0=1,zl1=1,zh0=2,zh1=2
 vpsubd          ymm12,ymm\l,ymm\h
+/*
+ * VEX Encoding Optimization for Platform-Independent Code
+ *
+ * Some assemblers (notably clang) will automatically swap operands of
+ * commutative instructions like VPADDD to use shorter encodings, while others
+ * (like gcc) may not. This causes different machine code across platforms.
+ *
+ * VEX prefixes come in two forms:
+ * - 2-byte VEX (0xC5): Can only be used when the ModR/M.rm operand is ymm0-7
+ * - 3-byte VEX (0xC4): Required when ModR/M.rm operand is ymm8-15
+ *
+ * When one operand is in ymm0-7 and another is in ymm8-15, we explicitly
+ * place the lower-numbered register (ymm0-7) as the second source operand
+ * to enable the 2-byte VEX encoding. Since VPADDD is commutative, this
+ * produces identical results while ensuring consistent machine code across
+ * different assemblers.
+ *
+ * Example:
+ *   VPADDD ymm4, ymm4, ymm8  -> 3-byte VEX (0xC4 0xC1 0x5D 0xFE 0xE0)
+ *   VPADDD ymm4, ymm8, ymm4  -> 2-byte VEX (0xC5 0xBD 0xFE 0xE4) ✓ preferred
+ */
+.if (\h < 8) && (\l >= 8)
+vpaddd          ymm\l,ymm\l,ymm\h
+.else
 vpaddd          ymm\l,ymm\h,ymm\l
+.endif
 
 vpmuldq         ymm13,ymm12,ymm\zl0
 vmovshdup       ymm\h,ymm12
