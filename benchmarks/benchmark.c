@@ -1530,9 +1530,9 @@ int main(int argc, char *argv[])
   timingtest(arm,"mlkem_mulcache_compute",call_mlkem_mulcache_compute);
   timingtest(all,"mlkem_ntt",call_mlkem_ntt);
   timingtest(all,"mlkem_reduce",call_mlkem_reduce);
+  timingtest(all,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
   timingtest(all,"mlkem_tobytes",call_mlkem_tobytes);
   timingtest(arm,"mlkem_tomont",call_mlkem_tomont);
-  timingtest(all,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
   timingtest(!arm,"mldsa_ntt",call_mldsa_ntt);
   timingtest(!arm,"mldsa_poly_reduce",call_mldsa_poly_reduce);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
