@@ -2120,21 +2120,32 @@ let SAFE_META_EXISTS_TAC (freevars:term list ref): tactic =
     let _ = freevars := fvs in
     META_EXISTS_TAC (asl,w);;
 
-let SAFE_UNIFY_REFL_TAC (allowed_vars_ref:term list ref): tactic =
+let SAFE_UNIFY_REFL_TAC (allowed_vars_ref:term list ref)
+    (allowed_var_prefixes_ref:string list ref): tactic =
   fun (asl,w) ->
     let allowed_vars = !allowed_vars_ref in
+    let allowed_var_prefixes = !allowed_var_prefixes_ref in
+
     let w_lhs,w_rhs = dest_eq w in
     let vars_to_exclude =
       if is_var w_rhs then []
       else snd (strip_comb w_rhs) in
+    (* Check whether there is unlisted usage of free var in LHS of equality *)
     let lhs_vars = subtract (frees w_lhs) vars_to_exclude in
-    if subset lhs_vars allowed_vars then
+    let used_vars = subtract lhs_vars allowed_vars in
+    let used_vars = filter (fun v ->
+      let n = name_of v in
+      forall (fun pfx -> not (String.starts_with ~prefix:pfx n))
+          allowed_var_prefixes) used_vars in
+    if List.is_empty used_vars then
       UNIFY_REFL_TAC (asl,w)
     else
      (let diff = subtract lhs_vars allowed_vars in
       Printf.printf "SAFE_UNIFY_REFL_TAC: uses unaccepted variable(s)\n";
       Printf.printf "Allowed vars: %s\n"
         (String.concat ", " (map string_of_term allowed_vars));
+      Printf.printf "Additionally allowed var name prefixes: %s\n"
+        (String.concat ", " (allowed_var_prefixes));
       Printf.printf "Disallowed vars that are used: %s\n"
         (String.concat ", " (map string_of_term diff));
       failwith "SAFE_UNIFY_REFL_TAC");;
@@ -2152,7 +2163,7 @@ let type_check (t:term) (ty:hol_type): unit =
     ();;
 
 (* ------------------------------------------------------------------------- *)
-(* Extra definitions for list                                                *)
+(* Extra definitions and theorems for list                                   *)
 (* ------------------------------------------------------------------------- *)
 
 let ENUMERATEL =
@@ -2169,6 +2180,23 @@ let ENUMERATEL_APPEND_ZERO = prove(
     APPEND (ENUMERATEL 0 f) l = l /\
     APPEND l (ENUMERATEL 0 f) = l`,
   REWRITE_TAC [ENUMERATEL;APPEND;APPEND_NIL]);;
+
+let ALL_IMP2 = prove(`forall (l:(A)list).
+  (forall x. P x ==> Q x) ==> ALL P l ==> ALL Q l`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ALL_IMP THEN
+  EXISTS_TAC `P:A->bool` THEN ASM_METIS_TAC[]);;
+
+let ALL_F = prove(`forall (l:(A)list) h. ALL (\x. false) (CONS h l) <=> F`,
+  REWRITE_TAC[ALL]);;
+
+let EX_SUBSET_LIST = prove(`forall (l:(A)list) P l2.
+  EX P l /\ ALL (\x. MEM x l2) l ==> EX P l2`,
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[EX];
+
+    REWRITE_TAC[EX;ALL] THEN
+    ASM_MESON_TAC[EX_MEM]
+  ]);;
 
 (* ------------------------------------------------------------------------- *)
 (* OCaml functions to merge diffs (called 'actions') that are used for       *)

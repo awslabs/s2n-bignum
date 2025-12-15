@@ -145,6 +145,7 @@ OBJ = curve25519/bignum_add_p25519.o \
       mlkem/mlkem_intt.o \
       mlkem/mlkem_ntt.o \
       mlkem/mlkem_reduce.o \
+      mlkem/mlkem_tobytes.o \
       p256/bignum_add_p256.o \
       p256/bignum_bigendian_4.o \
       p256/bignum_cmul_p256.o \

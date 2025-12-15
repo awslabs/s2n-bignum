@@ -34,6 +34,7 @@ find_stack_access_size `MAYCHANGE [memory :> bytes(z,8 * 8);
    as the unversally quantified variables that are public information. *)
 let gen_mk_safety_spec
     ?(coda_pc_range:(int*int) option) (* when coda is used: (begin, len) *)
+    ~(keep_maychanges:bool)
     (fnargs,_,meminputs,memoutputs,memtemps)
     (subroutine_correct_th:thm) exec
     (find_eq_stackpointer:term->bool)
@@ -174,9 +175,11 @@ let gen_mk_safety_spec
 
   (* Filter unused forall vars *)
   let spec_without_quantifiers =
+    let maychanges = if keep_maychanges then fnspec_maychanges
+      else mk_abs(mk_var("s",state_ty), mk_abs(mk_var("s'",state_ty), `true`))
+      in
     let body = list_mk_icomb "ensures"
-        [arch_const;precond;postcond;
-        mk_abs(mk_var("s",state_ty), mk_abs(mk_var("s'",state_ty), `true`))] in
+        [arch_const;precond;postcond;maychanges] in
     if fnspec_globalasms = `true` then body
     else mk_imp(fnspec_globalasms,body) in
   let the_e_var = mk_var("e", `:(uarch_event)list`) in
@@ -224,43 +227,60 @@ let DISCHARGE_MEMACCESS_INBOUNDS_TAC =
         `memaccess_inbounds (CONS a b) = memaccess_inbounds (APPEND [a] b)` in
   let append_nil_th =
       MESON[APPEND]
-        `memaccess_inbounds (APPEND [] b) = memaccess_inbounds b` in
+        `memaccess_inbounds (APPEND [] b) = memaccess_inbounds b /\
+         memaccess_inbounds (APPEND (APPEND [] []) b) = memaccess_inbounds b` in
   let discharge_using_asm_tac:tactic =
     FIRST_X_ASSUM (fun th ->
-    find_term (fun t -> name_of t = "memaccess_inbounds") (concl th);
-    MP_TAC th) THEN ASM_REWRITE_TAC[] THEN
+      find_term (fun t -> name_of t = "memaccess_inbounds") (concl th);
+      MP_TAC th) THEN ASM_REWRITE_TAC[] THEN
     (* this is sometimes needed *) REWRITE_TAC[APPEND] THEN
+    (* A moree general case *)
+    MATCH_MP_TAC MEMACCESS_INBOUNDS_MEM THEN
+    REWRITE_TAC[ALL;MEM] (* this must resolve all ALL (\x. MEM ..) goals *) THEN
     NO_TAC in
-  (* Case 1. If the exactly same memaccess_inbounds exists as assumption,
-     just use it. *)
-   (discharge_using_asm_tac) ORELSE
 
-  (* Case 2. if the goal is simply a concrete list of events, use an
-     existing tactic. *)
-   (DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC THEN NO_TAC) ORELSE
+  let rec main_tac (asl,w) =
+    (* Case 1. If the exactly same memaccess_inbounds exists as assumption,
+      just use it. *)
+    ((discharge_using_asm_tac) ORELSE
 
-  (* Caes 3. If the goal consist of memaccess_inbounds of a previous trace which
-     can be discharged by assumption, preceded by a concrete events list,
-     apply MEMACCESS_INBOUNDS_APPEND and prove it *)
-    (* Move the inner CONS to the outermost place *)
-   (REWRITE_TAC[CONJUNCT2 APPEND] THEN
-    (* Convert the CONS sequence in the first argument of memaccess_inbounds to
-       APPEND *)
-    CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
+    (* Case 2. if the goal is simply a concrete list of events, use an
+      existing tactic. *)
+    (DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC THEN NO_TAC) ORELSE
 
-    GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
-    CONJ_TAC THENL [
-      (* The new, concrete event trace. *)
-      DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
-      (* The existing event trace. *)
-      REWRITE_TAC[append_nil_th] THEN
-      discharge_using_asm_tac
-    ]) ORELSE
+    (* Caes 3. If the goal consist of memaccess_inbounds of a previous trace which
+      can be discharged by assumption, followed by a concrete events list,
+      apply MEMACCESS_INBOUNDS_APPEND and prove it *)
+      (* Move the inner CONS to the outermost place *)
+    (REWRITE_TAC[CONJUNCT2 APPEND] THEN
+      (* Convert the CONS sequence in the first argument of memaccess_inbounds to
+        APPEND *)
+      CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
 
-   FAIL_TAC
-    ("DISCHARGE_MEMACCESS_INBOUNDS_TAC could not identify the pattern." ^
-     "Please check whether the event list in assumption matches the event " ^
-     "list in the conclusion");;
+      GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
+      CONJ_TAC THENL [
+        (* The new, concrete event trace. *)
+        DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
+        (* The existing event trace. *)
+        REWRITE_TAC[append_nil_th] THEN
+        main_tac (* recursively call *)
+      ]) ORELSE
+
+      (* Case 4. Reverse of case3 :
+        memaccess_inbounds (APPEND f_events <concrete events>) ... *)
+    (GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
+      CONJ_TAC THENL [
+        (* The existing event trace. *)
+        main_tac; (* recursively call *)
+        (* The new, concrete event trace. *)
+        DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
+      ]) ORELSE
+
+    FAIL_TAC
+      ("DISCHARGE_MEMACCESS_INBOUNDS_TAC could not identify the pattern." ^
+      "Please check whether the event list in assumption matches the event " ^
+      "list in the conclusion")) (asl,w)
+  in main_tac;;
 
 let mk_freshvar =
   let n = ref 0 in
@@ -336,7 +356,7 @@ let rec WHILE_TAC (flag:bool ref) tac w =
 
 (* public_vars describe the HOL Light variables that will contain public
    information. This is for faster symbolic simulation. *)
-let GEN_PROVE_SAFETY_SPEC =
+let GEN_PROVE_SAFETY_SPEC_TAC =
   let pth =
     prove(`forall (e:(uarch_event)list) e2.
         e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
@@ -344,9 +364,9 @@ let GEN_PROVE_SAFETY_SPEC =
   let qth =
     prove(`memaccess_inbounds [] [] []`, MESON_TAC[memaccess_inbounds;ALL]) in
 
-  let mainfn ?(public_vars:term list option) exec
-    (extra_unpack_thms:thm list)
-    single_step_tac
+  let mainfn ?(public_vars:term list option)
+    ?(tac_before_maychange_simp:tactic option) exec
+    (extra_unpack_thms:thm list) single_step_tac
     :tactic =
     W (fun (asl,w) ->
       let f_events = fst (dest_exists w) in
@@ -362,7 +382,7 @@ let GEN_PROVE_SAFETY_SPEC =
         snd (dest_eq read_pc_eq) in
 
       X_META_EXISTS_TAC f_events THEN
-      REWRITE_TAC[C_ARGUMENTS;ALL;ALLPAIRS;NONOVERLAPPING_CLAUSES;fst exec] THEN
+      REWRITE_TAC[C_ARGUMENTS;ALL;ALLPAIRS;fst exec] THEN
       REWRITE_TAC extra_unpack_thms THEN
       REPEAT_GEN_AND_OFFSET_STACKPTR_TAC THEN
       TRY DISCH_TAC THEN
@@ -397,6 +417,8 @@ let GEN_PROVE_SAFETY_SPEC =
               single_step_tac exec ("s" ^ string_of_int !i)))
         THEN
 
+        (match tac_before_maychange_simp with
+         | Some tac -> tac | None -> ALL_TAC) THEN
         SIMPLIFY_MAYCHANGES_TAC THEN
         ABBREV_TRACE_TAC stored_abbrevs THEN CLARIFY_TAC)) THEN
 
@@ -449,12 +471,22 @@ let NIL_IMPLIES_APPEND_EQ =
 let EXISTS_E2_TAC allowed_vars_e =
   (* it could be NIL *)
   (MATCH_MP_TAC NIL_IMPLIES_APPEND_EQ THEN CONJ_TAC THENL [
-    REFL_TAC; SAFE_UNIFY_REFL_TAC allowed_vars_e
+    REFL_TAC; SAFE_UNIFY_REFL_TAC allowed_vars_e (ref [])
   ]) ORELSE
+  (* Apply CONS_TO_APPEND_CONV to the heads of the events *)
   (CONV_TAC (TRY_CONV (LAND_CONV CONS_TO_APPEND_CONV)) THEN
    TRY (GEN_REWRITE_TAC LAND_CONV [APPEND_ASSOC]) THEN
    AP_THM_TAC THEN AP_TERM_TAC THEN
-   SAFE_UNIFY_REFL_TAC allowed_vars_e);;
+   SAFE_UNIFY_REFL_TAC allowed_vars_e (ref [])) ORELSE
+  (* When the goal is
+     CONS(CONS(...(APPEND a (CONS(CONS(... e)))))) = APPEND e2 e
+     May appear when dealing with register spills in subroutines
+  *)
+  (CONV_TAC (TRY_CONV (LAND_CONV (ONCE_DEPTH_CONV CONS_TO_APPEND_CONV))) THEN
+   CONV_TAC (TRY_CONV (LAND_CONV (ONCE_DEPTH_CONV CONS_TO_APPEND_CONV))) THEN
+   GEN_REWRITE_TAC (LAND_CONV o DEPTH_CONV) [APPEND_ASSOC] THEN
+   AP_THM_TAC THEN AP_TERM_TAC THEN
+   SAFE_UNIFY_REFL_TAC allowed_vars_e (ref []));;
 
 (* Given a goal
   `|- exists f_events. forall ...
@@ -694,9 +726,14 @@ let UNIFY_F_EVENTS_TAC =
         FAIL_TAC ("This variable may not fit in bitwidth of word: " ^
             (string_of_term x)); ALL_TAC ]) word_args)
   THEN
-  (SAFE_UNIFY_REFL_TAC (ref []) ORELSE
+  (SAFE_UNIFY_REFL_TAC (ref [])
+      (ref ["f_events_callee"(* allow callee's f_events *)]) ORELSE
     (PRINT_GOAL_TAC THEN FAIL_TAC "UNIFY_F_EVENTS_TAC"));;
 
+(* When the goal has conclusion
+    ... = f_events ...  or
+    ... = (APPEND or CONS) ... f_events ...,
+  unify f_events with the concrete expression in LHS. *)
 let FULL_UNIFY_F_EVENTS_TAC:tactic =
   (* If t is `APPEND a b`, return Some (a,b) *)
   let dest_append (t:term):(term*term) option =

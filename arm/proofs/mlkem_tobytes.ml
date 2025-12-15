@@ -222,6 +222,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "mlkem_tobytes" subroutine_signatures)
     MLKEM_TOBYTES_SUBROUTINE_CORRECT
     MLKEM_TOBYTES_EXEC;;
@@ -245,4 +246,4 @@ let MLKEM_TOBYTES_SUBROUTINE_SAFE = time prove
                         memaccess_inbounds e2 [a,512; r,384] [r,384])
                (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC ~public_vars:public_vars MLKEM_TOBYTES_EXEC);;
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_TOBYTES_EXEC);;
