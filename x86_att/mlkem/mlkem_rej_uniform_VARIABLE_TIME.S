@@ -29,9 +29,9 @@
 // Microsoft x64 ABI:   RCX = r, RDX = buf, R8 = buflen, R9 = table
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum_x86.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
-.intel_syntax noprefix
+
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
@@ -43,7 +43,7 @@
 //
 // There are just a couple of minor changes:
 //
-// * Use xmm3 in place of xmm6, so we don't need to save/restore it for Windows
+// * Use %xmm3 in place of %xmm6, so we don't need to save/restore it for Windows
 // * Directly test for null input (buflen = 0), and skip body and return 0
 
 S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
@@ -51,73 +51,73 @@ S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        CFI_PUSH(rdi)
-        CFI_PUSH(rsi)
-        mov     rdi, rcx
-        mov     rsi, rdx
-        mov     rdx, r8
-        mov     rcx, r9
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
+        movq    %rcx, %rdi
+        movq    %rdx, %rsi
+        movq    %r8, %rdx
+        movq    %r9, %rcx
 #endif
 
         CFI_DEC_RSP(0x210)
 
-        xor     eax, eax
-        test    rdx, rdx
+        xorl    %eax, %eax
+        testq   %rdx, %rdx
         jz      Lmlkem_rej_uniform_VARIABLE_TIME_end
 
-        movabs  rax, 0xd010d010d010d01
-        movq    xmm0, rax
-        pinsrq  xmm0, rax, 0x1
-        movabs  rax, 0xfff0fff0fff0fff
-        movq    xmm5, rax
-        pinsrq  xmm5, rax, 0x1
-        movabs  rax, 0x504040302010100
-        movq    xmm4, rax
-        movabs  rax, 0xb0a0a0908070706
-        pinsrq  xmm4, rax, 0x1
-        mov     rax, 0x0
-        mov     r8, 0x0
-        mov     r9, 0x5555
+        movabsq $0xd010d010d010d01, %rax
+        movq    %rax, %xmm0
+        pinsrq  $0x1, %rax, %xmm0
+        movabsq $0xfff0fff0fff0fff, %rax
+        movq    %rax, %xmm5
+        pinsrq  $0x1, %rax, %xmm5
+        movabsq $0x504040302010100, %rax
+        movq    %rax, %xmm4
+        movabsq $0xb0a0a0908070706, %rax
+        pinsrq  $0x1, %rax, %xmm4
+        movq    $0x0, %rax
+        movq    $0x0, %r8
+        movq    $0x5555, %r9
 
 Lmlkem_rej_uniform_VARIABLE_TIME_loop:
-        movdqu  xmm2, [rsi+r8]
-        pshufb  xmm2, xmm4
-        movdqa  xmm3, xmm2
-        psrlw   xmm3, 0x4
-        pblendw xmm2, xmm3, 0xaa
-        pand    xmm2, xmm5
-        movdqa  xmm1, xmm0
-        pcmpgtw xmm1, xmm2
-        pmovmskb r11d, xmm1
-        pext    r11, r11, r9
-        mov     r10, r11
-        shl     r10, 0x4
-        movdqu  xmm3, [rcx+r10]
-        pshufb  xmm2, xmm3
-        movdqu  [rsp+2*rax], xmm2
-        popcnt  r11, r11
-        add     rax, r11
-        cmp     rax, 0x100
+        movdqu  (%rsi,%r8), %xmm2
+        pshufb  %xmm4, %xmm2
+        movdqa  %xmm2, %xmm3
+        psrlw   $0x4, %xmm3
+        pblendw $0xaa, %xmm3, %xmm2
+        pand    %xmm5, %xmm2
+        movdqa  %xmm0, %xmm1
+        pcmpgtw %xmm2, %xmm1
+        pmovmskb %xmm1, %r11d
+        pext    %r9, %r11, %r11
+        movq    %r11, %r10
+        shlq    $0x4, %r10
+        movdqu  (%rcx,%r10), %xmm3
+        pshufb  %xmm3, %xmm2
+        movdqu  %xmm2, (%rsp,%rax,2)
+        popcnt  %r11, %r11
+        addq    %r11, %rax
+        cmpq    $0x100, %rax
         jae     Lmlkem_rej_uniform_VARIABLE_TIME_final_copy
-        add     r8, 0xc
-        cmp     rdx, r8
+        addq    $0xc, %r8
+        cmpq    %r8, %rdx
         ja      Lmlkem_rej_uniform_VARIABLE_TIME_loop
 
 Lmlkem_rej_uniform_VARIABLE_TIME_final_copy:
-        mov     rcx, 0x100
-        cmp     rax, 0x100
-        cmova   rax, rcx
-        mov     rsi, rsp
-        mov     rcx, rax
-        shl     rcx, 1
+        movq    $0x100, %rcx
+        cmpq    $0x100, %rax
+        cmova   %rcx, %rax
+        movq    %rsp, %rsi
+        movq    %rax, %rcx
+        shlq    $1, %rcx
         repz  movsb
 
 Lmlkem_rej_uniform_VARIABLE_TIME_end:
         CFI_INC_RSP(0x210)
 
 #if WINDOWS_ABI
-        CFI_POP(rsi)
-        CFI_POP(rdi)
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
         CFI_RET
 
