@@ -25,28 +25,36 @@ let equiv_print_log = ref false;;
    return the address, byte size and constructor name ("bytes64", "bytes", ...).
    Note that this relies on the fact that both armstate and x86state structures
    have the memory field. *)
-let get_memory_read_info (t:term): (term * term * string) option =
-  if not (is_binary ":>" t) then None else
-  let l,r = dest_binary ":>" t in
-  let lname,_ = dest_const l in
-  if lname <> "memory" then None else
-  let c,args = strip_comb r in
-  match fst (dest_const c) with
-  | "bytes64" ->
-    (* args is just a location *)
-    assert (List.length args = 1);
-    Some (List.hd args, `8`, "bytes64")
-  | "bytes128" ->
-    (* args is just a location *)
-    assert (List.length args = 1);
-    Some (List.hd args, `16`, "bytes128")
-  | "bytes" ->
-    (* args is (loc, len). *)
-    assert (List.length args = 1);
-    let a, sz = dest_pair (List.hd args) in
-    Some (a, sz, "bytes")
-  | _ -> (* don't know what it is *)
-    None;;
+let get_memory_read_info =
+  let szs = [
+    "bytes16",`2`;
+    "bytes32",`4`;
+    "bytes64",`8`;
+    "bytes128",`16`;
+    "bytes256",`32`
+  ] in
+  fun (t:term): (term * term * string) option ->
+    if not (is_binary ":>" t) then None else
+    let l,r = dest_binary ":>" t in
+    let lname,_ = dest_const l in
+    if lname <> "memory" then None else
+    let c,args = strip_comb r in
+    let accessor:string = fst (dest_const c) in
+    try
+      let bytewidth:term = assoc accessor szs in
+      (* args is just a location *)
+      assert (List.length args = 1);
+      Some (List.hd args, bytewidth, accessor)
+    with _ ->
+      begin match accessor with
+      | "bytes" ->
+        (* args is (loc, len). *)
+        assert (List.length args = 1);
+        let a, sz = dest_pair (List.hd args) in
+        Some (a, sz, "bytes")
+      | _ -> (* don't know what it is *)
+        None
+      end;;
 
 let get_base_ptr_and_ofs (t:term): term * term =
   try (* t is "word_add baseptr (word ofs)" *)
@@ -1158,7 +1166,9 @@ let simplify_maychanges: term -> term =
 
     let _ = f maychanges in
 
-    (* now merge memory accesses. *)
+    (*** now merge memory accesses. ***)
+
+    (* Collect MAYCHANGE [memory :> ...] *)
     let maychange_mems_merged = ref [] in
     let add_maychange_mem (base_ptr, ofs, len): unit =
       (* if len is 8, just use bytes64. *)
@@ -1167,9 +1177,11 @@ let simplify_maychanges: term -> term =
       let final_term = if len = 8 then
           subst [base_ptr,the_base_ptr] the_memory_base_ptr
         else
-          subst [base_ptr,the_base_ptr;mk_small_numeral len,the_len] the_memory_base_ptr_len in
+          subst [base_ptr,the_base_ptr;mk_small_numeral len,the_len]
+              the_memory_base_ptr_len in
       maychange_mems_merged := !maychange_mems_merged @ [final_term] in
 
+    (* Iteratively consume maychange_mems and make maychange_mems_merged grow *)
     while length !maychange_mems <> 0 do
       let next_term,(ptr,len) = List.hd !maychange_mems in
       if not (is_numeral len) then begin
@@ -1181,8 +1193,10 @@ let simplify_maychanges: term -> term =
       end else
         let baseptr, _ = get_base_ptr_and_constofs ptr in
 
+        (* Find the memory accesses with the same base pointer *)
         let mems_of_interest, remaining = List.partition
-          (fun _,(ptr,len) -> baseptr = fst (get_base_ptr_and_constofs ptr) && is_numeral len)
+          (fun _,(ptr,len) -> baseptr = fst (get_base_ptr_and_constofs ptr) &&
+                              is_numeral len)
           !maychange_mems in
         maychange_mems := remaining;
 

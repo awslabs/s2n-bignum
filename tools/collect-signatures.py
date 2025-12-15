@@ -302,7 +302,6 @@ onlyInArm = [
   "mlkem_intt",
   "mlkem_mulcache_compute",
   "mlkem_rej_uniform_VARIABLE_TIME",
-  "mlkem_tobytes",
   "mlkem_tomont",
 ]
 onlyInX86 = [

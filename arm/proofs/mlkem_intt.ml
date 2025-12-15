@@ -614,6 +614,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "mlkem_intt" subroutine_signatures)
     MLKEM_INTT_SUBROUTINE_CORRECT
     MLKEM_INTT_EXEC;;
@@ -648,4 +649,4 @@ let MLKEM_INTT_SUBROUTINE_SAFE = time prove
                         [a,512; word_sub stackpointer (word 64),64])
                (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC ~public_vars:public_vars MLKEM_INTT_EXEC);;
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_INTT_EXEC);;
