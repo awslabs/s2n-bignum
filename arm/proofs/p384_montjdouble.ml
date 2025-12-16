@@ -24,8 +24,8 @@ needs "arm/proofs/bignum_add_p384.ml";;
 (**** print_literal_from_elf "arm/p384/p384_montjdouble.o";;
  ****)
 
-let p384_montjdouble_mc = define_assert_from_elf
-  "p384_montjdouble_mc" "arm/p384/unopt/p384_montjdouble.o"
+let p384_montjdouble_unopt_mc = define_assert_from_elf
+  "p384_montjdouble_unopt_mc" "arm/p384/unopt/p384_montjdouble.o"
 [
   0xd100c3ff;       (* arm_SUB SP SP (rvalue (word 48)) *)
   0xa90253f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&32))) *)
@@ -1107,15 +1107,15 @@ let p384_montjdouble_mc = define_assert_from_elf
   0xd65f03c0        (* arm_RET X30 *)
 ];;
 
-let P384_MONTJDOUBLE_EXEC = ARM_MK_EXEC_RULE p384_montjdouble_mc;;
+let P384_MONTJDOUBLE_UNOPT_EXEC = ARM_MK_EXEC_RULE p384_montjdouble_unopt_mc;;
 
-(* P384_MONTJDOUBLE_EXEC without sp add, callee save register reloads and ret.
+(* P384_MONTJDOUBLE_UNOPT_EXEC without sp add, callee save register reloads and ret.
    This truncation is for equivalence checking. *)
-let p384_montjdouble_core_mc_def,p384_montjdouble_core_mc,
-    P384_MONTJDOUBLE_CORE_EXEC =
-  mk_sublist_of_mc "p384_montjdouble_core_mc"
-    p384_montjdouble_mc (`0`,`LENGTH p384_montjdouble_mc - 28`)
-    (fst P384_MONTJDOUBLE_EXEC);;
+let p384_montjdouble_unopt_core_mc_def,p384_montjdouble_unopt_core_mc,
+    P384_MONTJDOUBLE_UNOPT_CORE_EXEC =
+  mk_sublist_of_mc "p384_montjdouble_unopt_core_mc"
+    p384_montjdouble_unopt_mc (`0`,`LENGTH p384_montjdouble_unopt_mc - 28`)
+    (fst P384_MONTJDOUBLE_UNOPT_EXEC);;
 
 (* ------------------------------------------------------------------------- *)
 (* Common supporting definitions and lemmas for component proofs.            *)
@@ -1435,8 +1435,8 @@ let DESUM_RULE' = cache DESUM_RULE and DECARRY_RULE' = cache DECARRY_RULE;;
 let PROLOGUE_SUBROUTINE_SIM_TAC corth inargs outarg m inouts =
   let main_tac =
      ARM_SUBROUTINE_SIM_ABBREV_TAC
-      (p384_montjdouble_core_mc,P384_MONTJDOUBLE_CORE_EXEC,0,
-       p384_montjdouble_core_mc,corth)
+      (p384_montjdouble_unopt_core_mc,P384_MONTJDOUBLE_UNOPT_CORE_EXEC,0,
+       p384_montjdouble_unopt_core_mc,corth)
       inargs outarg
   and k = length inouts + 1 in
   W(fun (asl,w) ->
@@ -1447,7 +1447,7 @@ let PROLOGUE_SUBROUTINE_SIM_TAC corth inargs outarg m inouts =
       (find_term (can (term_match [] `read PC s`)) o concl o snd) asl in
     let sname = name_of(rand pcs) in
     let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
-    ARM_STEPS_TAC P384_MONTJDOUBLE_CORE_EXEC ((n+1)--(n+m+k)) THEN
+    ARM_STEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC ((n+1)--(n+m+k)) THEN
     main_tac (name_of dvar') (n+m+k+1));;
 
 (* ------------------------------------------------------------------------- *)
@@ -1456,9 +1456,9 @@ let PROLOGUE_SUBROUTINE_SIM_TAC corth inargs outarg m inouts =
 
 let LOCAL_MONTSQR_P384_CORRECT =
   let lemma = prove(`!z x a pc.
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6)
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc + 0x67c) /\
                   C_ARGUMENTS [z; x] s /\
                   bignum_from_memory (x,6) s = a)
@@ -1474,21 +1474,21 @@ let LOCAL_MONTSQR_P384_CORRECT =
     SUBGOAL_THEN
       `bignum_montsqr_p384_core_mc =
         SUB_LIST (0x67c, LENGTH bignum_montsqr_p384_core_mc)
-                 p384_montjdouble_core_mc` MP_TAC THENL [
+                 p384_montjdouble_unopt_core_mc` MP_TAC THENL [
       REWRITE_TAC[fst BIGNUM_MONTSQR_P384_CORE_EXEC;
-                  bignum_montsqr_p384_core_mc; p384_montjdouble_core_mc] THEN
+                  bignum_montsqr_p384_core_mc; p384_montjdouble_unopt_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC; ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
     ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTSQR_P384_CORE_CORRECT
         (REWRITE_RULE [fst BIGNUM_MONTSQR_P384_CORE_EXEC] th)
         [fst BIGNUM_MONTSQR_P384_CORE_EXEC;
-        fst P384_MONTJDOUBLE_CORE_EXEC])) in
-  REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC]
+        fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC])) in
+  REWRITE_RULE [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC]
     (prove(`!z x a pc returnaddress.
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6)
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc + 0x67c) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [z; x] s /\
@@ -1502,11 +1502,11 @@ let LOCAL_MONTSQR_P384_CORRECT =
               MAYCHANGE MODIFIABLE_SIMD_REGS ,,
               MAYCHANGE [memory :> bytes(z,8 * 6)] ,,
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
-    REWRITE_TAC[fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+    REWRITE_TAC[fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
     ARM_ADD_RETURN_NOSTACK_TAC
-      P384_MONTJDOUBLE_CORE_EXEC
+      P384_MONTJDOUBLE_UNOPT_CORE_EXEC
       ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o
-        REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC;fst BIGNUM_MONTSQR_P384_CORE_EXEC])
+        REWRITE_RULE [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC;fst BIGNUM_MONTSQR_P384_CORE_EXEC])
       lemma)));;
 
 let LOCAL_MONTSQR_P384_TAC =
@@ -1522,9 +1522,9 @@ let LOCAL_MONTSQR_P384_TAC =
 
 let LOCAL_MONTMUL_P384_CORRECT =
   let lemma = prove(`!z x y a b pc.
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6)
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc+16) /\
                   C_ARGUMENTS [z; x; y] s /\
                   bignum_from_memory (x,6) s = a /\
@@ -1542,23 +1542,23 @@ let LOCAL_MONTMUL_P384_CORRECT =
     SUBGOAL_THEN
       `bignum_montmul_p384_core_mc =
         SUB_LIST (16, LENGTH bignum_montmul_p384_core_mc)
-                 p384_montjdouble_core_mc` MP_TAC THENL [
+                 p384_montjdouble_unopt_core_mc` MP_TAC THENL [
       REWRITE_TAC[fst BIGNUM_MONTMUL_P384_CORE_EXEC;
-                  bignum_montmul_p384_core_mc; p384_montjdouble_core_mc] THEN
+                  bignum_montmul_p384_core_mc; p384_montjdouble_unopt_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC; ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
       ARM_SUB_LIST_OF_MC_TAC BIGNUM_MONTMUL_P384_CORE_CORRECT
         (REWRITE_RULE [fst BIGNUM_MONTMUL_P384_CORE_EXEC] th)
-        [fst BIGNUM_MONTMUL_P384_CORE_EXEC;fst P384_MONTJDOUBLE_CORE_EXEC])) in
-  REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC]
+        [fst BIGNUM_MONTMUL_P384_CORE_EXEC;fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC])) in
+  REWRITE_RULE [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC]
     (prove(`!z x y a b pc stackpointer returnaddress.
         aligned 16 stackpointer /\
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6) /\
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6) /\
         ALL (nonoverlapping (word_sub stackpointer (word 48),48))
-            [(word pc,LENGTH p384_montjdouble_core_mc); (x,8 * 6); (y,8 * 6); (z,8 * 6)]
+            [(word pc,LENGTH p384_montjdouble_unopt_core_mc); (x,8 * 6); (y,8 * 6); (z,8 * 6)]
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word pc /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
@@ -1575,13 +1575,13 @@ let LOCAL_MONTMUL_P384_CORRECT =
               MAYCHANGE [memory :> bytes(z,8 * 6);
                          memory :> bytes(word_sub stackpointer (word 48),48)] ,,
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
-    REWRITE_TAC[fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+    REWRITE_TAC[fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
     ARM_ADD_RETURN_STACK_TAC
       ~pre_post_nsteps:(4,4)
-      P384_MONTJDOUBLE_CORE_EXEC
+      P384_MONTJDOUBLE_UNOPT_CORE_EXEC
       (let th = REWRITE_RULE [
             fst BIGNUM_MONTMUL_P384_CORE_EXEC;
-            fst P384_MONTJDOUBLE_CORE_EXEC] lemma in
+            fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] lemma in
         CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
       `[X19;X20;X21;X22;X23;X24]` 48));;
 
@@ -1599,9 +1599,9 @@ let LOCAL_MONTMUL_P384_TAC =
 
 let LOCAL_SUB_P384_CORRECT =
   let lemma = prove(`!z x y m n pc.
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6)
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc + 0xb48) /\
                   C_ARGUMENTS [z; x; y] s /\
                   bignum_from_memory (x,6) s = m /\
@@ -1613,20 +1613,20 @@ let LOCAL_SUB_P384_CORRECT =
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,6)])`,
     SUBGOAL_THEN
-      `bignum_sub_p384_mc = SUB_LIST (0xb48, 112) p384_montjdouble_core_mc` MP_TAC THENL [
-      REWRITE_TAC[fst BIGNUM_SUB_P384_EXEC; bignum_sub_p384_mc; p384_montjdouble_core_mc] THEN
+      `bignum_sub_p384_mc = SUB_LIST (0xb48, 112) p384_montjdouble_unopt_core_mc` MP_TAC THENL [
+      REWRITE_TAC[fst BIGNUM_SUB_P384_EXEC; bignum_sub_p384_mc; p384_montjdouble_unopt_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC;
       ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
     ARM_SUB_LIST_OF_MC_TAC BIGNUM_SUB_P384_CORRECT
         (REWRITE_RULE [fst BIGNUM_SUB_P384_EXEC] th)
-        [fst BIGNUM_SUB_P384_EXEC; fst P384_MONTJDOUBLE_CORE_EXEC])) in
-  REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC] (prove(
+        [fst BIGNUM_SUB_P384_EXEC; fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC])) in
+  REWRITE_RULE [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] (prove(
     `!z x y m n pc returnaddress.
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6)
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc + 0xb48) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [z; x; y] s /\
@@ -1638,11 +1638,11 @@ let LOCAL_SUB_P384_CORRECT =
           (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10] ,,
            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
-    REWRITE_TAC[fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+    REWRITE_TAC[fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
     ARM_ADD_RETURN_NOSTACK_TAC
-    P384_MONTJDOUBLE_CORE_EXEC
+    P384_MONTJDOUBLE_UNOPT_CORE_EXEC
     ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o
-     REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC;fst BIGNUM_SUB_P384_EXEC])
+     REWRITE_RULE [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC;fst BIGNUM_SUB_P384_EXEC])
      lemma)));;
 
 let LOCAL_SUB_P384_TAC =
@@ -1659,9 +1659,9 @@ let LOCAL_SUB_P384_TAC =
 
 let LOCAL_ADD_P384_CORRECT =
   let lemma = prove(`!z x y m n pc.
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6)
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc + 0xbb8) /\
                   C_ARGUMENTS [z; x; y] s /\
                   bignum_from_memory (x,6) s = m /\
@@ -1673,21 +1673,21 @@ let LOCAL_ADD_P384_CORRECT =
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,6)])`,
     SUBGOAL_THEN
-      `bignum_add_p384_mc = SUB_LIST (0xbb8, 156) p384_montjdouble_core_mc` MP_TAC THENL [
+      `bignum_add_p384_mc = SUB_LIST (0xbb8, 156) p384_montjdouble_unopt_core_mc` MP_TAC THENL [
       REWRITE_TAC[fst BIGNUM_ADD_P384_EXEC; bignum_add_p384_mc;
-                  p384_montjdouble_core_mc] THEN
+                  p384_montjdouble_unopt_core_mc] THEN
       CONV_TAC (RAND_CONV SUB_LIST_CONV) THEN REFL_TAC;
       ALL_TAC
     ] THEN
     DISCH_THEN (fun th ->
     ARM_SUB_LIST_OF_MC_TAC BIGNUM_ADD_P384_CORRECT
         (REWRITE_RULE [fst BIGNUM_ADD_P384_EXEC] th)
-        [fst BIGNUM_ADD_P384_EXEC; fst P384_MONTJDOUBLE_CORE_EXEC])) in
-  REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC] (prove(
+        [fst BIGNUM_ADD_P384_EXEC; fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC])) in
+  REWRITE_RULE [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] (prove(
     `!z x y m n pc returnaddress.
-        nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc) (z,8 * 6)
+        nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc) (z,8 * 6)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc + 0xbb8) /\
                   read X30 s = returnaddress /\
                   C_ARGUMENTS [z; x; y] s /\
@@ -1699,11 +1699,11 @@ let LOCAL_ADD_P384_CORRECT =
           (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10] ,,
            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
-    REWRITE_TAC[fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+    REWRITE_TAC[fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
     ARM_ADD_RETURN_NOSTACK_TAC
-    P384_MONTJDOUBLE_CORE_EXEC
+    P384_MONTJDOUBLE_UNOPT_CORE_EXEC
     ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o
-     REWRITE_RULE [fst P384_MONTJDOUBLE_CORE_EXEC;fst BIGNUM_ADD_P384_EXEC])
+     REWRITE_RULE [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC;fst BIGNUM_ADD_P384_EXEC])
      lemma)));;
 
 let LOCAL_ADD_P384_TAC =
@@ -1719,17 +1719,17 @@ let LOCAL_ADD_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_WEAKADD_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_core_mc 27 lvs
+  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 27 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
     !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 6)) t = n
     ==>
     aligned 16 (read SP t) /\
-    nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc)
+    nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc)
                    (word_add (read p3 t) (word n3),48)
     ==> ensures arm
-         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
               read PC s = pcin /\
               read SP s = read SP t /\
               read X25 s = read X25 t /\
@@ -1749,14 +1749,14 @@ let LOCAL_WEAKADD_P384_TAC =
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 6)] ,,
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+              fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "n_" o lhand o concl) THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "m_" o lhand o concl) THEN
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`] (1--12) (1--12) THEN
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`] (1--12) (1--12) THEN
   SUBGOAL_THEN `carry_s12 <=> 2 EXP 384 <= m + n` SUBST_ALL_TAC THENL
    [MATCH_MP_TAC FLAG_FROM_CARRY_LE THEN EXISTS_TAC `384` THEN
     MAP_EVERY EXPAND_TAC ["m"; "n"] THEN REWRITE_TAC[GSYM REAL_OF_NUM_ADD] THEN
@@ -1764,9 +1764,9 @@ let LOCAL_WEAKADD_P384_TAC =
     ACCUMULATOR_ASSUM_LIST(MP_TAC o end_itlist CONJ o DECARRY_RULE') THEN
     DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN BOUNDER_TAC[];
     ALL_TAC] THEN
-  ARM_STEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [13] THEN
+  ARM_STEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [13] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_UNMASK_64; NOT_LE]) THEN
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`] (14--27) (14--27) THEN
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`] (14--27) (14--27) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
   MATCH_MP_TAC(MESON[]
    `!x. (x < 2 EXP 384 /\ P x) /\ y = x ==> y < 2 EXP 384 /\ P y`) THEN
@@ -1815,7 +1815,7 @@ let LOCAL_WEAKADD_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUBC9_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_core_mc 86 lvs
+  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 86 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
@@ -1825,7 +1825,7 @@ let LOCAL_CMSUBC9_P384_TAC =
     nonoverlapping (word pc,4284)
                    (word_add (read p3 t) (word n3),48)
     ==> ensures arm
-         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
               read PC s = pcin /\
               read SP s = read SP t /\
               read X25 s = read X25 t /\
@@ -1844,11 +1844,11 @@ let LOCAL_CMSUBC9_P384_TAC =
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 6)] ,,
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+              fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
   ASM_CASES_TAC `n <= p_384` THENL
-   [ASM_REWRITE_TAC[]; ARM_SIM_TAC P384_MONTJDOUBLE_CORE_EXEC (1--86)] THEN
+   [ASM_REWRITE_TAC[]; ARM_SIM_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC (1--86)] THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "n_" o lhand o concl) THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "m_" o lhand o concl) THEN
@@ -1862,7 +1862,7 @@ let LOCAL_CMSUBC9_P384_TAC =
 
   (*** Initial negation of n ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`] (1--13) (1--13) THEN
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`] (1--13) (1--13) THEN
   ABBREV_TAC
    `n' = bignum_of_wordlist
            [sum_s3; sum_s5; sum_s8; sum_s10; sum_s12; sum_s13]` THEN
@@ -1890,7 +1890,7 @@ let LOCAL_CMSUBC9_P384_TAC =
 
   (*** Main sum of products computation +1 ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`] (14--62) (14--62) THEN
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`] (14--62) (14--62) THEN
   ABBREV_TAC `ca = bignum_of_wordlist
    [sum_s40; sum_s57; sum_s58; sum_s59; sum_s60; sum_s61; sum_s62]` THEN
   SUBGOAL_THEN `2 EXP 384 + 12 * m + 9 * n'= ca` MP_TAC THENL
@@ -1914,7 +1914,7 @@ let LOCAL_CMSUBC9_P384_TAC =
 
   (*** The rest of the computation ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`]
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`]
     [64;65;66;67;68;69;70;71; 75;77;80;81;82;83]
     (63--86) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -1967,17 +1967,17 @@ let LOCAL_CMSUBC9_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB41_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_core_mc 44 lvs
+  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 44 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
     !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 6)) t = n
     ==>
     aligned 16 (read SP t) /\
-    nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc)
+    nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc)
                    (word_add (read p3 t) (word n3),48)
     ==> ensures arm
-         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
               read PC s = pcin /\
               read SP s = read SP t /\
               read X25 s = read X25 t /\
@@ -1995,13 +1995,13 @@ let LOCAL_CMSUB41_P384_TAC =
             [memory :> bytes(word_add (read p3 t) (word n3),8 * 6)] ,,
            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+              fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
   (*** Globalize the n <= p_384 assumption ***)
 
   ASM_CASES_TAC `n <= p_384` THENL
-   [ASM_REWRITE_TAC[]; ARM_SIM_TAC P384_MONTJDOUBLE_CORE_EXEC (1--44)] THEN
+   [ASM_REWRITE_TAC[]; ARM_SIM_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC (1--44)] THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "n_" o lhand o concl) THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "m_" o lhand o concl) THEN
@@ -2018,7 +2018,7 @@ let LOCAL_CMSUB41_P384_TAC =
 
   (*** Main shift-subtract block ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`] [6;8;11;13;16;18;20] (1--20) THEN
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`] [6;8;11;13;16;18;20] (1--20) THEN
   ABBREV_TAC `ca = bignum_of_wordlist
    [sum_s6; sum_s8; sum_s11; sum_s13; sum_s16; sum_s18; sum_s20]` THEN
   SUBGOAL_THEN `&2 pow 384 + &4 * &m - &n:int = &ca`
@@ -2080,7 +2080,7 @@ let LOCAL_CMSUB41_P384_TAC =
 
   (*** The rest of the computation ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`]
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`]
     [22;23;24;25;26;27;28;29; 33;35;38;39;40;41]
     (21--44) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -2138,17 +2138,17 @@ let LOCAL_CMSUB41_P384_TAC =
 (* ------------------------------------------------------------------------- *)
 
 let LOCAL_CMSUB38_P384_TAC =
-  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_core_mc 74 lvs
+  ARM_MACRO_SIM_ABBREV_TAC p384_montjdouble_unopt_core_mc 74 lvs
   `!(t:armstate) pcin pcout p3 n3 p1 n1 p2 n2.
     !m. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 6)) t = m
     ==>
     !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 6)) t = n
     ==>
     aligned 16 (read SP t) /\
-    nonoverlapping (word pc,LENGTH p384_montjdouble_core_mc)
+    nonoverlapping (word pc,LENGTH p384_montjdouble_unopt_core_mc)
                    (word_add (read p3 t) (word n3),48)
     ==> ensures arm
-         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+         (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
               read PC s = pcin /\
               read SP s = read SP t /\
               read X25 s = read X25 t /\
@@ -2167,11 +2167,11 @@ let LOCAL_CMSUB38_P384_TAC =
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 6)] ,,
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+              fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
   ASM_CASES_TAC `n <= p_384` THENL
-   [ASM_REWRITE_TAC[]; ARM_SIM_TAC P384_MONTJDOUBLE_CORE_EXEC (1--74)] THEN
+   [ASM_REWRITE_TAC[]; ARM_SIM_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC (1--74)] THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "n_" o lhand o concl) THEN
   FIRST_ASSUM(BIGNUM_DIGITIZE_TAC "m_" o lhand o concl) THEN
@@ -2185,7 +2185,7 @@ let LOCAL_CMSUB38_P384_TAC =
 
   (*** Initial negation of n ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`] (1--13) (1--13) THEN
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`] (1--13) (1--13) THEN
   ABBREV_TAC
    `n' = bignum_of_wordlist
            [sum_s3; sum_s5; sum_s8; sum_s10; sum_s12; sum_s13]` THEN
@@ -2213,7 +2213,7 @@ let LOCAL_CMSUB38_P384_TAC =
 
   (*** Main sum of products computation +1 ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`]
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`]
    [21; 26; 28; 29; 31; 32; 34; 35; 37; 38;
     40; 41; 43; 44; 45; 46; 47; 48; 49; 50]
    (14--50) THEN
@@ -2276,7 +2276,7 @@ let LOCAL_CMSUB38_P384_TAC =
 
   (*** The rest of the computation ***)
 
-  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_CORE_EXEC [`SP`]
+  ARM_XACCSTEPS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC [`SP`]
    [52; 53; 54; 55; 56; 57; 58; 59;  63; 65; 68; 69; 70; 71]
    (51--74) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -2417,10 +2417,10 @@ let P384_MONTJDOUBLE_UNOPT_CORE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer.
         aligned 16 stackpointer /\
         ALL (nonoverlapping (stackpointer,384))
-            [(word pc,LENGTH p384_montjdouble_core_mc); (p1,144); (p3,144)] /\
-        nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_core_mc)
+            [(word pc,LENGTH p384_montjdouble_unopt_core_mc); (p1,144); (p3,144)] /\
+        nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_unopt_core_mc)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word(pc + 0xc6c) /\
                   read SP s = (word_add stackpointer (word 48)) /\
                   C_ARGUMENTS [p3; p1] s /\
@@ -2436,7 +2436,7 @@ let P384_MONTJDOUBLE_UNOPT_CORE_CORRECT = time prove
            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,144);
                       memory :> bytes(stackpointer,384)])`,
-  REWRITE_TAC[FORALL_PAIR_THM;fst P384_MONTJDOUBLE_CORE_EXEC] THEN
+  REWRITE_TAC[FORALL_PAIR_THM;fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN
   MAP_EVERY X_GEN_TAC
    [`p3:int64`; `p1:int64`; `x1:num`; `y1:num`; `z1:num`;
     `pc:num`; `stackpointer:int64`] THEN
@@ -2549,24 +2549,24 @@ needs "arm/proofs/utils/p384_montjdouble_params.ml";;
 (* Prove program equivalence between the base and optimized assemblies.      *)
 (* ------------------------------------------------------------------------- *)
 
-let p384_montjdouble_opt_mc =
-  define_from_elf "p384_montjdouble_opt_mc" "arm/p384/p384_montjdouble.o";;
-let P384_MONTJDOUBLE_OPT_EXEC = ARM_MK_EXEC_RULE p384_montjdouble_opt_mc;;
+let p384_montjdouble_mc =
+  define_from_elf "p384_montjdouble_mc" "arm/p384/p384_montjdouble.o";;
+let P384_MONTJDOUBLE_EXEC = ARM_MK_EXEC_RULE p384_montjdouble_mc;;
 
-let len_p384_montjdouble_opt = count_insts P384_MONTJDOUBLE_OPT_EXEC;;
+let len_p384_montjdouble_opt = count_insts P384_MONTJDOUBLE_EXEC;;
 
 let equiv_goal = mk_equiv_statement
     `aligned 16 stackpointer /\
      ALL (nonoverlapping (stackpointer:int64,384))
-            [(word pc,LENGTH p384_montjdouble_core_mc);
-             (word pc2,LENGTH p384_montjdouble_opt_mc);
+            [(word pc,LENGTH p384_montjdouble_unopt_core_mc);
+             (word pc2,LENGTH p384_montjdouble_mc);
              (p1:int64,144); (p3:int64,144)] /\
      ALL (nonoverlapping (p3,144))
-       [(word pc,LENGTH p384_montjdouble_core_mc);
-        (word pc2,LENGTH p384_montjdouble_opt_mc)]`
+       [(word pc,LENGTH p384_montjdouble_unopt_core_mc);
+        (word pc2,LENGTH p384_montjdouble_mc)]`
     p384_montjdouble_eqin
     p384_montjdouble_eqout
-    p384_montjdouble_core_mc None 0xc6c 0x10bc
+    p384_montjdouble_unopt_core_mc None 0xc6c 0x10bc
     `MAYCHANGE [PC; SP; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                 X11; X12; X13; X14; X15; X16; X17; X19; X20;
                 X21; X22; X23; X24; X25; X26; X30] ,,
@@ -2574,7 +2574,7 @@ let equiv_goal = mk_equiv_statement
      MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
      MAYCHANGE [memory :> bytes(p3,144);
                 memory :> bytes(stackpointer,384)]`
-    p384_montjdouble_opt_mc None 0x18 0x3050
+    p384_montjdouble_mc None 0x18 0x3050
     `MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
                 X11; X12; X13; X14; X15; X16; X17; X19; X20; X21;
                 X22; X23; X24; X25; X26; X27] ,,
@@ -2615,8 +2615,8 @@ let P384_MONTJDOUBLE_EQUIV = time prove(equiv_goal,
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
     SOME_FLAGS;MODIFIABLE_SIMD_REGS;
     ALLPAIRS;ALL;NONOVERLAPPING_CLAUSES;
-    fst P384_MONTJDOUBLE_CORE_EXEC;
-    fst P384_MONTJDOUBLE_OPT_EXEC] THEN
+    fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC;
+    fst P384_MONTJDOUBLE_EXEC] THEN
   REPEAT STRIP_TAC THEN
   (** Initialize **)
   EQUIV_INITIATE_TAC p384_montjdouble_eqin THEN
@@ -2627,7 +2627,7 @@ let P384_MONTJDOUBLE_EQUIV = time prove(equiv_goal,
   EQUIV_STEPS_TAC
     ~dead_value_info_left:p384_montjdouble_unopt_dead_value_info
     ~dead_value_info_right:p384_montjdouble_dead_value_info
-    actions_merged P384_MONTJDOUBLE_CORE_EXEC P384_MONTJDOUBLE_OPT_EXEC THEN
+    actions_merged P384_MONTJDOUBLE_UNOPT_CORE_EXEC P384_MONTJDOUBLE_EXEC THEN
 
   REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
   (* Prove remaining clauses from the postcondition *)
@@ -2654,31 +2654,31 @@ orthogonal_components_conv_custom_cache := fun _ -> None;;
 let event_n_at_pc_goal = mk_eventually_n_at_pc_statement
     `aligned 16 (stackpointer:int64) /\
      ALL (nonoverlapping (stackpointer,384))
-          [(word pc,LENGTH (APPEND p384_montjdouble_core_mc barrier_inst_bytes));
+          [(word pc,LENGTH (APPEND p384_montjdouble_unopt_core_mc barrier_inst_bytes));
            (p1,144); (p3,144)] /\
      nonoverlapping (p3,144)
-        (word pc,LENGTH (APPEND p384_montjdouble_core_mc barrier_inst_bytes))`
+        (word pc,LENGTH (APPEND p384_montjdouble_unopt_core_mc barrier_inst_bytes))`
     [`p1:int64`;`p3:int64`;`stackpointer:int64`]
-    p384_montjdouble_core_mc `pc+0xc6c` `pc+0x10bc`
+    p384_montjdouble_unopt_core_mc `pc+0xc6c` `pc+0x10bc`
     (mk_small_numeral (let _,_,n,_,_ = last !actions1 in n))
     `\s0. read SP s0 = word_add stackpointer (word 48) /\ C_ARGUMENTS [p3; p1] s0`;;
 
 
 let P384_MONTJDOUBLE_UNOPT_EVENTUALLY_N_AT_PC = prove(event_n_at_pc_goal,
-  REWRITE_TAC[LENGTH_APPEND;fst P384_MONTJDOUBLE_CORE_EXEC;
+  REWRITE_TAC[LENGTH_APPEND;fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC;
               BARRIER_INST_BYTES_LENGTH] THEN
   REWRITE_TAC[eventually_n_at_pc;ALL;NONOVERLAPPING_CLAUSES;C_ARGUMENTS] THEN
-  SUBGOAL_THEN `4 divides (LENGTH p384_montjdouble_core_mc)`
+  SUBGOAL_THEN `4 divides (LENGTH p384_montjdouble_unopt_core_mc)`
         (fun th -> REWRITE_TAC[MATCH_MP aligned_bytes_loaded_append th;
-                               fst P384_MONTJDOUBLE_CORE_EXEC]) THENL [
-    REWRITE_TAC[fst P384_MONTJDOUBLE_CORE_EXEC] THEN CONV_TAC NUM_DIVIDES_CONV;
+                               fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC]) THENL [
+    REWRITE_TAC[fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC] THEN CONV_TAC NUM_DIVIDES_CONV;
     ALL_TAC] THEN
   REPEAT GEN_TAC THEN
   STRIP_TAC THEN
   (* now start..! *)
   X_GEN_TAC `s0:armstate` THEN GEN_TAC THEN STRIP_TAC THEN
   (* eventually ==> eventually_n *)
-  PROVE_EVENTUALLY_IMPLIES_EVENTUALLY_N_TAC P384_MONTJDOUBLE_CORE_EXEC);;
+  PROVE_EVENTUALLY_IMPLIES_EVENTUALLY_N_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC);;
 
 (* P384_MONTJDOUBLE_UNOPT_CORE_CORRECT, but with stackpointer preservation
    added to the postcondition whereas SP added to MAYCHANGE.
@@ -2688,10 +2688,10 @@ let P384_MONTJDOUBLE_UNOPT_CORE_CORRECT_SP = time prove
  (`!p3 p1 t1 pc stackpointer.
          aligned 16 stackpointer /\
          ALL (nonoverlapping (stackpointer,384))
-         [word pc,LENGTH p384_montjdouble_core_mc; p1,144; p3,144] /\
-         nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_core_mc)
+         [word pc,LENGTH p384_montjdouble_unopt_core_mc; p1,144; p3,144] /\
+         nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_unopt_core_mc)
          ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_core_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_unopt_core_mc /\
                   read PC s = word (pc + 3180) /\
                   read SP s = word_add stackpointer (word 48) /\
                   C_ARGUMENTS [p3; p1] s /\
@@ -2741,8 +2741,8 @@ let P384_MONTJDOUBLE_UNOPT_CORE_CORRECT_SP = time prove
 
 let P384_MONTJDOUBLE_UNOPT_CORE_CORRECT_N =
   prove_ensures_n
-    P384_MONTJDOUBLE_EXEC
-    P384_MONTJDOUBLE_CORE_EXEC
+    P384_MONTJDOUBLE_UNOPT_EXEC
+    P384_MONTJDOUBLE_UNOPT_CORE_EXEC
     P384_MONTJDOUBLE_UNOPT_CORE_CORRECT_SP
     P384_MONTJDOUBLE_UNOPT_EVENTUALLY_N_AT_PC;;
 
@@ -2750,10 +2750,10 @@ let P384_MONTJDOUBLE_CORRECT = prove(
   `!p3 p1 t1 pc2 stackpointer.
         aligned 16 stackpointer /\
         ALL (nonoverlapping (stackpointer,384))
-            [(word pc2,LENGTH p384_montjdouble_opt_mc); (p1,144); (p3,144)] /\
-        nonoverlapping (p3,144) (word pc2,LENGTH p384_montjdouble_opt_mc)
+            [(word pc2,LENGTH p384_montjdouble_mc); (p1,144); (p3,144)] /\
+        nonoverlapping (p3,144) (word pc2,LENGTH p384_montjdouble_mc)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc2) p384_montjdouble_opt_mc /\
+             (\s. aligned_bytes_loaded s (word pc2) p384_montjdouble_mc /\
                   read PC s = word(pc2 + 0x18) /\
                   read SP s = (word_add stackpointer (word 48)) /\
                   C_ARGUMENTS [p3; p1] s /\
@@ -2775,11 +2775,11 @@ let P384_MONTJDOUBLE_CORRECT = prove(
   SUBGOAL_THEN
     `?pc.
       ALL (nonoverlapping
-        (word pc,LENGTH (APPEND p384_montjdouble_core_mc barrier_inst_bytes)))
+        (word pc,LENGTH (APPEND p384_montjdouble_unopt_core_mc barrier_inst_bytes)))
         [(p1:int64,144);(p3:int64,144);(stackpointer:int64,384)] /\
       4 divides val (word pc:int64)` MP_TAC THENL [
     REWRITE_TAC[LENGTH_APPEND;BARRIER_INST_BYTES_LENGTH;
-      fst P384_MONTJDOUBLE_CORE_EXEC;NONOVERLAPPING_CLAUSES;ALL] THEN
+      fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC;NONOVERLAPPING_CLAUSES;ALL] THEN
     time FIND_HOLE_TAC;
 
     (** SUBGOAL 2 **)
@@ -2789,12 +2789,12 @@ let P384_MONTJDOUBLE_CORRECT = prove(
   REPEAT_N 2 STRIP_TAC THEN
 
   VCGEN_EQUIV_TAC P384_MONTJDOUBLE_EQUIV P384_MONTJDOUBLE_UNOPT_CORE_CORRECT_N
-    [fst P384_MONTJDOUBLE_CORE_EXEC;fst P384_MONTJDOUBLE_OPT_EXEC] THEN
+    [fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC;fst P384_MONTJDOUBLE_EXEC] THEN
 
   (* unfold definitions that may block tactics *)
   RULE_ASSUM_TAC (REWRITE_RULE[ALL;NONOVERLAPPING_CLAUSES;
       LENGTH_APPEND;BARRIER_INST_BYTES_LENGTH;
-      fst P384_MONTJDOUBLE_CORE_EXEC; fst P384_MONTJDOUBLE_OPT_EXEC]) THEN
+      fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC; fst P384_MONTJDOUBLE_EXEC]) THEN
   REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN
   REWRITE_TAC[C_ARGUMENTS;BIGNUM_FROM_MEMORY_BYTES;bignum_triple_from_memory] THEN
   REPEAT CONJ_TAC THENL [
@@ -2807,19 +2807,19 @@ let P384_MONTJDOUBLE_CORRECT = prove(
     ASM_REWRITE_TAC[p384_montjdouble_eqin;C_ARGUMENTS] THEN
     EXISTS_TAC
       `write (memory :> bytelist
-          (word pc,LENGTH (APPEND p384_montjdouble_core_mc barrier_inst_bytes)))
-          (APPEND p384_montjdouble_core_mc barrier_inst_bytes)
+          (word pc,LENGTH (APPEND p384_montjdouble_unopt_core_mc barrier_inst_bytes)))
+          (APPEND p384_montjdouble_unopt_core_mc barrier_inst_bytes)
           (write PC (word (pc + 0xc6c)) s2)` THEN
     (* Expand variables appearing in the equiv relation *)
-    PROVE_CONJ_OF_EQ_READS_TAC P384_MONTJDOUBLE_CORE_EXEC THEN
+    PROVE_CONJ_OF_EQ_READS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC THEN
     (* Now has only one subgoal: the input state equivalence! *)
     REPEAT (HINT_EXISTS_REFL_TAC THEN
-        PROVE_CONJ_OF_EQ_READS_TAC P384_MONTJDOUBLE_CORE_EXEC);
+        PROVE_CONJ_OF_EQ_READS_TAC P384_MONTJDOUBLE_UNOPT_CORE_EXEC);
 
     (** SUBGOAL 2. Postcond **)
     REWRITE_TAC[p384_montjdouble_eqout;BIGNUM_FROM_MEMORY_BYTES] THEN
     CONV_TAC NUM_REDUCE_CONV THEN
-    MESON_TAC[fst P384_MONTJDOUBLE_CORE_EXEC; fst P384_MONTJDOUBLE_OPT_EXEC];
+    MESON_TAC[fst P384_MONTJDOUBLE_UNOPT_CORE_EXEC; fst P384_MONTJDOUBLE_EXEC];
 
     (** SUBGOAL 3. Frame **)
     MESON_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS]
@@ -2829,10 +2829,10 @@ let P384_MONTJDOUBLE_SUBROUTINE_CORRECT = time prove
  (`!p3 p1 t1 pc stackpointer returnaddress.
         aligned 16 stackpointer /\
         ALL (nonoverlapping (word_sub stackpointer (word 464),464))
-            [(word pc,LENGTH p384_montjdouble_opt_mc); (p1,144); (p3,144)] /\
-        nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_opt_mc)
+            [(word pc,LENGTH p384_montjdouble_mc); (p1,144); (p3,144)] /\
+        nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_mc)
         ==> ensures arm
-             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_opt_mc /\
+             (\s. aligned_bytes_loaded s (word pc) p384_montjdouble_mc /\
                   read PC s = word pc /\
                   read SP s = stackpointer /\
                   read X30 s = returnaddress /\
@@ -2845,6 +2845,90 @@ let P384_MONTJDOUBLE_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(p3,144);
                       memory :> bytes(word_sub stackpointer (word 464),464)])`,
-  ARM_ADD_RETURN_STACK_TAC P384_MONTJDOUBLE_OPT_EXEC
+  ARM_ADD_RETURN_STACK_TAC P384_MONTJDOUBLE_EXEC
    P384_MONTJDOUBLE_CORRECT
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27]` 464);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p384_montjdouble" subroutine_signatures)
+    P384_MONTJDOUBLE_CORRECT
+    P384_MONTJDOUBLE_EXEC;;
+
+let P384_MONTJDOUBLE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,384))
+           [word pc,LENGTH p384_montjdouble_mc; p1,144; p3,144] /\
+           nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_mc)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p384_montjdouble_mc /\
+                    read PC s = word (pc + 24) /\
+                    read SP s = word_add stackpointer (word 48) /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 12368) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,144; p3,144; stackpointer,384]
+                         [p3,144; stackpointer,384]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25;
+                 X26; X27] ,,
+                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,144); memory :> bytes (stackpointer,384)])`,
+  (* ASSERT_CONCL_TAC full_spec THEN <- fails because pc2 is renamed to pc *)
+  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P384_MONTJDOUBLE_EXEC);;
+
+let P384_MONTJDOUBLE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer returnaddress.
+          aligned 16 stackpointer /\
+          ALL (nonoverlapping (word_sub stackpointer (word 464),464))
+              [(word pc,LENGTH p384_montjdouble_mc); (p1,144); (p3,144)] /\
+          nonoverlapping (p3,144) (word pc,LENGTH p384_montjdouble_mc)
+          ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p384_montjdouble_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc
+                            (word_sub stackpointer (word 464)) returnaddress /\
+                         memaccess_inbounds e2
+                         [p1,144; p3,144;
+                          word_sub stackpointer (word 464),464]
+                         [p3,144;
+                          word_sub stackpointer (word 464),464]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(p3,144);
+                            memory :> bytes(word_sub stackpointer (word 464),464)])`,
+  REWRITE_TAC[fst P384_MONTJDOUBLE_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC P384_MONTJDOUBLE_EXEC
+    (REWRITE_RULE[fst P384_MONTJDOUBLE_EXEC]P384_MONTJDOUBLE_SAFE)
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27]` 464 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

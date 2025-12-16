@@ -24,5 +24,5 @@ let mk_safety_spec
 
 let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
   GEN_PROVE_SAFETY_SPEC_TAC ?public_vars:public_vars exec
-    [ALIGNED_BYTES_LOADED_APPEND_CLAUSE]
+    [ALIGNED_BYTES_LOADED_APPEND_CLAUSE;MODIFIABLE_SIMD_REGS]
     ARM_SINGLE_STEP_TAC;;

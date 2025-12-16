@@ -90,18 +90,12 @@ let mk_noibt_subroutine_safe_spec
         | Some so -> snd (dest_comb so) | None -> `0` in
       let new_readlist,new_writelist =
         if already_has_stackptr then
-          let _,sz = dest_pair (last old_readlist) in
-          let _ = Printf.printf "sz: %s\n" (string_of_term sz) in
-          let range1 = mk_pair (stackptr_with_ofs,sz) in
-          let range2_read,range2_write =
-            let ofs_int = dest_small_numeral stackofs_num in
-            let sz_int = dest_small_numeral sz in
-            let ofs_int2 = ofs_int - sz_int in
-            let base = list_mk_icomb "word_sub" [stackptr;mk_word(ofs_int2)] in
-            mk_pair(base,mk_small_numeral(ofs_int2+8)),
-            mk_pair(base,mk_small_numeral(ofs_int2)) in
-          ((butlast old_readlist) @ [range1;range2_read]),
-          ((butlast old_writelist) @ [range1;range2_write])
+          let ofs_int = dest_small_numeral stackofs_num in
+          (* stack+8 is read because it is where returnaddress is stored *)
+          let range_read = mk_pair (stackptr_with_ofs,mk_small_numeral(ofs_int+8)) in
+          let range_write = mk_pair (stackptr_with_ofs,stackofs_num) in
+          ((butlast old_readlist) @ [range_read]),
+          ((butlast old_writelist) @ [range_write])
         else
           let stackofs_num_plus_8 =
             mk_small_numeral((dest_small_numeral stackofs_num) + 8) in
@@ -121,6 +115,18 @@ let mk_noibt_subroutine_safe_spec
   mk_exists(new_f_events,
     list_mk_forall(new_uvs,mk_imp(new_assum,new_body)));;
 
+(* Usage:
+  generate_four_variants_of_x86_safety_specs
+      "p384_montjadd_alt"
+      P384_MONTJADD_ALT_CORRECT
+      P384_MONTJADD_ALT_EXEC
+      P384_MONTJADD_ALT_NOIBT_SUBROUTINE_CORRECT
+      P384_MONTJADD_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT;;
+
+  Needs these two files already loaded:
+    x86/proofs/consttime.ml
+    x86/proofs/subroutine_signatures.ml
+*)
 let generate_four_variants_of_x86_safety_specs (fnname:string)
     correct_th exec_th
     noibt_subroutine_correct_th noibt_windows_subroutine_correct_th =
@@ -128,6 +134,7 @@ let generate_four_variants_of_x86_safety_specs (fnname:string)
   (* 0. preamble *)
   print_endline ("(* ------------------------------------------------------------------------- *)");
   print_endline ("(* Constant-time and memory safety proof.                                    *)");
+  print_endline ("(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)");
   print_endline ("(* ------------------------------------------------------------------------- *)");
   print_endline ("");
 
