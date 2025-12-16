@@ -483,7 +483,7 @@ let MLKEM_NTT_CORRECT = prove
   (*** Simulate all the way to the end, in effect unrolling loops ***)
 
   MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_NTT_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[barmul])
+                      SIMD_SIMPLIFY_ABBREV_TAC[barmul])
             (1--904) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
@@ -501,17 +501,22 @@ let MLKEM_NTT_CORRECT = prove
   GEN_REWRITE_TAC (BINDER_CONV o RAND_CONV) [GSYM I_THM] THEN
   CONV_TAC(EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   ASM_REWRITE_TAC[I_THM; WORD_ADD_0] THEN DISCARD_STATE_TAC "s904" THEN
-  REPEAT(W(fun (asl,w) ->
-     if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
 
-  (*** Get congruences and bounds for the result digits and finish ***)
+  (*** Now analyze the local assumptions ***)
 
-  FIRST_X_ASSUM(MP_TAC o CONV_RULE EXPAND_CASES_CONV) THEN
-  POP_ASSUM_LIST(K ALL_TAC) THEN
-  DISCH_THEN(fun aboth ->
-    W(MP_TAC o GEN_CONGBOUND_RULE (CONJUNCTS aboth) o
-      rand o lhand o rator o lhand o snd)) THEN
-  (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+  W(fun (asl,w) ->
+      let lfn = PROCESS_BOUND_ASSUMPTIONS
+        (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
+      and asms =
+        map snd (filter (is_local_definition [barmul] o concl o snd) asl) in
+      let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+
+      REPEAT(W(fun (asl,w) ->
+        if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
+
+     W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
+        rand o lhand o rator o lhand o snd) THEN
+    (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
      [MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
       CONV_TAC(ONCE_DEPTH_CONV FORWARD_NTT_CONV) THEN
       REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN

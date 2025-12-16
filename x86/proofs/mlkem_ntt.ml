@@ -1167,7 +1167,7 @@ let MLKEM_NTT_CORRECT = prove
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
 
   MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_NTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[ntt_montmul; ntt_montmul_add; ntt_montmul_sub])
+                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; ntt_montmul_add; ntt_montmul_sub])
         (1--587) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
@@ -1207,17 +1207,21 @@ let MLKEM_NTT_CORRECT = prove
 
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
-  REPEAT(GEN_REWRITE_TAC I
-   [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
 
-  FIRST_X_ASSUM(MP_TAC o CONV_RULE EXPAND_CASES_CONV) THEN
-  POP_ASSUM_LIST(K ALL_TAC) THEN
-  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-  DISCH_THEN(fun aboth ->
-    W(MP_TAC o GEN_CONGBOUND_RULE (CONJUNCTS aboth) o
-      rand o lhand o rator o lhand o snd)) THEN
+  W(fun (asl,w) ->
+      let lfn = PROCESS_BOUND_ASSUMPTIONS
+        (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
+      and asms =
+        map snd (filter (is_local_definition [barmul] o concl o snd) asl) in
+      let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
-  (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+      REWRITE_TAC[GSYM CONJ_ASSOC] THEN
+      REPEAT(GEN_REWRITE_TAC I
+       [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
+
+      W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
+        rand o lhand o rator o lhand o snd) THEN
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
    [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`] THEN
     MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
     CONV_TAC(ONCE_DEPTH_CONV AVX2_FORWARD_NTT_CONV) THEN
@@ -1229,7 +1233,7 @@ let MLKEM_NTT_CORRECT = prove
     MATCH_MP_TAC(INT_ARITH
      `l':int <= l /\ u <= u'
       ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
-    CONV_TAC INT_REDUCE_CONV])
+    CONV_TAC INT_REDUCE_CONV]))
 );;
 
 let MLKEM_NTT_NOIBT_SUBROUTINE_CORRECT  = prove
@@ -1317,7 +1321,7 @@ let MLKEM_NTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
                    (word_sub stackpointer (word 176), 184)  /\
     nonoverlapping (a, 512) (zetas, 1248) /\
     nonoverlapping (a, 512) (word_sub stackpointer (word 176), 184) /\
-    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184) 
+    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184)
     ==> ensures x86
           (\s. bytes_loaded s (word pc) mlkem_ntt_windows_tmc /\
               read RIP s = word pc /\
@@ -1449,7 +1453,7 @@ let MLKEM_NTT_WINDOWS_SUBROUTINE_CORRECT  = prove
                    (word_sub stackpointer (word 176), 184)  /\
     nonoverlapping (a, 512) (zetas, 1248) /\
     nonoverlapping (a, 512) (word_sub stackpointer (word 176), 184) /\
-    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184) 
+    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184)
     ==> ensures x86
           (\s. bytes_loaded s (word pc) mlkem_ntt_windows_mc /\
               read RIP s = word pc /\
