@@ -527,7 +527,7 @@ let MLKEM_NTT_CORRECT = prove
       MATCH_MP_TAC(INT_ARITH
        `l':int <= l /\ u <= u'
         ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
-      CONV_TAC INT_REDUCE_CONV]));;
+      CONV_TAC INT_REDUCE_CONV])));;
 
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 

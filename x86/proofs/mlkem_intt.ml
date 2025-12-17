@@ -1200,7 +1200,7 @@ let MLKEM_INTT_CORRECT = prove
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
 
   W(fun (asl,w) ->
-      let lfn = undefined 
+      let lfn = undefined
       and asms =
         map snd (filter (is_local_definition [barmul] o concl o snd) asl) in
       let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
@@ -1223,7 +1223,7 @@ let MLKEM_INTT_CORRECT = prove
     MATCH_MP_TAC(INT_ARITH
      `l':int <= l /\ u <= u'
       ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
-    CONV_TAC INT_REDUCE_CONV])
+    CONV_TAC INT_REDUCE_CONV]))
 );;
 
 let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
@@ -1309,7 +1309,7 @@ let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
                    (word_sub stackpointer (word 176), 184)  /\
     nonoverlapping (a, 512) (zetas, 1248) /\
     nonoverlapping (a, 512) (word_sub stackpointer (word 176), 184) /\
-    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184) 
+    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184)
     ==> ensures x86
           (\s. bytes_loaded s (word pc) mlkem_intt_windows_tmc /\
               read RIP s = word pc /\
@@ -1440,7 +1440,7 @@ let MLKEM_INTT_WINDOWS_SUBROUTINE_CORRECT  = prove
                    (word_sub stackpointer (word 176), 184)  /\
     nonoverlapping (a, 512) (zetas, 1248) /\
     nonoverlapping (a, 512) (word_sub stackpointer (word 176), 184) /\
-    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184) 
+    nonoverlapping (zetas, 1248) (word_sub stackpointer (word 176), 184)
     ==> ensures x86
           (\s. bytes_loaded s (word pc) mlkem_intt_windows_mc /\
               read RIP s = word pc /\
