@@ -1429,10 +1429,12 @@ let SIMD_SIMPLIFY_ABBREV_TAC =
   fun unfold_defs unfold_aux ->
     let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
     let pam t = exists (fun p -> can(term_match [] p) t) pats in
-    let ttac th =
-      let th' = CONV_RULE(RAND_CONV 
+    let ttac th (asl,w) =
+      let th' = CONV_RULE(RAND_CONV
                  (SIMD_SIMPLIFY_CONV (unfold_defs @ unfold_aux))) th in
-      let tms = sort free_in (find_terms pam (rand(concl th'))) in
-      ASSUME_TAC th' THEN
-      MAP_EVERY AUTO_ABBREV_TAC tms in
+      let asms =
+        map snd (filter (is_local_definition unfold_defs o concl o snd) asl) in
+      let th'' = GEN_REWRITE_RULE (RAND_CONV o TOP_DEPTH_CONV) asms th' in
+      let tms = sort free_in (find_terms pam (rand(concl th''))) in
+      (MP_TAC th'' THEN MAP_EVERY AUTO_ABBREV_TAC tms THEN DISCH_TAC) (asl,w) in
   TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
