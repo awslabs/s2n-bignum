@@ -4636,7 +4636,8 @@ let MLDSA_NTT_CORRECT = prove
   W(fun (asl,w) ->
      let asms =
         map snd (filter (is_local_definition
-          [ntt_montmul; ntt_montmul_add; ntt_montmul_sub; barred_x86] o concl o snd) asl) in
+          [mldsa_montmul; WORD_ADD_MLDSA_MONTMUL;
+           WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL] o concl o snd) asl) in
      MP_TAC(end_itlist CONJ (rev asms)) THEN
      MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
 
