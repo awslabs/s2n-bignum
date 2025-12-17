@@ -120,15 +120,15 @@ let len_computed = LENGTH_CONV (rhs (concl len_thm)) in
 let final_value = rhs (concl len_computed) in
 dest_small_numeral final_value;;
 
-val it : int = 12141
-pc + 0x2F6D ***)
+val it : int = 12129
+pc + 0x2F61 ***)
 
 (*** let MLDSA_INTT_CORRECT = prove ***)
  g(`!a zetas x pc.
     aligned 32 a /\
     aligned 32 zetas /\
-    nonoverlapping (word pc,0x2F6D) (a, 1024) /\
-    nonoverlapping (word pc,0x2F6D) (zetas, 2496) /\
+    nonoverlapping (word pc,0x2F61) (a, 1024) /\
+    nonoverlapping (word pc,0x2F61) (zetas, 2496) /\
     nonoverlapping (a, 1024) (zetas, 2496)
     ==> ensures x86
           (\s. bytes_loaded s (word pc) (BUTLAST mldsa_intt_tmc) /\
@@ -138,7 +138,7 @@ pc + 0x2F6D ***)
               !i. i < 256
                   ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                       x i)
-          (\s. read RIP s = word(pc + 0x2F6C) /\
+          (\s. read RIP s = word(pc + 0x2F60) /\
               (!i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
@@ -147,7 +147,7 @@ pc + 0x2F6D ***)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [ZMM0; ZMM1; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
           MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
-          MAYCHANGE [memory :> bytes(a,1024)])`)
+          MAYCHANGE [memory :> bytes(a,1024)])`);;
 
 (*** Setup - introduce variables and break down assumptions ***)    
 
@@ -203,6 +203,32 @@ e(MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_INTT_TMC_EXEC [n] THEN
                       WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL])
         (1--2265) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+
+e(REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+  CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
+  CONV_RULE(READ_MEMORY_SPLIT_CONV 4) o
+  check (can (term_match [] `read qqq s:int256 = xxx`) o concl))));;
+
+ e(CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC
+           DEPTH_CONV NUM_ADD_CONV) THEN
+  REWRITE_TAC[INT_ABS_BOUNDS; WORD_ADD_0] THEN
+  ASM_REWRITE_TAC[WORD_ADD_0]);;
+
+e(ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s2265");;
+
+e(REWRITE_TAC[WORD_BLAST `word_subword (x:int32) (0, 32) = x`] THEN
+  REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0, 64) = x`] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV));;
+
+e(CONV_TAC(DEPTH_CONV let_CONV));;
+
+e(REWRITE_TAC[GSYM CONJ_ASSOC] THEN
+  REPEAT(GEN_REWRITE_TAC I
+   [TAUT `p /\\ q /\\ r /\\ s <=> (p /\\ q /\\ r) /\\ s`] THEN CONJ_TAC));;
+
+e(POP_ASSUM_LIST(K ALL_TAC));;
+
 
 (* notes:
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
