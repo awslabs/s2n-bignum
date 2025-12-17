@@ -547,7 +547,8 @@ let MLKEM_INTT_CORRECT = prove
   W(fun (asl,w) ->
       let lfn = undefined
       and asms =
-        map snd (filter (is_local_definition [barmul] o concl o snd) asl) in
+        map snd (filter (is_local_definition [barred; barmul] o concl o snd) 
+                asl) in
       let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
       REPEAT(W(fun (asl,w) ->

@@ -1212,7 +1212,7 @@ let MLKEM_NTT_CORRECT = prove
       let lfn = PROCESS_BOUND_ASSUMPTIONS
         (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
       and asms =
-        map snd (filter (is_local_definition [barmul] o concl o snd) asl) in
+        map snd (filter (is_local_definition [ntt_montmul; ntt_montmul_add; ntt_montmul_sub] o concl o snd) asl) in
       let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
       REWRITE_TAC[GSYM CONJ_ASSOC] THEN
