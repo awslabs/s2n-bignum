@@ -4611,8 +4611,9 @@ let MLDSA_NTT_CORRECT = prove
 (*** Do the entire simulation (very slow!) ****)
 
   MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_NTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[mldsa_montmul; WORD_ADD_MLDSA_MONTMUL;
-                      WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL])
+                      SIMD_SIMPLIFY_ABBREV_TAC[mldsa_montmul]
+                        [WORD_ADD_MLDSA_MONTMUL;
+                         WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL])
         (1--2337) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
@@ -4635,9 +4636,7 @@ let MLDSA_NTT_CORRECT = prove
 
   W(fun (asl,w) ->
      let asms =
-        map snd (filter (is_local_definition
-          [mldsa_montmul; WORD_ADD_MLDSA_MONTMUL;
-           WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL] o concl o snd) asl) in
+        map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
      MP_TAC(end_itlist CONJ (rev asms)) THEN
      MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
 
@@ -4659,8 +4658,7 @@ let MLDSA_NTT_CORRECT = prove
       let lfn = PROCESS_BOUND_ASSUMPTIONS
         (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
       and asms =
-        map snd (filter (is_local_definition [mldsa_montmul; WORD_ADD_MLDSA_MONTMUL;
-                      WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL] o concl o snd) asl) in
+        map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
       let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
       REWRITE_TAC[GSYM CONJ_ASSOC] THEN

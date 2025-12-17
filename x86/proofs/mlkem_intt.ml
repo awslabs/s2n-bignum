@@ -1155,7 +1155,8 @@ let MLKEM_INTT_CORRECT = prove
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
 
   MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_INTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; ntt_montmul_add; ntt_montmul_sub; barred_x86])
+                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; barred_x86] 
+                              [ntt_montmul_add; ntt_montmul_sub])
         (1--663) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -1176,7 +1177,7 @@ let MLKEM_INTT_CORRECT = prove
   W(fun (asl,w) ->
      let asms =
         map snd (filter (is_local_definition
-          [ntt_montmul; ntt_montmul_add; ntt_montmul_sub; barred_x86] o concl o snd) asl) in
+          [ntt_montmul; barred_x86] o concl o snd) asl) in
      MP_TAC(end_itlist CONJ (rev asms)) THEN
      MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
 
@@ -1211,7 +1212,7 @@ let MLKEM_INTT_CORRECT = prove
   W(fun (asl,w) ->
       let lfn = undefined
       and asms =
-        map snd (filter (is_local_definition [ntt_montmul; ntt_montmul_add; ntt_montmul_sub; barred_x86] o concl o snd) asl) in
+        map snd (filter (is_local_definition [ntt_montmul; barred_x86] o concl o snd) asl) in
       let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
       REWRITE_TAC[GSYM CONJ_ASSOC] THEN

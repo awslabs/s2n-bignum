@@ -1167,7 +1167,7 @@ let MLKEM_NTT_CORRECT = prove
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
 
   MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_NTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; ntt_montmul_add; ntt_montmul_sub])
+                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul] [ntt_montmul_add; ntt_montmul_sub])
         (1--587) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
@@ -1186,8 +1186,7 @@ let MLKEM_NTT_CORRECT = prove
 
   W(fun (asl,w) ->
      let asms =
-        map snd (filter (is_local_definition
-          [ntt_montmul; ntt_montmul_add; ntt_montmul_sub] o concl o snd) asl) in
+        map snd (filter (is_local_definition [ntt_montmul] o concl o snd) asl) in
      MP_TAC(end_itlist CONJ (rev asms)) THEN
      MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
 
@@ -1221,7 +1220,7 @@ let MLKEM_NTT_CORRECT = prove
       let lfn = PROCESS_BOUND_ASSUMPTIONS
         (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
       and asms =
-        map snd (filter (is_local_definition [ntt_montmul; ntt_montmul_add; ntt_montmul_sub] o concl o snd) asl) in
+        map snd (filter (is_local_definition [ntt_montmul] o concl o snd) asl) in
       let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
       REWRITE_TAC[GSYM CONJ_ASSOC] THEN

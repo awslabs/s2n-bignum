@@ -526,7 +526,7 @@ let MLKEM_INTT_CORRECT = prove
   (*** Simulate all the way to the end, in effect unrolling loops ***)
 
   MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_INTT_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[barred; barmul])
+                      SIMD_SIMPLIFY_ABBREV_TAC[barred; barmul] [])
             (1--1157) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 

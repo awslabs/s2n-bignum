@@ -1377,7 +1377,7 @@ let rec ASM_CONGBOUND_RULE lfn tm =
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | _ -> CONCL_BOUNDS_RULE(ISPEC tm CONGBOUND_ATOM);;
 
-let GEN_CONGBOUND_RULE aboths = 
+let GEN_CONGBOUND_RULE aboths =
   ASM_CONGBOUND_RULE (PROCESS_BOUND_ASSUMPTIONS aboths);;
 
 let CONGBOUND_RULE = GEN_CONGBOUND_RULE [];;
@@ -1426,14 +1426,13 @@ let SIMD_SIMPLIFY_ABBREV_TAC =
   and x86_simdable =
     can (term_match [] `read X (s:x86state):int256 = whatever`) in
   let simdable tm = arm_simdable tm || x86_simdable tm in
-  fun unfold_defs ->
+  fun unfold_defs unfold_aux ->
     let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
     let pam t = exists (fun p -> can(term_match [] p) t) pats in
     let ttac th =
-      let th' = CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) th in
+      let th' = CONV_RULE(RAND_CONV 
+                 (SIMD_SIMPLIFY_CONV (unfold_defs @ unfold_aux))) th in
       let tms = sort free_in (find_terms pam (rand(concl th'))) in
       ASSUME_TAC th' THEN
       MAP_EVERY AUTO_ABBREV_TAC tms in
-  TRY(FIRST_X_ASSUM
-   (ttac o
-    check (simdable o concl)));;
+  TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
