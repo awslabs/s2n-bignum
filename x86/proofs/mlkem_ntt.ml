@@ -1184,6 +1184,13 @@ let MLKEM_NTT_CORRECT = prove
 
   ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s587" THEN
 
+  W(fun (asl,w) ->
+     let asms =
+        map snd (filter (is_local_definition
+          [ntt_montmul; ntt_montmul_add; ntt_montmul_sub] o concl o snd) asl) in
+     MP_TAC(end_itlist CONJ (rev asms)) THEN
+     MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
+
   REWRITE_TAC[WORD_BLAST `word_subword (x:int32) (0, 32) = x`] THEN
   REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0, 64) = x`] THEN
   REWRITE_TAC[WORD_BLAST
@@ -1204,6 +1211,8 @@ let MLKEM_NTT_CORRECT = prove
      word_subword x (0, 16)`] THEN
 
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+
+  STRIP_TAC THEN
 
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN

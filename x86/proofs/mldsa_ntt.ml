@@ -4633,6 +4633,13 @@ let MLDSA_NTT_CORRECT = prove
 
   ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s2337" THEN
 
+  W(fun (asl,w) ->
+     let asms =
+        map snd (filter (is_local_definition
+          [ntt_montmul; ntt_montmul_add; ntt_montmul_sub; barred_x86] o concl o snd) asl) in
+     MP_TAC(end_itlist CONJ (rev asms)) THEN
+     MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
+
 (*** Remove one other non-arithmetical oddity ***)
 
   REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0,64) = x`] THEN
@@ -4641,6 +4648,8 @@ let MLDSA_NTT_CORRECT = prove
     h`] THEN
 
 (*** Try splitting into 256 subgoals and applying CONGBOUND ***)
+
+  STRIP_TAC THEN
 
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
