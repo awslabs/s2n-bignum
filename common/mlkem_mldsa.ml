@@ -1295,10 +1295,6 @@ let CONCL_BOUNDS_RULE =
 let SIDE_ELIM_RULE th =
   MP th (EQT_ELIM(DIMINDEX_INT_REDUCE_CONV(lhand(concl th))));;
 
-(* ------------------------------------------------------------------------- *)
-(* Generalized CONGBOUND with list of assumptions.                           *)
-(* ------------------------------------------------------------------------- *)
-
 let rec ASM_CONGBOUND_RULE lfn tm =
     try apply lfn tm with Failure _ ->
     match tm with
@@ -1393,7 +1389,8 @@ let rec LOCAL_CONGBOUND_RULE lfn asms =
       LOCAL_CONGBOUND_RULE lfn' ths;;
 
 (* ------------------------------------------------------------------------- *)
-(* Simplify SIMD cruft and fold abbreviations when encountered.              *)
+(* Simplify SIMD cruft and fold relevant definitions when encountered.       *)
+(* The ABBREV form also introduces abbreviations for relevant subterms.      *)
 (* ------------------------------------------------------------------------- *)
 
 let SIMD_SIMPLIFY_CONV unfold_defs =
@@ -1412,9 +1409,9 @@ let SIMD_SIMPLIFY_TAC unfold_defs =
     check (simdable o concl)));;
 
 let is_local_definition unfold_defs =
-    let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
-    let pam t = exists (fun p -> can(term_match [] p) t) pats in
-    fun tm -> is_eq tm && is_var(rand tm) && pam(lhand tm);;
+  let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
+  let pam t = exists (fun p -> can(term_match [] p) t) pats in
+  fun tm -> is_eq tm && is_var(rand tm) && pam(lhand tm);;
 
 let AUTO_ABBREV_TAC tm =
   let gv = genvar(type_of tm) in

@@ -494,7 +494,7 @@ let MLKEM_NTT_CORRECT = prove
     CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
     check (can (term_match [] `read qqq s:int128 = xxx`) o concl))) THEN
 
-  (*** Turn the conclusion into an explicit conjunction and split it up ***)
+  (*** Expand and substitute in the conclusion we want to prove ***)
 
   DISCH_TAC THEN
   CONV_TAC(ONCE_DEPTH_CONV let_CONV) THEN REWRITE_TAC[INT_ABS_BOUNDS] THEN
@@ -502,21 +502,21 @@ let MLKEM_NTT_CORRECT = prove
   CONV_TAC(EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   ASM_REWRITE_TAC[I_THM; WORD_ADD_0] THEN DISCARD_STATE_TAC "s904" THEN
 
-  (*** Now analyze the local assumptions ***)
+  (*** Perform congruence and bound propagation and finish ***)
 
   W(fun (asl,w) ->
-      let lfn = PROCESS_BOUND_ASSUMPTIONS
-        (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
-      and asms =
-        map snd (filter (is_local_definition [barmul] o concl o snd) asl) in
-      let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+    let lfn = PROCESS_BOUND_ASSUMPTIONS
+      (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
+    and asms =
+      map snd (filter (is_local_definition [barmul] o concl o snd) asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
-      REPEAT(W(fun (asl,w) ->
-        if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
+    REPEAT(W(fun (asl,w) ->
+      if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
 
-     W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
         rand o lhand o rator o lhand o snd) THEN
-    (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
      [MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
       CONV_TAC(ONCE_DEPTH_CONV FORWARD_NTT_CONV) THEN
       REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN

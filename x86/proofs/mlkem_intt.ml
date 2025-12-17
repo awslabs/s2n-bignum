@@ -1155,7 +1155,7 @@ let MLKEM_INTT_CORRECT = prove
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
 
   MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_INTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; barred_x86] 
+                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul; barred_x86]
                               [ntt_montmul_add; ntt_montmul_sub])
         (1--663) THEN
 
@@ -1210,17 +1210,15 @@ let MLKEM_INTT_CORRECT = prove
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
 
   W(fun (asl,w) ->
-      let lfn = undefined
-      and asms =
-        map snd (filter (is_local_definition [ntt_montmul; barred_x86] o concl o snd) asl) in
-      let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+    let lfn = undefined
+    and asms =
+      map snd (filter (is_local_definition [ntt_montmul; barred_x86] o concl o snd) asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
-      REWRITE_TAC[GSYM CONJ_ASSOC] THEN
-      REPEAT(GEN_REWRITE_TAC I
-       [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
+    REPEAT(GEN_REWRITE_TAC I
+     [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
 
-      W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
-        rand o lhand o rator o lhand o snd) THEN
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o rand o lhand o rator o lhand o snd) THEN
    (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
    [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 3329 65536`] THEN
     MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN

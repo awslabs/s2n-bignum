@@ -4634,52 +4634,49 @@ let MLDSA_NTT_CORRECT = prove
 
   ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s2337" THEN
 
+(*** Remove one other non-arithmetical oddity ***)
+
   W(fun (asl,w) ->
      let asms =
         map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
      MP_TAC(end_itlist CONJ (rev asms)) THEN
      MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
 
-(*** Remove one other non-arithmetical oddity ***)
-
   REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0,64) = x`] THEN
   REWRITE_TAC[WORD_BLAST
    `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0,32) =
     h`] THEN
 
-(*** Try splitting into 256 subgoals and applying CONGBOUND ***)
-
   STRIP_TAC THEN
+
+(*** Try splitting into 256 subgoals and applying CONGBOUND ***)
 
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
 
   W(fun (asl,w) ->
-      let lfn = PROCESS_BOUND_ASSUMPTIONS
-        (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
-      and asms =
-        map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
-      let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+    let lfn = PROCESS_BOUND_ASSUMPTIONS
+      (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
+    and asms =
+      map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
-      REWRITE_TAC[GSYM CONJ_ASSOC] THEN
-      REPEAT(GEN_REWRITE_TAC I
-       [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
-
-      W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
-        rand o lhand o rator o lhand o snd) THEN
-  (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
-   [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
-    CONV_TAC(ONCE_DEPTH_CONV MLDSA_FORWARD_NTT_CONV) THEN
-    REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
-    REWRITE_TAC[INT_REM_EQ] THEN
-    REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
-    REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
-    CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
-    MATCH_MP_TAC(INT_ARITH
-     `l':int <= l /\ u <= u'
-      ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
-    CONV_TAC INT_REDUCE_CONV])));;
+    REPEAT(GEN_REWRITE_TAC I
+     [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o rand o lhand o rator o lhand o snd) THEN
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+     [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
+      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
+      CONV_TAC(ONCE_DEPTH_CONV MLDSA_FORWARD_NTT_CONV) THEN
+      REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
+      REWRITE_TAC[INT_REM_EQ] THEN
+      REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
+      REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
+      CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
+      MATCH_MP_TAC(INT_ARITH
+       `l':int <= l /\ u <= u'
+        ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
+      CONV_TAC INT_REDUCE_CONV])));;
 
 (* ------------------------------------------------------------------------- *)
 (* Subroutine correctness theorems.                                          *)

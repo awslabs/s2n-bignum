@@ -537,26 +537,28 @@ let MLKEM_INTT_CORRECT = prove
    CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
    check (can (term_match [] `read qqq s:int128 = xxx`) o concl))) THEN
 
-  (*** Turn the conclusion into an explicit conjunction and split it up ***)
+  (*** Expand and substitute in the conclusion we want to prove ***)
 
   CONV_TAC(ONCE_DEPTH_CONV let_CONV) THEN REWRITE_TAC[INT_ABS_BOUNDS] THEN
   GEN_REWRITE_TAC (BINDER_CONV o RAND_CONV) [GSYM I_THM] THEN
   CONV_TAC(EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   ASM_REWRITE_TAC[I_THM; WORD_ADD_0] THEN DISCARD_STATE_TAC "s1157" THEN
 
+  (*** Perform congruence and bound propagation and finish ***)
+
   W(fun (asl,w) ->
-      let lfn = undefined
-      and asms =
-        map snd (filter (is_local_definition [barred; barmul] o concl o snd)
-                asl) in
-      let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+    let lfn = undefined
+    and asms =
+      map snd (filter (is_local_definition [barred; barmul] o concl o snd)
+              asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
 
-      REPEAT(W(fun (asl,w) ->
-        if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
+    REPEAT(W(fun (asl,w) ->
+      if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
 
-      W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
-        rand o lhand o rator o lhand o snd) THEN
-    (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
+      rand o lhand o rator o lhand o snd) THEN
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
      [MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
       CONV_TAC(ONCE_DEPTH_CONV INVERSE_NTT_CONV) THEN
       REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
