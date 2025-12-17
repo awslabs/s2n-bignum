@@ -1038,6 +1038,10 @@ extern void mlkem_tomont(int16_t a[S2N_BIGNUM_STATIC 256]);
 // Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 16-bit words), return
 extern uint64_t mlkem_rej_uniform_VARIABLE_TIME(int16_t r[S2N_BIGNUM_STATIC 256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
 
+// Reorders ML-KEM polynomial coefficients for x86 implementation
+// Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
+extern void mlkem_unpack(int16_t a[S2N_BIGNUM_STATIC 256]);
+
 // Point addition on NIST curve P-256 in Montgomery-Jacobian coordinates
 // Inputs p1[12], p2[12]; output p3[12]
 extern void p256_montjadd(uint64_t p3[S2N_BIGNUM_STATIC 12],const uint64_t p1[S2N_BIGNUM_STATIC 12],const uint64_t p2[S2N_BIGNUM_STATIC 12]);

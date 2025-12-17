@@ -12259,6 +12259,41 @@ uint64_t t, i;
   return 0;
 }
 
+int test_mlkem_unpack(void)
+{
+#ifdef __x86_64__
+uint64_t t, i;
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  printf("Testing mlkem_unpack with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+      { a[i] = random64() & 0xff;
+        b[i] = a[i];
+      }
+
+     mlkem_unpack(a);
+
+     mlkem_poly_to_avx2_layout(b);
+
+     for (i = 0; i < 256; ++i)
+      { if (a[i] != b[i])
+         { printf("Error in mlkem_unpack; element i = %"PRIu64
+                  "; expected output for input[i] = 0x%03"PRIx16
+                  " while output is = 0x%03"PRIx16"\n",
+                  i,b[i],a[i]);
+           return 1;
+         }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#else
+  return 0;
+#endif
+}
+
 int test_mlkem_frombytes(void)
 {
 #ifdef __x86_64__
@@ -15677,6 +15712,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
   functionaltest(all,"mlkem_tomont",test_mlkem_tomont);
+  functionaltest(all,"mlkem_unpack",test_mlkem_unpack);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
