@@ -12,7 +12,7 @@
 //                      const uint8_t *table);
 //
 // Interprets the input buffer as packed 12-bit numbers with a length of
-// buflen bytes, assumed to be a multiple of 24. Fills the output array
+// buflen bytes, assumed to be a multiple of 12. Fills the output array
 // with those numbers from the packed buffer that are < 3329, in the order
 // of appearance, returning the total number of entries written, with a
 // maximum of 256. The table argument is a specific precomputed table of
