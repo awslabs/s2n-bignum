@@ -718,6 +718,12 @@ let NUM_OF_WORDLIST_FROM_MEMORY = prove
   REPEAT STRIP_TAC THEN MATCH_MP_TAC NUM_OF_WORDLIST_FROM_MEMORY_GEN THEN
   REWRITE_TAC[DIMINDEX_TYBIT0; DIMINDEX_TYBIT1] THEN ARITH_TAC);;
 
+let NUM_OF_WORDLIST_FROM_MEMORY_BYTE = prove
+ (`!a n s. num_of_wordlist (wordlist_from_memory (a,n) s:byte list) =
+           read (memory :> bytes (a,n)) s`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC NUM_OF_WORDLIST_FROM_MEMORY_GEN THEN
+  REWRITE_TAC[DIMINDEX_8]);;
+
 let WORDLIST_FROM_MEMORY_EQ_ALT = prove
  (`!addr len size l s.
         dimindex(:N) * len = 8 * size

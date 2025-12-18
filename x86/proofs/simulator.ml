@@ -14,7 +14,7 @@ let regfile = new_definition
    [val(read RAX s); val(read RCX s); val(read RDX s); val(read RBX s);
     bitval(read CF s) +  4 * bitval(read PF s) + 16 * bitval(read AF s) +
     64 * bitval(read ZF s) + 128 * bitval(read SF s) +
-    2048 * bitval(read OF s);
+    1024 * bitval(read DF s) + 2048 * bitval(read OF s);
     val(read RBP s); val(read RSI s); val(read RDI s); val(read R8 s);
     val(read R9 s); val(read R10 s); val(read R11 s); val(read R12 s);
     val(read R13 s); val(read R14 s); val(read R15 s);
@@ -118,7 +118,7 @@ let regfile = new_definition
 
 let FLAGENCODING_11 = prove
  (`bitval b0 + 4 * bitval b1 + 16 * bitval b2 +
-   64 * bitval b3 + 128 * bitval b4 + 2048 * bitval b5 = n <=>
+   64 * bitval b3 + 128 * bitval b4 + 1024 * bitval b5 + 2048 * bitval b6 = n <=>
    n < 4096 /\
    (b0 <=> ODD n) /\
    ~ODD(n DIV 2) /\
@@ -130,8 +130,8 @@ let FLAGENCODING_11 = prove
    (b4 <=> ODD(n DIV 128)) /\
    ~ODD(n DIV 256) /\
    ~ODD(n DIV 512) /\
-   ~ODD(n DIV 1024) /\
-   (b5 <=> ODD(n DIV 2048))`,
+   (b5 <=> ODD(n DIV 1024)) /\
+   (b6 <=> ODD(n DIV 2048))`,
   REWRITE_TAC[bitval] THEN
   REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
   (EQ_TAC THENL [DISCH_THEN(SUBST1_TAC o SYM) THEN ARITH_TAC; ALL_TAC]) THEN
@@ -162,6 +162,64 @@ let YMMENCODING_REGROUP = prove
   CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(TOP_DEPTH_CONV BIT_WORD_CONV) THEN
   REWRITE_TAC[CONJ_ASSOC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Explicit execution for x86_movsb (not needed for usual proofs)            *)
+(* ------------------------------------------------------------------------- *)
+
+let X86_REVERT_STRINGCOPY = prove
+ (`read (memory :> bytes (b,n)) s' =
+   read (memory :> bytes (b,n))
+   (write (memory :> bytes (b,n))
+          (x86_stringcopy df a b n
+            (read (memory :> bytes (a,n)) s)
+            (read (memory :> bytes (b,n)) s))
+          t)
+   ==> n < 2 EXP 64
+       ==> read (memory :> bytes (b,n)) s' =
+           read (memory :> bytes (b,n)) (x86_movsb df a b n s)`,
+  MESON_TAC[x86_stringcopy; READ_WRITE_X86_STRINGCOPY]);;
+
+let X86_MOVSB_CLAUSES = prove
+ (`x86_movsb d a b 0 s = s /\
+   x86_movsb false a b (SUC n) s =
+   write (memory :> bytes8 (word_add b (word n)))
+         (read (memory :> bytes8 (word_add a (word n)))
+               (x86_movsb false a b n s))
+         (x86_movsb false a b n s) /\
+   x86_movsb true a b (SUC n) s =
+   x86_movsb true a b n
+      (write (memory :> bytes8 (word_add b (word n)))
+             (read (memory :> bytes8 (word_add a (word n))) s)
+             s)`,
+  REWRITE_TAC[x86_movsb; I_THM; o_THM; x86_movsb1]);;
+
+let X86_MOVSB_CONV =
+  let true_tm = `T` and false_tm = `F` and zero_tm = `0`
+  and [conv0;conv1;conv2] =
+    map (fun th -> GEN_REWRITE_CONV I [th]) (CONJUNCTS X86_MOVSB_CLAUSES)
+  and simprule =
+    CONV_RULE(RAND_CONV(DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) in
+  let rec conv tm =
+    if lhand tm = zero_tm then conv0 tm
+    else if lhand(funpow 3 rator tm) = false_tm then
+      let th0 =  (LAND_CONV num_CONV THENC conv1 THENC
+                  ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) tm in
+      let tm' = rand(rand(concl th0)) in
+      let th1 = conv tm' in
+      let th2 = CONV_RULE (RAND_CONV
+                  (COMB2_CONV  (RAND_CONV(RAND_CONV(K th1))) (K th1))) th0 in
+      simprule th2
+   else
+      let th0 = (LAND_CONV num_CONV THENC conv2 THENC
+                 ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) tm in
+      let th1 = CONV_RULE(RAND_CONV conv) th0 in
+      simprule th1 in
+  fun tm ->
+    (match tm with
+      Comb(Comb(Comb(Comb(Comb(Const("x86_movsb",_),df),a),b),n),s)
+      when (df = false_tm || df = true_tm) && is_numeral n -> conv tm
+    | _ -> failwith "X86_MOVSB_CONV");;
 
 (* ------------------------------------------------------------------------- *)
 (* Random numbers with random bit density, random state for simulating.      *)
@@ -707,6 +765,9 @@ let iclasses = iclasses_regreg @
  [0xc5; 0xf1; 0x6c; 0xca]; (* VPUNPCKLQDQ xmm1, xmm1, xmm2 *)
  [0xc5; 0xe9; 0x6c; 0xd3]; (* VPUNPCKLQDQ xmm2, xmm2, xmm3 *)
  [0xc4; 0x41; 0x79; 0x6c; 0xc1]; (* VPUNPCKLQDQ xmm8, xmm8, xmm9 *)
+ [0xf8]; (* CLC *)
+ [0xfc]; (* CLD *)
+ [0xfd]; (* STD *)
 ];;
 
 (* ------------------------------------------------------------------------- *)
@@ -728,7 +789,7 @@ let template =
       MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
                  ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
       MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
-      MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`;;
+      MAYCHANGE [CF; PF; AF; ZF; SF; OF; DF] ,, MAYCHANGE [events])`;;
 
 let num_two_to_64 = Num.num_of_string "18446744073709551616";;
 
@@ -763,8 +824,22 @@ let extra_simp_tac =
   REWRITE_TAC[WORD_RULE `word_sub x (word_add x y):N word = word_neg y`;
               WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
-              WORD_RULE `word_sub (word_add x y) y:N word = x`] THEN
+              WORD_RULE `word_sub (word_add x y) y:N word = x`;
+              WORD_RULE `word_add x (word(1 * val(word_not (word_add x y)))) =
+                         word_neg (word_add y (word 1):N word)`] THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[];;
+
+let extra_movsb_tac =
+  FIRST_X_ASSUM(MP_TAC o MATCH_MP X86_REVERT_STRINGCOPY) THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN NO_TAC; ALL_TAC] THEN
+  CONV_TAC(LAND_CONV
+    (RAND_CONV(RAND_CONV X86_MOVSB_CONV) THENC
+     BINOP_CONV
+      (GEN_REWRITE_CONV I [GSYM NUM_OF_WORDLIST_FROM_MEMORY_BYTE] THENC
+       RAND_CONV WORDLIST_FROM_MEMORY_CONV) THENC
+     GEN_REWRITE_CONV TOP_DEPTH_CONV [NUM_OF_WORDLIST_EQ] THENC
+     TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) THEN
+  ASM_REWRITE_TAC[] THEN STRIP_TAC;;
 
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
@@ -781,7 +856,11 @@ and tac_main (memopidx: int option) mc states =
   | Some idx ->
     let states1, states2 = chop_list idx states in
     (if states1 <> [] then X86_STEPS_TAC mc states1 else ALL_TAC) THEN
-    (if states2 <> [] then X86_VSTEPS_TAC mc states2 else ALL_TAC)
+    (if states2 <> [] then
+       X86_VSTEPS_TAC mc [hd states2] THEN
+       TRY extra_movsb_tac THEN
+       X86_VSTEPS_TAC mc (tl states2)
+     else ALL_TAC)
   | None -> X86_STEPS_TAC mc states
   end
 and tac_after memop =
@@ -1162,6 +1241,24 @@ let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) = fun () ->
    pfx @ rex @ opcode @ [0x4c; sib; disp*16];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
   ];;
 
+let cosimulate_movsb_full_harness() = fun () ->
+  let src = 64 + Random.int 32
+  and dest = 64 + Random.int 32
+  and count = Random.int 8
+  and rep = Random.int 3 in
+  [[0x48; 0x8d; 0x7c; 0x24; dest]; (* LEA rdi, [rsp+dest] *)
+   [0x48; 0x8d; 0x74; 0x24; src]; (* LEA rsi, [rsp+src] *)
+   [0xb9; count; 0x00; 0x00; 0x00]; (* MOV ecx, count *)
+   (if rep = 0 then [0xa4] (* MOVSB *)
+    else if rep = 1 then [0xf3; 0xa4] (* REPZ MOVSB *)
+    else [0xf2; 0xa4] (* REPZ MOVSB *)
+   );
+   [0x48; 0xf7; 0xd7;]; (* NOT rdi *)
+   [0x48; 0xf7; 0xd6;]; (* NOT rsi *)
+   [0x48; 0x8d; 0x3c; 0x3c]; (* LEA rdi, [rsp + rdi] *)
+   [0x48; 0x8d; 0x34; 0x34]; (* LEA rsi, [rsp + rsi] *)
+  ];;
+
 (* Each mem simulation is a pair consists of a list of instructions
   to execute and a bool representing whether additional assumptions
   are needed. Currently the additional assumption is for stack
@@ -1225,6 +1322,8 @@ let mem_iclasses = [
   (cosimulate_sse_mov_unaligned_full_harness([0xf3], [0x0f; 0x7f]), false);
   (cosimulate_sse_mov_unaligned_base_disp_harness([0xf3], [0x0f; 0x7f]), false);
   (cosimulate_sse_mov_unaligned_rsp_harness([0xf3], [0x0f; 0x7f]), false);
+  (* MOVSB and REP MOVSB *)
+  (cosimulate_movsb_full_harness(),false);
   (* MOVUPS xmm1, xmm2/m128 *)
   (cosimulate_sse_mov_unaligned_full_harness([], [0x0f; 0x10]), false);
   (cosimulate_sse_mov_unaligned_base_disp_harness([], [0x0f; 0x10]), false);
@@ -1276,12 +1375,14 @@ let mem_iclasses = [
   ];;
 
 let run_random_memopsimulation() =
-  let deferred_icodes,add_assum = el (Random.int (length mem_iclasses)) mem_iclasses in
+  let deferred_icodes,add_assum =
+    el (Random.int (length mem_iclasses)) mem_iclasses in
   let icodes = deferred_icodes() in
   let l = length icodes in
   let _ = assert (l >= 2) in
-  let memop_index = if l >= 6 then l - 4 else l - 2 in
-  cosimulate_instructions (Some memop_index)  (if add_assum then 16 else 0) icodes;;
+  let memop_index = if l = 8 then 3 else if l >= 6 then l - 4 else l - 2 in
+  cosimulate_instructions
+     (Some memop_index)  (if add_assum then 16 else 0) icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Cosimulation of simple memory instructions with uniform [rsp+32] address  *)
