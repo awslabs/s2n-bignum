@@ -4793,6 +4793,22 @@ let subroutine_signatures = [
    ])
 );
 
+("mlkem_frombytes",
+  ([(*args*)
+     ("r", "int16_t[static 256]", (*is const?*)"false");
+     ("a", "uint8_t[static 384]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "384"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mlkem_intt_x86",
   ([(*args*)
      ("a", "int16_t[static 256]", (*is const?*)"false");
@@ -4837,6 +4853,22 @@ let subroutine_signatures = [
    ],
    [(* output buffers *)
     ("a", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mlkem_tobytes",
+  ([(*args*)
+     ("r", "uint8_t[static 384]", (*is const?*)"false");
+     ("a", "int16_t[static 256]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "384"(* num elems *), 1(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])

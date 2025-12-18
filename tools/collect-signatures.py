@@ -331,6 +331,7 @@ onlyInX86 = [
   "bignum_triple_sm2_alt",
   "mldsa_ntt",
   "mldsa_poly_reduce",
+  "mlkem_frombytes",
   "mlkem_ntt_x86",
   "mlkem_intt_x86",
 ]

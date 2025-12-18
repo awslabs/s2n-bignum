@@ -12259,6 +12259,49 @@ uint64_t t, i;
   return 0;
 }
 
+int test_mlkem_frombytes(void)
+{
+#ifdef __x86_64__
+uint64_t t, i;
+  uint8_t a[384] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  int16_t c[256] __attribute__((aligned(32)));
+  printf("Testing mlkem_frombytes with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 384; ++i) a[i] = random64() & 0xff;
+
+     mlkem_frombytes(b,a);
+
+     for (i = 0; i < 128; ++i)
+      { const uint8_t t0 = a[3 * i + 0];
+        const uint8_t t1 = a[3 * i + 1];
+        const uint8_t t2 = a[3 * i + 2];
+
+        c[2*i+0] = (int16_t)(t0 | ((t1 << 8) & 0xFFF));
+        c[2*i+1] = (int16_t)((t1 >> 4) | (t2 << 4));
+      }
+
+     mlkem_poly_to_avx2_layout(c);
+
+     for (i = 0; i < 256; ++i)
+      { if (c[i] != b[i])
+         { printf("Error in mlkem_frombytes; element i = %"PRIu64
+                  "; expected output for input[i] = 0x%03"PRIx16
+                  " while output is = 0x%03"PRIx16"\n",
+                  i,c[i],b[i]);
+           return 1;
+         }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#else
+  return 0;
+#endif
+}
+
+
 int test_mlkem_tobytes(void)
 {
 uint64_t t, i;
@@ -15630,6 +15673,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
   functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
+  functionaltest(all,"mlkem_frombytes",test_mlkem_frombytes);
   functionaltest(all,"mlkem_intt",test_mlkem_intt);
   functionaltest(all,"mlkem_ntt",test_mlkem_ntt);
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);

@@ -1022,6 +1022,10 @@ extern void mlkem_ntt(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z_01234[S2N
 // Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
 extern void mlkem_reduce(int16_t a[S2N_BIGNUM_STATIC 256]);
 
+// Unpack ML-KEM polynomial coefficients
+// Input a[384] (bytes); output r[256] (signed 16-bit words)
+extern void mlkem_frombytes(int16_t r[S2N_BIGNUM_STATIC 256],const uint8_t a[S2N_BIGNUM_STATIC 384]);
+
 // Pack ML-KEM polynomial coefficients as 12-bit numbers
 // Input a[256] (signed 16-bit words); output r[384] (bytes)
 extern void mlkem_tobytes(uint8_t r[S2N_BIGNUM_STATIC 384],const int16_t a[S2N_BIGNUM_STATIC 256]);
