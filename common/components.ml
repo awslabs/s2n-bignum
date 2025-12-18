@@ -2060,6 +2060,28 @@ let bytes128 = define
 let bytes256 = define
  `bytes256 addr :((int64->byte),256 word)component = bytes(addr,32) :> asword`;;
 
+let BYTES8_ELEMENT = prove
+ (`bytes8 = element`,
+  REWRITE_TAC[FUN_EQ_THM; COMPONENT_EQ] THEN
+  REWRITE_TAC[bytes8; READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[READ_BYTES_1; WRITE_BYTES_1] THEN
+  REWRITE_TAC[asword; write; through; read] THEN
+  REWRITE_TAC[GSYM DIMINDEX_8; VAL_MOD_REFL; WORD_VAL; READ_ELEMENT]);;
+
+let READ_BYTES_BYTES8 = prove
+ (`!a s. read (bytes(a,1)) s = val(read (bytes8 a) s)`,
+  REWRITE_TAC[READ_BYTES_1; BYTES8_ELEMENT; READ_ELEMENT]);;
+
+let READ_MEMORY_BYTES_BYTES8 = prove
+ (`!m a s. read (m :> bytes(a,1)) s = val(read (m :> bytes8 a) s)`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_BYTES_BYTES8]);;
+
+let READ_ELEMENT_WRITE_BYTES8 = prove
+ (`!a b w m.
+        read (element b) (write (bytes8 a) w m) =
+        if b = a then w else read (element b) m`,
+  REWRITE_TAC[BYTES8_ELEMENT; READ_WRITE_ELEMENT]);;
+
 let BYTES8_WBYTES = prove
  (`bytes8 = wbytes`,
   REWRITE_TAC[FUN_EQ_THM; wbytes; bytes8] THEN
@@ -2438,6 +2460,90 @@ let READ_MEMORY_BYTES_TRIVIAL = prove(
   `forall (z:int64) (s:A) m. read (m :> bytes (z,0)) s = 0`,
   REWRITE_TAC[READ_COMPONENT_COMPOSE] THEN
   REWRITE_TAC[READ_BYTES_TRIVIAL]);;
+
+let PREFIX_BYTES_AS_SUBCOMPONENT = prove
+ (`!(a:N word) m n.
+        m <= n ==> ?c. bytes(a,m) = bytes(a,n) :> c`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[COMPONENT_EQ; EXISTS_COMPONENT] THEN
+  EXISTS_TAC `\x. x MOD 2 EXP (8 * m)` THEN
+  EXISTS_TAC
+   `\y s. y MOD 2 EXP (8 * m) + 2 EXP (8 * m) * s DIV 2 EXP (8 * m) ` THEN
+  CONJ_TAC THENL
+   [ALL_TAC; GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `y:num`] THEN
+  GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `s:N word->byte` THEN
+  ASM_SIMP_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE; read; write;
+               READ_BYTES_MOD; ARITH_RULE `m <= n ==> MIN n m = m`] THEN
+  FIRST_X_ASSUM(X_CHOOSE_THEN `d:num` SUBST1_TAC o
+    GEN_REWRITE_RULE I [LE_EXISTS]) THEN
+  REWRITE_TAC[WRITE_BYTES_COMBINE] THEN
+  REWRITE_TAC[READ_BYTES_DIV; ADD_SUB2] THEN
+  REWRITE_TAC[REWRITE_RULE[extensionally_valid_component]
+        EXTENSIONALLY_VALID_COMPONENT_BYTES]);;
+
+let CONTAINED_BYTES_AS_SUBCOMPONENT_GEN = prove
+ (`!(a:N word) b m n.
+        val (word_sub a b) + m <= n /\
+        n <= 2 EXP dimindex(:N)
+        ==> ?c. bytes(a,m) = bytes(b,n) :> c`,
+  let lemma = prove
+   (`!(a:N word) m n.
+          m + n <= 2 EXP dimindex(:N)
+          ==> ?c. bytes(word_add a (word m),n) = bytes(a,m+n) :> c`,
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[COMPONENT_EQ; EXISTS_COMPONENT] THEN
+    EXISTS_TAC `\x. x DIV 2 EXP (8 * m)` THEN
+    EXISTS_TAC
+     `\y:num s:num. s MOD 2 EXP (8 * m) + 2 EXP (8 * m) * y` THEN
+    CONJ_TAC THENL
+     [ALL_TAC; GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `y:num`] THEN
+    GEN_REWRITE_TAC I [FUN_EQ_THM] THEN X_GEN_TAC `s:N word->byte` THEN
+    ASM_SIMP_TAC[READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE; read; write;
+                 READ_BYTES_DIV; ADD_SUB2] THEN
+    ONCE_REWRITE_TAC[GSYM MOD_MOD_REFL] THEN
+    REWRITE_TAC[WRITE_BYTES_COMBINE] THEN
+    REWRITE_TAC[READ_BYTES_MOD; ARITH_RULE `MIN (m + n) m = m`] THEN
+    MATCH_MP_TAC(MESON[]
+     `read c s = read c s' /\ write c (read c s') s' = s'
+      ==> s' = write c (read c s) s'`) THEN
+    REWRITE_TAC[REWRITE_RULE[extensionally_valid_component]
+          EXTENSIONALLY_VALID_COMPONENT_BYTES] THEN
+    MATCH_MP_TAC(GSYM READ_WRITE_ORTHOGONAL_COMPONENTS) THEN
+    REWRITE_TAC[ORTHOGONAL_COMPONENTS_BYTES] THEN
+    REWRITE_TAC[NONOVERLAPPING_MODULO] THEN
+    ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN
+    REWRITE_TAC[NONOVERLAPPING_QFREE; WORD_VAL] THEN
+    REWRITE_TAC[WORD_RULE `word_sub (word_add x y) x = y`] THEN
+    STRIP_TAC THEN REWRITE_TAC[VAL_WORD] THEN
+    SUBGOAL_THEN `m < 2 EXP dimindex(:N)` ASSUME_TAC THENL
+     [ASM_ARITH_TAC; ASM_SIMP_TAC[MOD_LT] THEN ASM_ARITH_TAC]) in
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`b:N word`; `val(word_sub a b:N word)`; `m:num`] lemma) THEN
+  REWRITE_TAC[WORD_VAL; WORD_RULE `word_add b (word_sub a b) = a`] THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
+  X_GEN_TAC `d:(num,num)component` THEN DISCH_THEN SUBST1_TAC THEN
+  MP_TAC(ISPECL [`b:N word`; `val(word_sub a b:N word) + m`; `n:num`]
+        PREFIX_BYTES_AS_SUBCOMPONENT) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(X_CHOOSE_THEN `c:(num,num)component` SUBST1_TAC) THEN
+  REWRITE_TAC[GSYM COMPONENT_COMPOSE_ASSOC] THEN MESON_TAC[]);;
+
+let CONTAINED_BYTES_AS_SUBCOMPONENT = prove
+ (`!(a:N word) b m n.
+        n < 2 EXP dimindex(:N) /\
+        contained (a,m) (b,n)
+        ==> ?c. bytes(a,m) = bytes(b,n) :> c`,
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `m = 0` THENL
+   [STRIP_TAC THEN
+    ASM_REWRITE_TAC[COMPONENT_EQ; bytes; FUN_EQ_THM;
+                    READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+    EXISTS_TAC `rvalue 0:(num,num)component` THEN
+    REWRITE_TAC[READ_RVALUE; WRITE_RVALUE] THEN
+    REWRITE_TAC[REWRITE_RULE[extensionally_valid_component]
+        EXTENSIONALLY_VALID_COMPONENT_BYTES];
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+    ASM_SIMP_TAC[LE_1; CONTAINED_QFREE] THEN STRIP_TAC THEN
+    ASM_SIMP_TAC[CONTAINED_BYTES_AS_SUBCOMPONENT_GEN; LT_IMP_LE]]);;
 
 (* ------------------------------------------------------------------------- *)
 (* State component corresponding to the head of a stack/list.                *)
@@ -2863,54 +2969,6 @@ let ORTHOGONAL_COMPONENTS_RULE2 tm1 tm2 =
   ORTHOGONAL_COMPONENTS_CONV(list_mk_icomb "orthogonal_components" [tm1;tm2]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Tool to attempt to reduce "read c (write d y s)", either by showing       *)
-(* c=d or that the two components c and d are orthogonal.                    *)
-(* ------------------------------------------------------------------------- *)
-
-let COMPONENT_READ_OVER_WRITE_CONV =
-  let pth_same = prove
-   (`valid_component c ==> read c (write c y s) = y`,
-    SIMP_TAC[valid_component])
-  and pth_orth = prove
-   (`orthogonal_components c d ==> read c (write d y s) = read c s`,
-    SIMP_TAC[orthogonal_components]) in
-  let rule_same = PART_MATCH (lhand o rand) pth_same
-  and rule_orth = PART_MATCH (lhand o rand) pth_orth in
-  fun tm ->
-   let rule_same_matched, rule_orth_matched = ref false, ref false in
-   (try let th = rule_same tm in
-        rule_same_matched := true;
-        MP th (VALID_COMPONENT_CONV(lhand(concl th)))
-    with _ ->
-      try let th = rule_orth tm in
-          rule_orth_matched := true;
-          MP th (ORTHOGONAL_COMPONENTS_CONV(lhand(concl th)))
-      with _ ->
-        (* If tm was of the form `read _ (write _ _ _)`, this failure is from
-           *_COMPONENT{S}_CONV which were supposed to prove either fully
-           overlapping or orthogonal aliasing relation between the reads and
-           writes in tm. This fact might be helpful to the user. *)
-        (if !components_print_log && (!rule_same_matched || !rule_orth_matched) then
-          Printf.printf
-            "Info: could not prove whether the reads and writes of `%s` are fully overlapping or orthogonal.\n"
-            (string_of_term tm)
-        else ());
-        failwith "COMPONENT_READ_OVER_WRITE_CONV");;
-
-(* ------------------------------------------------------------------------- *)
-(* Similar tool for "write c y (write c z s)"                                *)
-(* ------------------------------------------------------------------------- *)
-
-let COMPONENT_WRITE_OVER_WRITE_CONV =
-  let pth = prove
-   (`valid_component c ==> write c y (write c z s) = write c y s`,
-    SIMP_TAC[valid_component]) in
-  let rule = PART_MATCH (lhand o rand) pth in
-   fun tm ->
-    (let th = rule tm in
-     MP th (VALID_COMPONENT_CONV(lhand(concl th))));;
-
-(* ------------------------------------------------------------------------- *)
 (* Slightly ad hoc tactic to do "simple" linear arithmetic: pick out         *)
 (* "environmental" assumptions with relevance to natural number arithmetic.  *)
 (* ------------------------------------------------------------------------- *)
@@ -3002,10 +3060,11 @@ let NONOVERLAP_REVERT_CONV =
    GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_VAL]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Normalize as word_add base (iword x), even by introduceing iword(&0).     *)
+(* Normalize as word_add base (iword x), even by introducing iword(&0).      *)
 (* ------------------------------------------------------------------------- *)
 
 let INORMALIZE_RELATIVE_ADDRESS_CONV =
+  let CHECK_REMAINDERED_CONV = ALL_CONV o check(vfree_in `rem`) in
   let trivconv = GEN_REWRITE_CONV I
     [WORD_RULE `z:int64 = word_add z (iword(&0))`]
   and initconv =
@@ -3013,10 +3072,16 @@ let INORMALIZE_RELATIVE_ADDRESS_CONV =
      [WORD_ADD; IWORD_INT_ADD; WORD_VAL; GSYM WORD_ADD_ASSOC;
       WORD_RULE `word_sub x y:int64 = word_add x (word_neg y)`]
   and mainconv =
+    GEN_REWRITE_CONV DEPTH_CONV [VAL_WORD] THENC
     GEN_REWRITE_CONV TOP_DEPTH_CONV
      [GSYM IWORD_INT_ADD; WORD_IWORD;
       GSYM IWORD_INT_NEG; GSYM IWORD_INT_MUL] THENC
-    GEN_REWRITE_CONV TOP_DEPTH_CONV [GSYM INT_OF_NUM_CLAUSES] in
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [GSYM INT_OF_NUM_CLAUSES; GSYM INT_OF_NUM_REM] THENC
+    TRY_CONV(CHECK_REMAINDERED_CONV THENC
+             GEN_REWRITE_CONV I [GSYM IWORD_REM_SIZE] THENC
+             RAND_CONV INT_REM_DOWN_CONV THENC
+             GEN_REWRITE_CONV I [IWORD_REM_SIZE]) in
   let postconv tm =
     match tm with
       Var(_,_)
@@ -3402,6 +3467,55 @@ let COMPONENTS_READ_OVER_WRITE_ORTHOGONAL_CONV =
               AP_TERM l (conv ths r))
       | _ -> raise Unchanged in
   fun tm -> try conv ariths tm with Unchanged -> REFL tm;;
+
+(* ------------------------------------------------------------------------- *)
+(* This one attempts to reduce "read c (write d y s)", either by showing     *)
+(* c=d or that the two components c and d are orthogonal.                    *)
+(* ------------------------------------------------------------------------- *)
+
+let COMPONENT_READ_OVER_WRITE_CONV =
+  let pth_same = prove
+   (`valid_component c ==> read c (write c y s) = y`,
+    SIMP_TAC[valid_component])
+  and pth_orth = prove
+   (`orthogonal_components c d ==> read c (write d y s) = read c s`,
+    SIMP_TAC[orthogonal_components]) in
+  let rule_same = PART_MATCH (lhand o rand) pth_same
+  and rule_orth = PART_MATCH (lhand o rand) pth_orth
+  and orth_rule = ORTHOGONAL_COMPONENTS_RULE(NONOVERLAPPING_DRIVERS[],[]) in
+  fun tm ->
+   let rule_same_matched, rule_orth_matched = ref false, ref false in
+   (try let th = rule_same tm in
+        rule_same_matched := true;
+        MP th (VALID_COMPONENT_CONV(lhand(concl th)))
+    with _ ->
+      try let th = rule_orth tm in
+          rule_orth_matched := true;
+          MP th (orth_rule(lhand(concl th)))
+      with _ ->
+        (* If tm was of the form `read _ (write _ _ _)`, this failure is from
+           *_COMPONENT{S}_CONV which were supposed to prove either fully
+           overlapping or orthogonal aliasing relation between the reads and
+           writes in tm. This fact might be helpful to the user. *)
+        (if !components_print_log && (!rule_same_matched || !rule_orth_matched) then
+          Printf.printf
+            "Info: could not prove whether the reads and writes of `%s` are fully overlapping or orthogonal.\n"
+            (string_of_term tm)
+        else ());
+        failwith "COMPONENT_READ_OVER_WRITE_CONV");;
+
+(* ------------------------------------------------------------------------- *)
+(* Similar tool for "write c y (write c z s)"                                *)
+(* ------------------------------------------------------------------------- *)
+
+let COMPONENT_WRITE_OVER_WRITE_CONV =
+  let pth = prove
+   (`valid_component c ==> write c y (write c z s) = write c y s`,
+    SIMP_TAC[valid_component]) in
+  let rule = PART_MATCH (lhand o rand) pth in
+   fun tm ->
+    (let th = rule tm in
+     MP th (VALID_COMPONENT_CONV(lhand(concl th))));;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactic versions, the latter allowing identical components too.            *)
