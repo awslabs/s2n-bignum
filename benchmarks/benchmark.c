@@ -1097,6 +1097,7 @@ void call_mldsa_poly_reduce(void) repeat(mldsa_poly_reduce((int32_t*)b0))
 
 void call_mlkem_ntt(void) repeat(mlkem_ntt_x86((int16_t*)b0,(int16_t*)b1))
 void call_mlkem_intt(void) repeat(mlkem_intt_x86((int16_t*)b0,(int16_t*)b1))
+void call_mlkem_frombytes(void) repeat(mlkem_frombytes((uint16_t*)b0,(int8_t*)b1))
 
 void call_bignum_copy_row_from_table_8n__32_16(void) {}
 void call_bignum_copy_row_from_table_8n__32_32(void) {}
@@ -1142,6 +1143,7 @@ void call_sha3_keccak4_f1600(void) repeat(sha3_keccak4_f1600(b0,b1))
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
+void call_mlkem_frombytes(void) {}
 #endif
 
 int main(int argc, char *argv[])
@@ -1526,6 +1528,7 @@ int main(int argc, char *argv[])
   timingtest(all,"mlkem_basemul_k2",call_mlkem_basemul_k2);
   timingtest(all,"mlkem_basemul_k3",call_mlkem_basemul_k3);
   timingtest(all,"mlkem_basemul_k4",call_mlkem_basemul_k4);
+  timingtest(!arm,"mlkem_frombytes",call_mlkem_frombytes);
   timingtest(all,"mlkem_intt",call_mlkem_intt);
   timingtest(arm,"mlkem_mulcache_compute",call_mlkem_mulcache_compute);
   timingtest(all,"mlkem_ntt",call_mlkem_ntt);
