@@ -1147,9 +1147,10 @@ let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
     let x = read src s in (dest := x) s`;;
 
-(*** This is a tricky one. We should really give it an iterative
- *** semantics to handle overlapping regions. We currently just
- *** assume the regions don't overlap for sensible results
+(*** This has a complicated iterative semantics via the
+ *** auxiliary function x86_movsb (in lowercase). Here
+ *** the "rept" argument is true iff this is a repeated
+ *** instance REP MOVSB.
  ***)
 
 let x86_MOVSB = new_definition
