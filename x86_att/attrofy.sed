@@ -257,6 +257,7 @@ s/^vpsubd[ \t]+%ymm9,%ymm9,%ymm15$/vpsubd\t\t%ymm15,%ymm9,%ymm9/
 s/^vpsubd[ \t]+%ymm12,%ymm12,%ymm13$/vpsubd\t\t%ymm13,%ymm12,%ymm12/
 s/^vpsubd[ \t]+%ymm12,%ymm12,%ymm14$/vpsubd\t\t%ymm14,%ymm12,%ymm12/
 s/^vpsubd[ \t]+%ymm\\h,%ymm\\h,%ymm14$/vpsubd\t\t%ymm14,%ymm\\h,%ymm\\h/
+s/^vpsubd[ \t]+%ymm\\l,%ymm\\l,%ymm13$/vpsubd\t\t%ymm13,%ymm\\l,%ymm\\l/
 
 # Eliminate any trailing spaces, just to be tidy
 
