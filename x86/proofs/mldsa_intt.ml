@@ -222,7 +222,7 @@ e(MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_INTT_TMC_EXEC [n] THEN
 
 e(REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
   CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
-  CONV_RULE(READ_MEMORY_SPLIT_CONV 4) o
+  CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
   check (can (term_match [] `read qqq s:int256 = xxx`) o concl))));;
 
 (*** Expand the cases in the conclusion ***)
