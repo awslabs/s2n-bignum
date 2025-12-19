@@ -254,12 +254,14 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mlkem/mlkem_basemul_k2.o \
              mlkem/mlkem_basemul_k3.o \
              mlkem/mlkem_basemul_k4.o \
-             mlkem/mlkem_ntt.o \
              mlkem/mlkem_frombytes.o \
-             mlkem/mlkem_tobytes.o \
              mlkem/mlkem_intt.o \
+             mlkem/mlkem_ntt.o \
              mlkem/mlkem_reduce.o \
              mlkem/mlkem_rej_uniform_VARIABLE_TIME.o \
+             mlkem/mlkem_tobytes.o \
+             mlkem/mlkem_tomont.o \
+             mlkem/mlkem_unpack.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \
              p256/bignum_cmul_p256.o \
