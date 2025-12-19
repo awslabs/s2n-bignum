@@ -12351,11 +12351,9 @@ uint64_t t, i;
 
 int test_mlkem_tomont(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[256], b[256];
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
   printf("Testing mlkem_tomont with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -12385,7 +12383,6 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_rej_uniform(void)
@@ -15679,6 +15676,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
   functionaltest(all,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
+  functionaltest(all,"mlkem_tomont",test_mlkem_tomont);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
@@ -15738,7 +15736,6 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
     functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
-    functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);
     functionaltest(sha3,"sha3_keccak_f1600_alt",test_sha3_keccak_f1600_alt);
     functionaltest(arm,"sha3_keccak_f1600_alt2",test_sha3_keccak_f1600_alt2);
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
