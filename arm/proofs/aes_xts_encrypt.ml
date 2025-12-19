@@ -12,22 +12,8 @@ needs "arm/proofs/aes_xts_encrypt_spec.ml";;
 arm_print_log := true;;
 components_print_log := true;;
 
-(* print_literal_from_elf "arm/aes-xts/aes-xts-armv8.o";; *)
-(* save_literal_from_elf "arm/aes-xts/aes-xts-armv8.txt" "arm/aes-xts/aes-xts-armv8.o";; *)
-
-(* let aes_xts_armv8 = define_assert_from_elf "aes_xts_armv8" "arm/aes-xts/aes-xts-armv8.o" ..*)
-
-(* Missing instructions that were added in PR#211
-4c4070a6   10: 4c4070a6      ld1.16b { v6 }, [x5]
-4cdfa87c   5c: 4cdfa87c      ld1.4s  { v28, v29 }, [x3], #32
-d503201f   f8: d503201f      nop
-4cc87000   198: 4cc87000      ld1.16b { v0 }, [x0], x8
-4c40a870   19c: 4c40a870      ld1.4s  { v16, v17 }, [x3]
-3875682f   818: 3875682f      ldrb    w15, [x1, x21]
-Also LDP/STP pre-index and post-index
-*)
-
-let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/aes-xts/aes-xts-armv8.o"
+(* print_literal_from_elf "arm/aes-xts/aes_xts_encrypt_armv8.o";; *)
+let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/aes-xts/aes_xts_encrypt_armv8.o"
 [
   0xd10183ff;       (* arm_SUB SP SP (rvalue (word 0x60)) *)
   0x6d0227e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&0x20))) *)
@@ -7937,102 +7923,3 @@ let AES256_XTS_ENCRYPT_SUBROUTINE_CORRECT = prove(
       fst AES256_XTS_ENCRYPT_EXEC] AES256_XTS_ENCRYPT_CORRECT)
    `[X19; X20; X21; X22; D8; D9; D10; D11; D12; D13; D14; D15]` 96
   );;
-(*
-val it : goalstack = 1 subgoal (1 total)
-
-  0 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xaac) (val ptxt_p,val len)`]
-  1 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xaac) (val ctxt_p,val len)`]
-  2 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xaac) (val key1_p,0xf4)`]
-  3 [`nonoverlapping_modulo (0x2 EXP 0x40) (pc,0xaac) (val key2_p,0xf4)`]
-  4 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ptxt_p,val len)
-      (val ctxt_p,val len)`]
-  5 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ptxt_p,val len)
-      (val key1_p,0xf4)`]
-  6 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ptxt_p,val len)
-      (val key2_p,0xf4)`]
-  7 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ctxt_p,val len)
-      (val key1_p,0xf4)`]
-  8 [`nonoverlapping_modulo (0x2 EXP 0x40) (val ctxt_p,val len)
-      (val key2_p,0xf4)`]
-  9 [`nonoverlapping_modulo (0x2 EXP 0x40) (val key1_p,0xf4)
-      (val key2_p,0xf4)`]
- 10 [`val len >= 0x10`]
- 11 [`val len <= 0x2 EXP 0x18`]
- 12 [`LENGTH pt_in = val len`]
- 13 [`word_add tail_len len_full_blocks = len`]
- 14 [`word_and len (word 0xfffffffffffffff0) = len_full_blocks`]
- 15 [`word (val len_full_blocks DIV 0x50) = num_5blocks`]
- 16 [`word_and len (word 0xf) = tail_len`]
- 17 [`[k1_0; k1_1; k1_2; k1_3; k1_4; k1_5; k1_6; k1_7; k1_8; k1_9; k1_10;
-       k1_11; k1_12; k1_13; k1_14] =
-      key1_lst`]
- 18 [`[k2_0; k2_1; k2_2; k2_3; k2_4; k2_5; k2_6; k2_7; k2_8; k2_9; k2_10;
-       k2_11; k2_12; k2_13; k2_14] =
-      key2_lst`]
- 19 [`~(val len < 0x50)`]
- 20 [`~(val len_full_blocks < 0x50)`]
- 21 [`val len_full_blocks <= 0x2 EXP 0x18`]
- 22 [`0x0 < val num_5blocks`]
- 23 [`val len_full_blocks <= val len`]
- 24 [`val num_5blocks * 0x50 <= val len_full_blocks`]
-
-`ensures arm
- (\s.
-      aligned_bytes_loaded s (word pc) aes256_xts_encrypt_mc /\
-      read PC s = word (pc + 0x9e0) /\
-      read X0 s =
-      word_add ptxt_p (word (acc_len num_5blocks len_full_blocks)) /\
-      read X1 s =
-      word_add ctxt_p (word (acc_len num_5blocks len_full_blocks)) /\
-      read X21 s = tail_len /\
-      read Q6 s =
-      calculate_tweak (acc_blocks num_5blocks len_full_blocks true) iv
-      key2_lst /\
-      read X19 s = word 0x87 /\
-      read X10 s =
-      word_subword
-      (calculate_tweak (acc_blocks num_5blocks len_full_blocks false) iv
-      key2_lst)
-      (0x40,0x40) /\
-      read X9 s =
-      word_zx
-      (calculate_tweak (acc_blocks num_5blocks len_full_blocks false) iv
-      key2_lst) /\
-      read Q16 s = k1_0 /\
-      read Q17 s = k1_1 /\
-      read Q12 s = k1_2 /\
-      read Q13 s = k1_3 /\
-      read Q14 s = k1_4 /\
-      read Q15 s = k1_5 /\
-      read Q4 s = k1_6 /\
-      read Q5 s = k1_7 /\
-      read Q18 s = k1_8 /\
-      read Q19 s = k1_9 /\
-      read Q20 s = k1_10 /\
-      read Q21 s = k1_11 /\
-      read Q22 s = k1_12 /\
-      read Q23 s = k1_13 /\
-      read Q7 s = k1_14 /\
-      byte_list_at pt_in ptxt_p len s /\
-      byte_list_at
-      (aes256_xts_encrypt pt_in (acc_len num_5blocks len_full_blocks) iv
-       key1_lst
-      key2_lst)
-      ctxt_p
-      (word (acc_len num_5blocks len_full_blocks))
-      s)
- (\s.
-      read PC s = word (pc + 0xaac - 0x8 * 0x4) /\
-      (forall i.
-           i < val len
-           ==> read (memory :> bytes8 (word_add ctxt_p (word i))) s =
-               EL i (aes256_xts_encrypt pt_in (val len) iv key1_lst key2_lst)))
- (MAYCHANGE
-  [PC; X0; X1; X2; X4; X6; X7; X8; X9; X10; X11; X19; X20; X21; X22] ,,
-  MAYCHANGE
-  [Q0; Q1; Q4; Q5; Q6; Q7; Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15; Q16; Q17;
-   Q18; Q19; Q20; Q21; Q22; Q23; Q24; Q25; Q26] ,,
-  MAYCHANGE [NF; ZF; CF; VF] ,,
-  MAYCHANGE [events] ,,
-  MAYCHANGE [memory :> bytes (ctxt_p,val len)])`
-*)
