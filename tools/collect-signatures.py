@@ -331,6 +331,7 @@ onlyInX86 = [
   "mldsa_ntt",
   "mldsa_poly_reduce",
   "mlkem_frombytes",
+  "mlkem_mulcache_compute_x86",
   "mlkem_ntt_x86",
   "mlkem_intt_x86",
   "mlkem_unpack",
