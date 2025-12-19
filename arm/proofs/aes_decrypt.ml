@@ -3,14 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-use_file_raise_failure := true;;
-arm_print_log := true;;
-
 needs "arm/proofs/base.ml";;
-loadt "arm/proofs/aes_decrypt_spec.ml";;
+needs "arm/proofs/utils/aes_decrypt_spec.ml";;
 
-print_literal_from_elf "arm/aes-xts/aes256_decrypt.o";;
-
+(* print_literal_from_elf "arm/aes-xts/aes256_decrypt.o";; *)
 let aes256_decrypt_mc = define_assert_from_elf "aes256_decrypt_mc" "arm/aes-xts/aes256_decrypt.o"
 [
   0xb940f046;       (* arm_LDR W6 X2 (Immediate_Offset (word 0xf0)) *)
@@ -36,7 +32,6 @@ let aes256_decrypt_mc = define_assert_from_elf "aes256_decrypt_mc" "arm/aes-xts/
 
 let AES256_DECRYPT_EXEC = ARM_MK_EXEC_RULE aes256_decrypt_mc;;
 
-(* TODO: Could this be better? read(memory :> bytes(key, 240) = all_k) *)
 let AES256_DECRYPT_CORRECT = prove(
   `!plaintext ciphertext key ib k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 pc.
     nonoverlapping (word pc,LENGTH aes256_decrypt_mc) (plaintext,16)

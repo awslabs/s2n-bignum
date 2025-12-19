@@ -1,5 +1,10 @@
-needs "arm/proofs/base.ml";;
-needs "arm/proofs/aes_encrypt_spec.ml";;
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
+needs "common/aes.ml";;
+needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 
 (*
 AES-256-XTS Encryption Algorithm for Any Input Length

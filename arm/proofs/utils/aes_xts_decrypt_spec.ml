@@ -1,12 +1,18 @@
-use_file_raise_failure := true;;
-needs "common/aes.ml";;
-loadt "arm/proofs/aes_encrypt_spec.ml";;
-loadt "arm/proofs/aes_decrypt_spec.ml";;
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
 
+needs "common/aes.ml";;
+needs "arm/proofs/utils/aes_encrypt_spec.ml";;
+needs "arm/proofs/utils/aes_decrypt_spec.ml";;
+
+(*
 let pp_print_num fmt tm =
   let n = dest_numeral tm in
   pp_print_string fmt (string_of_num_hex n) in
 install_user_printer("pp_print_num",pp_print_num);;
+*)
 
 (*******************************************)
 (* Specification *)

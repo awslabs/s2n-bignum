@@ -1,8 +1,12 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 needs "arm/proofs/base.ml";;
-needs "arm/proofs/aes_encrypt_spec.ml";;
+needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 
-print_literal_from_elf "arm/aes-xts/aes256_encrypt.o";;
-
+(* print_literal_from_elf "arm/aes-xts/aes256_encrypt.o";; *)
 let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/aes-xts/aes256_encrypt.o"
 [
   0xb940f046;       (* arm_LDR W6 X2 (Immediate_Offset (word 240)) *)
@@ -27,8 +31,6 @@ let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/aes-xts/
 ];;
 
 let AES256_ENCRYPT_EXEC = ARM_MK_EXEC_RULE aes256_encrypt_mc;;
-
-(* TODO: Could this be better? read(memory :> bytes(key, 240) = all_k) *)
 
 let AES256_ENCRYPT_CORRECT = prove(
   `!ciphertext plaintext key ib k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 pc.
