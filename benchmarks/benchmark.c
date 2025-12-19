@@ -1099,6 +1099,7 @@ void call_mldsa_poly_reduce(void) repeat(mldsa_poly_reduce((int32_t*)b0))
 void call_mlkem_ntt(void) repeat(mlkem_ntt_x86((int16_t*)b0,(int16_t*)b1))
 void call_mlkem_intt(void) repeat(mlkem_intt_x86((int16_t*)b0,(int16_t*)b1))
 void call_mlkem_frombytes(void) repeat(mlkem_frombytes((uint16_t*)b0,(int8_t*)b1))
+void call_mlkem_unpack(void) repeat(mlkem_unpack((uint16_t*)b0))
 
 void call_bignum_copy_row_from_table_8n__32_16(void) {}
 void call_bignum_copy_row_from_table_8n__32_32(void) {}
@@ -1143,6 +1144,7 @@ void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
 void call_mlkem_frombytes(void) {}
+void call_mlkem_unpack(void) {}
 #endif
 
 int main(int argc, char *argv[])
@@ -1535,6 +1537,7 @@ int main(int argc, char *argv[])
   timingtest(all,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
   timingtest(all,"mlkem_tobytes",call_mlkem_tobytes);
   timingtest(all,"mlkem_tomont",call_mlkem_tomont);
+  timingtest(!arm,"mlkem_unpack",call_mlkem_unpack);
   timingtest(!arm,"mldsa_ntt",call_mldsa_ntt);
   timingtest(!arm,"mldsa_poly_reduce",call_mldsa_poly_reduce);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
