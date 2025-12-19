@@ -167,6 +167,19 @@ e(REWRITE_TAC [SOME_FLAGS; fst MLDSA_INTT_TMC_EXEC]);;
 e(GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
   GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
   GHOST_INTRO_TAC `init_ymm2:int256` `read YMM2` THEN
+  GHOST_INTRO_TAC `init_ymm3:int256` `read YMM3` THEN
+  GHOST_INTRO_TAC `init_ymm4:int256` `read YMM4` THEN
+  GHOST_INTRO_TAC `init_ymm5:int256` `read YMM5` THEN
+  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
+  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
+  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
+  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
+  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
+  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
+  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
+  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
+  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
+  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
   ENSURES_INIT_TAC "s0");;
 
 (*** First restructure all the loads from the a pointer ***)
