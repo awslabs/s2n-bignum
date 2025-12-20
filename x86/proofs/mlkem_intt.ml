@@ -1104,7 +1104,7 @@ let MLKEM_INTT_CORRECT = prove
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
-                      abs(ival zi) <= &26632))
+                      abs(ival zi) <= &26631))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI  ,,
            MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8;
                       ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
@@ -1240,7 +1240,7 @@ let MLKEM_INTT_NOIBT_SUBROUTINE_CORRECT  = prove
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
-                      abs(ival zi) <= &26632))
+                      abs(ival zi) <= &26631))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(a, 512)])`,
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
@@ -1270,7 +1270,7 @@ let MLKEM_INTT_SUBROUTINE_CORRECT  = prove
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
-                      abs(ival zi) <= &26632))
+                      abs(ival zi) <= &26631))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(a, 512)])`,
   let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
@@ -1315,7 +1315,7 @@ let MLKEM_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
-                      abs(ival zi) <= &26632))
+                      abs(ival zi) <= &26631))
           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
            MAYCHANGE [memory :> bytes(a, 512)])`,
@@ -1446,7 +1446,7 @@ let MLKEM_INTT_WINDOWS_SUBROUTINE_CORRECT  = prove
                         ==> let zi =
                       read(memory :> bytes16(word_add a (word(2 * i)))) s in
                       (ival zi == avx2_inverse_ntt (ival o x) i) (mod &3329) /\
-                      abs(ival zi) <= &26632))
+                      abs(ival zi) <= &26631))
           (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
            MAYCHANGE [memory :> bytes(a, 512)])`,
