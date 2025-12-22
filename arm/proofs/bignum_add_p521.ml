@@ -170,3 +170,38 @@ let BIGNUM_ADD_P521_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_ADD_P521_EXEC BIGNUM_ADD_P521_CORRECT);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "bignum_add_p521" subroutine_signatures)
+    BIGNUM_ADD_P521_SUBROUTINE_CORRECT
+    BIGNUM_ADD_P521_EXEC;;
+
+let BIGNUM_ADD_P521_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc returnaddress.
+           nonoverlapping (word pc,152) (z,8 * 9)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_add_p521_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z pc returnaddress /\
+                         memaccess_inbounds e2 [x,72; y,72; z,72] [z,72]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_ADD_P521_EXEC);;
