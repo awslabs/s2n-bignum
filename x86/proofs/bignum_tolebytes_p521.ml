@@ -187,3 +187,170 @@ let BIGNUM_TOLEBYTES_P521_WINDOWS_SUBROUTINE_CORRECT = prove
                        memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_TOLEBYTES_P521_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_tolebytes_p521" subroutine_signatures)
+    BIGNUM_TOLEBYTES_P521_CORRECT
+    BIGNUM_TOLEBYTES_P521_EXEC;;
+
+let BIGNUM_TOLEBYTES_P521_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc.
+           nonoverlapping (word pc,71) (z,66) /\
+           (x = z \/ nonoverlapping (x,8 * 9) (z,66))
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc)
+                    (BUTLAST bignum_tolebytes_p521_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 70) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc /\
+                         memaccess_inbounds e2 [x,72; z,66] [z,66]))
+               (MAYCHANGE [RIP; RAX] ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bytes (z,66)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_TOLEBYTES_P521_EXEC);;
+
+let BIGNUM_TOLEBYTES_P521_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        nonoverlapping (stackpointer,8) (z,66) /\
+        nonoverlapping (word pc,LENGTH bignum_tolebytes_p521_tmc) (z,66) /\
+        (x = z \/ nonoverlapping (x,8 * 9) (z,66))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_tolebytes_p521_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events x z pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [x,72; z,66; stackpointer,8]
+                      [z,66; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (z,66)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_tolebytes_p521_tmc
+    BIGNUM_TOLEBYTES_P521_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_TOLEBYTES_P521_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        nonoverlapping (stackpointer,8) (z,66) /\
+        nonoverlapping (word pc,LENGTH bignum_tolebytes_p521_mc) (z,66) /\
+        (x = z \/ nonoverlapping (x,8 * 9) (z,66))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_tolebytes_p521_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events x z pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [x,72; z,66; stackpointer,8]
+                      [z,66; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bytes (z,66)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_TOLEBYTES_P521_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_TOLEBYTES_P521_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_tolebytes_p521_windows_tmc; x,8 * 9] /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,66) /\
+        nonoverlapping (word pc,LENGTH bignum_tolebytes_p521_windows_tmc)
+        (z,66) /\
+        (x = z \/ nonoverlapping (x,8 * 9) (z,66))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_tolebytes_p521_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,72; z,66; word_sub stackpointer (word 16),24]
+                      [z,66; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,66);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  WINDOWS_X86_WRAP_NOSTACK_TAC
+    bignum_tolebytes_p521_windows_tmc bignum_tolebytes_p521_tmc
+    BIGNUM_TOLEBYTES_P521_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_TOLEBYTES_P521_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 16),16))
+        [word pc,LENGTH bignum_tolebytes_p521_windows_mc; x,8 * 9] /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,66) /\
+        nonoverlapping (word pc,LENGTH bignum_tolebytes_p521_windows_mc)
+        (z,66) /\
+        (x = z \/ nonoverlapping (x,8 * 9) (z,66))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_tolebytes_p521_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,72; z,66; word_sub stackpointer (word 16),24]
+                      [z,66; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,66);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_TOLEBYTES_P521_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

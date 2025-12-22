@@ -1010,6 +1010,10 @@ extern void mlkem_intt_x86(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[
 // Inputs a[256], z[128] and t[128] (signed 16-bit words); output x[128] (signed 16-bit words)
 extern void mlkem_mulcache_compute(int16_t x[S2N_BIGNUM_STATIC 128],const int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z[S2N_BIGNUM_STATIC 128],const int16_t t[S2N_BIGNUM_STATIC 128]);
 
+// Precompute the mulcache data for a polynomial in the NTT domain
+// Inputs a[256], qdata[128] (signed 16-bit words); output x[128] (signed 16-bit words)
+extern void mlkem_mulcache_compute_x86(int16_t x[S2N_BIGNUM_STATIC 128],const int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[S2N_BIGNUM_STATIC 624]);
+
 // Forward number-theoretic transform from ML-KEM x86 implementation
 // Input a[256] (signed 16-bit words), qdata[624]; output a[256] (signed 16-bit words)
 extern void mlkem_ntt_x86(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[S2N_BIGNUM_STATIC 624]);
@@ -1022,6 +1026,10 @@ extern void mlkem_ntt(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z_01234[S2N
 // Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
 extern void mlkem_reduce(int16_t a[S2N_BIGNUM_STATIC 256]);
 
+// Unpack ML-KEM polynomial coefficients
+// Input a[384] (bytes); output r[256] (signed 16-bit words)
+extern void mlkem_frombytes(int16_t r[S2N_BIGNUM_STATIC 256],const uint8_t a[S2N_BIGNUM_STATIC 384]);
+
 // Pack ML-KEM polynomial coefficients as 12-bit numbers
 // Input a[256] (signed 16-bit words); output r[384] (bytes)
 extern void mlkem_tobytes(uint8_t r[S2N_BIGNUM_STATIC 384],const int16_t a[S2N_BIGNUM_STATIC 256]);
@@ -1033,6 +1041,10 @@ extern void mlkem_tomont(int16_t a[S2N_BIGNUM_STATIC 256]);
 // Uniform rejection sampling for ML-KEM
 // Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 16-bit words), return
 extern uint64_t mlkem_rej_uniform_VARIABLE_TIME(int16_t r[S2N_BIGNUM_STATIC 256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
+
+// Reorders ML-KEM polynomial coefficients for x86 implementation
+// Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words)
+extern void mlkem_unpack(int16_t a[S2N_BIGNUM_STATIC 256]);
 
 // Point addition on NIST curve P-256 in Montgomery-Jacobian coordinates
 // Inputs p1[12], p2[12]; output p3[12]

@@ -12151,23 +12151,33 @@ int test_mlkem_intt(void)
 
 int test_mlkem_mulcache_compute(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[256], x[128], y[128];
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t x[128] __attribute__((aligned(32)));
+  int16_t y[128] __attribute__((aligned(32)));
+  int16_t z[128] __attribute__((aligned(32)));
   printf("Testing mlkem_mulcache_compute with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
    { for (i = 0; i < 256; ++i)
         a[i] = (int16_t) (random64());
+
      reference_mulcache_compute(y,a);
+
+#ifdef __x86_64__
+     mlkem_poly_mulcache_to_avx2_layout(y);
+
+     mlkem_poly_to_avx2_layout(a);
+     mlkem_mulcache_compute_x86(x,a,mlkem_qdata);
+#else
      mlkem_mulcache_compute(x,a,mulcache_zetas,mulcache_zetas_twisted);
+#endif
+
      for (i = 0; i < 128; ++i)
       { if (rem_3329(x[i]) != rem_3329(y[i]))
          { printf("Error in mulcache element i = %"PRIu64"; code[i] = 0x%04"PRIx16
                   " while reference[i] = 0x%04"PRIx16"\n",
-                  i,x[i],y[i]);
+                  i,rem_3329(x[i]),rem_3329(y[i]));
            return 1;
          }
       }
@@ -12182,7 +12192,6 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_ntt(void)
@@ -12259,6 +12268,84 @@ uint64_t t, i;
   return 0;
 }
 
+int test_mlkem_unpack(void)
+{
+#ifdef __x86_64__
+uint64_t t, i;
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  printf("Testing mlkem_unpack with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+      { a[i] = random64() & 0xff;
+        b[i] = a[i];
+      }
+
+     mlkem_unpack(a);
+
+     mlkem_poly_to_avx2_layout(b);
+
+     for (i = 0; i < 256; ++i)
+      { if (a[i] != b[i])
+         { printf("Error in mlkem_unpack; element i = %"PRIu64
+                  "; expected output for input[i] = 0x%03"PRIx16
+                  " while output is = 0x%03"PRIx16"\n",
+                  i,b[i],a[i]);
+           return 1;
+         }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#else
+  return 0;
+#endif
+}
+
+int test_mlkem_frombytes(void)
+{
+#ifdef __x86_64__
+uint64_t t, i;
+  uint8_t a[384] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  int16_t c[256] __attribute__((aligned(32)));
+  printf("Testing mlkem_frombytes with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 384; ++i) a[i] = random64() & 0xff;
+
+     mlkem_frombytes(b,a);
+
+     for (i = 0; i < 128; ++i)
+      { const uint8_t t0 = a[3 * i + 0];
+        const uint8_t t1 = a[3 * i + 1];
+        const uint8_t t2 = a[3 * i + 2];
+
+        c[2*i+0] = (int16_t)(t0 | ((t1 << 8) & 0xFFF));
+        c[2*i+1] = (int16_t)((t1 >> 4) | (t2 << 4));
+      }
+
+     mlkem_poly_to_avx2_layout(c);
+
+     for (i = 0; i < 256; ++i)
+      { if (c[i] != b[i])
+         { printf("Error in mlkem_frombytes; element i = %"PRIu64
+                  "; expected output for input[i] = 0x%03"PRIx16
+                  " while output is = 0x%03"PRIx16"\n",
+                  i,c[i],b[i]);
+           return 1;
+         }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#else
+  return 0;
+#endif
+}
+
+
 int test_mlkem_tobytes(void)
 {
 uint64_t t, i;
@@ -12308,11 +12395,9 @@ uint64_t t, i;
 
 int test_mlkem_tomont(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[256], b[256];
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
   printf("Testing mlkem_tomont with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -12342,7 +12427,6 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_rej_uniform(void)
@@ -15630,11 +15714,15 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
   functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
+  functionaltest(all,"mlkem_frombytes",test_mlkem_frombytes);
   functionaltest(all,"mlkem_intt",test_mlkem_intt);
+  functionaltest(all,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
   functionaltest(all,"mlkem_ntt",test_mlkem_ntt);
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
   functionaltest(all,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
+  functionaltest(all,"mlkem_tomont",test_mlkem_tomont);
+  functionaltest(all,"mlkem_unpack",test_mlkem_unpack);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
@@ -15693,8 +15781,6 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_16",test_bignum_copy_row_from_table_16);
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
-    functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
-    functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);
     functionaltest(sha3,"sha3_keccak_f1600_alt",test_sha3_keccak_f1600_alt);
     functionaltest(arm,"sha3_keccak_f1600_alt2",test_sha3_keccak_f1600_alt2);
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
