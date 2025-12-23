@@ -1011,7 +1011,7 @@ extern void mlkem_intt_x86(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[
 extern void mlkem_mulcache_compute(int16_t x[S2N_BIGNUM_STATIC 128],const int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z[S2N_BIGNUM_STATIC 128],const int16_t t[S2N_BIGNUM_STATIC 128]);
 
 // Precompute the mulcache data for a polynomial in the NTT domain
-// Inputs a[256], qdata[128] (signed 16-bit words); output x[128] (signed 16-bit words)
+// Inputs a[256], qdata[624] (signed 16-bit words); output x[128] (signed 16-bit words)
 extern void mlkem_mulcache_compute_x86(int16_t x[S2N_BIGNUM_STATIC 128],const int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[S2N_BIGNUM_STATIC 624]);
 
 // Forward number-theoretic transform from ML-KEM x86 implementation

@@ -445,3 +445,239 @@ let BIGNUM_MOD_N25519_SUBROUTINE_CORRECT = time prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MOD_N25519_EXEC BIGNUM_MOD_N25519_CORRECT);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let WORD_SUB_SUB_CONST = prove (
+  `word_sub (word_sub x (word i)) (word j):(N)word =
+   word_sub x (word (i + j))`,
+  CONV_TAC WORD_RULE);;
+
+(* generated with:
+  mk_safety_spec ~keep_maychanges:true
+      (assoc "bignum_mod_n25519" subroutine_signatures)
+      BIGNUM_MOD_N25519_CORRECT
+      BIGNUM_MOD_N25519_EXEC;; *)
+let BIGNUM_MOD_N25519_SAFE = time prove
+ (`exists f_events.
+        forall e z k x pc.
+            nonoverlapping (word pc,304) (z,32)
+            ==> ensures arm
+                (\s.
+                     aligned_bytes_loaded s (word pc) bignum_mod_n25519_mc /\
+                     read PC s = word pc /\
+                     C_ARGUMENTS [z; k; x] s /\
+                     read events s = e)
+                (\s.
+                     read PC s = word (pc + 248) /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events x z k pc /\
+                          memaccess_inbounds e2 [x,val k * 8; z,32] [z,32]))
+                (MAYCHANGE
+                 [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13] ,,
+                 MAYCHANGE SOME_FLAGS ,,
+                 MAYCHANGE [events] ,,
+                 MAYCHANGE [memory :> bignum (z,4)])`,
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(x:int64) (z:int64) (k:int64) (pc:num).
+      if val k = 0 then
+        f_ev_k0 x z k pc
+      else if val k = 1 then
+        f_ev_k1 x z k pc
+      else if val k = 2 then
+        f_ev_k2 x z k pc
+      else if val k = 3 then
+        f_ev_k3 x z k pc
+      else
+        APPEND
+          (if val k = 4 then
+            f_ev_4 x z k pc
+           else APPEND
+            (f_ev_loop_post x z k pc)
+            (APPEND
+              (ENUMERATEL (val k - 4) (f_ev_loop x z k pc))
+              (f_ev_loop_pre x z k pc)))
+          (f_ev_1 x z k pc)
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REPEAT STRIP_TAC THEN
+
+  ABBREV_TAC `k' = val (k:int64)` THEN
+  SUBGOAL_THEN `k' < 2 EXP 64` ASSUME_TAC THENL [
+    EXPAND_TAC "k'" THEN MATCH_ACCEPT_TAC VAL_BOUND_64; ALL_TAC
+  ] THEN
+  ASM_CASES_TAC `k' < 4` THENL [
+    FIRST_ASSUM(MP_TAC o MATCH_MP (ARITH_RULE
+      `k < 4 ==> k = 0 \/ k = 1 \/ k = 2 \/ k = 3`)) THEN
+    STRIP_TAC THENL [
+      ASM_REWRITE_TAC[ARITH] THEN
+      ARM_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--9) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (* k = 1 *)
+      ASM_REWRITE_TAC[ARITH] THEN
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      ARM_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--12) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (* k = 2 *)
+      ASM_REWRITE_TAC[ARITH] THEN
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      ARM_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--15) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (* k = 3 *)
+      ASM_REWRITE_TAC[ARITH] THEN
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      ARM_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--17) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+    ];
+
+    ALL_TAC
+  ] THEN
+
+  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
+    `~(k < 4) ==> ~(k = 0) /\ ~(k = 1) /\ ~(k = 2) /\ ~(k = 3)`)) THEN
+  ASM_REWRITE_TAC[] THEN
+
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x88`
+   `\s. read X0 s = z /\
+        read X2 s = x /\
+        read X1 s = word(k' - 4)` THEN CONJ_TAC THENL [
+    ARM_SIM_TAC ~canonicalize_pc_diff:false
+      BIGNUM_MOD_N25519_EXEC (1--34) THEN
+    CONJ_TAC THENL [
+      IMP_REWRITE_TAC[GSYM WORD_SUB2] THEN
+      EXPAND_TAC "k'" THEN ASM_REWRITE_TAC[WORD_VAL] THEN ASM_ARITH_TAC;
+      ALL_TAC
+    ] THEN
+
+    (* to help memory inbounds reasoning (got from fn correctness proof *)
+    SUBGOAL_THEN
+      `word_add (word_shl (word_sub k (word 4)) 3) x:int64 =
+       word_add x (word (8 * (k' - 4)))` MP_TAC THENL [
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+        CONV_TAC WORD_RULE; SIMPLE_ARITH_TAC];
+      ALL_TAC
+    ] THEN
+    DISCH_THEN SUBST_ALL_TAC THEN
+    (* rewrite k with word k' *)
+    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC
+  ] THEN
+
+  (*** Finish off the k = 4 case which is now just the writeback ***)
+
+  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
+   `~(k' < 4) ==> k' = 4 \/ (~(k' = 4) /\ 4 < k')`))
+  THENL
+   [ASM_REWRITE_TAC[SUB_REFL;MULT_0] THEN
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC BIGNUM_MOD_N25519_EXEC (1--3) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC] THEN
+
+  ASM_REWRITE_TAC[] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `k' - 4` `pc + 0x8c` `pc + 0xf0`
+   `\i s. read X0 s = z /\
+          read X2 s = x /\
+          read X1 s = word ((k' - 4) - i)` THEN
+  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL [
+    SIMPLE_ARITH_TAC;
+
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC BIGNUM_MOD_N25519_EXEC [1] THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [
+      IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
+      SIMPLE_ARITH_TAC;
+
+      ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0]; ALL_TAC] THEN
+    (* rewrite k with word k' *)
+    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC;
+
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC BIGNUM_MOD_N25519_EXEC (1--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC BIGNUM_MOD_N25519_EXEC (1--25) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
+    REPEAT CONJ_TAC THENL [
+      GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC;
+    ];
+    ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+    [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ];
+    ALL_TAC
+  ] THEN
+  (* rewrite k with word k' *)
+  SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+  REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
+  (* safety_print_log := 1;; revealed that CONTAINED_TAC could not prove
+     expressions including `word_sub (word (k' - 4 - i)) (word 1)`. *)
+  SUBGOAL_THEN `word_sub (word (k' - 4 - i)) (word 1) =
+                word (k' - 4 - (i + 1)):int64` SUBST_ALL_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN
+    CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+    ALL_TAC
+  ] THEN
+  (* .. and manual inspection of sub-tactics reveal this *)
+  MAP_EVERY VAL_INT64_TAC [`k':num`; `k'-4`] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_MOD_N25519_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+        forall e z k x pc returnaddress.
+          nonoverlapping (word pc,0x130) (z,32)
+          ==> ensures arm
+                (\s.
+                     aligned_bytes_loaded s (word pc) bignum_mod_n25519_mc /\
+                     read PC s = word pc /\
+                     read X30 s = returnaddress /\
+                     C_ARGUMENTS [z; k; x] s /\
+                     read events s = e)
+                (\s.
+                     read PC s = returnaddress /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events x z k pc returnaddress /\
+                          memaccess_inbounds e2 [x,val k * 8; z,32] [z,32]))
+                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                 MAYCHANGE [memory :> bignum(z,4)])`,
+  ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_MOD_N25519_EXEC BIGNUM_MOD_N25519_SAFE
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;

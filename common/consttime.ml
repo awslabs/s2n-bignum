@@ -38,7 +38,7 @@ find_stack_access_size `MAYCHANGE [memory :> bytes(z,8 * 8);
    is named other than 'pc' in subroutine_correct_th.
 *)
 let gen_mk_safety_spec
-    ?(coda_pc_range:(int*int) option) (* when coda is used: (begin, len) *)
+    ?(readonly_objects=([]:(term * term)list)) (* address(int64), size(num) list *)
     ~(keep_maychanges:bool)
     (fnargs,_,meminputs,memoutputs,memtemps)
     (subroutine_correct_th:thm) exec
@@ -68,10 +68,18 @@ let gen_mk_safety_spec
       assoc var_c c_to_hol_vars
     with _ -> failwith ("c_var_to_hol: unknown var in C: " ^ var_c) in
 
-  let bytes_term = find_term
-    (fun t -> is_comb t && let name = name_of (fst (strip_comb t)) in
-        name = "bytes_loaded" || name = "aligned_bytes_loaded")
+  let bytes_loaded_terms = find_terms
+    (fun t -> is_comb t &&
+        let bytes_loaded,args = strip_comb t in
+        let name = name_of bytes_loaded in
+        (name = "bytes_loaded" || name = "aligned_bytes_loaded") &&
+        List.length args = 3)
       fnspec_precond in
+  let (bytes_loaded_mc::[]),bytes_loaded_others = List.partition (fun t ->
+      let _::pc::_ = snd (strip_comb t) in
+      let word_const,pc_var = dest_comb pc in
+      String.starts_with ~prefix:"pc" (name_of pc_var))
+    bytes_loaded_terms in
   let read_sp_eq: term option = try
       Some (find_term find_eq_stackpointer fnspec_precond)
     with _ -> None in
@@ -125,6 +133,15 @@ let gen_mk_safety_spec
   (* Create the f_events var as well as expressions (not necessarily var)
      as args of f_events containing public information *)
   let f_events_public_args = public_vars @
+    ((* If _mc takes extra arguments, which can happen when it is taking
+        the addresses of readonly objects, add them *)
+      let the_mc = rand bytes_loaded_mc in
+      if is_const the_mc then []
+      else begin
+        let the_mc_fn, addr_args = strip_comb the_mc in
+        filter (fun t -> is_var t && name_of t <> "pc") addr_args
+      end
+    ) @
     (match stack_access_size with
      | None -> [`pc:num`] @ (Option.to_list returnaddress_var)
      | Some (baseptr,sz) ->
@@ -132,20 +149,33 @@ let gen_mk_safety_spec
   let f_events = mk_var("f_events",
     itlist mk_fun_ty (map type_of f_events_public_args) `:(uarch_event)list`) in
 
-  (* memreads,memwrites with stackpointer as well as pc :) *)
+  (* memreads,memwrites with stackpointer as well as pc :)
+    These will be the arguments of memaccess_inbounds.
+  *)
   let memreads,memwrites =
     match stack_access_size with
     | None -> memreads,memwrites
     | Some (baseptr,sz) ->
       (memreads @ [baseptr,mk_small_numeral sz],
        memwrites @ [baseptr,mk_small_numeral sz]) in
+  (* coda *)
   let memreads,memwrites =
-    match coda_pc_range with
-    | None -> memreads,memwrites
-    | Some (pos,sz) ->
-      let baseptr = subst [mk_small_numeral pos,`n:num`] `word_add (word pc) (word n):int64` in
-      (memreads @ [baseptr,mk_small_numeral sz],
-       memwrites @ [baseptr,mk_small_numeral sz]) in
+    let the_mc = rand bytes_loaded_mc in
+    if is_binary "APPEND" the_mc then
+      let code_mc,data_mc = dest_binary "APPEND" the_mc in
+      let baseptr = subst [code_mc,`b:((8)word)list`]
+        `word (pc + LENGTH (b:((8)word)list)):int64` in
+      let len = subst [data_mc,`b:((8)word)list`] `LENGTH (b:((8)word)list)` in
+      (memreads @ [baseptr,len], memwrites)
+    else
+      memreads,memwrites in
+  (* rodata *)
+  let memreads,memwrites =
+    let _ = List.iter (fun (addr,sz) ->
+        if not (can dest_word_ty (type_of addr)) then
+          failwith ("rodata: not a int64 ty: " ^ (string_of_term addr)))
+        readonly_objects in
+    (memreads @ readonly_objects),memwrites in
 
   let s = mk_var("s",state_ty) in
   let precond =
@@ -154,9 +184,10 @@ let gen_mk_safety_spec
     let read_pc_eq = vsubst [s,fnspec_precond_bvar] read_pc_eq in
     mk_gabs(s,
       list_mk_conj ([
-        vsubst [s,s] bytes_term;
+        vsubst [s,s] bytes_loaded_mc;
         read_pc_eq;
       ] @
+      bytes_loaded_others @
       (match read_sp_eq with | None -> [] | Some t -> [ vsubst [s,s] t ]) @
       (match read_x30_eq with | None -> [] | Some t -> [ vsubst [s,s] t ]) @
       [ mk_comb (c_args, s); `read events s = e`; ])) in
@@ -288,21 +319,32 @@ let DISCHARGE_MEMACCESS_INBOUNDS_TAC =
       GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
       CONJ_TAC THENL [
         (* The new, concrete event trace. *)
-        DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
+        DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC THEN
+        (if !safety_print_log then
+          PRINT_TAC
+            "DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC left this, retracting..."
+          THEN PRINT_GOAL_TAC
+        else ALL_TAC) THEN NO_TAC;
         (* The existing event trace. *)
         REWRITE_TAC[append_nil_th] THEN
         main_tac (* recursively call *)
-      ] THEN NO_TAC) ORELSE
+        THEN NO_TAC
+      ]) ORELSE
 
       (* Case 4. Reverse of case3 :
         memaccess_inbounds (APPEND f_events <concrete events>) ... *)
     (GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
       CONJ_TAC THENL [
         (* The existing event trace. *)
-        main_tac; (* recursively call *)
+        main_tac THEN NO_TAC; (* recursively call *)
         (* The new, concrete event trace. *)
-        DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
-      ] THEN NO_TAC) ORELSE
+        DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC THEN
+        (if !safety_print_log then
+          PRINT_TAC
+            "DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC left this, retracting..."
+          THEN PRINT_GOAL_TAC
+        else ALL_TAC) THEN NO_TAC;
+      ]) ORELSE
 
     (* Case 5: memaccess_inbounds (APPEND e1 e2) ... where e1 and e2 are
        somewhat complex. Restrict to the case when e1 could be discharged with
@@ -313,17 +355,17 @@ let DISCHARGE_MEMACCESS_INBOUNDS_TAC =
         DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC; (* recursively call *)
         (* The new, concrete event trace. *)
         main_tac;
-      ] THEN NO_TAC) ORELSE
-
-    FAIL_TAC
-      ("DISCHARGE_MEMACCESS_INBOUNDS_TAC could not identify the pattern." ^
-      "Please check whether the event list in assumption matches the event " ^
-      "list in the conclusion")) (asl,w)
+      ] THEN NO_TAC)) (asl,w)
   in
   (* Remove all vacuous appends *)
   REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
   (* start! *)
-  main_tac;;
+  (main_tac ORELSE
+   (PRINT_GOAL_TAC THEN
+    FAIL_TAC
+      ("DISCHARGE_MEMACCESS_INBOUNDS_TAC could not identify the pattern. " ^
+      "Please check whether the event list in assumption matches the event " ^
+      "list in the conclusion")));;
 
 let mk_freshvar =
   let n = ref 0 in
@@ -346,7 +388,6 @@ let ABBREV_TRACE_TAC (stored_abbrevs:thm list ref)=
           list_mk_comb(c,trace::readranges::writeranges::[]) in
       (SUBGOAL_THEN new_mem_inbounds MP_TAC THENL [
         DISCHARGE_MEMACCESS_INBOUNDS_TAC THEN
-        PRINT_GOAL_TAC THEN
         FAIL_TAC "could not prove memaccess_inbounds";
         ALL_TAC
       ] THEN DISCARD_MATCHING_ASSUMPTIONS [`memaccess_inbounds x rr wr`] THEN
@@ -419,6 +460,9 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       let f_events = fst (dest_exists w) in
       let quantvars,forall_body = strip_forall(snd(dest_exists w)) in
       let stored_abbrevs = ref [] in
+
+      if List.is_empty quantvars || hd quantvars <> `e:(uarch_event)list`
+      then failwith "The goal must be `exists f_events. forall e ...`" else
 
       (* The destination PC *)
       let dest_pc_addr =
@@ -772,13 +816,27 @@ let UNIFY_F_EVENTS_TAC =
       let eq_val = mk_eq (x,mk_icomb(`val:(N)word->num`,new_v)) in (* wx = val (x) *)
       ABBREV_TAC (mk_eq (new_v,t)) THEN
       SUBGOAL_THEN eq_val SUBST_ALL_TAC THENL
-      [ ASM_SIMP_TAC[WORD_VAL] THEN
-        FAIL_TAC ("This variable may not fit in bitwidth of word: " ^
-            (string_of_term x)); ALL_TAC ]) word_args)
+      [ (ASM_SIMP_TAC[WORD_VAL] THEN NO_TAC) ORELSE
+        (EXPAND_TAC (name_of new_v) THEN EXPAND_TAC (name_of x) THEN
+         REWRITE_TAC[WORD_VAL] THEN NO_TAC) ORELSE
+        (PRINT_GOAL_TAC THEN
+         FAIL_TAC ("This variable may not fit in bitwidth of word: " ^
+            (string_of_term x)));
+        ALL_TAC ]) word_args)
   THEN
   (SAFE_UNIFY_REFL_TAC (ref [])
       (ref ["f_events_callee"(* allow callee's f_events *)]) ORELSE
     (PRINT_GOAL_TAC THEN FAIL_TAC "UNIFY_F_EVENTS_TAC"));;
+
+(* An extra wrapper on top of UNIFY_F_EVENTS_TAC. Canonicalizes
+   APPEND and ENUMERATEL before trying UNIFY_F_EVENTS_TAC. *)
+let CANONICALIZE_UNIFY_F_EVENTS_TAC:tactic =
+  PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
+  GEN_REWRITE_TAC (ONCE_DEPTH_CONV o LAND_CONV) [ENUMERATEL_ADD1] THEN
+  GEN_REWRITE_TAC REDEPTH_CONV [APPEND_ASSOC] THEN
+  REPEAT (AP_THM_TAC THEN AP_TERM_TAC) THEN
+  CONV_TAC (REPEATC (RAND_CONV BETA_CONV)) THEN
+  UNIFY_F_EVENTS_TAC;;
 
 (* When the goal has conclusion
     ... = f_events ...  or
@@ -804,7 +862,7 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
     in
 
   PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
-  fun (asl,w) ->
+  (fun (asl,w) ->
     let l,r = dest_eq w in
     (* When the goal is `x = f_events ...` *)
     if is_f_events_comb r then UNIFY_F_EVENTS_TAC (asl,w) else
@@ -919,7 +977,7 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
         | _, _ ->
           do_fail "Unknown case"
         end
-      end) (asl,w);;
+      end) (asl,w)) ORELSE CANONICALIZE_UNIFY_F_EVENTS_TAC;;
 
 (* The input goal: 'exists e2. ....' *)
 let DISCHARGE_SAFETY_PROPERTY_TAC =

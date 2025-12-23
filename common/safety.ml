@@ -154,6 +154,8 @@ let MEMACCESS_INBOUNDS_CONTAINED = prove(
 (* Helper tactics for subroutines                                            *)
 (* ------------------------------------------------------------------------- *)
 
+let safety_print_log = ref false;;
+
 (* Do ASSUME_TAC for safety proof which is `exists f_events. ...` after
   stripping the exists f_events part. *)
 let ASSUME_CALLEE_SAFETY_TAC =
@@ -187,4 +189,3 @@ let ASSUME_CALLEE_SAFETY_TAILED_TAC =
       in
     let safety_th'' = ONCE_REWRITE_RULE[eqth] safety_th' in
     ASSUME_CALLEE_SAFETY_TAC safety_th'' name;;
-
