@@ -747,67 +747,6 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xt
 
 let AES_XTS_DECRYPT_EXEC = ARM_MK_EXEC_RULE aes_xts_decrypt_mc;;
 
-(** Proof **)
-(*
-let AES_XTS_DECRYPT_1BLOCK_CORRECT = prove(
-  `!ct_ptr pt_ptr key0_ptr key1_ptr iv_ptr ib iv
-    (k00:int128) k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e
-    k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e
-    pc.
-    nonoverlapping (word pc, LENGTH aes_xts_decrypt_mc) (pt_ptr, 16)
-    ==> ensures arm
-    (\s. aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
-         read PC s = word (pc + 0x1c) /\
-         C_ARGUMENTS [ct_ptr; pt_ptr; word 16; key0_ptr; key1_ptr; iv_ptr] s /\
-         read(memory :> bytes128 ct_ptr) s = ib /\
-         read(memory :> bytes128 iv_ptr) s = iv /\
-         set_key_schedule s key0_ptr k00 k01 k02 k03 k04 k05 k06 k07 k08 k09 k0a k0b k0c k0d k0e /\
-         set_key_schedule s key1_ptr k10 k11 k12 k13 k14 k15 k16 k17 k18 k19 k1a k1b k1c k1d k1e)
-    (\s. read PC s = word (pc + 0xa10) /\
-         read(memory :> bytes128 pt_ptr) s =
-           aes256_xts_decrypt_1block ib iv
-           [k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d; k0e]
-           [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]
-         )
-    (MAYCHANGE [PC] ,, MAYCHANGE [events] ,,
-     MAYCHANGE [X21;X2;X6;X4;X9;X10;X19;X22;X11;X7;X0;X1;X8] ,,
-     MAYCHANGE [Q6;Q1;Q0;Q8;Q16;Q17;Q12;Q13;Q14;Q15;Q4;Q5;Q18;Q19;Q20;Q21;Q22;Q23;Q7;Q29;Q24] ,,
-     MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 pt_ptr])
-    `,
-  REWRITE_TAC [(REWRITE_CONV [aes_xts_decrypt_mc] THENC LENGTH_CONV) `LENGTH aes_xts_decrypt_mc`] THEN
-  REWRITE_TAC[set_key_schedule; C_ARGUMENTS; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
-  REPEAT STRIP_TAC THEN
-
-  (* Start symbolic simulation*)
-  ENSURES_INIT_TAC "s0" THEN
-  (* Simulate until the first tweak and verify the first tweak equiv the spec *)
-  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (1--69) THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC
-    `(aes256_encrypt iv [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]):int128`
-    o  MATCH_MP (MESON[] `read Q6 s = a ==> !a'. a = a' ==> read Q6 s = a'`)) THEN
-  ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN AESENC_TAC; DISCH_TAC] THEN
-
-  (* Simulating until finish decrypting one block *)
-  ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (70--126) THEN
-  FIRST_X_ASSUM(MP_TAC o
-    SPEC `(aes256_xts_decrypt_1block ib iv
-       [k00; k01; k02; k03; k04; k05; k06; k07; k08; k09; k0a; k0b; k0c; k0d; k0e]
-       [k10; k11; k12; k13; k14; k15; k16; k17; k18; k19; k1a; k1b; k1c; k1d; k1e]):int128`
-    o  MATCH_MP (MESON[] `read Q0 s = a ==> !a'. a = a' ==> read Q0 s = a'`)) THEN
-  ANTS_TAC THENL [
-    REWRITE_TAC [aes256_xts_decrypt_1block] THEN
-    REWRITE_TAC [xts_init_tweak] THEN
-    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    REWRITE_TAC [aes256_xts_decrypt_round] THEN
-    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    AESDEC_TAC; DISCH_TAC] THEN
-
-    (* Simulate to the end *)
-    ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (127--137) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC []
-);;
-*)
-
 (**********************************************************************)
 (**                    Decrypt-specific lemmas                       **)
 

@@ -28,9 +28,7 @@ endif
 
 # List of object files
 
-OBJ = aes256_encrypt.o \
-      aes256_decrypt.o \
-      aes_xts_encrypt_armv8.o \
+OBJ = aes_xts_encrypt_armv8.o \
       aes_xts_decrypt_armv8.o
 
 %.o : %.S ; $(CC) -E -I../../include $< | $(GAS) -o $@ -

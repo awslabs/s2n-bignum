@@ -13,6 +13,8 @@ To verify programs in x86, see `x86/tutorial`.
 5. `loop.ml`: Verifying a program that has a simple loop.
 6. `bignum.ml`: Writing a specification of a program dealing with big numbers & proving it.
 7. `rodata.ml`: Reading data from the read-only section.
+8. `aes_encrypt.ml`: Verifying a simple AES encryption program.
+9. `aes_decrypt.ml`: Verifying a simple AES decryption program.
 
 ### Relational reasoning
 

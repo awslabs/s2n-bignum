@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
+ (******************************************************************************
+  An example AES decryption proof.
+******************************************************************************)
+
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/aes_decrypt_spec.ml";;
 

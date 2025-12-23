@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
+(******************************************************************************
+  An example AES encryption proof.
+******************************************************************************)
+
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 
@@ -70,14 +74,7 @@ let AES256_ENCRYPT_CORRECT = prove(
   REWRITE_TAC [(REWRITE_CONV [aes256_encrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_encrypt_mc`] THEN
   REPEAT STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
-  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (1--5) THEN
-  (* 1 loop iteration is 8 steps *)
-  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (6--13) THEN
-  (* 5 more iterations = 8*5 = 40 steps *)
-  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (14--53) THEN
-  (* 6 final steps *)
-  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (54--58) THEN
-  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (59--59) THEN
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (1--59) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC [aes256_encrypt] THEN
