@@ -14913,8 +14913,8 @@ int test_known_values_xts_encrypt(void)
   int failures = 0, successes = 0;
   printf("Testing known value cases for aes-xts encrypt\n");
 
-  AES_KEY *key1 = (AES_KEY *)malloc(sizeof(AES_KEY));
-  AES_KEY *key2 = (AES_KEY *)malloc(sizeof(AES_KEY));
+  s2n_bignum_AES_KEY *key1 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  s2n_bignum_AES_KEY *key2 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
   size_t len;
   uint8_t iv[16];
   uint8_t in[224];
@@ -14942,8 +14942,8 @@ int test_known_values_xts_decrypt(void)
   int failures = 0, successes = 0;
   printf("Testing known value cases for aes-xts decrypt\n");
 
-  AES_KEY *key1 = (AES_KEY *)malloc(sizeof(AES_KEY));
-  AES_KEY *key2 = (AES_KEY *)malloc(sizeof(AES_KEY));
+  s2n_bignum_AES_KEY *key1 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  s2n_bignum_AES_KEY *key2 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
   size_t len;
   uint8_t iv[16];
   uint8_t in[224];

@@ -50,7 +50,7 @@ static uint64_t bb[16][BUFFERSIZE];
 static uint64_t bigbuff[100000];
 
 // AES keys for XTS mode testing
-static AES_KEY aes_key1, aes_key2;
+static s2n_bignum_AES_KEY aes_key1, aes_key2;
 static uint8_t aes_iv[16];
 
 // Source of random 64-bit numbers with bit density

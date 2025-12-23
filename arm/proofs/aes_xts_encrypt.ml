@@ -3220,7 +3220,7 @@ let AES_XTS_ENCRYPT_LT_5BLOCK_CORRECT = time prove(
 
 (*
 void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
-                        const AES_KEY *key1, const AES_KEY *key2,
+                        const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2,
                         const uint8_t iv[16])
 *)
 let AES256_XTS_ENCRYPT_CORRECT = prove(

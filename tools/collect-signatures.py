@@ -411,7 +411,7 @@ for archname in ["arm","x86"]:
         arg_elem_bytesizes[argname] = 2
       elif isPtrOrArray(argtype, "int8_t") or isPtrOrArray(argtype, "uint8_t"):
         arg_elem_bytesizes[argname] = 1
-      elif isPtr(argtype, "AES_KEY"):
+      elif isPtr(argtype, "s2n_bignum_AES_KEY"):
         arg_elem_bytesizes[argname] = 1
       elif "[" not in argtype and "*" not in argtype:
         continue
