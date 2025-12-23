@@ -3488,6 +3488,41 @@ let X86_EXECUTE =
      (GEN_REWRITE_RULE I [GSYM FUN_EQ_THM]
         (GEN `s:x86state` x86_execute)));;
 
+(* A set of theorems pre-evaluated to the corresponding match case.
+  [("ADC",
+    |- x86_execute (ADC a0 a1) =
+       (\s.
+            (add_load_event a1 s ,,
+             add_load_event a0 s ,,
+             add_store_event a0 s ,,
+             (\s.
+                  (match operand_size a0 with
+                     64 -> x86_ADC (OPERAND64 a0 s) (OPERAND64 a1 s)
+                   | 32 -> x86_ADC (OPERAND32 a0 s) (OPERAND32 a1 s)
+                   | 16 -> x86_ADC (OPERAND16 a0 s) (OPERAND16 a1 s)
+                   | 8 -> x86_ADC (OPERAND8 a0 s) (OPERAND8 a1 s))
+                  s))
+            s));
+    ...]
+*)
+let X86_EXECUTE_CASES:(string * thm) list =
+  let constructors =
+    (conjuncts o fst o dest_imp o snd o strip_forall o concl)
+    instruction_INDUCTION in
+  let constructors = map (snd o strip_forall) constructors in
+  let constructors = map rand constructors in
+  map (fun inst ->
+      let name = (name_of o fst o strip_comb) inst in
+      let tapp = mk_comb (`x86_execute`,inst) in
+      (* if inst is an operation with tuple arguments, unfold them.
+        ex: MULX4 a0 a1 -> MUX4 (fst a0, snd a0) (fst a1, snd a1) *)
+      let tapp_pairs_unfolded = ONCE_DEPTH_CONV
+          (ONCE_REWRITE_CONV [GSYM PAIR]) tapp in
+      let full_expr = REWRITE_CONV[X86_EXECUTE]
+          (rhs (concl tapp_pairs_unfolded)) in
+      (name,TRANS tapp_pairs_unfolded full_expr))
+    constructors;;
+
 let REGISTER_ALIASES =
  [rax;  rcx;  rdx;  rbx;  rsp;  rbp;  rsi;  rdi;
   r8;   r9;  r10;  r11;  r12;  r13;  r14;  r15;
@@ -4261,8 +4296,13 @@ let X86_CONV (decode_ths:thm option array) ths tm =
   let eth = tryfind (fun loaded_mc_th ->
       GEN_REWRITE_CONV I [X86_THM decode_ths loaded_mc_th pc_th] tm)
     bytes_loaded_mc_ths in
+  (* Pick the right rules. It will be a singleton in most cases... *)
+  let x86_execute_case_rules:thm list =
+    let ts = find_terms is_const (concl eth) in
+    List.filter_map (fun t ->
+      try Some ((assoc (name_of t) X86_EXECUTE_CASES)) with _ -> None) ts in
   (K eth THENC
-   REWRITE_CONV[X86_EXECUTE] THENC
+   PURE_ONCE_REWRITE_CONV(x86_execute_case_rules) THENC
    REWRITE_CONV[add_store_event;add_load_event;SEQ_ID] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
    REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
