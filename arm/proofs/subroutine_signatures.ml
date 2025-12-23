@@ -6,7 +6,7 @@ let subroutine_signatures = [
      ("length", "size_t", (*is const?*)"false");
      ("key1", "s2n_bignum_AES_KEY*", (*is const?*)"true");
      ("key2", "s2n_bignum_AES_KEY*", (*is const?*)"true");
-     ("iv", "uint8_t[16]", (*is const?*)"true");
+     ("iv", "uint8_t[static 16]", (*is const?*)"true");
    ],
    "void",
    [(* input buffers *)
@@ -29,7 +29,7 @@ let subroutine_signatures = [
      ("length", "size_t", (*is const?*)"false");
      ("key1", "s2n_bignum_AES_KEY*", (*is const?*)"true");
      ("key2", "s2n_bignum_AES_KEY*", (*is const?*)"true");
-     ("iv", "uint8_t[16]", (*is const?*)"true");
+     ("iv", "uint8_t[static 16]", (*is const?*)"true");
    ],
    "void",
    [(* input buffers *)

@@ -9,7 +9,7 @@
 //                                   size_t length,
 //                                   const s2n_bignum_AES_KEY *key1,
 //                                   const s2n_bignum_AES_KEY *key2,
-//                                   const uint8_t iv[16]);
+//                                   const uint8_t iv[static 16]);
 //
 // Standard ARM ABI: X0 = in, X1 = out, X2 = length, X3 = key1, X4 = key2, X5 = iv
 // ----------------------------------------------------------------------------
