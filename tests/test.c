@@ -14858,9 +14858,9 @@ int test_word_recip(void)
   if (x[0] != UINT64_C(n)) \
   { printf("Failed known value test\n"); ++failures; } else { ++successes; }
 
-int test_known_values(void)
+int test_known_values_p384(void)
 { int failures = 0, successes = 0;
-  printf("Testing known value cases\n");
+  printf("Testing known value cases for p384\n");
 
 #include "known_value_tests_p384.h"
 
@@ -14872,6 +14872,95 @@ int test_known_values(void)
     { printf("Successfully passed %d known value tests\n",successes);
       return 0;
     }
+}
+
+// Helpers for writing XTS tests
+void assign_bytearray_from_hexstring(uint8_t *bytearr, const char *hexstr, int len)
+{
+  for (int i = 0; i < len; i++) {
+    sscanf(&hexstr[i * 2], "%2hhx", &bytearr[i]);
+  }
+}
+
+void assign_bytearray_zero(uint8_t *bytearr, int len)
+{
+  for(int i = 0; i < len; i++){
+    bytearr[i] = 0x00;
+  }
+}
+
+#define ASSIGNHEX(bytearr, hexstr, len) assign_bytearray_from_hexstring(bytearr, hexstr, len)
+#define ASSIGNZERO(bytearr, len) assign_bytearray_zero(bytearr, len)
+
+int check_bytearr(const uint8_t *out, const uint8_t *res, int diff, int len)
+{
+  for(int i = 0; i < len; i++){
+    if (out[i]!=res[i]){diff = 1;break;};
+  }
+  return diff;
+}
+
+#define CHECKHEX(out, res, diff, len) \
+  if (check_bytearr(out, res, diff, len)) \
+  { printf("Failed known value test\n"); ++failures; } else { ++successes; }
+
+
+int test_known_values_xts_encrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for aes-xts encrypt\n");
+
+  AES_KEY *key1 = (AES_KEY *)malloc(sizeof(AES_KEY));
+  AES_KEY *key2 = (AES_KEY *)malloc(sizeof(AES_KEY));
+  size_t len;
+  uint8_t iv[16];
+  uint8_t in[224];
+  uint8_t out[224];
+  uint8_t res[224];
+
+#include "known_value_tests_xts_encrypt.h"
+
+  if (failures != 0)
+    { printf ("Failed %d known value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
+}
+
+int test_known_values_xts_decrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for aes-xts decrypt\n");
+
+  AES_KEY *key1 = (AES_KEY *)malloc(sizeof(AES_KEY));
+  AES_KEY *key2 = (AES_KEY *)malloc(sizeof(AES_KEY));
+  size_t len;
+  uint8_t iv[16];
+  uint8_t in[224];
+  uint8_t out[224];
+  uint8_t res[224];
+
+#include "known_value_tests_xts_decrypt.h"
+
+  if (failures != 0)
+    { printf ("Failed %d known value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
 }
 
 // ****************************************************************************
@@ -15404,6 +15493,7 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 int main(int argc, char *argv[])
 { int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
   int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
+  int aes = get_arch_name() == ARCH_AARCH64 && supports_arm_aes();
   int arm = get_arch_name() == ARCH_AARCH64;
   int all = 1;
   int extrastrigger = 1;
@@ -15788,12 +15878,13 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
     functionaltest(arm,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
-
+    functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
+    functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
   }
 
   if (extrastrigger) function_to_test = "_";
 
-  functionaltest(bmi,"known value tests",test_known_values);
+  functionaltest(bmi,"known value tests",test_known_values_p384);
 
   functionaltest(bmi,"curve25519_x25519 (TweetNaCl)",test_curve25519_x25519_tweetnacl);
   functionaltest(all,"curve25519_x25519_alt (TweetNaCl)",test_curve25519_x25519_alt_tweetnacl);

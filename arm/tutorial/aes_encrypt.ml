@@ -11,7 +11,7 @@ needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 
 (* print_literal_from_elf "arm/aes-xts/aes256_encrypt.o";; *)
-let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/aes-xts/aes256_encrypt.o"
+let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/tutorial/aes_encrypt.o"
 [
   0xb940f046;       (* arm_LDR W6 X2 (Immediate_Offset (word 240)) *)
   0x4cdf7040;       (* arm_LDR Q0 X2 (Postimmediate_Offset (word 16)) *)

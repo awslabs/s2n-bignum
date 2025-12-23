@@ -1,17 +1,16 @@
-#############################################################################
-# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
-# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
-# TODO: figure out copyright
-#############################################################################
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 
 // ----------------------------------------------------------------------------
 // AES_XTS_DECRYPT (256-bit)
+// Inputs *in, length, *key1, *key2, iv[16]; output *out
 //
-// void aes_hw_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
-//                const AES_KEY *key1, const AES_KEY *key2,
-//                const uint8_t iv[16]);
+//    extern void aes_hw_xts_decrypt(const uint8_t *in, uint8_t *out, 
+//                                   size_t length,
+//                                   const AES_KEY *key1, const AES_KEY *key2,
+//                                   const uint8_t iv[16]);
 //
-// Standard ARM ABI: X0 = in, X1 = out, X2 = length, X3 = key1, X4 = key2, X5 = iv, returns X1
+// Standard ARM ABI: X0 = in, X1 = out, X2 = length, X3 = key1, X4 = key2, X5 = iv
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum.h"
 

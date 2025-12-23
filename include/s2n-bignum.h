@@ -30,6 +30,22 @@
 #define S2N_BIGNUM_STATIC static
 #endif
 
+struct aes_key_st {
+  uint64_t rd_key[30];
+  int rounds;
+};
+typedef struct aes_key_st AES_KEY;
+
+// AES_XTS_DECRYPT (256-bit)
+// Inputs *in, length, *key1, *key2, iv[16]; output *out
+extern void aes_hw_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
+        const AES_KEY *key1, const AES_KEY *key2, const uint8_t iv[16]);
+
+// AES_XTS_ENCRYPT (256-bit)
+// Inputs *in, length, *key1, *key2, iv[16]; output *out
+extern void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
+        const AES_KEY *key1, const AES_KEY *key2, const uint8_t iv[16]);
+
 // Add, z := x + y
 // Inputs x[m], y[n]; outputs function return (carry-out) and z[p]
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);
