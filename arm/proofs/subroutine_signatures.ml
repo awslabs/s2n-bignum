@@ -1,5 +1,5 @@
 let subroutine_signatures = [
-("aes_hw_xts_decrypt",
+("aes_xts_decrypt",
   ([(*args*)
      ("in", "uint8_t*", (*is const?*)"true");
      ("out", "uint8_t*", (*is const?*)"false");
@@ -22,7 +22,7 @@ let subroutine_signatures = [
    ])
 );
 
-("aes_hw_xts_encrypt",
+("aes_xts_encrypt",
   ([(*args*)
      ("in", "uint8_t*", (*is const?*)"true");
      ("out", "uint8_t*", (*is const?*)"false");

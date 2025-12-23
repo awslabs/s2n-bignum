@@ -1120,19 +1120,19 @@ void call_sha3_keccak4_f1600(void) {}
 void call_sha3_keccak4_f1600_alt(void) {}
 void call_sha3_keccak4_f1600_alt2(void) {}
 
-void call_aes_hw_xts_encrypt_16(void) {}
-void call_aes_hw_xts_encrypt_32(void) {}
-void call_aes_hw_xts_encrypt_64(void) {}
-void call_aes_hw_xts_encrypt_128(void) {}
-void call_aes_hw_xts_encrypt_256(void) {}
-void call_aes_hw_xts_encrypt_512(void) {}
+void call_aes_xts_encrypt_16(void) {}
+void call_aes_xts_encrypt_32(void) {}
+void call_aes_xts_encrypt_64(void) {}
+void call_aes_xts_encrypt_128(void) {}
+void call_aes_xts_encrypt_256(void) {}
+void call_aes_xts_encrypt_512(void) {}
 
-void call_aes_hw_xts_decrypt_16(void) {}
-void call_aes_hw_xts_decrypt_32(void) {}
-void call_aes_hw_xts_decrypt_64(void) {}
-void call_aes_hw_xts_decrypt_128(void) {}
-void call_aes_hw_xts_decrypt_256(void) {}
-void call_aes_hw_xts_decrypt_512(void) {}
+void call_aes_xts_decrypt_16(void) {}
+void call_aes_xts_decrypt_32(void) {}
+void call_aes_xts_decrypt_64(void) {}
+void call_aes_xts_decrypt_128(void) {}
+void call_aes_xts_decrypt_256(void) {}
+void call_aes_xts_decrypt_512(void) {}
 
 #else
 
@@ -1165,7 +1165,7 @@ void call_mlkem_frombytes(void) {}
 void call_mlkem_unpack(void) {}
 
 // Helper function for AES XTS encrypt with parameterized length
-static void aes_hw_xts_encrypt_helper(size_t len)
+static void aes_xts_encrypt_helper(size_t len)
 {
   int j;
   for (j = 0; j < 30; ++j) {
@@ -1176,19 +1176,19 @@ static void aes_hw_xts_encrypt_helper(size_t len)
   aes_key2.rounds = 14;
   for (j = 0; j < 16; ++j) aes_iv[j] = (uint8_t)(b3[j] & 0xFF);
 
-  aes_hw_xts_encrypt((uint8_t*)b0, (uint8_t*)b1, len, &aes_key1, &aes_key2, aes_iv);
+  aes_xts_encrypt((uint8_t*)b0, (uint8_t*)b1, len, &aes_key1, &aes_key2, aes_iv);
 }
 
 // AES XTS encrypt wrapper functions for different block sizes
-void call_aes_hw_xts_encrypt_16(void) { repeat(aes_hw_xts_encrypt_helper(16)); }
-void call_aes_hw_xts_encrypt_32(void) { repeat(aes_hw_xts_encrypt_helper(32)); }
-void call_aes_hw_xts_encrypt_64(void) { repeat(aes_hw_xts_encrypt_helper(64)); }
-void call_aes_hw_xts_encrypt_128(void) { repeat(aes_hw_xts_encrypt_helper(128)); }
-void call_aes_hw_xts_encrypt_256(void) { repeat(aes_hw_xts_encrypt_helper(256)); }
-void call_aes_hw_xts_encrypt_512(void) { repeatfewer(10,aes_hw_xts_encrypt_helper(512)); }
+void call_aes_xts_encrypt_16(void) { repeat(aes_xts_encrypt_helper(16)); }
+void call_aes_xts_encrypt_32(void) { repeat(aes_xts_encrypt_helper(32)); }
+void call_aes_xts_encrypt_64(void) { repeat(aes_xts_encrypt_helper(64)); }
+void call_aes_xts_encrypt_128(void) { repeat(aes_xts_encrypt_helper(128)); }
+void call_aes_xts_encrypt_256(void) { repeat(aes_xts_encrypt_helper(256)); }
+void call_aes_xts_encrypt_512(void) { repeatfewer(10,aes_xts_encrypt_helper(512)); }
 
 // Helper function for AES XTS decrypt with parameterized length
-static void aes_hw_xts_decrypt_helper(size_t len)
+static void aes_xts_decrypt_helper(size_t len)
 {
   int j;
   for (j = 0; j < 30; ++j) {
@@ -1199,16 +1199,16 @@ static void aes_hw_xts_decrypt_helper(size_t len)
   aes_key2.rounds = 14;
   for (j = 0; j < 16; ++j) aes_iv[j] = (uint8_t)(b3[j] & 0xFF);
 
-  aes_hw_xts_decrypt((uint8_t*)b0, (uint8_t*)b1, len, &aes_key1, &aes_key2, aes_iv);
+  aes_xts_decrypt((uint8_t*)b0, (uint8_t*)b1, len, &aes_key1, &aes_key2, aes_iv);
 }
 
 // AES XTS decrypt wrapper functions for different block sizes
-void call_aes_hw_xts_decrypt_16(void) { repeat(aes_hw_xts_decrypt_helper(16)); }
-void call_aes_hw_xts_decrypt_32(void) { repeat(aes_hw_xts_decrypt_helper(32)); }
-void call_aes_hw_xts_decrypt_64(void) { repeat(aes_hw_xts_decrypt_helper(64)); }
-void call_aes_hw_xts_decrypt_128(void) { repeat(aes_hw_xts_decrypt_helper(128)); }
-void call_aes_hw_xts_decrypt_256(void) { repeat(aes_hw_xts_decrypt_helper(256)); }
-void call_aes_hw_xts_decrypt_512(void) { repeatfewer(10,aes_hw_xts_decrypt_helper(512)); }
+void call_aes_xts_decrypt_16(void) { repeat(aes_xts_decrypt_helper(16)); }
+void call_aes_xts_decrypt_32(void) { repeat(aes_xts_decrypt_helper(32)); }
+void call_aes_xts_decrypt_64(void) { repeat(aes_xts_decrypt_helper(64)); }
+void call_aes_xts_decrypt_128(void) { repeat(aes_xts_decrypt_helper(128)); }
+void call_aes_xts_decrypt_256(void) { repeat(aes_xts_decrypt_helper(256)); }
+void call_aes_xts_decrypt_512(void) { repeatfewer(10,aes_xts_decrypt_helper(512)); }
 
 #endif
 
@@ -1669,18 +1669,18 @@ int main(int argc, char *argv[])
   timingtest(all,"word_negmodinv",call_word_negmodinv);
   timingtest(all,"word_popcount",call_word_popcount);
   timingtest(all,"word_recip",call_word_recip);
-  timingtest(aes,"aes_hw_xts_encrypt (16 bytes)",call_aes_hw_xts_encrypt_16);
-  timingtest(aes,"aes_hw_xts_encrypt (32 bytes)",call_aes_hw_xts_encrypt_32);
-  timingtest(aes,"aes_hw_xts_encrypt (64 bytes)",call_aes_hw_xts_encrypt_64);
-  timingtest(aes,"aes_hw_xts_encrypt (128 bytes)",call_aes_hw_xts_encrypt_128);
-  timingtest(aes,"aes_hw_xts_encrypt (256 bytes)",call_aes_hw_xts_encrypt_256);
-  timingtest(aes,"aes_hw_xts_encrypt (512 bytes)",call_aes_hw_xts_encrypt_512);
-  timingtest(aes,"aes_hw_xts_decrypt (16 bytes)",call_aes_hw_xts_decrypt_16);
-  timingtest(aes,"aes_hw_xts_decrypt (32 bytes)",call_aes_hw_xts_decrypt_32);
-  timingtest(aes,"aes_hw_xts_decrypt (64 bytes)",call_aes_hw_xts_decrypt_64);
-  timingtest(aes,"aes_hw_xts_decrypt (128 bytes)",call_aes_hw_xts_decrypt_128);
-  timingtest(aes,"aes_hw_xts_decrypt (256 bytes)",call_aes_hw_xts_decrypt_256);
-  timingtest(aes,"aes_hw_xts_decrypt (512 bytes)",call_aes_hw_xts_decrypt_512);
+  timingtest(aes,"aes_xts_encrypt (16 bytes)",call_aes_xts_encrypt_16);
+  timingtest(aes,"aes_xts_encrypt (32 bytes)",call_aes_xts_encrypt_32);
+  timingtest(aes,"aes_xts_encrypt (64 bytes)",call_aes_xts_encrypt_64);
+  timingtest(aes,"aes_xts_encrypt (128 bytes)",call_aes_xts_encrypt_128);
+  timingtest(aes,"aes_xts_encrypt (256 bytes)",call_aes_xts_encrypt_256);
+  timingtest(aes,"aes_xts_encrypt (512 bytes)",call_aes_xts_encrypt_512);
+  timingtest(aes,"aes_xts_decrypt (16 bytes)",call_aes_xts_decrypt_16);
+  timingtest(aes,"aes_xts_decrypt (32 bytes)",call_aes_xts_decrypt_32);
+  timingtest(aes,"aes_xts_decrypt (64 bytes)",call_aes_xts_decrypt_64);
+  timingtest(aes,"aes_xts_decrypt (128 bytes)",call_aes_xts_decrypt_128);
+  timingtest(aes,"aes_xts_decrypt (256 bytes)",call_aes_xts_decrypt_256);
+  timingtest(aes,"aes_xts_decrypt (512 bytes)",call_aes_xts_decrypt_512);
 
   // Summarize performance in arithmetic and geometric means
 

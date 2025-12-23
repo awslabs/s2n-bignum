@@ -28,8 +28,8 @@ endif
 
 # List of object files
 
-OBJ = aes_hw_xts_decrypt.o \
-      aes_hw_xts_encrypt.o
+OBJ = aes_xts_decrypt.o \
+      aes_xts_encrypt.o
 
 
 %.o : %.S ; $(CC) -E -I../../include $< | $(GAS) -o $@ -

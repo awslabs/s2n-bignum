@@ -6,8 +6,8 @@ use_file_raise_failure := true;;
 
 needs "arm/proofs/utils/aes_xts_common.ml";;
 
-(* print_literal_from_elf "arm/aes-xts/aes_xts_encrypt_armv8.o";; *)
-let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/aes-xts/aes_xts_encrypt_armv8.o"
+(* print_literal_from_elf "arm/aes-xts/aes_xts_encrypt.o";; *)
+let aes256_xts_encrypt_mc = define_assert_from_elf "aes256_xts_encrypt_mc" "arm/aes-xts/aes_xts_encrypt.o"
 [
   0xd10183ff;       (* arm_SUB SP SP (rvalue (word 0x60)) *)
   0x6d0227e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&0x20))) *)
@@ -3219,7 +3219,7 @@ let AES_XTS_ENCRYPT_LT_5BLOCK_CORRECT = time prove(
 
 
 (*
-void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
+void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
                         const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2,
                         const uint8_t iv[16])
 *)

@@ -78,7 +78,7 @@ len = 16;
 ASSIGNHEX(res, "000102030405060708090a0b0c0d0e0f", len);
 ASSIGNHEX(in, "c30ca8f2ed57307edc87e544867ac888", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 1block + 1byte = 17 bytes
@@ -86,7 +86,7 @@ len = 17;
 ASSIGNHEX(res, "000102030405060708090a0b0c0d0e0f10", len);
 ASSIGNHEX(in, "7f117752cc598a8b0d81d88af9f9bec8c3", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 1block + 6byte = 22 bytes
@@ -94,7 +94,7 @@ len = 22;
 ASSIGNHEX(res, "000102030405060708090a0b0c0d0e0f101112131415", len);
 ASSIGNHEX(in, "75e8188bcce59ada939f57de2cb9a489c30ca8f2ed57", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 1bock + 15bytes = 31 bytes
@@ -102,7 +102,7 @@ len = 31;
 ASSIGNHEX(res, "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e", len);
 ASSIGNHEX(in, "581ea1fee5516ad432ddebe75fd27c6fc30ca8f2ed57307edc87e544867ac8", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 3 blocks + 3 bytes
@@ -112,7 +112,7 @@ ASSIGNHEX(res, "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
 ASSIGNHEX(in, "c30ca8f2ed57307edc87e544867ac888348c208928d7406269954551cb627b5b"
         "bea47768aa25376e924cce6a102ca2e4e1c241", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 4 blocks
@@ -122,7 +122,7 @@ ASSIGNHEX(res, "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f
 ASSIGNHEX(in, "c30ca8f2ed57307edc87e544867ac888348c208928d7406269954551cb627b5b"
         "e1c241d0ff691de6b47ad81eac2b925b474e1fd14311edb95219ce64677f497b", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 4blocks + 10 bytes = 74 bytes
@@ -134,7 +134,7 @@ ASSIGNHEX(in, "c30ca8f2ed57307edc87e544867ac888348c208928d7406269954551cb627b5b"
         "e1c241d0ff691de6b47ad81eac2b925b0f451eb8847b98d48b1407f64a4f9ee3"
         "474e1fd14311edb95219", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 5 blocks
@@ -146,7 +146,7 @@ ASSIGNHEX(in, "c30ca8f2ed57307edc87e544867ac888348c208928d7406269954551cb627b5b"
         "e1c241d0ff691de6b47ad81eac2b925b474e1fd14311edb95219ce64677f497b"
         "8917567652e9b4ef3838baf35e400fe1", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 5blocks + 7bytes = 87 bytes
@@ -158,7 +158,7 @@ ASSIGNHEX(in, "c30ca8f2ed57307edc87e544867ac888348c208928d7406269954551cb627b5b"
         "e1c241d0ff691de6b47ad81eac2b925b474e1fd14311edb95219ce64677f497b"
         "a436b967e79bb8e8e4c29d1099fe1bbf8917567652e9b4", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 6 blocks
@@ -172,7 +172,7 @@ ASSIGNHEX(in,
     "e1c241d0ff691de6b47ad81eac2b925b474e1fd14311edb95219ce64677f497b"
     "8917567652e9b4ef3838baf35e400fe1ffe2f16cfa1900d7ae2b67f0e6f43b71", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 6blocks + 4bytes = 100 bytes
@@ -188,7 +188,7 @@ ASSIGNHEX(in,
     "8917567652e9b4ef3838baf35e400fe1aad32ff4d83b0af3f6a176025bd1321b"
     "ffe2f16c", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 8 blocks
@@ -204,7 +204,7 @@ ASSIGNHEX(in,
     "8917567652e9b4ef3838baf35e400fe1ffe2f16cfa1900d7ae2b67f0e6f43b71"
     "769d1b0e0c0b99ea11de58fcd3b72e1bce3d9a8750b87e945d77f4dc39d73b04", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 8blocks + 6 bytes = 134 bytes
@@ -222,7 +222,7 @@ ASSIGNHEX(in,
     "769d1b0e0c0b99ea11de58fcd3b72e1be0ad32884698e15420e52c96b698bba1"
     "ce3d9a8750b8", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 9 blocks = 144 bytes
@@ -240,7 +240,7 @@ ASSIGNHEX(in,
     "769d1b0e0c0b99ea11de58fcd3b72e1bce3d9a8750b87e945d77f4dc39d73b04"
     "e11b6adce343e1f38c6a879463c080d7", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 9blocks + 14bytes = 158bytes
@@ -258,7 +258,7 @@ ASSIGNHEX(in,
     "769d1b0e0c0b99ea11de58fcd3b72e1bce3d9a8750b87e945d77f4dc39d73b04"
     "a5da920d96beb388ade417027054dbd0e11b6adce343e1f38c6a879463c0", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 10blocks = 160bytes
@@ -276,7 +276,7 @@ ASSIGNHEX(in,
     "769d1b0e0c0b99ea11de58fcd3b72e1bce3d9a8750b87e945d77f4dc39d73b04"
     "e11b6adce343e1f38c6a879463c080d74a72a90b1e6fe46b7bc95a929f79947e", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 10blocks + 5bytes = 165bytes
@@ -296,7 +296,7 @@ ASSIGNHEX(in,
     "e11b6adce343e1f38c6a879463c080d7254c4d65cf40e04934108bcde6bda824"
     "4a72a90b1e", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 11 blocks = 176 bytes
@@ -316,7 +316,7 @@ ASSIGNHEX(in,
     "e11b6adce343e1f38c6a879463c080d74a72a90b1e6fe46b7bc95a929f79947e"
     "ae8cc61cbb5f8cbd0c6f052e95ed6539", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 11 blocks + 9 bytes = 185bytes
@@ -336,7 +336,7 @@ ASSIGNHEX(in,
     "e11b6adce343e1f38c6a879463c080d74a72a90b1e6fe46b7bc95a929f79947e"
     "3ed782ad26e98e07f14d47f3c2a8e92aae8cc61cbb5f8cbd0c", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);
 
 // 14 blocks
@@ -358,5 +358,5 @@ ASSIGNHEX(in,
     "ae8cc61cbb5f8cbd0c6f052e95ed65399009f56148fc07d88c8e0113d7eafb1f"
     "ea39991882130ee45e95a3c6bc508f09c990add0cd3f1ca3403c096f9277e785", len);
 ASSIGNZERO(out, len);
-aes_hw_xts_decrypt(in,out,len,key1,key2,iv);
+aes_xts_decrypt(in,out,len,key1,key2,iv);
 CHECKHEX(out,res,0,len);

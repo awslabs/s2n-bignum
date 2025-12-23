@@ -403,8 +403,8 @@ UNOPT_OBJ = p256/unopt/bignum_montmul_p256_base.o \
             fastmul/unopt/bignum_mul_8_16_base.o \
             fastmul/unopt/bignum_sqr_8_16_base.o
 
-AES_XTS_OBJ = aes-xts/aes_hw_xts_decrypt.o \
-              aes-xts/aes_hw_xts_encrypt.o
+AES_XTS_OBJ = aes-xts/aes_xts_decrypt.o \
+              aes-xts/aes_xts_encrypt.o
 
 
 OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ)

@@ -295,8 +295,8 @@ for arch in ["arm", "x86"]:
 
 # A list of functions that are either only in arm or x86
 onlyInArm = [
-  "aes_hw_xts_decrypt",
-  "aes_hw_xts_encrypt",
+  "aes_xts_decrypt",
+  "aes_xts_encrypt",
   "bignum_copy_row_from_table_8n",
   "bignum_copy_row_from_table_16",
   "bignum_copy_row_from_table_32",

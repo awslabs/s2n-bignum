@@ -5,7 +5,7 @@
 // AES_XTS_DECRYPT (256-bit)
 // Inputs in[length], length, key1[244], key2[244], iv[16]; output out[length]
 //
-//    extern void aes_hw_xts_decrypt(const uint8_t *in, uint8_t *out,
+//    extern void aes_xts_decrypt(const uint8_t *in, uint8_t *out,
 //                                   size_t length,
 //                                   const s2n_bignum_AES_KEY *key1,
 //                                   const s2n_bignum_AES_KEY *key2,
@@ -16,8 +16,8 @@
 #include "_internal_s2n_bignum.h"
 
         .arch	armv8-a+crypto
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(aes_hw_xts_decrypt)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(aes_hw_xts_decrypt)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(aes_xts_decrypt)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(aes_xts_decrypt)
         .text
         .balign 4
 
@@ -75,7 +75,7 @@
         umulh dst, src, dst __LF \
         lsr   dst, dst, #6
 
-S2N_BN_SYMBOL(aes_hw_xts_decrypt):
+S2N_BN_SYMBOL(aes_xts_decrypt):
         // AARCH64_VALID_CALL_TARGET
         sub sp, sp, #STACK_SIZE
         save_vregs

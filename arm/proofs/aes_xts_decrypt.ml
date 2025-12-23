@@ -6,8 +6,8 @@ use_file_raise_failure := true;;
 
 needs "arm/proofs/utils/aes_xts_common.ml";;
 
-(* print_literal_from_elf "arm/aes-xts/aes_xts_decrypt_armv8.o";; *)
-let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xts/aes_xts_decrypt_armv8.o"
+(* print_literal_from_elf "arm/aes-xts/aes_xts_decrypt.o";; *)
+let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xts/aes_xts_decrypt.o"
 [
   0xd10183ff;       (* arm_SUB SP SP (rvalue (word 0x60)) *)
   0x6d0227e8;       (* arm_STP D8 D9 SP (Immediate_Offset (iword (&0x20))) *)
