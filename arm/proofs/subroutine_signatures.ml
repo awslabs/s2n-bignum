@@ -1,4 +1,50 @@
 let subroutine_signatures = [
+("aes_hw_xts_decrypt",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("length", "size_t", (*is const?*)"false");
+     ("key1", "AES_KEY*", (*is const?*)"true");
+     ("key2", "AES_KEY*", (*is const?*)"true");
+     ("iv", "uint8_t[16]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("in", "length"(* num elems *), 1(* elem bytesize *));
+    ("key1", "244"(* num elems *), 1(* elem bytesize *));
+    ("key2", "244"(* num elems *), 1(* elem bytesize *));
+    ("iv", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "length"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("aes_hw_xts_encrypt",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("length", "size_t", (*is const?*)"false");
+     ("key1", "AES_KEY*", (*is const?*)"true");
+     ("key2", "AES_KEY*", (*is const?*)"true");
+     ("iv", "uint8_t[16]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("in", "length"(* num elems *), 1(* elem bytesize *));
+    ("key1", "244"(* num elems *), 1(* elem bytesize *));
+    ("key2", "244"(* num elems *), 1(* elem bytesize *));
+    ("iv", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "length"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("bignum_add",
   ([(*args*)
      ("p", "uint64_t", (*is const?*)"false");

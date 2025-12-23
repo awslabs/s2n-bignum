@@ -37,12 +37,12 @@ struct aes_key_st {
 typedef struct aes_key_st AES_KEY;
 
 // AES_XTS_DECRYPT (256-bit)
-// Inputs *in, length, *key1, *key2, iv[16]; output *out
+// Inputs in[length], length, key1[244], key2[244], iv[16]; output out[length]
 extern void aes_hw_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
         const AES_KEY *key1, const AES_KEY *key2, const uint8_t iv[16]);
 
 // AES_XTS_ENCRYPT (256-bit)
-// Inputs *in, length, *key1, *key2, iv[16]; output *out
+// Inputs in[length], length, key1[244], key2[244], iv[16]; output out[length]
 extern void aes_hw_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
         const AES_KEY *key1, const AES_KEY *key2, const uint8_t iv[16]);
 
