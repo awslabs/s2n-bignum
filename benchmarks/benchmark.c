@@ -1120,6 +1120,20 @@ void call_sha3_keccak4_f1600(void) {}
 void call_sha3_keccak4_f1600_alt(void) {}
 void call_sha3_keccak4_f1600_alt2(void) {}
 
+void call_aes_hw_xts_encrypt_16(void) {}
+void call_aes_hw_xts_encrypt_32(void) {}
+void call_aes_hw_xts_encrypt_64(void) {}
+void call_aes_hw_xts_encrypt_128(void) {}
+void call_aes_hw_xts_encrypt_256(void) {}
+void call_aes_hw_xts_encrypt_512(void) {}
+
+void call_aes_hw_xts_decrypt_16(void) {}
+void call_aes_hw_xts_decrypt_32(void) {}
+void call_aes_hw_xts_decrypt_64(void) {}
+void call_aes_hw_xts_decrypt_128(void) {}
+void call_aes_hw_xts_decrypt_256(void) {}
+void call_aes_hw_xts_decrypt_512(void) {}
+
 #else
 
 void call_mldsa_ntt(void) {}
@@ -1149,7 +1163,6 @@ void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
 void call_mlkem_frombytes(void) {}
 void call_mlkem_unpack(void) {}
-#endif
 
 // Helper function for AES XTS encrypt with parameterized length
 static void aes_hw_xts_encrypt_helper(size_t len)
@@ -1196,6 +1209,8 @@ void call_aes_hw_xts_decrypt_64(void) { repeat(aes_hw_xts_decrypt_helper(64)); }
 void call_aes_hw_xts_decrypt_128(void) { repeat(aes_hw_xts_decrypt_helper(128)); }
 void call_aes_hw_xts_decrypt_256(void) { repeat(aes_hw_xts_decrypt_helper(256)); }
 void call_aes_hw_xts_decrypt_512(void) { repeatfewer(10,aes_hw_xts_decrypt_helper(512)); }
+
+#endif
 
 int main(int argc, char *argv[])
 {
