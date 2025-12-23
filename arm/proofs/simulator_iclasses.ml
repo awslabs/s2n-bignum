@@ -450,6 +450,9 @@ let check_insns () =
     "00111000010xxxxxxxxx11xxxxxxxxxx";
     "0011100101xxxxxxxxxxxxxxxxxxxxxx";
 
+    (*** ldrb (shifted register, no shift S = 0) ***)
+    "00111000011xxxxxxxx010xxxxxxxxxx";
+
     (*** ld1 (1 register, Post-immediate offset) ***)
     "0x001100110111110111xxxxxxxxxxxx";
 
