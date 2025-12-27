@@ -681,7 +681,6 @@ let (ARM_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
     GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
     ASM_REWRITE_TAC[]) in
   fun (execth1,_) sname (asl,w) ->
-    let sv = mk_var(sname,type_of(rand(rand w))) in
     (* do sanity-check and print a warning message if it fails *)
     (if not (is_imp w) ||
       let the_lhs,the_rhs = dest_imp w in
@@ -692,6 +691,7 @@ let (ARM_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
     then
       Printf.printf "ARM_BIGSTEP_TAC: `ensures ... ==> eventually ...` expected, but got `%s`.\n"
         (string_of_term w));
+    let sv = mk_var(sname,type_of(rand(rand w))) in
     (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
       (!simulation_precanon_thms) THEN
      MATCH_MP_TAC lemma THEN CONJ_TAC THENL
@@ -799,7 +799,7 @@ let PC_PLUS_CONV =
        read PC s = word(pc + m + n)`] THENC
   funpow 3 RAND_CONV NUM_ADD_CONV;;
 
-let ARM_SUBROUTINE_SIM_TAC =
+let ARM_SUBROUTINE_SIM_TAC ?(is_safety_thm=false) =
   let auxth = METIS[] `(a:(A)list) = b /\ LENGTH b = n ==> LENGTH a = n`
   and len_tm = `LENGTH:((8)word)list->num` in
   fun (machinecode,execth,offset,submachinecode,subth) ->
@@ -837,6 +837,12 @@ let ARM_SUBROUTINE_SIM_TAC =
                       MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
                       MODIFIABLE_UPPER_SIMD_REGS; fst execth] THEN
       REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+      (if is_safety_thm then
+        (* Turn '(forall e_stack_spill. ..) ==> ...' to
+          'exists e_stack_spill. .. ==> ...' *)
+        ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+        META_EXISTS_TAC
+       else ALL_TAC) THEN
       TRY(ANTS_TAC THENL
        [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
         ALIGNED_WORD_TAC THEN REPEAT CONJ_TAC THEN
@@ -851,10 +857,13 @@ let ARM_SUBROUTINE_SIM_TAC =
       ARM_BIGSTEP_TAC execth sname' THENL
        [(* Precondition of subth *)
         FIRST_X_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP subimpth) ORELSE
+        (CONJ_TAC THENL [
+            FIRST_X_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP subimpth);
+            ALL_TAC]) ORELSE
         (PRINT_GOAL_TAC THEN FAIL_TAC
           "Could not discharge precond (subgoal after ARM_BIGSTEP_TAC)");
-        ALL_TAC] THEN
-      RULE_ASSUM_TAC(CONV_RULE(TRY_CONV PC_PLUS_CONV));;
+
+        RULE_ASSUM_TAC(CONV_RULE(TRY_CONV PC_PLUS_CONV))];;
 
 let ARM_SUBROUTINE_SIM_ABBREV_TAC tupper ilist0 =
   let tac = ARM_SUBROUTINE_SIM_TAC tupper ilist0 in
@@ -1078,12 +1087,57 @@ let ARM_ADD_RETURN_NOSTACK_TAC =
 (* Version with register save/restore and stack adjustment.                  *)
 (* ------------------------------------------------------------------------- *)
 
+(* Useful lemmas *)
+let swap_forall = MESON[]
+   `(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
+    (forall y e_stack_spill. P e_stack_spill y)` and
+  swap_forall3 = MESON[]
+   `(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
+    (forall y e_stack_spill z. P e_stack_spill y z)` and
+  append_lemma = MESON[APPEND_EXISTS]
+    `(forall (e:(A)list). P e) <=>
+      (forall e_stack_spill e. P (APPEND e_stack_spill e))` and
+  exists_stack_spill_ev_lemma = METIS[]
+    `(exists (e_stack_spill:A). (P e_stack_spill ==> Q)) ==>
+      ((forall e_stack_spill. P e_stack_spill) ==> Q)` and
+  mono2lemma = MESON[]
+   `(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z)) ==> (!x y. P x y) ==> (!x z. Q x z)` and
+  mono3lemma = MESON[]
+   `(!(x:A). (!(y:B) (y':C). P x y y') ==> (!(z:D) (z':E). Q x z z')) ==>
+    (!x y y'. P x y y') ==> (!x z z'. Q x z z')`;;
+
 let ARM_ADD_RETURN_STACK_TAC =
-  let mono2lemma = MESON[]
-   `(!x. (!y. P x y) ==> (!y. Q x y)) ==> (!x y. P x y) ==> (!x y. Q x y)`
-  and sp_tm = `SP` and x30_tm = `X30`
+  let sp_tm = `SP` and x30_tm = `X30`
   and dqd_thm = WORD_BLAST `(word_zx:int128->int64)(word_zx(x:int64)) = x` in
+  let append_e2_nil =
+    prove(`forall (e:(uarch_event)list) e2.
+        e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
+    MESON_TAC[APPEND]) in
+
+  (* A sanity check of vars in the 'forall ....' goal *)
+  let check_forallvars_tac:tactic =
+    let find_and_check (lhs_pat:term) (t:term) (quants:term list) =
+      let read_eq = try Some (find_term (fun t ->
+        is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
+        with _ -> None in
+      match read_eq with
+      | Some read_eq ->
+        let the_var = rhs read_eq in
+        if is_var the_var && not (mem the_var quants) then
+          failwith ("variable " ^ (string_of_term the_var)
+            ^ " (which is LHS of " ^ (string_of_term lhs_pat)
+            ^ ") does not appear at forall")
+        else
+          ALL_TAC
+      | None -> ALL_TAC in
+    W(fun (asl,w) ->
+      let quants = fst (strip_forall w) in
+      find_and_check `read X30 s` w quants THEN
+      find_and_check `read events s` w quants THEN
+      find_and_check `read SP s` w quants) in
+
   fun ?(pre_post_nsteps:(int*int) option) execth coreth reglist stackoff ->
+    let is_coreth_safety = is_exists (concl coreth) in
     let regs = dest_list reglist in
     (* The number of steps that ARM_STEPS will take before/after BIGSTEP. *)
     let pre_n,post_n =
@@ -1093,12 +1147,32 @@ let ARM_ADD_RETURN_STACK_TAC =
         let n = let n0 = (length regs + 1 (* +1 if len is odd *)) / 2 in
                     if 16 * n0 = stackoff then n0 else n0 + 1 in
         (n,n) in
-    MP_TAC coreth THEN
+    (if is_coreth_safety then
+      ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
+      (* f_events of the current goal will have additional args, compared to
+         f_events of coreth: returnaddress and stackpointer. This will be
+         filled in later. *)
+      META_EXISTS_TAC THEN
+      check_forallvars_tac THEN
+      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th))
+     else
+      (* th is functional correctness *)
+      check_forallvars_tac THEN
+      MP_TAC coreth) THEN
+
     REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                  MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS;
                  MODIFIABLE_UPPER_SIMD_REGS;
                  fst execth (* Length of mc *)] THEN
-    REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC) THEN
+    (if is_coreth_safety then
+      (* push e_stack_spill to the innermost var of forall *)
+      REPEAT(CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])) THEN
+             MATCH_MP_TAC mono3lemma THEN GEN_TAC)
+     else
+      REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC)) THEN
+    (if is_coreth_safety then
+      CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
+     else ALL_TAC) THEN
     (if vfree_in sp_tm (concl coreth) then
       DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th) THEN
       MATCH_MP_TAC MONO_FORALL THEN GEN_TAC
@@ -1113,6 +1187,13 @@ let ARM_ADD_RETURN_STACK_TAC =
       TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
       MP_TAC th) THEN
     ASM_REWRITE_TAC[] THEN
+    (if is_coreth_safety then
+      (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
+         'exists e_stack_spill. .. ==> ...' *)
+      ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+      META_EXISTS_TAC
+     else
+      ALL_TAC) THEN
     TRY(ANTS_TAC THENL
      [REPEAT CONJ_TAC THEN ALIGNED_WORD_TAC THEN
       TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
@@ -1130,6 +1211,15 @@ let ARM_ADD_RETURN_STACK_TAC =
       ARM_STEPS_TAC execth (1--pre_n) THEN
       MP_TAC th) THEN
     ARM_BIGSTEP_TAC execth ("s"^string_of_int(pre_n+1)) THEN
+    (* ARM_BIGSTEP_TAC may leave an additional subgoal about precondition.
+       If the precondition is about event trace, solve here. *)
+    (if is_coreth_safety then
+      TRY
+        (TRY (GEN_REWRITE_TAC I [append_e2_nil]) THEN
+         TRY (CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV)) THEN
+         BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+         NO_TAC)
+     else ALL_TAC) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN
     ARM_STEPS_TAC execth ((pre_n+2)--(pre_n+post_n+2)) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN

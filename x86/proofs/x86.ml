@@ -4494,11 +4494,17 @@ let X86_QUICKSIM_TAC execth pats snums =
 (* More convenient wrappings of basic simulation flow.                       *)
 (* ------------------------------------------------------------------------- *)
 
-let X86_SIM_TAC execth snums =
+let X86_SIM_TAC ?(preprocess_tac:tactic option) ?(canonicalize_pc_diff=true)
+    execth snums =
   REWRITE_TAC(!simulation_precanon_thms) THEN
-  ENSURES_INIT_TAC "s0" THEN X86_STEPS_TAC execth snums THEN
+  ENSURES_INIT_TAC "s0" THEN
+  (match preprocess_tac with Some t -> t | None -> ALL_TAC) THEN
+  X86_STEPS_TAC execth snums THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+  (if canonicalize_pc_diff then
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[]
+   else ALL_TAC);;
 
 let X86_ACCSIM_TAC execth anums snums =
   REWRITE_TAC(!simulation_precanon_thms) THEN
@@ -4522,6 +4528,16 @@ let (X86_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
     GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
     ASM_REWRITE_TAC[]) in
   fun (execth1,_) sname (asl,w) ->
+    (* do sanity-check and print a warning message if it fails *)
+    (if not (is_imp w) ||
+      let the_lhs,the_rhs = dest_imp w in
+      not (is_comb the_lhs &&
+           name_of (fst (strip_comb the_lhs)) = "ensures" &&
+           is_comb the_rhs &&
+           name_of (fst (strip_comb the_rhs)) = "eventually")
+    then
+      Printf.printf "X86_BIGSTEP_TAC: `ensures ... ==> eventually ...` expected, but got `%s`.\n"
+        (string_of_term w));
     let sv = mk_var(sname,type_of(rand(rand w))) in
     (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
       (!simulation_precanon_thms) THEN
@@ -4622,7 +4638,8 @@ let RIP_PLUS_CONV =
        read RIP s = word(pc + m + n)`] THENC
   funpow 3 RAND_CONV NUM_ADD_CONV;;
 
-let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
+let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
+    (machinecode,execth,offset,submachinecode,subth) =
   let subimpth =
       BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset in
   fun ilist0 n ->
@@ -4631,13 +4648,30 @@ let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
     let svar = mk_var(sname,`:x86state`)
     and svar0 = mk_var("s",`:x86state`) in
     let ilist = map (vsubst[svar,svar0]) ilist0 in
-    MP_TAC(TWEAK_PC_OFFSET(SPECL ilist subth)) THEN
+      let subth_specl =
+        try SPECL ilist subth with _ -> begin
+          (if (!x86_print_log) then
+            (Printf.printf "ilist and subth's forall vars do not match\n";
+            Printf.printf "ilist: [%s]\n" (end_itlist
+              (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
+             Printf.printf "subth's forall vars: [%s]\n"
+                (end_itlist (fun s s2 -> s ^ "; " ^ s2)
+                  (map string_of_term (fst (strip_forall (concl subth)))))));
+          failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
+        end in
+    MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
     REWRITE_TAC[COMPUTE_LENGTH_RULE submachinecode] THEN
     ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
                     MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                     WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     REWRITE_TAC[fst execth] THEN
     REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE; NONOVERLAPPING_CLAUSES] THEN
+    (if is_safety_thm then
+      (* Turn '(forall e_stack_spill. ..) ==> ...' to
+        'exists e_stack_spill. .. ==> ...' *)
+      ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+      META_EXISTS_TAC
+      else ALL_TAC) THEN
     TRY(ANTS_TAC THENL
      [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
       REPEAT CONJ_TAC THEN
@@ -4652,6 +4686,9 @@ let X86_SUBROUTINE_SIM_TAC (machinecode,execth,offset,submachinecode,subth) =
     X86_BIGSTEP_TAC execth sname' THENL
      [(* Precondition of subth *)
       FIRST_X_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP subimpth) ORELSE
+      (CONJ_TAC THENL [
+          FIRST_X_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP subimpth);
+          ALL_TAC]) ORELSE
       (PRINT_GOAL_TAC THEN FAIL_TAC
         "Could not discharge precond (subgoal after X86_BIGSTEP_TAC)");
       ALL_TAC] THEN
@@ -5064,7 +5101,18 @@ let WINDOWS_X86_WRAP_NOSTACK_TAC =
     let is_coreth_safety = is_exists (concl coreth) in
     let coreth = REWRITE_RULE
       [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] coreth in
-   (REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
+    let is_coreth_safety = is_exists (concl coreth) in
+    (* is_coreth_safety must hold iff the current goalstate is
+       `exists ...`. *)
+    let check_safety_match_tac:tactic =
+      fun (asl,w) ->
+        if is_coreth_safety <> (is_exists w) then
+          failwith "coreth must be `exists ..` iff the conclusion is"
+        else ALL_TAC (asl,w) in
+
+   (check_safety_match_tac THEN
+    REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     PURE_REWRITE_TAC[WINDOWS_ABI_STACK_THM] THEN
     (if is_coreth_safety then
       ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
@@ -5138,7 +5186,9 @@ let WINDOWS_X86_WRAP_STACK_TAC =
   and count_args =
     let argy = `WINDOWS_C_ARGUMENTS` in
     let is_nargle t = is_comb t && rator t = argy in
-    length o dest_list o rand o find_term is_nargle in
+    fun t -> try
+        (length o dest_list o rand o find_term is_nargle) t
+      with _ -> failwith "Could not find WINDOWS_C_ARGUMENTS" in
   fun winmc stdmc coreth reglist stdstackoff (asl,w) ->
     let stdregs = dest_list reglist in
     let n =
@@ -5160,7 +5210,16 @@ let WINDOWS_X86_WRAP_STACK_TAC =
     and winexecth = X86_MK_EXEC_RULE winmc in
     (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
     let is_coreth_safety = is_exists (concl coreth) in
-   (REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    (* is_coreth_safety must hold iff the current goalstate is
+       `exists ...`. *)
+    let check_safety_match_tac:tactic =
+      fun (asl,w) ->
+        if is_coreth_safety <> (is_exists w) then
+          failwith "coreth must be `exists ..` iff the conclusion is"
+        else ALL_TAC (asl,w) in
+
+   (check_safety_match_tac THEN
+    REWRITE_TAC [WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     PURE_REWRITE_TAC[WINDOWS_ABI_STACK_THM] THEN
     (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
     (if is_coreth_safety then
