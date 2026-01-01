@@ -3488,6 +3488,41 @@ let X86_EXECUTE =
      (GEN_REWRITE_RULE I [GSYM FUN_EQ_THM]
         (GEN `s:x86state` x86_execute)));;
 
+(* A set of theorems pre-evaluated to the corresponding match case.
+  [("ADC",
+    |- x86_execute (ADC a0 a1) =
+       (\s.
+            (add_load_event a1 s ,,
+             add_load_event a0 s ,,
+             add_store_event a0 s ,,
+             (\s.
+                  (match operand_size a0 with
+                     64 -> x86_ADC (OPERAND64 a0 s) (OPERAND64 a1 s)
+                   | 32 -> x86_ADC (OPERAND32 a0 s) (OPERAND32 a1 s)
+                   | 16 -> x86_ADC (OPERAND16 a0 s) (OPERAND16 a1 s)
+                   | 8 -> x86_ADC (OPERAND8 a0 s) (OPERAND8 a1 s))
+                  s))
+            s));
+    ...]
+*)
+let X86_EXECUTE_CASES:(string * thm) list =
+  let constructors =
+    (conjuncts o fst o dest_imp o snd o strip_forall o concl)
+    instruction_INDUCTION in
+  let constructors = map (snd o strip_forall) constructors in
+  let constructors = map rand constructors in
+  map (fun inst ->
+      let name = (name_of o fst o strip_comb) inst in
+      let tapp = mk_comb (`x86_execute`,inst) in
+      (* if inst is an operation with tuple arguments, unfold them.
+        ex: MULX4 a0 a1 -> MUX4 (fst a0, snd a0) (fst a1, snd a1) *)
+      let tapp_pairs_unfolded = ONCE_DEPTH_CONV
+          (ONCE_REWRITE_CONV [GSYM PAIR]) tapp in
+      let full_expr = REWRITE_CONV[X86_EXECUTE]
+          (rhs (concl tapp_pairs_unfolded)) in
+      (name,TRANS tapp_pairs_unfolded full_expr))
+    constructors;;
+
 let REGISTER_ALIASES =
  [rax;  rcx;  rdx;  rbx;  rsp;  rbp;  rsi;  rdi;
   r8;   r9;  r10;  r11;  r12;  r13;  r14;  r15;
@@ -4261,8 +4296,13 @@ let X86_CONV (decode_ths:thm option array) ths tm =
   let eth = tryfind (fun loaded_mc_th ->
       GEN_REWRITE_CONV I [X86_THM decode_ths loaded_mc_th pc_th] tm)
     bytes_loaded_mc_ths in
+  (* Pick the right rules. It will be a singleton in most cases... *)
+  let x86_execute_case_rules:thm list =
+    let ts = find_terms is_const (concl eth) in
+    List.filter_map (fun t ->
+      try Some ((assoc (name_of t) X86_EXECUTE_CASES)) with _ -> None) ts in
   (K eth THENC
-   REWRITE_CONV[X86_EXECUTE] THENC
+   PURE_ONCE_REWRITE_CONV(x86_execute_case_rules) THENC
    REWRITE_CONV[add_store_event;add_load_event;SEQ_ID] THENC
    ONCE_DEPTH_CONV OPERAND_SIZE_CONV THENC
    REWRITE_CONV[condition_semantics; aligned_OPERAND128; aligned_OPERAND256] THENC
@@ -4648,17 +4688,17 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
     let svar = mk_var(sname,`:x86state`)
     and svar0 = mk_var("s",`:x86state`) in
     let ilist = map (vsubst[svar,svar0]) ilist0 in
-      let subth_specl =
-        try SPECL ilist subth with _ -> begin
-          (if (!x86_print_log) then
-            (Printf.printf "ilist and subth's forall vars do not match\n";
-            Printf.printf "ilist: [%s]\n" (end_itlist
-              (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
-             Printf.printf "subth's forall vars: [%s]\n"
-                (end_itlist (fun s s2 -> s ^ "; " ^ s2)
-                  (map string_of_term (fst (strip_forall (concl subth)))))));
-          failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
-        end in
+    let subth_specl =
+      try SPECL ilist subth with _ -> begin
+        (if (!x86_print_log) then
+          (Printf.printf "ilist and subth's forall vars do not match\n";
+          Printf.printf "ilist: [%s]\n" (end_itlist
+            (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
+            Printf.printf "subth's forall vars: [%s]\n"
+              (end_itlist (fun s s2 -> s ^ "; " ^ s2)
+                (map string_of_term (fst (strip_forall (concl subth)))))));
+        failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
+      end in
     MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
     REWRITE_TAC[COMPUTE_LENGTH_RULE submachinecode] THEN
     ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
@@ -4672,6 +4712,15 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
       ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
       META_EXISTS_TAC
       else ALL_TAC) THEN
+    (* at this point, there must be no universal quantification at LHS of
+        '==>' in conclusion. *)
+    (W (fun (_,w) ->
+      if is_forall (fst (dest_imp w)) then
+        PRINT_GOAL_TAC THEN
+        failwith ("Universal quantification still exists at LHS of '==>'. " ^
+            "Did you forget to pass ~is_safety_thm:true?")
+      else ALL_TAC)) THEN
+
     TRY(ANTS_TAC THENL
      [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
       REPEAT CONJ_TAC THEN
@@ -4790,6 +4839,27 @@ let X86_MACRO_SIM_ABBREV_TAC =
 (* Fix up call/return boilerplate given core correctness.                    *)
 (* ------------------------------------------------------------------------- *)
 
+(* A sanity check of vars in the 'forall ....' goal *)
+let check_forallvars_tac:tactic =
+  let find_and_check (lhs_pat:term) (t:term) (quants:term list) =
+    let read_eq = try Some (find_term (fun t ->
+      is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
+      with _ -> None in
+    match read_eq with
+    | Some read_eq ->
+      let the_var = rhs read_eq in
+      if is_var the_var && not (mem the_var quants) then
+        failwith ("variable " ^ (string_of_term the_var)
+          ^ " (which is RHS of " ^ (string_of_term lhs_pat)
+          ^ ") does not appear at forall")
+      else
+        ALL_TAC
+    | None -> ALL_TAC in
+  W(fun (asl,w) ->
+    let quants = fst (strip_forall w) in
+    find_and_check `read RSP s` w quants THEN
+    find_and_check `read (memory :> bytes64 stackpointer) s` w quants);;
+
 let X86_ADD_RETURN_NOSTACK_TAC =
   let lemma1 = prove
    (`ensures step P Q R /\
@@ -4829,14 +4899,24 @@ let X86_ADD_RETURN_NOSTACK_TAC =
     let coreth =
       REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
       coreth in
+    let is_coreth_safety = is_exists (concl coreth) in
+
+    (* is_coreth_safety must hold iff the current goalstate is
+       `exists ...`. *)
+    (fun (asl,w) ->
+      if is_coreth_safety <> (is_exists w) then
+        failwith "coreth must be `exists ..` iff the conclusion is"
+      else ALL_TAC (asl,w)) THEN
+
     REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
-    (if is_exists (concl coreth) then
+    (if is_coreth_safety then
       ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
       (* f_events of the current goal will have additional args, compared to
          f_events of coreth: returnaddress and stackpointer. This will be
          filled in later. *)
       META_EXISTS_TAC THEN
+      check_forallvars_tac THEN
       FIRST_X_ASSUM MP_TAC
      else
       (* th is functional correctness *) MP_TAC coreth) THEN
@@ -4892,9 +4972,6 @@ let swap_forall = MESON[]
   append_lemma = MESON[APPEND_EXISTS]
     `(forall (e:(A)list). P e) <=>
       (forall e_stack_spill e. P (APPEND e_stack_spill e))` and
-  exists_stack_spill_ev_lemma = METIS[]
-    `(exists (e_stack_spill:A). (P e_stack_spill ==> Q)) ==>
-      ((forall e_stack_spill. P e_stack_spill) ==> Q)` and
   mono2lemma = MESON[]
    `(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z)) ==> (!x y. P x y) ==> (!x z. Q x z)` and
   mono3lemma = MESON[]
@@ -4907,28 +4984,35 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
     let regs = dest_list reglist in
     (* If coreth was a safety property, coreth is `exists f_events. ...`. *)
     let is_coreth_safety = is_exists (concl coreth) in
+
+    (* is_coreth_safety must hold iff the current goalstate is
+       `exists ...`. *)
+    (fun (asl,w) ->
+      if is_coreth_safety <> (is_exists w) then
+        failwith "coreth must be `exists ..` iff the conclusion is"
+      else ALL_TAC (asl,w)) THEN
+
     (if is_coreth_safety then
       ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
       (* f_events of the current goal will have additional args, compared to
          f_events of coreth: returnaddress and stackpointer. This will be
          filled in later. *)
       META_EXISTS_TAC THEN
-      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th))
+      check_forallvars_tac THEN
+      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th)) THEN
+      (* push e_stack_spill to the innermost var of forall *)
+      REPEAT(CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])) THEN
+             MATCH_MP_TAC mono3lemma THEN GEN_TAC) THEN
+      CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
      else
-      (* th is functional correctness *) MP_TAC coreth) THEN
+      (* th is functional correctness *)
+      check_forallvars_tac THEN
+      MP_TAC coreth THEN
+      REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC)) THEN
 
     REWRITE_TAC[fst execth] THEN
     REWRITE_TAC [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                  WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-    (if is_coreth_safety then
-      (* push e_stack_spill to the innermost var of forall *)
-      REPEAT(CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])) THEN
-             MATCH_MP_TAC mono3lemma THEN GEN_TAC)
-     else
-      REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC)) THEN
-    (if is_coreth_safety then
-      CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
-     else ALL_TAC) THEN
     (if vfree_in `RSP` (concl coreth) then
       DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th) THEN
       MATCH_MP_TAC MONO_FORALL THEN GEN_TAC
@@ -4947,13 +5031,22 @@ let GEN_X86_ADD_RETURN_STACK_TAC =
     (if is_coreth_safety then
       (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
          'exists e_stack_spill. .. ==> ...' *)
-      MATCH_MP_TAC exists_stack_spill_ev_lemma THEN
+      ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
       META_EXISTS_TAC
      else
       ALL_TAC) THEN
-    TRY(ANTS_TAC THENL
-     [REPEAT CONJ_TAC THEN TRY DISJ2_TAC THEN NONOVERLAPPING_TAC;
-      ALL_TAC]) THEN
+    (* If coreth has remaining assumptions to discharge
+       (usually nonoverlapping conditions), prove them *)
+    W(fun (asl,w) ->
+      let coreth_stmt,_ = dest_imp w in
+      if is_imp coreth_stmt then
+        ANTS_TAC THENL
+         [REPEAT CONJ_TAC THEN TRY DISJ2_TAC THEN NONOVERLAPPING_TAC THEN
+          (* All assumptions must have been discharged at this point *)
+          (PRINT_GOAL_TAC THEN
+          FAIL_TAC "Could not discharge assumptions of coreth");
+          ALL_TAC]
+      else ALL_TAC) THEN
     DISCH_THEN(fun th ->
       MAP_EVERY (fun c -> ENSURES_PRESERVED_TAC ("init_"^fst(dest_const c)) c)
                 regs THEN
@@ -5120,18 +5213,16 @@ let WINDOWS_X86_WRAP_NOSTACK_TAC =
          f_events of coreth: returnaddress and stackpointer. This will be
          filled in later. *)
       META_EXISTS_TAC THEN
-      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th))
-     else
-      (* th is functional correctness *) MP_TAC coreth) THEN
-
-    REWRITE_TAC[fst winexecth] THEN
-    (if is_coreth_safety then
+      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th)) THEN
       (* push e_stack_spill to the innermost var of forall *)
       REPEAT(CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])) THEN
              MATCH_MP_TAC mono3lemma THEN GEN_TAC) THEN
       CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
      else
+      (* th is functional correctness *) MP_TAC coreth THEN
       REPEAT(MATCH_MP_TAC mono2lemma THEN GEN_TAC)) THEN
+
+    REWRITE_TAC[fst winexecth] THEN
     MATCH_MP_TAC pcofflemma THEN
     EXISTS_TAC (mk_small_numeral pcoff) THEN GEN_TAC THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV pcplusplus_conv)) THEN
@@ -5147,7 +5238,7 @@ let WINDOWS_X86_WRAP_NOSTACK_TAC =
     (if is_coreth_safety then
       (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
          'exists e_stack_spill. .. ==> ...' *)
-      MATCH_MP_TAC exists_stack_spill_ev_lemma THEN
+      ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
       META_EXISTS_TAC
      else
       ALL_TAC) THEN
@@ -5228,19 +5319,16 @@ let WINDOWS_X86_WRAP_STACK_TAC =
          f_events of coreth: returnaddress and stackpointer. This will be
          filled in later. *)
       META_EXISTS_TAC THEN
-      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th))
+      FIRST_X_ASSUM (fun th -> MP_TAC (ONCE_REWRITE_RULE[append_lemma]th)) THEN
+      (* push e_stack_spill to the innermost var of forall *)
+      REPEAT(CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])) THEN
+             MATCH_MP_TAC monopsrlemma THEN GEN_TAC) THEN
+      CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall]))
      else
-      (* th is functional correctness *) MP_TAC coreth) THEN
+      (* th is functional correctness *) MP_TAC coreth THEN
+      REPEAT(MATCH_MP_TAC monopsrlemma THEN GEN_TAC)) THEN
 
     REWRITE_TAC[fst winexecth] THEN
-    REPEAT((if is_coreth_safety then
-          (* push e_stack_spill to the innermost var of forall *)
-          (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])))
-        else ALL_TAC) THEN
-      MATCH_MP_TAC monopsrlemma THEN GEN_TAC) THEN
-    (if is_coreth_safety then
-          (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[swap_forall])))
-        else ALL_TAC) THEN
     MATCH_MP_TAC pcofflemma THEN
     EXISTS_TAC (mk_small_numeral pcoff) THEN GEN_TAC THEN
     CONV_TAC(LAND_CONV(ONCE_DEPTH_CONV pcplusplus_conv)) THEN
@@ -5264,7 +5352,7 @@ let WINDOWS_X86_WRAP_STACK_TAC =
     (if is_coreth_safety then
       (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
          'exists e_stack_spill. .. ==> ...' *)
-      MATCH_MP_TAC exists_stack_spill_ev_lemma THEN
+      ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
       META_EXISTS_TAC
      else
       ALL_TAC) THEN
@@ -5417,7 +5505,11 @@ let ADD_IBT_TAC =
       REPEAT GEN_TAC THEN
       CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
       REFL_TAC;
-      FIRST_X_ASSUM ACCEPT_TAC];;
+      FIRST_X_ASSUM ACCEPT_TAC ORELSE
+      ((* When the goal contains LENGTH .._mc and LENGTH .._tmc . *)
+       FIRST_X_ASSUM MP_TAC THEN
+       REWRITE_TAC[LENGTH_APPEND] THEN CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV)
+       THEN ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)];;
 
 let ADD_IBT_RULE th =
   let the_concl = concl th in

@@ -4876,6 +4876,23 @@ let subroutine_signatures = [
    ])
 );
 
+("mlkem_rej_uniform_VARIABLE_TIME",
+  ([(*args*)
+     ("r", "int16_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t*", (*is const?*)"true");
+     ("buflen", "uint64_t", (*is const?*)"false");
+     ("table", "uint8_t*", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mlkem_tobytes",
   ([(*args*)
      ("r", "uint8_t[static 384]", (*is const?*)"false");

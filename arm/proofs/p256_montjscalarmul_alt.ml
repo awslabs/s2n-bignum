@@ -4607,20 +4607,6 @@ let P256_MONTJSCALARMUL_ALT_SAFE = time prove
     ALL_TAC
   ] THEN
 
-  (* DISCHARGE_SAFETY_PROPERTY_TAC *)
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL [
-    PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
-    GEN_REWRITE_TAC (ONCE_DEPTH_CONV o LAND_CONV) [ENUMERATEL_ADD1] THEN
-    GEN_REWRITE_TAC REDEPTH_CONV [APPEND_ASSOC] THEN
-    REPEAT (AP_THM_TAC THEN AP_TERM_TAC) THEN
-    UNIFY_F_EVENTS_TAC;
-    ALL_TAC] THEN
-
-  (* Need this extra stuff. How did I find this out? I had to manually execute
-     subtactics of DISCHARGE_MEMACCESS_INBOUNDS_TAC and get the goal state when
-     CONTAINED_TAC failed. :( Can I print this automatically? *)
   SUBGOAL_THEN
     `word (8 * val (word_ushr (word_sub (word (4 * (63 - i))) (word 4):int64) 6))
      :int64 = word (8 * (4 * (62 - i)) DIV 2 EXP 6)`
@@ -4638,7 +4624,7 @@ let P256_MONTJSCALARMUL_ALT_SAFE = time prove
 
     ALL_TAC
   ] THEN
-  DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let P256_MONTJSCALARMUL_ALT_SUBROUTINE_SAFE = time prove
  (`exists f_events. forall e res scalar point pc stackpointer returnaddress.
