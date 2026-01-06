@@ -13162,3 +13162,419 @@ let P384_MONTJSCALARMUL_WINDOWS_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 3168),3168)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJSCALARMUL_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+(* Local versions of the subroutines. *)
+
+let LOCAL_JADD_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p384_montjscalarmul_tmc,P384_MONTJSCALARMUL_EXEC,
+          0x1c3a,p384_montjadd_tmc,safety_th)
+        [`e:(uarch_event)list`;`read RDI s`; `read RSI s`; `read RDX s`;
+        `pc + 0x1c3a`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
+         `stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_JDOUBLE_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p384_montjscalarmul_tmc,P384_MONTJSCALARMUL_EXEC,
+          0x7245,p384_montjdouble_tmc,safety_th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+        `pc + 0x7245`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+              n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
+         `stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p384_montjscalarmul" subroutine_signatures)
+    P384_MONTJSCALARMUL_CORRECT
+    P384_MONTJSCALARMUL_EXEC;;
+
+let P384_MONTJSCALARMUL_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           ALL (nonoverlapping (stackpointer,3096))
+           [word pc,40838; res,144; scalar,48; point,144] /\
+           nonoverlapping (res,144) (word pc,40838)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) p384_montjscalarmul_tmc /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = word_add stackpointer (word 408) /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 7208) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,48; point,144; res,144; stackpointer,3096]
+                         [res,144; stackpointer,3096]))
+               (MAYCHANGE [RIP] ,,
+                MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
+                MAYCHANGE
+                [memory :> bytes (res,144);
+                 memory :> bytes (stackpointer,3096)])`,
+
+  ASSERT_CONCL_TAC full_spec THEN
+
+  (* Prepare the safety theorem of subroutine to be used! This is necessary to
+     keep introduction of metavariable in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+     (let baseth = X86_SIMD_SHARPEN_RULE P384_MONTJADD_NOIBT_SUBROUTINE_SAFE
+       (X86_PROMOTE_RETURN_STACK_TAC p384_montjadd_tmc P384_MONTJADD_SAFE
+          `[RBX; RBP; R12; R13; R14; R15]` 400 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC) in
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+          baseth))
+    "H_JADD_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (let baseth = X86_SIMD_SHARPEN_RULE P384_MONTJDOUBLE_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC p384_montjdouble_tmc P384_MONTJDOUBLE_SAFE
+          `[RBX; RBP; R12; R13; R14; R15]` 392 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC) in
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+          baseth))
+    "H_JDOUBLE_SAFE" THEN
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_loop_post scalar point res pc stackpointer)
+        (APPEND
+          (ENUMERATEL 76 (f_ev_loop scalar point res pc stackpointer))
+            (f_ev_loop_pre scalar point res pc stackpointer))
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN
+  STRIP_TAC (* event e *) THEN
+
+  REWRITE_TAC[GSYM SEQ_ASSOC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL;
+              fst P384_MONTJSCALARMUL_EXEC] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS] THEN
+  ENSURES_EXISTING_PRESERVED_TAC `RSP` THEN
+
+  (*** Main loop invariant setup. ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `76` `pc + 0xec6` `pc + 0x1b61`
+   `\i s.
+      read RSP s = word_add stackpointer (word 408) /\
+      read (memory :> bytes64(word_add stackpointer (word 3048))) s = res /\
+      read RBP s = word (5 * (76 - i))` THEN
+  REPEAT CONJ_TAC THENL [
+    ARITH_TAC;
+
+    (*** Initial holding of invariant ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (1--68) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 69 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (70--73) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 74 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (75--77) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 78 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (79--82) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 83 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (84--86) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 87 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (88--91) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 92 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (93--95) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 96 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (97--100) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 101 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (102--104) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 105 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (106--109) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 110 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (111--113) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 114 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (115--118) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 119 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (120--122) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 123 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (124--127) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 128 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (129--131) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 132 THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (133--522) THEN
+
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** Defer the main invariant preservation proof till below ***)
+
+    ALL_TAC;
+
+    (*** Final copying to the output and specializing invariant ***)
+
+    REWRITE_TAC[] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (1--37) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  (**** Now the preservation of the loop invariant ***)
+
+  REPEAT STRIP_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (1--4) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 5 THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (6--8) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 9 THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (10--12) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 13 THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (14--16) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 17 THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (18--20) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 21 THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (22--45) THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (46--434) THEN
+  LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 435 THEN
+  X86_STEPS_TAC P384_MONTJSCALARMUL_EXEC (436--437) THEN
+
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN
+    SIMPLE_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+      AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC
+    ];
+    ALL_TAC
+  ] THEN
+
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P384_MONTJSCALARMUL_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 3144),3144))
+        [word pc,LENGTH p384_montjscalarmul_tmc; scalar,48; point,144] /\
+        ALL (nonoverlapping (res,144))
+        [word pc,LENGTH p384_montjscalarmul_tmc;
+         word_sub stackpointer (word 3144),3152]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjscalarmul_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 3144))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,48; point,144; res,144;
+                       word_sub stackpointer (word 3144),3152]
+                      [res,144; word_sub stackpointer (word 3144),3144]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,144);
+              memory :> bytes (word_sub stackpointer (word 3144),3144)])`,
+  X86_ADD_RETURN_STACK_TAC P384_MONTJSCALARMUL_EXEC
+    P384_MONTJSCALARMUL_SAFE `[RBX; RBP; R12; R13; R14; R15]` 3144
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P384_MONTJSCALARMUL_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 3144),3144))
+        [word pc,LENGTH p384_montjscalarmul_mc; scalar,48; point,144] /\
+        ALL (nonoverlapping (res,144))
+        [word pc,LENGTH p384_montjscalarmul_mc;
+         word_sub stackpointer (word 3144),3152]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjscalarmul_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 3144))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,48; point,144; res,144;
+                       word_sub stackpointer (word 3144),3152]
+                      [res,144; word_sub stackpointer (word 3144),3144]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,144);
+              memory :> bytes (word_sub stackpointer (word 3144),3144)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJSCALARMUL_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let P384_MONTJSCALARMUL_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 3168),3168))
+        [word pc,LENGTH p384_montjscalarmul_windows_tmc; scalar,48; point,144] /\
+        ALL (nonoverlapping (res,144))
+        [word pc,LENGTH p384_montjscalarmul_windows_tmc;
+         word_sub stackpointer (word 3168),3176]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjscalarmul_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 3168))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,48; point,144; res,144;
+                       word_sub stackpointer (word 3168),3176]
+                      [res,144; word_sub stackpointer (word 3168),3168]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,144);
+              memory :> bytes (word_sub stackpointer (word 3168),3168)])`,
+  let WINDOWS_P384_MONTJSCALARMUL_EXEC =
+    X86_MK_EXEC_RULE p384_montjscalarmul_windows_tmc
+  and baseth =
+    X86_SIMD_SHARPEN_RULE P384_MONTJSCALARMUL_NOIBT_SUBROUTINE_SAFE
+    (X86_ADD_RETURN_STACK_TAC P384_MONTJSCALARMUL_EXEC
+     P384_MONTJSCALARMUL_SAFE `[RBX; RBP; R12; R13; R14; R15]` 3144 THEN
+     DISCHARGE_SAFETY_PROPERTY_TAC) in
+  let subth =
+    CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+     (REWRITE_RULE[bignum_triple_from_memory] baseth) in
+
+  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
+  META_EXISTS_TAC THEN STRIP_TAC THEN
+
+  REWRITE_TAC[fst WINDOWS_P384_MONTJSCALARMUL_EXEC] THEN
+  REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 3168 THEN
+  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
+  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+  REWRITE_TAC[bignum_triple_from_memory; WORD_RULE
+    `word(8 * 6) = word 48 /\ word(16 * 6) = word 96`] THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+  UNDISCH_THEN `read RSP s0 = word_add stackpointer (word 3168)`
+   (fun th -> SUBST_ALL_TAC th THEN ASSUME_TAC th) THEN
+  RULE_ASSUM_TAC
+   (CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
+  X86_STEPS_TAC WINDOWS_P384_MONTJSCALARMUL_EXEC (1--6) THEN
+
+  REMOVE_THEN "H_CALLEE" (fun subth ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (p384_montjscalarmul_windows_tmc,
+        WINDOWS_P384_MONTJSCALARMUL_EXEC,
+        0x13,p384_montjscalarmul_tmc,subth)
+      [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+        `pc + 0x13`; `read RSP s`;
+        `read (memory :> bytes64 (read RSP s)) s`] 7) THENL [
+    EXISTS_E2_TAC(ref
+      [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
+        `stackpointer:int64`]);
+
+    ALL_TAC
+  ] THEN
+  X86_STEPS_TAC WINDOWS_P384_MONTJSCALARMUL_EXEC (8--10) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P384_MONTJSCALARMUL_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 3168),3168))
+        [word pc,LENGTH p384_montjscalarmul_windows_mc; scalar,48; point,144] /\
+        ALL (nonoverlapping (res,144))
+        [word pc,LENGTH p384_montjscalarmul_windows_mc;
+         word_sub stackpointer (word 3168),3176]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjscalarmul_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 3168))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,48; point,144; res,144;
+                       word_sub stackpointer (word 3168),3176]
+                      [res,144; word_sub stackpointer (word 3168),3168]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,144);
+              memory :> bytes (word_sub stackpointer (word 3168),3168)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJSCALARMUL_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

@@ -10,7 +10,7 @@
 //      RCX = regfile[1]
 //      RDX = regfile[2]
 //      RBX = regfile[3]
-//      OF:xx:xx:xx:SF:ZF:xx:AF:xx:PF:xx:CF = regfile[4] & 0xFF
+//      OF:DF:xx:xx:SF:ZF:xx:AF:xx:PF:xx:CF = regfile[4] & 0xFF
 //      RBP = regfile[5]
 //      RSI = regfile[6]
 //      RDI = regfile[7]
@@ -55,6 +55,7 @@ void print_regs()
   printf("   R14 = 0x%016"PRIx64"\n",regs[14]);
   printf("   R15 = 0x%016"PRIx64"\n",regs[15]);
   printf("    OF = %d\n",(regs[4] & (1<<11)) != 0);
+  printf("    DF = %d\n",(regs[4] & (1<<10)) != 0);
   printf("    SF = %d\n",(regs[4] & (1<<7)) != 0);
   printf("    ZF = %d\n",(regs[4] & (1<<6)) != 0);
   printf("    AF = %d\n",(regs[4] & (1<<4)) != 0);

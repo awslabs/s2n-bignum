@@ -4932,3 +4932,191 @@ let P384_MONTJDOUBLE_WINDOWS_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 408),408)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJDOUBLE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p384_montjdouble" subroutine_signatures)
+    P384_MONTJDOUBLE_CORRECT
+    P384_MONTJDOUBLE_EXEC;;
+
+let P384_MONTJDOUBLE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer.
+           ALL (nonoverlapping (stackpointer,344))
+           [word pc,11585; p1,144; p3,144] /\
+           nonoverlapping (p3,144) (word pc,11585)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST p384_montjdouble_tmc) /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 11567) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,144; p3,144; stackpointer,344]
+                         [p3,144; stackpointer,344]))
+               (MAYCHANGE
+                [RIP; RDI; RSI; RAX; RDX; RCX; R8; R9; R10; R11; RBX; RBP;
+                 R12; R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,144); memory :> bytes (stackpointer,344)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P384_MONTJDOUBLE_EXEC);;
+
+let P384_MONTJDOUBLE_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 392),392))
+        [word pc,LENGTH p384_montjdouble_tmc; p1,144] /\
+        ALL (nonoverlapping (p3,144))
+        [word pc,LENGTH p384_montjdouble_tmc;
+         word_sub stackpointer (word 392),400]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjdouble_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 392))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,144; p3,144; word_sub stackpointer (word 392),400]
+                      [p3,144; word_sub stackpointer (word 392),392]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,144);
+              memory :> bytes (word_sub stackpointer (word 392),392)])`,
+  X86_PROMOTE_RETURN_STACK_TAC p384_montjdouble_tmc P384_MONTJDOUBLE_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 392 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P384_MONTJDOUBLE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 392),392))
+        [word pc,LENGTH p384_montjdouble_mc; p1,144] /\
+        ALL (nonoverlapping (p3,144))
+        [word pc,LENGTH p384_montjdouble_mc;
+         word_sub stackpointer (word 392),400]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjdouble_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 392))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,144; p3,144; word_sub stackpointer (word 392),400]
+                      [p3,144; word_sub stackpointer (word 392),392]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,144);
+              memory :> bytes (word_sub stackpointer (word 392),392)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJDOUBLE_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let P384_MONTJDOUBLE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 408),408))
+        [word pc,LENGTH p384_montjdouble_windows_tmc; p1,144] /\
+        ALL (nonoverlapping (p3,144))
+        [word pc,LENGTH p384_montjdouble_windows_tmc;
+         word_sub stackpointer (word 408),416]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjdouble_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 408))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,144; p3,144; word_sub stackpointer (word 408),416]
+                      [p3,144; word_sub stackpointer (word 408),408]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,144);
+              memory :> bytes (word_sub stackpointer (word 408),408)])`,
+  WINDOWS_X86_WRAP_STACK_TAC
+    p384_montjdouble_windows_tmc p384_montjdouble_tmc
+    P384_MONTJDOUBLE_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 392 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P384_MONTJDOUBLE_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 408),408))
+        [word pc,LENGTH p384_montjdouble_windows_mc; p1,144] /\
+        ALL (nonoverlapping (p3,144))
+        [word pc,LENGTH p384_montjdouble_windows_mc;
+         word_sub stackpointer (word 408),416]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p384_montjdouble_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 408))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,144; p3,144; word_sub stackpointer (word 408),416]
+                      [p3,144; word_sub stackpointer (word 408),408]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,144);
+              memory :> bytes (word_sub stackpointer (word 408),408)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJDOUBLE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

@@ -180,6 +180,10 @@ let CONS_TO_APPEND_CONV (t:term) =
 (* - : thm = |- CONS 1 (CONS 2 e) = APPEND [1; 2] e *)
 CONS_TO_APPEND_CONV `CONS 1 (CONS 2 e)`;;
 
+let APPEND_EXISTS = prove(
+ `forall (x:(A)list). exists (x1:(A)list) x2. x = APPEND x1 x2`,
+    STRIP_TAC THEN EXISTS_TAC `[]:(A)list` THEN MESON_TAC[APPEND]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Combined word and number and a few other things reduction.                *)
 (* ------------------------------------------------------------------------- *)
@@ -2191,6 +2195,20 @@ let ALL_F = prove(`forall (l:(A)list) h. ALL (\x. false) (CONS h l) <=> F`,
 
 let EX_SUBSET_LIST = prove(`forall (l:(A)list) P l2.
   EX P l /\ ALL (\x. MEM x l2) l ==> EX P l2`,
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[EX];
+
+    REWRITE_TAC[EX;ALL] THEN
+    ASM_MESON_TAC[EX_MEM]
+  ]);;
+
+let GEN_EX_SUBSET_LIST = prove(`
+  forall (P:A->bool) Q (l:(A)list) l2.
+    (forall a b. P a /\ Q a b ==> P b) ==>
+    EX (\x. P x) l /\ ALL (\x. EX (\y. Q x y) l2) l ==> EX (\x. P x) l2`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  MAP_EVERY SPEC_TAC [(`l2:(A)list`,`l2:(A)list`);(`l:(A)list`,`l:(A)list`)]
+    THEN
   LIST_INDUCT_TAC THENL [
     REWRITE_TAC[EX];
 

@@ -102,9 +102,59 @@ let MEMACCESS_INBOUNDS_MEM = prove(
     ]
   ]);;
 
+let MEMACCESS_INBOUNDS_CONTAINED = prove(
+  `forall e rr rr' wr wr'.
+    ALL (\r. EX (\r'. contained r r') rr') rr /\
+    ALL (\w. EX (\w'. contained w w') wr') wr
+    ==> memaccess_inbounds e rr wr
+    ==> memaccess_inbounds e rr' wr'`,
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[memaccess_inbounds;ALL];
+
+    CONV_TAC (ONCE_DEPTH_CONV
+      (CONS_TO_APPEND_CONV)) THEN
+    REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
+    REPEAT STRIP_TAC THENL [
+      UNDISCH_TAC `ALL (\(r:int64#num). EX (\r'. contained r r') rr') rr` THEN
+      UNDISCH_TAC `ALL (\(w:int64#num). EX (\w'. contained w w') wr') wr` THEN
+      UNDISCH_TAC `memaccess_inbounds [h] rr wr` THEN
+      REWRITE_TAC[memaccess_inbounds;ALL] THEN
+      SPEC_TAC (`(h:uarch_event)`,`(h:uarch_event)`) THEN
+      MATCH_MP_TAC uarch_event_INDUCT THEN
+      REWRITE_TAC[] THEN CONJ_TAC THENL [
+        REWRITE_TAC[FORALL_PAIR_THM] THEN
+        REPEAT GEN_TAC THEN
+        DISCH_THEN (LABEL_TAC "H1") THEN
+        DISCH_THEN (K ALL_TAC) THEN
+        DISCH_THEN (LABEL_TAC "H2") THEN
+        REMOVE_THEN "H1" (fun th1 -> REMOVE_THEN "H2"
+          (fun th2 -> MP_TAC (CONJ th1 th2))) THEN
+        MATCH_MP_TAC GEN_EX_SUBSET_LIST THEN
+        REWRITE_TAC[FORALL_PAIR_THM] THEN
+        MESON_TAC[contained; DIMINDEX_64;CONTAINED_MODULO_TRANS];
+
+        REWRITE_TAC[FORALL_PAIR_THM] THEN
+        REPEAT GEN_TAC THEN
+        DISCH_THEN (LABEL_TAC "H1") THEN
+        DISCH_THEN (LABEL_TAC "H2") THEN
+        DISCH_THEN (K ALL_TAC) THEN
+        REMOVE_THEN "H1" (fun th1 -> REMOVE_THEN "H2"
+          (fun th2 -> MP_TAC (CONJ th1 th2))) THEN
+        MATCH_MP_TAC GEN_EX_SUBSET_LIST THEN
+        REWRITE_TAC[FORALL_PAIR_THM] THEN
+        MESON_TAC[contained; DIMINDEX_64;CONTAINED_MODULO_TRANS];
+
+      ];
+
+      ASM_METIS_TAC[];
+    ]
+  ]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Helper tactics for subroutines                                            *)
 (* ------------------------------------------------------------------------- *)
+
+let safety_print_log = ref false;;
 
 (* Do ASSUME_TAC for safety proof which is `exists f_events. ...` after
   stripping the exists f_events part. *)
@@ -117,3 +167,25 @@ let ASSUME_CALLEE_SAFETY_TAC =
       mk_var("f_events_callee" ^ (string_of_int !fresh_f_events_var_counter),
               f_events_var_type) in
     (X_CHOOSE_THEN f_events_callee (LABEL_TAC asmname)) callee_safety_proof;;
+
+(* Extension of ASSUME_CALLEE_SAFETY_TAC: given safety_th which is
+  |- exists f_events. forall e x y ... . P e,
+  split e into e_tail and e, and push e_tail into the innermost place.
+  |- exists f_events. forall e x y ... e_tail. P (APPEND e_tail e)
+*)
+let ASSUME_CALLEE_SAFETY_TAILED_TAC =
+  let append_lemma = MESON[APPEND_EXISTS]
+    `(forall (e:(uarch_event)list). P e) <=>
+      (forall e_tail e. P (APPEND e_tail e))` in
+  fun (safety_th:thm) (name:string) ->
+    let safety_th' = ONCE_REWRITE_RULE[append_lemma] safety_th in
+    (* push e_tail to the innermost location *)
+    let exarg,body = dest_exists (concl safety_th') in
+    let args,body = strip_forall body in
+    let args_rotated = (tl args) @ [hd args] in
+    let eqth = MESON[](mk_eq(
+        concl safety_th',
+        mk_exists(exarg,list_mk_forall(args_rotated,body))))
+      in
+    let safety_th'' = ONCE_REWRITE_RULE[eqth] safety_th' in
+    ASSUME_CALLEE_SAFETY_TAC safety_th'' name;;

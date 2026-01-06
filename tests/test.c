@@ -956,16 +956,16 @@ static int32_t mldsa_zetas[256] = {
 static int32_t __attribute__((aligned(32))) mldsa_avx2_data[624] = {
     // Offset 0-7: 8XQ (8 copies of MLDSA_Q = 8380417)
     8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417,
-    
+
     // Offset 8-15: 8XQINV (8 copies of MLDSA_QINV = 58728449)
     58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449,
-    
+
     // Offset 16-23: 8XDIV_QINV (8 copies of -8395782)
     -8395782, -8395782, -8395782, -8395782, -8395782, -8395782, -8395782, -8395782,
-    
+
     // Offset 24-31: 8XDIV (8 copies of 41978)
     41978, 41978, 41978, 41978, 41978, 41978, 41978, 41978,
-    
+
     // Offset 32-327: ZETAS_QINV (Montgomery form zetas, 296 elements)
     -151046689,
     1830765815, -1929875198, -1927777021, 1640767044, 1477910808, 1612161320, 1640734244, 308362795,
@@ -1007,7 +1007,7 @@ static int32_t __attribute__((aligned(32))) mldsa_avx2_data[624] = {
     1136965286, 1779436847, 1116720494, 1042326957, 1405999311, 713994583, 940195359, -1542497137,
     2061661095, -883155599, 1726753853, -1547952704, 394851342, 283780712, 776003547, 1123958025,
     201262505, 1934038751, 374860238,
-    
+
     // Offset 328-623: ZETAS (Regular zetas, 296 elements)
     -3975713, 25847, -2608894, -518909, 237124, -777960, -876248, 466468, 1826347, 1826347, 1826347,
     1826347, 2353451, 2353451, 2353451, 2353451, -359251, -359251, -359251, -359251, -2091905,
@@ -2759,25 +2759,25 @@ uint64_t pow_8380417(uint64_t x, uint64_t n)
 void reference_mldsa_forward_ntt_spec(int32_t a[256])
 {
     int32_t result[256];
-    
+
     for (int k = 0; k < 256; k++) {
         uint64_t sum = 0;
         uint8_t order_k = avx2_ntt_order(k);
-        
+
         for (int j = 0; j < 256; j++) {
             // Properly normalize input to [0, MLDSA_Q) range
             int64_t normalized_aj = ((int64_t)a[j] % 8380417 + 8380417) % 8380417;
-            
+
             uint64_t power = ((uint64_t)(2 * order_k + 1) * j) % 16760832; // Reduce exponent mod (q-1)*2
             uint64_t zeta_power = pow_8380417(1753, power);
-            
+
             uint64_t term = ((uint64_t)normalized_aj * zeta_power) % 8380417;
             sum = (sum + term) % 8380417;
         }
-        
+
         result[k] = (int32_t)sum;
     }
-    
+
     // Copy result back
     for (int i = 0; i < 256; i++) {
         a[i] = result[i];
@@ -2788,17 +2788,17 @@ void reference_mldsa_forward_ntt_spec(int32_t a[256])
 void reference_mldsa_forward_ntt(int32_t a[256])
 {
     unsigned int layer;
-    
+
     for (layer = 1; layer < 9; layer++) {
         unsigned start, k, len;
         // Twiddle factors for layer n are at indices 2^(n-1)..2^n-1
         k = 1u << (layer - 1);
         len = 256u >> layer;
-        
+
         for (start = 0; start < 256; start += 2 * len) {
             int32_t zeta = mldsa_zetas[k++];
             unsigned j;
-            
+
             for (j = start; j < start + len; j++) {
                 int32_t t = reference_mldsa_reduce((int64_t)zeta * a[j + len]);
                 a[j + len] = a[j] - t;
@@ -12151,23 +12151,33 @@ int test_mlkem_intt(void)
 
 int test_mlkem_mulcache_compute(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[256], x[128], y[128];
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t x[128] __attribute__((aligned(32)));
+  int16_t y[128] __attribute__((aligned(32)));
+  int16_t z[128] __attribute__((aligned(32)));
   printf("Testing mlkem_mulcache_compute with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
    { for (i = 0; i < 256; ++i)
         a[i] = (int16_t) (random64());
+
      reference_mulcache_compute(y,a);
+
+#ifdef __x86_64__
+     mlkem_poly_mulcache_to_avx2_layout(y);
+
+     mlkem_poly_to_avx2_layout(a);
+     mlkem_mulcache_compute_x86(x,a,mlkem_qdata);
+#else
      mlkem_mulcache_compute(x,a,mulcache_zetas,mulcache_zetas_twisted);
+#endif
+
      for (i = 0; i < 128; ++i)
       { if (rem_3329(x[i]) != rem_3329(y[i]))
          { printf("Error in mulcache element i = %"PRIu64"; code[i] = 0x%04"PRIx16
                   " while reference[i] = 0x%04"PRIx16"\n",
-                  i,x[i],y[i]);
+                  i,rem_3329(x[i]),rem_3329(y[i]));
            return 1;
          }
       }
@@ -12182,7 +12192,6 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_ntt(void)
@@ -12259,6 +12268,84 @@ uint64_t t, i;
   return 0;
 }
 
+int test_mlkem_unpack(void)
+{
+#ifdef __x86_64__
+uint64_t t, i;
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  printf("Testing mlkem_unpack with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 256; ++i)
+      { a[i] = random64() & 0xff;
+        b[i] = a[i];
+      }
+
+     mlkem_unpack(a);
+
+     mlkem_poly_to_avx2_layout(b);
+
+     for (i = 0; i < 256; ++i)
+      { if (a[i] != b[i])
+         { printf("Error in mlkem_unpack; element i = %"PRIu64
+                  "; expected output for input[i] = 0x%03"PRIx16
+                  " while output is = 0x%03"PRIx16"\n",
+                  i,b[i],a[i]);
+           return 1;
+         }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#else
+  return 0;
+#endif
+}
+
+int test_mlkem_frombytes(void)
+{
+#ifdef __x86_64__
+uint64_t t, i;
+  uint8_t a[384] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
+  int16_t c[256] __attribute__((aligned(32)));
+  printf("Testing mlkem_frombytes with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { for (i = 0; i < 384; ++i) a[i] = random64() & 0xff;
+
+     mlkem_frombytes(b,a);
+
+     for (i = 0; i < 128; ++i)
+      { const uint8_t t0 = a[3 * i + 0];
+        const uint8_t t1 = a[3 * i + 1];
+        const uint8_t t2 = a[3 * i + 2];
+
+        c[2*i+0] = (int16_t)(t0 | ((t1 << 8) & 0xFFF));
+        c[2*i+1] = (int16_t)((t1 >> 4) | (t2 << 4));
+      }
+
+     mlkem_poly_to_avx2_layout(c);
+
+     for (i = 0; i < 256; ++i)
+      { if (c[i] != b[i])
+         { printf("Error in mlkem_frombytes; element i = %"PRIu64
+                  "; expected output for input[i] = 0x%03"PRIx16
+                  " while output is = 0x%03"PRIx16"\n",
+                  i,c[i],b[i]);
+           return 1;
+         }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#else
+  return 0;
+#endif
+}
+
+
 int test_mlkem_tobytes(void)
 {
 uint64_t t, i;
@@ -12308,11 +12395,9 @@ uint64_t t, i;
 
 int test_mlkem_tomont(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
 uint64_t t, i;
-  int16_t a[256], b[256];
+  int16_t a[256] __attribute__((aligned(32)));
+  int16_t b[256] __attribute__((aligned(32)));
   printf("Testing mlkem_tomont with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -12342,14 +12427,10 @@ uint64_t t, i;
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mlkem_rej_uniform(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
   uint64_t t, i;
   uint8_t inbuf[24*160];
    int16_t a[256], b[256];
@@ -12384,7 +12465,6 @@ int test_mlkem_rej_uniform(void)
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mldsa_poly_reduce(void)
@@ -12399,16 +12479,16 @@ int test_mldsa_poly_reduce(void)
     // 32-byte alignment for AVX2 vmovdqa instructions
     int32_t a[256] __attribute__((aligned(32)));
     int32_t b[256] __attribute__((aligned(32)));
-    
+
     printf("Testing mldsa_poly_reduce with %d cases\n", tests);
 
     for (t = 0; t < tests; ++t) {
         for (i = 0; i < 256; ++i)
             // Generate random int32_t values across full range [-2^31, 2^31-1]
             b[i] = a[i] = (int32_t) (random64() % 4294967296ULL) - 2147483648LL;
-        
+
         mldsa_poly_reduce(b);
-        
+
         for (i = 0; i < 256; ++i) {
             if (reference_poly_reduce(a[i]) != b[i]) {
                 printf("Error in mldsa_poly_reduce; element i = %"PRIu64
@@ -12418,7 +12498,7 @@ int test_mldsa_poly_reduce(void)
                 return 1;
             }
         }
-        
+
         if (VERBOSE) {
             printf("OK:mldsa_poly_reduce[0x%08"PRIx32",0x%08"PRIx32",...,"
                    "0x%08"PRIx32",0x%08"PRIx32"] = "
@@ -12447,7 +12527,7 @@ int test_mldsa_ntt(void)
     // 32-byte alignment for AVX2 vmovdqa instructions
     int32_t a[256] __attribute__((aligned(32)));
     int32_t b[256] __attribute__((aligned(32)));
-    
+
     printf("Testing mldsa_ntt with %d cases\n", tests);
 
     for (t = 0; t < tests; ++t) {
@@ -12456,18 +12536,18 @@ int test_mldsa_ntt(void)
             a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
             b[i] = a[i];  // Copy for assembly implementation
         }
-        
+
         // Call the x86 assembly implementation with complete AVX2 data structure
         mldsa_ntt(b, mldsa_avx2_data);
-        
+
         // Test against HOL-Light specification implementation
         reference_mldsa_forward_ntt_spec(a);
-        
+
         // Compare results (apply reduction to both values for comparison)
         for (i = 0; i < 256; ++i) {
             int32_t reduced_a = reference_poly_reduce(a[i]);
             int32_t reduced_b = reference_poly_reduce(b[i]);
-            
+
             // Also check if they're congruent modulo MLDSA_Q
             if (reduced_a != reduced_b) {
                 // Check if they differ by a multiple of MLDSA_Q
@@ -12480,7 +12560,7 @@ int test_mldsa_ntt(void)
                 }
             }
         }
-        
+
         if (VERBOSE) {
             printf("OK: mldsa_ntt[0x%08"PRIx32",0x%08"PRIx32",...,"
                    "0x%08"PRIx32",0x%08"PRIx32"] = "
@@ -12490,7 +12570,7 @@ int test_mldsa_ntt(void)
                    b[0], b[1], b[254], b[255]);
         }
     }
-    
+
     printf("All OK\n");
     return 0;
 #else
@@ -15634,10 +15714,15 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
   functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
+  functionaltest(all,"mlkem_frombytes",test_mlkem_frombytes);
   functionaltest(all,"mlkem_intt",test_mlkem_intt);
+  functionaltest(all,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
   functionaltest(all,"mlkem_ntt",test_mlkem_ntt);
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
+  functionaltest(all,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
+  functionaltest(all,"mlkem_tomont",test_mlkem_tomont);
+  functionaltest(all,"mlkem_unpack",test_mlkem_unpack);
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
@@ -15696,9 +15781,6 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_16",test_bignum_copy_row_from_table_16);
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
-    functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
-    functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);
-    functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
     functionaltest(sha3,"sha3_keccak_f1600_alt",test_sha3_keccak_f1600_alt);
     functionaltest(arm,"sha3_keccak_f1600_alt2",test_sha3_keccak_f1600_alt2);
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);

@@ -2237,3 +2237,446 @@ let EDWARDS25519_DECODE_WINDOWS_SUBROUTINE_CORRECT = time prove
                     memory :> bytes(word_sub stackpointer (word 336),336)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_DECODE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+(* generated with:
+  mk_safety_spec ~keep_maychanges:true
+      (assoc "bignum_mul_p25519" subroutine_signatures)
+      LOCAL_MUL_P25519_CORRECT
+      EDWARDS25519_DECODE_EXEC;; *)
+let LOCAL_MUL_P25519_SAFE = time prove
+ (`exists f_events.
+        forall e z x y pc.
+            nonoverlapping (word pc,2430) (z,8 * 4)
+            ==> ensures x86
+                (\s.
+                     bytes_loaded s (word pc) edwards25519_decode_tmc /\
+                     read RIP s = word (pc + 1472) /\
+                     C_ARGUMENTS [z; x; y] s /\
+                     read events s = e)
+                (\s.
+                     read RIP s = word (pc + 1902) /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events x y z pc /\
+                          memaccess_inbounds e2 [x,32; y,32; z,32] [z,32]))
+                (MAYCHANGE
+                 [RIP; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11; R12; R13;
+                  R14; R15] ,,
+                 MAYCHANGE [memory :> bytes (z,8 * 4)] ,,
+                 MAYCHANGE SOME_FLAGS ,,
+                 MAYCHANGE [events])`,
+  PROVE_SAFETY_SPEC_TAC EDWARDS25519_DECODE_EXEC);;
+
+let LOCAL_MUL_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (edwards25519_decode_tmc,EDWARDS25519_DECODE_EXEC,
+        0x0,edwards25519_decode_tmc,safety_th)
+      [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+      `pc:num`] n
+    THENL [
+      EXISTS_E2_TAC (ref [`z:int64`;`c:int64`;`pc:num`;`stackpointer:int64`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+(* LOCAL_NSQR_P25519: unfortunately this does not exist as a separate subroutine
+  in s2n-bignum.h . :/ Below is manually modified from LOCAL_MUL_P25519_SAFE *)
+let LOCAL_NSQR_P25519_SAFE = time prove
+ (`exists f_events.
+        forall e z k x pc stackpointer.
+          nonoverlapping (word pc,0x97e) (z,8 * 4) /\
+          nonoverlapping (stackpointer,264) (word pc,0x97e) /\
+          1 <= val k /\ val k <= 1000
+          ==> ensures x86
+                (\s.
+                    bytes_loaded s (word pc) edwards25519_decode_tmc /\
+                    read RIP s = word(pc + 0x76f) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [z; k; x] s /\
+                    read events s = e)
+                (\s. read RIP s = word (pc + 0x97d) /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events z k x pc stackpointer /\
+                          memaccess_inbounds e2
+                              [x,32; z,32; stackpointer,264]
+                              [z,32; word_add stackpointer (word 200),64]))
+                (MAYCHANGE [RIP; RSI; RAX; RBX; RCX; RDX; RBP;
+                      R8; R9; R10; R11; R12; R13; R14; R15] ,,
+                MAYCHANGE [memory :> bytes(z,8 * 4);
+                  memory :> bytes(word_add stackpointer (word 200),8*4)] ,,
+                MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(z:int64) (k:int64) (x:int64) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_loop_post z k x pc stackpointer)
+        (APPEND
+          (ENUMERATEL (val k) (f_ev_loop z k x pc stackpointer))
+            (f_ev_loop_pre z k x pc stackpointer))
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; ALL; SOME_FLAGS] THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `val (k:int64)` `pc + 0x79e` `pc + 0x942`(*+1*)
+   `\i s. read RSP s = stackpointer /\
+          read RDI s = z /\
+          read RSI s = word((val (k:int64)) - i)` THEN REPEAT CONJ_TAC THENL [
+    ASM_ARITH_TAC;
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (1--8) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0;WORD_VAL];ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC; (*** Main loop invariant ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (1--17) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  REPEAT STRIP_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (1--69) THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (70--70) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    ABBREV_TAC `k' = val (k:int64)` THEN
+    VAL_INT64_TAC `k' - i` THEN VAL_INT64_TAC `1` THEN
+    ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN
+    SIMPLE_ARITH_TAC; ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN
+    ABBREV_TAC `k' = val (k:int64)` THEN
+    CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+    ALL_TAC
+  ] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let LOCAL_NSQR_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (edwards25519_decode_tmc,EDWARDS25519_DECODE_EXEC,
+          0x0,edwards25519_decode_tmc,safety_th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+        `pc:num`; `stackpointer:int64`] n THENL [
+      EXISTS_E2_TAC (ref [`z:int64`;`c:int64`;`pc:num`;`stackpointer:int64`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+
+let full_spec,public_vars = mk_safety_spec ~keep_maychanges:true
+      (assoc "edwards25519_decode" subroutine_signatures)
+      EDWARDS25519_DECODE_CORRECT
+      EDWARDS25519_DECODE_EXEC;;
+
+let EDWARDS25519_DECODE_SAFE = time prove
+ (`exists f_events.
+        forall e z c pc stackpointer.
+            ALL (nonoverlapping (stackpointer,264))
+            [word pc,2430; z,8 * 8; c,8 * 4] /\
+            nonoverlapping (word pc,2430) (z,8 * 8)
+            ==> ensures x86
+                (\s.
+                     bytes_loaded s (word pc) edwards25519_decode_tmc /\
+                     read RIP s = word (pc + 17) /\
+                     read RSP s = word_add stackpointer (word 8) /\
+                     C_ARGUMENTS [z; c] s /\
+                     read events s = e)
+                (\s.
+                     read RIP s = word (pc + 1454) /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events c z pc stackpointer /\
+                          memaccess_inbounds e2
+                              [c,32; z,64; stackpointer,264]
+                              [z,64; stackpointer,264]))
+                (MAYCHANGE
+                 [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11;
+                  R12; R13; R14; R15] ,,
+                 MAYCHANGE SOME_FLAGS ,,
+                 MAYCHANGE [events] ,,
+                 MAYCHANGE
+                 [memory :> bytes (z,8 * 8);
+                  memory :> bytes (stackpointer,264)])`,
+
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_MUL_P25519_SAFE "H_MUL" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_NSQR_P25519_SAFE "H_NSQR" THEN
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[ALL;SOME_FLAGS;C_ARGUMENTS] THEN
+  REPEAT STRIP_TAC THEN
+  ENSURES_EXISTING_PRESERVED_TAC `RSP` THEN
+
+  ENSURES_INIT_TAC "s0" THEN
+  (* simply use symbolic sim to cover the first part of ENSURES_SEQUENCE_TAC *)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (1--19) THEN
+  (* now the second part of ENSURES_SEQUENCE_TAC. *)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (20--23) THEN
+  LOCAL_NSQR_SAFETY_TAC "H_NSQR" 24 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (25--50) THEN
+  LOCAL_MUL_SAFETY_TAC "H_MUL" 51 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (52--64) THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (65--68) THEN
+  LOCAL_MUL_SAFETY_TAC "H_MUL" 69 THEN
+
+  (*** The power tower. Simply add 100 to the step numbers of fn correctness
+       proof... ***)
+
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (151--155) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  156 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (157--161) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  162 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (163--167) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  168 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (169--173) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  174 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (175--179) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  180 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (181--185) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  186 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (187--191) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  192 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (193--197) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  198 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (199--203) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  204 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (205--209) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  210 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (211--215) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  216 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (217--221) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  222 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (223--227) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  228 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (229--233) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  234 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (235--239) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  240 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (241--245) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  246 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (247--251) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  252 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (253--257) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  258 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (259--263) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  264 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (265--269) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  270 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (271--275) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR"  276 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (277--281) THEN LOCAL_MUL_SAFETY_TAC "H_MUL"  282 THEN
+
+  (*** e^2 * w computation ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (283--287) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 288 THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (289--293) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 294 THEN
+
+  (*** s = u * e ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (295--299) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 300 THEN
+
+  (*** t = j_25519 * s ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (301--313) THEN
+  LOCAL_MUL_SAFETY_TAC "H_MUL" 314 THEN
+
+  (*** Comparison with 0 or 1 ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (315--325) THEN
+
+  (*** Comparison with -1 ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (326--333) THEN
+
+  (*** Multiplexing of s or t ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (334--350) THEN
+
+  (*** Error indication (so far) ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (351--355) THEN
+
+  (*** Computation of p_25519 - x and all ***)
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (356--367) THEN
+  X86_STEPS_TAC EDWARDS25519_DECODE_EXEC (368--400) THEN
+
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+(*
+  generate_four_variants_of_x86_safety_specs
+    "edwards25519_decode"
+    EDWARDS25519_DECODE_CORRECT
+    EDWARDS25519_DECODE_EXEC
+    EDWARDS25519_DECODE_NOIBT_SUBROUTINE_CORRECT
+    EDWARDS25519_DECODE_NOIBT_WINDOWS_SUBROUTINE_CORRECT;;
+*)
+let EDWARDS25519_DECODE_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z c pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 312),312))
+        [word pc,LENGTH edwards25519_decode_tmc; z,8 * 8; c,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 8))
+        [word pc,LENGTH edwards25519_decode_tmc;
+         word_sub stackpointer (word 312),320]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_decode_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; c] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events c z pc (word_sub stackpointer (word 312))
+                        returnaddress /\
+                      memaccess_inbounds e2
+                        [c,32; z,64; word_sub stackpointer (word 312),320]
+                        [z,64; word_sub stackpointer (word 312),312]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 8);
+              memory :> bytes (word_sub stackpointer (word 312),312)])`,
+  X86_ADD_RETURN_STACK_TAC
+    EDWARDS25519_DECODE_EXEC EDWARDS25519_DECODE_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 312
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let EDWARDS25519_DECODE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z c pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 312),312))
+        [word pc,LENGTH edwards25519_decode_mc; z,8 * 8; c,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 8))
+        [word pc,LENGTH edwards25519_decode_mc;
+         word_sub stackpointer (word 312),320]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_decode_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; c] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events c z pc (word_sub stackpointer (word 312))
+                        returnaddress /\
+                      memaccess_inbounds e2
+                        [c,32; z,64; word_sub stackpointer (word 312),320]
+                        [z,64; word_sub stackpointer (word 312),312]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 8);
+              memory :> bytes (word_sub stackpointer (word 312),312)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE EDWARDS25519_DECODE_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let EDWARDS25519_DECODE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z c pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 336),336))
+        [word pc,LENGTH edwards25519_decode_windows_tmc; z,8 * 8; c,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 8))
+        [word pc,LENGTH edwards25519_decode_windows_tmc;
+         word_sub stackpointer (word 336),344]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_decode_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; c] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events c z pc (word_sub stackpointer (word 336))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [c,32; z,64; word_sub stackpointer (word 336),344]
+                      [z,64; word_sub stackpointer (word 336),336]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 8);
+              memory :> bytes (word_sub stackpointer (word 336),336)])`,
+  let WINDOWS_EDWARDS25519_DECODE_EXEC =
+    X86_MK_EXEC_RULE edwards25519_decode_windows_tmc
+  and subth =
+   X86_SIMD_SHARPEN_RULE
+    (REWRITE_RULE[fst EDWARDS25519_DECODE_EXEC]
+      EDWARDS25519_DECODE_NOIBT_SUBROUTINE_SAFE)
+    (X86_ADD_RETURN_STACK_TAC
+     EDWARDS25519_DECODE_EXEC EDWARDS25519_DECODE_SAFE
+     `[RBX; RBP; R12; R13; R14; R15]` 312 THEN
+     DISCHARGE_SAFETY_PROPERTY_TAC) in
+  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
+  META_EXISTS_TAC THEN STRIP_TAC THEN
+
+  REWRITE_TAC[fst WINDOWS_EDWARDS25519_DECODE_EXEC] THEN
+  REPLICATE_TAC 3 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 336 THEN
+  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS; C_RETURN;
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
+  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+  X86_STEPS_TAC WINDOWS_EDWARDS25519_DECODE_EXEC (1--5) THEN
+  REMOVE_THEN "H_CALLEE" (fun subth ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (edwards25519_decode_windows_tmc,
+        WINDOWS_EDWARDS25519_DECODE_EXEC,
+        0x10,edwards25519_decode_tmc,subth)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+          `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]
+          6) THENL [
+    EXISTS_E2_TAC (ref [`stackpointer:int64`;`pc:num`]);
+    ALL_TAC
+  ] THEN
+  X86_STEPS_TAC WINDOWS_EDWARDS25519_DECODE_EXEC (7--9) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let EDWARDS25519_DECODE_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z c pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 336),336))
+        [word pc,LENGTH edwards25519_decode_windows_mc; z,8 * 8; c,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 8))
+        [word pc,LENGTH edwards25519_decode_windows_mc;
+         word_sub stackpointer (word 336),344]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) edwards25519_decode_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; c] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events c z pc (word_sub stackpointer (word 336))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [c,32; z,64; word_sub stackpointer (word 336),344]
+                      [z,64; word_sub stackpointer (word 336),336]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 8);
+              memory :> bytes (word_sub stackpointer (word 336),336)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+    EDWARDS25519_DECODE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
