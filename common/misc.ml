@@ -2203,6 +2203,20 @@ let EX_SUBSET_LIST = prove(`forall (l:(A)list) P l2.
     ASM_MESON_TAC[EX_MEM]
   ]);;
 
+let GEN_EX_SUBSET_LIST = prove(`
+  forall (P:A->bool) Q (l:(A)list) l2.
+    (forall a b. P a /\ Q a b ==> P b) ==>
+    EX (\x. P x) l /\ ALL (\x. EX (\y. Q x y) l2) l ==> EX (\x. P x) l2`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  MAP_EVERY SPEC_TAC [(`l2:(A)list`,`l2:(A)list`);(`l:(A)list`,`l:(A)list`)]
+    THEN
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[EX];
+
+    REWRITE_TAC[EX;ALL] THEN
+    ASM_MESON_TAC[EX_MEM]
+  ]);;
+
 (* ------------------------------------------------------------------------- *)
 (* OCaml functions to merge diffs (called 'actions') that are used for       *)
 (* equivalence checking, specifically EQUIV_STEPS_TAC.                       *)

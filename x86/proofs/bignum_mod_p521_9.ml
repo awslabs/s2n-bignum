@@ -309,3 +309,180 @@ let BIGNUM_MOD_P521_9_WINDOWS_SUBROUTINE_CORRECT = prove
                       memory :> bytes(word_sub stackpointer (word 24),24)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MOD_P521_9_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mod_p521_9" subroutine_signatures)
+    BIGNUM_MOD_P521_9_CORRECT
+    BIGNUM_MOD_P521_9_EXEC;;
+
+let BIGNUM_MOD_P521_9_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc.
+           nonoverlapping (word pc,168) (z,8 * 9)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST bignum_mod_p521_9_tmc) /\
+                    read RIP s = word (pc + 1) /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 166) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc /\
+                         memaccess_inbounds e2 [x,72; z,72] [z,72]))
+               (MAYCHANGE [RIP; RSI; RAX; RCX; RDX; R8; R9; R10; R11; RBX] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bignum (z,9)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MOD_P521_9_EXEC);;
+
+let BIGNUM_MOD_P521_9_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 8),16) (z,8 * 9) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+        [word pc,LENGTH bignum_mod_p521_9_tmc; x,8 * 9] /\
+        nonoverlapping (word pc,LENGTH bignum_mod_p521_9_tmc) (z,8 * 9)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_mod_p521_9_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 8))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,72; z,72; word_sub stackpointer (word 8),16]
+                      [z,72; word_sub stackpointer (word 8),8]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,9);
+              memory :> bytes (word_sub stackpointer (word 8),8)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_mod_p521_9_tmc BIGNUM_MOD_P521_9_SAFE
+   `[RBX]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_MOD_P521_9_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 8),16) (z,8 * 9) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 8),8))
+        [word pc,LENGTH bignum_mod_p521_9_mc; x,8 * 9] /\
+        nonoverlapping (word pc,LENGTH bignum_mod_p521_9_mc) (z,8 * 9)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_mod_p521_9_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 8))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,72; z,72; word_sub stackpointer (word 8),16]
+                      [z,72; word_sub stackpointer (word 8),8]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,9);
+              memory :> bytes (word_sub stackpointer (word 8),8)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MOD_P521_9_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_MOD_P521_9_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 24),32) (z,8 * 9) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
+        [word pc,LENGTH bignum_mod_p521_9_windows_tmc; x,8 * 9] /\
+        nonoverlapping (word pc,LENGTH bignum_mod_p521_9_windows_tmc)
+        (z,8 * 9)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_mod_p521_9_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 24))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,72; z,72; word_sub stackpointer (word 24),32]
+                      [z,72; word_sub stackpointer (word 24),24]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,9);
+              memory :> bytes (word_sub stackpointer (word 24),24)])`,
+  WINDOWS_X86_WRAP_STACK_TAC bignum_mod_p521_9_windows_tmc bignum_mod_p521_9_tmc
+    BIGNUM_MOD_P521_9_SAFE `[RBX]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_MOD_P521_9_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 24),32) (z,8 * 9) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 24),24))
+        [word pc,LENGTH bignum_mod_p521_9_windows_mc; x,8 * 9] /\
+        nonoverlapping (word pc,LENGTH bignum_mod_p521_9_windows_mc)
+        (z,8 * 9)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_mod_p521_9_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 24))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,72; z,72; word_sub stackpointer (word 24),32]
+                      [z,72; word_sub stackpointer (word 24),24]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,9);
+              memory :> bytes (word_sub stackpointer (word 24),24)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MOD_P521_9_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

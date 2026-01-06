@@ -824,17 +824,38 @@ let BIGNUM_SQR_SUBROUTINE_SAFE = prove(
        else (word ((k + 1) - n):int64)) < n` ASSUME_TAC THENL [
       ONCE_REWRITE_TAC[GSYM NOT_LE] THEN ASM_REWRITE_TAC[] THEN NO_TAC; ALL_TAC
     ] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC THEN
-    (* One goal remains *)
-    DISJ1_TAC THEN
-    (* copy and paste of CONTAINED_TAC, but uses ASM_ARITH_TAC *)
-    GEN_REWRITE_TAC I [GSYM CONTAINED_MODULO_MOD2] THEN
-    GEN_REWRITE_TAC (BINOP_CONV o LAND_CONV o LAND_CONV o TOP_DEPTH_CONV)
-    [VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
-    CONV_TAC(BINOP_CONV(LAND_CONV MOD_DOWN_CONV)) THEN
-    GEN_REWRITE_TAC I [CONTAINED_MODULO_MOD2] THEN
-    MATCH_MP_TAC CONTAINED_MODULO_OFFSET_SIMPLE THEN
-    ASM_ARITH_TAC
+
+    (* Unfold DISCHARGE_SAFETY_PROPERTY_TAC *)
+    SAFE_META_EXISTS_TAC allowed_vars_e THEN
+    CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+    CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
+
+    (* Remove all vacuous appends *)
+    REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
+
+    REWRITE_TAC[CONJUNCT2 APPEND] THEN
+    (* Convert the CONS sequence in the first argument of memaccess_inbounds to
+        APPEND *)
+    CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
+
+    GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
+    CONJ_TAC THENL [
+      REWRITE_TAC[memaccess_inbounds;ALL;EX] THEN
+      (* CONTAINED_TAC works for contained_modulo *)
+      REWRITE_TAC[contained;DIMINDEX_64] THEN
+      DISJ1_TAC THEN
+      (* copy and paste of CONTAINED_TAC, but uses ASM_ARITH_TAC *)
+      GEN_REWRITE_TAC I [GSYM CONTAINED_MODULO_MOD2] THEN
+      GEN_REWRITE_TAC (BINOP_CONV o LAND_CONV o LAND_CONV o TOP_DEPTH_CONV)
+      [VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+      CONV_TAC(BINOP_CONV(LAND_CONV MOD_DOWN_CONV)) THEN
+      GEN_REWRITE_TAC I [CONTAINED_MODULO_MOD2] THEN
+      MATCH_MP_TAC CONTAINED_MODULO_OFFSET_SIMPLE THEN
+      ASM_ARITH_TAC;
+
+      ALL_TAC
+    ] THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC;
   ] THEN
 
   (*** Case split to trivialize the "no terms in sum" case ***)
@@ -925,39 +946,58 @@ let BIGNUM_SQR_SUBROUTINE_SAFE = prove(
   CONJ_TAC THENL [
     CONV_TAC WORD_BLAST; ALL_TAC
   ] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC THEN
-  (* one subgoal remains *)
-  DISJ1_TAC THEN
+
+  (* Unfold DISCHARGE_SAFETY_PROPERTY_TAC *)
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+  CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
+
   SUBGOAL_THEN `j + ((k + 1) - n) < MIN ((k + 1) DIV 2) n` ASSUME_TAC THENL [
     SIMPLE_ARITH_TAC; ALL_TAC
   ] THEN
-  ASM_CASES_TAC `n <= (k + 1)` THENL [
-    SUBGOAL_THEN
-      `word_sub (word (8 * k)) (word (8 * (j + (k + 1) - n))):int64 =
-       word (8 * (n - j - 1))` MP_TAC THENL [
-      IMP_REWRITE_TAC[WORD_SUB2] THEN
-      CONJ_TAC THENL [
-        AP_TERM_TAC THEN REWRITE_TAC[ARITH_RULE`8 * a - 8 * b = 8 * (a - b)`] THEN
-        AP_TERM_TAC THEN SIMPLE_ARITH_TAC;
-        SIMPLE_ARITH_TAC];
-      ALL_TAC] THEN
-    DISCH_THEN SUBST_ALL_TAC THEN
-    CONTAINED_TAC;
 
-    (* what is n? it is # words of x.
-       what is k? it is # words of z. *)
-    SUBGOAL_THEN `(k + 1) - n = 0` SUBST_ALL_TAC THENL
-    [ SIMPLE_ARITH_TAC;ALL_TAC ] THEN
-    SUBGOAL_THEN `k + 1 < n` ASSUME_TAC THENL [SIMPLE_ARITH_TAC;ALL_TAC] THEN
-    SUBST_ALL_TAC (ARITH_RULE`j + 0 = j`) THEN
-    SUBGOAL_THEN
-      `word_sub (word (8 * k)) (word (8 * j)):int64 = word (8 * (k - j))`
-    MP_TAC THENL [
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
-        REWRITE_TAC[ARITH_RULE`8 * a - 8 * b = 8 * (a - b)`] THEN NO_TAC;
-        REWRITE_TAC[LE_MULT_LCANCEL] THEN SIMPLE_ARITH_TAC
-      ]; ALL_TAC
-    ] THEN
-    DISCH_THEN SUBST_ALL_TAC THEN
-    CONTAINED_TAC
-  ]);;
+  (* Remove all vacuous appends *)
+  REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
+
+  REWRITE_TAC[CONJUNCT2 APPEND] THEN
+  (* Convert the CONS sequence in the first argument of memaccess_inbounds to
+      APPEND *)
+  CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
+
+  GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
+  CONJ_TAC THENL [
+
+    ASM_CASES_TAC `n <= (k + 1)` THENL [
+      SUBGOAL_THEN
+        `word_sub (word (8 * k)) (word (8 * (j + (k + 1) - n))):int64 =
+        word (8 * (n - j - 1))` MP_TAC THENL [
+        IMP_REWRITE_TAC[WORD_SUB2] THEN
+        CONJ_TAC THENL [
+          AP_TERM_TAC THEN REWRITE_TAC[ARITH_RULE`8 * a - 8 * b = 8 * (a - b)`] THEN
+          AP_TERM_TAC THEN SIMPLE_ARITH_TAC;
+          SIMPLE_ARITH_TAC];
+        ALL_TAC] THEN
+      DISCH_THEN SUBST_ALL_TAC THEN
+      DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
+
+      (* what is n? it is # words of x.
+        what is k? it is # words of z. *)
+      SUBGOAL_THEN `(k + 1) - n = 0` SUBST_ALL_TAC THENL
+      [ SIMPLE_ARITH_TAC;ALL_TAC ] THEN
+      SUBGOAL_THEN `k + 1 < n` ASSUME_TAC THENL [SIMPLE_ARITH_TAC;ALL_TAC] THEN
+      SUBST_ALL_TAC (ARITH_RULE`j + 0 = j`) THEN
+      SUBGOAL_THEN
+        `word_sub (word (8 * k)) (word (8 * j)):int64 = word (8 * (k - j))`
+      MP_TAC THENL [
+        IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+          REWRITE_TAC[ARITH_RULE`8 * a - 8 * b = 8 * (a - b)`] THEN NO_TAC;
+          REWRITE_TAC[LE_MULT_LCANCEL] THEN SIMPLE_ARITH_TAC
+        ]; ALL_TAC
+      ] THEN
+      DISCH_THEN SUBST_ALL_TAC THEN
+      DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC
+    ];
+
+    ALL_TAC
+  ] THEN
+  DISCHARGE_MEMACCESS_INBOUNDS_TAC);;

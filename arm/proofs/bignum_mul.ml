@@ -756,52 +756,65 @@ let BIGNUM_MUL_SUBROUTINE_SAFE = prove(
     ]; ALL_TAC
   ] THEN
   CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC THEN
-  (* Rmaining one inbounds goal *)
-  DISJ2_TAC THEN DISJ1_TAC THEN
-  REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
-  VAL_INT64_TAC `MIN (k + 1) m - (j + (k + 1) - n)` THEN
-  ASM_REWRITE_TAC[] THEN
-  ASM_CASES_TAC `8 * n <= 8 * k + 8 * 1` THENL [
-    SUBGOAL_THEN
-        `word ((8 * ((k + 1) - MIN (k + 1) m) + 18446744073709551608) +
-              8 * (MIN (k + 1) m - (j + (k + 1) - n))):int64 =
-        word (8 * (n - j) - 8)` SUBST_ALL_TAC THENL [
-      REWRITE_TAC[WORD_ADD;LEFT_ADD_DISTRIB;LEFT_SUB_DISTRIB;
-        WORD_ARITH
-          `word_add x (word 18446744073709551608:int64) = word_sub x (word 8)`]
-      THEN
-      ASM_REWRITE_TAC[WORD_SUB;WORD_ADD] THEN
-      REWRITE_TAC[ARITH_RULE`8 * MIN (k + 1) m <= 8 * k + 8 * 1`] THEN
-      COND_CASES_TAC THENL [ ALL_TAC; SIMPLE_ARITH_TAC ] THEN
-      SUBGOAL_THEN `(8 <= 8 * n - 8 * j) <=> true` SUBST_ALL_TAC THENL [
-        SIMPLE_ARITH_TAC; ALL_TAC
-      ] THEN
-      SUBGOAL_THEN `8 * j <= 8 * n <=> true` SUBST_ALL_TAC THENL [
-        SIMPLE_ARITH_TAC; ALL_TAC
-      ] THEN
-      REWRITE_TAC[] THEN CONV_TAC WORD_RULE;
 
-      ALL_TAC
-    ] THEN
-    CONTAINED_TAC;
+  (* Unfold DISCHARGE_SAFETY_PROPERTY_TAC *)
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+  CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
 
-    SUBGOAL_THEN
-        `word ((8 * ((k + 1) - MIN (k + 1) m) + 18446744073709551608) +
-              8 * (MIN (k + 1) m - (j + (k + 1) - n))):int64 =
-        word (8 * (k - j))` SUBST_ALL_TAC THENL [
-      REWRITE_TAC[WORD_ADD;LEFT_ADD_DISTRIB;LEFT_SUB_DISTRIB;
-        WORD_ARITH
-          `word_add x (word 18446744073709551608:int64) = word_sub x (word 8)`]
-      THEN
-      ASM_REWRITE_TAC[WORD_SUB;WORD_ADD] THEN
-      REWRITE_TAC[ARITH_RULE`8 * MIN (k + 1) m <= 8 * k + 8 * 1`] THEN
-      COND_CASES_TAC THENL [ ALL_TAC; SIMPLE_ARITH_TAC ] THEN
-      SUBGOAL_THEN `8 * j <= 8 * k <=> true` SUBST_ALL_TAC THENL [
-        SIMPLE_ARITH_TAC; ALL_TAC
+  (* Remove all vacuous appends *)
+  REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
+
+  REWRITE_TAC[CONJUNCT2 APPEND] THEN
+  CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
+  GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[GSYM WORD_ADD_ASSOC; GSYM WORD_ADD] THEN
+    VAL_INT64_TAC `MIN (k + 1) m - (j + (k + 1) - n)` THEN
+    ASM_REWRITE_TAC[] THEN
+    ASM_CASES_TAC `8 * n <= 8 * k + 8 * 1` THENL [
+      SUBGOAL_THEN
+          `word ((8 * ((k + 1) - MIN (k + 1) m) + 18446744073709551608) +
+                8 * (MIN (k + 1) m - (j + (k + 1) - n))):int64 =
+          word (8 * (n - j) - 8)` SUBST_ALL_TAC THENL [
+        REWRITE_TAC[WORD_ADD;LEFT_ADD_DISTRIB;LEFT_SUB_DISTRIB;
+          WORD_ARITH
+            `word_add x (word 18446744073709551608:int64) = word_sub x (word 8)`]
+        THEN
+        ASM_REWRITE_TAC[WORD_SUB;WORD_ADD] THEN
+        REWRITE_TAC[ARITH_RULE`8 * MIN (k + 1) m <= 8 * k + 8 * 1`] THEN
+        COND_CASES_TAC THENL [ ALL_TAC; SIMPLE_ARITH_TAC ] THEN
+        SUBGOAL_THEN `(8 <= 8 * n - 8 * j) <=> true` SUBST_ALL_TAC THENL [
+          SIMPLE_ARITH_TAC; ALL_TAC
+        ] THEN
+        SUBGOAL_THEN `8 * j <= 8 * n <=> true` SUBST_ALL_TAC THENL [
+          SIMPLE_ARITH_TAC; ALL_TAC
+        ] THEN
+        REWRITE_TAC[] THEN CONV_TAC WORD_RULE;
+
+        ALL_TAC
       ] THEN
-      REWRITE_TAC[] THEN CONV_TAC WORD_RULE;
-      ALL_TAC
-    ] THEN
-    CONTAINED_TAC
+      DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
+
+      SUBGOAL_THEN
+          `word ((8 * ((k + 1) - MIN (k + 1) m) + 18446744073709551608) +
+                8 * (MIN (k + 1) m - (j + (k + 1) - n))):int64 =
+          word (8 * (k - j))` SUBST_ALL_TAC THENL [
+        REWRITE_TAC[WORD_ADD;LEFT_ADD_DISTRIB;LEFT_SUB_DISTRIB;
+          WORD_ARITH
+            `word_add x (word 18446744073709551608:int64) = word_sub x (word 8)`]
+        THEN
+        ASM_REWRITE_TAC[WORD_SUB;WORD_ADD] THEN
+        REWRITE_TAC[ARITH_RULE`8 * MIN (k + 1) m <= 8 * k + 8 * 1`] THEN
+        COND_CASES_TAC THENL [ ALL_TAC; SIMPLE_ARITH_TAC ] THEN
+        SUBGOAL_THEN `8 * j <= 8 * k <=> true` SUBST_ALL_TAC THENL [
+          SIMPLE_ARITH_TAC; ALL_TAC
+        ] THEN
+        REWRITE_TAC[] THEN CONV_TAC WORD_RULE;
+        ALL_TAC
+      ] THEN
+      DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
+    ];
+
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC
   ]);;
