@@ -8769,7 +8769,7 @@ let LOCAL_JADD_TAC =
        P256_MONTJADD_SUBROUTINE_CORRECT) in
   ARM_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
-    0x20c8,p256_montjadd_opt_mc,th)
+    0x20c8,p256_montjadd_mc,th)
   [`read X0 s`; `read X1 s`;
    `read(memory :> bytes(read X1 s,8 * 4)) s,
     read(memory :> bytes(word_add (read X1 s) (word 32),8 * 4)) s,
@@ -8787,7 +8787,7 @@ let LOCAL_JDOUBLE_TAC =
        P256_MONTJDOUBLE_SUBROUTINE_CORRECT) in
   ARM_SUBROUTINE_SIM_TAC
    (p256_scalarmul_mc,P256_SCALARMUL_EXEC,
-    0x5180,p256_montjdouble_opt_mc,th)
+    0x5180,p256_montjdouble_mc,th)
   [`read X0 s`; `read X1 s`;
    `read(memory :> bytes(read X1 s,8 * 4)) s,
     read(memory :> bytes(word_add (read X1 s) (word 32),8 * 4)) s,
