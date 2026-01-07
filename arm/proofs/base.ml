@@ -60,7 +60,7 @@ extra_word_CONV :=
 (* Additional Cryptographic AES intrinsics                                   *)
 (* ------------------------------------------------------------------------- *)
 
-loadt "arm/proofs/aes.ml";;
+loadt "arm/proofs/utils/aes.ml";;
 
 extra_word_CONV := [AESE_REDUCE_CONV; AESMC_REDUCE_CONV;
                     AESD_REDUCE_CONV; AESIMC_REDUCE_CONV]
