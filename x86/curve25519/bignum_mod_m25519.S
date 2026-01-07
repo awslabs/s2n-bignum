@@ -192,8 +192,6 @@ Lbignum_mod_m25519_writeback:
 #endif
         CFI_RET
 
-S2N_BN_SIZE_DIRECTIVE(bignum_mod_m25519)
-
 Lbignum_mod_m25519_shortinput:
 
         xor     m0, m0
@@ -211,6 +209,8 @@ Lbignum_mod_m25519_shortinput:
         jz      Lbignum_mod_m25519_writeback
         mov     m2, [rdx + 16]
         jmp     Lbignum_mod_m25519_writeback
+
+S2N_BN_SIZE_DIRECTIVE(bignum_mod_m25519)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
