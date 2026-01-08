@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 
 // ----------------------------------------------------------------------------
-// Reduce modulo basepoint order, z := x mod m_25519
+// Reduce modulo group order, z := x mod m_25519
 // Input x[k]; output z[4]
 //
 //    extern void bignum_mod_m25519(uint64_t z[static 4], uint64_t k,
@@ -171,6 +171,24 @@ Lbignum_mod_m25519_loop:
 
         dec     k
         jnz     Lbignum_mod_m25519_loop
+        jmp     Lbignum_mod_m25519_writeback
+
+Lbignum_mod_m25519_shortinput:
+
+        xor     m0, m0
+        xor     m1, m1
+        xor     m2, m2
+        xor     m3, m3
+
+        test    k, k
+        jz      Lbignum_mod_m25519_writeback
+        mov     m0, [rdx]
+        dec     k
+        jz      Lbignum_mod_m25519_writeback
+        mov     m1, [rdx + 8]
+        dec     k
+        jz      Lbignum_mod_m25519_writeback
+        mov     m2, [rdx + 16]
 
 // Write back
 
@@ -191,24 +209,6 @@ Lbignum_mod_m25519_writeback:
         CFI_POP(rdi)
 #endif
         CFI_RET
-
-Lbignum_mod_m25519_shortinput:
-
-        xor     m0, m0
-        xor     m1, m1
-        xor     m2, m2
-        xor     m3, m3
-
-        test    k, k
-        jz      Lbignum_mod_m25519_writeback
-        mov     m0, [rdx]
-        dec     k
-        jz      Lbignum_mod_m25519_writeback
-        mov     m1, [rdx + 8]
-        dec     k
-        jz      Lbignum_mod_m25519_writeback
-        mov     m2, [rdx + 16]
-        jmp     Lbignum_mod_m25519_writeback
 
 S2N_BN_SIZE_DIRECTIVE(bignum_mod_m25519)
 
