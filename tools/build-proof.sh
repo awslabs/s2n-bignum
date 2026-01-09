@@ -18,7 +18,7 @@ ml_path=${s2n_bignum_arch}/${ml_path_noarch}
 hol_sh_cmd=$2
 output_path=${s2n_bignum_arch}/$3
 
-# Query hol.sh for the actual HOLLIGHT_DIR location This works for
+# Query hol.sh for the actual HOLLIGHT_DIR location. This works for
 # both git installations (~/hol-light) and opam installations where
 # hol.sh is in bin/ but libraries are in lib/hol_light/
 export HOLLIGHT_DIR="$("${hol_sh_cmd}" -dir)"
