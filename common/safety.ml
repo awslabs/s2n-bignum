@@ -27,6 +27,10 @@ needs "common/overlap.ml";;
  *** The formal semantics of instruction must emit a fixed list of events.
  *** It is not allowed for an instruction to raise one event when its input
  *** data is X and and two events when its input data is Y.
+ *** Note: for x86, even if PUSH and POP instructions do memory access at RSP
+ *** which is public information (stack address is public), these instructions
+ *** must still explicitly raise EventLoad and EventStore because otherwise
+ *** memory safety check will miss out-of-bounds stack access.
  ***)
 let uarch_event_INDUCT, uarch_event_RECURSION = define_type
   "uarch_event =
