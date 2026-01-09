@@ -2142,7 +2142,7 @@ let SAFE_UNIFY_REFL_TAC (allowed_vars_ref:term list ref)
       let n = name_of v in
       forall (fun pfx -> not (String.starts_with ~prefix:pfx n))
           allowed_var_prefixes) used_vars in
-    if List.is_empty used_vars then
+    if used_vars = [] then
       UNIFY_REFL_TAC (asl,w)
     else
      (let diff = subtract lhs_vars allowed_vars in

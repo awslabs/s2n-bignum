@@ -284,7 +284,7 @@ let DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC:tactic =
           is_comb cth &&
           name_of (fst (strip_comb cth)) = "memaccess_inbounds")
         asl) in
-    if List.is_empty meminbounds then
+    if meminbounds = [] then
       failwith "No memaccess_inbounds assumption" else
     end_itlist (fun tac1 tac2 -> tac1 ORELSE tac2)
       (map try_discharge meminbounds));;
