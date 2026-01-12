@@ -657,4 +657,3 @@ S2N_BN_SIZE_DIRECTIVE(mlkem_ntt_x86)
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
 #endif
-
