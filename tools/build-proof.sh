@@ -18,6 +18,11 @@ ml_path=${s2n_bignum_arch}/${ml_path_noarch}
 hol_sh_cmd=$2
 output_path=${s2n_bignum_arch}/$3
 
+if [ ! -f "${hol_sh_cmd}" ]; then
+  echo "hol.sh is not a file or does not exist. Please install HOL Light and ensure hol.sh is on your PATH, or set HOLLIGHT to the hol.sh path."
+  exit 1
+fi
+
 # Query hol.sh for the actual HOLLIGHT_DIR location. This works for
 # both git installations (~/hol-light) and opam installations where
 # hol.sh is in bin/ but libraries are in lib/hol_light/

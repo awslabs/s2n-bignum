@@ -465,10 +465,6 @@ BASE_ML=proofs/base.ml \
 
 HOLLIGHT?=$(shell which hol.sh 2>/dev/null)
 
-ifeq ($(HOLLIGHT),)
-$(error hol.sh not found in PATH. Please install HOL Light and ensure hol.sh is on your PATH, or set HOLLIGHT to the hol.sh path.)
-endif
-
 PROOF_BINS = $(OBJ:.o=.native)
 PROOF_LOGS = $(OBJ:.o=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
