@@ -115,7 +115,7 @@ jobs:
 
     - name: Run tests
       run: |
-        export HOLDIR=`pwd`/hol-light
+        export HOLLIGHT=`pwd`/hol-light/hol.sh
         cd ${{ matrix.arch }}
         make sematest
 
@@ -153,7 +153,7 @@ jobs:
 
     - name: Run tutorial
       run: |
-        export HOLDIR=`pwd`/hol-light
+        export HOLLIGHT=`pwd`/hol-light/hol.sh
         cd ${{ matrix.arch }}
         make tutorial -j2
 
@@ -183,6 +183,6 @@ jobs:
 
     - name: Run tutorial
       run: |
-        export HOLDIR=`pwd`/hol-light
+        export HOLLIGHT=`pwd`/hol-light/hol.sh
         cd arm
         make tutorial -j2
