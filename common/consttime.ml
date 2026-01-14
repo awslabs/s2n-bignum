@@ -365,7 +365,7 @@ let DISCHARGE_MEMACCESS_INBOUNDS_TAC =
     FAIL_TAC
       ("DISCHARGE_MEMACCESS_INBOUNDS_TAC could not identify the pattern. " ^
       "Please check whether the event list in assumption matches the event " ^
-      "list in the conclusion")));;
+      "list in the conclusion. setting safety_print_log := true might give more clue.")));;
 
 let mk_freshvar =
   let n = ref 0 in
@@ -979,10 +979,18 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
         end
       end) (asl,w)) ORELSE CANONICALIZE_UNIFY_F_EVENTS_TAC;;
 
-(* The input goal: 'exists e2. ....' *)
-let DISCHARGE_SAFETY_PROPERTY_TAC =
+(* The input goal: 'exists e2. ....'
+  If FULL_UNIFY_F_EVENTS_TAC raises a failure because unseen variable x is
+  inside the goal of `... x ... = f_events ...`, provide the assumption
+  `x = ...` that can be used to expand x.
+*)
+let DISCHARGE_SAFETY_PROPERTY_TAC
+  ?(abbrevs_unfold_before_f_events_tac=[]) =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
+  CONJ_TAC THENL [
+    MAP_EVERY (fun t -> UNDISCH_THEN t (SUBST_ALL_TAC o GSYM))
+      abbrevs_unfold_before_f_events_tac THEN
+    FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
   (* Prove memaccess_inbounds predicates *)
   DISCHARGE_MEMACCESS_INBOUNDS_TAC;;

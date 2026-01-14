@@ -7,6 +7,7 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/aes_xts_common.ml";;
+needs "arm/proofs/consttime.ml";;
 
 (* print_literal_from_elf "arm/aes-xts/aes_xts_decrypt.o";; *)
 let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xts/aes_xts_decrypt.o"
@@ -2373,6 +2374,483 @@ let CIPHER_STEALING_CORRECT = time prove(
       ]
   ]
 );;
+
+let CIPHER_STEALING_SAFE = time prove(
+  `exists f_events.
+  forall ct_ptr pt_ptr key1_ptr len pc
+    tail_len num_blocks num_blocks_adjusted num_5blocks_adjusted.
+    nonoverlapping (word pc, LENGTH aes_xts_decrypt_mc) (pt_ptr, val len)
+    /\ nonoverlapping (ct_ptr, val len) (pt_ptr, val len)
+    /\ nonoverlapping (key1_ptr, 260) (pt_ptr, val len)
+    /\ val len >= 16 /\ val len <= 2 EXP 24
+    /\ word_add tail_len num_blocks = len
+    /\ word_and len (word 0xfffffffffffffff0) = num_blocks
+    /\ word_and len (word 0xf) = tail_len
+    /\ (if val tail_len = 0x0 then num_blocks else word_sub num_blocks (word 0x10)) = num_blocks_adjusted
+    /\ word (val num_blocks_adjusted DIV 0x50) = num_5blocks_adjusted
+    ==> ensures arm
+    (\s. aligned_bytes_loaded s (word pc) aes_xts_decrypt_mc /\
+         read PC s = word (pc + 0xa0c) /\
+         read X0 s = word_add ct_ptr (word (acc_len num_5blocks_adjusted num_blocks_adjusted)) /\
+         read X1 s = word_add pt_ptr (word (acc_len num_5blocks_adjusted num_blocks_adjusted)) /\
+         read X3 s = key1_ptr /\
+         read X21 s = tail_len /\
+         read X19 s = word 0x87 /\
+         read events s = e)
+    (\s. read PC s = word (pc + 0xb58) /\
+         exists e2.
+           read events s = APPEND e2 e /\
+           e2 = f_events ct_ptr pt_ptr key1_ptr tail_len num_blocks_adjusted
+              num_5blocks_adjusted pc /\
+           memaccess_inbounds e2
+              [(ct_ptr, val len); (pt_ptr, val len); (key1_ptr, 260)]
+              [(pt_ptr, val len)])
+    (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI,,
+     MAYCHANGE [X19; X20; X21; X22],,
+     MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+     MAYCHANGE [memory :> bytes(pt_ptr, val len)])`,
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(ct_ptr:int64) (pt_ptr:int64) (key1_ptr:int64) (tail_len:int64)
+      (num_blocks_adjusted:int64) (num_5blocks_adjusted:int64) (pc:num).
+      if val (tail_len) = 0 then
+        f_ev_short ct_ptr pt_ptr key1_ptr tail_len num_blocks_adjusted
+                   num_5blocks_adjusted pc
+      else
+        APPEND
+          (APPEND
+            (f_ev_epil ct_ptr pt_ptr key1_ptr tail_len num_blocks_adjusted
+                   num_5blocks_adjusted pc)
+            (APPEND
+              (ENUMERATEL (val tail_len)
+                (f_ev_loop ct_ptr pt_ptr key1_ptr tail_len num_blocks_adjusted
+                   num_5blocks_adjusted pc))
+              (f_ev_prol ct_ptr pt_ptr key1_ptr tail_len num_blocks_adjusted
+                    num_5blocks_adjusted pc))
+          )
+          (f_ev_pre ct_ptr pt_ptr key1_ptr tail_len num_blocks_adjusted
+                   num_5blocks_adjusted pc)
+    :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN
+
+  REWRITE_TAC [(REWRITE_CONV [aes_xts_decrypt_mc] THENC LENGTH_CONV) `LENGTH aes_xts_decrypt_mc`] THEN
+  REWRITE_TAC[set_key_schedule; C_ARGUMENTS; SOME_FLAGS;
+    NONOVERLAPPING_CLAUSES; byte_list_at;
+    MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
+
+  (* Prove once and for all the bounds for num_blocks, num_blocks_adjusted
+     and num_5blocks_adjusted *)
+  SUBGOAL_THEN `~(val (num_blocks:int64) < 16)` ASSUME_TAC THENL
+  [ SUBGOAL_THEN `~(val (len:int64) < 16)` MP_TAC THENL
+    [ASM_ARITH_TAC; ALL_TAC] THEN
+    UNDISCH_TAC `word_and len (word 0xfffffffffffffff0) = (num_blocks:int64)` THEN
+    MP_TAC (SPECL [`len:int64`; `num_blocks:int64`] NUM_BLOCKS_LO_BOUND_1BLOCK_THM) THEN
+    SIMP_TAC[]; ALL_TAC] THEN
+  SUBGOAL_THEN `val (num_blocks:int64) <= 2 EXP 24` ASSUME_TAC THENL
+  [ UNDISCH_TAC `val (len:int64) <= 2 EXP 24` THEN
+    UNDISCH_TAC `word_and len (word 0xfffffffffffffff0) = (num_blocks:int64)` THEN
+    MP_TAC (SPECL [`len:int64`; `num_blocks:int64`] NUM_BLOCKS_HI_BOUND_THM) THEN
+    SIMP_TAC[]; ALL_TAC] THEN
+  SUBGOAL_THEN `~(val (num_blocks_adjusted:int64) < 0)` ASSUME_TAC THENL
+  [ UNDISCH_TAC `~(val (num_blocks:int64) < 16)` THEN
+    UNDISCH_TAC `(if val (tail_len:int64) = 0x0
+     then (num_blocks:int64)
+     else word_sub num_blocks (word 0x10)) =
+     num_blocks_adjusted` THEN
+    MP_TAC (SPECL [`num_blocks:int64`;`tail_len:int64`;`num_blocks_adjusted:int64`]
+      NUM_BLOCKS_ADJUSTED_LO_BOUND_1BLOCK_THM) THEN SIMP_TAC[]
+    ; ALL_TAC] THEN
+  SUBGOAL_THEN `val (num_blocks_adjusted:int64) <= 2 EXP 24` ASSUME_TAC THENL
+  [ UNDISCH_TAC `val (num_blocks:int64) <= 2 EXP 24` THEN
+    UNDISCH_TAC `~(val (num_blocks:int64) < 16)` THEN
+    UNDISCH_TAC `(if val (tail_len:int64) = 0x0
+     then (num_blocks:int64)
+     else word_sub num_blocks (word 0x10)) =
+     num_blocks_adjusted` THEN
+    MP_TAC (SPECL [`num_blocks:int64`;`tail_len:int64`;`num_blocks_adjusted:int64`]
+      NUM_BLOCKS_ADJUSTED_HI_BOUND_THM) THEN SIMP_TAC[]
+    ; ALL_TAC] THEN
+  SUBGOAL_THEN `val (tail_len:int64) < 16` ASSUME_TAC THENL
+  [ EXPAND_TAC "tail_len" THEN
+    REWRITE_TAC[ARITH_RULE `0xf = 2 EXP 4 - 1`] THEN
+    REWRITE_TAC[VAL_WORD_AND_MASK_WORD] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    SIMP_TAC[MOD_LT_EQ] THEN
+    CONV_TAC NUM_REDUCE_CONV
+  ; ALL_TAC] THEN
+  (* relationship between variables *)
+  SUBGOAL_THEN `val (num_blocks:int64) <= val (len:int64)` ASSUME_TAC THENL
+  [ EXPAND_TAC "num_blocks" THEN SIMP_TAC[NUM_BLOCKS_LT_LEN_THM]; ALL_TAC] THEN
+  SUBGOAL_THEN `val (num_blocks_adjusted:int64) <= val (len:int64)` ASSUME_TAC THENL
+  [ EXPAND_TAC "num_blocks_adjusted" THEN
+    COND_CASES_TAC THENL
+    [ ASM_SIMP_TAC[];
+      UNDISCH_TAC `~(val (num_blocks:int64) < 16)` THEN
+      UNDISCH_TAC `word_and (len:int64) (word 0xfffffffffffffff0) = (num_blocks:int64)` THEN
+      MP_TAC (SPECL [`len:int64`; `num_blocks:int64`] NUM_BLOCKS_ADJUSTED_LT_LEN_THM) THEN
+      SIMP_TAC[]]; ALL_TAC] THEN
+  SUBGOAL_THEN `val (num_5blocks_adjusted:int64) * 0x50 <= val (num_blocks_adjusted:int64)` ASSUME_TAC THENL
+  [ EXPAND_TAC "num_5blocks_adjusted" THEN
+    REWRITE_TAC [VAL_WORD; DIMINDEX_64] THEN
+    UNDISCH_TAC `val (num_blocks_adjusted:int64) <= 0x2 EXP 0x18` THEN
+    ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `val (num_5blocks_adjusted:int64) * 0x50 <= val (len:int64)` ASSUME_TAC THENL
+  [ EXPAND_TAC "num_5blocks_adjusted" THEN
+    REWRITE_TAC [VAL_WORD; DIMINDEX_64] THEN
+    UNDISCH_TAC `val (num_blocks_adjusted:int64) <= 0x2 EXP 0x18` THEN
+    UNDISCH_TAC `val (num_blocks_adjusted:int64) <= val (len:int64)` THEN
+    ARITH_TAC; ALL_TAC] THEN
+
+  (* Prove more properties about num_blocks_adjusted and num_5blocks_adjusted *)
+  SUBGOAL_THEN `val (num_blocks_adjusted:int64) DIV 0x50 = val (num_5blocks_adjusted:int64)` ASSUME_TAC THENL
+  [ EXPAND_TAC "num_5blocks_adjusted" THEN
+    IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+    UNDISCH_TAC `val (num_blocks_adjusted:int64) <= 0x2 EXP 0x18` THEN
+    ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `0x10 divides val (num_blocks_adjusted:int64)` ASSUME_TAC THENL
+  [ EXPAND_TAC "num_blocks_adjusted" THEN
+    EXPAND_TAC "num_blocks" THEN
+    COND_CASES_TAC THENL
+    [ REWRITE_TAC[NUM_BLOCKS_TO_VAL] THEN
+      IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT; DIVIDES_RMUL; DIVIDES_REFL] THEN
+      MP_TAC (SPEC `len:int64` VAL_BOUND_64) THEN
+      ARITH_TAC;
+
+      IMP_REWRITE_TAC[NUM_BLOCKS_MINUS1_TO_VAL] THEN
+      IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT; DIVIDES_RMUL; DIVIDES_REFL] THEN
+      MP_TAC (SPEC `len:int64` VAL_BOUND_64) THEN
+      ARITH_TAC]; ALL_TAC] THEN
+
+  (* If no tail, execute to the end *)
+  ASM_CASES_TAC `val (tail_len:int64) = 0` THENL
+  [
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (1--2) THEN
+    (* Discharge if condition *)
+    SUBGOAL_THEN `val (word_and (tail_len:int64) (word 0xf)) = 0x0` MP_TAC THENL
+    [ UNDISCH_TAC `val (tail_len:int64) = 0x0` THEN BITBLAST_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC] THEN
+
+  (* The cipher stealing branch *)
+  ASM_REWRITE_TAC[] THEN
+  (* Break the rest of the program into two parts: before byte-swap and after.
+     This is because byte-swap needs another invariant proof. *)
+  ABBREV_TAC `curr_len = (acc_len (num_5blocks_adjusted:int64) (num_blocks_adjusted:int64)):num` THEN
+  ABBREV_TAC `curr_blocks = (acc_blocks (num_5blocks_adjusted:int64) (num_blocks_adjusted:int64) T):num` THEN
+
+  SUBGOAL_THEN `curr_len + 0x10 <= val (len:int64)` ASSUME_TAC THENL
+  [ EXPAND_TAC "curr_len" THEN
+    MP_TAC (SPECL [`num_5blocks_adjusted:int64`; `num_blocks_adjusted:int64`] VALUE_OF_ACC_LEN) THEN
+    REPEAT_N 3 (ANTS_TAC THENL [ASM_ARITH_TAC ORELSE ASM_SIMP_TAC[]; ALL_TAC]) THEN
+    SIMP_TAC[] THEN DISCH_TAC THEN
+    EXPAND_TAC "num_blocks_adjusted" THEN
+    SIMP_TAC[ASSUME `~(val (tail_len:int64) = 0)`] THEN
+    UNDISCH_TAC `val (num_blocks:int64) <= val (len:int64)` THEN
+    SUBGOAL_THEN `val (num_blocks:int64) >= 16` MP_TAC THENL
+    [ASM_ARITH_TAC; ALL_TAC] THEN
+    WORD_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `val ((word curr_len):int64) = curr_len` ASSUME_TAC THENL
+  [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+    EXPAND_TAC "curr_len" THEN
+    MP_TAC (SPECL [`num_5blocks_adjusted:int64`; `num_blocks_adjusted:int64`; `2 EXP 64`]
+      BOUND_OF_ACC_LEN) THEN
+    ANTS_TAC THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+    ANTS_TAC THENL [ ASM_SIMP_TAC[]; ALL_TAC] THEN
+    ANTS_TAC THENL [ ASM_SIMP_TAC[]; ALL_TAC] THEN
+    ANTS_TAC THENL [ ASM_ARITH_TAC; ALL_TAC] THEN
+    SIMP_TAC[]; ALL_TAC] THEN
+
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xab8`
+  `\s.
+      read X0 s = word_add (word_add ct_ptr (word curr_len)) (word 0x10) /\
+      read X1 s = word_add pt_ptr (word curr_len) /\
+      read X21 s = tail_len` THEN
+  CONJ_TAC THENL
+  [
+    MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+    EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+        MAYCHANGE [X19; X20; X21; X22],,
+        MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+        MAYCHANGE [memory :> bytes128 (word_add pt_ptr (word curr_len))]` THEN
+    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    CONJ_TAC THENL [
+      REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
+              MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
+      ABBREV_TAC `vallen = val (len:int64)` THEN
+      SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
+
+    REWRITE_TAC[byte_list_at] THEN
+    UNDISCH_THEN `val ((word curr_len):int64) = curr_len`
+        (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THEN
+
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (1--2) THEN
+
+    (* Discharge if condition *)
+    SUBGOAL_THEN `~(val (word_and (tail_len:int64) (word 0xf)) = 0x0)` MP_TAC THENL
+    [ UNDISCH_TAC `~(val (tail_len:int64) = 0x0)` THEN
+      UNDISCH_TAC `val (tail_len:int64) < 16` THEN
+      MP_TAC (SPEC `tail_len:int64` WORD_AND_MASK16_EQ_0) THEN
+      SIMP_TAC[]; ALL_TAC] THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+
+    (* Decrypt last block *)
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (3--11) THEN
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (12--42) THEN
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (43--43) THEN
+
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    EXPAND_TAC "curr_len" THEN
+    ABBREV_TAC `vlen = val (len:int64)` THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC
+  ] THEN
+
+  SUBGOAL_THEN `curr_len + 16 + val (tail_len:int64) = val (len:int64)` ASSUME_TAC THENL
+  [ REWRITE_TAC[GSYM (ASSUME `acc_len num_5blocks_adjusted num_blocks_adjusted = curr_len`)] THEN
+    MP_TAC (SPECL [`num_5blocks_adjusted:int64`; `num_blocks_adjusted:int64`] VALUE_OF_ACC_LEN) THEN
+    ANTS_TAC THENL[ASM_ARITH_TAC; ALL_TAC] THEN
+    ANTS_TAC THENL[ASM_ARITH_TAC; ALL_TAC] THEN
+    ANTS_TAC THENL[ASM_SIMP_TAC[]; ALL_TAC] THEN
+    SIMP_TAC[] THEN DISCH_TAC THEN
+    EXPAND_TAC "num_blocks_adjusted" THEN
+    UNDISCH_TAC `~(val (tail_len:int64) = 0)` THEN
+    SIMP_TAC[] THEN DISCH_TAC THEN
+    ASM_SIMP_TAC[VAL_WORD_SUB; DIMINDEX_64; VAL_WORD;
+      ARITH_RULE `16 MOD 2 EXP 64 = 16`] THEN
+    MP_TAC (SPECL [`val (num_blocks:int64)`; `0x2 EXP 0x40`; `16`]
+      (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+    ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[] THEN DISCH_TAC THEN
+    MP_TAC (SPECL [`1`; `0x2 EXP 0x40`; `val (num_blocks:int64) - 16`]
+      (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+    SIMP_TAC[ARITH_RULE `!x. 1 * x = x`] THEN DISCH_TAC THEN
+    IMP_REWRITE_TAC[MOD_LT] THEN
+    CONJ_TAC THENL [
+      SUBGOAL_THEN `val (num_blocks:int64) - 0x10 + 0x10 + val (tail_len:int64)
+        = val num_blocks + val tail_len` SUBST1_TAC THENL
+      [ IMP_REWRITE_TAC[ADD_ASSOC; SUB_ADD] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+      EXPAND_TAC "len" THEN
+      REWRITE_TAC[VAL_WORD_ADD] THEN
+      IMP_REWRITE_TAC[MOD_LT; DIMINDEX_64] THEN
+      CONJ_TAC THENL [ARITH_TAC; ASM_ARITH_TAC];
+      ALL_TAC
+    ] THEN
+    ASM_ARITH_TAC; ALL_TAC] THEN
+
+  (* Invariant proof for .composite_dec_loop *)
+  ENSURES_EVENTS_WHILE_UP2_TAC
+    `val (tail_len:int64)`
+    `pc + 0xac0`
+    `pc + 0xad8`
+    `\i s.
+    ( read X0 s = word_add (word_add ct_ptr (word curr_len)) (word 0x10) /\
+      read X1 s = word_add pt_ptr (word curr_len) /\
+      read X13 s = word_add (word_add pt_ptr (word curr_len)) (word 0x10) /\
+      read X20 s = word_add (word_add ct_ptr (word curr_len)) (word 0x10) /\
+      read X21 s = (word (val (tail_len:int64) - i)):int64)` THEN
+  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
+  [
+    (* Subgoal 1: invariant holds before entering loop *)
+    REWRITE_TAC[byte_list_at] THEN
+    UNDISCH_THEN `val ((word curr_len):int64) = curr_len`
+        (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THEN
+
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (1--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    REPEAT CONJ_TAC THENL
+    [
+      REWRITE_TAC[WORD_VAL; SUB_0] THEN NO_TAC;
+
+      DISCHARGE_SAFETY_PROPERTY_TAC
+    ];
+
+    (* Subgoal 2: inductive step *)
+    REWRITE_TAC[] THEN
+    REPEAT STRIP_TAC THEN
+    ABBREV_TAC `n = val (tail_len:int64)` THEN
+
+    (* For non-overlapping and MAYCHANGE address reasoning *)
+    SUBGOAL_THEN `curr_len + 16 + (n - i - 1) < val (len:int64)` ASSUME_TAC THENL
+    [ REWRITE_TAC[GSYM (ASSUME `acc_len num_5blocks_adjusted num_blocks_adjusted = curr_len`)] THEN
+      MP_TAC (SPECL [`num_5blocks_adjusted:int64`; `num_blocks_adjusted:int64`] VALUE_OF_ACC_LEN) THEN
+      REPEAT_N 3 (ANTS_TAC THENL [ASM_ARITH_TAC ORELSE ASM_SIMP_TAC[]; ALL_TAC]) THEN
+      SIMP_TAC[] THEN DISCH_TAC THEN
+      ASM_ARITH_TAC;
+
+      ALL_TAC] THEN
+
+    MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+    EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+        MAYCHANGE [X19; X20; X21; X22],,
+        MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+        MAYCHANGE [memory :> bytes8 (word_add pt_ptr (word (curr_len + 0x10 +
+          (n - i - 1))))],,
+        MAYCHANGE [memory :> bytes8 (word_add pt_ptr (word (curr_len +
+          (n - i - 1))))]` THEN
+    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    CONJ_TAC THENL [
+      REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
+              MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
+      ABBREV_TAC `vallen = val (len:int64)` THEN
+      SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
+
+    REWRITE_TAC[byte_list_at] THEN
+    UNDISCH_THEN `val ((word curr_len):int64) = curr_len`
+        (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THEN
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+
+    SUBGOAL_THEN `val ((word (n - i)):int64) = n - i` SUBST_ALL_TAC THENL
+    [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+      UNDISCH_TAC `i < n` THEN
+      UNDISCH_TAC `n < 0x10` THEN
+      ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `val ((word (n - (i + 0x1))):int64) = n - (i + 1)` SUBST_ALL_TAC THENL
+    [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+      UNDISCH_TAC `i < n` THEN
+      UNDISCH_TAC `n < 0x10` THEN
+      ARITH_TAC; ALL_TAC] THEN
+
+    SUBGOAL_THEN `word_sub ((word (i + 0x1)):int64) (word 0x1) = word i` ASSUME_TAC THENL
+    [ REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUB; DIMINDEX_64] THEN
+      MP_TAC (SPECL [`val ((word (i + 0x1)):int64)`; `0x2 EXP 0x40`; `val ((word 0x1):int64)`]
+        (ARITH_RULE `!a b c. c <= a ==> c <= b ==> a + b - c = (a - c) + b`)) THEN
+      ANTS_TAC THENL [
+        IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN ASM_ARITH_TAC
+        ; ALL_TAC] THEN
+      ANTS_TAC THENL [ WORD_ARITH_TAC; ALL_TAC] THEN
+      SIMP_TAC[] THEN DISCH_TAC THEN
+      MP_TAC (SPECL [`1`; `0x2 EXP 0x40`; `val ((word (i + 0x1)):int64) - val ((word 0x1):int64)`]
+        (CONJUNCT1 (CONJUNCT2 (CONJUNCT2 MOD_MULT_ADD)))) THEN
+      SIMP_TAC[ARITH_RULE `!x. 1 * x = x`] THEN DISCH_TAC THEN
+      IMP_REWRITE_TAC[MOD_LT] THEN
+      CONJ_TAC THENL
+      [ SUBGOAL_THEN `i + 1 < 2 EXP 64` MP_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+        IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+        ARITH_TAC;
+        UNDISCH_TAC `i < n` THEN
+        UNDISCH_TAC `n < 0x10` THEN
+        WORD_ARITH_TAC]
+      ; ALL_TAC] THEN
+
+    SUBGOAL_THEN `val ((word i):int64) < 0x10` ASSUME_TAC THENL
+    [ UNDISCH_TAC `i < n` THEN
+      UNDISCH_TAC `n < 0x10` THEN
+      WORD_ARITH_TAC; ALL_TAC ] THEN
+    ASM_SIMP_TAC[] THEN
+    REPEAT STRIP_TAC THEN
+
+    MP_TAC (SPECL [`ct_ptr:int64`; `len:int64`;
+      `(word_add (word (curr_len + 0x10)) (word i)):int64`;
+      `ct:byte list`; `s0:armstate`] SELECT_ONE_BYTE_FROM_FORALL) THEN
+    SUBGOAL_THEN `val (word_add ((word (curr_len + 0x10)):int64) (word i)) < val (len:int64)` ASSUME_TAC THENL
+    [ REWRITE_TAC[WORD_RULE `!a b. word_add ((word a):int64) (word b) = word (a + b)`] THEN
+      IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
+      ASM_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC[] THEN
+    STRIP_TAC THEN
+
+    (* For address matching when symbolic simulation *)
+    SUBGOAL_THEN `word_add (ct_ptr:int64) (word_add (word (curr_len + 0x10)) (word i)) =
+      word_add ct_ptr (word (curr_len + 16 + i))` SUBST_ALL_TAC THENL
+    [ REWRITE_TAC[WORD_RULE `!a b. word_add ((word a):int64) (word b) = word (a + b)`; ADD_ASSOC]
+    ; ALL_TAC] THEN
+    SUBGOAL_THEN `!x. word_add (word_add (pt_ptr:int64) (word curr_len)) (word x) =
+      word_add pt_ptr (word (curr_len + x))` ASSUME_TAC THENL
+    [ GEN_TAC THEN REWRITE_TAC[
+        WORD_RULE `!(a:int64) b c. word_add (word_add a b) c = word_add a (word_add b c)`;
+        WORD_RULE `!a b. word_add ((word a):int64) (word b) = word (a + b)`]
+      ; ALL_TAC] THEN
+    POP_ASSUM(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th])) THEN
+
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (1--6) THEN
+    (* Help MAYCHANGE predicate be syntactically similar to the MAYCHANGE conclusion *)
+    SUBGOAL_THEN `word_sub (word (n - i)) (word 1) = word (n - i - 1):int64` SUBST_ALL_TAC THENL [
+      IMP_REWRITE_TAC[WORD_SUB2] THEN SIMPLE_ARITH_TAC;
+      ALL_TAC;
+    ] THEN
+
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [
+      (* Initial version of proof generated by Opus 4.6. :) *)
+      SUBGOAL_THEN `1 <= n - i /\ n - i <= 15` STRIP_ASSUME_TAC THENL
+      [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+      VAL_INT64_TAC `n - i` THEN
+      VAL_INT64_TAC `n - i - 1` THEN
+      SUBGOAL_THEN `ival (word (n - i):int64) = &(n - i)` ASSUME_TAC THENL
+      [REWRITE_TAC[ival] THEN ASM_REWRITE_TAC[] THEN
+        REWRITE_TAC[DIMINDEX_64] THEN CONV_TAC NUM_REDUCE_CONV THEN
+        SIMPLE_ARITH_TAC;
+        ALL_TAC] THEN
+      SUBGOAL_THEN `ival (word (n - i - 1):int64) = &(n - i - 1)`
+        ASSUME_TAC THENL
+      [REWRITE_TAC[ival] THEN ASM_REWRITE_TAC[] THEN
+        REWRITE_TAC[DIMINDEX_64] THEN CONV_TAC NUM_REDUCE_CONV THEN
+        SIMPLE_ARITH_TAC;
+        ALL_TAC] THEN
+      ASM_REWRITE_TAC[] THEN
+      SUBGOAL_THEN `~(&(n - i - 1):int < &0)` (fun th -> REWRITE_TAC[th]) THENL
+      [REWRITE_TAC[INT_NOT_LT; INT_POS]; ALL_TAC] THEN
+      SUBGOAL_THEN `&(n - i) - &1:int = &(n - i - 1)` SUBST1_TAC THENL
+      [MP_TAC(SPECL [`1`; `n - i:num`] INT_OF_NUM_SUB) THEN
+       UNDISCH_TAC `1 <= n - i` THEN SIMP_TAC[] THEN INT_ARITH_TAC;
+       ALL_TAC] THEN
+      REWRITE_TAC[] THEN
+      ASM_CASES_TAC `n - i - 1 = 0` THENL
+      [ASM_REWRITE_TAC[] THEN
+        SUBGOAL_THEN `~(i + 1 < n)` (fun th -> REWRITE_TAC[th]) THEN SIMPLE_ARITH_TAC;
+       ASM_REWRITE_TAC[] THEN
+        SUBGOAL_THEN `i + 1 < n` (fun th -> REWRITE_TAC[th]) THEN SIMPLE_ARITH_TAC];
+
+      ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [
+      CONV_TAC WORD_RULE; ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [
+      AP_TERM_TAC THEN SIMPLE_ARITH_TAC;
+      ALL_TAC
+    ] THEN
+    (* Abbbreviate val(len) because it appears memaccess_inbounds and
+       existence of 'val' blocks reasoning of contained/nonoverlapping
+       predicates *)
+    ABBREV_TAC `m = val (len:int64)` THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+      ~abbrevs_unfold_before_f_events_tac:[
+        `acc_len num_5blocks_adjusted num_blocks_adjusted = curr_len`;
+        `val (tail_len:int64) = n`;
+      ];
+
+    (* Subgoal 3: *)
+    REWRITE_TAC[] THEN
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC AES_XTS_DECRYPT_EXEC (1--32) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [
+      REWRITE_TAC[GSYM (ASSUME `acc_len num_5blocks_adjusted num_blocks_adjusted = curr_len`)] THEN
+      ABBREV_TAC `vlen = val (len:int64)` THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (* Maychange *)
+      ABBREV_TAC `vallen = val (len:int64)` THEN
+      ABBREV_TAC `valcurlen = val (curr_len:int64)` THEN
+      MONOTONE_MAYCHANGE_TAC
+    ]
+  ]
+);;
+
 
 (* Proof: Less than 2 blocks *)
 let AES_XTS_DECRYPT_LT_2BLOCK_CORRECT = time prove(
