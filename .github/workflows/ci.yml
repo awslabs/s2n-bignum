@@ -219,7 +219,7 @@ jobs:
         HOLLIGHT_USE_MODULE=1 make
         cd ..
 
-    - name: Run tutorial
+    - name: Run proofs and tutorial
       run: |
         export HOLDIR=`pwd`/hol-light
         export BUILD_CORE_COUNT=15
