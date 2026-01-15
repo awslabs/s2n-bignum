@@ -1,0 +1,106 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Template to build a CodeBuild Project, assumes that GitHub credentials are already set up."
+Parameters:
+  ProjectName:
+    Type: String
+    Description: The name of the CodeBuild Project
+    Default: s2n-bignum
+  ProjectDescription:
+    Type: String
+    Description: The description for the CodeBuild Project
+  SourceLocation:
+    Type: String
+    Description: The https GitHub URL for the project
+    Default: https://github.com/awslabs/s2n-bignum
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "s2n-bignum CodeBuild Project Template"
+        Parameters:
+          - ProjectName
+          - ProjectDescription
+          - SourceLocation
+
+Resources:
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+        Version: '2012-10-17'
+      MaxSessionDuration: 3600
+    
+  CodeBuildBasePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Effect: Allow
+            Resource:
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${CodeBuildProjectGithubActions}'
+              - !Sub 'arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${CodeBuildProjectGithubActions}:*'
+          - Action:
+              - codebuild:CreateReportGroup
+              - codebuild:CreateReport
+              - codebuild:UpdateReport
+              - codebuild:BatchPutTestCases
+              - codebuild:BatchPutCodeCoverages
+            Effect: Allow
+            Resource: !Sub 'arn:${AWS::Partition}:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/${CodeBuildProjectGithubActions}-*'
+        Version: '2012-10-17'
+      PolicyName: CodeBuildBasePolicy
+      Roles:
+        - !Ref CodeBuildServiceRole
+
+  CodeBuildProjectGithubActions:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Cache:
+        Type: NO_CACHE
+      EncryptionKey: alias/aws/s3
+      Environment:
+        ComputeType: BUILD_GENERAL1_2XLARGE
+        EnvironmentVariables:
+          - Name: PROJECT_NAME
+            Type: PLAINTEXT
+            Value: !Ref ProjectName
+        Image: aws/codebuild/standard:7.0
+        ImagePullCredentialsType: CODEBUILD
+        PrivilegedMode: true
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+      Name: s2n-bignum-github-actions
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Source:
+        Location: https://github.com/nhatnghiho/s2n-bignum.git
+        ReportBuildStatus: true
+        Type: GITHUB
+      TimeoutInMinutes: 480
+      QueuedTimeoutInMinutes: 480
+      Triggers:
+        FilterGroups:
+          - - Pattern: WORKFLOW_JOB_QUEUED
+              Type: EVENT
+        PullRequestBuildPolicy:
+          RequiresCommentApproval: ALL_PULL_REQUESTS
+          ApproverRoles:
+            - GITHUB_ADMIN
+            - GITHUB_MAINTAIN
+            - GITHUB_WRITE
+            - GITHUB_TRIAGE
+        Webhook: true
