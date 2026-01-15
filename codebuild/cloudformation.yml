@@ -69,7 +69,7 @@ Resources:
       Name: s2n-bignum-github-actions
       Description: CodeBuild project to run workflows from Github Actions
       Source:
-        Location: https://github.com/nhatnghiho/s2n-bignum.git
+        Location: https://github.com/awslabs/s2n-bignum.git
         ReportBuildStatus: true
         Type: GITHUB
       Artifacts:
@@ -79,10 +79,6 @@ Resources:
       EncryptionKey: alias/aws/s3
       Environment:
         ComputeType: BUILD_GENERAL1_2XLARGE
-        EnvironmentVariables:
-          - Name: PROJECT_NAME
-            Type: PLAINTEXT
-            Value: !Ref ProjectName
         Image: aws/codebuild/standard:7.0
         ImagePullCredentialsType: CODEBUILD
         PrivilegedMode: true
