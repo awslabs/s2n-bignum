@@ -2910,10 +2910,6 @@ void reference_mldsa_inverse_ntt_spec(int32_t a[256])
     }
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> c8e454c9 (rest of test.c)
 // Keccak-f1600 reference.
 // https://keccak.team/files/Keccak-reference-3.0.pdf
 
@@ -6388,7 +6384,6 @@ int test_bignum_madd_n25519_alt(void)
   return 0;
 }
 
-<<<<<<< HEAD
 int test_bignum_mod_m25519(void)
 { uint64_t t, k;
   printf("Testing bignum_mod_m25519 with %d cases\n",tests);
@@ -6417,8 +6412,6 @@ int test_bignum_mod_m25519(void)
   return 0;
 }
 
-=======
->>>>>>> c8e454c9 (rest of test.c)
 int test_bignum_mod_m25519_4(void)
 { uint64_t t;
   printf("Testing bignum_mod_m25519_4 with %d cases\n",tests);
@@ -6466,21 +6459,13 @@ int test_bignum_mod_n25519(void)
      c = reference_compare(k,(k < 4) ? b0 : b3,4,b4);
      if (c != 0)
       { printf("### Disparity: [size %4"PRIu64" -> %4"PRIu64"] "
-<<<<<<< HEAD
                "0x%016"PRIx64"...%016"PRIx64" mod n_25519 = "
-=======
-               "0x%016"PRIx64"...%016"PRIx64" mod n_256 = "
->>>>>>> c8e454c9 (rest of test.c)
                "0x%016"PRIx64"...%016"PRIx64" not 0x%016"PRIx64"...%016"PRIx64"\n",
                k,UINT64_C(4),b0[k-1],b0[0],b4[3],b4[0],b3[3],b3[0]);
         return 1;
       }
      else if (VERBOSE)
-<<<<<<< HEAD
-      { printf("OK: [size %4"PRIu64" -> %4"PRIu64"] 0x%016"PRIx64"...%016"PRIx64" mod n_25519 = "
-=======
       { printf("OK: [size %4"PRIu64" -> %4"PRIu64"] 0x%016"PRIx64"...%016"PRIx64" mod n_256 = "
->>>>>>> c8e454c9 (rest of test.c)
                "0x%016"PRIx64"...%016"PRIx64"\n",
                k,UINT64_C(4),b0[k-1],b0[0],b4[3],b4[0]);
       }
@@ -12043,11 +12028,6 @@ int test_edwards25519_scalarmuldouble_alt(void)
   return 0;
 }
 
-<<<<<<< HEAD
-=======
->>>>>>> 56f41495 (Added spec test to intt)
-=======
->>>>>>> c8e454c9 (rest of test.c)
 #ifdef __x86_64__
 static void mlkem_poly_to_avx2_layout(int16_t a[256])
 {
@@ -15956,17 +15936,11 @@ int main(int argc, char *argv[])
   functionaltest(all,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
   functionaltest(all,"mlkem_ntt",test_mlkem_ntt);
   functionaltest(all,"mlkem_reduce",test_mlkem_reduce);
-<<<<<<< HEAD
-<<<<<<< HEAD
   functionaltest(all,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
   functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
   functionaltest(all,"mlkem_tomont",test_mlkem_tomont);
   functionaltest(all,"mlkem_unpack",test_mlkem_unpack);
-=======
->>>>>>> 56f41495 (Added spec test to intt)
-=======
   functionaltest(all,"mlkem_tobytes",test_mlkem_tobytes);
->>>>>>> c8e454c9 (rest of test.c)
   functionaltest(bmi,"p256_montjadd",test_p256_montjadd);
   functionaltest(all,"p256_montjadd_alt",test_p256_montjadd_alt);
   functionaltest(bmi,"p256_montjdouble",test_p256_montjdouble);
@@ -16025,12 +15999,9 @@ int main(int argc, char *argv[])
     functionaltest(all,"bignum_copy_row_from_table_16",test_bignum_copy_row_from_table_16);
     functionaltest(all,"bignum_copy_row_from_table_32",test_bignum_copy_row_from_table_32);
     functionaltest(all,"bignum_emontredc_8n_cdiff",test_bignum_emontredc_8n_cdiff);
-<<<<<<< HEAD
-=======
     functionaltest(arm,"mlkem_mulcache_compute",test_mlkem_mulcache_compute);
     functionaltest(arm,"mlkem_tomont",test_mlkem_tomont);
     functionaltest(arm,"mlkem_rej_uniform_VARIABLE_TIME",test_mlkem_rej_uniform);
->>>>>>> 56f41495 (Added spec test to intt)
     functionaltest(sha3,"sha3_keccak_f1600_alt",test_sha3_keccak_f1600_alt);
     functionaltest(arm,"sha3_keccak_f1600_alt2",test_sha3_keccak_f1600_alt2);
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
