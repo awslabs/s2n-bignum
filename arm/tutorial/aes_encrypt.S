@@ -12,11 +12,11 @@
 aes_encrypt:
 	ldr	w6,[x2,#240]
 	ld1	{v0.16b},[x2],#16
+	ld1	{v1.16b},[x2],#16
 	ld1	{v6.16b},[x1]
 	sub	w6,w6,#2
-	ld1	{v1.16b},[x2],#16
 
-Loop_enc_iv_enc:
+Loop_enc:
 	aese	v6.16b,v0.16b
 	aesmc	v6.16b,v6.16b
 	ld1	{v0.4s},[x2],#16
@@ -24,7 +24,7 @@ Loop_enc_iv_enc:
 	aese	v6.16b,v1.16b
 	aesmc	v6.16b,v6.16b
 	ld1	{v1.4s},[x2],#16
-	b.gt	Loop_enc_iv_enc
+	b.gt	Loop_enc
 
 	aese	v6.16b,v0.16b
 	aesmc	v6.16b,v6.16b

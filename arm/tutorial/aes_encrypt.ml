@@ -4,20 +4,41 @@
  *)
 
 (******************************************************************************
-  An example AES encryption proof.
+  An AES-256 encryption proof.
 ******************************************************************************)
 
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 
-(* print_literal_from_elf "arm/aes-xts/aes256_encrypt.o";; *)
-let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/tutorial/aes_encrypt.o"
-[
+(* The following program performs an AES-256 encryption:
+   - input: 128-bit block stored in memory at address in x1
+   - output: 128-bit block to be stored in memory at address in x0
+   - round keys: 15 128-bit values stored starting at address in x2, k0 to k14.
+                 After the round keys, the number of rounds is stored
+                 at offset 240 of address in x2. This number is 14 for AES-256 (see below)
+   w6 is the round counter.
+   2 round keys are loaded in v0 and v1 before the loop and then in the loop and
+   the counter is decremented by 2 in each iteration.
+
+   The instructions AESE and AESMC form one AES round:
+   AESE: AESSubBytes(AESShiftRows(operand1 XOR operand2),   // XOR = AddRoundKey
+   AESMC: AESMixColumns(operand)
+   The last round doesn't use AESMC, only AESE and XOR.
+   The output is stored at the end.
+
+   In the specs, the first round key is used in AddRoundKey in the initialization
+   then 13 regular rounds, each ending with AddRoundKey,
+   then a last round that doesn't have MixColumns and ends with AddRoundKey
+   In the implementation, there are 14 rounds that start with AddRoundKey in AESE
+   and one last round (with no MixColumns) ending with AddRoundKey.
+*)
+
+let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/tutorial/aes_encrypt.o" [
   0xb940f046;       (* arm_LDR W6 X2 (Immediate_Offset (word 240)) *)
   0x4cdf7040;       (* arm_LDR Q0 X2 (Postimmediate_Offset (word 16)) *)
+  0x4cdf7041;       (* arm_LDR Q1 X2 (Postimmediate_Offset (word 16)) *)
   0x4c407026;       (* arm_LDR Q6 X1 No_Offset *)
   0x510008c6;       (* arm_SUB W6 W6 (rvalue (word 2)) *)
-  0x4cdf7041;       (* arm_LDR Q1 X2 (Postimmediate_Offset (word 16)) *)
   0x4e284806;       (* arm_AESE Q6 Q0 *)
   0x4e2868c6;       (* arm_AESMC Q6 Q6 *)
   0x4cdf7840;       (* arm_LDR Q0 X2 (Postimmediate_Offset (word 16)) *)
@@ -34,17 +55,27 @@ let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/tutorial
   0x4c007806        (* arm_STR Q6 X0 No_Offset *)
 ];;
 
+(*
+You can get the above OCaml list data structure from
+First generating the <file.o> by running at the command line under arm directory:
+  $ make tutorial/<file.o>
+`print_literal_from_elf "<file.o>"` or
+`save_literal_from_elf "<file.txt>" "<file.o>"`.
+*)
+
 let AES256_ENCRYPT_EXEC = ARM_MK_EXEC_RULE aes256_encrypt_mc;;
 
 let AES256_ENCRYPT_CORRECT = prove(
-  `!ciphertext plaintext key ib k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 pc.
+  `!ciphertext plaintext key pt_in k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 pc.
     nonoverlapping (word pc,LENGTH aes256_encrypt_mc) (ciphertext,16)
     ==> ensures arm
       // precondition
       (\s. aligned_bytes_loaded s (word pc) aes256_encrypt_mc /\
            read PC s = word pc /\
+           // uses the C ABI which puts the arguments in their order in registers x0 to x7.
+           // Here only 3 arguments are passed in.
            C_ARGUMENTS [ciphertext; plaintext; key] s /\
-           read(memory :> bytes128 plaintext) s = ib /\
+           read(memory :> bytes128 plaintext) s = pt_in /\
            read(memory :> bytes32 (word_add key (word 240))) s = word 14 /\
            read(memory :> bytes128 key) s = k0 /\
            read(memory :> bytes128 (word_add key (word 16))) s = k1 /\
@@ -65,20 +96,34 @@ let AES256_ENCRYPT_CORRECT = prove(
       // postcondition
       (\s. read PC s = word (pc + LENGTH aes256_encrypt_mc) /\
            read(memory :> bytes128 ciphertext) s =
-              aes256_encrypt ib
+              aes256_encrypt pt_in
                 [k0; k1; k2; k3; k4; k5; k6; k7; k8; k9; k10; k11; k12; k13; k14]
       )
+      // Registers (and memory locations) that may change after execution
       (MAYCHANGE [PC;X2;X6],, MAYCHANGE [Q0;Q1;Q6],, MAYCHANGE [events],,
        MAYCHANGE SOME_FLAGS,, MAYCHANGE [memory :> bytes128 ciphertext])`,
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
+
+  (* Convert C_ARGUMENTS to reading registers x0, x1, x2 and expand SOME_FLAGS *)
+  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
+
+  (* Find the length of the program using a Conversion *)
   REWRITE_TAC [(REWRITE_CONV [aes256_encrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_encrypt_mc`] THEN
+
   REPEAT STRIP_TAC THEN
+  (* Start symbolic execution with state 's0' *)
   ENSURES_INIT_TAC "s0" THEN
+  (* Symbolic execution of all instructions *)
   ARM_STEPS_TAC AES256_ENCRYPT_EXEC (1--59) THEN
+  (* Returned; Finalize symbolic execution. *)
   ENSURES_FINAL_STATE_TAC THEN
+
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC [aes256_encrypt] THEN
+
+  (* Replace the elements from the key round lists with their value *)
   REWRITE_TAC EL_15_128_CLAUSES THEN
+
+  (* Expand definitions and evaluate `let` terms *)
   REWRITE_TAC [aes256_encrypt_round; aese; aesmc] THEN
   CONV_TAC (TOP_DEPTH_CONV let_CONV) THEN
   BITBLAST_TAC

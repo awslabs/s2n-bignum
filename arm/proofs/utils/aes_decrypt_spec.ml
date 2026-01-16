@@ -2,18 +2,19 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
+(* ====================================================================================== *)
+(* AES-256 decryption spec https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf. *)
+(* ====================================================================================== *)
 
 needs "common/aes.ml";;
 
 (* let pp_print_num fmt tm =
   let n = dest_numeral tm in
   pp_print_string fmt (string_of_num_hex n) in
-install_user_printer("pp_print_num",pp_print_num);; 
+install_user_printer("pp_print_num",pp_print_num);;
 *)
 
 (*
-NIST: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
-
 procedure EQINVCIPHER(in, Nr, dw)
 2: state ← in
 3: state ← ADDROUNDKEY(state,dw[4 ∗Nr..4 ∗Nr +3])
