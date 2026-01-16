@@ -1540,7 +1540,7 @@ int main(int argc, char *argv[])
   timingtest(all,"mlkem_reduce",call_mlkem_reduce);
   timingtest(all,"mlkem_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mlkem_rej_uniform);
   timingtest(all,"mlkem_tobytes",call_mlkem_tobytes);
-  timingtest(arm,"mlkem_tomont",call_mlkem_tomont);
+  timingtest(all,"mlkem_tomont",call_mlkem_tomont);
   timingtest(!arm,"mlkem_unpack",call_mlkem_unpack);
   timingtest(!arm,"mldsa_intt",call_mldsa_intt);
   timingtest(!arm,"mldsa_ntt",call_mldsa_ntt);
