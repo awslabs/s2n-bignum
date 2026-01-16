@@ -2330,6 +2330,33 @@ let x86_decode_unique = prove
       REWRITE_TAC [d2;
         REWRITE_RULE [th1; d2; APPEND_NIL; SYM th; l1] l2]) th));;
 
+(* A useful lemma to recover the APPEND form of mc from the CONS form which was
+   enforced by define_relocated_mc. This helps x86 decoder work well.
+   Looks horrendous, but it works... *)
+let BYTELIST_OF_INT_APPEND = prove(`
+  CONS
+    (word (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) MOD 256)
+      :(8)word)
+  (CONS
+    (word (
+      (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) DIV 256) MOD 256
+    ):(8)word)
+  (CONS
+    (word (
+      (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) DIV 256 DIV 256)
+      MOD 256
+    ):(8)word)
+  (CONS
+    (word (
+      (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) DIV 256 DIV 256 DIV 256)
+      MOD 256
+    ):(8)word)
+  y
+  ))) =
+  APPEND (bytelist_of_int 4 x) y`,
+  CONV_TAC (RAND_CONV (TOP_DEPTH_CONV num_CONV)) THEN
+  REWRITE_TAC[bytelist_of_int;bytelist_of_num;APPEND]);;
+
 let X86_DECODES_THM =
   let pth = (UNDISCH_ALL o prove)
    (`i = i' ==> pc + n = pc' ==>
@@ -2361,6 +2388,7 @@ let X86_DECODES_THM =
     | Const("NIL",_) -> [CONJUNCT1 th',pcofs]
     | _ -> let dth,bth = CONJ_PAIR th' in (dth,pcofs)::(go bth) in
   fun th ->
+    let th = PURE_REWRITE_RULE[BYTELIST_OF_INT_APPEND] th in
     let decodes:(thm*term) list = (go o
       (fun dth -> EQ_MP dth (ASSUME (lhs (concl dth)))) o
       AP_TERM `bytes_loaded s (word pc)`) th in
@@ -4692,9 +4720,9 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
       try SPECL ilist subth with _ -> begin
         (if (!x86_print_log) then
           (Printf.printf "ilist and subth's forall vars do not match\n";
-          Printf.printf "ilist: [%s]\n" (end_itlist
+           Printf.printf "ilist: [%s]\n" (end_itlist
             (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
-            Printf.printf "subth's forall vars: [%s]\n"
+           Printf.printf "subth's forall vars: [%s]\n"
               (end_itlist (fun s s2 -> s ^ "; " ^ s2)
                 (map string_of_term (fst (strip_forall (concl subth)))))));
         failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
