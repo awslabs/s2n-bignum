@@ -1438,3 +1438,172 @@ let BIGNUM_KMUL_16_32_SUBROUTINE_CORRECT = prove
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_KMUL_16_32_EXEC BIGNUM_KMUL_16_32_CORRECT
     `[X19;X20;X21;X22;X23;X24;X25;X26;X27;X28;X29;X30]` 96);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let BIGNUM_KMUL_16_32_SAFE_LEMMA = prove
+ (`exists f_events. forall e z x y pc returnaddress.
+      ALL (nonoverlapping (z,8 * 16))
+          [(word pc,2932); (x,8 * 8); (y,8 * 8)]
+      ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc) bignum_kmul_16_32_mc /\
+                 read PC s = word(pc + 0x3bc) /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [z; x; y] s /\
+                 read events s = e)
+          (\s. read PC s = returnaddress /\
+              (exists e2.
+                  read events s = APPEND e2 e /\
+                  e2 = f_events z x y pc returnaddress /\
+                  memaccess_inbounds e2
+                    [z,128; x,64; y,64]
+                    [z,128]))
+            (MAYCHANGE [PC; X1; X2; X3; X4; X5; X6; X7; X8;
+                        X9; X10; X11; X12; X13; X14; X15; X16;
+                        X17; X19; X20; X21; X22; X23; X24] ,,
+             MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5],,
+             MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
+             MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
+  PROVE_SAFETY_SPEC_TAC BIGNUM_KMUL_16_32_EXEC);;
+
+let BIGNUM_KMUL_16_32_LEMMA_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (bignum_kmul_16_32_mc,BIGNUM_KMUL_16_32_EXEC,
+        0x0,bignum_kmul_16_32_mc,safety_th)
+        [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+        `pc:num`; `read X30 s`] n THENL [
+      EXISTS_E2_TAC (ref [`pc:num`;`x:int64`;`y:int64`;`z:int64`;`t:int64`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_kmul_16_32" subroutine_signatures)
+    BIGNUM_KMUL_16_32_CORRECT
+    BIGNUM_KMUL_16_32_EXEC;;
+
+let BIGNUM_KMUL_16_32_SAFE = prove
+ (`exists f_events.
+       forall e z x y t pc.
+           nonoverlapping (z,8 * 32) (t,8 * 32) /\
+           ALLPAIRS nonoverlapping [z,8 * 32; t,8 * 32]
+           [word pc,2932; x,8 * 16; y,8 * 16]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_kmul_16_32_mc /\
+                    read PC s = word (pc + 24) /\
+                    C_ARGUMENTS [z; x; y; t] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 928) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z t pc /\
+                         memaccess_inbounds e2
+                         [x,128; y,128; z,256; t,32 * 8]
+                         [z,256; t,32 * 8]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25;
+                 X26; X27; X28; X29; X30] ,,
+                MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5] ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 32); memory :> bytes (t,8 * 32)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+
+  ASSERT_CONCL_TAC full_spec THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_KMUL_16_32_SAFE_LEMMA "H_LEMMA" THEN
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REPEAT STRIP_TAC THEN
+
+  ENSURES_INIT_TAC "s0" THEN
+
+  (*** First nested 8x8 multiply block ***)
+
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (1--5) THEN
+  BIGNUM_KMUL_16_32_LEMMA_SAFETY_TAC "H_LEMMA" 6 THEN
+
+  (*** Sign-difference computation for x ***)
+
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (7--23) THEN
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (24--44) THEN
+
+  (*** Second nested 8x8 multiply ***)
+
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (45--48) THEN
+  BIGNUM_KMUL_16_32_LEMMA_SAFETY_TAC "H_LEMMA" 49 THEN
+
+  (*** Sign-difference computation for y ***)
+
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (50--66) THEN
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (67--88) THEN
+
+  (*** Computation of H' = H + L_top ***)
+
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (89--124) THEN
+
+  (*** Third and final nested multiply ***)
+
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (125--128) THEN
+  BIGNUM_KMUL_16_32_LEMMA_SAFETY_TAC "H_LEMMA" 129 THEN
+
+  (*** All remaining accumulation of sub-results ***)
+
+  ARM_STEPS_TAC BIGNUM_KMUL_16_32_EXEC (130--229) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let full_subr_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_kmul_16_32" subroutine_signatures)
+    BIGNUM_KMUL_16_32_SUBROUTINE_CORRECT
+    BIGNUM_KMUL_16_32_EXEC;;
+
+let BIGNUM_KMUL_16_32_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x y t pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           PAIRWISE nonoverlapping
+           [z,8 * 32; t,8 * 32; word_sub stackpointer (word 96),96] /\
+           ALLPAIRS nonoverlapping
+           [z,8 * 32; t,8 * 32; word_sub stackpointer (word 96),96]
+           [word pc,LENGTH bignum_kmul_16_32_mc; x,8 * 16; y,8 * 16]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_kmul_16_32_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x; y; t] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events x y z t pc
+                         (word_sub stackpointer (word 96))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [x,128; y,128; z,256; t,32 * 8;
+                          word_sub stackpointer (word 96),96]
+                         [z,256; t,32 * 8; word_sub stackpointer (word 96),96]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 32); memory :> bytes (t,8 * 32);
+                 memory :> bytes (word_sub stackpointer (word 96),96)])`,
+  ASSERT_CONCL_TAC full_subr_spec THEN
+  ARM_ADD_RETURN_STACK_TAC BIGNUM_KMUL_16_32_EXEC BIGNUM_KMUL_16_32_SAFE
+    `[X19;X20;X21;X22;X23;X24;X25;X26;X27;X28;X29;X30]` 96 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

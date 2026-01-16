@@ -1689,6 +1689,23 @@ let subroutine_signatures = [
    ])
 );
 
+("bignum_mod_m25519",
+  ([(*args*)
+     ("z", "uint64_t[static 4]", (*is const?*)"false");
+     ("k", "uint64_t", (*is const?*)"false");
+     ("x", "uint64_t*", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("x", "k"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("z", "4"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("bignum_mod_m25519_4",
   ([(*args*)
      ("z", "uint64_t[static 4]", (*is const?*)"false");
@@ -4871,6 +4888,23 @@ let subroutine_signatures = [
    ],
    [(* output buffers *)
     ("a", "256"(* num elems *), 2(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mlkem_rej_uniform_VARIABLE_TIME",
+  ([(*args*)
+     ("r", "int16_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t*", (*is const?*)"true");
+     ("buflen", "uint64_t", (*is const?*)"false");
+     ("table", "uint8_t*", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 2(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])

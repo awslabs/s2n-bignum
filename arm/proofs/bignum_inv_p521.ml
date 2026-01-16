@@ -3549,3 +3549,291 @@ let BIGNUM_INV_P521_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_INV_P521_EXEC BIGNUM_INV_P521_CORRECT
    `[X19;X20;X21;X22]` 320);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let LOCAL_WORD_DIVSTEP59_SAFE = prove
+ (`exists f_events. forall e pc.
+       ensures arm
+        (\s. aligned_bytes_loaded s (word pc)
+                 (TRIM_LIST (12,16) bignum_inv_p521_mc) /\
+             read PC s = word(pc + 0x92c) /\
+             read events s = e)
+        (\s. read PC s = word(pc + 0x12a0) /\
+             (exists e2.
+                read events s = APPEND e2 e /\
+                // e2 is actually [], but let's keep it to make tactics happy
+                e2 = f_events pc /\
+                memaccess_inbounds e2 [] []))
+        (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X7; X8; X9;
+                    X10; X11; X12; X13; X14; X15; X16; X17] ,,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
+
+  PROVE_SAFETY_SPEC_TAC CORE_INV_P521_EXEC);;
+
+let CORE_INV_P521_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc stackpointer.
+          aligned 16 stackpointer /\
+          ALL (nonoverlapping (stackpointer,288))
+              [(word pc,0x1590); (z,8 * 9); (x,8 * 9)] /\
+          nonoverlapping (word pc,0x1590) (z,8 * 9)
+          ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                       (TRIM_LIST (12,16) bignum_inv_p521_mc) /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 0x1590) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc stackpointer /\
+                         memaccess_inbounds e2
+                          [x,72; z,72; stackpointer,288]
+                          [z,72; stackpointer,288]))
+               (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9;
+                            X10; X11; X12; X13; X14; X15; X16; X17;
+                            X19; X20; X21; X22] ,,
+                MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bytes(z,8 * 9);
+                            memory :> bytes(stackpointer,288)])`,
+
+  (* Prepare the safety theorem of subroutine to be used! This is necessary to
+     keep introduction of metavariable in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_WORD_DIVSTEP59_SAFE
+      "H_DIVSTEP59_SAFE" THEN
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(z:int64) (x:int64) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_loop_post z x pc stackpointer)
+        (APPEND
+          (ENUMERATEL 20 (f_ev_loop z x pc stackpointer))
+            (f_ev_loop_pre z x pc stackpointer))
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN
+  STRIP_TAC (* event e *) THEN
+
+  (* functional correctness *)
+  MAP_EVERY X_GEN_TAC
+   [`z:int64`; `x:int64`; `pc:num`; `stackpointer:int64`] THEN
+  REWRITE_TAC[ALLPAIRS; ALL] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** Set up the main loop invariant ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `20` `pc + 0x920` `pc + 0x920`
+   `\i s.
+      read SP s = stackpointer /\
+      read X20 s = z /\
+      read X21 s = word(21 - i)`
+  THEN REPEAT CONJ_TAC THENL [
+    ARITH_TAC;
+
+    (*** Initial holding of the invariant ***)
+
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false CORE_INV_P521_EXEC (1--54) THEN
+    CONJ_TAC THENL [WORD_ARITH_TAC; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** Main invariant proof ***)
+
+    REWRITE_TAC[] THEN
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC CORE_INV_P521_EXEC (1--3) THEN
+    (* bigstep *)
+    (* safety *)
+    USE_THEN "H_DIVSTEP59_SAFE"
+      (MP_TAC o SPECL [`e:(uarch_event)list`;`pc:num`]) THEN
+    (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
+         'exists e_stack_spill. .. ==> ...' *)
+    ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+    META_EXISTS_TAC THEN
+    REWRITE_TAC[SOME_FLAGS] THEN
+    ARM_BIGSTEP_TAC CORE_INV_P521_EXEC "s4" THENL [
+      CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV) THEN
+      REWRITE_TAC[APPEND_ASSOC] THEN
+      BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+      NO_TAC;
+      ALL_TAC
+    ] THEN
+
+    (*** The trivial fact that we loop back ***)
+
+    ARM_STEPS_TAC CORE_INV_P521_EXEC (5--7) THEN
+    SUBGOAL_THEN
+     `word_sub (word (21 - i)) (word 1):int64 = word(21 - (i + 1))`
+    SUBST_ALL_TAC THENL
+     [REWRITE_TAC[ARITH_RULE `21 - (i + 1) = (21 - i) - 1`] THEN
+      GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN
+      ASM_SIMP_TAC[ARITH_RULE `i < 20 ==> 1 <= 21 - i`];
+      ALL_TAC] THEN
+    SUBGOAL_THEN `~(val(word(21 - (i + 1)):int64) = 0)`
+     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))
+    THENL
+     [VAL_INT64_TAC `21 - (i + 1)` THEN ASM_REWRITE_TAC[] THEN
+      UNDISCH_TAC `i < 20` THEN ARITH_TAC;
+      ALL_TAC] THEN
+
+    ARM_STEPS_TAC CORE_INV_P521_EXEC (8--537) THEN
+
+    (*** Finish the simulation before proceeding ***)
+
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [REWRITE_TAC[COND_ID]; ALL_TAC] THEN
+    (* since automation of DISCHARGE_SAFETY_PROPERTY_TAC is insufficient,
+       manually write the proof here *)
+    SAFE_META_EXISTS_TAC allowed_vars_e THEN
+    CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+    CONJ_TAC THENL [
+      PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
+      REWRITE_TAC[APPEND_ASSOC] THEN
+      AP_THM_TAC THEN AP_TERM_TAC THEN
+      REWRITE_TAC[ENUMERATEL_ADD1] THEN
+      AP_THM_TAC THEN AP_TERM_TAC THEN
+      UNIFY_F_EVENTS_TAC; ALL_TAC
+    ] THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC;
+
+    ALL_TAC
+  ] THEN
+
+  (*** Start on the tail computation, with similar divstep reasoning ***)
+
+  REWRITE_TAC[] THEN
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC CORE_INV_P521_EXEC (1--3) THEN
+
+  USE_THEN "H_DIVSTEP59_SAFE"
+      (MP_TAC o SPECL [`e:(uarch_event)list`;`pc:num`]) THEN
+  (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
+        'exists e_stack_spill. .. ==> ...' *)
+  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[SOME_FLAGS] THEN
+  ARM_BIGSTEP_TAC CORE_INV_P521_EXEC "s4" THENL [
+    CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV) THEN
+    REWRITE_TAC[APPEND_ASSOC] THEN
+    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+    NO_TAC;
+    ALL_TAC
+  ] THEN
+
+  (*** Complete all the simulation first ***)
+
+  ARM_STEPS_TAC CORE_INV_P521_EXEC
+   (5--192) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  (* since automation of DISCHARGE_SAFETY_PROPERTY_TAC is insufficient,
+      manually write the proof here *)
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+  CONJ_TAC THENL [
+    PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
+    REWRITE_TAC[APPEND_ASSOC] THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC; ALL_TAC
+  ] THEN
+  DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+
+let BIGNUM_INV_P521_SAFE = time prove
+ (`exists f_events. forall e z x pc stackpointer.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (stackpointer,288))
+            [(word pc,0x15ac); (z,8 * 9); (x,8 * 9)] /\
+        nonoverlapping (word pc,0x15ac) (z,8 * 9)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) bignum_inv_p521_mc /\
+                  read PC s = word(pc + 0xc) /\
+                  read SP s = stackpointer /\
+                  C_ARGUMENTS [z; x] s /\
+                  read events s = e)
+             (\s. read PC s = word (pc + 0x159c) /\
+                  (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events x z pc stackpointer /\
+                      memaccess_inbounds e2 [x,72; z,72; stackpointer,288]
+                                            [z,72; stackpointer,288]))
+          (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9;
+                      X10; X11; X12; X13; X14; X15; X16; X17;
+                      X19; X20; X21; X22] ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+           MAYCHANGE [memory :> bytes(z,8 * 9);
+                      memory :> bytes(stackpointer,288)])`,
+  ASSUME_CALLEE_SAFETY_TAC CORE_INV_P521_SAFE "H_CORE_SAFE" THEN
+  META_EXISTS_TAC THEN
+  MAP_EVERY X_GEN_TAC
+   [`e:(uarch_event)list`; `z:int64`; `x:int64`; `pc:num`; `stackpointer:int64`]
+   THEN
+  REWRITE_TAC[ALLPAIRS; ALL] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+  REMOVE_THEN "H_CORE_SAFE" (fun safe_th -> ARM_SUBROUTINE_SIM_TAC
+      (bignum_inv_p521_mc,BIGNUM_INV_P521_EXEC,0xc,
+       (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p521_mc] THENC
+        TRIM_LIST_CONV)
+       `TRIM_LIST (12,16) bignum_inv_p521_mc`,
+       safe_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`;
+       `pc + 0xc`; `stackpointer:int64`] 1) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_inv_p521" subroutine_signatures)
+    BIGNUM_INV_P521_SUBROUTINE_CORRECT
+    BIGNUM_INV_P521_EXEC;;
+
+let BIGNUM_INV_P521_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (word_sub stackpointer (word 320),320))
+           [word pc,5548; z,8 * 9; x,8 * 9] /\
+           nonoverlapping (word pc,5548) (z,8 * 9)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_inv_p521_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events x z pc (word_sub stackpointer (word 320))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [x,72; z,72;
+                          word_sub stackpointer (word 320),320]
+                         [z,72;
+                          word_sub stackpointer (word 320),320]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 9);
+                 memory :> bytes (word_sub stackpointer (word 320),320)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_ADD_RETURN_STACK_TAC
+   BIGNUM_INV_P521_EXEC BIGNUM_INV_P521_SAFE
+   `[X19;X20;X21;X22]` 320 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

@@ -148,6 +148,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              curve25519/bignum_invsqrt_p25519_alt.o \
              curve25519/bignum_madd_n25519.o \
              curve25519/bignum_madd_n25519_alt.o \
+             curve25519/bignum_mod_m25519.o \
              curve25519/bignum_mod_m25519_4.o \
              curve25519/bignum_mod_n25519.o \
              curve25519/bignum_mod_n25519_4.o \
@@ -410,7 +411,9 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
 
-TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_simp2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o
+TUTORIAL_OBJ = $(filter-out tutorial/safety.o, $(TUTORIAL_PROOFS:.ml=.o)) \
+    curve25519/bignum_mod_n25519.o p256/bignum_mux_4.o p256/bignum_mux_4.obj \
+    tutorial/rel_simp2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o
 
 .PHONY: bmi clean clobber
 
@@ -522,6 +525,11 @@ sm2/sm2_montjscalarmul_alt.native: sm2/sm2_montjadd_alt.native sm2/sm2_montjdoub
 
 # Tutorial
 
+# safety tutorial does not have safety.o and uses existing ones
+tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
+                        curve25519/bignum_mod_n25519.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+# other tutorials have their .o files
 .SECONDEXPANSION:
 tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 # Additional dependencies on .o files

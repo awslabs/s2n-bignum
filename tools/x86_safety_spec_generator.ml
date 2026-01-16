@@ -25,7 +25,7 @@ let mk_noibt_subroutine_safe_spec
           fst (dest_binary "word_sub" t) = stackptr) new_assum in
       Some (rand ofs)
     with _ ->
-      let _ = Printf.printf "Has no \"word_sub stackpointer (word ..)\"; stackofs is None" in
+      let _ = Printf.printf "(* Has no \"word_sub stackpointer (word ..)\"; stackofs is None *)\n" in
       None in
 
   let _::pre_fn::post_fn::new_frame::[] = snd (strip_comb body) in
@@ -90,18 +90,17 @@ let mk_noibt_subroutine_safe_spec
         | Some so -> snd (dest_comb so) | None -> `0` in
       let new_readlist,new_writelist =
         if already_has_stackptr then
-          let _,sz = dest_pair (last old_readlist) in
-          let _ = Printf.printf "sz: %s\n" (string_of_term sz) in
-          let range1 = mk_pair (stackptr_with_ofs,sz) in
-          let range2_read,range2_write =
-            let ofs_int = dest_small_numeral stackofs_num in
-            let sz_int = dest_small_numeral sz in
-            let ofs_int2 = ofs_int - sz_int in
-            let base = list_mk_icomb "word_sub" [stackptr;mk_word(ofs_int2)] in
-            mk_pair(base,mk_small_numeral(ofs_int2+8)),
-            mk_pair(base,mk_small_numeral(ofs_int2)) in
-          ((butlast old_readlist) @ [range1;range2_read]),
-          ((butlast old_writelist) @ [range1;range2_write])
+          let ofs_int = dest_small_numeral stackofs_num in
+          (* stack+8 is read because it is where returnaddress is stored *)
+          let range_read = mk_pair (stackptr_with_ofs,mk_small_numeral(ofs_int+8)) in
+          let range_write = mk_pair (stackptr_with_ofs,stackofs_num) in
+          (* remove the old stack range *)
+          let old_readlist_nosp = filter (fun t ->
+              not (can (find_term (fun t' -> t' = stackptr)) t)) old_readlist in
+          let old_writelist_nosp = filter (fun t ->
+              not (can (find_term (fun t' -> t' = stackptr)) t)) old_writelist in
+          (old_readlist_nosp @ [range_read]),
+          (old_writelist_nosp @ [range_write])
         else
           let stackofs_num_plus_8 =
             mk_small_numeral((dest_small_numeral stackofs_num) + 8) in
@@ -121,6 +120,23 @@ let mk_noibt_subroutine_safe_spec
   mk_exists(new_f_events,
     list_mk_forall(new_uvs,mk_imp(new_assum,new_body)));;
 
+(* Usage:
+  generate_four_variants_of_x86_safety_specs
+      "p384_montjadd_alt"
+      P384_MONTJADD_ALT_CORRECT
+      P384_MONTJADD_ALT_EXEC
+      P384_MONTJADD_ALT_NOIBT_SUBROUTINE_CORRECT
+      P384_MONTJADD_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT;;
+
+  Needs these two files already loaded:
+    x86/proofs/consttime.ml
+    x86/proofs/subroutine_signatures.ml
+
+  NOTE: the assumptions of generated *_SUBROUTINE_SAFE (no IBT) may have wrong
+  nonoverlapping ranges on (pc,<program length>) if the program lengths are
+  hard-coded as integer constants. It must be corrected by adding 4.
+  An example is edwards25519_scalarmuldouble which has coda mc.
+*)
 let generate_four_variants_of_x86_safety_specs (fnname:string)
     correct_th exec_th
     noibt_subroutine_correct_th noibt_windows_subroutine_correct_th =
@@ -128,6 +144,7 @@ let generate_four_variants_of_x86_safety_specs (fnname:string)
   (* 0. preamble *)
   print_endline ("(* ------------------------------------------------------------------------- *)");
   print_endline ("(* Constant-time and memory safety proof.                                    *)");
+  print_endline ("(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)");
   print_endline ("(* ------------------------------------------------------------------------- *)");
   print_endline ("");
 
@@ -175,8 +192,19 @@ let generate_four_variants_of_x86_safety_specs (fnname:string)
   print_endline "(* Constant-time and memory safety proof of Windows ABI version.             *)";
   print_endline "(* ------------------------------------------------------------------------- *)\n";
 
+  (* Replace `<fnname>_tmc` with `<fnname>_windows_tmc` *)
+  let full_spec_w =
+    let the_tmc = find_term
+        (fun t -> is_const t && name_of t = fnname ^ "_tmc") full_spec in
+    let windows_tmc = mk_mconst (fnname ^ "_windows_tmc", type_of the_tmc) in
+    let data_tmc = match find_terms
+        (fun t -> is_const t && name_of t = fnname ^ "_data") full_spec with
+      | [] -> []
+      | the_tmc::[] ->
+        [mk_mconst (fnname ^ "_windows_data", type_of the_tmc), the_tmc] in
+    subst ((windows_tmc,the_tmc)::data_tmc) full_spec in
   let noibt_windows_subroutine_safe_spec = mk_noibt_subroutine_safe_spec
-    (ASSUME (full_spec)) noibt_windows_subroutine_correct_th in
+    (ASSUME (full_spec_w)) noibt_windows_subroutine_correct_th in
   Format.printf "let %s_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove\n" fnname_u;
   Format.printf " (%a,\n" pp_print_qterm noibt_windows_subroutine_safe_spec;
   Format.printf "  <TACTIC> THEN DISCHARGE_SAFETY_PROPERTY_TAC);;\n\n";

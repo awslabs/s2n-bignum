@@ -441,6 +441,10 @@ extern void bignum_madd_n25519 (uint64_t z[S2N_BIGNUM_STATIC 4], const uint64_t 
 extern void bignum_madd_n25519_alt (uint64_t z[S2N_BIGNUM_STATIC 4], const uint64_t x[S2N_BIGNUM_STATIC 4], const uint64_t y[S2N_BIGNUM_STATIC 4], const uint64_t c[S2N_BIGNUM_STATIC 4]);
 
 // Reduce modulo group order, z := x mod m_25519
+// Input x[k]; output z[4]
+extern void bignum_mod_m25519 (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t k, const uint64_t *x);
+
+// Reduce modulo group order, z := x mod m_25519
 // Input x[4]; output z[4]
 extern void bignum_mod_m25519_4 (uint64_t z[S2N_BIGNUM_STATIC 4], const uint64_t x[S2N_BIGNUM_STATIC 4]);
 
@@ -1027,7 +1031,7 @@ extern void mlkem_intt_x86(int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[
 extern void mlkem_mulcache_compute(int16_t x[S2N_BIGNUM_STATIC 128],const int16_t a[S2N_BIGNUM_STATIC 256],const int16_t z[S2N_BIGNUM_STATIC 128],const int16_t t[S2N_BIGNUM_STATIC 128]);
 
 // Precompute the mulcache data for a polynomial in the NTT domain
-// Inputs a[256], qdata[128] (signed 16-bit words); output x[128] (signed 16-bit words)
+// Inputs a[256], qdata[624] (signed 16-bit words); output x[128] (signed 16-bit words)
 extern void mlkem_mulcache_compute_x86(int16_t x[S2N_BIGNUM_STATIC 128],const int16_t a[S2N_BIGNUM_STATIC 256],const int16_t qdata[S2N_BIGNUM_STATIC 624]);
 
 // Forward number-theoretic transform from ML-KEM x86 implementation
