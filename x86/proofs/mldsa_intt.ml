@@ -146,7 +146,7 @@ pc + 0x2F61 ***)
                       (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                       abs(ival zi) <= &6135312))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-          MAYCHANGE [ZMM0; ZMM1; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+          MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
           MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
           MAYCHANGE [memory :> bytes(a,1024)])`);;
 
@@ -206,9 +206,9 @@ e(MP_TAC(end_itlist CONJ (map (fun n ->
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC);;
 
-
+(*** resurrect some of them here starting at zetas+1312 ***)
 e(FIRST_ASSUM(MP_TAC o check
-  (can (term_match [] `read (memory :> bytes256 (word_add zetas (word 128))) s0 = xxx`) o concl)) THEN
+  (can (term_match [] `read (memory :> bytes256 (word_add zetas (word 1312))) s0 = xxx`) o concl)) THEN
   CONV_TAC(LAND_CONV(READ_MEMORY_SPLIT_CONV 3)) THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC);;
 
@@ -236,6 +236,16 @@ e(REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
   ASM_REWRITE_TAC[WORD_ADD_0]);;
 
 e(ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s2265");;
+
+(* 
+  W(fun (asl,w) ->
+     let asms =
+        map snd (filter (is_local_definition
+          [mldsa_montmul] o concl o snd) asl) in
+     MP_TAC(end_itlist CONJ (rev asms)) THEN
+     MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms) THEN
+     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+*)
 
 e(REWRITE_TAC[WORD_BLAST `word_subword (x:int32) (0, 32) = x`] THEN
   REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0, 64) = x`] THEN
