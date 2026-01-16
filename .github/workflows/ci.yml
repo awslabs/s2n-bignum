@@ -186,3 +186,47 @@ jobs:
         export HOLDIR=`pwd`/hol-light
         cd arm
         make tutorial -j2
+
+  s2n-bignum-proofs:
+    strategy:
+        matrix:
+          arch: [arm, x86]
+    runs-on:
+      - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+  
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt --allow-insecure-repositories update
+        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh
+        opam init --disable-sandboxing
+
+    - name: Install HOL Light
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
+    - name: Run proofs and tutorial
+      run: |
+        export HOLDIR=`pwd`/hol-light
+        export BUILD_CORE_COUNT=15
+        export CORE_COUNT=64
+        cd ${{ matrix.arch }}
+        make -j ${BUILD_CORE_COUNT} build_proofs build_tutorial
+        make -j ${CORE_COUNT} proofs tutorial
+        ../tools/collect-times.sh ${{ matrix.arch }}
+
+
