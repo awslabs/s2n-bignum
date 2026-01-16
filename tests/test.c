@@ -6465,7 +6465,7 @@ int test_bignum_mod_n25519(void)
         return 1;
       }
      else if (VERBOSE)
-      { printf("OK: [size %4"PRIu64" -> %4"PRIu64"] 0x%016"PRIx64"...%016"PRIx64" mod n_256 = "
+      { printf("OK: [size %4"PRIu64" -> %4"PRIu64"] 0x%016"PRIx64"...%016"PRIx64" mod n_25519 = "
                "0x%016"PRIx64"...%016"PRIx64"\n",
                k,UINT64_C(4),b0[k-1],b0[0],b4[3],b4[0]);
       }
