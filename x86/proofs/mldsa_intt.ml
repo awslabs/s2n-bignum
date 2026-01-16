@@ -215,8 +215,9 @@ e(FIRST_ASSUM(MP_TAC o check
 (*** Do the simulation ***)
 
 e(MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_INTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[mldsa_montmul; WORD_ADD_MLDSA_MONTMUL;
-                      WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL])
+                      SIMD_SIMPLIFY_ABBREV_TAC[mldsa_montmul]
+                        [WORD_ADD_MLDSA_MONTMUL;
+                         WORD_ADD_MLDSA_MONTMUL_ALT; WORD_SUB_MLDSA_MONTMUL])
         (1--2265) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
