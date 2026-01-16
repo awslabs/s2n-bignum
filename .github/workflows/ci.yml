@@ -221,7 +221,7 @@ jobs:
 
     - name: Run proofs and tutorial
       run: |
-        export HOLDIR=`pwd`/hol-light
+        export HOLLIGHT=`pwd`/hol-light/hol.sh
         export BUILD_CORE_COUNT=15
         export CORE_COUNT=64
         cd ${{ matrix.arch }}
