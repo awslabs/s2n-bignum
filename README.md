@@ -325,18 +325,30 @@ the way in which specific machine instructions modify registers, flags and
 memory.
 
 To perform the formal proof for a particular function, you will need to install
-the latest version of [HOL Light](https://github.com/jrh13/hol-light/).
-The OPAM version might not work because it does not contain sufficiently recent
-libraries.
-To install HOL Light, please follow its
-[README](https://github.com/jrh13/hol-light/blob/master/README) instruction.
-After installation, set the `HOLDIR` environment variable to the path of
-the `hol-light` directory and use the Makefile within either the `arm` or
-`x86` directories to generate a target of the form
-`function_name.correct` for a corresponding object file `function_name.o`.
-Alternatively, the entire collection of functions can all be formally proved
-via the `proofs` pseudo-target. This is likely to be very time-consuming and
-hence better executed with some parallelism, e.g.
+[HOL Light](https://github.com/jrh13/hol-light/).
+
+Option 1: Install via OPAM (Recommended)
+
+Create a new OCaml 5.2 environment and install HOL Light:
+
+    opam switch create ocaml-5.2 ocaml-base-compiler.5.2.0
+    opam switch ocaml-5.2
+    opam install hol_light hol_light_module
+
+Ensure that `hol.sh` is available in your PATH after installation.
+
+Option 2: Install from Source
+
+Follow the [README](https://github.com/jrh13/hol-light/blob/master/README)
+instructions from the HOL Light repository. Make sure to compile with
+`HOLLIGHT_USE_MODULE=1` to generate `hol_lib.cmxa`. After installation, ensure
+that `hol.sh` is available in your PATH.
+
+Use the Makefile within either the `arm` or `x86` directories to generate a
+target of the form `function_name.correct` for a corresponding object file
+`function_name.o`. Alternatively, the entire collection of functions can all be
+formally proved via the `proofs` pseudo-target. This is likely to be very
+time-consuming and hence better executed with some parallelism, e.g.
 
     nohup make -j 16 proofs &
 
