@@ -206,7 +206,13 @@ e(MP_TAC(end_itlist CONJ (map (fun n ->
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC);;
 
-(*** resurrect some of them here starting at zetas+1312 ***)
+(*** resurrect some of them here starting at zetas+128 then zetas+1312 ***)
+
+e(FIRST_ASSUM(MP_TAC o check
+  (can (term_match [] `read (memory :> bytes256 (word_add zetas (word 128))) s0 = xxx`) o concl)) THEN
+  CONV_TAC(LAND_CONV(READ_MEMORY_SPLIT_CONV 3)) THEN
+  CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC);;
+
 e(FIRST_ASSUM(MP_TAC o check
   (can (term_match [] `read (memory :> bytes256 (word_add zetas (word 1312))) s0 = xxx`) o concl)) THEN
   CONV_TAC(LAND_CONV(READ_MEMORY_SPLIT_CONV 3)) THEN
