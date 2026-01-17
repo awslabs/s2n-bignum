@@ -1237,6 +1237,27 @@ let arm_MLS_VEC = define
             else simd8 word_sub d (simd8 word_mul n m) in
           (Rd := word_zx d':(128)word) (s:armstate)`;;
 
+let arm_MLA_VEC = define
+ `arm_MLA_VEC Rd Rn Rm esize datasize =
+    \s. let d = read Rd s
+        and n = read Rn s
+        and m = read Rm s in
+        if datasize = 128 then
+          let d':(128)word =
+            if esize = 32 then simd4 word_add d (simd4 word_mul n m)
+            else if esize = 16 then simd8 word_add d (simd8 word_mul n m)
+            else simd16 word_add d (simd16 word_mul n m) in
+          (Rd := d') s
+        else
+          let d:(64)word = word_subword d (0,64)
+          and n:(64)word = word_subword n (0,64)
+          and m:(64)word = word_subword m (0,64) in
+          let d':(64)word =
+            if esize = 32 then simd2 word_add d (simd2 word_mul n m)
+            else if esize = 16 then simd4 word_add d (simd4 word_mul n m)
+            else simd8 word_add d (simd8 word_mul n m) in
+          (Rd := word_zx d':(128)word) (s:armstate)`;;
+
 let arm_MOVI = define
  `arm_MOVI (Rd:(armstate,N word)component) (imm:int64) =
     \s. let immN:N word = if dimindex(:N) = 128
@@ -3106,6 +3127,7 @@ let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
 let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
 let arm_DUP_GEN_ALT =    EXPAND_SIMD_RULE arm_DUP_GEN;;
 let arm_MLS_VEC_ALT =    EXPAND_SIMD_RULE arm_MLS_VEC;;
+let arm_MLA_VEC_ALT =    EXPAND_SIMD_RULE arm_MLA_VEC;;
 let arm_MUL_VEC_ALT =    EXPAND_SIMD_RULE arm_MUL_VEC;;
 let arm_REV64_VEC_ALT =  EXPAND_SIMD_RULE arm_REV64_VEC;;
 let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
@@ -3215,6 +3237,7 @@ let ARM_OPERATION_CLAUSES =
        arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
        arm_MADD;
+       arm_MLA_VEC_ALT;
        arm_MLS_VEC_ALT;
        arm_MOVI; arm_MOVK_ALT; arm_MOVN; arm_MOVZ; arm_MSUB;
        arm_MUL_VEC_ALT;

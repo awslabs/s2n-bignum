@@ -173,6 +173,14 @@ let iclasses =
   (*** MLS (vector) ***)
   "0x101110xx1xxxxx100101xxxxxxxxxx";
 
+  (*** MLA (by element; focus on defined sizes) ***)
+  "0x10111101xxxxxx0000x0xxxxxxxxxx";
+  "0x10111110xxxxxx0000x0xxxxxxxxxx";
+  "0x101111xxxxxxxx0000x0xxxxxxxxxx";
+
+  (*** MLA (vector) ***)
+  "0x001110xx1xxxxx100101xxxxxxxxxx";
+
   (*** MOVI ***)
   "0110111100000xxx111001xxxxxxxxxx"; (* q=1, cmode=1110 *)
 
