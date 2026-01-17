@@ -241,11 +241,22 @@ s/[ \t]*vpblendw[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/v
 # vpmuldq %ymm14,%ymm12,%ymm\zl1 should be vpmuldq %ymm\zl1,%ymm12,%ymm14
 s/^vpmuldq[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm\\([a-z_0-9]+)$/vpmuldq\t\t%ymm\\\3,%ymm\2,%ymm\1/
 
-# vpmuldq %ymm13,%ymm13,%ymm0 should be vpmuldq %ymm0,%ymm13,%ymm13
-s/^vpmuldq[ \t]+%ymm([0-9]+),%ymm\1,%ymm([0-9]+)$/vpmuldq\t\t%ymm\2,%ymm\1,%ymm\1/
+# Fix vpmuldq with duplicate registers - explicit patterns for each register since BSD sed doesn't support \1 in search
+s/^vpmuldq[ \t]+%ymm12,%ymm12,%ymm0$/vpmuldq\t\t%ymm0,%ymm12,%ymm12/
+s/^vpmuldq[ \t]+%ymm13,%ymm13,%ymm0$/vpmuldq\t\t%ymm0,%ymm13,%ymm13/
+s/^vpmuldq[ \t]+%ymm14,%ymm14,%ymm0$/vpmuldq\t\t%ymm0,%ymm14,%ymm14/
+s/^vpmuldq[ \t]+%ymm15,%ymm15,%ymm0$/vpmuldq\t\t%ymm0,%ymm15,%ymm15/
 
-# vpsubd %ymm\l,%ymm\l,%ymm13 should be vpsubd %ymm13,%ymm\l,%ymm\l
-s/^vpsubd[ \t]+%ymm\\([a-z_0-9]+),%ymm\\\1,%ymm([0-9]+)$/vpsubd\t\t%ymm\2,%ymm\\\1,%ymm\\\1/
+# Fix vpsubd with duplicate registers - explicit patterns for each register
+s/^vpsubd[ \t]+%ymm4,%ymm4,%ymm12$/vpsubd\t\t%ymm12,%ymm4,%ymm4/
+s/^vpsubd[ \t]+%ymm5,%ymm5,%ymm13$/vpsubd\t\t%ymm13,%ymm5,%ymm5/
+s/^vpsubd[ \t]+%ymm6,%ymm6,%ymm12$/vpsubd\t\t%ymm12,%ymm6,%ymm6/
+s/^vpsubd[ \t]+%ymm7,%ymm7,%ymm13$/vpsubd\t\t%ymm13,%ymm7,%ymm7/
+s/^vpsubd[ \t]+%ymm8,%ymm8,%ymm14$/vpsubd\t\t%ymm14,%ymm8,%ymm8/
+s/^vpsubd[ \t]+%ymm9,%ymm9,%ymm15$/vpsubd\t\t%ymm15,%ymm9,%ymm9/
+s/^vpsubd[ \t]+%ymm12,%ymm12,%ymm13$/vpsubd\t\t%ymm13,%ymm12,%ymm12/
+s/^vpsubd[ \t]+%ymm12,%ymm12,%ymm14$/vpsubd\t\t%ymm14,%ymm12,%ymm12/
+s/^vpsubd[ \t]+%ymm\\h,%ymm\\h,%ymm14$/vpsubd\t\t%ymm14,%ymm\\h,%ymm\\h/
 
 # Eliminate any trailing spaces, just to be tidy
 
