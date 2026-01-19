@@ -111,6 +111,9 @@ let iclasses =
   (*** ADD ***)
   "0x001110xx1xxxxx100001xxxxxxxxxx";
 
+  (*** ABS ***)
+  "0x001110xx100000101110xxxxxxxxxx";
+
   (*** AND ***)
   "0x001110001xxxxx000111xxxxxxxxxx";
 
