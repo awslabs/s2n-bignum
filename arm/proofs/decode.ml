@@ -626,6 +626,14 @@ let decode = new_definition `!w:int32. decode w =
       let datasize = if q then 128 else 64 in
       SOME (arm_MLA_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
 
+  | [0:1; q; 0b001110:6; size:2; 0b100000101110:12; Rn:5; Rd:5] ->
+    // ABS (vector)
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED" - 64-bit only with Q=1
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_ABS_VEC (QREG' Rd) (QREG' Rn) esize datasize)
+
   | [0:1; q; 0b001111:6; sz:2; L:1; M:1; R:4; 0b1000:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MUL (by element)
     if sz = word 0b00 \/ sz = word 0b11 then NONE else // "UNDEFINED"

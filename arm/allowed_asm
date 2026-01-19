@@ -1,5 +1,12 @@
 : adc$
 : adcs$
+: abs.2d$
+: abs.2s$
+: abs.4h$
+: abs.4s$
+: abs.8b$
+: abs.8h$
+: abs.16b$
 : add$
 : adds$
 : adr$

@@ -845,6 +845,24 @@ let arm_ADD_VEC = define
             else simd8 word_add n m in
           (Rd := word_zx d:(128)word) s`;;
 
+let arm_ABS_VEC = define
+ `arm_ABS_VEC Rd Rn esize datasize =
+    \s. let n = read Rn (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then usimd2 (\x. iword(abs(ival x))) n
+            else if esize = 32 then usimd4 (\x. iword(abs(ival x))) n
+            else if esize = 16 then usimd8 (\x. iword(abs(ival x))) n
+            else usimd16 (\x. iword(abs(ival x))) n in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let d:(64)word =
+            if esize = 32 then usimd2 (\x. iword(abs(ival x))) n
+            else if esize = 16 then usimd4 (\x. iword(abs(ival x))) n
+            else usimd8 (\x. iword(abs(ival x))) n in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_ADDS = define
  `arm_ADDS Rd Rm Rn =
     \s. let m = read Rm s
@@ -3123,6 +3141,7 @@ let EXPAND_SIMD_RULE =
   CONV_RULE (DEPTH_CONV DIMINDEX_CONV) o REWRITE_RULE all_simd_rules;;
 
 let arm_ADD_VEC_ALT =    EXPAND_SIMD_RULE arm_ADD_VEC;;
+let arm_ABS_VEC_ALT =    EXPAND_SIMD_RULE arm_ABS_VEC;;
 let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
 let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
 let arm_DUP_GEN_ALT =    EXPAND_SIMD_RULE arm_DUP_GEN;;
@@ -3225,7 +3244,7 @@ let arm_ST3_ALT = end_itlist CONJ
 let ARM_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
     (*** Alphabetically sorted, new alphabet appears in the next line ***)
-      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDS_ALT; arm_ADR;
+      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIT;
        arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
