@@ -1087,6 +1087,27 @@ let arm_CMHI_VEC = define
             else simd8 (masking word_ugt) n m in
           (Rd := word_zx d:(128)word) s`;;
 
+let arm_CMGE_VEC = define
+ `arm_CMGE_VEC Rd Rn Rm esize datasize =
+    \s:armstate.
+        let n = read Rn s in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 (masking (\x y. ival x >= ival y)) n m
+            else if esize = 32 then simd4 (masking (\x y. ival x >= ival y)) n m
+            else if esize = 16 then simd8 (masking (\x y. ival x >= ival y)) n m
+            else simd16 (masking (\x y. ival x >= ival y)) n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 (masking (\x y. ival x >= ival y)) n m
+            else if esize = 16 then simd4 (masking (\x y. ival x >= ival y)) n m
+            else simd8 (masking (\x y. ival x >= ival y)) n m in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_CNT = define
  `arm_CNT Rd Rn datasize =
     \s:armstate.
@@ -3143,6 +3164,7 @@ let EXPAND_SIMD_RULE =
 let arm_ADD_VEC_ALT =    EXPAND_SIMD_RULE arm_ADD_VEC;;
 let arm_ABS_VEC_ALT =    EXPAND_SIMD_RULE arm_ABS_VEC;;
 let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
+let arm_CMGE_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGE_VEC;;
 let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
 let arm_DUP_GEN_ALT =    EXPAND_SIMD_RULE arm_DUP_GEN;;
 let arm_MLS_VEC_ALT =    EXPAND_SIMD_RULE arm_MLS_VEC;;
@@ -3249,7 +3271,7 @@ let ARM_OPERATION_CLAUSES =
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIT;
        arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
-       arm_CMHI_VEC_ALT; arm_CNT_ALT;
+       arm_CMHI_VEC_ALT; arm_CMGE_VEC_ALT; arm_CNT_ALT;
        arm_CSEL; arm_CSINC; arm_CSINV; arm_CSNEG;
        arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR_VEC; arm_EOR3; arm_EXT; arm_EXTR;

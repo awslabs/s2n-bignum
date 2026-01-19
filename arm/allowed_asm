@@ -29,6 +29,13 @@
 : cinc$
 : cinv$
 : clz$
+: cmge.2d$
+: cmge.2s$
+: cmge.4h$
+: cmge.4s$
+: cmge.8b$
+: cmge.8h$
+: cmge.16b$
 : cmhi$
 : cmhi.8h$
 : cmn$
