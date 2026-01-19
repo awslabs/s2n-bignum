@@ -844,6 +844,14 @@ let decode = new_definition `!w:int32. decode w =
     let elements = datasize DIV esize in
     SOME(arm_UADDLV (QREG' Rd) (QREG' Rn) elements esize)
 
+  | [0:1; q; 0b101110:6; size:2; 0b110000101010:12; Rn:5; Rd:5] ->
+    // UMAXV
+    if size = word 0b10 /\ ~q \/ size = word 0b11 then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    let elements = datasize DIV esize in
+    SOME(arm_UMAXV (QREG' Rd) (QREG' Rn) elements esize)
+
   | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
     // UMLAL (vector, Q = 0). UMLAL2 (vector, Q=1)
     if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
