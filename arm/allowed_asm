@@ -153,6 +153,11 @@
 : uaddlp.2d$
 : uaddlv$
 : uaddlv.8h$
+: umaxv.4h$
+: umaxv.4s$
+: umaxv.8b$
+: umaxv.8h$
+: umaxv.16b$
 : ubfx$
 : umaddl$
 : umlal$

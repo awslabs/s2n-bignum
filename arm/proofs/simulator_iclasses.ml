@@ -316,6 +316,9 @@ let iclasses =
   (*** UADDLV ***)
   "0x101110xx110000001110xxxxxxxxxx";
 
+  (*** UMAXV ***)
+  "0x101110xx110000101010xxxxxxxxxx";
+
   (*** UMOV (.d, .s) ***)
   "01001110000x1000001111xxxxxxxxxx";
   "00001110000xx100001111xxxxxxxxxx";

@@ -1714,6 +1714,44 @@ let arm_UADDLV = define
                     (\i. val(word_subword n (esize*i,esize):int128)) in
          (Rd := (word d:128 word)) s`;;
 
+let arm_UMAXV = define
+ `arm_UMAXV Rd Rn elements esize =
+    \s:armstate.
+        let n:128 word = read Rn s in
+        let d = if elements = 4 then
+                  MAX (val(word_subword n (0,esize):int128))
+                      (MAX (val(word_subword n (esize,esize):int128))
+                           (MAX (val(word_subword n (2*esize,esize):int128))
+                                (val(word_subword n (3*esize,esize):int128))))
+                else if elements = 8 then
+                  MAX (val(word_subword n (0,esize):int128))
+                      (MAX (val(word_subword n (esize,esize):int128))
+                           (MAX (val(word_subword n (2*esize,esize):int128))
+                                (MAX (val(word_subword n (3*esize,esize):int128))
+                                     (MAX (val(word_subword n (4*esize,esize):int128))
+                                          (MAX (val(word_subword n (5*esize,esize):int128))
+                                               (MAX (val(word_subword n (6*esize,esize):int128))
+                                                    (val(word_subword n (7*esize,esize):int128))))))))
+                else if elements = 16 then
+                  MAX (val(word_subword n (0,esize):int128))
+                      (MAX (val(word_subword n (esize,esize):int128))
+                           (MAX (val(word_subword n (2*esize,esize):int128))
+                                (MAX (val(word_subword n (3*esize,esize):int128))
+                                     (MAX (val(word_subword n (4*esize,esize):int128))
+                                          (MAX (val(word_subword n (5*esize,esize):int128))
+                                               (MAX (val(word_subword n (6*esize,esize):int128))
+                                                    (MAX (val(word_subword n (7*esize,esize):int128))
+                                                         (MAX (val(word_subword n (8*esize,esize):int128))
+                                                              (MAX (val(word_subword n (9*esize,esize):int128))
+                                                                   (MAX (val(word_subword n (10*esize,esize):int128))
+                                                                        (MAX (val(word_subword n (11*esize,esize):int128))
+                                                                             (MAX (val(word_subword n (12*esize,esize):int128))
+                                                                                  (MAX (val(word_subword n (13*esize,esize):int128))
+                                                                                       (MAX (val(word_subword n (14*esize,esize):int128))
+                                                                                            (val(word_subword n (15*esize,esize):int128))))))))))))))))
+                else 0 in
+        (Rd := (word d:128 word)) s`;;
+
 let arm_UBFM = define
  `arm_UBFM Rd Rn immr imms =
     \s. let x:N word = read Rn (s:armstate) in
@@ -3227,6 +3265,71 @@ let arm_UADDLV_ALT =
    `arm_UADDLV Rd Rn 8 16`;
    `arm_UADDLV Rd Rn 4 32`];;
 
+let arm_UMAXV_ALT =
+  let prove_lemma goal =
+    prove(goal,
+      REWRITE_TAC[arm_UMAXV; FUN_EQ_THM; LET_DEF; LET_END_DEF] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[VAL_WORD_SUBWORD] THEN
+      REWRITE_TAC[DIMINDEX_8; DIMINDEX_16; DIMINDEX_32; DIMINDEX_128] THEN
+      CONV_TAC NUM_REDUCE_CONV) in
+  let lemma_4_32 = prove_lemma
+    `arm_UMAXV Rd Rn 4 32 =
+     (\s. (Rd := word
+           (MAX (val(word_subword (read Rn s) (0,32):32 word))
+           (MAX (val(word_subword (read Rn s) (32,32):32 word))
+           (MAX (val(word_subword (read Rn s) (64,32):32 word))
+                (val(word_subword (read Rn s) (96,32):32 word)))))) s)` in
+  let lemma_4_16 = prove_lemma
+    `arm_UMAXV Rd Rn 4 16 =
+     (\s. (Rd := word
+           (MAX (val(word_subword (read Rn s) (0,16):16 word))
+           (MAX (val(word_subword (read Rn s) (16,16):16 word))
+           (MAX (val(word_subword (read Rn s) (32,16):16 word))
+                (val(word_subword (read Rn s) (48,16):16 word)))))) s)` in
+  let lemma_8_16 = prove_lemma
+    `arm_UMAXV Rd Rn 8 16 =
+     (\s. (Rd := word
+           (MAX (val(word_subword (read Rn s) (0,16):16 word))
+           (MAX (val(word_subword (read Rn s) (16,16):16 word))
+           (MAX (val(word_subword (read Rn s) (32,16):16 word))
+           (MAX (val(word_subword (read Rn s) (48,16):16 word))
+           (MAX (val(word_subword (read Rn s) (64,16):16 word))
+           (MAX (val(word_subword (read Rn s) (80,16):16 word))
+           (MAX (val(word_subword (read Rn s) (96,16):16 word))
+                (val(word_subword (read Rn s) (112,16):16 word)))))))))) s)` in
+  let lemma_8_8 = prove_lemma
+    `arm_UMAXV Rd Rn 8 8 =
+     (\s. (Rd := word
+           (MAX (val(word_subword (read Rn s) (0,8):byte))
+           (MAX (val(word_subword (read Rn s) (8,8):byte))
+           (MAX (val(word_subword (read Rn s) (16,8):byte))
+           (MAX (val(word_subword (read Rn s) (24,8):byte))
+           (MAX (val(word_subword (read Rn s) (32,8):byte))
+           (MAX (val(word_subword (read Rn s) (40,8):byte))
+           (MAX (val(word_subword (read Rn s) (48,8):byte))
+                (val(word_subword (read Rn s) (56,8):byte)))))))))) s)` in
+  let lemma_16_8 = prove_lemma
+    `arm_UMAXV Rd Rn 16 8 =
+     (\s. (Rd := word
+           (MAX (val(word_subword (read Rn s) (0,8):byte))
+           (MAX (val(word_subword (read Rn s) (8,8):byte))
+           (MAX (val(word_subword (read Rn s) (16,8):byte))
+           (MAX (val(word_subword (read Rn s) (24,8):byte))
+           (MAX (val(word_subword (read Rn s) (32,8):byte))
+           (MAX (val(word_subword (read Rn s) (40,8):byte))
+           (MAX (val(word_subword (read Rn s) (48,8):byte))
+           (MAX (val(word_subword (read Rn s) (56,8):byte))
+           (MAX (val(word_subword (read Rn s) (64,8):byte))
+           (MAX (val(word_subword (read Rn s) (72,8):byte))
+           (MAX (val(word_subword (read Rn s) (80,8):byte))
+           (MAX (val(word_subword (read Rn s) (88,8):byte))
+           (MAX (val(word_subword (read Rn s) (96,8):byte))
+           (MAX (val(word_subword (read Rn s) (104,8):byte))
+           (MAX (val(word_subword (read Rn s) (112,8):byte))
+                (val(word_subword (read Rn s) (120,8):byte)))))))))))))))))) s)` in
+  end_itlist CONJ [lemma_8_8; lemma_16_8; lemma_4_16; lemma_8_16; lemma_4_32];;
+
 let ASSIGN_MEMORY_TRIPLES_SPLIT = prove
  (`(memory :> wbytes x) := (y:192 word) =
    (memory :> bytes64 (word_add x (word 16))) := word_subword y (128,64) ,,
@@ -3298,7 +3401,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TBL_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
-       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
+       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;
