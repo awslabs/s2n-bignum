@@ -129,6 +129,9 @@ let iclasses =
   (*** CMHI, vector ***)
   "0x101110xx1xxxxx001101xxxxxxxxxx";
 
+  (*** CMGE, vector ***)
+  "0x001110xx1xxxxx001111xxxxxxxxxx";
+
   (*** CNT, bias to defined size = 0 ***)
   "0x00111000100000010110xxxxxxxxxx";
   "0x001110xx100000010110xxxxxxxxxx";
