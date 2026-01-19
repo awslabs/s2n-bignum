@@ -327,7 +327,11 @@ memory.
 To perform the formal proof for a particular function, you will need to install
 [HOL Light](https://github.com/jrh13/hol-light/).
 
-Option 1: Install via OPAM (Recommended)
+There are two options to install HOL Light. We recommend the second, which will
+always give you the latest version of HOL Light. This is because running the
+full proofs requires features in the latest HOL Light (after Nov 2025).
+
+Option 1: Install via OPAM (Easier)
 
 Create a new OCaml 5.2 environment and install HOL Light:
 
@@ -337,12 +341,13 @@ Create a new OCaml 5.2 environment and install HOL Light:
 
 Ensure that `hol.sh` is available in your PATH after installation.
 
-Option 2: Install from Source
+Option 2: Install from Source (Recommended)
 
 Follow the [README](https://github.com/jrh13/hol-light/blob/master/README)
 instructions from the HOL Light repository. Make sure to compile with
 `HOLLIGHT_USE_MODULE=1` to generate `hol_lib.cmxa`. After installation, ensure
-that `hol.sh` is available in your PATH.
+that `hol.sh` is available in your PATH. We recommend to place it under your
+home folder `$HOME/hol-light`.
 
 Use the Makefile within either the `arm` or `x86` directories to generate a
 target of the form `function_name.correct` for a corresponding object file
