@@ -53,7 +53,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
 
    mov    rcx,rsp
    .cfi_register rsp, rcx
-   and    rsp, QWORD PTR 0xffffffffffffffe0
+   and    rsp, 0xffffffffffffffe0
    sub %rsp, 0x360
 
    // **** Bitstates Allocation Map on Stack **** //
@@ -84,34 +84,30 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    // 0x2e0(%rsp)	A[24]	[state0[24], state1[24], state2[24], state3[24]]	Input (%rdi) offsets: 0xC0, 0x188, 0x250, 0x318
 
    // Load 32 bytes from each of the 4 states (A[0-3])
-   vmovdqu ymm5,[rdi]         // Load state0[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0x00)
-   vmovdqu ymm1,[rdi+0xc8]    // Load state1[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0xC8)
-   vmovdqu ymm2,[rdi+0x190]   // Load state2[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0x190)
-   vmovdqu ymm3,[rdi+0x258]   // Load state3[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0x258)
+   vmovdqu ymm5,[rdi]                            // Load state0[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0x00)
+   vmovdqu ymm1,[rdi+0xc8]                       // Load state1[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0xC8)
+   vmovdqu ymm2,[rdi+0x190]                      // Load state2[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0x190)
+   vmovdqu ymm3,[rdi+0x258]                      // Load state3[0, 1, 2, 3] (32 bytes from Input (%rdi) offsets: 0x258)
 
    // Interleave low and high qwords from ymm5(state0[0, 1, 2, 3]) and ymm1(state1[0, 1, 2, 3])
-   vpunpcklqdq ymm4,ymm5,ymm1             // ymm4 = [state0[0] | state1[0] | state0[2] | state1[2]]
-   vpunpckhqdq ymm0,ymm5,ymm1             // ymm0 = [state0[1] | state1[1] | state0[3] | state1[3]]
+   vpunpcklqdq ymm4,ymm5,ymm1                    // ymm4 = [state0[0] | state1[0] | state0[2] | state1[2]]
+   vpunpckhqdq ymm0,ymm5,ymm1                    // ymm0 = [state0[1] | state1[1] | state0[3] | state1[3]]
 
    // Interleave low and high qwords from ymm2(state2[0, 1, 2, 3]) and ymm3(state3[0, 1, 2, 3])
-   vpunpcklqdq ymm6,ymm2,ymm3             // ymm6 = [state2[0] | state3[0] | state2[2] | state3[2]]
-   vpunpckhqdq ymm7,ymm2,ymm3             // ymm7 = [state2[1] | state3[1] | state2[3] | state3[3]]
+   vpunpcklqdq ymm6,ymm2,ymm3                    // ymm6 = [state2[0] | state3[0] | state2[2] | state3[2]]
+   vpunpckhqdq ymm7,ymm2,ymm3                    // ymm7 = [state2[1] | state3[1] | state2[3] | state3[3]]
 
    // Permute 128-bit lanes to complete the interleave
-   // A0 = ymm5 = [state0[0] | state1[0] | state2[0] | state3[0]]
-   vperm2i128 ymm5,ymm4,ymm6,0x20
-   // A2 = ymm2 = [state0[2] | state1[2] | state2[2] | state3[2]]
-   vperm2i128 ymm2,ymm4,ymm6,0x31
-   // A1 = ymm1 = [state0[1] | state1[1] | state2[1] | state3[1]]
-   vperm2i128 ymm1,ymm0,ymm7,0x20
-   // A3 = ymm3 = [state0[3] | state1[3] | state2[3] | state3[3]]
-   vperm2i128 ymm3,ymm0,ymm7,0x31
+   vperm2i128 ymm5,ymm4,ymm6,0x20                // A0 = ymm5 = [state0[0] | state1[0] | state2[0] | state3[0]]
+   vperm2i128 ymm2,ymm4,ymm6,0x31                // A2 = ymm2 = [state0[2] | state1[2] | state2[2] | state3[2]]
+   vperm2i128 ymm1,ymm0,ymm7,0x20                // A1 = ymm1 = [state0[1] | state1[1] | state2[1] | state3[1]]
+   vperm2i128 ymm3,ymm0,ymm7,0x31                // A3 = ymm3 = [state0[3] | state1[3] | state2[3] | state3[3]]
 
    // Store results on the stack following the Bitstates Allocation Map
-                                         // keep A0 -> ymm5 (special value, not stored on stack)
-   vmovdqu [rsp],ymm1        // store A[1] -> on stack
-   vmovdqu [rsp+0x20],ymm2   // store A[2] -> on stack
-   vmovdqu [rsp+0x40],ymm3   // store A[3] -> on stack
+   // keep A0 -> ymm5 (special value, not stored on stack)
+   vmovdqu [rsp],ymm1                            // store A[1] -> on stack
+   vmovdqu [rsp+0x20],ymm2                       // store A[2] -> on stack
+   vmovdqu [rsp+0x40],ymm3                       // store A[3] -> on stack
 
    // Load, Interleave, and Store 32 bytes from each of the 4 states (A[4-7])
    vmovdqu ymm0,[rdi+0x20]
@@ -205,18 +201,12 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
 
    // Load, Interleave, and Store 32 bytes from each of the 4 states (A[24])
    // A[24] is the last element (only 8 bytes per state)
-   // Load state0[24] into lower 64 bits of xmm1
-   vmovq  xmm1,QWORD PTR [rdi+0xc0]
-   // Insert state1[24] into upper 64 bits of xmm1 = [state0[24] | state1[24]]
-   vpinsrq xmm1,xmm1,[rdi+0x188],0x1
-   // Load state2[24] into lower 64 bits of xmm2
-   vmovq  xmm2,QWORD PTR [rdi+0x250]
-   // Insert state3[24] into upper 64 bits of xmm2 = [state2[24] | state3[24]]
-   vpinsrq xmm2,xmm2,[rdi+0x318],0x1
-   // Interleave into ymm3 = A[24] = [state0[24] | state1[24] | state2[24] | state3[24]]
-   vinserti128 ymm3,ymm1,xmm2,0x1
-   // store A[24] -> on stack
-   vmovdqu [rsp+0x2e0],ymm3
+   vmovq  xmm1,[rdi+0xc0]                        // Load state0[24] into lower 64 bits of xmm1
+   vpinsrq xmm1,xmm1,[rdi+0x188],0x1             // Insert state1[24] into upper 64 bits of xmm1 = [state0[24] | state1[24]]
+   vmovq  xmm2,[rdi+0x250]                       // Load state2[24] into lower 64 bits of xmm2
+   vpinsrq xmm2,xmm2,[rdi+0x318],0x1             // Insert state3[24] into upper 64 bits of xmm2 = [state2[24] | state3[24]]
+   vinserti128 ymm3,ymm1,xmm2,0x1                // Interleave into ymm3 = A[24] = [state0[24] | state1[24] | state2[24] | state3[24]]
+   vmovdqu [rsp+0x2e0],ymm3                      // store A[24] -> on stack
 
    // Initialize the loop counter
    mov    rax,0x0
@@ -224,49 +214,49 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
 .Lsha3_keccak4_f1600_loop:
 
    // Theta step
-   // ymm5                                     // state A[0,0] (A[0])
-   vmovdqu ymm12,[rsp+0x80]       // state A[0,1] (A[5])
-   vmovdqu ymm13,[rsp+0x120]      // state A[0,2] (A[10])
-   vmovdqu ymm11,[rsp+0x1c0]      // state A[0,3] (A[15])
-   vmovdqu ymm10,[rsp+0x260]      // state A[0,4] (A[20])
-   vpxor  ymm1,ymm5,ymm12                     // A[0,0] xor A[0,1] (A[0] xor A[5])
-   vpxor  ymm0,ymm11,ymm13                    // A[0,2] xor A[0,3] (A[10] xor A[15])
-   vpxor  ymm1,ymm1,ymm0                      // (A[0,0] xor A[0,1]) xor (A[0,2] xor A[0,3]) ((A[0] xor A[5]) xor (A[10] xor A[15]))
-   vpxor  ymm1,ymm1,ymm10                     // C[0] = A[0,4] xor (A[0,0] xor A[0,1] xor A[0,2] xor A[0,3]) (A[20] xor (A[0] xor A[5] xor A[10] xor A[15]))
+   // ymm5                                       // state A[0,0] (A[0])
+   vmovdqu ymm12,[rsp+0x80]                      // state A[0,1] (A[5])
+   vmovdqu ymm13,[rsp+0x120]                     // state A[0,2] (A[10])
+   vmovdqu ymm11,[rsp+0x1c0]                     // state A[0,3] (A[15])
+   vmovdqu ymm10,[rsp+0x260]                     // state A[0,4] (A[20])
+   vpxor  ymm1,ymm5,ymm12                        // A[0,0] xor A[0,1] (A[0] xor A[5])
+   vpxor  ymm0,ymm11,ymm13                       // A[0,2] xor A[0,3] (A[10] xor A[15])
+   vpxor  ymm1,ymm1,ymm0                         // (A[0,0] xor A[0,1]) xor (A[0,2] xor A[0,3]) ((A[0] xor A[5]) xor (A[10] xor A[15]))
+   vpxor  ymm1,ymm1,ymm10                        // C[0] = A[0,4] xor (A[0,0] xor A[0,1] xor A[0,2] xor A[0,3]) (A[20] xor (A[0] xor A[5] xor A[10] xor A[15]))
 
    vmovdqu ymm4,[rsp]
    vmovdqu ymm6,[rsp+0x1e0]
    vpxor  ymm8,ymm4,[rsp+0xa0]
    vpxor  ymm0,ymm6,[rsp+0x140]
    vpxor  ymm8,ymm8,ymm0
-   vpxor  ymm8,ymm8,[rsp+0x280]   // C[1] = A[1,4] (A[21]) xor A[1,2] xor A[1,3] xor A[1,1] xor A[1,0] (A[21] xor A[11] xor A[16] xor A[6] xor A[1])
+   vpxor  ymm8,ymm8,[rsp+0x280]                  // C[1] = A[1,4] (A[21]) xor A[1,2] xor A[1,3] xor A[1,1] xor A[1,0] (A[21] xor A[11] xor A[16] xor A[6] xor A[1])
 
    vmovdqu ymm0,[rsp+0x20]
    vpxor  ymm7,ymm0,[rsp+0xc0]
    vmovdqu ymm14,[rsp+0x200]
    vpxor  ymm0,ymm14,[rsp+0x160]
    vpxor  ymm7,ymm7,ymm0
-   vpxor  ymm7,ymm7,[rsp+0x2a0]  // C[2] = A[2,4] (A[22]) xor A[2,2] xor A[2,3] xor A[2,1] xor A[2,0] (A[22] xor A[12] xor A[17] xor A[7] xor A[2])
+   vpxor  ymm7,ymm7,[rsp+0x2a0]                  // C[2] = A[2,4] (A[22]) xor A[2,2] xor A[2,3] xor A[2,1] xor A[2,0] (A[22] xor A[12] xor A[17] xor A[7] xor A[2])
 
    vmovdqu ymm3,[rsp+0x40]
    vpxor  ymm6,ymm3,[rsp+0xe0]
    vmovdqu ymm0,[rsp+0x220]
    vpxor  ymm0,ymm0,[rsp+0x180]
    vpxor  ymm6,ymm6,ymm0
-   vpxor  ymm6,ymm6,[rsp+0x2c0]  // C[3] = A[3,4] (A[23]) xor A[3,2] xor A[3,3] xor A[3,1] xor A[3,0] (A[23] xor A[13] xor A[18] xor A[8] xor A[3])
+   vpxor  ymm6,ymm6,[rsp+0x2c0]                  // C[3] = A[3,4] (A[23]) xor A[3,2] xor A[3,3] xor A[3,1] xor A[3,0] (A[23] xor A[13] xor A[18] xor A[8] xor A[3])
 
    vmovdqu ymm4,[rsp+0x60]
    vpxor  ymm2,ymm4,[rsp+0x100]
    vmovdqu ymm0,[rsp+0x240]
    vpxor  ymm0,ymm0,[rsp+0x1a0]
    vpxor  ymm2,ymm2,ymm0
-   vpxor  ymm2,ymm2,[rsp+0x2e0]  // C[4] = A[4,4] (A[24]) xor A[4,2] xor A[4,3] xor A[4,1] xor A[4,0] (A[24] xor A[14] xor A[19] xor A[9] xor A[4])
+   vpxor  ymm2,ymm2,[rsp+0x2e0]                  // C[4] = A[4,4] (A[24]) xor A[4,2] xor A[4,3] xor A[4,1] xor A[4,0] (A[24] xor A[14] xor A[19] xor A[9] xor A[4])
 
-    // C[0] = ymm1
-    // C[1] = ymm8 -> on stack
-    // C[2] = ymm7 -> on stack
-    // C[3] = ymm6 -> on stack
-    // C[4] = ymm2 -> on stack
+   // C[0] = ymm1
+   // C[1] = ymm8 -> on stack
+   // C[2] = ymm7 -> on stack
+   // C[3] = ymm6 -> on stack
+   // C[4] = ymm2 -> on stack
 
    // ROL(C[1], 1)
    vpsllq ymm4,ymm8,0x1
@@ -283,61 +273,60 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    vpsrlq ymm9,ymm6,0x3f
    vpor   ymm0,ymm0,ymm9
 
-   vpxor  ymm4,ymm4,ymm2        // D[0] = C[4] xor ROL(C[1], 1)
-   vpxor  ymm3,ymm3,ymm1        // D[1] = C[0] xor ROL(C[2], 1)
-   vpxor  ymm0,ymm0,ymm8        // D[2] = C[1] xor ROL(C[3], 1)
+   vpxor  ymm4,ymm4,ymm2                         // D[0] = C[4] xor ROL(C[1], 1)
+   vpxor  ymm3,ymm3,ymm1                         // D[1] = C[0] xor ROL(C[2], 1)
+   vpxor  ymm0,ymm0,ymm8                         // D[2] = C[1] xor ROL(C[3], 1)
 
    // ROL(C[4], 1)
    vpsllq ymm8,ymm2,0x1
    vpsrlq ymm2,ymm2,0x3f
    vpor   ymm2,ymm2,ymm8
 
-   vpxor  ymm14,ymm4,ymm5                     // A'[0] = A'[0,0] = A[0,0] xor D[0]
-   vpxor  ymm9,ymm0,[rsp+0xc0]    // A'[7] = A'[2,1] = A[2,1] (A[7]) xor D[2]
-   vmovdqu [rsp+0x320],ymm9       // store A'[2,1] (A'[7]) -> on stack
+   vpxor  ymm14,ymm4,ymm5                        // A'[0] = A'[0,0] = A[0,0] xor D[0]
+   vpxor  ymm9,ymm0,[rsp+0xc0]                   // A'[7] = A'[2,1] = A[2,1] (A[7]) xor D[2]
+   vmovdqu [rsp+0x320],ymm9                      // store A'[2,1] (A'[7]) -> on stack
+   vpxor  ymm15,ymm4,ymm12                       // A'[5] = A'[0,1] = A[0,1] (A[5]) xor D[0]
+   vpxor  ymm12,ymm3,[rsp]                       // A'[1] = A'[1,0] = A[1,0] (A[1]) xor D[1]
+   vpxor  ymm8,ymm3,[rsp+0x140]                  // A'[11] = A[1,2] (A[11]) xor D[1]
+   vmovdqu [rsp+0x340],ymm14                     // store A'[0,0] (A'[0]) -> on stack
+   vpxor  ymm14,ymm4,ymm13                       // A'[10] = A'[0,2] = A[0,2] (A[10]) xor D[0]
+   vpxor  ymm13,ymm4,ymm11                       // A'[15] = A'[0,3] = A[0,3] (A[15]) xor D[0]
+   vpxor  ymm11,ymm3,[rsp+0xa0]                  // A'[6] = A'[1,1] = A[1,1] (A[6]) xor D[1]
+   vpxor  ymm4,ymm4,ymm10                        // A'[20] = A'[0,4] = A[0,4] (A[20]) xor D[0]
+   vpxor  ymm10,ymm0,[rsp+0x20]                  // A'[2] = A'[2,0] = A[2,0] (A[2]) xor D[2]
 
-   vpxor  ymm15,ymm4,ymm12                    // A'[5] = A'[0,1] = A[0,1] (A[5]) xor D[0]
-   vpxor  ymm12,ymm3,[rsp]        // A'[1] = A'[1,0] = A[1,0] (A[1]) xor D[1]
-   vpxor  ymm8,ymm3,[rsp+0x140]   // A'[11] = A[1,2] (A[11]) xor D[1]
-   vmovdqu [rsp+0x340],ymm14      // store A'[0,0] (A'[0]) -> on stack
-   vpxor  ymm14,ymm4,ymm13                    // A'[10] = A'[0,2] = A[0,2] (A[10]) xor D[0]
-   vpxor  ymm13,ymm4,ymm11                    // A'[15] = A'[0,3] = A[0,3] (A[15]) xor D[0]
-   vpxor  ymm11,ymm3,[rsp+0xa0]   // A'[6] = A'[1,1] = A[1,1] (A[6]) xor D[1]
-   vpxor  ymm4,ymm4,ymm10                     // A'[20] = A'[0,4] = A[0,4] (A[20]) xor D[0]
-   vpxor  ymm10,ymm0,[rsp+0x20]   // A'[2] = A'[2,0] = A[2,0] (A[2]) xor D[2]
-
-   vpxor  ymm2,ymm2,ymm7                      // D[3] = C[2] xor ROL(C[4], 1)
+   vpxor  ymm2,ymm2,ymm7                         // D[3] = C[2] xor ROL(C[4], 1)
 
    // ROL(C[0], 1)
    vpsllq ymm7,ymm1,0x1
    vpsrlq ymm1,ymm1,0x3f
    vpor   ymm1,ymm1,ymm7
-   vpxor  ymm1,ymm1,ymm6                      // D[4] = C[3] xor ROL(C[0], 1)
+   vpxor  ymm1,ymm1,ymm6                         // D[4] = C[3] xor ROL(C[0], 1)
 
-   vpxor  ymm7,ymm3,[rsp+0x1e0]   // A'[16] = A'[1,3] = A[1,3] (A[16]) xor D[1]
-   vpxor  ymm3,ymm3,[rsp+0x280]   // A'[21] = A'[1,4] = A[1,4] (A[21]) xor D[1]
-   vpxor  ymm5,ymm2,[rsp+0x40]    // A'[3] = A'[3,0] = A[3,0] (A[3]) xor D[3]
-   vpxor  ymm9,ymm0,[rsp+0x160]   // A'[12] = A'[2,2] = A[2,2] (A[12]) xor D[2]
-   vpxor  ymm6,ymm0,[rsp+0x200]   // A'[17] = A'[2,3] = A[2,3] (A[17]) xor D[2]
-   vpxor  ymm0,ymm0,[rsp+0x2a0]   // A'[22] =A'[2,4] = A[2,4] (A[22]) xor D[2]
-   vmovdqu [rsp],ymm5             // store A'[3,0] (A'[3]) -> on stack
-   vpxor  ymm5,ymm2,[rsp+0xe0]    // A'[8] = A'[3,1] = A[3,1] (A[8]) xor D[3]
-   vmovdqu [rsp+0xa0],ymm5        // store A'[3,1] (A'[8]) -> on stack
-   vpxor  ymm5,ymm2,[rsp+0x180]   // A'[13] = A'[3,2] = A[3,2] (A[13]) xor D[3]
-   vmovdqu [rsp+0x140],ymm5       // store A'[3,2] (A'[13]) -> on stack
-   vpxor  ymm5,ymm2,[rsp+0x220]   // A'[18] = A'[3,3] = A[3,3] (A[18]) xor D[3]
-   vpxor  ymm2,ymm2,[rsp+0x2c0]   // store A'[3,3] (A'[18]) -> on stack
-   vmovdqu [rsp+0x1e0],ymm5       // A'[23] = A'[3,4] = A[3,4] (A[23]) xor D[3]
-   vpxor  ymm5,ymm1,[rsp+0x60]    // A'[4] = A'[4,0] = A[4,0] (A[4]) xor D[4]
-   vmovdqu [rsp+0x280],ymm5       // store A'[4,0] (A'[4]) -> on stack
-   vpxor  ymm5,ymm1,[rsp+0x100]   // A'[9] = A'[4,1] = A[4,1] (A[9]) xor D[4]
-   vmovdqu [rsp+0x20],ymm5        // store A'[4,1] (A'[9]) -> on stack
-   vpxor  ymm5,ymm1,[rsp+0x1a0]   // A'[14] = A'[4,2] = A[4,2] (A[14]) xor D[4]
-   vmovdqu [rsp+0x160],ymm5       // store A'[4,2] (A'[14]) -> on stack
-   vpxor  ymm5,ymm1,[rsp+0x240]   // A'[19] = A'[4,3] = A[4,3] (A[19]) xor D[4]
-   vmovdqu [rsp+0x200],ymm5       // store A'[4,3] (A'[19]) -> on stack
-   vpxor  ymm1,ymm1,[rsp+0x2e0]   // A'[24] = A'[4,4] = A[4,4] (A[24]) xor D[4]
-   vmovdqu [rsp+0x40],ymm1        // store A'[4,4] (A'[24]) -> on stack
+   vpxor  ymm7,ymm3,[rsp+0x1e0]                  // A'[16] = A'[1,3] = A[1,3] (A[16]) xor D[1]
+   vpxor  ymm3,ymm3,[rsp+0x280]                  // A'[21] = A'[1,4] = A[1,4] (A[21]) xor D[1]
+   vpxor  ymm5,ymm2,[rsp+0x40]                   // A'[3] = A'[3,0] = A[3,0] (A[3]) xor D[3]
+   vpxor  ymm9,ymm0,[rsp+0x160]                  // A'[12] = A'[2,2] = A[2,2] (A[12]) xor D[2]
+   vpxor  ymm6,ymm0,[rsp+0x200]                  // A'[17] = A'[2,3] = A[2,3] (A[17]) xor D[2]
+   vpxor  ymm0,ymm0,[rsp+0x2a0]                  // A'[22] =A'[2,4] = A[2,4] (A[22]) xor D[2]
+   vmovdqu [rsp],ymm5                            // store A'[3,0] (A'[3]) -> on stack
+   vpxor  ymm5,ymm2,[rsp+0xe0]                   // A'[8] = A'[3,1] = A[3,1] (A[8]) xor D[3]
+   vmovdqu [rsp+0xa0],ymm5                       // store A'[3,1] (A'[8]) -> on stack
+   vpxor  ymm5,ymm2,[rsp+0x180]                  // A'[13] = A'[3,2] = A[3,2] (A[13]) xor D[3]
+   vmovdqu [rsp+0x140],ymm5                      // store A'[3,2] (A'[13]) -> on stack
+   vpxor  ymm5,ymm2,[rsp+0x220]                  // A'[18] = A'[3,3] = A[3,3] (A[18]) xor D[3]
+   vpxor  ymm2,ymm2,[rsp+0x2c0]                  // store A'[3,3] (A'[18]) -> on stack
+   vmovdqu [rsp+0x1e0],ymm5                      // A'[23] = A'[3,4] = A[3,4] (A[23]) xor D[3]
+   vpxor  ymm5,ymm1,[rsp+0x60]                   // A'[4] = A'[4,0] = A[4,0] (A[4]) xor D[4]
+   vmovdqu [rsp+0x280],ymm5                      // store A'[4,0] (A'[4]) -> on stack
+   vpxor  ymm5,ymm1,[rsp+0x100]                  // A'[9] = A'[4,1] = A[4,1] (A[9]) xor D[4]
+   vmovdqu [rsp+0x20],ymm5                       // store A'[4,1] (A'[9]) -> on stack
+   vpxor  ymm5,ymm1,[rsp+0x1a0]                  // A'[14] = A'[4,2] = A[4,2] (A[14]) xor D[4]
+   vmovdqu [rsp+0x160],ymm5                      // store A'[4,2] (A'[14]) -> on stack
+   vpxor  ymm5,ymm1,[rsp+0x240]                  // A'[19] = A'[4,3] = A[4,3] (A[19]) xor D[4]
+   vmovdqu [rsp+0x200],ymm5                      // store A'[4,3] (A'[19]) -> on stack
+   vpxor  ymm1,ymm1,[rsp+0x2e0]                  // A'[24] = A'[4,4] = A[4,4] (A[24]) xor D[4]
+   vmovdqu [rsp+0x40],ymm1                       // store A'[4,4] (A'[24]) -> on stack
 
    // **** State Array B[x,y] after Rho and Pi Steps - Register/Stack Allocation Map ****
    // B[0,0] (B[0])              [rsp+0x340] (A'[0,0] unchanged, no rotation)
@@ -365,7 +354,6 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    // B[2,4] (B[22])             ymm14
    // B[3,4] (B[23])             [rsp+0x2a0]
    // B[4,4] (B[24])             [rsp+0x2e0]
-
 
    // Rho and Pi Steps
    // B[1,3] (B[16]): ROL(A'[0,1], 36)
@@ -616,7 +604,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    vpxor  ymm8,ymm8,ymm11
    vmovdqu [rsp+0x40],ymm8
 
-    // (A''[8]) A''[3,1] = B[3,1] XOR ((NOT B[4,1]) AND B[0,1])
+   // (A''[8]) A''[3,1] = B[3,1] XOR ((NOT B[4,1]) AND B[0,1])
    vpandn ymm8,ymm0,ymm3
    vpxor  ymm7,ymm8,ymm7
    vmovdqu [rsp+0xe0],ymm7
@@ -659,7 +647,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    // (A''[19]) A''[4,3] = B[4,3] XOR ((NOT B[0,3]) AND B[1,3])
    vpandn ymm5,ymm13,[rsp+0x320]
    vpxor  ymm5,ymm5,ymm14
-   vpbroadcastq ymm0,QWORD PTR [rsi]
+   vpbroadcastq ymm0,[rsi]
    vpxor  ymm5,ymm5,ymm0
 
    // (A''[24]) A''[4,4] = B[4,4] XOR ((NOT B[0,4]) AND B[1,4])
@@ -676,33 +664,29 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    jne    .Lsha3_keccak4_f1600_loop
 
    // Load, De-interleave, and Store 32 bytes to each of the 4 states (A[0-3])
-                                          // ymm5 = A[0] = [state0[0] | state1[0] | state2[0] | state3[0]] (already in register)
-   vmovdqu ymm1,[rsp]         // Load A[1] from stack = [state0[1] | state1[1] | state2[1] | state3[1]]
-   vmovdqu ymm2,[rsp+0x20]    // Load A[2] from stack = [state0[2] | state1[2] | state2[2] | state3[2]]
-   vmovdqu ymm3,[rsp+0x40]    // Load A[3] from stack = [state0[3] | state1[3] | state2[3] | state3[3]]
+   // ymm5 = A[0] = [state0[0] | state1[0] | state2[0] | state3[0]] (already in register)
+   vmovdqu ymm1,[rsp]                            // Load A[1] from stack = [state0[1] | state1[1] | state2[1] | state3[1]]
+   vmovdqu ymm2,[rsp+0x20]                       // Load A[2] from stack = [state0[2] | state1[2] | state2[2] | state3[2]]
+   vmovdqu ymm3,[rsp+0x40]                       // Load A[3] from stack = [state0[3] | state1[3] | state2[3] | state3[3]]
 
    // De-interleave ymm5(A[0]) and ymm1(A[1])
-   vpunpcklqdq ymm4,ymm5,ymm1             // ymm4 = [state0[0] | state0[1] | state2[0] | state2[1]]
-   vpunpckhqdq ymm6,ymm5,ymm1             // ymm6 = [state1[0] | state1[1] | state3[0] | state3[1]]
+   vpunpcklqdq ymm4,ymm5,ymm1                    // ymm4 = [state0[0] | state0[1] | state2[0] | state2[1]]
+   vpunpckhqdq ymm6,ymm5,ymm1                    // ymm6 = [state1[0] | state1[1] | state3[0] | state3[1]]
    // De-interleave ymm2(A[2]) and ymm3(A[3])
-   vpunpcklqdq ymm7,ymm2,ymm3             // ymm7 = [state0[2] | state0[3] | state2[2] | state2[3]]
-   vpunpckhqdq ymm8,ymm2,ymm3             // ymm8 = [state1[2] | state1[3] | state3[2] | state3[3]]
+   vpunpcklqdq ymm7,ymm2,ymm3                    // ymm7 = [state0[2] | state0[3] | state2[2] | state2[3]]
+   vpunpckhqdq ymm8,ymm2,ymm3                    // ymm8 = [state1[2] | state1[3] | state3[2] | state3[3]]
 
    // Permute 128-bit lanes to complete the de-interleave
-   // ymm5 = [state0[0] | state0[1] | state0[2] | state0[3]]
-   vperm2i128 ymm5,ymm4,ymm7,0x20
-   // ymm1 = [state1[0] | state1[1] | state1[2] | state1[3]]
-   vperm2i128 ymm1,ymm6,ymm8,0x20
-   // ymm2 = [state2[0] | state2[1] | state2[2] | state2[3]]
-   vperm2i128 ymm2,ymm4,ymm7,0x31
-   // ymm3 = [state3[0] | state3[1] | state3[2] | state3[3]]
-   vperm2i128 ymm3,ymm6,ymm8,0x31
+   vperm2i128 ymm5,ymm4,ymm7,0x20                // ymm5 = [state0[0] | state0[1] | state0[2] | state0[3]]
+   vperm2i128 ymm1,ymm6,ymm8,0x20                // ymm1 = [state1[0] | state1[1] | state1[2] | state1[3]]
+   vperm2i128 ymm2,ymm4,ymm7,0x31                // ymm2 = [state2[0] | state2[1] | state2[2] | state2[3]]
+   vperm2i128 ymm3,ymm6,ymm8,0x31                // ymm3 = [state3[0] | state3[1] | state3[2] | state3[3]]
 
    // Store de-interleaved results back to output
-   vmovdqu [rdi],ymm5         // Store state0[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0x00)
-   vmovdqu [rdi+0xc8],ymm1    // Store state1[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0xC8)
-   vmovdqu [rdi+0x190],ymm2   // Store state2[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0x190)
-   vmovdqu [rdi+0x258],ymm3   // Store state3[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0x258)
+   vmovdqu [rdi],ymm5                            // Store state0[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0x00)
+   vmovdqu [rdi+0xc8],ymm1                       // Store state1[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0xC8)
+   vmovdqu [rdi+0x190],ymm2                      // Store state2[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0x190)
+   vmovdqu [rdi+0x258],ymm3                      // Store state3[0, 1, 2, 3] (32 bytes to Output (%rdi) offsets: 0x258)
 
    // Load, De-interleave, and Store 32 bytes to each of the 4 states (A[4-7])
    vmovdqu ymm0,[rsp+0x60]
@@ -799,10 +783,10 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    vmovdqu ymm3,[rsp+0x2e0]
    vextracti128 xmm0,ymm3,0x0
    vextracti128 xmm1,ymm3,0x1
-   vmovq  QWORD PTR [rdi+0xc0],xmm0
-   vpextrq QWORD PTR [rdi+0x188],xmm0,0x1
-   vmovq  QWORD PTR [rdi+0x250],xmm1
-   vpextrq QWORD PTR [rdi+0x318],xmm1,0x1
+   vmovq [rdi+0xc0],xmm0
+   vpextrq [rdi+0x188],xmm0,0x1
+   vmovq [rdi+0x250],xmm1
+   vpextrq [rdi+0x318],xmm1,0x1
 
    mov    rsp,rcx
    .cfi_same_value rcx

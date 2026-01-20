@@ -32,8 +32,8 @@ s/_internal_s2n_bignum_x86/_internal_s2n_bignum_x86_att/
 /^\.endm/b
 
 # 4-operand instructions: dest,src1,src2,imm -> $imm,%src2,%src1,%dest
-s/[ \t]*vperm2i128[ \t]+ymm([a-z_0-9]+),ymm([a-z_0-9]+),ymm([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\3,%ymm\2,%ymm\1/
-s/^vperm2i128[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\\\3,%ymm\\\2,%ymm\\\1/
+s/[ \t]^vperm2i128[ \t]+ymm([a-z_0-9]+),ymm([a-z_0-9]+),ymm([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\3,%ymm\2,%ymm\1/
+s/[ \t]^vperm2i128[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\\\3,%ymm\\\2,%ymm\\\1/
 s/^vpblendd[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\\\3,%ymm\\\2,%ymm\\\1/
 
 # 3-operand instructions: dest,src1,src2 -> %src2,%src1,%dest
@@ -95,6 +95,7 @@ s/^vpbroadcastd[ \t]+ymm([0-9]+),([^,]+)$/vpbroadcastd\t\2,%ymm\1/
 
 s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,;]*)([/;].*)*$/\1\4, \3 \5/
 s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\5, \4, \3 \6/
+s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\6, \5, \4, \3 \7/
 
 # Fix up whitespace just in case
 
