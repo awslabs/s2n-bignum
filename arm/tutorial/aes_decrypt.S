@@ -12,9 +12,9 @@
 aes_decrypt:
 	ldr	w6,[x2,#240]
 	ld1	{v0.16b},[x2],#16
-	ld1	{v1.16b},[x2],#16
 	ld1	{v6.16b},[x1]
 	sub	w6,w6,#2
+	ld1	{v1.16b},[x2],#16
 
 Loop_dec:
 	aesd	v6.16b,v0.16b
