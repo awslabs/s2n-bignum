@@ -14,8 +14,7 @@ To verify programs in x86, see `x86/tutorial`.
 6. `bignum.ml`: Writing a specification of a program dealing with big numbers & proving it.
 7. `rodata.ml`: Reading data from the read-only section.
 8. `safety.ml`: Verify the safety property (constant-time and and memory-safe)
-9. `aes_encrypt.ml`: Verifying a simple AES encryption program.
-10. `aes_decrypt.ml`: Verifying a simple AES decryption program.
+9. `aes_encrypt_decrypt.ml`: Verify AES block encryption and decryption.
 
 ### Relational reasoning
 
