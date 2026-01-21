@@ -1106,7 +1106,7 @@ let SHA3_KECCAK4_F1600_CORRECT = prove
 
 let SHA3_KECCAK4_F1600_FULL_EXEC = X86_MK_EXEC_RULE sha3_keccak4_f1600_tmc;;
 
-let SHA3_KECCAK4_F1600_NOIBT_SUBROUTINE_CORRECT = prove
+let SHA3_KECCAK4_F1600_NOIBT_SUBROUTINE_CORRECT = time prove
  (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_tmc) (val (word_sub stackpointer (word 0x37f)), 0x37f) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_tmc) (val bitstate_in, 800) /\
@@ -1174,7 +1174,7 @@ let SHA3_KECCAK4_F1600_NOIBT_SUBROUTINE_CORRECT = prove
   X86_STEPS_TAC SHA3_KECCAK4_F1600_FULL_EXEC (5--6) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
-let SHA3_KECCAK4_F1600_SUBROUTINE_CORRECT = prove
+let SHA3_KECCAK4_F1600_SUBROUTINE_CORRECT = time prove
  (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64 returnaddress.
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_mc) (val (word_sub stackpointer (word 0x37f)), 0x37f) /\
   nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak4_f1600_mc) (val bitstate_in, 800) /\
