@@ -44,7 +44,7 @@ out = state
 
 end
 *)
-(* TODO: Nevine will finish writing this spec *)
+
 (* Note: In the spec, SubBytes precedes ShiftRows, but the instruction
          definition of aese in arm/proofs/aes.ml has them interchanged.
          This is possible but requires a modified lookup table, joined_GF2,

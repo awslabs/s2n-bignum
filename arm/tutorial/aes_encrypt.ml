@@ -4,7 +4,7 @@
  *)
 
 (******************************************************************************
-  An AES-256 encryption proof.
+  AES-256 encryption proof.
 ******************************************************************************)
 
 needs "arm/proofs/base.ml";;
@@ -20,7 +20,7 @@ needs "arm/proofs/utils/aes_encrypt_spec.ml";;
    2 round keys are loaded in v0 and v1 before the loop and then in the loop and
    the counter is decremented by 2 in each iteration.
 
-   The instructions AESE and AESMC form one AES round:
+   The instructions AESE and AESMC form one AES encryption round:
    AESE: AESSubBytes(AESShiftRows(operand1 XOR operand2),   // XOR = AddRoundKey
    AESMC: AESMixColumns(operand)
    The last round doesn't use AESMC, only AESE and XOR.
@@ -59,10 +59,13 @@ let aes256_encrypt_mc = define_assert_from_elf "aes256_encrypt_mc" "arm/tutorial
 You can get the above OCaml list data structure from
 First generating the <file.o> by running at the command line under arm directory:
   $ make tutorial/<file.o>
-`print_literal_from_elf "<file.o>"` or
+`print_literal_from_elf "arm/tutorial/<file.o>"` or
 `save_literal_from_elf "<file.txt>" "<file.o>"`.
 *)
 
+(* ARM_MK_EXEC_RULE decodes the byte sequence into an OCaml array of
+  theorems describing the instruction decoded at each PC (only when
+  it is multiple of 4). *)
 let AES256_ENCRYPT_EXEC = ARM_MK_EXEC_RULE aes256_encrypt_mc;;
 
 let AES256_ENCRYPT_CORRECT = prove(
@@ -109,25 +112,32 @@ let AES256_ENCRYPT_CORRECT = prove(
   (* Find the length of the program using a Conversion *)
   REWRITE_TAC [(REWRITE_CONV [aes256_encrypt_mc] THENC LENGTH_CONV) `LENGTH aes256_encrypt_mc`] THEN
 
+ (* Strips the outermost universal quantifier from the conclusion of a goal *)
   REPEAT STRIP_TAC THEN
   (* Start symbolic execution with state 's0' *)
   ENSURES_INIT_TAC "s0" THEN
-  (* Symbolic execution of all instructions *)
-  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (1--59) THEN
+  (* Symbolic execution *)
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (1--6) THEN
+  ARM_STEPS_TAC AES256_ENCRYPT_EXEC (7--59) THEN
   (* Returned; Finalize symbolic execution. *)
   ENSURES_FINAL_STATE_TAC THEN
 
+  (* Use ASM_REWRITE_TAC[] to rewrite the goal using equalities in assumptions. *)
   ASM_REWRITE_TAC[] THEN
+  (* Use the specs to expand defintions *)
   REWRITE_TAC [aes256_encrypt] THEN
 
-  (* Replace the elements from the key round lists with their value *)
+  (* Replace the elements selection, EL, with the selected element
+     from the key round list. *)
   REWRITE_TAC EL_15_128_CLAUSES THEN
 
-  (* Expand definitions and evaluate `let` terms *)
+  (* Expand definitions and evaluate `let` terms. *)
   REWRITE_TAC [aes256_encrypt_round; aese; aesmc] THEN
   CONV_TAC (TOP_DEPTH_CONV let_CONV) THEN
+
+  (* Evaluate the logical expression on both sides as a gate circuit between bits. *)
   BITBLAST_TAC
-  (* Alternatively, use the XOR symmetry
-  GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
+  (* Alternatively, use the XOR symmetry *)
+  (* GEN_REWRITE_TAC LAND_CONV [WORD_XOR_SYM] THEN
     REFL_TAC *)
 );;
