@@ -135,7 +135,7 @@ pc + 0x2F61 ***)
               read RIP s = word pc /\
               C_ARGUMENTS [a; zetas] s /\
               wordlist_from_memory(zetas,624) s = MAP (iword: int -> 32 word) mldsa_complete_qdata /\
-              (!i. i < 256 ==> abs(ival(x i)) <= &42035261) /\
+              (!i. i < 256 ==> abs(ival(x i)) <= &8380416) /\
               !i. i < 256
                   ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                       x i)
@@ -143,7 +143,7 @@ pc + 0x2F61 ***)
               (!i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
-                      (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
+                      (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                       abs(ival zi) <= &6135312))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
@@ -288,6 +288,78 @@ e(W(fun (asl,w) ->
        `l':int <= l /\ u <= u'
         ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
       CONV_TAC INT_REDUCE_CONV])));;
+
+
+
+(* new attempt after simulation *)
+
+(*** Step 1: Split 256-bit memory into 32-bit chunks ***)
+e(REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+  CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
+  CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
+  check (can (term_match [] `read qqq s:int256 = xxx`) o concl))));;
+
+(*** Step 2: Expand cases and simplify ***)
+e(CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC DEPTH_CONV NUM_ADD_CONV) THEN
+  REWRITE_TAC[INT_ABS_BOUNDS; WORD_ADD_0] THEN
+  ASM_REWRITE_TAC[WORD_ADD_0]);;
+
+(*** Step 3: Discard state ***)
+e(ASM_REWRITE_TAC[] THEN DISCARD_STATE_TAC "s2265");;
+
+(*** Step 4: Pull abbreviations into conclusion ***)
+e(W(fun (asl,w) ->
+     let asms =
+        map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
+     MP_TAC(end_itlist CONJ (rev asms)) THEN
+     MAP_EVERY (fun t -> UNDISCH_THEN (concl t) (K ALL_TAC)) asms));;
+
+(*** Step 5: Simplify word operations ***)
+e(REWRITE_TAC[WORD_BLAST `word_subword (x:int32) (0,32) = x`] THEN
+  REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0,64) = x`] THEN
+  REWRITE_TAC[WORD_BLAST
+   `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0,32) = h`] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV));;
+
+(*** Step 6: Move to assumptions ***)
+e(STRIP_TAC);;
+
+(*** Step 7: Expand lets ***)
+e(CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[GSYM CONJ_ASSOC]);;
+
+(*** Step 8: Final proof - use the exact pattern from ML-DSA Forward NTT ***)
+e(W(fun (asl,w) ->
+    let lfn = PROCESS_BOUND_ASSUMPTIONS
+      (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
+    and asms =
+      map snd (filter (is_local_definition [mldsa_montmul] o concl o snd) asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+
+    REPEAT(GEN_REWRITE_TAC I
+     [TAUT `p /\ q /\ r /\ s <=> (p /\ q /\ r) /\ s`] THEN CONJ_TAC) THEN
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o rand o lhand o rator o lhand o snd) THEN
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+     [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
+      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
+      CONV_TAC(ONCE_DEPTH_CONV MLDSA_INVERSE_NTT_CONV) THEN
+      REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
+      REWRITE_TAC[INT_REM_EQ] THEN
+      REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
+      REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
+      CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
+      MATCH_MP_TAC(INT_ARITH
+       `l':int <= l /\ u <= u'
+        ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
+      CONV_TAC INT_REDUCE_CONV])));;
+
+
+
+
+
+
+
 
 
 (* 
