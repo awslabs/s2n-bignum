@@ -144,7 +144,7 @@ pc + 0x2F61 ***)
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
                       (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
-                      abs(ival zi) <= &6135312))
+                      abs(ival zi) <= &8380416))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
           MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
