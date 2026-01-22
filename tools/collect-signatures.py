@@ -48,11 +48,6 @@ class FnMemInputOutput:
     return self.meminputs == io2.meminputs and self.memoutputs == io2.memoutputs and \
         self.temporaries == decl2.temporaries
 
-  def print(self):
-    print(f"- meminputs: {self.meminputs}")
-    print(f"- memoutputs: {self.memoutputs}")
-    print(f"- temporaries: {self.temporaries}")
-
 def parseFnDecl(s:str, filename:str) -> FnDecl:
   assert s.startswith("extern"), s
   original_lines = s
