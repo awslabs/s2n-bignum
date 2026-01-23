@@ -54,7 +54,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    mov    rcx,rsp
    .cfi_register rsp, rcx
    and    rsp, 0xffffffffffffffe0
-   sub %rsp, 0x360
+   sub rsp, 0x360
 
    // **** Bitstates Allocation Map on Stack **** //
    // ymm5     	    A[0]	[state0[0], state1[0], state2[0], state3[0]]        Input (%rdi) offsets: 0x00, 0xC8, 0x190, 0x258
@@ -211,7 +211,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    // Initialize the loop counter
    mov    rax,0x0
 
-.Lsha3_keccak4_f1600_loop:
+Lsha3_keccak4_f1600_loop:
 
    // Theta step
    // ymm5                                       // state A[0,0] (A[0])
@@ -661,7 +661,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    add    rsi,0x8
    add    rax,0x1
    cmp    rax,0x18
-   jne    .Lsha3_keccak4_f1600_loop
+   jne    Lsha3_keccak4_f1600_loop
 
    // Load, De-interleave, and Store 32 bytes to each of the 4 states (A[0-3])
    // ymm5 = A[0] = [state0[0] | state1[0] | state2[0] | state3[0]] (already in register)

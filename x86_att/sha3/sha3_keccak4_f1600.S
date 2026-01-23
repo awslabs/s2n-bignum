@@ -211,7 +211,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    // Initialize the loop counter
    movq   $0x0, %rax
 
-.Lsha3_keccak4_f1600_loop:
+Lsha3_keccak4_f1600_loop:
 
    // Theta step
    // %ymm5                                       // state A(0,0) (A[0])
@@ -661,7 +661,7 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    addq   $0x8, %rsi
    addq   $0x1, %rax
    cmpq   $0x18, %rax
-   jne    .Lsha3_keccak4_f1600_loop
+   jne    Lsha3_keccak4_f1600_loop
 
    // Load, De-interleave, and Store 32 bytes to each of the 4 states (A(0-3))
    // %ymm5 = A0 = (state0[0) | state1[0] | state2[0] | state3[0]] (already in register)
