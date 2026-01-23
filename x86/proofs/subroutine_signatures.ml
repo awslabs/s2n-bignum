@@ -4735,7 +4735,7 @@ let subroutine_signatures = [
    ])
 );
 
-("mldsa_poly_reduce",
+("mldsa_reduce",
   ([(*args*)
      ("a", "int32_t[static 256]", (*is const?*)"false");
    ],
