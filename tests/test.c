@@ -12597,7 +12597,7 @@ int test_mlkem_rej_uniform(void)
   return 0;
 }
 
-int test_mldsa_poly_reduce(void)
+int test_mldsa_reduce(void)
 {
     // Skip test on non-x86_64 architectures
     if (get_arch_name() != ARCH_X86_64) {
@@ -12610,18 +12610,18 @@ int test_mldsa_poly_reduce(void)
     int32_t a[256] __attribute__((aligned(32)));
     int32_t b[256] __attribute__((aligned(32)));
 
-    printf("Testing mldsa_poly_reduce with %d cases\n", tests);
+    printf("Testing mldsa_reduce with %d cases\n", tests);
 
     for (t = 0; t < tests; ++t) {
         for (i = 0; i < 256; ++i)
             // Generate random int32_t values across full range [-2^31, 2^31-1]
             b[i] = a[i] = (int32_t) (random64() % 4294967296ULL) - 2147483648LL;
 
-        mldsa_poly_reduce(b);
+        mldsa_reduce(b);
 
         for (i = 0; i < 256; ++i) {
             if (reference_poly_reduce(a[i]) != b[i]) {
-                printf("Error in mldsa_poly_reduce; element i = %"PRIu64
+                printf("Error in mldsa_reduce; element i = %"PRIu64
                        "; code[i] = 0x%08"PRIx32
                        " while reference[i] = 0x%08"PRIx32"\n",
                        i, b[i], reference_poly_reduce(a[i]));
@@ -12630,7 +12630,7 @@ int test_mldsa_poly_reduce(void)
         }
 
         if (VERBOSE) {
-            printf("OK:mldsa_poly_reduce[0x%08"PRIx32",0x%08"PRIx32",...,"
+            printf("OK:mldsa_reduce[0x%08"PRIx32",0x%08"PRIx32",...,"
                    "0x%08"PRIx32",0x%08"PRIx32"] = "
                    "[0x%08"PRIx32",0x%08"PRIx32",...,"
                    "0x%08"PRIx32",0x%08"PRIx32"]\n",
@@ -15927,7 +15927,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
-  functionaltest(all,"mldsa_poly_reduce",test_mldsa_poly_reduce);
+  functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
   functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
