@@ -128,6 +128,13 @@ let BITMAP_MLDSA_AVX2_NTT_ORDER = prove
 let mldsa_avx2_ntt_order' = define
  `mldsa_avx2_ntt_order' = bitmap [4;3;2;7;6;5;1;0]`;;
 
+(* ML-DSA INTT twiddle index formula from Matthias Kannwischer *)
+let mldsa_intt_twiddle_index = define
+ `mldsa_intt_twiddle_index k j =
+    let packed_j = (j DIV 64)*64 + (j DIV 8) MOD 8 + (j MOD 8)*8 in
+    (bitreverse8 packed_j * k + k DIV 2 + 
+     if ODD(bitcount k) then 128 else 0) MOD 256`;;
+
 let AVX2_NTT_ORDER_INVOLUTION = prove
  (`!n. n < 256 ==> mldsa_avx2_ntt_order'(mldsa_avx2_ntt_order n) = n /\
                    mldsa_avx2_ntt_order(mldsa_avx2_ntt_order' n) = n`,
@@ -202,7 +209,7 @@ let mldsa_inverse_ntt = define
  `mldsa_inverse_ntt f k =
     (&8347681 * isum (0..255)
                  (\j. f j *
-                      &731434 pow ((2 * j + 1) * mldsa_avx2_ntt_order' k)))
+                      &731434 pow (2 * mldsa_intt_twiddle_index k j + 1)))
     rem &8380417`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -254,7 +261,7 @@ let MLDSA_FORWARD_NTT = prove
 let MLDSA_INVERSE_NTT = prove
  (`mldsa_inverse_ntt f k =
    (&8347681 * isum (0..255)
-              (\j. f j * &731434 pow ((2 * j + 1) * mldsa_avx2_ntt_order' k)))
+              (\j. f j * &731434 pow (2 * mldsa_intt_twiddle_index k j + 1)))
    rem &8380417`,
   REWRITE_TAC[mldsa_inverse_ntt]);;
 
@@ -436,7 +443,7 @@ let MLDSA_INVERSE_NTT_ALT = prove
    isum (0..255)
         (\j. f j *
              (&8347681 *
-           (&731434 pow ((2 * j + 1) * mldsa_avx2_ntt_order' k)) rem &8380417)
+           (&731434 pow (2 * mldsa_intt_twiddle_index k j + 1)) rem &8380417)
              rem &8380417)
     rem &8380417`,
   REWRITE_TAC[mldsa_inverse_ntt; GSYM ISUM_LMUL] THEN
@@ -453,7 +460,9 @@ let MLDSA_INVERSE_NTT_CONV =
   GEN_REWRITE_CONV I [MLDSA_INVERSE_NTT_ALT] THENC
   LAND_CONV EXPAND_ISUM_CONV THENC
   DEPTH_CONV NUM_RED_CONV THENC
-  GEN_REWRITE_CONV ONCE_DEPTH_CONV [MLDSA_AVX2_NTT_ORDER_CLAUSES'] THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [mldsa_intt_twiddle_index] THENC
+  DEPTH_CONV(let_CONV ORELSEC NUM_RED_CONV) THENC
+  GEN_REWRITE_CONV DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
