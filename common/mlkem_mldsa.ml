@@ -132,8 +132,15 @@ let mldsa_avx2_ntt_order' = define
 let mldsa_intt_twiddle_index = define
  `mldsa_intt_twiddle_index k j =
     let packed_j = (j DIV 64)*64 + (j DIV 8) MOD 8 + (j MOD 8)*8 in
-    (bitreverse8 packed_j * k + k DIV 2 + 
-     if ODD(bitcount k) then 128 else 0) MOD 256`;;
+    let parity_k = if EVEN k then 0 else 
+                   if EVEN(k DIV 2) then 1 else
+                   if EVEN(k DIV 4) then 0 else
+                   if EVEN(k DIV 8) then 1 else
+                   if EVEN(k DIV 16) then 0 else
+                   if EVEN(k DIV 32) then 1 else
+                   if EVEN(k DIV 64) then 0 else
+                   if EVEN(k DIV 128) then 1 else 0 in
+    (bitreverse8 packed_j * k + k DIV 2 + 128 * parity_k) MOD 256`;;
 
 let AVX2_NTT_ORDER_INVOLUTION = prove
  (`!n. n < 256 ==> mldsa_avx2_ntt_order'(mldsa_avx2_ntt_order n) = n /\
