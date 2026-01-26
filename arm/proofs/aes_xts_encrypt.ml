@@ -5560,7 +5560,7 @@ let AES256_XTS_ENCRYPT_CORRECT = prove(
   ASM_SIMP_TAC[]
 );;
 
-let AES256_XTS_ENCRYPT_SUBROUTINE_CORRECT = prove(
+let AES_XTS_ENCRYPT_SUBROUTINE_CORRECT = prove(
   `!ptxt_p ctxt_p len key1_p key2_p iv_p
     pt_in iv
     k1_0 k1_1 k1_2 k1_3 k1_4 k1_5 k1_6 k1_7 k1_8 k1_9 k1_10 k1_11 k1_12 k1_13 k1_14
