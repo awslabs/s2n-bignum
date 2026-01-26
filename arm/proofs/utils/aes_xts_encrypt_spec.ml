@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-needs "common/aes.ml";;
-needs "arm/proofs/utils/aes_encrypt_spec.ml";;
+needs "arm/proofs/utils/aes_xts_common_spec.ml";;
 
 (*
 AES-256-XTS Encryption Algorithm for Any Input Length
@@ -37,51 +36,6 @@ For partial final blocks, ciphertext stealing is used as per Section 5.3.2.
 (*****************************************)
 (* AES-XTS encryption full *)
 
-(* Note: the implementation sequences the calculation of the tweak for each block,
-   however, the specification will calculate the tweak from the very beginning for each block.
-   We write the specification in the sequenced version for proof simplicity. *)
-
-(* Helper functions derived from Amanda's code:
-   https://github.com/amanda-zx/s2n-bignum/blob/sha512/arm/sha512/sha512_specs.ml#L360 *)
-
-(* TODO: put it in a common place to be used with decrypt
-     Start *)
-let bytes_to_int128 = define
-  `bytes_to_int128 (bs : byte list) : int128 =
-    word_join
-      (word_join
-        (word_join (word_join (EL 15 bs) (EL 14 bs) : int16) (word_join (EL 13 bs) (EL 12 bs) : int16) : int32)
-        (word_join (word_join (EL 11 bs) (EL 10 bs) : int16) (word_join (EL 9 bs) (EL 8 bs) : int16) : int32) : int64)
-      (word_join
-        (word_join (word_join (EL 7 bs) (EL 6 bs) : int16) (word_join (EL 5 bs) (EL 4 bs) : int16) : int32)
-        (word_join (word_join (EL 3 bs) (EL 2 bs) : int16) (word_join (EL 1 bs) (EL 0 bs) : int16) : int32) : int64)`;;
-
-let int128_to_bytes = define
-  `int128_to_bytes (w : int128) : byte list =
-     [word_subword w (0, 8); word_subword w (8, 8); word_subword w (16, 8); word_subword w (24, 8);
-      word_subword w (32, 8); word_subword w (40, 8); word_subword w (48, 8); word_subword w (56, 8);
-      word_subword w (64, 8); word_subword w (72, 8); word_subword w (80, 8); word_subword w (88, 8);
-      word_subword w (96, 8); word_subword w (104, 8); word_subword w (112, 8); word_subword w (120, 8)]`;;
-
-(* XTS tweak initialization - encrypt the IV with key2 *)
-let xts_init_tweak = new_definition
-  `xts_init_tweak (iv:int128) (key2:int128 list) =
-     aes256_encrypt iv key2`;;
-
-(* Multiplication by the primitive element \alpha in GF(2^128) *)
-let GF_128_mult_by_primitive = new_definition
-  `GF_128_mult_by_primitive (tweak:(128)word) =
-     let shifted = word_shl tweak 1 in
-     let mask = word_ishr tweak 127 in
-     word_xor (word_and mask (word 0x87)) shifted`;;
-
-let calculate_tweak = new_recursive_definition num_RECURSION
-  `calculate_tweak 0 (iv:(128)word) (key2:int128 list) = xts_init_tweak iv key2 /\
-   calculate_tweak (SUC n) (iv:(128)word) (key2:int128 list) =
-     GF_128_mult_by_primitive (calculate_tweak n iv key2)`;;
-
-(* TODO: put it in a common place to be used with decrypt
-     End *)
 (* AES-XTS encryption round function *)
 let aes256_xts_encrypt_round = new_definition
   `aes256_xts_encrypt_round (P:int128) (tk:int128) (key1:int128 list) =
@@ -160,8 +114,7 @@ let aes256_xts_encrypt_tail = new_definition
   return: Output ciphertext as a byte list
   When input len < 16, the function returns [].
 *)
-(* TODO: Double check if NIST spec talks about the error case len < 16 *)
-(* TODO: Double check the pseudo code in the spec for tweak calculation in ANEX c *)
+
 let aes256_xts_encrypt = new_definition
   `aes256_xts_encrypt
      (P:byte list) (len:num) (iv:int128) (key1:int128 list) (key2:int128 list) : byte list =
@@ -402,22 +355,6 @@ let key_2 = new_definition `key_2:int128 list =
   ]`;;
 
 
-(* Common with decrypt *)
-let XTS_INIT_TWEAK_CONV =
-  REWR_CONV xts_init_tweak THENC AESENC_HELPER_CONV;;
-(*
-let tmp_xts_tweak = (REWRITE_CONV [iv1; tweak_key_schedule] THENC XTS_INIT_TWEAK_CONV)
-    `xts_init_tweak iv1
-            tweak_key_schedule`;;
-(* Or the following: 33 sec *)
-time prove(`xts_init_tweak iv1
-            tweak_key_schedule
-            = word 0x8b2b4a71228e98aed6aa0ca97775261a`,
-            CONV_TAC(REWRITE_CONV [iv1; tweak_key_schedule] THENC LAND_CONV XTS_INIT_TWEAK_CONV)
-            THEN REFL_TAC
-          );;
-*)
-
 (*
 let AES_XTS_ENC_1BLK_HELPER_CONV =
 (*    PRINT_TERM_CONV THENC *)
@@ -506,70 +443,7 @@ time prove(`aes256_xts_encrypt_1block
     );;
 *)
 
-(* Common with decrypt *)
-let EL_16_8_CLAUSES =
-  let pat = `EL n [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;x10;x11;x12;x13;x14;x15]:byte` in
-  map (fun n -> EL_CONV(subst [mk_small_numeral n,`n:num`] pat)) (0--15);;
 
-let BYTES_TO_INT128_CONV =
-  REWR_CONV bytes_to_int128 THENC
-  REWRITE_CONV EL_16_8_CLAUSES THENC
-  DEPTH_CONV WORD_RED_CONV;;
-(*
-time prove(`bytes_to_int128 ptext
-            = (word 0x0f0e0d0c0b0a09080706050403020100 :int128)`,
-            CONV_TAC(REWRITE_CONV [ptext;int128_to_bytes] THENC
-               LAND_CONV BYTES_TO_INT128_CONV) THEN
-            REFL_TAC
-          );;
-*)
-
-(* Common with decrypt *)
-let INT128_TO_BYTES_CONV =
-  REWRITE_CONV [int128_to_bytes] THENC
-  DEPTH_CONV WORD_RED_CONV;;
-(* INT128_TO_BYTES_CONV `int128_to_bytes (word 0x0102030405060708090a0b0c0d0e0f)`;; *)
-
-(* Common with decrypt *)
-let GF_128_MULT_BY_PRIMITIVE_CONV =
-  REWRITE_CONV [GF_128_mult_by_primitive] THENC
-  REPEATC let_CONV THENC
-  DEPTH_CONV WORD_RED_CONV;;
-(* GF_128_MULT_BY_PRIMITIVE_CONV
-  `GF_128_mult_by_primitive (word 0x8b2b4a71228e98aed6aa0ca97775261a)`;; *)
-time prove(`GF_128_mult_by_primitive (word 0x8b2b4a71228e98aed6aa0ca97775261a)
-            = (word 0x165694e2451d315dad541952eeea4cb3 : int128)`,
-            CONV_TAC(LAND_CONV GF_128_MULT_BY_PRIMITIVE_CONV) THEN REFL_TAC
-          );;
-
-let rec CALCULATE_TWEAK_CONV tm =
-  let BASE_CONV =
-    ONCE_REWRITE_CONV [calculate_tweak] THENC
-    XTS_INIT_TWEAK_CONV in
-  let INDUCT_CONV =
-    RATOR_CONV(LAND_CONV num_CONV) THENC (* ((calculate_tweak 1) iv_tweak) key_2 *)
-        (* PRINT_TERM_CONV THENC*)
-    ONCE_REWRITE_CONV [CONJUNCT2 calculate_tweak] THENC
-    RAND_CONV CALCULATE_TWEAK_CONV THENC
-    GF_128_MULT_BY_PRIMITIVE_CONV in
-  match tm with
-  | Comb
-     (Comb
-       (Comb
-         (Const ("calculate_tweak",_), n),
-       _),
-     _) ->
-    if dest_numeral n =/ num 0
-    then BASE_CONV tm
-    else INDUCT_CONV tm
-  | _ -> failwith "CALCULATE_TWEAK_CONV: inapplicable";;
-(*
-(* result: word 0x8b2b4a71228e98aed6aa0ca97775261a, confirmed by input to first encrypt_round above *)
-(REWRITE_CONV [iv1;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 0 iv1 tweak_key_schedule`;;
-*)(*
-(* result: word 0x165694e2451d315dad541952eeea4cb3, confirmed by input to second encrypt_round above *)
-(REWRITE_CONV [iv1;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 1 iv1 tweak_key_schedule`;;
-*)
 
 let rec AES256_XTS_ENCRYPT_REC_CONV tm =
   let BASE_CONV =

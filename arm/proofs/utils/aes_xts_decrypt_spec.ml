@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
 
-needs "common/aes.ml";;
-needs "arm/proofs/utils/aes_encrypt_spec.ml";;
+needs "arm/proofs/utils/aes_xts_common_spec.ml";;
 needs "arm/proofs/utils/aes_decrypt_spec.ml";;
 
 (*
@@ -24,10 +23,10 @@ https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=8637988
 
 Section 5.4.1
 
-a) T ← AES-enc(Key2, i) ⊗ αj
-b) CC ← C ⊕ T
-c) PP ← AES-dec(Key1, CC)
-d) P ← PP ⊕ T
+a) T := AES-enc(Key2, i) MUL alpha^j
+b) CC := C XOR T
+c) PP := AES-dec(Key1, CC)
+d) P := PP XOR T
 
 *)
 
@@ -49,51 +48,6 @@ let aes256_xts_decrypt_1block = new_definition
 
 (*******************************************)
 (* AES-XTS decryption *)
-
-(* Helper functions derived from Amanda's code:
-  https://github.com/amanda-zx/s2n-bignum/blob/sha512/arm/sha512/sha512_specs.ml#L360
-*)
-let bytes_to_int128 = define
-  `bytes_to_int128 (bs : byte list) : int128 =
-    word_join
-      (word_join
-        (word_join (word_join (EL 15 bs) (EL 14 bs) : int16) (word_join (EL 13 bs) (EL 12 bs) : int16) : int32)
-        (word_join (word_join (EL 11 bs) (EL 10 bs) : int16) (word_join (EL 9 bs) (EL 8 bs) : int16) : int32) : int64)
-      (word_join
-        (word_join (word_join (EL 7 bs) (EL 6 bs) : int16) (word_join (EL 5 bs) (EL 4 bs) : int16) : int32)
-        (word_join (word_join (EL 3 bs) (EL 2 bs) : int16) (word_join (EL 1 bs) (EL 0 bs) : int16) : int32) : int64)`;;
-
-let int128_to_bytes = define
-  `int128_to_bytes (w : int128) : byte list =
-    [word_subword w (0, 8);
-     word_subword w (8, 8);
-     word_subword w (16, 8);
-     word_subword w (24, 8);
-     word_subword w (32, 8);
-     word_subword w (40, 8);
-     word_subword w (48, 8);
-     word_subword w (56, 8);
-     word_subword w (64, 8);
-     word_subword w (72, 8);
-     word_subword w (80, 8);
-     word_subword w (88, 8);
-     word_subword w (96, 8);
-     word_subword w (104, 8);
-     word_subword w (112, 8);
-     word_subword w (120, 8)]`;;
-
-(* Multiplication by the primitive element \alpha in GF(2^128) *)
-let GF_128_mult_by_primitive = new_definition
-  `GF_128_mult_by_primitive
-    (tweak:(128)word) =
-    let shifted = word_shl tweak 1 in
-    let mask = word_ishr tweak 127 in
-    word_xor (word_and mask (word 0x87)) shifted`;;
-
-let calculate_tweak = new_recursive_definition num_RECURSION
-  `calculate_tweak 0 (iv:(128)word) (key2:int128 list) = xts_init_tweak iv key2 /\
-   calculate_tweak (SUC n) (iv:(128)word) (key2:int128 list) =
-     GF_128_mult_by_primitive (calculate_tweak n iv key2)`;;
 
 let eth = prove_general_recursive_function_exists
  `?aes256_xts_decrypt_rec.

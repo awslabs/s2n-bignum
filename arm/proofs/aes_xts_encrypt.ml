@@ -735,8 +735,7 @@ let LENGTH_OF_AES256_XTS_ENCRYPT_REC = prove(
     ONCE_REWRITE_TAC[aes256_xts_encrypt_rec] THEN
     COND_CASES_TAC THENL
     [ SIMP_TAC[LENGTH_EQ_NIL];
-      SIMP_TAC[] THEN
-      REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
+      CONV_TAC (DEPTH_CONV let_CONV) THEN
       REWRITE_TAC[LENGTH_APPEND] THEN
       SUBGOAL_THEN `~(m < i) ==> (m + 1) - (i + 1) < (m + 1) - i` ASSUME_TAC THENL
       [ ASM_ARITH_TAC ; ALL_TAC ] THEN
@@ -1316,27 +1315,14 @@ let AESXTS_ENC_ONE_BLOCK_TAC =
   BITBLAST_TAC;;
 
 let TWEAK_UPDATE_CONV =
-  let ADD_SUC_1 = ARITH_RULE `!n. n + 1 = SUC(n)` in
-  let ADD_SUC_2 = ARITH_RULE `!n. n + 2 = SUC(n + 1)` in
-  let ADD_SUC_3 = ARITH_RULE `!n. n + 3 = SUC(n + 2)` in
-  let ADD_SUC_4 = ARITH_RULE `!n. n + 4 = SUC(n + 3)` in
-  let ADD_SUC_5 = ARITH_RULE `!n. n + 5 = SUC(n + 4)` in
-  let ADD_SUC_6 = ARITH_RULE `!n. n + 6 = SUC(n + 5)` in
-  let ADD_SUC_7 = ARITH_RULE `!n. n + 7 = SUC(n + 6)` in
-  let ADD_SUC_8 = ARITH_RULE `!n. n + 8 = SUC(n + 7)` in
-  let ADD_SUC_9 = ARITH_RULE `!n. n + 9 = SUC(n + 8)` in
+ let thms = CONJUNCTS
+  ((REWRITE_RULE[ARITH; ADD_0] o
+    CONV_RULE EXPAND_CASES_CONV o ARITH_RULE)
+    `forall i. i < 9 ==> forall n. n + SUC i = SUC (n + i)`) in
   NUM_REDUCE_CONV THENC
   RATOR_CONV (LAND_CONV (num_CONV ORELSEC
     FIRST_CONV
-    [ CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_1]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_2]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_3]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_4]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_5]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_6]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_7]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_8]);
-      CHANGED_CONV (ONCE_REWRITE_CONV [ADD_SUC_9]);])) THENC
+    (map (fun th -> CHANGED_CONV (ONCE_REWRITE_CONV [th])) thms))) THENC
   REWRITE_CONV [CONJUNCT2 calculate_tweak] THENC
   GF_128_MULT_BY_PRIMITIVE_CONV;;
 
@@ -1791,6 +1777,38 @@ let CIPHER_STEALING_ENC_CORRECT = time prove(
       [tail_len,16] -- previous decryption result, CP
     Memory: For the tail, Cm, pointed to by X13, for each byte
       [i,tail_len) -- copied over from Pm block
+
+              +----------------+                +----------------+
+              |     P_m-1      |                |  P_m |  CP     |
+              +----------------+                +----------------+
+                      |                                ^  |
+                      |                            <-- |  |
+      l1_curr_len     | Enc    curr_len               x21 |  Enc
+              |       |        |                       |  |
+              v       v        v             +---------+  v
+              +----------------+             |  +----------------+
+              |  C_m |    CP   |             |  |     C_m-1      |
+              +----------------+             |  +--------+-------+
+              ^      ^                       |           |
+              |  <-- |                       |           |
+              x1    x21 (decreasing offset)  |           |
+                    ||                       |           |
+                    +------------------------+           |
+                     |            (2)                    |
+                     +------------------------------+    |
+                                       (1)          |    |
+              +----------------+                +---v--+ |
+              |     C_m-1      |                | C_m  | |
+              +----------------+                +------+ |
+              ^       ^                         ^        |
+              |       |                         |        |
+              x1      |             (3)         x13      |
+                      +----------------------------------+
+
+  1, 2 and 3 are order of moving bytes because they're written to the same place.
+  - 1 and 2 are in a loop iterating over the bytes at offset x21
+  - 3 is after the loop and last block encryption (decryption) writing the block at the output at x1
+
   *)
 
   ENSURES_WHILE_PADOWN_TAC
