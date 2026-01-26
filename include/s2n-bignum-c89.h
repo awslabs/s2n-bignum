@@ -999,7 +999,7 @@ extern void mldsa_ntt(int32_t a[256], const int32_t zetas[624]);
 
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
-extern void mldsa_poly_reduce(int32_t a[256]);
+extern void mldsa_reduce(int32_t a[256]);
 
 /* Scalar product of 2-element polynomial vectors in NTT domain, with mulcache */
 /* Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words) */

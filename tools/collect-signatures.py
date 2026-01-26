@@ -330,7 +330,7 @@ onlyInX86 = [
   "bignum_triple_p521_alt",
   "bignum_triple_sm2_alt",
   "mldsa_ntt",
-  "mldsa_poly_reduce",
+  "mldsa_reduce",
   "mlkem_frombytes",
   "mlkem_mulcache_compute_x86",
   "mlkem_ntt_x86",
@@ -430,5 +430,3 @@ for archname in ["arm","x86"]:
     f.write(");\n\n")
   f.write("];;")
   f.close()
-
-

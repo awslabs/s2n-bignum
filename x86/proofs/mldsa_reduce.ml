@@ -10,10 +10,10 @@
 needs "x86/proofs/base.ml";;
 needs "common/mlkem_mldsa.ml";;
 
-(**** print_literal_from_elf "x86/mldsa/mldsa_poly_reduce.o";;
+(**** print_literal_from_elf "x86/mldsa/mldsa_reduce.o";;
  ****)
 
-let mldsa_poly_reduce_mc = define_assert_from_elf "mldsa_poly_reduce_mc" "x86/mldsa/mldsa_poly_reduce.o"
+let mldsa_reduce_mc = define_assert_from_elf "mldsa_reduce_mc" "x86/mldsa/mldsa_reduce.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0xb8; 0x01; 0xe0; 0x7f; 0x00;
@@ -379,8 +379,8 @@ let mldsa_poly_reduce_mc = define_assert_from_elf "mldsa_poly_reduce_mc" "x86/ml
   0xc3                     (* RET *)
 ];;
 
-let mldsa_poly_reduce_tmc = define_trimmed "mldsa_poly_reduce_tmc" mldsa_poly_reduce_mc;;
-let MLDSA_POLY_REDUCE_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_poly_reduce_tmc;;
+let mldsa_reduce_tmc = define_trimmed "mldsa_reduce_tmc" mldsa_reduce_mc;;
+let MLDSA_REDUCE_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_reduce_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Complete structured proof                                                 *)
@@ -391,7 +391,7 @@ let MLDSA_REDUCE_CORRECT = prove
         aligned 32 a /\
         nonoverlapping (word pc,0x482) (a, 1024)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST mldsa_poly_reduce_tmc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST mldsa_reduce_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a] s /\
                   !i. i < 256
@@ -410,7 +410,7 @@ let MLDSA_REDUCE_CORRECT = prove
 
   MAP_EVERY X_GEN_TAC [`a:int64`; `x:num->int32`; `pc:num`] THEN
 
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; fst MLDSA_POLY_REDUCE_TMC_EXEC] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; fst MLDSA_REDUCE_TMC_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
   (*** Manually expand the cases in the hypotheses ***)
@@ -419,7 +419,7 @@ let MLDSA_REDUCE_CORRECT = prove
   CONV_TAC NUM_REDUCE_CONV THEN
   REPEAT STRIP_TAC THEN
 
-  REWRITE_TAC [SOME_FLAGS; fst MLDSA_POLY_REDUCE_TMC_EXEC] THEN
+  REWRITE_TAC [SOME_FLAGS; fst MLDSA_REDUCE_TMC_EXEC] THEN
 
   GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
   GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
@@ -437,7 +437,7 @@ let MLDSA_REDUCE_CORRECT = prove
   STRIP_TAC THEN
 
    MAP_EVERY (fun n ->
-      X86_STEPS_TAC MLDSA_POLY_REDUCE_TMC_EXEC [n] THEN
+      X86_STEPS_TAC MLDSA_REDUCE_TMC_EXEC [n] THEN
       SIMD_SIMPLIFY_TAC[mldsa_barred])
              (1--198) THEN
 
@@ -457,13 +457,13 @@ let MLDSA_REDUCE_CORRECT = prove
   DISCARD_STATE_TAC "s198" THEN
   REWRITE_TAC[GSYM mldsa_barred]);;
 
-let MLDSA_POLY_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
+let MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
-        nonoverlapping (word pc,LENGTH mldsa_poly_reduce_tmc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_tmc) (a,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) mldsa_poly_reduce_tmc /\
+             (\s. bytes_loaded s (word pc) mldsa_reduce_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -479,15 +479,15 @@ let MLDSA_POLY_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
                           ival(mldsa_barred (x i)))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_poly_reduce_tmc MLDSA_REDUCE_CORRECT);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_reduce_tmc MLDSA_REDUCE_CORRECT);;
 
-let MLDSA_POLY_REDUCE_SUBROUTINE_CORRECT = prove
+let MLDSA_REDUCE_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
-        nonoverlapping (word pc,LENGTH mldsa_poly_reduce_mc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_mc) (a,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) mldsa_poly_reduce_mc /\
+             (\s. bytes_loaded s (word pc) mldsa_reduce_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -503,7 +503,7 @@ let MLDSA_POLY_REDUCE_SUBROUTINE_CORRECT = prove
                           ival(mldsa_barred (x i)))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_POLY_REDUCE_NOIBT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT));;
 
 
 
@@ -511,24 +511,24 @@ let MLDSA_POLY_REDUCE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let mldsa_poly_reduce_windows_mc = define_from_elf
-   "mldsa_poly_reduce_windows_mc" "x86/mldsa/mldsa_poly_reduce.obj";;
+let mldsa_reduce_windows_mc = define_from_elf
+   "mldsa_reduce_windows_mc" "x86/mldsa/mldsa_reduce.obj";;
 
-let mldsa_poly_reduce_windows_tmc =
-  define_trimmed "mldsa_poly_reduce_windows_tmc" mldsa_poly_reduce_windows_mc;;
+let mldsa_reduce_windows_tmc =
+  define_trimmed "mldsa_reduce_windows_tmc" mldsa_reduce_windows_mc;;
 
-let MLDSA_POLY_REDUCE_WINDOWS_TMC_EXEC =
-  X86_MK_EXEC_RULE mldsa_poly_reduce_windows_tmc;;
+let MLDSA_REDUCE_WINDOWS_TMC_EXEC =
+  X86_MK_EXEC_RULE mldsa_reduce_windows_tmc;;
 
-let MLDSA_POLY_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
+let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
-        nonoverlapping (word pc,LENGTH mldsa_poly_reduce_windows_tmc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
-        nonoverlapping (word pc,LENGTH mldsa_poly_reduce_windows_tmc)
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc)
                        (word_sub stackpointer (word 176),176)
         ==> ensures x86
-              (\s. bytes_loaded s (word pc) mldsa_poly_reduce_windows_tmc /\
+              (\s. bytes_loaded s (word pc) mldsa_reduce_windows_tmc /\
                    read RIP s = word pc /\
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -549,7 +549,7 @@ let MLDSA_POLY_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPLICATE_TAC 3 GEN_TAC THEN
   WORD_FORALL_OFFSET_TAC 176 THEN REPEAT GEN_TAC THEN
 
-  REWRITE_TAC[fst MLDSA_POLY_REDUCE_WINDOWS_TMC_EXEC] THEN
+  REWRITE_TAC[fst MLDSA_REDUCE_WINDOWS_TMC_EXEC] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
   REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
 
@@ -584,18 +584,18 @@ let MLDSA_POLY_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
 
   ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_POLY_REDUCE_WINDOWS_TMC_EXEC (1--13) THEN
+  X86_STEPS_TAC MLDSA_REDUCE_WINDOWS_TMC_EXEC (1--13) THEN
 
   MP_TAC(SPECL [`a:int64`; `x:num->int32`; `pc + 81`]
     MLDSA_REDUCE_CORRECT) THEN
   ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
   ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
 
-  X86_BIGSTEP_TAC MLDSA_POLY_REDUCE_WINDOWS_TMC_EXEC "s14" THENL
+  X86_BIGSTEP_TAC MLDSA_REDUCE_WINDOWS_TMC_EXEC "s14" THENL
    [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_poly_reduce_windows_tmc
+     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_reduce_windows_tmc
      (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mldsa_poly_reduce_tmc))
+      (AP_TERM `BUTLAST:byte list->byte list` mldsa_reduce_tmc))
      81));
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
@@ -611,7 +611,7 @@ let MLDSA_POLY_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     `ymm14_epilog = read YMM14 s14`;
     `ymm15_epilog = read YMM15 s14`] THEN
 
-  X86_STEPS_TAC MLDSA_POLY_REDUCE_WINDOWS_TMC_EXEC (15--27) THEN
+  X86_STEPS_TAC MLDSA_REDUCE_WINDOWS_TMC_EXEC (15--27) THEN
 
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
@@ -619,15 +619,15 @@ let MLDSA_POLY_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
-let MLDSA_POLY_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
+let MLDSA_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
-        nonoverlapping (word pc,LENGTH mldsa_poly_reduce_windows_mc) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_mc) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
-        nonoverlapping (word pc,LENGTH mldsa_poly_reduce_windows_mc)
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_mc)
                        (word_sub stackpointer (word 176),176)
         ==> ensures x86
-              (\s. bytes_loaded s (word pc) mldsa_poly_reduce_windows_mc /\
+              (\s. bytes_loaded s (word pc) mldsa_reduce_windows_mc /\
                    read RIP s = word pc /\
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -644,4 +644,4 @@ let MLDSA_POLY_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_POLY_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
