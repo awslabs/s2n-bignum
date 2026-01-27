@@ -1143,6 +1143,12 @@ let x86_VMOVQ = new_definition
     let (x'':N word) = word_zx x' in
     (dest := x'') s`;;
 
+let x86_VMOVHPD = new_definition
+ `x86_VMOVHPD dest src s =
+    let (x:128 word) = read src s in
+    let (x':64 word) = word_subword x (64, 64) in
+    (dest := x') s`;;
+
 let x86_MOVUPS = new_definition
  `x86_MOVUPS dest src s =
     let x = read src s in (dest := x) s`;;
@@ -2678,6 +2684,11 @@ let x86_execute = define
           (64,128) -> x86_VMOVQ (OPERAND64 dest s) (OPERAND128 src s)
         | (128,64) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND64 src s)
         | (128,128) -> x86_VMOVQ (OPERAND128 dest s) (OPERAND128 src s)) s)) s
+    | VMOVHPD dest src ->
+        (add_load_event src s ,,
+         add_store_event dest s ,,
+        (\s. (match (operand_size dest, operand_size src) with
+          (64,128) -> x86_VMOVHPD (OPERAND64 dest s) (OPERAND128 src s)) s)) s
     | MOVSB rept dest src size ->
         (\s. x86_MOVSB rept (OPERAND64 dest s) (OPERAND64 src s) (OPERAND64 size s) s) s
     | MOVSX dest src ->
@@ -4104,8 +4115,8 @@ let X86_OPERATION_CLAUSES =
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CLD; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
     x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
-    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ; x86_MOVSX; x86_MOVUPS;
-    x86_MOVSB_ALT;
+    x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ;
+    x86_VMOVHPD; x86_MOVSX; x86_MOVUPS; x86_MOVSB_ALT;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
     x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
