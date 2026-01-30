@@ -68,7 +68,7 @@ vpblendd	$0xAA,%ymm\r1,%ymm\r0,%ymm\r3
  *         (See the end of this file for the exact value of MONTMUL_BOUND)
  */
 .macro butterfly l,h,zl0=1,zl1=1,zh0=2,zh1=2
-vpsubd		%ymm\h,%ymm\l,%ymm12
+vpsubd		%ymm\l,%ymm\h,%ymm12
 /*
  * VEX Encoding Optimization for Platform-Independent Code
  *
