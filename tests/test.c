@@ -12747,17 +12747,14 @@ int test_mldsa_intt(void)
         reference_mldsa_inverse_ntt(spec_result);
         reference_frommont_mldsa(spec_result);
         
-        // Both should recover the original (modulo q)
-        // Assembly may produce negation due to sign convention
+        // Both should recover the original (modulo q) - EXACT match required
         for (i = 0; i < 256; ++i) {
             int32_t norm_original = ((original[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
             int32_t norm_asm = ((asm_result[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
             int32_t norm_spec = ((spec_result[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
-            int32_t norm_negated = ((MLDSA_Q - norm_original) % MLDSA_Q);
             
-            // Assembly: accept original or negation (sign convention)
-            int asm_ok = (norm_asm == norm_original) || (norm_asm == norm_negated);
-            // Spec: must match original exactly
+            // Both must match original exactly (no negation accepted)
+            int asm_ok = (norm_asm == norm_original);
             int spec_ok = (norm_spec == norm_original);
             
             if (!asm_ok || !spec_ok) {
