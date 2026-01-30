@@ -130,6 +130,7 @@
 : vmovq$
 : vmovdqa$
 : vmovdqu$
+: vmovhpd$
 : vmovshdup$
 : vmovsldup$
 : vpaddd$
