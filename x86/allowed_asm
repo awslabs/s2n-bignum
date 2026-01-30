@@ -150,6 +150,7 @@
 : vinserti128$
 : vextracti128$
 : vpmuldq$
+: vpmulhrsw$
 : vpmulhw$
 : vpmulld$
 : vpmullw$
