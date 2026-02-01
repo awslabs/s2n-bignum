@@ -1927,6 +1927,14 @@ let x86_VPINSRQ = new_definition
     let res = word_insert x (64 * sel,64) w in
     (dest := res) s`;;
 
+let x86_VPINSRW = new_definition
+ `x86_VPINSRW dest src1 src2 imm8 (s:x86state) =
+    let x:int128 = read src1 s
+    and w:int16 = word_subword (read src2 s:M word) (0,16)
+    and sel = val(read imm8 s:byte) MOD 8 in
+    let res = word_insert x (16 * sel,16) w in
+    (dest := res) s`;;
+
 let x86_VPEXTRD = new_definition
  `x86_VPEXTRD dest src imm8 (s:x86state) =
     let x:int128 = read src s
@@ -3106,6 +3114,14 @@ let x86_execute = define
          add_store_event dest s ,,
        (\s. x86_VPINSRQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND64 src2 s)
                        (OPERAND8 imm8 s) s)) s
+    | VPINSRW dest src1 src2 imm8 ->
+       (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+       (\s. (match operand_size src2 with
+               32 -> x86_VPINSRW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND32 src2 s)
+                                  (OPERAND8 imm8 s)
+             | 16 -> x86_VPINSRW (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND16 src2 s)
+                                  (OPERAND8 imm8 s)) s)) s
     | VPEXTRD dest src imm8 ->
        (add_load_event src s ,, add_store_event dest s ,,
        (\s. x86_VPEXTRD (OPERAND32 dest s) (OPERAND128 src s)
@@ -4137,7 +4153,7 @@ let X86_OPERATION_CLAUSES =
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
-    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VINSERTI128; x86_VEXTRACTI128;
+    x86_VPADDD_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
     x86_VPEXTRD; x86_VPEXTRQ; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR;
     x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLQ_ALT;
     x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPSLLD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
