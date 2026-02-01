@@ -922,6 +922,17 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                   | _ -> NONE)
                | _ -> NONE))
             | _ -> NONE)
+        | [0xc4:8] ->
+            if L then NONE else
+            read_ModRM rex l >>= \((reg,rm),l).
+            read_imm Byte l >>= \(imm8,l).
+            let dest = mmreg reg Lower_128 in
+            let src1 = mmreg v Lower_128 in
+            let src2 = if is_memop rm then operand_of_RM Lower_16 rm
+                       else operand_of_RM Lower_32 rm in
+            (match pfxs with
+            | (T, Rep0, SG0) -> SOME (VPINSRW dest src1 src2 imm8, l)
+            | _ -> NONE)
         | [0xd6:8] -> (if word_not v = (word 0b1111:4 word) then
           (if L then NONE else
           (read_ModRM rex l >>= \((reg,rm),l).

@@ -145,6 +145,7 @@
 : vpermq$
 : vpinsrd$
 : vpinsrq$
+: vpinsrw$
 : vpextrd$
 : vpextrq$
 : vinserti128$
