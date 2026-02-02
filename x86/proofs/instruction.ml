@@ -349,6 +349,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPOR operand operand operand
    | VPSHUFB operand operand operand
    | VPSLLD operand operand operand
+   | VPSLLVD operand operand operand
    | VPSLLQ operand operand operand
    | VPSLLW operand operand operand
    | VPSRAD operand operand operand
