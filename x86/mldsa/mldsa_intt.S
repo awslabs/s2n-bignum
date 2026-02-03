@@ -91,7 +91,7 @@ vpsubd          ymm12,ymm\h,ymm\l
  *
  * Example:
  *   VPADDD ymm4, ymm4, ymm8  -> 3-byte VEX (0xC4 0xC1 0x5D 0xFE 0xE0)
- *   VPADDD ymm4, ymm8, ymm4  -> 2-byte VEX (0xC5 0xBD 0xFE 0xE4) ✓ preferred
+ *   VPADDD ymm4, ymm8, ymm4  -> 2-byte VEX (0xC5 0xBD 0xFE 0xE4) preferred
  */
 .if (\h < 8) && (\l >= 8)
 vpaddd          ymm\l,ymm\l,ymm\h
