@@ -8,12 +8,15 @@
 // The transform is in-place with input and output a[256]. Computes the inverse
 // NTT of a polynomial in place, transforming from NTT representation to coefficient
 // representation. The input polynomial a is a 256-element array of signed 32-bit
-// integers representing coefficients in bitreversed order, assumed to be
-// coefficient-wise bound by a reasonable multiple of MLDSA_Q (8380417) in absolute
-// value. The zetas parameter points to precomputed twiddle factors (roots of unity
-// and their Montgomery inverses) required for the inverse NTT computation.
-// The output polynomial is in normal order and the coefficients are in Montgomery
-// form, coefficient-wise bound by MONTMUL_BOUND in absolute value.
+// integers representing coefficients in NTT domain, with each coefficient bounded
+// by |a[i]| < Q. The zetas parameter points to precomputed twiddle factors
+// (roots of unity and their Montgomery inverses) required for the inverse NTT
+// computation.
+//
+// The output polynomial is in coefficient representation (normal order) with
+// coefficients in Montgomery form, each bounded by |a[i]| < Q.
+// The inverse NTT includes the division by 256 (the transform size) and maps the
+// result to Montgomery domain via multiplication by 2^32/256 = 2^24.
 //
 // The implementation uses Montgomery arithmetic for efficient modular reduction
 // modulo Q = 8380417, maintaining constant-time execution for side-channel
@@ -88,7 +91,7 @@ vpsubd		%ymm\l,%ymm\h,%ymm12
  *
  * Example:
  *   VPADDD %ymm4, %ymm4, %ymm8  -> 3-byte VEX (0xC4 0xC1 0x5D 0xFE 0xE0)
- *   VPADDD %ymm4, %ymm8, %ymm4  -> 2-byte VEX (0xC5 0xBD 0xFE 0xE4) ✓ preferred
+ *   VPADDD %ymm4, %ymm8, %ymm4  -> 2-byte VEX (0xC5 0xBD 0xFE 0xE4) preferred
  */
 .if (\h < 8) && (\l >= 8)
 vpaddd		%ymm\h,%ymm\l,%ymm\l
