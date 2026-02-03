@@ -128,20 +128,6 @@ let BITMAP_MLDSA_AVX2_NTT_ORDER = prove
 let mldsa_avx2_ntt_order' = define
  `mldsa_avx2_ntt_order' = bitmap [4;3;2;7;6;5;1;0]`;;
 
-(* ML-DSA INTT twiddle index formula from Matthias Kannwischer *)
-let mldsa_intt_twiddle_index = define
- `mldsa_intt_twiddle_index k j =
-    let packed_j = (j DIV 64)*64 + (j DIV 8) MOD 8 + (j MOD 8)*8 in
-    let parity_k = ((if ODD k then 1 else 0) +
-                    (if ODD(k DIV 2) then 1 else 0) +
-                    (if ODD(k DIV 4) then 1 else 0) +
-                    (if ODD(k DIV 8) then 1 else 0) +
-                    (if ODD(k DIV 16) then 1 else 0) +
-                    (if ODD(k DIV 32) then 1 else 0) +
-                    (if ODD(k DIV 64) then 1 else 0) +
-                    (if ODD(k DIV 128) then 1 else 0)) MOD 2 in
-    (bitreverse8 packed_j * k + k DIV 2 + 128 * parity_k) MOD 256`;;
-
 let AVX2_NTT_ORDER_INVOLUTION = prove
  (`!n. n < 256 ==> mldsa_avx2_ntt_order'(mldsa_avx2_ntt_order n) = n /\
                    mldsa_avx2_ntt_order(mldsa_avx2_ntt_order' n) = n`,
@@ -188,6 +174,7 @@ let forward_ntt = define
 
 (* ------------------------------------------------------------------------- *)
 (* The precise specs of the actual x86 code.                                 *)
+(* Both inverse NTTs also map to Montgomery form, hence 2^B / N multiplier.  *)
 (* ------------------------------------------------------------------------- *)
 
 let avx2_forward_ntt = define
@@ -214,9 +201,9 @@ let mldsa_forward_ntt = define
 
 let mldsa_inverse_ntt = define
  `mldsa_inverse_ntt f k =
-    (&8347681 * isum (0..255)
-                 (\j. f j *
-                      &731434 pow (2 * mldsa_intt_twiddle_index k j + 1)))
+    (&2 pow 24 * isum (0..255)
+                 (\j. f(mldsa_avx2_ntt_order' j) *
+                      &731434 pow ((2 * j + 1) * k)))
     rem &8380417`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -264,13 +251,6 @@ let MLDSA_FORWARD_NTT = prove
  (`mldsa_forward_ntt f k =
    isum (0..255) (\j. f j * &1753 pow ((2 * mldsa_avx2_ntt_order k + 1) * j)) rem &8380417`,
   REWRITE_TAC[mldsa_forward_ntt]);;
-
-let MLDSA_INVERSE_NTT = prove
- (`mldsa_inverse_ntt f k =
-   (&8347681 * isum (0..255)
-              (\j. f j * &731434 pow (2 * mldsa_intt_twiddle_index k j + 1)))
-   rem &8380417`,
-  REWRITE_TAC[mldsa_inverse_ntt]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Explicit computation rules to evaluate mod-3329 powers/sums less naively. *)
@@ -447,11 +427,10 @@ let MLDSA_FORWARD_NTT_CONV =
 
 let MLDSA_INVERSE_NTT_ALT = prove
  (`mldsa_inverse_ntt f k =
-   isum (0..255)
-        (\j. f j *
-             (&8347681 *
-           (&731434 pow (2 * mldsa_intt_twiddle_index k j + 1)) rem &8380417)
-             rem &8380417)
+    isum (0..255)
+         (\j. f(mldsa_avx2_ntt_order' j) *
+              (&16777216 * (&731434 pow ((2 * j + 1) * k)) rem &8380417)
+              rem &8380417)
     rem &8380417`,
   REWRITE_TAC[mldsa_inverse_ntt; GSYM ISUM_LMUL] THEN
   MATCH_MP_TAC (REWRITE_RULE[] (ISPEC
@@ -467,9 +446,7 @@ let MLDSA_INVERSE_NTT_CONV =
   GEN_REWRITE_CONV I [MLDSA_INVERSE_NTT_ALT] THENC
   LAND_CONV EXPAND_ISUM_CONV THENC
   DEPTH_CONV NUM_RED_CONV THENC
-  GEN_REWRITE_CONV ONCE_DEPTH_CONV [mldsa_intt_twiddle_index] THENC
-  DEPTH_CONV(let_CONV ORELSEC NUM_RED_CONV) THENC
-  GEN_REWRITE_CONV DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [MLDSA_AVX2_NTT_ORDER_CLAUSES'] THENC
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;

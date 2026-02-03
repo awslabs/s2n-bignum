@@ -120,7 +120,8 @@ let final_value = rhs (concl len_computed);;
 dest_small_numeral final_value;;
 
 val it : int = 12089
-pc + 0x2F39 ***)
+Minus 1 for ret instruction is
+pc + 0x2F38, ***)
 
 (*** let MLDSA_INTT_CORRECT = prove ***)
  g(`!a zetas x pc.
@@ -142,14 +143,14 @@ pc + 0x2F39 ***)
               (!i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
-                      (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
+                      (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                       abs(ival zi) <= &8380416))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
           MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
           MAYCHANGE [memory :> bytes(a,1024)])`);;
 
-(*** Setup - introduce variables and break down assumptions ***)    
+(*** Setup - introduce variables and break down assumptions ***)
 
 e(MAP_EVERY X_GEN_TAC [`a:int64`; `zetas:int64`; `x:num->int32`; `pc:num`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
@@ -163,7 +164,7 @@ e(CONV_TAC(RATOR_CONV(LAND_CONV(ONCE_DEPTH_CONV EXPAND_CASES_CONV))) THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   REPEAT STRIP_TAC);;
 
-e(REWRITE_TAC [SOME_FLAGS; fst MLDSA_INTT_TMC_EXEC]);;  
+e(REWRITE_TAC [SOME_FLAGS; fst MLDSA_INTT_TMC_EXEC]);;
 
 e(GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
   GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
@@ -257,7 +258,7 @@ e(REWRITE_TAC[WORD_BLAST `word_subword (x:int32) (0,32) = x`] THEN
    `word_subword (word_ushr (word_join (h:int32) (l:int32):int64) 32) (0,32) = h`] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV));;
 
-(* mldsa-intt-9 *)  
+(* mldsa-intt-9 *)
 e(STRIP_TAC);;
 
 (* mldsa-intt-10 *)
@@ -382,7 +383,7 @@ let MLDSA_INTT_CORRECT = prove
               (!i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
-                      (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
+                      (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                       abs(ival zi) <= &8380416))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
@@ -399,7 +400,7 @@ let MLDSA_INTT_CORRECT = prove
   CONV_TAC NUM_REDUCE_CONV THEN
   REPEAT STRIP_TAC THEN
   REWRITE_TAC [SOME_FLAGS; fst MLDSA_INTT_TMC_EXEC] THEN
-  
+
   GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
   GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
   GHOST_INTRO_TAC `init_ymm2:int256` `read YMM2` THEN
@@ -539,7 +540,7 @@ let MLDSA_INTT_NOIBT_SUBROUTINE_CORRECT = prove
               (!i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
-                      (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
+                      (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                       abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(a,1024)])`,
@@ -572,7 +573,7 @@ let MLDSA_INTT_SUBROUTINE_CORRECT = prove
               (!i. i < 256
                         ==> let zi =
                       read(memory :> bytes32(word_add a (word(4 * i)))) s in
-                      (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
+                      (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                       abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(a,1024)])`,
@@ -620,7 +621,7 @@ let MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                    (!i. i < 256
                              ==> let zi =
                            read(memory :> bytes32(word_add a (word(4 * i)))) s in
-                           (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
+                           (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                            abs(ival zi) <= &8380416))
               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
@@ -717,7 +718,7 @@ let MLDSA_INTT_WINDOWS_SUBROUTINE_CORRECT = prove
                    (!i. i < 256
                              ==> let zi =
                            read(memory :> bytes32(word_add a (word(4 * i)))) s in
-                           (ival zi == &2 pow 32 * mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
+                           (ival zi == mldsa_inverse_ntt (ival o x) i) (mod &8380417) /\
                            abs(ival zi) <= &8380416))
               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
@@ -728,7 +729,7 @@ let MLDSA_INTT_WINDOWS_SUBROUTINE_CORRECT = prove
   (CONV_RULE TWEAK_CONV MLDSA_INTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;
 
 
-(* 
+(*
  e(CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC
            DEPTH_CONV NUM_ADD_CONV) THEN
