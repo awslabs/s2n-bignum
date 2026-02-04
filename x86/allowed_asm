@@ -169,6 +169,7 @@
 : vpsrad$
 : vpsraw$
 : vpsrld$
+: vpsrldq$
 : vpsrlvd$
 : vpsrlvq$
 : vpsrlq$

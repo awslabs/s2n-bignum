@@ -959,6 +959,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                | (T, Rep0, SG0) ->
                  (bitmatch r3 with
                | [0b010:3] -> SOME (VPSRLQ (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+               | [0b011:3] -> SOME (VPSRLDQ (mmreg v sz) (simd_of_RM sz rm) imm8,l)
                | [0b110:3] -> SOME (VPSLLQ (mmreg v sz) (simd_of_RM sz rm) imm8,l)
                   | _ -> NONE)
                | _ -> NONE))

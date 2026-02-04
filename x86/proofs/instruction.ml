@@ -360,6 +360,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSRAD operand operand operand
    | VPSRAW operand operand operand
    | VPSRLD operand operand operand
+   | VPSRLDQ operand operand operand
    | VPSRLVD operand operand operand
    | VPSRLVQ operand operand operand
    | VPSRLQ operand operand operand
