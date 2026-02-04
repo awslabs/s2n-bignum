@@ -975,6 +975,19 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
             (match pfxs with
             | (T, Rep0, SG0) -> SOME (VPINSRW dest src1 src2 imm8, l)
             | _ -> NONE)
+        | [0xc5:8] ->
+           if word_not v = (word 0b1111:4 word) then
+           (if L then NONE else
+            read_ModRM rex l >>= \((reg,rm),l).
+            if is_memop rm then NONE else
+            read_imm Byte l >>= \(imm8,l).
+            if rex_W rex then NONE else
+            let dest = %(gpr_adjust reg Lower_32) in
+            let src = simd_of_RM Lower_128 rm in
+            match pfxs with
+            | (T, Rep0, SG0) -> SOME (VPEXTRW dest src imm8, l)
+            | _ -> NONE)
+           else NONE
         | [0xd6:8] -> (if word_not v = (word 0b1111:4 word) then
           (if L then NONE else
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -1014,6 +1027,19 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
             match pfxs with
             | (T, Rep0, SG0) -> SOME (VPBLENDW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
             | _ -> NONE)
+        | [0x15:8] ->
+           if word_not v = (word 0b1111:4 word) then
+           (if L then NONE else
+            read_ModRM rex l >>= \((reg,rm),l).
+            read_imm Byte l >>= \(imm8,l).
+            if rex_W rex then NONE else
+            let src = mmreg reg Lower_128 in
+            let dest = if is_memop rm then operand_of_RM Lower_16 rm
+                       else operand_of_RM Lower_32 rm in
+            match pfxs with
+            | (T, Rep0, SG0) -> SOME (VPEXTRW dest src imm8, l)
+            | _ -> NONE)
+          else NONE
         | [0x16:8] ->
            if word_not v = (word 0b1111:4 word) then
            (if L then NONE else
