@@ -134,6 +134,7 @@
 : vmovshdup$
 : vmovsldup$
 : vpaddd$
+: vpaddq$
 : vpaddw$
 : vpand$
 : vpandn$
