@@ -20,7 +20,7 @@
 //   - 8xQINV: Eight copies of Q^(-1) mod 2^32 for Montgomery multiplication
 //   - 8xQ: Eight copies of Q for the reduction step
 //
-// extern void mldsa_pointwise(
+// extern void mldsa_pointwise_x86(
 //     int32_t c[static 256],
 //     const int32_t a[static 256],
 //     const int32_t b[static 256],
