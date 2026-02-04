@@ -1070,6 +1070,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPERM2I128 (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
            | _ -> NONE)
+        | [0x4c:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           read_byte l >>= \(imm,l). bitmatch imm with [mask_r:4; lo:4] ->
+           if rex_W rex then NONE else
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPBLENDVB (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) (mmreg mask_r sz),l)
+           | _ -> NONE)
         | _ -> NONE)
     | _ -> NONE)
   | [0b1100011:7; v] -> if has_unhandled_pfxs pfxs then NONE else
