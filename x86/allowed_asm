@@ -165,6 +165,7 @@
 : vpsraw$
 : vpsrld$
 : vpsrlvd$
+: vpsrlvq$
 : vpsrlq$
 : vpsrlw$
 : vpsubd$
