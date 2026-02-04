@@ -150,6 +150,7 @@
 : vpextrq$
 : vinserti128$
 : vextracti128$
+: vpmaddubsw$
 : vpmaddwd$
 : vpackuswb$
 : vpmuldq$
