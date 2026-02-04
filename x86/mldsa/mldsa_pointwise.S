@@ -34,9 +34,9 @@
 #include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_pointwise)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_pointwise)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_pointwise)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_pointwise_x86)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_pointwise_x86)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_pointwise_x86)
         .text
 
 #define c rdi
@@ -47,7 +47,7 @@
 #define MLD_AVX2_BACKEND_DATA_OFFSET_8XQINV 0
 #define MLD_AVX2_BACKEND_DATA_OFFSET_8XQ 8
 
-S2N_BN_SYMBOL(mldsa_pointwise):
+S2N_BN_SYMBOL(mldsa_pointwise_x86):
         CFI_START
         _CET_ENDBR
 
@@ -237,7 +237,7 @@ pointwise_looptop1:
 #endif
         CFI_RET
 
-S2N_BN_SIZE_DIRECTIVE(mldsa_pointwise)
+S2N_BN_SIZE_DIRECTIVE(mldsa_pointwise_x86)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

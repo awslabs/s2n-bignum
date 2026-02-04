@@ -12543,6 +12543,70 @@ int test_mldsa_reduce(void)
 #endif
 }
 
+// Reference implementation for MLDSA pointwise Montgomery multiplication
+// Computes c[i] = montgomery_reduce(a[i] * b[i]) for all i
+void reference_mldsa_pointwise(int32_t c[256], const int32_t a[256], const int32_t b[256])
+{
+    for (int i = 0; i < 256; i++) {
+        int64_t product = (int64_t)a[i] * (int64_t)b[i];
+        c[i] = reference_mldsa_reduce(product);
+    }
+}
+
+int test_mldsa_pointwise(void)
+{
+    uint64_t t, i;
+    // 32-byte alignment for AVX2/NEON vector instructions
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t b[256] __attribute__((aligned(32)));
+    int32_t c[256] __attribute__((aligned(32)));
+    int32_t d[256] __attribute__((aligned(32)));
+
+    printf("Testing mldsa_pointwise with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        // Generate random polynomial coefficients in NTT domain
+        // Assume coefficients are bounded by 9*Q in absolute value
+        for (i = 0; i < 256; ++i) {
+            a[i] = (int32_t)(random64() % (2 * 9 * 8380417)) - 9 * 8380417;
+            b[i] = (int32_t)(random64() % (2 * 9 * 8380417)) - 9 * 8380417;
+        }
+
+        // Compute reference result
+        reference_mldsa_pointwise(d, a, b);
+
+        // Call the appropriate architecture-specific implementation
+#ifdef __x86_64__
+        mldsa_pointwise_x86(c, a, b, mldsa_avx2_data);
+#else
+        mldsa_pointwise(c, a, b);
+#endif
+
+        // Compare results (both should be Montgomery-reduced)
+        for (i = 0; i < 256; ++i) {
+            // Apply canonical reduction for comparison
+            int32_t reduced_c = reference_poly_reduce(c[i]);
+            int32_t reduced_d = reference_poly_reduce(d[i]);
+
+            if (reduced_c != reduced_d) {
+                printf("Error in mldsa_pointwise element i = %"PRIu64"; "
+                       "code[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32") "
+                       "while reference[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32")\n",
+                       i, i, c[i], reduced_c, i, d[i], reduced_d);
+                return 1;
+            }
+        }
+
+        if (VERBOSE) {
+            printf("OK: mldsa_pointwise: a[0]=0x%08"PRIx32", b[0]=0x%08"PRIx32" => c[0]=0x%08"PRIx32"\n",
+                   a[0], b[0], c[0]);
+        }
+    }
+
+    printf("All OK\n");
+    return 0;
+}
+
 int test_mldsa_ntt(void)
 {
     // Skip test on non-x86_64 architectures
@@ -15734,6 +15798,7 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
+  functionaltest(all,"mldsa_pointwise",test_mldsa_pointwise);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
