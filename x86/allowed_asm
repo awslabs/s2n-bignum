@@ -138,6 +138,7 @@
 : vpand$
 : vpandn$
 : vpblendd$
+: vpblendvb$
 : vpblendw$
 : vpbroadcastd$
 : vpbroadcastq$
