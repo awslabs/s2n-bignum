@@ -981,6 +981,10 @@ extern void edwards25519_scalarmuldouble_alt(uint64_t res[8],const uint64_t scal
 /* Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_ntt(int32_t a[256], const int32_t zetas[624]);
 
+/* NTT domain coefficient unpacking for ML-DSA */
+/* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
+extern void mldsa_nttunpack(int32_t a[256]);
+
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_reduce(int32_t a[256]);

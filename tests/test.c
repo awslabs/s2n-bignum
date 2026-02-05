@@ -12606,6 +12606,103 @@ int test_mldsa_ntt(void)
 #endif
 }
 
+// Reference implementation for mldsa_nttunpack
+// 
+// SPECIFICATION:
+// This function performs an 8x8 matrix transpose within each of 4 blocks of 64 coefficients.
+// It converts from AVX2 lane-interleaved layout to sequential layout.
+//
+// Mathematical specification:
+//   For each block b ∈ {0, 1, 2, 3}:
+//     For each position i ∈ {0, ..., 63}:
+//       output[64*b + i] = input[64*b + (i mod 8) * 8 + (i div 8)]
+//
+// This transposes the organization from:
+//   [ymm0[0..7], ymm1[0..7], ymm2[0..7], ..., ymm7[0..7]]
+// to:
+//   [ymm0[0], ymm1[0], ..., ymm7[0], ymm0[1], ymm1[1], ..., ymm7[7]]
+//
+// The transformation is a permutation (bijective) and is self-inverse.
+//
+void reference_mldsa_nttunpack(int32_t a[256])
+{
+    int32_t temp[256];
+    int i;
+    
+    // Copy input to temp
+    for (i = 0; i < 256; i++) {
+        temp[i] = a[i];
+    }
+    
+    // Apply the transpose specification to each of 4 blocks
+    for (int block = 0; block < 4; block++) {
+        int base = block * 64;
+        
+        for (i = 0; i < 64; i++) {
+            // Specification: output[base + i] = input[base + (i % 8) * 8 + (i / 8)]
+            int src_index = base + (i % 8) * 8 + (i / 8);
+            a[base + i] = temp[src_index];
+        }
+    }
+}
+
+int test_mldsa_nttunpack(void)
+{
+    // Skip test on non-x86_64 architectures  
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+
+#ifdef __x86_64__
+    uint64_t t, i;
+    // 32-byte alignment for AVX2 vmovdqa instructions
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t b[256] __attribute__((aligned(32)));
+    int32_t c[256] __attribute__((aligned(32)));
+
+    printf("Testing mldsa_nttunpack with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        // Generate random input polynomial coefficients
+        for (i = 0; i < 256; ++i) {
+            a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
+            b[i] = a[i];  // Copy for assembly implementation
+            c[i] = a[i];  // Copy for reference
+        }
+
+        // Call the x86 assembly implementation
+        mldsa_nttunpack(b);
+
+        // Call reference implementation
+        reference_mldsa_nttunpack(c);
+
+        // Compare results
+        for (i = 0; i < 256; ++i) {
+            if (b[i] != c[i]) {
+                printf("Error in mldsa_nttunpack element i = %"PRIu64"; "
+                       "code[%"PRIu64"] = 0x%08"PRIx32" while reference[%"PRIu64"] = 0x%08"PRIx32"\n",
+                       i, i, b[i], i, c[i]);
+                return 1;
+            }
+        }
+
+        if (VERBOSE) {
+            printf("OK: mldsa_nttunpack[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"] = "
+                   "[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"]\n",
+                   a[0], a[1], a[254], a[255],
+                   b[0], b[1], b[254], b[255]);
+        }
+    }
+
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;  // Fallback for non-x86_64 compile-time environments
+#endif
+}
+
 int test_p256_montjadd(void)
 { uint64_t t, k;
   printf("Testing p256_montjadd with %d cases\n",tests);
@@ -15734,6 +15831,7 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
+  functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
