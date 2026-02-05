@@ -160,21 +160,21 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpsubw %ymm10, %ymm14, %ymm10
  vpsubw %ymm11, %ymm15, %ymm11
  vpslld $0x10, %ymm5, %ymm3
-vpblendw	$0xaa,%ymm3,%ymm4,%ymm3
+ vpblendw $0xaa, %ymm3, %ymm4, %ymm3
  vpsrld $0x10, %ymm4, %ymm4
-vpblendw	$0xaa,%ymm5,%ymm4,%ymm5
+ vpblendw $0xaa, %ymm5, %ymm4, %ymm5
  vpslld $0x10, %ymm7, %ymm4
-vpblendw	$0xaa,%ymm4,%ymm6,%ymm4
+ vpblendw $0xaa, %ymm4, %ymm6, %ymm4
  vpsrld $0x10, %ymm6, %ymm6
-vpblendw	$0xaa,%ymm7,%ymm6,%ymm7
+ vpblendw $0xaa, %ymm7, %ymm6, %ymm7
  vpslld $0x10, %ymm9, %ymm6
-vpblendw	$0xaa,%ymm6,%ymm8,%ymm6
+ vpblendw $0xaa, %ymm6, %ymm8, %ymm6
  vpsrld $0x10, %ymm8, %ymm8
-vpblendw	$0xaa,%ymm9,%ymm8,%ymm9
+ vpblendw $0xaa, %ymm9, %ymm8, %ymm9
  vpslld $0x10, %ymm11, %ymm8
-vpblendw	$0xaa,%ymm8,%ymm10,%ymm8
+ vpblendw $0xaa, %ymm8, %ymm10, %ymm8
  vpsrld $0x10, %ymm10, %ymm10
-vpblendw	$0xaa,%ymm11,%ymm10,%ymm11
+ vpblendw $0xaa, %ymm11, %ymm10, %ymm11
  vmovdqa 32(%rsi), %ymm12
  vpermd 736(%rsi), %ymm12, %ymm2
  vpermd 768(%rsi), %ymm12, %ymm10
@@ -210,21 +210,21 @@ vpblendw	$0xaa,%ymm11,%ymm10,%ymm11
  vpmullw %ymm0, %ymm12, %ymm12
  vpsubw %ymm12, %ymm3, %ymm3
  vmovsldup %ymm4, %ymm10
-vpblendd	$0xaa,%ymm10,%ymm3,%ymm10
+ vpblendd $0xaa, %ymm10, %ymm3, %ymm10
  vpsrlq $0x20, %ymm3, %ymm3
-vpblendd	$0xaa,%ymm4,%ymm3,%ymm4
+ vpblendd $0xaa, %ymm4, %ymm3, %ymm4
  vmovsldup %ymm8, %ymm3
-vpblendd	$0xaa,%ymm3,%ymm6,%ymm3
+ vpblendd $0xaa, %ymm3, %ymm6, %ymm3
  vpsrlq $0x20, %ymm6, %ymm6
-vpblendd	$0xaa,%ymm8,%ymm6,%ymm8
+ vpblendd $0xaa, %ymm8, %ymm6, %ymm8
  vmovsldup %ymm7, %ymm6
-vpblendd	$0xaa,%ymm6,%ymm5,%ymm6
+ vpblendd $0xaa, %ymm6, %ymm5, %ymm6
  vpsrlq $0x20, %ymm5, %ymm5
-vpblendd	$0xaa,%ymm7,%ymm5,%ymm7
+ vpblendd $0xaa, %ymm7, %ymm5, %ymm7
  vmovsldup %ymm11, %ymm5
-vpblendd	$0xaa,%ymm5,%ymm9,%ymm5
+ vpblendd $0xaa, %ymm5, %ymm9, %ymm5
  vpsrlq $0x20, %ymm9, %ymm9
-vpblendd	$0xaa,%ymm11,%ymm9,%ymm11
+ vpblendd $0xaa, %ymm11, %ymm9, %ymm11
  vpermq $0x1b, 672(%rsi), %ymm2
  vpermq $0x1b, 704(%rsi), %ymm9
  vpsubw %ymm10, %ymm4, %ymm12
@@ -448,21 +448,21 @@ vperm2i128	$0x31,%ymm11,%ymm8,%ymm11
  vpsubw %ymm10, %ymm14, %ymm10
  vpsubw %ymm11, %ymm15, %ymm11
  vpslld $0x10, %ymm5, %ymm3
-vpblendw	$0xaa,%ymm3,%ymm4,%ymm3
+ vpblendw $0xaa, %ymm3, %ymm4, %ymm3
  vpsrld $0x10, %ymm4, %ymm4
-vpblendw	$0xaa,%ymm5,%ymm4,%ymm5
+ vpblendw $0xaa, %ymm5, %ymm4, %ymm5
  vpslld $0x10, %ymm7, %ymm4
-vpblendw	$0xaa,%ymm4,%ymm6,%ymm4
+ vpblendw $0xaa, %ymm4, %ymm6, %ymm4
  vpsrld $0x10, %ymm6, %ymm6
-vpblendw	$0xaa,%ymm7,%ymm6,%ymm7
+ vpblendw $0xaa, %ymm7, %ymm6, %ymm7
  vpslld $0x10, %ymm9, %ymm6
-vpblendw	$0xaa,%ymm6,%ymm8,%ymm6
+ vpblendw $0xaa, %ymm6, %ymm8, %ymm6
  vpsrld $0x10, %ymm8, %ymm8
-vpblendw	$0xaa,%ymm9,%ymm8,%ymm9
+ vpblendw $0xaa, %ymm9, %ymm8, %ymm9
  vpslld $0x10, %ymm11, %ymm8
-vpblendw	$0xaa,%ymm8,%ymm10,%ymm8
+ vpblendw $0xaa, %ymm8, %ymm10, %ymm8
  vpsrld $0x10, %ymm10, %ymm10
-vpblendw	$0xaa,%ymm11,%ymm10,%ymm11
+ vpblendw $0xaa, %ymm11, %ymm10, %ymm11
  vmovdqa 32(%rsi), %ymm12
  vpermd 288(%rsi), %ymm12, %ymm2
  vpermd 320(%rsi), %ymm12, %ymm10
@@ -498,21 +498,21 @@ vpblendw	$0xaa,%ymm11,%ymm10,%ymm11
  vpmullw %ymm0, %ymm12, %ymm12
  vpsubw %ymm12, %ymm3, %ymm3
  vmovsldup %ymm4, %ymm10
-vpblendd	$0xaa,%ymm10,%ymm3,%ymm10
+ vpblendd $0xaa, %ymm10, %ymm3, %ymm10
  vpsrlq $0x20, %ymm3, %ymm3
-vpblendd	$0xaa,%ymm4,%ymm3,%ymm4
+ vpblendd $0xaa, %ymm4, %ymm3, %ymm4
  vmovsldup %ymm8, %ymm3
-vpblendd	$0xaa,%ymm3,%ymm6,%ymm3
+ vpblendd $0xaa, %ymm3, %ymm6, %ymm3
  vpsrlq $0x20, %ymm6, %ymm6
-vpblendd	$0xaa,%ymm8,%ymm6,%ymm8
+ vpblendd $0xaa, %ymm8, %ymm6, %ymm8
  vmovsldup %ymm7, %ymm6
-vpblendd	$0xaa,%ymm6,%ymm5,%ymm6
+ vpblendd $0xaa, %ymm6, %ymm5, %ymm6
  vpsrlq $0x20, %ymm5, %ymm5
-vpblendd	$0xaa,%ymm7,%ymm5,%ymm7
+ vpblendd $0xaa, %ymm7, %ymm5, %ymm7
  vmovsldup %ymm11, %ymm5
-vpblendd	$0xaa,%ymm5,%ymm9,%ymm5
+ vpblendd $0xaa, %ymm5, %ymm9, %ymm5
  vpsrlq $0x20, %ymm9, %ymm9
-vpblendd	$0xaa,%ymm11,%ymm9,%ymm11
+ vpblendd $0xaa, %ymm11, %ymm9, %ymm11
  vpermq $0x1b, 224(%rsi), %ymm2
  vpermq $0x1b, 256(%rsi), %ymm9
  vpsubw %ymm10, %ymm4, %ymm12
