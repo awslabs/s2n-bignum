@@ -414,7 +414,8 @@ TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
 
 TUTORIAL_OBJ = $(filter-out tutorial/safety.o, $(TUTORIAL_PROOFS:.ml=.o)) \
     curve25519/bignum_mod_n25519.o p256/bignum_mux_4.o p256/bignum_mux_4.obj \
-    tutorial/rel_simp2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o
+    tutorial/rel_simp2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o \
+    tutorial/rodata_local.o
 
 .PHONY: bmi clean clobber
 
@@ -534,6 +535,7 @@ tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
 .SECONDEXPANSION:
 tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 # Additional dependencies on .o files
+tutorial/rodata.native: tutorial/rodata_local.o
 tutorial/rel_simp.native: tutorial/rel_simp2.o
 tutorial/rel_equivtac.native: tutorial/rel_equivtac2.o tutorial/rel_equivtac_sse.o
 tutorial/rel_reordertac.native: tutorial/rel_reordertac2.o
