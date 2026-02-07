@@ -2742,6 +2742,33 @@ void reference_mldsa_bitreverse(int32_t a[256])
     }
 }
 
+// Convert ML-DSA array elements to Montgomery form (multiply by 2^32 mod q)
+void reference_tomont_mldsa(int32_t a[256])
+{
+    const int32_t MLDSA_Q = 8380417;
+    // 2^32 mod q (computed as (2^32) % 8380417)
+    const uint64_t r_mod_q = 4294967296ULL % 8380417; // = 4193792
+    
+    for (int i = 0; i < 256; i++) {
+        // Normalize to [0, q)
+        int64_t normalized = ((int64_t)a[i] % MLDSA_Q + MLDSA_Q) % MLDSA_Q;
+        // Multiply by 2^32 mod q
+        a[i] = (int32_t)((normalized * r_mod_q) % MLDSA_Q);
+    }
+}
+
+// Convert ML-DSA array elements from Montgomery form to normal form
+// Inverse operation of reference_tomont_mldsa
+void reference_frommont_mldsa(int32_t a[256])
+{
+    for (int i = 0; i < 256; i++) {
+        int64_t t_val = (int64_t)a[i];
+        int32_t m = (int32_t)((t_val * 58728449LL) & 0xFFFFFFFF);
+        a[i] = (t_val - (int64_t)m * 8380417) >> 32;
+    }
+}
+
+
 // Raise number to power: x^n mod 8380417
 uint64_t pow_8380417(uint64_t x, uint64_t n)
 {
@@ -2805,6 +2832,81 @@ void reference_mldsa_forward_ntt(int32_t a[256])
                 a[j] = a[j] + t;
             }
         }
+    }
+}
+
+// Reference inverse NTT for ML-DSA (matching mldsa-native C algorithm)
+// Takes NTT-domain input (no bit-reversal needed), produces Montgomery form output
+// This matches the assembly mldsa_intt behavior
+void reference_mldsa_inverse_ntt(int32_t a[256])
+{
+    unsigned int layer;
+    
+    // Apply inverse NTT butterfly layers in reverse order (8 down to 1)
+    for (layer = 8; layer >= 1; layer--) {
+        unsigned start, k, len;
+        // For inverse, use zetas starting from index (1 << layer) - 1 and going down
+        // This gives us the zetas in reverse order
+        k = (1u << layer) - 1;
+        len = 256u >> layer;
+        
+        for (start = 0; start < 256; start += 2 * len) {
+            // Use negative zeta for inverse transform
+            int32_t zeta = -mldsa_zetas[k--];
+            unsigned j;
+            
+            for (j = start; j < start + len; j++) {
+                int32_t t = a[j];
+                a[j] = t + a[j + len];
+                a[j + len] = t - a[j + len];
+                a[j + len] = reference_mldsa_reduce((int64_t)zeta * a[j + len]);
+            }
+        }
+    }
+    
+    // Scale by mont/256 (= 2^32/256 mod q) to get Montgomery form output
+    // 41978 = pow(2, 64-8, MLDSA_Q) per mldsa-native
+    const int32_t f = 41978;
+    for (unsigned i = 0; i < 256; i++) {
+        a[i] = reference_mldsa_reduce((int64_t)a[i] * f);
+    }
+}
+
+// Pure inverse ML-DSA NTT specification (algebraic inverse of forward NTT)
+// Since forward NTT: result[k] = sum_{j=0..255} a[j] * ζ^((2*order(k)+1)*j)
+// Inverse NTT: result[j] = (1/256) * sum_{k=0..255} a[k] * ζ^(-(2*order(k)+1)*j)
+void reference_mldsa_inverse_ntt_spec(int32_t a[256])
+{
+    int32_t result[256];
+    const int32_t MLDSA_Q = 8380417;
+    const uint64_t inv_256 = 8347681; // 256^(-1) mod q
+    
+    for (int j = 0; j < 256; j++) {
+        uint64_t sum = 0;
+        
+        for (int k = 0; k < 256; k++) {
+            // Normalize input
+            int64_t normalized_ak = ((int64_t)a[k] % MLDSA_Q + MLDSA_Q) % MLDSA_Q;
+            
+            // Get the bit-reversed index for k (same as forward NTT uses)
+            uint8_t order_k = avx2_ntt_order(k);
+            
+            // For inverse: use negative exponent ζ^(-(2*order(k)+1)*j)
+            uint64_t power = ((uint64_t)(2 * order_k + 1) * j);
+            uint64_t inv_power = (8380416 - (power % 8380416)) % 8380416;
+            uint64_t zeta_power = pow_8380417(1753, inv_power);
+            
+            uint64_t term = ((uint64_t)normalized_ak * zeta_power) % MLDSA_Q;
+            sum = (sum + term) % MLDSA_Q;
+        }
+        
+        // Multiply by 1/256 mod q
+        result[j] = (int32_t)((sum * inv_256) % MLDSA_Q);
+    }
+    
+    // Copy result back
+    for (int i = 0; i < 256; i++) {
+        a[i] = result[i];
     }
 }
 
@@ -12646,6 +12748,88 @@ void reference_mldsa_nttunpack(int32_t a[256])
     }
 }
 
+// Test mldsa_intt: validates both assembly and C reference specification
+// Tests that both NTT/iNTT pairs are proper inverses
+int test_mldsa_intt(void)
+{
+    // Skip test on non-x86_64 architectures
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+
+#ifdef __x86_64__
+    uint64_t t, i;
+    int32_t original[256] __attribute__((aligned(32)));
+    int32_t asm_result[256] __attribute__((aligned(32)));
+    int32_t spec_result[256] __attribute__((aligned(32)));
+    int32_t temp[256] __attribute__((aligned(32)));
+    
+    printf("Testing mldsa_intt with %d cases\n", tests);
+    
+    for (t = 0; t < tests; ++t) {
+        const int32_t MLDSA_Q = 8380417;
+        
+        // Generate random normal-form coefficients
+        for (i = 0; i < 256; ++i)
+            original[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
+        
+        // Test 1: Assembly NTT → Assembly iNTT round-trip
+        for (i = 0; i < 256; ++i) temp[i] = original[i];
+        mldsa_ntt(temp, mldsa_avx2_data);
+        for (i = 0; i < 256; ++i) asm_result[i] = temp[i];
+        mldsa_intt(asm_result, mldsa_avx2_data);
+        reference_frommont_mldsa(asm_result);
+        
+        // Test 2: C reference NTT → C reference iNTT round-trip  
+        for (i = 0; i < 256; ++i) temp[i] = original[i];
+        reference_mldsa_forward_ntt(temp);
+        for (i = 0; i < 256; ++i) spec_result[i] = temp[i];
+        reference_mldsa_inverse_ntt(spec_result);
+        reference_frommont_mldsa(spec_result);
+        
+        // Both should recover the original (modulo q) - EXACT match required
+        for (i = 0; i < 256; ++i) {
+            int32_t norm_original = ((original[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
+            int32_t norm_asm = ((asm_result[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
+            int32_t norm_spec = ((spec_result[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
+            
+            // Both must match original exactly (no negation accepted)
+            int asm_ok = (norm_asm == norm_original);
+            int spec_ok = (norm_spec == norm_original);
+            
+            if (!asm_ok || !spec_ok) {
+                printf("Error at element i = %"PRIu64":\n", i);
+                printf("  Original: 0x%08"PRIx32" (norm: 0x%08"PRIx32")\n",
+                       original[i], norm_original);
+                printf("  Assembly round-trip: 0x%08"PRIx32" (norm: 0x%08"PRIx32") %s\n",
+                       asm_result[i], norm_asm, asm_ok ? "✓" : "✗");
+                printf("  Spec round-trip: 0x%08"PRIx32" (norm: 0x%08"PRIx32") %s\n",
+                       spec_result[i], norm_spec, spec_ok ? "✓" : "✗");
+                return 1;
+            }
+        }
+        
+        if (VERBOSE) {
+            // Display using spec NTT input/output
+            for (i = 0; i < 256; ++i) temp[i] = original[i];
+            reference_mldsa_forward_ntt(temp);
+            
+            printf("OK: iNTT[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"] = "
+                   "[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"]\n",
+                   temp[0], temp[1], temp[254], temp[255],
+                   spec_result[0], spec_result[1], spec_result[254], spec_result[255]);
+        }
+    }
+
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;  // Fallback for non-x86_64 compile-time environments
+#endif
+}
+
 int test_mldsa_nttunpack(void)
 {
     // Skip test on non-x86_64 architectures  
@@ -15830,6 +16014,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmulbase_alt",test_edwards25519_scalarmulbase_alt);
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
+  functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
