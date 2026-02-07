@@ -27,9 +27,10 @@ s/_internal_s2n_bignum_x86/_internal_s2n_bignum_x86_att/
 / mulrow .+,/b
 
 # Don't transform macro definitions and calls except that the
-# butterfly macros get the ymm default replacement done
+# butterfly and shuffle macros get the ymm default replacement done
 
 /^\.macro butterfly/ s/=ymm/=%ymm/g
+/^\.macro shuffle/ s/=ymm/=%ymm/g
 /^\.macro/b
 /^\.endm/b
 
