@@ -111,6 +111,9 @@ let iclasses =
   (*** ADD ***)
   "0x001110xx1xxxxx100001xxxxxxxxxx";
 
+  (*** ABS ***)
+  "0x001110xx100000101110xxxxxxxxxx";
+
   (*** AND ***)
   "0x001110001xxxxx000111xxxxxxxxxx";
 
@@ -125,6 +128,9 @@ let iclasses =
 
   (*** CMHI, vector ***)
   "0x101110xx1xxxxx001101xxxxxxxxxx";
+
+  (*** CMGE, vector ***)
+  "0x001110xx1xxxxx001111xxxxxxxxxx";
 
   (*** CNT, bias to defined size = 0 ***)
   "0x00111000100000010110xxxxxxxxxx";
@@ -309,6 +315,9 @@ let iclasses =
 
   (*** UADDLV ***)
   "0x101110xx110000001110xxxxxxxxxx";
+
+  (*** UMAXV ***)
+  "0x101110xx110000101010xxxxxxxxxx";
 
   (*** UMOV (.d, .s) ***)
   "01001110000x1000001111xxxxxxxxxx";

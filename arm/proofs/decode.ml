@@ -466,6 +466,13 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     SOME (arm_CMHI_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
 
+  | [0:1; q; 0b001110:6; size:2; 1:1; Rm:5; 0b001111:6; Rn:5; Rd:5] ->
+    // CMGE (register)
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP val size in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_CMGE_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
+
   | [0:1; q; 0b101110001:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
     // EOR
     SOME (arm_EOR_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
@@ -625,6 +632,14 @@ let decode = new_definition `!w:int32. decode w =
       let esize = 8 * (2 EXP (val size)) in
       let datasize = if q then 128 else 64 in
       SOME (arm_MLA_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
+
+  | [0:1; q; 0b001110:6; size:2; 0b100000101110:12; Rn:5; Rd:5] ->
+    // ABS (vector)
+    if size = word 0b11 /\ ~q then NONE // "UNDEFINED" - 64-bit only with Q=1
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_ABS_VEC (QREG' Rd) (QREG' Rn) esize datasize)
 
   | [0:1; q; 0b001111:6; sz:2; L:1; M:1; R:4; 0b1000:4; H:1; 0:1; Rn:5; Rd:5] ->
     // MUL (by element)
@@ -828,6 +843,14 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     let elements = datasize DIV esize in
     SOME(arm_UADDLV (QREG' Rd) (QREG' Rn) elements esize)
+
+  | [0:1; q; 0b101110:6; size:2; 0b110000101010:12; Rn:5; Rd:5] ->
+    // UMAXV
+    if size = word 0b10 /\ ~q \/ size = word 0b11 then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    let elements = datasize DIV esize in
+    SOME(arm_UMAXV (QREG' Rd) (QREG' Rn) elements esize)
 
   | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
     // UMLAL (vector, Q = 0). UMLAL2 (vector, Q=1)
