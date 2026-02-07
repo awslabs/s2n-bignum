@@ -118,10 +118,10 @@ S2N_BN_SYMBOL(sha3_keccak4_f1600):
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x60(%rsp)
    vmovdqu %ymm1, 0x80(%rsp)
    vmovdqu %ymm2, 0xa0(%rsp)
@@ -136,10 +136,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0xe0(%rsp)
    vmovdqu %ymm1, 0x100(%rsp)
    vmovdqu %ymm2, 0x120(%rsp)
@@ -154,10 +154,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x160(%rsp)
    vmovdqu %ymm1, 0x180(%rsp)
    vmovdqu %ymm2, 0x1a0(%rsp)
@@ -172,10 +172,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x1e0(%rsp)
    vmovdqu %ymm1, 0x200(%rsp)
    vmovdqu %ymm2, 0x220(%rsp)
@@ -190,10 +190,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x260(%rsp)
    vmovdqu %ymm1, 0x280(%rsp)
    vmovdqu %ymm2, 0x2a0(%rsp)
@@ -697,10 +697,10 @@ Lsha3_keccak4_f1600_loop:
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x20(%rdi)
    vmovdqu %ymm1, 0xe8(%rdi)
    vmovdqu %ymm2, 0x1b0(%rdi)
@@ -715,10 +715,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x40(%rdi)
    vmovdqu %ymm1, 0x108(%rdi)
    vmovdqu %ymm2, 0x1d0(%rdi)
@@ -733,10 +733,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x60(%rdi)
    vmovdqu %ymm1, 0x128(%rdi)
    vmovdqu %ymm2, 0x1f0(%rdi)
@@ -751,10 +751,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0x80(%rdi)
    vmovdqu %ymm1, 0x148(%rdi)
    vmovdqu %ymm2, 0x210(%rdi)
@@ -769,10 +769,10 @@ vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
    vpunpckhqdq %ymm1, %ymm0, %ymm6
    vpunpcklqdq %ymm3, %ymm2, %ymm7
    vpunpckhqdq %ymm3, %ymm2, %ymm8
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm0
-vperm2i128	$0x20,%ymm8,%ymm6,%ymm1
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm2
-vperm2i128	$0x31,%ymm8,%ymm6,%ymm3
+   vperm2i128 $0x20, %ymm7, %ymm4, %ymm0
+   vperm2i128 $0x20, %ymm8, %ymm6, %ymm1
+   vperm2i128 $0x31, %ymm7, %ymm4, %ymm2
+   vperm2i128 $0x31, %ymm8, %ymm6, %ymm3
    vmovdqu %ymm0, 0xa0(%rdi)
    vmovdqu %ymm1, 0x168(%rdi)
    vmovdqu %ymm2, 0x230(%rdi)

@@ -293,14 +293,14 @@ S2N_BN_SYMBOL(mlkem_intt_x86):
  vpsraw $0xa, %ymm12, %ymm12
  vpmullw %ymm0, %ymm12, %ymm12
  vpsubw %ymm12, %ymm9, %ymm9
-vperm2i128	$0x20,%ymm10,%ymm9,%ymm7
-vperm2i128	$0x31,%ymm10,%ymm9,%ymm10
-vperm2i128	$0x20,%ymm4,%ymm6,%ymm9
-vperm2i128	$0x31,%ymm4,%ymm6,%ymm4
-vperm2i128	$0x20,%ymm5,%ymm3,%ymm6
-vperm2i128	$0x31,%ymm5,%ymm3,%ymm5
-vperm2i128	$0x20,%ymm11,%ymm8,%ymm3
-vperm2i128	$0x31,%ymm11,%ymm8,%ymm11
+ vperm2i128 $0x20, %ymm10, %ymm9, %ymm7
+ vperm2i128 $0x31, %ymm10, %ymm9, %ymm10
+ vperm2i128 $0x20, %ymm4, %ymm6, %ymm9
+ vperm2i128 $0x31, %ymm4, %ymm6, %ymm4
+ vperm2i128 $0x20, %ymm5, %ymm3, %ymm6
+ vperm2i128 $0x31, %ymm5, %ymm3, %ymm5
+ vperm2i128 $0x20, %ymm11, %ymm8, %ymm3
+ vperm2i128 $0x31, %ymm11, %ymm8, %ymm11
  vmovdqa 544(%rsi), %ymm2
  vmovdqa 576(%rsi), %ymm8
  vpsubw %ymm7, %ymm10, %ymm12
@@ -581,14 +581,14 @@ vperm2i128	$0x31,%ymm11,%ymm8,%ymm11
  vpsraw $0xa, %ymm12, %ymm12
  vpmullw %ymm0, %ymm12, %ymm12
  vpsubw %ymm12, %ymm9, %ymm9
-vperm2i128	$0x20,%ymm10,%ymm9,%ymm7
-vperm2i128	$0x31,%ymm10,%ymm9,%ymm10
-vperm2i128	$0x20,%ymm4,%ymm6,%ymm9
-vperm2i128	$0x31,%ymm4,%ymm6,%ymm4
-vperm2i128	$0x20,%ymm5,%ymm3,%ymm6
-vperm2i128	$0x31,%ymm5,%ymm3,%ymm5
-vperm2i128	$0x20,%ymm11,%ymm8,%ymm3
-vperm2i128	$0x31,%ymm11,%ymm8,%ymm11
+ vperm2i128 $0x20, %ymm10, %ymm9, %ymm7
+ vperm2i128 $0x31, %ymm10, %ymm9, %ymm10
+ vperm2i128 $0x20, %ymm4, %ymm6, %ymm9
+ vperm2i128 $0x31, %ymm4, %ymm6, %ymm4
+ vperm2i128 $0x20, %ymm5, %ymm3, %ymm6
+ vperm2i128 $0x31, %ymm5, %ymm3, %ymm5
+ vperm2i128 $0x20, %ymm11, %ymm8, %ymm3
+ vperm2i128 $0x31, %ymm11, %ymm8, %ymm11
  vmovdqa 96(%rsi), %ymm2
  vmovdqa 128(%rsi), %ymm8
  vpsubw %ymm7, %ymm10, %ymm12
