@@ -936,6 +936,13 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     SOME(arm_TBL (QREG' Rd) [QREG' Rn] (QREG' Rm) datasize)
 
+  | [0:1; q; 0b001110000:9; Rm:5; 0b001000:6; Rn:5; Rd:5] ->
+    // TBL (2-register table, len = 1)
+    let datasize = if q then 128 else 64 in
+    SOME(arm_TBL2 (QREG' Rd) (QREG' Rn)
+                  (QREG' (word_add Rn (word 1:(5)word)))
+                  (QREG' Rm) datasize)
+
   | [0b11001110000:11; Rm:5; 0:1; Ra:5; Rn:5; Rd:5] ->
     // EOR3
     SOME (arm_EOR3 (QREG' Rd) (QREG' Rn) (QREG' Rm) (QREG' Ra))
