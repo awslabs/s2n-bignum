@@ -127,7 +127,9 @@ let AESKEYGENASSIST_REDUCE_CONV tm =
 (** TESTS                                      **)
 (************************************************)
 (* From White Paper:
-  Intel Advanced Encryption Standard (AES) New Instructions Set *)
+  Intel Advanced Encryption Standard (AES) New Instructions Set
+  https://www.intel.com/content/dam/doc/white-paper/advanced-encryption-standard-new-instructions-set-paper.pdf
+  Fig 11. AESENC Example to Fig 14 AESDECLAST Example *)
 
 prove(`aesenc (word 0x7b5b54657374566563746f725d53475d)
               (word 0x48692853686179295b477565726f6e5d) =
