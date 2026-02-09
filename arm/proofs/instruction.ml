@@ -1962,6 +1962,32 @@ let arm_USHR_VEC = define
             else usimd8 (\x. word_ushr x amt) n in
           (Rd := word_zx d:(128)word) s`;;
 
+let word_ushl = new_definition
+ `(word_ushl:N word->N word->N word) x y =
+    let amt:byte = word_subword y (0,8) in
+    if ~(bit 7 amt) then word_shl x (val amt)
+    else word_ushr x (val(word_neg amt))`;;
+
+let arm_USHL_VEC = define
+ `arm_USHL_VEC Rd Rn Rm esize datasize =
+    \s. let n = read Rn s
+        and m = read Rm (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 word_ushl n m
+            else if esize = 32 then simd4 word_ushl n m
+            else if esize = 16 then simd8 word_ushl n m
+            else simd16 word_ushl n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 word_ushl n m
+            else if esize = 16 then simd4 word_ushl n m
+            else simd8 word_ushl n m in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_USRA_VEC = define
  `arm_USRA_VEC Rd Rn shift esize datasize =
     \s. let n:(128)word = read Rn s in
@@ -3168,6 +3194,8 @@ let arm_UMLSL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMLSL_VEC;;
 let arm_UMLSL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMLSL2_VEC;;
 let arm_UMULL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMULL_VEC;;
 let arm_UMULL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMULL2_VEC;;
+let arm_USHL_VEC_ALT =
+  REWRITE_RULE[word_ushl] (EXPAND_SIMD_RULE arm_USHL_VEC);;
 let arm_USHR_VEC_ALT =   EXPAND_SIMD_RULE arm_USHR_VEC;;
 let arm_USRA_VEC_ALT =   EXPAND_SIMD_RULE arm_USRA_VEC;;
 let arm_UZP1_ALT =       EXPAND_SIMD_RULE arm_UZP1;;
@@ -3279,7 +3307,7 @@ let ARM_OPERATION_CLAUSES =
        arm_UMSUBL;
        arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT;
        arm_UMULH;
-       arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
+       arm_USHL_VEC_ALT; arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
        arm_UZP2_ALT;
        arm_XAR; arm_XTN_ALT;
        arm_ZIP1_ALT; arm_ZIP2_ALT;

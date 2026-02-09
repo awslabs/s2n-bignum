@@ -451,6 +451,14 @@ let decode = new_definition `!w:int32. decode w =
       SOME ((if u then arm_SUB_VEC else arm_ADD_VEC)
             (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
 
+  | [0:1; q; 0b101110:6; size:2; 1:1; Rm:5; 0b010001:6; Rn:5; Rd:5] ->
+    // USHL (vector, per-element variable shift)
+    if size = (word 0b11:(2)word) /\ ~q then NONE
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_USHL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
+
   | [0:1; q; 0b001110001:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
     // AND
     SOME (arm_AND_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))

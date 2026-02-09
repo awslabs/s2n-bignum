@@ -338,6 +338,9 @@ let iclasses =
   (*** UMULL2 ***)
   "01101110xx1xxxxx110000xxxxxxxxxx";
 
+  (*** USHL ***)
+  "0x101110xx1xxxxx010001xxxxxxxxxx";
+
   (*** USHR (make sure immh is nonzero) ***)
   "0x10111101xxxxxx000001xxxxxxxxxx";
   "0x101111001xxxxx000001xxxxxxxxxx";
