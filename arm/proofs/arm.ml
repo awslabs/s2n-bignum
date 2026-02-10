@@ -251,6 +251,41 @@ let DREG_EXPAND_CLAUSES = prove
    D31 = Q31 :> zerotop_64`,
   REWRITE_TAC(!component_alias_thms));;
 
+let SREG_EXPAND_CLAUSES = prove
+ (`S0 = Q0 :> zerotop_96 /\
+   S1 = Q1 :> zerotop_96 /\
+   S2 = Q2 :> zerotop_96 /\
+   S3 = Q3 :> zerotop_96 /\
+   S4 = Q4 :> zerotop_96 /\
+   S5 = Q5 :> zerotop_96 /\
+   S6 = Q6 :> zerotop_96 /\
+   S7 = Q7 :> zerotop_96 /\
+   S8 = Q8 :> zerotop_96 /\
+   S9 = Q9 :> zerotop_96 /\
+   S10 = Q10 :> zerotop_96 /\
+   S11 = Q11 :> zerotop_96 /\
+   S12 = Q12 :> zerotop_96 /\
+   S13 = Q13 :> zerotop_96 /\
+   S14 = Q14 :> zerotop_96 /\
+   S15 = Q15 :> zerotop_96 /\
+   S16 = Q16 :> zerotop_96 /\
+   S17 = Q17 :> zerotop_96 /\
+   S18 = Q18 :> zerotop_96 /\
+   S19 = Q19 :> zerotop_96 /\
+   S20 = Q20 :> zerotop_96 /\
+   S21 = Q21 :> zerotop_96 /\
+   S22 = Q22 :> zerotop_96 /\
+   S23 = Q23 :> zerotop_96 /\
+   S24 = Q24 :> zerotop_96 /\
+   S25 = Q25 :> zerotop_96 /\
+   S26 = Q26 :> zerotop_96 /\
+   S27 = Q27 :> zerotop_96 /\
+   S28 = Q28 :> zerotop_96 /\
+   S29 = Q29 :> zerotop_96 /\
+   S30 = Q30 :> zerotop_96 /\
+   S31 = Q31 :> zerotop_96`,
+  REWRITE_TAC(!component_alias_thms));;
+
 let READ_SHIFTEDREG_CLAUSES = prove
  (`read (Shiftedreg Rn LSL n) s = word_shl (read Rn s) n /\
    read (Shiftedreg Rn LSR n) s = word_ushr (read Rn s) n /\
@@ -303,11 +338,13 @@ let ARM_EXEC_CONV =
     GEN_REWRITE_CONV ONCE_DEPTH_CONV [CONJUNCT2 SEQ_ID]) ORELSEC
    (GEN_REWRITE_CONV I ARM_OPERATION_CLAUSES THENC
     REWRITE_CONV [condition_semantics])) THENC
-  REWRITE_CONV[WREG_EXPAND_CLAUSES; DREG_EXPAND_CLAUSES] THENC
+  REWRITE_CONV[WREG_EXPAND_CLAUSES; DREG_EXPAND_CLAUSES;
+               SREG_EXPAND_CLAUSES] THENC
   REWRITE_CONV[READ_RVALUE; ARM_ZERO_REGISTER;
-               ASSIGN_ZEROTOP_32; ASSIGN_ZEROTOP_64;
+               ASSIGN_ZEROTOP_32; ASSIGN_ZEROTOP_64; ASSIGN_ZEROTOP_96;
                READ_ZEROTOP_32; WRITE_ZEROTOP_32;
                READ_ZEROTOP_64; WRITE_ZEROTOP_64;
+               READ_ZEROTOP_96; WRITE_ZEROTOP_96;
                READ_SHIFTEDREG_CLAUSES; READ_EXTENDEDREG_CLAUSES;
                READ_LANE_CLAUSES] THENC
   DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_WORD_OPERATION_CONV);;

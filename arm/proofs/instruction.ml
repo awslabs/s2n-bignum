@@ -375,7 +375,7 @@ let QREG = define `QREG n = simdregisters :> element(word n)`;;
 
 let DREG = define `DREG n = QREG n :> zerotop_64`;;
 
-let SREG = define `SREG n = DREG n :> zerotop_32`;;
+let SREG = define `SREG n = QREG n :> zerotop_96`;;
 
 let HREG = define `HREG n = SREG n :> zerotop_16`;;
 
@@ -460,6 +460,45 @@ add_component_alias_thms
    D8;  D9; D10; D11; D12; D13; D14; D15;
   D16; D17; D18; D19; D20; D21; D22; D23;
   D24; D25; D26; D27; D28; D29; D30; D31];;
+
+let  S0 = define ` S0 = SREG  0`;;
+let  S1 = define ` S1 = SREG  1`;;
+let  S2 = define ` S2 = SREG  2`;;
+let  S3 = define ` S3 = SREG  3`;;
+let  S4 = define ` S4 = SREG  4`;;
+let  S5 = define ` S5 = SREG  5`;;
+let  S6 = define ` S6 = SREG  6`;;
+let  S7 = define ` S7 = SREG  7`;;
+let  S8 = define ` S8 = SREG  8`;;
+let  S9 = define ` S9 = SREG  9`;;
+let S10 = define `S10 = SREG 10`;;
+let S11 = define `S11 = SREG 11`;;
+let S12 = define `S12 = SREG 12`;;
+let S13 = define `S13 = SREG 13`;;
+let S14 = define `S14 = SREG 14`;;
+let S15 = define `S15 = SREG 15`;;
+let S16 = define `S16 = SREG 16`;;
+let S17 = define `S17 = SREG 17`;;
+let S18 = define `S18 = SREG 18`;;
+let S19 = define `S19 = SREG 19`;;
+let S20 = define `S20 = SREG 20`;;
+let S21 = define `S21 = SREG 21`;;
+let S22 = define `S22 = SREG 22`;;
+let S23 = define `S23 = SREG 23`;;
+let S24 = define `S24 = SREG 24`;;
+let S25 = define `S25 = SREG 25`;;
+let S26 = define `S26 = SREG 26`;;
+let S27 = define `S27 = SREG 27`;;
+let S28 = define `S28 = SREG 28`;;
+let S29 = define `S29 = SREG 29`;;
+let S30 = define `S30 = SREG 30`;;
+let S31 = define `S31 = SREG 31`;;
+
+add_component_alias_thms
+ [ S0;  S1;  S2;  S3;  S4;  S5;  S6;  S7;
+   S8;  S9; S10; S11; S12; S13; S14; S15;
+  S16; S17; S18; S19; S20; S21; S22; S23;
+  S24; S25; S26; S27; S28; S29; S30; S31];;
 
 (* ------------------------------------------------------------------------- *)
 (* Additional subcomponents for individual lanes of a SIMD register.         *)
