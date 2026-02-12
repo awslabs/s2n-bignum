@@ -164,6 +164,7 @@
 : vpsrlq$
 : vpsrlw$
 : vpsubd$
+: vpsubq$
 : vpsubw$
 : vpunpckhqdq$
 : vpunpcklqdq$
