@@ -180,10 +180,10 @@ S2N_BN_SYMBOL(mlkem_ntt_x86):
  vpaddw %ymm14, %ymm10, %ymm10
  vpsubw %ymm15, %ymm6, %ymm6
  vpaddw %ymm15, %ymm11, %ymm11
-vperm2i128	$0x20,%ymm10,%ymm5,%ymm7
-vperm2i128	$0x31,%ymm10,%ymm5,%ymm10
-vperm2i128	$0x20,%ymm11,%ymm6,%ymm5
-vperm2i128	$0x31,%ymm11,%ymm6,%ymm11
+ vperm2i128 $0x20, %ymm10, %ymm5, %ymm7
+ vperm2i128 $0x31, %ymm10, %ymm5, %ymm10
+ vperm2i128 $0x20, %ymm11, %ymm6, %ymm5
+ vperm2i128 $0x31, %ymm11, %ymm6, %ymm11
  vmovdqa 160(%rsi), %ymm15
  vmovdqa 192(%rsi), %ymm2
  vpmullw %ymm15, %ymm7, %ymm12
@@ -194,10 +194,10 @@ vperm2i128	$0x31,%ymm11,%ymm6,%ymm11
  vpmulhw %ymm2, %ymm10, %ymm10
  vpmulhw %ymm2, %ymm5, %ymm5
  vpmulhw %ymm2, %ymm11, %ymm11
-vperm2i128	$0x20,%ymm8,%ymm3,%ymm6
-vperm2i128	$0x31,%ymm8,%ymm3,%ymm8
-vperm2i128	$0x20,%ymm9,%ymm4,%ymm3
-vperm2i128	$0x31,%ymm9,%ymm4,%ymm9
+ vperm2i128 $0x20, %ymm8, %ymm3, %ymm6
+ vperm2i128 $0x31, %ymm8, %ymm3, %ymm8
+ vperm2i128 $0x20, %ymm9, %ymm4, %ymm3
+ vperm2i128 $0x31, %ymm9, %ymm4, %ymm9
  vpmulhw %ymm0, %ymm12, %ymm12
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
@@ -426,10 +426,10 @@ vperm2i128	$0x31,%ymm9,%ymm4,%ymm9
  vpaddw %ymm14, %ymm10, %ymm10
  vpsubw %ymm15, %ymm6, %ymm6
  vpaddw %ymm15, %ymm11, %ymm11
-vperm2i128	$0x20,%ymm10,%ymm5,%ymm7
-vperm2i128	$0x31,%ymm10,%ymm5,%ymm10
-vperm2i128	$0x20,%ymm11,%ymm6,%ymm5
-vperm2i128	$0x31,%ymm11,%ymm6,%ymm11
+ vperm2i128 $0x20, %ymm10, %ymm5, %ymm7
+ vperm2i128 $0x31, %ymm10, %ymm5, %ymm10
+ vperm2i128 $0x20, %ymm11, %ymm6, %ymm5
+ vperm2i128 $0x31, %ymm11, %ymm6, %ymm11
  vmovdqa 608(%rsi), %ymm15
  vmovdqa 640(%rsi), %ymm2
  vpmullw %ymm15, %ymm7, %ymm12
@@ -440,10 +440,10 @@ vperm2i128	$0x31,%ymm11,%ymm6,%ymm11
  vpmulhw %ymm2, %ymm10, %ymm10
  vpmulhw %ymm2, %ymm5, %ymm5
  vpmulhw %ymm2, %ymm11, %ymm11
-vperm2i128	$0x20,%ymm8,%ymm3,%ymm6
-vperm2i128	$0x31,%ymm8,%ymm3,%ymm8
-vperm2i128	$0x20,%ymm9,%ymm4,%ymm3
-vperm2i128	$0x31,%ymm9,%ymm4,%ymm9
+ vperm2i128 $0x20, %ymm8, %ymm3, %ymm6
+ vperm2i128 $0x31, %ymm8, %ymm3, %ymm8
+ vperm2i128 $0x20, %ymm9, %ymm4, %ymm3
+ vperm2i128 $0x31, %ymm9, %ymm4, %ymm9
  vpmulhw %ymm0, %ymm12, %ymm12
  vpmulhw %ymm0, %ymm13, %ymm13
  vpmulhw %ymm0, %ymm14, %ymm14
