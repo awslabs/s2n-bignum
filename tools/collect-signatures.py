@@ -330,6 +330,7 @@ onlyInX86 = [
   "bignum_triple_sm2_alt",
   "mldsa_intt",
   "mldsa_ntt",
+  "mldsa_nttunpack",
   "mldsa_reduce",
   "mlkem_frombytes",
   "mlkem_mulcache_compute_x86",

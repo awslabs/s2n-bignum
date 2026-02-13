@@ -1097,6 +1097,7 @@ void call_sm2_montjscalarmul_alt(void) repeatfewer(10,sm2_montjscalarmul_alt(b1,
 
 void call_mldsa_intt(void) repeat(mldsa_intt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_ntt(void) repeat(mldsa_ntt((int32_t*)b0,(const int32_t*)b1))
+void call_mldsa_nttunpack(void) repeat(mldsa_nttunpack((int32_t*)b0))
 void call_mldsa_reduce(void) repeat(mldsa_reduce((int32_t*)b0))
 
 void call_mlkem_frombytes(void) repeat(mlkem_frombytes((uint16_t*)b0,(int8_t*)b1))
@@ -1122,6 +1123,7 @@ void call_sha3_keccak4_f1600_alt2(void) {}
 
 void call_mldsa_intt(void) {}
 void call_mldsa_ntt(void) {}
+void call_mldsa_nttunpack(void) {}
 void call_mldsa_reduce(void) {}
 
 void call_bignum_copy_row_from_table_8n__32_16(void) \
@@ -1543,6 +1545,7 @@ int main(int argc, char *argv[])
   timingtest(!arm,"mlkem_unpack",call_mlkem_unpack);
   timingtest(!arm,"mldsa_intt",call_mldsa_intt);
   timingtest(!arm,"mldsa_ntt",call_mldsa_ntt);
+  timingtest(!arm,"mldsa_nttunpack",call_mldsa_nttunpack);
   timingtest(!arm,"mldsa_reduce",call_mldsa_reduce);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
   timingtest(all,"p256_montjadd_alt",call_p256_montjadd_alt);
