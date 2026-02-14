@@ -330,9 +330,13 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 8))))
   | [0b10:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 4))))
-  // Post-immediate offset, size 128 only
+  // Post-immediate offset, sizes 128, 64 and 32
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
+  | [0b11:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
+  | [0b10:2; 0b1111000:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
   // Shifted register, size 128 only, no extensions (i.e. only UXTX)
   | [0b00:2; 0b1111001:7; is_ld; 1:1; Rm:5; 0b011:3; S; 0b10:2;  Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn)
