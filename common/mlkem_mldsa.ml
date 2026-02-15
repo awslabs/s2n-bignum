@@ -217,6 +217,22 @@ let FORWARD_NTT = prove
   REWRITE_TAC[ARITH_RULE `(2 * x + i MOD 2) DIV 2 = x`] THEN
   REWRITE_TAC[MOD_MULT_ADD; MOD_MOD_REFL]);;
 
+
+let arm_mldsa_pure_forward_ntt = define
+ `arm_mldsa_pure_forward_ntt f k =
+    isum (0..255) (\j. f j * &1753 pow ((2 * k + 1) * j))
+    rem &8380417`;;
+
+let arm_mldsa_forward_ntt = define
+ `arm_mldsa_forward_ntt f k =
+    isum (0..255) (\j. f j * &1753 pow ((2 * bitreverse8 k + 1) * j))
+    rem &8380417`;;
+
+let ARM_MLDSA_FORWARD_NTT = prove
+ (`arm_mldsa_forward_ntt = reorder bitreverse8 o arm_mldsa_pure_forward_ntt`,
+  REWRITE_TAC[FUN_EQ_THM; o_DEF; reorder] THEN
+  REWRITE_TAC[arm_mldsa_forward_ntt; arm_mldsa_pure_forward_ntt]);;
+
 let INVERSE_NTT = prove
  (`inverse_ntt = tomont_3329 o pure_inverse_ntt o reorder bitreverse_pairs`,
   REWRITE_TAC[FUN_EQ_THM; o_DEF; bitreverse_pairs; reorder] THEN
@@ -269,6 +285,22 @@ let FORWARD_NTT_ALT = prove
   REWRITE_TAC[forward_ntt] THEN MATCH_MP_TAC
    (REWRITE_RULE[] (ISPEC
       `(\x y. x rem &3329 = y rem &3329)` ISUM_RELATED)) THEN
+  REWRITE_TAC[INT_REM_EQ; FINITE_NUMSEG; INT_CONG_ADD] THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_REM; GSYM INT_OF_NUM_CLAUSES;
+              GSYM INT_REM_EQ] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC INT_ARITH);;
+
+let ARM_MLDSA_FORWARD_NTT_ALT = prove
+ (`arm_mldsa_forward_ntt f k =
+   isum (0..255)
+        (\j. f j *
+             (&1753 pow ((2 * bitreverse8 k + 1) * j)) rem &8380417)
+    rem &8380417`,
+  REWRITE_TAC[arm_mldsa_forward_ntt] THEN MATCH_MP_TAC
+   (REWRITE_RULE[] (ISPEC
+      `(\x y. x rem &8380417 = y rem &8380417)` ISUM_RELATED)) THEN
   REWRITE_TAC[INT_REM_EQ; FINITE_NUMSEG; INT_CONG_ADD] THEN
   X_GEN_TAC `i:num` THEN DISCH_TAC THEN
   REWRITE_TAC[GSYM INT_OF_NUM_REM; GSYM INT_OF_NUM_CLAUSES;
@@ -425,6 +457,18 @@ let MLDSA_FORWARD_NTT_CONV =
   GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
 
+
+let ARM_MLDSA_FORWARD_NTT_CONV =
+  GEN_REWRITE_CONV I [ARM_MLDSA_FORWARD_NTT_ALT] THENC
+  LAND_CONV EXPAND_ISUM_CONV THENC
+  DEPTH_CONV NUM_RED_CONV THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
+  DEPTH_CONV NUM_RED_CONV THENC
+  GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
+  ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
+
+
+
 let MLDSA_INVERSE_NTT_ALT = prove
  (`mldsa_inverse_ntt f k =
     isum (0..255)
@@ -483,6 +527,12 @@ let barmul = define
   word_sub (word_mul a b)
            (word_mul (iword_saturate((&2 * ival a * k + &32768) div &65536))
                      (word 3329))`;;
+
+let arm_mldsa_barmul = define
+ `arm_mldsa_barmul (k,b) (a:int32):int32 =
+  word_sub (word_mul a b)
+           (word_mul (iword_saturate((&2 * ival a * k + &2147483648) div &4294967296))
+                     (word 8380417))`;;
 
 let montred = define
    `(montred:int32->int16) x =
@@ -948,6 +998,59 @@ let CONGBOUND_BARMUL = prove
    `l:int <= x /\ x <= u ==> abs x <= max (abs l) (abs u)`] THEN
   CONV_TAC INT_ARITH);;
 
+let CONGBOUND_ARM_MLDSA_BARMUL = prove
+ (`!a a' l u.
+        ((ival a == a') (mod &8380417) /\ l <= ival a /\ ival a <= u)
+        ==> !k b. abs(k) <= &2147483647 /\
+                  (max (abs l) (abs u) *
+                   abs(&4294967296 * ival b - &16760834 * k) + &17996812765888511) div &4294967296
+                  <= &2147483647
+                  ==> (ival(arm_mldsa_barmul(k,b) a) == a' * ival b) (mod &8380417) /\
+                      --(max (abs l) (abs u) *
+                         abs(&4294967296 * ival b - &16760834 * k) + &17996808470921216)
+                         div &4294967296
+                      <= ival(arm_mldsa_barmul(k,b) a) /\
+                      ival(arm_mldsa_barmul(k,b) a) <=
+                      (max (abs l) (abs u) * abs(&4294967296 * ival b - &16760834 * k) +
+                       &17996812765888511) div &4294967296`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[INT_ABS_BOUNDS] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[arm_mldsa_barmul] THEN
+  REWRITE_TAC[iword_saturate; word_INT_MIN; word_INT_MAX; DIMINDEX_32] THEN
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
+  REPEAT(COND_CASES_TAC THENL
+   [FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (MESON[] `p ==> ~p ==> q`)) THEN
+    REWRITE_TAC[INT_GT; INT_NOT_LT] THEN ASM BOUNDER_TAC[];
+    ASM_REWRITE_TAC[]]) THEN
+  REWRITE_TAC[WORD_RULE
+   `word_sub (word_mul a b) (word_mul (iword k) (word c)) =
+    iword(ival a * ival b - &c * k)`] THEN
+  MATCH_MP_TAC(MESON[]
+   `(x == k) (mod n) /\
+    (a <= x /\ x <= b ==> ival(iword x:int32) = x) /\
+    (a <= x /\ x <= b)
+    ==> (ival(iword x:int32) == k) (mod n) /\
+        a <= ival(iword x:int32) /\ ival(iword x:int32) <= b`) THEN
+  ASM_SIMP_TAC[INTEGER_RULE
+   `(a:int == a') (mod n) ==> (a * b - n * c == a' * b) (mod n)`] THEN
+  CONJ_TAC THENL
+   [REPEAT STRIP_TAC THEN MATCH_MP_TAC IVAL_IWORD THEN
+    REWRITE_TAC[DIMINDEX_32; ARITH] THEN ASM_INT_ARITH_TAC;
+    ALL_TAC] THEN
+  MATCH_MP_TAC(INT_ARITH
+   `&4294967296 * l + &17996808470921216 <= a * (&4294967296 * b - &16760834 * k) /\
+    a * (&4294967296 * b - &16760834 * k) <= &4294967296 * u - &17996808470921216
+    ==> l <= a * b - &8380417 * (&2 * a * k + &2147483648) div &4294967296 /\
+        a * b - &8380417 * (&2 * a * k + &2147483648) div &4294967296 <= u`) THEN
+  CONJ_TAC THENL
+   [MATCH_MP_TAC(INT_ARITH `abs(y):int <= --x ==> x <= y`);
+    MATCH_MP_TAC(INT_ARITH `abs(y):int <= x ==> y <= x`)] THEN
+  REWRITE_TAC[INT_ABS_MUL] THEN
+  TRANS_TAC INT_LE_TRANS
+   `max (abs l) (abs u) * abs(&4294967296 * ival(b:int32) - &16760834 * k)` THEN
+  ASM_SIMP_TAC[INT_LE_RMUL; INT_ABS_POS; INT_ARITH
+   `l:int <= x /\ x <= u ==> abs x <= max (abs l) (abs u)`] THEN
+  CONV_TAC INT_ARITH);;
+
 let CONGBOUND_MONTMUL_X86 = prove
  (`!x y. ((ival x == x') (mod &3329) /\ lx <= ival x /\ ival x <= ux) /\
          ((ival y == y') (mod &3329) /\ ly <= ival y /\ ival y <= uy)
@@ -1392,6 +1495,11 @@ let rec ASM_CONGBOUND_RULE lfn tm =
         let ktm,btm = dest_pair kb and th0 = ASM_CONGBOUND_RULE lfn t in
         let th0' = WEAKEN_INTCONG_RULE (num 3329) th0 in
         let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_BARMUL th0') in
+        CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
+    | Comb(Comb(Const("arm_mldsa_barmul",_),kb),t) ->
+        let ktm,btm = dest_pair kb and th0 = ASM_CONGBOUND_RULE lfn t in
+        let th0' = WEAKEN_INTCONG_RULE (num 8380417) th0 in
+        let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_ARM_MLDSA_BARMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("montmul_x86",_),ltm),rtm) ->
         let lth = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn ltm)
