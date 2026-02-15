@@ -117,6 +117,10 @@ let ASSIGN_ZEROTOP_64 = prove
  (`forall c y. ((c :> zerotop_64) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_64]);;
 
+let ASSIGN_ZEROTOP_96 = prove
+ (`forall c y. ((c :> zerotop_96) := y):A->A->bool = (c := word_zx y)`,
+  REWRITE_TAC[assign; WRITE_ZEROTOP_96]);;
+
 let ASSIGN_ZEROTOP_128 = prove
  (`forall c y. ((c :> zerotop_128) := y):A->A->bool = (c := word_zx y)`,
   REWRITE_TAC[assign; WRITE_ZEROTOP_128]);;
