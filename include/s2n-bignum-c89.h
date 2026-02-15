@@ -857,7 +857,7 @@ extern void bignum_tolebytes_4 (uint8_t z[32], const uint64_t x[4]);
 extern void bignum_tolebytes_6 (uint8_t z[48], const uint64_t x[6]);
 
 /* Convert 9-digit 528-bit bignum to little-endian bytes */
-/* Input x[6]; output z[66] (bytes) */
+/* Input x[9]; output z[66] (bytes) */
 extern void bignum_tolebytes_p521 (uint8_t z[66], const uint64_t x[9]);
 
 /* Convert to Montgomery form z := (2^256 * x) mod p_256 */
@@ -977,8 +977,12 @@ extern void edwards25519_scalarmulbase_alt(uint64_t res[8],const uint64_t scalar
 extern void edwards25519_scalarmuldouble(uint64_t res[8],const uint64_t scalar[4], const uint64_t point[8],const uint64_t bscalar[4]);
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[8],const uint64_t scalar[4], const uint64_t point[8],const uint64_t bscalar[4]);
 
-// Inverse number-theoretic transform for ML-DSA
-// Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words)
+/* Forward number-theoretic transform for ML-DSA */
+/* Input a[256], z_012345[144], z_67[384] (signed 32-bit words); output a[256] (signed 32-bit words) */
+extern void mldsa_ntt_arm(int32_t a[256], const int32_t z_012345[144], const int32_t z_67[384]);
+
+/* Inverse number-theoretic transform for ML-DSA */
+/* Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_intt(int32_t a[256], const int32_t zetas[624]);
 
 /* Forward number-theoretic transform for ML-DSA */
@@ -988,6 +992,10 @@ extern void mldsa_ntt(int32_t a[256], const int32_t zetas[624]);
 /* Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA */
 /* Inputs a[256], b[256] (signed 32-bit words); output r[256] (signed 32-bit words) */
 extern void mldsa_pointwise(int32_t r[256], const int32_t a[256], const int32_t b[256]);
+
+/* Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA, x86 version */
+/* Inputs a[256], b[256], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
+extern void mldsa_pointwise_x86(int32_t c[256], const int32_t a[256], const int32_t b[256], const int32_t qdata[16]);
 
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
@@ -1009,9 +1017,21 @@ extern void mlkem_basemul_k4(int16_t r[256],const int16_t a[1024],const int16_t 
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_intt(int16_t a[256],const int16_t z_01234[80],const int16_t z_56[384]);
 
+/* Inverse number-theoretic transform from ML-KEM */
+/* Input a[256] (signed 16-bit words), qdata[624]; output a[256] (signed 16-bit words) */
+extern void mlkem_intt_x86(int16_t a[256],const int16_t qdata[624]);
+
 /* Precompute the mulcache data for a polynomial in the NTT domain */
 /* Inputs a[256], z[128] and t[128] (signed 16-bit words); output x[128] (signed 16-bit words) */
 extern void mlkem_mulcache_compute(int16_t x[128],const int16_t a[256],const int16_t z[128],const int16_t t[128]);
+
+/* Precompute the mulcache data for a polynomial in the NTT domain */
+/* Inputs a[256], qdata[624] (signed 16-bit words); output x[128] (signed 16-bit words) */
+extern void mlkem_mulcache_compute_x86(int16_t x[128],const int16_t a[256],const int16_t qdata[624]);
+
+/* Forward number-theoretic transform from ML-KEM x86 implementation */
+/* Input a[256] (signed 16-bit words), qdata[624]; output a[256] (signed 16-bit words) */
+extern void mlkem_ntt_x86(int16_t a[256],const int16_t qdata[624]);
 
 /* Forward number-theoretic transform from ML-KEM */
 /* Input a[256] (signed 16-bit words), z_01234[80] (signed 16-bit words), z_56[384] (signed 16-bit words); output a[256] (signed 16-bit words) */
@@ -1020,6 +1040,10 @@ extern void mlkem_ntt(int16_t a[256],const int16_t z_01234[80],const int16_t z_5
 /* Canonical modular reduction of polynomial coefficients for ML-KEM */
 /* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */
 extern void mlkem_reduce(int16_t a[256]);
+
+/* Unpack ML-KEM polynomial coefficients */
+/* Input a[384] (bytes); output r[256] (signed 16-bit words) */
+extern void mlkem_frombytes(int16_t r[256],const uint8_t a[384]);
 
 /* Pack ML-KEM polynomial coefficients as 12-bit numbers */
 /* Input a[256] (signed 16-bit words); output r[384] (bytes) */
@@ -1032,6 +1056,10 @@ extern void mlkem_tomont(int16_t a[256]);
 /* Uniform rejection sampling for ML-KEM */
 /* Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 16-bit words), return */
 extern uint64_t mlkem_rej_uniform_VARIABLE_TIME(int16_t r[256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
+
+/* Reorders ML-KEM polynomial coefficients for x86 implementation */
+/* Input a[256] (signed 16-bit words); output a[256] (signed 16-bit words) */
+extern void mlkem_unpack(int16_t a[256]);
 
 /* Point addition on NIST curve P-256 in Montgomery-Jacobian coordinates */
 /* Inputs p1[12], p2[12]; output p3[12] */
@@ -1132,7 +1160,11 @@ extern void sha3_keccak2_f1600_alt(uint64_t a[50],const uint64_t rc[24]);
 /* Batched 4-way Keccak-f1600 permutation for SHA3 */
 /* Inputs a[100], rc[24]; output a[100] */
 extern void sha3_keccak4_f1600(uint64_t a[100],const uint64_t rc[24]);
+#ifdef __x86_64__
+extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24],const uint64_t rho8[4],const uint64_t rho56[4]);
+#else
 extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24]);
+#endif
 extern void sha3_keccak4_f1600_alt2(uint64_t a[100],const uint64_t rc[24]);
 
 /* Point addition on CC curve SM2 in Montgomery-Jacobian coordinates */
