@@ -386,14 +386,6 @@ let MLDSA_NTTUNPACK_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_nttunpack_tmc;;
 (* sequential layout. This is analogous to mlkem_unpack but for int32.       *)
 (* ------------------------------------------------------------------------- *)
 
-let nttunpack_order = new_definition
-  `nttunpack_order i =
-   let block = i DIV 64 in
-   let pos = i MOD 64 in
-   let lane = pos DIV 8 in
-   let offset = pos MOD 8 in
-   64 * block + 8 * offset + lane`;;
-
 let nttunpack_unorder = new_definition
   `nttunpack_unorder i =
    let block = i DIV 64 in
@@ -402,11 +394,26 @@ let nttunpack_unorder = new_definition
    let offset = pos DIV 8 in
    64 * block + 8 * lane + offset`;;
 
-let pack_nttunpack = new_definition
-  `pack_nttunpack l = list_of_seq (\i. EL (nttunpack_order i) l) 256`;;
+let unpack_nttunpack = new_definition
+  `unpack_nttunpack l = list_of_seq (\i. EL (nttunpack_unorder i) l) 256`;;
+  
+(* ------------------------------------------------------------------------- *)
+(* Proves our simple arithmetic implements the same reordering as            *)
+(* mldsa_avx2_ntt_order'(bitreverse8 i). This converts from AVX2 NTT domain  *)
+(* used by ML-DSA forward/inverse NTT to standard bitreversed order.         *)
+(* ------------------------------------------------------------------------- *)
+let nttunpack_unorder = new_definition
+  `nttunpack_unorder i = 64*(i DIV 64) + 8*(i MOD 8) + (i MOD 64) DIV 8`;;
 
 let unpack_nttunpack = new_definition
   `unpack_nttunpack l = list_of_seq (\i. EL (nttunpack_unorder i) l) 256`;;
+
+let NTTUNPACK_UNORDER_EQUIV = prove
+  (`!i. i < 256 ==> nttunpack_unorder i = mldsa_avx2_ntt_order'(bitreverse8 i)`,
+  CONV_TAC EXPAND_CASES_CONV THEN
+  REWRITE_TAC[nttunpack_unorder; mldsa_avx2_ntt_order'; bitreverse8; bitmap; numbit; bitval] THEN
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV);;
 
 (* ------------------------------------------------------------------------- *)
 (* Main correctness theorem                                                  *)
