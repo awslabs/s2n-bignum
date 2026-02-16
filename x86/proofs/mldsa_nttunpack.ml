@@ -402,11 +402,6 @@ let unpack_nttunpack = new_definition
 (* mldsa_avx2_ntt_order'(bitreverse8 i). This converts from AVX2 NTT domain  *)
 (* used by ML-DSA forward/inverse NTT to standard bitreversed order.         *)
 (* ------------------------------------------------------------------------- *)
-let nttunpack_unorder = new_definition
-  `nttunpack_unorder i = 64*(i DIV 64) + 8*(i MOD 8) + (i MOD 64) DIV 8`;;
-
-let unpack_nttunpack = new_definition
-  `unpack_nttunpack l = list_of_seq (\i. EL (nttunpack_unorder i) l) 256`;;
 
 let NTTUNPACK_UNORDER_EQUIV = prove
   (`!i. i < 256 ==> nttunpack_unorder i = mldsa_avx2_ntt_order'(bitreverse8 i)`,
