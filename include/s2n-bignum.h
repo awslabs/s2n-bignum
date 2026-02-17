@@ -987,6 +987,10 @@ extern void edwards25519_scalarmuldouble_alt(uint64_t res[S2N_BIGNUM_STATIC 8],c
 extern void mldsa_ntt_arm(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t z_012345[144], const int32_t z_67[384]);
 
 // Inverse number-theoretic transform for ML-DSA
+// Input a[256], z_78[384], z_123456[160] (signed 32-bit words); output a[256] (signed 32-bit words)
+extern void mldsa_intt_arm(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t z_78[S2N_BIGNUM_STATIC 384], const int32_t z_123456[S2N_BIGNUM_STATIC 160]);
+
+// Inverse number-theoretic transform for ML-DSA
 // Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_intt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N_BIGNUM_STATIC 624]);
 

@@ -467,7 +467,38 @@ let ARM_MLDSA_FORWARD_NTT_CONV =
   GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
 
+let arm_mldsa_inverse_ntt = define
+ `arm_mldsa_inverse_ntt f k =
+    (&2 pow 24 * isum (0..255)
+                 (\j. f(bitreverse8 j) *
+                      &731434 pow ((2 * j + 1) * k)))
+    rem &8380417`;;
 
+let ARM_MLDSA_INVERSE_NTT_ALT = prove
+ (`arm_mldsa_inverse_ntt f k =
+    isum (0..255)
+         (\j. f(bitreverse8 j) *
+              (&16777216 * (&731434 pow ((2 * j + 1) * k)) rem &8380417)
+              rem &8380417)
+    rem &8380417`,
+  REWRITE_TAC[arm_mldsa_inverse_ntt; GSYM ISUM_LMUL] THEN
+  MATCH_MP_TAC (REWRITE_RULE[] (ISPEC
+      `(\x y. x rem &8380417 = y rem &8380417)` ISUM_RELATED)) THEN
+  REWRITE_TAC[INT_REM_EQ; FINITE_NUMSEG; INT_CONG_ADD] THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_REM; GSYM INT_OF_NUM_CLAUSES;
+              GSYM INT_REM_EQ] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC INT_ARITH);;
+
+let ARM_MLDSA_INVERSE_NTT_CONV =
+  GEN_REWRITE_CONV I [ARM_MLDSA_INVERSE_NTT_ALT] THENC
+  LAND_CONV EXPAND_ISUM_CONV THENC
+  DEPTH_CONV NUM_RED_CONV THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
+  DEPTH_CONV NUM_RED_CONV THENC
+  GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
+  ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
 
 let MLDSA_INVERSE_NTT_ALT = prove
  (`mldsa_inverse_ntt f k =
