@@ -4399,19 +4399,20 @@ let subroutine_signatures = [
    ])
 );
 
-("mldsa_pointwise",
+("mldsa_intt_arm",
   ([(*args*)
-     ("r", "int32_t[static 256]", (*is const?*)"false");
-     ("a", "int32_t[static 256]", (*is const?*)"true");
-     ("b", "int32_t[static 256]", (*is const?*)"true");
+     ("a", "int32_t[static 256]", (*is const?*)"false");
+     ("z_78", "int32_t[static 384]", (*is const?*)"true");
+     ("z_123456", "int32_t[static 160]", (*is const?*)"true");
    ],
    "void",
    [(* input buffers *)
     ("a", "256"(* num elems *), 4(* elem bytesize *));
-    ("b", "256"(* num elems *), 4(* elem bytesize *));
+    ("z_78", "384"(* num elems *), 4(* elem bytesize *));
+    ("z_123456", "160"(* num elems *), 4(* elem bytesize *));
    ],
    [(* output buffers *)
-    ("r", "256"(* num elems *), 4(* elem bytesize *));
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])
@@ -4431,6 +4432,24 @@ let subroutine_signatures = [
    ],
    [(* output buffers *)
     ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_pointwise",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("a", "int32_t[static 256]", (*is const?*)"true");
+     ("b", "int32_t[static 256]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+    ("b", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])
