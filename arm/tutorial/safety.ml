@@ -596,9 +596,13 @@ let bignum_mod_n25519_safe = time prove
      ensures.
   2. You can put this at the postcondition:
     `exists e2.
-      read events s = APPEND e2 e /\ memaccess_inbounds e2 ....`
+      read events s = APPEND e2 e /\ memaccess_inbounds e2 [..] [..]`
   3. Just do the symbolic simulation, then reuse DISCHARGE_SAFETY_PROPERTY_TAC.
     It can handle the variant of postcondition having no f_events.
+
+  For slightly more advanced programs like bignum_mod_n25519, using the
+  traditional ENSURES_*_TAC with invariants containing
+  `read events s = APPEND e2 e /\ memaccess_inbounds e2 [..] [..]` will work.
 *)
 
 let bignum_mux_4_memory_safe = time prove
