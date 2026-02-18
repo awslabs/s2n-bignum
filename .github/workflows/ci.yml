@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 env:
-  HOLLIGHT_COMMIT: "b9a430b8fee43cc94babc8e3970cdd2740a994dc"
+  HOLLIGHT_COMMIT: "0a5e935c976d1ff780906c23b8f82939189844e5"
 
 jobs:
   s2n-bignum-tests:
@@ -193,7 +193,7 @@ jobs:
           arch: [arm, x86]
     runs-on:
       - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
-  
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
