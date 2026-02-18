@@ -355,6 +355,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSRLQ operand operand operand
    | VPSRLW operand operand operand
    | VPSUBD operand operand operand
+   | VPSUBQ operand operand operand
    | VPSUBW operand operand operand
    | VPUNPCKHQDQ operand operand operand
    | VPUNPCKLQDQ operand operand operand
