@@ -176,6 +176,16 @@ let gen_mk_safety_spec
           failwith ("rodata: not a int64 ty: " ^ (string_of_term addr)))
         readonly_objects in
     (memreads @ readonly_objects),memwrites in
+  (* Remove duplicates *)
+  let memreads,memwrites =
+    let rec dedup l =
+      match l with
+      | h::t -> if mem h t then dedup t else h::(dedup t)
+      | h::[] -> [h]
+      | [] -> []
+    in
+    rev (dedup (rev memreads)),
+    rev (dedup (rev memwrites)) in
 
   let s = mk_var("s",state_ty) in
   let precond =
