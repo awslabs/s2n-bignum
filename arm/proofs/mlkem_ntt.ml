@@ -612,7 +612,7 @@ let MLKEM_NTT_SUBROUTINE_SAFE = time prove
                         (word_sub stackpointer (word 64))
                         returnaddress /\
                         memaccess_inbounds e2
-                        [a,512; z_01234,160; z_56,768; a,512;
+                        [a,512; z_01234,160; z_56,768;
                          word_sub stackpointer (word 64),64]
                         [a,512; word_sub stackpointer (word 64),64])
                (\s s'. true)`,

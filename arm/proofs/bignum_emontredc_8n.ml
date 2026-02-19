@@ -2987,7 +2987,7 @@ let BIGNUM_EMONTREDC_8N_SUBROUTINE_SAFE = prove(
                          f_events m z k pc (word_sub stackpointer (word 112))
                          returnaddress /\
                          memaccess_inbounds e2
-                         [z,(2 * val k) * 8; m,val k * 8; z,(2 * val k) * 8;
+                         [z,(2 * val k) * 8; m,val k * 8;
                           word_sub stackpointer (word 112),112]
                          [z,(2 * val k) * 8;
                           word_sub stackpointer (word 112),112]))
