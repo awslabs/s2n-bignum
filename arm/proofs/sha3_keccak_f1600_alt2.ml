@@ -479,7 +479,7 @@ let SHA3_KECCAK_F1600_ALT2_SUBROUTINE_SAFE = time prove
                         f_events rc a pc (word_sub stackpointer (word 208))
                         returnaddress /\
                         memaccess_inbounds e2
-                        [a,200; rc,192; a,200;
+                        [a,200; rc,192;
                          word_sub stackpointer (word 208),208]
                         [a,200; word_sub stackpointer (word 208),208])
                (\s s'. true)`,
