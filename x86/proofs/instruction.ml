@@ -325,6 +325,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VMOVSLDUP operand operand
    | VPADDW operand operand operand
    | VPADDD operand operand operand
+   | VPADDQ operand operand operand
    | VPAND operand operand operand
    | VPANDN operand operand operand
    | VPBLENDD operand operand operand operand
