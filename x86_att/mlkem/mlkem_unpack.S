@@ -53,14 +53,14 @@ S2N_BN_SYMBOL(mlkem_unpack):
  vmovdqa 160(%rdi), %ymm9
  vmovdqa 192(%rdi), %ymm10
  vmovdqa 224(%rdi), %ymm11
-vperm2i128	$0x20,%ymm8,%ymm4,%ymm3
-vperm2i128	$0x31,%ymm8,%ymm4,%ymm8
-vperm2i128	$0x20,%ymm9,%ymm5,%ymm4
-vperm2i128	$0x31,%ymm9,%ymm5,%ymm9
-vperm2i128	$0x20,%ymm10,%ymm6,%ymm5
-vperm2i128	$0x31,%ymm10,%ymm6,%ymm10
-vperm2i128	$0x20,%ymm11,%ymm7,%ymm6
-vperm2i128	$0x31,%ymm11,%ymm7,%ymm11
+ vperm2i128 $0x20, %ymm8, %ymm4, %ymm3
+ vperm2i128 $0x31, %ymm8, %ymm4, %ymm8
+ vperm2i128 $0x20, %ymm9, %ymm5, %ymm4
+ vperm2i128 $0x31, %ymm9, %ymm5, %ymm9
+ vperm2i128 $0x20, %ymm10, %ymm6, %ymm5
+ vperm2i128 $0x31, %ymm10, %ymm6, %ymm10
+ vperm2i128 $0x20, %ymm11, %ymm7, %ymm6
+ vperm2i128 $0x31, %ymm11, %ymm7, %ymm11
  vpunpcklqdq %ymm5, %ymm3, %ymm7
  vpunpckhqdq %ymm5, %ymm3, %ymm5
  vpunpcklqdq %ymm10, %ymm8, %ymm3
@@ -117,14 +117,14 @@ vperm2i128	$0x31,%ymm11,%ymm7,%ymm11
  vmovdqa 416(%rdi), %ymm9
  vmovdqa 448(%rdi), %ymm10
  vmovdqa 480(%rdi), %ymm11
-vperm2i128	$0x20,%ymm8,%ymm4,%ymm3
-vperm2i128	$0x31,%ymm8,%ymm4,%ymm8
-vperm2i128	$0x20,%ymm9,%ymm5,%ymm4
-vperm2i128	$0x31,%ymm9,%ymm5,%ymm9
-vperm2i128	$0x20,%ymm10,%ymm6,%ymm5
-vperm2i128	$0x31,%ymm10,%ymm6,%ymm10
-vperm2i128	$0x20,%ymm11,%ymm7,%ymm6
-vperm2i128	$0x31,%ymm11,%ymm7,%ymm11
+ vperm2i128 $0x20, %ymm8, %ymm4, %ymm3
+ vperm2i128 $0x31, %ymm8, %ymm4, %ymm8
+ vperm2i128 $0x20, %ymm9, %ymm5, %ymm4
+ vperm2i128 $0x31, %ymm9, %ymm5, %ymm9
+ vperm2i128 $0x20, %ymm10, %ymm6, %ymm5
+ vperm2i128 $0x31, %ymm10, %ymm6, %ymm10
+ vperm2i128 $0x20, %ymm11, %ymm7, %ymm6
+ vperm2i128 $0x31, %ymm11, %ymm7, %ymm11
  vpunpcklqdq %ymm5, %ymm3, %ymm7
  vpunpckhqdq %ymm5, %ymm3, %ymm5
  vpunpcklqdq %ymm10, %ymm8, %ymm3

@@ -17,7 +17,8 @@
 s/\.intel_syntax *noprefix//
 s/_internal_s2n_bignum_x86/_internal_s2n_bignum_x86_att/
 
-# Don't make any transforms on lines with the argument-taking macros
+# Don't make any transforms on lines with most argument-taking macros
+# We need to be more careful with those taking ymm register arguments
 
 / addrow .+,/b
 / mulpadd .+,/b
@@ -25,77 +26,19 @@ s/_internal_s2n_bignum_x86/_internal_s2n_bignum_x86_att/
 / mulpade .+,/b
 / mulrow .+,/b
 
-# SPECIFIC AVX2 MACRO INSTRUCTION CONVERSIONS - MUST BE BEFORE GENERAL RULES
+# Don't transform macro definitions and calls except that the
+# butterfly macros get the ymm default replacement done
 
-# Don't transform macro definitions and calls
+/^\.macro butterfly/ s/=ymm/=%ymm/g
 /^\.macro/b
 /^\.endm/b
 
-# 4-operand instructions: dest,src1,src2,imm -> $imm,%src2,%src1,%dest
-s/[ \t]*vperm2i128[ \t]+ymm([a-z_0-9]+),ymm([a-z_0-9]+),ymm([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\3,%ymm\2,%ymm\1/
-s/^vperm2i128[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vperm2i128\t$\4,%ymm\\\3,%ymm\\\2,%ymm\\\1/
-s/^vpblendd[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\\\3,%ymm\\\2,%ymm\\\1/
+# Reverse the argument order for binary, ternary and quaternary instructions
+# Skip all other macros for this step even if we later do ymm replacement.
 
-# 3-operand instructions: dest,src1,src2 -> %src2,%src1,%dest
-s/^vpunpcklqdq[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vpunpcklqdq\t%ymm\\\3,%ymm\\\2,%ymm\\\1/
-s/^vpunpckhqdq[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vpunpckhqdq\t%ymm\\\3,%ymm\\\2,%ymm\\\1/
-
-# 3-operand with immediate: dest,src,imm -> $imm,%src,%dest
-s/^vpsrlq[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),([0-9]+)$/vpsrlq\t\t$\3,%ymm\\\2,%ymm\\\1/
-
-# 2-operand instructions: dest,src -> %src,%dest
-s/^vmovsldup[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vmovsldup\t%ymm\\\2,%ymm\\\1/
-s/^vmovshdup[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vmovshdup\t%ymm\\\2,%ymm\\\1/
-
-# Handle mixed cases: vmovshdup ymm12,%ymm\h -> vmovshdup %ymm\h,%ymm12
-s/^vmovshdup[ \t]+ymm([0-9]+),%ymm\\([a-z_0-9]+)$/vmovshdup\t%ymm\\\2,%ymm\1/
-
-# BUTTERFLY MACRO SPECIFIC CONVERSIONS
-# Based on diff: vpmuldq ymm13,ymm\h,ymm\zl0 -> vpmuldq %ymm\zl0,%ymm\h,%ymm13
-s/^vpmuldq[ \t]+ymm([0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vpmuldq\t\t%ymm\\\3,%ymm\\\2,%ymm\1/
-s/^vpmuldq[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vpmuldq\t\t%ymm\\\3,%ymm\\\2,%ymm\\\1/
-s/^vpmuldq[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm([0-9]+)$/vpmuldq\t\t%ymm\3,%ymm\\\2,%ymm\\\1/
-
-# vpsubd ymm12,ymm\l,ymm\h -> vpsubd %ymm\h,%ymm\l,%ymm12
-s/^vpsubd[ \t]+ymm([0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vpsubd\t\t%ymm\\\3,%ymm\\\2,%ymm\1/
-s/^vpsubd[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vpsubd\t\t%ymm\\\3,%ymm\\\2,%ymm\\\1/
-
-# vpaddd ymm\l,ymm\l,ymm\h -> vpaddd %ymm\h,%ymm\l,%ymm\l
-s/^vpaddd[ \t]+ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+),ymm\\([a-z_0-9]+)$/vpaddd\t\t%ymm\\\3,%ymm\\\2,%ymm\\\1/
-s/^vpaddd[ \t]+ymm\\([a-z_0-9]+),ymm([0-9]+),ymm([0-9]+)$/vpaddd\t\t%ymm\3,%ymm\2,%ymm\\\1/
-
-# MEMORY OPERATIONS BASED ON DIFF ANALYSIS
-
-# Memory loads for levels0t1: [rdi+0+32*\off] -> 0+32*\off(%rdi) (offset first for 32-byte scale)
-s/^vmovdqa[ \t]+ymm([0-9]+),\[([a-z_0-9]+)\+([0-9]+)\+32\*\\([a-z_0-9]+)\]$/vmovdqa\t\t\3+32*\\\4(\2),%ymm\1/
-s/^vmovdqa[ \t]+ymm\\([a-z_0-9]+),\[([a-z_0-9]+)\+([0-9]+)\+32\*\\([a-z_0-9]+)\]$/vmovdqa\t\t\3+32*\\\4(\2),%ymm\\\1/
-
-# Memory loads for levels2t7: [rdi+0+256*\off] -> 256*\off+0(%rdi) (scale*macro first for 256-byte scale)
-s/^vmovdqa[ \t]+ymm([0-9]+),\[([a-z_0-9]+)\+([0-9]+)\+256\*\\([a-z_0-9]+)\]$/vmovdqa\t\t256*\\\4+\3(\2),%ymm\1/
-s/^vmovdqa[ \t]+ymm\\([a-z_0-9]+),\[([a-z_0-9]+)\+([0-9]+)\+256\*\\([a-z_0-9]+)\]$/vmovdqa\t\t256*\\\4+\3(\2),%ymm\\\1/
-
-# Memory stores for levels0t1: [rdi+0+32*\off],ymm4 -> %ymm4,0+32*\off(%rdi)
-s/^vmovdqa[ \t]+\[([a-z_0-9]+)\+([0-9]+)\+32\*\\([a-z_0-9]+)\],ymm([0-9]+)$/vmovdqa\t\t%ymm\4,\2+32*\\\3(\1)/
-s/^vmovdqa[ \t]+\[([a-z_0-9]+)\+([0-9]+)\+32\*\\([a-z_0-9]+)\],ymm\\([a-z_0-9]+)$/vmovdqa\t\t%ymm\\\4,\2+32*\\\3(\1)/
-
-# Memory stores for levels2t7: [rdi+0+256*\off],ymm4 -> %ymm4,256*\off+0(%rdi)
-s/^vmovdqa[ \t]+\[([a-z_0-9]+)\+([0-9]+)\+256\*\\([a-z_0-9]+)\],ymm([0-9]+)$/vmovdqa\t\t%ymm\4,256*\\\3+\2(\1)/
-s/^vmovdqa[ \t]+\[([a-z_0-9]+)\+([0-9]+)\+256\*\\([a-z_0-9]+)\],ymm\\([a-z_0-9]+)$/vmovdqa\t\t%ymm\\\4,256*\\\3+\2(\1)/
-
-# Fallback for other memory operations
-s/^vmovdqa[ \t]+ymm([0-9]+),([^,]+)$/vmovdqa\t\t\2,%ymm\1/
-s/^vmovdqa[ \t]+ymm\\([a-z_0-9]+),([^,]+)$/vmovdqa\t\t\2,%ymm\\\1/
-s/^vmovdqa[ \t]+([^,]+),ymm([0-9]+)$/vmovdqa\t\t%ymm\2,\1/
-s/^vmovdqa[ \t]+([^,]+),ymm\\([a-z_0-9]+)$/vmovdqa\t\t%ymm\\\2,\1/
-
-# Broadcast instructions: vpbroadcastd ymm1,[rsi+...] -> vpbroadcastd ...(%rsi),%ymm1
-s/^vpbroadcastd[ \t]+ymm([0-9]+),([^,]+)$/vpbroadcastd\t\2,%ymm\1/
-
-# Reverse the argument order for binary and ternary instructions
-
-s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,;]*)([/;].*)*$/\1\4, \3 \5/
-s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\5, \4, \3 \6/
-s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\6, \5, \4, \3 \7/
+/shuffle|butterfly/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,;]*)([/;].*)*$/\1\4, \3 \5/
+/shuffle|butterfly/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\5, \4, \3 \6/
+/shuffle|butterfly/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\6, \5, \4, \3 \7/
 
 # Fix up whitespace just in case
 
@@ -103,7 +46,7 @@ s/ +,/,/
 
 # Decorate literals with $
 
-s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)(([-~+*/()A-Z0-9]*(0x[a-zA-Z0-9]*)*)* *\,)/\1$\3/
+/butterfly/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)(([-~+*/()A-Z0-9]*(0x[a-zA-Z0-9]*)*)* *\,)/\1$\3/
 
 # Translate relative addresses with uppercase base variable
 # Turn defined offset fields into explicit indirections to match
@@ -153,9 +96,6 @@ s/([[(,.;: ])(r9d*)/\1\%\2/g
 s/([[(,.;: ])(r1[0-5]d*)/\1\%\2/g
 s/([[(,.;: ])([re]ip)/\1\%\2/g
 s/([[(,.;: ])([xyz]mm[0-9]*)/\1\%\2/g
-
-# Handle macro parameter registers like ymm\r0, ymm\r1, etc.
-s/ymm\\([a-z_0-9]+)/\%ymm\\\1/g
 
 # Add explicit sizes to instructions
 
@@ -209,44 +149,6 @@ s/q(  .*short)/l\1/
 s/q( .*%e)/l\1/
 s/q( .*%r[0-9]+d)/l\1/
 s/q( .*%ax)/w\1/
-
-# Clean up double percent signs that may result from macro expansion
-s/%%ymm/%ymm/g
-
-# Fix vmovshdup operand order after register prefixing: vmovshdup %ymm12,%ymm\h -> vmovshdup %ymm\h,%ymm12
-s/^vmovshdup[ \t]+%ymm([0-9]+),%ymm\\([a-z_0-9]+)$/vmovshdup\t%ymm\\\2,%ymm\1/
-
-# Fix vmovshdup without % prefix: vmovshdup ymm12,%ymm\h -> vmovshdup %ymm\h,%ymm12
-s/^vmovshdup[ \t]+ymm([0-9]+),%ymm\\([a-z_0-9]+)$/vmovshdup\t%ymm\\\2,%ymm\1/
-
-# Fix missing % prefixes on regular registers in butterfly macro
-s/^vpmuldq[ \t]+ymm([0-9]+),/vpmuldq\t\t%ymm\1,/
-s/^vmovshdup[ \t]+ymm([0-9]+),/vmovshdup\t%ymm\1,/
-s/[ \t]*vpblendd[ \t]+ymm([0-9]+),/vpblendd\t%ymm\1,/
-s/[ \t]*vpblendw[ \t]+ymm([0-9]+),/vpblendw\t%ymm\1,/
-
-# Fix specific operand order issues that got reversed by general rules
-# vpsrlq should be: vpsrlq $32,%ymm1,%ymm10 not vpsrlq ymm10,%ymm1,32
-s/^vpsrlq[ \t]+ymm([0-9]+),%ymm([0-9]+),([0-9]+)$/vpsrlq\t\t$\3,%ymm\2,%ymm\1/
-s/^vpsrlq[ \t]+%ymm([0-9]+),%ymm([0-9]+),([0-9]+)$/vpsrlq\t\t$\3,%ymm\2,%ymm\1/
-
-# vmovshdup should be: vmovshdup %ymm2,%ymm15 not vmovshdup %ymm15,%ymm2
-s/^vmovshdup[ \t]+%ymm([0-9]+),%ymm([0-9]+)$/vmovshdup\t%ymm\2,%ymm\1/
-
-# vpblendd should be: vpblendd $0xAA,%ymm12,%ymm\h,%ymm\h not vpblendd %ymm\h,%ymm\h,%ymm12,0xAA
-s/[ \t]*vpblendd[ \t]+%ymm\\([a-z_0-9]+),%ymm\\([a-z_0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\3,%ymm\\\2,%ymm\\\1/
-s/[ \t]*vpblendd[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendd\t$\4,%ymm\3,%ymm\2,%ymm\1/
-s/[ \t]*vpblendw[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm([0-9]+),(0x[0-9A-Fa-f]+)$/vpblendw\t$\4,%ymm\3,%ymm\2,%ymm\1/
-
-# Fix remaining butterfly macro operand order issues
-# vpmuldq %ymm14,%ymm12,%ymm\zl1 should be vpmuldq %ymm\zl1,%ymm12,%ymm14
-s/^vpmuldq[ \t]+%ymm([0-9]+),%ymm([0-9]+),%ymm\\([a-z_0-9]+)$/vpmuldq\t\t%ymm\\\3,%ymm\2,%ymm\1/
-
-# vpmuldq %ymm13,%ymm13,%ymm0 should be vpmuldq %ymm0,%ymm13,%ymm13
-s/^vpmuldq[ \t]+%ymm([0-9]+),%ymm\1,%ymm([0-9]+)$/vpmuldq\t\t%ymm\2,%ymm\1,%ymm\1/
-
-# vpsubd %ymm\l,%ymm\l,%ymm13 should be vpsubd %ymm13,%ymm\l,%ymm\l
-s/^vpsubd[ \t]+%ymm\\([a-z_0-9]+),%ymm\\\1,%ymm([0-9]+)$/vpsubd\t\t%ymm\2,%ymm\\\1,%ymm\\\1/
 
 # Eliminate any trailing spaces, just to be tidy
 

@@ -55,12 +55,12 @@ S2N_BN_SYMBOL(mlkem_frombytes):
  vmovdqu 96(%rsi), %ymm7
  vmovdqu 128(%rsi), %ymm8
  vmovdqu 160(%rsi), %ymm9
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm3
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm7
-vperm2i128	$0x20,%ymm8,%ymm5,%ymm4
-vperm2i128	$0x31,%ymm8,%ymm5,%ymm8
-vperm2i128	$0x20,%ymm9,%ymm6,%ymm5
-vperm2i128	$0x31,%ymm9,%ymm6,%ymm9
+ vperm2i128 $0x20, %ymm7, %ymm4, %ymm3
+ vperm2i128 $0x31, %ymm7, %ymm4, %ymm7
+ vperm2i128 $0x20, %ymm8, %ymm5, %ymm4
+ vperm2i128 $0x31, %ymm8, %ymm5, %ymm8
+ vperm2i128 $0x20, %ymm9, %ymm6, %ymm5
+ vperm2i128 $0x31, %ymm9, %ymm6, %ymm9
  vpunpcklqdq %ymm8, %ymm3, %ymm6
  vpunpckhqdq %ymm8, %ymm3, %ymm8
  vpunpcklqdq %ymm5, %ymm7, %ymm3
@@ -127,12 +127,12 @@ vperm2i128	$0x31,%ymm9,%ymm6,%ymm9
  vmovdqu 288(%rsi), %ymm7
  vmovdqu 320(%rsi), %ymm8
  vmovdqu 352(%rsi), %ymm9
-vperm2i128	$0x20,%ymm7,%ymm4,%ymm3
-vperm2i128	$0x31,%ymm7,%ymm4,%ymm7
-vperm2i128	$0x20,%ymm8,%ymm5,%ymm4
-vperm2i128	$0x31,%ymm8,%ymm5,%ymm8
-vperm2i128	$0x20,%ymm9,%ymm6,%ymm5
-vperm2i128	$0x31,%ymm9,%ymm6,%ymm9
+ vperm2i128 $0x20, %ymm7, %ymm4, %ymm3
+ vperm2i128 $0x31, %ymm7, %ymm4, %ymm7
+ vperm2i128 $0x20, %ymm8, %ymm5, %ymm4
+ vperm2i128 $0x31, %ymm8, %ymm5, %ymm8
+ vperm2i128 $0x20, %ymm9, %ymm6, %ymm5
+ vperm2i128 $0x31, %ymm9, %ymm6, %ymm9
  vpunpcklqdq %ymm8, %ymm3, %ymm6
  vpunpckhqdq %ymm8, %ymm3, %ymm8
  vpunpcklqdq %ymm5, %ymm7, %ymm3
