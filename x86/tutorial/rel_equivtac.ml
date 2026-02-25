@@ -254,7 +254,7 @@ let EXPAND_READ_XMM_SSE_RULE th =
           [read_ymm;`(128,128)`])) THEN
         GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [GSYM th'] THEN
         CONV_TAC WORD_BLAST)
-  with _ -> failwith ("Could not expand " ^ (string_of_thm th));;
+  with Failure _ -> failwith ("Could not expand " ^ (string_of_thm th));;
 
 
 let org_extra_word_conv = !extra_word_CONV;;

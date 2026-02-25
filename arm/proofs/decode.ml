@@ -1208,7 +1208,7 @@ let ALIAS_CONV =
       let th' = INST_TYPE (map (fun ty' -> ty,ty')
         (type_vars_in_term (concl th))) th in
       try f (CONV_RULE (CHANGED_CONV (REWRITE_CONV [SYM xth])) th')
-      with _ -> I in
+      with Failure _ -> I in
     g `:64` XZR_ZR o g `:32` WZR_ZR o f th in
   let f th =
     if can (find_term
@@ -1244,8 +1244,9 @@ let ALIAS_CONV =
   self := ONCE_DEPTH_CONV (REWRITES_CONV net);
   OPERAND_ALIAS_CONV THENC ALIAS_CONV;;
 
+open Compute;;
+
 let PURE_DECODE_CONV =
-  let open Compute in
 
   let custom_word_red_conv_list =
     (* No WORD_IWORD_CONV *)
@@ -1320,12 +1321,12 @@ let PURE_DECODE_CONV =
       let c = concl th in (* c should be: `decode .. = SOME ...` *)
       let r,_ = dest_comb (rhs c) in
       if is_const r && name_of r = "SOME" then th else failwith ""
-    with _ -> failwith ("PURE_DECODE_CONV: " ^ (string_of_term t));;
+    with Failure _ -> failwith ("PURE_DECODE_CONV: " ^ (string_of_term t));;
 
 let DECODE_CONV tm =
   let th = PURE_DECODE_CONV tm in
   try CONV_RULE (RAND_CONV (RAND_CONV ALIAS_CONV)) th
-  with _ -> th;;
+  with Failure _ -> th;;
 
 (* ------------------------------------------------------------------------- *)
 (* Testing and preparation.                                                  *)
@@ -1733,7 +1734,7 @@ let term_of_relocs_arm, assert_relocs =
           assert false)
         in
         pc+4, next_insns
-      with _ -> failwith ("could not check opcode " ^ (string_of_term reloc_opcode)) in
+      with Failure _ -> failwith ("could not check opcode " ^ (string_of_term reloc_opcode)) in
 
     (* opcode_fn is the large OCaml function printed by print_literal_relocs_from_elf *)
     fun (args,tm) opcode_fn ->

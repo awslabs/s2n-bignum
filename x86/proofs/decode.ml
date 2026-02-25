@@ -1452,7 +1452,7 @@ let ADX_CONV =
   function
   | Comb(Const("adx",_),v) ->
     (try assoc v pths
-    with _ -> failwith "ADX_CONV")
+    with Failure _ -> failwith "ADX_CONV")
   | _ -> failwith "ADX_CONV";;
 
 let TO_WORDSIZE_CONV =
@@ -1461,7 +1461,7 @@ let TO_WORDSIZE_CONV =
   function
   | Comb(Const("to_wordsize",_),v) ->
     (try assoc v pths
-    with _ -> failwith "TO_WORDSIZE_CONV")
+    with Failure _ -> failwith "TO_WORDSIZE_CONV")
   | _ -> failwith "TO_WORDSIZE_CONV";;
 
 let SIMD_TO_WORDSIZE_CONV =
@@ -1470,7 +1470,7 @@ let SIMD_TO_WORDSIZE_CONV =
   function
   | Comb(Const("simd_to_wordsize",_),v) ->
     (try assoc v pths
-    with _ -> failwith "SIMD_TO_WORDSIZE_CONV")
+    with Failure _ -> failwith "SIMD_TO_WORDSIZE_CONV")
   | _ -> failwith "SIMD_TO_WORDSIZE_CONV";;
 
 let VEXL_SIZE_CONV =
@@ -1479,7 +1479,7 @@ let VEXL_SIZE_CONV =
   function
   | Comb(Const("vexL_size",_),v) ->
     (try assoc v pths
-    with _ -> failwith "VEXL_SIZE_CONV")
+    with Failure _ -> failwith "VEXL_SIZE_CONV")
   | _ -> failwith "VEXL_SIZE_CONV";;
 
 let operand_of_RM = define

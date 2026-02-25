@@ -362,7 +362,7 @@ let MLKEM_TOBYTES_CORRECT = prove(
   REWRITE_TAC[bignum_of_wordlist; VAL] THEN
   POP_ASSUM_LIST (fun ths ->
   let dominated = filter (fun th -> 
-    can (find_term (fun t -> try fst(dest_const t) = "bit" with _ -> false)) (concl th)) ths in
+    can (find_term (fun t -> try fst(dest_const t) = "bit" with Failure _ -> false)) (concl th)) ths in
   MAP_EVERY ASSUME_TAC (rev dominated)) THEN
   CONV_TAC(TOP_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC(ONCE_DEPTH_CONV NUM_SUB_CONV) THEN

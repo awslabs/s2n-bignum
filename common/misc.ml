@@ -166,11 +166,14 @@ let CONS_TO_APPEND_CONV (t:term) =
   let elems = ref [] in
   let rec strip_cons (t:term):term = begin
     try
-      let the_cons,(itm::tail::[]) = strip_comb t in
-      if name_of the_cons <> "CONS" then failwith "" else
-      elems := itm::!elems;
-      strip_cons tail
-    with _ -> t
+      let the_cons,args = strip_comb t in
+      match args with
+      | [itm; tail] ->
+        if name_of the_cons <> "CONS" then failwith "" else
+        elems := itm::!elems;
+        strip_cons tail
+      | _ -> failwith ""
+    with Failure _ -> t
   end in
   let tail = strip_cons t in
   let new_list = mk_list (rev (!elems), type_of (hd !elems)) in
@@ -2140,9 +2143,9 @@ let SAFE_UNIFY_REFL_TAC (allowed_vars_ref:term list ref)
     let used_vars = subtract lhs_vars allowed_vars in
     let used_vars = filter (fun v ->
       let n = name_of v in
-      forall (fun pfx -> not (String.starts_with ~prefix:pfx n))
+      forall (fun pfx -> not (starts_with pfx n))
           allowed_var_prefixes) used_vars in
-    if List.is_empty used_vars then
+    if used_vars = [] then
       UNIFY_REFL_TAC (asl,w)
     else
      (let diff = subtract lhs_vars allowed_vars in

@@ -25,7 +25,7 @@ let find_stack_access_size (fnspec_maychange:term): (term * int) option =
          a = stackptr)) fnspec_maychange in
     let baseptr,sz = dest_pair t in
     Some (baseptr, dest_small_numeral sz)
-  with _ -> None;;
+  with Failure _ -> None;;
 
 find_stack_access_size `MAYCHANGE [memory :> bytes (stackpointer,264)]`;;
 find_stack_access_size `MAYCHANGE [memory :> bytes(z,8 * 8);
@@ -66,7 +66,7 @@ let gen_mk_safety_spec
     let c_to_hol_vars = map (fun ((x,_,_),yvar) -> x,yvar) c_to_hol_vars in
     try
       assoc var_c c_to_hol_vars
-    with _ -> failwith ("c_var_to_hol: unknown var in C: " ^ var_c) in
+    with Failure _ -> failwith ("c_var_to_hol: unknown var in C: " ^ var_c) in
 
   let bytes_loaded_terms = find_terms
     (fun t -> is_comb t &&
@@ -78,11 +78,11 @@ let gen_mk_safety_spec
   let (bytes_loaded_mc::[]),bytes_loaded_others = List.partition (fun t ->
       let _::pc::_ = snd (strip_comb t) in
       let word_const,pc_var = dest_comb pc in
-      String.starts_with ~prefix:"pc" (name_of pc_var))
+      starts_with"pc" (name_of pc_var))
     bytes_loaded_terms in
   let read_sp_eq: term option = try
       Some (find_term find_eq_stackpointer fnspec_precond)
-    with _ -> None in
+    with Failure _ -> None in
   let stack_access_size: (term*int) option =
       find_stack_access_size fnspec_maychanges in
   assert ((read_sp_eq = None) = (stack_access_size = None));
@@ -91,11 +91,11 @@ let gen_mk_safety_spec
     List.find_opt (fun t -> name_of t = "returnaddress") fnspec_quants in
   let read_x30_eq: term option = try
       Some (find_term find_eq_returnaddress fnspec_precond)
-    with _ -> None in
+    with Failure _ -> None in
 
   (* An expression s to a term of :num type. *)
   let rec elemsz_to_hol (s:string): term =
-    let s = if String.starts_with ~prefix:">=" s
+    let s = if starts_with">=" s
       then String.sub s 2 (String.length s - 2) else s in
 
     match String.index_opt s '*' with
@@ -106,7 +106,7 @@ let gen_mk_safety_spec
       mk_binary "*" (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
     | None ->
      (try mk_small_numeral (int_of_string s)
-      with _ ->
+      with Failure _ ->
         let v = c_var_to_hol s in
         match dest_type (type_of v) with
         | ("num",_) -> v
@@ -118,7 +118,7 @@ let gen_mk_safety_spec
       (fun (c_varname,range,elemty_size) ->
         c_var_to_hol c_varname,
         (try mk_small_numeral (elemty_size * int_of_string range)
-         with _ ->
+         with Failure _ ->
            mk_binary "*" (elemsz_to_hol range, mk_small_numeral elemty_size))) in
 
     map fn (meminputs @ memoutputs @ memtemps),
@@ -143,9 +143,9 @@ let gen_mk_safety_spec
       end
     ) @
     (match stack_access_size with
-     | None -> [`pc:num`] @ (Option.to_list returnaddress_var)
+     | None -> [`pc:num`] @ (match returnaddress_var with Some v -> [v] | None -> [])
      | Some (baseptr,sz) ->
-       [`pc:num`;baseptr] @ (Option.to_list returnaddress_var)) in
+       [`pc:num`;baseptr] @ (match returnaddress_var with Some v -> [v] | None -> [])) in
   let f_events = mk_var("f_events",
     itlist mk_fun_ty (map type_of f_events_public_args) `:(uarch_event)list`) in
 
@@ -226,7 +226,7 @@ let gen_mk_safety_spec
   (* Return the spec, as well as the HOL Light variables having public info *)
   (mk_exists(f_events,
     list_mk_forall(fnspec_quants_filtered, spec_without_quantifiers)),
-   the_e_var::`pc:num`::public_vars @ Option.to_list returnaddress_var @
+   the_e_var::`pc:num`::public_vars @ (match returnaddress_var with Some v -> [v] | None -> []) @
       (if read_sp_eq = None then [] else [`stackpointer:int64`]));;
 
 let REPEAT_GEN_AND_OFFSET_STACKPTR_TAC =
@@ -284,7 +284,7 @@ let DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC:tactic =
           is_comb cth &&
           name_of (fst (strip_comb cth)) = "memaccess_inbounds")
         asl) in
-    if List.is_empty meminbounds then
+    if meminbounds = [] then
       failwith "No memaccess_inbounds assumption" else
     end_itlist (fun tac1 tac2 -> tac1 ORELSE tac2)
       (map try_discharge meminbounds));;
@@ -461,7 +461,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       let quantvars,forall_body = strip_forall(snd(dest_exists w)) in
       let stored_abbrevs = ref [] in
 
-      if List.is_empty quantvars || hd quantvars <> `e:(uarch_event)list`
+      if quantvars = [] || hd quantvars <> `e:(uarch_event)list`
       then failwith "The goal must be `exists f_events. forall e ...`" else
 
       (* The destination PC *)
@@ -607,13 +607,13 @@ let CONCRETIZE_F_EVENTS_TAC (concrete_f_events:term): tactic =
     let free_f_events = frees concrete_f_events in
     (* Do sanity check *)
     let _ = List.iter (fun t ->
-        if not (String.starts_with ~prefix:"f_ev" (name_of t))
+        if not (starts_with"f_ev" (name_of t))
         then failwith
           ("This free variable does not start with 'f_ev'; is it a function " ^
            "that returns a list of uarch_events?") else
         let tty = type_of t in
         try let _ = dest_fun_ty tty in ()
-        with _ -> failwith "This is not a function type")
+        with Failure _ -> failwith "This is not a function type")
       free_f_events in
     let new_goal = subst [concrete_f_events,old_f_events] body in
     let new_goal = list_mk_exists (free_f_events, new_goal) in
@@ -673,7 +673,7 @@ let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
 
     let e_back::e_front_tail::[] = snd (strip_comb e2_def_post) in
 
-    let e2_def_pre = try Some (find_e2_def precond) with _ -> None in
+    let e2_def_pre = try Some (find_e2_def precond) with Failure _ -> None in
     let _ = match e2_def_pre with
       | Some (_,e2_def_pre,_) ->
         if not (is_nil e2_def_pre ||
@@ -761,7 +761,7 @@ let ENSURES_EVENTS_WHILE_UP2_TAC =
         let the_enumeratel,(counter::e_loop::[]) = strip_comb e_enumeratel in
         (* discard e_back! *)
         the_enumeratel,counter,e_loop,e_front,e_prev_trace
-      with _ -> failmsg() in
+      with Failure _ -> failmsg() in
 
     let _ = match numitr with
      | None -> ()

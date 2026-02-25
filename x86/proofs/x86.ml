@@ -4162,7 +4162,7 @@ let X86_THM =
         failwith ("X86_THM: Cannot decompose PC expression: " ^
                   string_of_term (concl pc_th)) in
     let _ = if !x86_print_log then
-      let opt = Option.get execth2.(pc_ofs) in
+      let opt = option_get execth2.(pc_ofs) in
       (* opt: |- forall ... bytes_loaded .. ==> x86_decode .. (INST ..) *)
       let t = snd (strip_forall (concl (opt))) in
       let t = snd (dest_imp t) in
@@ -4173,7 +4173,7 @@ let X86_THM =
     CONV_RULE
       (ONCE_DEPTH_CONV
         (REWR_CONV (GSYM ADD_ASSOC) THENC RAND_CONV NUM_REDUCE_CONV))
-      (MATCH_MP th (MATCH_MP (Option.get execth2.(pc_ofs)) loaded_mc_th));;
+      (MATCH_MP th (MATCH_MP (option_get execth2.(pc_ofs)) loaded_mc_th));;
 
 let X86_ENSURES_SUBLEMMA_TAC =
   ENSURES_SUBLEMMA_TAC o MATCH_MP bytes_loaded_update o CONJUNCT1;;
@@ -4264,14 +4264,14 @@ let X86_CONV (decode_ths:thm option array) ths tm =
     (fun th ->
       let c = concl th in
       is_eq c && is_read_rip (fst (dest_eq c)))
-    ths with _ ->
+    ths with Failure _ ->
       failwith "X86_CONV: can't find `read RIP .. = ..` from ths" in
 
   (* Find `bytes_loaded ..`. *)
   let bytes_loaded_mc_ths:thm list =
     (* Pick the _mc const from decode_ths, if decode_ths[0] != None, which is
        likely to be true. *)
-    let the_mc:term option = Option.bind decode_ths.(0)
+    let the_mc:term option = option_bind decode_ths.(0)
       (fun th ->
         (* th is `forall .., bytes_loaded ... _mc ==> x86_decode ..`. *)
         let t = concl th in
@@ -4285,11 +4285,11 @@ let X86_CONV (decode_ths:thm option array) ths tm =
         let cc = concl th in is_comb cc && (
         let c,args = strip_comb (concl th) in
         c = bytes_loaded_tm &&
-          (the_mc = None || last args = Option.get the_mc)))
+          (the_mc = None || last args = option_get the_mc)))
       ths in
     if res = [] then failwith
         ("X86_CONV: can't find `bytes_loaded .. .. " ^
-          (if the_mc <> None then string_of_term (Option.get the_mc) else "..")
+          (if the_mc <> None then string_of_term (option_get the_mc) else "..")
           ^ "` from ths")
     else res in
 
@@ -4299,8 +4299,8 @@ let X86_CONV (decode_ths:thm option array) ths tm =
   (* Pick the right rules. It will be a singleton in most cases... *)
   let x86_execute_case_rules:thm list =
     let ts = find_terms is_const (concl eth) in
-    List.filter_map (fun t ->
-      try Some ((assoc (name_of t) X86_EXECUTE_CASES)) with _ -> None) ts in
+    filter_map (fun t ->
+      try Some ((assoc (name_of t) X86_EXECUTE_CASES)) with Failure _ -> None) ts in
   (K eth THENC
    PURE_ONCE_REWRITE_CONV(x86_execute_case_rules) THENC
    REWRITE_CONV[add_store_event;add_load_event;SEQ_ID] THENC
@@ -4689,7 +4689,7 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
     and svar0 = mk_var("s",`:x86state`) in
     let ilist = map (vsubst[svar,svar0]) ilist0 in
     let subth_specl =
-      try SPECL ilist subth with _ -> begin
+      try SPECL ilist subth with Failure _ -> begin
         (if (!x86_print_log) then
           (Printf.printf "ilist and subth's forall vars do not match\n";
           Printf.printf "ilist: [%s]\n" (end_itlist
@@ -4844,7 +4844,7 @@ let check_forallvars_tac:tactic =
   let find_and_check (lhs_pat:term) (t:term) (quants:term list) =
     let read_eq = try Some (find_term (fun t ->
       is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
-      with _ -> None in
+      with Failure _ -> None in
     match read_eq with
     | Some read_eq ->
       let the_var = rhs read_eq in
@@ -5279,7 +5279,7 @@ let WINDOWS_X86_WRAP_STACK_TAC =
     let is_nargle t = is_comb t && rator t = argy in
     fun t -> try
         (length o dest_list o rand o find_term is_nargle) t
-      with _ -> failwith "Could not find WINDOWS_C_ARGUMENTS" in
+      with Failure _ -> failwith "Could not find WINDOWS_C_ARGUMENTS" in
   fun winmc stdmc coreth reglist stdstackoff (asl,w) ->
     let stdregs = dest_list reglist in
     let n =

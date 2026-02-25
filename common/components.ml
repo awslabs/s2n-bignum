@@ -2656,7 +2656,7 @@ let (COMPONENT_CANON_CONV:conv),add_component_alias_thms =
   (fun tm ->
     if is_const tm then
       try assoc tm !component_canon_conv_cache
-      with _ ->
+      with Failure _ ->
         let thnew = !conv tm in
         component_canon_conv_cache := (tm,thnew)::!component_canon_conv_cache;
         thnew
@@ -2953,9 +2953,9 @@ let ORTHOGONAL_COMPONENTS_CONV tm =
       try
         let lref = assoc lhs !orthogonal_components_conv_cache in
         try assoc rhs !lref
-        with _ -> let newth = eval() in lref := (rhs, newth)::!lref;
+        with Failure _ -> let newth = eval() in lref := (rhs, newth)::!lref;
           newth
-      with _ -> let newth = eval() in
+      with Failure _ -> let newth = eval() in
         orthogonal_components_conv_cache := (lhs, ref [(rhs,newth)])::!orthogonal_components_conv_cache;
         newth
     else begin
@@ -2963,7 +2963,7 @@ let ORTHOGONAL_COMPONENTS_CONV tm =
       | Some th -> th
       | None -> eval()
     end
-  with _ -> failwith "ORTHOGONAL_COMPONENTS_CONV: unknown term";;
+  with Failure _ -> failwith "ORTHOGONAL_COMPONENTS_CONV: unknown term";;
 
 let ORTHOGONAL_COMPONENTS_RULE2 tm1 tm2 =
   ORTHOGONAL_COMPONENTS_CONV(list_mk_icomb "orthogonal_components" [tm1;tm2]);;
@@ -3488,11 +3488,11 @@ let COMPONENT_READ_OVER_WRITE_CONV =
    (try let th = rule_same tm in
         rule_same_matched := true;
         MP th (VALID_COMPONENT_CONV(lhand(concl th)))
-    with _ ->
+    with Failure _ ->
       try let th = rule_orth tm in
           rule_orth_matched := true;
           MP th (orth_rule(lhand(concl th)))
-      with _ ->
+      with Failure _ ->
         (* If tm was of the form `read _ (write _ _ _)`, this failure is from
            *_COMPONENT{S}_CONV which were supposed to prove either fully
            overlapping or orthogonal aliasing relation between the reads and
@@ -3607,7 +3607,7 @@ let ASSUMPTION_STATE_UPDATE_TAC =
             STATE_UPDATE_RULE cxt uth thi
           with Failure failmsg ->
             (if !components_print_log &&
-                String.starts_with ~prefix:"NONOVERLAPPING_RULE" failmsg then
+                starts_with "NONOVERLAPPING_RULE" failmsg then
               (Printf.printf "Info: assumption `%s` is erased.\n"  (string_of_term (concl thi));
                Printf.printf "- Reason: %s\n" failmsg));
             failwith failmsg) thy

@@ -726,7 +726,7 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   (* safety property version *)
   W(fun (asl,w) ->
     (* grab the current event list *)
-    let current_events = List.filter_map (fun (_,ath) -> let t = concl ath in
+    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
       if is_eq t && is_read_events (lhs t) then Some (rhs t)
       else None) asl in
     if length current_events <> 1

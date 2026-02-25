@@ -894,8 +894,8 @@ let decode_inst ibytes =
      mk_flist(map (curry mk_comb `word:num->byte` o mk_small_numeral) ibytes) in
   let execth = X86_MK_EXEC_RULE(REFL ibyteterm) in
   let decoded = mk_flist
-     (map (rand o rand o snd o strip_forall o concl o Option.get)
-       (filter Option.is_some (Array.to_list (snd execth)))) in
+     (map (rand o rand o snd o strip_forall o concl o option_get)
+       (filter option_is_some (Array.to_list (snd execth)))) in
   let _ = print_term decoded in
   decoded;;
 
@@ -960,10 +960,10 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
 
     let execth = X86_MK_EXEC_RULE(REFL ibyteterm) in
 
-    let inst_th = Option.get (snd execth).(0) in
+    let inst_th = option_get (snd execth).(0) in
     let decoded = mk_flist
-      (map (rand o rand o snd o strip_forall o concl o Option.get)
-        (filter Option.is_some (Array.to_list (snd execth)))) in
+      (map (rand o rand o snd o strip_forall o concl o option_get)
+        (filter option_is_some (Array.to_list (snd execth)))) in
 
     let result =
       match
