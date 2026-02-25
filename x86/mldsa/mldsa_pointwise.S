@@ -52,7 +52,7 @@ S2N_BN_SYMBOL(mldsa_pointwise_x86):
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        CFI_DEC_RSP(176)
+        CFI_DEC_RSP(192)
         CFI_STACKSAVEU(xmm6,0)
         CFI_STACKSAVEU(xmm7,16)
         CFI_STACKSAVEU(xmm8,32)
@@ -65,6 +65,7 @@ S2N_BN_SYMBOL(mldsa_pointwise_x86):
         CFI_STACKSAVEU(xmm15,144)
         CFI_STACKSAVE(rdi,160)
         CFI_STACKSAVE(rsi,168)
+        CFI_STACKSAVE(rdx,176)
         mov     rdi, rcx
         mov     rsi, rdx
         mov     rdx, r8
@@ -231,7 +232,8 @@ pointwise_looptop1:
         CFI_STACKLOADU(xmm15,144)
         CFI_STACKLOAD(rdi,160)
         CFI_STACKLOAD(rsi,168)
-        CFI_INC_RSP(176)
+        CFI_STACKLOAD(rdx,176)
+        CFI_INC_RSP(192)
 #endif
         CFI_RET
 
