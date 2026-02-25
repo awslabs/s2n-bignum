@@ -279,7 +279,9 @@ OBJ = curve25519/bignum_add_p25519.o \
       secp256k1/bignum_demont_p256k1.o \
       secp256k1/bignum_double_p256k1.o \
       secp256k1/bignum_half_p256k1.o \
+      secp256k1/bignum_mod_n256k1.o \
       secp256k1/bignum_mod_n256k1_4.o \
+      secp256k1/bignum_mod_p256k1.o \
       secp256k1/bignum_mod_p256k1_4.o \
       secp256k1/bignum_montmul_p256k1.o \
       secp256k1/bignum_montmul_p256k1_alt.o \
