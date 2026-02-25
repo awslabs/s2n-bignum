@@ -450,6 +450,10 @@ extern void bignum_mod_n256_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t k, co
 extern void bignum_mod_n256_4 (uint64_t z[S2N_BIGNUM_STATIC 4], const uint64_t x[S2N_BIGNUM_STATIC 4]);
 
 // Reduce modulo group order, z := x mod n_256k1
+// Input x[k]; output z[4]
+extern void bignum_mod_n256k1 (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t k, const uint64_t *x);
+
+// Reduce modulo group order, z := x mod n_256k1
 // Input x[4]; output z[4]
 extern void bignum_mod_n256k1_4 (uint64_t z[S2N_BIGNUM_STATIC 4], const uint64_t x[S2N_BIGNUM_STATIC 4]);
 
@@ -488,6 +492,10 @@ extern void bignum_mod_p256_alt (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t k, co
 // Reduce modulo field characteristic, z := x mod p_256
 // Input x[4]; output z[4]
 extern void bignum_mod_p256_4 (uint64_t z[S2N_BIGNUM_STATIC 4], const uint64_t x[S2N_BIGNUM_STATIC 4]);
+
+// Reduce modulo field characteristic, z := x mod p_256k1
+// Input x[k]; output z[4]
+extern void bignum_mod_p256k1 (uint64_t z[S2N_BIGNUM_STATIC 4], uint64_t k, const uint64_t *x);
 
 // Reduce modulo field characteristic, z := x mod p_256k1
 // Input x[4]; output z[4]
