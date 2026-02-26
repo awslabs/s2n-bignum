@@ -37,8 +37,8 @@ motivated users.
 |---|------|--------------------|
 | A1 | Wrong functional spec | Specifications written in simple mathematical style; integration and conformance tests (NIST CAVP, Wycheproof) |
 | A2 | Precondition mismatch | Preconditions explicit in formal statements; signature cross-checking; *planned C-level contracts* |
-| A3 | Non-constant-time code | Formal constant-time proofs for all AWS-LC functions; empirical timing tests |
-| A4 | Out-of-bounds memory access | Formal memory-safety proofs for all AWS-LC functions; frame conditions; Valgrind |
+| A3 | Non-constant-time code | Formal constant-time proofs for all functions currently used by AWS-LC; empirical timing tests |
+| A4 | Out-of-bounds memory access | Formal memory-safety proofs for all functions currently used by AWS-LC; frame conditions; Valgrind |
 | B1 | Wrong ISA model or decoder | Co-simulation testing against real hardware on every CI run |
 | B2 | Buggy ELF loader | Loader errors typically cause proof failure; function-level random testing |
 | B3 | Model omissions (caches, speculative execution, etc.) | Standard for sequential user-mode verification; omissions documented |
@@ -248,6 +248,17 @@ not model:
 
 These omissions are standard for this class of verification and are not
 expected to affect functional correctness of sequential user-mode code.
+
+**Hardware faults and errata.** The proofs reason about an idealized machine
+and do not protect against physical faults (transient bit flips from cosmic
+rays or voltage fluctuations, deliberate fault injection) or undocumented CPU
+errata. Where the vendor documentation describes variability in instruction
+behavior, the formal model already accounts for it (see B1 above). The
+co-simulation testing can also detect systematic CPU errata for the
+instructions and operand patterns it exercises. Transient physical faults and
+deliberate fault injection are entirely out of scope; high-assurance
+deployments in physically hostile environments would need additional
+countermeasures at the hardware or protocol level.
 
 ---
 
