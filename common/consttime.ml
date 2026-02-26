@@ -440,7 +440,12 @@ let rec WHILE_TAC (flag:bool ref) tac w =
 
 (* public_vars describe the HOL Light variables that will contain public
    information. This is for faster symbolic simulation. *)
-let GEN_PROVE_SAFETY_SPEC_TAC =
+let GEN_PROVE_SAFETY_SPEC_TAC
+    ?(public_vars:term list option)
+    ?(tac_before_maychange_simp:tactic option) exec
+    (extra_unpack_thms:thm list) single_step_tac
+    :tactic =
+
   let pth =
     prove(`forall (e:(uarch_event)list) e2.
         e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
@@ -448,10 +453,6 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
   let qth =
     prove(`memaccess_inbounds [] [] []`, MESON_TAC[memaccess_inbounds;ALL]) in
 
-  let mainfn ?(public_vars:term list option)
-    ?(tac_before_maychange_simp:tactic option) exec
-    (extra_unpack_thms:thm list) single_step_tac
-    :tactic =
 
     REWRITE_TAC[C_ARGUMENTS;ALL;ALLPAIRS;SOME_FLAGS;fst exec] THEN
     REWRITE_TAC extra_unpack_thms THEN
@@ -535,8 +536,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       (ACCEPT_TAC qth ORELSE
       (POP_ASSUM MP_TAC THEN
        W (fun (asl,w) -> REWRITE_TAC(APPEND :: (map GSYM !stored_abbrevs))) THEN
-       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds")))
-  in mainfn;;
+       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds"))));;
 
 let ASSERT_CONCL_TAC (t:term): tactic =
   PRINT_GOAL_TAC THEN
