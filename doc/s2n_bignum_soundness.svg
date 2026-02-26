@@ -34,7 +34,7 @@
   <text x="335" y="113" text-anchor="middle" font-size="11" font-weight="bold" fill="#a44">Gap A</text>
 
   <!-- Proof arrow (right side, vertical) -->
-  <line x1="555" y1="165" x2="555" y2="260" stroke="#2a7" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="555" y1="260" x2="555" y2="165" stroke="#2a7" stroke-width="3" marker-end="url(#arrow)"/>
   <rect x="588" y="192" width="140" height="40" rx="6" fill="#e8f5e8" stroke="#2a7" stroke-width="1.5"/>
   <text x="658" y="210" text-anchor="middle" font-size="12" font-weight="bold" fill="#185">Formal proof</text>
   <text x="658" y="225" text-anchor="middle" font-size="11" fill="#296">(HOL Light)</text>
