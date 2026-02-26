@@ -30,19 +30,22 @@ assumption.
 
 ## Summary of risks
 
+Mitigations in *italics* are planned future work or actions available to
+motivated users.
+
 | # | Risk | Primary mitigation |
 |---|------|--------------------|
 | A1 | Wrong functional spec | Specifications written in simple mathematical style; integration and conformance tests (NIST CAVP, Wycheproof) |
-| A2 | Precondition mismatch | Preconditions explicit in formal statements; signature cross-checking; planned C-level contracts |
+| A2 | Precondition mismatch | Preconditions explicit in formal statements; signature cross-checking; *planned C-level contracts* |
 | A3 | Non-constant-time code | Formal constant-time proofs for all AWS-LC functions; empirical timing tests |
 | A4 | Out-of-bounds memory access | Formal memory-safety proofs for all AWS-LC functions; frame conditions; Valgrind |
 | B1 | Wrong ISA model or decoder | Co-simulation testing against real hardware on every CI run |
 | B2 | Buggy ELF loader | Loader errors typically cause proof failure; function-level random testing |
 | B3 | Model omissions (caches, speculative execution, etc.) | Standard for sequential user-mode verification; omissions documented |
-| C1 | HOL Light kernel or OCaml runtime bug | 20+ year track record; OCaml maturity; independent proof checking (Candle, HOLTrace) |
+| C1 | HOL Light kernel or OCaml runtime bug | 20+ year track record; OCaml maturity; *independent proof checking (Candle, HOLTrace)* |
 | D1 | Environment assumptions violated | Assumptions documented; standard for target platforms |
-| D2 | C header/assembly mismatch | Signature cross-checking tool; function-level testing; planned formal link |
-| D3 | Caller violates preconditions | Manual review at call sites; planned C-level contracts |
+| D2 | C header/assembly mismatch | Signature cross-checking tool; function-level testing; *planned formal link* |
+| D3 | Caller violates preconditions | Manual review at call sites; *planned C-level contracts* |
 
 Details for each risk follow in the sections below.
 
@@ -182,7 +185,7 @@ imported into another project and assembled on a different system, there is
 currently no systematic check (e.g., hash comparison or watermarking) that the
 resulting object code matches the bytes the proofs were verified against. An
 assembler bug or version difference could in principle produce different code.
-Running the s2n-bignum proofs on the target platform would catch this, but is
+Running the s2n-bignum proofs on the target platform would catch this, but
 may be considered too time-consuming to be part of routine builds.
 
 ### B1. ISA model fidelity
@@ -214,9 +217,9 @@ proofs are valid regardless of which behavior the hardware exhibits.
 
 ### B2. ELF object-code loader
 
-An OCaml ELF loader extracts the `.text` section from each object file for
-verification. If it extracts the wrong bytes, the proof applies to different
-code than what runs in production.
+An OCaml ELF loader extracts the `.text` section (and, where applicable, the
+`.rodata` section) from each object file for verification. If it extracts the
+wrong bytes, the proof applies to different code than what runs in production.
 
 **Mitigations.** (1) The proof engineer must know the exact byte sequence to
 write the proof, so loader errors would typically cause proof failure rather
