@@ -187,14 +187,6 @@ let mldsa_pointwise_consts = define
     &8380417; &8380417; &8380417; &8380417]`;;
 
 (* ------------------------------------------------------------------------- *)
-(* Pointwise multiplication specification                                    *)
-(* ------------------------------------------------------------------------- *)
-
-let mldsa_pointwise = define
- `mldsa_pointwise (f:num->int) (g:num->int) i =
-    (f i * g i * &(inverse_mod 8380417 4294967296)) rem &8380417`;;
-
-(* ------------------------------------------------------------------------- *)
 (* Auxiliary lemmas                                                          *)
 (* ------------------------------------------------------------------------- *)
 
@@ -223,6 +215,7 @@ let Q_MUL_COMM = WORD_RULE
 (* Normalization rules for VPSRLQ/VMOVSHDUP patterns *)
 let USHR32_SUBWORD = WORD_BLAST
  `word_subword (word_ushr (x:int64) 32) (0,32):int32 = word_subword x (32,32)`;;
+ 
 let DUP32_SUBWORD = WORD_BLAST
  `word_subword (word_duplicate (word_subword (x:int64) (32,32):int32):int64) (0,32):int32
   = word_subword x (32,32)`;;
@@ -365,7 +358,7 @@ let MLDSA_POINTWISE_CORRECT = prove
 
   (* Execute all 543 instructions with SIMD simplification *)
   MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_POINTWISE_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[mldsa_vpmuldq_montreduce])
+                      SIMD_SIMPLIFY_TAC[mldsa_pointwise_montred])
         (1--543) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
@@ -383,7 +376,7 @@ let MLDSA_POINTWISE_CORRECT = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[USHR32_SUBWORD; DUP32_SUBWORD] THEN
-  REWRITE_TAC[Q_MUL_COMM; GSYM mldsa_vpmuldq_montreduce] THEN
+  REWRITE_TAC[Q_MUL_COMM; GSYM mldsa_pointwise_montred] THEN
   REWRITE_TAC[WORD_JOIN_SUBWORD] THEN
 
   (* Prove postcondition - congruence + bounds for each coefficient *)

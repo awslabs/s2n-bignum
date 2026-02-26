@@ -128,7 +128,7 @@ let BITMAP_MLDSA_AVX2_NTT_ORDER = prove
 let mldsa_avx2_ntt_order' = define
  `mldsa_avx2_ntt_order' = bitmap [4;3;2;7;6;5;1;0]`;;
 
-let AVX2_NTT_ORDER_INVOLUTION = prove
+let MLDSA_AVX2_NTT_ORDER_INVOLUTION = prove
  (`!n. n < 256 ==> mldsa_avx2_ntt_order'(mldsa_avx2_ntt_order n) = n /\
                    mldsa_avx2_ntt_order(mldsa_avx2_ntt_order' n) = n`,
   CONV_TAC EXPAND_CASES_CONV THEN
@@ -594,6 +594,22 @@ let mldsa_montmul = define
       (word_subword (word_mul (word_sx (x:int32)) b:int64) (0,32):int32))
       (word 8380417:int64))
     (32,32))`;;
+
+let mldsa_pointwise = define
+ `mldsa_pointwise (f:num->int) (g:num->int) i =
+    (f i * g i * &(inverse_mod 8380417 4294967296)) rem &8380417`;;
+
+let mldsa_pointwise_montred = define
+ `mldsa_pointwise_montred (x:int64) =
+    word_subword
+      (word_sub x
+        (word_mul
+          (word_sx (word_subword
+            (word_mul (word 58728449:int64)
+                      (word_sx (word_subword x (0,32):int32):int64))
+            (0,32):int32):int64)
+          (word 8380417:int64)))
+      (32,32) : int32`;;
 
 let WORD_ADD_MLDSA_MONTMUL = prove
  (`word_add y (mldsa_montmul (a,b) x) =
@@ -1160,25 +1176,7 @@ let CONGBOUND_MLDSA_MONTRED = prove
     TRANS_TAC INT_LE_TRANS `(&2 pow 31 - &1) *  &8380417:int` THEN
     CONJ_TAC THENL [BOUNDER_TAC[]; ASM_INT_ARITH_TAC]]);;
 
-(* --------------------------------------------------------------------- *)
-(* VPMULDQ Montgomery reduction for ML-DSA pointwise multiplication.     *)
-(* This handles the standard Montgomery pattern used by VPMULDQ in the   *)
-(* pointwise assembly: prod - sx(lo32(qinv * sx(lo32(prod)))) * Q        *)
-(* --------------------------------------------------------------------- *)
-
-let mldsa_vpmuldq_montreduce = define
- `mldsa_vpmuldq_montreduce (x:int64) =
-    word_subword
-      (word_sub x
-        (word_mul
-          (word_sx (word_subword
-            (word_mul (word 58728449:int64)
-                      (word_sx (word_subword x (0,32):int32):int64))
-            (0,32):int32):int64)
-          (word 8380417:int64)))
-      (32,32) : int32`;;
-
-let WZX_CONG = prove
+let WORD_ZX_CONG_32 = prove
  (`!y:int64. (ival(word_zx y:int32) == ival y) (mod (&2 pow 32))`,
   GEN_TAC THEN ONCE_REWRITE_TAC[GSYM INT_REM_EQ] THEN
   SIMP_TAC[INT_REM_IVAL; DIMINDEX_64; ARITH] THEN
@@ -1208,19 +1206,19 @@ let IWORD_CONG_32 = prove
     SIMP_TAC[INT_REM_IVAL_IWORD; DIMINDEX_64; LE_REFL] THEN
     REWRITE_TAC[INT_SUB_REFL; INT_REM_ZERO]]);;
 
-let ilemma_mldsa = prove
+let IVAL_WORD_SUBWORD_DIV_32 = prove
  (`!x:int64. ival(word_subword x (32,32):int32) = ival x div &2 pow 32`,
   REWRITE_TAC[GSYM DIMINDEX_16; GSYM IVAL_WORD_ISHR] THEN
   GEN_TAC THEN REWRITE_TAC[DIMINDEX_16] THEN BITBLAST_TAC);;
 
-let MONTRED_VPMULDQ_LEMMA = prove
- (`!x:int64. &2 pow 32 * ival(mldsa_vpmuldq_montreduce x) =
+let MLDSA_POINTWISE_MONTRED_LEMMA = prove
+ (`!x:int64. &2 pow 32 * ival(mldsa_pointwise_montred x) =
        ival(word_sub x
          (word_mul (word_sx(word_subword
            (word_mul (word 58728449:int64)
                      (word_sx (word_subword x (0,32):int32):int64))
            (0,32):int32):int64) (word 8380417:int64)))`,
-  GEN_TAC THEN REWRITE_TAC[mldsa_vpmuldq_montreduce; ilemma_mldsa] THEN
+  GEN_TAC THEN REWRITE_TAC[mldsa_pointwise_montred; IVAL_WORD_SUBWORD_DIV_32] THEN
   MATCH_MP_TAC(INT_ARITH
     `x rem &2 pow 32 = &0 ==> &2 pow 32 * x div &2 pow 32 = x`) THEN
   REWRITE_TAC[WORD_SUB_IMODULAR; imodular; INT_REM_EQ_0] THEN
@@ -1234,13 +1232,13 @@ let MONTRED_VPMULDQ_LEMMA = prove
   ABBREV_TAC `low:int = ival(word_zx(x:int64):int32)` THEN
   ABBREV_TAC `mid:int = ival(word_zx(iword((&58728449:int) * low):int64):int32)` THEN
   SUBGOAL_THEN `((&2:int) pow 32) divides (low - ival(x:int64))` ASSUME_TAC THENL
-   [MP_TAC(SPEC `x:int64` WZX_CONG) THEN
+   [MP_TAC(SPEC `x:int64` WORD_ZX_CONG_32) THEN
     ASM_REWRITE_TAC[int_congruent; GSYM int_divides]; ALL_TAC] THEN
   MP_TAC(SPEC `(&58728449:int) * low` IWORD_CONG_32) THEN
   ABBREV_TAC `iw:int = ival(iword((&58728449:int) * low):int64)` THEN
   DISCH_TAC THEN
   SUBGOAL_THEN `((&2:int) pow 32) divides (mid - iw:int)` ASSUME_TAC THENL
-   [MP_TAC(SPEC `iword((&58728449:int) * low):int64` WZX_CONG) THEN
+   [MP_TAC(SPEC `iword((&58728449:int) * low):int64` WORD_ZX_CONG_32) THEN
     ASM_REWRITE_TAC[int_congruent; GSYM int_divides]; ALL_TAC] THEN
   SUBGOAL_THEN `((&2:int) pow 32) divides ((&58728449:int) * (&8380417:int) - &1)`
     ASSUME_TAC THENL
@@ -1262,16 +1260,16 @@ let MONTRED_VPMULDQ_LEMMA = prove
     `!(n:int) a b c. n divides (a - c) /\ n divides (b - c)
       ==> n divides (a - b)`]);;
 
-let CONGBOUND_VPMULDQ_MONTREDUCE = prove
+let CONGBOUND_MLDSA_POINTWISE_MONTRED = prove
  (`!a a' l u.
       (ival a == a') (mod &8380417) /\ l <= ival a /\ ival a <= u
       ==> --(&9205375228383854592) <= l /\ u <= &9205375228383854591
-          ==> (ival(mldsa_vpmuldq_montreduce a) ==
+          ==> (ival(mldsa_pointwise_montred a) ==
                &(inverse_mod 8380417 4294967296) * a')
               (mod &8380417) /\
               (l - &17996808470921216) div &2 pow 32
-                <= ival(mldsa_vpmuldq_montreduce a) /\
-              ival(mldsa_vpmuldq_montreduce a) <=
+                <= ival(mldsa_pointwise_montred a) /\
+              ival(mldsa_pointwise_montred a) <=
               &1 + (u + &17996808470921216) div &2 pow 32`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN STRIP_TAC THEN
   CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC(ONCE_DEPTH_CONV INVERSE_MOD_CONV) THEN
@@ -1284,7 +1282,7 @@ let CONGBOUND_VPMULDQ_MONTREDUCE = prove
     DISCH_THEN(fun th -> REWRITE_TAC[th])] THEN
   ONCE_REWRITE_TAC[INT_ARITH
    `l:int <= x <=> &2 pow 32 * l <= &2 pow 32 * x`] THEN
-  REWRITE_TAC[MONTRED_VPMULDQ_LEMMA] THEN
+  REWRITE_TAC[MLDSA_POINTWISE_MONTRED_LEMMA] THEN
   REWRITE_TAC[WORD_RULE
    `word_sub (a:int64) (word_mul b c) = iword(ival a - ival b * ival c)`] THEN
   SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
@@ -1559,10 +1557,10 @@ let rec ASM_CONGBOUND_RULE lfn tm =
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
                    (ASM_CONGBOUND_RULE lfn t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_MONTRED th1))
-    | Comb(Const("mldsa_vpmuldq_montreduce",_),t) ->
+    | Comb(Const("mldsa_pointwise_montred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
                    (ASM_CONGBOUND_RULE lfn t) in
-        CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_VPMULDQ_MONTREDUCE th1))
+        CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_POINTWISE_MONTRED th1))
     | Comb(Const("mldsa_barred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
                      (ASM_CONGBOUND_RULE lfn t) in
