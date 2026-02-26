@@ -321,6 +321,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VMOVQ operand operand
    | VMOVDQA operand operand
    | VMOVDQU operand operand
+   | VMOVHPD operand operand
    | VMOVSHDUP operand operand
    | VMOVSLDUP operand operand
    | VPADDW operand operand operand
@@ -338,20 +339,25 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPEXTRQ operand operand operand
    | VPINSRD operand operand operand operand
    | VPINSRQ operand operand operand operand
+   | VPINSRW operand operand operand operand
    | VEXTRACTI128 operand operand operand
    | VINSERTI128 operand operand operand operand
    | VPMULDQ operand operand operand
+   | VPMULHRSW operand operand operand
    | VPMULHW operand operand operand
    | VPMULLD operand operand operand
    | VPMULLW operand operand operand
    | VPOR operand operand operand
    | VPSHUFB operand operand operand
    | VPSLLD operand operand operand
+   | VPSLLVD operand operand operand
    | VPSLLQ operand operand operand
    | VPSLLW operand operand operand
    | VPSRAD operand operand operand
    | VPSRAW operand operand operand
    | VPSRLD operand operand operand
+   | VPSRLVD operand operand operand
+   | VPSRLVQ operand operand operand
    | VPSRLQ operand operand operand
    | VPSRLW operand operand operand
    | VPSUBD operand operand operand
