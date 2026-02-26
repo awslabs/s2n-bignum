@@ -536,7 +536,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC
       (ACCEPT_TAC qth ORELSE
       (POP_ASSUM MP_TAC THEN
        W (fun (asl,w) -> REWRITE_TAC(APPEND :: (map GSYM !stored_abbrevs))) THEN
-       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds"))));;
+       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds")));;
 
 let ASSERT_CONCL_TAC (t:term): tactic =
   PRINT_GOAL_TAC THEN
