@@ -1,6 +1,6 @@
 # Soundness of s2n-bignum Formal Verification
 
-s2n-bignum provides machine-checked proofs that its assembly routines produce
+s2n-bignum provides machine-checked proofs that its machine code routines produce
 mathematically correct results for all inputs. But no formal verification is
 absolute. Every FV effort links two **formal** objects -- a specification and a
 model -- each of which is *assumed* to correspond to something informal and
@@ -178,7 +178,7 @@ One important aspect of the s2n-bignum approach significantly narrows this gap:
 **proofs are about the actual object-code byte sequences**, which are checked
 against the object files produced by the build. This eliminates any direct
 dependence on the correctness of compilers or assemblers -- a class of
-assumption that affects most other formal verification efforts.
+assumption that affects many other formal verification efforts.
 
 **Caveat: reassembly in downstream projects.** When s2n-bignum `.S` files are
 imported into another project and assembled on a different system, there is
