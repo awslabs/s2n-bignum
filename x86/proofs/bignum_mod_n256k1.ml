@@ -321,7 +321,7 @@ let tac execth offset =
   X86_ACCSTEPS_TAC execth [2] (1--2) THEN
   X86_STEPS_TAC execth (3--5) THEN
   FIRST_X_ASSUM(MP_TAC o SPEC `word q:int64` o MATCH_MP (MESON[]
-   `!q. read RAX s = q' ==> q' = q ==> read RAX s = q`)) THEN
+   `!q. read RBX s = q' ==> q' = q ==> read RBX s = q`)) THEN
   ANTS_TAC THENL
    [EXPAND_TAC "q" THEN
     EXPAND_TAC "m" THEN
@@ -336,10 +336,8 @@ let tac execth offset =
      [REWRITE_TAC[ARITH_RULE
        `MIN (2 EXP 64 + a) (2 EXP 64 - 1) = 2 EXP 64 - 1`] THEN
       CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC WORD_REDUCE_CONV;
-      SIMP_TAC[VAL_BOUND_64; ARITH_RULE
-       `n < 2 EXP 64 ==> MIN n (2 EXP 64 - 1) = n`] THEN
-      GEN_REWRITE_TAC LAND_CONV [GSYM WORD_VAL] THEN
-      CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV)];
+      SIMP_TAC[VAL_BOUND_64; WORD_VAL; ARITH_RULE
+       `n < 2 EXP 64 ==> MIN n (2 EXP 64 - 1) = n`]];
     DISCH_TAC THEN VAL_INT64_TAC `q:num`] THEN
 
   (*** The next digit in the current state ***)
@@ -357,6 +355,7 @@ let tac execth offset =
 
   ABBREV_TAC `w:int64 = word q` THEN
   UNDISCH_THEN `val(w:int64) = q` (SUBST_ALL_TAC o SYM) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_VAL]) THEN
   ACCUMULATOR_POP_ASSUM_LIST(K ALL_TAC o end_itlist CONJ) THEN
 
   (*** Subtraction of q * n_256k1 ***)
@@ -378,13 +377,16 @@ let tac execth offset =
     CONJ_TAC THENL [BOUNDER_TAC[]; CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV)] THEN
     ASM_REWRITE_TAC[] THEN EXPAND_TAC "m" THEN
     REWRITE_TAC[bignum_of_wordlist; GSYM REAL_OF_NUM_CLAUSES; n_256k1] THEN
-    ACCUMULATOR_ASSUM_LIST(MP_TAC o end_itlist CONJ o DESUM_RULE) THEN
+    ACCUMULATOR_ASSUM_LIST(MP_TAC o end_itlist CONJ o
+      DESUM_RULE o map(REWRITE_RULE[VAL_WORD_BITVAL; ADD_CLAUSES])) THEN
     DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
     CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN
     REPEAT(MATCH_MP_TAC INTEGER_ADD THEN CONJ_TAC) THEN
     TRY REAL_INTEGER_TAC THEN
-    ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o DECARRY_RULE) THEN
-    DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN REAL_INTEGER_TAC;
+    ACCUMULATOR_POP_ASSUM_LIST(MP_TAC o end_itlist CONJ o
+      DECARRY_RULE o map(REWRITE_RULE[VAL_WORD_BITVAL; ADD_CLAUSES])) THEN
+    DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+    REWRITE_TAC[REAL_MUL_RZERO; REAL_MUL_LZERO] THEN REAL_INTEGER_TAC;
     ACCUMULATOR_POP_ASSUM_LIST(K ALL_TAC)] THEN
 
   (*** Final correction ***)

@@ -309,10 +309,8 @@ let tac execth offset =
      [REWRITE_TAC[ARITH_RULE
        `MIN (2 EXP 64 + a) (2 EXP 64 - 1) = 2 EXP 64 - 1`] THEN
       CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC WORD_REDUCE_CONV;
-      SIMP_TAC[VAL_BOUND_64; ARITH_RULE
-       `n < 2 EXP 64 ==> MIN n (2 EXP 64 - 1) = n`] THEN
-      GEN_REWRITE_TAC LAND_CONV [GSYM WORD_VAL] THEN
-      CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV)];
+      SIMP_TAC[VAL_BOUND_64; WORD_VAL; ARITH_RULE
+       `n < 2 EXP 64 ==> MIN n (2 EXP 64 - 1) = n`]];
     DISCH_TAC THEN VAL_INT64_TAC `q:num`] THEN
 
   (*** The next digit in the current state ***)
@@ -394,7 +392,7 @@ let tac execth offset =
 
 let BIGNUM_MOD_P256K1_CORRECT = time prove
  (`!z k x n pc.
-      nonoverlapping (word pc,0xec) (z,32)
+      nonoverlapping (word pc,0xe8) (z,32)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_mod_p256k1_tmc /\
                 read RIP s = word(pc + 0x3) /\
@@ -461,7 +459,7 @@ let bignum_mod_p256k1_windows_tmc = define_trimmed "bignum_mod_p256k1_windows_tm
 
 let BIGNUM_MOD_P256K1_WINDOWS_CORRECT = time prove
  (`!z k x n pc.
-      nonoverlapping (word pc,0xf9) (z,32)
+      nonoverlapping (word pc,0xf5) (z,32)
       ==> ensures x86
            (\s. bytes_loaded s (word pc) bignum_mod_p256k1_windows_tmc /\
                 read RIP s = word(pc + 0xe) /\
