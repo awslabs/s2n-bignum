@@ -448,8 +448,7 @@ BASE_ML=proofs/arm.ml \
         proofs/instruction.ml \
         proofs/subroutine_signatures.ml
 
-HOLDIR?=$(HOME)/hol-light
-HOLLIGHT:=$(HOLDIR)/hol.sh
+HOLLIGHT?=$(shell which hol.sh 2>/dev/null)
 
 PROOF_BINS = $(OBJ:.o=.native)
 PROOF_LOGS = $(OBJ:.o=.correct)
