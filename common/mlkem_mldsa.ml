@@ -611,6 +611,33 @@ let mldsa_pointwise_montred = define
           (word 8380417:int64)))
       (32,32) : int32`;;
 
+let arm_mldsa_pointwise_montred = define
+ `arm_mldsa_pointwise_montred (x:int64) =
+    word_subword
+      (word_sub x
+        (word_mul
+          (word_sx (word_mul (word_subword x (0,32):int32)
+                             (word 58728449:int32)):int64)
+          (word_sx (word 8380417:int32):int64)))
+      (32,32) : int32`;;
+
+let arm_mldsa_pointwise_montred' =
+  CONV_RULE (RAND_CONV (ONCE_DEPTH_CONV WORD_REDUCE_CONV))
+    arm_mldsa_pointwise_montred;;
+
+(* Key equivalence: ARM montred = x86 montred.
+   Uses WORD_ZX_MUL to show low-32 of 64-bit product = 32-bit product. *)
+let ARM_MLDSA_MONTRED_EQ = prove(
+ `!x:int64. arm_mldsa_pointwise_montred x = mldsa_pointwise_montred x`,
+  GEN_TAC THEN
+  REWRITE_TAC[arm_mldsa_pointwise_montred; mldsa_pointwise_montred] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN
+  REWRITE_TAC[WORD_BLAST `word_subword (x:int64) (0,32):int32 = word_zx x`] THEN
+  SIMP_TAC[WORD_ZX_MUL; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
+  REWRITE_TAC[WORD_BLAST `word_zx(word_sx (a:int32):int64):int32 = a`] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN
+  REWRITE_TAC[WORD_MUL_SYM]);;
+
 let WORD_ADD_MLDSA_MONTMUL = prove
  (`word_add y (mldsa_montmul (a,b) x) =
    word_sub (word_add
