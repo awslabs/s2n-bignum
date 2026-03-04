@@ -141,6 +141,7 @@ OBJ = curve25519/bignum_add_p25519.o \
       mldsa/mldsa_intt.o \
       mldsa/mldsa_ntt.o \
       mldsa/mldsa_pointwise.o \
+      mldsa/mldsa_pointwise_acc_l4.o \
       mldsa/mldsa_reduce.o \
       mlkem/mlkem_basemul_k2.o \
       mlkem/mlkem_basemul_k3.o \
