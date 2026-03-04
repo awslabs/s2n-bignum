@@ -5,6 +5,7 @@
 
 (* ========================================================================= *)
 (* Pointwise multiplication and accumulation of polynomials in ML-DSA NTT    *)
+(* x86 AVX2 implementation: c[i] = MontReduce(sum_{k=0}^{3} a_k[i]*b_k[i]) *)
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
@@ -175,8 +176,9 @@ let mldsa_pointwise_acc_l4_mc = define_assert_from_elf "mldsa_pointwise_acc_l4_m
 let mldsa_pointwise_acc_l4_tmc = define_trimmed "mldsa_pointwise_acc_l4_tmc" mldsa_pointwise_acc_l4_mc;;
 let MLDSA_POINTWISE_ACC_L4_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_pointwise_acc_l4_tmc;;
 
-x86_print_log := true;;
-components_print_log := true;;
+(* ========================================================================= *)
+(* Specification                                                             *)
+(* ========================================================================= *)
 
 let mldsa_pointwise_acc_l4 = define
  `mldsa_pointwise_acc_l4 (f:num->int) (g:num->int) i =
@@ -186,8 +188,6 @@ let mldsa_pointwise_acc_l4 = define
       f (i + 768) * g (i + 768)) *
      &(inverse_mod 8380417 4294967296)) rem &8380417`;;
 
-(* Constants layout for acc_l4: Q at offset 0, QINV at offset 32
-   (NOTE: opposite order from mldsa_pointwise which has QINV first) *)
 let mldsa_pointwise_acc_l4_consts = define
  `mldsa_pointwise_acc_l4_consts:int list =
    [&8380417; &8380417; &8380417; &8380417;
@@ -199,7 +199,6 @@ let mldsa_pointwise_acc_l4_consts = define
 (* Auxiliary lemmas                                                          *)
 (* ========================================================================= *)
 
-(* ival of sign-extended product equals integer product when bounded *)
 let IVAL_WORD_MUL_SX32_64 = prove(
  `!x:int32 y:int32.
     abs(ival x) <= &75423752 /\ abs(ival y) <= &75423752
@@ -221,24 +220,21 @@ let IVAL_WORD_MUL_SX32_64 = prove(
 let Q_MUL_COMM = WORD_RULE
  `word_mul (word 8380417:int64) x = word_mul x (word 8380417:int64)`;;
 
-(* Normalization rules for VPSRLQ/VMOVSHDUP patterns *)
 let USHR32_SUBWORD = WORD_BLAST
  `word_subword (word_ushr (x:int64) 32) (0,32):int32 = word_subword x (32,32)`;;
- 
 let DUP32_SUBWORD = WORD_BLAST
  `word_subword (word_duplicate (word_subword (x:int64) (32,32):int32):int64) (0,32):int32
   = word_subword x (32,32)`;;
 
-(* Simplify word_subword(word_join ...) - needed for odd-indexed coefficients *)
 let WORD_JOIN_SUBWORD = WORD_BLAST
  `word_subword (word_join (a:int32) (b:int32):int64) (32,32):int32 = a`;;
 
 (* ========================================================================= *)
-(* Correctness proof - unrolled 1412-step simulation                         *)
-(* 4 setup instructions + 88 per iteration * 16 iterations = 1412            *)
+(* Correctness proof                                                         *)
 (* ========================================================================= *)
 
-g `!c a b consts x y pc.
+let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
+ (`!c a b consts x y pc.
     aligned 32 c /\
     aligned 32 a /\
     aligned 32 b /\
@@ -275,18 +271,15 @@ g `!c a b consts x y pc.
            MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
                       ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
            MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
-           MAYCHANGE [memory :> bytes(c, 1024)])`;;
+           MAYCHANGE [memory :> bytes(c, 1024)])`,
 
-(* Phase 1: Setup - strip quantifiers, introduce preconditions *)
-e(MAP_EVERY X_GEN_TAC
+  MAP_EVERY X_GEN_TAC
     [`c:int64`; `a:int64`; `b:int64`; `consts:int64`;
      `x:num->int32`; `y:num->int32`; `pc:num`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               NONOVERLAPPING_CLAUSES; ALL] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   GLOBALIZE_PRECONDITION_TAC THEN
-  (* Derive weaker bound for x: 8380416 <= 75423752
-     This is needed for IVAL_WORD_MUL_SX32_64 in Phase 7 *)
   SUBGOAL_THEN
     `!i. i < 1024 ==> abs(ival((x:num->int32) i)) <= &75423752`
     ASSUME_TAC THENL
@@ -297,10 +290,9 @@ e(MAP_EVERY X_GEN_TAC
   CONV_TAC(RATOR_CONV(LAND_CONV(ONCE_DEPTH_CONV EXPAND_CASES_CONV))) THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   REPEAT STRIP_TAC THEN
-  REWRITE_TAC [SOME_FLAGS; fst MLDSA_POINTWISE_ACC_L4_TMC_EXEC]);;
+  REWRITE_TAC [SOME_FLAGS; fst MLDSA_POINTWISE_ACC_L4_TMC_EXEC] THEN
 
-(* Phase 2: Ghost variables for YMM registers *)
-e(GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
+  GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
   GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
   GHOST_INTRO_TAC `init_ymm2:int256` `read YMM2` THEN
   GHOST_INTRO_TAC `init_ymm3:int256` `read YMM3` THEN
@@ -315,41 +307,33 @@ e(GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
   GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
   GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
   GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15`);;
+  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
 
-(* Phase 2b: Ghost reads from output region c (32 x 256-bit = 1024 bytes)
-   CRITICAL: the simulator only updates EXISTING memory assumptions.
-   Without these, VMOVDQA writes to c are lost during simulation. *)
-e(MAP_EVERY (fun n ->
+  MAP_EVERY (fun n ->
     let vname = "init_c" ^ string_of_int n in
     GHOST_INTRO_TAC (mk_var(vname, `:int256`))
       (subst[mk_small_numeral(32*n),`n:num`]
         `read (memory :> bytes256(word_add c (word n)))`))
     (0--31) THEN
-  ENSURES_INIT_TAC "s0");;
+  ENSURES_INIT_TAC "s0" THEN
 
-(* Phase 3a: Merge memory reads from array a (128 x 256-bit = 4096 bytes)
-   4 layers of 1024 bytes each, covering offsets 0..4063 *)
-e(MP_TAC(end_itlist CONJ (map (fun n ->
+  MP_TAC(end_itlist CONJ (map (fun n ->
     READ_MEMORY_MERGE_CONV 3 (subst[mk_small_numeral(32*n),`n:num`]
       `read (memory :> bytes256(word_add a (word n))) s0`)) (0--127))) THEN
   ASM_REWRITE_TAC[WORD_ADD_0] THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN
-  STRIP_TAC);;
+  STRIP_TAC THEN
 
-(* Phase 3b: Merge memory reads from array b (128 x 256-bit = 4096 bytes) *)
-e(MP_TAC(end_itlist CONJ (map (fun n ->
+  MP_TAC(end_itlist CONJ (map (fun n ->
     READ_MEMORY_MERGE_CONV 3 (subst[mk_small_numeral(32*n),`n:num`]
       `read (memory :> bytes256(word_add b (word n))) s0`)) (0--127))) THEN
   ASM_REWRITE_TAC[WORD_ADD_0] THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN
-  STRIP_TAC);;
+  STRIP_TAC THEN
 
-(* Now discard ALL bytes32 reads (both a and b are merged into bytes256) *)
-e(DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`]);;
+  DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
 
-(* Phase 3c: Merge constants memory (2 x 256-bit = 64 bytes) *)
-e(FIRST_X_ASSUM(MP_TAC o CONV_RULE (LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
+  FIRST_X_ASSUM(MP_TAC o CONV_RULE (LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
   REWRITE_TAC[mldsa_pointwise_acc_l4_consts; MAP; CONS_11] THEN
   STRIP_TAC THEN
   MP_TAC(end_itlist CONJ (map (fun n ->
@@ -358,44 +342,36 @@ e(FIRST_X_ASSUM(MP_TAC o CONV_RULE (LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
   ASM_REWRITE_TAC[WORD_ADD_0] THEN
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 consts) s = z`] THEN
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN
-  STRIP_TAC);;
+  STRIP_TAC THEN
 
-(* Phase 4a: Add product bounds as assumptions.
-   Each product |x_k[i] * y_k[i]| <= 75423752^2 = 5688742365757504
-   Sum of 4 products <= 4 * 5688742365757504 = 22754969463030016
-   This is well within CONGBOUND_VPMULDQ_MONTREDUCE domain (< 9.2 * 10^18) *)
-e(SUBGOAL_THEN
+  (* Product bounds (tight: 8380416 * 75423752 = 632082418040832) *)
+  SUBGOAL_THEN
    `!i. i < 1024 ==>
      abs(ival(word_mul (word_sx ((x:num->int32) i):int64)
-                       (word_sx ((y:num->int32) i):int64))) <= &5688742365757504`
+                       (word_sx ((y:num->int32) i):int64))) <= &632082418040832`
    ASSUME_TAC THENL
   [REPEAT STRIP_TAC THEN
    MP_TAC(ISPECL [`(x:num->int32) i`; `(y:num->int32) i`] IVAL_WORD_MUL_SX32_64) THEN
    ANTS_TAC THENL
     [ASM_MESON_TAC[]; DISCH_THEN(fun th -> REWRITE_TAC[th])] THEN
    REWRITE_TAC[INT_ABS_MUL] THEN
-   MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC `&75423752 * &75423752:int` THEN
+   MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC `&8380416 * &75423752:int` THEN
    CONJ_TAC THENL
     [MATCH_MP_TAC INT_LE_MUL2 THEN REWRITE_TAC[INT_ABS_POS] THEN ASM_MESON_TAC[];
      CONV_TAC INT_REDUCE_CONV];
-   ALL_TAC]);;
+   ALL_TAC] THEN
 
-(* Phase 4b: Execute all 1411 instructions with SIMD simplification.
-   Uses SIMD_SIMPLIFY_TAC to fold Montgomery reduction patterns.
-   NOTE: Requires x86.ml fix for VPSUBQ dispatch in x86_execute. *)
-e(MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[mldsa_vpmuldq_montreduce])
+  MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_TMC_EXEC [n] THEN
+                      SIMD_SIMPLIFY_TAC[mldsa_pointwise_montred])
         (1--1411) THEN
   ENSURES_FINAL_STATE_TAC THEN
-  ASM_REWRITE_TAC[]);;
+  ASM_REWRITE_TAC[] THEN
 
-(* Phase 5: Split bytes256 -> bytes32 for output memory *)
-e(REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
+  REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
     CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
-    check (can (term_match [] `read qqq s1411:int256 = xxx`) o concl))));;
+    check (can (term_match [] `read qqq s1411:int256 = xxx`) o concl))) THEN
 
-(* Phase 6: Expand output cases, substitute, collapse subwords, fold *)
-e(CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC DEPTH_CONV NUM_ADD_CONV) THEN
   REWRITE_TAC[WORD_ADD_0] THEN
   ASM_REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[] THEN
@@ -403,14 +379,9 @@ e(CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[USHR32_SUBWORD; DUP32_SUBWORD] THEN
   REWRITE_TAC[Q_MUL_COMM; GSYM mldsa_vpmuldq_montreduce] THEN
-  REWRITE_TAC[WORD_JOIN_SUBWORD]);;
-(*
-(* Phase 7: Prove postcondition - congruence + bounds for each coefficient.
-   Each group has 2 conjuncts: (cong /\ abs_bound).
-   Key difference from pointwise: we have FOUR product terms per coefficient.
-   Each ival(word_mul(word_sx x)(word_sx y)) must be rewritten to
-   ival(x) * ival(y) using IVAL_WORD_MUL_SX32_64 for congruence to close. *)
-e(W(fun (asl,w) ->
+  REWRITE_TAC[WORD_JOIN_SUBWORD] THEN
+  
+  W(fun (asl,w) ->
     let lfn = PROCESS_BOUND_ASSUMPTIONS
       (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
     in
@@ -419,13 +390,12 @@ e(W(fun (asl,w) ->
         let mr = rand(lhand(rator(lhand w))) in
         MP_TAC(ASM_CONGBOUND_RULE lfn mr) THEN
         MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
-         [(* Congruence branch *)
-          REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
+         [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
           MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
           REWRITE_TAC[GSYM INT_REM_EQ; o_THM; mldsa_pointwise_acc_l4;
                        INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
           CONV_TAC INT_REM_DOWN_CONV THEN
-          (* Rewrite ALL four ival(word_mul(word_sx x)(word_sx y)) = ival x * ival y *)
+          CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
           REPEAT(W(fun (_,w) ->
             let prod = find_term
               (can (term_match []
@@ -442,18 +412,112 @@ e(W(fun (asl,w) ->
               ALL_TAC])) THEN
           CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
           AP_THM_TAC THEN AP_TERM_TAC THEN INT_ARITH_TAC;
-          (* Bounds branch: output bounded by Q-1 = 8380416 *)
           REWRITE_TAC[INT_ABS_BOUNDS] THEN
           MATCH_MP_TAC(INT_ARITH
            `l':int <= l /\ u <= u'
             ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
           CONV_TAC INT_REDUCE_CONV])
     in
-    (* Adaptively split until each subgoal has <= 2 conjuncts *)
     REPEAT(W(fun (_,w) ->
       if length(conjuncts w) > 2 then CONJ_TAC else NO_TAC)) THEN
     prove_group));;
 
-let MLDSA_POINTWISE_ACC_L4_CORRECT = top_thm();;
+(* ========================================================================= *)
+(* Subroutine form                                                           *)
+(* ========================================================================= *)
 
-*)
+let MLDSA_POINTWISE_ACC_L4_NOIBT_SUBROUTINE_CORRECT = prove
+ (`!c a b consts x y pc stackpointer returnaddress.
+    aligned 32 c /\
+    aligned 32 a /\
+    aligned 32 b /\
+    aligned 32 consts /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_tmc) (c, 1024) /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_tmc) (a, 4096) /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_tmc) (b, 4096) /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_tmc) (consts, 64) /\
+    nonoverlapping (c, 1024) (a, 4096) /\
+    nonoverlapping (c, 1024) (b, 4096) /\
+    nonoverlapping (c, 1024) (consts, 64) /\
+    nonoverlapping (a, 4096) (b, 4096) /\
+    nonoverlapping (a, 4096) (consts, 64) /\
+    nonoverlapping (b, 4096) (consts, 64) /\
+    nonoverlapping (stackpointer, 8) (c, 1024) /\
+    nonoverlapping (stackpointer, 8) (a, 4096) /\
+    nonoverlapping (stackpointer, 8) (b, 4096) /\
+    nonoverlapping (stackpointer, 8) (consts, 64)
+    ==> ensures x86
+          (\s. bytes_loaded s (word pc) mldsa_pointwise_acc_l4_tmc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [c; a; b; consts] s /\
+              wordlist_from_memory(consts,16) s =
+                MAP (iword: int -> 32 word) mldsa_pointwise_acc_l4_consts /\
+              (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
+              (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
+              (!i. i < 1024 ==>
+                read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
+              (!i. i < 1024 ==>
+                read(memory :> bytes32(word_add b (word(4 * i)))) s = y i))
+          (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              (!i. i < 256 ==>
+                let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
+                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
+                  (mod &8380417) /\
+                abs(ival zi) <= &8380416))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(c, 1024)])`,
+  let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_pointwise_acc_l4_tmc
+    (CONV_RULE TWEAK_CONV MLDSA_POINTWISE_ACC_L4_CORRECT));;
+
+let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT = prove
+ (`!c a b consts x y pc stackpointer returnaddress.
+    aligned 32 c /\
+    aligned 32 a /\
+    aligned 32 b /\
+    aligned 32 consts /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_mc) (c, 1024) /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_mc) (a, 4096) /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_mc) (b, 4096) /\
+    nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_mc) (consts, 64) /\
+    nonoverlapping (c, 1024) (a, 4096) /\
+    nonoverlapping (c, 1024) (b, 4096) /\
+    nonoverlapping (c, 1024) (consts, 64) /\
+    nonoverlapping (a, 4096) (b, 4096) /\
+    nonoverlapping (a, 4096) (consts, 64) /\
+    nonoverlapping (b, 4096) (consts, 64) /\
+    nonoverlapping (stackpointer, 8) (c, 1024) /\
+    nonoverlapping (stackpointer, 8) (a, 4096) /\
+    nonoverlapping (stackpointer, 8) (b, 4096) /\
+    nonoverlapping (stackpointer, 8) (consts, 64)
+    ==> ensures x86
+          (\s. bytes_loaded s (word pc) mldsa_pointwise_acc_l4_mc /\
+              read RIP s = word pc /\
+              read RSP s = stackpointer /\
+              read (memory :> bytes64 stackpointer) s = returnaddress /\
+              C_ARGUMENTS [c; a; b; consts] s /\
+              wordlist_from_memory(consts,16) s =
+                MAP (iword: int -> 32 word) mldsa_pointwise_acc_l4_consts /\
+              (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
+              (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
+              (!i. i < 1024 ==>
+                read(memory :> bytes32(word_add a (word(4 * i)))) s = x i) /\
+              (!i. i < 1024 ==>
+                read(memory :> bytes32(word_add b (word(4 * i)))) s = y i))
+          (\s. read RIP s = returnaddress /\
+              read RSP s = word_add stackpointer (word 8) /\
+              (!i. i < 256 ==>
+                let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
+                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
+                  (mod &8380417) /\
+                abs(ival zi) <= &8380416))
+          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(c, 1024)])`,
+  let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
+  CONV_TAC TWEAK_CONV THEN
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+    (CONV_RULE TWEAK_CONV MLDSA_POINTWISE_ACC_L4_NOIBT_SUBROUTINE_CORRECT)));;
