@@ -70,40 +70,6 @@ let mldsa_pointwise_mc = define_assert_from_elf
 
 let MLDSA_POINTWISE_EXEC = ARM_MK_EXEC_RULE mldsa_pointwise_mc;;
 
-(* ------------------------------------------------------------------------- *)
-(* Auxiliary lemmas                                                          *)
-(* ------------------------------------------------------------------------- *)
-
-(* ival of sign-extended product equals integer product when bounded *)
-let IVAL_WORD_MUL_SX32_64 = prove(
- `!x:int32 y:int32.
-    abs(ival x) <= &75423752 /\ abs(ival y) <= &75423752
-    ==> ival(word_mul (word_sx x:int64) (word_sx y:int64)) = ival x * ival y`,
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[WORD_RULE `word_mul a b:int64 = iword(ival a * ival b)`] THEN
-  SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
-  MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_64] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `abs(ival(x:int32) * ival(y:int32)) <= &5688742365757504` MP_TAC THENL
-   [REWRITE_TAC[INT_ABS_MUL] THEN
-    MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC `&75423752 * &75423752:int` THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC INT_LE_MUL2 THEN ASM_REWRITE_TAC[INT_ABS_POS];
-      CONV_TAC INT_REDUCE_CONV];
-    REWRITE_TAC[INT_ABS_BOUNDS] THEN CONV_TAC INT_REDUCE_CONV THEN
-    INT_ARITH_TAC]);;
-
-(* Merge 4 x bytes32 into bytes128 at a given base+offset *)
-let MEMORY_128_FROM_32_TAC =
-  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
-  and pat = `read (memory :> bytes128(word_add a (word n))) s0` in
-  fun v boff n ->
-    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
-    let f i =
-      let itm = mk_small_numeral(boff + 16*i) in
-      READ_MEMORY_MERGE_CONV 2 (subst[itm,n_tm] pat') in
-    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
-
 (* ========================================================================= *)
 (* Correctness proof                                                         *)
 (* ========================================================================= *)
@@ -132,7 +98,7 @@ let MLDSA_POINTWISE_CORRECT = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(r, 1024)])`,
 
-  (* Phase 1: Setup *)
+  (* Setup *)
   MAP_EVERY X_GEN_TAC
     [`r:int64`; `a:int64`; `b:int64`;
      `x:num->int32`; `y:num->int32`; `pc:num`] THEN
@@ -146,7 +112,7 @@ let MLDSA_POINTWISE_CORRECT = prove
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[SOME_FLAGS; MODIFIABLE_SIMD_REGS] THEN
 
-  (* Phase 2: Initialize and merge memory *)
+  (* Initialize and merge memory *)
   ENSURES_INIT_TAC "s0" THEN
   MEMORY_128_FROM_32_TAC "a" 0 64 THEN
   ASM_REWRITE_TAC[WORD_ADD_0] THEN CONV_TAC WORD_REDUCE_CONV THEN
@@ -156,19 +122,19 @@ let MLDSA_POINTWISE_CORRECT = prove
   STRIP_TAC THEN
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
 
-  (* Phase 3: Simulate all 679 instructions with SIMD simplification *)
+  (* Simulate all 679 instructions with SIMD simplification *)
   MAP_EVERY (fun n -> ARM_STEPS_TAC MLDSA_POINTWISE_EXEC [n] THEN
                       SIMD_SIMPLIFY_TAC[arm_mldsa_pointwise_montred'])
         (1--679) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
-  (* Phase 4: Split bytes128 -> bytes32 for output memory *)
+  (* Split bytes128 -> bytes32 for output memory *)
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
     CONV_RULE (SIMD_SIMPLIFY_CONV []) o
     CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
     check (can (term_match [] `read qqq s:int128 = xxx`) o concl))) THEN
 
-  (* Phase 5: Expand output cases, substitute, simplify subwords *)
+  (* Expand output cases, substitute, simplify subwords *)
   CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC DEPTH_CONV NUM_ADD_CONV) THEN
   REWRITE_TAC[WORD_ADD_0] THEN
@@ -195,7 +161,7 @@ let MLDSA_POINTWISE_CORRECT = prove
      CONV_TAC INT_REDUCE_CONV];
    ALL_TAC] THEN
 
-  (* Phase 6: Prove postcondition - congruence + bounds for each coefficient *)
+  (* Prove postcondition - congruence + bounds for each coefficient *)
   W(fun (asl,w) ->
     let lfn = PROCESS_BOUND_ASSUMPTIONS
       (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))

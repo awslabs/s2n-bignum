@@ -174,55 +174,6 @@ let mldsa_pointwise_mc = define_assert_from_elf "mldsa_pointwise_mc" "x86/mldsa/
 let mldsa_pointwise_tmc = define_trimmed "mldsa_pointwise_tmc" mldsa_pointwise_mc;;
 let MLDSA_POINTWISE_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_pointwise_tmc;;
 
-(* ------------------------------------------------------------------------- *)
-(* Constants table: qinv (for Montgomery reduction) and Q (modulus)          *)
-(* Both broadcasted 8 times for SIMD processing                              *)
-(* ------------------------------------------------------------------------- *)
-
-let mldsa_pointwise_consts = define
- `mldsa_pointwise_consts:int list =
-   [&58728449; &58728449; &58728449; &58728449;
-    &58728449; &58728449; &58728449; &58728449;
-    &8380417; &8380417; &8380417; &8380417;
-    &8380417; &8380417; &8380417; &8380417]`;;
-
-(* ------------------------------------------------------------------------- *)
-(* Auxiliary lemmas                                                          *)
-(* ------------------------------------------------------------------------- *)
-
-(* ival of sign-extended product equals integer product when bounded by Q-1 *)
-let IVAL_WORD_MUL_SX32_64 = prove(
- `!x:int32 y:int32.
-    abs(ival x) <= &75423752 /\ abs(ival y) <= &75423752
-    ==> ival(word_mul (word_sx x:int64) (word_sx y:int64)) = ival x * ival y`,
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[WORD_RULE `word_mul a b:int64 = iword(ival a * ival b)`] THEN
-  SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
-  MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_64] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `abs(ival(x:int32) * ival(y:int32)) <= &5688742365757504` MP_TAC THENL
-   [REWRITE_TAC[INT_ABS_MUL] THEN
-    MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC `&75423752 * &75423752:int` THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC INT_LE_MUL2 THEN ASM_REWRITE_TAC[INT_ABS_POS];
-      CONV_TAC INT_REDUCE_CONV];
-    REWRITE_TAC[INT_ABS_BOUNDS] THEN CONV_TAC INT_REDUCE_CONV THEN
-    INT_ARITH_TAC]);;
-
-let Q_MUL_COMM = WORD_RULE
- `word_mul (word 8380417:int64) x = word_mul x (word 8380417:int64)`;;
-
-(* Normalization rules for VPSRLQ/VMOVSHDUP patterns *)
-let USHR32_SUBWORD = WORD_BLAST
- `word_subword (word_ushr (x:int64) 32) (0,32):int32 = word_subword x (32,32)`;;
- 
-let DUP32_SUBWORD = WORD_BLAST
- `word_subword (word_duplicate (word_subword (x:int64) (32,32):int32):int64) (0,32):int32
-  = word_subword x (32,32)`;;
-
-(* Simplify word_subword(word_join ...) - needed for odd-indexed coefficients *)
-let WORD_JOIN_SUBWORD = WORD_BLAST
- `word_subword (word_join (a:int32) (b:int32):int64) (32,32):int32 = a`;;
 
 (* ========================================================================= *)
 (* Correctness proof                                                         *)
@@ -281,7 +232,7 @@ let MLDSA_POINTWISE_CORRECT = prove
   REPEAT STRIP_TAC THEN
   REWRITE_TAC [SOME_FLAGS; fst MLDSA_POINTWISE_TMC_EXEC] THEN
 
-  (* Phase 2: Ghost variables for YMM registers *)
+  (* Ghost variables for YMM registers *)
   GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
   GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
   GHOST_INTRO_TAC `init_ymm2:int256` `read YMM2` THEN
