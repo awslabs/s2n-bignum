@@ -210,7 +210,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
           (\s. read RIP s = word(pc + 0x1D1) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -338,7 +338,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
         MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
          [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
           MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
-          REWRITE_TAC[GSYM INT_REM_EQ; o_THM; mldsa_pointwise_acc;
+          REWRITE_TAC[GSYM INT_REM_EQ; o_THM; mldsa_pointwise_acc_l4;
                        INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
           CONV_TAC INT_REM_DOWN_CONV THEN
           CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
@@ -410,7 +410,7 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -458,7 +458,7 @@ let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -522,7 +522,7 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,,
@@ -654,7 +654,7 @@ let MLDSA_POINTWISE_ACC_L4_WINDOWS_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,,
