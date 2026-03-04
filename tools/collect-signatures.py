@@ -299,6 +299,7 @@ onlyInArm = [
   "curve25519_x25519_byte_alt",
   "sha3_",
   "mldsa_pointwise",
+  "mldsa_pointwise_acc_l4",
   "mlkem_ntt",
   "mlkem_intt",
   "mlkem_mulcache_compute",

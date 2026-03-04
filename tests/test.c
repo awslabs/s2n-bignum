@@ -12738,14 +12738,8 @@ void reference_mldsa_pointwise_acc_l4(int32_t c[256], const int32_t a[1024], con
 
 int test_mldsa_pointwise_acc_l4(void)
 {
-    // Skip test on non-x86_64 architectures
-    if (get_arch_name() != ARCH_X86_64) {
-        return 0;
-    }
-
-#ifdef __x86_64__
     uint64_t t, i;
-    // 32-byte alignment for AVX2 instructions
+    // 32-byte alignment for AVX2/NEON vector instructions
     int32_t a[1024] __attribute__((aligned(32)));
     int32_t b[1024] __attribute__((aligned(32)));
     int32_t c_asm[256] __attribute__((aligned(32)));
@@ -12762,11 +12756,15 @@ int test_mldsa_pointwise_acc_l4(void)
             b[i] = (int32_t)(random64() % (18 * 8380417)) - (9 * 8380417);
         }
 
-        // Call assembly implementation
-        mldsa_pointwise_acc_l4_x86(c_asm, a, b, mldsa_avx2_data);
-
         // Call reference implementation
         reference_mldsa_pointwise_acc_l4(c_ref, a, b);
+
+        // Call the appropriate architecture-specific implementation
+#ifdef __x86_64__
+        mldsa_pointwise_acc_l4_x86(c_asm, a, b, mldsa_avx2_data);
+#else
+        mldsa_pointwise_acc_l4(c_asm, a, b);
+#endif
 
         // Compare results (apply reduction for comparison)
         for (i = 0; i < 256; ++i) {
@@ -12795,9 +12793,6 @@ int test_mldsa_pointwise_acc_l4(void)
 
     printf("All OK\n");
     return 0;
-#else
-    return 0;
-#endif
 }
 
 int test_mldsa_ntt(void)

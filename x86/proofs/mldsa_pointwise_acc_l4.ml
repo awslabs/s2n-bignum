@@ -5,7 +5,6 @@
 
 (* ========================================================================= *)
 (* Pointwise multiplication and accumulation of polynomials in ML-DSA NTT    *)
-(* x86 AVX2 implementation: c[i] = MontReduce(sum_{k=0}^{3} a_k[i]*b_k[i]) *)
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
@@ -177,59 +176,6 @@ let mldsa_pointwise_acc_l4_tmc = define_trimmed "mldsa_pointwise_acc_l4_tmc" mld
 let MLDSA_POINTWISE_ACC_L4_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_pointwise_acc_l4_tmc;;
 
 (* ========================================================================= *)
-(* Specification                                                             *)
-(* ========================================================================= *)
-
-let mldsa_pointwise_acc_l4 = define
- `mldsa_pointwise_acc_l4 (f:num->int) (g:num->int) i =
-    ((f i * g i +
-      f (i + 256) * g (i + 256) +
-      f (i + 512) * g (i + 512) +
-      f (i + 768) * g (i + 768)) *
-     &(inverse_mod 8380417 4294967296)) rem &8380417`;;
-
-let mldsa_pointwise_acc_l4_consts = define
- `mldsa_pointwise_acc_l4_consts:int list =
-   [&8380417; &8380417; &8380417; &8380417;
-    &8380417; &8380417; &8380417; &8380417;
-    &58728449; &58728449; &58728449; &58728449;
-    &58728449; &58728449; &58728449; &58728449]`;;
-
-(* ========================================================================= *)
-(* Auxiliary lemmas                                                          *)
-(* ========================================================================= *)
-
-let IVAL_WORD_MUL_SX32_64 = prove(
- `!x:int32 y:int32.
-    abs(ival x) <= &75423752 /\ abs(ival y) <= &75423752
-    ==> ival(word_mul (word_sx x:int64) (word_sx y:int64)) = ival x * ival y`,
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[WORD_RULE `word_mul a b:int64 = iword(ival a * ival b)`] THEN
-  SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
-  MATCH_MP_TAC IVAL_IWORD THEN REWRITE_TAC[DIMINDEX_64] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `abs(ival(x:int32) * ival(y:int32)) <= &5688742365757504` MP_TAC THENL
-   [REWRITE_TAC[INT_ABS_MUL] THEN
-    MATCH_MP_TAC INT_LE_TRANS THEN EXISTS_TAC `&75423752 * &75423752:int` THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC INT_LE_MUL2 THEN ASM_REWRITE_TAC[INT_ABS_POS];
-      CONV_TAC INT_REDUCE_CONV];
-    REWRITE_TAC[INT_ABS_BOUNDS] THEN CONV_TAC INT_REDUCE_CONV THEN
-    INT_ARITH_TAC]);;
-
-let Q_MUL_COMM = WORD_RULE
- `word_mul (word 8380417:int64) x = word_mul x (word 8380417:int64)`;;
-
-let USHR32_SUBWORD = WORD_BLAST
- `word_subword (word_ushr (x:int64) 32) (0,32):int32 = word_subword x (32,32)`;;
-let DUP32_SUBWORD = WORD_BLAST
- `word_subword (word_duplicate (word_subword (x:int64) (32,32):int32):int64) (0,32):int32
-  = word_subword x (32,32)`;;
-
-let WORD_JOIN_SUBWORD = WORD_BLAST
- `word_subword (word_join (a:int32) (b:int32):int64) (32,32):int32 = a`;;
-
-(* ========================================================================= *)
 (* Correctness proof                                                         *)
 (* ========================================================================= *)
 
@@ -254,7 +200,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
               read RIP s = word pc /\
               C_ARGUMENTS [c; a; b; consts] s /\
               wordlist_from_memory(consts,16) s =
-                MAP (iword: int -> 32 word) mldsa_pointwise_acc_l4_consts /\
+                MAP (iword: int -> 32 word) mldsa_pointwise_acc_consts /\
               (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
               (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
               (!i. i < 1024 ==>
@@ -264,7 +210,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
           (\s. read RIP s = word(pc + 0x1D1) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -334,7 +280,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
 
   FIRST_X_ASSUM(MP_TAC o CONV_RULE (LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
-  REWRITE_TAC[mldsa_pointwise_acc_l4_consts; MAP; CONS_11] THEN
+  REWRITE_TAC[mldsa_pointwise_acc_consts; MAP; CONS_11] THEN
   STRIP_TAC THEN
   MP_TAC(end_itlist CONJ (map (fun n ->
     READ_MEMORY_MERGE_CONV 3 (subst[mk_small_numeral(32*n),`n:num`]
@@ -392,7 +338,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
         MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
          [REWRITE_TAC[INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
           MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
-          REWRITE_TAC[GSYM INT_REM_EQ; o_THM; mldsa_pointwise_acc_l4;
+          REWRITE_TAC[GSYM INT_REM_EQ; o_THM; mldsa_pointwise_acc;
                        INVERSE_MOD_CONV `inverse_mod 8380417 4294967296`] THEN
           CONV_TAC INT_REM_DOWN_CONV THEN
           CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
@@ -453,7 +399,7 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_SUBROUTINE_CORRECT = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [c; a; b; consts] s /\
               wordlist_from_memory(consts,16) s =
-                MAP (iword: int -> 32 word) mldsa_pointwise_acc_l4_consts /\
+                MAP (iword: int -> 32 word) mldsa_pointwise_acc_consts /\
               (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
               (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
               (!i. i < 1024 ==>
@@ -464,7 +410,7 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -501,7 +447,7 @@ let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [c; a; b; consts] s /\
               wordlist_from_memory(consts,16) s =
-                MAP (iword: int -> 32 word) mldsa_pointwise_acc_l4_consts /\
+                MAP (iword: int -> 32 word) mldsa_pointwise_acc_consts /\
               (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
               (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
               (!i. i < 1024 ==>
@@ -512,7 +458,7 @@ let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
@@ -565,7 +511,7 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [c; a; b; consts] s /\
               wordlist_from_memory(consts,16) s =
-                MAP (iword: int -> 32 word) mldsa_pointwise_acc_l4_consts /\
+                MAP (iword: int -> 32 word) mldsa_pointwise_acc_consts /\
               (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
               (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
               (!i. i < 1024 ==>
@@ -576,7 +522,7 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,,
@@ -697,7 +643,7 @@ let MLDSA_POINTWISE_ACC_L4_WINDOWS_SUBROUTINE_CORRECT = prove
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [c; a; b; consts] s /\
               wordlist_from_memory(consts,16) s =
-                MAP (iword: int -> 32 word) mldsa_pointwise_acc_l4_consts /\
+                MAP (iword: int -> 32 word) mldsa_pointwise_acc_consts /\
               (!i. i < 1024 ==> abs(ival(x i)) <= &8380416) /\
               (!i. i < 1024 ==> abs(ival(y i)) <= &75423752) /\
               (!i. i < 1024 ==>
@@ -708,7 +654,7 @@ let MLDSA_POINTWISE_ACC_L4_WINDOWS_SUBROUTINE_CORRECT = prove
               read RSP s = word_add stackpointer (word 8) /\
               (!i. i < 256 ==>
                 let zi = read(memory :> bytes32(word_add c (word(4 * i)))) s in
-                (ival zi == mldsa_pointwise_acc_l4 (ival o x) (ival o y) i)
+                (ival zi == mldsa_pointwise_acc (ival o x) (ival o y) i)
                   (mod &8380417) /\
                 abs(ival zi) <= &8380416))
           (MAYCHANGE [RSP] ,,
