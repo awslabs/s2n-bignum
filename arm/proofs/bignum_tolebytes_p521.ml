@@ -230,3 +230,39 @@ let BIGNUM_TOLEBYTES_P521_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bytes(z,66)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_TOLEBYTES_P521_EXEC
     BIGNUM_TOLEBYTES_P521_CORRECT);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "bignum_tolebytes_p521" subroutine_signatures)
+    BIGNUM_TOLEBYTES_P521_SUBROUTINE_CORRECT
+    BIGNUM_TOLEBYTES_P521_EXEC;;
+
+let BIGNUM_TOLEBYTES_P521_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc returnaddress.
+           nonoverlapping (word pc,532) (z,66) /\
+           (x = z \/ nonoverlapping (x,8 * 9) (z,66))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_tolebytes_p521_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc returnaddress /\
+                         memaccess_inbounds e2 [x,72; z,66] [z,66]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_TOLEBYTES_P521_EXEC);;

@@ -416,7 +416,7 @@ let BIGNUM_MONTIFIER_CORRECT = time prove
                          R8; R9; R10; R11; R12; R13] ,,
               MAYCHANGE [memory :> bytes(z,8 * val k);
                          memory :> bytes(t,8 * val k)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `mm:int64`; `t:int64`; `m:num`; `pc:num`] THEN

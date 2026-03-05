@@ -124,7 +124,8 @@ let MLKEM_MULCACHE_COMPUTE_CORRECT = prove
            !i. i < 128
                ==> let z_i = read(memory :> bytes16
                                 (word_add dst (word (2 * i)))) s in
-                   (ival z_i == (mulcache (ival o x)) i) (mod &3329))
+                   (ival z_i == (mulcache (ival o x)) i) (mod &3329) /\
+                   (abs(ival z_i) <= &3328))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(dst, 256)])`,
 
@@ -175,31 +176,38 @@ let MLKEM_MULCACHE_COMPUTE_CORRECT = prove
   POP_ASSUM_LIST (K ALL_TAC) THEN
 
   (* Split into one congruence goals per index. *)
-  REPEAT CONJ_TAC THEN
+  (* Split into pairs of congruence and absolute value goals *)
+  REPEAT(W(fun (asl,w) ->
+  if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
 
   REWRITE_TAC[mulcache; mulcache_zetas_twisted; mulcache_zetas] THEN
   CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
 
   (* Instantiate general congruence and bounds rule for Barrett multiplication
    * so it matches the current goal, and add as new assumption. *)
-  W (MP_TAC o CONGBOUND_RULE o rand o lhand o rator o snd) THEN
+  W (MP_TAC o CONGBOUND_RULE o rand o rand o rator o rator o lhand o snd) THEN
   ASM_REWRITE_TAC [o_THM] THEN
 
-  (* CONGBOUND_RULE gives a correctness and a bounds result -- here, we only
-   * need the correctness result since mlkem_mulcache_compute makes no
-   * statement about output coefficient bounds. *)
-  MATCH_MP_TAC (TAUT `(x ==> z) ==> (x /\ y ==> z)`) THEN
+  MATCH_MP_TAC MONO_AND THEN (CONJ_TAC THENL [
+    (* Correctness *)
+    REWRITE_TAC [GSYM INT_REM_EQ; o_THM] THEN
+    CONV_TAC INT_REM_DOWN_CONV THEN
+    STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
+    CONV_TAC ((GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE7_CLAUSES])
+              THENC (REPEATC (CHANGED_CONV (ONCE_DEPTH_CONV NUM_RED_CONV)))) THEN
+    REWRITE_TAC[INT_REM_EQ] THEN
+      REWRITE_TAC [REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
+      REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
+      CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC
 
-  REWRITE_TAC [GSYM INT_REM_EQ] THEN
-  CONV_TAC INT_REM_DOWN_CONV THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
-  CONV_TAC ((GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE7_CLAUSES])
-            THENC (REPEATC (CHANGED_CONV (ONCE_DEPTH_CONV NUM_RED_CONV)))) THEN
+    ;
 
-  REWRITE_TAC[INT_REM_EQ] THEN
-  REWRITE_TAC [REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
-  REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
-  CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC
+    (* Bounds *)
+    REWRITE_TAC [INT_ABS_BOUNDS] THEN
+    MATCH_MP_TAC(INT_ARITH
+      `l':int <= l /\ u <= u'
+       ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
+    CONV_TAC INT_REDUCE_CONV])
 );;
 
 let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
@@ -229,7 +237,8 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
            !i. i < 128
                ==> let z_i = read(memory :> bytes16
                                 (word_add dst (word (2 * i)))) s in
-                   (ival z_i == (mulcache (ival o x)) i) (mod &3329))
+                   (ival z_i == (mulcache (ival o x)) i) (mod &3329) /\
+                   (abs(ival z_i) <= &3328))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(dst, 256)])`,
   let TWEAK_CONV = REWRITE_CONV[fst MLKEM_MULCACHE_COMPUTE_EXEC] in
@@ -245,14 +254,15 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "mlkem_mulcache_compute" subroutine_signatures)
     MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT
     MLKEM_MULCACHE_COMPUTE_EXEC;;
 
 let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall dst src zetas zetas_twisted pc returnaddress.
+       forall e dst src zetas zetas_twisted pc returnaddress.
            ALL (nonoverlapping (dst,256))
            [word pc,LENGTH mlkem_mulcache_compute_mc; src,512; zetas,256;
             zetas_twisted,256]
@@ -265,8 +275,8 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
                     C_ARGUMENTS [dst; src; zetas; zetas_twisted] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 =
                         f_events src zetas zetas_twisted dst pc returnaddress /\
@@ -274,5 +284,5 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
                         [src,512; zetas,256; zetas_twisted,256; dst,256]
                         [dst,256])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC MLKEM_MULCACHE_COMPUTE_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_MULCACHE_COMPUTE_EXEC);;

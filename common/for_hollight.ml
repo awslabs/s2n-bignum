@@ -363,3 +363,21 @@ let conceal_bitmatch: term -> (thm * term * int * thm * conv) option =
     conceal_bitmatch (concl decode_extendtype);;
     conceal_bitmatch (concl decode);;
 *)
+
+(* ------------------------------------------------------------------------- *)
+(* Find substring                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+let find_substring str sub =
+  let str_len = String.length str in
+  let sub_len = String.length sub in
+
+  let rec f_search pos =
+    if pos + sub_len > str_len then
+      None
+    else if String.sub str pos sub_len = sub then
+      Some pos
+    else
+      f_search (pos + 1)
+  in
+  f_search 0;;

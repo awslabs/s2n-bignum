@@ -542,7 +542,7 @@ let SHA3_KECCAK_F1600_CORRECT = prove
                   wordlist_from_memory(bitstate_in,25) s = keccak 24 A)
            (MAYCHANGE [RIP; RAX; RBX; RCX; RDX; RBP; 
                       R8; R9; R10; R11; R12; R13; R14; R15; RDI; RSI] ,, 
-            MAYCHANGE SOME_FLAGS ,, 
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
             MAYCHANGE [memory :> bytes (stackpointer, 208)],,
             MAYCHANGE [memory :> bytes (bitstate_in, 200)])`,
   REWRITE_TAC[SOME_FLAGS] THEN

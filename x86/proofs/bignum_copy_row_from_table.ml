@@ -62,10 +62,6 @@ let PAIR_EQ_ARITH_RULE (lp:term) (rp:term) =
   let th = GEN_REWRITE_RULE (RAND_CONV o LAND_CONV) [lth] th in
   GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [rth] th;;
 
-let READ_MEMORY_BYTES_0 = prove(`read (memory :> bytes (z,0)) s = 0`,
-    REWRITE_TAC[PAIR_EQ_ARITH_RULE `(x:int64,0)` `(x:int64, 8*0)`] THEN
-    REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; BIGNUM_FROM_MEMORY_TRIVIAL]);;
-
 let SPLIT_FIRST_CONJ_ASSUM_TAC =
     FIRST_X_ASSUM (fun thm -> let t1,t2 = CONJ_PAIR thm in
                               MAP_EVERY ASSUME_TAC [t1;t2]);;
@@ -151,7 +147,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
            bignum_from_memory (z, val width) s = m)
       (MAYCHANGE [RIP] ,,
        MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-       MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+       MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
        MAYCHANGE [memory :> bytes(z,8 * val width)])`,
 
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
@@ -214,7 +210,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
     EXISTS_TAC `MAYCHANGE [RIP] ,,
                 MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * (val (width:int64) - (i + 1))))]` THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     CONJ_TAC THENL [
@@ -332,7 +328,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
     (* loop entry *)
     X86_SIM_TAC BIGNUM_COPY_ROW_FROM_TABLE_CORE_EXEC (1--1) THEN
     ASM_REWRITE_TAC[WORD_VAL; ADD_0; MULT_0; WORD_ADD_0; SUB_0;
-        LOWDIGITS_0; HIGHDIGITS_0; READ_MEMORY_BYTES_0] THEN
+        LOWDIGITS_0; HIGHDIGITS_0; READ_MEMORY_BYTES_TRIVIAL] THEN
     ASM_ARITH_TAC;
 
     (* loop body *)
@@ -350,7 +346,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
       RULE_ASSUM_TAC (REWRITE_RULE[SUB_0;
         MATCH_MP LOWDIGITS_SELF (ASSUME `m < 2 EXP (64 * val (width:int64))`);
         MATCH_MP HIGHDIGITS_ZERO (ASSUME `m < 2 EXP (64 * val (width:int64))`);
-        MULT_0; READ_MEMORY_BYTES_0]) THEN
+        MULT_0; READ_MEMORY_BYTES_TRIVIAL]) THEN
       REPEAT CASES_FIRST_DISJ_ASSUM_TAC THEN REPEAT SPLIT_FIRST_CONJ_ASSUM_TAC THEN ASM_REWRITE_TAC[] THENL [
         UNDISCH_TAC `i < val (idx:int64)` THEN ARITH_TAC;
         UNDISCH_TAC `i = val (idx:int64)` THEN ARITH_TAC;
@@ -377,7 +373,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_CORRECT = prove(
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
     EXISTS_TAC `MAYCHANGE [RIP] ,,
                 MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
-                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,, MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bytes64 (word (val (z:int64) + 8 * i'))]` THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     CONJ_TAC THENL [

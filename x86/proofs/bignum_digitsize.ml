@@ -46,7 +46,7 @@ let BIGNUM_DIGITSIZE_CORRECT = prove
          (\s'. read RIP s' = word (pc + 0x1e) /\
                C_RETURN s' = word((bitsize x + 63) DIV 64))
          (MAYCHANGE [RIP; RDI; RDX; RCX; RAX] ,,
-          MAYCHANGE SOME_FLAGS)`,
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`a:int64`; `x:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN

@@ -14,7 +14,7 @@ let regfile = new_definition
    [val(read RAX s); val(read RCX s); val(read RDX s); val(read RBX s);
     bitval(read CF s) +  4 * bitval(read PF s) + 16 * bitval(read AF s) +
     64 * bitval(read ZF s) + 128 * bitval(read SF s) +
-    2048 * bitval(read OF s);
+    1024 * bitval(read DF s) + 2048 * bitval(read OF s);
     val(read RBP s); val(read RSI s); val(read RDI s); val(read R8 s);
     val(read R9 s); val(read R10 s); val(read R11 s); val(read R12 s);
     val(read R13 s); val(read R14 s); val(read R15 s);
@@ -118,7 +118,7 @@ let regfile = new_definition
 
 let FLAGENCODING_11 = prove
  (`bitval b0 + 4 * bitval b1 + 16 * bitval b2 +
-   64 * bitval b3 + 128 * bitval b4 + 2048 * bitval b5 = n <=>
+   64 * bitval b3 + 128 * bitval b4 + 1024 * bitval b5 + 2048 * bitval b6 = n <=>
    n < 4096 /\
    (b0 <=> ODD n) /\
    ~ODD(n DIV 2) /\
@@ -130,8 +130,8 @@ let FLAGENCODING_11 = prove
    (b4 <=> ODD(n DIV 128)) /\
    ~ODD(n DIV 256) /\
    ~ODD(n DIV 512) /\
-   ~ODD(n DIV 1024) /\
-   (b5 <=> ODD(n DIV 2048))`,
+   (b5 <=> ODD(n DIV 1024)) /\
+   (b6 <=> ODD(n DIV 2048))`,
   REWRITE_TAC[bitval] THEN
   REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
   (EQ_TAC THENL [DISCH_THEN(SUBST1_TAC o SYM) THEN ARITH_TAC; ALL_TAC]) THEN
@@ -162,6 +162,64 @@ let YMMENCODING_REGROUP = prove
   CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(TOP_DEPTH_CONV BIT_WORD_CONV) THEN
   REWRITE_TAC[CONJ_ASSOC]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Explicit execution for x86_movsb (not needed for usual proofs)            *)
+(* ------------------------------------------------------------------------- *)
+
+let X86_REVERT_STRINGCOPY = prove
+ (`read (memory :> bytes (b,n)) s' =
+   read (memory :> bytes (b,n))
+   (write (memory :> bytes (b,n))
+          (x86_stringcopy df a b n
+            (read (memory :> bytes (a,n)) s)
+            (read (memory :> bytes (b,n)) s))
+          t)
+   ==> n < 2 EXP 64
+       ==> read (memory :> bytes (b,n)) s' =
+           read (memory :> bytes (b,n)) (x86_movsb df a b n s)`,
+  MESON_TAC[x86_stringcopy; READ_WRITE_X86_STRINGCOPY]);;
+
+let X86_MOVSB_CLAUSES = prove
+ (`x86_movsb d a b 0 s = s /\
+   x86_movsb false a b (SUC n) s =
+   write (memory :> bytes8 (word_add b (word n)))
+         (read (memory :> bytes8 (word_add a (word n)))
+               (x86_movsb false a b n s))
+         (x86_movsb false a b n s) /\
+   x86_movsb true a b (SUC n) s =
+   x86_movsb true a b n
+      (write (memory :> bytes8 (word_add b (word n)))
+             (read (memory :> bytes8 (word_add a (word n))) s)
+             s)`,
+  REWRITE_TAC[x86_movsb; I_THM; o_THM; x86_movsb1]);;
+
+let X86_MOVSB_CONV =
+  let true_tm = `T` and false_tm = `F` and zero_tm = `0`
+  and [conv0;conv1;conv2] =
+    map (fun th -> GEN_REWRITE_CONV I [th]) (CONJUNCTS X86_MOVSB_CLAUSES)
+  and simprule =
+    CONV_RULE(RAND_CONV(DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) in
+  let rec conv tm =
+    if lhand tm = zero_tm then conv0 tm
+    else if lhand(funpow 3 rator tm) = false_tm then
+      let th0 =  (LAND_CONV num_CONV THENC conv1 THENC
+                  ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) tm in
+      let tm' = rand(rand(concl th0)) in
+      let th1 = conv tm' in
+      let th2 = CONV_RULE (RAND_CONV
+                  (COMB2_CONV  (RAND_CONV(RAND_CONV(K th1))) (K th1))) th0 in
+      simprule th2
+   else
+      let th0 = (LAND_CONV num_CONV THENC conv2 THENC
+                 ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) tm in
+      let th1 = CONV_RULE(RAND_CONV conv) th0 in
+      simprule th1 in
+  fun tm ->
+    (match tm with
+      Comb(Comb(Comb(Comb(Comb(Const("x86_movsb",_),df),a),b),n),s)
+      when (df = false_tm || df = true_tm) && is_numeral n -> conv tm
+    | _ -> failwith "X86_MOVSB_CONV");;
 
 (* ------------------------------------------------------------------------- *)
 (* Random numbers with random bit density, random state for simulating.      *)
@@ -196,7 +254,7 @@ let random_instruction iclasses =
 
 loadt "x86/x86-insns.ml";;
 
-let iclasses = iclasses @
+let iclasses = iclasses_regreg @
 
 (*** The elements here were added manually for additional checks. ***)
 
@@ -276,6 +334,27 @@ let iclasses = iclasses @
  [0x66; 0x44; 0x0f; 0x7e; 0xee]; (* MOVD esi, xmm13 *)
  [0x66; 0x44; 0x0f; 0x7e; 0xf7]; (* MOVD edi, xmm14 *)
  [0x66; 0x45; 0x0f; 0x7e; 0xf8]; (* MOVD r8d, xmm15 *)
+ [0xf3; 0x48; 0x0f; 0xb8; 0xc3]; (* POPCNT (% rax) (% rbx) *)
+ [0xf3; 0x49; 0x0f; 0xb8; 0xef]; (* POPCNT (% rbp) (% r15) *)
+ [0xf3; 0x0f; 0xb8; 0xd9];  (* POPCNT (% ebx) (% ecx) *)
+ [0xf3; 0x41; 0x0f; 0xb8; 0xf2]; (* POPCNT (% esi) (% r10d) *)
+ [0x66; 0x48; 0x0f; 0x6e; 0xc0]; (* MOVQ (%_% xmm0) (% rax) *)
+ [0x66; 0x49; 0x0f; 0x6e; 0xcf]; (* MOVQ (%_% xmm1) (% r15) *)
+ [0x66; 0x4c; 0x0f; 0x6e; 0xcb]; (* MOVQ (%_% xmm9) (% rbx) *)
+ [0x66; 0x4d; 0x0f; 0x6e; 0xc9]; (* MOVQ (%_% xmm9) (% r9) *)
+ [0x66; 0x48; 0x0f; 0x7e; 0xd1]; (* MOVQ (% rcx) (%_% xmm2) *)
+ [0x66; 0x49; 0x0f; 0x7e; 0xe3]; (* MOVQ (% r11) (%_% xmm4) *)
+ [0x66; 0x4c; 0x0f; 0x7e; 0xd2]; (* MOVQ (% rdx) (%_% xmm10) *)
+ [0x66; 0x4d; 0x0f; 0x7e; 0xf4]; (* MOVQ (% r12) (%_% xmm14) *)
+ [0x66; 0x41; 0x0f; 0xd6; 0xc7]; (* MOVQ (%_% xmm15) (%_% xmm0) [nonstandard encoding] *)
+ [0xc5; 0xe9; 0xeb; 0xcb];       (* VPOR (%_% xmm1) (%_% xmm2) (%_% xmm3) *)
+ [0xc5; 0xd5; 0xeb; 0xe6];       (* VPOR (%_% ymm4) (%_% ymm5) (%_% ymm6) *)
+ [0xc4; 0xc1; 0x39; 0xeb; 0xf9]; (* VPOR (%_% xmm7) (%_% xmm8) (%_% xmm9) *)
+ [0xc4; 0x41; 0x25; 0xeb; 0xd4]; (* VPOR (%_% ymm10) (%_% ymm11) (%_% ymm12) *)
+ [0xc4; 0x41; 0x09; 0xeb; 0xef]; (* VPOR (%_% xmm13) (%_% xmm14) (%_% xmm15) *)
+ [0xc4; 0xc1; 0x3d; 0xeb; 0xc7]; (* VPOR (%_% ymm0) (%_% ymm8) (%_% ymm15) *)
+ [0xc5; 0xd9; 0xeb; 0xe4];       (* VPOR (%_% xmm4) (%_% xmm4) (%_% xmm4) *)
+ [0xc5; 0xcd; 0xeb; 0xf6];       (* VPOR (%_% ymm6) (%_% ymm6) (%_% ymm6) *)
  [0xc5; 0xe9; 0xef; 0xcb];  (* VPXOR (%_% xmm1) (%_% xmm2) (%_% xmm3) *)
  [0xc5; 0xed; 0xef; 0xcb];  (* VPXOR (%_% ymm1) (%_% ymm2) (%_% ymm3) *)
  [0xc4; 0x41; 0x31; 0xef; 0xd0]; (* VPXOR (%_% xmm10) (%_% xmm9) (%_% xmm8) *)
@@ -303,6 +382,25 @@ let iclasses = iclasses @
  [0x66; 0x0f; 0x3a; 0xdf; 0xc8; 0x01]; (*AESKEYGENASSIST (%_% xmm1) (%_% xmm0) (Imm8 (word 1)) *)
  [0x66; 0x0f; 0x3a; 0xdf; 0xf8; 0xff]; (*AESKEYGENASSIST (%_% xmm15) (%_% xmm0) (Imm8 (word 255)) *)
  [0x66; 0x0f; 0x3a; 0xdf; 0xdc; 0x19]; (*AESKEYGENASSIST (%_% xmm3) (%_% xmm12) (Imm8 (word 25)) *)
+ [0x66; 0x0f; 0x3a; 0x0e; 0xd6; 0x00]; (* PBLENDW (%_% xmm2) (%_% xmm6) (Imm8 (word 0)) *)
+ [0x66; 0x0f; 0x3a; 0x0e; 0xc7; 0x12]; (* PBLENDW (%_% xmm0) (%_% xmm7) (Imm8 (word 18)) *)
+ [0x66; 0x41; 0x0f; 0x3a; 0x0e; 0xc8; 0x38]; (* PBLENDW (%_% xmm1) (%_% xmm8) (Imm8 (word 56)) *)
+ [0x66; 0x44; 0x0f; 0x3a; 0x0e; 0xcc; 0x49]; (* PBLENDW (%_% xmm9) (%_% xmm4) (Imm8 (word 73)) *)
+ [0x66; 0x44; 0x0f; 0x3a; 0x0e; 0xfb; 0xab]; (* PBLENDW (%_% xmm15) (%_% xmm3) (Imm8 (word 171)) *)
+ [0x66; 0x41; 0x0f; 0x3a; 0x0e; 0xee; 0xfe]; (* PBLENDW (%_% xmm5) (%_% xmm14) (Imm8 (word 254)) *)
+ [0x66; 0x0f; 0x3a; 0x22; 0xf8; 0x03]; (* PINSRD (%_% xmm7) (% eax) (Imm8 (word 3)) *)
+ [0x66; 0x48; 0x0f; 0x3a; 0x22; 0xc0; 0x91];  (* PINSRQ (%_% xmm0) (% rax) (Imm8 (word 145)) *)
+ [0x66; 0x44; 0x0f; 0x3a; 0x22; 0xc1; 0x17]; (* PINSRD (%_% xmm8) (% ecx) (Imm8 (word 23)) *)
+ [0x66; 0x4c; 0x0f; 0x3a; 0x22; 0xca; 0x76]; (* PINSRQ (%_% xmm9) (% rdx) (Imm8 (word 118)) *)
+ [0x66; 0x41; 0x0f; 0x3a; 0x22; 0xd0; 0x19]; (* PINSRD (%_% xmm2) (% r8d) (Imm8 (word 25)) *)
+ [0x66; 0x49; 0x0f; 0x3a; 0x22; 0xdf; 0xff]; (* PINSRQ (%_% xmm3) (% r15) (Imm8 (word 255)) *)
+ [0x66; 0x45; 0x0f; 0x3a; 0x22; 0xe2; 0x14]; (* PINSRD (%_% xmm12) (% r10d) (Imm8 (word 20)) *)
+ [0x66; 0x4d; 0x0f; 0x3a; 0x22; 0xff; 0x42]; (* PINSRQ (%_% xmm15) (% r15) (Imm8 (word 66)) *)
+ [0x66; 0x0f; 0x38; 0x00; 0xd4]; (* PSHUFB (%_% xmm2) (%_% xmm4) *)
+ [0x66; 0x0f; 0x38; 0x00; 0xf8]; (* PSHUFB (%_% xmm7) (%_% xmm0) *)
+ [0x66; 0x41; 0x0f; 0x38; 0x00; 0xd8]; (* PSHUFB (%_% xmm3) (%_% xmm8) *)
+ [0x66; 0x45; 0x0f; 0x38; 0x00; 0xc9]; (* PSHUFB (%_% xmm9) (%_% xmm9) *)
+ [0x66; 0x44; 0x0f; 0x38; 0x00; 0xf8]; (* PSHUFB (%_% xmm15) (%_% xmm0) *)
  [0x66; 0x0f; 0x70; 0xc9; 0x55]; (*PSHUFD (%_% xmm1) (%_% xmm1) (Imm8 (word 85)) *)
  [0x66; 0x44; 0x0f; 0x70; 0xca; 0x5f]; (*PSHUFD (%_% xmm9) (%_% xmm2) (Imm8 (word 95)) *)
  [0x66; 0x0f; 0xef; 0xd3]; (*PXOR (%_% xmm2) (%_% xmm3) *)
@@ -315,13 +413,45 @@ let iclasses = iclasses @
  [0x66; 0x41; 0x0f; 0xd4; 0xff]; (*PADDQ (%_% xmm7) (%_% xmm15) *)
  [0x66; 0x0f; 0x72; 0xe1; 0x1f]; (*PSRAD (%_% xmm1) (Imm8 (word 31)) *)
  [0x66; 0x41; 0x0f; 0x72; 0xe4; 0x38]; (*PSRAD (%_% xmm12) (Imm8 (word 56)) *)
+ [0x66; 0x41; 0x0f; 0x71; 0xd7; 0x00]; (* PSRLW (%_% xmm15) (Imm8 (word 0)) *)
+ [0x66; 0x41; 0x0f; 0x71; 0xd6; 0x01]; (* PSRLW (%_% xmm14) (Imm8 (word 1)) *)
+ [0x66; 0x41; 0x0f; 0x71; 0xd5; 0x02]; (* PSRLW (%_% xmm13) (Imm8 (word 2)) *)
+ [0x66; 0x41; 0x0f; 0x71; 0xd1; 0x0e]; (* PSRLW (%_% xmm9) (Imm8 (word 14)) *)
+ [0x66; 0x41; 0x0f; 0x71; 0xd0; 0x0f]; (* PSRLW (%_% xmm8) (Imm8 (word 15)) *)
+ [0x66; 0x0f; 0x71; 0xd7; 0x10]; (* PSRLW (%_% xmm7) (Imm8 (word 16)) *)
+ [0x66; 0x0f; 0x71; 0xd6; 0x11]; (* PSRLW (%_% xmm6) (Imm8 (word 17)) *)
  [0x66; 0x45; 0x0f; 0x66; 0xfe]; (*PCMPGTD (%_% xmm15) (%_% xmm14) *)
  [0x66; 0x0f; 0x66; 0xcb]; (*PCMPGTD (%_% xmm1) (%_% xmm3) *)
+ [0x66; 0x0f; 0x65; 0xca]; (* PCMPGTW (%_% xmm1) (%_% xmm2) *)
+ [0x66; 0x44; 0x0f; 0x65; 0xfa]; (* PCMPGTW (%_% xmm15) (%_% xmm2) *)
+ [0x66; 0x41; 0x0f; 0x65; 0xf8]; (* PCMPGTW (%_% xmm7) (%_% xmm8) *)
+ [0x66; 0x45; 0x0f; 0x65; 0xc9]; (* PCMPGTW (%_% xmm9) (%_% xmm9) *)
+ [0xc4; 0xe2; 0xf2; 0xf5; 0xc3]; (* PEXT (% rax) (% rcx) (% rbx) *)
+ [0xc4; 0xe2; 0x4a; 0xf5; 0xef]; (* PEXT (% ebp) (% esi) (% edi) *)
+ [0xc4; 0x62; 0xfa; 0xf5; 0xc3]; (* PEXT (% r8) (% rax) (% rbx) *)
+ [0xc4; 0x62; 0x52; 0xf5; 0xe0]; (* PEXT (% r12d) (% ebp) (% eax) *)
+ [0xc4; 0x42; 0x8a; 0xf5; 0xfd]; (* PEXT (% r15) (% r14) (% r13) *)
+ [0xc4; 0x42; 0x22; 0xf5; 0xe2]; (* PEXT (% r12d) (% r11d) (% r10d) *)
+ [0x66; 0x0f; 0xd7; 0xc0]; (* PMOVMSKB (% eax) (%_% xmm0) *)
+ [0x66; 0x41; 0x0f; 0xd7; 0xd8]; (* PMOVMSKB (% ebx) (%_% xmm8) *)
+ [0x66; 0x41; 0x0f; 0xd7; 0xcc]; (* PMOVMSKB (% ecx) (%_% xmm12) *)
+ [0x66; 0x44; 0x0f; 0xd7; 0xc1]; (* PMOVMSKB (% r8d) (%_% xmm1) *)
+ [0x66; 0x45; 0x0f; 0xd7; 0xd1]; (* PMOVMSKB (% r10d) (%_% xmm9) *)
+ [0x66; 0x45; 0x0f; 0xd7; 0xf3]; (* PMOVMSKB (% r14d) (%_% xmm11) *)
  [0x66; 0x90]; (* NOP *)
  [0x0f; 0x1f; 0x4f; 0x00]; (* NOP_N (Memop Doubleword (%% (rdi,0))) *)
  [0x66; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
  [0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
  [0x66; 0x66; 0x2e; 0x0f; 0x1f; 0x84; 0x00; 0x00; 0x00; 0x00; 0x00]; (* NOP_N (Memop Word (%%%% (rax,0,rax))) *)
+ [0xc5; 0xf9; 0x6e; 0xc0];  (* VMOVD (%_% xmm0) (% eax) *)
+ [0xc5; 0xf9; 0x6e; 0xcb];  (* VMOVD (%_% xmm1) (% ebx) *)
+ [0xc5; 0x79; 0x7e; 0xf1];  (* VMOVD (% ecx) (%_% xmm14) *)
+ [0xc5; 0x79; 0x7e; 0xfa];  (* VMOVD (% edx) (%_% xmm15) *)
+ [0xc4; 0xc1; 0xf9; 0x6e; 0xd0]; (* VMOVQ (%_% xmm2) (% r8) *)
+ [0xc4; 0xc1; 0xf9; 0x6e; 0xd9]; (* VMOVQ (%_% xmm3) (% r9) *)
+ [0xc4; 0x41; 0xf9; 0x7e; 0xe6]; (* VMOVQ (% r14) (%_% xmm12) *)
+ [0xc4; 0x41; 0xf9; 0x7e; 0xef]; (* VMOVQ (% r15) (%_% xmm13) *)
+ [0xc5; 0xfa; 0x7e; 0xca]; (* VMOVQ (%_% xmm2) (%_% xmm1) *)
  [0xc5; 0xf9; 0x6f; 0xca]; (* VMOVDQA xmm1, xmm2 *)
  [0xc5; 0xf9; 0x6f; 0xd3]; (* VMOVDQA xmm2, xmm3 *)
  [0xc5; 0xf9; 0x6f; 0xdc]; (* VMOVDQA xmm3, xmm4 *)
@@ -332,6 +462,12 @@ let iclasses = iclasses @
  [0xc5; 0xfd; 0x6f; 0xdc]; (* VMOVDQA ymm3, ymm4 *)
  [0xc5; 0xfd; 0x7f; 0xd1]; (* VMOVDQA ymm1, ymm2 *)
  [0xc5; 0xfd; 0x7f; 0xda]; (* VMOVDQA ymm2, ymm3 *)
+ [0xc5; 0xfa; 0x6f; 0xca];       (* VMOVDQU (%_% xmm1) (%_% xmm2)   *)
+ [0xc4; 0x41; 0x7e; 0x6f; 0xfe]; (* VMOVDQU (%_% ymm15) (%_% ymm14) *)
+ [0xc5; 0xfa; 0x6f; 0xff];       (* VMOVDQU (%_% xmm7) (%_% xmm7)   *)
+ [0xc4; 0x41; 0x7e; 0x6f; 0xc0]; (* VMOVDQU (%_% ymm8) (%_% ymm8)   *)
+ [0xc5; 0x7a; 0x7f; 0xe8];       (* VMOVDQU (%_% xmm0) (%_% xmm13)  *)
+ [0xc5; 0x7e; 0x7f; 0xff];       (* VMOVDQU (%_% ymm7) (%_% ymm15)  *)
  [0xc4; 0x41; 0x79; 0x6f; 0xc1]; (* VMOVDQA xmm8, xmm9 *)
  [0xc4; 0x41; 0x7d; 0x6f; 0xca]; (* VMOVDQA ymm8, ymm10 *)
  [0xc5; 0xfe; 0x12; 0xc1]; (* VMOVSLDUP ymm0, ymm1 *)
@@ -408,6 +544,12 @@ let iclasses = iclasses @
  [0xc4; 0x43; 0x59; 0x02; 0xd3; 0x0c]; (* VPBLENDD xmm10, xmm10, xmm11, 0x0c *)
  [0xc4; 0x43; 0x19; 0x02; 0xe5; 0x06]; (* VPBLENDD xmm12, xmm12, xmm13, 0x06 *)
  [0xc4; 0x43; 0x09; 0x02; 0xf7; 0x03]; (* VPBLENDD xmm14, xmm14, xmm15, 0x03 *)
+ [0xc4; 0xc3; 0x69; 0x0e; 0xcf; 0x13]; (* VPBLENDW (%_% xmm1) (%_% xmm2) (%_% xmm15) (Imm8 (word 19)) *)
+ [0xc4; 0xc3; 0x5d; 0x0e; 0xde; 0x1b]; (* VPBLENDW (%_% ymm3) (%_% ymm4) (%_% ymm14) (Imm8 (word 27)) *)
+ [0xc4; 0x43; 0x19; 0x0e; 0xd5; 0x00]; (* VPBLENDW (%_% xmm10) (%_% xmm12) (%_% xmm13) (Imm8 (word 0)) *)
+ [0xc4; 0x43; 0x0d; 0x0e; 0xff; 0xff]; (* VPBLENDW (%_% ymm15) (%_% ymm14) (%_% ymm15) (Imm8 (word 255)) *)
+ [0xc4; 0xe3; 0x49; 0x0e; 0xfd; 0xde]; (* VPBLENDW (%_% xmm7) (%_% xmm6) (%_% xmm5) (Imm8 (word 222)) *)
+ [0xc4; 0x43; 0x3d; 0x0e; 0xcf; 0x65]; (* VPBLENDW (%_% ymm9) (%_% ymm8) (%_% ymm15) (Imm8 (word 101)) *)
  [0xc4; 0xe2; 0x79; 0x58; 0xc1]; (* VPBROADCASTD xmm0, xmm1 *)
  [0xc4; 0xe2; 0x79; 0x58; 0xca]; (* VPBROADCASTD xmm1, xmm2 *)
  [0xc4; 0xe2; 0x7d; 0x58; 0xd3]; (* VPBROADCASTD ymm2, xmm3 *)
@@ -432,6 +574,12 @@ let iclasses = iclasses @
  [0xc4; 0x62; 0x79; 0x59; 0xd3]; (* VPBROADCASTQ xmm10, xmm11 *)
  [0xc4; 0x62; 0x79; 0x59; 0xe5]; (* VPBROADCASTQ xmm12, xmm13 *)
  [0xc4; 0x62; 0x79; 0x59; 0xf7]; (* VPBROADCASTQ xmm14, xmm15 *)
+ [0xc4; 0xc2; 0x5d; 0x36; 0xde]; (* VPERMD (%_% ymm3) (%_% ymm4) (%_% ymm14) *)
+ [0xc4; 0xe2; 0x75; 0x36; 0xc2]; (* VPERMD (%_% ymm0) (%_% ymm1) (%_% ymm2) *)
+ [0xc4; 0xc2; 0x45; 0x36; 0xe8]; (* VPERMD (%_% ymm5) (%_% ymm7) (%_% ymm8) *)
+ [0xc4; 0xc2; 0x35; 0x36; 0xf2]; (* VPERMD (%_% ymm6) (%_% ymm9) (%_% ymm10) *)
+ [0xc4; 0xc2; 0x1d; 0x36; 0xc3]; (* VPERMD (%_% ymm0) (%_% ymm12) (%_% ymm11) *)
+ [0xc4; 0x42; 0x0d; 0x36; 0xfd]; (* VPERMD (%_% ymm15) (%_% ymm14) (%_% ymm13) *)
  [0xc4; 0xe3; 0xfd; 0x00; 0xc1; 0x4e]; (* VPERMQ ymm0, ymm1, 0x4e *)
  [0xc4; 0xe3; 0xfd; 0x00; 0xd2; 0x1b]; (* VPERMQ ymm2, ymm2, 0x1b *)
  [0xc4; 0xe3; 0xfd; 0x00; 0xdb; 0x93]; (* VPERMQ ymm3, ymm3, 0x93 *)
@@ -453,6 +601,101 @@ let iclasses = iclasses @
  [0xc4; 0xe3; 0x75; 0x46; 0xd3; 0x08]; (* VPERM2I128 ymm2, ymm1, ymm3, 0x08 (zero low lane) *)
  [0xc4; 0xe3; 0x6d; 0x46; 0xe4; 0x18]; (* VPERM2I128 ymm4, ymm2, ymm4, 0x18 (zero high lane) *)
  [0xc4; 0xe3; 0x65; 0x46; 0xed; 0x88]; (* VPERM2I128 ymm5, ymm3, ymm5, 0x88 (zero both lanes) *)
+ [0xc4; 0xe3; 0x41; 0x22; 0xf8; 0x03]; (* VPINSRD xmm7, xmm7, eax, 0x3  *)
+ [0xc4; 0xe3; 0xf9; 0x22; 0xc0; 0x91]; (* VPINSRQ xmm0, xmm0, rax, 0x91 *)
+ [0xc4; 0x63; 0x39; 0x22; 0xc1; 0x17]; (* VPINSRD xmm8, xmm8, ecx, 0x17 *)
+ [0xc4; 0x63; 0xb1; 0x22; 0xca; 0x76]; (* VPINSRQ xmm9, xmm9, rdx, 0x76 *)
+ [0xc4; 0xc3; 0x69; 0x22; 0xd0; 0x19]; (* VPINSRD xmm2, xmm2, r8d, 0x19 *)
+ [0xc4; 0xc3; 0xe1; 0x22; 0xdf; 0xff]; (* VPINSRQ xmm3, xmm3, r15, 0xff *)
+ [0xc4; 0xc3; 0x69; 0x22; 0xc8; 0xff]; (* VPINSRD (%_% xmm1) (%_% xmm2) (% r8d) (Imm8 (word 255)) *)
+ [0xc4; 0x63; 0x79; 0x22; 0xf0; 0x0c]; (* VPINSRD (%_% xmm14) (%_% xmm0) (% eax) (Imm8 (word 12)) *)
+ [0xc4; 0xe3; 0x99; 0x22; 0xf1; 0x0b]; (* VPINSRQ (%_% xmm6) (%_% xmm12) (% rcx) (Imm8 (word 11)) *)
+ [0xc4; 0x43; 0xe1; 0x22; 0xc4; 0x05]; (* VPINSRQ (%_% xmm8) (%_% xmm3) (% r12) (Imm8 (word 5)) *)
+ [0xc5; 0xf9; 0xc4; 0xc0; 0x03]; (* VPINSRW xmm0, xmm0, eax, 0x3 *)
+ [0xc5; 0xc1; 0xc4; 0xf9; 0x05]; (* VPINSRW xmm7, xmm7, ecx, 0x5 *)
+ [0xc5; 0x39; 0xc4; 0xc2; 0x07]; (* VPINSRW xmm8, xmm8, edx, 0x7 *)
+ [0xc5; 0xe9; 0xc4; 0xcb; 0x00]; (* VPINSRW xmm1, xmm2, ebx, 0x0 *)
+ [0xc4; 0xe2; 0x7d; 0x47; 0xc1]; (* VPSLLVD ymm0, ymm0, ymm1 *)
+ [0xc4; 0xe2; 0x45; 0x47; 0xfa]; (* VPSLLVD ymm7, ymm7, ymm2 *)
+ [0xc4; 0x42; 0x3d; 0x47; 0xc1]; (* VPSLLVD ymm8, ymm8, ymm9 *)
+ [0xc4; 0xe2; 0x6d; 0x47; 0xcb]; (* VPSLLVD ymm1, ymm2, ymm3 *)
+ [0xc4; 0xe2; 0x79; 0x47; 0xc1]; (* VPSLLVD xmm0, xmm0, xmm1 *)
+ [0xc4; 0xe2; 0x69; 0x47; 0xcb]; (* VPSLLVD xmm1, xmm2, xmm3 *)
+ [0xc4; 0xe2; 0x7d; 0x45; 0xc1]; (* VPSRLVD ymm0, ymm0, ymm1 *)
+ [0xc4; 0xe2; 0x45; 0x45; 0xfa]; (* VPSRLVD ymm7, ymm7, ymm2 *)
+ [0xc4; 0x42; 0x3d; 0x45; 0xc1]; (* VPSRLVD ymm8, ymm8, ymm9 *)
+ [0xc4; 0xe2; 0x6d; 0x45; 0xcb]; (* VPSRLVD ymm1, ymm2, ymm3 *)
+ [0xc4; 0xe2; 0x79; 0x45; 0xc1]; (* VPSRLVD xmm0, xmm0, xmm1 *)
+ [0xc4; 0xe2; 0x69; 0x45; 0xcb]; (* VPSRLVD xmm1, xmm2, xmm3 *)
+ [0xc4; 0xe2; 0xfd; 0x45; 0xc1]; (* VPSRLVQ ymm0, ymm0, ymm1 *)
+ [0xc4; 0xe2; 0xc5; 0x45; 0xfa]; (* VPSRLVQ ymm7, ymm7, ymm2 *)
+ [0xc4; 0x42; 0xbd; 0x45; 0xc1]; (* VPSRLVQ ymm8, ymm8, ymm9 *)
+ [0xc4; 0xe2; 0xed; 0x45; 0xcb]; (* VPSRLVQ ymm1, ymm2, ymm3 *)
+ [0xc4; 0xe2; 0xf9; 0x45; 0xc1]; (* VPSRLVQ xmm0, xmm0, xmm1 *)
+ [0xc4; 0xe2; 0xe9; 0x45; 0xcb]; (* VPSRLVQ xmm1, xmm2, xmm3 *)
+ [0xc5; 0xfd; 0xf5; 0xc1]; (* VPMADDWD ymm0, ymm0, ymm1 *)
+ [0xc5; 0xc5; 0xf5; 0xfa]; (* VPMADDWD ymm7, ymm7, ymm2 *)
+ [0xc4; 0x41; 0x3d; 0xf5; 0xc1]; (* VPMADDWD ymm8, ymm8, ymm9 *)
+ [0xc5; 0xed; 0xf5; 0xcb]; (* VPMADDWD ymm1, ymm2, ymm3 *)
+ [0xc5; 0xf9; 0xf5; 0xc1]; (* VPMADDWD xmm0, xmm0, xmm1 *)
+ [0xc5; 0xe9; 0xf5; 0xcb]; (* VPMADDWD xmm1, xmm2, xmm3 *)
+ [0xc5; 0xfd; 0x67; 0xc1]; (* VPACKUSWB ymm0, ymm0, ymm1 *)
+ [0xc5; 0xc5; 0x67; 0xfa]; (* VPACKUSWB ymm7, ymm7, ymm2 *)
+ [0xc4; 0x41; 0x3d; 0x67; 0xc1]; (* VPACKUSWB ymm8, ymm8, ymm9 *)
+ [0xc5; 0xed; 0x67; 0xcb]; (* VPACKUSWB ymm1, ymm2, ymm3 *)
+ [0xc5; 0xf9; 0x67; 0xc1]; (* VPACKUSWB xmm0, xmm0, xmm1 *)
+ [0xc5; 0xe9; 0x67; 0xcb]; (* VPACKUSWB xmm1, xmm2, xmm3 *)
+ [0xc4; 0xe2; 0x7d; 0x04; 0xc1]; (* VPMADDUBSW ymm0, ymm0, ymm1 *)
+ [0xc4; 0xe2; 0x45; 0x04; 0xfa]; (* VPMADDUBSW ymm7, ymm7, ymm2 *)
+ [0xc4; 0x42; 0x3d; 0x04; 0xc1]; (* VPMADDUBSW ymm8, ymm8, ymm9 *)
+ [0xc4; 0xe2; 0x6d; 0x04; 0xcb]; (* VPMADDUBSW ymm1, ymm2, ymm3 *)
+ [0xc4; 0xe2; 0x79; 0x04; 0xc1]; (* VPMADDUBSW xmm0, xmm0, xmm1 *)
+ [0xc4; 0xe2; 0x69; 0x04; 0xcb]; (* VPMADDUBSW xmm1, xmm2, xmm3 *)
+ [0xc4; 0xc3; 0x41; 0x4c; 0xf8; 0x60]; (* VPBLENDVB xmm7, xmm7, xmm8, xmm6 *)
+ [0xc4; 0xe3; 0x71; 0x4c; 0xc3; 0x20]; (* VPBLENDVB xmm0, xmm1, xmm3, xmm2 *)
+ [0xc4; 0xe3; 0x79; 0x4c; 0xc1; 0x90]; (* VPBLENDVB xmm0, xmm0, xmm1, xmm9 *)
+ [0xc4; 0xc3; 0x45; 0x4c; 0xf8; 0x60]; (* VPBLENDVB ymm7, ymm7, ymm8, ymm6 *)
+ [0xc4; 0xe3; 0x75; 0x4c; 0xc3; 0x20]; (* VPBLENDVB ymm0, ymm1, ymm3, ymm2 *)
+ [0xc4; 0xe3; 0x7d; 0x4c; 0xc1; 0x90]; (* VPBLENDVB ymm0, ymm0, ymm1, ymm9 *)
+ [0xc5; 0xfd; 0xd4; 0xc1]; (* VPADDQ ymm0, ymm0, ymm1 *)
+ [0xc5; 0xc5; 0xd4; 0xfa]; (* VPADDQ ymm7, ymm7, ymm2 *)
+ [0xc4; 0x41; 0x3d; 0xd4; 0xc1]; (* VPADDQ ymm8, ymm8, ymm9 *)
+ [0xc5; 0xed; 0xd4; 0xcb]; (* VPADDQ ymm1, ymm2, ymm3 *)
+ [0xc5; 0xf9; 0xd4; 0xc1]; (* VPADDQ xmm0, xmm0, xmm1 *)
+ [0xc5; 0xe9; 0xd4; 0xcb]; (* VPADDQ xmm1, xmm2, xmm3 *)
+ [0xc5; 0xfd; 0x73; 0xd9; 0x03]; (* VPSRLDQ ymm0, ymm1, 3 *)
+ [0xc5; 0xed; 0x73; 0xdf; 0x07]; (* VPSRLDQ ymm2, ymm7, 7 *)
+ [0xc4; 0xc1; 0x3d; 0x73; 0xd9; 0x0f]; (* VPSRLDQ ymm8, ymm9, 15 *)
+ [0xc5; 0xf9; 0x73; 0xd9; 0x01]; (* VPSRLDQ xmm0, xmm1, 1 *)
+ [0xc5; 0xe9; 0x73; 0xdb; 0x05]; (* VPSRLDQ xmm2, xmm3, 5 *)
+ [0xc5; 0xf9; 0xc5; 0xc7; 0x03]; (* VPEXTRW eax, xmm7, 0x3 (0F C5 form) *)
+ [0xc4; 0xc1; 0x79; 0xc5; 0xc1; 0x05]; (* VPEXTRW eax, xmm9, 0x5 (0F C5 form) *)
+ [0xc4; 0xe3; 0x79; 0x15; 0xf8; 0x03]; (* VPEXTRW eax, xmm7, 0x3 (0F3A 15 form) *)
+ [0xc4; 0xe3; 0x79; 0x15; 0xc1; 0x05]; (* VPEXTRW ecx, xmm0, 0x5 (0F3A 15 form) *)
+ [0xc4; 0x43; 0x79; 0x15; 0xc0; 0x02]; (* VPEXTRW r8d, xmm8, 0x2 (0F3A 15 form) *)
+ [0xc4; 0x63; 0x79; 0x15; 0xc9; 0x01]; (* VPEXTRW ecx, xmm9, 0x1 (0F3A 15 form) *)
+ [0xc4; 0xe3; 0x79; 0x16; 0xf8; 0x03]; (* VPEXTRD eax, xmm7, 0x3  *)
+ [0xc4; 0xe3; 0xf9; 0x16; 0xc0; 0x91]; (* VPEXTRQ rax, xmm0, 0x91 *)
+ [0xc4; 0x63; 0x79; 0x16; 0xc1; 0x17]; (* VPEXTRD ecx, xmm8, 0x17 *)
+ [0xc4; 0x63; 0xf9; 0x16; 0xca; 0x76]; (* VPEXTRQ rdx, xmm9, 0x76 *)
+ [0xc4; 0xc3; 0x79; 0x16; 0xd0; 0x19]; (* VPEXTRD r8d, xmm2, 0x19 *)
+ [0xc4; 0xc3; 0xf9; 0x16; 0xdf; 0xff]; (* VPEXTRQ r15, xmm3, 0xff *)
+ [0xc4; 0xe3; 0x75; 0x38; 0xca; 0x00]; (* VINSERTI128 (%_% ymm1) (%_% ymm1) (%_% xmm2) (Imm8 (word 0)) *)
+ [0xc4; 0xe3; 0x75; 0x38; 0xda; 0x01]; (* VINSERTI128 (%_% ymm3) (%_% ymm1) (%_% xmm2) (Imm8 (word 1)) *)
+ [0xc4; 0xe3; 0x7d; 0x39; 0xca; 0x00]; (* VEXTRACTI128 (%_% xmm2) (%_% ymm1) (Imm8 (word 0)) *)
+ [0xc4; 0xe3; 0x7d; 0x39; 0xdb; 0x01]; (* VEXTRACTI128 (%_% xmm3) (%_% ymm3) (Imm8 (word 1)) *)
+ [0xc4; 0x62; 0x09; 0x00; 0xec]; (* VPSHUFB (%_% xmm13) (%_% xmm14) (%_% xmm4) *)
+ [0xc4; 0xc2; 0x5d; 0x00; 0xde]; (* VPSHUFB (%_% ymm3) (%_% ymm4) (%_% ymm14) *)
+ [0xc4; 0xc2; 0x31; 0x00; 0xf8]; (* VPSHUFB (%_% xmm7) (%_% xmm9) (%_% xmm8) *)
+ [0xc4; 0xe2; 0x75; 0x00; 0xc2]; (* VPSHUFB (%_% ymm0) (%_% ymm1) (%_% ymm2) *)
+ [0xc4; 0x42; 0x01; 0x00; 0xff]; (* VPSHUFB (%_% xmm15) (%_% xmm15) (%_% xmm15) *)
+ [0xc4; 0xc2; 0x45; 0x00; 0xe8]; (* VPSHUFB (%_% ymm5) (%_% ymm7) (%_% ymm8) *)
+ [0xc4; 0xe2; 0x79; 0x00; 0xca]; (* VPSHUFB (%_% xmm1) (%_% xmm0) (%_% xmm2) *)
+ [0xc4; 0xc2; 0x35; 0x00; 0xf2]; (* VPSHUFB (%_% ymm6) (%_% ymm9) (%_% ymm10) *)
+ [0xc4; 0xe2; 0x79; 0x00; 0xca]; (* VPSHUFB (%_% xmm1) (%_% xmm0) (%_% xmm2) *)
+ [0xc4; 0xc2; 0x1d; 0x00; 0xc3]; (* VPSHUFB (%_% ymm0) (%_% ymm12) (%_% ymm11) *)
+ [0xc4; 0xe2; 0x79; 0x00; 0xe4]; (* VPSHUFB (%_% xmm4) (%_% xmm0) (%_% xmm4) *)
+ [0xc4; 0x42; 0x0d; 0x00; 0xfd]; (* VPSHUFB (%_% ymm15) (%_% ymm14) (%_% ymm13) *)
  [0xc4; 0xe2; 0xfd; 0x28; 0xc1]; (* VPMULDQ ymm0, ymm0, ymm1 *)
  [0xc4; 0xe2; 0xf5; 0x28; 0xca]; (* VPMULDQ ymm1, ymm1, ymm2 *)
  [0xc4; 0xe2; 0xed; 0x28; 0xd3]; (* VPMULDQ ymm2, ymm2, ymm3 *)
@@ -469,6 +712,8 @@ let iclasses = iclasses @
  [0xc4; 0x62; 0x71; 0x28; 0xca]; (* VPMULDQ xmm10, xmm10, xmm11 *)
  [0xc4; 0x62; 0x69; 0x28; 0xd3]; (* VPMULDQ xmm12, xmm12, xmm13 *)
  [0xc4; 0x62; 0x61; 0x28; 0xdc]; (* VPMULDQ xmm14, xmm14, xmm15 *)
+ [0xc4; 0xe2; 0x7d; 0x0b; 0xc1]; (* VPMULHRSW ymm0, ymm0, ymm1 *)
+ [0xc4; 0xe2; 0x79; 0x0b; 0xc1]; (* VPMULHRSW xmm0, xmm0, xmm1 *)
  [0xc5; 0x45; 0xe5; 0xfb]; (* VPMULHW (%_% ymm15) (%_% ymm7) (%_% ymm3) *)
  [0xc5; 0x41; 0xe5; 0xfb]; (* VPMULHW (%_% xmm15) (%_% xmm7) (%_% xmm3) *)
  [0xc4; 0xe2; 0x7d; 0x40; 0xc1]; (* VPMULLD ymm0, ymm0, ymm1 *)
@@ -491,6 +736,8 @@ let iclasses = iclasses @
  [0xc4; 0xc1; 0x79; 0xd5; 0xc9]; (* VPMULLW (%_% xmm1) (%_% xmm0) (%_% xmm9) *)
  [0xc5; 0xa1; 0xdb; 0xd2]; (* VPAND (%_% xmm2) (%_% xmm11) (%_% xmm2) *)
  [0xc5; 0xa5; 0xdb; 0xd2]; (* VPAND (%_% ymm2) (%_% ymm11) (%_% ymm2) *)
+ [0xc5; 0xa1; 0xdf; 0xd2]; (* VPANDN (%_% xmm2) (%_% xmm11) (%_% xmm2) *)
+ [0xc5; 0xa5; 0xdf; 0xd2]; (* VPANDN (%_% ymm2) (%_% ymm11) (%_% ymm2) *)
  [0xc5; 0xfd; 0x73; 0xd1; 0x01;]; (* VPSRLQ (%_% ymm0) (%_% ymm1) (Imm8 (word 1)) *)
  [0xc4; 0xc1; 0x7d; 0x73; 0xd0; 0x08;]; (* VPSRLQ (%_% ymm0) (%_% ymm8) (Imm8 (word 8)) *)
  [0xc5; 0xf5; 0x73; 0xd0; 0x10;]; (* VPSRLQ (%_% ymm1) (%_% ymm0) (Imm8 (word 16)) *)
@@ -538,6 +785,30 @@ let iclasses = iclasses @
  [0xc4; 0x41; 0x05; 0x73; 0xf7; 0x3f]; (* VPSLLQ ymm15, ymm15, 63 *)
  [0xc4; 0xc1; 0x79; 0x73; 0xf0; 0x20]; (* VPSLLQ xmm0, xmm8, 32 *)
  [0xc4; 0x41; 0x01; 0x73; 0xf7; 0x3f]; (* VPSLLQ xmm15, xmm15, 63 *)
+ [0xc5; 0xf1; 0x71; 0xf2; 0x0b]; (* VPSLLW (%_% xmm1) (%_% xmm2) (Imm8 (word 11)) *)
+ [0xc5; 0xd5; 0x71; 0xf5; 0x00]; (* VPSLLW (%_% ymm5) (%_% ymm5) (Imm8 (word 0)) *)
+ [0xc4; 0xc1; 0x41; 0x71; 0xf1; 0x10]; (* VPSLLW (%_% xmm7) (%_% xmm9) (Imm8 (word 16)) *)
+ [0xc4; 0xc1; 0x3d; 0x71; 0xf2; 0x11]; (* VPSLLW (%_% ymm8) (%_% ymm10) (Imm8 (word 17)) *)
+ [0xc4; 0xc1; 0x09; 0x71; 0xf5; 0x21]; (* VPSLLW (%_% xmm14) (%_% xmm13) (Imm8 (word 33)) *)
+ [0xc4; 0xc1; 0x1d; 0x71; 0xf7; 0x06]; (* VPSLLW (%_% ymm12) (%_% ymm15) (Imm8 (word 6)) *)
+ [0xc4; 0xc1; 0x29; 0x71; 0xf3; 0xff]; (* VPSLLW (%_% xmm10) (%_% xmm11) (Imm8 (word 255)) *)
+ [0xc5; 0xa5; 0x71; 0xf0; 0x80]; (* VPSLLW (%_% ymm11) (%_% ymm0) (Imm8 (word 128)) *)
+ [0xc5; 0xf1; 0x72; 0xf2; 0x0b]; (* VPSLLD (%_% xmm1) (%_% xmm2) (Imm8 (word 11)) *)
+ [0xc5; 0xd5; 0x72; 0xf5; 0x00]; (* VPSLLD (%_% ymm5) (%_% ymm5) (Imm8 (word 0)) *)
+ [0xc4; 0xc1; 0x41; 0x72; 0xf1; 0x10]; (* VPSLLD (%_% xmm7) (%_% xmm9) (Imm8 (word 16)) *)
+ [0xc4; 0xc1; 0x3d; 0x72; 0xf2; 0x11]; (* VPSLLD (%_% ymm8) (%_% ymm10) (Imm8 (word 17)) *)
+ [0xc4; 0xc1; 0x09; 0x72; 0xf5; 0x21]; (* VPSLLD (%_% xmm14) (%_% xmm13) (Imm8 (word 33)) *)
+ [0xc4; 0xc1; 0x1d; 0x72; 0xf7; 0x06]; (* VPSLLD (%_% ymm12) (%_% ymm15) (Imm8 (word 6)) *)
+ [0xc4; 0xc1; 0x29; 0x72; 0xf3; 0xff]; (* VPSLLD (%_% xmm10) (%_% xmm11) (Imm8 (word 255)) *)
+ [0xc5; 0xa5; 0x72; 0xf0; 0x80]; (* VPSLLD (%_% ymm11) (%_% ymm0) (Imm8 (word 128)) *)
+ [0xc5; 0xf1; 0x72; 0xd2; 0x0b]; (* VPSRLD (%_% xmm1) (%_% xmm2) (Imm8 (word 11)) *)
+ [0xc5; 0xd5; 0x72; 0xd5; 0x00]; (* VPSRLD (%_% ymm5) (%_% ymm5) (Imm8 (word 0)) *)
+ [0xc4; 0xc1; 0x41; 0x72; 0xd1; 0x10]; (* VPSRLD (%_% xmm7) (%_% xmm9) (Imm8 (word 16)) *)
+ [0xc4; 0xc1; 0x3d; 0x72; 0xd2; 0x11]; (* VPSRLD (%_% ymm8) (%_% ymm10) (Imm8 (word 17)) *)
+ [0xc4; 0xc1; 0x09; 0x72; 0xd5; 0x21]; (* VPSRLD (%_% xmm14) (%_% xmm13) (Imm8 (word 33)) *)
+ [0xc4; 0xc1; 0x1d; 0x72; 0xd7; 0x06]; (* VPSRLD (%_% ymm12) (%_% ymm15) (Imm8 (word 6)) *)
+ [0xc4; 0xc1; 0x29; 0x72; 0xd3; 0xff]; (* VPSRLD (%_% xmm10) (%_% xmm11) (Imm8 (word 255)) *)
+ [0xc5; 0xa5; 0x72; 0xd0; 0x80]; (* VPSRLD (%_% ymm11) (%_% ymm0) (Imm8 (word 128)) *)
  [0xc5; 0xfd; 0x6d; 0xc1]; (* VPUNPCKHQDQ ymm0, ymm0, ymm1 *)
  [0xc5; 0xf5; 0x6d; 0xca]; (* VPUNPCKHQDQ ymm1, ymm1, ymm2 *)
  [0xc5; 0xed; 0x6d; 0xd3]; (* VPUNPCKHQDQ ymm2, ymm2, ymm3 *)
@@ -559,6 +830,9 @@ let iclasses = iclasses @
  [0xc5; 0xf1; 0x6c; 0xca]; (* VPUNPCKLQDQ xmm1, xmm1, xmm2 *)
  [0xc5; 0xe9; 0x6c; 0xd3]; (* VPUNPCKLQDQ xmm2, xmm2, xmm3 *)
  [0xc4; 0x41; 0x79; 0x6c; 0xc1]; (* VPUNPCKLQDQ xmm8, xmm8, xmm9 *)
+ [0xf8]; (* CLC *)
+ [0xfc]; (* CLD *)
+ [0xfd]; (* STD *)
 ];;
 
 (* ------------------------------------------------------------------------- *)
@@ -580,7 +854,7 @@ let template =
       MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
                  ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
       MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
-      MAYCHANGE SOME_FLAGS)`;;
+      MAYCHANGE [CF; PF; AF; ZF; SF; OF; DF] ,, MAYCHANGE [events])`;;
 
 let num_two_to_64 = Num.num_of_string "18446744073709551616";;
 
@@ -615,8 +889,22 @@ let extra_simp_tac =
   REWRITE_TAC[WORD_RULE `word_sub x (word_add x y):N word = word_neg y`;
               WORD_RULE `word_sub y (word_add x y):N word = word_neg x`;
               WORD_RULE `word_sub (word_add x y) x:N word = y`;
-              WORD_RULE `word_sub (word_add x y) y:N word = x`] THEN
+              WORD_RULE `word_sub (word_add x y) y:N word = x`;
+              WORD_RULE `word_add x (word(1 * val(word_not (word_add x y)))) =
+                         word_neg (word_add y (word 1):N word)`] THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[];;
+
+let extra_movsb_tac =
+  FIRST_X_ASSUM(MP_TAC o MATCH_MP X86_REVERT_STRINGCOPY) THEN
+  ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV THEN NO_TAC; ALL_TAC] THEN
+  CONV_TAC(LAND_CONV
+    (RAND_CONV(RAND_CONV X86_MOVSB_CONV) THENC
+     BINOP_CONV
+      (GEN_REWRITE_CONV I [GSYM NUM_OF_WORDLIST_FROM_MEMORY_BYTE] THENC
+       RAND_CONV WORDLIST_FROM_MEMORY_CONV) THENC
+     GEN_REWRITE_CONV TOP_DEPTH_CONV [NUM_OF_WORDLIST_EQ] THENC
+     TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV)) THEN
+  ASM_REWRITE_TAC[] THEN STRIP_TAC;;
 
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
@@ -633,7 +921,11 @@ and tac_main (memopidx: int option) mc states =
   | Some idx ->
     let states1, states2 = chop_list idx states in
     (if states1 <> [] then X86_STEPS_TAC mc states1 else ALL_TAC) THEN
-    (if states2 <> [] then X86_VSTEPS_TAC mc states2 else ALL_TAC)
+    (if states2 <> [] then
+       X86_VSTEPS_TAC mc [hd states2] THEN
+       TRY extra_movsb_tac THEN
+       X86_VSTEPS_TAC mc (tl states2)
+     else ALL_TAC)
   | None -> X86_STEPS_TAC mc states
   end
 and tac_after memop =
@@ -679,7 +971,7 @@ let decode_inst ibytes =
  *** it can be modified in between.
  ***)
 
-let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list =
+let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
   let icodes = map ibyte_to_icode_fn ibytes_list in
@@ -720,8 +1012,9 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
     let output_state = output_state_raw in
 
     let add_assum_subst =
-      if add_assum
-      then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      if add_assum = 32
+      then `aligned 32 stackpointer /\ aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
+      else if add_assum = 16 then `aligned 16 (stackpointer:int64):bool`,`additional_assumptions:bool`
       else `T:bool`,`additional_assumptions:bool` in
     let goal = subst
       [ibyteterm,`ibytes:byte list`;
@@ -764,7 +1057,7 @@ let cosimulate_instructions (memopidx: int option) (add_assum: bool) ibytes_list
 
 let run_random_regsimulation () =
   let ibytes:int list = random_instruction iclasses in
-  cosimulate_instructions None false [ibytes];;
+  cosimulate_instructions None 0 [ibytes];;
 
 (* ------------------------------------------------------------------------- *)
 (* Setting up safe self-contained tests for memory accessing instructions.   *)
@@ -1013,6 +1306,24 @@ let cosimulate_sse_mov_aligned_rsp_harness(pfx, opcode) = fun () ->
    pfx @ rex @ opcode @ [0x4c; sib; disp*16];  (* INST [rsp + scale*rcx + displacement], imm1/9 *)
   ];;
 
+let cosimulate_movsb_full_harness() = fun () ->
+  let src = 64 + Random.int 32
+  and dest = 64 + Random.int 32
+  and count = Random.int 8
+  and rep = Random.int 3 in
+  [[0x48; 0x8d; 0x7c; 0x24; dest]; (* LEA rdi, [rsp+dest] *)
+   [0x48; 0x8d; 0x74; 0x24; src]; (* LEA rsi, [rsp+src] *)
+   [0xb9; count; 0x00; 0x00; 0x00]; (* MOV ecx, count *)
+   (if rep = 0 then [0xa4] (* MOVSB *)
+    else if rep = 1 then [0xf3; 0xa4] (* REPZ MOVSB *)
+    else [0xf2; 0xa4] (* REPZ MOVSB *)
+   );
+   [0x48; 0xf7; 0xd7;]; (* NOT rdi *)
+   [0x48; 0xf7; 0xd6;]; (* NOT rsi *)
+   [0x48; 0x8d; 0x3c; 0x3c]; (* LEA rdi, [rsp + rdi] *)
+   [0x48; 0x8d; 0x34; 0x34]; (* LEA rsi, [rsp + rsi] *)
+  ];;
+
 (* Each mem simulation is a pair consists of a list of instructions
   to execute and a bool representing whether additional assumptions
   are needed. Currently the additional assumption is for stack
@@ -1076,6 +1387,8 @@ let mem_iclasses = [
   (cosimulate_sse_mov_unaligned_full_harness([0xf3], [0x0f; 0x7f]), false);
   (cosimulate_sse_mov_unaligned_base_disp_harness([0xf3], [0x0f; 0x7f]), false);
   (cosimulate_sse_mov_unaligned_rsp_harness([0xf3], [0x0f; 0x7f]), false);
+  (* MOVSB and REP MOVSB *)
+  (cosimulate_movsb_full_harness(),false);
   (* MOVUPS xmm1, xmm2/m128 *)
   (cosimulate_sse_mov_unaligned_full_harness([], [0x0f; 0x10]), false);
   (cosimulate_sse_mov_unaligned_base_disp_harness([], [0x0f; 0x10]), false);
@@ -1127,43 +1440,100 @@ let mem_iclasses = [
   ];;
 
 let run_random_memopsimulation() =
-  let deferred_icodes,add_assum = el (Random.int (length mem_iclasses)) mem_iclasses in
+  let deferred_icodes,add_assum =
+    el (Random.int (length mem_iclasses)) mem_iclasses in
   let icodes = deferred_icodes() in
   let l = length icodes in
   let _ = assert (l >= 2) in
-  let memop_index = if l >= 6 then l - 4 else l - 2 in
-  cosimulate_instructions (Some memop_index) add_assum icodes;;
+  let memop_index = if l = 8 then 3 else if l >= 6 then l - 4 else l - 2 in
+  cosimulate_instructions
+     (Some memop_index)  (if add_assum then 16 else 0) icodes;;
+
+(* ------------------------------------------------------------------------- *)
+(* Cosimulation of simple memory instructions with uniform [rsp+32] address  *)
+(* ------------------------------------------------------------------------- *)
+
+let simple_memory_iclasses = iclasses_simplemem @
+[
+  (*** these were added manually for extra checks ***)
+
+  [0x66; 0x0f; 0x3a; 0x22; 0x7c; 0x24; 0x07; 0x04]; (* pinsrd xmm7, [rsp + 0x7], 0x4 *)
+  [0x66; 0x44; 0x0f; 0x3a; 0x22; 0x74; 0x24; 0x06; 0x63]; (* pinsrd xmm14, [rsp + 0x6], 0x63 *)
+  [0x66; 0x48; 0x0f; 0x3a; 0x22; 0x44; 0x24; 0x05; 0x2a]; (* pinsrq xmm0, [rsp + 0x5], 0x2a *)
+  [0x66; 0x4c; 0x0f; 0x3a; 0x22; 0x44; 0x24; 0x04; 0x0d]; (* pinsrq xmm8, [rsp + 0x4], 0xd *)
+  [0xc4; 0xe3; 0x69; 0x22; 0x4c; 0x24; 0x07; 0xff]; (* vpinsrd xmm1, xmm2, [rsp + 0x7], 0xff *)
+  [0xc4; 0x63; 0x79; 0x22; 0x74; 0x24; 0x06; 0x0c]; (* vpinsrd xmm14, xmm0, [rsp + 0x6], 0xc *)
+  [0xc4; 0xe3; 0x99; 0x22; 0x74; 0x24; 0x05; 0x0b]; (* vpinsrq xmm6, xmm12, [rsp + 0x5], 0xb *)
+  [0xc4; 0x63; 0xb9; 0x22; 0x44; 0x24; 0x04; 0x05]; (* vpinsrq xmm8, xmm8, [rsp + 0x4], 0x5 *)
+  [0xc4; 0x63; 0x79; 0x16; 0x5c; 0x24; 0x03; 0x13]; (* vpextrd [rsp + 0x3], xmm11, 0x13 *)
+  [0xc4; 0xe3; 0x79; 0x16; 0x4c; 0x24; 0x02; 0x07]; (* vpextrd [rsp + 0x2], xmm1, 0x7 *)
+  [0xc4; 0xe3; 0xf9; 0x16; 0x74; 0x24; 0x01; 0x13]; (* vpextrq [rsp + 0x1], xmm6, 0x13 *)
+  [0xc4; 0x63; 0xf9; 0x16; 0x3c; 0x24; 0x07]; (* vpextrq [rsp], xmm15, 0x7 *)
+  [0x66; 0x0f; 0x6e; 0x0c; 0x24]; (* movd xmm1, [rsp] *)
+  [0x66; 0x0f; 0x7e; 0x0c; 0x24]; (* movd [rsp], xmm1 *)
+  [0xf3; 0x0f; 0x7e; 0x0c; 0x24]; (* movq xmm1, [rsp] *)
+  [0x66; 0x48; 0x0f; 0x7e; 0x0c; 0x24]; (* movq [rsp], xmm1 [nonstandard encoding] *)
+  [0xc5; 0xf9; 0x6e; 0x0c; 0x24]; (* vmovd xmm1, [rsp] *)
+  [0xc5; 0xf9; 0x7e; 0x0c; 0x24]; (* vmovd [rsp], xmm1 *)
+  [0xc5; 0xfa; 0x7e; 0x0c; 0x24]; (* vmovq xmm1, [rsp] *)
+  [0xc4; 0xe1; 0xf9; 0x7e; 0x0c; 0x24]; (* vmovq [rsp], xmm1 [nonstandard encoding] *)
+  [0x66; 0x44; 0x0f; 0xd6; 0x3c; 0x24]; (* movq [rsp], xmm15 *)
+  [0xf3; 0x44; 0x0f; 0x7e; 0x3c; 0x24]; (* movq xmm15, [rsp] *)
+  [0xc5; 0xf9; 0xd6; 0x04; 0x24]; (* vmovq [rsp], xmm0 *)
+  [0xc5; 0xfa; 0x7e; 0x04; 0x24]; (* vmovq xmm0, [rsp] *)
+  [0xc5; 0xf9; 0x17; 0x04; 0x24]; (* vmovhpd [rsp], xmm0 *)
+  [0xc5; 0xf9; 0x17; 0x0c; 0x24]; (* vmovhpd [rsp], xmm1 *)
+  [0xc4; 0x61; 0x79; 0x17; 0x04; 0x24]; (* vmovhpd [rsp], xmm8 *)
+  [0xc4; 0x61; 0x79; 0x17; 0x3c; 0x24];  (* vmovhpd [rsp], xmm15 *)
+  [0xc5; 0xe9; 0xc4; 0x4c; 0x24; 0x07; 0x05]; (* vpinsrw xmm1, xmm2, [rsp + 0x7], 0x5 *)
+  [0xc5; 0x79; 0xc4; 0x74; 0x24; 0x06; 0x0c]; (* vpinsrw xmm14, xmm0, [rsp + 0x6], 0xc *)
+];;
+
+let simplemem_iclasses =
+  map (fun l -> [l],true) simple_memory_iclasses;;
+
+let run_random_simplememopsimulation() =
+  let icodes,add_assum =
+    el (Random.int (length simplemem_iclasses)) simplemem_iclasses in
+  let memop_index = 0 in
+  cosimulate_instructions (Some memop_index) 32 icodes;;
 
 (* ------------------------------------------------------------------------- *)
 (* Keep running tests till a failure happens then return it.                 *)
 (* ------------------------------------------------------------------------- *)
 
 let run_random_simulation() =
-  if Random.int 100 < 90 then
+  let rn = Random.int 100 in
+  if rn < 80 then
     let decoded, result = run_random_regsimulation() in
-    decoded,result,true
-  else
+    decoded,result,0
+  else if rn < 90 then
     let decoded, result = run_random_memopsimulation() in
-    decoded,result,false;;
+    decoded,result,1
+  else
+    let decoded, result = run_random_simplememopsimulation() in
+    decoded,result,2;;
 
 let time_limit_sec = 2400.0;;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
+let tested_smp_instances = ref 0;;
 
 let rec run_random_simulations start_t =
-  let decoded,result,isreg = run_random_simulation() in
+  let decoded,result,simty = run_random_simulation() in
   if result then begin
-    tested_reg_instances := !tested_reg_instances + (if isreg then 1 else 0);
-    tested_mem_instances := !tested_mem_instances + (if isreg then 0 else 1);
+    tested_reg_instances := !tested_reg_instances + (if simty = 0 then 1 else 0);
+    tested_mem_instances := !tested_mem_instances + (if simty = 1 then 1 else 0);
+    tested_smp_instances := !tested_smp_instances + (if simty = 2 then 1 else 0);
     let fey = if is_numeral decoded
               then " (fails correctly) instruction code " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
     let now_t = Sys.time() in
     if now_t -. start_t > time_limit_sec then
-      let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
-          time_limit_sec !tested_reg_instances !tested_mem_instances
-          (!tested_reg_instances + !tested_mem_instances) in
+      let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, total: %d)\n"
+          time_limit_sec !tested_reg_instances !tested_mem_instances !tested_smp_instances
+          (!tested_reg_instances + !tested_mem_instances + !tested_smp_instances) in
       None
     else run_random_simulations start_t
   end

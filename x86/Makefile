@@ -148,6 +148,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              curve25519/bignum_invsqrt_p25519_alt.o \
              curve25519/bignum_madd_n25519.o \
              curve25519/bignum_madd_n25519_alt.o \
+             curve25519/bignum_mod_m25519.o \
              curve25519/bignum_mod_m25519_4.o \
              curve25519/bignum_mod_n25519.o \
              curve25519/bignum_mod_n25519_4.o \
@@ -249,7 +250,21 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              generic/word_negmodinv.o \
              generic/word_popcount.o \
              generic/word_recip.o \
-             mldsa/mldsa_poly_reduce.o \
+             mldsa/mldsa_intt.o \
+             mldsa/mldsa_ntt.o \
+             mldsa/mldsa_reduce.o \
+             mlkem/mlkem_basemul_k2.o \
+             mlkem/mlkem_basemul_k3.o \
+             mlkem/mlkem_basemul_k4.o \
+             mlkem/mlkem_frombytes.o \
+             mlkem/mlkem_intt.o \
+             mlkem/mlkem_mulcache_compute.o \
+             mlkem/mlkem_ntt.o \
+             mlkem/mlkem_reduce.o \
+             mlkem/mlkem_rej_uniform_VARIABLE_TIME.o \
+             mlkem/mlkem_tobytes.o \
+             mlkem/mlkem_tomont.o \
+             mlkem/mlkem_unpack.o \
              p256/bignum_add_p256.o \
              p256/bignum_bigendian_4.o \
              p256/bignum_cmul_p256.o \
@@ -366,6 +381,7 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              secp256k1/bignum_triple_p256k1.o \
              secp256k1/bignum_triple_p256k1_alt.o \
              sha3/sha3_keccak_f1600.o \
+             sha3/sha3_keccak4_f1600.o \
              sm2/bignum_add_sm2.o \
              sm2/bignum_cmul_sm2.o \
              sm2/bignum_cmul_sm2_alt.o \
@@ -397,7 +413,9 @@ OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
 
-TUTORIAL_OBJ = $(TUTORIAL_PROOFS:.ml=.o) tutorial/rel_simp2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o
+TUTORIAL_OBJ = $(filter-out tutorial/safety.o, $(TUTORIAL_PROOFS:.ml=.o)) \
+    curve25519/bignum_mod_n25519.o p256/bignum_mux_4.o p256/bignum_mux_4.obj \
+    tutorial/rel_simp2.o tutorial/rel_equivtac2.o tutorial/rel_reordertac2.o
 
 .PHONY: bmi clean clobber
 
@@ -509,6 +527,11 @@ sm2/sm2_montjscalarmul_alt.native: sm2/sm2_montjadd_alt.native sm2/sm2_montjdoub
 
 # Tutorial
 
+# safety tutorial does not have safety.o and uses existing ones
+tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
+                        curve25519/bignum_mod_n25519.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+# other tutorials have their .o files
 .SECONDEXPANSION:
 tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 # Additional dependencies on .o files
@@ -528,7 +551,7 @@ proofs: run_proofs ; ../tools/count-proofs.sh .
 tutorial: build_tutorial $(TUTORIAL_PROOF_LOGS);
 
 
-x86-insns.ml: $(OBJ) $(WINOBJ); ../tools/list-x86-insns.sh x86-insns.ml
+x86-insns.ml: ; ../tools/list-x86-insns.sh x86-insns.ml
 # Always run sematest regardless of dependency check
 FORCE: ;
 # Always use max. # of cores because in Makefile one cannot get the passed number of -j.

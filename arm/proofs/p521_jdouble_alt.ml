@@ -4637,3 +4637,138 @@ let P521_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
    P521_JDOUBLE_ALT_CORRECT
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28]`
    592);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let LOCAL_SQR_P521_SAFETY_TAC (assump_name:string) =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let _ = Printf.printf "sname: %s\n" sname in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+1)--(n+3)) THEN
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+4)--(n+(3+230))));;
+
+let LOCAL_MUL_P521_SAFETY_TAC (assump_name:string) =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let _ = Printf.printf "sname: %s\n" sname in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+1)--(n+4)) THEN
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+5)--(n+(4+373))));;
+
+let LOCAL_ADD_P521_SAFETY_TAC =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let _ = Printf.printf "sname: %s\n" sname in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+1)--(n+37)));;
+
+let LOCAL_SUB_P521_SAFETY_TAC =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let _ = Printf.printf "sname: %s\n" sname in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+1)--(n+34)));;
+
+let LOCAL_CMSUBC9_P521_SAFETY_TAC =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let _ = Printf.printf "sname: %s\n" sname in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+1)--(n+107)));;
+
+let LOCAL_CMSUB41_P521_SAFETY_TAC =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let _ = Printf.printf "sname: %s\n" sname in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+1)--(n+57)));;
+
+let LOCAL_CMSUB38_P521_SAFETY_TAC =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let _ = Printf.printf "sname: %s\n" sname in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+    ARM_STEPS_TAC P521_JDOUBLE_ALT_EXEC ((n+1)--(n+82)));;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p521_jdouble_alt" subroutine_signatures)
+    P521_JDOUBLE_ALT_CORRECT
+    P521_JDOUBLE_ALT_EXEC;;
+
+let P521_JDOUBLE_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,512))
+           [word pc,10736; p1,216; p3,216] /\
+           nonoverlapping (p3,216) (word pc,10736)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p521_jdouble_alt_mc /\
+                    read PC s = word (pc + 24) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 10708) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,216; p3,216; stackpointer,512]
+                         [p3,216; stackpointer,512]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25;
+                 X26; X27] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,216); memory :> bytes (stackpointer,512)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P521_JDOUBLE_ALT_EXEC);;
+
+let P521_JDOUBLE_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer returnaddress.
+          aligned 16 stackpointer /\
+          ALL (nonoverlapping (word_sub stackpointer (word 592),592))
+              [(word pc,0x29f0); (p1,216); (p3,216)] /\
+          nonoverlapping (p3,216) (word pc,0x29f0)
+          ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p521_jdouble_alt_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc
+                            (word_sub stackpointer (word 592))
+                            returnaddress /\
+                         memaccess_inbounds e2
+                          [p1,216; p3,216;
+                            word_sub stackpointer (word 592),592]
+                          [p3,216;
+                            word_sub stackpointer (word 592),592]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(p3,216);
+                      memory :> bytes(word_sub stackpointer (word 592),592)])`,
+  ARM_ADD_RETURN_STACK_TAC P521_JDOUBLE_ALT_EXEC
+    P521_JDOUBLE_ALT_SAFE
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28]`
+    592 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;

@@ -52,7 +52,7 @@ let branch_SPEC = prove(
          read RAX s = word_umax (word a) (word b))
     // Registers (and memory locations) that may change after execution.
     // ',,' is composition of relations.
-    (MAYCHANGE [RSP;RIP;RAX] ,, MAYCHANGE SOME_FLAGS)`,
+    (MAYCHANGE [RSP;RIP;RAX] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   (* Strips the outermost universal quantifier from the conclusion of a goal *)
   REPEAT STRIP_TAC THEN
   (* ENSURES_FINAL_STATE_TAC does not understand SOME_FLAGS in MAYCHANGE. Let's

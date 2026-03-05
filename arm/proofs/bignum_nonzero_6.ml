@@ -67,3 +67,37 @@ let BIGNUM_NONZERO_6_SUBROUTINE_CORRECT = prove
                C_RETURN s = if ~(n = 0) then word 1 else word 0)
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_NONZERO_6_EXEC BIGNUM_NONZERO_6_CORRECT);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "bignum_nonzero_6" subroutine_signatures)
+    BIGNUM_NONZERO_6_SUBROUTINE_CORRECT
+    BIGNUM_NONZERO_6_EXEC;;
+
+let BIGNUM_NONZERO_6_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e x pc returnaddress.
+           ensures arm
+           (\s.
+                aligned_bytes_loaded s (word pc) bignum_nonzero_6_mc /\
+                read PC s = word pc /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [x] s /\
+                read events s = e)
+           (\s.
+                read PC s = returnaddress /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events x pc returnaddress /\
+                     memaccess_inbounds e2 [x,48] []))
+           (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_NONZERO_6_EXEC);;

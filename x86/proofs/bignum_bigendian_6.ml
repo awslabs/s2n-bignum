@@ -58,7 +58,7 @@ let BIGNUM_FROMBEBYTES_6_CORRECT = time prove
                 read (memory :> bytelist(x,48)) s = l)
            (\s. read RIP s = word (pc + 0x40) /\
                 bignum_from_memory(z,6) s = num_of_bytelist (REVERSE l))
-          (MAYCHANGE [RIP; RAX; RDX] ,,
+          (MAYCHANGE [RIP; RAX; RDX] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `l:byte list`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
@@ -138,7 +138,7 @@ let BIGNUM_TOBEBYTES_6_CORRECT = time prove
            (\s. read RIP s = word (pc + 0x40) /\
                 read (memory :> bytelist(z,48)) s =
                 REVERSE(bytelist_of_num 48 n))
-          (MAYCHANGE [RIP; RAX; RDX] ,,
+          (MAYCHANGE [RIP; RAX; RDX] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
@@ -208,7 +208,7 @@ let BIGNUM_BIGENDIAN_6_CORRECT = time prove
            (\s. read RIP s = word (pc + 0x40) /\
                 bignum_from_memory(z,6) s =
                 num_of_bytelist(REVERSE(bytelist_of_num 48 n)))
-          (MAYCHANGE [RIP; RAX; RDX] ,,
+          (MAYCHANGE [RIP; RAX; RDX] ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,6)])`,
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   GEN_REWRITE_TAC (RATOR_CONV o LAND_CONV o ONCE_DEPTH_CONV)

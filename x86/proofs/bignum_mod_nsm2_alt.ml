@@ -457,7 +457,7 @@ let BIGNUM_MOD_NSM2_ALT_CORRECT = time prove
            (\s. read RIP s = word (pc + 0x144) /\
                 bignum_from_memory (z,4) s = n MOD n_sm2)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; R8; R9; R10; R11; R12] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   tac BIGNUM_MOD_NSM2_ALT_EXEC
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral));;
@@ -525,7 +525,7 @@ let BIGNUM_MOD_NSM2_ALT_WINDOWS_CORRECT = time prove
            (\s. read RIP s = word (pc + 0x14f) /\
                 bignum_from_memory (z,4) s = n MOD n_sm2)
           (MAYCHANGE [RIP; RSI; RAX; RDX; RCX; RBX; R8; R9; R10; R11; R12] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,4)])`,
   tac (X86_MK_EXEC_RULE bignum_mod_nsm2_alt_windows_tmc)
       (curry mk_comb `(+) (pc:num)` o mk_small_numeral o (fun n -> n+11)));;

@@ -504,7 +504,7 @@ let BIGNUM_MONTSQR_P521_ALT_CORRECT = time prove
                        (inverse_mod p_521 (2 EXP 576) * n EXP 2) MOD p_521))
           (MAYCHANGE [RIP; RAX; RBX; RCX; RDX;
                       R8; R9; R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9);
                       memory :> bytes(stackpointer,72)])`,
   MAP_EVERY X_GEN_TAC

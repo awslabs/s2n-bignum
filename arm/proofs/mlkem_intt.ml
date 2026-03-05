@@ -526,7 +526,7 @@ let MLKEM_INTT_CORRECT = prove
   (*** Simulate all the way to the end, in effect unrolling loops ***)
 
   MAP_EVERY (fun n -> ARM_STEPS_TAC MLKEM_INTT_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[barred; barmul])
+                      SIMD_SIMPLIFY_ABBREV_TAC[barred; barmul] [])
             (1--1157) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
@@ -537,19 +537,28 @@ let MLKEM_INTT_CORRECT = prove
    CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
    check (can (term_match [] `read qqq s:int128 = xxx`) o concl))) THEN
 
-  (*** Turn the conclusion into an explicit conjunction and split it up ***)
+  (*** Expand and substitute in the conclusion we want to prove ***)
 
   CONV_TAC(ONCE_DEPTH_CONV let_CONV) THEN REWRITE_TAC[INT_ABS_BOUNDS] THEN
   GEN_REWRITE_TAC (BINDER_CONV o RAND_CONV) [GSYM I_THM] THEN
   CONV_TAC(EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   ASM_REWRITE_TAC[I_THM; WORD_ADD_0] THEN DISCARD_STATE_TAC "s1157" THEN
-  REPEAT(W(fun (asl,w) ->
-     if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
 
-  (*** Get congruences and bounds for the result digits and finish ***)
+  (*** Perform congruence and bound propagation and finish ***)
 
-  (W(MP_TAC o CONGBOUND_RULE o rand o lhand o rator o lhand o snd) THEN
-    MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+  W(fun (asl,w) ->
+    let lfn = undefined
+    and asms =
+      map snd (filter (is_local_definition [barred; barmul] o concl o snd)
+              asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+
+    REPEAT(W(fun (asl,w) ->
+      if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
+
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
+      rand o lhand o rator o lhand o snd) THEN
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
      [MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
       CONV_TAC(ONCE_DEPTH_CONV INVERSE_NTT_CONV) THEN
       REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
@@ -560,7 +569,7 @@ let MLKEM_INTT_CORRECT = prove
       MATCH_MP_TAC(INT_ARITH
        `l':int <= l /\ u <= u'
         ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
-      CONV_TAC INT_REDUCE_CONV]));;
+      CONV_TAC INT_REDUCE_CONV])));;
 
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 
@@ -613,14 +622,15 @@ let MLKEM_INTT_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "mlkem_intt" subroutine_signatures)
     MLKEM_INTT_SUBROUTINE_CORRECT
     MLKEM_INTT_EXEC;;
 
 let MLKEM_INTT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall a z_01234 z_56 pc stackpointer returnaddress.
+       forall e a z_01234 z_56 pc stackpointer returnaddress.
            aligned 16 stackpointer /\
            ALLPAIRS nonoverlapping
            [a,512; word_sub stackpointer (word 64),64]
@@ -630,13 +640,13 @@ let MLKEM_INTT_SUBROUTINE_SAFE = time prove
                (\s.
                     aligned_bytes_loaded s (word pc) mlkem_intt_mc /\
                     read PC s = word pc /\
-                    read X30 s = returnaddress /\
                     read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
                     C_ARGUMENTS [a; z_01234; z_56] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 =
                         f_events z_01234 z_56 a pc
@@ -647,5 +657,5 @@ let MLKEM_INTT_SUBROUTINE_SAFE = time prove
                          word_sub stackpointer (word 64),64]
                         [a,512; word_sub stackpointer (word 64),64])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC MLKEM_INTT_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_INTT_EXEC);;

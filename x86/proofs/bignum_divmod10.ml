@@ -72,7 +72,7 @@ let BIGNUM_DIVMOD10_CORRECT = time prove
                 bignum_from_memory (z,val k) s = n DIV 10 /\
                 C_RETURN s = word(n MOD 10))
           (MAYCHANGE [RIP; RDI; RAX; RDX; RCX; R8; R9; R10] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `n:num`; `pc:num`] THEN

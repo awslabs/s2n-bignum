@@ -41,7 +41,7 @@ let BIGNUM_EVEN_CORRECT = prove
                bignum_from_memory(a,val k) s = x)
           (\s. read RIP s = word(pc + 0x11) /\
                C_RETURN s = if EVEN x then word 1 else word 0)
-          (MAYCHANGE [RIP; RAX] ,, MAYCHANGE SOME_FLAGS)`,
+          (MAYCHANGE [RIP; RAX] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`a1:int64`; `x:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN

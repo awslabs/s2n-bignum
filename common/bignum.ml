@@ -718,6 +718,12 @@ let NUM_OF_WORDLIST_FROM_MEMORY = prove
   REPEAT STRIP_TAC THEN MATCH_MP_TAC NUM_OF_WORDLIST_FROM_MEMORY_GEN THEN
   REWRITE_TAC[DIMINDEX_TYBIT0; DIMINDEX_TYBIT1] THEN ARITH_TAC);;
 
+let NUM_OF_WORDLIST_FROM_MEMORY_BYTE = prove
+ (`!a n s. num_of_wordlist (wordlist_from_memory (a,n) s:byte list) =
+           read (memory :> bytes (a,n)) s`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC NUM_OF_WORDLIST_FROM_MEMORY_GEN THEN
+  REWRITE_TAC[DIMINDEX_8]);;
+
 let WORDLIST_FROM_MEMORY_EQ_ALT = prove
  (`!addr len size l s.
         dimindex(:N) * len = 8 * size
@@ -1518,6 +1524,17 @@ let MEMORY_128_FROM_64_TAC =
       let itm = mk_small_numeral(boff + 16*i) in
       READ_MEMORY_MERGE_CONV 1 (subst[itm,n_tm] pat') in
     MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
+
+let MEMORY_256_FROM_16_TAC =
+  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
+  and pat = `read (memory :> bytes256(word_add a (word n))) s0` in
+  fun v n ->
+    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
+    let f i =
+      let itm = mk_small_numeral(32*i) in
+      READ_MEMORY_MERGE_CONV 4 (subst[itm,n_tm] pat') in
+    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
+
 
 let READ_MEMORY_SPLIT_CONV =
   let baseconv =

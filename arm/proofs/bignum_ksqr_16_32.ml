@@ -990,3 +990,147 @@ let BIGNUM_KSQR_16_32_SUBROUTINE_CORRECT = prove
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_KSQR_16_32_EXEC BIGNUM_KSQR_16_32_CORRECT
     `[X19;X20;X21;X22;X23;X24;X25;X30]` 64);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let BIGNUM_KSQR_16_32_SAFE_LEMMA = prove
+ (`exists f_events. forall e z x pc returnaddress.
+      ALL (nonoverlapping (z,8 * 16))
+          [(word pc,2164); (x,8 * 8)]
+      ==> ensures arm
+           (\s. aligned_bytes_loaded s (word pc) bignum_ksqr_16_32_mc /\
+                read PC s = word(pc + 0x2c0) /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [z; x] s /\
+                read events s = e)
+           (\s. read PC s = returnaddress /\
+                (exists e2.
+                  read events s = APPEND e2 e /\
+                  e2 = f_events z x pc returnaddress /\
+                  memaccess_inbounds e2
+                    [z,128; x,64]
+                    [z,128]))
+           (MAYCHANGE [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                       X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
+            MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
+                      Q21; Q22; Q23; Q30] ,,
+            MAYCHANGE [memory :> bytes(z,8 * 16)] ,,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
+  PROVE_SAFETY_SPEC_TAC BIGNUM_KSQR_16_32_EXEC);;
+
+let BIGNUM_KSQR_16_32_LEMMA_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (bignum_ksqr_16_32_mc,BIGNUM_KSQR_16_32_EXEC,
+         0x0,bignum_ksqr_16_32_mc,safety_th)
+        [`e:(uarch_event)list`; `read X0 s`; `read X1 s`;
+        `pc:num`; `read X30 s`] n THENL [
+      EXISTS_E2_TAC (ref [`pc:num`;`x:int64`;`z:int64`;`t:int64`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_ksqr_16_32" subroutine_signatures)
+    BIGNUM_KSQR_16_32_CORRECT
+    BIGNUM_KSQR_16_32_EXEC;;
+
+let BIGNUM_KSQR_16_32_SAFE = prove
+ (`exists f_events.
+       forall e z x t pc.
+           nonoverlapping (z,8 * 32) (t,8 * 24) /\
+           ALLPAIRS nonoverlapping [z,8 * 32; t,8 * 24]
+           [word pc,2164; x,8 * 16]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_ksqr_16_32_mc /\
+                    read PC s = word (pc + 16) /\
+                    C_ARGUMENTS [z; x; t] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 684) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z t pc /\
+                         memaccess_inbounds e2 [x,128; z,256; t,24 * 8]
+                         [z,256; t,24 * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X30] ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 32); memory :> bytes (t,8 * 24)])`,
+
+  ASSERT_CONCL_TAC full_spec THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_KSQR_16_32_SAFE_LEMMA "H_LEMMA" THEN
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[ALLPAIRS; ALL; PAIRWISE] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REPEAT STRIP_TAC THEN
+
+  ENSURES_INIT_TAC "s0" THEN
+
+  ARM_STEPS_TAC BIGNUM_KSQR_16_32_EXEC (1--4) THEN
+  BIGNUM_KSQR_16_32_LEMMA_SAFETY_TAC "H_LEMMA" 5 THEN
+
+  ARM_STEPS_TAC BIGNUM_KSQR_16_32_EXEC (6--43) THEN
+
+  ARM_STEPS_TAC BIGNUM_KSQR_16_32_EXEC (44--46) THEN
+  BIGNUM_KSQR_16_32_LEMMA_SAFETY_TAC "H_LEMMA" 47 THEN
+
+  ARM_STEPS_TAC BIGNUM_KSQR_16_32_EXEC (48--83) THEN
+  ARM_STEPS_TAC BIGNUM_KSQR_16_32_EXEC (84--86) THEN
+
+  BIGNUM_KSQR_16_32_LEMMA_SAFETY_TAC "H_LEMMA" 87 THEN
+
+  ARM_STEPS_TAC BIGNUM_KSQR_16_32_EXEC (88--170) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let full_subr_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_ksqr_16_32" subroutine_signatures)
+    BIGNUM_KSQR_16_32_SUBROUTINE_CORRECT
+    BIGNUM_KSQR_16_32_EXEC;;
+
+let BIGNUM_KSQR_16_32_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x t pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           PAIRWISE nonoverlapping
+           [z,8 * 32; t,8 * 24; word_sub stackpointer (word 64),64] /\
+           ALLPAIRS nonoverlapping
+           [z,8 * 32; t,8 * 24; word_sub stackpointer (word 64),64]
+           [word pc,2164; x,8 * 16]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_ksqr_16_32_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x; t] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events x z t pc (word_sub stackpointer (word 64))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [x,128; z,256; t,24 * 8;
+                          word_sub stackpointer (word 64),64]
+                         [z,256; t,24 * 8; word_sub stackpointer (word 64),64]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 32); memory :> bytes (t,8 * 24);
+                 memory :> bytes (word_sub stackpointer (word 64),64)])`,
+  ASSERT_CONCL_TAC full_subr_spec THEN
+  ARM_ADD_RETURN_STACK_TAC BIGNUM_KSQR_16_32_EXEC BIGNUM_KSQR_16_32_SAFE
+    `[X19;X20;X21;X22;X23;X24;X25;X30]` 64 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

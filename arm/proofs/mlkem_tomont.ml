@@ -221,14 +221,15 @@ let MLKEM_TOMONT_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "mlkem_tomont" subroutine_signatures)
     MLKEM_TOMONT_SUBROUTINE_CORRECT
     MLKEM_TOMONT_EXEC;;
 
 let MLKEM_TOMONT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall ptr pc returnaddress.
+       forall e ptr pc returnaddress.
            nonoverlapping (word pc,LENGTH mlkem_tomont_mc) (ptr,512)
            ==> ensures arm
                (\s.
@@ -238,11 +239,11 @@ let MLKEM_TOMONT_SUBROUTINE_SAFE = time prove
                     C_ARGUMENTS [ptr] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 = f_events ptr pc returnaddress /\
                         memaccess_inbounds e2 [ptr,512; ptr,512] [ptr,512])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC MLKEM_TOMONT_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_TOMONT_EXEC);;

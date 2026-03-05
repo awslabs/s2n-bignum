@@ -4409,3 +4409,250 @@ let P256_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 1248),1248)])`,
    ARM_ADD_RETURN_STACK_TAC P256_MONTJSCALARMUL_ALT_EXEC
    P256_MONTJSCALARMUL_ALT_CORRECT `[X19; X20; X21; X30]` 1248);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+(* Local versions of the subroutines.  *)
+
+let LOCAL_JADD_SAFETY_TAC (assump_name:string) (n:int)  =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_montjscalarmul_alt_mc,P256_MONTJSCALARMUL_ALT_EXEC,
+          0x804,p256_montjadd_alt_mc,th)
+        [`e:(uarch_event)list`;`read X0 s`; `read X1 s`;
+        `read X2 s`;
+        `pc + 0x804`; `read SP s`; `read X30 s`] n
+    THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
+         `stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_JDOUBLE_SAFETY_TAC (assump_name:string) (n:int)  =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_montjscalarmul_alt_mc,P256_MONTJSCALARMUL_ALT_EXEC,
+          0x2624,p256_montjdouble_alt_mc,th)
+        [`e:(uarch_event)list`; `read X0 s`; `read X1 s`;
+        `pc + 0x2624`; `read SP s`; `read X30 s`] n
+    THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
+         `stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+
+    ]);;
+
+let full_spec,public_vars = mk_safety_spec
+  ~keep_maychanges:true
+  (assoc "p256_montjscalarmul_alt" subroutine_signatures)
+  P256_MONTJSCALARMUL_ALT_CORRECT
+  P256_MONTJSCALARMUL_ALT_EXEC;;
+
+let P256_MONTJSCALARMUL_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,1216))
+           [word pc,13920; res,96; scalar,32; point,96] /\
+           nonoverlapping (res,96) (word pc,13920)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    p256_montjscalarmul_alt_mc /\
+                    read PC s = word (pc + 12) /\
+                    read SP s = word_add stackpointer (word 224) /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 2036) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,96; res,96; stackpointer,1216]
+                         [res,96; stackpointer,1216]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X19; X20; X21; X30] ,,
+                MAYCHANGE
+                [memory :> bytes (res,96);
+                 memory :> bytes (stackpointer,1216)])`,
+
+  ASSERT_CONCL_TAC full_spec THEN
+  (* Prepare the safety theorem of subroutine to be used! This is necessary to
+     keep introduction of metavariable in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC P256_MONTJADD_ALT_SUBROUTINE_SAFE
+      "H_JADD_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC P256_MONTJDOUBLE_ALT_SUBROUTINE_SAFE
+      "H_JDOUBLE_SAFE" THEN
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_loop_post scalar point res pc stackpointer)
+        (APPEND
+          (ENUMERATEL 63 (f_ev_loop scalar point res pc stackpointer))
+            (f_ev_loop_pre scalar point res pc stackpointer))
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN
+  STRIP_TAC (* event e *) THEN
+
+  REWRITE_TAC[GSYM SEQ_ASSOC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS] THEN
+
+  (*** Main loop invariant setup. The bound on y is handy to have included ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `63` `pc + 0x454` `pc + 0x7c4`
+   `\i s.
+      read SP s = word_add stackpointer (word 224) /\
+      read X19 s = res /\
+      read X20 s = word (4 * (63 - i))` THEN
+  REPEAT CONJ_TAC THENL [
+    ARITH_TAC;
+
+    (*** Initial holding of invariant ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (1--71) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 72 THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (73--76) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 77 THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (78--80) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 81 THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (82--85) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 86 THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (87--89) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 90 THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (91--94) THEN
+    LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 95 THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (96--98) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 99 THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (100--101) THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (102--281) THEN
+
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** Defer the main invariant preservation proof till below ***)
+
+    ALL_TAC;
+
+    (*** Final copying to the output and specializing invariant ***)
+
+    REWRITE_TAC[] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (1--12) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  (**** Now the preservation of the loop invariant ***)
+
+  REWRITE_TAC[] THEN
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (1--4) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 5 THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (6--8) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 9 THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (10--12) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 13 THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (14--16) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 17 THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (18--24) THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (25--197) THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (198--219) THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (220--223) THEN
+  LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 224 THEN
+  ARM_STEPS_TAC P256_MONTJSCALARMUL_ALT_EXEC (225--225) THEN
+
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN
+    SIMPLE_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+      AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC
+    ];
+    ALL_TAC
+  ] THEN
+
+  SUBGOAL_THEN
+    `word (8 * val (word_ushr (word_sub (word (4 * (63 - i))) (word 4):int64) 6))
+     :int64 = word (8 * (4 * (62 - i)) DIV 2 EXP 6)`
+  SUBST_ALL_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+      ALL_TAC; SIMPLE_ARITH_TAC
+    ] THEN
+    AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+    IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN CONJ_TAC THENL [
+      BINOP_TAC THENL [REFL_TAC;ALL_TAC] THEN
+      BINOP_TAC THENL [SIMPLE_ARITH_TAC; REFL_TAC];
+
+      SIMPLE_ARITH_TAC
+    ];
+
+    ALL_TAC
+  ] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P256_MONTJSCALARMUL_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events. forall e res scalar point pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 1248),1248))
+            [(word pc,0x3660); (res,96); (scalar,32); (point,96)] /\
+        nonoverlapping (res,96) (word pc,0x3660)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p256_montjscalarmul_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [res;scalar;point] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc
+                            (word_sub stackpointer (word 1248))
+                            returnaddress /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,96; res,96;
+                          word_sub stackpointer (word 1248),1248]
+                         [res,96;
+                          word_sub stackpointer (word 1248),1248]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE[memory :> bytes(res,96);
+                     memory :> bytes(word_sub stackpointer (word 1248),1248)])`,
+  ARM_ADD_RETURN_STACK_TAC P256_MONTJSCALARMUL_ALT_EXEC
+       P256_MONTJSCALARMUL_ALT_SAFE `[X19; X20; X21; X30]` 1248 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

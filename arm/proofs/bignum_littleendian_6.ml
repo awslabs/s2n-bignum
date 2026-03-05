@@ -258,3 +258,39 @@ let BIGNUM_LITTLEENDIAN_6_SUBROUTINE_CORRECT = time prove
            MAYCHANGE [memory :> bignum(z,6)])`,
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_LITTLEENDIAN_6_EXEC
     BIGNUM_LITTLEENDIAN_6_CORRECT);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "bignum_littleendian_6" subroutine_signatures)
+    BIGNUM_LITTLEENDIAN_6_SUBROUTINE_CORRECT
+    BIGNUM_LITTLEENDIAN_6_EXEC;;
+
+let BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc returnaddress.
+           nonoverlapping (word pc,412) (z,8 * 6) /\
+           (x = z \/ nonoverlapping (x,8 * 6) (z,8 * 6))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_littleendian_6_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc returnaddress /\
+                         memaccess_inbounds e2 [x,48; z,48] [z,48]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_LITTLEENDIAN_6_EXEC);;

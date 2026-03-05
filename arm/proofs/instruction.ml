@@ -7,35 +7,6 @@
 (* Simplified model of aarch64 (64-bit ARM) semantics.                       *)
 (* ========================================================================= *)
 
-(*** We start with defining an observable microarchitectural event.
- *** This is used to describe the safety property of assembly programs such as
- *** the constant-time property.
- *** We define that an instruction raises an observable microarchitectural
- *** event if its cycles/power consumption/anything that can be observed by
- *** a side-channel attacker can vary depending on the inputs of
- *** the instruction. For example, instructions taking a constant number of
- *** cycles like ADD do not raise an observable event, whereas cond branch does.
- *** Its kinds (EventLoad/Store/...) describe the events distinguishable from
- *** each other by the attacker, and their parameters describe the values
- *** that are inputs and/or outputs of the instructions that will affect the
- *** observed cycles/etc.
- *** An opcode of instruction is not a parameter of the event, even if the
- *** number of taken cycles may depend on opcode. This relies on an assumption
- *** that a program is public information.
- *** One instruction can raise multiple events (e.g., one that reads PC from
- *** the memory and jumps to the address, even though this case will not exist
- *** in Arm).
- ***)
-let armevent_INDUCT, armevent_RECURSION = define_type
-  "armevent =
-    // (address, byte length)
-    EventLoad (int64#num)
-    // (address, byte length)
-    | EventStore (int64#num)
-    // (src pc, destination pc)
-    | EventJump (int64#int64)
-  ";;
-
 (*** For convenience we lump the stack pointer in as general register 31.
  *** The indexing is cleaner for a 32-bit enumeration via words, and in
  *** fact in some settings this may be interpreted correctly when register 31
@@ -56,7 +27,7 @@ let armstate_INDUCT,armstate_RECURSION,armstate_COMPONENTS =
        simdregisters: 5 word->int128;   // 32 SIMD registers
        flags: 4 word;                   // NZCV flags
        memory: 64 word -> byte;         // memory
-       events: armevent list            // Observable uarch events
+       events: uarch_event list            // Observable uarch events
      }";;
 
 let bytes_loaded = new_definition
@@ -1264,6 +1235,27 @@ let arm_MLS_VEC = define
             if esize = 32 then simd2 word_sub d (simd2 word_mul n m)
             else if esize = 16 then simd4 word_sub d (simd4 word_mul n m)
             else simd8 word_sub d (simd8 word_mul n m) in
+          (Rd := word_zx d':(128)word) (s:armstate)`;;
+
+let arm_MLA_VEC = define
+ `arm_MLA_VEC Rd Rn Rm esize datasize =
+    \s. let d = read Rd s
+        and n = read Rn s
+        and m = read Rm s in
+        if datasize = 128 then
+          let d':(128)word =
+            if esize = 32 then simd4 word_add d (simd4 word_mul n m)
+            else if esize = 16 then simd8 word_add d (simd8 word_mul n m)
+            else simd16 word_add d (simd16 word_mul n m) in
+          (Rd := d') s
+        else
+          let d:(64)word = word_subword d (0,64)
+          and n:(64)word = word_subword n (0,64)
+          and m:(64)word = word_subword m (0,64) in
+          let d':(64)word =
+            if esize = 32 then simd2 word_add d (simd2 word_mul n m)
+            else if esize = 16 then simd4 word_add d (simd4 word_mul n m)
+            else simd8 word_add d (simd8 word_mul n m) in
           (Rd := word_zx d':(128)word) (s:armstate)`;;
 
 let arm_MOVI = define
@@ -3135,6 +3127,7 @@ let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
 let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
 let arm_DUP_GEN_ALT =    EXPAND_SIMD_RULE arm_DUP_GEN;;
 let arm_MLS_VEC_ALT =    EXPAND_SIMD_RULE arm_MLS_VEC;;
+let arm_MLA_VEC_ALT =    EXPAND_SIMD_RULE arm_MLA_VEC;;
 let arm_MUL_VEC_ALT =    EXPAND_SIMD_RULE arm_MUL_VEC;;
 let arm_REV64_VEC_ALT =  EXPAND_SIMD_RULE arm_REV64_VEC;;
 let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
@@ -3244,6 +3237,7 @@ let ARM_OPERATION_CLAUSES =
        arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
        arm_MADD;
+       arm_MLA_VEC_ALT;
        arm_MLS_VEC_ALT;
        arm_MOVI; arm_MOVK_ALT; arm_MOVN; arm_MOVZ; arm_MSUB;
        arm_MUL_VEC_ALT;

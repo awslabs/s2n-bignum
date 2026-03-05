@@ -194,7 +194,7 @@ let BIGNUM_AMONTREDC_CORRECT = time prove
                          R10; R11; R12; R13; R14; R15] ,,
               MAYCHANGE [memory :> bytes(z,8 * val k);
                          memory :> bytes(stackpointer,8)] ,,
-              MAYCHANGE SOME_FLAGS)`,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `nx:num` THEN X_GEN_TAC `x:int64` THEN
   X_GEN_TAC `m:int64` THEN W64_GEN_TAC `p:num` THEN

@@ -5188,3 +5188,223 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = time prove
     (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_BYTE_EXEC]
      CURVE25519_X25519BASE_BYTE_CORRECT)
     `[X19; X20; X21; X22; X23; X24]` 496);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let LOCAL_MODINV_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (curve25519_x25519base_byte_mc',CURVE25519_X25519BASE_BYTE_EXEC,0x1a18,
+        (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_mc] THENC TRIM_LIST_CONV)
+        `TRIM_LIST (12,16) bignum_inv_p25519_mc`,
+        safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`;
+        `pc + 0x1a18`; `stackpointer:int64`] n
+    THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
+         `stackpointer:int64`;`tables:num`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]
+  );;
+
+let full_spec,public_vars = mk_safety_spec
+    ~readonly_objects:[`word tables:int64`,`48576`]
+    ~keep_maychanges:true
+    (assoc "curve25519_x25519base_byte" subroutine_signatures)
+    CURVE25519_X25519BASE_BYTE_CORRECT
+    CURVE25519_X25519BASE_BYTE_EXEC;;
+
+let CURVE25519_X25519BASE_BYTE_SAFE = time prove
+ (`exists f_events.
+       forall e tables res scalar pc stackpointer.
+           aligned 16 stackpointer /\
+           adrp_within_bounds (word tables) (word (pc + 280)) /\
+           ALL (nonoverlapping (stackpointer,448))
+           [word pc,11772; word tables,48576; res,32; scalar,32] /\
+           nonoverlapping (res,32) (word pc,11772)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                      (curve25519_x25519base_byte_mc pc tables) /\
+                    read PC s = word (pc + 16) /\
+                    // This clause is manually added
+                    bytes_loaded s (word tables)
+                      curve25519_x25519base_byte_constant_data /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [res; scalar] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 11752) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar res tables pc stackpointer /\
+                         memaccess_inbounds e2
+                            [scalar,32; res,32; stackpointer,448;
+                             word tables,48576]
+                            [res,32; stackpointer,448]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (res,32); memory :> bytes (stackpointer,448)])`,
+  (* ASSERT_CONCL_TAC full_spec THEN <- this fails due to the extra precond *)
+
+  (* Prepare the safety theorem of subroutine to be used! This is necessary to
+     keep introduction of metavariable in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE
+      "H_INV_SAFE" THEN
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(scalar:int64) (res:int64) (tables:num) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_epil scalar res tables pc stackpointer)
+        (APPEND
+          (ENUMERATEL 63 (\i.
+            f_ev_loop scalar res tables pc stackpointer i))
+          (f_ev_prol scalar res tables pc stackpointer))
+    :(uarch_event)list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[ALLPAIRS; ALL] THEN STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
+
+  REWRITE_TAC[BYTES_LOADED_DATA] THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `63` `pc + 0x1b0` `pc + 0x1990`(*+2 insn *)
+   `\i s.
+      read (memory :> bytes(word tables,48576)) s =
+        num_of_bytelist curve25519_x25519base_byte_constant_data /\
+      read SP s = stackpointer /\
+      read X23 s = res /\
+      read X19 s = word(tables + 0xc0 + 768 * i) /\
+      read X20 s = word (4 * (i + 1))` THEN
+  REPEAT CONJ_TAC THENL [
+    ARITH_TAC;
+
+    (*** Initial setup and modification of the inputs ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (1--68) THEN
+
+    FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD) THEN
+
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (69--104) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+    CONJ_TAC THENL [WORD_ARITH_TAC; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The main loop invariant for adding the next table entry ***)
+
+    REPEAT STRIP_TAC THEN
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (1--5) THEN
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (6--11) THEN
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (12--183) THEN
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (184--211) THEN
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (212--
+      (211+(14(*DOUBLE_TWICE4*) + 16(*SUB_TWICE4*) + 16(*ADD_TWICE4*) +
+            172(*MUL_4*) + 172(*MUL_4*) + 172(*MUL_4*) + 16(*SUB_TWICE4*) +
+            16(*ADD_TWICE4*) + 16(*SUB_TWICE4*) + 16(*ADD_TWICE4*) +
+            172(*MUL_4*) + 172(*MUL_4*) + 172(*MUL_4*) + 172(*MUL_4*)))) THEN
+
+    ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (1526--1528) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [
+      REWRITE_TAC[VAL_WORD_ADD] THEN
+      MAP_EVERY VAL_INT64_TAC [`4*(i+1)`;`4`] THEN
+      ASM_REWRITE_TAC[DIMINDEX_64] THEN
+      ONCE_REWRITE_TAC[GSYM COND_RAND] THEN
+      IMP_REWRITE_TAC[MOD_LT] THEN
+      SIMPLE_ARITH_TAC;
+
+      ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE;ALL_TAC] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE;ALL_TAC] THEN
+
+    (* Found this pattern from safety_print_log := true *)
+    SUBGOAL_THEN
+      `word (8 * val (word_ushr (word (4 * (i + 1)):int64) 6))
+      :int64 = word (8 * (4 * (i + 1)) DIV 2 EXP 6)`
+    SUBST_ALL_TAC THENL [
+      AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+      IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      ALL_TAC
+    ] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC
+  ] THEN
+
+  (*** Clean up ready for the final translation part ***)
+
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (1--
+      (16(*ADD_TWICE4*) + 16(*SUB_TWICE4*))) THEN
+  ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (33--34) THEN
+  LOCAL_MODINV_SAFETY_TAC "H_INV_SAFE" 35 THEN
+  ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (36--(35+180)) THEN
+  ARM_STEPS_TAC CURVE25519_X25519BASE_BYTE_EXEC (216--(215+62)) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+
+  SUBST_ALL_TAC (ARITH_RULE`2 EXP 6 = 64`) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let CURVE25519_X25519BASE_BYTE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e tables res scalar pc stackpointer returnaddress.
+          aligned 16 stackpointer /\
+          adrp_within_bounds (word tables) (word(pc + 0x118)) /\
+          ALL (nonoverlapping (word_sub stackpointer (word 496),496))
+              [(word pc,0x2dfc); (word tables,48576); (res,32); (scalar,32)] /\
+          nonoverlapping (res,32) (word pc,0x2dfc)
+          ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                      (curve25519_x25519base_byte_mc pc tables) /\
+                    read PC s = word pc /\
+                    bytes_loaded s (word tables)
+                      curve25519_x25519base_byte_constant_data /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [res; scalar] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar res tables pc
+                            (word_sub stackpointer (word 496))
+                            returnaddress /\
+                         memaccess_inbounds e2
+                            [scalar,32; res,32;
+                             word_sub stackpointer (word 496),496;
+                             word tables,48576]
+                            [res,32;
+                             word_sub stackpointer (word 496),496]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(res,32);
+                      memory :> bytes(word_sub stackpointer (word 496),496)])`,
+  REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_BYTE_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_BYTE_EXEC
+    (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_BYTE_EXEC]
+     CURVE25519_X25519BASE_BYTE_SAFE)
+    `[X19; X20; X21; X22; X23; X24]` 496 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

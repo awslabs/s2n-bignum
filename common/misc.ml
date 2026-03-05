@@ -180,6 +180,10 @@ let CONS_TO_APPEND_CONV (t:term) =
 (* - : thm = |- CONS 1 (CONS 2 e) = APPEND [1; 2] e *)
 CONS_TO_APPEND_CONV `CONS 1 (CONS 2 e)`;;
 
+let APPEND_EXISTS = prove(
+ `forall (x:(A)list). exists (x1:(A)list) x2. x = APPEND x1 x2`,
+    STRIP_TAC THEN EXISTS_TAC `[]:(A)list` THEN MESON_TAC[APPEND]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Combined word and number and a few other things reduction.                *)
 (* ------------------------------------------------------------------------- *)
@@ -1236,6 +1240,15 @@ let (WORD_FORALL_OFFSET_TAC:int->tactic) =
   fun n -> MATCH_MP_TAC lemma THEN EXISTS_TAC (mk_small_numeral n) THEN
            CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV);;
 
+(* A rule version of WORD_FORALL_OFFSET_TAC. *)
+let (WORD_FORALL_OFFSET_RULE:int->thm->thm) =
+  let lemma = prove
+   (`!a (P:N word->bool). (!x. P x) ==> (!x. P(word_add x (word a)))`,
+    MESON_TAC[WORD_RULE `word_add (word_sub x a) (a:N word) = x`]) in
+  fun n th ->
+    let th0 = MATCH_MP (SPEC (mk_small_numeral n) lemma) th in
+    CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_ADD_SUBTRACT_WORD_CONV) th0;;
+
 (* ------------------------------------------------------------------------- *)
 (* Do some limited simplification in association with symbolic execution.    *)
 (* ------------------------------------------------------------------------- *)
@@ -1404,7 +1417,7 @@ let REPEAT_I (t:int->tactic):tactic =
   f 0;;
 
 (* ------------------------------------------------------------------------- *)
-(* Tactics that break a conjunction/disjunction in assumptions               *)
+(* Tactics that break a conjunction/disjunction/etc in assumptions           *)
 (* ------------------------------------------------------------------------- *)
 
 let SPLIT_FIRST_CONJ_ASSUM_TAC =
@@ -1414,6 +1427,9 @@ let SPLIT_FIRST_CONJ_ASSUM_TAC =
 let CASES_FIRST_DISJ_ASSUM_TAC =
     FIRST_X_ASSUM (fun thm ->
       if is_disj (concl thm) then DISJ_CASES_TAC thm else failwith "");;
+
+let STRIP_EXISTS_ASSUM_TAC =
+    FIRST_X_ASSUM (STRIP_ASSUME_TAC o (check (is_exists o concl)));;
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics that prove a subgoal using {ASM_}ARITH_TAC.                       *)
@@ -1521,6 +1537,132 @@ let WORD_INTERLEAVE_CONV =
 
 extra_word_CONV :=
   WORD_INTERLEAVE_CONV::WORD_SUBDEINTERLEAVE_CONV::(!extra_word_CONV);;
+
+(* ------------------------------------------------------------------------- *)
+(* A basic word operation corresponding to x86's exotic PEXT instruction.    *)
+(* The definition is a bit clumsy and complicated, but as an extra sanity    *)
+(* check and a route to more efficient concrete evaluation we relate it to   *)
+(* a natural-number counterpart defined via recursion on binary digits.      *)
+(* ------------------------------------------------------------------------- *)
+
+let word_condense = define
+ `(word_condense:N word->N word->N word) x y =
+  word(nsum {i | i < dimindex(:N)}
+            (\i. 2 EXP word_popcount(word_and y (word(2 EXP i - 1))) *
+                 bitval(bit i (word_and x y))))`;;
+
+let WORD_CONDENSE_ALT = prove
+ (`!x y:N word.
+    word_condense x y =
+    word(nsum (0..dimindex(:N)-1)
+              (\i. 2 EXP word_popcount(word_and y (word(2 EXP i - 1))) *
+                   bitval(bit i (word_and x y))))`,
+  REWRITE_TAC[word_condense; NUMSEG_LT; DIMINDEX_NONZERO]);;
+
+let num_condense = define
+`num_condense n m =
+  if m = 0 \/ n = 0 then 0
+  else if EVEN m then num_condense (n DIV 2) (m DIV 2)
+  else 2 * num_condense (n DIV 2) (m DIV 2) + bitval(ODD n)`;;
+
+let NUM_CONDENSE_0 = prove
+ (`(!m. num_condense m 0 = 0) /\
+   (!n. num_condense 0 n = 0)`,
+  ONCE_REWRITE_TAC[num_condense] THEN REWRITE_TAC[]);;
+
+let NUM_CONDENSE_CLAUSES = prove
+ (`(!m n. num_condense (2 * n) (2 * m) = num_condense n m) /\
+   (!m n. num_condense (2 * n + 1) (2 * m) = num_condense n m) /\
+   (!m n. num_condense (2 * n) (2 * m + 1) = 2 * num_condense n m) /\
+   (!m n. num_condense (2 * n + 1) (2 * m + 1) = 2 * num_condense n m + 1)`,
+  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [num_condense] THEN
+  REWRITE_TAC[ADD_EQ_0; MULT_EQ_0; EVEN_MULT; EVEN_ADD; ODD_ADD; ODD_MULT;
+              BITVAL_CLAUSES; ARITH] THEN
+  REWRITE_TAC[ARITH_RULE `(2 * n) DIV 2 = n /\ (2 * n + 1) DIV 2 = n`] THEN
+  REWRITE_TAC[ADD_CLAUSES] THEN MESON_TAC[NUM_CONDENSE_0; MULT_CLAUSES]);;
+
+let NSUM_CLAUSES_IMAGE = prove
+ (`!f k. nsum {i | i < SUC k} f = f 0 + nsum {i | i < k} (f o SUC)`,
+  GEN_TAC THEN INDUCT_TAC THEN
+  ASM_REWRITE_TAC[NUMSEG_LT; NOT_SUC; NSUM_CLAUSES; ADD_CLAUSES] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[NSUM_SING; NUMSEG_SING] THEN
+  REWRITE_TAC[SUC_SUB1] THEN
+  SIMP_TAC[NSUM_CLAUSES_LEFT; ARITH_RULE `0 <= SUC n`] THEN
+  AP_TERM_TAC THEN REWRITE_TAC[ADD1; NSUM_OFFSET; o_DEF]);;
+
+let WORD_CONDENSE = prove
+ (`!x y:N word. word_condense x y = word(num_condense (val x) (val y))`,
+  REWRITE_TAC[FORALL_VAL_GEN; word_condense] THEN
+  REWRITE_TAC[BIT_WORD_AND; BIT_MASK_WORD; word_popcount; bits_of_word] THEN
+  SIMP_TAC[BIT_WORD] THEN
+  REWRITE_TAC[TAUT `p /\ (p /\ q) /\ p /\ r <=> (p /\ r) /\ q`] THEN
+  SIMP_TAC[ARITH_RULE `i:num < k ==> (j < k /\ j < i <=> j < i)`] THEN
+  REWRITE_TAC[RIGHT_IMP_FORALL_THM; IMP_IMP] THEN
+  MAP_EVERY X_GEN_TAC [`m:num`; `n:num`] THEN
+  DISCH_TAC THEN AP_TERM_TAC THEN CONV_TAC SYM_CONV THEN POP_ASSUM MP_TAC THEN
+  MAP_EVERY (fun t -> SPEC_TAC(t,t)) [`m:num`;`n:num`] THEN
+  SPEC_TAC(`dimindex(:N)`,`k:num`) THEN INDUCT_TAC THEN
+  SIMP_TAC[EXP; ARITH_RULE `n < 1 <=> n = 0`; CONJUNCT1 LT;
+           NUM_CONDENSE_0; EMPTY_GSPEC; NSUM_CLAUSES] THEN
+  GEN_REWRITE_TAC I [NUM_CASES_BINARY] THEN
+  CONJ_TAC THEN X_GEN_TAC `n:num` THEN
+  GEN_REWRITE_TAC I [NUM_CASES_BINARY] THEN
+  CONJ_TAC THEN X_GEN_TAC `m:num` THEN
+  REWRITE_TAC[ARITH_RULE `2 * m < 2 * n <=> m < n`] THEN
+  REWRITE_TAC[ARITH_RULE `2 * m + 1 < 2 * n <=> m < n`] THEN
+  ASM_SIMP_TAC[NUM_CONDENSE_CLAUSES] THEN POP_ASSUM(K ALL_TAC) THEN
+  ONCE_REWRITE_TAC[SET_RULE
+   `{x | P x /\ Q x} = {x | x IN {y | P y} /\ Q x}`] THEN
+  SIMP_TAC[CARD_EQ_NSUM; FINITE_NUMSEG_LT; FINITE_RESTRICT] THEN
+  REWRITE_TAC[NSUM_RESTRICT_SET] THEN
+  REWRITE_TAC[NSUM_CLAUSES_IMAGE; o_DEF] THEN
+  REWRITE_TAC[EXP; DIV_1; GSYM DIV_DIV] THEN
+  REWRITE_TAC[ARITH_RULE `(2 * n) DIV 2 = n /\ (2 * n + 1) DIV 2 = n`] THEN
+  REWRITE_TAC[ODD_MULT; ODD_ADD; ARITH; BITVAL_CLAUSES; MULT_CLAUSES;
+              ADD_CLAUSES; CONJUNCT1 LT; EMPTY_GSPEC; NSUM_CLAUSES] THEN
+  REWRITE_TAC[CARD_CLAUSES; ARITH_RULE `x + 1 = 1 + y <=> x = y`] THEN
+  REWRITE_TAC[EQ_ADD_RCANCEL; GSYM NSUM_LMUL; EXP_ADD; EXP_1] THEN
+  REWRITE_TAC[MULT_ASSOC]);;
+
+let NUM_CONDENSE_BINARY = prove
+ (`num_condense (NUMERAL(BIT0 n)) (NUMERAL(BIT1 m)) =
+   2 * num_condense (NUMERAL n) (NUMERAL m) /\
+   num_condense (NUMERAL(BIT1 n)) (NUMERAL(BIT1 m)) =
+   2 * num_condense (NUMERAL n) (NUMERAL m) + 1 /\
+   num_condense (NUMERAL(BIT0 n)) (NUMERAL(BIT0 m)) =
+   num_condense (NUMERAL n) (NUMERAL m) /\
+   num_condense (NUMERAL(BIT1 n)) (NUMERAL(BIT0 m)) =
+   num_condense (NUMERAL n) (NUMERAL m)`,
+  REWRITE_TAC[GSYM ADD1; ARITH_RULE `2 = SUC(SUC 0)`] THEN
+  REWRITE_TAC[BIT1; BIT0] THEN
+  ABBREV_TAC `zero = 0` THEN REWRITE_TAC[NUMERAL] THEN
+  FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC[GSYM MULT_2] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ARITH_RULE `SUC(2 * n) = 2 * n + 1`; NUM_CONDENSE_CLAUSES]);;
+
+let NUM_CONDENSE_CONV =
+  let [pth_even; pth_odd; pth_base0; pth_base1] =
+    CONJUNCTS NUM_CONDENSE_BINARY in
+  let baseconv = GEN_REWRITE_CONV I [NUM_CONDENSE_0]
+  and evenconv = GEN_REWRITE_CONV I [pth_even]
+  and oddconv = GEN_REWRITE_CONV I [pth_odd]
+  and downconv = GEN_REWRITE_CONV I [pth_base0; pth_base1] in
+  let rec conv tm =
+    (baseconv ORELSEC
+     (downconv THENC conv) ORELSEC
+     (evenconv THENC RAND_CONV conv THENC NUM_MULT_CONV) ORELSEC
+     (oddconv THENC LAND_CONV(RAND_CONV conv THENC NUM_MULT_CONV) THENC
+      NUM_ADD_CONV)) tm in
+  fun tm ->
+    match tm with
+     Comb(Comb(Const("num_condense",_),_),_) -> conv tm
+    | _ -> failwith "NUM_CONDENSE_CONV";;
+
+let WORD_CONDENSE_CONV =
+  GEN_REWRITE_CONV I [WORD_CONDENSE] THENC
+  RAND_CONV(BINOP_CONV WORD_VAL_CONV THENC NUM_CONDENSE_CONV);;
+
+extra_word_CONV := WORD_CONDENSE_CONV::(!extra_word_CONV);;
 
 (* ------------------------------------------------------------------------- *)
 (* A few more lemmas about words.                                            *)
@@ -1930,14 +2072,23 @@ let UNIFY_REFL_TAC: tactic =
       if vfree_in constr w_lhs then
         failwith (Printf.sprintf "UNIFY_REFL_TAC: failed: `%s`" (string_of_term w))
       else
-        let f = list_mk_abs (rargs,w_lhs) in
+        (* replace non-variable arguments of the RHS function with temporary
+           variables. *)
+        let rargs_vars = map
+          (fun v -> if is_var v then v else
+            let _ = Printf.printf
+              "UNIFY_REFL_TAC: warning: this isn't var: %s\n"
+              (string_of_term v) in genvar (type_of v)) rargs in
+        let f = list_mk_abs (rargs_vars,w_lhs) in
         let the_goal = mk_eq (w_lhs, list_mk_comb (f,rargs)) in
         let th = prove(the_goal, REWRITE_TAC[]) in
         UNIFY_ACCEPT_TAC [constr] th (asl,w);;
 
 let UNIFY_REFL_TAC_TEST = prove(`?x. 1 = x`, META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
 let UNIFY_REFL_TAC_TEST2 = prove(`?f. y + z = f y z`,
-		META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
+                META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
+let UNIFY_REFL_TAC_TEST3 = prove(`?f. y + 1 = f y 0`,
+                META_EXISTS_TAC THEN UNIFY_REFL_TAC);;
 
 (* Given `?x1 x2 ... . t` where t is a conjunction of equalities,
    HINT_EXISTS_REFL_TAC infers an assignment for the outermost quantfier x1.
@@ -1963,6 +2114,47 @@ let HINT_EXISTS_REFL_TAC: tactic =
     | [] -> failwith ("Cannot find a hint for " ^ (string_of_term qvar_to_match))
     | (Some t)::_ -> EXISTS_TAC t (asl,g);;
 
+(* 'Safe' versions of META_EXISTS_TAC and UNIFY_REFL_TAC.
+   SAFE_META_EXISTS_TAC receives a reference to list of variables that are
+   available when META_EXISTS_TAC is run.
+   The reference is then passed to SAFE_UNIFY_REFL_TAC, which checks whether
+   any unallowed variable is used during instantiation. *)
+let SAFE_META_EXISTS_TAC (freevars:term list ref): tactic =
+  fun (asl,w) ->
+    let fvs = freesl (w::(map (concl o snd) asl)) in
+    let _ = freevars := fvs in
+    META_EXISTS_TAC (asl,w);;
+
+let SAFE_UNIFY_REFL_TAC (allowed_vars_ref:term list ref)
+    (allowed_var_prefixes_ref:string list ref): tactic =
+  fun (asl,w) ->
+    let allowed_vars = !allowed_vars_ref in
+    let allowed_var_prefixes = !allowed_var_prefixes_ref in
+
+    let w_lhs,w_rhs = dest_eq w in
+    let vars_to_exclude =
+      if is_var w_rhs then []
+      else snd (strip_comb w_rhs) in
+    (* Check whether there is unlisted usage of free var in LHS of equality *)
+    let lhs_vars = subtract (frees w_lhs) vars_to_exclude in
+    let used_vars = subtract lhs_vars allowed_vars in
+    let used_vars = filter (fun v ->
+      let n = name_of v in
+      forall (fun pfx -> not (String.starts_with ~prefix:pfx n))
+          allowed_var_prefixes) used_vars in
+    if List.is_empty used_vars then
+      UNIFY_REFL_TAC (asl,w)
+    else
+     (let diff = subtract lhs_vars allowed_vars in
+      Printf.printf "SAFE_UNIFY_REFL_TAC: uses unaccepted variable(s)\n";
+      Printf.printf "Allowed vars: %s\n"
+        (String.concat ", " (map string_of_term allowed_vars));
+      Printf.printf "Additionally allowed var name prefixes: %s\n"
+        (String.concat ", " (allowed_var_prefixes));
+      Printf.printf "Disallowed vars that are used: %s\n"
+        (String.concat ", " (map string_of_term diff));
+      failwith "SAFE_UNIFY_REFL_TAC");;
+
 (* ------------------------------------------------------------------------- *)
 (* A tiny checker function printing an informative diagnostic message        *)
 (* ------------------------------------------------------------------------- *)
@@ -1976,9 +2168,58 @@ let type_check (t:term) (ty:hol_type): unit =
     ();;
 
 (* ------------------------------------------------------------------------- *)
+(* Extra definitions and theorems for list                                   *)
+(* ------------------------------------------------------------------------- *)
+
+let ENUMERATEL =
+  define
+    `(ENUMERATEL 0 (f:num->A list) = []) /\
+     (ENUMERATEL (SUC n) f = APPEND (f n) (ENUMERATEL n f))`;;
+
+let ENUMERATEL_ADD1 = prove(
+  `forall n f:num->A list. ENUMERATEL (n + 1) f = APPEND (f n) (ENUMERATEL n f)`,
+  REWRITE_TAC [GSYM ADD1; ENUMERATEL]);;
+
+let ENUMERATEL_APPEND_ZERO = prove(
+  `forall f:num->A list l.
+    APPEND (ENUMERATEL 0 f) l = l /\
+    APPEND l (ENUMERATEL 0 f) = l`,
+  REWRITE_TAC [ENUMERATEL;APPEND;APPEND_NIL]);;
+
+let ALL_IMP2 = prove(`forall (l:(A)list).
+  (forall x. P x ==> Q x) ==> ALL P l ==> ALL Q l`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ALL_IMP THEN
+  EXISTS_TAC `P:A->bool` THEN ASM_METIS_TAC[]);;
+
+let ALL_F = prove(`forall (l:(A)list) h. ALL (\x. false) (CONS h l) <=> F`,
+  REWRITE_TAC[ALL]);;
+
+let EX_SUBSET_LIST = prove(`forall (l:(A)list) P l2.
+  EX P l /\ ALL (\x. MEM x l2) l ==> EX P l2`,
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[EX];
+
+    REWRITE_TAC[EX;ALL] THEN
+    ASM_MESON_TAC[EX_MEM]
+  ]);;
+
+let GEN_EX_SUBSET_LIST = prove(`
+  forall (P:A->bool) Q (l:(A)list) l2.
+    (forall a b. P a /\ Q a b ==> P b) ==>
+    EX (\x. P x) l /\ ALL (\x. EX (\y. Q x y) l2) l ==> EX (\x. P x) l2`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  MAP_EVERY SPEC_TAC [(`l2:(A)list`,`l2:(A)list`);(`l:(A)list`,`l:(A)list`)]
+    THEN
+  LIST_INDUCT_TAC THENL [
+    REWRITE_TAC[EX];
+
+    REWRITE_TAC[EX;ALL] THEN
+    ASM_MESON_TAC[EX_MEM]
+  ]);;
+
+(* ------------------------------------------------------------------------- *)
 (* OCaml functions to merge diffs (called 'actions') that are used for       *)
 (* equivalence checking, specifically EQUIV_STEPS_TAC.                       *)
 (* ------------------------------------------------------------------------- *)
 
 needs "common/actions_merger.ml";;
-

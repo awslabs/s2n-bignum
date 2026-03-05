@@ -116,7 +116,7 @@ let BIGNUM_MUX16_CORRECT = prove
            (\s. read RIP s = word (pc + 0x101) /\
                 (val i < 16 ==> bignum_from_memory (z,val k) s = n (val i)))
           (MAYCHANGE [RIP; RSI; RCX; RAX; RDX; R8; R9; R10] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`] THEN

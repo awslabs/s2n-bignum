@@ -38,7 +38,7 @@ let WORD_MIN_CORRECT = prove
           (\s. read RIP s = word(pc + 0xa) /\
                C_RETURN s = word_umin a b)
           (MAYCHANGE [RIP; RAX] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`a:int64`; `b:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   X86_SIM_TAC WORD_MIN_EXEC (1--3) THEN POP_ASSUM_LIST(K ALL_TAC) THEN

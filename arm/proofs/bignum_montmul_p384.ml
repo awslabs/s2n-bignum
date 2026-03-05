@@ -2680,3 +2680,47 @@ let BIGNUM_AMONTMUL_P384_SUBROUTINE_CORRECT = time prove
       BIGNUM_AMONTMUL_P384_CORRECT in
     CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
    `[X19;X20;X21;X22;X23;X24]` 48);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "bignum_montmul_p384" subroutine_signatures)
+    BIGNUM_MONTMUL_P384_SUBROUTINE_CORRECT
+    BIGNUM_MONTMUL_P384_EXEC;;
+
+let BIGNUM_MONTMUL_P384_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           nonoverlapping (word pc,LENGTH bignum_montmul_p384_mc) (z,8 * 6) /\
+           ALL (nonoverlapping (word_sub stackpointer (word 48),48))
+           [word pc,LENGTH bignum_montmul_p384_mc; x,8 * 6; y,8 * 6; z,8 * 6]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_montmul_p384_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events x y z pc (word_sub stackpointer (word 48))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [x,48; y,48; z,48;
+                          word_sub stackpointer (word 48),48]
+                         [z,48; word_sub stackpointer (word 48),48]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MONTMUL_P384_EXEC);;

@@ -679,3 +679,47 @@ let BIGNUM_MUL_P521_ALT_SUBROUTINE_CORRECT = prove
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_MUL_P521_ALT_EXEC BIGNUM_MUL_P521_ALT_CORRECT
    `[X19;X20;X21;X22;X23;X24;X25;X26]` 128);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "bignum_mul_p521_alt" subroutine_signatures)
+    BIGNUM_MUL_P521_ALT_SUBROUTINE_CORRECT
+    BIGNUM_MUL_P521_ALT_EXEC;;
+
+let BIGNUM_MUL_P521_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           nonoverlapping (z,8 * 9) (word pc,1536) /\
+           ALL (nonoverlapping (word_sub stackpointer (word 128),128))
+           [word pc,1536; x,8 * 9; y,8 * 9; z,8 * 9]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mul_p521_alt_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events x y z pc (word_sub stackpointer (word 128))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [x,72; y,72; z,72;
+                          word_sub stackpointer (word 128),128]
+                         [z,72; word_sub stackpointer (word 128),128]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MUL_P521_ALT_EXEC);;

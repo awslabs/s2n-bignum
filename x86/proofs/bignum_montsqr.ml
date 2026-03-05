@@ -189,7 +189,7 @@ let BIGNUM_MONTSQR_CORRECT = time prove
            (MAYCHANGE [RIP; RAX; RBX; RBP; RDX; R8; R9;
                        R10; R11; R12; R13; R14; R15] ,,
             MAYCHANGE [memory :> bytes(z,8 * val k)] ,,
-            MAYCHANGE SOME_FLAGS)`,
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `m:int64`] THEN
   MAP_EVERY X_GEN_TAC [`a:num`; `n:num`; `pc:num`] THEN

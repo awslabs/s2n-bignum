@@ -68,7 +68,7 @@ let BIGNUM_MODOPTNEG_CORRECT = prove
                    ==> bignum_from_memory(z,val k) s =
                        if p = word 0 \/ a = 0 then a else n - a))
              (MAYCHANGE [RIP; RAX; RDX; R9; R10; R11] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val k)])`,
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `p:int64`; `x:int64`; `m:int64`] THEN

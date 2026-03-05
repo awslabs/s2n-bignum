@@ -9,7 +9,7 @@
 // integers modulo 8380417 with the result being centered around zero,
 // specifically -6283009 <= r <= 6283008, in-place.
 //
-// extern void mldsa_poly_reduce(int32_t a[static 256]);
+// extern void mldsa_reduce(int32_t a[static 256]);
 //
 // Standard x86-64 ABI: RDI = a
 // Microsoft x64 ABI:   RCX = a
@@ -18,14 +18,14 @@
 #include "_internal_s2n_bignum_x86.h"
 
         .intel_syntax noprefix
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_poly_reduce)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_poly_reduce)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_poly_reduce)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_reduce)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_reduce)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_reduce)
         .text
 
 #define a rdi
 
-S2N_BN_SYMBOL(mldsa_poly_reduce):
+S2N_BN_SYMBOL(mldsa_reduce):
         CFI_START
         _CET_ENDBR
 
@@ -293,7 +293,7 @@ S2N_BN_SYMBOL(mldsa_poly_reduce):
 #endif
         CFI_RET
 
-S2N_BN_SIZE_DIRECTIVE(mldsa_poly_reduce)
+S2N_BN_SIZE_DIRECTIVE(mldsa_reduce)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

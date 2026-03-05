@@ -73,7 +73,7 @@ let BIGNUM_SHL_SMALL_CORRECT = prove
                    ==> C_RETURN s =
                        word(highdigits (2 EXP (val c MOD 64) * a) (val p))))
              (MAYCHANGE [RIP; RAX; RCX; RDX; R8; R9; R10; R11] ,,
-              MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum(z,val p)])`,
   W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `n:num` THEN X_GEN_TAC `x:int64` THEN

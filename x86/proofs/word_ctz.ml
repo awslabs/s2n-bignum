@@ -40,7 +40,7 @@ let WORD_CTZ_CORRECT = prove
           (\s. read RIP s = word(pc + 0x10) /\
                C_RETURN s = word(word_ctz a))
           (MAYCHANGE [RIP; RAX; RDX] ,,
-           MAYCHANGE SOME_FLAGS)`,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   MAP_EVERY X_GEN_TAC [`a:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   X86_SIM_TAC WORD_CTZ_EXEC (1--4) THEN

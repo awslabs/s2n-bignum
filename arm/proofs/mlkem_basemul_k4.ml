@@ -569,14 +569,15 @@ let MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-let full_spec = mk_safety_spec
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "mlkem_basemul_k4" subroutine_signatures)
     MLKEM_BASEMUL_K4_SUBROUTINE_CORRECT
     MLKEM_BASEMUL_K4_EXEC;;
 
 let MLKEM_BASEMUL_K4_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall srcA srcB srcBt dst pc stackpointer returnaddress.
+       forall e srcA srcB srcBt dst pc stackpointer returnaddress.
            aligned 16 stackpointer /\
            ALLPAIRS nonoverlapping
            [dst,512; word_sub stackpointer (word 64),64]
@@ -587,13 +588,13 @@ let MLKEM_BASEMUL_K4_SUBROUTINE_SAFE = time prove
                (\s.
                     aligned_bytes_loaded s (word pc) mlkem_basemul_k4_mc /\
                     read PC s = word pc /\
-                    read X30 s = returnaddress /\
                     read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
                     C_ARGUMENTS [dst; srcA; srcB; srcBt] s /\
                     read events s = e)
                (\s.
+                    read PC s = returnaddress /\
                     exists e2.
-                        read PC s = returnaddress /\
                         read events s = APPEND e2 e /\
                         e2 =
                         f_events srcA srcB srcBt dst pc
@@ -604,5 +605,5 @@ let MLKEM_BASEMUL_K4_SUBROUTINE_SAFE = time prove
                          word_sub stackpointer (word 64),64]
                         [dst,512; word_sub stackpointer (word 64),64])
                (\s s'. true)`,
-  ASSERT_GOAL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC MLKEM_BASEMUL_K4_EXEC);;
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_BASEMUL_K4_EXEC);;

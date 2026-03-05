@@ -87,10 +87,10 @@ let equiv_goal = mk_equiv_statement_simple
   eqout (* Output state equivalence *)
   mc EXEC  (* First program machine code *)
   `MAYCHANGE [RIP; RSI; RDI] ,, MAYCHANGE [memory :> bytes (outbuf, 8)] ,,
-   MAYCHANGE SOME_FLAGS`
+   MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`
   mc2 EXEC2 (* Second program machine code *)
   `MAYCHANGE [RIP; R8; R9] ,, MAYCHANGE [memory :> bytes (outbuf, 8)] ,,
-   MAYCHANGE SOME_FLAGS`;;
+   MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events]`;;
 
 (* equiv_goal is:
   `forall pc pc2 inbuf outbuf.

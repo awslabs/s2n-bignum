@@ -5013,7 +5013,7 @@ let LOCAL_SQR_P521_TAC =
             MAYCHANGE
              [memory :> bytes(word_add (read p3 t) (word n3),8 * 9);
               memory :> bytes(word_add stackpointer (word 504),72)] ,,
-            MAYCHANGE SOME_FLAGS)`
+            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5221,7 +5221,7 @@ let LOCAL_MUL_P521_TAC =
           MAYCHANGE
             [memory :> bytes(word_add (read p3 t) (word n3),8 * 9);
              memory :> bytes(word_add stackpointer (word 504),72)] ,,
-         MAYCHANGE SOME_FLAGS)`
+         MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5430,7 +5430,7 @@ let LOCAL_ADD_P521_TAC =
          (MAYCHANGE [RIP; RAX; RDX; R8; R9; R10; R11; RBX; R12; R13; R14] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5553,7 +5553,7 @@ let LOCAL_SUB_P521_TAC =
          (MAYCHANGE [RIP; RAX; RDX; R8; R9; R10; R11; RBX; R12; R13; R14] ,,
           MAYCHANGE
            [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-          MAYCHANGE SOME_FLAGS)`
+          MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5652,7 +5652,7 @@ let LOCAL_WEAKMUL_P521_TAC =
           MAYCHANGE
             [memory :> bytes(word_add (read p3 t) (word n3),8 * 9);
              memory :> bytes(word_add stackpointer (word 504),72)] ,,
-         MAYCHANGE SOME_FLAGS)`
+         MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -5839,7 +5839,7 @@ let LOCAL_CMSUBC9_P521_TAC =
                         R10; R11; R12; R13; R14; R15] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -6122,7 +6122,7 @@ let LOCAL_CMSUB41_P521_TAC =
                         R10; R11; R12; R13; R14; R15] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
 
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -6434,7 +6434,7 @@ let LOCAL_CMSUB38_P521_TAC =
                         R10; R11; R12; R13; R14; R15] ,,
              MAYCHANGE
                [memory :> bytes(word_add (read p3 t) (word n3),8 * 9)] ,,
-              MAYCHANGE SOME_FLAGS)`
+              MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`
  (REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
@@ -6760,7 +6760,7 @@ let P521_JDOUBLE_ALT_CORRECT = time prove
                             (bignum_triple_from_memory(p3,9) s))
           (MAYCHANGE [RIP; RAX; RBX; RBP; RCX; RDX; R8; R9;
                       R10; R11; R12; R13; R14; R15] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(p3,216);
                       memory :> bytes(stackpointer,576)])`,
   REWRITE_TAC[FORALL_PAIR_THM] THEN
@@ -6930,3 +6930,192 @@ let P521_JDOUBLE_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 640),640)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p521_jdouble_alt" subroutine_signatures)
+    P521_JDOUBLE_ALT_CORRECT
+    P521_JDOUBLE_ALT_EXEC;;
+
+let P521_JDOUBLE_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer.
+           ALL (nonoverlapping (stackpointer,576))
+           [word pc,17040; p1,216; p3,216] /\
+           nonoverlapping (p3,216) (word pc,17040)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST p521_jdouble_alt_tmc) /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 17022) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,216; p3,216; stackpointer,576]
+                         [p3,216; stackpointer,576]))
+               (MAYCHANGE
+                [RIP; RAX; RBX; RBP; RCX; RDX; R8; R9; R10; R11; R12; R13;
+                 R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,216); memory :> bytes (stackpointer,576)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P521_JDOUBLE_ALT_EXEC);;
+
+let P521_JDOUBLE_ALT_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 624),624))
+        [word pc,LENGTH p521_jdouble_alt_tmc; p1,216] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jdouble_alt_tmc;
+         word_sub stackpointer (word 624),632]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jdouble_alt_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 624))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p3,216; word_sub stackpointer (word 624),632]
+                      [p3,216; word_sub stackpointer (word 624),624]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 624),624)])`,
+  X86_PROMOTE_RETURN_STACK_TAC p521_jdouble_alt_tmc P521_JDOUBLE_ALT_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 624 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P521_JDOUBLE_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 624),624))
+        [word pc,LENGTH p521_jdouble_alt_mc; p1,216] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jdouble_alt_mc;
+         word_sub stackpointer (word 624),632]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jdouble_alt_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 624))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p3,216; word_sub stackpointer (word 624),632]
+                      [p3,216; word_sub stackpointer (word 624),624]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 624),624)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JDOUBLE_ALT_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let P521_JDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 640),640))
+        [word pc,LENGTH p521_jdouble_alt_windows_tmc; p1,216] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jdouble_alt_windows_tmc;
+         word_sub stackpointer (word 640),648]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jdouble_alt_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 640))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p3,216; word_sub stackpointer (word 640),648]
+                      [p3,216; word_sub stackpointer (word 640),640]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 640),640)])`,
+  WINDOWS_X86_WRAP_STACK_TAC
+    p521_jdouble_alt_windows_tmc p521_jdouble_alt_tmc
+    P521_JDOUBLE_ALT_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 624 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P521_JDOUBLE_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e p3 p1 pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 640),640))
+        [word pc,LENGTH p521_jdouble_alt_windows_mc; p1,216] /\
+        ALL (nonoverlapping (p3,216))
+        [word pc,LENGTH p521_jdouble_alt_windows_mc;
+         word_sub stackpointer (word 640),648]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p521_jdouble_alt_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [p3; p1] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events p1 p3 pc (word_sub stackpointer (word 640))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [p1,216; p3,216; word_sub stackpointer (word 640),648]
+                      [p3,216; word_sub stackpointer (word 640),640]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (p3,216);
+              memory :> bytes (word_sub stackpointer (word 640),640)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P521_JDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

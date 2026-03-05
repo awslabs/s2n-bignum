@@ -129,7 +129,7 @@ let BIGNUM_HALF_P521_CORRECT = time prove
                    ==> bignum_from_memory (z,9) s =
                        (inverse_mod p_521 2 * n) MOD p_521))
           (MAYCHANGE [RIP; RAX; RDX; RCX] ,,
-           MAYCHANGE SOME_FLAGS ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bignum(z,9)])`,
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `n:num`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES] THEN
