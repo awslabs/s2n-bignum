@@ -550,7 +550,8 @@ let ASSERT_CONCL_TAC (t:term): tactic =
 (* Tactics corresponding to Hoare rules.                                     *)
 (* ------------------------------------------------------------------------- *)
 
-let allowed_vars_e = ref [];;
+(*monomorphic type annotation to avoid value-restriction weak vars in generated files*)
+let allowed_vars_e : term list ref = ref [];;
 
 let NIL_IMPLIES_APPEND_EQ =
   prove(`forall (l:(A)list) m m'. m = m' /\ [] = l ==> m = APPEND l m'`,
