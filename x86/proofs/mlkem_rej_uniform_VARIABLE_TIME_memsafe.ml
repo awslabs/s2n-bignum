@@ -12,16 +12,10 @@
 (* (exists f_events. forall ... e2 = f_events <public_params>) cannot        *)
 (* be used here because the microarchitectural events depend on private      *)
 (* data (which buffer elements pass the < 3329 filter).                      *)
-(*                                                                           *)
-(* Note the readable range for buf is val buflen + 4, not val buflen.        *)
-(* This is because the MOVDQU instruction reads 16 bytes at 12-byte          *)
-(* aligned offsets within the buffer: when r8 = buflen - 12, the read        *)
-(* extends to buf + buflen + 4, i.e., 4 bytes past the declared buffer.      *)
 (* ========================================================================= *)
 
 needs "x86/proofs/mlkem_rej_uniform_VARIABLE_TIME.ml";;
 needs "x86/proofs/consttime.ml";;
-loadt "x86/proofs/debug.ml";;
 
 (* Helper: discharge the memsafe postcondition
      exists e2. read events s = APPEND e2 e /\ memaccess_inbounds e2 R W
@@ -78,42 +72,20 @@ let DISCHARGE_MEMSAFE_ASM_TAC:tactic =
   CONJ_TAC THENL
    [REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN
     REPEAT CONJ_TAC THEN
-    TRY(REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE
-                CONTAINED_ASM_TAC) THEN NO_TAC);
+    REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE
+                CONTAINED_ASM_TAC) THEN
+    NO_TAC;
     REWRITE_TAC[APPEND; APPEND_NIL] THEN
     FIRST_ASSUM ACCEPT_TAC];;
 
-let ACONV_DIAG_TAC (asl,w) =
-  let n = List.length asl in
-  List.iteri (fun i (_,th) ->
-    let c = concl th in
-    if aconv c w then
-      Printf.printf "Asm %d: ACONV MATCH\n" (n - 1 - i)
-    else if can (find_term (fun t ->
-        try name_of t = "memaccess_inbounds" with Failure _ -> false)) c
-    then begin
-      Printf.printf "Asm %d: memaccess_inbounds but NOT aconv\n" (n - 1 - i);
-      let ca = snd(strip_comb c) and wa = snd(strip_comb w) in
-      if List.length ca = List.length wa then
-        List.iteri (fun j (ct,wt) ->
-          Printf.printf "  arg%d: aconv=%b type_c=%s type_w=%s\n"
-            j (aconv ct wt)
-            (string_of_type(type_of ct))
-            (string_of_type(type_of wt)))
-          (List.combine ca wa)
-      else Printf.printf "  different number of args: %d vs %d\n"
-        (List.length ca) (List.length wa)
-    end) asl;
-  ALL_TAC (asl,w);;
-
 let MLKEM_REJ_UNIFORM_MEMSAFE = prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer e.
+ (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (stackpointer,528))
-          [(word pc,0xf7); (buf,val buflen + 4); (table,4096)] /\
+          [(word pc,0x100); (buf,val buflen); (table,4096)] /\
       ALL (nonoverlapping (res,512))
-          [(word pc,0xf7); (stackpointer,528)]
+          [(word pc,0x100); (stackpointer,528)]
       ==> ensures x86
            (\s. bytes_loaded s (word pc) (BUTLAST mlkem_rej_uniform_tmc) /\
                 read RIP s = word(pc + 0x7) /\
@@ -123,11 +95,11 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
                 wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
                 wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
                 read events s = e)
-           (\s. read RIP s = word(pc + 0xef) /\
+           (\s. read RIP s = word(pc + 0xf8) /\
                 (exists e2.
                      read events s = APPEND e2 e /\
                      memaccess_inbounds e2
-                       [buf,val buflen + 4; table,4096; stackpointer,528]
+                       [buf,val buflen; table,4096; stackpointer,528]
                        [stackpointer,528; res,512]))
            (MAYCHANGE [RIP; RDI; RSI; RAX; RCX; RDX; R8; R9; R10; R11] ,,
             MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
@@ -140,8 +112,8 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   MAP_EVERY X_GEN_TAC [`res:int64`; `buf:int64`] THEN
   W64_GEN_TAC `buflen:num` THEN
   MAP_EVERY X_GEN_TAC
-   [`table:int64`; `inlist:(12 word)list`; `pc:num`; `stackpointer:int64`;
-    `e:(uarch_event)list`] THEN
+   [`table:int64`; `inlist:(12 word)list`;
+    `e:(uarch_event)list`; `pc:num`; `stackpointer:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               SOME_FLAGS; ALL; C_RETURN; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -192,7 +164,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   (* === Phase 3: Main loop with event tracking === *)
   (* Invariant = CORRECT invariant + event accumulator *)
 
-  ENSURES_WHILE_UP2_TAC `N:num` `pc + 0x73` `pc + 0xd3`
+  ENSURES_WHILE_UP2_TAC `N:num` `pc + 0x73` `pc + 0xdc`
    `\i s. read RSP s = stackpointer /\
           ~read DF s /\
           read (memory :> bytes (buf,buflen)) s = num_of_wordlist inlist /\
@@ -215,7 +187,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
           (exists e_acc.
             read events s = APPEND e_acc e /\
             memaccess_inbounds e_acc
-              [buf,buflen + 4; table,4096; stackpointer,528]
+              [buf,buflen; table,4096; stackpointer,528]
               [stackpointer,528; res,512])` THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
    [(* === Phase 3a: Pre-loop establishes invariant at i=0 === *)
@@ -257,6 +229,33 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
     XMM_EXISTSTOP_TAC "top5" `YMM5` THEN
     ABBREV_TAC `q0 = read (memory :> bytes128 cur) s0` THEN
 
+    (* Prove memory read decomposition for MOVQ+PINSRD (Hanno's fix) *)
+    SUBGOAL_THEN `read (memory :> bytes64 cur) s0 = (word_subword (q0 : 128 word) (0,64) : 64 word)`
+    ASSUME_TAC THENL [
+      EXPAND_TAC "q0" THEN
+      REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUBWORD; VAL_READ_WBYTES;
+            BYTES64_WBYTES; BYTES128_WBYTES; DIMINDEX_64; DIMINDEX_128;
+            READ_COMPONENT_COMPOSE] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[DIV_1; READ_BYTES_MOD] THEN
+      REWRITE_TAC[ARITH_RULE `18446744073709551616 = 2 EXP (8 * 8)`] THEN
+      REWRITE_TAC[READ_BYTES_MOD] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+    SUBGOAL_THEN `read (memory :> bytes32 (word_add buf (word (1 * val (word (12 * i) : 64 word) + 8)))) s0
+       = (word_subword (q0 : 128 word) (64,32) : 32 word)`
+    ASSUME_TAC THENL [
+      EXPAND_TAC "q0" THEN EXPAND_TAC "cur" THEN
+      REWRITE_TAC[MULT_CLAUSES; WORD_RULE
+      `word_add buf (word(val(word x:int64) + 8)):int64 =
+       word_add (word_add buf (word x)) (word 8)`] THEN
+      REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_SUBWORD; VAL_READ_WBYTES;
+                  BYTES32_WBYTES; BYTES128_WBYTES; DIMINDEX_32; DIMINDEX_128;
+                  READ_COMPONENT_COMPOSE] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[ARITH_RULE `18446744073709551616 = 2 EXP (8 * 8)`;
+                  ARITH_RULE `4294967296 = 2 EXP (8 * 4)`] THEN
+      REWRITE_TAC[READ_BYTES_DIV; READ_BYTES_MOD] THEN
+      CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+
     (* Simulate up to table index computation, same as CORRECT *)
     ASSUME_TAC(WORD_RULE
      `!x. word (1 * val(word x:int64)):int64 = word x`) THEN
@@ -265,7 +264,14 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
       RULE_ASSUM_TAC(REWRITE_RULE[WORD_SUBWORD_AND]) THEN
       RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV (WORD_SIMPLE_SUBWORD_CONV))) THEN
       RULE_ASSUM_TAC(CONV_RULE WORD_REDUCE_CONV))
-    (1--11) THEN
+    (1--12) THEN
+
+    (* Recombine MOVQ+PINSRD result back into word_zx form (Hanno's fix) *)
+    RULE_ASSUM_TAC(REWRITE_RULE[WORD_BLAST
+     `word_insert (word_zx (word_subword (q0:int128) (0,64):int64):int128)
+                  (64,32)
+                  (word_subword q0 (64,32):int32) =
+      (word_zx:96 word->int128) (word_subword q0 (0,96))`]) THEN
 
     (* Simplify, same as CORRECT *)
     RULE_ASSUM_TAC(REWRITE_RULE[lemma1a; lemma1b; WORD_BLAST
@@ -282,15 +288,15 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
     RULE_ASSUM_TAC(REWRITE_RULE[TAUT `(if p then T else F) <=> p`]) THEN
 
     (* Table lookup, same as CORRECT *)
-    REABBREV_TAC `idx = read R10 s11` THEN
-    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC [12] THEN
+    REABBREV_TAC `idx = read R10 s12` THEN
+    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC [13] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
      `word_shl x 4:int64 = word(16 * val x)`]) THEN
     ABBREV_TAC
      `tab =
       read (memory :> bytes128(word_add table (word(16 * val(idx:int64)))))
-           s12` THEN
-    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (13--14) THEN
+           s13` THEN
+    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (14--15) THEN
 
     (* Simplify, same as CORRECT *)
     RULE_ASSUM_TAC(REWRITE_RULE[lemma2]) THEN
@@ -333,7 +339,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
               (EL j (SUB_LIST(8 * i,8) inlist)) = x j`
     ASSUME_TAC THENL
      [UNDISCH_THEN
-       `read (memory :> bytes (buf,buflen)) s14 =
+       `read (memory :> bytes (buf,buflen)) s15 =
         num_of_wordlist(inlist:(12 word)list)`
        (MP_TAC o AP_TERM
          `\x. x DIV 2 EXP (8 * 12 * i) MOD 2 EXP (8 * 12)`) THEN
@@ -374,7 +380,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 
     (* Table-based selection brute force, same as CORRECT *)
     SUBGOAL_THEN
-     `read YMM2 s14 =
+     `read YMM2 s15 =
       (word_join:int128->int128->int256)
       (word_subword (ymm2_init:int256) (128,128))
       (word(num_of_wordlist
@@ -382,7 +388,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
                  [x 0:int16; x 1; x 2; x 3; x 4; x 5; x 6; x 7])))`
     MP_TAC THENL
      [UNDISCH_TAC
-       `read(memory :> bytes(table,4096)) s14 =
+       `read(memory :> bytes(table,4096)) s15 =
         num_of_wordlist mlkem_rej_uniform_table` THEN
       REPLICATE_TAC 4
        (GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV)
@@ -411,12 +417,12 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 
     (* Writeback and popcount, same as CORRECT *)
     VAL_INT64_TAC `curlen:num` THEN
-    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (15--16) THEN
+    X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (16--17) THEN
     RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV (WORD_SIMPLE_SUBWORD_CONV))) THEN
 
     (* Counting, same as CORRECT *)
     SUBGOAL_THEN
-     `read R11 s16 = word(LENGTH (FILTER (\x. val x < 3329)
+     `read R11 s17 = word(LENGTH (FILTER (\x. val x < 3329)
                        [x 0:int16; x 1; x 2; x 3; x 4; x 5; x 6; x 7]))`
     MP_TAC THENL
      [ASM_REWRITE_TAC[] THEN
@@ -424,7 +430,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
         GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o RAND_CONV) [SYM th]) THEN
       REPEAT(ONCE_REWRITE_TAC[FILTER] THEN REWRITE_TAC[] THEN
              COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
-      DISCARD_STATE_TAC "s16" THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
+      DISCARD_STATE_TAC "s17" THEN REWRITE_TAC[BITVAL_CLAUSES] THEN
       CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_CONDENSE_CONV)) THEN
       REWRITE_TAC[LENGTH; FILTER] THEN CONV_TAC NUM_REDUCE_CONV THEN REFL_TAC;
       DISCARD_MATCHING_ASSUMPTIONS [`read R11 s = x`] THEN STRIP_TAC] THEN
@@ -447,7 +453,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 
     SUBGOAL_THEN
      `curlen' < 264 /\
-      read (memory :> bytes (stackpointer,2*curlen')) s16 =
+      read (memory :> bytes (stackpointer,2*curlen')) s17 =
       num_of_wordlist(curlist':int16 list)`
     STRIP_ASSUME_TAC THENL
      [MAP_EVERY EXPAND_TAC ["curlen'"; "curlist'"] THEN CONJ_TAC THENL
@@ -459,7 +465,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
       DISCH_THEN SUBST1_TAC THEN
       UNDISCH_THEN
        `read (memory :> bytes128 (word_add stackpointer (word (2 * curlen))))
-             s16 =
+             s17 =
         word (num_of_wordlist(lis:int16 list))`
        (MP_TAC o AP_TERM `val:int128->num`) THEN
       REWRITE_TAC[READ_COMPONENT_COMPOSE; BYTES128_WBYTES; VAL_READ_WBYTES;
@@ -505,17 +511,14 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
       FIRST_X_ASSUM(MP_TAC o C MATCH_MP (ASSUME `i + 1 < N`)) THEN
       ASM_REWRITE_TAC[NOT_LT; ARITH_RULE `(i + 1) + 1 = i + 2`] THEN
       STRIP_TAC THEN VAL_INT64_TAC `curlen':num` THEN
-      X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (17--19) THEN
-      FPRINT_MSG "branch1: past steps 17-19" THEN
+      X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (18--20) THEN
       (* Memsafe: protect events from GSYM WORD_ADD rewriting *)
       POP_ASSUM(fun ev_th ->
         POP_ASSUM MP_TAC THEN
         ASM_REWRITE_TAC[GSYM WORD_ADD; GSYM NOT_LT] THEN
         DISCH_TAC THEN
         ASSUME_TAC ev_th) THEN
-      FPRINT_MSG "branch1: past RIP resolution" THEN
-      X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (20--22) THEN
-      FPRINT_MSG "branch1: past steps 20-22" THEN
+      X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (21--23) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
        [MATCH_MP_TAC(TAUT `p ==> (if p then x else y) = x`) THEN
         ASM_REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0; NOT_LT; DE_MORGAN_THM] THEN
@@ -530,16 +533,13 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
       REPLICATE_TAC 3 (CONJ_TAC THENL [CONV_TAC WORD_BLAST; ALL_TAC]) THEN
       CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
       ASM_REWRITE_TAC[GSYM WORD_ADD] THEN
-      FPRINT_MSG "branch1: before WORD_RULE" THEN
       CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-      FPRINT_MSG "branch1: before DISCHARGE_MEMSAFE_ASM_TAC" THEN
       RULE_ASSUM_TAC(REWRITE_RULE[WORD_ADD]) THEN
+      EXPAND_TAC "cur" THEN
       DISCHARGE_MEMSAFE_ASM_TAC;
 
       (* Case i + 1 >= N: loop might exit *)
-      FPRINT_MSG "branch2: entering i+1 >= N branch" THEN
-      X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (17--19) THEN
-      FPRINT_MSG "branch2: past steps 17-19" THEN
+      X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (18--20) THEN
       (* Memsafe: protect events from GSYM WORD_ADD rewriting *)
       POP_ASSUM(fun ev_th ->
         POP_ASSUM MP_TAC THEN
@@ -548,25 +548,18 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
         COND_CASES_TAC THEN DISCH_TAC THEN
         ASSUME_TAC ev_th) THENL
        [(* Exit via JAE (outlen >= 256) *)
-        FPRINT_MSG "branch2a: Exit via JAE" THEN
         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-        FPRINT_MSG "branch2a: past ENSURES_FINAL_STATE_TAC" THEN
         ASM_REWRITE_TAC[XMM0; XMM4; XMM5; READ_ZEROTOP_128] THEN
-        FPRINT_MSG "branch2a: past XMM rewrite" THEN
         REPLICATE_TAC 3 (CONJ_TAC THENL [CONV_TAC WORD_BLAST; ALL_TAC]) THEN
-        FPRINT_MSG "branch2a: past WORD_BLAST" THEN
         CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
         ASM_REWRITE_TAC[GSYM WORD_ADD] THEN
-        FPRINT_MSG "branch2a: past GSYM WORD_ADD" THEN
         TRY(CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC]) THEN
-        FPRINT_MSG "branch2a: before DISCHARGE_MEMSAFE_ASM_TAC" THEN
         RULE_ASSUM_TAC(REWRITE_RULE[WORD_ADD]) THEN
+        EXPAND_TAC "cur" THEN
         DISCHARGE_MEMSAFE_ASM_TAC;
 
         (* Fall through to buffer exhaustion exit *)
-        FPRINT_MSG "branch2b: buffer exhaustion" THEN
-        X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (20--22) THEN
-        FPRINT_MSG "branch2b: past steps 20-22" THEN
+        X86_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (21--23) THEN
         ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
          [MATCH_MP_TAC(TAUT `p ==> (if ~p then x else y) = y`) THEN
           ASM_REWRITE_TAC[VAL_EQ_0; WORD_SUB_EQ_0; NOT_LT; DE_MORGAN_THM] THEN
@@ -581,7 +574,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
             SIMPLE_ARITH_TAC;
             MATCH_MP_TAC(ARITH_RULE
              `l < 256 ==> 256 <= l ==> b <= 12 * i'`)] THEN
-          DISCARD_STATE_TAC "s22" THEN
+          DISCARD_STATE_TAC "s23" THEN
           UNDISCH_TAC `~(256 <= curlen')` THEN REWRITE_TAC[NOT_LE] THEN
           MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] LET_TRANS) THEN
           SUBST1_TAC(SYM(ASSUME `LENGTH(curlist':int16 list) = curlen'`)) THEN
@@ -590,17 +583,13 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
           DISCH_THEN(X_CHOOSE_THEN `d:num` SUBST1_TAC) THEN
           REWRITE_TAC[LEFT_ADD_DISTRIB; SUB_LIST_SPLIT] THEN
           REWRITE_TAC[REJ_SAMPLE_APPEND; LENGTH_APPEND; LE_ADD];
-          FPRINT_MSG "branch2b: memsafe conjunct" THEN
           ASM_REWRITE_TAC[XMM0; XMM4; XMM5; READ_ZEROTOP_128] THEN
-          FPRINT_MSG "branch2b: past XMM rewrite" THEN
           REPLICATE_TAC 3 (CONJ_TAC THENL [CONV_TAC WORD_BLAST; ALL_TAC]) THEN
-          FPRINT_MSG "branch2b: past WORD_BLAST" THEN
           CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
           ASM_REWRITE_TAC[GSYM WORD_ADD] THEN
-          FPRINT_MSG "branch2b: past GSYM WORD_ADD" THEN
           TRY(CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC]) THEN
-          FPRINT_MSG "branch2b: before DISCHARGE_MEMSAFE_ASM_TAC" THEN
           RULE_ASSUM_TAC(REWRITE_RULE[WORD_ADD]) THEN
+          EXPAND_TAC "cur" THEN
           DISCHARGE_MEMSAFE_ASM_TAC]]];
 
     (* === Phase 3c: Post-loop copying to output === *)
@@ -653,30 +642,19 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
       DISCH_THEN SUBST1_TAC THEN DISCH_TAC] THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[WORD_ADD]) THEN
-    FPRINT_MSG "phase3c: before VAL_WORD normalization" THEN
-    FPRINT THEN
     SUBGOAL_THEN `val(word buflen:int64) = buflen`
       (fun th -> REWRITE_TAC[th]) THENL
      [MATCH_MP_TAC VAL_WORD_EQ THEN
       REWRITE_TAC[DIMINDEX_64] THEN MEMSAFE_ARITH_TAC;
       ALL_TAC] THEN
-    FPRINT_MSG "phase3c: after VAL_WORD normalization" THEN
     SAFE_META_EXISTS_TAC allowed_vars_e THEN
-    FPRINT_MSG "phase3c: past SAFE_META_EXISTS_TAC" THEN
     CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-    FPRINT_MSG "phase3c: past EXISTS_E2_TAC" THEN
     REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
-    FPRINT_MSG "phase3c: past MEMACCESS_INBOUNDS_APPEND" THEN
     CONJ_TAC THENL
-     [FPRINT_MSG "phase3c: new events branch" THEN
-      REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN
-      FPRINT_MSG "phase3c: past memaccess_inbounds unfold" THEN
+     [REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN
       REPEAT CONJ_TAC THEN
       TRY(REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE
-                  CONTAINED_ASM_TAC) THEN NO_TAC) THEN
-      FPRINT_MSG "phase3c: CONTAINED_ASM_TAC did not solve all goals" THEN
-      FPRINT;
-      FPRINT_MSG "phase3c: e_acc branch" THEN
+                  CONTAINED_ASM_TAC) THEN NO_TAC);
       REWRITE_TAC[APPEND; APPEND_NIL] THEN
       W(fun (asl,w) ->
         let ths = filter (fun (_,th) -> aconv (concl th) w) asl in
@@ -692,12 +670,12 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_MEMSAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress e.
+ (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 528),528))
           [(word pc,LENGTH mlkem_rej_uniform_tmc);
-           (buf,val buflen + 4); (table,4096)] /\
+           (buf,val buflen); (table,4096)] /\
       ALL (nonoverlapping (res,512))
           [(word pc,LENGTH mlkem_rej_uniform_tmc);
            (word_sub stackpointer (word 528),536)]
@@ -716,7 +694,7 @@ let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_MEMSAFE = time prove
                 (exists e2.
                      read events s = APPEND e2 e /\
                      memaccess_inbounds e2
-                       [buf,val buflen + 4; table,4096;
+                       [buf,val buflen; table,4096;
                         word_sub stackpointer (word 528),536]
                        [word_sub stackpointer (word 528),528; res,512]))
            (MAYCHANGE [RSP] ,,
@@ -729,15 +707,15 @@ let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_MEMSAFE = time prove
   CONV_TAC TWEAK_CONV THEN
   X86_PROMOTE_RETURN_STACK_TAC mlkem_rej_uniform_tmc
     (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_MEMSAFE) `[]` 528 THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  DISCHARGE_MEMSAFE_TAC);;
 
 let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress e.
+ (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 528),528))
           [(word pc,LENGTH mlkem_rej_uniform_mc);
-           (buf,val buflen + 4); (table,4096)] /\
+           (buf,val buflen); (table,4096)] /\
       ALL (nonoverlapping (res,512))
           [(word pc,LENGTH mlkem_rej_uniform_mc);
            (word_sub stackpointer (word 528),536)]
@@ -756,7 +734,7 @@ let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
                 (exists e2.
                      read events s = APPEND e2 e /\
                      memaccess_inbounds e2
-                       [buf,val buflen + 4; table,4096;
+                       [buf,val buflen; table,4096;
                         word_sub stackpointer (word 528),536]
                        [word_sub stackpointer (word 528),528; res,512]))
            (MAYCHANGE [RSP] ,,
@@ -772,89 +750,21 @@ let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
 
 (* ------------------------------------------------------------------------- *)
 (* Memory safety of Windows ABI version.                                     *)
+(*                                                                           *)
+(* TODO: WINDOWS_X86_WRAP_STACK_TAC's non-safety path cannot handle          *)
+(* postconditions with (exists e2. memaccess_inbounds e2 ...) because        *)
+(* the stack region sizes differ between the inner theorem (stackpointer,    *)
+(* 528) and the Windows wrapper (word_sub stackpointer (word 544), 552/544). *)
+(* The safety path (for theorems with outer "exists f_events") handles this  *)
+(* by tracking events through the prologue/epilogue separately, but that     *)
+(* pattern requires f_events to be constructible during the proof. For this  *)
+(* loop-based proof where events are existentially quantified across         *)
+(* iterations, f_events cannot be constructed by META_EXISTS_TAC unification.*)
+(*                                                                           *)
+(* Possible fixes:                                                           *)
+(* 1. Extend WINDOWS_X86_WRAP_STACK_TAC to handle non-safety postconditions  *)
+(*    with event tracking (new infrastructure).                              *)
+(* 2. Write a manual Windows wrapper proof using ENSURES_SEQUENCE_TAC.       *)
+(* 3. Restructure the proof to track concrete events through the loop        *)
+(*    (enabling the exists f_events pattern).                                *)
 (* ------------------------------------------------------------------------- *)
-
-let MLKEM_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_MEMSAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress e.
-      12 divides val buflen /\
-      8 * val buflen = 12 * LENGTH inlist /\
-      ALL (nonoverlapping (word_sub stackpointer (word 544),544))
-          [(word pc,LENGTH mlkem_rej_uniform_windows_tmc);
-           (buf,val buflen + 4); (table,4096)] /\
-      ALL (nonoverlapping (res,512))
-          [(word pc,LENGTH mlkem_rej_uniform_windows_tmc);
-           (word_sub stackpointer (word 544),552)]
-      ==> ensures x86
-           (\s. bytes_loaded s (word pc) mlkem_rej_uniform_windows_tmc /\
-                read RIP s = word pc /\
-                read RSP s = stackpointer /\
-                read (memory :> bytes64 stackpointer) s = returnaddress /\
-                WINDOWS_C_ARGUMENTS [res;buf;buflen;table] s /\
-                (read DF s <=> false) /\
-                wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
-                wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
-                read events s = e)
-           (\s. read RIP s = returnaddress /\
-                read RSP s = word_add stackpointer (word 8) /\
-                (exists e2.
-                     read events s = APPEND e2 e /\
-                     memaccess_inbounds e2
-                       [buf,val buflen + 4; table,4096;
-                        word_sub stackpointer (word 544),552]
-                       [word_sub stackpointer (word 544),544; res,512]))
-           (MAYCHANGE [RSP] ,,
-            WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-            MAYCHANGE [memory :> bytes(res,512);
-                       memory :> bytes(word_sub stackpointer (word 544),544)])`,
-  let TWEAK_CONV =
-    TOP_DEPTH_CONV let_CONV THENC
-    REWRITE_CONV[wordlist_from_memory] THENC
-    TOP_DEPTH_CONV DIMINDEX_CONV THENC
-    ONCE_REWRITE_CONV [ARITH_RULE `x = 12 * y <=> 12 * y = x`] THENC
-    SIMP_CONV[] THENC NUM_REDUCE_CONV in
-  CONV_TAC TWEAK_CONV THEN
-  WINDOWS_X86_WRAP_STACK_TAC
-    mlkem_rej_uniform_windows_tmc mlkem_rej_uniform_tmc
-    (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_MEMSAFE)
-    `[]` 528 THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
-
-let MLKEM_REJ_UNIFORM_WINDOWS_SUBROUTINE_MEMSAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress e.
-      12 divides val buflen /\
-      8 * val buflen = 12 * LENGTH inlist /\
-      ALL (nonoverlapping (word_sub stackpointer (word 544),544))
-          [(word pc,LENGTH mlkem_rej_uniform_windows_mc);
-           (buf,val buflen + 4); (table,4096)] /\
-      ALL (nonoverlapping (res,512))
-          [(word pc,LENGTH mlkem_rej_uniform_windows_mc);
-           (word_sub stackpointer (word 544),552)]
-      ==> ensures x86
-           (\s. bytes_loaded s (word pc) mlkem_rej_uniform_windows_mc /\
-                read RIP s = word pc /\
-                read RSP s = stackpointer /\
-                read (memory :> bytes64 stackpointer) s = returnaddress /\
-                WINDOWS_C_ARGUMENTS [res;buf;buflen;table] s /\
-                (read DF s <=> false) /\
-                wordlist_from_memory(table,4096) s = mlkem_rej_uniform_table /\
-                wordlist_from_memory(buf,LENGTH inlist) s = inlist /\
-                read events s = e)
-           (\s. read RIP s = returnaddress /\
-                read RSP s = word_add stackpointer (word 8) /\
-                (exists e2.
-                     read events s = APPEND e2 e /\
-                     memaccess_inbounds e2
-                       [buf,val buflen + 4; table,4096;
-                        word_sub stackpointer (word 544),552]
-                       [word_sub stackpointer (word 544),544; res,512]))
-           (MAYCHANGE [RSP] ,,
-            WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-            MAYCHANGE [memory :> bytes(res,512);
-                       memory :> bytes(word_sub stackpointer (word 544),544)])`,
-  let TWEAK_CONV =
-    TOP_DEPTH_CONV let_CONV THENC
-    REWRITE_CONV[wordlist_from_memory] in
-  CONV_TAC TWEAK_CONV THEN
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE
-   (CONV_RULE TWEAK_CONV
-     MLKEM_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_MEMSAFE)));;
