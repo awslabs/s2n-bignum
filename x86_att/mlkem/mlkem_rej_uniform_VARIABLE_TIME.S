@@ -41,10 +41,13 @@
 // This code is effectively the same as the original here:
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/src/native/x86_64/src/rej_uniform_asm.S
 //
-// There are just a couple of minor changes:
+// There are a few changes:
 //
 // * Use %xmm3 in place of %xmm6, so we don't need to save/restore it for Windows
 // * Directly test for null input (buflen = 0), and skip body and return 0
+// * Use movq+pinsrd to load exactly 12 bytes per iteration instead of movdqu
+//   which reads 16 bytes and would overread 4 bytes past the buffer on the
+//   last iteration
 
 S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
         CFI_START
@@ -80,7 +83,8 @@ S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
         movq    $0x5555, %r9
 
 Lmlkem_rej_uniform_VARIABLE_TIME_loop:
-        movdqu  (%rsi,%r8), %xmm2
+        movq    (%rsi,%r8), %xmm2
+        pinsrd  $0x2, 8(%rsi,%r8,1), %xmm2
         pshufb  %xmm4, %xmm2
         movdqa  %xmm2, %xmm3
         psrlw   $0x4, %xmm3
