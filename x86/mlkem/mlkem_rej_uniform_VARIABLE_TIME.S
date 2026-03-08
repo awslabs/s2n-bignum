@@ -45,9 +45,6 @@
 //
 // * Use xmm3 in place of xmm6, so we don't need to save/restore it for Windows
 // * Directly test for null input (buflen = 0), and skip body and return 0
-// * Use movq+pinsrd to load exactly 12 bytes per iteration instead of movdqu
-//   which reads 16 bytes and would overread 4 bytes past the buffer on the
-//   last iteration
 
 S2N_BN_SYMBOL(mlkem_rej_uniform_VARIABLE_TIME):
         CFI_START
