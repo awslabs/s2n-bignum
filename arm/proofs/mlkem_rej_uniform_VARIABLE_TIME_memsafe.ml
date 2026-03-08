@@ -93,7 +93,7 @@ let STRIP_EXISTS_ASSUM_TAC =
 (* ========================================================================= *)
 
 let MLKEM_REJ_UNIFORM_MEMSAFE = prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer e.
+ (`!res buf buflen table (inlist:(12 word)list) pc e stackpointer.
       24 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (stackpointer,576))
@@ -124,8 +124,8 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   MAP_EVERY X_GEN_TAC [`res:int64`; `buf:int64`] THEN
   W64_GEN_TAC `buflen:num` THEN
   MAP_EVERY X_GEN_TAC
-   [`table:int64`; `inlist:(12 word)list`; `pc:num`; `stackpointer:int64`;
-    `e:(uarch_event)list`] THEN
+   [`table:int64`; `inlist:(12 word)list`; `pc:num`;
+    `e:(uarch_event)list`; `stackpointer:int64`] THEN
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; C_ARGUMENTS;
               ALL; C_RETURN; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -450,6 +450,10 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
              (word(16 * val(idx3:int64))))) s30`] THEN
 
       ARM_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (31--46) THEN
+
+      (* Normalize shifted-register table addresses for event containment *)
+      RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
+        `word_shl (x:int64) 4 = word(16 * val x)`]) THEN
 
       (*** Repeating all the simplifications above ***)
 
@@ -787,6 +791,12 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
       (*** The end of the loop body ***)
 
       ARM_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (59--62) THEN
+
+      (* Normalize store event addresses: word_shl from ADD Xn, Xn, Xm LSL #1 *)
+      RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
+        `word_add (word_add a (word(2 * n))) (word_shl (word m) 1):int64 =
+         word_add a (word(2 * (n + m)))`]) THEN
+
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
       REWRITE_TAC[ARITH_RULE `32 * (i + 1) = 32 * i + 32`] THEN
@@ -824,6 +834,31 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
         SUBST1_TAC(SYM(ASSUME `curlen1 + len1:num = curlen2`)) THEN
         SUBST1_TAC(SYM(ASSUME `curlen + len0:num = curlen1`)) THEN
         CONV_TAC WORD_RULE;
+        (* Establish table index bounds for memory safety *)
+        SUBGOAL_THEN `val(idx0:int64) < 256` ASSUME_TAC THENL
+         [EXPAND_TAC "idx0" THEN
+          REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
+          CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_CONDENSE_CONV)) THEN
+          CONV_TAC NUM_REDUCE_CONV;
+          ALL_TAC] THEN
+        SUBGOAL_THEN `val(idx1:int64) < 256` ASSUME_TAC THENL
+         [EXPAND_TAC "idx1" THEN
+          REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
+          CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_CONDENSE_CONV)) THEN
+          CONV_TAC NUM_REDUCE_CONV;
+          ALL_TAC] THEN
+        SUBGOAL_THEN `val(idx2:int64) < 256` ASSUME_TAC THENL
+         [EXPAND_TAC "idx2" THEN
+          REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
+          CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_CONDENSE_CONV)) THEN
+          CONV_TAC NUM_REDUCE_CONV;
+          ALL_TAC] THEN
+        SUBGOAL_THEN `val(idx3:int64) < 256` ASSUME_TAC THENL
+         [EXPAND_TAC "idx3" THEN
+          REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
+          CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_CONDENSE_CONV)) THEN
+          CONV_TAC NUM_REDUCE_CONV;
+          ALL_TAC] THEN
         DISCHARGE_MEMSAFE_ASM_TAC];
 
       (*** The (relatively) trivial loop-back goal ****)
@@ -1112,6 +1147,10 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 
   ARM_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (21--28) THEN
 
+  (* Normalize shifted-register table addresses for event containment *)
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
+    `word_shl (x:int64) 4 = word(16 * val x)`]) THEN
+
   (*** Repeating all the simplifications above ***)
 
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_SUBWORD_AND]) THEN
@@ -1323,6 +1362,12 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   (*** The end of the tail computation ***)
 
   ARM_STEPS_TAC MLKEM_REJ_UNIFORM_EXEC (35--36) THEN
+
+  (* Normalize store event addresses: word_shl from ADD Xn, Xn, Xm LSL #1 *)
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE
+    `word_add (word_add a (word(2 * n))) (word_shl (word m) 1):int64 =
+     word_add a (word(2 * (n + m)))`]) THEN
+
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   EXISTS_TAC `2 * N + 1` THEN
   REWRITE_TAC[ARITH_RULE `16 * (2 * N + 1) = 32 * N + 16`] THEN
@@ -1352,19 +1397,34 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
   ASM_SIMP_TAC[ARITH_RULE `l < 272 ==> l < 288`] THEN
   ASM_REWRITE_TAC[ARITH_RULE
    `24 * ((2 * N + 1) + 1) = (48 * N + 24) + 24`] THEN
-  CONJ_TAC THENL [ALL_TAC; ARITH_TAC] THEN
   CONJ_TAC THENL
    [SUBST1_TAC(SYM(ASSUME `curlen1 + len1:num = curlen2`)) THEN
     SUBST1_TAC(SYM(ASSUME `curlen + len0:num = curlen1`)) THEN
     CONV_TAC WORD_RULE;
-    DISCHARGE_MEMSAFE_ASM_TAC]);;
+    ALL_TAC] THEN
+  CONJ_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  (* Establish table index bounds for memory safety *)
+  SUBGOAL_THEN `val(idx0:int64) < 256` ASSUME_TAC THENL
+   [EXPAND_TAC "idx0" THEN
+    REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
+    CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_CONDENSE_CONV)) THEN
+    CONV_TAC NUM_REDUCE_CONV;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `val(idx1:int64) < 256` ASSUME_TAC THENL
+   [EXPAND_TAC "idx1" THEN
+    REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
+    CONV_TAC(DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_CONDENSE_CONV)) THEN
+    CONV_TAC NUM_REDUCE_CONV;
+    ALL_TAC] THEN
+  DISCHARGE_MEMSAFE_ASM_TAC THEN
+  DISJ1_TAC THEN EXPAND_TAC "cur" THEN CONTAINED_TAC);;
 
 (* ------------------------------------------------------------------------- *)
 (* Memory safety of the subroutine version.                                  *)
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
- (`!res buf buflen table (inlist:(12 word)list) pc stackpointer returnaddress e.
+ (`!res buf buflen table (inlist:(12 word)list) pc e stackpointer returnaddress.
       24 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
       ALL (nonoverlapping (word_sub stackpointer (word 576),576))
@@ -1398,4 +1458,4 @@ let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
   ARM_ADD_RETURN_STACK_TAC MLKEM_REJ_UNIFORM_EXEC
    (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_MEMSAFE)
     `[]:int64 list` 576 THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  DISCHARGE_MEMSAFE_TAC);;
