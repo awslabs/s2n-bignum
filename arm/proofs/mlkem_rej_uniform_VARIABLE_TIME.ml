@@ -3072,7 +3072,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 (* Memory safety of the subroutine version.                                  *)
 (* ------------------------------------------------------------------------- *)
 
-let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
+let MLKEM_REJ_UNIFORM_SUBROUTINE_SAFE = time prove
  (`!res buf buflen table (inlist:(12 word)list) pc e stackpointer returnaddress.
       24 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\

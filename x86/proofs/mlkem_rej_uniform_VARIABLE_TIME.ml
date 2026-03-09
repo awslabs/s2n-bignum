@@ -1865,7 +1865,7 @@ let MLKEM_REJ_UNIFORM_MEMSAFE = prove
 (* Memory safety of the subroutine version.                                  *)
 (* ------------------------------------------------------------------------- *)
 
-let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_MEMSAFE = time prove
+let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_SAFE = time prove
  (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
@@ -1905,7 +1905,7 @@ let MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_MEMSAFE = time prove
     (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_MEMSAFE) `[]` 528 THEN
   DISCHARGE_MEMSAFE_TAC);;
 
-let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
+let MLKEM_REJ_UNIFORM_SUBROUTINE_SAFE = time prove
  (`!res buf buflen table (inlist:(12 word)list) e pc stackpointer returnaddress.
       12 divides val buflen /\
       8 * val buflen = 12 * LENGTH inlist /\
@@ -1942,7 +1942,7 @@ let MLKEM_REJ_UNIFORM_SUBROUTINE_MEMSAFE = time prove
     REWRITE_CONV[wordlist_from_memory] in
   CONV_TAC TWEAK_CONV THEN
   MATCH_ACCEPT_TAC(ADD_IBT_RULE
-   (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_MEMSAFE)));;
+   (CONV_RULE TWEAK_CONV MLKEM_REJ_UNIFORM_NOIBT_SUBROUTINE_SAFE)));;
 
 (* ------------------------------------------------------------------------- *)
 (* Memory safety of Windows ABI version.                                     *)
