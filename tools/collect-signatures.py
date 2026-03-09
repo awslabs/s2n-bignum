@@ -48,7 +48,6 @@ class FnMemInputOutput:
     return self.meminputs == io2.meminputs and self.memoutputs == io2.memoutputs and \
         self.temporaries == decl2.temporaries
 
-
 def parseFnDecl(s:str, filename:str) -> FnDecl:
   assert s.startswith("extern"), s
   original_lines = s
@@ -291,6 +290,8 @@ for arch in ["arm", "x86"]:
 
 # A list of functions that are either only in arm or x86
 onlyInArm = [
+  "aes_xts_decrypt",
+  "aes_xts_encrypt",
   "bignum_copy_row_from_table_8n",
   "bignum_copy_row_from_table_16",
   "bignum_copy_row_from_table_32",
@@ -395,6 +396,7 @@ for archname in ["arm","x86"]:
 
     # Before printing input and output buffers, collect elem bytesize of buffers
     arg_elem_bytesizes = dict()
+    isPtr = lambda fullty, elemty: fullty.startswith(elemty + "*")
     isPtrOrArray = lambda fullty, elemty: fullty.startswith(elemty + "[") or fullty.startswith(elemty + "*")
     for argname, argtype, _ in fnsig.args:
       if isPtrOrArray(argtype, "int64_t") or isPtrOrArray(argtype, "uint64_t"):
@@ -404,6 +406,8 @@ for archname in ["arm","x86"]:
       elif isPtrOrArray(argtype, "int16_t") or isPtrOrArray(argtype, "uint16_t"):
         arg_elem_bytesizes[argname] = 2
       elif isPtrOrArray(argtype, "int8_t") or isPtrOrArray(argtype, "uint8_t"):
+        arg_elem_bytesizes[argname] = 1
+      elif isPtr(argtype, "s2n_bignum_AES_KEY"):
         arg_elem_bytesizes[argname] = 1
       elif "[" not in argtype and "*" not in argtype:
         continue

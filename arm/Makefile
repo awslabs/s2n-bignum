@@ -404,13 +404,17 @@ UNOPT_OBJ = p256/unopt/bignum_montmul_p256_base.o \
             fastmul/unopt/bignum_mul_8_16_base.o \
             fastmul/unopt/bignum_sqr_8_16_base.o
 
-OBJ = $(POINT_OBJ) $(BIGNUM_OBJ)
+AES_XTS_OBJ = aes-xts/aes_xts_decrypt.o \
+              aes-xts/aes_xts_encrypt.o
+
+
+OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ)
 
 # Tutorial assembly files
 
 TUTORIAL_PROOFS = $(wildcard tutorial/*.ml)
 
-TUTORIAL_OBJ = $(filter-out tutorial/safety.o, $(TUTORIAL_PROOFS:.ml=.o)) \
+TUTORIAL_OBJ = $(filter-out tutorial/aes_encrypt_decrypt.o tutorial/safety.o, $(TUTORIAL_PROOFS:.ml=.o)) \
     curve25519/bignum_mod_n25519.o p256/bignum_mux_4.o \
     tutorial/rel_loop2.o \
     tutorial/rel_simp2.o tutorial/rel_veceq2.o tutorial/rel_equivtac2.o \
@@ -421,9 +425,9 @@ TUTORIAL_OBJ = $(filter-out tutorial/safety.o, $(TUTORIAL_PROOFS:.ml=.o)) \
 # x18 should not be used for Apple platforms. Check this using grep.
 
 %.o : %.S
-	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+\.(quad|hword)\s+(0x|-)?[0-9a-f]+$$' | $(ASSEMBLE) -o $@ -
+	cat $< | $(PREPROCESS) | $(SPLIT) | grep -v -E '^\s+.quad\s+0x[0-9a-f]+$$' | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
 	$(OBJDUMP) $@ | ( ( ! grep --ignore-case -E 'w18|[^0]x18' ) || ( rm $@ ; exit 1 ) )
-	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -o $@ -
+	cat $< | $(PREPROCESS) | $(SPLIT) | $(ASSEMBLE) -march=armv8-a+crypto -o $@ -
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 
@@ -525,6 +529,12 @@ sm2/sm2_montjscalarmul_alt.native: sm2/sm2_montjadd_alt.native sm2/sm2_montjdoub
 tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
                         curve25519/bignum_mod_n25519.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
+# aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
+tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
+                                     tutorial/aes_encrypt.o tutorial/aes_decrypt.o ; \
+  ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
 # other tutorials have their .o files
 .SECONDEXPANSION:
 tutorial/%.native: tutorial/%.ml tutorial/%.o ; ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
