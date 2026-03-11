@@ -333,6 +333,7 @@ onlyInX86 = [
   "mldsa_intt",
   "mldsa_ntt",
   "mldsa_pointwise_acc_l4_x86",
+  "mldsa_pointwise_acc_l5_x86",
   "mldsa_pointwise_x86",
   "mldsa_reduce",
   "mlkem_frombytes",

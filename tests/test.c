@@ -12795,6 +12795,88 @@ int test_mldsa_pointwise_acc_l4(void)
     return 0;
 }
 
+// Reference implementation for pointwise multiplication with accumulation (L5)
+void reference_mldsa_pointwise_acc_l5(int32_t c[256], const int32_t a[1280], const int32_t b[1280])
+{
+    const int32_t MLDSA_Q = 8380417;
+
+    for (int i = 0; i < 256; i++) {
+        // Accumulate products: c[i] = a0[i]*b0[i] + a1[i]*b1[i] + a2[i]*b2[i] + a3[i]*b3[i] + a4[i]*b4[i]
+        int64_t acc = 0;
+        for (int j = 0; j < 5; j++) {
+            int64_t product = (int64_t)a[j * 256 + i] * (int64_t)b[j * 256 + i];
+            acc += product;
+        }
+
+        // Montgomery reduction
+        c[i] = reference_mldsa_reduce(acc);
+    }
+}
+
+int test_mldsa_pointwise_acc_l5(void)
+{
+    // Skip test on non-x86_64 architectures
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+
+#ifdef __x86_64__
+    uint64_t t, i;
+    // 32-byte alignment for AVX2/NEON vector instructions
+    int32_t a[1280] __attribute__((aligned(32)));
+    int32_t b[1280] __attribute__((aligned(32)));
+    int32_t c_asm[256] __attribute__((aligned(32)));
+    int32_t c_ref[256] __attribute__((aligned(32)));
+
+    printf("Testing mldsa_pointwise_acc_l5 with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        const int32_t MLDSA_Q = 8380417;
+
+        // Generate random inputs bounded by 9*Q (as per specification)
+        for (i = 0; i < 1280; ++i) {
+            a[i] = (int32_t)(random64() % (18 * 8380417)) - (9 * 8380417);
+            b[i] = (int32_t)(random64() % (18 * 8380417)) - (9 * 8380417);
+        }
+
+        // Call reference implementation
+        reference_mldsa_pointwise_acc_l5(c_ref, a, b);
+
+        // Call the x86-specific implementation
+        mldsa_pointwise_acc_l5_x86(c_asm, a, b, mldsa_avx2_data);
+
+        // Compare results (apply reduction for comparison)
+        for (i = 0; i < 256; ++i) {
+            int32_t reduced_asm = reference_poly_reduce(c_asm[i]);
+            int32_t reduced_ref = reference_poly_reduce(c_ref[i]);
+
+            if (reduced_asm != reduced_ref) {
+                // Check if they differ by a multiple of MLDSA_Q
+                int64_t diff = (int64_t)c_asm[i] - (int64_t)c_ref[i];
+                if (diff % MLDSA_Q != 0) {
+                    printf("Error in mldsa_pointwise_acc_l5 at element i = %"PRIu64"; "
+                           "asm[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32") "
+                           "while ref[%"PRIu64"] = 0x%08"PRIx32" (reduced: 0x%08"PRIx32")\n",
+                           i, i, c_asm[i], reduced_asm, i, c_ref[i], reduced_ref);
+                    return 1;
+                }
+            }
+        }
+
+        if (VERBOSE) {
+            printf("OK: mldsa_pointwise_acc_l5[a[0]=0x%08"PRIx32", b[0]=0x%08"PRIx32"] -> "
+                   "c[0]=0x%08"PRIx32", c[255]=0x%08"PRIx32"\n",
+                   a[0], b[0], c_asm[0], c_asm[255]);
+        }
+    }
+
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;  // Fallback for non-x86_64 compile-time environments
+#endif
+}
+
 int test_mldsa_ntt(void)
 {
     // Skip test on non-x86_64 architectures
@@ -16071,6 +16153,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_pointwise",test_mldsa_pointwise);
   functionaltest(all,"mldsa_pointwise_acc_l4",test_mldsa_pointwise_acc_l4);
+  functionaltest(!arm,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
