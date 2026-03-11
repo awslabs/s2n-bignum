@@ -16153,7 +16153,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_pointwise",test_mldsa_pointwise);
   functionaltest(all,"mldsa_pointwise_acc_l4",test_mldsa_pointwise_acc_l4);
-  functionaltest(!arm,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
+  functionaltest(all,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
