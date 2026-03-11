@@ -108,11 +108,11 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
        https://refspecs.linuxbase.org/elf/gabi4+/ch4.sheader.html
        has a table for their integer values, and  Figure 4-14
        has types for special sections such as .text . *)
-    fun name ty:bytes ->
+    fun name ty ->
       let hdr = find (fun header -> section_name header = name) headers in
       check_section_type hdr ty; hdr in
 
-  let find_section_contents (name,ty):bytes =
+  let find_section_contents (name,ty) =
       section_contents (find_section_header name ty) in
 
   (* From .strtab (string table) extract a string whose byte offset starts from
@@ -121,7 +121,7 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
     try let the_table = section_contents
         (find_section_header ".strtab" 3 (* SHT_STRTAB *)) in
       fun chridx -> get_string the_table chridx
-    with _ -> fun (chridx:int) -> "" in
+    with Failure _ -> fun (chridx:int) -> "" in
 
   (* The .rodata section (None if nonexistent) *)
   let rodata_contents:bytes option = catch
@@ -133,20 +133,20 @@ let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
       find_section_contents (".symtab",2 (* SHT_SYMTAB *)) in
 
   let symbol_name (symtab_idx:int): string =
-    let symtab = Option.get symtab_contents in
+    let symtab = option_get symtab_contents in
     let sym_entrysize = 24 (* size of Elf64_Sym struct *) in
     let char_idx = get_int_le symtab (symtab_idx * sym_entrysize) 4 in
     from_string_table char_idx
   in
   (* The "st_shndx" field *)
   let symbol_sectionidx (symtab_idx:int): int =
-    let symtab = Option.get symtab_contents in
+    let symtab = option_get symtab_contents in
     let sym_entrysize = 24 in
     get_int_le symtab (symtab_idx * sym_entrysize + 6) 2
   in
   (* Least-significant 4 bits of the "st_info" field *)
   let symbol_type (symtab_idx:int): int =
-    let symtab = Option.get symtab_contents in
+    let symtab = option_get symtab_contents in
     let sym_entrysize = 24 in
     let symbol_info = get_int_le symtab (symtab_idx * sym_entrysize + 4) 1 in
     symbol_info land 0xf
@@ -333,7 +333,7 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
       (* Some symbols starting with "ltmp" are auto-generated. They are ignored by
         tools like:
         https://github.com/microsoft/llvm-mctoll/blob/master/MachODump.cpp#L228 *)
-      not (String.starts_with ~prefix:"ltmp" symbol_name)
+      not (starts_with "ltmp" symbol_name)
     then begin
       const_symbols := !const_symbols @ [(symbol_name, n_value(*byte offset *))]
     end) !raw_symbols;
@@ -358,11 +358,11 @@ let load_macho (cputype:int) (reloc_type:int -> 'a) (file:bytes):
       let symname,secofs,seclen = s in
       if start_ofs < seclen then
         let symbol_len = if end_ofs <> None
-          then (Option.get end_ofs - start_ofs)
+          then (option_get end_ofs - start_ofs)
           else seclen - start_ofs in
         Bytes.sub file (secofs + start_ofs) symbol_len
       else
-        let end_ofs = Option.map (fun x -> x - seclen) end_ofs in
+        let end_ofs = option_map (fun x -> x - seclen) end_ofs in
         extract_bytes (start_ofs - seclen) end_ofs sections' in
 
   (* 1. The __text section data *)

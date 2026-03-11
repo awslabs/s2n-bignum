@@ -164,7 +164,7 @@ let safety_print_log = ref false;;
   stripping the exists f_events part. *)
 let ASSUME_CALLEE_SAFETY_TAC =
   let fresh_f_events_var_counter = ref 0 in
-  fun (callee_safety_proof:thm) (asmname:string) :tactic ->
+  fun (callee_safety_proof:thm) (asmname:string) ->
     let f_events_var_type = type_of (fst (dest_exists (concl callee_safety_proof))) in
     let f_events_callee =
       let _ = fresh_f_events_var_counter := 1 + !fresh_f_events_var_counter in

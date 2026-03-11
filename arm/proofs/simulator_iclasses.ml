@@ -574,7 +574,7 @@ let check_insns () =
       | Some idx ->
         let hexcode = "0x" ^ (String.sub l 0 idx) in
         let desc = String.trim (String.sub l (idx+1) (String.length l - idx - 1)) in
-        if String.starts_with ~prefix:".word" desc then true (* defines a constant *)
+        if starts_with ".word" desc then true (* defines a constant *)
         else
           try
             let opcode = int_of_string hexcode in
@@ -582,7 +582,7 @@ let check_insns () =
               true (* Check passes *)
             else
               List.exists (match_bitpattern opcode) iclasses
-          with _ -> false
+          with Failure _ -> false
     in
 
   let tmppath = Filename.temp_file "objdump" ".txt" in

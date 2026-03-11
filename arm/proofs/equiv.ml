@@ -27,12 +27,12 @@ let get_bytelist_length (ls:term): int =
       "get_bytelist_length: cannot get the length of `%s`" (string_of_term ls));;
 
 let define_mc_from_intlist (newname:string) (ops:int list) =
-  let charlist = List.concat_map
+  let charlist = flat (map
     (fun op32 ->
-      [Char.chr (Int.logand op32 255);
-       Char.chr (Int.logand (Int.shift_right op32 8) 255);
-       Char.chr (Int.logand (Int.shift_right op32 16) 255);
-       Char.chr (Int.logand (Int.shift_right op32 24) 255)]) ops in
+      [Char.chr (op32 land 255);
+       Char.chr ((op32 lsr 8) land 255);
+       Char.chr ((op32 lsr 16) land 255);
+       Char.chr ((op32 lsr 24) land 255)]) ops) in
   let byte_list = Bytes.init (List.length charlist) (fun i -> List.nth charlist i) in
   define_word_list newname (term_of_bytes byte_list);;
 
@@ -106,7 +106,7 @@ let DIVIDES_EXP_CONV (divisor:term) (dividend:term): thm =
       try
         let lth = fn divisor lhs in
         ISPEC rhs (MATCH_MP DIVIDES_RMUL lth)
-      with _ ->
+      with Failure _ ->
         let lhs,rhs = dest_binary "*" dividend in
         let rth = fn divisor rhs in
         ISPEC lhs (MATCH_MP DIVIDES_LMUL rth)
@@ -166,8 +166,8 @@ let DIV_EXP_REDUCE_CONV (dividend:term) (divisor:term):thm =
       (* `(lhs + rhs) DIV divisor = (lhs DIV divisor) + (rhs DIV divisor)` *)
       let precond =
         try DISJ1 (DIVIDES_EXP_CONV divisor lhs) (mk_binary "num_divides" (divisor,rhs))
-        with _ -> try DISJ2 (mk_binary "num_divides" (divisor,lhs)) (DIVIDES_EXP_CONV divisor rhs)
-        with _ -> failwith "Could not derive DIV_ADD's precond" in
+        with Failure _ -> try DISJ2 (mk_binary "num_divides" (divisor,lhs)) (DIVIDES_EXP_CONV divisor rhs)
+        with Failure _ -> failwith "Could not derive DIV_ADD's precond" in
       let expr = REWRITE_CONV[MATCH_MP DIV_ADD precond] expr in
       (* (lhs DIV divisor) + (rhs DIV divisor) = lhs' + rhs' *)
       REWRITE_RULE [lhs_eq;rhs_eq;simp_one] expr
@@ -576,13 +576,13 @@ let equiv_test_ops: int list = [
 ];;
 
 let equiv_test_mc =
-  let charlist = List.concat_map
+  let charlist = flat (map
     (fun op32 ->
-      [Char.chr (Int.logand op32 255);
-       Char.chr (Int.logand (Int.shift_right op32 8) 255);
-       Char.chr (Int.logand (Int.shift_right op32 16) 255);
-       Char.chr (Int.logand (Int.shift_right op32 24) 255)])
-    equiv_test_ops in
+      [Char.chr (op32 land 255);
+       Char.chr ((op32 lsr 8) land 255);
+       Char.chr ((op32 lsr 16) land 255);
+       Char.chr ((op32 lsr 24) land 255)])
+    equiv_test_ops) in
   let byte_list = Bytes.init (List.length charlist) (fun i -> List.nth charlist i) in
   define_word_list "__equiv_test_mc" (term_of_bytes byte_list);;
 
@@ -620,7 +620,7 @@ let backward_taint_analysis
     (* Input and output components *)
     for i = pc_end downto pc_begin do
       (* mark tainted_regs[i] as tainted *)
-      let ts = try assoc i tainted_regs with _ -> [] in
+      let ts = try assoc i tainted_regs with Failure _ -> [] in
       tainted := union !tainted ts;
       match decode_ths.(i) with
       | None -> ()
@@ -752,7 +752,7 @@ let map_output_regs
       match update_idx with
       | Some update_idx -> begin
         (* found! *)
-        let the_th_left = Option.get (decode_ths_left.(pc_begin_left + (idx_left-1)*4)) in
+        let the_th_left = option_get (decode_ths_left.(pc_begin_left + (idx_left-1)*4)) in
         let r_left = snd (dest_imp (snd (strip_forall (concl the_th_left)))) in
         let f,args_left = strip_comb r_left in
         if name_of f <> "arm_decode" then failwith "Unknown inst" else
@@ -1215,7 +1215,7 @@ let ARM_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
 
         if List.length abbrevs_for_st_n = List.length new_state_eqs then
           (* For each `read c sn = rhs`, replace rhs with abbrev *)
-          let new_state_eqs = List.filter_map
+          let new_state_eqs = filter_map
             (fun new_state_eq ->
               let rhs = rhs (concl new_state_eq) in
               (* Find 'rhs = abbrev' from the left program's  updates. *)
@@ -1225,7 +1225,7 @@ let ARM_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
               | Some (_,rhs_to_abbrev) ->
                 (try
                   Some (GEN_REWRITE_RULE RAND_CONV [rhs_to_abbrev] new_state_eq)
-                with _ ->
+                with Failure _ ->
                   (Printf.printf "Failed to proceed.\n";
                     Printf.printf "- rhs: `%s`\n" (string_of_term rhs);
                     Printf.printf "- rhs_to_abbrev: `%s`\n" (string_of_thm rhs_to_abbrev);
@@ -1298,7 +1298,7 @@ let TRY_CONST_PCS_TAC (pcs:int list) (val_word_ptrs:term list):tactic =
     else if is_binary "<=" t then Some ("<=",dest_binary "<=" t)
     else None in
   fun (asl,w) ->
-    let upper_lower_bounds = List.filter_map
+    let upper_lower_bounds = filter_map
       (fun _,th ->
         let c = concl th in
         match decomp_relop c with
@@ -1309,11 +1309,11 @@ let TRY_CONST_PCS_TAC (pcs:int list) (val_word_ptrs:term list):tactic =
         | _ -> None) asl in
     let ranges = List.map
       (fun val_word_ptr ->
-        let lb = List.filter_map (fun t,comp,i ->
+        let lb = filter_map (fun t,comp,i ->
           if comp = ">=" && t = val_word_ptr then Some i
           else None) upper_lower_bounds in
         let lb = List.fold_left max 0 lb in
-        let ub = List.filter_map (fun t,comp,i ->
+        let ub = filter_map (fun t,comp,i ->
           if comp = "<" && t = val_word_ptr then Some i
           else None) upper_lower_bounds in
         let ub = List.fold_left min max_int ub in
@@ -1370,7 +1370,7 @@ let FIND_HOLE_TAC: tactic =
     let terms_nonoverlap, term_divides = (butlast goal_conjs, last goal_conjs) in
     if fst (strip_comb term_divides) <> `divides`
     then failwith ("Not 'divides' predicate: " ^ (string_of_term term_divides)) else
-    let ranges:(term*int) list = List.concat_map
+    let ranges:(term*int) list = flat (map
       (fun t ->
         let tt,ranges = strip_comb t in
         if tt <> `nonoverlapping_modulo` then
@@ -1384,7 +1384,7 @@ let FIND_HOLE_TAC: tactic =
             then failwith ("Has non-constant size: " ^ (string_of_term t)) else
             (ptr, dest_small_numeral size) in
           List.map dest_range (List.tl ranges))
-      terms_nonoverlap in
+      terms_nonoverlap) in
     let ranges = uniq (sort (<) ranges) in
     Printf.printf "Aggregated ranges: %s\n"
       (String.concat ", " (List.map
@@ -1698,7 +1698,7 @@ let EVENTUALLY_TAKE_STEP_RIGHT_FORALL_TAC exec_decode (k:int):tactic =
   DISCH_THEN (fun th ->
     try let _,th2 = CONJ_PAIR th in
       LABEL_TAC "HEVENTUALLY" th2
-    with _ ->
+    with Failure _ ->
       (Printf.printf "Not a conjunction: %s\n" (string_of_thm th);
       failwith "EVENTUALLY_TAKE_STEP_RIGHT_FORALL_TAC")) THEN
   DISCH_THEN (LABEL_TAC "HSTEPS") THEN
@@ -2332,7 +2332,7 @@ needs "common/actions_merger.ml";;
 let rec break_equal_loads actions (decodeth1:thm option array) pcbegin1
                                  (decodeth2:thm option array) pcbegin2 =
   let get_opname_from_decode (th:thm option):string =
-    let th = Option.get th in
+    let th = option_get th in
     (* th is: `|- forall s pc.
            aligned_bytes_loaded s (word pc) bignum_montsqr_p256_mc
            ==> arm_decode s (word (pc + 216)) (arm_ADC X8 X8 XZR)` *)
@@ -2368,7 +2368,7 @@ let rec break_equal_loads actions (decodeth1:thm option array) pcbegin1
       let opname2 = get_opname_from_decode decodeth2.(pcbegin2 + 4 * (beg2 + i)) in
       if opname1 <> opname2 then failwith
         (Printf.sprintf "Op not equal: %s vs. %s" opname1 opname2) else
-      if String.starts_with ~prefix:"arm_LD" opname1 then
+      if starts_with "arm_LD" opname1 then
         if !ld_start_i = -1 then begin
           (* first load *)
           (* flush ("equal", eq_start_i ~ i-1) *)

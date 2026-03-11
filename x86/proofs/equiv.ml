@@ -596,7 +596,7 @@ let X86_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
 
         if List.length abbrevs_for_st_n = List.length new_state_eqs then
           (* For each `read c sn = rhs`, replace rhs with abbrev *)
-          let new_state_eqs = List.filter_map
+          let new_state_eqs = filter_map
             (fun new_state_eq ->
               let rhs = rhs (concl new_state_eq) in
               (* Find 'rhs = abbrev' from the left program's  updates. *)
@@ -606,7 +606,7 @@ let X86_N_STEPS_AND_REWRITE_TAC execth (snums:int list) (inst_map: int list)
               | Some (_,rhs_to_abbrev) ->
                 (try
                   Some (GEN_REWRITE_RULE RAND_CONV [rhs_to_abbrev] new_state_eq)
-                with _ ->
+                with Failure _ ->
                   (Printf.printf "Failed to proceed.\n";
                     Printf.printf "- rhs: `%s`\n" (string_of_term rhs);
                     Printf.printf "- rhs_to_abbrev: `%s`\n" (string_of_thm rhs_to_abbrev);

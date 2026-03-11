@@ -45,7 +45,7 @@ let get_memory_read_info =
       (* args is just a location *)
       assert (List.length args = 1);
       Some (List.hd args, bytewidth, accessor)
-    with _ ->
+    with Failure _ ->
       begin match accessor with
       | "bytes" ->
         (* args is (loc, len). *)
@@ -62,7 +62,7 @@ let get_base_ptr_and_ofs (t:term): term * term =
     let wordc, ofs = dest_comb y in
     if name_of wordc <> "word" then failwith "not word" else
     (baseptr, ofs)
-  with _ -> (t, mk_small_numeral 0);;
+  with Failure _ -> (t, mk_small_numeral 0);;
 
 assert (get_base_ptr_and_ofs `x:int64` = (`x:int64`,`0`));;
 assert (get_base_ptr_and_ofs `word_add x (word 32):int64` = (`x:int64`,`32`));;
@@ -79,7 +79,7 @@ let get_base_ptr_and_constofs (t:term): term * int =
     try
       let ofs = rhs (concl (NUM_RED_CONV ofs)) in
       (base,dest_small_numeral ofs)
-    with _ -> (t,0);;
+    with Failure _ -> (t,0);;
 
 assert (get_base_ptr_and_constofs `word_add x (word (8*4)):int64` = (`x:int64`,32));;
 
@@ -107,24 +107,24 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
   let const_num_opt (t:term): int option =
     try if is_numeral t then Some (dest_small_numeral t)
         else Some (dest_small_numeral (rhs (concl (NUM_RED_CONV t))))
-    with _ -> None in
+    with Failure _ -> None in
   let eight = `8` in
   let rec divide_by_8 t: term option =
-    try Some (mk_small_numeral ((Option.get (const_num_opt t)) / 8))
-    with _ -> try
+    try Some (mk_small_numeral ((option_get (const_num_opt t)) / 8))
+    with Failure _ -> try
       let l,r = dest_binary "*" t in
       if l = eight then Some r else if r = eight then Some l else None
-    with _ -> try
+    with Failure _ -> try
       let l,r = dest_binary "+" t in
       match (divide_by_8 l),(divide_by_8 r) with
       | Some l', Some r' -> Some (mk_binary "+" (l',r'))
       | _ -> None
-    with _ -> try
+    with Failure _ -> try
       let l,r = dest_binary "-" t in
       match (divide_by_8 l),(divide_by_8 r) with
       | Some l', Some r' -> Some (mk_binary "-" (l',r'))
       | _ -> None
-    with _ -> None
+    with Failure _ -> None
     in
   let is_multiple_of_8 t = divide_by_8 t <> None in
   let subtract_num t1 t2: term option =
@@ -133,7 +133,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
     else
       (* returns: ((sym expr, coeff) list, constant) *)
       let rec decompose_adds t: ((term * int) list) * int =
-        try ([], dest_small_numeral t) with _ ->
+        try ([], dest_small_numeral t) with Failure _ ->
         try let l,r = dest_binary "+" t in
           let lsyms,lconst = decompose_adds l in
           let rsyms,rconst = decompose_adds r in
@@ -143,7 +143,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
             else map (fun (rsym,rcoeff) ->
               if rsym = lsym then (lsym,lcoeff + rcoeff) else (rsym,rcoeff))
               rsyms) lsyms rsyms in
-          (syms,lconst+rconst) with _ ->
+          (syms,lconst+rconst) with Failure _ ->
         try (* note that num's subtraction is a bit complicated because
                num cannot be negative. However, there is a chance
                that even if the intermediate constants are negative the
@@ -159,13 +159,13 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
             else map (fun (rsym,rcoeff) ->
               if rsym = lsym then (lsym,lcoeff - rcoeff) else (rsym,-rcoeff))
               rsyms) lsyms rsyms in
-          (syms,lconst-rconst) with _ ->
+          (syms,lconst-rconst) with Failure _ ->
         try let l,r = dest_binary "*" t in
           let lconst = dest_small_numeral l in
           let rsyms,rconst = decompose_adds r in
           (map (fun (sym,coeff) -> (sym,coeff * lconst)) rsyms,
            rconst * lconst)
-        with _ -> ([t,1],0)
+        with Failure _ -> ([t,1],0)
       in
       let syms1,const1 = decompose_adds t1 in
       let syms2,const2 = decompose_adds t2 in
@@ -233,7 +233,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
             (TAC_PROOF((assumptions,mk_eq(ptrofs,ptrofs')),
               IMP_REWRITE_TAC[WORD_SUB2] THEN SIMPLE_ARITH_TAC)) in
           get_base_ptr_and_ofs ptrofs'
-        with _ -> (ptr,ofs)
+        with Failure _ -> (ptr,ofs)
       in
 
       if not (is_multiple_of_8 ofs) then
@@ -246,7 +246,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
 
       if constr_name = "bytes64" then
         let _ = assert (size = eight) in
-        let larger_reads = List.filter_map (fun (_,ath) ->
+        let larger_reads = filter_map (fun (_,ath) ->
           try
             let c = concl ath in
             if not (is_eq c) then None else
@@ -271,12 +271,12 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
                 not (ofs + 8 <= ofs2)
               | _ -> true
               end) then
-                Some (ath,Option.get c_access_info)
+                Some (ath,option_get c_access_info)
               else None
               end
             | _ -> None
             end
-          with _ ->
+          with Failure _ ->
             let _ = Printf.printf "Warning: MK_MEMORY_READ_EQ_BIGDIGIT_CONV: unexpected failure: `%s`\n" (string_of_term (concl ath))in
             None) assumptions in
         if larger_reads = []
@@ -285,7 +285,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
           Printf.printf "MK_MEMORY_READ_EQ_BIGDIGIT_CONV: found:\n";
           List.iter (fun th,_ -> Printf.printf "  `%s`\n" (string_of_term (concl th))) larger_reads));
 
-        let extracted_reads = List.filter_map
+        let extracted_reads = filter_map
           (fun larger_read_th,(ptrofs2,(ptr2,ofs2),size2,_,_) ->
           try
             let larger_read = lhs (concl larger_read_th) in
@@ -295,7 +295,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
                   (string_of_term ofs2) in None else
 
             let ofsdiff = subtract_num ofs ofs2 in
-            let reldigitofs = Option.bind ofsdiff divide_by_8 in
+            let reldigitofs = option_bind ofsdiff divide_by_8 in
             let nwords = divide_by_8 size2 in
 
             begin match reldigitofs, nwords with
@@ -328,7 +328,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
                     (* strip word_add *)
                     (AP_TERM_TAC THEN AP_TERM_TAC THEN SIMPLE_ARITH_TAC))) in
                 Some (REWRITE_RULE[larger_read_th] eq_th,[])
-              with _ ->
+              with Failure _ ->
                 (if !equiv_print_log then
                   Printf.printf "Could not prove `%s`\n" (string_of_term the_goal)); None
               end
@@ -339,7 +339,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
               None
             end
             end
-          with _ -> begin
+          with Failure _ -> begin
             Printf.printf "Warning: MK_MEMORY_READ_EQ_BIGDIGIT_CONV: failed while processing `%s`\n" (string_of_term (concl larger_read_th)); None
           end) larger_reads in
 
@@ -513,12 +513,12 @@ let DIGITIZE_MEMORY_READS th state_update_th =
         let th2',smaller_read_ths = MK_MEMORY_READ_EQ_BIGDIGIT_CONV the_rhs asl in
         let _ = new_memory_reads := th2'::(smaller_read_ths @ !new_memory_reads) in
         GEN_REWRITE_RULE RAND_CONV [th2'] th2
-      with _ -> th2) (CONJUNCTS th) in
+      with Failure _ -> th2) (CONJUNCTS th) in
 
     (* new_memory_reads will still use the 'previous' state. update it. *)
     new_memory_reads := map
       (fun th -> try STATE_UPDATE_RULE ([NONOVERLAPPING_SIMPLE_64],[])
-                         state_update_th th with _ -> th)
+                         state_update_th th with Failure _ -> th)
       !new_memory_reads;
 
     let res_th = end_itlist CONJ ths in
@@ -529,7 +529,7 @@ let DIGITIZE_MEMORY_READS th state_update_th =
         Printf.printf "rewritten th: %s\n" (string_of_term (concl res_th));
         Printf.printf "new_memory_reads th: %s\n"
           (if newmems_th = None then "None" else
-            ("Some " ^ (string_of_term (concl (Option.get newmems_th)))))) in
+            ("Some " ^ (string_of_term (concl (option_get newmems_th)))))) in
     res_th,newmems_th;;
 
 
@@ -686,7 +686,7 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
               Printf.printf "\t- Abbreviating `%s` as \"%s\" as well\n"
                 (string_of_term rhs2) vname in
             (REWRITE_RULE[r] readth2),rhs
-          with _ ->
+          with Failure _ ->
             (* Inspect if this is the result of updating lower bits of the
                registers. *)
           (try
@@ -699,7 +699,7 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
               Printf.printf "\t- Abbreviating `%s` as \"%s\" instead\n"
                 (string_of_term wlo2) vname in
             (REWRITE_RULE[r] readth2),wlo1
-          with _ ->
+          with Failure _ ->
             Printf.printf "\t- Error: WORD_RULE could not prove `%s = %s`\n"
               (string_of_term rhs2) (string_of_term rhs);
             Printf.printf "If the two expressions seem semantically equivalent,";
@@ -786,7 +786,7 @@ let CLEAR_UNUSED_ABBREVS =
         (* assumptions that read states should not be removed *)
         alive_queue := i::!alive_queue
       else if is_eq (concl th) && is_var (rand (concl th)) &&
-              not (String.ends_with ~suffix:"DO_NOT_CLEAR" asmname) then
+              not (ends_with "DO_NOT_CLEAR" asmname) then
         (* if th is 'e = var', mark it as initially dead & extract rhs var *)
         !asl_with_flags.(i) <- (false, (Some (rand (concl th)), asmname, th))
       else
@@ -1058,7 +1058,7 @@ let mk_equiv_statement_template
   let mk_bytes_loaded (s:term) (pc_var:term) (mc:term) (data:term option) =
     let _ = List.map2 type_check [s;pc_var;mc] [state_ty;`:num`;`:((8)word)list`] in
     let mc_all = if data = None then mc else
-      let data = Option.get data in
+      let data = option_get data in
       let _ = type_check data `:((8)word)list` in
       list_mk_icomb "APPEND" [mc;data]
     in
@@ -1080,8 +1080,8 @@ let mk_equiv_statement_template
   let equiv_in_pred = fst (strip_comb (fst (dest_eq equiv_in_body))) in
   let equiv_out_pred = fst (strip_comb (fst (dest_eq equiv_out_body))) in
 
-  let data1_name = Option.map (fun x -> (lhs (concl x))) data1 in
-  let data2_name = Option.map (fun x -> (lhs (concl x))) data2 in
+  let data1_name = option_map (fun x -> (lhs (concl x))) data1 in
+  let data2_name = option_map (fun x -> (lhs (concl x))) data2 in
   let precond = mk_gabs (spair,
     (list_mk_conj [
       mk_bytes_loaded s pc (lhs (concl mc1)) data1_name;
@@ -1265,7 +1265,7 @@ let simplify_maychanges: term -> term =
 
 let SIMPLIFY_MAYCHANGES_TAC =
   W(fun (asl,w) ->
-    let mcs = List.filter_map
+    let mcs = filter_map
       (fun (_,asm) -> if maychange_term (concl asm) then Some asm else None) asl in
     MAP_EVERY (fun asm ->
         let x, st2 = dest_comb (concl asm) in
