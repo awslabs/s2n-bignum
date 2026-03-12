@@ -213,10 +213,10 @@ let MLDSA_POINTWISE_ACC_L5_CORRECT = prove
     aligned 32 a /\
     aligned 32 b /\
     aligned 32 consts /\
-    nonoverlapping (word pc, 0x22F) (c, 1024) /\
-    nonoverlapping (word pc, 0x22F) (a, 5120) /\
-    nonoverlapping (word pc, 0x22F) (b, 5120) /\
-    nonoverlapping (word pc, 0x22F) (consts, 64) /\
+    nonoverlapping (word pc, 0x22B) (c, 1024) /\
+    nonoverlapping (word pc, 0x22B) (a, 5120) /\
+    nonoverlapping (word pc, 0x22B) (b, 5120) /\
+    nonoverlapping (word pc, 0x22B) (consts, 64) /\
     nonoverlapping (c, 1024) (a, 5120) /\
     nonoverlapping (c, 1024) (b, 5120) /\
     nonoverlapping (c, 1024) (consts, 64) /\
