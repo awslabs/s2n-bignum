@@ -675,6 +675,17 @@ let mldsa_pointwise_acc_l5 = define
       f (i + 1024) * g (i + 1024)) *
      &(inverse_mod 8380417 4294967296)) rem &8380417`;;
 
+let mldsa_pointwise_acc_l7 = define
+ `mldsa_pointwise_acc_l7 (f:num->int) (g:num->int) i =
+    ((f i * g i +
+      f (i + 256) * g (i + 256) +
+      f (i + 512) * g (i + 512) +
+      f (i + 768) * g (i + 768) +
+      f (i + 1024) * g (i + 1024) +
+      f (i + 1280) * g (i + 1280) +
+      f (i + 1536) * g (i + 1536)) *
+     &(inverse_mod 8380417 4294967296)) rem &8380417`;;
+
 let WORD_ADD_MLDSA_MONTMUL = prove
  (`word_add y (mldsa_montmul (a,b) x) =
    word_sub (word_add
