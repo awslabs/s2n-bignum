@@ -147,6 +147,7 @@
 : uaddlv.8h$
 : ubfx$
 : umaddl$
+: umin$
 : umlal$
 : umlal.2d$
 : umlal2$

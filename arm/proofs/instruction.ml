@@ -1709,6 +1709,27 @@ let arm_UADDLP = define
                           (word_zx (word_subword x (8,8):(32)word):(16)word)) n in
           (Rd := res) s`;;
 
+let arm_UMIN_VEC = define
+ `arm_UMIN_VEC Rd Rn Rm esize datasize =
+    \s:armstate.
+        let n = read Rn s in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 word_umin n m
+            else if esize = 32 then simd4 word_umin n m
+            else if esize = 16 then simd8 word_umin n m
+            else simd16 word_umin n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 word_umin n m
+            else if esize = 16 then simd4 word_umin n m
+            else simd8 word_umin n m in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_UADDLV = define
  `arm_UADDLV Rd Rn elements esize =
     \s:armstate.
@@ -3190,6 +3211,7 @@ let arm_TBL_ALT =        EXPAND_SIMD_RULE arm_TBL;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
 let arm_UADDLP_ALT =     EXPAND_SIMD_RULE arm_UADDLP;;
+let arm_UMIN_VEC_ALT =   EXPAND_SIMD_RULE arm_UMIN_VEC;;
 let arm_UMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMLAL_VEC;;
 let arm_UMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMLAL2_VEC;;
 let arm_UMLSL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMLSL_VEC;;
@@ -3307,6 +3329,7 @@ let ARM_OPERATION_CLAUSES =
        arm_UMSUBL;
        arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT;
        arm_UMULH;
+       arm_UMIN_VEC_ALT;
        arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
        arm_UZP2_ALT;
        arm_XAR; arm_XTN_ALT;
