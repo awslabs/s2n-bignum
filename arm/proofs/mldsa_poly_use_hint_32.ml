@@ -105,17 +105,6 @@ let MLDSA_USE_HINT_EXEC = ARM_MK_EXEC_RULE mldsa_poly_use_hint_32_mc;;
 (*   4. if a0 <= 0: return (a1 - 1) & 15                                     *)
 (* ========================================================================= *)
 
-(* Merge 4 x bytes32 into bytes128 at a given base+offset *)
-let USE_HINT_MEMORY_128_FROM_32_TAC =
-  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
-  and pat = `read (memory :> bytes128(word_add a (word n))) s0` in
-  fun v boff n ->
-    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
-    let f i =
-      let itm = mk_small_numeral(boff + 16*i) in
-      READ_MEMORY_MERGE_CONV 2 (subst[itm,n_tm] pat') in
-    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
-
 (* ========================================================================= *)
 (* Correctness proof                                                         *)
 (* ========================================================================= *)
