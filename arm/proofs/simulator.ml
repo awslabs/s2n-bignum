@@ -571,10 +571,57 @@ let cosimulate_ldst3() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers SIMD scalar LDR and STR with 32-bit (S) and 64-bit (D)
+ *** element sizes, with unsigned-offset and post-immediate addressing.
+ ***)
+
+let cosimulate_ldst_sd() =
+  let is_d = Random.int 2 in
+  let size = if is_d = 1 then 0b11 else 0b10 in
+  let scale = if is_d = 1 then 8 else 4 in
+  let is_post = Random.int 2 in
+  let isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let stackoff =
+    if rn = 31 then Random.int 15 * 16
+    else Random.int (256 - scale) in
+  if is_post = 0 then begin
+    (* Unsigned offset: size|111101|0|isld|imm12|Rn|Rt *)
+    let max_imm = (255 - scale - stackoff) / scale in
+    let imm12 = if max_imm > 0 then Random.int max_imm else 0 in
+    let code =
+      pow2 30 */ num size +/
+      pow2 24 */ num 0b111101 +/
+      pow2 22 */ num isld +/
+      pow2 10 */ num imm12 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  end else begin
+    (* Post-index: size|1111000|isld|0|imm9|01|Rn|Rt *)
+    let postinc = scale in
+    let code =
+      pow2 30 */ num size +/
+      pow2 23 */ num 0b1111000 +/
+      pow2 22 */ num isld +/
+      pow2 12 */ num postinc +/
+      pow2 10 */ num 0b01 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  end;;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ldst3; cosimulate_ldstu
+    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst_sd
     ];;
 
 let run_random_memopsimulation() =

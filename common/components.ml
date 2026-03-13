@@ -1574,6 +1574,36 @@ add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_64];;
 add_component_read_write_thms
  [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_64)];;
 
+let zerotop_96 = new_definition
+  `zerotop_96:(int128,int32)component =
+      through(word_zx,word_zx)`;;
+
+let READ_ZEROTOP_96 = prove
+ (`!s:A. read (c :> zerotop_96) s = word_zx(read c s)`,
+  REWRITE_TAC[READ_COMPONENT_COMPOSE; zerotop_96; through; read]);;
+
+let WRITE_ZEROTOP_96 = prove
+ (`!(s:A) y. write (c :> zerotop_96) y s = write c (word_zx y) s`,
+  REWRITE_TAC[WRITE_COMPONENT_COMPOSE; zerotop_96; through; write]);;
+
+let VALID_COMPONENT_ZEROTOP_96 = prove
+ (`valid_component zerotop_96`,
+  REWRITE_TAC[valid_component; read; write; zerotop_96; through] THEN
+  GEN_TAC THEN MATCH_MP_TAC WORD_ZX_ZX THEN
+  REWRITE_TAC[DIMINDEX_32; DIMINDEX_128] THEN CONV_TAC NUM_REDUCE_CONV);;
+
+add_valid_component_thms [VALID_COMPONENT_ZEROTOP_96];;
+
+let WEAKLY_VALID_COMPONENT_ZEROTOP_96 = prove
+  (`weakly_valid_component(zerotop_96)`,
+   MATCH_MP_TAC VALID_IMP_WEAKLY_VALID_COMPONENT THEN
+   REWRITE_TAC[VALID_COMPONENT_ZEROTOP_96]);;
+
+add_weakly_valid_component_thms [WEAKLY_VALID_COMPONENT_ZEROTOP_96];;
+
+add_component_read_write_thms
+ [CONJUNCT1(GEN_REWRITE_RULE I [valid_component] VALID_COMPONENT_ZEROTOP_96)];;
+
 let zerotop_16 = new_definition
   `zerotop_16:(int32,int16)component =
       through(word_zx,word_zx)`;;

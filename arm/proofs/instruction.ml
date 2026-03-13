@@ -375,7 +375,7 @@ let QREG = define `QREG n = simdregisters :> element(word n)`;;
 
 let DREG = define `DREG n = QREG n :> zerotop_64`;;
 
-let SREG = define `SREG n = DREG n :> zerotop_32`;;
+let SREG = define `SREG n = QREG n :> zerotop_96`;;
 
 let HREG = define `HREG n = SREG n :> zerotop_16`;;
 
@@ -460,6 +460,45 @@ add_component_alias_thms
    D8;  D9; D10; D11; D12; D13; D14; D15;
   D16; D17; D18; D19; D20; D21; D22; D23;
   D24; D25; D26; D27; D28; D29; D30; D31];;
+
+let  S0 = define ` S0 = SREG  0`;;
+let  S1 = define ` S1 = SREG  1`;;
+let  S2 = define ` S2 = SREG  2`;;
+let  S3 = define ` S3 = SREG  3`;;
+let  S4 = define ` S4 = SREG  4`;;
+let  S5 = define ` S5 = SREG  5`;;
+let  S6 = define ` S6 = SREG  6`;;
+let  S7 = define ` S7 = SREG  7`;;
+let  S8 = define ` S8 = SREG  8`;;
+let  S9 = define ` S9 = SREG  9`;;
+let S10 = define `S10 = SREG 10`;;
+let S11 = define `S11 = SREG 11`;;
+let S12 = define `S12 = SREG 12`;;
+let S13 = define `S13 = SREG 13`;;
+let S14 = define `S14 = SREG 14`;;
+let S15 = define `S15 = SREG 15`;;
+let S16 = define `S16 = SREG 16`;;
+let S17 = define `S17 = SREG 17`;;
+let S18 = define `S18 = SREG 18`;;
+let S19 = define `S19 = SREG 19`;;
+let S20 = define `S20 = SREG 20`;;
+let S21 = define `S21 = SREG 21`;;
+let S22 = define `S22 = SREG 22`;;
+let S23 = define `S23 = SREG 23`;;
+let S24 = define `S24 = SREG 24`;;
+let S25 = define `S25 = SREG 25`;;
+let S26 = define `S26 = SREG 26`;;
+let S27 = define `S27 = SREG 27`;;
+let S28 = define `S28 = SREG 28`;;
+let S29 = define `S29 = SREG 29`;;
+let S30 = define `S30 = SREG 30`;;
+let S31 = define `S31 = SREG 31`;;
+
+add_component_alias_thms
+ [ S0;  S1;  S2;  S3;  S4;  S5;  S6;  S7;
+   S8;  S9; S10; S11; S12; S13; S14; S15;
+  S16; S17; S18; S19; S20; S21; S22; S23;
+  S24; S25; S26; S27; S28; S29; S30; S31];;
 
 (* ------------------------------------------------------------------------- *)
 (* Additional subcomponents for individual lanes of a SIMD register.         *)
@@ -1962,6 +2001,32 @@ let arm_USHR_VEC = define
             else usimd8 (\x. word_ushr x amt) n in
           (Rd := word_zx d:(128)word) s`;;
 
+let word_ushl = new_definition
+ `(word_ushl:N word->N word->N word) x y =
+    let amt:byte = word_subword y (0,8) in
+    if ~(bit 7 amt) then word_shl x (val amt)
+    else word_ushr x (val(word_neg amt))`;;
+
+let arm_USHL_VEC = define
+ `arm_USHL_VEC Rd Rn Rm esize datasize =
+    \s. let n = read Rn s
+        and m = read Rm (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then simd2 word_ushl n m
+            else if esize = 32 then simd4 word_ushl n m
+            else if esize = 16 then simd8 word_ushl n m
+            else simd16 word_ushl n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 word_ushl n m
+            else if esize = 16 then simd4 word_ushl n m
+            else simd8 word_ushl n m in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_USRA_VEC = define
  `arm_USRA_VEC Rd Rn shift esize datasize =
     \s. let n:(128)word = read Rn s in
@@ -2203,6 +2268,21 @@ let arm_TBL = define
         else
           let d =
              usimd8 (\x. word_subword n (8 * val x,8):byte) (word_zx m:int64) in
+          (Rd := word_zx d:(128)word) s`;;
+
+let arm_TBL2 = define
+ `arm_TBL2 Rd Rn1 Rn2 Rm datasize =
+    \s:armstate.
+        let n1:int128 = read Rn1 s in
+        let n2:int128 = read Rn2 s in
+        let table:(256)word = word_join n2 n1 in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d = usimd16 (\x. word_subword table (8 * val x,8):byte) m in
+          (Rd := d) s
+        else
+          let d =
+             usimd8 (\x. word_subword table (8 * val x,8):byte) (word_zx m:int64) in
           (Rd := word_zx d:(128)word) s`;;
 
 (* ------------------------------------------------------------------------- *)
@@ -3143,6 +3223,7 @@ let arm_SMULL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMULL2_VEC;;
 let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TBL_ALT =        EXPAND_SIMD_RULE arm_TBL;;
+let arm_TBL2_ALT =       EXPAND_SIMD_RULE arm_TBL2;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
 let arm_UADDLP_ALT =     EXPAND_SIMD_RULE arm_UADDLP;;
@@ -3152,6 +3233,8 @@ let arm_UMLSL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMLSL_VEC;;
 let arm_UMLSL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMLSL2_VEC;;
 let arm_UMULL_VEC_ALT =  EXPAND_SIMD_RULE arm_UMULL_VEC;;
 let arm_UMULL2_VEC_ALT = EXPAND_SIMD_RULE arm_UMULL2_VEC;;
+let arm_USHL_VEC_ALT =
+  REWRITE_RULE[word_ushl] (EXPAND_SIMD_RULE arm_USHL_VEC);;
 let arm_USHR_VEC_ALT =   EXPAND_SIMD_RULE arm_USHR_VEC;;
 let arm_USRA_VEC_ALT =   EXPAND_SIMD_RULE arm_USRA_VEC;;
 let arm_UZP1_ALT =       EXPAND_SIMD_RULE arm_UZP1;;
@@ -3255,7 +3338,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
-       arm_TBL_ALT;
+       arm_TBL_ALT; arm_TBL2_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
        arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
@@ -3263,7 +3346,7 @@ let ARM_OPERATION_CLAUSES =
        arm_UMSUBL;
        arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT;
        arm_UMULH;
-       arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
+       arm_USHL_VEC_ALT; arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
        arm_UZP2_ALT;
        arm_XAR; arm_XTN_ALT;
        arm_ZIP1_ALT; arm_ZIP2_ALT;
