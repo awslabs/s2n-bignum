@@ -658,7 +658,7 @@ Lsha3_keccak4_f1600_alt:
      vmovhpd [rdi+0x188],xmm3
      vmovq [rdi+0x250],xmm15
      vmovhpd [rdi+0x318],xmm15
-     mov	rsp, r11
+     mov  rsp, r11
      .cfi_same_value r11
      .cfi_same_value rsp
 
