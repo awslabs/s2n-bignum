@@ -305,3 +305,44 @@ let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT = prove
   ARM_ADD_RETURN_NOSTACK_TAC MLDSA_POINTWISE_ACC_L4_EXEC
     (REWRITE_RULE[fst MLDSA_POINTWISE_ACC_L4_EXEC]
        MLDSA_POINTWISE_ACC_L4_CORRECT));;
+
+(* ========================================================================= *)
+(* Constant-time and memory safety proof.                                    *)
+(* ========================================================================= *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "mldsa_pointwise_acc_l4" subroutine_signatures)
+    MLDSA_POINTWISE_ACC_L4_SUBROUTINE_CORRECT
+    MLDSA_POINTWISE_ACC_L4_EXEC;;
+
+let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e r a b pc returnaddress.
+           nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_mc) (r,1024) /\
+           nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_mc) (a,4096) /\
+           nonoverlapping (word pc,LENGTH mldsa_pointwise_acc_l4_mc) (b,4096) /\
+           nonoverlapping (r,1024) (a,4096) /\
+           nonoverlapping (r,1024) (b,4096) /\
+           nonoverlapping (a,4096) (b,4096)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    mldsa_pointwise_acc_l4_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [r; a; b] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a b r pc returnaddress /\
+                         memaccess_inbounds e2 [a,4096; b,4096; r,1024]
+                         [r,1024]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_POINTWISE_ACC_L4_EXEC);;
