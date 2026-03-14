@@ -459,8 +459,15 @@ let decode = new_definition `!w:int32. decode w =
     // BIC (vector)
     SOME (arm_BIC_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
 
+  | [0:1; q; 0b001110:6; size:2; 1:1; Rm:5; 0b001101:6; Rn:5; Rd:5] ->
+    // CMGT (vector, register, signed)
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP val size in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_CMGT_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
+
   | [0:1; q; 0b101110:6; size:2; 1:1; Rm:5; 0b001101:6; Rn:5; Rd:5] ->
-    // CMHI (vector)
+    // CMHI (vector, register, unsigned)
     if size = word 0b11 /\ ~q then NONE else
     let esize = 8 * 2 EXP val size in
     let datasize = if q then 128 else 64 in
@@ -486,6 +493,13 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     SOME (arm_CNT (QREG' Rd) (QREG' Rn) datasize)
 
+  | [0:1; q; 0b101110:6; size:2; 0b100000100110:12; Rn:5; Rd:5] ->
+    // CMLE (vector, zero) - signed compare <= 0
+    if size = word 0b11 /\ ~q then NONE else
+    let esize = 8 * 2 EXP val size in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_CMLE_VEC_ZERO (QREG' Rd) (QREG' Rn) esize datasize)
+
   | [0:1; q; 0b001110000:9; imm5:5; 0b000011:6; Rn:5; Rd:5] ->
     // DUP (general)
     let size = word_ctz imm5 in
@@ -505,7 +519,7 @@ let decode = new_definition `!w:int32. decode w =
     else NONE
 
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
-    // MOVI, USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
+    // MOVI (op=1), USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
     if val immh = 0 then
       // MOVI, 128-bit only
       if cmode = word 0b1110 /\ q then
@@ -795,14 +809,36 @@ let decode = new_definition `!w:int32. decode w =
       SOME (arm_SRSHR_VEC (QREG' Rd) (QREG' Rn) amt esize datasize)
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b000001:6; Rn:5; Rd:5] ->
-    // SSHR
-    if immh = (word 0b0: (4)word) then NONE // "asimdimm case"
+    // SSHR, or MOVI 32-bit (op=0, cmode=0000) when immh=0
+    if immh = (word 0b0: (4)word) then
+      // MOVI 32-bit, no shift (cmode=0000, op=0)
+      // immb reinterpreted as abc, Rn as defgh
+      let abc = immb in
+      let defgh = Rn in
+      let abcdefgh:(8)word = word_join abc defgh in
+      let imm32:(32)word = word_zx abcdefgh in
+      let imm64:(64)word = word_join imm32 imm32 in
+      if q then SOME (arm_MOVI (QREG' Rd) imm64)
+      else SOME (arm_MOVI (DREG' Rd) imm64)
     else if bit 3 immh /\ ~q then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
       let datasize = if q then 128 else 64 in
       let amt = 2 * esize - val(word_join immh immb:7 word) in
       SOME (arm_SSHR_VEC (QREG' Rd) (QREG' Rn) amt esize datasize)
+
+  | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b000101:6; Rn:5; Rd:5] ->
+    // ORR immediate 32-bit (op=0, cmode=0001) when immh=0
+    if immh = (word 0b0: (4)word) then
+      let abc = immb in
+      let defgh = Rn in
+      let abcdefgh:(8)word = word_join abc defgh in
+      let imm32:(32)word = word_zx abcdefgh in
+      let imm64:(64)word = word_join imm32 imm32 in
+      let datasize = if q then 128 else 64 in
+      let imm2 = if q then word_duplicate imm64 else word_zx imm64 in
+      SOME (arm_ORR_VEC (QREG' Rd) (QREG' Rd) (rvalue imm2) datasize)
+    else NONE
 
   | [0:1; q; 0b001110:6; size:2; 0:1; Rm:5; 0:1; op; 0b1010:4; Rn:5; Rd:5] ->
     // TRN1 and TRN2

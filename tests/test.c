@@ -12076,6 +12076,89 @@ static void mlkem_poly_mulcache_to_avx2_layout(int16_t a[128])
 }
 #endif
 
+// Reference implementation of mldsa_poly_use_hint_32 for ML-DSA parameter sets 65/87
+// GAMMA2 = (Q-1)/32 = 261888, output range [0, 15]
+// Matches the exact assembly algorithm using SQDMULH-based Barrett decomposition
+void reference_mldsa_poly_use_hint_32(int32_t b[256], const int32_t a[256], const int32_t h[256])
+{
+    const int32_t TWO_GAMMA2 = 523776;
+    const int32_t THRESHOLD = 8118528;  // 31 * GAMMA2
+    const int32_t BARRETT = 1074791425; // 0x40100401
+    for (int i = 0; i < 256; i++) {
+        int32_t ai = a[i];
+        // Decompose using SQDMULH + SRSHR (matching assembly)
+        // sqdmulh: (2 * ai * BARRETT) >> 32
+        int32_t sqdmulh_result = (int32_t)(((int64_t)2 * ai * BARRETT) >> 32);
+        // srshr by 18: (x + (1 << 17)) >> 18  (signed rounding shift right)
+        int32_t a1 = (sqdmulh_result + (1 << 17)) >> 18;
+        // a0 = ai - a1 * 2*GAMMA2
+        int32_t a0 = ai - a1 * TWO_GAMMA2;
+        // Wraparound: if ai > threshold, set a1=0, a0 += -1 (since mask = -1)
+        if (ai > THRESHOLD) {
+            a1 = 0;
+            a0 = a0 + (-1);  // add the all-ones mask
+        }
+        // delta = (a0 <= 0) ? -1 : 1
+        int32_t delta = (a0 <= 0) ? -1 : 1;
+        // b = (a1 + delta * hint) & 15
+        b[i] = (a1 + delta * h[i]) & 15;
+    }
+}
+
+int test_mldsa_poly_use_hint_32(void)
+{
+    // Skip test on non-aarch64 architectures (ARM-only function)
+    if (get_arch_name() != ARCH_AARCH64) {
+        return 0;
+    }
+
+#ifdef __aarch64__
+    uint64_t t, i;
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t h[256] __attribute__((aligned(32)));
+    int32_t b_asm[256] __attribute__((aligned(32)));
+    int32_t b_ref[256] __attribute__((aligned(32)));
+
+    printf("Testing mldsa_poly_use_hint_32 with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        // Generate random coefficients in [0, Q)
+        for (i = 0; i < 256; ++i) {
+            a[i] = (int32_t)(random64() % 8380417);
+            h[i] = (int32_t)(random64() % 2);  // hint is 0 or 1
+        }
+
+        // Compute reference result
+        reference_mldsa_poly_use_hint_32(b_ref, a, h);
+
+        // Call the assembly implementation
+        mldsa_poly_use_hint_32(b_asm, a, h);
+
+        // Compare results
+        for (i = 0; i < 256; ++i) {
+            if (b_asm[i] != b_ref[i]) {
+                printf("Error in mldsa_poly_use_hint_32 element i = %"PRIu64"; "
+                       "asm = %"PRId32" ref = %"PRId32" "
+                       "(a[i] = %"PRId32", h[i] = %"PRId32")\n",
+                       i, b_asm[i], b_ref[i], a[i], h[i]);
+                return 1;
+            }
+        }
+
+        if (VERBOSE) {
+            printf("OK: mldsa_poly_use_hint_32: a[0]=0x%08"PRIx32", h[0]=%"PRId32" => b[0]=%"PRId32"\n",
+                   a[0], h[0], b_asm[0]);
+        }
+    }
+
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;
+#endif
+}
+
+
 int test_mlkem_basemul_k2(void)
 {
 uint64_t t, i;
@@ -15925,6 +16008,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
+  functionaltest(all,"mldsa_poly_use_hint_32",test_mldsa_poly_use_hint_32);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
   functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
