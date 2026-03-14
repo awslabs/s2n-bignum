@@ -2948,6 +2948,11 @@ uint64_t keccak_r[5][5] =
  { UINT64_C(27), UINT64_C(20), UINT64_C(39), UINT64_C(8), UINT64_C(14) }
 };
 
+static const uint64_t rho8[4] = {0x0605040302010007, 0x0E0D0C0B0A09080F,
+                                     0x1615141312111017, 0x1E1D1C1B1A19181F};
+static const uint64_t rho56[4] = {0x0007060504030201, 0x080F0E0D0C0B0A09,
+                                     0x1017161514131211, 0x181F1E1D1C1B1A19};
+
 uint64_t rol(uint64_t x,uint64_t k)
 { k &= 0x3F;
   if (k == 0) return x;
@@ -14537,9 +14542,6 @@ int test_sha3_keccak4_f1600(void)
 
 int test_sha3_keccak4_f1600_alt(void)
 {
-#ifdef __x86_64__
-  return 1;
-#else
   uint64_t t, i;
   uint64_t a[100], b[100], c[100];
   printf("Testing sha3_keccak4_f1600_alt with %d cases\n",tests);
@@ -14551,7 +14553,11 @@ int test_sha3_keccak4_f1600_alt(void)
      reference_keccak_f1600(b+25,a+25);
      reference_keccak_f1600(b+50,a+50);
      reference_keccak_f1600(b+75,a+75);
-     sha3_keccak4_f1600_alt(c,keccak_RC);
+     #ifdef __x86_64__
+       sha3_keccak4_f1600_alt(c,keccak_RC, rho8, rho56);
+     #else
+       sha3_keccak4_f1600_alt(c,keccak_RC);
+     #endif
      for (i = 0; i < 100; ++i)
       { if (b[i] != c[i])
          { printf("Error in keccak4_f1600 batch = %"PRIu64", element i = %"PRIu64"; "
@@ -14571,7 +14577,6 @@ int test_sha3_keccak4_f1600_alt(void)
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_sha3_keccak4_f1600_alt2(void)
@@ -16066,6 +16071,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"secp256k1_jmixadd_alt",test_secp256k1_jmixadd_alt);
   functionaltest(all,"sha3_keccak_f1600",test_sha3_keccak_f1600);
   functionaltest(all,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
+  functionaltest(all,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
   functionaltest(bmi,"sm2_montjadd",test_sm2_montjadd);
   functionaltest(all,"sm2_montjadd_alt",test_sm2_montjadd_alt);
   functionaltest(bmi,"sm2_montjdouble",test_sm2_montjdouble);
@@ -16093,7 +16099,6 @@ int main(int argc, char *argv[])
     functionaltest(arm,"sha3_keccak_f1600_alt2",test_sha3_keccak_f1600_alt2);
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
     functionaltest(sha3,"sha3_keccak2_f1600_alt",test_sha3_keccak2_f1600_alt);
-    functionaltest(sha3,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
 
   }
