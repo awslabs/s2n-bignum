@@ -870,38 +870,6 @@ let sha3_keccak4_f1600_tmc = define_trimmed "sha3_keccak4_f1600_tmc" sha3_keccak
 
 let SHA3_KECCAK4_F1600_EXEC = X86_MK_CORE_EXEC_RULE sha3_keccak4_f1600_tmc;;
 
-(* ------------------------------------------------------------------------- *)
-(* Additional definitions and tactics used in the proof.                     *)
-(* ------------------------------------------------------------------------- *)
-
-let PC_OFFSET_CONV = 
-  GEN_REWRITE_CONV DEPTH_CONV [ARITH_RULE `(m + a) + b = m + (a + b)`] THENC
-  NUM_REDUCE_CONV;;
-
-let MEMORY_256_FROM_64_TAC =
-  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
-  and pat = `read (memory :> bytes256(word_add a (word n))) s0` in
-  fun v boff n ->
-    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
-    let f i =
-      let itm = mk_small_numeral(boff + 32*i) in
-      READ_MEMORY_MERGE_CONV 2 (subst[itm,n_tm] pat') in
-    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
-
-let WORD_SUBWORD_JOIN_EXTRACT_64 = prove
- (`!a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (0,64)):int64) = d /\
- !a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (64,64)):int64) = c /\
- !a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (128,64)):int64) = b /\
- !a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (192,64)):int64) = a`,
- REPEAT GEN_TAC THEN
-  BITBLAST_TAC);;
-
-let WORD_SUBWORD_JOIN_EXTRACT_128 = prove
- (`!a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (0,128)):int128) = ((word_join c d):int128) /\
- !a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (128,128)):int128) = ((word_join a b):int128)`,
-   REPEAT GEN_TAC THEN
-   BITBLAST_TAC);;
-
 let SHA3_KECCAK4_F1600_CORRECT = prove
   (`!rc_pointer:int64 bitstate_in:int64 A1 A2 A3 A4 pc:num stackpointer:int64.
   nonoverlapping_modulo (2 EXP 64) (pc, 0xc1b) (val stackpointer, 0x360) /\
