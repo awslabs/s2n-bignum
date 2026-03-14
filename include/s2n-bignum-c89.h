@@ -985,6 +985,22 @@ extern void mldsa_intt(int32_t a[256], const int32_t zetas[624]);
 /* Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_ntt(int32_t a[256], const int32_t zetas[624]);
 
+/* Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA */
+/* Inputs a[256], b[256] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise(int32_t r[256], const int32_t a[256], const int32_t b[256]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L4 */
+/* Inputs a[1024], b[1024] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l4(int32_t r[256], const int32_t a[1024], const int32_t b[1024]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L5 */
+/* Inputs a[1280], b[1280] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l5(int32_t r[256], const int32_t a[1280], const int32_t b[1280]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L7 */
+/* Inputs a[1792], b[1792] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l7(int32_t r[256], const int32_t a[1792], const int32_t b[1792]);
+
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_reduce(int32_t a[256]);
