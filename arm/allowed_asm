@@ -22,8 +22,12 @@
 : cinc$
 : cinv$
 : clz$
+: cmgt$
+: cmgt.4s$
 : cmhi$
 : cmhi.8h$
+: cmle$
+: cmle.4s$
 : cmn$
 : cmp$
 : cnt$
@@ -64,6 +68,7 @@
 : mov.d$
 : movi$
 : movi.2d$
+: movi.4s$
 : movk$
 : msub$
 : mul$
@@ -74,6 +79,7 @@
 : ngc$
 : ngcs$
 : orr$
+: orr.4s$
 : rax1$
 : rax1.2d$
 : ret$
@@ -141,6 +147,7 @@
 : uaddlv.8h$
 : ubfx$
 : umaddl$
+: umin$
 : umlal$
 : umlal.2d$
 : umlal2$
