@@ -243,7 +243,7 @@ let MLKEM_TOMONT_SUBROUTINE_SAFE = time prove
                     exists e2.
                         read events s = APPEND e2 e /\
                         e2 = f_events ptr pc returnaddress /\
-                        memaccess_inbounds e2 [ptr,512; ptr,512] [ptr,512])
+                        memaccess_inbounds e2 [ptr,512] [ptr,512])
                (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_TOMONT_EXEC);;
