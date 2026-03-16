@@ -176,6 +176,16 @@ let gen_mk_safety_spec
           failwith ("rodata: not a int64 ty: " ^ (string_of_term addr)))
         readonly_objects in
     (memreads @ readonly_objects),memwrites in
+  (* Remove duplicates *)
+  let memreads,memwrites =
+    let rec dedup l =
+      match l with
+      | h::t -> if mem h t then dedup t else h::(dedup t)
+      | h::[] -> [h]
+      | [] -> []
+    in
+    rev (dedup (rev memreads)),
+    rev (dedup (rev memwrites)) in
 
   let s = mk_var("s",state_ty) in
   let precond =
@@ -980,10 +990,18 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
         end
       end) (asl,w)) ORELSE CANONICALIZE_UNIFY_F_EVENTS_TAC;;
 
-(* The input goal: 'exists e2. ....' *)
+(* The input goal:
+  exists e2.
+    read events s = APPEND e2 e /\
+    e2 = f_events <public args> /\     <--- this clause is optional.
+    memaccess_inbounds e2 ...'
+*)
 let DISCHARGE_SAFETY_PROPERTY_TAC =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
-  (* Prove memaccess_inbounds predicates *)
-  DISCHARGE_MEMACCESS_INBOUNDS_TAC;;
+  W (fun (asl,w) ->
+    (if is_conj w then
+      (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ])
+    else ALL_TAC) THEN
+    (* Prove memaccess_inbounds predicates *)
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC);;

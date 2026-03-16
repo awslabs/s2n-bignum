@@ -222,7 +222,7 @@ let SHA3_KECCAK_F1600_ALT_CORRECT = prove
       GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [SYM th]) THEN
     REWRITE_TAC[keccak_round] THEN CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN
     CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    REWRITE_TAC[CONS_11] THEN REPEAT CONJ_TAC THEN BITBLAST_TAC;
+    REWRITE_TAC[CONS_11] THEN REPEAT CONJ_TAC THEN KECCAK_BITBLAST_TAC;
 
     (*** The trivial loop-back goal ***)
 
@@ -306,7 +306,7 @@ let SHA3_KECCAK_F1600_ALT_SUBROUTINE_SAFE = time prove
                         f_events rc a pc (word_sub stackpointer (word 64))
                         returnaddress /\
                         memaccess_inbounds e2
-                        [a,200; rc,192; a,200;
+                        [a,200; rc,192;
                          word_sub stackpointer (word 64),64]
                         [a,200; word_sub stackpointer (word 64),64])
                (\s s'. true)`,

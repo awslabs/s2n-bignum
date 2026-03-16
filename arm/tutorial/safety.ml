@@ -195,7 +195,7 @@ let bignum_mux_4_safe = time prove
              MAYCHANGE SOME_FLAGS ,,
              MAYCHANGE [events] ,,
              MAYCHANGE [memory :> bignum (z,4)])`,
-  (* Assert that the goal is ssame as bignum_mux_4_safety_spec *)
+  (* Assert that the goal is same as bignum_mux_4_safety_spec *)
   ASSERT_CONCL_TAC bignum_mux_4_safety_spec THEN
   (* Go! *)
   PROVE_SAFETY_SPEC_TAC BIGNUM_MUX_4_EXEC);;
@@ -583,3 +583,55 @@ let bignum_mod_n25519_safe = time prove
       Note that {X86,ARM}_SUBROUTINE_SIM_TAC is now returning two subgoals.
       The first subgoal can be proven with EXISTS_E2_TAC.
 *)
+
+
+(* ------------------------------------------------------------------------- *)
+(* How can we only prove memory safety but not constant-time property?       *)
+(* ------------------------------------------------------------------------- *)
+
+(* You can prove the memory safety property of a program, but not constant-time
+  property as follows:
+
+  1. The spec won't need to quantify f_events! The goal is just traditional
+     ensures.
+  2. You can put this at the postcondition:
+    `exists e2.
+      read events s = APPEND e2 e /\ memaccess_inbounds e2 [..] [..]`
+  3. Just do the symbolic simulation, then reuse DISCHARGE_SAFETY_PROPERTY_TAC.
+    It can handle the variant of postcondition having no f_events.
+
+  For slightly more advanced programs like bignum_mod_n25519, using the
+  traditional ENSURES_*_TAC with invariants containing
+  `read events s = APPEND e2 e /\ memaccess_inbounds e2 [..] [..]` will work.
+*)
+
+let bignum_mux_4_memory_safe = time prove
+ (`forall e p z x y pc.
+      nonoverlapping (word pc,72) (z,8 * 4) /\
+      (x = z \/ nonoverlapping (x,8 * 4) (z,8 * 4)) /\
+      (y = z \/ nonoverlapping (y,8 * 4) (z,8 * 4))
+      ==> ensures arm
+          (\s.
+              aligned_bytes_loaded s (word pc) bignum_mux_4_mc /\
+              read PC s = word pc /\
+              C_ARGUMENTS [p; z; x; y] s /\
+              read events s = e)
+          (\s.
+              read PC s = word (pc + 68) /\
+              (exists e2.
+                    read events s = APPEND e2 e /\
+                    memaccess_inbounds e2 [x,32; y,32; z,32] [z,32]))
+          (MAYCHANGE [PC; X0; X4] ,,
+            MAYCHANGE SOME_FLAGS ,,
+            MAYCHANGE [events] ,,
+            MAYCHANGE [memory :> bignum (z,4)])`,
+  (* Start with the traditional proof style. *)
+  REPEAT GEN_TAC THEN DISCH_THEN ((MAP_EVERY ASSUME_TAC) o CONJUNCTS) THEN
+  REWRITE_TAC[C_ARGUMENTS;SOME_FLAGS] THEN
+  ENSURES_INIT_TAC "s0" THEN
+  ARM_STEPS_TAC BIGNUM_MUX_4_EXEC (1--17) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+
+  (* Now the `exists e2. ....` part. *)
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
