@@ -119,8 +119,8 @@ let AES256_KEXP_LAST_CONV =
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (* ========================================================================= *)
-(* KAT: AES-128 Key Expansion (FIPS 197 Appendix A.1)                       *)
-(* Key = 2b7e1516 28aed2a6 abf71588 09cf4f3c                                *)
+(* KAT: AES-128 Key Expansion (FIPS 197 Appendix A.1)                        *)
+(* Key = 2b7e1516 28aed2a6 abf71588 09cf4f3c                                 *)
 (* ========================================================================= *)
 
 prove(`aes128_kexp_round 0
@@ -156,9 +156,9 @@ prove(`aes128_kexp_round 9
   REFL_TAC);;
 
 (* ========================================================================= *)
-(* KAT: AES-256 Key Expansion (FIPS 197 Appendix A.3)                       *)
-(* Key = 603deb10 15ca71be 2b73aef0 857d7781                                *)
-(*       1f352c07 3b6108d7 2d9810a3 0914dff4                                *)
+(* KAT: AES-256 Key Expansion (FIPS 197 Appendix A.3)                        *)
+(* Key = 603deb10 15ca71be 2b73aef0 857d7781                                 *)
+(*       1f352c07 3b6108d7 2d9810a3 0914dff4                                 *)
 (* ========================================================================= *)
 
 prove(`aes256_kexp_round 0
@@ -192,8 +192,8 @@ prove(`aes256_kexp_last 6
   REFL_TAC);;
 
 (* ========================================================================= *)
-(* AES Cipher steps (FIPS 197 Sec 5.1)                                      *)
-(* NIST byte ordering: byte 0 = MSB of 128-bit word.                        *)
+(* AES Cipher steps (FIPS 197 Sec 5.1)                                       *)
+(* NIST byte ordering: byte 0 = MSB of 128-bit word.                         *)
 (* NIST round order: SubBytes -> ShiftRows -> MixColumns -> AddRoundKey.     *)
 (* ========================================================================= *)
 
@@ -277,7 +277,7 @@ prove(`fips197_mix_columns (word 0xd4bf5d30e0b452aeb84111f11e2798e5) =
   CONV_TAC(LAND_CONV FIPS197_MIX_COLUMNS_CONV) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* AddRoundKey (FIPS 197 Sec 5.1.4): XOR state with round key.              *)
+(* AddRoundKey (FIPS 197 Sec 5.1.4): XOR state with round key.               *)
 (* ========================================================================= *)
 
 let fips197_add_round_key = new_definition
@@ -382,7 +382,7 @@ let FIPS197_ENCRYPT_CONV cipher_def ks_def =
   FIPS197_FINAL_ROUND_REDUCE_CONV;;
 
 (* ========================================================================= *)
-(* KAT: FIPS 197 Appendix B — AES-128 full encryption                       *)
+(* KAT: FIPS 197 Appendix B — AES-128 full encryption                        *)
 (* Plaintext:  0x3243f6a8885a308d313198a2e0370734                            *)
 (* Key:        0x2b7e151628aed2a6abf7158809cf4f3c                            *)
 (* Ciphertext: 0x3925841d02dc09fbdc118597196a0b32                            *)
@@ -410,7 +410,7 @@ prove(`aes128_cipher (word 0x3243f6a8885a308d313198a2e0370734)
     AES128_APPENDIX_B_KEY_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* KAT: AES-256 full encryption (NIST AES_Core256 / FIPS 197 Appendix A.3)  *)
+(* KAT: AES-256 full encryption (NIST AES_Core256 / FIPS 197 Appendix A.3)   *)
 (* Key:        0x603deb1015ca71be2b73aef0857d7781                            *)
 (*             1f352c073b6108d72d9810a30914dff4                              *)
 (* Plaintext:  0x6bc1bee22e409f96e93d7e117393172a                            *)
@@ -443,8 +443,8 @@ prove(`aes256_cipher (word 0x6bc1bee22e409f96e93d7e117393172a)
     AES256_CORE_KEY_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* KAT: AESAVS Appendix B GFSbox — AES-128 with all-zero key                *)
-(* Source: "The Advanced Encryption Standard Algorithm Validation Suite"      *)
+(* KAT: AESAVS Appendix B GFSbox — AES-128 with all-zero key                 *)
+(* Source: "The Advanced Encryption Standard Algorithm Validation Suite"     *)
 (* ========================================================================= *)
 
 let AESAVS_ZERO_KEY_128_SCHEDULE = new_definition
@@ -477,7 +477,7 @@ prove(`aes128_cipher (word 0x00000000000000000000000000000000)
     AESAVS_ZERO_KEY_128_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* KAT: AES-256 with all-zero key                                           *)
+(* KAT: AES-256 with all-zero key                                            *)
 (* ========================================================================= *)
 
 let AESAVS_ZERO_KEY_256_SCHEDULE = new_definition
