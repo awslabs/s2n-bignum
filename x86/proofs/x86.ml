@@ -3163,7 +3163,6 @@ let x86_execute = define
          | 8 -> x86_SUB (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | TEST dest src ->
         (add_load_event dest s ,, add_load_event src s ,,
-         add_store_event dest s ,,
         (\s. (match operand_size dest with
            64 -> x86_TEST (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TEST (OPERAND32 dest s) (OPERAND32 src s)
