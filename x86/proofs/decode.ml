@@ -2422,7 +2422,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     | Comb(Comb((Const(",",_) as p),opo'),
         Comb(Comb((Const(",",_) as q),rep'),Const("SG0",_))),
       (Const("NONE",_) as rex), l' ->
-      TRANS (INST [opo',opo; rep',rep; l',l] decode'_ds)
+      TRANS (INST [opo',opo; rep',rep; l',l] decode'_es)
         (decoder (mk_comb (mk_comb (p, opo'),
                            mk_comb (mk_comb (q, rep'), es))) rex l')
     | _ -> failwith "decode 0x26 failed" in
