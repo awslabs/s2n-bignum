@@ -395,3 +395,31 @@ let GHASH_POLYVAL_ACC_BATCHED = prove(
        [MP_TAC(ISPECL [`bool_poly`; `poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))`; `poly_of_word (h':int128)`; `poly_of_word (h_power (h:int128) (LENGTH (t:(int128)list)))`] RING_ADD_RDISTRIB) THEN
         SIMP_TAC[BOOL_POLY_OF_WORD];
         MESON_TAC[RING_ADD_ASSOC; RING_ADD; RING_MUL; BOOL_POLY_OF_WORD]]]]);;
+
+(* ========================================================================= *)
+(* Htable precondition and Karatsuba middle term                             *)
+(* ========================================================================= *)
+
+let karatsuba_mid = new_definition
+  `karatsuba_mid (h:int128) : 64 word =
+   word_xor (word_subword h (0,64) : 64 word)
+            (word_subword h (64,64) : 64 word)`;;
+
+let htable_powers = new_definition
+  `htable_powers (h:int128) (powers:(int128)list) (n:num) <=>
+   LENGTH powers = n /\
+   !k. k < n ==> EL k powers = h_power h k`;;
+
+let GHASH_BATCHED_FROM_HTABLE = prove(
+  `!(h:int128) (a:int128) (b:int128) (bs:(int128)list) (powers:(int128)list).
+    htable_powers h powers (SUC(LENGTH bs))
+    ==> ghash_polyval_acc h a (CONS b bs) =
+        polyval_reduce_prop3(
+          word_xor (word_pmul (word_xor a b) (EL (LENGTH bs) powers) : 256 word)
+                   (ghash_wide h (LENGTH bs - 1) bs))`,
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[htable_powers]) THEN
+  STRIP_TAC THEN
+  SUBGOAL_THEN `EL (LENGTH (bs:(int128)list)) powers = h_power (h:int128) (LENGTH bs)` SUBST1_TAC THENL
+   [FIRST_X_ASSUM MATCH_MP_TAC THEN ARITH_TAC;
+    REWRITE_TAC[GHASH_POLYVAL_ACC_BATCHED]]);;
