@@ -457,3 +457,167 @@ let htable_mem = new_definition
      word_join (karatsuba_mid(h_power h 6) : 64 word)
                (karatsuba_mid(h_power h 7) : 64 word) /\
    read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128(h_power h 7)`;;
+
+(* ========================================================================= *)
+(* The x-shift / twist: multiplication by x mod Q(x)                        *)
+(* H table initialization computes H_twisted = x * H mod Q(x) via shift-left-by-1      *)
+(* with conditional reduction by Q(x) - x^128 = 0xC2...01.                  *)
+(* ========================================================================= *)
+
+let POLYVAL_TWIST_CONST = new_definition
+  `POLYVAL_TWIST_CONST : int128 = word 0xC2000000000000000000000000000001`;;
+
+let ghash_twist = new_definition
+  `ghash_twist (h:int128) : int128 =
+   if bit 127 h
+   then word_xor (word_shl h 1) POLYVAL_TWIST_CONST
+   else word_shl h 1`;;
+
+(* poly_of_word(word 2) = x (the polynomial variable) *)
+let BIT_WORD_2_128 = prove(
+  `!i. bit i (word 2 : int128) <=> i = 1`,
+  GEN_TAC THEN
+  ASM_CASES_TAC `i = 1` THEN ASM_REWRITE_TAC[] THENL
+   [CONV_TAC(ONCE_DEPTH_CONV BIT_WORD_CONV) THEN REWRITE_TAC[];
+    REWRITE_TAC[BIT_WORD] THEN
+    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+    ASM_CASES_TAC `i < 128` THEN ASM_REWRITE_TAC[] THEN
+    ASM_CASES_TAC `i = 0` THENL
+     [ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
+      SUBGOAL_THEN `~ODD(2 DIV 2 EXP i)` (fun th -> REWRITE_TAC[th]) THEN
+      SUBGOAL_THEN `2 DIV 2 EXP i = 0` (fun th -> REWRITE_TAC[th; ODD]) THEN
+      MP_TAC(SPECL [`2`; `2 EXP i`] DIV_LT) THEN ANTS_TAC THENL
+       [TRANS_TAC LTE_TRANS `2 EXP 2` THEN CONJ_TAC THENL
+         [CONV_TAC NUM_REDUCE_CONV;
+          REWRITE_TAC[LE_EXP] THEN ASM_ARITH_TAC];
+        SIMP_TAC[]]]]);;
+
+let POLY_OF_WORD_2 = prove(
+  `poly_of_word(word 2 : int128) = poly_var bool_ring (one:1)`,
+  SUBGOAL_THEN `word 2 : int128 = word_of_poly(poly_var bool_ring (one:1))`
+    SUBST1_TAC THENL
+   [ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
+    X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+    REWRITE_TAC[word_of_poly; BIT_WORD_OF_BITS; IN_ELIM_THM; BIT_WORD_2_128] THEN
+    REWRITE_TAC[poly_var; bool_poly; POLY_RING; BOOL_RING;
+                monomial_1; monomial_var; coeff] THEN
+    REWRITE_TAC[FUN_EQ_THM; FORALL_ONE_THM] THEN
+    ASM_CASES_TAC `i = 1` THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
+    MATCH_MP_TAC POLY_OF_WORD_OF_POLY THEN
+    REWRITE_TAC[POLY_VAR_BOOL_POLY] THEN
+    REWRITE_TAC[POLY_DEG_VAR; BOOL_RING] THEN
+    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+    ARITH_TAC]);;
+
+(* Q(x) = x^128 + TWIST_CONST (at 256 bits) *)
+let POLYVAL_DECOMP = prove(
+  `polyval_poly = ring_add bool_poly
+    (poly_of_word(word(2 EXP 128) : 256 word))
+    (poly_of_word(word 0xC2000000000000000000000000000001 : 256 word))`,
+  MP_TAC(INST_TYPE [`:256`,`:N`] POLYVAL_POLY_OF_WORD) THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[GSYM POLY_OF_WORD_XOR] THEN
+  AP_TERM_TAC THEN CONV_TAC WORD_REDUCE_CONV);;
+
+(* GHASH_TWIST_CORRECT: the twist computes x * H mod Q(x).                  *)
+(* Proof: decompose word_pmul h (word 2) = word_shl (word_zx h) 1 at 256    *)
+(* bits, show ghash_twist = polyval_reduce_step of that via bit-level        *)
+(* reasoning, then use POLY_EQUIV_POLYVAL_REDUCE_STEP for the congruence.    *)
+
+let WORD_PMUL_1 = REWRITE_RULE[WORD_SHL_ZERO; ARITH_RULE `2 EXP 0 = 1`]
+  (ISPECL [`x:N word`; `0`] (CONJUNCT1 WORD_PMUL_POW2));;
+
+let PMUL_2_AS_SHL = prove(
+  `!h:int128. word_pmul h (word 2:int128) : 256 word =
+              word_shl (word_zx h : 256 word) 1`,
+  GEN_TAC THEN
+  ONCE_REWRITE_TAC[GSYM(CONJUNCT2 WORD_PMUL_ZX)] THEN
+  ONCE_REWRITE_TAC[GSYM(CONJUNCT1 WORD_PMUL_ZX)] THEN
+  CONV_TAC(LAND_CONV(RAND_CONV WORD_REDUCE_CONV)) THEN
+  REWRITE_TAC[CONV_RULE(ONCE_DEPTH_CONV NUM_REDUCE_CONV)
+    (ISPECL [`word_zx(h:int128):256 word`; `1`] (CONJUNCT2 WORD_PMUL_POW2))]);;
+
+let SUBWORD_SHL_ZX = prove(
+  `!h:int128. word_zx(word_shl h 1) : 256 word =
+              word_subword (word_shl (word_zx h : 256 word) 1) (0,128)`,
+  GEN_TAC THEN ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
+  X_GEN_TAC `k:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[BIT_WORD_ZX; BIT_WORD_SHL; BIT_WORD_SUBWORD; ADD_0; SUB_0] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ADD_CLAUSES] THEN
+  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
+
+let USHR_SHL_ZX_T = prove(
+  `!h:int128. bit 127 h ==>
+    word_ushr (word_shl (word_zx h : 256 word) 1) 128 : 256 word = word 1`,
+  GEN_TAC THEN DISCH_TAC THEN
+  ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN X_GEN_TAC `k:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[BIT_WORD_USHR; BIT_WORD_SHL; BIT_WORD_ZX; BIT_WORD_1] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  ASM_CASES_TAC `k = 0` THEN ASM_REWRITE_TAC[] THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
+    SUBGOAL_THEN `bit ((k + 128) - 1) (h:int128) <=> F` (fun th -> REWRITE_TAC[th]) THEN
+    REWRITE_TAC[GSYM(TAUT `~p <=> (p <=> F)`)] THEN
+    ONCE_REWRITE_TAC[BIT_GUARD] THEN
+    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+    REWRITE_TAC[TAUT `~(p /\ q) <=> ~p \/ ~q`] THEN
+    DISJ1_TAC THEN REWRITE_TAC[NOT_LT] THEN
+    UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC]);;
+
+let USHR_SHL_ZX_F = prove(
+  `!h:int128. ~bit 127 h ==>
+    word_ushr (word_shl (word_zx h : 256 word) 1) 128 : 256 word = word 0`,
+  GEN_TAC THEN DISCH_TAC THEN
+  ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN X_GEN_TAC `k:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[BIT_WORD_USHR; BIT_WORD_SHL; BIT_WORD_ZX; BIT_WORD_0] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+  ASM_CASES_TAC `k = 0` THEN ASM_REWRITE_TAC[] THENL
+   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
+    SUBGOAL_THEN `bit ((k + 128) - 1) (h:int128) <=> F` (fun th -> REWRITE_TAC[th]) THEN
+    REWRITE_TAC[GSYM(TAUT `~p <=> (p <=> F)`)] THEN
+    ONCE_REWRITE_TAC[BIT_GUARD] THEN
+    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
+    REWRITE_TAC[TAUT `~(p /\ q) <=> ~p \/ ~q`] THEN
+    DISJ1_TAC THEN REWRITE_TAC[NOT_LT] THEN
+    UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC]);;
+
+let TWIST_WORD_IDENTITY = prove(
+  `!h:int128.
+    word_zx(ghash_twist h) : 256 word =
+    polyval_reduce_step(word_shl (word_zx h : 256 word) 1)`,
+  GEN_TAC THEN
+  REWRITE_TAC[ghash_twist; POLYVAL_TWIST_CONST; polyval_reduce_step] THEN
+  ASM_CASES_TAC `bit 127 (h:int128)` THEN ASM_REWRITE_TAC[] THENL
+   [MP_TAC(SPEC `h:int128` USHR_SHL_ZX_T) THEN ASM_REWRITE_TAC[] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC[WORD_PMUL_1; WORD_ZX_XOR; SUBWORD_SHL_ZX] THEN
+    CONV_TAC WORD_REDUCE_CONV;
+    MP_TAC(SPEC `h:int128` USHR_SHL_ZX_F) THEN ASM_REWRITE_TAC[] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC[CONJUNCT1 WORD_PMUL_0; WORD_XOR_0; SUBWORD_SHL_ZX]]);;
+
+let GHASH_TWIST_CORRECT = prove(
+  `!h:int128.
+    (poly_of_word(ghash_twist h) ==
+     ring_mul bool_poly (poly_var bool_ring one) (poly_of_word h)) (mod_polyval)`,
+  GEN_TAC THEN
+  SUBGOAL_THEN
+    `poly_of_word(ghash_twist (h:int128)) =
+     poly_of_word(polyval_reduce_step(word_pmul h (word 2:int128) : 256 word) : 256 word)`
+    SUBST1_TAC THENL
+   [TRANS_TAC EQ_TRANS `poly_of_word(word_zx(ghash_twist (h:int128)) : 256 word)` THEN
+    CONJ_TAC THENL
+     [SIMP_TAC[POLY_OF_WORD_ZX; DIMINDEX_128; DIMINDEX_256; ARITH_RULE `128 <= 256`];
+      AP_TERM_TAC THEN REWRITE_TAC[TWIST_WORD_IDENTITY; PMUL_2_AS_SHL]];
+    MP_TAC(ISPEC `word_pmul (h:int128) (word 2:int128) : 256 word`
+                 POLY_EQUIV_POLYVAL_REDUCE_STEP) THEN
+    REWRITE_TAC[POLY_OF_WORD_PMUL_2N] THEN
+    SIMP_TAC[POLY_OF_WORD_ZX; DIMINDEX_128; DIMINDEX_256;
+             ARITH_RULE `128 <= 256`] THEN
+    REWRITE_TAC[POLY_OF_WORD_2] THEN
+    ONCE_REWRITE_TAC[MESON[RING_MUL_SYM; BOOL_POLY_OF_WORD; POLY_VAR_BOOL_POLY]
+      `ring_mul bool_poly (poly_of_word h) (poly_var bool_ring one) =
+       ring_mul bool_poly (poly_var bool_ring one) (poly_of_word h)`] THEN
+    REWRITE_TAC[]]);;
