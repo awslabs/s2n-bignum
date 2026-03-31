@@ -423,3 +423,37 @@ let GHASH_BATCHED_FROM_HTABLE = prove(
   SUBGOAL_THEN `EL (LENGTH (bs:(int128)list)) powers = h_power (h:int128) (LENGTH bs)` SUBST1_TAC THENL
    [FIRST_X_ASSUM MATCH_MP_TAC THEN ARITH_TAC;
     REWRITE_TAC[GHASH_POLYVAL_ACC_BATCHED]]);;
+
+(* ========================================================================= *)
+(* Memory-level Htable predicate matching H table initialization output layout          *)
+(* 12 x 128-bit entries (192 bytes) for H^1..H^8 with Karatsuba middle terms*)
+(* Layout: groups of 3 entries [H^{2k+1}, pack(mid,mid), H^{2k+2}]          *)
+(* ========================================================================= *)
+
+let byteswap128 = new_definition
+  `byteswap128 (x:int128) : int128 =
+   word_join (word_subword x (0,64) : 64 word)
+             (word_subword x (64,64) : 64 word)`;;
+
+let htable_mem = new_definition
+  `htable_mem (h:int128) (ptr:int64) (s:armstate) <=>
+   read (memory :> bytes128 ptr) s = byteswap128(h_power h 0) /\
+   read (memory :> bytes128 (word_add ptr (word 16))) s =
+     word_join (karatsuba_mid(h_power h 0) : 64 word)
+               (karatsuba_mid(h_power h 1) : 64 word) /\
+   read (memory :> bytes128 (word_add ptr (word 32))) s = byteswap128(h_power h 1) /\
+   read (memory :> bytes128 (word_add ptr (word 48))) s = byteswap128(h_power h 2) /\
+   read (memory :> bytes128 (word_add ptr (word 64))) s =
+     word_join (karatsuba_mid(h_power h 2) : 64 word)
+               (karatsuba_mid(h_power h 3) : 64 word) /\
+   read (memory :> bytes128 (word_add ptr (word 80))) s = byteswap128(h_power h 3) /\
+   read (memory :> bytes128 (word_add ptr (word 96))) s = byteswap128(h_power h 4) /\
+   read (memory :> bytes128 (word_add ptr (word 112))) s =
+     word_join (karatsuba_mid(h_power h 4) : 64 word)
+               (karatsuba_mid(h_power h 5) : 64 word) /\
+   read (memory :> bytes128 (word_add ptr (word 128))) s = byteswap128(h_power h 5) /\
+   read (memory :> bytes128 (word_add ptr (word 144))) s = byteswap128(h_power h 6) /\
+   read (memory :> bytes128 (word_add ptr (word 160))) s =
+     word_join (karatsuba_mid(h_power h 6) : 64 word)
+               (karatsuba_mid(h_power h 7) : 64 word) /\
+   read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128(h_power h 7)`;;
