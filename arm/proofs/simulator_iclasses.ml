@@ -196,6 +196,8 @@ let iclasses =
   (*** MOVI ***)
   "0110111100000xxx111001xxxxxxxxxx"; (* q=1, cmode=1110, 64-bit *)
   "0x00111100000xxx000001xxxxxxxxxx"; (* 32-bit MOVI, immh=0 *)
+  "0100111100000xxx010001xxxxxxxxxx"; (* q=1, op=0, cmode=0100, LSL #16 *)
+  "0100111100000xxx110101xxxxxxxxxx"; (* q=1, op=0, cmode=1101, MSL #16 *)
 
   (*** ORR (vector, immediate, 32-bit) ***)
   "0x00111100000xxx000101xxxxxxxxxx"; (* 32-bit ORR imm, immh=0 *)
@@ -317,6 +319,9 @@ let iclasses =
   (*** TBL ***)
   "0x001110000xxxxx000000xxxxxxxxxx";
 
+  (*** TBL2 ***)
+  "0x001110000xxxxx001000xxxxxxxxxx";
+
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
 
@@ -328,6 +333,9 @@ let iclasses =
 
   (*** UMAXV ***)
   "0x101110xx110000101010xxxxxxxxxx";
+
+  (*** UMIN, vector ***)
+  "0x101110xx1xxxxx011011xxxxxxxxxx";
 
   (*** UMOV (.d, .s) ***)
   "01001110000x1000001111xxxxxxxxxx";
@@ -353,6 +361,9 @@ let iclasses =
 
   (*** UMULL2 ***)
   "01101110xx1xxxxx110000xxxxxxxxxx";
+
+  (*** USHL ***)
+  "0x101110xx1xxxxx010001xxxxxxxxxx";
 
   (*** USHR (make sure immh is nonzero) ***)
   "0x10111101xxxxxx000001xxxxxxxxxx";

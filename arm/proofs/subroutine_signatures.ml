@@ -4399,6 +4399,24 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_pointwise",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("a", "int32_t[static 256]", (*is const?*)"true");
+     ("b", "int32_t[static 256]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+    ("b", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mlkem_basemul_k2",
   ([(*args*)
      ("r", "int16_t[static 256]", (*is const?*)"false");
