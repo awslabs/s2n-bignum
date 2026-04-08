@@ -276,19 +276,11 @@ prove(`fips197_mix_columns (word 0xd4bf5d30e0b452aeb84111f11e2798e5) =
        word 0x046681e5e0cb199a48f8d37a2806264c`,
   CONV_TAC(LAND_CONV FIPS197_MIX_COLUMNS_CONV) THEN REFL_TAC);;
 
-(* ========================================================================= *)
-(* AddRoundKey (FIPS 197 Sec 5.1.4): XOR state with round key.               *)
-(* ========================================================================= *)
-
-let fips197_add_round_key = new_definition
-  `fips197_add_round_key (s:128 word) (k:128 word) : 128 word = word_xor s k`;;
-
-(* KAT: FIPS 197 Appendix B, Round 1 AddRoundKey *)
-prove(`fips197_add_round_key (word 0x046681e5e0cb199a48f8d37a2806264c)
-                             (word 0xa0fafe1788542cb123a339392a6c7605) =
+(* KAT: FIPS 197 Appendix B, Round 1 AddRoundKey (just XOR) *)
+prove(`word_xor (word 0x046681e5e0cb199a48f8d37a2806264c : 128 word)
+                (word 0xa0fafe1788542cb123a339392a6c7605 : 128 word) =
        word 0xa49c7ff2689f352b6b5bea43026a5049`,
-  CONV_TAC(REWRITE_CONV [fips197_add_round_key] THENC
-           DEPTH_CONV WORD_RED_CONV) THEN REFL_TAC);;
+  CONV_TAC(DEPTH_CONV WORD_RED_CONV) THEN REFL_TAC);;
 
 (* ========================================================================= *)
 (* AES Cipher (FIPS 197 Algorithm 1) — unrolled                              *)
@@ -382,6 +374,87 @@ let FIPS197_ENCRYPT_CONV cipher_def ks_def =
   FIPS197_FINAL_ROUND_REDUCE_CONV;;
 
 (* ========================================================================= *)
+(* Fast AES conversions via precomputed lookup tables.                        *)
+(*                                                                           *)
+(* The bottleneck in AES evaluation is word_subword on 2048-bit constants    *)
+(* (joined_GF2 for S-box, joined_FFmul_02/03 for MixColumns).               *)
+(* Precomputing all 256 entries for each table eliminates this bottleneck.   *)
+(* One-time cost: ~48s. Speedup: AES-128 from ~40s to ~7s per call.         *)
+(* ========================================================================= *)
+
+let aes_sbox_table = Array.init 256 (fun n ->
+  AES_SUB_BYTE_CONV
+    (vsubst [mk_small_numeral n, `n:num`]
+       `aes_sub_byte joined_GF2 ((word:num->8 word) n)`));;
+
+let ffmul02_table = Array.init 256 (fun n ->
+  FFMUL02_CONV
+    (vsubst [mk_small_numeral n, `n:num`]
+       `FFmul02 ((word:num->8 word) n)`));;
+
+let ffmul03_table = Array.init 256 (fun n ->
+  FFMUL03_CONV
+    (vsubst [mk_small_numeral n, `n:num`]
+       `FFmul03 ((word:num->8 word) n)`));;
+
+let FIPS197_SUB_BYTES_FAST_CONV =
+  REWRITE_CONV [fips197_sub_bytes; aes_sub_bytes; aes_sub_bytes_select] THENC
+  TOP_DEPTH_CONV let_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV (Array.to_list aes_sbox_table) THENC
+  WORD_JOIN_LIST_16_8_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let AES_MIX_WORD_FAST_CONV =
+  REWRITE_CONV [aes_mix_word] THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV (Array.to_list ffmul02_table) THENC
+  GEN_REWRITE_CONV ONCE_DEPTH_CONV (Array.to_list ffmul03_table) THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let FIPS197_MIX_COLUMNS_FAST_CONV =
+  REWRITE_CONV [fips197_mix_columns] THENC
+  AES_MIX_WORD_FAST_CONV THENC
+  WORD_JOIN_LIST_16_8_CONV THENC
+  TOP_DEPTH_CONV let_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let FIPS197_ROUND_FAST_CONV =
+  REWRITE_CONV [fips197_round] THENC
+  FIPS197_SUB_BYTES_FAST_CONV THENC
+  FIPS197_SHIFT_ROWS_CONV THENC
+  FIPS197_MIX_COLUMNS_FAST_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let FIPS197_ROUND_REDUCE_FAST_CONV tm =
+  match tm with
+    Comb(Comb(Const("fips197_round",_),Comb(Const("word",_),s)),
+         Comb(Const("word",_),k))
+    when is_numeral s && is_numeral k -> FIPS197_ROUND_FAST_CONV tm
+    | _ -> failwith "FIPS197_ROUND_REDUCE_FAST_CONV";;
+
+let FIPS197_FINAL_ROUND_FAST_CONV =
+  REWRITE_CONV [fips197_final_round] THENC
+  FIPS197_SUB_BYTES_FAST_CONV THENC
+  FIPS197_SHIFT_ROWS_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let FIPS197_FINAL_ROUND_REDUCE_FAST_CONV tm =
+  match tm with
+    Comb(Comb(Const("fips197_final_round",_),Comb(Const("word",_),s)),
+         Comb(Const("word",_),k))
+    when is_numeral s && is_numeral k -> FIPS197_FINAL_ROUND_FAST_CONV tm
+    | _ -> failwith "FIPS197_FINAL_ROUND_REDUCE_FAST_CONV";;
+
+let FIPS197_ENCRYPT_FAST_CONV cipher_def ks_def =
+  REWRITE_CONV [ks_def] THENC
+  REWRITE_CONV [cipher_def] THENC
+  TOP_DEPTH_CONV let_CONV THENC
+  DEPTH_CONV (EL_CONV ORELSEC WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
+  DEPTH_CONV FIPS197_ROUND_REDUCE_FAST_CONV THENC
+  FIPS197_FINAL_ROUND_REDUCE_FAST_CONV;;
+
+(* ========================================================================= *)
 (* KAT: FIPS 197 Appendix B — AES-128 full encryption                        *)
 (* Plaintext:  0x3243f6a8885a308d313198a2e0370734                            *)
 (* Key:        0x2b7e151628aed2a6abf7158809cf4f3c                            *)
@@ -406,7 +479,7 @@ let AES128_APPENDIX_B_KEY_SCHEDULE = new_definition
 prove(`aes128_cipher (word 0x3243f6a8885a308d313198a2e0370734)
                      AES128_APPENDIX_B_KEY_SCHEDULE =
        word 0x3925841d02dc09fbdc118597196a0b32`,
-  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_CONV aes128_cipher
+  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_FAST_CONV aes128_cipher
     AES128_APPENDIX_B_KEY_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
@@ -439,7 +512,7 @@ let AES256_CORE_KEY_SCHEDULE = new_definition
 prove(`aes256_cipher (word 0x6bc1bee22e409f96e93d7e117393172a)
                      AES256_CORE_KEY_SCHEDULE =
        word 0xf3eed1bdb5d2a03c064b5a7e3db181f8`,
-  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_CONV aes256_cipher
+  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_FAST_CONV aes256_cipher
     AES256_CORE_KEY_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
@@ -466,14 +539,14 @@ let AESAVS_ZERO_KEY_128_SCHEDULE = new_definition
 prove(`aes128_cipher (word 0xf34481ec3cc627bacd5dc3fb08f273e6)
                      AESAVS_ZERO_KEY_128_SCHEDULE =
        word 0x0336763e966d92595a567cc9ce537f5e`,
-  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_CONV aes128_cipher
+  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_FAST_CONV aes128_cipher
     AESAVS_ZERO_KEY_128_SCHEDULE)) THEN REFL_TAC);;
 
 (* AESAVS: key=0, pt=0 *)
 prove(`aes128_cipher (word 0x00000000000000000000000000000000)
                      AESAVS_ZERO_KEY_128_SCHEDULE =
        word 0x66e94bd4ef8a2c3b884cfa59ca342b2e`,
-  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_CONV aes128_cipher
+  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_FAST_CONV aes128_cipher
     AESAVS_ZERO_KEY_128_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
@@ -503,12 +576,12 @@ let AESAVS_ZERO_KEY_256_SCHEDULE = new_definition
 prove(`aes256_cipher (word 0x00000000000000000000000000000000)
                      AESAVS_ZERO_KEY_256_SCHEDULE =
        word 0xdc95c078a2408989ad48a21492842087`,
-  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_CONV aes256_cipher
+  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_FAST_CONV aes256_cipher
     AESAVS_ZERO_KEY_256_SCHEDULE)) THEN REFL_TAC);;
 
 (* AESAVS GFSbox first vector: key=0, pt=014730f8... *)
 prove(`aes256_cipher (word 0x014730f80ac625fe84f026c60bfd547d)
                      AESAVS_ZERO_KEY_256_SCHEDULE =
        word 0x5c9d844ed46f9885085e5d6a4f94c7d7`,
-  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_CONV aes256_cipher
+  CONV_TAC(LAND_CONV(FIPS197_ENCRYPT_FAST_CONV aes256_cipher
     AESAVS_ZERO_KEY_256_SCHEDULE)) THEN REFL_TAC);;
