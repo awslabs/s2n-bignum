@@ -166,6 +166,7 @@
 : umaxv.16b$
 : ubfx$
 : umaddl$
+: umin$
 : umlal$
 : umlal.2d$
 : umlal2$

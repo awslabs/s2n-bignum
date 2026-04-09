@@ -4752,6 +4752,26 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_pointwise_x86",
+  ([(*args*)
+     ("c", "int32_t[static 256]", (*is const?*)"false");
+     ("a", "int32_t[static 256]", (*is const?*)"true");
+     ("b", "int32_t[static 256]", (*is const?*)"true");
+     ("qdata", "int32_t[static 16]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+    ("b", "256"(* num elems *), 4(* elem bytesize *));
+    ("qdata", "16"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("c", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mldsa_reduce",
   ([(*args*)
      ("a", "int32_t[static 256]", (*is const?*)"false");
