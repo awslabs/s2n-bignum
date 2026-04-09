@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 env:
-  HOLLIGHT_COMMIT: "0a5e935c976d1ff780906c23b8f82939189844e5"
+  HOLLIGHT_COMMIT: "af5d20e033025a9f30a490d9c39edace632405a3"
 
 jobs:
   s2n-bignum-tests:
