@@ -1223,3 +1223,7 @@ extern uint64_t word_popcount (uint64_t a);
 // Single-word reciprocal, 2^64 + ret = ceil(2^128/a) - 1 if MSB of "a" is set
 // Input a; output function return
 extern uint64_t word_recip (uint64_t a);
+
+// GHASH polynomial multiply: Xi = H * Xi (mod x^128 + x^7 + x^2 + x + 1)
+// Inputs Xi[2], Htable[4]; output Xi[2]
+extern void gcm_gmult_v8 (uint64_t Xi[2], const uint64_t Htable[4]);

@@ -1125,6 +1125,57 @@ uint64_t min(uint64_t x,uint64_t y)
 
 #define swap(x,y) { uint64_t tmp = x; x = y; y = tmp; }
 
+// C reference of gcm_init_v8: precompute Htable from raw GHASH key H.
+// Adapted from AWS-LC's gcm_init_nohw (crypto/fipsmodule/modes/gcm_nohw.c).
+// Applies the POLYVAL twist (multiply by x mod Q) to H and stores the result.
+static void reference_gcm_init(uint64_t Htable[4], const uint64_t H[2])
+{ uint64_t h_lo = H[1];
+  uint64_t h_hi = H[0];
+  uint64_t carry = (int64_t)h_hi >> 63;
+  h_hi = (h_hi << 1) | (h_lo >> 63);
+  h_lo = h_lo << 1;
+  h_lo ^= carry & UINT64_C(0x0000000000000001);
+  h_hi ^= carry & UINT64_C(0xc200000000000000);
+  Htable[0] = h_hi;
+  Htable[1] = h_lo;
+  Htable[2] = h_hi ^ h_lo;
+  Htable[3] = 0;
+}
+
+// 64x64 carry-less multiply, from AWS-LC's gcm_nohw.c.
+static void gcm_mul64_nohw(uint64_t *out_lo, uint64_t *out_hi,
+                            uint64_t a, uint64_t b)
+{ uint64_t lo = 0, hi = 0; int i;
+  for (i = 0; i < 64; i++)
+    if ((a >> i) & 1)
+     { lo ^= (b << i); if(i) hi ^= (b >> (64-i)); }
+  *out_lo = lo; *out_hi = hi;
+}
+
+// POLYVAL multiply + Montgomery reduction mod Q(x), from AWS-LC's gcm_nohw.c.
+// Computes Xi = Xi * H * x^{-128} mod Q, matching the assembly's convention.
+static void gcm_polyval_nohw(uint64_t Xi[2], const uint64_t H[2])
+{ // Karatsuba multiplication
+  uint64_t r0, r1, r2, r3, mid0, mid1;
+  gcm_mul64_nohw(&r0, &r1, Xi[0], H[0]);
+  gcm_mul64_nohw(&r2, &r3, Xi[1], H[1]);
+  gcm_mul64_nohw(&mid0, &mid1, Xi[0] ^ Xi[1], H[0] ^ H[1]);
+  mid0 ^= r0 ^ r2;
+  mid1 ^= r1 ^ r3;
+  r2 ^= mid1;
+  r1 ^= mid0;
+  // Montgomery reduction: multiply by x^{-128} mod Q.
+  // x^{-128} = x^{-7} + x^{-2} + x^{-1} + 1
+  r1 ^= (r0 << 63) ^ (r0 << 62) ^ (r0 << 57);
+  r2 ^= r0;                                        // 1
+  r3 ^= r1;
+  r2 ^= r0 >> 1;  r2 ^= r1 << 63;  r3 ^= r1 >> 1;  // x^{-1}
+  r2 ^= r0 >> 2;  r2 ^= r1 << 62;  r3 ^= r1 >> 2;  // x^{-2}
+  r2 ^= r0 >> 7;  r2 ^= r1 << 57;  r3 ^= r1 >> 7;  // x^{-7}
+  Xi[0] = r2;
+  Xi[1] = r3;
+}
+
 uint64_t reference_wordbytereverse(uint64_t n)
 { uint64_t n2 = ((n & UINT64_C(0xFF00FF00FF00FF00)) >> 8) |
                 ((n & UINT64_C(0x00FF00FF00FF00FF)) << 8);
@@ -15631,6 +15682,52 @@ int test_edwards25519_scalarmulbase_alt_tweetnacl(void)
   return 0;
 }
 
+// gcm_gmult_v8 test: verify the assembly against the C
+// reference implementation of GHASH multiply via POLYVAL.
+//
+// Both the assembly and the C reference:
+//   1. Byte-swap Xi (convert from big-endian bytes to POLYVAL convention)
+//   2. Multiply Xi by the twisted H from Htable (POLYVAL: mod Q with x^{-128})
+//   3. Byte-swap the result back
+int test_gcm_gmult_v8(void)
+{ uint64_t i;
+  uint64_t H_key[2], Xi_input[2], Xi_asm[2], Htable[4];
+  printf("Testing gcm_gmult_v8 with %d cases\n",tests);
+  for (i = 0; i < tests; ++i)
+   { H_key[0] = random64(); H_key[1] = random64();
+     Xi_input[0] = random64(); Xi_input[1] = random64();
+     // Prepare Htable (same init for both assembly and C reference)
+     reference_gcm_init(Htable, H_key);
+     // Run assembly
+     Xi_asm[0] = Xi_input[0]; Xi_asm[1] = Xi_input[1];
+     gcm_gmult_v8(Xi_asm, Htable);
+     // Run C reference: byte-swap Xi, polyval with Htable, byte-swap back
+     // Htable layout: [0]=h_hi, [1]=h_lo. POLYVAL expects [lo, hi]
+     uint64_t Xi_ref[2], H_polyval[2];
+     Xi_ref[0] = reference_wordbytereverse(Xi_input[1]);
+     Xi_ref[1] = reference_wordbytereverse(Xi_input[0]);
+     H_polyval[0] = Htable[1];  // lo
+     H_polyval[1] = Htable[0];  // hi
+     gcm_polyval_nohw(Xi_ref, H_polyval);
+     uint64_t ref_out[2];
+     ref_out[0] = reference_wordbytereverse(Xi_ref[1]);
+     ref_out[1] = reference_wordbytereverse(Xi_ref[0]);
+     if (Xi_asm[0] != ref_out[0] || Xi_asm[1] != ref_out[1])
+      { printf("### Disparity: gcm_gmult_v8 case %"PRIu64"\n",i);
+        printf("  H:   [%016"PRIx64",%016"PRIx64"]\n",H_key[1],H_key[0]);
+        printf("  Xi:  [%016"PRIx64",%016"PRIx64"]\n",Xi_input[1],Xi_input[0]);
+        printf("  asm: [%016"PRIx64",%016"PRIx64"]\n",Xi_asm[1],Xi_asm[0]);
+        printf("  ref: [%016"PRIx64",%016"PRIx64"]\n",ref_out[1],ref_out[0]);
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: gcm_gmult_v8 case %"PRIu64"\n",i);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+}
+
 // ****************************************************************************
 // Main dispatching to appropriate test code
 // ****************************************************************************
@@ -16076,6 +16173,7 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
     functionaltest(sha3,"sha3_keccak2_f1600_alt",test_sha3_keccak2_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
+    functionaltest(all,"gcm_gmult_v8",test_gcm_gmult_v8);
 
   }
 
