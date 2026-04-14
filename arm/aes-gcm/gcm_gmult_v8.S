@@ -3,10 +3,10 @@
 
 // ----------------------------------------------------------------------------
 // GHASH polynomial multiply: Xi = H * Xi (mod x^128 + x^7 + x^2 + x + 1)
-// Inputs Xi[2], Htable[4]; output Xi[2]
+// Inputs Xi[16], Htable[16] (precomputed by gcm_init_v8); output Xi[16]
 //
 //    extern void gcm_gmult_v8
-//      (uint64_t Xi[2], const uint64_t Htable[4]);
+//      (uint8_t Xi[16], const u128 Htable[16]);
 //
 // Performs GHASH multiplication of the current hash value Xi by the
 // authentication key H, reducing modulo the GHASH polynomial

@@ -1125,6 +1125,10 @@ uint64_t min(uint64_t x,uint64_t y)
 
 #define swap(x,y) { uint64_t tmp = x; x = y; y = tmp; }
 
+#ifndef __x86_64__
+// Use the declaration from s2n-bignum.h (via u128 type).
+// The test passes uint64_t arrays which have the same memory layout.
+
 // C reference of gcm_init_v8: precompute Htable from raw GHASH key H.
 // Adapted from AWS-LC's gcm_init_nohw (crypto/fipsmodule/modes/gcm_nohw.c).
 // Applies the POLYVAL twist (multiply by x mod Q) to H and stores the result.
@@ -1175,6 +1179,7 @@ static void gcm_polyval_nohw(uint64_t Xi[2], const uint64_t H[2])
   Xi[0] = r2;
   Xi[1] = r3;
 }
+#endif
 
 uint64_t reference_wordbytereverse(uint64_t n)
 { uint64_t n2 = ((n & UINT64_C(0xFF00FF00FF00FF00)) >> 8) |
@@ -15690,24 +15695,29 @@ int test_edwards25519_scalarmulbase_alt_tweetnacl(void)
 //   2. Multiply Xi by the twisted H from Htable (POLYVAL: mod Q with x^{-128})
 //   3. Byte-swap the result back
 int test_gcm_gmult_v8(void)
-{ uint64_t i;
-  uint64_t H_key[2], Xi_input[2], Xi_asm[2], Htable[4];
+{ 
+#ifdef __x86_64__
+  return 1;
+#else
+uint64_t i;
+  uint64_t H_key[2], Xi_input[2], Xi_asm[2];
+  u128 Htable[16];
   printf("Testing gcm_gmult_v8 with %d cases\n",tests);
   for (i = 0; i < tests; ++i)
    { H_key[0] = random64(); H_key[1] = random64();
      Xi_input[0] = random64(); Xi_input[1] = random64();
      // Prepare Htable (same init for both assembly and C reference)
-     reference_gcm_init(Htable, H_key);
+     reference_gcm_init((uint64_t *)Htable, H_key);
      // Run assembly
      Xi_asm[0] = Xi_input[0]; Xi_asm[1] = Xi_input[1];
-     gcm_gmult_v8(Xi_asm, Htable);
+     gcm_gmult_v8((uint8_t *)Xi_asm, Htable);
      // Run C reference: byte-swap Xi, polyval with Htable, byte-swap back
      // Htable layout: [0]=h_hi, [1]=h_lo. POLYVAL expects [lo, hi]
      uint64_t Xi_ref[2], H_polyval[2];
      Xi_ref[0] = reference_wordbytereverse(Xi_input[1]);
      Xi_ref[1] = reference_wordbytereverse(Xi_input[0]);
-     H_polyval[0] = Htable[1];  // lo
-     H_polyval[1] = Htable[0];  // hi
+     H_polyval[0] = Htable[0].lo;
+     H_polyval[1] = Htable[0].hi;
      gcm_polyval_nohw(Xi_ref, H_polyval);
      uint64_t ref_out[2];
      ref_out[0] = reference_wordbytereverse(Xi_ref[1]);
@@ -15726,6 +15736,7 @@ int test_gcm_gmult_v8(void)
    }
   printf("All OK\n");
   return 0;
+#endif
 }
 
 // ****************************************************************************

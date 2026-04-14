@@ -785,8 +785,6 @@ void call_word_popcount(void) repeat(word_popcount(b0[0]))
 
 void call_word_recip(void) repeat(word_recip(b0[0]))
 
-void call_gcm_gmult_v8(void) repeat(gcm_gmult_v8(b0,b1))
-
 void call_bignum_bigendian_4(void) repeat(bignum_bigendian_4(b0,b1))
 void call_bignum_littleendian_4(void) repeat(bignum_littleendian_4(b0,b1))
 void call_bignum_tolebytes_4(void) repeat(bignum_tolebytes_4((unsigned char *)b0,b1))
@@ -1097,6 +1095,8 @@ void call_sm2_montjscalarmul_alt(void) repeatfewer(10,sm2_montjscalarmul_alt(b1,
 
 #ifdef __x86_64__
 
+void call_gcm_gmult_v8(void) {}
+
 void call_mldsa_intt(void) repeat(mldsa_intt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_ntt(void) repeat(mldsa_ntt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_pointwise(void) repeat(mldsa_pointwise_x86((int32_t*)b0,(int32_t*)b1,(int32_t*)b2,(int32_t*)b3))
@@ -1122,6 +1122,8 @@ void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1,b2,b3
 void call_sha3_keccak4_f1600_alt2(void) {}
 
 #else
+
+void call_gcm_gmult_v8(void) repeat(gcm_gmult_v8((uint8_t *)b0,(u128 *)b1))
 
 void call_mldsa_intt(void) {}
 void call_mldsa_ntt(void) {}

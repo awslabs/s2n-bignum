@@ -11,10 +11,8 @@
 needs "arm/proofs/base.ml";;
 needs "arm/proofs/utils/gcm_gmult_v8_nist.ml";;
 
-(* Sys.chdir("/home/ubuntu/auto_proofs/s2n-bignum");; *)
-
 let gcm_gmult_v8_mc = define_assert_from_elf "gcm_gmult_v8_mc"
-  "arm/generic/gcm_gmult_v8.o"
+  "arm/aes-gcm/gcm_gmult_v8.o"
 [
   0x3dc00010;       (* ldr q16, [x0] *)
   0xd2f84002;       (* mov x2, #0xc200000000000000 *)

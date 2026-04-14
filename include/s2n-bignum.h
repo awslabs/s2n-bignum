@@ -1224,6 +1224,11 @@ extern uint64_t word_popcount (uint64_t a);
 // Input a; output function return
 extern uint64_t word_recip (uint64_t a);
 
+// GCM functions — guarded to avoid redundant declarations when AWS-LC's
+// modes/internal.h is already included (AWS-LC uses -Wredundant-decls).
+#ifndef OPENSSL_HEADER_MODES_INTERNAL_H
+typedef struct { uint64_t hi, lo; } u128;
 // GHASH polynomial multiply: Xi = H * Xi (mod x^128 + x^7 + x^2 + x + 1)
-// Inputs Xi[2], Htable[4]; output Xi[2]
-extern void gcm_gmult_v8 (uint64_t Xi[2], const uint64_t Htable[4]);
+// Inputs Xi[16], Htable[16] (precomputed by gcm_init_v8); output Xi[16]
+extern void gcm_gmult_v8 (uint8_t Xi[16], const u128 Htable[16]);
+#endif

@@ -401,13 +401,15 @@ for archname in ["arm","x86"]:
     isPtrOrArray = lambda fullty, elemty: fullty.startswith(elemty + "[") or fullty.startswith(elemty + "*")
     for argname, argtype, _ in fnsig.args:
       if isPtrOrArray(argtype, "int64_t") or isPtrOrArray(argtype, "uint64_t"):
-        arg_elem_bytesizes[argname] = 8
+        arg_elem_bytesizes[argname.lower()] = 8
       elif isPtrOrArray(argtype, "int32_t") or isPtrOrArray(argtype, "uint32_t"):
-        arg_elem_bytesizes[argname] = 4
+        arg_elem_bytesizes[argname.lower()] = 4
       elif isPtrOrArray(argtype, "int16_t") or isPtrOrArray(argtype, "uint16_t"):
-        arg_elem_bytesizes[argname] = 2
+        arg_elem_bytesizes[argname.lower()] = 2
       elif isPtrOrArray(argtype, "int8_t") or isPtrOrArray(argtype, "uint8_t"):
-        arg_elem_bytesizes[argname] = 1
+        arg_elem_bytesizes[argname.lower()] = 1
+      elif isPtrOrArray(argtype, "u128"):
+        arg_elem_bytesizes[argname.lower()] = 16
       elif "[" not in argtype and "*" not in argtype:
         continue
       else:

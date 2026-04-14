@@ -145,7 +145,7 @@ let GCM_GMULT_TEST_TAC =
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   CONV_TAC(TOP_DEPTH_CONV (WORD_RED_CONV ORELSEC WORD_PMUL_CONV));;
 
-(* Test 0: zero input always yields zero output
+(* Test 0: zero input always yields zero output *)
 let GCM_GMULT_TEST_ZERO = prove(
   `gcm_gmult_spec (word 0:(128)word)
                    (word 0:(128)word)
@@ -182,4 +182,4 @@ let GCM_GMULT_TEST_3 = prove(
                    (word 0xffffffffffffffffffffffffffffffff:(128)word)
                    (word 0x0:(128)word) =
    (word 0x5555555555555555555555555555017a:(128)word)`,
-  GCM_GMULT_TEST_TAC);; *)
+  GCM_GMULT_TEST_TAC);;

@@ -4399,6 +4399,23 @@ let subroutine_signatures = [
    ])
 );
 
+("gcm_gmult_v8",
+  ([(*args*)
+     ("Xi", "uint8_t[16]", (*is const?*)"false");
+     ("Htable", "u128[16]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("xi", "16"(* num elems *), 1(* elem bytesize *));
+    ("htable", "16"(* num elems *), 16(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("xi", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mldsa_pointwise",
   ([(*args*)
      ("r", "int32_t[static 256]", (*is const?*)"false");
