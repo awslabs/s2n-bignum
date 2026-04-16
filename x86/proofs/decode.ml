@@ -1111,6 +1111,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
               | _ -> NONE)
               else NONE)
           else NONE)
+        | [0x44:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+          read_imm Byte l >>= \(imm8,l).
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPCLMULQDQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+           | _ -> NONE)
         | [0x46:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).

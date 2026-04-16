@@ -692,6 +692,13 @@ let decode = new_definition `!w:int32. decode w =
       let datasize = if q then 128 else 64 in
       SOME (arm_MUL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
 
+  | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b100111:6; Rn:5; Rd:5] ->
+    // PMUL (vector, size must be 00)
+    if ~(size = word 0b00) then NONE
+    else
+      let datasize = if q then 128 else 64 in
+      SOME (arm_PMUL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) datasize)
+
   | [0:1; q; 0b001110101:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
     // MOV, ORR
     SOME (arm_ORR_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
@@ -993,6 +1000,16 @@ let decode = new_definition `!w:int32. decode w =
         SOME (arm_SMULL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
       else
         SOME (arm_SMULL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
+
+  | [0:1; q; 0b001110:6; size:2; 1:1; Rm:5; 0b111000:6; Rn:5; Rd:5] ->
+    // PMULL (vector, Q = 0). PMULL2 (vector, Q = 1)
+    if ~(size = word 0b00 \/ size = word 0b11) then NONE
+    else
+      let esize = 8 * (2 EXP (val size)) in
+      if q then
+        SOME (arm_PMULL2_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
+      else
+        SOME (arm_PMULL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize)
 
   | [0:1; q; 0b001110:6; size:2; 0b0:1; Rm:5; 0b000110:6; Rn:5; Rd:5] ->
     // UZP1

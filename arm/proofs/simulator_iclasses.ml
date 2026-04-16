@@ -210,6 +210,21 @@ let iclasses =
   (*** MUL (vector) ***)
   "0x001110xx1xxxxx100111xxxxxxxxxx";
 
+  (*** PMUL (vector, size = 00) ***)
+  "0x101110001xxxxx100111xxxxxxxxxx";
+
+  (*** PMULL (size = 00, i.e. 8-bit) ***)
+  "00001110001xxxxx111000xxxxxxxxxx";
+
+  (*** PMULL2 (size = 00, i.e. 8-bit) ***)
+  "01001110001xxxxx111000xxxxxxxxxx";
+
+  (*** PMULL (size = 11, i.e. 64-bit) ***)
+  "00001110111xxxxx111000xxxxxxxxxx";
+
+  (*** PMULL2 (size = 11, i.e. 64-bit) ***)
+  "01001110111xxxxx111000xxxxxxxxxx";
+
   (*** NOP ***)
   "11010101000000110010000000011111";
 
