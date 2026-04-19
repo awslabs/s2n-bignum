@@ -982,6 +982,10 @@ extern void edwards25519_scalarmulbase_alt(uint64_t res[S2N_BIGNUM_STATIC 8],con
 extern void edwards25519_scalarmuldouble(uint64_t res[S2N_BIGNUM_STATIC 8],const uint64_t scalar[S2N_BIGNUM_STATIC 4], const uint64_t point[S2N_BIGNUM_STATIC 8],const uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[S2N_BIGNUM_STATIC 8],const uint64_t scalar[S2N_BIGNUM_STATIC 4], const uint64_t point[S2N_BIGNUM_STATIC 8],const uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 
+// Forward number-theoretic transform for ML-DSA
+// Input a[256], z_012345[144], z_67[384] (signed 32-bit words); output a[256] (signed 32-bit words)
+extern void mldsa_ntt_arm(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t z_012345[144], const int32_t z_67[384]);
+
 // Inverse number-theoretic transform for ML-DSA
 // Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_intt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N_BIGNUM_STATIC 624]);
@@ -989,6 +993,18 @@ extern void mldsa_intt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N
 // Forward number-theoretic transform for ML-DSA
 // Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_ntt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N_BIGNUM_STATIC 624]);
+
+// NTT unpack for ML-DSA (rearrange coefficients from bitreversed to standard order)
+// Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
+extern void mldsa_nttunpack(int32_t a[S2N_BIGNUM_STATIC 256]);
+
+// Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA
+// Inputs a[256], b[256] (signed 32-bit words); output r[256] (signed 32-bit words)
+extern void mldsa_pointwise(int32_t r[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t b[S2N_BIGNUM_STATIC 256]);
+
+// Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA, x86 version
+// Inputs a[256], b[256], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words)
+extern void mldsa_pointwise_x86(int32_t c[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t b[S2N_BIGNUM_STATIC 256], const int32_t qdata[S2N_BIGNUM_STATIC 16]);
 
 // Canonical reduction of polynomial coefficients for ML-DSA
 // Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
