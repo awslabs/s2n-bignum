@@ -2873,8 +2873,8 @@ void reference_mldsa_inverse_ntt(int32_t a[256])
 }
 
 // Pure inverse ML-DSA NTT specification (algebraic inverse of forward NTT)
-// Since forward NTT: result[k] = sum_{j=0..255} a[j] * ζ^((2*order(k)+1)*j)
-// Inverse NTT: result[j] = (1/256) * sum_{k=0..255} a[k] * ζ^(-(2*order(k)+1)*j)
+// Since forward NTT: result[k] = sum_{j=0..255} a[j] * zeta^((2*order(k)+1)*j)
+// Inverse NTT: result[j] = (1/256) * sum_{k=0..255} a[k] * zeta^(-(2*order(k)+1)*j)
 void reference_mldsa_inverse_ntt_spec(int32_t a[256])
 {
     int32_t result[256];
@@ -2891,7 +2891,7 @@ void reference_mldsa_inverse_ntt_spec(int32_t a[256])
             // Get the bit-reversed index for k (same as forward NTT uses)
             uint8_t order_k = avx2_ntt_order(k);
             
-            // For inverse: use negative exponent ζ^(-(2*order(k)+1)*j)
+            // For inverse: use negative exponent zeta^(-(2*order(k)+1)*j)
             uint64_t power = ((uint64_t)(2 * order_k + 1) * j);
             uint64_t inv_power = (8380416 - (power % 8380416)) % 8380416;
             uint64_t zeta_power = pow_8380417(1753, inv_power);
@@ -12738,14 +12738,14 @@ int test_mldsa_intt(void)
         for (i = 0; i < 256; ++i)
             original[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
         
-        // Test 1: Assembly NTT → Assembly iNTT round-trip
+        // Test 1: Assembly NTT -> Assembly iNTT round-trip
         for (i = 0; i < 256; ++i) temp[i] = original[i];
         mldsa_ntt(temp, mldsa_avx2_data);
         for (i = 0; i < 256; ++i) asm_result[i] = temp[i];
         mldsa_intt(asm_result, mldsa_avx2_data);
         reference_frommont_mldsa(asm_result);
         
-        // Test 2: C reference NTT → C reference iNTT round-trip  
+        // Test 2: C reference NTT -> C reference iNTT round-trip  
         for (i = 0; i < 256; ++i) temp[i] = original[i];
         reference_mldsa_forward_ntt(temp);
         for (i = 0; i < 256; ++i) spec_result[i] = temp[i];
@@ -12767,9 +12767,9 @@ int test_mldsa_intt(void)
                 printf("  Original: 0x%08"PRIx32" (norm: 0x%08"PRIx32")\n",
                        original[i], norm_original);
                 printf("  Assembly round-trip: 0x%08"PRIx32" (norm: 0x%08"PRIx32") %s\n",
-                       asm_result[i], norm_asm, asm_ok ? "✓" : "✗");
+                       asm_result[i], norm_asm, asm_ok ? "PASS" : "FAIL");
                 printf("  Spec round-trip: 0x%08"PRIx32" (norm: 0x%08"PRIx32") %s\n",
-                       spec_result[i], norm_spec, spec_ok ? "✓" : "✗");
+                       spec_result[i], norm_spec, spec_ok ? "PASS" : "FAIL");
                 return 1;
             }
         }

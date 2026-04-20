@@ -16,17 +16,17 @@ install_user_printer("pp_print_num",pp_print_num);;
 
 (*
 procedure EQINVCIPHER(in, Nr, dw)
-2: state ← in
-3: state ← ADDROUNDKEY(state,dw[4 ∗Nr..4 ∗Nr +3])
-4: for round from Nr −1 downto 1 do
-5: state ← INVSUBBYTES(state)
-6: state ← INVSHIFTROWS(state)
-7: state ← INVMIXCOLUMNS(state)
-8: state ← ADDROUNDKEY(state,dw[4 ∗ round..4 ∗ round +3])
+2: state <- in
+3: state <- ADDROUNDKEY(state,dw[4*Nr..4*Nr +3])
+4: for round from Nr-1 downto 1 do
+5: state <- INVSUBBYTES(state)
+6: state <- INVSHIFTROWS(state)
+7: state <- INVMIXCOLUMNS(state)
+8: state <- ADDROUNDKEY(state,dw[4 * round..4 * round +3])
 9: end for
-10: state ← INVSUBBYTES(state)
-11: state ← INVSHIFTROWS(state)
-12: state ← ADDROUNDKEY(state,dw[0..3])
+10: state <- INVSUBBYTES(state)
+11: state <- INVSHIFTROWS(state)
+12: state <- ADDROUNDKEY(state,dw[0..3])
 13: return state
 14: end procedure
 *)

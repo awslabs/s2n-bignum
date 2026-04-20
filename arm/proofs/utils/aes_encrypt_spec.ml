@@ -27,7 +27,7 @@ state = in
 
 AddRoundKey(state, w[0, Nb-1]) // See Sec. 5.1.4
 
-for round = 1 step 1 to Nr–1
+for round = 1 step 1 to Nr-1
 
 SubBytes(state) // See Sec. 5.1.1
 ShiftRows(state) // See Sec. 5.1.2
