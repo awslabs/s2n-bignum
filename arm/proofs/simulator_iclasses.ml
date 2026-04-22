@@ -199,6 +199,15 @@ let iclasses =
   "0100111100000xxx010001xxxxxxxxxx"; (* q=1, op=0, cmode=0100, LSL #16 *)
   "0100111100000xxx110101xxxxxxxxxx"; (* q=1, op=0, cmode=1101, MSL #16 *)
 
+  (*** MOVI (op=0, cmode=1110, byte) ***)
+  "0x00111100000xxx111001xxxxxxxxxx";
+
+  (*** MOVI (op=0, cmode=1000, 16-bit, q=1 only) -- shares opcode with SHRN ***)
+  "0100111100000xxx100001xxxxxxxxxx";
+
+  (*** MOVI (op=0, cmode=1010, 16-bit shifted, q=1 only) -- shares opcode with SSHLL ***)
+  "0100111100000xxx101001xxxxxxxxxx";
+
   (*** ORR (vector, immediate, 32-bit) ***)
   "0x00111100000xxx000101xxxxxxxxxx"; (* 32-bit ORR imm, immh=0 *)
 
@@ -379,6 +388,17 @@ let iclasses =
 
   (*** USHL ***)
   "0x101110xx1xxxxx010001xxxxxxxxxx";
+
+  (*** USHLL / USHLL2 (make sure immh is nonzero) ***)
+  "0x10111101xxxxxx101001xxxxxxxxxx";
+  "0x101111001xxxxx101001xxxxxxxxxx";
+  "0x1011110001xxxx101001xxxxxxxxxx";
+  "0x10111100001xxx101001xxxxxxxxxx";
+
+  (*** SSHLL (make sure immh is nonzero) ***)
+  "0x001111001xxxxx101001xxxxxxxxxx";
+  "0x0011110001xxxx101001xxxxxxxxxx";
+  "0x00111100001xxx101001xxxxxxxxxx";
 
   (*** USHR (make sure immh is nonzero) ***)
   "0x10111101xxxxxx000001xxxxxxxxxx";
