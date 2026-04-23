@@ -1003,7 +1003,7 @@ let MLDSA_INTT_SUBROUTINE_SAFE = time prove
                         (word_sub stackpointer (word 64))
                         returnaddress /\
                         memaccess_inbounds e2
-                        [a,1024; z_78,1536; z_123456,640; a,1024;
+                        [a,1024; z_78,1536; z_123456,640;
                          word_sub stackpointer (word 64),64]
                         [a,1024; word_sub stackpointer (word 64),64])
                (\s s'. true)`,
