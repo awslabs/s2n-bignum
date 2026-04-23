@@ -590,7 +590,7 @@ let BEZOUT_BOOL_POLY = prove
   REWRITE_TAC[bool_poly] THEN
   MESON_TAC[PID_EQ_UFD_BEZOUT_RING; PID_POLY_RING; FIELD_BOOL_RING]);;
 
-let RING_IRREDUCBLE_GHASH_POLYNOMIAL = prove
+let RING_IRREDUCIBLE_GHASH_POLYNOMIAL = prove
  (`ring_irreducible bool_poly ghash_poly`,
   let lemma = prove
    (`!s t. s IN ring_carrier bool_poly /\
