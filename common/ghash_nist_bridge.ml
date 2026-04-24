@@ -940,3 +940,52 @@ let GUERON_PROP1 = prove(
       CONJ_TAC THENL
        [REWRITE_TAC[MOD_POLYVAL_REFL; BOOL_POLY_OF_WORD];
         REWRITE_TAC[GHASH_TWIST_CORRECT]]]])
+
+(* ========================================================================= *)
+(* NIST GHASH "dot" operation and recursive GHASH definition.                *)
+(*                                                                           *)
+(* nist_dot is the native NIST GHASH multiply: bit-reflect inputs,           *)
+(* carry-less multiply, reduce mod P(x), bit-reflect the result.             *)
+(*                                                                           *)
+(* nist_ghash is defined recursively using nist_dot, matching the NIST       *)
+(* SP 800-38D specification directly.                                        *)
+(*                                                                           *)
+(* NIST_GHASH_IS_POLYVAL bridges to ghash_polyval_acc via GUERON_PROP1.      *)
+(* ========================================================================= *)
+
+let nist_dot = new_definition
+  `nist_dot (a:int128) (b:int128) : int128 =
+   bit_reflect128(ghash_reduce(word_pmul (bit_reflect128 a) (bit_reflect128 b)))`;;
+
+(* GUERON_PROP1 restated in terms of nist_dot                                *)
+let NIST_DOT_IS_POLYVAL_DOT = prove
+ (`!a b:int128. nist_dot a b = polyval_dot a (ghash_twist b)`,
+  REWRITE_TAC[nist_dot; GUERON_PROP1]);;
+
+let nist_ghash = define
+ `nist_ghash (h:int128) (acc:int128) [] = acc /\
+  nist_ghash h acc (CONS x xs) =
+    nist_ghash h (nist_dot (word_xor acc x) h) xs`;;
+
+(* The core bridge: NIST GHASH = POLYVAL Horner with twisted key.            *)
+(* Proof by list induction; the step case uses GUERON_PROP1 via              *)
+(* NIST_DOT_IS_POLYVAL_DOT to rewrite nist_dot to polyval_dot.               *)
+let NIST_GHASH_IS_POLYVAL = prove
+ (`!h acc xs. nist_ghash h acc xs = ghash_polyval_acc (ghash_twist h) acc xs`,
+  GEN_TAC THEN ONCE_REWRITE_TAC[SWAP_FORALL_THM] THEN
+  LIST_INDUCT_TAC THEN
+  ASM_REWRITE_TAC[nist_ghash; ghash_polyval_acc; NIST_DOT_IS_POLYVAL_DOT]);;
+
+let NIST_GHASH_NIL = prove
+ (`!h acc. nist_ghash h acc [] = acc`,
+  REWRITE_TAC[nist_ghash]);;
+
+let NIST_GHASH_CONS = prove
+ (`!h acc x xs. nist_ghash h acc (CONS x xs) =
+                nist_ghash h (nist_dot (word_xor acc x) h) xs`,
+  REWRITE_TAC[nist_ghash]);;
+
+let NIST_GHASH_APPEND = prove
+ (`!h xs ys acc. nist_ghash h acc (APPEND xs ys) =
+                 nist_ghash h (nist_ghash h acc xs) ys`,
+  REWRITE_TAC[NIST_GHASH_IS_POLYVAL; GHASH_ACC_APPEND]);;
