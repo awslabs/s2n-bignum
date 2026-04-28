@@ -1777,6 +1777,26 @@ let x86_VPBLENDW = new_definition
         let res:(128)word = msimd8 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
+let x86_VPCLMULQDQ = new_definition
+  `x86_VPCLMULQDQ dest src1 src2 ibyte (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s
+      and imm:byte = read ibyte s in
+      let f = \(x:128 word) (y:128 word).
+        let a:int64 = if bit 0 imm
+                      then word_subword x (64,64)
+                      else word_subword x (0,64)
+        and b:int64 = if bit 4 imm
+                      then word_subword y (64,64)
+                      else word_subword y (0,64) in
+        (word_pmul a b:128 word) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd2 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPBROADCASTD = new_definition
   `x86_VPBROADCASTD (dest:(x86state,(N)word)component) src (s:x86state) =
       let (x:M word) = read src s in
@@ -2115,6 +2135,17 @@ let x86_VPSUBD = new_definition
         (dest := (word_zx res):N word) s
       else
         let res:(128)word = simd4 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPSUBQ = new_definition
+  `x86_VPSUBQ dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd4 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd2 word_sub (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPSUBW = new_definition
@@ -3163,7 +3194,6 @@ let x86_execute = define
          | 8 -> x86_SUB (OPERAND8 dest s) (OPERAND8 src s)) s)) s
     | TEST dest src ->
         (add_load_event dest s ,, add_load_event src s ,,
-         add_store_event dest s ,,
         (\s. (match operand_size dest with
            64 -> x86_TEST (OPERAND64 dest s) (OPERAND64 src s)
          | 32 -> x86_TEST (OPERAND32 dest s) (OPERAND32 src s)
@@ -3241,6 +3271,14 @@ let x86_execute = define
                               (OPERAND256 src2 s) (OPERAND8 imm8 s)
         | 128 -> x86_VPBLENDW (OPERAND128 dest s) (OPERAND128 src1 s)
                               (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
+    | VPCLMULQDQ dest src1 src2 imm8 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPCLMULQDQ (OPERAND256 dest s) (OPERAND256 src1 s)
+                                (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPCLMULQDQ (OPERAND128 dest s) (OPERAND128 src1 s)
+                                (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
     | VPBROADCASTD dest src ->
         (add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
@@ -3438,6 +3476,14 @@ let x86_execute = define
           256 -> x86_VPSUBD (OPERAND256 dest s) (OPERAND256 src1 s)
                             (OPERAND256 src2 s)
         | 128 -> x86_VPSUBD (OPERAND128 dest s) (OPERAND128 src1 s)
+                            (OPERAND128 src2 s)) s)) s
+    | VPSUBQ dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSUBQ (OPERAND256 dest s) (OPERAND256 src1 s)
+                            (OPERAND256 src2 s)
+        | 128 -> x86_VPSUBQ (OPERAND128 dest s) (OPERAND128 src1 s)
                             (OPERAND128 src2 s)) s)) s
     | VPSUBW dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
@@ -4357,6 +4403,7 @@ let x86_VPADDQ_ALT = EXPAND_SIMD_RULE x86_VPADDQ;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
 let x86_VPBLENDD_ALT = EXPAND_SIMD_RULE x86_VPBLENDD;;
 let x86_VPBLENDW_ALT = EXPAND_SIMD_RULE x86_VPBLENDW;;
+let x86_VPCLMULQDQ_ALT = EXPAND_SIMD_RULE x86_VPCLMULQDQ;;
 let x86_VPBROADCASTD_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTD;;
 let x86_VPBROADCASTQ_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTQ;;
 let x86_VPERMD_ALT = EXPAND_SIMD_RULE x86_VPERMD;;
@@ -4385,6 +4432,7 @@ let x86_VPSLLVD_ALT = EXPAND_SIMD_RULE x86_VPSLLVD;;
 let x86_VPSLLQ_ALT = EXPAND_SIMD_RULE x86_VPSLLQ;;
 let x86_VPSLLW_ALT = EXPAND_SIMD_RULE x86_VPSLLW;;
 let x86_VPSUBD_ALT = EXPAND_SIMD_RULE x86_VPSUBD;;
+let x86_VPSUBQ_ALT = EXPAND_SIMD_RULE x86_VPSUBQ;;
 let x86_VPSUBW_ALT = EXPAND_SIMD_RULE x86_VPSUBW;;
 let x86_VPSRAD_ALT = EXPAND_SIMD_RULE x86_VPSRAD;;
 let x86_VPSRLD_ALT = EXPAND_SIMD_RULE x86_VPSRLD;;
@@ -4418,12 +4466,12 @@ let X86_OPERATION_CLAUSES =
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
-    x86_VPEXTRD; x86_VPEXTRQ; x86_VPEXTRW; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR;
+    x86_VPEXTRD; x86_VPEXTRQ; x86_VPEXTRW; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBQ_ALT; x86_VPSUBW_ALT; x86_VPXOR;
     x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLDQ_ALT; x86_VPSRLVD_ALT; x86_VPSRLVQ_ALT; x86_VPSRLQ_ALT;
     x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
     x86_VMOVDQA_ALT; x86_VMOVDQU_ALT; x86_VPMADDUBSW_ALT; x86_VPMADDWD_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPACKUSWB_ALT; x86_VPBLENDVB_ALT;
-    x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
+    x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPCLMULQDQ_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;

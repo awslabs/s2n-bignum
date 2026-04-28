@@ -914,6 +914,12 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPSUBD (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0xfb:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPSUBQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
         | [0xfd:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -1105,6 +1111,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
               | _ -> NONE)
               else NONE)
           else NONE)
+        | [0x44:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+          read_imm Byte l >>= \(imm8,l).
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPCLMULQDQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+           | _ -> NONE)
         | [0x46:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -2422,7 +2435,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     | Comb(Comb((Const(",",_) as p),opo'),
         Comb(Comb((Const(",",_) as q),rep'),Const("SG0",_))),
       (Const("NONE",_) as rex), l' ->
-      TRANS (INST [opo',opo; rep',rep; l',l] decode'_ds)
+      TRANS (INST [opo',opo; rep',rep; l',l] decode'_es)
         (decoder (mk_comb (mk_comb (p, opo'),
                            mk_comb (mk_comb (q, rep'), es))) rex l')
     | _ -> failwith "decode 0x26 failed" in
