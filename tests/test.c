@@ -15451,6 +15451,10 @@ int test_known_values_p384(void)
     }
 }
 
+// Reference implementation of AES-256-XTS for comparison testing
+
+#include "ref_aes_xts.c"
+
 // Helpers for writing XTS tests
 void assign_bytearray_from_hexstring(uint8_t *bytearr, const char *hexstr, int len)
 {
@@ -15537,6 +15541,175 @@ int test_known_values_xts_decrypt(void)
     { printf("Successfully passed %d known value tests\n",successes);
       return 0;
     }
+#endif
+}
+
+// ****************************************************************************
+// Random-input testing of AES-XTS against reference implementation
+// ****************************************************************************
+
+// Fill a byte array with random data
+
+static void random_bytes(uint8_t *buf, size_t n)
+{ size_t i;
+  for (i = 0; i < n; ++i) buf[i] = (uint8_t)(rand() & 0xFF);
+}
+
+int test_aes_xts_encrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY ek1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts_encrypt against reference with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random keys and IV
+     random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     // Random length from 16 to 512, with bias toward interesting sizes
+     len = 16 + (rand() % 497);
+     // With some probability, force block-aligned lengths
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     // With some probability, test near-boundary sizes
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     // Expand keys for the assembly function
+     ref_aes256_expand_key(key1, &ek1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Assembly
+     aes_xts_encrypt(bb1, bb2, len, &ek1, &ek2, iv);
+
+     // Reference
+     ref_aes_xts_encrypt(bb1, bb3, len, key1, key2, iv);
+
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: aes_xts_encrypt len=%zu\n", len);
+        printf("    key1=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key1[i]);
+        printf("\n    iv=");
+        for (int i = 0; i < 16; ++i) printf("%02x", iv[i]);
+        printf("\n");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: aes_xts_encrypt len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_aes_xts_decrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY dk1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts_decrypt against reference with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random keys and IV
+     random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     // Random length from 16 to 512
+     len = 16 + (rand() % 497);
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     // Expand keys for the assembly function (decrypt needs reversed schedule)
+     ref_aes256_expand_decrypt_key(key1, &dk1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Assembly
+     aes_xts_decrypt(bb1, bb2, len, &dk1, &ek2, iv);
+
+     // Reference
+     ref_aes_xts_decrypt(bb1, bb3, len, key1, key2, iv);
+
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: aes_xts_decrypt len=%zu\n", len);
+        printf("    key1=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key1[i]);
+        printf("\n    iv=");
+        for (int i = 0; i < 16; ++i) printf("%02x", iv[i]);
+        printf("\n");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: aes_xts_decrypt len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_aes_xts_roundtrip(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY ek1, dk1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts encrypt/decrypt roundtrip with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     len = 16 + (rand() % 497);
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     ref_aes256_expand_key(key1, &ek1);
+     ref_aes256_expand_decrypt_key(key1, &dk1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Encrypt then decrypt, should recover original
+     aes_xts_encrypt(bb1, bb2, len, &ek1, &ek2, iv);
+     aes_xts_decrypt(bb2, bb3, len, &dk1, &ek2, iv);
+
+     if (memcmp(bb1, bb3, len) != 0)
+      { printf("### Disparity: roundtrip failed len=%zu\n", len);
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: roundtrip len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
 #endif
 }
 
@@ -16459,6 +16632,9 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
     functionaltest(sha3,"sha3_keccak2_f1600_alt",test_sha3_keccak2_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
+    functionaltest(aes,"aes_xts_encrypt",test_aes_xts_encrypt);
+    functionaltest(aes,"aes_xts_decrypt",test_aes_xts_decrypt);
+    functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
   }
