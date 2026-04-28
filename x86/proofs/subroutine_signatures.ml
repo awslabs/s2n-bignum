@@ -5642,7 +5642,6 @@ let subroutine_signatures = [
    ])
 );
 
-
 ("sha3_keccak_f1600",
   ([(*args*)
      ("a", "uint64_t[25]", (*is const?*)"false");
