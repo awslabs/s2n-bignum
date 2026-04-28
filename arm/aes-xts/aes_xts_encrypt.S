@@ -14,10 +14,11 @@
 // Standard ARM ABI: X0 = in, X1 = out, X2 = length, X3 = key1, X4 = key2, X5 = iv
 // ----------------------------------------------------------------------------
 // Auto-added during import for AWS-LC symbol prefixing support
-#include "_internal_s2n_bignum.h"
+#include "_internal_s2n_bignum_arm.h"
 
         .arch	armv8-a+crypto
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(aes_xts_encrypt)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(aes_xts_encrypt)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(aes_xts_encrypt)
         .text
         .balign 4
@@ -30,24 +31,24 @@
 #define STACK_BASE_VREGS STACK_SIZE_GPRS
 
 #define save_regs \
-        stp  x19, x20, [sp, #(STACK_BASE_GPRS + 16*0)] __LF \
-     	stp  x21, x22, [sp, #(STACK_BASE_GPRS + 16*1)]
+        CFI_STACKSAVE2X(x19,x20,0,8) __LF \
+        CFI_STACKSAVE2X(x21,x22,16,24)
 
 #define restore_regs \
-        ldp  x19, x20, [sp, #(STACK_BASE_GPRS + 16*0)] __LF \
-        ldp  x21, x22, [sp, #(STACK_BASE_GPRS + 16*1)]
+        CFI_STACKLOAD2(x19,x20,0) __LF \
+        CFI_STACKLOAD2(x21,x22,16)
 
 #define save_vregs \
-    	stp  d8,  d9, [sp, #(STACK_BASE_VREGS + 16*0)] __LF \
-    	stp d10, d11, [sp, #(STACK_BASE_VREGS + 16*1)] __LF \
-    	stp d12, d13, [sp, #(STACK_BASE_VREGS + 16*2)] __LF \
-        stp d14, d15, [sp, #(STACK_BASE_VREGS + 16*3)]
+        CFI_STACKSAVE2X(d8,d9,32,40) __LF \
+        CFI_STACKSAVE2X(d10,d11,48,56) __LF \
+        CFI_STACKSAVE2X(d12,d13,64,72) __LF \
+        CFI_STACKSAVE2X(d14,d15,80,88)
 
 #define restore_vregs \
-        ldp  d8,  d9, [sp, #(STACK_BASE_VREGS + 16*0)] __LF \
-        ldp d10, d11, [sp, #(STACK_BASE_VREGS + 16*1)] __LF \
-        ldp d12, d13, [sp, #(STACK_BASE_VREGS + 16*2)] __LF \
-        ldp d14, d15, [sp, #(STACK_BASE_VREGS + 16*3)]
+        CFI_STACKLOAD2(d8,d9,32) __LF \
+        CFI_STACKLOAD2(d10,d11,48) __LF \
+        CFI_STACKLOAD2(d12,d13,64) __LF \
+        CFI_STACKLOAD2(d14,d15,80)
 
 // A single AES round
 // Prevent SLOTHY from unfolding because uArchs tend to fuse AESMC+AESE
@@ -71,16 +72,17 @@
 
 S2N_BN_SYMBOL(aes_xts_encrypt):
     # AARCH64_VALID_CALL_TARGET
+        CFI_START
 
-        sub sp, sp, #STACK_SIZE
+        CFI_DEC_SP(STACK_SIZE)
         save_vregs
         save_regs
 
 
         cmp   x2, #16 // AES-XTS needs at least one block
-        b.lt  .Lxts_enc_abort
+        b.lt  Lxts_enc_abort
 .align  4
-.Lxts_enc_big_size:  // Encrypt input size >= 16 bytes
+Lxts_enc_big_size:  // Encrypt input size >= 16 bytes
         and  x21, x2, #0xf    // store the tail value of length%16
         and  x2, x2, #-16    // len &= 0x1..110000, now divisible by 16
 
@@ -91,13 +93,13 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         sub  w6, w6, #2
         ld1  {v1.4s}, [x4], #16
 
-.Loop_iv_enc:
+Loop_iv_enc:
         aesr(v6.16b, v0.16b)
         ld1  {v0.4s}, [x4], #16
         subs w6, w6, #2
         aesr(v6.16b, v1.16b)
         ld1  {v1.4s}, [x4], #16
-        b.gt .Loop_iv_enc
+        b.gt Loop_iv_enc
 
         aesr(v6.16b, v0.16b)
         ld1  {v0.4s}, [x4]
@@ -115,10 +117,10 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         ld1 {v7.4s},        [x7]
 
 // Encryption
-.Lxts_enc:
+Lxts_enc:
         mov   w19, #0x87
         cmp x2, #0x20
-        b.lo .Lxts_enc_tail1x   // when input = 1 with tail
+        b.lo Lxts_enc_tail1x   // when input = 1 with tail
 
         // The iv for second block
         // x9- iv(low), x10 - iv(high)
@@ -128,19 +130,19 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         tweak(d8, v8.d[1])
 
         cmp x2, #0x30
-        b.lo  .Lxts_enc_tail2x    // when input size  = 2
+        b.lo  Lxts_enc_tail2x    // when input size  = 2
 
         // The iv for third block
         tweak(d9,v9.d[1])
 
         cmp  x2,#0x40
-        b.lo  .Lxts_enc_tail3x
+        b.lo  Lxts_enc_tail3x
 
         // The iv for fourth block
         tweak(d10,v10.d[1])
 
         cmp x2,#0x50
-        b.lo  .Lxts_enc_tail4x
+        b.lo  Lxts_enc_tail4x
 
         // The iv for fifth block
         tweak(d11,v11.d[1])
@@ -148,7 +150,7 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         udiv_by_80(x2, x8) // Number of 5x-unrolled iterations
 
 .align  4
-.Loop5x_xts_enc:
+Loop5x_xts_enc:
         ldp q0, q1, [x0], #0x50
         ldp q24, q25, [x0, #-0x30]
         ldr q26, [x0, #-0x10]
@@ -274,25 +276,25 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
 
         sub x2, x2, #0x50
         subs x8,x8,#1
-        cbnz x8, .Loop5x_xts_enc
+        cbnz x8, Loop5x_xts_enc
 
-.Loop5x_enc_after:
+Loop5x_enc_after:
         cmp  x2,#0x40
-        b.eq  .Lxts_enc_tail4x  // 4 blocks left
+        b.eq  Lxts_enc_tail4x  // 4 blocks left
 
         cmp x2,#0x30
-        b.eq .Lxts_enc_tail3x
+        b.eq Lxts_enc_tail3x
 
         cmp x2,#0x20
-        b.eq .Lxts_enc_tail2x
+        b.eq Lxts_enc_tail2x
 
         cmp x2,#0x10
-        b.eq .Lxts_enc_tail1x
+        b.eq Lxts_enc_tail1x
 
-        b .Lxts_enc_done     // no blocks left
+        b Lxts_enc_done     // no blocks left
 
 .align  4
-.Lxts_enc_tail4x:
+Lxts_enc_tail4x:
         ld1  {v0.16b}, [x0],#16  // the first block
         ld1  {v1.16b}, [x0],#16  // the second block
         ld1  {v24.16b},[x0],#16  // the third block
@@ -393,10 +395,10 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         fmov  x10,v10.d[1]
         tweak(d6, v6.d[1])
 
-        b  .Lxts_enc_done
+        b  Lxts_enc_done
 
 .align  4
-.Lxts_enc_tail3x:
+Lxts_enc_tail3x:
         ld1  {v0.16b,v1.16b}, [x0],#32
         ld1  {v24.16b}, [x0],#16
 
@@ -475,9 +477,9 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         fmov  x10,v9.d[1]
         tweak(d6, v6.d[1])
 
-        b .Lxts_enc_done  // done processing three blocks
+        b Lxts_enc_done  // done processing three blocks
 
-.Lxts_enc_tail2x:
+Lxts_enc_tail2x:
         ld1  {v0.16b,v1.16b},[x0],#32  // the first block
 
         eor  v0.16b,v0.16b,v6.16b
@@ -536,9 +538,9 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         fmov  x9,d8
         fmov  x10,v8.d[1]
         tweak(d6, v6.d[1])
-        b  .Lxts_enc_done
+        b  Lxts_enc_done
 
-.Lxts_enc_tail1x:
+Lxts_enc_tail1x:
         ld1  {v0.16b}, [x0],#16  // the first block
 
         eor  v0.16b,v0.16b,v6.16b
@@ -566,25 +568,25 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         fmov  x9,d6
         fmov  x10,v6.d[1]
         tweak(d6, v6.d[1])
-        b  .Lxts_enc_done
+        b  Lxts_enc_done
 
 .align  5
-.Lxts_enc_done:
+Lxts_enc_done:
         // Process the tail block with cipher stealing.
         tst  x21,#0xf
-        b.eq  .Lxts_enc_abort
+        b.eq  Lxts_enc_abort
 
         mov  x20,x0
         mov  x13,x1
         sub  x1,x1,#16
-.composite_enc_loop:
+Lcomposite_enc_loop:
         subs  x21,x21,#1
         ldrb  w15,[x1,x21]
         ldrb  w14,[x20,x21]
         strb  w15,[x13,x21]
         strb  w14,[x1,x21]
-        b.gt  .composite_enc_loop
-.Lxts_enc_load_done:
+        b.gt  Lcomposite_enc_loop
+Lxts_enc_load_done:
         ld1  {v26.16b},[x1]
         eor  v26.16b,v26.16b,v6.16b
 
@@ -608,11 +610,13 @@ S2N_BN_SYMBOL(aes_xts_encrypt):
         eor  v26.16b,v26.16b,v6.16b
         st1  {v26.16b},[x1]
 
-.Lxts_enc_abort:
+Lxts_enc_abort:
         restore_regs
         restore_vregs
-        add sp, sp, #STACK_SIZE
-        ret
+        CFI_INC_SP(STACK_SIZE)
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(aes_xts_encrypt)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
