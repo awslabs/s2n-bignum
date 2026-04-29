@@ -436,3 +436,4 @@ static void ref_aes_xts_decrypt(const uint8_t *in, uint8_t *out, size_t len,
      ref_aes256_decrypt_block(block, block, &ek1);
      for (j = 0; j < 16; ++j) out[16*nblocks + j] = block[j] ^ tweak_m1[j];
    }
+}
