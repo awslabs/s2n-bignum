@@ -105,7 +105,10 @@ let arm_ldst3 = new_definition `arm_ldst3 ld Rt1 =
 let arm_adv_simd_expand_imm = new_definition
   `(arm_adv_simd_expand_imm:(8)word->(1)word->(4)word->((64)word)option)
       abcdefgh op cmode =
-    if val cmode = 14 /\ val op = 1 then
+    if val cmode = 14 /\ val op = 0 then
+      // MOVI byte: 8-bit immediate replicated to all bytes
+      SOME(word_duplicate abcdefgh:int64)
+    else if val cmode = 14 /\ val op = 1 then
       let rep8 = \(x:bool). if x then (word 255:(8)word) else (word 0) in
       let res: (64)word =
         word_join (rep8 (bit 7 abcdefgh))
@@ -511,6 +514,10 @@ let decode = new_definition `!w:int32. decode w =
     // BIT
     SOME (arm_BIT (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
 
+  | [0:1; q; 0b101110111:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
+    // BIF
+    SOME (arm_BIF (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
+
   // Two sizes of FCSEL, not allowing FP16 case at all
   | [0b00011110:8; 0b00:2; 0b1:1; Rm:5; cond:4; 0b11:2; Rn:5; Rd:5] ->
     SOME (arm_FCSEL (QREG' Rd) (QREG' Rn) (QREG' Rm) (Condition cond) 32)
@@ -547,6 +554,16 @@ let decode = new_definition `!w:int32. decode w =
       // datasize is fixed to 128.
       SOME (arm_EXT (QREG' Rd) (QREG' Rn) (QREG' Rm) pos)
     else NONE
+
+  | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b1110:4; 0b01:2; defgh:5; Rd:5] ->
+    // MOVI (op=0, cmode=1110): 8-bit byte immediate replicated to all lanes
+    let abcdefgh:(8)word = word_join abc defgh in
+    let imm = arm_adv_simd_expand_imm abcdefgh (word 0:(1)word) (word 0b1110:(4)word) in
+    (match imm with
+    | SOME imm ->
+        if q then SOME (arm_MOVI (QREG' Rd) imm)
+        else SOME (arm_MOVI (DREG' Rd) imm)
+    | NONE -> NONE)
 
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=1), USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
@@ -731,6 +748,13 @@ let decode = new_definition `!w:int32. decode w =
     else
       let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
       SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize))
+
+  | [0:1; q; 0b101110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
+    // REV32 (vector)
+    if size = (word 0b10: (2)word) \/ size = (word 0b11: (2)word) then NONE
+    else
+      let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
+      SOME (arm_REV32_VEC (QREG' Rd) (QREG' Rn) (val esize) (if q then 128 else 64))
 
   | [0b01101110000:11; imm5:5; 0:1; imm4:4; 1:1; Rn:5; Rd:5] ->
     // INS, or "MOV (element)"
