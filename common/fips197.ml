@@ -9,7 +9,7 @@
 (* This file defines AES key expansion and cipher following the NIST spec    *)
 (* exactly (SubBytes before ShiftRows). It is independent from the           *)
 (* hardware-oriented definitions in common/aes.ml and arm/x86 proofs.        *)
-(* Equivalence can be proved separately.                                     *)
+(* Equivalence will be proved separately.                                    *)
 (*                                                                           *)
 (* Key expansion reuses aes_subword from common/aes.ml (SubWord is the       *)
 (* same in both NIST and hardware models).                                   *)
@@ -27,27 +27,23 @@ let aes_kexp_core = new_definition
   `aes_kexp_core (rcon:32 word) (prev:32 word) (back:32 word) : 32 word =
     word_xor back (word_xor (aes_subword (word_rol prev 8)) rcon)`;;
 
-let AES_KEXP_CORE_CONV =
-  REWRITE_CONV [aes_kexp_core] THENC
-  AES_SUBWORD_CONV THENC
-  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
-
 (* SubWord-only step (FIPS 197 Sec 5.2: when Nk>6 and i mod Nk = 4) *)
 let aes_kexp_sub = new_definition
   `aes_kexp_sub (prev:32 word) (back:32 word) : 32 word =
     word_xor back (aes_subword prev)`;;
 
-let AES_KEXP_SUB_CONV =
-  REWRITE_CONV [aes_kexp_sub] THENC
+(* Combined conversion for both key expansion steps. *)
+let AES_KEXP_CONV =
+  REWRITE_CONV [aes_kexp_core; aes_kexp_sub] THENC
   AES_SUBWORD_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (* Round constants (FIPS 197 Table 5) *)
 let aes_rcon = new_definition
   `aes_rcon : (32 word) list =
-    [ word 0x01000000; word 0x02000000; word 0x04000000; word 0x08000000
-    ; word 0x10000000; word 0x20000000; word 0x40000000; word 0x80000000
-    ; word 0x1b000000; word 0x36000000 ]`;;
+    [ word 0x01000000; word 0x02000000; word 0x04000000; word 0x08000000;
+      word 0x10000000; word 0x20000000; word 0x40000000; word 0x80000000;
+      word 0x1b000000; word 0x36000000 ]`;;
 
 (* Pre-computed EL reductions for 10-element 32-bit word lists. *)
 let EL_10_32_CLAUSES =
@@ -70,17 +66,23 @@ let AES128_KEXP_ROUND_CONV =
   REWRITE_CONV [aes128_kexp_round; aes_rcon] THENC
   REWRITE_CONV EL_10_32_CLAUSES THENC
   TOP_DEPTH_CONV let_CONV THENC
-  AES_KEXP_CORE_CONV THENC
+  AES_KEXP_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (* AES-256 key expansion round (FIPS 197 Sec 5.2, Nk=8 case).
    Given round index i (0-6) and the previous 8 words, produce the next 8. *)
+(* AES-256 key expansion round (FIPS 197 Sec 5.2, Nk=8 case).
+   Input/output is a pair of 4-tuples: (hi_half, lo_half).
+   Note: HOL Light prints the second component without outer parens due to
+   right-associativity of #, but FST/SND correctly project each half. *)
 let aes256_kexp_round = new_definition
   `aes256_kexp_round (i:num)
-    (w0:32 word, w1:32 word, w2:32 word, w3:32 word,
-     w4:32 word, w5:32 word, w6:32 word, w7:32 word)
-    : 32 word # 32 word # 32 word # 32 word #
-      32 word # 32 word # 32 word # 32 word =
+    (hi:32 word # 32 word # 32 word # 32 word,
+     lo:32 word # 32 word # 32 word # 32 word)
+    : (32 word # 32 word # 32 word # 32 word) #
+      (32 word # 32 word # 32 word # 32 word) =
+    let (w0,w1,w2,w3) = hi in
+    let (w4,w5,w6,w7) = lo in
     let w8  = aes_kexp_core (EL i aes_rcon) w7 w0 in
     let w9  = word_xor w1 w8 in
     let w10 = word_xor w2 w9 in
@@ -89,22 +91,24 @@ let aes256_kexp_round = new_definition
     let w13 = word_xor w5 w12 in
     let w14 = word_xor w6 w13 in
     let w15 = word_xor w7 w14 in
-    (w8, w9, w10, w11, w12, w13, w14, w15)`;;
+    ((w8, w9, w10, w11), (w12, w13, w14, w15))`;;
 
 let AES256_KEXP_ROUND_CONV =
-  REWRITE_CONV [aes256_kexp_round; aes_rcon] THENC
-  REWRITE_CONV EL_10_32_CLAUSES THENC
+  REWRITE_CONV [aes256_kexp_round] THENC
   TOP_DEPTH_CONV let_CONV THENC
-  AES_KEXP_CORE_CONV THENC
-  AES_KEXP_SUB_CONV THENC
+  REWRITE_CONV [aes_rcon] THENC
+  REWRITE_CONV EL_10_32_CLAUSES THENC
+  AES_KEXP_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (* AES-256 last half-round: only 4 words (core step, no SubWord step). *)
 let aes256_kexp_last = new_definition
   `aes256_kexp_last (i:num)
-    (w0:32 word, w1:32 word, w2:32 word, w3:32 word,
-     w4:32 word, w5:32 word, w6:32 word, w7:32 word)
+    (hi:32 word # 32 word # 32 word # 32 word,
+     lo:32 word # 32 word # 32 word # 32 word)
     : 32 word # 32 word # 32 word # 32 word =
+    let (w0,w1,w2,w3) = hi in
+    let (w4,w5,w6,w7) = lo in
     let w8  = aes_kexp_core (EL i aes_rcon) w7 w0 in
     let w9  = word_xor w1 w8 in
     let w10 = word_xor w2 w9 in
@@ -112,10 +116,11 @@ let aes256_kexp_last = new_definition
     (w8, w9, w10, w11)`;;
 
 let AES256_KEXP_LAST_CONV =
-  REWRITE_CONV [aes256_kexp_last; aes_rcon] THENC
-  REWRITE_CONV EL_10_32_CLAUSES THENC
+  REWRITE_CONV [aes256_kexp_last] THENC
   TOP_DEPTH_CONV let_CONV THENC
-  AES_KEXP_CORE_CONV THENC
+  REWRITE_CONV [aes_rcon] THENC
+  REWRITE_CONV EL_10_32_CLAUSES THENC
+  AES_KEXP_CONV THENC
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (* ========================================================================= *)
@@ -142,17 +147,8 @@ prove(`aes128_kexp_round 9
                    word 0xabf71588, word 0x09cf4f3c)))))))))) =
        (word 0xd014f9a8, word 0xc9ee2589, word 0xe13f0cc8, word 0xb6630ca6)`,
   CONV_TAC(LAND_CONV(
-    RAND_CONV(RAND_CONV(RAND_CONV(RAND_CONV(RAND_CONV(RAND_CONV(
-      RAND_CONV(RAND_CONV(RAND_CONV AES128_KEXP_ROUND_CONV THENC
-      AES128_KEXP_ROUND_CONV) THENC
-      AES128_KEXP_ROUND_CONV) THENC
-      AES128_KEXP_ROUND_CONV) THENC
-      AES128_KEXP_ROUND_CONV) THENC
-      AES128_KEXP_ROUND_CONV) THENC
-      AES128_KEXP_ROUND_CONV) THENC
-      AES128_KEXP_ROUND_CONV) THENC
-      AES128_KEXP_ROUND_CONV) THENC
-    AES128_KEXP_ROUND_CONV)) THEN
+    itlist (fun _ c -> RAND_CONV c THENC AES128_KEXP_ROUND_CONV)
+           (1--10) ALL_CONV)) THEN
   REFL_TAC);;
 
 (* ========================================================================= *)
@@ -162,10 +158,10 @@ prove(`aes128_kexp_round 9
 (* ========================================================================= *)
 
 prove(`aes256_kexp_round 0
-        (word 0x603deb10, word 0x15ca71be, word 0x2b73aef0, word 0x857d7781,
-         word 0x1f352c07, word 0x3b6108d7, word 0x2d9810a3, word 0x0914dff4) =
-       (word 0x9ba35411, word 0x8e6925af, word 0xa51a8b5f, word 0x2067fcde,
-        word 0xa8b09c1a, word 0x93d194cd, word 0xbe49846e, word 0xb75d5b9a)`,
+        ((word 0x603deb10, word 0x15ca71be, word 0x2b73aef0, word 0x857d7781),
+         (word 0x1f352c07, word 0x3b6108d7, word 0x2d9810a3, word 0x0914dff4)) =
+       ((word 0x9ba35411, word 0x8e6925af, word 0xa51a8b5f, word 0x2067fcde),
+        (word 0xa8b09c1a, word 0x93d194cd, word 0xbe49846e, word 0xb75d5b9a))`,
   CONV_TAC(LAND_CONV AES256_KEXP_ROUND_CONV) THEN REFL_TAC);;
 
 prove(`aes256_kexp_last 6
@@ -175,21 +171,107 @@ prove(`aes256_kexp_last 6
           (aes256_kexp_round 2
            (aes256_kexp_round 1
             (aes256_kexp_round 0
-              (word 0x603deb10, word 0x15ca71be,
-               word 0x2b73aef0, word 0x857d7781,
-               word 0x1f352c07, word 0x3b6108d7,
-               word 0x2d9810a3, word 0x0914dff4))))))) =
+              ((word 0x603deb10, word 0x15ca71be,
+                word 0x2b73aef0, word 0x857d7781),
+               (word 0x1f352c07, word 0x3b6108d7,
+                word 0x2d9810a3, word 0x0914dff4)))))))) =
        (word 0xfe4890d1, word 0xe6188d0b, word 0x046df344, word 0x706c631e)`,
   CONV_TAC(LAND_CONV(
-    RAND_CONV(RAND_CONV(RAND_CONV(RAND_CONV(RAND_CONV(
-      RAND_CONV AES256_KEXP_ROUND_CONV THENC
-      AES256_KEXP_ROUND_CONV) THENC
-      AES256_KEXP_ROUND_CONV) THENC
-      AES256_KEXP_ROUND_CONV) THENC
-      AES256_KEXP_ROUND_CONV) THENC
-      AES256_KEXP_ROUND_CONV) THENC
+    itlist (fun _ c -> RAND_CONV c THENC AES256_KEXP_ROUND_CONV)
+           (1--6) ALL_CONV THENC
     AES256_KEXP_LAST_CONV)) THEN
   REFL_TAC);;
+
+(* ========================================================================= *)
+(* Full key expansion functions                                              *)
+(* ========================================================================= *)
+
+(* Helper: join four 32-bit words into a 128-bit word (big-endian). *)
+let word_join4_32_128 = new_definition
+  `word_join4_32_128 (w0:32 word, w1:32 word, w2:32 word, w3:32 word)
+    : 128 word =
+    (word_join:32 word->96 word->128 word) w0
+      ((word_join:32 word->64 word->96 word) w1
+        ((word_join:32 word->32 word->64 word) w2 w3))`;;
+
+(* Split 128-bit word into four 32-bit words (big-endian). *)
+let word_split128_4x32 = new_definition
+  `word_split128_4x32 (k:128 word)
+    : 32 word # 32 word # 32 word # 32 word =
+    ((word_subword:128 word->(num#num)->32 word) k (96,32),
+     (word_subword:128 word->(num#num)->32 word) k (64,32),
+     (word_subword:128 word->(num#num)->32 word) k (32,32),
+     (word_subword:128 word->(num#num)->32 word) k (0,32))`;;
+
+(* AES-128 key expansion: key -> 11-element round key schedule. *)
+let aes128_key_expansion = new_definition
+  `aes128_key_expansion (key:128 word) : (128 word) list =
+    let k0 = word_split128_4x32 key in
+    let k1 = aes128_kexp_round 0 k0 in
+    let k2 = aes128_kexp_round 1 k1 in
+    let k3 = aes128_kexp_round 2 k2 in
+    let k4 = aes128_kexp_round 3 k3 in
+    let k5 = aes128_kexp_round 4 k4 in
+    let k6 = aes128_kexp_round 5 k5 in
+    let k7 = aes128_kexp_round 6 k6 in
+    let k8 = aes128_kexp_round 7 k7 in
+    let k9 = aes128_kexp_round 8 k8 in
+    let k10 = aes128_kexp_round 9 k9 in
+    MAP word_join4_32_128 [k0; k1; k2; k3; k4; k5;
+                           k6; k7; k8; k9; k10]`;;
+
+(* AES-256 key expansion: (key_hi, key_lo) -> 15-element round key schedule.
+   key_hi is the first 128 bits of the 256-bit key, key_lo the second. *)
+let aes256_key_expansion = new_definition
+  `aes256_key_expansion (key_hi:128 word) (key_lo:128 word)
+    : (128 word) list =
+    let h0 = word_split128_4x32 key_hi in
+    let l0 = word_split128_4x32 key_lo in
+    let r1 = aes256_kexp_round 0 (h0, l0) in
+    let r2 = aes256_kexp_round 1 r1 in
+    let r3 = aes256_kexp_round 2 r2 in
+    let r4 = aes256_kexp_round 3 r3 in
+    let r5 = aes256_kexp_round 4 r4 in
+    let r6 = aes256_kexp_round 5 r5 in
+    let r7 = aes256_kexp_last 6 r6 in
+    [ key_hi; key_lo;
+      word_join4_32_128 (FST r1); word_join4_32_128 (SND r1);
+      word_join4_32_128 (FST r2); word_join4_32_128 (SND r2);
+      word_join4_32_128 (FST r3); word_join4_32_128 (SND r3);
+      word_join4_32_128 (FST r4); word_join4_32_128 (SND r4);
+      word_join4_32_128 (FST r5); word_join4_32_128 (SND r5);
+      word_join4_32_128 (FST r6); word_join4_32_128 (SND r6);
+      word_join4_32_128 r7 ]`;;
+
+(* Conversions for key expansion evaluation. *)
+let WORD_JOIN4_32_128_CONV =
+  REWRITE_CONV [word_join4_32_128] THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let WORD_SPLIT128_4x32_CONV =
+  REWRITE_CONV [word_split128_4x32] THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let AES128_KEY_EXPANSION_CONV =
+  REWRITE_CONV [aes128_key_expansion] THENC
+  TOP_DEPTH_CONV let_CONV THENC
+  WORD_SPLIT128_4x32_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
+  itlist (fun _ c -> c THENC AES128_KEXP_ROUND_CONV) (1--10) ALL_CONV THENC
+  REWRITE_CONV [MAP] THENC
+  WORD_JOIN4_32_128_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
+
+let AES256_KEY_EXPANSION_CONV =
+  REWRITE_CONV [aes256_key_expansion] THENC
+  TOP_DEPTH_CONV let_CONV THENC
+  WORD_SPLIT128_4x32_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV) THENC
+  itlist (fun _ c -> c THENC AES256_KEXP_ROUND_CONV) (1--6) ALL_CONV THENC
+  AES256_KEXP_LAST_CONV THENC
+  REWRITE_CONV [FST; SND] THENC
+  WORD_JOIN4_32_128_CONV THENC
+  DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (* ========================================================================= *)
 (* AES Cipher steps (FIPS 197 Sec 5.1)                                       *)
@@ -206,22 +288,22 @@ let fips197_sub_bytes = new_definition
 let fips197_shift_rows = new_definition
   `fips197_shift_rows (op:128 word) : 128 word =
     word_join_list_16_8
-    [ (word_subword op (120, 8))
-    ; (word_subword op (80, 8))
-    ; (word_subword op (40, 8))
-    ; (word_subword op (0, 8))
-    ; (word_subword op (88, 8))
-    ; (word_subword op (48, 8))
-    ; (word_subword op (8, 8))
-    ; (word_subword op (96, 8))
-    ; (word_subword op (56, 8))
-    ; (word_subword op (16, 8))
-    ; (word_subword op (104, 8))
-    ; (word_subword op (64, 8))
-    ; (word_subword op (24, 8))
-    ; (word_subword op (112, 8))
-    ; (word_subword op (72, 8))
-    ; (word_subword op (32, 8)) ]`;;
+    [ (word_subword op (120, 8));
+      (word_subword op (80, 8));
+      (word_subword op (40, 8));
+      (word_subword op (0, 8));
+      (word_subword op (88, 8));
+      (word_subword op (48, 8));
+      (word_subword op (8, 8));
+      (word_subword op (96, 8));
+      (word_subword op (56, 8));
+      (word_subword op (16, 8));
+      (word_subword op (104, 8));
+      (word_subword op (64, 8));
+      (word_subword op (24, 8));
+      (word_subword op (112, 8));
+      (word_subword op (72, 8));
+      (word_subword op (32, 8)) ]`;;
 
 let FIPS197_SUB_BYTES_CONV =
   REWRITE_CONV [fips197_sub_bytes] THENC AES_SUB_BYTES_CONV;;
@@ -374,12 +456,12 @@ let FIPS197_ENCRYPT_CONV cipher_def ks_def =
   FIPS197_FINAL_ROUND_REDUCE_CONV;;
 
 (* ========================================================================= *)
-(* Fast AES conversions via precomputed lookup tables.                        *)
+(* Fast AES conversions via precomputed lookup tables.                       *)
 (*                                                                           *)
 (* The bottleneck in AES evaluation is word_subword on 2048-bit constants    *)
-(* (joined_GF2 for S-box, joined_FFmul_02/03 for MixColumns).               *)
+(* (joined_GF2 for S-box, joined_FFmul_02/03 for MixColumns).                *)
 (* Precomputing all 256 entries for each table eliminates this bottleneck.   *)
-(* One-time cost: ~48s. Speedup: AES-128 from ~40s to ~7s per call.         *)
+(* One-time cost: ~48s. Speedup: AES-128 from ~40s to ~7s per call.          *)
 (* ========================================================================= *)
 
 let aes_sbox_table = Array.init 256 (fun n ->
