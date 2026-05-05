@@ -466,7 +466,6 @@ TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 # Build precompiled native binaries of HOL Light proofs
 
 proofs/simulator.native: proofs/simulator.ml $(BASE_ML) proofs/simulator_iclasses.ml ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
-proofs/fips197.native: proofs/fips197.ml $(BASE_ML) ; ../tools/build-proof.sh proofs/fips197.ml "$(HOLLIGHT)" "$@"
 
 # For constant-time property and memory safety, collect input/output/temporary
 # buffers from function signatures in s2n-bignum.h .

@@ -70,8 +70,6 @@ let AES128_KEXP_ROUND_CONV =
   DEPTH_CONV (WORD_RED_CONV ORELSEC NUM_RED_CONV);;
 
 (* AES-256 key expansion round (FIPS 197 Sec 5.2, Nk=8 case).
-   Given round index i (0-6) and the previous 8 words, produce the next 8. *)
-(* AES-256 key expansion round (FIPS 197 Sec 5.2, Nk=8 case).
    Input/output is a pair of 4-tuples: (hi_half, lo_half).
    Note: HOL Light prints the second component without outer parens due to
    right-associativity of #, but FST/SND correctly project each half. *)
