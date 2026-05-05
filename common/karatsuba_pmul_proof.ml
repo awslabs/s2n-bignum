@@ -3,7 +3,7 @@
 (* Shows: word_pmul a b = Karatsuba decomposition using 3 half-size pmuls.   *)
 (* ========================================================================= *)
 
-needs "common/polyval_prop3_proof.ml";;
+needs "common/polyval.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper lemmas for polynomial-level conversion.                            *)
@@ -36,6 +36,8 @@ let POLY_OF_WORD_PMUL_GEN = prove(
   MATCH_MP_TAC(INST_TYPE [`:P`,`:N`] POLY_OF_WORD_OF_POLY) THEN
   ASM_REWRITE_TAC[]);;
 
+let POLY_VAR_POW_OF_WORD_256 = INST_TYPE [`:256`,`:N`] POLY_VAR_POW_OF_WORD;;
+
 let zx_128_256 = prove
  (`!w:128 word. poly_of_word(word_zx w : 256 word) = poly_of_word w`,
   GEN_TAC THEN MATCH_MP_TAC POLY_OF_WORD_ZX THEN
@@ -46,17 +48,19 @@ let zx_64_128 = prove
   GEN_TAC THEN MATCH_MP_TAC POLY_OF_WORD_ZX THEN
   REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN ARITH_TAC);;
 
-let PMUL_DEG_TAC =
-  REWRITE_TAC[bool_poly; POLY_RING; DIMINDEX_256] THEN
+let PMUL_DEG_TAC_GEN dim_out dim_in =
+  REWRITE_TAC[bool_poly; POLY_RING; dim_out] THEN
   W(MP_TAC o PART_MATCH (lhand o rand) POLY_DEG_MUL_LE o lhand o snd) THEN
   REWRITE_TAC[RING_POLYNOMIAL_OF_WORD] THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] LET_TRANS) THEN
-  REWRITE_TAC[DIMINDEX_128; POLY_DEG_POLY_OF_WORD; DIMINDEX_256] THEN
+  REWRITE_TAC[dim_in; POLY_DEG_POLY_OF_WORD; dim_out] THEN
   CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
   CONV_TAC(ONCE_DEPTH_CONV WORD_CLZ_CONV) THEN
   TRY(MATCH_MP_TAC(ARITH_RULE `a < 128 /\ b <= 128 ==> a + b < 256`) THEN
-      CONJ_TAC THEN REWRITE_TAC[WORD_CLZ_LT_DIMINDEX; DIMINDEX_128]) THEN
+      CONJ_TAC THEN REWRITE_TAC[WORD_CLZ_LT_DIMINDEX; dim_in]) THEN
   ARITH_TAC;;
+
+let PMUL_DEG_TAC = PMUL_DEG_TAC_GEN DIMINDEX_256 DIMINDEX_128;;
 
 let pmul_shl_zx = prove(
   `(!w:128 word.
@@ -100,17 +104,10 @@ let shl_zx_64_to_poly = prove(
     MATCH_MP_TAC(INST_TYPE [`:128`,`:N`] POLY_VAR_POW_OF_WORD) THEN
     REWRITE_TAC[DIMINDEX_128] THEN ARITH_TAC))] THEN
   MATCH_MP_TAC POLY_OF_WORD_PMUL_GEN THEN
-  REWRITE_TAC[bool_poly; POLY_RING; DIMINDEX_128] THEN
-  W(MP_TAC o PART_MATCH (lhand o rand) POLY_DEG_MUL_LE o lhand o snd) THEN
-  REWRITE_TAC[RING_POLYNOMIAL_OF_WORD] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] LET_TRANS) THEN
-  MP_TAC(ISPEC `w:64 word` POLY_DEG_POLY_OF_WORD_BOUND) THEN
-  REWRITE_TAC[DIMINDEX_64; POLY_DEG_POLY_OF_WORD; DIMINDEX_128] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
-  CONV_TAC(ONCE_DEPTH_CONV WORD_CLZ_CONV) THEN ARITH_TAC);;
+  PMUL_DEG_TAC_GEN DIMINDEX_128 DIMINDEX_64);;
 
 (* ------------------------------------------------------------------------- *)
-(* Schoolbook ring identity: (a+bx)(c+dx) = ac + (ad+bc)x + bdx^2.          *)
+(* Schoolbook ring identity: (a+bx)(c+dx) = ac + (ad+bc)x + bdx^2.           *)
 (* Proved by RING_RULE (universal ring identity, no char-2 needed).          *)
 (* ------------------------------------------------------------------------- *)
 
@@ -120,13 +117,6 @@ let SCHOOLBOOK_RING = GEN_ALL(RING_RULE
    ring_add r (ring_mul r a c)
      (ring_add r (ring_mul r (ring_add r (ring_mul r a d) (ring_mul r b c)) x)
                   (ring_mul r (ring_mul r b d) (ring_mul r x x)))`);;
-
-let BOOL_POLY_ADD_ASSOC = prove(
-  `!x y z. x IN ring_carrier bool_poly /\ y IN ring_carrier bool_poly /\
-            z IN ring_carrier bool_poly
-            ==> ring_add bool_poly x (ring_add bool_poly y z) =
-                ring_add bool_poly (ring_add bool_poly x y) z`,
-  SIMP_TAC[RING_ADD_ASSOC]);;
 
 (* ------------------------------------------------------------------------- *)
 (* Schoolbook expansion of 128x128 carry-less multiplication.                *)
@@ -188,9 +178,9 @@ let PMUL_SCHOOLBOOK = prove(
 
 (* ------------------------------------------------------------------------- *)
 (* Main theorem: Karatsuba decomposition of carry-less multiplication.       *)
-(* word_pmul(a,b) = p_lo XOR shl(mid,64) XOR shl(p_hi,128)                 *)
-(* where mid = p_mid XOR p_lo XOR p_hi (Karatsuba tidy-up).                 *)
-(* Proof: schoolbook identity (RING_RULE) + char-2 tidy-up (WORD_BITWISE).  *)
+(* word_pmul(a,b) = p_lo XOR shl(mid,64) XOR shl(p_hi,128)                   *)
+(* where mid = p_mid XOR p_lo XOR p_hi (Karatsuba tidy-up).                  *)
+(* Proof: schoolbook identity (RING_RULE) + char-2 tidy-up (WORD_BITWISE).   *)
 (* ------------------------------------------------------------------------- *)
 
 let PMUL_KARATSUBA = prove(

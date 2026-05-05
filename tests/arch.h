@@ -27,6 +27,11 @@ int supports_arm_sha3(void)
   return 0;
 }
 
+int supports_arm_aes(void)
+{ // Not an ARM machine at all
+  return 0;
+}
+
 #else
 
 int supports_bmi2_and_adx(void)
@@ -68,6 +73,43 @@ int supports_bmi2_and_adx(void)
     return 0;
   #endif
   }
+
+#endif
+
+#if __linux__
+  #include <sys/auxv.h>
+  #include <asm/hwcap.h>
+  int supports_arm_aes(void)
+  {
+    long hwcaps = getauxval(AT_HWCAP);
+    return (hwcaps & HWCAP_AES) != 0;
+  }
+
+#elif __FreeBSD__ || __OpenBSD__
+
+  #include <elf.h>
+  #include <sys/auxv.h>
+  int supports_arm_aes(void)
+  {
+    unsigned long hwcaps;
+    if (elf_aux_info(AT_HWCAP, &hwcaps, sizeof(hwcaps)) != 0)
+     { printf("Warning: Failed to read AT_HWCAP\n");
+       return 0;
+     }
+    return (hwcaps & HWCAP_AES) != 0;
+  }
+
+#else
+
+  int supports_arm_aes(void)
+  {
+  #if __ARM_FEATURE_AES
+    return 1;
+  #else
+    return 0;
+  #endif
+  }
+
 #endif
 
 enum arch_name get_arch_name()

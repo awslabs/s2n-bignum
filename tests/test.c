@@ -825,6 +825,7 @@ uint8_t mlkem_rej_uniform_table[] =
   0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15   // 255
 };
 
+#ifdef __x86_64__
 // Constants for the ML-KEM NTT and INTT functions and mulcache.
 // These are taken with no semantic change from mlkem-native
 // file "mlkem/native/x86_64/src/consts.c"
@@ -909,6 +910,8 @@ static int16_t __attribute__((aligned(32))) mlkem_qdata[624] = {
  -21498, -20198,  23210, -17442, -23860, -20257,   7756,  23132,
 };
 
+#endif
+
 // ***************************************************************************
 // ML-DSA zeta constants
 // ***************************************************************************
@@ -950,6 +953,7 @@ static int32_t mldsa_zetas[256] = {
   -554416,  3919660, -48306, -1362209,  3937738,  1400424, -846154,  1976782
 };
 
+#ifdef __x86_64__
 // Complete AVX2 data structure for x86 MLDSA assembly (624 int32_t elements)
 // Based on mldsa-native consts.c structure and reference Dilithium AVX2
 // https://github.com/pq-crystals/dilithium/blob/master/avx2/consts.c
@@ -1040,6 +1044,105 @@ static int32_t __attribute__((aligned(32))) mldsa_avx2_data[624] = {
     3406031, -1846953, -3776993, -164721, -1207385, 3014001, -1799107, 269760, 472078, 1910376,
     -3833893, -2286327, -3545687, -1362209, 1976782
 };
+#endif
+
+// ARM NTT zeta constants for layers 0-5 (144 int32_t values)
+// Derived from ntt_zetas_layer012345 in arm/proofs/mldsa_ntt.ml
+static int32_t mldsa_ntt_arm_z_012345[144] = {
+    -3572223, -915382907, 3765607, 964937599, 3761513, 963888510,
+    -3201494, -820383522, -2883726, -738955404, -3145678, -806080660,
+    -3201430, -820367122, 0, 0, -601683, -154181397,
+    -3370349, -863652652, -4063053, -1041158200, 3602218, 923069133,
+    3182878, 815613168, 2740543, 702264730, -3586446, -919027554,
+    0, 0, 3542485, 907762539, 2663378, 682491182,
+    -1674615, -429120452, -3110818, -797147778, 2101410, 538486762,
+    3704823, 949361686, 1159875, 297218217, 0, 0,
+    2682288, 687336873, -3524442, -903139016, -434125, -111244624,
+    394148, 101000509, 928749, 237992130, 1095468, 280713909,
+    -3506380, -898510625, 0, 0, 2129892, 545785280,
+    676590, 173376332, -1335936, -342333886, 2071829, 530906624,
+    -4018989, -1029866791, 3241972, 830756018, 2156050, 552488273,
+    0, 0, 3764867, 964747974, -3227876, -827143915,
+    1714295, 439288460, 3415069, 875112161, 1759347, 450833045,
+    -817536, -209493775, -3574466, -915957677, 0, 0,
+    -1005239, -257592709, 2453983, 628833668, 1460718, 374309300,
+    3756790, 962678241, -1935799, -496048908, -1716988, -439978542,
+    -3950053, -1012201926, 0, 0, 557458, 142848732,
+    -642628, -164673562, -3585098, -918682129, -2897314, -742437332,
+    3192354, 818041395, 556856, 142694469, 3870317, 991769559,
+    0, 0, -1221177, -312926867, 2815639, 721508096,
+    2283733, 585207070, 2917338, 747568486, 1853806, 475038184,
+    3345963, 857403734, 1858416, 476219497, 0, 0
+};
+
+// ARM NTT zeta constants for layers 6-7 (384 int32_t values)
+// Derived from ntt_zetas_layer67 in arm/proofs/mldsa_ntt.ml
+static int32_t mldsa_ntt_arm_z_67[384] = {
+    3073009, 1277625, -2635473, 3852015, 787459213, 327391679,
+    -675340520, 987079667, 1753, -2659525, 2660408, -59148,
+    449207, -681503850, 681730119, -15156688, -1935420, -1455890,
+    -1780227, 2772600, -495951789, -373072124, -456183549, 710479343,
+    4183372, -3222807, -3121440, -274060, 1071989969, -825844983,
+    -799869667, -70227934, 1182243, 636927, -3956745, -3284915,
+    302950022, 163212680, -1013916752, -841760171, 87208, -3965306,
+    -2296397, -3716946, 22347069, -1016110510, -588452222, -952468207,
+    2508980, 2028118, 1937570, -3815725, 642926661, 519705671,
+    496502727, -977780347, -27812, 1009365, -1979497, -3956944,
+    -7126831, 258649997, -507246529, -1013967746, 822541, -2454145,
+    1596822, -3759465, 210776307, -628875181, 409185979, -963363710,
+    2811291, -2983781, -1109516, 4158088, 720393920, -764594519,
+    -284313712, 1065510939, -1685153, 2678278, -3551006, -250446,
+    -431820817, 686309310, -909946047, -64176841, -3410568, -3768948,
+    635956, -2455377, -873958779, -965793731, 162963861, -629190881,
+    1528066, 482649, 1148858, -2962264, 391567239, 123678909,
+    294395108, -759080783, -4146264, 2192938, 2387513, -268456,
+    -1062481036, 561940831, 611800717, -68791907, -1772588, -1727088,
+    -3611750, -3180456, -454226054, -442566669, -925511710, -814992530,
+    -565603, 169688, 2462444, -3334383, -144935890, 43482586,
+    631001801, -854436357, 3747250, 1239911, 3195676, 1254190,
+    960233614, 317727459, 818892658, 321386456, 2296099, -3838479,
+    2642980, -12417, 588375860, -983611064, 677264190, -3181859,
+    -4166425, -3488383, 1987814, -3197248, -1067647297, -893898890,
+    509377762, -819295484, 2998219, -89301, -1354892, -1310261,
+    768294260, -22883400, -347191365, -335754661, 141835, 2513018,
+    613238, -2218467, 36345249, 643961400, 157142369, -568482643,
+    1736313, 235407, -3250154, 3258457, 444930577, 60323094,
+    -832852657, 834980303, -458740, 4040196, 2039144, -818761,
+    -117552223, 1035301089, 522531086, -209807681, -1921994, -3472069,
+    -1879878, -2178965, -492511373, -889718424, -481719139, -558360247,
+    -2579253, 1787943, -2391089, -2254727, -660934133, 458160776,
+    -612717067, -577774276, -1623354, -2374402, 586241, 527981,
+    -415984810, -608441020, 150224382, 135295244, 2105286, -2033807,
+    -1179613, -2743411, 539479988, -521163479, -302276083, -702999655,
+    3482206, -4182915, -1300016, -2362063, 892316032, -1071872863,
+    -333129378, -605279149, -1476985, 2491325, 507927, -724804,
+    -378477722, 638402564, 130156402, -185731180, 1994046, -1393159,
+    -1187885, -1834526, 510974714, -356997292, -304395785, -470097680,
+    -1317678, 2461387, 3035980, 621164, -337655269, 630730945,
+    777970524, 159173408, -3033742, 2647994, -2612853, 749577,
+    -777397036, 678549029, -669544140, 192079267, -338420, 3009748,
+    4148469, -4022750, -86720197, 771248568, 1063046068, -1030830548,
+    3901472, -1226661, 2925816, 3374250, 999753034, -314332144,
+    749740976, 864652284, 3980599, -1615530, 1665318, 1163598,
+    1020029345, -413979908, 426738094, 298172236, 2569011, 1723229,
+    2028038, -3369273, 658309618, 441577800, 519685171, -863376927,
+    1356448, -2775755, 2683270, -2778788, 347590090, -711287812,
+    687588511, -712065019, 3994671, -1370517, 3363542, 545376,
+    1023635298, -351195274, 861908357, 139752717, -11879, 3020393,
+    214880, -770441, -3043996, 773976352, 55063046, -197425671,
+    -3467665, 2312838, -653275, -459163, -888589898, 592665232,
+    -167401858, -117660617, 3105558, 508145, 860144, 140244,
+    795799901, 130212265, 220412084, 35937555, -1103344, -553718,
+    3430436, -1514152, -282732136, -141890356, 879049958, -388001774,
+    348812, -327848, 1011223, -2354215, 89383150, -84011120,
+    259126110, -603268097, -2185084, 2358373, -3014420, 2926054,
+    -559928242, 604333585, -772445769, 749801963, 3123762, -2193087,
+    -1716814, -392707, 800464680, -561979013, -439933955, -100631253,
+    -3818627, -1922253, -2236726, 1744507, -978523985, -492577742,
+    -573161516, 447030292, -303005, -3974485, 1900052, 1054478,
+    -77645096, -1018462631, 486888731, 270210213, 3531229, -3773731,
+    -781875, -731434, 904878186, -967019376, -200355636, -187430119
+};
 
 // Separate data structure for x86 mldsa_pointwise (different order than mldsa_ntt)
 static int32_t __attribute__((aligned(32))) mldsa_pointwise_data[16] = {
@@ -1048,6 +1151,107 @@ static int32_t __attribute__((aligned(32))) mldsa_pointwise_data[16] = {
 
     // Offset 8-15: 8XQ (8 copies of MLDSA_Q = 8380417)
     8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417,
+};
+
+// ARM iNTT zeta constants for layers 7-8 (384 int32_t values)
+// Derived from zetas_layer78 in arm/proofs/mldsa_intt.ml
+static int32_t mldsa_intt_arm_z_78[384] = {
+    -1744507, 2236726, 1922253, 3818627, -447030292, 573161516,
+    492577742, 978523985, 731434, 781875, 3773731, -3531229,
+    187430119, 200355636, 967019376, -904878186, -1054478, -1900052,
+    3974485, 303005, -270210213, -486888731, 1018462631, 77645096,
+    2354215, -1011223, 327848, -348812, 603268097, -259126110,
+    84011120, -89383150, 392707, 1716814, 2193087, -3123762,
+    100631253, 439933955, 561979013, -800464680, -2926054, 3014420,
+    -2358373, 2185084, -749801963, 772445769, -604333585, 559928242,
+    459163, 653275, -2312838, 3467665, 117660617, 167401858,
+    -592665232, 888589898, 1514152, -3430436, 553718, 1103344,
+    388001774, -879049958, 141890356, 282732136, -140244, -860144,
+    -508145, -3105558, -35937555, -220412084, -130212265, -795799901,
+    2778788, -2683270, 2775755, -1356448, 712065019, -687588511,
+    711287812, -347590090, 770441, -214880, -3020393, 11879,
+    197425671, -55063046, -773976352, 3043996, -545376, -3363542,
+    1370517, -3994671, -139752717, -861908357, 351195274, -1023635298,
+    -3374250, -2925816, 1226661, -3901472, -864652284, -749740976,
+    314332144, -999753034, 3369273, -2028038, -1723229, -2569011,
+    863376927, -519685171, -441577800, -658309618, -1163598, -1665318,
+    1615530, -3980599, -298172236, -426738094, 413979908, -1020029345,
+    -621164, -3035980, -2461387, 1317678, -159173408, -777970524,
+    -630730945, 337655269, 4022750, -4148469, -3009748, 338420,
+    1030830548, -1063046068, -771248568, 86720197, -749577, 2612853,
+    -2647994, 3033742, -192079267, 669544140, -678549029, 777397036,
+    2362063, 1300016, 4182915, -3482206, 605279149, 333129378,
+    1071872863, -892316032, 1834526, 1187885, 1393159, -1994046,
+    470097680, 304395785, 356997292, -510974714, 724804, -507927,
+    -2491325, 1476985, 185731180, -130156402, -638402564, 378477722,
+    2254727, 2391089, -1787943, 2579253, 577774276, 612717067,
+    -458160776, 660934133, 2743411, 1179613, 2033807, -2105286,
+    702999655, 302276083, 521163479, -539479988, -527981, -586241,
+    2374402, 1623354, -135295244, -150224382, 608441020, 415984810,
+    -3258457, 3250154, -235407, -1736313, -834980303, 832852657,
+    -60323094, -444930577, 2178965, 1879878, 3472069, 1921994,
+    558360247, 481719139, 889718424, 492511373, 818761, -2039144,
+    -4040196, 458740, 209807681, -522531086, -1035301089, 117552223,
+    3197248, -1987814, 3488383, 4166425, 819295484, -509377762,
+    893898890, 1067647297, 2218467, -613238, -2513018, -141835,
+    568482643, -157142369, -643961400, -36345249, 1310261, 1354892,
+    89301, -2998219, 335754661, 347191365, 22883400, -768294260,
+    3334383, -2462444, -169688, 565603, 854436357, -631001801,
+    -43482586, 144935890, 12417, -2642980, 3838479, -2296099,
+    3181859, -677264190, 983611064, -588375860, -1254190, -3195676,
+    -1239911, -3747250, -321386456, -818892658, -317727459, -960233614,
+    2962264, -1148858, -482649, -1528066, 759080783, -294395108,
+    -123678909, -391567239, 3180456, 3611750, 1727088, 1772588,
+    814992530, 925511710, 442566669, 454226054, 268456, -2387513,
+    -2192938, 4146264, 68791907, -611800717, -561940831, 1062481036,
+    -4158088, 1109516, 2983781, -2811291, -1065510939, 284313712,
+    764594519, -720393920, 2455377, -635956, 3768948, 3410568,
+    629190881, -162963861, 965793731, 873958779, 250446, 3551006,
+    -2678278, 1685153, 64176841, 909946047, -686309310, 431820817,
+    3815725, -1937570, -2028118, -2508980, 977780347, -496502727,
+    -519705671, -642926661, 3759465, -1596822, 2454145, -822541,
+    963363710, -409185979, 628875181, -210776307, 3956944, 1979497,
+    -1009365, 27812, 1013967746, 507246529, -258649997, 7126831,
+    274060, 3121440, 3222807, -4183372, 70227934, 799869667,
+    825844983, -1071989969, 3716946, 2296397, 3965306, -87208,
+    952468207, 588452222, 1016110510, -22347069, 3284915, 3956745,
+    -636927, -1182243, 841760171, 1013916752, -163212680, -302950022,
+    -3852015, 2635473, -1277625, -3073009, -987079667, 675340520,
+    -327391679, -787459213, -2772600, 1780227, 1455890, 1935420,
+    -710479343, 456183549, 373072124, 495951789, 59148, -2660408,
+    2659525, -1753, 15156688, -681730119, 681503850, -449207
+};
+
+// ARM iNTT zeta constants for layers 1-6 (160 int32_t values)
+// Derived from zetas_layer123456 in arm/proofs/mldsa_intt.ml
+static int32_t mldsa_intt_arm_z_123456[160] = {
+    -2283733, -585207070, 0, 0, -1858416, -476219497,
+    -3345963, -857403734, -2815639, -721508096, 0, 0,
+    -1853806, -475038184, -2917338, -747568486, 3585098, 918682129,
+    0, 0, -3870317, -991769559, -556856, -142694469,
+    642628, 164673562, 0, 0, -3192354, -818041395,
+    2897314, 742437332, -1460718, -374309300, 0, 0,
+    3950053, 1012201926, 1716988, 439978542, -2453983, -628833668,
+    0, 0, 1935799, 496048908, -3756790, -962678241,
+    -1714295, -439288460, 0, 0, 3574466, 915957677,
+    817536, 209493775, 3227876, 827143915, 0, 0,
+    -1759347, -450833045, -3415069, -875112161, 1335936, 342333886,
+    0, 0, -2156050, -552488273, -3241972, -830756018,
+    -676590, -173376332, 0, 0, 4018989, 1029866791,
+    -2071829, -530906624, 434125, 111244624, 0, 0,
+    3506380, 898510625, -1095468, -280713909, 3524442, 903139016,
+    0, 0, -928749, -237992130, -394148, -101000509,
+    1674615, 429120452, 0, 0, -1159875, -297218217,
+    -3704823, -949361686, -2663378, -682491182, 0, 0,
+    -2101410, -538486762, 3110818, 797147778, 4063053, 1041158200,
+    0, 0, 3586446, 919027554, -2740543, -702264730,
+    3370349, 863652652, 0, 0, -3182878, -815613168,
+    -3602218, -923069133, -294725, -75523344, -3761513, -963888510,
+    -3765607, -964937599, 3201430, 820367122, 3145678, 806080660,
+    2883726, 738955404, 3201494, 820383522, 1221177, 312926867,
+    -557458, -142848732, 1005239, 257592709, -3764867, -964747974,
+    -2129892, -545785280, -2682288, -687336873, -3542485, -907762539,
+    601683, 154181397, 0, 0
 };
 
 // ****************************************************************************
@@ -2848,7 +3052,7 @@ uint64_t pow_8380417(uint64_t x, uint64_t n)
 // Pure forward ML-DSA NTT
 // NTT[k] = sum_{j=0..255} a[j] * 1753^((2 * avx2_ntt_order(k) + 1) * j) mod 8380417
 // where avx2_ntt_order(k) = bitreverse8(64*(k/64) + (k%64)/8 + 8*(k%8))
-void reference_mldsa_forward_ntt_spec(int32_t a[256])
+void reference_mldsa_forward_ntt_spec_x86(int32_t a[256])
 {
     int32_t result[256];
 
@@ -2938,8 +3142,8 @@ void reference_mldsa_inverse_ntt(int32_t a[256])
 }
 
 // Pure inverse ML-DSA NTT specification (algebraic inverse of forward NTT)
-// Since forward NTT: result[k] = sum_{j=0..255} a[j] * ζ^((2*order(k)+1)*j)
-// Inverse NTT: result[j] = (1/256) * sum_{k=0..255} a[k] * ζ^(-(2*order(k)+1)*j)
+// Since forward NTT: result[k] = sum_{j=0..255} a[j] * zeta^((2*order(k)+1)*j)
+// Inverse NTT: result[j] = (1/256) * sum_{k=0..255} a[k] * zeta^(-(2*order(k)+1)*j)
 void reference_mldsa_inverse_ntt_spec(int32_t a[256])
 {
     int32_t result[256];
@@ -2956,7 +3160,7 @@ void reference_mldsa_inverse_ntt_spec(int32_t a[256])
             // Get the bit-reversed index for k (same as forward NTT uses)
             uint8_t order_k = avx2_ntt_order(k);
             
-            // For inverse: use negative exponent ζ^(-(2*order(k)+1)*j)
+            // For inverse: use negative exponent zeta^(-(2*order(k)+1)*j)
             uint64_t power = ((uint64_t)(2 * order_k + 1) * j);
             uint64_t inv_power = (8380416 - (power % 8380416)) % 8380416;
             uint64_t zeta_power = pow_8380417(1753, inv_power);
@@ -12355,7 +12559,6 @@ uint64_t t, i;
   int16_t a[256] __attribute__((aligned(32)));
   int16_t x[128] __attribute__((aligned(32)));
   int16_t y[128] __attribute__((aligned(32)));
-  int16_t z[128] __attribute__((aligned(32)));
   printf("Testing mlkem_mulcache_compute with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
@@ -12742,7 +12945,7 @@ int test_mldsa_pointwise(void)
         for (i = 0; i < 256; ++i) {
             a[i] = (int32_t)(random64() % (2 * 9 * 8380417)) - 9 * 8380417;
             b[i] = (int32_t)(random64() % (2 * 9 * 8380417)) - 9 * 8380417;
-        }
+    }
 
         // Compute reference result
         reference_mldsa_pointwise(d, a, b);
@@ -12781,31 +12984,29 @@ int test_mldsa_pointwise(void)
 
 int test_mldsa_ntt(void)
 {
-    // Skip test on non-x86_64 architectures
-    if (get_arch_name() != ARCH_X86_64) {
-        return 0;
-    }
-
-#ifdef __x86_64__
     uint64_t t, i;
-    // 32-byte alignment for AVX2 vmovdqa instructions
     int32_t a[256] __attribute__((aligned(32)));
     int32_t b[256] __attribute__((aligned(32)));
 
     printf("Testing mldsa_ntt with %d cases\n", tests);
 
     for (t = 0; t < tests; ++t) {
-        // Generate random input polynomial coefficients (like MLKEM does)
+        // Generate random input polynomial coefficients
         for (i = 0; i < 256; ++i) {
             a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
-            b[i] = a[i];  // Copy for assembly implementation
+            b[i] = a[i];
         }
 
-        // Call the x86 assembly implementation with complete AVX2 data structure
+        // Call the assembly implementation
+#ifdef __x86_64__
         mldsa_ntt(b, mldsa_avx2_data);
+        reference_mldsa_forward_ntt_spec_x86(a);
+#else
+        mldsa_ntt_arm(b, mldsa_ntt_arm_z_012345, mldsa_ntt_arm_z_67);
+        reference_mldsa_forward_ntt(a);
+#endif
 
         // Test against HOL-Light specification implementation
-        reference_mldsa_forward_ntt_spec(a);
 
         // Compare results (apply reduction to both values for comparison)
         for (i = 0; i < 256; ++i) {
@@ -12837,21 +13038,12 @@ int test_mldsa_ntt(void)
 
     printf("All OK\n");
     return 0;
-#else
-    return 0;  // Fallback for non-x86_64 compile-time environments
-#endif
 }
 
 // Test mldsa_intt: validates both assembly and C reference specification
 // Tests that both NTT/iNTT pairs are proper inverses
 int test_mldsa_intt(void)
 {
-    // Skip test on non-x86_64 architectures
-    if (get_arch_name() != ARCH_X86_64) {
-        return 0;
-    }
-
-#ifdef __x86_64__
     uint64_t t, i;
     int32_t original[256] __attribute__((aligned(32)));
     int32_t asm_result[256] __attribute__((aligned(32)));
@@ -12867,14 +13059,20 @@ int test_mldsa_intt(void)
         for (i = 0; i < 256; ++i)
             original[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
         
-        // Test 1: Assembly NTT → Assembly iNTT round-trip
+        // Test 1: Assembly NTT -> Assembly iNTT round-trip
         for (i = 0; i < 256; ++i) temp[i] = original[i];
+#ifdef __x86_64__
         mldsa_ntt(temp, mldsa_avx2_data);
         for (i = 0; i < 256; ++i) asm_result[i] = temp[i];
         mldsa_intt(asm_result, mldsa_avx2_data);
+#else
+        mldsa_ntt_arm(temp, mldsa_ntt_arm_z_012345, mldsa_ntt_arm_z_67);
+        for (i = 0; i < 256; ++i) asm_result[i] = temp[i];
+        mldsa_intt_arm(asm_result, mldsa_intt_arm_z_78, mldsa_intt_arm_z_123456);
+#endif
         reference_frommont_mldsa(asm_result);
         
-        // Test 2: C reference NTT → C reference iNTT round-trip  
+        // Test 2: C reference NTT -> C reference iNTT round-trip  
         for (i = 0; i < 256; ++i) temp[i] = original[i];
         reference_mldsa_forward_ntt(temp);
         for (i = 0; i < 256; ++i) spec_result[i] = temp[i];
@@ -12896,9 +13094,9 @@ int test_mldsa_intt(void)
                 printf("  Original: 0x%08"PRIx32" (norm: 0x%08"PRIx32")\n",
                        original[i], norm_original);
                 printf("  Assembly round-trip: 0x%08"PRIx32" (norm: 0x%08"PRIx32") %s\n",
-                       asm_result[i], norm_asm, asm_ok ? "✓" : "✗");
+                       asm_result[i], norm_asm, asm_ok ? "PASS" : "FAIL");
                 printf("  Spec round-trip: 0x%08"PRIx32" (norm: 0x%08"PRIx32") %s\n",
-                       spec_result[i], norm_spec, spec_ok ? "✓" : "✗");
+                       spec_result[i], norm_spec, spec_ok ? "PASS" : "FAIL");
                 return 1;
             }
         }
@@ -12917,6 +13115,100 @@ int test_mldsa_intt(void)
         }
     }
     
+    printf("All OK\n");
+    return 0;
+}
+
+// Reference implementation for mldsa_nttunpack
+// 
+// SPECIFICATION:
+// This function performs an 8x8 matrix transpose within each of 4 blocks of 64 coefficients.
+// It converts from AVX2 lane-interleaved layout to sequential layout.
+//
+// Mathematical specification:
+//   For each block b ∈ {0, 1, 2, 3}:
+//     For each position i ∈ {0, ..., 63}:
+//       output[64*b + i] = input[64*b + (i mod 8) * 8 + (i div 8)]
+//
+// This transposes the organization from:
+//   [ymm0[0..7], ymm1[0..7], ymm2[0..7], ..., ymm7[0..7]]
+// to:
+//   [ymm0[0], ymm1[0], ..., ymm7[0], ymm0[1], ymm1[1], ..., ymm7[7]]
+//
+// The transformation is a permutation (bijective) and is self-inverse.
+//
+void reference_mldsa_nttunpack(int32_t a[256])
+{
+    int32_t temp[256];
+    int i;
+    
+    // Copy input to temp
+    for (i = 0; i < 256; i++) {
+        temp[i] = a[i];
+    }
+    
+    // Apply the transpose specification to each of 4 blocks
+    for (int block = 0; block < 4; block++) {
+        int base = block * 64;
+        
+        for (i = 0; i < 64; i++) {
+            // Specification: output[base + i] = input[base + (i % 8) * 8 + (i / 8)]
+            int src_index = base + (i % 8) * 8 + (i / 8);
+            a[base + i] = temp[src_index];
+        }
+    }
+}
+
+int test_mldsa_nttunpack(void)
+{
+    // Skip test on non-x86_64 architectures  
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+
+#ifdef __x86_64__
+    uint64_t t, i;
+    // 32-byte alignment for AVX2 vmovdqa instructions
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t b[256] __attribute__((aligned(32)));
+    int32_t c[256] __attribute__((aligned(32)));
+
+    printf("Testing mldsa_nttunpack with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        // Generate random input polynomial coefficients
+        for (i = 0; i < 256; ++i) {
+            a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
+            b[i] = a[i];  // Copy for assembly implementation
+            c[i] = a[i];  // Copy for reference
+        }
+
+        // Call the x86 assembly implementation
+        mldsa_nttunpack(b);
+
+        // Call reference implementation
+        reference_mldsa_nttunpack(c);
+
+        // Compare results
+        for (i = 0; i < 256; ++i) {
+            if (b[i] != c[i]) {
+                printf("Error in mldsa_nttunpack element i = %"PRIu64"; "
+                       "code[%"PRIu64"] = 0x%08"PRIx32" while reference[%"PRIu64"] = 0x%08"PRIx32"\n",
+                       i, i, b[i], i, c[i]);
+                return 1;
+            }
+        }
+
+        if (VERBOSE) {
+            printf("OK: mldsa_nttunpack[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"] = "
+                   "[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"]\n",
+                   a[0], a[1], a[254], a[255],
+                   b[0], b[1], b[254], b[255]);
+        }
+    }
+
     printf("All OK\n");
     return 0;
 #else
@@ -15199,9 +15491,9 @@ int test_word_recip(void)
   if (x[0] != UINT64_C(n)) \
   { printf("Failed known value test\n"); ++failures; } else { ++successes; }
 
-int test_known_values(void)
+int test_known_values_p384(void)
 { int failures = 0, successes = 0;
-  printf("Testing known value cases\n");
+  printf("Testing known value cases for p384\n");
 
 #include "known_value_tests_p384.h"
 
@@ -15213,6 +15505,268 @@ int test_known_values(void)
     { printf("Successfully passed %d known value tests\n",successes);
       return 0;
     }
+}
+
+// Reference implementation of AES-256-XTS for comparison testing
+
+#include "ref_aes_xts.c"
+
+// Helpers for writing XTS tests
+void assign_bytearray_from_hexstring(uint8_t *bytearr, const char *hexstr, int len)
+{
+  for (int i = 0; i < len; i++) {
+    sscanf(&hexstr[i * 2], "%2hhx", &bytearr[i]);
+  }
+}
+
+void assign_bytearray_zero(uint8_t *bytearr, int len)
+{
+  for(int i = 0; i < len; i++){
+    bytearr[i] = 0x00;
+  }
+}
+
+#define ASSIGNHEX(bytearr, hexstr, len) assign_bytearray_from_hexstring(bytearr, hexstr, len)
+#define ASSIGNZERO(bytearr, len) assign_bytearray_zero(bytearr, len)
+
+int check_bytearr(const uint8_t *out, const uint8_t *res, int diff, int len)
+{
+  for(int i = 0; i < len; i++){
+    if (out[i]!=res[i]){diff = 1;break;};
+  }
+  return diff;
+}
+
+#define CHECKHEX(out, res, diff, len) \
+  if (check_bytearr(out, res, diff, len)) \
+  { printf("Failed known value test\n"); ++failures; } else { ++successes; }
+
+
+int test_known_values_xts_encrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for aes-xts encrypt\n");
+
+  s2n_bignum_AES_KEY *key1 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  s2n_bignum_AES_KEY *key2 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  size_t len;
+  uint8_t iv[16];
+  uint8_t in[224];
+  uint8_t out[224];
+  uint8_t res[224];
+
+#include "known_value_tests_xts_encrypt.h"
+
+  if (failures != 0)
+    { printf ("Failed %d known value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
+}
+
+int test_known_values_xts_decrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for aes-xts decrypt\n");
+
+  s2n_bignum_AES_KEY *key1 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  s2n_bignum_AES_KEY *key2 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  size_t len;
+  uint8_t iv[16];
+  uint8_t in[224];
+  uint8_t out[224];
+  uint8_t res[224];
+
+#include "known_value_tests_xts_decrypt.h"
+
+  if (failures != 0)
+    { printf ("Failed %d known value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
+}
+
+// ****************************************************************************
+// Random-input testing of AES-XTS against reference implementation
+// ****************************************************************************
+
+// Fill a byte array with random data
+
+static void random_bytes(uint8_t *buf, size_t n)
+{ size_t i;
+  for (i = 0; i < n; ++i) buf[i] = (uint8_t)(rand() & 0xFF);
+}
+
+int test_aes_xts_encrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY ek1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts_encrypt against reference with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random keys and IV
+     random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     // Random length from 16 to 512, with bias toward interesting sizes
+     len = 16 + (rand() % 497);
+     // With some probability, force block-aligned lengths
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     // With some probability, test near-boundary sizes
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     // Expand keys for the assembly function
+     ref_aes256_expand_key(key1, &ek1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Assembly
+     aes_xts_encrypt(bb1, bb2, len, &ek1, &ek2, iv);
+
+     // Reference
+     ref_aes_xts_encrypt(bb1, bb3, len, key1, key2, iv);
+
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: aes_xts_encrypt len=%zu\n", len);
+        printf("    key1=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key1[i]);
+        printf("\n    iv=");
+        for (int i = 0; i < 16; ++i) printf("%02x", iv[i]);
+        printf("\n");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: aes_xts_encrypt len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_aes_xts_decrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY dk1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts_decrypt against reference with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random keys and IV
+     random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     // Random length from 16 to 512
+     len = 16 + (rand() % 497);
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     // Expand keys for the assembly function (decrypt needs reversed schedule)
+     ref_aes256_expand_decrypt_key(key1, &dk1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Assembly
+     aes_xts_decrypt(bb1, bb2, len, &dk1, &ek2, iv);
+
+     // Reference
+     ref_aes_xts_decrypt(bb1, bb3, len, key1, key2, iv);
+
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: aes_xts_decrypt len=%zu\n", len);
+        printf("    key1=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key1[i]);
+        printf("\n    iv=");
+        for (int i = 0; i < 16; ++i) printf("%02x", iv[i]);
+        printf("\n");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: aes_xts_decrypt len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_aes_xts_roundtrip(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY ek1, dk1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts encrypt/decrypt roundtrip with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     len = 16 + (rand() % 497);
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     ref_aes256_expand_key(key1, &ek1);
+     ref_aes256_expand_decrypt_key(key1, &dk1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Encrypt then decrypt, should recover original
+     aes_xts_encrypt(bb1, bb2, len, &ek1, &ek2, iv);
+     aes_xts_decrypt(bb2, bb3, len, &dk1, &ek2, iv);
+
+     if (memcmp(bb1, bb3, len) != 0)
+      { printf("### Disparity: roundtrip failed len=%zu\n", len);
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: roundtrip len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
 }
 
 // ****************************************************************************
@@ -15797,6 +16351,7 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 int main(int argc, char *argv[])
 { int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
   int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
+  int aes = get_arch_name() == ARCH_AARCH64 && supports_arm_aes();
   int arm = get_arch_name() == ARCH_AARCH64;
   int all = 1;
   int extrastrigger = 1;
@@ -16105,6 +16660,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
+  functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);
   functionaltest(all,"mldsa_pointwise",test_mldsa_pointwise);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
@@ -16185,12 +16741,16 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak2_f1600_alt",test_sha3_keccak2_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
     functionaltest(all,"gcm_gmult_v8",test_gcm_gmult_v8);
-
+    functionaltest(aes,"aes_xts_encrypt",test_aes_xts_encrypt);
+    functionaltest(aes,"aes_xts_decrypt",test_aes_xts_decrypt);
+    functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
+    functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
+    functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
   }
 
   if (extrastrigger) function_to_test = "_";
 
-  functionaltest(bmi,"known value tests",test_known_values);
+  functionaltest(bmi,"known value tests",test_known_values_p384);
 
   functionaltest(bmi,"curve25519_x25519 (TweetNaCl)",test_curve25519_x25519_tweetnacl);
   functionaltest(all,"curve25519_x25519_alt (TweetNaCl)",test_curve25519_x25519_alt_tweetnacl);

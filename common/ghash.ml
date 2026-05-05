@@ -26,13 +26,13 @@ let POLY_RING_VAR_POW_1 = prove
 (* ------------------------------------------------------------------------- *)
 
 let coeff = define
- `coeff:num->1->num = \d v. d`;;
+ `coeff = \i (p:(1->num)->A). p(\v:1. i)`;;
 
 let POLY_MUL_UNIVARIATE = prove
  (`!r (p:(1->num)->R) q.
       poly_mul r p q =
       \m. ring_sum r (0..m one)
-              (\i. ring_mul r (p(coeff i)) (q(coeff(m one - i))))`,
+              (\i. ring_mul r (coeff i p) (coeff (m one - i) q))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[poly_mul; coeff] THEN
   GEN_REWRITE_TAC I [FUN_EQ_THM] THEN
   GEN_REWRITE_TAC I [FORALL_FUN_FROM_1] THEN
@@ -92,7 +92,7 @@ let POLY_VARPOW_BOOL_POLY = prove
   SIMP_TAC[RING_POW; POLY_VAR_BOOL_POLY]);;
 
 let word_of_poly = define
- `(word_of_poly:((1->num)->bool)->N word) p = word_of_bits {i | p(coeff i)}`;;
+ `(word_of_poly:((1->num)->bool)->N word) p = word_of_bits {i | coeff i p}`;;
 
 let poly_of_word = define
  `(poly_of_word:N word->(1->num)->bool) w = \m. bit (m one) w`;;
@@ -102,11 +102,10 @@ let BOOL_POLY_OF_WORD = prove
   REWRITE_TAC[bool_poly; POLY_RING; ring_polynomial; ring_powerseries;
               IN_ELIM_THM; BOOL_RING; SUBSET_UNIV; IN_UNIV] THEN
   REWRITE_TAC[FINITE_MONOMIAL_VARS_1; INFINITE] THEN
-  REWRITE_TAC[poly_of_word] THEN GEN_TAC THEN
-  MATCH_MP_TAC FINITE_SUBSET THEN
-  EXISTS_TAC `IMAGE coeff {i | i < dimindex(:N)}` THEN
+  REWRITE_TAC[poly_of_word] THEN GEN_TAC THEN MATCH_MP_TAC FINITE_SUBSET THEN
+  EXISTS_TAC `IMAGE (\i (v:1). i) {i | i < dimindex(:N)}` THEN
   SIMP_TAC[FINITE_IMAGE; FINITE_NUMSEG_LT; SUBSET; IN_ELIM_THM] THEN
-  REWRITE_TAC[FORALL_FUN_FROM_1; IN_IMAGE; IN_ELIM_THM; coeff] THEN
+  REWRITE_TAC[FORALL_FUN_FROM_1; IN_IMAGE; IN_ELIM_THM] THEN
   MESON_TAC[BIT_TRIVIAL; NOT_LE]);;
 
 let RING_POLYNOMIAL_OF_WORD = prove
@@ -591,7 +590,7 @@ let BEZOUT_BOOL_POLY = prove
   REWRITE_TAC[bool_poly] THEN
   MESON_TAC[PID_EQ_UFD_BEZOUT_RING; PID_POLY_RING; FIELD_BOOL_RING]);;
 
-let RING_IRREDUCBLE_GHASH_POLYNOMIAL = prove
+let RING_IRREDUCIBLE_GHASH_POLYNOMIAL = prove
  (`ring_irreducible bool_poly ghash_poly`,
   let lemma = prove
    (`!s t. s IN ring_carrier bool_poly /\
