@@ -48,7 +48,7 @@ prove(`inc32 (word 0xFEEDFACEDEADBEEFFEEDFACEFFFFFFFF : 128 word) =
 (* ========================================================================= *)
 (* GCTR: NIST SP 800-38D Algorithm 3 (counter-mode encryption).              *)
 (*                                                                           *)
-(* Operates on full 128-bit blocks. Partial last block handling is deferred   *)
+(* Operates on full 128-bit blocks. Partial last block handling is deferred  *)
 (* to the GCM-AE/AD layer. Uses AES-128 cipher from fips197.ml.              *)
 (* ========================================================================= *)
 
@@ -97,7 +97,7 @@ let rec GCTR_FAST_CONV ks_def tm =
 
 (* ========================================================================= *)
 (* Key schedule for NIST SP 800-38D Test Case 3 (AES-128).                   *)
-(* Key: 0xFEFFE9928665731C6D6A8F9467308308                                  *)
+(* Key: 0xFEFFE9928665731C6D6A8F9467308308                                   *)
 (* ========================================================================= *)
 
 let NIST_TC3_KEY_SCHEDULE = new_definition
@@ -116,9 +116,9 @@ let NIST_TC3_KEY_SCHEDULE = new_definition
     ]`;;
 
 (* ========================================================================= *)
-(* GCTR KATs from NIST SP 800-38D Test Case 3.                              *)
-(* Key: 0xFEFFE9928665731C6D6A8F9467308308                                  *)
-(* ICB: 0xCAFEBABEFACEDBADDECAF88800000002                                  *)
+(* GCTR KATs from NIST SP 800-38D Test Case 3.                               *)
+(* Key: 0xFEFFE9928665731C6D6A8F9467308308                                   *)
+(* ICB: 0xCAFEBABEFACEDBADDECAF88800000002                                   *)
 (* ========================================================================= *)
 
 prove(`gctr AESAVS_ZERO_KEY_128_SCHEDULE
@@ -148,12 +148,12 @@ prove(`gctr NIST_TC3_KEY_SCHEDULE
 (* GF(2^128) multiplication: NIST SP 800-38D Section 6.3.                    *)
 (*                                                                           *)
 (* Multiplication in GF(2^128) with irreducible polynomial                   *)
-(* P(x) = x^128 + x^7 + x^2 + x + 1.                                       *)
+(* P(x) = x^128 + x^7 + x^2 + x + 1.                                         *)
 (*                                                                           *)
 (* NIST uses reflected bit ordering (bit 0 = MSB = coefficient of x^0).      *)
 (* We implement this as: bit-reverse inputs, carry-less multiply, reduce     *)
-(* mod P(x) using ghash_reduce from common/ghash.ml, then bit-reverse the   *)
-(* result. The reduction polynomial 0x87 = x^7+x^2+x+1 is the low part     *)
+(* mod P(x) using ghash_reduce from common/ghash.ml, then bit-reverse the    *)
+(* result. The reduction polynomial 0x87 = x^7+x^2+x+1 is the low part       *)
 (* of P(x).                                                                  *)
 (* ========================================================================= *)
 
@@ -198,8 +198,8 @@ prove(`gf128_mul (word 0x0388DACE60B6A392F328C2B971B2FE78)
 (* GHASH: NIST SP 800-38D Algorithm 2.                                       *)
 (*                                                                           *)
 (* GHASH(H, X_1 || ... || X_m) iterates gf128_mul:                           *)
-(*   Y_0 = 0, Y_i = gf128_mul(Y_{i-1} XOR X_i, H).                         *)
-(* Takes an initial accumulator Y (normally word 0) for generality.           *)
+(*   Y_0 = 0, Y_i = gf128_mul(Y_{i-1} XOR X_i, H).                           *)
+(* Takes an initial accumulator Y (normally word 0) for generality.          *)
 (* ========================================================================= *)
 
 let ghash = define
@@ -231,7 +231,7 @@ prove(`ghash (word 0xB83B533708BF535D0AA6E52980D53B78) (word 0)
   CONV_TAC(LAND_CONV GHASH_CONV) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* GCM-AE: NIST SP 800-38D Algorithm 4 (authenticated encryption).          *)
+(* GCM-AE: NIST SP 800-38D Algorithm 4 (authenticated encryption).           *)
 (*                                                                           *)
 (* Simplified to 96-bit IV, full 128-bit blocks, and 128-bit tag.            *)
 (* Key schedule is pre-expanded. Returns (ciphertext, tag).                  *)
@@ -251,7 +251,7 @@ let gcm_ae = new_definition
   (C, tag)`;;
 
 (* ========================================================================= *)
-(* GCM-AD: NIST SP 800-38D Algorithm 5 (authenticated decryption).          *)
+(* GCM-AD: NIST SP 800-38D Algorithm 5 (authenticated decryption).           *)
 (*                                                                           *)
 (* Returns SOME plaintext if tag verifies, NONE otherwise.                   *)
 (* ========================================================================= *)
@@ -271,11 +271,11 @@ let gcm_ad = new_definition
 
 
 (* ========================================================================= *)
-(* KATs: NIST SP 800-38D Test Case 1 (AES-128, empty P, empty A, 96-bit IV) *)
+(* KATs: NIST SP 800-38D Test Case 1 (AES-128, empty P, empty A, 96-bit IV)  *)
 (* Key: 0x00000000000000000000000000000000                                   *)
 (* IV:  0x000000000000000000000000                                           *)
 (* C:   (empty)                                                              *)
-(* T:   0x58e2fccefa7e3061367f1d57a4e7455a                                  *)
+(* T:   0x58e2fccefa7e3061367f1d57a4e7455a                                   *)
 (* ========================================================================= *)
 
 prove(`gcm_ae AESAVS_ZERO_KEY_128_SCHEDULE
@@ -317,12 +317,12 @@ prove(`gcm_ad AESAVS_ZERO_KEY_128_SCHEDULE
   REFL_TAC);;
 
 (* ========================================================================= *)
-(* KATs: NIST SP 800-38D Test Case 2 (AES-128, 1-block P, empty A)          *)
+(* KATs: NIST SP 800-38D Test Case 2 (AES-128, 1-block P, empty A)           *)
 (* Key: 0x00000000000000000000000000000000                                   *)
 (* IV:  0x000000000000000000000000                                           *)
 (* P:   0x00000000000000000000000000000000                                   *)
-(* C:   0x0388dace60b6a392f328c2b971b2fe78                                  *)
-(* T:   0xab6e47d42cec13bdf53a67b21257bddf                                  *)
+(* C:   0x0388dace60b6a392f328c2b971b2fe78                                   *)
+(* T:   0xab6e47d42cec13bdf53a67b21257bddf                                   *)
 (* Deconstructed KAT: each step proved individually (~45s total).            *)
 (* ========================================================================= *)
 
@@ -347,12 +347,12 @@ let tc2_tag = WORD_RED_CONV
 (* T = 0xab6e47d42cec13bdf53a67b21257bddf ✓ *)
 
 (* ========================================================================= *)
-(* KATs: NIST SP 800-38D Test Case 3 (AES-128, 4-block P, empty A)          *)
-(* Key: 0xfeffe9928665731c6d6a8f9467308308                                  *)
+(* KATs: NIST SP 800-38D Test Case 3 (AES-128, 4-block P, empty A)           *)
+(* Key: 0xfeffe9928665731c6d6a8f9467308308                                   *)
 (* IV:  0xcafebabefacedbaddecaf888                                           *)
-(* P:   d9313225...b16aedf5aa0de657ba637b391aafd255 (4 blocks)              *)
-(* C:   42831ec2...1ba30b396a0aac973d58e091473f5985 (4 blocks)              *)
-(* T:   0x4d5c2af327cd64a62cf35abd2ba6fab4                                  *)
+(* P:   d9313225...b16aedf5aa0de657ba637b391aafd255 (4 blocks)               *)
+(* C:   42831ec2...1ba30b396a0aac973d58e091473f5985 (4 blocks)               *)
+(* T:   0x4d5c2af327cd64a62cf35abd2ba6fab4                                   *)
 (* Deconstructed KAT: each step proved individually (~100s total).           *)
 (* ========================================================================= *)
 

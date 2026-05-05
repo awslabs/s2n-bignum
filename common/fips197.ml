@@ -374,12 +374,12 @@ let FIPS197_ENCRYPT_CONV cipher_def ks_def =
   FIPS197_FINAL_ROUND_REDUCE_CONV;;
 
 (* ========================================================================= *)
-(* Fast AES conversions via precomputed lookup tables.                        *)
+(* Fast AES conversions via precomputed lookup tables.                       *)
 (*                                                                           *)
 (* The bottleneck in AES evaluation is word_subword on 2048-bit constants    *)
-(* (joined_GF2 for S-box, joined_FFmul_02/03 for MixColumns).               *)
+(* (joined_GF2 for S-box, joined_FFmul_02/03 for MixColumns).                *)
 (* Precomputing all 256 entries for each table eliminates this bottleneck.   *)
-(* One-time cost: ~48s. Speedup: AES-128 from ~40s to ~7s per call.         *)
+(* One-time cost: ~48s. Speedup: AES-128 from ~40s to ~7s per call.          *)
 (* ========================================================================= *)
 
 let aes_sbox_table = Array.init 256 (fun n ->
