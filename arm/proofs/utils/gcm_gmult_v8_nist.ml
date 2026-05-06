@@ -9,13 +9,15 @@
 (* Implements Algorithm 1 (Section 6.3) and Algorithm 2 (Section 6.4)         *)
 (* exactly as defined in NIST Special Publication 800-38D, November 2007.     *)
 (*                                                                            *)
-(* The NIST bit convention: a 128-bit block is a bit string x_0 x_1 ... x_127 *)
-(* where x_0 is the MSB of byte 0.  In HOL Light's 128-bit word, byte 0       *)
-(* occupies bits 0-7 with bit 0 = LSB.  The mapping is:                       *)
-(*   NIST bit (8k + j)  <-->  HOL Light bit (8k + 7 - j)                      *)
+(* The NIST bit convention (polynomial-semantics interpretation): a 128-bit   *)
+(* block encodes a polynomial whose highest-degree coefficient (x^127) is    *)
+(* NIST bit 0, and whose constant term is NIST bit 127.  In HOL Light's      *)
+(* 128-bit word view, this maps:                                             *)
+(*   NIST bit i  <-->  HOL Light bit (127 - i)                                *)
 (*                                                                            *)
-(* This file defines the NIST operations directly in terms of this mapping,   *)
-(* without introducing any intermediate "bit reversal" abstraction.           *)
+(* Converting from NIST bit numbering to the natural polynomial               *)
+(* representation (HOL bit k = coefficient of x^k) is a single full 128-bit   *)
+(* reversal: word_reversefields 1 (= bit_reflect128).                         *)
 (* =========================================================================  *)
 
 needs "common/ghash_spec.ml";;
@@ -23,44 +25,36 @@ needs "arm/proofs/utils/gcm_gmult_v8_spec.ml";;
 
 (* ---- NIST bit-level operations on 128-bit blocks ----------------------- *)
 
-(* NIST bit x_i of block X: x_0 = MSB of byte 0 = HOL bit 7,
-   x_1 = next bit = HOL bit 6, ..., x_7 = LSB of byte 0 = HOL bit 0,
-   x_8 = MSB of byte 1 = HOL bit 15, etc.
-
-   General formula: NIST bit i (where i = 8*k + j, 0 <= j < 8)
-   maps to HOL bit 8*k + (7 - j) = 8*(i DIV 8) + 7 - i MOD 8. *)
+(* NIST bit x_i of block X: under the polynomial-semantics interpretation,
+   NIST bit 0 represents the coefficient of x^127 (highest degree) and NIST
+   bit 127 represents the constant term. This maps NIST bit i to HOL bit
+   (127 - i) — a full 128-bit reversal of bit indices. *)
 let nist_bit = new_definition
-  `nist_bit (x:int128) (i:num) =
-   bit (8 * (i DIV 8) + 7 - i MOD 8) x`;;
+  `nist_bit (x:int128) (i:num) = bit (127 - i) x`;;
 
-(* NIST LSB_1(V): the rightmost bit = NIST bit 127 = HOL bit 120. *)
+(* NIST LSB_1(V): the rightmost bit = NIST bit 127 = HOL bit 0. *)
 let nist_lsb = new_definition
-  `nist_lsb (v:int128) = bit 120 v`;;
+  `nist_lsb (v:int128) = bit 0 v`;;
 
 (* NIST right shift V >> 1: shift the bit string right by one position.
    x_0 x_1 ... x_127  -->  0 x_0 x_1 ... x_126
 
-   In HOL Light bit terms, bit h of (nist_shr1 v):
-   - If h MOD 8 < 7: bit (h + 1) of v    (shift within byte)
-   - If h = 7:       F                     (NIST bit 0 = cleared)
-   - If h MOD 8 = 7 and h > 7: bit (h - 15) of v  (carry across bytes) *)
+   Under the new convention (NIST bit i = HOL bit (127 - i)):
+   "shift NIST bits right by one" corresponds to "shift HOL bits right by
+   one" (NIST position i+1 becomes NIST position i, i.e. HOL bit (127-i-1)
+   moves to HOL bit (127-i) — that's `word_ushr` by 1 at the bit level). *)
 let nist_shr1 = new_definition
-  `nist_shr1 (v:int128) : int128 =
-   (word_of_bits
-     {k | k < 128 /\
-          (if k MOD 8 < 7 then bit (k + 1) v
-           else if k = 7 then F
-           else bit (k - 15) v)} : int128)`;;
+  `nist_shr1 (v:int128) : int128 = word_ushr v 1`;;
 
 (* ---- Algorithm 1: X • Y (Section 6.3) --------------------------------- *)
 
-(* R = 11100001 || 0^120.  In the HOL word representation:
-   byte 0 = 0xE1 (bits 0-7, with bit 7 = NIST x_0 = 1,
-   bit 6 = NIST x_1 = 1, bit 5 = NIST x_2 = 1,
-   bit 0 = NIST x_7 = 1, bits 1-4 = 0).
-   All other bytes = 0.  So R = word 0xE1 = word 225. *)
+(* R = 11100001 || 0^120.  Under the new convention where NIST bit i
+   corresponds to HOL bit (127 - i), R has NIST bits 0,1,2,7 set, which
+   translates to HOL bits 127, 126, 125, 120 set.
+   Value: 2^127 + 2^126 + 2^125 + 2^120. *)
 let ghash_R = new_definition
-  `ghash_R : int128 = word 0xE1`;;
+  `ghash_R : int128 =
+   word (2 EXP 127 + 2 EXP 126 + 2 EXP 125 + 2 EXP 120)`;;
 
 (* The loop body of Algorithm 1.  We count down the remaining steps:
    ghash_mul_loop Z V X 0 = Z   (done, return Z_128)
@@ -103,71 +97,49 @@ let nist_ghash_spec = define
 (* Bridge A: NIST Algorithm 1 = polynomial multiplication mod P(x)           *)
 (*                                                                           *)
 (* The NIST shift-and-XOR loop computes the same result as:                  *)
-(*   brp(ghash_reduce(word_pmul (brp X) (brp Y)))                            *)
-(* where brp = bit_reverse_per_byte, which converts between NIST bit order   *)
-(* and the natural polynomial bit order used by poly_of_word / word_pmul.    *)
+(*   bit_reflect128(ghash_reduce(word_pmul (bit_reflect128 X) (bit_reflect128 Y))) *)
+(* where bit_reflect128 = word_reversefields 1 is the full 128-bit           *)
+(* bit-reversal that converts between NIST bit ordering and the natural      *)
+(* polynomial bit order used by poly_of_word / word_pmul.                    *)
 (*                                                                           *)
 (* Key insight: NIST "right shift" (V >> 1) = multiplication by the          *)
-(* polynomial variable x in GF(2)[x]. In natural bit order (after brp),      *)
-(* this is word_shl by 1 (shift towards MSB = higher polynomial degree).     *)
-(* The conditional XOR with R implements reduction mod P(x) when the         *)
-(* x^127 coefficient overflows into x^128.                                   *)
+(* polynomial variable x in GF(2)[x]. In natural bit order (after the full   *)
+(* bit-reversal), this is word_shl by 1 (shift towards MSB = higher          *)
+(* polynomial degree). The conditional XOR with R implements reduction       *)
+(* mod P(x) when the x^127 coefficient overflows into x^128.                 *)
 (* ========================================================================= *)
 
-(* Per-byte bit reversal (brp): reverses bits within each byte,
-   keeping bytes in the same position.  Composed as full bit reversal +
-   byte reversal.  Converts between NIST bit ordering and HOL Light's
-   poly_of_word. *)
-let bit_reverse_per_byte = new_definition
-  `bit_reverse_per_byte (x:int128) : int128 =
-   word_reversefields 8 (word_reversefields 1 x)`;;
+(* Full 128-bit bit reversal: maps NIST bit i to HOL bit i directly.
+   This single reversal absorbs the NIST-to-polynomial convention change. *)
+let bit_reflect128 = new_definition
+  `bit_reflect128 (x:int128) : int128 = word_reversefields 1 x`;;
 
-(* NIST bit i of x = natural bit i of brp(x).
-   The fundamental bridge between NIST and polynomial conventions. *)
+(* NIST bit i of x = natural bit i of bit_reflect128(x).
+   Trivial under the new definitions: both sides are bit (127 - i) x. *)
 let NIST_BIT_AS_NATURAL = prove(
   `!x:int128. !i. i < 128 ==>
-    (nist_bit x i <=> bit i (bit_reverse_per_byte x))`,
+    (nist_bit x i <=> bit i (bit_reflect128 x))`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[nist_bit; bit_reverse_per_byte; BIT_WORD_REVERSEFIELDS;
+  REWRITE_TAC[nist_bit; bit_reflect128; BIT_WORD_REVERSEFIELDS;
               DIMINDEX_128] THEN
   CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `8 * (15 - i DIV 8) + i MOD 8 < 128` ASSUME_TAC THENL
-   [MP_TAC(SPEC `i:num` (MATCH_MP DIVISION (ARITH_RULE `~(8 = 0)`))) THEN
-    UNDISCH_TAC `i < 128` THEN ARITH_TAC;
-    ASM_REWRITE_TAC[DIV_1; MOD_1; MULT_CLAUSES; ADD_0] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN
-    MP_TAC(SPEC `i:num` (MATCH_MP DIVISION (ARITH_RULE `~(8 = 0)`))) THEN
-    UNDISCH_TAC `i < 128` THEN ARITH_TAC]);;
+  REWRITE_TAC[DIV_1; MOD_1; MULT_CLAUSES; ADD_0]);;
 
-(* NIST LSB_1(V) = bit 127 of brp(V) = the highest polynomial coefficient. *)
+(* NIST LSB_1(V) = bit 127 of bit_reflect128(V). *)
 let NIST_LSB_AS_NATURAL = prove(
-  `!v:int128. nist_lsb v <=> bit 127 (bit_reverse_per_byte v)`,
-  GEN_TAC THEN REWRITE_TAC[nist_lsb] THEN
-  MP_TAC(SPECL [`v:int128`; `127`] NIST_BIT_AS_NATURAL) THEN
-  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[nist_bit] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]));;
-
-(* R in natural bit order = word 0x87 = x^7 + x^2 + x + 1 = P(x) - x^128.
-   brp reverses bits within each byte: 0xE1 = 11100001 → 10000111 = 0x87. *)
-let BYTE_BITREV_GHASH_R = prove(
-  `bit_reverse_per_byte ghash_R = (word 0x87 : int128)`,
-  REWRITE_TAC[bit_reverse_per_byte; ghash_R] THEN
-  SUBGOAL_THEN `word_reversefields 1 (word 0xE1:(128)word) =
-                word 179445779430963642842013953137846517760`
-    SUBST1_TAC THENL
-   [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
-  SUBGOAL_THEN `word_reversefields 8
-    (word 179445779430963642842013953137846517760:(128)word) = word 135`
-    SUBST1_TAC THENL
-   [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+  `!v:int128. nist_lsb v <=> bit 127 (bit_reflect128 v)`,
+  GEN_TAC THEN
+  REWRITE_TAC[nist_lsb; bit_reflect128; BIT_WORD_REVERSEFIELDS; DIMINDEX_128] THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
-(* ---- Arithmetic helpers ------------------------------------------------- *)
-
-  let SUB_8Q_PLUS_7 = prove(
-    `!q. 1 <= q ==> (8 * q + 7) - 15 = 8 * (q - 1)`,
-    GEN_TAC THEN DISCH_TAC THEN ASM_ARITH_TAC);;
+(* R in natural bit order = word 0x87 = x^7 + x^2 + x + 1 = P(x) - x^128.
+   Under the new convention where NIST bit i = HOL bit (127-i), ghash_R has
+   bits 127,126,125,120 set (NIST bits 0,1,2,7); bit_reflect128 flips to
+   bits 0,1,2,7 (= 0x87). *)
+let REFLECT_GHASH_R = prove(
+  `bit_reflect128 ghash_R = (word 0x87 : int128)`,
+  REWRITE_TAC[bit_reflect128; ghash_R] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC WORD_REDUCE_CONV);;
 
 (* ---- NIST_SHR1_BIT: nist_shr1 shifts NIST bits right by 1 -------------- *)
 
@@ -178,112 +150,58 @@ let NIST_SHR1_BIT = prove(
   `!v:int128. !k. k < 128 ==>
     (nist_bit (nist_shr1 v) k <=> if k = 0 then F else nist_bit v (k - 1))`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[nist_bit; nist_shr1; BIT_WORD_USHR; DIMINDEX_128] THEN
   ASM_CASES_TAC `k = 0` THEN ASM_REWRITE_TAC[] THENL
-   [REWRITE_TAC[nist_bit; nist_shr1; BIT_WORD_OF_BITS; IN_ELIM_THM; DIMINDEX_128] THEN
-    CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
-  MP_TAC(SPECL [`k:num`; `8`] DIVISION) THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
-  ABBREV_TAC `q = k DIV 8` THEN ABBREV_TAC `r = k MOD 8` THEN STRIP_TAC THEN
-  SUBGOAL_THEN `q < 16` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `q * 8 = 8 * q`]) THEN
-  FIRST_X_ASSUM(SUBST_ALL_TAC o check (is_eq o concl)) THEN
-  ASM_CASES_TAC `r = 0` THENL
-   [SUBGOAL_THEN `1 <= q` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    ASM_REWRITE_TAC[nist_bit; nist_shr1; BIT_WORD_OF_BITS; IN_ELIM_THM;
-                    DIMINDEX_128; ADD_0; SUB_0] THEN
-    SIMP_TAC[DIV_MULT; MOD_MULT; ARITH_RULE `~(8=0)`] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN
-    SUBGOAL_THEN `(8*q+7) MOD 8 = 7` (fun th -> REWRITE_TAC[th]) THENL
-     [MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `q:num` THEN ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `8*q+7 < 128 /\ ~(8*q+7=7)` (fun th -> REWRITE_TAC[th]) THENL
-     [ASM_ARITH_TAC; ALL_TAC] THEN
-    ASM_SIMP_TAC[SUB_8Q_PLUS_7] THEN
-    SUBGOAL_THEN `(8 * q) - 1 = (q-1)*8 + 7` SUBST1_TAC THENL
-     [ASM_ARITH_TAC; ALL_TAC] THEN
-    SIMP_TAC[DIV_MULT_ADD; MOD_MULT_ADD; ARITH_RULE `~(8=0)`] THEN
-    CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[ADD_0; SUB_REFL];
-    SUBGOAL_THEN `1 <= r` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    ASM_REWRITE_TAC[nist_bit; nist_shr1; BIT_WORD_OF_BITS; IN_ELIM_THM; DIMINDEX_128] THEN
-    SUBGOAL_THEN `(8*q+r) DIV 8 = q /\ (8*q+r) MOD 8 = r`
-      (fun th -> REWRITE_TAC[th]) THENL
-     [CONJ_TAC THENL
-       [MATCH_MP_TAC DIV_UNIQ THEN EXISTS_TAC `r:num` THEN ASM_ARITH_TAC;
-        MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `q:num` THEN ASM_ARITH_TAC]; ALL_TAC] THEN
-    SUBGOAL_THEN `(8*q+(7-r)) MOD 8 = 7-r /\ 8*q+(7-r) < 128 /\
-                  ~(8*q+r=0) /\ 7-r < 7`
-      (fun th -> REWRITE_TAC[th]) THENL
-     [REPEAT CONJ_TAC THENL
-       [MATCH_MP_TAC MOD_UNIQ THEN EXISTS_TAC `q:num` THEN ASM_ARITH_TAC;
-        ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]; ALL_TAC] THEN
-    SUBGOAL_THEN `(8 * q + r) - 1 = q * 8 + (r - 1)` SUBST1_TAC THENL
-     [ASM_ARITH_TAC; ALL_TAC] THEN
-    SIMP_TAC[DIV_MULT_ADD; MOD_MULT_ADD; ARITH_RULE `~(8=0)`] THEN
-    SUBGOAL_THEN `(r-1) DIV 8 = 0 /\ (r-1) MOD 8 = r-1`
-      (fun th -> REWRITE_TAC[th]) THENL
-     [ASM_SIMP_TAC[DIV_LT; MOD_LT; ARITH_RULE `r < 8 /\ 1 <= r ==> r-1 < 8`]; ALL_TAC] THEN
-    REWRITE_TAC[ADD_0; MULT_0; ARITH_RULE `q * 8 = 8 * q`] THEN
-    SUBGOAL_THEN `(8 * q + (7 - r)) + 1 = 8 * q + (7 - (r - 1))`
-      (fun th -> REWRITE_TAC[th]) THEN ASM_ARITH_TAC]);;
+   [SIMP_TAC[BIT_TRIVIAL; DIMINDEX_128; ARITH_RULE `128 <= 127 - 0 + 1`];
+    AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC]);;
 
 (* ========================================================================= *)
 (* Equivalence A: NIST loop ↔ polynomial multiplication in natural bit order *)
 (* ========================================================================= *)
 
-(* brp distributes over XOR *)
-let BYTE_BITREV_XOR = prove(
-  `!a b:int128. bit_reverse_per_byte(word_xor a b) =
-                word_xor (bit_reverse_per_byte a) (bit_reverse_per_byte b)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[bit_reverse_per_byte] THEN
+(* bit_reflect128 distributes over XOR *)
+let REFLECT128_XOR = prove(
+  `!a b:int128. bit_reflect128(word_xor a b) =
+                word_xor (bit_reflect128 a) (bit_reflect128 b)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[bit_reflect128] THEN
   CONV_TAC WORD_BLAST);;
 
 (* NIST shr1 in natural order = word_shl by 1 (multiply by x) *)
 let NIST_SHR1_AS_SHL = prove(
-  `!v:int128. bit_reverse_per_byte(nist_shr1 v) =
-              word_shl (bit_reverse_per_byte v) 1`,
-  GEN_TAC THEN REWRITE_TAC[WORD_EQ_BITS_ALT; DIMINDEX_128] THEN
-  X_GEN_TAC `k:num` THEN DISCH_TAC THEN
-  REWRITE_TAC[BIT_WORD_SHL; DIMINDEX_128] THEN
-  MP_TAC(SPECL [`nist_shr1 (v:int128)`; `k:num`] NIST_BIT_AS_NATURAL) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN(SUBST1_TAC o GSYM) THEN
-  MP_TAC(SPECL [`v:int128`; `k:num`] NIST_SHR1_BIT) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-  ASM_CASES_TAC `k = 0` THEN ASM_REWRITE_TAC[] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `1 <= k` (fun th -> REWRITE_TAC[th]) THENL
-   [ASM_ARITH_TAC; ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN
-  MP_TAC(SPECL [`v:int128`; `k - 1`] NIST_BIT_AS_NATURAL) THEN
-  ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN(SUBST1_TAC o GSYM)] THEN
-  REWRITE_TAC[]);;
+  `!v:int128. bit_reflect128(nist_shr1 v) =
+              word_shl (bit_reflect128 v) 1`,
+  GEN_TAC THEN REWRITE_TAC[bit_reflect128; nist_shr1] THEN
+  CONV_TAC WORD_BLAST);;
 
 (* V-step: the NIST V-update (shift right + conditional XOR with R) in
    natural polynomial order equals multiply-by-x with reduction mod P(x).
    If bit 127 is set (overflow), XOR with 0x87 = x^7+x^2+x+1 reduces. *)
 let NIST_V_UPDATE_AS_POLY_SHL = prove(
   `!v:int128.
-    bit_reverse_per_byte
+    bit_reflect128
       (if nist_lsb v then word_xor (nist_shr1 v) ghash_R else nist_shr1 v) =
-    (if bit 127 (bit_reverse_per_byte v)
-     then word_xor (word_shl (bit_reverse_per_byte v) 1) (word 0x87)
-     else word_shl (bit_reverse_per_byte v) 1)`,
+    (if bit 127 (bit_reflect128 v)
+     then word_xor (word_shl (bit_reflect128 v) 1) (word 0x87)
+     else word_shl (bit_reflect128 v) 1)`,
   GEN_TAC THEN REWRITE_TAC[NIST_LSB_AS_NATURAL] THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THENL
-   [REWRITE_TAC[BYTE_BITREV_XOR; NIST_SHR1_AS_SHL; BYTE_BITREV_GHASH_R];
+   [REWRITE_TAC[REFLECT128_XOR; NIST_SHR1_AS_SHL; REFLECT_GHASH_R];
     REWRITE_TAC[NIST_SHR1_AS_SHL]]);;
 
 (* Z-step: the NIST Z-update (conditional XOR of accumulator Z with V
-   when bit x_i is set) commutes with brp. In natural polynomial order,
-   nist_bit becomes bit, and word_xor is preserved by brp. *)
+   when bit x_i is set) commutes with bit_reflect128. In natural polynomial
+   order, nist_bit becomes bit, and word_xor is preserved by the reversal. *)
 let NIST_Z_UPDATE_AS_POLY_XOR = prove(
   `!z v x:int128. !i. i < 128 ==>
-    bit_reverse_per_byte
+    bit_reflect128
       (if nist_bit x i then word_xor z v else z) =
-    (if bit i (bit_reverse_per_byte x)
-     then word_xor (bit_reverse_per_byte z) (bit_reverse_per_byte v)
-     else bit_reverse_per_byte z)`,
+    (if bit i (bit_reflect128 x)
+     then word_xor (bit_reflect128 z) (bit_reflect128 v)
+     else bit_reflect128 z)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   MP_TAC(SPECL [`x:int128`; `i:num`] NIST_BIT_AS_NATURAL) THEN
   ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-  COND_CASES_TAC THEN REWRITE_TAC[BYTE_BITREV_XOR]);;
+  COND_CASES_TAC THEN REWRITE_TAC[REFLECT128_XOR]);;
 
 (* ---- Polynomial loop (natural bit order version of Algorithm 1) --------- *)
 
@@ -300,15 +218,15 @@ let poly_mul_loop = define
               else word_shl v 1 in
      poly_mul_loop z' v' x n`;;
 
-(* ---- NIST_LOOP_AS_POLY_LOOP: brp commutes with the loop ------------------------------ *)
+(* ---- NIST_LOOP_AS_POLY_LOOP: bit_reflect128 commutes with the loop ------ *)
 
-(* The NIST loop after brp equals the polynomial loop.
+(* The NIST loop after bit_reflect128 equals the polynomial loop.
    Proved by induction using NIST_V_UPDATE_AS_POLY_SHL and NIST_Z_UPDATE_AS_POLY_XOR. *)
 let NIST_LOOP_AS_POLY_LOOP = prove(
   `!n z v x:int128.
-    bit_reverse_per_byte(ghash_mul_loop z v x n) =
-    poly_mul_loop (bit_reverse_per_byte z) (bit_reverse_per_byte v)
-                  (bit_reverse_per_byte x) n`,
+    bit_reflect128(ghash_mul_loop z v x n) =
+    poly_mul_loop (bit_reflect128 z) (bit_reflect128 v)
+                  (bit_reflect128 x) n`,
   INDUCT_TAC THENL
    [REWRITE_TAC[ghash_mul_loop; poly_mul_loop];
     REPEAT GEN_TAC THEN
@@ -321,21 +239,21 @@ let NIST_LOOP_AS_POLY_LOOP = prove(
     MP_TAC(SPEC `v:int128` NIST_V_UPDATE_AS_POLY_SHL) THEN
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[]]);;
 
-(* brp(0) = 0 *)
-let BYTE_BITREV_ZERO = prove(
-  `bit_reverse_per_byte (word 0 : int128) = word 0`,
-  REWRITE_TAC[bit_reverse_per_byte] THEN CONV_TAC WORD_REDUCE_CONV);;
+(* bit_reflect128(0) = 0 *)
+let REFLECT128_ZERO = prove(
+  `bit_reflect128 (word 0 : int128) = word 0`,
+  REWRITE_TAC[bit_reflect128] THEN CONV_TAC WORD_REDUCE_CONV);;
 
-(* Bridge A, Stage 1: the NIST Algorithm 1 multiply, after brp, equals the
-   natural-order polynomial loop. This separates the NIST bit-ordering
-   concern from the polynomial algebra — everything after this point
-   works in natural bit order. *)
+(* Bridge A, Stage 1: the NIST Algorithm 1 multiply, after bit_reflect128,
+   equals the natural-order polynomial loop. This separates the NIST bit-
+   ordering concern from the polynomial algebra — everything after this
+   point works in natural bit order. *)
 let NIST_GHASH_MUL_BYTREV_EQ_POLY_LOOP = prove(
   `!x y:int128.
-    bit_reverse_per_byte(nist_ghash_mul x y) =
-    poly_mul_loop (word 0) (bit_reverse_per_byte y) (bit_reverse_per_byte x) 128`,
+    bit_reflect128(nist_ghash_mul x y) =
+    poly_mul_loop (word 0) (bit_reflect128 y) (bit_reflect128 x) 128`,
   REPEAT GEN_TAC THEN
-  REWRITE_TAC[nist_ghash_mul; NIST_LOOP_AS_POLY_LOOP; BYTE_BITREV_ZERO]);;
+  REWRITE_TAC[nist_ghash_mul; NIST_LOOP_AS_POLY_LOOP; REFLECT128_ZERO]);;
 
 (* ---- Uniqueness of 128-bit representatives mod P(x) --------------------- *)
 
@@ -1096,26 +1014,27 @@ let POLY_LOOP_EQ_GHASH_REDUCE = prove(
       ACCEPT_TAC(MATCH_MP MOD_GHASH_TRANS (CONJ h0 h1))))]);;
 
 (* ========================================================================= *)
-(* BRIDGE A: NIST Algorithm 1 = ghash_reduce(word_pmul(brp x, brp y))        *)
+(* BRIDGE A: NIST Algorithm 1 = ghash_reduce(word_pmul(refl x, refl y))      *)
 (*                                                                           *)
 (* This is the top-level Bridge A theorem connecting the NIST specification  *)
 (* to polynomial multiplication mod P(x) in the natural bit order.           *)
 (* ========================================================================= *)
 
-(* brp(nist_ghash_mul x y) = poly_mul_loop 0 (brp y) (brp x) 128 *)
+(* bit_reflect128(nist_ghash_mul x y) =
+   poly_mul_loop 0 (bit_reflect128 y) (bit_reflect128 x) 128 *)
 let NIST_GHASH_MUL_EQ_POLY_LOOP = prove(
   `!x y:int128.
-    bit_reverse_per_byte(nist_ghash_mul x y) =
-    poly_mul_loop (word 0) (bit_reverse_per_byte y) (bit_reverse_per_byte x) 128`,
+    bit_reflect128(nist_ghash_mul x y) =
+    poly_mul_loop (word 0) (bit_reflect128 y) (bit_reflect128 x) 128`,
   REPEAT GEN_TAC THEN
-  REWRITE_TAC[nist_ghash_mul; NIST_LOOP_AS_POLY_LOOP; BYTE_BITREV_ZERO]);;
+  REWRITE_TAC[nist_ghash_mul; NIST_LOOP_AS_POLY_LOOP; REFLECT128_ZERO]);;
 
 (* BRIDGE A: The main theorem.
    Combines NIST_GHASH_MUL_EQ_POLY_LOOP with POLY_LOOP_EQ_GHASH_REDUCE. *)
 let NIST_GHASH_EQ_GHASH_REDUCE = prove(
   `!x y:int128.
-    bit_reverse_per_byte(nist_ghash_mul x y) =
-    ghash_reduce(word_pmul (bit_reverse_per_byte x) (bit_reverse_per_byte y) : 256 word)`,
+    bit_reflect128(nist_ghash_mul x y) =
+    ghash_reduce(word_pmul (bit_reflect128 x) (bit_reflect128 y) : 256 word)`,
   REPEAT GEN_TAC THEN
   REWRITE_TAC[NIST_GHASH_MUL_EQ_POLY_LOOP; POLY_LOOP_EQ_GHASH_REDUCE]);;
 
