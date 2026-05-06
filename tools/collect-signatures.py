@@ -412,11 +412,11 @@ for archname in ["arm","x86"]:
       elif isPtrOrArray(argtype, "int16_t") or isPtrOrArray(argtype, "uint16_t"):
         arg_elem_bytesizes[argname.lower()] = 2
       elif isPtrOrArray(argtype, "int8_t") or isPtrOrArray(argtype, "uint8_t"):
-        arg_elem_bytesizes[argname] = 1
+        arg_elem_bytesizes[argname.lower()] = 1
       elif isPtr(argtype, "s2n_bignum_AES_KEY"):
-        arg_elem_bytesizes[argname] = 1
+        arg_elem_bytesizes[argname.lower()] = 1
       elif isPtrOrArray(argtype, "u128"):
-        arg_elem_bytesizes[argname] = 16
+        arg_elem_bytesizes[argname.lower()] = 16
       elif "[" not in argtype and "*" not in argtype:
         continue
       else:
