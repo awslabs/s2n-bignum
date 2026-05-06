@@ -105,8 +105,8 @@ let GCM_SIMD_SIMPLIFY_TAC =
 let GCM_GMULT_V8_EXEC_CORRECT = prove
  (`!xi_ptr htable_ptr (xi:(128)word) (h:(128)word) (hhl:(128)word) pc.
     nonoverlapping (word pc,112) (xi_ptr:int64,16) /\
-    nonoverlapping (word pc,112) (htable_ptr:int64,48) /\
-    nonoverlapping (xi_ptr,16) (htable_ptr,48)
+    nonoverlapping (word pc,112) (htable_ptr:int64,32) /\
+    nonoverlapping (xi_ptr,16) (htable_ptr,32)
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) gcm_gmult_v8_mc /\
            read PC s = word pc /\
@@ -145,8 +145,8 @@ let GCM_GMULT_V8_SUBROUTINE_CORRECT = prove
  (`!xi_ptr htable_ptr (xi:(128)word) (h:(128)word) (hhl:(128)word)
     pc returnaddress.
     nonoverlapping (word pc,112) (xi_ptr:int64,16) /\
-    nonoverlapping (word pc,112) (htable_ptr:int64,48) /\
-    nonoverlapping (xi_ptr,16) (htable_ptr,48)
+    nonoverlapping (word pc,112) (htable_ptr:int64,32) /\
+    nonoverlapping (xi_ptr,16) (htable_ptr,32)
     ==> ensures arm
       (\s. aligned_bytes_loaded s (word pc) gcm_gmult_v8_mc /\
            read PC s = word pc /\
