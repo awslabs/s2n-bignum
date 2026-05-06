@@ -1099,6 +1099,8 @@ void call_sm2_montjscalarmul_alt(void) repeatfewer(10,sm2_montjscalarmul_alt(b1,
 
 #ifdef __x86_64__
 
+void call_gcm_gmult_v8(void) {}
+
 void call_mldsa_intt(void) repeat(mldsa_intt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_ntt(void) repeat(mldsa_ntt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_nttunpack(void) repeat(mldsa_nttunpack((int32_t*)b0))
@@ -1139,6 +1141,8 @@ void call_aes_xts_decrypt_256(void) {}
 void call_aes_xts_decrypt_512(void) {}
 
 #else
+
+void call_gcm_gmult_v8(void) repeat(gcm_gmult_v8((uint8_t *)b0,(u128 *)b1))
 
 void call_mldsa_intt(void) repeat(mldsa_intt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_ntt(void) repeat(mldsa_ntt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
@@ -1679,6 +1683,7 @@ int main(int argc, char *argv[])
   timingtest(all,"word_negmodinv",call_word_negmodinv);
   timingtest(all,"word_popcount",call_word_popcount);
   timingtest(all,"word_recip",call_word_recip);
+  timingtest(arm,"gcm_gmult_v8",call_gcm_gmult_v8);
   timingtest(aes,"aes_xts_encrypt (16 bytes)",call_aes_xts_encrypt_16);
   timingtest(aes,"aes_xts_encrypt (32 bytes)",call_aes_xts_encrypt_32);
   timingtest(aes,"aes_xts_encrypt (64 bytes)",call_aes_xts_encrypt_64);
