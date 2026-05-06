@@ -39,6 +39,25 @@ S2N_BN_SYMBOL(mldsa_rej_uniform):
 
         _CET_ENDBR
 
+#if WINDOWS_ABI
+        pushq   %rdi
+        pushq   %rsi
+        subq    $160, %rsp
+        movdqu  %xmm6, 0(%rsp)
+        movdqu  %xmm7, 16(%rsp)
+        movdqu  %xmm8, 32(%rsp)
+        movdqu  %xmm9, 48(%rsp)
+        movdqu  %xmm10, 64(%rsp)
+        movdqu  %xmm11, 80(%rsp)
+        movdqu  %xmm12, 96(%rsp)
+        movdqu  %xmm13, 112(%rsp)
+        movdqu  %xmm14, 128(%rsp)
+        movdqu  %xmm15, 144(%rsp)
+        movq    %rcx, %rdi
+        movq    %rdx, %rsi
+        movq    %r8, %rdx
+#endif
+
         // Shuffle mask: expand 24 bytes (8 x 3-byte coefficients) into
         // 8 x 4-byte lanes (with a zero high byte in each).
         movq    $0xff050403ff020100, %r10
@@ -107,6 +126,21 @@ mldsa_rej_uniform_scalar:
 
 mldsa_rej_uniform_done:
         vzeroupper
+#if WINDOWS_ABI
+        movdqu  0(%rsp), %xmm6
+        movdqu  16(%rsp), %xmm7
+        movdqu  32(%rsp), %xmm8
+        movdqu  48(%rsp), %xmm9
+        movdqu  64(%rsp), %xmm10
+        movdqu  80(%rsp), %xmm11
+        movdqu  96(%rsp), %xmm12
+        movdqu  112(%rsp), %xmm13
+        movdqu  128(%rsp), %xmm14
+        movdqu  144(%rsp), %xmm15
+        addq    $160, %rsp
+        popq    %rsi
+        popq    %rdi
+#endif
         ret
 
 #if defined(__linux__) && defined(__ELF__)
