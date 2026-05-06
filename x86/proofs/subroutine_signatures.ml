@@ -4802,6 +4802,24 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_rej_uniform",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t[static 840]", (*is const?*)"true");
+     ("table", "uint64_t[static 256]", (*is const?*)"true");
+   ],
+   "uint32_t",
+   [(* input buffers *)
+    ("buf", "840"(* num elems *), 1(* elem bytesize *));
+    ("table", "256"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mlkem_basemul_k2",
   ([(*args*)
      ("r", "int16_t[static 256]", (*is const?*)"false");

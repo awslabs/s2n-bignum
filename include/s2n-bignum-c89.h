@@ -1009,6 +1009,13 @@ extern void mldsa_ntt(int32_t a[256], const int32_t zetas[624]);
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_nttunpack(int32_t a[256]);
 
+/* Uniform rejection sampling for ML-DSA: extract 23-bit coefficients from */
+/* 3-byte-packed input, keeping only those strictly less than q = 8380417. */
+/* Returns the number of accepted coefficients (at most 256). */
+/* Inputs buf[840] (uint8_t), table[256] (uint64_t lookup table); */
+/* output r[256] (int32_t). */
+extern uint32_t mldsa_rej_uniform(int32_t r[256], const uint8_t buf[840], const uint64_t table[256]);
+
 /* Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA */
 /* Inputs a[256], b[256] (signed 32-bit words); output r[256] (signed 32-bit words) */
 extern void mldsa_pointwise(int32_t r[256], const int32_t a[256], const int32_t b[256]);
