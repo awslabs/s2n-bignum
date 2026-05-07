@@ -12955,9 +12955,9 @@ int test_mldsa_pointwise_acc_l4(void)
     for (t = 0; t < tests; ++t) {
         const int32_t MLDSA_Q = 8380417;
 
-        // Generate random inputs bounded by 9*Q (as per specification)
+        // Generate random inputs: a bounded by Q, b bounded by 9*Q (per spec)
         for (i = 0; i < 1024; ++i) {
-            a[i] = (int32_t)(random64() % (18 * 8380417)) - (9 * 8380417);
+            a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
             b[i] = (int32_t)(random64() % (18 * 8380417)) - (9 * 8380417);
         }
 

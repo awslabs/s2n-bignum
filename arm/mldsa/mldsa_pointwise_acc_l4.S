@@ -16,6 +16,11 @@
 //   QINV = 58728449 (negative inverse of Q mod 2^32)
 //   R = 2^32 (Montgomery parameter)
 //
+// Input bounds (per coefficient, absolute value):
+//   |a[i]| < Q
+//   |b[i]| < 9*Q
+// Output coefficients are bounded by Q in absolute value.
+//
 // extern void mldsa_pointwise_acc_l4
 //      (int32_t r[static 256], const int32_t a[static 1024],
 //       const int32_t b[static 1024]);

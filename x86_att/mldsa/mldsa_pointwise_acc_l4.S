@@ -16,9 +16,11 @@
 // which requires accumulating 4 polynomial products. The input polynomials
 // a and b are laid out sequentially with a stride of 1024 bytes (256 * 4).
 //
-// The input polynomial coefficients in a and b are assumed to be bounded by
-// 9*Q in absolute value. The output polynomial c will have coefficients bounded
-// by Q in absolute value after Montgomery reduction.
+// Input bounds (per coefficient, absolute value):
+//   |a[i]| < Q
+//   |b[i]| < 9*Q
+// The output polynomial c will have coefficients bounded by Q in absolute
+// value after Montgomery reduction.
 //
 // The qdata parameter points to precomputed constants required for Montgomery
 // arithmetic:
@@ -116,7 +118,7 @@ S2N_BN_SYMBOL(mldsa_pointwise_acc_l4_x86):
         vmovdqa (MLD_AVX2_BACKEND_DATA_OFFSET_8XQ)*4(qdata), %ymm1
 
         xorl    %eax, %eax
-pointwise_acc_l4_looptop:
+Lpointwise_acc_l4_looptop:
         pointwise 0
 
 // Move first product
@@ -173,7 +175,7 @@ pointwise_acc_l4_looptop:
         addq    $64, c
         addl    $1, %eax
         cmpl    $16, %eax
-        jb      pointwise_acc_l4_looptop
+        jb      Lpointwise_acc_l4_looptop
 
 #if WINDOWS_ABI
         CFI_STACKLOADU(%xmm6,0)
