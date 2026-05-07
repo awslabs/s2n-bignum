@@ -3086,8 +3086,8 @@ void reference_mldsa_inverse_ntt(int32_t a[256])
 }
 
 // Pure inverse ML-DSA NTT specification (algebraic inverse of forward NTT)
-// Since forward NTT: result[k] = sum_{j=0..255} a[j] * ζ^((2*order(k)+1)*j)
-// Inverse NTT: result[j] = (1/256) * sum_{k=0..255} a[k] * ζ^(-(2*order(k)+1)*j)
+// Since forward NTT: result[k] = sum_{j=0..255} a[j] * zeta^((2*order(k)+1)*j)
+// Inverse NTT: result[j] = (1/256) * sum_{k=0..255} a[k] * zeta^(-(2*order(k)+1)*j)
 void reference_mldsa_inverse_ntt_spec(int32_t a[256])
 {
     int32_t result[256];
@@ -3104,7 +3104,7 @@ void reference_mldsa_inverse_ntt_spec(int32_t a[256])
             // Get the bit-reversed index for k (same as forward NTT uses)
             uint8_t order_k = avx2_ntt_order(k);
             
-            // For inverse: use negative exponent ζ^(-(2*order(k)+1)*j)
+            // For inverse: use negative exponent zeta^(-(2*order(k)+1)*j)
             uint64_t power = ((uint64_t)(2 * order_k + 1) * j);
             uint64_t inv_power = (8380416 - (power % 8380416)) % 8380416;
             uint64_t zeta_power = pow_8380417(1753, inv_power);
@@ -12889,7 +12889,7 @@ int test_mldsa_pointwise(void)
         for (i = 0; i < 256; ++i) {
             a[i] = (int32_t)(random64() % (2 * 9 * 8380417)) - 9 * 8380417;
             b[i] = (int32_t)(random64() % (2 * 9 * 8380417)) - 9 * 8380417;
-        }
+    }
 
         // Compute reference result
         reference_mldsa_pointwise(d, a, b);
@@ -12993,16 +12993,16 @@ int test_mldsa_intt(void)
     int32_t asm_result[256] __attribute__((aligned(32)));
     int32_t spec_result[256] __attribute__((aligned(32)));
     int32_t temp[256] __attribute__((aligned(32)));
-
+    
     printf("Testing mldsa_intt with %d cases\n", tests);
-
+    
     for (t = 0; t < tests; ++t) {
         const int32_t MLDSA_Q = 8380417;
-
+        
         // Generate random normal-form coefficients
         for (i = 0; i < 256; ++i)
             original[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
-
+        
         // Test 1: Assembly NTT -> Assembly iNTT round-trip
         for (i = 0; i < 256; ++i) temp[i] = original[i];
 #ifdef __x86_64__
@@ -13015,24 +13015,24 @@ int test_mldsa_intt(void)
         mldsa_intt_arm(asm_result, mldsa_intt_arm_z_78, mldsa_intt_arm_z_123456);
 #endif
         reference_frommont_mldsa(asm_result);
-
-        // Test 2: C reference NTT -> C reference iNTT round-trip
+        
+        // Test 2: C reference NTT -> C reference iNTT round-trip  
         for (i = 0; i < 256; ++i) temp[i] = original[i];
         reference_mldsa_forward_ntt(temp);
         for (i = 0; i < 256; ++i) spec_result[i] = temp[i];
         reference_mldsa_inverse_ntt(spec_result);
         reference_frommont_mldsa(spec_result);
-
+        
         // Both should recover the original (modulo q) - EXACT match required
         for (i = 0; i < 256; ++i) {
             int32_t norm_original = ((original[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
             int32_t norm_asm = ((asm_result[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
             int32_t norm_spec = ((spec_result[i] % MLDSA_Q) + MLDSA_Q) % MLDSA_Q;
-
+            
             // Both must match original exactly (no negation accepted)
             int asm_ok = (norm_asm == norm_original);
             int spec_ok = (norm_spec == norm_original);
-
+            
             if (!asm_ok || !spec_ok) {
                 printf("Error at element i = %"PRIu64":\n", i);
                 printf("  Original: 0x%08"PRIx32" (norm: 0x%08"PRIx32")\n",
@@ -13044,12 +13044,12 @@ int test_mldsa_intt(void)
                 return 1;
             }
         }
-
+        
         if (VERBOSE) {
             // Display using spec NTT input/output
             for (i = 0; i < 256; ++i) temp[i] = original[i];
             reference_mldsa_forward_ntt(temp);
-
+            
             printf("OK: iNTT[0x%08"PRIx32",0x%08"PRIx32",...,"
                    "0x%08"PRIx32",0x%08"PRIx32"] = "
                    "[0x%08"PRIx32",0x%08"PRIx32",...,"
@@ -13058,7 +13058,7 @@ int test_mldsa_intt(void)
                    spec_result[0], spec_result[1], spec_result[254], spec_result[255]);
         }
     }
-
+    
     printf("All OK\n");
     return 0;
 }
@@ -15435,9 +15435,9 @@ int test_word_recip(void)
   if (x[0] != UINT64_C(n)) \
   { printf("Failed known value test\n"); ++failures; } else { ++successes; }
 
-int test_known_values(void)
+int test_known_values_p384(void)
 { int failures = 0, successes = 0;
-  printf("Testing known value cases\n");
+  printf("Testing known value cases for p384\n");
 
 #include "known_value_tests_p384.h"
 
@@ -15449,6 +15449,268 @@ int test_known_values(void)
     { printf("Successfully passed %d known value tests\n",successes);
       return 0;
     }
+}
+
+// Reference implementation of AES-256-XTS for comparison testing
+
+#include "ref_aes_xts.c"
+
+// Helpers for writing XTS tests
+void assign_bytearray_from_hexstring(uint8_t *bytearr, const char *hexstr, int len)
+{
+  for (int i = 0; i < len; i++) {
+    sscanf(&hexstr[i * 2], "%2hhx", &bytearr[i]);
+  }
+}
+
+void assign_bytearray_zero(uint8_t *bytearr, int len)
+{
+  for(int i = 0; i < len; i++){
+    bytearr[i] = 0x00;
+  }
+}
+
+#define ASSIGNHEX(bytearr, hexstr, len) assign_bytearray_from_hexstring(bytearr, hexstr, len)
+#define ASSIGNZERO(bytearr, len) assign_bytearray_zero(bytearr, len)
+
+int check_bytearr(const uint8_t *out, const uint8_t *res, int diff, int len)
+{
+  for(int i = 0; i < len; i++){
+    if (out[i]!=res[i]){diff = 1;break;};
+  }
+  return diff;
+}
+
+#define CHECKHEX(out, res, diff, len) \
+  if (check_bytearr(out, res, diff, len)) \
+  { printf("Failed known value test\n"); ++failures; } else { ++successes; }
+
+
+int test_known_values_xts_encrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for aes-xts encrypt\n");
+
+  s2n_bignum_AES_KEY *key1 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  s2n_bignum_AES_KEY *key2 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  size_t len;
+  uint8_t iv[16];
+  uint8_t in[224];
+  uint8_t out[224];
+  uint8_t res[224];
+
+#include "known_value_tests_xts_encrypt.h"
+
+  if (failures != 0)
+    { printf ("Failed %d known value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
+}
+
+int test_known_values_xts_decrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for aes-xts decrypt\n");
+
+  s2n_bignum_AES_KEY *key1 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  s2n_bignum_AES_KEY *key2 = (s2n_bignum_AES_KEY *)malloc(sizeof(s2n_bignum_AES_KEY));
+  size_t len;
+  uint8_t iv[16];
+  uint8_t in[224];
+  uint8_t out[224];
+  uint8_t res[224];
+
+#include "known_value_tests_xts_decrypt.h"
+
+  if (failures != 0)
+    { printf ("Failed %d known value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
+}
+
+// ****************************************************************************
+// Random-input testing of AES-XTS against reference implementation
+// ****************************************************************************
+
+// Fill a byte array with random data
+
+static void random_bytes(uint8_t *buf, size_t n)
+{ size_t i;
+  for (i = 0; i < n; ++i) buf[i] = (uint8_t)(rand() & 0xFF);
+}
+
+int test_aes_xts_encrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY ek1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts_encrypt against reference with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random keys and IV
+     random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     // Random length from 16 to 512, with bias toward interesting sizes
+     len = 16 + (rand() % 497);
+     // With some probability, force block-aligned lengths
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     // With some probability, test near-boundary sizes
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     // Expand keys for the assembly function
+     ref_aes256_expand_key(key1, &ek1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Assembly
+     aes_xts_encrypt(bb1, bb2, len, &ek1, &ek2, iv);
+
+     // Reference
+     ref_aes_xts_encrypt(bb1, bb3, len, key1, key2, iv);
+
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: aes_xts_encrypt len=%zu\n", len);
+        printf("    key1=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key1[i]);
+        printf("\n    iv=");
+        for (int i = 0; i < 16; ++i) printf("%02x", iv[i]);
+        printf("\n");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: aes_xts_encrypt len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_aes_xts_decrypt(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY dk1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts_decrypt against reference with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { // Random keys and IV
+     random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     // Random length from 16 to 512
+     len = 16 + (rand() % 497);
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     // Expand keys for the assembly function (decrypt needs reversed schedule)
+     ref_aes256_expand_decrypt_key(key1, &dk1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Assembly
+     aes_xts_decrypt(bb1, bb2, len, &dk1, &ek2, iv);
+
+     // Reference
+     ref_aes_xts_decrypt(bb1, bb3, len, key1, key2, iv);
+
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: aes_xts_decrypt len=%zu\n", len);
+        printf("    key1=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key1[i]);
+        printf("\n    iv=");
+        for (int i = 0; i < 16; ++i) printf("%02x", iv[i]);
+        printf("\n");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: aes_xts_decrypt len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+int test_aes_xts_roundtrip(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key1[32], key2[32], iv[16];
+  s2n_bignum_AES_KEY ek1, dk1, ek2;
+  size_t len;
+
+  printf("Testing aes_xts encrypt/decrypt roundtrip with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { random_bytes(key1, 32);
+     random_bytes(key2, 32);
+     random_bytes(iv, 16);
+
+     len = 16 + (rand() % 497);
+     if ((rand() & 7) == 0) len = 16 * (1 + (rand() % 32));
+     if ((rand() & 7) == 1) len = 16 + (rand() % 15);
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     ref_aes256_expand_key(key1, &ek1);
+     ref_aes256_expand_decrypt_key(key1, &dk1);
+     ref_aes256_expand_key(key2, &ek2);
+
+     // Encrypt then decrypt, should recover original
+     aes_xts_encrypt(bb1, bb2, len, &ek1, &ek2, iv);
+     aes_xts_decrypt(bb2, bb3, len, &dk1, &ek2, iv);
+
+     if (memcmp(bb1, bb3, len) != 0)
+      { printf("### Disparity: roundtrip failed len=%zu\n", len);
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: roundtrip len=%zu\n", len);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
 }
 
 // ****************************************************************************
@@ -15981,6 +16243,7 @@ void functionaltest(int enabled,char *name,int (*f)(void))
 int main(int argc, char *argv[])
 { int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
   int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
+  int aes = get_arch_name() == ARCH_AARCH64 && supports_arm_aes();
   int arm = get_arch_name() == ARCH_AARCH64;
   int all = 1;
   int extrastrigger = 1;
@@ -16369,12 +16632,16 @@ int main(int argc, char *argv[])
     functionaltest(sha3,"sha3_keccak2_f1600",test_sha3_keccak2_f1600);
     functionaltest(sha3,"sha3_keccak2_f1600_alt",test_sha3_keccak2_f1600_alt);
     functionaltest(sha3,"sha3_keccak4_f1600_alt2",test_sha3_keccak4_f1600_alt2);
-
+    functionaltest(aes,"aes_xts_encrypt",test_aes_xts_encrypt);
+    functionaltest(aes,"aes_xts_decrypt",test_aes_xts_decrypt);
+    functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
+    functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
+    functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
   }
 
   if (extrastrigger) function_to_test = "_";
 
-  functionaltest(bmi,"known value tests",test_known_values);
+  functionaltest(bmi,"known value tests",test_known_values_p384);
 
   functionaltest(bmi,"curve25519_x25519 (TweetNaCl)",test_curve25519_x25519_tweetnacl);
   functionaltest(all,"curve25519_x25519_alt (TweetNaCl)",test_curve25519_x25519_alt_tweetnacl);
