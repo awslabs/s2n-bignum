@@ -125,7 +125,6 @@ mldsa_rej_uniform_scalar:
         jmp     mldsa_rej_uniform_scalar
 
 mldsa_rej_uniform_done:
-        vzeroupper
 #if WINDOWS_ABI
         movdqu  0(%rsp), %xmm6
         movdqu  16(%rsp), %xmm7
