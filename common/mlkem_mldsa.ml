@@ -658,6 +658,14 @@ let mldsa_pointwise_consts = define
     &8380417; &8380417; &8380417; &8380417;
     &8380417; &8380417; &8380417; &8380417]`;;
 
+let mldsa_pointwise_acc_consts = define
+ `mldsa_pointwise_acc_consts:int list =
+   [&8380417; &8380417; &8380417; &8380417;
+    &8380417; &8380417; &8380417; &8380417;
+    &58728449; &58728449; &58728449; &58728449;
+    &58728449; &58728449; &58728449; &58728449]`;;
+
+
 (* ------------------------------------------------------------------------- *)
 (* Analogous ML-DSA idioms.                                                  *)
 (* ------------------------------------------------------------------------- *)
@@ -731,6 +739,14 @@ let ARM_MLDSA_MONTRED_EQ = prove(
   REWRITE_TAC[WORD_BLAST `word_zx(word_sx (a:int32):int64):int32 = a`] THEN
   CONV_TAC WORD_REDUCE_CONV THEN
   REWRITE_TAC[WORD_MUL_SYM]);;
+
+let mldsa_pointwise_acc_l4 = define
+ `mldsa_pointwise_acc_l4 (f:num->int) (g:num->int) i =
+    ((f i * g i +
+      f (i + 256) * g (i + 256) +
+      f (i + 512) * g (i + 512) +
+      f (i + 768) * g (i + 768)) *
+     &(inverse_mod 8380417 4294967296)) rem &8380417`;;
 
 let WORD_ADD_MLDSA_MONTMUL = prove
  (`word_add y (mldsa_montmul (a,b) x) =
