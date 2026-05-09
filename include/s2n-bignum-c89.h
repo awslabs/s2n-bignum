@@ -1044,6 +1044,14 @@ extern void mldsa_pointwise_acc_l5(int32_t r[256], const int32_t a[1280], const 
 /* Inputs a[1280], b[1280], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
 extern void mldsa_pointwise_acc_l5_x86(int32_t c[256], const int32_t a[1280], const int32_t b[1280], const int32_t qdata[16]);
 
+/* Pointwise multiplication with accumulation for ML-DSA L7 */
+/* Inputs a[1792], b[1792] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l7(int32_t r[256], const int32_t a[1792], const int32_t b[1792]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L7, x86 version */
+/* Inputs a[1792], b[1792], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l7_x86(int32_t c[256], const int32_t a[1792], const int32_t b[1792], const int32_t qdata[16]);
+
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_reduce(int32_t a[256]);
