@@ -84,13 +84,13 @@ S2N_BN_SYMBOL(mldsa_rej_uniform):
         xor     eax, eax
         xor     ecx, ecx
 
-mldsa_rej_uniform_loop:
+Lmldsa_rej_uniform_loop:
         // Exit to scalar tail if we have 248 or more accepted (next 8 might
         // overflow) or if byte offset is past 808 (would read past buf+840-24).
         cmp     eax, 0xf8
-        ja      mldsa_rej_uniform_scalar
+        ja      Lmldsa_rej_uniform_scalar
         cmp     ecx, 0x328
-        ja      mldsa_rej_uniform_scalar
+        ja      Lmldsa_rej_uniform_scalar
 
         vmovdqu ymm3, YMMWORD PTR [rsi+rcx]
         add     ecx, 0x18
@@ -105,13 +105,13 @@ mldsa_rej_uniform_loop:
         vpermd  ymm3, ymm4, ymm3
         vmovdqu YMMWORD PTR [rdi+4*rax], ymm3
         add     eax, r9d
-        jmp     mldsa_rej_uniform_loop
+        jmp     Lmldsa_rej_uniform_loop
 
-mldsa_rej_uniform_scalar:
+Lmldsa_rej_uniform_scalar:
         cmp     eax, 0x100
-        jae     mldsa_rej_uniform_done
+        jae     Lmldsa_rej_uniform_done
         cmp     ecx, 0x345
-        ja      mldsa_rej_uniform_done
+        ja      Lmldsa_rej_uniform_done
         movzx   r8d, WORD PTR [rsi+rcx]
         movzx   r9d, BYTE PTR [rsi+rcx+2]
         shl     r9d, 0x10
@@ -119,12 +119,12 @@ mldsa_rej_uniform_scalar:
         and     r8d, 0x7fffff
         add     ecx, 0x3
         cmp     r8d, 0x7fe001
-        jae     mldsa_rej_uniform_scalar
+        jae     Lmldsa_rej_uniform_scalar
         mov     DWORD PTR [rdi+4*rax], r8d
         add     eax, 0x1
-        jmp     mldsa_rej_uniform_scalar
+        jmp     Lmldsa_rej_uniform_scalar
 
-mldsa_rej_uniform_done:
+Lmldsa_rej_uniform_done:
 #if WINDOWS_ABI
         movdqu  xmm6,  [rsp+0]
         movdqu  xmm7,  [rsp+16]

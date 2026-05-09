@@ -84,13 +84,13 @@ S2N_BN_SYMBOL(mldsa_rej_uniform):
         xorl    %eax, %eax
         xorl    %ecx, %ecx
 
-mldsa_rej_uniform_loop:
+Lmldsa_rej_uniform_loop:
         // Exit to scalar tail if we have 248 or more accepted (next 8 might
         // overflow) or if byte offset is past 808 (would read past buf+840-24).
         cmpl    $0xf8, %eax
-        ja      mldsa_rej_uniform_scalar
+        ja      Lmldsa_rej_uniform_scalar
         cmpl    $0x328, %ecx
-        ja      mldsa_rej_uniform_scalar
+        ja      Lmldsa_rej_uniform_scalar
 
         vmovdqu  (%rsi,%rcx), %ymm3
         addl    $0x18, %ecx
@@ -105,13 +105,13 @@ mldsa_rej_uniform_loop:
         vpermd  %ymm3, %ymm4, %ymm3
         vmovdqu %ymm3,  (%rdi,%rax,4)
         addl    %r9d, %eax
-        jmp     mldsa_rej_uniform_loop
+        jmp     Lmldsa_rej_uniform_loop
 
-mldsa_rej_uniform_scalar:
+Lmldsa_rej_uniform_scalar:
         cmpl    $0x100, %eax
-        jae     mldsa_rej_uniform_done
+        jae     Lmldsa_rej_uniform_done
         cmpl    $0x345, %ecx
-        ja      mldsa_rej_uniform_done
+        ja      Lmldsa_rej_uniform_done
         movzwl (%rsi,%rcx), %r8d
         movzbl 2(%rsi,%rcx,1), %r9d
         shll    $0x10, %r9d
@@ -119,12 +119,12 @@ mldsa_rej_uniform_scalar:
         andl    $0x7fffff, %r8d
         addl    $0x3, %ecx
         cmpl    $0x7fe001, %r8d
-        jae     mldsa_rej_uniform_scalar
+        jae     Lmldsa_rej_uniform_scalar
         movl    %r8d,  (%rdi,%rax,4)
         addl    $0x1, %eax
-        jmp     mldsa_rej_uniform_scalar
+        jmp     Lmldsa_rej_uniform_scalar
 
-mldsa_rej_uniform_done:
+Lmldsa_rej_uniform_done:
 #if WINDOWS_ABI
         movdqu  0(%rsp), %xmm6
         movdqu  16(%rsp), %xmm7
