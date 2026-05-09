@@ -17141,7 +17141,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
   functionaltest(all,"mldsa_pointwise_acc_l7",test_mldsa_pointwise_acc_l7);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
-  functionaltest(!arm,"mldsa_rej_uniform",test_mldsa_rej_uniform);
+  functionaltest(all,"mldsa_rej_uniform",test_mldsa_rej_uniform);
   functionaltest(all,"mlkem_basemul_k2",test_mlkem_basemul_k2);
   functionaltest(all,"mlkem_basemul_k3",test_mlkem_basemul_k3);
   functionaltest(all,"mlkem_basemul_k4",test_mlkem_basemul_k4);
