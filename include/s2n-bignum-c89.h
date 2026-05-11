@@ -25,6 +25,22 @@
  * ----------------------------------------------------------------------------
  */
 
+struct s2n_bignum_aes_key_st {
+  uint64_t rd_key[30];
+  int rounds;
+};
+typedef struct s2n_bignum_aes_key_st s2n_bignum_AES_KEY;
+
+/* AES_XTS_DECRYPT (256-bit) */
+/* Inputs in[length], length, key1[244], key2[244], iv[16]; output out[length] */
+extern void aes_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
+        const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[16]);
+
+/* AES_XTS_ENCRYPT (256-bit) */
+/* Inputs in[length], length, key1[244], key2[244], iv[16]; output out[length] */
+extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
+        const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[16]);
+
 /* Add, z := x + y */
 /* Inputs x[m], y[n]; outputs function return (carry-out) and z[p] */
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);
@@ -982,6 +998,10 @@ extern void edwards25519_scalarmuldouble_alt(uint64_t res[8],const uint64_t scal
 extern void mldsa_ntt_arm(int32_t a[256], const int32_t z_012345[144], const int32_t z_67[384]);
 
 /* Inverse number-theoretic transform for ML-DSA */
+/* Input a[256], z_78[384], z_123456[160] (signed 32-bit words); output a[256] (signed 32-bit words) */
+extern void mldsa_intt_arm(int32_t a[256], const int32_t z_78[384], const int32_t z_123456[160]);
+
+/* Inverse number-theoretic transform for ML-DSA */
 /* Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_intt(int32_t a[256], const int32_t zetas[624]);
 
@@ -989,7 +1009,7 @@ extern void mldsa_intt(int32_t a[256], const int32_t zetas[624]);
 /* Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_ntt(int32_t a[256], const int32_t zetas[624]);
 
-/* NTT domain coefficient unpacking for ML-DSA */
+/* NTT unpack for ML-DSA (rearrange coefficients from bitreversed to standard order) */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_nttunpack(int32_t a[256]);
 
@@ -1000,6 +1020,30 @@ extern void mldsa_pointwise(int32_t r[256], const int32_t a[256], const int32_t 
 /* Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA, x86 version */
 /* Inputs a[256], b[256], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
 extern void mldsa_pointwise_x86(int32_t c[256], const int32_t a[256], const int32_t b[256], const int32_t qdata[16]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L4 */
+/* Inputs a[1024], b[1024] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l4(int32_t r[256], const int32_t a[1024], const int32_t b[1024]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L4, x86 version */
+/* Inputs a[1024], b[1024], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l4_x86(int32_t c[256], const int32_t a[1024], const int32_t b[1024], const int32_t qdata[16]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L5 */
+/* Inputs a[1280], b[1280] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l5(int32_t r[256], const int32_t a[1280], const int32_t b[1280]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L5, x86 version */
+/* Inputs a[1280], b[1280], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l5_x86(int32_t c[256], const int32_t a[1280], const int32_t b[1280], const int32_t qdata[16]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L7 */
+/* Inputs a[1792], b[1792] (signed 32-bit words); output r[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l7(int32_t r[256], const int32_t a[1792], const int32_t b[1792]);
+
+/* Pointwise multiplication with accumulation for ML-DSA L7, x86 version */
+/* Inputs a[1792], b[1792], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
+extern void mldsa_pointwise_acc_l7_x86(int32_t c[256], const int32_t a[1792], const int32_t b[1792], const int32_t qdata[16]);
 
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */

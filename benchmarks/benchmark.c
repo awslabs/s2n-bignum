@@ -49,6 +49,10 @@ static uint64_t bb[16][BUFFERSIZE];
 
 static uint64_t bigbuff[100000];
 
+// AES keys for XTS mode testing
+static s2n_bignum_AES_KEY aes_key1, aes_key2;
+static uint8_t aes_iv[16];
+
 // Source of random 64-bit numbers with bit density
 // 0 = all zeros, 32 = "average", 64 = all ones
 // Then a generic one with the density itself randomized
@@ -1095,10 +1099,18 @@ void call_sm2_montjscalarmul_alt(void) repeatfewer(10,sm2_montjscalarmul_alt(b1,
 
 #ifdef __x86_64__
 
+static int32_t __attribute__((aligned(32))) mldsa_avx2_qdata[16] = {
+    8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417, 8380417,  // 8XQ
+    58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449  // 8XQINV
+};
+
 void call_mldsa_intt(void) repeat(mldsa_intt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_ntt(void) repeat(mldsa_ntt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_nttunpack(void) repeat(mldsa_nttunpack((int32_t*)b0))
 void call_mldsa_pointwise(void) repeat(mldsa_pointwise_x86((int32_t*)b0,(int32_t*)b1,(int32_t*)b2,(int32_t*)b3))
+void call_mldsa_pointwise_acc_l4(void) repeat(mldsa_pointwise_acc_l4_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
+void call_mldsa_pointwise_acc_l5(void) repeat(mldsa_pointwise_acc_l5_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
+void call_mldsa_pointwise_acc_l7(void) repeat(mldsa_pointwise_acc_l7_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
 void call_mldsa_reduce(void) repeat(mldsa_reduce((int32_t*)b0))
 
 void call_mlkem_frombytes(void) repeat(mlkem_frombytes((uint16_t*)b0,(int8_t*)b1))
@@ -1120,12 +1132,29 @@ void call_sha3_keccak2_f1600_alt(void) {}
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1,b2,b3))
 void call_sha3_keccak4_f1600_alt2(void) {}
 
+void call_aes_xts_encrypt_16(void) {}
+void call_aes_xts_encrypt_32(void) {}
+void call_aes_xts_encrypt_64(void) {}
+void call_aes_xts_encrypt_128(void) {}
+void call_aes_xts_encrypt_256(void) {}
+void call_aes_xts_encrypt_512(void) {}
+
+void call_aes_xts_decrypt_16(void) {}
+void call_aes_xts_decrypt_32(void) {}
+void call_aes_xts_decrypt_64(void) {}
+void call_aes_xts_decrypt_128(void) {}
+void call_aes_xts_decrypt_256(void) {}
+void call_aes_xts_decrypt_512(void) {}
+
 #else
 
-void call_mldsa_intt(void) {}
+void call_mldsa_intt(void) repeat(mldsa_intt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_ntt(void) repeat(mldsa_ntt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_nttunpack(void) {}
 void call_mldsa_pointwise(void) repeat(mldsa_pointwise((int32_t*)b0,(int32_t*)b1,(int32_t*)b2))
+void call_mldsa_pointwise_acc_l4(void) repeat(mldsa_pointwise_acc_l4((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
+void call_mldsa_pointwise_acc_l5(void) repeat(mldsa_pointwise_acc_l5((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
+void call_mldsa_pointwise_acc_l7(void) repeat(mldsa_pointwise_acc_l7((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_reduce(void) {}
 
 void call_bignum_copy_row_from_table_8n__32_16(void) \
@@ -1151,12 +1180,60 @@ void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
 void call_mlkem_frombytes(void) {}
 void call_mlkem_unpack(void) {}
+
+// Helper function for AES XTS encrypt with parameterized length
+static void aes_xts_encrypt_helper(size_t len)
+{
+  int j;
+  for (j = 0; j < 30; ++j) {
+    aes_key1.rd_key[j] = b1[j % BUFFERSIZE];
+    aes_key2.rd_key[j] = b2[j % BUFFERSIZE];
+  }
+  aes_key1.rounds = 14;  // AES-256
+  aes_key2.rounds = 14;
+  for (j = 0; j < 16; ++j) aes_iv[j] = (uint8_t)(b3[j] & 0xFF);
+
+  aes_xts_encrypt((uint8_t*)b0, (uint8_t*)b1, len, &aes_key1, &aes_key2, aes_iv);
+}
+
+// AES XTS encrypt wrapper functions for different block sizes
+void call_aes_xts_encrypt_16(void) { repeat(aes_xts_encrypt_helper(16)); }
+void call_aes_xts_encrypt_32(void) { repeat(aes_xts_encrypt_helper(32)); }
+void call_aes_xts_encrypt_64(void) { repeat(aes_xts_encrypt_helper(64)); }
+void call_aes_xts_encrypt_128(void) { repeat(aes_xts_encrypt_helper(128)); }
+void call_aes_xts_encrypt_256(void) { repeat(aes_xts_encrypt_helper(256)); }
+void call_aes_xts_encrypt_512(void) { repeatfewer(10,aes_xts_encrypt_helper(512)); }
+
+// Helper function for AES XTS decrypt with parameterized length
+static void aes_xts_decrypt_helper(size_t len)
+{
+  int j;
+  for (j = 0; j < 30; ++j) {
+    aes_key1.rd_key[j] = b1[j % BUFFERSIZE];
+    aes_key2.rd_key[j] = b2[j % BUFFERSIZE];
+  }
+  aes_key1.rounds = 14;  // AES-256
+  aes_key2.rounds = 14;
+  for (j = 0; j < 16; ++j) aes_iv[j] = (uint8_t)(b3[j] & 0xFF);
+
+  aes_xts_decrypt((uint8_t*)b0, (uint8_t*)b1, len, &aes_key1, &aes_key2, aes_iv);
+}
+
+// AES XTS decrypt wrapper functions for different block sizes
+void call_aes_xts_decrypt_16(void) { repeat(aes_xts_decrypt_helper(16)); }
+void call_aes_xts_decrypt_32(void) { repeat(aes_xts_decrypt_helper(32)); }
+void call_aes_xts_decrypt_64(void) { repeat(aes_xts_decrypt_helper(64)); }
+void call_aes_xts_decrypt_128(void) { repeat(aes_xts_decrypt_helper(128)); }
+void call_aes_xts_decrypt_256(void) { repeat(aes_xts_decrypt_helper(256)); }
+void call_aes_xts_decrypt_512(void) { repeatfewer(10,aes_xts_decrypt_helper(512)); }
+
 #endif
 
 int main(int argc, char *argv[])
 {
   int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
   int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
+  int aes = get_arch_name() == ARCH_AARCH64 && supports_arm_aes();
   int all = 1;
   int arm = get_arch_name() == ARCH_AARCH64;
   char *argending;
@@ -1545,10 +1622,13 @@ int main(int argc, char *argv[])
   timingtest(all,"mlkem_tobytes",call_mlkem_tobytes);
   timingtest(all,"mlkem_tomont",call_mlkem_tomont);
   timingtest(!arm,"mlkem_unpack",call_mlkem_unpack);
-  timingtest(!arm,"mldsa_intt",call_mldsa_intt);
+  timingtest(all,"mldsa_intt",call_mldsa_intt);
   timingtest(all,"mldsa_ntt",call_mldsa_ntt);
   timingtest(!arm,"mldsa_nttunpack",call_mldsa_nttunpack);
   timingtest(all,"mldsa_pointwise",call_mldsa_pointwise);
+  timingtest(all,"mldsa_pointwise_acc_l4",call_mldsa_pointwise_acc_l4);
+  timingtest(all,"mldsa_pointwise_acc_l5",call_mldsa_pointwise_acc_l5);
+  timingtest(all,"mldsa_pointwise_acc_l7",call_mldsa_pointwise_acc_l7);
   timingtest(!arm,"mldsa_reduce",call_mldsa_reduce);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
   timingtest(all,"p256_montjadd_alt",call_p256_montjadd_alt);
@@ -1613,6 +1693,18 @@ int main(int argc, char *argv[])
   timingtest(all,"word_negmodinv",call_word_negmodinv);
   timingtest(all,"word_popcount",call_word_popcount);
   timingtest(all,"word_recip",call_word_recip);
+  timingtest(aes,"aes_xts_encrypt (16 bytes)",call_aes_xts_encrypt_16);
+  timingtest(aes,"aes_xts_encrypt (32 bytes)",call_aes_xts_encrypt_32);
+  timingtest(aes,"aes_xts_encrypt (64 bytes)",call_aes_xts_encrypt_64);
+  timingtest(aes,"aes_xts_encrypt (128 bytes)",call_aes_xts_encrypt_128);
+  timingtest(aes,"aes_xts_encrypt (256 bytes)",call_aes_xts_encrypt_256);
+  timingtest(aes,"aes_xts_encrypt (512 bytes)",call_aes_xts_encrypt_512);
+  timingtest(aes,"aes_xts_decrypt (16 bytes)",call_aes_xts_decrypt_16);
+  timingtest(aes,"aes_xts_decrypt (32 bytes)",call_aes_xts_decrypt_32);
+  timingtest(aes,"aes_xts_decrypt (64 bytes)",call_aes_xts_decrypt_64);
+  timingtest(aes,"aes_xts_decrypt (128 bytes)",call_aes_xts_decrypt_128);
+  timingtest(aes,"aes_xts_decrypt (256 bytes)",call_aes_xts_decrypt_256);
+  timingtest(aes,"aes_xts_decrypt (512 bytes)",call_aes_xts_decrypt_512);
 
   // Summarize performance in arithmetic and geometric means
 

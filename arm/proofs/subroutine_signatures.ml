@@ -1,4 +1,50 @@
 let subroutine_signatures = [
+("aes_xts_decrypt",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("length", "size_t", (*is const?*)"false");
+     ("key1", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("key2", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("iv", "uint8_t[static 16]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("in", "length"(* num elems *), 1(* elem bytesize *));
+    ("key1", "244"(* num elems *), 1(* elem bytesize *));
+    ("key2", "244"(* num elems *), 1(* elem bytesize *));
+    ("iv", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "length"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("aes_xts_encrypt",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("length", "size_t", (*is const?*)"false");
+     ("key1", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("key2", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("iv", "uint8_t[static 16]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("in", "length"(* num elems *), 1(* elem bytesize *));
+    ("key1", "244"(* num elems *), 1(* elem bytesize *));
+    ("key2", "244"(* num elems *), 1(* elem bytesize *));
+    ("iv", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "length"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("bignum_add",
   ([(*args*)
      ("p", "uint64_t", (*is const?*)"false");
@@ -4399,19 +4445,20 @@ let subroutine_signatures = [
    ])
 );
 
-("mldsa_pointwise",
+("mldsa_intt_arm",
   ([(*args*)
-     ("r", "int32_t[static 256]", (*is const?*)"false");
-     ("a", "int32_t[static 256]", (*is const?*)"true");
-     ("b", "int32_t[static 256]", (*is const?*)"true");
+     ("a", "int32_t[static 256]", (*is const?*)"false");
+     ("z_78", "int32_t[static 384]", (*is const?*)"true");
+     ("z_123456", "int32_t[static 160]", (*is const?*)"true");
    ],
    "void",
    [(* input buffers *)
     ("a", "256"(* num elems *), 4(* elem bytesize *));
-    ("b", "256"(* num elems *), 4(* elem bytesize *));
+    ("z_78", "384"(* num elems *), 4(* elem bytesize *));
+    ("z_123456", "160"(* num elems *), 4(* elem bytesize *));
    ],
    [(* output buffers *)
-    ("r", "256"(* num elems *), 4(* elem bytesize *));
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])
@@ -4431,6 +4478,78 @@ let subroutine_signatures = [
    ],
    [(* output buffers *)
     ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_pointwise",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("a", "int32_t[static 256]", (*is const?*)"true");
+     ("b", "int32_t[static 256]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+    ("b", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_pointwise_acc_l4",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("a", "int32_t[static 1024]", (*is const?*)"true");
+     ("b", "int32_t[static 1024]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "1024"(* num elems *), 4(* elem bytesize *));
+    ("b", "1024"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_pointwise_acc_l5",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("a", "int32_t[static 1280]", (*is const?*)"true");
+     ("b", "int32_t[static 1280]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "1280"(* num elems *), 4(* elem bytesize *));
+    ("b", "1280"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_pointwise_acc_l7",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("a", "int32_t[static 1792]", (*is const?*)"true");
+     ("b", "int32_t[static 1792]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "1792"(* num elems *), 4(* elem bytesize *));
+    ("b", "1792"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])
