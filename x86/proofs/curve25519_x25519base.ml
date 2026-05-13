@@ -5108,27 +5108,8 @@ let CURVE25519_X25519BASE_SUBROUTINE_CORRECT = time prove
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 536),536)])`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[CURVE25519_X25519BASE_MC_BRIDGE] THEN
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
-    MAYCHANGE_IDEMPOT_TAC;
-    SUBSUMED_MAYCHANGE_TAC;
-    REPEAT GEN_TAC THEN
-    REWRITE_TAC[C_ARGUMENTS; bignum_from_memory; bytes_loaded] THEN
-    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
-    MP_TAC (SPECL [`tables:num`; `res:int64`; `scalar:int64`; `n:num`; `pc + 4`;
-                   `stackpointer:int64`; `returnaddress:int64`]
-                  CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT) THEN
-    REWRITE_TAC[ARITH_RULE `(pc + 4) + 84 = pc + 88`;
-                WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
-    ASM_REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES;
-                    MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
-    DISCH_THEN MATCH_MP_TAC THEN
-    POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
-    REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-    NONOVERLAPPING_TAC
-  ]);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE ~bridge:(Some CURVE25519_X25519BASE_MC_BRIDGE)
+                                CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT));;
 
 let CURVE25519_X25519BASE_BYTE_NOIBT_SUBROUTINE_CORRECT = prove
  (`!tables res scalar n pc stackpointer returnaddress.
@@ -5182,9 +5163,8 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 536),536)])`,
-  REWRITE_TAC[GSYM(CONV_RULE NUM_REDUCE_CONV
-   (SPEC `4` BIGNUM_FROM_MEMORY_BYTES))] THEN
-  MATCH_ACCEPT_TAC CURVE25519_X25519BASE_SUBROUTINE_CORRECT);;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE ~bridge:(Some CURVE25519_X25519BASE_MC_BRIDGE)
+                                CURVE25519_X25519BASE_BYTE_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)

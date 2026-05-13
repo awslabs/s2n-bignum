@@ -5897,7 +5897,59 @@ let ADD_IBT_TAC =
        REWRITE_TAC[LENGTH_APPEND] THEN CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV)
        THEN ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)];;
 
-let ADD_IBT_RULE th =
+(* Tactic for the parametrized case: directly apply IBT_WRAP_THM after
+   rewriting with the user-supplied bridge thm
+     `forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`,
+   then discharge the resulting `ensures ... at pc+4` using the input NOIBT
+   theorem instantiated with `pc -> pc+4`. *)
+let ADD_IBT_TAC_PARAMETRIZED bridge_th th =
+  REPEAT GEN_TAC THEN REWRITE_TAC[bridge_th] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS;
+              C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+    (* (1) MAYCHANGE R is idempotent: R ,, R = R. *)
+    MAYCHANGE_IDEMPOT_TAC;
+    (* (2) MAYCHANGE [RIP] is subsumed by R (R writes RIP). *)
+    SUBSUMED_MAYCHANGE_TAC;
+    (* (3) writing RIP doesn't affect the precondition components (RSP, args,
+       memory reads at fixed addresses, etc.). *)
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC[C_ARGUMENTS; C_RETURN;
+                WINDOWS_C_ARGUMENTS; bignum_from_memory; bytes_loaded] THEN
+    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+    (* (4) `ensures ... at pc+4` for the trimmed mc — discharged by the input
+       NOIBT theorem with pc -> pc+4 (offsets/lengths shift by 4 accordingly,
+       and the `(word pc, fulllen)` nonoverlapping bound subsumes the
+       `(word (pc+4), trimlen)` one). *)
+    W (fun (asl,w) ->
+      let avs,_ = strip_forall (concl th) in
+      let new_avs = map (fun v ->
+        if is_var v && name_of v = "pc" then mk_binary "+" (v,`4`)
+        else v) avs in
+      MP_TAC (REWRITE_RULE[C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
+                            MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                            WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                            SOME_FLAGS]
+              (SPECL new_avs th))) THEN
+    REWRITE_TAC[ARITH_RULE `(pc + 4) + 84 = pc + 88`;
+                WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
+    DISCH_THEN MATCH_MP_TAC THEN
+    POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+    REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+    REPEAT CONJ_TAC THEN
+    TRY (FIRST_X_ASSUM ACCEPT_TAC) THEN
+    NONOVERLAPPING_TAC
+  ];;
+
+(* For unparametrized (constant) mcs, ADD_IBT_RULE infers everything from
+   the definitions. For parametrized mcs (e.g. `mc pc tables` produced by
+   define_assert_relocs_from_elf + define_trimmed), the caller must supply
+   the bridge equation
+     `forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`
+   via the optional `~bridge` argument. *)
+let ADD_IBT_RULE ?(bridge:thm option = None) th =
   let the_concl = concl th in
   (* If th is safety property, it starts with `exists f_events. ...` *)
   let the_concl = if is_exists the_concl then
@@ -5905,23 +5957,66 @@ let ADD_IBT_RULE th =
   let bldat =
    rand(lhand(body(lhand(rator
     (repeat (snd o dest_imp) (snd(strip_forall(the_concl)))))))) in
-  let trimctm = if is_const bldat then bldat else lhand bldat in
-  let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
-  let fullmctm = rand(rand(concl trimcd)) in
-  let fullmc = find ((=) fullmctm o lhand o concl) (definitions()) in
-  let trimc =
-    CONV_RULE (RAND_CONV TRIM_LIST_CONV)
-     (GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [fullmc] trimcd) in
-  let rec adjust tm =
-    match tm with
-      Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
+  let parametrized = not (is_const bldat) in
+  match bridge, parametrized with
+  | None, true ->
+    (* Parametrized mc with no bridge: we cannot derive the bridge from the
+       definitions alone (define_trimmed re-quantifies and shifts pc), so ask
+       the caller to provide it. *)
+    let trim_head_const = fst (strip_comb bldat) in
+    failwith ("ADD_IBT_RULE: input theorem uses parametrized mc " ^
+              name_of trim_head_const ^
+              "; please supply ~bridge:thm of shape " ^
+              "`forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`")
+  | None, false ->
+    (* Original behavior: tmc was defined as `tmc = TRIM_LIST(4,0) mc`, so we
+       recover mc syntactically from trimcd's rhs and build expth ourselves. *)
+    let trimctm = bldat in
+    let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
+    let fullmctm = rand(rand(concl trimcd)) in
+    let fullmc = find ((=) fullmctm o lhand o concl) (definitions()) in
+    let trimc =
+      CONV_RULE (RAND_CONV TRIM_LIST_CONV)
+       (GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [fullmc] trimcd) in
+    let rec adjust tm =
+      match tm with
+        Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
+            when is_numeral off ->
+          mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
+      | Comb(s,t) -> mk_comb(adjust s,adjust t)
+      | Abs(x,t) -> mk_abs(x,adjust t)
+      | _ -> if tm = trimctm then fullmctm else tm in
+    prove(adjust (concl th), ADD_IBT_TAC fullmc trimc th)
+  | Some bridge_th, _ ->
+    (* Parametrized path: read mc/tmc head constants from the bridge, sanity-
+       check the tmc head matches the input theorem, then bump every numeric
+       offset (`pc + n` and `(word pc, n)`) by 4 to form the IBT goal and
+       discharge it via ADD_IBT_TAC_PARAMETRIZED. *)
+    if not parametrized then
+      failwith "ADD_IBT_RULE: bridge supplied but mc is not parametrized" else
+    let trim_head_const = fst (strip_comb bldat) in
+    let bridge_eq = SPEC_ALL bridge_th in
+    let mc_app = lhand (concl bridge_eq) in
+    let trimcall = rand (rand (concl bridge_eq)) in
+    let fullmctm = fst (strip_comb mc_app) in
+    let bridge_trimctm = fst (strip_comb trimcall) in
+    if bridge_trimctm <> trim_head_const then
+      failwith ("ADD_IBT_RULE: bridge thm's trimmed mc " ^
+                name_of bridge_trimctm ^ " does not match input theorem's mc "
+                ^ name_of trim_head_const)
+    else
+    let rec adjust tm =
+      match tm with
+      | Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
           when is_numeral off ->
-        mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
-    | Comb(s,t) -> mk_comb(adjust s,adjust t)
-    | Abs(x,t) -> mk_abs(x,adjust t)
-    | _ -> if tm = trimctm then  fullmctm else tm in
-  prove(adjust (concl th),
-        ADD_IBT_TAC fullmc trimc th);;
+          mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
+      | Comb(Comb(Const("+",_),Var("pc",_)) as p,off)
+          when is_numeral off ->
+          mk_comb(p,mk_numeral(num 4 +/ dest_numeral off))
+      | Comb(s,t) -> mk_comb(adjust s,adjust t)
+      | Abs(x,t) -> mk_abs(x,adjust t)
+      | _ -> if tm = trim_head_const then fullmctm else tm in
+    prove(adjust (concl th), ADD_IBT_TAC_PARAMETRIZED bridge_th th);;
 
 let READ_ZMM_BOTTOM_QUARTER = prove
  (`!zmmx:(S,512 word)component s.
