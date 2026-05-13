@@ -5042,16 +5042,19 @@ let CURVE25519_X25519BASE_CORRECT = time prove
   CONV_TAC INTEGER_RULE);;
 
 let CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT = time prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 84) /\
     ALL (nonoverlapping (word_sub stackpointer (word 536),536))
-        [(word pc,0x2e74); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x2e74) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+        [(word pc,0x2e74); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e74); (word tables,48576);
+         (word_sub stackpointer (word 536),544)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_tmc
-                       curve25519_x25519base_constant_data) /\
+                (curve25519_x25519base_tmc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [res; scalar] s /\
@@ -5062,25 +5065,39 @@ let CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT = time prove
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 536),536)])`,
-  REWRITE_TAC[BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst CURVE25519_X25519BASE_EXEC] THEN
+  REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC] THEN
   X86_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_EXEC
-   (REWRITE_RULE[BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst CURVE25519_X25519BASE_EXEC]
+   (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC]
     CURVE25519_X25519BASE_CORRECT)
     `[RBX; RBP; R12; R13; R14; R15]` 536);;
 
+(* Bridge equation relating the IBT mc to the trimmed mc: mc pc tables =
+   APPEND [endbr64] (tmc (pc+4) tables). Used for ADD_IBT_RULE-style
+   transformations on parametrized mcs. *)
+let CURVE25519_X25519BASE_MC_BRIDGE = prove
+ (`!pc tables. curve25519_x25519base_mc pc tables =
+     APPEND [word 0xf3:byte; word 0x0f; word 0x1e; word 0xfa]
+            (curve25519_x25519base_tmc (pc + 4) tables)`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[curve25519_x25519base_mc; curve25519_x25519base_tmc; APPEND] THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
+  AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[INT_ARITH `&pc + &88 = (&pc + &4) + &84:int`]);;
+
 let CURVE25519_X25519BASE_SUBROUTINE_CORRECT = time prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 88) /\
     ALL (nonoverlapping (word_sub stackpointer (word 536),536))
-        [(word pc,0x2e78); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x2e78) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+        [(word pc,0x2e78); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e78); (word tables,48576);
+         (word_sub stackpointer (word 536),544)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_mc
-                       curve25519_x25519base_constant_data) /\
+                (curve25519_x25519base_mc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [res; scalar] s /\
@@ -5091,19 +5108,42 @@ let CURVE25519_X25519BASE_SUBROUTINE_CORRECT = time prove
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 536),536)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT));;
+  REPEAT GEN_TAC THEN REWRITE_TAC[CURVE25519_X25519BASE_MC_BRIDGE] THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+    MAYCHANGE_IDEMPOT_TAC;
+    SUBSUMED_MAYCHANGE_TAC;
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC[C_ARGUMENTS; bignum_from_memory; bytes_loaded] THEN
+    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+    MP_TAC (SPECL [`tables:num`; `res:int64`; `scalar:int64`; `n:num`; `pc + 4`;
+                   `stackpointer:int64`; `returnaddress:int64`]
+                  CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT) THEN
+    REWRITE_TAC[ARITH_RULE `(pc + 4) + 84 = pc + 88`;
+                WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
+    ASM_REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES;
+                    MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
+    DISCH_THEN MATCH_MP_TAC THEN
+    POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+    REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+    NONOVERLAPPING_TAC
+  ]);;
 
 let CURVE25519_X25519BASE_BYTE_NOIBT_SUBROUTINE_CORRECT = prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 84) /\
     ALL (nonoverlapping (word_sub stackpointer (word 536),536))
-        [(word pc,0x2e74); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x2e74) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+        [(word pc,0x2e74); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e74); (word tables,48576);
+         (word_sub stackpointer (word 536),544)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_tmc
-                       curve25519_x25519base_constant_data) /\
+                (curve25519_x25519base_tmc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [res; scalar] s /\
@@ -5119,16 +5159,19 @@ let CURVE25519_X25519BASE_BYTE_NOIBT_SUBROUTINE_CORRECT = prove
   MATCH_ACCEPT_TAC CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT);;
 
 let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 88) /\
     ALL (nonoverlapping (word_sub stackpointer (word 536),536))
-        [(word pc,0x2e78); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0x2e78) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+        [(word pc,0x2e78); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e78); (word tables,48576);
+         (word_sub stackpointer (word 536),544)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_mc
-                       curve25519_x25519base_constant_data) /\
+                (curve25519_x25519base_mc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               C_ARGUMENTS [res; scalar] s /\
@@ -5139,7 +5182,9 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
          (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 536),536)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_X25519BASE_BYTE_NOIBT_SUBROUTINE_CORRECT));;
+  REWRITE_TAC[GSYM(CONV_RULE NUM_REDUCE_CONV
+   (SPEC `4` BIGNUM_FROM_MEMORY_BYTES))] THEN
+  MATCH_ACCEPT_TAC CURVE25519_X25519BASE_SUBROUTINE_CORRECT);;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
