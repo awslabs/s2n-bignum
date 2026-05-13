@@ -14,53 +14,12 @@ let WORD_DECOMPOSE_128 = BITBLAST_RULE
     a = word_xor (word_zx (word_subword a (0,64) : 64 word))
                  (word_shl (word_zx (word_subword a (64,64) : 64 word)) 64)`;;
 
-let POLY_OF_WORD_INJ = prove(
-  `!(x:N word) (y:N word). poly_of_word x = poly_of_word y ==> x = y`,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  ONCE_REWRITE_TAC[GSYM WORD_OF_POLY_OF_WORD] THEN
-  AP_TERM_TAC THEN ASM_REWRITE_TAC[]);;
-
-let POLY_OF_WORD_PMUL_GEN = prove(
-  `!(x:M word) (y:N word).
-    poly_deg bool_ring (ring_mul bool_poly (poly_of_word x) (poly_of_word y))
-    < dimindex(:P)
-    ==> poly_of_word(word_pmul x y : P word) =
-        ring_mul bool_poly (poly_of_word x) (poly_of_word y)`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[WORD_PMUL_POLY] THEN
-  ABBREV_TAC `p = ring_mul bool_poly (poly_of_word (x:M word)) (poly_of_word (y:N word))` THEN
-  SUBGOAL_THEN `p IN ring_carrier bool_poly` ASSUME_TAC THENL
-  [EXPAND_TAC "p" THEN SIMP_TAC[RING_MUL; BOOL_POLY_OF_WORD]; ALL_TAC] THEN
-  REWRITE_TAC[GSYM WORD_OF_POLY_OF_WORD_GEN] THEN
-  SUBGOAL_THEN `poly_of_word((word_of_poly:((1->num)->bool)->P word) p) = p`
-    (fun th -> REWRITE_TAC[th]) THEN
-  MATCH_MP_TAC(INST_TYPE [`:P`,`:N`] POLY_OF_WORD_OF_POLY) THEN
-  ASM_REWRITE_TAC[]);;
-
-let POLY_VAR_POW_OF_WORD_256 = INST_TYPE [`:256`,`:N`] POLY_VAR_POW_OF_WORD;;
-
-let zx_128_256 = prove
- (`!w:128 word. poly_of_word(word_zx w : 256 word) = poly_of_word w`,
-  GEN_TAC THEN MATCH_MP_TAC POLY_OF_WORD_ZX THEN
-  REWRITE_TAC[DIMINDEX_128; DIMINDEX_256] THEN ARITH_TAC);;
-
 let zx_64_128 = prove
  (`!w:64 word. poly_of_word(word_zx w : 128 word) = poly_of_word w`,
   GEN_TAC THEN MATCH_MP_TAC POLY_OF_WORD_ZX THEN
   REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN ARITH_TAC);;
 
-let PMUL_DEG_TAC_GEN dim_out dim_in =
-  REWRITE_TAC[bool_poly; POLY_RING; dim_out] THEN
-  W(MP_TAC o PART_MATCH (lhand o rand) POLY_DEG_MUL_LE o lhand o snd) THEN
-  REWRITE_TAC[RING_POLYNOMIAL_OF_WORD] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] LET_TRANS) THEN
-  REWRITE_TAC[dim_in; POLY_DEG_POLY_OF_WORD; dim_out] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
-  CONV_TAC(ONCE_DEPTH_CONV WORD_CLZ_CONV) THEN
-  TRY(MATCH_MP_TAC(ARITH_RULE `a < 128 /\ b <= 128 ==> a + b < 256`) THEN
-      CONJ_TAC THEN REWRITE_TAC[WORD_CLZ_LT_DIMINDEX; dim_in]) THEN
-  ARITH_TAC;;
-
-let PMUL_DEG_TAC = PMUL_DEG_TAC_GEN DIMINDEX_256 DIMINDEX_128;;
+let POLY_VAR_POW_OF_WORD_256 = INST_TYPE [`:256`,`:N`] POLY_VAR_POW_OF_WORD;;
 
 let pmul_shl_zx = prove(
   `(!w:128 word.
@@ -72,12 +31,6 @@ let pmul_shl_zx = prove(
   CONJ_TAC THEN GEN_TAC THEN
   GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [CONJUNCT1 WORD_PMUL_ZX] THEN
   MATCH_MP_TAC POLY_OF_WORD_PMUL_GEN THEN PMUL_DEG_TAC);;
-
-let pmul_128_256 = prove(
-  `!x:128 word y:128 word.
-     poly_of_word(word_pmul x y : 256 word) =
-     ring_mul bool_poly (poly_of_word x) (poly_of_word y)`,
-  REPEAT GEN_TAC THEN MATCH_MP_TAC POLY_OF_WORD_PMUL_GEN THEN PMUL_DEG_TAC);;
 
 let pow64_256 = prove
  (`poly_of_word(word(2 EXP 64) : 256 word) =
