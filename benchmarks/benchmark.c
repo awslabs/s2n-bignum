@@ -1111,6 +1111,7 @@ void call_mldsa_pointwise(void) repeat(mldsa_pointwise_x86((int32_t*)b0,(int32_t
 void call_mldsa_pointwise_acc_l4(void) repeat(mldsa_pointwise_acc_l4_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
 void call_mldsa_pointwise_acc_l5(void) repeat(mldsa_pointwise_acc_l5_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
 void call_mldsa_pointwise_acc_l7(void) repeat(mldsa_pointwise_acc_l7_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
+void call_mldsa_poly_use_hint_88(void) {}
 void call_mldsa_reduce(void) repeat(mldsa_reduce((int32_t*)b0))
 
 void call_mlkem_frombytes(void) repeat(mlkem_frombytes((uint16_t*)b0,(int8_t*)b1))
