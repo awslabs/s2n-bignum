@@ -5180,6 +5180,12 @@ let X86_MACRO_SIM_ABBREV_TAC =
     GEN_REWRITE_RULE ONCE_DEPTH_CONV
      [WORD_RULE `word_add z (word 0):int64 = z`] in
   fun mc ->
+    (* For mcs that contain rodata relocations the bytelist representation
+       contains four explicit per-byte CONSes computed from the raw integer
+       displacement; collapse them back into `APPEND (bytelist_of_int 4 _) _`
+       so that the decode and execution machinery can see the displacement
+       as a single 4-byte hole. *)
+    let mc = PURE_REWRITE_RULE[BYTELIST_OF_INT_APPEND] mc in
     let offl = extract_offsets mc in
     let execth = X86_MK_EXEC_RULE mc in
     fun codelen localvars template core_tac prep ilist ->

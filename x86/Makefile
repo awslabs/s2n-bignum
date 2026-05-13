@@ -472,7 +472,7 @@ BASE_ML=proofs/base.ml \
         proofs/subroutine_signatures.ml \
         proofs/x86.ml
 
-HOLDIR?=$(HOME)/hol-light
+HOLDIR?=/mnt/disk/hol-light
 HOLLIGHT:=$(HOLDIR)/hol.sh
 
 PROOF_BINS = $(OBJ:.o=.native)

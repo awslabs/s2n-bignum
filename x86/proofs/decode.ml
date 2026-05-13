@@ -3082,15 +3082,67 @@ let save_literal_from_elf deffile objfile =
 
 (*** Define a variant with initial ENDBR64 trimmed away ***)
 
+(* Define `<name> = TRIM_LIST(4,0)(<mc>)` to skip past the leading ENDBR64.
+   Backward-compatible for plain `mc = [bytes]` definitions. For mc theorems
+   parameterised over `pc` and rodata symbols (as produced by
+   define_assert_relocs_from_elf), the new definition is keyed on the post-
+   ENDBR64 entry pc: any literal `&pc + &n` reference inside the bytelist is
+   shifted by -4 so that, when the trimmed bytes are loaded at the post-
+   ENDBR64 pc, RIP-relative displacements still resolve to the same absolute
+   targets as the original mc. *)
+
 let define_trimmed =
+  let trim_size = 4 in
   let trim_tm = `TRIM_LIST(4,0):byte list->byte list`
   and bl_ty = `:byte list` in
   fun name th ->
-    let eth = CONV_RULE(RAND_CONV TRIM_LIST_CONV) (AP_TERM trim_tm th) in
-    let ldef =
-      try mk_mconst(name,bl_ty) with Failure _ -> mk_var(name,bl_ty) in
-    let def' = mk_eq(ldef,lhand(concl eth)) in
-    TRANS (new_definition def') eth;;
+    let avs,_ = strip_forall(concl th) in
+    if avs = [] then
+      let eth = CONV_RULE(RAND_CONV TRIM_LIST_CONV) (AP_TERM trim_tm th) in
+      let ldef =
+        try mk_mconst(name,bl_ty) with Failure _ -> mk_var(name,bl_ty) in
+      let def' = mk_eq(ldef,lhand(concl eth)) in
+      TRANS (new_definition def') eth
+    else
+      let th_unq = SPEC_ALL th in
+      let eth = CONV_RULE(RAND_CONV TRIM_LIST_CONV) (AP_TERM trim_tm th_unq) in
+      let trimmed_body = rand (concl eth) in
+      let pc_var = List.hd avs in
+      let pc_int = mk_comb(`int_of_num`, pc_var) in
+      let subst_body =
+        let rec walk t =
+          try
+            let l,r = dest_binop `(+):int->int->int` t in
+            if l = pc_int then
+              let _,n = dest_comb r in
+              if is_numeral n then
+                let nv = dest_numeral n in
+                if nv >=/ num trim_size then
+                  mk_binop `(+):int->int->int` pc_int
+                    (mk_comb(`int_of_num`, mk_numeral (nv -/ num trim_size)))
+                else t
+              else t
+            else
+              (match t with
+               | Comb(f,x) -> mk_comb(walk f, walk x)
+               | Abs(v,b) -> mk_abs(v, walk b)
+               | _ -> t)
+          with Failure _ ->
+            (match t with
+             | Comb(f,x) -> mk_comb(walk f, walk x)
+             | Abs(v,b) -> mk_abs(v, walk b)
+             | _ -> t)
+        in walk trimmed_body in
+      let arg_tys = List.map type_of avs in
+      let new_const_ty =
+        List.fold_right (fun t acc -> mk_fun_ty t acc) arg_tys bl_ty in
+      let ldef =
+        try mk_mconst(name,new_const_ty)
+        with Failure _ -> mk_var(name,new_const_ty) in
+      let lhs_named = List.fold_left (fun acc v -> mk_comb(acc,v)) ldef avs in
+      let def' = mk_eq(lhs_named, subst_body) in
+      let def_th = new_definition def' in
+      GENL avs (SPEC_ALL def_th);;
 
 let mk_bytelist = C (curry mk_list) `:byte`;;
 
