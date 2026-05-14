@@ -5080,6 +5080,9 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
         failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
       end in
     MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
+    (* is_forall + SPEC_ALL handles relocatable mcs (e.g. those defined via
+       define_assert_relocs_from_elf, which are forall-quantified over
+       pc/rodata). *)
     REWRITE_TAC[COMPUTE_LENGTH_RULE
                   (if is_forall(concl submachinecode)
                    then SPEC_ALL submachinecode
@@ -5835,6 +5838,57 @@ let IBT_WRAP_THM = prove
         (RATOR_CONV o RATOR_CONV) [MAYCHANGE_SING]) THEN
     REWRITE_TAC[ASSIGNS; assign] THEN ASM_MESON_TAC[]]);;
 
+(* Shared bits between the unparametrized and parametrized variants of
+   ADD_IBT_TAC. *)
+
+(* If the goal is `exists f_events. ..`, instantiate f_events using the
+   f_events in `th_noexists`, replacing pc with `pc + 4`. *)
+let WITNESS_F_EVENTS_TAC (th_noexists:thm): tactic =
+  W (fun (asl,w) ->
+    if not (is_exists w) then ALL_TAC else
+    let f_events_term = find_term (fun t ->
+      is_comb t && name_of(fst(strip_comb t)) = "f_events")
+      (concl th_noexists) in
+    let f_events,args = strip_comb f_events_term in
+    let new_argdecls,new_args = unzip (map (fun t ->
+      if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
+      else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
+    let new_f_events = list_mk_abs
+      (new_argdecls,list_mk_comb(f_events,new_args)) in
+    EXISTS_TAC new_f_events);;
+
+(* Strip a leading `exists f_events.` from `th` (yielding `th_noexists`),
+   correspondingly instantiate the goal's `exists`, and run [k th_noexists]
+   on the resulting body. For functional-correctness theorems (no leading
+   `exists`), [k th] runs directly. *)
+let ADD_IBT_OPEN_EXISTS th (k:thm->tactic): tactic =
+  if is_exists (concl th) then
+    MP_TAC th THEN STRIP_TAC THEN
+    FIRST_X_ASSUM (fun th_noexists ->
+      WITNESS_F_EVENTS_TAC th_noexists THEN k th_noexists)
+  else
+    k th;;
+
+(* The four IBT_WRAP_THM subgoals shared by both variants. The fourth
+   subgoal (discharging the inner `ensures ... at pc+4`) differs: the
+   unparametrized version uses MAP_EVERY X_GEN_TAC + MP_TAC SPECL inline,
+   while the parametrized version takes a tactic argument. *)
+let IBT_WRAP_TAC (discharge_inner:tactic): tactic =
+  MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+    (* (1) MAYCHANGE R is idempotent. *)
+    MAYCHANGE_IDEMPOT_TAC;
+    (* (2) MAYCHANGE [RIP] is subsumed by R. *)
+    SUBSUMED_MAYCHANGE_TAC;
+    (* (3) writing RIP doesn't affect the precondition components. *)
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC[C_ARGUMENTS; C_RETURN;
+                WINDOWS_C_ARGUMENTS; bytes_loaded] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+    (* (4) caller-supplied: discharge `ensures ... at pc+4`. *)
+    discharge_inner
+  ];;
+
 let ADD_IBT_TAC =
   let tweak = subst[`pc + 4`,`pc:num`]
   and EXPAND_TRIMMED_RULE =
@@ -5844,67 +5898,38 @@ let ADD_IBT_TAC =
     fun fullmc trimc ->
      GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [GSYM trimc]
      (GEN_REWRITE_RULE RAND_CONV [pth] fullmc) in
-  (* If the goal is 'exists f_events. ..', instantiate f_events using
-     the f_events in th_noexists. pc is replaced with 'pc + 4'. *)
-  let witness_f_events_tac (th_noexists:thm): tactic =
-    W (fun (asl,w) ->
-      if not (is_exists w) then ALL_TAC else
-      let f_events_term = find_term (fun t ->
-        is_comb t && name_of(fst(strip_comb t)) = "f_events")
-        (concl th_noexists) in
-
-      let f_events,args = strip_comb f_events_term in
-
-      let new_argdecls,new_args = unzip (map (fun t ->
-        if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
-        else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
-      let new_f_events = list_mk_abs
-        (new_argdecls,list_mk_comb(f_events,new_args)) in
-      EXISTS_TAC new_f_events
-    ) in
   fun fullmc trimc th ->
     let expth = EXPAND_TRIMMED_RULE fullmc trimc in
-    MP_TAC th THEN
-    (* If th is a safety property, it has 'exists f_events. ...'. *)
-    (if is_exists (concl th) then
-      STRIP_TAC (*strip exists *) THEN FIRST_X_ASSUM MP_TAC
-    else ALL_TAC) THEN
-    DISCH_THEN (fun th_noexists ->
-        witness_f_events_tac th_noexists THEN MP_TAC th_noexists) THEN
-    (* Now the path is irrelevant to whether th is safety or functional
-      correctness proof *)
-    DISCH_THEN (fun th -> W(fun (asl,w) ->
-      let avs = fst(strip_forall w) in
-      MAP_EVERY X_GEN_TAC avs THEN
-      MP_TAC(SPECL (map tweak avs) th))) THEN
-    REWRITE_TAC(!simulation_precanon_thms) THEN
-    REWRITE_TAC[C_ARGUMENTS; C_RETURN;
-                MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-                WINDOWS_C_ARGUMENTS; ALL; ALLPAIRS;
-                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-    TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
-     [REPEAT(REWRITE_TAC[] THEN
-             ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
-              (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
-      REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
-      REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
-      MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
-        NONOVERLAPPING_MODULO_SUBREGIONS) THEN
-      REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
-      MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
-      ALL_TAC]) THEN
-    DISCH_TAC THEN REWRITE_TAC[expth; GSYM APPEND_ASSOC] THEN
-    MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL
-     [MAYCHANGE_IDEMPOT_TAC;
-      SUBSUMED_MAYCHANGE_TAC;
-      REPEAT GEN_TAC THEN
-      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-      REFL_TAC;
-      FIRST_X_ASSUM ACCEPT_TAC ORELSE
-      ((* When the goal contains LENGTH .._mc and LENGTH .._tmc . *)
-       FIRST_X_ASSUM MP_TAC THEN
-       REWRITE_TAC[LENGTH_APPEND] THEN CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV)
-       THEN ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)];;
+    ADD_IBT_OPEN_EXISTS th (fun th_inner ->
+      MP_TAC th_inner THEN
+      DISCH_THEN (fun th -> W(fun (asl,w) ->
+        let avs = fst(strip_forall w) in
+        MAP_EVERY X_GEN_TAC avs THEN
+        MP_TAC(SPECL (map tweak avs) th))) THEN
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      REWRITE_TAC[C_ARGUMENTS; C_RETURN;
+                  MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                  WINDOWS_C_ARGUMENTS; ALL; ALLPAIRS;
+                  WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+      TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
+       [REPEAT(REWRITE_TAC[] THEN
+               ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
+                (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
+        REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
+        REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+        MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
+          NONOVERLAPPING_MODULO_SUBREGIONS) THEN
+        REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
+        MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
+        ALL_TAC]) THEN
+      DISCH_TAC THEN REWRITE_TAC[expth; GSYM APPEND_ASSOC] THEN
+      IBT_WRAP_TAC
+        (FIRST_X_ASSUM ACCEPT_TAC ORELSE
+         ((* When the goal contains LENGTH .._mc and LENGTH .._tmc . *)
+          FIRST_X_ASSUM MP_TAC THEN
+          REWRITE_TAC[LENGTH_APPEND] THEN
+          CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV) THEN
+          ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)));;
 
 (* Tactic for the parametrized case: directly apply IBT_WRAP_THM after
    rewriting with the user-supplied bridge thm
@@ -5913,37 +5938,16 @@ let ADD_IBT_TAC =
    theorem instantiated with `pc -> pc+4`.
 
    For safety theorems (`exists f_events. forall ...`), the goal also has
-   `exists f_events.` at the head. We strip th's exists into a hypothesis,
-   instantiate the goal's exists with a witness derived from th's f_events
-   (replacing pc by pc+4), then proceed exactly as in the
-   functional-correctness case using the inner-body theorem. *)
+   `exists f_events.` at the head; ADD_IBT_OPEN_EXISTS takes care of that. *)
 let ADD_IBT_TAC_PARAMETRIZED bridge_th th =
-  let core (th_inner:thm) =
+  ADD_IBT_OPEN_EXISTS th (fun th_inner ->
     REPEAT GEN_TAC THEN REWRITE_TAC[bridge_th] THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS;
                 C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
                 WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
-      (* (1) MAYCHANGE R is idempotent: R ,, R = R. *)
-      MAYCHANGE_IDEMPOT_TAC;
-      (* (2) MAYCHANGE [RIP] is subsumed by R (R writes RIP). *)
-      SUBSUMED_MAYCHANGE_TAC;
-      (* (3) writing RIP doesn't affect the precondition components. *)
-      REPEAT GEN_TAC THEN
-      REWRITE_TAC[C_ARGUMENTS; C_RETURN;
-                  WINDOWS_C_ARGUMENTS; bytes_loaded] THEN
-      (W (fun _ ->
-          try REWRITE_TAC[find
-                (fun th ->
-                   try is_const (lhand (concl th)) &&
-                       name_of (lhand (concl th)) = "bignum_from_memory"
-                   with Failure _ -> false)
-                (definitions())]
-          with Failure _ -> ALL_TAC)) THEN
-      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
-      (* (4) discharge `ensures ... at pc+4` via th_inner with pc -> pc+4. *)
-      W (fun (asl,w) ->
+    IBT_WRAP_TAC
+      (W (fun (asl,w) ->
         let avs,_ = strip_forall (concl th_inner) in
         let new_avs = map (fun v ->
           if is_var v && name_of v = "pc" then mk_binary "+" (v,`4`)
@@ -5953,38 +5957,17 @@ let ADD_IBT_TAC_PARAMETRIZED bridge_th th =
                               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                               SOME_FLAGS]
                 (SPECL new_avs th_inner))) THEN
-      CONV_TAC(ONCE_DEPTH_CONV
-        (REWR_CONV(ARITH_RULE `(pc + 4) + n:num = pc + (n + 4)`) THENC
-         RAND_CONV NUM_ADD_CONV)) THEN
-      REWRITE_TAC[
-        WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
-      DISCH_THEN MATCH_MP_TAC THEN
-      POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
-      REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-      REPEAT CONJ_TAC THEN
-      TRY (FIRST_X_ASSUM ACCEPT_TAC) THEN
-      NONOVERLAPPING_TAC
-    ] in
-  if is_exists (concl th) then
-    (* Safety case: strip th's `exists f_events.` and instantiate the goal's
-       leading `exists` with a witness derived from th's f_events. *)
-    MP_TAC th THEN STRIP_TAC THEN
-    FIRST_X_ASSUM (fun th_inner ->
-      W (fun (asl,w) ->
-        if not (is_exists w) then ALL_TAC else
-        let f_events_term = find_term (fun t ->
-          is_comb t && name_of(fst(strip_comb t)) = "f_events")
-          (concl th_inner) in
-        let f_events,args = strip_comb f_events_term in
-        let new_argdecls,new_args = unzip (map (fun t ->
-          if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
-          else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
-        let new_f_events = list_mk_abs
-          (new_argdecls,list_mk_comb(f_events,new_args)) in
-        EXISTS_TAC new_f_events) THEN
-      core th_inner)
-  else
-    core th;;
+       CONV_TAC(ONCE_DEPTH_CONV
+         (REWR_CONV(ARITH_RULE `(pc + 4) + n:num = pc + (n + 4)`) THENC
+          RAND_CONV NUM_ADD_CONV)) THEN
+       REWRITE_TAC[
+         WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
+       DISCH_THEN MATCH_MP_TAC THEN
+       POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+       REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+       REPEAT CONJ_TAC THEN
+       TRY (FIRST_X_ASSUM ACCEPT_TAC) THEN
+       NONOVERLAPPING_TAC));;
 
 (* For unparametrized (constant) mcs, ADD_IBT_RULE infers everything from
    the definitions. For parametrized mcs (e.g. `mc pc tables` produced by
@@ -6000,7 +5983,19 @@ let ADD_IBT_RULE ?(bridge:thm option = None) th =
   let bldat =
    rand(lhand(body(lhand(rator
     (repeat (snd o dest_imp) (snd(strip_forall(the_concl)))))))) in
-  let parametrized = not (is_const bldat) in
+  (* The mc inside bytes_loaded can take three forms:
+       (a) a bare constant `tmc` (legacy non-rodata, no inline data),
+       (b) `APPEND tmc data` (legacy non-rodata with inline data section),
+       (c) `tmc pc tables` from define_assert_relocs_from_elf (rodata-aware).
+     Only (c) is "parametrized" w.r.t. ADD_IBT_RULE — for (a) and (b) the
+     trimmed mc constant can be looked up directly in the_definitions. *)
+  let parametrized =
+    if is_const bldat then false
+    else if is_comb bldat &&
+            is_const (fst (strip_comb bldat)) &&
+            name_of (fst (strip_comb bldat)) = "APPEND" then
+      false  (* legacy `APPEND tmc data` form *)
+    else true in
   match bridge, parametrized with
   | None, true ->
     (* Parametrized mc with no bridge: we cannot derive the bridge from the
@@ -6012,9 +6007,9 @@ let ADD_IBT_RULE ?(bridge:thm option = None) th =
               "; please supply ~bridge:thm of shape " ^
               "`forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`")
   | None, false ->
-    (* Original behavior: tmc was defined as `tmc = TRIM_LIST(4,0) mc`, so we
-       recover mc syntactically from trimcd's rhs and build expth ourselves. *)
-    let trimctm = bldat in
+    (* Legacy non-rodata path: tmc was defined as `tmc = TRIM_LIST(4,0) mc`,
+       and bldat is either `tmc` (case a) or `APPEND tmc data` (case b). *)
+    let trimctm = if is_const bldat then bldat else lhand bldat in
     let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
     let fullmctm = rand(rand(concl trimcd)) in
     let fullmc = find ((=) fullmctm o lhand o concl) (definitions()) in

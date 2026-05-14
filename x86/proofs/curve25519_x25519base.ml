@@ -27,12 +27,12 @@ prioritize_num();;
 (**** print_literal_relocs_from_elf "x86/curve25519/curve25519_x25519base.o";;
  ****)
 
-(* The .text body of curve25519_x25519base is identical between the Sys-V .o
+(* The .text body of curve25519_x25519base is identical between the Linux ABI .o
    and the Windows .obj (the latter merely prepends a small dispatcher that
-   shuffles arguments and invokes the Sys-V entry).  We share the body bytes
+   shuffles arguments and invokes the Linux ABI entry).  We share the body bytes
    between the two mc declarations to avoid a ~3500-line duplicate.  The
    `prefix` argument is the byte sequence preceding the function body
-   (ENDBR64 alone for Sys-V; ENDBR64 + ABI dispatcher for Windows). *)
+   (ENDBR64 alone for Linux ABI; ENDBR64 + ABI dispatcher for Windows). *)
 
 let curve25519_x25519base_body : 'a. int list -> (int list -> 'a) ->
                                      (string * int -> 'a) -> 'a list =
@@ -5184,10 +5184,10 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
 
 (* The Windows .obj's .text contains a relocation against .rodata, so it is
    loaded with define_assert_relocs_from_elf rather than define_coda_from_elf.
-   The .rodata content is identical to the Sys-V build, so the WHOLE_READONLY_data
+   The .rodata content is identical to the Linux ABI build, so the WHOLE_READONLY_data
    constant is reused. *)
 
-(* The Windows entry prepends a ~16-byte ABI dispatcher to the Sys-V body. *)
+(* The Windows entry prepends a ~16-byte ABI dispatcher to the Linux ABI body. *)
 let curve25519_x25519base_windows_mc,_ =
   define_assert_relocs_from_elf
     "curve25519_x25519base_windows_mc"
@@ -5225,9 +5225,9 @@ let CURVE25519_X25519BASE_WINDOWS_MC_BRIDGE = prove
 
 (* The Windows trimmed mc has length 0x2e84: a 16-byte ABI-translation wrapper
    (PUSH RDI/RSI; MOV RDI<-RCX; MOV RSI<-RDX; CALL +3; POP RSI/RDI; RET) at
-   offsets 0..15, then the Sys-V trimmed body of length 0x2e74 starting at
+   offsets 0..15, then the Linux ABI trimmed body of length 0x2e74 starting at
    pc+0x10. The LEA targeting `tables` is at the same instruction as in the
-   Sys-V body, so the riprel32_within_bounds bound is `tables (pc + 100)`
+   Linux ABI body, so the riprel32_within_bounds bound is `tables (pc + 100)`
    for the trimmed mc (since `(pc + 0x10) + 84 = pc + 100`) and `tables (pc + 104)`
    for the IBT mc. *)
 
@@ -5257,9 +5257,9 @@ let CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 560),560)])`,
   let WINDOWS_CURVE25519_X25519BASE_EXEC =
     X86_MK_EXEC_RULE curve25519_x25519base_windows_tmc
-  (* Re-derive the Sys-V subroutine theorem from the explicit-MAYCHANGE form
+  (* Re-derive the Linux ABI subroutine theorem from the explicit-MAYCHANGE form
      of CURVE25519_X25519BASE_CORRECT (no ZMM, no ABI macro). This makes the
-     Sys-V subth's MAYCHANGE small enough that ENSURES_FINAL_STATE_TAC's
+     Linux ABI subth's MAYCHANGE small enough that ENSURES_FINAL_STATE_TAC's
      MONOTONE_MAYCHANGE step subsumes the goal's WINDOWS ABI MAYCHANGE
      directly. *)
   and subth =
@@ -5385,7 +5385,7 @@ let CURVE25519_X25519BASE_BYTE_WINDOWS_SUBROUTINE_CORRECT = prove
 needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/subroutine_signatures.ml";;
 
-(* The Sys-V mc trims its 17-byte IBT prologue, so the inner BIGNUM_INV_P25519
+(* The Linux ABI mc trims its 17-byte IBT prologue, so the inner BIGNUM_INV_P25519
    call lands at pc + 0x18b1 (vs. pc + 0x18b4 in pre-rodata where the IBT-mc
    path was used). The H_INV_SAFE callee safety hypothesis (post
    ASSUME_CALLEE_SAFETY_TAILED_TAC) is universally quantified over
@@ -5711,7 +5711,7 @@ let CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
               memory :> bytes (word_sub stackpointer (word 560),560)])`,
   let WINDOWS_CURVE25519_X25519BASE_EXEC =
     X86_MK_EXEC_RULE curve25519_x25519base_windows_tmc
-  (* Re-derive the Sys-V SUBROUTINE_SAFE theorem with explicit MAYCHANGE
+  (* Re-derive the Linux ABI SUBROUTINE_SAFE theorem with explicit MAYCHANGE
      small enough that ENSURES_FINAL_STATE_TAC's MONOTONE_MAYCHANGE step
      subsumes the Windows ABI MAYCHANGE directly. *)
   and subth =
