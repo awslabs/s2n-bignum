@@ -5080,7 +5080,10 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
         failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
       end in
     MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
-    REWRITE_TAC[COMPUTE_LENGTH_RULE submachinecode] THEN
+    REWRITE_TAC[COMPUTE_LENGTH_RULE
+                  (if is_forall(concl submachinecode)
+                   then SPEC_ALL submachinecode
+                   else submachinecode)] THEN
     ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
                     MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                     WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -5103,8 +5106,14 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
 
     TRY(ANTS_TAC THENL
      [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+      (* Normalize `(pc + n) + m` to `pc + (n+m)` (both num and int forms)
+         so that `riprel32_within_bounds`/`(word(pc+n), len)` etc. line up
+         with the outer assumptions when the inner subroutine starts at
+         a non-zero offset within the outer mc. *)
+      CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_ADD_ADD_CONV) THEN
       REPEAT CONJ_TAC THEN
       TRY(CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN NO_TAC) THEN
+      TRY(FIRST_X_ASSUM ACCEPT_TAC) THEN
       (NONOVERLAPPING_TAC ORELSE
        DISJ1_TAC THEN NONOVERLAPPING_TAC ORELSE
        DISJ2_TAC THEN NONOVERLAPPING_TAC);
@@ -5901,47 +5910,81 @@ let ADD_IBT_TAC =
    rewriting with the user-supplied bridge thm
      `forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`,
    then discharge the resulting `ensures ... at pc+4` using the input NOIBT
-   theorem instantiated with `pc -> pc+4`. *)
+   theorem instantiated with `pc -> pc+4`.
+
+   For safety theorems (`exists f_events. forall ...`), the goal also has
+   `exists f_events.` at the head. We strip th's exists into a hypothesis,
+   instantiate the goal's exists with a witness derived from th's f_events
+   (replacing pc by pc+4), then proceed exactly as in the
+   functional-correctness case using the inner-body theorem. *)
 let ADD_IBT_TAC_PARAMETRIZED bridge_th th =
-  REPEAT GEN_TAC THEN REWRITE_TAC[bridge_th] THEN
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS;
-              C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
-              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
-    (* (1) MAYCHANGE R is idempotent: R ,, R = R. *)
-    MAYCHANGE_IDEMPOT_TAC;
-    (* (2) MAYCHANGE [RIP] is subsumed by R (R writes RIP). *)
-    SUBSUMED_MAYCHANGE_TAC;
-    (* (3) writing RIP doesn't affect the precondition components (RSP, args,
-       memory reads at fixed addresses, etc.). *)
-    REPEAT GEN_TAC THEN
-    REWRITE_TAC[C_ARGUMENTS; C_RETURN;
-                WINDOWS_C_ARGUMENTS; bignum_from_memory; bytes_loaded] THEN
-    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
-    (* (4) `ensures ... at pc+4` for the trimmed mc — discharged by the input
-       NOIBT theorem with pc -> pc+4 (offsets/lengths shift by 4 accordingly,
-       and the `(word pc, fulllen)` nonoverlapping bound subsumes the
-       `(word (pc+4), trimlen)` one). *)
-    W (fun (asl,w) ->
-      let avs,_ = strip_forall (concl th) in
-      let new_avs = map (fun v ->
-        if is_var v && name_of v = "pc" then mk_binary "+" (v,`4`)
-        else v) avs in
-      MP_TAC (REWRITE_RULE[C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
-                            MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-                            WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-                            SOME_FLAGS]
-              (SPECL new_avs th))) THEN
-    REWRITE_TAC[ARITH_RULE `(pc + 4) + 84 = pc + 88`;
-                WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
-    DISCH_THEN MATCH_MP_TAC THEN
-    POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
-    REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-    REPEAT CONJ_TAC THEN
-    TRY (FIRST_X_ASSUM ACCEPT_TAC) THEN
-    NONOVERLAPPING_TAC
-  ];;
+  let core (th_inner:thm) =
+    REPEAT GEN_TAC THEN REWRITE_TAC[bridge_th] THEN
+    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS;
+                C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
+                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    REPEAT STRIP_TAC THEN
+    MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+      (* (1) MAYCHANGE R is idempotent: R ,, R = R. *)
+      MAYCHANGE_IDEMPOT_TAC;
+      (* (2) MAYCHANGE [RIP] is subsumed by R (R writes RIP). *)
+      SUBSUMED_MAYCHANGE_TAC;
+      (* (3) writing RIP doesn't affect the precondition components. *)
+      REPEAT GEN_TAC THEN
+      REWRITE_TAC[C_ARGUMENTS; C_RETURN;
+                  WINDOWS_C_ARGUMENTS; bytes_loaded] THEN
+      (W (fun _ ->
+          try REWRITE_TAC[find
+                (fun th ->
+                   try is_const (lhand (concl th)) &&
+                       name_of (lhand (concl th)) = "bignum_from_memory"
+                   with Failure _ -> false)
+                (definitions())]
+          with Failure _ -> ALL_TAC)) THEN
+      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+      (* (4) discharge `ensures ... at pc+4` via th_inner with pc -> pc+4. *)
+      W (fun (asl,w) ->
+        let avs,_ = strip_forall (concl th_inner) in
+        let new_avs = map (fun v ->
+          if is_var v && name_of v = "pc" then mk_binary "+" (v,`4`)
+          else v) avs in
+        MP_TAC (REWRITE_RULE[C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
+                              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                              SOME_FLAGS]
+                (SPECL new_avs th_inner))) THEN
+      CONV_TAC(ONCE_DEPTH_CONV
+        (REWR_CONV(ARITH_RULE `(pc + 4) + n:num = pc + (n + 4)`) THENC
+         RAND_CONV NUM_ADD_CONV)) THEN
+      REWRITE_TAC[
+        WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
+      DISCH_THEN MATCH_MP_TAC THEN
+      POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+      REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+      REPEAT CONJ_TAC THEN
+      TRY (FIRST_X_ASSUM ACCEPT_TAC) THEN
+      NONOVERLAPPING_TAC
+    ] in
+  if is_exists (concl th) then
+    (* Safety case: strip th's `exists f_events.` and instantiate the goal's
+       leading `exists` with a witness derived from th's f_events. *)
+    MP_TAC th THEN STRIP_TAC THEN
+    FIRST_X_ASSUM (fun th_inner ->
+      W (fun (asl,w) ->
+        if not (is_exists w) then ALL_TAC else
+        let f_events_term = find_term (fun t ->
+          is_comb t && name_of(fst(strip_comb t)) = "f_events")
+          (concl th_inner) in
+        let f_events,args = strip_comb f_events_term in
+        let new_argdecls,new_args = unzip (map (fun t ->
+          if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
+          else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
+        let new_f_events = list_mk_abs
+          (new_argdecls,list_mk_comb(f_events,new_args)) in
+        EXISTS_TAC new_f_events) THEN
+      core th_inner)
+  else
+    core th;;
 
 (* For unparametrized (constant) mcs, ADD_IBT_RULE infers everything from
    the definitions. For parametrized mcs (e.g. `mc pc tables` produced by

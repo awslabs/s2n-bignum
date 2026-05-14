@@ -27,12 +27,16 @@ prioritize_num();;
 (**** print_literal_relocs_from_elf "x86/curve25519/curve25519_x25519base.o";;
  ****)
 
-let curve25519_x25519base_mc,
-    (curve25519_x25519base_constant_data::_) =
-    define_assert_relocs_from_elf "curve25519_x25519base_mc"
-    "x86/curve25519/curve25519_x25519base.o"
-(fun b ADDR -> [b[
-  0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
+(* The .text body of curve25519_x25519base is identical between the Sys-V .o
+   and the Windows .obj (the latter merely prepends a small dispatcher that
+   shuffles arguments and invokes the Sys-V entry).  We share the body bytes
+   between the two mc declarations to avoid a ~3500-line duplicate.  The
+   `prefix` argument is the byte sequence preceding the function body
+   (ENDBR64 alone for Sys-V; ENDBR64 + ABI dispatcher for Windows). *)
+
+let curve25519_x25519base_body : 'a. int list -> (int list -> 'a) ->
+                                     (string * int -> 'a) -> 'a list =
+  fun prefix b ADDR -> [b(prefix @ [
   0x53;                    (* PUSH (% rbx) *)
   0x55;                    (* PUSH (% rbp) *)
   0x41; 0x54;              (* PUSH (% r12) *)
@@ -58,7 +62,7 @@ let curve25519_x25519base_mc,
                            (* MOV (Memop Quadword (%% (rsp,24))) (% rax) *)
   0x48; 0x8b; 0x04; 0x24;  (* MOV (% rax) (Memop Quadword (%% (rsp,0))) *)
   0x48; 0x83; 0xe0; 0x08;  (* AND (% rax) (Imm8 (word 8)) *)
-  0x4c; 0x8d; 0x15]; ADDR ("WHOLE_READONLY_data",(-4)); b[
+  0x4c; 0x8d; 0x15]); ADDR ("WHOLE_READONLY_data",(-4)); b[
                            (* LEA (% r10) (Riprel (word_sx (iword (&WHOLE_READONLY_data - (&pc + &88))))) *)
   0x4d; 0x8d; 0x5a; 0x60;  (* LEA (% r11) (%% (r10,96)) *)
   0x49; 0x8b; 0x02;        (* MOV (% rax) (Memop Quadword (%% (r10,0))) *)
@@ -3537,7 +3541,15 @@ let curve25519_x25519base_mc,
   0x5d;                    (* POP (% rbp) *)
   0x5b;                    (* POP (% rbx) *)
   0xc3                     (* RET *)
-]]);;
+]];;
+
+let curve25519_x25519base_mc,
+    (curve25519_x25519base_constant_data::_) =
+    define_assert_relocs_from_elf "curve25519_x25519base_mc"
+    "x86/curve25519/curve25519_x25519base.o"
+    (fun b ADDR -> curve25519_x25519base_body
+       [0xf3; 0x0f; 0x1e; 0xfa]  (* ENDBR64 *)
+       b ADDR);;
 
 let curve25519_x25519base_tmc =
   define_trimmed "curve25519_x25519base_tmc" curve25519_x25519base_mc;;
@@ -5170,26 +5182,69 @@ let CURVE25519_X25519BASE_BYTE_SUBROUTINE_CORRECT = prove
 (* Correctness of Windows ABI version.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-let curve25519_x25519base_windows_mc,
-    curve25519_x25519base_windows_data =
-  define_coda_from_elf 0x2e8b
-  "curve25519_x25519base_windows_mc"
-  "curve25519_x25519base_windows_data"
-  "x86/curve25519/curve25519_x25519base.obj";;
+(* The Windows .obj's .text contains a relocation against .rodata, so it is
+   loaded with define_assert_relocs_from_elf rather than define_coda_from_elf.
+   The .rodata content is identical to the Sys-V build, so the WHOLE_READONLY_data
+   constant is reused. *)
 
-let curve25519_x25519base_windows_tmc = define_trimmed "curve25519_x25519base_windows_tmc" curve25519_x25519base_windows_mc;;
+(* The Windows entry prepends a ~16-byte ABI dispatcher to the Sys-V body. *)
+let curve25519_x25519base_windows_mc,_ =
+  define_assert_relocs_from_elf
+    "curve25519_x25519base_windows_mc"
+    "x86/curve25519/curve25519_x25519base.obj"
+    (fun b ADDR -> curve25519_x25519base_body
+       [0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
+        0x57;                    (* PUSH (% rdi) *)
+        0x56;                    (* PUSH (% rsi) *)
+        0x48; 0x89; 0xcf;        (* MOV (% rdi) (% rcx) *)
+        0x48; 0x89; 0xd6;        (* MOV (% rsi) (% rdx) *)
+        0xe8; 0x03; 0x00; 0x00; 0x00;
+                                 (* CALL (Imm32 (word 3)) *)
+        0x5e;                    (* POP (% rsi) *)
+        0x5f;                    (* POP (% rdi) *)
+        0xc3]                    (* RET *)
+       b ADDR);;
+
+let curve25519_x25519base_windows_tmc =
+  define_trimmed "curve25519_x25519base_windows_tmc"
+                 curve25519_x25519base_windows_mc;;
+
+(* Bridge equation analogous to CURVE25519_X25519BASE_MC_BRIDGE for the
+   Windows mc/tmc pair. Used to apply ADD_IBT_RULE on rodata-aware
+   parametrized mcs. *)
+let CURVE25519_X25519BASE_WINDOWS_MC_BRIDGE = prove
+ (`!pc tables. curve25519_x25519base_windows_mc pc tables =
+     APPEND [word 0xf3:byte; word 0x0f; word 0x1e; word 0xfa]
+            (curve25519_x25519base_windows_tmc (pc + 4) tables)`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[curve25519_x25519base_windows_mc;
+              curve25519_x25519base_windows_tmc; APPEND] THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
+  AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REWRITE_TAC[INT_ARITH `&pc + &104 = (&pc + &4) + &100:int`]);;
+
+(* The Windows trimmed mc has length 0x2e84: a 16-byte ABI-translation wrapper
+   (PUSH RDI/RSI; MOV RDI<-RCX; MOV RSI<-RDX; CALL +3; POP RSI/RDI; RET) at
+   offsets 0..15, then the Sys-V trimmed body of length 0x2e74 starting at
+   pc+0x10. The LEA targeting `tables` is at the same instruction as in the
+   Sys-V body, so the riprel32_within_bounds bound is `tables (pc + 100)`
+   for the trimmed mc (since `(pc + 0x10) + 84 = pc + 100`) and `tables (pc + 104)`
+   for the IBT mc. *)
 
 let CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 100) /\
     ALL (nonoverlapping (word_sub stackpointer (word 560),560))
-        [(word pc,0xec47); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0xec47) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+        [(word pc,0x2e84); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e84); (word tables,48576);
+         (word_sub stackpointer (word 560),568)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_windows_tmc
-                       curve25519_x25519base_windows_data) /\
+                (curve25519_x25519base_windows_tmc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [res; scalar] s /\
@@ -5202,60 +5257,57 @@ let CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 560),560)])`,
   let WINDOWS_CURVE25519_X25519BASE_EXEC =
     X86_MK_EXEC_RULE curve25519_x25519base_windows_tmc
-  and baseth =
-    X86_SIMD_SHARPEN_RULE CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT
-    (REWRITE_TAC[BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                 fst CURVE25519_X25519BASE_EXEC] THEN
-     X86_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_EXEC
-      (REWRITE_RULE[BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                    fst CURVE25519_X25519BASE_EXEC]
-       CURVE25519_X25519BASE_CORRECT)
-    `[RBX; RBP; R12; R13; R14; R15]` 536) in
-  let subth =
-   REWRITE_RULE[BYTES_LOADED_APPEND_CLAUSE; BYTES_LOADED_DATA;
-                fst CURVE25519_X25519BASE_EXEC] baseth in
-  REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 560 THEN
+  (* Re-derive the Sys-V subroutine theorem from the explicit-MAYCHANGE form
+     of CURVE25519_X25519BASE_CORRECT (no ZMM, no ABI macro). This makes the
+     Sys-V subth's MAYCHANGE small enough that ENSURES_FINAL_STATE_TAC's
+     MONOTONE_MAYCHANGE step subsumes the goal's WINDOWS ABI MAYCHANGE
+     directly. *)
+  and subth =
+    REWRITE_RULE[BYTES_LOADED_DATA; BIGNUM_FROM_MEMORY_BYTES; ARITH]
+    (X86_SIMD_SHARPEN_RULE CURVE25519_X25519BASE_NOIBT_SUBROUTINE_CORRECT
+     (REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC] THEN
+      X86_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_EXEC
+       (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC]
+        CURVE25519_X25519BASE_CORRECT)
+       `[RBX; RBP; R12; R13; R14; R15]` 536)) in
+  REWRITE_TAC[BYTES_LOADED_DATA] THEN
+  REPLICATE_TAC 5 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 560 THEN
   REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
-  REWRITE_TAC[BYTES_LOADED_APPEND_CLAUSE] THEN
-  REWRITE_TAC[fst WINDOWS_CURVE25519_X25519BASE_EXEC] THEN
-  GEN_REWRITE_TAC
-   (RATOR_CONV o LAND_CONV o ABS_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-   [bytes_loaded] THEN
-  REWRITE_TAC[READ_BYTELIST_EQ_BYTES; CONV_RULE (RAND_CONV LENGTH_CONV)
-     (AP_TERM `LENGTH:byte list->num`
-      curve25519_x25519base_windows_data)] THEN
-  REWRITE_TAC[curve25519_x25519base_windows_data] THEN
-  REWRITE_TAC[GSYM curve25519_x25519base_constant_data] THEN
   ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
   ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
   REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
   X86_STEPS_TAC WINDOWS_CURVE25519_X25519BASE_EXEC (1--5) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE
-   [ARITH_RULE `pc + 0x2e87 = (pc + 16) + 0x2e77`]) THEN
   X86_SUBROUTINE_SIM_TAC
     (curve25519_x25519base_windows_tmc,
      WINDOWS_CURVE25519_X25519BASE_EXEC,
      0x10,curve25519_x25519base_tmc,subth)
-        [`read RDI s`; `read RSI s`;
+        [`tables:num`; `read RDI s`; `read RSI s`;
          `read (memory :> bytes (read RSI s,8 * 4)) s`;
          `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]
-        6 THEN
+        6 THENL [
+    UNDISCH_TAC `read (memory :> bytes (scalar:int64,8 * 4)) s5 = n` THEN
+    REWRITE_TAC[ARITH_RULE `8 * 4 = 32`];
+    ALL_TAC] THEN
   X86_STEPS_TAC WINDOWS_CURVE25519_X25519BASE_EXEC (7--9) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[ARITH_RULE `8 * 4 = 32`]);;
 
 let CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_CORRECT = time prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 104) /\
     ALL (nonoverlapping (word_sub stackpointer (word 560),560))
-        [(word pc,0xec4b); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0xec4b) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+        [(word pc,0x2e88); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e88); (word tables,48576);
+         (word_sub stackpointer (word 560),568)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_windows_mc
-                       curve25519_x25519base_windows_data) /\
+                (curve25519_x25519base_windows_mc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [res; scalar] s /\
@@ -5266,19 +5318,24 @@ let CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_CORRECT = time prove
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 560),560)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+                     ~bridge:(Some CURVE25519_X25519BASE_WINDOWS_MC_BRIDGE)
+                     CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
 let CURVE25519_X25519BASE_BYTE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 100) /\
     ALL (nonoverlapping (word_sub stackpointer (word 560),560))
-        [(word pc,0xec47); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0xec47) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+        [(word pc,0x2e84); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e84); (word tables,48576);
+         (word_sub stackpointer (word 560),568)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_windows_tmc
-                       curve25519_x25519base_windows_data) /\
+                (curve25519_x25519base_windows_tmc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [res; scalar] s /\
@@ -5294,16 +5351,19 @@ let CURVE25519_X25519BASE_BYTE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   MATCH_ACCEPT_TAC CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_CORRECT);;
 
 let CURVE25519_X25519BASE_BYTE_WINDOWS_SUBROUTINE_CORRECT = prove
- (`!res scalar n pc stackpointer returnaddress.
+ (`!tables res scalar n pc stackpointer returnaddress.
+    riprel32_within_bounds tables (pc + 104) /\
     ALL (nonoverlapping (word_sub stackpointer (word 560),560))
-        [(word pc,0xec4b); (scalar,32)] /\
-    nonoverlapping (res,32) (word pc,0xec4b) /\
-    nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+        [(word pc,0x2e88); (word tables,48576); (scalar,32)] /\
+    ALL (nonoverlapping (res,32))
+        [(word pc,0x2e88); (word tables,48576);
+         (word_sub stackpointer (word 560),568)]
     ==> ensures x86
          (\s. bytes_loaded s (word pc)
-               (APPEND curve25519_x25519base_windows_mc
-                       curve25519_x25519base_windows_data) /\
+                (curve25519_x25519base_windows_mc pc tables) /\
               read RIP s = word pc /\
+              bytes_loaded s (word tables)
+                curve25519_x25519base_constant_data /\
               read RSP s = stackpointer /\
               read (memory :> bytes64 stackpointer) s = returnaddress /\
               WINDOWS_C_ARGUMENTS [res; scalar] s /\
@@ -5314,4 +5374,426 @@ let CURVE25519_X25519BASE_BYTE_WINDOWS_SUBROUTINE_CORRECT = prove
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,32);
                      memory :> bytes(word_sub stackpointer (word 560),560)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE CURVE25519_X25519BASE_BYTE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+                     ~bridge:(Some CURVE25519_X25519BASE_WINDOWS_MC_BRIDGE)
+                     CURVE25519_X25519BASE_BYTE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+(* The Sys-V mc trims its 17-byte IBT prologue, so the inner BIGNUM_INV_P25519
+   call lands at pc + 0x18b1 (vs. pc + 0x18b4 in pre-rodata where the IBT-mc
+   path was used). The H_INV_SAFE callee safety hypothesis (post
+   ASSUME_CALLEE_SAFETY_TAILED_TAC) is universally quantified over
+   `e z x pc stackpointer e_tail` in that order, so the ilist matches. *)
+let LOCAL_MODINV_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+       (curve25519_x25519base_tmc',
+        CURVE25519_X25519BASE_EXEC,
+        0x18b1,
+        (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_tmc] THENC TRIM_LIST_CONV)
+        `TRIM_LIST (17,18) bignum_inv_p25519_tmc`,
+        safety_th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+        `pc + 0x18b1`; `stackpointer:int64`] n
+    THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
+         `stackpointer:int64`;`tables:num`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]
+  );;
+
+let full_spec,public_vars = mk_safety_spec
+    ~readonly_objects:[`word tables:int64`,`48576`]
+    ~keep_maychanges:true
+    (assoc "curve25519_x25519base" subroutine_signatures)
+    CURVE25519_X25519BASE_CORRECT
+    CURVE25519_X25519BASE_EXEC;;
+
+let CURVE25519_X25519BASE_SAFE = time prove
+ (`exists f_events.
+       forall e tables res scalar pc stackpointer.
+           riprel32_within_bounds tables (pc + 84) /\
+           ALL (nonoverlapping (stackpointer,488))
+           [word pc,0x2e74; word tables,48576; res,32; scalar,32] /\
+           nonoverlapping (res,32) (word pc,0x2e74)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc)
+                      (curve25519_x25519base_tmc pc tables) /\
+                    read RIP s = word (pc + 17) /\
+                    bytes_loaded s (word tables)
+                      curve25519_x25519base_constant_data /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [res; scalar] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 11874) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar res tables pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; res,32; stackpointer,488;
+                          word tables,48576]
+                         [res,32; stackpointer,488]))
+               (MAYCHANGE
+                [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11;
+                 R12; R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (res,32); memory :> bytes (stackpointer,488)])`,
+  (* Prepare the safety theorem of subroutine to be used; this keeps
+     introduction of metavariables in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE
+      "H_INV_SAFE" THEN
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(scalar:int64) (res:int64) (tables:num) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_epil scalar res tables pc stackpointer)
+        (APPEND
+          (ENUMERATEL 63 (\i.
+            f_ev_loop scalar res tables pc stackpointer i))
+          (f_ev_prol scalar res tables pc stackpointer))
+    :(uarch_event)list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
+
+  REWRITE_TAC[BYTES_LOADED_DATA] THEN
+
+  (*** Setup of the main loop ***)
+
+  (* Loop entry pc + 0x197 (=407), loop exit pc + 0x17a1 (=6049) per the
+     CORRECT proof. UP2 takes the loop-end address + 2 insns, since it
+     unrolls the 0..63 body once before terminating. The pre-rodata mc had
+     the same loop-body layout but at +3 byte offset because of the
+     embedded 4-byte LEA displacement vs the rodata-resolved version. *)
+  ENSURES_EVENTS_WHILE_UP2_TAC `63` `pc + 0x197` `pc + 0x17b3`(*+2 insns *)
+   `\i s.
+      read (memory :> bytes(word tables,48576)) s =
+          num_of_bytelist curve25519_x25519base_constant_data /\
+      read RSP s = stackpointer /\
+      read (memory :> bytes64 (word_add stackpointer (word 448))) s = res /\
+      read (memory :> bytes64 (word_add stackpointer (word 480))) s =
+          word(tables + 0xc0 + 768 * i) /\
+      read (memory :> bytes64 (word_add stackpointer (word 456))) s =
+          word (4 * (i+1))` THEN
+  REPEAT CONJ_TAC THENL [
+    ARITH_TAC;
+
+    (*** Initial setup and modification of the inputs ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+
+    X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (1--14) THEN
+
+    (*** Fold the rip-relative LEA results so `read R10 s = word tables`
+         and `read R11 s = word_add (word tables) (word 96)`. ***)
+
+    UNDISCH_TAC `read R10 s14 =
+        word(val (word (pc + 84):(64)word) +
+             val (word_sx (iword (&tables - (&pc + &84)):int32):(64)word):num)` THEN
+    IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+    UNDISCH_TAC `read R11 s14 =
+        word_add
+        (word (val (word (pc + 84):(64)word) +
+               val (word_sx (iword (&tables - (&pc + &84)):int32):(64)word):num))
+        (word 96)` THEN
+    IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN
+    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+
+    X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (15--72) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+    CONJ_TAC THENL [WORD_ARITH_TAC; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The main loop invariant for adding the next table entry ***)
+
+    REPEAT STRIP_TAC THEN
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (1--239) THEN
+    X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (240--
+      (239+(19(*DOUBLE_TWICE4*) + 19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) +
+            82(*MUL_4*) + 82(*MUL_4*) + 82(*MUL_4*) + 19(*SUB_TWICE4*) +
+            19(*ADD_TWICE4*) + 19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) +
+            82(*MUL_4*) + 82(*MUL_4*) + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
+    X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (947--947) THEN
+    X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (948--989) THEN
+    X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (990--991) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [
+      REWRITE_TAC[VAL_WORD_ADD] THEN
+      MAP_EVERY VAL_INT64_TAC [`4*(i+1)`;`4`] THEN
+      ASM_REWRITE_TAC[DIMINDEX_64] THEN
+      ONCE_REWRITE_TAC[GSYM COND_RAND] THEN
+      IMP_REWRITE_TAC[MOD_LT] THEN
+      SIMPLE_ARITH_TAC;
+
+      ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE;ALL_TAC] THEN
+    CONJ_TAC THENL [CONV_TAC WORD_RULE;ALL_TAC] THEN
+
+    (* Found this pattern from safety_print_log := true *)
+    SUBGOAL_THEN
+      `word (8 * val (word_ushr (word (4 * (i + 1)):int64) 6))
+      :int64 = word (8 * (4 * (i + 1)) DIV 2 EXP 6)`
+    SUBST_ALL_TAC THENL [
+      AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+      IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      ALL_TAC
+    ] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC] THEN
+
+  (*** Clean up ready for the final translation part ***)
+
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (1--
+      (19(*ADD_TWICE4*) + 19(*SUB_TWICE4*))) THEN
+  X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (39--40) THEN
+  LOCAL_MODINV_SAFETY_TAC "H_INV_SAFE" 41 THEN
+  X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (42--(41+91)) THEN
+
+  X86_STEPS_TAC CURVE25519_X25519BASE_EXEC (133--133) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+
+  SUBST_ALL_TAC (ARITH_RULE`2 EXP 6 = 64`) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let CURVE25519_X25519BASE_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e tables res scalar pc stackpointer returnaddress.
+        riprel32_within_bounds tables (pc + 84) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 536),536))
+        [word pc,0x2e74; word tables,48576; scalar,32] /\
+        nonoverlapping (res,32) (word pc,0x2e74) /\
+        nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                   (curve25519_x25519base_tmc pc tables) /\
+                 read RIP s = word pc /\
+                 bytes_loaded s (word tables)
+                   curve25519_x25519base_constant_data /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar res tables pc
+                      (word_sub stackpointer (word 536))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; res,32;
+                       word_sub stackpointer (word 536),544;
+                       word tables,48576]
+                      [res,32; word_sub stackpointer (word 536),536]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,32);
+              memory :> bytes (word_sub stackpointer (word 536),536)])`,
+  REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC] THEN
+  X86_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_EXEC
+   (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC]
+    CURVE25519_X25519BASE_SAFE)
+    `[RBX; RBP; R12; R13; R14; R15]` 536
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let CURVE25519_X25519BASE_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e tables res scalar pc stackpointer returnaddress.
+        riprel32_within_bounds tables (pc + 88) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 536),536))
+        [word pc,0x2e78; word tables,48576; scalar,32] /\
+        nonoverlapping (res,32) (word pc,0x2e78) /\
+        nonoverlapping (res,32) (word_sub stackpointer (word 536),544)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                   (curve25519_x25519base_mc pc tables) /\
+                 read RIP s = word pc /\
+                 bytes_loaded s (word tables)
+                   curve25519_x25519base_constant_data /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar res tables pc
+                          (word_sub stackpointer (word 536))
+                          returnaddress /\
+                      memaccess_inbounds e2
+                          [scalar,32; res,32;
+                           word_sub stackpointer (word 536),544;
+                           word tables,48576]
+                          [res,32; word_sub stackpointer (word 536),536]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,32);
+              memory :> bytes (word_sub stackpointer (word 536),536)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+                     ~bridge:(Some CURVE25519_X25519BASE_MC_BRIDGE)
+                     CURVE25519_X25519BASE_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e tables res scalar pc stackpointer returnaddress.
+        riprel32_within_bounds tables (pc + 100) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [word pc,0x2e84; word tables,48576; scalar,32] /\
+        nonoverlapping (res,32) (word pc,0x2e84) /\
+        nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                   (curve25519_x25519base_windows_tmc pc tables) /\
+                 read RIP s = word pc /\
+                 bytes_loaded s (word tables)
+                   curve25519_x25519base_constant_data /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar res tables pc
+                      (word_sub stackpointer (word 560))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; res,32;
+                       word_sub stackpointer (word 560),568;
+                       word tables,48576]
+                      [res,32; word_sub stackpointer (word 560),560]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,32);
+              memory :> bytes (word_sub stackpointer (word 560),560)])`,
+  let WINDOWS_CURVE25519_X25519BASE_EXEC =
+    X86_MK_EXEC_RULE curve25519_x25519base_windows_tmc
+  (* Re-derive the Sys-V SUBROUTINE_SAFE theorem with explicit MAYCHANGE
+     small enough that ENSURES_FINAL_STATE_TAC's MONOTONE_MAYCHANGE step
+     subsumes the Windows ABI MAYCHANGE directly. *)
+  and subth =
+    REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC]
+    (X86_SIMD_SHARPEN_RULE CURVE25519_X25519BASE_NOIBT_SUBROUTINE_SAFE
+     (REWRITE_TAC[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC] THEN
+      X86_ADD_RETURN_STACK_TAC CURVE25519_X25519BASE_EXEC
+       (REWRITE_RULE[BYTES_LOADED_DATA; fst CURVE25519_X25519BASE_EXEC]
+        CURVE25519_X25519BASE_SAFE)
+       `[RBX; RBP; R12; R13; R14; R15]` 536 THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC)) in
+  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
+  META_EXISTS_TAC THEN GEN_TAC THEN
+
+  REWRITE_TAC[BYTES_LOADED_DATA] THEN
+  REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 560 THEN
+  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
+  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+  X86_STEPS_TAC WINDOWS_CURVE25519_X25519BASE_EXEC (1--5) THEN
+  REMOVE_THEN "H_CALLEE" (fun subth ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (curve25519_x25519base_windows_tmc,
+      WINDOWS_CURVE25519_X25519BASE_EXEC,
+      0x10,curve25519_x25519base_tmc,subth)
+          (* H_CALLEE quantifier order (from ASSUME_CALLEE_SAFETY_TAILED_TAC):
+             [e; tables; res; scalar; pc; stackpointer; returnaddress; e_tail].
+             SPECL the leading 7; e_tail is left as a metavariable bound by
+             META_EXISTS_TAC inside X86_SUBROUTINE_SIM_TAC. *)
+          [`e:(uarch_event)list`; `tables:num`;
+           `read RDI s`; `read RSI s`;
+          `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]
+          6) THENL [
+    EXISTS_E2_TAC(ref
+      [`tables:num`;`pc:num`;`stackpointer:int64`]);
+
+    ALL_TAC
+  ] THEN
+  X86_STEPS_TAC WINDOWS_CURVE25519_X25519BASE_EXEC (7--9) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+    forall e tables res scalar pc stackpointer returnaddress.
+        riprel32_within_bounds tables (pc + 104) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 560),560))
+        [word pc,0x2e88; word tables,48576; scalar,32] /\
+        nonoverlapping (res,32) (word pc,0x2e88) /\
+        nonoverlapping (res,32) (word_sub stackpointer (word 560),568)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc)
+                   (curve25519_x25519base_windows_mc pc tables) /\
+                 read RIP s = word pc /\
+                 bytes_loaded s (word tables)
+                   curve25519_x25519base_constant_data /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events scalar res tables pc
+                        (word_sub stackpointer (word 560))
+                        returnaddress /\
+                      memaccess_inbounds e2
+                        [scalar,32; res,32;
+                         word_sub stackpointer (word 560),568;
+                         word tables,48576]
+                        [res,32; word_sub stackpointer (word 560),560]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,32);
+              memory :> bytes (word_sub stackpointer (word 560),560)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
+                     ~bridge:(Some CURVE25519_X25519BASE_WINDOWS_MC_BRIDGE)
+                     CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

@@ -1959,13 +1959,22 @@ let COMPUTE_LENGTH_RULE th =
     (AP_TERM ltm th);;
 
 (* ------------------------------------------------------------------------- *)
-(* Normalize (x + m) + n -> x + [m+n] for numerals m and n                   *)
+(* Normalize (x + m) + n -> x + [m+n] for numerals m and n.                  *)
+(* The int variant `&(x + m) + &n -> &x + &[m+n]` is needed for x86 rodata-  *)
+(* aware mc bytelists (rip-relative displacement encodings) so that          *)
+(* BYTELIST_SUBLIST_CONV can match an outer mc evaluated at `pc` against an  *)
+(* inner mc evaluated at `pc + offset`.                                      *)
 (* ------------------------------------------------------------------------- *)
 
 let NORMALIZE_ADD_ADD_CONV =
-  GEN_REWRITE_CONV I [ARITH_RULE
-   `(pc + NUMERAL m) + NUMERAL n = pc + NUMERAL m + NUMERAL n`] THENC
-  RAND_CONV NUM_ADD_CONV;;
+  let nat_pth = ARITH_RULE
+   `(pc + NUMERAL m) + NUMERAL n = pc + NUMERAL m + NUMERAL n`
+  and int_pth = prove
+   (`&(pc + NUMERAL m) + &(NUMERAL n) = &pc + &(NUMERAL m + NUMERAL n):int`,
+    REWRITE_TAC[GSYM INT_OF_NUM_ADD;
+                INT_ARITH `(a + b:int) + c = a + b + c`]) in
+  (GEN_REWRITE_CONV I [nat_pth] THENC RAND_CONV NUM_ADD_CONV) ORELSEC
+  (GEN_REWRITE_CONV I [int_pth] THENC RAND_CONV (RAND_CONV NUM_ADD_CONV));;
 
 (* ------------------------------------------------------------------------- *)
 (* Prove byte list l2 is an initial sublist of l1, as `?r. l1 = APPEND l2 r` *)
