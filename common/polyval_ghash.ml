@@ -6,7 +6,7 @@
 (* the 2-block Horner-to-batched equality.                                   *)
 (*                                                                           *)
 (* Key definitions:                                                          *)
-(*   polyval_dot a b    = prop3(pmul(a,b)) = a*b*x^{-128} mod Q(x)          *)
+(*   polyval_dot a b    = prop3(pmul(a,b)) = a*b*x^{-128} mod Q(x)           *)
 (*   ghash_polyval_acc h acc xs = Horner iteration (left fold)               *)
 (*                                                                           *)
 (* Key theorems:                                                             *)
@@ -22,7 +22,7 @@
 needs "common/polyval.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* The POLYVAL "dot" operation: dot(a,b) = a * b * x^{-128} mod Q(x).       *)
+(* The POLYVAL "dot" operation: dot(a,b) = a * b * x^{-128} mod Q(x).        *)
 (* Defined computationally as prop3(pmul(a,b)).                              *)
 (* ------------------------------------------------------------------------- *)
 
@@ -49,7 +49,7 @@ let POLYVAL_DOT_CORRECT = prove
 
 (* ------------------------------------------------------------------------- *)
 (* GHASH Horner iteration (left fold over block list).                       *)
-(* ghash_polyval_acc h acc [X1;X2;...;Xn] processes X1 first, Xn last.      *)
+(* ghash_polyval_acc h acc [X1;X2;...;Xn] processes X1 first, Xn last.       *)
 (* This matches the NIST GHASH specification order.                          *)
 (* ------------------------------------------------------------------------- *)
 
@@ -78,23 +78,6 @@ let GHASH_ACC_STEP_CONG = prove
   REWRITE_TAC[ghash_polyval_acc; GSYM POLY_OF_WORD_XOR;
               POLYVAL_DOT_CORRECT]);;
 
-(* Ring algebra helpers for bool_poly *)
-let BOOL_POLY_MUL_ASSOC = prove
- (`!a b c. a IN ring_carrier bool_poly /\
-           b IN ring_carrier bool_poly /\
-           c IN ring_carrier bool_poly
-           ==> ring_mul bool_poly (ring_mul bool_poly a b) c =
-               ring_mul bool_poly a (ring_mul bool_poly b c)`,
-  SIMP_TAC[RING_MUL_ASSOC]);;
-
-let BOOL_POLY_MUL_ASSOC_REV = prove
- (`!a b c. a IN ring_carrier bool_poly /\
-           b IN ring_carrier bool_poly /\
-           c IN ring_carrier bool_poly
-           ==> ring_mul bool_poly a (ring_mul bool_poly b c) =
-               ring_mul bool_poly (ring_mul bool_poly a b) c`,
-  SIMP_TAC[RING_MUL_ASSOC]);;
-
 let BOOL_POLY_MUL_COMM23 = prove
  (`!a b c. a IN ring_carrier bool_poly /\
            b IN ring_carrier bool_poly /\
@@ -121,7 +104,7 @@ let ASSOC_SPEC = prove
    ring_mul bool_poly
     (ring_add bool_poly (poly_of_word a) (poly_of_word b))
     (ring_mul bool_poly (poly_of_word (polyval_dot h h)) (ring_pow bool_poly (poly_var bool_ring one) 128))`,
-  MATCH_MP_TAC BOOL_POLY_MUL_ASSOC THEN
+  MATCH_MP_TAC (GSYM RING_MUL_ASSOC) THEN
   SIMP_TAC[RING_ADD; BOOL_POLY_OF_WORD; POLY_VARPOW_BOOL_POLY]);;
 
 let ASSOC_REV_SPEC = prove
@@ -131,7 +114,7 @@ let ASSOC_REV_SPEC = prove
    ring_mul bool_poly
     (ring_mul bool_poly (ring_add bool_poly (poly_of_word a) (poly_of_word b)) (poly_of_word h))
     (poly_of_word h)`,
-  MATCH_MP_TAC BOOL_POLY_MUL_ASSOC_REV THEN
+  MATCH_MP_TAC RING_MUL_ASSOC THEN
   SIMP_TAC[RING_ADD; BOOL_POLY_OF_WORD]);;
 
 (* Inner congruence: (a+b)*dot(h,h) == dot(a XOR b,h)*h (mod Q)              *)
@@ -178,7 +161,7 @@ let INNER_CONG = prove
 (* 2-block Horner unrolling: ghash_polyval_acc h a [b;c] = prop3(...)        *)
 (* Processing 2 GHASH blocks iteratively equals a batched computation:       *)
 (* XOR of 256-bit polynomial multiplications followed by Prop 3 reduction    *)
-(* This matches the Loop_mod2x_v8 loop in ghashv8-armx.S                    *)
+(* This matches the Loop_mod2x_v8 loop in ghashv8-armx.S                     *)
 (* ========================================================================= *)
 
 let GHASH_POLYVAL_ACC_2 = prove
@@ -227,7 +210,7 @@ let GHASH_POLYVAL_ACC_2 = prove
 
 (* ========================================================================= *)
 (* Proof strategy: coprimality route (no irreducibility needed).             *)
-(*   gcd(Q,x)=1 from Q(0)=1, then gcd(Q,x^n)=1 by induction.              *)
+(*   gcd(Q,x)=1 from Q(0)=1, then gcd(Q,x^n)=1 by induction.                 *)
 (*   Cancel x^128 from both sides of congruences.                            *)
 (*   Control associativity of intermediate expressions so MOD_POLYVAL_MUL    *)
 (*   matches the right subterms (use left-associated ((a+b)*h)*h).           *)
@@ -251,7 +234,7 @@ let ghash_wide = define
 let WORD_XOR_0 = WORD_RULE `word_xor (x:N word) (word 0) = x`;;
 
 (* ========================================================================= *)
-(* Generalized inner congruence: dot(a,h) * H^k == a * H^{k+1} (mod Q)      *)
+(* Generalized inner congruence: dot(a,h) * H^k == a * H^{k+1} (mod Q)       *)
 (* ========================================================================= *)
 
 let LHS_ASSOC = prove(
@@ -275,7 +258,7 @@ let RHS_ASSOC = prove(
     (poly_of_word a)
     (ring_mul bool_poly (poly_of_word (polyval_dot (h_power h k) h))
                         (ring_pow bool_poly (poly_var bool_ring one) 128))`,
-  REPEAT GEN_TAC THEN MATCH_MP_TAC BOOL_POLY_MUL_ASSOC THEN
+  REPEAT GEN_TAC THEN MATCH_MP_TAC(GSYM RING_MUL_ASSOC) THEN
   REWRITE_TAC[BOOL_POLY_OF_WORD; POLY_VARPOW_BOOL_POLY; RING_MUL]);;
 
 let MID_COMM = prove(
@@ -328,7 +311,7 @@ let INNER_CONG_GEN = prove(
 (* General n-block batched GHASH theorem (by list induction)                 *)
 (* For any non-empty list bs:                                                *)
 (*   ghash_polyval_acc h a (CONS b bs) =                                     *)
-(*     prop3(pmul(a XOR b, h_power h (LENGTH bs))  XOR  ghash_wide h ... bs)        *)
+(*     prop3(pmul(a XOR b, h_power h (LENGTH bs))  XOR  ghash_wide h ... bs) *)
 (* This covers 2/4/8-block as special cases.                                 *)
 (* ========================================================================= *)
 
@@ -424,11 +407,11 @@ let GHASH_BATCHED_FROM_HTABLE = prove(
    [FIRST_X_ASSUM MATCH_MP_TAC THEN ARITH_TAC;
     REWRITE_TAC[GHASH_POLYVAL_ACC_BATCHED]]);;
 
-(* ========================================================================= *)
-(* Memory-level Htable predicate matching H table initialization output layout          *)
-(* 12 x 128-bit entries (192 bytes) for H^1..H^8 with Karatsuba middle terms*)
-(* Layout: groups of 3 entries [H^{2k+1}, pack(mid,mid), H^{2k+2}]          *)
-(* ========================================================================= *)
+(* =========================================================================  *)
+(* Memory-level Htable predicate matching H table initialization output layout*)
+(* 12 x 128-bit entries (192 bytes) for H^1..H^8 with Karatsuba middle terms  *)
+(* Layout: groups of 3 entries [H^{2k+1}, pack(mid,mid), H^{2k+2}]            *)
+(* ========================================================================== *)
 
 let byteswap128 = new_definition
   `byteswap128 (x:int128) : int128 =
@@ -459,9 +442,9 @@ let htable_mem = new_definition
    read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128(h_power h 7)`;;
 
 (* ========================================================================= *)
-(* The x-shift / twist: multiplication by x mod Q(x)                        *)
-(* H table initialization computes H_twisted = x * H mod Q(x) via shift-left-by-1      *)
-(* with conditional reduction by Q(x) - x^128 = 0xC2...01.                  *)
+(* The x-shift / twist: multiplication by x mod Q(x)                         *)
+(* H table initialization computes H_twisted = x * H mod Q(x) via            *)
+(* shift-left-by-1 with conditional reduction by Q(x) - x^128 = 0xC2...01.   *)
 (* ========================================================================= *)
 
 let POLYVAL_TWIST_CONST = new_definition
@@ -476,21 +459,9 @@ let ghash_twist = new_definition
 (* poly_of_word(word 2) = x (the polynomial variable) *)
 let BIT_WORD_2_128 = prove(
   `!i. bit i (word 2 : int128) <=> i = 1`,
-  GEN_TAC THEN
-  ASM_CASES_TAC `i = 1` THEN ASM_REWRITE_TAC[] THENL
-   [CONV_TAC(ONCE_DEPTH_CONV BIT_WORD_CONV) THEN REWRITE_TAC[];
-    REWRITE_TAC[BIT_WORD] THEN
-    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-    ASM_CASES_TAC `i < 128` THEN ASM_REWRITE_TAC[] THEN
-    ASM_CASES_TAC `i = 0` THENL
-     [ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
-      SUBGOAL_THEN `~ODD(2 DIV 2 EXP i)` (fun th -> REWRITE_TAC[th]) THEN
-      SUBGOAL_THEN `2 DIV 2 EXP i = 0` (fun th -> REWRITE_TAC[th; ODD]) THEN
-      MP_TAC(SPECL [`2`; `2 EXP i`] DIV_LT) THEN ANTS_TAC THENL
-       [TRANS_TAC LTE_TRANS `2 EXP 2` THEN CONJ_TAC THENL
-         [CONV_TAC NUM_REDUCE_CONV;
-          REWRITE_TAC[LE_EXP] THEN ASM_ARITH_TAC];
-        SIMP_TAC[]]]]);;
+  ONCE_REWRITE_TAC[ARITH_RULE `2 = 2 EXP 1`] THEN
+  REWRITE_TAC[BIT_WORD_POW2; DIMINDEX_128] THEN
+  ARITH_TAC);;
 
 let POLY_OF_WORD_2 = prove(
   `poly_of_word(word 2 : int128) = poly_var bool_ring (one:1)`,
@@ -520,8 +491,8 @@ let POLYVAL_DECOMP = prove(
   REWRITE_TAC[GSYM POLY_OF_WORD_XOR] THEN
   AP_TERM_TAC THEN CONV_TAC WORD_REDUCE_CONV);;
 
-(* GHASH_TWIST_CORRECT: the twist computes x * H mod Q(x).                  *)
-(* Proof: decompose word_pmul h (word 2) = word_shl (word_zx h) 1 at 256    *)
+(* GHASH_TWIST_CORRECT: the twist computes x * H mod Q(x).                   *)
+(* Proof: decompose word_pmul h (word 2) = word_shl (word_zx h) 1 at 256     *)
 (* bits, show ghash_twist = polyval_reduce_step of that via bit-level        *)
 (* reasoning, then use POLY_EQUIV_POLYVAL_REDUCE_STEP for the congruence.    *)
 
@@ -541,47 +512,17 @@ let PMUL_2_AS_SHL = prove(
 let SUBWORD_SHL_ZX = prove(
   `!h:int128. word_zx(word_shl h 1) : 256 word =
               word_subword (word_shl (word_zx h : 256 word) 1) (0,128)`,
-  GEN_TAC THEN ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
-  X_GEN_TAC `k:num` THEN DISCH_TAC THEN
-  REWRITE_TAC[BIT_WORD_ZX; BIT_WORD_SHL; BIT_WORD_SUBWORD; ADD_0; SUB_0] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[ADD_CLAUSES] THEN
-  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC);;
+  BITBLAST_TAC);;
 
 let USHR_SHL_ZX_T = prove(
   `!h:int128. bit 127 h ==>
     word_ushr (word_shl (word_zx h : 256 word) 1) 128 : 256 word = word 1`,
-  GEN_TAC THEN DISCH_TAC THEN
-  ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN X_GEN_TAC `k:num` THEN DISCH_TAC THEN
-  REWRITE_TAC[BIT_WORD_USHR; BIT_WORD_SHL; BIT_WORD_ZX; BIT_WORD_1] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  ASM_CASES_TAC `k = 0` THEN ASM_REWRITE_TAC[] THENL
-   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
-    SUBGOAL_THEN `bit ((k + 128) - 1) (h:int128) <=> F` (fun th -> REWRITE_TAC[th]) THEN
-    REWRITE_TAC[GSYM(TAUT `~p <=> (p <=> F)`)] THEN
-    ONCE_REWRITE_TAC[BIT_GUARD] THEN
-    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-    REWRITE_TAC[TAUT `~(p /\ q) <=> ~p \/ ~q`] THEN
-    DISJ1_TAC THEN REWRITE_TAC[NOT_LT] THEN
-    UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC]);;
+  BITBLAST_TAC);;
 
 let USHR_SHL_ZX_F = prove(
   `!h:int128. ~bit 127 h ==>
     word_ushr (word_shl (word_zx h : 256 word) 1) 128 : 256 word = word 0`,
-  GEN_TAC THEN DISCH_TAC THEN
-  ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN X_GEN_TAC `k:num` THEN DISCH_TAC THEN
-  REWRITE_TAC[BIT_WORD_USHR; BIT_WORD_SHL; BIT_WORD_ZX; BIT_WORD_0] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  ASM_CASES_TAC `k = 0` THEN ASM_REWRITE_TAC[] THENL
-   [CONV_TAC NUM_REDUCE_CONV THEN ASM_REWRITE_TAC[];
-    SUBGOAL_THEN `bit ((k + 128) - 1) (h:int128) <=> F` (fun th -> REWRITE_TAC[th]) THEN
-    REWRITE_TAC[GSYM(TAUT `~p <=> (p <=> F)`)] THEN
-    ONCE_REWRITE_TAC[BIT_GUARD] THEN
-    CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-    REWRITE_TAC[TAUT `~(p /\ q) <=> ~p \/ ~q`] THEN
-    DISJ1_TAC THEN REWRITE_TAC[NOT_LT] THEN
-    UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC]);;
+  BITBLAST_TAC);;
 
 let TWIST_WORD_IDENTITY = prove(
   `!h:int128.
