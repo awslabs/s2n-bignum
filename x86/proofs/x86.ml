@@ -5030,7 +5030,7 @@ let BYTES_LOADED_SUBPROGRAM_RULE =
   and pc_tm = `pc:num`
   and pcp_tm = `(+) (pc:num)`
   and wd_tm = `word:num->int64`
-  and s_tm = `s:armstate` in
+  and s_tm = `s:x86state` in
   let topvars = [s_tm; pc_tm] in
   fun mc1 mc2 offset ->
     let nptm = mk_comb(pcp_tm,mk_small_numeral offset) in
