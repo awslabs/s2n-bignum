@@ -346,6 +346,8 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VEXTRACTI128 operand operand operand
    | VINSERTI128 operand operand operand operand
    | VPACKUSWB operand operand operand
+   | VPCMPGTD operand operand operand
+   | VPCMPGTW operand operand operand
    | VPBLENDVB operand operand operand operand
    | VPMADDUBSW operand operand operand
    | VPMADDWD operand operand operand
