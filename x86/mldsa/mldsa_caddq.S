@@ -25,13 +25,11 @@
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_caddq)
         .text
 
-#define a rdi
-
 .macro caddq_vector offset, reg
-        vpcmpgtd \reg, ymm2, [\offset + a]
+        vpcmpgtd \reg, ymm2, [rdi + \offset]
         vpand   \reg, \reg, ymm1
-        vpaddd  \reg, \reg, [\offset + a]
-        vmovdqa  [\offset + a], \reg
+        vpaddd  \reg, \reg, [rdi + \offset]
+        vmovdqa  [rdi + \offset], \reg
 .endm
 
 S2N_BN_SYMBOL(mldsa_caddq):
