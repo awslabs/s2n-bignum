@@ -144,6 +144,8 @@
 : vpblendw$
 : vpbroadcastd$
 : vpbroadcastq$
+: vpcmpgtd$
+: vpcmpgtw$
 : vperm2i128$
 : vpermd$
 : vpermq$
