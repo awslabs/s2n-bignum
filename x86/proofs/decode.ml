@@ -782,11 +782,10 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (F, RepZ, SG0) -> SOME (VMOVSLDUP (mmreg reg sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
-        | [0x50:8] -> if word_not v = (word 0b1111:4 word) then
+        | [0x50:8] -> if word_not v = (word 0b1111:4 word) /\ L then
           (read_ModRM rex l >>= \((reg,rm),l).
            let dest = %(gpr_adjust reg Lower_32) in
-           let sz = vexL_size L in
-           let src = simd_of_RM sz rm in
+           let src = simd_of_RM Lower_256 rm in
            match pfxs with
            | (F, Rep0, SG0) -> SOME (VMOVMSKPS dest src, l)
            | _ -> NONE)
