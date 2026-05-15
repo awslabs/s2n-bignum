@@ -1568,7 +1568,6 @@ let define_relocated_mc name (args, tm:term list * term): thm =
               REWRITE_CONV[bytelist_of_num]) `bytelist_of_num 4 x` in
   REWRITE_RULE[APPEND; blth] mc_def;;
 
-
 needs "common/elf.ml";;
 
 let make_fn_word_list, make_fn_word_list_reloc =
