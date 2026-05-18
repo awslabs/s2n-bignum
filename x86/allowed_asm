@@ -127,6 +127,7 @@
 : test$
 : testq$
 : vmovd$
+: vmovmskps$
 : vmovq$
 : vmovdqa$
 : vmovdqu$
@@ -159,6 +160,7 @@
 : vpmaddubsw$
 : vpmaddwd$
 : vpackuswb$
+: vpmovzxbd$
 : vpmuldq$
 : vpmulhrsw$
 : vpmulhw$
@@ -184,6 +186,7 @@
 : vpunpckhqdq$
 : vpunpcklqdq$
 : vpxor$
+: vzeroupper$
 : xchg$
 : xor$
 : xorl$
