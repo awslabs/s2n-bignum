@@ -42,7 +42,7 @@ grep '\[' /tmp/all_instructions | grep -vi '^lea'  >/tmp/fullmemory_instructions
 echo '.intel_syntax noprefix' >/tmp/register_instructions
 egrep -vi '^(j|call|ret|push|pop)' /tmp/other_instructions | grep -vwi rsp | grep -vwi rip | sort | uniq  >>/tmp/register_instructions
 echo '.intel_syntax noprefix' >/tmp/memory_instructions
-sed -e 's/\[.*\]/MEMORY_CELL/' /tmp/fullmemory_instructions | grep -vwi rsp | grep -vwi rip | sort | uniq | sed -e 's/MEMORY_CELL/[rsp+32]/' >>/tmp/memory_instructions
+sed -e 's/\[.*\]/MEMORY_CELL/' /tmp/fullmemory_instructions | grep -vwi rsp | grep -vwi rip | grep -vwi movs | sort | uniq | sed -e 's/MEMORY_CELL/[rsp+32]/' >>/tmp/memory_instructions
 
 # Now turn them into the syntax for the simulator OCaml input
 
