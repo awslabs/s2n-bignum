@@ -253,7 +253,9 @@ let mldsa_caddq_mc = define_assert_from_elf "mldsa_caddq_mc" "x86/mldsa/mldsa_ca
 let mldsa_caddq_tmc = define_trimmed "mldsa_caddq_tmc" mldsa_caddq_mc;;
 let MLDSA_CADDQ_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_caddq_tmc;;
 
-(* ... functional spec ... *)
+(* ------------------------------------------------------------------------- *)
+(* Functional specification of mldsa_caddq                                   *)
+(* ------------------------------------------------------------------------- *)
 
 let mldsa_caddq = define
  `(mldsa_caddq:int32->int32) x =
@@ -281,7 +283,30 @@ let mldsa_caddq_rem = prove
     ASM_INT_ARITH_TAC
   ]);;
 
-(* ... core correctness ... *)
+let mldsa_caddq_bound = prove
+ (`!x:int32. abs(ival x) < &8380417
+    ==> &0 <= ival(mldsa_caddq x) /\ ival(mldsa_caddq x) < &8380417`,
+  GEN_TAC THEN DISCH_TAC THEN
+  MP_TAC(SPEC `x:int32` mldsa_caddq_rem) THEN ASM_REWRITE_TAC[] THEN
+  DISCH_THEN SUBST1_TAC THEN CONJ_TAC THENL
+   [MP_TAC(SPECL [`ival(x:int32)`; `&8380417:int`] INT_REM_POS) THEN
+    INT_ARITH_TAC;
+    MP_TAC(SPECL [`ival(x:int32)`; `&8380417:int`] INT_LT_REM) THEN
+    INT_ARITH_TAC]);;
+
+let mldsa_caddq_lower = prove
+ (`!x:int32. abs(ival x) < &8380417
+    ==> &0 <= ival(mldsa_caddq x)`,
+  MESON_TAC[mldsa_caddq_bound]);;
+
+let mldsa_caddq_upper = prove
+ (`!x:int32. abs(ival x) < &8380417
+    ==> ival(mldsa_caddq x) < &8380417`,
+  MESON_TAC[mldsa_caddq_bound]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Core correctness theorem                                                  *)
+(* ------------------------------------------------------------------------- *)
 
 let MLDSA_CADDQ_CORRECT = time prove
  (`!a x pc.
@@ -296,10 +321,15 @@ let MLDSA_CADDQ_CORRECT = time prove
                           x i) /\
                   (!i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read RIP s = word(pc + 875) /\
-                  !i. i < 256
+                  (!i. i < 256
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
-                          ival(x i) rem &8380417)
+                          ival(x i) rem &8380417) /\
+                  (!i. i < 256
+                      ==> &0 <= ival(read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s) /\
+                          ival(read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s) < &8380417))
              (MAYCHANGE [RIP] ,, MAYCHANGE [events] ,,
               MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
               MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
@@ -330,14 +360,21 @@ let MLDSA_CADDQ_CORRECT = time prove
      CONV_RULE(SIMD_SIMPLIFY_CONV[mldsa_caddq]) o
      CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
      check (can (term_match [] `read qqq s132:int256 = xxx`) o concl))) THEN
-  CONV_TAC(EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV THENC
+           ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   ASM_REWRITE_TAC[WORD_ADD_0] THEN
   ONCE_REWRITE_TAC[WORD_ADD_SYM] THEN
   REWRITE_TAC[GSYM mldsa_caddq] THEN
   DISCARD_NONMATCHING_ASSUMPTIONS [`abs (ival t) < &8380417`] THEN
-  REPEAT CONJ_TAC THEN MATCH_MP_TAC mldsa_caddq_rem THEN ASM_REWRITE_TAC[]);;
+  REPEAT CONJ_TAC THEN
+  TRY(MATCH_MP_TAC mldsa_caddq_rem) THEN
+  TRY(MATCH_MP_TAC mldsa_caddq_lower) THEN
+  TRY(MATCH_MP_TAC mldsa_caddq_upper) THEN
+  ASM_REWRITE_TAC[]);;
 
-(* ... subroutine correctness ... *)
+(* ------------------------------------------------------------------------- *)
+(* Subroutine correctness theorem (includes return)                          *)
+(* ------------------------------------------------------------------------- *)
 
 let MLDSA_CADDQ_NOIBT_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
@@ -356,10 +393,15 @@ let MLDSA_CADDQ_NOIBT_SUBROUTINE_CORRECT = prove
                   (!i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  (!i. i < 256
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
-                          ival(x i) rem &8380417)
+                          ival(x i) rem &8380417) /\
+                  (!i. i < 256
+                      ==> &0 <= ival(read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s) /\
+                          ival(read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s) < &8380417))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_caddq_tmc MLDSA_CADDQ_CORRECT);;
@@ -381,10 +423,15 @@ let MLDSA_CADDQ_SUBROUTINE_CORRECT = prove
                   (!i. i < 256 ==> abs(ival(x i)) < &8380417))
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
-                  !i. i < 256
+                  (!i. i < 256
                       ==> ival(read(memory :> bytes32
                                  (word_add a (word(4 * i)))) s) =
-                          ival(x i) rem &8380417)
+                          ival(x i) rem &8380417) /\
+                  (!i. i < 256
+                      ==> &0 <= ival(read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s) /\
+                          ival(read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s) < &8380417))
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_CADDQ_NOIBT_SUBROUTINE_CORRECT));;
@@ -487,10 +534,15 @@ let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                    (!i. i < 256 ==> abs(ival(x i)) < &8380417))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   !i. i < 256
+                   (!i. i < 256
                        ==> ival(read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s) =
-                           ival(x i) rem &8380417)
+                           ival(x i) rem &8380417) /\
+                   (!i. i < 256
+                       ==> &0 <= ival(read(memory :> bytes32
+                                  (word_add a (word(4 * i)))) s) /\
+                           ival(read(memory :> bytes32
+                                  (word_add a (word(4 * i)))) s) < &8380417))
               (MAYCHANGE [RSP] ,,
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                MAYCHANGE [memory :> bytes(word_sub stackpointer (word 32),32)] ,,
@@ -546,10 +598,15 @@ let MLDSA_CADDQ_WINDOWS_SUBROUTINE_CORRECT = prove
                    (!i. i < 256 ==> abs(ival(x i)) < &8380417))
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
-                   !i. i < 256
+                   (!i. i < 256
                        ==> ival(read(memory :> bytes32
                                   (word_add a (word(4 * i)))) s) =
-                           ival(x i) rem &8380417)
+                           ival(x i) rem &8380417) /\
+                   (!i. i < 256
+                       ==> &0 <= ival(read(memory :> bytes32
+                                  (word_add a (word(4 * i)))) s) /\
+                           ival(read(memory :> bytes32
+                                  (word_add a (word(4 * i)))) s) < &8380417))
               (MAYCHANGE [RSP] ,,
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                MAYCHANGE [memory :> bytes(word_sub stackpointer (word 32),32)] ,,
