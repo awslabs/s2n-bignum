@@ -192,82 +192,22 @@ jobs:
         cd arm
         make tutorial -j2
 
-  s2n-bignum-proofs:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - arch: arm
-            subdir: aes-xts
-          - arch: arm
-            subdir: curve25519
-          - arch: arm
-            subdir: fastmul
-          - arch: arm
-            subdir: generic
-          - arch: arm
-            subdir: mldsa
-          - arch: arm
-            subdir: mlkem
-          - arch: arm
-            subdir: p256
-          - arch: arm
-            subdir: p384
-          - arch: arm
-            subdir: p521
-          - arch: arm
-            subdir: secp256k1
-          - arch: arm
-            subdir: sha3
-          - arch: arm
-            subdir: sm2
-          - arch: x86
-            subdir: curve25519
-          - arch: x86
-            subdir: fastmul
-          - arch: x86
-            subdir: generic
-          - arch: x86
-            subdir: mldsa
-          - arch: x86
-            subdir: mlkem
-          - arch: x86
-            subdir: p256
-          - arch: x86
-            subdir: p384
-          - arch: x86
-            subdir: p521
-          - arch: x86
-            subdir: secp256k1
-          - arch: x86
-            subdir: sha3
-          - arch: x86
-            subdir: sm2
-    runs-on:
-      - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
-    name: ${{ matrix.arch }} ${{ matrix.subdir }} proofs
-
+  # Stage 1: compute the per-proof matrix and the list of changed files.
+  # Cheap job (just python + git diff).
+  s2n-bignum-proofs-matrix:
+    runs-on: ubuntu-24.04
+    outputs:
+      proofs: ${{ steps.gen.outputs.proofs }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # need history for git diff against PR base
-
-    - name: Install jq + python (cheap, needed for the filter)
+        fetch-depth: 0
+    - name: Generate per-proof matrix
+      id: gen
       run: |
-        sudo apt --allow-insecure-repositories update
-        sudo apt -y install jq python3
-
-    - name: Compute proof dependency map
-      run: |
+        python3 tools/list-proofs.py > all-proofs.json
         python3 tools/compute-proof-deps.py > proof-deps.json
-        echo "dep map size: $(wc -l < proof-deps.json) lines, $(jq 'length' proof-deps.json) proofs"
-
-    - name: Get changed files
-      id: changed
-      run: |
-        # In a PR context: diff between PR base and head. Otherwise: empty
-        # (which makes everything affected by default).
+        # changed-files: empty => "everything affected"
         if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
           git diff --name-only \
             "${{ github.event.pull_request.base.sha }}" \
@@ -276,54 +216,63 @@ jobs:
         else
           : > changed-files.txt
         fi
-        echo "changed files:"
-        cat changed-files.txt | head
+        # Filter all-proofs.json by dep set intersection with changed-files
+        python3 tools/filter-affected.py \
+          all-proofs.json proof-deps.json changed-files.txt > affected.json
+        # Emit the matrix as a JSON array on a single line
+        echo "proofs=$(cat affected.json)" >> "$GITHUB_OUTPUT"
+        echo "Affected proofs: $(jq 'length' affected.json) of $(jq 'length' all-proofs.json)"
 
-    - name: Decide whether this subdir has any affected proofs
-      id: decide
-      run: |
-        affected=$(python3 tools/decide-affected.py \
-          ${{ matrix.arch }} \
-          ${{ matrix.subdir }} \
-          proof-deps.json \
-          changed-files.txt)
-        echo "affected=$affected" >> "$GITHUB_OUTPUT"
-        echo "affected for ${{ matrix.arch }}/${{ matrix.subdir }}: $affected"
+  # Stage 2: one matrix entry per affected proof. If nothing is affected,
+  # this job's matrix is empty and the job becomes a no-op.
+  s2n-bignum-proofs:
+    needs: s2n-bignum-proofs-matrix
+    if: needs.s2n-bignum-proofs-matrix.outputs.proofs != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        proof: ${{ fromJSON(needs.s2n-bignum-proofs-matrix.outputs.proofs) }}
+    runs-on:
+      - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+    name: ${{ matrix.proof.arch }} ${{ matrix.proof.subdir }}/${{ matrix.proof.name }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Cache HOL Light build
+      id: cache-hol
+      uses: actions/cache@v4
+      with:
+        path: hol-light
+        key: hol-light-${{ env.HOLLIGHT_COMMIT }}-${{ runner.os }}-${{ runner.arch }}
 
     - name: Install dependent packages
-      if: steps.decide.outputs.affected == 'true'
       run: |
+        sudo apt --allow-insecure-repositories update
         sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
         wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
         chmod +x install.sh
         echo "/usr/local/bin" | sh ./install.sh
         opam init --disable-sandboxing
 
-    - name: Install HOL Light
-      if: steps.decide.outputs.affected == 'true'
+    - name: Build HOL Light (cache miss)
+      if: steps.cache-hol.outputs.cache-hit != 'true'
       run: |
         git clone https://github.com/jrh13/hol-light.git
         cd hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
         eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
         HOLLIGHT_USE_MODULE=1 make
-        cd ..
 
-    - name: Run affected proofs in ${{ matrix.arch }}/${{ matrix.subdir }}
-      if: steps.decide.outputs.affected == 'true'
+    - name: Run proof ${{ matrix.proof.arch }}/${{ matrix.proof.subdir }}/${{ matrix.proof.name }}
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         BUILD_CORE_COUNT: 15
-        CORE_COUNT: 64
       run: |
         export HOLDIR=`pwd`/hol-light
-        ./tools/run-proofs-with-checks.sh \
-          ${{ matrix.arch }} \
-          ${{ matrix.subdir }} \
-          proof-deps.json \
-          changed-files.txt
+        cd ${{ matrix.proof.arch }}
+        target=${{ matrix.proof.subdir }}/${{ matrix.proof.name }}.correct
+        make -j ${BUILD_CORE_COUNT} ${target%.correct}.native
+        make $target
 
 
