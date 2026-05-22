@@ -192,18 +192,27 @@ jobs:
         cd arm
         make tutorial -j2
 
-  # Stage 1: compute the per-proof matrix and the list of changed files.
+  # Stage 1: compute the affected-proof set and pick a routing mode.
   # Cheap job (just python + git diff).
+  #
+  # GitHub Actions caps a job matrix at 256 entries per workflow run. When
+  # the affected set exceeds the per-proof threshold, we fall back to a
+  # bulk-per-arch matrix (<=2 entries) that does a single HOL Light install
+  # per arch and runs the affected `.correct` targets with `make -j`.
   s2n-bignum-proofs-matrix:
     runs-on: ubuntu-24.04
     outputs:
+      mode: ${{ steps.gen.outputs.mode }}
       proofs: ${{ steps.gen.outputs.proofs }}
+      bulk: ${{ steps.gen.outputs.bulk }}
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - name: Generate per-proof matrix
+    - name: Generate matrix
       id: gen
+      env:
+        PER_PROOF_THRESHOLD: 200
       run: |
         python3 tools/list-proofs.py > all-proofs.json
         python3 tools/compute-proof-deps.py > proof-deps.json
@@ -216,18 +225,35 @@ jobs:
         else
           : > changed-files.txt
         fi
-        # Filter all-proofs.json by dep set intersection with changed-files
         python3 tools/filter-affected.py \
           all-proofs.json proof-deps.json changed-files.txt > affected.json
-        # Emit the matrix as a JSON array on a single line
-        echo "proofs=$(cat affected.json)" >> "$GITHUB_OUTPUT"
-        echo "Affected proofs: $(jq 'length' affected.json) of $(jq 'length' all-proofs.json)"
+        affected_count=$(jq 'length' affected.json)
+        total_count=$(jq 'length' all-proofs.json)
+        echo "Affected proofs: $affected_count of $total_count"
+        if [ "$affected_count" -le "$PER_PROOF_THRESHOLD" ]; then
+          echo "mode=per-proof" >> "$GITHUB_OUTPUT"
+          echo "proofs=$(cat affected.json)" >> "$GITHUB_OUTPUT"
+          echo "bulk=[]" >> "$GITHUB_OUTPUT"
+        else
+          # One bulk entry per arch that has any affected proof. Each entry
+          # carries the space-separated list of subdir/name targets to make.
+          jq -c '
+            group_by(.arch)
+            | map({arch: .[0].arch,
+                   targets: (map(.subdir + "/" + .name + ".correct") | join(" "))})
+          ' affected.json > bulk.json
+          echo "mode=bulk" >> "$GITHUB_OUTPUT"
+          echo "proofs=[]" >> "$GITHUB_OUTPUT"
+          echo "bulk=$(cat bulk.json)" >> "$GITHUB_OUTPUT"
+          echo "Routing $affected_count affected proofs through bulk-per-arch (matrix cap is 256)."
+        fi
 
-  # Stage 2: one matrix entry per affected proof. If nothing is affected,
-  # this job's matrix is empty and the job becomes a no-op.
+  # Stage 2a: one matrix entry per affected proof. Active only when stage 1
+  # picked the per-proof mode. If nothing is affected, the matrix is empty
+  # and this job is skipped automatically.
   s2n-bignum-proofs:
     needs: s2n-bignum-proofs-matrix
-    if: needs.s2n-bignum-proofs-matrix.outputs.proofs != '[]'
+    if: needs.s2n-bignum-proofs-matrix.outputs.mode == 'per-proof' && needs.s2n-bignum-proofs-matrix.outputs.proofs != '[]'
     strategy:
       fail-fast: false
       matrix:
@@ -239,12 +265,17 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # Cache at a stable absolute path. opam bakes absolute shebangs into
+    # the binaries it installs, so restoring to a different directory than
+    # the build dir leaves /path/to/_opam/bin/ocamlrun unreachable.
+    # CodeBuild's $GITHUB_WORKSPACE varies per job, but $HOME (= /root) is
+    # stable across the fleet, so we pin HOL Light there.
     - name: Cache HOL Light build
       id: cache-hol
       uses: actions/cache@v4
       with:
-        path: hol-light
-        key: hol-light-${{ env.HOLLIGHT_COMMIT }}-${{ runner.os }}-${{ runner.arch }}
+        path: /root/hol-light
+        key: hol-light-${{ env.HOLLIGHT_COMMIT }}-${{ runner.os }}-${{ runner.arch }}-v2
 
     - name: Install dependent packages
       run: |
@@ -258,8 +289,8 @@ jobs:
     - name: Build HOL Light (cache miss)
       if: steps.cache-hol.outputs.cache-hit != 'true'
       run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
+        git clone https://github.com/jrh13/hol-light.git /root/hol-light
+        cd /root/hol-light
         git checkout ${{ env.HOLLIGHT_COMMIT }}
         make switch-5
         eval $(opam env)
@@ -269,10 +300,70 @@ jobs:
       env:
         BUILD_CORE_COUNT: 15
       run: |
-        export HOLDIR=`pwd`/hol-light
+        export HOLDIR=/root/hol-light
         cd ${{ matrix.proof.arch }}
         target=${{ matrix.proof.subdir }}/${{ matrix.proof.name }}.correct
         make -j ${BUILD_CORE_COUNT} ${target%.correct}.native
         make $target
+
+  # Stage 2b: bulk fallback. Up to one matrix entry per arch (so <= 2 jobs
+  # total). Each entry runs all affected `.correct` targets for its arch
+  # in a single HOL Light install with `make -j`.
+  s2n-bignum-proofs-bulk:
+    needs: s2n-bignum-proofs-matrix
+    if: needs.s2n-bignum-proofs-matrix.outputs.mode == 'bulk'
+    strategy:
+      fail-fast: false
+      matrix:
+        bulk: ${{ fromJSON(needs.s2n-bignum-proofs-matrix.outputs.bulk) }}
+    runs-on:
+      - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+    name: ${{ matrix.bulk.arch }} affected proofs (bulk)
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # See note on stage 2a: opam bakes absolute shebangs, so the cache
+    # path must be stable across jobs. /root/hol-light works on the
+    # codebuild fleet image; $GITHUB_WORKSPACE does not.
+    - name: Cache HOL Light build
+      id: cache-hol
+      uses: actions/cache@v4
+      with:
+        path: /root/hol-light
+        key: hol-light-${{ env.HOLLIGHT_COMMIT }}-${{ runner.os }}-${{ runner.arch }}-v2
+
+    - name: Install dependent packages
+      run: |
+        sudo apt --allow-insecure-repositories update
+        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh
+        opam init --disable-sandboxing
+
+    - name: Build HOL Light (cache miss)
+      if: steps.cache-hol.outputs.cache-hit != 'true'
+      run: |
+        git clone https://github.com/jrh13/hol-light.git /root/hol-light
+        cd /root/hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        HOLLIGHT_USE_MODULE=1 make
+
+    - name: Run affected ${{ matrix.bulk.arch }} proofs
+      env:
+        BUILD_CORE_COUNT: 15
+        CORE_COUNT: 64
+      run: |
+        export HOLDIR=/root/hol-light
+        cd ${{ matrix.bulk.arch }}
+        # `targets` is a space-separated list of <subdir>/<name>.correct entries.
+        targets="${{ matrix.bulk.targets }}"
+        natives=""
+        for t in $targets; do natives="$natives ${t%.correct}.native"; done
+        make -j ${BUILD_CORE_COUNT} $natives
+        make -j ${CORE_COUNT} $targets
 
 
