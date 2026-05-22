@@ -253,26 +253,10 @@ jobs:
       with:
         fetch-depth: 0  # need history for git diff against PR base
 
-    - name: Install dependent packages
+    - name: Install jq + python (cheap, needed for the filter)
       run: |
         sudo apt --allow-insecure-repositories update
-        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot jq python3
-        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
-        chmod +x install.sh
-        echo "/usr/local/bin" | sh ./install.sh
-        opam init --disable-sandboxing
-
-    - name: Install HOL Light
-      run: |
-        git clone https://github.com/jrh13/hol-light.git
-        cd hol-light
-        git checkout ${{ env.HOLLIGHT_COMMIT }}
-        make switch-5
-        eval $(opam env)
-        echo $(ocamlc -version)
-        echo $(camlp5 -v)
-        HOLLIGHT_USE_MODULE=1 make
-        cd ..
+        sudo apt -y install jq python3
 
     - name: Compute proof dependency map
       run: |
@@ -283,7 +267,7 @@ jobs:
       id: changed
       run: |
         # In a PR context: diff between PR base and head. Otherwise: empty
-        # (which makes the wrapper run all proofs).
+        # (which makes everything affected by default).
         if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
           git diff --name-only \
             "${{ github.event.pull_request.base.sha }}" \
@@ -295,7 +279,41 @@ jobs:
         echo "changed files:"
         cat changed-files.txt | head
 
+    - name: Decide whether this subdir has any affected proofs
+      id: decide
+      run: |
+        affected=$(python3 tools/decide-affected.py \
+          ${{ matrix.arch }} \
+          ${{ matrix.subdir }} \
+          proof-deps.json \
+          changed-files.txt)
+        echo "affected=$affected" >> "$GITHUB_OUTPUT"
+        echo "affected for ${{ matrix.arch }}/${{ matrix.subdir }}: $affected"
+
+    - name: Install dependent packages
+      if: steps.decide.outputs.affected == 'true'
+      run: |
+        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh
+        opam init --disable-sandboxing
+
+    - name: Install HOL Light
+      if: steps.decide.outputs.affected == 'true'
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
     - name: Run affected proofs in ${{ matrix.arch }}/${{ matrix.subdir }}
+      if: steps.decide.outputs.affected == 'true'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         BUILD_CORE_COUNT: 15
