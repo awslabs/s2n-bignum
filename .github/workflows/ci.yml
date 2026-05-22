@@ -4,6 +4,11 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: read
+
 env:
   HOLLIGHT_COMMIT: "af5d20e033025a9f30a490d9c39edace632405a3"
 
@@ -245,11 +250,13 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # need history for git diff against PR base
 
     - name: Install dependent packages
       run: |
         sudo apt --allow-insecure-repositories update
-        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot jq python3
         wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
         chmod +x install.sh
         echo "/usr/local/bin" | sh ./install.sh
@@ -267,18 +274,38 @@ jobs:
         HOLLIGHT_USE_MODULE=1 make
         cd ..
 
-    - name: Run proofs for ${{ matrix.arch }}/${{ matrix.subdir }}
+    - name: Compute proof dependency map
+      run: |
+        python3 tools/compute-proof-deps.py > proof-deps.json
+        echo "dep map size: $(wc -l < proof-deps.json) lines, $(jq 'length' proof-deps.json) proofs"
+
+    - name: Get changed files
+      id: changed
+      run: |
+        # In a PR context: diff between PR base and head. Otherwise: empty
+        # (which makes the wrapper run all proofs).
+        if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+          git diff --name-only \
+            "${{ github.event.pull_request.base.sha }}" \
+            "${{ github.event.pull_request.head.sha }}" \
+            > changed-files.txt
+        else
+          : > changed-files.txt
+        fi
+        echo "changed files:"
+        cat changed-files.txt | head
+
+    - name: Run affected proofs in ${{ matrix.arch }}/${{ matrix.subdir }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BUILD_CORE_COUNT: 15
+        CORE_COUNT: 64
       run: |
         export HOLDIR=`pwd`/hol-light
-        export BUILD_CORE_COUNT=15
-        export CORE_COUNT=64
-        cd ${{ matrix.arch }}
-        # Build the .native binaries for the proofs in this subdirectory.
-        # build_proofs depends on UNOPT_OBJ, so the .o files for THIS subdir
-        # also get assembled. We rely on the per-target Makefile rules
-        # rather than the `proofs` aggregate to scope to just this subdir.
-        targets=$(ls ${{ matrix.subdir }}/*.S | sed 's/\.S$/.correct/')
-        make -j ${BUILD_CORE_COUNT} $(echo "$targets" | sed 's/\.correct$/.native/')
-        make -j ${CORE_COUNT} $targets
+        ./tools/run-proofs-with-checks.sh \
+          ${{ matrix.arch }} \
+          ${{ matrix.subdir }} \
+          proof-deps.json \
+          changed-files.txt
 
 
