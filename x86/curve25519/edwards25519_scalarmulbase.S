@@ -445,8 +445,8 @@ Ledwards25519_scalarmulbase_standard:
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        lea     r10, [rip+Ledwards25519_scalarmulbase_0g]
-        lea     r11, [rip+Ledwards25519_scalarmulbase_251g]
+        lea     r10, [rip+edwards25519_scalarmulbase_constant]
+        lea     r11, [r10+8*12]
 
         mov     rax, [r10]
         mov     rcx, [r11]
@@ -529,7 +529,7 @@ Ledwards25519_scalarmulbase_standard:
 // end because we made sure bit 251 is clear in the reduced scalar.
 
         mov     i, 0
-        lea     rax, [rip+Ledwards25519_scalarmulbase_gtable]
+        lea     rax, [r10+8*24]
         mov     tab, rax
         mov     bias, 0
 
@@ -2312,18 +2312,26 @@ S2N_BN_SIZE_DIRECTIVE(Ledwards25519_scalarmulbase_standard)
 S2N_BN_SIZE_DIRECTIVE(edwards25519_scalarmulbase)
 #endif
 
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
+
 // ****************************************************************************
-// The precomputed data (all read-only). This is currently part of the same
-// text section, which gives position-independent code with simple PC-relative
-// addressing. However it could be put in a separate section via something like
-//
-// .section .rodata
+// The precomputed data (all read-only).
 // ****************************************************************************
+
+#if defined(__ELF__)
+.section .rodata
+.type S2N_BN_SYMBOL(edwards25519_scalarmulbase_constant), %object
+.size S2N_BN_SYMBOL(edwards25519_scalarmulbase_constant), 48576
+#elif defined(__APPLE__)
+.const_data
+#endif
+
+S2N_BN_SYMBOL(edwards25519_scalarmulbase_constant):
 
 // 0 * B = 0 and 2^251 * B in extended-projective coordinates
 // but with Z = 1 assumed and hence left out, so they are (X,Y,T) only.
-
-Ledwards25519_scalarmulbase_0g:
 
         .quad   0x0000000000000000
         .quad   0x0000000000000000
@@ -2340,8 +2348,6 @@ Ledwards25519_scalarmulbase_0g:
         .quad   0x0000000000000000
         .quad   0x0000000000000000
 
-Ledwards25519_scalarmulbase_251g:
-
         .quad   0x525f946d7c7220e7
         .quad   0x4636b0b2f1e35444
         .quad   0x796e9d70e892ae0f
@@ -2357,8 +2363,6 @@ Ledwards25519_scalarmulbase_251g:
 
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
-
-Ledwards25519_scalarmulbase_gtable:
 
         // 2^0 * 1 * G
 
@@ -9919,7 +9923,3 @@ Ledwards25519_scalarmulbase_gtable:
         .quad   0xeb848e0f7f19547e
         .quad   0x2503a1d065a497b9
         .quad   0x0fef911191df895f
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack, "", %progbits
-#endif

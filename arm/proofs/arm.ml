@@ -804,7 +804,11 @@ let ARM_SUBROUTINE_SIM_TAC ?(is_safety_thm=false) =
   and len_tm = `LENGTH:((8)word)list->num` in
   fun (machinecode,execth,offset,submachinecode,subth) ->
     let subimpth =
-      ALIGNED_BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset in
+      try
+        ALIGNED_BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset
+      with Failure _ ->
+        failwith ("ARM_SUBROUTINE_SIM_TAC: submachinecode (4th of input tuple) isn't " ^
+          "at offset " ^ (string_of_int offset) ^ " of machinecode (1st of tuple)") in
     (* Replace 'LENGTH .._mc' with its actual constant. This frequently appears
        at nonoverlapping criteria of subth. *)
     let subth =
