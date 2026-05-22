@@ -5,6 +5,7 @@
 
 (* ========================================================================= *)
 (* Common specifications and tactics for ML-KEM, mainly related to the NTT.  *)
+(* (CI smoke-test: no-op edit to fan out the per-proof matrix to ~36 jobs.)  *)
 (* ========================================================================= *)
 
 needs "Library/words.ml";;
