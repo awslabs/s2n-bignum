@@ -5,6 +5,7 @@
 
 (* ========================================================================= *)
 (* ARM instruction decoding.                                                 *)
+(* (CI smoke-test: no-op edit; expected to route through bulk-arm fallback.) *)
 (* ========================================================================= *)
 
 let XREG_SP = new_definition `XREG_SP n = registers :> element n`;;
