@@ -5,6 +5,7 @@
 
 (* ========================================================================= *)
 (* Pointwise multiplication of polynomials in NTT domain for ML-DSA.         *)
+(* (CI smoke-test: a no-op edit to validate the per-proof check-run flow.)   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
