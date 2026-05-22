@@ -189,10 +189,58 @@ jobs:
 
   s2n-bignum-proofs:
     strategy:
-        matrix:
-          arch: [arm, x86]
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm
+            subdir: aes-xts
+          - arch: arm
+            subdir: curve25519
+          - arch: arm
+            subdir: fastmul
+          - arch: arm
+            subdir: generic
+          - arch: arm
+            subdir: mldsa
+          - arch: arm
+            subdir: mlkem
+          - arch: arm
+            subdir: p256
+          - arch: arm
+            subdir: p384
+          - arch: arm
+            subdir: p521
+          - arch: arm
+            subdir: secp256k1
+          - arch: arm
+            subdir: sha3
+          - arch: arm
+            subdir: sm2
+          - arch: x86
+            subdir: curve25519
+          - arch: x86
+            subdir: fastmul
+          - arch: x86
+            subdir: generic
+          - arch: x86
+            subdir: mldsa
+          - arch: x86
+            subdir: mlkem
+          - arch: x86
+            subdir: p256
+          - arch: x86
+            subdir: p384
+          - arch: x86
+            subdir: p521
+          - arch: x86
+            subdir: secp256k1
+          - arch: x86
+            subdir: sha3
+          - arch: x86
+            subdir: sm2
     runs-on:
       - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
+    name: ${{ matrix.arch }} ${{ matrix.subdir }} proofs
 
     steps:
     - name: Checkout code
@@ -219,14 +267,18 @@ jobs:
         HOLLIGHT_USE_MODULE=1 make
         cd ..
 
-    - name: Run proofs and tutorial
+    - name: Run proofs for ${{ matrix.arch }}/${{ matrix.subdir }}
       run: |
         export HOLDIR=`pwd`/hol-light
         export BUILD_CORE_COUNT=15
         export CORE_COUNT=64
         cd ${{ matrix.arch }}
-        make -j ${BUILD_CORE_COUNT} build_proofs build_tutorial
-        make -j ${CORE_COUNT} proofs tutorial
-        ../tools/collect-times.sh ${{ matrix.arch }}
+        # Build the .native binaries for the proofs in this subdirectory.
+        # build_proofs depends on UNOPT_OBJ, so the .o files for THIS subdir
+        # also get assembled. We rely on the per-target Makefile rules
+        # rather than the `proofs` aggregate to scope to just this subdir.
+        targets=$(ls ${{ matrix.subdir }}/*.S | sed 's/\.S$/.correct/')
+        make -j ${BUILD_CORE_COUNT} $(echo "$targets" | sed 's/\.correct$/.native/')
+        make -j ${CORE_COUNT} $targets
 
 
