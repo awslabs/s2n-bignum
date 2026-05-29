@@ -4572,10 +4572,6 @@ let subroutine_signatures = [
    [(* temporary buffers *)
    ])
 );
-   ],
-   [(* temporary buffers *)
-   ])
-);
 
 ("mlkem_basemul_k2",
   ([(*args*)
