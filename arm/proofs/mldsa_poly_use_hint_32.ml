@@ -804,13 +804,8 @@ let MLDSA_USE_HINT_32_CORRECT = prove
   CONV_TAC(DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
 
-  (* Build a per-element val-form correctness via a chain of theorem
-     transformations: starting from ELEMENT_CORRECT_WORD (`asm a h = word(code
-     (val a) (val h))`), unfold the asm definition fully, derive
-       - EC_FINAL: the SIMD LHS = word(code (val a) (val h))
-       - EC_VAL_FINAL: val(SIMD LHS:int32) < 16 (used for the bound subgoal)
-     EC_VAL_FINAL is derived by composing EC_FINAL with `val(word x) =
-     x MOD 2^32`, the bound on the code spec, and MOD reduction. *)
+  (* Build the per-element FIPS-eq lemma EC_FINAL by composing
+     ELEMENT_CORRECT_WORD with the asm definition unfold. *)
   let EC_DEEP =
     CONV_RULE(DEPTH_CONV WORD_NUM_RED_CONV)
      (CONV_RULE(DEPTH_CONV(INT_RED_CONV ORELSEC NUM_RED_CONV))
@@ -819,26 +814,6 @@ let MLDSA_USE_HINT_32_CORRECT = prove
                         DIMINDEX_32] ELEMENT_CORRECT_WORD))) in
   let EC_FINAL = ONCE_REWRITE_RULE[WORD_AND_SYM]
     (ONCE_REWRITE_RULE[WORD_OR_SYM] EC_DEEP) in
-  let EC_VAL_FINAL =
-    let a = `a:int32` and h = `h:int32` in
-    let ec_eq = rand(concl(SPEC_ALL EC_FINAL)) in
-    let ec_lhs = lhand ec_eq in
-    let val_lhs = mk_comb(`val:int32->num`, ec_lhs) in
-    let goal_concl = mk_forall(a, mk_forall(h,
-      mk_imp(rand(rator(concl(SPEC_ALL EC_FINAL))),
-        mk_binop `(<):num->num->bool` val_lhs `16`))) in
-    prove(goal_concl,
-      REPEAT STRIP_TAC THEN
-      MP_TAC(SPECL [a;h] EC_FINAL) THEN
-      ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-      REWRITE_TAC[VAL_WORD; DIMINDEX_32] THEN
-      CONV_TAC NUM_REDUCE_CONV THEN
-      MATCH_MP_TAC(ARITH_RULE `x < 16 ==> x MOD 4294967296 < 16`) THEN
-      REWRITE_TAC[mldsa_use_hint_32_code] THEN
-      CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-      REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
-      REWRITE_TAC[MOD_LT_EQ; ARITH_EQ]) in
 
   (* Pre-rewrite mldsa_use_hint_32 -> _code via the equivalence at all
      occurrences in the goal. IMP_REWRITE_TAC handles the conditional lemma
