@@ -319,6 +319,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TZCNT operand operand
    | VMOVD operand operand
    | VMOVMSKPS operand operand
+   | VPMOVMSKB operand operand
    | VMOVQ operand operand
    | VMOVDQA operand operand
    | VMOVDQU operand operand
@@ -352,7 +353,9 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPBLENDVB operand operand operand operand
    | VPMADDUBSW operand operand operand
    | VPMADDWD operand operand operand
+   | VPMOVSXBD operand operand
    | VPMOVZXBD operand operand
+   | VPMOVZXBW operand operand
    | VPMULDQ operand operand operand
    | VPMULHRSW operand operand operand
    | VPMULHW operand operand operand
@@ -372,6 +375,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSRLVQ operand operand operand
    | VPSRLQ operand operand operand
    | VPSRLW operand operand operand
+   | VPSUBB operand operand operand
    | VPSUBD operand operand operand
    | VPSUBQ operand operand operand
    | VPSUBW operand operand operand
