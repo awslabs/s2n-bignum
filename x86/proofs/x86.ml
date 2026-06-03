@@ -2235,7 +2235,8 @@ let x86_VPSUBB = new_definition
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s in
       if dimindex(:N) = 256 then
-        let res:(256)word = simd32 word_sub (word_zx x) (word_zx y) in
+        let f128 = \w1 w2. simd16 word_sub w1 w2 in
+        let res:(256)word = simd2 f128 (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s
       else
         let res:(128)word = simd16 word_sub (word_zx x) (word_zx y) in
