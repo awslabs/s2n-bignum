@@ -1489,14 +1489,8 @@ let arm_REV64_VEC = define
 let arm_REV32_VEC = define
  `arm_REV32_VEC Rd Rn esize =
     \s. let n:(128)word = read Rn (s:armstate) in
-        let n_reversed16 = usimd4 (\x. word_join
-          (word_subword x (0,16):(16)word) (word_subword x (16,16):(16)word)
-          : (32)word) n in
-        if esize = 16 then (Rd := n_reversed16) s else
-        let n_reversed8 = usimd8 (\x. word_join
-          (word_subword x (0,8):(8)word) (word_subword x (8,8):(8)word)
-          : (16)word) n_reversed16 in
-        (Rd := n_reversed8) s`;;
+        let n_reversed = usimd4 (word_reversefields esize) n in
+        (Rd := n_reversed) s`;;
 
 let arm_RORV = define
  `arm_RORV Rd Rm Rn =
