@@ -2013,10 +2013,10 @@ let x86_VPMOVSXBD = new_definition
       let (x:M word) = read src s in
       let f = \(b:byte). word_sx b:int32 in
       if dimindex(:N) = 256 then
-        let res:(256)word = simd8 f (word_zx x:int64) in
+        let res:(256)word = usimd8 f (word_zx x:int64) in
         (dest := (word_zx res):N word) s
       else
-        let res:(128)word = simd4 f (word_zx x:int32) in
+        let res:(128)word = usimd4 f (word_zx x:int32) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHRSW = new_definition
