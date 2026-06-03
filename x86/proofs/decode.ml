@@ -709,10 +709,7 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x30:8] -> if word_not v = (word 0b1111:4 word) then
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-           let sop = if is_memop rm then
-                       (if L then operand_of_RM Lower_128 rm
-                        else operand_of_RM Lower_64 rm)
-                     else simd_of_RM Lower_128 rm in
+           let sop = simd_of_RM Lower_128 rm in
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPMOVZXBW (mmreg reg sz) sop,l)
            | _ -> NONE)
