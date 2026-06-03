@@ -2232,18 +2232,14 @@ let x86_VPSHUFB = new_definition
 
 let x86_VPSUBB = new_definition
   `x86_VPSUBB dest src1 src2 (s:x86state) =
-      let (x:N word) = read src1 s
-      and (y:N word) = read src2 s in
+      let x:N word = read src1 s
+      and y:N word = read src2 s in
+      let f128 = \(w1:int128) (w2:int128). simd16 word_sub w1 w2 in
       if dimindex(:N) = 256 then
-        let xlo = (word_zx x):int128 and ylo = (word_zx y):int128 in
-        let xhi = word_zx (word_ushr x 128):int128
-        and yhi = word_zx (word_ushr y 128):int128 in
-        let reslo = simd16 word_sub xlo ylo
-        and reshi = simd16 word_sub xhi yhi in
-        let res = word_or (word_zx reslo) (word_shl (word_zx reshi) 128) in
+        let res = simd2 f128 (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s
       else
-        let res:(128)word = simd16 word_sub (word_zx x) (word_zx y) in
+        let res = f128 (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPSUBD = new_definition
