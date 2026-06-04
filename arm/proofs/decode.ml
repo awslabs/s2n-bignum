@@ -511,6 +511,10 @@ let decode = new_definition `!w:int32. decode w =
     // BIT
     SOME (arm_BIT (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
 
+  | [0:1; q; 0b101110111:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
+    // BIF
+    SOME (arm_BIF (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
+
   // Two sizes of FCSEL, not allowing FP16 case at all
   | [0b00011110:8; 0b00:2; 0b1:1; Rm:5; cond:4; 0b11:2; Rn:5; Rd:5] ->
     SOME (arm_FCSEL (QREG' Rd) (QREG' Rn) (QREG' Rm) (Condition cond) 32)
@@ -731,6 +735,14 @@ let decode = new_definition `!w:int32. decode w =
     else
       let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
       SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize))
+
+  | [0:1; q; 0b101110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
+    // REV32
+    if ~q then NONE // datasize = 64 is unsupported yet
+    else if size = (word 0b10: (2)word) \/ size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
+      SOME (arm_REV32_VEC (QREG' Rd) (QREG' Rn) (val esize))
 
   | [0b01101110000:11; imm5:5; 0:1; imm4:4; 1:1; Rn:5; Rd:5] ->
     // INS, or "MOV (element)"
