@@ -1054,6 +1054,10 @@ extern void mldsa_pointwise_acc_l7_x86(int32_t c[S2N_BIGNUM_STATIC 256], const i
 // Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_reduce(int32_t a[S2N_BIGNUM_STATIC 256]);
 
+// Use hint to correct high bits of decomposition for ML-DSA (parameter sets 65/87)
+// Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words)
+extern void mldsa_poly_use_hint_32(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
+
 // Use hint to correct high bits of decomposition for ML-DSA (parameter set 44)
 // Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words)
 extern void mldsa_poly_use_hint_88(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
