@@ -872,6 +872,20 @@ let MEMORY_128_FROM_32_TAC =
     MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
 
 (* ------------------------------------------------------------------------- *)
+(* ML-DSA use_hint Merge 4 x bytes32 into bytes128 at a given base+offset    *)
+(* ------------------------------------------------------------------------- *)
+
+let USE_HINT_MEMORY_128_FROM_32_TAC =
+  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
+  and pat = `read (memory :> bytes128(word_add a (word n))) s0` in
+  fun v boff n ->
+    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
+    let f i =
+      let itm = mk_small_numeral(boff + 16*i) in
+      READ_MEMORY_MERGE_CONV 2 (subst[itm,n_tm] pat') in
+    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
+
+(* ------------------------------------------------------------------------- *)
 (* From |- (x == y) (mod m) /\ P   to   |- (x == y) (mod n) /\ P             *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1949,3 +1963,176 @@ let SIMD_SIMPLIFY_ABBREV_TAC =
       let tms = sort free_in (find_terms pam (rand(concl th''))) in
       (MP_TAC th'' THEN MAP_EVERY AUTO_ABBREV_TAC tms THEN DISCH_TAC) (asl,w) in
   TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
+
+(* ========================================================================= *)
+(* ML-DSA use_hint shared infrastructure lemmas                              *)
+(* Used by both poly_use_hint_32 and poly_use_hint_88 proofs                 *)
+(* ========================================================================= *)
+
+(* ival equals val for values in [0, Q) where Q = 8380417 < 2^31 *)
+let MLDSA_IVAL_VAL = prove(
+  `!a:int32. val a < 8380417 ==> ival a = &(val a)`,
+  GEN_TAC THEN DISCH_TAC THEN
+  SIMP_TAC[ival; DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  COND_CASES_TAC THEN ASM_ARITH_TAC);;
+
+(* For natural numbers, &n is never < -2^31 *)
+let INT_POS_NEG_BOUND = prove(`!n. ~((&n:int) < --(&2147483648))`,
+  GEN_TAC THEN REWRITE_TAC[INT_NOT_LT] THEN
+  MP_TAC(SPEC `n:num` INT_POS) THEN INT_ARITH_TAC);;
+
+(* val(iword(&n)) = n for n < 2^31 *)
+let VAL_IWORD_NUM_32 = prove(
+  `!n. n < 2147483648 ==> val(iword(&n):int32) = n`,
+  GEN_TAC THEN DISCH_TAC THEN
+  MP_TAC(ISPECL [`&n:int`] (INST_TYPE [`:32`,`:N`] INT_VAL_IWORD)) THEN
+  REWRITE_TAC[DIMINDEX_32; INT_POS] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  ANTS_TAC THENL
+  [REWRITE_TAC[INT_OF_NUM_LT] THEN ASM_ARITH_TAC;
+   REWRITE_TAC[INT_OF_NUM_EQ] THEN SIMP_TAC[]]);;
+
+(* word_ile x 0 in terms of bit 31 (signed non-positive check) *)
+let WORD_ILE_ZERO_32 = BITBLAST_RULE
+  `!x:int32. word_ile x (word 0) <=> bit 31 x \/ x = word 0`;;
+
+(* val(word_and x (word 15)) = val x MOD 16 *)
+let VAL_WORD_AND_15_32 = BITBLAST_RULE
+  `!x:int32. val(word_and x (word 15:int32)) = val x MOD 16`;;
+
+(* word_and x all-ones = x *)
+let WORD_AND_ONES_32 = prove(
+  `!x:int32. word_and x (word 4294967295) = x`,
+  GEN_TAC THEN SUBGOAL_THEN `(word 4294967295 : int32) = word_not(word 0)` SUBST1_TAC THENL
+  [CONV_TAC WORD_REDUCE_CONV; REWRITE_TAC[WORD_AND_NOT0]]);;
+
+(* word_mul x 1 = x *)
+let WORD_MUL_1_32 = prove(
+  `!x:int32. word_mul x (word 1) = x`,
+  GEN_TAC THEN REWRITE_TAC[GSYM VAL_EQ; VAL_WORD_MUL; VAL_WORD; DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[MULT_CLAUSES] THEN
+  MATCH_MP_TAC MOD_LT THEN MP_TAC(ISPEC `x:int32` VAL_BOUND) THEN
+  REWRITE_TAC[DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV);;
+
+(* Bridge lemmas: derive both real_gt and int_gt from a single NUM fact.
+   Needed for native mode where real_gt and int_gt are distinct types. *)
+let REAL_INT_GT_BRIDGE = prove(
+  `!a:num b c. a <= b * c ==>
+   ~(real_gt (&a - &b * &c) (&0)) /\ ~(int_gt (&a - &b * &c) (&0))`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN CONJ_TAC THENL
+  [REWRITE_TAC[real_gt; REAL_NOT_LT] THEN
+   MP_TAC(REWRITE_RULE[GSYM REAL_OF_NUM_LE; GSYM REAL_OF_NUM_MUL] (ASSUME `a <= b * c`)) THEN REAL_ARITH_TAC;
+   REWRITE_TAC[INT_GT; INT_NOT_LT] THEN
+   MP_TAC(REWRITE_RULE[GSYM INT_OF_NUM_LE; GSYM INT_OF_NUM_MUL] (ASSUME `a <= b * c`)) THEN INT_ARITH_TAC]);;
+
+let REAL_INT_GT_BRIDGE_POS = prove(
+  `!a:num b c. ~(a <= b * c) ==>
+   real_gt (&a - &b * &c) (&0) /\ int_gt (&a - &b * &c) (&0)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[NOT_LE] THEN DISCH_TAC THEN CONJ_TAC THENL
+  [REWRITE_TAC[real_gt] THEN
+   MP_TAC(REWRITE_RULE[GSYM REAL_OF_NUM_LT; GSYM REAL_OF_NUM_MUL] (ASSUME `b * c < a`)) THEN REAL_ARITH_TAC;
+   REWRITE_TAC[INT_GT] THEN
+   MP_TAC(REWRITE_RULE[GSYM INT_OF_NUM_LT; GSYM INT_OF_NUM_MUL] (ASSUME `b * c < a`)) THEN INT_ARITH_TAC]);;
+
+(* ========================================================================= *)
+(* Shared helper lemmas for UseHint proofs                                   *)
+(* ========================================================================= *)
+
+let DIV_SANDWICH = prove(
+  `!x d k. ~(d = 0) /\ k * d <= x /\ x < (k + 1) * d ==> x DIV d = k`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN `k <= x DIV d` ASSUME_TAC THENL
+  [ASM_SIMP_TAC[LE_RDIV_EQ] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `x DIV d < k + 1` ASSUME_TAC THENL
+  [ASM_SIMP_TAC[RDIV_LT_EQ] THEN ASM_ARITH_TAC; ASM_ARITH_TAC]);;
+
+let INT_MOD_RESIDUE = prove(
+  `!r m. ~(m = 0) ==> (&r:int) - &(r DIV m) * &m = &(r MOD m)`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  MP_TAC(SPECL [`r:num`; `m:num`] (CONJUNCT1 DIVISION_SIMP)) THEN
+  REWRITE_TAC[GSYM INT_OF_NUM_MUL; GSYM INT_OF_NUM_ADD;
+              GSYM INT_OF_NUM_EQ] THEN
+  INT_ARITH_TAC);;
+
+(* ========================================================================= *)
+(* FIPS 204 UseHint definitions (Algorithms 36 and 40)                       *)
+(* ========================================================================= *)
+
+let mldsa_cmod = new_definition
+  `mldsa_cmod (r:num) (m:num) : int =
+   if (r MOD m) * 2 <= m then &(r MOD m) else &(r MOD m) - &m`;;
+
+let mldsa_decompose_32 = new_definition
+  `mldsa_decompose_32 (r:num) : num # int =
+   let r0 = mldsa_cmod r 523776 in
+   if &r - r0 = &8380416 then (0, r0 - &1)
+   else (num_of_int((&r - r0) div &523776), r0)`;;
+
+let decompose_32_r1 = new_definition
+  `decompose_32_r1 (r:num) : num = FST(mldsa_decompose_32 r)`;;
+
+let decompose_32_r0 = new_definition
+  `decompose_32_r0 (r:num) : int = SND(mldsa_decompose_32 r)`;;
+
+let mldsa_use_hint_32 = new_definition
+  `mldsa_use_hint_32 (h:num) (r:num) : num =
+   let (r1, r0) = mldsa_decompose_32 r in
+   if h = 1 /\ r0 > &0 then (r1 + 1) MOD 16
+   else if h = 1 /\ r0 <= &0 then (r1 + 15) MOD 16
+   else r1`;;
+
+let LOWER_NONWRAP_R1 = prove(
+  `!r. r MOD 523776 * 2 <= 523776 /\
+       ~((&r:int) - &(r MOD 523776) = &8380416) ==>
+   decompose_32_r1 r = r DIV 523776`,
+  GEN_TAC THEN STRIP_TAC THEN
+  REWRITE_TAC[decompose_32_r1; mldsa_decompose_32; mldsa_cmod] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN `r MOD 523776 <= r` ASSUME_TAC THENL
+  [MESON_TAC[MOD_LE]; ALL_TAC] THEN
+  ASM_SIMP_TAC[INT_OF_NUM_SUB; INT_OF_NUM_DIV;
+               NUM_OF_INT_OF_NUM; INT_OF_NUM_EQ] THEN
+  MP_TAC(SPECL [`r:num`; `523776`] (CONJUNCT1 DIVISION_SIMP)) THEN
+  DISCH_TAC THEN
+  SUBGOAL_THEN `r - r MOD 523776 = 523776 * r DIV 523776` SUBST1_TAC THENL
+  [ASM_ARITH_TAC; ALL_TAC] THEN
+  MP_TAC(SPECL [`523776`; `r DIV 523776`] DIV_MULT) THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let UPPER_NONWRAP_R1 = prove(
+  `!r. ~(r MOD 523776 * 2 <= 523776) /\
+       ~((&r:int) - (&(r MOD 523776) - &523776) = &8380416) ==>
+   decompose_32_r1 r = r DIV 523776 + 1`,
+  GEN_TAC THEN STRIP_TAC THEN
+  REWRITE_TAC[decompose_32_r1; mldsa_decompose_32; mldsa_cmod] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN `r MOD 523776 <= r` ASSUME_TAC THENL
+  [MESON_TAC[MOD_LE]; ALL_TAC] THEN
+  SUBGOAL_THEN `r MOD 523776 < 523776` ASSUME_TAC THENL
+  [MP_TAC(SPECL [`r:num`; `523776`] MOD_LT_EQ) THEN ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(&r:int) - (&(r MOD 523776) - &523776) =
+                &(r - r MOD 523776 + 523776)` ASSUME_TAC THENL
+  [ASM_SIMP_TAC[GSYM INT_OF_NUM_SUB; GSYM INT_OF_NUM_ADD] THEN
+   INT_ARITH_TAC; ALL_TAC] THEN
+  ASM_REWRITE_TAC[INT_OF_NUM_DIV; NUM_OF_INT_OF_NUM; INT_OF_NUM_EQ] THEN
+  MP_TAC(SPECL [`r:num`; `523776`] (CONJUNCT1 DIVISION_SIMP)) THEN
+  DISCH_TAC THEN
+  SUBGOAL_THEN `r - r MOD 523776 + 523776 = (r DIV 523776 + 1) * 523776`
+    ASSUME_TAC THENL
+  [ASM_ARITH_TAC; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  MP_TAC(SPECL [`(r DIV 523776 + 1) * 523776`; `523776`] DIV_MULT) THEN
+  ARITH_TAC);;
+
+let MLDSA_USE_HINT_32_UNFOLD = prove(
+  `!h r. mldsa_use_hint_32 h r =
+   (if h = 1 /\ decompose_32_r0 r > &0 then (decompose_32_r1 r + 1) MOD 16
+    else if h = 1 /\ decompose_32_r0 r <= &0
+    then (decompose_32_r1 r + 15) MOD 16
+    else decompose_32_r1 r)`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[mldsa_use_hint_32; decompose_32_r1; decompose_32_r0] THEN
+  SPEC_TAC(`mldsa_decompose_32 r`, `p:num#int`) THEN
+  REWRITE_TAC[FORALL_PAIR_THM] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN REWRITE_TAC[]);;
