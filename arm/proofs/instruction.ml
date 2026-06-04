@@ -988,6 +988,18 @@ let arm_BIT = define
           let out':(64)word = word_subword out (0,64) in
           (Rd := word_zx out':(128)word) s`;;
 
+let arm_BIF = define
+ `arm_BIF Rd Rn Rm datasize =
+    \s. let m = read Rm s
+        and n = read Rn s
+        and d = read Rd s in
+        let out:(128)word = word_or (word_and d m) (word_and n (word_not m)) in
+        if datasize = 128 then
+          (Rd := out) s
+        else
+          let out':(64)word = word_subword out (0,64) in
+          (Rd := word_zx out':(128)word) s`;;
+
 (*** As with x86, we have relative and absolute versions of branch & link ***)
 (*** The absolute one gives a natural way of handling linker-insertions.  ***)
 
@@ -1473,6 +1485,12 @@ let arm_REV64_VEC = define
           (word_subword x (0,8):(8)word) (word_subword x (8,8):(8)word)
           : (16)word) n_reversed16 in
         (Rd := n_reversed8) s`;;
+
+let arm_REV32_VEC = define
+ `arm_REV32_VEC Rd Rn esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let n_reversed = usimd4 (word_reversefields esize) n in
+        (Rd := n_reversed) s`;;
 
 let arm_RORV = define
  `arm_RORV Rd Rm Rn =
@@ -3416,6 +3434,7 @@ let arm_PMUL_VEC_ALT =   EXPAND_SIMD_RULE arm_PMUL_VEC;;
 let arm_PMULL_VEC_ALT =  EXPAND_SIMD_RULE arm_PMULL_VEC;;
 let arm_PMULL2_VEC_ALT = EXPAND_SIMD_RULE arm_PMULL2_VEC;;
 let arm_REV64_VEC_ALT =  EXPAND_SIMD_RULE arm_REV64_VEC;;
+let arm_REV32_VEC_ALT =  EXPAND_SIMD_RULE arm_REV32_VEC;;
 let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
 let arm_SSHR_VEC_ALT =   EXPAND_SIMD_RULE arm_SSHR_VEC;;
 let arm_SHRN_ALT =       EXPAND_SIMD_RULE arm_SHRN;;
@@ -3536,7 +3555,7 @@ let ARM_OPERATION_CLAUSES =
     (*** Alphabetically sorted, new alphabet appears in the next line ***)
       [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
-       arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIT;
+       arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT;
        arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
        arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMLE_VEC_ZERO_ALT; arm_CNT_ALT;
@@ -3554,7 +3573,7 @@ let ARM_OPERATION_CLAUSES =
        arm_ORN; arm_ORR; arm_ORR_VEC;
        arm_PMUL_VEC_ALT;
        arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT;
-       arm_RET; arm_REV; arm_REV64_VEC_ALT; arm_RORV;
+       arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
