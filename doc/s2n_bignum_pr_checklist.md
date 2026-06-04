@@ -116,4 +116,33 @@
 
 ## Type 3: Adding a New Specification
 
-- [ ] *(To be defined — topic for a future discussion on writing good formal specifications)*
+- [ ] **Specification style**
+  - [ ] Top-level specification should be as abstract and mathematical as possible — avoid code-like pseudocode that mirrors the implementation
+  - [ ] Specification states an implication (model implies spec), not necessarily an equivalence — it's OK for the spec to leave some aspects undetermined (e.g., Jacobian representation choice)
+  - [ ] Keeping the spec stylistically different from the code reduces common-mode errors (same mistake in both spec and implementation)
+  - [ ] For functions that are inherently non-mathematical (AES, SHA-3, Keccak round constants), accept that the spec will resemble code — but validate more aggressively (see below)
+
+- [ ] **Layered specifications**
+  - [ ] Consider multiple specification levels: a low-level (close to code) spec, a medium-level spec, and a high-level mathematical spec
+  - [ ] Prove implications between layers (low implies medium implies high)
+  - [ ] The low-level spec can track a standards document (e.g., NIST pseudocode); the high-level spec captures the mathematical essence
+
+- [ ] **Spec validation (closing "gap A")**
+  - [ ] For mathematical specs (bignum arithmetic, elliptic curves, GHASH polynomial math): the spec is short and abstract enough to inspect by eye — low risk
+  - [ ] For code-like specs (AES, SHA, symmetric crypto round functions): higher risk of spec bugs — apply additional validation:
+    - [ ] Run known-answer tests / test vectors against the specification (make the spec executable or prove equivalence to an executable form)
+    - [ ] Compare against specifications in other formal systems (Cryptol, Isabelle/HOL, Coq, Lean, ACL2) — look for structural similarities and flag disparities
+    - [ ] Cross-check with the authoritative standards document (NIST FIPS, RFC) — have a human verify the correspondence, not just an LLM (to avoid common-mode LLM errors)
+  - [ ] For byte-level concerns: verify byte ordering, endianness, and encoding conventions match the standard (e.g., GHASH bit-reversal per NIST SP 800-38D)
+
+- [ ] **Executability considerations (for abstract/mathematical specs)**
+  - [ ] Abstract mathematical specs may not be directly executable — that's acceptable, but requires compensating validation
+  - [ ] If the spec is not executable, ensure there is a proven-equivalent executable form or test vectors that validate the proof chain end-to-end
+  - [ ] For under-determined specs using existential quantifiers (output is "some value such that ..."), verify the spec is satisfiable — i.e., a valid output exists for all valid inputs
+  - [ ] Note: code-like specs (AES, SHA) are inherently executable and testable — this tradeoff does not apply to them
+
+- [ ] **Relationship to standards documents**
+  - [ ] Identify the authoritative informal spec (RFC, NIST FIPS, original paper)
+  - [ ] Document which document and section the formal spec corresponds to
+  - [ ] If the informal spec uses pseudocode, prefer formalizing the mathematical intent rather than transliterating the pseudocode
+  - [ ] Watch for implicit behaviors buried in pseudocode (e.g., X25519 returning 0 for input 0 is implicit in the Fermat inverse, not stated explicitly)
