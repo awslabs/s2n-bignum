@@ -37,7 +37,7 @@ S2N_BN_SYMBOL(mldsa_poly_use_hint_88):
         CFI_START
 
 // This matches the code in the mldsa-native repository
-// https://github.com/pq-code-package/mldsa-native/blob/main/mldsa/src/native/aarch64/src/poly_use_hint_88_asm.S
+// https://github.com/pq-code-package/mldsa-native/blob/main/mldsa/src/native/aarch64/src/poly_use_hint_88_aarch64_asm.S
 
 // Load constants into SIMD registers
 
