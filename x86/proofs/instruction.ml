@@ -318,6 +318,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | TEST operand operand
    | TZCNT operand operand
    | VMOVD operand operand
+   | VMOVMSKPS operand operand
    | VMOVQ operand operand
    | VMOVDQA operand operand
    | VMOVDQU operand operand
@@ -351,6 +352,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPBLENDVB operand operand operand operand
    | VPMADDUBSW operand operand operand
    | VPMADDWD operand operand operand
+   | VPMOVZXBD operand operand
    | VPMULDQ operand operand operand
    | VPMULHRSW operand operand operand
    | VPMULHW operand operand operand
@@ -376,6 +378,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPUNPCKHQDQ operand operand operand
    | VPUNPCKLQDQ operand operand operand
    | VPXOR operand operand operand
+   | VZEROUPPER
    | XCHG operand operand
    | XOR operand operand";;
 

@@ -511,6 +511,10 @@ let decode = new_definition `!w:int32. decode w =
     // BIT
     SOME (arm_BIT (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
 
+  | [0:1; q; 0b101110111:9; Rm:5; 0b000111:6; Rn:5; Rd:5] ->
+    // BIF
+    SOME (arm_BIF (QREG' Rd) (QREG' Rn) (QREG' Rm) (if q then 128 else 64))
+
   // Two sizes of FCSEL, not allowing FP16 case at all
   | [0b00011110:8; 0b00:2; 0b1:1; Rm:5; cond:4; 0b11:2; Rn:5; Rd:5] ->
     SOME (arm_FCSEL (QREG' Rd) (QREG' Rn) (QREG' Rm) (Condition cond) 32)
@@ -731,6 +735,14 @@ let decode = new_definition `!w:int32. decode w =
     else
       let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
       SOME (arm_REV64_VEC (QREG' Rd) (QREG' Rn) (val esize))
+
+  | [0:1; q; 0b101110:6; size:2; 0b100000000010:12; Rn:5; Rd:5] ->
+    // REV32
+    if ~q then NONE // datasize = 64 is unsupported yet
+    else if size = (word 0b10: (2)word) \/ size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize:(64)word = word_shl (word 0b1000: (64)word) (val size) in
+      SOME (arm_REV32_VEC (QREG' Rd) (QREG' Rn) (val esize))
 
   | [0b01101110000:11; imm5:5; 0:1; imm4:4; 1:1; Rn:5; Rd:5] ->
     // INS, or "MOV (element)"
@@ -1557,18 +1569,23 @@ let define_relocated_mc name (args, tm:term list * term): thm =
   | [] -> f (name, A)
   | (v::vs) -> mk_comb (mk_tm_comb f (mk_fun_ty (type_of v) A) vs, v) in
   let args0,args = args,rev args in
-  try new_definition (list_mk_forall
-    (args0, mk_eq (mk_tm_comb mk_var `:byte list` args, tm)))
-  with Failure _ ->
-    new_definition (list_mk_forall
-      (args0, mk_eq (mk_tm_comb mk_mconst `:byte list` args, tm)));;
+  let mc_def =
+    try new_definition (list_mk_forall
+      (args0, mk_eq (mk_tm_comb mk_var `:byte list` args, tm)))
+    with Failure _ ->
+      new_definition (list_mk_forall
+        (args0, mk_eq (mk_tm_comb mk_mconst `:byte list` args, tm))) in
+  (* break APPEND(4-byte list, list) to 4 consecutive CONSs. *)
+  let blth = (LAND_CONV (TOP_DEPTH_CONV num_CONV) THENC
+              REWRITE_CONV[bytelist_of_num]) `bytelist_of_num 4 x` in
+  REWRITE_RULE[APPEND; blth] mc_def;;
 
 needs "common/elf.ml";;
 
 let make_fn_word_list, make_fn_word_list_reloc =
   let print_list rhs_col =
     let indent = "\n" ^ String.make rhs_col ' ' in
-    fun rels start end_ head bs dec ->
+    fun next_rel start end_ head bs dec ->
       let buf = Buffer.create 1024 in
       Buffer.add_string buf start;
       let rec go pc prev_inst_printer = function
@@ -1578,7 +1595,7 @@ let make_fn_word_list, make_fn_word_list_reloc =
         go (pc + 4) (fun s ->
           (* s is either "" or ";" *)
           let opcode = get_int_le bs pc 4 in
-          match rels pc with
+          match next_rel pc with
           | None ->
           (Printf.bprintf buf "  %s0x%08x%s" head opcode s;
             let space_size = String.length head + String.length s + 12 in
@@ -1612,13 +1629,13 @@ let make_fn_word_list, make_fn_word_list_reloc =
   let print_list_reloc = print_list 24 in
   fun (bstext, constants, rels) ->
     let r = ref rels in
-    let f i = match !r with
+    let next_rel i = match !r with
     | (ty,(off,sym,add)) :: rels when off = i -> r := rels; Some (ty,sym,add)
     | _ -> None in
     (* The input argument of function X must match that of append_reloc_X.
      * ex) BL: append_reloc_BL
      *)
-    print_list_reloc f "(fun w BL ADR ADRP ADD_rri64 -> [\n" "]);;\n" "w " bstext;;
+    print_list_reloc next_rel "(fun w BL ADR ADRP ADD_rri64 -> [\n" "]);;\n" "w " bstext;;
 (*
 let trim_ret_core dec =
   let m1 = Array.length dec - 1 in
@@ -1695,16 +1712,6 @@ let N_SUBLIST_CONV =
 
   - : thm = |- [0; 1; 2; 3; 4; 5] = APPEND [0] (APPEND test1 [5])
 *)
-(*
-let define_trim_ret_thm name th =
-  let th = SPEC_ALL th in
-  let df,tm1 = dest_eq (concl th) in
-  let n, tm = trim_ret_off tm1 in
-  let rec args ls = function
-  | Comb(f,v) -> args (v::ls) f
-  | _ -> ls in
-  let defn = define_relocated_mc name (args [] df, tm) in
-  defn, TRANS th (N_SUBLIST_CONV (SPEC_ALL defn) n tm1);; *)
 
 let define_from_elf name file =
   define_word_list name (term_of_bytes (load_elf_contents_arm file));;
@@ -1909,7 +1916,8 @@ let term_of_relocs_arm, assert_relocs =
         pc+4, next_insns
       with _ -> failwith ("could not check opcode " ^ (string_of_term reloc_opcode)) in
 
-    (* opcode_fn is the large OCaml function printed by print_literal_relocs_from_elf *)
+    (* opcode_fn is the large OCaml function printed by
+       print_literal_relocs_from_elf *)
     fun (args,tm) opcode_fn ->
       let opcode_fn_implemented = opcode_fn
           (* This order should match the fn args printed by
@@ -1930,12 +1938,7 @@ let define_assert_relocs name (tm:term list * term) printed_opcodes_fn
     (constants:(string * bytes) list)
     :(thm(*machine code def*) * thm list(*data definitions of constants*)) =
   assert_relocs tm printed_opcodes_fn;
-  let mc_def = define_relocated_mc name tm in
-  let mc_def_canonicalized =
-    (* break APPEND(4-byte list, list) to 4 consecutive CONSs. *)
-    let blth = (LAND_CONV (TOP_DEPTH_CONV num_CONV) THENC
-                REWRITE_CONV[bytelist_of_num]) `bytelist_of_num 4 x` in
-    REWRITE_RULE[APPEND; blth] mc_def in
+  let mc_def_canonicalized = define_relocated_mc name tm in
   let datatype = `:((8)word)list` in
   (mc_def_canonicalized,
    map (fun (name,data) ->
