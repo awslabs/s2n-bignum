@@ -21,6 +21,7 @@ needs "Library/pocklington.ml";;
 needs "Library/integer.ml";;
 needs "Library/words.ml";;
 needs "Library/bitmatch.ml";;
+loadt "Library/records.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* common ARM-x86 proof infrastructure.                                      *)
@@ -32,7 +33,6 @@ loadt "common/words2.ml";;
 loadt "common/misc.ml";;
 loadt "common/components.ml";;
 loadt "common/alignment.ml";;
-loadt "common/records.ml";;
 loadt "common/relational.ml";;
 loadt "common/interval.ml";;
 loadt "common/elf.ml";;

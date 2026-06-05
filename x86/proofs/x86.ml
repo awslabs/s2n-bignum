@@ -1019,6 +1019,25 @@ let x86_DEC = new_definition
 let x86_ENDBR64 = new_definition
  `x86_ENDBR64 (s:x86state) = \s'. s = s'`;;
 
+let x86_VZEROUPPER = new_definition
+ `x86_VZEROUPPER (s:x86state) =
+  (YMM0  := word_zx(word_subword (read YMM0  s) (0,128):int128) ,,
+   YMM1  := word_zx(word_subword (read YMM1  s) (0,128):int128) ,,
+   YMM2  := word_zx(word_subword (read YMM2  s) (0,128):int128) ,,
+   YMM3  := word_zx(word_subword (read YMM3  s) (0,128):int128) ,,
+   YMM4  := word_zx(word_subword (read YMM4  s) (0,128):int128) ,,
+   YMM5  := word_zx(word_subword (read YMM5  s) (0,128):int128) ,,
+   YMM6  := word_zx(word_subword (read YMM6  s) (0,128):int128) ,,
+   YMM7  := word_zx(word_subword (read YMM7  s) (0,128):int128) ,,
+   YMM8  := word_zx(word_subword (read YMM8  s) (0,128):int128) ,,
+   YMM9  := word_zx(word_subword (read YMM9  s) (0,128):int128) ,,
+   YMM10 := word_zx(word_subword (read YMM10 s) (0,128):int128) ,,
+   YMM11 := word_zx(word_subword (read YMM11 s) (0,128):int128) ,,
+   YMM12 := word_zx(word_subword (read YMM12 s) (0,128):int128) ,,
+   YMM13 := word_zx(word_subword (read YMM13 s) (0,128):int128) ,,
+   YMM14 := word_zx(word_subword (read YMM14 s) (0,128):int128) ,,
+   YMM15 := word_zx(word_subword (read YMM15 s) (0,128):int128)) s`;;
+
 (*** There are really four different multiplies here.
  ***
  *** 1. x86_IMUL: a signed multiply with the same length for operands
@@ -1356,6 +1375,20 @@ let x86_PMOVMSKB = new_definition
     let x:int128 = read src s in
     let res:int16 = usimd16 (\x. if bit 7 x then word 1 else word 0) x in
     (dest := word_zx res:N word) s`;;
+
+let x86_VMOVMSKPS = new_definition
+ `x86_VMOVMSKPS dest src (s:x86state) =
+    let x:int256 = read src s in
+    let res:byte = word(
+      bitval(bit 31 (word_subword x (0,32):int32)) +
+      2 * bitval(bit 31 (word_subword x (32,32):int32)) +
+      4 * bitval(bit 31 (word_subword x (64,32):int32)) +
+      8 * bitval(bit 31 (word_subword x (96,32):int32)) +
+      16 * bitval(bit 31 (word_subword x (128,32):int32)) +
+      32 * bitval(bit 31 (word_subword x (160,32):int32)) +
+      64 * bitval(bit 31 (word_subword x (192,32):int32)) +
+      128 * bitval(bit 31 (word_subword x (224,32):int32))) in
+    (dest := word_zx res:int32) s`;;
 
 (*** Push and pop are a bit odd in several ways. First of all, there is  ***)
 (*** an implicit memory operand so this doesn't have quite the same      ***)
@@ -1777,6 +1810,26 @@ let x86_VPBLENDW = new_definition
         let res:(128)word = msimd8 fn (word_zx imm8) (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
+let x86_VPCLMULQDQ = new_definition
+  `x86_VPCLMULQDQ dest src1 src2 ibyte (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s
+      and imm:byte = read ibyte s in
+      let f = \(x:128 word) (y:128 word).
+        let a:int64 = if bit 0 imm
+                      then word_subword x (64,64)
+                      else word_subword x (0,64)
+        and b:int64 = if bit 4 imm
+                      then word_subword y (64,64)
+                      else word_subword y (0,64) in
+        (word_pmul a b:128 word) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd2 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPBROADCASTD = new_definition
   `x86_VPBROADCASTD (dest:(x86state,(N)word)component) src (s:x86state) =
       let (x:M word) = read src s in
@@ -1893,6 +1946,17 @@ let x86_VPMULDQ = new_definition
         (dest := (word_zx res):N word) s
       else
         let res:(128)word = simd2 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPMOVZXBD = new_definition
+  `x86_VPMOVZXBD dest src (s:x86state) =
+      let (x:M word) = read src s in
+      let f = \(b:byte). word_zx b:int32 in
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd8 f (word_zx x:int64) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = usimd4 f (word_zx x:int32) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPMULHRSW = new_definition
@@ -2117,6 +2181,17 @@ let x86_VPSUBD = new_definition
         let res:(128)word = simd4 word_sub (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
+let x86_VPSUBQ = new_definition
+  `x86_VPSUBQ dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd4 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd2 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPSUBW = new_definition
   `x86_VPSUBW dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -2126,6 +2201,32 @@ let x86_VPSUBW = new_definition
         (dest := (word_zx res):N word) s
       else
         let res:(128)word = simd8 word_sub (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPCMPGTD = new_definition
+  `x86_VPCMPGTD dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      let f = (\(a:32 word) (b:32 word).
+          if word_igt a b then (word 0xffffffff) else (word 0)) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd8 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd4 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
+let x86_VPCMPGTW = new_definition
+  `x86_VPCMPGTW dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      let f = (\(a:16 word) (b:16 word).
+          if word_igt a b then (word 0xffff) else (word 0)) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd16 f (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd8 f (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
 (* Only VPSRAD version where shift count is an immediate value is supported *)
@@ -2515,6 +2616,33 @@ let x86_decode_unique = prove
       REWRITE_TAC [d2;
         REWRITE_RULE [th1; d2; APPEND_NIL; SYM th; l1] l2]) th));;
 
+(* A useful lemma to recover the APPEND form of mc from the CONS form which was
+   enforced by define_relocated_mc. This helps x86 decoder work well.
+   Looks horrendous, but it works... *)
+let BYTELIST_OF_INT_APPEND = prove(`
+  CONS
+    (word (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) MOD 256)
+      :(8)word)
+  (CONS
+    (word (
+      (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) DIV 256) MOD 256
+    ):(8)word)
+  (CONS
+    (word (
+      (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) DIV 256 DIV 256)
+      MOD 256
+    ):(8)word)
+  (CONS
+    (word (
+      (num_of_int (x rem &(256 EXP SUC (SUC (SUC (SUC 0))))) DIV 256 DIV 256 DIV 256)
+      MOD 256
+    ):(8)word)
+  y
+  ))) =
+  APPEND (bytelist_of_int 4 x) y`,
+  CONV_TAC (RAND_CONV (TOP_DEPTH_CONV num_CONV)) THEN
+  REWRITE_TAC[bytelist_of_int;bytelist_of_num;APPEND]);;
+
 let X86_DECODES_THM =
   let pth = (UNDISCH_ALL o prove)
    (`i = i' ==> pc + n = pc' ==>
@@ -2546,6 +2674,7 @@ let X86_DECODES_THM =
     | Const("NIL",_) -> [CONJUNCT1 th',pcofs]
     | _ -> let dth,bth = CONJ_PAIR th' in (dth,pcofs)::(go bth) in
   fun th ->
+    let th = PURE_REWRITE_RULE[BYTELIST_OF_INT_APPEND] th in
     let decodes:(thm*term) list = (go o
       (fun dth -> EQ_MP dth (ASSUME (lhs (concl dth)))) o
       AP_TERM `bytes_loaded s (word pc)`) th in
@@ -3190,6 +3319,9 @@ let x86_execute = define
         (\s. (match operand_size dest with
           256 -> x86_VMOVDQU (OPERAND256 dest s) (OPERAND256 src s) s
         | 128 -> x86_VMOVDQU (OPERAND128 dest s) (OPERAND128 src s) s))) s
+    | VMOVMSKPS dest src ->
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. x86_VMOVMSKPS (OPERAND32 dest s) (OPERAND256 src s) s)) s
     | VMOVSHDUP dest src ->
         (add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
@@ -3240,6 +3372,14 @@ let x86_execute = define
                               (OPERAND256 src2 s) (OPERAND8 imm8 s)
         | 128 -> x86_VPBLENDW (OPERAND128 dest s) (OPERAND128 src1 s)
                               (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
+    | VPCLMULQDQ dest src1 src2 imm8 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPCLMULQDQ (OPERAND256 dest s) (OPERAND256 src1 s)
+                                (OPERAND256 src2 s) (OPERAND8 imm8 s)
+        | 128 -> x86_VPCLMULQDQ (OPERAND128 dest s) (OPERAND128 src1 s)
+                                (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
     | VPBROADCASTD dest src ->
         (add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
@@ -3353,6 +3493,15 @@ let x86_execute = define
                               (OPERAND256 src2 s)
         | 128 -> x86_VPMADDWD (OPERAND128 dest s) (OPERAND128 src1 s)
                               (OPERAND128 src2 s)) s)) s
+    | VPMOVZXBD dest src ->
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> (match operand_size src with
+                    128 -> x86_VPMOVZXBD (OPERAND256 dest s) (OPERAND128 src s)
+                  |  64 -> x86_VPMOVZXBD (OPERAND256 dest s) (OPERAND64 src s))
+        | 128 -> (match operand_size src with
+                    128 -> x86_VPMOVZXBD (OPERAND128 dest s) (OPERAND128 src s)
+                  |  32 -> x86_VPMOVZXBD (OPERAND128 dest s) (OPERAND32 src s))) s)) s
     | VPMULDQ dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -3430,6 +3579,22 @@ let x86_execute = define
                             (OPERAND8 imm8 s)
         | 128 -> x86_VPSLLW (OPERAND128 dest s) (OPERAND128 src s)
                             (OPERAND8 imm8 s)) s)) s
+    | VPCMPGTD dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPCMPGTD (OPERAND256 dest s) (OPERAND256 src1 s)
+                               (OPERAND256 src2 s)
+        | 128 -> x86_VPCMPGTD (OPERAND128 dest s) (OPERAND128 src1 s)
+                               (OPERAND128 src2 s)) s)) s
+    | VPCMPGTW dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPCMPGTW (OPERAND256 dest s) (OPERAND256 src1 s)
+                               (OPERAND256 src2 s)
+        | 128 -> x86_VPCMPGTW (OPERAND128 dest s) (OPERAND128 src1 s)
+                               (OPERAND128 src2 s)) s)) s
     | VPSUBD dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -3437,6 +3602,14 @@ let x86_execute = define
           256 -> x86_VPSUBD (OPERAND256 dest s) (OPERAND256 src1 s)
                             (OPERAND256 src2 s)
         | 128 -> x86_VPSUBD (OPERAND128 dest s) (OPERAND128 src1 s)
+                            (OPERAND128 src2 s)) s)) s
+    | VPSUBQ dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSUBQ (OPERAND256 dest s) (OPERAND256 src1 s)
+                            (OPERAND256 src2 s)
+        | 128 -> x86_VPSUBQ (OPERAND128 dest s) (OPERAND128 src1 s)
                             (OPERAND128 src2 s)) s)) s
     | VPSUBW dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
@@ -3545,6 +3718,8 @@ let x86_execute = define
         (\s. (match operand_size dest with
           256 -> x86_VPUNPCKLQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPUNPCKLQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s)) s
+    | VZEROUPPER ->
+        x86_VZEROUPPER s
     | XCHG dest src ->
         (add_load_event src s ,, add_load_event dest s ,,
          add_store_event dest s ,, add_store_event src s ,,
@@ -4356,11 +4531,14 @@ let x86_VPADDQ_ALT = EXPAND_SIMD_RULE x86_VPADDQ;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
 let x86_VPBLENDD_ALT = EXPAND_SIMD_RULE x86_VPBLENDD;;
 let x86_VPBLENDW_ALT = EXPAND_SIMD_RULE x86_VPBLENDW;;
+let x86_VPCLMULQDQ_ALT = EXPAND_SIMD_RULE x86_VPCLMULQDQ;;
 let x86_VPBROADCASTD_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTD;;
 let x86_VPBROADCASTQ_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTQ;;
 let x86_VPERMD_ALT = EXPAND_SIMD_RULE x86_VPERMD;;
 let x86_VPERMQ_ALT = EXPAND_SIMD_RULE x86_VPERMQ;;
 let x86_VPERM2I128_ALT = EXPAND_SIMD_RULE x86_VPERM2I128;;
+let x86_VPCMPGTD_ALT = EXPAND_SIMD_RULE x86_VPCMPGTD;;
+let x86_VPCMPGTW_ALT = EXPAND_SIMD_RULE x86_VPCMPGTW;;
 let x86_VPACKUSWB_ALT =
   (CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
    CONV_RULE NUM_REDUCE_CONV o
@@ -4373,6 +4551,9 @@ let x86_VPBLENDVB_ALT =
    CONV_RULE (DEPTH_CONV DIMINDEX_CONV)) x86_VPBLENDVB;;
 let x86_VPMADDUBSW_ALT = EXPAND_SIMD_RULE x86_VPMADDUBSW;;
 let x86_VPMADDWD_ALT = EXPAND_SIMD_RULE x86_VPMADDWD;;
+let x86_VMOVMSKPS_ALT = x86_VMOVMSKPS;;
+let x86_VPMOVZXBD_ALT = EXPAND_SIMD_RULE x86_VPMOVZXBD;;
+let x86_VZEROUPPER_ALT = x86_VZEROUPPER;;
 let x86_VPMULDQ_ALT = EXPAND_SIMD_RULE x86_VPMULDQ;;
 let x86_VPMULHRSW_ALT = EXPAND_SIMD_RULE x86_VPMULHRSW;;
 let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
@@ -4384,6 +4565,7 @@ let x86_VPSLLVD_ALT = EXPAND_SIMD_RULE x86_VPSLLVD;;
 let x86_VPSLLQ_ALT = EXPAND_SIMD_RULE x86_VPSLLQ;;
 let x86_VPSLLW_ALT = EXPAND_SIMD_RULE x86_VPSLLW;;
 let x86_VPSUBD_ALT = EXPAND_SIMD_RULE x86_VPSUBD;;
+let x86_VPSUBQ_ALT = EXPAND_SIMD_RULE x86_VPSUBQ;;
 let x86_VPSUBW_ALT = EXPAND_SIMD_RULE x86_VPSUBW;;
 let x86_VPSRAD_ALT = EXPAND_SIMD_RULE x86_VPSRAD;;
 let x86_VPSRLD_ALT = EXPAND_SIMD_RULE x86_VPSRLD;;
@@ -4417,13 +4599,15 @@ let X86_OPERATION_CLAUSES =
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
     x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
-    x86_VPEXTRD; x86_VPEXTRQ; x86_VPEXTRW; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBW_ALT; x86_VPXOR;
+    x86_VPCMPGTD_ALT; x86_VPCMPGTW_ALT;
+    x86_VPEXTRD; x86_VPEXTRQ; x86_VPEXTRW; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBQ_ALT; x86_VPSUBW_ALT; x86_VPXOR;
     x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLDQ_ALT; x86_VPSRLVD_ALT; x86_VPSRLVQ_ALT; x86_VPSRLQ_ALT;
     x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
     x86_VMOVDQA_ALT; x86_VMOVDQU_ALT; x86_VPMADDUBSW_ALT; x86_VPMADDWD_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPACKUSWB_ALT; x86_VPBLENDVB_ALT;
-    x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
+    x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPCLMULQDQ_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
+    x86_VMOVMSKPS_ALT; x86_VPMOVZXBD_ALT; x86_VZEROUPPER_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
@@ -4953,7 +5137,7 @@ let BYTES_LOADED_SUBPROGRAM_RULE =
   and pc_tm = `pc:num`
   and pcp_tm = `(+) (pc:num)`
   and wd_tm = `word:num->int64`
-  and s_tm = `s:armstate` in
+  and s_tm = `s:x86state` in
   let topvars = [s_tm; pc_tm] in
   fun mc1 mc2 offset ->
     let nptm = mk_comb(pcp_tm,mk_small_numeral offset) in
@@ -4995,15 +5179,21 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
       try SPECL ilist subth with _ -> begin
         (if (!x86_print_log) then
           (Printf.printf "ilist and subth's forall vars do not match\n";
-          Printf.printf "ilist: [%s]\n" (end_itlist
+           Printf.printf "ilist: [%s]\n" (end_itlist
             (fun s s2 -> s ^ "; " ^ s2) (map string_of_term ilist));
-            Printf.printf "subth's forall vars: [%s]\n"
+           Printf.printf "subth's forall vars: [%s]\n"
               (end_itlist (fun s s2 -> s ^ "; " ^ s2)
                 (map string_of_term (fst (strip_forall (concl subth)))))));
         failwith "X86_SUBROUTINE_SIM_TAC: subth vars don't not match ilist0"
       end in
     MP_TAC(TWEAK_PC_OFFSET subth_specl) THEN
-    REWRITE_TAC[COMPUTE_LENGTH_RULE submachinecode] THEN
+    (* is_forall + SPEC_ALL handles relocatable mcs (e.g. those defined via
+       define_assert_relocs_from_elf, which are forall-quantified over
+       pc/rodata). *)
+    REWRITE_TAC[COMPUTE_LENGTH_RULE
+                  (if is_forall(concl submachinecode)
+                   then SPEC_ALL submachinecode
+                   else submachinecode)] THEN
     ASM_REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
                     MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
                     WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -5026,8 +5216,14 @@ let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
 
     TRY(ANTS_TAC THENL
      [CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
+      (* Normalize `(pc + n) + m` to `pc + (n+m)` (both num and int forms)
+         so that `riprel32_within_bounds`/`(word(pc+n), len)` etc. line up
+         with the outer assumptions when the inner subroutine starts at
+         a non-zero offset within the outer mc. *)
+      CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_ADD_ADD_CONV) THEN
       REPEAT CONJ_TAC THEN
       TRY(CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN NO_TAC) THEN
+      TRY(FIRST_X_ASSUM ACCEPT_TAC) THEN
       (NONOVERLAPPING_TAC ORELSE
        DISJ1_TAC THEN NONOVERLAPPING_TAC ORELSE
        DISJ2_TAC THEN NONOVERLAPPING_TAC);
@@ -5103,6 +5299,12 @@ let X86_MACRO_SIM_ABBREV_TAC =
     GEN_REWRITE_RULE ONCE_DEPTH_CONV
      [WORD_RULE `word_add z (word 0):int64 = z`] in
   fun mc ->
+    (* For mcs that contain rodata relocations the bytelist representation
+       contains four explicit per-byte CONSes computed from the raw integer
+       displacement; collapse them back into `APPEND (bytelist_of_int 4 _) _`
+       so that the decode and execution machinery can see the displacement
+       as a single 4-byte hole. *)
+    let mc = PURE_REWRITE_RULE[BYTELIST_OF_INT_APPEND] mc in
     let offl = extract_offsets mc in
     let execth = X86_MK_EXEC_RULE mc in
     fun codelen localvars template core_tac prep ilist ->
@@ -5743,6 +5945,57 @@ let IBT_WRAP_THM = prove
         (RATOR_CONV o RATOR_CONV) [MAYCHANGE_SING]) THEN
     REWRITE_TAC[ASSIGNS; assign] THEN ASM_MESON_TAC[]]);;
 
+(* Shared bits between the unparametrized and parametrized variants of
+   ADD_IBT_TAC. *)
+
+(* If the goal is `exists f_events. ..`, instantiate f_events using the
+   f_events in `th_noexists`, replacing pc with `pc + 4`. *)
+let WITNESS_F_EVENTS_TAC (th_noexists:thm): tactic =
+  W (fun (asl,w) ->
+    if not (is_exists w) then ALL_TAC else
+    let f_events_term = find_term (fun t ->
+      is_comb t && name_of(fst(strip_comb t)) = "f_events")
+      (concl th_noexists) in
+    let f_events,args = strip_comb f_events_term in
+    let new_argdecls,new_args = unzip (map (fun t ->
+      if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
+      else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
+    let new_f_events = list_mk_abs
+      (new_argdecls,list_mk_comb(f_events,new_args)) in
+    EXISTS_TAC new_f_events);;
+
+(* Strip a leading `exists f_events.` from `th` (yielding `th_noexists`),
+   correspondingly instantiate the goal's `exists`, and run [k th_noexists]
+   on the resulting body. For functional-correctness theorems (no leading
+   `exists`), [k th] runs directly. *)
+let ADD_IBT_OPEN_EXISTS th (k:thm->tactic): tactic =
+  if is_exists (concl th) then
+    MP_TAC th THEN STRIP_TAC THEN
+    FIRST_X_ASSUM (fun th_noexists ->
+      WITNESS_F_EVENTS_TAC th_noexists THEN k th_noexists)
+  else
+    k th;;
+
+(* The four IBT_WRAP_THM subgoals shared by both variants. The fourth
+   subgoal (discharging the inner `ensures ... at pc+4`) differs: the
+   unparametrized version uses MAP_EVERY X_GEN_TAC + MP_TAC SPECL inline,
+   while the parametrized version takes a tactic argument. *)
+let IBT_WRAP_TAC (discharge_inner:tactic): tactic =
+  MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+    (* (1) MAYCHANGE R is idempotent. *)
+    MAYCHANGE_IDEMPOT_TAC;
+    (* (2) MAYCHANGE [RIP] is subsumed by R. *)
+    SUBSUMED_MAYCHANGE_TAC;
+    (* (3) writing RIP doesn't affect the precondition components. *)
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC[C_ARGUMENTS; C_RETURN;
+                WINDOWS_C_ARGUMENTS; bytes_loaded] THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+    (* (4) caller-supplied: discharge `ensures ... at pc+4`. *)
+    discharge_inner
+  ];;
+
 let ADD_IBT_TAC =
   let tweak = subst[`pc + 4`,`pc:num`]
   and EXPAND_TRIMMED_RULE =
@@ -5752,69 +6005,84 @@ let ADD_IBT_TAC =
     fun fullmc trimc ->
      GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [GSYM trimc]
      (GEN_REWRITE_RULE RAND_CONV [pth] fullmc) in
-  (* If the goal is 'exists f_events. ..', instantiate f_events using
-     the f_events in th_noexists. pc is replaced with 'pc + 4'. *)
-  let witness_f_events_tac (th_noexists:thm): tactic =
-    W (fun (asl,w) ->
-      if not (is_exists w) then ALL_TAC else
-      let f_events_term = find_term (fun t ->
-        is_comb t && name_of(fst(strip_comb t)) = "f_events")
-        (concl th_noexists) in
-
-      let f_events,args = strip_comb f_events_term in
-
-      let new_argdecls,new_args = unzip (map (fun t ->
-        if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
-        else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
-      let new_f_events = list_mk_abs
-        (new_argdecls,list_mk_comb(f_events,new_args)) in
-      EXISTS_TAC new_f_events
-    ) in
   fun fullmc trimc th ->
     let expth = EXPAND_TRIMMED_RULE fullmc trimc in
-    MP_TAC th THEN
-    (* If th is a safety property, it has 'exists f_events. ...'. *)
-    (if is_exists (concl th) then
-      STRIP_TAC (*strip exists *) THEN FIRST_X_ASSUM MP_TAC
-    else ALL_TAC) THEN
-    DISCH_THEN (fun th_noexists ->
-        witness_f_events_tac th_noexists THEN MP_TAC th_noexists) THEN
-    (* Now the path is irrelevant to whether th is safety or functional
-      correctness proof *)
-    DISCH_THEN (fun th -> W(fun (asl,w) ->
-      let avs = fst(strip_forall w) in
-      MAP_EVERY X_GEN_TAC avs THEN
-      MP_TAC(SPECL (map tweak avs) th))) THEN
-    REWRITE_TAC(!simulation_precanon_thms) THEN
-    REWRITE_TAC[C_ARGUMENTS; C_RETURN;
-                MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-                WINDOWS_C_ARGUMENTS; ALL; ALLPAIRS;
-                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-    TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
-     [REPEAT(REWRITE_TAC[] THEN
-             ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
-              (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
-      REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
-      REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
-      MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
-        NONOVERLAPPING_MODULO_SUBREGIONS) THEN
-      REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
-      MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
-      ALL_TAC]) THEN
-    DISCH_TAC THEN REWRITE_TAC[expth; GSYM APPEND_ASSOC] THEN
-    MATCH_MP_TAC IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL
-     [MAYCHANGE_IDEMPOT_TAC;
-      SUBSUMED_MAYCHANGE_TAC;
-      REPEAT GEN_TAC THEN
-      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-      REFL_TAC;
-      FIRST_X_ASSUM ACCEPT_TAC ORELSE
-      ((* When the goal contains LENGTH .._mc and LENGTH .._tmc . *)
-       FIRST_X_ASSUM MP_TAC THEN
-       REWRITE_TAC[LENGTH_APPEND] THEN CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV)
-       THEN ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)];;
+    ADD_IBT_OPEN_EXISTS th (fun th_inner ->
+      MP_TAC th_inner THEN
+      DISCH_THEN (fun th -> W(fun (asl,w) ->
+        let avs = fst(strip_forall w) in
+        MAP_EVERY X_GEN_TAC avs THEN
+        MP_TAC(SPECL (map tweak avs) th))) THEN
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      REWRITE_TAC[C_ARGUMENTS; C_RETURN;
+                  MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                  WINDOWS_C_ARGUMENTS; ALL; ALLPAIRS;
+                  WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+      TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
+       [REPEAT(REWRITE_TAC[] THEN
+               ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
+                (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
+        REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
+        REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+        MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
+          NONOVERLAPPING_MODULO_SUBREGIONS) THEN
+        REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
+        MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
+        ALL_TAC]) THEN
+      DISCH_TAC THEN REWRITE_TAC[expth; GSYM APPEND_ASSOC] THEN
+      IBT_WRAP_TAC
+        (FIRST_X_ASSUM ACCEPT_TAC ORELSE
+         ((* When the goal contains LENGTH .._mc and LENGTH .._tmc . *)
+          FIRST_X_ASSUM MP_TAC THEN
+          REWRITE_TAC[LENGTH_APPEND] THEN
+          CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV) THEN
+          ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)));;
 
-let ADD_IBT_RULE th =
+(* Tactic for the parametrized case: directly apply IBT_WRAP_THM after
+   rewriting with the user-supplied bridge thm
+     `forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`,
+   then discharge the resulting `ensures ... at pc+4` using the input NOIBT
+   theorem instantiated with `pc -> pc+4`.
+
+   For safety theorems (`exists f_events. forall ...`), the goal also has
+   `exists f_events.` at the head; ADD_IBT_OPEN_EXISTS takes care of that. *)
+let ADD_IBT_TAC_PARAMETRIZED bridge_th th =
+  ADD_IBT_OPEN_EXISTS th (fun th_inner ->
+    REPEAT GEN_TAC THEN REWRITE_TAC[bridge_th] THEN
+    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS;
+                C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
+                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    REPEAT STRIP_TAC THEN
+    IBT_WRAP_TAC
+      (W (fun (asl,w) ->
+        let avs,_ = strip_forall (concl th_inner) in
+        let new_avs = map (fun v ->
+          if is_var v && name_of v = "pc" then mk_binary "+" (v,`4`)
+          else v) avs in
+        MP_TAC (REWRITE_RULE[C_ARGUMENTS; C_RETURN; WINDOWS_C_ARGUMENTS;
+                              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                              SOME_FLAGS]
+                (SPECL new_avs th_inner))) THEN
+       CONV_TAC(ONCE_DEPTH_CONV
+         (REWR_CONV(ARITH_RULE `(pc + 4) + n:num = pc + (n + 4)`) THENC
+          RAND_CONV NUM_ADD_CONV)) THEN
+       REWRITE_TAC[
+         WORD_RULE `word(pc+4):int64 = word_add (word pc) (word 4)`] THEN
+       DISCH_THEN MATCH_MP_TAC THEN
+       POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
+       REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+       REPEAT CONJ_TAC THEN
+       TRY (FIRST_X_ASSUM ACCEPT_TAC) THEN
+       NONOVERLAPPING_TAC));;
+
+(* For unparametrized (constant) mcs, ADD_IBT_RULE infers everything from
+   the definitions. For parametrized mcs (e.g. `mc pc tables` produced by
+   define_assert_relocs_from_elf + define_trimmed), the caller must supply
+   the bridge equation
+     `forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`
+   via the optional `~bridge` argument. *)
+let ADD_IBT_RULE ?(bridge:thm option = None) th =
   let the_concl = concl th in
   (* If th is safety property, it starts with `exists f_events. ...` *)
   let the_concl = if is_exists the_concl then
@@ -5822,23 +6090,78 @@ let ADD_IBT_RULE th =
   let bldat =
    rand(lhand(body(lhand(rator
     (repeat (snd o dest_imp) (snd(strip_forall(the_concl)))))))) in
-  let trimctm = if is_const bldat then bldat else lhand bldat in
-  let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
-  let fullmctm = rand(rand(concl trimcd)) in
-  let fullmc = find ((=) fullmctm o lhand o concl) (definitions()) in
-  let trimc =
-    CONV_RULE (RAND_CONV TRIM_LIST_CONV)
-     (GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [fullmc] trimcd) in
-  let rec adjust tm =
-    match tm with
-      Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
+  (* The mc inside bytes_loaded can take three forms:
+       (a) a bare constant `tmc` (legacy non-rodata, no inline data),
+       (b) `APPEND tmc data` (legacy non-rodata with inline data section),
+       (c) `tmc pc tables` from define_assert_relocs_from_elf (rodata-aware).
+     Only (c) is "parametrized" w.r.t. ADD_IBT_RULE — for (a) and (b) the
+     trimmed mc constant can be looked up directly in the_definitions. *)
+  let parametrized =
+    if is_const bldat then false
+    else if is_comb bldat &&
+            is_const (fst (strip_comb bldat)) &&
+            name_of (fst (strip_comb bldat)) = "APPEND" then
+      false  (* legacy `APPEND tmc data` form *)
+    else true in
+  match bridge, parametrized with
+  | None, true ->
+    (* Parametrized mc with no bridge: we cannot derive the bridge from the
+       definitions alone (define_trimmed re-quantifies and shifts pc), so ask
+       the caller to provide it. *)
+    let trim_head_const = fst (strip_comb bldat) in
+    failwith ("ADD_IBT_RULE: input theorem uses parametrized mc " ^
+              name_of trim_head_const ^
+              "; please supply ~bridge:thm of shape " ^
+              "`forall args. mc args = APPEND [endbr64] (tmc (pc+4) <rest>)`")
+  | None, false ->
+    (* Legacy non-rodata path: tmc was defined as `tmc = TRIM_LIST(4,0) mc`,
+       and bldat is either `tmc` (case a) or `APPEND tmc data` (case b). *)
+    let trimctm = if is_const bldat then bldat else lhand bldat in
+    let trimcd = find ((=) trimctm o lhand o concl) (definitions()) in
+    let fullmctm = rand(rand(concl trimcd)) in
+    let fullmc = find ((=) fullmctm o lhand o concl) (definitions()) in
+    let trimc =
+      CONV_RULE (RAND_CONV TRIM_LIST_CONV)
+       (GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [fullmc] trimcd) in
+    let rec adjust tm =
+      match tm with
+        Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
+            when is_numeral off ->
+          mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
+      | Comb(s,t) -> mk_comb(adjust s,adjust t)
+      | Abs(x,t) -> mk_abs(x,adjust t)
+      | _ -> if tm = trimctm then fullmctm else tm in
+    prove(adjust (concl th), ADD_IBT_TAC fullmc trimc th)
+  | Some bridge_th, _ ->
+    (* Parametrized path: read mc/tmc head constants from the bridge, sanity-
+       check the tmc head matches the input theorem, then bump every numeric
+       offset (`pc + n` and `(word pc, n)`) by 4 to form the IBT goal and
+       discharge it via ADD_IBT_TAC_PARAMETRIZED. *)
+    if not parametrized then
+      failwith "ADD_IBT_RULE: bridge supplied but mc is not parametrized" else
+    let trim_head_const = fst (strip_comb bldat) in
+    let bridge_eq = SPEC_ALL bridge_th in
+    let mc_app = lhand (concl bridge_eq) in
+    let trimcall = rand (rand (concl bridge_eq)) in
+    let fullmctm = fst (strip_comb mc_app) in
+    let bridge_trimctm = fst (strip_comb trimcall) in
+    if bridge_trimctm <> trim_head_const then
+      failwith ("ADD_IBT_RULE: bridge thm's trimmed mc " ^
+                name_of bridge_trimctm ^ " does not match input theorem's mc "
+                ^ name_of trim_head_const)
+    else
+    let rec adjust tm =
+      match tm with
+      | Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
           when is_numeral off ->
-        mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
-    | Comb(s,t) -> mk_comb(adjust s,adjust t)
-    | Abs(x,t) -> mk_abs(x,adjust t)
-    | _ -> if tm = trimctm then  fullmctm else tm in
-  prove(adjust (concl th),
-        ADD_IBT_TAC fullmc trimc th);;
+          mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
+      | Comb(Comb(Const("+",_),Var("pc",_)) as p,off)
+          when is_numeral off ->
+          mk_comb(p,mk_numeral(num 4 +/ dest_numeral off))
+      | Comb(s,t) -> mk_comb(adjust s,adjust t)
+      | Abs(x,t) -> mk_abs(x,adjust t)
+      | _ -> if tm = trim_head_const then fullmctm else tm in
+    prove(adjust (concl th), ADD_IBT_TAC_PARAMETRIZED bridge_th th);;
 
 let READ_ZMM_BOTTOM_QUARTER = prove
  (`!zmmx:(S,512 word)component s.

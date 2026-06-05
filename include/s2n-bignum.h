@@ -30,6 +30,22 @@
 #define S2N_BIGNUM_STATIC static
 #endif
 
+struct s2n_bignum_aes_key_st {
+  uint64_t rd_key[30];
+  int rounds;
+};
+typedef struct s2n_bignum_aes_key_st s2n_bignum_AES_KEY;
+
+// AES_XTS_DECRYPT (256-bit)
+// Inputs in[length], length, key1[244], key2[244], iv[16]; output out[length]
+extern void aes_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
+        const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[S2N_BIGNUM_STATIC 16]);
+
+// AES_XTS_ENCRYPT (256-bit)
+// Inputs in[length], length, key1[244], key2[244], iv[16]; output out[length]
+extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
+        const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[S2N_BIGNUM_STATIC 16]);
+
 // Add, z := x + y
 // Inputs x[m], y[n]; outputs function return (carry-out) and z[p]
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);
@@ -990,6 +1006,14 @@ extern void edwards25519_scalarmulbase_alt(uint64_t res[S2N_BIGNUM_STATIC 8],con
 extern void edwards25519_scalarmuldouble(uint64_t res[S2N_BIGNUM_STATIC 8],const uint64_t scalar[S2N_BIGNUM_STATIC 4], const uint64_t point[S2N_BIGNUM_STATIC 8],const uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[S2N_BIGNUM_STATIC 8],const uint64_t scalar[S2N_BIGNUM_STATIC 4], const uint64_t point[S2N_BIGNUM_STATIC 8],const uint64_t bscalar[S2N_BIGNUM_STATIC 4]);
 
+// Forward number-theoretic transform for ML-DSA
+// Input a[256], z_012345[144], z_67[384] (signed 32-bit words); output a[256] (signed 32-bit words)
+extern void mldsa_ntt_arm(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t z_012345[144], const int32_t z_67[384]);
+
+// Inverse number-theoretic transform for ML-DSA
+// Input a[256], z_78[384], z_123456[160] (signed 32-bit words); output a[256] (signed 32-bit words)
+extern void mldsa_intt_arm(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t z_78[S2N_BIGNUM_STATIC 384], const int32_t z_123456[S2N_BIGNUM_STATIC 160]);
+
 // Inverse number-theoretic transform for ML-DSA
 // Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_intt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N_BIGNUM_STATIC 624]);
@@ -998,9 +1022,49 @@ extern void mldsa_intt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N
 // Input a[256], zetas[624] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_ntt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N_BIGNUM_STATIC 624]);
 
+// NTT unpack for ML-DSA (rearrange coefficients from bitreversed to standard order)
+// Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
+extern void mldsa_nttunpack(int32_t a[S2N_BIGNUM_STATIC 256]);
+
+// Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA
+// Inputs a[256], b[256] (signed 32-bit words); output r[256] (signed 32-bit words)
+extern void mldsa_pointwise(int32_t r[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t b[S2N_BIGNUM_STATIC 256]);
+
+// Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA, x86 version
+// Inputs a[256], b[256], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words)
+extern void mldsa_pointwise_x86(int32_t c[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t b[S2N_BIGNUM_STATIC 256], const int32_t qdata[S2N_BIGNUM_STATIC 16]);
+
+// Pointwise multiplication with accumulation for ML-DSA L4
+// Inputs a[1024], b[1024] (signed 32-bit words); output r[256] (signed 32-bit words)
+extern void mldsa_pointwise_acc_l4(int32_t r[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 1024], const int32_t b[S2N_BIGNUM_STATIC 1024]);
+
+// Pointwise multiplication with accumulation for ML-DSA L4, x86 version
+// Inputs a[1024], b[1024], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words)
+extern void mldsa_pointwise_acc_l4_x86(int32_t c[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 1024], const int32_t b[S2N_BIGNUM_STATIC 1024], const int32_t qdata[S2N_BIGNUM_STATIC 16]);
+
+// Pointwise multiplication with accumulation for ML-DSA L5
+// Inputs a[1280], b[1280] (signed 32-bit words); output r[256] (signed 32-bit words)
+extern void mldsa_pointwise_acc_l5(int32_t r[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 1280], const int32_t b[S2N_BIGNUM_STATIC 1280]);
+
+// Pointwise multiplication with accumulation for ML-DSA L5, x86 version
+// Inputs a[1280], b[1280], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words)
+extern void mldsa_pointwise_acc_l5_x86(int32_t c[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 1280], const int32_t b[S2N_BIGNUM_STATIC 1280], const int32_t qdata[S2N_BIGNUM_STATIC 16]);
+
+// Pointwise multiplication with accumulation for ML-DSA L7
+// Inputs a[1792], b[1792] (signed 32-bit words); output r[256] (signed 32-bit words)
+extern void mldsa_pointwise_acc_l7(int32_t r[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 1792], const int32_t b[S2N_BIGNUM_STATIC 1792]);
+
+// Pointwise multiplication with accumulation for ML-DSA L7, x86 version
+// Inputs a[1792], b[1792], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words)
+extern void mldsa_pointwise_acc_l7_x86(int32_t c[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 1792], const int32_t b[S2N_BIGNUM_STATIC 1792], const int32_t qdata[S2N_BIGNUM_STATIC 16]);
+
 // Canonical reduction of polynomial coefficients for ML-DSA
 // Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_reduce(int32_t a[S2N_BIGNUM_STATIC 256]);
+
+// Use hint to correct high bits of decomposition for ML-DSA (parameter sets 65/87)
+// Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words)
+extern void mldsa_poly_use_hint_32(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
 
 // Scalar product of 2-element polynomial vectors in NTT domain, with mulcache
 // Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words)

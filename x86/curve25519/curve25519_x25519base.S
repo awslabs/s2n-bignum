@@ -409,8 +409,8 @@ Lcurve25519_x25519base_standard:
         mov     rax, [rsp]
         and     rax, 8
 
-        lea     r10, [rip+Lcurve25519_x25519base_edwards25519_0g]
-        lea     r11, [rip+Lcurve25519_x25519base_edwards25519_8g]
+        lea     r10, [rip+curve25519_x25519base_constant]
+        lea     r11, [r10+8*12]
 
         mov     rax, [r10]
         mov     rcx, [r11]
@@ -494,7 +494,7 @@ Lcurve25519_x25519base_standard:
 // l >= 9 case cannot arise on the last iteration.
 
         mov     i, 4
-        lea     rax, [rip+Lcurve25519_x25519base_edwards25519_gtable]
+        lea     rax, [r10+8*24]
         mov     tab, rax
         mov     bias, 0
 
@@ -2273,18 +2273,26 @@ S2N_BN_SIZE_DIRECTIVE(Lcurve25519_x25519base_standard)
 S2N_BN_SIZE_DIRECTIVE(curve25519_x25519base)
 #endif
 
+#if defined(__linux__) && defined(__ELF__)
+.section .note.GNU-stack, "", %progbits
+#endif
+
 // ****************************************************************************
-// The precomputed data (all read-only). This is currently part of the same
-// text section, which gives position-independent code with simple PC-relative
-// addressing. However it could be put in a separate section via something like
-//
-// .section .rodata
+// The precomputed data (all read-only).
 // ****************************************************************************
+
+#if defined(__ELF__)
+.section .rodata
+.type S2N_BN_SYMBOL(curve25519_x25519base_constant), %object
+.size S2N_BN_SYMBOL(curve25519_x25519base_constant), 48576
+#elif defined(__APPLE__)
+.const_data
+#endif
+
+S2N_BN_SYMBOL(curve25519_x25519base_constant):
 
 // 2^254 * G and (2^254 + 8) * G in extended-projective coordinates
 // but with z = 1 assumed and hence left out, so they are (X,Y,T) only.
-
-Lcurve25519_x25519base_edwards25519_0g:
 
         .quad   0x251037f7cf4e861d
         .quad   0x10ede0fb19fb128f
@@ -2301,7 +2309,6 @@ Lcurve25519_x25519base_edwards25519_0g:
         .quad   0x72e302a348492870
         .quad   0x1253c19e53dbe1bc
 
-Lcurve25519_x25519base_edwards25519_8g:
 
         .quad   0x331d086e0d9abcaa
         .quad   0x1e23c96d311a10c9
@@ -2320,8 +2327,6 @@ Lcurve25519_x25519base_edwards25519_8g:
 
 // Precomputed table of multiples of generator for edwards25519
 // all in precomputed extended-projective (y-x,x+y,2*d*x*y) triples.
-
-Lcurve25519_x25519base_edwards25519_gtable:
 
         // 2^4 * 1 * G
 
@@ -9882,7 +9887,3 @@ Lcurve25519_x25519base_edwards25519_gtable:
         .quad   0x3d0987990aff3f7a
         .quad   0xd09ef36267daba45
         .quad   0x7761455e7b1c669c
-
-#if defined(__linux__) && defined(__ELF__)
-.section .note.GNU-stack, "", %progbits
-#endif
