@@ -18,12 +18,12 @@ more extensively used in Arm's NEON vectorization proofs targeting Graviton2.
 There are several proofs of linear optimizations for the field operations of the
 P-256/384/521 elliptic curves:
 
-- [`arm/proofs/bignum_montmul_p256.ml`](arm/proofs/bignum_montmul_p256.ml),
-  [`bignum_montmul_p384.ml`](arm/proofs/bignum_montmul_p384.ml),
-  [`bignum_montmul_p521.ml`](arm/proofs/bignum_montmul_p521.ml),
+- [`arm/proofs/bignum_montmul_p256.ml`](../arm/proofs/bignum_montmul_p256.ml),
+  [`bignum_montmul_p384.ml`](../arm/proofs/bignum_montmul_p384.ml),
+  [`bignum_montmul_p521.ml`](../arm/proofs/bignum_montmul_p521.ml),
 - corresponding `bignum_montsqr_*` files,
-- [`bignum_mul_p521.ml`](arm/proofs/bignum_mul_p521.ml) and
-  [`bignum_sqr_p521.ml`](arm/proofs/bignum_sqr_p521.ml).
+- [`bignum_mul_p521.ml`](../arm/proofs/bignum_mul_p521.ml) and
+  [`bignum_sqr_p521.ml`](../arm/proofs/bignum_sqr_p521.ml).
 
 Each of these composes (1) NEON vectorization followed by (2) SLOTHY instruction
 reordering. Each step proves a separate `ensures2` equivalence theorem; the two are
@@ -33,7 +33,7 @@ of the scalar reference to yield functional correctness of the optimized program
 
 We use `bignum_montmul_p256` as the running example and call out P384/P521
 differences in passing. All name references below are from
-[`arm/proofs/bignum_montmul_p256.ml`](arm/proofs/bignum_montmul_p256.ml) unless
+[`arm/proofs/bignum_montmul_p256.ml`](../arm/proofs/bignum_montmul_p256.ml) unless
 noted otherwise.
 
 ### 2.1 The three machine-code versions
@@ -149,7 +149,7 @@ extra_word_CONV :=
 ```
 
 and restores it after the `EQUIV1` proof. `WORD_MUL64_LO`/`WORD_MUL64_HI` (in
-[`arm/proofs/neon_helper.ml`](arm/proofs/neon_helper.ml)) rewrite the NEON compound-
+[`arm/proofs/neon_helper.ml`](../arm/proofs/neon_helper.ml)) rewrite the NEON compound-
 multiplication idiom (sequences of `UMULL`/`UZP`/`USRA`/`UMLAL` computing
 `mul_lo`/`mul_hi` of two 64-bit lanes) into the corresponding scalar `MUL`/`UMULH`
 outputs. `WORD_BITMANIP_SIMP_LEMMAS` cleans up small bit-permutation helpers
@@ -268,8 +268,8 @@ names, same final `PROVE_ENSURES_FROM_EQUIV_AND_ENSURES_N_TAC`.
 
 ## 3. Program Equivalence of Point Operations
 
-The proofs of [`p256_montjadd.ml`](arm/proofs/p256_montjadd.ml) and
-[`p384_montjadd.ml`](arm/proofs/p384_montjadd.ml) follow the same master plan as §2
+The proofs of [`p256_montjadd.ml`](../arm/proofs/p256_montjadd.ml) and
+[`p384_montjadd.ml`](../arm/proofs/p384_montjadd.ml) follow the same master plan as §2
 but at a much larger scale: the unoptimized routine makes several `bl` calls to
 Montgomery multiplication/squaring subroutines and has significant redundancy across
 those call boundaries, which is exploited by two *extra* optimizations:
@@ -315,7 +315,7 @@ assembled progressively to match this decomposition. Each individual rewrite
 contributes its own action list (`"call montsqr_p256"`, `"call montmul_p256"`,
 `"call sub_p256"`, identity `"equal"` blocks, `"replace"`/`"insert"`/`"delete"`
 for mem-elim), and the `merge_actions` helper in
-[`arm/proofs/utils/p256_montjadd_params.ml`](arm/proofs/utils/p256_montjadd_params.ml)
+[`arm/proofs/utils/p256_montjadd_params.ml`](../arm/proofs/utils/p256_montjadd_params.ml)
 composes them into a single `actions_merged` list that is passed to the main
 equivalence proof.
 
@@ -367,7 +367,7 @@ VCGEN_EQUIV_TAC P256_MONTJADD_EQUIV P256_MONTJADD_UNOPT_CORE_CORRECT_N
   [fst P256_MONTJADD_UNOPT_CORE_EXEC; fst P256_MONTJADD_EXEC]
 ```
 
-`VCGEN_EQUIV_TAC` (in [`arm/proofs/equiv.ml`](arm/proofs/equiv.ml)) is a slightly
+`VCGEN_EQUIV_TAC` (in [`arm/proofs/equiv.ml`](../arm/proofs/equiv.ml)) is a slightly
 heavier cousin of `PROVE_ENSURES_FROM_EQUIV_AND_ENSURES_N_TAC`: it exposes three
 remaining subgoals (precondition, postcondition, frame) that the caller then
 discharges, instead of packaging them behind a canned pattern. For the point
@@ -375,14 +375,14 @@ operations the precondition subgoal in particular requires custom work because t
 input-state relation mentions SP and a 224-byte stack scratch area, which
 `PROVE_ENSURES_FROM_EQUIV_AND_ENSURES_N_TAC`'s canned strategy cannot anticipate.
 
-[`p384_montjadd.ml`](arm/proofs/p384_montjadd.ml) follows exactly the same pattern
+[`p384_montjadd.ml`](../arm/proofs/p384_montjadd.ml) follows exactly the same pattern
 with a different register set and 6×3-word Jacobian coordinates.
 
 ## 4. Program Equivalence of `bignum_emontredc_8n_cdiff`
 
 `bignum_emontredc_8n_cdiff` is the extended Montgomery reduction of an arbitrary
 bignum, used inside bignum modular multiplication. Compared to the existing
-[`bignum_emontredc_8n`](arm/proofs/bignum_emontredc_8n.ml), the `_cdiff` variant
+[`bignum_emontredc_8n`](../arm/proofs/bignum_emontredc_8n.ml), the `_cdiff` variant
 adds:
 
 1. **NEON vectorization** of the expensive `MUL`/`UMULH` quartets in both the outer-
@@ -407,7 +407,7 @@ equivalence proof for the pipelined loop is not attempted in one shot; instead
 `A`, `[B; A]` and `B` separately.
 
 The proof is in
-[`arm/proofs/bignum_emontredc_8n_cdiff.ml`](arm/proofs/bignum_emontredc_8n_cdiff.ml).
+[`arm/proofs/bignum_emontredc_8n_cdiff.ml`](../arm/proofs/bignum_emontredc_8n_cdiff.ml).
 All name references in this section are from that file unless noted.
 
 ### 4.1 Where are the cached multiplied differences computed?
