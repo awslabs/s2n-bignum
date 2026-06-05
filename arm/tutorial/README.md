@@ -25,4 +25,4 @@ To verify programs in x86, see `x86/tutorial`.
 4. `rel_loop.ml`: Proving equivalence of two simple loops.
 5. `rel_veceq.ml`: Proving equivalence of scalar vs. vectorized 128x128->256-bit squaring.
 
-[doc/program_equivalence.md](doc/program_equivalence.md) has detailed explanations about the structures of program equivalence proofs in s2n-bignum.
+[doc/program_equivalence.md](../../doc/program_equivalence.md) has detailed explanations about the structures of program equivalence proofs in s2n-bignum.
