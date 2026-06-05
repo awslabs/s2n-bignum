@@ -1049,6 +1049,10 @@ extern void mldsa_pointwise_acc_l7_x86(int32_t c[256], const int32_t a[1792], co
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_reduce(int32_t a[256]);
 
+/* Use hint to correct high bits of decomposition for ML-DSA (parameter sets 65/87) */
+/* Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words) */
+extern void mldsa_poly_use_hint_32(int32_t b[256], const int32_t a[256], const int32_t h[256]);
+
 /* Scalar product of 2-element polynomial vectors in NTT domain, with mulcache */
 /* Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words) */
 extern void mlkem_basemul_k2(int16_t r[256],const int16_t a[512],const int16_t b[512],const int16_t bt[256]);
