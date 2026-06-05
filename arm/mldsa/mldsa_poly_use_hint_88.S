@@ -14,7 +14,7 @@
 //
 // Algorithm per coefficient:
 //   1. Decompose: a1 = round_down(a / 190464), a0 = a - a1*190464
-//      If a > 43*GAMMA2 = 4094976, wrap: a1=0, a0=a-Q
+//      If a > 87*GAMMA2 = 8285184, wrap: a1=0, a0=a-Q
 //   2. delta = (a0 <= 0) ? -1 : 1
 //   3. b = min((a1 + delta * h) & ~mask_gt_43, 43)
 //      where mask_gt_43 clears values > 43 and umin clamps to 43
@@ -46,7 +46,7 @@ S2N_BN_SYMBOL(mldsa_poly_use_hint_88):
         movk    w4, #0x7f, lsl #16
         dup     v20.4s, w4
 
-// v21 = 43*GAMMA2 = 4094976 = 0x3e6c00 (wraparound threshold)
+// v21 = 87*GAMMA2 = 8285184 = 0x7e6c00 (wraparound threshold)
         mov     w5, #0x6c00
         movk    w5, #0x7e, lsl #16
         dup     v21.4s, w5
@@ -86,7 +86,7 @@ Lmldsa_poly_use_hint_88_loop:
         // Decompose: a1 = sqdmulh(a, barrett_const) >> 17
         sqdmulh v17.4s, v1.4s, v23.4s
         srshr   v17.4s, v17.4s, #0x11
-        // Check wraparound: mask = (a > 43*GAMMA2) ? all_ones : 0
+        // Check wraparound: mask = (a > 87*GAMMA2) ? all_ones : 0
         cmgt    v25.4s, v1.4s, v21.4s
         // a0 = a - a1 * 2*GAMMA2
         mls     v1.4s, v17.4s, v22.4s
