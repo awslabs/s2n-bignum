@@ -126,6 +126,9 @@ let iclasses =
   (*** BIT ***)
   "0x101110101xxxxx000111xxxxxxxxxx";
 
+  (*** BIF ***)
+  "0x101110111xxxxx000111xxxxxxxxxx";
+
   (*** CMGT, vector, register, signed ***)
   "0x001110xx1xxxxx001101xxxxxxxxxx";
 
@@ -246,6 +249,9 @@ let iclasses =
 
   (*** REV64 ***)
   "01001110xx100000000010xxxxxxxxxx";
+
+  (*** REV32 ***)
+  "01101110xx100000000010xxxxxxxxxx";
 
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)

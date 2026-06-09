@@ -305,6 +305,8 @@ onlyInArm = [
   "mldsa_pointwise_acc_l4",
   "mldsa_pointwise_acc_l5",
   "mldsa_pointwise_acc_l7",
+  "mldsa_poly_use_hint_32",
+  "mldsa_poly_use_hint_88",
   "mlkem_ntt",
   "mlkem_intt",
   "mlkem_mulcache_compute",
