@@ -3177,6 +3177,15 @@ int32_t reference_poly_reduce(int32_t a)
     return t;
 }
 
+// Reference conditional add Q for ML-DSA
+// If coefficient is negative, add Q
+int32_t reference_poly_caddq(int32_t a)
+{
+    const int32_t MLDSA_Q = 8380417;
+    if (a < 0) a += MLDSA_Q;
+    return a;
+}
+
 // Reference Montgomery reduction for ML-DSA
 // MLDSA_QINV = 58728449 which is q^(-1) mod 2^32
 int32_t reference_mldsa_reduce(int64_t a)
@@ -13253,6 +13262,54 @@ int test_mldsa_rej_uniform(void)
 #endif
 }
 
+int test_mldsa_caddq(void)
+{
+    // Skip test on non-x86_64 architectures
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+
+#ifdef __x86_64__
+    uint64_t t, i;
+    // 32-byte alignment for AVX2 vmovdqa instructions
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t b[256] __attribute__((aligned(32)));
+
+    printf("Testing mldsa_caddq with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        for (i = 0; i < 256; ++i)
+            // Generate values in (-Q, Q) range
+            b[i] = a[i] = (int32_t)(random64() % (2 * 8380417)) - 8380417;
+
+        mldsa_caddq(b);
+
+        for (i = 0; i < 256; ++i) {
+            if (reference_poly_caddq(a[i]) != b[i]) {
+                printf("Error in mldsa_caddq; element i = %"PRIu64
+                       "; code[i] = 0x%08"PRIx32
+                       " while reference[i] = 0x%08"PRIx32"\n",
+                       i, b[i], reference_poly_caddq(a[i]));
+                return 1;
+            }
+        }
+
+        if (VERBOSE) {
+            printf("OK:mldsa_caddq[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"] = "
+                   "[0x%08"PRIx32",0x%08"PRIx32",...,"
+                   "0x%08"PRIx32",0x%08"PRIx32"]\n",
+                   a[0], a[1], a[254], a[255],
+                   b[0], b[1], b[254], b[255]);
+        }
+    }
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;  // Fallback for non-x86_64 compile-time environments
+#endif
+}
+
 int test_mldsa_reduce(void)
 {
     // Skip test on non-x86_64 architectures
@@ -17307,6 +17364,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"edwards25519_scalarmulbase_alt",test_edwards25519_scalarmulbase_alt);
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
+  functionaltest(all,"mldsa_caddq",test_mldsa_caddq);
   functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);

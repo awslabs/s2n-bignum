@@ -4847,6 +4847,21 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_caddq",
+  ([(*args*)
+     ("a", "int32_t[static 256]", (*is const?*)"false");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mldsa_reduce",
   ([(*args*)
      ("a", "int32_t[static 256]", (*is const?*)"false");

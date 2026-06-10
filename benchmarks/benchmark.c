@@ -1368,6 +1368,7 @@ static int32_t __attribute__((aligned(32))) mldsa_avx2_qdata[16] = {
     58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449  // 8XQINV
 };
 
+void call_mldsa_caddq(void) repeat(mldsa_caddq((int32_t*)b0))
 void call_mldsa_intt(void) repeat(mldsa_intt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_ntt(void) repeat(mldsa_ntt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_nttunpack(void) repeat(mldsa_nttunpack((int32_t*)b0))
@@ -1415,6 +1416,7 @@ void call_aes_xts_decrypt_512(void) {}
 
 #else
 
+void call_mldsa_caddq(void) {}
 void call_mldsa_intt(void) repeat(mldsa_intt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_ntt(void) repeat(mldsa_ntt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_nttunpack(void) {}
@@ -1892,6 +1894,7 @@ int main(int argc, char *argv[])
   timingtest(all,"mlkem_tobytes",call_mlkem_tobytes);
   timingtest(all,"mlkem_tomont",call_mlkem_tomont);
   timingtest(!arm,"mlkem_unpack",call_mlkem_unpack);
+  timingtest(!arm,"mldsa_caddq",call_mldsa_caddq);
   timingtest(all,"mldsa_intt",call_mldsa_intt);
   timingtest(all,"mldsa_ntt",call_mldsa_ntt);
   timingtest(!arm,"mldsa_nttunpack",call_mldsa_nttunpack);

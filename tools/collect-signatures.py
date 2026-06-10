@@ -344,6 +344,7 @@ onlyInX86 = [
   "mldsa_pointwise_acc_l5_x86",
   "mldsa_pointwise_acc_l7_x86",
   "mldsa_pointwise_x86",
+  "mldsa_caddq",
   "mldsa_reduce",
   "mldsa_rej_uniform",
   "mlkem_frombytes",
