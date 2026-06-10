@@ -1044,6 +1044,9 @@ extern void mldsa_pointwise_acc_l7(int32_t r[256], const int32_t a[1792], const 
 /* Pointwise multiplication with accumulation for ML-DSA L7, x86 version */
 /* Inputs a[1792], b[1792], qdata[16] (signed 32-bit words); output c[256] (signed 32-bit words) */
 extern void mldsa_pointwise_acc_l7_x86(int32_t c[256], const int32_t a[1792], const int32_t b[1792], const int32_t qdata[16]);
+/* Conditional addition of Q to polynomial coefficients for ML-DSA */
+/* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
+extern void mldsa_caddq(int32_t a[256]);
 
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
