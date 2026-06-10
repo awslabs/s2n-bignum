@@ -3581,11 +3581,17 @@ let MLDSA_REJ_UNIFORM_ETA4_MEMSAFE = prove
 
 
 (* ------------------------------------------------------------------------- *)
-(* Memory safety of the subroutine form.                                     *)
+(* Memory safety of the subroutine form.                                      *)
+(*                                                                            *)
+(* This proves memory safety only (all accesses in-bounds), not the full       *)
+(* secret-independence (f_events) clause of the other AArch64 _SUBROUTINE_SAFE *)
+(* theorems. That is intentional: rej_uniform_eta{2,4} produce the secret      *)
+(* vectors s1/s2, but the rejection decision itself is not secret, so control  *)
+(* flow and timing may depend on it. See pq-code-package/mldsa-native#1160.    *)
 (* ------------------------------------------------------------------------- *)
 
 
-let MLDSA_REJ_UNIFORM_ETA4_SUBROUTINE_MEMSAFE = time prove
+let MLDSA_REJ_UNIFORM_ETA4_SUBROUTINE_SAFE = time prove
  (`!res buf buflen table (inlist:byte list) pc e stackpointer returnaddress.
       8 divides val buflen /\
       8 <= val buflen /\
