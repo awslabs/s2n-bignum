@@ -362,6 +362,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPINSRW operand operand operand operand
    | VEXTRACTI128 operand operand operand
    | VINSERTI128 operand operand operand operand
+   | VPABSD operand operand
    | VPACKUSWB operand operand operand
    | VPCMPGTD operand operand operand
    | VPCMPGTW operand operand operand
@@ -395,6 +396,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSUBD operand operand operand
    | VPSUBQ operand operand operand
    | VPSUBW operand operand operand
+   | VPTEST operand operand
    | VPUNPCKHQDQ operand operand operand
    | VPUNPCKLQDQ operand operand operand
    | VPXOR operand operand operand

@@ -1908,6 +1908,18 @@ let x86_VPBLENDVB = new_definition
                 else (word_subword x128 (8*i,8):byte)) * 2 EXP (8*i))) in
         (dest := (word_zx res):N word) s`;;
 
+let x86_VPABSD = new_definition
+  `x86_VPABSD dest src (s:x86state) =
+      let (x:N word) = read src s in
+      let f = (\(a:int32).
+          if word_igt (word 0:int32) a then word_neg a else a) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd8 f (word_zx x) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = usimd4 f (word_zx x) in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPACKUSWB = new_definition
   `x86_VPACKUSWB dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -2398,6 +2410,17 @@ let x86_VPSRLW = new_definition
       else
         let res:(128)word = usimd8 (\z. word_ushr z count) (word_zx x) in
         (dest := (word_zx res):N word) s`;;
+
+let x86_VPTEST = new_definition
+ `x86_VPTEST src1 src2 (s:x86state) =
+        let (x:N word) = read src1 s
+        and (y:N word) = read src2 s in
+        (ZF := (val(word_and x y) = 0) ,,
+         CF := (val(word_and y (word_not x)) = 0) ,,
+         AF := F ,,
+         OF := F ,,
+         PF := F ,,
+         SF := F) s`;;
 
 let x86_VPUNPCKHQDQ = new_definition
   `x86_VPUNPCKHQDQ dest src1 src2 (s:x86state) =
@@ -3536,6 +3559,11 @@ let x86_execute = define
     | VEXTRACTI128 dest src imm8 ->
        (add_load_event src s ,, add_store_event dest s ,,
        (\s. x86_VEXTRACTI128 (OPERAND128 dest s) (OPERAND256 src s) (OPERAND8 imm8 s) s)) s
+    | VPABSD dest src ->
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPABSD (OPERAND256 dest s) (OPERAND256 src s)
+        | 128 -> x86_VPABSD (OPERAND128 dest s) (OPERAND128 src s)) s)) s
     | VPACKUSWB dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -3721,6 +3749,11 @@ let x86_execute = define
                             (OPERAND256 src2 s)
         | 128 -> x86_VPSUBW (OPERAND128 dest s) (OPERAND128 src1 s)
                             (OPERAND128 src2 s)) s)) s
+    | VPTEST src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+        (\s. (match operand_size src1 with
+          256 -> x86_VPTEST (OPERAND256 src1 s) (OPERAND256 src2 s)
+        | 128 -> x86_VPTEST (OPERAND128 src1 s) (OPERAND128 src2 s)) s)) s
     | VPSRAW dest src imm8 ->
         (add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
@@ -4654,10 +4687,12 @@ let x86_VPBLENDVB_ALT =
 let x86_VPMADDUBSW_ALT = EXPAND_SIMD_RULE x86_VPMADDUBSW;;
 let x86_VPMADDWD_ALT = EXPAND_SIMD_RULE x86_VPMADDWD;;
 let x86_VMOVMSKPS_ALT = x86_VMOVMSKPS;;
+let x86_VPABSD_ALT = EXPAND_SIMD_RULE x86_VPABSD;;
 let x86_VPMOVMSKB_ALT = x86_VPMOVMSKB;;
 let x86_VPMOVSXBD_ALT = EXPAND_SIMD_RULE x86_VPMOVSXBD;;
 let x86_VPMOVZXBD_ALT = EXPAND_SIMD_RULE x86_VPMOVZXBD;;
 let x86_VPMOVZXBW_ALT = EXPAND_SIMD_RULE x86_VPMOVZXBW;;
+let x86_VPTEST_ALT = x86_VPTEST;;
 let x86_VZEROUPPER_ALT = x86_VZEROUPPER;;
 let x86_VPMULDQ_ALT = EXPAND_SIMD_RULE x86_VPMULDQ;;
 let x86_VPMULHRSW_ALT = EXPAND_SIMD_RULE x86_VPMULHRSW;;
@@ -4713,8 +4748,8 @@ let X86_OPERATION_CLAUSES =
     x86_VPACKUSWB_ALT; x86_VPBLENDVB_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPCLMULQDQ_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
-    x86_VMOVMSKPS_ALT; x86_VPMOVMSKB_ALT; x86_VPMOVSXBD_ALT;
-    x86_VPMOVZXBD_ALT; x86_VPMOVZXBW_ALT; x86_VPSUBB_ALT; x86_VZEROUPPER_ALT;
+    x86_VMOVMSKPS_ALT; x86_VPABSD_ALT; x86_VPMOVMSKB_ALT; x86_VPMOVSXBD_ALT;
+    x86_VPMOVZXBD_ALT; x86_VPMOVZXBW_ALT; x86_VPSUBB_ALT; x86_VPTEST_ALT; x86_VZEROUPPER_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;

@@ -1104,6 +1104,7 @@ static int32_t __attribute__((aligned(32))) mldsa_avx2_qdata[16] = {
     58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449, 58728449  // 8XQINV
 };
 
+void call_mldsa_caddq(void) repeat(mldsa_caddq((int32_t*)b0))
 void call_mldsa_intt(void) repeat(mldsa_intt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_ntt(void) repeat(mldsa_ntt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_nttunpack(void) repeat(mldsa_nttunpack((int32_t*)b0))
@@ -1111,6 +1112,7 @@ void call_mldsa_pointwise(void) repeat(mldsa_pointwise_x86((int32_t*)b0,(int32_t
 void call_mldsa_pointwise_acc_l4(void) repeat(mldsa_pointwise_acc_l4_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
 void call_mldsa_pointwise_acc_l5(void) repeat(mldsa_pointwise_acc_l5_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
 void call_mldsa_pointwise_acc_l7(void) repeat(mldsa_pointwise_acc_l7_x86((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2,mldsa_avx2_qdata))
+void call_mldsa_poly_use_hint_88(void) {}
 void call_mldsa_reduce(void) repeat(mldsa_reduce((int32_t*)b0))
 void call_mldsa_poly_use_hint_32(void) {}
 
@@ -1149,6 +1151,7 @@ void call_aes_xts_decrypt_512(void) {}
 
 #else
 
+void call_mldsa_caddq(void) {}
 void call_mldsa_intt(void) repeat(mldsa_intt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_ntt(void) repeat(mldsa_ntt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_nttunpack(void) {}
@@ -1157,6 +1160,7 @@ void call_mldsa_pointwise_acc_l4(void) repeat(mldsa_pointwise_acc_l4((int32_t*)b
 void call_mldsa_pointwise_acc_l5(void) repeat(mldsa_pointwise_acc_l5((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_pointwise_acc_l7(void) repeat(mldsa_pointwise_acc_l7((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_poly_use_hint_32(void) repeat(mldsa_poly_use_hint_32((int32_t*)b0,(int32_t*)b1,(int32_t*)b2))
+void call_mldsa_poly_use_hint_88(void) repeat(mldsa_poly_use_hint_88((int32_t*)b0,(int32_t*)b1,(int32_t*)b2))
 void call_mldsa_reduce(void) {}
 
 void call_bignum_copy_row_from_table_8n__32_16(void) \
@@ -1624,6 +1628,7 @@ int main(int argc, char *argv[])
   timingtest(all,"mlkem_tobytes",call_mlkem_tobytes);
   timingtest(all,"mlkem_tomont",call_mlkem_tomont);
   timingtest(!arm,"mlkem_unpack",call_mlkem_unpack);
+  timingtest(!arm,"mldsa_caddq",call_mldsa_caddq);
   timingtest(all,"mldsa_intt",call_mldsa_intt);
   timingtest(all,"mldsa_ntt",call_mldsa_ntt);
   timingtest(!arm,"mldsa_nttunpack",call_mldsa_nttunpack);
@@ -1632,6 +1637,7 @@ int main(int argc, char *argv[])
   timingtest(all,"mldsa_pointwise_acc_l5",call_mldsa_pointwise_acc_l5);
   timingtest(all,"mldsa_pointwise_acc_l7",call_mldsa_pointwise_acc_l7);
   timingtest(arm,"mldsa_poly_use_hint_32",call_mldsa_poly_use_hint_32);
+  timingtest(arm,"mldsa_poly_use_hint_88",call_mldsa_poly_use_hint_88);
   timingtest(!arm,"mldsa_reduce",call_mldsa_reduce);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);
   timingtest(all,"p256_montjadd_alt",call_p256_montjadd_alt);

@@ -689,6 +689,20 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPMULHRSW (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0x17:8] -> if word_not v = (word 0b1111:4 word) then
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPTEST (mmreg reg sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
+        else NONE
+        | [0x1e:8] -> if word_not v = (word 0b1111:4 word) then
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPABSD (mmreg reg sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
+        else NONE
         | [0x21:8] -> if word_not v = (word 0b1111:4 word) then
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
