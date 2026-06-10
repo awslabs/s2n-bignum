@@ -143,8 +143,6 @@
 : vpblendvb$
 : vpblendw$
 : vpbroadcastd$
-: vpcmpgtd$
-: vpcmpgtw$
 : vpbroadcastq$
 : vpcmpgtd$
 : vpcmpgtw$

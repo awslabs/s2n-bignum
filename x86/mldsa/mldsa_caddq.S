@@ -37,9 +37,8 @@ S2N_BN_SYMBOL(mldsa_caddq):
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        CFI_DEC_RSP(32)
-        CFI_STACKSAVEU(xmm6,0)
-        CFI_STACKSAVE(rdi,16)
+        CFI_PUSH(rdi)
+        CFI_PUSH(rsi)
         mov     rdi, rcx
 #endif
 
@@ -84,9 +83,8 @@ S2N_BN_SYMBOL(mldsa_caddq):
         caddq_vector 992, ymm5
 
 #if WINDOWS_ABI
-        CFI_STACKLOADU(xmm6,0)
-        CFI_STACKLOAD(rdi,16)
-        CFI_INC_RSP(32)
+        CFI_POP(rsi)
+        CFI_POP(rdi)
 #endif
         CFI_RET
 

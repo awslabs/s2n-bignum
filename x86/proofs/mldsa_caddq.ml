@@ -519,9 +519,9 @@ let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_windows_tmc) (a,1024) /\
-        nonoverlapping (word_sub stackpointer (word 32),40) (a,1024) /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (a,1024) /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_windows_tmc)
-                       (word_sub stackpointer (word 32),32)
+                       (word_sub stackpointer (word 16),16)
         ==> ensures x86
               (\s. bytes_loaded s (word pc) mldsa_caddq_windows_tmc /\
                    read RIP s = word pc /\
@@ -545,47 +545,18 @@ let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                                   (word_add a (word(4 * i)))) s) < &8380417))
               (MAYCHANGE [RSP] ,,
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 32),32)] ,,
+               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)] ,,
                MAYCHANGE [memory :> bytes(a,1024)])`,
-  REPLICATE_TAC 3 GEN_TAC THEN
-  WORD_FORALL_OFFSET_TAC 32 THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[fst MLDSA_CADDQ_WINDOWS_TMC_EXEC] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
-  REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
-  ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC[GSYM YMM6] THEN
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GLOBALIZE_PRECONDITION_TAC THEN
-  REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
-  ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_CADDQ_WINDOWS_TMC_EXEC (1--4) THEN
-  MP_TAC(SPECL [`a:int64`; `x:num->int32`; `pc + 16`]
-    MLDSA_CADDQ_CORRECT) THEN
-  ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
-  X86_BIGSTEP_TAC MLDSA_CADDQ_WINDOWS_TMC_EXEC "s5" THENL
-   [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_caddq_windows_tmc
-     (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mldsa_caddq_tmc))
-     16));
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
-  ABBREV_TAC `ymm6_epilog = read YMM6 s5` THEN
-  X86_STEPS_TAC MLDSA_CADDQ_WINDOWS_TMC_EXEC (6--9) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC mldsa_caddq_windows_tmc mldsa_caddq_tmc
+      MLDSA_CADDQ_CORRECT);;
 
 let MLDSA_CADDQ_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_windows_mc) (a,1024) /\
-        nonoverlapping (word_sub stackpointer (word 32),40) (a,1024) /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (a,1024) /\
         nonoverlapping (word pc,LENGTH mldsa_caddq_windows_mc)
-                       (word_sub stackpointer (word 32),32)
+                       (word_sub stackpointer (word 16),16)
         ==> ensures x86
               (\s. bytes_loaded s (word pc) mldsa_caddq_windows_mc /\
                    read RIP s = word pc /\
@@ -609,7 +580,7 @@ let MLDSA_CADDQ_WINDOWS_SUBROUTINE_CORRECT = prove
                                   (word_add a (word(4 * i)))) s) < &8380417))
               (MAYCHANGE [RSP] ,,
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 32),32)] ,,
+               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)] ,,
                MAYCHANGE [memory :> bytes(a,1024)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
@@ -619,9 +590,9 @@ let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
  (`exists f_events. forall e a pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mldsa_caddq_windows_tmc) (a, 1024) /\
-        nonoverlapping (word_sub stackpointer (word 32), 40) (a, 1024) /\
+        nonoverlapping (word_sub stackpointer (word 16), 24) (a, 1024) /\
         nonoverlapping (word pc, LENGTH mldsa_caddq_windows_tmc)
-                       (word_sub stackpointer (word 32), 32)
+                       (word_sub stackpointer (word 16), 16)
         ==> ensures x86
               (\s.
                   bytes_loaded s (word pc) mldsa_caddq_windows_tmc /\
@@ -634,65 +605,25 @@ let MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
                   read RSP s = word_add stackpointer (word 8) /\
                   (exists e2.
                         read events s = APPEND e2 e /\
-                        e2 = f_events a pc (word_sub stackpointer (word 32)) returnaddress /\
+                        e2 = f_events a pc (word_sub stackpointer (word 16)) returnaddress /\
                         memaccess_inbounds e2
-                          [a,1024; word_sub stackpointer (word 32),40]
-                          [a,1024; word_sub stackpointer (word 32),40]))
+                          [a,1024; word_sub stackpointer (word 16),24]
+                          [a,1024; word_sub stackpointer (word 16),16]))
               (MAYCHANGE [RSP] ,,
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 32), 32)] ,,
+               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16), 16)] ,,
                MAYCHANGE [memory :> bytes(a, 1024)])`,
-  ASSUME_CALLEE_SAFETY_TAC MLDSA_CADDQ_SAFE "H_subth" THEN
-  META_EXISTS_TAC THEN
-  REPLICATE_TAC 3 GEN_TAC THEN
-  WORD_FORALL_OFFSET_TAC 32 THEN
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[fst MLDSA_CADDQ_WINDOWS_TMC_EXEC] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
-  REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
-  ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC[GSYM YMM6] THEN
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GLOBALIZE_PRECONDITION_TAC THEN
-  REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
-  ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_CADDQ_WINDOWS_TMC_EXEC (1--4) THEN
-  W(fun (asl,w) ->
-    let current_events = List.filter_map (fun (_,ath) -> let t = concl ath in
-      if is_eq t && is_read_events (lhs t) then Some (rhs t)
-      else None) asl in
-    if length current_events <> 1
-    then failwith "More than 'read events .. = ..?'"
-    else
-      REMOVE_THEN "H_subth"
-        (MP_TAC o SPECL [hd current_events; `a:int64`; `pc + 16`]))
-  THEN
-  ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
-  X86_BIGSTEP_TAC MLDSA_CADDQ_WINDOWS_TMC_EXEC "s5" THENL
-   [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_caddq_windows_tmc
-     (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mldsa_caddq_tmc))
-     16));
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
-  ABBREV_TAC `ymm6_epilog = read YMM6 s5` THEN
-  X86_STEPS_TAC MLDSA_CADDQ_WINDOWS_TMC_EXEC (6--9) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [ DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC mldsa_caddq_windows_tmc mldsa_caddq_tmc
+      MLDSA_CADDQ_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let MLDSA_CADDQ_WINDOWS_SUBROUTINE_SAFE = prove
  (`exists f_events. forall e a pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc, LENGTH mldsa_caddq_windows_mc) (a, 1024) /\
-        nonoverlapping (word_sub stackpointer (word 32), 40) (a, 1024) /\
+        nonoverlapping (word_sub stackpointer (word 16), 24) (a, 1024) /\
         nonoverlapping (word pc, LENGTH mldsa_caddq_windows_mc)
-                       (word_sub stackpointer (word 32), 32)
+                       (word_sub stackpointer (word 16), 16)
         ==> ensures x86
               (\s.
                   bytes_loaded s (word pc) mldsa_caddq_windows_mc /\
@@ -705,12 +636,12 @@ let MLDSA_CADDQ_WINDOWS_SUBROUTINE_SAFE = prove
                   read RSP s = word_add stackpointer (word 8) /\
                   (exists e2.
                         read events s = APPEND e2 e /\
-                        e2 = f_events a pc (word_sub stackpointer (word 32)) returnaddress /\
+                        e2 = f_events a pc (word_sub stackpointer (word 16)) returnaddress /\
                         memaccess_inbounds e2
-                          [a,1024; word_sub stackpointer (word 32),40]
-                          [a,1024; word_sub stackpointer (word 32),40]))
+                          [a,1024; word_sub stackpointer (word 16),24]
+                          [a,1024; word_sub stackpointer (word 16),16]))
               (MAYCHANGE [RSP] ,,
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 32), 32)] ,,
+               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16), 16)] ,,
                MAYCHANGE [memory :> bytes(a, 1024)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_CADDQ_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
