@@ -1393,40 +1393,10 @@ let x86_VMOVMSKPS = new_definition
 let x86_VPMOVMSKB = new_definition
  `x86_VPMOVMSKB dest src (s:x86state) =
     let x:int256 = read src s in
-    let res:int32 = word(
-      bitval(bit 7 (word_subword x (0,8):byte)) +
-      2 * bitval(bit 7 (word_subword x (8,8):byte)) +
-      4 * bitval(bit 7 (word_subword x (16,8):byte)) +
-      8 * bitval(bit 7 (word_subword x (24,8):byte)) +
-      16 * bitval(bit 7 (word_subword x (32,8):byte)) +
-      32 * bitval(bit 7 (word_subword x (40,8):byte)) +
-      64 * bitval(bit 7 (word_subword x (48,8):byte)) +
-      128 * bitval(bit 7 (word_subword x (56,8):byte)) +
-      256 * bitval(bit 7 (word_subword x (64,8):byte)) +
-      512 * bitval(bit 7 (word_subword x (72,8):byte)) +
-      1024 * bitval(bit 7 (word_subword x (80,8):byte)) +
-      2048 * bitval(bit 7 (word_subword x (88,8):byte)) +
-      4096 * bitval(bit 7 (word_subword x (96,8):byte)) +
-      8192 * bitval(bit 7 (word_subword x (104,8):byte)) +
-      16384 * bitval(bit 7 (word_subword x (112,8):byte)) +
-      32768 * bitval(bit 7 (word_subword x (120,8):byte)) +
-      65536 * bitval(bit 7 (word_subword x (128,8):byte)) +
-      131072 * bitval(bit 7 (word_subword x (136,8):byte)) +
-      262144 * bitval(bit 7 (word_subword x (144,8):byte)) +
-      524288 * bitval(bit 7 (word_subword x (152,8):byte)) +
-      1048576 * bitval(bit 7 (word_subword x (160,8):byte)) +
-      2097152 * bitval(bit 7 (word_subword x (168,8):byte)) +
-      4194304 * bitval(bit 7 (word_subword x (176,8):byte)) +
-      8388608 * bitval(bit 7 (word_subword x (184,8):byte)) +
-      16777216 * bitval(bit 7 (word_subword x (192,8):byte)) +
-      33554432 * bitval(bit 7 (word_subword x (200,8):byte)) +
-      67108864 * bitval(bit 7 (word_subword x (208,8):byte)) +
-      134217728 * bitval(bit 7 (word_subword x (216,8):byte)) +
-      268435456 * bitval(bit 7 (word_subword x (224,8):byte)) +
-      536870912 * bitval(bit 7 (word_subword x (232,8):byte)) +
-      1073741824 * bitval(bit 7 (word_subword x (240,8):byte)) +
-      2147483648 * bitval(bit 7 (word_subword x (248,8):byte))) in
-    (dest := res:int32) s`;;
+    (dest := word(nsum (0..31)
+                   (\i. 2 EXP i *
+                        bitval(bit 7 (word_subword x (8 * i,8):byte))))
+            :int32) s`;;
 
 (*** Push and pop are a bit odd in several ways. First of all, there is  ***)
 (*** an implicit memory operand so this doesn't have quite the same      ***)
@@ -4708,7 +4678,12 @@ let x86_VPMADDUBSW_ALT = EXPAND_SIMD_RULE x86_VPMADDUBSW;;
 let x86_VPMADDWD_ALT = EXPAND_SIMD_RULE x86_VPMADDWD;;
 let x86_VMOVMSKPS_ALT = x86_VMOVMSKPS;;
 let x86_VPABSD_ALT = EXPAND_SIMD_RULE x86_VPABSD;;
-let x86_VPMOVMSKB_ALT = x86_VPMOVMSKB;;
+let x86_VPMOVMSKB_ALT =
+  (CONV_RULE
+     (TOP_DEPTH_CONV let_CONV THENC
+      ONCE_DEPTH_CONV EXPAND_NSUM_CONV THENC
+      NUM_REDUCE_CONV THENC
+      GEN_REWRITE_CONV TOP_DEPTH_CONV [MULT_CLAUSES])) x86_VPMOVMSKB;;
 let x86_VPMOVSXBD_ALT = EXPAND_SIMD_RULE x86_VPMOVSXBD;;
 let x86_VPMOVZXBD_ALT = EXPAND_SIMD_RULE x86_VPMOVZXBD;;
 let x86_VPMOVZXBW_ALT = EXPAND_SIMD_RULE x86_VPMOVZXBW;;
