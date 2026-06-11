@@ -65,7 +65,15 @@ and bx = define `bx = Gpr (word 3) Lower_16`
 and sp = define `sp = Gpr (word 4) Lower_16`
 and bp = define `bp = Gpr (word 5) Lower_16`
 and si = define `si = Gpr (word 6) Lower_16`
-and di = define `di = Gpr (word 7) Lower_16`;;
+and di = define `di = Gpr (word 7) Lower_16`
+and  r8w = define ` r8w = Gpr (word  8) Lower_16`
+and  r9w = define ` r9w = Gpr (word  9) Lower_16`
+and r10w = define `r10w = Gpr (word 10) Lower_16`
+and r11w = define `r11w = Gpr (word 11) Lower_16`
+and r12w = define `r12w = Gpr (word 12) Lower_16`
+and r13w = define `r13w = Gpr (word 13) Lower_16`
+and r14w = define `r14w = Gpr (word 14) Lower_16`
+and r15w = define `r15w = Gpr (word 15) Lower_16`;;
 
 let ah = define `ah = Gpr (word 0) Upper_8`
 and al = define `al = Gpr (word 0) Lower_8`
@@ -78,7 +86,15 @@ and bl = define `bl = Gpr (word 3) Lower_8`
 and spl = define `spl = Gpr (word 4) Lower_8`
 and bpl = define `bpl = Gpr (word 5) Lower_8`
 and sil = define `sil = Gpr (word 6) Lower_8`
-and dil = define `dil = Gpr (word 7) Lower_8`;;
+and dil = define `dil = Gpr (word 7) Lower_8`
+and r8b  = define ` r8b = Gpr (word  8) Lower_8`
+and r9b  = define ` r9b = Gpr (word  9) Lower_8`
+and r10b = define `r10b = Gpr (word 10) Lower_8`
+and r11b = define `r11b = Gpr (word 11) Lower_8`
+and r12b = define `r12b = Gpr (word 12) Lower_8`
+and r13b = define `r13b = Gpr (word 13) Lower_8`
+and r14b = define `r14b = Gpr (word 14) Lower_8`
+and r15b = define `r15b = Gpr (word 15) Lower_8`;;
 
 (* ------------------------------------------------------------------------- *)
 (* XMM/YMM/ZMM registers and opmask registers.                               *)
@@ -346,15 +362,20 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPINSRW operand operand operand operand
    | VEXTRACTI128 operand operand operand
    | VINSERTI128 operand operand operand operand
+   | VPABSD operand operand
    | VPACKUSWB operand operand operand
    | VPCMPGTD operand operand operand
    | VPCMPGTW operand operand operand
    | VPBLENDVB operand operand operand operand
    | VPMADDUBSW operand operand operand
    | VPMADDWD operand operand operand
+   | VPMOVMSKB operand operand
+   | VPMOVSXBD operand operand
    | VPMOVZXBD operand operand
+   | VPMOVZXBW operand operand
    | VPMULDQ operand operand operand
    | VPMULHRSW operand operand operand
+   | VPMULHUW operand operand operand
    | VPMULHW operand operand operand
    | VPMULLD operand operand operand
    | VPMULLW operand operand operand
@@ -372,9 +393,11 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSRLVQ operand operand operand
    | VPSRLQ operand operand operand
    | VPSRLW operand operand operand
+   | VPSUBB operand operand operand
    | VPSUBD operand operand operand
    | VPSUBQ operand operand operand
    | VPSUBW operand operand operand
+   | VPTEST operand operand
    | VPUNPCKHQDQ operand operand operand
    | VPUNPCKLQDQ operand operand operand
    | VPXOR operand operand operand
