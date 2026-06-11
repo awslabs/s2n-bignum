@@ -21,6 +21,7 @@ needs "Library/pocklington.ml";;
 needs "Library/integer.ml";;
 needs "Library/words.ml";;
 needs "Library/bitmatch.ml";;
+loadt "Library/records.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* common ARM-x86 proof infrastructure.                                      *)
@@ -32,7 +33,6 @@ loadt "common/words2.ml";;
 loadt "common/misc.ml";;
 loadt "common/components.ml";;
 loadt "common/alignment.ml";;
-loadt "common/records.ml";;
 loadt "common/relational.ml";;
 loadt "common/interval.ml";;
 loadt "common/elf.ml";;
@@ -60,7 +60,7 @@ extra_word_CONV :=
 (* Additional Cryptographic AES intrinsics                                   *)
 (* ------------------------------------------------------------------------- *)
 
-loadt "arm/proofs/aes.ml";;
+loadt "arm/proofs/utils/aes.ml";;
 
 extra_word_CONV := [AESE_REDUCE_CONV; AESMC_REDUCE_CONV;
                     AESD_REDUCE_CONV; AESIMC_REDUCE_CONV]
