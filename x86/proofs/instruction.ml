@@ -375,6 +375,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPMOVZXBW operand operand
    | VPMULDQ operand operand operand
    | VPMULHRSW operand operand operand
+   | VPMULHUW operand operand operand
    | VPMULHW operand operand operand
    | VPMULLD operand operand operand
    | VPMULLW operand operand operand
