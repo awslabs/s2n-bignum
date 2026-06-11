@@ -706,7 +706,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x21:8] -> if word_not v = (word 0b1111:4 word) then
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-           let sop = simd_of_RM Lower_128 rm in
+           (* Byte->doubleword extend: source is 8 bytes (256-bit dest) or
+              4 bytes (128-bit dest). For a register source read the whole
+              xmm; for memory read only the bytes actually consumed. *)
+           let sop = if is_memop rm then
+                       (if L then operand_of_RM Full_64 rm
+                        else operand_of_RM Lower_32 rm)
+                     else simd_of_RM Lower_128 rm in
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPMOVSXBD (mmreg reg sz) sop,l)
            | _ -> NONE)
@@ -720,7 +726,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x30:8] -> if word_not v = (word 0b1111:4 word) then
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-           let sop = simd_of_RM Lower_128 rm in
+           (* Byte->word extend: source is 16 bytes (256-bit dest) or
+              8 bytes (128-bit dest). For a register source read the whole
+              xmm; for memory read only the bytes actually consumed. *)
+           let sop = if is_memop rm then
+                       (if L then simd_of_RM Lower_128 rm
+                        else operand_of_RM Full_64 rm)
+                     else simd_of_RM Lower_128 rm in
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPMOVZXBW (mmreg reg sz) sop,l)
            | _ -> NONE)
@@ -728,7 +740,13 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         | [0x31:8] -> if word_not v = (word 0b1111:4 word) then
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
-           let sop = simd_of_RM Lower_128 rm in
+           (* Byte->doubleword extend: source is 8 bytes (256-bit dest) or
+              4 bytes (128-bit dest). For a register source read the whole
+              xmm; for memory read only the bytes actually consumed. *)
+           let sop = if is_memop rm then
+                       (if L then operand_of_RM Full_64 rm
+                        else operand_of_RM Lower_32 rm)
+                     else simd_of_RM Lower_128 rm in
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPMOVZXBD (mmreg reg sz) sop,l)
            | _ -> NONE)
