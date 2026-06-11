@@ -163,6 +163,7 @@
 : vpmovzxbd$
 : vpmuldq$
 : vpmulhrsw$
+: vpmulhuw$
 : vpmulhw$
 : vpmulld$
 : vpmullw$
