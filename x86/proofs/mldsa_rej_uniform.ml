@@ -2971,7 +2971,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
             REWRITE_CONV[GSYM READ_COMPONENT_COMPOSE])) val_eq in
           (* Result: read(memory :> bytes(addr,32)) s35 = val(read YMM3 s35) *)
           ASSUME_TAC bytes32_eq (asl,w)
-        with e ->
+        with _ ->
           ALL_TAC (asl,w)) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
       CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
@@ -3101,7 +3101,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
             let bridge = MATCH_MP VPERMD_MEMORY_BRIDGE
               (CONJ bytes32_hyp (CONJ vpermd_hyp lenrej_bound)) in
             REWRITE_TAC[bridge] (asl,w)
-          with e ->
+          with _ ->
             failwith "memstore bridge derivation failed")];
 
       (* ~(i+1 < N): exit to pc+181.
@@ -5790,8 +5790,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
             REWRITE_CONV[GSYM READ_COMPONENT_COMPOSE])) val_eq in
           (* Result: read(memory :> bytes(addr,32)) s35 = val(read YMM3 s35) *)
           ASSUME_TAC bytes32_eq (asl,w)
-        with e ->
-          Printf.printf "pre-ENSURES bytes32 setup failed: %s\n%!" (Printexc.to_string e);
+        with _ ->
           ALL_TAC (asl,w)) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
       CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
@@ -5870,26 +5869,26 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
             (* 1. bytes32 hypothesis: read(bytes(addr,32)) s35 = vr *)
             let has_const name t = try fst(dest_const t) = name with _ -> false in
             let has_var name t = try fst(dest_var t) = name with _ -> false in
-            let bytes32_hyp = try snd(List.find (fun (_,th) ->
+            let bytes32_hyp = snd(List.find (fun (_,th) ->
               is_eq(concl th) &&
               can (find_term (fun t -> try dest_numeral t = Num.num_of_int 32 with _ -> false)) (lhs(concl th)) &&
               can (find_term (fun t -> try fst(dest_var t) = "s35" with _ -> false)) (lhs(concl th)) &&
               can (find_term (fun t -> try fst(dest_var t) = "res" with _ -> false)) (lhs(concl th)) &&
               can (find_term (fun t -> try fst(dest_const t) = "bytes" with _ -> false)) (lhs(concl th)) &&
               not(can (find_term (fun t -> try fst(dest_const t) = "bytes256" with _ -> false)) (lhs(concl th))) &&
-              not(can (find_term (fun t -> try fst(dest_const t) = "events" with _ -> false)) (lhs(concl th)))) asl) with Not_found -> (Printf.printf "bytes32_hyp Not_found\n%!"; raise Not_found) in
+              not(can (find_term (fun t -> try fst(dest_const t) = "events" with _ -> false)) (lhs(concl th)))) asl) in
             (* Find newlen = lenrej hypothesis *)
-            let newlen_eq = try snd(List.find (fun (_,th) ->
+            let newlen_eq = snd(List.find (fun (_,th) ->
               try is_eq(concl th) && has_var "newlen" (lhs(concl th)) &&
                   has_var "lenrej" (rhs(concl th))
-              with _ -> false) asl) with Not_found -> (Printf.printf "newlen_eq Not_found\n%!"; raise Not_found) in
+              with _ -> false) asl) in
             (* Find VPERMD MOD hyp: val(YMM3 sN) MOD 2^(32*newlen) = num_of_wordlist(...)
                May be for s34 or s33 — find the most recent one *)
-            let vpermd_hyp_raw = try snd(List.find (fun (_,th) ->
+            let vpermd_hyp_raw = snd(List.find (fun (_,th) ->
               is_eq(concl th) &&
               can (find_term (has_const "MOD")) (concl th) &&
               can (find_term (has_var "newlen")) (concl th) &&
-              can (find_term (has_const "num_of_wordlist")) (concl th)) asl) with Not_found -> (Printf.printf "vpermd_hyp_raw Not_found\n%!"; raise Not_found) in
+              can (find_term (has_const "num_of_wordlist")) (concl th)) asl) in
             (* Normalize: replace newlen with lenrej *)
             let vpermd_hyp_1 = REWRITE_RULE[newlen_eq] vpermd_hyp_raw in
             (* The VPERMD hyp may use a different state (s34) than bytes32 (s35).
@@ -5914,17 +5913,16 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
             with _ ->
               vpermd_hyp_1 in
             (* 3. lenrej <= 8: directly available *)
-            let lenrej_bound = try snd(List.find (fun (_,th) ->
+            let lenrej_bound = snd(List.find (fun (_,th) ->
               try is_binary "<=" (concl th) &&
                   has_var "lenrej" (lhand(concl th)) &&
                   dest_small_numeral(rand(concl th)) = 8
-              with _ -> false) asl) with Not_found -> (Printf.printf "lenrej_bound Not_found\n%!"; raise Not_found) in
+              with _ -> false) asl) in
             (* Forward chain: MATCH_MP VPERMD_MEMORY_BRIDGE (bytes32 /\ mod /\ bound) *)
             let bridge = MATCH_MP VPERMD_MEMORY_BRIDGE
               (CONJ bytes32_hyp (CONJ vpermd_hyp lenrej_bound)) in
             REWRITE_TAC[bridge] (asl,w)
-          with e ->
-            Printf.printf "memstore bridge: %s\n%!" (Printexc.to_string e);
+          with _ ->
             failwith "memstore bridge derivation failed");
         W(fun (asl,w) ->
             try
@@ -6122,9 +6120,8 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
                  clean_th: read RIP s37 = word(pc+181).
                  Want: (if c then a else b) = word(pc+181). *)
               let cond_eq_clean = TRANS (SYM cond_th) clean_th in
-              Printf.printf "DBG: COND rewrite TRANS produced %s\n%!" (string_of_term (concl cond_eq_clean));
               RULE_ASSUM_TAC (REWRITE_RULE [cond_eq_clean]) (asl,w)
-            with e -> Printf.printf "DBG: COND rewrite failed: %s\n%!" (Printexc.to_string e); ALL_TAC (asl,w)) THEN
+            with _ -> ALL_TAC (asl,w)) THEN
           TRY (FIRST_X_ASSUM(K ALL_TAC o check (fun th ->
             let c = concl th in
             is_eq c && can (find_term ((=) `read RIP s37`)) c &&
@@ -6506,7 +6503,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
               let bridge = MATCH_MP VPERMD_MEMORY_BRIDGE
                 (CONJ bytes32_eq (CONJ vpermd newlen_bound)) in
               ASSUME_TAC bridge (asl,w)
-            with e -> Printf.printf "DBG: J2 PRE-ENSURES failed: %s\n%!" (Printexc.to_string e); failwith "J2 PRE-ENSURES") THEN
+            with _ -> failwith "J2 PRE-ENSURES") THEN
           ENSURES_FINAL_STATE_TAC THEN
           ASM_REWRITE_TAC[] THEN
           CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
@@ -6633,20 +6630,6 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
               ASM_REWRITE_TAC[] THEN
               REWRITE_TAC[EQ_ADD_LCANCEL; EQ_MULT_LCANCEL; EXP_EQ_0; ARITH_EQ] THEN
               ASM_REWRITE_TAC[] THEN NO_TAC) THEN
-          (* DBG: log if mem branch failed and goal still has memory pattern. *)
-          (fun (asl,w) ->
-            let s = string_of_term w in
-            let m = String.length s in
-            let pat = "memory :> bytes (res" in
-            let pm = String.length pat in
-            let has_pat =
-              let rec check i = i + pm <= m &&
-                (String.sub s i pm = pat || check (i+1)) in
-              m >= pm && check 0 in
-            if has_pat then
-              Printf.printf "DBG: J2 MEM BRANCH FAILED, residual=%s\n%!"
-                (if m < 300 then s else String.sub s 0 300 ^ "...");
-            ALL_TAC (asl,w)) THEN
           TRY (W(fun (_,w) ->
             if (try let n = fst(dest_var(fst(dest_exists w))) in
                     n = "e_acc'" || n = "e_acc" || String.length n >= 5 &&
@@ -6946,7 +6929,6 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
               ALL_TAC] THEN
             REWRITE_TAC[] THEN
             (fun (asl, w) ->
-              try
                 let has_const name t = try fst(dest_const t) = name with _ -> false in
                 let has_var name t = try fst(dest_var t) = name with _ -> false in
                 let mem_hyp = snd(List.find (fun (_, th) ->
@@ -6968,7 +6950,6 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
                   (ISPECL [`inlist:(24 word)list`; `8 * N + K`] SUB_LIST_REFL)
                   bound_th in
                 let mem_hyp' = REWRITE_RULE[sub_eq] mem_hyp in
-                Printf.printf "DBG: K>0 oe-only mem_hyp' = %s\n%!" (string_of_term (concl mem_hyp'));
                 (REPEAT CONJ_TAC THEN
                  TRY (FIRST_ASSUM ACCEPT_TAC) THEN
                  TRY (ACCEPT_TAC mem_hyp') THEN
@@ -6989,8 +6970,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
                            EXISTS_TAC e_var THEN ASM_REWRITE_TAC[]
                          with _ -> NO_TAC))
                      else NO_TAC
-                   with _ -> NO_TAC))) (asl, w)
-              with e -> Printf.printf "DBG: memory finalize failed: %s\n%!" (Printexc.to_string e); failwith "memory finalize failed")]]]]]);;
+                   with _ -> NO_TAC))) (asl, w))]]]]]);;
 
 
 (* ------------------------------------------------------------------------- *)
