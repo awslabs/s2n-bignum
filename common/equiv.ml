@@ -43,13 +43,13 @@ let get_memory_read_info =
     try
       let bytewidth:term = assoc accessor szs in
       (* args is just a location *)
-      assert (List.length args = 1);
+      if List.length args <> 1 then failwith "get_memory_read_info" else
       Some (List.hd args, bytewidth, accessor)
     with Failure _ ->
       begin match accessor with
       | "bytes" ->
         (* args is (loc, len). *)
-        assert (List.length args = 1);
+        if List.length args <> 1 then failwith "get_memory_read_info" else
         let a, sz = dest_pair (List.hd args) in
         Some (a, sz, "bytes")
       | _ -> (* don't know what it is *)
@@ -690,8 +690,14 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
             (* Inspect if this is the result of updating lower bits of the
                registers. *)
           (try
-            let wj1,whi1::wlo1::[] = strip_ncomb 2 rhs in
-            let wj2,whi2::wlo2::[] = strip_ncomb 2 rhs2 in
+            let wj1,whi1,wlo1 =
+              match strip_ncomb 2 rhs with
+                wj1,[whi1;wlo1] -> wj1,whi1,wlo1
+              | _ -> failwith "" in
+            let wj2,whi2,wlo2 =
+              match strip_ncomb 2 rhs2 with
+                wj2,[whi2;wlo2] -> wj2,whi2,wlo2
+              | _ -> failwith "" in
             if wj1 <> wj2 then failwith "" else
             if wlo1 = wlo2 then readth2,wlo1 else
             let r = WORD_RULE (mk_eq(wlo2,wlo1)) in

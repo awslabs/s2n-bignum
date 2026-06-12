@@ -1912,7 +1912,7 @@ let term_of_relocs_arm, assert_relocs =
           Printf.eprintf "  actual opcode: `%s`\n" (string_of_term reloc_opcode);
           Printf.eprintf "  asserting opcode: `%s`\n" (string_of_term lhs);
           Printf.eprintf "  PC: %d (0x%x)\n" pc pc;
-          assert false)
+          failwith "assert_reloc_maker")
         in
         pc+4, next_insns
       with Failure _ -> failwith ("could not check opcode " ^ (string_of_term reloc_opcode)) in

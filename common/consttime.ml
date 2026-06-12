@@ -78,7 +78,7 @@ let gen_mk_safety_spec
   let (bytes_loaded_mc::[]),bytes_loaded_others = List.partition (fun t ->
       let _::pc::_ = snd (strip_comb t) in
       let word_const,pc_var = dest_comb pc in
-      starts_with"pc" (name_of pc_var))
+      starts_with "pc" (name_of pc_var))
     bytes_loaded_terms in
   let read_sp_eq: term option = try
       Some (find_term find_eq_stackpointer fnspec_precond)
@@ -95,7 +95,7 @@ let gen_mk_safety_spec
 
   (* An expression s to a term of :num type. *)
   let rec elemsz_to_hol (s:string): term =
-    let s = if starts_with">=" s
+    let s = if starts_with ">=" s
       then String.sub s 2 (String.length s - 2) else s in
 
     match String.index_opt s '*' with
@@ -618,7 +618,7 @@ let CONCRETIZE_F_EVENTS_TAC (concrete_f_events:term): tactic =
     let free_f_events = frees concrete_f_events in
     (* Do sanity check *)
     let _ = List.iter (fun t ->
-        if not (starts_with"f_ev" (name_of t))
+        if not (starts_with "f_ev" (name_of t))
         then failwith
           ("This free variable does not start with 'f_ev'; is it a function " ^
            "that returns a list of uarch_events?") else
@@ -659,8 +659,10 @@ let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
     let t_exists_e2 = find_term
       (fun t -> is_exists t && fst (dest_exists t) = var_e2)
       pred in
-    let clause1::e2_equals::clause3::[] =
-      conjuncts (snd (dest_exists t_exists_e2)) in
+    let clause1,e2_equals,clause3 =
+      match conjuncts (snd (dest_exists t_exists_e2)) with
+        [clause1;e2_equals;clause3] -> clause1,e2_equals,clause3
+      | _ -> failwith "find_e2_def: expected three conjuncts" in
 
     if not (is_eq e2_equals)
     then failwith ("expected `e2 = ...`, but got " ^
@@ -672,7 +674,10 @@ let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
   fun (asl,w) ->
     let t_ensures,args = strip_comb w in
     if name_of t_ensures <> "ensures" then failwith "not ensures" else
-    let t_arm::precond::postcond::_::[] = args in
+    let t_arm,precond,postcond =
+      match args with
+        t_arm::precond::postcond::_::[] -> t_arm,precond,postcond
+      | _ -> failwith "expected ensures with four arguments" in
 
     (* extract the 'e2 = APPEND ...' subterm, from 'exists e2. ...'. *)
     let clause1,e2_def_post,clause3 = find_e2_def postcond in
@@ -682,7 +687,10 @@ let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
     then failwith ("expected `e2 = APPEND ..`, but got " ^
         (string_of_term e2_def_post)) else
 
-    let e_back::e_front_tail::[] = snd (strip_comb e2_def_post) in
+    let e_back,e_front_tail =
+      match snd (strip_comb e2_def_post) with
+        [e_back;e_front_tail] -> e_back,e_front_tail
+      | _ -> failwith "ENSURES_EVENTS_SEQUENCE_TAC: expected APPEND _ _" in
 
     let e2_def_pre = try Some (find_e2_def precond) with Failure _ -> None in
     let _ = match e2_def_pre with
@@ -735,7 +743,10 @@ let ENSURES_EVENTS_WHILE_UP2_TAC =
   let mk_new_inv loop_inv (itrbegin:term option) (numitr:term option) (asl,w) =
     let t_ensures,args = strip_comb w in
     if name_of t_ensures <> "ensures" then failwith "not ensures" else
-    let t_arm::precond::postcond::_::[] = args in
+    let t_arm,precond,postcond =
+      match args with
+        t_arm::precond::postcond::_::[] -> t_arm,precond,postcond
+      | _ -> failwith "expected ensures with four arguments" in
 
     (* extract the 'e2 = APPEND ...' subterm, from 'exists e2. ...'. *)
     let var_e2 = mk_var("e2",`:(uarch_event)list`) in
@@ -744,8 +755,10 @@ let ENSURES_EVENTS_WHILE_UP2_TAC =
       postcond in
     let t_exists_e2_in_pre = can (find_term
       (fun t -> is_exists t && fst (dest_exists t) = var_e2)) precond in
-    let clause1::e2_equals::clause3::[] =
-      conjuncts (snd (dest_exists t_exists_e2)) in
+    let clause1,e2_equals,clause3 =
+      match conjuncts (snd (dest_exists t_exists_e2)) with
+        [clause1;e2_equals;clause3] -> clause1,e2_equals,clause3
+      | _ -> failwith "find_e2_def: expected three conjuncts" in
 
     let failmsg () =
       if t_exists_e2_in_pre then
@@ -769,7 +782,10 @@ let ENSURES_EVENTS_WHILE_UP2_TAC =
         let e_back,e_middle = dest_binary "APPEND" the_append in
         let e_enumeratel,e_front = dest_binary "APPEND" e_middle in
         (* e_enumeratel is supposed to be 'ENUMERATEL n ...' *)
-        let the_enumeratel,(counter::e_loop::[]) = strip_comb e_enumeratel in
+        let the_enumeratel,counter,e_loop =
+          match strip_comb e_enumeratel with
+            the_enumeratel,[counter;e_loop] -> the_enumeratel,counter,e_loop
+          | _ -> failwith "expected ENUMERATEL with two arguments" in
         (* discard e_back! *)
         the_enumeratel,counter,e_loop,e_front,e_prev_trace
       with Failure _ -> failmsg() in

@@ -242,8 +242,10 @@ let EXPAND_READ_XMM_SSE_RULE th =
         XMM12_SSE; XMM13_SSE; XMM14_SSE; XMM15_SSE;
         READ_BOTTOM_128] @ READ_YMM_SSE_EQUIV) th in
     let the_lhs,rhs = dest_eq (concl th') in
-    let c_word_subword,read_ymm::idx::[] = strip_comb (the_lhs) in
-    let c_read,the_ymm::statevar::[] = strip_comb read_ymm in
+    let read_ymm =
+      match strip_comb the_lhs with
+        _,[read_ymm;_] -> read_ymm
+      | _ -> failwith "EXPAND_READ_XMM_SSE_RULE: unexpected read form" in
     let upperbits_var = mk_var ("x",`:(128)word`) in
     let new_goal = mk_exists(upperbits_var, mk_eq(read_ymm,
         list_mk_comb (`word_join:(128)word->(128)word->(256)word`,
