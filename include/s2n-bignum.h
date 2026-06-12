@@ -1073,6 +1073,10 @@ extern void mldsa_poly_use_hint_32(int32_t b[S2N_BIGNUM_STATIC 256], const int32
 // Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words)
 extern void mldsa_poly_use_hint_88(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
 
+// Uniform rejection sampling for ML-DSA
+// Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 32-bit words), return
+extern uint64_t mldsa_rej_uniform_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
+
 // Scalar product of 2-element polynomial vectors in NTT domain, with mulcache
 // Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words)
 extern void mlkem_basemul_k2(int16_t r[S2N_BIGNUM_STATIC 256],const int16_t a[S2N_BIGNUM_STATIC 512],const int16_t b[S2N_BIGNUM_STATIC 512],const int16_t bt[S2N_BIGNUM_STATIC 256]);
