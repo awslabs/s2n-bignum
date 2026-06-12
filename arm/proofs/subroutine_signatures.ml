@@ -1744,6 +1744,23 @@ let subroutine_signatures = [
    ])
 );
 
+("bignum_mod_n256k1",
+  ([(*args*)
+     ("z", "uint64_t[static 4]", (*is const?*)"false");
+     ("k", "uint64_t", (*is const?*)"false");
+     ("x", "uint64_t*", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("x", "k"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("z", "4"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("bignum_mod_n256k1_4",
   ([(*args*)
      ("z", "uint64_t[static 4]", (*is const?*)"false");
@@ -1883,6 +1900,23 @@ let subroutine_signatures = [
    "void",
    [(* input buffers *)
     ("x", "4"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("z", "4"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("bignum_mod_p256k1",
+  ([(*args*)
+     ("z", "uint64_t[static 4]", (*is const?*)"false");
+     ("k", "uint64_t", (*is const?*)"false");
+     ("x", "uint64_t*", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("x", "k"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("z", "4"(* num elems *), 8(* elem bytesize *));
