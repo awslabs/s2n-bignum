@@ -2420,7 +2420,7 @@ let EDWARDS25519_EPADD_CORRECT = time prove
   MAP_EVERY X_GEN_TAC [`x1:int`; `y1:int`; `x2:int`; `y2:int`] THEN
   STRIP_TAC THEN EVERY_ASSUM(fun th ->
     try STRIP_ASSUME_TAC(MATCH_MP EDWARDS25519_EXPROJECTIVE_BOUND th)
-    with _ -> ALL_TAC) THEN
+    with Failure _ -> ALL_TAC) THEN
   DISCARD_STATE_TAC "s27" THEN
   DISCARD_MATCHING_ASSUMPTIONS
    [`aligned a b`; `nonoverlapping_modulo a b c`] THEN

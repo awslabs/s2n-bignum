@@ -828,9 +828,9 @@ let MLDSA_POINTWISE_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
   ENSURES_INIT_TAC "s0" THEN
   X86_STEPS_TAC MLDSA_POINTWISE_WINDOWS_TMC_EXEC (1--18) THEN
-  
+
   W(fun (asl,w) ->
-    let current_events = List.filter_map (fun (_,ath) -> let t = concl ath in
+    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
       if is_eq t && is_read_events (lhs t) then Some (rhs t)
       else None) asl in
     if length current_events <> 1
