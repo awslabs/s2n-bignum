@@ -1578,9 +1578,9 @@ orthogonal_components_conv_custom_cache :=
     try
       let lref = assoc l !cache in
       try Some (assoc r !lref)
-      with _ -> let newth = eval () in
+      with Failure _ -> let newth = eval () in
         lref := (r,newth)::!lref; Some newth
-    with _ -> let newth = eval () in
+    with Failure _ -> let newth = eval () in
       cache := (l, ref [(r,newth)])::!cache; Some newth;;
 
 

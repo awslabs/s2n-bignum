@@ -16,6 +16,42 @@ let rec dest_list = function
 
 let catch f x = try Some(f x) with Failure _ -> None;;
 
+(* --------------------------------------------------------------------- *)
+(* Compatibility shims for OCaml < 4.08 (Option module absent).          *)
+(* --------------------------------------------------------------------- *)
+
+let option_get = function Some x -> x | None -> failwith "option_get";;
+let option_map f = function Some x -> Some (f x) | None -> None;;
+let option_bind opt f = match opt with Some x -> f x | None -> None;;
+let option_is_some = function Some _ -> true | None -> false;;
+
+(* --------------------------------------------------------------------- *)
+(* Compatibility for List.filter_map (not available before OCaml 4.08).  *)
+(* --------------------------------------------------------------------- *)
+
+let rec filter_map f = function
+  | [] -> []
+  | x :: xs ->
+    match f x with
+    | Some y -> y :: filter_map f xs
+    | None -> filter_map f xs;;
+
+(* --------------------------------------------------------------------- *)
+(* Compatibility for String.starts_with/ends_with (OCaml < 4.13).        *)
+(* --------------------------------------------------------------------- *)
+
+let starts_with prefix s =
+  let plen = String.length prefix in
+  String.length s >= plen && String.sub s 0 plen = prefix;;
+
+let ends_with suffix s =
+  let slen = String.length suffix and len = String.length s in
+  len >= slen && String.sub s (len - slen) slen = suffix;;
+
+(* --------------------------------------------------------------------- *)
+(* End of compatibility shims.                                            *)
+(* --------------------------------------------------------------------- *)
+
 let rec takedrop (n:int) (l:'a list): 'a list * 'a list =
   if n = 0 then ([],l)
   else
@@ -233,7 +269,7 @@ let BITMATCH_MEMO_CONV =
     begin try
       let ls, th' = inst_bitpat_numeral (hd (hyp th)) nn in
       PROVE_HYP th' (INST ls th)
-    with _ ->
+    with Failure _ ->
       failwith (sprintf "BITMATCH_MEMO_CONV: match failed: 0x%x" (Num.int_of_num nn))
     end
   | _ -> failwith "BITMATCH_MEMO_CONV";;
@@ -322,7 +358,7 @@ let conceal_bitmatch: term -> (thm * term * int * thm * conv) option =
             let ls, th' = inst_bitpat_numeral (hd (hyp th)) nn in
             (GEN_REWRITE_CONV I [new_abbrev] THENC
              GEN_REWRITE_CONV I [PROVE_HYP th' (INST ls th)]) tm
-          with _ ->
+          with Failure _ ->
             failwith (sprintf "conceal_bitmatch: match failed: 0x%x" n)
           end
         | _ -> failwith "" in

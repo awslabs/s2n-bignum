@@ -24,7 +24,7 @@ let mk_noibt_subroutine_safe_spec
       let ofs = find_term (fun t -> is_binary "word_sub" t &&
           fst (dest_binary "word_sub" t) = stackptr) new_assum in
       Some (rand ofs)
-    with _ ->
+    with Failure _ ->
       let _ = Printf.printf "(* Has no \"word_sub stackpointer (word ..)\"; stackofs is None *)\n" in
       None in
 
@@ -61,7 +61,7 @@ let mk_noibt_subroutine_safe_spec
       try let a,t' = dest_fun_ty t in
           let args,t0 = f t' in
           (a::args),t0
-      with _ -> [],t in
+      with Failure _ -> [],t in
     let args,retty = f ty in
     let new_args = args @
       (if already_has_stackptr then [type_of retaddr]

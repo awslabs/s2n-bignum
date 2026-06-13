@@ -1332,20 +1332,20 @@ let precalc_sign_template =
 
 let precalc_diffs =
   let full_expr = mk_list
-       (List.concat_map (fun (i0, i1) ->
+       (flat (map (fun (i0, i1) ->
             let absdiff, isneg = cdiff_from_bignum `n:num` `i_div_4:num` i0 i1 in
             [absdiff; subst [isneg, mk_var("__isnonneg__",`:bool`)] precalc_sign_template])
-          [(1,0);(2,0);(3,0);(2,1);(3,1);(3,2)],
+          [(1,0);(2,0);(3,0);(2,1);(3,1);(3,2)]),
         `:(64)word`) in
   new_definition (subst [full_expr,`__full_expr__:((64)word)list`]
     `precalc_diffs (n:num) (i_div_4:num) = (__full_expr__:((64)word)list)`);;
 
 let precalc_diffs_rev =
   let full_expr = mk_list
-       (List.concat_map (fun (i0, i1) ->
+       (flat (map (fun (i0, i1) ->
             let absdiff, isneg = cdiff_from_bignum `n:num` `i_div_4:num` i0 i1 in
             [absdiff; subst [isneg, mk_var("__isnonneg__",`:bool`)] precalc_sign_template])
-          [(0,1);(0,2);(0,3);(1,2);(1,3);(2,3)],
+          [(0,1);(0,2);(0,3);(1,2);(1,3);(2,3)]),
         `:(64)word`) in
   new_definition (subst [full_expr,`__full_expr__:((64)word)list`]
     `precalc_diffs_rev (n:num) (i_div_4:num) = (__full_expr__:((64)word)list)`);;
@@ -3119,24 +3119,24 @@ let extend_first_equiv_for_seq_composition equiv_th1 equiv_th2
     let ts = find_terms (fun t ->
       is_comb t && name_of (fst (dest_comb t)) = "mk_equiv_regs")
       body in
-    let equiv_regs = List.concat_map (fun t -> let regs = snd (dest_comb t) in
-      dest_list regs) ts in
+    let equiv_regs = flat (map (fun t -> let regs = snd (dest_comb t) in
+      dest_list regs) ts) in
     (* mk_equiv_regs2 can specify equivalent regs too. *)
     let ts' = find_terms (fun t ->
       is_comb t && let t = fst (dest_comb t) in
       is_comb t && name_of (fst (dest_comb t)) = "mk_equiv_regs2")
       body in
-    let equiv_regs2 = List.concat_map (fun t ->
+    let equiv_regs2 = flat (map (fun t ->
       let _,(ls1::ls2::[]) = strip_comb t in
       let regs1,regs2 = dest_list ls1,dest_list ls2 in
       let pairs = zip regs1 regs2 in
-      map fst (filter (fun (t1,t2) -> t1 = t2) pairs)) ts' in
+      map fst (filter (fun (t1,t2) -> t1 = t2) pairs)) ts') in
 
     (* some registers that are read. *)
     let ts2 = find_terms (fun t ->
       is_comb t && name_of (fst (dest_comb t)) = "read")
       body in
-    let specified_regs = List.filter_map (fun t ->
+    let specified_regs = filter_map (fun t ->
       let r = snd (dest_comb t) in if is_const r then Some r else None)
       ts2 in
     (equiv_regs @ equiv_regs2,specified_regs) in
@@ -4370,8 +4370,8 @@ let regs_no_abbrev_left =
   let addr_regs = (pcend,`X27`)::addr_regs in (* loop counter *)
   let res = tl (backward_taint_analysis (snd OUTERLOOP_STEP3_EXEC)
     [pcbeg,pcend] (map (fun (x,y) -> x,[y]) addr_regs)) in
-  List.map (fun pcdiv4 ->
-      try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 ->
+      try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 let regs_no_abbrev_right =
@@ -4383,8 +4383,8 @@ let regs_no_abbrev_right =
   let addr_regs = (pcend,`X27`)::addr_regs in (* loop counter *)
   let res = tl (backward_taint_analysis (snd BIGNUM_EMONTREDC_8N_CDIFF_EXEC)
     [pcbeg,pcend] (map (fun (x,y) -> x,[y]) addr_regs)) in
-  List.map (fun pcdiv4 ->
-      try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 ->
+      try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 
@@ -4668,8 +4668,8 @@ let step3_outerloop_out_regs_left,step3_outerloop_out_regs_right =
     (Array.of_list inst_map)
     step3_outerloop_out_regs_right in
   let lr = zip m step3_outerloop_out_regs_right in
-  let lr = List.filter_map (fun x,y ->
-    if x = None then None else Some (snd (Option.get x),y)) lr in
+  let lr = filter_map (fun x,y ->
+    if x = None then None else Some (snd (option_get x),y)) lr in
   unzip lr;;
 
 let step3_outerloop_eqout_regs = build_equiv_regs2
@@ -4729,7 +4729,7 @@ let regs_no_abbrev_left =
   let addr_regs = (pcend,[`X27`;`X0`;`X1`;`X2`;`SP`;`X30`])::addr_regs in
   let res = tl (backward_taint_analysis (snd OUTERLOOP_STEP3_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 let regs_no_abbrev_right =
@@ -4745,7 +4745,7 @@ let regs_no_abbrev_right =
       addr_regs in
   let res = tl (backward_taint_analysis (snd BIGNUM_EMONTREDC_8N_CDIFF_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 
@@ -4935,8 +4935,8 @@ let step3_inner_loop_postamble_out_regs_left,
     (Array.of_list inst_map)
     step3_inner_loop_postamble_out_regs_right in
   let lr = zip m step3_inner_loop_postamble_out_regs_right in
-  let lr = List.filter_map (fun x,y ->
-    if x = None then None else Some (snd (Option.get x),y)) lr in
+  let lr = filter_map (fun x,y ->
+    if x = None then None else Some (snd (option_get x),y)) lr in
   unzip lr;;
 
 let step3_inner_loop_postamble_eqout_regs = build_equiv_regs2
@@ -5001,7 +5001,7 @@ let regs_no_abbrev_left =
   let addr_regs = update_key_list pcend [`X0`;`X1`;`X2`;`SP`;`X30`;`X26`] addr_regs in
   let res = tl (backward_taint_analysis (snd OUTERLOOP_STEP3_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 let regs_no_abbrev_right =
@@ -5015,7 +5015,7 @@ let regs_no_abbrev_right =
   let addr_regs = update_key_list pcend [`X0`;`X1`;`X2`;`SP`;`X30`;`X26`] addr_regs in
   let res = tl (backward_taint_analysis (snd BIGNUM_EMONTREDC_8N_CDIFF_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 
@@ -5567,7 +5567,7 @@ let regs_no_abbrev_left =
       [`X27`;`X0`;`X1`;`X2`;`SP`;`X30`] addr_regs in
   let res = tl (backward_taint_analysis (snd OUTERLOOP_STEP1_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 let regs_no_abbrev_right =
@@ -5582,7 +5582,7 @@ let regs_no_abbrev_right =
       [`X27`;`X0`;`X1`;`X2`;`SP`;`X30`] addr_regs in
   let res = tl (backward_taint_analysis (snd MADDLOOP_STEP2_X30_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 
@@ -5994,7 +5994,7 @@ let regs_no_abbrev =
   let addr_regs = (pcend,[`X27`;`X0`;`X1`;`X2`;`SP`;`X30`])::addr_regs in
   let res = tl (backward_taint_analysis (snd OUTERLOOP_STEP1_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 
@@ -6215,7 +6215,7 @@ let regs_no_abbrev =
   let addr_regs = update_key_list pcend [`X0`;`X1`;`X2`;`SP`;`X30`;`X26`] addr_regs in
   let res = tl (backward_taint_analysis (snd OUTERLOOP_STEP1_EXEC)
     [pcbeg,pcend] addr_regs) in
-  List.map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with _ -> [])
+  map (fun pcdiv4 -> try assoc (pcdiv4 * 4) res with Failure _ -> [])
     ((pcbeg / 4) -- (pcend / 4));;
 
 (* (state number, (equation, fresh var)) *)

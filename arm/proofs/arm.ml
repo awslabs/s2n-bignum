@@ -355,7 +355,7 @@ let ARM_THM =
       with Failure _ ->
         failwith ("ARM_THM: Cannot decompose PC expression: " ^ (string_of_term (concl pc_th))) in
     let _ = if !arm_print_log then
-      let opt = Option.get execth2.(pc_ofs) in
+      let opt = option_get execth2.(pc_ofs) in
       (* opt: |- forall ... aligned_bytes_loaded ..
                  ==> arm_decode .. (arm_INST ..) *)
       let t = snd (strip_forall (concl (opt))) in
@@ -364,7 +364,7 @@ let ARM_THM =
       Printf.printf "Instruction at `pc + %d (%#x)`: `%s`\n" pc_ofs pc_ofs
           (string_of_term term)
     in
-    MATCH_MP th (MATCH_MP (Option.get execth2.(pc_ofs)) loaded_mc_th);;
+    MATCH_MP th (MATCH_MP (option_get execth2.(pc_ofs)) loaded_mc_th);;
 
 let ARM_ENSURES_SUBLEMMA_TAC =
   ENSURES_SUBLEMMA_TAC o MATCH_MP aligned_bytes_loaded_update o CONJUNCT1;;
@@ -397,13 +397,13 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
     (fun th -> (* do not use term_match because it is slow. *)
       let c = concl th in
       is_eq c && is_read_pc (fst (dest_eq c)))
-    ths with _ -> failwith "ARM_CONV: can't find `read PC .. = ..` from ths" in
+    ths with Failure _ -> failwith "ARM_CONV: can't find `read PC .. = ..` from ths" in
 
   (* Find `aligned_bytes_loaded ..`. *)
   let aligned_bytes_loaded_mc_ths:thm list =
     (* Pick the _mc const from decode_ths, if decode_ths[0] != None, which is
        likely to be true. *)
-    let the_mc:term option = Option.bind decode_ths.(0)
+    let the_mc:term option = option_bind decode_ths.(0)
       (fun th ->
         (* th is `forall .., bytes_loaded ... _mc ==> arm_decode ..`. *)
         let t = concl th in
@@ -417,11 +417,11 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
         let cc = concl th in is_comb cc && (
         let c,args = strip_comb (concl th) in
         c = aligned_bytes_loaded_tm &&
-          (the_mc = None || last args = Option.get the_mc)))
+          (the_mc = None || last args = option_get the_mc)))
       ths in
     if res = [] then failwith
         ("ARM_CONV: can't find `aligned_bytes_loaded .. .. " ^
-          (if the_mc <> None then string_of_term (Option.get the_mc) else "..")
+          (if the_mc <> None then string_of_term (option_get the_mc) else "..")
           ^ "` from ths")
     else res in
 
@@ -821,7 +821,7 @@ let ARM_SUBROUTINE_SIM_TAC ?(is_safety_thm=false) =
       and svar0 = mk_var("s",`:armstate`) in
       let ilist = map (vsubst[svar,svar0]) ilist0 in
       let subth_specl =
-        try SPECL ilist subth with _ -> begin
+        try SPECL ilist subth with Failure _ -> begin
           (if (!arm_print_log) then
             (Printf.printf "ilist and subth's forall vars do not match\n";
             Printf.printf "ilist: [%s]\n" (end_itlist
@@ -1019,7 +1019,7 @@ let check_forallvars_tac:tactic =
   let find_and_check (lhs_pat:term) (t:term) (quants:term list) =
     let read_eq = try Some (find_term (fun t ->
       is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
-      with _ -> None in
+      with Failure _ -> None in
     match read_eq with
     | Some read_eq ->
       let the_var = rhs read_eq in
