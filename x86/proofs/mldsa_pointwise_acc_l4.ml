@@ -326,7 +326,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
   REWRITE_TAC[USHR32_SUBWORD; DUP32_SUBWORD] THEN
   REWRITE_TAC[Q_MUL_COMM; GSYM mldsa_pointwise_montred] THEN
   REWRITE_TAC[WORD_JOIN_SUBWORD] THEN
-  
+
   W(fun (asl,w) ->
     let lfn = PROCESS_BOUND_ASSUMPTIONS
       (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
@@ -345,7 +345,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
           try let a' = SPEC iterm ath in
               let a'' = MP a' ilt in
               if aconv (concl a'') bt then a'' else failwith ""
-          with _ -> failwith "") asl in
+          with Failure _ -> failwith "") asl in
       MP th (CONJ (prove_bound ante_x) (prove_bound ante_y))) in
     (* Extract 256 coefficient pairs from the goal conjunction *)
     let rec pair_up = function
@@ -376,7 +376,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
           CONV_TAC INT_REDUCE_CONV]) (asl, pair) in
       if sgs <> [] then failwith ("prove_pair " ^ string_of_int idx)
       else just null_inst [] in
-    let all_thms = List.map2 prove_pair (0--255) pairs in
+    let all_thms = map2 prove_pair (0--255) pairs in
     ACCEPT_TAC(end_itlist CONJ all_thms)));;
 
 (* ========================================================================= *)
@@ -837,9 +837,9 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
   ENSURES_INIT_TAC "s0" THEN
   X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC (1--17) THEN
-  
+
   W(fun (asl,w) ->
-    let current_events = List.filter_map (fun (_,ath) -> let t = concl ath in
+    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
       if is_eq t && is_read_events (lhs t) then Some (rhs t)
       else None) asl in
     if length current_events <> 1

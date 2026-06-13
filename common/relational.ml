@@ -741,10 +741,10 @@ let ASSIGNS_SWAP_CONV tm =
         try
           let lref = assoc x !assigns_swap_conv_cache in
           try assoc y !lref
-          with _ ->
+          with Failure _ ->
             let newth = prove(the_goal,ASSIGNS_SWAP_TAC) in
             lref := (y, newth)::!lref; newth
-        with _ ->
+        with Failure _ ->
           let newth = prove(the_goal,ASSIGNS_SWAP_TAC) in
           assigns_swap_conv_cache := (x, ref [(y,newth)])::!assigns_swap_conv_cache;
           newth
