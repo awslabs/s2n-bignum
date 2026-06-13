@@ -399,7 +399,7 @@ let MLDSA_POINTWISE_ACC_L7_CORRECT = prove
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
     CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
     check (can (term_match [] `read qqq s2179:int256 = xxx`) o concl))) THEN
-  
+
   CONV_TAC(TOP_DEPTH_CONV EXPAND_CASES_CONV) THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV THENC DEPTH_CONV NUM_ADD_CONV) THEN
   REWRITE_TAC[WORD_ADD_0] THEN
@@ -428,7 +428,7 @@ let MLDSA_POINTWISE_ACC_L7_CORRECT = prove
           try let a' = SPEC iterm ath in
               let a'' = MP a' ilt in
               if aconv (concl a'') bt then a'' else failwith ""
-          with _ -> failwith "") asl in
+          with Failure _ -> failwith "") asl in
       MP th (CONJ (prove_bound ante_x) (prove_bound ante_y))) in
     (* Extract 256 coefficient pairs from the goal conjunction *)
     let rec pair_up = function
@@ -459,7 +459,7 @@ let MLDSA_POINTWISE_ACC_L7_CORRECT = prove
           CONV_TAC INT_REDUCE_CONV]) (asl, pair) in
       if sgs <> [] then failwith ("prove_pair " ^ string_of_int idx)
       else just null_inst [] in
-    let all_thms = List.map2 prove_pair (0--255) pairs in
+    let all_thms = map2 prove_pair (0--255) pairs in
     ACCEPT_TAC(end_itlist CONJ all_thms)));;
 
 (* ========================================================================= *)
@@ -932,7 +932,7 @@ let MLDSA_POINTWISE_ACC_L7_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   X86_STEPS_TAC MLDSA_POINTWISE_ACC_L7_WINDOWS_TMC_EXEC (1--17) THEN
 
   W(fun (asl,w) ->
-    let current_events = List.filter_map (fun (_,ath) -> let t = concl ath in
+    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
       if is_eq t && is_read_events (lhs t) then Some (rhs t)
       else None) asl in
     if length current_events <> 1

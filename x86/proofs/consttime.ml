@@ -47,7 +47,7 @@ let EXPAND_MAYCHANGE_YMM_REGS_TAC:tactic =
     try
       let lhs,rhs = dest_binary ",," t in
       (collect_maychange_components lhs) @ (collect_maychange_components rhs)
-    with _ ->
+    with Failure _ ->
       if is_comb t && name_of (rator t) = "MAYCHANGE" then
         let args = rand t in
         dest_list args
@@ -60,12 +60,12 @@ let EXPAND_MAYCHANGE_YMM_REGS_TAC:tactic =
     let t,s = dest_comb t in
     let maychange_comps = collect_maychange_components t in
     (* map YMM to ZMM *)
-    let maychange_comps = List.map (fun t ->
-      try assoc t ymms with _ -> t) maychange_comps in
+    let maychange_comps = map (fun t ->
+      try assoc t ymms with Failure _ -> t) maychange_comps in
     (* unique it *)
     let maychange_comps = uniq (sort (<) maychange_comps) in
 
-    let new_maychanges = List.map (fun t ->
+    let new_maychanges = map (fun t ->
         let unary_list = mk_list ([t],type_of t) in
         mk_icomb (`MAYCHANGE`,unary_list))
       maychange_comps in

@@ -245,7 +245,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
           try let a' = SPEC iterm ath in
               let a'' = MP a' ilt in
               if aconv (concl a'') bt then a'' else failwith ""
-          with _ -> failwith "") asl in
+          with Failure _ -> failwith "") asl in
       MP th (CONJ (prove_bound ante_x) (prove_bound ante_y))) in
     (* Extract 256 coefficient pairs from the goal conjunction *)
     let rec pair_up = function
