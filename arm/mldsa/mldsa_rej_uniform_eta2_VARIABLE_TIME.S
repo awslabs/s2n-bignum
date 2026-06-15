@@ -24,7 +24,7 @@
 // Output:
 //   return value (uint64_t)       — number of coefficients written (<= 256)
 //
-// extern uint64_t mldsa_rej_uniform_eta2
+// extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME
 //      (int32_t r[static 256], const uint8_t *buf, unsigned buflen,
 //       const uint8_t table[static 4096]);
 //
@@ -33,13 +33,13 @@
 // ----------------------------------------------------------------------------
 #include "_internal_s2n_bignum_arm.h"
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_rej_uniform_eta2)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_rej_uniform_eta2)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_rej_uniform_eta2)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME)
         .text
         .balign 4
 
-S2N_BN_SYMBOL(mldsa_rej_uniform_eta2):
+S2N_BN_SYMBOL(mldsa_rej_uniform_eta2_VARIABLE_TIME):
         CFI_START
 
 // This matches the code in the mldsa-native repository

@@ -4625,7 +4625,7 @@ let subroutine_signatures = [
    ])
 );
 
-("mldsa_rej_uniform_eta2",
+("mldsa_rej_uniform_eta2_VARIABLE_TIME",
   ([(*args*)
      ("r", "int32_t[static 256]", (*is const?*)"false");
      ("buf", "uint8_t*", (*is const?*)"true");
@@ -4644,7 +4644,7 @@ let subroutine_signatures = [
    ])
 );
 
-("mldsa_rej_uniform_eta4",
+("mldsa_rej_uniform_eta4_VARIABLE_TIME",
   ([(*args*)
      ("r", "int32_t[static 256]", (*is const?*)"false");
      ("buf", "uint8_t*", (*is const?*)"true");

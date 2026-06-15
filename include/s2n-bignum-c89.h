@@ -1070,11 +1070,11 @@ extern void mldsa_poly_use_hint_88(int32_t b[256], const int32_t a[256], const i
 
 /* Rejection sampling for ML-DSA secret key (eta = 2; parameter sets 44/87) */
 /* Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words) */
-extern uint64_t mldsa_rej_uniform_eta2(int32_t r[256], const uint8_t *buf, unsigned buflen, const uint8_t table[4096]);
+extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME(int32_t r[256], const uint8_t *buf, unsigned buflen, const uint8_t table[4096]);
 
 /* Rejection sampling for ML-DSA secret key (eta = 4; parameter set 65) */
 /* Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words) */
-extern uint64_t mldsa_rej_uniform_eta4(int32_t r[256], const uint8_t *buf, unsigned buflen, const uint8_t table[4096]);
+extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME(int32_t r[256], const uint8_t *buf, unsigned buflen, const uint8_t table[4096]);
 
 /* Scalar product of 2-element polynomial vectors in NTT domain, with mulcache */
 /* Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words) */

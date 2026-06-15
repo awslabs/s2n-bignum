@@ -13277,13 +13277,13 @@ int test_mldsa_rej_uniform_eta4(void)
   int32_t a[256], b[256];
   uint64_t ac, bc;
 
-  printf("Testing mldsa_rej_uniform_eta4 with %d cases\n",tests);
+  printf("Testing mldsa_rej_uniform_eta4_VARIABLE_TIME with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
    { uint64_t buflen = 8 * ((rand() % 160) + 1);
      for (i = 0; i < buflen; ++i) inbuf[i] = (uint8_t) rand();
      ac = reference_mldsa_rej_uniform_eta4(a,inbuf,buflen);
-     bc = mldsa_rej_uniform_eta4(b,inbuf,(unsigned)buflen,mldsa_rej_uniform_eta_table);
+     bc = mldsa_rej_uniform_eta4_VARIABLE_TIME(b,inbuf,(unsigned)buflen,mldsa_rej_uniform_eta_table);
      if (ac != bc)
       { printf("Error in number of elements returned; code = %"PRIu64
                ", ref = %"PRIu64"\n",bc,ac);
@@ -13291,7 +13291,7 @@ int test_mldsa_rej_uniform_eta4(void)
       }
      for (i = 0; i < ac; ++i)
       { if (a[i] != b[i])
-         { printf("Error in mldsa_rej_uniform_eta4; element i = %"PRIu64
+         { printf("Error in mldsa_rej_uniform_eta4_VARIABLE_TIME; element i = %"PRIu64
                   "; code[i] = %"PRId32
                   " while reference[i] = %"PRId32"\n",
                   i,b[i],a[i]);
@@ -13299,7 +13299,7 @@ int test_mldsa_rej_uniform_eta4(void)
          }
       }
      if (VERBOSE)
-      { printf("OK:mldsa_rej_uniform_eta4, input %4"PRIu64" bytes = %4"PRIu64" nibbles, returned %4"PRIu64" elements: "
+      { printf("OK:mldsa_rej_uniform_eta4_VARIABLE_TIME, input %4"PRIu64" bytes = %4"PRIu64" nibbles, returned %4"PRIu64" elements: "
                "[%4"PRId32",...,%4"PRId32"]\n",
               buflen,2*buflen,bc,b[0],b[(bc==0) ? 0 : bc-1]);
       }
@@ -13319,13 +13319,13 @@ int test_mldsa_rej_uniform_eta2(void)
   int32_t a[256], b[256];
   uint64_t ac, bc;
 
-  printf("Testing mldsa_rej_uniform_eta2 with %d cases\n",tests);
+  printf("Testing mldsa_rej_uniform_eta2_VARIABLE_TIME with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
    { uint64_t buflen = 8 * ((rand() % 160) + 1);
      for (i = 0; i < buflen; ++i) inbuf[i] = (uint8_t) rand();
      ac = reference_mldsa_rej_uniform_eta2(a,inbuf,buflen);
-     bc = mldsa_rej_uniform_eta2(b,inbuf,(unsigned)buflen,mldsa_rej_uniform_eta_table);
+     bc = mldsa_rej_uniform_eta2_VARIABLE_TIME(b,inbuf,(unsigned)buflen,mldsa_rej_uniform_eta_table);
      if (ac != bc)
       { printf("Error in number of elements returned; code = %"PRIu64
                ", ref = %"PRIu64"\n",bc,ac);
@@ -13333,7 +13333,7 @@ int test_mldsa_rej_uniform_eta2(void)
       }
      for (i = 0; i < ac; ++i)
       { if (a[i] != b[i])
-         { printf("Error in mldsa_rej_uniform_eta2; element i = %"PRIu64
+         { printf("Error in mldsa_rej_uniform_eta2_VARIABLE_TIME; element i = %"PRIu64
                   "; code[i] = %"PRId32
                   " while reference[i] = %"PRId32"\n",
                   i,b[i],a[i]);
@@ -13341,7 +13341,7 @@ int test_mldsa_rej_uniform_eta2(void)
          }
       }
      if (VERBOSE)
-      { printf("OK:mldsa_rej_uniform_eta2, input %4"PRIu64" bytes = %4"PRIu64" nibbles, returned %4"PRIu64" elements: "
+      { printf("OK:mldsa_rej_uniform_eta2_VARIABLE_TIME, input %4"PRIu64" bytes = %4"PRIu64" nibbles, returned %4"PRIu64" elements: "
                "[%4"PRId32",...,%4"PRId32"]\n",
               buflen,2*buflen,bc,b[0],b[(bc==0) ? 0 : bc-1]);
       }
@@ -17463,8 +17463,8 @@ int main(int argc, char *argv[])
   functionaltest(all,"mldsa_pointwise_acc_l4",test_mldsa_pointwise_acc_l4);
   functionaltest(all,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
   functionaltest(all,"mldsa_pointwise_acc_l7",test_mldsa_pointwise_acc_l7);
-  functionaltest(all,"mldsa_rej_uniform_eta2",test_mldsa_rej_uniform_eta2);
-  functionaltest(all,"mldsa_rej_uniform_eta4",test_mldsa_rej_uniform_eta4);
+  functionaltest(all,"mldsa_rej_uniform_eta2_VARIABLE_TIME",test_mldsa_rej_uniform_eta2);
+  functionaltest(all,"mldsa_rej_uniform_eta4_VARIABLE_TIME",test_mldsa_rej_uniform_eta4);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);
   functionaltest(all,"mldsa_poly_use_hint_32",test_mldsa_poly_use_hint_32);
   functionaltest(all,"mldsa_poly_use_hint_88",test_mldsa_poly_use_hint_88);
