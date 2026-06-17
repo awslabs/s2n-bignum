@@ -1073,6 +1073,14 @@ extern void mldsa_poly_use_hint_32(int32_t b[S2N_BIGNUM_STATIC 256], const int32
 // Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words)
 extern void mldsa_poly_use_hint_88(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
 
+// Rejection sampling for ML-DSA secret key (eta = 2; parameter sets 44/87)
+// Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words)
+extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t *buf, unsigned buflen, const uint8_t table[S2N_BIGNUM_STATIC 4096]);
+
+// Rejection sampling for ML-DSA secret key (eta = 4; parameter set 65)
+// Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words)
+extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t *buf, unsigned buflen, const uint8_t table[S2N_BIGNUM_STATIC 4096]);
+
 // Uniform rejection sampling for ML-DSA
 // Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 32-bit words), return
 extern uint64_t mldsa_rej_uniform_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);

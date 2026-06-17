@@ -396,7 +396,7 @@ let nttunpack_unorder = new_definition
 
 let unpack_nttunpack = new_definition
   `unpack_nttunpack l = list_of_seq (\i. EL (nttunpack_unorder i) l) 256`;;
-  
+
 (* ------------------------------------------------------------------------- *)
 (* Proves our simple arithmetic implements the same reordering as            *)
 (* mldsa_avx2_ntt_order'(bitreverse8 i). This converts from AVX2 NTT domain  *)
@@ -432,15 +432,15 @@ let MLDSA_NTTUNPACK_CORRECT = prove
           MAYCHANGE [memory :> bytes(a, 1024)] ,,
           MAYCHANGE [RIP] ,,
           MAYCHANGE [ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11])`,
-  
+
   MAP_EVERY X_GEN_TAC [`a:int64`; `l:int32 list`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  
+
   ASM_CASES_TAC `LENGTH(l:int32 list) = 256` THENL
    [ASM_REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0";
     X86_SIM_TAC MLDSA_NTTUNPACK_TMC_EXEC (1--192)] THEN
-  
+
   UNDISCH_TAC
    `read(memory :> bytes(a,1024)) s0 = num_of_wordlist(l:int32 list)` THEN
   GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o RAND_CONV)
@@ -448,7 +448,7 @@ let MLDSA_NTTUNPACK_CORRECT = prove
   ASM_REWRITE_TAC[] THEN
   CONV_TAC(LAND_CONV(RAND_CONV(RAND_CONV LIST_OF_SEQ_CONV))) THEN
   REWRITE_TAC[] THEN
-  
+
   (* Pair int32 values into 256-bit words for AVX2 operations *)
   REPLICATE_TAC 3
    (GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV)
@@ -457,20 +457,20 @@ let MLDSA_NTTUNPACK_CORRECT = prove
   CONV_TAC WORD_REDUCE_CONV THEN
   CONV_TAC(LAND_CONV BYTES_EQ_NUM_OF_WORDLIST_EXPAND_CONV) THEN
   REWRITE_TAC[GSYM BYTES256_WBYTES] THEN STRIP_TAC THEN
-  
+
   (* Step through each instruction with SIMD simplification *)
   MAP_EVERY (fun n ->
     X86_STEPS_TAC MLDSA_NTTUNPACK_TMC_EXEC [n] THEN
     SIMD_SIMPLIFY_TAC[])
    (1--192) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  
+
   (* Extract all the memory writes from the execution *)
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
     CONV_RULE(SIMD_SIMPLIFY_CONV[]) o
     CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
     check (can (term_match [] `read qqq s:int256 = xxx`) o concl))) THEN
-  
+
   (* Expand memory representation and verify against specification *)
   REWRITE_TAC[ARITH_RULE `1024 = 8 * 128`] THEN
   CONV_TAC(LAND_CONV BIGNUM_LEXPAND_CONV) THEN
@@ -480,7 +480,7 @@ let MLDSA_NTTUNPACK_CORRECT = prove
   CONV_TAC(ONCE_DEPTH_CONV LIST_OF_SEQ_CONV) THEN
   CONV_TAC NUM_REDUCE_CONV THEN
   REWRITE_TAC[num_of_wordlist; VAL] THEN
-  
+
   REWRITE_TAC[bignum_of_wordlist; VAL] THEN
   POP_ASSUM_LIST(K ALL_TAC) THEN
   CONV_TAC(TOP_DEPTH_CONV DIMINDEX_CONV) THEN
@@ -571,7 +571,7 @@ let MLDSA_NTTUNPACK_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
           MAYCHANGE [memory :> bytes(a, 1024)] ,,
           WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)])`,
-  
+
   REPLICATE_TAC 3 GEN_TAC THEN
   WORD_FORALL_OFFSET_TAC 176 THEN
   REPEAT GEN_TAC THEN
@@ -848,7 +848,7 @@ let MLDSA_NTTUNPACK_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
 
   (* safety property version *)
   W(fun (asl,w) ->
-    let current_events = List.filter_map (fun (_,ath) -> let t = concl ath in
+    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
       if is_eq t && is_read_events (lhs t) then Some (rhs t)
       else None) asl in
     if length current_events <> 1

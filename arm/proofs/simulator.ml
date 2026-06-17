@@ -257,8 +257,8 @@ let cosimulate_instructions (memopidx: int option) icodes =
     let execth = ARM_MK_EXEC_RULE(REFL ibyteterm) in
 
     let decoded = mk_flist
-     (map (rand o rand o snd o strip_forall o concl o Option.get)
-          (filter Option.is_some (Array.to_list (snd execth))))
+     (map (rand o rand o snd o strip_forall o concl o option_get)
+          (filter option_is_some (Array.to_list (snd execth))))
     and result =
     can prove
      (goal,
@@ -529,7 +529,7 @@ let cosimulate_ld1r() =
   let stackoff =
     if rn = 31 then Random.int 14 * 16
     else Random.int 224 in
-  let stackoff' = (Int.shift_left 8 size)/8 + stackoff in
+  let stackoff' = (8 lsl size)/8 + stackoff in
   let code =
     pow2 30 */ num q +/
     pow2 12 */ num 0b001101110111111100 +/
