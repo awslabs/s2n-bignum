@@ -4625,6 +4625,23 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_rej_uniform_VARIABLE_TIME",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t*", (*is const?*)"true");
+     ("buflen", "uint64_t", (*is const?*)"false");
+     ("table", "uint8_t*", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mldsa_rej_uniform_eta2_VARIABLE_TIME",
   ([(*args*)
      ("r", "int32_t[static 256]", (*is const?*)"false");
