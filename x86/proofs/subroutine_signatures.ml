@@ -1805,6 +1805,23 @@ let subroutine_signatures = [
    ])
 );
 
+("bignum_mod_n256k1",
+  ([(*args*)
+     ("z", "uint64_t[static 4]", (*is const?*)"false");
+     ("k", "uint64_t", (*is const?*)"false");
+     ("x", "uint64_t*", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("x", "k"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("z", "4"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("bignum_mod_n256k1_4",
   ([(*args*)
      ("z", "uint64_t[static 4]", (*is const?*)"false");
@@ -2003,6 +2020,23 @@ let subroutine_signatures = [
 );
 
 ("bignum_mod_p256_alt",
+  ([(*args*)
+     ("z", "uint64_t[static 4]", (*is const?*)"false");
+     ("k", "uint64_t", (*is const?*)"false");
+     ("x", "uint64_t*", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("x", "k"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("z", "4"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("bignum_mod_p256k1",
   ([(*args*)
      ("z", "uint64_t[static 4]", (*is const?*)"false");
      ("k", "uint64_t", (*is const?*)"false");
@@ -4718,6 +4752,21 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_caddq",
+  ([(*args*)
+     ("a", "int32_t[static 256]", (*is const?*)"false");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mldsa_intt",
   ([(*args*)
      ("a", "int32_t[static 256]", (*is const?*)"false");
@@ -4842,21 +4891,6 @@ let subroutine_signatures = [
    ],
    [(* output buffers *)
     ("c", "256"(* num elems *), 4(* elem bytesize *));
-   ],
-   [(* temporary buffers *)
-   ])
-);
-
-("mldsa_caddq",
-  ([(*args*)
-     ("a", "int32_t[static 256]", (*is const?*)"false");
-   ],
-   "void",
-   [(* input buffers *)
-    ("a", "256"(* num elems *), 4(* elem bytesize *));
-   ],
-   [(* output buffers *)
-    ("a", "256"(* num elems *), 4(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])

@@ -311,6 +311,7 @@ onlyInArm = [
   "mldsa_poly_use_hint_88",
   "mldsa_rej_uniform_eta2_VARIABLE_TIME",
   "mldsa_rej_uniform_eta4_VARIABLE_TIME",
+  "mldsa_rej_uniform_VARIABLE_TIME",
   "mlkem_ntt",
   "mlkem_intt",
   "mlkem_mulcache_compute",

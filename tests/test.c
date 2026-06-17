@@ -829,6 +829,28 @@ uint8_t mlkem_rej_uniform_table[] =
 // One 16-byte entry per 8-bit acceptance mask; positions of accepted
 // nibble pairs (16-bit slot indices) packed left-to-right, with 255 fill.
 
+// Base ML-DSA rejection sampling uses a 256-byte (16 x 16) compaction
+// table indexed by a 4-bit acceptance mask (cf. the proof's
+// mldsa_rej_uniform_table). 255 (= -1 as int8) entries are unused fillers.
+uint8_t mldsa_rej_uniform_table[] =
+{ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 0
+   0,  1,  2,  3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 1
+   4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 2
+   0,  1,  2,  3,  4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1,  // 3
+   8,  9, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 4
+   0,  1,  2,  3,  8,  9, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1,  // 5
+   4,  5,  6,  7,  8,  9, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1,  // 6
+   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, -1, -1, -1, -1,  // 7
+  12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 8
+   0,  1,  2,  3, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1,  // 9
+   4,  5,  6,  7, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1,  // 10
+   0,  1,  2,  3,  4,  5,  6,  7, 12, 13, 14, 15, -1, -1, -1, -1,  // 11
+   8,  9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1,  // 12
+   0,  1,  2,  3,  8,  9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1,  // 13
+   4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1,  // 14
+   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15   // 15
+};
+
 uint8_t mldsa_rej_uniform_eta_table[] =
 {
   255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,  // 0
@@ -3511,6 +3533,30 @@ uint64_t reference_rej_uniform(int16_t r[256],uint8_t *buf,uint64_t buflen)
 // Rejection sampling reference for ML-DSA eta=4
 // Takes 4-bit nibbles from buf (low nibble first) and accepts those < 9,
 // mapping accepted value n to (4 - n) as int32. Stops when ctr reaches 256.
+
+// Rejection sampling reference for ML-DSA (base, q-filter)
+// Interprets the buffer as packed 24-bit numbers (3 bytes each, little-endian),
+// masks each to 23 bits, and keeps those < q = 8380417, in order, up to 256.
+uint64_t reference_mldsa_rej_uniform(int32_t r[256],const uint8_t *buf,uint64_t buflen)
+{
+  uint64_t ctr, pos;
+  uint32_t val;
+
+  ctr = pos = 0;
+
+  while (ctr < 256 && pos + 3 <= buflen)
+   {
+     val = ((uint32_t)buf[pos + 0] |
+            ((uint32_t)buf[pos + 1] << 8) |
+            ((uint32_t)buf[pos + 2] << 16)) & 0x7FFFFF;
+     pos += 3;
+
+     if (val < 8380417) r[ctr++] = (int32_t)val;
+   }
+
+  return ctr;
+}
+
 
 uint64_t reference_mldsa_rej_uniform_eta4(int32_t r[256],const uint8_t *buf,uint64_t buflen)
 {
@@ -13267,6 +13313,49 @@ int test_mlkem_rej_uniform(void)
   return 0;
 }
 
+int test_mldsa_rej_uniform(void)
+{
+#ifdef __x86_64__
+  return 0;
+#else
+  uint64_t t, i;
+  uint8_t inbuf[24*160];
+  int32_t a[256], b[256];
+  uint64_t ac, bc;
+
+  printf("Testing mldsa_rej_uniform_VARIABLE_TIME with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { uint64_t buflen = 24 * (rand() % 160);
+     for (i = 0; i < buflen; ++i) inbuf[i] = (uint8_t) rand();
+     ac = reference_mldsa_rej_uniform(a,inbuf,buflen);
+     bc = mldsa_rej_uniform_VARIABLE_TIME(b,inbuf,buflen,mldsa_rej_uniform_table);
+     if (ac != bc)
+      { printf("Error in number of elements returned; code = %"PRIu64
+               ", ref = %"PRIu64"\n",bc,ac);
+        return 1;
+      }
+     for (i = 0; i < ac; ++i)
+      { if (a[i] != b[i])
+         { printf("Error in mldsa_rej_uniform_VARIABLE_TIME; element i = %"PRIu64
+                  "; code[i] = %"PRId32
+                  " while reference[i] = %"PRId32"\n",
+                  i,b[i],a[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK:mldsa_rej_uniform_VARIABLE_TIME, input %4"PRIu64" bytes = %4"PRIu64" elements, returned %4"PRIu64" elements: "
+               "[0x%06"PRIx32",...,0x%06"PRIx32"]\n",
+              buflen,buflen/3,bc,b[0],b[(bc==0) ? 0 : bc-1]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+
 int test_mldsa_rej_uniform_eta4(void)
 {
 #ifdef __x86_64__
@@ -17463,6 +17552,7 @@ int main(int argc, char *argv[])
   functionaltest(all,"mldsa_pointwise_acc_l4",test_mldsa_pointwise_acc_l4);
   functionaltest(all,"mldsa_pointwise_acc_l5",test_mldsa_pointwise_acc_l5);
   functionaltest(all,"mldsa_pointwise_acc_l7",test_mldsa_pointwise_acc_l7);
+  functionaltest(all,"mldsa_rej_uniform_VARIABLE_TIME",test_mldsa_rej_uniform);
   functionaltest(all,"mldsa_rej_uniform_eta2_VARIABLE_TIME",test_mldsa_rej_uniform_eta2);
   functionaltest(all,"mldsa_rej_uniform_eta4_VARIABLE_TIME",test_mldsa_rej_uniform_eta4);
   functionaltest(all,"mldsa_reduce",test_mldsa_reduce);

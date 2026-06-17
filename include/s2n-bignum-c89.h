@@ -1076,6 +1076,10 @@ extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME(int32_t r[256], const uint8
 /* Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words) */
 extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME(int32_t r[256], const uint8_t *buf, unsigned buflen, const uint8_t table[4096]);
 
+/* Uniform rejection sampling for ML-DSA */
+/* Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 32-bit words), return */
+extern uint64_t mldsa_rej_uniform_VARIABLE_TIME(int32_t r[256],const uint8_t *buf,uint64_t buflen,const uint8_t *table);
+
 /* Scalar product of 2-element polynomial vectors in NTT domain, with mulcache */
 /* Inputs a[512], b[512], bt[256] (signed 16-bit words); output r[256] (signed 16-bit words) */
 extern void mlkem_basemul_k2(int16_t r[256],const int16_t a[512],const int16_t b[512],const int16_t bt[256]);
