@@ -444,6 +444,27 @@ uint8_t mlkem_rej_uniform_table[] =
   0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15   // 255
 };
 
+// Base ML-DSA rej-uniform compaction table (see test.c / the proof);
+// outside any arch #ifdef so the ARM call below can reference it.
+uint8_t mldsa_rej_uniform_table[] =
+{ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 0
+   0,  1,  2,  3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 1
+   4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 2
+   0,  1,  2,  3,  4,  5,  6,  7, -1, -1, -1, -1, -1, -1, -1, -1,  // 3
+   8,  9, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 4
+   0,  1,  2,  3,  8,  9, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1,  // 5
+   4,  5,  6,  7,  8,  9, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1,  // 6
+   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, -1, -1, -1, -1,  // 7
+  12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 8
+   0,  1,  2,  3, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1,  // 9
+   4,  5,  6,  7, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1,  // 10
+   0,  1,  2,  3,  4,  5,  6,  7, 12, 13, 14, 15, -1, -1, -1, -1,  // 11
+   8,  9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1,  // 12
+   0,  1,  2,  3,  8,  9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1,  // 13
+   4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1,  // 14
+   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15   // 15
+};
+
 // Wrappers round the functions to call uniformly
 
 void call_bignum_add__4_4(void) repeat(bignum_add(4,b0,4,b1,4,b2))
@@ -1117,6 +1138,7 @@ void call_mldsa_pointwise_acc_l7(void) repeat(mldsa_pointwise_acc_l7_x86((int32_
 void call_mldsa_poly_use_hint_88(void) {}
 void call_mldsa_reduce(void) repeat(mldsa_reduce((int32_t*)b0))
 void call_mldsa_poly_use_hint_32(void) {}
+void call_mldsa_rej_uniform(void) {}
 void call_mldsa_rej_uniform_eta2(void) {}
 void call_mldsa_rej_uniform_eta4(void) {}
 
@@ -1165,6 +1187,7 @@ void call_mldsa_pointwise_acc_l5(void) repeat(mldsa_pointwise_acc_l5((int32_t*)b
 void call_mldsa_pointwise_acc_l7(void) repeat(mldsa_pointwise_acc_l7((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_poly_use_hint_32(void) repeat(mldsa_poly_use_hint_32((int32_t*)b0,(int32_t*)b1,(int32_t*)b2))
 void call_mldsa_poly_use_hint_88(void) repeat(mldsa_poly_use_hint_88((int32_t*)b0,(int32_t*)b1,(int32_t*)b2))
+void call_mldsa_rej_uniform(void) repeat(mldsa_rej_uniform_VARIABLE_TIME((int32_t*)b0,(const uint8_t*)b1,1200,mldsa_rej_uniform_table))
 void call_mldsa_rej_uniform_eta2(void) repeat(mldsa_rej_uniform_eta2_VARIABLE_TIME((int32_t*)b0,(const uint8_t*)b1,272,(const uint8_t*)b2))
 void call_mldsa_rej_uniform_eta4(void) repeat(mldsa_rej_uniform_eta4_VARIABLE_TIME((int32_t*)b0,(const uint8_t*)b1,272,(const uint8_t*)b2))
 void call_mldsa_reduce(void) {}
@@ -1646,6 +1669,7 @@ int main(int argc, char *argv[])
   timingtest(all,"mldsa_pointwise_acc_l7",call_mldsa_pointwise_acc_l7);
   timingtest(arm,"mldsa_poly_use_hint_32",call_mldsa_poly_use_hint_32);
   timingtest(arm,"mldsa_poly_use_hint_88",call_mldsa_poly_use_hint_88);
+  timingtest(arm,"mldsa_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mldsa_rej_uniform);
   timingtest(arm,"mldsa_rej_uniform_eta2_VARIABLE_TIME",call_mldsa_rej_uniform_eta2);
   timingtest(arm,"mldsa_rej_uniform_eta4_VARIABLE_TIME",call_mldsa_rej_uniform_eta4);
   timingtest(!arm,"mldsa_reduce",call_mldsa_reduce);
