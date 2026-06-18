@@ -292,6 +292,7 @@ for arch in ["arm", "x86"]:
 onlyInArm = [
   "aes_xts_decrypt",
   "aes_xts_encrypt",
+  "aes256_gcm",
   "bignum_copy_row_from_table_8n",
   "bignum_copy_row_from_table_16",
   "bignum_copy_row_from_table_32",
@@ -427,6 +428,10 @@ for archname in ["arm","x86"]:
       elif isPtrOrArray(argtype, "int8_t") or isPtrOrArray(argtype, "uint8_t"):
         arg_elem_bytesizes[argname] = 1
       elif isPtr(argtype, "s2n_bignum_AES_KEY"):
+        arg_elem_bytesizes[argname] = 1
+      elif isPtrOrArray(argtype, "u128"):
+        arg_elem_bytesizes[argname] = 16
+      elif isPtr(argtype, "void"):
         arg_elem_bytesizes[argname] = 1
       elif "[" not in argtype and "*" not in argtype:
         continue

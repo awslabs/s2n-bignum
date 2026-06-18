@@ -12,8 +12,8 @@
 //
 //    extern size_t aes256_gcm
 //      (const uint8_t *in, size_t bit_len, uint8_t *out,
-//       uint8_t *Xi, uint8_t ivec[16], const void *key,
-//       const u128 Htable[16]);
+//       uint8_t *xi, uint8_t ivec[16], const void *key,
+//       const u128 htable[16]);
 //
 //   x0 = input_ptr   x1 = bit_length   x2 = output_ptr   x3 = current_tag
 //   x4 = counter     x5 = key          x6 = Htable

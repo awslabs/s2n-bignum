@@ -46,6 +46,10 @@ extern void aes_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
 extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
         const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[S2N_BIGNUM_STATIC 16]);
 
+// AES_256_GCM encrypt (single binary, all length paths)
+// Inputs in[bit_len], bit_len, xi[16], ivec[16], key[16], htable[16]; outputs out[bit_len], xi[16]
+extern size_t aes256_gcm (const uint8_t *in, size_t bit_len, uint8_t *out, uint8_t *xi, uint8_t ivec[16], const void *key, const u128 htable[16]);
+
 // Add, z := x + y
 // Inputs x[m], y[n]; outputs function return (carry-out) and z[p]
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);
