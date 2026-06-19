@@ -6154,9 +6154,9 @@ let KS0_LEMMA = prove(
 let NFULL0_LEMMA = prove(
   `!n. 1 <= n /\ n <= 16 ==> (n - 1) DIV 16 = 0 /\ n - 16 * ((n-1) DIV 16) = n`,
   REPEAT STRIP_TAC THENL
-   [SIMP_TAC[DIV_EQ_0; ARITH_EQ] THEN ASM_ARITH_TAC;
+   [ASM_ARITH_TAC;
     SUBGOAL_THEN `(n-1) DIV 16 = 0` SUBST1_TAC THENL
-     [SIMP_TAC[DIV_EQ_0; ARITH_EQ] THEN ASM_ARITH_TAC; ASM_ARITH_TAC]]);;
+     [ASM_ARITH_TAC; ASM_ARITH_TAC]]);;
 
 let SUB_LIST_0_16 = prove(
   `!l:(byte)list. LENGTH l = 16 ==> SUB_LIST (0,16) l = l`,
@@ -6261,7 +6261,7 @@ let EL_INT128_TO_BYTES = prove(
  `!w i. i < 16 ==> EL i (int128_to_bytes w):byte = word_subword w (8*i,8)`,
   GEN_TAC THEN REWRITE_TAC[int128_to_bytes] THEN
   CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC EL_16_8_CLAUSES THEN
-  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[]);;
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV));;
 
 let MASK_BYTE_OUT = prove(
  `!(ct:int128) (out0:int128) (n:num) (i:num).
@@ -6302,7 +6302,7 @@ let EL_SUB_LIST_GEN = prove(
   INDUCT_TAC THEN REWRITE_TAC[ADD_CLAUSES] THENL
    [MESON_TAC[EL_SUB_LIST_0]; ALL_TAC] THEN
   LIST_INDUCT_TAC THEN
-  REWRITE_TAC[LENGTH; ARITH_RULE `~(SUC m + n <= 0)`] THEN
+  REWRITE_TAC[LENGTH] THEN
   REPEAT STRIP_TAC THENL
    [UNDISCH_TAC `SUC (m + n) <= 0` THEN ARITH_TAC;
     REWRITE_TAC[SUB_LIST_CLAUSES; EL; TL] THEN
@@ -6319,7 +6319,7 @@ let BYTE_LIST_AT_BLOCK = prove(
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[BYTES128_TO_BYTES8_THM] THEN
   REWRITE_TAC[bytes_to_int128] THEN
-  REWRITE_TAC[WORD_ADD_ASSOC_CONSTS] THEN CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
+  CONV_TAC(DEPTH_CONV NUM_ADD_CONV) THEN
   SUBGOAL_THEN
    `!j. j < 16 ==> read (memory :> bytes8 (word_add in_ptr (word (16 * k + j)))) s =
                    EL j (SUB_LIST(16*k,16) (pt_in:byte list))`
@@ -6344,7 +6344,7 @@ let GCM_CT_REC_STEP = prove(
      CONS (word_xor (bytes_to_int128 (SUB_LIST(i*16,16) P)) (gcm_keystream i ivec rks))
           (gcm_ct_rec (i+1) m P ivec rks)`,
   CONJ_TAC THEN GEN_REWRITE_TAC LAND_CONV [gcm_ct_rec] THEN
-  REWRITE_TAC[NOT_SUC; SUC_SUB1; LET_DEF; LET_END_DEF; ADD1]);;
+  REWRITE_TAC[NOT_SUC; SUC_SUB1; LET_DEF; LET_END_DEF]);;
 
 let GCM_CT_BYTES_REC_STEP = prove(
   `gcm_ct_bytes_rec i 0 P ivec rks = [] /\
@@ -6352,7 +6352,7 @@ let GCM_CT_BYTES_REC_STEP = prove(
      APPEND (int128_to_bytes (word_xor (bytes_to_int128 (SUB_LIST(i*16,16) P)) (gcm_keystream i ivec rks)))
             (gcm_ct_bytes_rec (i+1) m P ivec rks)`,
   CONJ_TAC THEN GEN_REWRITE_TAC LAND_CONV [gcm_ct_bytes_rec] THEN
-  REWRITE_TAC[NOT_SUC; SUC_SUB1; LET_DEF; LET_END_DEF; ADD1]);;
+  REWRITE_TAC[NOT_SUC; SUC_SUB1; LET_DEF; LET_END_DEF]);;
 
 (* --- keystream at iterate i in terms of gcm_ctr_iter --- *)
 let KS_ITER = prove(
@@ -6376,11 +6376,10 @@ let CTR_ITER_CLAUSES = (CONJUNCTS o prove)(
 
 (* --- small DIV/MOD helpers for the recursive EL lemma --- *)
 let ADD16_DIV = prove(`!j. (j + 16) DIV 16 = j DIV 16 + 1`,
-  GEN_TAC THEN REWRITE_TAC[ARITH_RULE `j + 16 = 1 * 16 + j`] THEN
-  SIMP_TAC[DIV_MULT_ADD; ARITH_EQ] THEN ARITH_TAC);;
+  ARITH_TAC);;
 let ADD16_MOD = prove(`!j. (j + 16) MOD 16 = j MOD 16`,
   GEN_TAC THEN REWRITE_TAC[ARITH_RULE `j + 16 = 1 * 16 + j`] THEN
-  SIMP_TAC[MOD_MULT_ADD; ARITH_EQ]);;
+  SIMP_TAC[MOD_MULT_ADD]);;
 
 (* --- byte i of the recursive full-block ciphertext byte list --- *)
 let EL_GCM_CT_BYTES_REC = prove(
@@ -6391,7 +6390,7 @@ let EL_GCM_CT_BYTES_REC = prove(
                                (gcm_keystream (base + i DIV 16) ivec rks))
                      (8 * (i MOD 16), 8)`,
   INDUCT_TAC THENL
-   [REWRITE_TAC[MULT_CLAUSES; LT] THEN ARITH_TAC;
+   [ARITH_TAC;
     REPEAT GEN_TAC THEN DISCH_TAC THEN
     REWRITE_TAC[GCM_CT_BYTES_REC_STEP] THEN
     SUBGOAL_THEN `LENGTH(int128_to_bytes (word_xor (bytes_to_int128 (SUB_LIST(base*16,16) P)) (gcm_keystream base ivec rks))) = 16`
@@ -6414,7 +6413,7 @@ let EL_GCM_CT_BYTES_REC = prove(
 
 let LENGTH_GCM_CT_BYTES_REC = prove(
  `!nfull base P ivec rks. LENGTH(gcm_ct_bytes_rec base nfull P ivec rks) = 16 * nfull`,
-  INDUCT_TAC THEN REWRITE_TAC[GCM_CT_BYTES_REC_STEP; LENGTH; MULT_CLAUSES] THEN
+  INDUCT_TAC THEN REWRITE_TAC[GCM_CT_BYTES_REC_STEP] THEN
   ASM_REWRITE_TAC[LENGTH_APPEND; int128_to_bytes; LENGTH] THEN ARITH_TAC);;
 
 (* --- GENERIC OUTPUT BRIDGE: N-1 full ct stores + masked tail = byte_list_at spec --- *)
@@ -6479,7 +6478,7 @@ let OUT_BRIDGE_GEN = prove(
     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [MULT_SYM] THEN
     ASM_SIMP_TAC[MASK_BYTE_OUT] THEN
     REWRITE_TAC[MULT_SYM] THEN
-    REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_SUBWORD; BIT_WORD_AND; BIT_MASK_WORD; DIMINDEX_8; DIMINDEX_128] THEN
+    REWRITE_TAC[WORD_EQ_BITS_ALT; BIT_WORD_SUBWORD; BIT_WORD_AND; BIT_MASK_WORD; DIMINDEX_128] THEN
     X_GEN_TAC `b:num` THEN STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
     ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC]);;
 
@@ -6538,7 +6537,6 @@ let GHASH_BLOCKS_1 = prove(
   MP_TAC(SPECL [`0`;`tail:num`] NFULL_LEMMA') THEN ASM_REWRITE_TAC[] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[CONJUNCT1 th; CONJUNCT2 th]) THEN
   REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
-  REWRITE_TAC(map num_CONV [`7`;`6`;`5`;`4`;`3`;`2`;`1`]) THEN
   REWRITE_TAC[GCM_CT_REC_STEP] THEN
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
@@ -6972,8 +6970,8 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_ABS = prove(
         REPEAT CONJ_TAC THENL
          [ASM_REWRITE_TAC[]; ASM_REWRITE_TAC[]; EXPAND_TAC "byte_len" THEN ASM_ARITH_TAC;
           GEN_TAC THEN REWRITE_TAC[ARITH_RULE `~(k < 0)`];
-          CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC CTR_ITER_CLAUSES THEN
-          CONV_TAC NUM_REDUCE_CONV THEN REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[]];
+          CONV_TAC NUM_REDUCE_CONV THEN
+          REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[]];
         ASM_REWRITE_TAC[] THEN
         ASM_SIMP_TAC[GCM_FINAL_XI_UNFOLD; ARITH_RULE `1 <= byte_len ==> ~(16 * 0 + byte_len = 0)`] THEN
         MP_TAC(SPECL [`byte_len:num`;`pt_in:byte list`;`ivec:(128)word`;`[rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]:int128 list`] GHASH_BLOCKS_1) THEN
