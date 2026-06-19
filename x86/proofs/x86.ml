@@ -5306,7 +5306,11 @@ let RIP_PLUS_CONV =
 let X86_SUBROUTINE_SIM_TAC ?(is_safety_thm=false)
     (machinecode,execth,offset,submachinecode,subth) =
   let subimpth =
-      BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset in
+    try
+      BYTES_LOADED_SUBPROGRAM_RULE machinecode submachinecode offset
+    with Failure _ ->
+      failwith ("X86_SUBROUTINE_SIM_TAC: submachinecode (4th of input tuple) isn't " ^
+        "at offset " ^ (string_of_int offset) ^ " of machinecode (1st of tuple)") in
   fun ilist0 n ->
     let sname = "s"^string_of_int(n-1)
     and sname' = "s"^string_of_int n in
