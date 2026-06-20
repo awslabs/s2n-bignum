@@ -12296,6 +12296,7 @@ let LOCAL_PEPADD_SAFETY_TAC (assump_name:string) (n:int) =
 (* Overall point operation proof. *)
 
 let full_spec,public_vars = mk_safety_spec
+    ~readonly_objects:[`word tables:int64`,`768`]
     ~keep_maychanges:true
     (assoc "edwards25519_scalarmuldouble_alt" subroutine_signatures)
     EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT
