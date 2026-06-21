@@ -208,7 +208,6 @@ let FIVEBLOCK_MASK_REG = prove
     : int128)
     = word (2 EXP (8 * byte_len) - 1)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NBLOCK_WORD_INSERT_BOTH_LANES] THEN
-  SPEC_TAC(`byte_len:num`,`byte_len:num`) THEN GEN_TAC THEN
   NBLOCK_MASK_PEEL_TAC 1);;
 
 (* ------------------------------------------------------------------------- *)

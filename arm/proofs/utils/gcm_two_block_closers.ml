@@ -181,7 +181,7 @@ let GCM_2BLOCK_GHASH_PREFIX_TAC =
     REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
     REWRITE_TAC[WORD_BLAST `!x:(32)word. word_reversefields 8 x = word_bytereverse x`] THEN
     REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
-    REWRITE_TAC[BYTEREVERSE_JOIN_FOLD] THEN TRY REFL_TAC; ALL_TAC ] THEN
+    REWRITE_TAC[BYTEREVERSE_JOIN_FOLD]; ALL_TAC ] THEN
   (* Partial last block: abbreviate the mask and the masked block ctm2, and
      bridge the simulator's word_and mask ct2 to ctm2 = word_and ct2 mask. *)
   ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
@@ -238,12 +238,11 @@ let GCM_2BLOCK_GHASH_PREFIX_TAC =
               REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   CONV_TAC(TOP_DEPTH_CONV PMUL_NORM_CONV) THEN
-  REWRITE_TAC[WORD_XOR_ASSOC] THEN
   SUBGOAL_THEN
     `word_subword (word 0:(128)word) (0,64):(64)word = word 0 /\
      word_subword (word 0:(128)word) (64,64):(64)word = word 0`
     (fun th -> REWRITE_TAC[th]) THENL [CONJ_TAC THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  REWRITE_TAC[WORD_XOR_0; WORD_XOR_0_LEFT] THEN REWRITE_TAC[WORD_XOR_ASSOC] THEN
+  REWRITE_TAC[WORD_XOR_0; WORD_XOR_0_LEFT] THEN
   REWRITE_TAC[karatsuba_mid; WORD_REVERSEFIELDS_XOR_8_128; WORD_SUBWORD_XOR] THEN
   (* 10 atomic ABBREVs *)
   ABBREV_TAC `(c1lo:(64)word) = word_subword (word_reversefields 8 (ct1:(128)word)) (0,64)` THEN
@@ -256,7 +255,7 @@ let GCM_2BLOCK_GHASH_PREFIX_TAC =
   ABBREV_TAC `(hd1:(64)word) = word_subword (h:(128)word) (64,64)` THEN
   ABBREV_TAC `(he0:(64)word) = word_subword ((polyval_dot h h):(128)word) (0,64)` THEN
   ABBREV_TAC `(he1:(64)word) = word_subword ((polyval_dot h h):(128)word) (64,64)` THEN
-  ASM_REWRITE_TAC[] THEN REWRITE_TAC[WORD_XOR_ASSOC] THEN
+  ASM_REWRITE_TAC[] THEN
   (* 6 inner pmul ABBREVs *)
   ABBREV_TAC `(w1lo:(128)word) = word_pmul (word_xor (xilo:(64)word) (c1lo:(64)word)) (he0:(64)word)` THEN
   ABBREV_TAC `(w1hi:(128)word) = word_pmul (word_xor (xihi:(64)word) (c1hi:(64)word)) (he1:(64)word)` THEN
@@ -282,7 +281,7 @@ let GCM_2BLOCK_GHASH_PREFIX_TAC =
   ABBREV_TAC `(w2hi_h:(64)word) = word_subword (w2hi:(128)word) (64,64)` THEN
   ABBREV_TAC `(w2md_l:(64)word) = word_subword (w2md:(128)word) (0,64)` THEN
   ABBREV_TAC `(w2md_h:(64)word) = word_subword (w2md:(128)word) (64,64)` THEN
-  ASM_REWRITE_TAC[] THEN REWRITE_TAC[WORD_XOR_ASSOC] THEN
+  ASM_REWRITE_TAC[] THEN
   (* Normalize LHS mid-pmuls to abbreviated w?md. *)
   SUBGOAL_THEN `word_pmul (word_xor (c2lo:(64)word) (c2hi:(64)word)) (word_xor (hd0:(64)word) (hd1:(64)word)):(128)word = w2md`
     (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w2md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
@@ -474,5 +473,4 @@ let TWOBLOCK_MASK_REG = prove
     : int128)
     = word (2 EXP (8 * byte_len) - 1)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NBLOCK_WORD_INSERT_BOTH_LANES] THEN
-  SPEC_TAC(`byte_len:num`,`byte_len:num`) THEN GEN_TAC THEN
   NBLOCK_MASK_PEEL_TAC 1);;

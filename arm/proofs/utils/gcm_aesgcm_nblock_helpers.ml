@@ -680,7 +680,7 @@ let GCM_NBLOCK_CT_LATER_STEP_TAC (n:int) (k:int) : tactic =
      REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
      REWRITE_TAC[WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
      REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
-     REWRITE_TAC[BYTEREVERSE_JOIN_FOLD] THEN TRY REFL_TAC
+     REWRITE_TAC[BYTEREVERSE_JOIN_FOLD]
    else
      (* k≥3: collapse the gcm_ctr_inc^{k-1} nest.  June base: after the rev
         bridge the goal is a word_join=word_insert counter identity; fold the
@@ -1008,7 +1008,6 @@ let NBLOCK_MASK_REG = prove
     : int128)
     = word (2 EXP (8 * byte_len) - 1)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NBLOCK_WORD_INSERT_BOTH_LANES] THEN
-  SPEC_TAC(`byte_len:num`,`byte_len:num`) THEN GEN_TAC THEN
   NBLOCK_MASK_PEEL_TAC 1);;
 
 (* Masking an already-masked block again with the same mask is idempotent. *)
@@ -1026,7 +1025,7 @@ let NBLOCK_USHR_BYTELEN = prove
   SUBGOAL_THEN `val (word (8 * total_bytes):int64) = 8 * total_bytes` SUBST1_TAC THENL
    [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
-  REWRITE_TAC[EXP; ARITH] THEN ARITH_TAC);;
+  ARITH_TAC);;
 
 (* ival of a small nonnegative word literal (used to resolve the cascade
    block-count comparison with a symbolic partial byte_len). *)

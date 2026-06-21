@@ -68,7 +68,7 @@ let ONE_BLOCK_USHR_BYTELEN = prove
   SUBGOAL_THEN `val (word (8 * byte_len):int64) = 8 * byte_len` SUBST1_TAC THENL
    [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
-  REWRITE_TAC[EXP; ARITH] THEN ARITH_TAC);;
+  ARITH_TAC);;
 
 (* The masked ciphertext written by the bif store: masking the already-masked
    block again with the same mask is idempotent. *)
