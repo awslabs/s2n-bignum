@@ -12024,11 +12024,11 @@ let LOCAL_MODINV_SAFETY_TAC (assump_name:string) (n:int) =
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]
@@ -12067,15 +12067,15 @@ let LOCAL_EPDOUBLE_SAFETY_TAC (assump_name:string) (n:int) =
         (edwards25519_scalarmuldouble_tmc',EDWARDS25519_SCALARMULDOUBLE_EXEC,
           0x0,edwards25519_scalarmuldouble_tmc',safety_th)
         [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-         `pc:num`; `read RSP s`] n
+         `pc:num`; `tables:num`; `read RSP s`] n
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]);;
@@ -12113,15 +12113,15 @@ let LOCAL_PDOUBLE_SAFETY_TAC (assump_name:string) (n:int) =
       (edwards25519_scalarmuldouble_tmc',EDWARDS25519_SCALARMULDOUBLE_EXEC,
         0x0,edwards25519_scalarmuldouble_tmc',safety_th)
       [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-      `pc:num`; `read RSP s`] n
+      `pc:num`; `tables:num`; `read RSP s`] n
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]);;
@@ -12160,14 +12160,14 @@ let LOCAL_EPADD_SAFETY_TAC (assump_name:string) (n:int) =
         (edwards25519_scalarmuldouble_tmc',EDWARDS25519_SCALARMULDOUBLE_EXEC,
           0x0,edwards25519_scalarmuldouble_tmc',safety_th)
         [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `read RBP s`; `pc:num`; `read RSP s`] n THENL [
+        `read RBP s`; `pc:num`; `tables:num`; `read RSP s`] n THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
   ]);;
@@ -12206,15 +12206,15 @@ let LOCAL_PEPADD_SAFETY_TAC (assump_name:string) (n:int) =
       (edwards25519_scalarmuldouble_tmc',EDWARDS25519_SCALARMULDOUBLE_EXEC,
         0x0,edwards25519_scalarmuldouble_tmc',safety_th)
       [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-      `read RBP s`; `pc:num`; `read RSP s`] n
+      `read RBP s`; `pc:num`; `tables:num`; `read RSP s`] n
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]);;

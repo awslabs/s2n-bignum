@@ -10460,8 +10460,8 @@ let LOCAL_PEPADD_TAC =
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
  (`!tables res scalar point bscalar n xy m pc stackpointer.
-    riprel32_within_bounds tables (pc + 1173) /\
-    riprel32_within_bounds tables (pc + 3754) /\
+    riprel32_within_bounds tables (pc + 1169) /\
+    riprel32_within_bounds tables (pc + 3750) /\
     ALL (nonoverlapping (stackpointer,1672))
         [(word pc,0x6fc9); (word tables,768);
          (res,64); (scalar,32); (point,64); (bscalar,32)] /\
@@ -11812,8 +11812,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_CORRECT = time prove
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_NOIBT_SUBROUTINE_CORRECT = time prove
  (`!tables res scalar point bscalar n xy m pc stackpointer returnaddress.
-    riprel32_within_bounds tables (pc + 1173) /\
-    riprel32_within_bounds tables (pc + 3754) /\
+    riprel32_within_bounds tables (pc + 1169) /\
+    riprel32_within_bounds tables (pc + 3750) /\
     ALL (nonoverlapping (word_sub stackpointer (word 1720),1720))
         [(word pc,LENGTH (edwards25519_scalarmuldouble_alt_tmc pc tables));
          (word tables,768); (scalar,32); (point,64); (bscalar,32)] /\
@@ -11861,8 +11861,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_MC_BRIDGE = prove
               edwards25519_scalarmuldouble_alt_tmc; APPEND] THEN
   REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-  REWRITE_TAC[INT_ARITH `&pc + &1177 = (&pc + &4) + &1173:int`;
-              INT_ARITH `&pc + &3758 = (&pc + &4) + &3754:int`]);;
+  REWRITE_TAC[INT_ARITH `&pc + &1173 = (&pc + &4) + &1169:int`;
+              INT_ARITH `&pc + &3754 = (&pc + &4) + &3750:int`]);;
 
 let LENGTH_EDWARDS25519_SCALARMULDOUBLE_ALT_MC = prove
  (`!pc tables. LENGTH (edwards25519_scalarmuldouble_alt_mc pc tables) = 0x6fcd`,
@@ -11871,8 +11871,8 @@ let LENGTH_EDWARDS25519_SCALARMULDOUBLE_ALT_MC = prove
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
  (`!tables res scalar point bscalar n xy m pc stackpointer returnaddress.
-    riprel32_within_bounds tables (pc + 1177) /\
-    riprel32_within_bounds tables (pc + 3758) /\
+    riprel32_within_bounds tables (pc + 1173) /\
+    riprel32_within_bounds tables (pc + 3754) /\
     ALL (nonoverlapping (word_sub stackpointer (word 1720),1720))
         [(word pc,LENGTH (edwards25519_scalarmuldouble_alt_mc pc tables));
          (word tables,768); (scalar,32); (point,64); (bscalar,32)] /\
@@ -11950,8 +11950,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_WINDOWS_MC_BRIDGE = prove
               edwards25519_scalarmuldouble_alt_windows_tmc; APPEND] THEN
   REWRITE_TAC[GSYM INT_OF_NUM_ADD] THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-  REWRITE_TAC[INT_ARITH `&pc + &1199 = (&pc + &4) + &1195:int`;
-              INT_ARITH `&pc + &3780 = (&pc + &4) + &3776:int`]);;
+  REWRITE_TAC[INT_ARITH `&pc + &1195 = (&pc + &4) + &1191:int`;
+              INT_ARITH `&pc + &3776 = (&pc + &4) + &3772:int`]);;
 
 let LENGTH_EDWARDS25519_SCALARMULDOUBLE_ALT_WINDOWS_MC = prove
  (`!pc tables. LENGTH (edwards25519_scalarmuldouble_alt_windows_mc pc tables) =
@@ -11962,8 +11962,8 @@ let LENGTH_EDWARDS25519_SCALARMULDOUBLE_ALT_WINDOWS_MC = prove
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!tables res scalar point bscalar n xy m pc stackpointer returnaddress.
-    riprel32_within_bounds tables (pc + 1195) /\
-    riprel32_within_bounds tables (pc + 3776) /\
+    riprel32_within_bounds tables (pc + 1191) /\
+    riprel32_within_bounds tables (pc + 3772) /\
     ALL (nonoverlapping (word_sub stackpointer (word 1744),1744))
         [(word pc,LENGTH (edwards25519_scalarmuldouble_alt_windows_tmc pc tables));
          (word tables,768); (scalar,32); (point,64); (bscalar,32)] /\
@@ -12032,8 +12032,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT = time pro
 
 let EDWARDS25519_SCALARMULDOUBLE_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
  (`!tables res scalar point bscalar n xy m pc stackpointer returnaddress.
-    riprel32_within_bounds tables (pc + 1199) /\
-    riprel32_within_bounds tables (pc + 3780) /\
+    riprel32_within_bounds tables (pc + 1195) /\
+    riprel32_within_bounds tables (pc + 3776) /\
     ALL (nonoverlapping (word_sub stackpointer (word 1744),1744))
         [(word pc,LENGTH (edwards25519_scalarmuldouble_alt_windows_mc pc tables));
          (word tables,768); (scalar,32); (point,64); (bscalar,32)] /\
@@ -12094,11 +12094,11 @@ let LOCAL_MODINV_SAFETY_TAC (assump_name:string) (n:int) =
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]
@@ -12138,15 +12138,15 @@ let LOCAL_EPDOUBLE_SAFETY_TAC (assump_name:string) (n:int) =
           EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
           0x0,edwards25519_scalarmuldouble_alt_tmc',safety_th)
         [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-         `pc:num`; `read RSP s`] n
+         `pc:num`; `tables:num`; `read RSP s`] n
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]);;
@@ -12185,15 +12185,15 @@ let LOCAL_PDOUBLE_SAFETY_TAC (assump_name:string) (n:int) =
         EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
         0x0,edwards25519_scalarmuldouble_alt_tmc',safety_th)
       [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-      `pc:num`; `read RSP s`] n
+      `pc:num`; `tables:num`; `read RSP s`] n
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]);;
@@ -12233,14 +12233,14 @@ let LOCAL_EPADD_SAFETY_TAC (assump_name:string) (n:int) =
           EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
           0x0,edwards25519_scalarmuldouble_alt_tmc',safety_th)
         [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `read RBP s`; `pc:num`; `read RSP s`] n THENL [
+        `read RBP s`; `pc:num`; `tables:num`; `read RSP s`] n THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
   ]);;
@@ -12280,15 +12280,15 @@ let LOCAL_PEPADD_SAFETY_TAC (assump_name:string) (n:int) =
         EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC,
         0x0,edwards25519_scalarmuldouble_alt_tmc',safety_th)
       [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-      `read RBP s`; `pc:num`; `read RSP s`] n
+      `read RBP s`; `pc:num`; `tables:num`; `read RSP s`] n
     THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`bscalar:int64`;
-         `stackpointer:int64`;
+         `stackpointer:int64`;`tables:num`;
          (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->int64->
-                    num->int64->num->(uarch_event)list`]);
+                    num->num->int64->num->(uarch_event)list`]);
 
       LABEL_TAC assump_name safety_th
     ]);;
@@ -12305,8 +12305,8 @@ let full_spec,public_vars = mk_safety_spec
 let EDWARDS25519_SCALARMULDOUBLE_ALT_SAFE = time prove
  (`exists f_events.
        forall e tables res scalar point bscalar pc stackpointer.
-           riprel32_within_bounds tables (pc + 1173) /\
-           riprel32_within_bounds tables (pc + 3754) /\
+           riprel32_within_bounds tables (pc + 1169) /\
+           riprel32_within_bounds tables (pc + 3750) /\
            ALL (nonoverlapping (stackpointer,1672))
            [word pc,28617; word tables,768;
             res,64; scalar,32; point,64; bscalar,32] /\
@@ -12402,8 +12402,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_SAFE = time prove
     X86_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (148--167) THEN
     UNDISCH_TAC
      `read RBP s167 =
-      word(val(word(pc + 1173):int64) +
-           val(word_sx(iword(&tables - (&pc + &1173)):int32):int64))` THEN
+      word(val(word(pc + 1169):int64) +
+           val(word_sx(iword(&tables - (&pc + &1169)):int32):int64))` THEN
     IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN ASM_REWRITE_TAC[] THEN
     DISCH_TAC THEN
     X86_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (168--709) THEN
@@ -12440,8 +12440,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_SAFE = time prove
   X86_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (23--35) THEN
   UNDISCH_TAC
    `read RBP s35 =
-    word(val(word(pc + 3754):int64) +
-         val(word_sx(iword(&tables - (&pc + &3754)):int32):int64))` THEN
+    word(val(word(pc + 3750):int64) +
+         val(word_sx(iword(&tables - (&pc + &3750)):int32):int64))` THEN
   IMP_REWRITE_TAC[RIP_REL_ADDR_FOLD] THEN ASM_REWRITE_TAC[] THEN
   DISCH_TAC THEN
   X86_STEPS_TAC EDWARDS25519_SCALARMULDOUBLE_ALT_EXEC (36--242) THEN
@@ -12491,8 +12491,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_SAFE = time prove
 let EDWARDS25519_SCALARMULDOUBLE_ALT_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
     forall e tables res scalar point bscalar pc stackpointer returnaddress.
-        riprel32_within_bounds tables (pc + 1173) /\
-        riprel32_within_bounds tables (pc + 3754) /\
+        riprel32_within_bounds tables (pc + 1169) /\
+        riprel32_within_bounds tables (pc + 3750) /\
         ALL (nonoverlapping (word_sub stackpointer (word 1720),1720))
         [word pc,LENGTH (edwards25519_scalarmuldouble_alt_tmc pc tables);
          word tables,768; scalar,32; point,64; bscalar,32] /\
@@ -12540,8 +12540,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_NOIBT_SUBROUTINE_SAFE = time prove
 let EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
     forall e tables res scalar point bscalar pc stackpointer returnaddress.
-        riprel32_within_bounds tables (pc + 1177) /\
-        riprel32_within_bounds tables (pc + 3758) /\
+        riprel32_within_bounds tables (pc + 1173) /\
+        riprel32_within_bounds tables (pc + 3754) /\
         ALL (nonoverlapping (word_sub stackpointer (word 1720),1720))
         [word pc,LENGTH (edwards25519_scalarmuldouble_alt_mc pc tables);
          word tables,768; scalar,32; point,64; bscalar,32] /\
@@ -12592,8 +12592,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_SUBROUTINE_SAFE = time prove
 let EDWARDS25519_SCALARMULDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.
     forall e tables res scalar point bscalar pc stackpointer returnaddress.
-        riprel32_within_bounds tables (pc + 1195) /\
-        riprel32_within_bounds tables (pc + 3776) /\
+        riprel32_within_bounds tables (pc + 1191) /\
+        riprel32_within_bounds tables (pc + 3772) /\
         ALL (nonoverlapping (word_sub stackpointer (word 1744),1744))
         [word pc,LENGTH (edwards25519_scalarmuldouble_alt_windows_tmc pc tables);
          word tables,768; scalar,32; point,64; bscalar,32] /\
@@ -12675,8 +12675,8 @@ let EDWARDS25519_SCALARMULDOUBLE_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
 let EDWARDS25519_SCALARMULDOUBLE_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.
     forall e tables res scalar point bscalar pc stackpointer returnaddress.
-        riprel32_within_bounds tables (pc + 1199) /\
-        riprel32_within_bounds tables (pc + 3780) /\
+        riprel32_within_bounds tables (pc + 1195) /\
+        riprel32_within_bounds tables (pc + 3776) /\
         ALL (nonoverlapping (word_sub stackpointer (word 1744),1744))
         [word pc,LENGTH (edwards25519_scalarmuldouble_alt_windows_mc pc tables);
          word tables,768; scalar,32; point,64; bscalar,32] /\
