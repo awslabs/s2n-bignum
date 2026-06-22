@@ -15705,7 +15705,11 @@ static void reference_md5_block(uint32_t *state, const uint8_t *data,
 // pair of initial state and num blocks of random data. block size draw from the
 // interval [0,4]
 int test_md5_compress(void)
-{ uint64_t t, i, num;
+{
+#ifndef __x86_64__
+  return 1;
+#else
+  uint64_t t, i, num;
   uint32_t s_ref[4], s_asm[4];
   printf("Testing md5_compress with %d cases\n",tests);
 
@@ -15733,6 +15737,7 @@ int test_md5_compress(void)
    }
   printf("All OK\n");
   return 0;
+#endif
 }
 
 int test_sha3_keccak_f1600(void)
@@ -17691,7 +17696,6 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_caddq",test_mldsa_caddq);
-  functionaltest(all,"md5_compress",test_md5_compress);
   functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);
@@ -17787,6 +17791,10 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+  }
+
+  if (get_arch_name() == ARCH_X86_64) {
+    functionaltest(all,"md5_compress",test_md5_compress);
   }
 
   if (extrastrigger) function_to_test = "_";
