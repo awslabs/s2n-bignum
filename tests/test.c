@@ -15589,6 +15589,152 @@ int test_secp256k1_jmixadd_alt(void)
   return 0;
 }
 
+// Helper functions for MD5 differential KATs. Reference implementation taken
+// from aws-lc: crypto/fipsmodule/md5/md5.c.
+static uint32_t md5ref_load_u32_le(const uint8_t *p)
+{ return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) |
+         ((uint32_t)p[3] << 24);
+}
+
+static uint32_t md5ref_rotl_u32(uint32_t value, int shift)
+{ return (value << shift) | (value >> ((-shift) & 31));
+}
+
+#define MD5REF_F(b, c, d) ((((c) ^ (d)) & (b)) ^ (d))
+#define MD5REF_G(b, c, d) ((((b) ^ (c)) & (d)) ^ (c))
+#define MD5REF_H(b, c, d) ((b) ^ (c) ^ (d))
+#define MD5REF_I(b, c, d) (((~(d)) | (b)) ^ (c))
+#define MD5REF_RND(fn, a, b, c, d, k, s, t)      \
+  do {                                           \
+    (a) += ((k) + (t) + fn((b), (c), (d)));      \
+    (a) = md5ref_rotl_u32(a, s);                 \
+    (a) += (b);                                  \
+  } while (0)
+
+static void reference_md5_block(uint32_t *state, const uint8_t *data,
+                                uint64_t num)
+{ uint32_t A = state[0], B = state[1], C = state[2], D = state[3];
+  uint32_t X[16];
+  uint64_t i;
+
+  for (; num--;)
+   { for (i = 0; i < 16; i++) { X[i] = md5ref_load_u32_le(data); data += 4; }
+
+     MD5REF_RND(MD5REF_F, A, B, C, D, X[0], 7, 0xd76aa478L);
+     MD5REF_RND(MD5REF_F, D, A, B, C, X[1], 12, 0xe8c7b756L);
+     MD5REF_RND(MD5REF_F, C, D, A, B, X[2], 17, 0x242070dbL);
+     MD5REF_RND(MD5REF_F, B, C, D, A, X[3], 22, 0xc1bdceeeL);
+     MD5REF_RND(MD5REF_F, A, B, C, D, X[4], 7, 0xf57c0fafL);
+     MD5REF_RND(MD5REF_F, D, A, B, C, X[5], 12, 0x4787c62aL);
+     MD5REF_RND(MD5REF_F, C, D, A, B, X[6], 17, 0xa8304613L);
+     MD5REF_RND(MD5REF_F, B, C, D, A, X[7], 22, 0xfd469501L);
+     MD5REF_RND(MD5REF_F, A, B, C, D, X[8], 7, 0x698098d8L);
+     MD5REF_RND(MD5REF_F, D, A, B, C, X[9], 12, 0x8b44f7afL);
+     MD5REF_RND(MD5REF_F, C, D, A, B, X[10], 17, 0xffff5bb1L);
+     MD5REF_RND(MD5REF_F, B, C, D, A, X[11], 22, 0x895cd7beL);
+     MD5REF_RND(MD5REF_F, A, B, C, D, X[12], 7, 0x6b901122L);
+     MD5REF_RND(MD5REF_F, D, A, B, C, X[13], 12, 0xfd987193L);
+     MD5REF_RND(MD5REF_F, C, D, A, B, X[14], 17, 0xa679438eL);
+     MD5REF_RND(MD5REF_F, B, C, D, A, X[15], 22, 0x49b40821L);
+
+     MD5REF_RND(MD5REF_G, A, B, C, D, X[1], 5, 0xf61e2562L);
+     MD5REF_RND(MD5REF_G, D, A, B, C, X[6], 9, 0xc040b340L);
+     MD5REF_RND(MD5REF_G, C, D, A, B, X[11], 14, 0x265e5a51L);
+     MD5REF_RND(MD5REF_G, B, C, D, A, X[0], 20, 0xe9b6c7aaL);
+     MD5REF_RND(MD5REF_G, A, B, C, D, X[5], 5, 0xd62f105dL);
+     MD5REF_RND(MD5REF_G, D, A, B, C, X[10], 9, 0x02441453L);
+     MD5REF_RND(MD5REF_G, C, D, A, B, X[15], 14, 0xd8a1e681L);
+     MD5REF_RND(MD5REF_G, B, C, D, A, X[4], 20, 0xe7d3fbc8L);
+     MD5REF_RND(MD5REF_G, A, B, C, D, X[9], 5, 0x21e1cde6L);
+     MD5REF_RND(MD5REF_G, D, A, B, C, X[14], 9, 0xc33707d6L);
+     MD5REF_RND(MD5REF_G, C, D, A, B, X[3], 14, 0xf4d50d87L);
+     MD5REF_RND(MD5REF_G, B, C, D, A, X[8], 20, 0x455a14edL);
+     MD5REF_RND(MD5REF_G, A, B, C, D, X[13], 5, 0xa9e3e905L);
+     MD5REF_RND(MD5REF_G, D, A, B, C, X[2], 9, 0xfcefa3f8L);
+     MD5REF_RND(MD5REF_G, C, D, A, B, X[7], 14, 0x676f02d9L);
+     MD5REF_RND(MD5REF_G, B, C, D, A, X[12], 20, 0x8d2a4c8aL);
+
+     MD5REF_RND(MD5REF_H, A, B, C, D, X[5], 4, 0xfffa3942L);
+     MD5REF_RND(MD5REF_H, D, A, B, C, X[8], 11, 0x8771f681L);
+     MD5REF_RND(MD5REF_H, C, D, A, B, X[11], 16, 0x6d9d6122L);
+     MD5REF_RND(MD5REF_H, B, C, D, A, X[14], 23, 0xfde5380cL);
+     MD5REF_RND(MD5REF_H, A, B, C, D, X[1], 4, 0xa4beea44L);
+     MD5REF_RND(MD5REF_H, D, A, B, C, X[4], 11, 0x4bdecfa9L);
+     MD5REF_RND(MD5REF_H, C, D, A, B, X[7], 16, 0xf6bb4b60L);
+     MD5REF_RND(MD5REF_H, B, C, D, A, X[10], 23, 0xbebfbc70L);
+     MD5REF_RND(MD5REF_H, A, B, C, D, X[13], 4, 0x289b7ec6L);
+     MD5REF_RND(MD5REF_H, D, A, B, C, X[0], 11, 0xeaa127faL);
+     MD5REF_RND(MD5REF_H, C, D, A, B, X[3], 16, 0xd4ef3085L);
+     MD5REF_RND(MD5REF_H, B, C, D, A, X[6], 23, 0x04881d05L);
+     MD5REF_RND(MD5REF_H, A, B, C, D, X[9], 4, 0xd9d4d039L);
+     MD5REF_RND(MD5REF_H, D, A, B, C, X[12], 11, 0xe6db99e5L);
+     MD5REF_RND(MD5REF_H, C, D, A, B, X[15], 16, 0x1fa27cf8L);
+     MD5REF_RND(MD5REF_H, B, C, D, A, X[2], 23, 0xc4ac5665L);
+
+     MD5REF_RND(MD5REF_I, A, B, C, D, X[0], 6, 0xf4292244L);
+     MD5REF_RND(MD5REF_I, D, A, B, C, X[7], 10, 0x432aff97L);
+     MD5REF_RND(MD5REF_I, C, D, A, B, X[14], 15, 0xab9423a7L);
+     MD5REF_RND(MD5REF_I, B, C, D, A, X[5], 21, 0xfc93a039L);
+     MD5REF_RND(MD5REF_I, A, B, C, D, X[12], 6, 0x655b59c3L);
+     MD5REF_RND(MD5REF_I, D, A, B, C, X[3], 10, 0x8f0ccc92L);
+     MD5REF_RND(MD5REF_I, C, D, A, B, X[10], 15, 0xffeff47dL);
+     MD5REF_RND(MD5REF_I, B, C, D, A, X[1], 21, 0x85845dd1L);
+     MD5REF_RND(MD5REF_I, A, B, C, D, X[8], 6, 0x6fa87e4fL);
+     MD5REF_RND(MD5REF_I, D, A, B, C, X[15], 10, 0xfe2ce6e0L);
+     MD5REF_RND(MD5REF_I, C, D, A, B, X[6], 15, 0xa3014314L);
+     MD5REF_RND(MD5REF_I, B, C, D, A, X[13], 21, 0x4e0811a1L);
+     MD5REF_RND(MD5REF_I, A, B, C, D, X[4], 6, 0xf7537e82L);
+     MD5REF_RND(MD5REF_I, D, A, B, C, X[11], 10, 0xbd3af235L);
+     MD5REF_RND(MD5REF_I, C, D, A, B, X[2], 15, 0x2ad7d2bbL);
+     MD5REF_RND(MD5REF_I, B, C, D, A, X[9], 21, 0xeb86d391L);
+
+     A = state[0] += A;
+     B = state[1] += B;
+     C = state[2] += C;
+     D = state[3] += D;
+   }
+}
+
+#undef MD5REF_F
+#undef MD5REF_G
+#undef MD5REF_H
+#undef MD5REF_I
+#undef MD5REF_RND
+
+// Differential test: verify that asm block matches the C reference on random
+// pair of initial state and num blocks of random data. block size draw from the
+// interval [0,4]
+int test_md5_compress(void)
+{ uint64_t t, i, num;
+  uint32_t s_ref[4], s_asm[4];
+  printf("Testing md5_compress with %d cases\n",tests);
+
+  for (t = 0; t < tests; ++t)
+   { num = (uint64_t)(rand() % 5);
+     for (i = 0; i < 4; ++i)
+      { uint32_t w = ((uint32_t)(rand() & 0xffff) << 16) |
+                     (uint32_t)(rand() & 0xffff);
+        s_ref[i] = w; s_asm[i] = w;
+      }
+     for (i = 0; i < num * 64; ++i) bb1[i] = (uint8_t)(rand() & 0xff);
+
+     reference_md5_block(s_ref, bb1, num);
+     md5_compress(s_asm, bb1, num);
+
+     for (i = 0; i < 4; ++i)
+      { if (s_ref[i] != s_asm[i])
+         { printf("Error in md5_compress (case %"PRIu64", "
+                  "num=%"PRIu64") word %"PRIu64": code = 0x%08"PRIx32
+                  " while reference = 0x%08"PRIx32"\n",
+                  t,num,i,s_asm[i],s_ref[i]);
+           return 1;
+         }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+}
+
 int test_sha3_keccak_f1600(void)
 { uint64_t t, i;
   uint64_t a[25], b[25], c[25];
@@ -17545,6 +17691,7 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_caddq",test_mldsa_caddq);
+  functionaltest(all,"md5_compress",test_md5_compress);
   functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);

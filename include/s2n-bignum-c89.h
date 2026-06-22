@@ -1001,6 +1001,10 @@ extern void edwards25519_scalarmulbase_alt(uint64_t res[8],const uint64_t scalar
 extern void edwards25519_scalarmuldouble(uint64_t res[8],const uint64_t scalar[4], const uint64_t point[8],const uint64_t bscalar[4]);
 extern void edwards25519_scalarmuldouble_alt(uint64_t res[8],const uint64_t scalar[4], const uint64_t point[8],const uint64_t bscalar[4]);
 
+/* MD5 block compression: hash num_blocks 64-byte blocks of data into state[4] */
+/* Input state[4], data[64*num_blocks]; output state[4] */
+extern void md5_compress(uint32_t state[4],const uint8_t *data,size_t num_blocks);
+
 /* Forward number-theoretic transform for ML-DSA */
 /* Input a[256], z_012345[144], z_67[384] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_ntt_arm(int32_t a[256], const int32_t z_012345[144], const int32_t z_67[384]);
