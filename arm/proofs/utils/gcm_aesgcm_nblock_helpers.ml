@@ -109,50 +109,9 @@ let WORD_REVERSEFIELDS_8_BYTEREVERSE_32 = prove
  (`!x:(32)word. word_reversefields 8 x = word_bytereverse x`,
   GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
-(* ========================================================================= *)
-(* SHARED SUBWORD HELPER (input over 256-bit zero-extended values)           *)
-(*                                                                           *)
-(* SHL_SUBWORD_CASES_128: Shifted/zero-extended 128->256 subword cases. *)
-(* This is needed by the inductive bridge (post-Karatsuba normalization).    *)
-(* ========================================================================= *)
+(* SHL_SUBWORD_CASES_128 removed: unused by AES256_GCM_ENCRYPT_CORRECT (only the parked claude_4.7 backups used it). *)
 
-let SHL_SUBWORD_CASES_128 = prove
- (`(!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 64) (0,64):(64)word = word 0) /\
-   (!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 64) (64,64):(64)word = word_subword x (0,64)) /\
-   (!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 64) (128,64):(64)word = word_subword x (64,64)) /\
-   (!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 64) (192,64):(64)word = word 0) /\
-   (!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 128) (0,64):(64)word = word 0) /\
-   (!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 128) (64,64):(64)word = word 0) /\
-   (!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 128) (128,64):(64)word = word_subword x (0,64)) /\
-   (!x:(128)word. word_subword (word_shl (word_zx x:(256)word) 128) (192,64):(64)word = word_subword x (64,64)) /\
-   (!x:(128)word. word_subword (word_zx x:(256)word) (0,64):(64)word = word_subword x (0,64)) /\
-   (!x:(128)word. word_subword (word_zx x:(256)word) (64,64):(64)word = word_subword x (64,64)) /\
-   (!x:(128)word. word_subword (word_zx x:(256)word) (128,64):(64)word = word 0) /\
-   (!x:(128)word. word_subword (word_zx x:(256)word) (192,64):(64)word = word 0)`,
-  REPEAT CONJ_TAC THEN GEN_TAC THEN CONV_TAC WORD_BLAST);;
-
-(* ========================================================================= *)
-(* ABBREV_SUBWORD_HALVES_TAC : abbreviate every word_subword <var> (k,64)    *)
-(* pattern as a fresh h_i variable. Used in the inductive bridge proof.     *)
-(* ========================================================================= *)
-
-let ABBREV_SUBWORD_HALVES_TAC : tactic = fun (asl,w) ->
-  let halves = find_terms (fun t -> try
-    let (f,n) = dest_comb t in
-    let (g,x) = dest_comb f in
-    name_of g = "word_subword" && is_var x &&
-    (n = `(0,64)` || n = `(64,64)`)
-  with _ -> false) w in
-  let uniq = setify halves in
-  let all_frees =
-    frees w @ List.concat (map (fun (_,th) -> frees(concl th)) asl) in
-  let rec process all n ts (asl,w) =
-    match ts with
-    | [] -> ALL_TAC (asl,w)
-    | t :: rest ->
-      let v = variant all (mk_var("h" ^ string_of_int n, type_of t)) in
-      (ABBREV_TAC (mk_eq(v, t)) THEN process (v::all) (n+1) rest) (asl,w) in
-  process all_frees 0 uniq (asl,w);;
+(* ABBREV_SUBWORD_HALVES_TAC removed: unused by AES256_GCM_ENCRYPT_CORRECT (only the parked claude_4.7 backups used it). *)
 
 (* ========================================================================= *)
 (* GENERIC N-BLOCK KARATSUBA SPEC                                            *)
