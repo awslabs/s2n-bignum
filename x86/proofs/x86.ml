@@ -4746,12 +4746,13 @@ let X86_OPERATION_CLAUSES =
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
     x86_VMOVMSKPS_ALT; x86_VPABSD_ALT; x86_VPMOVMSKB_ALT; x86_VPMOVSXBD_ALT;
     x86_VPMOVZXBD_ALT; x86_VPMOVZXBW_ALT; x86_VPSUBB_ALT; x86_VPTEST_ALT; x86_VZEROUPPER_ALT;
-    (*** 32-bit backups since the ALT forms are 64-bit only ***)
+    (*** 32/8-bit backups since the ALT forms are 64-bit only ***)
     INST_TYPE[`:32`,`:N`] x86_ADC;
     INST_TYPE[`:32`,`:N`] x86_ADCX;
     INST_TYPE[`:32`,`:N`] x86_ADOX;
     INST_TYPE[`:32`,`:N`] x86_ADD;
     INST_TYPE[`:32`,`:N`] x86_CMP;
+    INST_TYPE[`:8`,`:N`] x86_CMP;
     INST_TYPE[`:32`,`:N`] x86_SBB;
     INST_TYPE[`:32`,`:N`] x86_SUB];;
 
