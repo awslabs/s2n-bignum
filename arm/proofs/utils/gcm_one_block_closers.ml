@@ -53,7 +53,7 @@ let WORD_INSERT_BOTH_LANES = prove
  (`!(b0:int128) (a:int64) (c:int64).
      word_insert ((word_insert b0 (0,64) a):int128) (64,64) c : int128 =
      word_join c a`,
-  REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
+  CONV_TAC WORD_BLAST);;
 
 (* The mask register the routine builds in Q0 (base b0 = the AES ciphertext that
    previously occupied Q0; both its lanes are overwritten by the two csel results)
@@ -75,7 +75,7 @@ let ONE_BLOCK_USHR_BYTELEN = prove
 let ONE_BLOCK_MASK_IDEM = prove
  (`!(ct:int128) (mask:int128).
      word_and (word_and mask ct) mask = word_and ct mask`,
-  REPEAT GEN_TAC THEN CONV_TAC WORD_BITWISE_RULE);;
+  CONV_TAC WORD_BITWISE_RULE);;
 
 (* GCM_GHASH_STEP_TAC (N=1, unmasked) removed: unused by AES256_GCM_ENCRYPT_CORRECT (the live 1-block path uses GCM_GHASH_STEP_MASKED_TAC; the unmasked variant has no caller). *)
 

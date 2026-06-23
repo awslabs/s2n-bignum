@@ -1249,8 +1249,8 @@ let GCM_INLOOP_GUARD_TAC x5_lemma : tactic =
 (* (cmp x5,#0x70..#0x10) all falls through; the b .L256_enc_blocks_less_     *)
 (* than_1 lands on the shared masked-store + GHASH + Barrett-reduce tail,    *)
 (* which is byte-identical to the standalone one-block routine — so its      *)
-(* GHASH/mask closers (GCM_CT_STEP_TAC, GCM_GHASH_STEP_MASKED_TAC, and the   *)
-(* ONE_BLOCK lemmas) apply verbatim.                                         *)
+(* GHASH/mask closers (GCM_CT_STEP_TAC, the GCM_1B_GHASH_CLOSE framework      *)
+(* closer, and the ONE_BLOCK lemmas) apply verbatim.                         *)
 (* ========================================================================= *)
 
 (* All the GHASH / mask / cascade closers reused by the 1-, 2- and 3-block    *)
@@ -1353,8 +1353,226 @@ let GCM_CASCADE_TAC : tactic =
 
 (* --- the 1-block correctness theorem ------------------------------------- *)
 
-let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
- (`!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
+(* ============================================================ *)
+(* 1-block GHASH final-closure helpers/tactics, in the SAME       *)
+(* GCM_NB_GHASH_CLOSE framework as bands 2-8, instantiated at N=1  *)
+(* (0 full blocks + 1 partial; the single masked block sits in the *)
+(* block-1/xi-accumulator position with multiplier h, so qS=1,     *)
+(* qB=4*1+1=5).  Routes through GHASH_POLYVAL_ACC_1 + the 1-block   *)
+(* ACC Karatsuba bridge.                                           *)
+(* ============================================================ *)
+
+let GHASH_POLYVAL_ACC_1 = prove
+ (`!(h:int128) (a:int128) (b:int128).
+    ghash_polyval_acc h a [b] =
+    polyval_reduce_prop3 (word_pmul (word_xor a b) h : 256 word)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[ghash_polyval_acc] THEN
+  MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
+  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
+  EXISTS_TAC
+    `ring_mul bool_poly (poly_of_word (word_xor (a:int128) (b:int128))) (poly_of_word (h:int128))` THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[POLYVAL_DOT_CORRECT];
+    ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
+    MP_TAC(ISPECL [`word_pmul (word_xor (a:int128) (b:int128)) (h:int128) : 256 word`]
+      POLYVAL_REDUCE_PROP3_CORRECT) THEN
+    REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
+
+let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
+ (`!(b1:int128) (h:int128) (hk:int128).
+    word_subword hk (0,64):(64)word = karatsuba_mid h
+    ==> ghash_1block_karatsuba b1 (byteswap128 h) hk =
+        word_reversefields 8 (polyval_reduce_prop3 (word_pmul b1 h : 256 word))`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  ASM_SIMP_TAC[GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT] THEN
+  AP_TERM_TAC THEN
+  MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
+  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
+  EXISTS_TAC `ring_mul bool_poly (poly_of_word (b1:int128)) (poly_of_word (h:int128))` THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[POLYVAL_DOT_CORRECT];
+    ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
+    MP_TAC(ISPECL [`word_pmul (b1:int128) (h:int128) : 256 word`] POLYVAL_REDUCE_PROP3_CORRECT) THEN
+    REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
+
+let XI_HS_LO_1 = prove
+ (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (0,64):(64)word =
+   word_subword (word_reversefields 8 xi) (0,64)`,
+  REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC WORD_BLAST);;
+let XI_HS_HI_1 = prove
+ (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (64,64):(64)word =
+   word_subword (word_reversefields 8 xi) (64,64)`,
+  REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC WORD_BLAST);;
+
+(* Step 1+2: no full blocks to fold (N=1) — FOLD_SPEC_CTS is the identity. *)
+let GCM_1B_FOLD_SPEC_CTS : tactic = ALL_TAC;;
+
+(* Step 3: b0-general mask-register collapse over the assumptions. *)
+let GCM_1B_MASK_COLLAPSE_ASMS : tactic =
+  SUBGOAL_THEN `1 <= (byte_len:num) /\ byte_len <= 16` ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  FIRST_ASSUM(fun bth -> if concl bth = `1 <= (byte_len:num) /\ byte_len <= 16` then
+    RULE_ASSUM_TAC(REWRITE_RULE[GEN `b0:int128` (MP (SPEC_ALL NBLOCK_MASK_REG) bth)]) else NO_TAC);;
+
+(* Step 5: no separate KSk fold (the single block's counter is ivec, folded in
+   TAIL_NOFINAL when ct = word_xor pt (aes ivec ...) is established). *)
+let GCM_1B_KS1_FOLD : tactic = ALL_TAC;;
+
+(* Closer tail: ctm abbrev + ct fold + ACC_1 bridge + atomic ABBREVs +
+   inner pmul ABBREVs + z-vars + qS/qB — mirror GCM_2B_TAIL_NOFINAL for N=1
+   (single block, in the block-1/xi-accumulator position, multiplier h). *)
+let GCM_1B_TAIL_NOFINAL : tactic =
+  REWRITE_TAC[GHASH_POLYVAL_ACC_1; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
+  ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
+  ABBREV_TAC `ctm = word_and (ct:(128)word) mask` THEN
+  (* Fold the spec-side AES expression to the abbreviated ciphertext ct. *)
+  SUBGOAL_THEN
+    `word_xor pt (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
+                                   rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct`
+    (fun th -> REWRITE_TAC[th]) THENL [
+    MAP_EVERY EXPAND_TAC ["ct"; "s13"] THEN
+    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC]; ALL_TAC ] THEN
+  SUBGOAL_THEN `word_and (mask:(128)word) (ct:(128)word) = ctm`
+    (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL [
+    EXPAND_TAC "ctm" THEN CONV_TAC WORD_BITWISE_RULE; ALL_TAC ] THEN
+  (* Apply the 1-block ACC Karatsuba bridge. *)
+  FIRST_ASSUM(fun th ->
+    if is_eq(concl th) && (try lhs(concl th) = `word_subword (h1k:(128)word) (0,64):(64)word` with _ -> false)
+    then REWRITE_TAC[GSYM(MATCH_MP GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC th)] else NO_TAC) THEN
+  REWRITE_TAC[ghash_1block_karatsuba; LET_DEF; LET_END_DEF] THEN
+  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+  ASM_REWRITE_TAC[] THEN
+  CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
+  REWRITE_TAC[REV64_LOWER_LANE; REV64_UPPER_LANE; REV8_JOIN_FOLD] THEN
+  MATCH_MP_TAC(MESON[]
+    `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
+  FIRST_ASSUM(fun th ->
+    if is_eq(concl th) && rand(concl th) = `final_xi:(128)word` then SUBST1_TAC(SYM th) else NO_TAC) THEN
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+              KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
+              WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
+              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
+              WORD_XOR_0; WORD_XOR_ASSOC;
+              REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  REWRITE_TAC[WORD_XOR_ASSOC; KAR_MID_BRIDGE; WORD_SUBWORD_0;
+              WORD_XOR_0; WORD_XOR_0_LEFT] THEN
+  REWRITE_TAC[GSYM WORD_SUBWORD_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
+              WORD_XOR_ASSOC; WORD_XOR_0; WORD_XOR_0_LEFT] THEN
+  REWRITE_TAC[karatsuba_mid; WORD_REVERSEFIELDS_XOR_8_128; WORD_SUBWORD_XOR] THEN
+  (* atomic ABBREVs: 1 ct block (ctm) + xi + h.  Naming mirrors the framework
+     (c1lo/c1hi for the masked block, xilo/xihi, hd0/hd1 for h). *)
+  ABBREV_TAC `(c1lo:(64)word) = word_subword (word_reversefields 8 (ctm:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(c1hi:(64)word) = word_subword (word_reversefields 8 (ctm:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(xilo:(64)word) = word_subword (word_reversefields 8 (xi:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(xihi:(64)word) = word_subword (word_reversefields 8 (xi:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(hd0:(64)word) = word_subword (h:(128)word) (0,64)` THEN
+  ABBREV_TAC `(hd1:(64)word) = word_subword (h:(128)word) (64,64)` THEN
+  ASM_REWRITE_TAC[] THEN
+  (* inner pmul ABBREVs (single block in the xi-accumulator position). *)
+  ABBREV_TAC `(w1lo:(128)word) = word_pmul (word_xor (xilo:(64)word) (c1lo:(64)word)) (hd0:(64)word)` THEN
+  ABBREV_TAC `(w1hi:(128)word) = word_pmul (word_xor (xihi:(64)word) (c1hi:(64)word)) (hd1:(64)word)` THEN
+  ABBREV_TAC `(w1md:(128)word) = word_pmul (word_xor (word_xor (xihi:(64)word) (c1hi:(64)word)) (word_xor (xilo:(64)word) (c1lo:(64)word))) (word_xor (hd0:(64)word) (hd1:(64)word))` THEN
+  REWRITE_TAC[DOUBLE_SUBWORD_JOIN; DOUBLE_SUBWORD_JOIN_HI; WORD_SUBWORD_XOR] THEN
+  SUBGOAL_THEN
+    `word_pmul (word_xor (xihi:(64)word) (word_xor (c1hi:(64)word) (word_xor (xilo:(64)word) (c1lo:(64)word)))) (word_xor (hd0:(64)word) (hd1:(64)word)):(128)word = w1md`
+    (fun th -> REWRITE_TAC[th]) THENL
+    [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  (* z-vars. *)
+  ABBREV_TAC `(w1lo_l:(64)word) = word_subword (w1lo:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1lo_h:(64)word) = word_subword (w1lo:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w1hi_l:(64)word) = word_subword (w1hi:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1hi_h:(64)word) = word_subword (w1hi:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w1md_l:(64)word) = word_subword (w1md:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1md_h:(64)word) = word_subword (w1md:(128)word) (64,64)` THEN
+  ASM_REWRITE_TAC[] THEN
+  (* qS: small Barrett pmul (1 atom). *)
+  ABBREV_TAC `(qS:(128)word) = word_pmul (w1lo_l:(64)word) (word 13979173243358019584:(64)word)` THEN
+  ASM_REWRITE_TAC[] THEN
+  (* qB: big Barrett pmul (4N+1 = 5 atoms). *)
+  ABBREV_TAC `(qB:(128)word) = word_pmul
+    (word_xor (w1md_l:(64)word) (word_xor w1lo_l (word_xor w1hi_l (word_xor (word_subword (qS:(128)word) (0,64)) w1lo_h)))) (word 13979173243358019584:(64)word)` THEN
+  SUBGOAL_THEN
+    `word_pmul (word_xor (w1lo_h:(64)word) (word_xor w1md_l (word_xor w1hi_l (word_xor w1lo_l (word_subword (qS:(128)word) (0,64)))))) (word 13979173243358019584:(64)word):(128)word = qB`
+    (fun th -> REWRITE_TAC[th]) THENL
+    [EXPAND_TAC "qB" THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+     CONV_TAC(BINOP_CONV bubble_sort_conv) THEN REFL_TAC; ALL_TAC];;
+
+(* per-half XOR-AC closer — mirror GCM_2B_HALF_CLOSE (1 mid, qS 1, qB 5). *)
+let GCM_1B_FOLD_MIDS_TAC : tactic =
+  fun (asl,gg) ->
+    let rec finds hd t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = hd ->
+          a :: (finds hd a (finds hd x acc))
+      | Comb(l,r) -> finds hd l (finds hd r acc)
+      | Abs(_,b) -> finds hd b acc | _ -> acc in
+    let hdw = `word_xor (hd0:(64)word) hd1` in
+    let mk tgt hd arg =
+      SUBGOAL_THEN
+        (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[arg;hd]),tgt))
+        (fun th -> REWRITE_TAC[th]) THENL
+       [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+        CONV_TAC WORD_RULE; ALL_TAC] in
+    (EVERY (map (mk `w1md:(128)word` hdw) (setify(finds hdw gg [])))) (asl,gg);;
+
+let GCM_1B_FOLD_TO tgt natoms : tactic =
+  let w64 = `word 13979173243358019584:(64)word` in
+  fun (asl,gg) ->
+    let rec finds t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = w64 ->
+          a :: (finds a (finds x acc))
+      | Comb(l,r) -> finds l (finds r acc) | Abs(_,b) -> finds b acc | _ -> acc in
+    let rec at t = match t with
+      | Comb(Comb(Const("word_xor",_),x),y) -> at x @ at y | _ -> [t] in
+    let args = List.filter (fun a -> List.length(at a) = natoms) (setify(finds gg [])) in
+    (EVERY (map (fun a ->
+       FIRST [SUBGOAL_THEN
+                (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[a;w64]),tgt))
+                (fun th -> REWRITE_TAC[th]) THENL
+               [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+                CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC; ALL_TAC];
+              ALL_TAC]) args)) (asl,gg);;
+
+let GCM_1B_HALF_CLOSE : tactic =
+  GCM_1B_FOLD_MIDS_TAC THEN ASM_REWRITE_TAC[] THEN
+  GCM_1B_FOLD_TO `qS:(128)word` 1 THEN ASM_REWRITE_TAC[] THEN
+  GCM_1B_FOLD_TO `qB:(128)word` 5 THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC;;
+
+(* The full GHASH closer — mirror GCM_2B_GHASH_CLOSE exactly (N=1). *)
+let GCM_1B_GHASH_CLOSE : tactic =
+  GCM_1B_FOLD_SPEC_CTS THEN
+  REWRITE_TAC[GHASH_POLYVAL_ACC_1; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
+  GCM_1B_MASK_COLLAPSE_ASMS THEN
+  GCM_1B_KS1_FOLD THEN
+  GCM_1B_TAIL_NOFINAL THEN
+  REWRITE_TAC[XI_HS_LO_1; XI_HS_HI_1] THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   `word_pmul (word_xor (xihi:(64)word) (word_xor c1hi (word_xor xilo c1lo)))
+              (word_xor (hd0:(64)word) hd1):(128)word = w1md`
+   (fun th -> REWRITE_TAC[th]) THENL
+   [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  BINOP_TAC THENL [GCM_1B_HALF_CLOSE; GCM_1B_HALF_CLOSE];;
+
+(* Keystream/ciphertext abbreviation for the single (masked) block: read the
+   AES keystream from its register (the aese/aesmc chain, no rk14) and define
+   s13 + ct, mirroring the register-grab idiom of the wider bands rather than a
+   hand-written 28-deep aese literal.  (The block is masked, so there is no
+   plain word_xor-store for abbrev_ct_from_store to read.) *)
+let GCM_1B_ABBREV_CT : tactic =
+  FIRST_ASSUM(fun th ->
+    if can(term_match[]`read Q0 (s:armstate) = (x:int128)`)(concl th) &&
+       (try fst(dest_const(repeat rator (rand(concl th)))) = "aese" with _ -> false)
+    then ABBREV_TAC(mk_eq(mk_var("s13",`:(128)word`), rand(concl th)))
+    else NO_TAC) THEN
+  ABBREV_TAC `ct = word_xor (word_xor pt s13) rk14 :(128)word`;;
+
+(* Named goal for the 1BLOCK band (shared spec lifted by the ABS layer). *)
+let gcm_1b_goal =
+ `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
     (pt:(128)word) (out0:(128)word) (ivec:(128)word)
     (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word)
     (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word)
@@ -1446,7 +1664,10 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
                   memory :> bytes64 (word_add stackptr (word 48));
                   memory :> bytes64 (word_add stackptr (word 56));
                   memory :> bytes64 (word_add stackptr (word 64));
-                  memory :> bytes64 (word_add stackptr (word 72))])`,
+                  memory :> bytes64 (word_add stackptr (word 72))])`;;
+
+let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
+ (gcm_1b_goal,
   (* Entry + nop/cbz (1-2): byte_len >= 1 so the cbz is not taken. *)
   GCM_INIT_TAC GCM_CBZ_LEMMA THEN
 
@@ -1469,8 +1690,7 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
 
   (* Abbreviate the block-0 AES output (`ct`/`s13`) so the shared one-block
      closures fold it back. *)
-  ABBREV_TAC `s13 = aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese ivec rk0)) rk1)) rk2)) rk3)) rk4)) rk5)) rk6)) rk7)) rk8)) rk9)) rk10)) rk11)) rk12)) rk13:(128)word` THEN
-  ABBREV_TAC `ct = word_xor (word_xor pt s13) rk14 :(128)word` THEN
+  GCM_1B_ABBREV_CT THEN
 
   (* Tail mask build (323-336); collapse the data-dependent mask register Q0
      to word (2^(8*byte_len) - 1). *)
@@ -1490,7 +1710,7 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_SIMP_TAC[ONE_BLOCK_USHR_BYTELEN; ONE_BLOCK_MASK_IDEM] THEN
-  CONJ_TAC THENL [GCM_CT_STEP_TAC; GCM_GHASH_STEP_MASKED_TAC]);;
+  CONJ_TAC THENL [GCM_CT_STEP_TAC; GCM_1B_GHASH_CLOSE]);;
 
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_1 branch (2-block: full block 1 + partial   *)
@@ -1586,8 +1806,331 @@ let GCM_CASCADE2_TAC : tactic =
     else NO_TAC)
   else NO_TAC);;
 
-let AES256_GCM_ENCRYPT_LT_2BLOCK_CONCRETE = prove
- (`!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
+(* Store-based ct abbreviation (robust against the per-branch Q-register
+   scramble): reads the keystream actually stored at out_ptr+off and
+   abbreviates s13_N + ctN.  Defined here at its first use (the 2-block band)
+   and shared verbatim by the 3/4/5/6/7/8-block branches below.
+   Strict matcher: pins the EXACT store address AND the plaintext ptN (a loose
+   `term_match` on `read (memory :> bytes128 out_ptr) s` unifies out_ptr with
+   `word_add out_ptr (word N)` because out_ptr is free, which mis-attributed
+   ct1=s13_2 at 7/8 blocks; pinning the address and ptN avoids that). *)
+let abbrev_ct_from_store off nidx : tactic = fun (asl,w) ->
+  let addr = if off=0 then `out_ptr:int64`
+    else vsubst[mk_small_numeral off,`Z:num`] `word_add out_ptr (word Z):int64` in
+  let ptn = mk_var("pt"^string_of_int nidx,`:(128)word`) in
+  let store = tryfind (fun (_,th) -> let t=concl th in
+    if is_eq t &&
+       (try fst(dest_const(rator(rator(lhs t))))="read" with _->false) &&
+       (try aconv (rand(rand(rand(rator(lhs t))))) addr with _->false) &&
+       (try fst(dest_const(repeat rator (rand t)))="word_xor" with _->false) &&
+       (try aconv (lhand(lhand(rand t))) ptn with _->false)
+    then t else fail()) asl in
+  let ks0 = rand(lhand(rand store)) in
+  let ks =
+    if (try fst(dest_const(rator(rator ks0)))="read" with _->false)
+    then (try tryfind (fun (_,th) -> let t=concl th in
+                if is_eq t && lhs t = ks0 then rand t else fail()) asl
+          with _ -> ks0)
+    else ks0 in
+  let s13n = mk_var("s13_"^string_of_int nidx,`:(128)word`) in
+  let ctn = mk_var("ct"^string_of_int nidx,`:(128)word`) in
+  (ABBREV_TAC(mk_eq(s13n,ks)) THEN
+   ABBREV_TAC(mk_eq(ctn,
+     list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,
+       [list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,[ptn;s13n]); `rk14:(128)word`]))))
+  (asl,w);;
+
+(* --- 2-block GHASH final-closure helpers/tactics, in the 5/6/7-block
+   GCM_NB_GHASH_CLOSE framework (instantiated at N=2: 1 full + 1 partial).
+   ct abbreviation is store-based (abbrev_ct_from_store), as in bands 5/6/7. --- *)
+
+(* ============================================================ *)
+(* NEW 5B-style 2-block GHASH closer (mirrors GCM_5B_* / N=4).   *)
+(* N=2: 1 full block + 1 partial.                               *)
+(* ============================================================ *)
+
+(* xi half-swap normalizers (defined inline; mirror XI_HS_LO_5/HI_5). *)
+let XI_HS_LO_2 = prove
+ (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (0,64):(64)word =
+   word_subword (word_reversefields 8 xi) (0,64)`,
+  REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC WORD_BLAST);;
+let XI_HS_HI_2 = prove
+ (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (64,64):(64)word =
+   word_subword (word_reversefields 8 xi) (64,64)`,
+  REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC WORD_BLAST);;
+
+(* ct1 closer (counter = ivec, no inc) — mirror CT_CLOSE_5/4/3. *)
+let CT_CLOSE_2 nidx =
+  let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
+  EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
+  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+
+(* Step 1+2: establish the single full-block spec-form ct fold F1 and fold it
+   into the RHS ghash list — mirror GCM_5B_FOLD_SPEC_CTS (folds 4). *)
+let GCM_2B_FOLD_SPEC_CTS : tactic =
+  (* F1 *)
+  SUBGOAL_THEN
+   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
+                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   ASSUME_TAC THENL
+   [EXPAND_TAC "ct1" THEN
+    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  (* fold the single full block into the RHS ghash list only. *)
+  (fun (asl,w) ->
+     let getf n = snd(find (fun (_,th) ->
+       is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
+       (let l=lhand(concl th) in
+        (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
+        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1] (asl,w));;
+
+(* Step 3: b0-general mask-register collapse over the assumptions. *)
+let GCM_2B_MASK_COLLAPSE_ASMS : tactic =
+  SUBGOAL_THEN `1 <= (byte_len:num) /\ byte_len <= 16` ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  FIRST_ASSUM(fun bth -> if concl bth = `1 <= (byte_len:num) /\ byte_len <= 16` then
+    RULE_ASSUM_TAC(REWRITE_RULE[GEN `b0:int128` (MP (SPEC_ALL TWOBLOCK_MASK_REG) bth)]) else NO_TAC);;
+
+(* Step 5: bridge the machine block-2 keystream (collapsed +1 counter, baked
+   into final_xi) to the spec ct2 — mirror GCM_5B_KS5_FOLD (+4) / KS3 (+2). *)
+let GCM_2B_KS2_FOLD : tactic = fun (asl,w) ->
+  let substr sub s =
+    let ls=String.length s and lb=String.length sub in
+    let rec go i = if i+lb>ls then false
+                   else if String.sub s i lb = sub then true else go(i+1) in go 0 in
+  let fxidef = snd(find (fun (_,th) ->
+    is_eq(concl th) && (try rand(concl th)=`final_xi:(128)word` with _->false)) asl) in
+  let body = lhs(concl fxidef) in
+  let best = ref None in
+  let rec walk t =
+    (try let s=string_of_term t in
+      if substr "pt2" s && substr "aese" s && substr "rk14" s &&
+         (try fst(dest_const(repeat rator t))="word_xor" with _->false) &&
+         (match !best with None->true | Some b -> String.length s < String.length(string_of_term b))
+      then best := Some t
+     with _->());
+    (match t with Comb(a,b)->walk a; walk b | Abs(_,b)->walk b | _->()) in
+  walk body;
+  let ks2 = (match !best with Some t->t | None->failwith "KS2_FOLD: ks2 not found") in
+  (SUBGOAL_THEN (mk_eq(ks2, `ct2:(128)word`)) ASSUME_TAC THENL
+    [CONV_TAC SYM_CONV THEN EXPAND_TAC "ct2" THEN
+     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[WORD_XOR_ASSOC] THEN
+     AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+     REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+     REWRITE_TAC[gcm_ctr_inc] THEN
+     REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
+     REWRITE_TAC[WORD_BLAST `!x:(32)word. word_reversefields 8 x = word_bytereverse x`] THEN
+     REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
+     REWRITE_TAC[BYTEREVERSE_JOIN_FOLD];
+     ALL_TAC] THEN
+   FIRST_ASSUM(fun th ->
+     if is_eq(concl th) && rand(concl th)=`ct2:(128)word` &&
+        (try fst(dest_const(repeat rator (lhs(concl th))))="word_xor" with _->false) &&
+        String.length(string_of_term(lhs(concl th))) > 1000
+     then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
+  (asl,w);;
+
+(* Closer tail (ctm2 abbrev + bridge + atomic ABBREVs + qS/qB), minus the
+   final BINOP — mirror GCM_5B_TAIL_NOFINAL for N=2.  No h^3 normalization
+   (only h, h^2 appear). *)
+let GCM_2B_TAIL_NOFINAL : tactic =
+  ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
+  ABBREV_TAC `ctm2 = word_and (ct2:(128)word) mask` THEN
+  SUBGOAL_THEN `word_and (mask:(128)word) (ct2:(128)word) = ctm2`
+    (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL [
+    EXPAND_TAC "ctm2" THEN CONV_TAC WORD_BITWISE_RULE; ALL_TAC ] THEN
+  (* Apply 2-block bridge. *)
+  MP_TAC(SPECL
+    [`word_reversefields 8 (word_xor xi ct1):int128`;
+     `word_reversefields 8 ctm2:int128`;
+     `h:int128`; `h1k:int128`;
+     `word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word`]
+    GHASH_2BLOCK_KARATSUBA_EQ_POLYVAL_ACC) THEN
+  SUBGOAL_THEN
+    `word_subword (word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
+     karatsuba_mid (polyval_dot h h)`
+    (fun th -> REWRITE_TAC[th]) THENL [
+    SUBGOAL_THEN
+      `word_subword (word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
+       word_subword (h1k:(128)word) (64,64):(64)word`
+      (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ASM_REWRITE_TAC[]]; ALL_TAC ] THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
+  REWRITE_TAC[ghash_2block_karatsuba; LET_DEF; LET_END_DEF] THEN
+  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  SUBGOAL_THEN
+    `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
+     karatsuba_mid (polyval_dot h h)`
+    (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ALL_TAC] THEN
+  REWRITE_TAC[GSYM karatsuba_mid] THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
+  CONV_TAC SYM_CONV THEN
+  FIRST_ASSUM(fun th ->
+    if is_eq(concl th) && rand(concl th) = `final_xi:(128)word` &&
+       (try (let l = lhs(concl th) in is_comb l &&
+             (let r = rator l in not(is_comb r && (try fst(dest_const(rator r)) = "read" with _ -> false))))
+        with _ -> false)
+    then SUBST1_TAC(SYM th) else NO_TAC) THEN
+  REWRITE_TAC[REV64_LOWER_LANE; REV64_UPPER_LANE; REV8_JOIN_FOLD] THEN
+  MATCH_MP_TAC(MESON[]
+    `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
+  REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
+  REWRITE_TAC[WORD_JOIN_SELF_MID] THEN
+  CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+              KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION; WORD_JOIN_SELF_MID;
+              WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
+              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
+              WORD_XOR_0; WORD_XOR_ASSOC;
+              REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  CONV_TAC(TOP_DEPTH_CONV PMUL_NORM_CONV) THEN
+  SUBGOAL_THEN
+    `word_subword (word 0:(128)word) (0,64):(64)word = word 0 /\
+     word_subword (word 0:(128)word) (64,64):(64)word = word 0`
+    (fun th -> REWRITE_TAC[th]) THENL [CONJ_TAC THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
+  REWRITE_TAC[WORD_XOR_0; WORD_XOR_0_LEFT] THEN
+  REWRITE_TAC[karatsuba_mid; WORD_REVERSEFIELDS_XOR_8_128; WORD_SUBWORD_XOR] THEN
+  (* 10 atomic ABBREVs (c1lo..c2hi, xi, hd..he). *)
+  ABBREV_TAC `(c1lo:(64)word) = word_subword (word_reversefields 8 (ct1:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(c1hi:(64)word) = word_subword (word_reversefields 8 (ct1:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(c2lo:(64)word) = word_subword (word_reversefields 8 (ctm2:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(c2hi:(64)word) = word_subword (word_reversefields 8 (ctm2:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(xilo:(64)word) = word_subword (word_reversefields 8 (xi:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(xihi:(64)word) = word_subword (word_reversefields 8 (xi:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(hd0:(64)word) = word_subword (h:(128)word) (0,64)` THEN
+  ABBREV_TAC `(hd1:(64)word) = word_subword (h:(128)word) (64,64)` THEN
+  ABBREV_TAC `(he0:(64)word) = word_subword ((polyval_dot h h):(128)word) (0,64)` THEN
+  ABBREV_TAC `(he1:(64)word) = word_subword ((polyval_dot h h):(128)word) (64,64)` THEN
+  ASM_REWRITE_TAC[] THEN
+  (* 6 inner pmul ABBREVs (w1..w2). *)
+  ABBREV_TAC `(w1lo:(128)word) = word_pmul (word_xor (xilo:(64)word) (c1lo:(64)word)) (he0:(64)word)` THEN
+  ABBREV_TAC `(w1hi:(128)word) = word_pmul (word_xor (xihi:(64)word) (c1hi:(64)word)) (he1:(64)word)` THEN
+  ABBREV_TAC `(w1md:(128)word) = word_pmul (word_xor (word_xor (xihi:(64)word) (c1hi:(64)word)) (word_xor (xilo:(64)word) (c1lo:(64)word))) (word_xor (he0:(64)word) (he1:(64)word))` THEN
+  ABBREV_TAC `(w2lo:(128)word) = word_pmul (c2lo:(64)word) (hd0:(64)word)` THEN
+  ABBREV_TAC `(w2hi:(128)word) = word_pmul (c2hi:(64)word) (hd1:(64)word)` THEN
+  ABBREV_TAC `(w2md:(128)word) = word_pmul (word_xor (c2hi:(64)word) (c2lo:(64)word)) (word_xor (hd0:(64)word) (hd1:(64)word))` THEN
+  REWRITE_TAC[DOUBLE_SUBWORD_JOIN; DOUBLE_SUBWORD_JOIN_HI; WORD_SUBWORD_XOR] THEN
+  SUBGOAL_THEN
+    `word_pmul (word_xor (xihi:(64)word) (word_xor (c1hi:(64)word) (word_xor (xilo:(64)word) (c1lo:(64)word)))) (word_xor (he0:(64)word) (he1:(64)word)):(128)word = w1md`
+    (fun th -> REWRITE_TAC[th]) THENL
+    [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  (* 12 z-vars. *)
+  ABBREV_TAC `(w1lo_l:(64)word) = word_subword (w1lo:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1lo_h:(64)word) = word_subword (w1lo:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w1hi_l:(64)word) = word_subword (w1hi:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1hi_h:(64)word) = word_subword (w1hi:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w1md_l:(64)word) = word_subword (w1md:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1md_h:(64)word) = word_subword (w1md:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w2lo_l:(64)word) = word_subword (w2lo:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w2lo_h:(64)word) = word_subword (w2lo:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w2hi_l:(64)word) = word_subword (w2hi:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w2hi_h:(64)word) = word_subword (w2hi:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w2md_l:(64)word) = word_subword (w2md:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w2md_h:(64)word) = word_subword (w2md:(128)word) (64,64)` THEN
+  ASM_REWRITE_TAC[] THEN
+  (* Normalize LHS mid-pmuls to abbreviated w?md (swapped xor arg order). *)
+  SUBGOAL_THEN `word_pmul (word_xor (c2lo:(64)word) (c2hi:(64)word)) (word_xor (hd0:(64)word) (hd1:(64)word)):(128)word = w2md`
+    (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w2md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  SUBGOAL_THEN `word_pmul (word_xor (xilo:(64)word) (word_xor (c1lo:(64)word) (word_xor (xihi:(64)word) (c1hi:(64)word)))) (word_xor (he0:(64)word) (he1:(64)word)):(128)word = w1md`
+    (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  (* qS: small Barrett pmul; fold both XOR orderings. *)
+  ABBREV_TAC `(qS:(128)word) = word_pmul (word_xor (w2lo_l:(64)word) (w1lo_l)) (word 13979173243358019584:(64)word)` THEN
+  SUBGOAL_THEN `word_pmul (word_xor (w1lo_l:(64)word) (w2lo_l)) (word 13979173243358019584:(64)word):(128)word = qS`
+    (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "qS" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  (* qB: big Barrett pmul; fold the LHS-order copy via bubble_sort_conv. *)
+  ABBREV_TAC `(qB:(128)word) = word_pmul
+    (word_xor (w2md_l:(64)word) (word_xor w1md_l (word_xor w2lo_l (word_xor w1lo_l (word_xor w2hi_l (word_xor w1hi_l (word_xor (word_subword (qS:(128)word) (0,64)) (word_xor w2lo_h (w1lo_h))))))))) (word 13979173243358019584:(64)word)` THEN
+  SUBGOAL_THEN
+    `word_pmul (word_xor (w1lo_h:(64)word) (word_xor w2lo_h (word_xor w1md_l (word_xor w2md_l (word_xor w1hi_l (word_xor w2hi_l (word_xor w1lo_l (word_xor w2lo_l ((word_subword (qS:(128)word) (0,64))))))))))) (word 13979173243358019584:(64)word):(128)word = qB`
+    (fun th -> REWRITE_TAC[th]) THENL
+    [EXPAND_TAC "qB" THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+     CONV_TAC(BINOP_CONV bubble_sort_conv) THEN REFL_TAC; ALL_TAC];;
+
+(* per-half XOR-AC closer — mirror GCM_5B_HALF_CLOSE (2 mids, qS 2, qB 7). *)
+let GCM_2B_FOLD_MIDS_TAC : tactic =
+  fun (asl,gg) ->
+    let rec finds hd t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = hd ->
+          a :: (finds hd a (finds hd x acc))
+      | Comb(l,r) -> finds hd l (finds hd r acc)
+      | Abs(_,b) -> finds hd b acc | _ -> acc in
+    let hew = `word_xor (he0:(64)word) he1`
+    and hdw = `word_xor (hd0:(64)word) hd1` in
+    let mk tgt hd arg =
+      SUBGOAL_THEN
+        (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[arg;hd]),tgt))
+        (fun th -> REWRITE_TAC[th]) THENL
+       [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+        CONV_TAC WORD_RULE; ALL_TAC] in
+    (EVERY ((map (mk `w1md:(128)word` hew) (setify(finds hew gg [])))
+          @ (map (mk `w2md:(128)word` hdw) (setify(finds hdw gg []))))) (asl,gg);;
+
+let GCM_2B_FOLD_TO tgt natoms : tactic =
+  let w64 = `word 13979173243358019584:(64)word` in
+  fun (asl,gg) ->
+    let rec finds t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = w64 ->
+          a :: (finds a (finds x acc))
+      | Comb(l,r) -> finds l (finds r acc) | Abs(_,b) -> finds b acc | _ -> acc in
+    let rec at t = match t with
+      | Comb(Comb(Const("word_xor",_),x),y) -> at x @ at y | _ -> [t] in
+    let args = List.filter (fun a -> List.length(at a) = natoms) (setify(finds gg [])) in
+    (EVERY (map (fun a ->
+       FIRST [SUBGOAL_THEN
+                (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[a;w64]),tgt))
+                (fun th -> REWRITE_TAC[th]) THENL
+               [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+                CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC; ALL_TAC];
+              ALL_TAC]) args)) (asl,gg);;
+
+let GCM_2B_HALF_CLOSE : tactic =
+  GCM_2B_FOLD_MIDS_TAC THEN ASM_REWRITE_TAC[] THEN
+  GCM_2B_FOLD_TO `qS:(128)word` 2 THEN ASM_REWRITE_TAC[] THEN
+  GCM_2B_FOLD_TO `qB:(128)word` 9 THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC;;
+
+(* The full GHASH closer — mirror GCM_5B_GHASH_CLOSE. *)
+let GCM_2B_GHASH_CLOSE : tactic =
+  GCM_2B_FOLD_SPEC_CTS THEN
+  REWRITE_TAC[GHASH_POLYVAL_ACC_2; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
+  GCM_2B_MASK_COLLAPSE_ASMS THEN
+  GCM_2B_KS2_FOLD THEN
+  GCM_2B_TAIL_NOFINAL THEN
+  REWRITE_TAC[XI_HS_LO_2; XI_HS_HI_2] THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   `word_pmul (word_xor (xihi:(64)word) (word_xor c1hi (word_xor xilo c1lo)))
+              (word_xor (he0:(64)word) he1):(128)word = w1md`
+   (fun th -> REWRITE_TAC[th]) THENL
+   [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  BINOP_TAC THENL [GCM_2B_HALF_CLOSE; GCM_2B_HALF_CLOSE];;
+
+(* masked-ct2 store conjunct closer — mirror GCM_5B_MASKED_CT5_CLOSE (+1). *)
+let GCM_2B_MASKED_CT2_CLOSE : tactic =
+  SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP TWOBLOCK_MASK_REG th]) THEN
+  REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
+  MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[WORD_XOR_ASSOC] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+  REWRITE_TAC[gcm_ctr_inc] THEN
+  REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
+  REWRITE_TAC[WORD_BLAST `!x:(32)word. word_reversefields 8 x = word_bytereverse x`] THEN
+  REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
+  REWRITE_TAC[BYTEREVERSE_JOIN_FOLD];;
+
+(* Named goal for the 2BLOCK band (shared spec lifted by the ABS layer). *)
+let gcm_2b_goal =
+ `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
     (pt1:(128)word) (pt2:(128)word) (out0:(128)word) (ivec:(128)word)
     (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word)
     (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word)
@@ -1692,42 +2235,19 @@ let AES256_GCM_ENCRYPT_LT_2BLOCK_CONCRETE = prove
                   memory :> bytes64 (word_add stackptr (word 48));
                   memory :> bytes64 (word_add stackptr (word 56));
                   memory :> bytes64 (word_add stackptr (word 64));
-                  memory :> bytes64 (word_add stackptr (word 72))])`,
-  (* Entry + nop/cbz (1-2); prologue (3-19); 8-lane counter & AES (20-263). *)
-  GCM_INIT_TAC GCM_CBZ_LEMMA2 THEN
-  GCM_PROLOGUE_TAC THEN
-  GCM_RUN 20 263 THEN
+                  memory :> bytes64 (word_add stackptr (word 72))])`;;
 
-  (* In-loop guard (264-266): X5 collapses to in_ptr so b.ge is taken. *)
-  GCM_INLOOP_GUARD_TAC GCM_X5_LEMMA2 THEN
-
-  (* Tail entry loads (267-272); collapse the tail length X5 = word(16+byte_len). *)
-  GCM_RUN 267 272 THEN GCM_BND16 GCM_X5TAIL_LEMMA2 THEN
-
-  (* Tail length cascade (273-321): thresholds 32..112 fall through, threshold
-     0x10 is taken (b.gt) into .L256_enc_blocks_more_than_1. *)
+let AES256_GCM_ENCRYPT_LT_2BLOCK_CONCRETE = prove
+ (gcm_2b_goal,
+  (* ---- symbolic simulation (store-based ct abbreviation) ---- *)
+  GCM_INIT_TAC GCM_CBZ_LEMMA2 THEN GCM_PROLOGUE_TAC THEN GCM_RUN 20 263 THEN
+  GCM_INLOOP_GUARD_TAC GCM_X5_LEMMA2 THEN GCM_RUN 267 272 THEN
+  GCM_BND16 GCM_X5TAIL_LEMMA2 THEN
   GCM_RUN_THEN GCM_CASCADE2_TAC 273 321 THEN
-
-  (* more_than_1 body (322-331): st1 of block 1 + first GHASH. *)
-  GCM_RUN 322 331 THEN
-
-  (* Abbreviate the two AES block outputs (`ct1` from the out_ptr store, `ct2`
-     from Q9) so the two-block closures fold them back. *)
-  FIRST_ASSUM(fun th -> if is_eq(concl th) && can(term_match[]`read (memory :> bytes128 out_ptr) (s:armstate)`)(lhs(concl th)) &&
-       (try fst(dest_const(repeat rator (rand(concl th)))) = "word_xor" with _ -> false)
-    then ABBREV_TAC(mk_eq(mk_var("s13_1",`:(128)word`), rand(lhand(rand(concl th))))) else NO_TAC) THEN
-  ABBREV_TAC `ct1 = word_xor (word_xor pt1 s13_1) rk14 :(128)word` THEN
-  FIRST_ASSUM(fun th -> if can (term_match [] `read Q9 (s:armstate) = (x:int128)`) (concl th) &&
-       (try fst(dest_const(repeat rator (rand(concl th)))) = "word_xor" with _ -> false)
-    then ABBREV_TAC(mk_eq(mk_var("s13_2",`:(128)word`), rand(lhand(rand(concl th))))) else NO_TAC) THEN
-  ABBREV_TAC `ct2 = word_xor (word_xor pt2 s13_2) rk14 :(128)word` THEN
-
-  (* Tail mask build (332-350); collapse the data-dependent mask register. *)
+  GCM_RUN 322 331 THEN abbrev_ct_from_store 0 1 THEN
   GCM_RUN 332 350 THEN
   SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP TWOBLOCK_MASK_REG th])) THEN
-
-  (* Masked store, GHASH Karatsuba, Barrett reduce up to EOR3+EXT (351-374). *)
   GCM_RUN 351 374 THEN
   GCM_NBLOCK_POST_SIM_NORMALIZE_TAC THEN ABBREV_FINAL_XI_TAC THEN
   ARM_STEPS_TAC AES256_GCM_EXEC (375--381) THEN
@@ -1735,17 +2255,15 @@ let AES256_GCM_ENCRYPT_LT_2BLOCK_CONCRETE = prove
   SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP TWOBLOCK_MASK_REG th]) THEN
   ASM_SIMP_TAC[TWOBLOCK_USHR] THEN
-  CONJ_TAC THENL [GCM_CT1_STEP_TAC; ALL_TAC] THEN
-  CONJ_TAC THENL [
-    SUBGOAL_THEN `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2:(128)word`
-      ASSUME_TAC THENL [EXPAND_TAC "ct2" THEN GCM_CTR1_FOLD_TAC "s13_2"; ALL_TAC] THEN
-    ASM_REWRITE_TAC[NBLOCK_MASK_IDEM]; ALL_TAC] THEN
-
-
-  (* Masked-GHASH closure for the more_than_1 path (the single-binary variant
-     of GCM_2BLOCK_GHASH_STEP_MASKED_TAC: folds the reassembled xi, then
-     AC-normalises the two Karatsuba halves). *)
-  GCM_2BLOCK_GHASH_VIA_BRANCH_TAC);;
+  (* ---- three conjuncts: ct1, masked-ct2, GHASH ---- *)
+  CONJ_TAC THENL [CT_CLOSE_2 1; ALL_TAC] THEN
+  CONJ_TAC THENL [GCM_2B_MASKED_CT2_CLOSE; ALL_TAC] THEN
+  (* ---- ct2 abbreviation (spec form) so the closer's ctm2 works ---- *)
+  ABBREV_TAC `ct2 = word_xor pt2
+    (aes256_block_enc (gcm_ctr_inc ivec)
+                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+  (* ---- GHASH conjunct ---- *)
+  GCM_2B_GHASH_CLOSE);;
 
 
 (* ========================================================================= *)
@@ -1850,41 +2368,333 @@ let GCM_CASCADE3_TAC : tactic =
   else NO_TAC);;
 
 
-(* Abbreviate the two full-block ciphertexts ct1 (out_ptr) / ct2 (out_ptr+16) *)
-(* and their AES keystreams, so the two-block closures fold them back.        *)
-let GCM_3B_CT1_ABBREV_TAC : tactic =
-  FIRST_ASSUM(fun th -> if is_eq(concl th) &&
-       can(term_match[]`read (memory :> bytes128 out_ptr) (s:armstate)`)(lhs(concl th)) &&
-       (try fst(dest_const(repeat rator (rand(concl th)))) = "word_xor" with _ -> false)
-    then ABBREV_TAC(mk_eq(mk_var("s13_1",`:(128)word`), rand(lhand(rand(concl th))))) else NO_TAC) THEN
-  ABBREV_TAC `ct1 = word_xor (word_xor pt1 s13_1) rk14 :(128)word` THEN
-  FIRST_ASSUM(fun th -> if is_eq(concl th) &&
-       can(term_match[]`read (memory :> bytes128 (word_add out_ptr (word 16))) (s:armstate)`)(lhs(concl th)) &&
-       (try fst(dest_const(repeat rator (rand(concl th)))) = "word_xor" with _ -> false)
-    then ABBREV_TAC(mk_eq(mk_var("s13_2",`:(128)word`), rand(lhand(rand(concl th))))) else NO_TAC) THEN
-  ABBREV_TAC `ct2 = word_xor (word_xor pt2 s13_2) rk14 :(128)word`;;
 
+(* --- 3-block GHASH final-closure helpers/tactics, in the 5/6/7-block
+   GCM_NB_GHASH_CLOSE framework (instantiated at N=3: 2 full + 1 partial).
+   ct abbreviation is store-based (abbrev_ct_from_store), as in bands 5/6/7. --- *)
 
-(* Abbreviate the partial third-block ciphertext ct3 and its keystream,       *)
-(* extracted from inside the masked out_ptr+32 store.                         *)
-let GCM_3B_CT3_ABBREV_TAC : tactic =
+(* ============================================================ *)
+(* NEW 5B-style 3-block GHASH closer (mirrors GCM_5B_* / N=4).   *)
+(* N=3: 2 full blocks + 1 partial.                              *)
+(* ============================================================ *)
+
+(* xi half-swap normalizers (defined inline; mirror XI_HS_LO_5/HI_5). *)
+let XI_HS_LO_3 = prove
+ (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (0,64):(64)word =
+   word_subword (word_reversefields 8 xi) (0,64)`,
+  REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC WORD_BLAST);;
+let XI_HS_HI_3 = prove
+ (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (64,64):(64)word =
+   word_subword (word_reversefields 8 xi) (64,64)`,
+  REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC WORD_BLAST);;
+
+(* ct1 closer (counter = ivec, no inc) — mirror CT_CLOSE_5/CT_CLOSE_4. *)
+let CT_CLOSE_3 nidx =
+  let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
+  EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
+  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+
+(* 3-block CT step tactics (uniform generator). *)
+let GCM_3BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 3 2;;
+
+(* Step 1+2: establish the two full-block spec-form ct folds F1..F2 and fold
+   them into the RHS ghash list — mirror GCM_5B_FOLD_SPEC_CTS (folds 4). *)
+let GCM_3B_FOLD_SPEC_CTS : tactic =
+  (* F1 *)
+  SUBGOAL_THEN
+   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
+                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   ASSUME_TAC THENL
+   [EXPAND_TAC "ct1" THEN
+    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  (* F2 *)
+  SUBGOAL_THEN
+   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
+                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   ASSUME_TAC THENL
+   [CONV_TAC SYM_CONV THEN GCM_3BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
+  (* fold the two full blocks into the RHS ghash list only. *)
+  (fun (asl,w) ->
+     let getf n = snd(find (fun (_,th) ->
+       is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
+       (let l=lhand(concl th) in
+        (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
+        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2] (asl,w));;
+
+(* Step 3: b0-general mask-register collapse over the assumptions. *)
+let GCM_3B_MASK_COLLAPSE_ASMS : tactic =
+  SUBGOAL_THEN `1 <= (byte_len:num) /\ byte_len <= 16` ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  FIRST_ASSUM(fun bth -> if concl bth = `1 <= (byte_len:num) /\ byte_len <= 16` then
+    RULE_ASSUM_TAC(REWRITE_RULE[GEN `b0:int128` (MP (SPEC_ALL THREEBLOCK_MASK_REG) bth)]) else NO_TAC);;
+
+(* Step 5: bridge the machine block-3 keystream (collapsed +2 counter, baked
+   into final_xi) to the spec ct3 — mirror GCM_5B_KS5_FOLD (+4) / KS4 (+3). *)
+let GCM_3B_KS3_FOLD : tactic = fun (asl,w) ->
+  let substr sub s =
+    let ls=String.length s and lb=String.length sub in
+    let rec go i = if i+lb>ls then false
+                   else if String.sub s i lb = sub then true else go(i+1) in go 0 in
+  let fxidef = snd(find (fun (_,th) ->
+    is_eq(concl th) && (try rand(concl th)=`final_xi:(128)word` with _->false)) asl) in
+  let body = lhs(concl fxidef) in
+  let best = ref None in
+  let rec walk t =
+    (try let s=string_of_term t in
+      if substr "pt3" s && substr "aese" s && substr "rk14" s &&
+         (try fst(dest_const(repeat rator t))="word_xor" with _->false) &&
+         (match !best with None->true | Some b -> String.length s < String.length(string_of_term b))
+      then best := Some t
+     with _->());
+    (match t with Comb(a,b)->walk a; walk b | Abs(_,b)->walk b | _->()) in
+  walk body;
+  let ks3 = (match !best with Some t->t | None->failwith "KS3_FOLD: ks3 not found") in
+  let bri = WORD_BLAST `word_bytereverse (word_bytereverse (x:(32)word)) = x` in
+  let add2 = WORD_RULE `word_add (word_add (x:(32)word) (word 1)) (word 1) = word_add x (word 2)` in
+  (SUBGOAL_THEN (mk_eq(ks3, `ct3:(128)word`)) ASSUME_TAC THENL
+    [CONV_TAC SYM_CONV THEN EXPAND_TAC "ct3" THEN
+     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[WORD_XOR_ASSOC] THEN
+     AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+     REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+     REWRITE_TAC[gcm_ctr_inc] THEN
+     REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS; WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
+     REWRITE_TAC[INSERT_SUBWORD; INSERT_IDEM] THEN
+     REWRITE_TAC[bri] THEN REWRITE_TAC[add2] THEN
+     REWRITE_TAC[CTR_WORD_INSERT];
+     ALL_TAC] THEN
+   FIRST_ASSUM(fun th ->
+     if is_eq(concl th) && rand(concl th)=`ct3:(128)word` &&
+        (try fst(dest_const(repeat rator (lhs(concl th))))="word_xor" with _->false) &&
+        String.length(string_of_term(lhs(concl th))) > 1000
+     then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
+  (asl,w);;
+
+(* Closer tail (ctm3 abbrev + h^3 norm + bridge + atomic ABBREVs + qS/qB),
+   minus the final BINOP — mirror GCM_5B_TAIL_NOFINAL for N=3. *)
+let GCM_3B_TAIL_NOFINAL : tactic =
+  ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
+  ABBREV_TAC `ctm3 = word_and (ct3:(128)word) mask` THEN
+  SUBGOAL_THEN `word_and (mask:(128)word) (ct3:(128)word) = ctm3`
+    (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL [
+    EXPAND_TAC "ctm3" THEN CONV_TAC WORD_BITWISE_RULE; ALL_TAC ] THEN
+  (* Normalize h^3 left-assoc -> symmetric (to match the 3-block bridge). *)
+  SUBGOAL_THEN
+    `polyval_dot (polyval_dot (h:int128) h) h = polyval_dot h (polyval_dot h h)`
+    (fun th -> REWRITE_TAC[th]) THENL
+    [REWRITE_TAC[polyval_dot] THEN REWRITE_TAC[WORD_PMUL_SYM]; ALL_TAC] THEN
+  (* Apply 3-block bridge. *)
+  MP_TAC(SPECL
+    [`word_reversefields 8 (word_xor xi ct1):int128`;
+     `word_reversefields 8 ct2:int128`; `word_reversefields 8 ctm3:int128`;
+     `h:int128`; `h1k:int128`;
+     `word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word`;
+     `h3k:int128`]
+    GHASH_3BLOCK_KARATSUBA_EQ_POLYVAL_ACC) THEN
+  SUBGOAL_THEN
+    `word_subword (word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
+     karatsuba_mid (polyval_dot h h)`
+    (fun th -> REWRITE_TAC[th]) THENL [
+    SUBGOAL_THEN
+      `word_subword (word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
+       word_subword (h1k:(128)word) (64,64):(64)word`
+      (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ASM_REWRITE_TAC[]]; ALL_TAC ] THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
+  REWRITE_TAC[ghash_3block_karatsuba; LET_DEF; LET_END_DEF] THEN
+  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  SUBGOAL_THEN
+    `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
+     karatsuba_mid (polyval_dot h h)`
+    (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ALL_TAC] THEN
+  REWRITE_TAC[GSYM karatsuba_mid] THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
+  CONV_TAC SYM_CONV THEN
   FIRST_ASSUM(fun th ->
-    if is_eq(concl th) &&
-       can(term_match[]`read (memory :> bytes128 (word_add out_ptr (word 32))) (s:armstate)`)(lhs(concl th))
-    then
-      let rhs = rand(concl th) in
-      let ct3t = find_term (fun t ->
-        try is_comb t && fst(dest_const(rator(rator t)))="word_xor" &&
-            (let a = rand(rator t) in is_comb a && fst(dest_const(rator(rator a)))="word_xor" &&
-             rand(rator a) = `pt3:(128)word`)
-        with _ -> false) rhs in
-      let ks = rand(lhand ct3t) in
-      ABBREV_TAC(mk_eq(mk_var("s13_3",`:(128)word`), ks))
-    else NO_TAC) THEN
-  ABBREV_TAC `ct3 = word_xor (word_xor pt3 s13_3) rk14 :(128)word`;;
+    if is_eq(concl th) && rand(concl th) = `final_xi:(128)word` &&
+       (try (let l = lhs(concl th) in is_comb l &&
+             (let r = rator l in not(is_comb r && (try fst(dest_const(rator r)) = "read" with _ -> false))))
+        with _ -> false)
+    then SUBST1_TAC(SYM th) else NO_TAC) THEN
+  REWRITE_TAC[REV64_LOWER_LANE; REV64_UPPER_LANE; REV8_JOIN_FOLD] THEN
+  MATCH_MP_TAC(MESON[]
+    `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
+  REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
+  CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+              KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
+              WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
+              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
+              WORD_XOR_0; WORD_XOR_ASSOC;
+              REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
+  CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  CONV_TAC(TOP_DEPTH_CONV PMUL_NORM_CONV) THEN
+  SUBGOAL_THEN
+    `word_subword (word 0:(128)word) (0,64):(64)word = word 0 /\
+     word_subword (word 0:(128)word) (64,64):(64)word = word 0`
+    (fun th -> REWRITE_TAC[th]) THENL [CONJ_TAC THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
+  REWRITE_TAC[WORD_XOR_0; WORD_XOR_0_LEFT] THEN
+  REWRITE_TAC[karatsuba_mid; WORD_REVERSEFIELDS_XOR_8_128; WORD_SUBWORD_XOR] THEN
+  (* 14 atomic ABBREVs (c1lo..c3hi, xi, hd..hf). *)
+  ABBREV_TAC `(c1lo:(64)word) = word_subword (word_reversefields 8 (ct1:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(c1hi:(64)word) = word_subword (word_reversefields 8 (ct1:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(c2lo:(64)word) = word_subword (word_reversefields 8 (ct2:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(c2hi:(64)word) = word_subword (word_reversefields 8 (ct2:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(c3lo:(64)word) = word_subword (word_reversefields 8 (ctm3:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(c3hi:(64)word) = word_subword (word_reversefields 8 (ctm3:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(xilo:(64)word) = word_subword (word_reversefields 8 (xi:(128)word)) (0,64)` THEN
+  ABBREV_TAC `(xihi:(64)word) = word_subword (word_reversefields 8 (xi:(128)word)) (64,64)` THEN
+  ABBREV_TAC `(hd0:(64)word) = word_subword (h:(128)word) (0,64)` THEN
+  ABBREV_TAC `(hd1:(64)word) = word_subword (h:(128)word) (64,64)` THEN
+  ABBREV_TAC `(he0:(64)word) = word_subword ((polyval_dot h h):(128)word) (0,64)` THEN
+  ABBREV_TAC `(he1:(64)word) = word_subword ((polyval_dot h h):(128)word) (64,64)` THEN
+  ABBREV_TAC `(hf0:(64)word) = word_subword ((polyval_dot h (polyval_dot h h)):(128)word) (0,64)` THEN
+  ABBREV_TAC `(hf1:(64)word) = word_subword ((polyval_dot h (polyval_dot h h)):(128)word) (64,64)` THEN
+  ASM_REWRITE_TAC[] THEN
+  (* 9 inner pmul ABBREVs (w1..w3). *)
+  ABBREV_TAC `(w1lo:(128)word) = word_pmul (word_xor (xilo:(64)word) (c1lo:(64)word)) (hf0:(64)word)` THEN
+  ABBREV_TAC `(w1hi:(128)word) = word_pmul (word_xor (xihi:(64)word) (c1hi:(64)word)) (hf1:(64)word)` THEN
+  ABBREV_TAC `(w1md:(128)word) = word_pmul (word_xor (word_xor (xihi:(64)word) (c1hi:(64)word)) (word_xor (xilo:(64)word) (c1lo:(64)word))) (word_xor (hf0:(64)word) (hf1:(64)word))` THEN
+  ABBREV_TAC `(w2lo:(128)word) = word_pmul (c2lo:(64)word) (he0:(64)word)` THEN
+  ABBREV_TAC `(w2hi:(128)word) = word_pmul (c2hi:(64)word) (he1:(64)word)` THEN
+  ABBREV_TAC `(w2md:(128)word) = word_pmul (word_xor (c2hi:(64)word) (c2lo:(64)word)) (word_xor (he0:(64)word) (he1:(64)word))` THEN
+  ABBREV_TAC `(w3lo:(128)word) = word_pmul (c3lo:(64)word) (hd0:(64)word)` THEN
+  ABBREV_TAC `(w3hi:(128)word) = word_pmul (c3hi:(64)word) (hd1:(64)word)` THEN
+  ABBREV_TAC `(w3md:(128)word) = word_pmul (word_xor (c3hi:(64)word) (c3lo:(64)word)) (word_xor (hd0:(64)word) (hd1:(64)word))` THEN
+  REWRITE_TAC[DOUBLE_SUBWORD_JOIN; DOUBLE_SUBWORD_JOIN_HI; WORD_SUBWORD_XOR] THEN
+  SUBGOAL_THEN
+    `word_pmul (word_xor (xihi:(64)word) (word_xor (c1hi:(64)word) (word_xor (xilo:(64)word) (c1lo:(64)word)))) (word_xor (hf0:(64)word) (hf1:(64)word)):(128)word = w1md`
+    (fun th -> REWRITE_TAC[th]) THENL
+    [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  (* 18 z-vars. *)
+  ABBREV_TAC `(w1lo_l:(64)word) = word_subword (w1lo:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1lo_h:(64)word) = word_subword (w1lo:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w1hi_l:(64)word) = word_subword (w1hi:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1hi_h:(64)word) = word_subword (w1hi:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w1md_l:(64)word) = word_subword (w1md:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w1md_h:(64)word) = word_subword (w1md:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w2lo_l:(64)word) = word_subword (w2lo:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w2lo_h:(64)word) = word_subword (w2lo:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w2hi_l:(64)word) = word_subword (w2hi:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w2hi_h:(64)word) = word_subword (w2hi:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w2md_l:(64)word) = word_subword (w2md:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w2md_h:(64)word) = word_subword (w2md:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w3lo_l:(64)word) = word_subword (w3lo:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w3lo_h:(64)word) = word_subword (w3lo:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w3hi_l:(64)word) = word_subword (w3hi:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w3hi_h:(64)word) = word_subword (w3hi:(128)word) (64,64)` THEN
+  ABBREV_TAC `(w3md_l:(64)word) = word_subword (w3md:(128)word) (0,64)` THEN
+  ABBREV_TAC `(w3md_h:(64)word) = word_subword (w3md:(128)word) (64,64)` THEN
+  ASM_REWRITE_TAC[] THEN
+  (* Normalize LHS mid-pmuls to abbreviated w?md (swapped xor arg order). *)
+  SUBGOAL_THEN `word_pmul (word_xor (c2lo:(64)word) (c2hi:(64)word)) (word_xor (he0:(64)word) (he1:(64)word)):(128)word = w2md`
+    (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w2md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  SUBGOAL_THEN `word_pmul (word_xor (c3lo:(64)word) (c3hi:(64)word)) (word_xor (hd0:(64)word) (hd1:(64)word)):(128)word = w3md`
+    (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w3md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  SUBGOAL_THEN `word_pmul (word_xor (xilo:(64)word) (word_xor (c1lo:(64)word) (word_xor (xihi:(64)word) (c1hi:(64)word)))) (word_xor (hf0:(64)word) (hf1:(64)word)):(128)word = w1md`
+    (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  (* qS: small Barrett pmul; fold both XOR orderings. *)
+  ABBREV_TAC `(qS:(128)word) = word_pmul (word_xor (w3lo_l:(64)word) (word_xor w2lo_l (w1lo_l))) (word 13979173243358019584:(64)word)` THEN
+  SUBGOAL_THEN `word_pmul (word_xor (w1lo_l:(64)word) (word_xor w2lo_l (w3lo_l))) (word 13979173243358019584:(64)word):(128)word = qS`
+    (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "qS" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  (* qB: big Barrett pmul; fold the LHS-order copy via bubble_sort_conv. *)
+  ABBREV_TAC `(qB:(128)word) = word_pmul
+    (word_xor (w3md_l:(64)word) (word_xor w2md_l (word_xor w1md_l (word_xor w3lo_l (word_xor w2lo_l (word_xor w1lo_l (word_xor w3hi_l (word_xor w2hi_l (word_xor w1hi_l (word_xor (word_subword (qS:(128)word) (0,64)) (word_xor w3lo_h (word_xor w2lo_h (w1lo_h))))))))))))) (word 13979173243358019584:(64)word)` THEN
+  SUBGOAL_THEN
+    `word_pmul (word_xor (w1lo_h:(64)word) (word_xor w2lo_h (word_xor w3lo_h (word_xor w1md_l (word_xor w2md_l (word_xor w3md_l (word_xor w1hi_l (word_xor w2hi_l (word_xor w3hi_l (word_xor w1lo_l (word_xor w2lo_l (word_xor w3lo_l ((word_subword (qS:(128)word) (0,64))))))))))))))) (word 13979173243358019584:(64)word):(128)word = qB`
+    (fun th -> REWRITE_TAC[th]) THENL
+    [EXPAND_TAC "qB" THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+     CONV_TAC(BINOP_CONV bubble_sort_conv) THEN REFL_TAC; ALL_TAC];;
+
+(* per-half XOR-AC closer — mirror GCM_5B_HALF_CLOSE (3 mids, qS 3, qB 13). *)
+let GCM_3B_FOLD_MIDS_TAC : tactic =
+  fun (asl,gg) ->
+    let rec finds hd t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = hd ->
+          a :: (finds hd a (finds hd x acc))
+      | Comb(l,r) -> finds hd l (finds hd r acc)
+      | Abs(_,b) -> finds hd b acc | _ -> acc in
+    let hfw = `word_xor (hf0:(64)word) hf1`
+    and hew = `word_xor (he0:(64)word) he1`
+    and hdw = `word_xor (hd0:(64)word) hd1` in
+    let mk tgt hd arg =
+      SUBGOAL_THEN
+        (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[arg;hd]),tgt))
+        (fun th -> REWRITE_TAC[th]) THENL
+       [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+        CONV_TAC WORD_RULE; ALL_TAC] in
+    (EVERY ((map (mk `w1md:(128)word` hfw) (setify(finds hfw gg [])))
+          @ (map (mk `w2md:(128)word` hew) (setify(finds hew gg [])))
+          @ (map (mk `w3md:(128)word` hdw) (setify(finds hdw gg []))))) (asl,gg);;
+
+let GCM_3B_FOLD_TO tgt natoms : tactic =
+  let w64 = `word 13979173243358019584:(64)word` in
+  fun (asl,gg) ->
+    let rec finds t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = w64 ->
+          a :: (finds a (finds x acc))
+      | Comb(l,r) -> finds l (finds r acc) | Abs(_,b) -> finds b acc | _ -> acc in
+    let rec at t = match t with
+      | Comb(Comb(Const("word_xor",_),x),y) -> at x @ at y | _ -> [t] in
+    let args = List.filter (fun a -> List.length(at a) = natoms) (setify(finds gg [])) in
+    (EVERY (map (fun a ->
+       FIRST [SUBGOAL_THEN
+                (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[a;w64]),tgt))
+                (fun th -> REWRITE_TAC[th]) THENL
+               [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+                CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC; ALL_TAC];
+              ALL_TAC]) args)) (asl,gg);;
+
+let GCM_3B_HALF_CLOSE : tactic =
+  GCM_3B_FOLD_MIDS_TAC THEN ASM_REWRITE_TAC[] THEN
+  GCM_3B_FOLD_TO `qS:(128)word` 3 THEN ASM_REWRITE_TAC[] THEN
+  GCM_3B_FOLD_TO `qB:(128)word` 13 THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC;;
+
+(* The full GHASH closer — mirror GCM_5B_GHASH_CLOSE. *)
+let GCM_3B_GHASH_CLOSE : tactic =
+  GCM_3B_FOLD_SPEC_CTS THEN
+  REWRITE_TAC[GHASH_POLYVAL_ACC_3; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
+  GCM_3B_MASK_COLLAPSE_ASMS THEN
+  GCM_3B_KS3_FOLD THEN
+  GCM_3B_TAIL_NOFINAL THEN
+  REWRITE_TAC[XI_HS_LO_3; XI_HS_HI_3] THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   `word_pmul (word_xor (xihi:(64)word) (word_xor c1hi (word_xor xilo c1lo)))
+              (word_xor (hf0:(64)word) hf1):(128)word = w1md`
+   (fun th -> REWRITE_TAC[th]) THENL
+   [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  BINOP_TAC THENL [GCM_3B_HALF_CLOSE; GCM_3B_HALF_CLOSE];;
+
+(* masked-ct3 store conjunct closer — mirror GCM_5B_MASKED_CT5_CLOSE (+2). *)
+let GCM_3B_MASKED_CT3_CLOSE : tactic =
+  let bri = WORD_BLAST `word_bytereverse (word_bytereverse (x:(32)word)) = x` in
+  let add2 = WORD_RULE `word_add (word_add (x:(32)word) (word 1)) (word 1) = word_add x (word 2)` in
+  SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP THREEBLOCK_MASK_REG th]) THEN
+  REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
+  MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[WORD_XOR_ASSOC] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+  REWRITE_TAC[gcm_ctr_inc] THEN
+  REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
+  REWRITE_TAC[WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
+  REWRITE_TAC[INSERT_SUBWORD; INSERT_IDEM] THEN
+  REWRITE_TAC[bri] THEN REWRITE_TAC[add2] THEN
+  REWRITE_TAC[CTR_WORD_INSERT];;
 
 
-let AES256_GCM_ENCRYPT_LT_3BLOCK_CONCRETE = prove(
+(* Named goal for the 3BLOCK band (shared spec lifted by the ABS layer). *)
+let gcm_3b_goal =
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
     (pt1:(128)word) (pt2:(128)word) (pt3:(128)word) (out0:(128)word) (ivec:(128)word)
     (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word)
@@ -2004,34 +2814,37 @@ let AES256_GCM_ENCRYPT_LT_3BLOCK_CONCRETE = prove(
                   memory :> bytes64 (word_add stackptr (word 48));
                   memory :> bytes64 (word_add stackptr (word 56));
                   memory :> bytes64 (word_add stackptr (word 64));
-                  memory :> bytes64 (word_add stackptr (word 72))])`,
+                  memory :> bytes64 (word_add stackptr (word 72))])`;;
+
+let AES256_GCM_ENCRYPT_LT_3BLOCK_CONCRETE = prove
+ (gcm_3b_goal,
+  (* ---- symbolic simulation (store-based ct abbreviation) ---- *)
   GCM_INIT_TAC GCM_CBZ_LEMMA3 THEN GCM_PROLOGUE_TAC THEN GCM_RUN 20 263 THEN
-  GCM_INLOOP_GUARD_TAC GCM_X5_LEMMA3 THEN GCM_RUN 267 272 THEN GCM_BND16 GCM_X5TAIL_LEMMA3 THEN
+  GCM_INLOOP_GUARD_TAC GCM_X5_LEMMA3 THEN GCM_RUN 267 272 THEN
+  GCM_BND16 GCM_X5TAIL_LEMMA3 THEN
   GCM_RUN_THEN GCM_CASCADE3_TAC 273 321 THEN
-  GCM_RUN 322 346 THEN
-  GCM_3B_CT1_ABBREV_TAC THEN
+  GCM_RUN 322 346 THEN abbrev_ct_from_store 0 1 THEN abbrev_ct_from_store 16 2 THEN
   GCM_RUN 347 366 THEN
   SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP THREEBLOCK_MASK_REG th])) THEN
   GCM_RUN 367 374 THEN
-  GCM_3B_CT3_ABBREV_TAC THEN
   GCM_RUN 375 385 THEN
   GCM_NBLOCK_POST_SIM_NORMALIZE_TAC THEN ABBREV_FINAL_XI_TAC THEN
   ARM_STEPS_TAC AES256_GCM_EXEC (386--392) THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN ENSURES_FINAL_STATE_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [ASM_SIMP_TAC[THREEBLOCK_USHR]; ALL_TAC] THEN
-  CONJ_TAC THENL [
-    EXPAND_TAC "ct1" THEN EXPAND_TAC "s13_1" THEN
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  CONJ_TAC THENL [GCM_CT2_STEP_TAC; ALL_TAC] THEN
-  CONJ_TAC THENL [
-    REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
-    SUBGOAL_THEN `ct3 = word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word`
-      ASSUME_TAC THENL [EXPAND_TAC "ct3" THEN GCM_CTR2_FOLD_TAC "s13_3"; ALL_TAC] THEN
-    FIRST_ASSUM(fun th -> if is_eq(concl th) && lhs(concl th) = `ct3:(128)word`
-      then REWRITE_TAC[th] else NO_TAC) THEN REFL_TAC; ALL_TAC] THEN
-  GCM_3BLOCK_GHASH_STEP_MASKED_TAC);;
+  SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP THREEBLOCK_MASK_REG th]) THEN
+  ASM_SIMP_TAC[THREEBLOCK_USHR] THEN
+  (* ---- four conjuncts: ct1, ct2, masked-ct3, GHASH ---- *)
+  CONJ_TAC THENL [CT_CLOSE_3 1; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC SYM_CONV THEN GCM_3BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL [GCM_3B_MASKED_CT3_CLOSE; ALL_TAC] THEN
+  (* ---- ct3 abbreviation (spec form) so the closer's ctm3 works ---- *)
+  ABBREV_TAC `ct3 = word_xor pt3
+    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
+                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+  (* ---- GHASH conjunct ---- *)
+  GCM_3B_GHASH_CLOSE);;
 
 
 (* ========================================================================= *)
@@ -2126,8 +2939,8 @@ let GCM_CASCADE4_TAC : tactic =
     else NO_TAC)
   else NO_TAC);;
 
-(* --- 4-block GHASH final-closure helper lemmas/tactics --- *)
-
+(* --- 4-block GHASH final-closure helpers/tactics, in the 5/6/7-block
+   GCM_NB_GHASH_CLOSE framework (instantiated at N=4: 3 full + 1 partial). --- *)
 
 (* GHASH-closure helper lemmas (xi half-swap normalization). *)
 let XI_HS_LO = prove
@@ -2141,319 +2954,159 @@ let XI_HS_HI = prove
   REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
   CONV_TAC WORD_BLAST);;
 
-(* b0-general mask-register collapse; drop ct-store hyps before byte-folds. *)
-let GCM_4B_MASK_COLLAPSE_TAC =
+(* ============================================================ *)
+(* 4-block GHASH closer (mirrors GCM_5B_* exactly).             *)
+(* ============================================================ *)
+
+(* xi half-swap normalizers (same as XI_HS_LO/HI). *)
+let XI_HS_LO_4 = XI_HS_LO;;
+let XI_HS_HI_4 = XI_HS_HI;;
+
+(* ct1 closer (counter = ivec, no inc) — mirror CT_CLOSE_5. *)
+let CT_CLOSE_4 nidx =
+  let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
+  EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
+  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+
+(* Step 1+2: establish the three full-block spec-form ct folds F1..F3 and fold
+   them into the RHS ghash list — mirror GCM_5B_FOLD_SPEC_CTS (which folds 4). *)
+let GCM_4B_FOLD_SPEC_CTS : tactic =
+  (* F1 *)
+  SUBGOAL_THEN
+   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
+                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   ASSUME_TAC THENL
+   [EXPAND_TAC "ct1" THEN
+    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  (* F2 *)
+  SUBGOAL_THEN
+   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
+                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   ASSUME_TAC THENL
+   [CONV_TAC SYM_CONV THEN GCM_4BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
+  (* F3 *)
+  SUBGOAL_THEN
+   `word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2
+                  rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct3`
+   ASSUME_TAC THENL
+   [CONV_TAC SYM_CONV THEN GCM_4BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
+  (* fold the three full blocks into the RHS ghash list only. *)
+  (fun (asl,w) ->
+     let getf n = snd(find (fun (_,th) ->
+       is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
+       (let l=lhand(concl th) in
+        (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
+        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3] (asl,w));;
+
+(* Step 3: b0-general mask-register collapse over the assumptions. *)
+let GCM_4B_MASK_COLLAPSE_ASMS : tactic =
   SUBGOAL_THEN `1 <= (byte_len:num) /\ byte_len <= 16` ASSUME_TAC THENL
    [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   FIRST_ASSUM(fun bth -> if concl bth = `1 <= (byte_len:num) /\ byte_len <= 16` then
-    REWRITE_TAC[GEN `b0:int128` (MP (SPEC_ALL FOURBLOCK_MASK_REG) bth)] else NO_TAC);;
-let GCM_4B_DROP_CT_STORES =
-  REPEAT(FIRST_X_ASSUM(fun th ->
-    if is_eq(concl th) &&
-       (rand(concl th)=`ct1:(128)word` || rand(concl th)=`ct2:(128)word` || rand(concl th)=`ct3:(128)word`) &&
-       can(term_match[]`read (memory :> bytes128 p) (s:armstate)`)(lhs(concl th))
-    then ALL_TAC else NO_TAC));;
-let gcm_4b_w1md_target = `word_pmul (word_xor (xihi:(64)word) (word_xor c1hi (word_xor xilo c1lo))) (word_xor (hg0:(64)word) hg1):(128)word`;;
-let GCM_4B_CTM4_FOLD : tactic = fun (asl,w) ->
-  if can (find_term (fun t -> t = `word_and mask (ct4:(128)word):(128)word`)) w then
-   (SUBGOAL_THEN `word_and mask ct4 = ctm4:(128)word` (fun th -> REWRITE_TAC[th]) THENL
-    [FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`ctm4:(128)word` &&
-        aconv(lhs(concl th))`word_and ct4 mask:(128)word` then
-        (GEN_REWRITE_TAC RAND_CONV [SYM th] THEN CONV_TAC WORD_BITWISE_RULE) else NO_TAC); ALL_TAC]) (asl,w)
-  else ALL_TAC (asl,w);;
-let GCM_4B_W1MD_FOLD : tactic = fun (asl,w) ->
-  if can (find_term (fun t -> t = gcm_4b_w1md_target)) w then
-   (SUBGOAL_THEN `word_pmul (word_xor (xihi:(64)word) (word_xor c1hi (word_xor xilo c1lo))) (word_xor (hg0:(64)word) hg1):(128)word = w1md`
-    (fun th -> REWRITE_TAC[th]) THENL
-    [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC]) (asl,w)
-  else ALL_TAC (asl,w);;
-(* June-2026 base: the per-half XOR-AC closer.  After the leaf prefix the two
-   64-bit halves still carry w1md/w2md/w3md/w4md, qS and qB as un-folded
-   `word_pmul` terms in machine-side AC orderings that bubble_sort_conv treats as
-   opaque atoms, so the halves sort to different normal forms.  Mirror the
-   3-block GCM_3BLOCK_HALF_CLOSE recipe (bubble_fix / FOLD_MIDS / FOLD_TO are
-   defined in gcm_three_block_closers.ml, loaded above): fold the 4 mids, then
-   qS (4 atoms), then qB (17 atoms), each up-to-AC, before the fixpoint sort. *)
-let GCM_4B_FOLD_MIDS_TAC : tactic =
-  fun (asl,gg) ->
-    let rec finds hd t acc = match t with
-      | Comb(Comb(Const("word_pmul",_),a),x) when x = hd ->
-          a :: (finds hd a (finds hd x acc))
-      | Comb(l,r) -> finds hd l (finds hd r acc)
-      | Abs(_,b) -> finds hd b acc | _ -> acc in
-    let hgw = `word_xor (hg0:(64)word) hg1`
-    and hfw = `word_xor (hf0:(64)word) hf1`
-    and hew = `word_xor (he0:(64)word) he1`
-    and hdw = `word_xor (hd0:(64)word) hd1` in
-    let mk tgt hd arg =
-      SUBGOAL_THEN
-        (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[arg;hd]),tgt))
-        (fun th -> REWRITE_TAC[th]) THENL
-       [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-        CONV_TAC WORD_RULE; ALL_TAC] in
-    (EVERY ((map (mk `w1md:(128)word` hgw) (setify(finds hgw gg [])))
-          @ (map (mk `w2md:(128)word` hfw) (setify(finds hfw gg [])))
-          @ (map (mk `w3md:(128)word` hew) (setify(finds hew gg [])))
-          @ (map (mk `w4md:(128)word` hdw) (setify(finds hdw gg []))))) (asl,gg);;
-let GCM_4B_FOLD_TO tgt natoms : tactic =
-  let w64 = `word 13979173243358019584:(64)word` in
-  fun (asl,gg) ->
-    let rec finds t acc = match t with
-      | Comb(Comb(Const("word_pmul",_),a),x) when x = w64 ->
-          a :: (finds a (finds x acc))
-      | Comb(l,r) -> finds l (finds r acc) | Abs(_,b) -> finds b acc | _ -> acc in
-    let rec at t = match t with
-      | Comb(Comb(Const("word_xor",_),x),y) -> at x @ at y | _ -> [t] in
-    let args = List.filter (fun a -> List.length(at a) = natoms) (setify(finds gg [])) in
-    (EVERY (map (fun a ->
-       FIRST [SUBGOAL_THEN
-                (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[a;w64]),tgt))
-                (fun th -> REWRITE_TAC[th]) THENL
-               [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-                CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC; ALL_TAC];
-              ALL_TAC]) args)) (asl,gg);;
-let GCM_4B_HALF_CLOSE : tactic =
-  SUBGOAL_THEN `word_and (mask:(128)word) (ct4:(128)word) = ctm4`
-    (fun th -> REWRITE_TAC[th]) THENL
-   [EXPAND_TAC "ctm4" THEN CONV_TAC WORD_BITWISE_RULE; ALL_TAC] THEN
-  REWRITE_TAC[REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI;
-              HALFSWAP_REV8_LEMMA; JOIN_SUBWORD_IDENT] THEN ASM_REWRITE_TAC[] THEN
-  GCM_4B_FOLD_MIDS_TAC THEN ASM_REWRITE_TAC[] THEN
-  GCM_4B_FOLD_TO `qS:(128)word` 4 THEN ASM_REWRITE_TAC[] THEN
-  GCM_4B_FOLD_TO `qB:(128)word` 17 THEN ASM_REWRITE_TAC[] THEN
-  CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC;;
-let GCM_4B_LEAF_CLOSE =
-  REWRITE_TAC[XI_HS_LO; XI_HS_HI] THEN GCM_4B_CTM4_FOLD THEN ASM_REWRITE_TAC[] THEN
-  GCM_4B_W1MD_FOLD THEN ASM_REWRITE_TAC[] THEN GCM_4B_HALF_CLOSE;;
+    RULE_ASSUM_TAC(REWRITE_RULE[GEN `b0:int128` (MP (SPEC_ALL FOURBLOCK_MASK_REG) bth)]) else NO_TAC);;
 
-(* GHASH closer slices (from GCM_4BLOCK_GHASH_STEP_MASKED_TAC). *)
-let GCM_4B_FOLD_AND_BRIDGE =
-  REWRITE_TAC[GHASH_POLYVAL_ACC_4; POLYVAL_DOT_H4_EQ_LOCAL;
-              GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
-  (* Fold xi⊕pt1⊕aes = xi⊕ct1 *)
-  SUBGOAL_THEN
-    `word_xor xi (word_xor pt1
-       (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                         rk8 rk9 rk10 rk11 rk12 rk13 rk14)) =
-     word_xor xi ct1:(128)word`
-    (fun th -> REWRITE_TAC[th]) THENL [
-    EXPAND_TAC "ct1" THEN EXPAND_TAC "s13_1" THEN
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN
-    ASM_REWRITE_TAC[] THEN
-    FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th) = `ct1:(128)word` &&
-         aconv (lhs(concl th)) `word_xor (word_xor pt1 s13_1) rk14:(128)word`
-      then REWRITE_TAC[GSYM th] else NO_TAC) THEN
-    TRY(CONV_TAC WORD_RULE);
-    ALL_TAC
-  ] THEN
-  (* Fold pt2⊕aes = ct2 *)
-  SUBGOAL_THEN
-    `word_xor pt2
-       (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5 rk6
-                         rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) =
-     ct2:(128)word`
-    (fun th -> REWRITE_TAC[th]) THENL [
-    FIRST_ASSUM(fun th ->
-      if is_eq(concl th) && rand(concl th) = `ct2:(128)word` &&
-         (aconv (lhs(concl th)) `word_xor pt2 (word_xor s13_2 rk14):(128)word` ||
-          aconv (lhs(concl th)) `word_xor (word_xor pt2 s13_2) rk14:(128)word`)
-      then SUBST1_TAC(SYM th) else NO_TAC) THEN
-    REWRITE_TAC[aes256_block_enc] THEN
-    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    REWRITE_TAC[WORD_XOR_ASSOC] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-    FIRST_ASSUM(fun th ->
-      if is_eq(concl th) && rand(concl th) = `s13_2:(128)word` &&
-         not(try fst(dest_const(rator(rator(lhs(concl th))))) = "read"
-             with _ -> false)
-      then SUBST1_TAC(SYM th) else NO_TAC) THEN
-    REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
-    REWRITE_TAC[LANE0_BYTES_JOIN; LANE1_BYTES_JOIN;
-                LANE2_BYTES_JOIN; LANE3_BYTES_JOIN_BE;
-                CTR_WORD_INSERT; gcm_ctr_inc] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
-    REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
-    REWRITE_TAC[BYTEREVERSE_JOIN_FOLD] THEN TRY REFL_TAC THEN
-    AP_TERM_TAC THEN
-    REWRITE_TAC[BYTEREVERSE_JOIN_FOLD];
-    ALL_TAC
-  ] THEN
-  (* Fold pt3⊕aes(gcm_ctr_inc²) = ct3 *)
-  SUBGOAL_THEN
-    `word_xor pt3
-       (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
-                         rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11
-                         rk12 rk13 rk14) =
-     ct3:(128)word`
-    (fun th -> REWRITE_TAC[th]) THENL [
-    FIRST_ASSUM(fun th ->
-      if is_eq(concl th) && rand(concl th) = `ct3:(128)word` &&
-         (aconv (lhs(concl th)) `word_xor pt3 (word_xor s13_3 rk14):(128)word` ||
-          aconv (lhs(concl th)) `word_xor (word_xor pt3 s13_3) rk14:(128)word`)
-      then SUBST1_TAC(SYM th) else NO_TAC) THEN
-    REWRITE_TAC[aes256_block_enc] THEN
-    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    REWRITE_TAC[WORD_XOR_ASSOC] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-    FIRST_ASSUM(fun th ->
-      if is_eq(concl th) && rand(concl th) = `s13_3:(128)word` &&
-         not(try fst(dest_const(rator(rator(lhs(concl th))))) = "read"
-             with _ -> false)
-      then SUBST1_TAC(SYM th) else NO_TAC) THEN
-    REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
-    REWRITE_TAC[LANE0_BYTES_JOIN; LANE1_BYTES_JOIN;
-                LANE2_BYTES_JOIN; LANE3_BYTES_JOIN_BE;
-                CTR_WORD_INSERT] THEN
-    REWRITE_TAC[gcm_ctr_inc] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
-    ABBREV_TAC `ctr2b:(32)word = word_subword (ivec:(128)word) (96,32)` THEN
-    ABBREV_TAC `br2b:(32)word = word_bytereverse (ctr2b:(32)word)` THEN
-    ABBREV_TAC `step1_2b:(32)word = word_bytereverse (word_add (br2b:(32)word) (word 1:(32)word))` THEN
-    REWRITE_TAC[BYTEREVERSE_JOIN_FOLD; INSERT_SUBWORD; INSERT_IDEM] THEN
-    REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-    EXPAND_TAC "step1_2b" THEN
-    REWRITE_TAC[WORD_BLAST `word_bytereverse (word_bytereverse (x:(32)word)) = x`] THEN
-    AP_TERM_TAC THEN CONV_TAC WORD_RULE;
-    ALL_TAC
-  ] THEN
-  (* Fold pt4⊕aes(gcm_ctr_inc³) = ct4 *)
-  SUBGOAL_THEN
-    `word_xor pt4
-       (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                         rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11
-                         rk12 rk13 rk14) =
-     ct4:(128)word`
-    (fun th -> REWRITE_TAC[th]) THENL [
-    FIRST_ASSUM(fun th ->
-      if is_eq(concl th) && rand(concl th) = `ct4:(128)word` &&
-         (aconv (lhs(concl th)) `word_xor pt4 (word_xor s13_4 rk14):(128)word` ||
-          aconv (lhs(concl th)) `word_xor (word_xor pt4 s13_4) rk14:(128)word`)
-      then SUBST1_TAC(SYM th) else NO_TAC) THEN
-    REWRITE_TAC[aes256_block_enc] THEN
-    CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    REWRITE_TAC[WORD_XOR_ASSOC] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-    FIRST_ASSUM(fun th ->
-      if is_eq(concl th) && rand(concl th) = `s13_4:(128)word` &&
-         not(try fst(dest_const(rator(rator(lhs(concl th))))) = "read"
-             with _ -> false)
-      then SUBST1_TAC(SYM th) else NO_TAC) THEN
-    REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
-    REWRITE_TAC[LANE0_BYTES_JOIN; LANE1_BYTES_JOIN;
-                LANE2_BYTES_JOIN; LANE3_BYTES_JOIN_BE;
-                CTR_WORD_INSERT] THEN
-    REWRITE_TAC[gcm_ctr_inc] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
-    ABBREV_TAC `ctr3b:(32)word = word_subword (ivec:(128)word) (96,32)` THEN
-    ABBREV_TAC `br3b:(32)word = word_bytereverse (ctr3b:(32)word)` THEN
-    ABBREV_TAC `step1_3b:(32)word = word_bytereverse (word_add (br3b:(32)word) (word 1:(32)word))` THEN
-    REWRITE_TAC[BYTEREVERSE_JOIN_FOLD; INSERT_SUBWORD; INSERT_IDEM] THEN
-    REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-    EXPAND_TAC "step1_3b" THEN
-    REWRITE_TAC[WORD_BLAST `word_bytereverse (word_bytereverse (x:(32)word)) = x`] THEN
-    AP_TERM_TAC THEN CONV_TAC WORD_RULE;
-    ALL_TAC
-  ] THEN
-  (* Partial last block: abbreviate the mask and the masked block ctm4, and
-     bridge the simulator's word_and mask ct4 to ctm4 = word_and ct4 mask. *)
+(* Step 5: bridge the machine block-4 keystream (collapsed +3 counter, baked
+   into final_xi) to the spec ct4 — mirror GCM_5B_KS5_FOLD (+4). *)
+let GCM_4B_KS4_FOLD : tactic = fun (asl,w) ->
+  let substr sub s =
+    let ls=String.length s and lb=String.length sub in
+    let rec go i = if i+lb>ls then false
+                   else if String.sub s i lb = sub then true else go(i+1) in go 0 in
+  let fxidef = snd(find (fun (_,th) ->
+    is_eq(concl th) && (try rand(concl th)=`final_xi:(128)word` with _->false)) asl) in
+  let body = lhs(concl fxidef) in
+  let best = ref None in
+  let rec walk t =
+    (try let s=string_of_term t in
+      if substr "pt4" s && substr "aese" s && substr "rk14" s &&
+         (try fst(dest_const(repeat rator t))="word_xor" with _->false) &&
+         (match !best with None->true | Some b -> String.length s < String.length(string_of_term b))
+      then best := Some t
+     with _->());
+    (match t with Comb(a,b)->walk a; walk b | Abs(_,b)->walk b | _->()) in
+  walk body;
+  let ks4 = (match !best with Some t->t | None->failwith "KS4_FOLD: ks4 not found") in
+  let bri = WORD_BLAST `word_bytereverse (word_bytereverse (x:(32)word)) = x` in
+  let add3 = WORD_RULE `word_add (word_add (word_add (x:(32)word) (word 1)) (word 1)) (word 1) = word_add x (word 3)` in
+  (SUBGOAL_THEN (mk_eq(ks4, `ct4:(128)word`)) ASSUME_TAC THENL
+    [CONV_TAC SYM_CONV THEN EXPAND_TAC "ct4" THEN
+     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[WORD_XOR_ASSOC] THEN
+     AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+     REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+     REWRITE_TAC[gcm_ctr_inc] THEN
+     REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS; WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
+     REWRITE_TAC[INSERT_SUBWORD; INSERT_IDEM] THEN
+     REWRITE_TAC[bri] THEN REWRITE_TAC[add3] THEN
+     REWRITE_TAC[CTR_WORD_INSERT];
+     ALL_TAC] THEN
+   FIRST_ASSUM(fun th ->
+     if is_eq(concl th) && rand(concl th)=`ct4:(128)word` &&
+        (try fst(dest_const(repeat rator (lhs(concl th))))="word_xor" with _->false) &&
+        String.length(string_of_term(lhs(concl th))) > 1000
+     then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
+  (asl,w);;
+
+(* Closer tail (ctm4 abbrev + h^3 norm + bridge + atomic ABBREVs + qS/qB),
+   minus the final BINOP — mirror GCM_5B_TAIL_NOFINAL for N=4. *)
+let GCM_4B_TAIL_NOFINAL : tactic =
   ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
   ABBREV_TAC `ctm4 = word_and (ct4:(128)word) mask` THEN
   SUBGOAL_THEN `word_and (mask:(128)word) (ct4:(128)word) = ctm4`
     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL [
     EXPAND_TAC "ctm4" THEN CONV_TAC WORD_BITWISE_RULE; ALL_TAC ] THEN
-  (* Normalize h^3 from left-assoc (polyval_dot (polyval_dot h h) h) to the
-     symmetric form (polyval_dot h (polyval_dot h h)) used by the bridge. *)
+  (* Normalize h^3 left-assoc -> symmetric (to match the 4-block bridge). *)
   SUBGOAL_THEN
-    `polyval_dot (polyval_dot (h:int128) h) h =
-     polyval_dot h (polyval_dot h h)`
+    `polyval_dot (polyval_dot (h:int128) h) h = polyval_dot h (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
     [REWRITE_TAC[polyval_dot] THEN REWRITE_TAC[WORD_PMUL_SYM]; ALL_TAC] THEN
-  (* Apply bridge lemma *)
+  (* Apply 4-block bridge. *)
   MP_TAC(SPECL
     [`word_reversefields 8 (word_xor xi ct1):int128`;
-     `word_reversefields 8 ct2:int128`;
-     `word_reversefields 8 ct3:int128`;
+     `word_reversefields 8 ct2:int128`; `word_reversefields 8 ct3:int128`;
      `word_reversefields 8 ctm4:int128`;
      `h:int128`; `h1k:int128`;
-     `word_join (word 0:(64)word)
-        (word_subword (h1k:(128)word) (64,64):(64)word)
-      :(128)word`;
+     `word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word`;
      `h3k:int128`;
-     `word_join (word 0:(64)word)
-        (word_subword (h3k:(128)word) (64,64):(64)word)
-      :(128)word`]
+     `word_join (word 0:(64)word) (word_subword (h3k:(128)word) (64,64):(64)word):(128)word`]
     GHASH_4BLOCK_KARATSUBA_EQ_POLYVAL_ACC) THEN
   SUBGOAL_THEN
-    `word_subword
-       (word_join (word 0:(64)word)
-                  (word_subword (h1k:(128)word) (64,64):(64)word)
-        :(128)word) (0,64):(64)word =
+    `word_subword (word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL [
     SUBGOAL_THEN
-      `word_subword
-         (word_join (word 0:(64)word)
-                    (word_subword (h1k:(128)word) (64,64):(64)word)
-          :(128)word) (0,64):(64)word =
+      `word_subword (word_join (word 0:(64)word) (word_subword (h1k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
        word_subword (h1k:(128)word) (64,64):(64)word`
-      (fun th -> REWRITE_TAC[th]) THENL
-      [CONV_TAC WORD_BLAST; ASM_REWRITE_TAC[]];
-    ALL_TAC
-  ] THEN
+      (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ASM_REWRITE_TAC[]]; ALL_TAC ] THEN
   SUBGOAL_THEN
-    `word_subword
-       (word_join (word 0:(64)word)
-                  (word_subword (h3k:(128)word) (64,64):(64)word)
-        :(128)word) (0,64):(64)word =
+    `word_subword (word_join (word 0:(64)word) (word_subword (h3k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot (polyval_dot h h) (polyval_dot h h))`
     (fun th -> REWRITE_TAC[th]) THENL [
     SUBGOAL_THEN
-      `word_subword
-         (word_join (word 0:(64)word)
-                    (word_subword (h3k:(128)word) (64,64):(64)word)
-          :(128)word) (0,64):(64)word =
+      `word_subword (word_join (word 0:(64)word) (word_subword (h3k:(128)word) (64,64):(64)word):(128)word) (0,64):(64)word =
        word_subword (h3k:(128)word) (64,64):(64)word`
-      (fun th -> REWRITE_TAC[th]) THENL
-      [CONV_TAC WORD_BLAST; ASM_REWRITE_TAC[]];
-    ALL_TAC
-  ] THEN
-  ASM_REWRITE_TAC[] THEN
-  ALL_TAC;;
-
-let GCM_4B_TAIL3A =
-  DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
+      (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ASM_REWRITE_TAC[]]; ALL_TAC ] THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_4block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
   REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
   SUBGOAL_THEN
-    `word_subword (word_join (word 0:(64)word)
-                             (karatsuba_mid (polyval_dot h h):(64)word)
-                   :(128)word) (0,64):(64)word =
+    `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ALL_TAC] THEN
   SUBGOAL_THEN
-    `word_subword (word_join (word 0:(64)word)
-                             (karatsuba_mid (polyval_dot (polyval_dot h h)
-                                                          (polyval_dot h h)):(64)word)
-                   :(128)word) (0,64):(64)word =
+    `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot (polyval_dot h h) (polyval_dot h h)):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot (polyval_dot h h) (polyval_dot h h))`
     (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  REWRITE_TAC[GSYM karatsuba_mid] THEN
-  ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[GSYM karatsuba_mid] THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
   CONV_TAC SYM_CONV THEN
   FIRST_ASSUM(fun th ->
     if is_eq(concl th) && rand(concl th) = `final_xi:(128)word` &&
-       (try (let l = lhs(concl th) in
-             is_comb l &&
-             (let r = rator l in
-              not(is_comb r &&
-                  (try fst(dest_const(rator r)) = "read" with _ -> false))))
+       (try (let l = lhs(concl th) in is_comb l &&
+             (let r = rator l in not(is_comb r && (try fst(dest_const(rator r)) = "read" with _ -> false))))
         with _ -> false)
     then SUBST1_TAC(SYM th) else NO_TAC) THEN
   REWRITE_TAC[REV64_LOWER_LANE; REV64_UPPER_LANE; REV8_JOIN_FOLD] THEN
@@ -2468,20 +3121,16 @@ let GCM_4B_TAIL3A =
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
-              REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO;
-              REVERSEFIELDS8_SUBWORD_HI] THEN
+              REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   CONV_TAC(TOP_DEPTH_CONV PMUL_NORM_CONV) THEN
   SUBGOAL_THEN
     `word_subword (word 0:(128)word) (0,64):(64)word = word 0 /\
      word_subword (word 0:(128)word) (64,64):(64)word = word 0`
-    (fun th -> REWRITE_TAC[th]) THENL
-    [CONJ_TAC THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
+    (fun th -> REWRITE_TAC[th]) THENL [CONJ_TAC THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
   REWRITE_TAC[WORD_XOR_0; WORD_XOR_0_LEFT] THEN
-  ALL_TAC;;
-
-let GCM_4B_TAIL_P1 =
   REWRITE_TAC[karatsuba_mid; WORD_REVERSEFIELDS_XOR_8_128; WORD_SUBWORD_XOR] THEN
+  (* 18 atomic ABBREVs (c1lo..c4hi, xi, hd..hg). *)
   ABBREV_TAC `(c1lo:(64)word) = word_subword (word_reversefields 8 (ct1:(128)word)) (0,64)` THEN
   ABBREV_TAC `(c1hi:(64)word) = word_subword (word_reversefields 8 (ct1:(128)word)) (64,64)` THEN
   ABBREV_TAC `(c2lo:(64)word) = word_subword (word_reversefields 8 (ct2:(128)word)) (0,64)` THEN
@@ -2501,32 +3150,7 @@ let GCM_4B_TAIL_P1 =
   ABBREV_TAC `(hg0:(64)word) = word_subword ((polyval_dot (polyval_dot h h) (polyval_dot h h)):(128)word) (0,64)` THEN
   ABBREV_TAC `(hg1:(64)word) = word_subword ((polyval_dot (polyval_dot h h) (polyval_dot h h)):(128)word) (64,64)` THEN
   ASM_REWRITE_TAC[] THEN
-  (* Byte-form fold: ct1's definition (pt1 xor s13_1 xor rk14) leaks the
-     (rev8 _)_lo/_hi byte forms into the (xi xor ct1) Karatsuba term; re-fold
-     them to the c1lo/c1hi atoms (4-block-specific; ct1 is not opaque here). *)
-  SUBGOAL_THEN
-    `(word_xor (word_subword (word_reversefields 8 (pt1:(128)word)) (0,64))
-               (word_xor (word_subword (word_reversefields 8 (s13_1:(128)word)) (0,64))
-                         (word_subword (word_reversefields 8 (rk14:(128)word)) (0,64))) :(64)word
-      = c1lo) /\
-     (word_xor (word_subword (word_reversefields 8 (pt1:(128)word)) (64,64))
-               (word_xor (word_subword (word_reversefields 8 (s13_1:(128)word)) (64,64))
-                         (word_subword (word_reversefields 8 (rk14:(128)word)) (64,64))) :(64)word
-      = c1hi)`
-    (fun th -> REWRITE_TAC[th]) THENL
-    [CONJ_TAC THENL
-       [EXPAND_TAC "c1lo" THEN EXPAND_TAC "ct1" THEN
-        REWRITE_TAC[GSYM WORD_REVERSEFIELDS_XOR_8_128; GSYM WORD_SUBWORD_XOR] THEN
-        (* June base: ct1 def is left-assoc ((pt1⊕s13_1)⊕rk14) but the mid term
-           carries right-assoc (pt1⊕(s13_1⊕rk14)); peel subword∘reversefields and
-           close the XOR-assoc gap with WORD_RULE. *)
-        TRY(AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);
-        EXPAND_TAC "c1hi" THEN EXPAND_TAC "ct1" THEN
-        REWRITE_TAC[GSYM WORD_REVERSEFIELDS_XOR_8_128; GSYM WORD_SUBWORD_XOR] THEN
-        TRY(AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE)];
-     ALL_TAC];;
-
-let GCM_4B_TAIL_P2C =
+  (* 12 inner pmul ABBREVs (w1..w4). *)
   ABBREV_TAC `(w1lo:(128)word) = word_pmul (word_xor (xilo:(64)word) (c1lo:(64)word)) (hg0:(64)word)` THEN
   ABBREV_TAC `(w1hi:(128)word) = word_pmul (word_xor (xihi:(64)word) (c1hi:(64)word)) (hg1:(64)word)` THEN
   ABBREV_TAC `(w1md:(128)word) = word_pmul (word_xor (word_xor (xihi:(64)word) (c1hi:(64)word)) (word_xor (xilo:(64)word) (c1lo:(64)word))) (word_xor (hg0:(64)word) (hg1:(64)word))` THEN
@@ -2544,6 +3168,7 @@ let GCM_4B_TAIL_P2C =
     `word_pmul (word_xor (xihi:(64)word) (word_xor (c1hi:(64)word) (word_xor (xilo:(64)word) (c1lo:(64)word)))) (word_xor (hg0:(64)word) (hg1:(64)word)):(128)word = w1md`
     (fun th -> REWRITE_TAC[th]) THENL
     [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  (* 24 z-vars. *)
   ABBREV_TAC `(w1lo_l:(64)word) = word_subword (w1lo:(128)word) (0,64)` THEN
   ABBREV_TAC `(w1lo_h:(64)word) = word_subword (w1lo:(128)word) (64,64)` THEN
   ABBREV_TAC `(w1hi_l:(64)word) = word_subword (w1hi:(128)word) (0,64)` THEN
@@ -2569,6 +3194,7 @@ let GCM_4B_TAIL_P2C =
   ABBREV_TAC `(w4md_l:(64)word) = word_subword (w4md:(128)word) (0,64)` THEN
   ABBREV_TAC `(w4md_h:(64)word) = word_subword (w4md:(128)word) (64,64)` THEN
   ASM_REWRITE_TAC[] THEN
+  (* Normalize LHS mid-pmuls to the abbreviated w?md (swapped xor arg order). *)
   SUBGOAL_THEN `word_pmul (word_xor (c2lo:(64)word) (c2hi:(64)word)) (word_xor (hf0:(64)word) (hf1:(64)word)):(128)word = w2md`
     (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w2md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
   SUBGOAL_THEN `word_pmul (word_xor (c3lo:(64)word) (c3hi:(64)word)) (word_xor (he0:(64)word) (he1:(64)word)):(128)word = w3md`
@@ -2577,18 +3203,101 @@ let GCM_4B_TAIL_P2C =
     (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w4md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
   SUBGOAL_THEN `word_pmul (word_xor (xilo:(64)word) (word_xor (c1lo:(64)word) (word_xor (xihi:(64)word) (c1hi:(64)word)))) (word_xor (hg0:(64)word) (hg1:(64)word)):(128)word = w1md`
     (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  (* qS: small Barrett pmul; fold both XOR orderings. *)
   ABBREV_TAC `(qS:(128)word) = word_pmul (word_xor (w4lo_l:(64)word) (word_xor w3lo_l (word_xor w2lo_l w1lo_l))) (word 13979173243358019584:(64)word)` THEN
   SUBGOAL_THEN `word_pmul (word_xor (w1lo_l:(64)word) (word_xor w2lo_l (word_xor w3lo_l w4lo_l))) (word 13979173243358019584:(64)word):(128)word = qS`
     (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "qS" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
   ASM_REWRITE_TAC[] THEN
+  (* qB: big Barrett pmul; fold the LHS-order copy via bubble_sort_conv. *)
   ABBREV_TAC `(qB:(128)word) = word_pmul
     (word_xor (w4md_l:(64)word) (word_xor w3md_l (word_xor w2md_l (word_xor w1md_l (word_xor w4lo_l (word_xor w3lo_l (word_xor w2lo_l (word_xor w1lo_l (word_xor w4hi_l (word_xor w3hi_l (word_xor w2hi_l (word_xor w1hi_l (word_xor (word_subword (qS:(128)word) (0,64)) (word_xor w4lo_h (word_xor w3lo_h (word_xor w2lo_h w1lo_h)))))))))))))))) (word 13979173243358019584:(64)word)` THEN
   SUBGOAL_THEN
     `word_pmul (word_xor (w1lo_h:(64)word) (word_xor w2lo_h (word_xor w3lo_h (word_xor w4lo_h (word_xor w1md_l (word_xor w2md_l (word_xor w3md_l (word_xor w4md_l (word_xor w1hi_l (word_xor w2hi_l (word_xor w3hi_l (word_xor w4hi_l (word_xor w1lo_l (word_xor w2lo_l (word_xor w3lo_l (word_xor w4lo_l (word_subword (qS:(128)word) (0,64)))))))))))))))))) (word 13979173243358019584:(64)word):(128)word = qB`
     (fun th -> REWRITE_TAC[th]) THENL
     [EXPAND_TAC "qB" THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-     CONV_TAC(BINOP_CONV bubble_sort_conv) THEN REFL_TAC; ALL_TAC] THEN
-  ALL_TAC;;
+     CONV_TAC(BINOP_CONV bubble_sort_conv) THEN REFL_TAC; ALL_TAC];;
+
+(* per-half XOR-AC closer — mirror GCM_5B_HALF_CLOSE (4 mids, qS 4, qB 17). *)
+let GCM_4B_FOLD_MIDS_TAC : tactic =
+  fun (asl,gg) ->
+    let rec finds hd t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = hd ->
+          a :: (finds hd a (finds hd x acc))
+      | Comb(l,r) -> finds hd l (finds hd r acc)
+      | Abs(_,b) -> finds hd b acc | _ -> acc in
+    let hgw = `word_xor (hg0:(64)word) hg1`
+    and hfw = `word_xor (hf0:(64)word) hf1`
+    and hew = `word_xor (he0:(64)word) he1`
+    and hdw = `word_xor (hd0:(64)word) hd1` in
+    let mk tgt hd arg =
+      SUBGOAL_THEN
+        (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[arg;hd]),tgt))
+        (fun th -> REWRITE_TAC[th]) THENL
+       [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+        CONV_TAC WORD_RULE; ALL_TAC] in
+    (EVERY ((map (mk `w1md:(128)word` hgw) (setify(finds hgw gg [])))
+          @ (map (mk `w2md:(128)word` hfw) (setify(finds hfw gg [])))
+          @ (map (mk `w3md:(128)word` hew) (setify(finds hew gg [])))
+          @ (map (mk `w4md:(128)word` hdw) (setify(finds hdw gg []))))) (asl,gg);;
+
+let GCM_4B_FOLD_TO tgt natoms : tactic =
+  let w64 = `word 13979173243358019584:(64)word` in
+  fun (asl,gg) ->
+    let rec finds t acc = match t with
+      | Comb(Comb(Const("word_pmul",_),a),x) when x = w64 ->
+          a :: (finds a (finds x acc))
+      | Comb(l,r) -> finds l (finds r acc) | Abs(_,b) -> finds b acc | _ -> acc in
+    let rec at t = match t with
+      | Comb(Comb(Const("word_xor",_),x),y) -> at x @ at y | _ -> [t] in
+    let args = List.filter (fun a -> List.length(at a) = natoms) (setify(finds gg [])) in
+    (EVERY (map (fun a ->
+       FIRST [SUBGOAL_THEN
+                (mk_eq(list_mk_comb(`word_pmul:(64)word->(64)word->(128)word`,[a;w64]),tgt))
+                (fun th -> REWRITE_TAC[th]) THENL
+               [EXPAND_TAC (fst(dest_var tgt)) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+                CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC; ALL_TAC];
+              ALL_TAC]) args)) (asl,gg);;
+
+let GCM_4B_HALF_CLOSE : tactic =
+  GCM_4B_FOLD_MIDS_TAC THEN ASM_REWRITE_TAC[] THEN
+  GCM_4B_FOLD_TO `qS:(128)word` 4 THEN ASM_REWRITE_TAC[] THEN
+  GCM_4B_FOLD_TO `qB:(128)word` 17 THEN ASM_REWRITE_TAC[] THEN
+  CONV_TAC(BINOP_CONV bubble_fix) THEN REFL_TAC;;
+
+(* The full GHASH closer — mirror GCM_5B_GHASH_CLOSE. *)
+let GCM_4B_GHASH_CLOSE : tactic =
+  GCM_4B_FOLD_SPEC_CTS THEN
+  REWRITE_TAC[GHASH_POLYVAL_ACC_4; POLYVAL_DOT_H4_EQ_LOCAL; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
+  GCM_4B_MASK_COLLAPSE_ASMS THEN
+  GCM_4B_KS4_FOLD THEN
+  GCM_4B_TAIL_NOFINAL THEN
+  REWRITE_TAC[XI_HS_LO_4; XI_HS_HI_4] THEN ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN
+   `word_pmul (word_xor (xihi:(64)word) (word_xor c1hi (word_xor xilo c1lo)))
+              (word_xor (hg0:(64)word) hg1):(128)word = w1md`
+   (fun th -> REWRITE_TAC[th]) THENL
+   [EXPAND_TAC "w1md" THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+  BINOP_TAC THENL [GCM_4B_HALF_CLOSE; GCM_4B_HALF_CLOSE];;
+
+(* masked-ct4 store conjunct closer — mirror GCM_5B_MASKED_CT5_CLOSE (+3). *)
+let GCM_4B_MASKED_CT4_CLOSE : tactic =
+  let bri = WORD_BLAST `word_bytereverse (word_bytereverse (x:(32)word)) = x` in
+  let add3 = WORD_RULE `word_add (word_add (word_add (x:(32)word) (word 1)) (word 1)) (word 1) = word_add x (word 3)` in
+  SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP FOURBLOCK_MASK_REG th]) THEN
+  REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
+  MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[WORD_XOR_ASSOC] THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
+  REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
+  REWRITE_TAC[gcm_ctr_inc] THEN
+  REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
+  REWRITE_TAC[WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
+  REWRITE_TAC[INSERT_SUBWORD; INSERT_IDEM] THEN
+  REWRITE_TAC[bri] THEN REWRITE_TAC[add3] THEN
+  REWRITE_TAC[CTR_WORD_INSERT];;
+
 
 (* The 4-block branch goal (three full + one partial block). *)
 let gcm_4b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
@@ -2727,24 +3436,16 @@ let gcm_4b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
                   memory :> bytes64 (word_add stackptr (word 64));
                   memory :> bytes64 (word_add stackptr (word 72))])`;;
 
-let GCM_4BLOCK_CT1_FILE_TAC = GCM_NBLOCK_CT_STEP_TAC 4 1;;
-
 let AES256_GCM_ENCRYPT_LT_4BLOCK_CONCRETE = prove
  (gcm_4b_goal,
+  (* ---- symbolic simulation (store-based ct abbreviation) ---- *)
   GCM_INIT_TAC GCM_CBZ_LEMMA4 THEN GCM_PROLOGUE_TAC THEN GCM_RUN 20 263 THEN
-  FIRST_ASSUM(fun th -> if can(term_match[]`read Q0 (s:armstate)=(x:int128)`)(concl th)
-    then ABBREV_TAC(mk_eq(mk_var("s13_1",`:(128)word`),rand(concl th))) else NO_TAC) THEN
-  FIRST_ASSUM(fun th -> if can(term_match[]`read Q1 (s:armstate)=(x:int128)`)(concl th)
-    then ABBREV_TAC(mk_eq(mk_var("s13_2",`:(128)word`),rand(concl th))) else NO_TAC) THEN
-  FIRST_ASSUM(fun th -> if can(term_match[]`read Q2 (s:armstate)=(x:int128)`)(concl th)
-    then ABBREV_TAC(mk_eq(mk_var("s13_3",`:(128)word`),rand(concl th))) else NO_TAC) THEN
-  FIRST_ASSUM(fun th -> if can(term_match[]`read Q3 (s:armstate)=(x:int128)`)(concl th)
-    then ABBREV_TAC(mk_eq(mk_var("s13_4",`:(128)word`),rand(concl th))) else NO_TAC) THEN
-  GCM_INLOOP_GUARD_TAC GCM_X5_LEMMA4 THEN GCM_RUN 267 272 THEN GCM_BND16 GCM_X5TAIL_LEMMA4 THEN
+  GCM_INLOOP_GUARD_TAC GCM_X5_LEMMA4 THEN GCM_RUN 267 272 THEN
+  GCM_BND16 GCM_X5TAIL_LEMMA4 THEN
   GCM_RUN_THEN GCM_CASCADE4_TAC 273 321 THEN
-  ABBREV_TAC `ct1 = word_xor (word_xor pt1 s13_1) rk14:(128)word` THEN
-  GCM_RUN 322 335 THEN ABBREV_TAC `ct2 = word_xor (word_xor pt2 s13_2) rk14:(128)word` THEN
-  GCM_RUN 336 348 THEN ABBREV_TAC `ct3 = word_xor (word_xor pt3 s13_3) rk14:(128)word` THEN
+  abbrev_ct_from_store 0 1 THEN
+  GCM_RUN 322 335 THEN abbrev_ct_from_store 16 2 THEN
+  GCM_RUN 336 348 THEN abbrev_ct_from_store 32 3 THEN
   GCM_RUN 349 366 THEN
   SUBGOAL_THEN `1 <= (byte_len:num) /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP FOURBLOCK_MASK_REG th])) THEN
@@ -2755,46 +3456,17 @@ let AES256_GCM_ENCRYPT_LT_4BLOCK_CONCRETE = prove
   SUBGOAL_THEN `1 <= (byte_len:num) /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP FOURBLOCK_MASK_REG th]) THEN
   ASM_SIMP_TAC[FOURBLOCK_USHR] THEN
-  CONJ_TAC THENL [GCM_4BLOCK_CT1_FILE_TAC; ALL_TAC] THEN
-  CONJ_TAC THENL [GCM_4BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
-  CONJ_TAC THENL [GCM_4BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
-  CONJ_TAC THENL [
-    SUBGOAL_THEN `1 <= (byte_len:num) /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-    DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP FOURBLOCK_MASK_REG th]) THEN
-    REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
-    (* June-2026 base: 4-peel (not 5) reaches the `word_xor (word_xor pt4 s13_4)
-       rk14 = ...` level; left-assoc + reversefields bridge + word_join=word_insert
-       counter identity then closes the triple-increment counter. *)
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-    CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
-    REWRITE_TAC[WORD_XOR_ASSOC] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-    FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th) = `s13_4:(128)word` &&
-        not(try fst(dest_const(rator(rator(lhs(concl th))))) = "read" with _ -> false)
-      then SUBST1_TAC(SYM th) else NO_TAC) THEN
-    REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
-    REWRITE_TAC[LANE0_BYTES_JOIN; LANE1_BYTES_JOIN; LANE2_BYTES_JOIN; LANE3_BYTES_JOIN_BE; CTR_WORD_INSERT] THEN
-    REWRITE_TAC[gcm_ctr_inc] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
-    REWRITE_TAC[WORD_REVERSEFIELDS_8_BYTEREVERSE_32] THEN
-    ABBREV_TAC `ctr3b:(32)word = word_subword (ivec:(128)word) (96,32)` THEN
-    ABBREV_TAC `br3b:(32)word = word_bytereverse (ctr3b:(32)word)` THEN
-    ABBREV_TAC `step1_3b:(32)word = word_bytereverse (word_add (br3b:(32)word) (word 1:(32)word))` THEN
-    REWRITE_TAC[BYTEREVERSE_JOIN_FOLD; INSERT_SUBWORD; INSERT_IDEM] THEN
-    REWRITE_TAC[GSYM CTR_WORD_INSERT] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-    EXPAND_TAC "step1_3b" THEN
-    REWRITE_TAC[WORD_BLAST `word_bytereverse (word_bytereverse (x:(32)word)) = x`] THEN
-    AP_TERM_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-  GCM_4B_MASK_COLLAPSE_TAC THEN
-  ABBREV_TAC `ct4 = word_xor (word_xor pt4 s13_4) rk14:(128)word` THEN
-  SUBGOAL_THEN `word_xor pt4 (word_xor s13_4 rk14) = ct4:(128)word` ASSUME_TAC THENL
-   [FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`ct4:(128)word` &&
-        aconv (lhs(concl th)) `word_xor (word_xor pt4 s13_4) rk14:(128)word`
-       then REWRITE_TAC[SYM th] else NO_TAC) THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-  GCM_4B_FOLD_AND_BRIDGE THEN GCM_4B_TAIL3A THEN GCM_4B_MASK_COLLAPSE_TAC THEN GCM_4B_DROP_CT_STORES THEN
-  GCM_4B_TAIL_P1 THEN GCM_4B_TAIL_P2C THEN BINOP_TAC THEN GCM_4B_LEAF_CLOSE);;
-
+  (* ---- five conjuncts: ct1..ct3, masked-ct4, GHASH ---- *)
+  CONJ_TAC THENL [CT_CLOSE_4 1; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC SYM_CONV THEN GCM_4BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC SYM_CONV THEN GCM_4BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL [GCM_4B_MASKED_CT4_CLOSE; ALL_TAC] THEN
+  (* ---- ct4 abbreviation (spec form) so the closer's ctm4 works ---- *)
+  ABBREV_TAC `ct4 = word_xor pt4
+    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
+                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+  (* ---- GHASH conjunct ---- *)
+  GCM_4B_GHASH_CLOSE);;
 
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_4 branch (5-block: four full blocks +        *)
@@ -3040,36 +3712,9 @@ let gcm_5b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
                   memory :> bytes64 (word_add stackptr (word 72))])`;;
 
 (* --- Store-based ct abbreviation (robust against Q-register scramble). --- *)
-
-(* Store-based ct abbreviation for the 5-block single-binary branch.  Reads    *)
-(* the actual keystream stored at out_ptr+offbytes (robust against the          *)
-(* per-branch Q-register scramble) and abbreviates s13_N + ctN.  v3: if the     *)
-(* stored value's keystream is still a raw register read, resolve it to that    *)
-(* register's (expanded aese) value assumption.                                 *)
-let abbrev_ct_from_store offbytes nidx : tactic = fun (asl,w) ->
-  let lhspat =
-    if offbytes=0 then `read (memory :> bytes128 out_ptr) (s:armstate)`
-    else vsubst [mk_small_numeral offbytes, `Z:num`]
-           `read (memory :> bytes128 (word_add out_ptr (word Z))) (s:armstate)` in
-  let store = tryfind (fun (_,th) -> let t=concl th in
-    if is_eq t && (can (term_match [] lhspat) (lhs t)) &&
-       (try fst(dest_const(repeat rator (rand t)))="word_xor" with _->false)
-    then t else fail()) asl in
-  let ks0 = rand(lhand(rand store)) in
-  let ks =
-    if (try fst(dest_const(rator(rator ks0)))="read" with _->false)
-    then (try tryfind (fun (_,th) -> let t=concl th in
-                if is_eq t && lhs t = ks0 then rand t else fail()) asl
-          with _ -> ks0)
-    else ks0 in
-  let s13n = mk_var("s13_"^string_of_int nidx,`:(128)word`) in
-  let ptn = mk_var("pt"^string_of_int nidx,`:(128)word`) in
-  let ctn = mk_var("ct"^string_of_int nidx,`:(128)word`) in
-  (ABBREV_TAC(mk_eq(s13n,ks)) THEN
-   ABBREV_TAC(mk_eq(ctn,
-     list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,
-       [list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,[ptn;s13n]); `rk14:(128)word`]))))
-  (asl,w);;
+(* `abbrev_ct_from_store` is now defined once in the 4-block GHASH-closer       *)
+(* section above (its first use), and shared verbatim by the 5/6-block          *)
+(* branches here.                                                               *)
 
 (* --- 5-block GHASH final-closure helper tactics. --- *)
 
@@ -4544,38 +5189,10 @@ let gcm_7b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
 
 (* --- 7-block store-based ct abbreviation + conjunct closers. --- *)
 
-(* ========================================================================= *)
-(* 7-block branch: CORRECTED store-based ct abbreviation (strict address +    *)
-(* plaintext matcher). The prior abbrev_ct_from_store off=0 pattern           *)
-(* `read (memory :> bytes128 out_ptr) s` term-matched word_add out_ptr        *)
-(* (word N) because out_ptr is a free var, causing the ct1=s13_2 "collision"  *)
-(* that all prior 7-block sessions mis-attributed to a fundamental issue.     *)
-(* This strict version pins the exact address AND the plaintext ptN.          *)
-(* ========================================================================= *)
-
-let abbrev_ct7 off nidx : tactic = fun (asl,w) ->
-  let addr = if off=0 then `out_ptr:int64`
-    else vsubst[mk_small_numeral off,`Z:num`] `word_add out_ptr (word Z):int64` in
-  let ptn = mk_var("pt"^string_of_int nidx,`:(128)word`) in
-  let store = tryfind (fun (_,th) -> let t=concl th in
-    if is_eq t &&
-       (try fst(dest_const(rator(rator(lhs t))))="read" with _->false) &&
-       (try aconv (rand(rand(rand(rator(lhs t))))) addr with _->false) &&
-       (try fst(dest_const(repeat rator (rand t)))="word_xor" with _->false) &&
-       (try aconv (lhand(lhand(rand t))) ptn with _->false)
-    then t else fail()) asl in
-  let ks0 = rand(lhand(rand store)) in
-  let ks =
-    if (try fst(dest_const(rator(rator ks0)))="read" with _->false)
-    then (try tryfind (fun (_,th) -> let t=concl th in if is_eq t && lhs t = ks0 then rand t else fail()) asl with _ -> ks0)
-    else ks0 in
-  let s13n = mk_var("s13_"^string_of_int nidx,`:(128)word`) in
-  let ctn = mk_var("ct"^string_of_int nidx,`:(128)word`) in
-  (ABBREV_TAC(mk_eq(s13n,ks)) THEN
-   ABBREV_TAC(mk_eq(ctn,
-     list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,
-       [list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,[ptn;s13n]); `rk14:(128)word`]))))
-  (asl,w);;
+(* 7-block ct abbreviation uses the shared strict `abbrev_ct_from_store`
+   (defined once near the 2-block band).  The earlier per-band `abbrev_ct7`
+   was the prototype of that strict matcher and is now folded into the shared
+   helper. *)
 
 (* ct1 closer (counter = ivec). *)
 let CT_CLOSE_7 nidx =
@@ -5098,10 +5715,10 @@ let AES256_GCM_ENCRYPT_LT_7BLOCK_CONCRETE = prove
   GCM_INLOOP_GUARD_TAC GCM_X7_LEMMA7 THEN GCM_RUN 267 272 THEN
   GCM_BND16 GCM_X7TAIL_LEMMA7 THEN
   GCM_RUN_THEN GCM_CASCADE7_TAC 273 321 THEN
-  abbrev_ct7 0 1 THEN abbrev_ct7 16 2 THEN abbrev_ct7 32 3 THEN
-  GCM_RUN 322 348 THEN abbrev_ct7 48 4 THEN
-  GCM_RUN 349 362 THEN abbrev_ct7 64 5 THEN
-  GCM_RUN 363 376 THEN abbrev_ct7 80 6 THEN
+  abbrev_ct_from_store 0 1 THEN abbrev_ct_from_store 16 2 THEN abbrev_ct_from_store 32 3 THEN
+  GCM_RUN 322 348 THEN abbrev_ct_from_store 48 4 THEN
+  GCM_RUN 349 362 THEN abbrev_ct_from_store 64 5 THEN
+  GCM_RUN 363 376 THEN abbrev_ct_from_store 80 6 THEN
   GCM_RUN 377 417 THEN
   SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP SEVENBLOCK_MASK_REG th])) THEN
@@ -5378,34 +5995,9 @@ let gcm_8b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
 
 (* --- 8-block store-based ct abbreviation + conjunct closers. --- *)
 
-(* ========================================================================= *)
-(* 8-block branch: strict store-based ct abbreviation + conjunct closers.      *)
-(* Mirrors the 7-block seven_abbrev_ct7.ml; block-8 = gcm_ctr_inc^7 -> add7.    *)
-(* ========================================================================= *)
-
-let abbrev_ct8 off nidx : tactic = fun (asl,w) ->
-  let addr = if off=0 then `out_ptr:int64`
-    else vsubst[mk_small_numeral off,`Z:num`] `word_add out_ptr (word Z):int64` in
-  let ptn = mk_var("pt"^string_of_int nidx,`:(128)word`) in
-  let store = tryfind (fun (_,th) -> let t=concl th in
-    if is_eq t &&
-       (try fst(dest_const(rator(rator(lhs t))))="read" with _->false) &&
-       (try aconv (rand(rand(rand(rator(lhs t))))) addr with _->false) &&
-       (try fst(dest_const(repeat rator (rand t)))="word_xor" with _->false) &&
-       (try aconv (lhand(lhand(rand t))) ptn with _->false)
-    then t else fail()) asl in
-  let ks0 = rand(lhand(rand store)) in
-  let ks =
-    if (try fst(dest_const(rator(rator ks0)))="read" with _->false)
-    then (try tryfind (fun (_,th) -> let t=concl th in if is_eq t && lhs t = ks0 then rand t else fail()) asl with _ -> ks0)
-    else ks0 in
-  let s13n = mk_var("s13_"^string_of_int nidx,`:(128)word`) in
-  let ctn = mk_var("ct"^string_of_int nidx,`:(128)word`) in
-  (ABBREV_TAC(mk_eq(s13n,ks)) THEN
-   ABBREV_TAC(mk_eq(ctn,
-     list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,
-       [list_mk_comb(`word_xor:(128)word->(128)word->(128)word`,[ptn;s13n]); `rk14:(128)word`]))))
-  (asl,w);;
+(* 8-block ct abbreviation uses the shared strict `abbrev_ct_from_store`
+   (defined once near the 2-block band); the earlier per-band `abbrev_ct8`
+   duplicate is now folded into that shared helper. *)
 
 (* ct1 closer (counter = ivec). *)
 let CT_CLOSE_8 nidx =
@@ -5897,11 +6489,11 @@ let AES256_GCM_ENCRYPT_LT_8BLOCK_CONCRETE = prove
   GCM_BND16 GCM_X8TAIL_LEMMA8 THEN
   GCM_RUN_THEN GCM_CASCADE8_TAC 273 276 THEN
   GCM_RUN 277 300 THEN
-  abbrev_ct8 0 1 THEN abbrev_ct8 16 2 THEN
+  abbrev_ct_from_store 0 1 THEN abbrev_ct_from_store 16 2 THEN
   GCM_RUN 301 340 THEN
-  abbrev_ct8 32 3 THEN abbrev_ct8 48 4 THEN abbrev_ct8 64 5 THEN
+  abbrev_ct_from_store 32 3 THEN abbrev_ct_from_store 48 4 THEN abbrev_ct_from_store 64 5 THEN
   GCM_RUN 341 370 THEN
-  abbrev_ct8 80 6 THEN abbrev_ct8 96 7 THEN
+  abbrev_ct_from_store 80 6 THEN abbrev_ct_from_store 96 7 THEN
   GCM_RUN 371 417 THEN
   SUBGOAL_THEN `1 <= byte_len /\ byte_len <= 16` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP EIGHTBLOCK_MASK_REG th])) THEN
