@@ -123,35 +123,11 @@ let PMUL_NORM_CONV tm =
     else failwith "already normalized"
   | _ -> failwith "not word_pmul";;
 
-(* ---- Assembly-shaped 1-block spec --------------------------------------- *)
-
-let ghash_1block_karatsuba = new_definition
- `ghash_1block_karatsuba (input:int128) (h:int128) (hk:int128) : int128 =
-  let a_lo:64 word = word_subword input (0,64) in
-  let a_hi:64 word = word_subword input (64,64) in
-  let h_lo:64 word = word_subword h (0,64) in
-  let h_hi:64 word = word_subword h (64,64) in
-  let hk_lo:64 word = word_subword hk (0,64) in
-  let pl:int128 = word_pmul a_lo h_hi in
-  let ph:int128 = word_pmul a_hi h_lo in
-  let pm:int128 = word_pmul (word_xor a_lo a_hi) hk_lo in
-  let mid:int128 = word_xor (word_xor pm ph) pl in
-  let a:64 word = word_subword pl (0,64) in
-  let b:64 word = word_xor (word_subword pl (64,64)) (word_subword mid (0,64)) in
-  let c:64 word = word_xor (word_subword ph (0,64)) (word_subword mid (64,64)) in
-  let d:64 word = word_subword ph (64,64) in
-  let w:64 word = word 13979173243358019584 in
-  let wa:128 word = word_pmul a w in
-  let wa_lo:64 word = word_subword wa (0,64) in
-  let wa_hi:64 word = word_subword wa (64,64) in
-  let v:64 word = word_xor b wa_lo in
-  let u:64 word = word_xor (word_xor c a) wa_hi in
-  let wv:128 word = word_pmul v w in
-  let wv_lo:64 word = word_subword wv (0,64) in
-  let wv_hi:64 word = word_subword wv (64,64) in
-  let f:64 word = word_xor u wv_lo in
-  let g:64 word = word_xor (word_xor d v) wv_hi in
-  word_reversefields 8 (word_join g f : 128 word)`;;
+(* The assembly-shaped 1-block spec `ghash_1block_karatsuba` and its bridge     *)
+(* `GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT` live in gcm_one_block_closers.ml      *)
+(* (alongside the other per-length karatsuba specs/bridges).  They depend on    *)
+(* POLYVAL_DOT_KARATSUBA / BYTESWAP128_SUBWORD_* / WORD_SUBWORD_XOR_COMM below,  *)
+(* which are general (multi-N) support lemmas and stay here.                    *)
 
 (* ---- polyval_dot expressed in Karatsuba + Prop3 form --------------------- *)
 
@@ -207,23 +183,7 @@ let WORD_SUBWORD_XOR_COMM = prove(
     word_subword (word_xor a (word_xor c b)) n`,
   REPEAT GEN_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT = prove(
-  `!(input:int128) (h:int128) (hk:int128).
-    word_subword hk (0,64):(64)word = karatsuba_mid h
-    ==> ghash_1block_karatsuba input (byteswap128 h) hk =
-        word_reversefields 8 (polyval_dot input h)`,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[ghash_1block_karatsuba; LET_DEF; LET_END_DEF;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI;
-              REWRITE_RULE[LET_DEF; LET_END_DEF] POLYVAL_DOT_KARATSUBA] THEN
-  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  ASM_REWRITE_TAC[karatsuba_mid] THEN
-  REWRITE_TAC[WORD_XOR_ASSOC] THEN
-  CONV_TAC(TOP_DEPTH_CONV PMUL_NORM_CONV) THEN
-  REWRITE_TAC[WORD_XOR_ASSOC] THEN
-  REWRITE_TAC[GSYM WORD_XOR_ASSOC] THEN
-  REWRITE_TAC[WORD_SUBWORD_XOR_COMM] THEN
-  REWRITE_TAC[WORD_XOR_ASSOC]);;
+(* GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT moved to gcm_one_block_closers.ml. *)
 
 (* ---- SIMD per-lane reversal fold lemmas ---------------------------------- *)
 
@@ -425,37 +385,36 @@ let REV8_JOIN_FOLD = prove(
   CONV_TAC WORD_BLAST);;
 
 (* ---- Half-swap lemmas (used by the 3-block only-Q19 fast reduce) ---------- *)
-(* When the GHASH accumulator register (Q19) is abbreviated opaque across the
-   epilogue ext (the 3-block fast reduce), the final_xi value and the ciphertext
-   atoms enter the GHASH closer in half-swapped `word_join` form. These three
-   WORD_BLAST identities re-normalize them to the c?lo/c?hi shape the closer
-   expects. Centralized here (was inline in the 3-block file). *)
+(* (The half-swap re-normalization lemmas HALFSWAP_JOIN_SELF / HALFSWAP_REV8_LEMMA
+   / JOIN_SUBWORD_IDENT were removed/relocated: unused by AES256_GCM_ENCRYPT_CORRECT
+   — they supported the standalone 3-block opaque-Q19 closer, now in
+   gcm_aesgcm_standalone_blocks_helper.ml.) *)
 
-(* Half-swap of `word_join x x` (256-bit) taking the middle 128 bits. *)
-(* HALFSWAP_JOIN_SELF moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
+(* ---- N-block GHASH_POLYVAL_ACC specializations (lengths 1..8) ------------- *)
+(* All of GHASH_POLYVAL_ACC_1..8 live here, derived from the ring-algebra      *)
+(* proof shape and from GHASH_POLYVAL_ACC_BATCHED (in common/polyval_ghash.ml, *)
+(* loaded before this file via `needs`). The per-N proof files reference these *)
+(* rather than redefining them.                                               *)
 
-(* reversefields of a half-swapped join = lo/hi-swapped subword of reversefields. *)
-let HALFSWAP_REV8_LEMMA = prove
- (`!(x:(128)word).
-     (word_subword (word_reversefields 8
-        (word_join (word_subword x (0,64):(64)word) (word_subword x (64,64):(64)word):(128)word):(128)word) (0,64):(64)word =
-      word_subword (word_reversefields 8 x:(128)word) (64,64):(64)word) /\
-     (word_subword (word_reversefields 8
-        (word_join (word_subword x (0,64):(64)word) (word_subword x (64,64):(64)word):(128)word):(128)word) (64,64):(64)word =
-      word_subword (word_reversefields 8 x:(128)word) (0,64):(64)word)`,
-  GEN_TAC THEN CONJ_TAC THEN CONV_TAC WORD_BLAST);;
+(* ========================================================================= *)
+(* 1-block base case: ghash_polyval_acc h a [b] = prop3(pmul (a XOR b) h).    *)
+(* ========================================================================= *)
 
-(* A half-swapped join of a word's subwords reconstructs the word. *)
-let JOIN_SUBWORD_IDENT = prove
- (`!(x:(128)word).
-     word_join (word_subword x (64,64):(64)word) (word_subword x (0,64):(64)word):(128)word = x`,
-  GEN_TAC THEN CONV_TAC WORD_BLAST);;
-
-(* ---- N-block GHASH_POLYVAL_ACC specializations (lengths 2..7) ------------- *)
-(* All of GHASH_POLYVAL_ACC_2..7 live here, derived from GHASH_POLYVAL_ACC_2's *)
-(* ring-algebra proof and from GHASH_POLYVAL_ACC_BATCHED (both in              *)
-(* common/ghash_spec.ml, loaded before this file via `needs`). The per-N      *)
-(* proof files reference these rather than redefining them.                   *)
+let GHASH_POLYVAL_ACC_1 = prove
+ (`!(h:int128) (a:int128) (b:int128).
+    ghash_polyval_acc h a [b] =
+    polyval_reduce_prop3 (word_pmul (word_xor a b) h : 256 word)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[ghash_polyval_acc] THEN
+  MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
+  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
+  EXISTS_TAC
+    `ring_mul bool_poly (poly_of_word (word_xor (a:int128) (b:int128))) (poly_of_word (h:int128))` THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[POLYVAL_DOT_CORRECT];
+    ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
+    MP_TAC(ISPECL [`word_pmul (word_xor (a:int128) (b:int128)) (h:int128) : 256 word`]
+      POLYVAL_REDUCE_PROP3_CORRECT) THEN
+    REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
 
 (* ========================================================================= *)
 (* 2-block Horner unrolling: ghash_polyval_acc h a [b;c] = prop3(...)        *)
@@ -655,6 +614,30 @@ let GHASH_POLYVAL_ACC_7 = prove
   REWRITE_TAC[WORD_XOR_0] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
   REWRITE_TAC[num_CONV `6`; num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
+
+(* ========================================================================= *)
+(* 8-block unrolling: ghash_polyval_acc h a [p;q;r;s;t;u;z;w8] = prop3(...).  *)
+(* ========================================================================= *)
+
+let GHASH_POLYVAL_ACC_8 = prove
+ (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128) (s:int128) (t:int128) (u:int128) (z:int128) (w8:int128).
+    ghash_polyval_acc h a [p:int128; q; r; s; t; u; z; w8] =
+    polyval_reduce_prop3
+      (word_xor (word_pmul (word_xor a p) (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) h) h) h) : 256 word)
+      (word_xor (word_pmul q (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) h) h) : 256 word)
+      (word_xor (word_pmul r (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) h) : 256 word)
+      (word_xor (word_pmul s (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) : 256 word)
+      (word_xor (word_pmul t (polyval_dot (polyval_dot (polyval_dot h h) h) h) : 256 word)
+      (word_xor (word_pmul u (polyval_dot (polyval_dot h h) h) : 256 word)
+      (word_xor (word_pmul z (polyval_dot h h) : 256 word)
+                (word_pmul w8 h : 256 word))))))))`,
+  REPEAT GEN_TAC THEN
+  MP_TAC (SPECL [`h:int128`; `[q:int128; r; s; t; u; z; w8]`; `a:int128`; `p:int128`]
+                GHASH_POLYVAL_ACC_BATCHED) THEN
+  REWRITE_TAC[LENGTH; ghash_wide; h_power; ARITH; SUB_0] THEN
+  REWRITE_TAC[WORD_XOR_0] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  REWRITE_TAC[num_CONV `7`; num_CONV `6`; num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
 
 (* ---- Tactics for closing the GHASH subgoal -------------------------------- *)
 

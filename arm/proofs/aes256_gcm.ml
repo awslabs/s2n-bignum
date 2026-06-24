@@ -1249,7 +1249,7 @@ let GCM_INLOOP_GUARD_TAC x5_lemma : tactic =
 (* (cmp x5,#0x70..#0x10) all falls through; the b .L256_enc_blocks_less_     *)
 (* than_1 lands on the shared masked-store + GHASH + Barrett-reduce tail,    *)
 (* which is byte-identical to the standalone one-block routine — so its      *)
-(* GHASH/mask closers (GCM_CT_STEP_TAC, the GCM_1B_GHASH_CLOSE framework      *)
+(* GHASH/mask closers (GCM_1BLOCK_CT1_STEP_TAC, the GCM_1B_GHASH_CLOSE        *)
 (* closer, and the ONE_BLOCK lemmas) apply verbatim.                         *)
 (* ========================================================================= *)
 
@@ -1358,42 +1358,11 @@ let GCM_CASCADE_TAC : tactic =
 (* GCM_NB_GHASH_CLOSE framework as bands 2-8, instantiated at N=1  *)
 (* (0 full blocks + 1 partial; the single masked block sits in the *)
 (* block-1/xi-accumulator position with multiplier h, so qS=1,     *)
-(* qB=4*1+1=5).  Routes through GHASH_POLYVAL_ACC_1 + the 1-block   *)
-(* ACC Karatsuba bridge.                                           *)
+(* qB=4*1+1=5).  Routes through GHASH_POLYVAL_ACC_1 (centralized in *)
+(* gcm_aesgcm_helpers.ml with ACC_2..8) + the 1-block ACC Karatsuba *)
+(* bridge GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC (in                 *)
+(* gcm_one_block_closers.ml with the other per-length bridges).     *)
 (* ============================================================ *)
-
-let GHASH_POLYVAL_ACC_1 = prove
- (`!(h:int128) (a:int128) (b:int128).
-    ghash_polyval_acc h a [b] =
-    polyval_reduce_prop3 (word_pmul (word_xor a b) h : 256 word)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[ghash_polyval_acc] THEN
-  MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
-  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-  EXISTS_TAC
-    `ring_mul bool_poly (poly_of_word (word_xor (a:int128) (b:int128))) (poly_of_word (h:int128))` THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[POLYVAL_DOT_CORRECT];
-    ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
-    MP_TAC(ISPECL [`word_pmul (word_xor (a:int128) (b:int128)) (h:int128) : 256 word`]
-      POLYVAL_REDUCE_PROP3_CORRECT) THEN
-    REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
-
-let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
- (`!(b1:int128) (h:int128) (hk:int128).
-    word_subword hk (0,64):(64)word = karatsuba_mid h
-    ==> ghash_1block_karatsuba b1 (byteswap128 h) hk =
-        word_reversefields 8 (polyval_reduce_prop3 (word_pmul b1 h : 256 word))`,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT] THEN
-  AP_TERM_TAC THEN
-  MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
-  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-  EXISTS_TAC `ring_mul bool_poly (poly_of_word (b1:int128)) (poly_of_word (h:int128))` THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[POLYVAL_DOT_CORRECT];
-    ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
-    MP_TAC(ISPECL [`word_pmul (b1:int128) (h:int128) : 256 word`] POLYVAL_REDUCE_PROP3_CORRECT) THEN
-    REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
 
 let XI_HS_LO_1 = prove
  (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (0,64):(64)word =
@@ -1710,19 +1679,15 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_SIMP_TAC[ONE_BLOCK_USHR_BYTELEN; ONE_BLOCK_MASK_IDEM] THEN
-  CONJ_TAC THENL [GCM_CT_STEP_TAC; GCM_1B_GHASH_CLOSE]);;
+  CONJ_TAC THENL [GCM_1BLOCK_CT1_STEP_TAC; GCM_1B_GHASH_CLOSE]);;
 
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_1 branch (2-block: full block 1 + partial   *)
 (* block 2) of this same single binary, proved as a standalone theorem and   *)
 (* applied exactly as the XTS length-band lemmas are.  Reuses the two-block   *)
-(* masked closers (GCM_CT1_STEP_TAC, TWOBLOCK_MASK_REG, TWOBLOCK_USHR,        *)
-(* GHASH Karatsuba bridge) at the tactic level.                              *)
+(* masked closers (TWOBLOCK_MASK_REG, TWOBLOCK_USHR, GHASH Karatsuba bridge)  *)
+(* at the tactic level.                                                       *)
 (* ========================================================================= *)
-
-(* The two-block ciphertext-store closer (block 1 = ivec, block 2 =          *)
-(* gcm_ctr_inc ivec): the N=2 instance of the shared generator.               *)
-let GCM_CT1_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 2 1;;
 
 (* --- 2-block-branch length/cascade helpers (thresholds over 16+byte_len) --- *)
 
@@ -2273,14 +2238,9 @@ let AES256_GCM_ENCRYPT_LT_2BLOCK_CONCRETE = prove
 (* lemmas are.  The tail-dispatch cascade now takes the cmp x5,#0x20 / b.gt   *)
 (* branch into .more_than_2, which stores block 1, falls into .more_than_1   *)
 (* (block 2), then into .less_than_1 (masked partial block 3 + final GHASH).  *)
-(* Reuses the three-block masked closers (GCM_3BLOCK_GHASH_STEP_MASKED_TAC,   *)
-(* THREEBLOCK_MASK_REG/USHR, GCM_CT2_STEP_TAC) at the tactic level.          *)
+(* Reuses the three-block masked closers (THREEBLOCK_MASK_REG/USHR, GHASH     *)
+(* Karatsuba bridge) at the tactic level.                                     *)
 (* ========================================================================= *)
-
-(* The three-block ciphertext-store closer for block 2 (ivec_2 =             *)
-(* gcm_ctr_inc ivec): the N=3 instance of the shared generator.  (Blocks 1    *)
-(* and 3 are closed inline below.)                                            *)
-let GCM_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 3 2;;
 
 (* --- 3-block-branch length/cascade helpers (thresholds over 32+byte_len) --- *)
 
@@ -6673,26 +6633,6 @@ let gcm_final_xi = new_definition
 (* Bridge lemmas: concrete 1-block band postcondition <-> abstract spec.      *)
 (* ========================================================================= *)
 
-let KS0_LEMMA = prove(
-  `gcm_keystream 0 ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14] =
-   aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14`,
-  REWRITE_TAC[gcm_keystream; gcm_ctr_iter] THEN
-  REWRITE_TAC(map num_CONV [`14`;`13`;`12`;`11`;`10`;`9`;`8`;`7`;`6`;`5`;`4`;`3`;`2`;`1`]) THEN
-  REWRITE_TAC[EL; HD; TL]);;
-
-let NFULL0_LEMMA = prove(
-  `!n. 1 <= n /\ n <= 16 ==> (n - 1) DIV 16 = 0 /\ n - 16 * ((n-1) DIV 16) = n`,
-  REPEAT STRIP_TAC THENL
-   [ASM_ARITH_TAC;
-    SUBGOAL_THEN `(n-1) DIV 16 = 0` SUBST1_TAC THENL
-     [ASM_ARITH_TAC; ASM_ARITH_TAC]]);;
-
-let SUB_LIST_0_16 = prove(
-  `!l:(byte)list. LENGTH l = 16 ==> SUB_LIST (0,16) l = l`,
-  REPEAT STRIP_TAC THEN
-  ONCE_REWRITE_TAC[GSYM (ASSUME `LENGTH(l:byte list) = 16`)] THEN
-  REWRITE_TAC[SUB_LIST_LENGTH]);;
-
 let EL_16_8_CLAUSES = (CONJUNCTS o prove)
  (`EL 0 [a0;a1;a2;a3;a4;a5;a6;a7;a8;a9;a10;a11;a12;a13;a14;a15] = a0 /\
    EL 1 [a0;a1;a2;a3;a4;a5;a6;a7;a8;a9;a10;a11;a12;a13;a14;a15] = a1 /\
@@ -6737,18 +6677,6 @@ let BYTES128_TO_BYTES8_THM = prove(
   GEN_REWRITE_TAC TOP_DEPTH_CONV [READ_MEMORY_BYTESIZED_SPLIT; WORD_ADD_ASSOC_CONSTS] THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
   ONCE_REWRITE_TAC [ARITH_RULE `pos + 0 = (pos:num)`] THEN REFL_TAC);;
-
-let LIST_OF_EL_16 = prove(
-  `!l:(byte)list. LENGTH l = 16 ==>
-     [EL 0 l; EL 1 l; EL 2 l; EL 3 l; EL 4 l; EL 5 l; EL 6 l; EL 7 l;
-      EL 8 l; EL 9 l; EL 10 l; EL 11 l; EL 12 l; EL 13 l; EL 14 l; EL 15 l] = l`,
-  REWRITE_TAC[ARITH_RULE `16 = SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC(SUC 0)))))))))))))))`] THEN
-  REWRITE_TAC[LENGTH_EQ_CONS; LENGTH_EQ_NIL] THEN
-  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC(map num_CONV [`15`;`14`;`13`;`12`;`11`;`10`;`9`;`8`;`7`;`6`;`5`;`4`;`3`;`2`;`1`]) THEN
-  REWRITE_TAC[EL; HD; TL]);;
-
-let GCM_VAL16 = WORD_REDUCE_CONV `val(word 16:int64)`;;
 
 (* BYTE_LIST_AT_16_BYTES128 moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT; depends on this file's spec). *)
 

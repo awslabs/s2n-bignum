@@ -177,26 +177,8 @@ let GHASH_8BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* ========================================================================= *)
-let GHASH_POLYVAL_ACC_8 = prove
- (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128) (s:int128) (t:int128) (u:int128) (z:int128) (w8:int128).
-    ghash_polyval_acc h a [p:int128; q; r; s; t; u; z; w8] =
-    polyval_reduce_prop3
-      (word_xor (word_pmul (word_xor a p) (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) h) h) h) : 256 word)
-      (word_xor (word_pmul q (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) h) h) : 256 word)
-      (word_xor (word_pmul r (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) h) : 256 word)
-      (word_xor (word_pmul s (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) : 256 word)
-      (word_xor (word_pmul t (polyval_dot (polyval_dot (polyval_dot h h) h) h) : 256 word)
-      (word_xor (word_pmul u (polyval_dot (polyval_dot h h) h) : 256 word)
-      (word_xor (word_pmul z (polyval_dot h h) : 256 word)
-                (word_pmul w8 h : 256 word))))))))`,
-  REPEAT GEN_TAC THEN
-  MP_TAC (SPECL [`h:int128`; `[q:int128; r; s; t; u; z; w8]`; `a:int128`; `p:int128`]
-                GHASH_POLYVAL_ACC_BATCHED) THEN
-  REWRITE_TAC[LENGTH; ghash_wide; h_power; ARITH; SUB_0] THEN
-  REWRITE_TAC[WORD_XOR_0] THEN
-  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-  REWRITE_TAC[num_CONV `7`; num_CONV `6`; num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
+(* GHASH_POLYVAL_ACC_8 moved to gcm_aesgcm_helpers.ml (centralized with the    *)
+(* rest of the GHASH_POLYVAL_ACC_1..8 family).                                  *)
 
 (* ========================================================================= *)
 (* ========================================================================= *)

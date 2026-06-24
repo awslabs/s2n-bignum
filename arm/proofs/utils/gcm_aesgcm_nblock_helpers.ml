@@ -165,7 +165,7 @@ let kara_acc = define
 
 (* The shared Barrett reduction taking the accumulated (pl, ph, pm) triple
    and producing the final 128-bit GHASH digest. This mirrors the let-chain
-   in ghash_1block_karatsuba (lines 96-112 of gcm_aesgcm_helpers.ml) and the
+   in ghash_1block_karatsuba (in gcm_one_block_closers.ml) and the
    matching let-chain in ghash_2block_karatsuba. *)
 let karatsuba_reduce_shared = new_definition
  `karatsuba_reduce_shared (pl:int128) (ph:int128) (pm:int128) : int128 =
@@ -481,21 +481,6 @@ let GHASH_NBLOCK_KARATSUBA_EQ_PROP3 = prove
 (* But because the AES chain term is huge (~14 lines of nested aese/aesmc),  *)
 (* we provide a generator that builds it on demand from the round-key list. *)
 (* ------------------------------------------------------------------------- *)
-
-(* AES_ROUND_CHAIN_TAC : term -> term -> string -> tactic                    *)
-(*   AES_ROUND_CHAIN_TAC `ivec_k:(128)word` `[rk0;...;rk13]` "s13_k"          *)
-(*   produces ABBREV_TAC `s13_k = aese (aesmc (aese ... rk13)`.               *)
-let AES_ROUND_CHAIN_TAC ivec rks name : tactic =
-  let aese_tm = `aese:(128)word -> (128)word -> (128)word`
-  and aesmc_tm = `aesmc:(128)word -> (128)word` in
-  let chain = List.fold_left (fun acc rk ->
-    let after_aese = mk_comb(mk_comb(aese_tm, acc), rk) in
-    mk_comb(aesmc_tm, after_aese)) ivec rks in
-  let chain_no_final_aesmc = match chain with
-    | Comb(_, x) -> x
-    | _ -> failwith "AES_ROUND_CHAIN_TAC: empty rks" in
-  ABBREV_TAC(mk_eq(mk_var(name, type_of chain_no_final_aesmc),
-                   chain_no_final_aesmc));;
 
 (* ABBREV_FINAL_XI_TAC : tactic                                              *)
 (*   Abbreviate Q19 (the assembled Karatsuba+Barrett result) as `final_xi`. *)
@@ -898,8 +883,13 @@ let rec bubble_sort_conv tm =
       apply_n_times (k-1) (TRANS acc th) in
   apply_n_times n (REFL tm);;
 
-
-
+(* Iterate bubble_sort_conv to a fixpoint: keep re-sorting until the XOR chain  *)
+(* is stable.  Shared by every N-block GHASH closer (folds word_pmul args up to *)
+(* AC so the final per-half sort sees abbreviated atoms on both sides).         *)
+let rec bubble_fix tm =
+  let th = bubble_sort_conv tm in
+  let r = rhs(concl th) in
+  if r = tm then th else TRANS th (bubble_fix r);;
 
 
 (* ========================================================================= *)

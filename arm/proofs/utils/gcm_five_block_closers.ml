@@ -1,4 +1,6 @@
 (* ===== 5-block GHASH closers (mc-free, extracted from aes256_gcm_five_block.ml) ===== *)
+needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
+
 let ghash_5block_karatsuba = new_definition
  `ghash_5block_karatsuba (b1:int128) (b2:int128) (b3:int128) (b4:int128) (b5:int128)
                          (h_tw:int128)  (hk:int128)
