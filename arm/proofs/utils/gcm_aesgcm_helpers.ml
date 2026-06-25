@@ -14,7 +14,8 @@ needs "arm/proofs/base.ml";;
 needs "common/aes.ml";;
 needs "arm/proofs/utils/aes.ml";;
 needs "arm/proofs/utils/aes256_gcm_block_enc_spec.ml";;
-needs "common/ghash_spec.ml";;
+needs "common/karatsuba_pmul.ml";;
+needs "common/polyval_ghash.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* WORD_SIMPLE_SUBWORD_CONV compatibility shim.                               *)
@@ -466,6 +467,35 @@ let GHASH_POLYVAL_ACC_2 = prove
           REWRITE_TAC[MOD_POLYVAL_REFL; RING_MUL; BOOL_POLY_OF_WORD]];
         REWRITE_TAC[]] THEN
       SIMP_TAC[RING_MUL; BOOL_POLY_OF_WORD]]]);;
+
+(* Helper: polyval_dot(a XOR p, h) * h^2 == a*h^3 + p*h^3 (mod Q), where      *)
+(* h^3 = polyval_dot h (polyval_dot h h).  Bridges via INNER_CONG_GEN, after  *)
+(* first commuting polyval_dot h h^2 = polyval_dot h^2 h (via WORD_PMUL_SYM). *)
+(* Used by GHASH_POLYVAL_ACC_3 below.                                         *)
+let HELPER_3 = prove
+ (`!(a:int128) (p:int128) (h:int128).
+    (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor a p) h))
+       (poly_of_word (polyval_dot h h)) ==
+     ring_add bool_poly
+       (ring_mul bool_poly (poly_of_word a) (poly_of_word (polyval_dot h (polyval_dot h h))))
+       (ring_mul bool_poly (poly_of_word p) (poly_of_word (polyval_dot h (polyval_dot h h)))))
+    mod_polyval`,
+  REPEAT GEN_TAC THEN
+  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
+  EXISTS_TAC
+    `ring_mul bool_poly
+      (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (p:int128)))
+      (poly_of_word (polyval_dot (h:int128) (polyval_dot h h)))` THEN
+  CONJ_TAC THENL
+   [SUBGOAL_THEN `polyval_dot (h:int128) (polyval_dot h h) = polyval_dot (polyval_dot (h:int128) h) h`
+      SUBST1_TAC THENL
+     [REWRITE_TAC[polyval_dot] THEN REWRITE_TAC[WORD_PMUL_SYM];
+      ALL_TAC] THEN
+    MP_TAC(ISPECL [`h:int128`; `word_xor (a:int128) (p:int128)`; `1`] INNER_CONG_GEN) THEN
+    REWRITE_TAC[TWO; ONE; h_power; POLY_OF_WORD_XOR];
+    MATCH_MP_TAC MOD_POLYVAL_REFL_GEN THEN
+    SIMP_TAC[RING_MUL; RING_ADD; BOOL_POLY_OF_WORD] THEN
+    MATCH_MP_TAC(GSYM RING_ADD_RDISTRIB) THEN REWRITE_TAC[BOOL_POLY_OF_WORD]]);;
 
 let GHASH_POLYVAL_ACC_3 = prove
  (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128).
