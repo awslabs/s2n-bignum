@@ -101,6 +101,12 @@ s/([[(,.;: ])([xyz]mm[0-9]*)/\1\%\2/g
 
 s/QWORD PTR//g
 
+# A byte-sized memory operand carries no register from which a size suffix can
+# be inferred (e.g. "cmp BYTE PTR [rbp+3], 0"), so translate the explicit
+# "BYTE PTR" marker into an AT&T "b" mnemonic suffix and drop the marker.
+
+/BYTE PTR/{ s/^( *)([a-z][a-z0-9]*)/\1\2b/; s/BYTE PTR // }
+
 s/ adc  / adcq /g
 s/ adcx  / adcxq /g
 s/ add  / addq /g

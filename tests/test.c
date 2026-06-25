@@ -3506,6 +3506,154 @@ void reference_keccak_f1600(uint64_t r[25],uint64_t a[25])
         r[5*y+x] = A[x][y];
 }
 
+// SHA-256 reference: a direct port of the scalar C implementation
+// sha256_compress from AWS-LC (crypto/fipsmodule/sha/sha256.c),
+// itself the FIPS 180-4 compression function over whole 64-byte blocks.
+
+static const uint32_t sha256_K256[64] =
+ { 0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL, 0x3956c25bUL,
+   0x59f111f1UL, 0x923f82a4UL, 0xab1c5ed5UL, 0xd807aa98UL, 0x12835b01UL,
+   0x243185beUL, 0x550c7dc3UL, 0x72be5d74UL, 0x80deb1feUL, 0x9bdc06a7UL,
+   0xc19bf174UL, 0xe49b69c1UL, 0xefbe4786UL, 0x0fc19dc6UL, 0x240ca1ccUL,
+   0x2de92c6fUL, 0x4a7484aaUL, 0x5cb0a9dcUL, 0x76f988daUL, 0x983e5152UL,
+   0xa831c66dUL, 0xb00327c8UL, 0xbf597fc7UL, 0xc6e00bf3UL, 0xd5a79147UL,
+   0x06ca6351UL, 0x14292967UL, 0x27b70a85UL, 0x2e1b2138UL, 0x4d2c6dfcUL,
+   0x53380d13UL, 0x650a7354UL, 0x766a0abbUL, 0x81c2c92eUL, 0x92722c85UL,
+   0xa2bfe8a1UL, 0xa81a664bUL, 0xc24b8b70UL, 0xc76c51a3UL, 0xd192e819UL,
+   0xd6990624UL, 0xf40e3585UL, 0x106aa070UL, 0x19a4c116UL, 0x1e376c08UL,
+   0x2748774cUL, 0x34b0bcb5UL, 0x391c0cb3UL, 0x4ed8aa4aUL, 0x5b9cca4fUL,
+   0x682e6ff3UL, 0x748f82eeUL, 0x78a5636fUL, 0x84c87814UL, 0x8cc70208UL,
+   0x90befffaUL, 0xa4506cebUL, 0xbef9a3f7UL, 0xc67178f2UL };
+
+static uint32_t sha256_rotr(uint32_t x, int n)
+{ return (x >> n) | (x << (32 - n));
+}
+
+static uint32_t sha256_load_be(const uint8_t *p)
+{ return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+         ((uint32_t)p[2] << 8) | (uint32_t)p[3];
+}
+
+// See FIPS 180-4, section 4.1.2.
+#define SHA256_Sigma0(x)                                \
+  (sha256_rotr((x), 2) ^ sha256_rotr((x), 13) ^         \
+   sha256_rotr((x), 22))
+#define SHA256_Sigma1(x)                                \
+  (sha256_rotr((x), 6) ^ sha256_rotr((x), 11) ^         \
+   sha256_rotr((x), 25))
+#define SHA256_sigma0(x) \
+  (sha256_rotr((x), 7) ^ sha256_rotr((x), 18) ^ ((x) >> 3))
+#define SHA256_sigma1(x) \
+  (sha256_rotr((x), 17) ^ sha256_rotr((x), 19) ^ ((x) >> 10))
+
+#define SHA256_Ch(x, y, z) (((x) & (y)) ^ ((~(x)) & (z)))
+#define SHA256_Maj(x, y, z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+
+#define SHA256_ROUND_00_15(i, a, b, c, d, e, f, g, h)                 \
+  do {                                                                \
+    T1 += h + SHA256_Sigma1(e) + SHA256_Ch(e, f, g) + sha256_K256[i]; \
+    h = SHA256_Sigma0(a) + SHA256_Maj(a, b, c);                       \
+    d += T1;                                                          \
+    h += T1;                                                          \
+  } while (0)
+
+#define SHA256_ROUND_16_63(i, a, b, c, d, e, f, g, h, X)    \
+  do {                                                      \
+    s0 = X[(i + 1) & 0x0f];                                 \
+    s0 = SHA256_sigma0(s0);                                 \
+    s1 = X[(i + 14) & 0x0f];                                \
+    s1 = SHA256_sigma1(s1);                                 \
+    T1 = X[(i) & 0x0f] += s0 + s1 + X[(i + 9) & 0x0f];      \
+    SHA256_ROUND_00_15(i, a, b, c, d, e, f, g, h);          \
+  } while (0)
+
+void reference_sha256_block_data_order(uint32_t state[8], const uint8_t *data,
+                                       size_t num)
+{ uint32_t a, b, c, d, e, f, g, h, s0, s1, T1;
+  uint32_t X[16];
+  int i;
+
+  while (num--)
+   { a = state[0];
+     b = state[1];
+     c = state[2];
+     d = state[3];
+     e = state[4];
+     f = state[5];
+     g = state[6];
+     h = state[7];
+
+     T1 = X[0] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(0, a, b, c, d, e, f, g, h);
+     T1 = X[1] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(1, h, a, b, c, d, e, f, g);
+     T1 = X[2] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(2, g, h, a, b, c, d, e, f);
+     T1 = X[3] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(3, f, g, h, a, b, c, d, e);
+     T1 = X[4] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(4, e, f, g, h, a, b, c, d);
+     T1 = X[5] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(5, d, e, f, g, h, a, b, c);
+     T1 = X[6] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(6, c, d, e, f, g, h, a, b);
+     T1 = X[7] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(7, b, c, d, e, f, g, h, a);
+     T1 = X[8] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(8, a, b, c, d, e, f, g, h);
+     T1 = X[9] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(9, h, a, b, c, d, e, f, g);
+     T1 = X[10] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(10, g, h, a, b, c, d, e, f);
+     T1 = X[11] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(11, f, g, h, a, b, c, d, e);
+     T1 = X[12] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(12, e, f, g, h, a, b, c, d);
+     T1 = X[13] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(13, d, e, f, g, h, a, b, c);
+     T1 = X[14] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(14, c, d, e, f, g, h, a, b);
+     T1 = X[15] = sha256_load_be(data);
+     data += 4;
+     SHA256_ROUND_00_15(15, b, c, d, e, f, g, h, a);
+
+     for (i = 16; i < 64; i += 8)
+      { SHA256_ROUND_16_63(i + 0, a, b, c, d, e, f, g, h, X);
+        SHA256_ROUND_16_63(i + 1, h, a, b, c, d, e, f, g, X);
+        SHA256_ROUND_16_63(i + 2, g, h, a, b, c, d, e, f, X);
+        SHA256_ROUND_16_63(i + 3, f, g, h, a, b, c, d, e, X);
+        SHA256_ROUND_16_63(i + 4, e, f, g, h, a, b, c, d, X);
+        SHA256_ROUND_16_63(i + 5, d, e, f, g, h, a, b, c, X);
+        SHA256_ROUND_16_63(i + 6, c, d, e, f, g, h, a, b, X);
+        SHA256_ROUND_16_63(i + 7, b, c, d, e, f, g, h, a, X);
+      }
+
+     state[0] += a;
+     state[1] += b;
+     state[2] += c;
+     state[3] += d;
+     state[4] += e;
+     state[5] += f;
+     state[6] += g;
+     state[7] += h;
+   }
+}
+
 // Rejection sampling reference
 
 uint64_t reference_rej_uniform(int16_t r[256],uint8_t *buf,uint64_t buflen)
@@ -15589,6 +15737,124 @@ int test_secp256k1_jmixadd_alt(void)
   return 0;
 }
 
+// SHA-256 scalar x86 block compression (no SHA-NI or SIMD).
+//
+// The function requires num_blocks >= 1 (do-while loop).
+
+int test_sha256_compress(void)
+{
+#ifndef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  int i;
+  size_t num;
+  uint32_t state_ref[8], state_asm[8];
+  uint8_t data[8*64], data_copy[8*64];
+
+  static const uint32_t sha256_iv[8] =
+   { 0x6a09e667UL, 0xbb67ae85UL, 0x3c6ef372UL, 0xa54ff53aUL,
+     0x510e527fUL, 0x9b05688cUL, 0x1f83d9abUL, 0x5be0cd19UL };
+
+  // FIPS 180-4 single-block known answer: SHA256("abc")
+
+  static const uint32_t digest_abc[8] =
+   { 0xba7816bfUL, 0x8f01cfeaUL, 0x414140deUL, 0x5dae2223UL,
+     0xb00361a3UL, 0x96177a9cUL, 0xb410ff61UL, 0xf20015adUL };
+
+  // FIPS 180-4 two-block known answer:
+  // SHA256("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")
+
+  static const uint32_t digest_abcdbcde[8] =
+   { 0x248d6a61UL, 0xd20638b8UL, 0xe5c02693UL, 0x0c3e6039UL,
+     0xa33ce459UL, 0x64ff2167UL, 0xf6ecedd4UL, 0x19db06c1UL };
+
+  printf("Testing sha256_compress with %d cases\n",tests);
+
+  // "abc" padded to one 64-byte block
+
+  memset(data,0,64);
+  data[0] = 0x61; data[1] = 0x62; data[2] = 0x63; data[3] = 0x80;
+  data[63] = 0x18;
+  for (i = 0; i < 8; ++i) state_asm[i] = sha256_iv[i];
+  sha256_compress(state_asm,data,1);
+  for (i = 0; i < 8; ++i)
+   { if (state_asm[i] != digest_abc[i])
+      { printf("### Disparity: SHA256(\"abc\") word %d; "
+               "code = 0x%08"PRIx32" while reference = 0x%08"PRIx32"\n",
+               i,state_asm[i],digest_abc[i]);
+        return 1;
+      }
+   }
+  if (VERBOSE)
+   { printf("OK: SHA256(\"abc\") = [0x%08"PRIx32",0x%08"PRIx32",...,"
+            "0x%08"PRIx32"]\n",
+            state_asm[0],state_asm[1],state_asm[7]);
+   }
+
+  // The 56-byte FIPS vector padded to two 64-byte blocks
+  // (exercises the outer loop with the standard chaining values)
+
+  memset(data,0,128);
+  memcpy(data,"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",56);
+  data[56] = 0x80;
+  data[126] = 0x01; data[127] = 0xc0;
+  for (i = 0; i < 8; ++i) state_asm[i] = sha256_iv[i];
+  sha256_compress(state_asm,data,2);
+  for (i = 0; i < 8; ++i)
+   { if (state_asm[i] != digest_abcdbcde[i])
+      { printf("### Disparity: SHA256(\"abcdbcde...nopq\") word %d; "
+               "code = 0x%08"PRIx32" while reference = 0x%08"PRIx32"\n",
+               i,state_asm[i],digest_abcdbcde[i]);
+        return 1;
+      }
+   }
+  if (VERBOSE)
+   { printf("OK: SHA256(\"abcdbcde...nopq\") = [0x%08"PRIx32",0x%08"PRIx32
+            ",...,0x%08"PRIx32"]\n",
+            state_asm[0],state_asm[1],state_asm[7]);
+   }
+
+  // Random cross-checks against the C reference at num_blocks = 1..8 with
+  // random initial state, catching state carry-over bugs across the outer
+  // loop. num_blocks = 0 is excluded (function precondition).
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { num = (size_t)(1 + (t % 8));
+     for (i = 0; i < 8; ++i)
+        state_ref[i] = state_asm[i] = (uint32_t)random64();
+     for (i = 0; i < (int)(64*num); ++i) data[i] = (uint8_t)(rand() & 0xFF);
+     memcpy(data_copy,data,64*num);
+
+     reference_sha256_block_data_order(state_ref,data,num);
+     sha256_compress(state_asm,data,num);
+
+     if (memcmp(data,data_copy,64*num) != 0)
+      { printf("### Disparity: [blocks %2zu] input data buffer modified\n",
+               num);
+        return 1;
+      }
+     for (i = 0; i < 8; ++i)
+      { if (state_asm[i] != state_ref[i])
+         { printf("### Disparity: [blocks %2zu] state word %d; "
+                  "code = 0x%08"PRIx32" while reference = 0x%08"PRIx32"\n",
+                  num,i,state_asm[i],state_ref[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: [blocks %2zu] sha256 state = [0x%08"PRIx32",0x%08"PRIx32
+               ",...,0x%08"PRIx32"]\n",
+               num,state_asm[0],state_asm[1],state_asm[7]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif // __x86_64__
+}
+
+
+
 int test_sha3_keccak_f1600(void)
 { uint64_t t, i;
   uint64_t a[25], b[25], c[25];
@@ -17640,6 +17906,10 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+  }
+
+  if (get_arch_name() == ARCH_X86_64) {
+    functionaltest(all,"sha256_compress",test_sha256_compress);
   }
 
   if (extrastrigger) function_to_test = "_";
