@@ -1128,6 +1128,7 @@ static int32_t __attribute__((aligned(32))) mldsa_avx2_qdata[16] = {
 };
 
 void call_mldsa_caddq(void) repeat(mldsa_caddq((int32_t*)b0))
+void call_md5_compress(void) repeat(md5_compress((uint32_t*)b0,(const uint8_t*)b1,1))
 void call_mldsa_intt(void) repeat(mldsa_intt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_ntt(void) repeat(mldsa_ntt((int32_t*)b0,(const int32_t*)b1))
 void call_mldsa_nttunpack(void) repeat(mldsa_nttunpack((int32_t*)b0))
@@ -1178,6 +1179,7 @@ void call_aes_xts_decrypt_512(void) {}
 #else
 
 void call_mldsa_caddq(void) {}
+void call_md5_compress(void) {}
 void call_mldsa_intt(void) repeat(mldsa_intt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_ntt(void) repeat(mldsa_ntt_arm((int32_t*)b0,(const int32_t*)b1,(const int32_t*)b2))
 void call_mldsa_nttunpack(void) {}
@@ -1647,6 +1649,7 @@ int main(int argc, char *argv[])
   timingtest(all,"edwards25519_scalarmulbase_alt",call_edwards25519_scalarmulbase_alt);
   timingtest(bmi,"edwards25519_scalarmuldouble",call_edwards25519_scalarmuldouble);
   timingtest(all,"edwards25519_scalarmuldouble_alt",call_edwards25519_scalarmuldouble_alt);
+  timingtest(!arm,"md5_compress (1 block)",call_md5_compress);
   timingtest(all,"mlkem_basemul_k2",call_mlkem_basemul_k2);
   timingtest(all,"mlkem_basemul_k3",call_mlkem_basemul_k3);
   timingtest(all,"mlkem_basemul_k4",call_mlkem_basemul_k4);
