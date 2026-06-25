@@ -17,11 +17,16 @@
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
+needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 
 (* OCaml helper: int -> num (the tail-cascade threshold lemmas below use it to  *)
 (* build numerals).  Note the core HOL `num_of_int` is a term constant, not     *)
 (* this OCaml function.                                                          *)
 let num_of_int n = Num.num_of_string (string_of_int n);;
+
+(* The AES-256 keystream is computed by the upstream math-level aes256_encrypt; *)
+(* AES256_ENCRYPT_UNFOLD (arm/proofs/utils/aes256_gcm_block_enc_spec.ml)        *)
+(* rewrites it into the aese/aesmc instruction chain the simulator produces.    *)
 
 (* print_literal_from_elf "arm/aes-gcm/aes256_gcm.o";; *)
 let aes256_gcm_mc = define_assert_from_elf
@@ -1396,13 +1401,15 @@ let GCM_1B_TAIL_NOFINAL : tactic =
   REWRITE_TAC[GHASH_POLYVAL_ACC_1; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
   ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
   ABBREV_TAC `ctm = word_and (ct:(128)word) mask` THEN
-  (* Fold the spec-side AES expression to the abbreviated ciphertext ct. *)
+  (* Fold the spec-side AES expression to the abbreviated ciphertext ct.        *)
+  (* The postcondition uses the upstream aes256_encrypt; unfold it to the        *)
+  (* aese/aesmc chain the simulator produced via AES256_ENCRYPT_UNFOLD. *)
   SUBGOAL_THEN
-    `word_xor pt (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                                   rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct`
+    `word_xor pt (aes256_encrypt ivec
+       [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct`
     (fun th -> REWRITE_TAC[th]) THENL [
     MAP_EVERY EXPAND_TAC ["ct"; "s13"] THEN
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC]; ALL_TAC ] THEN
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC]; ALL_TAC ] THEN
   SUBGOAL_THEN `word_and (mask:(128)word) (ct:(128)word) = ctm`
     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL [
     EXPAND_TAC "ctm" THEN CONV_TAC WORD_BITWISE_RULE; ALL_TAC ] THEN
@@ -1606,8 +1613,8 @@ let gcm_1b_goal =
            read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h)
-      (\s. let ct = word_xor pt (aes256_block_enc ivec rk0 rk1 rk2 rk3
-                     rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+      (\s. let ct = word_xor pt (aes256_encrypt ivec
+                     [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm = word_and ct mask in
            read PC s = word(pc + 4588) /\
@@ -1679,7 +1686,14 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_SIMP_TAC[ONE_BLOCK_USHR_BYTELEN; ONE_BLOCK_MASK_IDEM] THEN
-  CONJ_TAC THENL [GCM_1BLOCK_CT1_STEP_TAC; GCM_1B_GHASH_CLOSE]);;
+  CONJ_TAC THENL
+   [(* ciphertext-store branch: the goal's `ct` uses upstream aes256_encrypt
+       (see gcm_1b_goal); unfold it to the aese/aesmc chain and close as the
+       generic GCM_1BLOCK_CT1_STEP_TAC does. *)
+    EXPAND_TAC "ct" THEN EXPAND_TAC "s13" THEN
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN
+    ASM_REWRITE_TAC[];
+    GCM_1B_GHASH_CLOSE]);;
 
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_1 branch (2-block: full block 1 + partial   *)
@@ -1830,18 +1844,17 @@ let XI_HS_HI_2 = prove
 let CT_CLOSE_2 nidx =
   let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
   EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
 
 (* Step 1+2: establish the single full-block spec-form ct fold F1 and fold it
    into the RHS ghash list — mirror GCM_5B_FOLD_SPEC_CTS (folds 4). *)
 let GCM_2B_FOLD_SPEC_CTS : tactic =
   (* F1 *)
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* fold the single full block into the RHS ghash list only. *)
   (fun (asl,w) ->
@@ -1849,7 +1862,7 @@ let GCM_2B_FOLD_SPEC_CTS : tactic =
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1] (asl,w));;
 
 (* Step 3: b0-general mask-register collapse over the assumptions. *)
@@ -1882,7 +1895,7 @@ let GCM_2B_KS2_FOLD : tactic = fun (asl,w) ->
   let ks2 = (match !best with Some t->t | None->failwith "KS2_FOLD: ks2 not found") in
   (SUBGOAL_THEN (mk_eq(ks2, `ct2:(128)word`)) ASSUME_TAC THENL
     [CONV_TAC SYM_CONV THEN EXPAND_TAC "ct2" THEN
-     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
      REWRITE_TAC[WORD_XOR_ASSOC] THEN
      AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
      REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -2083,7 +2096,7 @@ let GCM_2B_MASKED_CT2_CLOSE : tactic =
   DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP TWOBLOCK_MASK_REG th]) THEN
   REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
   MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
-  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -2166,13 +2179,10 @@ let gcm_2b_goal =
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h))
       (\s. let ct1 =
              word_xor pt1
-               (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                                 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct2 =
              word_xor pt2
-               (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4
-                                 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12
-                                 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm2 = word_and ct2 mask in
            read PC s = word(pc + 4588) /\
@@ -2225,8 +2235,7 @@ let AES256_GCM_ENCRYPT_LT_2BLOCK_CONCRETE = prove
   CONJ_TAC THENL [GCM_2B_MASKED_CT2_CLOSE; ALL_TAC] THEN
   (* ---- ct2 abbreviation (spec form) so the closer's ctm2 works ---- *)
   ABBREV_TAC `ct2 = word_xor pt2
-    (aes256_block_enc (gcm_ctr_inc ivec)
-                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+    (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]):(128)word` THEN
   (* ---- GHASH conjunct ---- *)
   GCM_2B_GHASH_CLOSE);;
 
@@ -2354,7 +2363,7 @@ let XI_HS_HI_3 = prove
 let CT_CLOSE_3 nidx =
   let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
   EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
 
 (* 3-block CT step tactics (uniform generator). *)
 let GCM_3BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 3 2;;
@@ -2364,16 +2373,14 @@ let GCM_3BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 3 2;;
 let GCM_3B_FOLD_SPEC_CTS : tactic =
   (* F1 *)
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
   SUBGOAL_THEN
-   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
-                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_3BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
   (* fold the two full blocks into the RHS ghash list only. *)
@@ -2382,7 +2389,7 @@ let GCM_3B_FOLD_SPEC_CTS : tactic =
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2] (asl,w));;
 
 (* Step 3: b0-general mask-register collapse over the assumptions. *)
@@ -2417,7 +2424,7 @@ let GCM_3B_KS3_FOLD : tactic = fun (asl,w) ->
   let add2 = WORD_RULE `word_add (word_add (x:(32)word) (word 1)) (word 1) = word_add x (word 2)` in
   (SUBGOAL_THEN (mk_eq(ks3, `ct3:(128)word`)) ASSUME_TAC THENL
     [CONV_TAC SYM_CONV THEN EXPAND_TAC "ct3" THEN
-     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
      REWRITE_TAC[WORD_XOR_ASSOC] THEN
      AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
      REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -2641,7 +2648,7 @@ let GCM_3B_MASKED_CT3_CLOSE : tactic =
   DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP THREEBLOCK_MASK_REG th]) THEN
   REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
   MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
-  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -2733,18 +2740,13 @@ let gcm_3b_goal =
              karatsuba_mid (polyval_dot h (polyval_dot h h)))
       (\s. let ct1 =
              word_xor pt1
-               (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                                 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct2 =
              word_xor pt2
-               (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4
-                                 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12
-                                 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct3 =
              word_xor pt3
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm3 = word_and ct3 mask in
            read PC s = word(pc + 4588) /\
@@ -2801,8 +2803,7 @@ let AES256_GCM_ENCRYPT_LT_3BLOCK_CONCRETE = prove
   CONJ_TAC THENL [GCM_3B_MASKED_CT3_CLOSE; ALL_TAC] THEN
   (* ---- ct3 abbreviation (spec form) so the closer's ctm3 works ---- *)
   ABBREV_TAC `ct3 = word_xor pt3
-    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
-                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+    (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]):(128)word` THEN
   (* ---- GHASH conjunct ---- *)
   GCM_3B_GHASH_CLOSE);;
 
@@ -2926,29 +2927,26 @@ let XI_HS_HI_4 = XI_HS_HI;;
 let CT_CLOSE_4 nidx =
   let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
   EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
 
 (* Step 1+2: establish the three full-block spec-form ct folds F1..F3 and fold
    them into the RHS ghash list — mirror GCM_5B_FOLD_SPEC_CTS (which folds 4). *)
 let GCM_4B_FOLD_SPEC_CTS : tactic =
   (* F1 *)
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
   SUBGOAL_THEN
-   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
-                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_4BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
   (* F3 *)
   SUBGOAL_THEN
-   `word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2
-                  rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct3`
+   `word_xor pt3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct3`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_4BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
   (* fold the three full blocks into the RHS ghash list only. *)
@@ -2957,7 +2955,7 @@ let GCM_4B_FOLD_SPEC_CTS : tactic =
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3] (asl,w));;
 
 (* Step 3: b0-general mask-register collapse over the assumptions. *)
@@ -2992,7 +2990,7 @@ let GCM_4B_KS4_FOLD : tactic = fun (asl,w) ->
   let add3 = WORD_RULE `word_add (word_add (word_add (x:(32)word) (word 1)) (word 1)) (word 1) = word_add x (word 3)` in
   (SUBGOAL_THEN (mk_eq(ks4, `ct4:(128)word`)) ASSUME_TAC THENL
     [CONV_TAC SYM_CONV THEN EXPAND_TAC "ct4" THEN
-     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
      REWRITE_TAC[WORD_XOR_ASSOC] THEN
      AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
      REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -3247,7 +3245,7 @@ let GCM_4B_MASKED_CT4_CLOSE : tactic =
   DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP FOURBLOCK_MASK_REG th]) THEN
   REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
   MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
-  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -3346,23 +3344,16 @@ let gcm_4b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
              karatsuba_mid (polyval_dot (polyval_dot h h) (polyval_dot h h)))
       (\s. let ct1 =
              word_xor pt1
-               (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                                 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct2 =
              word_xor pt2
-               (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4
-                                 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12
-                                 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct3 =
              word_xor pt3
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct4 =
              word_xor pt4
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm4 = word_and ct4 mask in
            read PC s = word(pc + 4588) /\
@@ -3423,8 +3414,7 @@ let AES256_GCM_ENCRYPT_LT_4BLOCK_CONCRETE = prove
   CONJ_TAC THENL [GCM_4B_MASKED_CT4_CLOSE; ALL_TAC] THEN
   (* ---- ct4 abbreviation (spec form) so the closer's ctm4 works ---- *)
   ABBREV_TAC `ct4 = word_xor pt4
-    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+    (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]):(128)word` THEN
   (* ---- GHASH conjunct ---- *)
   GCM_4B_GHASH_CLOSE);;
 
@@ -3614,28 +3604,19 @@ let gcm_5b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
              karatsuba_mid (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h))
       (\s. let ct1 =
              word_xor pt1
-               (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                                 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct2 =
              word_xor pt2
-               (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4
-                                 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12
-                                 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct3 =
              word_xor pt3
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct4 =
              word_xor pt4
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct5 =
              word_xor pt5
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm5 = word_and ct5 mask in
            read PC s = word(pc + 4588) /\
@@ -3894,40 +3875,35 @@ ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
 let GCM_5B_FOLD_SPEC_CTS : tactic =
   (* F1 *)
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
     (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
   SUBGOAL_THEN
-   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
-                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_5BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
   (* F3 *)
   SUBGOAL_THEN
-   `word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2
-                  rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct3`
+   `word_xor pt3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct3`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_5BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
   (* F4 *)
   SUBGOAL_THEN
-   `word_xor pt4 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct4`
+   `word_xor pt4 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct4`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_5BLOCK_CT4_STEP_TAC; ALL_TAC] THEN
   (* fold the four into the RHS ghash list only: pick the F-fact for each ctN
-     (LHS = word_xor ptN (aes256_block_enc ...)) and GEN_REWRITE the RHS. *)
+     (LHS = word_xor ptN (aes256_encrypt ...)) and GEN_REWRITE the RHS. *)
   (fun (asl,w) ->
      let getf n = snd(find (fun (_,th) ->
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3; getf 4] (asl,w));;
 
 (* Step 4: b0-general mask-register collapse, applied to ALL assumptions
@@ -3973,7 +3949,7 @@ let GCM_5B_KS5_FOLD : tactic = fun (asl,w) ->
         collapsed +4 counter (rev∘rev=id, rev8→bytereverse, nested-insert
         collapse, double-bytereverse cancel, +1×4→+4, word_join→word_insert). *)
      CONV_TAC SYM_CONV THEN EXPAND_TAC "ct5" THEN
-     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
      REWRITE_TAC[WORD_XOR_ASSOC] THEN
      AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
      REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -4070,7 +4046,7 @@ let GCM_5B_GHASH_CLOSE : tactic =
 let CT_CLOSE_5 nidx =
   let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
   EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
 
 (* masked-ct5 store conjunct closer: collapse the mask reg in the goal, peel
    word_or/word_and/word_xor down to the counter identity (machine +4 form vs
@@ -4078,7 +4054,7 @@ let CT_CLOSE_5 nidx =
 (* June-2026 base: mirror the band-4 ct4 counter peel.  The machine block-5
    keystream is `word_xor (word_xor pt5 aes) rk14` (left-assoc) over a collapsed
    +4 counter emitted as `word_reversefields 8` (not word_bytereverse), and the
-   spec side is `word_xor pt5 (aes256_block_enc (gcm_ctr_inc^4 ivec) ...)`.
+   spec side is `word_xor pt5 (aes256_encrypt (gcm_ctr_inc^4 ivec) ...)`.
    Orient spec left, unfold AES, left-assoc, peel pt5/rk14, peel the aese/aesmc
    layers to the counter arg, then bridge gcm_ctr_inc^4 → the machine word_join
    form: rev∘rev = id, rev8→bytereverse, collapse nested inserts, cancel the
@@ -4091,7 +4067,7 @@ let GCM_5B_MASKED_CT5_CLOSE : tactic =
   DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP FIVEBLOCK_MASK_REG th]) THEN
   REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
   MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
-  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -4129,8 +4105,7 @@ let AES256_GCM_ENCRYPT_LT_5BLOCK_CONCRETE = prove
   CONJ_TAC THENL [GCM_5B_MASKED_CT5_CLOSE; ALL_TAC] THEN
   (* ---- ct5 abbreviation (spec form) so the closer's ctm5 works ---- *)
   ABBREV_TAC `ct5 = word_xor pt5
-    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))
-                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+    (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]):(128)word` THEN
   (* ---- GHASH conjunct ---- *)
   GCM_5B_GHASH_CLOSE);;
 
@@ -4330,33 +4305,22 @@ let gcm_6b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
              karatsuba_mid (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h))
       (\s. let ct1 =
              word_xor pt1
-               (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                                 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct2 =
              word_xor pt2
-               (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4
-                                 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12
-                                 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct3 =
              word_xor pt3
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct4 =
              word_xor pt4
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct5 =
              word_xor pt5
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct6 =
              word_xor pt6
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm6 = word_and ct6 mask in
            read PC s = word(pc + 4588) /\
@@ -4640,47 +4604,40 @@ let GCM_6B_TAIL_NOFINAL : tactic =
 let GCM_6B_FOLD_SPEC_CTS : tactic =
   (* F1 *)
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
     (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
   SUBGOAL_THEN
-   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
-                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_6BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
   (* F3 *)
   SUBGOAL_THEN
-   `word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2
-                  rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct3`
+   `word_xor pt3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct3`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_6BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
   (* F4 *)
   SUBGOAL_THEN
-   `word_xor pt4 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct4`
+   `word_xor pt4 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct4`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_6BLOCK_CT4_STEP_TAC; ALL_TAC] THEN
   (* F5 *)
   SUBGOAL_THEN
-   `word_xor pt5 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct5`
+   `word_xor pt5 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct5`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_6BLOCK_CT5_STEP_TAC; ALL_TAC] THEN
   (* fold the five into the RHS ghash list only: pick the F-fact for each ctN
-     (LHS = word_xor ptN (aes256_block_enc ...)) and GEN_REWRITE the RHS. *)
+     (LHS = word_xor ptN (aes256_encrypt ...)) and GEN_REWRITE the RHS. *)
   (fun (asl,w) ->
      let getf n = snd(find (fun (_,th) ->
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3; getf 4; getf 5] (asl,w));;
 
 (* Step 4: b0-general mask-register collapse, applied to ALL assumptions
@@ -4722,7 +4679,7 @@ let GCM_6B_KS6_FOLD : tactic = fun (asl,w) ->
     [(* band-4/5 counter peel: orient spec, unfold AES, left-assoc, peel pt6/rk14,
         peel aese layers, bridge the collapsed +5 counter. *)
      CONV_TAC SYM_CONV THEN EXPAND_TAC "ct6" THEN
-     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
      REWRITE_TAC[WORD_XOR_ASSOC] THEN
      AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
      REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -4818,7 +4775,7 @@ let GCM_6B_GHASH_CLOSE : tactic =
 let CT_CLOSE_6 nidx =
   let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
   EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
 
 (* masked-ct6 store conjunct closer: collapse the mask reg, peel word_or/
    word_and/word_xor to the counter identity (machine +5 form vs spec
@@ -4830,7 +4787,7 @@ let GCM_6B_MASKED_CT6_CLOSE : tactic =
   DISCH_THEN(fun th -> REWRITE_TAC[MATCH_MP SIXBLOCK_MASK_REG th]) THEN
   REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
   MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
-  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -4869,8 +4826,7 @@ let AES256_GCM_ENCRYPT_LT_6BLOCK_CONCRETE = prove
   CONJ_TAC THENL [GCM_6B_MASKED_CT6_CLOSE; ALL_TAC] THEN
   (* ---- ct6 abbreviation (spec form) so the closer's ctm6 works ---- *)
   ABBREV_TAC `ct6 = word_xor pt6
-    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))
-                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+    (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]):(128)word` THEN
   (* ---- GHASH conjunct ---- *)
   GCM_6B_GHASH_CLOSE);;
 
@@ -5075,38 +5031,25 @@ let gcm_7b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
              karatsuba_mid (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h))
       (\s. let ct1 =
              word_xor pt1
-               (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7
-                                 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct2 =
              word_xor pt2
-               (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4
-                                 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12
-                                 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct3 =
              word_xor pt3
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct4 =
              word_xor pt4
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct5 =
              word_xor pt5
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct6 =
              word_xor pt6
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct7 =
              word_xor pt7
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))))
-                                 rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8
-                                 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm7 = word_and ct7 mask in
            read PC s = word(pc + 4588) /\
@@ -5158,7 +5101,7 @@ let gcm_7b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
 let CT_CLOSE_7 nidx =
   let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
   EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
 
 (* masked-ct7 store conjunct closer: block-7 = gcm_ctr_inc^6 -> "+6". *)
 let GCM_7B_MASKED_CT7_CLOSE : tactic =
@@ -5166,7 +5109,7 @@ let GCM_7B_MASKED_CT7_CLOSE : tactic =
   let add6 = WORD_RULE `word_add (word_add (word_add (word_add (word_add (word_add (x:(32)word) (word 1)) (word 1)) (word 1)) (word 1)) (word 1)) (word 1) = word_add x (word 6)` in
   REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
   MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
-  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -5179,42 +5122,33 @@ let GCM_7B_MASKED_CT7_CLOSE : tactic =
 (* GHASH ct-fold (mirror GCM_6B_FOLD_SPEC_CTS, 6 full-block cts). *)
 let GCM_7B_FOLD_SPEC_CTS : tactic =
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
     (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
-                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2
-                  rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct3`
+   `word_xor pt3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct3`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt4 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct4`
+   `word_xor pt4 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct4`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT4_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt5 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct5`
+   `word_xor pt5 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct5`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT5_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt6 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct6`
+   `word_xor pt6 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct6`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT6_STEP_TAC; ALL_TAC] THEN
   (fun (asl,w) ->
      let getf n = snd(find (fun (_,th) ->
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3; getf 4; getf 5; getf 6] (asl,w));;
 
 (* The GHASH conjunct closes via GCM_7B_GHASH_CLOSE (mirror of the 6-block    *)
@@ -5485,54 +5419,45 @@ let GCM_7B_TAIL_NOFINAL : tactic =
 let GCM_7B_FOLD_SPEC_CTS : tactic =
   (* F1 *)
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
     (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
   SUBGOAL_THEN
-   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5
-                  rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct2`
+   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
   (* F3 *)
   SUBGOAL_THEN
-   `word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2
-                  rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) = ct3`
+   `word_xor pt3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct3`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
   (* F4 *)
   SUBGOAL_THEN
-   `word_xor pt4 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct4`
+   `word_xor pt4 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct4`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT4_STEP_TAC; ALL_TAC] THEN
   (* F5 *)
   SUBGOAL_THEN
-   `word_xor pt5 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct5`
+   `word_xor pt5 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct5`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT5_STEP_TAC; ALL_TAC] THEN
   (* F6 *)
   SUBGOAL_THEN
-   `word_xor pt6 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))
-                  rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13
-                  rk14) = ct6`
+   `word_xor pt6 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct6`
    ASSUME_TAC THENL
    [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT6_STEP_TAC; ALL_TAC] THEN
   (* fold the six into the RHS ghash list only: pick the F-fact for each ctN
-     (LHS = word_xor ptN (aes256_block_enc ...)) and GEN_REWRITE the RHS. *)
+     (LHS = word_xor ptN (aes256_encrypt ...)) and GEN_REWRITE the RHS. *)
   (fun (asl,w) ->
      let getf n = snd(find (fun (_,th) ->
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3; getf 4; getf 5; getf 6] (asl,w));;
 
 (* Step 4: b0-general mask-register collapse, applied to ALL assumptions
@@ -5572,7 +5497,7 @@ let GCM_7B_KS7_FOLD : tactic = fun (asl,w) ->
   (SUBGOAL_THEN (mk_eq(ks5, `ct7:(128)word`)) ASSUME_TAC THENL
     [(* band-4/5/6 counter peel for the collapsed +6 counter. *)
      CONV_TAC SYM_CONV THEN EXPAND_TAC "ct7" THEN
-     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
      REWRITE_TAC[WORD_XOR_ASSOC] THEN
      AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
      REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -5698,8 +5623,7 @@ let AES256_GCM_ENCRYPT_LT_7BLOCK_CONCRETE = prove
   CONJ_TAC THENL [GCM_7B_MASKED_CT7_CLOSE; ALL_TAC] THEN
   (* ---- ct7 abbreviation (spec form) so the closer's ctm7 works ---- *)
   ABBREV_TAC `ct7 = word_xor pt7
-    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))))
-                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+    (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]):(128)word` THEN
   (* ---- GHASH conjunct ---- *)
   GCM_7B_GHASH_CLOSE);;
 
@@ -5890,28 +5814,28 @@ let gcm_8b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
       (\s.
            let ct1 =
              word_xor pt1
-               (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct2 =
              word_xor pt2
-               (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct3 =
              word_xor pt3
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct4 =
              word_xor pt4
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct5 =
              word_xor pt5
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct6 =
              word_xor pt6
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct7 =
              word_xor pt7
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let ct8 =
              word_xor pt8
-               (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14) in
+               (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) in
            let mask = word (2 EXP (8 * byte_len) - 1):(128)word in
            let ctm8 = word_and ct8 mask in
            read PC s = word(pc + 4588) /\
@@ -5963,7 +5887,7 @@ let gcm_8b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
 let CT_CLOSE_8 nidx =
   let s13n = "s13_"^string_of_int nidx and ctn = "ct"^string_of_int nidx in
   EXPAND_TAC ctn THEN EXPAND_TAC s13n THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];;
 
 (* masked-ct8 store conjunct closer: block-8 = gcm_ctr_inc^7 -> "+7". *)
 let GCM_8B_MASKED_CT8_CLOSE : tactic =
@@ -5971,7 +5895,7 @@ let GCM_8B_MASKED_CT8_CLOSE : tactic =
   let add7 = WORD_RULE `word_add (word_add (word_add (word_add (word_add (word_add (word_add (x:(32)word) (word 1)) (word 1)) (word 1)) (word 1)) (word 1)) (word 1)) (word 1) = word_add x (word 7)` in
   REWRITE_TAC[NBLOCK_MASK_IDEM] THEN
   MATCH_MP_TAC(MESON[] `x = y ==> word_or (word_and x m) r = word_or (word_and y m) r:(128)word`) THEN
-  CONV_TAC SYM_CONV THEN REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  CONV_TAC SYM_CONV THEN REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
   REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -5984,43 +5908,36 @@ let GCM_8B_MASKED_CT8_CLOSE : tactic =
 (* GHASH ct-fold (mirror GCM_7B_FOLD_SPEC_CTS, 7 full-block cts). *)
 let GCM_8B_FOLD_SPEC_CTS : tactic =
   SUBGOAL_THEN
-   `word_xor pt1 (aes256_block_enc ivec rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct1`
+   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
     (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
-    REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
+    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt2 (aes256_block_enc (gcm_ctr_inc ivec) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct2`
+   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_8BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt3 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc ivec)) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct3`
+   `word_xor pt3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct3`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_8BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt4 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct4`
+   `word_xor pt4 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct4`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_8BLOCK_CT4_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt5 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct5`
+   `word_xor pt5 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct5`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_8BLOCK_CT5_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt6 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct6`
+   `word_xor pt6 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct6`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_8BLOCK_CT6_STEP_TAC; ALL_TAC] THEN
   SUBGOAL_THEN
-   `word_xor pt7 (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9
-                  rk10 rk11 rk12 rk13 rk14) = ct7`
+   `word_xor pt7 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct7`
    ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_8BLOCK_CT7_STEP_TAC; ALL_TAC] THEN
   (fun (asl,w) ->
      let getf n = snd(find (fun (_,th) ->
        is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
        (let l=lhand(concl th) in
         (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_block_enc" with _->false))) asl) in
+        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3; getf 4; getf 5; getf 6; getf 7] (asl,w));;
 
 (* --- 8-block GHASH final-closure helper tactics (mirror 7-block). --- *)
@@ -6343,7 +6260,7 @@ let GCM_8B_KS8_FOLD : tactic = fun (asl,w) ->
   (SUBGOAL_THEN (mk_eq(ks8, `ct8:(128)word`)) ASSUME_TAC THENL
     [(* band-4/5/6/7 counter peel for the collapsed +7 counter. *)
      CONV_TAC SYM_CONV THEN EXPAND_TAC "ct8" THEN
-     REWRITE_TAC[aes256_block_enc] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+     REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
      REWRITE_TAC[WORD_XOR_ASSOC] THEN
      AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
      REPEAT(AP_THM_TAC ORELSE AP_TERM_TAC) THEN
@@ -6474,8 +6391,7 @@ let AES256_GCM_ENCRYPT_LT_8BLOCK_CONCRETE = prove
   CONJ_TAC THENL [GCM_8B_MASKED_CT8_CLOSE; ALL_TAC] THEN
   (* ---- ct8 abbreviation (spec form) so the closer's ctm8 works ---- *)
   ABBREV_TAC `ct8 = word_xor pt8
-    (aes256_block_enc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))))))
-                      rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14):(128)word` THEN
+    (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]):(128)word` THEN
   (* ---- GHASH conjunct ---- *)
   GCM_8B_GHASH_CLOSE);;
 
@@ -6534,7 +6450,7 @@ let AES256_GCM_ENCRYPT_LT_0BLOCK_CONCRETE = prove
 (* mirroring the AES-XTS spec (arm/proofs/xts_reference/aes_xts_encrypt_spec   *)
 (* + aes-xts-armv8.ml).  Reuses XTS's mode-agnostic byte/word conversions and  *)
 (* byte_list_at memory predicate, and the existing GCM per-block primitives    *)
-(* (aes256_block_enc, gcm_ctr_inc, ghash_polyval_acc).                         *)
+(* (aes256_encrypt, gcm_ctr_inc, ghash_polyval_acc).                         *)
 (* ========================================================================= *)
 
 (* --- byte<->word conversions + memory predicate (verbatim from XTS) --- *)
@@ -6566,9 +6482,7 @@ let gcm_ctr_iter = new_recursive_definition num_RECURSION
 
 let gcm_keystream = new_definition
   `gcm_keystream (i:num) (ivec:(128)word) (rks:int128 list) : (128)word =
-     aes256_block_enc (gcm_ctr_iter i ivec)
-       (EL 0 rks) (EL 1 rks) (EL 2 rks) (EL 3 rks) (EL 4 rks) (EL 5 rks) (EL 6 rks) (EL 7 rks)
-       (EL 8 rks) (EL 9 rks) (EL 10 rks) (EL 11 rks) (EL 12 rks) (EL 13 rks) (EL 14 rks)`;;
+     aes256_encrypt (gcm_ctr_iter i ivec) [(EL 0 rks);(EL 1 rks);(EL 2 rks);(EL 3 rks);(EL 4 rks);(EL 5 rks);(EL 6 rks);(EL 7 rks);(EL 8 rks);(EL 9 rks);(EL 10 rks);(EL 11 rks);(EL 12 rks);(EL 13 rks);(EL 14 rks)]`;;
 
 (* --- recursive full-block ciphertext (int128 blocks) --- *)
 let gcm_ct_rec = new_specification ["gcm_ct_rec"]
@@ -6814,7 +6728,7 @@ let GCM_CT_BYTES_REC_STEP = prove(
 (* --- keystream at iterate i in terms of gcm_ctr_iter --- *)
 let KS_ITER = prove(
   `!i. gcm_keystream i ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14] =
-       aes256_block_enc (gcm_ctr_iter i ivec) rk0 rk1 rk2 rk3 rk4 rk5 rk6 rk7 rk8 rk9 rk10 rk11 rk12 rk13 rk14`,
+       aes256_encrypt (gcm_ctr_iter i ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]`,
   GEN_TAC THEN REWRITE_TAC[gcm_keystream] THEN
   REWRITE_TAC(map num_CONV [`14`;`13`;`12`;`11`;`10`;`9`;`8`;`7`;`6`;`5`;`4`;`3`;`2`;`1`]) THEN
   REWRITE_TAC[EL; HD; TL]);;
@@ -7411,6 +7325,9 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_ABS = prove(
    [REPEAT CONJ_TAC THEN TRY(FIRST [ASM_ARITH_TAC; NONOVERLAPPING_TAC; ASM_REWRITE_TAC[]]);
     ALL_TAC] THEN
   DISCH_THEN(fun band ->
+    (* The CONCRETE postcondition is phrased with the upstream aes256_encrypt,
+       matching the spec bridge (KS_ITER / OUT_BRIDGE_GEN, also aes256_encrypt-
+       based) directly. *)
     MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
     EXISTS_TAC (rand(concl band)) THEN CONJ_TAC THENL
      [REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN

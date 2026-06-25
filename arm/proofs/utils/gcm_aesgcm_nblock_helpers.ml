@@ -545,7 +545,7 @@ let mk_s13_name (n:int) (k:int) : string =
 let GCM_NBLOCK_CT1_STEP_TAC (n:int) : tactic =
   let ct = mk_ct_name n 1 and s13 = mk_s13_name n 1 in
   EXPAND_TAC ct THEN EXPAND_TAC s13 THEN
-  REWRITE_TAC[aes256_block_enc; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN
   ASM_REWRITE_TAC[];;
 
 (* --- Counter-insert lemmas (used by the ct>=3 folds in the GHASH step) ----- *)
@@ -564,7 +564,7 @@ let INSERT_SUBWORD = prove
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
 (* For block k≥2: ivec_k = gcm_ctr_inc^{k-1} ivec — needs the LANE/CTR chain. *)
-(* The shared front-half (substitute ct_k / s13_k, unfold aes256_block_enc,   *)
+(* The shared front-half (substitute ct_k / s13_k, unfold aes256_encrypt,   *)
 (* peel to the ivec argument, apply LANE0..3 + CTR_WORD_INSERT) is identical   *)
 (* for all k. The TAIL then differs by counter depth:                          *)
 (*   k=2 (ivec_2 = gcm_ctr_inc ivec): one unfold, fold via BYTEREVERSE_JOIN.   *)
@@ -588,7 +588,7 @@ let GCM_NBLOCK_CT_LATER_STEP_TAC (n:int) (k:int) : tactic =
   let step1_def = mk_eq(step1,
     `word_bytereverse (word_add (word_bytereverse (word_subword (ivec:(128)word) (96,32):(32)word)) (word 1:(32)word)):(32)word`) in
   (* the shared front-half: substitute ct_k, unfold AES, peel to ivec arg.
-     June-2026 base: the goal is `ct_k = word_xor pt_k (aes256_block_enc ...)`
+     June-2026 base: the goal is `ct_k = word_xor pt_k (aes256_encrypt ...)`
      (ct on LHS), the ct_k defining assumption is LEFT-associated
      `word_xor (word_xor pt_k s13_k) rk14 = ct_k`, WORD_XOR_ASSOC normalizes to
      left, and the 32-bit REV counter shuffle emits word_reversefields 8 (not
@@ -606,7 +606,7 @@ let GCM_NBLOCK_CT_LATER_STEP_TAC (n:int) (k:int) : tactic =
          | _ -> false
         with _ -> false)
     then SUBST1_TAC(SYM th) else NO_TAC) THEN
-  REWRITE_TAC[aes256_block_enc] THEN
+  REWRITE_TAC[AES256_ENCRYPT_UNFOLD] THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
