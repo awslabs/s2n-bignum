@@ -19,8 +19,8 @@
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
 (* OCaml helper: int -> num (the tail-cascade threshold lemmas below use it to  *)
-(* build numerals).  Previously supplied by the now-removed new_instructions.ml;*)
-(* the core HOL `num_of_int` is a term constant, not this OCaml function.        *)
+(* build numerals).  Note the core HOL `num_of_int` is a term constant, not     *)
+(* this OCaml function.                                                          *)
 let num_of_int n = Num.num_of_string (string_of_int n);;
 
 (* print_literal_from_elf "arm/aes-gcm/aes256_gcm.o";; *)
