@@ -53,6 +53,10 @@ static uint64_t bigbuff[100000];
 static s2n_bignum_AES_KEY aes_key1, aes_key2;
 static uint8_t aes_iv[16];
 
+// AES state for GCM mode testing
+static u128 gcm_htable[16];
+static uint8_t gcm_xi[16], gcm_ivec[16];
+
 // Source of random 64-bit numbers with bit density
 // 0 = all zeros, 32 = "average", 64 = all ones
 // Then a generic one with the density itself randomized
@@ -1175,6 +1179,11 @@ void call_aes_xts_decrypt_128(void) {}
 void call_aes_xts_decrypt_256(void) {}
 void call_aes_xts_decrypt_512(void) {}
 
+void call_aes256_gcm_16(void) {}
+void call_aes256_gcm_32(void) {}
+void call_aes256_gcm_64(void) {}
+void call_aes256_gcm_128(void) {}
+
 #else
 
 void call_mldsa_caddq(void) {}
@@ -1261,6 +1270,26 @@ void call_aes_xts_decrypt_64(void) { repeat(aes_xts_decrypt_helper(64)); }
 void call_aes_xts_decrypt_128(void) { repeat(aes_xts_decrypt_helper(128)); }
 void call_aes_xts_decrypt_256(void) { repeat(aes_xts_decrypt_helper(256)); }
 void call_aes_xts_decrypt_512(void) { repeatfewer(10,aes_xts_decrypt_helper(512)); }
+
+// Helper function for AES GCM encrypt with parameterized length.  The combined
+// binary covers the 0..8-block length bands, so lengths run up to 128 bytes.
+static void aes256_gcm_helper(size_t len)
+{
+  int j;
+  for (j = 0; j < 30; ++j) aes_key1.rd_key[j] = b1[j % BUFFERSIZE];
+  aes_key1.rounds = 14;  // AES-256
+  for (j = 0; j < 16; ++j) { gcm_ivec[j] = (uint8_t)(b3[j] & 0xFF); gcm_xi[j] = 0; }
+  gcm_ivec[15] = 2;  // counter starts at J0+1
+  memcpy(gcm_htable, b2, sizeof(gcm_htable));
+
+  aes256_gcm((uint8_t*)b0, 8*len, (uint8_t*)b1, gcm_xi, gcm_ivec, (const void*)aes_key1.rd_key, gcm_htable);
+}
+
+// AES GCM encrypt wrapper functions for different block sizes
+void call_aes256_gcm_16(void) { repeat(aes256_gcm_helper(16)); }
+void call_aes256_gcm_32(void) { repeat(aes256_gcm_helper(32)); }
+void call_aes256_gcm_64(void) { repeat(aes256_gcm_helper(64)); }
+void call_aes256_gcm_128(void) { repeat(aes256_gcm_helper(128)); }
 
 #endif
 
@@ -1748,6 +1777,10 @@ int main(int argc, char *argv[])
   timingtest(aes,"aes_xts_decrypt (128 bytes)",call_aes_xts_decrypt_128);
   timingtest(aes,"aes_xts_decrypt (256 bytes)",call_aes_xts_decrypt_256);
   timingtest(aes,"aes_xts_decrypt (512 bytes)",call_aes_xts_decrypt_512);
+  timingtest(aes,"aes256_gcm (16 bytes)",call_aes256_gcm_16);
+  timingtest(aes,"aes256_gcm (32 bytes)",call_aes256_gcm_32);
+  timingtest(aes,"aes256_gcm (64 bytes)",call_aes256_gcm_64);
+  timingtest(aes,"aes256_gcm (128 bytes)",call_aes256_gcm_128);
 
   // Summarize performance in arithmetic and geometric means
 
