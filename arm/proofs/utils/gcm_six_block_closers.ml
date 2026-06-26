@@ -1,4 +1,8 @@
-(* ===== 6-block GHASH closers (mc-free, extracted from aes256_gcm_six_block.ml) ===== *)
+(* ========================================================================= *)
+(* 6-block GHASH and partial-block closers for the AES-256-GCM band proof.   *)
+(* Pure algebra (no machine code, no symbolic simulation).                   *)
+(* ========================================================================= *)
+
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
 let ghash_6block_karatsuba = new_definition
@@ -103,7 +107,7 @@ let GHASH_6BLOCK_AS_NBLOCK = prove
   REWRITE_TAC[WORD_XOR_ASSOC]);;
 
 (* ========================================================================= *)
-(* PER-N BRIDGE: ghash_6block_karatsuba <-> polyval_reduce_prop3              *)
+(* PER-N BRIDGE: ghash_6block_karatsuba <-> polyval_reduce_prop3             *)
 (* ========================================================================= *)
 
 let GHASH_6BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
@@ -165,28 +169,16 @@ let GHASH_6BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* GHASH_POLYVAL_ACC_6 (6-block specialization of GHASH_POLYVAL_ACC_BATCHED)
-   is defined in arm/proofs/utils/gcm_aesgcm_helpers.ml (ACC_2..4 are in
-   common/ghash_spec.ml; ACC_5/6/7 are derived in the helpers file).
-   POLYVAL_DOT_H4_EQ_LOCAL / H5_EQ / H6_EQ live in
-   arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml. *)
+(* GHASH_POLYVAL_ACC_6 and the symmetric h-power normalizers POLYVAL_DOT_H4..H6_EQ
+   live in gcm_aesgcm_helpers.ml / gcm_aesgcm_nblock_helpers.ml respectively. *)
 
-
-(* GCM_6BLOCK_CT1_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
+(* ===== Per-block ciphertext closers (ct1 closes inline in aes256_gcm.ml) = *)
 let GCM_6BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 6 2;;
-
-(* CT3 for ivec_3 = gcm_ctr_inc² ivec — needs the second counter unfolding.
-   Uses INSERT_IDEM/INSERT_SUBWORD to sidestep the polymorphic-type issue. *)
 let GCM_6BLOCK_CT3_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 6 3;;
-
 let GCM_6BLOCK_CT4_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 6 4;;
-
 let GCM_6BLOCK_CT5_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 6 5;;
 
-(* GCM_6BLOCK_CT6_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
-(* GCM_6BLOCK_GHASH_STEP_MASKED_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
+(* ===== Partial-final-block helpers (total bytes = 80 + byte_len) ========= *)
 let SIXBLOCK_USHR = prove
  (`!byte_len. byte_len <= 16 ==>
      word_ushr (word (640 + 8 * byte_len):int64) 3 = word (80 + byte_len)`,
@@ -215,13 +207,3 @@ let SIXBLOCK_MASK_REG = prove
     = word (2 EXP (8 * byte_len) - 1)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NBLOCK_WORD_INSERT_BOTH_LANES] THEN
   NBLOCK_MASK_PEEL_TAC 1);;
-
-(* ------------------------------------------------------------------------- *)
-(* Tail-dispatch cascade branch resolution.  With a symbolic byte_len the     *)
-(* total length is X5 = word_ushr (word (640 + 8*byte_len)) 3 = 80 + byte_len *)
-(* (five leading full blocks + the partial last block).  Each cmp/b.gt in the *)
-(* cascade (thresholds 96,80 (taken),64,48,32,16) leaves the PC as an          *)
-(* if-then-else on the signed-greater-than condition; SIXBLOCK_GT_COND        *)
-(* collapses that to t < 80 + byte_len (TOTAL_LANES = 80), which the byte_len  *)
-(* bounds then decide.                                                         *)
-(* ------------------------------------------------------------------------- *)

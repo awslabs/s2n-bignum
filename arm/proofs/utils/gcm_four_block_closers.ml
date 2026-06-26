@@ -1,4 +1,8 @@
-(* ===== 4-block GHASH closers (mc-free, extracted from aes256_gcm_four_block.ml) ===== *)
+(* ========================================================================= *)
+(* 4-block GHASH and partial-block closers for the AES-256-GCM band proof.   *)
+(* Pure algebra (no machine code, no symbolic simulation).                   *)
+(* ========================================================================= *)
+
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
 let ghash_4block_karatsuba = new_definition
@@ -82,10 +86,10 @@ let GHASH_4BLOCK_AS_NBLOCK = prove
   REWRITE_TAC[WORD_XOR_ASSOC]);;
 
 (* ========================================================================= *)
-(* PER-N BRIDGE: ghash_4block_karatsuba ↔ polyval_reduce_prop3                *)
+(* PER-N BRIDGE: ghash_4block_karatsuba ↔ polyval_reduce_prop3               *)
 (*                                                                           *)
-(* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)        *)
-(* + GHASH_4BLOCK_AS_NBLOCK + GHASH_POLYVAL_ACC_4 + POLYVAL_DOT_H4_EQ.        *)
+(* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)       *)
+(* + GHASH_4BLOCK_AS_NBLOCK + GHASH_POLYVAL_ACC_4 + POLYVAL_DOT_H4_EQ.       *)
 (* ========================================================================= *)
 
 let GHASH_4BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
@@ -140,28 +144,11 @@ let GHASH_4BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* ========================================================================= *)
-(* POLYVAL_DOT_H4_EQ: left-associated h^4 = symmetric h^4.                    *)
-(* Bridges GHASH_POLYVAL_ACC_4 output (polyval_dot (polyval_dot              *)
-(* (polyval_dot h h) h) h) to the bridge lemma's symmetric h^4 form           *)
-(* (polyval_dot (polyval_dot h h) (polyval_dot h h)).                          *)
-(* ========================================================================= *)
-
-(* ========================================================================= *)
-(* INSERT_IDEM / INSERT_SUBWORD : helpers for ct3/ct4 closures.               *)
-(* ========================================================================= *)
-
-(* ========================================================================= *)
-(*  PER-N: MACHINE CODE                                                      *)
-(* ========================================================================= *)
-
-
-(* GCM_4BLOCK_CT1_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
+(* ===== Per-block ciphertext closers (ct1 closes inline in aes256_gcm.ml) = *)
 let GCM_4BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 4 2;;
 let GCM_4BLOCK_CT3_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 4 3;;
 
-(* GCM_4BLOCK_GHASH_STEP_MASKED_TAC removed: unused by AES256_GCM_ENCRYPT_CORRECT (band-4 uses the inline GCM_4B_FOLD_AND_BRIDGE/TAIL3A/TAIL_P1/TAIL_P2C/LEAF_CLOSE slices in aes256_gcm.ml). *)
-
+(* ===== Partial-final-block helpers (total bytes = 48 + byte_len) ========= *)
 let FOURBLOCK_USHR = prove
  (`!byte_len. byte_len <= 16 ==>
      word_ushr (word (384 + 8 * byte_len):int64) 3 = word (48 + byte_len)`,
@@ -190,13 +177,4 @@ let FOURBLOCK_MASK_REG = prove
     = word (2 EXP (8 * byte_len) - 1)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NBLOCK_WORD_INSERT_BOTH_LANES] THEN
   NBLOCK_MASK_PEEL_TAC 1);;
-
-(* ------------------------------------------------------------------------- *)
-(* Tail-dispatch cascade branch resolution.  With a symbolic byte_len the     *)
-(* total length is X5 = word_ushr (word (384 + 8*byte_len)) 3 = 32 + byte_len *)
-(* (two leading full blocks + the partial last block).  Each cmp/b.gt in the  *)
-(* cascade (thresholds 96,80,64,48 (taken),32,16) leaves the PC as an if-then-else on  *)
-(* the signed-greater-than condition; FOURBLOCK_GT_COND collapses that to the *)
-(* numeric test t < 48 + byte_len (TOTAL_LANES = 48), which the byte_len bounds then decide.      *)
-(* ------------------------------------------------------------------------- *)
 

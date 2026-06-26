@@ -1,4 +1,8 @@
-(* ===== 7-block GHASH closers (mc-free, extracted from aes256_gcm_seven_block.ml) ===== *)
+(* ========================================================================= *)
+(* 7-block GHASH and partial-block closers for the AES-256-GCM band proof.   *)
+(* Pure algebra (no machine code, no symbolic simulation).                   *)
+(* ========================================================================= *)
+
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
 let ghash_7block_karatsuba = new_definition
@@ -168,26 +172,17 @@ let GHASH_7BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* GHASH_POLYVAL_ACC_7 (7-block specialization of GHASH_POLYVAL_ACC_BATCHED)
-   is defined in arm/proofs/utils/gcm_aesgcm_helpers.ml (ACC_2..4 are in
-   common/ghash_spec.ml; ACC_5/6/7 are derived in the helpers file). *)
+(* GHASH_POLYVAL_ACC_7 and the symmetric h-power normalizers POLYVAL_DOT_H4..H7_EQ
+   live in gcm_aesgcm_helpers.ml / gcm_aesgcm_nblock_helpers.ml respectively. *)
 
-
-(* GCM_7BLOCK_CT1_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
+(* ===== Per-block ciphertext closers (ct1 closes inline in aes256_gcm.ml) = *)
 let GCM_7BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 7 2;;
-
 let GCM_7BLOCK_CT3_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 7 3;;
-
 let GCM_7BLOCK_CT4_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 7 4;;
-
 let GCM_7BLOCK_CT5_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 7 5;;
-
 let GCM_7BLOCK_CT6_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 7 6;;
 
-(* GCM_7BLOCK_CT7_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
-(* GCM_7BLOCK_GHASH_STEP_MASKED_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
+(* ===== Partial-final-block helpers (total bytes = 96 + byte_len) ========= *)
 let SEVENBLOCK_USHR = prove
  (`!byte_len. byte_len <= 16 ==>
      word_ushr (word (768 + 8 * byte_len):int64) 3 = word (96 + byte_len)`,

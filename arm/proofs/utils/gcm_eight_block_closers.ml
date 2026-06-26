@@ -1,4 +1,8 @@
-(* ===== 8-block GHASH closers (mc-free, extracted from eight_blocks standalone) ===== *)
+(* ========================================================================= *)
+(* 8-block GHASH and partial-block closers for the AES-256-GCM band proof.   *)
+(* Pure algebra (no machine code, no symbolic simulation).                   *)
+(* ========================================================================= *)
+
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
 let ghash_8block_karatsuba = new_definition
@@ -177,23 +181,18 @@ let GHASH_8BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* GHASH_POLYVAL_ACC_8 moved to gcm_aesgcm_helpers.ml (centralized with the    *)
-(* rest of the GHASH_POLYVAL_ACC_1..8 family).                                  *)
+(* GHASH_POLYVAL_ACC_8 lives in gcm_aesgcm_helpers.ml (with the rest of the
+   GHASH_POLYVAL_ACC_1..8 family). *)
 
-(* ========================================================================= *)
-(* ========================================================================= *)
-
-(* CT-step tactics (uniform, like the 7-block closers). *)
-(* GCM_8BLOCK_CT1_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
+(* ===== Per-block ciphertext closers (ct1 closes inline in aes256_gcm.ml) = *)
 let GCM_8BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 8 2;;
 let GCM_8BLOCK_CT3_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 8 3;;
 let GCM_8BLOCK_CT4_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 8 4;;
 let GCM_8BLOCK_CT5_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 8 5;;
 let GCM_8BLOCK_CT6_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 8 6;;
 let GCM_8BLOCK_CT7_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 8 7;;
-(* GCM_8BLOCK_CT8_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
 
-(* USHR / MASK_REG for the more_than_7 path: C-arg 896 + 8*byte_len, ushr -> 112+byte_len. *)
+(* ===== Partial-final-block helpers (total bytes = 112 + byte_len) ======== *)
 let EIGHTBLOCK_USHR = prove
  (`!byte_len. byte_len <= 16 ==>
      word_ushr (word (896 + 8 * byte_len):int64) 3 = word (112 + byte_len)`,

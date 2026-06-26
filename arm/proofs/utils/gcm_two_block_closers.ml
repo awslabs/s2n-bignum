@@ -1,9 +1,6 @@
 (* ========================================================================= *)
-(* Two-block GHASH / mask / cascade closers for the AES-256-GCM band proofs.  *)
-(*                                                                           *)
-(* Split out of the former gcm_branch_closers.ml.                            *)
-(* Pure-algebra closers (no machine code, no symbolic simulation); shared    *)
-(* by the standalone per-N proof and the single-binary band proof.           *)
+(* 2-block GHASH and partial-block closers for the AES-256-GCM band proof.   *)
+(* Pure algebra (no machine code, no symbolic simulation).                   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
@@ -55,9 +52,9 @@ let ghash_2block_karatsuba = new_definition
 (*                                                                           *)
 (* The N=2 instance of ghash_Nblock_karatsuba — applied to                   *)
 (*   triples = [(b1, h_tw, hk); (b2, h2_tw, h2k)]                            *)
-(* — is structurally equivalent to ghash_2block_karatsuba. We prove this    *)
-(* compatibility theorem so the 2-block bridge can be derived from the      *)
-(* generic inductive bridge.                                                  *)
+(* — is structurally equivalent to ghash_2block_karatsuba. We prove this     *)
+(* compatibility theorem so the 2-block bridge can be derived from the       *)
+(* generic inductive bridge.                                                 *)
 (* ========================================================================= *)
 
 (* Note the N-block aggregator XOR-folds (pl, ph, pm) using fresh names;
@@ -77,12 +74,12 @@ let GHASH_2BLOCK_AS_NBLOCK = prove
   REWRITE_TAC[]);;
 
 (* ========================================================================= *)
-(* PER-N BRIDGE: ghash_2block_karatsuba ↔ polyval_reduce_prop3                *)
+(* PER-N BRIDGE: ghash_2block_karatsuba ↔ polyval_reduce_prop3               *)
 (*                                                                           *)
-(* The bridge GHASH_2BLOCK_KARATSUBA_EQ_POLYVAL_ACC (proven below) is what    *)
-(* the GHASH closure applies. It corresponds to the generic inductive bridge  *)
-(* GHASH_NBLOCK_KARATSUBA_EQ_PROP3 specialised via GHASH_2BLOCK_AS_NBLOCK +    *)
-(* GHASH_POLYVAL_ACC_2.                                                        *)
+(* The bridge GHASH_2BLOCK_KARATSUBA_EQ_POLYVAL_ACC (proven below) is what   *)
+(* the GHASH closure applies. It corresponds to the generic inductive bridge *)
+(* GHASH_NBLOCK_KARATSUBA_EQ_PROP3 specialised via GHASH_2BLOCK_AS_NBLOCK +  *)
+(* GHASH_POLYVAL_ACC_2.                                                      *)
 (* ========================================================================= *)
 
 let GHASH_2BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
@@ -114,35 +111,7 @@ let GHASH_2BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* ========================================================================= *)
-(*  PER-N: MACHINE CODE                                                      *)
-(* ========================================================================= *)
-
-(* ===== TWO-BLOCK: GHASH / mask / branch closers ========================== *)
-(* ========================================================================= *)
-(* PER-BLOCK CIPHERTEXT CLOSURES (instances of GCM_NBLOCK_CT_STEP_TAC for     *)
-(* N=2). Block 1 has ivec_1 = ivec (no LANE/CTR chain); block 2 has         *)
-(* ivec_2 = gcm_ctr_inc ivec (LANE/CTR/BYTEREVERSE chain).                    *)
-(* ========================================================================= *)
-
-
-(* ========================================================================= *)
-(*  GHASH STEP TACTIC (N=2 instance) -- same template as 4/5/6/7 blocks.      *)
-(*  Atoms (c?lo/c?hi, xilo/xihi, hd/he) -> inner pmuls (w?lo/w?hi/w?md) ->     *)
-(*  z-vars -> qS/qB Barrett pmuls -> bubble_sort_conv XOR-AC closure.         *)
-(* ========================================================================= *)
-
-(* GCM_2BLOCK_GHASH_STEP_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
-(* The two standalone-routine GHASH closers (GCM_2BLOCK_GHASH_STEP_MASKED_TAC /
-   _VIA_BRANCH_TAC) and their helpers (GCM_2BLOCK_GHASH_PREFIX_TAC,
-   GCM_2BLOCK_FOLD_QB_TAC, GCM_CTR1/2_FOLD_TAC, JOIN_XI_SELF) were removed:
-   unused by AES256_GCM_ENCRYPT_CORRECT (the live more_than_1 GHASH is closed
-   inline in aes256_gcm.ml). *)
-(* ------------------------------------------------------------------------- *)
-(* Partial-final-block helpers.                                              *)
-(*   total bytes = 16 + byte_len (block 1 full, block 2 = byte_len bytes).    *)
-(* ------------------------------------------------------------------------- *)
+(* ===== Partial-final-block helpers (total bytes = 16 + byte_len) ========= *)
 
 let TWOBLOCK_USHR = prove
  (`!byte_len. byte_len <= 16 ==>
@@ -151,10 +120,6 @@ let TWOBLOCK_USHR = prove
   SUBGOAL_THEN `128 + 8 * byte_len = 8 * (16 + byte_len)` SUBST1_TAC THENL
    [ARITH_TAC; ALL_TAC] THEN
   MATCH_MP_TAC NBLOCK_USHR_BYTELEN THEN ASM_ARITH_TAC);;
-
-(* The "more than 1 block" cascade branch (b.gt) is taken for any partial
-   final block, so the PC resolves to the in-cascade target (pc+408). *)
-(* TWOBLOCK_BRANCH moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
 
 (* The partial-block mask register, built from the 2-block bit length
    (128 + 8*byte_len), collapses to word (2^(8*byte_len) - 1): the leading

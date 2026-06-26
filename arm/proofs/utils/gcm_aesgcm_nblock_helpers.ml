@@ -8,20 +8,20 @@
 (*       assembly-shape spec to polyval_reduce_prop3 of the batched form     *)
 (*       (which equals ghash_polyval_acc by GHASH_POLYVAL_ACC_BATCHED). Each *)
 (*       per-N proof file derives its own GHASH_kBLOCK_..._EQ_POLYVAL_ACC    *)
-(*       bridge from this.                                                     *)
-(*   - GHASH_POLYVAL_ACC_5/6/7 and the symmetric h-power normalizers         *)
-(*       POLYVAL_DOT_H4_EQ_LOCAL..H8_EQ.                                       *)
+(*       bridge from this.                                                   *)
+(*   - The symmetric h-power normalizers POLYVAL_DOT_H4_EQ_LOCAL..H8_EQ.     *)
+(*       (The GHASH_POLYVAL_ACC_1..8 family lives in gcm_aesgcm_helpers.ml.) *)
 (*   - Per-block named tactics: ABBREV_FINAL_XI_TAC, GCM_NBLOCK_CT_STEP_TAC, *)
-(*     GCM_NBLOCK_POST_AES/TAIL_DISPATCH/POST_SIM_NORMALIZE_TAC.              *)
+(*     GCM_NBLOCK_POST_AES/TAIL_DISPATCH/POST_SIM_NORMALIZE_TAC.             *)
 (*   - bubble_sort_conv (XOR-AC canonicaliser for the GHASH closure).        *)
 (*   - Shared LANE/CTR/BYTEREVERSE/gcm_ctr_inc lemmas.                       *)
 (*                                                                           *)
-(* Each per-N proof file hand-writes its own GHASH closure                    *)
-(* (GCM_kBLOCK_GHASH_STEP_TAC) using the atoms/pmuls/qS/qB/bubble_sort        *)
+(* Each per-N proof file hand-writes its own GHASH closure                   *)
+(* (GCM_kBLOCK_GHASH_STEP_TAC) using the atoms/pmuls/qS/qB/bubble_sort       *)
 (* pattern; there is intentionally no single generic GHASH-closure tactic.   *)
 (*                                                                           *)
-(* The key inductive step:                                                    *)
-(*   ghash_Nblock_karatsuba (CONS triple rest) acc =                          *)
+(* The key inductive step:                                                   *)
+(*   ghash_Nblock_karatsuba (CONS triple rest) acc =                         *)
 (*     ghash_Nblock_karatsuba rest (xor_triple acc triple)                   *)
 (* where each triple contributes pl⊕ph⊕pm to the running accumulator.        *)
 (* The base case rest = [] applies the SHARED Barrett reduction.             *)
@@ -32,7 +32,7 @@ needs "arm/proofs/utils/gcm_aesgcm_helpers.ml";;
 (* ========================================================================= *)
 (* COUNTER-INCREMENT HELPER (N≥2)                                            *)
 (* gcm_ctr_inc, LANE0..3 byte-join, CTR_WORD_INSERT, BYTEREVERSE_JOIN_FOLD   *)
-(* These describe the AES counter increment via REV32+ADD+REV32 byte chain. *)
+(* These describe the AES counter increment via REV32+ADD+REV32 byte chain.  *)
 (* ========================================================================= *)
 
 let gcm_ctr_inc = new_definition
@@ -101,38 +101,34 @@ let BYTEREVERSE_JOIN_FOLD = prove
      word_bytereverse a`,
   GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
-(* Post-b9a430b the ARM simulator emits `word_reversefields 8` (not            *)
-(* `word_bytereverse`) for the 32-bit REV counter shuffle.  On 32-bit words    *)
-(* the two are identical; this bridge normalizes the counter folds back to     *)
-(* the `word_bytereverse` form the CTR tactics were written against.           *)
+(* Post-b9a430b the ARM simulator emits `word_reversefields 8` (not          *)
+(* `word_bytereverse`) for the 32-bit REV counter shuffle.  On 32-bit words  *)
+(* the two are identical; this bridge normalizes the counter folds back to   *)
+(* the `word_bytereverse` form the CTR tactics were written against.         *)
 let WORD_REVERSEFIELDS_8_BYTEREVERSE_32 = prove
  (`!x:(32)word. word_reversefields 8 x = word_bytereverse x`,
   GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
-(* SHL_SUBWORD_CASES_128 removed: unused by AES256_GCM_ENCRYPT_CORRECT (only the parked claude_4.7 backups used it). *)
-
-(* ABBREV_SUBWORD_HALVES_TAC removed: unused by AES256_GCM_ENCRYPT_CORRECT (only the parked claude_4.7 backups used it). *)
-
 (* ========================================================================= *)
 (* GENERIC N-BLOCK KARATSUBA SPEC                                            *)
 (*                                                                           *)
-(* ghash_Nblock_karatsuba : (int128 list) -> int128 -> int128 -> int128       *)
+(* ghash_Nblock_karatsuba : (int128 list) -> int128 -> int128 -> int128      *)
 (*                                                                           *)
-(*   The assembly-shape recursive spec.                                       *)
-(*   Each block contributes (pl, ph, pm) computed from its (input, h_tw, hk)  *)
-(*   triple; all triples are XOR-summed; then SHARED Barrett reduction.       *)
+(*   The assembly-shape recursive spec.                                      *)
+(*   Each block contributes (pl, ph, pm) computed from its (input, h_tw, hk) *)
+(*   triple; all triples are XOR-summed; then SHARED Barrett reduction.      *)
 (*                                                                           *)
-(* Note: in the actual assembly, the per-block hk_lo is fetched from           *)
-(* `karatsuba_mid (h_power h k)` (precomputed in Htable). The spec captures   *)
-(* this via the precondition `subword hk_k (0,64) = karatsuba_mid h_k`.       *)
+(* Note: in the actual assembly, the per-block hk_lo is fetched from         *)
+(* `karatsuba_mid (h_power h k)` (precomputed in Htable). The spec captures  *)
+(* this via the precondition `subword hk_k (0,64) = karatsuba_mid h_k`.      *)
 (*                                                                           *)
-(* INPUT LAYOUT:                                                              *)
-(*   triples = [(input_1, h_tw_1, hk_1); (input_2, h_tw_2, hk_2); ...]        *)
-(*   where:                                                                   *)
+(* INPUT LAYOUT:                                                             *)
+(*   triples = [(input_1, h_tw_1, hk_1); (input_2, h_tw_2, hk_2); ...]       *)
+(*   where:                                                                  *)
 (*     input_k = the kth GHASH input block (already XOR'd with running acc   *)
 (*               for the first block by the caller)                          *)
-(*     h_tw_k  = byteswap128 (h^{N-k+1})  -- the H power for this block       *)
-(*     hk_k    = the Karatsuba-mid key for h_tw_k                              *)
+(*     h_tw_k  = byteswap128 (h^{N-k+1})  -- the H power for this block      *)
+(*     hk_k    = the Karatsuba-mid key for h_tw_k                            *)
 (* ========================================================================= *)
 
 (* Karatsuba (pl_k, ph_k, pm_k) for a single block. *)
@@ -194,33 +190,32 @@ let ghash_Nblock_karatsuba = new_definition
   let pl,ph,pm = kara_acc triples (word 0) (word 0) (word 0) in
   karatsuba_reduce_shared pl ph pm`;;
 
-
 (* ========================================================================= *)
-(* INDUCTIVE BRIDGE                                                           *)
+(* INDUCTIVE BRIDGE                                                          *)
 (*                                                                           *)
 (* GHASH_NBLOCK_KARATSUBA_EQ_PROP3 is proved BY INDUCTION on the block list  *)
-(* via three structural lemmas:                                               *)
+(* via three structural lemmas:                                              *)
 (*                                                                           *)
 (*   1. KARATSUBA_REDUCE_AS_PROP3_CLEAN:                                     *)
-(*      karatsuba_reduce_shared pl ph pm =                                    *)
-(*        word_reversefields 8 (polyval_reduce_prop3 (pack_corrected pl ph pm)) *)
+(*      karatsuba_reduce_shared pl ph pm =                                   *)
+(*        word_reversefields 8 (polyval_reduce_prop3 (pack_corrected ...))   *)
 (*      (i.e., the assembly-shape Barrett reduction equals prop3 on the      *)
 (*       Karatsuba-corrected packed value, modulo a final byte-reversal.)    *)
 (*                                                                           *)
 (*   2. KARATSUBA_BLOCK_PACKS_TO_PMUL_CLEAN:                                 *)
-(*      pack_corrected (pl_k, ph_k, pm_k) = pmul input_k h_k (256-bit)        *)
-(*      under the precondition that hk's low half = karatsuba_mid h_k.        *)
+(*      pack_corrected (pl_k, ph_k, pm_k) = pmul input_k h_k (256-bit)       *)
+(*      under the precondition that hk's low half = karatsuba_mid h_k.       *)
 (*                                                                           *)
-(*   3. PACK_CORRECTED_XOR (additivity / linearity):                          *)
-(*      pack_corrected commutes with XOR in all three arguments.              *)
+(*   3. PACK_CORRECTED_XOR (additivity / linearity):                         *)
+(*      pack_corrected commutes with XOR in all three arguments.             *)
 (*                                                                           *)
 (* From these three the inductive bridge follows: kara_acc XOR-folds         *)
 (* per-block (pl, ph, pm); pack distributes over XOR; each block contributes *)
 (* pmul input_k h_k; the total equals XOR of pmul input_k h_k; then          *)
-(* karatsuba_reduce_shared = prop3 on this total.                             *)
+(* karatsuba_reduce_shared = prop3 on this total.                            *)
 (*                                                                           *)
 (* The N=1, 2, 3, ..., 8 bridges are derived from this inductive bridge      *)
-(* + GHASH_POLYVAL_ACC_<N> (from ghash_spec.ml).                              *)
+(* + GHASH_POLYVAL_ACC_<N> (from gcm_aesgcm_helpers.ml).                     *)
 (* ========================================================================= *)
 
 (* Pack-corrected: combines (pl, ph, pm) into the 256-bit Karatsuba layout
@@ -472,19 +467,19 @@ let GHASH_NBLOCK_KARATSUBA_EQ_PROP3 = prove
   DISCH_THEN SUBST1_TAC THEN
   REWRITE_TAC[WORD_XOR_0_LEFT]);;
 
-(* Per-block prefix tactic for the AES round simulation + s13 abbreviation. *)
+(* Per-block prefix tactic for the AES round simulation + s13 abbreviation.  *)
 (* In the actual proof body, this expands to:                                *)
 (*   ARM_STEPS_TAC EXEC (start--end) THEN                                    *)
-(*   GCM_ENC_SIMPLIFY_TAC THEN                                                *)
+(*   GCM_ENC_SIMPLIFY_TAC THEN                                               *)
 (*   ABBREV_TAC `s13_k = aese (aesmc (aese ... (aese ivec_k rk0)) ... rk13)` *)
 (*                                                                           *)
 (* But because the AES chain term is huge (~14 lines of nested aese/aesmc),  *)
-(* we provide a generator that builds it on demand from the round-key list. *)
+(* we provide a generator that builds it on demand from the round-key list.  *)
 (* ------------------------------------------------------------------------- *)
 
 (* ABBREV_FINAL_XI_TAC : tactic                                              *)
-(*   Abbreviate Q19 (the assembled Karatsuba+Barrett result) as `final_xi`. *)
-(*   Insert in the main proof BEFORE the EXT/REV64/STR steps to avoid       *)
+(*   Abbreviate Q19 (the assembled Karatsuba+Barrett result) as `final_xi`.  *)
+(*   Insert in the main proof BEFORE the EXT/REV64/STR steps to avoid        *)
 (*   byte-level term explosion.                                              *)
 let ABBREV_FINAL_XI_TAC : tactic =
   FIRST_ASSUM(fun th ->
@@ -493,20 +488,8 @@ let ABBREV_FINAL_XI_TAC : tactic =
          ABBREV_TAC(mk_eq(mk_var("final_xi",type_of rhs), rhs))
     else NO_TAC);;
 
-(* ========================================================================= *)
-(* POST_AES_NORMALIZE_TAC: pos-step-93 (between AES rounds and tail check)  *)
-(* TAIL_DISPATCH_NORMALIZE_TAC: between LDR D16 and b.gt                    *)
-(* POST_SIM_NORMALIZE_TAC: post-step-153/111 cleanup before final state    *)
-(*                                                                           *)
-(* These mirror the GCM_2BLOCK_POST_AES/TAIL_DISPATCH/POST_SIM_NORMALIZE     *)
-(* tactics from the 2-block file. The tail-dispatch and post-aes flavors    *)
-(* are needed only when N≥2 (the 1-block has no tail dispatch).             *)
-(* ========================================================================= *)
-
-(* GCM_NBLOCK_POST_AES_NORMALIZE_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
-(* GCM_NBLOCK_TAIL_DISPATCH_NORMALIZE_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
+(* Post-simulation assumption cleanup before the final state: normalize      *)
+(* stack/pointer arithmetic, masks, XOR association, and the SIMD shuffles.  *)
 let GCM_NBLOCK_POST_SIM_NORMALIZE_TAC =
   RULE_ASSUM_TAC(REWRITE_RULE[STACK_PTR_CANCEL; WORD_ADD_ASSOC_CONSTS]) THEN
   RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(DEPTH_CONV NUM_ADD_CONV))) THEN
@@ -529,12 +512,12 @@ let GCM_NBLOCK_POST_SIM_NORMALIZE_TAC =
 (*                                                                           *)
 (* GCM_NBLOCK_CT_STEP_TAC k : closes `ct_k = pt_k ⊕ aes256(ivec_k, ...)`     *)
 (*   via EXPAND_TAC ct_k + EXPAND_TAC s13_k + WORD_XOR_ASSOC + ASM_REWRITE.  *)
-(*   For k=1: ivec_k = ivec.                                                  *)
+(*   For k=1: ivec_k = ivec.                                                 *)
 (*   For k≥2: ivec_k = gcm_ctr_inc^{k-1} ivec — needs LANE/CTR chain.        *)
 (* ========================================================================= *)
 
 (* Build "ct" or "ct_k", "s13" or "s13_k" name strings. By convention:       *)
-(*   1-block: `ct`, `s13`        (no suffix)                                  *)
+(*   1-block: `ct`, `s13`        (no suffix)                                 *)
 (*   N-block (N≥2): `ct_k`, `s13_k` for k = 1..N                             *)
 let mk_ct_name (n:int) (k:int) : string =
   if n = 1 then "ct" else "ct" ^ string_of_int k;;
@@ -563,16 +546,16 @@ let INSERT_SUBWORD = prove
      (96,32):(32)word = y`,
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
-(* For block k≥2: ivec_k = gcm_ctr_inc^{k-1} ivec — needs the LANE/CTR chain. *)
-(* The shared front-half (substitute ct_k / s13_k, unfold aes256_encrypt,   *)
-(* peel to the ivec argument, apply LANE0..3 + CTR_WORD_INSERT) is identical   *)
-(* for all k. The TAIL then differs by counter depth:                          *)
-(*   k=2 (ivec_2 = gcm_ctr_inc ivec): one unfold, fold via BYTEREVERSE_JOIN.   *)
-(*   k≥3 (ivec_k = gcm_ctr_inc^{k-1} ivec): abbreviate ctr_k/br_k/step1_k, then *)
-(*     INSERT_SUBWORD/INSERT_IDEM collapse the nested word_inserts and the      *)
-(*     double-byte-reverse cancels.                                            *)
-(* This generalizes the per-file GCM_CT3..CTk_STEP_TAC so each proof just      *)
-(* calls GCM_NBLOCK_CT_STEP_TAC n k (one line per block, like CT1/CT2).        *)
+(* For block k≥2: ivec_k = gcm_ctr_inc^{k-1} ivec, needs the LANE/CTR chain. *)
+(* The shared front-half (substitute ct_k / s13_k, unfold aes256_encrypt,    *)
+(* peel to the ivec argument, apply LANE0..3 + CTR_WORD_INSERT) is identical *)
+(* for all k. The TAIL then differs by counter depth:                        *)
+(*   k=2 (ivec_2 = gcm_ctr_inc ivec): one unfold, fold via BYTEREVERSE_JOIN. *)
+(*   k≥3 (ivec_k = gcm_ctr_inc^{k-1} ivec): abbreviate ctr_k/br_k/step1_k,   *)
+(*     then INSERT_SUBWORD/INSERT_IDEM collapse the nested word_inserts and  *)
+(*     double-byte-reverse cancels.                                          *)
+(* This generalizes the per-file GCM_CT3..CTk_STEP_TAC so each proof just    *)
+(* calls GCM_NBLOCK_CT_STEP_TAC n k (one line per block, like CT1/CT2).      *)
 let GCM_NBLOCK_CT_LATER_STEP_TAC (n:int) (k:int) : tactic =
   if k <= 1 then failwith "GCM_NBLOCK_CT_LATER_STEP_TAC: k must be ≥ 2"
   else
@@ -645,16 +628,15 @@ let GCM_NBLOCK_CT_STEP_TAC (n:int) (k:int) : tactic =
   if k = 1 then GCM_NBLOCK_CT1_STEP_TAC n
   else GCM_NBLOCK_CT_LATER_STEP_TAC n k;;
 
-
 (* ========================================================================= *)
-(*  SHARED PER-N PROOF HELPERS (hoisted here so the N-block proof files do    *)
-(*  not each re-prove them).  Used by two_/three_/.../eight_blocks proofs.    *)
+(*  SHARED PER-N PROOF HELPERS (hoisted here so the N-block proof files do   *)
+(*  not each re-prove them).  Used by two_/three_/.../eight_blocks proofs.   *)
 (* ========================================================================= *)
 
-(* --- Symmetric h-power normalizers ---------------------------------------- *)
-(* GHASH_POLYVAL_ACC_N emits left-associated h-powers (((h.h).h)..); the      *)
-(* karatsuba bridge wants the symmetric forms the Htable holds. H4 is the one *)
-(* nontrivial ring-algebra proof; H5..H8 follow by congruence.                *)
+(* ---- Symmetric h-power normalizers -------------------------------------- *)
+(* GHASH_POLYVAL_ACC_N emits left-associated h-powers (((h.h).h)..); the     *)
+(* karatsuba bridge wants the symmetric forms the Htable holds.  H4 is the   *)
+(* one nontrivial ring-algebra proof; H5..H8 follow by congruence.           *)
 
 let POLYVAL_DOT_H4_EQ_LOCAL = prove
  (`!(h:int128).
@@ -809,13 +791,11 @@ let POLYVAL_DOT_H4_EQ_LOCAL = prove
     REWRITE_TAC[MOD_POLYVAL_REFL; BOOL_POLY_OF_WORD];
     FIRST_ASSUM MATCH_ACCEPT_TAC]);;
 
-
 let POLYVAL_DOT_H5_EQ = prove
  (`!(h:int128).
      polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h =
      polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h`,
   GEN_TAC THEN REWRITE_TAC[POLYVAL_DOT_H4_EQ_LOCAL]);;
-
 
 let POLYVAL_DOT_H6_EQ = prove
  (`!(h:int128).
@@ -823,13 +803,11 @@ let POLYVAL_DOT_H6_EQ = prove
      polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h`,
   GEN_TAC THEN REWRITE_TAC[POLYVAL_DOT_H5_EQ]);;
 
-
 let POLYVAL_DOT_H7_EQ = prove
  (`!(h:int128).
      polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) h) h) h) h) h =
      polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h`,
   GEN_TAC THEN REWRITE_TAC[POLYVAL_DOT_H6_EQ]);;
-
 
 let POLYVAL_DOT_H8_EQ = prove
  (`!(h:int128).
@@ -837,14 +815,9 @@ let POLYVAL_DOT_H8_EQ = prove
      polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h`,
   GEN_TAC THEN REWRITE_TAC[POLYVAL_DOT_H7_EQ]);;
 
-
-
-
-
-
-(* --- Bubble-sort conversion for XOR canonical form ------------------------ *)
-(* WORD_BITWISE_RULE blows up past ~17-21 atoms; this sorts word_xor chains   *)
-(* string-lexicographically via pairwise commutativity.                       *)
+(* ---- Bubble-sort conversion for XOR canonical form ---------------------- *)
+(* WORD_BITWISE_RULE blows up past ~17-21 atoms; this sorts word_xor chains  *)
+(* string-lexicographically via pairwise commutativity.                      *)
 
 let word_xor_left_comm = WORD_RULE
   `word_xor (a:64 word) (word_xor b c) = word_xor b (word_xor a c)`;;
@@ -883,27 +856,27 @@ let rec bubble_sort_conv tm =
       apply_n_times (k-1) (TRANS acc th) in
   apply_n_times n (REFL tm);;
 
-(* Iterate bubble_sort_conv to a fixpoint: keep re-sorting until the XOR chain  *)
-(* is stable.  Shared by every N-block GHASH closer (folds word_pmul args up to *)
-(* AC so the final per-half sort sees abbreviated atoms on both sides).         *)
+(* Iterate bubble_sort_conv to a fixpoint: keep re-sorting until the XOR     *)
+(* chain is stable.  Shared by every N-block GHASH closer (folds word_pmul   *)
+(* args up to AC so the final per-half sort sees abbreviated atoms on both   *)
+(* sides).                                                                   *)
 let rec bubble_fix tm =
   let th = bubble_sort_conv tm in
   let r = rhs(concl th) in
   if r = tm then th else TRANS th (bubble_fix r);;
 
-
 (* ========================================================================= *)
-(* PARTIAL-BLOCK MASK CONSTRUCTION (shared across all N-block proofs)         *)
+(* PARTIAL-BLOCK MASK CONSTRUCTION (shared across all N-block proofs)        *)
 (*                                                                           *)
 (* In an N-block encrypt the final block may be partial: byte_len in 1..16   *)
 (* bytes.  The routine builds a 128-bit mask in Q0 from the (mod-128) bit    *)
 (* length via  and #127 ; sub #128 ; neg ; and #127 ; lsrv (all-ones >> n) ; *)
 (* cmp #64 ; csel ; csel ; ins d0/d1, masks the last ciphertext block to its *)
-(* low 8*byte_len bits, and (via bif) keeps the untouched output bytes above  *)
-(* the message end.  NBLOCK_MASK_REG shows the constructed register, in the   *)
+(* low 8*byte_len bits, and (via bif) keeps the untouched output bytes above *)
+(* the message end.  NBLOCK_MASK_REG shows the constructed register, in the  *)
 (* exact ival/flag form the symbolic simulator produces, equals              *)
-(* word (2^(8*byte_len) - 1).  The proof peels byte_len into its 16 values    *)
-(* (a single 16-way ARITH_RULE disjunction is intractable).                   *)
+(* word (2^(8*byte_len) - 1).  The proof peels byte_len into its 16 values   *)
+(* (a single 16-way ARITH_RULE disjunction is intractable).                  *)
 (* ========================================================================= *)
 
 let nblock_mask_red_tac =

@@ -1,14 +1,11 @@
 (* ========================================================================= *)
-(* Three-block GHASH / mask / cascade closers for the AES-256-GCM band proofs.  *)
-(*                                                                           *)
-(* Split out of the former gcm_branch_closers.ml.                            *)
-(* Pure-algebra closers (no machine code, no symbolic simulation); shared    *)
-(* by the standalone per-N proof and the single-binary band proof.           *)
+(* 3-block GHASH and partial-block closers for the AES-256-GCM band proof.   *)
+(* Pure algebra (no machine code, no symbolic simulation).                   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
-(* ===== THREE-BLOCK: Karatsuba bridge ===================================== *)
+(* ===== 3-block GHASH Karatsuba spec + bridge to the ghash_polyval_acc spec  *)
 let ghash_3block_karatsuba = new_definition
  `ghash_3block_karatsuba (b1:int128) (b2:int128) (b3:int128)
                          (h_tw:int128)  (hk:int128)
@@ -79,10 +76,10 @@ let GHASH_3BLOCK_AS_NBLOCK = prove
   REWRITE_TAC[WORD_XOR_ASSOC]);;
 
 (* ========================================================================= *)
-(* PER-N BRIDGE: ghash_3block_karatsuba ↔ polyval_reduce_prop3                *)
+(* PER-N BRIDGE: ghash_3block_karatsuba ↔ polyval_reduce_prop3               *)
 (*                                                                           *)
-(* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)        *)
-(* + GHASH_3BLOCK_AS_NBLOCK.                                                  *)
+(* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)       *)
+(* + GHASH_3BLOCK_AS_NBLOCK.                                                 *)
 (* ========================================================================= *)
 
 let GHASH_3BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
@@ -123,17 +120,8 @@ let GHASH_3BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* ========================================================================= *)
-(*  PER-N: MACHINE CODE                                                      *)
+(* ===== Partial-final-block helpers (total bytes = 32 + byte_len) ========= *)
 
-(* ===== THREE-BLOCK: GHASH / mask / cascade closers ======================= *)
-
-(* ========================================================================= *)
-(* (The standalone N=3 GHASH closer GCM_3BLOCK_GHASH_STEP_MASKED_TAC and its  *)
-(* helpers GCM_3BLOCK_FOLD_MIDS_TAC / GCM_3BLOCK_FOLD_TO / GCM_3BLOCK_HALF_CLOSE *)
-(* were removed: unused by AES256_GCM_ENCRYPT_CORRECT, which closes the N=3    *)
-(* GHASH inline in aes256_gcm.ml.)                                            *)
-(* ========================================================================= *)
 let THREEBLOCK_USHR = prove
  (`!byte_len. byte_len <= 16 ==>
      word_ushr (word (256 + 8 * byte_len):int64) 3 = word (32 + byte_len)`,
@@ -162,11 +150,3 @@ let THREEBLOCK_MASK_REG = prove
     = word (2 EXP (8 * byte_len) - 1)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NBLOCK_WORD_INSERT_BOTH_LANES] THEN
   NBLOCK_MASK_PEEL_TAC 1);;
-
-(* ------------------------------------------------------------------------- *)
-(* (The tail-dispatch cascade lemmas IVAL_WORD_SUB_SMALL / THREEBLOCK_GT_COND *)
-(* {,_FALSE,_TRUE} / THREEBLOCK_CASC{48,64,80,96} were removed: unused by     *)
-(* AES256_GCM_ENCRYPT_CORRECT.  The live 3-block cascade is resolved by       *)
-(* GCM_CASCADE_TAC in aes256_gcm.ml; the standalone variants live in          *)
-(* gcm_aesgcm_standalone_blocks_helper.ml.)                                   *)
-(* ------------------------------------------------------------------------- *)

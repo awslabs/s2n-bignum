@@ -1,20 +1,11 @@
 (* ========================================================================= *)
-(* One-block GHASH / mask / cascade closers for the AES-256-GCM band proofs.  *)
-(*                                                                           *)
-(* Split out of the former gcm_branch_closers.ml; also carries the shared    *)
-(* partial-block mask construction lemmas used by every band.                *)
-(* Pure-algebra closers (no machine code, no symbolic simulation); shared    *)
-(* by the standalone per-N proof and the single-binary band proof.           *)
+(* 1-block GHASH and partial-block closers for the AES-256-GCM band proof.   *)
+(* Pure algebra (no machine code, no symbolic simulation).                   *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
-(* ===== 1-block GHASH karatsuba spec + bridges =========================== *)
-(* The assembly-shaped single-block GHASH and its bridges to polyval_dot /    *)
-(* the ghash_polyval_acc spec.  Mirrors the per-length ghash_Nblock_karatsuba  *)
-(* + GHASH_NBLOCK_KARATSUBA_EQ_* artifacts that live in each closer file.      *)
-(* (The general support lemmas POLYVAL_DOT_KARATSUBA, BYTESWAP128_SUBWORD_*,   *)
-(* WORD_SUBWORD_XOR_COMM stay in gcm_aesgcm_helpers.ml, loaded before this.)   *)
+(* ===== 1-block GHASH Karatsuba spec + bridges to the ghash_polyval_acc spec *)
 
 let ghash_1block_karatsuba = new_definition
  `ghash_1block_karatsuba (input:int128) (h:int128) (hk:int128) : int128 =
@@ -79,29 +70,7 @@ let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
     MP_TAC(ISPECL [`word_pmul (b1:int128) (h:int128) : 256 word`] POLYVAL_REDUCE_PROP3_CORRECT) THEN
     REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
 
-(* ===== ONE-BLOCK: partial-block mask construction + GHASH closers ======== *)
-(* ========================================================================= *)
-(* PARTIAL-BLOCK MASK CONSTRUCTION                                            *)
-(*                                                                           *)
-(* For an input of byte_len bytes (1 <= byte_len <= 16), the routine builds a *)
-(* 128-bit mask register in Q0 from byte_len via the sequence                 *)
-(*   and x1,#127 ; sub #128 ; neg ; and #127 ; lsrv (all-ones >> n) ;         *)
-(*   cmp #64 ; csel ; csel ; ins d0/d1.                                       *)
-(* The lemma below shows that this register, in the exact ival/flag form the  *)
-(* symbolic simulator produces, equals word (2^(8*byte_len) - 1): a mask with *)
-(* the low 8*byte_len bits set.  The proof peels byte_len into its 16 values  *)
-(* (a single 16-way ARITH_RULE disjunction is intractable) and reduces each   *)
-(* concrete case by word/num/int arithmetic.                                  *)
-(* ========================================================================= *)
-
-(* (The byte_len-peeling mask tactics mask_red_tac / one_block_cases16 /        *)
-(* MASK_PEEL_TAC were removed: they supported ONE_BLOCK_MASK_REG, which is not   *)
-(* used by AES256_GCM_ENCRYPT_CORRECT and now lives in the standalone helper.)   *)
-
-(* The mask register the routine builds in Q0 (base b0 = the AES ciphertext that
-   previously occupied Q0; both its lanes are overwritten by the two csel results)
-   equals word (2^(8*byte_len) - 1). *)
-(* ONE_BLOCK_MASK_REG moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
+(* ===== ONE-BLOCK: partial-block mask + ciphertext closers ================ *)
 
 (* The returned byte length: x9 = (8*byte_len) >> 3 = byte_len for byte_len <= 16. *)
 let ONE_BLOCK_USHR_BYTELEN = prove
@@ -120,17 +89,5 @@ let ONE_BLOCK_MASK_IDEM = prove
      word_and (word_and mask ct) mask = word_and ct mask`,
   CONV_TAC WORD_BITWISE_RULE);;
 
-(* GCM_1BLOCK_GHASH_STEP_TAC (N=1, unmasked) removed: unused by AES256_GCM_ENCRYPT_CORRECT (the live 1-block path closes GHASH inline via GCM_1B_GHASH_CLOSE in aes256_gcm.ml). *)
-
-(* ========================================================================= *)
-(* CIPHERTEXT CLOSURE: 1-block instance (shared with GCM_NBLOCK_CT_STEP_TAC). *)
-(* For 1-block: ivec_1 = ivec (no gcm_ctr_inc), so no LANE/CTR chain.        *)
-(* ========================================================================= *)
-
+(* Ciphertext closure, 1-block instance (ivec_1 = ivec, no gcm_ctr_inc). *)
 let GCM_1BLOCK_CT1_STEP_TAC = GCM_NBLOCK_CT1_STEP_TAC 1;;
-
-(* ========================================================================= *)
-(* (The masked N=1 GHASH step tactic GCM_1BLOCK_GHASH_STEP_MASKED_TAC was     *)
-(* removed: unused by AES256_GCM_ENCRYPT_CORRECT.  The live 1-block path      *)
-(* closes GHASH inline via GCM_1B_GHASH_CLOSE in aes256_gcm.ml.)              *)
-(* ========================================================================= *)

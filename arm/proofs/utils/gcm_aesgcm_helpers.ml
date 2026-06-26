@@ -1,40 +1,75 @@
 (* ========================================================================= *)
-(* Shared GCM AES-GCM proof helpers (extracted from 1-block claude_4.7).     *)
-(*                                                                           *)
-(* This file provides ONLY the helper definitions, lemmas, and tactics that  *)
-(* the per-N-block claude_4.7 proofs share.  It does NOT include any         *)
-(* machine-code definition or main theorem — those belong in the per-proof  *)
-(* file.                                                                     *)
-(*                                                                           *)
-(* Loading this file is fast (~30 seconds), unlike loading the full 1-block *)
-(* proof which takes ~12 minutes due to ARM simulation.                     *)
+(* Shared AES-256-GCM proof helpers: the general (block-count-agnostic)      *)
+(* definitions, lemmas, and tactics the per-N-block closers reuse — field    *)
+(* algebra, SIMD byte-shuffle folds, the GHASH_POLYVAL_ACC_1..8 family, and  *)
+(* AES256_ENCRYPT_UNFOLD.  No machine-code definition or main theorem.       *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
 needs "common/aes.ml";;
 needs "arm/proofs/utils/aes.ml";;
-needs "arm/proofs/utils/aes256_gcm_block_enc_spec.ml";;
+needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 needs "common/karatsuba_pmul.ml";;
 needs "common/polyval_ghash.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* WORD_SIMPLE_SUBWORD_CONV compatibility shim.                               *)
+(* AES256_ENCRYPT_UNFOLD: rewrite the upstream math-level aes256_encrypt     *)
+(* (applied to a literal 15-element round-key list) into the aese/aesmc      *)
+(* instruction chain that symbolic execution of the AESE+AESMC sequence      *)
+(* produces. The GCM keystream is computed by aes256_encrypt; every          *)
+(* per-block ciphertext- and keystream-fold matches the simulator's          *)
+(* aese/aesmc form against the spec via this lemma. Its RHS stops at         *)
+(* aese/aesmc (not dissolved into sub_bytes/shift_rows/mix_columns the way   *)
+(* XTS's AESENC_TAC does), and it is a rewrite-rule theorem (unlike the      *)
+(* upstream AESENC_HELPER_CONV conversion), so it slots into the closers'    *)
+(* REWRITE_TAC lists and RULE_ASSUM_TAC(REWRITE_RULE ...) calls.             *)
+(* ------------------------------------------------------------------------- *)
+
+let AES256_ENCRYPT_UNFOLD = prove
+ (`!(input:(128)word)
+     (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word)
+     (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word)
+     (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word)
+     (rk12:(128)word) (rk13:(128)word) (rk14:(128)word).
+     aes256_encrypt input
+       [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14] =
+     (let s0 = aesmc (aese input rk0) in
+      let s1 = aesmc (aese s0 rk1) in
+      let s2 = aesmc (aese s1 rk2) in
+      let s3 = aesmc (aese s2 rk3) in
+      let s4 = aesmc (aese s3 rk4) in
+      let s5 = aesmc (aese s4 rk5) in
+      let s6 = aesmc (aese s5 rk6) in
+      let s7 = aesmc (aese s6 rk7) in
+      let s8 = aesmc (aese s7 rk8) in
+      let s9 = aesmc (aese s8 rk9) in
+      let s10 = aesmc (aese s9 rk10) in
+      let s11 = aesmc (aese s10 rk11) in
+      let s12 = aesmc (aese s11 rk12) in
+      let s13 = aese s12 rk13 in
+      word_xor s13 rk14)`,
+  REWRITE_TAC[aes256_encrypt; aes256_encrypt_round; aese; aesmc;
+              LET_DEF; LET_END_DEF] THEN
+  CONV_TAC(DEPTH_CONV EL_CONV) THEN REWRITE_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* WORD_SIMPLE_SUBWORD_CONV compatibility shim.                              *)
 (*                                                                           *)
-(* HOL commit b9a430b (Dec 2025, in the current checkpoint base) reordered     *)
-(* WORD_SIMPLE_SUBWORD_CONV to try the trivial size-match rewrite FIRST and    *)
-(* `failwith` in its catch-all, instead of trying the structural word_join /   *)
-(* word_insert / word_subword / word_zx cases first and falling back to        *)
-(* WORD_SUBWORD_TRIVIAL.  The new conversion no longer collapses the nested    *)
-(* word_subword (word_join ...) ... byte-shuffle networks that every GCM GHASH *)
-(* closer produces when it expands final_xi, so all the per-band closers (which *)
-(* call WORD_SIMPLE_SUBWORD_CONV by name) stop closing.                        *)
+(* HOL commit b9a430b (Dec 2025, in the current checkpoint base) reordered   *)
+(* WORD_SIMPLE_SUBWORD_CONV to try the trivial size-match rewrite FIRST and  *)
+(* `failwith` in its catch-all, instead of trying the structural word_join / *)
+(* word_insert / word_subword / word_zx cases first and falling back to      *)
+(* WORD_SUBWORD_TRIVIAL.  The new conversion no longer collapses the nested  *)
+(* word_subword (word_join ...) ... byte-shuffle networks that every GCM     *)
+(* GHASH closer produces when it expands final_xi, so all the per-band       *)
+(* closers (which call WORD_SIMPLE_SUBWORD_CONV by name) stop closing.       *)
 (*                                                                           *)
-(* Rather than port every closer, we re-bind WORD_SIMPLE_SUBWORD_CONV to the   *)
-(* verbatim pre-b9a430b definition here, restoring the term normal form the    *)
-(* whole proof was written against.  This is loaded after the ARM model, which *)
-(* drives its own simplification through the late-bound `extra_word_CONV` ref  *)
-(* (NOT this name), so the symbolic simulator is unaffected.  All supporting   *)
-(* theorems exist unchanged in the current base.                              *)
+(* Rather than port every closer, we re-bind WORD_SIMPLE_SUBWORD_CONV to the *)
+(* verbatim pre-b9a430b definition here, restoring the term normal form the  *)
+(* whole proof was written against.  This is loaded after the ARM model,     *)
+(* which drives its own simplification through the late-bound                *)
+(* `extra_word_CONV` ref (NOT this name), so the symbolic simulator is       *)
+(* unaffected.  All supporting theorems exist unchanged in the current base. *)
 (* ------------------------------------------------------------------------- *)
 
 let WORD_SIMPLE_SUBWORD_COMPAT_CONV =
@@ -124,11 +159,8 @@ let PMUL_NORM_CONV tm =
     else failwith "already normalized"
   | _ -> failwith "not word_pmul";;
 
-(* The assembly-shaped 1-block spec `ghash_1block_karatsuba` and its bridge     *)
-(* `GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT` live in gcm_one_block_closers.ml      *)
-(* (alongside the other per-length karatsuba specs/bridges).  They depend on    *)
-(* POLYVAL_DOT_KARATSUBA / BYTESWAP128_SUBWORD_* / WORD_SUBWORD_XOR_COMM below,  *)
-(* which are general (multi-N) support lemmas and stay here.                    *)
+(* The per-N GHASH Karatsuba specs/bridges live in the per-block closer      *)
+(* files; the general (multi-N) support lemmas they need stay here.          *)
 
 (* ---- polyval_dot expressed in Karatsuba + Prop3 form --------------------- *)
 
@@ -184,8 +216,6 @@ let WORD_SUBWORD_XOR_COMM = prove(
     word_subword (word_xor a (word_xor c b)) n`,
   REPEAT GEN_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT moved to gcm_one_block_closers.ml. *)
-
 (* ---- SIMD per-lane reversal fold lemmas ---------------------------------- *)
 
 let REV64_LOWER_LANE = prove(
@@ -225,8 +255,6 @@ let WORD_SWAP_HALVES_INVOLUTION = prove(
         (word_subword (word_join a a:(256)word) (64,128):(128)word):(256)word)
       (64,128):(128)word = a`,
   CONV_TAC WORD_BLAST);;
-
-(* WORD_JOIN_SUBWORD_HALVES moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
 
 (* June-2026 HOL base: the new WORD_SIMPLE_SUBWORD_CONV no longer collapses the
    straddling extraction word_subword (word_join a a) (64,128) (it crosses the
@@ -385,20 +413,14 @@ let REV8_JOIN_FOLD = prove(
     word_reversefields 8 (word_join hi lo:(128)word)`,
   CONV_TAC WORD_BLAST);;
 
-(* ---- Half-swap lemmas (used by the 3-block only-Q19 fast reduce) ---------- *)
-(* (The half-swap re-normalization lemmas HALFSWAP_JOIN_SELF / HALFSWAP_REV8_LEMMA
-   / JOIN_SUBWORD_IDENT were removed/relocated: unused by AES256_GCM_ENCRYPT_CORRECT
-   — they supported the standalone 3-block opaque-Q19 closer, now in
-   gcm_aesgcm_standalone_blocks_helper.ml.) *)
-
-(* ---- N-block GHASH_POLYVAL_ACC specializations (lengths 1..8) ------------- *)
-(* All of GHASH_POLYVAL_ACC_1..8 live here, derived from the ring-algebra      *)
-(* proof shape and from GHASH_POLYVAL_ACC_BATCHED (in common/polyval_ghash.ml, *)
-(* loaded before this file via `needs`). The per-N proof files reference these *)
-(* rather than redefining them.                                               *)
+(* ---- N-block GHASH_POLYVAL_ACC specializations (lengths 1..8) ----------- *)
+(* All of GHASH_POLYVAL_ACC_1..8 live here, derived from the ring-algebra    *)
+(* proof shape and from GHASH_POLYVAL_ACC_BATCHED (common/polyval_ghash.ml,  *)
+(* loaded before this file via `needs`).  The per-N proof files reference    *)
+(* these rather than redefining them.                                        *)
 
 (* ========================================================================= *)
-(* 1-block base case: ghash_polyval_acc h a [b] = prop3(pmul (a XOR b) h).    *)
+(* 1-block base case: ghash_polyval_acc h a [b] = prop3(pmul (a XOR b) h).   *)
 (* ========================================================================= *)
 
 let GHASH_POLYVAL_ACC_1 = prove
@@ -421,7 +443,7 @@ let GHASH_POLYVAL_ACC_1 = prove
 (* 2-block Horner unrolling: ghash_polyval_acc h a [b;c] = prop3(...)        *)
 (* Processing 2 GHASH blocks iteratively equals a batched computation:       *)
 (*   XOR of 256-bit polynomial multiplications followed by Prop 3 reduction  *)
-(* This matches the Loop_mod2x_v8 loop in ghashv8-armx.S                    *)
+(* This matches the Loop_mod2x_v8 loop in ghashv8-armx.S                     *)
 (* ========================================================================= *)
 
 let GHASH_POLYVAL_ACC_2 = prove
@@ -468,10 +490,10 @@ let GHASH_POLYVAL_ACC_2 = prove
         REWRITE_TAC[]] THEN
       SIMP_TAC[RING_MUL; BOOL_POLY_OF_WORD]]]);;
 
-(* Helper: polyval_dot(a XOR p, h) * h^2 == a*h^3 + p*h^3 (mod Q), where      *)
-(* h^3 = polyval_dot h (polyval_dot h h).  Bridges via INNER_CONG_GEN, after  *)
-(* first commuting polyval_dot h h^2 = polyval_dot h^2 h (via WORD_PMUL_SYM). *)
-(* Used by GHASH_POLYVAL_ACC_3 below.                                         *)
+(* Helper: polyval_dot(a XOR p, h) * h^2 == a*h^3 + p*h^3 (mod Q), where     *)
+(* h^3 = polyval_dot h (polyval_dot h h).  Bridges via INNER_CONG_GEN, after *)
+(* commuting polyval_dot h h^2 = polyval_dot h^2 h (via WORD_PMUL_SYM).      *)
+(* Used by GHASH_POLYVAL_ACC_3 below.                                        *)
 let HELPER_3 = prove
  (`!(a:int128) (p:int128) (h:int128).
     (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor a p) h))
@@ -558,8 +580,8 @@ let GHASH_POLYVAL_ACC_3 = prove
     MATCH_MP_TAC MOD_POLYVAL_REFL_GEN THEN ASM_SIMP_TAC[RING_ADD]]);;
 
 (* ========================================================================= *)
-(* GHASH_POLYVAL_ACC_4: 4-block Horner unrolling specialization.            *)
-(* Derived directly from GHASH_POLYVAL_ACC_BATCHED for list [p;q;r;s].      *)
+(* GHASH_POLYVAL_ACC_4: 4-block Horner unrolling specialization.             *)
+(* Derived directly from GHASH_POLYVAL_ACC_BATCHED for list [p;q;r;s].       *)
 (* Unfolds h_power 0..3 to the polyval_dot chain (h, h^2, h^3, h^4).         *)
 (* ========================================================================= *)
 
@@ -646,7 +668,7 @@ let GHASH_POLYVAL_ACC_7 = prove
   REWRITE_TAC[num_CONV `6`; num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
 
 (* ========================================================================= *)
-(* 8-block unrolling: ghash_polyval_acc h a [p;q;r;s;t;u;z;w8] = prop3(...).  *)
+(* 8-block unrolling: ghash_polyval_acc h a [p;q;r;s;t;u;z;w8] = prop3(...). *)
 (* ========================================================================= *)
 
 let GHASH_POLYVAL_ACC_8 = prove
@@ -669,11 +691,7 @@ let GHASH_POLYVAL_ACC_8 = prove
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
   REWRITE_TAC[num_CONV `7`; num_CONV `6`; num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
 
-(* ---- Tactics for closing the GHASH subgoal -------------------------------- *)
-
-(* ABBREV_ALL_PMUL_TAC moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
-(* PMUL_ARG_SORT_CONV moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
+(* ---- Subword-of-join folds for the GHASH closure -------------------------- *)
 
 let DOUBLE_SUBWORD_JOIN = prove(
   `!(x:(128)word).

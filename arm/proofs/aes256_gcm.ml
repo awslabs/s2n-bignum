@@ -11,7 +11,7 @@
 (* internal length-dispatch cascade, with per-length-band correctness        *)
 (* lemmas proved against that single binary and dispatched at the top.       *)
 (*                                                                           *)
-(* This file proves the 1-block case, taking the                            *)
+(* This file proves the 1-block case, taking the                             *)
 (* .L256_enc_blocks_less_than_1 branch, exactly as the XTS LT_2BLOCK band    *)
 (* lemma proves its short case against the one XTS binary.                   *)
 (* ========================================================================= *)
@@ -19,14 +19,15 @@
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 
-(* OCaml helper: int -> num (the tail-cascade threshold lemmas below use it to  *)
-(* build numerals).  Note the core HOL `num_of_int` is a term constant, not     *)
-(* this OCaml function.                                                          *)
+(* OCaml helper: int -> num (the tail-cascade threshold lemmas below use it  *)
+(* to build numerals).  Note the core HOL `num_of_int` is a term constant,   *)
+(* not this OCaml function.                                                  *)
 let num_of_int n = Num.num_of_string (string_of_int n);;
 
-(* The AES-256 keystream is computed by the upstream math-level aes256_encrypt; *)
-(* AES256_ENCRYPT_UNFOLD (arm/proofs/utils/aes256_gcm_block_enc_spec.ml)        *)
-(* rewrites it into the aese/aesmc instruction chain the simulator produces.    *)
+(* The AES-256 keystream is computed by the upstream math-level              *)
+(* aes256_encrypt; AES256_ENCRYPT_UNFOLD (arm/proofs/utils/                  *)
+(* gcm_aesgcm_helpers.ml) rewrites it into the aese/aesmc instruction chain  *)
+(* the simulator produces.                                                   *)
 
 (* print_literal_from_elf "arm/aes-gcm/aes256_gcm.o";; *)
 let aes256_gcm_mc = define_assert_from_elf
@@ -1199,7 +1200,7 @@ let AES256_GCM_EXEC = ARM_MK_EXEC_RULE aes256_gcm_mc;;
 (* ========================================================================= *)
 
 (* The length precondition `1 <= byte_len /\ byte_len <= 16`, reassembled    *)
-(* from the two split assumptions for use with MATCH_MP.                      *)
+(* from the two split assumptions for use with MATCH_MP.                     *)
 let GCM_BOUNDS = CONJ (ASSUME `1 <= byte_len`) (ASSUME `byte_len <= 16`);;
 
 (* Simulate steps a..b, simplifying the encryption state after each step.    *)
@@ -1212,7 +1213,7 @@ let GCM_RUN_THEN (extra:tactic) a b : tactic =
   MAP_EVERY (fun n ->
     ARM_STEPS_TAC AES256_GCM_EXEC [n] THEN GCM_ENC_SIMPLIFY_TAC THEN extra) (a--b);;
 
-(* Discharge a length lemma `1 <= byte_len /\ byte_len <= 16 ==> P` into the  *)
+(* Discharge a length lemma `1 <= byte_len /\ byte_len <= 16 ==> P` into the *)
 (* assumptions (used to collapse the cbz / in-loop guard conditionals).      *)
 let GCM_BND lemma : tactic = RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP lemma GCM_BOUNDS]);;
 
@@ -1254,13 +1255,13 @@ let GCM_INLOOP_GUARD_TAC x5_lemma : tactic =
 (* (cmp x5,#0x70..#0x10) all falls through; the b .L256_enc_blocks_less_     *)
 (* than_1 lands on the shared masked-store + GHASH + Barrett-reduce tail,    *)
 (* which is byte-identical to the standalone one-block routine — so its      *)
-(* GHASH/mask closers (GCM_1BLOCK_CT1_STEP_TAC, the GCM_1B_GHASH_CLOSE        *)
+(* GHASH/mask closers (GCM_1BLOCK_CT1_STEP_TAC, the GCM_1B_GHASH_CLOSE       *)
 (* closer, and the ONE_BLOCK lemmas) apply verbatim.                         *)
 (* ========================================================================= *)
 
-(* All the GHASH / mask / cascade closers reused by the 1-, 2- and 3-block    *)
-(* branch proofs below come from this shared file (pure algebra, no machine    *)
-(* code), so we do not re-prove the per-N standalone correctness theorems.     *)
+(* All the GHASH / mask / cascade closers reused by the 1-, 2- and 3-block   *)
+(* branch proofs below come from this shared file (pure algebra, no machine  *)
+(* code), so we do not re-prove the per-N standalone correctness theorems.   *)
 needs "arm/proofs/utils/gcm_one_block_closers.ml";;
 needs "arm/proofs/utils/gcm_two_block_closers.ml";;
 needs "arm/proofs/utils/gcm_three_block_closers.ml";;
@@ -1358,16 +1359,16 @@ let GCM_CASCADE_TAC : tactic =
 
 (* --- the 1-block correctness theorem ------------------------------------- *)
 
-(* ============================================================ *)
-(* 1-block GHASH final-closure helpers/tactics, in the SAME       *)
-(* GCM_NB_GHASH_CLOSE framework as bands 2-8, instantiated at N=1  *)
-(* (0 full blocks + 1 partial; the single masked block sits in the *)
-(* block-1/xi-accumulator position with multiplier h, so qS=1,     *)
-(* qB=4*1+1=5).  Routes through GHASH_POLYVAL_ACC_1 (centralized in *)
-(* gcm_aesgcm_helpers.ml with ACC_2..8) + the 1-block ACC Karatsuba *)
-(* bridge GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC (in                 *)
-(* gcm_one_block_closers.ml with the other per-length bridges).     *)
-(* ============================================================ *)
+(* ============================================================              *)
+(* 1-block GHASH final-closure helpers/tactics, in the SAME                  *)
+(* GCM_NB_GHASH_CLOSE framework as bands 2-8, instantiated at N=1            *)
+(* (0 full blocks + 1 partial; the single masked block sits in the           *)
+(* block-1/xi-accumulator position with multiplier h, so qS=1,               *)
+(* qB=4*1+1=5).  Routes through GHASH_POLYVAL_ACC_1 (centralized in          *)
+(* gcm_aesgcm_helpers.ml with ACC_2..8) + the 1-block ACC Karatsuba          *)
+(* bridge GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC (in                          *)
+(* gcm_one_block_closers.ml with the other per-length bridges).              *)
+(* ============================================================              *)
 
 let XI_HS_LO_1 = prove
  (`word_subword (word_reversefields 8 (word_join (word_subword (xi:(128)word) (64,64):(64)word) (word_subword xi (0,64):(64)word):(128)word)) (0,64):(64)word =
@@ -1401,9 +1402,9 @@ let GCM_1B_TAIL_NOFINAL : tactic =
   REWRITE_TAC[GHASH_POLYVAL_ACC_1; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
   ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
   ABBREV_TAC `ctm = word_and (ct:(128)word) mask` THEN
-  (* Fold the spec-side AES expression to the abbreviated ciphertext ct.        *)
-  (* The postcondition uses the upstream aes256_encrypt; unfold it to the        *)
-  (* aese/aesmc chain the simulator produced via AES256_ENCRYPT_UNFOLD. *)
+  (* Fold the spec-side AES expression to the abbreviated ciphertext ct.     *)
+  (* The postcondition uses the upstream aes256_encrypt; unfold it to the    *)
+  (* aese/aesmc chain the simulator produced via AES256_ENCRYPT_UNFOLD.      *)
   SUBGOAL_THEN
     `word_xor pt (aes256_encrypt ivec
        [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct`
@@ -1698,9 +1699,9 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_CONCRETE = prove
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_1 branch (2-block: full block 1 + partial   *)
 (* block 2) of this same single binary, proved as a standalone theorem and   *)
-(* applied exactly as the XTS length-band lemmas are.  Reuses the two-block   *)
-(* masked closers (TWOBLOCK_MASK_REG, TWOBLOCK_USHR, GHASH Karatsuba bridge)  *)
-(* at the tactic level.                                                       *)
+(* applied exactly as the XTS length-band lemmas are.  Reuses the two-block  *)
+(* masked closers (TWOBLOCK_MASK_REG, TWOBLOCK_USHR, GHASH Karatsuba bridge) *)
+(* at the tactic level.                                                      *)
 (* ========================================================================= *)
 
 (* --- 2-block-branch length/cascade helpers (thresholds over 16+byte_len) --- *)
@@ -1823,10 +1824,10 @@ let abbrev_ct_from_store off nidx : tactic = fun (asl,w) ->
    GCM_NB_GHASH_CLOSE framework (instantiated at N=2: 1 full + 1 partial).
    ct abbreviation is store-based (abbrev_ct_from_store), as in bands 5/6/7. --- *)
 
-(* ============================================================ *)
-(* NEW 5B-style 2-block GHASH closer (mirrors GCM_5B_* / N=4).   *)
-(* N=2: 1 full block + 1 partial.                               *)
-(* ============================================================ *)
+(* ============================================================              *)
+(* NEW 5B-style 2-block GHASH closer (mirrors GCM_5B_* / N=4).               *)
+(* N=2: 1 full block + 1 partial.                                            *)
+(* ============================================================              *)
 
 (* xi half-swap normalizers (defined inline; mirror XI_HS_LO_5/HI_5). *)
 let XI_HS_LO_2 = prove
@@ -2239,16 +2240,15 @@ let AES256_GCM_ENCRYPT_LT_2BLOCK_CONCRETE = prove
   (* ---- GHASH conjunct ---- *)
   GCM_2B_GHASH_CLOSE);;
 
-
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_2 branch (3-block: full block 1 + full      *)
 (* block 2 + partial block 3, total 33..48 bytes) of the same single binary, *)
 (* proved as a standalone theorem and applied exactly as the XTS length-band *)
-(* lemmas are.  The tail-dispatch cascade now takes the cmp x5,#0x20 / b.gt   *)
+(* lemmas are.  The tail-dispatch cascade now takes the cmp x5,#0x20 / b.gt  *)
 (* branch into .more_than_2, which stores block 1, falls into .more_than_1   *)
-(* (block 2), then into .less_than_1 (masked partial block 3 + final GHASH).  *)
-(* Reuses the three-block masked closers (THREEBLOCK_MASK_REG/USHR, GHASH     *)
-(* Karatsuba bridge) at the tactic level.                                     *)
+(* (block 2), then into .less_than_1 (masked partial block 3 + final GHASH). *)
+(* Reuses the three-block masked closers (THREEBLOCK_MASK_REG/USHR, GHASH    *)
+(* Karatsuba bridge) at the tactic level.                                    *)
 (* ========================================================================= *)
 
 (* --- 3-block-branch length/cascade helpers (thresholds over 32+byte_len) --- *)
@@ -2336,16 +2336,14 @@ let GCM_CASCADE3_TAC : tactic =
     else NO_TAC)
   else NO_TAC);;
 
-
-
 (* --- 3-block GHASH final-closure helpers/tactics, in the 5/6/7-block
    GCM_NB_GHASH_CLOSE framework (instantiated at N=3: 2 full + 1 partial).
    ct abbreviation is store-based (abbrev_ct_from_store), as in bands 5/6/7. --- *)
 
-(* ============================================================ *)
-(* NEW 5B-style 3-block GHASH closer (mirrors GCM_5B_* / N=4).   *)
-(* N=3: 2 full blocks + 1 partial.                              *)
-(* ============================================================ *)
+(* ============================================================              *)
+(* NEW 5B-style 3-block GHASH closer (mirrors GCM_5B_* / N=4).               *)
+(* N=3: 2 full blocks + 1 partial.                                           *)
+(* ============================================================              *)
 
 (* xi half-swap normalizers (defined inline; mirror XI_HS_LO_5/HI_5). *)
 let XI_HS_LO_3 = prove
@@ -2659,7 +2657,6 @@ let GCM_3B_MASKED_CT3_CLOSE : tactic =
   REWRITE_TAC[bri] THEN REWRITE_TAC[add2] THEN
   REWRITE_TAC[CTR_WORD_INSERT];;
 
-
 (* Named goal for the 3BLOCK band (shared spec lifted by the ABS layer). *)
 let gcm_3b_goal =
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
@@ -2807,12 +2804,11 @@ let AES256_GCM_ENCRYPT_LT_3BLOCK_CONCRETE = prove
   (* ---- GHASH conjunct ---- *)
   GCM_3B_GHASH_CLOSE);;
 
-
 (* ========================================================================= *)
-(* The L256_enc_blocks_more_than_3 branch (4-block: three full blocks +       *)
-(* partial block 4, total 49..64 bytes) of the single binary, proved as a     *)
-(* standalone theorem and applied exactly as the XTS length-band lemmas are.   *)
-(* Reuses the four-block masked closers from gcm_four_block_closers.ml.        *)
+(* The L256_enc_blocks_more_than_3 branch (4-block: three full blocks +      *)
+(* partial block 4, total 49..64 bytes) of the single binary, proved as a    *)
+(* standalone theorem and applied exactly as the XTS length-band lemmas are. *)
+(* Reuses the four-block masked closers from gcm_four_block_closers.ml.      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_four_block_closers.ml";;
@@ -2915,9 +2911,9 @@ let XI_HS_HI = prove
   REWRITE_TAC[GSYM REV8_JOIN_FOLD; REVERSEFIELDS8_SUBWORD_LO; REVERSEFIELDS8_SUBWORD_HI] THEN
   CONV_TAC WORD_BLAST);;
 
-(* ============================================================ *)
-(* 4-block GHASH closer (mirrors GCM_5B_* exactly).             *)
-(* ============================================================ *)
+(* ============================================================              *)
+(* 4-block GHASH closer (mirrors GCM_5B_* exactly).                          *)
+(* ============================================================              *)
 
 (* xi half-swap normalizers (same as XI_HS_LO/HI). *)
 let XI_HS_LO_4 = XI_HS_LO;;
@@ -3256,7 +3252,6 @@ let GCM_4B_MASKED_CT4_CLOSE : tactic =
   REWRITE_TAC[bri] THEN REWRITE_TAC[add3] THEN
   REWRITE_TAC[CTR_WORD_INSERT];;
 
-
 (* The 4-block branch goal (three full + one partial block). *)
 let gcm_4b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
     (pt1:(128)word) (pt2:(128)word) (pt3:(128)word) (pt4:(128)word)
@@ -3419,10 +3414,10 @@ let AES256_GCM_ENCRYPT_LT_4BLOCK_CONCRETE = prove
   GCM_4B_GHASH_CLOSE);;
 
 (* ========================================================================= *)
-(* The L256_enc_blocks_more_than_4 branch (5-block: four full blocks +        *)
-(* partial block 5, total 65..80 bytes) of the single binary, proved as a     *)
-(* standalone theorem and applied exactly as the XTS length-band lemmas are.  *)
-(* Reuses the five-block masked closers from gcm_five_block_closers.ml.        *)
+(* The L256_enc_blocks_more_than_4 branch (5-block: four full blocks +       *)
+(* partial block 5, total 65..80 bytes) of the single binary, proved as a    *)
+(* standalone theorem and applied exactly as the XTS length-band lemmas are. *)
+(* Reuses the five-block masked closers from gcm_five_block_closers.ml.      *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_five_block_closers.ml";;
@@ -3653,19 +3648,19 @@ let gcm_5b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
                   memory :> bytes64 (word_add stackptr (word 72))])`;;
 
 (* --- Store-based ct abbreviation (robust against Q-register scramble). --- *)
-(* `abbrev_ct_from_store` is now defined once in the 4-block GHASH-closer       *)
-(* section above (its first use), and shared verbatim by the 5/6-block          *)
-(* branches here.                                                               *)
+(* `abbrev_ct_from_store` is now defined once in the 4-block GHASH-closer    *)
+(* section above (its first use), and shared verbatim by the 5/6-block       *)
+(* branches here.                                                            *)
 
 (* --- 5-block GHASH final-closure helper tactics. --- *)
 
 (* ========================================================================= *)
 (* Self-contained 5-block GHASH conjunct closer for the single-binary        *)
-(* aes256_gcm.ml more_than_4 (5-block) branch.  Reaches "No subgoals" from    *)
-(* the final GHASH equality (machine word_join = spec word_reversefields).    *)
-(* Mirrors the 4-block recipe; adds the ks5 +4-counter bridge and the in-asm  *)
-(* b0-general mask-register collapse that the 5-block sim leaves baked into   *)
-(* final_xi.                                                                  *)
+(* aes256_gcm.ml more_than_4 (5-block) branch.  Reaches "No subgoals" from   *)
+(* the final GHASH equality (machine word_join = spec word_reversefields).   *)
+(* Mirrors the 4-block recipe; adds the ks5 +4-counter bridge and the in-asm *)
+(* b0-general mask-register collapse that the 5-block sim leaves baked into  *)
+(* final_xi.                                                                 *)
 (* ========================================================================= *)
 
 (* xi half-swap normalization (shared with 4-block, redefined locally). *)
@@ -3966,10 +3961,6 @@ let GCM_5B_KS5_FOLD : tactic = fun (asl,w) ->
      then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
   (asl,w);;
 
-(* Step 8: fold the RHS-order qB pmul copy (extracts the residual big Barrett
-   pmul over (word 13979173243358019584) from the RHS). *)
-(* GCM_5B_QB_FOLD moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
 (* June-2026 base: the per-half XOR-AC closer, mirroring band-4's GCM_4B_HALF_CLOSE.
    Single-pass bubble_sort_conv cannot fully sort the 21-atom qB chain; fold the
    5 mids (w1md=hh, w2md=hg, w3md=hf, w4md=he, w5md=hd), then qS (5 atoms), then
@@ -4038,9 +4029,8 @@ let GCM_5B_GHASH_CLOSE : tactic =
 
 (* --- The 5-block branch theorem. --- *)
 
-(* Full assembled AES256_GCM_ENCRYPT_LT_5BLOCK_CORRECT proof (more_than_4).    *)
-(* Depends on: gcm_five_block_closers.ml, wip/fivegoal.ml, wip/five_helpers.ml, *)
-(* wip/five_abbrev_ct.ml, wip/five_ghash_closer.ml.                            *)
+(* Full assembled AES256_GCM_ENCRYPT_LT_5BLOCK_CORRECT proof (more_than_4),  *)
+(* using the closers from gcm_five_block_closers.ml.                         *)
 
 (* ct1 closer (counter = ivec, no inc). *)
 let CT_CLOSE_5 nidx =
@@ -4109,12 +4099,11 @@ let AES256_GCM_ENCRYPT_LT_5BLOCK_CONCRETE = prove
   (* ---- GHASH conjunct ---- *)
   GCM_5B_GHASH_CLOSE);;
 
-
 (* ========================================================================= *)
-(* The L256_enc_blocks_more_than_5 branch (6-block: five full blocks +        *)
-(* partial block 6, total 81..96 bytes) of the single binary, proved as a     *)
-(* standalone theorem and applied exactly as the XTS length-band lemmas are.  *)
-(* Reuses the six-block masked closers from gcm_six_block_closers.ml.          *)
+(* The L256_enc_blocks_more_than_5 branch (6-block: five full blocks +       *)
+(* partial block 6, total 81..96 bytes) of the single binary, proved as a    *)
+(* standalone theorem and applied exactly as the XTS length-band lemmas are. *)
+(* Reuses the six-block masked closers from gcm_six_block_closers.ml.        *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_six_block_closers.ml";;
@@ -4147,7 +4136,6 @@ let GCM_X6TAIL_LEMMA6 = prove
  (`byte_len <= 16 ==>
    word_sub (word_add in_ptr (word_ushr (word (640+8*byte_len):int64) 3)) in_ptr = word (80+byte_len)`,
   ASM_SIMP_TAC[SIXBLOCK_USHR] THEN CONV_TAC WORD_RULE);;
-
 
 (* Cascade for more_than_5: total lanes = 80+byte_len (81..96).  The b.gt #112
    and #96 fall through (total <= 96), the b.gt #80 is taken (total >= 81) into
@@ -4362,11 +4350,11 @@ let gcm_6b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
 
 (* ========================================================================= *)
 (* Self-contained 5-block GHASH conjunct closer for the single-binary        *)
-(* aes256_gcm.ml more_than_4 (5-block) branch.  Reaches "No subgoals" from    *)
-(* the final GHASH equality (machine word_join = spec word_reversefields).    *)
-(* Mirrors the 4-block recipe; adds the ks5 +4-counter bridge and the in-asm  *)
-(* b0-general mask-register collapse that the 5-block sim leaves baked into   *)
-(* final_xi.                                                                  *)
+(* aes256_gcm.ml more_than_4 (5-block) branch.  Reaches "No subgoals" from   *)
+(* the final GHASH equality (machine word_join = spec word_reversefields).   *)
+(* Mirrors the 4-block recipe; adds the ks5 +4-counter bridge and the in-asm *)
+(* b0-general mask-register collapse that the 5-block sim leaves baked into  *)
+(* final_xi.                                                                 *)
 (* ========================================================================= *)
 
 (* xi half-swap normalization (shared with 4-block, redefined locally). *)
@@ -4598,7 +4586,6 @@ let GCM_6B_TAIL_NOFINAL : tactic =
     [EXPAND_TAC "qB" THEN AP_THM_TAC THEN AP_TERM_TAC THEN
      CONV_TAC(BINOP_CONV bubble_sort_conv) THEN REFL_TAC; ALL_TAC];;
 
-
 (* Step 1+2: establish the four spec-form ct folds F1..F4 and fold them into
    the RHS ghash list. *)
 let GCM_6B_FOLD_SPEC_CTS : tactic =
@@ -4696,10 +4683,6 @@ let GCM_6B_KS6_FOLD : tactic = fun (asl,w) ->
      then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
   (asl,w);;
 
-(* Step 8: fold the RHS-order qB pmul copy (extracts the residual big Barrett
-   pmul over (word 13979173243358019584) from the RHS). *)
-(* GCM_6B_QB_FOLD moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
 (* June-2026 base: per-half XOR-AC closer, mirroring band-4/5.  6 mids
    (w1md=hj, w2md=hh, w3md=hg, w4md=hf, w5md=he, w6md=hd), qS=6 atoms, qB=25 atoms. *)
 let GCM_6B_FOLD_MIDS_TAC : tactic =
@@ -4767,9 +4750,8 @@ let GCM_6B_GHASH_CLOSE : tactic =
 
 (* --- The 6-block branch theorem. --- *)
 
-(* Full assembled AES256_GCM_ENCRYPT_LT_6BLOCK_CORRECT proof (more_than_5).    *)
-(* Depends on: gcm_six_block_closers.ml, wip/sixgoal.ml, wip/six_helpers.ml,   *)
-(* wip/five_abbrev_ct.ml, wip/six_ghash_closer.ml.                             *)
+(* Full assembled AES256_GCM_ENCRYPT_LT_6BLOCK_CORRECT proof (more_than_5),  *)
+(* using the closers from gcm_six_block_closers.ml.                          *)
 
 (* ct1 closer (counter = ivec, no inc). *)
 let CT_CLOSE_6 nidx =
@@ -4832,9 +4814,9 @@ let AES256_GCM_ENCRYPT_LT_6BLOCK_CONCRETE = prove
 
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_6 branch (7-block: six full blocks +        *)
-(* partial block 7, total 97..112 bytes) of the single binary, proved as a    *)
-(* standalone theorem and applied exactly as the XTS length-band lemmas are.  *)
-(* Reuses the seven-block masked closers from gcm_seven_block_closers.ml.       *)
+(* partial block 7, total 97..112 bytes) of the single binary, proved as a   *)
+(* standalone theorem and applied exactly as the XTS length-band lemmas are. *)
+(* Reuses the seven-block masked closers from gcm_seven_block_closers.ml.    *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_seven_block_closers.ml";;
@@ -4867,7 +4849,6 @@ let GCM_X7TAIL_LEMMA7 = prove
  (`byte_len <= 16 ==>
    word_sub (word_add in_ptr (word_ushr (word (768+8*byte_len):int64) 3)) in_ptr = word (96+byte_len)`,
   ASM_SIMP_TAC[SEVENBLOCK_USHR] THEN CONV_TAC WORD_RULE);;
-
 
 (* Cascade for more_than_6: total lanes = 96+byte_len (97..112).  The b.gt #112
    falls through (total <= 112), the b.gt #96 is taken (total >= 97) into
@@ -5089,7 +5070,6 @@ let gcm_7b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
                   memory :> bytes64 (word_add stackptr (word 64));
                   memory :> bytes64 (word_add stackptr (word 72))])`;;
 
-
 (* --- 7-block store-based ct abbreviation + conjunct closers. --- *)
 
 (* 7-block ct abbreviation uses the shared strict `abbrev_ct_from_store`
@@ -5151,19 +5131,19 @@ let GCM_7B_FOLD_SPEC_CTS : tactic =
         (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3; getf 4; getf 5; getf 6] (asl,w));;
 
-(* The GHASH conjunct closes via GCM_7B_GHASH_CLOSE (mirror of the 6-block    *)
-(* GCM_6B_GHASH_CLOSE) defined in seven_ghash_closer.ml — its bridge MP_TAC   *)
-(* uses the genuine htable h7k now present in the goal.                       *)
+(* The GHASH conjunct closes via GCM_7B_GHASH_CLOSE (mirror of the 6-block   *)
+(* GCM_6B_GHASH_CLOSE) defined in seven_ghash_closer.ml — its bridge MP_TAC  *)
+(* uses the genuine htable h7k now present in the goal.                      *)
 
 (* --- 7-block GHASH final-closure helper tactics (mirror 6-block). --- *)
 
 (* ========================================================================= *)
 (* Self-contained 7-block GHASH conjunct closer for the single-binary        *)
-(* aes256_gcm.ml more_than_6 (7-block) branch.  Reaches "No subgoals" from    *)
-(* the final GHASH equality (machine word_join = spec word_reversefields).    *)
-(* Mirrors the 6-block recipe (GCM_6B_GHASH_CLOSE); adds the ks7 +6-counter   *)
-(* bridge and the in-asm b0-general mask-register collapse that the 7-block   *)
-(* sim leaves baked into final_xi.                                            *)
+(* aes256_gcm.ml more_than_6 (7-block) branch.  Reaches "No subgoals" from   *)
+(* the final GHASH equality (machine word_join = spec word_reversefields).   *)
+(* Mirrors the 6-block recipe (GCM_6B_GHASH_CLOSE); adds the ks7 +6-counter  *)
+(* bridge and the in-asm b0-general mask-register collapse that the 7-block  *)
+(* sim leaves baked into final_xi.                                           *)
 (* ========================================================================= *)
 
 (* xi half-swap normalization (shared with 4-block, redefined locally). *)
@@ -5413,7 +5393,6 @@ let GCM_7B_TAIL_NOFINAL : tactic =
     [EXPAND_TAC "qB" THEN AP_THM_TAC THEN AP_TERM_TAC THEN
      CONV_TAC(BINOP_CONV bubble_sort_conv) THEN REFL_TAC; ALL_TAC];;
 
-
 (* Step 1+2: establish the four spec-form ct folds F1..F4 and fold them into
    the RHS ghash list. *)
 let GCM_7B_FOLD_SPEC_CTS : tactic =
@@ -5513,10 +5492,6 @@ let GCM_7B_KS7_FOLD : tactic = fun (asl,w) ->
         String.length(string_of_term(lhs(concl th))) > 1000
      then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
   (asl,w);;
-
-(* Step 8: fold the RHS-order qB pmul copy (extracts the residual big Barrett
-   pmul over (word 13979173243358019584) from the RHS). *)
-(* GCM_7B_QB_FOLD moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
 
 (* The full GHASH closer: applied at the final GHASH conjunct. *)
 (* June-2026 base: per-half XOR-AC closer, mirroring band-4/5/6.  7 mids
@@ -5629,12 +5604,12 @@ let AES256_GCM_ENCRYPT_LT_7BLOCK_CONCRETE = prove
 
 (* ========================================================================= *)
 (* The L256_enc_blocks_more_than_7 branch (8-block: seven full blocks +      *)
-(* partial block 8, total 113..128 bytes) of the single binary, proved as a   *)
-(* standalone theorem and applied exactly as the XTS length-band lemmas are.  *)
-(* Reuses the eight-block masked closers from gcm_eight_block_closers.ml.       *)
-(* more_than_7 is the highest dispatch branch; it reads scratch Q18 via an    *)
-(* INS (mov v18.d[0]) before fully writing it, so the precondition pins        *)
-(* read Q18 = q18i (its high lane is dead).                                    *)
+(* partial block 8, total 113..128 bytes) of the single binary, proved as a  *)
+(* standalone theorem and applied exactly as the XTS length-band lemmas are. *)
+(* Reuses the eight-block masked closers from gcm_eight_block_closers.ml.    *)
+(* more_than_7 is the highest dispatch branch; it reads scratch Q18 via an   *)
+(* INS (mov v18.d[0]) before fully writing it, so the precondition pins      *)
+(* read Q18 = q18i (its high lane is dead).                                  *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/gcm_eight_block_closers.ml";;
@@ -5667,7 +5642,6 @@ let GCM_X8TAIL_LEMMA8 = prove
  (`byte_len <= 16 ==>
    word_sub (word_add in_ptr (word_ushr (word (896+8*byte_len):int64) 3)) in_ptr = word (112+byte_len)`,
   ASM_SIMP_TAC[EIGHTBLOCK_USHR] THEN CONV_TAC WORD_RULE);;
-
 
 (* Cascade for more_than_7: total lanes = 112+byte_len (113..128).  The b.gt #112
    is taken directly (total >= 113) into .more_than_7.  No FALSE thresholds;
@@ -5944,11 +5918,11 @@ let GCM_8B_FOLD_SPEC_CTS : tactic =
 
 (* ========================================================================= *)
 (* Self-contained 8-block GHASH conjunct closer for the single-binary        *)
-(* aes256_gcm.ml more_than_7 (8-block) branch.  Reaches "No subgoals" from    *)
-(* the final GHASH equality (machine word_join = spec word_reversefields).    *)
-(* Mirrors the 7-block recipe (GCM_7B_GHASH_CLOSE); adds the ks8 +7-counter   *)
-(* bridge and the in-asm b0-general mask-register collapse that the 8-block   *)
-(* sim leaves baked into final_xi.                                            *)
+(* aes256_gcm.ml more_than_7 (8-block) branch.  Reaches "No subgoals" from   *)
+(* the final GHASH equality (machine word_join = spec word_reversefields).   *)
+(* Mirrors the 7-block recipe (GCM_7B_GHASH_CLOSE); adds the ks8 +7-counter  *)
+(* bridge and the in-asm b0-general mask-register collapse that the 8-block  *)
+(* sim leaves baked into final_xi.                                           *)
 (* ========================================================================= *)
 
 let XI_HS_LO_8 = prove
@@ -6277,8 +6251,6 @@ let GCM_8B_KS8_FOLD : tactic = fun (asl,w) ->
      then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
   (asl,w);;
 
-(* GCM_8B_QB_FOLD moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT). *)
-
 (* June-2026 base: per-half XOR-AC closer, mirroring band-4..7.  8 mids
    (w1md=hn, w2md=hm, w3md=hj, w4md=hh, w5md=hg, w6md=hf, w7md=he, w8md=hd),
    qS=8, qB=33. *)
@@ -6396,10 +6368,10 @@ let AES256_GCM_ENCRYPT_LT_8BLOCK_CONCRETE = prove
   GCM_8B_GHASH_CLOSE);;
 
 (* ========================================================================= *)
-(* The zero-input branch (byte_len = 0).  The length argument X1 = 0, so the  *)
-(* `cbz x1` at the entry (pc+4) is taken, jumping directly to the early exit  *)
-(* (`mov w0,#0` @ pc+4592; `ret` @ pc+4596).  Nothing is encrypted: the        *)
-(* output and the GHASH accumulator xi are left unchanged and X0 = 0.          *)
+(* The zero-input branch (byte_len = 0).  The length argument X1 = 0, so the *)
+(* `cbz x1` at the entry (pc+4) is taken, jumping directly to the early exit *)
+(* (`mov w0,#0` @ pc+4592; `ret` @ pc+4596).  Nothing is encrypted: the      *)
+(* output and the GHASH accumulator xi are left unchanged and X0 = 0.        *)
 (* ========================================================================= *)
 
 let gcm_0b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
@@ -6427,30 +6399,28 @@ let gcm_0b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
 
 let AES256_GCM_ENCRYPT_LT_0BLOCK_CONCRETE = prove
  (gcm_0b_goal,
-  (* Entry + nop (1); cbz x1 (2) is TAKEN since X1 = 0, jumping to pc+4592;    *)
-  (* mov w0,#0 (3) lands at the RET (pc+4596).                                  *)
+  (* Entry + nop (1); cbz x1 (2) is TAKEN since X1 = 0, jumping to pc+4592;  *)
+  (* mov w0,#0 (3) lands at the RET (pc+4596).                               *)
   REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
               SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst AES256_GCM_EXEC] THEN
   REPEAT STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN
   ARM_STEPS_TAC AES256_GCM_EXEC (1--3) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]);;
 
-
 (* ========================================================================= *)
-(* COMBINED CORRECTNESS THEOREM (XTS-style dispatch over the per-block bands) *)
+(* COMBINED CORRECTNESS THEOREM (XTS-style dispatch over per-block bands).   *)
 (*                                                                           *)
 (* Recursive byte-list spec aes256_gcm_encrypt / gcm_final_xi + the bridge   *)
-(* lemmas relating each band's concrete word-level postcondition to the     *)
-(* abstract spec, then AES256_GCM_ENCRYPT_CORRECT dispatching by input        *)
-(* length (currently scoped to val len <= 16: the 0-block + 1-block bands).   *)
+(* lemmas relating each band's concrete word-level postcondition to the      *)
+(* abstract spec, then AES256_GCM_ENCRYPT_CORRECT dispatching by input       *)
+(* length over the 0..8-block bands (val len <= 128).                        *)
 (* ========================================================================= *)
 
 (* ========================================================================= *)
-(* Recursive AES-256-GCM encrypt specification over a plaintext byte list,    *)
-(* mirroring the AES-XTS spec (arm/proofs/xts_reference/aes_xts_encrypt_spec   *)
-(* + aes-xts-armv8.ml).  Reuses XTS's mode-agnostic byte/word conversions and  *)
-(* byte_list_at memory predicate, and the existing GCM per-block primitives    *)
-(* (aes256_encrypt, gcm_ctr_inc, ghash_polyval_acc).                         *)
+(* Recursive AES-256-GCM encrypt specification over a plaintext byte list,   *)
+(* mirroring the AES-XTS spec.  Reuses the mode-agnostic byte/word           *)
+(* conversions and byte_list_at memory predicate, and the existing GCM       *)
+(* per-block primitives (aes256_encrypt, gcm_ctr_inc, ghash_polyval_acc).    *)
 (* ========================================================================= *)
 
 (* --- byte<->word conversions + memory predicate (verbatim from XTS) --- *)
@@ -6508,8 +6478,8 @@ let gcm_ct_bytes_rec = new_specification ["gcm_ct_bytes_rec"]
              let ct = word_xor blk (gcm_keystream i ivec rks) in
              APPEND (int128_to_bytes ct) (gcm_ct_bytes_rec (i + 1) (nfull - 1) P ivec rks)`);;
 
-(* --- masked partial-tail ciphertext block: read the full 16-byte block then  *)
-(* mask to `tail` bytes (the binary reads a full block and masks).            *)
+(* --- masked partial-tail ciphertext block: read the full 16-byte block     *)
+(* then mask to `tail` bytes (the binary reads a full block and masks).      *)
 let gcm_ctm_tail = new_definition
   `gcm_ctm_tail (i:num) (tail:num) (P:byte list) (ivec:(128)word) (rks:int128 list) : (128)word =
      let blk = bytes_to_int128 (SUB_LIST (i * 16, 16) P) in
@@ -6524,8 +6494,8 @@ let gcm_ghash_blocks = new_definition
      APPEND (gcm_ct_rec 0 nfull P ivec rks)
             [gcm_ctm_tail nfull tail P ivec rks]`;;
 
-(* --- the ciphertext byte list (output): full block bytes ++ first `tail`     *)
-(* bytes of the masked partial block; [] for empty input.                     *)
+(* --- the ciphertext byte list (output): full block bytes ++ first `tail`   *)
+(* bytes of the masked partial block; [] for empty input.                    *)
 let aes256_gcm_encrypt = new_definition
   `aes256_gcm_encrypt (len:num) (P:byte list) (ivec:(128)word) (rks:int128 list) : (byte list) =
      let tail = len - 16 * ((len - 1) DIV 16) in
@@ -6544,7 +6514,7 @@ let gcm_final_xi = new_definition
           (MAP (\b. word_reversefields 8 b) (gcm_ghash_blocks len P ivec rks)))`;;
 
 (* ========================================================================= *)
-(* Bridge lemmas: concrete 1-block band postcondition <-> abstract spec.      *)
+(* Bridge lemmas: concrete 1-block band postcondition <-> abstract spec.     *)
 (* ========================================================================= *)
 
 let EL_16_8_CLAUSES = (CONJUNCTS o prove)
@@ -6591,8 +6561,6 @@ let BYTES128_TO_BYTES8_THM = prove(
   GEN_REWRITE_TAC TOP_DEPTH_CONV [READ_MEMORY_BYTESIZED_SPLIT; WORD_ADD_ASSOC_CONSTS] THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
   ONCE_REWRITE_TAC [ARITH_RULE `pos + 0 = (pos:num)`] THEN REFL_TAC);;
-
-(* BYTE_LIST_AT_16_BYTES128 moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT; depends on this file's spec). *)
 
 let SUBWORD_BYTES_TO_INT128 = prove(
  `!b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 b10 b11 b12 b13 b14 b15 i. i < 16
@@ -6648,10 +6616,6 @@ let MASK_BYTE_OUT = prove(
   SUBGOAL_THEN `8 * i + j < 8 * n` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   ASM_REWRITE_TAC[]);;
 
-(* XI_BRIDGE_1B moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT; depends on this file's spec). *)
-
-(* OUT_BRIDGE_1B moved to gcm_aesgcm_standalone_blocks_helper.ml (unused by AES256_GCM_ENCRYPT_CORRECT; depends on this file's spec). *)
-
 (* ===== N-block generic bridges ===== *)
 
 let NFULL_LEMMA' = prove(
@@ -6679,8 +6643,8 @@ let EL_SUB_LIST_GEN = prove(
     REWRITE_TAC[SUB_LIST_CLAUSES; EL; TL] THEN
     FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC]);;
 
-(* --- block-k input bridge: the k-th 128-bit block read = bytes_to_int128 of  *)
-(* the k-th 16-byte sublist of the plaintext byte list. --- *)
+(* --- block-k input bridge: the k-th 128-bit block read = bytes_to_int128   *)
+(* of the k-th 16-byte sublist of the plaintext byte list. ---               *)
 let BYTE_LIST_AT_BLOCK = prove(
  `!pt_in in_ptr nblk k s.
     (!i. i < 16 * nblk ==> read (memory :> bytes8 (word_add in_ptr (word i))) s = EL i pt_in) /\
@@ -6895,7 +6859,6 @@ let GCM_FINAL_XI_UNFOLD = prove(
             (MAP (\b. word_reversefields 8 b) (gcm_ghash_blocks len pt_in ivec rks)))`,
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[gcm_final_xi]);;
 
-
 (* ===== N-block bridges already loaded from gcm_nblock_bridges content ===== *)
 
 (* ===== GHASH_BLOCKS_1..8 ===== *)
@@ -6926,7 +6889,6 @@ let GHASH_BLOCKS_2 = prove(
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
-
 let GHASH_BLOCKS_3 = prove(
   `!tail pt_in ivec rks. 1 <= tail /\ tail <= 16
     ==> gcm_ghash_blocks (16 * 2 + tail) pt_in ivec rks =
@@ -6941,7 +6903,6 @@ let GHASH_BLOCKS_3 = prove(
   REWRITE_TAC[GCM_CT_REC_STEP] THEN
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
-
 
 let GHASH_BLOCKS_4 = prove(
   `!tail pt_in ivec rks. 1 <= tail /\ tail <= 16
@@ -6958,7 +6919,6 @@ let GHASH_BLOCKS_4 = prove(
   REWRITE_TAC[GCM_CT_REC_STEP] THEN
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
-
 
 let GHASH_BLOCKS_5 = prove(
   `!tail pt_in ivec rks. 1 <= tail /\ tail <= 16
@@ -6977,7 +6937,6 @@ let GHASH_BLOCKS_5 = prove(
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
-
 let GHASH_BLOCKS_6 = prove(
   `!tail pt_in ivec rks. 1 <= tail /\ tail <= 16
     ==> gcm_ghash_blocks (16 * 5 + tail) pt_in ivec rks =
@@ -6995,7 +6954,6 @@ let GHASH_BLOCKS_6 = prove(
   REWRITE_TAC[GCM_CT_REC_STEP] THEN
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
-
 
 let GHASH_BLOCKS_7 = prove(
   `!tail pt_in ivec rks. 1 <= tail /\ tail <= 16
@@ -7016,7 +6974,6 @@ let GHASH_BLOCKS_7 = prove(
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
 
-
 let GHASH_BLOCKS_8 = prove(
   `!tail pt_in ivec rks. 1 <= tail /\ tail <= 16
     ==> gcm_ghash_blocks (16 * 7 + tail) pt_in ivec rks =
@@ -7036,7 +6993,6 @@ let GHASH_BLOCKS_8 = prove(
   REWRITE_TAC[GCM_CT_REC_STEP] THEN
   REWRITE_TAC[gcm_ctm_tail; LET_DEF; LET_END_DEF; APPEND] THEN
   CONV_TAC NUM_REDUCE_CONV);;
-
 
 (* ===== abstract band lemmas 0,1,2..8 ===== *)
 
@@ -7170,7 +7126,6 @@ let AES256_GCM_ENCRYPT_LT_0BLOCK_ABS = prove(
        [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN
         RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
-
 
 let AES256_GCM_ENCRYPT_LT_1BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
@@ -7360,7 +7315,6 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_ABS = prove(
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
 
-
 let AES256_GCM_ENCRYPT_LT_2BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
     16 + 1 <= val len /\ val len <= 32 /\ LENGTH pt_in = 128 /\
@@ -7549,7 +7503,6 @@ let AES256_GCM_ENCRYPT_LT_2BLOCK_ABS = prove(
         MP_TAC(ISPECL [`pt_in:byte list`;`in_ptr:int64`;`x:armstate`] INPUT_READS_128) THEN
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
-
 
 let AES256_GCM_ENCRYPT_LT_3BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
@@ -7742,7 +7695,6 @@ let AES256_GCM_ENCRYPT_LT_3BLOCK_ABS = prove(
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
 
-
 let AES256_GCM_ENCRYPT_LT_4BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
     48 + 1 <= val len /\ val len <= 64 /\ LENGTH pt_in = 128 /\
@@ -7934,7 +7886,6 @@ let AES256_GCM_ENCRYPT_LT_4BLOCK_ABS = prove(
         MP_TAC(ISPECL [`pt_in:byte list`;`in_ptr:int64`;`x:armstate`] INPUT_READS_128) THEN
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
-
 
 let AES256_GCM_ENCRYPT_LT_5BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
@@ -8130,7 +8081,6 @@ let AES256_GCM_ENCRYPT_LT_5BLOCK_ABS = prove(
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
 
-
 let AES256_GCM_ENCRYPT_LT_6BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
     80 + 1 <= val len /\ val len <= 96 /\ LENGTH pt_in = 128 /\
@@ -8325,7 +8275,6 @@ let AES256_GCM_ENCRYPT_LT_6BLOCK_ABS = prove(
         MP_TAC(ISPECL [`pt_in:byte list`;`in_ptr:int64`;`x:armstate`] INPUT_READS_128) THEN
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
-
 
 let AES256_GCM_ENCRYPT_LT_7BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
@@ -8523,7 +8472,6 @@ let AES256_GCM_ENCRYPT_LT_7BLOCK_ABS = prove(
         MP_TAC(ISPECL [`pt_in:byte list`;`in_ptr:int64`;`x:armstate`] INPUT_READS_128) THEN
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
-
 
 let AES256_GCM_ENCRYPT_LT_8BLOCK_ABS = prove(
  `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr (pt_in:byte list) (co0:(128)word) (co1:(128)word) (co2:(128)word) (co3:(128)word) (co4:(128)word) (co5:(128)word) (co6:(128)word) (co7:(128)word) (ivec:(128)word) (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word) (rk4:(128)word) (rk5:(128)word) (rk6:(128)word) (rk7:(128)word) (rk8:(128)word) (rk9:(128)word) (rk10:(128)word) (rk11:(128)word) (rk12:(128)word) (rk13:(128)word) (rk14:(128)word) (xi:(128)word) (h:(128)word) (h1k:(128)word) (h3k:(128)word) (h5k:(128)word) (h7k:(128)word) (q18i:(128)word) (len:int64) stackptr pc.
@@ -8723,7 +8671,6 @@ let AES256_GCM_ENCRYPT_LT_8BLOCK_ABS = prove(
         MP_TAC(ISPECL [`pt_in:byte list`;`in_ptr:int64`;`x:armstate`] INPUT_READS_128) THEN
         ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
         ACCEPT_TAC band]]));;
-
 
 (* ===== combined dispatch ===== *)
 
