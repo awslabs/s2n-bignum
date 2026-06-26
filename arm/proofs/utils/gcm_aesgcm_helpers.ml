@@ -1,3 +1,7 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
 (* ========================================================================= *)
 (* Shared AES-256-GCM proof helpers: the general (block-count-agnostic)      *)
 (* definitions, lemmas, and tactics the per-N-block closers reuse — field    *)
