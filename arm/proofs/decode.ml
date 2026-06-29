@@ -220,6 +220,11 @@ let decode = new_definition `!w:int32. decode w =
     SOME ((if sf then (if op then arm_CBNZ else arm_CBZ) (XREG' Rt)
                  else (if op then arm_CBNZ else arm_CBZ) (WREG' Rt))
       (word (val imm19 * 4)))
+  | [b5; 0b011011:6; op; b40:5; imm14:14; Rt:5] ->
+    SOME ((if b5 then (if op then arm_TBNZ else arm_TBZ) (XREG' Rt)
+                 else (if op then arm_TBNZ else arm_TBZ) (WREG' Rt))
+      ((if b5 then 32 else 0) + val b40)
+      (word (val imm14 * 4)))
   | [sf; op; 0b011010100:9; Rm:5; cond:4; 0:1; o2; Rn:5; Rd:5] ->
     SOME ((if sf
       then arm_csop op o2 (XREG' Rd) (XREG' Rn) (XREG' Rm)
