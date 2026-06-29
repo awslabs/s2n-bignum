@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 
 // ----------------------------------------------------------------------------
-// AES-256-GCM encrypt — the COMPLETE aesv8_gcm_8x_enc_256 kernel (all paths).
+// AES-256-GCM encrypt (single binary, all length paths)
 //
 // This is the full 8x-unrolled AES-256-GCM encrypt function from aws-lc's
 // aesv8-gcm-armv8-unroll8.S, with NOTHING commented out: a single binary
@@ -34,12 +34,21 @@ S2N_BN_SYMBOL(aes256_gcm):
 	nop
 	cbz	x1, .L256_enc_ret
 	stp	d8, d9, [sp, #-80]!
+	.cfi_adjust_cfa_offset 80
+	.cfi_rel_offset d8, 0
+	.cfi_rel_offset d9, 8
 	lsr	x9, x1, #3
 	mov	x16, x4
 	mov	x11, x5
 	stp	d10, d11, [sp, #16]
+	.cfi_rel_offset d10, 16
+	.cfi_rel_offset d11, 24
 	stp	d12, d13, [sp, #32]
+	.cfi_rel_offset d12, 32
+	.cfi_rel_offset d13, 40
 	stp	d14, d15, [sp, #48]
+	.cfi_rel_offset d14, 48
+	.cfi_rel_offset d15, 56
 	mov	x5, #0xc200000000000000
 	stp	x5, xzr, [sp, #64]
 	add	x10, sp, #64
@@ -1525,9 +1534,18 @@ S2N_BN_SYMBOL(aes256_gcm):
 	mov	x0, x9					//return sizes
 
 	ldp	d10, d11, [sp, #16]
+	.cfi_restore d10
+	.cfi_restore d11
 	ldp	d12, d13, [sp, #32]
+	.cfi_restore d12
+	.cfi_restore d13
 	ldp	d14, d15, [sp, #48]
+	.cfi_restore d14
+	.cfi_restore d15
 	ldp	d8, d9, [sp], #80
+	.cfi_adjust_cfa_offset -80
+	.cfi_restore d8
+	.cfi_restore d9
 	ret
 
 .L256_enc_ret:
