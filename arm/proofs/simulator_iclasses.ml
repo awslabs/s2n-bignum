@@ -295,6 +295,15 @@ let iclasses =
   (*** SMLAL2 ***)
   "01001110xx1xxxxx100000xxxxxxxxxx";
 
+  (*** SMLAL / SMLAL2 (by element) ***)
+  "0x001111xxxxxxxx0010x0xxxxxxxxxx";
+
+  (*** UMULL / UMULL2 (by element) ***)
+  "0x101111xxxxxxxx1010x0xxxxxxxxxx";
+
+  (*** UMLSL / UMLSL2 (by element) ***)
+  "0x101111xxxxxxxx0110x0xxxxxxxxxx";
+
   (*** SMLSL ***)
   "00001110xx1xxxxx101000xxxxxxxxxx";
 
