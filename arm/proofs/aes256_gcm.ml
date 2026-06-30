@@ -3218,7 +3218,7 @@ let GCM_4B_HALF_CLOSE : tactic =
 (* The full GHASH closer — mirror GCM_5B_GHASH_CLOSE. *)
 let GCM_4B_GHASH_CLOSE : tactic =
   GCM_4B_FOLD_SPEC_CTS THEN
-  REWRITE_TAC[GHASH_POLYVAL_ACC_4; POLYVAL_DOT_H4_EQ_LOCAL; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
+  REWRITE_TAC[GHASH_POLYVAL_ACC_4; POLYVAL_DOT_H4_EQ; GSYM WORD_REVERSEFIELDS_XOR_8_128] THEN
   GCM_4B_MASK_COLLAPSE_ASMS THEN
   GCM_4B_KS4_FOLD THEN
   GCM_4B_TAIL_NOFINAL THEN
@@ -3686,7 +3686,7 @@ ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
     `polyval_dot (polyval_dot (polyval_dot (h:int128) h) h) h =
      polyval_dot (polyval_dot h h) (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
-    [REWRITE_TAC[POLYVAL_DOT_H4_EQ_LOCAL]; ALL_TAC] THEN
+    [REWRITE_TAC[POLYVAL_DOT_H4_EQ]; ALL_TAC] THEN
   SUBGOAL_THEN
     `polyval_dot (polyval_dot (h:int128) h) h = polyval_dot h (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
@@ -3870,7 +3870,7 @@ let GCM_5B_FOLD_SPEC_CTS : tactic =
    `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
-    (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
+    (* ct1's def is left-assoc; left-associate the EXPAND output. *)
     REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
@@ -3918,9 +3918,9 @@ let GCM_5B_KS5_FOLD : tactic = fun (asl,w) ->
   let fxidef = snd(find (fun (_,th) ->
     is_eq(concl th) && (try rand(concl th)=`final_xi:(128)word` with _->false)) asl) in
   let body = lhs(concl fxidef) in
-  (* June base: pick the SHORTEST pt5/aese word_xor that ALSO contains rk14 — i.e.
+  (* Pick the SHORTEST pt5/aese word_xor that ALSO contains rk14 — i.e.
      the full block-5 keystream `word_xor pt5 (word_xor (aese..rk13) rk14)`.  The
-     post-b9a430b normal form also exposes a shorter pre-whitening (no rk14)
+     normal form also exposes a shorter pre-whitening (no rk14)
      pt5/aese subterm; requiring rk14 avoids picking that wrong one. *)
   let best = ref None in
   let rec walk t =
@@ -3958,7 +3958,7 @@ let GCM_5B_KS5_FOLD : tactic = fun (asl,w) ->
      then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
   (asl,w);;
 
-(* June-2026 base: the per-half XOR-AC closer, mirroring band-4's GCM_4B_HALF_CLOSE.
+(* Per-half XOR-AC closer, mirroring band-4's GCM_4B_HALF_CLOSE.
    Single-pass bubble_sort_conv cannot fully sort the 21-atom qB chain; fold the
    5 mids (w1md=hh, w2md=hg, w3md=hf, w4md=he, w5md=hd), then qS (5 atoms), then
    qB (21 atoms), each up-to-AC via bubble_fix, before the fixpoint sort.  bubble_fix
@@ -4038,7 +4038,7 @@ let CT_CLOSE_5 nidx =
 (* masked-ct5 store conjunct closer: collapse the mask reg in the goal, peel
    word_or/word_and/word_xor down to the counter identity (machine +4 form vs
    spec gcm_ctr_inc^4), and discharge it with the nested-insert collapse. *)
-(* June-2026 base: mirror the band-4 ct4 counter peel.  The machine block-5
+(* Mirror the band-4 ct4 counter peel.  The machine block-5
    keystream is `word_xor (word_xor pt5 aes) rk14` (left-assoc) over a collapsed
    +4 counter emitted as `word_reversefields 8` (not word_bytereverse), and the
    spec side is `word_xor pt5 (aes256_encrypt (gcm_ctr_inc^4 ivec) ...)`.
@@ -4378,7 +4378,7 @@ let GCM_6B_TAIL_NOFINAL : tactic =
     `polyval_dot (polyval_dot (polyval_dot (h:int128) h) h) h =
      polyval_dot (polyval_dot h h) (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
-    [REWRITE_TAC[POLYVAL_DOT_H4_EQ_LOCAL]; ALL_TAC] THEN
+    [REWRITE_TAC[POLYVAL_DOT_H4_EQ]; ALL_TAC] THEN
   SUBGOAL_THEN
     `polyval_dot (polyval_dot (h:int128) h) h = polyval_dot h (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
@@ -4591,7 +4591,7 @@ let GCM_6B_FOLD_SPEC_CTS : tactic =
    `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
-    (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
+    (* ct1's def is left-assoc; left-associate the EXPAND output. *)
     REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
@@ -4644,7 +4644,7 @@ let GCM_6B_KS6_FOLD : tactic = fun (asl,w) ->
   let fxidef = snd(find (fun (_,th) ->
     is_eq(concl th) && (try rand(concl th)=`final_xi:(128)word` with _->false)) asl) in
   let body = lhs(concl fxidef) in
-  (* June base: require rk14 so the full keystream (not the pre-whitening subterm)
+  (* require rk14 so the full keystream (not the pre-whitening subterm)
      is picked; mirror band-5 GCM_5B_KS5_FOLD. *)
   let best = ref None in
   let rec walk t =
@@ -4680,7 +4680,7 @@ let GCM_6B_KS6_FOLD : tactic = fun (asl,w) ->
      then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
   (asl,w);;
 
-(* June-2026 base: per-half XOR-AC closer, mirroring band-4/5.  6 mids
+(* Per-half XOR-AC closer, mirroring band-4/5.  6 mids
    (w1md=hj, w2md=hh, w3md=hg, w4md=hf, w5md=he, w6md=hd), qS=6 atoms, qB=25 atoms. *)
 let GCM_6B_FOLD_MIDS_TAC : tactic =
   fun (asl,gg) ->
@@ -5134,7 +5134,7 @@ let GCM_7B_TAIL_NOFINAL : tactic =
     `polyval_dot (polyval_dot (polyval_dot (h:int128) h) h) h =
      polyval_dot (polyval_dot h h) (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
-    [REWRITE_TAC[POLYVAL_DOT_H4_EQ_LOCAL]; ALL_TAC] THEN
+    [REWRITE_TAC[POLYVAL_DOT_H4_EQ]; ALL_TAC] THEN
   SUBGOAL_THEN
     `polyval_dot (polyval_dot (h:int128) h) h = polyval_dot h (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
@@ -5366,7 +5366,7 @@ let GCM_7B_FOLD_SPEC_CTS : tactic =
    `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
-    (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
+    (* ct1's def is left-assoc; left-associate the EXPAND output. *)
     REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   (* F2 *)
@@ -5424,7 +5424,7 @@ let GCM_7B_KS7_FOLD : tactic = fun (asl,w) ->
   let fxidef = snd(find (fun (_,th) ->
     is_eq(concl th) && (try rand(concl th)=`final_xi:(128)word` with _->false)) asl) in
   let body = lhs(concl fxidef) in
-  (* June base: require rk14 to pick the full keystream (mirror band-5/6). *)
+  (* require rk14 to pick the full keystream (mirror band-5/6). *)
   let best = ref None in
   let rec walk t =
     (try let s=string_of_term t in
@@ -5459,7 +5459,7 @@ let GCM_7B_KS7_FOLD : tactic = fun (asl,w) ->
   (asl,w);;
 
 (* The full GHASH closer: applied at the final GHASH conjunct. *)
-(* June-2026 base: per-half XOR-AC closer, mirroring band-4/5/6.  7 mids
+(* Per-half XOR-AC closer, mirroring band-4/5/6.  7 mids
    (w1md=hm, w2md=hj, w3md=hh, w4md=hg, w5md=hf, w6md=he, w7md=hd), qS=7, qB=29. *)
 let GCM_7B_FOLD_MIDS_TAC : tactic =
   fun (asl,gg) ->
@@ -5850,7 +5850,7 @@ let GCM_8B_FOLD_SPEC_CTS : tactic =
    `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
    ASSUME_TAC THENL
    [EXPAND_TAC "ct1" THEN
-    (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
+    (* ct1's def is left-assoc; left-associate the EXPAND output. *)
     REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   SUBGOAL_THEN
@@ -5912,7 +5912,7 @@ let GCM_8B_TAIL_NOFINAL : tactic =
     `polyval_dot (polyval_dot (polyval_dot (h:int128) h) h) h =
      polyval_dot (polyval_dot h h) (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
-    [REWRITE_TAC[POLYVAL_DOT_H4_EQ_LOCAL]; ALL_TAC] THEN
+    [REWRITE_TAC[POLYVAL_DOT_H4_EQ]; ALL_TAC] THEN
   SUBGOAL_THEN
     `polyval_dot (polyval_dot (h:int128) h) h = polyval_dot h (polyval_dot h h)`
     (fun th -> REWRITE_TAC[th]) THENL
@@ -6182,7 +6182,7 @@ let GCM_8B_KS8_FOLD : tactic = fun (asl,w) ->
   let fxidef = snd(find (fun (_,th) ->
     is_eq(concl th) && (try rand(concl th)=`final_xi:(128)word` with _->false)) asl) in
   let body = lhs(concl fxidef) in
-  (* June base: require rk14 to pick the full keystream (mirror band-5/6/7). *)
+  (* require rk14 to pick the full keystream (mirror band-5/6/7). *)
   let best = ref None in
   let rec walk t =
     (try let s=string_of_term t in
@@ -6216,7 +6216,7 @@ let GCM_8B_KS8_FOLD : tactic = fun (asl,w) ->
      then RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th] else NO_TAC))
   (asl,w);;
 
-(* June-2026 base: per-half XOR-AC closer, mirroring band-4..7.  8 mids
+(* Per-half XOR-AC closer, mirroring band-4..7.  8 mids
    (w1md=hn, w2md=hm, w3md=hj, w4md=hh, w5md=hg, w6md=hf, w7md=he, w8md=hd),
    qS=8, qB=33. *)
 let GCM_8B_FOLD_MIDS_TAC : tactic =
