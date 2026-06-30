@@ -52,7 +52,6 @@ let AES256_ENCRYPT_UNFOLD = prove
               LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV EL_CONV) THEN REWRITE_TAC[]);;
 
-
 (* ---- Karatsuba limb extraction lemmas (256-bit word_pmul layout) --------- *)
 
 let KARATSUBA_LIMB_0_63 = prove(
@@ -89,6 +88,16 @@ let KARATSUBA_LIMB_192_255 = prove(
 
 let KARATSUBA_LIMBS = CONJ (CONJ KARATSUBA_LIMB_0_63 KARATSUBA_LIMB_64_127)
                            (CONJ KARATSUBA_LIMB_128_191 KARATSUBA_LIMB_192_255);;
+
+let KAR_SUBWORD_LEMMA = prove(
+  `!(xi_rev:(128)word).
+    word_subword
+      (word_xor xi_rev
+        (word_subword (word_join xi_rev xi_rev:(256)word) (64,128)))
+      (0,64):(64)word =
+    word_xor (word_subword xi_rev (0,64):(64)word)
+             (word_subword xi_rev (64,64):(64)word)`,
+  CONV_TAC WORD_BLAST);;
 
 (* ---- Pmul argument-order normalizer -------------------------------------- *)
 
@@ -140,15 +149,15 @@ let POLYVAL_DOT_KARATSUBA = prove(
   CONV_TAC(TOP_DEPTH_CONV PMUL_NORM_CONV) THEN
   REWRITE_TAC[WORD_XOR_ASSOC]);;
 
-(* ---- 1-block bridge ------------------------------------------------------ *)
+(* ---- Swap-halves subword folds + subword-of-XOR commute ------------------ *)
 
-let BYTESWAP128_SUBWORD_LO = prove(
-  `!(h:int128). word_subword (byteswap128 h) (0,64):(64)word = word_subword h (64,64)`,
-  REWRITE_TAC[byteswap128] THEN CONV_TAC WORD_BLAST);;
+let SWAPHALVES128_SUBWORD_LO = prove(
+  `!(h:int128). word_subword (word_swaphalves128 h) (0,64):(64)word = word_subword h (64,64)`,
+  REWRITE_TAC[word_swaphalves128] THEN CONV_TAC WORD_BLAST);;
 
-let BYTESWAP128_SUBWORD_HI = prove(
-  `!(h:int128). word_subword (byteswap128 h) (64,64):(64)word = word_subword h (0,64)`,
-  REWRITE_TAC[byteswap128] THEN CONV_TAC WORD_BLAST);;
+let SWAPHALVES128_SUBWORD_HI = prove(
+  `!(h:int128). word_subword (word_swaphalves128 h) (64,64):(64)word = word_subword h (0,64)`,
+  REWRITE_TAC[word_swaphalves128] THEN CONV_TAC WORD_BLAST);;
 
 let WORD_SUBWORD_XOR_COMM = prove(
   `!(a:(N)word) (b:(N)word) n.
@@ -187,6 +196,8 @@ let REV64_128 = prove(
                             (word_reversefields 8 xi:(128)word):(256)word) (64,128)`,
   CONV_TAC WORD_BLAST);;
 
+let SIMD_SIMPLIFY_RULES = [REV64_LOWER_LANE; REV64_UPPER_LANE; REV64_128];;
+
 let WORD_SWAP_HALVES_INVOLUTION = prove(
   `!(a:(128)word).
     word_subword
@@ -196,18 +207,11 @@ let WORD_SWAP_HALVES_INVOLUTION = prove(
       (64,128):(128)word = a`,
   CONV_TAC WORD_BLAST);;
 
-(* June-2026 HOL base: the new WORD_SIMPLE_SUBWORD_CONV no longer collapses the
-   straddling extraction word_subword (word_join a a) (64,128) (it crosses the
-   128-bit join boundary), leaving it wrapped around the REV64 byte shuffle so
-   the lane lemmas cannot match.  This lemma rewrites it to the explicit
-   half-swap so the byte-level subword extraction can proceed. *)
 let WORD_JOIN_SELF_MID = prove(
   `!a:(128)word.
      word_subword (word_join a a:(256)word) (64,128):(128)word =
      word_join (word_subword a (0,64):(64)word) (word_subword a (64,64):(64)word):(128)word`,
   CONV_TAC WORD_BLAST);;
-
-let SIMD_SIMPLIFY_RULES = [REV64_LOWER_LANE; REV64_UPPER_LANE; REV64_128];;
 
 let SIMD_SIMPLIFY_ASSUM_TAC =
   RULE_ASSUM_TAC(fun th ->
@@ -220,16 +224,19 @@ let MASK_IS_ONES = prove(
     word_insert (word_insert x (0,64) (word 18446744073709551615:(128)word):(128)word)
       (64,64) (word 18446744073709551615:(128)word):(128)word =
     (word_not(word 0):(128)word)`, CONV_TAC WORD_BLAST);;
-let WORD_AND_MASK = prove(
+
+let WORD_AND_FULLMASK_128 = prove(
   `!(x:(128)word) (y:(128)word).
     word_and x (word_insert (word_insert y (0,64) (word 18446744073709551615:(128)word):(128)word)
       (64,64) (word 18446744073709551615:(128)word):(128)word) = x`,
   REWRITE_TAC[MASK_IS_ONES; WORD_AND_NOT0]);;
-let WORD_AND_MASK_SYM = prove(
+
+let WORD_AND_FULLMASK_128_SYM = prove(
   `!(x:(128)word) (y:(128)word).
     word_and (word_insert (word_insert y (0,64) (word 18446744073709551615:(128)word):(128)word)
       (64,64) (word 18446744073709551615:(128)word):(128)word) x = x`,
   REWRITE_TAC[MASK_IS_ONES; WORD_AND_NOT0]);;
+
 let BIF_MASK = prove(
   `!(d:(128)word) (n:(128)word) (m:(128)word).
     word_or (word_and d (word_insert (word_insert m (0,64) (word 18446744073709551615:(128)word):(128)word)
@@ -237,19 +244,23 @@ let BIF_MASK = prove(
     (word_and n (word_not (word_insert (word_insert m (0,64) (word 18446744073709551615:(128)word):(128)word)
       (64,64) (word 18446744073709551615:(128)word):(128)word))) = d`,
   CONV_TAC WORD_BLAST);;
+
 let WORD_ZX_ALLONES_64_128 = prove(
   `word_zx (word 18446744073709551615:(64)word):(128)word =
    word 18446744073709551615:(128)word`, CONV_TAC WORD_BLAST);;
+
 let MASK_IS_ONES_64 = prove(
   `!(x:(128)word).
     word_insert (word_insert x (0,64) (word 18446744073709551615:(64)word):(128)word)
       (64,64) (word 18446744073709551615:(64)word):(128)word =
     (word_not(word 0):(128)word)`, CONV_TAC WORD_BLAST);;
+
 let WORD_AND_MASK_64 = prove(
   `!(x:(128)word) (y:(128)word).
     word_and x (word_insert (word_insert y (0,64) (word 18446744073709551615:(64)word):(128)word)
       (64,64) (word 18446744073709551615:(64)word):(128)word) = x`,
   REWRITE_TAC[MASK_IS_ONES_64; WORD_AND_NOT0]);;
+
 let WORD_AND_MASK_SYM_64 = prove(
   `!(x:(128)word) (y:(128)word).
     word_and (word_insert (word_insert y (0,64) (word 18446744073709551615:(64)word):(128)word)
@@ -264,7 +275,7 @@ let STACK_PTR_CANCEL = WORD_RULE
 let GCM_ENC_SIMPLIFY_TAC =
   SIMD_SIMPLIFY_ASSUM_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_SWAP_HALVES_INVOLUTION;
-    WORD_ZX_ALLONES_64_128; WORD_AND_MASK; WORD_AND_MASK_SYM; BIF_MASK;
+    WORD_ZX_ALLONES_64_128; WORD_AND_FULLMASK_128; WORD_AND_FULLMASK_128_SYM; BIF_MASK;
     WORD_AND_MASK_64; WORD_AND_MASK_SYM_64]) THEN
   RULE_ASSUM_TAC(fun th ->
     try CONV_RULE(RAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) th
@@ -275,7 +286,7 @@ let GCM_ENC_SIMPLIFY_TAC =
 let WORD_XOR_0_LEFT = WORD_BITWISE_RULE
   `word_xor (word 0) x = (x:(N)word)`;;
 
-let WORD_INSERT_AS_JOIN_1 = prove(
+let WORD_INSERT_AS_JOIN_LO = prove(
   `!(a:(128)word) (b:(128)word).
     word_insert a (0,64) (word_subword b (64,64):(128)word) =
     (word_join (word_subword a (64,64):(64)word) (word_subword b (64,64):(64)word):(128)word)`,
@@ -289,7 +300,7 @@ let WORD_INSERT_AS_JOIN_1 = prove(
   ASM_SIMP_TAC[ARITH_RULE `i < 128 /\ ~(i < 64) ==> i - 64 < 64`;
                ARITH_RULE `i < 128 /\ ~(i < 64) ==> 64 + i - 64 = i`]);;
 
-let WORD_INSERT_AS_JOIN_2 = prove(
+let WORD_INSERT_AS_JOIN_HI = prove(
   `!(a:(128)word) (b:(128)word).
     word_insert a (64,64) (word_subword b (0,64):(128)word) =
     (word_join (word_subword b (0,64):(64)word) (word_subword a (0,64):(64)word):(128)word)`,
@@ -305,31 +316,24 @@ let WORD_INSERT_AS_JOIN_2 = prove(
                ARITH_RULE `~(64 <= i /\ i < 128) /\ i < 128 ==> i < 64`;
                ARITH_RULE `0 + i = i`]);;
 
-let KAR_SUBWORD_LEMMA = prove(
-  `!(xi_rev:(128)word).
-    word_subword
-      (word_xor xi_rev
-        (word_subword (word_join xi_rev xi_rev:(256)word) (64,128)))
-      (0,64):(64)word =
-    word_xor (word_subword xi_rev (0,64):(64)word)
-             (word_subword xi_rev (64,64):(64)word)`,
-  CONV_TAC WORD_BLAST);;
-
 let REVERSEFIELDS8_SUBWORD_LO = prove(
   `!(x:(128)word).
     word_reversefields 8 (word_subword x (0,64):(64)word) =
     word_subword (word_reversefields 8 x:(128)word) (64,64):(64)word`,
   CONV_TAC WORD_BLAST);;
+
 let REVERSEFIELDS8_SUBWORD_HI = prove(
   `!(x:(128)word).
     word_reversefields 8 (word_subword x (64,64):(64)word) =
     word_subword (word_reversefields 8 x:(128)word) (0,64):(64)word`,
   CONV_TAC WORD_BLAST);;
+
 let WORD_REVERSEFIELDS_XOR_8_128 = prove(
   `!(x:(128)word) (y:(128)word).
     word_reversefields 8 (word_xor x y) =
     word_xor (word_reversefields 8 x) (word_reversefields 8 y)`,
   CONV_TAC WORD_BLAST);;
+
 let KAR_MID_BRIDGE = prove(
   `!(xi:(128)word) (ct:(128)word).
     word_xor (word_subword (word_reversefields 8 xi) (64,64):(64)word)
@@ -339,6 +343,7 @@ let KAR_MID_BRIDGE = prove(
              (word_subword (word_reversefields 8 (word_xor xi ct)) (64,64))`,
   REWRITE_TAC[WORD_REVERSEFIELDS_XOR_8_128; WORD_SUBWORD_XOR] THEN
   CONV_TAC WORD_RULE);;
+
 let HALFSWAP_XOR = prove(
   `!(a:(128)word) (b:(128)word).
     word_xor
@@ -347,6 +352,7 @@ let HALFSWAP_XOR = prove(
       (word_join b b:(256)word) =
     word_join (word_xor a b:(128)word) (word_xor a b:(128)word):(256)word`,
   CONV_TAC WORD_BLAST);;
+
 let REV8_JOIN_FOLD = prove(
   `!(lo:(64)word) (hi:(64)word).
     word_join (word_reversefields 8 lo) (word_reversefields 8 hi):(128)word =
@@ -638,6 +644,7 @@ let DOUBLE_SUBWORD_JOIN = prove(
     word_subword (word_subword (word_join x x:(256)word) (64,128):(128)word) (0,64):(64)word =
     word_subword x (64,64)`,
   CONV_TAC WORD_BLAST);;
+
 let DOUBLE_SUBWORD_JOIN_HI = prove(
   `!(x:(128)word).
     word_subword (word_subword (word_join x x:(256)word) (64,128):(128)word) (64,64):(64)word =

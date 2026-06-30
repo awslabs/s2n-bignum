@@ -42,11 +42,11 @@ let ghash_1block_karatsuba = new_definition
 let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT = prove(
   `!(input:int128) (h:int128) (hk:int128).
     word_subword hk (0,64):(64)word = karatsuba_mid h
-    ==> ghash_1block_karatsuba input (byteswap128 h) hk =
+    ==> ghash_1block_karatsuba input (word_swaphalves128 h) hk =
         word_reversefields 8 (polyval_dot input h)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[ghash_1block_karatsuba; LET_DEF; LET_END_DEF;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI;
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI;
               REWRITE_RULE[LET_DEF; LET_END_DEF] POLYVAL_DOT_KARATSUBA] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
   ASM_REWRITE_TAC[karatsuba_mid] THEN
@@ -60,7 +60,7 @@ let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT = prove(
 let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
  (`!(b1:int128) (h:int128) (hk:int128).
     word_subword hk (0,64):(64)word = karatsuba_mid h
-    ==> ghash_1block_karatsuba b1 (byteswap128 h) hk =
+    ==> ghash_1block_karatsuba b1 (word_swaphalves128 h) hk =
         word_reversefields 8 (polyval_reduce_prop3 (word_pmul b1 h : 256 word))`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   ASM_SIMP_TAC[GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_DOT] THEN

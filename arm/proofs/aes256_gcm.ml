@@ -1427,10 +1427,10 @@ let GCM_1B_TAIL_NOFINAL : tactic =
     `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
   FIRST_ASSUM(fun th ->
     if is_eq(concl th) && rand(concl th) = `final_xi:(128)word` then SUBST1_TAC(SYM th) else NO_TAC) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -1611,7 +1611,7 @@ let gcm_1b_goal =
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h)
       (\s. let ct = word_xor pt (aes256_encrypt ivec
@@ -1940,7 +1940,7 @@ let GCM_2B_TAIL_NOFINAL : tactic =
   ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_2block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  REWRITE_TAC[SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   SUBGOAL_THEN
     `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
@@ -1960,10 +1960,10 @@ let GCM_2B_TAIL_NOFINAL : tactic =
   REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
   REWRITE_TAC[WORD_JOIN_SELF_MID] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION; WORD_JOIN_SELF_MID;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -2172,10 +2172,10 @@ let gcm_2b_goal =
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            read (memory :> bytes128 (word_add htable_ptr (word 32))) s =
-             byteswap128 (polyval_dot h h) /\
+             word_swaphalves128 (polyval_dot h h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h))
       (\s. let ct1 =
@@ -2471,7 +2471,7 @@ let GCM_3B_TAIL_NOFINAL : tactic =
   ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_3block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  REWRITE_TAC[SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   SUBGOAL_THEN
     `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
@@ -2490,10 +2490,10 @@ let GCM_3B_TAIL_NOFINAL : tactic =
     `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
   REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -2724,12 +2724,12 @@ let gcm_3b_goal =
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            read (memory :> bytes128 (word_add htable_ptr (word 32))) s =
-             byteswap128 (polyval_dot h h) /\
+             word_swaphalves128 (polyval_dot h h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 48))) s =
-             byteswap128 (polyval_dot h (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
@@ -3045,7 +3045,7 @@ let GCM_4B_TAIL_NOFINAL : tactic =
   ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_4block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  REWRITE_TAC[SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   SUBGOAL_THEN
     `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
@@ -3068,10 +3068,10 @@ let GCM_4B_TAIL_NOFINAL : tactic =
     `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
   REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -3321,15 +3321,15 @@ let gcm_4b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            read (memory :> bytes128 (word_add htable_ptr (word 32))) s =
-             byteswap128 (polyval_dot h h) /\
+             word_swaphalves128 (polyval_dot h h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 48))) s =
-             byteswap128 (polyval_dot h (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
            read (memory :> bytes128 (word_add htable_ptr (word 80))) s =
-             byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word =
              karatsuba_mid (polyval_dot h h) /\
@@ -3576,17 +3576,17 @@ let gcm_5b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            read (memory :> bytes128 (word_add htable_ptr (word 32))) s =
-             byteswap128 (polyval_dot h h) /\
+             word_swaphalves128 (polyval_dot h h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 48))) s =
-             byteswap128 (polyval_dot h (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
            read (memory :> bytes128 (word_add htable_ptr (word 80))) s =
-             byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 96))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word =
@@ -3724,7 +3724,7 @@ ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
   ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_5block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  REWRITE_TAC[SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   SUBGOAL_THEN
     `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
@@ -3747,10 +3747,10 @@ ABBREV_TAC `mask = word (2 EXP (8 * byte_len) - 1):(128)word` THEN
     `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
   REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -4266,20 +4266,20 @@ let gcm_6b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            read (memory :> bytes128 (word_add htable_ptr (word 32))) s =
-             byteswap128 (polyval_dot h h) /\
+             word_swaphalves128 (polyval_dot h h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 48))) s =
-             byteswap128 (polyval_dot h (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
            read (memory :> bytes128 (word_add htable_ptr (word 80))) s =
-             byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 96))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
            read (memory :> bytes128 (word_add htable_ptr (word 128))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word =
              karatsuba_mid (polyval_dot h h) /\
@@ -4426,7 +4426,7 @@ let GCM_6B_TAIL_NOFINAL : tactic =
   ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_6block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  REWRITE_TAC[SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   SUBGOAL_THEN
     `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
@@ -4453,10 +4453,10 @@ let GCM_6B_TAIL_NOFINAL : tactic =
     `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
   REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -4980,22 +4980,22 @@ let gcm_7b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            read (memory :> bytes128 (word_add htable_ptr (word 32))) s =
-             byteswap128 (polyval_dot h h) /\
+             word_swaphalves128 (polyval_dot h h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 48))) s =
-             byteswap128 (polyval_dot h (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
            read (memory :> bytes128 (word_add htable_ptr (word 80))) s =
-             byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 96))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
            read (memory :> bytes128 (word_add htable_ptr (word 128))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 144))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word =
@@ -5099,38 +5099,6 @@ let GCM_7B_MASKED_CT7_CLOSE : tactic =
   REWRITE_TAC[bri] THEN REWRITE_TAC[add6] THEN
   REWRITE_TAC[CTR_WORD_INSERT];;
 
-(* GHASH ct-fold (mirror GCM_6B_FOLD_SPEC_CTS, 6 full-block cts). *)
-let GCM_7B_FOLD_SPEC_CTS : tactic =
-  SUBGOAL_THEN
-   `word_xor pt1 (aes256_encrypt ivec [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct1`
-   ASSUME_TAC THENL
-   [EXPAND_TAC "ct1" THEN
-    (* June base: ct1's def is left-assoc; left-associate the EXPAND output. *)
-    REWRITE_TAC[AES256_ENCRYPT_UNFOLD; LET_DEF; LET_END_DEF; WORD_XOR_ASSOC] THEN ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor pt2 (aes256_encrypt (gcm_ctr_inc ivec) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct2`
-   ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT2_STEP_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor pt3 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc ivec)) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct3`
-   ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT3_STEP_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor pt4 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct4`
-   ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT4_STEP_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor pt5 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec)))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct5`
-   ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT5_STEP_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor pt6 (aes256_encrypt (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc (gcm_ctr_inc ivec))))) [rk0;rk1;rk2;rk3;rk4;rk5;rk6;rk7;rk8;rk9;rk10;rk11;rk12;rk13;rk14]) = ct6`
-   ASSUME_TAC THENL [CONV_TAC SYM_CONV THEN GCM_7BLOCK_CT6_STEP_TAC; ALL_TAC] THEN
-  (fun (asl,w) ->
-     let getf n = snd(find (fun (_,th) ->
-       is_eq(concl th) && rand(concl th)=mk_var("ct"^string_of_int n,`:(128)word`) &&
-       (let l=lhand(concl th) in
-        (try fst(dest_const(rator(rator l)))="word_xor" with _->false) &&
-        (try fst(dest_const(repeat rator (rand l)))="aes256_encrypt" with _->false))) asl) in
-     GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [getf 1; getf 2; getf 3; getf 4; getf 5; getf 6] (asl,w));;
-
 (* The GHASH conjunct closes via GCM_7B_GHASH_CLOSE (mirror of the 6-block   *)
 (* GCM_6B_GHASH_CLOSE) defined in seven_ghash_closer.ml — its bridge MP_TAC  *)
 (* uses the genuine htable h7k now present in the goal.                      *)
@@ -5218,7 +5186,7 @@ let GCM_7B_TAIL_NOFINAL : tactic =
   ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_7block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  REWRITE_TAC[SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   SUBGOAL_THEN
     `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
@@ -5245,10 +5213,10 @@ let GCM_7B_TAIL_NOFINAL : tactic =
     `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
   REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -5751,25 +5719,25 @@ let gcm_8b_goal = `!in_ptr out_ptr xi_ptr ivec_ptr key_ptr htable_ptr
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
            read (memory :> bytes128 (word_add htable_ptr (word 32))) s =
-             byteswap128 (polyval_dot h h) /\
+             word_swaphalves128 (polyval_dot h h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 48))) s =
-             byteswap128 (polyval_dot h (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
            read (memory :> bytes128 (word_add htable_ptr (word 80))) s =
-             byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+             word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 96))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
            read (memory :> bytes128 (word_add htable_ptr (word 128))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 144))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
            read (memory :> bytes128 (word_add htable_ptr (word 176))) s =
-             byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+             word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word =
              karatsuba_mid (polyval_dot h h) /\
@@ -6006,7 +5974,7 @@ let GCM_8B_TAIL_NOFINAL : tactic =
   ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
   REWRITE_TAC[ghash_8block_karatsuba; LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+  REWRITE_TAC[SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   SUBGOAL_THEN
     `word_subword (word_join (word 0:(64)word) (karatsuba_mid (polyval_dot h h):(64)word):(128)word) (0,64):(64)word =
      karatsuba_mid (polyval_dot h h)`
@@ -6037,10 +6005,10 @@ let GCM_8B_TAIL_NOFINAL : tactic =
     `x = y ==> word_reversefields 8 x = word_reversefields 8 y:(128)word`) THEN
   REWRITE_TAC[WORD_SWAP_HALVES_INVOLUTION] THEN
   CONV_TAC(LAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) THEN
-  REWRITE_TAC[WORD_INSERT_AS_JOIN_1; WORD_INSERT_AS_JOIN_2;
+  REWRITE_TAC[WORD_INSERT_AS_JOIN_LO; WORD_INSERT_AS_JOIN_HI;
               KAR_SUBWORD_LEMMA; WORD_SWAP_HALVES_INVOLUTION;
               WORD_OR_REFL; WORD_XOR_ASSOC; WORD_SUBWORD_XOR;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   REWRITE_TAC[HALFSWAP_XOR; GSYM WORD_REVERSEFIELDS_XOR_8_128;
               WORD_XOR_0; WORD_XOR_ASSOC;
@@ -7061,18 +7029,18 @@ let AES256_GCM_ENCRYPT_LT_0BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -7192,18 +7160,18 @@ let AES256_GCM_ENCRYPT_LT_1BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -7380,18 +7348,18 @@ let AES256_GCM_ENCRYPT_LT_2BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -7569,18 +7537,18 @@ let AES256_GCM_ENCRYPT_LT_3BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -7760,18 +7728,18 @@ let AES256_GCM_ENCRYPT_LT_4BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -7952,18 +7920,18 @@ let AES256_GCM_ENCRYPT_LT_5BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -8146,18 +8114,18 @@ let AES256_GCM_ENCRYPT_LT_6BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -8341,18 +8309,18 @@ let AES256_GCM_ENCRYPT_LT_7BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -8538,18 +8506,18 @@ let AES256_GCM_ENCRYPT_LT_8BLOCK_ABS = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -8739,18 +8707,18 @@ let AES256_GCM_ENCRYPT_CORRECT = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\
@@ -8898,18 +8866,18 @@ let AES256_GCM_ENCRYPT_SUBROUTINE_CORRECT = prove(
            read (memory :> bytes128 (word_add key_ptr (word 208))) s = rk13 /\
            read (memory :> bytes128 (word_add key_ptr (word 224))) s = rk14 /\
            read (memory :> bytes128 xi_ptr) s = xi /\
-           read (memory :> bytes128 htable_ptr) s = byteswap128 h /\
+           read (memory :> bytes128 htable_ptr) s = word_swaphalves128 h /\
            read (memory :> bytes128 (word_add htable_ptr (word 16))) s = h1k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = byteswap128 (polyval_dot h h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = byteswap128 (polyval_dot h (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 32))) s = word_swaphalves128 (polyval_dot h h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 48))) s = word_swaphalves128 (polyval_dot h (polyval_dot h h)) /\
            read (memory :> bytes128 (word_add htable_ptr (word 64))) s = h3k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 80))) s = word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 96))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 112))) s = h5k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
-           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 128))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 144))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) /\
            read (memory :> bytes128 (word_add htable_ptr (word 160))) s = h7k /\
-           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
+           read (memory :> bytes128 (word_add htable_ptr (word 176))) s = word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h) h) h) /\
            word_subword h1k (0,64):(64)word = karatsuba_mid h /\
            word_subword h1k (64,64):(64)word = karatsuba_mid (polyval_dot h h) /\
            word_subword h3k (0,64):(64)word = karatsuba_mid (polyval_dot h (polyval_dot h h)) /\

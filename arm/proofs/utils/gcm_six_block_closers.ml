@@ -124,12 +124,12 @@ let GHASH_6BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
     word_subword h5k (0,64):(64)word = karatsuba_mid (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) /\
     word_subword h6k (0,64):(64)word = karatsuba_mid (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h)
     ==> ghash_6block_karatsuba b1 b2 b3 b4 b5 b6
-          (byteswap128 h) hk
-          (byteswap128 (polyval_dot h h)) h2k
-          (byteswap128 (polyval_dot h (polyval_dot h h))) h3k
-          (byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h))) h4k
-          (byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h)) h5k
-          (byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h)) h6k =
+          (word_swaphalves128 h) hk
+          (word_swaphalves128 (polyval_dot h h)) h2k
+          (word_swaphalves128 (polyval_dot h (polyval_dot h h))) h3k
+          (word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h))) h4k
+          (word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h)) h5k
+          (word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h)) h6k =
         word_reversefields 8
           (polyval_reduce_prop3
             (word_xor
@@ -146,27 +146,27 @@ let GHASH_6BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   REWRITE_TAC[GSYM GHASH_6BLOCK_AS_NBLOCK] THEN
   SUBGOAL_THEN
-    `[(b1:int128, byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h):int128, h6k:int128);
-      (b2:int128, byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h):int128, h5k:int128);
-      (b3:int128, byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)):int128, h4k:int128);
-      (b4:int128, byteswap128 (polyval_dot h (polyval_dot h h)):int128, h3k:int128);
-      (b5:int128, byteswap128 (polyval_dot h h):int128, h2k:int128);
-      (b6:int128, byteswap128 h:int128, hk:int128)] =
+    `[(b1:int128, word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h):int128, h6k:int128);
+      (b2:int128, word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h):int128, h5k:int128);
+      (b3:int128, word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)):int128, h4k:int128);
+      (b4:int128, word_swaphalves128 (polyval_dot h (polyval_dot h h)):int128, h3k:int128);
+      (b5:int128, word_swaphalves128 (polyval_dot h h):int128, h2k:int128);
+      (b6:int128, word_swaphalves128 h:int128, hk:int128)] =
      project_triples
-       [(b1, byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h), h6k, (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h));
-        (b2, byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h), h5k, (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h));
-        (b3, byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)), h4k, (polyval_dot (polyval_dot h h) (polyval_dot h h)));
-        (b4, byteswap128 (polyval_dot h (polyval_dot h h)), h3k, (polyval_dot h (polyval_dot h h)));
-        (b5, byteswap128 (polyval_dot h h), h2k, (polyval_dot h h));
-        (b6, byteswap128 h, hk, h)]`
+       [(b1, word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h), h6k, (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h));
+        (b2, word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h), h5k, (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h));
+        (b3, word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)), h4k, (polyval_dot (polyval_dot h h) (polyval_dot h h)));
+        (b4, word_swaphalves128 (polyval_dot h (polyval_dot h h)), h3k, (polyval_dot h (polyval_dot h h)));
+        (b5, word_swaphalves128 (polyval_dot h h), h2k, (polyval_dot h h));
+        (b6, word_swaphalves128 h, hk, h)]`
     SUBST1_TAC THENL [REWRITE_TAC[project_triples]; ALL_TAC] THEN
   MP_TAC(SPEC
-    `[(b1:int128, byteswap128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h):int128, h6k:int128, (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h):int128);
-      (b2:int128, byteswap128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h):int128, h5k:int128, (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h):int128);
-      (b3:int128, byteswap128 (polyval_dot (polyval_dot h h) (polyval_dot h h)):int128, h4k:int128, (polyval_dot (polyval_dot h h) (polyval_dot h h)):int128);
-      (b4:int128, byteswap128 (polyval_dot h (polyval_dot h h)):int128, h3k:int128, (polyval_dot h (polyval_dot h h)):int128);
-      (b5:int128, byteswap128 (polyval_dot h h):int128, h2k:int128, (polyval_dot h h):int128);
-      (b6:int128, byteswap128 h:int128, hk:int128, h:int128)]
+    `[(b1:int128, word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h):int128, h6k:int128, (polyval_dot (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h) h):int128);
+      (b2:int128, word_swaphalves128 (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h):int128, h5k:int128, (polyval_dot (polyval_dot (polyval_dot h h) (polyval_dot h h)) h):int128);
+      (b3:int128, word_swaphalves128 (polyval_dot (polyval_dot h h) (polyval_dot h h)):int128, h4k:int128, (polyval_dot (polyval_dot h h) (polyval_dot h h)):int128);
+      (b4:int128, word_swaphalves128 (polyval_dot h (polyval_dot h h)):int128, h3k:int128, (polyval_dot h (polyval_dot h h)):int128);
+      (b5:int128, word_swaphalves128 (polyval_dot h h):int128, h2k:int128, (polyval_dot h h):int128);
+      (b6:int128, word_swaphalves128 h:int128, hk:int128, h:int128)]
     :(int128#int128#int128#int128)list`
     GHASH_NBLOCK_KARATSUBA_EQ_PROP3) THEN
   ASM_REWRITE_TAC[kara_quad_ok; kara_quad_pmul; WORD_XOR_0_LEFT] THEN

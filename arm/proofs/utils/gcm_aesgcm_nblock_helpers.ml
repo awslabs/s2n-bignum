@@ -131,7 +131,7 @@ let WORD_REVERSEFIELDS_8_BYTEREVERSE_32 = prove
 (*   where:                                                                  *)
 (*     input_k = the kth GHASH input block (already XOR'd with running acc   *)
 (*               for the first block by the caller)                          *)
-(*     h_tw_k  = byteswap128 (h^{N-k+1})  -- the H power for this block      *)
+(*     h_tw_k  = word_swaphalves128 (h^{N-k+1})  -- the H power for this block      *)
 (*     hk_k    = the Karatsuba-mid key for h_tw_k                            *)
 (* ========================================================================= *)
 
@@ -290,16 +290,16 @@ let KARATSUBA_BLOCK_PACKS_TO_PMUL = prove
     word_subword hk (0,64):(64)word = karatsuba_mid h
     ==>
     (word_xor (word_xor
-        (word_zx (karatsuba_block_pl input (byteswap128 h)) :256 word)
+        (word_zx (karatsuba_block_pl input (word_swaphalves128 h)) :256 word)
         (word_shl (word_zx (word_xor (word_xor
-            (karatsuba_block_pl input (byteswap128 h))
-            (karatsuba_block_ph input (byteswap128 h)))
+            (karatsuba_block_pl input (word_swaphalves128 h))
+            (karatsuba_block_ph input (word_swaphalves128 h)))
           (karatsuba_block_pm input hk)) :256 word) 64))
-       (word_shl (word_zx (karatsuba_block_ph input (byteswap128 h)) :256 word) 128)) =
+       (word_shl (word_zx (karatsuba_block_ph input (word_swaphalves128 h)) :256 word) 128)) =
     word_pmul input h : 256 word`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[karatsuba_block_pl; karatsuba_block_ph; karatsuba_block_pm;
-              BYTESWAP128_SUBWORD_LO; BYTESWAP128_SUBWORD_HI] THEN
+              SWAPHALVES128_SUBWORD_LO; SWAPHALVES128_SUBWORD_HI] THEN
   ASM_REWRITE_TAC[karatsuba_mid] THEN
   REWRITE_TAC[REWRITE_RULE[LET_DEF; LET_END_DEF] PMUL_KARATSUBA] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
@@ -321,8 +321,8 @@ let KARATSUBA_BLOCK_PACKS_TO_PMUL_CLEAN = prove
     word_subword hk (0,64):(64)word = karatsuba_mid h
     ==>
     pack_corrected
-      (karatsuba_block_pl input (byteswap128 h))
-      (karatsuba_block_ph input (byteswap128 h))
+      (karatsuba_block_pl input (word_swaphalves128 h))
+      (karatsuba_block_ph input (word_swaphalves128 h))
       (karatsuba_block_pm input hk) =
     word_pmul input h : 256 word`,
   REWRITE_TAC[pack_corrected; KARATSUBA_BLOCK_PACKS_TO_PMUL]);;
@@ -384,7 +384,7 @@ let KARA_ACC_FIRST = prove
     REWRITE_TAC[PAIR_EQ] THEN REPEAT CONJ_TAC THEN CONV_TAC WORD_RULE]);;
 
 (* Quad-list = (input, h_tw, hk, h_true) per block. Used to express the bridge
-   precondition (every triple must come from a real `h` with byteswap128 + mid). *)
+   precondition (every triple must come from a real `h` with word_swaphalves128 + mid). *)
 let kara_quad_pmul = define
   `(kara_quad_pmul ([]:(int128#int128#int128#int128)list) (acc:256 word) = acc) /\
    (kara_quad_pmul (CONS (input,h_tw,hk,h) qrest) acc =
@@ -393,7 +393,7 @@ let kara_quad_pmul = define
 let kara_quad_ok = define
   `(kara_quad_ok ([]:(int128#int128#int128#int128)list) <=> T) /\
    (kara_quad_ok (CONS (input,h_tw,hk,h) qrest) <=>
-     h_tw = byteswap128 h /\
+     h_tw = word_swaphalves128 h /\
      word_subword hk (0,64):(64)word = karatsuba_mid h /\
      kara_quad_ok qrest)`;;
 
@@ -497,7 +497,7 @@ let ABBREV_FINAL_XI_TAC : tactic =
 let GCM_NBLOCK_POST_SIM_NORMALIZE_TAC =
   RULE_ASSUM_TAC(REWRITE_RULE[STACK_PTR_CANCEL; WORD_ADD_ASSOC_CONSTS]) THEN
   RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(DEPTH_CONV NUM_ADD_CONV))) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[WORD_AND_MASK; WORD_AND_MASK_SYM;
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_AND_FULLMASK_128; WORD_AND_FULLMASK_128_SYM;
     WORD_AND_MASK_64; WORD_AND_MASK_SYM_64;
     WORD_XOR_ASSOC]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_ADD_0; KAR_MID_BRIDGE]) THEN
