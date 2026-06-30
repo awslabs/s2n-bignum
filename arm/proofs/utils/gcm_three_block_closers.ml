@@ -124,6 +124,9 @@ let GHASH_3BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
   DISCH_THEN SUBST1_TAC THEN
   AP_TERM_TAC THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
+(* ===== Per-block ciphertext closers (ct1 closes inline in aes256_gcm.ml) = *)
+let GCM_3BLOCK_CT2_STEP_TAC = GCM_NBLOCK_CT_STEP_TAC 3 2;;
+
 (* ===== Partial-final-block helpers (total bytes = 32 + byte_len) ========= *)
 
 let THREEBLOCK_USHR = prove

@@ -640,7 +640,13 @@ let GCM_NBLOCK_CT_STEP_TAC (n:int) (k:int) : tactic =
 (* ---- Symmetric h-power normalizers -------------------------------------- *)
 (* GHASH_POLYVAL_ACC_N emits left-associated h-powers (((h.h).h)..); the     *)
 (* karatsuba bridge wants the symmetric forms the Htable holds.  H4 is the   *)
-(* one nontrivial ring-algebra proof; H5..H8 follow by congruence.           *)
+(* one nontrivial ring-algebra proof; H5..H8 follow by congruence.  H3 just  *)
+(* commutes the outer product (h^2.h = h.h^2) via WORD_PMUL_SYM.             *)
+
+let POLYVAL_DOT_H3_EQ = prove
+ (`!(h:int128).
+     polyval_dot (polyval_dot h h) h = polyval_dot h (polyval_dot h h)`,
+  GEN_TAC THEN REWRITE_TAC[polyval_dot] THEN REWRITE_TAC[WORD_PMUL_SYM]);;
 
 let POLYVAL_DOT_H4_EQ_LOCAL = prove
  (`!(h:int128).

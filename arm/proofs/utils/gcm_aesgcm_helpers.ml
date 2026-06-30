@@ -2,12 +2,12 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
-(* ========================================================================= *)
-(* Shared AES-256-GCM proof helpers: the general (block-count-agnostic)      *)
-(* definitions, lemmas, and tactics the per-N-block closers reuse — field    *)
-(* algebra, SIMD byte-shuffle folds, the GHASH_POLYVAL_ACC_1..8 family, and  *)
-(* AES256_ENCRYPT_UNFOLD.  No machine-code definition or main theorem.       *)
-(* ========================================================================= *)
+(* ========================================================================== *)
+(* Shared AES-256-GCM proof helpers: the general (block-count-agnostic)       *)
+(* definitions, lemmas, and tactics the per-N-block closers reuse — field     *)
+(* algebra, SIMD byte-shuffle folds, the GHASH_POLYVAL_ACC_1..8 family, and   *)
+(* AES256_ENCRYPT_UNFOLD.  No machine-code definition or main theorem.        *)
+(* ========================================================================== *)
 
 needs "arm/proofs/base.ml";;
 needs "common/aes.ml";;
@@ -16,14 +16,14 @@ needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 needs "common/karatsuba_pmul.ml";;
 needs "common/polyval_ghash.ml";;
 
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------- *)
 (* Unfold aes256_encrypt on a literal round-key list to the aese/aesmc chain. *)
 (* This is the form symbolic execution of the AESE+AESMC sequence emits, so   *)
 (* the per-block ciphertext/keystream folds match the simulator.  Kept as a   *)
 (* rewrite rule (not a conversion like the upstream AESENC_* ones) so it can  *)
 (* be used in the closers' REWRITE_TAC lists and RULE_ASSUM_TAC calls, and    *)
 (* stops at aese/aesmc rather than dissolving them into sub/shift/mix.        *)
-(* ------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------- *)
 
 let AES256_ENCRYPT_UNFOLD = prove
  (`!(input:(128)word)
@@ -108,8 +108,8 @@ let PMUL_NORM_CONV tm =
     else failwith "already normalized"
   | _ -> failwith "not word_pmul";;
 
-(* The per-N GHASH Karatsuba specs/bridges live in the per-block closer      *)
-(* files; the general (multi-N) support lemmas they need stay here.          *)
+(* The per-N GHASH Karatsuba specs/bridges live in the per-block closer       *)
+(* files; the general (multi-N) support lemmas they need stay here.           *)
 
 (* ---- polyval_dot expressed in Karatsuba + Prop3 form --------------------- *)
 
@@ -213,6 +213,20 @@ let WORD_JOIN_SELF_MID = prove(
      word_join (word_subword a (0,64):(64)word) (word_subword a (64,64):(64)word):(128)word`,
   CONV_TAC WORD_BLAST);;
 
+(* Subword-of-(swapped-halves) folds for the GHASH closure. *)
+
+let DOUBLE_SUBWORD_JOIN = prove(
+  `!(x:(128)word).
+    word_subword (word_subword (word_join x x:(256)word) (64,128):(128)word) (0,64):(64)word =
+    word_subword x (64,64)`,
+  CONV_TAC WORD_BLAST);;
+
+let DOUBLE_SUBWORD_JOIN_HI = prove(
+  `!(x:(128)word).
+    word_subword (word_subword (word_join x x:(256)word) (64,128):(128)word) (64,64):(64)word =
+    word_subword x (0,64)`,
+  CONV_TAC WORD_BLAST);;
+
 let SIMD_SIMPLIFY_ASSUM_TAC =
   RULE_ASSUM_TAC(fun th ->
     try REWRITE_RULE SIMD_SIMPLIFY_RULES th with _ -> th);;
@@ -268,10 +282,12 @@ let WORD_AND_MASK_SYM_64 = prove(
   REWRITE_TAC[MASK_IS_ONES_64; WORD_AND_NOT0]);;
 
 (* Stack/pointer arithmetic normalizer *)
+
 let STACK_PTR_CANCEL = WORD_RULE
   `!(x:(N)word) y. word_sub (word_add x y) y = x`;;
 
 (* ---- Per-step cleanup (called after every ARM_STEPS_TAC step) ------------ *)
+
 let GCM_ENC_SIMPLIFY_TAC =
   SIMD_SIMPLIFY_ASSUM_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_SWAP_HALVES_INVOLUTION;
@@ -359,15 +375,16 @@ let REV8_JOIN_FOLD = prove(
     word_reversefields 8 (word_join hi lo:(128)word)`,
   CONV_TAC WORD_BLAST);;
 
-(* ---- N-block GHASH_POLYVAL_ACC specializations (lengths 1..8) ----------- *)
-(* All of GHASH_POLYVAL_ACC_1..8 live here, derived from the ring-algebra    *)
-(* proof shape and from GHASH_POLYVAL_ACC_BATCHED (common/polyval_ghash.ml,  *)
-(* loaded before this file via `needs`).  The per-N proof files reference    *)
-(* these rather than redefining them.                                        *)
+(* ---- N-block GHASH_POLYVAL_ACC specializations (lengths 1..8) ------------ *)
+(* Each GHASH_POLYVAL_ACC_N rewrites the N-block accumulator into a single    *)
+(* Prop-3 reduction of the Horner XOR-sum of 256-bit carryless products       *)
+(*   (a XOR b1).h^N  XOR  b2.h^(N-1)  XOR ... XOR  bN.h.                      *)
+(* ACC_1 is the base case (proved directly); ACC_2..8 are uniform             *)
+(* specializations of GHASH_POLYVAL_ACC_BATCHED (common/polyval_ghash.ml,     *)
+(* loaded before this file via `needs`).  The per-N closer files reference    *)
+(* these rather than redefining them.                                         *)
 
-(* ========================================================================= *)
-(* 1-block base case: ghash_polyval_acc h a [b] = prop3(pmul (a XOR b) h).   *)
-(* ========================================================================= *)
+(* 1-block base case (proved directly from POLYVAL_DOT/PROP3, not batched). *)
 
 let GHASH_POLYVAL_ACC_1 = prove
  (`!(h:int128) (a:int128) (b:int128).
@@ -385,12 +402,7 @@ let GHASH_POLYVAL_ACC_1 = prove
       POLYVAL_REDUCE_PROP3_CORRECT) THEN
     REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
 
-(* ========================================================================= *)
-(* 2-block Horner unrolling: ghash_polyval_acc h a [b;c] = prop3(...)        *)
-(* Processing 2 GHASH blocks iteratively equals a batched computation:       *)
-(*   XOR of 256-bit polynomial multiplications followed by Prop 3 reduction  *)
-(* This matches the Loop_mod2x_v8 loop in ghashv8-armx.S                     *)
-(* ========================================================================= *)
+(* 2-block specialization of GHASH_POLYVAL_ACC_BATCHED. *)
 
 let GHASH_POLYVAL_ACC_2 = prove
  (`!(h:int128) (a:int128) (b:int128) (c:int128).
@@ -398,138 +410,34 @@ let GHASH_POLYVAL_ACC_2 = prove
     polyval_reduce_prop3
       (word_xor (word_pmul (word_xor a b) (polyval_dot h h) : 256 word)
                 (word_pmul c h : 256 word))`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[ghash_polyval_acc] THEN
-  MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
-  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-  EXISTS_TAC
-    `ring_add bool_poly
-      (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word h))
-      (ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word h))` THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-    EXISTS_TAC
-      `ring_mul bool_poly
-        (ring_add bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word (c:int128)))
-        (poly_of_word h)` THEN
-    CONJ_TAC THENL
-     [MP_TAC(ISPECL [`word_xor (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128)) (c:int128)`; `h:int128`] POLYVAL_DOT_CORRECT) THEN REWRITE_TAC[POLY_OF_WORD_XOR];
-      MATCH_MP_TAC MOD_POLYVAL_REFL_GEN THEN
-      SIMP_TAC[RING_MUL; RING_ADD; BOOL_POLY_OF_WORD] THEN
-      MATCH_MP_TAC(GSYM RING_ADD_RDISTRIB) THEN REWRITE_TAC[BOOL_POLY_OF_WORD]];
-    ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
-    MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-    EXISTS_TAC
-      `ring_add bool_poly
-        (ring_mul bool_poly (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))) (poly_of_word (polyval_dot (h:int128) h)))
-        (ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word h))` THEN
-    CONJ_TAC THENL
-     [MP_TAC(ISPECL [`word_xor (word_pmul (word_xor (a:int128) (b:int128)) (polyval_dot (h:int128) h) : 256 word) (word_pmul (c:int128) h : 256 word)`] POLYVAL_REDUCE_PROP3_CORRECT) THEN REWRITE_TAC[POLY_OF_WORD_XOR; POLY_OF_WORD_PMUL_2N];
-      MP_TAC(ISPECL
-        [`ring_mul bool_poly (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (b:int128))) (poly_of_word (polyval_dot (h:int128) h))`;
-         `ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (b:int128)) (h:int128))) (poly_of_word h)`;
-         `ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word (h:int128))`;
-         `ring_mul bool_poly (poly_of_word (c:int128)) (poly_of_word (h:int128))`] MOD_POLYVAL_ADD) THEN
-      ANTS_TAC THENL
-       [CONJ_TAC THENL
-         [REWRITE_TAC[INNER_CONG];
-          REWRITE_TAC[MOD_POLYVAL_REFL; RING_MUL; BOOL_POLY_OF_WORD]];
-        REWRITE_TAC[]] THEN
-      SIMP_TAC[RING_MUL; BOOL_POLY_OF_WORD]]]);;
-
-(* Helper: polyval_dot(a XOR p, h) * h^2 == a*h^3 + p*h^3 (mod Q), where     *)
-(* h^3 = polyval_dot h (polyval_dot h h).  Bridges via INNER_CONG_GEN, after *)
-(* commuting polyval_dot h h^2 = polyval_dot h^2 h (via WORD_PMUL_SYM).      *)
-(* Used by GHASH_POLYVAL_ACC_3 below.                                        *)
-let HELPER_3 = prove
- (`!(a:int128) (p:int128) (h:int128).
-    (ring_mul bool_poly (poly_of_word (polyval_dot (word_xor a p) h))
-       (poly_of_word (polyval_dot h h)) ==
-     ring_add bool_poly
-       (ring_mul bool_poly (poly_of_word a) (poly_of_word (polyval_dot h (polyval_dot h h))))
-       (ring_mul bool_poly (poly_of_word p) (poly_of_word (polyval_dot h (polyval_dot h h)))))
-    mod_polyval`,
   REPEAT GEN_TAC THEN
-  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-  EXISTS_TAC
-    `ring_mul bool_poly
-      (ring_add bool_poly (poly_of_word (a:int128)) (poly_of_word (p:int128)))
-      (poly_of_word (polyval_dot (h:int128) (polyval_dot h h)))` THEN
-  CONJ_TAC THENL
-   [SUBGOAL_THEN `polyval_dot (h:int128) (polyval_dot h h) = polyval_dot (polyval_dot (h:int128) h) h`
-      SUBST1_TAC THENL
-     [REWRITE_TAC[polyval_dot] THEN REWRITE_TAC[WORD_PMUL_SYM];
-      ALL_TAC] THEN
-    MP_TAC(ISPECL [`h:int128`; `word_xor (a:int128) (p:int128)`; `1`] INNER_CONG_GEN) THEN
-    REWRITE_TAC[TWO; ONE; h_power; POLY_OF_WORD_XOR];
-    MATCH_MP_TAC MOD_POLYVAL_REFL_GEN THEN
-    SIMP_TAC[RING_MUL; RING_ADD; BOOL_POLY_OF_WORD] THEN
-    MATCH_MP_TAC(GSYM RING_ADD_RDISTRIB) THEN REWRITE_TAC[BOOL_POLY_OF_WORD]]);;
+  MP_TAC (SPECL [`h:int128`; `[c:int128]`; `a:int128`; `b:int128`]
+                GHASH_POLYVAL_ACC_BATCHED) THEN
+  REWRITE_TAC[LENGTH; ghash_wide; h_power; ARITH; SUB_0] THEN
+  REWRITE_TAC[WORD_XOR_0] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  REWRITE_TAC[num_CONV `1`; h_power]);;
+
+(* 3-block specialization of GHASH_POLYVAL_ACC_BATCHED. *)
 
 let GHASH_POLYVAL_ACC_3 = prove
  (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128).
     ghash_polyval_acc h a [p:int128; q; r] =
     polyval_reduce_prop3
       (word_xor
-        (word_pmul (word_xor a p) (polyval_dot h (polyval_dot h h)) : 256 word)
+        (word_pmul (word_xor a p) (polyval_dot (polyval_dot h h) h) : 256 word)
        (word_xor
         (word_pmul q (polyval_dot h h) : 256 word)
         (word_pmul r h : 256 word)))`,
   REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [ghash_polyval_acc] THEN
-  REWRITE_TAC[GHASH_POLYVAL_ACC_2] THEN
-  REWRITE_TAC[WORD_PMUL_XOR] THEN
-  MATCH_MP_TAC(ISPEC `128` MOD_POLYVAL_CANCEL_VARPOW) THEN
-  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-  EXISTS_TAC
-    `poly_of_word (word_xor
-      (word_xor (word_pmul (polyval_dot (word_xor (a:int128) (p:int128)) (h:int128)) (polyval_dot h h))
-                (word_pmul (q:int128) (polyval_dot h h)))
-      (word_pmul (r:int128) (h:int128)) : 256 word)` THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[POLYVAL_REDUCE_PROP3_CORRECT];
-    ALL_TAC] THEN
-  ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN
-  MATCH_MP_TAC MOD_POLYVAL_TRANS THEN
-  EXISTS_TAC
-    `poly_of_word (word_xor
-      (word_xor (word_pmul (a:int128) (polyval_dot h (polyval_dot h h)))
-                (word_pmul (p:int128) (polyval_dot h (polyval_dot h h))))
-      (word_xor (word_pmul (q:int128) (polyval_dot h h))
-                (word_pmul (r:int128) (h:int128))) : 256 word)` THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[POLYVAL_REDUCE_PROP3_CORRECT];
-    ALL_TAC] THEN
-  REWRITE_TAC[POLY_OF_WORD_XOR; POLY_OF_WORD_PMUL_2N] THEN
-  MP_TAC(SPECL [`a:int128`; `p:int128`; `h:int128`] HELPER_3) THEN
-  REWRITE_TAC[mod_polyval] THEN DISCH_TAC THEN
-  ABBREV_TAC `pX = ring_mul bool_poly (poly_of_word (polyval_dot (word_xor (a:int128) (p:int128)) (h:int128))) (poly_of_word (polyval_dot (h:int128) h))` THEN
-  ABBREV_TAC `pY = ring_add bool_poly
-    (ring_mul bool_poly (poly_of_word (a:int128)) (poly_of_word (polyval_dot (h:int128) (polyval_dot h h))))
-    (ring_mul bool_poly (poly_of_word (p:int128)) (poly_of_word (polyval_dot (h:int128) (polyval_dot h h))))` THEN
-  ABBREV_TAC `pQ = ring_mul bool_poly (poly_of_word (q:int128)) (poly_of_word (polyval_dot (h:int128) h))` THEN
-  ABBREV_TAC `pR = ring_mul bool_poly (poly_of_word (r:int128)) (poly_of_word (h:int128))` THEN
-  SUBGOAL_THEN
-    `pX IN ring_carrier bool_poly /\ pY IN ring_carrier bool_poly /\ pQ IN ring_carrier bool_poly /\ pR IN ring_carrier bool_poly`
-    STRIP_ASSUME_TAC THENL
-   [MAP_EVERY EXPAND_TAC ["pX"; "pY"; "pQ"; "pR"] THEN
-    SIMP_TAC[RING_MUL; RING_ADD; BOOL_POLY_OF_WORD];
-    ALL_TAC] THEN
-  SUBGOAL_THEN
-    `ring_add bool_poly (ring_add bool_poly pX pQ) pR =
-     ring_add bool_poly pX (ring_add bool_poly pQ pR)`
-    SUBST1_TAC THENL
-   [MATCH_MP_TAC(GSYM RING_ADD_ASSOC) THEN ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  MATCH_MP_TAC MOD_POLYVAL_ADD THEN
-  CONJ_TAC THENL
-   [ONCE_REWRITE_TAC[MOD_POLYVAL_SYM] THEN ASM_REWRITE_TAC[];
-    MATCH_MP_TAC MOD_POLYVAL_REFL_GEN THEN ASM_SIMP_TAC[RING_ADD]]);;
+  MP_TAC (SPECL [`h:int128`; `[q:int128; r]`; `a:int128`; `p:int128`]
+                GHASH_POLYVAL_ACC_BATCHED) THEN
+  REWRITE_TAC[LENGTH; ghash_wide; h_power; ARITH; SUB_0] THEN
+  REWRITE_TAC[WORD_XOR_0] THEN
+  DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
+  REWRITE_TAC[num_CONV `2`; num_CONV `1`; h_power]);;
 
-(* ========================================================================= *)
-(* GHASH_POLYVAL_ACC_4: 4-block Horner unrolling specialization.             *)
-(* Derived directly from GHASH_POLYVAL_ACC_BATCHED for list [p;q;r;s].       *)
-(* Unfolds h_power 0..3 to the polyval_dot chain (h, h^2, h^3, h^4).         *)
-(* ========================================================================= *)
+(* 4-block specialization of GHASH_POLYVAL_ACC_BATCHED. *)
 
 let GHASH_POLYVAL_ACC_4 = prove
  (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128) (s:int128).
@@ -549,6 +457,8 @@ let GHASH_POLYVAL_ACC_4 = prove
   REWRITE_TAC[WORD_XOR_0] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
   REWRITE_TAC[num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
+
+(* 5-block specialization of GHASH_POLYVAL_ACC_BATCHED. *)
 
 let GHASH_POLYVAL_ACC_5 = prove
  (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128) (s:int128) (t:int128).
@@ -570,6 +480,8 @@ let GHASH_POLYVAL_ACC_5 = prove
   REWRITE_TAC[WORD_XOR_0] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
   REWRITE_TAC[num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
+
+(* 6-block specialization of GHASH_POLYVAL_ACC_BATCHED. *)
 
 let GHASH_POLYVAL_ACC_6 = prove
  (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128) (s:int128) (t:int128) (u:int128).
@@ -594,6 +506,8 @@ let GHASH_POLYVAL_ACC_6 = prove
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
   REWRITE_TAC[num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
 
+(* 7-block specialization of GHASH_POLYVAL_ACC_BATCHED. *)
+
 let GHASH_POLYVAL_ACC_7 = prove
  (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128) (s:int128) (t:int128) (u:int128) (z:int128).
     ghash_polyval_acc h a [p:int128; q; r; s; t; u; z] =
@@ -613,9 +527,7 @@ let GHASH_POLYVAL_ACC_7 = prove
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
   REWRITE_TAC[num_CONV `6`; num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
 
-(* ========================================================================= *)
-(* 8-block unrolling: ghash_polyval_acc h a [p;q;r;s;t;u;z;w8] = prop3(...). *)
-(* ========================================================================= *)
+(* 8-block specialization of GHASH_POLYVAL_ACC_BATCHED. *)
 
 let GHASH_POLYVAL_ACC_8 = prove
  (`!(h:int128) (a:int128) (p:int128) (q:int128) (r:int128) (s:int128) (t:int128) (u:int128) (z:int128) (w8:int128).
@@ -636,18 +548,3 @@ let GHASH_POLYVAL_ACC_8 = prove
   REWRITE_TAC[WORD_XOR_0] THEN
   DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
   REWRITE_TAC[num_CONV `7`; num_CONV `6`; num_CONV `5`; num_CONV `4`; num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
-
-(* ---- Subword-of-join folds for the GHASH closure -------------------------- *)
-
-let DOUBLE_SUBWORD_JOIN = prove(
-  `!(x:(128)word).
-    word_subword (word_subword (word_join x x:(256)word) (64,128):(128)word) (0,64):(64)word =
-    word_subword x (64,64)`,
-  CONV_TAC WORD_BLAST);;
-
-let DOUBLE_SUBWORD_JOIN_HI = prove(
-  `!(x:(128)word).
-    word_subword (word_subword (word_join x x:(256)word) (64,128):(128)word) (64,64):(64)word =
-    word_subword x (0,64)`,
-  CONV_TAC WORD_BLAST);;
-
