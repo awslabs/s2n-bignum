@@ -9,7 +9,8 @@
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
-(* ===== TWO-BLOCK: Karatsuba bridge ======================================= *)
+(* ===== 2-block GHASH Karatsuba spec ====================================== *)
+
 let ghash_2block_karatsuba = new_definition
  `ghash_2block_karatsuba (b1:int128) (b2:int128)
                          (h_tw:int128) (hk:int128)
@@ -53,17 +54,8 @@ let ghash_2block_karatsuba = new_definition
 
 (* ========================================================================= *)
 (* RELATIONSHIP TO ghash_Nblock_karatsuba                                    *)
-(*                                                                           *)
-(* The N=2 instance of ghash_Nblock_karatsuba — applied to                   *)
-(*   triples = [(b1, h_tw, hk); (b2, h2_tw, h2k)]                            *)
-(* — is structurally equivalent to ghash_2block_karatsuba. We prove this     *)
-(* compatibility theorem so the 2-block bridge can be derived from the       *)
-(* generic inductive bridge.                                                 *)
 (* ========================================================================= *)
 
-(* Note the N-block aggregator XOR-folds (pl, ph, pm) using fresh names;
-   ghash_2block_karatsuba uses inline pl1+pl2 etc. They are equal under
-   simple unfolding. *)
 let GHASH_2BLOCK_AS_NBLOCK = prove
  (`!(b1:int128) (b2:int128) (h_tw:int128) (hk:int128)
     (h2_tw:int128) (h2k:int128).
@@ -75,15 +67,13 @@ let GHASH_2BLOCK_AS_NBLOCK = prove
               karatsuba_block_pm; karatsuba_reduce_shared;
               LET_DEF; LET_END_DEF; WORD_XOR_0; WORD_XOR_0_LEFT] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[]);;
+  REWRITE_TAC[WORD_XOR_ASSOC]);;
 
 (* ========================================================================= *)
 (* PER-N BRIDGE: ghash_2block_karatsuba ↔ polyval_reduce_prop3               *)
 (*                                                                           *)
-(* The bridge GHASH_2BLOCK_KARATSUBA_EQ_POLYVAL_ACC (proven below) is what   *)
-(* the GHASH closure applies. It corresponds to the generic inductive bridge *)
-(* GHASH_NBLOCK_KARATSUBA_EQ_PROP3 specialised via GHASH_2BLOCK_AS_NBLOCK +  *)
-(* GHASH_POLYVAL_ACC_2.                                                      *)
+(* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)       *)
+(* + GHASH_2BLOCK_AS_NBLOCK + GHASH_POLYVAL_ACC_2.                           *)
 (* ========================================================================= *)
 
 let GHASH_2BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove

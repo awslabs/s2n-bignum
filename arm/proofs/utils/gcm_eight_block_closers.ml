@@ -9,6 +9,8 @@
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
+(* ===== 8-block GHASH Karatsuba spec ====================================== *)
+
 let ghash_8block_karatsuba = new_definition
  `ghash_8block_karatsuba (b1:int128) (b2:int128) (b3:int128) (b4:int128) (b5:int128) (b6:int128) (b7:int128) (b8:int128)
                          (h_tw:int128)  (hk:int128)
@@ -105,6 +107,9 @@ let ghash_8block_karatsuba = new_definition
   word_reversefields 8 (word_join g f : 128 word)`;;
 
 (* ========================================================================= *)
+(* RELATIONSHIP TO ghash_Nblock_karatsuba                                    *)
+(* ========================================================================= *)
+
 let GHASH_8BLOCK_AS_NBLOCK = prove
  (`!(b1:int128) (b2:int128) (b3:int128) (b4:int128) (b5:int128) (b6:int128) (b7:int128) (b8:int128)
     (h_tw:int128)  (hk:int128)
@@ -126,6 +131,12 @@ let GHASH_8BLOCK_AS_NBLOCK = prove
   REWRITE_TAC[WORD_XOR_ASSOC]);;
 
 (* ========================================================================= *)
+(* PER-N BRIDGE: ghash_8block_karatsuba ↔ polyval_reduce_prop3               *)
+(*                                                                           *)
+(* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)       *)
+(* + GHASH_8BLOCK_AS_NBLOCK + GHASH_POLYVAL_ACC_8 + POLYVAL_DOT_H8_EQ.       *)
+(* ========================================================================= *)
+
 let GHASH_8BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
  (`!(b1:int128) (b2:int128) (b3:int128) (b4:int128) (b5:int128) (b6:int128) (b7:int128) (b8:int128) (h:int128)
      (hk:int128) (h2k:int128) (h3k:int128) (h4k:int128) (h5k:int128) (h6k:int128) (h7k:int128) (h8k:int128).

@@ -9,7 +9,9 @@
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
-(* ===== 1-block GHASH Karatsuba spec + bridges to the ghash_polyval_acc spec *)
+(* ===== 1-block GHASH Karatsuba spec ====================================== *)
+(* Base case: the spec and its two direct bridges (to polyval_dot, then to    *)
+(* ghash_polyval_acc) live together; there is no GHASH_1BLOCK_AS_NBLOCK.       *)
 
 let ghash_1block_karatsuba = new_definition
  `ghash_1block_karatsuba (input:int128) (h:int128) (hk:int128) : int128 =
@@ -74,7 +76,7 @@ let GHASH_1BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove
     MP_TAC(ISPECL [`word_pmul (b1:int128) (h:int128) : 256 word`] POLYVAL_REDUCE_PROP3_CORRECT) THEN
     REWRITE_TAC[POLY_OF_WORD_PMUL_2N]]);;
 
-(* ===== ONE-BLOCK: partial-block mask + ciphertext closers ================ *)
+(* ===== Per-block ciphertext closers + partial-final-block helpers ======== *)
 
 (* The returned byte length: x9 = (8*byte_len) >> 3 = byte_len for byte_len <= 16. *)
 let ONE_BLOCK_USHR_BYTELEN = prove

@@ -9,6 +9,8 @@
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
+(* ===== 7-block GHASH Karatsuba spec ====================================== *)
+
 let ghash_7block_karatsuba = new_definition
  `ghash_7block_karatsuba (b1:int128) (b2:int128) (b3:int128) (b4:int128) (b5:int128) (b6:int128) (b7:int128)
                          (h_tw:int128)  (hk:int128)
@@ -119,7 +121,10 @@ let GHASH_7BLOCK_AS_NBLOCK = prove
   REWRITE_TAC[WORD_XOR_ASSOC]);;
 
 (* ========================================================================= *)
-(* PER-N BRIDGE: ghash_7block_karatsuba <-> polyval_reduce_prop3             *)
+(* PER-N BRIDGE: ghash_7block_karatsuba ↔ polyval_reduce_prop3               *)
+(*                                                                           *)
+(* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)       *)
+(* + GHASH_7BLOCK_AS_NBLOCK + GHASH_POLYVAL_ACC_7 + POLYVAL_DOT_H7_EQ.       *)
 (* ========================================================================= *)
 
 let GHASH_7BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove

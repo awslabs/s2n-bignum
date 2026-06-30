@@ -9,7 +9,8 @@
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
-(* ===== 3-block GHASH Karatsuba spec + bridge to the ghash_polyval_acc spec  *)
+(* ===== 3-block GHASH Karatsuba spec ====================================== *)
+
 let ghash_3block_karatsuba = new_definition
  `ghash_3block_karatsuba (b1:int128) (b2:int128) (b3:int128)
                          (h_tw:int128)  (hk:int128)
@@ -83,7 +84,7 @@ let GHASH_3BLOCK_AS_NBLOCK = prove
 (* PER-N BRIDGE: ghash_3block_karatsuba ↔ polyval_reduce_prop3               *)
 (*                                                                           *)
 (* DERIVED from GHASH_NBLOCK_KARATSUBA_EQ_PROP3 (the inductive bridge)       *)
-(* + GHASH_3BLOCK_AS_NBLOCK.                                                 *)
+(* + GHASH_3BLOCK_AS_NBLOCK + GHASH_POLYVAL_ACC_3 + POLYVAL_DOT_H3_EQ.       *)
 (* ========================================================================= *)
 
 let GHASH_3BLOCK_KARATSUBA_EQ_POLYVAL_ACC = prove

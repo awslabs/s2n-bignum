@@ -9,6 +9,8 @@
 
 needs "arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml";;
 
+(* ===== 4-block GHASH Karatsuba spec ====================================== *)
+
 let ghash_4block_karatsuba = new_definition
  `ghash_4block_karatsuba (b1:int128) (b2:int128) (b3:int128) (b4:int128)
                          (h_tw:int128)  (hk:int128)
