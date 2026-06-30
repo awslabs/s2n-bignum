@@ -54,7 +54,7 @@ extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
 typedef struct { uint64_t hi, lo; } u128;
 #endif
 
-// AES_256_GCM encrypt (single binary, all length paths)
+// AES-256-GCM encrypt (single binary, all length paths)
 // Inputs in[bit_len], bit_len, xi[16], ivec[16], key[16], htable[16]; outputs out[bit_len], xi[16]
 extern size_t aes256_gcm (const uint8_t *in, size_t bit_len, uint8_t *out, uint8_t *xi, uint8_t ivec[16], const void *key, const u128 htable[16]);
 

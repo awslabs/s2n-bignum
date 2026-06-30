@@ -17,16 +17,12 @@ needs "common/karatsuba_pmul.ml";;
 needs "common/polyval_ghash.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* AES256_ENCRYPT_UNFOLD: rewrite the upstream math-level aes256_encrypt     *)
-(* (applied to a literal 15-element round-key list) into the aese/aesmc      *)
-(* instruction chain that symbolic execution of the AESE+AESMC sequence      *)
-(* produces. The GCM keystream is computed by aes256_encrypt; every          *)
-(* per-block ciphertext- and keystream-fold matches the simulator's          *)
-(* aese/aesmc form against the spec via this lemma. Its RHS stops at         *)
-(* aese/aesmc (not dissolved into sub_bytes/shift_rows/mix_columns the way   *)
-(* XTS's AESENC_TAC does), and it is a rewrite-rule theorem (unlike the      *)
-(* upstream AESENC_HELPER_CONV conversion), so it slots into the closers'    *)
-(* REWRITE_TAC lists and RULE_ASSUM_TAC(REWRITE_RULE ...) calls.             *)
+(* Unfold aes256_encrypt on a literal round-key list to the aese/aesmc chain. *)
+(* This is the form symbolic execution of the AESE+AESMC sequence emits, so   *)
+(* the per-block ciphertext/keystream folds match the simulator.  Kept as a   *)
+(* rewrite rule (not a conversion like the upstream AESENC_* ones) so it can  *)
+(* be used in the closers' REWRITE_TAC lists and RULE_ASSUM_TAC calls, and    *)
+(* stops at aese/aesmc rather than dissolving them into sub/shift/mix.        *)
 (* ------------------------------------------------------------------------- *)
 
 let AES256_ENCRYPT_UNFOLD = prove
@@ -56,66 +52,6 @@ let AES256_ENCRYPT_UNFOLD = prove
               LET_DEF; LET_END_DEF] THEN
   CONV_TAC(DEPTH_CONV EL_CONV) THEN REWRITE_TAC[]);;
 
-(* ------------------------------------------------------------------------- *)
-(* WORD_SIMPLE_SUBWORD_CONV compatibility shim.                              *)
-(*                                                                           *)
-(* HOL commit b9a430b (Dec 2025, in the current checkpoint base) reordered   *)
-(* WORD_SIMPLE_SUBWORD_CONV to try the trivial size-match rewrite FIRST and  *)
-(* `failwith` in its catch-all, instead of trying the structural word_join / *)
-(* word_insert / word_subword / word_zx cases first and falling back to      *)
-(* WORD_SUBWORD_TRIVIAL.  The new conversion no longer collapses the nested  *)
-(* word_subword (word_join ...) ... byte-shuffle networks that every GCM     *)
-(* GHASH closer produces when it expands final_xi, so all the per-band       *)
-(* closers (which call WORD_SIMPLE_SUBWORD_CONV by name) stop closing.       *)
-(*                                                                           *)
-(* Rather than port every closer, we re-bind WORD_SIMPLE_SUBWORD_CONV to the *)
-(* verbatim pre-b9a430b definition here, restoring the term normal form the  *)
-(* whole proof was written against.  This is loaded after the ARM model,     *)
-(* which drives its own simplification through the late-bound                *)
-(* `extra_word_CONV` ref (NOT this name), so the symbolic simulator is       *)
-(* unaffected.  All supporting theorems exist unchanged in the current base. *)
-(* ------------------------------------------------------------------------- *)
-
-let WORD_SIMPLE_SUBWORD_COMPAT_CONV =
-  let dimarith_conv = DEPTH_CONV(!word_SIZE_CONV ORELSEC NUM_RED_CONV) in
-  let dimarith_rule th =
-    MP th (EQT_ELIM(dimarith_conv(lhand(concl th))))
-  and post_rule =
-     CONV_RULE(RAND_CONV(RAND_CONV(BINOP_CONV dimarith_conv)))
-  and triv_rule =
-     GEN_REWRITE_RULE (RAND_CONV o TRY_CONV) [WORD_DUPLICATE_REFL] in
-  let [rules_join; rules_insert; rules_zx; rules_subword; rules_duplicate;
-       [rule_duplicate]; [rule_trivial]] =
-  map (map (PART_MATCH (lhand o rand)))
-   [[WORD_SUBWORD_JOIN_LOWER; WORD_SUBWORD_JOIN_UPPER];
-    [WORD_SUBWORD_INSERT_OUTER; WORD_SUBWORD_INSERT_INNER];
-    [WORD_SUBWORD_ZX_TRIVIAL; WORD_SUBWORD_ZX];
-    [WORD_SUBWORD_SUBWORD]; [WORD_SUBWORD_DUPLICATE];
-    [WORD_SUBWORD_DUPLICATE_DUPLICATE];
-    [WORD_SUBWORD_TRIVIAL]] in
-  fun tm ->
-    match tm with
-      Comb(Comb(Const("word_subword",_),itm),
-           Comb(Comb(Const(",",_),Comb(Const("NUMERAL",_),_)),
-                Comb(Const("NUMERAL",_),_))) ->
-     (match itm with
-        Comb(Comb(Const("word_join",_),_),_) ->
-           post_rule(tryfind (fun f -> dimarith_rule(f tm)) rules_join)
-      | Comb(Comb(Comb(Const("word_insert",_),_),_),_) ->
-           post_rule(tryfind (fun f -> dimarith_rule(f tm)) rules_insert)
-      | Comb(Comb(Const("word_subword",_),_),_) ->
-           post_rule(tryfind (fun f -> dimarith_rule(f tm)) rules_subword)
-      | Comb(Const("word_zx",_),_) ->
-           tryfind (fun f -> dimarith_rule(f tm)) rules_zx
-      | Comb(Const("word_duplicate",_),_) ->
-         (try triv_rule(dimarith_rule(rule_duplicate tm))
-          with Failure _ ->
-           post_rule(tryfind (fun f -> dimarith_rule(f tm)) rules_duplicate))
-      | _ -> dimarith_rule(rule_trivial tm))
-    | _ -> failwith "WORD_SIMPLE_SUBWORD_COMPAT_CONV";;
-
-(* Globally restore the pre-b9a430b behaviour for the rest of this proof. *)
-let WORD_SIMPLE_SUBWORD_CONV = WORD_SIMPLE_SUBWORD_COMPAT_CONV;;
 
 (* ---- Karatsuba limb extraction lemmas (256-bit word_pmul layout) --------- *)
 
