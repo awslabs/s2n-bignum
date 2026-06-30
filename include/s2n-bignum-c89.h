@@ -1240,6 +1240,7 @@ extern void sha3_keccak2_f1600_alt(uint64_t a[50],const uint64_t rc[24]);
 /* Inputs a[100], rc[24]; output a[100] */
 extern void sha3_keccak4_f1600(uint64_t a[100],const uint64_t rc[24]);
 #ifdef __x86_64__
+/* Inputs a[100], rc[24], rho8[4], rho56[4]; output a[100] */
 extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24],const uint64_t rho8[4],const uint64_t rho56[4]);
 #else
 extern void sha3_keccak4_f1600_alt(uint64_t a[100],const uint64_t rc[24]);
