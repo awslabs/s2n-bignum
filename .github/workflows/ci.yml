@@ -66,12 +66,14 @@ jobs:
         ln -s /usr/local/bin/cmake /usr/local/bin/cmake3
 
     - name: Run tests
+      env:
+        PR_REPO_FULL_NAME: ${{ github.event.pull_request.head.repo.full_name }}
       run: |
-        echo "Run AWS-LC integration test (GITHUB_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}, GITHUB_TARGET: $GITHUB_HEAD_REF)"
+        echo "Run AWS-LC integration test (GITHUB_REPOSITORY: $PR_REPO_FULL_NAME, GITHUB_TARGET: $GITHUB_HEAD_REF)"
         git clone https://github.com/aws/aws-lc.git --depth=1
         cd aws-lc/third_party/s2n-bignum
         rm -rf ./s2n-bignum-imported
-        GITHUB_REPOSITORY=${{ github.event.pull_request.head.repo.full_name }}.git GITHUB_TARGET=$GITHUB_HEAD_REF ./import.sh
+        GITHUB_REPOSITORY="${PR_REPO_FULL_NAME}.git" GITHUB_TARGET="$GITHUB_HEAD_REF" ./import.sh
         cd ../../../
         mkdir aws-lc-build && cd aws-lc-build
         cmake3 -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DFIPS=On ../aws-lc
