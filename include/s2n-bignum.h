@@ -1251,6 +1251,10 @@ extern void sha3_keccak4_f1600_alt(uint64_t a[S2N_BIGNUM_STATIC 100],const uint6
 #endif
 extern void sha3_keccak4_f1600_alt2(uint64_t a[S2N_BIGNUM_STATIC 100],const uint64_t rc[S2N_BIGNUM_STATIC 24]);
 
+// SHA-512 block compression (no SHA-NI or SIMD)
+// Inputs state[8], data[64*num_blocks]; output state[8]
+extern void sha512_compress(uint64_t state[S2N_BIGNUM_STATIC 8],const uint8_t *data,size_t num_blocks);
+
 // Point addition on CC curve SM2 in Montgomery-Jacobian coordinates
 // Inputs p1[12], p2[12]; output p3[12]
 extern void sm2_montjadd(uint64_t p3[S2N_BIGNUM_STATIC 12],const uint64_t p1[S2N_BIGNUM_STATIC 12],const uint64_t p2[S2N_BIGNUM_STATIC 12]);

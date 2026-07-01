@@ -356,6 +356,7 @@ onlyInX86 = [
   "mlkem_ntt_x86",
   "mlkem_intt_x86",
   "mlkem_unpack",
+  "sha512_compress",
 ]
 
 for arch in ["arm","x86"]:

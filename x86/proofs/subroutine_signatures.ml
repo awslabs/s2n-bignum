@@ -5768,6 +5768,24 @@ let subroutine_signatures = [
    ])
 );
 
+("sha512_compress",
+  ([(*args*)
+     ("state", "uint64_t[static 8]", (*is const?*)"false");
+     ("data", "uint8_t*", (*is const?*)"true");
+     ("num_blocks", "size_t", (*is const?*)"false");
+   ],
+   "void",
+   [(* input buffers *)
+    ("state", "8"(* num elems *), 8(* elem bytesize *));
+    ("data", "64*num_blocks"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("state", "8"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("sm2_montjadd",
   ([(*args*)
      ("p3", "uint64_t[static 12]", (*is const?*)"false");
