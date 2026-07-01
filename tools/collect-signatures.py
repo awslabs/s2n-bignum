@@ -351,6 +351,7 @@ onlyInX86 = [
   "mldsa_pointwise_x86",
   "mldsa_caddq",
   "mldsa_reduce",
+  "mldsa_rej_uniform",
   "mlkem_frombytes",
   "mlkem_mulcache_compute_x86",
   "mlkem_ntt_x86",
