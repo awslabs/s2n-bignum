@@ -15779,7 +15779,11 @@ int test_secp256k1_jmixadd_alt(void)
 // The function requires num_blocks >= 1 (do-while loop).
 
 int test_sha512_compress(void)
-{ uint64_t t;
+{
+#ifndef __x86_64__
+  return 1;
+#else
+  uint64_t t;
   int i;
   size_t num;
   uint64_t state_ref[8], state_asm[8];
@@ -15890,6 +15894,7 @@ int test_sha512_compress(void)
    }
   printf("All OK\n");
   return 0;
+#endif
 }
 
 int test_sha3_keccak_f1600(void)
