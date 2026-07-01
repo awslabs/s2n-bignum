@@ -823,5 +823,199 @@ let SHA3_KECCAK_F1600_WINDOWS_SUBROUTINE_CORRECT = prove
                      memory :> bytes(word_sub stackpointer (word 272),272)])`,
 let TWEAK_CONV = ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV in
   CONV_TAC TWEAK_CONV THEN
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE 
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE
   (CONV_RULE TWEAK_CONV SHA3_KECCAK_F1600_NOIBT_WINDOWS_SUBROUTINE_CORRECT)));;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "sha3_keccak_f1600" subroutine_signatures)
+    SHA3_KECCAK_F1600_CORRECT
+    SHA3_KECCAK_F1600_EXEC;;
+
+let SHA3_KECCAK_F1600_SAFE = time prove
+ (`exists f_events.
+       forall e rc_pointer bitstate_in pc stackpointer.
+           nonoverlapping_modulo (2 EXP 64) (pc, 0x66a) (val stackpointer, 208) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, 0x66a) (val bitstate_in, 200) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, 0x66a) (val rc_pointer, 192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val rc_pointer,192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val stackpointer, 208) /\
+           nonoverlapping_modulo (2 EXP 64) (val stackpointer, 208) (val rc_pointer,192)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST sha3_keccak_f1600_tmc) /\
+                    read RIP s = word (pc + 0x11) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [bitstate_in; rc_pointer] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 0x658) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events rc_pointer bitstate_in pc stackpointer /\
+                         memaccess_inbounds e2
+                         [bitstate_in,200; rc_pointer,192; stackpointer,208]
+                         [bitstate_in,200; stackpointer,208]))
+               (MAYCHANGE [RIP; RAX; RBX; RCX; RDX; RBP;
+                           R8; R9; R10; R11; R12; R13; R14; R15; RDI; RSI] ,,
+                MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bytes (stackpointer, 208)] ,,
+                MAYCHANGE [memory :> bytes (bitstate_in, 200)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SHA3_KECCAK_F1600_EXEC);;
+
+let SHA3_KECCAK_F1600_NOIBT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e rc_pointer bitstate_in pc stackpointer returnaddress.
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_tmc) (val (word_sub stackpointer (word 256)), 256) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_tmc) (val bitstate_in, 200) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_tmc) (val rc_pointer, 192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val rc_pointer,192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val (word_sub stackpointer (word 256)), 264) /\
+           nonoverlapping_modulo (2 EXP 64) (val (word_sub stackpointer (word 256)), 256) (val rc_pointer,192)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) sha3_keccak_f1600_tmc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [bitstate_in; rc_pointer] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events rc_pointer bitstate_in pc
+                         (word_sub stackpointer (word 256)) returnaddress /\
+                         memaccess_inbounds e2
+                         [bitstate_in,200; rc_pointer,192;
+                          word_sub stackpointer (word 256),264]
+                         [bitstate_in,200;
+                          word_sub stackpointer (word 256),256]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (bitstate_in, 200);
+                           memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  X86_PROMOTE_RETURN_STACK_TAC sha3_keccak_f1600_tmc SHA3_KECCAK_F1600_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 256 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let SHA3_KECCAK_F1600_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e rc_pointer bitstate_in pc stackpointer returnaddress.
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_mc) (val (word_sub stackpointer (word 256)), 256) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_mc) (val bitstate_in, 200) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_mc) (val rc_pointer, 192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val rc_pointer,192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val (word_sub stackpointer (word 256)), 264) /\
+           nonoverlapping_modulo (2 EXP 64) (val (word_sub stackpointer (word 256)), 256) (val rc_pointer,192)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) sha3_keccak_f1600_mc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    C_ARGUMENTS [bitstate_in; rc_pointer] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events rc_pointer bitstate_in pc
+                         (word_sub stackpointer (word 256)) returnaddress /\
+                         memaccess_inbounds e2
+                         [bitstate_in,200; rc_pointer,192;
+                          word_sub stackpointer (word 256),264]
+                         [bitstate_in,200;
+                          word_sub stackpointer (word 256),256]))
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (bitstate_in, 200);
+                           memory :> bytes(word_sub stackpointer (word 256),256)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SHA3_KECCAK_F1600_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let SHA3_KECCAK_F1600_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e rc_pointer bitstate_in pc stackpointer returnaddress.
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val (word_sub stackpointer (word 272)), 272) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val bitstate_in, 200) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_tmc) (val rc_pointer, 192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val rc_pointer,192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val (word_sub stackpointer (word 272)), 280) /\
+           nonoverlapping_modulo (2 EXP 64) (val (word_sub stackpointer (word 272)), 272) (val rc_pointer,192)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) sha3_keccak_f1600_windows_tmc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    WINDOWS_C_ARGUMENTS [bitstate_in; rc_pointer] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events rc_pointer bitstate_in pc
+                         (word_sub stackpointer (word 272)) returnaddress /\
+                         memaccess_inbounds e2
+                         [bitstate_in,200; rc_pointer,192;
+                          word_sub stackpointer (word 272),280]
+                         [bitstate_in,200;
+                          word_sub stackpointer (word 272),272]))
+               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (bitstate_in, 200);
+                           memory :> bytes(word_sub stackpointer (word 272),272)])`,
+  WINDOWS_X86_WRAP_STACK_TAC
+    sha3_keccak_f1600_windows_tmc sha3_keccak_f1600_tmc
+    SHA3_KECCAK_F1600_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 256 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let SHA3_KECCAK_F1600_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e rc_pointer bitstate_in pc stackpointer returnaddress.
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val (word_sub stackpointer (word 272)), 272) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val bitstate_in, 200) /\
+           nonoverlapping_modulo (2 EXP 64) (pc, LENGTH sha3_keccak_f1600_windows_mc) (val rc_pointer, 192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val rc_pointer,192) /\
+           nonoverlapping_modulo (2 EXP 64) (val bitstate_in,200) (val (word_sub stackpointer (word 272)), 280) /\
+           nonoverlapping_modulo (2 EXP 64) (val (word_sub stackpointer (word 272)), 272) (val rc_pointer,192)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) sha3_keccak_f1600_windows_mc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    WINDOWS_C_ARGUMENTS [bitstate_in; rc_pointer] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events rc_pointer bitstate_in pc
+                         (word_sub stackpointer (word 272)) returnaddress /\
+                         memaccess_inbounds e2
+                         [bitstate_in,200; rc_pointer,192;
+                          word_sub stackpointer (word 272),280]
+                         [bitstate_in,200;
+                          word_sub stackpointer (word 272),272]))
+               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (bitstate_in, 200);
+                           memory :> bytes(word_sub stackpointer (word 272),272)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE SHA3_KECCAK_F1600_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

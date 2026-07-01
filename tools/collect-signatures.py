@@ -433,18 +433,24 @@ for archname in ["arm","x86"]:
       else:
         assert False, f"Unknown type: {argtype}!"
 
-    # input and output buffers
+    # input and output buffers.
+    # Buffer info comes from the single (shared) s2n-bignum.h comment, but a few
+    # functions take different arguments per arch (e.g. sha3_keccak4_f1600_alt
+    # has rho8/rho56 on x86 only). Skip buffers whose argument is absent from
+    # this arch's signature.
+    def emit_buffers(buffers):
+      for argname, bufferlen in buffers:
+        if argname not in arg_elem_bytesizes:
+          continue
+        f.write(f'    ("{argname}", "{bufferlen}"(* num elems *), {arg_elem_bytesizes[argname]}(* elem bytesize *));\n')
     f.write(f'   [(* input buffers *)\n')
-    for argname, bufferlen in meminout.meminputs:
-      f.write(f'    ("{argname}", "{bufferlen}"(* num elems *), {arg_elem_bytesizes[argname]}(* elem bytesize *));\n')
+    emit_buffers(meminout.meminputs)
     f.write(f'   ],\n')
     f.write(f'   [(* output buffers *)\n')
-    for argname, bufferlen in meminout.memoutputs:
-      f.write(f'    ("{argname}", "{bufferlen}"(* num elems *), {arg_elem_bytesizes[argname]}(* elem bytesize *));\n')
+    emit_buffers(meminout.memoutputs)
     f.write(f'   ],\n')
     f.write(f'   [(* temporary buffers *)\n')
-    for argname, bufferlen in meminout.temporaries:
-      f.write(f'    ("{argname}", "{bufferlen}"(* num elems *), {arg_elem_bytesizes[argname]}(* elem bytesize *));\n')
+    emit_buffers(meminout.temporaries)
     f.write(f'   ])\n')
 
     f.write(");\n\n")
