@@ -15774,11 +15774,9 @@ int test_secp256k1_jmixadd_alt(void)
   return 0;
 }
 
-// SHA-512 scalar x86 block compression (x86-only function; declared in
-// s2n-bignum.h). The function requires num_blocks >= 1 (do-while loop), so
-// num_blocks = 0 is deliberately not tested.
-
-#ifdef __x86_64__
+// SHA-512 scalar x86 block compression (no SHA-NI or SIMD).
+//
+// The function requires num_blocks >= 1 (do-while loop).
 
 int test_sha512_compress(void)
 { uint64_t t;
@@ -15893,8 +15891,6 @@ int test_sha512_compress(void)
   printf("All OK\n");
   return 0;
 }
-
-#endif // __x86_64__
 
 int test_sha3_keccak_f1600(void)
 { uint64_t t, i;
@@ -17914,9 +17910,6 @@ int main(int argc, char *argv[])
   functionaltest(all,"sha3_keccak_f1600",test_sha3_keccak_f1600);
   functionaltest(all,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
   functionaltest(all,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
-#ifdef __x86_64__
-  functionaltest(all,"sha512_compress",test_sha512_compress);
-#endif // __x86_64__
   functionaltest(bmi,"sm2_montjadd",test_sm2_montjadd);
   functionaltest(all,"sm2_montjadd_alt",test_sm2_montjadd_alt);
   functionaltest(bmi,"sm2_montjdouble",test_sm2_montjdouble);
@@ -17950,6 +17943,10 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+  }
+
+  if (get_arch_name() == ARCH_X86_64) {
+    functionaltest(all,"sha512_compress",test_sha512_compress);
   }
 
   if (extrastrigger) function_to_test = "_";
