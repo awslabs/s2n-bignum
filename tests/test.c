@@ -16447,6 +16447,10 @@ int test_known_values_p384(void)
 
 #include "ref_aes_xts.c"
 
+// Minimal AES-256-GCM reference (reuses the AES from ref_aes_xts.c above;
+// must be included after it).
+#include "ref_aes_gcm.c"
+
 // Helpers for writing XTS tests
 void assign_bytearray_from_hexstring(uint8_t *bytearr, const char *hexstr, int len)
 {
@@ -16699,6 +16703,246 @@ int test_aes_xts_roundtrip(void)
      else if (VERBOSE)
       { printf("OK: roundtrip len=%zu\n", len);
       }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+// ***************************************************************************
+// AES-256-GCM tests for the single-binary aes256_gcm assembly routine.
+//
+// aes256_gcm CTR-encrypts the plaintext and GHASH-accumulates the ciphertext
+// into xi (it does NOT finalize the tag).  The tests below set it up exactly as
+// the spec requires (240-byte expanded round keys, J0+1 counter, 16-slot
+// twisted-H Htable) and compare ct + xi against the pure-C reference in
+// ref_aes_gcm.c, plus NIST CAVP known-answer vectors (ct + finalized tag).
+// All ARM-only (the routine exists only in the aarch64 library).
+// ***************************************************************************
+
+#ifndef __x86_64__
+// Build the expanded key, the raw GHASH key H, and the 16-slot Htable that
+// aes256_gcm expects, from a 32-byte AES-256 key.
+static void gcm_setup(const uint8_t key[32], s2n_bignum_AES_KEY *ek,
+                      u128 Htable[16])
+{ ref_aes256_expand_key(key, ek);
+  uint8_t H_bytes[16] = {0};
+  ref_aes256_encrypt_block(H_bytes, H_bytes, ek);   // H = AES_K(0^128)
+  memset(Htable, 0, 16 * sizeof(u128));
+  uint64_t H_be[2] = { reference_wordbytereverse(((uint64_t *)H_bytes)[0]),
+                       reference_wordbytereverse(((uint64_t *)H_bytes)[1]) };
+  ref_gcm_init_v8(Htable, H_be);   // build the kernel's Htable (C reference)
+}
+
+// Parse a hex string into n bytes (for the NIST vectors).
+static void gcm_hex_to_bytes(const char *h, uint8_t *out, int n)
+{ for (int i = 0; i < n; i++)
+   { unsigned v; sscanf(h + 2*i, "%2x", &v); out[i] = (uint8_t)v; }
+}
+#endif
+
+// Random key/nonce/plaintext at every total length 1..128 bytes (N = 1..8
+// blocks, last block partial 1..16): assembly vs pure-C reference, checking the
+// full 16*N ciphertext bytes (so partial-block tail preservation is verified)
+// and the GHASH accumulator xi.
+int test_aes256_gcm(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  printf("Testing aes256_gcm on all tail lengths 1..128 bytes with %d cases each\n", tests);
+
+  for (uint64_t total = 1; total <= 128; ++total)
+   { int N = (int)((total + 15) / 16);           // block count 1..8
+     int byte_len = (int)(total - 16*(N-1));     // last-block bytes, 1..16
+     size_t bit_len = (size_t)(128*(N-1) + 8*byte_len);
+
+     for (uint64_t i = 0; i < (uint64_t)tests; ++i)
+      { uint8_t key[32];
+        random_bytes(key, 32);
+        s2n_bignum_AES_KEY ek;
+        u128 Htable[16];
+        gcm_setup(key, &ek, Htable);
+
+        uint8_t nonce[12];
+        random_bytes(nonce, 12);
+        random_bytes(bb1, 16*N);                 // plaintext
+
+        // Both output buffers preloaded with the SAME sentinel out0; the
+        // routine must preserve the bytes past the message end (bif store).
+        for (int j = 0; j < 16*N; j++)
+         { uint8_t s = (uint8_t)(0xA5 ^ j); bb2[j] = s; bb3[j] = s; }
+
+        uint8_t ivec_asm[16] = {0};
+        memcpy(ivec_asm, nonce, 12); ivec_asm[15] = 2;   // J0+1
+        uint8_t Xi_asm[16] = {0};
+        size_t ret = aes256_gcm(bb1, bit_len, bb2, Xi_asm, ivec_asm,
+                                (const void *)ek.rd_key, Htable);
+
+        uint8_t ivec_ref[16] = {0};
+        memcpy(ivec_ref, nonce, 12); ivec_ref[15] = 2;
+        uint8_t Xi_ref[16] = {0};
+        reference_aes256_gcm_blocks(bb1, N, byte_len, bb3, Xi_ref,
+                                    ivec_ref, &ek, Htable);
+
+        if (ret != total)
+         { printf("### aes256_gcm L=%"PRIu64" (N=%d,bl=%d) case %"PRIu64": ret %zu != %"PRIu64"\n",
+                  total, N, byte_len, i, ret, total); return 1; }
+        if (memcmp(bb2, bb3, 16*N) != 0)
+         { printf("### aes256_gcm L=%"PRIu64" (N=%d,bl=%d) case %"PRIu64": ciphertext mismatch\n",
+                  total, N, byte_len, i); return 1; }
+        if (memcmp(Xi_asm, Xi_ref, 16) != 0)
+         { printf("### aes256_gcm L=%"PRIu64" (N=%d,bl=%d) case %"PRIu64": xi mismatch\n",
+                  total, N, byte_len, i); return 1; }
+        else if (VERBOSE)
+         { printf("OK: aes256_gcm L=%"PRIu64" (N=%d, byte_len=%d)\n", total, N, byte_len); }
+      }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+// Deterministic all-zero key/nonce/plaintext at every length 1..128: a fixed,
+// repeatable sanity vector independent of the RNG (always runs, even tests=0).
+int test_aes256_gcm_zero_inputs(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  printf("Testing aes256_gcm zero inputs on all lengths 1..128\n");
+
+  uint8_t key[32] = {0};
+  s2n_bignum_AES_KEY ek;
+  u128 Htable[16];
+  gcm_setup(key, &ek, Htable);
+
+  for (int total = 1; total <= 128; ++total)
+   { int N = (total + 15) / 16;
+     int byte_len = total - 16*(N-1);
+     size_t bit_len = (size_t)(128*(N-1) + 8*byte_len);
+
+     memset(bb1, 0, 16*N);                       // plaintext
+     for (int j = 0; j < 16*N; j++)
+      { uint8_t s = (uint8_t)(0x5A ^ j); bb2[j] = s; bb3[j] = s; }
+
+     uint8_t ivec_asm[16] = {0}; ivec_asm[15] = 2;
+     uint8_t Xi_asm[16] = {0};
+     size_t ret = aes256_gcm(bb1, bit_len, bb2, Xi_asm, ivec_asm,
+                             (const void *)ek.rd_key, Htable);
+
+     uint8_t ivec_ref[16] = {0}; ivec_ref[15] = 2;
+     uint8_t Xi_ref[16] = {0};
+     reference_aes256_gcm_blocks(bb1, N, byte_len, bb3, Xi_ref, ivec_ref, &ek, Htable);
+
+     if (ret != (size_t)total ||
+         memcmp(bb2, bb3, 16*N) != 0 ||
+         memcmp(Xi_asm, Xi_ref, 16) != 0)
+      { printf("### aes256_gcm zero-input L=%d (N=%d,bl=%d): mismatch (ret=%zu)\n",
+               total, N, byte_len, ret); return 1; }
+     else if (VERBOSE)
+      { printf("OK: aes256_gcm zero input length %d (N=%d, byte_len=%d)\n", total, N, byte_len); }
+   }
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+// Known-answer test against fixed NIST vectors: encrypt a known plaintext and
+// check both the ciphertext and the 16-byte authentication tag against the
+// published expected values.  12-byte (96-bit) nonces, no additional
+// authenticated data (AAD).
+//
+// aes256_gcm only encrypts and accumulates the running GHASH value into xi; it
+// does NOT produce the final tag.  So after checking the ciphertext, the test
+// performs the two standard GCM tag-finalization steps itself (FIPS SP 800-38D):
+//   1. GHASH one more block holding the bit-lengths of (AAD, ciphertext);
+//   2. XOR E_K(J0), the AES encryption of the initial counter J0 = nonce||1.
+// The resulting 16 bytes are the GCM tag, compared to the vector's tag.
+//
+// Vectors: NIST CAVP gcmEncryptExtIV256.rsp (also in AWS-LC's
+// crypto/cipher_extra/test/nist_cavp/aes_256_gcm.txt); L = 13, 16, 32, 51.
+int test_aes256_gcm_nist(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  printf("Testing aes256_gcm NIST CAVP known-answer vectors\n");
+
+  struct { const char *key, *nonce, *pt, *ct, *tag; int msglen; } V[] = {
+    // L=13  (N=1, byte_len=13, partial)
+    { "a71dac1377a3bf5d7fb1b5e36bee70d2e01de2a84a1c1009ba7448f7f26131dc",
+      "c5b60dda3f333b1146e9da7c",
+      "5b87141335f2becac1a559e05f",
+      "43af49ec1ae3738a20755034d6",
+      "6f80b6ef2d8830a55eb63680a8dff9e0", 13 },
+    // L=16  (N=1, byte_len=16, full)
+    { "4c8ebfe1444ec1b2d503c6986659af2c94fafe945f72c1e8486a5acfedb8a0f8",
+      "473360e0ad24889959858995",
+      "7789b41cb3ee548814ca0b388c10b343",
+      "d2c78110ac7e8f107c0df0570bd7c90c",
+      "c26a379b6d98ef2852ead8ce83a833a7", 16 },
+    // L=32  (N=2, byte_len=16, full)
+    { "c3d99825f2181f4808acd2068eac7441a65bd428f14d2aab43fefc0129091139",
+      "cafabd9672ca6c79a2fbdc22",
+      "25431587e9ecffc7c37f8d6d52a9bc3310651d46fb0e3bad2726c8f2db653749",
+      "84e5f23f95648fa247cb28eef53abec947dbf05ac953734618111583840bd980",
+      "79651c875f7941793d42bbd0af1cce7c", 32 },
+    // L=51  (N=4, byte_len=3, partial)
+    { "4433db5fe066960bdd4e1d4d418b641c14bfcef9d574e29dcd0995352850f1eb",
+      "0e396446655582838f27f72f",
+      "d602c06b947abe06cf6aa2c5c1562e29062ad6220da9bc9c25d66a60bd85a80d4fbcc1fb4919b6566be35af9819aba836b8b47",
+      "b0d254abe43bdb563ead669192c1e57e9a85c51dba0f1c8501d1ce92273f1ce7e140dcfac94757fabb128caad16912cead0607",
+      "ffd0b02c92dbfcfbe9d58f7ff9e6f506", 51 },
+  };
+
+  for (size_t v = 0; v < sizeof(V)/sizeof(V[0]); ++v)
+   { int L = V[v].msglen;
+     int N = (L + 15) / 16;
+     int byte_len = L - 16*(N-1);
+     size_t bit_len = (size_t)(128*(N-1) + 8*byte_len);
+
+     uint8_t key[32], nonce[12], pt[128], ct_exp[128], tag_exp[16];
+     gcm_hex_to_bytes(V[v].key, key, 32);
+     gcm_hex_to_bytes(V[v].nonce, nonce, 12);
+     gcm_hex_to_bytes(V[v].pt, pt, L);
+     gcm_hex_to_bytes(V[v].ct, ct_exp, L);
+     gcm_hex_to_bytes(V[v].tag, tag_exp, 16);
+
+     s2n_bignum_AES_KEY ek;
+     u128 Htable[16];
+     gcm_setup(key, &ek, Htable);
+
+     uint8_t ivec[16] = {0};
+     memcpy(ivec, nonce, 12); ivec[15] = 2;        // J0+1
+     uint8_t Xi[16] = {0};
+     uint8_t ct_out[128];
+     size_t ret = aes256_gcm(pt, bit_len, ct_out, Xi, ivec,
+                             (const void *)ek.rd_key, Htable);
+
+     if (ret != (size_t)L)
+      { printf("### NIST vec %zu (L=%d): ret %zu != %d\n", v, L, ret, L); return 1; }
+     if (memcmp(ct_out, ct_exp, L) != 0)
+      { printf("### NIST vec %zu (L=%d): ciphertext mismatch\n", v, L); return 1; }
+
+     // Finalize the GCM tag directly from the kernel's accumulator Xi, exactly
+     // as AWS-LC's CRYPTO_gcm128_finish does: XOR the length block, one GHASH
+     // multiply Xi*H via ref_gcm_gmult_v8 (the C reference of gcm_gmult_v8, same
+     // twisted-H domain the kernel used), then XOR E_K(J0), J0 = nonce||0x...01.
+     uint8_t len_block[16] = {0};
+     uint64_t ct_bits = (uint64_t)L * 8;             // AAD len = 0
+     for (int b = 0; b < 8; b++) len_block[15-b] = (uint8_t)(ct_bits >> (8*b));
+     for (int j = 0; j < 16; j++) Xi[j] ^= len_block[j];
+     ref_gcm_gmult_v8(Xi, Htable);
+     uint8_t J0[16] = {0};
+     memcpy(J0, nonce, 12); J0[15] = 1;
+     uint8_t EK0[16];
+     ref_aes256_encrypt_block(J0, EK0, &ek);
+     for (int j = 0; j < 16; j++) Xi[j] ^= EK0[j];
+     if (memcmp(Xi, tag_exp, 16) != 0)
+      { printf("### NIST vec %zu (L=%d): tag mismatch\n", v, L); return 1; }
+     else if (VERBOSE)
+      { printf("OK: aes256_gcm NIST vector L=%d (N=%d, byte_len=%d)\n", L, N, byte_len); }
    }
   printf("All OK\n");
   return 0;
@@ -17640,6 +17884,9 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+    functionaltest(aes,"aes256_gcm",test_aes256_gcm);
+    functionaltest(aes,"aes256_gcm_zero_inputs",test_aes256_gcm_zero_inputs);
+    functionaltest(aes,"known value tests for aes256-gcm (NIST)",test_aes256_gcm_nist);
   }
 
   if (extrastrigger) function_to_test = "_";
