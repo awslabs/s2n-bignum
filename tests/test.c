@@ -3506,6 +3506,191 @@ void reference_keccak_f1600(uint64_t r[25],uint64_t a[25])
         r[5*y+x] = A[x][y];
 }
 
+// SHA-512 reference: a direct port of the scalar C implementation
+// sha512_block_data_order_nohw from AWS-LC (crypto/fipsmodule/sha/sha512.c),
+// itself the FIPS 180-4 compression function over whole 128-byte blocks.
+
+static const uint64_t sha512_K512[80] =
+ { UINT64_C(0x428a2f98d728ae22), UINT64_C(0x7137449123ef65cd),
+   UINT64_C(0xb5c0fbcfec4d3b2f), UINT64_C(0xe9b5dba58189dbbc),
+   UINT64_C(0x3956c25bf348b538), UINT64_C(0x59f111f1b605d019),
+   UINT64_C(0x923f82a4af194f9b), UINT64_C(0xab1c5ed5da6d8118),
+   UINT64_C(0xd807aa98a3030242), UINT64_C(0x12835b0145706fbe),
+   UINT64_C(0x243185be4ee4b28c), UINT64_C(0x550c7dc3d5ffb4e2),
+   UINT64_C(0x72be5d74f27b896f), UINT64_C(0x80deb1fe3b1696b1),
+   UINT64_C(0x9bdc06a725c71235), UINT64_C(0xc19bf174cf692694),
+   UINT64_C(0xe49b69c19ef14ad2), UINT64_C(0xefbe4786384f25e3),
+   UINT64_C(0x0fc19dc68b8cd5b5), UINT64_C(0x240ca1cc77ac9c65),
+   UINT64_C(0x2de92c6f592b0275), UINT64_C(0x4a7484aa6ea6e483),
+   UINT64_C(0x5cb0a9dcbd41fbd4), UINT64_C(0x76f988da831153b5),
+   UINT64_C(0x983e5152ee66dfab), UINT64_C(0xa831c66d2db43210),
+   UINT64_C(0xb00327c898fb213f), UINT64_C(0xbf597fc7beef0ee4),
+   UINT64_C(0xc6e00bf33da88fc2), UINT64_C(0xd5a79147930aa725),
+   UINT64_C(0x06ca6351e003826f), UINT64_C(0x142929670a0e6e70),
+   UINT64_C(0x27b70a8546d22ffc), UINT64_C(0x2e1b21385c26c926),
+   UINT64_C(0x4d2c6dfc5ac42aed), UINT64_C(0x53380d139d95b3df),
+   UINT64_C(0x650a73548baf63de), UINT64_C(0x766a0abb3c77b2a8),
+   UINT64_C(0x81c2c92e47edaee6), UINT64_C(0x92722c851482353b),
+   UINT64_C(0xa2bfe8a14cf10364), UINT64_C(0xa81a664bbc423001),
+   UINT64_C(0xc24b8b70d0f89791), UINT64_C(0xc76c51a30654be30),
+   UINT64_C(0xd192e819d6ef5218), UINT64_C(0xd69906245565a910),
+   UINT64_C(0xf40e35855771202a), UINT64_C(0x106aa07032bbd1b8),
+   UINT64_C(0x19a4c116b8d2d0c8), UINT64_C(0x1e376c085141ab53),
+   UINT64_C(0x2748774cdf8eeb99), UINT64_C(0x34b0bcb5e19b48a8),
+   UINT64_C(0x391c0cb3c5c95a63), UINT64_C(0x4ed8aa4ae3418acb),
+   UINT64_C(0x5b9cca4f7763e373), UINT64_C(0x682e6ff3d6b2b8a3),
+   UINT64_C(0x748f82ee5defb2fc), UINT64_C(0x78a5636f43172f60),
+   UINT64_C(0x84c87814a1f0ab72), UINT64_C(0x8cc702081a6439ec),
+   UINT64_C(0x90befffa23631e28), UINT64_C(0xa4506cebde82bde9),
+   UINT64_C(0xbef9a3f7b2c67915), UINT64_C(0xc67178f2e372532b),
+   UINT64_C(0xca273eceea26619c), UINT64_C(0xd186b8c721c0c207),
+   UINT64_C(0xeada7dd6cde0eb1e), UINT64_C(0xf57d4f7fee6ed178),
+   UINT64_C(0x06f067aa72176fba), UINT64_C(0x0a637dc5a2c898a6),
+   UINT64_C(0x113f9804bef90dae), UINT64_C(0x1b710b35131c471b),
+   UINT64_C(0x28db77f523047d84), UINT64_C(0x32caab7b40c72493),
+   UINT64_C(0x3c9ebe0a15c9bebc), UINT64_C(0x431d67c49c100d4c),
+   UINT64_C(0x4cc5d4becb3e42b6), UINT64_C(0x597f299cfc657e2a),
+   UINT64_C(0x5fcb6fab3ad6faec), UINT64_C(0x6c44198c4a475817) };
+
+static uint64_t sha512_rotr(uint64_t x, int n)
+{ return (x >> n) | (x << (64 - n));
+}
+
+static uint64_t sha512_load_be(const uint8_t *p)
+{ return ((uint64_t)p[0] << 56) | ((uint64_t)p[1] << 48) |
+         ((uint64_t)p[2] << 40) | ((uint64_t)p[3] << 32) |
+         ((uint64_t)p[4] << 24) | ((uint64_t)p[5] << 16) |
+         ((uint64_t)p[6] <<  8) | (uint64_t)p[7];
+}
+
+// See FIPS 180-4, section 4.1.3.
+#define SHA512_Sigma0(x)                                \
+  (sha512_rotr((x), 28) ^ sha512_rotr((x), 34) ^        \
+   sha512_rotr((x), 39))
+#define SHA512_Sigma1(x)                                \
+  (sha512_rotr((x), 14) ^ sha512_rotr((x), 18) ^        \
+   sha512_rotr((x), 41))
+#define SHA512_sigma0(x) \
+  (sha512_rotr((x), 1) ^ sha512_rotr((x), 8) ^ ((x) >> 7))
+#define SHA512_sigma1(x) \
+  (sha512_rotr((x), 19) ^ sha512_rotr((x), 61) ^ ((x) >> 6))
+
+#define SHA512_Ch(x, y, z) (((x) & (y)) ^ ((~(x)) & (z)))
+#define SHA512_Maj(x, y, z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+
+#define SHA512_ROUND_00_15(i, a, b, c, d, e, f, g, h)                 \
+  do {                                                                \
+    T1 += h + SHA512_Sigma1(e) + SHA512_Ch(e, f, g) + sha512_K512[i]; \
+    h = SHA512_Sigma0(a) + SHA512_Maj(a, b, c);                       \
+    d += T1;                                                          \
+    h += T1;                                                          \
+  } while (0)
+
+#define SHA512_ROUND_16_80(i, j, a, b, c, d, e, f, g, h, X)   \
+  do {                                                        \
+    s0 = X[(j + 1) & 0x0f];                                   \
+    s0 = SHA512_sigma0(s0);                                   \
+    s1 = X[(j + 14) & 0x0f];                                  \
+    s1 = SHA512_sigma1(s1);                                   \
+    T1 = X[(j) & 0x0f] += s0 + s1 + X[(j + 9) & 0x0f];        \
+    SHA512_ROUND_00_15(i + j, a, b, c, d, e, f, g, h);        \
+  } while (0)
+
+void reference_sha512_block_data_order(uint64_t state[8], const uint8_t *data,
+                                       size_t num)
+{ uint64_t a, b, c, d, e, f, g, h, s0, s1, T1;
+  uint64_t X[16];
+  int i;
+
+  while (num--)
+   { a = state[0];
+     b = state[1];
+     c = state[2];
+     d = state[3];
+     e = state[4];
+     f = state[5];
+     g = state[6];
+     h = state[7];
+
+     T1 = X[0] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(0, a, b, c, d, e, f, g, h);
+     T1 = X[1] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(1, h, a, b, c, d, e, f, g);
+     T1 = X[2] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(2, g, h, a, b, c, d, e, f);
+     T1 = X[3] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(3, f, g, h, a, b, c, d, e);
+     T1 = X[4] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(4, e, f, g, h, a, b, c, d);
+     T1 = X[5] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(5, d, e, f, g, h, a, b, c);
+     T1 = X[6] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(6, c, d, e, f, g, h, a, b);
+     T1 = X[7] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(7, b, c, d, e, f, g, h, a);
+     T1 = X[8] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(8, a, b, c, d, e, f, g, h);
+     T1 = X[9] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(9, h, a, b, c, d, e, f, g);
+     T1 = X[10] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(10, g, h, a, b, c, d, e, f);
+     T1 = X[11] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(11, f, g, h, a, b, c, d, e);
+     T1 = X[12] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(12, e, f, g, h, a, b, c, d);
+     T1 = X[13] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(13, d, e, f, g, h, a, b, c);
+     T1 = X[14] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(14, c, d, e, f, g, h, a, b);
+     T1 = X[15] = sha512_load_be(data);
+     data += 8;
+     SHA512_ROUND_00_15(15, b, c, d, e, f, g, h, a);
+
+     for (i = 16; i < 80; i += 16)
+      { SHA512_ROUND_16_80(i, 0, a, b, c, d, e, f, g, h, X);
+        SHA512_ROUND_16_80(i, 1, h, a, b, c, d, e, f, g, X);
+        SHA512_ROUND_16_80(i, 2, g, h, a, b, c, d, e, f, X);
+        SHA512_ROUND_16_80(i, 3, f, g, h, a, b, c, d, e, X);
+        SHA512_ROUND_16_80(i, 4, e, f, g, h, a, b, c, d, X);
+        SHA512_ROUND_16_80(i, 5, d, e, f, g, h, a, b, c, X);
+        SHA512_ROUND_16_80(i, 6, c, d, e, f, g, h, a, b, X);
+        SHA512_ROUND_16_80(i, 7, b, c, d, e, f, g, h, a, X);
+        SHA512_ROUND_16_80(i, 8, a, b, c, d, e, f, g, h, X);
+        SHA512_ROUND_16_80(i, 9, h, a, b, c, d, e, f, g, X);
+        SHA512_ROUND_16_80(i, 10, g, h, a, b, c, d, e, f, X);
+        SHA512_ROUND_16_80(i, 11, f, g, h, a, b, c, d, e, X);
+        SHA512_ROUND_16_80(i, 12, e, f, g, h, a, b, c, d, X);
+        SHA512_ROUND_16_80(i, 13, d, e, f, g, h, a, b, c, X);
+        SHA512_ROUND_16_80(i, 14, c, d, e, f, g, h, a, b, X);
+        SHA512_ROUND_16_80(i, 15, b, c, d, e, f, g, h, a, X);
+      }
+
+     state[0] += a;
+     state[1] += b;
+     state[2] += c;
+     state[3] += d;
+     state[4] += e;
+     state[5] += f;
+     state[6] += g;
+     state[7] += h;
+   }
+}
+
 // Rejection sampling reference
 
 uint64_t reference_rej_uniform(int16_t r[256],uint8_t *buf,uint64_t buflen)
@@ -15589,6 +15774,128 @@ int test_secp256k1_jmixadd_alt(void)
   return 0;
 }
 
+// SHA-512 scalar x86 block compression (x86-only function; declared in
+// s2n-bignum.h). The function requires num_blocks >= 1 (do-while loop), so
+// num_blocks = 0 is deliberately not tested.
+
+#ifdef __x86_64__
+
+int test_sha512_compress(void)
+{ uint64_t t;
+  int i;
+  size_t num;
+  uint64_t state_ref[8], state_asm[8];
+  uint8_t data[8*128], data_copy[8*128];
+
+  static const uint64_t sha512_iv[8] =
+   { UINT64_C(0x6a09e667f3bcc908), UINT64_C(0xbb67ae8584caa73b),
+     UINT64_C(0x3c6ef372fe94f82b), UINT64_C(0xa54ff53a5f1d36f1),
+     UINT64_C(0x510e527fade682d1), UINT64_C(0x9b05688c2b3e6c1f),
+     UINT64_C(0x1f83d9abfb41bd6b), UINT64_C(0x5be0cd19137e2179) };
+
+  // FIPS 180-4 single-block known answer: SHA512("abc")
+
+  static const uint64_t digest_abc[8] =
+   { UINT64_C(0xddaf35a193617aba), UINT64_C(0xcc417349ae204131),
+     UINT64_C(0x12e6fa4e89a97ea2), UINT64_C(0x0a9eeee64b55d39a),
+     UINT64_C(0x2192992a274fc1a8), UINT64_C(0x36ba3c23a3feebbd),
+     UINT64_C(0x454d4423643ce80e), UINT64_C(0x2a9ac94fa54ca49f) };
+
+  // FIPS 180-4 two-block known answer: SHA512 of the 896-bit message
+  // "abcdefgh...nopqrstu" (112 bytes -> two 128-byte blocks)
+
+  static const uint64_t digest_alphabet[8] =
+   { UINT64_C(0x8e959b75dae313da), UINT64_C(0x8cf4f72814fc143f),
+     UINT64_C(0x8f7779c6eb9f7fa1), UINT64_C(0x7299aeadb6889018),
+     UINT64_C(0x501d289e4900f7e4), UINT64_C(0x331b99dec4b5433a),
+     UINT64_C(0xc7d329eeb6dd2654), UINT64_C(0x5e96e55b874be909) };
+
+  printf("Testing sha512_compress with %d cases\n",tests);
+
+  // "abc" padded to one 128-byte block (message length 24 = 0x18 bits)
+
+  memset(data,0,128);
+  data[0] = 0x61; data[1] = 0x62; data[2] = 0x63; data[3] = 0x80;
+  data[127] = 0x18;
+  for (i = 0; i < 8; ++i) state_asm[i] = sha512_iv[i];
+  sha512_compress(state_asm,data,1);
+  for (i = 0; i < 8; ++i)
+   { if (state_asm[i] != digest_abc[i])
+      { printf("### Disparity: SHA512(\"abc\") word %d; "
+               "code = 0x%016"PRIx64" while reference = 0x%016"PRIx64"\n",
+               i,state_asm[i],digest_abc[i]);
+        return 1;
+      }
+   }
+  if (VERBOSE)
+   { printf("OK: SHA512(\"abc\") = [0x%016"PRIx64",0x%016"PRIx64",...,"
+            "0x%016"PRIx64"]\n",
+            state_asm[0],state_asm[1],state_asm[7]);
+   }
+
+  // The 112-byte FIPS vector padded to two 128-byte blocks (message length
+  // 896 = 0x380 bits), exercising the outer loop with standard chaining values
+
+  memset(data,0,256);
+  memcpy(data,"abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmn"
+              "hijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu",112);
+  data[112] = 0x80;
+  data[254] = 0x03; data[255] = 0x80;
+  for (i = 0; i < 8; ++i) state_asm[i] = sha512_iv[i];
+  sha512_compress(state_asm,data,2);
+  for (i = 0; i < 8; ++i)
+   { if (state_asm[i] != digest_alphabet[i])
+      { printf("### Disparity: SHA512(\"abcdefgh...rstu\") word %d; "
+               "code = 0x%016"PRIx64" while reference = 0x%016"PRIx64"\n",
+               i,state_asm[i],digest_alphabet[i]);
+        return 1;
+      }
+   }
+  if (VERBOSE)
+   { printf("OK: SHA512(\"abcdefgh...rstu\") = [0x%016"PRIx64",0x%016"PRIx64
+            ",...,0x%016"PRIx64"]\n",
+            state_asm[0],state_asm[1],state_asm[7]);
+   }
+
+  // Random cross-checks against the C reference at num_blocks = 1..8 with
+  // random initial state, catching state carry-over bugs across the outer
+  // loop. num_blocks = 0 is excluded (function precondition).
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { num = (size_t)(1 + (t % 8));
+     for (i = 0; i < 8; ++i)
+        state_ref[i] = state_asm[i] = random64();
+     for (i = 0; i < (int)(128*num); ++i) data[i] = (uint8_t)(rand() & 0xFF);
+     memcpy(data_copy,data,128*num);
+
+     reference_sha512_block_data_order(state_ref,data,num);
+     sha512_compress(state_asm,data,num);
+
+     if (memcmp(data,data_copy,128*num) != 0)
+      { printf("### Disparity: [blocks %2zu] input data buffer modified\n",
+               num);
+        return 1;
+      }
+     for (i = 0; i < 8; ++i)
+      { if (state_asm[i] != state_ref[i])
+         { printf("### Disparity: [blocks %2zu] state word %d; "
+                  "code = 0x%016"PRIx64" while reference = 0x%016"PRIx64"\n",
+                  num,i,state_asm[i],state_ref[i]);
+           return 1;
+         }
+      }
+     if (VERBOSE)
+      { printf("OK: [blocks %2zu] sha512 state = [0x%016"PRIx64",0x%016"PRIx64
+               ",...,0x%016"PRIx64"]\n",
+               num,state_asm[0],state_asm[1],state_asm[7]);
+      }
+   }
+  printf("All OK\n");
+  return 0;
+}
+
+#endif // __x86_64__
+
 int test_sha3_keccak_f1600(void)
 { uint64_t t, i;
   uint64_t a[25], b[25], c[25];
@@ -17607,6 +17914,9 @@ int main(int argc, char *argv[])
   functionaltest(all,"sha3_keccak_f1600",test_sha3_keccak_f1600);
   functionaltest(all,"sha3_keccak4_f1600",test_sha3_keccak4_f1600);
   functionaltest(all,"sha3_keccak4_f1600_alt",test_sha3_keccak4_f1600_alt);
+#ifdef __x86_64__
+  functionaltest(all,"sha512_compress",test_sha512_compress);
+#endif // __x86_64__
   functionaltest(bmi,"sm2_montjadd",test_sm2_montjadd);
   functionaltest(all,"sm2_montjadd_alt",test_sm2_montjadd_alt);
   functionaltest(bmi,"sm2_montjdouble",test_sm2_montjdouble);

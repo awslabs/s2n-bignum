@@ -1160,6 +1160,7 @@ void call_sha3_keccak2_f1600(void) {}
 void call_sha3_keccak2_f1600_alt(void) {}
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1,b2,b3))
 void call_sha3_keccak4_f1600_alt2(void) {}
+void call_sha512_compress(void) repeat(sha512_compress(b0,(uint8_t*)b1,1))
 
 void call_aes_xts_encrypt_16(void) {}
 void call_aes_xts_encrypt_32(void) {}
@@ -1212,6 +1213,7 @@ void call_sha3_keccak2_f1600(void) repeat(sha3_keccak2_f1600(b0,b1))
 void call_sha3_keccak2_f1600_alt(void) repeat(sha3_keccak2_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
+void call_sha512_compress(void) {}
 
 void call_mlkem_frombytes(void) {}
 void call_mlkem_unpack(void) {}
@@ -1719,6 +1721,7 @@ int main(int argc, char *argv[])
   timingtest(all,"sha3_keccak4_f1600",call_sha3_keccak4_f1600);
   timingtest(all,"sha3_keccak4_f1600_alt",call_sha3_keccak4_f1600_alt);
   timingtest(sha3,"sha3_keccak4_f1600_alt2",call_sha3_keccak4_f1600_alt2);
+  timingtest(!arm,"sha512_compress",call_sha512_compress);
   timingtest(bmi,"sm2_montjadd",call_sm2_montjadd);
   timingtest(all,"sm2_montjadd_alt",call_sm2_montjadd_alt);
   timingtest(bmi,"sm2_montjdouble",call_sm2_montjdouble);
