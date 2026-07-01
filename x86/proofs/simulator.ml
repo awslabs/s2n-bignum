@@ -1662,6 +1662,7 @@ let simple_memory_iclasses = iclasses_simplemem @
   [0xc4; 0xe2; 0x79; 0x30; 0x04; 0x24]; (* VPMOVZXBW (%_% xmm0) (Memop Quadword (%% (rsp,0))) *)
   [0xc5; 0xed; 0xf8; 0x0c; 0x24]; (* VPSUBB (%_% ymm1) (%_% ymm2) (Memop Word256 (%% (rsp,0))) *)
   [0xc5; 0xe9; 0xf8; 0x0c; 0x24]; (* VPSUBB (%_% xmm1) (%_% xmm2) (Memop Word128 (%% (rsp,0))) *)
+  [0x80; 0x3c; 0x24; 0x00]; (* CMP (Memop Byte (%% (rsp,0))) (Imm8 (word 0)) *)
 ];;
 
 let simplemem_iclasses =
