@@ -289,7 +289,7 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xt
   0xac828420;       (* arm_STP Q0 Q1 X1 (Postimmediate_Offset (iword (&0x50))) *)
   0xad3ee438;       (* arm_STP Q24 Q25 X1 (Immediate_Offset (iword (-- &0x30))) *)
   0x3c9f003a;       (* arm_STR Q26 X1 (Immediate_Offset (word 0xfffffffffffffff0)) *)
-  0xf1014042;       (* arm_SUBS X2 X2 (rvalue (word 0x50)) *)
+  0xd1014042;       (* arm_SUB X2 X2 (rvalue (word 0x50)) *)
   0xf1000508;       (* arm_SUBS X8 X8 (rvalue (word 0x1)) *)
   0xb5ffe888;       (* arm_CBNZ X8 (word 0x1ffd10) *)
   0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)

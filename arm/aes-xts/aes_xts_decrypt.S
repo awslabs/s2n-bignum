@@ -287,7 +287,7 @@ Loop5x_xts_dec:
         stp q24, q25, [x1, #-0x30]
         str  q26, [x1, #-0x10]
 
-        subs x2,x2,#0x50
+        sub x2,x2,#0x50
         subs x8,x8,#1
         cbnz x8, Loop5x_xts_dec
 
