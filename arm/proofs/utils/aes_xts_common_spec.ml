@@ -67,13 +67,13 @@ let BYTES_TO_INT128_CONV =
   REWRITE_CONV EL_16_8_CLAUSES THENC
   DEPTH_CONV WORD_RED_CONV;;
 (*
-let ptext = new_definition
-  `ptext =
+let xts_tv_ptext = new_definition
+  `xts_tv_ptext =
    int128_to_bytes (word 0x0F0E0D0C0B0A09080706050403020100 : int128)`;;
 
-time prove(`bytes_to_int128 ptext
+time prove(`bytes_to_int128 xts_tv_ptext
             = (word 0x0f0e0d0c0b0a09080706050403020100 :int128)`,
-            CONV_TAC(REWRITE_CONV [ptext;int128_to_bytes] THENC
+            CONV_TAC(REWRITE_CONV [xts_tv_ptext;int128_to_bytes] THENC
                LAND_CONV BYTES_TO_INT128_CONV) THEN
             REFL_TAC
           );;
@@ -99,8 +99,8 @@ time prove(`GF_128_mult_by_primitive (word 0x8b2b4a71228e98aed6aa0ca97775261a)
 let XTS_INIT_TWEAK_CONV =
   REWR_CONV xts_init_tweak THENC AESENC_HELPER_CONV;;
 
-let iv1 = new_definition
-  `iv1 = (word 0x000000000000000000000000000000FF) : int128`;;
+let xts_tv_iv1 = new_definition
+  `xts_tv_iv1 = (word 0x000000000000000000000000000000FF) : int128`;;
 
 let tweak_key_schedule = new_definition `tweak_key_schedule:int128 list =
   [ word 0x95278333646284239397585326594131
@@ -121,14 +121,14 @@ let tweak_key_schedule = new_definition `tweak_key_schedule:int128 list =
   ]`;;
 
 (*
-let tmp_xts_tweak = (REWRITE_CONV [iv1; tweak_key_schedule] THENC XTS_INIT_TWEAK_CONV)
-    `xts_init_tweak iv1
+let tmp_xts_tweak = (REWRITE_CONV [xts_tv_iv1; tweak_key_schedule] THENC XTS_INIT_TWEAK_CONV)
+    `xts_init_tweak xts_tv_iv1
             tweak_key_schedule`;;
 (* Or the following: 36 sec on M3 *)
-time prove(`xts_init_tweak iv1
+time prove(`xts_init_tweak xts_tv_iv1
             tweak_key_schedule
             = word 0x8b2b4a71228e98aed6aa0ca97775261a`,
-            CONV_TAC(REWRITE_CONV [iv1; tweak_key_schedule] THENC
+            CONV_TAC(REWRITE_CONV [xts_tv_iv1; tweak_key_schedule] THENC
               LAND_CONV XTS_INIT_TWEAK_CONV)
             THEN REFL_TAC
           );;
@@ -157,10 +157,10 @@ let rec CALCULATE_TWEAK_CONV tm =
   | _ -> failwith "CALCULATE_TWEAK_CONV: inapplicable";;
 (*
 (* result: word 0x8b2b4a71228e98aed6aa0ca97775261a, same as xts_init_tweak test above *)
-(REWRITE_CONV [iv1;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 0 iv1 tweak_key_schedule`;;
+(REWRITE_CONV [xts_tv_iv1;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 0 xts_tv_iv1 tweak_key_schedule`;;
 
 (* result: word 0x165694e2451d315dad541952eeea4cb3, same as GF_128_mult_by_primitive test above *)
-(REWRITE_CONV [iv1;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 1 iv1 tweak_key_schedule`;;
+(REWRITE_CONV [xts_tv_iv1;tweak_key_schedule] THENC CALCULATE_TWEAK_CONV) `calculate_tweak 1 xts_tv_iv1 tweak_key_schedule`;;
 *)
 
 (*
