@@ -687,7 +687,7 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                MAYCHANGE [memory :> bytes(word_sub stackpointer (word 96), 96)] ,,
                MAYCHANGE [memory :> bytes(a, 512)])`,
-  (* The safety property specific tacics *)
+  (* The safety property specific tactics *)
   ASSUME_CALLEE_SAFETY_TAC MLKEM_REDUCE_SAFE "H_subth" THEN
   META_EXISTS_TAC THEN
 

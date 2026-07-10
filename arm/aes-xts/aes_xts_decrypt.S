@@ -136,7 +136,7 @@ Lxts_dec:
         b.eq Lxts_dec_begin
         sub x2,x2,#16
         cmp x2, #16
-        b.lt Lxts_dec_done   // There is one block and a tail, go directy to cipher-stealing
+        b.lt Lxts_dec_done   // There is one block and a tail, go directly to cipher-stealing
 
 Lxts_dec_begin:
         udiv_by_80(x2, x8) // Number of 5x-unrolled iterations

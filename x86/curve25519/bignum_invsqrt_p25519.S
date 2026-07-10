@@ -338,7 +338,7 @@ Lbignum_invsqrt_p25519_standard:
         cmovnz  rbp, r11
         mov     [rdx+24], rbp
 
-// Determine if it is is indeed an inverse square root, also distinguishing
+// Determine if it is indeed an inverse square root, also distinguishing
 // the degenerate x * z^2 == 0 (mod p_25519) case, which is equivalent to
 // x == 0 (mod p_25519). Hence return the Legendre-Jacobi symbol as required.
 

@@ -195,7 +195,7 @@ let bignum_mux_4_safe = time prove
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,4)])`,
-  (* Assert that the goal is ssame as bignum_mux_4_safety_spec *)
+  (* Assert that the goal is same as bignum_mux_4_safety_spec *)
   ASSERT_CONCL_TAC bignum_mux_4_safety_spec THEN
   (* Go! *)
   PROVE_SAFETY_SPEC_TAC BIGNUM_MUX_4_EXEC);;

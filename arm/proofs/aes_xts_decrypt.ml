@@ -4105,7 +4105,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
       ANTS_TAC THENL
       [REWRITE_TAC[CONJUNCT1 calculate_tweak; xts_init_tweak] THEN
        EXPAND_TAC "key2" THEN AESENC_TAC; DISCH_TAC] THEN
-      (* ===> Symbolic Simulation: Symbolic simulating untill next branch *)
+      (* ===> Symbolic Simulation: Symbolic simulating until next branch *)
       ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (70--89) THEN
       (* Case split on whether there is a tail *)
       FIRST_X_ASSUM MP_TAC THEN
@@ -4628,7 +4628,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
         ] THEN
 
         REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-        (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+        (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
         IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * i + 0x10):num`;
           `x:byte list`; `s188:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
         EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * i + 0x20) iv key1 key2)` THEN
@@ -5062,7 +5062,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
           ] THEN
 
           REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-          (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+          (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
           IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * val (num_5blocks_adjusted:int64) + 0x10):num`;
             `x:byte list`; `s188:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
           EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * val (num_5blocks_adjusted:int64) + 0x20) iv key1 key2)` THEN
@@ -5357,7 +5357,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
           ] THEN
 
           REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-          (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+          (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
           IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * val (num_5blocks_adjusted:int64) + 0x10):num`;
             `x:byte list`; `s108:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
           EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * val (num_5blocks_adjusted:int64) + 0x20) iv key1 key2)` THEN
@@ -5599,7 +5599,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
           DISCH_TAC THEN
 
           REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-          (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+          (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
           IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * val (num_5blocks_adjusted:int64) + 0x10):num`;
             `x:byte list`; `s78:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
           EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * val (num_5blocks_adjusted:int64) + 0x20) iv key1 key2)` THEN

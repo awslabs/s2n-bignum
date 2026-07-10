@@ -341,7 +341,7 @@ Lbignum_sqrt_p25519_alt_standard:
         cmovnzq %r11, %rbp
         movq    %rbp, 24(%rdx)
 
-// Determine if it is is indeed a square root and also if a = 0
+// Determine if it is indeed a square root and also if a = 0
 // Hence return the Legendre-Jacobi symbol as required.
 
         leaq    B(%rsp), %rdi

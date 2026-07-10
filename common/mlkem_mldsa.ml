@@ -891,7 +891,7 @@ let WEAKEN_INTCONG_RULE =
     CONJ (lrule n th1) th2;;
 
 (* ------------------------------------------------------------------------- *)
-(* Unify modulus and conjoin a pair of (x == y) (mod m) /\ P thoerems.       *)
+(* Unify modulus and conjoin a pair of (x == y) (mod m) /\ P theorems.       *)
 (* ------------------------------------------------------------------------- *)
 
 let UNIFY_INTCONG_RULE th1 th2 =

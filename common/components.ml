@@ -2937,7 +2937,7 @@ let INT_OF_NUM_CONV =
   NUM_REDUCE_CONV;;
 
 (* ------------------------------------------------------------------------- *)
-(* Filter away assumptions other than natural number predictes and any       *)
+(* Filter away assumptions other than natural number predicates and any      *)
 (* involving various other constructs, notably the "read" function. The idea *)
 (* is to keep only those that might be involved in address calculation. When *)
 (* a theorem passes the filter, normalize arithmetic to be on Z not N.       *)

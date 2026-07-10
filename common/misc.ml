@@ -2041,7 +2041,7 @@ let TWEAK_PC_OFFSET_CONV =
 let TWEAK_PC_OFFSET = CONV_RULE(ONCE_DEPTH_CONV TWEAK_PC_OFFSET_CONV);;
 
 (* ------------------------------------------------------------------------- *)
-(* Tactics for using labeled assumtions                                      *)
+(* Tactics for using labeled assumptions                                     *)
 (* ------------------------------------------------------------------------- *)
 
 let UNDISCH_LABEL_TAC (label:string):tactic =

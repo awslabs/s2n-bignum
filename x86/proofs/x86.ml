@@ -1508,7 +1508,7 @@ let x86_RET = new_definition
 (*** 32-bit and 64-bit forms just mask as in the others. Not generic.    ***)
 
 (*** It's not quite enough to just use the native size, as certain       ***)
-(*** things are different in case case masked_shift IN {0,1} (e.g. OF)   ***)
+(*** things are different in case masked_shift IN {0,1} (e.g. OF)   ***)
 (*** We assume that the masked value comes in from the decoder           ***)
 (*** Our underlying rotate functions are modulo anyway.                  ***)
 (*** It is at least clearly stated that SF, ZF, AF, PF are unaffected    ***)

@@ -1490,7 +1490,7 @@ let prove_correct_barrier_appended (correct_th:thm) core_exec_th: thm =
     REPEAT STRIP_TAC THEN
 
     MP_TAC (SPEC_ALL correct_th) THEN
-    (* Prove antedecent of correct_th *)
+    (* Prove antecedent of correct_th *)
     ANTS_TAC THENL [
       POP_ASSUM_LIST (fun th -> MP_TAC (end_itlist CONJ th)) THEN
       REWRITE_TAC[ALL;NONOVERLAPPING_CLAUSES;LENGTH_APPEND;
@@ -1602,7 +1602,7 @@ let EXPAND_ARM_THEN (h_arm_hyp:string) exec_decode_th (ttac:thm->tactic):tactic 
 let EXPAND_ARM_AND_UPDATE_READS_TAC (h_arm_hyp:string)
     exec_decode_th (exec_decode_len:thm):tactic =
   EXPAND_ARM_THEN h_arm_hyp exec_decode_th MP_TAC THEN
-  (* Now we have state-updating writes at antedecendent of the goal. *)
+  (* Now we have state-updating writes at antecedent of the goal. *)
   (* Mimic what ARM_STEP_TAC does from an analogous situation. *)
   NONSELFMODIFYING_STATE_UPDATE_TAC
     (MATCH_MP aligned_bytes_loaded_update exec_decode_len) THEN
@@ -2286,7 +2286,7 @@ let prove_equiv_seq_composition (equivth1:thm) (equivth2:thm)
       ASM_REWRITE_TAC[] THEN
       (ASM_MESON_TAC[prog1_out_implies_prog2_in_thm] ORELSE PRINT_GOAL_TAC);
 
-      (* Maychanges: copid from ENSURES2_FRAME_SUBSUMED_TAC modulo its first line *)
+      (* Maychanges: copied from ENSURES2_FRAME_SUBSUMED_TAC modulo its first line *)
       REWRITE_TAC[subsumed;FORALL_PAIR_THM;SEQ_PAIR_SPLIT;ETA_AX;SOME_FLAGS] THEN
       REPEAT STRIP_TAC THENL
       (* two subgoals from here *)
@@ -2323,7 +2323,7 @@ needs "common/actions_merger.ml";;
 (*   read X1 s = bigdigit 0 a /\ read X2 s = bigdigit 1 a /\                 *)
 (*   read (memory :> bytes64 X3) = bigdigit 0 a /\                           *)
 (*   read (memory :> bytes64 (word_add X3 (word 8)) = bigdigit 1 a           *)
-(* The former two equations will be abbreivated by ABBREV_READS_TAC whereas  *)
+(* The former two equations will be abbreviated by ABBREV_READS_TAC whereas  *)
 (* the latter two equations will be unchanged and kept as assumptions when   *)
 (* "equiv" was its action. break_equal_loads will change this action to      *)
 (* "replace" so that the former two equations are not abbreviated.           *)

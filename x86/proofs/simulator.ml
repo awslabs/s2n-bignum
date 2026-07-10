@@ -1085,7 +1085,7 @@ and tac_main (memopidx: int option) mc states =
 and tac_after memop =
   (* MEMORY_SPLIT_TAC will split out the memory write to the stack.
    Assumptions for flags that involves memory reads of more than one byte
-   (for example, ADD for byte64) will not be splitted out into bytes by
+   (for example, ADD for byte64) will not be split out into bytes by
    MEMORY_SPLIT_TAC. Instead, the flag expression is only treated until
    it gets into the goal. After it gets into the goal, the first
    READ_MEMORY_FULLMERGE_CONV will split the memory read in the goal that
