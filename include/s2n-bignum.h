@@ -1062,9 +1062,9 @@ extern void mldsa_pointwise_acc_l7_x86(int32_t c[S2N_BIGNUM_STATIC 256], const i
 extern void mldsa_caddq(int32_t a[S2N_BIGNUM_STATIC 256]);
 
 // Canonical reduction of polynomial coefficients for ML-DSA
-// Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
 // Result is centered, -6283009 <= r <= 6283008, and congruent mod 8380417
-// Assumes each input coefficient a <= 0x7fbfffff (else the reduction overflows)
+// Assumes each coefficient is <= 0x7fbfffff (else the reduction overflows)
+// Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_reduce(int32_t a[S2N_BIGNUM_STATIC 256]);
 
 // Use hint to correct high bits of decomposition for ML-DSA (parameter sets 65/87)
