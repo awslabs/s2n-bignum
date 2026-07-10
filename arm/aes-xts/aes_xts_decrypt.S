@@ -134,7 +134,7 @@ Loop_dec_iv_enc:
 Lxts_dec:
         tst x21,#0xf
         b.eq Lxts_dec_begin
-        subs x2,x2,#16
+        sub x2,x2,#16
         cmp x2, #16
         b.lt Lxts_dec_done   // There is one block and a tail, go directy to cipher-stealing
 
