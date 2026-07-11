@@ -1079,10 +1079,14 @@ extern void mldsa_decompose_88(int32_t a1[256], int32_t a0[256]);
 /* Unpack packed z polynomial for ML-DSA (GAMMA1 = 2^17, parameter set 44) */
 /* Inputs b[576], t[64] (bytes); output r[256] (signed 32-bit words) */
 extern void mldsa_polyz_unpack_17_arm(int32_t r[256], const uint8_t b[576], const uint8_t t[64]);
+/* x86 variant unpacks directly from the byte buffer (no shuffle table argument) */
+extern void mldsa_polyz_unpack_17_x86(int32_t r[256], const uint8_t b[576]);
 
 /* Unpack packed z polynomial for ML-DSA (GAMMA1 = 2^19, parameter sets 65/87) */
 /* Inputs b[640], t[64] (bytes); output r[256] (signed 32-bit words) */
 extern void mldsa_polyz_unpack_19_arm(int32_t r[256], const uint8_t b[640], const uint8_t t[64]);
+/* x86 variant unpacks directly from the byte buffer (no shuffle table argument) */
+extern void mldsa_polyz_unpack_19_x86(int32_t r[256], const uint8_t b[640]);
 
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Result is centered, -6283009 <= r <= 6283008, and congruent mod 8380417 */

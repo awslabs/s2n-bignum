@@ -14492,12 +14492,12 @@ uint64_t reference_mldsa_chknorm(const int32_t a[256], uint64_t bound)
 
 int test_mldsa_chknorm(void)
 {
-    // Skip test on non-aarch64 architectures (ARM-only in this PR)
-    if (get_arch_name() != ARCH_AARCH64) {
+    // mldsa_chknorm is a shared symbol on both AArch64 and x86.
+    if (get_arch_name() != ARCH_AARCH64 && get_arch_name() != ARCH_X86_64) {
         return 0;
     }
 
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(__x86_64__)
     uint64_t t, i;
     int32_t a[256] __attribute__((aligned(32)));
     const uint64_t bound = 131072;  // representative non-negative bound (1 << 17)
@@ -14568,8 +14568,8 @@ void reference_mldsa_decompose_88(int32_t a1[256], int32_t a0[256])
 static int test_mldsa_decompose_impl(const char *name,
     void (*asm_fn)(int32_t*, int32_t*), int gamma2)
 {
-    if (get_arch_name() != ARCH_AARCH64) return 0;
-#ifdef __aarch64__
+    if (get_arch_name() != ARCH_AARCH64 && get_arch_name() != ARCH_X86_64) return 0;
+#if defined(__aarch64__) || defined(__x86_64__)
     uint64_t t, i;
     int32_t a[256] __attribute__((aligned(32)));
     int32_t a1_asm[256] __attribute__((aligned(32)));
@@ -14600,7 +14600,7 @@ static int test_mldsa_decompose_impl(const char *name,
 
 int test_mldsa_decompose_32(void)
 {
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(__x86_64__)
     return test_mldsa_decompose_impl("mldsa_decompose_32", mldsa_decompose_32, 8380416/32);
 #else
     return 0;
@@ -14609,7 +14609,7 @@ int test_mldsa_decompose_32(void)
 
 int test_mldsa_decompose_88(void)
 {
-#ifdef __aarch64__
+#if defined(__aarch64__) || defined(__x86_64__)
     return test_mldsa_decompose_impl("mldsa_decompose_88", mldsa_decompose_88, 8380416/88);
 #else
     return 0;
@@ -14696,11 +14696,46 @@ static int test_mldsa_polyz_unpack_impl(const char *name,
 #endif
 }
 
+// x86 polyz_unpack routines unpack directly from the byte buffer (2 args, no
+// shuffle table), so they need their own test harness.
+static int test_mldsa_polyz_unpack_x86_impl(const char *name,
+    void (*asm_fn)(int32_t*, const uint8_t*), int gamma1_bits, int packed_bytes)
+{
+    if (get_arch_name() != ARCH_X86_64) return 0;
+#ifdef __x86_64__
+    uint64_t t, i;
+    int32_t r_asm[256] __attribute__((aligned(32)));
+    int32_t r_ref[256] __attribute__((aligned(32)));
+    uint8_t buf[640] __attribute__((aligned(32)));
+    printf("Testing %s with %d cases\n", name, tests);
+    for (t = 0; t < tests; ++t) {
+        for (i = 0; i < (uint64_t)packed_bytes; ++i) buf[i] = (uint8_t)(random64() & 0xFF);
+        reference_mldsa_polyz_unpack(r_ref, buf, gamma1_bits);
+        asm_fn(r_asm, buf);
+        for (i = 0; i < 256; ++i) {
+            if (r_asm[i] != r_ref[i]) {
+                printf("Error in %s element i = %"PRIu64"; asm=%"PRId32" ref=%"PRId32"\n",
+                       name, i, r_asm[i], r_ref[i]);
+                return 1;
+            }
+        }
+    }
+    printf("All OK\n");
+    return 0;
+#else
+    (void)asm_fn; (void)gamma1_bits; (void)packed_bytes; (void)name;
+    return 0;
+#endif
+}
+
 int test_mldsa_polyz_unpack_17(void)
 {
 #ifdef __aarch64__
     return test_mldsa_polyz_unpack_impl("mldsa_polyz_unpack_17_arm",
         mldsa_polyz_unpack_17_arm, mldsa_polyz_unpack_17_indices, 17, 576);
+#elif defined(__x86_64__)
+    return test_mldsa_polyz_unpack_x86_impl("mldsa_polyz_unpack_17_x86",
+        mldsa_polyz_unpack_17_x86, 17, 576);
 #else
     return 0;
 #endif
@@ -14711,6 +14746,9 @@ int test_mldsa_polyz_unpack_19(void)
 #ifdef __aarch64__
     return test_mldsa_polyz_unpack_impl("mldsa_polyz_unpack_19_arm",
         mldsa_polyz_unpack_19_arm, mldsa_polyz_unpack_19_indices, 19, 640);
+#elif defined(__x86_64__)
+    return test_mldsa_polyz_unpack_x86_impl("mldsa_polyz_unpack_19_x86",
+        mldsa_polyz_unpack_19_x86, 19, 640);
 #else
     return 0;
 #endif

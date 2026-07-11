@@ -4767,6 +4767,55 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_chknorm",
+  ([(*args*)
+     ("a", "int32_t[static 256]", (*is const?*)"true");
+     ("bound", "uint64_t", (*is const?*)"false");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_decompose_32",
+  ([(*args*)
+     ("a1", "int32_t[static 256]", (*is const?*)"false");
+     ("a0", "int32_t[static 256]", (*is const?*)"false");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a0", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a1", "256"(* num elems *), 4(* elem bytesize *));
+    ("a0", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_decompose_88",
+  ([(*args*)
+     ("a1", "int32_t[static 256]", (*is const?*)"false");
+     ("a0", "int32_t[static 256]", (*is const?*)"false");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a0", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a1", "256"(* num elems *), 4(* elem bytesize *));
+    ("a0", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mldsa_intt",
   ([(*args*)
      ("a", "int32_t[static 256]", (*is const?*)"false");
@@ -4891,6 +4940,38 @@ let subroutine_signatures = [
    ],
    [(* output buffers *)
     ("c", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_polyz_unpack_17_x86",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("b", "uint8_t[static 576]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("b", "576"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_polyz_unpack_19_x86",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("b", "uint8_t[static 640]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("b", "640"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
    ],
    [(* temporary buffers *)
    ])
