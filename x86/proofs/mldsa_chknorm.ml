@@ -11,7 +11,7 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
-needs "x86/proofs/mldsa_utils.ml";;
+needs "common/mlkem_mldsa.ml";;
 
 (**** print_literal_from_elf "x86/mldsa/mldsa_chknorm.o";;
  ****)

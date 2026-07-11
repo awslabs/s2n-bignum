@@ -17,8 +17,7 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
-needs "common/mldsa_specs.ml";;
-needs "x86/proofs/mldsa_utils.ml";;
+needs "common/mlkem_mldsa.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Supporting arithmetic/word lemmas for the decompose proofs.               *)

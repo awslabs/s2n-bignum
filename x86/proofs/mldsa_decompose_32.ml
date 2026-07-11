@@ -17,8 +17,7 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
-needs "common/mldsa_specs.ml";;
-needs "x86/proofs/mldsa_utils.ml";;
+needs "common/mlkem_mldsa.ml";;
 
 (**** print_literal_from_elf "x86/mldsa/mldsa_decompose_32.o";;
  ****)
