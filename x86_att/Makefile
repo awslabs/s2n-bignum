@@ -146,6 +146,11 @@ OBJ = curve25519/bignum_add_p25519.o \
       mldsa/mldsa_pointwise_acc_l5.o \
       mldsa/mldsa_pointwise_acc_l7.o \
       mldsa/mldsa_caddq.o \
+      mldsa/mldsa_chknorm.o \
+      mldsa/mldsa_decompose_32.o \
+      mldsa/mldsa_decompose_88.o \
+      mldsa/mldsa_polyz_unpack_17.o \
+      mldsa/mldsa_polyz_unpack_19.o \
       mldsa/mldsa_reduce.o \
       mldsa/mldsa_rej_uniform_VARIABLE_TIME.o \
       mlkem/mlkem_basemul_k2.o \
