@@ -252,6 +252,10 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              generic/word_negmodinv.o \
              generic/word_popcount.o \
              generic/word_recip.o \
+             mldsa/mldsa_caddq.o \
+             mldsa/mldsa_chknorm.o \
+             mldsa/mldsa_decompose_32.o \
+             mldsa/mldsa_decompose_88.o \
              mldsa/mldsa_intt.o \
              mldsa/mldsa_pointwise_acc_l4.o \
              mldsa/mldsa_pointwise_acc_l5.o \
@@ -260,6 +264,8 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mldsa/mldsa_pointwise.o \
              mldsa/mldsa_poly_use_hint_32.o \
              mldsa/mldsa_poly_use_hint_88.o \
+             mldsa/mldsa_polyz_unpack_17.o \
+             mldsa/mldsa_polyz_unpack_19.o \
              mldsa/mldsa_rej_uniform_eta2_VARIABLE_TIME.o \
              mldsa/mldsa_rej_uniform_eta4_VARIABLE_TIME.o \
              mlkem/mlkem_basemul_k2.o \

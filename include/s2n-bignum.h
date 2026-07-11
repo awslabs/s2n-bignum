@@ -1068,6 +1068,27 @@ extern void mldsa_pointwise_acc_l7_x86(int32_t c[S2N_BIGNUM_STATIC 256], const i
 // Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_caddq(int32_t a[S2N_BIGNUM_STATIC 256]);
 
+// Infinity-norm check of polynomial coefficients for ML-DSA
+// Returns 1 if any coefficient has absolute value >= bound, 0 otherwise
+// Input a[256] (signed 32-bit words), bound (unsigned 32-bit); output function return
+extern uint64_t mldsa_chknorm(const int32_t a[S2N_BIGNUM_STATIC 256], uint64_t bound);
+
+// Coefficient decomposition for ML-DSA (GAMMA2 = (Q-1)/32, parameter sets 65/87)
+// Input a0[256] (signed 32-bit words); outputs a1[256] (high parts) and a0[256] (low parts)
+extern void mldsa_decompose_32(int32_t a1[S2N_BIGNUM_STATIC 256], int32_t a0[S2N_BIGNUM_STATIC 256]);
+
+// Coefficient decomposition for ML-DSA (GAMMA2 = (Q-1)/88, parameter set 44)
+// Input a0[256] (signed 32-bit words); outputs a1[256] (high parts) and a0[256] (low parts)
+extern void mldsa_decompose_88(int32_t a1[S2N_BIGNUM_STATIC 256], int32_t a0[S2N_BIGNUM_STATIC 256]);
+
+// Unpack packed z polynomial for ML-DSA (GAMMA1 = 2^17, parameter set 44)
+// Inputs b[576], t[64] (bytes); output r[256] (signed 32-bit words)
+extern void mldsa_polyz_unpack_17_arm(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t b[S2N_BIGNUM_STATIC 576], const uint8_t t[S2N_BIGNUM_STATIC 64]);
+
+// Unpack packed z polynomial for ML-DSA (GAMMA1 = 2^19, parameter sets 65/87)
+// Inputs b[640], t[64] (bytes); output r[256] (signed 32-bit words)
+extern void mldsa_polyz_unpack_19_arm(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t b[S2N_BIGNUM_STATIC 640], const uint8_t t[S2N_BIGNUM_STATIC 64]);
+
 // Canonical reduction of polynomial coefficients for ML-DSA
 // Result is centered, -6283009 <= r <= 6283008, and congruent mod 8380417
 // Assumes each coefficient is <= 0x7fbfffff (else the reduction overflows)
