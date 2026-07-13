@@ -284,7 +284,6 @@ let BIT_BOUND = BITBLAST_RULE
 let MLKEM_TOBYTES_CORRECT = prove(
   `!r a (l:int16 list) pc.
         aligned 32 a /\
-        aligned 32 r /\
         nonoverlapping (word pc, 764) (a, 512) /\
         nonoverlapping (word pc, 764) (r, 384) /\
         nonoverlapping (a, 512) (r, 384)
@@ -378,7 +377,6 @@ let MLKEM_TOBYTES_CORRECT = prove(
 let MLKEM_TOBYTES_NOIBT_SUBROUTINE_CORRECT = prove
 (`!r a (l:int16 list) pc.
         aligned 32 a /\
-        aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_tmc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_tmc) (r, 384) /\
         nonoverlapping (a, 512) (r, 384) /\
@@ -403,7 +401,6 @@ let MLKEM_TOBYTES_NOIBT_SUBROUTINE_CORRECT = prove
 let MLKEM_TOBYTES_SUBROUTINE_CORRECT = prove
 (`!r a (l:int16 list) pc.
         aligned 32 a /\
-        aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_mc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_mc) (r, 384) /\
         nonoverlapping (a, 512) (r, 384) /\
@@ -441,7 +438,6 @@ let mlkem_tobytes_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_tobytes_windows_tmc;
 let MLKEM_TOBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
 (`!r a (l:int16 list) pc stackpointer returnaddress.
         aligned 32 a /\
-        aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_tmc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_tmc) (r, 384) /\
         nonoverlapping (a, 512) (r, 384) /\
@@ -535,7 +531,6 @@ let MLKEM_TOBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
 let MLKEM_TOBYTES_WINDOWS_SUBROUTINE_CORRECT = prove
 (`!r a (l:int16 list) pc stackpointer returnaddress.
         aligned 32 a /\
-        aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_mc) (a, 512) /\
         nonoverlapping (word pc, LENGTH mlkem_tobytes_windows_mc) (r, 384) /\
         nonoverlapping (a, 512) (r, 384) /\
