@@ -4945,6 +4945,40 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_poly_use_hint_32",
+  ([(*args*)
+     ("a", "int32_t[static 256]", (*is const?*)"false");
+     ("h", "int32_t[static 256]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+    ("h", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_poly_use_hint_88",
+  ([(*args*)
+     ("a", "int32_t[static 256]", (*is const?*)"false");
+     ("h", "int32_t[static 256]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+    ("h", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mldsa_polyz_unpack_17_x86",
   ([(*args*)
      ("r", "int32_t[static 256]", (*is const?*)"false");

@@ -261,6 +261,8 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mldsa/mldsa_pointwise_acc_l4.o \
              mldsa/mldsa_pointwise_acc_l5.o \
              mldsa/mldsa_pointwise_acc_l7.o \
+             mldsa/mldsa_poly_use_hint_32.o \
+             mldsa/mldsa_poly_use_hint_88.o \
              mldsa/mldsa_polyz_unpack_17.o \
              mldsa/mldsa_polyz_unpack_19.o \
              mldsa/mldsa_reduce.o \

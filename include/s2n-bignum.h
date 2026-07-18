@@ -1102,12 +1102,24 @@ extern void mldsa_polyz_unpack_19_x86(int32_t r[S2N_BIGNUM_STATIC 256], const ui
 extern void mldsa_reduce(int32_t a[S2N_BIGNUM_STATIC 256]);
 
 // Use hint to correct high bits of decomposition for ML-DSA (parameter sets 65/87)
+// The x86 variant operates in place on a[256]; the ARM variant writes b[256]
+#ifdef __x86_64__
+// Inputs a[256], h[256] (signed 32-bit words); output a[256] (signed 32-bit words, in place)
+extern void mldsa_poly_use_hint_32(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
+#else
 // Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words)
 extern void mldsa_poly_use_hint_32(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
+#endif
 
 // Use hint to correct high bits of decomposition for ML-DSA (parameter set 44)
+// The x86 variant operates in place on a[256]; the ARM variant writes b[256]
+#ifdef __x86_64__
+// Inputs a[256], h[256] (signed 32-bit words); output a[256] (signed 32-bit words, in place)
+extern void mldsa_poly_use_hint_88(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
+#else
 // Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words)
 extern void mldsa_poly_use_hint_88(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
+#endif
 
 // Rejection sampling for ML-DSA secret key (eta = 2; parameter sets 44/87)
 // Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words)

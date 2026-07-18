@@ -181,9 +181,31 @@ header_lines = list(header_f.readlines())
 i = 0
 prev_mem_inout = None
 fnsigsAndInouts = {}
+# Some functions have architecture-specific declarations guarded by
+# '#ifdef __x86_64__ ... #else ... #endif' because their ABI differs between
+# x86 and arm (e.g. an in-place variant on one arch). For those, record a
+# per-architecture override keyed by function name so that the generated
+# subroutine_signatures.ml and the consistency checks use the right signature.
+fnsigsAndInoutsByArch = {"arm": {}, "x86": {}}
+# archctx is None outside any ifdef, or the set of archs the current block
+# applies to (e.g. {"x86"} inside '#ifdef __x86_64__', {"arm"} inside its '#else').
+archctx = None
 
 while i < len(header_lines):
   l = header_lines[i]
+  lstrip = l.strip()
+  if lstrip == "#ifdef __x86_64__":
+    archctx = {"x86"}
+    i += 1
+    continue
+  if lstrip == "#else" and archctx == {"x86"}:
+    archctx = {"arm"}
+    i += 1
+    continue
+  if lstrip == "#endif" and archctx is not None:
+    archctx = None
+    i += 1
+    continue
   if not (l.startswith("extern")):
     i += 1
     continue
@@ -221,10 +243,23 @@ while i < len(header_lines):
     # Also parse the comment
     mem_inout = getMemInoutFromComment(comment_inout)
 
-  fnsigsAndInouts[decl.fnname] = (decl, mem_inout)
+  if archctx is None:
+    fnsigsAndInouts[decl.fnname] = (decl, mem_inout)
+  else:
+    for a in archctx:
+      fnsigsAndInoutsByArch[a][decl.fnname] = (decl, mem_inout)
+    # Keep a default entry (from whichever branch is seen first) so that
+    # generic lookups (existence checks) still succeed.
+    fnsigsAndInouts.setdefault(decl.fnname, (decl, mem_inout))
 
   i += 1
   prev_mem_inout = mem_inout
+
+# Resolve the per-architecture signature/inout for a function name.
+def sigInoutForArch(fnname, arch):
+  if fnname in fnsigsAndInoutsByArch[arch]:
+    return fnsigsAndInoutsByArch[arch][fnname]
+  return fnsigsAndInouts[fnname]
 
 
 ###############################################################################
@@ -375,29 +410,29 @@ def checkOnlyInArch(fnname, onlyIn):
   return False
 
 for fnname in fnsigsAndInouts:
-  fnsigFromHeader,_ = fnsigsAndInouts[fnname]
-
   if not checkOnlyInArch(fnname, onlyInX86):
+    fnsigFromHeaderArm,_ = sigInoutForArch(fnname, "arm")
     assert fnname in fnsigsFromAsm["arm"], \
       f"Could not find function {fnname} from arm! Should it be added to onlyInX86 array?"
-    if fnsigFromHeader != fnsigsFromAsm["arm"][fnname]:
+    if fnsigFromHeaderArm != fnsigsFromAsm["arm"][fnname]:
       print(f"Function signature mismatch! function: {fnname}, arch: arm")
       print("s2n-bignum.h:")
-      fnsigFromHeader.print()
+      fnsigFromHeaderArm.print()
       print("assembly comment:")
       fnsigsFromAsm["arm"][fnname].print()
-      assert fnsigFromHeader == fnsigsFromAsm["arm"][fnname], f"{fnname}"
+      assert fnsigFromHeaderArm == fnsigsFromAsm["arm"][fnname], f"{fnname}"
 
   if not checkOnlyInArch(fnname, onlyInArm):
+    fnsigFromHeaderX86,_ = sigInoutForArch(fnname, "x86")
     assert fnname in fnsigsFromAsm["x86"], \
       f"Could not find function {fnname} from x86! Should it be added to onlyInArm array?"
-    if fnsigFromHeader != fnsigsFromAsm["x86"][fnname]:
+    if fnsigFromHeaderX86 != fnsigsFromAsm["x86"][fnname]:
       print("Function signature mismatch! function: {fnname}, arch: arm")
       print("s2n-bignum.h:")
-      fnsigFromHeader.print()
+      fnsigFromHeaderX86.print()
       print("assembly comment:")
       fnsigsFromAsm["x86"][fnname].print()
-      assert fnsigFromHeader == fnsigsFromAsm["x86"][fnname], f"{fnname}"
+      assert fnsigFromHeaderX86 == fnsigsFromAsm["x86"][fnname], f"{fnname}"
 
 for archname in ["arm","x86"]:
   f = open(os.path.join(archname, os.path.join("proofs", "subroutine_signatures.ml")), "w")
@@ -407,7 +442,7 @@ for archname in ["arm","x86"]:
     print(f"Printing inpput/output of {fnname}..")
 
     fnsig = fnsigsFromAsm[archname][fnname]
-    _, meminout = fnsigsAndInouts[fnname]
+    _, meminout = sigInoutForArch(fnname, archname)
     f.write(f'("{fnsig.fnname}",\n')
 
     # args and return type

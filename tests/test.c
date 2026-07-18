@@ -13002,12 +13002,18 @@ void reference_mldsa_poly_use_hint_32(int32_t b[256], const int32_t a[256], cons
 
 int test_mldsa_poly_use_hint_32(void)
 {
-    // Skip test on non-aarch64 architectures (ARM-only function)
+    // use_hint has different ABIs per architecture: ARM writes b[256] (3 args),
+    // x86 operates in place on a[256] (2 args). Both are exercised here.
+#if defined(__aarch64__) || defined(__x86_64__)
+#ifdef __aarch64__
     if (get_arch_name() != ARCH_AARCH64) {
         return 0;
     }
-
-#ifdef __aarch64__
+#else
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+#endif
     uint64_t t, i;
     int32_t a[256] __attribute__((aligned(32)));
     int32_t h[256] __attribute__((aligned(32)));
@@ -13027,7 +13033,13 @@ int test_mldsa_poly_use_hint_32(void)
         reference_mldsa_poly_use_hint_32(b_ref, a, h);
 
         // Call the assembly implementation
+#ifdef __aarch64__
         mldsa_poly_use_hint_32(b_asm, a, h);
+#else
+        // x86 variant works in place: copy input into b_asm, then correct it
+        for (i = 0; i < 256; ++i) b_asm[i] = a[i];
+        mldsa_poly_use_hint_32(b_asm, h);
+#endif
 
         // Compare results
         for (i = 0; i < 256; ++i) {
@@ -14425,12 +14437,18 @@ void reference_mldsa_poly_use_hint_88(int32_t b[256], const int32_t a[256], cons
 
 int test_mldsa_poly_use_hint_88(void)
 {
-    // Skip test on non-aarch64 architectures (ARM-only function)
+    // use_hint has different ABIs per architecture: ARM writes b[256] (3 args),
+    // x86 operates in place on a[256] (2 args). Both are exercised here.
+#if defined(__aarch64__) || defined(__x86_64__)
+#ifdef __aarch64__
     if (get_arch_name() != ARCH_AARCH64) {
         return 0;
     }
-
-#ifdef __aarch64__
+#else
+    if (get_arch_name() != ARCH_X86_64) {
+        return 0;
+    }
+#endif
     uint64_t t, i;
     int32_t a[256] __attribute__((aligned(32)));
     int32_t h[256] __attribute__((aligned(32)));
@@ -14450,7 +14468,13 @@ int test_mldsa_poly_use_hint_88(void)
         reference_mldsa_poly_use_hint_88(b_ref, a, h);
 
         // Call the assembly implementation
+#ifdef __aarch64__
         mldsa_poly_use_hint_88(b_asm, a, h);
+#else
+        // x86 variant works in place: copy input into b_asm, then correct it
+        for (i = 0; i < 256; ++i) b_asm[i] = a[i];
+        mldsa_poly_use_hint_88(b_asm, h);
+#endif
 
         // Compare results
         for (i = 0; i < 256; ++i) {
