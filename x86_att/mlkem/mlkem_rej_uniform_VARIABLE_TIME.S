@@ -36,6 +36,7 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
         .text
+        .balign 32
         .balign 4
 
 // This code is effectively the same as the original here:

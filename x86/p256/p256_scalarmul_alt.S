@@ -26,6 +26,7 @@
         S2N_BN_SYM_PRIVACY_DIRECTIVE(p256_scalarmul_alt)
 
         .text
+        .balign 32
         .balign 4
 
 // Size of individual field elements
