@@ -462,3 +462,39 @@ let BYTE_LIST_AT_NBLOCK_CTR = prove(
     SUBGOAL_THEN `8 * j + b < 8 * tail` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
     SUBGOAL_THEN `8 * j + b < 128` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
     ASM_REWRITE_TAC[]]);;
+
+(* ----------------------------------------------------------------------------
+   WHOLE-BLOCK (tail = 16) collapse: the masked full+tail byte buffer equals the
+   plain whole-block aes_ctr_bytes when the tail mask is all-ones.  Used by the
+   whole-blocks-only decrypt variant (aesv8_gcm_8x_dec_256_wb) wrappers.
+   ---------------------------------------------------------------------------- *)
+let WORD_AND_ALLONES_128 = prove
+ (`!x:int128. word_and x (word (2 EXP (8 * 16) - 1)) = x`,
+  GEN_TAC THEN CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN CONV_TAC WORD_BLAST);;
+
+let SUB_LIST_16_INT128_TO_BYTES = prove
+ (`!w:int128. SUB_LIST (0,16) (int128_to_bytes w) = int128_to_bytes w`,
+  GEN_TAC THEN MATCH_MP_TAC SUB_LIST_LENGTH_IMPLIES THEN
+  REWRITE_TAC[LENGTH_INT128_TO_BYTES]);;
+
+let AES_CTR_FULL_TAIL_BYTES_WHOLE = prove
+ (`!ctr0 pts keys nfull.
+     nfull + 1 = LENGTH pts
+     ==> aes_ctr_full_tail_bytes ctr0 pts keys nfull 16 =
+         aes_ctr_bytes ctr0 pts keys`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[aes_ctr_full_tail_bytes; aes_ctr_bytes; WORD_AND_ALLONES_128] THEN
+  REWRITE_TAC[SUB_LIST_16_INT128_TO_BYTES] THEN
+  SUBGOAL_THEN `LENGTH (aes_ctr ctr0 pts keys) = nfull + 1` MP_TAC THENL
+   [ASM_REWRITE_TAC[LENGTH_AES_CTR]; ALL_TAC] THEN
+  SPEC_TAC(`aes_ctr ctr0 pts keys`,`l:int128 list`) THEN
+  SPEC_TAC(`nfull:num`,`n:num`) THEN
+  INDUCT_TAC THEN LIST_INDUCT_TAC THEN
+  REWRITE_TAC[LENGTH; ADD_CLAUSES; NOT_SUC; SUC_INJ;
+              ARITH_RULE `~(0 = 1)`] THENL
+   [REWRITE_TAC[ARITH_RULE `SUC k = 1 <=> k = 0`; LENGTH_EQ_NIL] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    REWRITE_TAC[SUB_LIST_CLAUSES; int128_list_to_bytes; APPEND; EL; HD; APPEND_NIL];
+    DISCH_TAC THEN REWRITE_TAC[SUB_LIST_CLAUSES; int128_list_to_bytes] THEN
+    REWRITE_TAC[EL; TL; GSYM APPEND_ASSOC] THEN AP_TERM_TAC THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);;
