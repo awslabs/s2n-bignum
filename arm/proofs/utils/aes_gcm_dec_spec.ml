@@ -214,3 +214,49 @@ let GCM_DEC_PT_BYTES_5 = build_pt_bytes_lemma 4;;
 let GCM_DEC_PT_BYTES_6 = build_pt_bytes_lemma 5;;
 let GCM_DEC_PT_BYTES_7 = build_pt_bytes_lemma 6;;
 let GCM_DEC_PT_BYTES_8 = build_pt_bytes_lemma 7;;
+
+(* ----------------------------------------------------------------------------
+   WHOLE-BLOCK (len = 16*N) unfolds for the whole-blocks-only decrypt variant
+   (aesv8_gcm_8x_dec_256_wb): specialize the per-N masked unfolds at tail = 16
+   and collapse the all-ones mask, giving plain unmasked block lists / the plain
+   whole-block aes_ctr_bytes output.  N = 1..8.
+   ---------------------------------------------------------------------------- *)
+let build_ghash_blocks_whole n =
+  let base = el (n-1) [GCM_DEC_GHASH_BLOCKS_1;GCM_DEC_GHASH_BLOCKS_2;
+                       GCM_DEC_GHASH_BLOCKS_3;GCM_DEC_GHASH_BLOCKS_4;
+                       GCM_DEC_GHASH_BLOCKS_5;GCM_DEC_GHASH_BLOCKS_6;
+                       GCM_DEC_GHASH_BLOCKS_7;GCM_DEC_GHASH_BLOCKS_8] in
+  let th = MP (SPECL [`16`;`x:byte list`] base) (ARITH_RULE `1 <= 16 /\ 16 <= 16`) in
+  let th = REWRITE_RULE[WORD_AND_ALLONES_128] th in
+  GEN `x:byte list` (CONV_RULE (LAND_CONV(RATOR_CONV(RAND_CONV NUM_REDUCE_CONV))) th);;
+
+let GCM_DEC_GHASH_BLOCKS_WHOLE_1 = build_ghash_blocks_whole 1;;
+let GCM_DEC_GHASH_BLOCKS_WHOLE_2 = build_ghash_blocks_whole 2;;
+let GCM_DEC_GHASH_BLOCKS_WHOLE_3 = build_ghash_blocks_whole 3;;
+let GCM_DEC_GHASH_BLOCKS_WHOLE_4 = build_ghash_blocks_whole 4;;
+let GCM_DEC_GHASH_BLOCKS_WHOLE_5 = build_ghash_blocks_whole 5;;
+let GCM_DEC_GHASH_BLOCKS_WHOLE_6 = build_ghash_blocks_whole 6;;
+let GCM_DEC_GHASH_BLOCKS_WHOLE_7 = build_ghash_blocks_whole 7;;
+let GCM_DEC_GHASH_BLOCKS_WHOLE_8 = build_ghash_blocks_whole 8;;
+
+let build_pt_bytes_whole n =
+  let base = el (n-1) [GCM_DEC_PT_BYTES_1;GCM_DEC_PT_BYTES_2;GCM_DEC_PT_BYTES_3;
+                       GCM_DEC_PT_BYTES_4;GCM_DEC_PT_BYTES_5;GCM_DEC_PT_BYTES_6;
+                       GCM_DEC_PT_BYTES_7;GCM_DEC_PT_BYTES_8] in
+  let th = MP (SPECL [`16`;`x:byte list`;`ctr0:int128`;`keys:int128 list`] base)
+              (ARITH_RULE `1 <= 16 /\ 16 <= 16`) in
+  let collapse = PART_MATCH (lhs o rand) AES_CTR_FULL_TAIL_BYTES_WHOLE (rand(concl th)) in
+  let collapse = MP collapse
+      (prove(lhand(concl collapse), REWRITE_TAC[LENGTH] THEN ARITH_TAC)) in
+  let th = TRANS th collapse in
+  GENL [`x:byte list`;`ctr0:int128`;`keys:int128 list`]
+    (CONV_RULE (LAND_CONV(funpow 3 RATOR_CONV (RAND_CONV NUM_REDUCE_CONV))) th);;
+
+let GCM_DEC_PT_BYTES_WHOLE_1 = build_pt_bytes_whole 1;;
+let GCM_DEC_PT_BYTES_WHOLE_2 = build_pt_bytes_whole 2;;
+let GCM_DEC_PT_BYTES_WHOLE_3 = build_pt_bytes_whole 3;;
+let GCM_DEC_PT_BYTES_WHOLE_4 = build_pt_bytes_whole 4;;
+let GCM_DEC_PT_BYTES_WHOLE_5 = build_pt_bytes_whole 5;;
+let GCM_DEC_PT_BYTES_WHOLE_6 = build_pt_bytes_whole 6;;
+let GCM_DEC_PT_BYTES_WHOLE_7 = build_pt_bytes_whole 7;;
+let GCM_DEC_PT_BYTES_WHOLE_8 = build_pt_bytes_whole 8;;
