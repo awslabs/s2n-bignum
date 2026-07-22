@@ -260,6 +260,8 @@ BIGNUM_OBJ = curve25519/bignum_add_p25519.o \
              mldsa/mldsa_pointwise_acc_l7.o \
              mldsa/mldsa_reduce.o \
              mldsa/mldsa_rej_uniform_VARIABLE_TIME.o \
+             mldsa/mldsa_rej_uniform_eta2_VARIABLE_TIME.o \
+             mldsa/mldsa_rej_uniform_eta4_VARIABLE_TIME.o \
              mlkem/mlkem_basemul_k2.o \
              mlkem/mlkem_basemul_k3.o \
              mlkem/mlkem_basemul_k4.o \

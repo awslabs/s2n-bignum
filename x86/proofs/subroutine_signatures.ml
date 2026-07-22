@@ -4929,6 +4929,42 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_rej_uniform_eta2_VARIABLE_TIME",
+  ([(*args*)
+     ("r", "int32_t*", (*is const?*)"false");
+     ("buf", "uint8_t*", (*is const?*)"true");
+     ("table", "uint8_t[256][8]", (*is const?*)"true");
+   ],
+   "unsigned",
+   [(* input buffers *)
+    ("buf", "buflen"(* num elems *), 1(* elem bytesize *));
+    ("table", "4096"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_rej_uniform_eta4_VARIABLE_TIME",
+  ([(*args*)
+     ("r", "int32_t*", (*is const?*)"false");
+     ("buf", "uint8_t*", (*is const?*)"true");
+     ("table", "uint8_t[256][8]", (*is const?*)"true");
+   ],
+   "unsigned",
+   [(* input buffers *)
+    ("buf", "buflen"(* num elems *), 1(* elem bytesize *));
+    ("table", "4096"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mlkem_basemul_k2",
   ([(*args*)
      ("r", "int16_t[static 256]", (*is const?*)"false");

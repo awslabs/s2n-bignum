@@ -1083,12 +1083,26 @@ extern void mldsa_poly_use_hint_32(int32_t b[S2N_BIGNUM_STATIC 256], const int32
 extern void mldsa_poly_use_hint_88(int32_t b[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t h[S2N_BIGNUM_STATIC 256]);
 
 // Rejection sampling for ML-DSA secret key (eta = 2; parameter sets 44/87)
+// The x86 (AVX2) and Arm (NEON) backends diverge: x86 reads a fixed-size input
+// buffer and a 2048-byte table; Arm takes a variable buflen and a 4096-byte table.
+#ifdef __x86_64__
+// Inputs buf[136], table[2048] (uint8_t); output r[256] (signed 32-bit words)
+extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t buf[S2N_BIGNUM_STATIC 136], const uint8_t table[S2N_BIGNUM_STATIC 2048]);
+#else
 // Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words)
 extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t *buf, unsigned buflen, const uint8_t table[S2N_BIGNUM_STATIC 4096]);
+#endif
 
 // Rejection sampling for ML-DSA secret key (eta = 4; parameter set 65)
+// The x86 (AVX2) and Arm (NEON) backends diverge: x86 reads a fixed-size input
+// buffer and a 2048-byte table; Arm takes a variable buflen and a 4096-byte table.
+#ifdef __x86_64__
+// Inputs buf[272], table[2048] (uint8_t); output r[256] (signed 32-bit words)
+extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t buf[S2N_BIGNUM_STATIC 272], const uint8_t table[S2N_BIGNUM_STATIC 2048]);
+#else
 // Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words)
 extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t *buf, unsigned buflen, const uint8_t table[S2N_BIGNUM_STATIC 4096]);
+#endif
 
 // Uniform rejection sampling for ML-DSA
 // Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 32-bit words), return
