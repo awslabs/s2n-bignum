@@ -1,5 +1,4 @@
 (*
- * Copyright (c) The mldsa-native project authors
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
@@ -17,7 +16,6 @@ needs "common/mlkem_mldsa.ml";;
  ****)
 
 let mldsa_chknorm_mc = define_assert_from_elf "mldsa_chknorm_mc" "x86/mldsa/mldsa_chknorm.o"
-(*** BYTECODE START ***)
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x83; 0xee; 0x01;        (* SUB (% esi) (Imm8 (word 1)) *)
@@ -159,7 +157,6 @@ let mldsa_chknorm_mc = define_assert_from_elf "mldsa_chknorm_mc" "x86/mldsa/mlds
   0x0f; 0x95; 0xc0;        (* SETNE (% al) *)
   0xc3                     (* RET *)
 ];;
-(*** BYTECODE END ***)
 
 let mldsa_chknorm_tmc = define_trimmed "mldsa_chknorm_tmc" mldsa_chknorm_mc;;
 
@@ -351,9 +348,6 @@ let MLDSA_CHKNORM_CORRECT = prove(
 (* ------------------------------------------------------------------------- *)
 (* Subroutine correctness theorem (includes return)                          *)
 (* ------------------------------------------------------------------------- *)
-
-(* This specification must be kept in sync with the CBMC contract in         *)
-(* mldsa/src/native/x86_64/src/arith_native_x86_64.h                         *)
 
 let MLDSA_CHKNORM_NOIBT_SUBROUTINE_CORRECT = prove(
  `!a (x:num->int32) (bound:int32) pc stackpointer returnaddress.

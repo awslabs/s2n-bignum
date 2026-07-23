@@ -1,5 +1,4 @@
 (*
- * Copyright (c) The mldsa-native project authors
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
@@ -23,7 +22,6 @@ needs "common/mlkem_mldsa.ml";;
  ****)
 
 let mldsa_decompose32_mc = define_assert_from_elf "mldsa_decompose32_mc" "x86/mldsa/mldsa_decompose_32.o"
-(*** BYTECODE START ***)
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0xb8; 0x7f; 0x00; 0x00; 0x00;
@@ -722,17 +720,13 @@ let mldsa_decompose32_mc = define_assert_from_elf "mldsa_decompose32_mc" "x86/ml
                            (* VMOVDQA (Memop Word256 (%% (rsi,992))) (%_% ymm2) *)
   0xc3                     (* RET *)
 ];;
-(*** BYTECODE END ***)
 
 let mldsa_decompose32_tmc = define_trimmed "mldsa_decompose32_tmc" mldsa_decompose32_mc;;
 let MLDSA_DECOMPOSE32_EXEC = X86_MK_CORE_EXEC_RULE mldsa_decompose32_tmc;;
 
-(* ========================================================================= *)
-(* Word-arithmetic helper lemmas.                                            *)
-(* These are ported from the mldsa-native x86_64 utils and specialised to    *)
-(* the decompose-32 constants; they are inlined here to avoid extending the  *)
-(* shared x86/proofs/mldsa_utils.ml.                                         *)
-(* ========================================================================= *)
+(* ------------------------------------------------------------------------- *)
+(* Supporting arithmetic/word lemmas for the decompose proofs.               *)
+(* ------------------------------------------------------------------------- *)
 
 (* val of the right-shift-by-7 of (x+127), for in-range x. *)
 let H_T = prove(

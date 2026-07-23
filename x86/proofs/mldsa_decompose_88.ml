@@ -1,5 +1,4 @@
 (*
- * Copyright (c) The mldsa-native project authors
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
@@ -7,7 +6,7 @@
 (* ========================================================================= *)
 (* Functional correctness of mldsa_decompose_88 (x86_64 AVX2):               *)
 (* Decompose polynomial coefficients into (a1, a0) where                     *)
-(* a mod^+ Q = a1*2*GAMMA2 + a0 for GAMMA2 = (Q-1)/88 = 95232                 *)
+(* a mod^+ Q = a1*2*GAMMA2 + a0 for GAMMA2 = (Q-1)/88 = 95232                *)
 (* (ML-DSA-44).                                                              *)
 (*                                                                           *)
 (* The high-bits quotient is computed with the AVX2 mulhi/mulhrs Barrett     *)
@@ -19,124 +18,10 @@
 needs "x86/proofs/base.ml";;
 needs "common/mlkem_mldsa.ml";;
 
-(* ------------------------------------------------------------------------- *)
-(* Supporting arithmetic/word lemmas for the decompose proofs.               *)
-(* (Ported from the mldsa-native x86_64 utils; inlined here to keep the      *)
-(* shared x86/proofs/mldsa_utils.ml unchanged.)                              *)
-(* ------------------------------------------------------------------------- *)
-
-(* The shifted representative val(word_ushr (x+127) 7). *)
-let H_T = prove(
-  `!x:int32. val x < 8380417 ==>
-     val(word_ushr (word_add (x:int32) (word 127)) 7) = (val x + 127) DIV 128`,
-  GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[VAL_WORD_USHR; VAL_WORD_ADD; VAL_WORD; DIMINDEX_32] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `(val(x:int32) + 127) MOD 4294967296 = val x + 127` SUBST1_TAC THENL
-   [MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; REWRITE_TAC[]]);;
-
-(* The shifted value stays below the next power-of-two boundary. *)
-let T_BOUND = prove(
-  `!x:int32. val x < 8380417 ==> (val x + 127) DIV 128 < 65473`,
-  GEN_TAC THEN DISCH_TAC THEN
-  SIMP_TAC[RDIV_LT_EQ; ARITH_RULE `~(128 = 0)`] THEN ASM_ARITH_TAC);;
-
-(* DIV bound helper: pins a quotient from a multiplicative bracket. *)
-let DIV_BOUNDS_EQ = prove(
-  `!b d q. ~(d = 0) /\ q * d <= b /\ b < (q + 1) * d ==> b DIV d = q`,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC(ARITH_RULE `q <= r /\ r < q + 1 ==> r = q`) THEN
-  CONJ_TAC THENL
-   [ASM_SIMP_TAC[LE_RDIV_EQ] THEN ASM_ARITH_TAC;
-    ASM_SIMP_TAC[RDIV_LT_EQ] THEN ASM_ARITH_TAC]);;
-
-(* ival = val for in-range positive int32. *)
-let IVAL_EQ_VAL = prove(
-  `!x:int32. val x < 2 EXP 31 ==> ival x = &(val x)`,
-  GEN_TAC THEN REWRITE_TAC[IVAL_VAL; DIMINDEX_32] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
-  DISCH_TAC THEN
-  SUBGOAL_THEN `bit (32 - 1) (x:int32) = F` ASSUME_TAC THENL
-   [REWRITE_TAC[BIT_VAL; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC;
-    ASM_REWRITE_TAC[bitval] THEN INT_ARITH_TAC]);;
-
-(* val of a 16->32 sign extension when the source is below 2^15. *)
-let VAL_SX_16_32 = prove(
-  `!w:16 word. val w < 32768 ==> val(word_sx w:int32) = val w`,
-  GEN_TAC THEN DISCH_TAC THEN
-  SUBGOAL_THEN `bit 15 (w:16 word) = F` ASSUME_TAC THENL
-   [REWRITE_TAC[BIT_VAL; DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
-    SUBGOAL_THEN `val(w:16 word) DIV 32768 = 0` SUBST1_TAC THENL
-     [MATCH_MP_TAC DIV_LT THEN ASM_REWRITE_TAC[]; CONV_TAC NUM_REDUCE_CONV]; ALL_TAC] THEN
-  SUBGOAL_THEN `ival(w:16 word) = &(val w)` ASSUME_TAC THENL
-   [MP_TAC(ISPEC `w:16 word` VAL_IVAL) THEN
-    REWRITE_TAC[DIMINDEX_16; ARITH_RULE `16 - 1 = 15`] THEN
-    ASM_REWRITE_TAC[BITVAL_CLAUSES; INT_MUL_RZERO; INT_ADD_RID] THEN INT_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `ival(word_sx (w:16 word):int32) = &(val w)` ASSUME_TAC THENL
-   [MP_TAC(ISPECL [`w:16 word`] (INST_TYPE [`:16`,`:M`; `:32`,`:N`] IVAL_WORD_SX)) THEN
-    REWRITE_TAC[DIMINDEX_16; DIMINDEX_32] THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
-    ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  MP_TAC(ISPEC `word_sx (w:16 word):int32` VAL_IVAL) THEN
-  REWRITE_TAC[DIMINDEX_32; ARITH_RULE `32 - 1 = 31`] THEN
-  SUBGOAL_THEN `bit 31 (word_sx (w:16 word):int32) = F` SUBST1_TAC THENL
-   [MP_TAC(ISPEC `word_sx (w:16 word):int32` MSB_IVAL) THEN
-    REWRITE_TAC[DIMINDEX_32; ARITH_RULE `32 - 1 = 31`] THEN DISCH_THEN SUBST1_TAC THEN
-    ASM_REWRITE_TAC[] THEN INT_ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[BITVAL_CLAUSES; INT_MUL_RZERO; INT_ADD_RID] THEN
-  ASM_REWRITE_TAC[] THEN REWRITE_TAC[INT_OF_NUM_EQ] THEN ASM_MESON_TAC[]);;
-
-(* Signed comparison against a non-negative bound below 2^31. *)
-let IGT_BOUND_GEN = prove(
-  `!x:int32 b. b < 2147483648 ==> (word_igt x (word b) <=> ival x > &b)`,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  SUBGOAL_THEN `ival(word b:int32) = &b` ASSUME_TAC THENL
-   [MP_TAC(ISPEC `word b:int32` IVAL_EQ_VAL) THEN
-    REWRITE_TAC[VAL_WORD; DIMINDEX_32] THEN
-    SUBGOAL_THEN `b MOD 2 EXP 32 = b` SUBST1_TAC THENL
-     [MATCH_MP_TAC MOD_LT THEN UNDISCH_TAC `b < 2147483648` THEN ARITH_TAC;
-      ANTS_TAC THENL [UNDISCH_TAC `b < 2147483648` THEN ARITH_TAC; SIMP_TAC[]]];
-    ASM_REWRITE_TAC[WORD_IGT; irelational2; GT]]);;
-
-(* High 16 bits of a 16x16->32 unsigned multiply (VPMULHUW lane semantics). *)
-let MULHI_LANE_GEN = prove(
-  `!t:int32 m. val t < 65536 /\ m < 65536 ==>
-     val(word_subword (word_mul (word_zx (word_subword t (0,16):16 word):int32)
-                                (word m)) (16,16):16 word) =
-     (val t * m) DIV 65536`,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  SUBGOAL_THEN `val(t:int32) * m < 4294967296` ASSUME_TAC THENL
-   [MATCH_MP_TAC LET_TRANS THEN EXISTS_TAC `65535 * 65535` THEN
-    CONJ_TAC THENL [MATCH_MP_TAC LE_MULT2 THEN ASM_ARITH_TAC; ARITH_TAC];
-    ALL_TAC] THEN
-  REWRITE_TAC[VAL_WORD_SUBWORD; VAL_WORD_MUL; VAL_WORD_ZX_GEN; VAL_WORD;
-              DIMINDEX_16; DIMINDEX_32] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  SUBGOAL_THEN `val(t:int32) DIV 1 = val t /\ val(t:int32) MOD 65536 = val t`
-    (fun th -> REWRITE_TAC[th]) THENL
-   [ASM_SIMP_TAC[DIV_1; MOD_LT]; ALL_TAC] THEN
-  SUBGOAL_THEN `val(t:int32) MOD 4294967296 = val t /\ m MOD 4294967296 = m`
-    (fun th -> REWRITE_TAC[th]) THENL
-   [CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `(val(t:int32) * m) MOD 4294967296 = val t * m` SUBST1_TAC THENL
-   [MATCH_MP_TAC MOD_LT THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  MATCH_MP_TAC MOD_LT THEN
-  SIMP_TAC[RDIV_LT_EQ; ARITH_RULE `~(65536 = 0)`] THEN ASM_ARITH_TAC);;
-
-(* word_not distributes over word_join at the 64/128/256-bit AVX2 lane widths. *)
-let WORD_NOT_JOIN_64 = WORD_BLAST
-  `!a b : int32. word_not ((word_join:int32->int32->int64) a b) =
-   word_join (word_not a) (word_not b)`;;
-let WORD_NOT_JOIN_128 = WORD_BLAST
-  `!a b : int64. word_not ((word_join:int64->int64->int128) a b) =
-   word_join (word_not a) (word_not b)`;;
-let WORD_NOT_JOIN_256 = WORD_BLAST
-  `!a b : int128. word_not ((word_join:int128->int128->int256) a b) =
-   word_join (word_not a) (word_not b)`;;
-
 (**** print_literal_from_elf "x86/mldsa/mldsa_decompose_88.o";;
  ****)
 
 let mldsa_decompose_88_mc = define_assert_from_elf "mldsa_decompose_88_mc" "x86/mldsa/mldsa_decompose_88.o"
-(*** BYTECODE START ***)
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0xb8; 0x7f; 0x00; 0x00; 0x00;
@@ -835,10 +720,120 @@ let mldsa_decompose_88_mc = define_assert_from_elf "mldsa_decompose_88_mc" "x86/
                            (* VMOVDQA (Memop Word256 (%% (rsi,992))) (%_% ymm2) *)
   0xc3                     (* RET *)
 ];;
-(*** BYTECODE END ***)
 
 let mldsa_decompose_88_tmc = define_trimmed "mldsa_decompose_88_tmc" mldsa_decompose_88_mc;;
 let MLDSA_DECOMPOSE_88_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_decompose_88_tmc;;
+
+(* ------------------------------------------------------------------------- *)
+(* Supporting arithmetic/word lemmas for the decompose proofs.               *)
+(* ------------------------------------------------------------------------- *)
+
+(* The shifted representative val(word_ushr (x+127) 7). *)
+let H_T = prove(
+  `!x:int32. val x < 8380417 ==>
+     val(word_ushr (word_add (x:int32) (word 127)) 7) = (val x + 127) DIV 128`,
+  GEN_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[VAL_WORD_USHR; VAL_WORD_ADD; VAL_WORD; DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `(val(x:int32) + 127) MOD 4294967296 = val x + 127` SUBST1_TAC THENL
+   [MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; REWRITE_TAC[]]);;
+
+(* The shifted value stays below the next power-of-two boundary. *)
+let T_BOUND = prove(
+  `!x:int32. val x < 8380417 ==> (val x + 127) DIV 128 < 65473`,
+  GEN_TAC THEN DISCH_TAC THEN
+  SIMP_TAC[RDIV_LT_EQ; ARITH_RULE `~(128 = 0)`] THEN ASM_ARITH_TAC);;
+
+(* DIV bound helper: pins a quotient from a multiplicative bracket. *)
+let DIV_BOUNDS_EQ = prove(
+  `!b d q. ~(d = 0) /\ q * d <= b /\ b < (q + 1) * d ==> b DIV d = q`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC(ARITH_RULE `q <= r /\ r < q + 1 ==> r = q`) THEN
+  CONJ_TAC THENL
+   [ASM_SIMP_TAC[LE_RDIV_EQ] THEN ASM_ARITH_TAC;
+    ASM_SIMP_TAC[RDIV_LT_EQ] THEN ASM_ARITH_TAC]);;
+
+(* ival = val for in-range positive int32. *)
+let IVAL_EQ_VAL = prove(
+  `!x:int32. val x < 2 EXP 31 ==> ival x = &(val x)`,
+  GEN_TAC THEN REWRITE_TAC[IVAL_VAL; DIMINDEX_32] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_EXP_CONV) THEN
+  DISCH_TAC THEN
+  SUBGOAL_THEN `bit (32 - 1) (x:int32) = F` ASSUME_TAC THENL
+   [REWRITE_TAC[BIT_VAL; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC;
+    ASM_REWRITE_TAC[bitval] THEN INT_ARITH_TAC]);;
+
+(* val of a 16->32 sign extension when the source is below 2^15. *)
+let VAL_SX_16_32 = prove(
+  `!w:16 word. val w < 32768 ==> val(word_sx w:int32) = val w`,
+  GEN_TAC THEN DISCH_TAC THEN
+  SUBGOAL_THEN `bit 15 (w:16 word) = F` ASSUME_TAC THENL
+   [REWRITE_TAC[BIT_VAL; DIMINDEX_16] THEN CONV_TAC NUM_REDUCE_CONV THEN
+    SUBGOAL_THEN `val(w:16 word) DIV 32768 = 0` SUBST1_TAC THENL
+     [MATCH_MP_TAC DIV_LT THEN ASM_REWRITE_TAC[]; CONV_TAC NUM_REDUCE_CONV]; ALL_TAC] THEN
+  SUBGOAL_THEN `ival(w:16 word) = &(val w)` ASSUME_TAC THENL
+   [MP_TAC(ISPEC `w:16 word` VAL_IVAL) THEN
+    REWRITE_TAC[DIMINDEX_16; ARITH_RULE `16 - 1 = 15`] THEN
+    ASM_REWRITE_TAC[BITVAL_CLAUSES; INT_MUL_RZERO; INT_ADD_RID] THEN INT_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `ival(word_sx (w:16 word):int32) = &(val w)` ASSUME_TAC THENL
+   [MP_TAC(ISPECL [`w:16 word`] (INST_TYPE [`:16`,`:M`; `:32`,`:N`] IVAL_WORD_SX)) THEN
+    REWRITE_TAC[DIMINDEX_16; DIMINDEX_32] THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+    ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  MP_TAC(ISPEC `word_sx (w:16 word):int32` VAL_IVAL) THEN
+  REWRITE_TAC[DIMINDEX_32; ARITH_RULE `32 - 1 = 31`] THEN
+  SUBGOAL_THEN `bit 31 (word_sx (w:16 word):int32) = F` SUBST1_TAC THENL
+   [MP_TAC(ISPEC `word_sx (w:16 word):int32` MSB_IVAL) THEN
+    REWRITE_TAC[DIMINDEX_32; ARITH_RULE `32 - 1 = 31`] THEN DISCH_THEN SUBST1_TAC THEN
+    ASM_REWRITE_TAC[] THEN INT_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[BITVAL_CLAUSES; INT_MUL_RZERO; INT_ADD_RID] THEN
+  ASM_REWRITE_TAC[] THEN REWRITE_TAC[INT_OF_NUM_EQ] THEN ASM_MESON_TAC[]);;
+
+(* Signed comparison against a non-negative bound below 2^31. *)
+let IGT_BOUND_GEN = prove(
+  `!x:int32 b. b < 2147483648 ==> (word_igt x (word b) <=> ival x > &b)`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  SUBGOAL_THEN `ival(word b:int32) = &b` ASSUME_TAC THENL
+   [MP_TAC(ISPEC `word b:int32` IVAL_EQ_VAL) THEN
+    REWRITE_TAC[VAL_WORD; DIMINDEX_32] THEN
+    SUBGOAL_THEN `b MOD 2 EXP 32 = b` SUBST1_TAC THENL
+     [MATCH_MP_TAC MOD_LT THEN UNDISCH_TAC `b < 2147483648` THEN ARITH_TAC;
+      ANTS_TAC THENL [UNDISCH_TAC `b < 2147483648` THEN ARITH_TAC; SIMP_TAC[]]];
+    ASM_REWRITE_TAC[WORD_IGT; irelational2; GT]]);;
+
+(* High 16 bits of a 16x16->32 unsigned multiply (VPMULHUW lane semantics). *)
+let MULHI_LANE_GEN = prove(
+  `!t:int32 m. val t < 65536 /\ m < 65536 ==>
+     val(word_subword (word_mul (word_zx (word_subword t (0,16):16 word):int32)
+                                (word m)) (16,16):16 word) =
+     (val t * m) DIV 65536`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN `val(t:int32) * m < 4294967296` ASSUME_TAC THENL
+   [MATCH_MP_TAC LET_TRANS THEN EXISTS_TAC `65535 * 65535` THEN
+    CONJ_TAC THENL [MATCH_MP_TAC LE_MULT2 THEN ASM_ARITH_TAC; ARITH_TAC];
+    ALL_TAC] THEN
+  REWRITE_TAC[VAL_WORD_SUBWORD; VAL_WORD_MUL; VAL_WORD_ZX_GEN; VAL_WORD;
+              DIMINDEX_16; DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `val(t:int32) DIV 1 = val t /\ val(t:int32) MOD 65536 = val t`
+    (fun th -> REWRITE_TAC[th]) THENL
+   [ASM_SIMP_TAC[DIV_1; MOD_LT]; ALL_TAC] THEN
+  SUBGOAL_THEN `val(t:int32) MOD 4294967296 = val t /\ m MOD 4294967296 = m`
+    (fun th -> REWRITE_TAC[th]) THENL
+   [CONJ_TAC THEN MATCH_MP_TAC MOD_LT THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(val(t:int32) * m) MOD 4294967296 = val t * m` SUBST1_TAC THENL
+   [MATCH_MP_TAC MOD_LT THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  MATCH_MP_TAC MOD_LT THEN
+  SIMP_TAC[RDIV_LT_EQ; ARITH_RULE `~(65536 = 0)`] THEN ASM_ARITH_TAC);;
+
+(* word_not distributes over word_join at the 64/128/256-bit AVX2 lane widths. *)
+let WORD_NOT_JOIN_64 = WORD_BLAST
+  `!a b : int32. word_not ((word_join:int32->int32->int64) a b) =
+   word_join (word_not a) (word_not b)`;;
+let WORD_NOT_JOIN_128 = WORD_BLAST
+  `!a b : int64. word_not ((word_join:int64->int64->int128) a b) =
+   word_join (word_not a) (word_not b)`;;
+let WORD_NOT_JOIN_256 = WORD_BLAST
+  `!a b : int128. word_not ((word_join:int128->int128->int256) a b) =
+   word_join (word_not a) (word_not b)`;;
 
 (* ========================================================================= *)
 (* Word-level lane functions matching the AVX2 instruction sequence.         *)

@@ -1,5 +1,4 @@
 (*
- * Copyright (c) The mldsa-native project authors
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
@@ -23,7 +22,6 @@ needs "common/mlkem_mldsa.ml";;
 
 let mldsa_polyz_unpack_17_mc = define_assert_from_elf
   "mldsa_polyz_unpack_17_mc" "x86/mldsa/mldsa_polyz_unpack_17.o"
-(*** BYTECODE START ***)
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xb8; 0x00; 0x01; 0x02; 0xff; 0x02; 0x03; 0x04; 0xff;
@@ -512,7 +510,6 @@ let mldsa_polyz_unpack_17_mc = define_assert_from_elf
                            (* VMOVDQA (Memop Word256 (%% (rdi,992))) (%_% ymm0) *)
   0xc3                     (* RET *)
 ];;
-(*** BYTECODE END ***)
 
 let mldsa_polyz_unpack_17_tmc =
   define_trimmed "mldsa_polyz_unpack_17_tmc" mldsa_polyz_unpack_17_mc;;
@@ -808,8 +805,8 @@ let MLDSA_POLYZ_UNPACK_17_CORRECT = prove
        REWRITE_TAC[LENGTH_SUB_LIST; DIMINDEX_CONV `dimindex (:18)`] THEN
        ASM_SIMP_TAC [] THEN NUM_REDUCE_TAC;
        ALL_TAC]) (0--31) THEN
-  (*** Normalise the high-half load addresses from the nested form           ***)
-  (***   word_add (word_add b (word 18k)) (word 2)                           ***)
+  (*** Normalise the high-half load addresses from the nested form             ***)
+  (***   word_add (word_add b (word 18k)) (word 2)                             ***)
   (*** to the reduced form word_add b (word (18k+2)) the stepper computes,    ***)
   (*** so each block's high-half load resolves and YMM0 becomes ground before ***)
   (*** the store (otherwise DISCARD_OLDSTATE_TAC silently drops the store).    ***)
@@ -863,8 +860,6 @@ let MLDSA_POLYZ_UNPACK_17_CORRECT = prove
 
 (* ------------------------------------------------------------------------- *)
 (* Subroutine correctness                                                    *)
-(* This must be kept in sync with the CBMC specification in                  *)
-(* mldsa/src/native/x86_64/src/arith_native_x86_64.h                         *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_17_NOIBT_SUBROUTINE_CORRECT = prove
@@ -930,9 +925,7 @@ let MLDSA_POLYZ_UNPACK_17_SUBROUTINE_CORRECT = prove
 needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/subroutine_signatures.ml";;
 
-(* Signature of mldsa_polyz_unpack_17, matching the CBMC specification. The     *)
-(* central subroutine_signatures table is populated separately, so it is        *)
-(* given inline here.                                                           *)
+(* Signature of mldsa_polyz_unpack_17 *)
 let mldsa_polyz_unpack_17_signature =
   ([(*args*)
      ("r", "int32_t[static 256]", (*is const?*)"false");

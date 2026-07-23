@@ -1,5 +1,4 @@
 (*
- * Copyright (c) The mldsa-native project authors
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
@@ -8,7 +7,7 @@
 (* Functional correctness of polyz_unpack_19 (x86_64 AVX2):                  *)
 (* Unpack polynomial z with 20-bit packed coefficients (GAMMA1 = 2^19)       *)
 (* Maps packed [0, 2^20-1] to signed [-(2^19-1), 2^19] via GAMMA1 - x        *)
-(* (ML-DSA-65/87).                                                              *)
+(* (ML-DSA-65/87).                                                           *)
 (*                                                                           *)
 (* The x86 routine builds the shuffle/shift/mask/gamma1 constants inline     *)
 (* (VMOVQ/VPINSRQ/VINSERTI128/VPBROADCASTD) and unpacks 8 coefficients per   *)
@@ -23,7 +22,6 @@ needs "common/mlkem_mldsa.ml";;
 
 let mldsa_polyz_unpack_19_mc = define_assert_from_elf
   "mldsa_polyz_unpack_19_mc" "x86/mldsa/mldsa_polyz_unpack_19.o"
-(*** BYTECODE START ***)
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x48; 0xb8; 0x00; 0x01; 0x02; 0xff; 0x02; 0x03; 0x04; 0xff;
@@ -512,7 +510,6 @@ let mldsa_polyz_unpack_19_mc = define_assert_from_elf
                            (* VMOVDQA (Memop Word256 (%% (rdi,992))) (%_% ymm0) *)
   0xc3                     (* RET *)
 ];;
-(*** BYTECODE END ***)
 
 let mldsa_polyz_unpack_19_tmc =
   define_trimmed "mldsa_polyz_unpack_19_tmc" mldsa_polyz_unpack_19_mc;;
@@ -520,9 +517,7 @@ let mldsa_polyz_unpack_19_tmc =
 let MLDSA_POLYZ_UNPACK_19_EXEC = X86_MK_CORE_EXEC_RULE mldsa_polyz_unpack_19_tmc;;
 
 (* ------------------------------------------------------------------------- *)
-(* Coefficient (un)packing helpers.  These are present in the mldsa-native   *)
-(* utils but not (yet) in the in-tree x86/proofs/mldsa_utils.ml, so they are *)
-(* defined locally here.                                                     *)
+(* Coefficient (un)packing helpers shared across the polyz_unpack proofs.    *)
 (* ------------------------------------------------------------------------- *)
 
 (* Split ncoeffs d-bit coefficients into chunks of chunk_size. *)
@@ -866,8 +861,6 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
 
 (* ------------------------------------------------------------------------- *)
 (* Subroutine correctness                                                    *)
-(* This must be kept in sync with the CBMC specification in                  *)
-(* mldsa/src/native/x86_64/src/arith_native_x86_64.h                         *)
 (* ------------------------------------------------------------------------- *)
 
 let MLDSA_POLYZ_UNPACK_19_NOIBT_SUBROUTINE_CORRECT = prove
