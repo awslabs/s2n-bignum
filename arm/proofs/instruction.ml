@@ -2200,6 +2200,43 @@ let arm_SSHLL2_VEC = define
           let r:(128)word = usimd8 (\x. word_shl (word_sx x:(16)word) shift) nl in
           (Rd := r) s`;;
 
+(*** SADDW <Vd>.<Ta>, <Vn>.<Ta>, <Vm>.<Tb>: signed widening add (low half) ***)
+(*** Vn is the wide (already 2*esize per lane) operand; the low 64 bits of   ***)
+(*** Vm hold the narrow (esize-bit) lanes that are sign-extended and added.  ***)
+(*** Here esize is the *source* (narrow) element size in bits (8/16/32);     ***)
+(*** the destination element size is 2*esize.                                ***)
+let arm_SADDW = define
+ `arm_SADDW Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let mlow:(64)word = word_subword m (0,64) in
+        if esize = 32 then
+          let mlowsx:(128)word = usimd2 (word_sx:(32)word->(64)word) mlow in
+          (Rd := simd2 word_add n mlowsx) s
+        else if esize = 16 then
+          let mlowsx:(128)word = usimd4 (word_sx:(16)word->(32)word) mlow in
+          (Rd := simd4 word_add n mlowsx) s
+        else // esize = 8
+          let mlowsx:(128)word = usimd8 (word_sx:(8)word->(16)word) mlow in
+          (Rd := simd8 word_add n mlowsx) s`;;
+
+(*** SADDW2: same as SADDW but takes the high 64 bits of Vm as the narrow    ***)
+(*** source operand.                                                         ***)
+let arm_SADDW2 = define
+ `arm_SADDW2 Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let mhi:(64)word = word_subword m (64,64) in
+        if esize = 32 then
+          let mhisx:(128)word = usimd2 (word_sx:(32)word->(64)word) mhi in
+          (Rd := simd2 word_add n mhisx) s
+        else if esize = 16 then
+          let mhisx:(128)word = usimd4 (word_sx:(16)word->(32)word) mhi in
+          (Rd := simd4 word_add n mhisx) s
+        else // esize = 8
+          let mhisx:(128)word = usimd8 (word_sx:(8)word->(16)word) mhi in
+          (Rd := simd8 word_add n mhisx) s`;;
+
 let arm_USHR_VEC = define
  `arm_USHR_VEC Rd Rn amt esize datasize =
     \s. let n = read Rn s in
@@ -3445,6 +3482,8 @@ let arm_SMLSL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLSL_VEC;;
 let arm_SMLSL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLSL2_VEC;;
 let arm_SMULL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMULL_VEC;;
 let arm_SMULL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMULL2_VEC;;
+let arm_SADDW_ALT =      EXPAND_SIMD_RULE arm_SADDW;;
+let arm_SADDW2_ALT =     EXPAND_SIMD_RULE arm_SADDW2;;
 let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TBL_ALT =        EXPAND_SIMD_RULE arm_TBL;;
@@ -3574,6 +3613,7 @@ let ARM_OPERATION_CLAUSES =
        arm_PMUL_VEC_ALT;
        arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT;
        arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
+       arm_SADDW_ALT; arm_SADDW2_ALT;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
