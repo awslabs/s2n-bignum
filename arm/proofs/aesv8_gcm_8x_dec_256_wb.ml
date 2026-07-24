@@ -25,18 +25,33 @@
 (*    (ENSURES_SEQUENCE_TAC itself throws MAYCHANGE_IDEMPOT on the 4-memory-  *)
 (*    region frame; the SUBSUMED+TRANS route is the le1block lesson.)         *)
 (*    Statements are buffer-form: outputs and the GHASH list are over         *)
-(*    bytes_to_int128 (SUB_LIST (16i,16) ibytes).                             *)
+(*    bytes_to_int128 (SUB_LIST (16i,16) ibytes).  Internal proof artifacts;  *)
+(*    goal-builder generated, not meant to be read as specs.                  *)
+(*  - AESV8_GCM_8X_DEC_256_WB_{1..8}BLOCK: THE eight readable theorems, the   *)
+(*    only wrapper layer above _BUF_.  Hand-written literal statements in     *)
+(*    NIST vocabulary: nonoverlapping via ALLPAIRS/PAIRWISE/ALL, round keys   *)
+(*    via wordlist_from_memory (key_p,15) s = rk, htable precondition via the *)
+(*    named htable_mem_8 (ghash_twist H) predicate, output via                *)
+(*    gcm_dec_pt_bytes, and tag postcondition                                 *)
+(*      word_reversefields 8 (nist_ghash H tag0                              *)
+(*        (list_of_seq (nist_input_block ibytes) N))                          *)
+(*    -- SP 800-38D objects only (POLYVAL/ghash_twist stay inside the proof   *)
+(*    via NIST_GHASH_IS_POLYVAL).  Derived SIM-FREE from the _BUF_ bands.     *)
+(*  - AESV8_GCM_8X_DEC_256_WB_DISPATCH: the <=8-block packaging of the eight  *)
+(*    (symbolic nblk, 1 <= nblk <= 8), same vocabulary, hand-written.         *)
 (*  - A guard-abort theorem (unchanged).                                      *)
 (*                                                                            *)
-(* Reuses the mask-agnostic machinery from the masked chain via core.ml       *)
-(* (GHASH/Karatsuba bridge layer, SIMD-fold steppers).  JRH-style statement   *)
+(* Reuses the shared binary-independent machinery from                        *)
+(* aesv8_gcm_8x_dec_256_lemmas.ml (GHASH/Karatsuba bridge layer, SIMD-fold    *)
+(* steppers) -- NOT the masked binary's core.ml.  JRH-style statement         *)
 (* simplifications: AES256_XOR_ENCRYPT_RECONSTRUCT (machine aese/aesmc tower  *)
 (* = aes256_encrypt, proved once) and the htable_mem_dec named memory         *)
 (* predicate over the abstract key h.  No CHEAT_TAC, no new axioms.           *)
 (* ========================================================================= *)
 
-needs "arm/proofs/aesv8_gcm_8x_dec_256_core.ml";;
+needs "arm/proofs/aesv8_gcm_8x_dec_256_lemmas.ml";;
 needs "arm/proofs/utils/aes_gcm_dec_spec.ml";;
+needs "common/ghash_nist_bridge.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Machine code (print_literal_from_elf "arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o") *)
@@ -1193,40 +1208,10 @@ let AESV8_GCM_8X_DEC_256_WB_EXEC = ARM_MK_EXEC_RULE aesv8_gcm_8x_dec_256_wb_mc;;
 (* JRH-style shared statement/capture machinery.                              *)
 (* ------------------------------------------------------------------------- *)
 
-(* The machine\'s 14-round aese/aesmc keystream tower XOR (k14 xor cph) equals
-   the spec keystream XOR: proved ONCE, so every per-block plaintext capture is
-   a rewrite (replaces the per-site aes256_encrypt unfold + WORD_BLAST). *)
-let AES256_XOR_ENCRYPT_RECONSTRUCT = prove
- (`!ctr cph k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14:int128.
-    word_xor
-     (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese
-       (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc
-       (aese ctr k0) ) k1) ) k2) ) k3) ) k4) ) k5) ) k6) ) k7) ) k8) ) k9) ) k10) ) k11) ) k12) ) k13)
-     (word_xor k14 cph) =
-    word_xor cph (aes256_encrypt ctr [k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14])`,
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[aes256_encrypt] THEN REWRITE_TAC EL_15_128_CLAUSES THEN
-  REWRITE_TAC[aes256_encrypt_round; aese; aesmc] THEN
-  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN CONV_TAC WORD_BLAST);;
-
-(* The named 13-round partial tower (the keystream register shape at the
-   shared-front seam s265: rounds 0..12 + the final aese, NO 14th-key xor --
-   that xor happens per-block in the tail eor3).  Naming it collapses the 8
-   front-postcondition Q towers from ~2.6k chars each to one application, and
-   the reconstruct lemma below keeps every tail capture site working on the
-   folded form. *)
-let aes13 = new_definition
- `aes13 (p:int128) (k0:int128) (k1:int128) (k2:int128) (k3:int128) (k4:int128)
-        (k5:int128) (k6:int128) (k7:int128) (k8:int128) (k9:int128) (k10:int128)
-        (k11:int128) (k12:int128) (k13:int128) : int128 =
-    aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese
-      (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc (aese (aesmc
-      (aese p k0) ) k1) ) k2) ) k3) ) k4) ) k5) ) k6) ) k7) ) k8) ) k9) ) k10) ) k11) ) k12) ) k13`;;
-
-(* All tail capture sites rewrite with GSYM of this; rebinding it over aes13
-   keeps them verbatim while the front postcondition stays folded. *)
-let AES256_XOR_ENCRYPT_RECONSTRUCT =
-  REWRITE_RULE[GSYM aes13] AES256_XOR_ENCRYPT_RECONSTRUCT;;
+(* AES256_XOR_ENCRYPT_RECONSTRUCT + aes13 (the JRH AES128_CIPHER_RECONSTRUCT
+   pattern) hoisted to the shared file so the NIST convergence layer and the
+   future main-loop proof can use them without loading the wb chain. *)
+needs "arm/proofs/utils/aes_gcm_reconstruct.ml";;
 
 (* The 12-slot aws-lc htable layout as one predicate over the abstract GHASH
    input key h (slot values = the byteswapped polyval_dot towers + packed
@@ -4005,9 +3990,18 @@ let AESV8_GCM_8X_DEC_256_WB_BUF_8BLOCK = prove_band 8 WB_TAIL_8_TAC;;
 
 
 (* ------------------------------------------------------------------------- *)
-(* Readable byte_list_at wrappers + the <=8-block dispatch theorem.           *)
+(* The readable band theorems + the <=8-block dispatch theorem.               *)
 (* Sim-free from the BUF band theorems: only the input/output presentations   *)
 (* change, discharged by ARM-free bridges via ENSURES_PRE/POSTCONDITION_THM.  *)
+(* The bridges come in two internal layers (neither is a named spec):         *)
+(*   1. byte_list_at plumbing (BYTE_LIST_AT_TO_READ_BYTES /                   *)
+(*      BYTE_LIST_AT_WHOLE_CTR / prove_wb_wrapper): per-block stores +        *)
+(*      explicit ghash_polyval_acc -> gcm_dec_pt_bytes / gcm_dec_final_xi.    *)
+(*   2. NIST vocabulary (htable_mem_8 / GCM_DEC_FINAL_XI_NIST /              *)
+(*      nist_input_block): twisted-key POLYVAL objects -> SP 800-38D nist_ghash*)
+(*      under the free NIST hash key H with byteswap128 h = ghash_twist H.    *)
+(* The eight AESV8_GCM_8X_DEC_256_WB_{1..8}BLOCK statements below are written *)
+(* out literally -- they ARE the specification document.                      *)
 (* Together with AESV8_GCM_8X_DEC_256_WB_GUARD (above) this is the complete   *)
 (* contract of the whole-blocks binary: valid bit_len = 128*nblk (1<=nblk<=8) *)
 (* -> DISPATCH; invalid bit_len -> GUARD (ret 0, no memory).                  *)
@@ -4149,101 +4143,566 @@ let prove_wb_wrapper k buf_thm =
           REWRITE_TAC[WORD_ADD_0; el_facts] THEN ASM_REWRITE_TAC[el_facts]];
         MATCH_MP_TAC buf_thm THEN ASM_REWRITE_TAC[]]]);;
 
-(* ---- the 8 readable byte_list_at band wrappers ----------------------------- *)
-let AESV8_GCM_8X_DEC_256_WB_1BLOCK = prove_wb_wrapper 1 AESV8_GCM_8X_DEC_256_WB_BUF_1BLOCK;;
-let AESV8_GCM_8X_DEC_256_WB_2BLOCK = prove_wb_wrapper 2 AESV8_GCM_8X_DEC_256_WB_BUF_2BLOCK;;
-let AESV8_GCM_8X_DEC_256_WB_3BLOCK = prove_wb_wrapper 3 AESV8_GCM_8X_DEC_256_WB_BUF_3BLOCK;;
-let AESV8_GCM_8X_DEC_256_WB_4BLOCK = prove_wb_wrapper 4 AESV8_GCM_8X_DEC_256_WB_BUF_4BLOCK;;
-let AESV8_GCM_8X_DEC_256_WB_5BLOCK = prove_wb_wrapper 5 AESV8_GCM_8X_DEC_256_WB_BUF_5BLOCK;;
-let AESV8_GCM_8X_DEC_256_WB_6BLOCK = prove_wb_wrapper 6 AESV8_GCM_8X_DEC_256_WB_BUF_6BLOCK;;
-let AESV8_GCM_8X_DEC_256_WB_7BLOCK = prove_wb_wrapper 7 AESV8_GCM_8X_DEC_256_WB_BUF_7BLOCK;;
-let AESV8_GCM_8X_DEC_256_WB_8BLOCK = prove_wb_wrapper 8 AESV8_GCM_8X_DEC_256_WB_BUF_8BLOCK;;
+(* ------------------------------------------------------------------------- *)
+(* NIST-vocabulary bridge layer (JRH x4-kernel statement shape).              *)
+(*  - htable_mem_8: htable_mem_4-style named memory predicate over h_power    *)
+(*    indexing, for the 12-slot aws-lc htable layout (packed karatsuba mids). *)
+(*  - GCM_DEC_FINAL_XI_NIST: gcm_dec_final_xi = byte-reversed nist_ghash      *)
+(*    under byteswap128 h = ghash_twist H (Gueron Prop 1 via                  *)
+(*    NIST_GHASH_IS_POLYVAL from common/ghash_nist_bridge.ml).                *)
+(*  - nist_input_block: the NIST (big-endian) view of input block i, with the *)
+(*    LIST_OF_SEQ_NIST_INPUT bridges to gcm_dec_ghash_blocks.                 *)
+(*  - wordlist_from_memory key condensation: KEY_READS_FROM_WORDLIST +        *)
+(*    RK_ETA_15 relate the abstract rk list to the 15 bytes128 key reads.     *)
+(* ------------------------------------------------------------------------- *)
 
-(* ---- step 5: the <=8-block dispatch theorem --------------------------------
+(* ---- karatsuba_mid ignores the byteswap of its argument ------------------- *)
+let KARATSUBA_MID_BYTESWAP = prove
+ (`!x:int128. karatsuba_mid (byteswap128 x) = karatsuba_mid x`,
+  GEN_TAC THEN REWRITE_TAC[karatsuba_mid; byteswap128] THEN
+  CONV_TAC WORD_BLAST);;
+
+(* ---- h_power 0..7 unfolded to the explicit left-nested dot chains --------- *)
+let H_POWER_UNFOLD_7 = prove
+ (`h_power (hb:int128) 0 = hb /\
+   h_power hb 1 = polyval_dot hb hb /\
+   h_power hb 2 = polyval_dot (polyval_dot hb hb) hb /\
+   h_power hb 3 = polyval_dot (polyval_dot (polyval_dot hb hb) hb) hb /\
+   h_power hb 4 = polyval_dot (polyval_dot (polyval_dot (polyval_dot hb hb) hb) hb) hb /\
+   h_power hb 5 = polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot hb hb) hb) hb) hb) hb /\
+   h_power hb 6 = polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot hb hb) hb) hb) hb) hb) hb /\
+   h_power hb 7 = polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot (polyval_dot hb hb) hb) hb) hb) hb) hb) hb`,
+  REWRITE_TAC[num_CONV `7`; num_CONV `6`; num_CONV `5`; num_CONV `4`;
+              num_CONV `3`; num_CONV `2`; num_CONV `1`; h_power]);;
+
+(* ---- htable_mem_dec in h_power form (kills the nested let-towers) --------- *)
+let HTABLE_MEM_DEC_H_POWER = prove
+ (`!(h:int128) (ptr:int64) (s:armstate).
+     htable_mem_dec h ptr s <=>
+     read (memory :> bytes128 ptr) s = byteswap128 (h_power (byteswap128 h) 0) /\
+     read (memory :> bytes128 (word_add ptr (word 16))) s =
+       word_join (karatsuba_mid (h_power (byteswap128 h) 1))
+                 (karatsuba_mid (h_power (byteswap128 h) 0)) /\
+     read (memory :> bytes128 (word_add ptr (word 32))) s = byteswap128 (h_power (byteswap128 h) 1) /\
+     read (memory :> bytes128 (word_add ptr (word 48))) s = byteswap128 (h_power (byteswap128 h) 2) /\
+     read (memory :> bytes128 (word_add ptr (word 64))) s =
+       word_join (karatsuba_mid (h_power (byteswap128 h) 3))
+                 (karatsuba_mid (h_power (byteswap128 h) 2)) /\
+     read (memory :> bytes128 (word_add ptr (word 80))) s = byteswap128 (h_power (byteswap128 h) 3) /\
+     read (memory :> bytes128 (word_add ptr (word 96))) s = byteswap128 (h_power (byteswap128 h) 4) /\
+     read (memory :> bytes128 (word_add ptr (word 112))) s =
+       word_join (karatsuba_mid (h_power (byteswap128 h) 5))
+                 (karatsuba_mid (h_power (byteswap128 h) 4)) /\
+     read (memory :> bytes128 (word_add ptr (word 128))) s = byteswap128 (h_power (byteswap128 h) 5) /\
+     read (memory :> bytes128 (word_add ptr (word 144))) s = byteswap128 (h_power (byteswap128 h) 6) /\
+     read (memory :> bytes128 (word_add ptr (word 160))) s =
+       word_join (karatsuba_mid (h_power (byteswap128 h) 7))
+                 (karatsuba_mid (h_power (byteswap128 h) 6)) /\
+     read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128 (h_power (byteswap128 h) 7)`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[htable_mem_dec] THEN
+  CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[H_POWER_UNFOLD_7; KARATSUBA_MID_BYTESWAP; BYTESWAP128_INVOLUTION]);;
+
+(* ---- the JRH-style named htable predicate over the abstract key hk -------- *)
+(* hk is the POLYVAL-side key (byteswap128 of the memory h slot); with
+   hk = ghash_twist H this is the exact analogue of JRH's
+   htable_mem_4 (ghash_twist ...) hypothesis, extended to 8 powers /
+   12 slots (aws-lc layout with packed karatsuba mids). *)
+let htable_mem_8 = new_definition
+ `htable_mem_8 (hk:int128) (ptr:int64) (s:armstate) <=>
+    read (memory :> bytes128 ptr) s = byteswap128 (h_power hk 0) /\
+    read (memory :> bytes128 (word_add ptr (word 16))) s =
+      word_join (karatsuba_mid (h_power hk 1)) (karatsuba_mid (h_power hk 0)) /\
+    read (memory :> bytes128 (word_add ptr (word 32))) s = byteswap128 (h_power hk 1) /\
+    read (memory :> bytes128 (word_add ptr (word 48))) s = byteswap128 (h_power hk 2) /\
+    read (memory :> bytes128 (word_add ptr (word 64))) s =
+      word_join (karatsuba_mid (h_power hk 3)) (karatsuba_mid (h_power hk 2)) /\
+    read (memory :> bytes128 (word_add ptr (word 80))) s = byteswap128 (h_power hk 3) /\
+    read (memory :> bytes128 (word_add ptr (word 96))) s = byteswap128 (h_power hk 4) /\
+    read (memory :> bytes128 (word_add ptr (word 112))) s =
+      word_join (karatsuba_mid (h_power hk 5)) (karatsuba_mid (h_power hk 4)) /\
+    read (memory :> bytes128 (word_add ptr (word 128))) s = byteswap128 (h_power hk 5) /\
+    read (memory :> bytes128 (word_add ptr (word 144))) s = byteswap128 (h_power hk 6) /\
+    read (memory :> bytes128 (word_add ptr (word 160))) s =
+      word_join (karatsuba_mid (h_power hk 7)) (karatsuba_mid (h_power hk 6)) /\
+    read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128 (h_power hk 7)`;;
+
+let HTABLE_MEM_DEC_IS_HTABLE_MEM_8 = prove
+ (`!(h:int128) (ptr:int64) (s:armstate).
+     htable_mem_dec h ptr s <=> htable_mem_8 (byteswap128 h) ptr s`,
+  REWRITE_TAC[HTABLE_MEM_DEC_H_POWER; htable_mem_8]);;
+
+(* ---- word_bytereverse = word_reversefields 8 at :128 ----------------------- *)
+let BREV_RF8_128 = prove
+ (`word_bytereverse (x:int128) = word_reversefields 8 x`,
+  REWRITE_TAC[REWRITE_RULE[FUN_EQ_THM] WORD_BYTEREVERSE_REVERSEFIELDS]);;
+
+let BREV_RF8_INV_128 = prove
+ (`!x:int128. word_bytereverse (word_reversefields 8 x) = x`,
+  REWRITE_TAC[GSYM BREV_RF8_128; WORD_BYTEREVERSE_BYTEREVERSE]);;
+
+(* ---- the tag spec in nist_ghash vocabulary -------------------------------- *)
+(* Our band statements quantify the raw htable h slot; JRH quantifies the
+   NIST key H with the twist applied in the hypothesis.  The two are related
+   by byteswap128 h = ghash_twist H, under which gcm_dec_final_xi IS a
+   byte-reversed nist_ghash (Gueron Prop 1 via NIST_GHASH_IS_POLYVAL). *)
+let GCM_DEC_FINAL_XI_NIST = prove
+ (`!(H:int128) (h:int128) len x xi.
+     byteswap128 h = ghash_twist H
+     ==> gcm_dec_final_xi len x xi h =
+         word_bytereverse
+           (nist_ghash H (word_bytereverse xi)
+              (MAP word_bytereverse (gcm_dec_ghash_blocks len x)))`,
+  REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[gcm_dec_final_xi; NIST_GHASH_IS_POLYVAL]);;
+
+(* ---- the NIST (big-endian) view of input block i --------------------------- *)
+let nist_input_block = new_definition
+ `nist_input_block (x:byte list) (i:num) : int128 =
+    word_reversefields 8 (bytes_to_int128 (SUB_LIST (16 * i, 16) x))`;;
+
+(* list_of_seq (nist_input_block x) N = MAP word_bytereverse (gcm_dec_ghash_blocks (16*N) x) *)
+let build_list_of_seq_nist n =
+  let goal = list_mk_forall([`x:byte list`],
+    mk_eq(list_mk_comb(`list_of_seq:(num->int128)->num->int128 list`,
+            [mk_comb(`nist_input_block`,`x:byte list`); mk_small_numeral n]),
+          mk_comb(`MAP (word_bytereverse:int128->int128)`,
+            list_mk_comb(`gcm_dec_ghash_blocks`, [mk_small_numeral(16*n);`x:byte list`])))) in
+  prove(goal,
+    GEN_TAC THEN REWRITE_TAC[el (n-1) ghash_wholes; MAP] THEN
+    REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--n)))) THEN
+    REWRITE_TAC[LIST_OF_SEQ; o_DEF; nist_input_block; BREV_RF8_128] THEN
+    CONV_TAC NUM_REDUCE_CONV);;
+let LIST_OF_SEQ_NIST_INPUT = map build_list_of_seq_nist (1--8);;
+
+(* ---- key condensation: abstract rk list <-> the 15 bytes128 reads ---------- *)
+let RK_ETA_15 = prove
+ (`!rk:int128 list. LENGTH rk = 15
+     ==> rk = [EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk;
+               EL 7 rk; EL 8 rk; EL 9 rk; EL 10 rk; EL 11 rk; EL 12 rk;
+               EL 13 rk; EL 14 rk]`,
+  GEN_TAC THEN REWRITE_TAC[LENGTH_EQ_LIST_OF_SEQ] THEN
+  DISCH_THEN(fun th -> GEN_REWRITE_TAC LAND_CONV [th]) THEN
+  REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--15)))) THEN
+  REWRITE_TAC[LIST_OF_SEQ; o_DEF] THEN CONV_TAC(DEPTH_CONV BETA_CONV) THEN
+  CONV_TAC NUM_REDUCE_CONV);;
+
+let KEY_READS_FROM_WORDLIST = prove
+ (`!(key_p:int64) (rk:int128 list) s.
+     wordlist_from_memory (key_p,15) s = rk
+     ==> read (memory :> bytes128 key_p) s = EL 0 rk /\
+         read (memory :> bytes128 (word_add key_p (word 16))) s = EL 1 rk /\
+         read (memory :> bytes128 (word_add key_p (word 32))) s = EL 2 rk /\
+         read (memory :> bytes128 (word_add key_p (word 48))) s = EL 3 rk /\
+         read (memory :> bytes128 (word_add key_p (word 64))) s = EL 4 rk /\
+         read (memory :> bytes128 (word_add key_p (word 80))) s = EL 5 rk /\
+         read (memory :> bytes128 (word_add key_p (word 96))) s = EL 6 rk /\
+         read (memory :> bytes128 (word_add key_p (word 112))) s = EL 7 rk /\
+         read (memory :> bytes128 (word_add key_p (word 128))) s = EL 8 rk /\
+         read (memory :> bytes128 (word_add key_p (word 144))) s = EL 9 rk /\
+         read (memory :> bytes128 (word_add key_p (word 160))) s = EL 10 rk /\
+         read (memory :> bytes128 (word_add key_p (word 176))) s = EL 11 rk /\
+         read (memory :> bytes128 (word_add key_p (word 192))) s = EL 12 rk /\
+         read (memory :> bytes128 (word_add key_p (word 208))) s = EL 13 rk /\
+         read (memory :> bytes128 (word_add key_p (word 224))) s = EL 14 rk`,
+  REPEAT GEN_TAC THEN
+  CONV_TAC(LAND_CONV(LAND_CONV WORDLIST_FROM_MEMORY_CONV)) THEN
+  DISCH_THEN(SUBST1_TAC o SYM) THEN
+  REWRITE_TAC(map num_CONV (map mk_small_numeral (rev(1--14)))) THEN
+  REWRITE_TAC[EL; HD; TL]);;
+
+(* ---- the readable-band prover ----------------------------------------------
+   For band k: (1) prove_wb_wrapper k buf_thm gives the internal byte-list
+   wrapper over _BUF_kBLOCK; (2) instantiate it at ki := EL i rk,
+   h := byteswap128 (ghash_twist H), xi := word_reversefields 8 tag0 and
+   rewrite into NIST vocabulary; (3) close the literal statement:
+   ALLPAIRS/PAIRWISE/ALL unfold + NONOVERLAPPING_SYM hit the wrapper's
+   pairwise hypotheses, RK_ETA_15 folds the EL-list back to rk, and
+   ENSURES_PRECONDITION_THM + KEY_READS_FROM_WORDLIST bridge the key reads. *)
+let bsw_inv = SPEC `ghash_twist H` BYTESWAP128_INVOLUTION;;
+let mk_wrapper_nist k wrapper_thm =
+  let winst = SPECL ([`pc:num`;`stackpointer:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
+                      `in_p:int64`;`key_p:int64`;`htbl_p:int64`;`ibytes:byte list`;
+                      `word_reversefields 8 (tag0:int128)`;`ctr0:int128`] @
+                     map (fun i -> list_mk_comb(`EL:num->(int128)list->int128`,
+                            [mk_small_numeral i; `rk:int128 list`])) (0--14) @
+                     [`byteswap128 (ghash_twist H)`]) wrapper_thm in
+  let xi_rw = MP (SPECL [`H:int128`; `byteswap128 (ghash_twist H)`;
+                         mk_small_numeral(16*k); `ibytes:byte list`;
+                         `word_reversefields 8 (tag0:int128)`] GCM_DEC_FINAL_XI_NIST)
+                 bsw_inv in
+  REWRITE_RULE[HTABLE_MEM_DEC_IS_HTABLE_MEM_8; BYTESWAP128_INVOLUTION; xi_rw;
+               GSYM (el (k-1) LIST_OF_SEQ_NIST_INPUT); BREV_RF8_INV_128; BREV_RF8_128] winst;;
+
+let wb_rk15_tm = `[EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; EL 6 rk;
+                   EL 7 rk; EL 8 rk; EL 9 rk; EL 10 rk; EL 11 rk; EL 12 rk;
+                   EL 13 rk; EL 14 rk]:int128 list`;;
+let WB_READABLE_TAC k buf_thm =
+  let wn = mk_wrapper_nist k (prove_wb_wrapper k buf_thm) in
+  REPEAT GEN_TAC THEN REWRITE_TAC[ALLPAIRS;PAIRWISE;ALL] THEN STRIP_TAC THEN
+  MP_TAC wn THEN ANTS_TAC THENL
+   [ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THEN
+    ONCE_REWRITE_TAC[NONOVERLAPPING_SYM] THEN ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN (mk_eq(wb_rk15_tm,`rk:int128 list`)) SUBST1_TAC THENL
+   [CONV_TAC SYM_CONV THEN MATCH_MP_TAC RK_ETA_15 THEN ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  DISCH_TAC THEN MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN
+  FIRST_X_ASSUM(fun th ->
+    EXISTS_TAC (rand(rator(rator(concl th)))) THEN MP_TAC th) THEN
+  DISCH_TAC THEN CONJ_TAC THENL [ALL_TAC; ASM_REWRITE_TAC[]] THEN
+  X_GEN_TAC `s:armstate` THEN REWRITE_TAC[] THEN STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  FIRST_ASSUM(fun th ->
+    try MP_TAC(MATCH_MP KEY_READS_FROM_WORDLIST th)
+    with Failure _ -> failwith "no wordlist assumption") THEN
+  SIMP_TAC[];;
+
+(* ------------------------------------------------------------------------- *)
+(* THE eight readable band theorems (literal statements; the spec document).  *)
+(* Reading guide for N blocks: under the standard ABI/nonoverlapping side     *)
+(* conditions, decrypting N whole blocks writes to out_p the CTR keystream    *)
+(* XORed onto the input bytes (gcm_dec_pt_bytes), and replaces the tag at     *)
+(* xi_p with the standard SP 800-38D GHASH of the N raw ciphertext blocks     *)
+(* folded onto tag0 under the NIST hash key H (both tag values stored         *)
+(* little-endian-reversed, as the aws-lc caller keeps them).                  *)
+(* ------------------------------------------------------------------------- *)
+
+let AESV8_GCM_8X_DEC_256_WB_1BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 16 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,16; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,16; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,16; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,16; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 128; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 16) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 16 ibytes ctr0 rk) out_p (word 16) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 1)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,16); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 1 AESV8_GCM_8X_DEC_256_WB_BUF_1BLOCK);;
+
+let AESV8_GCM_8X_DEC_256_WB_2BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 32 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,32; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,32; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,32; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,32; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 256; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 32) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 32 ibytes ctr0 rk) out_p (word 32) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 2)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,32); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 2 AESV8_GCM_8X_DEC_256_WB_BUF_2BLOCK);;
+
+let AESV8_GCM_8X_DEC_256_WB_3BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 48 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,48; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,48; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,48; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,48; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 384; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 48) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 48 ibytes ctr0 rk) out_p (word 48) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 3)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,48); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 3 AESV8_GCM_8X_DEC_256_WB_BUF_3BLOCK);;
+
+let AESV8_GCM_8X_DEC_256_WB_4BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 64 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,64; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,64; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,64; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,64; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 512; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 64) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 64 ibytes ctr0 rk) out_p (word 64) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 4)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,64); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 4 AESV8_GCM_8X_DEC_256_WB_BUF_4BLOCK);;
+
+let AESV8_GCM_8X_DEC_256_WB_5BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 80 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,80; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,80; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,80; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,80; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 640; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 80) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 80 ibytes ctr0 rk) out_p (word 80) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 5)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,80); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 5 AESV8_GCM_8X_DEC_256_WB_BUF_5BLOCK);;
+
+let AESV8_GCM_8X_DEC_256_WB_6BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 96 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,96; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,96; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,96; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,96; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 768; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 96) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 96 ibytes ctr0 rk) out_p (word 96) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 6)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,96); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 6 AESV8_GCM_8X_DEC_256_WB_BUF_6BLOCK);;
+
+let AESV8_GCM_8X_DEC_256_WB_7BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 112 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,112; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,112; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,112; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,112; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 896; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 112) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 112 ibytes ctr0 rk) out_p (word 112) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 7)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,112); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 7 AESV8_GCM_8X_DEC_256_WB_BUF_7BLOCK);;
+
+let AESV8_GCM_8X_DEC_256_WB_8BLOCK = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     LENGTH ibytes = 128 /\ LENGTH rk = 15 /\
+     aligned 16 stackpointer /\
+     ALLPAIRS nonoverlapping
+       [out_p,128; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,128; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,128; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,128; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word 1024; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word 128) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes 128 ibytes ctr0 rk) out_p (word 128) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) 8)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,128); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  WB_READABLE_TAC 8 AESV8_GCM_8X_DEC_256_WB_BUF_8BLOCK);;
+
+(* ---- the <=8-block dispatch theorem ----------------------------------------
    ONE readable theorem for every valid whole-blocks call: symbolic nblk
    (1 <= nblk <= 8), bit_len C-argument = word (128*nblk), byte_list_at in/out
-   over the whole 16*nblk-byte buffer, postcondition via the recursive specs
-   gcm_dec_pt_bytes / gcm_dec_final_xi.  Proof: 8-way case split on nblk, each
-   case reduces 16*k/128*k to numerals and MATCH_MP_TACs the band wrapper.
-   Combined with AESV8_GCM_8X_DEC_256_WB_GUARD (wb.ml) this is the complete
-   contract of the whole-blocks binary. *)
-let mk_wb_dispatch_goal () =
-  let n16 = `16 * nblk` and n128 = `128 * nblk` in
-  let hyps0 = subst [n16,`sss:num`]
-    `LENGTH (ibytes:byte list) = sss /\
+   over the whole 16*nblk-byte buffer, same NIST vocabulary as the bands.
+   Proof: 8-way case split on nblk, each case reduces 16*k/128*k to numerals
+   and MATCH_MP_TACs the band theorem.  Combined with
+   AESV8_GCM_8X_DEC_256_WB_GUARD (above) this is the complete contract of the
+   whole-blocks binary. *)
+let AESV8_GCM_8X_DEC_256_WB_DISPATCH = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p
+    nblk ibytes (rk:int128 list) (H:int128) tag0 ctr0.
+     1 <= nblk /\ nblk <= 8 /\
+     LENGTH ibytes = 16 * nblk /\ LENGTH rk = 15 /\
      aligned 16 stackpointer /\
-     nonoverlapping (word pc, 4560) (stackpointer:int64, 80) /\
-     nonoverlapping (word pc, 4560) (out_p:int64, sss) /\
-     nonoverlapping (word pc, 4560) (xi_p:int64, 16) /\
-     nonoverlapping (word pc, 4560) (ivec_p:int64, 16) /\
-     nonoverlapping (out_p, sss) (xi_p, 16) /\
-     nonoverlapping (out_p, sss) (ivec_p, 16) /\
-     nonoverlapping (xi_p, 16) (ivec_p, 16) /\
-     nonoverlapping (ivec_p, 16) (in_p:int64, sss) /\
-     nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
-     nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
-     nonoverlapping (in_p, sss) (stackpointer, 80) /\
-     nonoverlapping (key_p, 240) (stackpointer, 80) /\
-     nonoverlapping (htbl_p, 192) (stackpointer, 80) /\
-     nonoverlapping (ivec_p, 16) (stackpointer, 80) /\
-     nonoverlapping (xi_p, 16) (in_p, sss) /\
-     nonoverlapping (xi_p, 16) (key_p, 240) /\
-     nonoverlapping (xi_p, 16) (htbl_p, 192) /\
-     nonoverlapping (xi_p, 16) (stackpointer, 80) /\
-     nonoverlapping (out_p, sss) (in_p, sss) /\
-     nonoverlapping (out_p, sss) (key_p, 240) /\
-     nonoverlapping (out_p, sss) (htbl_p, 192) /\
-     nonoverlapping (out_p, sss) (stackpointer, 80)` in
-  let hyps = mk_conj(`1 <= nblk`, mk_conj(`nblk <= 8`, hyps0)) in
-  let pre = subst [n16,`sss:num`; n128,`bbb:num`]
-    `\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
-        read PC s = word (pc + 0x20) /\ read SP s = stackpointer /\
-        C_ARGUMENTS [in_p; word bbb; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
-        byte_list_at (ibytes:byte list) in_p (word sss) s /\
-        read (memory :> bytes128 xi_p) s = xi /\
-        read (memory :> bytes128 ivec_p) s = ctr0 /\
-        read (memory :> bytes128 key_p) s = k0 /\
-        read (memory :> bytes128 (word_add key_p (word 16))) s = k1 /\
-        read (memory :> bytes128 (word_add key_p (word 32))) s = k2 /\
-        read (memory :> bytes128 (word_add key_p (word 48))) s = k3 /\
-        read (memory :> bytes128 (word_add key_p (word 64))) s = k4 /\
-        read (memory :> bytes128 (word_add key_p (word 80))) s = k5 /\
-        read (memory :> bytes128 (word_add key_p (word 96))) s = k6 /\
-        read (memory :> bytes128 (word_add key_p (word 112))) s = k7 /\
-        read (memory :> bytes128 (word_add key_p (word 128))) s = k8 /\
-        read (memory :> bytes128 (word_add key_p (word 144))) s = k9 /\
-        read (memory :> bytes128 (word_add key_p (word 160))) s = k10 /\
-        read (memory :> bytes128 (word_add key_p (word 176))) s = k11 /\
-        read (memory :> bytes128 (word_add key_p (word 192))) s = k12 /\
-        read (memory :> bytes128 (word_add key_p (word 208))) s = k13 /\
-        read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
-        htable_mem_dec h htbl_p s` in
-  let post = subst [n16,`sss:num`; wb_keys_tm,`kl:int128 list`]
-    `\s. read PC s = word (pc + 4528) /\
-         byte_list_at (gcm_dec_pt_bytes sss ibytes ctr0 (kl:int128 list)) out_p (word sss) s /\
-         read (memory :> bytes128 xi_p) s = gcm_dec_final_xi sss ibytes xi h` in
-  let frame = subst [n16,`sss:num`]
-    `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-     MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(xi_p:int64, 16);
-                memory :> bytes(ivec_p:int64, 16);
-                memory :> bytes(stackpointer:int64, 80)] ,,
-     MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
-                Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31]` in
-  let ens = subst [pre,`PPP:armstate->bool`; post,`QQQ:armstate->bool`;
-                   frame,`CCC:armstate->armstate->bool`] `ensures arm PPP QQQ CCC` in
-  list_mk_forall(wb_front_vars, mk_imp(hyps, ens));;
+     ALLPAIRS nonoverlapping
+       [out_p,16 * nblk; xi_p,16; ivec_p,16]
+       [word pc,4560; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
+     PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+     ALL (nonoverlapping (stackpointer,80))
+       [word pc,4560; in_p,16 * nblk; key_p,240; htbl_p,192]
+     ==> ensures arm
+          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+               read PC s = word (pc + 0x20) /\
+               read SP s = stackpointer /\
+               C_ARGUMENTS [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+               byte_list_at ibytes in_p (word (16 * nblk)) s /\
+               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+               read (memory :> bytes128 ivec_p) s = ctr0 /\
+               wordlist_from_memory (key_p,15) s = rk /\
+               htable_mem_8 (ghash_twist H) htbl_p s)
+          (\s. read PC s = word (pc + 4528) /\
+               byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk) out_p (word (16 * nblk)) s /\
+               read (memory :> bytes128 xi_p) s =
+               word_reversefields 8
+                 (nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) nblk)))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(out_p,16 * nblk); memory :> bytes(xi_p,16);
+                      memory :> bytes(ivec_p,16);
+                      memory :> bytes(stackpointer,80)] ,,
+           MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
+                      Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
+  let bands = [AESV8_GCM_8X_DEC_256_WB_1BLOCK;AESV8_GCM_8X_DEC_256_WB_2BLOCK;
+               AESV8_GCM_8X_DEC_256_WB_3BLOCK;AESV8_GCM_8X_DEC_256_WB_4BLOCK;
+               AESV8_GCM_8X_DEC_256_WB_5BLOCK;AESV8_GCM_8X_DEC_256_WB_6BLOCK;
+               AESV8_GCM_8X_DEC_256_WB_7BLOCK;AESV8_GCM_8X_DEC_256_WB_8BLOCK] in
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN `nblk = 1 \/ nblk = 2 \/ nblk = 3 \/ nblk = 4 \/ nblk = 5 \/ nblk = 6 \/ nblk = 7 \/ nblk = 8`
+    MP_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN
+  FIRST (map (fun w -> MATCH_MP_TAC w THEN ASM_REWRITE_TAC[]) bands));;
 
-let AESV8_GCM_8X_DEC_256_WB_DISPATCH =
-  let wrappers = [AESV8_GCM_8X_DEC_256_WB_1BLOCK;AESV8_GCM_8X_DEC_256_WB_2BLOCK;
+(* sanity: no hypotheses, no new axioms *)
+let () =
+  let readable = [AESV8_GCM_8X_DEC_256_WB_1BLOCK;AESV8_GCM_8X_DEC_256_WB_2BLOCK;
                   AESV8_GCM_8X_DEC_256_WB_3BLOCK;AESV8_GCM_8X_DEC_256_WB_4BLOCK;
                   AESV8_GCM_8X_DEC_256_WB_5BLOCK;AESV8_GCM_8X_DEC_256_WB_6BLOCK;
-                  AESV8_GCM_8X_DEC_256_WB_7BLOCK;AESV8_GCM_8X_DEC_256_WB_8BLOCK] in
-  let case_tac =
-    CONV_TAC NUM_REDUCE_CONV THEN
-    RULE_ASSUM_TAC(CONV_RULE NUM_REDUCE_CONV) THEN
-    FIRST (map (fun w -> MATCH_MP_TAC w THEN ASM_REWRITE_TAC[]) wrappers) in
-  prove(mk_wb_dispatch_goal (),
-    REPEAT GEN_TAC THEN STRIP_TAC THEN
-    SUBGOAL_THEN `nblk = 1 \/ nblk = 2 \/ nblk = 3 \/ nblk = 4 \/ nblk = 5 \/ nblk = 6 \/ nblk = 7 \/ nblk = 8`
-      MP_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN case_tac);;
+                  AESV8_GCM_8X_DEC_256_WB_7BLOCK;AESV8_GCM_8X_DEC_256_WB_8BLOCK;
+                  AESV8_GCM_8X_DEC_256_WB_DISPATCH;
+                  AESV8_GCM_8X_DEC_256_WB_GUARD] in
+  if exists (fun th -> hyp th <> []) readable then
+    failwith "WB readable theorems: unexpected hypotheses"
+  else if List.length (axioms()) <> 3 then
+    failwith "unexpected axiom count"
+  else Format.print_string "WB readable bands + dispatch + guard: hyps=0, axioms=3\n";;
