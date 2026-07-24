@@ -1668,6 +1668,50 @@ let arm_SHRN = define
         // equivalent to word_zx res:(128)word, but use word_subword instead
         (Rd := word_subword res (0,128)) s`;;
 
+(* ------------------------------------------------------------------------- *)
+(* SQSHRUN narrowing shift-right helper (per-lane).                          *)
+(*                                                                           *)
+(* Here x:(N)word is a wide source lane and the result is a narrow           *)
+(* (M)word lane (M = N DIV 2).                                               *)
+(*                                                                           *)
+(*   word_uqshrun:  SQSHRUN  - signed source, arithmetic shift right by      *)
+(*                  shift, clamp into the UNSIGNED narrow range [0,2^M-1].   *)
+(* ------------------------------------------------------------------------- *)
+
+let word_uqshrun = new_definition
+ `(word_uqshrun:(N)word->num->(M)word) x shift =
+    let v = ival x div (&2 pow shift) in
+    if v < &0 then word 0
+    else if v > &2 pow dimindex(:M) - &1 then word(2 EXP dimindex(:M) - 1)
+    else iword v`;;
+
+(* SQSHRUN: signed saturating shift right unsigned narrow (Q=0, low half). *)
+let arm_SQSHRUN = define
+ `arm_SQSHRUN Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_uqshrun x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_uqshrun x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_uqshrun x amnt:(8)word) n in
+        (Rd := word_subword res (0,128)) s`;;
+
+(* SQSHRUN2: as SQSHRUN but writes the upper 64 bits, preserving the low. *)
+let arm_SQSHRUN2 = define
+ `arm_SQSHRUN2 Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_uqshrun x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_uqshrun x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_uqshrun x amnt:(8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
 let arm_SMULH = define
  `arm_SMULH Rd Rn Rm =
     \s. let n:N word = read Rn (s:armstate)
@@ -3438,6 +3482,9 @@ let arm_REV32_VEC_ALT =  EXPAND_SIMD_RULE arm_REV32_VEC;;
 let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
 let arm_SSHR_VEC_ALT =   EXPAND_SIMD_RULE arm_SSHR_VEC;;
 let arm_SHRN_ALT =       EXPAND_SIMD_RULE arm_SHRN;;
+(* Unfold the per-lane helpers for symbolic execution and cosimulation. *)
+let arm_SQSHRUN_ALT =    REWRITE_RULE[word_uqshrun] (EXPAND_SIMD_RULE arm_SQSHRUN);;
+let arm_SQSHRUN2_ALT =   REWRITE_RULE[word_uqshrun] (EXPAND_SIMD_RULE arm_SQSHRUN2);;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
 let arm_SMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLAL_VEC;;
 let arm_SMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLAL2_VEC;;
@@ -3585,6 +3632,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SMULH;
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
+       arm_SQSHRUN_ALT; arm_SQSHRUN2_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TBL_ALT; arm_TBL2_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;

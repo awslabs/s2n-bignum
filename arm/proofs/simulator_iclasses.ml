@@ -289,6 +289,12 @@ let iclasses =
   "000011110001xxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "0000111100001xxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
 
+  (*** SQSHRUN / SQSHRUN2 (make sure immh is nonzero) ***)
+  "0x10111101xxxxxx100001xxxxxxxxxx";
+  "0x101111001xxxxx100001xxxxxxxxxx";
+  "0x1011110001xxxx100001xxxxxxxxxx";
+  "0x10111100001xxx100001xxxxxxxxxx";
+
   (*** SMLAL ***)
   "00001110xx1xxxxx100000xxxxxxxxxx";
 
