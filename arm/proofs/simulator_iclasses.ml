@@ -298,6 +298,9 @@ let iclasses =
   (*** SQRSHRUN / SQRSHRUN2 ***)
   "0x1011110xxxxxxx100011xxxxxxxxxx";
 
+  (*** RSHRN / RSHRN2 ***)
+  "0x0011110xxxxxxx100011xxxxxxxxxx";
+
   (*** SMLAL ***)
   "00001110xx1xxxxx100000xxxxxxxxxx";
 

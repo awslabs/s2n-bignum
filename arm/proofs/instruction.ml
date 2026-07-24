@@ -1669,7 +1669,7 @@ let arm_SHRN = define
         (Rd := word_subword res (0,128)) s`;;
 
 (* ------------------------------------------------------------------------- *)
-(* Saturating narrowing shift-right helpers (per-lane).                      *)
+(* Saturating / rounding narrowing shift-right helpers (per-lane).           *)
 (*                                                                           *)
 (* In each case x:(N)word is a wide source lane and the result is a narrow   *)
 (* (M)word lane (M = N DIV 2).                                               *)
@@ -1678,6 +1678,9 @@ let arm_SHRN = define
 (*                  shift, clamp into the UNSIGNED narrow range [0,2^M-1].   *)
 (*   word_uqrshrun: SQRSHRUN - as above but add the rounding constant        *)
 (*                  2^(shift-1) before the (rounding) shift, then clamp.     *)
+(*   word_rshrn:    RSHRN    - rounding shift right then truncate to the     *)
+(*                  low M bits (NO saturation): treat the source bits as an  *)
+(*                  unsigned value, add 2^(shift-1), shift right, keep low M.*)
 (* ------------------------------------------------------------------------- *)
 
 let word_uqshrun = new_definition
@@ -1693,6 +1696,10 @@ let word_uqrshrun = new_definition
     if v < &0 then word 0
     else if v > &2 pow dimindex(:M) - &1 then word(2 EXP dimindex(:M) - 1)
     else iword v`;;
+
+let word_rshrn = new_definition
+ `(word_rshrn:(N)word->num->(M)word) x shift =
+    word((val x + 2 EXP (shift - 1)) DIV (2 EXP shift))`;;
 
 (* SQSHRUN: signed saturating shift right unsigned narrow (Q=0, low half). *)
 let arm_SQSHRUN = define
@@ -1746,6 +1753,33 @@ let arm_SQRSHRUN2 = define
             usimd4 (\(x:(32)word). word_uqrshrun x amnt:(16)word) n
           else // esize = 8
             usimd8 (\(x:(16)word). word_uqrshrun x amnt:(8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
+(* RSHRN: rounding shift right narrow (no saturation, truncated). *)
+let arm_RSHRN = define
+ `arm_RSHRN Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_rshrn x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_rshrn x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_rshrn x amnt:(8)word) n in
+        (Rd := word_subword res (0,128)) s`;;
+
+(* RSHRN2: as RSHRN but writes the upper 64 bits, preserving the low. *)
+let arm_RSHRN2 = define
+ `arm_RSHRN2 Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_rshrn x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_rshrn x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_rshrn x amnt:(8)word) n in
         (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
 
 let arm_SMULH = define
@@ -3523,6 +3557,8 @@ let arm_SQSHRUN_ALT =    REWRITE_RULE[word_uqshrun] (EXPAND_SIMD_RULE arm_SQSHRU
 let arm_SQSHRUN2_ALT =   REWRITE_RULE[word_uqshrun] (EXPAND_SIMD_RULE arm_SQSHRUN2);;
 let arm_SQRSHRUN_ALT =   REWRITE_RULE[word_uqrshrun] (EXPAND_SIMD_RULE arm_SQRSHRUN);;
 let arm_SQRSHRUN2_ALT =  REWRITE_RULE[word_uqrshrun] (EXPAND_SIMD_RULE arm_SQRSHRUN2);;
+let arm_RSHRN_ALT =      REWRITE_RULE[word_rshrn] (EXPAND_SIMD_RULE arm_RSHRN);;
+let arm_RSHRN2_ALT =     REWRITE_RULE[word_rshrn] (EXPAND_SIMD_RULE arm_RSHRN2);;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
 let arm_SMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLAL_VEC;;
 let arm_SMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLAL2_VEC;;
@@ -3659,6 +3695,7 @@ let ARM_OPERATION_CLAUSES =
        arm_PMUL_VEC_ALT;
        arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT;
        arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
+       arm_RSHRN_ALT; arm_RSHRN2_ALT;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;

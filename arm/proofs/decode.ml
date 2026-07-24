@@ -652,10 +652,10 @@ let decode = new_definition `!w:int32. decode w =
           SOME (arm_SQSHRUN (QREG' Rd) (QREG' Rn) shift esize)
     else NONE
 
-  // The following narrowing shift-by-immediate form has opcode bits
+  // The following two narrowing shift-by-immediate forms have opcode bits
   // [15:10] = 100011, i.e. bits [11:10] = 11.  The broad Advanced SIMD
-  // modified-immediate clause above fixes bits [11:10] = 01, so it is
-  // DISJOINT from it (it differs in bit 11) and is matched here, after the
+  // modified-immediate clause above fixes bits [11:10] = 01, so these are
+  // DISJOINT from it (they differ in bit 11) and are matched here, after the
   // asimdimm clause, following the same convention as SHRN/SSHLL/SHL below.
   | [0:1; q; 0b1011110:7; immh:4; immb:3; 0b100011:6; Rn:5; Rd:5] ->
     // SQRSHRUN (Q = 0), SQRSHRUN2 (Q = 1): signed saturating rounding shift
@@ -671,6 +671,19 @@ let decode = new_definition `!w:int32. decode w =
         SOME (arm_SQRSHRUN2 (QREG' Rd) (QREG' Rn) shift esize)
       else
         SOME (arm_SQRSHRUN (QREG' Rd) (QREG' Rn) shift esize)
+
+  | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b100011:6; Rn:5; Rd:5] ->
+    // RSHRN (Q = 0), RSHRN2 (Q = 1): rounding shift right narrow (no
+    // saturation).  Bits [11:10] = 11, disjoint from asimdimm (01).
+    if immh = (word 0b0:(4)word) then NONE
+    else if bit 3 immh then NONE // "UNDEFINED"
+    else
+      let esize = 8 * 2 EXP (3 - word_clz immh) in
+      let shift = (2 * esize) - val(word_join immh immb: (7)word) in
+      if q then
+        SOME (arm_RSHRN2 (QREG' Rd) (QREG' Rn) shift esize)
+      else
+        SOME (arm_RSHRN (QREG' Rd) (QREG' Rn) shift esize)
 
   | [0:1; q; 0:1; 0b011110:6; 0b0000:4; abc:3; 0b1110:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=0, cmode=1110, immh=0)
