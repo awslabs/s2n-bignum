@@ -295,6 +295,9 @@ let iclasses =
   "0x1011110001xxxx100001xxxxxxxxxx";
   "0x10111100001xxx100001xxxxxxxxxx";
 
+  (*** SQRSHRUN / SQRSHRUN2 ***)
+  "0x1011110xxxxxxx100011xxxxxxxxxx";
+
   (*** SMLAL ***)
   "00001110xx1xxxxx100000xxxxxxxxxx";
 
