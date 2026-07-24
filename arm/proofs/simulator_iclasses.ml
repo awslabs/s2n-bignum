@@ -271,6 +271,18 @@ let iclasses =
   (*** SSUBW2 ***)
   "01001110xx1xxxxx001100xxxxxxxxxx";
 
+  (*** USUBL ***)
+  "00101110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** USUBL2 ***)
+  "01101110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** USUBW ***)
+  "00101110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** USUBW2 ***)
+  "01101110xx1xxxxx001100xxxxxxxxxx";
+
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
   "01011110000xxxxx010000xxxxxxxxxx";

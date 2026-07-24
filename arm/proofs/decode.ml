@@ -1018,6 +1018,32 @@ let decode = new_definition `!w:int32. decode w =
       else
         SOME (arm_UMLSL_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
 
+  | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b001000:6; Rn:5; Rd:5] ->
+    // USUBL (vector, Q = 0). USUBL2 (vector, Q = 1)
+    // Unsigned widening long subtract: both source operands are narrow
+    // (esize-bit) lanes that get zero-extended to 2*esize.
+    // size=11 (esize=64) is UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      if q then
+        SOME (arm_USUBL2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_USUBL (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+
+  | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b001100:6; Rn:5; Rd:5] ->
+    // USUBW (vector, Q = 0). USUBW2 (vector, Q = 1)
+    // Unsigned widening subtract: Vn is already wide; the narrow (esize-bit)
+    // Vm lanes are zero-extended to 2*esize and subtracted.
+    // size=11 (esize=64) is UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      if q then
+        SOME (arm_USUBW2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+      else
+        SOME (arm_USUBW (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
+
   | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b000100:6; Rn:5; Rd:5] ->
     // SADDW (vector, Q = 0). SADDW2 (vector, Q = 1)
     // esize is the *source* (narrow) element size in bits; destination

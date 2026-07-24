@@ -2315,6 +2315,80 @@ let arm_SSUBW2 = define
           let mhisx:(128)word = usimd8 (word_sx:(8)word->(16)word) mhi in
           (Rd := simd8 word_sub n mhisx) s`;;
 
+(*** USUBL <Vd>.<Ta>, <Vn>.<Tb>, <Vm>.<Tb>: unsigned widening long subtract.  ***)
+(*** Like SSUBL but both narrow operands are *zero*-extended.                 ***)
+let arm_USUBL = define
+ `arm_USUBL Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let nlow:(64)word = word_subword n (0,64) in
+        let mlow:(64)word = word_subword m (0,64) in
+        if esize = 32 then
+          let nlowzx:(128)word = usimd2 (word_zx:(32)word->(64)word) nlow in
+          let mlowzx:(128)word = usimd2 (word_zx:(32)word->(64)word) mlow in
+          (Rd := simd2 word_sub nlowzx mlowzx) s
+        else if esize = 16 then
+          let nlowzx:(128)word = usimd4 (word_zx:(16)word->(32)word) nlow in
+          let mlowzx:(128)word = usimd4 (word_zx:(16)word->(32)word) mlow in
+          (Rd := simd4 word_sub nlowzx mlowzx) s
+        else // esize = 8
+          let nlowzx:(128)word = usimd8 (word_zx:(8)word->(16)word) nlow in
+          let mlowzx:(128)word = usimd8 (word_zx:(8)word->(16)word) mlow in
+          (Rd := simd8 word_sub nlowzx mlowzx) s`;;
+
+(*** USUBL2: same as USUBL but reads the high 64 bits of Vn and Vm.           ***)
+let arm_USUBL2 = define
+ `arm_USUBL2 Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let nhi:(64)word = word_subword n (64,64) in
+        let mhi:(64)word = word_subword m (64,64) in
+        if esize = 32 then
+          let nhizx:(128)word = usimd2 (word_zx:(32)word->(64)word) nhi in
+          let mhizx:(128)word = usimd2 (word_zx:(32)word->(64)word) mhi in
+          (Rd := simd2 word_sub nhizx mhizx) s
+        else if esize = 16 then
+          let nhizx:(128)word = usimd4 (word_zx:(16)word->(32)word) nhi in
+          let mhizx:(128)word = usimd4 (word_zx:(16)word->(32)word) mhi in
+          (Rd := simd4 word_sub nhizx mhizx) s
+        else // esize = 8
+          let nhizx:(128)word = usimd8 (word_zx:(8)word->(16)word) nhi in
+          let mhizx:(128)word = usimd8 (word_zx:(8)word->(16)word) mhi in
+          (Rd := simd8 word_sub nhizx mhizx) s`;;
+
+(*** USUBW <Vd>.<Ta>, <Vn>.<Ta>, <Vm>.<Tb>: unsigned widening subtract.       ***)
+(*** Like SSUBW but the narrow Vm lanes are *zero*-extended (Vd = Vn-zx(Vm)). ***)
+let arm_USUBW = define
+ `arm_USUBW Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let mlow:(64)word = word_subword m (0,64) in
+        if esize = 32 then
+          let mlowzx:(128)word = usimd2 (word_zx:(32)word->(64)word) mlow in
+          (Rd := simd2 word_sub n mlowzx) s
+        else if esize = 16 then
+          let mlowzx:(128)word = usimd4 (word_zx:(16)word->(32)word) mlow in
+          (Rd := simd4 word_sub n mlowzx) s
+        else // esize = 8
+          let mlowzx:(128)word = usimd8 (word_zx:(8)word->(16)word) mlow in
+          (Rd := simd8 word_sub n mlowzx) s`;;
+
+(*** USUBW2: same as USUBW but takes the high 64 bits of Vm.                  ***)
+let arm_USUBW2 = define
+ `arm_USUBW2 Rd Rn Rm esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let m:(128)word = read Rm (s:armstate) in
+        let mhi:(64)word = word_subword m (64,64) in
+        if esize = 32 then
+          let mhizx:(128)word = usimd2 (word_zx:(32)word->(64)word) mhi in
+          (Rd := simd2 word_sub n mhizx) s
+        else if esize = 16 then
+          let mhizx:(128)word = usimd4 (word_zx:(16)word->(32)word) mhi in
+          (Rd := simd4 word_sub n mhizx) s
+        else // esize = 8
+          let mhizx:(128)word = usimd8 (word_zx:(8)word->(16)word) mhi in
+          (Rd := simd8 word_sub n mhizx) s`;;
+
 let arm_USHR_VEC = define
  `arm_USHR_VEC Rd Rn amt esize datasize =
     \s. let n = read Rn s in
@@ -3566,6 +3640,10 @@ let arm_SSUBL_ALT =      EXPAND_SIMD_RULE arm_SSUBL;;
 let arm_SSUBL2_ALT =     EXPAND_SIMD_RULE arm_SSUBL2;;
 let arm_SSUBW_ALT =      EXPAND_SIMD_RULE arm_SSUBW;;
 let arm_SSUBW2_ALT =     EXPAND_SIMD_RULE arm_SSUBW2;;
+let arm_USUBL_ALT =      EXPAND_SIMD_RULE arm_USUBL;;
+let arm_USUBL2_ALT =     EXPAND_SIMD_RULE arm_USUBL2;;
+let arm_USUBW_ALT =      EXPAND_SIMD_RULE arm_USUBW;;
+let arm_USUBW2_ALT =     EXPAND_SIMD_RULE arm_USUBW2;;
 let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TBL_ALT =        EXPAND_SIMD_RULE arm_TBL;;
@@ -3720,7 +3798,9 @@ let ARM_OPERATION_CLAUSES =
        arm_UMIN_VEC_ALT;
        arm_USHL_VEC_ALT;
        arm_USHLL_VEC_ALT; arm_USHLL2_VEC_ALT;
-       arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
+       arm_USHR_VEC_ALT; arm_USRA_VEC_ALT;
+       arm_USUBL_ALT; arm_USUBL2_ALT; arm_USUBW_ALT; arm_USUBW2_ALT;
+       arm_UZP1_ALT;
        arm_UZP2_ALT;
        arm_XAR; arm_XTN_ALT;
        arm_ZIP1_ALT; arm_ZIP2_ALT;
