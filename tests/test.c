@@ -13842,7 +13842,7 @@ int test_mldsa_rej_uniform_eta4(void)
      for (i = 0; i < buflen; ++i) inbuf[i] = (uint8_t) rand();
      ac = reference_mldsa_rej_uniform_eta4(a,inbuf,buflen);
 #ifdef __x86_64__
-     bc = mldsa_rej_uniform_eta4_VARIABLE_TIME(b,inbuf,eta_table);
+     bc = mldsa_rej_uniform_eta4_VARIABLE_TIME_x86(b,inbuf,eta_table);
 #else
      bc = mldsa_rej_uniform_eta4_VARIABLE_TIME(b,inbuf,(unsigned)buflen,eta_table);
 #endif
@@ -13894,7 +13894,7 @@ int test_mldsa_rej_uniform_eta2(void)
      for (i = 0; i < buflen; ++i) inbuf[i] = (uint8_t) rand();
      ac = reference_mldsa_rej_uniform_eta2(a,inbuf,buflen);
 #ifdef __x86_64__
-     bc = mldsa_rej_uniform_eta2_VARIABLE_TIME(b,inbuf,eta_table);
+     bc = mldsa_rej_uniform_eta2_VARIABLE_TIME_x86(b,inbuf,eta_table);
 #else
      bc = mldsa_rej_uniform_eta2_VARIABLE_TIME(b,inbuf,(unsigned)buflen,eta_table);
 #endif

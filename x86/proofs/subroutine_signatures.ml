@@ -4929,16 +4929,16 @@ let subroutine_signatures = [
    ])
 );
 
-("mldsa_rej_uniform_eta2_VARIABLE_TIME",
+("mldsa_rej_uniform_eta2_VARIABLE_TIME_x86",
   ([(*args*)
-     ("r", "int32_t*", (*is const?*)"false");
-     ("buf", "uint8_t*", (*is const?*)"true");
-     ("table", "uint8_t[256][8]", (*is const?*)"true");
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t[static 136]", (*is const?*)"true");
+     ("table", "uint8_t[static 2048]", (*is const?*)"true");
    ],
-   "unsigned",
+   "uint64_t",
    [(* input buffers *)
-    ("buf", "buflen"(* num elems *), 1(* elem bytesize *));
-    ("table", "4096"(* num elems *), 1(* elem bytesize *));
+    ("buf", "136"(* num elems *), 1(* elem bytesize *));
+    ("table", "2048"(* num elems *), 1(* elem bytesize *));
    ],
    [(* output buffers *)
     ("r", "256"(* num elems *), 4(* elem bytesize *));
@@ -4947,16 +4947,16 @@ let subroutine_signatures = [
    ])
 );
 
-("mldsa_rej_uniform_eta4_VARIABLE_TIME",
+("mldsa_rej_uniform_eta4_VARIABLE_TIME_x86",
   ([(*args*)
-     ("r", "int32_t*", (*is const?*)"false");
-     ("buf", "uint8_t*", (*is const?*)"true");
-     ("table", "uint8_t[256][8]", (*is const?*)"true");
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t[static 272]", (*is const?*)"true");
+     ("table", "uint8_t[static 2048]", (*is const?*)"true");
    ],
-   "unsigned",
+   "uint64_t",
    [(* input buffers *)
-    ("buf", "buflen"(* num elems *), 1(* elem bytesize *));
-    ("table", "4096"(* num elems *), 1(* elem bytesize *));
+    ("buf", "272"(* num elems *), 1(* elem bytesize *));
+    ("table", "2048"(* num elems *), 1(* elem bytesize *));
    ],
    [(* output buffers *)
     ("r", "256"(* num elems *), 4(* elem bytesize *));

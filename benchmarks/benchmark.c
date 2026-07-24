@@ -1405,8 +1405,8 @@ void call_mldsa_poly_use_hint_32(void) {}
 void call_mldsa_poly_use_hint_88(void) {}
 void call_mldsa_reduce(void) repeat(mldsa_reduce((int32_t*)b0))
 void call_mldsa_rej_uniform(void) repeat(mldsa_rej_uniform_VARIABLE_TIME_x86((int32_t*)b0,(uint8_t*)b1,(const uint64_t*)mldsa_rej_uniform_table))
-void call_mldsa_rej_uniform_eta2(void) repeat(mldsa_rej_uniform_eta2_VARIABLE_TIME((int32_t*)b0,(const uint8_t*)b1,(const uint8_t*)b2))
-void call_mldsa_rej_uniform_eta4(void) repeat(mldsa_rej_uniform_eta4_VARIABLE_TIME((int32_t*)b0,(const uint8_t*)b1,(const uint8_t*)b2))
+void call_mldsa_rej_uniform_eta2(void) repeat(mldsa_rej_uniform_eta2_VARIABLE_TIME_x86((int32_t*)b0,(const uint8_t*)b1,(const uint8_t*)b2))
+void call_mldsa_rej_uniform_eta4(void) repeat(mldsa_rej_uniform_eta4_VARIABLE_TIME_x86((int32_t*)b0,(const uint8_t*)b1,(const uint8_t*)b2))
 
 void call_mlkem_frombytes(void) repeat(mlkem_frombytes((uint16_t*)b0,(int8_t*)b1))
 void call_mlkem_intt(void) repeat(mlkem_intt_x86((int16_t*)b0,(int16_t*)b1))

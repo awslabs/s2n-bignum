@@ -11,10 +11,10 @@
 // r[256] with the accepted coefficients in order of appearance, returning the
 // total number written (max 256).
 //
-// extern unsigned mldsa_rej_uniform_eta2_VARIABLE_TIME
-//                     (int32_t *r,
-//                      const uint8_t *buf,
-//                      const uint8_t table[256][8]);
+// extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME_x86
+//                     (int32_t r[static 256],
+//                      const uint8_t buf[static 136],
+//                      const uint8_t table[static 2048]);
 //
 // The input buffer buf is a fixed MLD_AVX2_REJ_UNIFORM_ETA2_BUFLEN = 136
 // bytes; the table argument is a specific precomputed 256x8 = 2048-byte table
@@ -33,13 +33,13 @@
 #include "_internal_s2n_bignum_x86_att.h"
 
 
-        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME)
-        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME)
-        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME)
+        S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME_x86)
+        S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME_x86)
+        S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME_x86)
         .text
         .balign 4
 
-S2N_BN_SYMBOL(mldsa_rej_uniform_eta2_VARIABLE_TIME):
+S2N_BN_SYMBOL(mldsa_rej_uniform_eta2_VARIABLE_TIME_x86):
         CFI_START
         _CET_ENDBR
 
@@ -76,11 +76,11 @@ S2N_BN_SYMBOL(mldsa_rej_uniform_eta2_VARIABLE_TIME):
         xorl    %eax, %eax
         xorl    %ecx, %ecx
 
-Lmldsa_rej_uniform_eta2_loop:
+Lmldsa_rej_uniform_eta2_x86_loop:
         cmpl    $0xf8, %eax
-        ja      Lmldsa_rej_uniform_eta2_scalar
+        ja      Lmldsa_rej_uniform_eta2_x86_scalar
         cmpl    $0x78, %ecx
-        ja      Lmldsa_rej_uniform_eta2_scalar
+        ja      Lmldsa_rej_uniform_eta2_x86_scalar
         vpmovzxbw (%rsi,%rcx), %ymm0
         vpsllw  $0x4, %ymm0, %ymm1
         vpor    %ymm1, %ymm0, %ymm0
@@ -102,7 +102,7 @@ Lmldsa_rej_uniform_eta2_loop:
         shrl    $0x8, %r8d
         addl    $0x4, %ecx
         cmpl    $0xf8, %eax
-        ja      Lmldsa_rej_uniform_eta2_scalar
+        ja      Lmldsa_rej_uniform_eta2_x86_scalar
         vpsrldq $0x8, %xmm8, %xmm8
         movzx   %r8b, %r10d
         vmovq   (%rdx,%r10,8), %xmm9
@@ -117,7 +117,7 @@ Lmldsa_rej_uniform_eta2_loop:
         shrl    $0x8, %r8d
         addl    $0x4, %ecx
         cmpl    $0xf8, %eax
-        ja      Lmldsa_rej_uniform_eta2_scalar
+        ja      Lmldsa_rej_uniform_eta2_x86_scalar
         vextracti128 $0x1, %ymm0, %xmm8
         movzx   %r8b, %r10d
         vmovq   (%rdx,%r10,8), %xmm9
@@ -132,7 +132,7 @@ Lmldsa_rej_uniform_eta2_loop:
         shrl    $0x8, %r8d
         addl    $0x4, %ecx
         cmpl    $0xf8, %eax
-        ja      Lmldsa_rej_uniform_eta2_scalar
+        ja      Lmldsa_rej_uniform_eta2_x86_scalar
         vpsrldq $0x8, %xmm8, %xmm8
         movzx   %r8b, %r10d
         vmovq   (%rdx,%r10,8), %xmm9
@@ -145,19 +145,19 @@ Lmldsa_rej_uniform_eta2_loop:
         popcnt  %r10d, %r9d
         addl    %r9d, %eax
         addl    $0x4, %ecx
-        jmp     Lmldsa_rej_uniform_eta2_loop
+        jmp     Lmldsa_rej_uniform_eta2_x86_loop
 
-Lmldsa_rej_uniform_eta2_scalar:
+Lmldsa_rej_uniform_eta2_x86_scalar:
         cmpl    $0x100, %eax
-        jae     Lmldsa_rej_uniform_eta2_done
+        jae     Lmldsa_rej_uniform_eta2_x86_done
         cmpl    $0x88, %ecx
-        jae     Lmldsa_rej_uniform_eta2_done
+        jae     Lmldsa_rej_uniform_eta2_x86_done
         movzbl   (%rsi,%rcx), %r11d
         incl    %ecx
         movl    %r11d, %r10d
         andl    $0xf, %r10d
         cmpl    $0xf, %r10d
-        jae     Lmldsa_rej_uniform_eta2_high_nibble
+        jae     Lmldsa_rej_uniform_eta2_x86_high_nibble
         movl    %r10d, %r11d
         imull   $0xcd, %r11d, %r11d
         shrl    $0xa, %r11d
@@ -168,14 +168,14 @@ Lmldsa_rej_uniform_eta2_scalar:
         movl    %r11d, (%rdi,%rax,4)
         incl    %eax
         cmpl    $0x100, %eax
-        jae     Lmldsa_rej_uniform_eta2_done
+        jae     Lmldsa_rej_uniform_eta2_x86_done
 
-Lmldsa_rej_uniform_eta2_high_nibble:
+Lmldsa_rej_uniform_eta2_x86_high_nibble:
         movzbl   -0x1(%rsi,%rcx,1), %r11d
         shrl    $0x4, %r11d
         andl    $0xf, %r11d
         cmpl    $0xf, %r11d
-        jae     Lmldsa_rej_uniform_eta2_scalar
+        jae     Lmldsa_rej_uniform_eta2_x86_scalar
         movl    %r11d, %r10d
         imull   $0xcd, %r10d, %r10d
         shrl    $0xa, %r10d
@@ -185,9 +185,9 @@ Lmldsa_rej_uniform_eta2_high_nibble:
         subl    %r11d, %r10d
         movl    %r10d, (%rdi,%rax,4)
         incl    %eax
-        jmp     Lmldsa_rej_uniform_eta2_scalar
+        jmp     Lmldsa_rej_uniform_eta2_x86_scalar
 
-Lmldsa_rej_uniform_eta2_done:
+Lmldsa_rej_uniform_eta2_x86_done:
 
 #if WINDOWS_ABI
         CFI_STACKLOADU(%xmm6,0)
@@ -200,7 +200,7 @@ Lmldsa_rej_uniform_eta2_done:
 #endif
         CFI_RET
 
-S2N_BN_SIZE_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME)
+S2N_BN_SIZE_DIRECTIVE(mldsa_rej_uniform_eta2_VARIABLE_TIME_x86)
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits
