@@ -783,7 +783,7 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
   STRIP_TAC THEN
   ENSURES_INIT_TAC "s0" THEN
 
-  (*** Expand input: 256 coeffs -> 32 chunks of 160-bit words ***)
+  (* Expand input: 256 coeffs -> 32 chunks of 160-bit words *)
   UNDISCH_TAC `read(memory :> bytes(b,640)) s0 = num_of_wordlist(l:(20 word) list)` THEN
   IMP_REWRITE_TAC [NUM_OF_WORDLIST_SPLIT_20_256_8] THEN
   CONV_TAC (ONCE_DEPTH_CONV LIST_OF_SEQ_CONV) THEN
@@ -791,7 +791,7 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
   CONV_TAC(LAND_CONV BYTES_EQ_NUM_OF_WORDLIST_EXPAND_CONV) THEN
   STRIP_TAC THEN
 
-  (*** Split each 160-bit chunk into the two bytes128 loads ***)
+  (* Split each 160-bit chunk into the two bytes128 loads *)
   REPEAT(FIRST_X_ASSUM(fun th ->
     if can (term_match []
        `read (memory :> wbytes a) s = word t`) (concl th)
@@ -806,23 +806,23 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
        REWRITE_TAC[LENGTH_SUB_LIST; DIMINDEX_CONV `dimindex (:20)`] THEN
        ASM_SIMP_TAC [] THEN NUM_REDUCE_TAC;
        ALL_TAC]) (0--31) THEN
-  (*** Normalise the high-half load addresses from the nested form           ***)
-  (***   word_add (word_add b (word 20k)) (word 4)                           ***)
-  (*** to the reduced form word_add b (word (20k+4)) the stepper computes,    ***)
-  (*** so each block's high-half load resolves and YMM0 becomes ground before ***)
-  (*** the store (otherwise DISCARD_OLDSTATE_TAC silently drops the store).    ***)
+  (* Normalise the high-half load addresses from the nested form *)
+  (*   word_add (word_add b (word 20k)) (word 4) *)
+  (* to the reduced form word_add b (word (20k+4)) the stepper computes, *)
+  (* so each block's high-half load resolves and YMM0 becomes ground before *)
+  (* the store (otherwise DISCARD_OLDSTATE_TAC silently drops the store). *)
   CONV_TAC (GEN_REWRITE_CONV TOP_DEPTH_CONV [WORD_ADD_ASSOC_CONSTS] THENC
             TOP_SWEEP_CONV NUM_ADD_CONV) THEN
   REPEAT STRIP_TAC THEN
 
-  (*** Express each chunk's two bytes128 input pieces as subwords of the     ***)
-  (*** single 160-bit chunk word, so the per-lane VPSUBD operands compose    ***)
-  (*** into a single word_subword and SIMD_SIMPLIFY stays cheap.             ***)
+  (* Express each chunk's two bytes128 input pieces as subwords of the *)
+  (* single 160-bit chunk word, so the per-lane VPSUBD operands compose *)
+  (* into a single word_subword and SIMD_SIMPLIFY stays cheap. *)
   RULE_ASSUM_TAC(REWRITE_RULE X86_BASE_SIMPS_D20) THEN
 
-  (*** Symbolic execution: simplify each block's lanes, then fold the just- ***)
-  (*** computed YMM0 into atomic zunpack19 lanes before it is stored so the  ***)
-  (*** store and subsequent steps stay cheap.                               ***)
+  (* Symbolic execution: simplify each block's lanes, then fold the just- *)
+  (* computed YMM0 into atomic zunpack19 lanes before it is stored so the *)
+  (* store and subsequent steps stay cheap. *)
   MAP_EVERY (fun n ->
     X86_STEPS_TAC MLDSA_POLYZ_UNPACK_19_EXEC [n] THEN
     SIMD_SIMPLIFY_TAC [] THEN
@@ -830,19 +830,19 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
-  (*** Fold each 256-bit store into 8 atomic zunpack19 lanes ***)
+  (* Fold each 256-bit store into 8 atomic zunpack19 lanes *)
   RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV
      (ZPRE19_FOLD_CONV THENC REWRITE_CONV[ZUNPACK19_CORRECT])))) THEN
 
-  (*** Establish the 32 sublist-length facts the CASES rewrites need ***)
+  (* Establish the 32 sublist-length facts the CASES rewrites need *)
   MAP_EVERY (fun i -> SUBGOAL_THEN
     (subst [mk_small_numeral (8 * i), `i:num`]
       `LENGTH (SUB_LIST (i, 8) (l : (20 word) list)) = 8`) ASSUME_TAC
     THENL [ASM_REWRITE_TAC [LENGTH_SUB_LIST] THEN NUM_REDUCE_TAC; ALL_TAC])
     (0 -- 31) THEN
 
-  (*** Express the spec RHS as 32 chunks and split the 1024-byte output read   ***)
-  (*** into 32 matching 256-bit conjuncts.                                     ***)
+  (* Express the spec RHS as 32 chunks and split the 1024-byte output read *)
+  (* into 32 matching 256-bit conjuncts. *)
   SUBGOAL_THEN `LENGTH(MAP zunpack19 (l:(20 word) list)) = 256` ASSUME_TAC THENL
    [ASM_REWRITE_TAC[LENGTH_MAP]; ALL_TAC] THEN
   FIRST_X_ASSUM(fun th -> if concl th = `LENGTH(MAP zunpack19 (l:(20 word) list)) = 256`
@@ -851,9 +851,9 @@ let MLDSA_POLYZ_UNPACK_19_CORRECT = prove
   CONV_TAC (ONCE_DEPTH_CONV LIST_OF_SEQ_CONV) THEN
   REWRITE_TAC[MAP; o_DEF; GSYM MAP_SUB_LIST] THEN
   CONV_TAC BYTES_EQ_NUM_OF_WORDLIST_EXPAND_CONV THEN
-  (*** Normalise 8*k indices to literals everywhere, convert the stores to     ***)
-  (*** wbytes form, then rewrite each conjunct's spec RHS into the stored      ***)
-  (*** word_join shape and discharge it against its store.                     ***)
+  (* Normalise 8*k indices to literals everywhere, convert the stores to *)
+  (* wbytes form, then rewrite each conjunct's spec RHS into the stored *)
+  (* word_join shape and discharge it against its store. *)
   CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) o
                  REWRITE_RULE[BYTES256_WBYTES]) THEN

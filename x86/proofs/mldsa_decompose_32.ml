@@ -21,7 +21,7 @@ needs "common/mlkem_mldsa.ml";;
 (**** print_literal_from_elf "x86/mldsa/mldsa_decompose_32.o";;
  ****)
 
-let mldsa_decompose32_mc = define_assert_from_elf "mldsa_decompose32_mc" "x86/mldsa/mldsa_decompose_32.o"
+let mldsa_decompose_32_mc = define_assert_from_elf "mldsa_decompose_32_mc" "x86/mldsa/mldsa_decompose_32.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0xb8; 0x7f; 0x00; 0x00; 0x00;
@@ -721,8 +721,8 @@ let mldsa_decompose32_mc = define_assert_from_elf "mldsa_decompose32_mc" "x86/ml
   0xc3                     (* RET *)
 ];;
 
-let mldsa_decompose32_tmc = define_trimmed "mldsa_decompose32_tmc" mldsa_decompose32_mc;;
-let MLDSA_DECOMPOSE32_EXEC = X86_MK_CORE_EXEC_RULE mldsa_decompose32_tmc;;
+let mldsa_decompose_32_tmc = define_trimmed "mldsa_decompose_32_tmc" mldsa_decompose_32_mc;;
+let MLDSA_DECOMPOSE_32_EXEC = X86_MK_CORE_EXEC_RULE mldsa_decompose_32_tmc;;
 
 (* ------------------------------------------------------------------------- *)
 (* Supporting arithmetic/word lemmas for the decompose proofs.               *)
@@ -843,8 +843,8 @@ let WORD_NOT_JOIN_256 = WORD_BLAST
 (* ========================================================================= *)
 
 (* High-bits quotient h, x86 mulhi/mulhrs path (matches VPMULHUW+VPMULHRSW).  *)
-let decompose32_h = define
- `decompose32_h (y:int32) : int32 =
+let decompose_32_h = define
+ `decompose_32_h (y:int32) : int32 =
    word_join
     (word_subword
      (word_add
@@ -869,14 +869,14 @@ let decompose32_h = define
        (word 512:int32)) 14)
       (word 1:int32)) (1,16):16 word) :int32`;;
 
-let decompose32_a1 = define
- `decompose32_a1 (y:int32) : int32 =
+let decompose_32_a1 = define
+ `decompose_32_a1 (y:int32) : int32 =
    word_and (word_not (if word_igt y (word 8118528) then word 4294967295 else word 0))
-            (decompose32_h y)`;;
+            (decompose_32_h y)`;;
 
-let decompose32_a0 = define
- `decompose32_a0 (y:int32) : int32 =
-   word_add (word_sub y (word_mul (decompose32_h y) (word 523776)))
+let decompose_32_a0 = define
+ `decompose_32_a0 (y:int32) : int32 =
+   word_add (word_sub y (word_mul (decompose_32_h y) (word 523776)))
             (if word_igt y (word 8118528) then word 4294967295 else word 0)`;;
 
 (* The unsigned high-16 multiply (VPMULHUW) on a sub-2^16 lane, specialized
@@ -892,20 +892,20 @@ let MULHI_LANE = prove(
 (* The high 16-bit lane of the VPMULHUW/VPMULHRSW chain is identically zero
    (the high subword of (x+127)>>7 is multiplied by zero). *)
 let HI16_ZERO =
-  let rhs = rand(concl decompose32_h) in
+  let rhs = rand(concl decompose_32_h) in
   let hi16 = rand(rator rhs) in
   prove(mk_eq(hi16, `word 0:16 word`),
     SUBGOAL_THEN `word_mul (word_zx (word_subword (word_ushr (word_add (y:int32) (word 127)) 7) (16,16):16 word):int32)
                      (word 0):int32 = word 0` SUBST1_TAC THENL
      [CONV_TAC WORD_RULE; ALL_TAC] THEN CONV_TAC WORD_REDUCE_CONV);;
 
-(* Numerical form of decompose32_h: the nested mulhi/mulhrs floors. *)
+(* Numerical form of decompose_32_h: the nested mulhi/mulhrs floors. *)
 let H_NUM = prove(
   `!x:int32. val x < 8380417 ==>
-     val(decompose32_h x) =
+     val(decompose_32_h x) =
      (((((val x + 127) DIV 128 * 1025) DIV 65536) * 512) DIV 16384 + 1) DIV 2`,
   GEN_TAC THEN DISCH_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [decompose32_h] THEN
+  GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [decompose_32_h] THEN
   REWRITE_TAC[HI16_ZERO] THEN
   REWRITE_TAC[VAL_WORD_JOIN; DIMINDEX_16; DIMINDEX_32; VAL_WORD_0; ADD_CLAUSES; MULT_CLAUSES] THEN
   ABBREV_TAC `m:16 word = word_subword (word_mul (word_zx (word_subword (word_ushr (word_add (x:int32) (word 127)) 7) (0,16):16 word):int32) (word 1025)) (16,16)` THEN
@@ -1007,7 +1007,7 @@ let H_ROUND = prove(
    AArch64 (h32), enabling reuse of the spec-connection lemmas below. *)
 let H32_CORRECT = prove(
   `!x:int32. val x < 8380417 ==>
-    val(decompose32_h x) = (if val x MOD 523776 * 2 <= 523776
+    val(decompose_32_h x) = (if val x MOD 523776 * 2 <= 523776
                             then val x DIV 523776
                             else val x DIV 523776 + 1)`,
   GEN_TAC THEN DISCH_TAC THEN ASM_SIMP_TAC[H_NUM] THEN ASM_SIMP_TAC[H_ROUND]);;
@@ -1019,20 +1019,20 @@ let IGT_BOUND =
              (ARITH_RULE `8118528 < 2147483648`));;
 
 (* a1 = 0 on wrap-around, else h. *)
-let DECOMPOSE32_A1_CASES = prove(
-  `!x:int32. decompose32_a1 x = if ival x > &8118528 then word 0 else decompose32_h x`,
-  GEN_TAC THEN REWRITE_TAC[decompose32_a1; GSYM IGT_BOUND] THEN
-  ABBREV_TAC `h = decompose32_h x` THEN
+let DECOMPOSE_32_A1_CASES = prove(
+  `!x:int32. decompose_32_a1 x = if ival x > &8118528 then word 0 else decompose_32_h x`,
+  GEN_TAC THEN REWRITE_TAC[decompose_32_a1; GSYM IGT_BOUND] THEN
+  ABBREV_TAC `h = decompose_32_h x` THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN BITBLAST_TAC);;
 
 (* a0 subtracts one extra on wrap-around. *)
-let DECOMPOSE32_A0_CASES = prove(
-  `!x:int32. decompose32_a0 x =
+let DECOMPOSE_32_A0_CASES = prove(
+  `!x:int32. decompose_32_a0 x =
      if ival x > &8118528
-     then word_sub (word_sub x (word_mul (decompose32_h x) (word 523776))) (word 1)
-     else word_sub x (word_mul (decompose32_h x) (word 523776))`,
-  GEN_TAC THEN REWRITE_TAC[decompose32_a0; GSYM IGT_BOUND] THEN
-  ABBREV_TAC `h = decompose32_h x` THEN
+     then word_sub (word_sub x (word_mul (decompose_32_h x) (word 523776))) (word 1)
+     else word_sub x (word_mul (decompose_32_h x) (word 523776))`,
+  GEN_TAC THEN REWRITE_TAC[decompose_32_a0; GSYM IGT_BOUND] THEN
+  ABBREV_TAC `h = decompose_32_h x` THEN
   SUBGOAL_THEN `word 4294967295:int32 = word_neg(word 1)` SUBST1_TAC THENL
    [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN CONV_TAC WORD_RULE);;
@@ -1064,11 +1064,11 @@ let CMOD_ABS_BOUND_523776 = prove(
   ASM_ARITH_TAC);;
 
 (* a1 lane computes the high bits FST(mldsa_decompose_32(val x)). *)
-let DECOMPOSE32_A1_CORRECT = prove(
+let DECOMPOSE_32_A1_CORRECT = prove(
   `!x:int32. val x < 8380417
-    ==> val(decompose32_a1 x) = FST(mldsa_decompose_32(val x))`,
+    ==> val(decompose_32_a1 x) = FST(mldsa_decompose_32(val x))`,
   GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[DECOMPOSE32_A1_CASES; MLDSA_DECOMPOSE_32_EXPAND; LET_DEF; LET_END_DEF; FST] THEN
+  REWRITE_TAC[DECOMPOSE_32_A1_CASES; MLDSA_DECOMPOSE_32_EXPAND; LET_DEF; LET_END_DEF; FST] THEN
   COND_CASES_TAC THENL
    [REWRITE_TAC[VAL_WORD_0; FST] THEN
     SUBGOAL_THEN `val(x:int32) < 2 EXP 31` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -1102,17 +1102,17 @@ let DECOMPOSE32_A1_CORRECT = prove(
       ASM_REWRITE_TAC[FST]]]);;
 
 (* a0 lane computes the low bits SND(mldsa_decompose_32(val x)). *)
-let DECOMPOSE32_A0_CORRECT = prove(
+let DECOMPOSE_32_A0_CORRECT = prove(
   `!x:int32. val x < 8380417
-    ==> ival(decompose32_a0 x) = SND(mldsa_decompose_32(val x))`,
+    ==> ival(decompose_32_a0 x) = SND(mldsa_decompose_32(val x))`,
   GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[DECOMPOSE32_A0_CASES; MLDSA_DECOMPOSE_32_EXPAND; LET_DEF; LET_END_DEF; SND] THEN
-  SUBGOAL_THEN `word_sub x (word_mul (decompose32_h x) (word 523776)) : int32 =
-    iword(ival x - ival(decompose32_h x) * &523776)` SUBST1_TAC THENL
+  REWRITE_TAC[DECOMPOSE_32_A0_CASES; MLDSA_DECOMPOSE_32_EXPAND; LET_DEF; LET_END_DEF; SND] THEN
+  SUBGOAL_THEN `word_sub x (word_mul (decompose_32_h x) (word 523776)) : int32 =
+    iword(ival x - ival(decompose_32_h x) * &523776)` SUBST1_TAC THENL
    [CONV_TAC WORD_RULE; ALL_TAC] THEN
   SUBGOAL_THEN `ival(x:int32) = &(val x)` SUBST1_TAC THENL
    [MATCH_MP_TAC IVAL_EQ_VAL THEN ASM_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `ival(decompose32_h x:int32) = &(val(decompose32_h x))` SUBST1_TAC THENL
+  SUBGOAL_THEN `ival(decompose_32_h x:int32) = &(val(decompose_32_h x))` SUBST1_TAC THENL
    [MATCH_MP_TAC IVAL_EQ_VAL THEN
     MP_TAC(SPEC `x:int32` H32_CORRECT) THEN ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
     ASM_SIMP_TAC[RDIV_LT_EQ; ARITH_RULE `~(523776 = 0)`] THEN
@@ -1170,35 +1170,35 @@ let DECOMPOSE32_A0_CORRECT = prove(
 
 (* Range bounds on the lane outputs, phrased on the word-level lane functions
    so the main proof can discharge the CBMC-contract bounds uniformly. *)
-let DECOMPOSE32_A1_BOUND_LEMMA = prove(
-  `!x:int32. val x < 8380417 ==> val(decompose32_a1 x) <= 15`,
+let DECOMPOSE_32_A1_BOUND_LEMMA = prove(
+  `!x:int32. val x < 8380417 ==> val(decompose_32_a1 x) <= 15`,
   GEN_TAC THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[DECOMPOSE32_A1_CORRECT; MLDSA_DECOMPOSE_32_A1_BOUND]);;
+  ASM_SIMP_TAC[DECOMPOSE_32_A1_CORRECT; MLDSA_DECOMPOSE_32_A1_BOUND]);;
 
-let DECOMPOSE32_A0_BOUND_LO = prove(
-  `!x:int32. val x < 8380417 ==> --(&261888) <= ival(decompose32_a0 x)`,
+let DECOMPOSE_32_A0_BOUND_LO = prove(
+  `!x:int32. val x < 8380417 ==> --(&261888) <= ival(decompose_32_a0 x)`,
   GEN_TAC THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[DECOMPOSE32_A0_CORRECT] THEN
+  ASM_SIMP_TAC[DECOMPOSE_32_A0_CORRECT] THEN
   MP_TAC(SPEC `val(x:int32)` MLDSA_DECOMPOSE_32_A0_BOUND) THEN ASM_REWRITE_TAC[] THEN INT_ARITH_TAC);;
 
-let DECOMPOSE32_A0_BOUND_HI = prove(
-  `!x:int32. val x < 8380417 ==> ival(decompose32_a0 x) <= &261888`,
+let DECOMPOSE_32_A0_BOUND_HI = prove(
+  `!x:int32. val x < 8380417 ==> ival(decompose_32_a0 x) <= &261888`,
   GEN_TAC THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[DECOMPOSE32_A0_CORRECT] THEN
+  ASM_SIMP_TAC[DECOMPOSE_32_A0_CORRECT] THEN
   MP_TAC(SPEC `val(x:int32)` MLDSA_DECOMPOSE_32_A0_BOUND) THEN ASM_REWRITE_TAC[] THEN INT_ARITH_TAC);;
 
 (* ========================================================================= *)
 (* Core correctness theorem                                                  *)
 (* ========================================================================= *)
 
-let MLDSA_DECOMPOSE32_CORRECT = prove(
+let MLDSA_DECOMPOSE_32_CORRECT = prove(
  `!a1 a (x:num->int32) pc.
         ALL (nonoverlapping (word pc, 2144))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
         aligned 32 a1 /\ aligned 32 a
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) (BUTLAST mldsa_decompose32_tmc) /\
+             (\s. bytes_loaded s (word pc) (BUTLAST mldsa_decompose_32_tmc) /\
                   read RIP s = word pc /\
                   C_ARGUMENTS [a1; a] s /\
                   (!i. i < 256 ==>
@@ -1225,7 +1225,7 @@ let MLDSA_DECOMPOSE32_CORRECT = prove(
               MAYCHANGE [memory :> bytes(a,1024)])`,
   MAP_EVERY X_GEN_TAC [`a1:int64`; `a:int64`; `x:num->int32`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; ALL; SOME_FLAGS;
-              NONOVERLAPPING_CLAUSES; fst MLDSA_DECOMPOSE32_EXEC] THEN
+              NONOVERLAPPING_CLAUSES; fst MLDSA_DECOMPOSE_32_EXEC] THEN
   STRIP_TAC THEN
   CONV_TAC(RATOR_CONV(LAND_CONV(ONCE_DEPTH_CONV
     (EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV)))) THEN
@@ -1239,36 +1239,36 @@ let MLDSA_DECOMPOSE32_CORRECT = prove(
   DISCARD_MATCHING_ASSUMPTIONS [`read (memory :> bytes32 a) s = x`] THEN
   STRIP_TAC THEN
   MAP_EVERY (fun n ->
-    X86_STEPS_TAC MLDSA_DECOMPOSE32_EXEC [n] THEN
-    SIMD_SIMPLIFY_TAC[decompose32_a1; decompose32_a0]) (1--399) THEN
+    X86_STEPS_TAC MLDSA_DECOMPOSE_32_EXEC [n] THEN
+    SIMD_SIMPLIFY_TAC[decompose_32_a1; decompose_32_a0]) (1--399) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_NOT_JOIN_256; WORD_NOT_JOIN_128; WORD_NOT_JOIN_64]) THEN
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
-     CONV_RULE(SIMD_SIMPLIFY_CONV[decompose32_h; decompose32_a1; decompose32_a0]) o
+     CONV_RULE(SIMD_SIMPLIFY_CONV[decompose_32_h; decompose_32_a1; decompose_32_a0]) o
      CONV_RULE(READ_MEMORY_SPLIT_CONV 3) o
      check (can (term_match [] `read (memory :> bytes256 zzz) s399 = xxx`) o concl))) THEN
   CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   ASM_REWRITE_TAC[WORD_ADD_0] THEN
   REPEAT CONJ_TAC THEN
   FIRST (map (fun th -> MATCH_MP_TAC th THEN FIRST_ASSUM ACCEPT_TAC)
-     [DECOMPOSE32_A1_CORRECT; DECOMPOSE32_A0_CORRECT;
-      DECOMPOSE32_A1_BOUND_LEMMA; DECOMPOSE32_A0_BOUND_LO;
-      DECOMPOSE32_A0_BOUND_HI]));;
+     [DECOMPOSE_32_A1_CORRECT; DECOMPOSE_32_A0_CORRECT;
+      DECOMPOSE_32_A1_BOUND_LEMMA; DECOMPOSE_32_A0_BOUND_LO;
+      DECOMPOSE_32_A0_BOUND_HI]));;
 
 (* ========================================================================= *)
 (* Subroutine form with return, bounds matching the CBMC contract.           *)
 (* ========================================================================= *)
 
-let MLDSA_DECOMPOSE32_NOIBT_SUBROUTINE_CORRECT = prove(
+let MLDSA_DECOMPOSE_32_NOIBT_SUBROUTINE_CORRECT = prove(
  `!a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
-        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_tmc))
+        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_tmc))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
         nonoverlapping (stackpointer,8) (a1,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) mldsa_decompose32_tmc /\
+             (\s. bytes_loaded s (word pc) mldsa_decompose_32_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1293,18 +1293,18 @@ let MLDSA_DECOMPOSE32_NOIBT_SUBROUTINE_CORRECT = prove(
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a1,1024)] ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_decompose32_tmc MLDSA_DECOMPOSE32_CORRECT);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_decompose_32_tmc MLDSA_DECOMPOSE_32_CORRECT);;
 
-let MLDSA_DECOMPOSE32_SUBROUTINE_CORRECT = prove(
+let MLDSA_DECOMPOSE_32_SUBROUTINE_CORRECT = prove(
  `!a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
-        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_mc))
+        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_mc))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
         nonoverlapping (stackpointer,8) (a1,1024) /\
         nonoverlapping (stackpointer,8) (a,1024)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) mldsa_decompose32_mc /\
+             (\s. bytes_loaded s (word pc) mldsa_decompose_32_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1329,7 +1329,7 @@ let MLDSA_DECOMPOSE32_SUBROUTINE_CORRECT = prove(
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a1,1024)] ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE32_NOIBT_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE_32_NOIBT_SUBROUTINE_CORRECT));;
 
 (* ========================================================================= *)
 (* Memory safety.                                                            *)
@@ -1354,29 +1354,29 @@ let mldsa_decompose_32_signature =
 let full_spec,public_vars = mk_safety_spec
     ~keep_maychanges:true
     mldsa_decompose_32_signature
-    (REWRITE_RULE[SOME_FLAGS] MLDSA_DECOMPOSE32_CORRECT)
-    MLDSA_DECOMPOSE32_EXEC;;
+    (REWRITE_RULE[SOME_FLAGS] MLDSA_DECOMPOSE_32_CORRECT)
+    MLDSA_DECOMPOSE_32_EXEC;;
 
-let MLDSA_DECOMPOSE32_SAFE =
+let MLDSA_DECOMPOSE_32_SAFE =
   REWRITE_RULE [MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS]
   (time prove
    (full_spec,
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
     PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars
-      MLDSA_DECOMPOSE32_EXEC));;
+      MLDSA_DECOMPOSE_32_EXEC));;
 
-let MLDSA_DECOMPOSE32_NOIBT_SUBROUTINE_SAFE = time prove
+let MLDSA_DECOMPOSE_32_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e a1 a pc stackpointer returnaddress.
           aligned 32 a1 /\ aligned 32 a /\
-          ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_tmc))
+          ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_tmc))
               [(a1,1024); (a,1024)] /\
           nonoverlapping (a1,1024) (a,1024) /\
           nonoverlapping (stackpointer,8) (a1,1024) /\
           nonoverlapping (stackpointer,8) (a,1024)
           ==> ensures x86
                (\s.
-                    bytes_loaded s (word pc) mldsa_decompose32_tmc /\
+                    bytes_loaded s (word pc) mldsa_decompose_32_tmc /\
                     read RIP s = word pc /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1390,21 +1390,21 @@ let MLDSA_DECOMPOSE32_NOIBT_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2 [a,1024; a1,1024; a,1024; stackpointer,8]
                                                [a1,1024; a,1024; stackpointer,8]))
                (\s s'. true)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_decompose32_tmc MLDSA_DECOMPOSE32_SAFE THEN
+  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_decompose_32_tmc MLDSA_DECOMPOSE_32_SAFE THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
-let MLDSA_DECOMPOSE32_SUBROUTINE_SAFE = time prove
+let MLDSA_DECOMPOSE_32_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e a1 a pc stackpointer returnaddress.
           aligned 32 a1 /\ aligned 32 a /\
-          ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_mc))
+          ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_mc))
               [(a1,1024); (a,1024)] /\
           nonoverlapping (a1,1024) (a,1024) /\
           nonoverlapping (stackpointer,8) (a1,1024) /\
           nonoverlapping (stackpointer,8) (a,1024)
           ==> ensures x86
                (\s.
-                    bytes_loaded s (word pc) mldsa_decompose32_mc /\
+                    bytes_loaded s (word pc) mldsa_decompose_32_mc /\
                     read RIP s = word pc /\
                     read RSP s = stackpointer /\
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1418,7 +1418,7 @@ let MLDSA_DECOMPOSE32_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2 [a,1024; a1,1024; a,1024; stackpointer,8]
                                                [a1,1024; a,1024; stackpointer,8]))
                (\s s'. true)`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE32_NOIBT_SUBROUTINE_SAFE));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE_32_NOIBT_SUBROUTINE_SAFE));;
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
@@ -1428,27 +1428,27 @@ let MLDSA_DECOMPOSE32_SUBROUTINE_SAFE = time prove
 (* body is spliced in via BIGSTEP and the epilogue reasoned about directly.  *)
 (* ------------------------------------------------------------------------- *)
 
-let mldsa_decompose32_windows_mc = define_from_elf
-   "mldsa_decompose32_windows_mc" "x86/mldsa/mldsa_decompose_32.obj";;
+let mldsa_decompose_32_windows_mc = define_from_elf
+   "mldsa_decompose_32_windows_mc" "x86/mldsa/mldsa_decompose_32.obj";;
 
-let mldsa_decompose32_windows_tmc =
-  define_trimmed "mldsa_decompose32_windows_tmc" mldsa_decompose32_windows_mc;;
+let mldsa_decompose_32_windows_tmc =
+  define_trimmed "mldsa_decompose_32_windows_tmc" mldsa_decompose_32_windows_mc;;
 
-let MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC =
-  X86_MK_EXEC_RULE mldsa_decompose32_windows_tmc;;
+let MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC =
+  X86_MK_EXEC_RULE mldsa_decompose_32_windows_tmc;;
 
-let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
+let MLDSA_DECOMPOSE_32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
-        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_tmc))
+        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_tmc))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a1,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a,1024) /\
-        nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_tmc)
+        nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_tmc)
                        (word_sub stackpointer (word 96),96)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) mldsa_decompose32_windows_tmc /\
+             (\s. bytes_loaded s (word pc) mldsa_decompose_32_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1479,7 +1479,7 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   WORD_FORALL_OFFSET_TAC 96 THEN
   REPEAT GEN_TAC THEN
 
-  REWRITE_TAC[fst MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC] THEN
+  REWRITE_TAC[fst MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC] THEN
   REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
   REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -1506,7 +1506,7 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
 
   ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC (1--10) THEN
+  X86_STEPS_TAC MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC (1--10) THEN
 
   (* Decompose writes BOTH output buffers a1 and a and touches only
      ymm0-3,10-14, so the core CORRECT frame is stated with an explicit
@@ -1514,15 +1514,15 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
      would permit clobbering xmm6-9,15, which the Windows ABI requires
      preserved, making the epilogue subsumption unprovable. *)
   MP_TAC(SPECL [`a1:int64`; `a:int64`; `x:num->int32`; `pc + 49`]
-    MLDSA_DECOMPOSE32_CORRECT) THEN
+    MLDSA_DECOMPOSE_32_CORRECT) THEN
   ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; ALL; NONOVERLAPPING_CLAUSES] THEN
   ANTS_TAC THENL [REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
 
-  X86_BIGSTEP_TAC MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC "s11" THENL
+  X86_BIGSTEP_TAC MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC "s11" THENL
    [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_decompose32_windows_tmc
+     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_decompose_32_windows_tmc
      (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mldsa_decompose32_tmc))
+      (AP_TERM `BUTLAST:byte list->byte list` mldsa_decompose_32_tmc))
      49));
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
@@ -1533,7 +1533,7 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     `ymm13_epilog = read YMM13 s11`;
     `ymm14_epilog = read YMM14 s11`] THEN
 
-  X86_STEPS_TAC MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC (19--27) THEN
+  X86_STEPS_TAC MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC (19--27) THEN
 
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
@@ -1541,18 +1541,18 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
-let MLDSA_DECOMPOSE32_WINDOWS_SUBROUTINE_CORRECT = prove
+let MLDSA_DECOMPOSE_32_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a1 a (x:num->int32) pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
-        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_mc))
+        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_mc))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a1,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a,1024) /\
-        nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_mc)
+        nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_mc)
                        (word_sub stackpointer (word 96),96)
         ==> ensures x86
-             (\s. bytes_loaded s (word pc) mldsa_decompose32_windows_mc /\
+             (\s. bytes_loaded s (word pc) mldsa_decompose_32_windows_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1579,23 +1579,23 @@ let MLDSA_DECOMPOSE32_WINDOWS_SUBROUTINE_CORRECT = prove
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 96),96)] ,,
               MAYCHANGE [memory :> bytes(a1,1024)] ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE_32_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
 (* Windows safety proofs *)
 
-let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
+let MLDSA_DECOMPOSE_32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
  (`exists f_events. forall e a1 a pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
-        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_tmc))
+        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_tmc))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a1,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a,1024) /\
-        nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_tmc)
+        nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_tmc)
                        (word_sub stackpointer (word 96),96)
         ==> ensures x86
               (\s.
-                  bytes_loaded s (word pc) mldsa_decompose32_windows_tmc /\
+                  bytes_loaded s (word pc) mldsa_decompose_32_windows_tmc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1614,14 +1614,14 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
                MAYCHANGE [memory :> bytes(word_sub stackpointer (word 96),96)] ,,
                MAYCHANGE [memory :> bytes(a1,1024)] ,,
                MAYCHANGE [memory :> bytes(a,1024)])`,
-  ASSUME_CALLEE_SAFETY_TAC MLDSA_DECOMPOSE32_SAFE "H_subth" THEN
+  ASSUME_CALLEE_SAFETY_TAC MLDSA_DECOMPOSE_32_SAFE "H_subth" THEN
   META_EXISTS_TAC THEN
 
   REPLICATE_TAC 4 GEN_TAC THEN
   WORD_FORALL_OFFSET_TAC 96 THEN
   REPEAT GEN_TAC THEN
 
-  REWRITE_TAC[fst MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC] THEN
+  REWRITE_TAC[fst MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC] THEN
   REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
   REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
@@ -1648,7 +1648,7 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
 
   ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC (1--10) THEN
+  X86_STEPS_TAC MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC (1--10) THEN
 
   W(fun (asl,w) ->
     let current_events = filter_map (fun (_,ath) -> let t = concl ath in
@@ -1663,11 +1663,11 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; ALL; NONOVERLAPPING_CLAUSES] THEN
   ANTS_TAC THENL [REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
 
-  X86_BIGSTEP_TAC MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC "s11" THENL
+  X86_BIGSTEP_TAC MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC "s11" THENL
    [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_decompose32_windows_tmc
+     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_decompose_32_windows_tmc
      (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mldsa_decompose32_tmc))
+      (AP_TERM `BUTLAST:byte list->byte list` mldsa_decompose_32_tmc))
      49));
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
@@ -1678,7 +1678,7 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
     `ymm13_epilog = read YMM13 s11`;
     `ymm14_epilog = read YMM14 s11`] THEN
 
-  X86_STEPS_TAC MLDSA_DECOMPOSE32_WINDOWS_TMC_EXEC (19--27) THEN
+  X86_STEPS_TAC MLDSA_DECOMPOSE_32_WINDOWS_TMC_EXEC (19--27) THEN
 
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
@@ -1687,19 +1687,19 @@ let MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   CONJ_TAC THENL [ DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
-let MLDSA_DECOMPOSE32_WINDOWS_SUBROUTINE_SAFE = prove
+let MLDSA_DECOMPOSE_32_WINDOWS_SUBROUTINE_SAFE = prove
  (`exists f_events. forall e a1 a pc stackpointer returnaddress.
         aligned 32 a1 /\ aligned 32 a /\
-        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_mc))
+        ALL (nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_mc))
             [(a1,1024); (a,1024)] /\
         nonoverlapping (a1,1024) (a,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a1,1024) /\
         nonoverlapping (word_sub stackpointer (word 96),104) (a,1024) /\
-        nonoverlapping (word pc, LENGTH mldsa_decompose32_windows_mc)
+        nonoverlapping (word pc, LENGTH mldsa_decompose_32_windows_mc)
                        (word_sub stackpointer (word 96),96)
         ==> ensures x86
               (\s.
-                  bytes_loaded s (word pc) mldsa_decompose32_windows_mc /\
+                  bytes_loaded s (word pc) mldsa_decompose_32_windows_mc /\
                   read RIP s = word pc /\
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
@@ -1718,4 +1718,4 @@ let MLDSA_DECOMPOSE32_WINDOWS_SUBROUTINE_SAFE = prove
                MAYCHANGE [memory :> bytes(word_sub stackpointer (word 96),96)] ,,
                MAYCHANGE [memory :> bytes(a1,1024)] ,,
                MAYCHANGE [memory :> bytes(a,1024)])`,
-  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE32_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_DECOMPOSE_32_NOIBT_WINDOWS_SUBROUTINE_SAFE));;

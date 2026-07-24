@@ -66,7 +66,7 @@ S2N_BN_SYMBOL(mldsa_poly_use_hint_32):
         vpbroadcastd ymm4, xmm4
         vpbroadcastd ymm3, xmm3
 
-mldsa_poly_use_hint_32_loop:
+Lmldsa_poly_use_hint_32_loop:
         vmovdqa   ymm0, [rdi]
         vmovdqa   ymm2, [rsi]
         vpaddd    ymm1, ymm5, ymm0
@@ -91,7 +91,7 @@ mldsa_poly_use_hint_32_loop:
         add       rsi, 0x20
         add       rax, 0x20
         cmp       rax, 0x400
-        jne       mldsa_poly_use_hint_32_loop
+        jne       Lmldsa_poly_use_hint_32_loop
 
 #if WINDOWS_ABI
         CFI_STACKLOADU(xmm6,0)

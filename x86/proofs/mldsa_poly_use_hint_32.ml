@@ -53,7 +53,7 @@ let PACK8_MERGE = prove(
 
 let mldsa_poly_use_hint_32_mc = define_assert_from_elf
  "mldsa_poly_use_hint_32_mc" "x86/mldsa/mldsa_poly_use_hint_32.o"
-(*** BYTECODE START ***)
+(* BYTECODE START *)
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0xb9; 0x7f; 0x00; 0x00; 0x00;
@@ -121,7 +121,7 @@ let mldsa_poly_use_hint_32_mc = define_assert_from_elf
   0x75; 0x94;              (* JNE (Imm8 (word 148)) *)
   0xc3                     (* RET *)
 ];;
-(*** BYTECODE END ***)
+(* BYTECODE END *)
 
 let mldsa_poly_use_hint_32_tmc =
   define_trimmed "mldsa_poly_use_hint_32_tmc" mldsa_poly_use_hint_32_mc;;
