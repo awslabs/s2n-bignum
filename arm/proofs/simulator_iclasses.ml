@@ -253,6 +253,12 @@ let iclasses =
   (*** REV32 ***)
   "01101110xx100000000010xxxxxxxxxx";
 
+  (*** SADDW ***)
+  "00001110xx1xxxxx000100xxxxxxxxxx";
+
+  (*** SADDW2 ***)
+  "01001110xx1xxxxx000100xxxxxxxxxx";
+
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
   "01011110000xxxxx010000xxxxxxxxxx";
