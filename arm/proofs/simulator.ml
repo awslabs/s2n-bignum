@@ -571,10 +571,53 @@ let cosimulate_ldst3() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD1/ST1 (multiple structures), 4 registers, for datasizes
+ *** 64 and 128, addressing modes no-offset, post-immediate and post-register.
+ *** The four consecutive registers span 32 bytes (datasize 64) or 64 bytes
+ *** (datasize 128); the post-immediate writeback is exactly that span.
+ ***)
+
+let cosimulate_ldst1_4reg() =
+  let datasize = Random.int 2
+  and isld = Random.int 2
+  and esize = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let someoffset = Random.int 2 in
+  let regoffr = Random.int 32 in
+  (* No-offset form has Rm = 0 and bit23 = 0; the post forms set bit23 = 1,
+     with Rm = 31 selecting post-immediate and Rm = Xm post-register. As in
+     cosimulate_ldst3, avoid a base of SP or Rm aliasing the base for the
+     post-register form. *)
+  let regoff =
+    if someoffset = 0 then 0
+    else if regoffr = rn || rn = 31 || Random.bool() then 31
+    else regoffr in
+  let stackoff =
+    if rn = 31 then Random.int 12 * 16
+    else Random.int 192 in
+  (* Four 8- or 16-byte registers span 32 or 64 bytes. The post-immediate
+     form (Rm = 31) writes the base back by that span. *)
+  let postinc = if someoffset = 1 && regoff = 31 then 32 * (datasize + 1) else 0 in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 23 */ num someoffset +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num regoff +/
+    pow2 12 */ num 0b0010 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ldst3; cosimulate_ldstu
+    cosimulate_ldst3; cosimulate_ldstu; cosimulate_ldst1_4reg
     ];;
 
 let run_random_memopsimulation() =

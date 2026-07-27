@@ -2620,6 +2620,60 @@ let arm_STP = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(* Four-register contiguous load/store for little-endian LD1/ST1. *)
+
+let arm_LDP4 = define
+ `arm_LDP4 (Rt1:(armstate,N word)component)
+           (Rt2:(armstate,N word)component)
+           (Rt3:(armstate,N word)component)
+           (Rt4:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            orthogonal_components Rt1 Rt2 /\
+            orthogonal_components Rt1 Rt3 /\
+            orthogonal_components Rt1 Rt4 /\
+            orthogonal_components Rt2 Rt3 /\
+            orthogonal_components Rt2 Rt4 /\
+            orthogonal_components Rt3 Rt4 /\
+            (offset_writesback off
+             ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn /\
+                 orthogonal_components Rt3 Rn /\ orthogonal_components Rt4 Rn)
+         then
+           let w = dimindex(:N) DIV 8 in
+           Rt1 := read (memory :> wbytes addr) s ,,
+           Rt2 := read (memory :> wbytes(word_add addr (word w))) s ,,
+           Rt3 := read (memory :> wbytes(word_add addr (word(2 * w)))) s ,,
+           Rt4 := read (memory :> wbytes(word_add addr (word(3 * w)))) s ,,
+           events := CONS (EventLoad (addr,4 * w)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let arm_STP4 = define
+ `arm_STP4 (Rt1:(armstate,N word)component)
+           (Rt2:(armstate,N word)component)
+           (Rt3:(armstate,N word)component)
+           (Rt4:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off
+             ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn /\
+                 orthogonal_components Rt3 Rn /\ orthogonal_components Rt4 Rn)
+         then
+           let w = dimindex(:N) DIV 8 in
+           memory :> wbytes addr := read Rt1 s ,,
+           memory :> wbytes(word_add addr (word w)) := read Rt2 s ,,
+           memory :> wbytes(word_add addr (word(2 * w))) := read Rt3 s ,,
+           memory :> wbytes(word_add addr (word(3 * w))) := read Rt4 s ,,
+           events := CONS (EventStore (addr,4 * w)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 (* There is a bit of duplication in the following defintions.
   We have to do this because one step in symbolic execution
   doesn't handle let binding of pairs. *)
@@ -3625,4 +3679,5 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
+       arm_LDP4; arm_STP4;
        arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT];;
