@@ -352,6 +352,9 @@ let iclasses =
   (*** TBL2 ***)
   "0x001110000xxxxx001000xxxxxxxxxx";
 
+  (*** TBL3 (3-register table, len = 2) ***)
+  "0x001110000xxxxx010000xxxxxxxxxx";
+
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
 

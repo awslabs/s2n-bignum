@@ -2518,6 +2518,24 @@ let arm_TBL2 = define
              usimd8 (\x. word_subword table (8 * val x,8):byte) (word_zx m:int64) in
           (Rd := word_zx d:(128)word) s`;;
 
+(*** TBL (3-register table, len = 2): the lookup table is the concatenation    ***)
+(*** of three consecutive 128-bit registers (48 bytes); indices >= 48 read 0.  ***)
+let arm_TBL3 = define
+ `arm_TBL3 Rd Rn1 Rn2 Rn3 Rm datasize =
+    \s:armstate.
+        let n1:int128 = read Rn1 s in
+        let n2:int128 = read Rn2 s in
+        let n3:int128 = read Rn3 s in
+        let table:(384)word = word_join n3 (word_join n2 n1:(256)word) in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d = usimd16 (\x. word_subword table (8 * val x,8):byte) m in
+          (Rd := d) s
+        else
+          let d =
+             usimd8 (\x. word_subword table (8 * val x,8):byte) (word_zx m:int64) in
+          (Rd := word_zx d:(128)word) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Load and store instructions.                                              *)
 (* ------------------------------------------------------------------------- *)
@@ -3465,6 +3483,7 @@ let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TBL_ALT =        EXPAND_SIMD_RULE arm_TBL;;
 let arm_TBL2_ALT =       EXPAND_SIMD_RULE arm_TBL2;;
+let arm_TBL3_ALT =       EXPAND_SIMD_RULE arm_TBL3;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
 let arm_UADDLP_ALT =     EXPAND_SIMD_RULE arm_UADDLP;;
@@ -3603,7 +3622,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
-       arm_TBL_ALT; arm_TBL2_ALT;
+       arm_TBL_ALT; arm_TBL2_ALT; arm_TBL3_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
        arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
