@@ -2324,6 +2324,22 @@ let arm_XTN = define
           let nlow:(64)word = usimd8 (\x. word_subword x (0,8): (8)word) n in
           (Rd := (word_zx nlow:(128)word)) s`;;
 
+(*** XTN2: same extract-narrow as XTN but the narrowed lanes are written into  ***)
+(*** the HIGH 64 bits of Vd, preserving its low 64 bits (Q=1 form).            ***)
+(*** esize is Rd's (destination, narrow) element size.                         ***)
+let arm_XTN2 = define
+ `arm_XTN2 Rd Rn esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword x (0,32): (32)word) n
+          else if esize = 16 then
+            usimd4 (\x. word_subword x (0,16): (16)word) n
+          else // esize=8
+            usimd8 (\x. word_subword x (0,8): (8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
 
 let word_split_lohi = new_definition
  `(word_split_lohi:(N tybit0)word->((N)word # (N)word)) x =
@@ -3470,6 +3486,7 @@ let arm_USRA_VEC_ALT =   EXPAND_SIMD_RULE arm_USRA_VEC;;
 let arm_UZP1_ALT =       EXPAND_SIMD_RULE arm_UZP1;;
 let arm_UZP2_ALT =       EXPAND_SIMD_RULE arm_UZP2;;
 let arm_XTN_ALT =        EXPAND_SIMD_RULE arm_XTN;;
+let arm_XTN2_ALT =       EXPAND_SIMD_RULE arm_XTN2;;
 let arm_ZIP1_ALT =       EXPAND_SIMD_RULE arm_ZIP1;;
 let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
 let arm_LD2_ALT =        EXPAND_SIMD_RULE arm_LD2;;
@@ -3599,7 +3616,7 @@ let ARM_OPERATION_CLAUSES =
        arm_USHLL_VEC_ALT; arm_USHLL2_VEC_ALT;
        arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
        arm_UZP2_ALT;
-       arm_XAR; arm_XTN_ALT;
+       arm_XAR; arm_XTN_ALT; arm_XTN2_ALT;
        arm_ZIP1_ALT; arm_ZIP2_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
        INST_TYPE[`:32`,`:N`] arm_ADCS;

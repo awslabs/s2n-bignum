@@ -1092,12 +1092,13 @@ let decode = new_definition `!w:int32. decode w =
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
       SOME (arm_UZP2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
 
-  | [0:1; 0:1; 0b001110:6; size:2; 0b100001001010:12; Rn:5; Rd:5] ->
-    // XTN
+  | [0:1; q; 0b001110:6; size:2; 0b100001001010:12; Rn:5; Rd:5] ->
+    // XTN (q=0, low half) / XTN2 (q=1, high half)
     if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
-      SOME (arm_XTN (QREG' Rd) (QREG' Rn) (val esize))
+      if q then SOME (arm_XTN2 (QREG' Rd) (QREG' Rn) (val esize))
+      else SOME (arm_XTN (QREG' Rd) (QREG' Rn) (val esize))
 
   | [0:1; q; 0b001110:6; size:2; 0:1; Rm:5; 0:1; op; 0b1110:4; Rn:5; Rd:5] ->
     // ZIP1 (op = 0) and ZIP2 (op = 1)

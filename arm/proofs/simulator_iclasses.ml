@@ -427,8 +427,11 @@ let iclasses =
   (*** UZP2 ***)
   "01001110xx0xxxxx010110xxxxxxxxxx";
 
-  (*** XTN ***)
+  (*** XTN (q=0, low half) ***)
   "00001110xx100001001010xxxxxxxxxx";
+
+  (*** XTN2 (q=1, high half) ***)
+  "01001110xx100001001010xxxxxxxxxx";
 
   (*** ZIP1 ***)
   "0x001110xx0xxxxx001110xxxxxxxxxx";
