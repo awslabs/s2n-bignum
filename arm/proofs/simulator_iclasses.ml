@@ -283,6 +283,9 @@ let iclasses =
   (*** USUBW2 ***)
   "01101110xx1xxxxx001100xxxxxxxxxx";
 
+  (*** SMAX (signed element-wise maximum) ***)
+  "0x001110xx1xxxxx011001xxxxxxxxxx";
+
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
   "01011110000xxxxx010000xxxxxxxxxx";
@@ -418,8 +421,14 @@ let iclasses =
   (*** UADDLV ***)
   "0x101110xx110000001110xxxxxxxxxx";
 
+  (*** UMAX (unsigned element-wise maximum) ***)
+  "0x101110xx1xxxxx011001xxxxxxxxxx";
+
   (*** UMAXV ***)
   "0x101110xx110000101010xxxxxxxxxx";
+
+  (*** URHADD (unsigned rounding halving add) ***)
+  "0x101110xx1xxxxx000101xxxxxxxxxx";
 
   (*** UMIN, vector ***)
   "0x101110xx1xxxxx011011xxxxxxxxxx";
