@@ -998,6 +998,30 @@ let decode = new_definition `!w:int32. decode w =
     let elements = datasize DIV esize in
     SOME(arm_UMAXV (QREG' Rd) (QREG' Rn) elements esize)
 
+  | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b011001:6; Rn:5; Rd:5] ->
+    // SMAX (signed element-wise maximum). size=11 (esize=64) UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * 2 EXP (val size) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_SMAX_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
+
+  | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b011001:6; Rn:5; Rd:5] ->
+    // UMAX (unsigned element-wise maximum). size=11 (esize=64) UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * 2 EXP (val size) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_UMAX_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
+
+  | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b000101:6; Rn:5; Rd:5] ->
+    // URHADD (unsigned rounding halving add). size=11 (esize=64) UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
+    else
+      let esize = 8 * 2 EXP (val size) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_URHADD_VEC (QREG' Rd) (QREG' Rn) (QREG' Rm) esize datasize)
+
   | [0:1; q; 0b101110:6; size:2; 0b1:1; Rm:5; 0b100000:6; Rn:5; Rd:5] ->
     // UMLAL (vector, Q = 0). UMLAL2 (vector, Q=1)
     if size = (word 0b11: (2)word) then NONE // "UNDEFINED"

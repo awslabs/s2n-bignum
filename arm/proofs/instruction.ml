@@ -2263,6 +2263,76 @@ let arm_USHL_VEC = define
             else simd8 word_ushl n m in
           (Rd := word_zx d:(128)word) s`;;
 
+(*** URHADD <Vd>.<T>, <Vn>.<T>, <Vm>.<T>: unsigned rounding halving add.     ***)
+(*** Each lane is (UInt(n_i) + UInt(m_i) + 1) >> 1, kept in esize bits.        ***)
+(*** No widening: lanes stay esize wide.  esize 8/16 are the kernel needs;     ***)
+(*** 32 is also modelled for completeness.  datasize 64 or 128.               ***)
+let word_urhadd = define
+ `(word_urhadd:N word->N word->N word) x y =
+    word((val x + val y + 1) DIV 2)`;;
+
+let arm_URHADD_VEC = define
+ `arm_URHADD_VEC Rd Rn Rm esize datasize =
+    \s. let n = read Rn s
+        and m = read Rm (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 32 then simd4 word_urhadd n m
+            else if esize = 16 then simd8 word_urhadd n m
+            else simd16 word_urhadd n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 word_urhadd n m
+            else if esize = 16 then simd4 word_urhadd n m
+            else simd8 word_urhadd n m in
+          (Rd := word_zx d:(128)word) s`;;
+
+(*** SMAX <Vd>.<T>, <Vn>.<T>, <Vm>.<T>: signed element-wise maximum.          ***)
+(*** Each destination lane is the signed max of the two source lanes.         ***)
+let arm_SMAX_VEC = define
+ `arm_SMAX_VEC Rd Rn Rm esize datasize =
+    \s. let n = read Rn s
+        and m = read Rm (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 32 then simd4 word_imax n m
+            else if esize = 16 then simd8 word_imax n m
+            else simd16 word_imax n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 word_imax n m
+            else if esize = 16 then simd4 word_imax n m
+            else simd8 word_imax n m in
+          (Rd := word_zx d:(128)word) s`;;
+
+(*** UMAX <Vd>.<T>, <Vn>.<T>, <Vm>.<T>: unsigned element-wise maximum.         ***)
+(*** Each destination lane is the unsigned max of the two source lanes.       ***)
+(*** (Distinct from UMAXV, the across-vector reduction.)                       ***)
+let arm_UMAX_VEC = define
+ `arm_UMAX_VEC Rd Rn Rm esize datasize =
+    \s. let n = read Rn s
+        and m = read Rm (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 32 then simd4 word_umax n m
+            else if esize = 16 then simd8 word_umax n m
+            else simd16 word_umax n m in
+          (Rd := d) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let m:(64)word = word_subword m (0,64) in
+          let d:(64)word =
+            if esize = 32 then simd2 word_umax n m
+            else if esize = 16 then simd4 word_umax n m
+            else simd8 word_umax n m in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_USRA_VEC = define
  `arm_USRA_VEC Rd Rn shift esize datasize =
     \s. let n:(128)word = read Rn s in
@@ -3485,6 +3555,10 @@ let arm_USHLL_VEC_ALT =  EXPAND_SIMD_RULE arm_USHLL_VEC;;
 let arm_USHLL2_VEC_ALT = EXPAND_SIMD_RULE arm_USHLL2_VEC;;
 let arm_SSHLL_VEC_ALT =  EXPAND_SIMD_RULE arm_SSHLL_VEC;;
 let arm_SSHLL2_VEC_ALT = EXPAND_SIMD_RULE arm_SSHLL2_VEC;;
+let arm_URHADD_VEC_ALT =
+  REWRITE_RULE[word_urhadd] (EXPAND_SIMD_RULE arm_URHADD_VEC);;
+let arm_SMAX_VEC_ALT =    EXPAND_SIMD_RULE arm_SMAX_VEC;;
+let arm_UMAX_VEC_ALT =    EXPAND_SIMD_RULE arm_UMAX_VEC;;
 let arm_USHR_VEC_ALT =   EXPAND_SIMD_RULE arm_USHR_VEC;;
 let arm_USRA_VEC_ALT =   EXPAND_SIMD_RULE arm_USRA_VEC;;
 let arm_UZP1_ALT =       EXPAND_SIMD_RULE arm_UZP1;;
@@ -3598,6 +3672,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
        arm_SLI_VEC_ALT; arm_SRI_VEC_ALT;
+       arm_SMAX_VEC_ALT;
        arm_SMLAL_VEC_ALT; arm_SMLAL2_VEC_ALT;
        arm_SMLSL_VEC_ALT; arm_SMLSL2_VEC_ALT;
        arm_SMULL_VEC_ALT; arm_SMULL2_VEC_ALT;
@@ -3608,13 +3683,14 @@ let ARM_OPERATION_CLAUSES =
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TBL_ALT; arm_TBL2_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
-       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
+       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAX_VEC_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;
        arm_UMULL_VEC_ALT; arm_UMULL2_VEC_ALT;
        arm_UMULH;
        arm_UMIN_VEC_ALT;
+       arm_URHADD_VEC_ALT;
        arm_USHL_VEC_ALT;
        arm_USHLL_VEC_ALT; arm_USHLL2_VEC_ALT;
        arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
