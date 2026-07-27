@@ -153,7 +153,8 @@ let iclasses =
   "0x101110001xxxxx000111xxxxxxxxxx";
 
   (*** EXT ***)
-  "01101110000xxxxx0xxxx0xxxxxxxxxx"; (* 128 bits only *)
+  "01101110000xxxxx0xxxx0xxxxxxxxxx"; (* q=1, 128 bits *)
+  "00101110000xxxxx0xxxx0xxxxxxxxxx"; (* q=0, 64 bits or UNDEFINED *)
 
   (*** FCSEL, 32 and 64 bits ***)
   "00011110001xxxxxxxxx11xxxxxxxxxx";
