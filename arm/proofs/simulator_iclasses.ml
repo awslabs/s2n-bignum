@@ -283,6 +283,9 @@ let iclasses =
   (*** USUBW2 ***)
   "01101110xx1xxxxx001100xxxxxxxxxx";
 
+  (*** ADDV (across-vector add reduction) ***)
+  "0x001110xx110001101110xxxxxxxxxx";
+
   (*** SMAX (signed element-wise maximum) ***)
   "0x001110xx1xxxxx011001xxxxxxxxxx";
 
@@ -414,6 +417,9 @@ let iclasses =
 
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
+
+  (*** UADALP (unsigned pairwise add and accumulate long) ***)
+  "0x101110xx100000011010xxxxxxxxxx";
 
   (*** UADDLP ***)
   "01101110xx100000001010xxxxxxxxxx";
