@@ -853,7 +853,8 @@ let decode = new_definition `!w:int32. decode w =
         SOME (arm_SSHLL_VEC (QREG' Rd) (QREG' Rn) shift esize)
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b100001:6; Rn:5; Rd:5] ->
-    // SHRN (or MOVI with cmode=1000 when immh=0 and Q=1)
+    // SHRN (Q=0, low half) / SHRN2 (Q=1, high half)
+    // (or MOVI with cmode=1000 when immh=0 and Q=1)
     if immh = (word 0b0:(4)word) then
       if q then
         let abcdefgh:(8)word = word_join immb Rn in
@@ -862,15 +863,14 @@ let decode = new_definition `!w:int32. decode w =
         | SOME imm -> SOME (arm_MOVI (QREG' Rd) imm)
         | NONE -> NONE
       else NONE
-    else if q then NONE // writing to the upper part is unsupported yet
     else if bit 3 immh then NONE // "UNDEFINED"
     else
       let esize = 8 * 2 EXP (3 - word_clz immh) in
-      // datasize is 64, part is 0
-      let elements = 64 DIV esize in
+      // esize is the destination (narrow) element size
       let shift = (2 * esize) - val(word_join immh immb: (7)word) in
       // round is false
-      SOME (arm_SHRN (QREG' Rd) (QREG' Rn) shift esize)
+      if q then SOME (arm_SHRN2 (QREG' Rd) (QREG' Rn) shift esize)
+      else SOME (arm_SHRN (QREG' Rd) (QREG' Rn) shift esize)
 
   | [0:1; q; 0b001111:6; sz:2; L:1; M:1; R:4; 0b1100:4; H:1; 0:1; Rn:5; Rd:5] ->
     // SQDMULH (by element)

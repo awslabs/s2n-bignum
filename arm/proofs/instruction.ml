@@ -1668,6 +1668,25 @@ let arm_SHRN = define
         // equivalent to word_zx res:(128)word, but use word_subword instead
         (Rd := word_subword res (0,128)) s`;;
 
+(*** SHRN2: same shift-right-narrow as SHRN but the narrowed lanes are        ***)
+(*** written into the HIGH 64 bits of Vd, preserving its low 64 bits.         ***)
+(*** esize is Rd's (destination, narrow) element size.                        ***)
+let arm_SHRN2 = define
+ `arm_SHRN2 Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn s in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word).
+              word_subword (word_ushr x amnt) (0,32):(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word).
+              word_subword (word_ushr x amnt) (0,16):(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word).
+              word_subword (word_ushr x amnt) (0,8):(8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
 let arm_SMULH = define
  `arm_SMULH Rd Rn Rm =
     \s. let n:N word = read Rn (s:armstate)
@@ -3438,6 +3457,7 @@ let arm_REV32_VEC_ALT =  EXPAND_SIMD_RULE arm_REV32_VEC;;
 let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
 let arm_SSHR_VEC_ALT =   EXPAND_SIMD_RULE arm_SSHR_VEC;;
 let arm_SHRN_ALT =       EXPAND_SIMD_RULE arm_SHRN;;
+let arm_SHRN2_ALT =      EXPAND_SIMD_RULE arm_SHRN2;;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
 let arm_SMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLAL_VEC;;
 let arm_SMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLAL2_VEC;;
@@ -3574,7 +3594,7 @@ let ARM_OPERATION_CLAUSES =
        arm_PMUL_VEC_ALT;
        arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT;
        arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
-       arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
+       arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT; arm_SHRN2_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
        arm_SLI_VEC_ALT; arm_SRI_VEC_ALT;
