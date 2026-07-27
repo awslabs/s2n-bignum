@@ -544,13 +544,16 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_DUP_GEN (QREG' Rd) (XREG' Rn) esize datasize)
 
   | [0:1; q; 0b101110000:9; Rm:5; 0:1; imm4:4; 0:1; Rn:5; Rd:5] ->
-    // EXT
+    // EXT (q=1, 128-bit Q-form; q=0, 64-bit D-form)
     if ~q /\ bit 3 imm4 then NONE // "UNDEFINED"
     else if q then
       let pos = (val imm4) * 8 in
       // datasize is fixed to 128.
       SOME (arm_EXT (QREG' Rd) (QREG' Rn) (QREG' Rm) pos)
-    else NONE
+    else
+      let pos = (val imm4) * 8 in
+      // datasize is 64; DREG' reads/writes the low 64 bits (zeroing the top).
+      SOME (arm_EXT (DREG' Rd) (DREG' Rn) (DREG' Rm) pos)
 
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=1), USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
