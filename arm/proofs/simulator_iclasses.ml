@@ -145,9 +145,12 @@ let iclasses =
   "0x00111000100000010110xxxxxxxxxx";
   "0x001110xx100000010110xxxxxxxxxx";
 
-  (*** DUP ***)
+  (*** DUP (general, from Xn) ***)
   "01001110000x1000000011xxxxxxxxxx"; (* original DUP Vd.2d, xn *)
   "0x001110000xxxxx000011xxxxxxxxxx"; (* other variants too     *)
+
+  (*** DUP (element): broadcast Vn.<T>[index] across Vd ***)
+  "0x001110000xxxxx000001xxxxxxxxxx";
 
   (*** EOR ***)
   "0x101110001xxxxx000111xxxxxxxxxx";
