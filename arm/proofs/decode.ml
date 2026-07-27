@@ -543,6 +543,16 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     SOME (arm_DUP_GEN (QREG' Rd) (XREG' Rn) esize datasize)
 
+  | [0:1; q; 0b001110000:9; imm5:5; 0b000001:6; Rn:5; Rd:5] ->
+    // DUP (element): broadcast Vn.<T>[index] across Vd
+    let size = word_ctz imm5 in
+    if size > 3 then NONE else
+    if size = 3 /\ ~q then NONE else
+    let esize = 8 * 2 EXP size in
+    let idx = (val imm5) DIV (2 EXP (size + 1)) in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_DUP_ELEM (QREG' Rd) (QREG' Rn) idx esize datasize)
+
   | [0:1; q; 0b101110000:9; Rm:5; 0:1; imm4:4; 0:1; Rn:5; Rd:5] ->
     // EXT (q=1, 128-bit Q-form; q=0, 64-bit D-form)
     if ~q /\ bit 3 imm4 then NONE // "UNDEFINED"

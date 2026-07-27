@@ -1216,6 +1216,26 @@ let arm_DUP_GEN = define
             else word_duplicate (word_zx n:8 word) in
           (Rd := word_zx d:(128)word) s`;;
 
+(*** DUP (element): broadcast a single esize-bit lane (index idx) of Vn        ***)
+(*** across the destination.  esize is the element size; idx is the source     ***)
+(*** lane index.  datasize is 64 or 128.                                       ***)
+let arm_DUP_ELEM = define
+ `arm_DUP_ELEM Rd Rn idx esize datasize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then word_duplicate (word_subword n (64*idx,64):64 word)
+            else if esize = 32 then word_duplicate (word_subword n (32*idx,32):32 word)
+            else if esize = 16 then word_duplicate (word_subword n (16*idx,16):16 word)
+            else word_duplicate (word_subword n (8*idx,8):8 word) in
+          (Rd := d) s
+        else
+          let d:64 word =
+            if esize = 32 then word_duplicate (word_subword n (32*idx,32):32 word)
+            else if esize = 16 then word_duplicate (word_subword n (16*idx,16):16 word)
+            else word_duplicate (word_subword n (8*idx,8):8 word) in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_EON = define
  `arm_EON Rd Rm Rn =
     \s. let m = read Rm s
@@ -3460,6 +3480,7 @@ let arm_CMGT_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGT_VEC;;
 let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
 let arm_CMLE_VEC_ZERO_ALT = EXPAND_SIMD_RULE arm_CMLE_VEC_ZERO;;
 let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
+let arm_DUP_ELEM_ALT =   EXPAND_SIMD_RULE arm_DUP_ELEM;;
 let arm_DUP_GEN_ALT =    EXPAND_SIMD_RULE arm_DUP_GEN;;
 let arm_MLS_VEC_ALT =    EXPAND_SIMD_RULE arm_MLS_VEC;;
 let arm_MLA_VEC_ALT =    EXPAND_SIMD_RULE arm_MLA_VEC;;
@@ -3596,7 +3617,7 @@ let ARM_OPERATION_CLAUSES =
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
        arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMLE_VEC_ZERO_ALT; arm_CNT_ALT;
        arm_CSEL; arm_CSINC; arm_CSINV; arm_CSNEG;
-       arm_DUP_GEN_ALT;
+       arm_DUP_ELEM_ALT; arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR_VEC; arm_EOR3; arm_EXT; arm_EXTR;
        arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
