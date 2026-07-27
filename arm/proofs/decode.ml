@@ -998,6 +998,23 @@ let decode = new_definition `!w:int32. decode w =
     let elements = datasize DIV esize in
     SOME(arm_UMAXV (QREG' Rd) (QREG' Rn) elements esize)
 
+  | [0:1; q; 0b001110:6; size:2; 0b110001101110:12; Rn:5; Rd:5] ->
+    // ADDV (across-vector add reduction). size=10 with q=0 (2s) UNALLOCATED;
+    // size=11 UNDEFINED. Result is esize-wide scalar in low bits of Rd.
+    if size = word 0b10 /\ ~q \/ size = word 0b11 then NONE else
+    let esize = 8 * 2 EXP (val size) in
+    let datasize = if q then 128 else 64 in
+    let elements = datasize DIV esize in
+    SOME(arm_ADDV (QREG' Rd) (QREG' Rn) elements esize)
+
+  | [0:1; q; 0b101110:6; size:2; 0b100000011010:12; Rn:5; Rd:5] ->
+    // UADALP (unsigned pairwise add and accumulate long). size=11 UNDEFINED.
+    if size = (word 0b11: (2)word) then NONE
+    else
+      let esize: (64)word = word_shl (word 8: (64)word) (val size) in
+      let datasize = if q then 128 else 64 in
+      SOME (arm_UADALP (QREG' Rd) (QREG' Rn) (val esize) datasize)
+
   | [0:1; q; 0b001110:6; size:2; 0b1:1; Rm:5; 0b011001:6; Rn:5; Rd:5] ->
     // SMAX (signed element-wise maximum). size=11 (esize=64) UNDEFINED.
     if size = (word 0b11: (2)word) then NONE // "UNDEFINED"

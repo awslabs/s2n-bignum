@@ -2333,6 +2333,64 @@ let arm_UMAX_VEC = define
             else simd8 word_umax n m in
           (Rd := word_zx d:(128)word) s`;;
 
+(*** UADALP <Vd>.<Ta>, <Vn>.<Tb>: unsigned pairwise add and ACCUMULATE long.  ***)
+(*** Like UADDLP but the pairwise sums are added into the existing Rd lanes.   ***)
+(*** Vn holds 2*N narrow esize-bit lanes; each adjacent pair is zero-extended  ***)
+(*** to 2*esize, summed, and added to the corresponding wide Rd lane.          ***)
+(*** datasize is 64 or 128 according to Q. 64-bit forms zero the high half.    ***)
+let arm_UADALP = define
+ `arm_UADALP Rd Rn esize datasize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd (s:armstate) in
+        if datasize = 128 then
+          if esize = 32 then
+            let res = usimd2
+              (\x. word_add (word_zx (word_subword x (0,32):(32)word):(64)word)
+                            (word_zx (word_subword x (32,32):(32)word):(64)word)) n in
+            (Rd := simd2 word_add d res) s
+          else if esize = 16 then
+            let res = usimd4
+              (\x. word_add (word_zx (word_subword x (0,16):(16)word):(32)word)
+                            (word_zx (word_subword x (16,16):(16)word):(32)word)) n in
+            (Rd := simd4 word_add d res) s
+          else // esize=8
+            let res = usimd8
+              (\x. word_add (word_zx (word_subword x (0,8):(8)word):(16)word)
+                            (word_zx (word_subword x (8,8):(8)word):(16)word)) n in
+            (Rd := simd8 word_add d res) s
+        else
+          let n:(64)word = word_subword n (0,64) in
+          let d:(64)word = word_subword d (0,64) in
+          let d:(64)word =
+            if esize = 32 then
+              let res:(64)word =
+                word_add (word_zx (word_subword n (0,32):(32)word):(64)word)
+                         (word_zx (word_subword n (32,32):(32)word):(64)word) in
+              word_add d res
+            else if esize = 16 then
+              let res = usimd2
+                (\x. word_add (word_zx (word_subword x (0,16):(16)word):(32)word)
+                              (word_zx (word_subword x (16,16):(16)word):(32)word)) n in
+              simd2 word_add d res
+            else // esize=8
+              let res = usimd4
+                (\x. word_add (word_zx (word_subword x (0,8):(8)word):(16)word)
+                              (word_zx (word_subword x (8,8):(8)word):(16)word)) n in
+              simd4 word_add d res in
+          (Rd := word_zx d:(128)word) s`;;
+
+(*** ADDV <V><d>, <Vn>.<T>: across-vector add reduction.  The scalar result   ***)
+(*** is the sum (modulo 2^esize) of all lanes of Vn.<T>.  Modelled like        ***)
+(*** UADDLV / UMAXV but with summation and NO widening (result is esize-wide,  ***)
+(*** placed in the low bits of Rd).  Kernel needs 8h (8 lanes of 16) and 4s.   ***)
+let arm_ADDV = define
+ `arm_ADDV Rd Rn elements esize =
+    \s:armstate.
+        let n:128 word = read Rn s in
+        let d = nsum (0..elements-1)
+                    (\i. val(word_subword n (esize*i,esize):int128)) in
+        (Rd := (word (d MOD 2 EXP esize):128 word)) s`;;
+
 let arm_USRA_VEC = define
  `arm_USRA_VEC Rd Rn shift esize datasize =
     \s. let n:(128)word = read Rn s in
@@ -3559,6 +3617,7 @@ let arm_URHADD_VEC_ALT =
   REWRITE_RULE[word_urhadd] (EXPAND_SIMD_RULE arm_URHADD_VEC);;
 let arm_SMAX_VEC_ALT =    EXPAND_SIMD_RULE arm_SMAX_VEC;;
 let arm_UMAX_VEC_ALT =    EXPAND_SIMD_RULE arm_UMAX_VEC;;
+let arm_UADALP_ALT =      EXPAND_SIMD_RULE arm_UADALP;;
 let arm_USHR_VEC_ALT =   EXPAND_SIMD_RULE arm_USHR_VEC;;
 let arm_USRA_VEC_ALT =   EXPAND_SIMD_RULE arm_USRA_VEC;;
 let arm_UZP1_ALT =       EXPAND_SIMD_RULE arm_UZP1;;
@@ -3592,6 +3651,21 @@ let arm_UADDLV_ALT =
    `arm_UADDLV Rd Rn 4 16`;
    `arm_UADDLV Rd Rn 8 16`;
    `arm_UADDLV Rd Rn 4 32`];;
+
+let arm_ADDV_ALT =
+  (end_itlist CONJ o
+   map (REWRITE_RULE[WORD_ADD; WORD_VAL] o
+        CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+        CONV_RULE
+         (NUM_REDUCE_CONV THENC
+          ONCE_DEPTH_CONV EXPAND_NSUM_CONV THENC
+          NUM_REDUCE_CONV) o
+        GEN_REWRITE_CONV I [arm_ADDV]))
+  [`arm_ADDV Rd Rn 8 8`;
+   `arm_ADDV Rd Rn 16 8`;
+   `arm_ADDV Rd Rn 4 16`;
+   `arm_ADDV Rd Rn 8 16`;
+   `arm_ADDV Rd Rn 4 32`];;
 
 let arm_UMAXV_ALT =
   (end_itlist CONJ o
@@ -3647,7 +3721,7 @@ let arm_ST3_ALT = end_itlist CONJ
 let ARM_OPERATION_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
     (*** Alphabetically sorted, new alphabet appears in the next line ***)
-      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
+      [arm_ADC; arm_ADCS_ALT; arm_ADD; arm_ADD_VEC_ALT; arm_ADDV_ALT; arm_ABS_VEC_ALT; arm_ADDS_ALT; arm_ADR;
        arm_ADRP; arm_AND; arm_AND_VEC; arm_ANDS; arm_ASR; arm_ASRV;
        arm_B; arm_BCAX; arm_BFM; arm_BIC; arm_BIC_VEC; arm_BICS; arm_BIF; arm_BIT;
        arm_BL; arm_BL_ABSOLUTE; arm_Bcond;
@@ -3683,7 +3757,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
        arm_TBL_ALT; arm_TBL2_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
-       arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAX_VEC_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
+       arm_UADALP_ALT; arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAX_VEC_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
        arm_UMLSL_VEC_ALT; arm_UMLSL2_VEC_ALT;
        arm_UMSUBL;
