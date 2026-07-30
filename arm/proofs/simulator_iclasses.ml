@@ -574,6 +574,10 @@ let check_insns () =
     (*** ld1 / st1 (single lane, .s) post-index ***)
     "0x0011011x0xxxxx100x00xxxxxxxxxx";
 
+    (*** ldur / stur (SIMD & FP), unscaled, sizes 64 and 32 ***)
+    "111111000x0xxxxxxxxx00xxxxxxxxxx";
+    "101111000x0xxxxxxxxx00xxxxxxxxxx";
+
     (*** ld1r (post immediate ofs) ***)
     "0x001101110111111100xxxxxxxxxxxx";
 

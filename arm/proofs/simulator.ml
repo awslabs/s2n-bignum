@@ -697,12 +697,43 @@ let cosimulate_ldst_simd_bhs() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LDUR/STUR (SIMD&FP, unscaled immediate) for sizes 64 (D)
+ *** and 32 (S). The 9-bit immediate is a signed, unscaled byte offset.
+ ***)
+
+let cosimulate_ldstu_simd() =
+  let is_d = Random.int 2 in
+  let size = if is_d = 1 then 0b11 else 0b10 in
+  let access = if is_d = 1 then 8 else 4 in
+  let isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let stackoff =
+    if rn = 31 then Random.int 17 * 16
+    else Random.int 257 in
+  let minoff = -stackoff
+  and maxoff = 256 - access - stackoff in
+  let off = minoff + Random.int (maxoff - minoff + 1) in
+  let encodedoff = if off < 0 then off + 512 else off in
+  let code =
+    pow2 30 */ num size +/
+    pow2 24 */ num 0b111100 +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num encodedoff +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu;
     cosimulate_ldst1_3reg; cosimulate_ldst2_noofs;
-    cosimulate_ldst1_lane; cosimulate_ldst_simd_bhs
+    cosimulate_ldst1_lane; cosimulate_ldst_simd_bhs;
+    cosimulate_ldstu_simd
     ];;
 
 let run_random_memopsimulation() =
