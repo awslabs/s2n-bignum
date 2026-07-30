@@ -13,6 +13,9 @@ let XREG' = new_definition `XREG' (n:5 word) = XREG (val n)`;;
 let WREG' = new_definition `WREG' (n:5 word) = WREG (val n)`;;
 let QREG' = new_definition `QREG' (n:5 word) = QREG (val n)`;;
 let DREG' = new_definition `DREG' (n:5 word) = DREG (val n)`;;
+let SREG' = new_definition `SREG' (n:5 word) = SREG (val n)`;;
+let HREG' = new_definition `HREG' (n:5 word) = HREG (val n)`;;
+let BREG' = new_definition `BREG' (n:5 word) = BREG (val n)`;;
 
 let QLANE = define
  `QLANE reg 8 ix = QREG' reg :> LANE_B ix /\
@@ -79,6 +82,12 @@ let arm_ldst_q = new_definition `arm_ldst_q ld Rt =
   (if ld then arm_LDR else arm_STR) (QREG' Rt)`;;
 let arm_ldst_d = new_definition `arm_ldst_d ld Rt =
   (if ld then arm_LDR else arm_STR) (DREG' Rt)`;;
+let arm_ldst_s = new_definition `arm_ldst_s ld Rt =
+  (if ld then arm_LDR else arm_STR) (SREG' Rt)`;;
+let arm_ldst_h = new_definition `arm_ldst_h ld Rt =
+  (if ld then arm_LDR else arm_STR) (HREG' Rt)`;;
+let arm_ldst_bv = new_definition `arm_ldst_bv ld Rt =
+  (if ld then arm_LDR else arm_STR) (BREG' Rt)`;;
 let arm_ldstb = new_definition `arm_ldstb ld Rt =
   (if ld then arm_LDRB else arm_STRB) (WREG' Rt)`;;
 let arm_ldstp = new_definition `arm_ldstp ld x Rt Rt2 =
@@ -332,11 +341,19 @@ let decode = new_definition `!w:int32. decode w =
 
   // SIMD ld,st operations
   // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback
-  // Currently only supports sizes 128 and 64 (not 32, 16 or 8)
+  // Sizes 128 and 64; sub-64 (32/16/8) handled by the three clauses below.
   | [0b00:2; 0b111101:6; 0b1:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 16))))
   | [0b11:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
     SOME (arm_ldst_d is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 8))))
+  // LDR/STR (immediate, SIMD&FP), Unsigned offset, sizes 32/16/8 (S/H/B)
+  // opc = 01 (LDR) or 00 (STR); size = 10 (S), 01 (H), 00 (B); scale = size.
+  | [0b10:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_ldst_s is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 4))))
+  | [0b01:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_ldst_h is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12 * 2))))
+  | [0b00:2; 0b111101:6; 0b0:1; is_ld; imm12:12; Rn:5; Rt:5] ->
+    SOME (arm_ldst_bv is_ld Rt (XREG_SP Rn) (Immediate_Offset (word (val imm12))))
   // Post-immediate offset, sizes 128 and 64
   | [0b00:2; 0b1111001:7; is_ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word_sx imm9)))
@@ -1311,6 +1328,12 @@ let REG_CONV =
       TRANS (CONV_RULE (RAND_CONV (RAND_CONV WORD_RED_CONV))
         (SPEC (mk_comb (`word:num->5 word`, mk_numeral (num i))) th'))) A in
     F XREG' xs, F WREG' ws, F QREG' qs,F DREG' ds in
+  (* SREG'/HREG'/BREG' have no named aliases; just reduce to SREG/HREG/BREG n *)
+  let ss',hs',bs' =
+    let G th' = Array.init 32 (fun i ->
+      CONV_RULE (RAND_CONV (RAND_CONV WORD_RED_CONV))
+        (SPEC (mk_comb (`word:num->5 word`, mk_numeral (num i))) th')) in
+    G SREG', G HREG', G BREG' in
   function
   | Comb(Const("XREG",_),n) -> xs.(Num.int_of_num (dest_numeral n))
   | Comb(Const("WREG",_),n) -> ws.(Num.int_of_num (dest_numeral n))
@@ -1322,6 +1345,12 @@ let REG_CONV =
     qs'.(Num.int_of_num (dest_numeral n))
   | Comb(Const("DREG'",_),Comb(Const("word",_),n)) ->
     ds'.(Num.int_of_num (dest_numeral n))
+  | Comb(Const("SREG'",_),Comb(Const("word",_),n)) ->
+    ss'.(Num.int_of_num (dest_numeral n))
+  | Comb(Const("HREG'",_),Comb(Const("word",_),n)) ->
+    hs'.(Num.int_of_num (dest_numeral n))
+  | Comb(Const("BREG'",_),Comb(Const("word",_),n)) ->
+    bs'.(Num.int_of_num (dest_numeral n))
   | Comb(Const("XREG_SP",_),Comb(Const("word",_),n)) ->
     xsp.(Num.int_of_num (dest_numeral n))
   | Comb(Const("WREG_SP",_),Comb(Const("word",_),n)) ->
@@ -1510,10 +1539,11 @@ let PURE_DECODE_CONV =
     add_conv (`_MATCH:A->(A->B->bool)->B`, 2, MATCH_CONV) rw;
 
     (* components and instructions *)
-    List.iter (fun tm -> add_conv (tm, 1, REG_CONV) rw) [`XREG'`; `WREG'`; `QREG'`; `DREG'`; `XREG_SP`; `WREG_SP`];
+    List.iter (fun tm -> add_conv (tm, 1, REG_CONV) rw) [`XREG'`; `WREG'`; `QREG'`; `DREG'`; `SREG'`; `HREG'`; `BREG'`; `XREG_SP`; `WREG_SP`];
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
-              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
+              arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldst_s; arm_ldst_h; arm_ldst_bv;
+              arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
               arm_ldst2; arm_ldstp_2q; arm_ldstp_3q; arm_ldstp_3d;
               arm_ldst3; arm_ldst_lane] rw;
     (* .. that have bitmatch exprs inside *)

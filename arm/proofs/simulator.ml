@@ -668,12 +668,41 @@ let cosimulate_ldst1_lane() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LDR/STR (SIMD&FP, immediate, unsigned offset) for the
+ *** sub-64 element sizes 32 (S), 16 (H) and 8 (B). The byte offset is the
+ *** 12-bit immediate scaled by the access size.
+ ***)
+
+let cosimulate_ldst_simd_bhs() =
+  let size = Random.int 3 (* 0=B, 1=H, 2=S *)
+  and isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let access = 1 lsl size in
+  let stackoff =
+    if rn = 31 then Random.int 15 * 16
+    else Random.int (256 - access) in
+  (* The accessed range is [stackoff + imm12*access, +access); keep it within
+     the 256-byte buffer, i.e. stackoff + imm12*access + access <= 256. *)
+  let imm12 = Random.int (1 + (256 - access - stackoff) / access) in
+  let code =
+    pow2 30 */ num size +/
+    pow2 23 */ num 0b1111010 +/
+    pow2 22 */ num isld +/
+    pow2 10 */ num imm12 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu;
     cosimulate_ldst1_3reg; cosimulate_ldst2_noofs;
-    cosimulate_ldst1_lane
+    cosimulate_ldst1_lane; cosimulate_ldst_simd_bhs
     ];;
 
 let run_random_memopsimulation() =

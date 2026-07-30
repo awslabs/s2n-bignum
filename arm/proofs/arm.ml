@@ -251,6 +251,36 @@ let DREG_EXPAND_CLAUSES = prove
    D31 = Q31 :> zerotop_64`,
   REWRITE_TAC(!component_alias_thms));;
 
+(* Expand the scalar SIMD&FP sub-registers (S/H/B) down to the full Q register
+   (using the Qn aliases, so the result matches the Q-register state exposed by
+   the cosimulator's regfile) composed with the appropriate zerotop chain.  This
+   lets reads/writes of the S/H/B components reduce against the Q-register state
+   in the same way the existing WREG/DREG expand clauses do.  The decoder
+   produces SREG n / HREG n / BREG n with a concrete index n, so we enumerate
+   the 32 registers; the Qn alias on the RHS is what the input/regfile rewrite
+   knows about. *)
+
+let SREG_EXPAND_CLAUSES = prove
+ (list_mk_conj (map (fun i ->
+    let s = string_of_int i in
+    parse_term("SREG "^s^" = (Q"^s^" :> zerotop_64) :> zerotop_32")) (0--31)),
+  REWRITE_TAC[SREG; DREG] THEN REWRITE_TAC(!component_alias_thms));;
+
+let HREG_EXPAND_CLAUSES = prove
+ (list_mk_conj (map (fun i ->
+    let s = string_of_int i in
+    parse_term("HREG "^s^" = ((Q"^s^" :> zerotop_64) :> zerotop_32) :> zerotop_16"))
+    (0--31)),
+  REWRITE_TAC[HREG; SREG; DREG] THEN REWRITE_TAC(!component_alias_thms));;
+
+let BREG_EXPAND_CLAUSES = prove
+ (list_mk_conj (map (fun i ->
+    let s = string_of_int i in
+    parse_term("BREG "^s^
+      " = (((Q"^s^" :> zerotop_64) :> zerotop_32) :> zerotop_16) :> zerotop_8"))
+    (0--31)),
+  REWRITE_TAC[BREG; HREG; SREG; DREG] THEN REWRITE_TAC(!component_alias_thms));;
+
 let READ_SHIFTEDREG_CLAUSES = prove
  (`read (Shiftedreg Rn LSL n) s = word_shl (read Rn s) n /\
    read (Shiftedreg Rn LSR n) s = word_ushr (read Rn s) n /\
@@ -303,11 +333,15 @@ let ARM_EXEC_CONV =
     GEN_REWRITE_CONV ONCE_DEPTH_CONV [CONJUNCT2 SEQ_ID]) ORELSEC
    (GEN_REWRITE_CONV I ARM_OPERATION_CLAUSES THENC
     REWRITE_CONV [condition_semantics])) THENC
-  REWRITE_CONV[WREG_EXPAND_CLAUSES; DREG_EXPAND_CLAUSES] THENC
+  REWRITE_CONV[WREG_EXPAND_CLAUSES; DREG_EXPAND_CLAUSES;
+               SREG_EXPAND_CLAUSES; HREG_EXPAND_CLAUSES; BREG_EXPAND_CLAUSES] THENC
   REWRITE_CONV[READ_RVALUE; ARM_ZERO_REGISTER;
                ASSIGN_ZEROTOP_32; ASSIGN_ZEROTOP_64;
+               ASSIGN_ZEROTOP_16; ASSIGN_ZEROTOP_8;
                READ_ZEROTOP_32; WRITE_ZEROTOP_32;
                READ_ZEROTOP_64; WRITE_ZEROTOP_64;
+               READ_ZEROTOP_16; WRITE_ZEROTOP_16;
+               READ_ZEROTOP_8; WRITE_ZEROTOP_8;
                READ_SHIFTEDREG_CLAUSES; READ_EXTENDEDREG_CLAUSES;
                READ_LANE_CLAUSES] THENC
   DEPTH_CONV(WORD_NUM_RED_CONV ORELSEC WORD_WORD_OPERATION_CONV);;
