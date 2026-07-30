@@ -597,11 +597,38 @@ let cosimulate_ldst1_3reg() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD2/ST2 (multiple structures), 2 registers, no offset,
+ *** for datasizes 64 and 128 (size = 11 only valid for datasize 128).
+ ***)
+
+let cosimulate_ldst2_noofs() =
+  let datasize = Random.int 2
+  and isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  (* size 11 (esize 64) only valid for datasize 128 *)
+  let esize = if datasize = 0 then Random.int 3 else Random.int 4 in
+  let stackoff =
+    if rn = 31 then Random.int 13 * 16
+    else Random.int 208 in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num 0b1000 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu;
-    cosimulate_ldst1_3reg
+    cosimulate_ldst1_3reg; cosimulate_ldst2_noofs
     ];;
 
 let run_random_memopsimulation() =
