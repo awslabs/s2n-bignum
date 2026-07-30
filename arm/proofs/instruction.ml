@@ -2910,6 +2910,60 @@ let arm_STP3 = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(* LD1/ST1 (single structure, single lane). Loads/stores one element of a
+   vector register, leaving the other lanes intact for LD1 (asisdlso class).
+   esize selects the lane width (8/16/32/64), ix the lane index. *)
+
+let arm_LD1_LANE = define
+ `arm_LD1_LANE (Rt:(armstate,(128)word)component) Rn off esize ix =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           let old:(128)word = read Rt s in
+           let nu:(128)word =
+             (if esize = 64 then
+                word_insert old (64 * ix,64)
+                  ((read (memory :> wbytes addr) s):(64)word)
+              else if esize = 32 then
+                word_insert old (32 * ix,32)
+                  ((read (memory :> wbytes addr) s):(32)word)
+              else if esize = 16 then
+                word_insert old (16 * ix,16)
+                  ((read (memory :> wbytes addr) s):(16)word)
+              else
+                word_insert old (8 * ix,8)
+                  ((read (memory :> wbytes addr) s):(8)word)) in
+           Rt := nu ,,
+           events := CONS (EventLoad (addr,esize DIV 8)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let arm_ST1_LANE = define
+ `arm_ST1_LANE (Rt:(armstate,(128)word)component) Rn off esize ix =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           let v:(128)word = read Rt s in
+           (if esize = 64 then
+              memory :> wbytes addr := (word_subword v (64 * ix,64):(64)word)
+            else if esize = 32 then
+              memory :> wbytes addr := (word_subword v (32 * ix,32):(32)word)
+            else if esize = 16 then
+              memory :> wbytes addr := (word_subword v (16 * ix,16):(16)word)
+            else
+              memory :> wbytes addr := (word_subword v (8 * ix,8):(8)word)) ,,
+           events := CONS (EventStore (addr,esize DIV 8)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 (* ------------------------------------------------------------------------- *)
 (* SHA-related SIMD operations                                               *)
 (* ------------------------------------------------------------------------- *)
@@ -3522,6 +3576,19 @@ let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
 let arm_LD2_ALT =        EXPAND_SIMD_RULE arm_LD2;;
 let arm_ST2_ALT =        EXPAND_SIMD_RULE arm_ST2;;
 
+(*** Single-lane LD1/ST1: specialise the esize cascade to the 32-bit (.s)
+ *** form actually decoded, leaving the lane index ix symbolic. ***)
+let arm_LD1_LANE_ALT =
+  (CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+   CONV_RULE NUM_REDUCE_CONV o
+   GEN_REWRITE_CONV I [arm_LD1_LANE])
+  `arm_LD1_LANE Rt Rn off 32 ix`;;
+let arm_ST1_LANE_ALT =
+  (CONV_RULE(TOP_DEPTH_CONV let_CONV) o
+   CONV_RULE NUM_REDUCE_CONV o
+   GEN_REWRITE_CONV I [arm_ST1_LANE])
+  `arm_ST1_LANE Rt Rn off 32 ix`;;
+
 let arm_SQDMULH_VEC_ALT =
   REWRITE_RULE[word_2smulh] (EXPAND_SIMD_RULE arm_SQDMULH_VEC);;
 
@@ -3673,4 +3740,5 @@ let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
        arm_LDP3; arm_STP3;
-       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT];;
+       arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT;
+       arm_LD1_LANE_ALT; arm_ST1_LANE_ALT];;

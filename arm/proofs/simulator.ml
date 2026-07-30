@@ -624,11 +624,56 @@ let cosimulate_ldst2_noofs() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD1/ST1 (single structure, single lane), 32-bit (.s) form,
+ *** addressing modes no-offset, post-immediate (#4) and post-register.
+ *** The lane index is (Q:S). For LD1 the other lanes are preserved.
+ ***)
+
+let cosimulate_ldst1_lane() =
+  let isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32
+  and index = Random.int 4 in
+  let q = index / 2 and sbit = index mod 2 in
+  (* someoffset = 0 : no offset (const = 0011010, Rm = 0)
+     someoffset = 1 : post-index (const = 0011011); Rm = 11111 selects the
+       post-immediate (#4) form, otherwise Rm = Xm selects post-register.
+     The post-register form (which advances the base by the full value of Xm)
+     is only used when the base is not SP and Xm <> base, since otherwise it
+     either corrupts the harness stack pointer or aliases the base. *)
+  let someoffset = Random.int 2 in
+  let regoffr = Random.int 32 in
+  let rm =
+    if someoffset = 0 then 0
+    else if rn = 31 || regoffr = rn || Random.bool() then 31
+    else regoffr in
+  let constfield = if someoffset = 0 then 0b0011010 else 0b0011011 in
+  let stackoff =
+    if rn = 31 then Random.int 14 * 16
+    else Random.int 224 in
+  (* The post-immediate form (Rm = 31) advances the base by the element size
+     (4 bytes for .s); the post-register form advances it by Xm. *)
+  let postinc = if someoffset = 1 && rm = 31 then 4 else 0 in
+  let code =
+    pow2 30 */ num q +/
+    pow2 23 */ num constfield +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num 0b100 +/
+    pow2 12 */ num sbit +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu;
-    cosimulate_ldst1_3reg; cosimulate_ldst2_noofs
+    cosimulate_ldst1_3reg; cosimulate_ldst2_noofs;
+    cosimulate_ldst1_lane
     ];;
 
 let run_random_memopsimulation() =
