@@ -2992,7 +2992,7 @@ let wb_front_pre_tm = `\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256
 
 let wb_front_frame_tm = `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
       MAYCHANGE [memory :> bytes(out_p:int64, 16 * nblk); memory :> bytes(xi_p:int64, 16);
-                 memory :> bytes(ivec_p:int64, 16); memory :> bytes(stackpointer:int64, 80)] ,,
+                 memory :> bytes(ivec_p:int64, 16); memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
       MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                  Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31]`;;
 
@@ -3888,7 +3888,7 @@ let mk_band_goal k =
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
      MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(xi_p:int64, 16);
                 memory :> bytes(ivec_p:int64, 16);
-                memory :> bytes(stackpointer:int64, 80)] ,,
+                memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
      MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                 Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31]` in
   let ens = subst [pre,`PPP:armstate->bool`; post,`QQQ:armstate->bool`;
@@ -3917,7 +3917,7 @@ let fdbl_at k =
   let fs = subst [mk_small_numeral(16*k),`sss:num`]
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
      MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(xi_p:int64, 16);
-                memory :> bytes(ivec_p:int64, 16); memory :> bytes(stackpointer:int64, 80)] ,,
+                memory :> bytes(ivec_p:int64, 16); memory :> bytes(word_add stackpointer (word 64):int64, 16)] ,,
      MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                 Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31]` in
   mk_binop `(,,):(armstate->armstate->bool)->(armstate->armstate->bool)->(armstate->armstate->bool)` fs fs;;
@@ -4397,7 +4397,7 @@ let AESV8_GCM_8X_DEC_256_WB_1BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,16); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 1 AESV8_GCM_8X_DEC_256_WB_BUF_1BLOCK);;
@@ -4431,7 +4431,7 @@ let AESV8_GCM_8X_DEC_256_WB_2BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,32); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 2 AESV8_GCM_8X_DEC_256_WB_BUF_2BLOCK);;
@@ -4465,7 +4465,7 @@ let AESV8_GCM_8X_DEC_256_WB_3BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,48); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 3 AESV8_GCM_8X_DEC_256_WB_BUF_3BLOCK);;
@@ -4499,7 +4499,7 @@ let AESV8_GCM_8X_DEC_256_WB_4BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,64); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 4 AESV8_GCM_8X_DEC_256_WB_BUF_4BLOCK);;
@@ -4533,7 +4533,7 @@ let AESV8_GCM_8X_DEC_256_WB_5BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,80); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 5 AESV8_GCM_8X_DEC_256_WB_BUF_5BLOCK);;
@@ -4567,7 +4567,7 @@ let AESV8_GCM_8X_DEC_256_WB_6BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,96); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 6 AESV8_GCM_8X_DEC_256_WB_BUF_6BLOCK);;
@@ -4601,7 +4601,7 @@ let AESV8_GCM_8X_DEC_256_WB_7BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,112); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 7 AESV8_GCM_8X_DEC_256_WB_BUF_7BLOCK);;
@@ -4635,7 +4635,7 @@ let AESV8_GCM_8X_DEC_256_WB_8BLOCK = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,128); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   WB_READABLE_TAC 8 AESV8_GCM_8X_DEC_256_WB_BUF_8BLOCK);;
@@ -4678,7 +4678,7 @@ let AESV8_GCM_8X_DEC_256_WB_DISPATCH = prove
           (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
            MAYCHANGE [memory :> bytes(out_p,16 * nblk); memory :> bytes(xi_p,16);
                       memory :> bytes(ivec_p,16);
-                      memory :> bytes(stackpointer,80)] ,,
+                      memory :> bytes(word_add stackpointer (word 64),16)] ,,
            MAYCHANGE [Q0;Q1;Q2;Q3;Q4;Q5;Q6;Q7;Q8;Q9;Q10;Q11;Q12;Q13;Q14;Q15;
                       Q16;Q17;Q18;Q19;Q20;Q21;Q22;Q23;Q24;Q25;Q26;Q27;Q28;Q29;Q30;Q31])`,
   let bands = [AESV8_GCM_8X_DEC_256_WB_1BLOCK;AESV8_GCM_8X_DEC_256_WB_2BLOCK;
