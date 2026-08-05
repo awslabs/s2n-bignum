@@ -45,6 +45,33 @@ let subroutine_signatures = [
    ])
 );
 
+("aesv8_gcm_8x_enc_256_wb",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("bit_len", "size_t", (*is const?*)"false");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("xi", "uint8_t[static 16]", (*is const?*)"false");
+     ("ivec", "uint8_t[static 16]", (*is const?*)"false");
+     ("key", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("htable", "uint64_t[static 32]", (*is const?*)"true");
+   ],
+   "size_t",
+   [(* input buffers *)
+    ("in", "bit_len"(* num elems *), 1(* elem bytesize *));
+    ("xi", "16"(* num elems *), 1(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+    ("key", "244"(* num elems *), 1(* elem bytesize *));
+    ("htable", "32"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "bit_len"(* num elems *), 1(* elem bytesize *));
+    ("xi", "16"(* num elems *), 1(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("bignum_add",
   ([(*args*)
      ("p", "uint64_t", (*is const?*)"false");
