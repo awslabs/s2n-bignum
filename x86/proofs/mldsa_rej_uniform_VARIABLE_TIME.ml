@@ -10,11 +10,11 @@
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/mldsa_rej_uniform_table.ml";;
 
-(*** print_literal_from_elf "x86/mldsa/mldsa_rej_uniform.o";;
+(*** print_literal_from_elf "x86/mldsa/mldsa_rej_uniform_VARIABLE_TIME.o";;
  ***)
 
 let mldsa_rej_uniform_mc = define_assert_from_elf
-  "mldsa_rej_uniform_mc" "x86/mldsa/mldsa_rej_uniform.o"
+  "mldsa_rej_uniform_mc" "x86/mldsa/mldsa_rej_uniform_VARIABLE_TIME.o"
 [
   0xf3; 0x0f; 0x1e; 0xfa;  (* ENDBR64 *)
   0x49; 0xba; 0x00; 0x01; 0x02; 0xff; 0x03; 0x04; 0x05; 0xff;
@@ -1460,9 +1460,7 @@ let SCALAR_BODY_LEMMA = prove
            read RCX s = word(24 * N + 3 * (i+1)) /\
            read(memory :> bytes(res, 4 * outlen_j)) s = num_of_wordlist outlist_j))
      (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10] ,,
-      MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4;
-                 ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11;
-                 ZMM12; ZMM13; ZMM14; ZMM15] ,,
+      MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
       MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
       MAYCHANGE [memory :> bytes(res,1024)])`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
@@ -2295,9 +2293,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
               read(memory :> bytes(res,4 * outlen)) s =
                 num_of_wordlist outlist)
          (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10] ,,
-          MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4;
-                     ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11;
-                     ZMM12; ZMM13; ZMM14; ZMM15] ,,
+          MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
           MAYCHANGE [memory :> bytes(res,1024)])`,
 
@@ -4056,9 +4052,7 @@ let MLDSA_REJ_UNIFORM_CORRECT_BOUND = prove
                    ==> val(read(memory :> bytes32
                                  (word_add res (word(4 * i)))) s) < 8380417))
          (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10] ,,
-          MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4;
-                     ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11;
-                     ZMM12; ZMM13; ZMM14; ZMM15] ,,
+          MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
           MAYCHANGE [memory :> bytes(res,1024)])`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -4343,9 +4337,7 @@ let SCALAR_BODY_LEMMA_MEMSAFE = prove
                            [buf,840; table,2048]
                            [res,1024]))
      (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10] ,,
-      MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4;
-                 ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11;
-                 ZMM12; ZMM13; ZMM14; ZMM15] ,,
+      MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
       MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
       MAYCHANGE [memory :> bytes(res,1024)])`,
   REPEAT GEN_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
@@ -5179,9 +5171,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
                    [buf,840; table,2048]
                    [res,1024]))
          (MAYCHANGE [RIP; RAX; RCX; R8; R9; R10] ,,
-          MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4;
-                     ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11;
-                     ZMM12; ZMM13; ZMM14; ZMM15] ,,
+          MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
           MAYCHANGE [memory :> bytes(res,1024)])`,
   MAP_EVERY X_GEN_TAC
@@ -7150,7 +7140,7 @@ let MLDSA_REJ_UNIFORM_SUBROUTINE_SAFE = time prove
 (* ========================================================================= *)
 
 let mldsa_rej_uniform_windows_mc = define_from_elf "mldsa_rej_uniform_windows_mc"
-      "x86/mldsa/mldsa_rej_uniform.obj";;
+      "x86/mldsa/mldsa_rej_uniform_VARIABLE_TIME.obj";;
 
 let mldsa_rej_uniform_windows_tmc =
   define_trimmed "mldsa_rej_uniform_windows_tmc" mldsa_rej_uniform_windows_mc;;
@@ -7170,10 +7160,10 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT_NOBOUND = prove
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (table, 2048) /\
     nonoverlapping (res, 1024) (buf, 840) /\
     nonoverlapping (res, 1024) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (res, 1024) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (buf, 840) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184)
+    nonoverlapping (word_sub stackpointer (word 16), 24) (res, 1024) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (buf, 840) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (table, 2048) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24)
                    (word pc, LENGTH mldsa_rej_uniform_windows_tmc)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mldsa_rej_uniform_windows_tmc /\
@@ -7193,72 +7183,39 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT_NOBOUND = prove
                  num_of_wordlist outlist))
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,1024)] ,,
-          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)])`,
+          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   REPLICATE_TAC 5 GEN_TAC THEN
-  WORD_FORALL_OFFSET_TAC 176 THEN REPEAT GEN_TAC THEN
+  WORD_FORALL_OFFSET_TAC 16 THEN REPEAT GEN_TAC THEN
 
   REWRITE_TAC[fst MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC] THEN
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[WINDOWS_C_ARGUMENTS; WINDOWS_C_RETURN] THEN
   REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
 
+  (* The body only uses volatile xmm0-xmm4, so the new prologue/epilogue only
+     saves/restores rdi/rsi. The nonvolatile xmm6-xmm15 are never touched, so
+     their preservation is automatic and needs no ENSURES_PRESERVED_TAC. *)
   ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
   ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
-  ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm7" `ZMM7 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm8" `ZMM8 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm9" `ZMM9 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm10" `ZMM10 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm11" `ZMM11 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm13" `ZMM13 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
-
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
-
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
-  (* Substitute init_xmmN → word_zx init_ymmN in the goal, using the
-     assumptions from ENSURES_PRESERVED_TAC. Unlike mldsa_reduce's broad
-     `REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM))`, this keeps `LENGTH inlist = 280`
-     as an assumption (we need it later for the linux CORRECT precondition). *)
-  MAP_EVERY (fun n ->
-    UNDISCH_THEN
-      (mk_eq(mk_comb(`word_zx:int256->int128`,
-                     mk_var("init_ymm"^string_of_int n,`:int256`)),
-             mk_var("init_xmm"^string_of_int n,`:int128`)))
-      (SUBST1_TAC o SYM))
-   [6;7;8;9;10;11;12;13;14;15] THEN
 
   ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (1--16) THEN
+  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (1--5) THEN
 
   MP_TAC(SPECL
     [`res:int64`; `buf:int64`; `table:int64`;
-     `inlist:(24 word)list`; `pc + 91`]
+     `inlist:(24 word)list`; `pc + 11`]
     MLDSA_REJ_UNIFORM_CORRECT) THEN
   ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
   ANTS_TAC THENL [REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
 
-  X86_BIGSTEP_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC "s17" THENL
+  X86_BIGSTEP_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC "s6" THENL
    [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
      (BYTES_LOADED_SUBPROGRAM_RULE mldsa_rej_uniform_windows_tmc
      (REWRITE_RULE[BUTLAST_CLAUSES]
       (AP_TERM `BUTLAST:byte list->byte list` mldsa_rej_uniform_tmc))
-     91));
+     11));
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
   RULE_ASSUM_TAC(CONV_RULE(DEPTH_CONV let_CONV)) THEN
@@ -7267,22 +7224,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT_NOBOUND = prove
     `outlen = LENGTH (SUB_LIST (0,256) (REJ_SAMPLE (inlist:(24 word)list)))` THEN
   FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC) THEN
 
-  MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s17`;
-    `ymm7_epilog = read YMM7 s17`;
-    `ymm8_epilog = read YMM8 s17`;
-    `ymm9_epilog = read YMM9 s17`;
-    `ymm10_epilog = read YMM10 s17`;
-    `ymm11_epilog = read YMM11 s17`;
-    `ymm12_epilog = read YMM12 s17`;
-    `ymm13_epilog = read YMM13 s17`;
-    `ymm14_epilog = read YMM14 s17`;
-    `ymm15_epilog = read YMM15 s17`] THEN
-
-  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (18--31) THEN
-
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
+  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (7--9) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(DEPTH_CONV let_CONV) THEN ASM_REWRITE_TAC[] THEN
@@ -7296,10 +7238,10 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (table, 2048) /\
     nonoverlapping (res, 1024) (buf, 840) /\
     nonoverlapping (res, 1024) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (res, 1024) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (buf, 840) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184)
+    nonoverlapping (word_sub stackpointer (word 16), 24) (res, 1024) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (buf, 840) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (table, 2048) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24)
                    (word pc, LENGTH mldsa_rej_uniform_windows_tmc)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mldsa_rej_uniform_windows_tmc /\
@@ -7322,7 +7264,7 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
                                   (word_add res (word(4 * i)))) s) < 8380417)))
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,1024)] ,,
-          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)])`,
+          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ENSURES_STRENGTHEN_POST_X86 THEN
   EXISTS_TAC
@@ -7357,10 +7299,10 @@ let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_CORRECT = prove
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_mc) (table, 2048) /\
     nonoverlapping (res, 1024) (buf, 840) /\
     nonoverlapping (res, 1024) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (res, 1024) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (buf, 840) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184)
+    nonoverlapping (word_sub stackpointer (word 16), 24) (res, 1024) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (buf, 840) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (table, 2048) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24)
                    (word pc, LENGTH mldsa_rej_uniform_windows_mc)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mldsa_rej_uniform_windows_mc /\
@@ -7383,7 +7325,7 @@ let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_CORRECT = prove
                                   (word_add res (word(4 * i)))) s) < 8380417)))
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,1024)] ,,
-          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)])`,
+          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
@@ -7406,10 +7348,10 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_tmc) (table, 2048) /\
     nonoverlapping (res, 1024) (buf, 840) /\
     nonoverlapping (res, 1024) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (res, 1024) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (buf, 840) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184)
+    nonoverlapping (word_sub stackpointer (word 16), 24) (res, 1024) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (buf, 840) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (table, 2048) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24)
                    (word pc, LENGTH mldsa_rej_uniform_windows_tmc)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mldsa_rej_uniform_windows_tmc /\
@@ -7426,57 +7368,28 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
               (exists e2.
                  read events s = APPEND e2 e /\
                  memaccess_inbounds e2
-                   [buf,840; table,2048; word_sub stackpointer (word 176),184]
-                   [res,1024; word_sub stackpointer (word 176),176]))
+                   [buf,840; table,2048; word_sub stackpointer (word 16),24]
+                   [res,1024; word_sub stackpointer (word 16),16]))
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,1024)] ,,
-          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)])`,
+          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   REPLICATE_TAC 6 GEN_TAC THEN
-  WORD_FORALL_OFFSET_TAC 176 THEN REPEAT GEN_TAC THEN
+  WORD_FORALL_OFFSET_TAC 16 THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[fst MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC] THEN
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[WINDOWS_C_ARGUMENTS; WINDOWS_C_RETURN] THEN
   REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
 
+  (* The body only uses volatile xmm0-xmm4, so the new prologue/epilogue only
+     saves/restores rdi/rsi. The nonvolatile xmm6-xmm15 are never touched, so
+     their preservation is automatic and needs no ENSURES_PRESERVED_TAC. *)
   ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
   ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
-  ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm7" `ZMM7 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm8" `ZMM8 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm9" `ZMM9 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm10" `ZMM10 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm11" `ZMM11 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm13" `ZMM13 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
-
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
-
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
-  MAP_EVERY (fun n ->
-    UNDISCH_THEN
-      (mk_eq(mk_comb(`word_zx:int256->int128`,
-                     mk_var("init_ymm"^string_of_int n,`:int256`)),
-             mk_var("init_xmm"^string_of_int n,`:int128`)))
-      (SUBST1_TAC o SYM))
-   [6;7;8;9;10;11;12;13;14;15] THEN
 
   ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (1--16) THEN
+  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (1--5) THEN
 
   W(fun (asl,w) ->
     let current_events =
@@ -7492,40 +7405,30 @@ let MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
     else
       MP_TAC(SPECL
         [`res:int64`; `buf:int64`; `table:int64`;
-         `inlist:(24 word)list`; hd current_events; `pc + 91`]
+         `inlist:(24 word)list`; hd current_events; `pc + 11`]
         MLDSA_REJ_UNIFORM_MEMSAFE)) THEN
   ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
   ANTS_TAC THENL [REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
 
-  X86_BIGSTEP_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC "s17" THENL
+  X86_BIGSTEP_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC "s6" THENL
    [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
      (BYTES_LOADED_SUBPROGRAM_RULE mldsa_rej_uniform_windows_tmc
      (REWRITE_RULE[BUTLAST_CLAUSES]
       (AP_TERM `BUTLAST:byte list->byte list` mldsa_rej_uniform_tmc))
-     91));
+     11));
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
-  MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s17`;
-    `ymm7_epilog = read YMM7 s17`;
-    `ymm8_epilog = read YMM8 s17`;
-    `ymm9_epilog = read YMM9 s17`;
-    `ymm10_epilog = read YMM10 s17`;
-    `ymm11_epilog = read YMM11 s17`;
-    `ymm12_epilog = read YMM12 s17`;
-    `ymm13_epilog = read YMM13 s17`;
-    `ymm14_epilog = read YMM14 s17`;
-    `ymm15_epilog = read YMM15 s17`] THEN
-
-  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (18--31) THEN
-
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
+  X86_STEPS_TAC MLDSA_REJ_UNIFORM_WINDOWS_TMC_EXEC (7--9) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [DISCHARGE_MEMSAFE_TAC;
-    REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST]);;
+  (* With the volatile-only body, the tightened MAYCHANGE frame is discharged
+     automatically by ASM_REWRITE_TAC, so only the memsafe existential may
+     remain; handle both the split and the already-reduced goal shapes. *)
+  FIRST
+   [CONJ_TAC THENL
+     [DISCHARGE_MEMSAFE_TAC;
+      REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST];
+    DISCHARGE_MEMSAFE_TAC]);;
 
 let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_SAFE = time prove
  (`!res buf table (inlist:(24 word)list) e pc stackpointer returnaddress.
@@ -7535,10 +7438,10 @@ let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_SAFE = time prove
     nonoverlapping (word pc, LENGTH mldsa_rej_uniform_windows_mc) (table, 2048) /\
     nonoverlapping (res, 1024) (buf, 840) /\
     nonoverlapping (res, 1024) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (res, 1024) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (buf, 840) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184) (table, 2048) /\
-    nonoverlapping (word_sub stackpointer (word 176), 184)
+    nonoverlapping (word_sub stackpointer (word 16), 24) (res, 1024) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (buf, 840) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24) (table, 2048) /\
+    nonoverlapping (word_sub stackpointer (word 16), 24)
                    (word pc, LENGTH mldsa_rej_uniform_windows_mc)
     ==> ensures x86
          (\s. bytes_loaded s (word pc) mldsa_rej_uniform_windows_mc /\
@@ -7555,10 +7458,10 @@ let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_SAFE = time prove
               (exists e2.
                  read events s = APPEND e2 e /\
                  memaccess_inbounds e2
-                   [buf,840; table,2048; word_sub stackpointer (word 176),184]
-                   [res,1024; word_sub stackpointer (word 176),176]))
+                   [buf,840; table,2048; word_sub stackpointer (word 16),24]
+                   [res,1024; word_sub stackpointer (word 16),16]))
          (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE [memory :> bytes(res,1024)] ,,
-          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)])`,
+          MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
 

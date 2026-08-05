@@ -27,120 +27,105 @@
 // Microsoft x64 ABI:   RCX = r, RDX = buf, R8 = table
 // ----------------------------------------------------------------------------
 
-#include "_internal_s2n_bignum_x86.h"
+#include "_internal_s2n_bignum_x86_att.h"
 
-        .intel_syntax noprefix
+
         S2N_BN_SYM_VISIBILITY_DIRECTIVE(mldsa_rej_uniform_VARIABLE_TIME_x86)
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_rej_uniform_VARIABLE_TIME_x86)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_rej_uniform_VARIABLE_TIME_x86)
         .text
+        .balign 4
 
 S2N_BN_SYMBOL(mldsa_rej_uniform_VARIABLE_TIME_x86):
-
+        CFI_START
         _CET_ENDBR
 
 #if WINDOWS_ABI
-        push    rdi
-        push    rsi
-        sub     rsp, 160
-        movdqu  [rsp+0],   xmm6
-        movdqu  [rsp+16],  xmm7
-        movdqu  [rsp+32],  xmm8
-        movdqu  [rsp+48],  xmm9
-        movdqu  [rsp+64],  xmm10
-        movdqu  [rsp+80],  xmm11
-        movdqu  [rsp+96],  xmm12
-        movdqu  [rsp+112], xmm13
-        movdqu  [rsp+128], xmm14
-        movdqu  [rsp+144], xmm15
-        mov     rdi, rcx
-        mov     rsi, rdx
-        mov     rdx, r8
+        // The body only uses the volatile registers %xmm0-xmm4 (%ymm0-ymm4) and
+        // writes results directly to the output buffer, so none of the
+        // nonvolatile %xmm6-xmm15 need saving. We only preserve %rdi/rsi, which
+        // hold the mapped SysV argument pointers.
+        CFI_PUSH(%rdi)
+        CFI_PUSH(%rsi)
+        movq    %rcx, %rdi
+        movq    %rdx, %rsi
+        movq    %r8, %rdx
 #endif
 
         // Shuffle mask: expand 24 bytes (8 x 3-byte coefficients) into
         // 8 x 4-byte lanes (with a zero high byte in each).
-        mov     r10, 0xff050403ff020100
-        vmovq   xmm0, r10
-        mov     r10, 0xff0b0a09ff080706
-        vpinsrq xmm0, xmm0, r10, 0x1
-        mov     r10, 0xff090807ff060504
-        vmovq   xmm3, r10
-        mov     r10, 0xff0f0e0dff0c0b0a
-        vpinsrq xmm3, xmm3, r10, 0x1
-        vinserti128 ymm0, ymm0, xmm3, 0x1
+        movq    $0xff050403ff020100, %r10
+        vmovq   %r10, %xmm0
+        movq    $0xff0b0a09ff080706, %r10
+        vpinsrq $0x1, %r10, %xmm0, %xmm0
+        movq    $0xff090807ff060504, %r10
+        vmovq   %r10, %xmm3
+        movq    $0xff0f0e0dff0c0b0a, %r10
+        vpinsrq $0x1, %r10, %xmm3, %xmm3
+        vinserti128 $0x1, %xmm3, %ymm0, %ymm0
 
         // Mask 0x7fffff in all 8 lanes (keep low 23 bits)
-        mov     r8d, 0x7fffff
-        vmovd   xmm1, r8d
-        vpbroadcastd ymm1, xmm1
+        movl    $0x7fffff, %r8d
+        vmovd   %r8d, %xmm1
+        vpbroadcastd %xmm1, %ymm1
 
         // Threshold q = 0x7fe001 in all 8 lanes
-        mov     r8d, 0x7fe001
-        vmovd   xmm2, r8d
-        vpbroadcastd ymm2, xmm2
+        movl    $0x7fe001, %r8d
+        vmovd   %r8d, %xmm2
+        vpbroadcastd %xmm2, %ymm2
 
-        // rax = accepted count, rcx = byte offset into buf
-        xor     eax, eax
-        xor     ecx, ecx
+        // %rax = accepted count, %rcx = byte offset into buf
+        xorl    %eax, %eax
+        xorl    %ecx, %ecx
 
 Lmldsa_rej_uniform_VARIABLE_TIME_x86_loop:
         // Exit to scalar tail if we have 248 or more accepted (next 8 might
         // overflow) or if byte offset is past 808 (would read past buf+840-24).
-        cmp     eax, 0xf8
+        cmpl    $0xf8, %eax
         ja      Lmldsa_rej_uniform_VARIABLE_TIME_x86_scalar
-        cmp     ecx, 0x328
+        cmpl    $0x328, %ecx
         ja      Lmldsa_rej_uniform_VARIABLE_TIME_x86_scalar
 
-        vmovdqu ymm3, YMMWORD PTR [rsi+rcx]
-        add     ecx, 0x18
-        vpermq  ymm3, ymm3, 0x94
-        vpshufb ymm3, ymm3, ymm0
-        vpand   ymm3, ymm3, ymm1
-        vpsubd  ymm4, ymm3, ymm2
-        vmovmskps r8d, ymm4
-        popcnt  r9d, r8d
-        vmovq   xmm4, QWORD PTR [rdx+8*r8]
-        vpmovzxbd ymm4, xmm4
-        vpermd  ymm3, ymm4, ymm3
-        vmovdqu YMMWORD PTR [rdi+4*rax], ymm3
-        add     eax, r9d
+        vmovdqu  (%rsi,%rcx), %ymm3
+        addl    $0x18, %ecx
+        vpermq  $0x94, %ymm3, %ymm3
+        vpshufb %ymm0, %ymm3, %ymm3
+        vpand   %ymm1, %ymm3, %ymm3
+        vpsubd  %ymm2, %ymm3, %ymm4
+        vmovmskps %ymm4, %r8d
+        popcnt  %r8d, %r9d
+        vmovq    (%rdx,%r8,8), %xmm4
+        vpmovzxbd %xmm4, %ymm4
+        vpermd  %ymm3, %ymm4, %ymm3
+        vmovdqu %ymm3,  (%rdi,%rax,4)
+        addl    %r9d, %eax
         jmp     Lmldsa_rej_uniform_VARIABLE_TIME_x86_loop
 
 Lmldsa_rej_uniform_VARIABLE_TIME_x86_scalar:
-        cmp     eax, 0x100
+        cmpl    $0x100, %eax
         jae     Lmldsa_rej_uniform_VARIABLE_TIME_x86_done
-        cmp     ecx, 0x345
+        cmpl    $0x345, %ecx
         ja      Lmldsa_rej_uniform_VARIABLE_TIME_x86_done
-        movzx   r8d, WORD PTR [rsi+rcx]
-        movzx   r9d, BYTE PTR [rsi+rcx+2]
-        shl     r9d, 0x10
-        or      r8d, r9d
-        and     r8d, 0x7fffff
-        add     ecx, 0x3
-        cmp     r8d, 0x7fe001
+        movzwl (%rsi,%rcx), %r8d
+        movzbl 2(%rsi,%rcx,1), %r9d
+        shll    $0x10, %r9d
+        orl     %r9d, %r8d
+        andl    $0x7fffff, %r8d
+        addl    $0x3, %ecx
+        cmpl    $0x7fe001, %r8d
         jae     Lmldsa_rej_uniform_VARIABLE_TIME_x86_scalar
-        mov     DWORD PTR [rdi+4*rax], r8d
-        add     eax, 0x1
+        movl    %r8d,  (%rdi,%rax,4)
+        addl    $0x1, %eax
         jmp     Lmldsa_rej_uniform_VARIABLE_TIME_x86_scalar
 
 Lmldsa_rej_uniform_VARIABLE_TIME_x86_done:
 #if WINDOWS_ABI
-        movdqu  xmm6,  [rsp+0]
-        movdqu  xmm7,  [rsp+16]
-        movdqu  xmm8,  [rsp+32]
-        movdqu  xmm9,  [rsp+48]
-        movdqu  xmm10, [rsp+64]
-        movdqu  xmm11, [rsp+80]
-        movdqu  xmm12, [rsp+96]
-        movdqu  xmm13, [rsp+112]
-        movdqu  xmm14, [rsp+128]
-        movdqu  xmm15, [rsp+144]
-        add     rsp, 160
-        pop     rsi
-        pop     rdi
+        CFI_POP(%rsi)
+        CFI_POP(%rdi)
 #endif
-        ret
+        CFI_RET
+
+S2N_BN_SIZE_DIRECTIVE(mldsa_rej_uniform_VARIABLE_TIME_x86)
 
 #if defined(__linux__) && defined(__ELF__)
         .section .note.GNU-stack,"",%progbits
