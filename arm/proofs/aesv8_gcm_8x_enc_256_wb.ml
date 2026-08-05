@@ -2715,7 +2715,21 @@ let SETUP_INBLOCKS_TAC sname =
     read (memory :> bytes128 (word_add in_p (word (16 * 6)))) s = inblock 6 /\
     read (memory :> bytes128 (word_add in_p (word (16 * 7)))) s = inblock 7` in
   SUBGOAL_THEN concl_tm STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+   [(* PERF (session 090): after FIRST_ASSUM MATCH_MP_TAC each of the 8       *)
+    (* obligations is the trivial `b < nb` (b = literal 0..7), closed by      *)
+    (* just the bound `8 * (k + 1) <= nb` (b < 8 <= 8*(k+1) <= nb).  The old  *)
+    (* ASM_ARITH_TAC dragged ALL ~67 carried facts into the arith decision    *)
+    (* procedure, spending ~17.7s PER conjunct = ~142s per SETUP_INBLOCKS     *)
+    (* call; with 4 LDP_SETUP_TAC calls (255/256/264/265) that was ~570s =     *)
+    (* 83% of the whole WB_SETUP proof.  Targeted UNDISCH of exactly the one   *)
+    (* needed hyp + bare ARITH_TAC (the same idiom the body's INBLOCKS_TAC     *)
+    (* uses, session 074) closes each in ~0.005s — proof-preserving (the       *)
+    (* resulting STRIP_ASSUME_TAC state is bit-identical: goal signature       *)
+    (* len=26063 hash=312405345 old vs new, warm s2n-wbtail).  142.7s->0.04s   *)
+    (* per call, measured twice.  All three callers (WB_SETUP/_GEN/_G1) carry  *)
+    (* `8 * (k + 1) <= nb` verbatim.                                          *)
+    REPEAT CONJ_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
+    UNDISCH_TAC `8 * (k + 1) <= nb` THEN ARITH_TAC;
     ALL_TAC];;
 
 let LDP_SETUP_TAC n =
@@ -3327,6 +3341,23 @@ let Q19_FOLD_TAC =
   (* (parity 0), and the fold closes via GHASH_REDUCE_RAW_DIST8_PLAIN + the     *)
   (* flat-sum route with NO byteswap crossing.  See the new Q19_FOLD_TAC above. *)
 
+(* PERF (session 088): the body cheap-close dispatcher rewrites the out-forall  *)
+(* bound `j < 8*((i+1)+1)` into its 9-way disjunction split via an INLINE       *)
+(* `ARITH_RULE`.  That ARITH_RULE costs ~5.85s to PROVE, and the dispatcher is  *)
+(* run under `REPEAT CONJ_TAC` over ~19 residual goals — so the SAME lemma was  *)
+(* re-proven ~18 times (~105s), i.e. essentially the ENTIRE post-drive close    *)
+(* cost (profiled: every other sub-tactic in the cheap-close is ~0.02s).  Hoist *)
+(* it to a single top-level theorem computed ONCE and REWRITE_TAC[..] with it   *)
+(* per goal — byte-identical rewrite, hence proof-preserving.  MEASURED (warm    *)
+(* s2n-wbtail, shared drive+FINAL_STATE setpoint, interleaved A/B, twice): the   *)
+(* whole post-drive closer 113.34s/109.95s -> 12.44s/12.41s (NEW closes hyps=0), *)
+(* i.e. whole MAIN_LOOP ~270s -> ~171s (~-37%).                                  *)
+let MAIN_LOOP_OUT_DISJSPLIT = ARITH_RULE
+  `j < 8 * ((i + 1) + 1) <=>
+   j < 8 * (i+1) \/ j = 8*(i+1) \/ j = 8*(i+1) + 1 \/
+   j = 8*(i+1) + 2 \/ j = 8*(i+1) + 3 \/ j = 8*(i+1) + 4 \/
+   j = 8*(i+1) + 5 \/ j = 8*(i+1) + 6 \/ j = 8*(i+1) + 7`;;
+
 let AESV8_GCM_8X_ENC_256_WB_MAIN_LOOP = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p mod_p end_p
      tag0 nonce rk inblock nb k pc.
@@ -3684,10 +3715,7 @@ let AESV8_GCM_8X_ENC_256_WB_MAIN_LOOP = prove
           with _ -> false)
       then Q19_FOLD_TAC gl
       else
-       (REWRITE_TAC[ARITH_RULE `j < 8 * ((i + 1) + 1) <=>
-                            j < 8 * (i+1) \/ j = 8*(i+1) \/ j = 8*(i+1) + 1 \/
-                            j = 8*(i+1) + 2 \/ j = 8*(i+1) + 3 \/ j = 8*(i+1) + 4 \/
-                            j = 8*(i+1) + 5 \/ j = 8*(i+1) + 6 \/ j = 8*(i+1) + 7`] THEN
+       (REWRITE_TAC[MAIN_LOOP_OUT_DISJSPLIT] THEN
         ASM_REWRITE_TAC[TAUT `p \/ q ==> r <=> (p ==> r) /\ (q ==> r)`] THEN
         REWRITE_TAC[FORALL_AND_THM; FORALL_UNWIND_THM2] THEN
         REWRITE_TAC[ARITH_RULE `16 * (8 * (i+1) + b) = 128 * (i+1) + 16 * b`] THEN
