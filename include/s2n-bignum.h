@@ -46,6 +46,14 @@ extern void aes_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
 extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
         const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[S2N_BIGNUM_STATIC 16]);
 
+// Whole-blocks-only variant of aesv8_gcm_8x_enc_256: identical contract, but
+// requires "bit_len" to be a nonzero multiple of 128 (whole 16-byte blocks) and
+// returns 0 having touched no memory otherwise. No partial-final-block masking.
+// Inputs in[bit_len], bit_len, xi[16], ivec[16], key[244], htable[32]; outputs function return, out[bit_len], xi[16], ivec[16]
+extern size_t aesv8_gcm_8x_enc_256_wb(const uint8_t *in, size_t bit_len, uint8_t *out,
+        uint8_t xi[S2N_BIGNUM_STATIC 16], uint8_t ivec[S2N_BIGNUM_STATIC 16],
+        const s2n_bignum_AES_KEY *key, const uint64_t htable[S2N_BIGNUM_STATIC 32]);
+
 // Add, z := x + y
 // Inputs x[m], y[n]; outputs function return (carry-out) and z[p]
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);
