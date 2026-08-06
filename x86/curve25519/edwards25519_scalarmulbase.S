@@ -22,6 +22,7 @@
         S2N_BN_SYM_PRIVACY_DIRECTIVE(edwards25519_scalarmulbase)
 
         .text
+        .balign 32
 
 // Size of individual field elements
 

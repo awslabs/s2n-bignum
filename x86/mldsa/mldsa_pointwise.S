@@ -38,6 +38,7 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_pointwise_x86)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_pointwise_x86)
         .text
+        .balign 32
 
 #define c rdi
 #define a rsi
@@ -77,7 +78,7 @@ S2N_BN_SYMBOL(mldsa_pointwise_x86):
         vmovdqa ymm1, [qdata + (MLD_AVX2_BACKEND_DATA_OFFSET_8XQ)*4]
 
         xor     eax, eax
-pointwise_looptop1:
+Lpointwise_looptop1:
 // Handle 24 = 3*8 coefficients per iteration
 
 // Load a's coefficients
@@ -158,7 +159,7 @@ pointwise_looptop1:
         add     b, 96
         add     eax, 1
         cmp     eax, 10
-        jb      pointwise_looptop1
+        jb      Lpointwise_looptop1
 
 
 // Handle the last 256 % 24 = 16 = 2*8 coefficients, left over by the loop

@@ -45,6 +45,7 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_pointwise_acc_l4_x86)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_pointwise_acc_l4_x86)
         .text
+        .balign 32
 
 #define c rdi
 #define a rsi

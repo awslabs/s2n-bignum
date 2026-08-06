@@ -33,6 +33,7 @@
         S2N_BN_SYM_PRIVACY_DIRECTIVE(curve25519_x25519base_byte_alt)
 
         .text
+        .balign 32
 
 // Size of individual field elements
 
