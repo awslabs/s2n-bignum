@@ -19,8 +19,8 @@ let bignum_negmodinv_mc =
   0x53;                    (* PUSH (% rbx) *)
   0x41; 0x54;              (* PUSH (% r12) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
-  0x0f; 0x84; 0x02; 0x01; 0x00; 0x00;
-                           (* JE (Imm32 (word 258)) *)
+  0x0f; 0x84; 0x06; 0x01; 0x00; 0x00;
+                           (* JE (Imm32 (word 262)) *)
   0x48; 0x89; 0xd1;        (* MOV (% rcx) (% rdx) *)
   0x48; 0x8b; 0x01;        (* MOV (% rax) (Memop Quadword (%% (rcx,0))) *)
   0x48; 0x89; 0xc2;        (* MOV (% rdx) (% rax) *)
@@ -52,8 +52,8 @@ let bignum_negmodinv_mc =
   0x4c; 0x0f; 0xaf; 0xd8;  (* IMUL (% r11) (% rax) *)
   0x4c; 0x89; 0x1e;        (* MOV (Memop Quadword (%% (rsi,0))) (% r11) *)
   0x48; 0x83; 0xff; 0x01;  (* CMP (% rdi) (Imm8 (word 1)) *)
-  0x0f; 0x84; 0x97; 0x00; 0x00; 0x00;
-                           (* JE (Imm32 (word 151)) *)
+  0x0f; 0x84; 0x9b; 0x00; 0x00; 0x00;
+                           (* JE (Imm32 (word 155)) *)
   0x48; 0x8b; 0x01;        (* MOV (% rax) (Memop Quadword (%% (rcx,0))) *)
   0x4d; 0x31; 0xd2;        (* XOR (% r10) (% r10) *)
   0x49; 0xf7; 0xe3;        (* MUL2 (% rdx,% rax) (% r11) *)
@@ -71,7 +71,7 @@ let bignum_negmodinv_mc =
   0x49; 0x39; 0xf8;        (* CMP (% r8) (% rdi) *)
   0x72; 0xe3;              (* JB (Imm8 (word 227)) *)
   0x48; 0x83; 0xef; 0x02;  (* SUB (% rdi) (Imm8 (word 2)) *)
-  0x74; 0x52;              (* JE (Imm8 (word 82)) *)
+  0x74; 0x56;              (* JE (Imm8 (word 86)) *)
   0x48; 0x83; 0xc6; 0x08;  (* ADD (% rsi) (Imm8 (word 8)) *)
   0x4c; 0x8b; 0x16;        (* MOV (% r10) (Memop Quadword (%% (rsi,0))) *)
   0x4d; 0x89; 0xd9;        (* MOV (% r9) (% r11) *)
@@ -85,6 +85,7 @@ let bignum_negmodinv_mc =
   0x41; 0xb8; 0x01; 0x00; 0x00; 0x00;
                            (* MOV (% r8d) (Imm32 (word 1)) *)
   0x49; 0x89; 0xfc;        (* MOV (% r12) (% rdi) *)
+  0x0f; 0x1f; 0x40; 0x00;  (* NOP_N (Memop Doubleword (%% (rax,0))) *)
   0x4e; 0x13; 0x14; 0xc6;  (* ADC (% r10) (Memop Quadword (%%% (rsi,3,r8))) *)
   0x48; 0x19; 0xdb;        (* SBB (% rbx) (% rbx) *)
   0x4a; 0x8b; 0x04; 0xc1;  (* MOV (% rax) (Memop Quadword (%%% (rcx,3,r8))) *)
@@ -97,7 +98,7 @@ let bignum_negmodinv_mc =
   0x49; 0xff; 0xcc;        (* DEC (% r12) *)
   0x75; 0xdd;              (* JNE (Imm8 (word 221)) *)
   0x48; 0xff; 0xcf;        (* DEC (% rdi) *)
-  0x75; 0xae;              (* JNE (Imm8 (word 174)) *)
+  0x75; 0xaa;              (* JNE (Imm8 (word 170)) *)
   0x48; 0x8b; 0x46; 0x08;  (* MOV (% rax) (Memop Quadword (%% (rsi,8))) *)
   0x49; 0x0f; 0xaf; 0xc3;  (* IMUL (% rax) (% r11) *)
   0x48; 0x89; 0x46; 0x08;  (* MOV (Memop Quadword (%% (rsi,8))) (% rax) *)
@@ -139,14 +140,14 @@ let WORD_NEGMODINV_SEED_LEMMA_16 = prove
 
 let BIGNUM_NEGMODINV_CORRECT = prove
  (`!k z x m pc.
-        nonoverlapping (word pc,0x112) (z,8 * val k) /\
+        nonoverlapping (word pc,0x116) (z,8 * val k) /\
         nonoverlapping (x,8 * val k) (z,8 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST bignum_negmodinv_tmc) /\
                   read RIP s = word (pc + 0x3) /\
                   C_ARGUMENTS [k; z; x] s /\
                   bignum_from_memory (x,val k) s = m)
-             (\s. read RIP s = word(pc + 0x10e) /\
+             (\s. read RIP s = word(pc + 0x112) /\
                   (ODD m
                    ==> (m * bignum_from_memory(z,val k) s + 1 == 0)
                        (mod (2 EXP (64 * val k)))))
@@ -297,7 +298,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
 
   (*** Handle the "finale" next to share the k = 2 and general cases ***)
 
-  ENSURES_SEQUENCE_TAC `pc + 0x102`
+  ENSURES_SEQUENCE_TAC `pc + 0x106`
    `\s. read RSI s = word_sub (word_add z (word (8 * (k - 1)))) (word 8) /\
         read R11 s = word w /\
         (ODD m
@@ -349,7 +350,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
 
   SUBGOAL_THEN `2 < k /\ 1 < k - 1` STRIP_ASSUME_TAC THENL
    [ASM_ARITH_TAC; ALL_TAC] THEN
-  ENSURES_WHILE_PAUP_TAC `1` `k - 1` `pc + 0xb0` `pc + 0x100`
+  ENSURES_WHILE_PAUP_TAC `1` `k - 1` `pc + 0xb0` `pc + 0x104`
    `\i s. (read RDI s = word(k - 1 - i) /\
            read RSI s = word_sub (word_add z (word(8 * i))) (word 8) /\
            read RCX s = x /\
@@ -422,7 +423,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
    `nonoverlapping (z',8 * p) (z:int64,8 * i) /\
     nonoverlapping (z',8 * p) (x,8 * p) /\
     nonoverlapping (z',8 * p) (x,8 * k) /\
-    nonoverlapping (z',8 * p) (word pc,0x112)`
+    nonoverlapping (z',8 * p) (word pc,0x116)`
   MP_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES] THENL
    [EXPAND_TAC "z'" THEN REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC;
     STRIP_TAC] THEN
@@ -436,7 +437,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
     EXPAND_TAC "z'" THEN SUBSUMED_MAYCHANGE_TAC;
     ALL_TAC] THEN
 
-  ENSURES_SEQUENCE_TAC `pc + 0xfd`
+  ENSURES_SEQUENCE_TAC `pc + 0x101`
    `\s. read RDI s = word (p - 1) /\
         read RSI s = z' /\
         read RCX s = x /\
@@ -523,7 +524,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
 
   FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP
    (ARITH_RULE `2 <= k ==> 1 < k /\ ~(k = 0)`)) THEN
-  ENSURES_WHILE_PAUP_TAC `1` `k:num` `pc + 0xda` `pc + 0xfb`
+  ENSURES_WHILE_PAUP_TAC `1` `k:num` `pc + 0xde` `pc + 0xff`
    `\i s. (read RDI s = word (k - 1) /\
            read RSI s = z /\
            read RCX s = x /\
@@ -554,7 +555,7 @@ let BIGNUM_NEGMODINV_CORRECT = prove
        [BIGNUM_FROM_MEMORY_EQ_HIGHDIGITS] THEN
       ASM_REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES; ADD_CLAUSES] THEN
       STRIP_TAC] THEN
-    X86_ACCSTEPS_TAC BIGNUM_NEGMODINV_EXEC (6--8) (1--11) THEN
+    X86_ACCSTEPS_TAC BIGNUM_NEGMODINV_EXEC (6--8) (1--12) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     MATCH_MP_TAC(TAUT `p /\ (p ==> q) ==> p /\ q`) THEN CONJ_TAC THENL
      [REWRITE_TAC[GSYM WORD_MUL] THEN

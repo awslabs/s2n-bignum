@@ -31,6 +31,7 @@
 
 
         .text
+        .balign 32
 
 // Size in bytes of a 64-bit word
 

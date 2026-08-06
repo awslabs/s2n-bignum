@@ -22,7 +22,7 @@ let bignum_emontredc_mc =
   0x41; 0x56;              (* PUSH (% r14) *)
   0x4d; 0x31; 0xf6;        (* XOR (% r14) (% r14) *)
   0x48; 0x85; 0xff;        (* TEST (% rdi) (% rdi) *)
-  0x74; 0x78;              (* JE (Imm8 (word 120)) *)
+  0x74; 0x7a;              (* JE (Imm8 (word 122)) *)
   0x49; 0x89; 0xd0;        (* MOV (% r8) (% rdx) *)
   0x4d; 0x31; 0xc9;        (* XOR (% r9) (% r9) *)
   0x4c; 0x8b; 0x26;        (* MOV (% r12) (Memop Quadword (%% (rsi,0))) *)
@@ -37,7 +37,8 @@ let bignum_emontredc_mc =
                            (* MOV (% r10d) (Imm32 (word 1)) *)
   0x49; 0x89; 0xfd;        (* MOV (% r13) (% rdi) *)
   0x49; 0xff; 0xcd;        (* DEC (% r13) *)
-  0x74; 0x23;              (* JE (Imm8 (word 35)) *)
+  0x74; 0x25;              (* JE (Imm8 (word 37)) *)
+  0x66; 0x90;              (* NOP *)
   0x4e; 0x13; 0x1c; 0xd6;  (* ADC (% r11) (Memop Quadword (%%% (rsi,3,r10))) *)
   0x4d; 0x19; 0xe4;        (* SBB (% r12) (% r12) *)
   0x4b; 0x8b; 0x04; 0xd0;  (* MOV (% rax) (Memop Quadword (%%% (r8,3,r10))) *)
@@ -60,7 +61,7 @@ let bignum_emontredc_mc =
   0x48; 0x83; 0xc6; 0x08;  (* ADD (% rsi) (Imm8 (word 8)) *)
   0x49; 0xff; 0xc1;        (* INC (% r9) *)
   0x49; 0x39; 0xf9;        (* CMP (% r9) (% rdi) *)
-  0x72; 0x8e;              (* JB (Imm8 (word 142)) *)
+  0x72; 0x8c;              (* JB (Imm8 (word 140)) *)
   0x4c; 0x89; 0xf0;        (* MOV (% rax) (% r14) *)
   0x41; 0x5e;              (* POP (% r14) *)
   0x41; 0x5d;              (* POP (% r13) *)
@@ -79,7 +80,7 @@ let BIGNUM_EMONTREDC_EXEC = X86_MK_CORE_EXEC_RULE bignum_emontredc_tmc;;
 
 let BIGNUM_EMONTREDC_CORRECT = time prove
  (`!k z m w a n pc.
-        nonoverlapping (word pc,0x92) (z,8 * 2 * val k) /\
+        nonoverlapping (word pc,0x94) (z,8 * 2 * val k) /\
         nonoverlapping (m,8 * val k) (z,8 * 2 * val k)
         ==> ensures x86
              (\s. bytes_loaded s (word pc) (BUTLAST bignum_emontredc_tmc) /\
@@ -87,7 +88,7 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
                   C_ARGUMENTS [k; z; m; w] s /\
                   bignum_from_memory (z,2 * val k) s = a /\
                   bignum_from_memory (m,val k) s = n)
-             (\s. read RIP s = word(pc + 0x8a) /\
+             (\s. read RIP s = word(pc + 0x8c) /\
                   ((n * val w + 1 == 0) (mod (2 EXP 64))
                    ==> n * bignum_from_memory (z,val k) s + a =
                        2 EXP (64 * val k) *
@@ -126,7 +127,7 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
 
   (*** The outer loop setup with start and end ***)
 
-  ENSURES_WHILE_UP_TAC `k:num` `pc + 0x15` `pc + 0x82`
+  ENSURES_WHILE_UP_TAC `k:num` `pc + 0x15` `pc + 0x84`
    `\i s. read RDI s = word k /\
           read RSI s = word_add z (word(8 * i)) /\
           read R8 s = m /\
@@ -212,7 +213,7 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
   SUBGOAL_THEN
    `nonoverlapping (z',8 * p) (z:int64,8 * i) /\
     nonoverlapping (z',8 * p) (m,8 * k) /\
-    nonoverlapping (z',8 * p) (word pc,146)`
+    nonoverlapping (z',8 * p) (word pc,0x94)`
   MP_TAC THEN REWRITE_TAC[NONOVERLAPPING_CLAUSES] THENL
    [EXPAND_TAC "z'" THEN REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC;
     STRIP_TAC] THEN
@@ -283,7 +284,7 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
   GLOBALIZE_PRECONDITION_TAC THEN
   FIRST_X_ASSUM(X_CHOOSE_THEN `r0:num` STRIP_ASSUME_TAC) THEN
 
-  ENSURES_SEQUENCE_TAC `pc + 0x5f`
+  ENSURES_SEQUENCE_TAC `pc + 0x61`
    `\s. read RDI s = word k /\
         read RSI s = z' /\
         read R8 s = m /\
@@ -317,7 +318,7 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
 
     VAL_INT64_TAC `k - 1` THEN
 
-    ENSURES_WHILE_PAUP_TAC `1` `k:num` `pc + 0x3c` `pc + 0x5d`
+    ENSURES_WHILE_PAUP_TAC `1` `k:num` `pc + 0x3e` `pc + 0x5f`
      `\j s. (read RDI s = word k /\
              read RSI s = z' /\
              read R8 s = m /\
@@ -343,7 +344,8 @@ let BIGNUM_EMONTREDC_CORRECT = time prove
     REPEAT CONJ_TAC THENL
      [ASM_REWRITE_TAC[ARITH_RULE `1 < k <=> ~(k = 0 \/ k = 1)`];
       REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN
-      ENSURES_INIT_TAC "s0" THEN X86_STEPS_TAC BIGNUM_EMONTREDC_EXEC [1] THEN
+      ENSURES_INIT_TAC "s0" THEN
+      X86_STEPS_TAC BIGNUM_EMONTREDC_EXEC (1--2) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
       ASM_REWRITE_TAC[ARITH_RULE `k <= 1 <=> k = 0 \/ k = 1`] THEN
       CONJ_TAC THENL [ASM_REWRITE_TAC[MULT_CLAUSES]; ALL_TAC] THEN
