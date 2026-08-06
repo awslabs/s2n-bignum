@@ -34,7 +34,7 @@
         S2N_BN_FUNCTION_TYPE_DIRECTIVE(mldsa_rej_uniform_VARIABLE_TIME_x86)
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mldsa_rej_uniform_VARIABLE_TIME_x86)
         .text
-        .balign 4
+        .balign 32
 
 S2N_BN_SYMBOL(mldsa_rej_uniform_VARIABLE_TIME_x86):
         CFI_START
