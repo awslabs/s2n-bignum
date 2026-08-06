@@ -976,7 +976,7 @@ let BIGNUM_MUL_P521_NOIBT_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2
                          [x,72; y,72; z,72;
                           // Due to the limitation of DISCHARGE_SAFETY_PROPERTY_TAC,
-                          // stack areas are splitted. The first one matches
+                          // stack areas are split. The first one matches
                           // what BIGNUM_MUL_P521_SAFE says.
                           word_sub stackpointer (word 112),64;
                           word_sub stackpointer (word 48),56]
@@ -1019,7 +1019,7 @@ let BIGNUM_MUL_P521_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2
                          [x,72; y,72; z,72;
                           // Due to the limitation of DISCHARGE_SAFETY_PROPERTY_TAC,
-                          // stack areas are splitted. The first one matches
+                          // stack areas are split. The first one matches
                           // what BIGNUM_MUL_P521_SAFE says.
                           word_sub stackpointer (word 112),64;
                           word_sub stackpointer (word 48),56]

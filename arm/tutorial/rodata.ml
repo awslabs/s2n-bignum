@@ -76,7 +76,7 @@ let rodata_mc,rodata_constants_data = define_assert_relocs_from_elf
 
 let EXEC = ARM_MK_EXEC_RULE rodata_mc;;
 
-(* Two helper tactics (unrelevant to treating the readonly section, just for
+(* Two helper tactics (irrelevant to treating the readonly section, just for
      proving the upcoming properties).
 
    1. INTRO_READ_MEMORY_FROM_BYTES8_TAC t:

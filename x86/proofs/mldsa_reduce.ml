@@ -383,10 +383,34 @@ let mldsa_reduce_tmc = define_trimmed "mldsa_reduce_tmc" mldsa_reduce_mc;;
 let MLDSA_REDUCE_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_reduce_tmc;;
 
 (* ------------------------------------------------------------------------- *)
+(* The centered reduction property of the underlying word operation.          *)
+(* Given the input upper bound (which prevents the internal "+ 4194304"       *)
+(* rounding step from overflowing) mldsa_barred returns a representative that  *)
+(* is congruent to its argument modulo 8380417 and centered in                *)
+(* [-6283009, 6283008].  See CONGBOUND_MLDSA_BARRED in common/mlkem_mldsa.ml.  *)
+(* ------------------------------------------------------------------------- *)
+
+let MLDSA_BARRED_CONGBOUND = prove
+ (`!x:int32. ival x <= &0x7fbfffff
+             ==> (ival(mldsa_barred x) == ival x) (mod &8380417) /\
+                 --(&6283009) <= ival(mldsa_barred x) /\
+                 ival(mldsa_barred x) <= &6283008`,
+  GEN_TAC THEN DISCH_TAC THEN
+  MP_TAC(ISPECL [`x:int32`; `ival(x:int32)`; `ival(x:int32)`; `ival(x:int32)`]
+                CONGBOUND_MLDSA_BARRED) THEN
+  ANTS_TAC THENL
+   [REWRITE_TAC[INT_LE_REFL; INTEGER_RULE `(x:int == x) (mod n)`];
+    DISCH_THEN MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);;
+
+(* ------------------------------------------------------------------------- *)
 (* Complete structured proof                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-let MLDSA_REDUCE_CORRECT = prove
+(* First the raw functional result: the output word equals mldsa_barred of    *)
+(* the input.  The user-facing MLDSA_REDUCE_CORRECT below repackages this as a *)
+(* congruence-and-bound statement given the necessary input range hypothesis. *)
+
+let MLDSA_REDUCE_BARRED = prove
  (`!a x pc.
         aligned 32 a /\
         nonoverlapping (word pc,0x482) (a, 1024)
@@ -457,6 +481,50 @@ let MLDSA_REDUCE_CORRECT = prove
   DISCARD_STATE_TAC "s198" THEN
   REWRITE_TAC[GSYM mldsa_barred]);;
 
+(* Given the input range hypothesis (each coefficient <= 0x7fbfffff, which     *)
+(* rules out the top 0x400000 positive values where the internal rounding      *)
+(* would overflow) the output is centered and congruent to the input mod q.    *)
+
+let MLDSA_REDUCE_CORRECT = prove
+ (`!a x pc.
+        aligned 32 a /\
+        nonoverlapping (word pc,0x482) (a, 1024)
+        ==> ensures x86
+             (\s. bytes_loaded s (word pc) (BUTLAST mldsa_reduce_tmc) /\
+                  read RIP s = word pc /\
+                  C_ARGUMENTS [a] s /\
+                  (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
+                  !i. i < 256
+                      ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
+                          x i)
+             (\s. read RIP s = word(pc + 0x482) /\
+                  !i. i < 256
+                      ==> let zi = read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s in
+                          (ival zi == ival(x i)) (mod &8380417) /\
+                          --(&6283009) <= ival zi /\ ival zi <= &6283008)
+             (MAYCHANGE [RIP] ,, MAYCHANGE [events] ,,
+              MAYCHANGE [ZMM0; ZMM1; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10;
+                         ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+              MAYCHANGE [RAX] ,, MAYCHANGE SOME_FLAGS ,,
+              MAYCHANGE [memory :> bytes(a,1024)])`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  GLOBALIZE_PRECONDITION_TAC THEN
+  MP_TAC(SPECL [`a:int64`;`x:num->int32`;`pc:num`] MLDSA_REDUCE_BARRED) THEN
+  ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] ENSURES_POSTCONDITION_THM) THEN
+  REWRITE_TAC[] THEN
+  X_GEN_TAC `s:x86state` THEN
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_TAC THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(fun th -> MP_TAC(SPEC `i:num` th) THEN ANTS_TAC THENL
+    [FIRST_X_ASSUM ACCEPT_TAC; ALL_TAC]) THEN
+  DISCH_THEN SUBST1_TAC THEN
+  MATCH_MP_TAC MLDSA_BARRED_CONGBOUND THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `i:num`) THEN ASM_REWRITE_TAC[]);;
+
 let MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
@@ -468,15 +536,17 @@ let MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
+                  (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
                   !i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   !i. i < 256
-                      ==> ival(read(memory :> bytes32
-                                 (word_add a (word(4 * i)))) s) =
-                          ival(mldsa_barred (x i)))
+                      ==> let zi = read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s in
+                          (ival zi == ival(x i)) (mod &8380417) /\
+                          --(&6283009) <= ival zi /\ ival zi <= &6283008)
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_reduce_tmc MLDSA_REDUCE_CORRECT);;
@@ -492,15 +562,17 @@ let MLDSA_REDUCE_SUBROUTINE_CORRECT = prove
                   read RSP s = stackpointer /\
                   read (memory :> bytes64 stackpointer) s = returnaddress /\
                   C_ARGUMENTS [a] s /\
+                  (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
                   !i. i < 256
                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                           x i)
              (\s. read RIP s = returnaddress /\
                   read RSP s = word_add stackpointer (word 8) /\
                   !i. i < 256
-                      ==> ival(read(memory :> bytes32
-                                 (word_add a (word(4 * i)))) s) =
-                          ival(mldsa_barred (x i)))
+                      ==> let zi = read(memory :> bytes32
+                                 (word_add a (word(4 * i)))) s in
+                          (ival zi == ival(x i)) (mod &8380417) /\
+                          --(&6283009) <= ival zi /\ ival zi <= &6283008)
              (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REDUCE_NOIBT_SUBROUTINE_CORRECT));;
@@ -520,7 +592,7 @@ let mldsa_reduce_windows_tmc =
 let MLDSA_REDUCE_WINDOWS_TMC_EXEC =
   X86_MK_EXEC_RULE mldsa_reduce_windows_tmc;;
 
-let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
+let MLDSA_REDUCE_NOIBT_WINDOWS_BARRED = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
         nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc) (a,1024) /\
@@ -587,7 +659,7 @@ let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   X86_STEPS_TAC MLDSA_REDUCE_WINDOWS_TMC_EXEC (1--13) THEN
 
   MP_TAC(SPECL [`a:int64`; `x:num->int32`; `pc + 81`]
-    MLDSA_REDUCE_CORRECT) THEN
+    MLDSA_REDUCE_BARRED) THEN
   ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
   ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
 
@@ -619,6 +691,52 @@ let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
+(* Repackage the Windows result as congruence-and-bound under the input range  *)
+(* hypothesis, matching the SysV MLDSA_REDUCE_CORRECT above.                    *)
+
+let MLDSA_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
+ (`!a x pc stackpointer returnaddress.
+        aligned 32 a /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc) (a,1024) /\
+        nonoverlapping (word_sub stackpointer (word 176),184) (a,1024) /\
+        nonoverlapping (word pc,LENGTH mldsa_reduce_windows_tmc)
+                       (word_sub stackpointer (word 176),176)
+        ==> ensures x86
+              (\s. bytes_loaded s (word pc) mldsa_reduce_windows_tmc /\
+                   read RIP s = word pc /\
+                   read RSP s = stackpointer /\
+                   read (memory :> bytes64 stackpointer) s = returnaddress /\
+                   WINDOWS_C_ARGUMENTS [a] s /\
+                   (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
+                   !i. i < 256
+                       ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
+                           x i)
+              (\s. read RIP s = returnaddress /\
+                   read RSP s = word_add stackpointer (word 8) /\
+                   !i. i < 256
+                       ==> let zi = read(memory :> bytes32
+                                  (word_add a (word(4 * i)))) s in
+                           (ival zi == ival(x i)) (mod &8380417) /\
+                           --(&6283009) <= ival zi /\ ival zi <= &6283008)
+              (MAYCHANGE [RSP] ,,
+               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
+               MAYCHANGE [memory :> bytes(a,1024)])`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN GLOBALIZE_PRECONDITION_TAC THEN
+  MP_TAC(SPECL [`a:int64`;`x:num->int32`;`pc:num`;`stackpointer:int64`;
+               `returnaddress:int64`] MLDSA_REDUCE_NOIBT_WINDOWS_BARRED) THEN
+  ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] ENSURES_POSTCONDITION_THM) THEN
+  REWRITE_TAC[] THEN X_GEN_TAC `s:x86state` THEN
+  REPEAT(MATCH_MP_TAC MONO_AND THEN REWRITE_TAC[]) THEN
+  DISCH_TAC THEN CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(fun th -> MP_TAC(SPEC `i:num` th) THEN ANTS_TAC THENL
+    [FIRST_X_ASSUM ACCEPT_TAC; ALL_TAC]) THEN
+  DISCH_THEN SUBST1_TAC THEN
+  MATCH_MP_TAC MLDSA_BARRED_CONGBOUND THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `i:num`) THEN ASM_REWRITE_TAC[]);;
+
 let MLDSA_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
  (`!a x pc stackpointer returnaddress.
         aligned 32 a /\
@@ -632,15 +750,17 @@ let MLDSA_REDUCE_WINDOWS_SUBROUTINE_CORRECT = prove
                    read RSP s = stackpointer /\
                    read (memory :> bytes64 stackpointer) s = returnaddress /\
                    WINDOWS_C_ARGUMENTS [a] s /\
+                   (!i. i < 256 ==> ival(x i) <= &0x7fbfffff) /\
                    !i. i < 256
                        ==> read(memory :> bytes32(word_add a (word(4 * i)))) s =
                            x i)
               (\s. read RIP s = returnaddress /\
                    read RSP s = word_add stackpointer (word 8) /\
                    !i. i < 256
-                       ==> ival(read(memory :> bytes32
-                                  (word_add a (word(4 * i)))) s) =
-                           ival(mldsa_barred (x i)))
+                       ==> let zi = read(memory :> bytes32
+                                  (word_add a (word(4 * i)))) s in
+                           (ival zi == ival(x i)) (mod &8380417) /\
+                           --(&6283009) <= ival zi /\ ival zi <= &6283008)
               (MAYCHANGE [RSP] ,, WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176),176)] ,,
               MAYCHANGE [memory :> bytes(a,1024)])`,

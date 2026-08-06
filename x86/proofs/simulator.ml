@@ -622,6 +622,14 @@ let iclasses = iclasses_regreg @
  [0xc4; 0x62; 0x79; 0x59; 0xd3]; (* VPBROADCASTQ xmm10, xmm11 *)
  [0xc4; 0x62; 0x79; 0x59; 0xe5]; (* VPBROADCASTQ xmm12, xmm13 *)
  [0xc4; 0x62; 0x79; 0x59; 0xf7]; (* VPBROADCASTQ xmm14, xmm15 *)
+ [0xc4; 0xe2; 0x79; 0x79; 0xc1]; (* VPBROADCASTW xmm0, xmm1 *)
+ [0xc4; 0xe2; 0x79; 0x79; 0xca]; (* VPBROADCASTW xmm1, xmm2 *)
+ [0xc4; 0xe2; 0x7d; 0x79; 0xd3]; (* VPBROADCASTW ymm2, xmm3 *)
+ [0xc4; 0x42; 0x7d; 0x79; 0xe5]; (* VPBROADCASTW ymm12, xmm13 *)
+ [0xc4; 0xe2; 0x7d; 0x79; 0xf6]; (* VPBROADCASTW ymm6, xmm6 *)
+ [0xc4; 0xe2; 0x7d; 0x79; 0xff]; (* VPBROADCASTW ymm7, xmm7 *)
+ [0xc4; 0x42; 0x79; 0x79; 0xc1]; (* VPBROADCASTW xmm8, xmm9 *)
+ [0xc4; 0x62; 0x79; 0x79; 0xef]; (* VPBROADCASTW xmm13, xmm7 *)
  [0xc4; 0xc2; 0x5d; 0x36; 0xde]; (* VPERMD (%_% ymm3) (%_% ymm4) (%_% ymm14) *)
  [0xc4; 0xe2; 0x75; 0x36; 0xc2]; (* VPERMD (%_% ymm0) (%_% ymm1) (%_% ymm2) *)
  [0xc4; 0xc2; 0x45; 0x36; 0xe8]; (* VPERMD (%_% ymm5) (%_% ymm7) (%_% ymm8) *)
@@ -1085,7 +1093,7 @@ and tac_main (memopidx: int option) mc states =
 and tac_after memop =
   (* MEMORY_SPLIT_TAC will split out the memory write to the stack.
    Assumptions for flags that involves memory reads of more than one byte
-   (for example, ADD for byte64) will not be splitted out into bytes by
+   (for example, ADD for byte64) will not be split out into bytes by
    MEMORY_SPLIT_TAC. Instead, the flag expression is only treated until
    it gets into the goal. After it gets into the goal, the first
    READ_MEMORY_FULLMERGE_CONV will split the memory read in the goal that

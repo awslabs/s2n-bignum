@@ -384,7 +384,6 @@ let sha3_keccak4_f1600_alt2_mc = define_assert_from_elf
   0x91000739;       (* arm_ADD X25 X25 (rvalue (word 1)) *)
   0xce2062f7;       (* arm_BCAX Q23 Q23 Q0 Q24 *)
   0xf9000ff9;       (* arm_STR X25 SP (Immediate_Offset (word 24)) *)
-  0xf1005f3f;       (* arm_CMP X25 (rvalue (word 23)) *)
   0x4e601c3f;       (* arm_BIC_VEC Q31 Q1 Q0 128 *)
   0xcadbd439;       (* arm_EOR X25 X1 (Shiftedreg X27 ROR 53) *)
   0x8afabfdb;       (* arm_BIC X27 X30 (Shiftedreg X26 ROR 47) *)
@@ -554,7 +553,6 @@ let sha3_keccak4_f1600_alt2_mc = define_assert_from_elf
   0x91000739;       (* arm_ADD X25 X25 (rvalue (word 1)) *)
   0xce9de8f0;       (* arm_XAR Q16 Q7 Q29 (word 58) *)
   0xf9000ff9;       (* arm_STR X25 SP (Immediate_Offset (word 24)) *)
-  0xf1005f3f;       (* arm_CMP X25 (rvalue (word 23)) *)
   0x6e3a1d5f;       (* arm_EOR_VEC Q31 Q10 Q26 128 *)
   0xcadbd439;       (* arm_EOR X25 X1 (Shiftedreg X27 ROR 53) *)
   0x8afabfdb;       (* arm_BIC X27 X30 (Shiftedreg X26 ROR 47) *)
@@ -761,7 +759,7 @@ let sha3_keccak4_f1600_alt2_mc = define_assert_from_elf
   0x4ddfcfdc;       (* arm_LD1R Q28 X30 (Postimmediate_Offset (word 8)) 64 128 *)
   0xf9000bfe;       (* arm_STR X30 SP (Immediate_Offset (word 16)) *)
   0x6e3c1c00;       (* arm_EOR_VEC Q0 Q0 Q28 128 *)
-  0x54ffd5ad;       (* arm_BLE (word 2095796) *)
+  0x54ffd5cd;       (* arm_BLE (word 2095800) *)
   0x93c2f442;       (* arm_ROR X2 X2 61 *)
   0x93c39c63;       (* arm_ROR X3 X3 39 *)
   0x93c4d884;       (* arm_ROR X4 X4 54 *)
@@ -821,7 +819,7 @@ let sha3_keccak4_f1600_alt2_mc = define_assert_from_elf
   0xa94b500f;       (* arm_LDP X15 X20 X0 (Immediate_Offset (iword (&176))) *)
   0xf9406019;       (* arm_LDR X25 X0 (Immediate_Offset (word 192)) *)
   0xd1096000;       (* arm_SUB X0 X0 (rvalue (word 600)) *)
-  0x17fffd23;       (* arm_B (word 268432524) *)
+  0x17fffd25;       (* arm_B (word 268432532) *)
   0xf94003e0;       (* arm_LDR X0 SP (Immediate_Offset (word 0)) *)
   0x91096000;       (* arm_ADD X0 X0 (rvalue (word 600)) *)
   0xa9001801;       (* arm_STP X1 X6 X0 (Immediate_Offset (iword (&0))) *)
@@ -918,7 +916,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
       nonoverlapping (a,800) (stackpointer,216) /\
       ALLPAIRS nonoverlapping
                [(a,800); (stackpointer,216)]
-               [(word pc,0xda8); (rc,192)]
+               [(word pc,0xda0); (rc,192)]
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) sha3_keccak4_f1600_alt2_mc /\
                 read PC s = word (pc + 0x2c) /\
@@ -929,7 +927,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
                 wordlist_from_memory(word_add a (word 400),25) s = A3 /\
                 wordlist_from_memory(word_add a (word 600),25) s = A4 /\
                 wordlist_from_memory(rc,24) s = round_constants)
-           (\s. read PC s = word(pc + 0xd78) /\
+           (\s. read PC s = word(pc + 0xd70) /\
                 wordlist_from_memory(a,25) s = keccak 24 A1 /\
                 wordlist_from_memory(word_add a (word 200),25) s =
                 keccak 24 A2 /\
@@ -966,7 +964,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
 
   (*** First time round the main loop with [sp+32] = 0 ***)
 
-  ENSURES_WHILE_PAUP_TAC `1` `12` `pc + 0x658` `pc + 0xba4`
+  ENSURES_WHILE_PAUP_TAC `1` `12` `pc + 0x654` `pc + 0xb9c`
    `\i s.
       (read SP s = stackpointer /\
        wordlist_from_memory(rc,24) s = round_constants /\
@@ -1007,7 +1005,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
     MEMORY_128_FROM_64_TAC "a" 0 12 THEN
     MEMORY_128_FROM_64_TAC "a" 200 12 THEN
     ASM_REWRITE_TAC[WORD_ADD_0] THEN REPEAT STRIP_TAC THEN
-    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--395) THEN
+    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--394) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
      [CONV_TAC(LAND_CONV WORDLIST_FROM_MEMORY_CONV) THEN
       CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV) THEN
@@ -1078,7 +1076,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
       CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
       ALL_TAC] THEN
 
-    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--339) THEN
+    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--338) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
      [REWRITE_TAC[GSYM CONJ_ASSOC];
@@ -1124,7 +1122,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
 
   (*** Second time round the main loop with [sp+32] = 1 ***)
 
-  ENSURES_WHILE_PAUP_TAC `1` `12` `pc + 0x658` `pc + 0xba4`
+  ENSURES_WHILE_PAUP_TAC `1` `12` `pc + 0x654` `pc + 0xb9c`
    `\i s.
       (read SP s = stackpointer /\
        wordlist_from_memory(rc,24) s = round_constants /\
@@ -1170,7 +1168,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
     ASM_REWRITE_TAC[round_constants; CONS_11; GSYM CONJ_ASSOC] THEN
     REWRITE_TAC[GSYM round_constants] THEN
     ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--395) THEN
+    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--394) THEN
 
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
      [CONV_TAC(LAND_CONV WORDLIST_FROM_MEMORY_CONV) THEN
@@ -1245,7 +1243,7 @@ let SHA3_KECCAK4_F1600_ALT2_CORRECT = prove
       CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[];
       ALL_TAC] THEN
 
-    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--339) THEN
+    ARM_STEPS_TAC SHA3_KECCAK4_F1600_ALT2_EXEC (1--338) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
      [REWRITE_TAC[GSYM CONJ_ASSOC];
@@ -1327,7 +1325,7 @@ let SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_CORRECT = prove
       nonoverlapping (a,800) (word_sub stackpointer (word 224),224) /\
       ALLPAIRS nonoverlapping
                [(a,800); (word_sub stackpointer (word 224),224)]
-               [(word pc,0xda8); (rc,192)]
+               [(word pc,0xda0); (rc,192)]
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) sha3_keccak4_f1600_alt2_mc /\
                 read PC s = word pc /\
@@ -1381,7 +1379,7 @@ let SHA3_KECCAK4_F1600_ALT2_SUBROUTINE_SAFE = time prove
            nonoverlapping (a,800) (word_sub stackpointer (word 224),224) /\
            ALLPAIRS nonoverlapping
            [a,800; word_sub stackpointer (word 224),224]
-           [word pc,3496; rc,192]
+           [word pc,3488; rc,192]
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc)

@@ -67,7 +67,7 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xt
   0x4c4078e7;       (* arm_LDR Q7 X7 No_Offset *)
   0xf2400ebf;       (* arm_TST X21 (rvalue (word 0xf)) *)
   0x54000080;       (* arm_BEQ (word 0x10) *)
-  0xf1004042;       (* arm_SUBS X2 X2 (rvalue (word 0x10)) *)
+  0xd1004042;       (* arm_SUB X2 X2 (rvalue (word 0x10)) *)
   0xf100405f;       (* arm_CMP X2 (rvalue (word 0x10)) *)
   0x5400492b;       (* arm_BLT (word 0x924) *)
   0xb202e7e8;       (* arm_MOV X8 (rvalue (word 0xcccccccccccccccc)) *)
@@ -289,7 +289,7 @@ let aes_xts_decrypt_mc = define_assert_from_elf "aes_xts_decrypt_mc" "arm/aes-xt
   0xac828420;       (* arm_STP Q0 Q1 X1 (Postimmediate_Offset (iword (&0x50))) *)
   0xad3ee438;       (* arm_STP Q24 Q25 X1 (Immediate_Offset (iword (-- &0x30))) *)
   0x3c9f003a;       (* arm_STR Q26 X1 (Immediate_Offset (word 0xfffffffffffffff0)) *)
-  0xf1014042;       (* arm_SUBS X2 X2 (rvalue (word 0x50)) *)
+  0xd1014042;       (* arm_SUB X2 X2 (rvalue (word 0x50)) *)
   0xf1000508;       (* arm_SUBS X8 X8 (rvalue (word 0x1)) *)
   0xb5ffe888;       (* arm_CBNZ X8 (word 0x1ffd10) *)
   0xf101005f;       (* arm_CMP X2 (rvalue (word 0x40)) *)
@@ -4105,7 +4105,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
       ANTS_TAC THENL
       [REWRITE_TAC[CONJUNCT1 calculate_tweak; xts_init_tweak] THEN
        EXPAND_TAC "key2" THEN AESENC_TAC; DISCH_TAC] THEN
-      (* ===> Symbolic Simulation: Symbolic simulating untill next branch *)
+      (* ===> Symbolic Simulation: Symbolic simulating until next branch *)
       ARM_ACCSTEPS_TAC AES_XTS_DECRYPT_EXEC [] (70--89) THEN
       (* Case split on whether there is a tail *)
       FIRST_X_ASSUM MP_TAC THEN
@@ -4628,7 +4628,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
         ] THEN
 
         REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-        (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+        (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
         IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * i + 0x10):num`;
           `x:byte list`; `s188:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
         EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * i + 0x20) iv key1 key2)` THEN
@@ -5062,7 +5062,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
           ] THEN
 
           REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-          (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+          (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
           IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * val (num_5blocks_adjusted:int64) + 0x10):num`;
             `x:byte list`; `s188:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
           EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * val (num_5blocks_adjusted:int64) + 0x20) iv key1 key2)` THEN
@@ -5357,7 +5357,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
           ] THEN
 
           REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-          (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+          (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
           IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * val (num_5blocks_adjusted:int64) + 0x10):num`;
             `x:byte list`; `s108:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
           EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * val (num_5blocks_adjusted:int64) + 0x20) iv key1 key2)` THEN
@@ -5599,7 +5599,7 @@ let AES_XTS_DECRYPT_CORRECT = time prove(
           DISCH_TAC THEN
 
           REWRITE_TAC[ARITH_RULE `0x50 * i + 0x20 = (0x50 * i + 0x10) + 0x10`] THEN
-          (* Use SPECL to force IMP_REWRITE_TAC to apply once once *)
+          (* Use SPECL to force IMP_REWRITE_TAC to apply once *)
           IMP_REWRITE_TAC[(SPECL [`pt_ptr:int64`; `(0x50 * val (num_5blocks_adjusted:int64) + 0x10):num`;
             `x:byte list`; `s78:armstate`] READ_BYTES_AND_BYTE128_SPLIT)] THEN
           EXISTS_TAC `(aes256_xts_decrypt ct (0x50 * val (num_5blocks_adjusted:int64) + 0x20) iv key1 key2)` THEN

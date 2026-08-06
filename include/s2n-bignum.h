@@ -1026,6 +1026,13 @@ extern void mldsa_ntt(int32_t a[S2N_BIGNUM_STATIC 256], const int32_t zetas[S2N_
 // Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_nttunpack(int32_t a[S2N_BIGNUM_STATIC 256]);
 
+// Uniform rejection sampling for ML-DSA: extract 23-bit coefficients from
+// 3-byte-packed input, keeping only those strictly less than q = 8380417.
+// Returns the number of accepted coefficients (at most 256).
+// Inputs buf[840] (uint8_t), table[256] (uint64_t lookup table);
+// output r[256] (int32_t).
+extern uint32_t mldsa_rej_uniform_VARIABLE_TIME_x86(int32_t r[S2N_BIGNUM_STATIC 256], const uint8_t buf[S2N_BIGNUM_STATIC 840], const uint64_t table[S2N_BIGNUM_STATIC 256]);
+
 // Pointwise multiplication of polynomials in NTT domain (Montgomery form) for ML-DSA
 // Inputs a[256], b[256] (signed 32-bit words); output r[256] (signed 32-bit words)
 extern void mldsa_pointwise(int32_t r[S2N_BIGNUM_STATIC 256], const int32_t a[S2N_BIGNUM_STATIC 256], const int32_t b[S2N_BIGNUM_STATIC 256]);
@@ -1062,6 +1069,8 @@ extern void mldsa_pointwise_acc_l7_x86(int32_t c[S2N_BIGNUM_STATIC 256], const i
 extern void mldsa_caddq(int32_t a[S2N_BIGNUM_STATIC 256]);
 
 // Canonical reduction of polynomial coefficients for ML-DSA
+// Result is centered, -6283009 <= r <= 6283008, and congruent mod 8380417
+// Assumes each coefficient is <= 0x7fbfffff (else the reduction overflows)
 // Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words)
 extern void mldsa_reduce(int32_t a[S2N_BIGNUM_STATIC 256]);
 

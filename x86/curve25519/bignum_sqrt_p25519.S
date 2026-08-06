@@ -31,6 +31,7 @@
 
 
         .text
+        .balign 32
 
 // Size in bytes of a 64-bit word
 
@@ -342,7 +343,7 @@ Lbignum_sqrt_p25519_standard:
         cmovnz  rbp, r11
         mov     [rdx+24], rbp
 
-// Determine if it is is indeed a square root and also if a = 0
+// Determine if it is indeed a square root and also if a = 0
 // Hence return the Legendre-Jacobi symbol as required.
 
         lea     rdi, [rsp+B]

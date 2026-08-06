@@ -1297,7 +1297,7 @@ let ARM_SUB_LIST_OF_MC_TAC (core_th:thm) (program_sub_mc_def:thm)
     end else ();
     DISCH_THEN (fun core_th ->
       REPEAT STRIP_TAC THEN MP_TAC (ISPECL core_th_vars core_th)) THEN
-    (* Prove antedecent of core_th *)
+    (* Prove antecedent of core_th *)
     ANTS_TAC THENL [
       (REPEAT (POP_ASSUM MP_TAC) THEN
       REWRITE_TAC(length_ths @ [ALL;NONOVERLAPPING_CLAUSES]) THEN

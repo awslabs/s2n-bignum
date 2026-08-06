@@ -22,7 +22,7 @@ needs "x86/proofs/base.ml";;
   Let's prove that rbx in the final state is (rax(input) + rbx(input)) * 2.
   As done in "simple.ml", this can be done using symbolic execution. However,
   in this file, we will try a slightly different approach:
-  (1) The program will be splitted into two smaller programs:
+  (1) The program will be split into two smaller programs:
 
   First prog:
   0:   48 01 c3                add    %rax,%rbx

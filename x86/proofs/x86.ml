@@ -1508,7 +1508,7 @@ let x86_RET = new_definition
 (*** 32-bit and 64-bit forms just mask as in the others. Not generic.    ***)
 
 (*** It's not quite enough to just use the native size, as certain       ***)
-(*** things are different in case case masked_shift IN {0,1} (e.g. OF)   ***)
+(*** things are different in case masked_shift IN {0,1} (e.g. OF)        ***)
 (*** We assume that the masked value comes in from the decoder           ***)
 (*** Our underlying rotate functions are modulo anyway.                  ***)
 (*** It is at least clearly stated that SF, ZF, AF, PF are unaffected    ***)
@@ -1850,6 +1850,13 @@ let x86_VPBROADCASTQ = new_definition
       let (x:M word) = read src s in
       let qw = word_subword x (0,64):(64)word in
       let res:N word = word_duplicate qw in
+      (dest := res) s`;;
+
+let x86_VPBROADCASTW = new_definition
+  `x86_VPBROADCASTW (dest:(x86state,(N)word)component) src (s:x86state) =
+      let (x:M word) = read src s in
+      let ww = word_subword x (0,16):(16)word in
+      let res:N word = word_duplicate ww in
       (dest := res) s`;;
 
 let x86_VPBLENDVB = new_definition
@@ -3479,6 +3486,15 @@ let x86_execute = define
          | 128 -> (match operand_size src with
                     128 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND128 src s)
                   |  64 -> x86_VPBROADCASTQ (OPERAND128 dest s) (OPERAND64 src s))) s)) s
+    | VPBROADCASTW dest src ->
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> (match operand_size src with
+                    128 -> x86_VPBROADCASTW (OPERAND256 dest s) (OPERAND128 src s)
+                  |  16 -> x86_VPBROADCASTW (OPERAND256 dest s) (OPERAND16 src s))
+         | 128 -> (match operand_size src with
+                    128 -> x86_VPBROADCASTW (OPERAND128 dest s) (OPERAND128 src s)
+                  |  16 -> x86_VPBROADCASTW (OPERAND128 dest s) (OPERAND16 src s))) s)) s
     | VPERMD dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -4112,6 +4128,8 @@ let REGISTER_ALIASES =
   r8;   r9;  r10;  r11;  r12;  r13;  r14;  r15;
   eax; ecx; edx; ebx; esp; ebp; esi; edi;
   r8d; r9d; r10d; r11d; r12d; r13d; r14d; r15d;
+  r8w; r9w; r10w; r11w; r12w; r13w; r14w; r15w;
+  r8b; r9b; r10b; r11b; r12b; r13b; r14b; r15b;
   ax; cx; dx; bx; sp; bp; si; di; ah;
   al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil;
   xmm0; xmm1; xmm2; xmm3; xmm4; xmm5; xmm6; xmm7;
@@ -4659,6 +4677,7 @@ let x86_VPBLENDW_ALT = EXPAND_SIMD_RULE x86_VPBLENDW;;
 let x86_VPCLMULQDQ_ALT = EXPAND_SIMD_RULE x86_VPCLMULQDQ;;
 let x86_VPBROADCASTD_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTD;;
 let x86_VPBROADCASTQ_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTQ;;
+let x86_VPBROADCASTW_ALT = EXPAND_SIMD_RULE x86_VPBROADCASTW;;
 let x86_VPERMD_ALT = EXPAND_SIMD_RULE x86_VPERMD;;
 let x86_VPERMQ_ALT = EXPAND_SIMD_RULE x86_VPERMQ;;
 let x86_VPERM2I128_ALT = EXPAND_SIMD_RULE x86_VPERM2I128;;
@@ -4739,7 +4758,7 @@ let X86_OPERATION_CLAUSES =
     x86_VPCMPGTD_ALT; x86_VPCMPGTW_ALT;
     x86_VPEXTRD; x86_VPEXTRQ; x86_VPEXTRW; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBQ_ALT; x86_VPSUBW_ALT; x86_VPXOR;
     x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLDQ_ALT; x86_VPSRLVD_ALT; x86_VPSRLVQ_ALT; x86_VPSRLQ_ALT;
-    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
+    x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPBROADCASTW_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
     x86_VMOVDQA_ALT; x86_VMOVDQU_ALT; x86_VPMADDUBSW_ALT; x86_VPMADDWD_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPACKUSWB_ALT; x86_VPBLENDVB_ALT;
     x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPCLMULQDQ_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;

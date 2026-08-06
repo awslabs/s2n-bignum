@@ -480,7 +480,7 @@ let POLY_EQUIV_GHASH_REDUCE1 = prove
   MESON_TAC[BIT_GUARD]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Fixed-size eduction from 256 to 128 bits: 2 rounds of simple reduction.   *)
+(* Fixed-size reduction from 256 to 128 bits: 2 rounds of simple reduction.  *)
 (* ------------------------------------------------------------------------- *)
 
 let ghash_reduce = define

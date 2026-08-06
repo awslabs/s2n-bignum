@@ -665,7 +665,7 @@ let ABBREV_READS_TAC (readth,readth2:thm*thm) (forget_expr:bool):tactic =
       (* eq is: `read elem s = e` *)
       let lhs,rhs = dest_eq eq in
       let _,rhs2 = dest_eq eq2 in
-      (* If lhs is PC update, don't abbrevate it. Or, if rhs is already a
+      (* If lhs is PC update, don't abbreviate it. Or, if rhs is already a
         variable, don't abbreviate it again. Don't try to prove the rhs of
         eq2. *)
       if is_read_pc lhs || is_read_events lhs || is_var rhs
@@ -745,7 +745,7 @@ let ABBREV_READ_TAC (eqth:thm) (append_to:thm list ref):tactic =
        ASSUME_TAC eqth) else
     (* eq is: `read elem s = e` *)
     let lhs,rhs = dest_eq eq in
-    (* If lhs is PC update, don't abbrevate it *)
+    (* If lhs is PC update, don't abbreviate it *)
     if is_read_pc lhs || is_read_events lhs then ASSUME_TAC eqth
     else
       if get_read_component lhs = None then failwith "LHS is not read ..?" else

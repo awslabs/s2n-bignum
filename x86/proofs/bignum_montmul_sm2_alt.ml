@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(* Montgomery multiplication modulo p_sm2 using using traditional x86 muls.  *)
+(* Montgomery multiplication modulo p_sm2 using traditional x86 muls.        *)
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;

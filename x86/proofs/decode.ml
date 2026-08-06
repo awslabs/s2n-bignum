@@ -786,6 +786,16 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
                        else simd_of_RM Lower_128 rm in
              SOME (VPBROADCASTQ (mmreg reg sz) sop,l)
            | _ -> NONE)
+        | [0x79:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           if rex_W rex then NONE else
+           match pfxs with
+           | (T, Rep0, SG0) ->
+             let sop = if is_memop rm then operand_of_RM Lower_16 rm
+                       else simd_of_RM Lower_128 rm in
+             SOME (VPBROADCASTW (mmreg reg sz) sop,l)
+           | _ -> NONE)
         | [0x40:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).

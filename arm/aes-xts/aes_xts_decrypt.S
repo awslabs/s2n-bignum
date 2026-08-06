@@ -134,9 +134,9 @@ Loop_dec_iv_enc:
 Lxts_dec:
         tst x21,#0xf
         b.eq Lxts_dec_begin
-        subs x2,x2,#16
+        sub x2,x2,#16
         cmp x2, #16
-        b.lt Lxts_dec_done   // There is one block and a tail, go directy to cipher-stealing
+        b.lt Lxts_dec_done   // There is one block and a tail, go directly to cipher-stealing
 
 Lxts_dec_begin:
         udiv_by_80(x2, x8) // Number of 5x-unrolled iterations
@@ -287,7 +287,7 @@ Loop5x_xts_dec:
         stp q24, q25, [x1, #-0x30]
         str  q26, [x1, #-0x10]
 
-        subs x2,x2,#0x50
+        sub x2,x2,#0x50
         subs x8,x8,#1
         cbnz x8, Loop5x_xts_dec
 

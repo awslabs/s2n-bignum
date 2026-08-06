@@ -8645,7 +8645,7 @@ let BIGNUM_EMONTREDC_8N_CDIFF_CORE_CORRECT = prove(
       REWRITE_TAC[aligned_bytes_loaded;bytes_loaded;
         fst BIGNUM_EMONTREDC_8N_CDIFF_EXEC] THEN
       FIRST_X_ASSUM (fun th -> STRIP_TAC THEN ASM_REWRITE_TAC[] THEN MP_TAC th) THEN
-      (* okay, now MAYCHANGE at antedecendant.. *)
+      (* okay, now MAYCHANGE at antecedent.. *)
       (* a standard procedure *)
       REWRITE_TAC[MAYCHANGE; SEQ_ID] THEN
       REWRITE_TAC[GSYM SEQ_ASSOC] THEN
