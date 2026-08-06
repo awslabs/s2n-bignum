@@ -37,7 +37,6 @@
         S2N_BN_SYM_PRIVACY_DIRECTIVE(mlkem_rej_uniform_VARIABLE_TIME)
         .text
         .balign 32
-        .balign 4
 
 // This code is effectively the same as the original here:
 // https://github.com/pq-code-package/mlkem-native/blob/main/mlkem/src/native/x86_64/src/rej_uniform_asm.S
