@@ -352,6 +352,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PADDQ operand operand
    | PAND operand operand
    | PBLENDW operand operand operand
+   | PCLMULQDQ operand operand operand
    | PCMPGTD operand operand
    | PCMPGTW operand operand
    | PEXT operand operand operand
@@ -362,7 +363,9 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | POPCNT operand operand
    | PSHUFB operand operand
    | PSHUFD operand operand operand
+   | PSLLDQ operand operand
    | PSRAD operand operand
+   | PSRLDQ operand operand
    | PSRLW operand operand
    | PUSH operand
    | PXOR operand operand
