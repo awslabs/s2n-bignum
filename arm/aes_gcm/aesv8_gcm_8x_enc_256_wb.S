@@ -75,36 +75,34 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 	mov	x15, #0x100000000			//set up counter increment
 	movi	v31.16b, #0x0
 	mov	v31.d[1], x15
+	add	v28.4s, v31.4s, v31.4s		//[s100] +2 increment (hoisted, load shadow)
+	add	v10.4s, v28.4s, v31.4s		//[s100] +3 increment
+	add	v11.4s, v28.4s, v28.4s		//[s100] +4 increment
+	add	v12.4s, v11.4s, v31.4s		//[s100] +5 increment
+	add	v13.4s, v11.4s, v28.4s		//[s100] +6 increment
+	add	v14.4s, v11.4s, v10.4s		//[s100] +7 increment
 	sub	x5, x5, #1		//byte_len - 1
 
 	and	x5, x5, #0xffffffffffffff80	//number of bytes to be processed in main loop (at least 1 byte must be handled by tail)
 
 	add	x5, x5, x0
 
-	rev32	v30.16b, v0.16b				//set up reversed counter
-
-	add	v30.4s, v30.4s, v31.4s		//CTR block 0
-
-	rev32	v1.16b, v30.16b				//CTR block 1
-	add	v30.4s, v30.4s, v31.4s		//CTR block 1
-
-	rev32	v2.16b, v30.16b				//CTR block 2
-	add	v30.4s, v30.4s, v31.4s		//CTR block 2
-
-	rev32	v3.16b, v30.16b				//CTR block 3
-	add	v30.4s, v30.4s, v31.4s		//CTR block 3
-
-	rev32	v4.16b, v30.16b				//CTR block 4
-	add	v30.4s, v30.4s, v31.4s		//CTR block 4
-
-	rev32	v5.16b, v30.16b				//CTR block 5
-	add	v30.4s, v30.4s, v31.4s		//CTR block 5
-	ldp	q26, q27, [x11, #0]				 	//load rk0, rk1
-
-	rev32	v6.16b, v30.16b				//CTR block 6
-	add	v30.4s, v30.4s, v31.4s		//CTR block 6
-
-	rev32	v7.16b, v30.16b				//CTR block 7
+	rev32	v29.16b, v0.16b				//set up reversed counter (base = v30_0)
+	add	v8.4s, v29.4s, v31.4s		//[s100] CTR block 1 = base + 1
+	add	v9.4s, v29.4s, v28.4s		//[s100] CTR block 2 = base + 2
+	add	v15.4s, v29.4s, v10.4s		//[s100] CTR block 3 = base + 3
+	add	v16.4s, v29.4s, v11.4s		//[s100] CTR block 4 = base + 4
+	add	v17.4s, v29.4s, v12.4s		//[s100] CTR block 5 = base + 5
+	add	v18.4s, v29.4s, v13.4s		//[s100] CTR block 6 = base + 6
+	add	v30.4s, v29.4s, v14.4s		//[s100] CTR block 7 = base + 7
+	rev32	v1.16b, v8.16b		//CTR block 1 (rev32)
+	rev32	v2.16b, v9.16b		//CTR block 2 (rev32)
+	rev32	v3.16b, v15.16b		//CTR block 3 (rev32)
+	rev32	v4.16b, v16.16b		//CTR block 4 (rev32)
+	rev32	v5.16b, v17.16b		//CTR block 5 (rev32)
+	rev32	v6.16b, v18.16b		//CTR block 6 (rev32)
+	rev32	v7.16b, v30.16b		//CTR block 7 (rev32)
+	ldp	q26, q27, [x11, #0]		//load rk0, rk1
 
 	aese	v3.16b, v26.16b
 	aesmc	v3.16b, v3.16b			//AES block 3 - round 0
@@ -1241,7 +1239,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 
 	cmp	x5, #112
 .inst	0xce007509	//eor3 v9.16b, v8.16b, v0.16b, v29.16b				//AES block 8k+8 - result
-	b.gt	.L256_enc_blocks_more_than_7
+	b.gt	.L256_enc_exact8_drain	//[s097] exact-8 -> dedicated stripped drain
 
 	movi	v19.8b, #0
 	mov	v7.16b, v6.16b
@@ -1315,7 +1313,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 	ldr	q9, [x0], #16				//AES final-6 block - load plaintext
 
 	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
-	ins	v27.d[0], v8.d[1]					//GHASH final-7 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
 	ins	v18.d[0], v24.d[1]					//GHASH final-7 block - mid
 
 	movi	v16.8b, #0						//supress further partial tag feed in
@@ -1334,7 +1332,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
 	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-6 block - low
-	ins	v27.d[0], v8.d[1]					//GHASH final-6 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-6 block - mid
 	pmull2	v28.1q, v8.2d, v23.2d				//GHASH final-6 block - high
 
 	ldr	q9, [x0], #16				//AES final-5 block - load plaintext
@@ -1358,19 +1356,19 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-5 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-5 block - mid
 
 	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-5 block - high
 
 	eor	v17.16b, v17.16b, v28.16b					//GHASH final-5 block - high
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-5 block - mid
 
-	ins	v27.d[1], v27.d[0]					//GHASH final-5 block - mid
+	ext	v12.16b, v21.16b, v21.16b, #8			//[R2c] h5k(hi lane) to low lane
 
 	ldr	q9, [x0], #16				//AES final-4 block - load plaintext
 	pmull	v26.1q, v8.1d, v22.1d				//GHASH final-5 block - low
 
-	pmull2	v27.1q, v27.2d, v21.2d				//GHASH final-5 block - mid
+	pmull	v27.1q, v27.1d, v12.1d				//[R2c] final-5 mid (pmull low, h5k in v12)
 	movi	v16.8b, #0						//supress further partial tag feed in
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-5 block - low
 
@@ -1386,7 +1384,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-4 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-4 block - mid
 	pmull2	v28.1q, v8.2d, v20.2d				//GHASH final-4 block - high
 
 .inst	0xce047529	//eor3 v9.16b, v9.16b, v4.16b, v29.16b			//AES final-3 block - result
@@ -1410,17 +1408,18 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-3 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-3 block - mid
 	pmull2	v28.1q, v8.2d, v25.2d				//GHASH final-3 block - high
 
 	eor	v17.16b, v17.16b, v28.16b					//GHASH final-3 block - high
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-3 block - mid
 	ldr	q24, [x6, #64]				//load h4k | h3k
+	ext	v11.16b, v24.16b, v24.16b, #8			//[R2b] h3k(hi lane) to low lane
 
-	ins	v27.d[1], v27.d[0]					//GHASH final-3 block - mid
+	// [R2b] ins v27.d[1] removed (final-3, pmull low, h3k in v11)
 	ldr	q9, [x0], #16				//AES final-2 block - load plaintext
 
-	pmull2	v27.1q, v27.2d, v24.2d				//GHASH final-3 block - mid
+	pmull	v27.1q, v27.1d, v11.1d				//[R2b] final-3 mid (pmull low, h3k in v11)
 	pmull	v26.1q, v8.1d, v25.1d				//GHASH final-3 block - low
 
 .inst	0xce057529	//eor3 v9.16b, v9.16b, v5.16b, v29.16b			//AES final-2 block - result
@@ -1439,7 +1438,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-2 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-2 block - mid
 
 	movi	v16.8b, #0						//supress further partial tag feed in
 
@@ -1466,7 +1465,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 	movi	v16.8b, #0						//supress further partial tag feed in
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-1 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-1 block - mid
 	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-1 block - high
 
 .inst	0xce077529	//eor3 v9.16b, v9.16b, v7.16b, v29.16b			//AES final block - result
@@ -1476,11 +1475,12 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-1 block - mid
 
 	ldr	q21, [x6, #16]				//load h2k | h1k
+	ext	v10.16b, v21.16b, v21.16b, #8			//[R2] h2k(hi lane) to low lane
 
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final-1 block - low
-	ins	v27.d[1], v27.d[0]					//GHASH final-1 block - mid
+	// [R2] ins v27.d[1] removed (pmull low lane, h2k in v10)
 
-	pmull2	v27.1q, v27.2d, v21.2d				//GHASH final-1 block - mid
+	pmull	v27.1q, v27.1d, v10.1d				//[R2] final-1 mid (pmull low, h2k in v10)
 
 	eor	v18.16b, v18.16b, v27.16b				//GHASH final-1 block - mid
 .L256_enc_blocks_less_than_1:	//final whole block (whole-blocks contract: never partial)
@@ -1523,6 +1523,7 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 	ext	v19.16b, v19.16b, v19.16b, #8
 	rev64	v19.16b, v19.16b
 	st1	{ v19.16b }, [x3]
+.L256_enc_epilogue:  //[s097] both paths converge here (pristine 0x11a8)
 	mov	x0, x9					//return sizes
 // -- END verbatim generator body --
 
@@ -1536,6 +1537,200 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_enc_256_wb):
 .L256_enc_ret:
         mov	w0, #0x0
         CFI_RET
+
+
+.L256_enc_exact8_drain:  //[s097] dedicated exact-8 GHASH drain (no no-op tag eors)
+	st1	{ v9.16b}, [x2], #16				//AES final-7 block  - store result
+
+	rev64	v8.16b, v9.16b						//GHASH final-7 block
+
+	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
+
+	ldr	q9, [x0], #16				//AES final-6 block - load plaintext
+
+	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
+	ins	v18.d[0], v24.d[1]					//GHASH final-7 block - mid
+
+	movi	v16.8b, #0						//supress further partial tag feed in
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-7 block - mid
+.inst	0xce017529	//eor3 v9.16b, v9.16b, v1.16b, v29.16b			//AES final-6 block - result
+
+	pmull	v18.1q, v27.1d, v18.1d				//GHASH final-7 block - mid
+	pmull	v19.1q, v8.1d, v25.1d				//GHASH final-7 block - low
+
+	st1	{ v9.16b}, [x2], #16				//AES final-6 block - store result
+
+	rev64	v8.16b, v9.16b						//GHASH final-6 block
+
+
+	pmull	v14.1q, v8.1d, v23.1d				//[s098] final-6 low -> v14
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-6 block - mid
+	pmull2	v13.1q, v8.2d, v23.2d				//[s098] final-6 high -> v13
+
+	ldr	q9, [x0], #16				//AES final-5 block - load plaintext
+
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-6 block - mid
+
+	pmull	v15.1q, v27.1d, v24.1d				//[s098] final-6 mid -> v15
+.inst	0xce027529	//eor3 v9.16b, v9.16b, v2.16b, v29.16b			//AES final-5 block - result
+
+
+
+	st1	{ v9.16b}, [x2], #16				//AES final-5 block - store result
+
+	rev64	v8.16b, v9.16b						//GHASH final-5 block
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-5 block - mid
+
+	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-5 block - high
+
+	.inst	0xce1c3631	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//[s098] fused high (pair)
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-5 block - mid
+
+	ext	v12.16b, v21.16b, v21.16b, #8			//[R2c] h5k(hi lane) to low lane
+
+	ldr	q9, [x0], #16				//AES final-4 block - load plaintext
+	pmull	v26.1q, v8.1d, v22.1d				//GHASH final-5 block - low
+
+	pmull	v27.1q, v27.1d, v12.1d				//[R2c] final-5 mid (pmull low, h5k in v12)
+	.inst	0xce1a3a73	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//[s098] fused low (pair)
+
+	.inst	0xce1b3e52	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//[s098] fused mid (pair)
+.inst	0xce037529	//eor3 v9.16b, v9.16b, v3.16b, v29.16b			//AES final-4 block - result
+
+	st1	{ v9.16b}, [x2], #16				//AES final-4 block - store result
+
+	rev64	v8.16b, v9.16b						//GHASH final-4 block
+
+	ldr	q9, [x0], #16				//AES final-3 block - load plaintext
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-4 block - mid
+	pmull2	v13.1q, v8.2d, v20.2d				//[s098] final-4 high -> v13
+
+.inst	0xce047529	//eor3 v9.16b, v9.16b, v4.16b, v29.16b			//AES final-3 block - result
+	pmull	v14.1q, v8.1d, v20.1d				//[s098] final-4 low -> v14
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-4 block - mid
+
+	pmull	v15.1q, v27.1d, v21.1d				//[s098] final-4 mid -> v15
+
+
+
+	st1	{ v9.16b}, [x2], #16				//AES final-3 block - store result
+
+	ldr	q25, [x6, #80]				//load h4l | h4h
+	rev64	v8.16b, v9.16b						//GHASH final-3 block
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-3 block - mid
+	pmull2	v28.1q, v8.2d, v25.2d				//GHASH final-3 block - high
+
+	.inst	0xce1c3631	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//[s098] fused high (pair)
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-3 block - mid
+	ldr	q24, [x6, #64]				//load h4k | h3k
+	ext	v11.16b, v24.16b, v24.16b, #8			//[R2b] h3k(hi lane) to low lane
+
+	// [R2b] ins v27.d[1] removed (final-3, pmull low, h3k in v11)
+	ldr	q9, [x0], #16				//AES final-2 block - load plaintext
+
+	pmull	v27.1q, v27.1d, v11.1d				//[R2b] final-3 mid (pmull low, h3k in v11)
+	pmull	v26.1q, v8.1d, v25.1d				//GHASH final-3 block - low
+
+.inst	0xce057529	//eor3 v9.16b, v9.16b, v5.16b, v29.16b			//AES final-2 block - result
+
+	.inst	0xce1b3e52	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//[s098] fused mid (pair)
+	.inst	0xce1a3a73	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//[s098] fused low (pair)
+
+	ldr	q23, [x6, #48]				//load h3l | h3h
+
+	st1	{ v9.16b}, [x2], #16			 	//AES final-2 block - store result
+
+	rev64	v8.16b, v9.16b						//GHASH final-2 block
+	ldr	q9, [x0], #16				//AES final-1 block - load plaintext
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-2 block - mid
+
+
+	pmull2	v13.1q, v8.2d, v23.2d				//[s098] final-2 high -> v13
+.inst	0xce067529	//eor3 v9.16b, v9.16b, v6.16b, v29.16b			//AES final-1 block - result
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-2 block - mid
+
+
+	pmull	v15.1q, v27.1d, v24.1d				//[s098] final-2 mid -> v15
+	pmull	v14.1q, v8.1d, v23.1d				//[s098] final-2 low -> v14
+
+
+	st1	{ v9.16b}, [x2], #16				//AES final-1 block - store result
+
+	ldr	q22, [x6, #32]				//load h2l | h2h
+	rev64	v8.16b, v9.16b						//GHASH final-1 block
+	ldr	q9, [x0], #16				//AES final block - load plaintext
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-1 block - mid
+	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-1 block - high
+
+.inst	0xce077529	//eor3 v9.16b, v9.16b, v7.16b, v29.16b			//AES final block - result
+	.inst	0xce1c3631	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//[s098] fused high (pair)
+
+	pmull	v26.1q, v8.1d, v22.1d				//GHASH final-1 block - low
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-1 block - mid
+
+	ldr	q21, [x6, #16]				//load h2k | h1k
+	ext	v10.16b, v21.16b, v21.16b, #8			//[R2] h2k(hi lane) to low lane
+
+	.inst	0xce1a3a73	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//[s098] fused low (pair)
+	// [R2] ins v27.d[1] removed (pmull low lane, h2k in v10)
+
+	pmull	v27.1q, v27.1d, v10.1d				//[R2] final-1 mid (pmull low, h2k in v10)
+
+	.inst	0xce1b3e52	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//[s098] fused mid (pair)
+
+	ldr	q20, [x6]				//load h1l | h1h
+
+	rev64	v8.16b, v9.16b						//GHASH final block
+
+	rev32	v30.16b, v30.16b
+	str	q30, [x16]					//store the updated counter
+
+	st1	{ v9.16b}, [x2]				//store all 16B
+
+	ins	v16.d[0], v8.d[1]					//GHASH final block - mid
+	pmull2	v28.1q, v8.2d, v20.2d				//GHASH final block - high
+	pmull	v26.1q, v8.1d, v20.1d				//GHASH final block - low
+
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final block - high
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final block - low
+
+	eor	v16.8b, v16.8b, v8.8b				//GHASH final block - mid
+
+	pmull	v16.1q, v16.1d, v21.1d				//GHASH final block - mid
+
+	eor	v18.16b, v18.16b, v16.16b				//GHASH final block - mid
+	ldr	d16, [x10]			//MODULO - load modulo constant
+
+	ext	v21.16b, v17.16b, v17.16b, #8				//MODULO - other top alignment
+
+.inst	0xce114e52	//eor3 v18.16b, v18.16b, v17.16b, v19.16b		 	//MODULO - karatsuba tidy up
+	pmull	v29.1q, v17.1d, v16.1d			//MODULO - top 64b align with mid
+
+.inst	0xce1d5652	//eor3 v18.16b, v18.16b, v29.16b, v21.16b			//MODULO - fold into mid
+
+	pmull	v17.1q, v18.1d, v16.1d			//MODULO - mid 64b align with low
+	ext	v21.16b, v18.16b, v18.16b, #8				//MODULO - other mid alignment
+
+.inst	0xce115673	//eor3 v19.16b, v19.16b, v17.16b, v21.16b		 	//MODULO - fold into low
+	ext	v19.16b, v19.16b, v19.16b, #8
+	rev64	v19.16b, v19.16b
+	st1	{ v19.16b }, [x3]
+	b	.L256_enc_epilogue
 
 S2N_BN_SIZE_DIRECTIVE(aesv8_gcm_8x_enc_256_wb)
 
