@@ -1327,6 +1327,20 @@ let x86_PBLENDW = new_definition
      let res = msimd8 fn imm8 x y in
      (dest := res) s`;;
 
+(* SSE (legacy-encoded) PCLMULQDQ: 2-operand form, dest is also src1, 128-bit.
+   Half-selection by imm8 bit0 (src1) / bit4 (src2) matches x86_VPCLMULQDQ;
+   word_pmul carries the carry-less multiply semantics (kept opaque). *)
+let x86_PCLMULQDQ = new_definition
+  `x86_PCLMULQDQ dest src ibyte (s:x86state) =
+      let x:int128 = read dest s
+      and y:int128 = read src s
+      and imm:byte = read ibyte s in
+      let a:int64 = if bit 0 imm then word_subword x (64,64)
+                    else word_subword x (0,64)
+      and b:int64 = if bit 4 imm then word_subword y (64,64)
+                    else word_subword y (0,64) in
+      (dest := (word_pmul a b:128 word)) s`;;
+
 let x86_PCMPGTD = new_definition
   `x86_PCMPGTD dest src s =
     let x = read dest s in
@@ -1462,11 +1476,30 @@ let x86_PSHUFD = new_definition
         word_subword src ((val od)*32,32)) od in
     (dest := res) s`;;
 
+(* SSE PSLLDQ: byte-granular left shift of the whole 128-bit register by
+   imm8 bytes, zero-filled.  imm8 >= 16 (shift >= 128 bits) yields 0,
+   which word_shl provides automatically. *)
+let x86_PSLLDQ = new_definition
+  `x86_PSLLDQ dest imm8 s =
+    let d:(128)word = read dest s in
+    let count = 8 * val (read imm8 s) in
+    let res:(128)word = word_shl d count in
+    (dest := res) s`;;
+
 let x86_PSRAD = new_definition
   `x86_PSRAD dest imm8 s =
     let d = read dest s in
     let count = val (read imm8 s) in
     let res:(128)word = usimd4 (\x. word_ishr x count) d in
+    (dest := res) s`;;
+
+(* SSE PSRLDQ: byte-granular right shift of the whole 128-bit register by
+   imm8 bytes, zero-filled.  Mirrors the 128-bit branch of x86_VPSRLDQ. *)
+let x86_PSRLDQ = new_definition
+  `x86_PSRLDQ dest imm8 s =
+    let d:(128)word = read dest s in
+    let count = 8 * val (read imm8 s) in
+    let res:(128)word = word_ushr d count in
     (dest := res) s`;;
 
 let x86_PSRLW = new_definition
@@ -3175,6 +3208,11 @@ let x86_execute = define
         add_store_event dest s ,,
        (\s. x86_PBLENDW (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                         (OPERAND8 imm8 s) s)) s
+    | PCLMULQDQ dest src imm8 ->
+       (add_load_event dest s ,, add_load_event src s ,,
+        add_store_event dest s ,,
+       (\s. x86_PCLMULQDQ (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
+                          (OPERAND8 imm8 s) s)) s
     | PCMPGTD dest src ->
        (add_load_event dest s ,, add_load_event src s ,,
         add_store_event dest s ,,
@@ -3225,9 +3263,15 @@ let x86_execute = define
         add_store_event dest s ,,
        (\s. x86_PSHUFD (OPERAND128_SSE dest s) (OPERAND128_SSE src s)
                        (OPERAND8 imm8 s) s)) s
+    | PSLLDQ dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_PSLLDQ (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
     | PSRAD dest imm8 ->
        (add_load_event dest s ,, add_store_event dest s ,,
        (\s. x86_PSRAD (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
+    | PSRLDQ dest imm8 ->
+       (add_load_event dest s ,, add_store_event dest s ,,
+       (\s. x86_PSRLDQ (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
     | PSRLW dest imm8 ->
        (add_load_event dest s ,, add_store_event dest s ,,
        (\s. x86_PSRLW (OPERAND128_SSE dest s) (OPERAND8 imm8 s) s)) s
@@ -4747,9 +4791,9 @@ let X86_OPERATION_CLAUSES =
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ;
     x86_VMOVHPD; x86_MOVSX; x86_MOVUPS; x86_MOVSB_ALT;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
-    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
+    x86_PADDD_ALT; x86_PADDQ_ALT; x86_PAND; x86_PBLENDW_ALT; x86_PCLMULQDQ; x86_PCMPGTD_ALT; x86_PCMPGTW_ALT;
     x86_PEXT_ALT; x86_PINSRD; x86_PINSRQ; x86_PMOVMSKB_ALT; x86_POP_ALT; x86_POPCNT;
-    x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSRAD_ALT; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
+    x86_PSHUFB_ALT; x86_PSHUFD_ALT; x86_PSLLDQ; x86_PSRAD_ALT; x86_PSRLDQ; x86_PSRLW_ALT; x86_PUSH_ALT; x86_PXOR;
     x86_RCL; x86_RCR; x86_RET; x86_ROL; x86_ROR;
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
