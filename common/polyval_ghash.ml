@@ -413,33 +413,33 @@ let GHASH_BATCHED_FROM_HTABLE = prove(
 (* Layout: groups of 3 entries [H^{2k+1}, pack(mid,mid), H^{2k+2}]            *)
 (* ========================================================================== *)
 
-let byteswap128 = new_definition
-  `byteswap128 (x:int128) : int128 =
+let word_swaphalves128 = new_definition
+  `word_swaphalves128 (x:int128) : int128 =
    word_join (word_subword x (0,64) : 64 word)
              (word_subword x (64,64) : 64 word)`;;
 
 let htable_mem = new_definition
   `htable_mem (h:int128) (ptr:int64) (s:armstate) <=>
-   read (memory :> bytes128 ptr) s = byteswap128(h_power h 0) /\
+   read (memory :> bytes128 ptr) s = word_swaphalves128(h_power h 0) /\
    read (memory :> bytes128 (word_add ptr (word 16))) s =
      word_join (karatsuba_mid(h_power h 0) : 64 word)
                (karatsuba_mid(h_power h 1) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 32))) s = byteswap128(h_power h 1) /\
-   read (memory :> bytes128 (word_add ptr (word 48))) s = byteswap128(h_power h 2) /\
+   read (memory :> bytes128 (word_add ptr (word 32))) s = word_swaphalves128(h_power h 1) /\
+   read (memory :> bytes128 (word_add ptr (word 48))) s = word_swaphalves128(h_power h 2) /\
    read (memory :> bytes128 (word_add ptr (word 64))) s =
      word_join (karatsuba_mid(h_power h 2) : 64 word)
                (karatsuba_mid(h_power h 3) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 80))) s = byteswap128(h_power h 3) /\
-   read (memory :> bytes128 (word_add ptr (word 96))) s = byteswap128(h_power h 4) /\
+   read (memory :> bytes128 (word_add ptr (word 80))) s = word_swaphalves128(h_power h 3) /\
+   read (memory :> bytes128 (word_add ptr (word 96))) s = word_swaphalves128(h_power h 4) /\
    read (memory :> bytes128 (word_add ptr (word 112))) s =
      word_join (karatsuba_mid(h_power h 4) : 64 word)
                (karatsuba_mid(h_power h 5) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 128))) s = byteswap128(h_power h 5) /\
-   read (memory :> bytes128 (word_add ptr (word 144))) s = byteswap128(h_power h 6) /\
+   read (memory :> bytes128 (word_add ptr (word 128))) s = word_swaphalves128(h_power h 5) /\
+   read (memory :> bytes128 (word_add ptr (word 144))) s = word_swaphalves128(h_power h 6) /\
    read (memory :> bytes128 (word_add ptr (word 160))) s =
      word_join (karatsuba_mid(h_power h 6) : 64 word)
                (karatsuba_mid(h_power h 7) : 64 word) /\
-   read (memory :> bytes128 (word_add ptr (word 176))) s = byteswap128(h_power h 7)`;;
+   read (memory :> bytes128 (word_add ptr (word 176))) s = word_swaphalves128(h_power h 7)`;;
 
 (* ========================================================================= *)
 (* The x-shift / twist: multiplication by x mod Q(x)                         *)

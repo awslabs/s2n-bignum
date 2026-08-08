@@ -1,4 +1,30 @@
 let subroutine_signatures = [
+("aes256_gcm",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("bit_len", "size_t", (*is const?*)"false");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("xi", "uint8_t*", (*is const?*)"false");
+     ("ivec", "uint8_t[16]", (*is const?*)"false");
+     ("key", "void*", (*is const?*)"true");
+     ("htable", "u128[16]", (*is const?*)"true");
+   ],
+   "size_t",
+   [(* input buffers *)
+    ("in", "bit_len"(* num elems *), 1(* elem bytesize *));
+    ("xi", "16"(* num elems *), 1(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+    ("key", "16"(* num elems *), 1(* elem bytesize *));
+    ("htable", "16"(* num elems *), 16(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "bit_len"(* num elems *), 1(* elem bytesize *));
+    ("xi", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("aes_xts_decrypt",
   ([(*args*)
      ("in", "uint8_t*", (*is const?*)"true");

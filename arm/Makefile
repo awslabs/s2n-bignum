@@ -420,8 +420,10 @@ UNOPT_OBJ = p256/unopt/bignum_montmul_p256_base.o \
 AES_XTS_OBJ = aes-xts/aes_xts_decrypt.o \
               aes-xts/aes_xts_encrypt.o
 
+AES_GCM_OBJ = aes-gcm/aes256_gcm.o
 
-OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ)
+
+OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ) $(AES_GCM_OBJ)
 
 # Tutorial assembly files
 
