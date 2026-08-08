@@ -1414,6 +1414,8 @@ void call_mlkem_mulcache_compute(void) repeat(mlkem_mulcache_compute_x86((int16_
 void call_mlkem_ntt(void) repeat(mlkem_ntt_x86((int16_t*)b0,(int16_t*)b1))
 void call_mlkem_unpack(void) repeat(mlkem_unpack((uint16_t*)b0))
 
+void call_sha256_compress(void) repeat(sha256_compress((uint32_t*)b0,(uint8_t*)b1,1))
+
 void call_bignum_copy_row_from_table_8n__32_16(void) {}
 void call_bignum_copy_row_from_table_8n__32_32(void) {}
 void call_bignum_copy_row_from_table_16__32(void) {}
@@ -1481,6 +1483,8 @@ void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
 
 void call_mlkem_frombytes(void) {}
 void call_mlkem_unpack(void) {}
+
+void call_sha256_compress(void) {}
 
 // Helper function for AES XTS encrypt with parameterized length
 static void aes_xts_encrypt_helper(size_t len)
@@ -1978,6 +1982,7 @@ int main(int argc, char *argv[])
   timingtest(all,"secp256k1_jdouble_alt",call_secp256k1_jdouble_alt);
   timingtest(bmi,"secp256k1_jmixadd",call_secp256k1_jmixadd);
   timingtest(all,"secp256k1_jmixadd_alt",call_secp256k1_jmixadd_alt);
+  timingtest(!arm,"sha256_compress (1 block)",call_sha256_compress);
   timingtest(all,"sha3_keccak_f1600",call_sha3_keccak_f1600);
   timingtest(sha3,"sha3_keccak_f1600_alt",call_sha3_keccak_f1600_alt);
   timingtest(arm,"sha3_keccak_f1600_alt2",call_sha3_keccak_f1600_alt2);
