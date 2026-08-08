@@ -499,6 +499,10 @@ let check_insns () =
     "10110100xxxxxxxxxxxxxxxxxxxxxxxx";
     "10110101xxxxxxxxxxxxxxxxxxxxxxxx";
 
+    (*** tbz, tbnz ***)
+    "x0110110xxxxxxxxxxxxxxxxxxxxxxxx";
+    "x0110111xxxxxxxxxxxxxxxxxxxxxxxx";
+
     (*** ldp ***)
     "x010100x1xxxxxxxxxxxxxxxxxxxxxxx"; (* Preimmediate_Offset or Postimmediate_Offset *)
     "x01010010xxxxxxxxxxxxxxxxxxxxxxx"; (* Immediate_Offset *)
