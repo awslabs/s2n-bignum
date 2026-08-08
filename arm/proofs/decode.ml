@@ -543,14 +543,27 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     SOME (arm_DUP_GEN (QREG' Rd) (XREG' Rn) esize datasize)
 
+  | [0:1; q; 0b001110000:9; imm5:5; 0b000001:6; Rn:5; Rd:5] ->
+    // DUP (element): broadcast Vn.<T>[index] across Vd
+    let size = word_ctz imm5 in
+    if size > 3 then NONE else
+    if size = 3 /\ ~q then NONE else
+    let esize = 8 * 2 EXP size in
+    let idx = (val imm5) DIV (2 EXP (size + 1)) in
+    let datasize = if q then 128 else 64 in
+    SOME (arm_DUP_ELEM (QREG' Rd) (QREG' Rn) idx esize datasize)
+
   | [0:1; q; 0b101110000:9; Rm:5; 0:1; imm4:4; 0:1; Rn:5; Rd:5] ->
-    // EXT
+    // EXT (q=1, 128-bit Q-form; q=0, 64-bit D-form)
     if ~q /\ bit 3 imm4 then NONE // "UNDEFINED"
     else if q then
       let pos = (val imm4) * 8 in
       // datasize is fixed to 128.
       SOME (arm_EXT (QREG' Rd) (QREG' Rn) (QREG' Rm) pos)
-    else NONE
+    else
+      let pos = (val imm4) * 8 in
+      // datasize is 64; DREG' reads/writes the low 64 bits (zeroing the top).
+      SOME (arm_EXT (DREG' Rd) (DREG' Rn) (DREG' Rm) pos)
 
   | [0:1; q; 1:1; 0b011110:6; immh:4; abc:3; cmode:4; 0b01:2; defgh:5; Rd:5] ->
     // MOVI (op=1), USHR (Vector), USRA (Vector), SLI (Vector), SRI (vector)
@@ -1092,12 +1105,13 @@ let decode = new_definition `!w:int32. decode w =
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
       SOME (arm_UZP2 (QREG' Rd) (QREG' Rn) (QREG' Rm) (val esize))
 
-  | [0:1; 0:1; 0b001110:6; size:2; 0b100001001010:12; Rn:5; Rd:5] ->
-    // XTN
+  | [0:1; q; 0b001110:6; size:2; 0b100001001010:12; Rn:5; Rd:5] ->
+    // XTN (q=0, low half) / XTN2 (q=1, high half)
     if size = (word 0b11: (2)word) then NONE // "UNDEFINED"
     else
       let esize: (64)word = word_shl (word 8: (64)word) (val size) in
-      SOME (arm_XTN (QREG' Rd) (QREG' Rn) (val esize))
+      if q then SOME (arm_XTN2 (QREG' Rd) (QREG' Rn) (val esize))
+      else SOME (arm_XTN (QREG' Rd) (QREG' Rn) (val esize))
 
   | [0:1; q; 0b001110:6; size:2; 0:1; Rm:5; 0:1; op; 0b1110:4; Rn:5; Rd:5] ->
     // ZIP1 (op = 0) and ZIP2 (op = 1)
@@ -1120,6 +1134,14 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     SOME(arm_TBL2 (QREG' Rd) (QREG' Rn)
                   (QREG' (word_add Rn (word 1:(5)word)))
+                  (QREG' Rm) datasize)
+
+  | [0:1; q; 0b001110000:9; Rm:5; 0b010000:6; Rn:5; Rd:5] ->
+    // TBL (3-register table, len = 2)
+    let datasize = if q then 128 else 64 in
+    SOME(arm_TBL3 (QREG' Rd) (QREG' Rn)
+                  (QREG' (word_add Rn (word 1:(5)word)))
+                  (QREG' (word_add Rn (word 2:(5)word)))
                   (QREG' Rm) datasize)
 
   | [0b11001110000:11; Rm:5; 0:1; Ra:5; Rn:5; Rd:5] ->

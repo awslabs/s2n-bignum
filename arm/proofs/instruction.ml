@@ -1216,6 +1216,26 @@ let arm_DUP_GEN = define
             else word_duplicate (word_zx n:8 word) in
           (Rd := word_zx d:(128)word) s`;;
 
+(*** DUP (element): broadcast a single esize-bit lane (index idx) of Vn        ***)
+(*** across the destination.  esize is the element size; idx is the source     ***)
+(*** lane index.  datasize is 64 or 128.                                       ***)
+let arm_DUP_ELEM = define
+ `arm_DUP_ELEM Rd Rn idx esize datasize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        if datasize = 128 then
+          let d:(128)word =
+            if esize = 64 then word_duplicate (word_subword n (64*idx,64):64 word)
+            else if esize = 32 then word_duplicate (word_subword n (32*idx,32):32 word)
+            else if esize = 16 then word_duplicate (word_subword n (16*idx,16):16 word)
+            else word_duplicate (word_subword n (8*idx,8):8 word) in
+          (Rd := d) s
+        else
+          let d:64 word =
+            if esize = 32 then word_duplicate (word_subword n (32*idx,32):32 word)
+            else if esize = 16 then word_duplicate (word_subword n (16*idx,16):16 word)
+            else word_duplicate (word_subword n (8*idx,8):8 word) in
+          (Rd := word_zx d:(128)word) s`;;
+
 let arm_EON = define
  `arm_EON Rd Rm Rn =
     \s. let m = read Rm s
@@ -2324,6 +2344,22 @@ let arm_XTN = define
           let nlow:(64)word = usimd8 (\x. word_subword x (0,8): (8)word) n in
           (Rd := (word_zx nlow:(128)word)) s`;;
 
+(*** XTN2: same extract-narrow as XTN but the narrowed lanes are written into  ***)
+(*** the HIGH 64 bits of Vd, preserving its low 64 bits (Q=1 form).            ***)
+(*** esize is Rd's (destination, narrow) element size.                         ***)
+let arm_XTN2 = define
+ `arm_XTN2 Rd Rn esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\x. word_subword x (0,32): (32)word) n
+          else if esize = 16 then
+            usimd4 (\x. word_subword x (0,16): (16)word) n
+          else // esize=8
+            usimd8 (\x. word_subword x (0,8): (8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
 
 let word_split_lohi = new_definition
  `(word_split_lohi:(N tybit0)word->((N)word # (N)word)) x =
@@ -2493,6 +2529,24 @@ let arm_TBL2 = define
         let n1:int128 = read Rn1 s in
         let n2:int128 = read Rn2 s in
         let table:(256)word = word_join n2 n1 in
+        let m = read Rm s in
+        if datasize = 128 then
+          let d = usimd16 (\x. word_subword table (8 * val x,8):byte) m in
+          (Rd := d) s
+        else
+          let d =
+             usimd8 (\x. word_subword table (8 * val x,8):byte) (word_zx m:int64) in
+          (Rd := word_zx d:(128)word) s`;;
+
+(*** TBL (3-register table, len = 2): the lookup table is the concatenation    ***)
+(*** of three consecutive 128-bit registers (48 bytes); indices >= 48 read 0.  ***)
+let arm_TBL3 = define
+ `arm_TBL3 Rd Rn1 Rn2 Rn3 Rm datasize =
+    \s:armstate.
+        let n1:int128 = read Rn1 s in
+        let n2:int128 = read Rn2 s in
+        let n3:int128 = read Rn3 s in
+        let table:(384)word = word_join n3 (word_join n2 n1:(256)word) in
         let m = read Rm s in
         if datasize = 128 then
           let d = usimd16 (\x. word_subword table (8 * val x,8):byte) m in
@@ -3426,6 +3480,7 @@ let arm_CMGT_VEC_ALT =   EXPAND_SIMD_RULE arm_CMGT_VEC;;
 let arm_CMHI_VEC_ALT =   EXPAND_SIMD_RULE arm_CMHI_VEC;;
 let arm_CMLE_VEC_ZERO_ALT = EXPAND_SIMD_RULE arm_CMLE_VEC_ZERO;;
 let arm_CNT_ALT =        EXPAND_SIMD_RULE arm_CNT;;
+let arm_DUP_ELEM_ALT =   EXPAND_SIMD_RULE arm_DUP_ELEM;;
 let arm_DUP_GEN_ALT =    EXPAND_SIMD_RULE arm_DUP_GEN;;
 let arm_MLS_VEC_ALT =    EXPAND_SIMD_RULE arm_MLS_VEC;;
 let arm_MLA_VEC_ALT =    EXPAND_SIMD_RULE arm_MLA_VEC;;
@@ -3449,6 +3504,7 @@ let arm_SRI_VEC_ALT =    EXPAND_SIMD_RULE arm_SRI_VEC;;
 let arm_SUB_VEC_ALT =    EXPAND_SIMD_RULE arm_SUB_VEC;;
 let arm_TBL_ALT =        EXPAND_SIMD_RULE arm_TBL;;
 let arm_TBL2_ALT =       EXPAND_SIMD_RULE arm_TBL2;;
+let arm_TBL3_ALT =       EXPAND_SIMD_RULE arm_TBL3;;
 let arm_TRN1_ALT =       EXPAND_SIMD_RULE arm_TRN1;;
 let arm_TRN2_ALT =       EXPAND_SIMD_RULE arm_TRN2;;
 let arm_UADDLP_ALT =     EXPAND_SIMD_RULE arm_UADDLP;;
@@ -3470,6 +3526,7 @@ let arm_USRA_VEC_ALT =   EXPAND_SIMD_RULE arm_USRA_VEC;;
 let arm_UZP1_ALT =       EXPAND_SIMD_RULE arm_UZP1;;
 let arm_UZP2_ALT =       EXPAND_SIMD_RULE arm_UZP2;;
 let arm_XTN_ALT =        EXPAND_SIMD_RULE arm_XTN;;
+let arm_XTN2_ALT =       EXPAND_SIMD_RULE arm_XTN2;;
 let arm_ZIP1_ALT =       EXPAND_SIMD_RULE arm_ZIP1;;
 let arm_ZIP2_ALT =       EXPAND_SIMD_RULE arm_ZIP2;;
 let arm_LD2_ALT =        EXPAND_SIMD_RULE arm_LD2;;
@@ -3560,7 +3617,7 @@ let ARM_OPERATION_CLAUSES =
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
        arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMLE_VEC_ZERO_ALT; arm_CNT_ALT;
        arm_CSEL; arm_CSINC; arm_CSINV; arm_CSNEG;
-       arm_DUP_GEN_ALT;
+       arm_DUP_ELEM_ALT; arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR_VEC; arm_EOR3; arm_EXT; arm_EXTR;
        arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
@@ -3586,7 +3643,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
-       arm_TBL_ALT; arm_TBL2_ALT;
+       arm_TBL_ALT; arm_TBL2_ALT; arm_TBL3_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
        arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
@@ -3599,7 +3656,7 @@ let ARM_OPERATION_CLAUSES =
        arm_USHLL_VEC_ALT; arm_USHLL2_VEC_ALT;
        arm_USHR_VEC_ALT; arm_USRA_VEC_ALT; arm_UZP1_ALT;
        arm_UZP2_ALT;
-       arm_XAR; arm_XTN_ALT;
+       arm_XAR; arm_XTN_ALT; arm_XTN2_ALT;
        arm_ZIP1_ALT; arm_ZIP2_ALT;
     (*** 32-bit backups since the ALT forms are 64-bit only ***)
        INST_TYPE[`:32`,`:N`] arm_ADCS;
