@@ -280,6 +280,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | INC operand
    | JUMP condition operand
    | LEA operand bsid
+   | LEAVE
    | LZCNT operand operand
    | MOV operand operand
    | MOVD operand operand
@@ -385,6 +386,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPMULLW operand operand operand
    | VPOR operand operand operand
    | VPSHUFB operand operand operand
+   | VPSHUFD operand operand operand
    | VPSLLD operand operand operand
    | VPSLLVD operand operand operand
    | VPSLLQ operand operand operand
