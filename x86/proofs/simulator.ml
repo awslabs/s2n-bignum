@@ -431,6 +431,12 @@ let iclasses = iclasses_regreg @ iclasses_forms_reg @ iclasses_encodings_reg @
  [0x66; 0x44; 0x0f; 0x38; 0x00; 0xf8]; (* PSHUFB (%_% xmm15) (%_% xmm0) *)
  [0x66; 0x0f; 0x70; 0xc9; 0x55]; (*PSHUFD (%_% xmm1) (%_% xmm1) (Imm8 (word 85)) *)
  [0x66; 0x44; 0x0f; 0x70; 0xca; 0x5f]; (*PSHUFD (%_% xmm9) (%_% xmm2) (Imm8 (word 95)) *)
+ [0xc5; 0xf9; 0x70; 0xc1; 0x4e]; (* VPSHUFD (%_% xmm0) (%_% xmm1) (Imm8 (word 78)) *)
+ [0xc5; 0xf9; 0x70; 0xda; 0x4e]; (* VPSHUFD (%_% xmm3) (%_% xmm2) (Imm8 (word 78)) *)
+ [0xc5; 0x79; 0x70; 0xe1; 0x4e]; (* VPSHUFD (%_% xmm12) (%_% xmm1) (Imm8 (word 78)) *)
+ [0xc4; 0xc1; 0x79; 0x70; 0xea; 0x4e]; (* VPSHUFD (%_% xmm5) (%_% xmm10) (Imm8 (word 78)) *)
+ [0xc5; 0xfd; 0x70; 0xc1; 0x1b]; (* VPSHUFD (%_% ymm0) (%_% ymm1) (Imm8 (word 27)) -- 256-bit lane form *)
+ [0xc5; 0x7d; 0x70; 0xd2; 0xe4]; (* VPSHUFD (%_% ymm10) (%_% ymm2) (Imm8 (word 228)) *)
  [0x66; 0x0f; 0xef; 0xd3]; (*PXOR (%_% xmm2) (%_% xmm3) *)
  [0x66; 0x41; 0x0f; 0xef; 0xff]; (*PXOR (%_% xmm7) (%_% xmm15) *)
  [0x66; 0x0f; 0xdb; 0xd3]; (*PAND (%_% xmm2) (%_% xmm3) *)
@@ -1948,6 +1954,17 @@ let cosimulate_push_imm_harness() = fun () ->
    [0x48; 0x8d; 0x64; 0x24; 0xf8] (* lea rsp, [rsp - 8] *)
   ];;
 
+(* LEAVE, without REX or with REX or REX.W, which it ignores. RBP points
+   at slot k of the buffer, so LEAVE loads RBP from that slot and sets RSP
+   to RSP + 8 * k + 8, which the last LEA undoes. *)
+let cosimulate_leave_harness() = fun () ->
+  let k = Random.int 16 in
+  let leave_inst = el (Random.int 3) [[0xc9]; [0x40; 0xc9]; [0x48; 0xc9]] in
+  [[0x48; 0x8d; 0x6c; 0x24; 8 * k]; (* lea rbp, [rsp + 8 * k] *)
+   leave_inst; (* leave *)
+   [0x48; 0x8d; 0x64; 0x24; 0xf8 - 8 * k] (* lea rsp, [rsp - 8 * k - 8] *)
+  ];;
+
 (* Mode: base + scale*index + displacement
    Fixed: use of registers, displacement size = 8
    Randomized: addressing mode parameters *)
@@ -2097,6 +2114,8 @@ let mem_iclasses = [
   (cosimulate_mem_full_harness([0x0F; 0x42]), false);
   (cosimulate_mem_base_disp_harness([0x0F; 0x42]), false);
   (cosimulate_mem_rsp_harness([0x0F; 0x42]), false);
+  (* LEAVE *)
+  (cosimulate_leave_harness(), false);
   (* MOV r/m64, r64 *)
   (cosimulate_mem_full_harness([0x89]), false);
   (cosimulate_mem_base_disp_harness([0x89]), false);

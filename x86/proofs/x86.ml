@@ -1426,6 +1426,21 @@ let x86_POP = new_definition
          RSP := p' ,,
          dest := x) s`;;
 
+(* LEAVE = "mov rsp,rbp ; pop rbp".  Tears down the current stack frame: the
+   new RBP is loaded from the 8 bytes at the old RBP (the saved caller frame
+   pointer), and RSP is set to old-RBP + 8.  Modelled as a POP RBP whose stack
+   pointer is RBP rather than RSP.  The load goes through bytes64, as in
+   x86_RET and x86_POP_ALT, so that symbolic simulation can match it with
+   the bytes64 memory facts that PUSH leaves. *)
+let x86_LEAVE = new_definition
+ `x86_LEAVE s =
+        let p = read RBP s in
+        let x = read (memory :> bytes64 p) s in
+        let p' = word_add p (word 8) in
+        (events := CONS (EventLoad (p, 8)) (read events s) ,,
+         RSP := p' ,,
+         RBP := x) s`;;
+
 let x86_POPCNT = new_definition
  `x86_POPCNT dest src s =
     let x:N word = read src s in
@@ -2286,6 +2301,25 @@ let x86_VPSHUFB = new_definition
         (dest := (word_zx res):N word) s
       else
         let res = f128 (word_zx x) (word_zx ix) in
+        (dest := (word_zx res):N word) s`;;
+
+(* VEX-encoded PSHUFD: per-128-bit-lane doubleword shuffle controlled by the
+   same imm8 in each lane (the 4 2-bit fields of imm8 select, for each of the
+   4 result dwords, which source dword to copy).  For the 256-bit form the
+   identical control byte is applied independently to both 128-bit lanes (via
+   usimd2), matching the VPSHUFB pattern above.  VEX writes zero-extend the
+   containing ZMM (captured by the zerotop lens behind the dest component). *)
+let x86_VPSHUFD = new_definition
+  `x86_VPSHUFD dest src imm8 (s:x86state) =
+      let (x:N word) = read src s in
+      let od = read imm8 s in
+      let f128 = (\(w:int128).
+        usimd4 (\(sel:(2)word). word_subword w ((val sel)*32,32)) od) in
+      if dimindex(:N) = 256 then
+        let res:(256)word = usimd2 f128 (word_zx x) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = f128 (word_zx x) in
         (dest := (word_zx res):N word) s`;;
 
 let x86_VPSUBB = new_definition
@@ -3426,6 +3460,8 @@ let x86_execute = define
                         (val(read (OPERAND8 src s) s) MOD 32)
          | 8 -> x86_RCR (OPERAND8 dest s)
                         (val(read (OPERAND8 src s) s) MOD 32)) s)) s
+    | LEAVE ->
+        x86_LEAVE s
     | RET ->
         x86_RET s
     | ROL dest src ->
@@ -3848,6 +3884,13 @@ let x86_execute = define
                              (OPERAND256 src2 s)
         | 128 -> x86_VPSHUFB (OPERAND128 dest s) (OPERAND128 src1 s)
                              (OPERAND128 src2 s)) s)) s
+    | VPSHUFD dest src imm8 ->
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          256 -> x86_VPSHUFD (OPERAND256 dest s) (OPERAND256 src s)
+                             (OPERAND8 imm8 s)
+        | 128 -> x86_VPSHUFD (OPERAND128 dest s) (OPERAND128 src s)
+                             (OPERAND8 imm8 s)) s)) s
     | VPSLLVD dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -4946,6 +4989,7 @@ let x86_VPMULHW_ALT = EXPAND_SIMD_RULE x86_VPMULHW;;
 let x86_VPMULLD_ALT = EXPAND_SIMD_RULE x86_VPMULLD;;
 let x86_VPMULLW_ALT = EXPAND_SIMD_RULE x86_VPMULLW;;
 let x86_VPSHUFB_ALT = EXPAND_SIMD_RULE x86_VPSHUFB;;
+let x86_VPSHUFD_ALT = EXPAND_SIMD_RULE x86_VPSHUFD;;
 let x86_VPSLLD_ALT = EXPAND_SIMD_RULE x86_VPSLLD;;
 let x86_VPSLLVD_ALT = EXPAND_SIMD_RULE x86_VPSLLVD;;
 let x86_VPSLLQ_ALT = EXPAND_SIMD_RULE x86_VPSLLQ;;
@@ -5008,7 +5052,7 @@ let X86_OPERATION_CLAUSES =
     x86_AESKEYGENASSIST; x86_AND;
     x86_BSF; x86_BSR; x86_BSWAP; x86_BT; x86_BTC_ALT; x86_BTR_ALT; x86_BTS_ALT;
     x86_CALL_ALT; x86_CLC; x86_CLD; x86_CMC; x86_CMOV; x86_CMP_ALT; x86_DEC;
-    x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LZCNT;
+    x86_ENDBR64; x86_IMUL; x86_IMUL2; x86_IMUL3; x86_INC; x86_LEA; x86_LEAVE; x86_LZCNT;
     x86_MOV; x86_MOVAPS; x86_MOVDQA; x86_MOVDQU; x86_MOVD; x86_MOVQ; x86_VMOVD; x86_VMOVQ;
     x86_VMOVHPD; x86_MOVSX; x86_MOVUPS; x86_MOVSB_ALT;
     x86_MOVZX; x86_MUL2; x86_MULX4; x86_NEG; x86_NOP; x86_NOP_N; x86_NOT; x86_OR;
@@ -5026,7 +5070,7 @@ let X86_OPERATION_CLAUSES =
     x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPBROADCASTW_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
     x86_VMOVDQA_ALT; x86_VMOVDQU_ALT; x86_VPMADDUBSW_ALT; x86_VPMADDWD_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPACKUSWB_ALT; x86_VPBLENDVB_ALT;
-    x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPCLMULQDQ_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT;
+    x86_VPBLENDD_ALT; x86_VPBLENDW_ALT; x86_VPCLMULQDQ_ALT; x86_VPERMD_ALT; x86_VPERMQ_ALT; x86_VPSHUFB_ALT; x86_VPSHUFD_ALT;
     x86_VPUNPCKLQDQ_ALT; x86_VPUNPCKHQDQ_ALT; x86_VPBROADCASTQ_ALT; x86_VPERM2I128_ALT;
     x86_VMOVMSKPS_ALT; x86_VPABSD_ALT; x86_VPMOVMSKB_ALT; x86_VPMOVSXBD_ALT;
     x86_VPMOVZXBD_ALT; x86_VPMOVZXBW_ALT; x86_VPSUBB_ALT; x86_VPTEST_ALT; x86_VZEROUPPER_ALT;

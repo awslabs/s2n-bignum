@@ -52,6 +52,7 @@
 : jmp$
 : lea$
 : leaq$
+: leave$
 : mov$
 : movabs$
 : movabsq$
@@ -174,6 +175,7 @@
 : vpmullw$
 : vpor$
 : vpshufb$
+: vpshufd$
 : vpslld$
 : vpsllvd$
 : vpsllq$
