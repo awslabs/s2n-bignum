@@ -318,7 +318,6 @@ let DIMINDEX_12 = DIMINDEX_CONV `dimindex(:12)`;;
 
 let MLKEM_FROMBYTES_CORRECT = prove(
     `!r a (l:(12 word) list) pc.
-        aligned 32 a /\
         aligned 32 r /\
         nonoverlapping (word pc, 818) (a, 384) /\
         nonoverlapping (word pc, 818) (r, 512) /\
@@ -420,7 +419,6 @@ let MLKEM_FROMBYTES_CORRECT = prove(
 
 let MLKEM_FROMBYTES_NOIBT_SUBROUTINE_CORRECT = prove(
     `!r a (l:(12 word) list) pc.
-        aligned 32 a /\
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_tmc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_tmc) (r, 512) /\
@@ -444,7 +442,6 @@ let MLKEM_FROMBYTES_NOIBT_SUBROUTINE_CORRECT = prove(
 
 let MLKEM_FROMBYTES_SUBROUTINE_CORRECT = prove(
     `!r a (l:(12 word) list) pc.
-        aligned 32 a /\
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_mc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_mc) (r, 512) /\
@@ -481,7 +478,6 @@ let mlkem_frombytes_windows_tmc_EXEC = X86_MK_EXEC_RULE mlkem_frombytes_windows_
 
 let MLKEM_FROMBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
     `!r a (l:(12 word) list) pc stackpointer returnaddress.
-        aligned 32 a /\
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_tmc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_tmc) (r, 512) /\
@@ -583,7 +579,6 @@ let MLKEM_FROMBYTES_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove(
 
 let MLKEM_FROMBYTES_WINDOWS_SUBROUTINE_CORRECT = prove(
     `!r a (l:(12 word) list) pc stackpointer returnaddress.
-        aligned 32 a /\
         aligned 32 r /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_mc) (a, 384) /\
         nonoverlapping (word pc, LENGTH mlkem_frombytes_windows_mc) (r, 512) /\
