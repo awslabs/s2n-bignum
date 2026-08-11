@@ -90,6 +90,26 @@ let WORD_SWAP_HALVES_INVOLUTION = prove(
       (64,128):(128)word = a`,
   CONV_TAC WORD_BLAST);;
 
+(* ins->ext runtime opt (2026-08-11): the GHASH-tail Karatsuba mids now use
+   `ext vD.16b,vN.16b,vN.16b,#8` in place of `ins vD.d[0],vN.d[1]` (a false-dep
+   break; both consumed lane-0-only, values identical).  The stepper models
+   `ext vD,vN,vN,#8` on a 128-bit register as
+   `word_subword (word_join vN vN:256 word) (64,128):128 word` (a rot-by-64).
+   Every one of the 9 sites consumes ONLY lane 0 downstream (via `eor .8b` or
+   `pmull .1d`), i.e. the projection `word_subword (<ext form>) (0,64)`, which
+   is exactly the plain lane `word_subword vN (64,64)` the old `ins` form gave.
+   Collapsing this COMPOSED projection (NOT the standalone register — that would
+   false-fire on the byteswap/REV64 machinery, which uses the same
+   word_subword(word_join a a)(64,128) shape) restores the pre-opt syntactic
+   form, so ABBREV_INNER_PMULS's setify qq-numbering and every downstream tail
+   bridge match unchanged.  This is the same identity as SJ_COLLAPSE
+   (mainloop.ml), lifted here so the per-step normalizer below can fire it. *)
+let EXT8_LANE0_IS_SUBWORD_HI = prove(
+  `!(w:(128)word).
+    word_subword (word_subword (word_join w w:(256)word) (64,128):(128)word) (0,64):(64)word =
+    word_subword w (64,64)`,
+  GEN_TAC THEN CONV_TAC WORD_BLAST);;
+
 (* The xi_p store value is the per-lane byte-reverse of the GHASH result R
    (rev64 on each 64-bit lane); that equals word_bytereverse of the whole 128. *)
 let REV64_LANES_EQ = prove(
@@ -334,7 +354,7 @@ let SIMD_SIMPLIFY_ASSUM_TAC =
    normalize nested subwords.  Run after each GHASH step so terms stay small. *)
 let GCM_SIMD_SIMPLIFY_CORE_TAC =
   SIMD_SIMPLIFY_ASSUM_TAC THEN
-  RULE_ASSUM_TAC (REWRITE_RULE [WORD_SWAP_HALVES_INVOLUTION]) THEN
+  RULE_ASSUM_TAC (REWRITE_RULE [WORD_SWAP_HALVES_INVOLUTION; EXT8_LANE0_IS_SUBWORD_HI]) THEN
   RULE_ASSUM_TAC(fun th ->
     try CONV_RULE(RAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) th
     with _ -> th);;
