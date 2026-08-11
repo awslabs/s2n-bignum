@@ -1047,9 +1047,9 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
-  0x6e084712;       (* arm_INS Q18 Q24 0 64 64 128 *)
+  0x6e184312;       (* arm_EXT Q18 Q24 Q24 64 *)
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
-  0x6e08451b;       (* arm_INS Q27 Q8 0 64 64 128 *)
+  0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0xce01752c;       (* arm_EOR3 Q12 Q9 Q1 Q29 *)
   0x4ef9e111;       (* arm_PMULL2_VEC Q17 Q8 Q25 64 *)
   0x2e281f7b;       (* arm_EOR_VEC Q27 Q27 Q8 64 *)
@@ -1060,7 +1060,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x0f00e410;       (* arm_MOVI D16 (word 0) *)
-  0x6e08451b;       (* arm_INS Q27 Q8 0 64 64 128 *)
+  0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
   0x4ef7e11c;       (* arm_PMULL2_VEC Q28 Q8 Q23 64 *)
   0x0ef7e11a;       (* arm_PMULL_VEC Q26 Q8 Q23 64 *)
@@ -1073,7 +1073,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
   0x4ef6e11c;       (* arm_PMULL2_VEC Q28 Q8 Q22 64 *)
-  0x6e08451b;       (* arm_INS Q27 Q8 0 64 64 128 *)
+  0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x2e281f7b;       (* arm_EOR_VEC Q27 Q27 Q8 64 *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
@@ -1087,7 +1087,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x0f00e410;       (* arm_MOVI D16 (word 0) *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
-  0x6e08451b;       (* arm_INS Q27 Q8 0 64 64 128 *)
+  0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x0f00e410;       (* arm_MOVI D16 (word 0) *)
   0x0ef4e11a;       (* arm_PMULL_VEC Q26 Q8 Q20 64 *)
@@ -1104,7 +1104,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x3dc010d8;       (* arm_LDR Q24 X6 (Immediate_Offset (word 64)) *)
-  0x6e08451b;       (* arm_INS Q27 Q8 0 64 64 128 *)
+  0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
   0xce05752c;       (* arm_EOR3 Q12 Q9 Q5 Q29 *)
   0x2e281f7b;       (* arm_EOR_VEC Q27 Q27 Q8 64 *)
@@ -1120,7 +1120,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x3dc00cd7;       (* arm_LDR Q23 X6 (Immediate_Offset (word 48)) *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
-  0x6e08451b;       (* arm_INS Q27 Q8 0 64 64 128 *)
+  0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x0ef7e11a;       (* arm_PMULL_VEC Q26 Q8 Q23 64 *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
   0xce06752c;       (* arm_EOR3 Q12 Q9 Q6 Q29 *)
@@ -1133,7 +1133,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x6e3c1e31;       (* arm_EOR_VEC Q17 Q17 Q28 128 *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
-  0x6e08451b;       (* arm_INS Q27 Q8 0 64 64 128 *)
+  0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x3dc008d6;       (* arm_LDR Q22 X6 (Immediate_Offset (word 32)) *)
   0x2e281f7b;       (* arm_EOR_VEC Q27 Q27 Q8 64 *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
@@ -1153,7 +1153,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x3dc000d4;       (* arm_LDR Q20 X6 (Immediate_Offset (word 0)) *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x6e301d08;       (* arm_EOR_VEC Q8 Q8 Q16 128 *)
-  0x6e084510;       (* arm_INS Q16 Q8 0 64 64 128 *)
+  0x6e084110;       (* arm_EXT Q16 Q8 Q8 64 *)
   0x4ef4e11c;       (* arm_PMULL2_VEC Q28 Q8 Q20 64 *)
   0x2e281e10;       (* arm_EOR_VEC Q16 Q16 Q8 64 *)
   0x0ef4e11a;       (* arm_PMULL_VEC Q26 Q8 Q20 64 *)
@@ -1264,6 +1264,22 @@ let AESV8_GCM_8X_DEC_256_WB_GUARD = prove
 (* Shared band machinery (KEEPGH stepper + the Q19 byte-reversed-xi identity).*)
 (* ------------------------------------------------------------------------- *)
 
+(* ins->ext runtime opt (2026-08-11): the GHASH-tail Karatsuba mids now use
+   `ext vD.16b,vN.16b,vN.16b,#8` in place of `ins vD.d[0],vN.d[1]` (a false-dep
+   break; both consumed lane-0-only, values identical).  The stepper models
+   `ext vD,vN,vN,#8` on a 128-bit register as
+   `word_subword (word_join vN vN:256 word) (64,128):128 word` (a rot-by-64).
+   The syntactic-form fix lives ONCE in the per-step normalizer
+   GCM_SIMD_SIMPLIFY_CORE_TAC (aesv8_gcm_8x_dec_256_lemmas.ml): the lemma
+   EXT8_LANE0_IS_SUBWORD_HI collapses the COMPOSED lane-0 projection
+   `word_subword (<ext form>) (0,64)` (the only way any of the 9 sites consumes
+   the ext register — via eor .8b / pmull .1d) back to `word_subword vN (64,64)`,
+   exactly the plain lane the old `ins` form produced.  So every tail bridge sees
+   pre-opt-identical operand shapes and ABBREV_INNER_PMULS's qq-numbering is
+   preserved.  (This supersedes s087's EXT_JOIN_NORM, which rewrote the whole
+   ext REGISTER to a join-of-lanes form and thereby false-fired on the byteswap/
+   REV64 register shape, regressing the 2-block band.)  AUTO_MERGE_MIDS_KM_TAC
+   below is kept as a numbering-agnostic safety net for the N>=3 mid pairing. *)
 
 (* KEEPGH stepper (copied from le8block.ml; wb.ml does not load le8block) *)
 let DISCARD_OLDSTATE_KEEPGH_TAC s =
@@ -1721,6 +1737,40 @@ let WA_UNIFY_BB_TAC : tactic = fun (asl,w) ->
   let wa_eq = MATCH_MP (ISPECL [rand(rator rwa); rand rwa; rand(rator lwa); rand lwa] PMUL_CONG_128)
                 (CONJ in_eq mult_eq) in
   GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [wa_eq] (asl,w);;
+
+(* ins->ext runtime opt (2026-08-11): NAME-AGNOSTIC replacement for the per-band
+   hardcoded `MERGE_QQPAIR_KM_TAC "qq4'" "qq9"` + `FOLD_MID_HPOW_KM [...]` lines.
+   The per-step normalizer (GCM_SIMD_SIMPLIFY_CORE_TAC + EXT8_LANE0_IS_SUBWORD_HI)
+   collapses the ext-form Karatsuba-mid lanes back to the ins-form lanes, but if
+   ABBREV_INNER_PMULS ever assigns DIFFERENT qq numbers than the pre-opt proof the
+   hardcoded qq-names no longer exist.  Instead of re-deriving names per band
+   (fragile), this pairs the leftover mid pmuls by H-power (which keys off the KEY
+   operand h2/h3/.., unaffected by the data-side ext form): after MERGE_ANY_TAC has
+   merged everything it can, the only residual mismatch is a set of karatsuba-mid
+   qq atoms UNIQUE to the LHS vs UNIQUE to the RHS; each LHS-unique qq merges with
+   the RHS-unique qq of the SAME H-power (MERGE_QQPAIR_KM_TAC, closes by WORD_BLAST
+   so it is form-insensitive).  A numbering-agnostic safety net robust across
+   WB_TAIL_3..8 + prepretail regardless of the exact operand form. *)
+let AUTO_MERGE_MIDS_KM_TAC : tactic = fun (asl,w) ->
+  let rec xleaves t = match t with
+    | Comb(Comb(Const("word_xor",_),a),b) -> xleaves a @ xleaves b | _ -> [t] in
+  let qqs_in t = setify(map (fun v->fst(dest_var v))
+     (List.filter (fun v-> let n=fst(dest_var v) in String.length n>=2 && String.sub n 0 2="qq")
+        (frees t))) in
+  let hpow n = try let (_,th)=List.find(fun(_,th)->let c=concl th in
+       is_eq c && is_var(rhs c) && fst(dest_var(rhs c))=n) asl in pmul_mult_hpow(lhs(concl th))
+     with _->"?" in
+  let ll = xleaves(lhs w) and rl = xleaves(rhs w) in
+  let dl = subtract (setify ll) (setify rl) and dr = subtract (setify rl) (setify ll) in
+  let lqq = subtract (setify(List.concat_map qqs_in dl)) (setify(List.concat_map qqs_in dr)) in
+  let rqq = subtract (setify(List.concat_map qqs_in dr)) (setify(List.concat_map qqs_in dl)) in
+  let used = ref [] in
+  let pairs = List.filter_map (fun ln ->
+     let hp = hpow ln in
+     try let rn = List.find (fun rn -> not(mem rn !used) && hpow rn = hp) rqq in
+         used := rn :: !used; Some(ln,rn)
+     with _ -> None) lqq in
+  (EVERY (map (fun (a,b) -> MERGE_QQPAIR_KM_TAC a b) pairs)) (asl,w);;
 
 (* OPTIMIZED STEPPING (2026-07-18): stores window 283-392 uses the Q18-latest
    per-step-discard stepper + midacc atomization instead of all-KEEPGH
@@ -2421,9 +2471,7 @@ let WB_TAIL_3_TAC =
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
    ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
-   MERGE_QQPAIR_KM_TAC "qq4'" "qq9" THEN
-   MERGE_QQPAIR_KM_TAC "qq5'" "qq14" THEN
-   MAP_EVERY FOLD_MID_HPOW_KM ["H2"] THEN
+   AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
    GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
@@ -2498,9 +2546,7 @@ let WB_TAIL_4_TAC =
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
    ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
-   MERGE_QQPAIR_KM_TAC "qq6'" "qq14" THEN
-   MERGE_QQPAIR_KM_TAC "qq7'" "qq19" THEN
-   MAP_EVERY FOLD_MID_HPOW_KM ["H3";"H2"] THEN
+   AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
    GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
@@ -2578,9 +2624,7 @@ let WB_TAIL_5_TAC =
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
    ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
-   MERGE_QQPAIR_KM_TAC "qq8'" "qq19" THEN
-   MERGE_QQPAIR_KM_TAC "qq9'" "qq24" THEN
-   MAP_EVERY FOLD_MID_HPOW_KM ["H4";"H3";"H2"] THEN
+   AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
    GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
@@ -2660,9 +2704,7 @@ let WB_TAIL_6_TAC =
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
    ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
-   MERGE_QQPAIR_KM_TAC "qq10'" "qq24" THEN
-   MERGE_QQPAIR_KM_TAC "qq11'" "qq29" THEN
-   MAP_EVERY FOLD_MID_HPOW_KM ["H5";"H4";"H3";"H2"] THEN
+   AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
    GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
@@ -2746,9 +2788,7 @@ let WB_TAIL_7_TAC =
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
    ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
-   MERGE_QQPAIR_KM_TAC "qq12'" "qq29" THEN
-   MERGE_QQPAIR_KM_TAC "qq13'" "qq34" THEN
-   MAP_EVERY FOLD_MID_HPOW_KM ["H6";"H5";"H4";"H3";"H2"] THEN
+   AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
    GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
@@ -2837,10 +2877,7 @@ let WB_TAIL_8_TAC =
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
    ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
-   MERGE_QQPAIR_KM_TAC "qq14'" "qq28" THEN
-   MERGE_QQPAIR_KM_TAC "qq15'" "qq34" THEN
-   MERGE_QQPAIR_KM_TAC "qq16'" "qq39" THEN
-   MAP_EVERY FOLD_MID_HPOW_KM ["H6";"H5";"H4";"H3";"H2"] THEN
+   AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
    GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
