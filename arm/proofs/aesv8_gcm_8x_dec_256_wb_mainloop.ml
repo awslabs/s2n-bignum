@@ -1665,8 +1665,20 @@ let DISCARD_STALE_Q18_TAC : tactic = fun (asl,w) ->
            match state_num_of_q18_fact th with
            | Some k -> k < mx
            | None -> false) (asl,w);;
+(* SPEED (refine-084): the per-step normalizer is GCM_SIMD_SIMPLIFY_CORE_TAC, NOT
+   the double-pass GCM_SIMD_SIMPLIFY_TAC (= CORE THEN CORE).  The 2nd CORE pass is a
+   full RULE_ASSUM traversal of the whole carried GHASH pile; on the tail sim it is a
+   MEASURED no-op on 114/122 steps (it only folds the fresh REV64 byte-tree at the ~8
+   block-boundary steps, and THAT fold is re-done downstream by the Q19 bridge's
+   WORD_BYTEREVERSE_REVERSEFIELDS/RF8_SUBWORD rewrites).  Dropping it keeps every tail
+   (WB_TAIL_3..8, the sole consumers) closing hyps=0 while cutting the pile-driven
+   rescan: the per-step cost had GROWN 0.59->0.94s across 271-392 (pile-driven, not the
+   position-invariant ARM_STEPS wall).  WB_TAIL_GEN2_8 179.8s->150.2s (-16.5%), GEN2_3
+   also hyps=0.  Mirrors the s082 KEEPDATA single-pass fix on this file's OTHER stepper;
+   the tails' Q18LATEST stepper had never been converted.  If a future edit needs the
+   fixpoint here, restore GCM_SIMD_SIMPLIFY_TAC. *)
 let ARM_STEPS_FOLD_Q18LATEST_TAC exec snums =
-  MAP_EVERY (fun s -> ARM_VERBOSE_STEP_TAC exec s THEN GCM_SIMD_SIMPLIFY_TAC THEN
+  MAP_EVERY (fun s -> ARM_VERBOSE_STEP_TAC exec s THEN GCM_SIMD_SIMPLIFY_CORE_TAC THEN
               DISCARD_STALE_Q18_TAC THEN DISCARD_OLDSTATE_KEEPQ18_TAC s THEN CLARIFY_TAC)
     (statenames "s" snums);;
 (* MERGE_QQPAIR / FOLD_MID_HPOW variants that unfold karatsuba_mid inside the
@@ -2171,7 +2183,7 @@ let WB_TAIL_1_TAC =
   SUBGOAL_THEN `read Q12 (s333:armstate) = word_xor cph (aes256_encrypt (ctr0:int128)
       [k0:int128;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14])`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q12 s333`)) (concl asm)
+       if (try lhs(concl asm) = `read Q12 s333` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q12 s333` with _ -> false)
@@ -2193,7 +2205,7 @@ let WB_TAIL_1_TAC =
      polyval_dot (word_xor (word_bytereverse xi) (word_bytereverse cph))
        (byteswap128 h)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s341`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s341` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s341` with _ -> false)
@@ -2270,7 +2282,7 @@ let WB_TAIL_1_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (342--343) THEN
   SUBGOAL_THEN `read Q19 (s343:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s343`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s343` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s343` with _ -> false)
@@ -2294,7 +2306,7 @@ let WB_TAIL_2_TAC =
   SUBGOAL_THEN `read Q12 (s319:armstate) = word_xor cph0 (aes256_encrypt (ctr0:int128)
       [k0:int128;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14])`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q12 s319`)) (concl asm)
+       if (try lhs(concl asm) = `read Q12 s319` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q12 s319` with _ -> false)
@@ -2314,7 +2326,7 @@ let WB_TAIL_2_TAC =
       (gcm_ctr_inc ctr0:int128)
       [k0:int128;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14])`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q12 s325`)) (concl asm)
+       if (try lhs(concl asm) = `read Q12 s325` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q12 s325` with _ -> false)
@@ -2341,7 +2353,7 @@ let WB_TAIL_2_TAC =
      ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
        [word_bytereverse cph0; word_bytereverse cph1]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s355`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s355` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s355` with _ -> false)
@@ -2354,7 +2366,7 @@ let WB_TAIL_2_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (356--357) THEN
   SUBGOAL_THEN `read Q19 (s357:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s357`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s357` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s357` with _ -> false)
@@ -2382,7 +2394,7 @@ let WB_TAIL_3_TAC =
      ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
        [word_bytereverse cph0; word_bytereverse cph1; word_bytereverse cph2]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s366`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s366` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s366` with _ -> false)
@@ -2423,7 +2435,7 @@ let WB_TAIL_3_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (367--368) THEN
   SUBGOAL_THEN `read Q19 (s368:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s368`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s368` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s368` with _ -> false)
@@ -2457,7 +2469,7 @@ let WB_TAIL_4_TAC =
        [word_bytereverse cph0; word_bytereverse cph1;
         word_bytereverse cph2; word_bytereverse cph3]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s377`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s377` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s377` with _ -> false)
@@ -2501,7 +2513,7 @@ let WB_TAIL_4_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (378--379) THEN
   SUBGOAL_THEN `read Q19 (s379:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s379`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s379` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s379` with _ -> false)
@@ -2535,7 +2547,7 @@ let WB_TAIL_5_TAC =
        [word_bytereverse cph0; word_bytereverse cph1;
         word_bytereverse cph2; word_bytereverse cph3; word_bytereverse cph4]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s385`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s385` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s385` with _ -> false)
@@ -2581,7 +2593,7 @@ let WB_TAIL_5_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (386--387) THEN
   SUBGOAL_THEN `read Q19 (s387:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s387`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s387` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s387` with _ -> false)
@@ -2615,7 +2627,7 @@ let WB_TAIL_6_TAC =
        [word_bytereverse cph0; word_bytereverse cph1; word_bytereverse cph2;
         word_bytereverse cph3; word_bytereverse cph4; word_bytereverse cph5]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s393`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s393` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s393` with _ -> false)
@@ -2663,7 +2675,7 @@ let WB_TAIL_6_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (394--395) THEN
   SUBGOAL_THEN `read Q19 (s395:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s395`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s395` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s395` with _ -> false)
@@ -2699,7 +2711,7 @@ let WB_TAIL_7_TAC =
         word_bytereverse cph3; word_bytereverse cph4; word_bytereverse cph5;
         word_bytereverse cph6]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s399`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s399` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s399` with _ -> false)
@@ -2750,7 +2762,7 @@ let WB_TAIL_7_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (400--401) THEN
   SUBGOAL_THEN `read Q19 (s401:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s401`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s401` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s401` with _ -> false)
@@ -2787,7 +2799,7 @@ let WB_TAIL_8_TAC =
         word_bytereverse cph3; word_bytereverse cph4; word_bytereverse cph5;
         word_bytereverse cph6; word_bytereverse cph7]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s399`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s399` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s399` with _ -> false)
@@ -2842,7 +2854,7 @@ let WB_TAIL_8_TAC =
   ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (400--401) THEN
   SUBGOAL_THEN `read Q19 (s401:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if can (find_term (fun t -> t = `read Q19 s401`)) (concl asm)
+       if (try lhs(concl asm) = `read Q19 s401` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
      if is_eq(concl th) && (try lhs(concl th) = `read Q19 s401` with _ -> false)
@@ -3908,7 +3920,14 @@ let WBN_FRONT_STEP259_TAC =
   ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (85--173) THEN DISCARD_STALE_Q30_TAC THEN
   ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (174--177) THEN
   GCM_SIMD_SIMPLIFY_TAC THEN DISCARD_STALE_Q30_TAC THEN
-  ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (178--189) THEN
+  (* s083 speed: 178-189 is the GHASH REV64 window (Q19 byte-tree fold).  The
+     keep-everything ARM_VSTEPS_FOLD_TAC held a ~130k-char pile across all 12
+     steps (~29s); ARM_STEPS_FOLD_DISCARD_TAC folds Q19 BEFORE discarding old
+     states each step (the lemmas.ml "step and simplify as we go" idiom), so the
+     pile stays flat (~6.5s).  No store read-back is needed in this window, so
+     the per-step discard is safe -- proof still closes hyps=0.  Scoped to this
+     _259 stepper only; the dead WBN_FRONT_STEP_TAC below is left unchanged. *)
+  ARM_STEPS_FOLD_DISCARD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (178--189) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[Q19_BREVXI]) THEN DISCARD_STALE_Q30_TAC THEN
   ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (190--254) THEN
   DISCARD_STALE_Q30_TAC THEN GCM_SIMD_SIMPLIFY_TAC THEN
@@ -9930,8 +9949,18 @@ let DISCARD_OLDSTATE_KEEPDATA_TAC s =
     let us = unbound_statevars_of_read [] (concl thm) in
     if us = [] || us = [v] then false else true);;
 let DISCARD_STALE_DATA_TAC = MAP_EVERY DISCARD_STALE_QREG_TAC wbn_datawords_0_19;;
+(* SPEED (session-082, tactic-axis profile): the per-step fold here uses ONE pass of
+   GCM_SIMD_SIMPLIFY_CORE_TAC, not the shared double-pass GCM_SIMD_SIMPLIFY_TAC.  The
+   2nd pass exists (in the lemmas file) to reach a REV64 fixpoint that a single pass
+   can miss on ~6/278 steps -- but under KEEPDATA (which discards stale old-state reads
+   after every step) the body sim reaches its self-contained cut-points WITHOUT that
+   extra fold: WBN_MAIN_LOOP and WBN_PREPRETAIL_EXT2 (the ONLY two KEEPDATA-SIMP users)
+   both re-prove hyps=0 with a single core pass.  Measured on a warm dev-load:
+   WBN_MAIN_LOOP 188.2s->147.0s, WBN_PREPRETAIL 136.9s->103.5s (the 2nd pass was a
+   full pile-traversal no-op on 272/278 steps).  KEEPGH (tails/fronts) and every other
+   consumer keep the unchanged double-pass GCM_SIMD_SIMPLIFY_TAC. *)
 let ARM_STEPS_FOLD_KEEPDATA_TAC exec snums =
-  MAP_EVERY (fun s -> ARM_VERBOSE_STEP_TAC exec s THEN GCM_SIMD_SIMPLIFY_TAC THEN
+  MAP_EVERY (fun s -> ARM_VERBOSE_STEP_TAC exec s THEN GCM_SIMD_SIMPLIFY_CORE_TAC THEN
               DISCARD_STALE_DATA_TAC THEN DISCARD_OLDSTATE_KEEPDATA_TAC s THEN CLARIFY_TAC)
     (statenames "s" snums);;
 (* NO-SIMPLIFY variant for the reduce + store windows: GCM_SIMD_SIMPLIFY on the
