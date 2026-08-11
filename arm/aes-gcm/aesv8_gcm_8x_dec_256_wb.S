@@ -1315,11 +1315,11 @@ L256_dec_blocks_more_than_7:	//blocks	left >  7
 	ldr	q9, [x0], #16				//AES final-6 block - load ciphertext
 	st1	{ v12.16b}, [x2], #16				//AES final-7 block  - store result
 
-	ins	v18.d[0], v24.d[1]					//GHASH final-7 block - mid
+	ext	v18.16b, v24.16b, v24.16b, #8			//GHASH final-7 block - mid
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-7 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
 	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//eor3 v12.16b, v9.16b, v1.16b, v29.16b				//AES final-6 block - result
 
 	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
@@ -1337,7 +1337,7 @@ L256_dec_blocks_more_than_6:	//blocks	left >  6
 	ldr	q9, [x0], #16				//AES final-5 block - load ciphertext
 	movi	v16.8b, #0						//supress further partial tag feed in
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-6 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-6 block - mid
 	st1	{ v12.16b}, [x2], #16				//AES final-6 block - store result
 	pmull2	v28.1q, v8.2d, v23.2d				//GHASH final-6 block - high
 
@@ -1358,7 +1358,7 @@ L256_dec_blocks_more_than_5:	//blocks	left >  5
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
 	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-5 block - high
-	ins	v27.d[0], v8.d[1]					//GHASH final-5 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-5 block - mid
 
 	ldr	q9, [x0], #16				//AES final-4 block - load ciphertext
 
@@ -1382,7 +1382,7 @@ L256_dec_blocks_more_than_4:	//blocks	left >  4
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-4 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-4 block - mid
 	ldr	q9, [x0], #16				//AES final-3 block - load ciphertext
 
 	movi	v16.8b, #0						//supress further partial tag feed in
@@ -1410,7 +1410,7 @@ L256_dec_blocks_more_than_3:	//blocks	left >  3
 	ldr	q9, [x0], #16				//AES final-2 block - load ciphertext
 	ldr	q24, [x6, #64]				//load h4k | h3k
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-3 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-3 block - mid
 	st1	{ v12.16b}, [x2], #16			 	//AES final-3 block - store result
 
 	eor3	v12.16b, v9.16b, v5.16b, v29.16b	//eor3 v12.16b, v9.16b, v5.16b, v29.16b				//AES final-2 block - result
@@ -1437,7 +1437,7 @@ L256_dec_blocks_more_than_2:	//blocks	left >  2
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-2 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-2 block - mid
 
 	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-2 block - low
 	st1	{ v12.16b}, [x2], #16			  	//AES final-2 block - store result
@@ -1458,7 +1458,7 @@ L256_dec_blocks_more_than_1:	//blocks	left >  1
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v27.d[0], v8.d[1]					//GHASH final-1 block - mid
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-1 block - mid
 	ldr	q22, [x6, #32]				//load h2l | h2h
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-1 block - mid
@@ -1492,7 +1492,7 @@ L256_dec_blocks_less_than_1:	//final	whole block (whole-blocks contract: never p
 
 	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
 
-	ins	v16.d[0], v8.d[1]					//GHASH final block - mid
+	ext	v16.16b, v8.16b, v8.16b, #8					//GHASH final block - mid
 	pmull2	v28.1q, v8.2d, v20.2d				//GHASH final block - high
 
 	eor	v16.8b, v16.8b, v8.8b				//GHASH final block - mid
