@@ -2608,6 +2608,20 @@ let arm_STRH = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+let arm_LDRSB = define
+ `arm_LDRSB (Rt:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off ==> orthogonal_components Rt Rn)
+         then
+           Rt := word_sx (read (memory :> bytes8 addr) s) ,,
+           events := CONS (EventLoad (addr,1)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 (*** the actually encodable offsets are a bit more limited for LDP ***)
 (*** But this is all ignored at the present level and left to decoder ***)
 
@@ -3652,6 +3666,6 @@ let ARM_OPERATION_CLAUSES =
 
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
-      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDRH; arm_STRH;
+      [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDRH; arm_STRH; arm_LDRSB;
        arm_LDP; arm_STP;
        arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT];;

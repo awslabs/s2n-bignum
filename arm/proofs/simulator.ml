@@ -583,6 +583,96 @@ let cosimulate_ldsth() =
       [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code;
        sub_Xn_SP_Xn rn];;
 
+(*** This covers the W- and X-destination LDRSB forms with unsigned,
+ *** pre-indexed, post-indexed and unscaled immediate offsets, plus both
+ *** encodings of the zero-shift X-register offset.
+ ***)
+
+let cosimulate_ldrsb() =
+  let rn = Random.int 32
+  and w = Random.int 2
+  and mode = Random.int 5
+  and s = Random.int 2 in
+  let rm = (rn + 1 + Random.int 31) mod 32
+  and rt = (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then Random.int 16 * 16
+    else Random.int 256 in
+  if mode = 0 then
+    let imm12 = Random.int (256 - stackoff) in
+    let code =
+      pow2 23 */ num 0b001110011 +/
+      pow2 22 */ num w +/
+      pow2 10 */ num imm12 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 1 then
+    let delta = if rn = 31 then Random.int 16 else Random.int 31 - 15 in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b01 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code;
+       sub_Xn_SP_imm 31 (stackoff + delta)]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 2 then
+    let targetoff = Random.int 256 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b11 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 targetoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 3 then
+    let targetoff = Random.int 256 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else
+    let regoff = Random.int (256 - stackoff) in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 21 +/
+      pow2 16 */ num rm +/
+      pow2 13 */ num 0b011 +/
+      pow2 12 */ num s +/
+      pow2 10 */ num 0b10 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_Xn rn];;
+
 (*** This covers LDURB/STURB, and LDUR/STUR for 64-bit and 32-bit values ***)
 let cosimulate_ldstu() =
   let is_not_b = Random.int 2 in
@@ -663,7 +753,8 @@ let cosimulate_ldst3() =
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ldsth;
-    cosimulate_ld1r; cosimulate_ldst3; cosimulate_ldstu
+    cosimulate_ldrsb; cosimulate_ld1r;
+    cosimulate_ldst3; cosimulate_ldstu
     ];;
 
 let run_random_memopsimulation() =
