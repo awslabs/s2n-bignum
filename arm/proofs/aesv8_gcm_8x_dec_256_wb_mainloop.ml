@@ -2575,7 +2575,7 @@ let WB_TAIL_3_TAC =
      let (_,th) = List.find (fun (_,th) ->
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
-   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
+   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN (* MERGE_ANY dropped: AUTO_MERGE below subsumes it (refine-091) *)
    AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
@@ -2650,7 +2650,7 @@ let WB_TAIL_4_TAC =
      let (_,th) = List.find (fun (_,th) ->
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
-   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
+   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN (* MERGE_ANY dropped: AUTO_MERGE below subsumes it (refine-091) *)
    AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
@@ -2728,7 +2728,7 @@ let WB_TAIL_5_TAC =
      let (_,th) = List.find (fun (_,th) ->
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
-   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
+   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN (* MERGE_ANY dropped: AUTO_MERGE below subsumes it (refine-091) *)
    AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
@@ -2808,7 +2808,7 @@ let WB_TAIL_6_TAC =
      let (_,th) = List.find (fun (_,th) ->
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
-   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
+   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN (* MERGE_ANY dropped: AUTO_MERGE below subsumes it (refine-091) *)
    AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
@@ -2892,7 +2892,7 @@ let WB_TAIL_7_TAC =
      let (_,th) = List.find (fun (_,th) ->
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
-   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
+   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN (* MERGE_ANY dropped: AUTO_MERGE below subsumes it (refine-091) *)
    AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
@@ -2991,7 +2991,7 @@ let WB_TAIL_8_TAC =
      let (_,th) = List.find (fun (_,th) ->
        try rand(concl th) = `midacc:int128` && is_eq(concl th) with _ -> false) asl in
      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th] (asl,w)) THEN
-   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN MERGE_ANY_TAC THEN
+   ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN (* MERGE_ANY dropped: AUTO_MERGE below subsumes it (refine-091) *)
    AUTO_MERGE_MIDS_KM_TAC THEN
    WA_UNIFY_BB_TAC THEN ABBREV_WAWV_TAC THEN
    REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
