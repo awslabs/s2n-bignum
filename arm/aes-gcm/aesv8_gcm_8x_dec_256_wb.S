@@ -1246,7 +1246,7 @@ L256_dec_tail:	//TAIL
 
 	eor3	v12.16b, v9.16b, v0.16b, v29.16b	//eor3 v12.16b, v9.16b, v0.16b, v29.16b				//AES block 8k+8 - result
 	ldp	q22, q23, [x6, #128]			//load h6l | h6h
-	b.gt	L256_dec_blocks_more_than_7
+	b.gt	L256_dec_exact8_drain	//[opt] exact-8 -> dedicated stripped drain
 
 	mov	v7.16b, v6.16b
 	sub	v30.4s, v30.4s, v31.4s
@@ -1506,6 +1506,8 @@ L256_dec_blocks_less_than_1:	//final	whole block (whole-blocks contract: never p
 	ldr	d16, [x10]			//MODULO - load modulo constant
 	eor	v19.16b, v19.16b, v26.16b					//GHASH final block - low
 
+L256_dec_epilogue:  //[opt] cascade and exact-8 drain converge here
+
 	pmull	v21.1q, v17.1d, v16.1d		 	//MODULO - top 64b align with mid
 	eor	v14.16b, v17.16b, v19.16b				//MODULO - karatsuba tidy up
 
@@ -1532,6 +1534,207 @@ L256_dec_blocks_less_than_1:	//final	whole block (whole-blocks contract: never p
 	CFI_STACKLOAD2(d14,d15,48)
 	CFI_POP2N(d8,d9,80)
 	CFI_RET
+
+
+L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-tag eors)
+	// Straight-line concatenation of the 8 tail blocks for the
+	// exact-8 case (x5 > 112 => all 8 blocks remain).  The cascade at
+	// L256_dec_blocks_more_than_7.. is left UNCHANGED and still serves
+	// every other remainder.  Here the partial-tag feed is live only in
+	// the first block; the other 7 `eor v8,v8,v16` are XOR-with-zero
+	// and their `movi v16,#0` re-zeroing is dead, so both are dropped
+	// (14 instructions off the GHASH critical path).
+
+	// ---- exact-8 drain: block 7 (from L256_dec_blocks_more_than_7) ----
+	rev64	v8.16b, v9.16b						//GHASH final-7 block
+	ldr	q9, [x0], #16				//AES final-6 block - load ciphertext
+	st1	{ v12.16b}, [x2], #16				//AES final-7 block  - store result
+
+	ext	v18.16b, v24.16b, v24.16b, #8			//GHASH final-7 block - mid
+
+	eor	v8.16b, v8.16b, v16.16b					//feed in partial tag
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-7 block - mid
+	eor3	v12.16b, v9.16b, v1.16b, v29.16b	//eor3 v12.16b, v9.16b, v1.16b, v29.16b				//AES final-6 block - result
+
+	pmull2	v17.1q, v8.2d, v25.2d				//GHASH final-7 block - high
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-7 block - mid
+
+	pmull	v19.1q, v8.1d, v25.1d				//GHASH final-7 block - low
+	pmull	v18.1q, v27.1d, v18.1d			 	//GHASH final-7 block - mid
+
+	// ---- exact-8 drain: block 6 (from L256_dec_blocks_more_than_6) ----
+
+	rev64	v8.16b, v9.16b						//GHASH final-6 block
+
+	ldr	q9, [x0], #16				//AES final-5 block - load ciphertext
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-6 block - mid
+	st1	{ v12.16b}, [x2], #16				//AES final-6 block - store result
+	pmull2	v28.1q, v8.2d, v23.2d				//GHASH final-6 block - high
+
+	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-6 block - low
+
+	eor3	v12.16b, v9.16b, v2.16b, v29.16b	//eor3 v12.16b, v9.16b, v2.16b, v29.16b				//AES final-5 block - result
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final-6 block - low
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-6 block - mid
+
+	pmull	v27.1q, v27.1d, v24.1d				//GHASH final-6 block - mid
+
+	eor	v18.16b, v18.16b, v27.16b				//GHASH final-6 block - mid
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final-6 block - high
+
+	// ---- exact-8 drain: block 5 (from L256_dec_blocks_more_than_5) ----
+
+	rev64	v8.16b, v9.16b						//GHASH final-5 block
+
+
+	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-5 block - high
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-5 block - mid
+
+	ldr	q9, [x0], #16				//AES final-4 block - load ciphertext
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-5 block - mid
+	st1	{ v12.16b}, [x2], #16			  	//AES final-5 block - store result
+
+	pmull	v26.1q, v8.1d, v22.1d				//GHASH final-5 block - low
+	ins	v27.d[1], v27.d[0]					//GHASH final-5 block - mid
+
+	pmull2	v27.1q, v27.2d, v21.2d				//GHASH final-5 block - mid
+
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final-5 block - high
+	eor3	v12.16b, v9.16b, v3.16b, v29.16b	//eor3 v12.16b, v9.16b, v3.16b, v29.16b				//AES final-4 block - result
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final-5 block - low
+
+	eor	v18.16b, v18.16b, v27.16b				//GHASH final-5 block - mid
+
+	// ---- exact-8 drain: block 4 (from L256_dec_blocks_more_than_4) ----
+
+	rev64	v8.16b, v9.16b						//GHASH final-4 block
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-4 block - mid
+	ldr	q9, [x0], #16				//AES final-3 block - load ciphertext
+
+
+	pmull	v26.1q, v8.1d, v20.1d				//GHASH final-4 block - low
+	pmull2	v28.1q, v8.2d, v20.2d				//GHASH final-4 block - high
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-4 block - mid
+
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final-4 block - high
+
+	pmull	v27.1q, v27.1d, v21.1d				//GHASH final-4 block - mid
+
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final-4 block - low
+	st1	{ v12.16b}, [x2], #16			 	//AES final-4 block - store result
+
+	eor	v18.16b, v18.16b, v27.16b				//GHASH final-4 block - mid
+	eor3	v12.16b, v9.16b, v4.16b, v29.16b	//eor3 v12.16b, v9.16b, v4.16b, v29.16b				//AES final-3 block - result
+
+	// ---- exact-8 drain: block 3 (from L256_dec_blocks_more_than_3) ----
+
+	ldr	q25, [x6, #80]				//load h4l | h4h
+	rev64	v8.16b, v9.16b						//GHASH final-3 block
+
+	ldr	q9, [x0], #16				//AES final-2 block - load ciphertext
+	ldr	q24, [x6, #64]				//load h4k | h3k
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-3 block - mid
+	st1	{ v12.16b}, [x2], #16			 	//AES final-3 block - store result
+
+	eor3	v12.16b, v9.16b, v5.16b, v29.16b	//eor3 v12.16b, v9.16b, v5.16b, v29.16b				//AES final-2 block - result
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-3 block - mid
+
+	ins	v27.d[1], v27.d[0]					//GHASH final-3 block - mid
+	pmull	v26.1q, v8.1d, v25.1d				//GHASH final-3 block - low
+	pmull2	v28.1q, v8.2d, v25.2d				//GHASH final-3 block - high
+
+	pmull2	v27.1q, v27.2d, v24.2d				//GHASH final-3 block - mid
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final-3 block - low
+
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final-3 block - high
+
+	eor	v18.16b, v18.16b, v27.16b				//GHASH final-3 block - mid
+
+	// ---- exact-8 drain: block 2 (from L256_dec_blocks_more_than_2) ----
+
+	rev64	v8.16b, v9.16b						//GHASH final-2 block
+
+	ldr	q23, [x6, #48]				//load h3l | h3h
+	ldr	q9, [x0], #16				//AES final-1 block - load ciphertext
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-2 block - mid
+
+	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-2 block - low
+	st1	{ v12.16b}, [x2], #16			  	//AES final-2 block - store result
+	eor3	v12.16b, v9.16b, v6.16b, v29.16b	//eor3 v12.16b, v9.16b, v6.16b, v29.16b				//AES final-1 block - result
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-2 block - mid
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final-2 block - low
+
+	pmull	v27.1q, v27.1d, v24.1d				//GHASH final-2 block - mid
+	pmull2	v28.1q, v8.2d, v23.2d				//GHASH final-2 block - high
+
+	eor	v18.16b, v18.16b, v27.16b				//GHASH final-2 block - mid
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final-2 block - high
+
+	// ---- exact-8 drain: block 1 (from L256_dec_blocks_more_than_1) ----
+
+	rev64	v8.16b, v9.16b						//GHASH final-1 block
+
+
+	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-1 block - mid
+	ldr	q22, [x6, #32]				//load h2l | h2h
+
+	eor	v27.8b, v27.8b, v8.8b				//GHASH final-1 block - mid
+	ldr	q9, [x0], #16				//AES final block - load ciphertext
+	st1	{ v12.16b}, [x2], #16			 	//AES final-1 block - store result
+
+	ldr	q21, [x6, #16]				//load h2k | h1k
+	pmull	v26.1q, v8.1d, v22.1d				//GHASH final-1 block - low
+
+	ins	v27.d[1], v27.d[0]					//GHASH final-1 block - mid
+
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final-1 block - low
+
+	eor3	v12.16b, v9.16b, v7.16b, v29.16b	//eor3 v12.16b, v9.16b, v7.16b, v29.16b				//AES final block - result
+	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-1 block - high
+
+	pmull2	v27.1q, v27.2d, v21.2d				//GHASH final-1 block - mid
+
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final-1 block - high
+
+	eor	v18.16b, v18.16b, v27.16b				//GHASH final-1 block - mid
+
+	// ---- exact-8 drain: block 0 (from L256_dec_blocks_less_than_1) ----
+
+	rev32	v30.16b, v30.16b
+	str	q30, [x16]					//store the updated counter
+
+	ldr	q20, [x6]				//load h1l | h1h
+
+	rev64	v8.16b, v9.16b						//GHASH final block
+
+
+	ext	v16.16b, v8.16b, v8.16b, #8					//GHASH final block - mid
+	pmull2	v28.1q, v8.2d, v20.2d				//GHASH final block - high
+
+	eor	v16.8b, v16.8b, v8.8b				//GHASH final block - mid
+
+	pmull	v26.1q, v8.1d, v20.1d				//GHASH final block - low
+	eor	v17.16b, v17.16b, v28.16b					//GHASH final block - high
+
+	pmull	v16.1q, v16.1d, v21.1d				//GHASH final block - mid
+
+	eor	v18.16b, v18.16b, v16.16b				//GHASH final block - mid
+	ldr	d16, [x10]			//MODULO - load modulo constant
+	eor	v19.16b, v19.16b, v26.16b					//GHASH final block - low
+
+	b	L256_dec_epilogue
 
 L256_dec_ret:
 	mov	w0, #0x0
