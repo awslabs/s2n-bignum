@@ -532,6 +532,17 @@ let check_insns () =
     (*** ldrb / strb (shifted register, no shift S = 0) ***)
     "001110000x1xxxxxxxx010xxxxxxxxxx";
 
+    (*** ldrh / strh (post-indexed and pre-indexed immediate) ***)
+    "011110000x0xxxxxxxxx01xxxxxxxxxx";
+    "011110000x0xxxxxxxxx11xxxxxxxxxx";
+
+    (*** ldrh / strh (unsigned scaled and unscaled immediate) ***)
+    "011110010xxxxxxxxxxxxxxxxxxxxxxx";
+    "011110000x0xxxxxxxxx00xxxxxxxxxx";
+
+    (*** ldrh / strh (X-register offset, optionally scaled) ***)
+    "011110000x1xxxxx011x10xxxxxxxxxx";
+
     (*** ld1 (1 register, Post-immediate offset) ***)
     "0x001100110111110111xxxxxxxxxxxx";
 
