@@ -311,6 +311,14 @@ let decode = new_definition `!w:int32. decode w =
     // LDRB/STRB shifted register, no shift: option:011 S:0
   | [0b001110000:9; ld; 0b1:1; Rm:5; 0b011010:6; Rn:5; Rt:5] ->
     SOME (arm_ldstb ld Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+    // LDRB/STRB with a UXTW or SXTW register offset. Both values of S
+    // encode the byte access scale of zero.
+  | [0b001110000:9; ld; 1:1; Rm:5; 0b010:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn)
+      (Register_Offset (Extendedreg (WREG' Rm) UXTW)))
+  | [0b001110000:9; ld; 1:1; Rm:5; 0b110:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstb ld Rt (XREG_SP Rn)
+      (Register_Offset (Extendedreg (WREG' Rm) SXTW)))
 
     // LDRH/STRH, post-indexed and pre-indexed immediate
   | [0b011110000:9; ld; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
@@ -326,6 +334,16 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldsth ld Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 1
             else Register_Offset (XREG' Rm)))
+    // LDRH/STRH with a UXTW or SXTW register offset, optionally scaled
+    // by the two-byte access size.
+  | [0b011110000:9; ld; 1:1; Rm:5; 0b010:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (Extendedreg (WREG' Rm) UXTW) 1
+            else Register_Offset (Extendedreg (WREG' Rm) UXTW)))
+  | [0b011110000:9; ld; 1:1; Rm:5; 0b110:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldsth ld Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (Extendedreg (WREG' Rm) SXTW) 1
+            else Register_Offset (Extendedreg (WREG' Rm) SXTW)))
 
     // LDRSB, post-indexed and pre-indexed immediate
   | [0b001110001:9; w; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
@@ -339,6 +357,14 @@ let decode = new_definition `!w:int32. decode w =
     // LDRSB, X-register offset. Both values of S encode a zero shift.
   | [0b001110001:9; w; 1:1; Rm:5; 0b011:3; S; 0b10:2; Rn:5; Rt:5] ->
     SOME (arm_ldrsb w Rt (XREG_SP Rn) (Register_Offset (XREG' Rm)))
+    // LDRSB with a UXTW or SXTW register offset. Both values of S
+    // encode the byte access scale of zero.
+  | [0b001110001:9; w; 1:1; Rm:5; 0b010:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn)
+      (Register_Offset (Extendedreg (WREG' Rm) UXTW)))
+  | [0b001110001:9; w; 1:1; Rm:5; 0b110:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsb w Rt (XREG_SP Rn)
+      (Register_Offset (Extendedreg (WREG' Rm) SXTW)))
 
     // LDRSH, post-indexed and pre-indexed immediate
   | [0b011110001:9; w; 0:1; imm9:9; 0b01:2; Rn:5; Rt:5] ->
@@ -354,6 +380,16 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldrsh w Rt (XREG_SP Rn)
       (if S then Shiftreg_Offset (XREG' Rm) 1
             else Register_Offset (XREG' Rm)))
+    // LDRSH with a UXTW or SXTW register offset, optionally scaled
+    // by the two-byte access size.
+  | [0b011110001:9; w; 1:1; Rm:5; 0b010:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (Extendedreg (WREG' Rm) UXTW) 1
+            else Register_Offset (Extendedreg (WREG' Rm) UXTW)))
+  | [0b011110001:9; w; 1:1; Rm:5; 0b110:3; S; 0b10:2; Rn:5; Rt:5] ->
+    SOME (arm_ldrsh w Rt (XREG_SP Rn)
+      (if S then Shiftreg_Offset (Extendedreg (WREG' Rm) SXTW) 1
+            else Register_Offset (Extendedreg (WREG' Rm) SXTW)))
 
   | [x; 0b010100:6; pre; 0b1:1; ld; imm7:7; Rt2:5; Rn:5; Rt:5] ->
     SOME (arm_ldstp ld x Rt Rt2 (XREG_SP Rn)

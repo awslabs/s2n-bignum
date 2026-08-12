@@ -654,7 +654,8 @@ let CONDITION_SEMANTICS_INVERT_CONDITION = prove
 (* ------------------------------------------------------------------------- *)
 
 (*** We don't support quite all the addressing modes in C1.3.3.
- *** In particular we ignore extended 32-bit registers, which we'll never use
+ *** Extended 32-bit register offsets are represented by composing an
+ *** Extendedreg component with Register_Offset or Shiftreg_Offset.
  ***
  *** We have a numeric parameter in the Shiftreg_Offset but it's only
  *** allowed to be log_2(transfer_size), i.e. usually 3. We also just treat all
