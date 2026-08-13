@@ -9,7 +9,7 @@
 (* gf128_mul (from gcm.ml) and nist_dot (from ghash_nist_defs.ml) are the    *)
 (* same function: both compute                                               *)
 (*   bit_reflect(ghash_reduce(pmul(bit_reflect a, bit_reflect b)))           *)
-(* just via syntactically different aliases (bitrev128 vs bit_reflect128).    *)
+(* just via syntactically different aliases (bitrev128 vs bit_reflect128).   *)
 (*                                                                           *)
 (* ghash (from gcm.ml) and nist_ghash are then identical by induction.       *)
 (* This completes the chain from the NIST SP 800-38D spec (gcm.ml) down to   *)
