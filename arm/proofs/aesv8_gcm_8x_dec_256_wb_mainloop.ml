@@ -45,9 +45,9 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   "arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o"
 [
   0xd503201f;       (* arm_NOP *)
-  0xb4009b41;       (* arm_CBZ X1 (word 4968) *)
+  0xb4009a21;       (* arm_CBZ X1 (word 4932) *)
   0xf240183f;       (* arm_TST X1 (rvalue (word 127)) *)
-  0x54009b01;       (* arm_BNE (word 4960) *)
+  0x540099e1;       (* arm_BNE (word 4924) *)
   0x6dbb27e8;       (* arm_STP D8 D9 SP (Preimmediate_Offset (iword (-- &80))) *)
   0x6d012fea;       (* arm_STP D10 D11 SP (Immediate_Offset (iword (&16))) *)
   0x6d0237ec;       (* arm_STP D12 D13 SP (Immediate_Offset (iword (&32))) *)
@@ -1197,14 +1197,11 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
-  0x4ef7e11c;       (* arm_PMULL2_VEC Q28 Q8 Q23 64 *)
-  0x0ef7e11a;       (* arm_PMULL_VEC Q26 Q8 Q23 64 *)
+  0x4ef7e10d;       (* arm_PMULL2_VEC Q13 Q8 Q23 64 *)
+  0x0ef7e10e;       (* arm_PMULL_VEC Q14 Q8 Q23 64 *)
   0xce02752c;       (* arm_EOR3 Q12 Q9 Q2 Q29 *)
-  0x6e3a1e73;       (* arm_EOR_VEC Q19 Q19 Q26 128 *)
   0x2e281f7b;       (* arm_EOR_VEC Q27 Q27 Q8 64 *)
-  0x0ef8e37b;       (* arm_PMULL_VEC Q27 Q27 Q24 64 *)
-  0x6e3b1e52;       (* arm_EOR_VEC Q18 Q18 Q27 128 *)
-  0x6e3c1e31;       (* arm_EOR_VEC Q17 Q17 Q28 128 *)
+  0x0ef8e36f;       (* arm_PMULL_VEC Q15 Q27 Q24 64 *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x4ef6e11c;       (* arm_PMULL2_VEC Q28 Q8 Q22 64 *)
   0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
@@ -1214,21 +1211,18 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x0ef6e11a;       (* arm_PMULL_VEC Q26 Q8 Q22 64 *)
   0x6e18077b;       (* arm_INS Q27 Q27 64 0 64 64 *)
   0x4ef5e37b;       (* arm_PMULL2_VEC Q27 Q27 Q21 64 *)
-  0x6e3c1e31;       (* arm_EOR_VEC Q17 Q17 Q28 128 *)
+  0xce1c3631;       (* arm_EOR3 Q17 Q17 Q28 Q13 *)
   0xce03752c;       (* arm_EOR3 Q12 Q9 Q3 Q29 *)
-  0x6e3a1e73;       (* arm_EOR_VEC Q19 Q19 Q26 128 *)
-  0x6e3b1e52;       (* arm_EOR_VEC Q18 Q18 Q27 128 *)
+  0xce1a3a73;       (* arm_EOR3 Q19 Q19 Q26 Q14 *)
+  0xce1b3e52;       (* arm_EOR3 Q18 Q18 Q27 Q15 *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
-  0x0ef4e11a;       (* arm_PMULL_VEC Q26 Q8 Q20 64 *)
-  0x4ef4e11c;       (* arm_PMULL2_VEC Q28 Q8 Q20 64 *)
+  0x0ef4e10e;       (* arm_PMULL_VEC Q14 Q8 Q20 64 *)
+  0x4ef4e10d;       (* arm_PMULL2_VEC Q13 Q8 Q20 64 *)
   0x2e281f7b;       (* arm_EOR_VEC Q27 Q27 Q8 64 *)
-  0x6e3c1e31;       (* arm_EOR_VEC Q17 Q17 Q28 128 *)
-  0x0ef5e37b;       (* arm_PMULL_VEC Q27 Q27 Q21 64 *)
-  0x6e3a1e73;       (* arm_EOR_VEC Q19 Q19 Q26 128 *)
+  0x0ef5e36f;       (* arm_PMULL_VEC Q15 Q27 Q21 64 *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
-  0x6e3b1e52;       (* arm_EOR_VEC Q18 Q18 Q27 128 *)
   0xce04752c;       (* arm_EOR3 Q12 Q9 Q4 Q29 *)
   0x3dc014d9;       (* arm_LDR Q25 X6 (Immediate_Offset (word 80)) *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
@@ -1242,22 +1236,19 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x0ef9e11a;       (* arm_PMULL_VEC Q26 Q8 Q25 64 *)
   0x4ef9e11c;       (* arm_PMULL2_VEC Q28 Q8 Q25 64 *)
   0x4ef8e37b;       (* arm_PMULL2_VEC Q27 Q27 Q24 64 *)
-  0x6e3a1e73;       (* arm_EOR_VEC Q19 Q19 Q26 128 *)
-  0x6e3c1e31;       (* arm_EOR_VEC Q17 Q17 Q28 128 *)
-  0x6e3b1e52;       (* arm_EOR_VEC Q18 Q18 Q27 128 *)
+  0xce1a3a73;       (* arm_EOR3 Q19 Q19 Q26 Q14 *)
+  0xce1c3631;       (* arm_EOR3 Q17 Q17 Q28 Q13 *)
+  0xce1b3e52;       (* arm_EOR3 Q18 Q18 Q27 Q15 *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x3dc00cd7;       (* arm_LDR Q23 X6 (Immediate_Offset (word 48)) *)
   0x3cc10409;       (* arm_LDR Q9 X0 (Postimmediate_Offset (word 16)) *)
   0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
-  0x0ef7e11a;       (* arm_PMULL_VEC Q26 Q8 Q23 64 *)
+  0x0ef7e10e;       (* arm_PMULL_VEC Q14 Q8 Q23 64 *)
   0x4c9f704c;       (* arm_STR Q12 X2 (Postimmediate_Offset (word 16)) *)
   0xce06752c;       (* arm_EOR3 Q12 Q9 Q6 Q29 *)
   0x2e281f7b;       (* arm_EOR_VEC Q27 Q27 Q8 64 *)
-  0x6e3a1e73;       (* arm_EOR_VEC Q19 Q19 Q26 128 *)
-  0x0ef8e37b;       (* arm_PMULL_VEC Q27 Q27 Q24 64 *)
-  0x4ef7e11c;       (* arm_PMULL2_VEC Q28 Q8 Q23 64 *)
-  0x6e3b1e52;       (* arm_EOR_VEC Q18 Q18 Q27 128 *)
-  0x6e3c1e31;       (* arm_EOR_VEC Q17 Q17 Q28 128 *)
+  0x0ef8e36f;       (* arm_PMULL_VEC Q15 Q27 Q24 64 *)
+  0x4ef7e10d;       (* arm_PMULL2_VEC Q13 Q8 Q23 64 *)
   0x4e200928;       (* arm_REV64_VEC Q8 Q9 8 *)
   0x6e08411b;       (* arm_EXT Q27 Q8 Q8 64 *)
   0x3dc008d6;       (* arm_LDR Q22 X6 (Immediate_Offset (word 32)) *)
@@ -1267,12 +1258,12 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x3dc004d5;       (* arm_LDR Q21 X6 (Immediate_Offset (word 16)) *)
   0x0ef6e11a;       (* arm_PMULL_VEC Q26 Q8 Q22 64 *)
   0x6e18077b;       (* arm_INS Q27 Q27 64 0 64 64 *)
-  0x6e3a1e73;       (* arm_EOR_VEC Q19 Q19 Q26 128 *)
+  0xce1a3a73;       (* arm_EOR3 Q19 Q19 Q26 Q14 *)
   0xce07752c;       (* arm_EOR3 Q12 Q9 Q7 Q29 *)
   0x4ef6e11c;       (* arm_PMULL2_VEC Q28 Q8 Q22 64 *)
   0x4ef5e37b;       (* arm_PMULL2_VEC Q27 Q27 Q21 64 *)
-  0x6e3c1e31;       (* arm_EOR_VEC Q17 Q17 Q28 128 *)
-  0x6e3b1e52;       (* arm_EOR_VEC Q18 Q18 Q27 128 *)
+  0xce1c3631;       (* arm_EOR3 Q17 Q17 Q28 Q13 *)
+  0xce1b3e52;       (* arm_EOR3 Q18 Q18 Q27 Q15 *)
   0x6e200bde;       (* arm_REV32_VEC Q30 Q30 8 *)
   0x3d80021e;       (* arm_STR Q30 X16 (Immediate_Offset (word 0)) *)
   0x3dc000d4;       (* arm_LDR Q20 X6 (Immediate_Offset (word 0)) *)
@@ -1286,7 +1277,7 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
   0x6e301e52;       (* arm_EOR_VEC Q18 Q18 Q16 128 *)
   0xfd400150;       (* arm_LDR D16 X10 (Immediate_Offset (word 0)) *)
   0x6e3a1e73;       (* arm_EOR_VEC Q19 Q19 Q26 128 *)
-  0x17ffff84;       (* arm_B (word 268434960) *)
+  0x17ffff8d;       (* arm_B (word 268434996) *)
   0x52800000;       (* arm_MOV W0 (rvalue (word 0)) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
@@ -2942,31 +2933,37 @@ let WB_TAIL_8_TAC ivtac =
      (which is now reached only by remainders r=1..7).  The drain is the
      more_than_7 fall-through with 14 no-ops removed (7x movi v16,#0 + 7x
      eor v8,v8,v16, all dead when every block feeds), plus one `b` rejoin to
-     the common modulo at 0x1178; net -13 simulated steps, so every state
-     numbering below shifts down by 13 (s392->s379, s399->s386, s401->s388,
-     s402->s389).  RESOLVE (266--270) auto-retargets the b.gt; the drain
-     produces the identical Q18/Q19 at the 0x1178 rejoin, so the byteform
-     close is unchanged. *)
+     the common modulo at 0x1178; net -13 simulated steps vs the shared cascade.
+     [opt s103] eor3-FUSED the drain accumulate chains: 3 block-pairs
+     (final-6,final-5)(final-4,final-3)(final-2,final-1) each defer the 1st
+     block's 3 high/low/mid products to free regs v13/v14/v15, drop its 3
+     pairwise accumulate eors, and fold them into the 2nd block's 3 accumulate
+     eors via `eor3 acc,acc,prodB,prodA`.  Net -9 more simulated steps (all in
+     the accumulate window), so every state numbering below shifts down a
+     further 9 (s379->s370, s386->s377, s388->s379, s389->s380).  XOR is
+     assoc/comm so the folded Q18/Q19 at the 0x1178 rejoin are byte-identical;
+     the byteform close is unchanged.  RESOLVE (266--270) auto-retargets the
+     b.gt. *)
   ARM_STEPS_RESOLVE_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (266--270)  THEN
   (* stores window: Q18-latest per-step discard; readbacks self-propagate *)
-  ARM_STEPS_FOLD_Q18LATEST_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (271--379) THEN
-  ABBREV_TAC `midacc:int128 = read Q18 s379` THEN
+  ARM_STEPS_FOLD_Q18LATEST_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (271--370) THEN
+  ABBREV_TAC `midacc:int128 = read Q18 s370` THEN
   (* orient the defn tree=midacc so steppers substitute TOWARD the atom *)
   FIRST_X_ASSUM(fun th ->
     if (try lhs(concl th) = `midacc:int128` with _ -> false)
     then ASSUME_TAC (SYM th) else NO_TAC) THEN
-  ARM_STEPS_FOLD_KEEPGH_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (380--386) THEN
+  ARM_STEPS_FOLD_KEEPGH_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (371--377) THEN
   SUBGOAL_THEN
-    `read Q19 (s386:armstate) =
+    `read Q19 (s377:armstate) =
      ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
        [word_bytereverse cph0; word_bytereverse cph1; word_bytereverse cph2;
         word_bytereverse cph3; word_bytereverse cph4; word_bytereverse cph5;
         word_bytereverse cph6; word_bytereverse cph7]`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if (try lhs(concl asm) = `read Q19 s386` with _ -> false)
+       if (try lhs(concl asm) = `read Q19 s377` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
-     if is_eq(concl th) && (try lhs(concl th) = `read Q19 s386` with _ -> false)
+     if is_eq(concl th) && (try lhs(concl th) = `read Q19 s377` with _ -> false)
      then GEN_REWRITE_TAC LAND_CONV [th] else NO_TAC) THEN
       (fun (asl,w) ->
      let gmult8_dec = REWRITE_RULE[LET_DEF;LET_END_DEF]
@@ -3012,16 +3009,16 @@ let WB_TAIL_8_TAC ivtac =
       [word_bytereverse cph0; word_bytereverse cph1; word_bytereverse cph2;
        word_bytereverse cph3; word_bytereverse cph4; word_bytereverse cph5;
        word_bytereverse cph6; word_bytereverse cph7]` THEN
-  ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (387--388) THEN
-  SUBGOAL_THEN `read Q19 (s388:armstate) = word_bytereverse (gval:int128)`
+  ARM_VSTEPS_FOLD_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (378--379) THEN
+  SUBGOAL_THEN `read Q19 (s379:armstate) = word_bytereverse (gval:int128)`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
-       if (try lhs(concl asm) = `read Q19 s388` with _ -> false)
+       if (try lhs(concl asm) = `read Q19 s379` with _ -> false)
        then th else asm) THEN ASSUME_TAC th) THENL
   [FIRST_ASSUM(fun th ->
-     if is_eq(concl th) && (try lhs(concl th) = `read Q19 s388` with _ -> false)
+     if is_eq(concl th) && (try lhs(concl th) = `read Q19 s379` with _ -> false)
      then GEN_REWRITE_TAC LAND_CONV [th] else NO_TAC) THEN CONV_TAC WORD_BLAST;
    ALL_TAC] THEN
-  ARM_VSTEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC [389] THEN
+  ARM_VSTEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC [380] THEN
   DISCARD_COUNTER_ONLY_TAC THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT CONJ_TAC THEN
@@ -3156,10 +3153,10 @@ let wb_front_frame_tm = `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
 
 let wb_front_hyps_tm = `1 <= nblk /\ nblk <= 8 /\ LENGTH (ibytes:byte list) = 16 * nblk /\
     aligned 16 stackpointer /\
-    nonoverlapping (word pc, 4980) (stackpointer:int64, 80) /\
-    nonoverlapping (word pc, 4980) (out_p:int64, 16 * nblk) /\
-    nonoverlapping (word pc, 4980) (xi_p:int64, 16) /\
-    nonoverlapping (word pc, 4980) (ivec_p:int64, 16) /\
+    nonoverlapping (word pc, 4944) (stackpointer:int64, 80) /\
+    nonoverlapping (word pc, 4944) (out_p:int64, 16 * nblk) /\
+    nonoverlapping (word pc, 4944) (xi_p:int64, 16) /\
+    nonoverlapping (word pc, 4944) (ivec_p:int64, 16) /\
     nonoverlapping (ivec_p, 16) (in_p:int64, 16 * nblk) /\
     nonoverlapping (ivec_p, 16) (key_p:int64, 240) /\
     nonoverlapping (ivec_p, 16) (htbl_p:int64, 192) /\
@@ -4934,10 +4931,10 @@ let mk_band_goal k =
   let hyps = subst [n16,`sss:num`]
     `LENGTH (ibytes:byte list) = sss /\
      aligned 16 stackpointer /\
-     nonoverlapping (word pc, 4980) (stackpointer:int64, 80) /\
-     nonoverlapping (word pc, 4980) (out_p:int64, sss) /\
-     nonoverlapping (word pc, 4980) (xi_p:int64, 16) /\
-     nonoverlapping (word pc, 4980) (ivec_p:int64, 16) /\
+     nonoverlapping (word pc, 4944) (stackpointer:int64, 80) /\
+     nonoverlapping (word pc, 4944) (out_p:int64, sss) /\
+     nonoverlapping (word pc, 4944) (xi_p:int64, 16) /\
+     nonoverlapping (word pc, 4944) (ivec_p:int64, 16) /\
      nonoverlapping (out_p, sss) (xi_p, 16) /\
      nonoverlapping (out_p, sss) (ivec_p, 16) /\
      nonoverlapping (xi_p, 16) (ivec_p, 16) /\
@@ -5762,10 +5759,10 @@ let AESV8_GCM_8X_DEC_256_WB_1BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,16; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,16; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,16; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,16; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,16; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,16; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -5798,10 +5795,10 @@ let AESV8_GCM_8X_DEC_256_WB_2BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,32; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,32; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,32; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,32; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,32; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,32; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -5834,10 +5831,10 @@ let AESV8_GCM_8X_DEC_256_WB_3BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,48; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,48; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,48; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,48; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,48; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,48; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -5870,10 +5867,10 @@ let AESV8_GCM_8X_DEC_256_WB_4BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,64; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,64; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,64; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,64; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,64; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,64; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -5906,10 +5903,10 @@ let AESV8_GCM_8X_DEC_256_WB_5BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,80; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,80; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,80; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,80; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,80; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,80; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -5942,10 +5939,10 @@ let AESV8_GCM_8X_DEC_256_WB_6BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,96; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,96; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,96; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,96; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,96; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,96; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -5978,10 +5975,10 @@ let AESV8_GCM_8X_DEC_256_WB_7BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,112; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,112; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,112; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,112; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,112; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,112; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -6014,10 +6011,10 @@ let AESV8_GCM_8X_DEC_256_WB_8BLOCK = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,128; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,128; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,128; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,128; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,128; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,128; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -6059,10 +6056,10 @@ let AESV8_GCM_8X_DEC_256_WB_DISPATCH = prove
      aligned 16 stackpointer /\
      ALLPAIRS nonoverlapping
        [out_p,16 * nblk; xi_p,16; ivec_p,16]
-       [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
+       [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
      PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
      ALL (nonoverlapping (stackpointer,80))
-       [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192]
+       [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192]
      ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word (pc + 0x20) /\
@@ -13468,10 +13465,10 @@ let WBN_DEC_CORE_BYTELIST = prove
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-    [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
+    [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
     PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
     ALL (nonoverlapping (stackpointer,80))
-    [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192]
+    [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
               read PC s = word (pc + 32) /\
@@ -13606,11 +13603,11 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
       LENGTH rk = 15 /\
       aligned 16 stackpointer /\
       ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-      [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192;
+      [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192;
        word_sub stackpointer (word 80),80] /\
       PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
       ALL (nonoverlapping (word_sub stackpointer (word 80),80))
-      [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192]
+      [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192]
       ==> ensures arm
           (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
                read PC s = word pc /\
@@ -13931,10 +13928,10 @@ let AESV8_GCM_8X_DEC_256_WB_CORRECT = prove
     aligned 16 stackpointer /\
     word_bytereverse ctr0 = ctr_block nonce c /\
     ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-    [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
+    [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
     PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
     ALL (nonoverlapping (stackpointer,80))
-    [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192]
+    [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
               read PC s = word (pc + 32) /\
@@ -14043,11 +14040,11 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
     aligned 16 stackpointer /\
     word_bytereverse ctr0 = ctr_block nonce c /\
     ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
-    [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192;
+    [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192;
      word_sub stackpointer (word 80),80] /\
     PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
     ALL (nonoverlapping (word_sub stackpointer (word 80),80))
-    [word pc,4980; in_p,16 * nblk; key_p,240; htbl_p,192]
+    [word pc,4944; in_p,16 * nblk; key_p,240; htbl_p,192]
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
               read PC s = word pc /\
