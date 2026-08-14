@@ -78,42 +78,41 @@ S2N_BN_SYMBOL(aesv8_gcm_8x_dec_256_wb):
 	mov	x15, #0x100000000			//set up counter increment
 	movi	v31.16b, #0x0
 	mov	v31.d[1], x15
+	add	v28.4s, v31.4s, v31.4s		//+2 increment (hoisted into load shadow)
+	add	v10.4s, v28.4s, v31.4s		//+3 increment
+	add	v11.4s, v28.4s, v28.4s		//+4 increment
+	add	v12.4s, v11.4s, v31.4s		//+5 increment
+	add	v13.4s, v11.4s, v28.4s		//+6 increment
+	add	v14.4s, v11.4s, v10.4s		//+7 increment
 	mov	x5, x9
 
 	sub	x5, x5, #1		//byte_len - 1
 
-	rev32	v30.16b, v0.16b				//set up reversed counter
-
-	add	v30.4s, v30.4s, v31.4s		//CTR block 0
-
-	rev32	v1.16b, v30.16b				//CTR block 1
-	add	v30.4s, v30.4s, v31.4s		//CTR block 1
-
-	rev32	v2.16b, v30.16b				//CTR block 2
-	add	v30.4s, v30.4s, v31.4s		//CTR block 2
+	rev32	v29.16b, v0.16b				//set up reversed counter (base)
+	add	v8.4s, v29.4s, v31.4s		//CTR block 1 = base + 1
+	add	v9.4s, v29.4s, v28.4s		//CTR block 2 = base + 2
+	add	v15.4s, v29.4s, v10.4s		//CTR block 3 = base + 3
+	add	v16.4s, v29.4s, v11.4s		//CTR block 4 = base + 4
+	add	v17.4s, v29.4s, v12.4s		//CTR block 5 = base + 5
+	add	v18.4s, v29.4s, v13.4s		//CTR block 6 = base + 6
+	add	v30.4s, v29.4s, v14.4s		//CTR block 7 = base + 7
+	rev32	v1.16b, v8.16b				//CTR block 1
+	rev32	v2.16b, v9.16b				//CTR block 2
+	rev32	v3.16b, v15.16b				//CTR block 3
+	rev32	v4.16b, v16.16b				//CTR block 4
+	rev32	v5.16b, v17.16b				//CTR block 5
+	rev32	v6.16b, v18.16b				//CTR block 6
+	rev32	v7.16b, v30.16b				//CTR block 7
 	ldp	q26, q27, [x11, #0]				  	//load rk0, rk1
-
-	rev32	v3.16b, v30.16b				//CTR block 3
-	add	v30.4s, v30.4s, v31.4s		//CTR block 3
-
-	rev32	v4.16b, v30.16b				//CTR block 4
-	add	v30.4s, v30.4s, v31.4s		//CTR block 4
 
 	aese	v0.16b, v26.16b
 	aesmc	v0.16b, v0.16b			//AES block 0 - round 0
-
-	rev32	v5.16b, v30.16b				//CTR block 5
-	add	v30.4s, v30.4s, v31.4s		//CTR block 5
 
 	aese	v1.16b, v26.16b
 	aesmc	v1.16b, v1.16b			//AES block 1 - round 0
 	aese	v2.16b, v26.16b
 	aesmc	v2.16b, v2.16b			//AES block 2 - round 0
 
-	rev32	v6.16b, v30.16b				//CTR block 6
-	add	v30.4s, v30.4s, v31.4s		//CTR block 6
-
-	rev32	v7.16b, v30.16b				//CTR block 7
 	aese	v4.16b, v26.16b
 	aesmc	v4.16b, v4.16b			//AES block 4 - round 0
 
