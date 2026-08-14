@@ -1,8 +1,8 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 //
-// Phase-0 KAT gate, ABSOLUTE (stretch) check for the AES-256-GCM whole-blocks
-// DECRYPT main-loop proof.  Complements the differential gate kat_wb_dec.c.
+// ABSOLUTE KAT check for the AES-256-GCM whole-blocks DECRYPT kernel.
+// Complements the differential gate kat_wb_dec.c.
 //
 // Where the differential test proves "wb agrees with its trusted sibling on the
 // whole-block path", this test proves "wb computes the CORRECT AES-256-GCM
@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-// --- objects under test / reference (frozen; do not rebuild) ---------------
+// --- objects under test / reference ----------------------------------------
 extern size_t aesv8_gcm_8x_dec_256_wb(const uint8_t *in, size_t bit_len,
                                       uint8_t *out, uint8_t *Xi, uint8_t *ivec,
                                       const void *key, const void *Htable);
