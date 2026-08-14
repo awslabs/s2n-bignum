@@ -1565,6 +1565,8 @@ L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-
 	pmull	v18.1q, v27.1d, v18.1d			 	//GHASH final-7 block - mid
 
 	// ---- exact-8 drain: block 6 (from L256_dec_blocks_more_than_6) ----
+	// [opt] 1st of pair (final-6,final-5): products deferred to v13/v14/v15,
+	// their 3 accumulate eors dropped and folded into block 5's eor3s.
 
 	rev64	v8.16b, v9.16b						//GHASH final-6 block
 
@@ -1572,20 +1574,17 @@ L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-
 
 	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-6 block - mid
 	st1	{ v12.16b}, [x2], #16				//AES final-6 block - store result
-	pmull2	v28.1q, v8.2d, v23.2d				//GHASH final-6 block - high
+	pmull2	v13.1q, v8.2d, v23.2d				//[opt] final-6 high -> v13 (defer)
 
-	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-6 block - low
+	pmull	v14.1q, v8.1d, v23.1d				//[opt] final-6 low -> v14 (defer)
 
 	eor3	v12.16b, v9.16b, v2.16b, v29.16b	//eor3 v12.16b, v9.16b, v2.16b, v29.16b				//AES final-5 block - result
-	eor	v19.16b, v19.16b, v26.16b					//GHASH final-6 block - low
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-6 block - mid
 
-	pmull	v27.1q, v27.1d, v24.1d				//GHASH final-6 block - mid
-
-	eor	v18.16b, v18.16b, v27.16b				//GHASH final-6 block - mid
-	eor	v17.16b, v17.16b, v28.16b					//GHASH final-6 block - high
+	pmull	v15.1q, v27.1d, v24.1d				//[opt] final-6 mid -> v15 (defer)
 
 	// ---- exact-8 drain: block 5 (from L256_dec_blocks_more_than_5) ----
+	// [opt] 2nd of pair: folds block 6's deferred v13/v14/v15 via eor3.
 
 	rev64	v8.16b, v9.16b						//GHASH final-5 block
 
@@ -1603,13 +1602,15 @@ L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-
 
 	pmull2	v27.1q, v27.2d, v21.2d				//GHASH final-5 block - mid
 
-	eor	v17.16b, v17.16b, v28.16b					//GHASH final-5 block - high
+	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//[opt] fused high (final-6,final-5)
 	eor3	v12.16b, v9.16b, v3.16b, v29.16b	//eor3 v12.16b, v9.16b, v3.16b, v29.16b				//AES final-4 block - result
-	eor	v19.16b, v19.16b, v26.16b					//GHASH final-5 block - low
+	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//[opt] fused low (final-6,final-5)
 
-	eor	v18.16b, v18.16b, v27.16b				//GHASH final-5 block - mid
+	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//[opt] fused mid (final-6,final-5)
 
 	// ---- exact-8 drain: block 4 (from L256_dec_blocks_more_than_4) ----
+	// [opt] 1st of pair (final-4,final-3): products deferred to v13/v14/v15,
+	// their 3 accumulate eors dropped and folded into block 3's eor3s.
 
 	rev64	v8.16b, v9.16b						//GHASH final-4 block
 
@@ -1618,22 +1619,19 @@ L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-
 	ldr	q9, [x0], #16				//AES final-3 block - load ciphertext
 
 
-	pmull	v26.1q, v8.1d, v20.1d				//GHASH final-4 block - low
-	pmull2	v28.1q, v8.2d, v20.2d				//GHASH final-4 block - high
+	pmull	v14.1q, v8.1d, v20.1d				//[opt] final-4 low -> v14 (defer)
+	pmull2	v13.1q, v8.2d, v20.2d				//[opt] final-4 high -> v13 (defer)
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-4 block - mid
 
-	eor	v17.16b, v17.16b, v28.16b					//GHASH final-4 block - high
+	pmull	v15.1q, v27.1d, v21.1d				//[opt] final-4 mid -> v15 (defer)
 
-	pmull	v27.1q, v27.1d, v21.1d				//GHASH final-4 block - mid
-
-	eor	v19.16b, v19.16b, v26.16b					//GHASH final-4 block - low
 	st1	{ v12.16b}, [x2], #16			 	//AES final-4 block - store result
 
-	eor	v18.16b, v18.16b, v27.16b				//GHASH final-4 block - mid
 	eor3	v12.16b, v9.16b, v4.16b, v29.16b	//eor3 v12.16b, v9.16b, v4.16b, v29.16b				//AES final-3 block - result
 
 	// ---- exact-8 drain: block 3 (from L256_dec_blocks_more_than_3) ----
+	// [opt] 2nd of pair: folds block 4's deferred v13/v14/v15 via eor3.
 
 	ldr	q25, [x6, #80]				//load h4l | h4h
 	rev64	v8.16b, v9.16b						//GHASH final-3 block
@@ -1653,13 +1651,15 @@ L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-
 	pmull2	v28.1q, v8.2d, v25.2d				//GHASH final-3 block - high
 
 	pmull2	v27.1q, v27.2d, v24.2d				//GHASH final-3 block - mid
-	eor	v19.16b, v19.16b, v26.16b					//GHASH final-3 block - low
+	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//[opt] fused low (final-4,final-3)
 
-	eor	v17.16b, v17.16b, v28.16b					//GHASH final-3 block - high
+	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//[opt] fused high (final-4,final-3)
 
-	eor	v18.16b, v18.16b, v27.16b				//GHASH final-3 block - mid
+	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//[opt] fused mid (final-4,final-3)
 
 	// ---- exact-8 drain: block 2 (from L256_dec_blocks_more_than_2) ----
+	// [opt] 1st of pair (final-2,final-1): products deferred to v13/v14/v15,
+	// their 3 accumulate eors dropped and folded into block 1's eor3s.
 
 	rev64	v8.16b, v9.16b						//GHASH final-2 block
 
@@ -1669,20 +1669,17 @@ L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-
 
 	ext	v27.16b, v8.16b, v8.16b, #8					//GHASH final-2 block - mid
 
-	pmull	v26.1q, v8.1d, v23.1d				//GHASH final-2 block - low
+	pmull	v14.1q, v8.1d, v23.1d				//[opt] final-2 low -> v14 (defer)
 	st1	{ v12.16b}, [x2], #16			  	//AES final-2 block - store result
 	eor3	v12.16b, v9.16b, v6.16b, v29.16b	//eor3 v12.16b, v9.16b, v6.16b, v29.16b				//AES final-1 block - result
 
 	eor	v27.8b, v27.8b, v8.8b				//GHASH final-2 block - mid
-	eor	v19.16b, v19.16b, v26.16b					//GHASH final-2 block - low
 
-	pmull	v27.1q, v27.1d, v24.1d				//GHASH final-2 block - mid
-	pmull2	v28.1q, v8.2d, v23.2d				//GHASH final-2 block - high
-
-	eor	v18.16b, v18.16b, v27.16b				//GHASH final-2 block - mid
-	eor	v17.16b, v17.16b, v28.16b					//GHASH final-2 block - high
+	pmull	v15.1q, v27.1d, v24.1d				//[opt] final-2 mid -> v15 (defer)
+	pmull2	v13.1q, v8.2d, v23.2d				//[opt] final-2 high -> v13 (defer)
 
 	// ---- exact-8 drain: block 1 (from L256_dec_blocks_more_than_1) ----
+	// [opt] 2nd of pair: folds block 2's deferred v13/v14/v15 via eor3.
 
 	rev64	v8.16b, v9.16b						//GHASH final-1 block
 
@@ -1699,16 +1696,16 @@ L256_dec_exact8_drain:  //[opt] dedicated exact-8 GHASH drain (no no-op partial-
 
 	ins	v27.d[1], v27.d[0]					//GHASH final-1 block - mid
 
-	eor	v19.16b, v19.16b, v26.16b					//GHASH final-1 block - low
+	eor3	v19.16b, v19.16b, v26.16b, v14.16b	//eor3 v19.16b, v19.16b, v26.16b, v14.16b	//[opt] fused low (final-2,final-1)
 
 	eor3	v12.16b, v9.16b, v7.16b, v29.16b	//eor3 v12.16b, v9.16b, v7.16b, v29.16b				//AES final block - result
 	pmull2	v28.1q, v8.2d, v22.2d				//GHASH final-1 block - high
 
 	pmull2	v27.1q, v27.2d, v21.2d				//GHASH final-1 block - mid
 
-	eor	v17.16b, v17.16b, v28.16b					//GHASH final-1 block - high
+	eor3	v17.16b, v17.16b, v28.16b, v13.16b	//eor3 v17.16b, v17.16b, v28.16b, v13.16b	//[opt] fused high (final-2,final-1)
 
-	eor	v18.16b, v18.16b, v27.16b				//GHASH final-1 block - mid
+	eor3	v18.16b, v18.16b, v27.16b, v15.16b	//eor3 v18.16b, v18.16b, v27.16b, v15.16b	//[opt] fused mid (final-2,final-1)
 
 	// ---- exact-8 drain: block 0 (from L256_dec_blocks_less_than_1) ----
 
