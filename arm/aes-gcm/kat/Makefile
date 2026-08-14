@@ -1,8 +1,8 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 #
-# Phase-0 KAT gate for the AES-256-GCM whole-blocks DECRYPT main-loop proof.
-# Host must be aarch64 (the frozen .o objects run natively).
+# KAT gate for the AES-256-GCM whole-blocks DECRYPT kernel.
+# Host must be aarch64 (the .o objects run natively).
 #
 #   make            build + run the PRIMARY differential gate (no aws-lc dep)
 #   make run        alias for the default
@@ -10,7 +10,7 @@
 #   make all        run both
 #   make clean      remove build artifacts
 #
-# The objects under test live one directory up and are FROZEN (do not rebuild):
+# The objects under test live one directory up (build them there first):
 #   aesv8_gcm_8x_dec_256_wb.o   (target)
 #   aesv8_gcm_8x_dec_256.o      (trusted differential reference)
 #   aesv8_gcm_8x_enc_256.o      (trusted encrypt kernel, for the round-trip)
