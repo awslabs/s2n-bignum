@@ -47,7 +47,7 @@
 //
 // The parent file's prologue reorder (saves-first, C_ARGUMENTS entry past the
 // saves) is inherited unchanged.
-// Proofs: arm/proofs/aesv8_gcm_8x_dec_256_wb_mainloop.ml.
+// Proofs: arm/proofs/aesv8_gcm_8x_dec_256_wb.ml.
 #include "_internal_s2n_bignum_arm.h"
 
         .arch armv8.2-a+crypto+sha3
