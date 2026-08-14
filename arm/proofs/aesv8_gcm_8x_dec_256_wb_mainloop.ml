@@ -6,9 +6,9 @@
 (* (0x4a0..0x9ec), the GHASH catch-up prepretail (0x9f0..0xec0), and the tail *)
 (* cascade (0xec0), so correctness holds for arbitrary nblk >= 1.             *)
 (*                                                                            *)
-(* Binary: arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o (frozen).                    *)
-(* Plan:   _docs/wb-main-loop-plan.md (sec 3b -> 4 -> 5), with the pipeline   *)
-(*         correction from orchestrator/logs/plan-rationale.md baked in:      *)
+(* Binary: arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o                              *)
+(*                                                                            *)
+(* KEY PIPELINE FACT:                                                         *)
 (*         GHASH lags stores by one 8-block group, so the ENSURES_WHILE       *)
 (*         invariant is the TWO-STREAM form (store/counter stream at 8(i+1),  *)
 (*         GHASH stream at 8i, bridged by raw ciphertext regs q8..q15), NOT   *)
@@ -20,8 +20,7 @@
 (*   [later] FRONT-N capture (WBN_FRONT_BUF), ENSURES_WHILE loop, prepretail, *)
 (*           recomposition, subroutine wrapper.                               *)
 (*                                                                            *)
-(* Lemmas in sec 1-2 were developed and committed in work.ml (commit          *)
-(* 41f4953b) and are moved here verbatim (all proved; total < 2s).            *)
+(* All lemmas in sec 1-2 are proved (total < 2s).                             *)
 (* ========================================================================= *)
 
 
@@ -1291,10 +1290,10 @@ let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb
 let AESV8_GCM_8X_DEC_256_WB_EXEC = ARM_MK_EXEC_RULE aesv8_gcm_8x_dec_256_wb_mc;;
 
 (* ------------------------------------------------------------------------- *)
-(* JRH-style shared statement/capture machinery.                              *)
+(* Shared statement/capture machinery.                                        *)
 (* ------------------------------------------------------------------------- *)
 
-(* AES256_XOR_ENCRYPT_RECONSTRUCT + aes13 (the JRH AES128_CIPHER_RECONSTRUCT
+(* AES256_XOR_ENCRYPT_RECONSTRUCT + aes13 (the AES128_CIPHER_RECONSTRUCT
    pattern) hoisted to the shared file so the NIST convergence layer and the
    future main-loop proof can use them without loading the wb chain. *)
 needs "arm/proofs/utils/aes_gcm_reconstruct.ml";;
@@ -1302,7 +1301,7 @@ needs "arm/proofs/utils/aes_gcm_reconstruct.ml";;
 (* The 12-slot aws-lc htable layout as one predicate over the abstract GHASH
    input key h (slot values = the byteswapped polyval_dot towers + packed
    karatsuba mids, exactly the per-slot hypotheses of the masked-band chain).
-   JRH htable_mem_4 pattern.  EXPAND (REWRITE_TAC[htable_mem_dec] + let_CONV)
+   htable_mem_4 pattern.  EXPAND (REWRITE_TAC[htable_mem_dec] + let_CONV)
    BEFORE stepping so the htable loads resolve (fast_tail lesson). *)
 let htable_mem_dec = new_definition
  `htable_mem_dec (h:int128) (ptr:int64) (s:armstate) <=>
@@ -1378,7 +1377,7 @@ let AESV8_GCM_8X_DEC_256_WB_GUARD = prove
    the ext register — via eor .8b / pmull .1d) back to `word_subword vN (64,64)`,
    exactly the plain lane the old `ins` form produced.  So every tail bridge sees
    pre-opt-identical operand shapes and ABBREV_INNER_PMULS's qq-numbering is
-   preserved.  (This supersedes s087's EXT_JOIN_NORM, which rewrote the whole
+   preserved.  (This supersedes EXT_JOIN_NORM, which rewrote the whole
    ext REGISTER to a join-of-lanes form and thereby false-fired on the byteswap/
    REV64 register shape, regressing the 2-block band.)  AUTO_MERGE_MIDS_KM_TAC
    below is kept as a numbering-agnostic safety net for the N>=3 mid pairing. *)
@@ -1499,7 +1498,7 @@ let WB2_GMULT2_BRIDGE_TAC : tactic =
 
 (* ========================================================================= *)
 (* WB_3BLOCK .. WB_8BLOCK: whole-blocks dec variant, bit_len = 128*N (N=3..8).*)
-(* Promoted from work.ml (proved interactively; hyps=0, axioms=3, no cheats). *)
+(* hyps=0, axioms=3, no cheats.                                               *)
 (* Shared N>=3 band machinery (ported from le3block.ml) precedes the theorems.*)
 (* ========================================================================= *)
 
@@ -1792,7 +1791,7 @@ let DISCARD_STALE_Q18_TAC : tactic = fun (asl,w) ->
    (WB_TAIL_3..8, the sole consumers) closing hyps=0 while cutting the pile-driven
    rescan: the per-step cost had GROWN 0.59->0.94s across 271-392 (pile-driven, not the
    position-invariant ARM_STEPS wall).  WB_TAIL_GEN2_8 179.8s->150.2s (-16.5%), GEN2_3
-   also hyps=0.  Mirrors the s082 KEEPDATA single-pass fix on this file's OTHER stepper;
+   also hyps=0.  Mirrors the KEEPDATA single-pass fix on this file's OTHER stepper;
    the tails' Q18LATEST stepper had never been converted.  If a future edit needs the
    fixpoint here, restore GCM_SIMD_SIMPLIFY_TAC. *)
 let ARM_STEPS_FOLD_Q18LATEST_TAC exec snums =
@@ -2331,7 +2330,7 @@ let WB_TAIL_1_TAC ivtac =
   ARM_STEPS_RESOLVE_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (278--313) THEN
   (* === tail 314..333 (GHASH multiply; KEEPGH keeps Q16-Q19 alive) === *)
   ARM_STEPS_FOLD_KEEPGH_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (314--333) THEN
-  (* plaintext capture: the whole aese/aesmc tower XOR = aes256_encrypt (JRH) *)
+  (* plaintext capture: the whole aese/aesmc tower XOR = aes256_encrypt      *)
   SUBGOAL_THEN `read Q12 (s333:armstate) = word_xor cph (aes256_encrypt (ctr0:int128)
       [k0:int128;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14])`
     (fun th -> RULE_ASSUM_TAC(fun asm ->
@@ -3239,8 +3238,8 @@ let wb_ctr_lanes_thms =
 let wb_front_fold_tac =
   RULE_ASSUM_TAC(REWRITE_RULE[GSYM aes13]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE(map GSYM wb_ctr_lanes_thms));;
-(* the RAW counter accumulator kept in v30 (session-007 finding; HOISTED here
-   session-100 so the ivec M2 EDIT-0 Q30 conjunct in wb_front_postcond below can
+(* the RAW counter accumulator kept in v30 (HOISTED here so that
+   the ivec M2 EDIT-0 Q30 conjunct in wb_front_postcond below can
    reference it -- it was formerly in Sec 2).  byte-grouped rep with top 32-bit
    lane incremented by w.  The body's first instr `rev32 v5,v30` reads it, so the
    Sec-4 invariant pins Q30 = gcm_ctr_raw (word (8*i+13)) ctr0.  Its algebra
@@ -3988,21 +3987,21 @@ let wb_front_postcond = parse_term {|\(s:armstate).
     ((SUB_LIST:num#num->((8)word)list->((8)word)list) (0,16)
     (ibytes:((8)word)list))|};;
 
-(* ivec M2 (session-100): carry the advanced raw counter Q30 in the front
+(* ivec M2: carry the advanced raw counter Q30 in the front
    postcond so the <=8 DISPATCH bands + the shared WB_TAIL_GEN2_r (which prove
    FROM q_at k = this postcond) see Q30 concretely and can fold the ivec store.
    The front does 8 `add v30` (blocks 0-7) after the rev32 seed, so at the tail
    seam s265 (0x42c b.ge TAKEN for nblk<=8) Q30 = gcm_ctr_raw (word 8) ctr0.
-   HARVESTED session-098 (top lane = word_add(word_add(ctr0 top bytes)(word 7))
+   HARVESTED (top lane = word_add(word_add(ctr0 top bytes)(word 7))
    (word 1) = +8); the +8 count re-confirmed analytically. *)
 let wb_front_postcond = mk_abs(`s:armstate`,
     mk_conj(snd(dest_abs wb_front_postcond),
             `read Q30 (s:armstate) = gcm_ctr_raw (word 8) ctr0`));;
 
 (* ========================================================================= *)
-(* SESSION-075 SPEED REFACTOR -- the SHARED FRONT PREFIX (0x20 -> 0x428),      *)
+(* SPEED REFACTOR -- the SHARED FRONT PREFIX (0x20 -> 0x428),                  *)
 (* simulated ONCE across the <=8 front (WB_FRONT_BUF) AND the >=9 front        *)
-(* (WBN_FRONT_PREFIX).  Extends the s073 shared-prefix idiom by splitting at   *)
+(* (WBN_FRONT_PREFIX).  Extends the shared-prefix idiom by splitting at        *)
 (* the EARLIER 0x42c b.ge (step 260) instead of 0x49c (step 288): steps 1..259 *)
 (* (entry 0x20 -> the 0x42c b.ge, all straight-line, only round-key/counter    *)
 (* loads, NO input-block reads) are byte-identical work in BOTH bands, so we   *)
@@ -4113,8 +4112,8 @@ let wbn_init_uni_tac =
 (* the shared prefix steps 1..265 (entry 0x20 -> the 0x444 b.ge at pc+1092),
    identical to WB_FRONT_STEP_TAC / WBN_FRONT_STEP_TAC modulo the Q30-discard
    flavor; stops BEFORE the band-dependent 0x444 branch so X5 stays general.
-   (Was 1..259 / 0x42c / pc+1068 before the session-104 +6-instr counter flatten.) *)
-(* session-104 SETUP-counter flatten (+6 instrs): the parallel depth-2 counter
+   (Was 1..259 / 0x42c / pc+1068 before the +6-instr counter flatten.) *)
+(* SETUP-counter flatten (+6 instrs): the parallel depth-2 counter
    form REORDERS steps 16-58 (all counter SIMD first, then AES round-0/1) vs the
    old serial-interleaved 16-52, then RECONVERGES at ldp q28,q26 (new s59/old s53)
    with a UNIFORM +6 shift and every branch displacement unchanged.  The counter
@@ -4881,18 +4880,17 @@ let WBN_FRONT_PREFIX_259 = prove(mk_wbn_prefix259_goal wbn_front_prefix259_postc
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT CONJ_TAC THEN MONOTONE_MAYCHANGE_TAC);;
 
-(* ivec M2 (session-100): the front's 8 `add v30` land Q30's top lane as
+(* ivec M2: the front's 8 `add v30` land Q30's top lane as
    word_add(word_add(...)(word 7))(word 1); this folds the +7+1 to +8 so the
    raw tower matches the gcm_ctr_raw (word 8) ctr0 literal.  Precomputed `let`
    value -- inlining the WORD_RULE in the tactic throws "RAND_CONV: Not a
-   combination" (session-099). *)
+   combination". *)
 let WB_FRONT_Q30_TOPLANE = WORD_RULE
   `word_add (word_add (x:32 word) (word 7)) (word 1) = word_add x (word 8)`;;
 
 (* THE SHARED FRONT LEMMA (<=8 band): chain WBN_FRONT_PREFIX_259 (0x20->0x444)
    via ENSURES_TRANS_SIMPLE, then the 0x444 b.ge TAKEN (d=0 for nblk<=8 =>
-   X5=in_p => reflexive compare) + 6 steps 266..271 to s271 (pc+3820).
-   session-104 +6 step shift (was s259 / 260..265). *)
+   X5=in_p => reflexive compare) + 6 steps 266..271 to s271 (pc+3820). *)
 let WB_FRONT_BUF = prove(mk_wb_front_goal wb_front_postcond,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
@@ -4937,7 +4935,7 @@ let mk_out_conj i =
 let mk_ghash_list k =
   mk_flist(map (fun i -> mk_comb(`word_bytereverse:int128->int128`, mk_cph i)) (0--(k-1)));;
 
-(* ivec M2 (session-101): the band-exit counter write-back conjunct, spine form
+(* ivec M2: the band-exit counter write-back conjunct, spine form
    read [ivec_p] = gcm_ctr_inc_iter k ctr0 (used by mk_band_goal + WB_TAIL close). *)
 let mk_ivec_conj k = subst [mk_small_numeral k,`kkk:num`]
     `read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter kkk ctr0`;;
@@ -4998,7 +4996,7 @@ let mk_band_goal k =
     `read (memory :> bytes128 xi_p) s =
      word_bytereverse
        (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi) (lll:int128 list))` in
-  (* ivec M2 (session-101): the counter write-back at band exit r.  Spine form
+  (* ivec M2: the counter write-back at band exit r.  Spine form
      gcm_ctr_inc_iter r ctr0 (= gcm_ctr_add (word r) ctr0); closed by
      WB_IVEC_CLOSE_TAC r in each WB_TAIL_r_TAC. *)
   let ivec_post = mk_ivec_conj k in
@@ -5083,7 +5081,7 @@ let WB_PREP_TAC k =
   lanes THEN cphs THEN habbrevs;;
 
 (* ========================================================================= *)
-(* SESSION-071 SPEED REFACTOR -- the shared per-block back-leg, proved ONCE.  *)
+(* SPEED REFACTOR -- the shared per-block back-leg, proved ONCE.              *)
 (*                                                                            *)
 (* The back-leg sim `WB_PREP_TAC k THEN WB_TAIL_k_TAC` (init@s265 -> whole-   *)
 (* function exit pc+4528) was previously run TWICE per k: once inside         *)
@@ -5099,7 +5097,7 @@ let WB_PREP_TAC k =
 (* The 6 dropped cells (sp+72, xi_p, ivec_p, in_p block-0, X1, X9) are        *)
 (* objdump-confirmed never read by the tail range [0xed4,0x11b0); each        *)
 (* WB_TAIL_GEN2_k proving hyps=0 from the weak precond IS the in-proof audit  *)
-(* of that.  See session-044/045 notes (formerly at the WB_TAIL_GEN2 site).   *)
+(* of that.  (These notes were formerly at the WB_TAIL_GEN2 site.)            *)
 (* ------------------------------------------------------------------------- *)
 
 (* the band goal split into (vars, hyps, pre, post, frame) *)
@@ -5112,7 +5110,7 @@ let wbn_dissect_band k =
 
 (* the 4 seam cells EXT2 drops -- objdump-confirmed never read by the tail,  *)
 (* re-confirmed in-proof by proving the back-leg from the precond without    *)
-(* them (session-044).  [sp+72]=0 is a pinned artifact; xi_p/ivec_p are      *)
+(* them.  [sp+72]=0 is a pinned artifact; xi_p/ivec_p are                    *)
 (* consumed only via the pre-seeded Q19/Q16 and Q0..Q7; in_p block-0 arrives *)
 (* pre-loaded in Q9 (WBN_Q9_SPEC).                                           *)
 let wbn_tail_drop_lhs = [
@@ -5121,7 +5119,7 @@ let wbn_tail_drop_lhs = [
   `read (memory :> bytes128 ivec_p) (s:armstate)`;
   `read (memory :> bytes128 in_p) (s:armstate)`];;
 
-(* 6-cell drop: the 4 session-044 cells PLUS the dead X1,X9 (session-045).   *)
+(* 6-cell drop: the 4 cells PLUS the dead X1,X9.                             *)
 let wbn_tail_drop_lhs6 = wbn_tail_drop_lhs @
   [`read X1 (s:armstate)`; `read X9 (s:armstate)`];;
 let wbn_weak_q_at6 k =
@@ -5134,7 +5132,7 @@ let wbn_tail_backleg_goal6 r =
   let ens = list_mk_comb(`ensures arm`, [wbn_weak_q_at6 r; post; frame]) in
   list_mk_forall(vars, mk_imp(hyps, ens));;
 (* ======================================================================= *)
-(* ivec M2 (session-101): counter algebra HOISTED here (from Sec 2 @~6059 and *)
+(* ivec M2: counter algebra HOISTED here (from Sec 2 @~6059 and               *)
 (* Sec 9b @~9714) so WB_IVEC_CLOSE_TAC's deps (gcm_ctr_add, GCM_CTR_ADD_LANES, *)
 (* GCM_CTR_INC_ITER_ADD, the SUBW_RAW lemmas) are in scope for the band tail   *)
 (* ivec close below.  gcm_ctr_raw_def is already at ~3237 (s100 EDIT-0 hoist). *)
@@ -5145,8 +5143,8 @@ let wbn_tail_backleg_goal6 r =
 (*    gcm_ctr_inc_iter k x = gcm_ctr_add (word k) x.                         *)
 (*                                                                           *)
 (*    OOM WARNING: do NOT prove GCM_CTR_ADD_LANES by direct BITBLAST -- the  *)
-(*    symbolic 32-bit addend makes the BDD blow past 30GB (killed session    *)
-(*    2026-07-24).  The factoring below keeps every BITBLAST wiring-only     *)
+(*    symbolic 32-bit addend makes the BDD blow past 30GB.  The factoring    *)
+(*    below keeps every BITBLAST wiring-only                                  *)
 (*    (word_add never meets the BDD); whole layer proves in <1s.             *)
 (* ------------------------------------------------------------------------- *)
 
@@ -5291,7 +5289,7 @@ let GCM_CTR_RAW_INCR = prove
     `!(x:32 word) w. word_add (word_add x w) (word 1) = word_add x (word_add w (word 1))`]);;
 
 (* ------------------------------------------------------------------------- *)
-(* ivec M2 (session-101): the band-tail ivec write-back closer.               *)
+(* ivec M2: the band-tail ivec write-back closer.                             *)
 (*                                                                            *)
 (* Each band r stores rev32(v30) to [ivec_p] (str q30,[x16], .S:1468 cascade /*)
 (* :1698 drain).  With Q30 = gcm_ctr_raw (word 8) ctr0 carried in from the    *)
@@ -5300,7 +5298,7 @@ let GCM_CTR_RAW_INCR = prove
 (* rev32 of that = gcm_ctr_add (word r) = gcm_ctr_inc_iter r ctr0.  The close  *)
 (* runs entirely in 32-bit-lane algebra (SUBW_RAW_* pins the sub cascade to   *)
 (* the top lane; GCM_CTR_ADD_LANES gives the rev target) so no 128-bit blast  *)
-(* meets the symbolic counter.  Validated r=1,2,8 hyps=0 (session-101).       *)
+(* meets the symbolic counter.  Validated r=1,2,8 hyps=0.                     *)
 (* (mk_ivec_conj is defined just above mk_band_goal, since mk_band_goal uses it.) *)
 (* ------------------------------------------------------------------------- *)
 let sub_chain c n =
@@ -5491,7 +5489,7 @@ let mk_wb_wrapper_goal k =
     `byte_list_at (gcm_dec_pt_bytes nnn ibytes ctr0 (kl:int128 list)) out_p (word nnn) s` in
   let xipost = subst [n16,`nnn:num`]
     `read (memory :> bytes128 xi_p) s = gcm_dec_final_xi nnn ibytes xi h` in
-  (* ivec M2 (session-101): carry the band's counter write-back conjunct through
+  (* ivec M2: carry the band's counter write-back conjunct through
      the wrapper unchanged (spine form; not part of the byte-list vocab lift). *)
   let ivecpost = mk_ivec_conj k in
   let post' = mk_abs(sv, list_mk_conj [pcc; outpost; xipost; ivecpost]) in
@@ -5544,7 +5542,7 @@ let prove_wb_wrapper k buf_thm =
         MATCH_MP_TAC buf_thm THEN ASM_REWRITE_TAC[]]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* NIST-vocabulary bridge layer (JRH x4-kernel statement shape).              *)
+(* NIST-vocabulary bridge layer (the x4-kernel statement shape).              *)
 (*  - htable_mem_8: htable_mem_4-style named memory predicate over h_power    *)
 (*    indexing, for the 12-slot aws-lc htable layout (packed karatsuba mids). *)
 (*  - GCM_DEC_FINAL_XI_NIST: gcm_dec_final_xi = byte-reversed nist_ghash      *)
@@ -5603,9 +5601,9 @@ let HTABLE_MEM_DEC_H_POWER = prove
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[H_POWER_UNFOLD_7; KARATSUBA_MID_BYTESWAP; BYTESWAP128_INVOLUTION]);;
 
-(* ---- the JRH-style named htable predicate over the abstract key hk -------- *)
+(* ---- the named htable predicate over the abstract key hk ----------------- *)
 (* hk is the POLYVAL-side key (byteswap128 of the memory h slot); with
-   hk = ghash_twist H this is the exact analogue of JRH's
+   hk = ghash_twist H this is the exact analogue of the x4 kernels'
    htable_mem_4 (ghash_twist ...) hypothesis, extended to 8 powers /
    12 slots (aws-lc layout with packed karatsuba mids). *)
 let htable_mem_8 = new_definition
@@ -5642,7 +5640,7 @@ let BREV_RF8_INV_128 = prove
   REWRITE_TAC[GSYM BREV_RF8_128; WORD_BYTEREVERSE_BYTEREVERSE]);;
 
 (* ---- the tag spec in nist_ghash vocabulary -------------------------------- *)
-(* Our band statements quantify the raw htable h slot; JRH quantifies the
+(* Our band statements quantify the raw htable h slot; the x4 kernels quantify the
    NIST key H with the twist applied in the hypothesis.  The two are related
    by byteswap128 h = ghash_twist H, under which gcm_dec_final_xi IS a
    byte-reversed nist_ghash (Gueron Prop 1 via NIST_GHASH_IS_POLYVAL). *)
@@ -6297,25 +6295,25 @@ let D_GT_128 = prove
   POP_ASSUM_LIST(K ALL_TAC) THEN DISCH_TAC THEN
   MP_TAC(SPECL [`nblk - 1`; `8`] DIVISION) THEN ASM_ARITH_TAC);;
 
-(* (session-068: DIV128_16NBLK, a byte-level warm-up restatement kept "for the
+(* (DIV128_16NBLK, a byte-level warm-up restatement kept "for the
    seam arithmetic", was never referenced -- deleted.) *)
 
 (* (Sec 2 symbolic-counter block MOVED up to the band-tail region for the ivec
-   M2 close -- session-101.  gcm_ctr_add .. GCM_CTR_INC_ITER_ADD now precede
+   M2 close.  gcm_ctr_add .. GCM_CTR_INC_ITER_ADD now precede
    WB_TAIL_GEN2_r.) *)
 
-(* gcm_ctr_raw_def was HOISTED above wb_front_postcond (session-100): the ivec
+(* gcm_ctr_raw_def was HOISTED above wb_front_postcond: the ivec
    M2 EDIT 0 adds a `read Q30 s = gcm_ctr_raw (word 8) ctr0` conjunct to
    wb_front_postcond (Sec 3, earlier in the file), which forward-references
    gcm_ctr_raw -- so the definition now lives before that use.  Its body-only
    algebra lemmas (SUBW_RAW_*, GCM_CTR_RAW_INCR, REV32_FOLD_TAC) stay in Sec 9b. *)
 
-(* ivec M2 (session-100): the raw counter accumulator ABSORBS a prior gcm_ctr_add
+(* ivec M2: the raw counter accumulator ABSORBS a prior gcm_ctr_add
    into its own offset.  gcm_ctr_raw v (gcm_ctr_add u x) = gcm_ctr_raw (word_add u v) x.
    Needed by INNER_TAIL_FEED_TAC to discharge the SHIFTED tail's Q30 (the shift sets
    ctr0 := gcm_ctr_add (word 8*(q+1)) ctr0) against the M1 seam's Q30, and by the
    FULL_r ivec reconcile.  Proved at 32-bit-LANE granularity so the symbolic 32-bit
-   addend never enters a 128-bit BDD (a naive WORD_BLAST HANGS -- session-099).
+   addend never enters a 128-bit BDD (a naive WORD_BLAST HANGS).
    gcm_ctr_raw reads only the 4 lanes of its arg; gcm_ctr_add rewrites only lane
    (96,32); so the low 3 lanes pass through and the top lane composes the two adds. *)
 let BREV_LANE_64 = prove
@@ -6402,14 +6400,14 @@ let GCM_CTR_RAW_ABSORB_NUM = prove
 (* nblk>8 front hypotheses: swap the (1<=nblk /\ nblk<=8) prefix of wb.ml's
    wb_front_hyps_tm for the nblk>=17 regime, KEEP every nonoverlapping/aligned/
    length conjunct.
-   session-015: ALSO add nonoverlapping (out_p) (stackpointer,80).  wb.ml's
+   : ALSO add nonoverlapping (out_p) (stackpointer,80).  wb.ml's
    wb_front_hyps_tm omits it, but the nblk>8 front's FRONT-0 group (0x430..0x498)
    does four `stp q,q,[x2],#32` stores to out_p BEFORE the loop head 0x4a0.
    Without out_p-vs-stack disjointness the stepper cannot prove those stores miss
    [sp+64], so it DROPS the reduction-constant fact
    read (memory :> bytes64 (sp+64)) s = word 0xc200000000000000 (needed by the
-   body GHASH reduce; see the invariant [sp+64] conjunct + SESSION-014/015).
-   VALIDATED (session-015): with this conjunct the fact survives the full front
+   body GHASH reduce; see the invariant [sp+64] conjunct).
+   VALIDATED: with this conjunct the fact survives the full front
    sim to s288 (=loop head 0x4a0) and is auto-harvested by
    build_state_postcond_tms2. *)
 let wbn_front_hyps_tm =
@@ -6493,7 +6491,7 @@ let DISCARD_STALE_Q30_TAC : tactic = fun (asl,w) ->
     let n = state_num_of_read_q30 th in n >= 0 && n < mx) (asl,w);;
 
 (* front steps 1..265 (up to but NOT including the 0x444 b.ge at step 266).
-   session-104 SETUP-counter flatten: same +6 step shift + per-step loop extended
+   SETUP-counter flatten: same +6 step shift + per-step loop extended
    6--30 -> 6--41 as WBN_FRONT_STEP259_TAC above (was 1..259 / step 260 / 0x42c). *)
 let WBN_FRONT_STEP_TAC =
   ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (1--5) THEN
@@ -6531,8 +6529,7 @@ let WBN_RESOLVE_49C_TAC : tactic = fun (asl,w) ->
    DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))) (asl,w);;
 
 (* the complete front sim entry 0x20 -> loop head 0x4b8 (ends at s294).
-   session-104 +6 step shift: b.ge@0x42c step 260->266, tail 261..287->267..293,
-   b.ge@0x49c step 288->294. *)
+   Step map: b.ge@0x42c is step 266, tail 267..293, b.ge@0x49c step 294. *)
 let WBN_FRONT_FULL_TAC =
   wbn_init_tac THEN WBN_LANES_TAC THEN WBN_FRONT_STEP_TAC THEN
   WBN_RESOLVE_42C_TAC THEN
@@ -6543,7 +6540,7 @@ let WBN_FRONT_FULL_TAC =
   ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (294--294);;
 
 (* ------------------------------------------------------------------------- *)
-(* SESSION-073 SPEED REFACTOR -- the SHARED FRONT PREFIX, simulated ONCE.      *)
+(* SPEED REFACTOR -- the SHARED FRONT PREFIX, simulated ONCE.                  *)
 (*                                                                            *)
 (* WBN_FRONT_BUF (band 17<=nblk, -> loop head 0x4a0) and WBN_FRONT_TO_PREP_916 *)
 (* (band 9<=nblk<=16, -> prepretail 0x9f0) previously ran the IDENTICAL 287-  *)
@@ -6653,8 +6650,7 @@ let WBN_RESOLVE_42C_GE9_TAC : tactic =
 
 (* the shared prefix sim: entry 0x20 -> 0x4b4 (steps 1..293), NO step 294.
    Identical to WBN_FRONT_FULL_TAC's prefix (share WBN_FRONT_STEP_TAC verbatim),
-   but on the union band and stopping BEFORE the band-dependent 0x4b4 branch.
-   session-104 +6 step shift: b.ge@0x42c step 260->266, tail 261..287->267..293. *)
+   but on the union band and stopping BEFORE the band-dependent 0x4b4 branch. *)
 let WBN_FRONT_PREFIX_TAC =
   wbn_init_ge9_tac THEN WBN_LANES_GE9_TAC THEN WBN_FRONT_STEP_TAC THEN
   WBN_RESOLVE_42C_GE9_TAC THEN
@@ -7680,7 +7676,7 @@ let wbn_front_prefix_postcond = parse_term {|\(s:armstate).
 
 (* input lanes 0..7 established at s265 (the >=9 post-branch leg reads blocks
    0..7 via the ldp q8-q15 at 0x448+); follows from the s265 input-memory fact.
-   session-104: state renamed s259->s265 (front prefix +6 after counter flatten). *)
+   : state renamed s259->s265 (front prefix +6 after counter flatten). *)
 let WBN_LANES259_GE9_TAC =
   SUBGOAL_THEN `SUB_LIST (0, 16 * nblk) (ibytes:byte list) = ibytes` ASSUME_TAC THENL
    [MATCH_MP_TAC SUB_LIST_LENGTH_IMPLIES THEN ASM_REWRITE_TAC[LE_REFL]; ALL_TAC] THEN
@@ -7703,8 +7699,7 @@ let WBN_LANES259_GE9_TAC =
 
 (* FRONT-PREFIX (>=9 band): chain the shared WBN_FRONT_PREFIX_259 (0x20->0x444)
    via ENSURES_TRANS_SIMPLE, then the 0x444 b.ge FALLS THROUGH (nblk>=9, via
-   WB_LOOPENTER_FLAGS_GE9) + steps 266..293 to s293 (pc+1204).
-   session-104 +6 step shift (was s259 / 260..287 / 0x42c). *)
+   WB_LOOPENTER_FLAGS_GE9) + steps 266..293 to s293 (pc+1204). *)
 let WBN_FRONT_PREFIX = prove(mk_wbn_prefix_goal wbn_front_prefix_postcond,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
@@ -7730,7 +7725,7 @@ let WBN_FRONT_PREFIX = prove(mk_wbn_prefix_goal wbn_front_prefix_postcond,
    re-ran the same 288-step front sim purely to compute this term, wasting
    ~250s per cold load -- exactly the wb.ml wb_front_postcond optimisation
    (see aesv8_gcm_8x_dec_256_wb.ml:3054), applied here to the mainloop front.
-   The literal is aconv-identical to the harvested term (session-069 verified:
+   The literal is aconv-identical to the harvested term (verified:
    reparse + aconv + WBN_FRONT_BUF re-proved hyps=0 from it).
    REGENERATION (if the front or its keep-profile changes): re-enable the
    harvest below, then print the result with print_types_of_subterms := 2 and
@@ -8716,11 +8711,10 @@ let wbn_front_postcond_i0 = parse_term {|\(s:armstate).
    (two-stream pipelined form): q8..q15 = RAW ct blocks 0..7 pending fold,
    Q19 = word_bytereverse xi (GHASH acc over blocks 0..-1 = tag only), stores
    done for blocks 0..7, counters at 8..12, X0=in_p+128, X2=out_p+128.
-   SESSION-073: no longer runs the 287-step front sim -- reuses the shared
+   no longer runs the 287-step front sim -- reuses the shared
    WBN_FRONT_PREFIX (0x20->0x4b4) via ENSURES_TRANS_SIMPLE, then a single step 294
    (0x4b4 b.ge FALLS THROUGH for 17<=nblk, via WBN_RESOLVE_49C_TAC) lands at 0x4b8.
-   Close = the old WBN_FRONT_BUF final-state close (ASM_REWRITE + WORD_ADD_0).
-   session-104 +6 step shift (was s287 / step 288 / 0x49c->0x4a0). *)
+   Close = the old WBN_FRONT_BUF final-state close (ASM_REWRITE + WORD_ADD_0). *)
 let WBN_FRONT_BUF = prove(mk_wbn_front_goal wbn_front_postcond_i0,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
@@ -8744,7 +8738,7 @@ Gc.compact();;
 (* ------------------------------------------------------------------------- *)
 (* 4. Phase 2: the TWO-STREAM ENSURES_WHILE loop invariant (FROZEN).          *)
 (*                                                                            *)
-(* Derived (session-003) by generalizing WBN_FRONT_BUF's harvested s288       *)
+(* Derived by generalizing WBN_FRONT_BUF's harvested s288                     *)
 (* postcond to symbolic block index i.  The i=0 instance was VALIDATED to     *)
 (* follow from WBN_FRONT_BUF: 44 of 47 conjuncts (all registers, counters,    *)
 (* keystreams, GHASH acc, stores, pointers) close by                          *)
@@ -8766,12 +8760,12 @@ Gc.compact();;
 (* and NOT in the front MAYCHANGE frame -> preserved) but are NOT in          *)
 (* WBN_FRONT_BUF's harvested postcond (build_state_postcond_tms2 keeps only   *)
 (* `read _ s = _` + aligned_bytes_loaded, so htable_mem_dec is dropped, and   *)
-(* the in_p/key_p reads were s0 facts not re-stated at s288).  FIX for next   *)
-(* session: extend the front postcond harvest to re-assert these 3 (add them  *)
-(* to wbn_front_postcond_i0 / the keep-filter, OR carry them via a strengthen *)
-(* step), then WBN_FRONT_BUF closes them from the precond (they are in the    *)
-(* MAYCHANGE-preserved set).  With that, the ENSURES_WHILE_UP_TAC entry       *)
-(* subgoal (i=0) closes by MATCH_MP_TAC WBN_FRONT_BUF + the tactic above.     *)
+(* the in_p/key_p reads were s0 facts not re-stated at s288).  FIX: extend    *)
+(* the front postcond to re-assert these 3, either in the harvest keep-filter *)
+(* or by a strengthening step; WBN_FRONT_BUF then closes them from the        *)
+(* precond (they are in the MAYCHANGE-preserved set).  With that the          *)
+(* ENSURES_WHILE_UP_TAC entry subgoal (i=0) closes by MATCH_MP_TAC            *)
+(* WBN_FRONT_BUF + the tactic above.  Done in Sec 7 as WBN_FRONT_BUF_EXT.     *)
 (*                                                                            *)
 (* Two-stream reading of the invariant (VERIFIED off the i=0 goal):           *)
 (*  - store/counter stream AHEAD at 8(i+1): X0=in_p+128(i+1), X2=out_p+128(i+1)*)
@@ -8789,14 +8783,14 @@ Gc.compact();;
 (* + b.lt 0x4a0 @0x9ec (SIGNED, so a P-variant / WB_PTRCMP_FLAGS handles it); *)
 (* exit fall-through @0x9f0.  count q = (nblk-9) DIV 8.                        *)
 (*                                                                            *)
-(* session-011: Q26/Q27/Q28 (=k12/k13/k14) DROPPED from the invariant below   *)
+(* Q26/Q27/Q28 (=k12/k13/k14) DROPPED from the invariant below                *)
 (* — objdump-verified dead live-ins (loop head 0x4a4 ldp q26,q27,[x11] +      *)
 (* 0x518 ldp q28,q26,[x11,#32]; prepretail seam 0x9f0 ldp q26,q27,[x11] — all *)
 (* reload before first aese v_,v26/28 uses at 0x4d8/0x570).  Removal gated by *)
 (* the alpha-shadow wbn_loop_invariant_v2 (ENTRY_V2 re-proved to hyps=0).      *)
 (* CAUTION: do NOT put (* *) comments or backticks INSIDE the term backquote   *)
 (* below — HOL's in-term comment token is //, and (* *) / ` break the parse   *)
-(* (session-012 fix: the session-011 in-term note broke the cold-load).       *)
+(* (fix: the in-term note broke the cold-load).                               *)
 (* ------------------------------------------------------------------------- *)
 
 let wbn_loop_invariant = new_definition
@@ -8880,7 +8874,7 @@ let wbn_loop_invariant = new_definition
     read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
     htable_mem_dec h htbl_p s`;;
 
-(* ---- Entry-subgoal recipe (validated interactively, session-003) ----------
+(* ---- Entry-subgoal recipe (validated interactively, ) ----------
    The ENSURES_WHILE_UP_TAC entry subgoal is  pre ==> (PC=pc1 /\ inv 0 s).
    Given WBN_FRONT_BUF establishes pre ==> (PC=pc+0x4b8 /\ <postcond s>), the
    i=0 invariant  (wbn_loop_invariant ... 0 s)  follows from <postcond s> PLUS
@@ -8904,14 +8898,14 @@ let wbn_loop_invariant = new_definition
      REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[]
 
    With the RAW WBN_FRONT_BUF postcond as the assumption set this reduces the
-   goal to EXACTLY the 3 loop-constant conjuncts (confirmed session-003).  When
+   goal to EXACTLY the 3 loop-constant conjuncts.  When
    packaging as a standalone lemma with the postcond as a `\s.`-abstraction
    antecedent, watch the beta step: STRIP_TAC must see the antecedent already
    beta-reduced (do CONV_TAC(TOP_DEPTH_CONV BETA_CONV) on the WHOLE goal, incl.
    the antecedent, before STRIP_TAC) — a naive `(\s.P) s /\ (\s.Q) s ==> ...`
    left unreduced makes STRIP_TAC give conjunct hyps still wrapped.
 
-   NEXT-SESSION FIX to get a clean entry (no extra hyps):
+   FIX for a clean entry (no extra hyps):
    extend WBN_FRONT_BUF so its postcond re-asserts the 3 loop-constants.  Either
    (a) widen build_state_postcond_tms2's keep-filter to also retain
        `htable_mem_dec _ _ s` and the input/key `read _ s = _` facts (they are
@@ -8920,7 +8914,8 @@ let wbn_loop_invariant = new_definition
        (they hold in wb_front_pre_tm and survive the frame), via a framing/
        ENSURES_TRANS wrapper avoiding a full re-sim.  Then the entry subgoal of
        ENSURES_WHILE_UP_TAC closes by MATCH_MP_TAC WBN_FRONT_BUF_EXT + the tactic
-       above (no leftover conjuncts). *)
+       above (no leftover conjuncts).
+   Route (b) is the one taken; see Sec 7. *)
 
 (* ------------------------------------------------------------------------- *)
 (* 5. Phase 3: GHASH 8-block extension algebra (pure list/field, no sim).     *)
@@ -8988,7 +8983,7 @@ let GHASH_ACC_8BLOCK_EXTEND = prove
   REWRITE_TAC[LIST_OF_SEQ_8] THEN
   CONV_TAC(DEPTH_CONV BETA_CONV) THEN REWRITE_TAC[ADD_CLAUSES]);;
 
-(* Body GHASH-close bridge (session-011): the generalization of wb.ml's         *)
+(* Body GHASH-close bridge: the generalization of wb.ml's                       *)
 (* spec_to_byteform_wb8 to an ARBITRARY incoming accumulator `acc` (the running *)
 (* fold read Q19 at body entry) in place of the tail's hardwired                *)
 (* `word_bytereverse xi`.  Same H-power hypotheses (supplied by the htable      *)
@@ -9057,7 +9052,7 @@ let SPEC_TO_BYTEFORM_WB8_ACC = prove
   STRIP_TAC THEN REWRITE_TAC[GHASH_POLYVAL_ACC_8] THEN
   ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN CONV_TAC WORD_RULE);;
 
-(* The COMPOSED body Q19-close (session-011): the invariant's Q19 conjunct at    *)
+(* The COMPOSED body Q19-close: the invariant's Q19 conjunct at                  *)
 (* i+1 equals the machine 8-block byteform, with the incoming accumulator being  *)
 (* the invariant's OWN 8*i fold.  = GHASH_ACC_8BLOCK_EXTEND (split the 8*(i+1)   *)
 (* fold into [8 fresh blocks] on the 8*i fold) then SPEC_TO_BYTEFORM_WB8_ACC     *)
@@ -9133,9 +9128,9 @@ let BODY_Q19_CLOSE_ALGEBRA = prove
   MATCH_MP_TAC SPEC_TO_BYTEFORM_WB8_ACC THEN ASM_REWRITE_TAC[]);;
 
 (* --------------------------------------------------------------------------- *)
-(* session-061 (Q19 R1' close, part 1 of 2): THE REDUCE-DATAFLOW value-equality *)
-(* the reviewer flagged as the "real proof work".  The body's GHASH reduce      *)
-(* window (asm 0x924..0x9b4) reads three separable 128-bit accumulators at s289 *)
+(* THE REDUCE-DATAFLOW value-equality -- the algebraic core.  The body's GHASH  *)
+(* reduce window (asm 0x924..0x9b4) reads three separable 128-bit accumulators  *)
+(* at s289                                                                      *)
 (*   PL = Q17 = Sum_k karatsuba_block_pl,  PH = Q19 = Sum_k karatsuba_block_ph,  *)
 (*   PM = Q18 = Sum_k karatsuba_block_pm,  Barrett modulus raw in Q16,          *)
 (* then runs the shared Barrett W-reduction, landing read Q19 s326 in EXACTLY   *)
@@ -9202,7 +9197,7 @@ let WBN_MACHINE_REDUCE_IS_PROP3_PACK = prove
                          (word_subword (word_xor (word_xor PL PH) PM) (0,64):64 word))
                (word_subword (wa:int128) (0,64):64 word))
      (word 13979173243358019584:64 word)` THEN
-  (* SESSION-074 SPEED: the old monolithic `CONV_TAC WORD_BLAST` here bit-blasted
+  (* SPEED: the old monolithic `CONV_TAC WORD_BLAST` here bit-blasted
      PL/PH/PM as full 128-bit free vars (~115s).  Instead reconstruct the LHS
      result as word_join of its two 64-bit lanes (QQ0SPLIT), split the resulting
      word_join=word_join with JOIN_EQ_SPLIT, and close each 64-bit lane with the
@@ -9216,7 +9211,7 @@ let WBN_MACHINE_REDUCE_IS_PROP3_PACK = prove
   REWRITE_TAC[JOIN_EQ_SPLIT] THEN CONJ_TAC THEN LANE_FINISH_Z_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* session-062 (Q19 R1' close, part 2 of 2): BLOCK-ALGEBRA reconciliation     *)
+(* BLOCK-ALGEBRA reconciliation                                               *)
 (* facts.  These bridge the machine s289 accumulators (Q17/Q19/Q18 = the       *)
 (* separable Sigma-PL/PH/PM triple, in raw word_reversefields/word_join/       *)
 (* byteswap128-tower form) to the abstract kara_acc projection of an 8-quad    *)
@@ -9256,12 +9251,12 @@ let LANE_COLLAPSE = prove
 (* products two blocks at a time (a pmull2 then pmull over the packed lanes of  *)
 (* blocks A and B).  The (64,64)/(0,64) sub-lane of the XOR of the hi-join and  *)
 (* lo-join recovers each single block's (lo XOR hi) mid-input. *)
-(* session-063: the mid-input lane extractors used by the Q19 reduce.  Only the *)
+(* The mid-input lane extractors used by the Q19 reduce.  Only the              *)
 (* swapped-RHS PM_LANE_HI'/LO' variants below are consumed (build_q19_reduce_*  *)
 (* at :1154/:1247): they spell the extracted mid-input in the (0,64)^(64,64)    *)
 (* lane order that karatsuba_block_pm produces (word_pmul's first arg is atomic *)
 (* to WORD_RULE, so the lane XOR must match SYNTACTICALLY, not up to comm).     *)
-(* (session-068: the un-swapped PM_LANE_HI/LO were superseded by these and never *)
+(* (the un-swapped PM_LANE_HI/LO were superseded by these and never              *)
 (* referenced -- deleted.)                                                       *)
 let PM_LANE_HI' = prove
  (`!A B:int128.
@@ -9277,7 +9272,7 @@ let PM_LANE_LO' = prove
     = word_xor (word_subword B (0,64):64 word) (word_subword B (64,64):64 word)`,
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
-(* session-063 (block-0/block-1 SOFAR-pair PM mid-inputs): the FIRST pmull2/    *)
+(* Block-0/block-1 SOFAR-pair PM mid-inputs.  The FIRST pmull2/                 *)
 (* pmull PAIR folds in the running accumulator SOFAR, so block 0's operand      *)
 (* enters as a rot64'd word_join of SOFAR with the first ciphertext block       *)
 (* (not the plain packed pair the later blocks use).  These two lane lemmas     *)
@@ -9318,7 +9313,7 @@ let LANE_COLLAPSE_PM_B = prove
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
 (* --------------------------------------------------------------------------- *)
-(* session-064 (Q19 R1' WIRE-IN): compose the value-equality + close the CHEAT. *)
+(* Compose the value-equality + close the CHEAT.                                *)
 (*                                                                             *)
 (* build_q19_reduce_clean pl_t ph_t pm_t : given the three s289 accumulator     *)
 (* terms (= read Q17/Q19/Q18 s289, over h/xi/ibytes/i), produces the CLEAN      *)
@@ -9426,7 +9421,7 @@ let WBN_Q19_CLOSE_TAC : tactic =
     ACCEPT_TAC clean' (asl,w);;
 
 (* ------------------------------------------------------------------------- *)
-(* session-065: the k-indexed variant of build_q19_reduce_clean, for the      *)
+(* The k-indexed variant of build_q19_reduce_clean, for the                   *)
 (* PREPRETAIL Q19 close (index k = (nblk-9)DIV8, not the loop-body i).  The    *)
 (* only delta is INST'ing BODY_Q19_CLOSE_ALGEBRA with i := idx first, so its   *)
 (* spec fold reads ghash..(8*(idx+1)); everything else (the reduce identity    *)
@@ -9497,7 +9492,7 @@ let build_q19_reduce_clean_idx idx pl_t ph_t pm_t =
 (* (read Q16 = word_subword(word_join <caught_up> <caught_up>)(64,128)) both     *)
 (* reduce, after ASM_REWRITE substitutes the machine byteform + the CLEAN        *)
 (* value-equality folds it to ghash..(8*k+8), to the pure index identity         *)
-(* 8*k+8 = 8*(k+1), closed by ARITH + REFL.  session-065.                        *)
+(* 8*k+8 = 8*(k+1), closed by ARITH + REFL.                                      *)
 let WBN_Q19_PREPRETAIL_CLOSE_TAC (idx:term) : tactic =
   fun (asl,w) ->
     let clean = build_q19_reduce_clean_idx idx (!wbn_q19_pl) (!wbn_q19_ph) (!wbn_q19_pm) in
@@ -9545,10 +9540,10 @@ let ENSURES_ADD_PRESERVED = prove
     DISCH_THEN MATCH_MP_TAC THEN ASM_SIMP_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* 7. Phase 2 hyp-gap fix: WBN_FRONT_BUF_EXT (session-005).                   *)
+(* 7. Phase 2 hyp-gap fix: WBN_FRONT_BUF_EXT.                                 *)
 (*                                                                            *)
 (* The i=0 invariant instance needs 3 loop-CONSTANTS at the loop head that    *)
-(* WBN_FRONT_BUF's harvested postcond drops (session-003/004 GAP note above): *)
+(* WBN_FRONT_BUF's harvested postcond drops (GAP note above):                 *)
 (*   read (memory :> bytes (in_p,16*nblk)) s = num_of_bytelist ibytes         *)
 (*   read (memory :> bytes128 key_p) s = k0                                   *)
 (*   htable_mem_dec h htbl_p s                                                *)
@@ -9557,9 +9552,9 @@ let ENSURES_ADD_PRESERVED = prove
 (* key_p/htbl_p.  wbn_front_hyps_tm was missing exactly those 3 out_p         *)
 (* disjointness conjuncts (they ARE in wb.ml's <=8 band hyps, wb.ml:3854-57). *)
 (*                                                                            *)
-(* ROUTE (b) (session-004's ENSURES_ADD_PRESERVED), NOT route (a): we DON'T   *)
+(* ROUTE (b) (ENSURES_ADD_PRESERVED), NOT route (a): we DON'T                 *)
 (* re-run the front sim with widened hyps (the build_state_postcond_tms2      *)
-(* re-harvest the reviewer flagged as risky).  Instead keep the proven        *)
+(* re-harvest is the risky part).  Instead keep the proven                    *)
 (* WBN_FRONT_BUF verbatim and STRENGTHEN its postcond with the 3 constants    *)
 (* via ENSURES_ADD_PRESERVED: leg1 = WBN_FRONT_BUF (narrow hyps <= wide hyps, *)
 (* closed by MATCH_MP_TAC + ASM_REWRITE), leg2 = the pure frame-preservation  *)
@@ -9642,7 +9637,7 @@ let WBN_FRONT_BUF_EXT = prove(wbn_front_ext_goal,
     WBN_PUSH_LHS_READ_TAC]);;
 
 (* ------------------------------------------------------------------------- *)
-(* SESSION-073: WBN_FRONT_PREFIX_EXT -- the shared prefix strengthened with the *)
+(* WBN_FRONT_PREFIX_EXT -- the shared prefix strengthened with the              *)
 (* R loop-constants (key schedule + input bytes + htable), so the 9..16 front  *)
 (* leg (WBN_FRONT_TO_PREP_916, whose exit post wbn_core_applied 0 references    *)
 (* the htable + key reads) can reuse the ONE prefix sim.  Mirror of             *)
@@ -9690,7 +9685,7 @@ let wbn_front_prefix_ext_post =
   rand(rator(snd(dest_imp(snd(strip_forall(concl WBN_FRONT_PREFIX_EXT))))));;
 
 (* ------------------------------------------------------------------------- *)
-(* 8. Phase 2 CLOSE: WBN_LOOP_INVARIANT_ENTRY (session-005).                  *)
+(* 8. Phase 2 CLOSE: WBN_LOOP_INVARIANT_ENTRY.                                *)
 (*                                                                            *)
 (* THE entry subgoal that ENSURES_WHILE_UP_TAC produces for the main loop:    *)
 (*   ensures arm (\s. decodes /\ PC = pc+0x20 /\ precondition s)              *)
@@ -9699,8 +9694,8 @@ let wbn_front_prefix_ext_post =
 (* i.e. the front (entry -> loop head) establishes the i=0 invariant.  Proved *)
 (* by weakening WBN_FRONT_BUF_EXT's postcond (Q0 /\ 3-loop-constants) down to *)
 (* the i=0 invariant, via ENSURES_POSTCONDITION_THM.  The implication         *)
-(* (Q0 s /\ R s) ==> inv 0 s is the session-003 Sec-4 closing recipe, PLUS a  *)
-(* final numeral-normalization pass (session-005): after the recipe the goal  *)
+(* (Q0 s /\ R s) ==> inv 0 s is the Sec-4 closing recipe, PLUS a              *)
+(* final numeral-normalization pass: after the recipe the goal                *)
 (* is a conjunction of trivial `f (word n) = f (word (0+n))` /                 *)
 (* `SUB_LIST(16*(0+k)..) = SUB_LIST(16*k..)` equalities + the j<8 store        *)
 (* forall; ADD_CLAUSES + NUM_MULT_CONV + GCM_CTR_ADD_0 (block-0 = ctr0) close  *)
@@ -9753,16 +9748,16 @@ let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_goal,
     CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
     CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
     REWRITE_TAC[WORD_ADD_0] THEN ASM_REWRITE_TAC[] THEN
-    (* session-005 numeral-normalization tail: 0+n, 16*(0+k), block-0=ctr0 *)
+    (* numeral-normalization tail: 0+n, 16*(0+k), block-0=ctr0             *)
     REWRITE_TAC[ADD_CLAUSES] THEN CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
     CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
     REWRITE_TAC[WORD_ADD_0; MULT_CLAUSES] THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[GSYM GCM_CTR_ADD_LANES; GCM_CTR_ADD_0] THEN
     CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN ASM_REWRITE_TAC[GCM_CTR_ADD_0] THEN
-    (* session-008 Q30 residual: the only conjunct the session-005 closer leaves
+    (* Q30 residual: the only conjunct the closer leaves
        open after the Q30 patch.  The i=0 raw tower (top lane += 12 then += 1)
        collapses to gcm_ctr_raw (word 13) ctr0 = the invariant's 8*0+13 value.
-       VALIDATED (session-008, shadow wbn_loop_invariant_v2). *)
+       VALIDATED. *)
     REWRITE_TAC[gcm_ctr_raw_def;
       WORD_RULE `word_add (word_add (x:32 word) (word 12)) (word 1) =
                  word_add x (word 13)`;
@@ -9771,7 +9766,7 @@ let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_goal,
     MATCH_MP_TAC WBN_FRONT_BUF_EXT THEN ASM_REWRITE_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* 9. Phase 4 launch: PC/decode-free CORE invariant + split (session-006).    *)
+(* 9. Phase 4 launch: PC/decode-free CORE invariant + split.                  *)
 (*                                                                            *)
 (* wbn_loop_invariant bakes in two conjuncts the ENSURES_WHILE tactics MUST   *)
 (* own themselves:                                                            *)
@@ -9822,9 +9817,9 @@ let WBN_INV_SPLIT = prove
   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN REWRITE_TAC[CONJ_ACI]);;
 
 (* ------------------------------------------------------------------------- *)
-(* 9b. Phase 4 PREREQ: the RAW counter accumulator Q30 (session-007).          *)
+(* 9b. Phase 4 PREREQ: the RAW counter accumulator Q30.                        *)
 (*                                                                            *)
-(* CRITICAL FINDING (session-007): the frozen wbn_loop_invariant (Sec 4) is    *)
+(* CRITICAL FINDING: the frozen wbn_loop_invariant (Sec 4) is                  *)
 (* INCOMPLETE for the loop body.  The body's FIRST instruction                 *)
 (*   0x4a0  rev32 v5, v30                                                       *)
 (* reads Q30 -- the running CTR-block counter in its rev32-pending "raw" form  *)
@@ -9846,7 +9841,7 @@ let WBN_INV_SPLIT = prove
 (* lanes byte-grouped.  The body does rev32(v30) -> AES keystream input for    *)
 (* block 8i+13, then add v30,v30,v31 (v31 = word 2^96) to advance to 8i+14.    *)
 (*                                                                            *)
-(* THE FIX (next session): add a Q30 conjunct                                  *)
+(* THE FIX (applied below): add a Q30 conjunct                                 *)
 (*   read Q30 s = gcm_ctr_raw (word (8 * i + 13)) ctr0                          *)
 (* to wbn_loop_invariant (and thus wbn_loop_inv_core auto-tracks it).  Then     *)
 (* WBN_FRONT_BUF_EXT / WBN_LOOP_INVARIANT_ENTRY must re-establish it at i=0     *)
@@ -9854,17 +9849,17 @@ let WBN_INV_SPLIT = prove
 (* case advances it 8i+13 -> 8(i+1)+13 = 8i+21 over the 8 in-body increments.  *)
 (* ------------------------------------------------------------------------- *)
 
-(* gcm_ctr_raw_def moved to Sec 2 (session-008): the Sec-4 invariant now pins
+(* gcm_ctr_raw_def moved to Sec 2: the Sec-4 invariant now pins
    Q30 = gcm_ctr_raw (word (8*i+13)) ctr0, so the definition must precede Sec 4.
    Its body-only algebra lemmas remain here. *)
 
-(* (SUBW_RAW_* + GCM_CTR_RAW_INCR MOVED up to the band-tail region -- session-101.) *)
+(* (SUBW_RAW_* + GCM_CTR_RAW_INCR MOVED up to the band-tail region.)               *)
 
 (* REV32 fold: `rev32 v_,v30` (esize=32) applied to gcm_ctr_raw w ctr0 yields
    gcm_ctr_add w ctr0 -- the proper AES keystream input for CTR block w.  The
    arm_REV32_VEC tower is auto-generated by the stepper (~8k chars, deterministic),
    so the reusable form is a TACTIC that folds `read Qd sN` after a rev32-of-v30 step.
-   VALIDATED recipe (session-007, proves in ~2s):
+   VALIDATED recipe (proves in ~2s):
      <capture the rev32 tower T = rhs of `read Qd sN`>, then prove `T = gcm_ctr_add w ctr0` by
        REWRITE_TAC[gcm_ctr_raw_def] THEN
        GEN_REWRITE_TAC RAND_CONV [GCM_CTR_ADD_LANES] THEN
@@ -9905,7 +9900,7 @@ let REV32_FOLD_TAC (qd:string) (sn:string) (wtm:term) : tactic =
    to `read Qd sn = gcm_ctr_raw (word_add wtm (word 1)) ctr0` via GCM_CTR_RAW_INCR
    instantiated at w:=wtm.  Fold ONCE PER add (before the next add re-nests the
    +1s) so only the single-+1 GCM_CTR_RAW_INCR LHS is ever matched.
-   VALIDATED (session-008, self-test proved; MATCH_ACCEPT on the exact simplified
+   VALIDATED (self-test proved; MATCH_ACCEPT on the exact simplified
    single-add shape). *)
 let CTR_RAW_INCR_FOLD_TAC (qd:string) (sn:string) (wtm:term) : tactic =
   let incr_spec = INST [wtm,`w:32 word`] GCM_CTR_RAW_INCR in
@@ -9917,7 +9912,7 @@ let CTR_RAW_INCR_FOLD_TAC (qd:string) (sn:string) (wtm:term) : tactic =
     | _ -> th);;
 
 (* ------------------------------------------------------------------------- *)
-(* 10. Phase 4: fire the ENSURES_WHILE skeleton -> WBN_MAIN_LOOP (session-006)*)
+(* 10. Phase 4: fire the ENSURES_WHILE skeleton -> WBN_MAIN_LOOP              *)
 (*                                                                            *)
 (* The back-edge of .L256_dec_main_loop is                                    *)
 (*   cmp x0,x5 @0x9e4 ; stp q6,q7,[x2],#32 @0x9e8 ; b.lt 0x4a0 @0x9ec         *)
@@ -10017,9 +10012,9 @@ let UP2_ABI_TAC k pc1 pc2 iv =
    [REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN MAYCHANGE_IDEMPOT_TAC;
     ALL_TAC];;
 
-(* ---- body Q8..Q15 re-derivation (session-011) ----------------------------- *)
+(* ---- body Q8..Q15 re-derivation ------------------------------------------- *)
 (* The next raw-ct group (blocks 8(i+1)+0..8(i+1)+7) is loaded fresh in the body *)
-(* (ldp q8,q9,[x0],#32 @0x810 etc, x0 = in_p+128(i+1)).  The session-010 finding *)
+(* (ldp q8,q9,[x0],#32 @0x810 etc, x0 = in_p+128(i+1)).  The finding             *)
 (* is that the sim discards these read-facts — but they are RE-DERIVABLE at any  *)
 (* body state from the surviving in_p loop-constant (read (memory :> bytes       *)
 (* (in_p,16*nblk)) s = num_of_bytelist ibytes), which is preserved (in_p is      *)
@@ -10028,7 +10023,7 @@ let UP2_ABI_TAC k pc1 pc2 iv =
 (* LANES (wb.ml:2909) specialized so each block reads at in_p+16*(8(i+1)+m) =     *)
 (* bytes_to_int128(SUB_LIST(16*(8(i+1)+m),16) ibytes) — exactly the invariant's  *)
 (* read Q8..Q15 (i+1) values.  Prefer this to preserving the reg facts through   *)
-(* 300+ steps (per the reviewer's "re-derive over preserve" note).               *)
+(* 300+ steps: re-derive rather than preserve.                                   *)
 let WBN_RAWCT_BOUND = prove
  (`i < (nblk - 9) DIV 8 /\ 9 <= nblk ==> !m. m < 8 ==> 8 * (i+1) + m < nblk`,
   STRIP_TAC THEN X_GEN_TAC `m:num` THEN DISCH_TAC THEN
@@ -10054,13 +10049,13 @@ let WBN_RAWCT_READ = prove
     MP_TAC(SPEC_ALL WBN_RAWCT_BOUND) THEN ASM_SIMP_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* 10a. Phase 4 body-sim machinery (session-009).                             *)
+(* 10a. Phase 4 body-sim machinery.                                           *)
 (*                                                                            *)
 (* The loop body 0x4a0..0x9ec (340 instrs) is a software-pipelined 8-block     *)
 (* group: 8 AES-256 keystreams (aese/aesmc towers), 8 GHASH Horner folds,      *)
 (* the CTR-block counter advancing 8i+13 -> 8i+21 = 8(i+1)+13, 4 stp stores,   *)
 (* next-group ldp loads, and the signed b.lt back-edge.  The sim is driven     *)
-(* per-region (VALIDATED session-009, s0..s340 all clean, terms kept flat):    *)
+(* per-region (VALIDATED: s0..s340 all clean, terms kept flat):                *)
 (*   - counter-input rev32 v_,v30 folds:  REV32_FOLD_TAC "Qd" "sN" `word(8i+c)`*)
 (*   - counter-increment add v30 folds:   CTR_INCR_NORM_TAC "sN" c  (fold once *)
 (*       per add, THEN normalize word_add(word(8i+c))(word 1) -> word(8i+c+1)) *)
@@ -10104,12 +10099,12 @@ let DISCARD_STALE_Q19_TAC : tactic = fun (asl,w) ->
          DISCARD_ASSUMPTIONS_TAC (fun th ->
            (match state_num_of_q19_fact th with Some k -> k<mx | None -> false)) (asl,w);;
 
-(* ---- session-015: body-close reduce-window infrastructure (SESSION-014 ADDENDUM) --------
+(* ---- : body-close reduce-window infrastructure --------
    The final GHASH reduce (0x924..0x9b4) reloads Q16 = the [sp+64] modulus (now carried by
    the invariant) and feeds the pmull/eor3 chain via Q16/Q17/Q21/Q29.  Over that window we
    must KEEP Q16-Q19 (KEEPGH) yet not let their per-step towers pile up.  KEEPGH_LATEST =
    KEEPGH + keep only the LATEST read of each of Q16/Q17/Q18/Q19.  (KEEPGH lives in wb.ml;
-   this generalizes DISCARD_STALE_Q19_TAC to all four GHASH regs.)  VALIDATED (session-015)
+   this generalizes DISCARD_STALE_Q19_TAC to all four GHASH regs.)  VALIDATED
    to define+typecheck against the warm ckpt; the full-window behaviour is validated once
    the new invariant is cold-loaded (the body reaches this window only via wbn_loop_inv_core,
    which the warm ckpt still bakes WITHOUT the [sp+64] conjunct). *)
@@ -10126,12 +10121,12 @@ let DISCARD_STALE_QREG_TAC qn : tactic = fun (asl,w) ->
   | _ -> let mx = List.fold_left max 0 nums in
          DISCARD_ASSUMPTIONS_TAC (fun th ->
            (match state_num_of_qreg qn th with Some k -> k<mx | None -> false)) (asl,w);;
-(* (session-068: the KEEPGH_LATEST stepper family -- DISCARD_OLDSTATE_KEEPGH_
+(* (the KEEPGH_LATEST stepper family -- DISCARD_OLDSTATE_KEEPGH_
    LATEST_TAC and ARM_STEPS_FOLD_KEEPGH_LATEST_TAC / _NOSIMP_TAC -- was an early
    body-sim variant superseded by the KEEPDATA family the live sims use; it was
    never referenced and has been deleted.) *)
 
-(* WBN_NBLK_GE_9: moved here (session-024) from below the back-edge cluster so
+(* WBN_NBLK_GE_9: moved here from below the back-edge cluster so
    RAWCT_LEMMA_AT (Sec 10b) can reference it — the cold-load regression the
    e2386b15 commit introduced (Unbound value at the RAWCT_LEMMA_AT let). Depends
    only on DIVISION + ARITH_TAC, so it is safe to hoist. *)
@@ -10140,14 +10135,14 @@ let WBN_NBLK_GE_9 = prove
   MP_TAC(SPECL [`nblk - 9`; `8`] DIVISION) THEN ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* 10b. Phase-4 postcond-MATCH machinery (session-023).                       *)
+(* 10b. Phase-4 postcond-MATCH machinery.                                     *)
 (*                                                                            *)
-(* SESSION-023 finding: the 16 orthogonal postcond conjuncts (all but the      *)
+(*  finding: the 16 orthogonal postcond conjuncts (all but the                 *)
 (* escalated Q19 [11]) close CHEAT-free once three sub-problems are solved.    *)
 (* These tactics are VALIDATED live end-to-end (body sim reaches s340; the     *)
 (* counter conjunct [0] closes standalone via CTR_ADD_CLOSE_TAC in 0.8s).      *)
 (*                                                                            *)
-(* (A) Q8..Q15 raw-ct [3-10] (s017 Finding-2 part A — the 5-session blocker):  *)
+(* (A) Q8..Q15 raw-ct [3-10]:                                                 *)
 (*   right after each ldp (steps 221 src s220, 273 src s272, 306 src s305,     *)
 (*   309 src s308), the machine gives read Qk sN = read(mem:>bytes128 ADDR)    *)
 (*   s(N-1) — an OLD-STATE read that is un-closeable once s(N-1) is discarded.  *)
@@ -10158,13 +10153,13 @@ let WBN_NBLK_GE_9 = prove
 (*   current state (validated: read Q8 s225 already clean spec form) — so it    *)
 (*   survives every later discard.  m = 0..7 for Q8..Q15 in load order.         *)
 (*                                                                            *)
-(* (B) Reduce-window hang (the s014 concrete-modulus blocker): since Q19 [11]   *)
+(* (B) Reduce-window hang (the concrete-modulus blocker): since Q19 [11]        *)
 (*   goes behind the scoped CHEAT, DISCARD Q16/Q17/Q18/Q19 BEFORE the reduce    *)
 (*   window (before step 290).  The concrete [sp+64] modulus pmull that made    *)
 (*   GCM_SIMD_SIMPLIFY stack-overflow is then gone — 290..305 steps in ~15s.    *)
 (*   No midacc / Tier-2 machinery needed for the 16 conjuncts.                  *)
 (*                                                                            *)
-(* (C) Store window 310..340 + counter folds (s017 Finding-2 part B, PARTIAL):  *)
+(* (C) Store window 310..340 + counter folds (PARTIAL):                        *)
 (*   the AES keystream Q0..Q7 is consumed by eor3 (steps 313..335) to make the  *)
 (*   plaintext; KEEPGH-style stepping discards it, so store read-backs dangle.  *)
 (*   ARM_STEPS_DATA_NOSIMP_TAC keeps Q0..Q15 + ALL memory reads current (no      *)
@@ -10175,7 +10170,7 @@ let WBN_NBLK_GE_9 = prove
 (*   [1][2] (10k/51k chars, many un-folded nested adds) OOM WORD_BLAST.  SO the  *)
 (*   counter regs MUST be REV32_FOLD/CTR_INCR_NORM-folded DURING the store       *)
 (*   window (as the committed sim does: REV32_FOLD "Q25" s326, "Q4" s336,        *)
-(*   CTR_INCR_NORM s335/s337) — the OPEN piece for the next session is a store   *)
+(*   CTR_INCR_NORM s335/s337).  A cleaner alternative would be a single store   *)
 (*   window that keeps Q0..Q7 keystream + stores current AND folds Q0..Q4        *)
 (*   counters per-step (hybrid of ARM_STEPS_DATA_NOSIMP_TAC + the fold points).  *)
 (*                                                                            *)
@@ -10263,14 +10258,14 @@ let CTR_ADD_CLOSE_TAC : tactic =
   GEN_TAC THEN CONV_TAC WORD_BLAST;;
 
 (* ------------------------------------------------------------------------- *)
-(* 10c. Phase-4 body-close machinery (session-027).                           *)
+(* 10c. Phase-4 body-close machinery.                                         *)
 (*                                                                            *)
-(* SESSION-027: the full body sim + 16-conjunct close, driven CHEAT-free      *)
+(* the full body sim + 16-conjunct close, driven CHEAT-free                   *)
 (* (only [11]/Q19 keeps its scoped CHEAT).  The committed sim (below) uses a   *)
 (* KEEPDATA stepper that keeps Q0..Q19 latest (incl. the AES keystream Q0-Q7,  *)
-(* which the old Q18LATEST/KEEPGH_LATEST steppers discarded — the s025         *)
+(* which the old Q18LATEST/KEEPGH_LATEST steppers discarded — the             *)
 (* keystream-survival blocker).  Resolve-at-load for Q8-Q15 is done with       *)
-(* RESOLVE_LDP2_TAC, which fixes the s023 RESOLVE_QREG_A latent bug: the ldp    *)
+(* RESOLVE_LDP2_TAC, which fixes a RESOLVE_QREG_A latent bug: the ldp           *)
 (* leaves  read Qk s(N) = read(mem@ADDR) s(N-1)  (memory read at the LOAD-INPUT *)
 (* state s(N-1)), so the raw !m lemma must be matched AT s(N-1), not s(N).      *)
 (* RESOLVE_QREG_C matches the raw lemma at the register-read's own memory-state *)
@@ -10298,7 +10293,7 @@ let DISCARD_OLDSTATE_KEEPDATA_TAC s =
     let us = unbound_statevars_of_read [] (concl thm) in
     if us = [] || us = [v] then false else true);;
 let DISCARD_STALE_DATA_TAC = MAP_EVERY DISCARD_STALE_QREG_TAC wbn_datawords_0_19;;
-(* SPEED (session-082, tactic-axis profile): the per-step fold here uses ONE pass of
+(* SPEED: the per-step fold here uses ONE pass of
    GCM_SIMD_SIMPLIFY_CORE_TAC, not the shared double-pass GCM_SIMD_SIMPLIFY_TAC.  The
    2nd pass exists (in the lemmas file) to reach a REV64 fixpoint that a single pass
    can miss on ~6/278 steps -- but under KEEPDATA (which discards stale old-state reads
@@ -10314,7 +10309,7 @@ let ARM_STEPS_FOLD_KEEPDATA_TAC exec snums =
     (statenames "s" snums);;
 (* NO-SIMPLIFY variant for the reduce + store windows: GCM_SIMD_SIMPLIFY on the
    concrete [sp+64] modulus pmull (reduce) or the kept eor3 keystream towers
-   (store) explodes (session-014/024); step symbolic instead. *)
+   (store) explodes; step symbolic instead. *)
 let ARM_STEPS_FOLD_KEEPDATA_NOSIMP_TAC exec snums =
   MAP_EVERY (fun s -> ARM_VERBOSE_STEP_TAC exec s THEN
               DISCARD_STALE_DATA_TAC THEN DISCARD_OLDSTATE_KEEPDATA_TAC s THEN CLARIFY_TAC)
@@ -10330,7 +10325,7 @@ let DISCARD_QREGS_TAC qns : tactic =
 (* RESOLVE_QREG_C qreg scur m: like RESOLVE_QREG_A but matches the raw !m lemma AT
    the state of the register-read's embedded memory read (sload = s(N-1) for an
    ldp), not any state; and PURE_ONCE_REWRITE (not REWRITE) so the m=0 index
-   8*(i+1)+0 is not collapsed to 8*(i+1) before ACCEPT.  (session-027: the s023
+   8*(i+1)+0 is not collapsed to 8*(i+1) before ACCEPT.  (the
    RESOLVE_QREG_A fails on a recorded/cold run because the ldp memory read stays
    at s(N-1) while the raw lemma advances to s(N).) *)
 let RESOLVE_QREG_C (qreg:string) (scur:string) (m:int) : tactic =
@@ -10397,7 +10392,7 @@ let NEWBLK_CLOSE_TAC =
        word_add out_p (word (16*(8*(i+1)+M))):int64`)) (0--7) in
   RULE_ASSUM_TAC(REWRITE_RULE addrbr) THEN
   REWRITE_TAC canon THEN RULE_ASSUM_TAC(REWRITE_RULE (canon @ subbr)) THEN
-  (* SESSION-028 FIX: fire the store-readback hyp (ASM_REWRITE) BEFORE folding
+  (*  FIX: fire the store-readback hyp (ASM_REWRITE) BEFORE folding
      the raw aese/aesmc tower.  The s027 order ran GSYM aes13 first, when the
      goal LHS was still `read(mem) s340` (tower not yet substituted), so the
      fold had nothing to match and REFL_TAC failed on the 8 new-block legs. *)
@@ -10414,11 +10409,11 @@ let PLAINTEXT_CLOSE_TAC =
               ARITH_RULE `(8*i+8)+7 = 8*i+15`] THEN
   REFL_TAC;;
 
-(* (session-068: BSWAP_INVOL_MASSAGE_TAC, an h_k=byteswap128(...) involution
+(* (BSWAP_INVOL_MASSAGE_TAC, an h_k=byteswap128(...) involution
    bridge for an earlier BODY_Q19_CLOSE_ALGEBRA route, was never referenced --
    deleted.) *)
 
-(* PC back-edge arithmetic bridge (session-009). *)
+(* PC back-edge arithmetic bridge.               *)
 let WBN_DIV_SHIFT = prove
  (`9 <= nblk ==> (nblk - 1) DIV 8 = (nblk - 9) DIV 8 + 1`,
   STRIP_TAC THEN
@@ -10432,7 +10427,7 @@ let WBN_PC_BRIDGE = prove
    ==> ((128 * (i + 2) < 128 * (nblk - 1) DIV 8) <=> (i + 1 < (nblk - 9) DIV 8))`,
   DISCH_TAC THEN ASM_SIMP_TAC[WBN_DIV_SHIFT] THEN ARITH_TAC);;
 
-(* WBN_NBLK_GE_9 moved above Sec 10b (session-024 load-order fix). *)
+(* WBN_NBLK_GE_9 moved above Sec 10b (load-order fix).             *)
 
 (* premises of WB_PTRCMP_FLAGS at the back-edge: X0=in_p+128*(i+2) (a),
    X5=128*((nblk-1)DIV8)+in_p (d); both offsets < 2^63 from val in_p+16*nblk. *)
@@ -10483,7 +10478,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     (* 3. ===================== PHASE 4 LOOP BODY (TODO) ===================== *)
     (* Goal after `REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN   *)
     (* CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0"`:         *)
-    (* state s0 at 0x4a0, iteration i, with (confirmed session-006, risk #2): *)
+    (* state s0 at 0x4a0, iteration i, with (confirmed , risk #2):            *)
     (*   X0=in_p+128(i+1) X2=out_p+128(i+1) X4=in_p+16nblk                     *)
     (*   X5=128*((nblk-1)DIV8)+in_p X1=128nblk X9=16nblk X10=sp+64 X11=key_p   *)
     (*   X3=xi_p X6=htbl_p X16=ivec_p X15=word 4294967296 SP=stackpointer      *)
@@ -10492,12 +10487,12 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     (*   Q8..Q15 = raw ct blocks 8i+0..8i+7        (GHASH stream lags)         *)
     (*   Q19 = ghash_polyval_acc over blocks 0..8i-1                           *)
     (*   Q26=k12 Q27=k13 Q28=k14 Q31=word 79228162514264337593543950336        *)
-    (*   Q30 = gcm_ctr_raw (word (8i+13)) ctr0  (session-008 patch; read by     *)
+    (*   Q30 = gcm_ctr_raw (word (8i+13)) ctr0  (patch; read by                 *)
     (*         the body's first instr rev32 v5,v30; advances 8i+13 -> 8i+21).   *)
     (* Sim decodes cleanly.  340 instrs, body 0x4a0..0x9ec.  Target: core(i+1)  *)
     (* at PC=if i+1<k then 0x4a0 else 0x9f0.                                    *)
     (*                                                                          *)
-    (* SESSION-008 body-entry recon (VALIDATED interactively against the        *)
+    (*  body-entry recon (VALIDATED interactively against the                   *)
     (* Q30-patched wbn_loop_inv_core_v2, s0..s10 stepped clean, 2.6s+3.5s):     *)
     (*  loop-head counter schedule (objdump 0x4a0..0x4d0), interleaved:         *)
     (*    0x4a0 rev32 v5,v30   : Q5  <- rev32(gcm_ctr_raw(8i+13)) = keystream   *)
@@ -10531,18 +10526,18 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     (* body by WB_PTRCMP_FLAGS (x0 vs x5).  Reach the body-init state via       *)
     (*   REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN              *)
     (*   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0"          *)
-    (* (VALIDATED session-008: yields hyps incl. read Q30 s0 = gcm_ctr_raw      *)
+    (* (VALIDATED: yields hyps incl. read Q30 s0 = gcm_ctr_raw                  *)
     (* (word(8*i+13)) ctr0 at asm 58).  Use per-step GCM_SIMD_SIMPLIFY_TAC to   *)
     (* control term growth (see WBN_FRONT_STEP_TAC pattern, Sec 3).             *)
-    (* SESSION-009: full 340-instr sim below is VALIDATED end-to-end (s0..s340   *)
+    (* full 340-instr sim below is VALIDATED end-to-end (s0..s340                *)
     (* clean, PC lands at if i+1<(nblk-9)DIV8 then 0x4a0 else 0x9f0 exactly).    *)
     (* Only the postcondition MATCH (27 conjuncts: 8 AES-reconstruct, GHASH Q19  *)
     (* close, store-forall) remains -> inner CHEAT_TAC (Phase-4 sub-split).      *)
     (* ===================================================================== *)
-    (* SESSION-016: the 340-instr body re-sim, VALIDATED end-to-end with the   *)
-    (* [sp+64]-carrying invariant (wb-dec-mainloop6).  Replaces the broken     *)
-    (* session-009 Q18LATEST body (which discarded every read Qn sK, n<>18,    *)
-    (* dropping the postcond facts — the s010 root cause).  Recipe:            *)
+    (* the 340-instr body re-sim, VALIDATED end-to-end with the                *)
+    (* [sp+64]-carrying invariant.  Replaces the broken                        *)
+    (* Q18LATEST body (which discarded every read Qn sK, n<>18,                *)
+    (* dropping the postcond facts — the root cause).  Recipe:                 *)
     (*  - htable unfold+split @s0 (s013): the H-power ldrs resolve, so Q17/18/  *)
     (*    19 stay self-contained.                                              *)
     (*  - front 1-13 (counter rev32/add folds) verbatim.                       *)
@@ -10573,12 +10568,12 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
          can (find_term (fun t->match t with Const("karatsuba_mid",_)->true|_->false)) c
       then STRIP_ASSUME_TAC th else NO_TAC) THEN
     (* ===================================================================== *)
-    (* SESSION-027: full body sim (KEEPDATA — keeps Q0..Q19 incl keystream) +   *)
+    (* full body sim (KEEPDATA — keeps Q0..Q19 incl keystream) +                *)
     (* 16-conjunct close, CHEAT-free.  Only [11]/Q19 keeps its scoped CHEAT     *)
     (* (route DECIDED: tail FOLD_MID_HPOW port, separate follow-up).  Driven    *)
-    (* live end-to-end this session (s0..s340, PC exact; all 8/8 store-forall   *)
+    (* end-to-end (s0..s340, PC exact; all 8/8 store-forall                     *)
     (* new-block legs + plaintext + pointers + htable + MAYCHANGE close).       *)
-    (* Resolve-at-load via RESOLVE_LDP2_TAC (fixes the s023 RESOLVE_QREG_A       *)
+    (* Resolve-at-load via RESOLVE_LDP2_TAC (fixes a RESOLVE_QREG_A              *)
     (* state-subscript bug: the ldp memory read stays at the LOAD-INPUT state). *)
     (* --- counter setup 1..13 (rev32/add folds) --- *)
     ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (1--1) THEN
@@ -10615,7 +10610,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     REV32_FOLD_TAC "Q23" "s288" `word (8*i+18):32 word` THEN
     ARM_STEPS_FOLD_KEEPDATA_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (289--289) THEN
     CTR_INCR_NORM_TAC "s289" 18 THEN
-    (* --- session-064 Q19 R1' WIRE-IN: instead of DISCARDing the GHASH cluster,   *)
+    (* --- Q19 R1' WIRE-IN: instead of DISCARDing the GHASH cluster,               *)
     (*     ABBREV the three s289 accumulators (Q17/Q19/Q18 = PL/PH/PM) opaque so    *)
     (*     the reduce byteform stays small (629ch), then KEEP Q16-Q19 through the   *)
     (*     reduce (KEEPDATA_NOSIMP keeps Q0-Q19 incl keystream AND the abbreviated  *)
@@ -10646,7 +10641,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
      [MATCH_MP_TAC WBN_NBLK_GE_9 THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
     (* derive NF/VF flag equivalences as standalone theorems, rewrite into asms.
        (MUST rewrite into assumptions - MP_TAC'ing the implication into the goal
-       pollutes the state and breaks the subsequent stp step, session-009.) *)
+       pollutes the state and breaks the subsequent stp step, .) *)
     (fun (asl,w) ->
        let prem = MATCH_MP WBN_PTRCMP_PREMS
          (CONJ (ASSUME `val (in_p:int64) + 16 * nblk < 2 EXP 63`)
@@ -10673,7 +10668,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     REPEAT CONJ_TAC THENL
      [ (* [0-2] plaintext Q5,Q6,Q7 *)
        PLAINTEXT_CLOSE_TAC; PLAINTEXT_CLOSE_TAC; PLAINTEXT_CLOSE_TAC;
-       (* [3] Q19 GHASH acc — session-064 R1' close (was CHEAT): the goal is
+       (* [3] Q19 GHASH acc — R1' close (was CHEAT): the goal is
           <machine reduce byteform over PL/PH/PM> = ghash..(8*i+8), closed by the
           CLEAN value-equality WBN_Q19_CLOSE_TAC builds from the stashed s289
           accumulators (WBN_MACHINE_REDUCE_IS_PROP3_PACK + block-algebra). *)
@@ -10719,7 +10714,7 @@ Gc.compact();;
 (* pc+3796 (=0xed4), the exact state every wb.ml WB_TAIL_r_TAC consumes        *)
 (* (ENSURES_INIT_TAC "s265" on q_at r = wb.ml's wb_front_postcond[nblk:=r]).   *)
 (*                                                                            *)
-(* SEAM CONTRACT (session-033, verified against wb.ml:3081-3803 + Explore):    *)
+(* SEAM CONTRACT (verified against wb.ml:3081-3803 + Explore):                 *)
 (*  - The tail seam is at pc+3796 (0xed4), NOT 0xec0.  The prepretail sims     *)
 (*    THROUGH 0xec0..0xed0 (ext v16; sub x5,x4,x0; cmp; ldr q9,[x0],#16; ldp   *)
 (*    q24,q25,[x6,#160]) to set up the tail's Q9/Q24/Q25/X0/X5 registers.      *)
@@ -10728,7 +10723,7 @@ Gc.compact();;
 (*    folds the FINAL in-flight 8-block group (blocks 8k..8k+7) into Q19       *)
 (*    (catching the lagging GHASH stream up), and computes AES keystreams for  *)
 (*    the tail's Q0..Q7.                                                       *)
-(*  - RECOMPOSE SUBSTITUTION (session-033, fully determined off the s313       *)
+(*  - RECOMPOSE SUBSTITUTION (fully determined off the s313                    *)
 (*    harvest): the prepretail postcond = wb_front_postcond instantiated with  *)
 (*      ctr0'   := gcm_ctr_add (word (8*(k+1))) ctr0   (tail's shifted counter) *)
 (*      in_p'   := word_add in_p  (word (128*(k+1)))                            *)
@@ -10739,10 +10734,8 @@ Gc.compact();;
 (*    Q0..Q7 reconcile via GCM_CTR_ADD_COMPOSE:                                 *)
 (*      gcm_ctr_add(8k+8+i) ctr0 = gcm_ctr_inc^i (gcm_ctr_add(8(k+1)) ctr0).    *)
 (*                                                                            *)
-(* SIM RECIPE (session-033, VALIDATED interactively end-to-end on              *)
-(* wb-dec-mainloop10, ~2min, no hang/OOM; reaches read PC s313 = word(pc+3796);*)
-(* full state harvested -- see orchestrator/logs/session-033-prepretail-       *)
-(* recipe.md and session-033-summary.md):                                      *)
+(* SIM RECIPE (VALIDATED end-to-end, no hang/OOM; reaches                      *)
+(* read PC s313 = word(pc+3796) with the full state harvested):                *)
 (*                                                                            *)
 (*   REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN     *)
 (*   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0" THEN         *)
@@ -10765,7 +10758,7 @@ Gc.compact();;
 (*   ARM_STEPS_FOLD_KEEPDATA_TAC EXEC (121--211) THEN                           *)
 (*   ARM_STEPS_FOLD_KEEPDATA_TAC EXEC (212--240) THEN                           *)
 (*   (* discard the GHASH cluster before the [sp+64] modulus reduce (Q19        *)
-(*      CHEATed -- kills the s014 concrete-modulus hang) *)                     *)
+(*      CHEATed -- kills the concrete-modulus hang) *)                          *)
 (*   DISCARD_QREGS_TAC ["Q16";"Q17";"Q18";"Q19"] THEN                           *)
 (*   ARM_STEPS_FOLD_KEEPDATA_NOSIMP_TAC EXEC (241--306) THEN                    *)
 (*   (* tail setup 307..313 -> pc+3796 *)                                       *)
@@ -10783,18 +10776,9 @@ Gc.compact();;
 (*   X15=2^32 Q31=2^96 SP=stackpointer ; [sp+64]=0xC2..; keys k0..k14; htable;  *)
 (*   store-forall j<8*(k+1); input buffer -- all preserved.                    *)
 (*   NF/ZF/CF/VF on word_sub(in_p+16nblk)(in_p+128(k+1)) vs 112 [-> r=... calc] *)
-(*                                                                            *)
-(* NEXT SESSION deliverable: state WBN_PREPRETAIL as an ensures with post =     *)
-(* wb_front_postcond[shifted params above] (so WB_TAIL_r applies verbatim),     *)
-(* drive the recipe above, close every conjunct CHEAT-free EXCEPT the Q19       *)
-(* caught-up GHASH (scoped CHEAT mirroring [11] at :2085 -- same identity),     *)
-(* commit, cold-load gate.  The goal below is the current skeleton (post at     *)
-(* pc+3796 minimal); it is CHEAT-stubbed so the file loads.  DO NOT ship the    *)
-(* minimal post -- replace with the shifted wb_front_postcond before the        *)
-(* Phase-6 recompose can use it.                                                *)
 (* ========================================================================= *)
 
-(* Counter-shift identity (session-034 GO/NO-GO, re-proved s035): the prepretail
+(* Counter-shift identity: the prepretail
    produces AES keystreams Q0..Q7 at absolute block indices 8*(k+1)+i (i=0..7),
    i.e. gcm_ctr_add(word(8*k+8+i))ctr0.  The shifted-front tail seam expects
    Q0..Q7 = aes13(gcm_ctr_inc^i ctr0') k0..k13 with ctr0' = gcm_ctr_add(8*(k+1))ctr0.
@@ -10808,7 +10792,7 @@ let WBN_CTR_SHIFT = prove
   AP_THM_TAC THEN AP_TERM_TAC THEN REWRITE_TAC[GSYM WORD_ADD] THEN
   AP_TERM_TAC THEN ARITH_TAC);;
 
-(* SESSION-036 SOUNDNESS FIX: this raw harvested literal states Q16/Q19 at a FRESH
+(*  SOUNDNESS FIX: this raw harvested literal states Q16/Q19 at a FRESH
    unconstrained xi' (read Q19 s = word_bytereverse xi', Q16 = its staging).  As written
    that is FALSE (word_bytereverse is a bijection + the ARM model is deterministic, so
    `!xi'. hyps ==> ensures ... Q19 = word_bytereverse xi'` cannot hold) -- flagged by the
@@ -11530,7 +11514,7 @@ let wbn_prepretail_post_raw = parse_term {|\(s:armstate).
     ((word:num->(64)word) (128 * (((nblk:num) - 9) DIV 8 + 1))))
     ((word:num->(64)word) 16)|};;
 
-(* SESSION-036 SOUNDNESS FIX (reviewer-specified recipe).  The caught-up GHASH tag: the
+(*  SOUNDNESS FIX.  The caught-up GHASH tag: the
    loop invariant's Q19 shape (Sec 4, :623) at index i := k+1 = (nblk-9)DIV8 + 1, i.e. the
    fold over ALL 8*(k+1) processed blocks.  This IS the true machine value of Q19 at the
    prepretail seam (the loop exits with the GHASH stream lagging 8 blocks; the prepretail
@@ -11552,11 +11536,11 @@ let wbn_caught_up = `ghash_polyval_acc (byteswap128 (h:int128)) (word_byterevers
 let wbn_prepretail_post =
   subst [wbn_caught_up, `word_bytereverse (xi':int128)`] wbn_prepretail_post_raw;;
 
-(* SESSION-035: the shifted-front prepretail postcondition (VALIDATED end-to-end).
+(* the shifted-front prepretail postcondition (VALIDATED end-to-end).
    Built by harvesting the s313 state after the 313-instr sim + wb_front_fold_tac,
    with the two loop-un-tracked memory cells DROPPED (sound; see below) and the two
    GHASH staging regs Q16/Q19 stated at a fresh caught-up tag var xi'.
-   Deltas vs a naive vsubst of wb.ml's wb_front_postcond (session-035 findings):
+   Deltas vs a naive vsubst of wb.ml's wb_front_postcond:
     - Q0..Q7 = aes13 (gcm_ctr_add (word (8*k+8+i)) ctr0) k0..k13 (i=0..7, k=(nblk-9)DIV8);
       the shifted-front form aes13 (gcm_ctr_inc^i ctr0') with ctr0'=gcm_ctr_add(8(k+1))ctr0
       is bridged by WBN_CTR_SHIFT for the Phase-6 recompose.
@@ -11571,9 +11555,9 @@ let wbn_prepretail_post =
       Also DROPPED Q9 = <first tail block> (tail reloads it).  Phase 6 re-proves the tail
       leg (WB_TAIL_r) from this weaker post -- WB_TAIL_r_TAC never consumes the dropped
       facts (verified: no xi_p/ivec_p reads, and it re-loads Q9).
-    - Q16/Q19 caught-up tag: SESSION-036 pins it to `wbn_caught_up` (the i:=k+1 invariant
+    - Q16/Q19 caught-up tag:  pins it to `wbn_caught_up` (the i:=k+1 invariant
       Q19 shape, a function of the pinned inputs) -- NOT a fresh xi'.  The s035-committed
-      form used a fresh unconstrained xi' (Q19 = word_bytereverse xi'), which the s035 review
+      form used a fresh unconstrained xi' (Q19 = word_bytereverse xi'), which review
       found FALSE-as-written (bijection + determinism); s036 corrected it (see the SOUNDNESS
       FIX note above `wbn_caught_up`).  Q19 = wbn_caught_up, Q16 = its staging.  These two
       close behind the scoped disclosed CHEAT below (= the [11] RINNER=LINNER identity at
@@ -11588,7 +11572,7 @@ let WBN_Q9_INDEX_LT = prove
 
 (* index bound for the first-tail-block lane, 9<= variant (8*k+8 < nblk, k=0 here).
    Proves the SAME conclusion as WBN_Q9_INDEX_LT from the weaker 9<=nblk band.
-   (session-069) hoisted here from its original spot down in the 9..16 section so
+   hoisted here from its original spot down in the 9..16 section so
    the unified prepretail sim WBN_PREPRETAIL_EXT2_UNIFIED can consume it; also still
    used by the FRONT-916 / PREP_TO_END_916 chain below. *)
 let WBN_Q9_INDEX_LT_9 = prove
@@ -11597,7 +11581,7 @@ let WBN_Q9_INDEX_LT_9 = prove
   MP_TAC(SPECL[`nblk - 9`;`8`] DIVISION) THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   ABBREV_TAC `k = (nblk - 9) DIV 8` THEN ASM_ARITH_TAC);;
 
-(* NOTE (session-068 dead-code removal): the bare-post prepretail theorem
+(* NOTE: the bare-post prepretail theorem
    WBN_PREPRETAIL (and its goal wbn_prepretail_goal) was fully superseded by the
    output-forall + Q9 augmented WBN_PREPRETAIL_EXT2 below (a full standalone
    re-sim, ~131s) and was never consumed by any live chain; it has been deleted
@@ -11610,7 +11594,7 @@ let WBN_Q9_INDEX_LT_9 = prove
 (* Section 12. PHASE 6 -- recompose the nblk>8 chain.                         *)
 (* ------------------------------------------------------------------------- *)
 
-(* NOTE (session-068 dead-code removal): the bare-post recompose theorems
+(* NOTE: the bare-post recompose theorems
    WBN_LOOP_PREP (LOOP;PREPRETAIL) and WBN_FRONT_TO_PREP (FRONT;LOOP;PREPRETAIL),
    plus their goals wbn_loop_prep_goal / wbn_front_to_prep_goal, were superseded
    by the EXT2 recompose (WBN_LOOP_PREP_EXT2 / WBN_FRONT_TO_PREP_EXT2 below, which
@@ -11619,9 +11603,9 @@ let WBN_Q9_INDEX_LT_9 = prove
    the EXT2 versions. *)
 
 (* ------------------------------------------------------------------------- *)
-(* SESSION-040 -- the OUTPUT-STORE-FORALL augmentation of the prepretail post. *)
+(*  -- the OUTPUT-STORE-FORALL augmentation of the prepretail post.            *)
 (*                                                                            *)
-(* GAP found session-040: wbn_prepretail_post (64 conjuncts) DROPS the loop   *)
+(* GAP: wbn_prepretail_post (64 conjuncts) DROPS the loop                     *)
 (* invariant's quantified output-store conjunct                               *)
 (*   !j. j < 8*((nblk-9)DIV8 + 1) ==>                                         *)
 (*       read (memory :> bytes128 (word_add out_p (word (16*j)))) s =         *)
@@ -11653,7 +11637,7 @@ let wbn_prepretail_post_ext =
     mk_conj(snd(dest_abs wbn_prepretail_post),
             snd(dest_abs wbn_out_forall)));;
 
-(* NOTE (session-068 dead-code removal): the EXT-post prepretail theorem
+(* NOTE: the EXT-post prepretail theorem
    WBN_PREPRETAIL_EXT (another full ~131s re-sim) and its EXT recompose
    WBN_LOOP_PREP_EXT / WBN_FRONT_TO_PREP_EXT (with goals wbn_prepretail_ext_goal /
    wbn_loop_prep_ext_goal / wbn_front_to_prep_ext_goal) were an intermediate step
@@ -11663,20 +11647,20 @@ let wbn_prepretail_post_ext =
    is KEPT -- WBN_PREPRETAIL_EXT2's post is wbn_prepretail_post_ext /\ <Q9>. *)
 
 (* ------------------------------------------------------------------------- *)
-(* SESSION-040 -- WBN_Q9_SPEC: the first-tail-block resolver for the seam.     *)
+(*  -- WBN_Q9_SPEC: the first-tail-block resolver for the seam.                *)
 (*                                                                            *)
 (* At the prepretail seam (pc+3796) the code has just executed                 *)
 (*   ecc:  ldr q9, [x0], #16     (x0 = in_p + 128*(k+1) pre-increment)         *)
 (* so the sim carries  read Q9 s313 = read (memory :> bytes128                 *)
-(*   (word_add in_p (word (128*(k+1))))) s311  -- a RAW memory read (harvested  *)
-(* session-040).  The tail's FIRST instruction eor3 v12,v9,v0,v29 @0xedc reads  *)
+(*   (word_add in_p (word (128*(k+1))))) s311  -- a RAW memory read.            *)
+(* The tail's FIRST instruction eor3 v12,v9,v0,v29 @0xedc reads                 *)
 (* this Q9 (objdump-confirmed: incoming Q9 is consumed BEFORE any tail reload   *)
 (* at 0xfa4), so it MUST reach the tail seam in spec form.  This lemma resolves  *)
 (* that raw read to bytes_to_int128 (SUB_LIST (16*8*(k+1),16) ibytes) = the      *)
 (* first tail block (global block 8*(k+1)) via INPUT_BYTES_TO_BYTE128_LANES at    *)
 (* lane 8*(k+1), given 8*(k+1) < nblk (WBN_Q9_INDEX_LT) and the preserved        *)
-(* whole-buffer input-bytes fact.  hyps=0 (session-040).                         *)
-(* USE (next session): add read Q9 = <this RHS> to the prepretail post, resolve  *)
+(* whole-buffer input-bytes fact.  hyps=0.                                       *)
+(* USE: add read Q9 = <this RHS> to the prepretail post, resolve                 *)
 (* it in the sim right before ENSURES_FINAL_STATE via                           *)
 (*   MP_TAC(SPECL[...] WBN_Q9_SPEC) using the s313 input-bytes fact + the raw    *)
 (*   Q9 read (bridge s311->s313 memory equality: no stores 0xecc..0xed4).         *)
@@ -11704,17 +11688,17 @@ let WBN_Q9_SPEC = prove
       DISCH_THEN(fun th -> REWRITE_TAC[th])]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* SESSION-043 -- EXT2: prepretail post carrying BOTH the output-store forall  *)
+(*  -- EXT2: prepretail post carrying BOTH the output-store forall             *)
 (* (from EXT) AND the incoming Q9 (first tail block, global block 8*(k+1)).    *)
 (*                                                                            *)
-(* GAP (session-040): besides the output forall (carried by EXT), the tail's   *)
+(* GAP: besides the output forall (carried by EXT), the tail's                 *)
 (* FIRST instruction eor3 v12,v9,v0,v29 @0xedc consumes the INCOMING Q9 BEFORE  *)
 (* any tail reload (WBN_Q9_SPEC comment) -- so Q9 must reach the seam in spec   *)
 (* form.  wbn_prepretail_post_ext2 = wbn_prepretail_post_ext /\ the Q9 conjunct *)
 (* (read Q9 s = bytes_to_int128 (SUB_LIST (16 * 8 * ((nblk-9) DIV 8 + 1),16)    *)
 (* ibytes), aconv WBN_Q9_SPEC at k := (nblk-9) DIV 8).                          *)
 (*                                                                            *)
-(* Proof route (session-042 robust alternative, session-043 executed it):       *)
+(* Proof route (the robust alternative):                                        *)
 (* the ldr q9,[x0],#16 @0xecc (step 312) carries a RAW s311 memory read; the    *)
 (* s311->s313 memory-equality bridge is awkward (no s311 MAYCHANGE -- the frame *)
 (* is s0->s313 only).  Instead SPLIT the sim at s311 and resolve Q9 THERE: the  *)
@@ -11725,7 +11709,7 @@ let WBN_Q9_SPEC = prove
 (* to WBN_PREPRETAIL_EXT (~131s) otherwise; same scoped Q16/Q19 CHEAT.  hyps=0.  *)
 (* ------------------------------------------------------------------------- *)
 
-(* SESSION-097 (ivec write-back, M1 keystone): the prepretail post now also
+(*  (ivec write-back, M1 keystone): the prepretail post now also
    carries the advanced CTR-block counter register Q30, so the ivec write-back
    conjunct `read (memory :> bytes128 ivec_p) s = word_bytereverse (ctr_block
    nonce (c + nblk))` can be threaded to the exported theorems downstream (M2).
@@ -11761,7 +11745,7 @@ let wbn_prepretail_ext2_goal =
    (WBN_Q9_INDEX_LT vs WBN_Q9_INDEX_LT_9) and in their hyp band; every ARM step,
    fold, and close is identical, so the ~131s recipe lives here once.
    Recipe: init at the loop invariant (i:=k), counter folds 1..14, KEEPDATA bulk
-   15..240; session-065 Q19 R1' wire-in (step to s242 where PL/PH/PM=Q17/Q19/Q18
+   15..240; Q19 R1' wire-in (step to s242 where PL/PH/PM=Q17/Q19/Q18
    are complete -- PM's final eor3@0xdb4 is instr 242 -- ABBREV them opaque, then
    the reduce KEEPING Q16-Q19 so the byteform stays small); resolve the incoming
    Q9 at s311 (before ldr q9 @0xecc=step 312) to spec form via WBN_Q9_SPEC +
@@ -11797,7 +11781,7 @@ let WBN_PREPRETAIL_EXT2_TAC idx_lt_thm =
   WBN_Q19_EXTRACT_ABBREV_TAC "s242" THEN
   ARM_STEPS_FOLD_KEEPDATA_NOSIMP_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (243--306) THEN
   ARM_STEPS_FOLD_KEEPDATA_NOSIMP_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (307--311) THEN
-  (* SESSION-097: fold the 3rd add-v30 counter increment (un-normalized in the
+  (* fold the 3rd add-v30 counter increment (un-normalized in the
      NOSIMP window; the first two were folded by CTR_INCR_NORM at s3/s9).  The
      lane tower over gcm_ctr_raw (word (8*k+15)) ctr0 collapses to +1, then a
      WORD_RULE normalizes 8*k+15+1 -> 8*k+16 = the seam counter value.  No
@@ -11824,7 +11808,7 @@ let WBN_PREPRETAIL_EXT2_TAC idx_lt_thm =
   TRY MONOTONE_MAYCHANGE_TAC THEN
   TRY (ASM_REWRITE_TAC[]);;
 
-(* SPEED (session-069): the prepretail EXT2 sim (~137s) was run TWICE per cold
+(* SPEED: the prepretail EXT2 sim (~137s) was run TWICE per cold
    load -- here (17<=nblk) and again at WBN_PREPRETAIL_EXT2_916 (9..16) -- with
    IDENTICAL pre/post/sim, differing ONLY in the index lemma fed to the WBN_Q9_SPEC
    ANTS (WBN_Q9_INDEX_LT vs _9).  But WBN_Q9_INDEX_LT_9 proves that side condition
@@ -11863,7 +11847,7 @@ let WBN_PREPRETAIL_EXT2 =
 
 (* WBN_LOOP_PREP_EXT2 / WBN_FRONT_TO_PREP_EXT2: the EXT2-post analogues,          *)
 (* chaining through WBN_PREPRETAIL_EXT2.  Same ENSURES_TRANS_SIMPLE /             *)
-(* ENSURES_PRECONDITION_THM route as the EXT versions (incl. the s039 two-rator  *)
+(* ENSURES_PRECONDITION_THM route as the EXT versions (incl. the two-rator       *)
 (* peel that picks the PRE of WBN_LOOP_PREP_EXT2, not its post).  Both hyps=0.    *)
 let wbn_loop_prep_ext2_goal =
   let loop_pre = mk_abs(`s:armstate`,
@@ -11912,14 +11896,14 @@ let WBN_FRONT_TO_PREP_EXT2 = prove(wbn_front_to_prep_ext2_goal,
       ANTS_TAC THENL [FIRST_X_ASSUM ACCEPT_TAC; DISCH_THEN ACCEPT_TAC]]]);;
 
 (* ========================================================================= *)
-(* SESSION-044 -- PHASE 6 STEP 2: the tail leg (WBN_PREP_TO_END).            *)
+(*  -- PHASE 6 STEP 2: the tail leg (WBN_PREP_TO_END).                       *)
 (*                                                                           *)
-(* KEY STRUCTURAL FACT (session-044): wb.ml's WB_TAIL_r_TAC tail proofs      *)
+(* KEY STRUCTURAL FACT: wb.ml's WB_TAIL_r_TAC tail proofs                    *)
 (* already START at pc+3796 -- EXACTLY the EXT2 seam PC -- and drive to      *)
 (* pc+4528 (the whole-function exit) CHEAT-FREE (they discharge the r-block  *)
 (* GHASH via GMULT{r}_FULL_CORRECT_BA).  The shared per-block back-leg       *)
 (* WB_TAIL_GEN2_r -- `ensures arm (weak q_at r) (band_post r) (band_frame r)`*)
-(* -- is proved ONCE up front (session-071 refactor, at the prove_band site) *)
+(* -- is proved ONCE up front (refactor, at the prove_band site)             *)
 (* and reused both by prove_band and here by the nblk>8 recomposition, which *)
 (* feeds it by precondition-weakening (no re-simulation).  wbn_dissect_band, *)
 (* wbn_tail_drop_lhs(6), wbn_weak_q_at6, wbn_tail_backleg_goal6 and the       *)
@@ -11927,12 +11911,12 @@ let WBN_FRONT_TO_PREP_EXT2 = prove(wbn_front_to_prep_ext2_goal,
 (* ------------------------------------------------------------------------- *)
 
 (* ========================================================================= *)
-(* SESSION-045 -- PHASE 6 STEP 2b: WBN_PREP_TO_END assembly infrastructure.  *)
+(*  -- PHASE 6 STEP 2b: WBN_PREP_TO_END assembly infrastructure.             *)
 (*                                                                           *)
-(* SOUNDNESS FIX to the (uncommitted) session-044 STEP-2b recipe.  That      *)
+(* SOUNDNESS FIX to the (uncommitted) STEP-2b recipe.  That                  *)
 (* recipe fed WB_TAIL_GEN_r (which keep X1,X9 in their weak precond) by      *)
 (* ENSURES_PRECONDITION_THM from wbn_prepretail_post_ext2, claiming all 20   *)
-(* non-aconv conjuncts reconcile "by pure ARITH".  Session-045 FOUND that 2  *)
+(* non-aconv conjuncts reconcile "by pure ARITH".  In fact 2                 *)
 (* of them are UNDERIVABLE, not ARITH:                                       *)
 (*    ext2 delivers  read X1 s = word (128 * nblk),  read X9 s = word (16*nblk) *)
 (*    but a SPECL'd tail (in_p:=in_p+128(k+1), nblk-role:=r) wants           *)
@@ -11955,7 +11939,7 @@ let NUM_OF_BYTELIST_EQ_WORDLIST = prove
 (* block boundary 128*(k+1).  This discharges the shifted tail precond's      *)
 (* `read (memory :> bytes (in_p+128(k+1),16)) s = num_of_bytelist (SUB_LIST...)` *)
 (* conjunct from ext2's `read (memory :> bytes (in_p,16*nblk)) s = ... ibytes`.  *)
-(* (session-045, hyps=0).                                                     *)
+(* (hyps=0).                                                                  *)
 let WBN_INPUT_SLICE = prove
  (`!(nblk:num) (in_p:int64) (ibytes:byte list) (k:num) (s:armstate).
      LENGTH ibytes = 16 * nblk /\ 8 * (k + 1) < nblk /\
@@ -11982,7 +11966,7 @@ let WBN_INPUT_SLICE = prove
   REWRITE_TAC[NUM_OF_WORDLIST_SUB_LIST; DIMINDEX_8] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
 
-(* Session-047 generalization of WBN_INPUT_SLICE to an arbitrary slice length  *)
+(* Generalization of WBN_INPUT_SLICE to an arbitrary slice length              *)
 (* m (= 16*r):  the r>1 shifted tail reads 16*r input bytes at 128*(k+1), not   *)
 (* just 16.  Same proof, m kept symbolic under 128*(k+1)+m <= 16*nblk. hyps=0.  *)
 let WBN_INPUT_SLICE_GEN = prove
@@ -12011,19 +11995,19 @@ let WBN_INPUT_SLICE_GEN = prove
   REWRITE_TAC[NUM_OF_WORDLIST_SUB_LIST; DIMINDEX_8] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
 
-(* NOTE (session-071 speed refactor): the 6-cell-drop weak-precond builders     *)
+(* NOTE: the 6-cell-drop weak-precond builders                                  *)
 (* (wbn_tail_drop_lhs6, wbn_weak_q_at6, wbn_tail_backleg_goal6) and the eight    *)
 (* WB_TAIL_GEN2_1..8 back-leg theorems are now defined ONCE at the prove_band    *)
-(* site (session-071), so the per-block tail sim runs 8x per load, not 16x.      *)
+(* site, so the per-block tail sim runs 8x per load, not 16x.                    *)
 (* prove_band reuses them by precondition-weakening; the nblk>8 recomposition    *)
 (* below (INNER_TAIL_FEED_TAC / wbn_tail_gen2) references the same theorems.     *)
 
 (* ------------------------------------------------------------------------- *)
-(* WBN_PREP_TO_END_r recipe (VALIDATED for r=1 down to a full close this       *)
-(* session; the reconciliation tactic below took ext2_post ==>                *)
+(* WBN_PREP_TO_END_r recipe (VALIDATED for r=1 down to a full close: the       *)
+(* reconciliation tactic below takes ext2_post ==>                            *)
 (* shifted_weak_q_at6_1 to exactly its 4 trivial residuals -- 3 flags + the    *)
-(* input-read -- all now discharged by the helpers above + a per-subgoal       *)
-(* WORD_RULE.  Assembly of the ensures theorem itself is owed next session).   *)
+(* input-read -- all discharged by the helpers above + a per-subgoal           *)
+(* WORD_RULE).                                                                *)
 (*                                                                           *)
 (* shift_vals r (SPECL order = wb_front_vars minus nblk, 27 terms):           *)
 (*   [pc; stackpointer;                                                        *)
@@ -12078,7 +12062,7 @@ let WBN_INPUT_SLICE_GEN = prove
 (* ------------------------------------------------------------------------- *)
 
 (* ========================================================================= *)
-(* SESSION-047 -- PHASE 6 STEP 2b: WBN_PREP_TO_END_r landed (r=1).           *)
+(*  -- PHASE 6 STEP 2b: WBN_PREP_TO_END_r landed (r=1).                      *)
 (*                                                                           *)
 (* The seam post `wbn_prepretail_post_ext2` (the loop/prepretail EXT2 exit    *)
 (* at pc+3796) feeds the shifted r-block tail WB_TAIL_GEN2_r by precondition- *)
@@ -12086,7 +12070,7 @@ let WBN_INPUT_SLICE_GEN = prove
 (* (shifted band_post r) wbn_front_C_tm, under the length hyp                 *)
 (*   nblk = 8*((nblk-9) DIV 8 + 1) + r.                                       *)
 (*                                                                           *)
-(* SOUNDNESS (session-046/047): the r-block tail's own ANTS (NONOVERLAPPING_  *)
+(* SOUNDNESS: the r-block tail's own ANTS (NONOVERLAPPING_                    *)
 (* TAC over the shifted out_p/xi_p/ivec_p regions) needs 3 disjointness       *)
 (* clauses the ext2 wide hyps do NOT carry:                                   *)
 (*    nonoverlapping (out_p,16*nblk) (xi_p,16)                                *)
@@ -12094,12 +12078,12 @@ let WBN_INPUT_SLICE_GEN = prove
 (*    nonoverlapping (xi_p,16)       (ivec_p,16)                              *)
 (* These ARE genuine whole-function preconditions (the output buffer must be  *)
 (* disjoint from the Xi accumulator and the ivec; xi_p disjoint from ivec_p)  *)
-(* -- same class as the s004 in_p/out_p gap and s015 (out_p)(sp,80) gap.  In  *)
+(* -- same class as the in_p/out_p gap and the (out_p)(sp,80) gap.  In        *)
 (* the real band contract q_at r, xi_p (out_p,16*r) ivec_p at the size-16     *)
 (* (=16*nblk when nblk=1) granularity are present; at the whole-length        *)
 (* 16*nblk granularity dissect_band 1 shows only xi_p (ivec_p,16) literally,  *)
-(* so session-047 threads all 3 as SIDE-CONDITIONS on WBN_PREP_TO_END_r       *)
-(* (reviewer's alternative to widening wbn_front_hyps_wide_tm -- lighter, no  *)
+(* so all 3 are threaded as SIDE-CONDITIONS on WBN_PREP_TO_END_r              *)
+(* (the alternative to widening wbn_front_hyps_wide_tm -- lighter, no         *)
 (* chain re-prove).  They flow up to the final theorem's precond and are      *)
 (* supplied by the guard/subroutine wrapper (the band contract has them).     *)
 (* ------------------------------------------------------------------------- *)
@@ -12127,7 +12111,7 @@ let wbn_prep_to_end_extra_clauses =
    `nonoverlapping (out_p:int64,16 * nblk) (ivec_p:int64,16)`;
    `nonoverlapping (xi_p:int64,16) (ivec_p:int64,16)`];;
 
-(* NOTE (session-068 dead-code removal): an earlier scaffold shipped a
+(* NOTE: an earlier scaffold shipped a
    band-post-only seam family (wbn_prep_to_end_goal / WBN_PREP_TO_END_r_TAC /
    WBN_PREP_TO_END_1..8) that reconciled the ext2 seam post to the shifted
    band_post but dropped the first 8*(k+1) output stores.  It was fully
@@ -12138,7 +12122,7 @@ let wbn_prep_to_end_extra_clauses =
    INNER_TAIL_FEED_TAC below. *)
 
 (* ========================================================================= *)
-(* SESSION-048 -- PHASE 6 STEP 2b: tag-fold + output-forall algebra.         *)
+(*  -- PHASE 6 STEP 2b: tag-fold + output-forall algebra.                    *)
 (*                                                                           *)
 (* The per-r seam feed (INNER_TAIL_FEED_TAC + WB_TAIL_GEN2_r) lands a          *)
 (* SHIFTED-band post:                                                          *)
@@ -12206,7 +12190,7 @@ let WBN_SUBLIST_SHIFT = prove
 (* vocabulary, matching the ext2 seam's carried forall), the tag folded to      *)
 (* list_of_seq cph nblk via GHASH_ACC_APPEND.                                   *)
 (*                                                                             *)
-(* Route (session-048): FRAME_SUBSUMED (narrow tail out-frame -> wide           *)
+(* Route: FRAME_SUBSUMED (narrow tail out-frame -> wide                         *)
 (* wbn_front_C_tm), THEN ENSURES_POSTCONDITION_THM with the intermediate        *)
 (*   inter_post_r = \s. (shifted band_post r) s /\ (ext2 first-8(k+1) forall) s  *)
 (* splitting into: (1) inter_post_r ==> wbn_end_post [the tag-fold + store       *)
@@ -12227,7 +12211,7 @@ let wbn_end_post =
     word_bytereverse (ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
       (MAP word_bytereverse
         (list_of_seq (\k. bytes_to_int128 (SUB_LIST (16 * k,16) ibytes)) nblk)))` in
-  (* ivec M2 (session-101): the whole-buffer counter write-back, spine form
+  (* ivec M2: the whole-buffer counter write-back, spine form
      gcm_ctr_inc_iter nblk ctr0.  FULL_r reconciles the shifted band's
      gcm_ctr_inc_iter r (gcm_ctr_add (word 8(q+1)) ctr0) to this via
      GCM_CTR_INC_ITER_ADD + GCM_CTR_ADD_COMPOSE (8(q+1)+r = nblk). *)
@@ -12274,7 +12258,7 @@ let INNER_TAIL_FEED_TAC r tail_r =
   let counter_close =
     REPLICATE_TAC 14 AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
     CONV_TAC WORD_RULE in
-  (* ivec M2 (session-100): with the Q30 conjunct now carried in wbn_weak_q_at6 r,
+  (* ivec M2: with the Q30 conjunct now carried in wbn_weak_q_at6 r,
      the shifted tail precond demands read Q30 = gcm_ctr_raw (word 8)
      (gcm_ctr_add (word (8*(q+1))) ctr0); the M1 seam (ext2post, ASM_REWRITE'd in
      above) gives gcm_ctr_raw (word (8*q+16)) ctr0.  Absorb the prior add into the
@@ -12313,7 +12297,7 @@ let INNER_TAIL_FEED_TAC r tail_r =
       REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE NONOVERLAPPING_TAC);
       DISCH_THEN ACCEPT_TAC]];;
 
-(* r=1 full-post: validated end-to-end interactively (session-048). *)
+(* r=1 full-post: validated end-to-end interactively.               *)
 let WBN_PREP_TO_END_FULL_1 = prove(wbn_prep_to_end_full_goal 1,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
@@ -12355,7 +12339,7 @@ let WBN_PREP_TO_END_FULL_1 = prove(wbn_prep_to_end_full_goal 1,
         REWRITE_TAC[LIST_OF_SEQ_CLAUSES; MAP; MULT_CLAUSES; ADD_CLAUSES] THEN
         REWRITE_TAC[SUB_LIST_MIN_RIGHT; ARITH_RULE `MIN 16 16 = 16`;
                     ARITH_RULE `16 * 8 * (q + 1) = 128 * (q + 1)`];
-        (* ivec M2 (session-101): shifted band ivec = gcm_ctr_inc_iter 1
+        (* ivec M2: shifted band ivec = gcm_ctr_inc_iter 1
            (gcm_ctr_add (word (8*(q+1))) ctr0); reconcile to gcm_ctr_inc_iter nblk
            ctr0 via ITER_ADD + ADD_COMPOSE + nblk = 8*(q+1)+1. *)
         REWRITE_TAC[GCM_CTR_INC_ITER_ADD; GCM_CTR_ADD_COMPOSE] THEN
@@ -12379,7 +12363,7 @@ let WBN_PREP_TO_END_FULL_1 = prove(wbn_prep_to_end_full_goal 1,
       FIRST_X_ASSUM ACCEPT_TAC]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* SESSION-049 -- r>1 generalization of WBN_PREP_TO_END_FULL_1, MECHANIZED.    *)
+(*  -- r>1 generalization of WBN_PREP_TO_END_FULL_1, MECHANIZED.               *)
 (*                                                                             *)
 (* WBN_PREP_TO_END_FULL_r for r=2..8 has the IDENTICAL skeleton as FULL_1;     *)
 (* the r-dependent hand-parts are packaged as OCaml `int -> tactic` closures   *)
@@ -12534,7 +12518,7 @@ let WBN_PREP_TO_END_FULL_r_TAC r =
      [wbn_case2_forall_tac r;
       CONJ_TAC THENL
        [wbn_tag_fold_tac r;
-        (* ivec M2 (session-101): shifted band ivec = gcm_ctr_inc_iter r
+        (* ivec M2: shifted band ivec = gcm_ctr_inc_iter r
            (gcm_ctr_add (word (8*(q+1))) ctr0) -> gcm_ctr_inc_iter nblk ctr0
            via ITER_ADD + ADD_COMPOSE + nblk = 8*(q+1)+r. *)
         REWRITE_TAC[GCM_CTR_INC_ITER_ADD; GCM_CTR_ADD_COMPOSE] THEN
@@ -12559,7 +12543,7 @@ let WBN_PREP_TO_END_FULL_r_TAC r =
       FIRST_X_ASSUM ACCEPT_TAC]];;
 
 (* ------------------------------------------------------------------------- *)
-(* SESSION-072 SPEED refactor: the r=2..8 suffix sim is BAND-AGNOSTIC          *)
+(* SPEED refactor: the r=2..8 suffix sim is BAND-AGNOSTIC                      *)
 (* (WBN_PREP_TO_END_FULL_r_TAC uses no `17<=nblk`/`9<=nblk` literal and no      *)
 (* band-specific lemma; it only ABBREVs q=(nblk-9)DIV 8 symbolically).  The    *)
 (* two consumer families (FULL_r on `17<=nblk`, FULL_916_r on `9<=nblk/\       *)
@@ -12567,7 +12551,7 @@ let WBN_PREP_TO_END_FULL_r_TAC r =
 (* ONCE on the strictly-weaker UNIFIED band `9<=nblk` (WBN_PREP_TO_END_FREE_r), *)
 (* then derive both consumers by pure hyp-strengthening (statement bit-        *)
 (* identical, so the dispatchers wbn_full_thm/wbn_full_916_thm are untouched).  *)
-(* Mirrors WBN_PREPRETAIL_EXT2_916 (:below) and the s071 GEN2 dedup.            *)
+(* Mirrors WBN_PREPRETAIL_EXT2_916 (:below) and the GEN2 dedup.                 *)
 (* Saves 7 sims (~343s).  ens is byte-identical across all three bands (only    *)
 (* the front-hyps band conjunct differs), so MATCH_MP_TAC + ASM_ARITH closes.   *)
 (* ------------------------------------------------------------------------- *)
@@ -12610,8 +12594,8 @@ let wbn_prep_to_end_full_derive_tac free_thm =
   REPEAT GEN_TAC THEN STRIP_TAC THEN MATCH_MP_TAC free_thm THEN
   ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;;
 
-(* r=2..8 full-post legs (session-049 sims; session-072: now DERIVED from the
-   unified FREE_r, no re-sim).  r=1 is FULL_1 above.  Statement bit-identical. *)
+(* r=2..8 full-post legs, DERIVED from the unified FREE_r (no re-sim).
+   r=1 is FULL_1 above.  Statement bit-identical. *)
 let WBN_PREP_TO_END_FULL_2 = prove(wbn_prep_to_end_full_goal 2, wbn_prep_to_end_full_derive_tac WBN_PREP_TO_END_FREE_2);;
 let WBN_PREP_TO_END_FULL_3 = prove(wbn_prep_to_end_full_goal 3, wbn_prep_to_end_full_derive_tac WBN_PREP_TO_END_FREE_3);;
 let WBN_PREP_TO_END_FULL_4 = prove(wbn_prep_to_end_full_goal 4, wbn_prep_to_end_full_derive_tac WBN_PREP_TO_END_FREE_4);;
@@ -12621,7 +12605,7 @@ let WBN_PREP_TO_END_FULL_7 = prove(wbn_prep_to_end_full_goal 7, wbn_prep_to_end_
 let WBN_PREP_TO_END_FULL_8 = prove(wbn_prep_to_end_full_goal 8, wbn_prep_to_end_full_derive_tac WBN_PREP_TO_END_FREE_8);;
 
 (* ------------------------------------------------------------------------- *)
-(* WBN_PREP_TO_END (session-049): the 8-way case split on r = 1+(nblk-9) MOD 8. *)
+(* WBN_PREP_TO_END: the 8-way case split on r = 1+(nblk-9) MOD 8.               *)
 (* From the ext2 seam post to the full nblk-uniform wbn_end_post, under         *)
 (* 9 <= nblk + the 3 side-conditions.  Each residue rr in {0..7} dispatches to   *)
 (* WBN_PREP_TO_END_FULL_(rr+1); the per-branch length hyp                        *)
@@ -12657,7 +12641,7 @@ let WBN_PREP_TO_END = prove(wbn_prep_to_end_goal_final,
     ASM_REWRITE_TAC[] THEN UNDISCH_TAC `9 <= nblk` THEN ARITH_TAC) (1--8)));;
 
 (* ------------------------------------------------------------------------- *)
-(* WBN_FRONT_TO_END (session-049): the full nblk>8 (nblk>=17) front->exit       *)
+(* WBN_FRONT_TO_END: the full nblk>8 (nblk>=17) front->exit                     *)
 (* chain, pc+0x20 -> pc+4528.  WBN_FRONT_TO_PREP_EXT2 ; WBN_PREP_TO_END via     *)
 (* ENSURES_TRANS_SIMPLE (both share frame wbn_front_C_tm, and the seam post      *)
 (* wbn_prepretail_post_ext2 is aconv between them).  Precond = wbn_front_P_tm    *)
@@ -12686,7 +12670,7 @@ let WBN_FRONT_TO_END = prove(wbn_front_to_end_goal,
     UNDISCH_TAC `17 <= nblk` THEN ARITH_TAC]);;
 
 (* ========================================================================= *)
-(* SESSION-050 -- the nblk 9..16 leg (the loop is NEVER entered).             *)
+(*  -- the nblk 9..16 leg (the loop is NEVER entered).                        *)
 (*                                                                           *)
 (* For 9 <= nblk <= 16: q = (nblk-9) DIV 8 = 0, and d = 128*((nblk-1) DIV 8) *)
 (* = 128 (CONSTANT, since (nblk-1) DIV 8 = 1 across 9..16).  So at the loop- *)
@@ -12720,7 +12704,7 @@ let DIV8_916 = prove
   ASM_ARITH_TAC);;
 
 (* index bound for the first-tail-block lane, 9<= variant (8*k+8 < nblk, k=0 here).
-   NOTE (session-069): hoisted up next to WBN_Q9_INDEX_LT (~line 3332) because the
+   NOTE: hoisted up next to WBN_Q9_INDEX_LT (~line 3332) because the
    unified prepretail sim WBN_PREPRETAIL_EXT2_UNIFIED now consumes it. *)
 
 (* 0x42c b.ge (loop-entry test, X0=in_p<X5): FALLS THROUGH for 9..16 too. *)
@@ -12819,8 +12803,8 @@ let WBN_RESOLVE_49C_916_TAC : tactic = fun (asl,w) ->
                                ARITH_RULE `128 * 1 = 128`])) (asl,w);;
 
 (* the full front-916 sim: prefix IDENTICAL to WBN_FRONT_FULL_TAC to s293, then
-   0x4b4 resolved TAKEN, step 294 lands at 0xa08.  (Dead since the s073 shared-prefix
-   refactor; kept in sync with the +6 session-104 shift for consistency.) *)
+   0x4b4 resolved TAKEN, step 294 lands at 0xa08.  (Dead since the shared-prefix
+   refactor; kept in sync with the +6 shift for consistency.) *)
 let WBN_FRONT_916_FULL_TAC =
   wbn_init_916_tac THEN WBN_LANES_916_TAC THEN WBN_FRONT_STEP_TAC THEN
   WBN_RESOLVE_42C_916_TAC THEN
@@ -12869,13 +12853,13 @@ let wbn_front_to_prep_916_goal =
   let ens = list_mk_comb(`ensures arm`,[wbn_front_P_tm; wbn_entry_post_916; wbn_front_C_tm]) in
   list_mk_forall(wb_front_vars, mk_imp(wbn_front_hyps_916_tm, ens));;
 
-(* FRONT-916: SESSION-073 reuses the shared WBN_FRONT_PREFIX_EXT (0x20->0x4b4, with
+(* FRONT-916:  reuses the shared WBN_FRONT_PREFIX_EXT (0x20->0x4b4, with
    the R loop-constants preserved) via ENSURES_TRANS_SIMPLE, then a single step 294
    (0x4b4 b.ge TAKEN for 9..16, via WBN_RESOLVE_49C_916_TAC) lands at 0xa08 =
    wbn_core_applied 0.  Close = the old ENTRY_CLOSER_916 + WB_PTRCMP tail.  htable is
    UNFOLDED into its reads right after init so they propagate through step 294 (the
    folded htable_mem_dec predicate is not tracked across steps by the stepper).
-   session-104 +6 step shift (was s287 / step 288 / 0x49c->0x9f0). *)
+   folded htable_mem_dec predicate is not tracked across steps by the stepper). *)
 let WBN_FRONT_TO_PREP_916 = prove(wbn_front_to_prep_916_goal,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
@@ -12907,8 +12891,8 @@ let WBN_FRONT_TO_PREP_916 = prove(wbn_front_to_prep_916_goal,
       REPEAT CONJ_TAC THEN MONOTONE_MAYCHANGE_TAC]]);;
 
 (* PREPRETAIL-916: same statement as before (9..16 band), now derived (no sim)
-   from WBN_PREPRETAIL_EXT2_UNIFIED by hyp-strengthening -- see the session-069
-   SPEED note at WBN_PREPRETAIL_EXT2_UNIFIED.  Statement-identical to the pre-069
+   from WBN_PREPRETAIL_EXT2_UNIFIED by hyp-strengthening -- see the
+   SPEED note at WBN_PREPRETAIL_EXT2_UNIFIED.  Statement-identical to the earlier
    full-sim version (aconv verified); the shared sim ran on the 9<=nblk band that
    already subsumes 9..16, so this is a pure MATCH_MP + ASM_ARITH close. *)
 let wbn_prepretail_ext2_916_goal =
@@ -12956,7 +12940,7 @@ let WBN_FRONT_TO_PREP_EXT2_916 = prove(wbn_front_to_prep_ext2_916_goal,
 (* as WBN_PREP_TO_END but with the 9..16 hyp band; dispatches to the FULL_916_r     *)
 (* legs (r-block seam->band reconciliation, symbolic in q, q=0 here).               *)
 (*                                                                                  *)
-(* SESSION-051: CLOSED CHEAT-FREE (hyps=0).  s050's "warm 16*1 reduce quirk" was a  *)
+(* CLOSED CHEAT-FREE (hyps=0).  The "warm 16*1 reduce quirk" was a                 *)
 (* MISDIAGNOSIS.  The real root cause: WBN_PREP_TO_END_FULL_r_TAC does NOT handle    *)
 (* r=1 (it fails ACCEPT_TAC even on a COLD image) -- which is EXACTLY why the >=17    *)
 (* build hand-writes WBN_PREP_TO_END_FULL_1 (:4011) and only applies the parametric  *)
@@ -13024,7 +13008,7 @@ let WBN_PREP_TO_END_FULL_1_HAND_TAC =
         REWRITE_TAC[LIST_OF_SEQ_CLAUSES; MAP; MULT_CLAUSES; ADD_CLAUSES] THEN
         REWRITE_TAC[SUB_LIST_MIN_RIGHT; ARITH_RULE `MIN 16 16 = 16`;
                     ARITH_RULE `16 * 8 * (q + 1) = 128 * (q + 1)`];
-        (* ivec M2 (session-101): shifted band ivec = gcm_ctr_inc_iter 1
+        (* ivec M2: shifted band ivec = gcm_ctr_inc_iter 1
            (gcm_ctr_add (word (8*(q+1))) ctr0); reconcile to gcm_ctr_inc_iter nblk
            ctr0 via ITER_ADD + ADD_COMPOSE + nblk = 8*(q+1)+1. *)
         REWRITE_TAC[GCM_CTR_INC_ITER_ADD; GCM_CTR_ADD_COMPOSE] THEN
@@ -13048,7 +13032,7 @@ let WBN_PREP_TO_END_FULL_1_HAND_TAC =
       FIRST_X_ASSUM ACCEPT_TAC]];;
 
 (* r=1 keeps its hand tactic; r=2..8 DERIVE from the unified FREE_r sims proved
-   once above (session-072 SPEED dedup), no re-simulation.  Statement bit-
+   once above (SPEED dedup), no re-simulation.  Statement bit-
    identical to the pre-072 full-sim version (9..16 band). *)
 let WBN_PREP_TO_END_FULL_916_1 = prove(wbn_prep_to_end_full_916_goal 1, WBN_PREP_TO_END_FULL_1_HAND_TAC);;
 let WBN_PREP_TO_END_FULL_916_2 = prove(wbn_prep_to_end_full_916_goal 2, wbn_prep_to_end_full_derive_tac WBN_PREP_TO_END_FREE_2);;
@@ -13105,16 +13089,16 @@ let WBN_FRONT_TO_END_916 = prove(wbn_front_to_end_916_goal,
     MATCH_MP_TAC WBN_PREP_TO_END_916 THEN ASM_REWRITE_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* PHASE 6 IS COMPLETE (session-051): WBN_PREP_TO_END_916 is CHEAT-free, so     *)
+(* PHASE 6 IS COMPLETE: WBN_PREP_TO_END_916 is CHEAT-free, so                   *)
 (* the WHOLE nblk>8 chain (WBN_FRONT_TO_END for >=17, WBN_FRONT_TO_END_916 for  *)
 (* 9..16) is CHEAT-free.  The former scoped Q19/Q16 RINNER=LINNER identity (once *)
 (* at the loop body + the 4 guarded prepretail sites) was CLOSED by the Q19 R1'  *)
-(* route in sessions 064-065 (WBN_MACHINE_REDUCE_IS_PROP3_PACK +                 *)
+(* route (WBN_MACHINE_REDUCE_IS_PROP3_PACK +                                     *)
 (* WBN_BODY_Q19_REDUCE_CLEAN, wired in).  No CHEAT, no new_axiom anywhere.        *)
 (* ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
-(* PHASE 7 tag-side bridge lemmas (session-051, sim-free, symbolic nblk).      *)
+(* PHASE 7 tag-side bridge lemmas (sim-free, symbolic nblk).                   *)
 (* These reconcile wbn_end_post's tag conjunct to the NIST nist_ghash form at   *)
 (* symbolic nblk (the fixed-N LIST_OF_SEQ_NIST_INPUT in wb.ml does not cover a   *)
 (* symbolic count).  WBN_TAG_NIST_BRIDGE is the drop-in tag rewrite for the      *)
@@ -13148,7 +13132,7 @@ let WBN_TAG_NIST_BRIDGE = prove
   REWRITE_TAC[GSYM BREV_RF8_128; WORD_BYTEREVERSE_BYTEREVERSE]);;
 
 (* ------------------------------------------------------------------------- *)
-(* PHASE 7 output-side bridge lemmas (session-052, sim-free, symbolic nblk).   *)
+(* PHASE 7 output-side bridge lemmas (sim-free, symbolic nblk).                *)
 (* These are the symbolic-nblk analogues of the fixed-N GCM_DEC_PT_BYTES_WHOLE_k*)
 (* + BYTE_LIST_AT_WHOLE_CTR machinery in wb.ml, reconciling wbn_end_post's      *)
 (* nblk-uniform per-block output store forall to byte_list_at(gcm_dec_pt_bytes).*)
@@ -13185,7 +13169,7 @@ let GCM_DEC_PT_BYTES_WHOLE_SYM = prove
   REWRITE_TAC[LENGTH_GCM_DEC_BLOCKS_FROM] THEN ASM_ARITH_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* POINTWISE data-output support (session-079).                                *)
+(* POINTWISE data-output support.                                              *)
 (*                                                                             *)
 (* WHY these exist: the exported data postcondition is otherwise ONLY the      *)
 (* whole-buffer byte-list form byte_list_at(gcm_dec_pt_bytes(16*nblk)..).      *)
@@ -13196,7 +13180,7 @@ let GCM_DEC_PT_BYTES_WHOLE_SYM = prove
 (* the statement reads as though arbitrary byte lengths are accepted (inherited*)
 (* from the masked-partial chain).  The pointwise form                         *)
 (*   !j. j<nblk ==> read(memory:>bytes128(out_p+16j)) s = EL j (aes_ctr ...)    *)
-(* removes that ambiguity and matches Mila's/John's sibling AES-GCM shape.  Do *)
+(* removes that ambiguity and matches the sibling AES-GCM proofs' shape.  Do   *)
 (* NOT "simplify" it away by folding it back into the byte-list form.          *)
 
 (* 16 bytes at offset 16*j of int128_list_to_bytes repack to EL j.  The reverse
@@ -13344,11 +13328,11 @@ let WBN_END_OUTPUT_BYTE_LIST = prove
 
 (* ------------------------------------------------------------------------- *)
 (* Counter-model bridge to the NIST SP 800-38D nonce||counter form used by the *)
-(* sibling AES-GCM proofs (session-078 exploratory; session-080 wires it into   *)
-(* the exported theorems' nonce-named keystream).                              *)
+(* sibling AES-GCM proofs, wired into the exported theorems' nonce-named        *)
+(* keystream.                                                                  *)
 (*                                                                             *)
 (* Our chain names counters via gcm_ctr_inc_iter j ctr0 (successor-iterated     *)
-(* over an OPAQUE initial block ctr0).  Mila's/John's proofs instead use        *)
+(* over an OPAQUE initial block ctr0).  The sibling proofs instead use          *)
 (*   ctr_block nonce ctr = word_join (nonce:96 word) (word ctr:int32)          *)
 (* (NIST big-endian: fixed 96-bit nonce, 32-bit big-endian counter).  These     *)
 (* lemmas prove the two models COINCIDE: gcm_ctr_inc_iter is exactly NIST inc32 *)
@@ -13357,7 +13341,7 @@ let WBN_END_OUTPUT_BYTE_LIST = prove
 (* GCM_CTR_INC_ITER_CTR_BLOCK + CTR0_AS_CTR_BLOCK are what let the exported      *)
 (* _CORRECT/_SUBROUTINE_CORRECT NAME the nonce (via WBN_OUTPUT_POINTWISE_NONCE   *)
 (* below).  ctr_block + aes_ctr_block are the SHARED NIST vocabulary, now        *)
-(* defined in arm/proofs/utils/aes_ctr_spec.ml (session-092) and reached through *)
+(* defined in arm/proofs/utils/aes_ctr_spec.ml and reached through               *)
 (* this file's needs-chain (lemmas.ml -> aes_gcm_dec_spec.ml -> aes_ctr_spec.ml).*)
 (* ------------------------------------------------------------------------- *)
 
@@ -13412,7 +13396,7 @@ let CTR0_AS_CTR_BLOCK = prove
 (*   AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT  (ABI wrapper, this file)       *)
 (*   AESV8_GCM_8X_DEC_256_WB_GUARD               (reject path, wb.ml)           *)
 (* with AESV8_GCM_8X_DEC_256_WB_CORRECT the after-prologue core it wraps.  The  *)
-(* two exported CORRECT theorems are DERIVED (session-080) from two internal    *)
+(* two exported CORRECT theorems are DERIVED from two internal                  *)
 (* H-free byte-list spines by pinning H + weakening the postcond (see their     *)
 (* headers below for the vocabulary and the derivation):                        *)
 (*   WBN_DEC_CORE_BYTELIST        (byte_list output, pc+0x20..pc+4528)          *)
@@ -13446,7 +13430,7 @@ let CTR0_AS_CTR_BLOCK = prove
 (* ========================================================================= *)
 
 (* ------------------------------------------------------------------------- *)
-(* PHASE 7 (session-052): WBN_DEC_CORE_BYTELIST -- all nblk >= 1 (H free,      *)
+(* PHASE 7: WBN_DEC_CORE_BYTELIST -- all nblk >= 1 (H free,                    *)
 (* byte-list output; the internal spine the exported _CORRECT is lifted from). *)
 (* 3-way ASM_CASES: nblk<=8 -> existing DISPATCH (NIST vocab already); 9..16 -> *)
 (* WBN_FRONT_TO_END_916; >=17 -> WBN_FRONT_TO_END.  Each >8 chain ends in       *)
@@ -13467,9 +13451,9 @@ let CTR0_AS_CTR_BLOCK = prove
 (* Phase-8 wrapper/guard supplies -- for nblk<=8 they follow from small nblk;    *)
 (* for symbolic large nblk they must be assumed to avoid pointer/length          *)
 (* overflow).  CHEAT-FREE (the former Q19/[11] RINNER=LINNER identity was closed  *)
-(* by the R1' route in sessions 064-065); no new_axiom anywhere.                  *)
+(* by the R1' route); no new_axiom anywhere.                                     *)
 
-(* The statement is spelled out literally (XTS / John-Harrison style) so the
+(* The statement is spelled out literally (XTS style) so the
    reader sees the full pre/post/frame contract first.  It is the DISPATCH
    ensures-body verbatim, with the `nblk<=8` bound replaced by `1<=nblk` plus the
    two size bounds the Phase-8 wrapper/guard supplies (128*nblk<2 EXP 62 and
@@ -13561,7 +13545,7 @@ let WBN_DEC_CORE_BYTELIST = prove
            SUBST1_TAC THENL
            [AP_TERM_TAC THEN MATCH_MP_TAC RK_ETA_15 THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
           MATCH_MP_TAC WBN_END_OUTPUT_BYTE_LIST THEN ASM_REWRITE_TAC[];
-          (* ivec M2 (session-102 fix): the spine ivec conjunct is IDENTICAL raw
+          (* ivec M2: the spine ivec conjunct is IDENTICAL raw
              vs NIST (idsub touches neither ctr0 nor gcm_ctr_inc_iter), so the
              outer ASM_REWRITE_TAC[] already discharged it -- this leg is the tag
              ALONE.  s101 wrongly wrapped it in a CONJ_TAC, which threw on the
@@ -13584,14 +13568,14 @@ let WBN_DEC_CORE_BYTELIST = prove
     WBN_CHAIN_TO_NIST_TAC WBN_FRONT_TO_END]);;
 
 (* ------------------------------------------------------------------------- *)
-(* PHASE 8 (session-067): WBN_DEC_SUBROUTINE_BYTELIST -- the ABI subroutine    *)
+(* PHASE 8: WBN_DEC_SUBROUTINE_BYTELIST -- the ABI subroutine                  *)
 (* wrapper spine (H free, byte_list output; the exported _SUBROUTINE_CORRECT   *)
 (* is lifted from it below).                                                   *)
 (* The ABI subroutine wrapper for the whole-blocks path (bit_len = 128*nblk,   *)
-(* any nblk >= 0).  session-078 folded the nblk = 0 leg in (the entry cbz x1   *)
+(* any nblk >= 0).  The nblk = 0 leg is folded in (the entry cbz x1            *)
 (* is TAKEN, returns 0, empty output, tag unchanged) so this single theorem is  *)
-(* the external whole-blocks contract, matching Mila's encrypt _GEN shape.  The *)
-(* nblk >= 1 leg is unchanged from s067 (below); the guard fall-through and     *)
+(* the external whole-blocks contract, matching the encrypt _GEN shape.  The   *)
+(* nblk >= 1 leg is unchanged (below); the guard fall-through and              *)
 (* core-crossing machinery are exactly as before.                              *)
 (* Binary                                                                       *)
 (* layout (objdump): the entry GUARD (nop;cbz x1;ands zr,x1,#0x7f;b.ne, offs   *)
@@ -13616,7 +13600,7 @@ let WBN_DEC_CORE_BYTELIST = prove
 (*    the prologue steps clean; then ARM_STEPS 1--8 (guard+saves), ARM_BIGSTEP  *)
 (*    s9 (crosses the core), ARM_STEPS 10--15 (epilogue), ENSURES_FINAL.        *)
 (* The d8-d15 preservation now closes because the F1-narrowed core frame        *)
-(* bytes(sp+64,16) is DISJOINT from the [sp,64) spill area (session-066).       *)
+(* bytes(sp+64,16) is DISJOINT from the [sp,64) spill area.                     *)
 (* Inherits _CORRECT's soundness: CHEAT-free, no new_axiom.                     *)
 (* ------------------------------------------------------------------------- *)
 
@@ -13705,7 +13689,7 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
        moved to the end when the exact-8 drain was appended);
        d8-d15/SP are untouched (never spilled).  The output byte list is empty
        (byte_list_at over word 0 is vacuous) and the tag is unchanged
-       (nist_ghash H tag0 [] = tag0).  Mirrors Mila's nb=0 leg. *)
+       (nist_ghash H tag0 [] = tag0).  Mirrors the encrypt nb=0 leg. *)
     ASM_CASES_TAC `nblk = 0` THENL
      [FIRST_X_ASSUM SUBST_ALL_TAC THEN
       REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; ARITH_RULE `128 * 0 = 0`;
@@ -13746,7 +13730,7 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
       CONV_TAC WORD_RULE]);;
 
 (* ------------------------------------------------------------------------- *)
-(* Bridge (session-080): the whole-buffer byte-list output collapses to the     *)
+(* Bridge: the whole-buffer byte-list output collapses to the                   *)
 (* per-block, NIST-nonce-named keystream form the two exported theorems below   *)
 (* ship.  byte_list_at(gcm_dec_pt_bytes ..) -> !j<nblk. read bytes128(out+16j)  *)
 (* = pt_j XOR E_K(nonce||(c+j)), given word_bytereverse ctr0 = ctr_block nonce  *)
@@ -13779,9 +13763,9 @@ let WBN_OUTPUT_POINTWISE_NONCE = prove
   ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN REFL_TAC);;
 
 (* ------------------------------------------------------------------------- *)
-(* ABSTRACT INDEXED-INPUT bridges (session-092): re-present the exported       *)
+(* ABSTRACT INDEXED-INPUT bridges: re-present the exported                     *)
 (* contracts over an ABSTRACT input function `inblock : num -> int128` pinned   *)
-(* by a per-block read hypothesis, matching John's/Mila's sibling AES-GCM       *)
+(* by a per-block read hypothesis, matching the sibling AES-GCM proofs'         *)
 (* shape (input abstract, pinned by hypothesis).  The internal byte-list spine  *)
 (* is instantiated with the concrete witness                                    *)
 (*   ibytes := int128_list_to_bytes (list_of_seq inblock nblk)                  *)
@@ -13872,7 +13856,7 @@ let GCM_DEC_BLOCKS_FROM_ASSEMBLED = prove
 (* identity B: the GHASH input list over the assembled ibytes IS the NIST       *)
 (* (big-endian) view of inblock, i.e. word_bytereverse o inblock.  (For decrypt *)
 (* GHASH runs over the CIPHERTEXT = the INPUT, so this is the input analogue of  *)
-(* Mila's nist_cipher_block; nist_input_block is exactly that role.)            *)
+(* nist_cipher_block; nist_input_block is exactly that role.)                  *)
 let NIST_INPUT_OF_ASSEMBLED = prove
  (`!inblock nblk.
      list_of_seq
@@ -13886,21 +13870,22 @@ let NIST_INPUT_OF_ASSEMBLED = prove
   REWRITE_TAC[GSYM BREV_RF8_128]);;
 
 (* ========================================================================= *)
-(* THE EXPORTED CORE CONTRACT (session-080 consolidation; session-092 reshape). *)
+(* THE EXPORTED CORE CONTRACT (consolidation; reshape).                         *)
 (*                                                                             *)
 (* After-prologue core correctness for the whole-blocks decrypt, in the         *)
 (* reviewer-facing NIST SP 800-38D vocabulary matching the sibling AES-GCM       *)
-(* proofs (Mila's encrypt _GEN, John's x4 kernels):                            *)
+(* proofs (the encrypt _GEN and the x4 kernels):                              *)
 (*   - GHASH key NAMED as the GCM hash key H = aes256_encrypt (word 0) rk        *)
 (*     (= E_K(0^128)).  aes256_encrypt (NOT aes256_cipher) is the house Arm      *)
 (*     convention (AES-XTS bottoms out in it); the aes256_encrypt=aes256_cipher  *)
-(*     FIPS-197 bridge is a separate upstream deliverable (PR #389 / #370).      *)
+(*     FIPS-197 bridge is a separate upstream deliverable.  TODO: until it       *)
+(*     lands, that identification is an argument, not a theorem here.            *)
 (*   - NIST nonce NAMED by the hyp word_bytereverse ctr0 = ctr_block nonce c     *)
 (*     (every ctr0 admits this, CTR0_AS_CTR_BLOCK), so block j's keystream is    *)
 (*     E_K(nonce || (c + j)) -- the big-endian counter form.                     *)
 (*   - INPUT abstract as an indexed function inblock : num -> int128, pinned by  *)
-(*     the precondition read(bytes128(in_p+16j)) s = inblock j (session-092,      *)
-(*     matching John's/Mila's shape) -- no byte-list ibytes in the exported       *)
+(*     the precondition read(bytes128(in_p+16j)) s = inblock j (matching the      *)
+(*     sibling proofs' shape) -- no byte-list ibytes in the exported              *)
 (*     statement.                                                                 *)
 (*   - output POINTWISE over 16-byte blocks as                                    *)
 (*       word_xor (aes_ctr_block nonce rk (c + j)) (inblock j)                    *)
@@ -13926,9 +13911,9 @@ let NIST_INPUT_OF_ASSEMBLED = prove
 (* CRYPTO_gcm128_decrypt_ctr32 passes the RUNNING ctx->Yi mid-stream, so          *)
 (* entry counters != 2 are real.  In SP 800-38D counter 1 is reserved for the     *)
 (* tag mask, so the first data block is counter 2 -- c := 2 is exactly that NIST  *)
-(* instance of this theorem, one instantiation away (John's/Mila's hardcoded +2). *)
+(* instance of this theorem, one instantiation away (the siblings hardcode +2).   *)
 (*                                                                             *)
-(* IVEC WRITEBACK (LANDED, sessions 097-101): the post now carries the advanced   *)
+(* IVEC WRITEBACK: the post carries the advanced                                 *)
 (* counter the kernel stores (rev32 v30; str q30,[x16]) at both exits, as          *)
 (* read(bytes128 ivec_p) s = word_bytereverse (ctr_block nonce (c+nblk)) -- a       *)
 (* fully streaming contract.  The advanced-counter fact (read Q30 = gcm_ctr_raw    *)
@@ -13940,7 +13925,7 @@ let NIST_INPUT_OF_ASSEMBLED = prove
 (*                                                                             *)
 (* TODO(H-table provenance): htable_mem_8 states the H-power table layout the    *)
 (*   kernel requires (an INPUT) at H = aes256_encrypt (word 0) rk.  Proving       *)
-(*   gcm_init_v8 WRITES it is separate upstream work (PR #389 / #370); the        *)
+(*   gcm_init_v8 WRITES it is separate upstream work; the                        *)
 (*   sibling AES-GCM proofs take the identical table as a precond.               *)
 (* ========================================================================= *)
 
@@ -14021,7 +14006,7 @@ let AESV8_GCM_8X_DEC_256_WB_CORRECT = prove
       REWRITE_TAC[aes_ctr_block] THEN CONV_TAC WORD_BITWISE_RULE;
       CONJ_TAC THENL
        [REWRITE_TAC[NIST_INPUT_OF_ASSEMBLED];
-        (* ivec M2 (session-101): bridge the spine counter to the NIST nonce||(c+nblk)
+        (* ivec M2: bridge the spine counter to the NIST nonce||(c+nblk)
            block via GCM_CTR_INC_ITER_CTR_BLOCK + the nonce hypothesis. *)
         MP_TAC(SPECL [`nblk:num`; `nonce:96 word`; `c:num`; `ctr0:int128`]
           GCM_CTR_INC_ITER_CTR_BLOCK) THEN
@@ -14044,7 +14029,7 @@ let AESV8_GCM_8X_DEC_256_WB_CORRECT = prove
     ASM_REWRITE_TAC[]]);;
 
 (* ========================================================================= *)
-(* THE EXPORTED SUBROUTINE CONTRACT (session-080 consolidation; session-092     *)
+(* THE EXPORTED SUBROUTINE CONTRACT (consolidation;                             *)
 (* reshape) -- headline.  The full AAPCS64 wrapper, same reviewer-facing         *)
 (* vocabulary as the _CORRECT export above (H pinned, nonce named, ABSTRACT      *)
 (* indexed input `inblock`, pointwise aes_ctr_block output, GHASH over           *)
@@ -14052,7 +14037,8 @@ let AESV8_GCM_8X_DEC_256_WB_CORRECT = prove
 (* (nblk=0: entry cbz taken, returns 0; both the input-read hypothesis and the   *)
 (* output pointwise conjunct are vacuous -- no j<0 -- tag unchanged).  Its       *)
 (* bit_len = word (128*nblk) makes any invalid bit_len UNREPRESENTABLE (as       *)
-(* Mila's _GEN).  Derived from spine WBN_DEC_SUBROUTINE_BYTELIST like _CORRECT    *)
+(* the encrypt _GEN).  Derived from spine WBN_DEC_SUBROUTINE_BYTELIST like        *)
+(* _CORRECT                                                                      *)
 (* (INST + WBN_INPUT_ASSEMBLE + WBN_OUTPUT_POINTWISE_NONCE + the assembled        *)
 (* identities).  The ivec writeback is now included (see the _CORRECT header).    *)
 (* ========================================================================= *)
@@ -14132,7 +14118,7 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
       REWRITE_TAC[aes_ctr_block] THEN CONV_TAC WORD_BITWISE_RULE;
       CONJ_TAC THENL
        [ASM_REWRITE_TAC[NIST_INPUT_OF_ASSEMBLED];
-        (* ivec M2 (session-101): bridge spine counter -> NIST nonce||(c+nblk). *)
+        (* ivec M2: bridge spine counter -> NIST nonce||(c+nblk).               *)
         MP_TAC(SPECL [`nblk:num`; `nonce:96 word`; `c:num`; `ctr0:int128`]
           GCM_CTR_INC_ITER_CTR_BLOCK) THEN
         ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN REFL_TAC]];
@@ -14159,7 +14145,7 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
 (* AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT (above) IS the whole-function     *)
 (* AAPCS64 subroutine contract; AESV8_GCM_8X_DEC_256_WB_CORRECT is the           *)
 (* after-prologue core it wraps.  These are the TWO exported CORRECT theorems    *)
-(* (session-080 consolidated five near-identical variants into these two --      *)
+(* (consolidated five near-identical variants into these two --                  *)
 (* H pinned, nonce named, output pointwise -- so a reviewer sees ONE obvious     *)
 (* contract each).  See their headers above for the full spec.                  *)
 (*                                                                             *)
@@ -14178,8 +14164,7 @@ let AESV8_GCM_8X_DEC_256_WB_SUBROUTINE_CORRECT = prove
 (* Soundness gate: the exported theorems (SUBROUTINE_CORRECT for all nblk>=0,     *)
 (* CORRECT for all nblk>=1, GUARD) plus the internal byte-list spines are         *)
 (* hyps=0, and the file introduces NO new axiom -- the Q19/GHASH identity that    *)
-(* was scoped behind a CHEAT for ~15 sessions is closed (sessions 061-065, R1'    *)
-(* route).                                                                       *)
+(* was formerly scoped behind a CHEAT is closed (the R1' route).                 *)
 (* ------------------------------------------------------------------------- *)
 
 let () =
@@ -14188,13 +14173,13 @@ let () =
                   AESV8_GCM_8X_DEC_256_WB_GUARD;
                   WBN_DEC_CORE_BYTELIST; WBN_DEC_SUBROUTINE_BYTELIST] in
   (* Drift gate, two layers: (1) the byte-list SPINES are aconv-anchored to the
-     FROZEN _DISPATCH by term surgery (as before session-080); (2) the two
+     FROZEN _DISPATCH by term surgery; (2) the two
      EXPORTED theorems are aconv-anchored to the spines via `to_exported` (pin
      H := aes256_encrypt (word 0) rk; drop the ibytes var + its LENGTH hyp and
      add the abstract inblock var; add the nonce hyp + nonce/c vars; swap the
      input byte_list_at PREcondition for the indexed-read hyp; swap the byte-list
      data POSTcondition for the pointwise aes_ctr_block form; rewrite the GHASH
-     input list to word_bytereverse o inblock -- session-092).  Both anchors are
+     input list to word_bytereverse o inblock).  Both anchors are
      built from proved theorems (spine + WBN_OUTPUT_POINTWISE_NONCE +
      WBN_INPUT_ASSEMBLE + NIST_INPUT_OF_ASSEMBLED), so no hand-typed literal can
      drift undetected. *)
@@ -14236,7 +14221,7 @@ let () =
     let chyps' = list_mk_conj (filter (fun c -> c <> `1 <= nblk`)
                                       (conjuncts chyps)) in
     list_mk_forall(cvars @ [`returnaddress:int64`], mk_imp(chyps', cens')) in
-  (* (2) the session-092 presentation transform to the exported statement.  All
+  (* (2) the presentation transform to the exported statement.  All
      four presentation pieces are LIFTED from proved theorems so their typing is
      guaranteed to match the exported theorems' by construction:
        - nonce_hyp_tm  (word_bytereverse ctr0 = ctr_block nonce c)  from the
@@ -14272,7 +14257,7 @@ let () =
      = the RHS of NIST_INPUT_OF_ASSEMBLED (whole application, not just the fn). *)
   let ghash_inner_tm =
     rhs(snd(strip_forall(concl NIST_INPUT_OF_ASSEMBLED))) in
-  (* ivec M2 (session-101): the spine post carries the counter write-back in the
+  (* ivec M2: the spine post carries the counter write-back in the
      spine form gcm_ctr_inc_iter nblk ctr0; the exported statement re-presents it
      as the NIST nonce||(c+nblk) block (via GCM_CTR_INC_ITER_CTR_BLOCK + the nonce
      hyp in the proof).  Swap the spine ivec conjunct for the exported one. *)

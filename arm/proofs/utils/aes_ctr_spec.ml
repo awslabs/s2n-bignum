@@ -11,7 +11,7 @@
 (* decrypt (data = ciphertext) -- the transform word_xor x (aes256_encrypt    *)
 (* (gcm_ctr_inc_iter k ctr0) keys) is identical either way.                   *)
 (*                                                                            *)
-(* Design (see _docs/aesv8-gcm-nblock-generalization-plan-20260617.md, D1/D3):*)
+(* Design:                                                                    *)
 (*  - element type = int128 (one per 16-byte block); thin bytes<->int128      *)
 (*    adapters are added only where a memory readback needs them.             *)
 (*  - block k's counter = gcm_ctr_inc_iter k ctr0 (the shared DEFINED iterator *)
@@ -25,45 +25,39 @@ needs "arm/proofs/utils/gcm_ctr_helpers.ml";;
 needs "arm/proofs/utils/aes_encrypt_spec.ml";;
 (* Reuse the AES-XTS byte-list substrate VERBATIM: byte_list_at, bytes_to_int128, *)
 (* int128_to_bytes (and the readback machinery READ_BYTES_AND_BYTE128_SPLIT +      *)
-(* SUB_LIST_OF_INT128_TO_BYTES etc.).  These are exactly the defs Mila copied into *)
-(* her GCM spec, and they are built on aes256_encrypt (our primitive) -- so reusing *)
-(* them keeps us name-compatible with Mila with NO aes256_block_enc bridge (see    *)
-(* _docs/gcm-spec-divergence-from-mila-handback.md, decision 2026-06-18).           *)
+(* SUB_LIST_OF_INT128_TO_BYTES etc.).  These are built on aes256_encrypt, the      *)
+(* house primitive, so no aes256_block_enc bridge is needed.                       *)
 needs "arm/proofs/utils/aes_xts_common.ml";;
 
 (* ========================================================================= *)
-(* SHARED NIST counter vocabulary (session-092), matching John's merged x4     *)
-(* encrypt (_docs/jargh_gcm/aes_gcm_enc_kernel_x4_basic.ml:291) and Mila's x8   *)
-(* encrypt.  These are the counter-block and keystream-block names the exported *)
-(* AES-GCM contracts (encrypt AND decrypt) present, so a reader sees the SAME   *)
-(* per-block keystream term on both sides -- CTR mode is its own inverse, so    *)
-(* encrypt and decrypt differ only in which side is supplied as `inblock`.      *)
+(* SHARED NIST counter vocabulary.  These are the counter-block and keystream- *)
+(* block names the exported AES-GCM contracts (encrypt AND decrypt) present, so *)
+(* a reader sees the SAME per-block keystream term on both sides -- CTR mode is *)
+(* its own inverse, so encrypt and decrypt differ only in which side is         *)
+(* supplied as `inblock`.                                                      *)
 (*                                                                             *)
-(* HOME NOTE (session-092 deviation from the brief's "put it in common/"):      *)
-(* aes_ctr_block references aes256_encrypt, which is defined in                 *)
-(* arm/proofs/utils/aes_encrypt_spec.ml (the house Arm little-endian AES) --    *)
-(* NOT in common/.  common/ files never `needs "arm/..."` (a hard layering      *)
-(* rule; verified), so aes_ctr_block cannot live in common/ without either a    *)
-(* layering violation or relocating aes256_encrypt (out of scope, touches       *)
-(* AES-XTS).  aes_ctr_spec.ml is the natural SHARED home instead: it is already *)
-(* loaded by BOTH the encrypt proofs (aesv8_gcm_8x_enc_256_{1,2}block.ml) and   *)
-(* the decrypt chain (aesv8_gcm_8x_dec_256_lemmas.ml -> mainloop; le3..le8),    *)
-(* and it already has aes256_encrypt + gcm_ctr_inc_iter in scope.  ctr_block is *)
-(* co-located here (it was local to the mainloop proof file before s092).       *)
-(* When the AES-GCM proofs merge upstream and a shared aes256_cipher/           *)
-(* aes256_encrypt bridge (PR #389) lands, these fold into the common home.      *)
+(* HOME NOTE (why these live here and not in common/): aes_ctr_block references *)
+(* aes256_encrypt, defined in arm/proofs/utils/aes_encrypt_spec.ml (the house   *)
+(* Arm little-endian AES) -- NOT in common/.  common/ files never               *)
+(* `needs "arm/..."` (a hard layering rule), so aes_ctr_block cannot live in    *)
+(* common/ without either a layering violation or relocating aes256_encrypt     *)
+(* (which would touch AES-XTS).  This file is the natural SHARED home instead:  *)
+(* it is loaded by BOTH the encrypt proofs (aesv8_gcm_8x_enc_256_{1,2}block.ml) *)
+(* and the decrypt chain (aesv8_gcm_8x_dec_256_lemmas.ml -> mainloop), and it   *)
+(* already has aes256_encrypt + gcm_ctr_inc_iter in scope.  ctr_block is        *)
+(* co-located here for the same reason.                                        *)
 (* ========================================================================= *)
 
 (* NIST big-endian counter block: 96-bit nonce || 32-bit big-endian counter.   *)
-(* Verbatim John/Mila (modulo the :int128 result annotation).                   *)
+(* Shared with the encrypt side (modulo the :int128 result annotation).         *)
 let ctr_block = new_definition
  `ctr_block (nonce:96 word) ctr :int128 = word_join (nonce:96 word) (word ctr:int32)`;;
 
 (* One CTR KEYSTREAM block for NIST counter index i (the value the algorithm    *)
-(* XORs into block i).  SHARED NAME with John/Mila; general in the counter (no  *)
-(* hardcoded +2 -- see the NIST SP 800-38D note below).                         *)
+(* XORs into block i).  SHARED NAME with the encrypt side; general in the       *)
+(* counter (no hardcoded +2 -- see the NIST SP 800-38D note below).             *)
 (*                                                                             *)
-(* SEMANTICS -- reverse INSIDE, NOT outside (session-092, important):           *)
+(* SEMANTICS -- reverse INSIDE, NOT outside (important):                        *)
 (* the Arm kernel loads the counter little-endian (ld1 {v0.16b},[x16]) and runs *)
 (* the house little-endian aes256_encrypt on it, so the keystream is            *)
 (*   aes256_encrypt (word_bytereverse (ctr_block nonce i)) rk                   *)
@@ -71,30 +65,24 @@ let ctr_block = new_definition
 (* actually produces (WBN_OUTPUT_POINTWISE_NONCE in the mainloop file).  This   *)
 (* is NOT `word_bytereverse (aes256_encrypt (ctr_block nonce i) rk)` (reverse   *)
 (* outside) -- AES does not commute with byte-reversal, so that form is a       *)
-(* different (wrong) value under aes256_encrypt.  It IS the bridge-image of     *)
-(* Mila's `word_reversefields 8 (aes256_cipher (ctr_block nonce i) rk)`: with   *)
-(* aes256_cipher x = word_bytereverse (aes256_encrypt (word_bytereverse x) rk'),*)
-(* the two outer byte-reversals cancel, leaving exactly the inside form.  So    *)
-(* the shared per-block keystream TERM coincides; only the underlying primitive *)
-(* (aes256_encrypt vs FIPS-197 aes256_cipher) differs.  That equivalence is      *)
-(* REQUESTED BUT NOT YET DELIVERED: Taskei P389441671 (2026-06-08) asks for      *)
-(* Bridge 1 (fips197_round = aesmc(aese ..)) and Bridge 2 (aes256_cipher =       *)
-(* aes256_block_enc); composing Bridge 2 with the in-repo                        *)
-(* arm/proofs/utils/aes256_block_enc_eq_encrypt.ml closes it.  PR #389 (updated  *)
-(* 2026-08-13, out of draft) carries the GHASH-side bridge (ghash = nist_ghash)  *)
-(* plus an AES-128-only gctr/gcm_ae/gcm_ad + KATs, NOT these AES-256 bridges.    *)
-(* Until Bridge 2 lands, the coincidence argued above is an ARGUMENT, not a      *)
-(* machine-checked theorem.                                                     *)
+(* different (wrong) value under aes256_encrypt.                                *)
+(*                                                                             *)
+(* The shared per-block keystream TERM coincides with the FIPS-197 formulation:  *)
+(* with aes256_cipher x = word_bytereverse (aes256_encrypt (word_bytereverse x)  *)
+(* rk'), the two outer byte-reversals cancel, leaving exactly the inside form.   *)
+(* Only the underlying primitive differs (aes256_encrypt vs aes256_cipher).      *)
+(* TODO: the aes256_cipher = aes256_block_enc step is not machine-checked here,  *)
+(* so this coincidence is an ARGUMENT, not a theorem; composing that step with   *)
+(* arm/proofs/utils/aes256_block_enc_eq_encrypt.ml would close it.               *)
 let aes_ctr_block = new_definition
  `aes_ctr_block (nonce:96 word) (rk:int128 list) (i:num) : int128 =
     aes256_encrypt (word_bytereverse (ctr_block nonce i)) rk`;;
 
 (* One CTR OUTPUT block: data XOR the AES-256 keystream for block index k.     *)
-(* (Renamed from aes_ctr_block in session-092: the name aes_ctr_block is now    *)
-(* reserved for the shared KEYSTREAM-only meaning John/Mila use, defined just   *)
-(* above.  This 4-arg def is the XORed output block -- the CTR transform        *)
-(* applied to a plaintext/ciphertext block pt, indexed by a raw ctr0/k rather   *)
-(* than a NIST nonce/counter.)                                                  *)
+(* (aes_ctr_block above is reserved for the shared KEYSTREAM-only meaning.      *)
+(* This 4-arg def is the XORed output block -- the CTR transform applied to a   *)
+(* plaintext/ciphertext block pt, indexed by a raw ctr0/k rather than a NIST    *)
+(* nonce/counter.)                                                              *)
 let aes_ctr_output_block = new_definition
  `aes_ctr_output_block (ctr0:int128) (k:num) (pt:int128) (keys:int128 list) : int128 =
     word_xor pt (aes256_encrypt (gcm_ctr_inc_iter k ctr0) keys)`;;
@@ -172,13 +160,13 @@ let AES_CTR_2_MAP_BREV = prove
 
 (* ========================================================================= *)
 (* Byte-list view of the ciphertext, for a byte_list_at(out_p,len) postcond.  *)
-(* Mirrors AES-XTS (aes256_xts_encrypt : byte list) and Mila's                 *)
+(* Mirrors AES-XTS (aes256_xts_encrypt : byte list) and the encrypt-side       *)
 (* aes256_gcm_encrypt, but built on the XTS substrate int128_to_bytes +        *)
-(* aes256_encrypt (NO aes256_block_enc -- handback doc decision).             *)
+(* aes256_encrypt (NO aes256_block_enc).                                      *)
 (* ========================================================================= *)
 
 (* Flatten an int128 block list to a byte list (APPEND of int128_to_bytes),    *)
-(* exactly the XTS/Mila APPEND-of-int128_to_bytes shape.                        *)
+(* exactly the XTS APPEND-of-int128_to_bytes shape.                             *)
 let int128_list_to_bytes = define
  `int128_list_to_bytes ([]:int128 list) : byte list = [] /\
   int128_list_to_bytes (CONS w ws) =
@@ -291,13 +279,14 @@ let BYTE_LIST_AT_2BLOCKS_CTR = prove(
 (* mask = word (2 EXP (8*bl) - 1) -- the low bl bytes are ciphertext, the high  *)
 (* 16-bl bytes are the caller's pre-existing output (see the .S walkthrough).   *)
 (* byte_list_at over bl bytes constrains ONLY the low bl bytes, so it equals    *)
-(* the first bl bytes of the ciphertext block -- matching Mila's gcm_ctm_tail   *)
-(* (the nfull=0 tail of aes256_gcm_encrypt): word_and ct (word (2 EXP(8*tail)-1)).*)
+(* the first bl bytes of the ciphertext block -- matching the encrypt-side      *)
+(* gcm_ctm_tail (the nfull=0 tail of aes256_gcm_encrypt):                       *)
+(* word_and ct (word (2 EXP (8*tail) - 1)).                                    *)
 (*                                                                            *)
-(* The byte-extraction sublemmas are PORTED VERBATIM (names per plan R5) from   *)
-(* manastasova/s2n-bignum-dev@756df852 arm/proofs/aes256_gcm.ml: BYTE8_OF_BYTES128 *)
-(* SUBWORD_BYTES_TO_INT128, EL_SUB_LIST_0, EL_INT128_TO_BYTES, MASK_BYTE_OUT.    *)
-(* BYTES128_TO_BYTES8_THM is already in aes_xts_common.ml (shared XTS substrate).*)
+(* The byte-extraction sublemmas here (SUBWORD_BYTES_TO_INT128,                 *)
+(* BYTE8_OF_BYTES128, EL_SUB_LIST_0, EL_INT128_TO_BYTES, MASK_BYTE_OUT) share   *)
+(* names with the encrypt-side GCM spec.  BYTES128_TO_BYTES8_THM is already in   *)
+(* aes_xts_common.ml (shared XTS substrate).                                    *)
 (* ========================================================================= *)
 
 let BYTES128_TO_BYTES8_0 =
@@ -341,7 +330,7 @@ let EL_INT128_TO_BYTES = prove(
   CONV_TAC EXPAND_CASES_CONV THEN REWRITE_TAC EL_16_8_CLAUSES THEN
   CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[]);;
 
-(* word_or form (Mila's gcm_ctm_tail blend) and word_xor form (our LE1BLOCK     *)
+(* word_or form (the gcm_ctm_tail blend) and word_xor form (the LE1BLOCK       *)
 (* blend; the two masks are disjoint so or = xor): the masked byte = ct byte.   *)
 let MASK_BYTE_OUT = prove(
  `!(ct:int128) (out0:int128) (n:num) (i:num).
@@ -372,8 +361,8 @@ let MASK_BYTE_OUT_XOR = prove(
   ASM_REWRITE_TAC[]);;
 
 (* Byte spec for one partial/full block: the first bl bytes of the ciphertext   *)
-(* block (= Mila's gcm_ctm_tail viewed as a byte list, the aes256_gcm_encrypt    *)
-(* nfull=0 tail).                                                               *)
+(* block (= gcm_ctm_tail viewed as a byte list, the aes256_gcm_encrypt nfull=0  *)
+(* tail).                                                                       *)
 let aes_ctr_tail_bytes = new_definition
  `aes_ctr_tail_bytes (ctr0:int128) (pt:int128) (keys:int128 list) (bl:num) : byte list =
     SUB_LIST (0,bl) (int128_to_bytes (word_xor pt (aes256_encrypt ctr0 keys)))`;;
@@ -408,12 +397,12 @@ let BYTE_LIST_AT_TAIL_CTR = prove(
 (* val len = 16*nfull + tail, 1 <= tail <= 16.  This unifies the whole-block    *)
 (* (BYTE_LIST_AT_2BLOCKS_CTR) and partial-single-block (BYTE_LIST_AT_TAIL_CTR)  *)
 (* bridges and is what the 17..32-byte band / 4/8-block tail simulations        *)
-(* consume.  Modeled on manastasova@756df852 OUT_BRIDGE_GEN (byte-index case    *)
-(* split, reusing the ported byte-extraction sublemmas).                       *)
+(* consume.  Same shape as the encrypt-side OUT_BRIDGE_GEN (byte-index case     *)
+(* split, reusing the byte-extraction sublemmas above).                        *)
 (* ========================================================================= *)
 
 (* General byte ciphertext spec: nfull full blocks ++ first `tail` bytes of the *)
-(* masked block nfull.  Built on aes_ctr; the analog of Mila's aes256_gcm_encrypt.*)
+(* masked block nfull.  Built on aes_ctr; the analog of aes256_gcm_encrypt.      *)
 let aes_ctr_full_tail_bytes = new_definition
  `aes_ctr_full_tail_bytes (ctr0:int128) (pts:int128 list) (keys:int128 list)
                           (nfull:num) (tail:num) : byte list =

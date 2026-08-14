@@ -45,8 +45,8 @@ needs "arm/proofs/utils/aes_ctr_spec.ml";;
 (* ========================================================================= *)
 
 (* ------------------------------------------------------------------------- *)
-(* SIMD REV64 fold-back lemmas (ported from Mila's gcm_gmult_v8_spec.ml,     *)
-(* branch mila-gcm_gmult_proof).  The ARM simulator expands REV64.16B into a *)
+(* SIMD REV64 fold-back lemmas (shared with the GCM gmult spec layer).       *)
+(* The ARM simulator expands REV64.16B into a                                *)
 (* 4-level nested word_join/word_subword byte tree (128->64->32->16->8).     *)
 (* These collapse it back to word_reversefields 8 the instant it appears, so *)
 (* the giant (~145k char) term never forms and the final closure is fast.    *)
@@ -402,7 +402,7 @@ let RESOLVE_BRANCH_TAC =
 let ARM_STEPS_RESOLVE_TAC exec range =
   MAP_EVERY (fun n -> RESOLVE_BRANCH_TAC THEN ARM_STEPS_TAC exec [n]) (range);;
 
-(* Step with branch resolution + per-step SIMD REV64 folding (Mila's pattern).
+(* Step with branch resolution + per-step SIMD REV64 folding.
    Folds the byte-tree the instant each REV64/EXT step produces it, so the
    final closure never sees a 145k-char term. *)
 let ARM_STEPS_RESOLVE_SIMD_TAC exec range =
@@ -586,8 +586,7 @@ let FINISH_WV_TAC : tactic = fun (asl,w) ->
 
 (* Abbreviate the two 64-bit halves of every Karatsuba pmul output as fresh xNl/xNh vars
    (label l=low subword(0,64), h=hi subword(64,64); N from the operand kind: l for
-   subword-at-0 product, h for subword-at-64, m for the (a xor b) mid product).  Ported
-   verbatim from Mila's one_block_aes256_gcm_preloop_tail_direct.ml. *)
+   subword-at-0 product, h for subword-at-64, m for the (a xor b) mid product). *)
 let ABBREV_PMUL_HALVES_TAC : tactic = fun (asl,w) ->
   let classify_pmul eqn =
     try
@@ -626,7 +625,7 @@ let ABBREV_PMUL_HALVES_TAC : tactic = fun (asl,w) ->
       (ABBREV_TAC el THEN ABBREV_TAC eh THEN process (vl_var::vh_var::all) rest) (asl,w) in
   process all_frees pmul_vs (asl,w);;
 
-(* Half projection helpers for the Mila close. *)
+(* Half projection helpers for the lane-fold close. *)
 let JOINMID = prove(
   `!q:int128. word_subword (word_join q q :(256)word) (64,128):int128 =
      word_join (word_subword q (0,64):64 word) (word_subword q (64,64):64 word)`,
@@ -635,13 +634,13 @@ let QQ0SPLIT = prove(
   `!q:int128. q = word_join (word_subword q (64,64):64 word) (word_subword q (0,64):64 word)`,
   GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
-(* W-reduction lane-fold close (the "Mila route"): reduce the post-MERGE GHASH bridge goal to a
+(* W-reduction lane-fold close: reduce the post-MERGE GHASH bridge goal to a
    pure 64-bit XOR identity instead of one monolithic WORD_BLAST over `word_pmul _ W`.  Method:
    PMUL_W_64_128 (pmul-by-W -> shl 63/62/57), JOINMID, split qq0/qq1/qq2 into named 64-bit halves
    (QQ0SPLIT), fold the r1/u shift-triples to abbreviations, finish with a flat 64-bit blast.
    NOTE: NOT used by the committed dec close — on the dec goal shape this tactic stack-overflows,
-   so the bridge below inlines the r1/u/r2 staging by hand (see methodology doc §5).  Kept as
-   reference for the technique. *)
+   so the bridge below inlines the r1/u/r2 staging by hand.  Kept as reference for the
+   technique. *)
 let FINISH_WV_REDUCE_TAC : tactic =
   REWRITE_TAC[PMUL_W_64_128] THEN
   ABBREV_PMUL_HALVES_TAC THEN
@@ -879,13 +878,12 @@ let FINISH_2BLK_TAC : tactic =
 (* triples then runs the shared W-reduction equals                            *)
 (*   polyval_reduce_prop3 (word_pmul a0 b0 XOR word_pmul a1 b1).               *)
 (* Built from PMUL_KARATSUBA + GMULT_REDUCE_PROP3 (W-reduction proven ONCE in  *)
-(* the dec 1-block file), so the reduction is NEVER re-blasted.  This is OUR-  *)
-(* binary analog of Mila's GHASH_NBLOCK_KARATSUBA_EQ_PROP3; the per-block      *)
+(* the dec 1-block file), so the reduction is NEVER re-blasted.  It is this    *)
+(* binary's analog of GHASH_NBLOCK_KARATSUBA_EQ_PROP3; the per-block           *)
 (* operand transpose (rev64/h <-> brev/byteswap128) is reconciled by MERGE_2BLK *)
 (* and the W-reduction *surface* arrangement is closed by the r1/u/r2 hand     *)
-(* staging in DEC_2BLK_GMULT2_BRIDGE_TAC (generalized from the dec 1-block      *)
-(* s351 W-staging, 3 atoms -> 6).  See _docs/gmult2-fused-reduce-lemma.md and   *)
-(* _docs/dec-2block-gmult2-finish-handoff.md.                                  *)
+(* staging in DEC_2BLK_GMULT2_BRIDGE_TAC (the dec 1-block W-staging generalized *)
+(* from 3 atoms to 6).                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 (* GMULT2_FULL_CORRECT_BA: the 2-block fused multiply+reduce byteform =          *)

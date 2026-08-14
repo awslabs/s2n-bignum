@@ -1,9 +1,8 @@
 (* ============================================================================
    AES-256-GCM DECRYPT: recursive whole-buffer output + GHASH specification.
 
-   This is the decrypt analogue of Mila Anastasova's encrypt spec layer
-   (manastasova/s2n-bignum-dev branch aes256_gcm_tail: gcm_ct_rec / gcm_ghash_blocks
-   / aes256_gcm_encrypt / gcm_final_xi in arm/proofs/aes256_gcm.ml).  It moves the
+   This is the decrypt analogue of the encrypt spec layer (gcm_ct_rec /
+   gcm_ghash_blocks / aes256_gcm_encrypt / gcm_final_xi).  It moves the
    per-block expansion OFF the readable band theorem statements and INTO recursive
    spec functions of the whole input byte buffer `x` and its length; each band's
    readable wrapper then states its postcondition as `gcm_dec_pt_bytes (val len) x
@@ -23,7 +22,7 @@
 
    Vocabulary matches our binary's band theorems: base counter `ctr0` (= ivec),
    `aes256_encrypt` + `gcm_ctr_inc_iter` (our gcm_ctr_iter), GHASH key `byteswap128 h`,
-   `word_bytereverse` per block (= Mila's word_reversefields 8, provably equal).
+   `word_bytereverse` per block (= word_reversefields 8, provably equal).
 
    needs arm/proofs/utils/aes_ctr_spec.ml (aes_ctr / aes_ctr_full_tail_bytes /
    int128_to_bytes / bytes_to_int128).
@@ -139,7 +138,7 @@ let gcm_dec_nfull_facts nfull =
 
 (* ----------------------------------------------------------------------------
    Per-N unfold lemmas (N = nfull+1 blocks: nfull full + 1 masked tail),
-   mirroring Mila's GHASH_BLOCKS_1..8.  These rewrite the recursive whole-buffer
+   mirroring the encrypt-side GHASH_BLOCKS_1..8.  These rewrite the whole-buffer
    spec back to the explicit block list a band's BODY produces, so the readable
    wrappers are proved by REWRITE + the existing sim-free bridges.  N=1..8 cover
    every band the routine has (more_than_1 .. more_than_7).
