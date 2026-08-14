@@ -76,8 +76,15 @@ let ctr_block = new_definition
 (* aes256_cipher x = word_bytereverse (aes256_encrypt (word_bytereverse x) rk'),*)
 (* the two outer byte-reversals cancel, leaving exactly the inside form.  So    *)
 (* the shared per-block keystream TERM coincides; only the underlying primitive *)
-(* (aes256_encrypt vs FIPS-197 aes256_cipher) is the already-accepted upstream  *)
-(* divergence (PR #389 bridge).                                                 *)
+(* (aes256_encrypt vs FIPS-197 aes256_cipher) differs.  That equivalence is      *)
+(* REQUESTED BUT NOT YET DELIVERED: Taskei P389441671 (2026-06-08) asks for      *)
+(* Bridge 1 (fips197_round = aesmc(aese ..)) and Bridge 2 (aes256_cipher =       *)
+(* aes256_block_enc); composing Bridge 2 with the in-repo                        *)
+(* arm/proofs/utils/aes256_block_enc_eq_encrypt.ml closes it.  PR #389 (updated  *)
+(* 2026-08-13, out of draft) carries the GHASH-side bridge (ghash = nist_ghash)  *)
+(* plus an AES-128-only gctr/gcm_ae/gcm_ad + KATs, NOT these AES-256 bridges.    *)
+(* Until Bridge 2 lands, the coincidence argued above is an ARGUMENT, not a      *)
+(* machine-checked theorem.                                                     *)
 let aes_ctr_block = new_definition
  `aes_ctr_block (nonce:96 word) (rk:int128 list) (i:num) : int128 =
     aes256_encrypt (word_bytereverse (ctr_block nonce i)) rk`;;
