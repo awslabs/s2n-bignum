@@ -1,17 +1,16 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
 //
-// Phase-0 KAT gate for the AES-256-GCM whole-blocks DECRYPT main-loop proof.
+// KAT gate for the AES-256-GCM whole-blocks DECRYPT kernel.
 //
 // PURPOSE
 // -------
-// The proof of aesv8_gcm_8x_dec_256_wb.o is being extended from the already-
-// proven nblk<=8 bands to the nblk>8 main loop (.L256_dec_main_loop 0x4a0..
-// 0x9ec) + prepretail (0x9f0..0xec0).  That machine code has NEVER been
-// executed by any proof, so before any proof work we mechanically validate it.
+// Mechanically validate the nblk>8 machine code of aesv8_gcm_8x_dec_256_wb.o
+// -- the main loop (.L256_dec_main_loop 0x4a0..0x9ec) and prepretail
+// (0x9f0..0xec0) -- by execution, independently of the HOL Light proof.
 //
 // PRIMARY CHECK (differential) -- implemented here.
-//   The frozen wb binary was derived from the trusted upstream sibling
+//   The wb binary was derived from the trusted upstream sibling
 //   aesv8_gcm_8x_dec_256.o by exactly two edits (verified by disassembly diff):
 //     (a) an entry guard  `tst x1,#127; b.ne .L256_dec_ret`;
 //     (b) DELETION of the partial-last-block masking tail

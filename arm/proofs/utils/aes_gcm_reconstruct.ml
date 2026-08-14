@@ -1,13 +1,11 @@
 (* ========================================================================= *)
-(* JRH-style AES tower reconstruction lemmas, shared across the AES-GCM      *)
+(* AES tower reconstruction lemmas, shared across the AES-GCM                *)
 (* decrypt chain (wb bands, NIST convergence layer, future main-loop proof). *)
 (*                                                                           *)
 (* The machine leaves per-block keystreams as raw 14-round aese/aesmc        *)
 (* towers; these lemmas fold them onto the aes256_encrypt spec once, so      *)
 (* every capture site is a rewrite instead of a per-site unfold + blast      *)
-(* (the AES128_CIPHER_RECONSTRUCT pattern from jargh's x4 kernels).          *)
-(*                                                                           *)
-(* Hoisted verbatim from arm/proofs/aesv8_gcm_8x_dec_256_wb.ml.              *)
+(* (the AES128_CIPHER_RECONSTRUCT pattern used by the x4 kernels).           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/utils/aes_encrypt_spec.ml";;
