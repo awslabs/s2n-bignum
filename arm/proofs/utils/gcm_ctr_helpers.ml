@@ -12,16 +12,10 @@
 (* counter iterator (gcm_ctr_inc_iter) so block k's counter composes in a     *)
 (* recursion / N-block induction.                                            *)
 (*                                                                            *)
-(* Provenance / coordination (see                                            *)
-(*   _docs/aesv8-gcm-nblock-generalization-plan-20260617.md):                 *)
-(*  - gcm_ctr_inc + GCM_CTR_INC_LANES are lifted VERBATIM (byte-identical)    *)
-(*    from arm/proofs/aesv8_gcm_8x_enc_256_2block.ml so that file can later   *)
-(*    drop its inline copies and `needs` this one as a no-op.  Same def as    *)
-(*    Mila's gcm_ctr_inc in manastasova/s2n-bignum-dev@756df852               *)
-(*    arm/proofs/utils/gcm_aesgcm_nblock_helpers.ml (coordinate names verbatim*)
-(*    so a future merge is a no-op -- cf. plan R5).                           *)
-(*  - inc32 is COPIED verbatim from awslabs/s2n-bignum PR#389                 *)
-(*    (sgmenda:gcm-spec@2f81c762, common/gcm.ml); see the BEGIN/END block.     *)
+(* gcm_ctr_inc and GCM_CTR_INC_LANES are byte-identical to the definitions   *)
+(* in arm/proofs/aesv8_gcm_8x_enc_256_2block.ml, so that file can drop its   *)
+(* inline copies and `needs` this one as a no-op.  inc32 is the NIST         *)
+(* SP 800-38D increment; see the BEGIN/END block below.                      *)
 (*                                                                            *)
 (* No CHEAT_TAC, no new axioms.  Depends only on base.ml (word primitives).   *)
 (* ========================================================================= *)
@@ -32,9 +26,8 @@ needs "arm/proofs/base.ml";;
 (* The AES-GCM counter increment (the ARM binary's rev32+ADD+rev32).          *)
 (*                                                                            *)
 (* gcm_ctr_inc ivec = ivec with its top 32-bit lane byte-reversed, +1, and    *)
-(* byte-reversed back.  Lifted verbatim from                                  *)
-(* arm/proofs/aesv8_gcm_8x_enc_256_2block.ml (and matching Mila's def at      *)
-(* manastasova/s2n-bignum-dev@756df852 .../gcm_aesgcm_nblock_helpers.ml#L38). *)
+(* byte-reversed back.  Byte-identical to the definition in                  *)
+(* arm/proofs/aesv8_gcm_8x_enc_256_2block.ml.                                *)
 (* ========================================================================= *)
 
 let gcm_ctr_inc = new_definition
@@ -109,19 +102,20 @@ let GCM_CTR_INC_LANES = prove(
 (* NIST SP 800-38D inc32 and the byteswap bridge to gcm_ctr_inc.              *)
 (* ========================================================================= *)
 
-(* === BEGIN copied from awslabs/s2n-bignum PR#389 (sgmenda:gcm-spec@2f81c762) ===
-   common/gcm.ml : inc32.  Self-contained (word primitives only, zero deps).
-   REMOVE this copy and `needs "common/gcm.ml"` once PR#389 merges. *)
+(* inc32 per NIST SP 800-38D Section 6.2.  Self-contained (word primitives
+   only, zero dependencies).
+   TODO: drop this definition and `needs "common/gcm.ml"` instead, once a
+   shared inc32 is available there. *)
 let inc32 = new_definition
  `inc32 (cb:128 word) : 128 word =
     let top96:96 word = word_subword cb (32,96) in
     let bot32:32 word = word_subword cb (0,32) in
     word_join top96 (word_add bot32 (word 1 : 32 word)) : 128 word`;;
-(* === END copied from PR#389 === *)
+(* end inc32 *)
 
-(* @UPSTREAM-389?: INC32_GCM_CTR_INC -- the NIST inc32 <-> ARM gcm_ctr_inc     *)
-(* counter bridge.  Spec-adjacent, but gcm_ctr_inc is an ARM-proof artifact;   *)
-(* let the PR#389 authors decide whether the bridge lives upstream or here.    *)
+(* INC32_GCM_CTR_INC -- the NIST inc32 <-> ARM gcm_ctr_inc counter bridge.     *)
+(* Spec-adjacent, but gcm_ctr_inc is an ARM-proof artifact, so this is the     *)
+(* natural home for it unless a shared spec layer claims it.                   *)
 (*                                                                            *)
 (* Byte-order relationship: inc32 increments the LOW 32 bits of its argument   *)
 (* (NIST big-endian counter), keeping the top 96; gcm_ctr_inc increments the   *)
@@ -157,7 +151,7 @@ let GCM_CTR_INC_ITER_ADD = prove
      gcm_ctr_inc_iter (m + n) x = gcm_ctr_inc_iter m (gcm_ctr_inc_iter n x)`,
   REWRITE_TAC[GCM_CTR_INC_ITER_ITER; ITER_ADD]);;
 
-(* @UPSTREAM-389?: the iterated NIST bridge.  Lets the spec state block k's    *)
+(* The iterated NIST bridge.  Lets the spec state block k's                    *)
 (* counter NIST-faithfully (ITER k inc32 over the byteswapped ivec) while the  *)
 (* proof folds the binary's lanes via gcm_ctr_inc_iter.                        *)
 let GCM_CTR_INC_ITER_INC32 = prove
