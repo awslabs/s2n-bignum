@@ -1,10 +1,10 @@
 (* ========================================================================= *)
-(* Bridge: Mila's aes256_block_enc  ==  the AES-XTS aes256_encrypt.            *)
+(* Bridge: aes256_block_enc  ==  the AES-XTS aes256_encrypt.                   *)
 (*                                                                            *)
 (* The two AES-256 single-block keystream models in the tree compute the same *)
 (* function but are stated differently:                                       *)
 (*                                                                            *)
-(*  - aes256_block_enc (manastasova .../aes256_gcm_block_enc_spec.ml): flat    *)
+(*  - aes256_block_enc: flat                                                   *)
 (*    15-register-arg `aesmc (aese ...)` tower, matching the ARM AESE+AESMC    *)
 (*    instruction sequence (each round key folded INSIDE the next `aese`).     *)
 (*                                                                            *)
@@ -18,16 +18,14 @@
 (* makes them syntactically identical -- no GF(2^8) reasoning needed.          *)
 (*                                                                            *)
 (* This is the gating lemma for sharing ONE AES block primitive between the    *)
-(* GCM and XTS proofs (handback doc divergence D2).  Put this in a shared      *)
-(* common/ or arm/proofs/utils/ home so neither tree carries two AES models.   *)
+(* GCM and XTS proofs, so neither carries two AES models.                      *)
 (* ========================================================================= *)
 
 needs "common/aes.ml";;                          (* aese, aesmc, aes_* round helpers     *)
 needs "arm/proofs/utils/aes_encrypt_spec.ml";;   (* aes256_encrypt, aes256_encrypt_round, EL_15_128_CLAUSES *)
 
-(* Mila's primitive (verbatim from manastasova/s2n-bignum-dev@b2b19c83,
-   arm/proofs/utils/aes256_gcm_block_enc_spec.ml).  Included here so this file
-   is self-contained; delete this copy once the two trees share one home. *)
+(* The GCM-side primitive, included here so this file is self-contained.
+   TODO: drop this copy once one shared AES block primitive is in place. *)
 let aes256_block_enc = new_definition
   `aes256_block_enc (input:(128)word)
     (rk0:(128)word) (rk1:(128)word) (rk2:(128)word) (rk3:(128)word)
