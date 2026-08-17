@@ -176,13 +176,24 @@ and tac_main (memopidx: int option) mc states =
   | None -> ARM_STEPS_TAC mc states
   end
 and tac_after memop =
+  (* Normalize concrete extended-register addresses before splitting memory. *)
+  (if memop then
+     ASM_REWRITE_TAC[] THEN
+     CONV_TAC WORD_REDUCE_CONV THEN
+     RULE_ASSUM_TAC(CONV_RULE WORD_REDUCE_CONV)
+   else ALL_TAC) THEN
   (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  (if memop then
+     CONV_TAC WORD_REDUCE_CONV THEN
+     RULE_ASSUM_TAC(CONV_RULE WORD_REDUCE_CONV)
+   else ALL_TAC) THEN
   (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 WORD_ADD_0; WORD_SUB_0]) THEN
   ASM_REWRITE_TAC[CONJUNCT1 WORD_ADD_0; WORD_SUB_0] THEN
   extra_simp_tac THEN
+  (if memop then TRY MONOTONE_MAYCHANGE_TAC else ALL_TAC) THEN
   PRINT_GOAL_TAC THEN NO_TAC;;
 
 (*** Cosimulate a list of ARM instruction codes against hardware.
@@ -302,6 +313,16 @@ let sub_Xn_SP_Xn rn =
 
 let movz_Xn_imm rd imm =
   pow2 21 */ num_of_string "0b11010010100" +/
+  pow2 5 */ num(imm mod 65536) +/
+  num rd;;
+
+let movn_Wn_imm rd imm =
+  pow2 21 */ num_of_string "0b00010010100" +/
+  pow2 5 */ num(imm mod 65536) +/
+  num rd;;
+
+let movk_Xn_imm_lsl32 rd imm =
+  pow2 21 */ num_of_string "0b11110010110" +/
   pow2 5 */ num(imm mod 65536) +/
   num rd;;
 
@@ -494,6 +515,333 @@ let cosimulate_ldstrb() =
   else
     [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LDRH and STRH with unsigned, pre-indexed, post-indexed and
+ *** unscaled immediate offsets, plus an optionally scaled X-register offset.
+ ***)
+
+let cosimulate_ldsth() =
+  let rn = Random.int 32
+  and isld = Random.int 2
+  and mode = Random.int 5 in
+  let rm = (rn + 1 + Random.int 31) mod 32
+  and rt = (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then Random.int 15 * 16
+    else Random.int 255 in
+  if mode = 0 then
+    let imm12 = Random.int ((254 - stackoff) / 2 + 1) in
+    let code =
+      pow2 23 */ num 0b011110010 +/
+      pow2 22 */ num isld +/
+      pow2 10 */ num imm12 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 1 then
+    let delta = if rn = 31 then Random.int 16 else Random.int 31 - 15 in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b011110000 +/
+      pow2 22 */ num isld +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b01 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code;
+       sub_Xn_SP_imm 31 (stackoff + delta)]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 2 then
+    let targetoff = Random.int 255 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b011110000 +/
+      pow2 22 */ num isld +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b11 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 targetoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 3 then
+    let targetoff = Random.int 255 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b011110000 +/
+      pow2 22 */ num isld +/
+      pow2 12 */ num imm9 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else
+    let shift = Random.int 2 in
+    let regoff = Random.int ((254 - stackoff) / (1 lsl shift) + 1) in
+    let code =
+      pow2 23 */ num 0b011110000 +/
+      pow2 22 */ num isld +/
+      pow2 21 +/
+      pow2 16 */ num rm +/
+      pow2 13 */ num 0b011 +/
+      pow2 12 */ num shift +/
+      pow2 10 */ num 0b10 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_Xn rn];;
+
+(*** This covers the W- and X-destination LDRSB forms with unsigned,
+ *** pre-indexed, post-indexed and unscaled immediate offsets, plus both
+ *** encodings of the zero-shift X-register offset.
+ ***)
+
+let cosimulate_ldrsb() =
+  let rn = Random.int 32
+  and w = Random.int 2
+  and mode = Random.int 5
+  and s = Random.int 2 in
+  let rm = (rn + 1 + Random.int 31) mod 32
+  and rt = (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then Random.int 16 * 16
+    else Random.int 256 in
+  if mode = 0 then
+    let imm12 = Random.int (256 - stackoff) in
+    let code =
+      pow2 23 */ num 0b001110011 +/
+      pow2 22 */ num w +/
+      pow2 10 */ num imm12 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 1 then
+    let delta = if rn = 31 then Random.int 16 else Random.int 31 - 15 in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b01 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code;
+       sub_Xn_SP_imm 31 (stackoff + delta)]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 2 then
+    let targetoff = Random.int 256 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b11 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 targetoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 3 then
+    let targetoff = Random.int 256 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else
+    let regoff = Random.int (256 - stackoff) in
+    let code =
+      pow2 23 */ num 0b001110001 +/
+      pow2 22 */ num w +/
+      pow2 21 +/
+      pow2 16 */ num rm +/
+      pow2 13 */ num 0b011 +/
+      pow2 12 */ num s +/
+      pow2 10 */ num 0b10 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_Xn rn];;
+
+(*** This covers the W- and X-destination LDRSH forms with unsigned,
+ *** pre-indexed, post-indexed and unscaled immediate offsets, plus an
+ *** optionally scaled X-register offset.
+ ***)
+
+let cosimulate_ldrsh() =
+  let rn = Random.int 32
+  and w = Random.int 2
+  and mode = Random.int 5 in
+  let rm = (rn + 1 + Random.int 31) mod 32
+  and rt = (rn + 1 + Random.int 31) mod 32 in
+  let stackoff =
+    if rn = 31 then Random.int 15 * 16
+    else Random.int 255 in
+  if mode = 0 then
+    let imm12 = Random.int ((254 - stackoff) / 2 + 1) in
+    let code =
+      pow2 23 */ num 0b011110011 +/
+      pow2 22 */ num w +/
+      pow2 10 */ num imm12 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 1 then
+    let delta = if rn = 31 then Random.int 16 else Random.int 31 - 15 in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b011110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b01 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code;
+       sub_Xn_SP_imm 31 (stackoff + delta)]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 2 then
+    let targetoff = Random.int 255 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b011110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 10 */ num 0b11 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 targetoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else if mode = 3 then
+    let targetoff = Random.int 255 in
+    let delta = targetoff - stackoff in
+    let imm9 = if delta < 0 then delta + 512 else delta in
+    let code =
+      pow2 23 */ num 0b011110001 +/
+      pow2 22 */ num w +/
+      pow2 12 */ num imm9 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn]
+  else
+    let shift = Random.int 2 in
+    let regoff = Random.int ((254 - stackoff) / (1 lsl shift) + 1) in
+    let code =
+      pow2 23 */ num 0b011110001 +/
+      pow2 22 */ num w +/
+      pow2 21 +/
+      pow2 16 */ num rm +/
+      pow2 13 */ num 0b011 +/
+      pow2 12 */ num shift +/
+      pow2 10 */ num 0b10 +/
+      pow2 5 */ num rn +/
+      num rt in
+    if rn = 31 then
+      [add_Xn_SP_imm 31 stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_imm 31 stackoff]
+    else
+      [add_Xn_SP_imm rn stackoff; movz_Xn_imm rm regoff; code;
+       sub_Xn_SP_Xn rn];;
+
+(*** This covers UXTW and SXTW register offsets for LDRB/STRB, LDRH/STRH,
+ *** LDRSB and LDRSH. Both byte encodings of S are exercised; halfword S
+ *** selects an unscaled or two-byte-scaled index. UXTW cases have nonzero
+ *** upper X-register bits, while SXTW cases use negative W-register indices.
+ ***)
+
+let cosimulate_ldst_extreg() =
+  let kind = Random.int 4
+  and rn = Random.int 32
+  and sxtw = Random.bool()
+  and s = Random.int 2 in
+  let halfword = kind = 1 || kind = 3 in
+  let access = if halfword then 2 else 1 in
+  let shift = if halfword then s else 0 in
+  let scale = 1 lsl shift in
+  let rm =
+    if rn = 31 then Random.int 31
+    else (rn + 1 + Random.int 30) mod 31 in
+  let rec pick_rt () =
+    let rt = Random.int 31 in
+    if rt = rn || rt = rm then pick_rt () else rt in
+  let rt = pick_rt () in
+  let stackoff =
+    if sxtw then
+      if rn = 31 then (1 + Random.int 15) * 16
+      else scale + Random.int (256 - access - scale)
+    else
+      if rn = 31 then Random.int 15 * 16
+      else Random.int (257 - access - scale) in
+  let maxunits =
+    if sxtw then stackoff / scale
+    else (256 - access - stackoff) / scale in
+  let regoff = 1 + Random.int maxunits in
+  let option = if sxtw then 0b110 else 0b010 in
+  let op = Random.int 2 in
+  let prefix =
+    if kind = 0 then 0b001110000
+    else if kind = 1 then 0b011110000
+    else if kind = 2 then 0b001110001
+    else 0b011110001 in
+  let code =
+    pow2 23 */ num prefix +/
+    pow2 22 */ num op +/
+    pow2 21 +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num option +/
+    pow2 12 */ num s +/
+    pow2 10 */ num 0b10 +/
+    pow2 5 */ num rn +/
+    num rt in
+  let setindex =
+    if sxtw then [movn_Wn_imm rm (regoff - 1)]
+    else [movz_Xn_imm rm regoff; movk_Xn_imm_lsl32 rm 1] in
+  let restore =
+    if rn = 31 then sub_Xn_SP_imm 31 stackoff
+    else sub_Xn_SP_Xn rn in
+  add_Xn_SP_imm rn stackoff :: setindex @ [code; restore];;
+
 (*** This covers LDURB/STURB, and LDUR/STUR for 64-bit and 32-bit values ***)
 let cosimulate_ldstu() =
   let is_not_b = Random.int 2 in
@@ -573,8 +921,9 @@ let cosimulate_ldst3() =
 
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
-    cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ldst3; cosimulate_ldstu
+    cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ldsth;
+    cosimulate_ldrsb; cosimulate_ldrsh; cosimulate_ldst_extreg;
+    cosimulate_ld1r; cosimulate_ldst3; cosimulate_ldstu
     ];;
 
 let run_random_memopsimulation() =

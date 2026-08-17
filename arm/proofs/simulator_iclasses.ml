@@ -532,6 +532,51 @@ let check_insns () =
     (*** ldrb / strb (shifted register, no shift S = 0) ***)
     "001110000x1xxxxxxxx010xxxxxxxxxx";
 
+    (*** ldrb / strb (UXTW/SXTW register offset) ***)
+    "001110000x1xxxxxx10x10xxxxxxxxxx";
+
+    (*** ldrh / strh (post-indexed and pre-indexed immediate) ***)
+    "011110000x0xxxxxxxxx01xxxxxxxxxx";
+    "011110000x0xxxxxxxxx11xxxxxxxxxx";
+
+    (*** ldrh / strh (unsigned scaled and unscaled immediate) ***)
+    "011110010xxxxxxxxxxxxxxxxxxxxxxx";
+    "011110000x0xxxxxxxxx00xxxxxxxxxx";
+
+    (*** ldrh / strh (X-register offset, optionally scaled) ***)
+    "011110000x1xxxxx011x10xxxxxxxxxx";
+
+    (*** ldrh / strh (UXTW/SXTW register offset, optionally scaled) ***)
+    "011110000x1xxxxxx10x10xxxxxxxxxx";
+
+    (*** ldrsb (post-indexed and pre-indexed immediate) ***)
+    "001110001x0xxxxxxxxx01xxxxxxxxxx";
+    "001110001x0xxxxxxxxx11xxxxxxxxxx";
+
+    (*** ldrsb (unsigned and unscaled immediate) ***)
+    "001110011xxxxxxxxxxxxxxxxxxxxxxx";
+    "001110001x0xxxxxxxxx00xxxxxxxxxx";
+
+    (*** ldrsb (X-register offset; both zero-shift encodings) ***)
+    "001110001x1xxxxx011x10xxxxxxxxxx";
+
+    (*** ldrsb (UXTW/SXTW register offset) ***)
+    "001110001x1xxxxxx10x10xxxxxxxxxx";
+
+    (*** ldrsh (post-indexed and pre-indexed immediate) ***)
+    "011110001x0xxxxxxxxx01xxxxxxxxxx";
+    "011110001x0xxxxxxxxx11xxxxxxxxxx";
+
+    (*** ldrsh (unsigned scaled and unscaled immediate) ***)
+    "011110011xxxxxxxxxxxxxxxxxxxxxxx";
+    "011110001x0xxxxxxxxx00xxxxxxxxxx";
+
+    (*** ldrsh (X-register offset, optionally scaled) ***)
+    "011110001x1xxxxx011x10xxxxxxxxxx";
+
+    (*** ldrsh (UXTW/SXTW register offset, optionally scaled) ***)
+    "011110001x1xxxxxx10x10xxxxxxxxxx";
+
     (*** ld1 (1 register, Post-immediate offset) ***)
     "0x001100110111110111xxxxxxxxxxxx";
 
