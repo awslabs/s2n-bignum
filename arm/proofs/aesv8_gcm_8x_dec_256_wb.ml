@@ -13878,7 +13878,7 @@ let NIST_INPUT_OF_ASSEMBLED = prove
 (* SUB_LIST inputs, htable_mem_dec, individual key slots k0..k14).             *)
 (* wbn_loop_invariant below re-presents the SAME machine state in the     *)
 (* vocabulary the sibling AES-GCM proofs use (ctr_block nonce / aes_ctr_block  *)
-(* / nist_ghash / htable_mem_8 / EL n rk), and WBN_LOOP_INV_RAW_IS_NIST proves the    *)
+(* / nist_ghash / htable_mem_8 / EL n rk), and WBN_LOOP_INV_VOCAB proves the    *)
 (* two coincide under the standard adapter hypotheses.  The GHASH accumulator  *)
 (* is the PLAIN nist_ghash form (no byteswap128 wrapper): the loop accumulator *)
 (* is the pre-tag-store value, and the tag store is where the outer            *)
@@ -14163,7 +14163,7 @@ let INPUT_FORALL_IFF = prove
 (* The two invariants coincide under the standard adapter hypotheses plus the   *)
 (* loop side-condition 8*(i+1) <= nblk (a theorem in the loop context, where     *)
 (* i < (nblk-9) DIV 8).                                                          *)
-let WBN_LOOP_INV_RAW_IS_NIST = prove
+let WBN_LOOP_INV_VOCAB = prove
  (`!pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer nblk ibytes xi h
      k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14
      nonce c inblock tag0 rk i s.
@@ -14228,7 +14228,7 @@ let WBN_INV_SPLIT = prove
 (* bridges act on the core conjuncts (no PC/aligned), so this is proved directly  *)
 (* on the core defs — a full-invariant equivalence would not by itself entail a   *)
 (* core one.                                                                      *)
-let WBN_INV_CORE_RAW_IS_NIST = prove
+let WBN_INV_CORE_VOCAB = prove
  (`!pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer nblk ibytes xi h
      k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14
      nonce c inblock tag0 rk i s.
@@ -14275,8 +14275,8 @@ let WBN_INV_CORE_RAW_IS_NIST = prove
 (* the concrete 15-key list, ibytes is the assembled input) and the loop       *)
 (* side-condition 8*(i+1)<=nblk (a theorem in-loop, from 17<=nblk).            *)
 (*                                                                             *)
-(* WBN_INV_CORE_RAW_IS_NIST (raw core <=> shared core) transports WBN_MAIN_LOOP;     *)
-(* WBN_LOOP_INV_RAW_IS_NIST (raw inv <=> shared inv) transports the ENTRY (whose     *)
+(* WBN_INV_CORE_VOCAB (raw core <=> shared core) transports WBN_MAIN_LOOP;     *)
+(* WBN_LOOP_INV_VOCAB (raw inv <=> shared inv) transports the ENTRY (whose     *)
 (* postcondition carries the FULL invariant, not the PC/decode-stripped core). *)
 (* ------------------------------------------------------------------------- *)
 
@@ -14332,7 +14332,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_nist_goal,
     mk_eq(mk_comb(mk_comb(wbn_core_applied,kk),wbn_transport_sv),
           mk_comb(mk_comb(wbn_nist_core_applied,kk),wbn_transport_sv))) in
   let CORE_DISCHARGE =
-    GEN_TAC THEN MATCH_MP_TAC WBN_INV_CORE_RAW_IS_NIST THEN
+    GEN_TAC THEN MATCH_MP_TAC WBN_INV_CORE_VOCAB THEN
     REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC) in
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN `8 * (0 + 1) <= nblk` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -14364,7 +14364,7 @@ let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_nist_goal,
     mk_eq(mk_comb(mk_comb(wbn_inv_applied,`0`),wbn_transport_sv),
           mk_comb(mk_comb(wbn_nist_inv_applied,`0`),wbn_transport_sv))) in
   let INV_DISCHARGE0 =
-    GEN_TAC THEN MATCH_MP_TAC WBN_LOOP_INV_RAW_IS_NIST THEN
+    GEN_TAC THEN MATCH_MP_TAC WBN_LOOP_INV_VOCAB THEN
     REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC) in
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   SUBGOAL_THEN `8 * (0 + 1) <= nblk` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
