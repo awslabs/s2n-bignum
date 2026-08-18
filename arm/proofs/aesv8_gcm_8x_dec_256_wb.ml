@@ -8792,8 +8792,8 @@ Gc.compact();;
 (* (fix: the in-term note broke the cold-load).                               *)
 (* ------------------------------------------------------------------------- *)
 
-let wbn_loop_invariant = new_definition
- `wbn_loop_invariant (pc:num) (ctr0:int128) (in_p:int64) (out_p:int64)
+let wbn_loop_invariant_raw = new_definition
+ `wbn_loop_invariant_raw (pc:num) (ctr0:int128) (in_p:int64) (out_p:int64)
     (xi_p:int64) (ivec_p:int64) (key_p:int64) (htbl_p:int64) (stackpointer:int64)
     (nblk:num) (ibytes:byte list) (xi:int128) (h:int128)
     (k0:int128) k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 (k14:int128) =
@@ -8876,12 +8876,12 @@ let wbn_loop_invariant = new_definition
 (* ---- Entry-subgoal recipe (validated interactively, ) ----------
    The ENSURES_WHILE_UP_TAC entry subgoal is  pre ==> (PC=pc1 /\ inv 0 s).
    Given WBN_FRONT_BUF establishes pre ==> (PC=pc+0x4b8 /\ <postcond s>), the
-   i=0 invariant  (wbn_loop_invariant ... 0 s)  follows from <postcond s> PLUS
+   i=0 invariant  (wbn_loop_invariant_raw ... 0 s)  follows from <postcond s> PLUS
    the 3 loop-constants (in_p read-only, key_p=k0, htable_mem_dec) once those
    are added to WBN_FRONT_BUF's harvest.  The closing tactic (proves 44/47
    directly from the postcond hyps; the 3 come from the extended front):
 
-     GEN_TAC THEN REWRITE_TAC[wbn_loop_invariant] THEN
+     GEN_TAC THEN REWRITE_TAC[wbn_loop_invariant_raw] THEN
      CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN STRIP_TAC THEN
      CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
      RULE_ASSUM_TAC(REWRITE_RULE[GSYM GCM_CTR_ADD_LANES]) THEN
@@ -9573,7 +9573,7 @@ let wbn_front_P_tm, wbn_front_Q0_tm, wbn_front_C_tm =
   rand(rator(rator ens)), rand(rator ens), rand ens;;
 
 (* R = the 3 loop-constants, taken verbatim from WBN_FRONT_BUF's precond so
-   they match wbn_loop_invariant's conjuncts syntactically. *)
+   they match wbn_loop_invariant_raw's conjuncts syntactically. *)
 let wbn_front_R_tm =
   let sv = fst(dest_abs wbn_front_P_tm) in
   mk_abs(sv, list_mk_conj
@@ -9684,11 +9684,11 @@ let wbn_front_prefix_ext_post =
   rand(rator(snd(dest_imp(snd(strip_forall(concl WBN_FRONT_PREFIX_EXT))))));;
 
 (* ------------------------------------------------------------------------- *)
-(* 8. Phase 2 CLOSE: WBN_LOOP_INVARIANT_ENTRY.                                *)
+(* 8. Phase 2 CLOSE: WBN_LOOP_INVARIANT_ENTRY_RAW.                                *)
 (*                                                                            *)
 (* THE entry subgoal that ENSURES_WHILE_UP_TAC produces for the main loop:    *)
 (*   ensures arm (\s. decodes /\ PC = pc+0x20 /\ precondition s)              *)
-(*               (\s. decodes /\ PC = pc+0x4a0 /\ wbn_loop_invariant ... 0 s) *)
+(*               (\s. decodes /\ PC = pc+0x4a0 /\ wbn_loop_invariant_raw ... 0 s) *)
 (*               frame                                                        *)
 (* i.e. the front (entry -> loop head) establishes the i=0 invariant.  Proved *)
 (* by weakening WBN_FRONT_BUF_EXT's postcond (Q0 /\ 3-loop-constants) down to *)
@@ -9703,7 +9703,7 @@ let wbn_front_prefix_ext_post =
 
 (* i=0 invariant applied to all 27 loop params, as a (num->armstate->bool). *)
 let wbn_inv_applied =
-  list_mk_comb(`wbn_loop_invariant`,
+  list_mk_comb(`wbn_loop_invariant_raw`,
     [`pc:num`;`ctr0:int128`;`in_p:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
      `key_p:int64`;`htbl_p:int64`;`stackpointer:int64`;`nblk:num`;`ibytes:byte list`;
      `xi:int128`;`h:int128`;`k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;`k4:int128`;
@@ -9728,12 +9728,12 @@ let wbn_extQ =
     rhs(concl(BETA_CONV(mk_comb(wbn_front_Q0_tm,sv)))),
     rhs(concl(BETA_CONV(mk_comb(wbn_front_R_tm,sv)))))) ;;
 
-let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_goal,
+let WBN_LOOP_INVARIANT_ENTRY_RAW = prove(wbn_entry_goal,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ENSURES_POSTCONDITION_THM THEN
   EXISTS_TAC wbn_extQ THEN CONJ_TAC THENL
    [(* (Q0 x /\ R x) ==> decodes /\ PC=pc+0x4b8 /\ inv 0 x *)
-    GEN_TAC THEN REWRITE_TAC[wbn_loop_invariant] THEN
+    GEN_TAC THEN REWRITE_TAC[wbn_loop_invariant_raw] THEN
     CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN STRIP_TAC THEN
     CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[GSYM GCM_CTR_ADD_LANES]) THEN
@@ -9767,7 +9767,7 @@ let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_goal,
 (* ------------------------------------------------------------------------- *)
 (* 9. Phase 4 launch: PC/decode-free CORE invariant + split.                  *)
 (*                                                                            *)
-(* wbn_loop_invariant bakes in two conjuncts the ENSURES_WHILE tactics MUST   *)
+(* wbn_loop_invariant_raw bakes in two conjuncts the ENSURES_WHILE tactics MUST   *)
 (* own themselves:                                                            *)
 (*   C1  aligned_bytes_loaded s (word pc) ...mc   (program_decodes)           *)
 (*   C2  read PC s = word (pc + 1208)             (the loop-head PC)          *)
@@ -9778,19 +9778,19 @@ let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_goal,
 (* state whose PC is 0x9ec/0x9f0).  Standard s2n invariants (keccak,          *)
 (* emontredc) are PC/decode-free for exactly this reason.                     *)
 (*                                                                            *)
-(* wbn_loop_inv_core = wbn_loop_invariant with C1,C2 removed (built by        *)
+(* wbn_loop_inv_core_raw = wbn_loop_invariant_raw with C1,C2 removed (built by        *)
 (* dropping the first two conjuncts, so it stays in sync with the frozen      *)
-(* definition automatically).  WBN_INV_SPLIT is the bridge                    *)
-(*   wbn_loop_invariant ... i s <=>                                           *)
+(* definition automatically).  WBN_INV_RAW_SPLIT is the bridge                    *)
+(*   wbn_loop_invariant_raw ... i s <=>                                           *)
 (*     aligned_bytes_loaded s (word pc) mc /\ read PC s = word (pc+1184) /\   *)
-(*     wbn_loop_inv_core ... i s                                              *)
+(*     wbn_loop_inv_core_raw ... i s                                              *)
 (* so the ENTRY theorem (which yields the LHS at i=0) feeds any tactic that   *)
 (* wants the RHS, and the loop body/exit can carry ONLY the core across the   *)
 (* frame while the tactic supplies decode+PC.                                 *)
 (* ------------------------------------------------------------------------- *)
 
-let wbn_loop_inv_core =
-  let eqn = snd(strip_forall(concl wbn_loop_invariant)) in
+let wbn_loop_inv_core_raw =
+  let eqn = snd(strip_forall(concl wbn_loop_invariant_raw)) in
   let lhs_full, rhs_full = dest_eq eqn in
   let hd, params = strip_comb lhs_full in
   let ivars, body = strip_abs rhs_full in
@@ -9798,31 +9798,31 @@ let wbn_loop_inv_core =
   (* C1 = aligned_bytes_loaded, C2 = read PC = word(pc+1184); drop both *)
   let core_body = list_mk_conj (List.tl (List.tl cs)) in
   let core_rhs = list_mk_abs(ivars, core_body) in
-  let newhead = mk_var("wbn_loop_inv_core", type_of hd) in
+  let newhead = mk_var("wbn_loop_inv_core_raw", type_of hd) in
   new_definition (mk_eq(list_mk_comb(newhead, params), core_rhs));;
 
 let wbn_inv_args =
-  snd(strip_comb(fst(dest_eq(snd(strip_forall(concl wbn_loop_invariant))))));;
+  snd(strip_comb(fst(dest_eq(snd(strip_forall(concl wbn_loop_invariant_raw))))));;
 
-let WBN_INV_SPLIT = prove
+let WBN_INV_RAW_SPLIT = prove
  (list_mk_forall(wbn_inv_args @ [`i:num`;`s:armstate`],
     mk_eq(
-      list_mk_comb(`wbn_loop_invariant`, wbn_inv_args @ [`i:num`;`s:armstate`]),
+      list_mk_comb(`wbn_loop_invariant_raw`, wbn_inv_args @ [`i:num`;`s:armstate`]),
       list_mk_conj[
         `aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc`;
         `read PC s = word (pc + 1208)`;
-        list_mk_comb(`wbn_loop_inv_core`, wbn_inv_args @ [`i:num`;`s:armstate`])])),
-  REWRITE_TAC[wbn_loop_invariant; wbn_loop_inv_core] THEN
+        list_mk_comb(`wbn_loop_inv_core_raw`, wbn_inv_args @ [`i:num`;`s:armstate`])])),
+  REWRITE_TAC[wbn_loop_invariant_raw; wbn_loop_inv_core_raw] THEN
   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN REWRITE_TAC[CONJ_ACI]);;
 
 (* ------------------------------------------------------------------------- *)
 (* 9b. Phase 4 PREREQ: the RAW counter accumulator Q30.                        *)
 (*                                                                            *)
-(* CRITICAL FINDING: the frozen wbn_loop_invariant (Sec 4) is                  *)
+(* CRITICAL FINDING: the frozen wbn_loop_invariant_raw (Sec 4) is                  *)
 (* INCOMPLETE for the loop body.  The body's FIRST instruction                 *)
 (*   0x4a0  rev32 v5, v30                                                       *)
 (* reads Q30 -- the running CTR-block counter in its rev32-pending "raw" form  *)
-(* -- but wbn_loop_invariant has NO Q30 conjunct, so Q5 immediately goes       *)
+(* -- but wbn_loop_invariant_raw has NO Q30 conjunct, so Q5 immediately goes       *)
 (* symbolic in `read Q30 s0` and the body cannot close.  Static live-in        *)
 (* analysis of the whole body (0x4a0..0x9ec) shows Q30 is the ONLY vector      *)
 (* register whose first use is a READ and which the invariant fails to pin     *)
@@ -9842,8 +9842,8 @@ let WBN_INV_SPLIT = prove
 (*                                                                            *)
 (* THE FIX (applied below): add a Q30 conjunct                                 *)
 (*   read Q30 s = gcm_ctr_raw (word (8 * i + 13)) ctr0                          *)
-(* to wbn_loop_invariant (and thus wbn_loop_inv_core auto-tracks it).  Then     *)
-(* WBN_FRONT_BUF_EXT / WBN_LOOP_INVARIANT_ENTRY must re-establish it at i=0     *)
+(* to wbn_loop_invariant_raw (and thus wbn_loop_inv_core_raw auto-tracks it).  Then     *)
+(* WBN_FRONT_BUF_EXT / WBN_LOOP_INVARIANT_ENTRY_RAW must re-establish it at i=0     *)
 (* (from conjunct 46 via the gcm_ctr_raw (word 13) identity), and the step     *)
 (* case advances it 8i+13 -> 8(i+1)+13 = 8i+21 over the 8 in-body increments.  *)
 (* ------------------------------------------------------------------------- *)
@@ -9911,7 +9911,7 @@ let CTR_RAW_INCR_FOLD_TAC (qd:string) (sn:string) (wtm:term) : tactic =
     | _ -> th);;
 
 (* ------------------------------------------------------------------------- *)
-(* 10. Phase 4: fire the ENSURES_WHILE skeleton -> WBN_MAIN_LOOP              *)
+(* 10. Phase 4: fire the ENSURES_WHILE skeleton -> WBN_MAIN_LOOP_raw              *)
 (*                                                                            *)
 (* The back-edge of .L256_dec_main_loop is                                    *)
 (*   cmp x0,x5 @0x9e4 ; stp q6,q7,[x2],#32 @0x9e8 ; b.lt 0x4a0 @0x9ec         *)
@@ -9934,7 +9934,7 @@ let CTR_RAW_INCR_FOLD_TAC (qd:string) (sn:string) (wtm:term) : tactic =
 
 (* the applied PC-free core, as a (num->armstate->bool) and as a \i s. abstr. *)
 let wbn_core_applied =
-  list_mk_comb(`wbn_loop_inv_core`,
+  list_mk_comb(`wbn_loop_inv_core_raw`,
     [`pc:num`;`ctr0:int128`;`in_p:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
      `key_p:int64`;`htbl_p:int64`;`stackpointer:int64`;`nblk:num`;`ibytes:byte list`;
      `xi:int128`;`h:int128`;`k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;`k4:int128`;
@@ -10105,7 +10105,7 @@ let DISCARD_STALE_Q19_TAC : tactic = fun (asl,w) ->
    KEEPGH + keep only the LATEST read of each of Q16/Q17/Q18/Q19.  (KEEPGH lives in the <=8-block chain;
    this generalizes DISCARD_STALE_Q19_TAC to all four GHASH regs.)  VALIDATED
    to define+typecheck against the warm ckpt; the full-window behaviour is validated once
-   the new invariant is cold-loaded (the body reaches this window only via wbn_loop_inv_core,
+   the new invariant is cold-loaded (the body reaches this window only via wbn_loop_inv_core_raw,
    which the warm ckpt still bakes WITHOUT the [sp+64] conjunct). *)
 let state_num_of_qreg qn th =
   try let c = concl th in if not(is_eq c) then None else
@@ -10297,9 +10297,9 @@ let DISCARD_STALE_DATA_TAC = MAP_EVERY DISCARD_STALE_QREG_TAC wbn_datawords_0_19
    2nd pass exists (in the lemmas file) to reach a REV64 fixpoint that a single pass
    can miss on ~6/278 steps -- but under KEEPDATA (which discards stale old-state reads
    after every step) the body sim reaches its self-contained cut-points WITHOUT that
-   extra fold: WBN_MAIN_LOOP and WBN_PREPRETAIL_EXT2 (the ONLY two KEEPDATA-SIMP users)
+   extra fold: WBN_MAIN_LOOP_raw and WBN_PREPRETAIL_EXT2 (the ONLY two KEEPDATA-SIMP users)
    both re-prove hyps=0 with a single core pass.  Measured on a warm dev-load:
-   WBN_MAIN_LOOP 188.2s->147.0s, WBN_PREPRETAIL 136.9s->103.5s (the 2nd pass was a
+   WBN_MAIN_LOOP_raw 188.2s->147.0s, WBN_PREPRETAIL 136.9s->103.5s (the 2nd pass was a
    full pile-traversal no-op on 272/278 steps).  KEEPGH (tails/fronts) and every other
    consumer keep the unchanged double-pass GCM_SIMD_SIMPLIFY_TAC. *)
 let ARM_STEPS_FOLD_KEEPDATA_TAC exec snums =
@@ -10463,7 +10463,7 @@ let wbn_main_loop_goal =
   let ens = list_mk_comb(`ensures arm`,[loop_pre; loop_post; wbn_front_C_tm]) in
   list_mk_forall(wb_front_vars, mk_imp(wbn_front_hyps_wide_tm, ens));;
 
-let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
+let WBN_MAIN_LOOP_raw = prove(wbn_main_loop_goal,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   UP2_ABI_TAC `(nblk - 9) DIV 8` `pc + 0x4b8` `pc + 0xa08` wbn_core_iv THEN
   REPEAT CONJ_TAC THENL
@@ -10475,7 +10475,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     REPEAT CONJ_TAC THEN MONOTONE_MAYCHANGE_TAC;
     (* 3. ===================== PHASE 4 LOOP BODY (TODO) ===================== *)
-    (* Goal after `REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN   *)
+    (* Goal after `REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN   *)
     (* CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0"`:         *)
     (* state s0 at 0x4a0, iteration i, with (confirmed , risk #2):            *)
     (*   X0=in_p+128(i+1) X2=out_p+128(i+1) X4=in_p+16nblk                     *)
@@ -10523,7 +10523,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     (* (SUB_LIST(16*k,16) ibytes)).  Counter compose: GCM_CTR_ADD_COMPOSE /    *)
     (* GCM_CTR_INC_ITER_ADD.  Signed back-edge b.lt @0x9ec resolved inside the *)
     (* body by WB_PTRCMP_FLAGS (x0 vs x5).  Reach the body-init state via       *)
-    (*   REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN              *)
+    (*   REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN              *)
     (*   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0"          *)
     (* (VALIDATED: yields hyps incl. read Q30 s0 = gcm_ctr_raw                  *)
     (* (word(8*i+13)) ctr0 at asm 58).  Use per-step GCM_SIMD_SIMPLIFY_TAC to   *)
@@ -10556,7 +10556,7 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     (*  - back-edge 338-340: WB_PTRCMP_FLAGS standalone-rewrite + WBN_PC_BRIDGE.*)
     (*    PC lands EXACTLY at if i+1<(nblk-9)DIV8 then pc+1184 else pc+2544.    *)
     (* ===================================================================== *)
-    REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN
+    REPEAT STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN
     CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0" THEN
     (* htable unfold+split @s0 (s013): resolve the 13 H-power memory cells *)
     RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_dec]) THEN
@@ -10701,13 +10701,13 @@ let WBN_MAIN_LOOP = prove(wbn_main_loop_goal,
     ENSURES_INIT_TAC "s0" THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
     REPEAT CONJ_TAC THEN MONOTONE_MAYCHANGE_TAC]);;
-(* --- mid-load heap compaction after WBN_MAIN_LOOP (loop-body induction). --- *)
+(* --- mid-load heap compaction after WBN_MAIN_LOOP_raw (loop-body induction). --- *)
 Gc.compact();;
 
 (* ========================================================================= *)
 (* Section 11. PHASE 5 -- PREPRETAIL (0x9f0..0xed4 straight-line sim).         *)
 (*                                                                            *)
-(* The loop-exit state (WBN_MAIN_LOOP postcond: PC=pc+0x9f0, wbn_loop_inv_core *)
+(* The loop-exit state (WBN_MAIN_LOOP_raw postcond: PC=pc+0x9f0, wbn_loop_inv_core_raw *)
 (* at k=(nblk-9)DIV8, GHASH lagging one 8-block group) is driven through the   *)
 (* prepretail code (0x9f0..0xed4, 313 instrs) to the SHARED TAIL SEAM at       *)
 (* pc+3796 (=0xed4), the exact state every <=8-block WB_TAIL_r_TAC consumes                  *)
@@ -10736,7 +10736,7 @@ Gc.compact();;
 (* SIM RECIPE (VALIDATED end-to-end, no hang/OOM; reaches                      *)
 (* read PC s313 = word(pc+3796) with the full state harvested):                *)
 (*                                                                            *)
-(*   REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN     *)
+(*   REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN     *)
 (*   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0" THEN         *)
 (*   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_dec]) THEN                          *)
 (*   RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV let_CONV)) THEN                    *)
@@ -11621,14 +11621,14 @@ let WBN_Q9_INDEX_LT_9 = prove
 (* be used because the MAYCHANGE frame permits out_p writes).                  *)
 (*                                                                            *)
 (* wbn_out_forall = the invariant's output-store forall at i:=k, as a          *)
-(* predicate on s (extracted from wbn_loop_inv_core to guarantee it is the     *)
+(* predicate on s (extracted from wbn_loop_inv_core_raw to guarantee it is the     *)
 (* SAME term the sim preserves).  wbn_prepretail_post_ext = the 65-conjunct    *)
 (* post = wbn_prepretail_post /\ wbn_out_forall.                               *)
 (* ------------------------------------------------------------------------- *)
 
 let wbn_out_forall =
   let full = list_mk_comb(wbn_core_applied, [`(nblk - 9) DIV 8`; `s:armstate`]) in
-  let inv_cs = conjuncts (rhs(concl (REWRITE_CONV[wbn_loop_inv_core] full))) in
+  let inv_cs = conjuncts (rhs(concl (REWRITE_CONV[wbn_loop_inv_core_raw] full))) in
   mk_abs(`s:armstate`, find is_forall inv_cs);;
 
 let wbn_prepretail_post_ext =
@@ -11752,7 +11752,7 @@ let wbn_prepretail_ext2_goal =
    the 2 GHASH conjuncts close via WBN_Q19_PREPRETAIL_CLOSE_TAC (R1' route,
    CHEAT-free since s065). *)
 let WBN_PREPRETAIL_EXT2_TAC idx_lt_thm =
-  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[wbn_loop_inv_core_raw] THEN
   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ENSURES_INIT_TAC "s0" THEN
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_dec]) THEN
   RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV let_CONV)) THEN
@@ -11860,12 +11860,12 @@ let wbn_loop_prep_ext2_goal =
 let WBN_LOOP_PREP_EXT2 = prove(wbn_loop_prep_ext2_goal,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   MATCH_MP_TAC ENSURES_TRANS_SIMPLE THEN
-  EXISTS_TAC (rand(rator(snd(dest_imp(snd(strip_forall(concl WBN_MAIN_LOOP))))))) THEN
+  EXISTS_TAC (rand(rator(snd(dest_imp(snd(strip_forall(concl WBN_MAIN_LOOP_raw))))))) THEN
   CONJ_TAC THENL
    [REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN MAYCHANGE_IDEMPOT_TAC;
     ALL_TAC] THEN
   CONJ_TAC THENL
-   [MP_TAC(SPECL wb_front_vars WBN_MAIN_LOOP) THEN
+   [MP_TAC(SPECL wb_front_vars WBN_MAIN_LOOP_raw) THEN
     ANTS_TAC THENL [FIRST_X_ASSUM ACCEPT_TAC; DISCH_THEN ACCEPT_TAC];
     MP_TAC(SPECL wb_front_vars WBN_PREPRETAIL_EXT2) THEN
     ANTS_TAC THENL [FIRST_X_ASSUM ACCEPT_TAC; DISCH_THEN ACCEPT_TAC]]);;
@@ -11883,12 +11883,12 @@ let WBN_FRONT_TO_PREP_EXT2 = prove(wbn_front_to_prep_ext2_goal,
    [REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN MAYCHANGE_IDEMPOT_TAC;
     ALL_TAC] THEN
   CONJ_TAC THENL
-   [MP_TAC(SPECL wb_front_vars WBN_LOOP_INVARIANT_ENTRY) THEN
+   [MP_TAC(SPECL wb_front_vars WBN_LOOP_INVARIANT_ENTRY_RAW) THEN
     ANTS_TAC THENL [FIRST_X_ASSUM ACCEPT_TAC; DISCH_THEN ACCEPT_TAC];
     MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN
     EXISTS_TAC (rand(rator(rator(snd(dest_imp(snd(strip_forall(concl WBN_LOOP_PREP_EXT2)))))))) THEN
     CONJ_TAC THENL
-     [GEN_TAC THEN REWRITE_TAC[WBN_INV_SPLIT] THEN
+     [GEN_TAC THEN REWRITE_TAC[WBN_INV_RAW_SPLIT] THEN
       CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
       REWRITE_TAC[ARITH_RULE `pc + 0x4b8 = pc + 1208`] THEN CONV_TAC TAUT;
       MP_TAC(SPECL wb_front_vars WBN_LOOP_PREP_EXT2) THEN
@@ -12813,10 +12813,10 @@ let WBN_FRONT_916_FULL_TAC =
   WBN_RESOLVE_49C_916_TAC THEN
   ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (294--294);;
 
-(* invariant-establishment closer at s288 (mirror of WBN_LOOP_INVARIANT_ENTRY branch 1). *)
+(* invariant-establishment closer at s288 (mirror of WBN_LOOP_INVARIANT_ENTRY_RAW branch 1). *)
 let ENTRY_CLOSER_916 =
   ENSURES_FINAL_STATE_TAC THEN
-  REWRITE_TAC[wbn_loop_inv_core] THEN
+  REWRITE_TAC[wbn_loop_inv_core_raw] THEN
   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
   CONV_TAC(DEPTH_CONV NUM_MULT_CONV) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[GSYM GCM_CTR_ADD_LANES]) THEN
@@ -13419,7 +13419,7 @@ let CTR0_AS_CTR_BLOCK = prove
 (*   Each >8 chain factors, via ENSURES_TRANS_SIMPLE, into the four segments    *)
 (*   the binary runs in sequence (entry pc+0x20 -> exit pc+4528):               *)
 (*     FRONT       WBN_FRONT_BUF / _EXT / _EXT2      pc+0x20  -> loop head 0x4a0 *)
-(*     LOOP        WBN_MAIN_LOOP (ENSURES_WHILE)     0x4a0    -> 0x4a0 (per iter)*)
+(*     LOOP        WBN_MAIN_LOOP_raw (ENSURES_WHILE)     0x4a0    -> 0x4a0 (per iter)*)
 (*     PREPRETAIL  WBN_PREPRETAIL / _EXT / _EXT2     0x9f0    -> tail entry 3796 *)
 (*     TAIL        WBN_PREP_TO_END(_FULL) / _916     3796     -> 4528            *)
 (*   Composed as:  WBN_FRONT_TO_PREP(_EXT2)          = FRONT ; LOOP ; PREPRETAIL *)
@@ -13867,6 +13867,511 @@ let NIST_INPUT_OF_ASSEMBLED = prove
   MP_TAC(SPECL [`inblock:num->int128`; `nblk:num`; `i:num`] INBLOCK_OF_ASSEMBLED) THEN
   ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
   REWRITE_TAC[GSYM BREV_RF8_128]);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* Loop invariant in the shared NIST SP 800-38D vocabulary.                    *)
+(*                                                                             *)
+(* wbn_loop_invariant_raw (above) is stated in the raw per-register dialect the    *)
+(* symbolic simulation produces (gcm_ctr_add/gcm_ctr_raw counters, aes13       *)
+(* keystream towers, a ghash_polyval_acc accumulator over byte-reversed        *)
+(* SUB_LIST inputs, htable_mem_dec, individual key slots k0..k14).             *)
+(* wbn_loop_invariant below re-presents the SAME machine state in the     *)
+(* vocabulary the sibling AES-GCM proofs use (ctr_block nonce / aes_ctr_block  *)
+(* / nist_ghash / htable_mem_8 / EL n rk), and WBN_LOOP_INV_RAW_IS_NIST proves the    *)
+(* two coincide under the standard adapter hypotheses.  The GHASH accumulator  *)
+(* is the PLAIN nist_ghash form (no byteswap128 wrapper): the loop accumulator *)
+(* is the pre-tag-store value, and the tag store is where the outer            *)
+(* byte-reversal enters, so WBN_TAG_NIST_BRIDGE's outer word_bytereverse       *)
+(* strips off (WBN_LOOP_Q19_NIST).                                             *)
+(* ------------------------------------------------------------------------- *)
+
+(* counter register Q0..Q4: gcm_ctr_add is a byte-reversed NIST counter block. *)
+let CTR_ADD_AS_CTR_BLOCK = prove
+ (`!m (nonce:96 word) c ctr0.
+     word_bytereverse ctr0 = ctr_block nonce c
+     ==> gcm_ctr_add (word m) ctr0 = word_reversefields 8 (ctr_block nonce (c + m))`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM GCM_CTR_INC_ITER_ADD] THEN
+  MP_TAC(SPECL [`m:num`;`nonce:96 word`;`c:num`;`ctr0:int128`]
+    GCM_CTR_INC_ITER_CTR_BLOCK) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[BREV_RF8_128]);;
+
+(* raw counter register Q30: gcm_ctr_raw is a 32-field reverse of gcm_ctr_add. *)
+let RAW_IS_RF32_BREV_ADD = prove
+ (`!m ctr0. gcm_ctr_raw (word m) ctr0 =
+            word_reversefields 32 (word_bytereverse (gcm_ctr_add (word m) ctr0))`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[gcm_ctr_raw_def; gcm_ctr_add] THEN
+  REWRITE_TAC[GSYM BREV_TOP_LANE] THEN
+  ABBREV_TAC `t:32 word = word_bytereverse (word_subword (ctr0:int128) (96,32):32 word)` THEN
+  ABBREV_TAC `p:32 word = word_add t (word m)` THEN
+  CONV_TAC WORD_BLAST);;
+
+let BREV_RF8_INV = prove
+ (`!y:int128. word_bytereverse (word_reversefields 8 y) = y`,
+  GEN_TAC THEN REWRITE_TAC[GSYM(REWRITE_RULE[FUN_EQ_THM] WORD_BYTEREVERSE_REVERSEFIELDS)] THEN
+  REWRITE_TAC[WORD_BYTEREVERSE_BYTEREVERSE]);;
+
+let Q30_TEMPLATE = prove
+ (`!m ctr0 (kb:int128).
+     gcm_ctr_add (word m) ctr0 = word_reversefields 8 kb
+     ==> gcm_ctr_raw (word m) ctr0 = word_reversefields 32 kb`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC[RAW_IS_RF32_BREV_ADD] THEN
+  ASM_REWRITE_TAC[BREV_RF8_INV]);;
+
+let CTR_RAW_AS_CTR_BLOCK = prove
+ (`!m (nonce:96 word) c ctr0.
+     word_bytereverse ctr0 = ctr_block nonce c
+     ==> gcm_ctr_raw (word m) ctr0 = word_reversefields 32 (ctr_block nonce (c + m))`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC Q30_TEMPLATE THEN
+  MATCH_MP_TAC CTR_ADD_AS_CTR_BLOCK THEN ASM_REWRITE_TAC[]);;
+
+(* Q19 accumulator: the plain nist_ghash form (WBN_TAG_NIST_BRIDGE stripped of  *)
+(* its outer injective word_bytereverse).                                       *)
+let WBN_LOOP_Q19_NIST = prove
+ (`!(H:int128) h xi tag0 ibytes N.
+     byteswap128 h = ghash_twist H /\ xi = word_reversefields 8 tag0
+     ==> ghash_polyval_acc (byteswap128 h) (word_bytereverse xi)
+           (MAP word_bytereverse
+             (list_of_seq (\k. bytes_to_int128 (SUB_LIST (16 * k,16) ibytes)) N)) =
+         nist_ghash H tag0 (list_of_seq (nist_input_block ibytes) N)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`H:int128`;`h:int128`;`xi:int128`;`tag0:int128`;
+               `ibytes:byte list`;`N:num`] WBN_TAG_NIST_BRIDGE) THEN
+  ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[GSYM BREV_RF8_128] THEN
+  DISCH_THEN(MP_TAC o AP_TERM `word_bytereverse:int128->int128`) THEN
+  REWRITE_TAC[WORD_BYTEREVERSE_BYTEREVERSE]);;
+
+(* The shared-vocabulary loop invariant.  Same machine state as                *)
+(* wbn_loop_invariant_raw; the parameters are the NIST ones (nonce, counter base c, *)
+(* abstract indexed input `inblock`, initial tag `tag0`, round-key list `rk`)   *)
+(* rather than the raw ctr0/ibytes/xi/h/k0..k14.  The two-stream pipeline lag   *)
+(* (stores/counters at 8(i+1), GHASH at 8i) is preserved verbatim.              *)
+let wbn_loop_invariant = new_definition
+ `wbn_loop_invariant (pc:num) (nonce:96 word) (c:num) (in_p:int64) (out_p:int64)
+    (xi_p:int64) (ivec_p:int64) (key_p:int64) (htbl_p:int64) (stackpointer:int64)
+    (nblk:num) (inblock:num->int128) (tag0:int128) (rk:int128 list) =
+  \(i:num) (s:armstate).
+    aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+    read PC s = word (pc + 1208) /\
+    read Q0 s = word_reversefields 8 (ctr_block nonce (c + (8 * i + 8))) /\
+    read Q1 s = word_reversefields 8 (ctr_block nonce (c + (8 * i + 9))) /\
+    read Q2 s = word_reversefields 8 (ctr_block nonce (c + (8 * i + 10))) /\
+    read Q3 s = word_reversefields 8 (ctr_block nonce (c + (8 * i + 11))) /\
+    read Q4 s = word_reversefields 8 (ctr_block nonce (c + (8 * i + 12))) /\
+    read Q5 s = word_xor (aes_ctr_block nonce rk (c + (8 * i + 5))) (inblock (8 * i + 5)) /\
+    read Q6 s = word_xor (aes_ctr_block nonce rk (c + (8 * i + 6))) (inblock (8 * i + 6)) /\
+    read Q7 s = word_xor (aes_ctr_block nonce rk (c + (8 * i + 7))) (inblock (8 * i + 7)) /\
+    read Q8 s = inblock (8 * i + 0) /\
+    read Q9 s = inblock (8 * i + 1) /\
+    read Q10 s = inblock (8 * i + 2) /\
+    read Q11 s = inblock (8 * i + 3) /\
+    read Q12 s = inblock (8 * i + 4) /\
+    read Q13 s = inblock (8 * i + 5) /\
+    read Q14 s = inblock (8 * i + 6) /\
+    read Q15 s = inblock (8 * i + 7) /\
+    read Q19 s =
+      nist_ghash (aes256_encrypt (word 0) rk) tag0
+        (list_of_seq (\k. word_bytereverse (inblock k)) (8 * i)) /\
+    read X0 s = word_add in_p (word (128 * (i + 1))) /\
+    read X2 s = word_add out_p (word (128 * (i + 1))) /\
+    read X4 s = word_add in_p (word (16 * nblk)) /\
+    read X5 s = word_add (word (128 * (nblk - 1) DIV 8)) in_p /\
+    read X9 s = word (16 * nblk) /\
+    read X10 s = word_add stackpointer (word 64) /\
+    read X1 s = word (128 * nblk) /\
+    read X15 s = word 4294967296 /\
+    read Q31 s = word 79228162514264337593543950336 /\
+    read Q30 s = word_reversefields 32 (ctr_block nonce (c + (8 * i + 13))) /\
+    read X16 s = ivec_p /\
+    read X6 s = htbl_p /\
+    read X3 s = xi_p /\
+    read X11 s = key_p /\
+    read SP s = stackpointer /\
+    read (memory :> bytes64 (word_add stackpointer (word 64))) s =
+      word 13979173243358019584 /\
+    (!j. j < 8 * (i + 1)
+         ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
+             word_xor (aes_ctr_block nonce rk (c + j)) (inblock j)) /\
+    (!j. j < nblk
+         ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j) /\
+    read (memory :> bytes128 key_p) s = EL 0 rk /\
+    read (memory :> bytes128 (word_add key_p (word 16))) s = EL 1 rk /\
+    read (memory :> bytes128 (word_add key_p (word 32))) s = EL 2 rk /\
+    read (memory :> bytes128 (word_add key_p (word 48))) s = EL 3 rk /\
+    read (memory :> bytes128 (word_add key_p (word 64))) s = EL 4 rk /\
+    read (memory :> bytes128 (word_add key_p (word 80))) s = EL 5 rk /\
+    read (memory :> bytes128 (word_add key_p (word 96))) s = EL 6 rk /\
+    read (memory :> bytes128 (word_add key_p (word 112))) s = EL 7 rk /\
+    read (memory :> bytes128 (word_add key_p (word 128))) s = EL 8 rk /\
+    read (memory :> bytes128 (word_add key_p (word 144))) s = EL 9 rk /\
+    read (memory :> bytes128 (word_add key_p (word 160))) s = EL 10 rk /\
+    read (memory :> bytes128 (word_add key_p (word 176))) s = EL 11 rk /\
+    read (memory :> bytes128 (word_add key_p (word 192))) s = EL 12 rk /\
+    read (memory :> bytes128 (word_add key_p (word 208))) s = EL 13 rk /\
+    read (memory :> bytes128 (word_add key_p (word 224))) s = EL 14 rk /\
+    htable_mem_8 (ghash_twist (aes256_encrypt (word 0) rk)) htbl_p s`;;
+
+(* Per-block keystream: the raw aes13 store tower over the assembled input IS   *)
+(* the NIST aes_ctr_block XOR the input block (rk the literal 15-key list).      *)
+let KEYSTREAM_ENDBLOCK_NIST = prove
+ (`!inblock nblk ctr0 (nonce:96 word) c k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 j.
+     j < nblk /\
+     word_bytereverse ctr0 = ctr_block nonce c
+     ==> word_xor
+           (word_xor (bytes_to_int128 (SUB_LIST (16 * j,16)
+                        (int128_list_to_bytes (list_of_seq inblock nblk))))
+             (aes13 (gcm_ctr_inc_iter j ctr0) k0 k1 k2 k3 k4 k5 k6 k7 k8 k9
+                    k10 k11 k12 k13))
+           k14 =
+         word_xor
+           (aes_ctr_block nonce [k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]
+              (c + j))
+           (inblock j)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`nblk:num`;
+               `int128_list_to_bytes (list_of_seq (inblock:num->int128) nblk)`;
+               `ctr0:int128`;`k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;`k4:int128`;
+               `k5:int128`;`k6:int128`;`k7:int128`;`k8:int128`;`k9:int128`;`k10:int128`;
+               `k11:int128`;`k12:int128`;`k13:int128`;`k14:int128`;`j:num`]
+    WBN_ENDBLOCK_IS_AES_CTR) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+  MP_TAC(SPECL [`gcm_dec_blocks_from 0 nblk
+                  (int128_list_to_bytes (list_of_seq (inblock:num->int128) nblk))`;
+               `ctr0:int128`;
+               `[k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]:int128 list`;`j:num`]
+    EL_AES_CTR) THEN
+  REWRITE_TAC[LENGTH_GCM_DEC_BLOCKS_FROM] THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN DISCH_THEN SUBST1_TAC THEN
+  MP_TAC(SPECL [`inblock:num->int128`;`nblk:num`;`j:num`] GCM_DEC_BLOCKS_FROM_ASSEMBLED) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+  MP_TAC(SPECL [`j:num`;`nonce:96 word`;`c:num`;`ctr0:int128`]
+    GCM_CTR_INC_ITER_CTR_BLOCK) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[aes_ctr_block] THEN CONV_TAC WORD_BITWISE_RULE);;
+
+(* congruence lifting the per-block keystream identity under the store-forall.  *)
+let STORE_FORALL_CONG_KS = prove
+ (`!(A:num->int128) inblock nblk ctr0 (nonce:96 word) c
+     k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 i.
+     8 * (i + 1) <= nblk /\
+     word_bytereverse ctr0 = ctr_block nonce c
+     ==> ((!j. j < 8 * (i + 1)
+              ==> A j =
+                  word_xor
+                    (word_xor (bytes_to_int128 (SUB_LIST (16 * j,16)
+                        (int128_list_to_bytes (list_of_seq inblock nblk))))
+                      (aes13 (gcm_ctr_inc_iter j ctr0) k0 k1 k2 k3 k4 k5 k6 k7 k8 k9
+                             k10 k11 k12 k13))
+                    k14) <=>
+          (!j. j < 8 * (i + 1)
+              ==> A j = word_xor
+                          (aes_ctr_block nonce
+                             [k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]
+                             (c + j))
+                          (inblock j)))`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC(MESON[] `(!j. j < K ==> (f j = g j)) ==>
+     ((!j. j < K ==> A j = f j) <=> (!j. j < K ==> A j = g j))`) THEN
+  X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+  MATCH_MP_TAC KEYSTREAM_ENDBLOCK_NIST THEN ASM_REWRITE_TAC[] THEN
+  ASM_ARITH_TAC);;
+
+(* GHASH input list over the assembled input, prefix-N form. *)
+let NIST_INPUT_OF_ASSEMBLED_PREFIX = prove
+ (`!inblock nblk N. N <= nblk
+     ==> list_of_seq
+           (nist_input_block (int128_list_to_bytes (list_of_seq inblock nblk))) N =
+         list_of_seq (\i. word_bytereverse (inblock i)) N`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC LIST_OF_SEQ_EQ_PTWISE THEN
+  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+  REWRITE_TAC[nist_input_block] THEN
+  MP_TAC(SPECL [`inblock:num->int128`;`nblk:num`;`i:num`] INBLOCK_OF_ASSEMBLED) THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[GSYM BREV_RF8_128]);;
+
+(* Q19 accumulator over the assembled input = nist_ghash, in the form the       *)
+(* equivalence goal presents after the ghash_twist/word_reversefields adapters. *)
+let Q19_NIST_ASSEMBLED = prove
+ (`!(H:int128) tag0 inblock nblk N.
+     N <= nblk
+     ==> ghash_polyval_acc (ghash_twist H)
+           (word_bytereverse (word_reversefields 8 tag0))
+           (MAP word_bytereverse
+             (list_of_seq (\k. bytes_to_int128 (SUB_LIST (16 * k,16)
+                (int128_list_to_bytes (list_of_seq inblock nblk)))) N)) =
+         nist_ghash H tag0 (list_of_seq (\i. word_bytereverse (inblock i)) N)`,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`H:int128`;
+               `byteswap128 (ghash_twist H):int128`;
+               `word_reversefields 8 (tag0:int128)`;
+               `tag0:int128`;
+               `int128_list_to_bytes (list_of_seq (inblock:num->int128) nblk):byte list`;
+               `N:num`]
+    WBN_LOOP_Q19_NIST) THEN
+  REWRITE_TAC[BYTESWAP128_INVOLUTION] THEN DISCH_THEN SUBST1_TAC THEN
+  ASM_SIMP_TAC[NIST_INPUT_OF_ASSEMBLED_PREFIX]);;
+
+(* input buffer: the whole-buffer byte read = the per-block bytes128 reads.      *)
+let INPUT_FORALL_IFF = prove
+ (`!inblock nblk in_p s.
+     128 * nblk < 2 EXP 62
+     ==> (read (memory :> bytes (in_p,16 * nblk)) s =
+            num_of_bytelist (int128_list_to_bytes (list_of_seq inblock nblk)) <=>
+          (!j. j < nblk
+               ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s = inblock j))`,
+  REPEAT STRIP_TAC THEN EQ_TAC THENL
+   [DISCH_TAC THEN
+    MP_TAC(SPECL [`nblk:num`;`in_p:int64`;
+                  `int128_list_to_bytes (list_of_seq (inblock:num->int128) nblk)`;
+                  `s:armstate`] INPUT_BYTES_TO_BYTE128_LANES) THEN
+    ANTS_TAC THENL
+     [REWRITE_TAC[LENGTH_INT128_LIST_TO_BYTES; LENGTH_LIST_OF_SEQ; LE_REFL] THEN
+      SUBGOAL_THEN `SUB_LIST (0,16 * nblk)
+         (int128_list_to_bytes (list_of_seq (inblock:num->int128) nblk)) =
+         int128_list_to_bytes (list_of_seq inblock nblk)`
+        (fun th -> ASM_REWRITE_TAC[th]) THEN
+      MATCH_MP_TAC SUB_LIST_LENGTH_IMPLIES THEN
+      REWRITE_TAC[LENGTH_INT128_LIST_TO_BYTES; LENGTH_LIST_OF_SEQ; LE_REFL];
+      ALL_TAC] THEN
+    DISCH_TAC THEN X_GEN_TAC `j:num` THEN DISCH_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC `j:num`) THEN ASM_REWRITE_TAC[] THEN
+    DISCH_THEN SUBST1_TAC THEN
+    MATCH_MP_TAC INBLOCK_OF_ASSEMBLED THEN ASM_REWRITE_TAC[];
+    DISCH_TAC THEN
+    MP_TAC(SPECL [`16 * nblk`;`in_p:int64`;
+                  `int128_list_to_bytes (list_of_seq (inblock:num->int128) nblk)`;
+                  `s:armstate`] BYTE_LIST_TO_NUM_THM) THEN
+    REWRITE_TAC[LENGTH_INT128_LIST_TO_BYTES; LENGTH_LIST_OF_SEQ; LE_REFL] THEN
+    SUBGOAL_THEN `SUB_LIST (0,16 * nblk)
+       (int128_list_to_bytes (list_of_seq (inblock:num->int128) nblk)) =
+       int128_list_to_bytes (list_of_seq inblock nblk)`
+      SUBST1_TAC THENL
+     [MATCH_MP_TAC SUB_LIST_LENGTH_IMPLIES THEN
+      REWRITE_TAC[LENGTH_INT128_LIST_TO_BYTES; LENGTH_LIST_OF_SEQ; LE_REFL]; ALL_TAC] THEN
+    DISCH_THEN(fun th -> REWRITE_TAC[GSYM th]) THEN
+    MP_TAC(SPECL [`inblock:num->int128`;`nblk:num`;`in_p:int64`;`s:armstate`]
+      WBN_INPUT_ASSEMBLE) THEN
+    ASM_REWRITE_TAC[byte_list_at] THEN
+    SUBGOAL_THEN `val (word (16 * nblk):int64) = 16 * nblk` SUBST1_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+      MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN ARITH_TAC; ALL_TAC] THEN
+    REWRITE_TAC[]]);;
+
+(* The two invariants coincide under the standard adapter hypotheses plus the   *)
+(* loop side-condition 8*(i+1) <= nblk (a theorem in the loop context, where     *)
+(* i < (nblk-9) DIV 8).                                                          *)
+let WBN_LOOP_INV_RAW_IS_NIST = prove
+ (`!pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer nblk ibytes xi h
+     k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14
+     nonce c inblock tag0 rk i s.
+     128 * nblk < 2 EXP 62 /\
+     8 * (i + 1) <= nblk /\
+     word_bytereverse ctr0 = ctr_block nonce c /\
+     xi = word_reversefields 8 tag0 /\
+     byteswap128 h = ghash_twist (aes256_encrypt (word 0) rk) /\
+     rk = [k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14] /\
+     ibytes = int128_list_to_bytes (list_of_seq inblock nblk)
+     ==> (wbn_loop_invariant_raw pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer
+            nblk ibytes xi h k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 i s <=>
+          wbn_loop_invariant pc nonce c in_p out_p xi_p ivec_p key_p htbl_p
+            stackpointer nblk inblock tag0 rk i s)`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(SUBST_ALL_TAC o check(fun th ->
+    is_eq(concl th) && lhs(concl th) = `ibytes:byte list`)) THEN
+  FIRST_X_ASSUM(SUBST_ALL_TAC o check(fun th ->
+    is_eq(concl th) && lhs(concl th) = `rk:int128 list`)) THEN
+  SUBGOAL_THEN `8 * i <= nblk` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN
+    `8*i+0<nblk /\ 8*i+1<nblk /\ 8*i+2<nblk /\ 8*i+3<nblk /\
+     8*i+4<nblk /\ 8*i+5<nblk /\ 8*i+6<nblk /\ 8*i+7<nblk`
+    STRIP_ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[wbn_loop_invariant_raw; wbn_loop_invariant] THEN
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  ASM_SIMP_TAC[CTR_ADD_AS_CTR_BLOCK; CTR_RAW_AS_CTR_BLOCK;
+               HTABLE_MEM_DEC_IS_HTABLE_MEM_8; INBLOCK_OF_ASSEMBLED;
+               KEYSTREAM_ENDBLOCK_NIST; Q19_NIST_ASSEMBLED] THEN
+  CONV_TAC(DEPTH_CONV EL_CONV) THEN
+  ASM_SIMP_TAC[STORE_FORALL_CONG_KS; INPUT_FORALL_IFF] THEN
+  REWRITE_TAC[]);;
+
+(* Core (PC/decode-stripped) form of the vocabulary equivalence, the shape the  *)
+(* recompose consumers thread (wbn_loop_inv_core_raw / wbn_core_applied).            *)
+let wbn_loop_inv_core =
+  let eqn = snd(strip_forall(concl wbn_loop_invariant)) in
+  let lhs_full, rhs_full = dest_eq eqn in
+  let hd, params = strip_comb lhs_full in
+  let ivars, body = strip_abs rhs_full in
+  let cs = conjuncts body in
+  let core_body = list_mk_conj (List.tl (List.tl cs)) in
+  let core_rhs = list_mk_abs(ivars, core_body) in
+  let newhead = mk_var("wbn_loop_inv_core", type_of hd) in
+  new_definition (mk_eq(list_mk_comb(newhead, params), core_rhs));;
+
+let wbn_inv_nist_args =
+  snd(strip_comb(fst(dest_eq(snd(strip_forall(concl wbn_loop_invariant))))));;
+
+let WBN_INV_SPLIT = prove
+ (list_mk_forall(wbn_inv_nist_args @ [`i:num`;`s:armstate`],
+    mk_eq(
+      list_mk_comb(`wbn_loop_invariant`, wbn_inv_nist_args @ [`i:num`;`s:armstate`]),
+      list_mk_conj[
+        `aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc`;
+        `read PC s = word (pc + 1208)`;
+        list_mk_comb(`wbn_loop_inv_core`, wbn_inv_nist_args @ [`i:num`;`s:armstate`])])),
+  REWRITE_TAC[wbn_loop_invariant; wbn_loop_inv_core] THEN
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN REWRITE_TAC[CONJ_ACI]);;
+
+(* wbn_loop_inv_core_raw <=> wbn_loop_inv_core under the same adapter hyps.  The *)
+(* bridges act on the core conjuncts (no PC/aligned), so this is proved directly  *)
+(* on the core defs — a full-invariant equivalence would not by itself entail a   *)
+(* core one.                                                                      *)
+let WBN_INV_CORE_RAW_IS_NIST = prove
+ (`!pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer nblk ibytes xi h
+     k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14
+     nonce c inblock tag0 rk i s.
+     128 * nblk < 2 EXP 62 /\
+     8 * (i + 1) <= nblk /\
+     word_bytereverse ctr0 = ctr_block nonce c /\
+     xi = word_reversefields 8 tag0 /\
+     byteswap128 h = ghash_twist (aes256_encrypt (word 0) rk) /\
+     rk = [k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14] /\
+     ibytes = int128_list_to_bytes (list_of_seq inblock nblk)
+     ==> (wbn_loop_inv_core_raw pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer
+            nblk ibytes xi h k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 i s <=>
+          wbn_loop_inv_core pc nonce c in_p out_p xi_p ivec_p key_p htbl_p
+            stackpointer nblk inblock tag0 rk i s)`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(SUBST_ALL_TAC o check(fun th ->
+    is_eq(concl th) && lhs(concl th) = `ibytes:byte list`)) THEN
+  FIRST_X_ASSUM(SUBST_ALL_TAC o check(fun th ->
+    is_eq(concl th) && lhs(concl th) = `rk:int128 list`)) THEN
+  SUBGOAL_THEN `8 * i <= nblk` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN
+    `8*i+0<nblk /\ 8*i+1<nblk /\ 8*i+2<nblk /\ 8*i+3<nblk /\
+     8*i+4<nblk /\ 8*i+5<nblk /\ 8*i+6<nblk /\ 8*i+7<nblk`
+    STRIP_ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  REWRITE_TAC[wbn_loop_inv_core_raw; wbn_loop_inv_core] THEN
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  ASM_SIMP_TAC[CTR_ADD_AS_CTR_BLOCK; CTR_RAW_AS_CTR_BLOCK;
+               HTABLE_MEM_DEC_IS_HTABLE_MEM_8; INBLOCK_OF_ASSEMBLED;
+               KEYSTREAM_ENDBLOCK_NIST; Q19_NIST_ASSEMBLED] THEN
+  CONV_TAC(DEPTH_CONV EL_CONV) THEN
+  ASM_SIMP_TAC[STORE_FORALL_CONG_KS; INPUT_FORALL_IFF] THEN
+  REWRITE_TAC[]);;
+
+
+(* ------------------------------------------------------------------------- *)
+(* The four named loop-invariant consumers, re-closed in the SHARED NIST      *)
+(* vocabulary.  wbn_loop_inv_core (:above) and WBN_INV_SPLIT (:above) are      *)
+(* already the shared derivations.  WBN_MAIN_LOOP and WBN_LOOP_INVARIANT_ENTRY *)
+(* are transported from their _raw dialect proofs (WBN_MAIN_LOOP_raw,          *)
+(* WBN_LOOP_INVARIANT_ENTRY_RAW) across the vocabulary equivalence: the body   *)
+(* sim (which intrinsically produces dialect terms) is NOT re-run.  The        *)
+(* transport supplies the standard adapter hypotheses (ctr0 is a byte-reversed *)
+(* NIST counter block, xi/tag0 and h/H relate by the tag byte-reversal, rk is  *)
+(* the concrete 15-key list, ibytes is the assembled input) and the loop       *)
+(* side-condition 8*(i+1)<=nblk (a theorem in-loop, from 17<=nblk).            *)
+(*                                                                             *)
+(* WBN_INV_CORE_RAW_IS_NIST (raw core <=> shared core) transports WBN_MAIN_LOOP;     *)
+(* WBN_LOOP_INV_RAW_IS_NIST (raw inv <=> shared inv) transports the ENTRY (whose     *)
+(* postcondition carries the FULL invariant, not the PC/decode-stripped core). *)
+(* ------------------------------------------------------------------------- *)
+
+(* the shared PC/decode-free core applied to the 14 NIST params *)
+let wbn_nist_core_applied =
+  list_mk_comb(`wbn_loop_inv_core`,
+    [`pc:num`;`nonce:96 word`;`c:num`;`in_p:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
+     `key_p:int64`;`htbl_p:int64`;`stackpointer:int64`;`nblk:num`;`inblock:num->int128`;
+     `tag0:int128`;`rk:int128 list`]);;
+(* the shared FULL invariant applied to the 14 NIST params *)
+let wbn_nist_inv_applied =
+  list_mk_comb(`wbn_loop_invariant`,
+    [`pc:num`;`nonce:96 word`;`c:num`;`in_p:int64`;`out_p:int64`;`xi_p:int64`;`ivec_p:int64`;
+     `key_p:int64`;`htbl_p:int64`;`stackpointer:int64`;`nblk:num`;`inblock:num->int128`;
+     `tag0:int128`;`rk:int128 list`]);;
+
+let wbn_transport_adapter_hyps =
+ `word_bytereverse (ctr0:int128) = ctr_block nonce c /\
+  (xi:int128) = word_reversefields 8 (tag0:int128) /\
+  byteswap128 (h:int128) = ghash_twist (aes256_encrypt (word 0) rk) /\
+  (rk:int128 list) = [k0;k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14] /\
+  (ibytes:byte list) = int128_list_to_bytes (list_of_seq inblock nblk)`;;
+let wbn_transport_vars = union wb_front_vars
+  [`nonce:96 word`;`c:num`;`inblock:num->int128`;`tag0:int128`;`rk:int128 list`];;
+let wbn_transport_sv = `s:armstate`;;
+
+(* ---- WBN_MAIN_LOOP : shared-vocab loop theorem (core form) ---- *)
+let wbn_main_loop_nist_goal =
+  let ml_body = snd(dest_imp(snd(strip_forall(concl WBN_MAIN_LOOP_raw)))) in
+  let ml_pre  = rand(rator(rator ml_body))
+  and ml_post = rand(rator ml_body)
+  and ml_C    = rand ml_body in
+  let pre_conjs  = conjuncts(snd(dest_abs ml_pre))
+  and post_conjs = conjuncts(snd(dest_abs ml_post)) in
+  let kk = rand(rator (last post_conjs)) in
+  let nist_pre = mk_abs(wbn_transport_sv, list_mk_conj
+    [el 0 pre_conjs; el 1 pre_conjs;
+     mk_comb(mk_comb(wbn_nist_core_applied,`0`),wbn_transport_sv)]) in
+  let nist_post = mk_abs(wbn_transport_sv, list_mk_conj
+    [el 0 post_conjs; el 1 post_conjs;
+     mk_comb(mk_comb(wbn_nist_core_applied,kk),wbn_transport_sv)]) in
+  let ens = list_mk_comb(`ensures arm`,[nist_pre; nist_post; ml_C]) in
+  let ml_hyps = fst(dest_imp(snd(strip_forall(concl WBN_MAIN_LOOP_raw)))) in
+  list_mk_forall(wbn_transport_vars,
+    mk_imp(mk_conj(ml_hyps, wbn_transport_adapter_hyps), ens));;
+
+let WBN_MAIN_LOOP = prove(wbn_main_loop_nist_goal,
+  let kk = `(nblk - 9) DIV 8` in
+  let eqv0 = mk_forall(wbn_transport_sv,
+    mk_eq(mk_comb(mk_comb(wbn_core_applied,`0`),wbn_transport_sv),
+          mk_comb(mk_comb(wbn_nist_core_applied,`0`),wbn_transport_sv))) in
+  let eqvk = mk_forall(wbn_transport_sv,
+    mk_eq(mk_comb(mk_comb(wbn_core_applied,kk),wbn_transport_sv),
+          mk_comb(mk_comb(wbn_nist_core_applied,kk),wbn_transport_sv))) in
+  let CORE_DISCHARGE =
+    GEN_TAC THEN MATCH_MP_TAC WBN_INV_CORE_RAW_IS_NIST THEN
+    REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC) in
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN `8 * (0 + 1) <= nblk` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `8 * ((nblk - 9) DIV 8 + 1) <= nblk` ASSUME_TAC THENL
+   [MP_TAC(SPECL [`nblk - 9`; `8`] DIVISION) THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN eqv0 ASSUME_TAC THENL [CORE_DISCHARGE; ALL_TAC] THEN
+  SUBGOAL_THEN eqvk ASSUME_TAC THENL [CORE_DISCHARGE; ALL_TAC] THEN
+  PURE_ONCE_REWRITE_TAC[GSYM(ASSUME eqv0); GSYM(ASSUME eqvk)] THEN
+  MP_TAC(SPECL wb_front_vars WBN_MAIN_LOOP_raw) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_THEN ACCEPT_TAC]);;
+
+(* ---- WBN_LOOP_INVARIANT_ENTRY : shared-vocab entry theorem (full inv) ---- *)
+let wbn_entry_nist_goal =
+  let en_body = snd(dest_imp(snd(strip_forall(concl WBN_LOOP_INVARIANT_ENTRY_RAW)))) in
+  let en_P    = rand(rator(rator en_body))
+  and en_post = rand(rator en_body)
+  and en_C    = rand en_body in
+  let post_conjs = conjuncts(snd(dest_abs en_post)) in
+  let nist_post = mk_abs(wbn_transport_sv, list_mk_conj
+    [el 0 post_conjs; el 1 post_conjs;
+     mk_comb(mk_comb(wbn_nist_inv_applied,`0`),wbn_transport_sv)]) in
+  let ens = list_mk_comb(`ensures arm`,[en_P; nist_post; en_C]) in
+  let en_hyps = fst(dest_imp(snd(strip_forall(concl WBN_LOOP_INVARIANT_ENTRY_RAW)))) in
+  list_mk_forall(wbn_transport_vars,
+    mk_imp(mk_conj(en_hyps, wbn_transport_adapter_hyps), ens));;
+
+let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_nist_goal,
+  let eqinv0 = mk_forall(wbn_transport_sv,
+    mk_eq(mk_comb(mk_comb(wbn_inv_applied,`0`),wbn_transport_sv),
+          mk_comb(mk_comb(wbn_nist_inv_applied,`0`),wbn_transport_sv))) in
+  let INV_DISCHARGE0 =
+    GEN_TAC THEN MATCH_MP_TAC WBN_LOOP_INV_RAW_IS_NIST THEN
+    REPEAT CONJ_TAC THEN (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC) in
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN `8 * (0 + 1) <= nblk` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN eqinv0 ASSUME_TAC THENL [INV_DISCHARGE0; ALL_TAC] THEN
+  PURE_ONCE_REWRITE_TAC[GSYM(ASSUME eqinv0)] THEN
+  MP_TAC(SPECL wb_front_vars WBN_LOOP_INVARIANT_ENTRY_RAW) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_THEN ACCEPT_TAC]);;
 
 (* ========================================================================= *)
 (* THE EXPORTED CORE CONTRACT (consolidation; reshape).                         *)
