@@ -280,6 +280,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | INC operand
    | JUMP condition operand
    | LEA operand bsid
+   | LEAVE
    | LZCNT operand operand
    | MOV operand operand
    | MOVD operand operand
@@ -302,6 +303,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | PADDQ operand operand
    | PAND operand operand
    | PBLENDW operand operand operand
+   | PCLMULQDQ operand operand operand
    | PCMPGTD operand operand
    | PCMPGTW operand operand
    | PEXT operand operand operand
@@ -312,7 +314,9 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | POPCNT operand operand
    | PSHUFB operand operand
    | PSHUFD operand operand operand
+   | PSLLDQ operand operand
    | PSRAD operand operand
+   | PSRLDQ operand operand
    | PSRLW operand operand
    | PUSH operand
    | PXOR operand operand
@@ -365,6 +369,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VINSERTI128 operand operand operand operand
    | VPABSD operand operand
    | VPACKUSWB operand operand operand
+   | VPCMPEQW operand operand operand
    | VPCMPGTD operand operand operand
    | VPCMPGTW operand operand operand
    | VPBLENDVB operand operand operand operand
@@ -382,6 +387,7 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPMULLW operand operand operand
    | VPOR operand operand operand
    | VPSHUFB operand operand operand
+   | VPSHUFD operand operand operand
    | VPSLLD operand operand operand
    | VPSLLVD operand operand operand
    | VPSLLQ operand operand operand
