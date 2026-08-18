@@ -44,9 +44,9 @@ s/ movzx  +([a-z][a-z_0-9]*d?), *byte ptr/ movzbl \1,/g
 # Reverse the argument order for binary, ternary and quaternary instructions
 # Skip all other macros for this step even if we later do ymm replacement.
 
-/shuffle|butterfly|caddq_vector/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,;]*)([/;].*)*$/\1\4, \3 \5/
-/shuffle|butterfly|caddq_vector/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\5, \4, \3 \6/
-/shuffle|butterfly|caddq_vector/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\6, \5, \4, \3 \7/
+/shuffle|butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,;]*)([/;].*)*$/\1\4, \3 \5/
+/shuffle|butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\5, \4, \3 \6/
+/shuffle|butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)([^ (][^,/]*), *([^ ][^/,]*), *([^ ][^/,]*), *([^ ][^/,;]*)([/;].*)*$/\1\6, \5, \4, \3 \7/
 
 # Fix up whitespace just in case
 
@@ -54,7 +54,7 @@ s/ +,/,/
 
 # Decorate literals with $
 
-/butterfly|caddq_vector/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)(([-~+*/()A-Z0-9]*(0x[a-zA-Z0-9]*)*)* *\,)/\1$\3/
+/butterfly|caddq_vector|chknorm_vector|decompose_vector|zunpack17_block|zunpack19_block/! s/^(([a-z_0-9]+\:)* +[a-z_0-9]+ +)(([-~+*/()A-Z0-9]*(0x[a-zA-Z0-9]*)*)* *\,)/\1$\3/
 
 # Translate relative addresses with uppercase base variable
 # Turn defined offset fields into explicit indirections to match
@@ -93,6 +93,12 @@ s/ ax *$/ %ax/
 s/ ax,/ %ax,/
 s/ cl *$/ %cl/
 s/ cl,/ %cl,/
+s/ al *$/ %al/
+s/ al,/ %al,/
+s/ bl *$/ %bl/
+s/ bl,/ %bl,/
+s/ dl *$/ %dl/
+s/ dl,/ %dl,/
 s/([[(,.;: ])([re][abcd]x)/\1\%\2/g
 s/([[(,.;: ])([re]sp)/\1\%\2/g
 s/([[(,.;: ])([re]bp)/\1\%\2/g

@@ -1063,6 +1063,33 @@ extern void mldsa_pointwise_acc_l7_x86(int32_t c[256], const int32_t a[1792], co
 /* Input a[256] (signed 32-bit words); output a[256] (signed 32-bit words) */
 extern void mldsa_caddq(int32_t a[256]);
 
+/* Infinity-norm check of polynomial coefficients for ML-DSA */
+/* Returns 1 if any coefficient has absolute value >= bound, 0 otherwise */
+/* Input a[256] (signed 32-bit words), bound (unsigned 32-bit); output function return */
+extern uint64_t mldsa_chknorm(const int32_t a[256], uint64_t bound);
+
+/* Coefficient decomposition for ML-DSA (GAMMA2 = (Q-1)/32, parameter sets 65/87) */
+/* Input a0[256] (signed 32-bit words); outputs a1[256] (high parts) and a0[256] (low parts) */
+extern void mldsa_decompose_32(int32_t a1[256], int32_t a0[256]);
+
+/* Coefficient decomposition for ML-DSA (GAMMA2 = (Q-1)/88, parameter set 44) */
+/* Input a0[256] (signed 32-bit words); outputs a1[256] (high parts) and a0[256] (low parts) */
+extern void mldsa_decompose_88(int32_t a1[256], int32_t a0[256]);
+
+/* Unpack packed z polynomial for ML-DSA (GAMMA1 = 2^17, parameter set 44) */
+/* Inputs b[576], t[64] (bytes); output r[256] (signed 32-bit words) */
+extern void mldsa_polyz_unpack_17_arm(int32_t r[256], const uint8_t b[576], const uint8_t t[64]);
+/* x86 variant unpacks directly from the byte buffer (no shuffle table argument) */
+/* Input b[576] (bytes); output r[256] (signed 32-bit words) */
+extern void mldsa_polyz_unpack_17_x86(int32_t r[256], const uint8_t b[576]);
+
+/* Unpack packed z polynomial for ML-DSA (GAMMA1 = 2^19, parameter sets 65/87) */
+/* Inputs b[640], t[64] (bytes); output r[256] (signed 32-bit words) */
+extern void mldsa_polyz_unpack_19_arm(int32_t r[256], const uint8_t b[640], const uint8_t t[64]);
+/* x86 variant unpacks directly from the byte buffer (no shuffle table argument) */
+/* Input b[640] (bytes); output r[256] (signed 32-bit words) */
+extern void mldsa_polyz_unpack_19_x86(int32_t r[256], const uint8_t b[640]);
+
 /* Canonical reduction of polynomial coefficients for ML-DSA */
 /* Result is centered, -6283009 <= r <= 6283008, and congruent mod 8380417 */
 /* Assumes each coefficient is <= 0x7fbfffff (else the reduction overflows) */
@@ -1070,12 +1097,24 @@ extern void mldsa_caddq(int32_t a[256]);
 extern void mldsa_reduce(int32_t a[256]);
 
 /* Use hint to correct high bits of decomposition for ML-DSA (parameter sets 65/87) */
+/* The x86 variant operates in place on a[256]; the ARM variant writes b[256] */
+#ifdef __x86_64__
+/* Inputs a[256], h[256] (signed 32-bit words); output a[256] (signed 32-bit words, in place) */
+extern void mldsa_poly_use_hint_32(int32_t a[256], const int32_t h[256]);
+#else
 /* Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words) */
 extern void mldsa_poly_use_hint_32(int32_t b[256], const int32_t a[256], const int32_t h[256]);
+#endif
 
 /* Use hint to correct high bits of decomposition for ML-DSA (parameter set 44) */
+/* The x86 variant operates in place on a[256]; the ARM variant writes b[256] */
+#ifdef __x86_64__
+/* Inputs a[256], h[256] (signed 32-bit words); output a[256] (signed 32-bit words, in place) */
+extern void mldsa_poly_use_hint_88(int32_t a[256], const int32_t h[256]);
+#else
 /* Inputs a[256], h[256] (signed 32-bit words); output b[256] (signed 32-bit words) */
 extern void mldsa_poly_use_hint_88(int32_t b[256], const int32_t a[256], const int32_t h[256]);
+#endif
 
 /* Rejection sampling for ML-DSA secret key (eta = 2; parameter sets 44/87) */
 /* Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words) */
