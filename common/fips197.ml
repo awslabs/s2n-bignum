@@ -667,9 +667,9 @@ prove(`aes256_cipher (word 0x014730f80ac625fe84f026c60bfd547d)
     AESAVS_ZERO_KEY_256_SCHEDULE)) THEN REFL_TAC);;
 
 (* ========================================================================= *)
-(* KAT: AES-256 with the McGrew-Viega GCM Test Case 16 key                    *)
-(* (the AES-128 GCM test key 0xFEFFE992...67308308 repeated to 32 bytes).     *)
-(* Used by the AES-256-GCM 4-block KAT (TC16) in common/gcm.ml.               *)
+(* KAT: AES-256 with the McGrew-Viega GCM Test Case 16 key                   *)
+(* (the AES-128 GCM test key 0xFEFFE992...67308308 repeated to 32 bytes).    *)
+(* Used by the AES-256-GCM 4-block KAT (TC16) in common/gcm.ml.              *)
 (* ========================================================================= *)
 
 let NIST_TC16_KEY_SCHEDULE = new_definition
