@@ -44,10 +44,18 @@ let uarch_event_INDUCT, uarch_event_RECURSION = define_type
     // Instructions in X86 that are not in the DOIT list
     // (Data Operand Independent Timing Instructions)
 
+    // BSF (src, bitwidth)
+    | EventX86BSF (int64#num)
+    // BSR (src, bitwidth)
+    | EventX86BSR (int64#num)
+    // LZCNT (src, bitwidth)
+    | EventX86LZCNT (int64#num)
     // PEXT (src1, src2, bitwidth)
     | EventX86PEXT (int64#int64#num)
     // POPCNT (src, bitwidth)
     | EventX86POPCNT (int64#num)
+    // TZCNT (src, bitwidth)
+    | EventX86TZCNT (int64#num)
   ";;
 
 (* ------------------------------------------------------------------------- *)
