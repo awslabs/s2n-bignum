@@ -3435,7 +3435,7 @@ let x86_execute = define
     | VPADDB dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
-       (\s. (match operand_size dest with 
+       (\s. (match operand_size dest with
           256 -> x86_VPADDB (OPERAND256 dest s) (OPERAND256 src1 s)
                             (OPERAND256 src2 s)
         | 128 -> x86_VPADDB (OPERAND128 dest s) (OPERAND128 src1 s)
