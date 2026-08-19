@@ -152,7 +152,7 @@ Lmldsa_rej_uniform_eta2_x86_scalar:
         jae     Lmldsa_rej_uniform_eta2_x86_done
         cmpl    $0x88, %ecx
         jae     Lmldsa_rej_uniform_eta2_x86_done
-        movzbl   (%rsi,%rcx), %r11d
+        movzbl (%rsi,%rcx), %r11d
         incl    %ecx
         movl    %r11d, %r10d
         andl    $0xf, %r10d
@@ -171,7 +171,7 @@ Lmldsa_rej_uniform_eta2_x86_scalar:
         jae     Lmldsa_rej_uniform_eta2_x86_done
 
 Lmldsa_rej_uniform_eta2_x86_high_nibble:
-        movzbl   -0x1(%rsi,%rcx,1), %r11d
+        movzbl -0x1(%rsi,%rcx,1), %r11d
         shrl    $0x4, %r11d
         andl    $0xf, %r11d
         cmpl    $0xf, %r11d

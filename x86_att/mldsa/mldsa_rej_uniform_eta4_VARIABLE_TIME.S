@@ -130,7 +130,7 @@ Lmldsa_rej_uniform_eta4_x86_scalar:
         jae     Lmldsa_rej_uniform_eta4_x86_done
         cmpl    $0x110, %ecx
         jae     Lmldsa_rej_uniform_eta4_x86_done
-        movzbl   (%rsi,%rcx), %r11d
+        movzbl (%rsi,%rcx), %r11d
         incl    %ecx
         movl    %r11d, %r10d
         andl    $0xf, %r10d
