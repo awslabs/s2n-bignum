@@ -571,10 +571,169 @@ let cosimulate_ldst3() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD1/ST1 (multiple structures), 3 registers, no offset,
+ *** for datasizes 64 and 128.
+ ***)
+
+let cosimulate_ldst1_3reg() =
+  let datasize = Random.int 2
+  and isld = Random.int 2
+  and esize = Random.int 4
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let stackoff =
+    if rn = 31 then Random.int 13 * 16
+    else Random.int 208 in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num 0b0110 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LD2/ST2 (multiple structures), 2 registers, no offset,
+ *** for datasizes 64 and 128 (size = 11 only valid for datasize 128).
+ ***)
+
+let cosimulate_ldst2_noofs() =
+  let datasize = Random.int 2
+  and isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  (* size 11 (esize 64) only valid for datasize 128 *)
+  let esize = if datasize = 0 then Random.int 3 else Random.int 4 in
+  let stackoff =
+    if rn = 31 then Random.int 13 * 16
+    else Random.int 208 in
+  let code =
+    pow2 30 */ num datasize +/
+    pow2 24 */ num 0b001100 +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num 0b1000 +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LD1/ST1 (single structure, single lane), 32-bit (.s) form,
+ *** addressing modes no-offset, post-immediate (#4) and post-register.
+ *** The lane index is (Q:S). For LD1 the other lanes are preserved.
+ ***)
+
+let cosimulate_ldst1_lane() =
+  let isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32
+  and index = Random.int 4 in
+  let q = index / 2 and sbit = index mod 2 in
+  (* someoffset = 0 : no offset (const = 0011010, Rm = 0)
+     someoffset = 1 : post-index (const = 0011011); Rm = 11111 selects the
+       post-immediate (#4) form, otherwise Rm = Xm selects post-register.
+     The post-register form (which advances the base by the full value of Xm)
+     is only used when the base is not SP and Xm <> base, since otherwise it
+     either corrupts the harness stack pointer or aliases the base. *)
+  let someoffset = Random.int 2 in
+  let regoffr = Random.int 32 in
+  let rm =
+    if someoffset = 0 then 0
+    else if rn = 31 || regoffr = rn || Random.bool() then 31
+    else regoffr in
+  let constfield = if someoffset = 0 then 0b0011010 else 0b0011011 in
+  let stackoff =
+    if rn = 31 then Random.int 14 * 16
+    else Random.int 224 in
+  (* The post-immediate form (Rm = 31) advances the base by the element size
+     (4 bytes for .s); the post-register form advances it by Xm. *)
+  let postinc = if someoffset = 1 && rm = 31 then 4 else 0 in
+  let code =
+    pow2 30 */ num q +/
+    pow2 23 */ num constfield +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num rm +/
+    pow2 13 */ num 0b100 +/
+    pow2 12 */ num sbit +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LDR/STR (SIMD&FP, immediate, unsigned offset) for the
+ *** sub-64 element sizes 32 (S), 16 (H) and 8 (B). The byte offset is the
+ *** 12-bit immediate scaled by the access size.
+ ***)
+
+let cosimulate_ldst_simd_bhs() =
+  let size = Random.int 3 (* 0=B, 1=H, 2=S *)
+  and isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let access = 1 lsl size in
+  let stackoff =
+    if rn = 31 then Random.int 15 * 16
+    else Random.int (256 - access) in
+  (* The accessed range is [stackoff + imm12*access, +access); keep it within
+     the 256-byte buffer, i.e. stackoff + imm12*access + access <= 256. *)
+  let imm12 = Random.int (1 + (256 - access - stackoff) / access) in
+  let code =
+    pow2 30 */ num size +/
+    pow2 23 */ num 0b1111010 +/
+    pow2 22 */ num isld +/
+    pow2 10 */ num imm12 +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
+(*** This covers LDUR/STUR (SIMD&FP, unscaled immediate) for sizes 64 (D)
+ *** and 32 (S). The 9-bit immediate is a signed, unscaled byte offset.
+ ***)
+
+let cosimulate_ldstu_simd() =
+  let is_d = Random.int 2 in
+  let size = if is_d = 1 then 0b11 else 0b10 in
+  let access = if is_d = 1 then 8 else 4 in
+  let isld = Random.int 2
+  and rn = Random.int 32
+  and rt = Random.int 32 in
+  let stackoff =
+    if rn = 31 then Random.int 17 * 16
+    else Random.int 257 in
+  let minoff = -stackoff
+  and maxoff = 256 - access - stackoff in
+  let off = minoff + Random.int (maxoff - minoff + 1) in
+  let encodedoff = if off < 0 then off + 512 else off in
+  let code =
+    pow2 30 */ num size +/
+    pow2 24 */ num 0b111100 +/
+    pow2 22 */ num isld +/
+    pow2 12 */ num encodedoff +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
     cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
-    cosimulate_ldst3; cosimulate_ldstu
+    cosimulate_ldst3; cosimulate_ldstu;
+    cosimulate_ldst1_3reg; cosimulate_ldst2_noofs;
+    cosimulate_ldst1_lane; cosimulate_ldst_simd_bhs;
+    cosimulate_ldstu_simd
     ];;
 
 let run_random_memopsimulation() =

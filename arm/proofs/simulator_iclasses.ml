@@ -562,6 +562,22 @@ let check_insns () =
     (*** st2 (2 register, Post-immediate offset) ***)
     "0x001100100111111000xxxxxxxxxxxx";
 
+    (*** ld1 / st1 (3 registers, no offset) ***)
+    "0x0011000x0000000110xxxxxxxxxxxx";
+
+    (*** ld2 / st2 (2 register, no offset) ***)
+    "0x0011000x0000001000xxxxxxxxxxxx";
+
+    (*** ld1 / st1 (single lane, .s) no offset ***)
+    "0x0011010x000000100x00xxxxxxxxxx";
+
+    (*** ld1 / st1 (single lane, .s) post-index ***)
+    "0x0011011x0xxxxx100x00xxxxxxxxxx";
+
+    (*** ldur / stur (SIMD & FP), unscaled, sizes 64 and 32 ***)
+    "111111000x0xxxxxxxxx00xxxxxxxxxx";
+    "101111000x0xxxxxxxxx00xxxxxxxxxx";
+
     (*** ld1r (post immediate ofs) ***)
     "0x001101110111111100xxxxxxxxxxxx";
 
