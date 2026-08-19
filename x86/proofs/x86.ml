@@ -4364,6 +4364,14 @@ let OPERAND_CLAUSES = prove
    OPERAND8 (%bpl) s = RBP :> bottom_32 :> bottom_16 :> bottom_8 /\
    OPERAND8 (%sil) s = RSI :> bottom_32 :> bottom_16 :> bottom_8 /\
    OPERAND8 (%dil) s = RDI :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (% r8b) s =  R8 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (% r9b) s =  R9 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r10b) s = R10 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r11b) s = R11 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r12b) s = R12 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r13b) s = R13 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r14b) s = R14 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r15b) s = R15 :> bottom_32 :> bottom_16 :> bottom_8 /\
    OPERAND8 (%ah) s = RAX :> bottom_32 :> bottom_16 :> top_8 /\
    OPERAND8 (%ch) s = RCX :> bottom_32 :> bottom_16 :> top_8 /\
    OPERAND8 (%dh) s = RDX :> bottom_32 :> bottom_16 :> top_8 /\
@@ -4379,6 +4387,7 @@ let OPERAND_CLAUSES = prove
               r8d; r9d; r10d; r11d; r12d; r13d; r14d; r15d;
               ax; cx; dx; bx; sp; bp; si; di; ah;
               al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil;
+              r8b; r9b; r10b; r11b; r12b; r13b; r14b; r15b;
               EAX; ECX; EDX; EBX; ESP; EBP; ESI; EDI;
               R8D; R9D; R10D; R11D; R12D; R13D; R14D; R15D;
               AX; CX; DX; BX; SP; BP; SI; DI;
