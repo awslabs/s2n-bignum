@@ -350,13 +350,52 @@ let SIMD_SIMPLIFY_ASSUM_TAC =
   RULE_ASSUM_TAC(fun th ->
     try REWRITE_RULE SIMD_SIMPLIFY_RULES th with _ -> th);;
 
+(* ------------------------------------------------------------------------- *)
+(* REV32 (vector) per-32-bit-lane reversefields bridge.                        *)
+(*                                                                             *)
+(* Upstream f4ff9971 (#406) defines arm_REV32_VEC via                          *)
+(*   usimd4 (word_reversefields esize) n,                                      *)
+(* so arm_REV32_VEC_ALT (= EXPAND_SIMD_RULE) leaves, per 32-bit lane,          *)
+(*   word_reversefields esize (word_subword n (32k,32)).                       *)
+(* WORD_SIMPLE_SUBWORD_CONV is a NO-OP on word_reversefields (it does not      *)
+(* reduce through it), so the wrapper stays stuck; a downstream positional     *)
+(* RAND_CONV then lands on a non-combination and raises "RAND_CONV: Not a      *)
+(* combination" (the cold-load-from-source failure at front step s265, the     *)
+(* 0x440 aese before the 0x444 b.ge).  The decoder only ever emits esize in    *)
+(* {8,16} (decode.ml: esize = 8 << size, size in {0,1}; 2,3 -> UNDEFINED), so  *)
+(* these two per-lane rewrites — typed at :(32)word so they never touch the    *)
+(* REV64 64-bit-lane word_reversefields above — cover every REV32 the decoder  *)
+(* can produce and let the subword chain reduce fully to the same canonical    *)
+(* byte form the older local (staged word_join/word_subword) model gave.       *)
+(* ------------------------------------------------------------------------- *)
+let WORD_REVERSEFIELDS_8_32 = prove
+ (`word_reversefields 8 (x:(32)word) =
+     word_join
+       (word_join (word_subword x (0,8):(8)word) (word_subword x (8,8):(8)word):(16)word)
+       (word_join (word_subword x (16,8):(8)word) (word_subword x (24,8):(8)word):(16)word)`,
+  CONV_TAC WORD_BLAST);;
+
+let WORD_REVERSEFIELDS_16_32 = prove
+ (`word_reversefields 16 (x:(32)word) =
+     word_join (word_subword x (0,16):(16)word) (word_subword x (16,16):(16)word)`,
+  CONV_TAC WORD_BLAST);;
+
+(* Reduce the stuck per-lane word_reversefields FIRST (fires only on concrete  *)
+(* esize 8/16, which decode supplies), then run the normal subword collapse.   *)
+(* ORELSEC inside a single TOP_DEPTH_CONV so it is a total no-op on terms with  *)
+(* no 32-bit-lane reversefields (never raises unchanged).                      *)
+let REV32_LANE_SUBWORD_CONV =
+  TOP_DEPTH_CONV
+    (GEN_REWRITE_CONV I [WORD_REVERSEFIELDS_8_32; WORD_REVERSEFIELDS_16_32]
+     ORELSEC WORD_SIMPLE_SUBWORD_CONV);;
+
 (* Per-step SIMD simplifier core: fold REV64 trees, cancel double half-swaps,
    normalize nested subwords.  Run after each GHASH step so terms stay small. *)
 let GCM_SIMD_SIMPLIFY_CORE_TAC =
   SIMD_SIMPLIFY_ASSUM_TAC THEN
   RULE_ASSUM_TAC (REWRITE_RULE [WORD_SWAP_HALVES_INVOLUTION; EXT8_LANE0_IS_SUBWORD_HI]) THEN
   RULE_ASSUM_TAC(fun th ->
-    try CONV_RULE(RAND_CONV(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV)) th
+    try CONV_RULE(RAND_CONV(REV32_LANE_SUBWORD_CONV)) th
     with _ -> th);;
 
 (* The REV64 fold needs TWO passes to reach a fixpoint: pass 1 normalizes the
