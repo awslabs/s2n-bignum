@@ -4660,7 +4660,7 @@ let x86_MOVSB_ALT = prove
 (*** Simplify word operations in SIMD instructions ***)
 
 let all_simd_rules =
-[usimd16;usimd8;usimd4;usimd2;simd32;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
+   [usimd16;usimd8;usimd4;usimd2;simd32;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
