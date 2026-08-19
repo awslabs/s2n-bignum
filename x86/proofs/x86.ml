@@ -1770,7 +1770,6 @@ let x86_VPADDB = new_definition
         let res:(128)word = simd16 word_add (word_zx x) (word_zx y) in
         (dest := (word_zx res):N word) s`;;
 
-
 let x86_VPADDD = new_definition
   `x86_VPADDD dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
