@@ -411,10 +411,12 @@ let decode = new_definition `!w:int32. decode w =
     SOME (arm_ldst_q is_ld Rt (XREG_SP Rn) No_Offset)
 
   // LD1/ST1 (multiple structures), 2 registers,
-  //   Post-index with immediate offset, datasize = 128
+  //   Post-immediate offset and post-register offset, datasize = 128
   // Similar to LDP of SIMD registers, assuming little-endian architecture.
-  | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; 0b11111:5; 0b1010:4; size:2; Rn:5; Rt:5] ->
-    SOME (arm_ldstp_2q is_ld Rt (XREG_SP Rn) (Postimmediate_Offset (word 32)))
+  | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; Rm:5; 0b1010:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_2q is_ld Rt (XREG_SP Rn)
+      (if val Rm = 31 then (Postimmediate_Offset (word 32))
+                      else Postreg_Offset (XREG' Rm)))
   //   No offset, datasize = 128
   | [0:1; 1:1; 0b0011000:7; is_ld; 0b000000:6; 0b1010:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldstp_2q is_ld Rt (XREG_SP Rn) No_Offset)
