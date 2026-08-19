@@ -903,7 +903,9 @@ let x86_BSF = new_definition
  `x86_BSF dest src s =
         let x:N word = read src s in
         let z:N word = word(word_ctz x) in
-        ((if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
+        (events := CONS (EventX86BSF(word_zx x, dimindex(:N)))
+                        (read events s) ,,
+         (if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
          ZF := (val x = 0) ,,
          UNDEFINED_VALUES[CF;OF;SF;PF;AF]) s`;;
 
@@ -911,7 +913,9 @@ let x86_BSR = new_definition
  `x86_BSR dest src s =
         let x:N word = read src s in
         let z:N word = word(dimindex(:N) - 1 - word_clz x) in
-        ((if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
+        (events := CONS (EventX86BSR(word_zx x, dimindex(:N)))
+                        (read events s) ,,
+         (if x = word 0 then UNDEFINED_VALUES[dest] else dest := (z:N word)) ,,
          ZF := (val x = 0) ,,
          UNDEFINED_VALUES[CF;OF;SF;PF;AF]) s`;;
 
@@ -1111,7 +1115,9 @@ let x86_LZCNT = new_definition
  `x86_LZCNT dest src s =
         let x:N word = read src s in
         let z:N word = word(word_clz x) in
-        (dest := (z:N word) ,,
+        (events := CONS (EventX86LZCNT(word_zx x, dimindex(:N)))
+                        (read events s) ,,
+         dest := (z:N word) ,,
          CF := (val x = 0) ,,
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
@@ -2466,7 +2472,9 @@ let x86_TZCNT = new_definition
  `x86_TZCNT dest src s =
         let x:N word = read src s in
         let z:N word = word(word_ctz x) in
-        (dest := (z:N word) ,,
+        (events := CONS (EventX86TZCNT(word_zx x, dimindex(:N)))
+                        (read events s) ,,
+         dest := (z:N word) ,,
          CF := (val x = 0) ,,
          ZF := (val z = 0) ,,
          UNDEFINED_VALUES[OF;SF;PF;AF]) s`;;
