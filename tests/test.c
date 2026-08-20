@@ -17031,6 +17031,269 @@ int test_aes_xts_roundtrip(void)
 }
 
 // ****************************************************************************
+// Testing of the AES-256-GCM 8x encrypt kernel aesv8_gcm_8x_enc_256
+//
+// The imported assembly is a fused CTR-encrypt+GHASH kernel with no clean 1:1
+// C counterpart, so (per the importer verbatim rule) it is tested at the big_op
+// level. ref_gcm_nohw.c supplies, VERBATIM from aws-lc, both big_ops:
+//   * CRYPTO_gcm128_encrypt  (generic pure-C GCM encrypt, path A / reference)
+//   * hw_gcm_encrypt         (aws-lc HW dispatch containing the exact call site
+//                             that reaches aesv8_gcm_8x_enc_256, path B / SUT)
+// plus the verbatim pure-C GHASH gcm_*_nohw. Both big_ops compute the identical
+// GCM bulk operation (CTR encrypt under the AES-256 key + GHASH over the
+// resulting ciphertext, advancing the counter), so for the same inputs their
+// ciphertext, GHASH accumulator Xi and counter Yi/ivec must agree exactly.
+// ****************************************************************************
+
+#include "ref_gcm_nohw.c"
+
+// Randomized differential test: the imported asm (path B) vs the pure-C
+// reference big_op (path A), over the harness's `tests` count.
+// (Non-whole-blocks aesv8_gcm_8x_enc_256 kernel + its tests removed 2026-08-04:
+//  only the whole-blocks _wb variant is kept. See the WB tests below.)
+// Testing of the WHOLE-BLOCKS-ONLY encrypt kernel aesv8_gcm_8x_enc_256_wb.
+//
+// aesv8_gcm_8x_enc_256_wb is a drop-in for aesv8_gcm_8x_enc_256 restricted to a
+// whole-blocks contract: bit_len must be a nonzero multiple of 128, else it
+// returns 0 touching no memory. The partial-final-block masking is removed. The
+// aws-lc production path (hw_gcm_encrypt) always masks len to whole blocks and
+// passes len_blocks*8, so the contract is always satisfied there -- meaning _wb
+// must produce byte-identical results to the original on every input the
+// production dispatch can hand it.
+//
+// Three checks below:
+//  (1) differential vs the pure-C GCM reference (path A) on block-aligned input;
+//  (2) NEGATIVE / guard cases: called directly with a non-whole-block bit_len,
+//      _wb must return 0 and leave out/Xi/ivec untouched (and the produced
+//      ciphertext must NOT match a correct full encryption -- a false-positive
+//      guard that would fire if the length check were dropped);
+//  (3) the AES-256-GCM known-answer vectors, routed through _wb.
+#ifndef __x86_64__
+
+// Path-B dispatch identical to hw_gcm_encrypt but calling the _wb kernel. Only
+// rounds==14 is exercised here.
+static size_t hw_gcm_encrypt_wb(const uint8_t *in, uint8_t *out, size_t len,
+                                const AES_KEY *key, uint8_t ivec[16],
+                                uint8_t Xi[16], const uint64_t Htable[32]) {
+  const size_t len_blocks = len & kSizeTWithoutLower4Bits;
+  if (!len_blocks) return 0;
+  if (CRYPTO_is_ARMv8_GCM_8x_capable() && len >= 256 && key->rounds == 14) {
+    aesv8_gcm_8x_enc_256_wb(in, len_blocks * 8, out, Xi, ivec, key, Htable);
+  } else {
+    return 0;
+  }
+  return len_blocks;
+}
+#endif
+
+int test_aesv8_gcm_8x_enc_256_wb(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  uint64_t t;
+  uint8_t key[32], ivec[16], xi_in[16];
+  s2n_bignum_AES_KEY ek;
+  size_t len;
+
+  printf("Testing aesv8_gcm_8x_enc_256_wb against reference with %d cases\n",tests);
+
+  for (t = 0; t < (uint64_t)tests; ++t)
+   { random_bytes(key, 32);
+     random_bytes(ivec, 16);
+     random_bytes(xi_in, 16);
+
+     size_t blocks = 16 + (rand() % 48);
+     if ((rand() & 3) == 0) blocks = 16 + (rand() % 8);
+     len = blocks * 16;
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);                     // path A ciphertext (reference)
+     memset(bb3, 0, len);                     // path B ciphertext (_wb asm)
+
+     ref_aes256_expand_key(key, &ek);
+     ek.rounds = 14;
+
+     uint8_t zero[16] = {0}, Hbytes[16];
+     ref_aes256_encrypt_block(zero, Hbytes, &ek);
+     uint64_t H[2] = { CRYPTO_load_u64_be(Hbytes), CRYPTO_load_u64_be(Hbytes + 8) };
+
+     GCM128_CONTEXT ctxA; memset(&ctxA, 0, sizeof ctxA);
+     gcm_init_nohw(ctxA.gcm_key.Htable, H);
+     ctxA.gcm_key.block = ref_gcm_aes256_block;
+     memcpy(ctxA.Yi, ivec, 16);
+     memcpy(ctxA.Xi, xi_in, 16);
+     CRYPTO_gcm128_encrypt(&ctxA, &ek, bb1, bb2, len);
+
+     uint64_t Htable_v8[2 * 16]; memset(Htable_v8, 0, sizeof Htable_v8);
+     gcm_init_v8_c(Htable_v8, H);
+     uint8_t xi_b[16], ivec_b[16];
+     memcpy(xi_b, xi_in, 16); memcpy(ivec_b, ivec, 16);
+     size_t bulk = hw_gcm_encrypt_wb(bb1, bb3, len, &ek, ivec_b, xi_b, Htable_v8);
+
+     int bad = 0;
+     if (bulk != len)
+      { printf("### Disparity: aesv8_gcm_8x_enc_256_wb bulk=%zu != len=%zu\n", bulk, len); bad = 1; }
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: aesv8_gcm_8x_enc_256_wb ciphertext len=%zu\n", len); bad = 1; }
+     if (memcmp(ctxA.Xi, xi_b, 16) != 0)
+      { printf("### Disparity: aesv8_gcm_8x_enc_256_wb GHASH Xi len=%zu\n", len); bad = 1; }
+     if (memcmp(ctxA.Yi, ivec_b, 16) != 0)
+      { printf("### Disparity: aesv8_gcm_8x_enc_256_wb counter len=%zu\n", len); bad = 1; }
+     if (bad)
+      { printf("    key=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key[i]);
+        printf("\n    ivec=");
+        for (int i = 0; i < 16; ++i) printf("%02x", ivec[i]);
+        printf("\n");
+        return 1;
+      }
+     else if (VERBOSE)
+      { printf("OK: aesv8_gcm_8x_enc_256_wb len=%zu\n", len); }
+   }
+
+  // ---- (2) NEGATIVE / guard cases: bit_len not a whole number of blocks ----
+  // Call the _wb kernel DIRECTLY (bypassing hw_gcm_encrypt's block masking) with
+  // a bit_len that is not a multiple of 128. The contract: return 0, touch no
+  // memory. Also verify the "false-positive" property the human asked for: for
+  // such an input the kernel does NOT produce the correct full encryption -- so
+  // a caller violating the contract cannot get a valid result.
+  { printf("Testing aesv8_gcm_8x_enc_256_wb whole-blocks guard (negative cases)\n");
+    random_bytes(key, 32); random_bytes(ivec, 16); random_bytes(xi_in, 16);
+    ref_aes256_expand_key(key, &ek); ek.rounds = 14;
+    uint8_t zero[16] = {0}, Hbytes[16];
+    ref_aes256_encrypt_block(zero, Hbytes, &ek);
+    uint64_t H[2] = { CRYPTO_load_u64_be(Hbytes), CRYPTO_load_u64_be(Hbytes + 8) };
+    uint64_t Htable_v8[2 * 16]; memset(Htable_v8, 0, sizeof Htable_v8);
+    gcm_init_v8_c(Htable_v8, H);
+
+    // A set of non-block-multiple BIT lengths (>= 256 bytes so the 8x path is
+    // otherwise eligible): whole blocks + a few extra bits/bytes.
+    size_t base_blocks = 20;                 // 320 bytes
+    size_t bad_bitlens[] = {
+      base_blocks*128 + 1,                   // +1 bit
+      base_blocks*128 + 8,                   // +1 byte
+      base_blocks*128 + 64,                  // +half block
+      base_blocks*128 + 127,                 // 1 bit short of next block
+      (base_blocks*128) - 1                  // 1 bit short of whole
+    };
+    int nfail = 0;
+    for (size_t i = 0; i < sizeof(bad_bitlens)/sizeof(bad_bitlens[0]); ++i)
+     { size_t bitlen = bad_bitlens[i];
+       size_t nbytes = 512;                  // ample output buffer
+       random_bytes(bb1, nbytes);
+       memset(bb3, 0xA5, nbytes);            // sentinel: must stay untouched
+       uint8_t xi_b[16], ivec_b[16], xi0[16], iv0[16];
+       memcpy(xi_b, xi_in, 16); memcpy(ivec_b, ivec, 16);
+       memcpy(xi0, xi_in, 16);  memcpy(iv0, ivec, 16);
+       size_t r = aesv8_gcm_8x_enc_256_wb(bb1, bitlen, bb3, xi_b, ivec_b, &ek, Htable_v8);
+
+       int untouched = 1;
+       for (size_t j = 0; j < nbytes; ++j) if (bb3[j] != 0xA5) { untouched = 0; break; }
+       if (r != 0)              { printf("### Guard FAIL: bitlen=%zu returned %zu (want 0)\n", bitlen, r); nfail++; }
+       if (!untouched)          { printf("### Guard FAIL: bitlen=%zu wrote to output (want no write)\n", bitlen); nfail++; }
+       if (memcmp(xi_b, xi0, 16)!=0)  { printf("### Guard FAIL: bitlen=%zu modified Xi\n", bitlen); nfail++; }
+       if (memcmp(ivec_b, iv0, 16)!=0){ printf("### Guard FAIL: bitlen=%zu modified ivec\n", bitlen); nfail++; }
+
+       // false-positive check: a correct full encryption of floor(bitlen/128)
+       // whole blocks would produce ciphertext != sentinel; the guarded kernel
+       // must NOT have produced it (it produced nothing).
+       size_t whole = (bitlen/128)*16;
+       if (whole >= 16)
+        { static uint8_t refct[512]; memset(refct,0,whole);
+          GCM128_CONTEXT c2; memset(&c2,0,sizeof c2);
+          gcm_init_nohw(c2.gcm_key.Htable,H); c2.gcm_key.block=ref_gcm_aes256_block;
+          memcpy(c2.Yi,ivec,16); memcpy(c2.Xi,xi_in,16);
+          CRYPTO_gcm128_encrypt(&c2,&ek,bb1,refct,whole);
+          if (memcmp(bb3, refct, whole) == 0)
+           { printf("### Guard FAIL: bitlen=%zu output matched a valid encryption (guard bypassed!)\n", bitlen); nfail++; }
+        }
+     }
+    if (nfail) return 1;
+    if (VERBOSE) printf("OK: whole-blocks guard rejects all non-block bit lengths\n");
+  }
+
+  printf("All OK\n");
+  return 0;
+#endif
+}
+
+// Known-answer tests routed through the _wb kernel (all KAT vectors are
+// block-aligned, so _wb must reproduce the published ciphertext and tag).
+#ifndef __x86_64__
+static int run_gcm_256_kat_wb(const uint8_t *key, const uint8_t *nonce,
+                              size_t nonce_len, const uint8_t *aad, size_t aad_len,
+                              const uint8_t *pt, size_t pt_len,
+                              const uint8_t *ct_expect, const uint8_t *tag_expect)
+{ s2n_bignum_AES_KEY ek;
+  ref_aes256_expand_key(key, &ek);
+  ek.rounds = 14;
+  uint8_t zero[16] = {0}, Hbytes[16];
+  ref_aes256_encrypt_block(zero, Hbytes, &ek);
+  uint64_t H[2] = { CRYPTO_load_u64_be(Hbytes), CRYPTO_load_u64_be(Hbytes + 8) };
+  GCM128_CONTEXT ctx; memset(&ctx, 0, sizeof ctx);
+  gcm_init_nohw(ctx.gcm_key.Htable, H);
+  ctx.gcm_key.block = ref_gcm_aes256_block;
+  uint64_t Htable_v8[2 * 16]; memset(Htable_v8, 0, sizeof Htable_v8);
+  gcm_init_v8_c(Htable_v8, H);
+  CRYPTO_gcm128_setiv(&ctx, &ek, nonce, nonce_len);
+  CRYPTO_gcm128_aad(&ctx, aad, aad_len);
+  ctx.len.msg = ctx.len.msg + pt_len;
+  if (ctx.ares) { gcm_gmult_nohw(ctx.Xi, ctx.gcm_key.Htable); ctx.ares = 0; }
+  static uint8_t ct_out[BUFFERSIZE];
+  memset(ct_out, 0, pt_len);
+  size_t bulk = hw_gcm_encrypt_wb(pt, ct_out, pt_len, &ek, ctx.Yi, ctx.Xi, Htable_v8);
+  uint8_t tag_out[16];
+  CRYPTO_gcm128_tag(&ctx, tag_out, 16);
+  int bad = 0;
+  if (bulk != pt_len) { printf("Failed GCM _wb KAT: asm consumed %zu of %zu bytes\n", bulk, pt_len); bad = 1; }
+  if (memcmp(ct_out, ct_expect, pt_len) != 0) { printf("Failed GCM _wb KAT: ciphertext mismatch (pt_len=%zu)\n", pt_len); bad = 1; }
+  if (memcmp(tag_out, tag_expect, 16) != 0) { printf("Failed GCM _wb KAT: tag mismatch (pt_len=%zu)\n", pt_len); bad = 1; }
+  return bad;
+}
+#endif
+
+#define GCM_KAT_WB(KEYHEX, NONCEHEX, ADHEX, INHEX, CTHEX, TAGHEX)              \
+  do {                                                                         \
+    static uint8_t _key[32], _nonce[128], _aad[128];                           \
+    static uint8_t _pt[BUFFERSIZE], _ct[BUFFERSIZE], _tag[16];                 \
+    size_t _nlen = strlen(NONCEHEX) / 2, _alen = strlen(ADHEX) / 2;            \
+    size_t _plen = strlen(INHEX) / 2;                                          \
+    assign_bytearray_from_hexstring(_key, KEYHEX, 32);                         \
+    assign_bytearray_from_hexstring(_nonce, NONCEHEX, (int)_nlen);             \
+    if (_alen) assign_bytearray_from_hexstring(_aad, ADHEX, (int)_alen);       \
+    assign_bytearray_from_hexstring(_pt, INHEX, (int)_plen);                   \
+    assign_bytearray_from_hexstring(_ct, CTHEX, (int)_plen);                   \
+    assign_bytearray_from_hexstring(_tag, TAGHEX, 16);                         \
+    if (run_gcm_256_kat_wb(_key, _nonce, _nlen, _aad, _alen, _pt, _plen,       \
+                           _ct, _tag)) ++failures; else ++successes;           \
+  } while (0)
+
+int test_known_values_gcm_256_encrypt_wb(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing known value cases for aesv8_gcm_8x_enc_256_wb\n");
+
+#undef GCM_KAT
+#define GCM_KAT GCM_KAT_WB
+#include "known_value_tests_gcm_256.h"
+#undef GCM_KAT
+
+  if (failures != 0)
+    { printf ("Failed %d known value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
+}
+
+// ****************************************************************************
 // Analogous testing of relevant functions against TweetNaCl as reference
 //
 // See https://tweetnacl.cr.yp.to/ for more info on TweetNaCl
@@ -17965,6 +18228,8 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
+    functionaltest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb",test_aesv8_gcm_8x_enc_256_wb);
+    functionaltest(aes&&sha3,"known value tests for aesv8_gcm_8x_enc_256_wb",test_known_values_gcm_256_encrypt_wb);
   }
 
   if (extrastrigger) function_to_test = "_";
