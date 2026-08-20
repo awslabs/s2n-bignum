@@ -17147,8 +17147,12 @@ int test_aesv8_gcm_8x_dec_256_wb(void)
 
      // >= 256 bytes takes the 8x bulk path; the smaller band exercises 16..23
      // whole blocks, i.e. the tail cascade and the exact-8 drain.
+     // 16..63 blocks is the common case; the 1-in-4 draw concentrates on the
+     // 16..23 band (tail cascade and exact-8 drain), and the 1-in-8 draw reaches
+     // 64..256 blocks so the long main-loop path is exercised too.
      size_t blocks = 16 + (rand() % 48);
      if ((rand() & 3) == 0) blocks = 16 + (rand() % 8);
+     if ((rand() & 7) == 0) blocks = 64 + (rand() % 193);
      len = blocks * 16;
 
      random_bytes(bb1, len);              // plaintext P
