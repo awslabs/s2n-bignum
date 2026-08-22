@@ -253,6 +253,12 @@ let iclasses =
   (*** REV32 ***)
   "01101110xx100000000010xxxxxxxxxx";
 
+  (*** ADDV (across-vector add reduction) ***)
+  "0x001110xx110001101110xxxxxxxxxx";
+
+  (*** SMAX (signed element-wise maximum) ***)
+  "0x001110xx1xxxxx011001xxxxxxxxxx";
+
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
   "01011110000xxxxx010000xxxxxxxxxx";
@@ -288,6 +294,12 @@ let iclasses =
   "00001111001xxxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "000011110001xxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "0000111100001xxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
+
+  (*** SHRN2 (make sure immh is nonzero) ***)
+  "0100111101xxxxxx100001xxxxxxxxxx"; (* immh<3> = 1, UNDEFINED *)
+  "01001111001xxxxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
+  "010011110001xxxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
+  "0100111100001xxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
 
   (*** SMLAL ***)
   "00001110xx1xxxxx100000xxxxxxxxxx";
@@ -355,14 +367,23 @@ let iclasses =
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
 
+  (*** UADALP (unsigned pairwise add and accumulate long) ***)
+  "0x101110xx100000011010xxxxxxxxxx";
+
   (*** UADDLP ***)
   "01101110xx100000001010xxxxxxxxxx";
 
   (*** UADDLV ***)
   "0x101110xx110000001110xxxxxxxxxx";
 
+  (*** UMAX (unsigned element-wise maximum) ***)
+  "0x101110xx1xxxxx011001xxxxxxxxxx";
+
   (*** UMAXV ***)
   "0x101110xx110000101010xxxxxxxxxx";
+
+  (*** URHADD (unsigned rounding halving add) ***)
+  "0x101110xx1xxxxx000101xxxxxxxxxx";
 
   (*** UMIN, vector ***)
   "0x101110xx1xxxxx011011xxxxxxxxxx";
