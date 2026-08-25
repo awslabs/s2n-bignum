@@ -159,6 +159,71 @@ jobs:
         cd ${{ matrix.arch }}
         make tutorial -j2
 
+  # The Linux jobs above build ELF only, where S2N_BN_SYMBOL(x) and a bare x
+  # both spell the same symbol. On Mach-O they do not: S2N_BN_SYMBOL(x) is _x,
+  # so a symbol defined through the macro but referenced bare is undefined at
+  # link time on Darwin only. That is invisible to every ELF job, so check it
+  # here for both architectures.
+  s2n-bignum-macho:
+    strategy:
+      matrix:
+        arch: [arm, x86]
+
+    # macos-latest is arm64: arm assembles natively and x86 cross-assembles.
+    # Neither needs to execute, so no Intel runner or Rosetta is required.
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check S2N_BN_SYMBOL definition/reference consistency
+      run: |
+        python3 tools/check-symbol-refs.py \
+          ${{ matrix.arch == 'x86' && 'x86 x86_att' || 'arm' }}
+
+    - name: Assemble as Mach-O and check for undefined symbols
+      env:
+        SRCDIR: ${{ matrix.arch }}
+        MACHO_ARCH: ${{ matrix.arch == 'x86' && 'x86_64' || 'arm64' }}
+      run: |
+        # Only the Intel dialect is assembled for arch=x86: the x86_att sources
+        # are already proven object-identical to it by the s2n-bignum-tests job,
+        # and they use GNU as macro semantics that clang's integrated assembler
+        # rejects. The tutorial and proofs trees are excluded as HOL Light
+        # scaffolding rather than library code: tutorial has unguarded ELF
+        # .type/.section directives, and proofs/template.S carries a deliberate
+        # ICODE placeholder.
+        set -e
+        status=0
+        checked=0
+        for src in $(find "$SRCDIR" -name '*.S' \
+                       -not -path "$SRCDIR/tutorial/*" \
+                       -not -path "$SRCDIR/proofs/*" | sort); do
+          checked=$((checked + 1))
+          obj=$(mktemp -t machocheck).o
+          if ! clang -arch "$MACHO_ARCH" -c -I include -o "$obj" "$src" 2>/tmp/asm.err; then
+            echo "ASSEMBLE FAILED: $src"
+            cat /tmp/asm.err
+            status=1
+            rm -f "$obj"
+            continue
+          fi
+          undef=$(nm -u "$obj")
+          if [ -n "$undef" ]; then
+            echo "UNDEFINED SYMBOL(S) in $src:"
+            echo "$undef" | sed 's/^/    /'
+            status=1
+          fi
+          rm -f "$obj"
+        done
+        echo "Checked $checked Mach-O ($MACHO_ARCH) object(s) from $SRCDIR."
+        if [ $status -ne 0 ]; then
+          echo "Mach-O check failed."
+          exit 1
+        fi
+        echo "Mach-O check passed: no undefined symbols."
+
   s2n-bignum-tutorial-macos-arm:
     runs-on: macos-latest
 
