@@ -559,7 +559,12 @@ let [X_POWPOW_128; X_POWPOW_64] =
     let th2 = CONV_RULE(RATOR_CONV(BINOP2_CONV
                (RAND_CONV(RAND_CONV NUM_SUC_CONV))
                (ONCE_DEPTH_CONV WORD_PMUL_CONV THENC
-                REWRITE_CONV[ghash_reduce; ghash_reduce1] THENC
+                (* GHASH_REDUCE1, not the ghash_reduce1 definition: the defn
+                   leaves a `word_pmul _ (word 0x87)` that WORD_RED_CONV then
+                   evaluates 384 times at ~0.58s each (245s of this phrase).
+                   GHASH_REDUCE1 states the same reduction as shifts/xors, so
+                   the numerals reduce cheaply. Chain is bit-identical. *)
+                REWRITE_CONV[ghash_reduce; GHASH_REDUCE1] THENC
                 DEPTH_CONV(WORD_RED_CONV ORELSEC WORD_PMUL_CONV)))) th1 in
     th2::lis in
   let lis = rev(rules 128) in
