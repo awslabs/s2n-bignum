@@ -1441,6 +1441,24 @@ void call_aes_xts_decrypt_128(void) {}
 void call_aes_xts_decrypt_256(void) {}
 void call_aes_xts_decrypt_512(void) {}
 
+void call_aesv8_gcm_8x_dec_256_wb_16(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_32(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_48(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_64(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_128(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_256(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_512(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_1024(void) {}
+void call_aesv8_gcm_8x_dec_256_wb_4096(void) {}
+
+void call_gcm_ghash_v8_1(void) {}
+void call_gcm_ghash_v8_2(void) {}
+void call_gcm_ghash_v8_3(void) {}
+void call_gcm_ghash_v8_4(void) {}
+void call_gcm_ghash_v8_8(void) {}
+void call_gcm_ghash_v8_16(void) {}
+void call_gcm_ghash_v8_64(void) {}
+
 #else
 
 void call_mldsa_caddq(void) {}
@@ -1527,6 +1545,61 @@ void call_aes_xts_decrypt_64(void) { repeat(aes_xts_decrypt_helper(64)); }
 void call_aes_xts_decrypt_128(void) { repeat(aes_xts_decrypt_helper(128)); }
 void call_aes_xts_decrypt_256(void) { repeat(aes_xts_decrypt_helper(256)); }
 void call_aes_xts_decrypt_512(void) { repeatfewer(10,aes_xts_decrypt_helper(512)); }
+
+// Helper for the AES-256-GCM 8x whole-blocks decrypt kernel with parameterized
+// byte length.  Timing harness only: the round keys, GHASH table, tag and
+// counter are filled with arbitrary buffer bytes (the kernel runs the same
+// instructions regardless of the values).  "len" is in bytes and MUST be a
+// multiple of 16 -- the whole-blocks contract requires bit_len to be a nonzero
+// multiple of 128, and the kernel returns 0 without touching memory otherwise.
+// The kernel only takes the 8x bulk path for len >= 128 (8 blocks).
+static uint8_t aes_gcm_xi[16], aes_gcm_ivec[16];
+static uint64_t aes_gcm_htable[32];
+static void aesv8_gcm_8x_dec_256_wb_helper(size_t len)
+{
+  int j;
+  for (j = 0; j < 30; ++j) aes_key1.rd_key[j] = b1[j % BUFFERSIZE];
+  aes_key1.rounds = 14;  // AES-256
+  for (j = 0; j < 32; ++j) aes_gcm_htable[j] = b2[j % BUFFERSIZE];
+  for (j = 0; j < 16; ++j) { aes_gcm_xi[j] = (uint8_t)(b3[j] & 0xFF);
+                             aes_gcm_ivec[j] = (uint8_t)(b4[j] & 0xFF); }
+  aesv8_gcm_8x_dec_256_wb((uint8_t*)b0, len * 8, (uint8_t*)b1, aes_gcm_xi,
+                          aes_gcm_ivec, &aes_key1, aes_gcm_htable);
+}
+
+void call_aesv8_gcm_8x_dec_256_wb_16(void)   { repeat(aesv8_gcm_8x_dec_256_wb_helper(16)); }
+void call_aesv8_gcm_8x_dec_256_wb_32(void)   { repeat(aesv8_gcm_8x_dec_256_wb_helper(32)); }
+void call_aesv8_gcm_8x_dec_256_wb_48(void)   { repeat(aesv8_gcm_8x_dec_256_wb_helper(48)); }
+void call_aesv8_gcm_8x_dec_256_wb_64(void)   { repeat(aesv8_gcm_8x_dec_256_wb_helper(64)); }
+void call_aesv8_gcm_8x_dec_256_wb_128(void)  { repeat(aesv8_gcm_8x_dec_256_wb_helper(128)); }
+void call_aesv8_gcm_8x_dec_256_wb_256(void)  { repeat(aesv8_gcm_8x_dec_256_wb_helper(256)); }
+void call_aesv8_gcm_8x_dec_256_wb_512(void)  { repeat(aesv8_gcm_8x_dec_256_wb_helper(512)); }
+void call_aesv8_gcm_8x_dec_256_wb_1024(void) { repeatfewer(10,aesv8_gcm_8x_dec_256_wb_helper(1024)); }
+void call_aesv8_gcm_8x_dec_256_wb_4096(void) { repeatfewer(10,aesv8_gcm_8x_dec_256_wb_helper(4096)); }
+
+// Helper for GHASH, parameterized by 16-byte BLOCK count.  Timing harness only:
+// the GHASH key table is filled with arbitrary buffer bytes, since the function
+// runs the same instructions regardless of the values.  The block counts
+// registered below straddle the two code paths -- 1..3 blocks take the len < 64
+// path, 4 and up take the 4x path (4 exercises it with zero .Loop4x iterations,
+// 8 with one, 16 and 64 with several).
+static uint8_t ghash_v8_xi[16];
+static uint64_t ghash_v8_htable[32];
+static void gcm_ghash_v8_helper(size_t blocks)
+{
+  int j;
+  for (j = 0; j < 32; ++j) ghash_v8_htable[j] = b2[j % BUFFERSIZE];
+  for (j = 0; j < 16; ++j) ghash_v8_xi[j] = (uint8_t)(b3[j] & 0xFF);
+  gcm_ghash_v8_s2n(ghash_v8_xi, ghash_v8_htable, (const uint8_t*)b0, blocks * 16);
+}
+
+void call_gcm_ghash_v8_1(void)  { repeat(gcm_ghash_v8_helper(1)); }
+void call_gcm_ghash_v8_2(void)  { repeat(gcm_ghash_v8_helper(2)); }
+void call_gcm_ghash_v8_3(void)  { repeat(gcm_ghash_v8_helper(3)); }
+void call_gcm_ghash_v8_4(void)  { repeat(gcm_ghash_v8_helper(4)); }
+void call_gcm_ghash_v8_8(void)  { repeat(gcm_ghash_v8_helper(8)); }
+void call_gcm_ghash_v8_16(void) { repeat(gcm_ghash_v8_helper(16)); }
+void call_gcm_ghash_v8_64(void) { repeat(gcm_ghash_v8_helper(64)); }
 
 #endif
 
@@ -2015,6 +2088,24 @@ int main(int argc, char *argv[])
   timingtest(aes,"aes_xts_decrypt (128 bytes)",call_aes_xts_decrypt_128);
   timingtest(aes,"aes_xts_decrypt (256 bytes)",call_aes_xts_decrypt_256);
   timingtest(aes,"aes_xts_decrypt (512 bytes)",call_aes_xts_decrypt_512);
+  // GCM needs FEAT_SHA3 as well as FEAT_AES: the kernel uses eor3 (49 sites).
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (16 bytes)",call_aesv8_gcm_8x_dec_256_wb_16);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (32 bytes)",call_aesv8_gcm_8x_dec_256_wb_32);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (48 bytes)",call_aesv8_gcm_8x_dec_256_wb_48);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (64 bytes)",call_aesv8_gcm_8x_dec_256_wb_64);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (128 bytes)",call_aesv8_gcm_8x_dec_256_wb_128);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (256 bytes)",call_aesv8_gcm_8x_dec_256_wb_256);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (512 bytes)",call_aesv8_gcm_8x_dec_256_wb_512);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (1024 bytes)",call_aesv8_gcm_8x_dec_256_wb_1024);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_dec_256_wb (4096 bytes)",call_aesv8_gcm_8x_dec_256_wb_4096);
+  // GHASH needs only FEAT_AES (for PMULL), not FEAT_SHA3.
+  timingtest(aes,"gcm_ghash_v8_s2n (1 block)",call_gcm_ghash_v8_1);
+  timingtest(aes,"gcm_ghash_v8_s2n (2 blocks)",call_gcm_ghash_v8_2);
+  timingtest(aes,"gcm_ghash_v8_s2n (3 blocks)",call_gcm_ghash_v8_3);
+  timingtest(aes,"gcm_ghash_v8_s2n (4 blocks)",call_gcm_ghash_v8_4);
+  timingtest(aes,"gcm_ghash_v8_s2n (8 blocks)",call_gcm_ghash_v8_8);
+  timingtest(aes,"gcm_ghash_v8_s2n (16 blocks)",call_gcm_ghash_v8_16);
+  timingtest(aes,"gcm_ghash_v8_s2n (64 blocks)",call_gcm_ghash_v8_64);
 
   // Summarize performance in arithmetic and geometric means
 

@@ -556,6 +556,36 @@ let check_insns () =
     (*** st1 (2 registers, Post-immediate offset) 128-bit ***)
     "01001100100111111010xxxxxxxxxxxx";
 
+    (*** ld1 (2 registers, no offset) 128-bit ***)
+    "01001100010000001010xxxxxxxxxxxx";
+
+    (*** st1 (2 registers, no offset) 128-bit ***)
+    "01001100000000001010xxxxxxxxxxxx";
+
+    (*** ld1 (3 registers, Post-immediate offset) 128-bit ***)
+    "01001100110111110110xxxxxxxxxxxx";
+
+    (*** st1 (3 registers, Post-immediate offset) 128-bit ***)
+    "01001100100111110110xxxxxxxxxxxx";
+
+    (*** ld1 (4 registers, Post-immediate offset) 128-bit ***)
+    "01001100110111110010xxxxxxxxxxxx";
+
+    (*** st1 (4 registers, Post-immediate offset) 128-bit ***)
+    "01001100100111110010xxxxxxxxxxxx";
+
+    (*** ld1 (3 registers, no offset) 128-bit ***)
+    "01001100010000000110xxxxxxxxxxxx";
+
+    (*** st1 (3 registers, no offset) 128-bit ***)
+    "01001100000000000110xxxxxxxxxxxx";
+
+    (*** ld1 (4 registers, no offset) 128-bit ***)
+    "01001100010000000010xxxxxxxxxxxx";
+
+    (*** st1 (4 registers, no offset) 128-bit ***)
+    "01001100000000000010xxxxxxxxxxxx";
+
     (*** ld2 (2 register, Post-immediate offset) ***)
     "0x001100110111111000xxxxxxxxxxxx";
 

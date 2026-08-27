@@ -468,6 +468,43 @@ let cosimulate_ldst_1_2reg() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
+(*** This covers LD1/ST1 (multiple structures) with 3 and 4 registers,
+ *** 128-bit, in the two addressing modes the decoder supports for them:
+ *** post-index with immediate offset, and no offset.  Same shape as
+ *** cosimulate_ldst_1_2reg above; only the opcode field and the transfer
+ *** size differ (0b0110 / 48 bytes for 3 registers, 0b0010 / 64 for 4).
+ *** The stack offset is capped so the whole transfer stays inside the
+ *** harness's 256-byte window.
+ ***)
+
+let cosimulate_ldst_34reg() =
+  let is4 = Random.int 2 in
+  let nregs = if is4 = 1 then 4 else 3 in
+  let opcode = if is4 = 1 then 0b0010 else 0b0110 in
+  let nbytes = 16 * nregs in
+  let someoffset = Random.int 2
+  and rn = Random.int 32
+  and isld = Random.int 2
+  and rt = Random.int 32
+  and esize = Random.int 4 in
+  let stackoff =
+    if rn = 31 then Random.int ((256 - nbytes) / 16) * 16
+    else Random.int (256 - nbytes) in
+  let postinc = someoffset * nbytes in
+  let code =
+    pow2 24 */ num 0b01001100 +/
+    pow2 23 */ num someoffset +/
+    pow2 22 */ num isld +/
+    pow2 16 */ num(0b011111 * someoffset) +/
+    pow2 12 */ num opcode +/
+    pow2 10 */ num esize +/
+    pow2 5 */ num rn +/
+    num rt in
+  if rn = 31 then
+    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 (stackoff + postinc)]
+  else
+    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+
 (*** This covers LDRB and STRB with unshifted register
  *** There are several more supported addressing modes to cover.
  ***)
@@ -573,7 +610,8 @@ let cosimulate_ldst3() =
 
 let memclasses =
    [cosimulate_ldstr; cosimulate_ldstp; cosimulate_ldst_12;
-    cosimulate_ldst_1_2reg; cosimulate_ldstrb; cosimulate_ld1r;
+    cosimulate_ldst_1_2reg; cosimulate_ldst_34reg;
+    cosimulate_ldstrb; cosimulate_ld1r;
     cosimulate_ldst3; cosimulate_ldstu
     ];;
 

@@ -292,6 +292,7 @@ for arch in ["arm", "x86"]:
 onlyInArm = [
   "aes_xts_decrypt",
   "aes_xts_encrypt",
+  "aesv8_gcm_8x_dec_256_wb",
   "bignum_copy_row_from_table_8n",
   "bignum_copy_row_from_table_16",
   "bignum_copy_row_from_table_32",
@@ -300,6 +301,7 @@ onlyInArm = [
   "bignum_mod_p256k1",
   "curve25519_x25519_byte",
   "curve25519_x25519_byte_alt",
+  "gcm_ghash_v8_s2n",
   "sha3_",
   "mldsa_intt_arm",
   "mldsa_pointwise",

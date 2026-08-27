@@ -46,6 +46,24 @@ extern void aes_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
 extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
         const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[S2N_BIGNUM_STATIC 16]);
 
+// AESV8_GCM_8X_DEC_256_WB (AES-256-GCM decryption, whole blocks only)
+// Whole-blocks-only variant of aesv8_gcm_8x_dec_256: identical contract, but
+// requires "bit_len" to be a nonzero multiple of 128 (whole 16-byte blocks) and
+// returns 0 having touched no memory otherwise. No partial-final-block masking.
+// Inputs in[bit_len/8], bit_len, xi[16], ivec[16], key[244], htable[32]; outputs function return (number of bytes processed), out[bit_len/8], xi[16], ivec[16]
+extern size_t aesv8_gcm_8x_dec_256_wb(const uint8_t *in, size_t bit_len, uint8_t *out,
+        uint8_t xi[S2N_BIGNUM_STATIC 16], uint8_t ivec[S2N_BIGNUM_STATIC 16],
+        const s2n_bignum_AES_KEY *key, const uint64_t htable[S2N_BIGNUM_STATIC 32]);
+
+// GCM_GHASH_V8 (GHASH over whole 16-byte blocks)
+// Accumulates GHASH over "len" bytes of "inp" into the 16-byte state "xi", using
+// the v8-format key table "htable" produced by aws-lc's gcm_init_v8. "len" is in
+// bytes and must be a positive multiple of 16; only the 16 bytes at "xi" are
+// written. Reads htable[0..5] (96 bytes) when len >= 64, htable[0..2] otherwise.
+// Inputs xi[16], htable[32], inp[len], len; output xi[16]
+extern void gcm_ghash_v8_s2n(uint8_t xi[S2N_BIGNUM_STATIC 16],
+        const uint64_t htable[S2N_BIGNUM_STATIC 32], const uint8_t *inp, size_t len);
+
 // Add, z := x + y
 // Inputs x[m], y[n]; outputs function return (carry-out) and z[p]
 extern uint64_t bignum_add (uint64_t p, uint64_t *z, uint64_t m, const uint64_t *x, uint64_t n, const uint64_t *y);
