@@ -52,6 +52,7 @@
 : jmp$
 : lea$
 : leaq$
+: leave$
 : mov$
 : movabs$
 : movabsq$
@@ -77,6 +78,7 @@
 : paddq$
 : pand$
 : pblendw$
+: pclmulqdq$
 : pcmpgtw$
 : pinsrd$
 : pinsrq$
@@ -85,7 +87,9 @@
 : popq$
 : pshufb$
 : pshufd$
+: pslldq$
 : psrad$
+: psrldq$
 : psrlw$
 : push$
 : pushq$
@@ -145,6 +149,7 @@
 : vpbroadcastd$
 : vpbroadcastq$
 : vpbroadcastw$
+: vpcmpeqw$
 : vpcmpgtd$
 : vpcmpgtw$
 : vperm2i128$
@@ -170,6 +175,7 @@
 : vpmullw$
 : vpor$
 : vpshufb$
+: vpshufd$
 : vpslld$
 : vpsllvd$
 : vpsllq$
