@@ -9,13 +9,13 @@
 
 let NORMALIZE_ALIGNED_WORD_CONV =
   let pth = prove
-   (`(!n x:int64.
+   (`(!n (x:A word).
       w divides n ==> (aligned w (word_add x (word n)) <=> aligned w x)) /\
-     (!n x:int64.
+     (!n (x:A word).
       w divides n ==> (aligned w (word_add (word n) x) <=> aligned w x)) /\
-     (!n x:int64.
+     (!n (x:A word).
       w divides n ==> (aligned w (word_sub x (word n)) <=> aligned w x)) /\
-     (!n x:int64.
+     (!n (x:A word).
       w divides n ==> (aligned w (word_sub (word n) x) <=> aligned w x))`,
     MESON_TAC[ALIGNED_WORD_ADD_EQ; ALIGNED_WORD_SUB_EQ; ALIGNED_WORD;
              aligned]) in
@@ -45,7 +45,9 @@ let (ALIGNED_WORD_TAC:tactic) =
     CONV_TAC(ONCE_DEPTH_CONV NORMALIZE_ALIGNED_WORD_CONV) THEN
     ASSUM_LIST(fun thl ->
       REWRITE_TAC(mapfilter (CONV_RULE NORMALIZE_ALIGNED_WORD_CONV) thl))
-  and trigger = vfree_in `aligned:num->int64->bool` in
+  and trigger = can (find_term (fun tm ->
+    let f,args = strip_comb tm in
+    is_const f && name_of f = "aligned" && List.length args = 2)) in
   fun (asl,w) -> if trigger w then basetac (asl,w) else ALL_TAC (asl,w);;
 
 let ALIGNED_WORD_CONV ths =
@@ -54,5 +56,7 @@ let ALIGNED_WORD_CONV ths =
     GEN_REWRITE_CONV (SUB_ALIGNED_WORD_CONV o TOP_DEPTH_CONV) ths THENC
     ONCE_DEPTH_CONV NORMALIZE_ALIGNED_WORD_CONV THENC
     REWRITE_CONV(mapfilter (CONV_RULE NORMALIZE_ALIGNED_WORD_CONV) ths)
-  and trigger = vfree_in `aligned:num->int64->bool` in
+  and trigger = can (find_term (fun tm ->
+    let f,args = strip_comb tm in
+    is_const f && name_of f = "aligned" && List.length args = 2)) in
   fun tm -> if trigger tm then baseconv tm else REFL tm;;
