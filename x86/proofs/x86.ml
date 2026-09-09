@@ -4911,20 +4911,13 @@ let ASSIGNS_PULL_ZEROTOP_THM = prove
   MESON_TAC[]);;
 
 (* returns true if t is `read RIP <state>`. *)
-let is_read_rip t =
-  (* do not use term_match because it is slow. *)
-  match t with
-  | Comb (Comb (Const ("read", _), Const ("RIP", _)), _) -> true
-  | _ -> false;;
+let is_read_rip = is_read_named_component "RIP";;
 
 (* For compatibility with is_read_pc in Arm *)
 let is_read_pc = is_read_rip;;
 
 (* returns true if t is `read events <state>`. *)
-let is_read_events t =
-  match t with
-  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
-  | _ -> false;;
+let is_read_events = is_read_named_component "events";;
 
 (*** decode_ths is an array from int offset i to
  ***   Some `|- !s pc. bytes_loaded s pc *_mc
@@ -5016,85 +5009,21 @@ let X86_CONV (decode_ths:thm option array) ths tm =
  ) tm;;
 
 let X86_BASIC_STEP_TAC =
-  let x86_tm = `x86` and x86_ty = `:x86state` and one = `1:num` in
-  fun (decode_ths: thm option array) sname store_inst_term_to (asl,w) ->
-    let sv = rand w and sv' = mk_var(sname,x86_ty) in
-    let atm = mk_comb(mk_comb(x86_tm,sv),sv') in
-    let eth = X86_CONV decode_ths (map snd asl) atm in
-
-    (* store the decoded instruction at store_inst_term_to *)
-    (match store_inst_term_to with
-     | Some r -> r := rhs (concl eth)
-     | None -> ());
-
-    (* prepare a tactic for progressing to a next step. *)
-    let progress_tac =
-      let c,_ = strip_comb w in
-      if name_of c = "eventually" then
-        GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ2_TAC
-      else if name_of c = "eventually_n" then
-        let stepn = dest_numeral(rand(rator(rator w))) in
-        let stepn_decr = stepn -/ num 1 in
-        (* stepn = 1+{stepn-1}*)
-        let stepn_thm = GSYM (NUM_ADD_CONV
-          (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
-        GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
-        GEN_REWRITE_TAC I [EVENTUALLY_N_STEP]
-      else failwith "X86_BASIC_STEP_TAC: neither eventually nor eventually_n"
-      in
-
-    (progress_tac THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
-      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
-        (PRINT_GOAL_TAC THEN
-        FAIL_TAC ("X86_BASIC_STEP_TAC: Equality between two states is " ^
-                  "ill-formed. Did you forget to assume an extra condition" ^
-                  " like pointer alignment?")));
-      X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth] THEN
-      REPEAT X86_UNDEFINED_CHOOSE_TAC]) (asl,w);;
+  GEN_BASIC_STEP_TAC "X86" `x86` `:x86state` X86_CONV
+    (REPEAT X86_UNDEFINED_CHOOSE_TAC);;
 
 let X86_STEP_TAC (mc_length_th,decode_ths) subths sname
       (store_inst_term_to: term ref option)
       (strip_component_tac: thm_tactic) =
-  (*** This does the basic decoding setup ***)
+  GEN_STEP_TAC X86_BASIC_STEP_TAC ALL_TAC bytes_loaded_update
+    (fun _ _ -> ()) (mc_length_th,decode_ths) subths sname
+    store_inst_term_to strip_component_tac;;
 
-  X86_BASIC_STEP_TAC decode_ths sname store_inst_term_to THEN
+let X86_VERBOSE_STEP_TAC =
+  GEN_VERBOSE_STEP_TAC X86_STEP_TAC;;
 
-  (*** This part shows the code isn't self-modifying ***)
-
-  NONSELFMODIFYING_STATE_UPDATE_TAC
-    (MATCH_MP bytes_loaded_update mc_length_th) THEN
-
-  (*** Attempt also to show subroutines aren't modified, if applicable ***)
-
-  MAP_EVERY (TRY o NONSELFMODIFYING_STATE_UPDATE_TAC o
-    MATCH_MP bytes_loaded_update o CONJUNCT1) subths THEN
-
-  (*** This part produces any updated versions of existing asms ***)
-
-  ASSUMPTION_STATE_UPDATE_TAC THEN
-
-  (*** Produce updated "MAYCHANGE" assumption ***)
-
-  MAYCHANGE_STATE_UPDATE_TAC THEN
-
-  (*** This adds state component theorems for the updates ***)
-  (*** Could also assume th itself but I throw it away   ***)
-
-  DISCH_THEN(fun th ->
-    let thl = STATE_UPDATE_NEW_RULE th in
-    if thl = [] then ALL_TAC else
-    MP_TAC(end_itlist CONJ thl) THEN
-    ASSEMBLER_SIMPLIFY_TAC THEN
-    strip_component_tac th);;
-
-let X86_VERBOSE_STEP_TAC (exth1,exth2) sname g =
-  Format.print_string("Stepping to state "^sname); Format.print_newline();
-  X86_STEP_TAC (exth1,exth2) [] sname None (K STRIP_TAC) g;;
-
-let X86_VERBOSE_SUBSTEP_TAC (exth1,exth2) subths sname g =
-  Format.print_string("Stepping to state "^sname); Format.print_newline();
-  X86_STEP_TAC (exth1,exth2) subths sname None (K STRIP_TAC) g;;
+let X86_VERBOSE_SUBSTEP_TAC =
+  GEN_VERBOSE_SUBSTEP_TAC X86_STEP_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Throw away assumptions according to patterns.                             *)
@@ -5105,83 +5034,49 @@ let DISCARD_FLAGS_TAC =
    [`read CF s = y`; `read PF s = y`; `read AF s = y`;
     `read ZF s = y`; `read SF s = y`; `read OF s = y`];;
 
-let DISCARD_STATE_TAC s =
-  DISCARD_ASSUMPTIONS_TAC (vfree_in (mk_var(s,`:x86state`)) o concl);;
+let DISCARD_STATE_TAC =
+  GEN_DISCARD_STATE_TAC `:x86state`;;
 
-let DISCARD_OLDSTATE_TAC s =
-  let v = mk_var(s,`:x86state`) in
-  let rec unbound_statevars_of_read bound_svars tm =
-    match tm with
-      Comb(Comb(Const("read",_),cmp),s) ->
-        if mem s bound_svars then [] else [s]
-    | Comb(a,b) -> union (unbound_statevars_of_read bound_svars a)
-                         (unbound_statevars_of_read bound_svars b)
-    | Abs(v,t) -> unbound_statevars_of_read (v::bound_svars) t
-    | _ -> [] in
-  DISCARD_ASSUMPTIONS_TAC(
-    fun thm ->
-      let us = unbound_statevars_of_read [] (concl thm) in
-      if us = [] || us = [v] then false
-      else if not(mem v us) then true
-      else
-        if !x86_print_log then
-          (Format.print_string
-           ("Info: assumption \`"^string_of_term (concl thm)^
-            "\` is erased, but it might have contained useful information\n");
-           true)
-        else true);;
+let DISCARD_OLDSTATE_TAC =
+  GEN_DISCARD_OLDSTATE_TAC `:x86state` x86_print_log;;
 
 (* ------------------------------------------------------------------------- *)
 (* More convenient stepping tactics, optionally with accumulation.           *)
 (* ------------------------------------------------------------------------- *)
 
-let X86_SINGLE_STEP_TAC th s =
-  time (X86_VERBOSE_STEP_TAC th s) THEN
-  DISCARD_OLDSTATE_TAC s THEN
-  CLARIFY_TAC;;
+let X86_SINGLE_STEP_TAC =
+  GEN_SINGLE_STEP_TAC X86_VERBOSE_STEP_TAC DISCARD_OLDSTATE_TAC;;
 
-let X86_VACCSTEP_TAC th aflag s =
-  X86_VERBOSE_STEP_TAC th s THEN
-  (if aflag then TRY(ACCUMULATE_ARITH_TAC s THEN CLARIFY_TAC) else ALL_TAC);;
+let X86_VACCSTEP_TAC =
+  GEN_VACCSTEP_TAC X86_VERBOSE_STEP_TAC;;
 
-let X86_XACCSTEP_TAC th excs aflag s =
-  X86_SINGLE_STEP_TAC th s THEN
-  (if aflag then TRY(ACCUMULATEX_ARITH_TAC excs s THEN CLARIFY_TAC)
-   else ALL_TAC);;
+let X86_XACCSTEP_TAC =
+  GEN_XACCSTEP_TAC X86_SINGLE_STEP_TAC;;
 
 (* X86_GEN_ACCSTEP_TAC runs acc_preproc before ACCUMULATE_ARITH_TAC. This is
    useful when the output goal of X86_SINGLE_STEP_TAC needs additional rewrites
    for accumulator to recognize it. *)
-let X86_GEN_ACCSTEP_TAC acc_preproc th aflag s =
-  X86_SINGLE_STEP_TAC th s THEN
-  (if aflag then acc_preproc THEN TRY(ACCUMULATE_ARITH_TAC s THEN CLARIFY_TAC)
-   else ALL_TAC);;
+let X86_GEN_ACCSTEP_TAC =
+  GEN_ACCSTEP_TAC X86_SINGLE_STEP_TAC;;
 
 let X86_ACCSTEP_TAC th aflag s = X86_GEN_ACCSTEP_TAC ALL_TAC th aflag s;;
 
-let X86_VSTEPS_TAC th snums =
-  MAP_EVERY (X86_VERBOSE_STEP_TAC th) (statenames "s" snums);;
+let X86_VSTEPS_TAC =
+  GEN_VSTEPS_TAC X86_VERBOSE_STEP_TAC;;
 
-let X86_STEPS_TAC th snums =
-  MAP_EVERY (X86_SINGLE_STEP_TAC th) (statenames "s" snums);;
+let X86_STEPS_TAC =
+  GEN_STEPS_TAC X86_SINGLE_STEP_TAC;;
 
-let X86_VACCSTEPS_TAC th anums snums =
-  MAP_EVERY (fun n -> X86_VACCSTEP_TAC th (mem n anums) ("s"^string_of_int n))
-            snums;;
+let X86_VACCSTEPS_TAC =
+  GEN_VACCSTEPS_TAC X86_VACCSTEP_TAC;;
 
-let X86_XACCSTEPS_TAC th excs anums snums =
-  MAP_EVERY
-   (fun n -> X86_XACCSTEP_TAC th excs (mem n anums) ("s"^string_of_int n))
-   snums;;
+let X86_XACCSTEPS_TAC =
+  GEN_XACCSTEPS_TAC X86_XACCSTEP_TAC;;
 
 (* X86_GEN_ACCSTEPS_TAC runs acc_preproc before ACCUMULATE_ARITH_TAC.
    acc_preproc is a function from string (which is a state name) to tactic. *)
-let X86_GEN_ACCSTEPS_TAC acc_preproc th anums snums =
-  MAP_EVERY
-    (fun n ->
-      let state_name = "s"^string_of_int n in
-      X86_GEN_ACCSTEP_TAC (acc_preproc state_name) th (mem n anums) state_name)
-    snums;;
+let X86_GEN_ACCSTEPS_TAC =
+  GEN_ACCSTEPS_TAC X86_GEN_ACCSTEP_TAC;;
 
 let X86_ACCSTEPS_TAC th anums snums =
   X86_GEN_ACCSTEPS_TAC (fun _ -> ALL_TAC) th anums snums;;
