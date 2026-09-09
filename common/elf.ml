@@ -37,180 +37,334 @@ let get_string bs (a:int): string =
   Bytes.sub_string bs a (len a 0);;
 
 
-(*** load_elf reads an object file, and returns
-  (the ".text" section bytes,
-   read-only symbol names and their bytes
-     (which will include ("WHOLE_READONLY", whole rodata section)),
-   relocations info)
-***)
 let is_elf (file:bytes) = get_list file 0x0 4 = ['\x7f'; 'E'; 'L'; 'F'];;
 let is_elf_file (filename:string) = is_elf (load_file filename);;
 
-let load_elf (arch:int) (reloc_type:int -> 'a) (file:bytes):
-      bytes * (* .text *)
-      (string * bytes) list * (* name and data for each global rodata symbol *)
-      ('a * (int * string * int)) list (* relocation info *)
-  =
+(* ELF data layouts and constants follow the System V Generic ABI:
+
+   ELF header and class-dependent types:
+     https://gabi.xinuos.com/elf/02-eheader.html
+   Section headers and section types:
+     https://gabi.xinuos.com/elf/03-sheader.html
+   Symbol table entries:
+     https://gabi.xinuos.com/elf/05-symtab.html
+   REL and RELA relocation entries:
+     https://gabi.xinuos.com/elf/06-reloc.html
+*)
+type elf_class =
+  | Elf32
+  | Elf64;;
+
+type elf_symbol = {
+  elf_symbol_name: string;
+  elf_symbol_value: int;
+  elf_symbol_size: int;
+  elf_symbol_type: int;
+  elf_symbol_section_index: int;
+  elf_symbol_section_name: string
+};;
+
+type elf_relocation = {
+  elf_relocation_type: int;
+  elf_relocation_offset: int;
+  elf_relocation_symbol: elf_symbol;
+  elf_relocation_addend: int
+};;
+
+type elf_layout = {
+  elf_layout_ident_class: int;
+  elf_layout_header_shoff: int * int;
+  elf_layout_header_shentsize: int;
+  elf_layout_header_shnum: int;
+  elf_layout_header_shstrndx: int;
+  elf_layout_section_header_size: int;
+  elf_layout_section_offset: int * int;
+  elf_layout_section_size: int * int;
+  elf_layout_section_link: int;
+  elf_layout_section_entsize: int * int;
+  elf_layout_symbol_entry_size: int;
+  elf_layout_symbol_info: int;
+  elf_layout_symbol_shndx: int;
+  elf_layout_symbol_value: int * int;
+  elf_layout_symbol_size: int * int;
+  elf_layout_relocation_entry_size: int;
+  elf_layout_read_relocation_offset: bytes -> int -> int;
+  elf_layout_read_relocation_type: bytes -> int -> int;
+  elf_layout_read_relocation_symbol: bytes -> int -> int;
+  elf_layout_read_relocation_addend: bytes -> int -> int
+};;
+
+let elf32_layout:elf_layout = {
+  elf_layout_ident_class = 1;
+  elf_layout_header_shoff = 0x20,4;
+  elf_layout_header_shentsize = 0x2e;
+  elf_layout_header_shnum = 0x30;
+  elf_layout_header_shstrndx = 0x32;
+  elf_layout_section_header_size = 40;
+  elf_layout_section_offset = 0x10,4;
+  elf_layout_section_size = 0x14,4;
+  elf_layout_section_link = 0x18;
+  elf_layout_section_entsize = 0x24,4;
+  elf_layout_symbol_entry_size = 16;
+  elf_layout_symbol_info = 12;
+  elf_layout_symbol_shndx = 14;
+  elf_layout_symbol_value = 4,4;
+  elf_layout_symbol_size = 8,4;
+  elf_layout_relocation_entry_size = 12;
+  elf_layout_read_relocation_offset = (fun file off -> get_int_le file off 4);
+  elf_layout_read_relocation_type = (fun file off ->
+    get_int_le file (off + 4) 4 land 0xff);
+  elf_layout_read_relocation_symbol = (fun file off ->
+    get_int_le file (off + 4) 4 lsr 8);
+  elf_layout_read_relocation_addend = (fun file off ->
+    let n = get_int_le file (off + 8) 4 in
+    if n land 0x80000000 = 0 then n else n - 0x100000000)
+};;
+
+let elf64_layout:elf_layout = {
+  elf_layout_ident_class = 2;
+  elf_layout_header_shoff = 0x28,8;
+  elf_layout_header_shentsize = 0x3a;
+  elf_layout_header_shnum = 0x3c;
+  elf_layout_header_shstrndx = 0x3e;
+  elf_layout_section_header_size = 64;
+  elf_layout_section_offset = 0x18,8;
+  elf_layout_section_size = 0x20,8;
+  elf_layout_section_link = 0x28;
+  elf_layout_section_entsize = 0x38,8;
+  elf_layout_symbol_entry_size = 24;
+  elf_layout_symbol_info = 4;
+  elf_layout_symbol_shndx = 6;
+  elf_layout_symbol_value = 8,8;
+  elf_layout_symbol_size = 16,8;
+  elf_layout_relocation_entry_size = 24;
+  elf_layout_read_relocation_offset = (fun file off -> get_int_le file off 8);
+  elf_layout_read_relocation_type = (fun file off ->
+    get_int_le file (off + 0x8) 4);
+  elf_layout_read_relocation_symbol = (fun file off ->
+    get_int_le file (off + 0xc) 4);
+  elf_layout_read_relocation_addend = (fun file off ->
+    get_int_le file (off + 0x10) 8)
+};;
+
+let get_elf_layout = function
+  | Elf32 -> elf32_layout
+  | Elf64 -> elf64_layout;;
+
+(*** Read the class-independent parts of an ELF relocatable object. Only an
+     exact .rela.text/SHT_RELA relocation section is returned; any SHT_REL
+     section is rejected and other relocation sections are ignored. The raw
+     records retain symbol values and section information so a backend can
+     validate offsets and apply instruction-specific relocations without
+     re-parsing ELF32 or ELF64 structures. ***)
+let load_elf_raw (elf_class:elf_class) (arch:int) (file:bytes):
+      bytes *
+      (string * bytes) list *
+      elf_relocation list =
+  let layout = get_elf_layout elf_class in
 
   if not (is_elf file) then failwith "not an ELF file" else
-
-  if get_int_list file 0x4 5 <> [2; 1; 1; 0; 0]
-    (* ELFCLASS64, ELFDATA2LSB, version 1, ELFOSABI_NONE *) then
-    failwith "not a supported ELF filetype" else
+  if get_int_list file 0x4 5 <>
+       [layout.elf_layout_ident_class;1;1;0;0]
+  then failwith "not a supported ELF filetype" else
   if get_int_le file 0x12 2 <> arch then
     failwith ("unexpected ELF architecture: " ^
-        (Printf.sprintf "%x" (get_int_le file 0x12 2))) else
+      Printf.sprintf "%x" (get_int_le file 0x12 2)) else
 
-  (* Read the ELF header (first 64 bytes of the file) to get section headers *)
-  let section_headers: bytes array =
-    (* section header's offset; e_shoff *)
-    let shoff = get_int_le file 0x28 8
-    (* size of a single section header; e_shentsize*)
-    and shentsize = get_int_le file 0x3a 2
-    (* count of section headers = e_shnum *)
-    and shnum = get_int_le file 0x3c 2 in
-    Array.init shnum (fun i ->
-      Bytes.sub file (shoff + i * shentsize) shentsize)
+  let shoff_offset,shoff_size = layout.elf_layout_header_shoff in
+  let shoff = get_int_le file shoff_offset shoff_size
+  and shentsize = get_int_le file layout.elf_layout_header_shentsize 2
+  and shnum = get_int_le file layout.elf_layout_header_shnum 2
+  and shstrndx = get_int_le file layout.elf_layout_header_shstrndx 2 in
+  if shentsize < layout.elf_layout_section_header_size then
+    failwith "ELF section header is too small" else
+  let section_headers = Array.init shnum (fun i ->
+    Bytes.sub file (shoff + i * shentsize) shentsize) in
 
-  (* Helper fns to read a section header.
-     Corresponds to the Elf64_Shdr struct.
-     Note that Elf64_Word is a 4-byte int, Elf64_Addr is 8 bytes, and
-     Elf64_Xword is also 8 bytes. *)
-  and section_offset sec_header = get_int_le sec_header 0x18 8
-  and section_len sec_header = get_int_le sec_header 0x20 8
-  and section_link sec_header = get_int_le sec_header 0x28 4
-  and check_section_type sec_header ty =
-    if get_int_le sec_header 0x4 4 = ty then ()
-    else failwith "unexpected section type" in
+  let section_offset sec_header =
+    let off,len = layout.elf_layout_section_offset in
+    get_int_le sec_header off len
+  and section_len sec_header =
+    let off,len = layout.elf_layout_section_size in
+    get_int_le sec_header off len
+  and section_type sec_header = get_int_le sec_header 0x4 4
+  and section_link sec_header =
+    get_int_le sec_header layout.elf_layout_section_link 4
+  and section_entsize sec_header =
+    let off,len = layout.elf_layout_section_entsize in
+    get_int_le sec_header off len in
 
-  (* Get the section contents of a section header *)
-  let section_contents (sec_header:bytes): bytes =
+  let section_contents sec_header =
     Bytes.sub file (section_offset sec_header) (section_len sec_header) in
+  if shstrndx = 0xffff then failwith "no section header string table" else
+  if shstrndx >= Array.length section_headers then
+    failwith "bad section header string table index" else
+  let shstrtab = section_contents section_headers.(shstrndx) in
+  let section_name sec_header =
+    get_string shstrtab (get_int_le sec_header 0 4) in
+  let section_name_at idx =
+    if idx < Array.length section_headers
+    then section_name section_headers.(idx)
+    else "" in
+  let find_section_index name ty =
+    let rec find_index i =
+      if i = Array.length section_headers then
+        failwith ("missing ELF section: " ^ name) else
+      let header = section_headers.(i) in
+      if section_name header = name then
+        if section_type header = ty then i
+        else failwith "unexpected section type"
+      else find_index (i + 1) in
+    find_index 0 in
+  let find_section name ty =
+    section_headers.(find_section_index name ty) in
 
-  (* Get the section name from a section header *)
-  let section_name (sec_header:bytes) =
-    (* From .shstrtab (section header string table) extract a string whose byte
-      offset starts from chridx. *)
-    let from_section_string_table =
-      let shstrndx = get_int_le file 0x3e 2 in
-      if shstrndx = 0xffff then failwith "no section header string table" else
-      let get_string_from_table sec_ndx =
-        let off = section_offset section_headers.(sec_ndx) in
-        fun i -> get_string file (off + i)
-      in
-      fun entry_idx -> get_string_from_table shstrndx entry_idx
-    in
-    from_section_string_table (get_int_le sec_header 0 4) in
+  Array.iter (fun header ->
+    if section_type header = 9 (* SHT_REL *) then
+      failwith "ELF SHT_REL relocations are not supported; use SHT_RELA")
+    section_headers;
 
-  (* Find a section header from the section header table *)
-  let find_section_header =
-    let headers = Array.to_list section_headers in
-    (* ty stands for the type of a section. Figure 4-9 of
-       https://refspecs.linuxbase.org/elf/gabi4+/ch4.sheader.html
-       has a table for their integer values, and  Figure 4-14
-       has types for special sections such as .text . *)
-    fun name ty ->
-      let hdr = find (fun header -> section_name header = name) headers in
-      check_section_type hdr ty; hdr in
-
-  let find_section_contents (name,ty) =
-      section_contents (find_section_header name ty) in
-
-  (* From .strtab (string table) extract a string whose byte offset starts from
-     chridx. *)
-  let from_string_table =
-    try let the_table = section_contents
-        (find_section_header ".strtab" 3 (* SHT_STRTAB *)) in
-      fun chridx -> get_string the_table chridx
-    with Failure _ -> fun (chridx:int) -> "" in
-
-  (* The .rodata section (None if nonexistent) *)
-  let rodata_contents:bytes option = catch
-      find_section_contents (".rodata",1 (* SHT_PROGBITS *)) in
-  (* The symbol table.
-      https://refspecs.linuxbase.org/elf/gabi4+/ch4.symtab.html
-     (None if nonexistent) *)
-  let symtab_contents:bytes option = catch
-      find_section_contents (".symtab",2 (* SHT_SYMTAB *)) in
-
-  let symbol_name (symtab_idx:int): string =
+  let text = section_contents (find_section ".text" 1 (* SHT_PROGBITS *)) in
+  let rodata_index = catch (find_section_index ".rodata") 1 in
+  let symtab_index = catch (find_section_index ".symtab") 2 in
+  let symtab_header = option_map (fun i -> section_headers.(i)) symtab_index in
+  let symtab_contents = option_map section_contents symtab_header in
+  let symtab_entry_size =
+    match symtab_header with
+    | None -> layout.elf_layout_symbol_entry_size
+    | Some header ->
+      let n = section_entsize header in
+      if n = 0 then layout.elf_layout_symbol_entry_size
+      else if n < layout.elf_layout_symbol_entry_size then
+        failwith "ELF symbol entry is too small"
+      else n in
+  let symbol_string_table =
+    match symtab_header with
+    | None -> None
+    | Some header ->
+      let idx = section_link header in
+      if idx >= Array.length section_headers then
+        failwith "bad symbol string table index" else
+      let strtab_header = section_headers.(idx) in
+      if section_type strtab_header <> 3 then
+        failwith "symbol table does not reference a string table" else
+      Some (section_contents strtab_header) in
+  let symbol_count =
+    match symtab_contents with
+    | None -> 0
+    | Some symtab ->
+      if Bytes.length symtab mod symtab_entry_size <> 0 then
+        failwith "bad ELF symbol table size" else
+      Bytes.length symtab / symtab_entry_size in
+  let symbol symtab_idx =
+    if symtab_idx < 0 || symbol_count <= symtab_idx then
+      failwith "bad ELF symbol index" else
     let symtab = option_get symtab_contents in
-    let sym_entrysize = 24 (* size of Elf64_Sym struct *) in
-    let char_idx = get_int_le symtab (symtab_idx * sym_entrysize) 4 in
-    from_string_table char_idx
-  in
-  (* The "st_shndx" field *)
-  let symbol_sectionidx (symtab_idx:int): int =
-    let symtab = option_get symtab_contents in
-    let sym_entrysize = 24 in
-    get_int_le symtab (symtab_idx * sym_entrysize + 6) 2
-  in
-  (* Least-significant 4 bits of the "st_info" field *)
-  let symbol_type (symtab_idx:int): int =
-    let symtab = option_get symtab_contents in
-    let sym_entrysize = 24 in
-    let symbol_info = get_int_le symtab (symtab_idx * sym_entrysize + 4) 1 in
-    symbol_info land 0xf
-  in
+    let base = symtab_idx * symtab_entry_size in
+    let value_off,value_len = layout.elf_layout_symbol_value
+    and size_off,size_len = layout.elf_layout_symbol_size in
+    let name_index = get_int_le symtab base 4 in
+    let section_index =
+      get_int_le symtab (base + layout.elf_layout_symbol_shndx) 2 in
+    {
+      elf_symbol_name =
+        (match symbol_string_table with
+         | None -> ""
+         | Some strings -> get_string strings name_index);
+      elf_symbol_value = get_int_le symtab (base + value_off) value_len;
+      elf_symbol_size = get_int_le symtab (base + size_off) size_len;
+      elf_symbol_type =
+        get_int_le symtab (base + layout.elf_layout_symbol_info) 1 land 0xf;
+      elf_symbol_section_index = section_index;
+      elf_symbol_section_name = section_name_at section_index
+    } in
 
-  (* The ".text" section contents. *)
-  section_contents (find_section_header ".text" 1 (* SHT_PROGBITS *)),
-
-  (* Get the read-only data from ".rodata" section by searching
-    the symbol table (".symtab"). *)
-  (match (rodata_contents,symtab_contents) with
-    | Some rodata, Some symtab -> begin
-      let sym_entrysize = 24 (* size of Elf64_Sym struct *) in
-
-      (* Skim through the symbol table entries and collect readonly
-         entries *)
-      let rodata_entries = ref [] in
-      for i = 0 to (Bytes.length symtab) / sym_entrysize - 1 do
-        let symtab_entry = Bytes.sub symtab (i * sym_entrysize) sym_entrysize in
-        if symbol_type i = 1 (* 1 = STT_OBJECT: a data object, such as a variable,
-              an array, and so on. *) &&
-            section_name (section_headers.(symbol_sectionidx i)) = ".rodata"
-        then (* Found a .rodata entry *)
-          let symbol_name = symbol_name i in
-          let symbol_size = get_int_le symtab_entry 16 8 in
-          let symbol_addr = get_int_le symtab_entry 8 8 in
-          let data = Bytes.sub rodata symbol_addr symbol_size in
-          rodata_entries := (symbol_name, data)::!rodata_entries
-        else
-          ()
+  let rodata =
+    match rodata_index,symtab_contents with
+    | Some idx,Some _ ->
+      let contents = section_contents section_headers.(idx) in
+      let entries = ref [] in
+      for i = 0 to symbol_count - 1 do
+        let sym = symbol i in
+        if sym.elf_symbol_type = 1 &&
+           sym.elf_symbol_section_index = idx
+        then
+          let data = Bytes.sub contents sym.elf_symbol_value
+            sym.elf_symbol_size in
+          entries := (sym.elf_symbol_name,data)::!entries
       done;
-      (!rodata_entries @ ["WHOLE_READONLY", rodata]) 
-      end
-    | _ -> []),
+      !entries @ ["WHOLE_READONLY",contents]
+    | _ -> [] in
 
-  (* Relocation info *)
-  match catch (find_section_header ".rela.text") 4 (* SHT_RELA *) with
-  | None -> []
-  | Some rel_sec ->
-    let rel_pos = section_offset rel_sec in
-    let rel_end = rel_pos + section_len rel_sec in
-    let rec relocs off =
-      if off = rel_end then [] else
+  let relocations =
+    match catch (find_section ".rela.text") 4 (* SHT_RELA *) with
+    | None -> []
+    | Some rel_sec ->
+      let linked_symtab = section_link rel_sec in
+      (match symtab_index with
+       | Some idx when idx = linked_symtab -> ()
+       | Some _ ->
+         failwith "relocation section references another symbol table"
+       | None -> failwith "relocation section has no symbol table");
+      let entry_size =
+        let n = section_entsize rel_sec in
+        if n = 0 then layout.elf_layout_relocation_entry_size
+        else if n < layout.elf_layout_relocation_entry_size then
+          failwith "ELF relocation entry is too small"
+        else n in
+      let rel_size = section_len rel_sec in
+      if rel_size mod entry_size <> 0 then
+        failwith "bad ELF relocation section size" else
+      let rel_pos = section_offset rel_sec in
+      let rel_end = rel_pos + rel_size in
+      let rec read_relocations off =
+        if off = rel_end then [] else
+        {
+          elf_relocation_type =
+            layout.elf_layout_read_relocation_type file off;
+          elf_relocation_offset =
+            layout.elf_layout_read_relocation_offset file off;
+          elf_relocation_symbol =
+            symbol (layout.elf_layout_read_relocation_symbol file off);
+          elf_relocation_addend =
+            layout.elf_layout_read_relocation_addend file off
+        }::read_relocations (off + entry_size) in
+      read_relocations rel_pos in
 
-      let symtab_idx = get_int_le file (off + 0xc) 4 in
-      let r_offset = get_int_le file off 8 in
-      ((* The relocation type; ELF64_R_TYPE *)
-       reloc_type (get_int_le file (off + 0x8) 4),
-        ((* r_offset *)
-          r_offset,
-          (* The symbol name (string) *)
-          (if symbol_type symtab_idx = 3 (* STT_SECTION *) &&
-              section_name (section_headers.(symbol_sectionidx symtab_idx))
-              = ".rodata"
-           then "WHOLE_READONLY"
-           else symbol_name symtab_idx),
-          (* r_addend. Assume that this value is *)
-          get_int_le file (off + 0x10) 8)) ::
-      relocs (off + 0x18) in
-    relocs rel_pos;;
+  text,rodata,relocations;;
+
+let load_elf_with_class elf_class arch reloc_type file =
+  let text,rodata,relocations = load_elf_raw elf_class arch file in
+  text,rodata,
+  map (fun relocation ->
+    let symbol = relocation.elf_relocation_symbol in
+    reloc_type relocation.elf_relocation_type,
+    (relocation.elf_relocation_offset,
+     (if symbol.elf_symbol_type = 3 &&
+         symbol.elf_symbol_section_name = ".rodata"
+      then "WHOLE_READONLY"
+      else symbol.elf_symbol_name),
+     relocation.elf_relocation_addend))
+    relocations;;
+
+(*** Compatibility entry point for the existing AArch64 and x86-64
+     backends. ***)
+let load_elf arch reloc_type file =
+  load_elf_with_class Elf64 arch reloc_type file;;
+
+let load_elf32 arch reloc_type file =
+  load_elf_with_class Elf32 arch reloc_type file;;
+
+let load_elf64_raw arch file = load_elf_raw Elf64 arch file;;
+let load_elf32_raw arch file = load_elf_raw Elf32 arch file;;
 
 let load_elf_code arch file =
   let code,_,_ = load_elf arch
+    (fun _ -> failwith "ELF contains relocations") file in
+  code;;
+
+let load_elf32_code arch file =
+  let code,_,_ = load_elf32 arch
     (fun _ -> failwith "ELF contains relocations") file in
   code;;
 
