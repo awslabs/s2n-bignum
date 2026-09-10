@@ -17515,6 +17515,7 @@ static size_t gcm_wb_encrypt_direct(const uint8_t *in, uint8_t *out, size_t len,
 // ---------------------------------------------------------------------------
 
 
+#ifndef __x86_64__   // needs AES_KEY / GCM128_CONTEXT from the ARM-only C reference
 typedef void (*gcm_enc_kernel_fn)(const uint8_t *in, size_t bit_len, uint8_t *out,
         uint8_t *Xi, uint8_t *ivec, const AES_KEY *key, const uint64_t *Htable);
 
@@ -17599,6 +17600,7 @@ static int gcm_kernel_difftest(const char *name, gcm_enc_kernel_fn kern)
    }
   return 0;
 }
+#endif // !__x86_64__
 
 int test_gcm_kernel_ours_allsizes(void)
 {
