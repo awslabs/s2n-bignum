@@ -1447,6 +1447,11 @@ void call_aes_xts_decrypt_256(void) {}
 void call_aes_xts_decrypt_512(void) {}
 
 void call_aesv8_gcm_8x_enc_256_wb_256(void) {}
+void call_aesv8_gcm_8x_enc_256_wb_128(void) {}
+void call_aesv8_gcm_8x_enc_256_wb_64(void) {}
+void call_aesv8_gcm_8x_enc_256_wb_48(void) {}
+void call_aesv8_gcm_8x_enc_256_wb_32(void) {}
+void call_aesv8_gcm_8x_enc_256_wb_16(void) {}
 void call_aesv8_gcm_8x_enc_256_wb_512(void) {}
 void call_aesv8_gcm_8x_enc_256_wb_1024(void) {}
 void call_aesv8_gcm_8x_enc_256_wb_4096(void) {}
@@ -1563,6 +1568,11 @@ static void aesv8_gcm_8x_enc_256_wb_helper(size_t len)
 }
 
 void call_aesv8_gcm_8x_enc_256_wb_256(void)  { repeat(aesv8_gcm_8x_enc_256_wb_helper(256)); }
+void call_aesv8_gcm_8x_enc_256_wb_128(void)  { repeat(aesv8_gcm_8x_enc_256_wb_helper(128)); }
+void call_aesv8_gcm_8x_enc_256_wb_64(void)  { repeat(aesv8_gcm_8x_enc_256_wb_helper(64)); }
+void call_aesv8_gcm_8x_enc_256_wb_48(void)  { repeat(aesv8_gcm_8x_enc_256_wb_helper(48)); }
+void call_aesv8_gcm_8x_enc_256_wb_32(void)  { repeat(aesv8_gcm_8x_enc_256_wb_helper(32)); }
+void call_aesv8_gcm_8x_enc_256_wb_16(void)  { repeat(aesv8_gcm_8x_enc_256_wb_helper(16)); }
 void call_aesv8_gcm_8x_enc_256_wb_512(void)  { repeat(aesv8_gcm_8x_enc_256_wb_helper(512)); }
 void call_aesv8_gcm_8x_enc_256_wb_1024(void) { repeatfewer(10,aesv8_gcm_8x_enc_256_wb_helper(1024)); }
 void call_aesv8_gcm_8x_enc_256_wb_4096(void) { repeatfewer(10,aesv8_gcm_8x_enc_256_wb_helper(4096)); }
@@ -2062,6 +2072,11 @@ int main(int argc, char *argv[])
 
   // AES-256-GCM 8x encrypt kernel needs both AES and SHA3 (eor3)
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_256);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_128);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_64);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_48);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_32);
+  timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (256 bytes)",call_aesv8_gcm_8x_enc_256_wb_16);
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (512 bytes)",call_aesv8_gcm_8x_enc_256_wb_512);
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (1024 bytes)",call_aesv8_gcm_8x_enc_256_wb_1024);
   timingtest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb (4096 bytes)",call_aesv8_gcm_8x_enc_256_wb_4096);
