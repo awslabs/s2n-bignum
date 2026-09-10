@@ -17483,7 +17483,7 @@ static size_t hw_gcm_encrypt_wb(const uint8_t *in, uint8_t *out, size_t len,
 }
 #endif
 
-int test_aesv8_gcm_8x_enc_256(void)
+int test_aesv8_gcm_8x_enc_256_wb(void)
 {
 #ifdef __x86_64__
   return 1;
@@ -17618,7 +17618,7 @@ int test_aesv8_gcm_8x_enc_256(void)
 // Known-answer tests routed through the _wb kernel (all KAT vectors are
 // block-aligned, so _wb must reproduce the published ciphertext and tag).
 #ifndef __x86_64__
-static int run_gcm_256_kat(const uint8_t *key, const uint8_t *nonce,
+static int run_gcm_256_kat_wb(const uint8_t *key, const uint8_t *nonce,
                               size_t nonce_len, const uint8_t *aad, size_t aad_len,
                               const uint8_t *pt, size_t pt_len,
                               const uint8_t *ct_expect, const uint8_t *tag_expect)
@@ -17662,11 +17662,11 @@ static int run_gcm_256_kat(const uint8_t *key, const uint8_t *nonce,
     assign_bytearray_from_hexstring(_pt, INHEX, (int)_plen);                   \
     assign_bytearray_from_hexstring(_ct, CTHEX, (int)_plen);                   \
     assign_bytearray_from_hexstring(_tag, TAGHEX, 16);                         \
-    if (run_gcm_256_kat(_key, _nonce, _nlen, _aad, _alen, _pt, _plen,       \
+    if (run_gcm_256_kat_wb(_key, _nonce, _nlen, _aad, _alen, _pt, _plen,       \
                            _ct, _tag)) ++failures; else ++successes;           \
   } while (0)
 
-int test_known_values_gcm_256_encrypt(void)
+int test_known_values_gcm_256_encrypt_wb(void)
 {
 #ifdef __x86_64__
   return 1;
@@ -18630,8 +18630,8 @@ int main(int argc, char *argv[])
     functionaltest(aes,"aes_xts_roundtrip",test_aes_xts_roundtrip);
     functionaltest(aes,"known value tests for aes-xts encrypt",test_known_values_xts_encrypt);
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
-    functionaltest(aes&&sha3,"aesv8_gcm_8x_enc_256",test_aesv8_gcm_8x_enc_256);
-    functionaltest(aes&&sha3,"known value tests for aesv8_gcm_8x_enc_256_wb",test_known_values_gcm_256_encrypt);
+    functionaltest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb",test_aesv8_gcm_8x_enc_256_wb);
+    functionaltest(aes&&sha3,"known value tests for aesv8_gcm_8x_enc_256_wb",test_known_values_gcm_256_encrypt_wb);
   }
 
   if (extrastrigger) function_to_test = "_";
