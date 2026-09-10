@@ -17481,7 +17481,144 @@ static size_t hw_gcm_encrypt_wb(const uint8_t *in, uint8_t *out, size_t len,
   }
   return len_blocks;
 }
+
+// Same as hw_gcm_encrypt_wb but WITHOUT the production >=256 length gate. The
+// aws-lc dispatch only routes len>=256 to the 8x kernel, so hw_gcm_encrypt_wb
+// (which mirrors that dispatch) never reaches the kernel for inputs under 256
+// bytes -- exactly the small sizes whose specialized paths were added by the
+// small-input optimization campaign. The kernel is proven correct at every
+// whole-block size, so this variant calls it directly. It returns the kernel's
+// own byte count (X0 = byte_len = len for a valid whole-block call, 0 for a
+// rejected one), so the `bulk == len` contract matches hw_gcm_encrypt_wb.
+static size_t gcm_wb_encrypt_direct(const uint8_t *in, uint8_t *out, size_t len,
+                                    const AES_KEY *key, uint8_t ivec[16],
+                                    uint8_t Xi[16], const uint64_t Htable[32]) {
+  const size_t len_blocks = len & kSizeTWithoutLower4Bits;
+  if (!len_blocks) return 0;
+  return aesv8_gcm_8x_enc_256_wb(in, len_blocks * 8, out, Xi, ivec, key, Htable);
+}
 #endif
+
+
+// ---------------------------------------------------------------------------
+// Differential tests for every GCM encrypt kernel we benchmark.
+//
+// These call the assembly kernel DIRECTLY, with no length gate, so the
+// small-size specialized paths are exercised. That matters because aws-lc's
+// production dispatch (crypto/fipsmodule/modes/gcm.c) only routes to an 8x
+// kernel at len >= 256 -- so test_aesv8_gcm_8x_enc_256_wb below, which mirrors
+// that dispatch, can never reach any input under 256 bytes.
+//
+// Each kernel is checked against the same independent C reference
+// (CRYPTO_gcm128_encrypt + gcm_init_nohw) on ciphertext, GHASH accumulator and
+// counter, at every length the benchmark measures plus random block counts.
+// ---------------------------------------------------------------------------
+
+
+typedef void (*gcm_enc_kernel_fn)(const uint8_t *in, size_t bit_len, uint8_t *out,
+        uint8_t *Xi, uint8_t *ivec, const AES_KEY *key, const uint64_t *Htable);
+
+static void gcm_k_ours(const uint8_t *in, size_t bl, uint8_t *out, uint8_t *Xi,
+                       uint8_t *iv, const AES_KEY *k, const uint64_t *Ht)
+ { aesv8_gcm_8x_enc_256_wb(in, bl, out, Xi, iv, k, Ht); }
+
+// AES-256 kernel derived from the jargh gcm-branch AES-128 clean x4 kernel by
+// raising the round count 10 -> 14 (see benchmarks/reference/). Same 7-argument
+// order; returns bytes processed. AES-256, so directly comparable to ours.
+
+// Every length benchmarks/benchmark.c measures.
+static const size_t gcm_bench_lens[] =
+ { 16, 32, 48, 64, 80, 96, 112, 128, 192, 256, 512, 1024, 4096 };
+#define GCM_BENCH_NLENS (sizeof gcm_bench_lens / sizeof gcm_bench_lens[0])
+
+static int gcm_kernel_difftest(const char *name, gcm_enc_kernel_fn kern)
+{
+  uint64_t t;
+  uint8_t key[32], ivec[16], xi_in[16];
+  s2n_bignum_AES_KEY ek;
+  size_t len;
+  // Deterministic coverage, then random on top:
+  //   (a) every length benchmarks/benchmark.c measures;
+  //   (b) EXHAUSTIVELY every block count 1..64. The kernel selects its path from
+  //       the exact block count -- g = (nb-1)/8 groups and rem = (nb-1)%8 + 1 --
+  //       so 1..64 covers every (g,rem) pair for g = 0..7, which is exactly the
+  //       case structure the proof is split along. Random draws alone left ~28 of
+  //       the 64 block counts untested on any given run.
+  //   (c) extra random block counts for good measure.
+  uint64_t ncases = GCM_BENCH_NLENS + 64 + (uint64_t)tests;
+
+  for (t = 0; t < ncases; ++t)
+   { random_bytes(key, 32);
+     random_bytes(ivec, 16);
+     random_bytes(xi_in, 16);
+
+     if (t < GCM_BENCH_NLENS) len = gcm_bench_lens[t];
+     else if (t < GCM_BENCH_NLENS + 64) len = (t - GCM_BENCH_NLENS + 1) * 16;
+     else { size_t blocks = 1 + (rand() % 64); len = blocks * 16; }
+
+     random_bytes(bb1, len);
+     memset(bb2, 0, len);
+     memset(bb3, 0, len);
+
+     ref_aes256_expand_key(key, &ek);
+     ek.rounds = 14;
+
+     uint8_t zero[16] = {0}, Hbytes[16];
+     ref_aes256_encrypt_block(zero, Hbytes, &ek);
+     uint64_t H[2] = { CRYPTO_load_u64_be(Hbytes), CRYPTO_load_u64_be(Hbytes + 8) };
+
+     GCM128_CONTEXT ctxA; memset(&ctxA, 0, sizeof ctxA);
+     gcm_init_nohw(ctxA.gcm_key.Htable, H);
+     ctxA.gcm_key.block = ref_gcm_aes256_block;
+     memcpy(ctxA.Yi, ivec, 16);
+     memcpy(ctxA.Xi, xi_in, 16);
+     CRYPTO_gcm128_encrypt(&ctxA, &ek, bb1, bb2, len);
+
+     uint64_t Htable_v8[2 * 16]; memset(Htable_v8, 0, sizeof Htable_v8);
+     gcm_init_v8_c(Htable_v8, H);
+     uint8_t xi_b[16], ivec_b[16];
+     memcpy(xi_b, xi_in, 16); memcpy(ivec_b, ivec, 16);
+     (*kern)(bb1, len * 8, bb3, xi_b, ivec_b, &ek, Htable_v8);
+
+     int bad = 0;
+     if (memcmp(bb2, bb3, len) != 0)
+      { printf("### Disparity: %s ciphertext len=%zu\n", name, len); bad = 1; }
+     if (memcmp(ctxA.Xi, xi_b, 16) != 0)
+      { printf("### Disparity: %s GHASH Xi len=%zu\n", name, len); bad = 1; }
+     if (memcmp(ctxA.Yi, ivec_b, 16) != 0)
+      { printf("### Disparity: %s counter len=%zu\n", name, len); bad = 1; }
+     if (bad)
+      { printf("    key=");
+        for (int i = 0; i < 32; ++i) printf("%02x", key[i]);
+        printf("\n    ivec=");
+        for (int i = 0; i < 16; ++i) printf("%02x", ivec[i]);
+        printf("\n");
+        return 1;
+      }
+     printf("OK: %s len=%zu\n", name, len);
+   }
+  return 0;
+}
+
+int test_gcm_kernel_ours_allsizes(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  printf("Testing aesv8_gcm_8x_enc_256_wb (all sizes, direct) against reference\n");
+  return gcm_kernel_difftest("aesv8_gcm_8x_enc_256_wb", gcm_k_ours);
+#endif
+}
+
+
+
+// AES-256 expanded from the AES-128 SLOTHY software-pipelined champion (round
+// count 10 -> 14, schedule kept). See benchmarks/reference/.
+
+
+
+
+
 
 int test_aesv8_gcm_8x_enc_256_wb(void)
 {
@@ -17500,8 +17637,20 @@ int test_aesv8_gcm_8x_enc_256_wb(void)
      random_bytes(ivec, 16);
      random_bytes(xi_in, 16);
 
-     size_t blocks = 16 + (rand() % 48);
-     if ((rand() & 3) == 0) blocks = 16 + (rand() % 8);
+     // Block-count distribution widened (was: 16 + rand()%48, i.e. only nb 16..63
+     // -> len 256..1008 B). The small-input specialized paths -- the fused nb<=4
+     // short path, the rem=5/6/7 cascade, the rem=4/rem=8 drains -- all live at
+     // nb 1..12, which the old range never reached. Now span nb 1..64 with real
+     // weight on nb 1..12, while still drawing the old large range so the 8-block
+     // main loop and the g>=1 group logic stay covered. Strict superset of the
+     // old distribution: every nb the old code could produce is still reachable.
+     size_t blocks;
+     switch (rand() % 4)
+      { case 0:  blocks = 1 + (rand() % 12); break;   // fused/cascade paths (nb 1..12)
+        case 1:  blocks = 1 + (rand() % 12); break;   // (doubled weight on nb 1..12)
+        case 2:  blocks = 1 + (rand() % 64); break;   // full span nb 1..64
+        default: blocks = 16 + (rand() % 48); break;  // the original 16..63 range
+      }
      len = blocks * 16;
 
      random_bytes(bb1, len);
@@ -17526,7 +17675,12 @@ int test_aesv8_gcm_8x_enc_256_wb(void)
      gcm_init_v8_c(Htable_v8, H);
      uint8_t xi_b[16], ivec_b[16];
      memcpy(xi_b, xi_in, 16); memcpy(ivec_b, ivec, 16);
-     size_t bulk = hw_gcm_encrypt_wb(bb1, bb3, len, &ek, ivec_b, xi_b, Htable_v8);
+     // For len>=256 mirror the production dispatch (hw_gcm_encrypt_wb); the
+     // production path never routes the smaller sizes to this kernel, so call it
+     // directly there. Both return the byte count (== len on success).
+     size_t bulk = (len >= 256)
+       ? hw_gcm_encrypt_wb(bb1, bb3, len, &ek, ivec_b, xi_b, Htable_v8)
+       : gcm_wb_encrypt_direct(bb1, bb3, len, &ek, ivec_b, xi_b, Htable_v8);
 
      int bad = 0;
      if (bulk != len)
@@ -17572,12 +17726,18 @@ int test_aesv8_gcm_8x_enc_256_wb(void)
       base_blocks*128 + 8,                   // +1 byte
       base_blocks*128 + 64,                  // +half block
       base_blocks*128 + 127,                 // 1 bit short of next block
-      (base_blocks*128) - 1                  // 1 bit short of whole
+      (base_blocks*128) - 1,                 // 1 bit short of whole
+      // nebeid PR-445 rejected bit-length set (each not a multiple of 128):
+      2049,                                  // 2048 + 1  (256 whole bytes + 1 bit)
+      4095,                                  // 4096 - 1
+      8191,                                  // 8192 - 1
+      32769,                                 // 32768 + 1 (4096 whole bytes + 1 bit)
+      0                                      // zero-length input is also rejected
     };
     int nfail = 0;
     for (size_t i = 0; i < sizeof(bad_bitlens)/sizeof(bad_bitlens[0]); ++i)
      { size_t bitlen = bad_bitlens[i];
-       size_t nbytes = 512;                  // ample output buffer
+       size_t nbytes = 4096;                 // >= largest floor(bitlen/128)*16 below (32769 -> 4096)
        random_bytes(bb1, nbytes);
        memset(bb3, 0xA5, nbytes);            // sentinel: must stay untouched
        uint8_t xi_b[16], ivec_b[16], xi0[16], iv0[16];
@@ -17597,7 +17757,7 @@ int test_aesv8_gcm_8x_enc_256_wb(void)
        // must NOT have produced it (it produced nothing).
        size_t whole = (bitlen/128)*16;
        if (whole >= 16)
-        { static uint8_t refct[512]; memset(refct,0,whole);
+        { static uint8_t refct[4096]; memset(refct,0,whole);
           GCM128_CONTEXT c2; memset(&c2,0,sizeof c2);
           gcm_init_nohw(c2.gcm_key.Htable,H); c2.gcm_key.block=ref_gcm_aes256_block;
           memcpy(c2.Yi,ivec,16); memcpy(c2.Xi,xi_in,16);
@@ -17639,13 +17799,41 @@ static int run_gcm_256_kat_wb(const uint8_t *key, const uint8_t *nonce,
   if (ctx.ares) { gcm_gmult_nohw(ctx.Xi, ctx.gcm_key.Htable); ctx.ares = 0; }
   static uint8_t ct_out[BUFFERSIZE];
   memset(ct_out, 0, pt_len);
-  size_t bulk = hw_gcm_encrypt_wb(pt, ct_out, pt_len, &ek, ctx.Yi, ctx.Xi, Htable_v8);
+  // Drive the asm through the same setup path (H-table + J0 from key/IV via the
+  // C reference); mirror the production dispatch for len>=256 and call the kernel
+  // directly for the smaller published vectors (16/64/80/128 B and the small
+  // Wycheproof cases), which production never routes to the 8x kernel.
+  size_t bulk = (pt_len >= 256)
+    ? hw_gcm_encrypt_wb(pt, ct_out, pt_len, &ek, ctx.Yi, ctx.Xi, Htable_v8)
+    : gcm_wb_encrypt_direct(pt, ct_out, pt_len, &ek, ctx.Yi, ctx.Xi, Htable_v8);
   uint8_t tag_out[16];
   CRYPTO_gcm128_tag(&ctx, tag_out, 16);
   int bad = 0;
   if (bulk != pt_len) { printf("Failed GCM _wb KAT: asm consumed %zu of %zu bytes\n", bulk, pt_len); bad = 1; }
   if (memcmp(ct_out, ct_expect, pt_len) != 0) { printf("Failed GCM _wb KAT: ciphertext mismatch (pt_len=%zu)\n", pt_len); bad = 1; }
   if (memcmp(tag_out, tag_expect, 16) != 0) { printf("Failed GCM _wb KAT: tag mismatch (pt_len=%zu)\n", pt_len); bad = 1; }
+
+  // Independent pure-C reference cross-check (path A): the SAME J0/AAD setup, but
+  // encrypted by CRYPTO_gcm128_encrypt (no assembly) and finalized with
+  // CRYPTO_gcm128_tag. This proves each published vector agrees with the pure-C
+  // reference AND with our kernel -- a vector that only agreed with our kernel
+  // would prove nothing. A disagreement here is a genuine finding (the vector or
+  // the reference is wrong), not something to paper over, so it is reported with
+  // the exact byte length.
+  { GCM128_CONTEXT rc; memset(&rc, 0, sizeof rc);
+    gcm_init_nohw(rc.gcm_key.Htable, H);
+    rc.gcm_key.block = ref_gcm_aes256_block;
+    CRYPTO_gcm128_setiv(&rc, &ek, nonce, nonce_len);
+    CRYPTO_gcm128_aad(&rc, aad, aad_len);
+    static uint8_t ref_ct[BUFFERSIZE];
+    memset(ref_ct, 0, pt_len);
+    CRYPTO_gcm128_encrypt(&rc, &ek, pt, ref_ct, pt_len);   // finalizes AAD + CTR + GHASH internally
+    uint8_t ref_tag[16];
+    CRYPTO_gcm128_tag(&rc, ref_tag, 16);
+    if (memcmp(ref_ct, ct_expect, pt_len) != 0) { printf("Failed GCM _wb KAT: pure-C reference ciphertext disagrees with published (pt_len=%zu)\n", pt_len); bad = 1; }
+    if (memcmp(ref_tag, tag_expect, 16) != 0)   { printf("Failed GCM _wb KAT: pure-C reference tag disagrees with published (pt_len=%zu)\n", pt_len); bad = 1; }
+    if (memcmp(ref_ct, ct_out, pt_len) != 0)    { printf("Failed GCM _wb KAT: pure-C reference ciphertext disagrees with asm kernel (pt_len=%zu)\n", pt_len); bad = 1; }
+  }
   return bad;
 }
 #endif
@@ -17685,6 +17873,34 @@ int test_known_values_gcm_256_encrypt_wb(void)
     }
   else
     { printf("Successfully passed %d known value tests\n",successes);
+      return 0;
+    }
+#endif
+}
+
+// Filtered Wycheproof AES-256-GCM vectors, routed through the same _wb path as
+// the aws-lc KAT vectors above (and cross-checked against the pure-C reference
+// inside run_gcm_256_kat_wb). See tests/wycheproof_tests_gcm_256.h for the
+// source, the filter and the kept/skipped counts.
+int test_wycheproof_values_gcm_256_encrypt_wb(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  int failures = 0, successes = 0;
+  printf("Testing Wycheproof value cases for aesv8_gcm_8x_enc_256_wb\n");
+
+#undef GCM_KAT
+#define GCM_KAT GCM_KAT_WB
+#include "wycheproof_tests_gcm_256.h"
+#undef GCM_KAT
+
+  if (failures != 0)
+    { printf ("Failed %d Wycheproof value tests, passed %d\n",failures,successes);
+      return failures;
+    }
+  else
+    { printf("Successfully passed %d Wycheproof value tests\n",successes);
       return 0;
     }
 #endif
@@ -18632,6 +18848,8 @@ int main(int argc, char *argv[])
     functionaltest(aes,"known value tests for aes-xts decrypt",test_known_values_xts_decrypt);
     functionaltest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb",test_aesv8_gcm_8x_enc_256_wb);
     functionaltest(aes&&sha3,"known value tests for aesv8_gcm_8x_enc_256_wb",test_known_values_gcm_256_encrypt_wb);
+    functionaltest(aes&&sha3,"wycheproof tests for aesv8_gcm_8x_enc_256_wb",test_wycheproof_values_gcm_256_encrypt_wb);
+    functionaltest(aes&&sha3,"aesv8_gcm_8x_enc_256_wb_allsizes",test_gcm_kernel_ours_allsizes);
   }
 
   if (extrastrigger) function_to_test = "_";
