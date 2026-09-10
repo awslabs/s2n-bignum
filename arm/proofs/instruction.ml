@@ -1051,6 +1051,29 @@ let arm_CBZ = define
             (PC := pc_next ,,
              events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
+(*** TBZ/TBNZ test a single bit (bit n) of the operand register and branch ***)
+(*** to a PC-relative target. The offset is encoded as a signed 14-bit      ***)
+(*** word, multiplied by 4 (so represented here as a 16-bit word) then      ***)
+(*** sign-extended, exactly as for the conditional branches above.          ***)
+
+let arm_TBNZ = define
+ `arm_TBNZ Rt (n:num) (off:16 word) =
+        \s. let pc = word_sub (read PC s) (word 4) in
+            let pc_next = if bit n (read Rt s)
+                   then word_add pc (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
+let arm_TBZ = define
+ `arm_TBZ Rt (n:num) (off:16 word) =
+        \s. let pc = word_sub (read PC s) (word 4) in
+            let pc_next = if ~(bit n (read Rt s))
+                   then word_add pc (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
 let arm_CCMN = define
  `arm_CCMN Rm Rn (nzcv:4 word) cc =
     \s. let m = read Rm s
@@ -3375,6 +3398,32 @@ let arm_CBZ_ALT = prove
   CONV_TAC (DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[]);;
 
+let arm_TBNZ_ALT = prove
+ (`arm_TBNZ Rt (n:num) (off:16 word) =
+        \s. let pc_next = if bit n (read Rt s)
+                   then word_add (word_sub (read PC s) (word 4)) (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump
+                (word_sub (read PC s) (word 4),pc_next))
+                (read events s)) s`,
+  REWRITE_TAC[arm_TBNZ] THEN
+  CONV_TAC (DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[]);;
+
+let arm_TBZ_ALT = prove
+ (`arm_TBZ Rt (n:num) (off:16 word) =
+        \s. let pc_next = if ~(bit n (read Rt s))
+                   then word_add (word_sub (read PC s) (word 4)) (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump
+                (word_sub (read PC s) (word 4),pc_next))
+                (read events s)) s`,
+  REWRITE_TAC[arm_TBZ] THEN
+  CONV_TAC (DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[]);;
+
 (* ------------------------------------------------------------------------- *)
 (* MOV is an alias of MOVZ when Rm is an immediate                           *)
 (* ------------------------------------------------------------------------- *)
@@ -3586,7 +3635,7 @@ let ARM_OPERATION_CLAUSES =
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
-       arm_TBL_ALT; arm_TBL2_ALT;
+       arm_TBL_ALT; arm_TBL2_ALT; arm_TBNZ_ALT; arm_TBZ_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
        arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;
