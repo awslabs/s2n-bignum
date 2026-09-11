@@ -2725,20 +2725,10 @@ let X86_DECODES_THM =
 
 let X86_MK_EXEC_RULE th0 =
   let th0 = INST [`pc':num`,`pc:num`] (SPEC_ALL th0) in
-  let th1 = AP_TERM `LENGTH:byte list->num` th0 in
-  let th2 =
-    (REWRITE_CONV [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
-      LENGTH; LENGTH_APPEND] THENC NUM_REDUCE_CONV) (rhs (concl th1)) in
-  (* Length *)
-  let execth1 = TRANS th1 th2 in
-  (* Decode *)
-  let execth2_raw:(thm*term) list = X86_DECODES_THM th0 in
-  let (decode_arr:thm option array) = Array.make
-    (dest_small_numeral (snd (dest_eq (concl execth1)))) None in
-  let _ = List.iter (fun decode_th,pcofs ->
-    decode_arr.(dest_small_numeral pcofs) <- Some decode_th)
-    execth2_raw in
-  (execth1,decode_arr);;
+  GEN_MK_EXEC_RULE
+    [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
+     LENGTH; LENGTH_APPEND]
+    X86_DECODES_THM th0;;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions for adding microarchitectural events.                    *)

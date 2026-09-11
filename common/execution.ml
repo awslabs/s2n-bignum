@@ -16,6 +16,23 @@ let is_read_named_component component_name t =
       name = component_name
   | _ -> false;;
 
+(* Construct the length theorem and offset-indexed decode theorem array for
+   a byte-list machine-code definition. Backends supply any representation-
+   specific length rewrites and their decoder traversal. *)
+let GEN_MK_EXEC_RULE length_rewrites decodes_thm th0 =
+  let th1 = AP_TERM `LENGTH:byte list->num` th0 in
+  let th2 =
+    (REWRITE_CONV length_rewrites THENC NUM_REDUCE_CONV)
+      (rhs (concl th1)) in
+  let execth1 = TRANS th1 th2 in
+  let execth2_raw:(thm*term) list = decodes_thm th0 in
+  let decode_arr:thm option array = Array.make
+    (dest_small_numeral (snd (dest_eq (concl execth1)))) None in
+  let _ = List.iter (fun decode_th,pcofs ->
+    decode_arr.(dest_small_numeral pcofs) <- Some decode_th)
+    execth2_raw in
+  (execth1,decode_arr);;
+
 (* The shared stepping interface has two levels.
 
    GEN_BASIC_STEP_TAC performs the semantic step only. It selects a decode
