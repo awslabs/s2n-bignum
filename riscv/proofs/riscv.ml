@@ -82,6 +82,90 @@ let is_read_pc = is_read_named_component "PC";;
 
 let is_read_events = is_read_named_component "events";;
 
+(* Control-flow stepping creates alignment side conditions containing the
+   JALR bit-zero mask and symbolic PC additions. These lemmas and theorem
+   transformers normalize those expressions before `RISCV_CONV` unfolds the
+   instruction relation. *)
+
+let RISCV_JALR_ALIGNED_MASK = prove
+ (`!x:int32.
+    aligned 4 x
+    ==> word_and x (word_not (word 1)) = x`,
+  GEN_TAC THEN DISCH_TAC THEN
+  GEN_REWRITE_TAC RAND_CONV [GSYM WORD_VAL] THEN
+  let th =
+    CONV_RULE (ONCE_DEPTH_CONV NUM_REDUCE_CONV)
+      (ISPECL [`x:int32`; `1`]
+        (CONJUNCT1 WORD_AND_NOT_MASK_WORD)) in
+  REWRITE_TAC[th] THEN
+  AP_TERM_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[aligned]) THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  STRIP_TAC THEN
+  SUBGOAL_THEN `2 divides val(x:int32)` ASSUME_TAC THENL
+   [MATCH_MP_TAC
+      (ISPECL [`2`; `4`; `val(x:int32)`] DIVIDES_TRANS) THEN
+    ASM_REWRITE_TAC[] THEN CONV_TAC DIVIDES_CONV;
+    ALL_TAC] THEN
+  ONCE_REWRITE_TAC[MULT_SYM] THEN
+  ASM_REWRITE_TAC[GSYM DIVIDES_DIV_MULT]);;
+
+let RISCV_JALR_ALIGNED_MASK_WORD =
+  CONV_RULE (ONCE_DEPTH_CONV WORD_REDUCE_CONV)
+    RISCV_JALR_ALIGNED_MASK;;
+
+let RISCV_JALR_ALIGNED_TARGET = prove
+ (`!x:int32.
+    aligned 4 x
+    ==> aligned 4
+        (word_and (word_add x (word 0)) (word_not (word 1)))`,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC[WORD_ADD_0; RISCV_JALR_ALIGNED_MASK]);;
+
+let RISCV_WORD_ADD_LCANCEL_EQ = WORD_RULE
+ `!a x y:N word. word_add a x = word_add a y <=> x = y`;;
+
+let RISCV_JALR_MASK_THMS ths =
+  mapfilter
+    (fun th -> MATCH_MP RISCV_JALR_ALIGNED_MASK_WORD th)
+    ths;;
+
+let RISCV_JALR_READ_MASK_THMS ths =
+  let mask_ths = RISCV_JALR_MASK_THMS ths in
+  let int32_ty = type_of `x:int32` in
+  let mask_fn = `\x:int32. word_and x (word 4294967294)` in
+  mapfilter
+    (fun read_th ->
+      let l,r = dest_eq (concl read_th) in
+      if not (is_binary "read" l) || type_of r <> int32_ty then
+        failwith "not an int32 component read";
+      let lifted_th =
+        CONV_RULE (DEPTH_CONV BETA_CONV) (AP_TERM mask_fn read_th) in
+      let masked_rhs = rhs (concl lifted_th) in
+      let mask_th =
+        find (fun th -> lhs (concl th) = masked_rhs) mask_ths in
+      TRANS lifted_th mask_th)
+    ths;;
+
+let RISCV_NORMALIZE_PC_TH ths pc_th =
+  let eq_ths = filter (fun th -> is_eq (concl th)) ths in
+  let mask_ths = RISCV_JALR_MASK_THMS ths in
+  CONV_RULE
+   (RAND_CONV
+    (PURE_REWRITE_CONV
+      (eq_ths @ mask_ths @ [RISCV_WORD_ADD_LCANCEL_EQ]) THENC
+     DEPTH_CONV WORD_EQ_CONV THENC
+     REWRITE_CONV[]))
+   pc_th;;
+
+(* Convert one symbolic machine step to the explicit state update for the
+   instruction at the current PC. `decode_ths` is the array from
+   `RISCV_MK_EXEC_RULE`; `ths` must include the current `read PC` equation and
+   the matching `aligned_bytes_loaded` fact; and `tm` has the form
+   `riscv s s'`. For example, with `read PC s = word pc` and code beginning
+   with `ADDI A0 A0 1`, the result rewrites `riscv s s'` to the PC update
+   followed by the `A0` update and any generated events. *)
+
 let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
   let pc_th =
     try
@@ -92,6 +176,7 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
         ths
     with Failure _ ->
       failwith "RISCV_CONV: cannot find `read PC .. = ..`" in
+  let pc_th = RISCV_NORMALIZE_PC_TH ths pc_th in
   let aligned_bytes_loaded_mc_ths =
     let the_mc =
       option_bind decode_ths.(0)
@@ -112,6 +197,15 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
       failwith "RISCV_CONV: cannot find aligned code-loading assumption"
     else
       res in
+  let code_aligned_ths =
+    map (MATCH_MP aligned_bytes_loaded_aligned)
+      aligned_bytes_loaded_mc_ths in
+  let jalr_aligned_ths =
+    mapfilter
+      (fun th -> MATCH_MP RISCV_JALR_ALIGNED_TARGET th)
+      ths in
+  let jalr_read_mask_ths = RISCV_JALR_READ_MASK_THMS ths in
+  let aligned_ths = jalr_aligned_ths @ code_aligned_ths @ ths in
   let eth =
     try
       tryfind
@@ -130,13 +224,14 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
      riscv_event_load; riscv_event_store; riscv_event_jump; SEQ] THENC
    REWRITE_CONV[LET_DEF; LET_END_DEF] THENC
    TOP_DEPTH_CONV BETA_CONV THENC
-   ALIGNED_WORD_CONV ths THENC
+   ALIGNED_WORD_EXTENDED_CONV aligned_ths THENC
    GEN_REWRITE_CONV TOP_DEPTH_CONV [assign] THENC
    REWRITE_CONV[] THENC
    TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV THENC
    REWRITE_CONV
     [RISCV_ZERO_REGISTER; READ_RVALUE; WRITE_RVALUE; WORD_ADD_0] THENC
    WORD_REDUCE_CONV THENC
+   GEN_REWRITE_CONV TOP_DEPTH_CONV jalr_read_mask_ths THENC
    ONCE_REWRITE_CONV[WORD_SUB_ADD] THENC
    ONCE_DEPTH_CONV
     (REWR_CONV (GSYM ADD_ASSOC) THENC RAND_CONV NUM_REDUCE_CONV) THENC
