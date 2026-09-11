@@ -93,20 +93,10 @@ let ARM_MK_EXEC_RULE th0: thm * (thm option array) =
 
   let th0 = INST [`pc':num`,`pc:num`] (SPEC_ALL
     (PURE_REWRITE_RULE[reloc_op_convert_th] th0)) in
-  let th1 = AP_TERM `LENGTH:byte list->num` th0 in
-  let th2 =
-    (REWRITE_CONV [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
-      LENGTH; LENGTH_APPEND] THENC NUM_REDUCE_CONV) (rhs (concl th1)) in
-  (* Length *)
-  let execth1 = TRANS th1 th2 in
-  (* Decode *)
-  let execth2_raw:(thm*term) list = ARM_DECODES_THM th0 in
-  let (decode_arr:thm option array) = Array.make
-    (dest_small_numeral (snd (dest_eq (concl execth1)))) None in
-  let _ = List.iter (fun decode_th,pcofs ->
-    decode_arr.(dest_small_numeral pcofs) <- Some decode_th)
-    execth2_raw in
-  (execth1,decode_arr);;
+  GEN_MK_EXEC_RULE
+    [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
+     LENGTH; LENGTH_APPEND]
+    ARM_DECODES_THM th0;;
 
 
 (* Take a slice of a machine code using SUB_LIST.
