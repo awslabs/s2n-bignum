@@ -582,31 +582,49 @@ let cosimulate_ldst3() =
   else
     [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
 
-(*** This covers LD1/ST1 (multiple structures), 3 registers, no offset,
- *** for datasizes 64 and 128.
+(*** This covers LD1/ST1 (multiple structures), 3 registers, for datasizes
+ *** 64 and 128, with no offset, post-immediate and post-register addressing.
  ***)
 
 let cosimulate_ldst1_3reg() =
-  let datasize = Random.int 2
+  let mode = Random.int 3
+  and datasize = Random.int 2
   and isld = Random.int 2
   and esize = Random.int 4
   and rn = Random.int 32
   and rt = Random.int 32 in
+  let someoffset = if mode = 0 then 0 else 1 in
+  let rm =
+    if mode = 0 then 0
+    else if mode = 1 then 31
+    else
+      let candidate = Random.int 31 in
+      if candidate = rn then (candidate + 1) mod 31 else candidate in
+  let regoff = if mode = 2 then 1 + Random.int 64 else 0 in
   let stackoff =
     if rn = 31 then Random.int 13 * 16
     else Random.int 208 in
+  let postinc =
+    if mode = 1 then 24 * (datasize + 1)
+    else if mode = 2 then regoff
+    else 0 in
   let code =
     pow2 30 */ num datasize +/
     pow2 24 */ num 0b001100 +/
+    pow2 23 */ num someoffset +/
     pow2 22 */ num isld +/
+    pow2 16 */ num rm +/
     pow2 12 */ num 0b0110 +/
     pow2 10 */ num esize +/
     pow2 5 */ num rn +/
     num rt in
+  let setoffset = if mode = 2 then [movz_Xn_imm rm regoff] else [] in
   if rn = 31 then
-    [add_Xn_SP_imm 31 stackoff; code; sub_Xn_SP_imm 31 stackoff]
+    [add_Xn_SP_imm 31 stackoff] @ setoffset @
+    [code; sub_Xn_SP_imm 31 (stackoff + postinc)]
   else
-    [add_Xn_SP_imm rn stackoff; code; sub_Xn_SP_Xn rn];;
+    [add_Xn_SP_imm rn stackoff] @ setoffset @
+    [code; sub_Xn_SP_Xn rn];;
 
 (*** This covers LD2/ST2 (multiple structures), 2 registers, no offset,
  *** for datasizes 64 and 128 (size = 11 only valid for datasize 128).
