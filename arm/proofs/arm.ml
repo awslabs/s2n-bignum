@@ -9,6 +9,8 @@
 
 let arm_print_log = ref false;;
 
+loadt "common/decode32.ml";;
+
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding. For ARM we                *)
 (* currently go all the way to the semantics in one jump, no asm.            *)
@@ -18,33 +20,22 @@ let arm_decode = new_definition `arm_decode s pc inst <=>
   ?i:int32. aligned_bytes_loaded s pc (bytelist_of_num 4 (val i)) /\
             decode i = SOME inst`;;
 
+let ARM_DECODE_EQ_DECODE32 = prove
+ (`arm_decode s pc inst <=> decode32 decode s pc inst`,
+  REWRITE_TAC[arm_decode; decode32]);;
+
 let ARM_DECODE_CONS = prove
  (`!s pc l i inst l'. aligned_bytes_loaded s (word pc) l ==>
    read_int32 l = SOME (i, l') ==> decode i = SOME inst ==>
    arm_decode s (word pc) inst /\
    aligned_bytes_loaded s (word (pc + 4)) l'`,
-  REWRITE_TAC [read_int32; read_word_eq_some;
-    aligned_bytes_loaded_word] THEN
-  REPLICATE_TAC 9 STRIP_TAC THEN
-  POP_ASSUM_LIST (fun [h1;h2;h3;h4;h5;h6] ->
-    let t1,t2 = CONJ_PAIR (REWRITE_RULE
-      [GSYM WORD_ADD; h3; bytes_loaded_append; h4] h5) in
-    let th1 = MATCH_MP DIVIDES_ADD (CONJ h6 (SPEC `4` DIVIDES_REFL)) in
-    REWRITE_TAC [th1; h6; t2; h1; arm_decode; aligned_bytes_loaded_word] THEN
-    EXISTS_TAC `i:int32` THEN REWRITE_TAC [h1; h2; VAL_WORD;
-      DIMINDEX_32; ARITH_RULE `2 EXP 32 = 256 EXP 4`;
-      BYTELIST_OF_NUM_MOD; SYM h3; BYTELIST_OF_NUM_OF_BYTELIST; t1]));;
+  REWRITE_TAC[ARM_DECODE_EQ_DECODE32] THEN
+  MATCH_ACCEPT_TAC DECODE32_CONS);;
 
 let arm_decode_unique = prove
  (`!s pc x y. arm_decode s pc x ==> arm_decode s pc y ==> x = y`,
-  REWRITE_TAC [arm_decode] THEN REPEAT STRIP_TAC THEN
-  POP_ASSUM_LIST (fun [d2;l2; d1;l1] ->
-    let t = REWRITE_RULE [LENGTH_BYTELIST_OF_NUM]
-      (MATCH_MP (MATCH_MP aligned_bytes_loaded_unique l1) l2) in
-    let t2 = REWRITE_RULE [NUM_OF_BYTELIST_OF_NUM; GSYM CONG;
-      ARITH_RULE `256 EXP 4 = 2 EXP 32`; SYM DIMINDEX_32;
-      GSYM WORD_EQ; WORD_VAL] (AP_TERM `num_of_bytelist` t) in
-    ACCEPT_TAC (REWRITE_RULE [REWRITE_RULE [t2] d1; OPTION_INJ] d2)));;
+  REWRITE_TAC[ARM_DECODE_EQ_DECODE32] THEN
+  MESON_TAC[decode32_unique]);;
 
 let ARM_DECODES_THM =
   let pth = (UNDISCH_ALL o prove)
