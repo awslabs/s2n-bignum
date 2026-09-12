@@ -357,3 +357,250 @@ let RISCV_ACCSIM_TAC execth anums snums =
   ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
   ASM_REWRITE_TAC[];;
+
+(* ------------------------------------------------------------------------- *)
+(* Simulate through a core correctness theorem.                             *)
+(* ------------------------------------------------------------------------- *)
+
+let (RISCV_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
+  GEN_BIGSTEP_TAC
+    "RISCV" aligned_bytes_loaded_update DISCARD_OLDSTATE_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* Standard RV32 ILP32 psABI helpers.                                       *)
+(* ------------------------------------------------------------------------- *)
+
+(* These definitions model the integer calling convention of the standard
+   ILP32 ABI from the RISC-V ABIs Specification. They do not model ILP32E or
+   floating-point argument and return registers. *)
+
+let SOME_FLAGS = new_definition
+ `SOME_FLAGS:((riscvstate,bool)component)list = []`;;
+
+let C_ARGUMENTS = define
+ `(C_ARGUMENTS [a1;a2;a3;a4;a5;a6;a7;a8] s <=>
+        read A0 s = a1 /\ read A1 s = a2 /\ read A2 s = a3 /\
+        read A3 s = a4 /\ read A4 s = a5 /\ read A5 s = a6 /\
+        read A6 s = a7 /\ read A7 s = a8) /\
+  (C_ARGUMENTS [a1;a2;a3;a4;a5;a6;a7] s <=>
+        read A0 s = a1 /\ read A1 s = a2 /\ read A2 s = a3 /\
+        read A3 s = a4 /\ read A4 s = a5 /\ read A5 s = a6 /\
+        read A6 s = a7) /\
+  (C_ARGUMENTS [a1;a2;a3;a4;a5;a6] s <=>
+        read A0 s = a1 /\ read A1 s = a2 /\ read A2 s = a3 /\
+        read A3 s = a4 /\ read A4 s = a5 /\ read A5 s = a6) /\
+  (C_ARGUMENTS [a1;a2;a3;a4;a5] s <=>
+        read A0 s = a1 /\ read A1 s = a2 /\ read A2 s = a3 /\
+        read A3 s = a4 /\ read A4 s = a5) /\
+  (C_ARGUMENTS [a1;a2;a3;a4] s <=>
+        read A0 s = a1 /\ read A1 s = a2 /\ read A2 s = a3 /\
+        read A3 s = a4) /\
+  (C_ARGUMENTS [a1;a2;a3] s <=>
+        read A0 s = a1 /\ read A1 s = a2 /\ read A2 s = a3) /\
+  (C_ARGUMENTS [a1;a2] s <=>
+        read A0 s = a1 /\ read A1 s = a2) /\
+  (C_ARGUMENTS [a1] s <=>
+        read A0 s = a1) /\
+  (C_ARGUMENTS [] s <=>
+        T)`;;
+
+let C_RETURN = define
+ `C_RETURN = read A0`;;
+
+let PRESERVED_GPRS = define
+ `PRESERVED_GPRS =
+   [SP; S0; S1; S2; S3; S4; S5; S6; S7; S8; S9; S10; S11]`;;
+
+let MODIFIABLE_GPRS = define
+ `MODIFIABLE_GPRS =
+   [RA; A0; A1; A2; A3; A4; A5; A6; A7;
+    T0; T1; T2; T3; T4; T5; T6]`;;
+
+let MAYCHANGE_REGS_PERMITTED_BY_ABI = REWRITE_RULE
+  [MODIFIABLE_GPRS]
+  (new_definition `MAYCHANGE_REGS_PERMITTED_BY_ABI =
+      MAYCHANGE [PC] ,, MAYCHANGE MODIFIABLE_GPRS ,, MAYCHANGE [events]`);;
+
+(* ------------------------------------------------------------------------- *)
+(* Promote core correctness theorems to psABI subroutine theorems.          *)
+(* ------------------------------------------------------------------------- *)
+
+let RISCV_CHECK_FORALLVARS_TAC:tactic =
+  GEN_CHECK_FORALLVARS_TAC
+    [`read RA s`; `read events s`; `read SP s`];;
+
+let RISCV_SWAP_FORALL = SWAP_FORALL_THM
+and RISCV_SWAP_FORALL3 = SUBROUTINE_SWAP_FORALL3
+and RISCV_APPEND_LEMMA = SUBROUTINE_APPEND_FORALL
+and RISCV_MONO2_LEMMA = SUBROUTINE_MONO_FORALL2
+and RISCV_MONO3_LEMMA = SUBROUTINE_MONO_FORALL3
+and RISCV_APPEND_E2_NIL = SUBROUTINE_APPEND_PREFIX_NIL;;
+
+(* Promote a core theorem whose postcondition stops immediately before the
+   final return instruction. Schematically, the full routine is
+
+       addi a0,a0,1       # covered by coreth
+       jalr zero,ra,0     # executed by this tactic
+
+   The promoted theorem returns to the aligned value of RA and widens the
+   frame to the registers that the ILP32 ABI permits a callee to change. *)
+
+let RISCV_ADD_RETURN_NOSTACK_TAC =
+  fun execth coreth ->
+    let is_coreth_safety = is_exists (concl coreth) in
+
+    (fun (asl,w) ->
+      if is_coreth_safety <> is_exists w then
+        failwith "coreth must be `exists ..` iff the conclusion is"
+      else ALL_TAC (asl,w)) THEN
+
+    (if is_coreth_safety then
+      ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
+      META_EXISTS_TAC THEN
+      RISCV_CHECK_FORALLVARS_TAC THEN
+      FIRST_X_ASSUM
+        (fun th -> MP_TAC (ONCE_REWRITE_RULE[RISCV_APPEND_LEMMA] th)) THEN
+      REPEAT
+       (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[RISCV_SWAP_FORALL])) THEN
+        MATCH_MP_TAC RISCV_MONO2_LEMMA THEN GEN_TAC)
+     else
+      RISCV_CHECK_FORALLVARS_TAC THEN
+      MP_TAC coreth THEN
+      REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC)) THEN
+
+    REWRITE_TAC[MAYCHANGE_REGS_PERMITTED_BY_ABI; MODIFIABLE_GPRS] THEN
+    REWRITE_TAC[NONOVERLAPPING_CLAUSES; ALLPAIRS; ALL] THEN
+    REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
+                MAYCHANGE_REGS_PERMITTED_BY_ABI; MODIFIABLE_GPRS] THEN
+    DISCH_THEN(fun th ->
+      REPEAT GEN_TAC THEN
+      TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
+      MP_TAC th) THEN
+    ASM_REWRITE_TAC[] THEN
+    (if is_coreth_safety then
+      ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN META_EXISTS_TAC
+     else ALL_TAC) THEN
+    TRY(ANTS_TAC THENL
+     [REPEAT CONJ_TAC THEN
+      ((ASM_REWRITE_TAC[] THEN NO_TAC) ORELSE
+       (ALIGNED_WORD_TAC THEN NO_TAC) ORELSE
+       (TRY DISJ2_TAC THEN NONOVERLAPPING_TAC));
+      ALL_TAC]) THEN
+    DISCH_THEN(fun th ->
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      ENSURES_INIT_TAC "s0" THEN MP_TAC th) THEN
+    RISCV_BIGSTEP_TAC execth "s1" THEN
+    (if is_coreth_safety then
+      TRY
+       (TRY(GEN_REWRITE_TAC I [RISCV_APPEND_E2_NIL]) THEN
+        TRY(CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV)) THEN
+        BINOP_TAC THENL [UNIFY_REFL_TAC; REFL_TAC] THEN NO_TAC)
+     else ALL_TAC) THEN
+    RISCV_STEPS_TAC execth [2] THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_SIMP_TAC[RISCV_JALR_ALIGNED_MASK_WORD];;
+
+(* Promote a core theorem surrounded by a stack prologue and epilogue.
+   Schematically,
+
+       addi sp,sp,-16; sw s0,0(sp)    # prologue
+       ...                             # covered by coreth
+       lw s0,0(sp); addi sp,sp,16     # epilogue
+       jalr zero,ra,0
+
+   `reglist` names the saved registers and `stackoff` is the frame size. The
+   frame size must be a multiple of 16, so adjusting an aligned incoming SP
+   preserves the standard ILP32 stack alignment. The tactic executes the
+   prologue and epilogue, proves that SP and the listed callee-saved registers
+   are restored, and then applies the ABI frame. *)
+
+let RISCV_ADD_RETURN_STACK_TAC =
+  let sp_tm = `SP` in
+  fun ?(pre_post_nsteps:(int*int) option)
+      ?(core_precondition_tac = ALL_TAC)
+      execth coreth reglist stackoff ->
+    if stackoff mod 16 <> 0 then
+      failwith
+        "RISCV_ADD_RETURN_STACK_TAC: stack frame size is not 16-byte aligned";
+    let is_coreth_safety = is_exists (concl coreth) in
+    let regs = dest_list reglist in
+
+    (fun (asl,w) ->
+      if is_coreth_safety <> is_exists w then
+        failwith "coreth must be `exists ..` iff the conclusion is"
+      else ALL_TAC (asl,w)) THEN
+
+    let pre_n,post_n =
+      match pre_post_nsteps with
+      | Some (a,b) -> a,b
+      | None ->
+          let n = length regs + 1 in
+          n,n in
+
+    (if is_coreth_safety then
+      ASSUME_CALLEE_SAFETY_TAC coreth "" THEN
+      META_EXISTS_TAC THEN
+      RISCV_CHECK_FORALLVARS_TAC THEN
+      FIRST_X_ASSUM
+        (fun th -> MP_TAC (ONCE_REWRITE_RULE[RISCV_APPEND_LEMMA] th))
+     else
+      RISCV_CHECK_FORALLVARS_TAC THEN MP_TAC coreth) THEN
+
+    REWRITE_TAC[MAYCHANGE_REGS_PERMITTED_BY_ABI; MODIFIABLE_GPRS;
+                fst execth] THEN
+    (if is_coreth_safety then
+      REPEAT
+       (CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[RISCV_SWAP_FORALL])) THEN
+        MATCH_MP_TAC RISCV_MONO3_LEMMA THEN GEN_TAC) THEN
+      CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV[RISCV_SWAP_FORALL]))
+     else
+      REPEAT(MATCH_MP_TAC RISCV_MONO2_LEMMA THEN GEN_TAC)) THEN
+    (if vfree_in sp_tm (concl coreth) then
+      DISCH_THEN(fun th -> WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th) THEN
+      MATCH_MP_TAC MONO_FORALL THEN GEN_TAC
+     else
+      MATCH_MP_TAC MONO_FORALL THEN GEN_TAC THEN
+      DISCH_THEN(fun th ->
+        WORD_FORALL_OFFSET_TAC stackoff THEN MP_TAC th)) THEN
+    REWRITE_TAC[NONOVERLAPPING_CLAUSES; PAIRWISE; ALLPAIRS; ALL] THEN
+    REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+    DISCH_THEN(fun th ->
+      REPEAT GEN_TAC THEN
+      TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
+      MP_TAC th) THEN
+    ASM_REWRITE_TAC[] THEN
+    (if is_coreth_safety then
+      ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN META_EXISTS_TAC
+     else ALL_TAC) THEN
+    TRY(ANTS_TAC THENL
+     [REPEAT CONJ_TAC THEN
+      ((ASM_REWRITE_TAC[] THEN NO_TAC) ORELSE
+       (ALIGNED_WORD_TAC THEN NO_TAC) ORELSE
+       (TRY DISJ2_TAC THEN NONOVERLAPPING_TAC));
+      ALL_TAC]) THEN
+    DISCH_THEN(fun th ->
+      ((ENSURES_EXISTING_PRESERVED_TAC sp_tm THEN
+        MAP_EVERY
+         (fun c ->
+           ENSURES_PRESERVED_TAC ("init_" ^ fst(dest_const c)) c)
+         regs)
+       ORELSE
+       FAIL_TAC
+        "callee-save registers are still in MAYCHANGE, or `read SP s` is absent") THEN
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      ENSURES_INIT_TAC "s0" THEN
+      RISCV_STEPS_TAC execth (1--pre_n) THEN
+      MP_TAC th) THEN
+    RISCV_BIGSTEP_TAC execth ("s" ^ string_of_int(pre_n + 1)) THEN
+    (if is_coreth_safety then
+      TRY
+       (TRY(GEN_REWRITE_TAC I [RISCV_APPEND_E2_NIL]) THEN
+        TRY(CONV_TAC (LAND_CONV CONS_TO_APPEND_CONV)) THEN
+        BINOP_TAC THENL [UNIFY_REFL_TAC; REFL_TAC] THEN NO_TAC)
+     else ALL_TAC) THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    TRY(core_precondition_tac THEN NO_TAC) THEN
+    RISCV_STEPS_TAC execth
+      ((pre_n + 2)--(pre_n + post_n + 2)) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_SIMP_TAC[RISCV_JALR_ALIGNED_MASK_WORD];;
