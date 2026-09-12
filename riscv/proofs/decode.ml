@@ -346,3 +346,92 @@ let rec decode_all = function
 
 let define_assert_word_list name tm ls =
   define_word_list name (assert_word_list tm ls);;
+
+(* ------------------------------------------------------------------------- *)
+(* ELF32 object loading.                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+(* ELF machine IDs, flags, and relocation numbers follow the "ELF Object
+   Files" and "Relocations" sections of the RISC-V ABIs Specification:
+
+   https://riscv-non-isa.github.io/riscv-elf-psabi-doc/ *)
+
+let elf_machine_riscv = 243;;
+let ef_riscv_rvc = 0x1;;
+let ef_riscv_rve = 0x8;;
+let r_riscv_branch = 16;;
+
+let set_int32_le bs off n =
+  if off < 0 || off + 4 > Bytes.length bs then
+    failwith "set_int32_le: offset outside byte array"
+  else
+    for i = 0 to 3 do
+      Bytes.set bs (off + i)
+        (Char.chr ((n lsr (8 * i)) land 0xff))
+    done;;
+
+let riscv_apply_elf_relocation text (relocation:elf_relocation) =
+  let off = relocation.elf_relocation_offset
+  and symbol = relocation.elf_relocation_symbol in
+  if relocation.elf_relocation_type <> r_riscv_branch then
+    failwith (Printf.sprintf "unexpected RISC-V relocation type: %d"
+      relocation.elf_relocation_type)
+  else if symbol.elf_symbol_section_name <> ".text" then
+    failwith "R_RISCV_BRANCH target is not in .text"
+  else if off land 3 <> 0 then
+    failwith "R_RISCV_BRANCH offset is not four-byte aligned"
+  else if off < 0 || off + 4 > Bytes.length text then
+    failwith "R_RISCV_BRANCH offset is outside .text"
+  else
+    let target =
+      symbol.elf_symbol_value + relocation.elf_relocation_addend in
+    let displacement = target - off in
+    let instruction = get_int_le text off 4 in
+    if target < 0 || target >= Bytes.length text then
+      failwith "R_RISCV_BRANCH target is outside .text"
+    else if target land 3 <> 0 then
+      failwith "R_RISCV_BRANCH target is not four-byte aligned"
+    else if instruction land 0x7f <> 0x63 then
+      failwith "R_RISCV_BRANCH does not refer to a branch instruction"
+    else if displacement < -4096 || displacement > 4094 ||
+            displacement land 1 <> 0 then
+      failwith "R_RISCV_BRANCH displacement does not fit"
+    else
+      (* Place immediate bits 12, 10:5, 4:1, and 11 in the B-type fields
+         inst[31], inst[30:25], inst[11:8], and inst[7], respectively. *)
+      let imm = displacement land 0x1fff in
+      let encoded =
+        ((imm land 0x1000) lsl 19) lor
+        ((imm land 0x07e0) lsl 20) lor
+        ((imm land 0x001e) lsl 7) lor
+        ((imm land 0x0800) lsr 4) in
+      let relocated =
+        (instruction land (lnot 0xfe000f80)) lor encoded in
+      set_int32_le text off relocated;;
+
+let load_elf_contents_riscv path =
+  let file = load_file path in
+  let text,_,relocations =
+    load_elf32_raw elf_machine_riscv file in
+  let flags = get_int_le file 0x24 4 in
+  if flags land ef_riscv_rvc <> 0 then
+    failwith "RISC-V compressed instructions are not supported"
+  else if flags land ef_riscv_rve <> 0 then
+    failwith "RISC-V RV32E ABI is not supported"
+  else if Bytes.length text mod 4 <> 0 then
+    failwith "RISC-V .text size is not a multiple of four"
+  else
+    let relocated_text = Bytes.copy text in
+    List.iter (riscv_apply_elf_relocation relocated_text) relocations;
+    relocated_text;;
+
+(* Define machine code from relocated ELF text, with an optional explicit
+   word list that is checked against those bytes before the definition is
+   created. *)
+
+let define_from_elf name file =
+  define_word_list name (term_of_bytes (load_elf_contents_riscv file));;
+
+let define_assert_from_elf name file =
+  define_assert_word_list name
+    (term_of_bytes (load_elf_contents_riscv file));;
