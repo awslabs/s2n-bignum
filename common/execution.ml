@@ -206,6 +206,65 @@ but got `%s`.\n"
        discard_oldstate_tac sname])
     (asl,w);;
 
+(* ABI promotion starts from a goal whose precondition names caller-provided
+   values by equations such as `read X30 s = returnaddress`. The promotion
+   tactics then traverse and reorder the outer universal quantifiers. If the
+   right-hand variable of one of these equations is not an explicit outer
+   quantifier, the tactic can specialize that input instead of proving the
+   result for every caller value.
+
+   For each backend-supplied left-hand pattern, check the first matching
+   equality in the goal. A variable on its right must occur among the outer
+   `forall` binders. Missing equalities and non-variable right-hand sides are
+   accepted because a theorem may omit or already instantiate that input. *)
+let GEN_CHECK_FORALLVARS_TAC lhs_pats =
+  let find_and_check lhs_pat t quants =
+    let read_eq =
+      try Some (find_term
+        (fun t -> is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
+      with Failure _ -> None in
+    match read_eq with
+    | Some read_eq ->
+        let the_var = rhs read_eq in
+        if is_var the_var && not (mem the_var quants) then
+          failwith
+            ("variable " ^ string_of_term the_var ^
+             " (which is RHS of " ^ string_of_term lhs_pat ^
+             ") does not appear at forall")
+        else
+          ALL_TAC
+    | None -> ALL_TAC in
+  W(fun (_,w) ->
+    let quants = fst (strip_forall w) in
+    MAP_EVERY
+      (fun lhs_pat -> find_and_check lhs_pat w quants)
+      lhs_pats);;
+
+(* These lemmas contain no ABI facts. They only reorder explicit quantifiers,
+   split an event trace into a stack-spill prefix and the core trace, or carry
+   an implication across a change of inner quantified variables. Backend
+   files retain their old theorem names as exact-statement corollaries. *)
+let SUBROUTINE_SWAP_FORALL3 = MESON[]
+ `(forall (x:A) (y:B) (z:C). P x y z) <=>
+  (forall y x z. P x y z)`;;
+
+let SUBROUTINE_APPEND_FORALL = MESON[APPEND_EXISTS]
+ `(forall (e:(A)list). P e) <=>
+  (forall e_stack_spill e. P (APPEND e_stack_spill e))`;;
+
+let SUBROUTINE_MONO_FORALL2 = MESON[]
+ `(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z))
+  ==> (!x y. P x y) ==> (!x z. Q x z)`;;
+
+let SUBROUTINE_MONO_FORALL3 = MESON[]
+ `(!(x:A). (!(y:B) (y':C). P x y y') ==> (!(z:D) (z':E). Q x z z'))
+  ==> (!x y y'. P x y y') ==> (!x z z'. Q x z z')`;;
+
+let SUBROUTINE_APPEND_PREFIX_NIL = prove
+ (`!e:(A)list. !e2.
+    e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
+  MESON_TAC[APPEND]);;
+
 (* The full step tactic leaves facts about earlier states in the context.
    SINGLE_STEP is the usual linear-execution interface: after constructing
    the successor state, it removes facts which mention only obsolete states

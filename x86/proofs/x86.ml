@@ -5328,26 +5328,12 @@ let X86_MACRO_SIM_ABBREV_TAC =
 (* Fix up call/return boilerplate given core correctness.                    *)
 (* ------------------------------------------------------------------------- *)
 
-(* A sanity check of vars in the 'forall ....' goal *)
+(* The stack pointer and return address loaded from the caller stack are
+   recovered from initial-state equations during ABI promotion. Require their
+   names to be explicit outer quantifiers before the tactic reorders them. *)
 let check_forallvars_tac:tactic =
-  let find_and_check (lhs_pat:term) (t:term) (quants:term list) =
-    let read_eq = try Some (find_term (fun t ->
-      is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
-      with Failure _ -> None in
-    match read_eq with
-    | Some read_eq ->
-      let the_var = rhs read_eq in
-      if is_var the_var && not (mem the_var quants) then
-        failwith ("variable " ^ (string_of_term the_var)
-          ^ " (which is RHS of " ^ (string_of_term lhs_pat)
-          ^ ") does not appear at forall")
-      else
-        ALL_TAC
-    | None -> ALL_TAC in
-  W(fun (asl,w) ->
-    let quants = fst (strip_forall w) in
-    find_and_check `read RSP s` w quants THEN
-    find_and_check `read (memory :> bytes64 stackpointer) s` w quants);;
+  GEN_CHECK_FORALLVARS_TAC
+    [`read RSP s`; `read (memory :> bytes64 stackpointer) s`];;
 
 let X86_ADD_RETURN_NOSTACK_TAC =
   let lemma1 = prove
@@ -5452,20 +5438,27 @@ let X86_ADD_RETURN_NOSTACK_TAC =
 (* ------------------------------------------------------------------------- *)
 
 (* Useful lemmas *)
-let swap_forall = MESON[]
-   `(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
-    (forall y e_stack_spill. P e_stack_spill y)` and
-  swap_forall3 = MESON[]
-   `(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
-    (forall y e_stack_spill z. P e_stack_spill y z)` and
-  append_lemma = MESON[APPEND_EXISTS]
-    `(forall (e:(A)list). P e) <=>
-      (forall e_stack_spill e. P (APPEND e_stack_spill e))` and
-  mono2lemma = MESON[]
-   `(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z)) ==> (!x y. P x y) ==> (!x z. Q x z)` and
-  mono3lemma = MESON[]
-   `(!(x:A). (!(y:B) (y':C). P x y y') ==> (!(z:D) (z':E). Q x z z')) ==>
-    (!x y y'. P x y y') ==> (!x z z'. Q x z z')`;;
+let swap_forall = prove
+   (`(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
+     (forall y e_stack_spill. P e_stack_spill y)`,
+    MESON_TAC[SWAP_FORALL_THM]) and
+  swap_forall3 = prove
+   (`(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
+     (forall y e_stack_spill z. P e_stack_spill y z)`,
+    MESON_TAC[SUBROUTINE_SWAP_FORALL3]) and
+  append_lemma = prove
+   (`(forall (e:(A)list). P e) <=>
+     (forall e_stack_spill e. P (APPEND e_stack_spill e))`,
+    MESON_TAC[SUBROUTINE_APPEND_FORALL]) and
+  mono2lemma = prove
+   (`(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z))
+     ==> (!x y. P x y) ==> (!x z. Q x z)`,
+    MESON_TAC[SUBROUTINE_MONO_FORALL2]) and
+  mono3lemma = prove
+   (`(!(x:A). (!(y:B) (y':C). P x y y') ==>
+      (!(z:D) (z':E). Q x z z'))
+     ==> (!x y y'. P x y y') ==> (!x z z'. Q x z z')`,
+    MESON_TAC[SUBROUTINE_MONO_FORALL3]);;
 
 
 let GEN_X86_ADD_RETURN_STACK_TAC =
