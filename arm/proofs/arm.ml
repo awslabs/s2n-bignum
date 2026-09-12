@@ -547,45 +547,8 @@ let ARM_ACCSIM_TAC execth anums snums =
 (* ------------------------------------------------------------------------- *)
 
 let (ARM_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
-  let lemma = prove
-   (`P s /\ (!s':S. Q s' /\ C s s' ==> eventually step R s')
-     ==> ensures step P Q C ==> eventually step R s`,
-    STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [ensures] THEN
-    DISCH_THEN(MP_TAC o SPEC `s:S`) THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(MESON[]
-     `(!s:S. eventually step P s ==> eventually step Q s)
-      ==> eventually step P s ==> eventually step Q s`) THEN
-    GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
-    ASM_REWRITE_TAC[]) in
-  fun (execth1,_) sname (asl,w) ->
-    (* do sanity-check and print a warning message if it fails *)
-    (if not (is_imp w) ||
-      let the_lhs,the_rhs = dest_imp w in
-      not (is_comb the_lhs &&
-           name_of (fst (strip_comb the_lhs)) = "ensures" &&
-           is_comb the_rhs &&
-           name_of (fst (strip_comb the_rhs)) = "eventually")
-    then
-      Printf.printf "ARM_BIGSTEP_TAC: `ensures ... ==> eventually ...` expected, but got `%s`.\n"
-        (string_of_term w));
-    let sv = mk_var(sname,type_of(rand(rand w))) in
-    (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
-      (!simulation_precanon_thms) THEN
-     MATCH_MP_TAC lemma THEN CONJ_TAC THENL
-      [BETA_TAC THEN ASM_REWRITE_TAC[];
-       BETA_TAC THEN X_GEN_TAC sv THEN
-       REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [MAYCHANGE; SEQ_ID] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [GSYM SEQ_ASSOC] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_SEQ] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_THM] THEN
-       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
-       NONSELFMODIFYING_STATE_UPDATE_TAC
-        (MATCH_MP aligned_bytes_loaded_update execth1) THEN
-       ASSUMPTION_STATE_UPDATE_TAC THEN
-       MAYCHANGE_STATE_UPDATE_TAC THEN
-       DISCH_THEN(K ALL_TAC) THEN DISCARD_OLDSTATE_TAC sname])
-    (asl,w);;
+  GEN_BIGSTEP_TAC
+    "ARM" aligned_bytes_loaded_update DISCARD_OLDSTATE_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Go from |- aligned_bytes_loaded s (word pc) mc or the equivalent          *)
