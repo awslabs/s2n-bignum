@@ -160,6 +160,52 @@ useful information\n"
          true)
       else true);;
 
+(* Simulate through a core ensures theorem while preserving the surrounding
+   eventual-execution goal. Backends supply their code-loading update theorem
+   and old-state cleanup tactic. *)
+let GEN_BIGSTEP_TAC backend_name loaded_update discard_oldstate_tac =
+  let lemma = prove
+   (`P s /\ (!s':S. Q s' /\ C s s' ==> eventually step R s')
+     ==> ensures step P Q C ==> eventually step R s`,
+    STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [ensures] THEN
+    DISCH_THEN(MP_TAC o SPEC `s:S`) THEN ASM_REWRITE_TAC[] THEN
+    MATCH_MP_TAC(MESON[]
+     `(!s:S. eventually step P s ==> eventually step Q s)
+      ==> eventually step P s ==> eventually step Q s`) THEN
+    GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
+    ASM_REWRITE_TAC[]) in
+  fun (execth1,_) sname (asl,w) ->
+    if not (is_imp w) ||
+       let the_lhs,the_rhs = dest_imp w in
+       not (is_comb the_lhs &&
+            name_of (fst (strip_comb the_lhs)) = "ensures" &&
+            is_comb the_rhs &&
+            name_of (fst (strip_comb the_rhs)) = "eventually")
+    then
+      Printf.printf
+        "%s_BIGSTEP_TAC: `ensures ... ==> eventually ...` expected, \
+but got `%s`.\n"
+        backend_name (string_of_term w);
+    let sv = mk_var(sname,type_of(rand(rand w))) in
+    (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
+      (!simulation_precanon_thms) THEN
+     MATCH_MP_TAC lemma THEN CONJ_TAC THENL
+      [BETA_TAC THEN ASM_REWRITE_TAC[];
+       BETA_TAC THEN X_GEN_TAC sv THEN
+       REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
+       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [MAYCHANGE; SEQ_ID] THEN
+       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [GSYM SEQ_ASSOC] THEN
+       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_SEQ] THEN
+       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_THM] THEN
+       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
+       NONSELFMODIFYING_STATE_UPDATE_TAC
+        (MATCH_MP loaded_update execth1) THEN
+       ASSUMPTION_STATE_UPDATE_TAC THEN
+       MAYCHANGE_STATE_UPDATE_TAC THEN
+       DISCH_THEN(K ALL_TAC) THEN
+       discard_oldstate_tac sname])
+    (asl,w);;
+
 (* The full step tactic leaves facts about earlier states in the context.
    SINGLE_STEP is the usual linear-execution interface: after constructing
    the successor state, it removes facts which mention only obsolete states
