@@ -34,25 +34,14 @@
 #   define S2N_BN_SIZE_DIRECTIVE(name) .size S2N_BN_SYMBOL(name), .-S2N_BN_SYMBOL(name)
 #endif
 
-// Enable branch target identification (BTI) support unless explicitly
-// disabled with -DNO_IBT. This is the Arm counterpart of the x86 _CET_ENDBR
-// machinery in _internal_s2n_bignum_x86.h, and follows the same policy: the
-// marker is emitted unconditionally by default, since BTI 'c' is encoded in
-// the hint space and is therefore interpreted as a NOP by all pre-Armv8.5-A
-// processors. The only cost is one instruction per entry point.
-//
-// AARCH64_VALID_CALL_TARGET is named to match AWS-LC's macro of the same name
-// (include/openssl/asm_base.h), so a file carrying AWS-LC's marker needs no
-// edit; if that header has already defined it, we leave its definition alone,
-// exactly as the x86 side defers to <cet.h> when the platform provides it.
-//
-// Unlike x86 CET, Arm BTI additionally requires a .note.gnu.property section
-// declaring GNU_PROPERTY_AARCH64_FEATURE_1_BTI: the loader only marks pages as
-// guarded when every input object carries that note. The property is combined
-// with GNU_PROPERTY_AARCH64_FEATURE_1_AND semantics, i.e. the linker ANDs it
-// across all objects, so a single object without the note silently disables
-// BTI for the whole program. That is why the note is emitted here rather than
-// left to the consumer.
+// Enable branch target identification (BTI) support unless explicitly disabled
+// with -DNO_IBT, mirroring the x86 _CET_ENDBR machinery. AARCH64_VALID_CALL_TARGET
+// is emitted at each entry point unconditionally by default, since BTI 'c' is in
+// the hint space and so behaves as a NOP on all pre-Armv8.5-A processors. The name
+// matches AWS-LC's macro, whose definition we defer to if already present, just as
+// the x86 side defers to <cet.h>. Unlike CET, BTI also needs a .note.gnu.property
+// section: it has GNU_PROPERTY_AARCH64_FEATURE_1_AND semantics, so one object
+// without the note silently disables BTI program-wide, hence emitting it here.
 
 #if NO_IBT
 #   if defined(AARCH64_VALID_CALL_TARGET)
