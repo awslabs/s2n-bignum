@@ -34,6 +34,48 @@
 #   define S2N_BN_SIZE_DIRECTIVE(name) .size S2N_BN_SYMBOL(name), .-S2N_BN_SYMBOL(name)
 #endif
 
+// Enable branch target identification (BTI) support unless explicitly
+// disabled with -DNO_IBT. This is the Arm counterpart of the x86 _CET_ENDBR
+// machinery in _internal_s2n_bignum_x86.h, and follows the same policy: the
+// marker is emitted unconditionally by default, since BTI 'c' is encoded in
+// the hint space and is therefore interpreted as a NOP by all pre-Armv8.5-A
+// processors. The only cost is one instruction per entry point.
+//
+// AARCH64_VALID_CALL_TARGET is named to match AWS-LC's macro of the same name
+// (include/openssl/asm_base.h), so a file carrying AWS-LC's marker needs no
+// edit; if that header has already defined it, we leave its definition alone,
+// exactly as the x86 side defers to <cet.h> when the platform provides it.
+//
+// Unlike x86 CET, Arm BTI additionally requires a .note.gnu.property section
+// declaring GNU_PROPERTY_AARCH64_FEATURE_1_BTI: the loader only marks pages as
+// guarded when every input object carries that note. The property is combined
+// with GNU_PROPERTY_AARCH64_FEATURE_1_AND semantics, i.e. the linker ANDs it
+// across all objects, so a single object without the note silently disables
+// BTI for the whole program. That is why the note is emitted here rather than
+// left to the consumer.
+
+#if NO_IBT
+#   if defined(AARCH64_VALID_CALL_TARGET)
+#     error "The s2n-bignum build option NO_IBT was configured, but AARCH64_VALID_CALL_TARGET is defined in this compilation unit. That is weird, so failing the build."
+#   endif
+#   define AARCH64_VALID_CALL_TARGET
+#elif !defined(AARCH64_VALID_CALL_TARGET)
+#   define AARCH64_VALID_CALL_TARGET hint #34 /* BTI c */
+#   ifndef __APPLE__
+        .pushsection .note.gnu.property, "a"
+        .balign 8
+        .long 4
+        .long 0x10
+        .long 0x5                 /* NT_GNU_PROPERTY_TYPE_0 */
+        .asciz "GNU"
+        .long 0xc0000000          /* GNU_PROPERTY_AARCH64_FEATURE_1_AND */
+        .long 4
+        .long 1                   /* GNU_PROPERTY_AARCH64_FEATURE_1_BTI */
+        .long 0
+        .popsection
+#   endif
+#endif
+
 // Variants of instructions including CFI (call frame information) annotations
 
 #define CFI_START .cfi_startproc

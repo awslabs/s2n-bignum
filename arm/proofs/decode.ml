@@ -323,6 +323,13 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11010101000000110010000000011111:32] ->
     SOME arm_NOP
 
+  // BTI c (hint #34), the branch target identification landing pad emitted at
+  // entry points by AARCH64_VALID_CALL_TARGET. Like the x86 ENDBR64 it has no
+  // effect on the architectural state visible to this model, so it is modelled
+  // as a no-op; see arm_BTI. Encoding 0xd503245f.
+  | [0b11010101000000110010010001011111:32] ->
+    SOME arm_BTI
+
   // SIMD ld,st operations
   // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback
   // Currently only supports sizes 128 and 64 (not 32, 16 or 8)
@@ -1820,6 +1827,41 @@ let define_from_elf name file =
 
 let define_assert_from_elf name file =
   define_assert_word_list name (term_of_bytes (load_elf_contents_arm file));;
+
+(*** Define a variant with the initial BTI landing pad trimmed away ***)
+
+(* Arm counterpart of the x86 `define_trimmed` in x86/proofs/decode.ml.
+   Defines `<name> = TRIM_LIST(4,0)(<mc>)`, i.e. the machine code with its
+   leading `BTI c` (one 4-byte instruction, emitted by
+   AARCH64_VALID_CALL_TARGET) removed, so that a single proof can cover both
+   the default build and a `-DNO_IBT` build in which the marker is absent.
+
+   Simpler than the x86 version in one respect: AArch64 has no RIP-relative
+   addressing, and its branches encode a *relative* offset, so dropping the
+   first instruction shifts every internal branch target and its origin by the
+   same amount and no displacement inside the bytelist needs adjusting. The
+   x86 version has to shift each `&pc + &n` literal by -4 for exactly that
+   reason.
+
+   Only the plain `mc = [bytes]` shape is supported. An mc theorem
+   parameterised over `pc` (as produced for relocated code) is rejected rather
+   than silently mishandled, since the correct treatment of its address
+   literals has not been established here. *)
+
+let define_trimmed =
+  let trim_tm = `TRIM_LIST(4,0):byte list->byte list`
+  and bl_ty = `:byte list` in
+  fun name th ->
+    let avs,_ = strip_forall(concl th) in
+    if avs <> [] then
+      failwith ("define_trimmed: " ^ name ^
+                ": pc-parameterised mc theorems are not supported")
+    else
+      let eth = CONV_RULE(RAND_CONV TRIM_LIST_CONV) (AP_TERM trim_tm th) in
+      let ldef =
+        try mk_mconst(name,bl_ty) with Failure _ -> mk_var(name,bl_ty) in
+      let def' = mk_eq(ldef,lhand(concl eth)) in
+      TRANS (new_definition def') eth;;
 
 let print_literal_from_elf file =
   let bs = load_elf_contents_arm file in

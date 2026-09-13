@@ -1453,6 +1453,20 @@ let arm_PMUL_VEC = define
 let arm_NOP = new_definition
   `arm_NOP = \s s':armstate. s = s'`;;
 
+(*** This is the BTI instruction (here BTI c, hint #34), the branch target
+ *** identification landing pad that AARCH64_VALID_CALL_TARGET emits at each
+ *** entry point. On processors implementing Armv8.5-A BTI, an indirect branch
+ *** to a guarded page must land on such an instruction or the CPU raises a
+ *** Branch Target Exception; on earlier processors it lies in the hint space
+ *** and executes as a NOP. Either way it makes no change to the architectural
+ *** state this model describes, so it is a no-op here. It is given its own
+ *** constant rather than reusing arm_NOP so that disassembly and machine-code
+ *** literals distinguish an intentional landing pad from padding, mirroring
+ *** the x86 side's separate x86_ENDBR64. ***)
+
+let arm_BTI = new_definition
+  `arm_BTI = \s s':armstate. s = s'`;;
+
 let arm_ORN = define
  `arm_ORN Rd Rm Rn =
     \s. let m = read Rm s
@@ -3739,6 +3753,7 @@ let ARM_OPERATION_CLAUSES =
        arm_MLS_VEC_ALT;
        arm_MOVI; arm_MOVK_ALT; arm_MOVN; arm_MOVZ; arm_MSUB;
        arm_MUL_VEC_ALT;
+       arm_BTI;
        arm_NOP;
        arm_ORN; arm_ORR; arm_ORR_VEC;
        arm_PMUL_VEC_ALT;
