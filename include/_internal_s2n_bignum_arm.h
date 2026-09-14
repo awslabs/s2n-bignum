@@ -53,9 +53,9 @@
 #   ifndef __APPLE__
         .pushsection .note.gnu.property, "a"
         .balign 8
-        .long 4
-        .long 0x10
-        .long 0x5                 /* NT_GNU_PROPERTY_TYPE_0 */
+        .long 4                   /* n_namesz: sizeof "GNU\0" */
+        .long 0x10                /* n_descsz: 16 bytes of property data */
+        .long 0x5                 /* n_type: NT_GNU_PROPERTY_TYPE_0 */
         .asciz "GNU"
         .long 0xc0000000          /* GNU_PROPERTY_AARCH64_FEATURE_1_AND */
         .long 4
