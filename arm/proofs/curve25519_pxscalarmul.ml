@@ -39,7 +39,6 @@ let curve25519_pxscalarmul_mc = define_assert_from_elf
   0xa90a07e0;       (* arm_STP X0 X1 SP (Immediate_Offset (iword (&160))) *)
   0xa9410660;       (* arm_LDP X0 X1 X19 (Immediate_Offset (iword (&16))) *)
   0xa90b07e0;       (* arm_STP X0 X1 SP (Immediate_Offset (iword (&176))) *)
-  0xa9420660;       (* arm_LDP X0 X1 X19 (Immediate_Offset (iword (&32))) *)
   0xa9007fe2;       (* arm_STP X2 XZR SP (Immediate_Offset (iword (&0))) *)
   0xa9017fff;       (* arm_STP XZR XZR SP (Immediate_Offset (iword (&16))) *)
   0xaa1f03f6;       (* arm_MOV X22 XZR *)
@@ -1829,7 +1828,7 @@ let LOCAL_MUL_P25519_TAC =
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -2274,7 +2273,7 @@ let LOCAL_SQR_P25519_TAC =
       !n. read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
       ==>
         aligned 16 (read SP t) /\
-        nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+        nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
         ==> ensures arm
              (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                   read PC s = pcin /\
@@ -2638,7 +2637,7 @@ let LOCAL_MUL_4_TAC =
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -3060,7 +3059,7 @@ let LOCAL_SQR_4_TAC =
       read(memory :> bytes(word_add (read p1 t) (word n1),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -3401,7 +3400,7 @@ let LOCAL_ADD_4_TAC =
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -3448,7 +3447,7 @@ let LOCAL_SUB_4_TAC =
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -3515,7 +3514,7 @@ let LOCAL_ADD_TWICE4_TAC =
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -3584,7 +3583,7 @@ let LOCAL_SUB_TWICE4_TAC =
       !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
       ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -3657,7 +3656,7 @@ let LOCAL_CMADD_4_TAC =
      !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
      ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4)
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
                 read PC s = pcin /\
@@ -3802,7 +3801,7 @@ let LOCAL_MUX_4_TAC =
      !n. read(memory :> bytes(word_add (read p2 t) (word n2),8 * 4)) t = n
      ==>
       aligned 16 (read SP t) /\
-      nonoverlapping (word pc,0x1980) (word_add (read p3 t) (word n3),8 * 4) /\
+      nonoverlapping (word pc,0x197c) (word_add (read p3 t) (word n3),8 * 4) /\
       nonoverlapping (stackpointer:int64,256) (res,64)
       ==> ensures arm
            (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
@@ -3902,7 +3901,7 @@ let CURVE25519_PXSCALARMUL_CORRECT = time prove
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
       [(res,64); (stackpointer,256)]
-      [(word pc,0x1980); (scalar,32); (point,32)] /\
+      [(word pc,0x197c); (scalar,32); (point,32)] /\
     nonoverlapping (res,64) (stackpointer,256)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\
@@ -3911,7 +3910,7 @@ let CURVE25519_PXSCALARMUL_CORRECT = time prove
               C_ARGUMENTS [res; scalar; point] s /\
               bignum_from_memory (scalar,4) s = n /\
               bignum_from_memory (point,4) s = X)
-         (\s. read PC s = word (pc + 0x1970) /\
+         (\s. read PC s = word (pc + 0x196c) /\
               !(f:A ring) P.
                   field f /\ ring_char f = p_25519 /\
                   P IN group_carrier(curve25519x_group f) /\
@@ -3931,7 +3930,7 @@ let CURVE25519_PXSCALARMUL_CORRECT = time prove
   REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
 
-  ENSURES_WHILE_PDOWN_TAC `256` `pc + 0x50` `pc + 0x18e4`
+  ENSURES_WHILE_PDOWN_TAC `256` `pc + 0x4c` `pc + 0x18e0`
    `\i s.
      (read SP s = stackpointer /\
       read X17 s = res /\
@@ -3973,7 +3972,7 @@ let CURVE25519_PXSCALARMUL_CORRECT = time prove
     RULE_ASSUM_TAC(CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
     BIGNUM_LDIGITIZE_TAC "x_" `read (memory :> bytes (point,8 * 4)) s0` THEN
-    ARM_STEPS_TAC CURVE25519_PXSCALARMUL_EXEC (1--17) THEN
+    ARM_STEPS_TAC CURVE25519_PXSCALARMUL_EXEC (1--16) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     CONV_TAC(ONCE_DEPTH_CONV BIGNUM_LEXPAND_CONV) THEN
     ASM_REWRITE_TAC[] THEN ASM_SIMP_TAC[DIV_LT] THEN
@@ -4281,7 +4280,7 @@ let CURVE25519_PXSCALARMUL_SUBROUTINE_CORRECT = time prove
     aligned 16 stackpointer /\
     ALLPAIRS nonoverlapping
       [(res,64); (word_sub stackpointer (word 288),288)]
-      [(word pc,0x1980); (scalar,32); (point,32)] /\
+      [(word pc,0x197c); (scalar,32); (point,32)] /\
     nonoverlapping (res,64) (word_sub stackpointer (word 288),288)
     ==> ensures arm
          (\s. aligned_bytes_loaded s (word pc) curve25519_pxscalarmul_mc /\

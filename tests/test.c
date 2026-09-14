@@ -1378,6 +1378,143 @@ uint8_t mldsa_rej_uniform_eta_table[] =
 #endif
 
 #ifdef __x86_64__
+// The x86_64 (AVX2) ML-DSA rejection-sampling eta functions use a
+// 2048-byte (256 x 8) shuffle table (mld_rej_uniform_table in mldsa-native),
+// distinct from the 4096-byte NEON table above. Byte-for-byte identical to
+// the table inlined in the x86 proofs (mldsa_rej_uniform_table).
+static const uint8_t mldsa_rej_uniform_eta_table_x86[2048] =
+{
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+    1,   0,   0,   0,   0,   0,   0,   0,   0,   1,   0,   0,   0,   0,   0,   0,
+    2,   0,   0,   0,   0,   0,   0,   0,   0,   2,   0,   0,   0,   0,   0,   0,
+    1,   2,   0,   0,   0,   0,   0,   0,   0,   1,   2,   0,   0,   0,   0,   0,
+    3,   0,   0,   0,   0,   0,   0,   0,   0,   3,   0,   0,   0,   0,   0,   0,
+    1,   3,   0,   0,   0,   0,   0,   0,   0,   1,   3,   0,   0,   0,   0,   0,
+    2,   3,   0,   0,   0,   0,   0,   0,   0,   2,   3,   0,   0,   0,   0,   0,
+    1,   2,   3,   0,   0,   0,   0,   0,   0,   1,   2,   3,   0,   0,   0,   0,
+    4,   0,   0,   0,   0,   0,   0,   0,   0,   4,   0,   0,   0,   0,   0,   0,
+    1,   4,   0,   0,   0,   0,   0,   0,   0,   1,   4,   0,   0,   0,   0,   0,
+    2,   4,   0,   0,   0,   0,   0,   0,   0,   2,   4,   0,   0,   0,   0,   0,
+    1,   2,   4,   0,   0,   0,   0,   0,   0,   1,   2,   4,   0,   0,   0,   0,
+    3,   4,   0,   0,   0,   0,   0,   0,   0,   3,   4,   0,   0,   0,   0,   0,
+    1,   3,   4,   0,   0,   0,   0,   0,   0,   1,   3,   4,   0,   0,   0,   0,
+    2,   3,   4,   0,   0,   0,   0,   0,   0,   2,   3,   4,   0,   0,   0,   0,
+    1,   2,   3,   4,   0,   0,   0,   0,   0,   1,   2,   3,   4,   0,   0,   0,
+    5,   0,   0,   0,   0,   0,   0,   0,   0,   5,   0,   0,   0,   0,   0,   0,
+    1,   5,   0,   0,   0,   0,   0,   0,   0,   1,   5,   0,   0,   0,   0,   0,
+    2,   5,   0,   0,   0,   0,   0,   0,   0,   2,   5,   0,   0,   0,   0,   0,
+    1,   2,   5,   0,   0,   0,   0,   0,   0,   1,   2,   5,   0,   0,   0,   0,
+    3,   5,   0,   0,   0,   0,   0,   0,   0,   3,   5,   0,   0,   0,   0,   0,
+    1,   3,   5,   0,   0,   0,   0,   0,   0,   1,   3,   5,   0,   0,   0,   0,
+    2,   3,   5,   0,   0,   0,   0,   0,   0,   2,   3,   5,   0,   0,   0,   0,
+    1,   2,   3,   5,   0,   0,   0,   0,   0,   1,   2,   3,   5,   0,   0,   0,
+    4,   5,   0,   0,   0,   0,   0,   0,   0,   4,   5,   0,   0,   0,   0,   0,
+    1,   4,   5,   0,   0,   0,   0,   0,   0,   1,   4,   5,   0,   0,   0,   0,
+    2,   4,   5,   0,   0,   0,   0,   0,   0,   2,   4,   5,   0,   0,   0,   0,
+    1,   2,   4,   5,   0,   0,   0,   0,   0,   1,   2,   4,   5,   0,   0,   0,
+    3,   4,   5,   0,   0,   0,   0,   0,   0,   3,   4,   5,   0,   0,   0,   0,
+    1,   3,   4,   5,   0,   0,   0,   0,   0,   1,   3,   4,   5,   0,   0,   0,
+    2,   3,   4,   5,   0,   0,   0,   0,   0,   2,   3,   4,   5,   0,   0,   0,
+    1,   2,   3,   4,   5,   0,   0,   0,   0,   1,   2,   3,   4,   5,   0,   0,
+    6,   0,   0,   0,   0,   0,   0,   0,   0,   6,   0,   0,   0,   0,   0,   0,
+    1,   6,   0,   0,   0,   0,   0,   0,   0,   1,   6,   0,   0,   0,   0,   0,
+    2,   6,   0,   0,   0,   0,   0,   0,   0,   2,   6,   0,   0,   0,   0,   0,
+    1,   2,   6,   0,   0,   0,   0,   0,   0,   1,   2,   6,   0,   0,   0,   0,
+    3,   6,   0,   0,   0,   0,   0,   0,   0,   3,   6,   0,   0,   0,   0,   0,
+    1,   3,   6,   0,   0,   0,   0,   0,   0,   1,   3,   6,   0,   0,   0,   0,
+    2,   3,   6,   0,   0,   0,   0,   0,   0,   2,   3,   6,   0,   0,   0,   0,
+    1,   2,   3,   6,   0,   0,   0,   0,   0,   1,   2,   3,   6,   0,   0,   0,
+    4,   6,   0,   0,   0,   0,   0,   0,   0,   4,   6,   0,   0,   0,   0,   0,
+    1,   4,   6,   0,   0,   0,   0,   0,   0,   1,   4,   6,   0,   0,   0,   0,
+    2,   4,   6,   0,   0,   0,   0,   0,   0,   2,   4,   6,   0,   0,   0,   0,
+    1,   2,   4,   6,   0,   0,   0,   0,   0,   1,   2,   4,   6,   0,   0,   0,
+    3,   4,   6,   0,   0,   0,   0,   0,   0,   3,   4,   6,   0,   0,   0,   0,
+    1,   3,   4,   6,   0,   0,   0,   0,   0,   1,   3,   4,   6,   0,   0,   0,
+    2,   3,   4,   6,   0,   0,   0,   0,   0,   2,   3,   4,   6,   0,   0,   0,
+    1,   2,   3,   4,   6,   0,   0,   0,   0,   1,   2,   3,   4,   6,   0,   0,
+    5,   6,   0,   0,   0,   0,   0,   0,   0,   5,   6,   0,   0,   0,   0,   0,
+    1,   5,   6,   0,   0,   0,   0,   0,   0,   1,   5,   6,   0,   0,   0,   0,
+    2,   5,   6,   0,   0,   0,   0,   0,   0,   2,   5,   6,   0,   0,   0,   0,
+    1,   2,   5,   6,   0,   0,   0,   0,   0,   1,   2,   5,   6,   0,   0,   0,
+    3,   5,   6,   0,   0,   0,   0,   0,   0,   3,   5,   6,   0,   0,   0,   0,
+    1,   3,   5,   6,   0,   0,   0,   0,   0,   1,   3,   5,   6,   0,   0,   0,
+    2,   3,   5,   6,   0,   0,   0,   0,   0,   2,   3,   5,   6,   0,   0,   0,
+    1,   2,   3,   5,   6,   0,   0,   0,   0,   1,   2,   3,   5,   6,   0,   0,
+    4,   5,   6,   0,   0,   0,   0,   0,   0,   4,   5,   6,   0,   0,   0,   0,
+    1,   4,   5,   6,   0,   0,   0,   0,   0,   1,   4,   5,   6,   0,   0,   0,
+    2,   4,   5,   6,   0,   0,   0,   0,   0,   2,   4,   5,   6,   0,   0,   0,
+    1,   2,   4,   5,   6,   0,   0,   0,   0,   1,   2,   4,   5,   6,   0,   0,
+    3,   4,   5,   6,   0,   0,   0,   0,   0,   3,   4,   5,   6,   0,   0,   0,
+    1,   3,   4,   5,   6,   0,   0,   0,   0,   1,   3,   4,   5,   6,   0,   0,
+    2,   3,   4,   5,   6,   0,   0,   0,   0,   2,   3,   4,   5,   6,   0,   0,
+    1,   2,   3,   4,   5,   6,   0,   0,   0,   1,   2,   3,   4,   5,   6,   0,
+    7,   0,   0,   0,   0,   0,   0,   0,   0,   7,   0,   0,   0,   0,   0,   0,
+    1,   7,   0,   0,   0,   0,   0,   0,   0,   1,   7,   0,   0,   0,   0,   0,
+    2,   7,   0,   0,   0,   0,   0,   0,   0,   2,   7,   0,   0,   0,   0,   0,
+    1,   2,   7,   0,   0,   0,   0,   0,   0,   1,   2,   7,   0,   0,   0,   0,
+    3,   7,   0,   0,   0,   0,   0,   0,   0,   3,   7,   0,   0,   0,   0,   0,
+    1,   3,   7,   0,   0,   0,   0,   0,   0,   1,   3,   7,   0,   0,   0,   0,
+    2,   3,   7,   0,   0,   0,   0,   0,   0,   2,   3,   7,   0,   0,   0,   0,
+    1,   2,   3,   7,   0,   0,   0,   0,   0,   1,   2,   3,   7,   0,   0,   0,
+    4,   7,   0,   0,   0,   0,   0,   0,   0,   4,   7,   0,   0,   0,   0,   0,
+    1,   4,   7,   0,   0,   0,   0,   0,   0,   1,   4,   7,   0,   0,   0,   0,
+    2,   4,   7,   0,   0,   0,   0,   0,   0,   2,   4,   7,   0,   0,   0,   0,
+    1,   2,   4,   7,   0,   0,   0,   0,   0,   1,   2,   4,   7,   0,   0,   0,
+    3,   4,   7,   0,   0,   0,   0,   0,   0,   3,   4,   7,   0,   0,   0,   0,
+    1,   3,   4,   7,   0,   0,   0,   0,   0,   1,   3,   4,   7,   0,   0,   0,
+    2,   3,   4,   7,   0,   0,   0,   0,   0,   2,   3,   4,   7,   0,   0,   0,
+    1,   2,   3,   4,   7,   0,   0,   0,   0,   1,   2,   3,   4,   7,   0,   0,
+    5,   7,   0,   0,   0,   0,   0,   0,   0,   5,   7,   0,   0,   0,   0,   0,
+    1,   5,   7,   0,   0,   0,   0,   0,   0,   1,   5,   7,   0,   0,   0,   0,
+    2,   5,   7,   0,   0,   0,   0,   0,   0,   2,   5,   7,   0,   0,   0,   0,
+    1,   2,   5,   7,   0,   0,   0,   0,   0,   1,   2,   5,   7,   0,   0,   0,
+    3,   5,   7,   0,   0,   0,   0,   0,   0,   3,   5,   7,   0,   0,   0,   0,
+    1,   3,   5,   7,   0,   0,   0,   0,   0,   1,   3,   5,   7,   0,   0,   0,
+    2,   3,   5,   7,   0,   0,   0,   0,   0,   2,   3,   5,   7,   0,   0,   0,
+    1,   2,   3,   5,   7,   0,   0,   0,   0,   1,   2,   3,   5,   7,   0,   0,
+    4,   5,   7,   0,   0,   0,   0,   0,   0,   4,   5,   7,   0,   0,   0,   0,
+    1,   4,   5,   7,   0,   0,   0,   0,   0,   1,   4,   5,   7,   0,   0,   0,
+    2,   4,   5,   7,   0,   0,   0,   0,   0,   2,   4,   5,   7,   0,   0,   0,
+    1,   2,   4,   5,   7,   0,   0,   0,   0,   1,   2,   4,   5,   7,   0,   0,
+    3,   4,   5,   7,   0,   0,   0,   0,   0,   3,   4,   5,   7,   0,   0,   0,
+    1,   3,   4,   5,   7,   0,   0,   0,   0,   1,   3,   4,   5,   7,   0,   0,
+    2,   3,   4,   5,   7,   0,   0,   0,   0,   2,   3,   4,   5,   7,   0,   0,
+    1,   2,   3,   4,   5,   7,   0,   0,   0,   1,   2,   3,   4,   5,   7,   0,
+    6,   7,   0,   0,   0,   0,   0,   0,   0,   6,   7,   0,   0,   0,   0,   0,
+    1,   6,   7,   0,   0,   0,   0,   0,   0,   1,   6,   7,   0,   0,   0,   0,
+    2,   6,   7,   0,   0,   0,   0,   0,   0,   2,   6,   7,   0,   0,   0,   0,
+    1,   2,   6,   7,   0,   0,   0,   0,   0,   1,   2,   6,   7,   0,   0,   0,
+    3,   6,   7,   0,   0,   0,   0,   0,   0,   3,   6,   7,   0,   0,   0,   0,
+    1,   3,   6,   7,   0,   0,   0,   0,   0,   1,   3,   6,   7,   0,   0,   0,
+    2,   3,   6,   7,   0,   0,   0,   0,   0,   2,   3,   6,   7,   0,   0,   0,
+    1,   2,   3,   6,   7,   0,   0,   0,   0,   1,   2,   3,   6,   7,   0,   0,
+    4,   6,   7,   0,   0,   0,   0,   0,   0,   4,   6,   7,   0,   0,   0,   0,
+    1,   4,   6,   7,   0,   0,   0,   0,   0,   1,   4,   6,   7,   0,   0,   0,
+    2,   4,   6,   7,   0,   0,   0,   0,   0,   2,   4,   6,   7,   0,   0,   0,
+    1,   2,   4,   6,   7,   0,   0,   0,   0,   1,   2,   4,   6,   7,   0,   0,
+    3,   4,   6,   7,   0,   0,   0,   0,   0,   3,   4,   6,   7,   0,   0,   0,
+    1,   3,   4,   6,   7,   0,   0,   0,   0,   1,   3,   4,   6,   7,   0,   0,
+    2,   3,   4,   6,   7,   0,   0,   0,   0,   2,   3,   4,   6,   7,   0,   0,
+    1,   2,   3,   4,   6,   7,   0,   0,   0,   1,   2,   3,   4,   6,   7,   0,
+    5,   6,   7,   0,   0,   0,   0,   0,   0,   5,   6,   7,   0,   0,   0,   0,
+    1,   5,   6,   7,   0,   0,   0,   0,   0,   1,   5,   6,   7,   0,   0,   0,
+    2,   5,   6,   7,   0,   0,   0,   0,   0,   2,   5,   6,   7,   0,   0,   0,
+    1,   2,   5,   6,   7,   0,   0,   0,   0,   1,   2,   5,   6,   7,   0,   0,
+    3,   5,   6,   7,   0,   0,   0,   0,   0,   3,   5,   6,   7,   0,   0,   0,
+    1,   3,   5,   6,   7,   0,   0,   0,   0,   1,   3,   5,   6,   7,   0,   0,
+    2,   3,   5,   6,   7,   0,   0,   0,   0,   2,   3,   5,   6,   7,   0,   0,
+    1,   2,   3,   5,   6,   7,   0,   0,   0,   1,   2,   3,   5,   6,   7,   0,
+    4,   5,   6,   7,   0,   0,   0,   0,   0,   4,   5,   6,   7,   0,   0,   0,
+    1,   4,   5,   6,   7,   0,   0,   0,   0,   1,   4,   5,   6,   7,   0,   0,
+    2,   4,   5,   6,   7,   0,   0,   0,   0,   2,   4,   5,   6,   7,   0,   0,
+    1,   2,   4,   5,   6,   7,   0,   0,   0,   1,   2,   4,   5,   6,   7,   0,
+    3,   4,   5,   6,   7,   0,   0,   0,   0,   3,   4,   5,   6,   7,   0,   0,
+    1,   3,   4,   5,   6,   7,   0,   0,   0,   1,   3,   4,   5,   6,   7,   0,
+    2,   3,   4,   5,   6,   7,   0,   0,   0,   2,   3,   4,   5,   6,   7,   0,
+    1,   2,   3,   4,   5,   6,   7,   0,   0,   1,   2,   3,   4,   5,   6,   7,
+};
+
+
 // Constants for the ML-KEM NTT and INTT functions and mulcache.
 // These are taken with no semantic change from mlkem-native
 // file "mlkem/native/x86_64/src/consts.c"
@@ -13683,21 +13820,32 @@ int test_mldsa_rej_uniform(void)
 
 int test_mldsa_rej_uniform_eta4(void)
 {
-#ifdef __x86_64__
-  return 0;
-#else
   uint64_t t, i;
   uint8_t inbuf[8*160];
   int32_t a[256], b[256];
   uint64_t ac, bc;
+#ifdef __x86_64__
+  // The x86 (AVX2) backend reads a fixed-size input buffer and a 2048-byte table.
+  const uint8_t *eta_table = mldsa_rej_uniform_eta_table_x86;
+  const uint64_t buflen = 272;
+#else
+  const uint8_t *eta_table = mldsa_rej_uniform_eta_table;
+#endif
 
   printf("Testing mldsa_rej_uniform_eta4_VARIABLE_TIME with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
-   { uint64_t buflen = 8 * ((rand() % 160) + 1);
+   {
+#ifndef __x86_64__
+     uint64_t buflen = 8 * ((rand() % 160) + 1);
+#endif
      for (i = 0; i < buflen; ++i) inbuf[i] = (uint8_t) rand();
      ac = reference_mldsa_rej_uniform_eta4(a,inbuf,buflen);
-     bc = mldsa_rej_uniform_eta4_VARIABLE_TIME(b,inbuf,(unsigned)buflen,mldsa_rej_uniform_eta_table);
+#ifdef __x86_64__
+     bc = mldsa_rej_uniform_eta4_VARIABLE_TIME_x86(b,inbuf,eta_table);
+#else
+     bc = mldsa_rej_uniform_eta4_VARIABLE_TIME(b,inbuf,(unsigned)buflen,eta_table);
+#endif
      if (ac != bc)
       { printf("Error in number of elements returned; code = %"PRIu64
                ", ref = %"PRIu64"\n",bc,ac);
@@ -13720,26 +13868,36 @@ int test_mldsa_rej_uniform_eta4(void)
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mldsa_rej_uniform_eta2(void)
 {
-#ifdef __x86_64__
-  return 0;
-#else
   uint64_t t, i;
   uint8_t inbuf[8*160];
   int32_t a[256], b[256];
   uint64_t ac, bc;
+#ifdef __x86_64__
+  // The x86 (AVX2) backend reads a fixed-size input buffer and a 2048-byte table.
+  const uint8_t *eta_table = mldsa_rej_uniform_eta_table_x86;
+  const uint64_t buflen = 136;
+#else
+  const uint8_t *eta_table = mldsa_rej_uniform_eta_table;
+#endif
 
   printf("Testing mldsa_rej_uniform_eta2_VARIABLE_TIME with %d cases\n",tests);
 
   for (t = 0; t < tests; ++t)
-   { uint64_t buflen = 8 * ((rand() % 160) + 1);
+   {
+#ifndef __x86_64__
+     uint64_t buflen = 8 * ((rand() % 160) + 1);
+#endif
      for (i = 0; i < buflen; ++i) inbuf[i] = (uint8_t) rand();
      ac = reference_mldsa_rej_uniform_eta2(a,inbuf,buflen);
-     bc = mldsa_rej_uniform_eta2_VARIABLE_TIME(b,inbuf,(unsigned)buflen,mldsa_rej_uniform_eta_table);
+#ifdef __x86_64__
+     bc = mldsa_rej_uniform_eta2_VARIABLE_TIME_x86(b,inbuf,eta_table);
+#else
+     bc = mldsa_rej_uniform_eta2_VARIABLE_TIME(b,inbuf,(unsigned)buflen,eta_table);
+#endif
      if (ac != bc)
       { printf("Error in number of elements returned; code = %"PRIu64
                ", ref = %"PRIu64"\n",bc,ac);
@@ -13762,7 +13920,6 @@ int test_mldsa_rej_uniform_eta2(void)
    }
   printf("All OK\n");
   return 0;
-#endif
 }
 
 int test_mldsa_caddq(void)
@@ -14471,6 +14628,246 @@ int test_mldsa_poly_use_hint_88(void)
 
     printf("All OK\n");
     return 0;
+#else
+    return 0;
+#endif
+}
+
+
+// Reference implementation of mldsa_chknorm.
+// Returns 1 if any |a[i]| >= bound, else 0. (mldsa-native mld_poly_chknorm.)
+uint64_t reference_mldsa_chknorm(const int32_t a[256], uint64_t bound)
+{
+    int i;
+    for (i = 0; i < 256; ++i) {
+        int32_t v = a[i];
+        int32_t av = (v < 0) ? -v : v;
+        if ((uint64_t)av >= bound) return 1;
+    }
+    return 0;
+}
+
+int test_mldsa_chknorm(void)
+{
+    // Skip test on non-aarch64 architectures (ARM-only in this PR)
+    if (get_arch_name() != ARCH_AARCH64) {
+        return 0;
+    }
+
+#ifdef __aarch64__
+    uint64_t t, i;
+    int32_t a[256] __attribute__((aligned(32)));
+    const uint64_t bound = 131072;  // representative non-negative bound (1 << 17)
+
+    printf("Testing mldsa_chknorm with %d cases\n", tests);
+
+    for (t = 0; t < tests; ++t) {
+        if ((t & 1) == 0) {
+            // All coefficients strictly below the bound (exercise return 0).
+            for (i = 0; i < 256; ++i)
+                a[i] = (int32_t)(random64() % (2 * bound - 1)) - (int32_t)(bound - 1);
+        } else {
+            // Span below and above the bound (exercise return 1).
+            for (i = 0; i < 256; ++i)
+                a[i] = (int32_t)(random64() % (4 * bound)) - (int32_t)(2 * bound);
+        }
+
+        uint64_t got = mldsa_chknorm(a, bound);
+        uint64_t ref = reference_mldsa_chknorm(a, bound);
+        if (got != ref) {
+            printf("Error in mldsa_chknorm; bound = %"PRIu64
+                   "; code = %"PRIu64" while reference = %"PRIu64"\n",
+                   bound, got, ref);
+            return 1;
+        }
+    }
+    printf("All OK\n");
+    return 0;
+#else
+    return 0;
+#endif
+}
+
+// Reference decomposition for ML-DSA, GAMMA2 parameterized.
+// Computes (a1, a0) with a = a1*2*GAMMA2 + a0, a0 in (-GAMMA2, GAMMA2] except the
+// border case a1 = (Q-1)/(2*GAMMA2) -> a1 = 0, a0 = a - Q. Matches mld_decompose
+// (mldsa-native rounding.h); a0 written back over the input buffer, a1 to the output.
+static void reference_mldsa_decompose(int32_t a1_out[256], int32_t a0_inout[256],
+                                      int gamma2)
+{
+    const int32_t Q = 8380417;
+    int i;
+    for (i = 0; i < 256; ++i) {
+        int32_t a = a0_inout[i];
+        int32_t a1 = (a + 127) >> 7;
+        if (gamma2 == (Q - 1) / 88) {
+            a1 = (a1 * 11275 + (1 << 23)) >> 24;
+            a1 ^= ((43 - a1) >> 31) & a1;  // if a1 > 43 set 0
+        } else {  // (Q-1)/32
+            a1 = (a1 * 1025 + (1 << 21)) >> 22;
+            a1 &= 15;
+        }
+        int32_t a0 = a - a1 * 2 * gamma2;
+        a0 -= (((Q - 1) / 2 - a0) >> 31) & Q;  // border: a0 -= Q when a0 > (Q-1)/2
+        a1_out[i] = a1;
+        a0_inout[i] = a0;
+    }
+}
+
+void reference_mldsa_decompose_32(int32_t a1[256], int32_t a0[256])
+{ reference_mldsa_decompose(a1, a0, 8380416 / 32); }
+
+void reference_mldsa_decompose_88(int32_t a1[256], int32_t a0[256])
+{ reference_mldsa_decompose(a1, a0, 8380416 / 88); }
+
+// The decompose routines are self-checked: run reference on a copy, assembly on
+// another copy, compare both output buffers.
+static int test_mldsa_decompose_impl(const char *name,
+    void (*asm_fn)(int32_t*, int32_t*), int gamma2)
+{
+    if (get_arch_name() != ARCH_AARCH64) return 0;
+#ifdef __aarch64__
+    uint64_t t, i;
+    int32_t a[256] __attribute__((aligned(32)));
+    int32_t a1_asm[256] __attribute__((aligned(32)));
+    int32_t a0_asm[256] __attribute__((aligned(32)));
+    int32_t a1_ref[256] __attribute__((aligned(32)));
+    int32_t a0_ref[256] __attribute__((aligned(32)));
+    printf("Testing %s with %d cases\n", name, tests);
+    for (t = 0; t < tests; ++t) {
+        for (i = 0; i < 256; ++i) a[i] = (int32_t)(random64() % 8380417);
+        for (i = 0; i < 256; ++i) { a0_asm[i] = a[i]; a0_ref[i] = a[i]; }
+        reference_mldsa_decompose(a1_ref, a0_ref, gamma2);
+        asm_fn(a1_asm, a0_asm);
+        for (i = 0; i < 256; ++i) {
+            if (a1_asm[i] != a1_ref[i] || a0_asm[i] != a0_ref[i]) {
+                printf("Error in %s element i = %"PRIu64"; a=%"PRId32
+                       " asm=(%"PRId32",%"PRId32") ref=(%"PRId32",%"PRId32")\n",
+                       name, i, a[i], a1_asm[i], a0_asm[i], a1_ref[i], a0_ref[i]);
+                return 1;
+            }
+        }
+    }
+    printf("All OK\n");
+    return 0;
+#else
+    (void)asm_fn; (void)gamma2; (void)name; return 0;
+#endif
+}
+
+int test_mldsa_decompose_32(void)
+{
+#ifdef __aarch64__
+    return test_mldsa_decompose_impl("mldsa_decompose_32", mldsa_decompose_32, 8380416/32);
+#else
+    return 0;
+#endif
+}
+
+int test_mldsa_decompose_88(void)
+{
+#ifdef __aarch64__
+    return test_mldsa_decompose_impl("mldsa_decompose_88", mldsa_decompose_88, 8380416/88);
+#else
+    return 0;
+#endif
+}
+
+// Reference unpack of packed z polynomial (mldsa-native mld_polyz_unpack).
+// gamma1_bits selects 18-bit (GAMMA1=2^17) or 20-bit (GAMMA1=2^19) packing.
+static void reference_mldsa_polyz_unpack(int32_t r[256], const uint8_t *a, int gamma1_bits)
+{
+    const int32_t GAMMA1 = (int32_t)1 << gamma1_bits;
+    int i;
+    if (gamma1_bits == 17) {
+        for (i = 0; i < 256 / 4; ++i) {
+            r[4*i+0] = a[9*i+0] | ((int32_t)a[9*i+1] << 8) | ((int32_t)a[9*i+2] << 16);
+            r[4*i+0] &= 0x3FFFF;
+            r[4*i+1] = (a[9*i+2] >> 2) | ((int32_t)a[9*i+3] << 6) | ((int32_t)a[9*i+4] << 14);
+            r[4*i+1] &= 0x3FFFF;
+            r[4*i+2] = (a[9*i+4] >> 4) | ((int32_t)a[9*i+5] << 4) | ((int32_t)a[9*i+6] << 12);
+            r[4*i+2] &= 0x3FFFF;
+            r[4*i+3] = (a[9*i+6] >> 6) | ((int32_t)a[9*i+7] << 2) | ((int32_t)a[9*i+8] << 10);
+            r[4*i+3] &= 0x3FFFF;
+            r[4*i+0] = GAMMA1 - r[4*i+0];
+            r[4*i+1] = GAMMA1 - r[4*i+1];
+            r[4*i+2] = GAMMA1 - r[4*i+2];
+            r[4*i+3] = GAMMA1 - r[4*i+3];
+        }
+    } else {  // gamma1_bits == 19
+        for (i = 0; i < 256 / 2; ++i) {
+            r[2*i+0] = a[5*i+0] | ((int32_t)a[5*i+1] << 8) | ((int32_t)a[5*i+2] << 16);
+            r[2*i+0] &= 0xFFFFF;
+            r[2*i+1] = (a[5*i+2] >> 4) | ((int32_t)a[5*i+3] << 4) | ((int32_t)a[5*i+4] << 12);
+            r[2*i+0] = GAMMA1 - r[2*i+0];
+            r[2*i+1] = GAMMA1 - r[2*i+1];
+        }
+    }
+}
+
+// Shuffle-index tables consumed by the AArch64 polyz_unpack routines (TBL lookup).
+// Values match mldsa-native's mld_polyz_unpack_{17,19}_indices.
+static const uint8_t mldsa_polyz_unpack_17_indices[64] = {
+    0,  1,  2,  255, 2,  3,  4,  255, 4,  5,  6,  255, 6,  7,  8,  255,
+    9,  10, 11, 255, 11, 12, 13, 255, 13, 14, 15, 255, 15, 16, 17, 255,
+    2,  3,  4,  255, 4,  5,  6,  255, 6,  7,  8,  255, 8,  9,  10, 255,
+    11, 12, 13, 255, 13, 14, 15, 255, 15, 28, 29, 255, 29, 30, 31, 255,
+};
+static const uint8_t mldsa_polyz_unpack_19_indices[64] = {
+    0,  1,  2,  255, 2,  3,  4,  255, 5,  6,  7,  255, 7,  8,  9,  255,
+    10, 11, 12, 255, 12, 13, 14, 255, 15, 16, 17, 255, 17, 18, 19, 255,
+    4,  5,  6,  255, 6,  7,  8,  255, 9,  10, 11, 255, 11, 12, 13, 255,
+    14, 15, 24, 255, 24, 25, 26, 255, 27, 28, 29, 255, 29, 30, 31, 255,
+};
+
+// polyz_unpack is ARM-suffixed (mldsa_polyz_unpack_NN_arm): arm takes a shuffle
+// table, x86 does not, so it is not a shared symbol.
+static int test_mldsa_polyz_unpack_impl(const char *name,
+    void (*asm_fn)(int32_t*, const uint8_t*, const uint8_t*),
+    const uint8_t *table, int gamma1_bits, int packed_bytes)
+{
+    if (get_arch_name() != ARCH_AARCH64) return 0;
+#ifdef __aarch64__
+    uint64_t t, i;
+    int32_t r_asm[256] __attribute__((aligned(32)));
+    int32_t r_ref[256] __attribute__((aligned(32)));
+    uint8_t buf[640] __attribute__((aligned(32)));
+    printf("Testing %s with %d cases\n", name, tests);
+    for (t = 0; t < tests; ++t) {
+        for (i = 0; i < (uint64_t)packed_bytes; ++i) buf[i] = (uint8_t)(random64() & 0xFF);
+        reference_mldsa_polyz_unpack(r_ref, buf, gamma1_bits);
+        asm_fn(r_asm, buf, table);
+        for (i = 0; i < 256; ++i) {
+            if (r_asm[i] != r_ref[i]) {
+                printf("Error in %s element i = %"PRIu64"; asm=%"PRId32" ref=%"PRId32"\n",
+                       name, i, r_asm[i], r_ref[i]);
+                return 1;
+            }
+        }
+    }
+    printf("All OK\n");
+    return 0;
+#else
+    (void)asm_fn; (void)table; (void)gamma1_bits; (void)packed_bytes; (void)name;
+    return 0;
+#endif
+}
+
+int test_mldsa_polyz_unpack_17(void)
+{
+#ifdef __aarch64__
+    return test_mldsa_polyz_unpack_impl("mldsa_polyz_unpack_17_arm",
+        mldsa_polyz_unpack_17_arm, mldsa_polyz_unpack_17_indices, 17, 576);
+#else
+    return 0;
+#endif
+}
+
+int test_mldsa_polyz_unpack_19(void)
+{
+#ifdef __aarch64__
+    return test_mldsa_polyz_unpack_impl("mldsa_polyz_unpack_19_arm",
+        mldsa_polyz_unpack_19_arm, mldsa_polyz_unpack_19_indices, 19, 640);
 #else
     return 0;
 #endif
@@ -17870,6 +18267,11 @@ int main(int argc, char *argv[])
   functionaltest(bmi,"edwards25519_scalarmuldouble",test_edwards25519_scalarmuldouble);
   functionaltest(all,"edwards25519_scalarmuldouble_alt",test_edwards25519_scalarmuldouble_alt);
   functionaltest(all,"mldsa_caddq",test_mldsa_caddq);
+  functionaltest(all,"mldsa_chknorm",test_mldsa_chknorm);
+  functionaltest(all,"mldsa_decompose_32",test_mldsa_decompose_32);
+  functionaltest(all,"mldsa_decompose_88",test_mldsa_decompose_88);
+  functionaltest(all,"mldsa_polyz_unpack_17",test_mldsa_polyz_unpack_17);
+  functionaltest(all,"mldsa_polyz_unpack_19",test_mldsa_polyz_unpack_19);
   functionaltest(all,"mldsa_intt",test_mldsa_intt);
   functionaltest(all,"mldsa_ntt",test_mldsa_ntt);
   functionaltest(all,"mldsa_nttunpack",test_mldsa_nttunpack);

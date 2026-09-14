@@ -446,7 +446,7 @@ Ledwards25519_scalarmulbase_standard:
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        lea     r10, [rip+edwards25519_scalarmulbase_constant]
+        lea     r10, [rip+S2N_BN_SYMBOL(edwards25519_scalarmulbase_constant)]
         lea     r11, [r10+8*12]
 
         mov     rax, [r10]
