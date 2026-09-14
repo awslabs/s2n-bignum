@@ -4929,6 +4929,42 @@ let subroutine_signatures = [
    ])
 );
 
+("mldsa_rej_uniform_eta2_VARIABLE_TIME_x86",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t[static 136]", (*is const?*)"true");
+     ("table", "uint8_t[static 2048]", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+    ("buf", "136"(* num elems *), 1(* elem bytesize *));
+    ("table", "2048"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("mldsa_rej_uniform_eta4_VARIABLE_TIME_x86",
+  ([(*args*)
+     ("r", "int32_t[static 256]", (*is const?*)"false");
+     ("buf", "uint8_t[static 272]", (*is const?*)"true");
+     ("table", "uint8_t[static 2048]", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+    ("buf", "272"(* num elems *), 1(* elem bytesize *));
+    ("table", "2048"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("r", "256"(* num elems *), 4(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("mlkem_basemul_k2",
   ([(*args*)
      ("r", "int16_t[static 256]", (*is const?*)"false");
