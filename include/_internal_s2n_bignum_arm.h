@@ -57,10 +57,10 @@
         .long 0x10                /* n_descsz: 16 bytes of property data */
         .long 0x5                 /* n_type: NT_GNU_PROPERTY_TYPE_0 */
         .asciz "GNU"
-        .long 0xc0000000          /* GNU_PROPERTY_AARCH64_FEATURE_1_AND */
-        .long 4
-        .long 1                   /* GNU_PROPERTY_AARCH64_FEATURE_1_BTI */
-        .long 0
+        .long 0xc0000000          /* pr_type: GNU_PROPERTY_AARCH64_FEATURE_1_AND */
+        .long 4                   /* pr_datasz: 4 bytes */
+        .long 1                   /* pr_data: GNU_PROPERTY_AARCH64_FEATURE_1_BTI */
+        .long 0                   /* pad to 8-byte alignment */
         .popsection
 #   endif
 #endif
