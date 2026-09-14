@@ -76,6 +76,7 @@ s/^([^/][^[]+)[[]([a-z_0-9]+)[]]/\1\(\2\)/
 s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *8\*([a-z][a-z_0-9]*) *\+ *([a-z_A-Z0-9]+)[]]/\1\4\(\2,\3,8\)/
 s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([a-z][a-z_0-9]*) *\+ *([a-z_A-Z0-9]+)[]]/\1\4\(\2,\3,1\)/
 s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *8\*([a-z][a-z_0-9]*) *\- *([a-z_A-Z0-9]+)[]]/\1\-\4\(\2,\3,8\)/
+s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([a-z][a-z_0-9]*) *\- *([a-z_A-Z0-9]+)[]]/\1\-\4\(\2,\3,1\)/
 s/^([^/][^[]+)[[](rip) *\+ *([a-z_A-Z0-9* ]+)[]]/\1\3\(\2\)/
 s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\+ *([A-Z0-9* ]+)[]]/\1\3\(\2\)/
 s/^([^/][^[]+)[[]([a-z][a-z_0-9]*) *\- *([A-Z0-9* ]+)[]]/\1\-\3\(\2\)/
@@ -106,6 +107,12 @@ s/([[(,.;: ])([re]ip)/\1\%\2/g
 s/([[(,.;: ])([xyz]mm[0-9]*)/\1\%\2/g
 
 # Add explicit sizes to instructions
+
+# Byte-sized zero-extending load: "movzx BYTE PTR mem, reg" -> "movzbl mem, reg".
+# The BYTE PTR size annotation is dropped and the mnemonic is given an explicit
+# operand-size suffix, as GNU as cannot otherwise infer the memory operand size.
+# This must run before the generic "BYTE PTR" strip below.
+s/^(([a-z_0-9]+\:)* +)movzx( +)BYTE PTR /\1movzbl\3/
 
 s/YMMWORD PTR//g
 s/ymmword ptr//g
