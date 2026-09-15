@@ -4,7 +4,7 @@
  *)
 
 (* ========================================================================= *)
-(* Shared support for the RV32 ML-DSA forward NTT implementations.           *)
+(* Shared support for the RV32 ML-DSA NTT implementations.                   *)
 (* ========================================================================= *)
 
 needs "riscv/proofs/mldsa_objects.ml";;
@@ -38,6 +38,27 @@ let RV32_SIMPLIFY_ABBREV_TAC =
   let readable =
     can (term_match [] `read X (s:riscvstate):int32 = whatever`) in
   GEN_SIMPLIFY_ABBREV_TAC readable;;
+
+(* Select the `(z,w)` Barrett pair stored at table-pair index k. *)
+
+let rv32_mldsa_ntt_pair = define
+ `rv32_mldsa_ntt_pair (k:num) =
+    ((iword (EL (2 * k) rv32_mldsa_ntt_zetas)):int32,
+     (iword (EL (2 * k + 1) rv32_mldsa_ntt_zetas)):int32)`;;
+
+let RV32_MLDSA_BARRETT_PAIR = prove
+ (`!p:(int32#int32). !a:int32.
+      word_sub
+       (word_mul a (FST p))
+       (word_mul
+        (word_subword
+         (word_mul
+          (word_sx a:int64)
+          (word_sx (SND p):int64))
+         (32,32):int32)
+        (word 8380417)) =
+      mldsa_barrett_mul p a`,
+  REWRITE_TAC[FORALL_PAIR_THM; mldsa_barrett_mul]);;
 
 (* One radix-4 forward butterfly as implemented by the machine code. The
    three table pairs supply the low-layer root and two high-layer roots. *)
@@ -75,6 +96,54 @@ let RV32_NTT_REWRITE_STORES_TAC =
    (fun label ->
       USE_THEN label (fun th -> ONCE_REWRITE_TAC[GSYM th]))
    ["store3"; "store2"; "store1"; "store0"];;
+
+let RV32_NTT_REWRITE_BODY_UPDATES_TAC =
+  MAP_EVERY
+   (fun n ->
+      USE_THEN ("body" ^ string_of_int n)
+       (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
+      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
+      ASM_REWRITE_TAC[])
+   (rev(1--28));;
+
+let RV32_NTT_FLAT_COEFFICIENT_NONOVERLAPPING = prove
+ (`!a:int32 i j.
+      i < 256 /\ j < 256 /\ ~(j = i)
+      ==> nonoverlapping
+           (word_add a (word(4 * j)),4)
+           (word_add a (word(4 * i)),4)`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[nonoverlapping] THEN
+  MATCH_MP_TAC NONOVERLAPPING_MODULO_OFFSET_BOTH THEN
+  REWRITE_TAC[DIMINDEX_32] THEN
+  SUBGOAL_THEN `j:num < i \/ i < j` STRIP_ASSUME_TAC THEN
+  ASM_ARITH_TAC);;
+
+let RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL = prove
+ (`!a:int32 i j.
+      i < 256 /\ j < 256 /\ ~(j = i)
+      ==> orthogonal_components
+           ((memory :> bytes32
+             (word_add a (word(4 * j))))
+            : (riscvstate,int32)component)
+           ((memory :> bytes32
+             (word_add a (word(4 * i))))
+            : (riscvstate,int32)component)`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN
+   `nonoverlapping
+      (word_add (a:int32) (word(4 * j)),4)
+      (word_add a (word(4 * i)),4)`
+  ASSUME_TAC THENL
+   [MATCH_MP_TAC
+     (SPECL [`a:int32`; `i:num`; `j:num`]
+       RV32_NTT_FLAT_COEFFICIENT_NONOVERLAPPING) THEN
+    ASM_REWRITE_TAC[];
+    ORTHOGONAL_COMPONENTS_TAC]);;
+
+let RV32_NTT_INDEX4_CASES = prove
+ (`!r. r < 4 ==> r = 0 \/ r = 1 \/ r = 2 \/ r = 3`,
+  ARITH_TAC);;
 
 let RV32_NTT_COEFFICIENT_NONOVERLAPPING = prove
  (`!a:int32 i j r q.
@@ -130,6 +199,200 @@ let RV32_NTT_READ_OVER_WRITES_TAC =
          ORTHOGONAL_COMPONENTS_TAC];
        tac])) g in
   tac;;
+
+let RV32_NTT_PHASE2_PREFIX_UNCHANGED = prove
+ (`!h l g j.
+      ~(h = g /\ l = j)
+      ==> ((h < g \/ h = g /\ l < j + 1) <=>
+           h < g \/ h = g /\ l < j)`,
+  ARITH_TAC);;
+
+let RV32_MEMORY_PRESERVED_BY_CONTROL_MAYCHANGE = prove
+ (`!s0 s1:riscvstate.
+      (MAYCHANGE [PC] ,, MAYCHANGE [events]) s0 s1
+      ==> read memory s1 = read memory s0`,
+  MAP_EVERY X_GEN_TAC [`s0:riscvstate`; `s1:riscvstate`] THEN
+  DISCH_TAC THEN
+  MATCH_MP_TAC
+   (ISPECL
+     [`memory`;
+      `MAYCHANGE [PC]`;
+      `MAYCHANGE [events]`;
+      `s0:riscvstate`; `s1:riscvstate`]
+     SEQ_PRESERVES_COMPONENT) THEN
+  ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
+    DISCH_TAC THEN
+    MATCH_MP_TAC
+     (ISPECL
+       [`memory`; `[PC]`; `u:riscvstate`; `v:riscvstate`]
+       MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
+    ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC;
+    MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
+    DISCH_TAC THEN
+    MATCH_MP_TAC
+     (ISPECL
+       [`memory`; `[events]`; `u:riscvstate`; `v:riscvstate`]
+       MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
+    ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC]);;
+
+let RV32_WORDLIST_PRESERVED_BY_CONTROL_MAYCHANGE = prove
+ (`!a:int32. !n s0 s1:riscvstate.
+      (MAYCHANGE [PC] ,, MAYCHANGE [events]) s0 s1
+      ==> wordlist_from_memory(a,n) s1:int32 list =
+          wordlist_from_memory(a,n) s0`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `read memory s1 = read memory s0` ASSUME_TAC THENL
+   [MATCH_MP_TAC RV32_MEMORY_PRESERVED_BY_CONTROL_MAYCHANGE THEN
+    ASM_REWRITE_TAC[];
+    REWRITE_TAC[wordlist_from_memory; READ_COMPONENT_COMPOSE] THEN
+    ASM_REWRITE_TAC[]]);;
+
+let RV32_MEMORY_PRESERVED_BY_OUTER_EXIT_MAYCHANGE = prove
+ (`!s0 s1:riscvstate.
+      (MAYCHANGE [PC] ,, MAYCHANGE [events] ,, MAYCHANGE [T2]) s0 s1
+      ==> read memory s1 = read memory s0`,
+  MAP_EVERY X_GEN_TAC [`s0:riscvstate`; `s1:riscvstate`] THEN
+  DISCH_TAC THEN
+  MATCH_MP_TAC
+   (ISPECL
+     [`memory`;
+      `MAYCHANGE [PC]`;
+      `MAYCHANGE [events] ,, MAYCHANGE [T2]`;
+      `s0:riscvstate`; `s1:riscvstate`]
+     SEQ_PRESERVES_COMPONENT) THEN
+  ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
+    DISCH_TAC THEN
+    MATCH_MP_TAC
+     (ISPECL
+       [`memory`; `[PC]`; `u:riscvstate`; `v:riscvstate`]
+       MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
+    ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC;
+    MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
+    DISCH_TAC THEN
+    MATCH_MP_TAC
+     (ISPECL
+       [`memory`;
+        `MAYCHANGE [events]`;
+        `MAYCHANGE [T2]`;
+        `u:riscvstate`; `v:riscvstate`]
+       SEQ_PRESERVES_COMPONENT) THEN
+    ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THEN
+    MAP_EVERY X_GEN_TAC [`w:riscvstate`; `x:riscvstate`] THEN
+    DISCH_TAC THENL
+     [MATCH_MP_TAC
+       (ISPECL
+         [`memory`; `[events]`; `w:riscvstate`; `x:riscvstate`]
+         MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
+      ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC;
+      MATCH_MP_TAC
+       (ISPECL
+         [`memory`; `[T2]`; `w:riscvstate`; `x:riscvstate`]
+         MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
+      ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC]]);;
+
+let RV32_WORDLIST_PRESERVED_BY_OUTER_EXIT_MAYCHANGE = prove
+ (`!a:int32. !n s0 s1:riscvstate.
+      (MAYCHANGE [PC] ,, MAYCHANGE [events] ,, MAYCHANGE [T2]) s0 s1
+      ==> wordlist_from_memory(a,n) s1:int32 list =
+          wordlist_from_memory(a,n) s0`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `read memory s1 = read memory s0` ASSUME_TAC THENL
+   [MATCH_MP_TAC RV32_MEMORY_PRESERVED_BY_OUTER_EXIT_MAYCHANGE THEN
+    ASM_REWRITE_TAC[];
+    REWRITE_TAC[wordlist_from_memory; READ_COMPONENT_COMPOSE] THEN
+    ASM_REWRITE_TAC[]]);;
+
+let RV32_NTT_PHASE12_TABLE_TAC =
+  USE_THEN "entry_step"
+   (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
+  REWRITE_TAC[wordlist_from_memory; READ_COMPONENT_COMPOSE] THEN
+  CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
+  USE_THEN "table_before"
+   (fun th ->
+     MATCH_ACCEPT_TAC
+      (REWRITE_RULE
+        [wordlist_from_memory; READ_COMPONENT_COMPOSE]
+        th));;
+
+let RV32_NTT_USE_STRONGER_PRE_TAC th =
+  let tm = concl th in
+  let p = rand(rator(rator tm)) in
+  let q = rand(rator tm) in
+  MATCH_MP_TAC ENSURES_PREPOSTCONDITION_THM THEN
+  MAP_EVERY EXISTS_TAC [p;q] THEN
+  REPEAT CONJ_TAC THENL
+   [BETA_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    FIRST_ASSUM (fun ath -> MATCH_MP_TAC (SPEC_ALL ath)) THEN
+    ASM_REWRITE_TAC[];
+    BETA_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    FIRST_ASSUM (fun ath -> MATCH_MP_TAC (SPEC_ALL ath)) THEN
+    ASM_REWRITE_TAC[];
+    MATCH_ACCEPT_TAC th];;
+
+let RV32_NTT_PHASE3_COEFFICIENT_ORTHOGONAL = prove
+ (`!a:int32 h l r g j q.
+      h < 16 /\ l < 4 /\ r < 4 /\
+      g < 16 /\ j < 4 /\ q < 4 /\
+      ~(h = g /\ l = j)
+      ==> orthogonal_components
+           ((memory :> bytes32
+             (word_add a
+              (word(4 * (16 * h + l + 4 * r)))))
+            : (riscvstate,int32)component)
+           ((memory :> bytes32
+             (word_add a
+              (word(4 * (16 * g + j + 4 * q)))))
+            : (riscvstate,int32)component)`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC
+   (SPECL
+     [`a:int32`;
+      `16 * g + j + 4 * q`;
+      `16 * h + l + 4 * r`]
+     RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_ARITH_TAC;
+    ASM_ARITH_TAC;
+    ASM_CASES_TAC `h:num = g` THENL
+     [FIRST_X_ASSUM SUBST_ALL_TAC THEN
+      ASM_CASES_TAC `r:num = q` THENL
+       [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_ARITH_TAC;
+        SUBGOAL_THEN `r:num < q \/ q < r` STRIP_ASSUME_TAC THENL
+         [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]];
+      SUBGOAL_THEN `h:num < g \/ g < h` STRIP_ASSUME_TAC THENL
+       [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]]]);;
+
+let RV32_NTT_PHASE3_USE_COEFFICIENT_TAC =
+  fun (asl,w as gl) ->
+    let th =
+      tryfind
+       (fun (_,th) ->
+         let vs,bod = strip_forall(concl th) in
+         if List.length vs = 3 && is_imp bod then th
+         else failwith "not the coefficient invariant")
+       asl in
+    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
+    (MATCH_MP_TAC th' THEN ASM_REWRITE_TAC[]) gl;;
+
+let RV32_NTT_PHASE3_FINAL_COEFFICIENT_TAC =
+  fun (asl,w as gl) ->
+    let th =
+      tryfind
+       (fun (_,th) ->
+         let vs,bod = strip_forall(concl th) in
+         if List.length vs = 3 && is_imp bod then th
+         else failwith "not the coefficient invariant")
+       asl in
+    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
+    let bounds =
+      CONJ (ASSUME `h < 16`)
+       (CONJ (ASSUME `l < 4`) (ASSUME `r < 4`)) in
+    ACCEPT_TAC(ASM_REWRITE_RULE[] (MATCH_MP th' bounds)) gl;;
 
 (* ========================================================================= *)
 (* Shared preservation of the RV32 ML-DSA zeta table.                    *)

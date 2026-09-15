@@ -140,15 +140,6 @@ let RV32_MLDSA_BARRETT_PAIR2 = prove
   CONV_TAC(DEPTH_CONV WORD_SX_CONV) THEN
   REFL_TAC);;
 
-let RV32_NTT_REWRITE_BODY_UPDATES_TAC =
-  MAP_EVERY
-   (fun n ->
-      USE_THEN ("body" ^ string_of_int n)
-       (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-      ASM_REWRITE_TAC[])
-   (rev(1--28));;
-
 let RV32_MLDSA_NTT_PHASE1_BODY = prove
  (`!a z:int32. !x:num->int32. !i pc.
       aligned 4 a /\
@@ -972,20 +963,6 @@ let RV32_MLDSA_NTT_PHASE2_OUTER_SETUP = prove
     NUM_RING `(24 + 24 * g) + 20 = 4 * (11 + 6 * g)`] THEN
   ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_RULE);;
-
-let RV32_MLDSA_BARRETT_PAIR = prove
- (`!p:(int32#int32). !a:int32.
-      word_sub
-       (word_mul a (FST p))
-       (word_mul
-        (word_subword
-         (word_mul
-          (word_sx a:int64)
-          (word_sx (SND p):int64))
-         (32,32):int32)
-        (word 8380417)) =
-      mldsa_barrett_mul p a`,
-  REWRITE_TAC[FORALL_PAIR_THM; mldsa_barrett_mul]);;
 
 let RV32_MLDSA_NTT_PHASE2_BODY = prove
  (`!a z:int32. !x:num->int32. !g j pc.
