@@ -58,3 +58,31 @@ let decode32_unique = prove
       ARITH_RULE `256 EXP 4 = 2 EXP 32`; SYM DIMINDEX_32;
       GSYM WORD_EQ; WORD_VAL] (AP_TERM `num_of_bytelist` t) in
     ACCEPT_TAC(REWRITE_RULE[REWRITE_RULE[t2] d1; OPTION_INJ] d2)));;
+
+let dest_cons4 =
+  let assert_byte n = function
+  | Comb(Const("word",_),a) -> dest_numeral a = num n
+  | _ -> false in
+  fun n t -> match t with
+  | Comb(Comb(Const("CONS",_),a1),Comb(Comb(Const("CONS",_),a2),
+      Comb(Comb(Const("CONS",_),a3),Comb(Comb(Const("CONS",_),a4),tm))))
+      when 0 <= n && n <= 0xffffffff &&
+           assert_byte (n land 0xff) a1 &&
+           assert_byte ((n lsr 8) land 0xff) a2 &&
+           assert_byte ((n lsr 16) land 0xff) a3 &&
+           assert_byte ((n lsr 24) land 0xff) a4 ->
+        tm
+  | _ ->
+      failwith ("dest_cons4: 4-byte instruction " ^ string_of_int n ^
+                " does not match " ^ string_of_term t);;
+
+let assert_word_list tm ls =
+  if type_of tm = `:byte list` then
+    let rec go = function
+    | [],Const("NIL",_) -> ()
+    | n::ns,tm -> go (ns,dest_cons4 n tm)
+    | _ -> failwith "assert_word_list" in
+    go (ls,tm)
+  else
+    failwith "assert_word_list";
+  tm;;
