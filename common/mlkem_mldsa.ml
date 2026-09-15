@@ -1824,6 +1824,86 @@ let CONGBOUND_MLDSA_MONTMUL = prove
     MATCH_MP lemma o CONJUNCT2) THEN
   INT_ARITH_TAC);;
 
+(* A fixed Montgomery table pair stores `(y,y * qinv)`. The pointwise RV32
+   routine instead receives y at run time and computes the second word with a
+   32-bit multiplication. This theorem proves that the computed pair satisfies
+   the same modulo-2^32 relation required by `CONGBOUND_MLDSA_MONTMUL`. *)
+
+let MLDSA_QINV_RUNTIME_PAIR = prove
+ (`!y:int32.
+    (&8380417 *
+     ival(word_sx (word_mul y (word 58728449)):int64))
+    rem &4294967296 =
+    ival(word_sx y:int64) rem &4294967296`,
+  GEN_TAC THEN
+  SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
+  REWRITE_TAC[INT_REM_EQ] THEN
+  MP_TAC(ISPECL [`y:int32`; `word 58728449:int32`]
+    ICONG_WORD_MUL) THEN
+  REWRITE_TAC[DIMINDEX_32] THEN
+  CONV_TAC WORD_REDUCE_CONV THEN
+  CONV_TAC(ONCE_DEPTH_CONV INT_REDUCE_CONV) THEN
+  DISCH_THEN(LABEL_TAC "wordmul") THEN
+  MATCH_MP_TAC INT_CONG_TRANS THEN
+  EXISTS_TAC
+   `&8380417 * (ival(y:int32) * &58728449):int` THEN
+  CONJ_TAC THENL
+   [MATCH_MP_TAC INT_CONG_LMUL THEN
+    USE_THEN "wordmul" MATCH_ACCEPT_TAC;
+    REWRITE_TAC[INT_MUL_AC; INT_MUL_LID; INT_MUL_RID] THEN
+    MATCH_MP_TAC
+     (REWRITE_RULE[INT_MUL_AC; INT_MUL_LID; INT_MUL_RID]
+      (SPECL
+        [`&8380417 * &58728449:int`;
+         `&1:int`;
+         `ival(y:int32)`;
+         `&4294967296:int`]
+        INT_CONG_RMUL)) THEN
+    REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REDUCE_CONV]);;
+
+(* Lift a congruence-and-bound fact for x through the run-time Montgomery
+   pair. The result holds for every int32 value y and gives both the
+   Montgomery-scaled product modulo q and explicit output bounds. *)
+
+let CONGBOUND_MLDSA_MONTMUL_RUNTIME = prove
+ (`!x x' lx ux.
+      ((ival x == x') (mod &8380417) /\
+       lx <= ival x /\ ival x <= ux)
+      ==> !y:int32.
+          (ival(mldsa_montmul
+             (word_sx y,
+              word_sx (word_mul y (word 58728449))) x) ==
+           &(inverse_mod 8380417 4294967296) * ival y * x')
+          (mod &8380417) /\
+          (min (ival y * lx) (ival y * ux) - &17996808462540799)
+          div &4294967296 <=
+          ival(mldsa_montmul
+            (word_sx y,
+             word_sx (word_mul y (word 58728449))) x) /\
+          ival(mldsa_montmul
+            (word_sx y,
+             word_sx (word_mul y (word 58728449))) x) <=
+          (max (ival y * lx) (ival y * ux) + &17996812765888511)
+          div &2 pow 32`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN X_GEN_TAC `y:int32` THEN
+  FIRST_X_ASSUM(fun th ->
+    MP_TAC(SPECL
+      [`word_sx (y:int32):int64`;
+       `word_sx (word_mul (y:int32) (word 58728449)):int64`]
+      (MATCH_MP CONGBOUND_MLDSA_MONTMUL th))) THEN
+  ANTS_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [MP_TAC(ISPEC `y:int32` IVAL_BOUND) THEN
+      REWRITE_TAC[DIMINDEX_32] THEN
+      SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN INT_ARITH_TAC;
+      MP_TAC(ISPEC `y:int32` IVAL_BOUND) THEN
+      REWRITE_TAC[DIMINDEX_32] THEN
+      SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
+      CONV_TAC NUM_REDUCE_CONV THEN INT_ARITH_TAC;
+      MATCH_ACCEPT_TAC MLDSA_QINV_RUNTIME_PAIR];
+    SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH]]);;
+
 let CONGBOUND_NTT_MONTMUL = prove
  (`!x x' lx ux.
        ((ival x == x') (mod &3329) /\ lx <= ival x /\ ival x <= ux)
