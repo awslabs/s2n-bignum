@@ -535,6 +535,58 @@ let CLOSE_ABBREVIATED_SAFETY_PROPERTY_TAC
        ]
      ]) (asl,w);;
 
+(* Materialize the justification produced by a tactic with one subgoal.
+   Abstract over variables and assumptions introduced by the tactic so that
+   subsequent work only has to bridge the resulting theorem. *)
+let MATERIALIZE_ONE_GOAL_TAC (tac:tactic):tactic =
+  fun ((asl0,w0) as goal0) ->
+    let ((mvs,inst),goals,just) = tac goal0 in
+    match goals with
+    | [asl1,w1] ->
+        let goal_terms asl w =
+          w::itlist
+            (fun (_,th) acc -> concl th::(hyp th @ acc))
+            asl [] in
+        let asms1 =
+          itlist
+            (fun (_,th) acc ->
+              union (insert (concl th) (hyp th)) acc)
+            asl1 [] in
+        let oldvars = freesl (goal_terms asl0 w0) in
+        let newvars = freesl (w1::asms1) in
+        let localvars = subtract newvars (union mvs oldvars) in
+        let package =
+          list_mk_forall
+            (localvars,itlist (fun a b -> mk_imp(a,b)) asms1 w1) in
+        let fake_subgoal =
+          funpow (length asms1) UNDISCH
+            (SPECL localvars (ASSUME package)) in
+        let cached = just null_inst [fake_subgoal] in
+        let bridge = DISCH package cached in
+        ((mvs,inst),goals,
+         fun i ths ->
+           match ths with
+           | [th] ->
+               let asms_i = map (instantiate i) asms1
+               and localvars_i = map (instantiate i) localvars
+               and package_i = instantiate i package in
+               let discharged = itlist DISCH asms_i th in
+               if exists
+                    (fun v -> exists (vfree_in v) (hyp discharged))
+                    localvars_i
+               then failwith
+                 "MATERIALIZE_ONE_GOAL_TAC: local variable escaped";
+               let packed = GENL localvars_i discharged in
+               let packed =
+                 if concl packed = package_i then packed
+                 else EQ_MP (ALPHA (concl packed) package_i) packed in
+               MP (INSTANTIATE_ALL i bridge) packed
+           | _ ->
+               failwith
+                 "MATERIALIZE_ONE_GOAL_TAC: bad theorem list")
+    | _ ->
+        failwith "MATERIALIZE_ONE_GOAL_TAC: expected one subgoal";;
+
 let rec WHILE_TAC (flag:bool ref) tac w =
   (if !flag then tac THEN WHILE_TAC flag tac else ALL_TAC) w;;
 
@@ -581,29 +633,35 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
             is_eq t && is_binary "read" (lhs t) &&
             intersect (frees t) public_vars = [])) THEN
 
-      let chunksize = 50 in
+      let chunksize = 125 in
       let i = ref 0 in
       let successful = ref true and hasnext = ref true in
-      WHILE_TAC hasnext (W (fun (_,_) ->
-        REPEAT_N chunksize (W (fun (asl,w) ->
-          (* find 'read RIP/PC ... = ..' and check it reached at dest_pc_addr *)
-          match List.find_opt (fun (_,th) ->
-              is_eq (concl th) && is_read_pc (lhs (concl th)))
-              asl with
-          | None ->
-            successful := false; hasnext := false; ALL_TAC
-          | Some (_,read_pc_th) ->
-            if rhs (concl read_pc_th) = dest_pc_addr
-            then (* Successful! *) (hasnext := false; ALL_TAC)
-            else (* Proceed *)
-              let _ = i := !i + 1 in
-              single_step_tac exec ("s" ^ string_of_int !i)))
-        THEN
+      WHILE_TAC hasnext
+        (MATERIALIZE_ONE_GOAL_TAC
+          (W (fun (_,_) ->
+            REPEAT_N chunksize (W (fun (asl,w) ->
+              (* find 'read RIP/PC ... = ..' and check it reached at
+                 dest_pc_addr *)
+              match List.find_opt (fun (_,th) ->
+                  is_eq (concl th) && is_read_pc (lhs (concl th)))
+                  asl with
+              | None ->
+                successful := false; hasnext := false; ALL_TAC
+              | Some (_,read_pc_th) ->
+                if rhs (concl read_pc_th) = dest_pc_addr
+                then (* Successful! *) (hasnext := false; ALL_TAC)
+                else (* Proceed *)
+                  let _ = i := !i + 1 in
+                  single_step_tac exec ("s" ^ string_of_int !i)))
+            THEN
 
-        (match tac_before_maychange_simp with
-         | Some tac -> tac | None -> ALL_TAC) THEN
-        SIMPLIFY_MAYCHANGES_TAC THEN
-        ABBREV_TRACE_TAC stored_abbrevs THEN CLARIFY_TAC)) THEN
+            (match tac_before_maychange_simp with
+             | Some tac -> tac | None -> ALL_TAC) THEN
+            SIMPLIFY_MAYCHANGES_TAC)) THEN
+         (* The stored abbreviation theorem must not retain a chunk-local
+            trace variable. *)
+         ABBREV_TRACE_TAC stored_abbrevs THEN
+         CLARIFY_TAC) THEN
 
       W (fun (asl,w) ->
         if not !successful
