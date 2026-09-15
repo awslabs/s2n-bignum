@@ -223,15 +223,23 @@ let arm_mldsa_pure_forward_ntt = define
     isum (0..255) (\j. f j * &1753 pow ((2 * k + 1) * j))
     rem &8380417`;;
 
-let arm_mldsa_forward_ntt = define
- `arm_mldsa_forward_ntt f k =
+(* Direct ML-DSA transform with bit-reversed output indices. ARM and the RV32
+   layered proofs use this same mathematical specification; the historical
+   ARM name remains as an alias. *)
+
+let mldsa_bitreverse_forward_ntt = define
+ `mldsa_bitreverse_forward_ntt f k =
     isum (0..255) (\j. f j * &1753 pow ((2 * bitreverse8 k + 1) * j))
     rem &8380417`;;
+
+let arm_mldsa_forward_ntt = define
+ `arm_mldsa_forward_ntt = mldsa_bitreverse_forward_ntt`;;
 
 let ARM_MLDSA_FORWARD_NTT = prove
  (`arm_mldsa_forward_ntt = reorder bitreverse8 o arm_mldsa_pure_forward_ntt`,
   REWRITE_TAC[FUN_EQ_THM; o_DEF; reorder] THEN
-  REWRITE_TAC[arm_mldsa_forward_ntt; arm_mldsa_pure_forward_ntt]);;
+  REWRITE_TAC[arm_mldsa_forward_ntt; mldsa_bitreverse_forward_ntt;
+              arm_mldsa_pure_forward_ntt]);;
 
 let INVERSE_NTT = prove
  (`inverse_ntt = tomont_3329 o pure_inverse_ntt o reorder bitreverse_pairs`,
@@ -292,13 +300,13 @@ let FORWARD_NTT_ALT = prove
   CONV_TAC INT_REM_DOWN_CONV THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC INT_ARITH);;
 
-let ARM_MLDSA_FORWARD_NTT_ALT = prove
- (`arm_mldsa_forward_ntt f k =
+let MLDSA_BITREVERSE_FORWARD_NTT_ALT = prove
+ (`mldsa_bitreverse_forward_ntt f k =
    isum (0..255)
         (\j. f j *
              (&1753 pow ((2 * bitreverse8 k + 1) * j)) rem &8380417)
     rem &8380417`,
-  REWRITE_TAC[arm_mldsa_forward_ntt] THEN MATCH_MP_TAC
+  REWRITE_TAC[mldsa_bitreverse_forward_ntt] THEN MATCH_MP_TAC
    (REWRITE_RULE[] (ISPEC
       `(\x y. x rem &8380417 = y rem &8380417)` ISUM_RELATED)) THEN
   REWRITE_TAC[INT_REM_EQ; FINITE_NUMSEG; INT_CONG_ADD] THEN
@@ -307,6 +315,15 @@ let ARM_MLDSA_FORWARD_NTT_ALT = prove
               GSYM INT_REM_EQ] THEN
   CONV_TAC INT_REM_DOWN_CONV THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC INT_ARITH);;
+
+let ARM_MLDSA_FORWARD_NTT_ALT = prove
+ (`arm_mldsa_forward_ntt f k =
+   isum (0..255)
+        (\j. f j *
+             (&1753 pow ((2 * bitreverse8 k + 1) * j)) rem &8380417)
+    rem &8380417`,
+  REWRITE_TAC[arm_mldsa_forward_ntt;
+              MLDSA_BITREVERSE_FORWARD_NTT_ALT]);;
 
 let AVX2_FORWARD_NTT_ALT = prove
  (`avx2_forward_ntt f k =
@@ -457,9 +474,19 @@ let MLDSA_FORWARD_NTT_CONV =
   GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
 
+(* Expand one bit-reversed forward-transform output with a concrete index.
+   For example,
 
-let ARM_MLDSA_FORWARD_NTT_CONV =
-  GEN_REWRITE_CONV I [ARM_MLDSA_FORWARD_NTT_ALT] THENC
+     MLDSA_BITREVERSE_FORWARD_NTT_CONV
+       `mldsa_bitreverse_forward_ntt f 7`
+
+   produces the corresponding 256-term linear expression, leaving `f`
+   symbolic and reducing every bit reversal and root power. The EVAL
+   conversion is the lower-level suffix used after the transform has already
+   been rewritten to `MLDSA_BITREVERSE_FORWARD_NTT_ALT`. The ARM wrapper has
+   the same input shape for `arm_mldsa_forward_ntt`. *)
+
+let MLDSA_BITREVERSE_FORWARD_NTT_EVAL_CONV =
   LAND_CONV EXPAND_ISUM_CONV THENC
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
@@ -467,21 +494,36 @@ let ARM_MLDSA_FORWARD_NTT_CONV =
   GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
 
-let arm_mldsa_inverse_ntt = define
- `arm_mldsa_inverse_ntt f k =
+let MLDSA_BITREVERSE_FORWARD_NTT_CONV =
+  GEN_REWRITE_CONV I [MLDSA_BITREVERSE_FORWARD_NTT_ALT] THENC
+  MLDSA_BITREVERSE_FORWARD_NTT_EVAL_CONV;;
+
+let ARM_MLDSA_FORWARD_NTT_CONV =
+  GEN_REWRITE_CONV I [ARM_MLDSA_FORWARD_NTT_ALT] THENC
+  MLDSA_BITREVERSE_FORWARD_NTT_EVAL_CONV;;
+
+(* Direct inverse transform with bit-reversed input indices. ARM and the RV32
+   layered proofs use this same mathematical specification; the historical
+   ARM name remains as an alias. *)
+
+let mldsa_bitreverse_inverse_ntt = define
+ `mldsa_bitreverse_inverse_ntt f k =
     (&2 pow 24 * isum (0..255)
                  (\j. f(bitreverse8 j) *
                       &731434 pow ((2 * j + 1) * k)))
     rem &8380417`;;
 
-let ARM_MLDSA_INVERSE_NTT_ALT = prove
- (`arm_mldsa_inverse_ntt f k =
+let arm_mldsa_inverse_ntt = define
+ `arm_mldsa_inverse_ntt = mldsa_bitreverse_inverse_ntt`;;
+
+let MLDSA_BITREVERSE_INVERSE_NTT_ALT = prove
+ (`mldsa_bitreverse_inverse_ntt f k =
     isum (0..255)
          (\j. f(bitreverse8 j) *
               (&16777216 * (&731434 pow ((2 * j + 1) * k)) rem &8380417)
               rem &8380417)
     rem &8380417`,
-  REWRITE_TAC[arm_mldsa_inverse_ntt; GSYM ISUM_LMUL] THEN
+  REWRITE_TAC[mldsa_bitreverse_inverse_ntt; GSYM ISUM_LMUL] THEN
   MATCH_MP_TAC (REWRITE_RULE[] (ISPEC
       `(\x y. x rem &8380417 = y rem &8380417)` ISUM_RELATED)) THEN
   REWRITE_TAC[INT_REM_EQ; FINITE_NUMSEG; INT_CONG_ADD] THEN
@@ -491,14 +533,43 @@ let ARM_MLDSA_INVERSE_NTT_ALT = prove
   CONV_TAC INT_REM_DOWN_CONV THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC INT_ARITH);;
 
-let ARM_MLDSA_INVERSE_NTT_CONV =
-  GEN_REWRITE_CONV I [ARM_MLDSA_INVERSE_NTT_ALT] THENC
+let ARM_MLDSA_INVERSE_NTT_ALT = prove
+ (`arm_mldsa_inverse_ntt f k =
+    isum (0..255)
+         (\j. f(bitreverse8 j) *
+              (&16777216 * (&731434 pow ((2 * j + 1) * k)) rem &8380417)
+              rem &8380417)
+    rem &8380417`,
+  REWRITE_TAC[arm_mldsa_inverse_ntt;
+              MLDSA_BITREVERSE_INVERSE_NTT_ALT]);;
+
+(* Expand one bit-reversed inverse-transform output with a concrete index.
+   For example,
+
+     MLDSA_BITREVERSE_INVERSE_NTT_CONV
+       `mldsa_bitreverse_inverse_ntt f 7`
+
+   produces the corresponding 256-term linear expression, leaving `f`
+   symbolic and reducing every bit reversal and inverse-root power. The EVAL
+   conversion is the lower-level suffix used after the transform has already
+   been rewritten to `MLDSA_BITREVERSE_INVERSE_NTT_ALT`. The ARM wrapper has
+   the same input shape for `arm_mldsa_inverse_ntt`. *)
+
+let MLDSA_BITREVERSE_INVERSE_NTT_EVAL_CONV =
   LAND_CONV EXPAND_ISUM_CONV THENC
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
+
+let MLDSA_BITREVERSE_INVERSE_NTT_CONV =
+  GEN_REWRITE_CONV I [MLDSA_BITREVERSE_INVERSE_NTT_ALT] THENC
+  MLDSA_BITREVERSE_INVERSE_NTT_EVAL_CONV;;
+
+let ARM_MLDSA_INVERSE_NTT_CONV =
+  GEN_REWRITE_CONV I [ARM_MLDSA_INVERSE_NTT_ALT] THENC
+  MLDSA_BITREVERSE_INVERSE_NTT_EVAL_CONV;;
 
 let MLDSA_INVERSE_NTT_ALT = prove
  (`mldsa_inverse_ntt f k =
