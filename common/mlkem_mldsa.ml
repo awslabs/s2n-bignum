@@ -769,6 +769,38 @@ let mldsa_montmul = define
       (word 8380417:int64))
     (32,32))`;;
 
+(* Barrett multiplication by a table pair `(z,w)`. The intended table
+   relation is `w` close to `z * 2^32 / 8380417`; the computation subtracts
+   the modulus times the signed high half of `a * w` from `a * z`.
+   `MLDSA_BARRETT_MUL_SLOW` below proves the equivalent RV32 shift/add form
+   that avoids multiplying by the fixed modulus. *)
+
+let mldsa_barrett_mul = define
+ `mldsa_barrett_mul ((z:int32),(w:int32)) (a:int32):int32 =
+    word_sub
+      (word_mul a z)
+      (word_mul
+        (word_subword
+          (word_mul (word_sx a:int64) (word_sx w:int64))
+          (32,32):int32)
+        (word 8380417))`;;
+
+let MLDSA_BARRETT_MUL_SLOW = prove
+ (`!z:int32. !w:int32. !a:int32.
+    let t =
+      word_subword
+       (word_mul (word_sx a:int64) (word_sx w:int64))
+       (32,32):int32 in
+    word_sub
+      (word_add
+        (word_sub (word_mul a z) t)
+        (word_shl t 13))
+      (word_shl (word_shl t 13) 10) =
+    mldsa_barrett_mul (z,w) a`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[LET_DEF; LET_END_DEF; mldsa_barrett_mul] THEN
+  CONV_TAC WORD_RULE);;
+
 let mldsa_pointwise = define
  `mldsa_pointwise (f:num->int) (g:num->int) i =
     (f i * g i * &(inverse_mod 8380417 4294967296)) rem &8380417`;;
@@ -877,6 +909,23 @@ let WORD_ADD_MLDSA_MONTMUL_ALT = prove
 (* ------------------------------------------------------------------------- *)
 (* Auxiliary lemmas for ML-DSA multiplication                                *)
 (* ------------------------------------------------------------------------- *)
+
+let IVAL_WORD_MUL_SX32_64_EXACT = prove
+ (`!x:int32. !y:int32.
+    ival(word_mul (word_sx x:int64) (word_sx y:int64)) =
+    ival x * ival y`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[WORD_RULE
+   `word_mul a b:int64 = iword(ival a * ival b)`] THEN
+  SIMP_TAC[IVAL_WORD_SX; DIMINDEX_32; DIMINDEX_64; ARITH] THEN
+  MATCH_MP_TAC IVAL_IWORD THEN
+  REWRITE_TAC[DIMINDEX_64] THEN
+  MP_TAC(ISPEC `x:int32` IVAL_BOUND) THEN
+  MP_TAC(ISPEC `y:int32` IVAL_BOUND) THEN
+  REWRITE_TAC[DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  STRIP_TAC THEN STRIP_TAC THEN
+  BOUNDER_TAC[]);;
 
 (* ival of sign-extended product equals integer product when bounded by Q-1 *)
 let IVAL_WORD_MUL_SX32_64 = prove(
@@ -1612,6 +1661,83 @@ let IVAL_WORD_SUBWORD_DIV_32 = prove
   REWRITE_TAC[GSYM DIMINDEX_16; GSYM IVAL_WORD_ISHR] THEN
   GEN_TAC THEN REWRITE_TAC[DIMINDEX_16] THEN BITBLAST_TAC);;
 
+let CONGBOUND_MLDSA_BARRETT_MUL = prove
+ (`!a a' l u.
+      ((ival a == a') (mod &8380417) /\
+       l <= ival a /\ ival a <= u)
+      ==> !z:int32. !w:int32.
+          (max (abs l) (abs u) *
+             abs(&4294967296 * ival z - &8380417 * ival w) +
+             &35993616933462015) div &4294967296
+          <= &2147483647
+          ==> (ival(mldsa_barrett_mul (z,w) a) ==
+               a' * ival z) (mod &8380417) /\
+              --((max (abs l) (abs u) *
+                    abs(&4294967296 * ival z - &8380417 * ival w) +
+                    &35993616933462015) div &4294967296)
+              <= ival(mldsa_barrett_mul (z,w) a) /\
+              ival(mldsa_barrett_mul (z,w) a) <=
+              (max (abs l) (abs u) *
+                 abs(&4294967296 * ival z - &8380417 * ival w) +
+                 &35993616933462015) div &4294967296`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REPEAT GEN_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[mldsa_barrett_mul] THEN
+  REWRITE_TAC[WORD_RULE
+   `word_sub (word_mul a z)
+      (word_mul t (word 8380417):int32) =
+    iword(ival a * ival z - ival t * &8380417)`] THEN
+  REWRITE_TAC[IVAL_WORD_SUBWORD_DIV_32;
+              IVAL_WORD_MUL_SX32_64_EXACT] THEN
+  MATCH_MP_TAC(MESON[]
+   `(x == k) (mod n) /\
+    (lo <= x /\ x <= hi ==> ival(iword x:int32) = x) /\
+    (lo <= x /\ x <= hi)
+    ==> (ival(iword x:int32) == k) (mod n) /\
+        lo <= ival(iword x:int32) /\
+        ival(iword x:int32) <= hi`) THEN
+  ASM_SIMP_TAC[INTEGER_RULE
+   `(a:int == a') (mod q)
+    ==> (a * z - (a * w) div d * q == a' * z) (mod q)`] THEN
+  CONJ_TAC THENL
+   [REPEAT STRIP_TAC THEN MATCH_MP_TAC IVAL_IWORD THEN
+    REWRITE_TAC[DIMINDEX_32; ARITH] THEN ASM_INT_ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `abs(ival(a:int32) *
+        (&4294967296 * ival(z:int32) -
+         &8380417 * ival(w:int32)))
+    <= max (abs l) (abs u) *
+       abs(&4294967296 * ival(z:int32) -
+           &8380417 * ival(w:int32))`
+  ASSUME_TAC THENL
+   [REWRITE_TAC[INT_ABS_MUL] THEN
+    ASM_SIMP_TAC[INT_LE_RMUL; INT_ABS_POS; INT_ARITH
+     `l:int <= x /\ x <= u
+      ==> abs x <= max (abs l) (abs u)`];
+    ALL_TAC] THEN
+  MP_TAC(SPECL
+   [`ival(a:int32) * ival(w:int32):int`;
+    `&4294967296:int`] INT_DIVISION) THEN
+  CONV_TAC(ONCE_DEPTH_CONV INT_REDUCE_CONV) THEN
+  STRIP_TAC THEN
+  MP_TAC(SPECL
+   [`ival(a:int32):int`; `ival(z:int32):int`;
+    `ival(w:int32):int`;
+    `(ival(a:int32) * ival(w:int32)) div &4294967296`;
+    `(ival(a:int32) * ival(w:int32)) rem &4294967296`]
+   (INTEGER_RULE
+    `!a z w t r:int.
+      a * w = t * &4294967296 + r
+      ==> &4294967296 * (a * z - t * &8380417) =
+          a * (&4294967296 * z - &8380417 * w) +
+          &8380417 * r`)) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  REWRITE_TAC[INT_ARITH
+   `--(b div d) <= x <=> --x <= b div d`] THEN
+  ASM_SIMP_TAC[INT_LE_DIV_EQ; INT_OF_NUM_LT; ARITH] THEN
+  ASM_INT_ARITH_TAC);;
+
 let MLDSA_POINTWISE_MONTRED_LEMMA = prove
  (`!x:int64. &2 pow 32 * ival(mldsa_pointwise_montred x) =
        ival(word_sub x
@@ -2022,6 +2148,13 @@ let ASM_CONGBOUND_STEP rule tm =
         let ktm,btm = dest_pair kb and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 8380417) th0 in
         let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_ARM_MLDSA_BARMUL th0') in
+        CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
+    | Comb(Comb(Const("mldsa_barrett_mul",_),zw),t) ->
+        let ztm,wtm = dest_pair zw and th0 = rule t in
+        let th0' = WEAKEN_INTCONG_RULE (num 8380417) th0 in
+        let th1 =
+          SPECL [ztm;wtm]
+            (MATCH_MP CONGBOUND_MLDSA_BARRETT_MUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("montmul_x86",_),ltm),rtm) ->
         let lth = WEAKEN_INTCONG_RULE (num 3329) (rule ltm)
