@@ -490,21 +490,57 @@ let ABBREV_TRACE_TAC (stored_abbrevs:thm list ref)=
         ALL_TAC)
       (asl,w);;
 
+(* Close the generated safety property without expanding the stored trace
+   abbreviations. Fold each local definition into a closed nested function
+   and reuse the compact memaccess_inbounds assumption. *)
+let CLOSE_ABBREVIATED_SAFETY_PROPERTY_TAC
+    (stored_abbrevs:thm list ref):tactic =
+  fun (asl,w) ->
+    let _,body = dest_exists w in
+    let event_eq,f_events_eq =
+      match conjuncts body with
+      | event_eq::f_events_eq::_ -> event_eq,f_events_eq
+      | _ -> failwith "expected the generated safety property" in
+    let compact_trace,_ =
+      dest_binary "APPEND" (lhs event_eq) in
+    let f_events,args = strip_comb (rhs f_events_eq) in
+    let open_f_events = list_mk_abs(args,compact_trace) in
+    let close_one (acc,acc_equals_open) th =
+      let definition,trace_var = dest_eq (concl th) in
+      let binder = mk_abs(trace_var,acc) in
+      let closed_acc = mk_comb(binder,definition) in
+      let closed_acc_equals_acc =
+        CONV_RULE (RAND_CONV BETA_CONV)
+          (AP_TERM binder th) in
+      closed_acc,TRANS closed_acc_equals_acc acc_equals_open in
+    let _,closed_equals_open =
+      List.fold_left close_one
+        (open_f_events,REFL open_f_events)
+        !stored_abbrevs in
+    let compact_equals_closed =
+      let applied_equals_open =
+        List.fold_left
+          (fun th arg -> AP_THM th arg)
+          closed_equals_open args in
+      SYM
+        (CONV_RULE
+          (RAND_CONV (DEPTH_CONV BETA_CONV))
+          applied_equals_open) in
+    (EXISTS_TAC compact_trace THEN
+     CONJ_TAC THENL [
+       REFL_TAC;
+       CONJ_TAC THENL [
+         UNIFY_ACCEPT_TAC [f_events] compact_equals_closed;
+         DISCHARGE_MEMACCESS_INBOUNDS_TAC
+       ]
+     ]) (asl,w);;
+
 let rec WHILE_TAC (flag:bool ref) tac w =
   (if !flag then tac THEN WHILE_TAC flag tac else ALL_TAC) w;;
 
 (* public_vars describe the HOL Light variables that will contain public
    information. This is for faster symbolic simulation. *)
 let GEN_PROVE_SAFETY_SPEC_TAC =
-  let pth =
-    prove(`forall (e:((A)address_uarch_event)list) e2.
-        e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
-    MESON_TAC[APPEND]) in
-  let qth =
-    prove(`memaccess_inbounds
-              ([]:((A)address_uarch_event)list) [] []`,
-          MESON_TAC[memaccess_inbounds_def;ALL]) in
-
   let mainfn ?(public_vars:term list option)
     ?(tac_before_maychange_simp:tactic option) exec
     (extra_unpack_thms:thm list) single_step_tac
@@ -521,7 +557,6 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       if quantvars = [] || name_of (hd quantvars) <> "e" ||
          not (is_uarch_event_list_ty (type_of (hd quantvars)))
       then failwith "The goal must be `exists f_events. forall e ...`" else
-      let e2_var = mk_var("e2",type_of (hd quantvars)) in
 
       (* The destination PC *)
       let dest_pc_addr =
@@ -577,24 +612,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
 
       ENSURES_FINAL_STATE_TAC THEN
       ASM_REWRITE_TAC[] THEN
-      W (fun (asl,w) -> REWRITE_TAC(map GSYM !stored_abbrevs)) THEN
-
-      (* e2 can be []! *)
-      REWRITE_TAC[pth] THEN
-      (X_META_EXISTS_TAC e2_var ORELSE
-       (PRINT_GOAL_TAC THEN FAIL_TAC "Not `exists e2. ...`?")) THEN
-      CONJ_TAC THENL [
-        AP_THM_TAC THEN AP_TERM_TAC THEN
-        REWRITE_TAC[APPEND] THEN UNIFY_REFL_TAC;
-        ALL_TAC
-      ] THEN
-      (* e2 = f_events <public info> *)
-      CONJ_TAC THENL [UNIFY_REFL_TAC; ALL_TAC] THEN
-      (* memaccess_inbounds *)
-      (MATCH_ACCEPT_TAC qth ORELSE
-      (POP_ASSUM MP_TAC THEN
-       W (fun (asl,w) -> REWRITE_TAC(APPEND :: (map GSYM !stored_abbrevs))) THEN
-       PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds")))
+      CLOSE_ABBREVIATED_SAFETY_PROPERTY_TAC stored_abbrevs)
   in mainfn;;
 
 let ASSERT_CONCL_TAC (t:term): tactic =
