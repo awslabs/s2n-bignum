@@ -473,6 +473,26 @@ let WORDLIST_FROM_MEMORY_CLAUSES = prove
   REWRITE_TAC[GSYM MULT_ASSOC; ARITH_RULE `2 * 2 * 2 * x = 8 * x`] THEN
   REWRITE_TAC[ARITH_RULE `(8 * n) DIV 8 = n`]);;
 
+let EL_WORDLIST_FROM_MEMORY = prove
+ (`!a n i s.
+      i < n
+      ==> EL i
+           (wordlist_from_memory(a,n) s:
+             ((((N tybit0)tybit0)tybit0)word)list) =
+          read
+           (memory :>
+            wbytes(word_add a (word(dimindex(:N) * i)))) s`,
+  GEN_TAC THEN INDUCT_TAC THENL
+   [REPEAT GEN_TAC THEN ARITH_TAC;
+    REPEAT GEN_TAC THEN DISCH_TAC THEN
+    REWRITE_TAC[CONJUNCT2 WORDLIST_FROM_MEMORY_CLAUSES] THEN
+    ASM_CASES_TAC `i:num < n` THENL
+     [ASM_SIMP_TAC[EL_APPEND; LENGTH_WORDLIST_FROM_MEMORY];
+      SUBGOAL_THEN `i:num = n` SUBST1_TAC THENL
+       [ASM_ARITH_TAC;
+        REWRITE_TAC[EL_APPEND; LENGTH_WORDLIST_FROM_MEMORY; LT_REFL;
+                    SUB_REFL; EL; HD]]]]);;
+
 (* This conversion expands a wordlist_from_memory term whose list length is a
    numeral. It selects the named byte view from the list element width and
    normalizes the successive address offsets. Schematically,
