@@ -785,6 +785,14 @@ let mldsa_barrett_mul = define
           (32,32):int32)
         (word 8380417))`;;
 
+let MLDSA_Q_MUL_SHIFT_ADD = prove
+ (`!x t:int32.
+    word_sub
+      (word_add (word_sub x t) (word_shl t 13))
+      (word_shl (word_shl t 13) 10) =
+    word_sub x (word_mul t (word 8380417))`,
+  REPEAT GEN_TAC THEN CONV_TAC WORD_RULE);;
+
 let MLDSA_BARRETT_MUL_SLOW = prove
  (`!z:int32. !w:int32. !a:int32.
     let t =
@@ -1660,6 +1668,169 @@ let IVAL_WORD_SUBWORD_DIV_32 = prove
  (`!x:int64. ival(word_subword x (32,32):int32) = ival x div &2 pow 32`,
   REWRITE_TAC[GSYM DIMINDEX_16; GSYM IVAL_WORD_ISHR] THEN
   GEN_TAC THEN REWRITE_TAC[DIMINDEX_16] THEN BITBLAST_TAC);;
+
+(* The RV32 inverse NTT uses a doubled Barrett multiplier, then rounds and
+   halves its signed high product. Fold that sequence into the shared helper. *)
+let MLDSA_INTT_SCALE_MULH =
+  let int_div_round_halve = prove
+   (`!x:int.
+      (x div &4294967296 + &1) div &2 =
+      (x + &4294967296) div &8589934592`,
+    GEN_TAC THEN
+    SUBGOAL_THEN
+     `&8589934592:int = &4294967296 * &2`
+     SUBST1_TAC THENL
+     [CONV_TAC INT_REDUCE_CONV; ALL_TAC] THEN
+    let thdiv =
+      MATCH_MP
+       (SPECL
+         [`x + &4294967296:int`; `&4294967296:int`; `&2:int`]
+         INT_DIV_DIV)
+       (EQT_ELIM(INT_REDUCE_CONV `&0:int <= &4294967296`))
+    and thadd =
+      MATCH_MP
+       (SPECL
+         [`&1:int`; `&4294967296:int`; `x:int`]
+         (el 2 (CONJUNCTS INT_DIV_MUL_ADD)))
+       (EQT_ELIM(INT_REDUCE_CONV `~(&4294967296:int = &0)`)) in
+    ONCE_REWRITE_TAC[GSYM thdiv] THEN
+    REWRITE_TAC[REWRITE_RULE[INT_MUL_LID] thadd]) in
+  let int_div_lmul_cancel = prove
+   (`!c x d:int.
+      &0 < c ==> (c * x) div (c * d) = x div d`,
+    REPEAT STRIP_TAC THEN
+    SUBGOAL_THEN `&0:int <= c` ASSUME_TAC THENL
+     [ASM_INT_ARITH_TAC; ALL_TAC] THEN
+    ASM_SIMP_TAC
+     [GSYM INT_DIV_DIV; INT_DIV_MUL; INT_LT_IMP_NE]) in
+  let quotient_int = prove
+   (`!a:int.
+      ((a * &16791564) div &4294967296 + &1) div &2 =
+      (&2 * a * &4197891 + &2147483648) div &4294967296`,
+    GEN_TAC THEN
+    REWRITE_TAC[int_div_round_halve] THEN
+    SUBGOAL_THEN
+     `&8589934592:int = &2 * &4294967296`
+     SUBST1_TAC THENL
+     [CONV_TAC INT_REDUCE_CONV; ALL_TAC] THEN
+    TRANS_TAC EQ_TRANS
+     `(&2 * (&2 * a * &4197891 + &2147483648)) div
+      (&2 * &4294967296)` THEN
+    CONJ_TAC THENL
+     [MATCH_MP_TAC(MESON[]
+       `(x:int) = y ==> x div d = y div d`) THEN
+      INT_ARITH_TAC;
+      MATCH_MP_TAC int_div_lmul_cancel THEN
+      CONV_TAC INT_REDUCE_CONV]) in
+  let high_bounds = prove
+   (`!a:int32.
+      -- &8395782 <=
+        ival(word_subword
+          (word_mul
+            (word_sx a:int64)
+            (word_sx (word 16791564:int32):int64))
+          (32,32):int32) /\
+      ival(word_subword
+        (word_mul
+          (word_sx a:int64)
+          (word_sx (word 16791564:int32):int64))
+        (32,32):int32) <= &8395781`,
+    GEN_TAC THEN
+    REWRITE_TAC
+     [IVAL_WORD_SUBWORD_DIV_32;
+      IVAL_WORD_MUL_SX32_64_EXACT] THEN
+    CONV_TAC(ONCE_DEPTH_CONV WORD_NUM_RED_CONV) THEN
+    MP_TAC(ISPEC `a:int32` IVAL_BOUND) THEN
+    REWRITE_TAC[DIMINDEX_32] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    SIMP_TAC
+     [INT_LE_DIV_EQ; INT_DIV_LE_EQ;
+      INT_OF_NUM_LT; ARITH] THEN
+    CONV_TAC(ONCE_DEPTH_CONV INT_REDUCE_CONV) THEN
+    INT_ARITH_TAC) in
+  let quotient_bounds = prove
+   (`!a:int32.
+      -- &4197891 <=
+        (&2 * ival a * &4197891 + &2147483648) div
+        &4294967296 /\
+      (&2 * ival a * &4197891 + &2147483648) div
+        &4294967296 <= &4197891`,
+    GEN_TAC THEN
+    MP_TAC(ISPEC `a:int32` IVAL_BOUND) THEN
+    REWRITE_TAC[DIMINDEX_32] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    SIMP_TAC
+     [INT_LE_DIV_EQ; INT_DIV_LE_EQ;
+      INT_OF_NUM_LT; ARITH] THEN
+    CONV_TAC(ONCE_DEPTH_CONV INT_REDUCE_CONV) THEN
+    INT_ARITH_TAC) in
+  let high_add = prove
+   (`!a:int32.
+      ival(word_add
+        (word_subword
+          (word_mul
+            (word_sx a:int64)
+            (word_sx (word 16791564:int32):int64))
+          (32,32):int32)
+        (word 1)) =
+      ival(word_subword
+        (word_mul
+          (word_sx a:int64)
+          (word_sx (word 16791564:int32):int64))
+        (32,32):int32) + &1`,
+    GEN_TAC THEN
+    REWRITE_TAC[WORD_RULE
+     `word_add x (word 1):int32 = iword(ival x + &1)`] THEN
+    MATCH_MP_TAC IVAL_IWORD THEN
+    REWRITE_TAC[DIMINDEX_32] THEN
+    MP_TAC(SPEC `a:int32` high_bounds) THEN
+    CONV_TAC NUM_REDUCE_CONV THEN
+    INT_ARITH_TAC) in
+  let quotient_word = prove
+   (`!a:int32.
+      word_ishr
+        (word_add
+          (word_subword
+            (word_mul
+              (word_sx a:int64)
+              (word_sx (word 16791564:int32):int64))
+            (32,32):int32)
+          (word 1))
+        1 =
+      iword((&2 * ival a * &4197891 + &2147483648) div
+            &4294967296)`,
+    GEN_TAC THEN
+    REWRITE_TAC
+     [word_ishr; high_add;
+      IVAL_WORD_SUBWORD_DIV_32;
+      IVAL_WORD_MUL_SX32_64_EXACT] THEN
+    CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
+    REWRITE_TAC[quotient_int]) in
+  prove
+   (`!a:int32.
+      word_sub
+        (word_mul a (word 16382))
+        (word_mul
+          (word_ishr
+            (word_add
+              (word_subword
+                (word_mul
+                  (word_sx a:int64)
+                  (word_sx (word 16791564:int32):int64))
+                (32,32):int32)
+              (word 1))
+            1)
+          (word 8380417)) =
+      arm_mldsa_barmul (&4197891,word 16382) a`,
+    GEN_TAC THEN
+    REWRITE_TAC
+     [quotient_word; arm_mldsa_barmul; iword_saturate;
+      word_INT_MIN; word_INT_MAX; DIMINDEX_32] THEN
+    CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
+    MP_TAC(SPEC `a:int32` quotient_bounds) THEN
+    STRIP_TAC THEN
+    REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN
+    ASM_INT_ARITH_TAC);;
 
 let CONGBOUND_MLDSA_BARRETT_MUL = prove
  (`!a a' l u.
