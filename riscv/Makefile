@@ -31,6 +31,17 @@ MODEL_CHECK_LOGS := $(MODEL_CHECKS:.ml=.correct)
 proofs/%.native: proofs/%.ml $(MODEL_ML)
 	../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
+PROOF_SOURCES = \
+	proofs/mldsa_ntt.ml \
+	proofs/mldsa_ntt_slowmul.ml \
+	proofs/mldsa_intt.ml \
+	proofs/mldsa_intt_slowmul.ml \
+	proofs/mldsa_pointwise_montgomery.ml
+
+PROOF_SUPPORT := $(wildcard proofs/*.ml)
+PROOF_BINS := $(patsubst proofs/%.ml,mldsa/%.native,$(PROOF_SOURCES))
+PROOF_LOGS := $(PROOF_BINS:.native=.correct)
+
 MLDSA_SOURCE_DIR = mldsa/src/native/rv32im/src
 MLDSA_CONFIG = mldsa/src/common.h mldsa/src/native/rv32im/meta.h
 
@@ -66,11 +77,21 @@ mldsa/mldsa_pointwise_montgomery.o: \
 	$(MLDSA_CONFIG)
 	$(CLANG) $(RV32_FLAGS) $(MLDSA_CPPFLAGS) -c $< -o $@
 
+mldsa/%.native: proofs/%.ml $(PROOF_SUPPORT) mldsa/%.o
+	../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
 tutorial/%.native: tutorial/%.ml $(MODEL_ML)
 	../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
 %.correct: %.native
 	../tools/run-proof.sh "$<" "$@"
+
+build_proofs: $(MLDSA_OBJ) $(PROOF_BINS)
+	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
+
+run_proofs: build_proofs $(PROOF_LOGS)
+
+proofs: run_proofs
 
 build_tutorial: $(MODEL_CHECK_BINS) $(TUTORIAL_PROOF_BINS)
 	! grep -RI "check_axioms" . ../common/ --exclude="Makefile"
@@ -78,7 +99,8 @@ build_tutorial: $(MODEL_CHECK_BINS) $(TUTORIAL_PROOF_BINS)
 tutorial: build_tutorial $(MODEL_CHECK_LOGS) $(TUTORIAL_PROOF_LOGS)
 
 clean:
-	rm -f $(MLDSA_OBJ) $(MODEL_CHECK_BINS) $(MODEL_CHECK_LOGS) \
+	rm -f $(MLDSA_OBJ) $(PROOF_BINS) $(PROOF_LOGS) \
+		$(MODEL_CHECK_BINS) $(MODEL_CHECK_LOGS) \
 		$(TUTORIAL_PROOF_BINS) $(TUTORIAL_PROOF_LOGS)
 
-.PHONY: all build_tutorial tutorial clean
+.PHONY: all build_proofs run_proofs proofs build_tutorial tutorial clean
