@@ -9,22 +9,6 @@ needs "riscv/proofs/mldsa_ntt_layout.ml";;
 (* Shared driver for the two forward-NTT arithmetic bridges.                 *)
 (* ========================================================================= *)
 
-let RV32_NTT_CLOSED_NUM_CONV =
-  let numty = `:num` in
-  fun tm ->
-    if type_of tm = numty && frees tm = [] then
-      CHANGED_CONV NUM_REDUCE_CONV tm
-    else
-      failwith "RV32_NTT_CLOSED_NUM_CONV";;
-
-let RV32_NTT_CLOSED_INT_CONV =
-  let intty = `:int` in
-  fun tm ->
-    if type_of tm = intty && frees tm = [] then
-      CHANGED_CONV INT_REDUCE_CONV tm
-    else
-      failwith "RV32_NTT_CLOSED_INT_CONV";;
-
 let RV32_NTT_BOUNDS_ABS_LT = prove
  (`!x l u b:int.
      (l <= x /\ x <= u) /\ (--b < l /\ u < b)

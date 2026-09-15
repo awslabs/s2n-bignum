@@ -6853,3 +6853,6 @@ let RV32_MLDSA_INTT_MACHINE = prove
          RV32_MLDSA_INTT_SCALE) THEN
       ASM_REWRITE_TAC[] THEN
       DISCH_THEN RV32_NTT_USE_STRONGER_PRE_TAC]]);;
+
+
+needs "riscv/proofs/mldsa_intt_arithmetic.ml";;
