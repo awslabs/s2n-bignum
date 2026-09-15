@@ -9,6 +9,8 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
+
+x86_ymm_view := true;;
 needs "common/mlkem_mldsa.ml";;
 
 (* Make silent type-variable invention an error (avoids nondeterministic     *)

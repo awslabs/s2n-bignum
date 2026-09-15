@@ -8,6 +8,8 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
+
+x86_ymm_view := true;;
 needs "common/mlkem_mldsa.ml";;
 needs "common/int_linear.ml";;
 

@@ -10,6 +10,8 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
+
+x86_ymm_view := true;;
 needs "common/mlkem_mldsa.ml";;
 
 (* x86-specific SIMD block/lane memory lemmas (typed over x86state, so kept
