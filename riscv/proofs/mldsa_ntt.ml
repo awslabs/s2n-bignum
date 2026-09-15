@@ -7,24 +7,7 @@
 (* ML-DSA forward number-theoretic transform.                                *)
 (* ========================================================================= *)
 
-needs "riscv/proofs/mldsa_objects.ml";;
-needs "riscv/proofs/mldsa_zetas.ml";;
-needs "common/mlkem_mldsa.ml";;
-
-let RV32_WORDLIST_FROM_MEMORY_EL = prove
- (`!a:int32. !n i. !s:riscvstate.
-      i < n
-      ==> EL i (wordlist_from_memory(a,n) s:int32 list) =
-          read
-           (memory :> bytes32(word_add a (word(4 * i)))) s`,
-  REPEAT STRIP_TAC THEN
-  MP_TAC
-   (SPECL
-     [`a:int32`; `n:num`; `i:num`; `s:riscvstate`]
-     (INST_TYPE [`:4`,`:N`] EL_WORDLIST_FROM_MEMORY)) THEN
-  ASM_REWRITE_TAC[BYTES32_WBYTES] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  DISCH_THEN ACCEPT_TAC);;
+needs "riscv/proofs/mldsa_ntt_shared.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Phase 1.                                                                   *)
@@ -108,82 +91,6 @@ let RV32_MLDSA_NTT_PHASE1_SETUP = prove
   CONV_TAC(ONCE_DEPTH_CONV WORD_IWORD_CONV) THEN
   REWRITE_TAC[]);;
 
-let RV32_SIMPLIFY_ABBREV_TAC =
-  let readable =
-    can (term_match [] `read X (s:riscvstate):int32 = whatever`) in
-  GEN_SIMPLIFY_ABBREV_TAC readable;;
-
-let rv32_mldsa_radix4 = define
- `rv32_mldsa_radix4
-    (zw0:int32#int32) (zw1:int32#int32) (zw2:int32#int32)
-    (f:num->int32) k =
-    let t2 = mldsa_barrett_mul zw0 (f 2)
-    and t3 = mldsa_barrett_mul zw0 (f 3) in
-    let u0 = word_add (f 0) t2
-    and u1 = word_add (f 1) t3
-    and u2 = word_sub (f 0) t2
-    and u3 = word_sub (f 1) t3 in
-    let v1 = mldsa_barrett_mul zw1 u1
-    and v3 = mldsa_barrett_mul zw2 u3 in
-    if k = 0 then word_add u0 v1
-    else if k = 1 then word_sub u0 v1
-    else if k = 2 then word_add u2 v3
-    else word_sub u2 v3`;;
-
-let rv32_mldsa_ntt_phase1 = define
- `rv32_mldsa_ntt_phase1 (x:num->int32) i r =
-    rv32_mldsa_radix4
-      (iword (-- &3572223),iword (-- &1830765815))
-      (iword (&3765607),iword (&1929875198))
-      (iword (&3761513),iword (&1927777021))
-      (\k. x (i + 64 * k)) r`;;
-
-let RV32_NTT_REWRITE_STORES_TAC =
-  MAP_EVERY
-   (fun label ->
-      USE_THEN label (fun th -> ONCE_REWRITE_TAC[GSYM th]))
-   ["store3"; "store2"; "store1"; "store0"];;
-
-let RV32_NTT_COEFFICIENT_NONOVERLAPPING = prove
- (`!a:int32 i j r q.
-      i < 64 /\ j < 64 /\ r < 4 /\ q < 4 /\
-      ~(j = i /\ r = q)
-      ==> nonoverlapping
-           (word_add a (word(4 * (j + 64 * r))),4)
-           (word_add a (word(4 * (i + 64 * q))),4)`,
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[nonoverlapping] THEN
-  MATCH_MP_TAC NONOVERLAPPING_MODULO_OFFSET_BOTH THEN
-  REWRITE_TAC[DIMINDEX_32] THEN
-  ASM_CASES_TAC `r:num = q` THENL
-   [SUBGOAL_THEN `j:num < i \/ i < j` STRIP_ASSUME_TAC THENL
-     [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC];
-    SUBGOAL_THEN `r:num < q \/ q < r` STRIP_ASSUME_TAC THENL
-     [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]]);;
-
-let RV32_NTT_COEFFICIENT_ORTHOGONAL = prove
- (`!a:int32 i j r q.
-      i < 64 /\ j < 64 /\ r < 4 /\ q < 4 /\
-      ~(j = i /\ r = q)
-      ==> orthogonal_components
-           ((memory :> bytes32
-             (word_add a (word(4 * (j + 64 * r)))))
-            : (riscvstate,int32)component)
-           ((memory :> bytes32
-             (word_add a (word(4 * (i + 64 * q)))))
-            : (riscvstate,int32)component)`,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN
-   `nonoverlapping
-      (word_add (a:int32) (word(4 * (j + 64 * r))),4)
-      (word_add a (word(4 * (i + 64 * q))),4)`
-  ASSUME_TAC THENL
-   [MATCH_MP_TAC
-     (SPECL [`a:int32`; `i:num`; `j:num`; `r:num`; `q:num`]
-       RV32_NTT_COEFFICIENT_NONOVERLAPPING) THEN
-    ASM_REWRITE_TAC[];
-    ORTHOGONAL_COMPONENTS_TAC]);;
-
 let RV32_MLDSA_BARRETT_PAIR0 = prove
  (`!a:int32.
     word_sub
@@ -232,21 +139,6 @@ let RV32_MLDSA_BARRETT_PAIR2 = prove
   CONV_TAC(DEPTH_CONV WORD_IWORD_CONV) THEN
   CONV_TAC(DEPTH_CONV WORD_SX_CONV) THEN
   REFL_TAC);;
-
-let RV32_NTT_READ_OVER_WRITES_TAC =
-  let tac_orth = (MATCH_MP_TAC o prove)
-   (`orthogonal_components c d /\
-     read c s' = read c s
-     ==> read c (write d y s') = read c s`,
-    MESON_TAC[orthogonal_components]) in
-  let rec tac g =
-   (REFL_TAC ORELSE
-    (tac_orth THEN CONJ_TAC THENL
-      [FIRST
-        [ASM_REWRITE_TAC[] THEN NO_TAC;
-         ORTHOGONAL_COMPONENTS_TAC];
-       tac])) g in
-  tac;;
 
 let RV32_NTT_REWRITE_BODY_UPDATES_TAC =
   MAP_EVERY
@@ -874,94 +766,11 @@ let RV32_MLDSA_NTT_PHASE1 = prove
          RV32_MLDSA_NTT_PHASE1_LOOP) THEN
       ASM_REWRITE_TAC[fst MLDSA_NTT_EXEC]]]);;
 
-let RV32_MLDSA_NTT_TABLE_PRESERVED = prove
- (`!a zetas:int32. !s s':riscvstate.
-      nonoverlapping (a,1024) (zetas,2040) /\
-      (MAYCHANGE
-        [PC; S0; S1; S2; S3; S4; S5;
-         A1; T2; T4; A2; A3; A4; A5; A6; A7] ,,
-       MAYCHANGE [memory :> bytes(a,1024)] ,,
-       MAYCHANGE [events]) s s'
-      ==> wordlist_from_memory(zetas,510) s':int32 list =
-          wordlist_from_memory(zetas,510) s`,
-  MAP_EVERY X_GEN_TAC
-   [`a:int32`; `zetas:int32`; `s:riscvstate`; `s':riscvstate`] THEN
-  STRIP_TAC THEN
-  REWRITE_TAC[wordlist_from_memory] THEN
-  AP_TERM_TAC THEN
-  REWRITE_TAC[DIMINDEX_32] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  MATCH_MP_TAC
-   (ISPECL
-     [`memory :> bytes(zetas,2040)`;
-      `MAYCHANGE
-        [PC; S0; S1; S2; S3; S4; S5;
-         A1; T2; T4; A2; A3; A4; A5; A6; A7]`;
-      `MAYCHANGE [memory :> bytes(a,1024)] ,,
-       MAYCHANGE [events]`;
-      `s:riscvstate`; `s':riscvstate`]
-     SEQ_PRESERVES_COMPONENT) THEN
-  ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
-    DISCH_TAC THEN
-    MATCH_MP_TAC
-     (ISPECL
-       [`memory :> bytes(zetas,2040)`;
-        `[PC; S0; S1; S2; S3; S4; S5;
-          A1; T2; T4; A2; A3; A4; A5; A6; A7]`;
-        `u:riscvstate`; `v:riscvstate`]
-       MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-    ASM_REWRITE_TAC[ALL] THEN
-    REPEAT CONJ_TAC THEN ORTHOGONAL_COMPONENTS_TAC;
-    MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
-    DISCH_TAC THEN
-    MATCH_MP_TAC
-     (ISPECL
-       [`memory :> bytes(zetas,2040)`;
-        `MAYCHANGE [memory :> bytes(a,1024)]`;
-        `MAYCHANGE [events]`;
-        `u:riscvstate`; `v:riscvstate`]
-       SEQ_PRESERVES_COMPONENT) THEN
-    ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL
-     [MAP_EVERY X_GEN_TAC [`w:riscvstate`; `x:riscvstate`] THEN
-      DISCH_TAC THEN
-      MATCH_MP_TAC
-       (ISPECL
-         [`memory :> bytes(zetas,2040)`;
-          `[memory :> bytes(a,1024)]`;
-          `w:riscvstate`; `x:riscvstate`]
-         MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-      ASM_REWRITE_TAC[ALL] THEN
-      ORTHOGONAL_COMPONENTS_TAC;
-      MAP_EVERY X_GEN_TAC [`w:riscvstate`; `x:riscvstate`] THEN
-      DISCH_TAC THEN
-      MATCH_MP_TAC
-       (ISPECL
-         [`memory :> bytes(zetas,2040)`;
-          `[events]`;
-          `w:riscvstate`; `x:riscvstate`]
-         MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-      ASM_REWRITE_TAC[ALL] THEN
-      ORTHOGONAL_COMPONENTS_TAC]]);;
+needs "riscv/proofs/mldsa_ntt_layout.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Phase 2.                                                                   *)
 (* ------------------------------------------------------------------------- *)
-
-let rv32_mldsa_ntt_pair = define
- `rv32_mldsa_ntt_pair (k:num) =
-    ((iword (EL (2 * k) rv32_mldsa_ntt_zetas)):int32,
-     (iword (EL (2 * k + 1) rv32_mldsa_ntt_zetas)):int32)`;;
-
-let rv32_mldsa_ntt_phase2 = define
- `rv32_mldsa_ntt_phase2 (x:num->int32) g j r =
-    rv32_mldsa_radix4
-      (rv32_mldsa_ntt_pair (3 + 3 * g))
-      (rv32_mldsa_ntt_pair (4 + 3 * g))
-      (rv32_mldsa_ntt_pair (5 + 3 * g))
-      (\k. x (64 * g + j + 16 * k)) r`;;
 
 let RV32_MLDSA_NTT_PHASE2_OUTER_SETUP = prove
  (`!a zetas:int32. !g pc.
@@ -1163,85 +972,6 @@ let RV32_MLDSA_NTT_PHASE2_OUTER_SETUP = prove
     NUM_RING `(24 + 24 * g) + 20 = 4 * (11 + 6 * g)`] THEN
   ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_RULE);;
-
-let RV32_NTT_FLAT_COEFFICIENT_NONOVERLAPPING = prove
- (`!a:int32 i j.
-      i < 256 /\ j < 256 /\ ~(j = i)
-      ==> nonoverlapping
-           (word_add a (word(4 * j)),4)
-           (word_add a (word(4 * i)),4)`,
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[nonoverlapping] THEN
-  MATCH_MP_TAC NONOVERLAPPING_MODULO_OFFSET_BOTH THEN
-  REWRITE_TAC[DIMINDEX_32] THEN
-  SUBGOAL_THEN `j:num < i \/ i < j` STRIP_ASSUME_TAC THEN
-  ASM_ARITH_TAC);;
-
-let RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL = prove
- (`!a:int32 i j.
-      i < 256 /\ j < 256 /\ ~(j = i)
-      ==> orthogonal_components
-           ((memory :> bytes32
-             (word_add a (word(4 * j))))
-            : (riscvstate,int32)component)
-           ((memory :> bytes32
-             (word_add a (word(4 * i))))
-            : (riscvstate,int32)component)`,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN
-   `nonoverlapping
-      (word_add (a:int32) (word(4 * j)),4)
-      (word_add a (word(4 * i)),4)`
-  ASSUME_TAC THENL
-   [MATCH_MP_TAC
-     (SPECL [`a:int32`; `i:num`; `j:num`]
-       RV32_NTT_FLAT_COEFFICIENT_NONOVERLAPPING) THEN
-    ASM_REWRITE_TAC[];
-    ORTHOGONAL_COMPONENTS_TAC]);;
-
-let RV32_NTT_INDEX4_CASES = prove
- (`!r. r < 4 ==> r = 0 \/ r = 1 \/ r = 2 \/ r = 3`,
-  ARITH_TAC);;
-
-let RV32_NTT_PHASE2_COEFFICIENT_ORTHOGONAL = prove
- (`!a:int32 h l r g j q.
-      h < 4 /\ l < 16 /\ r < 4 /\
-      g < 4 /\ j < 16 /\ q < 4 /\
-      ~(h = g /\ l = j)
-      ==> orthogonal_components
-           ((memory :> bytes32
-             (word_add a
-              (word(4 * (64 * h + l + 16 * r)))))
-            : (riscvstate,int32)component)
-           ((memory :> bytes32
-             (word_add a
-              (word(4 * (64 * g + j + 16 * q)))))
-            : (riscvstate,int32)component)`,
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC
-   (SPECL
-     [`a:int32`;
-      `64 * g + j + 16 * q`;
-      `64 * h + l + 16 * r`]
-     RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL) THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_ARITH_TAC;
-    ASM_ARITH_TAC;
-    ASM_CASES_TAC `h:num = g` THENL
-     [FIRST_X_ASSUM SUBST_ALL_TAC THEN
-      ASM_CASES_TAC `r:num = q` THENL
-       [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_ARITH_TAC;
-        SUBGOAL_THEN `r:num < q \/ q < r` STRIP_ASSUME_TAC THENL
-         [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]];
-      SUBGOAL_THEN `h:num < g \/ g < h` STRIP_ASSUME_TAC THENL
-       [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]]]);;
-
-let RV32_NTT_PHASE2_PREFIX_UNCHANGED = prove
- (`!h l g j.
-      ~(h = g /\ l = j)
-      ==> ((h < g \/ h = g /\ l < j + 1) <=>
-           h < g \/ h = g /\ l < j)`,
-  ARITH_TAC);;
 
 let RV32_MLDSA_BARRETT_PAIR = prove
  (`!p:(int32#int32). !a:int32.
@@ -1984,106 +1714,6 @@ let RV32_MLDSA_NTT_PHASE2_INNER_LOOP = prove
        RV32_MLDSA_NTT_PHASE2_INNER_EXIT) THEN
     ASM_REWRITE_TAC[]]);;
 
-let RV32_MEMORY_PRESERVED_BY_CONTROL_MAYCHANGE = prove
- (`!s0 s1:riscvstate.
-      (MAYCHANGE [PC] ,, MAYCHANGE [events]) s0 s1
-      ==> read memory s1 = read memory s0`,
-  MAP_EVERY X_GEN_TAC [`s0:riscvstate`; `s1:riscvstate`] THEN
-  DISCH_TAC THEN
-  MATCH_MP_TAC
-   (ISPECL
-     [`memory`;
-      `MAYCHANGE [PC]`;
-      `MAYCHANGE [events]`;
-      `s0:riscvstate`; `s1:riscvstate`]
-     SEQ_PRESERVES_COMPONENT) THEN
-  ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
-    DISCH_TAC THEN
-    MATCH_MP_TAC
-     (ISPECL
-       [`memory`; `[PC]`; `u:riscvstate`; `v:riscvstate`]
-       MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-    ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC;
-    MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
-    DISCH_TAC THEN
-    MATCH_MP_TAC
-     (ISPECL
-       [`memory`; `[events]`; `u:riscvstate`; `v:riscvstate`]
-       MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-    ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC]);;
-
-let RV32_WORDLIST_PRESERVED_BY_CONTROL_MAYCHANGE = prove
- (`!a:int32. !n s0 s1:riscvstate.
-      (MAYCHANGE [PC] ,, MAYCHANGE [events]) s0 s1
-      ==> wordlist_from_memory(a,n) s1:int32 list =
-          wordlist_from_memory(a,n) s0`,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `read memory s1 = read memory s0` ASSUME_TAC THENL
-   [MATCH_MP_TAC RV32_MEMORY_PRESERVED_BY_CONTROL_MAYCHANGE THEN
-    ASM_REWRITE_TAC[];
-    REWRITE_TAC[wordlist_from_memory; READ_COMPONENT_COMPOSE] THEN
-    ASM_REWRITE_TAC[]]);;
-
-let RV32_MEMORY_PRESERVED_BY_OUTER_EXIT_MAYCHANGE = prove
- (`!s0 s1:riscvstate.
-      (MAYCHANGE [PC] ,, MAYCHANGE [events] ,, MAYCHANGE [T2]) s0 s1
-      ==> read memory s1 = read memory s0`,
-  MAP_EVERY X_GEN_TAC [`s0:riscvstate`; `s1:riscvstate`] THEN
-  DISCH_TAC THEN
-  MATCH_MP_TAC
-   (ISPECL
-     [`memory`;
-      `MAYCHANGE [PC]`;
-      `MAYCHANGE [events] ,, MAYCHANGE [T2]`;
-      `s0:riscvstate`; `s1:riscvstate`]
-     SEQ_PRESERVES_COMPONENT) THEN
-  ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
-    DISCH_TAC THEN
-    MATCH_MP_TAC
-     (ISPECL
-       [`memory`; `[PC]`; `u:riscvstate`; `v:riscvstate`]
-       MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-    ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC;
-    MAP_EVERY X_GEN_TAC [`u:riscvstate`; `v:riscvstate`] THEN
-    DISCH_TAC THEN
-    MATCH_MP_TAC
-     (ISPECL
-       [`memory`;
-        `MAYCHANGE [events]`;
-        `MAYCHANGE [T2]`;
-        `u:riscvstate`; `v:riscvstate`]
-       SEQ_PRESERVES_COMPONENT) THEN
-    ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THEN
-    MAP_EVERY X_GEN_TAC [`w:riscvstate`; `x:riscvstate`] THEN
-    DISCH_TAC THENL
-     [MATCH_MP_TAC
-       (ISPECL
-         [`memory`; `[events]`; `w:riscvstate`; `x:riscvstate`]
-         MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-      ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC;
-      MATCH_MP_TAC
-       (ISPECL
-         [`memory`; `[T2]`; `w:riscvstate`; `x:riscvstate`]
-         MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
-      ASM_REWRITE_TAC[ALL] THEN ORTHOGONAL_COMPONENTS_TAC]]);;
-
-let RV32_WORDLIST_PRESERVED_BY_OUTER_EXIT_MAYCHANGE = prove
- (`!a:int32. !n s0 s1:riscvstate.
-      (MAYCHANGE [PC] ,, MAYCHANGE [events] ,, MAYCHANGE [T2]) s0 s1
-      ==> wordlist_from_memory(a,n) s1:int32 list =
-          wordlist_from_memory(a,n) s0`,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `read memory s1 = read memory s0` ASSUME_TAC THENL
-   [MATCH_MP_TAC RV32_MEMORY_PRESERVED_BY_OUTER_EXIT_MAYCHANGE THEN
-    ASM_REWRITE_TAC[];
-    REWRITE_TAC[wordlist_from_memory; READ_COMPONENT_COMPOSE] THEN
-    ASM_REWRITE_TAC[]]);;
-
 let RV32_MLDSA_NTT_PHASE2_OUTER_BACKEDGE = prove
  (`!a zetas:int32. !x:num->int32. !i pc.
       0 < i /\ i < 4
@@ -2345,33 +1975,6 @@ let RV32_MLDSA_NTT_PHASE2_INNER_LOOP_TABLE = prove
         `x:num->int32`; `g:num`; `pc:num`]
        RV32_MLDSA_NTT_PHASE2_INNER_LOOP) THEN
     ASM_REWRITE_TAC[fst MLDSA_NTT_EXEC]]);;
-
-let RV32_NTT_PHASE2_USE_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 3 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
-    (MATCH_MP_TAC th' THEN ASM_REWRITE_TAC[]) gl;;
-
-let RV32_NTT_PHASE2_FINAL_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 3 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
-    let bounds =
-      CONJ (ASSUME `h < 4`)
-       (CONJ (ASSUME `l < 16`) (ASSUME `r < 4`)) in
-    ACCEPT_TAC(ASM_REWRITE_RULE[] (MATCH_MP th' bounds)) gl;;
 
 let RV32_MLDSA_NTT_PHASE2_OUTER_BODY = prove
  (`!a zetas:int32. !x:num->int32. !g pc.
@@ -2679,31 +2282,6 @@ let RV32_MLDSA_NTT_PHASE2_OUTER_LOOP = prove
           `x:num->int32`; `pc:num`]
          RV32_MLDSA_NTT_PHASE2_OUTER_EXIT)]]);;
 
-let RV32_NTT_PHASE12_INDEX = prove
- (`!h l r.
-      h < 4 /\ l < 16 /\ r < 4
-      ==> l + 16 * r < 64 /\
-          64 * h + l + 16 * r =
-          (l + 16 * r) + 64 * h /\
-          (64 * h + l + 16 * r) MOD 64 =
-          l + 16 * r /\
-          (64 * h + l + 16 * r) DIV 64 = h`,
-  REPEAT GEN_TAC THEN
-  STRIP_TAC THEN
-  SUBGOAL_THEN `l + 16 * r < 64` ASSUME_TAC THENL
-   [ASM_ARITH_TAC; ALL_TAC] THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    ARITH_TAC;
-    REWRITE_TAC[ARITH_RULE
-     `64 * h + l + 16 * r = (l + 16 * r) + 64 * h`] THEN
-    ASM_SIMP_TAC[MOD_MULT_ADD; MOD_LT];
-    REWRITE_TAC[ARITH_RULE
-     `64 * h + l + 16 * r = (l + 16 * r) + 64 * h`] THEN
-    SIMP_TAC[DIV_MULT_ADD; ARITH_EQ] THEN
-    SUBGOAL_THEN `(l + 16 * r) DIV 64 = 0` SUBST1_TAC THENL
-     [ASM_SIMP_TAC[DIV_EQ_0; ARITH_EQ]; ARITH_TAC]]);;
-
 let RV32_MLDSA_NTT_PHASE1_TABLE_PRESERVED = prove
  (`!a zetas:int32. !s s':riscvstate.
       nonoverlapping (a,1024) (zetas,2040) /\
@@ -2874,50 +2452,6 @@ let RV32_MLDSA_NTT_PHASE2_ENTRY = prove
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[]);;
 
-let RV32_NTT_PHASE12_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th = assoc "phase1_memory" asl in
-    let bounds =
-      CONJ (ASSUME `h < 4`)
-       (CONJ (ASSUME `l < 16`) (ASSUME `r < 4`)) in
-    let ith =
-      MATCH_MP
-       (SPECL [`h:num`; `l:num`; `r:num`]
-         RV32_NTT_PHASE12_INDEX)
-       bounds in
-    let sth =
-      MP (SPECL [`h:num`; `l + 16 * r`] th)
-       (CONJ (ASSUME `h < 4`) (CONJUNCT1 ith)) in
-    let sth' =
-      REWRITE_RULE
-       [GSYM(CONJUNCT1(CONJUNCT2 ith))]
-       sth in
-    (REWRITE_TAC
-      [CONJUNCT1(CONJUNCT2(CONJUNCT2 ith));
-       CONJUNCT2(CONJUNCT2(CONJUNCT2 ith))] THEN
-     MATCH_ACCEPT_TAC sth')
-    gl;;
-
-let RV32_NTT_PHASE12_TABLE_TAC =
-  USE_THEN "entry_step"
-   (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-  REWRITE_TAC[wordlist_from_memory; READ_COMPONENT_COMPOSE] THEN
-  CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-  USE_THEN "table_before"
-   (fun th ->
-     MATCH_ACCEPT_TAC
-      (REWRITE_RULE
-        [wordlist_from_memory; READ_COMPONENT_COMPOSE]
-        th));;
-
-let RV32_NTT_PHASE12_UPDATED_COEFFICIENT_TAC =
-  USE_THEN "entry_step"
-   (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-  CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-  MAP_EVERY X_GEN_TAC [`h:num`; `l:num`; `r:num`] THEN
-  STRIP_TAC THEN
-  RV32_NTT_PHASE12_COEFFICIENT_TAC;;
-
 let RV32_MLDSA_NTT_PHASE2_ENTRY_FULL = prove
  (`!a zetas:int32. !x:num->int32. !pc.
       ensures riscv
@@ -2991,27 +2525,6 @@ let RV32_MLDSA_NTT_PHASE2_ENTRY_FULL = prove
    RV32_NTT_PHASE12_TABLE_TAC ORELSE
    RV32_NTT_PHASE12_UPDATED_COEFFICIENT_TAC));;
 
-
-let rv32_mldsa_ntt_phase12 = define
- `rv32_mldsa_ntt_phase12 (x:num->int32) h l r =
-    rv32_mldsa_ntt_phase2
-      (\n. rv32_mldsa_ntt_phase1 x (n MOD 64) (n DIV 64))
-      h l r`;;
-
-let RV32_NTT_USE_STRONGER_PRE_TAC th =
-  let tm = concl th in
-  let p = rand(rator(rator tm)) in
-  let q = rand(rator tm) in
-  MATCH_MP_TAC ENSURES_PREPOSTCONDITION_THM THEN
-  MAP_EVERY EXISTS_TAC [p;q] THEN
-  REPEAT CONJ_TAC THENL
-   [BETA_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    FIRST_ASSUM (fun ath -> MATCH_MP_TAC (SPEC_ALL ath)) THEN
-    ASM_REWRITE_TAC[];
-    BETA_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    FIRST_ASSUM (fun ath -> MATCH_MP_TAC (SPEC_ALL ath)) THEN
-    ASM_REWRITE_TAC[];
-    MATCH_ACCEPT_TAC th];;
 
 let RV32_MLDSA_NTT_PHASE12 = prove
  (`!a zetas:int32. !x:num->int32. !pc.
@@ -3153,14 +2666,6 @@ let RV32_MLDSA_NTT_PHASE12 = prove
 (* ------------------------------------------------------------------------- *)
 (* Phase 3.                                                                   *)
 (* ------------------------------------------------------------------------- *)
-
-let rv32_mldsa_ntt_phase3 = define
- `rv32_mldsa_ntt_phase3 (x:num->int32) g j r =
-    rv32_mldsa_radix4
-      (rv32_mldsa_ntt_pair (15 + 3 * g))
-      (rv32_mldsa_ntt_pair (16 + 3 * g))
-      (rv32_mldsa_ntt_pair (17 + 3 * g))
-      (\k. x (16 * g + j + 4 * k)) r`;;
 
 let RV32_MLDSA_NTT_PHASE3_OUTER_SETUP = prove
  (`!a zetas:int32. !g pc.
@@ -3380,39 +2885,6 @@ let RV32_MLDSA_NTT_PHASE3_ENTRY = prove
   RISCV_STEPS_TAC MLDSA_NTT_EXEC [1] THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[]);;
-
-let RV32_NTT_PHASE3_COEFFICIENT_ORTHOGONAL = prove
- (`!a:int32 h l r g j q.
-      h < 16 /\ l < 4 /\ r < 4 /\
-      g < 16 /\ j < 4 /\ q < 4 /\
-      ~(h = g /\ l = j)
-      ==> orthogonal_components
-           ((memory :> bytes32
-             (word_add a
-              (word(4 * (16 * h + l + 4 * r)))))
-            : (riscvstate,int32)component)
-           ((memory :> bytes32
-             (word_add a
-              (word(4 * (16 * g + j + 4 * q)))))
-            : (riscvstate,int32)component)`,
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC
-   (SPECL
-     [`a:int32`;
-      `16 * g + j + 4 * q`;
-      `16 * h + l + 4 * r`]
-     RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL) THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_ARITH_TAC;
-    ASM_ARITH_TAC;
-    ASM_CASES_TAC `h:num = g` THENL
-     [FIRST_X_ASSUM SUBST_ALL_TAC THEN
-      ASM_CASES_TAC `r:num = q` THENL
-       [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_ARITH_TAC;
-        SUBGOAL_THEN `r:num < q \/ q < r` STRIP_ASSUME_TAC THENL
-         [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]];
-      SUBGOAL_THEN `h:num < g \/ g < h` STRIP_ASSUME_TAC THENL
-       [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]]]);;
 
 let RV32_MLDSA_NTT_PHASE3_BODY = prove
  (`!a z:int32. !x:num->int32. !g j pc.
@@ -4400,33 +3872,6 @@ let RV32_MLDSA_NTT_PHASE3_INNER_LOOP_TABLE = prove
        RV32_MLDSA_NTT_PHASE3_INNER_LOOP) THEN
     ASM_REWRITE_TAC[fst MLDSA_NTT_EXEC]]);;
 
-let RV32_NTT_PHASE3_USE_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 3 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
-    (MATCH_MP_TAC th' THEN ASM_REWRITE_TAC[]) gl;;
-
-let RV32_NTT_PHASE3_FINAL_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 3 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
-    let bounds =
-      CONJ (ASSUME `h < 16`)
-       (CONJ (ASSUME `l < 4`) (ASSUME `r < 4`)) in
-    ACCEPT_TAC(ASM_REWRITE_RULE[] (MATCH_MP th' bounds)) gl;;
-
 let RV32_MLDSA_NTT_PHASE3_OUTER_BODY = prove
  (`!a zetas:int32. !x:num->int32. !g pc.
       aligned 4 a /\
@@ -4732,91 +4177,6 @@ let RV32_MLDSA_NTT_PHASE3_OUTER_LOOP = prove
           `x:num->int32`; `pc:num`]
          RV32_MLDSA_NTT_PHASE3_OUTER_EXIT)]]);;
 
-let RV32_NTT_PHASE123_FLAT_RECONSTRUCT = prove
- (`!n. 64 * (n DIV 64) + n MOD 16 +
-       16 * ((n DIV 16) MOD 4) = n`,
-  GEN_TAC THEN
-  MP_TAC(SPECL [`n:num`; `16`] DIVISION) THEN
-  MP_TAC(SPECL [`n DIV 16`; `4`] DIVISION) THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[DIV_DIV] THEN
-  ARITH_TAC);;
-
-let RV32_NTT_PHASE123_INDEX = prove
- (`!h l r.
-      h < 16 /\ l < 4 /\ r < 4
-      ==> 16 * h + l + 4 * r < 256 /\
-          (16 * h + l + 4 * r) DIV 64 < 4 /\
-          (16 * h + l + 4 * r) MOD 16 < 16 /\
-          ((16 * h + l + 4 * r) DIV 16) MOD 4 < 4 /\
-          64 * ((16 * h + l + 4 * r) DIV 64) +
-          (16 * h + l + 4 * r) MOD 16 +
-          16 * (((16 * h + l + 4 * r) DIV 16) MOD 4) =
-          16 * h + l + 4 * r`,
-  REPEAT GEN_TAC THEN
-  STRIP_TAC THEN
-  SUBGOAL_THEN `16 * h + l + 4 * r < 256` ASSUME_TAC THENL
-   [ASM_ARITH_TAC; ALL_TAC] THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    ASM_SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN ASM_ARITH_TAC;
-    REWRITE_TAC[MOD_LT_EQ] THEN CONV_TAC NUM_REDUCE_CONV;
-    REWRITE_TAC[MOD_LT_EQ] THEN CONV_TAC NUM_REDUCE_CONV;
-    MATCH_ACCEPT_TAC
-     (SPEC `16 * h + l + 4 * r`
-       RV32_NTT_PHASE123_FLAT_RECONSTRUCT)]);;
-
-let rv32_mldsa_ntt_phase123 = define
- `rv32_mldsa_ntt_phase123 (x:num->int32) h l r =
-    rv32_mldsa_ntt_phase3
-      (\n. rv32_mldsa_ntt_phase12 x
-            (n DIV 64) (n MOD 16) ((n DIV 16) MOD 4))
-      h l r`;;
-
-let RV32_NTT_PHASE123_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th = assoc "phase12_memory" asl in
-    let bounds =
-      CONJ (ASSUME `h < 16`)
-       (CONJ (ASSUME `l < 4`) (ASSUME `r < 4`)) in
-    let ith =
-      MATCH_MP
-       (SPECL [`h:num`; `l:num`; `r:num`]
-         RV32_NTT_PHASE123_INDEX)
-       bounds in
-    let sth =
-      MP
-       (SPECL
-         [`(16 * h + l + 4 * r) DIV 64`;
-          `(16 * h + l + 4 * r) MOD 16`;
-          `((16 * h + l + 4 * r) DIV 16) MOD 4`]
-         th)
-       (CONJ
-         (CONJUNCT1(CONJUNCT2 ith))
-         (CONJ
-           (CONJUNCT1(CONJUNCT2(CONJUNCT2 ith)))
-           (CONJUNCT1
-             (CONJUNCT2(CONJUNCT2(CONJUNCT2 ith)))))) in
-    let eq =
-      CONJUNCT2
-       (CONJUNCT2
-        (CONJUNCT2
-         (CONJUNCT2 ith))) in
-    let sth' = REWRITE_RULE[eq] sth in
-    (USE_THEN "entry_step"
-      (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-     CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-     MATCH_ACCEPT_TAC sth')
-    gl;;
-
-let RV32_NTT_PHASE123_UPDATED_COEFFICIENT_TAC =
-  USE_THEN "entry_step"
-   (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-  CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-  MAP_EVERY X_GEN_TAC [`h:num`; `l:num`; `r:num`] THEN
-  STRIP_TAC THEN
-  RV32_NTT_PHASE123_COEFFICIENT_TAC;;
-
 let RV32_MLDSA_NTT_PHASE3_ENTRY_FULL = prove
  (`!a zetas:int32. !x:num->int32. !pc.
       ensures riscv
@@ -5013,14 +4373,6 @@ let RV32_MLDSA_NTT_PHASE123 = prove
 (* ------------------------------------------------------------------------- *)
 (* Phase 4.                                                                   *)
 (* ------------------------------------------------------------------------- *)
-
-let rv32_mldsa_ntt_phase4 = define
- `rv32_mldsa_ntt_phase4 (x:num->num->num->int32) g r =
-    rv32_mldsa_radix4
-      (rv32_mldsa_ntt_pair (63 + 3 * g))
-      (rv32_mldsa_ntt_pair (64 + 3 * g))
-      (rv32_mldsa_ntt_pair (65 + 3 * g))
-      (\k. x (g DIV 4) k (g MOD 4)) r`;;
 
 let RV32_MLDSA_NTT_PHASE4_ENTRY = prove
  (`!a:int32. !pc.
@@ -5241,23 +4593,6 @@ let RV32_MLDSA_NTT_PHASE4_OUTER_SETUP = prove
     NUM_RING `(504 + 24 * g) + 20 = 4 * (131 + 6 * g)`] THEN
   ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_RULE);;
-
-let RV32_NTT_PHASE4_COEFFICIENT_ORTHOGONAL = prove
- (`!a:int32 h r g q.
-      h < 64 /\ r < 4 /\ g < 64 /\ q < 4 /\ ~(h = g)
-      ==> orthogonal_components
-           ((memory :> bytes32
-             (word_add a (word(4 * (4 * h + r)))))
-            : (riscvstate,int32)component)
-           ((memory :> bytes32
-             (word_add a (word(4 * (4 * g + q)))))
-            : (riscvstate,int32)component)`,
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC
-   (SPECL
-     [`a:int32`; `4 * g + q`; `4 * h + r`]
-     RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL) THEN
-  REPEAT CONJ_TAC THEN ASM_ARITH_TAC);;
 
 let RV32_MLDSA_NTT_PHASE4_BODY = prove
  (`!a z:int32. !x:num->num->num->int32. !g pc.
@@ -5812,18 +5147,6 @@ let RV32_MLDSA_NTT_PHASE4_BODY_TABLE = prove
        RV32_MLDSA_NTT_PHASE4_BODY) THEN
     ASM_REWRITE_TAC[fst MLDSA_NTT_EXEC]]);;
 
-let RV32_NTT_PHASE4_USE_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 2 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `r:num`] th in
-    (MATCH_MP_TAC th' THEN ASM_REWRITE_TAC[]) gl;;
-
 let RV32_MLDSA_NTT_PHASE4_OUTER_BODY = prove
  (`!a zetas:int32. !x:num->num->num->int32. !g pc.
       aligned 4 a /\
@@ -5993,19 +5316,6 @@ let RV32_MLDSA_NTT_PHASE4_OUTER_BODY = prove
         RV32_NTT_PHASE4_USE_COEFFICIENT_TAC;
         USE_THEN "phase4_body" ACCEPT_TAC]]]);;
 
-let RV32_NTT_PHASE4_FINAL_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 2 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `r:num`] th in
-    let bounds = CONJ (ASSUME `h < 64`) (ASSUME `r < 4`) in
-    ACCEPT_TAC(ASM_REWRITE_RULE[] (MATCH_MP th' bounds)) gl;;
-
 let RV32_MLDSA_NTT_PHASE4_OUTER_LOOP = prove
  (`!a zetas:int32. !x:num->num->num->int32. !pc.
       aligned 4 a /\
@@ -6138,60 +5448,6 @@ let RV32_MLDSA_NTT_PHASE4_OUTER_LOOP = prove
           `x:num->num->num->int32`; `pc:num`]
          RV32_MLDSA_NTT_PHASE4_EXIT)]]);;
 
-let RV32_NTT_PHASE34_INDEX = prove
- (`!g r.
-      g < 64 /\ r < 4
-      ==> g DIV 4 < 16 /\
-          g MOD 4 < 4 /\
-          16 * (g DIV 4) + r + 4 * (g MOD 4) =
-          4 * g + r`,
-  REPEAT GEN_TAC THEN
-  STRIP_TAC THEN
-  SUBGOAL_THEN `g DIV 4 < 16` ASSUME_TAC THENL
-   [ASM_SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN ASM_ARITH_TAC;
-    ALL_TAC] THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[MOD_LT_EQ] THEN CONV_TAC NUM_REDUCE_CONV;
-    MP_TAC(SPECL [`g:num`; `4`] DIVISION) THEN
-    CONV_TAC NUM_REDUCE_CONV THEN
-    ARITH_TAC]);;
-
-let RV32_NTT_PHASE34_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th = assoc "phase3_memory" asl in
-    let bounds = CONJ (ASSUME `g < 64`) (ASSUME `r < 4`) in
-    let ith =
-      MATCH_MP
-       (SPECL [`g:num`; `r:num`]
-         RV32_NTT_PHASE34_INDEX)
-       bounds in
-    let sth =
-      MP
-       (SPECL
-         [`g DIV 4`; `r:num`; `g MOD 4`]
-         th)
-       (CONJ
-         (CONJUNCT1 ith)
-         (CONJ
-           (ASSUME `r < 4`)
-           (CONJUNCT1(CONJUNCT2 ith)))) in
-    let eq = CONJUNCT2(CONJUNCT2 ith) in
-    let sth' = REWRITE_RULE[eq] sth in
-    (USE_THEN "entry_step"
-      (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-     CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-     MATCH_ACCEPT_TAC sth')
-    gl;;
-
-let RV32_NTT_PHASE34_UPDATED_COEFFICIENT_TAC =
-  USE_THEN "entry_step"
-   (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-  CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-  MAP_EVERY X_GEN_TAC [`g:num`; `r:num`] THEN
-  STRIP_TAC THEN
-  RV32_NTT_PHASE34_COEFFICIENT_TAC;;
-
 let RV32_MLDSA_NTT_PHASE4_ENTRY_FULL = prove
  (`!a zetas:int32. !x:num->num->num->int32. !pc.
       ensures riscv
@@ -6264,10 +5520,6 @@ let RV32_MLDSA_NTT_PHASE4_ENTRY_FULL = prove
   (FIRST_ASSUM ACCEPT_TAC ORELSE
    RV32_NTT_PHASE12_TABLE_TAC ORELSE
    RV32_NTT_PHASE34_UPDATED_COEFFICIENT_TAC));;
-
-let rv32_mldsa_ntt_phase1234 = define
- `rv32_mldsa_ntt_phase1234 (x:num->int32) g r =
-    rv32_mldsa_ntt_phase4 (rv32_mldsa_ntt_phase123 x) g r`;;
 
 let RV32_MLDSA_NTT_PHASE1234 = prove
  (`!a zetas:int32. !x:num->int32. !pc.
