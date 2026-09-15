@@ -810,3 +810,335 @@ let RV32_INTT_PARTIAL_TRANSITIONS =
                (0--3))
            (0--(groups - 1))))
      (0--3));;
+
+(* ========================================================================= *)
+(* Functional interpretation of the four inverse-NTT phases.                *)
+(* ========================================================================= *)
+
+
+let RV32_INTT_BOUNDS_ABS_LE_RV32 = prove
+ (`!x l u b:int.
+     (l <= x /\ x <= u) /\ (--b <= l /\ u <= b)
+     ==> abs x <= b`,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[INT_ABS_BOUNDS] THEN
+  INT_ARITH_TAC);;
+
+let RV32_INTT_CONG_FROM_ZERO_RV32 =
+  INTEGER_RULE
+   `(x:int == y) (mod &0)
+    ==> (x == y) (mod &8380417)`;;
+
+let RV32_MLDSA_INTT_PHASE1234_CORRECT =
+  let partial_transitions =
+    RV32_INTT_PARTIAL_TRANSITIONS in
+  if length partial_transitions <> 340 then
+    failwith "RV32 inverse transition set is incomplete" else
+  let congbound_map tms ths =
+    let rec build tms ths =
+      match tms,ths with
+        [],[] -> undefined
+      | tm::otms,th::oths -> (tm |-> th) (build otms oths)
+      | _ -> failwith "congbound_map" in
+    build tms ths in
+  let input_bounds =
+    map
+     (fun n ->
+        ASSUME
+         (subst
+           [mk_small_numeral n,`i:num`]
+           `abs(ival((x:num->int32) i)) <= &8380416`))
+     (0--255) in
+  let input_terms =
+    map
+     (fun n ->
+        mk_comb
+         (`x:num->int32`,mk_small_numeral n))
+     (0--255) in
+  let input_map =
+    PROCESS_BOUND_ASSUMPTIONS input_bounds in
+  let close_input n cb =
+    let ntm = mk_small_numeral n in
+    let bridge =
+      REWRITE_RULE[o_THM]
+       (SPECL
+         [`ival o (x:num->int32)`;ntm]
+         RV32_INTT_INPUT_PARTIAL_CONG_RV32) in
+    CONJ
+     (RV32_INT_CONG_TRANS_RULE_FAST
+       (CONJUNCT1 cb) bridge)
+     (CONJUNCT2 cb) in
+  let input_facts =
+    List.mapi
+     (fun n tm ->
+        close_input n (apply input_map tm))
+     input_terms in
+  let initial_map =
+    congbound_map input_terms input_facts in
+  let pair_terms =
+    map
+     (fun n ->
+        mk_comb
+         (`rv32_mldsa_ntt_pair`,mk_small_numeral n))
+     (0--254) in
+  let pair_thms =
+    map
+     ((GEN_REWRITE_CONV I [rv32_mldsa_ntt_pair] THENC
+       DEPTH_CONV NUM_RED_CONV THENC
+       GEN_REWRITE_CONV DEPTH_CONV [rv32_mldsa_ntt_zetas] THENC
+       DEPTH_CONV EL_CONV))
+     pair_terms in
+  let pair_num_conv tm =
+    let n = dest_small_numeral(rand tm) in
+    let th = List.nth pair_thms n in
+    if aconv (lhand(concl th)) tm then th
+    else failwith "pair_num_conv" in
+  let build_congbound rule conv tm =
+    let eth = conv tm in
+    let cth = rule (rand(concl eth)) in
+    SUBS[SYM eth] cth in
+  let build_congbound_groups base conv groups =
+    flat
+     (map
+       (fun terms ->
+          let rule = MEMOIZED_ASM_CONGBOUND_RULE base in
+          map (build_congbound rule conv) terms)
+       groups) in
+  let transition_offset p =
+    if p = 0 then 0
+    else if p = 1 then 64
+    else if p = 2 then 80
+    else if p = 3 then 84
+    else failwith "transition_offset" in
+  let transition p g r =
+    List.nth partial_transitions
+     (4 * (transition_offset p + g) + r) in
+  let radix4_int_expand_conv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [rv32_mldsa_intt_radix4_int_rv32] THENC
+    TOP_DEPTH_CONV let_CONV THENC
+    DEPTH_CONV BETA_CONV THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV in
+  let compact_congbound p g t r cb =
+    let transition =
+      SPECL
+       [`ival o (x:num->int32)`;mk_small_numeral t]
+       (transition p g r) in
+    let transition =
+      CONV_RULE
+       (DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV)
+       transition in
+    let _,targs = strip_comb(concl transition) in
+    let radix = List.nth targs 0 in
+    let expansion = radix4_int_expand_conv radix in
+    let congruence =
+      SUBS [SYM expansion] (CONJUNCT1 cb) in
+    let congruence =
+      try MATCH_MP RV32_INTT_CONG_FROM_ZERO_RV32 congruence
+      with Failure _ -> congruence in
+    let compact =
+      RV32_INT_CONG_TRANS_RULE_FAST congruence transition in
+    CONV_RULE
+     (DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV)
+     (CONJ compact (CONJUNCT2 cb)) in
+  let close_stage p n cb =
+    if p = 0 then
+      compact_congbound
+        0 (n / 4) 0 (n mod 4) cb
+    else if p = 1 then
+      compact_congbound
+        1 (n / 16) ((n / 4) mod 4) (n mod 4) cb
+    else if p = 2 then
+      compact_congbound
+        2 (n / 64) ((n / 4) mod 16) (n mod 4) cb
+    else if p = 3 then
+      compact_congbound
+        3 0 (n / 4) (n mod 4) cb
+    else
+      failwith "close_stage" in
+  let run_stage phase base conv groups =
+    let terms = flat groups in
+    let raw =
+      build_congbound_groups base conv groups in
+    let closed =
+      List.mapi
+       (close_stage phase)
+       raw in
+    congbound_map terms closed,closed in
+  let phase1_term g r =
+    subst
+     [mk_small_numeral g,`g:num`;
+      mk_small_numeral r,`r:num`]
+     `rv32_mldsa_intt_phase1 (x:num->int32) g r` in
+  let phase1_expand_conv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [rv32_mldsa_intt_phase1;
+      rv32_mldsa_intt_radix4] THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    TOP_DEPTH_CONV let_CONV THENC
+    DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV THENC
+    DEPTH_CONV pair_num_conv in
+  let phase1_groups =
+    map
+     (fun g ->
+        map (phase1_term g) (0--3))
+     (0--63) in
+  let phase1_map,_ =
+    run_stage 0 initial_map
+      phase1_expand_conv phase1_groups in
+  let phase12_term g j r =
+    subst
+     [mk_small_numeral g,`g:num`;
+      mk_small_numeral j,`j:num`;
+      mk_small_numeral r,`r:num`]
+     `rv32_mldsa_intt_phase12 (x:num->int32) g j r` in
+  let phase12_expand_conv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [rv32_mldsa_intt_phase12;
+      rv32_mldsa_intt_phase2;
+      rv32_mldsa_intt_radix4] THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    TOP_DEPTH_CONV let_CONV THENC
+    DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV THENC
+    DEPTH_CONV pair_num_conv in
+  let phase12_groups =
+    flat
+     (map
+       (fun g ->
+          map
+           (fun j ->
+              map (phase12_term g j) (0--3))
+           (0--3))
+       (0--15)) in
+  let phase12_map,_ =
+    run_stage 1 phase1_map
+      phase12_expand_conv phase12_groups in
+  let phase123_term g j r =
+    subst
+     [mk_small_numeral g,`g:num`;
+      mk_small_numeral j,`j:num`;
+      mk_small_numeral r,`r:num`]
+     `rv32_mldsa_intt_phase123 (x:num->int32) g j r` in
+  let phase123_expand_conv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [rv32_mldsa_intt_phase123;
+      rv32_mldsa_intt_phase3;
+      rv32_mldsa_intt_radix4] THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    TOP_DEPTH_CONV let_CONV THENC
+    DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV THENC
+    DEPTH_CONV pair_num_conv in
+  let phase123_groups =
+    flat
+     (map
+       (fun g ->
+          map
+           (fun j ->
+              map (phase123_term g j) (0--3))
+           (0--15))
+       (0--3)) in
+  let phase123_map,_ =
+    run_stage 2 phase12_map
+      phase123_expand_conv phase123_groups in
+  let phase1234_term j r =
+    subst
+     [mk_small_numeral j,`j:num`;
+      mk_small_numeral r,`r:num`]
+     `rv32_mldsa_intt_phase1234 (x:num->int32) j r` in
+  let phase1234_expand_conv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [rv32_mldsa_intt_phase1234;
+      rv32_mldsa_intt_phase4;
+      rv32_mldsa_intt_radix4] THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    TOP_DEPTH_CONV let_CONV THENC
+    DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV THENC
+    DEPTH_CONV pair_num_conv in
+  let phase1234_groups =
+    map
+     (fun j ->
+        map (phase1234_term j) (0--3))
+     (0--63) in
+  let phase1234_map,_ =
+    run_stage 3 phase123_map
+      phase1234_expand_conv phase1234_groups in
+  let output_term n =
+    subst
+     [mk_small_numeral n,`n:num`]
+     `rv32_mldsa_intt_output (x:num->int32) n` in
+  let output_terms =
+    map output_term (0--255) in
+  let output_expand_conv =
+    GEN_REWRITE_CONV TOP_DEPTH_CONV
+     [rv32_mldsa_intt_output] THENC
+    DEPTH_CONV NUM_RED_CONV THENC
+    DEPTH_CONV RV32_NTT_CLOSED_NUM_CONV in
+  let output_rule =
+    MEMOIZED_ASM_CONGBOUND_RULE phase1234_map in
+  let output_facts =
+    map
+     (build_congbound output_rule output_expand_conv)
+     output_terms in
+  let close_output n cb =
+    let ntm = mk_small_numeral n in
+    let bridge =
+      SPECL
+       [`ival o (x:num->int32)`;ntm]
+       RV32_INTT_PARTIAL_256_CONG_RV32 in
+    let congruence =
+      RV32_INT_CONG_TRANS_RULE_FAST
+       (CONJUNCT1 cb) bridge in
+    let bounds = CONJUNCT2 cb in
+    let lower,upper = dest_conj(concl bounds) in
+    let ltm,xtm =
+      dest_binop `(<=):int->int->bool` lower
+    and xtm',utm =
+      dest_binop `(<=):int->int->bool` upper in
+    if not(aconv xtm xtm') then
+      failwith "close_output" else
+    let side =
+      EQT_ELIM
+       (INT_REDUCE_CONV
+         (subst
+           [ltm,`l:int`; utm,`u:int`]
+           `(-- &8380416:int) <= l /\
+            (u:int) <= &8380416`)) in
+    let abs_bound =
+      MATCH_MP
+       (SPECL [xtm;ltm;utm;`&8380416:int`]
+         RV32_INTT_BOUNDS_ABS_LE_RV32)
+       (CONJ bounds side) in
+    CONJ congruence abs_bound in
+  let final_outputs =
+    List.mapi close_output output_facts in
+  let all_outputs =
+    end_itlist CONJ
+     (flat(map CONJUNCTS final_outputs)) in
+  let input_conj =
+    list_mk_conj(map concl input_bounds) in
+  let all_outputs_imp =
+    DISCH input_conj
+     (itlist PROVE_HYP
+       (CONJUNCTS(ASSUME input_conj))
+       all_outputs) in
+  prove
+   (`!x:num->int32.
+       (!i. i < 256
+            ==> abs(ival(x i)) <= &8380416)
+       ==> !i. i < 256
+               ==> (ival(rv32_mldsa_intt_output x i) ==
+                    mldsa_bitreverse_inverse_ntt
+                     (ival o x) i)
+                   (mod &8380417) /\
+                   abs(ival
+                     (rv32_mldsa_intt_output x i))
+                   <= &8380416`,
+    GEN_TAC THEN
+    DISCH_TAC THEN
+    CONV_TAC EXPAND_CASES_CONV THEN
+    CONV_TAC(DEPTH_CONV NUM_RED_CONV) THEN
+    MATCH_MP_TAC all_outputs_imp THEN
+    REPEAT CONJ_TAC THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    CONV_TAC NUM_REDUCE_CONV);;
