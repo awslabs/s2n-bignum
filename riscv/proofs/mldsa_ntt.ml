@@ -6381,3 +6381,222 @@ let RV32_MLDSA_NTT_PHASE1234 = prove
             `pc:num`]
            RV32_MLDSA_NTT_PHASE4_OUTER_LOOP) THEN
         ASM_REWRITE_TAC[]]]]);;
+
+needs "riscv/proofs/mldsa_ntt_arithmetic.ml";;
+
+(* ========================================================================= *)
+(* Functional correctness and psABI promotion of the forward NTT.           *)
+(* ========================================================================= *)
+
+let RV32_MLDSA_NTT_STACK_TABLE_PRESERVED = prove
+ (`!stack zetas:int32. !s s':riscvstate.
+      nonoverlapping (stack,32) (zetas,2040) /\
+      (MAYCHANGE [PC] ,,
+       MAYCHANGE [SP] ,,
+       MAYCHANGE [memory :> bytes32 stack] ,,
+       MAYCHANGE [events] ,,
+       MAYCHANGE
+        [memory :> bytes32 (word_add stack (word 4))] ,,
+       MAYCHANGE
+        [memory :> bytes32 (word_add stack (word 8))] ,,
+       MAYCHANGE
+        [memory :> bytes32 (word_add stack (word 12))] ,,
+       MAYCHANGE
+        [memory :> bytes32 (word_add stack (word 16))] ,,
+       MAYCHANGE
+        [memory :> bytes32 (word_add stack (word 20))])
+      s s'
+      ==> wordlist_from_memory(zetas,510) s':int32 list =
+          wordlist_from_memory(zetas,510) s`,
+  let table = `memory :> bytes(zetas,2040)` in
+  let rec preserves_tac gl =
+    (REPEAT STRIP_TAC THEN
+     W(fun (asl,w) ->
+       let kind,args =
+         tryfind
+          (fun (_,th) ->
+            let head,args = strip_comb(concl th) in
+            let name = fst(dest_const head) in
+            if name = ",," || name = "MAYCHANGE"
+            then name,args
+            else failwith "not a frame relation")
+          asl in
+       if kind = ",," then
+         let r = List.nth args 0
+         and t = List.nth args 1 in
+         MATCH_MP_TAC
+          (ISPECL [table; r; t] SEQ_PRESERVES_COMPONENT) THEN
+         ASM_REWRITE_TAC[] THEN
+         CONJ_TAC THENL [preserves_tac; preserves_tac]
+       else
+         let cs = List.nth args 0 in
+         MATCH_MP_TAC
+          (ISPECL
+            [table; cs]
+            MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
+         ASM_REWRITE_TAC[ALL] THEN
+         REPEAT CONJ_TAC THEN
+         ORTHOGONAL_COMPONENTS_TAC)) gl in
+  MAP_EVERY X_GEN_TAC
+   [`stack:int32`; `zetas:int32`;
+    `s:riscvstate`; `s':riscvstate`] THEN
+  STRIP_TAC THEN
+  REWRITE_TAC[wordlist_from_memory] THEN
+  AP_TERM_TAC THEN
+  REWRITE_TAC[DIMINDEX_32] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  preserves_tac);;
+
+let RV32_MLDSA_NTT_STACK_TABLE_TAC =
+  W(fun (asl,w) ->
+    if can
+       (term_match []
+         `wordlist_from_memory(z,510) (s:riscvstate):int32 list =
+          MAP iword rv32_mldsa_ntt_zetas`)
+       w
+    then
+      ASM_MESON_TAC[RV32_MLDSA_NTT_STACK_TABLE_PRESERVED]
+    else
+      NO_TAC);;
+
+let MLDSA_NTT_CORE_CORRECT = prove
+ (`!a zetas:int32. !x:num->int32. !pc:num.
+    aligned 4 a /\
+    aligned 4 zetas /\
+    nonoverlapping
+      ((word pc):int32,LENGTH mldsa_ntt_mc)
+      (a,1024) /\
+    nonoverlapping (a,1024) (zetas,2040)
+    ==> ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) mldsa_ntt_mc /\
+           read PC s = word (pc + 28) /\
+           C_ARGUMENTS [a;zetas] s /\
+           wordlist_from_memory (zetas,510) s:int32 list =
+           MAP iword rv32_mldsa_ntt_zetas /\
+           (!i. i < 256 ==> abs(ival(x i)) < &8380417) /\
+           (!i. i < 256
+                ==> read
+                     (memory :>
+                      bytes32 (word_add a (word (4 * i)))) s =
+                    x i))
+      (\s. read PC s = word (pc + 748) /\
+           !i. i < 256
+               ==> let zi =
+                     read
+                      (memory :>
+                       bytes32 (word_add a (word (4 * i)))) s in
+                   (ival zi ==
+                    mldsa_bitreverse_forward_ntt (ival o x) i)
+                   (mod &8380417) /\
+                   abs(ival zi) < &94279698)
+      (MAYCHANGE
+        [PC; T0; S0; S1; S2; S3; S4; S5;
+         A1; T2; T3; T4; A2; A3; A4; A5; A6; A7] ,,
+       MAYCHANGE [memory :> bytes(a,1024)] ,,
+       MAYCHANGE [events])`,
+  MAP_EVERY X_GEN_TAC
+   [`a:int32`; `zetas:int32`; `x:num->int32`; `pc:num`] THEN
+  REPEAT STRIP_TAC THEN
+  GLOBALIZE_PRECONDITION_TAC THEN
+  MP_TAC
+   (SPECL
+     [`a:int32`; `zetas:int32`; `x:num->int32`; `pc:num`]
+     RV32_MLDSA_NTT_PHASE1234) THEN
+  ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(LABEL_TAC "machine") THEN
+  MATCH_MP_TAC ENSURES_PREPOSTCONDITION_THM THEN
+  USE_THEN "machine"
+   (fun th ->
+     let tm = concl th in
+     MAP_EVERY EXISTS_TAC
+      [rand(rator(rator tm)); rand(rator tm)]) THEN
+  REPEAT CONJ_TAC THENL
+   [BETA_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    ASM_ARITH_TAC;
+    BETA_TAC THEN X_GEN_TAC `s:riscvstate` THEN
+    DISCH_THEN
+     (fun th ->
+       let ths = CONJUNCTS th in
+       MAP_EVERY ASSUME_TAC ths THEN
+       LABEL_TAC "outputs" (last ths)) THEN
+    ASM_REWRITE_TAC[] THEN
+    X_GEN_TAC `i:num` THEN DISCH_TAC THEN
+    CONV_TAC let_CONV THEN
+    SUBGOAL_THEN
+     `read
+       (memory :>
+        bytes32 (word_add a (word (4 * i)))) s =
+      rv32_mldsa_ntt_phase1234 x (i DIV 4) (i MOD 4)`
+    SUBST1_TAC THENL
+     [USE_THEN "outputs"
+       (MP_TAC o SPECL [`i DIV 4`; `i MOD 4`]) THEN
+      ANTS_TAC THENL
+       [CONJ_TAC THENL
+         [ASM_SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN ASM_ARITH_TAC;
+          REWRITE_TAC[MOD_LT_EQ] THEN CONV_TAC NUM_REDUCE_CONV];
+        SUBGOAL_THEN `4 * (i DIV 4) + i MOD 4 = i`
+        ASSUME_TAC THENL
+         [MP_TAC(SPECL [`i:num`; `4`] DIVISION) THEN
+          CONV_TAC NUM_REDUCE_CONV THEN ARITH_TAC;
+          ASM_REWRITE_TAC[]]];
+      MP_TAC
+       (SPEC `x:num->int32`
+         RV32_MLDSA_NTT_PHASE1234_CORRECT) THEN
+      ASM_REWRITE_TAC[] THEN
+      DISCH_THEN(MP_TAC o SPEC `i:num`) THEN
+      ASM_REWRITE_TAC[]];
+    USE_THEN "machine" ACCEPT_TAC]);;
+
+let MLDSA_NTT_SUBROUTINE_CORRECT = prove
+ (`!a zetas:int32. !x:num->int32. !pc:num.
+    !stackpointer returnaddress:int32.
+    aligned 4 a /\
+    aligned 4 zetas /\
+    aligned 16 stackpointer /\
+    aligned 4 returnaddress /\
+    ALLPAIRS nonoverlapping
+      [(a,1024);
+       (word_sub stackpointer (word 32),32)]
+      [((word pc):int32,LENGTH mldsa_ntt_mc);
+       (zetas,2040)] /\
+    nonoverlapping
+      (a,1024)
+      (word_sub stackpointer (word 32),32)
+    ==> ensures riscv
+      (\s. aligned_bytes_loaded s (word pc) mldsa_ntt_mc /\
+           read PC s = word pc /\
+           read SP s = stackpointer /\
+           read RA s = returnaddress /\
+           C_ARGUMENTS [a;zetas] s /\
+           wordlist_from_memory (zetas,510) s:int32 list =
+           MAP iword rv32_mldsa_ntt_zetas /\
+           (!i. i < 256 ==> abs(ival(x i)) < &8380417) /\
+           (!i. i < 256
+                ==> read
+                     (memory :>
+                      bytes32 (word_add a (word (4 * i)))) s =
+                    x i))
+      (\s. read PC s = returnaddress /\
+           read SP s = stackpointer /\
+           !i. i < 256
+               ==> let zi =
+                     read
+                      (memory :>
+                       bytes32 (word_add a (word (4 * i)))) s in
+                   (ival zi ==
+                    mldsa_bitreverse_forward_ntt (ival o x) i)
+                   (mod &8380417) /\
+                   abs(ival zi) < &94279698)
+      (MAYCHANGE_REGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE
+        [memory :> bytes(a,1024);
+         memory :>
+          bytes(word_sub stackpointer (word 32),32)])`,
+  REWRITE_TAC[fst MLDSA_NTT_EXEC] THEN
+  RISCV_ADD_RETURN_STACK_TAC
+    ~core_precondition_tac:RV32_MLDSA_NTT_STACK_TABLE_TAC
+    MLDSA_NTT_EXEC
+    (REWRITE_RULE[fst MLDSA_NTT_EXEC]
+      MLDSA_NTT_CORE_CORRECT)
+    `[S0; S1; S2; S3; S4; S5]` 32);;
