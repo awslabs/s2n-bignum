@@ -1851,8 +1851,7 @@ let CONCL_BOUNDS_RULE =
 let SIDE_ELIM_RULE th =
   MP th (EQT_ELIM(DIMINDEX_INT_REDUCE_CONV(lhand(concl th))));;
 
-let rec ASM_CONGBOUND_RULE lfn tm =
-    try apply lfn tm with Failure _ ->
+let ASM_CONGBOUND_STEP rule tm =
     match tm with
       Comb(Const("word",_),n) when is_numeral n ->
         let th1 = ISPEC tm CONGBOUND_CONST in
@@ -1864,79 +1863,95 @@ let rec ASM_CONGBOUND_RULE lfn tm =
         let th2 = WORD_RED_CONV(lhand(lhand(snd(strip_forall(concl th1))))) in
         SUBS[SYM th0] (MATCH_MP th1 th2)
     | Comb(Comb(Const("barmul",_),kb),t) ->
-        let ktm,btm = dest_pair kb and th0 = ASM_CONGBOUND_RULE lfn t in
+        let ktm,btm = dest_pair kb and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 3329) th0 in
         let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_BARMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("arm_mldsa_barmul",_),kb),t) ->
-        let ktm,btm = dest_pair kb and th0 = ASM_CONGBOUND_RULE lfn t in
+        let ktm,btm = dest_pair kb and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 8380417) th0 in
         let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_ARM_MLDSA_BARMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("montmul_x86",_),ltm),rtm) ->
-        let lth = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn ltm)
-        and rth = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn rtm) in
+        let lth = WEAKEN_INTCONG_RULE (num 3329) (rule ltm)
+        and rth = WEAKEN_INTCONG_RULE (num 3329) (rule rtm) in
         let th1 = MATCH_MP CONGBOUND_MONTMUL_X86
                    (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(th1)
     | Comb(Const("barred",_),t) ->
-        let th1 = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn t) in
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         MATCH_MP CONGBOUND_BARRED th1
     | Comb(Const("barred_x86",_),t) ->
-        let th1 = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn t) in
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         MATCH_MP CONGBOUND_BARRED_X86 th1
     | Comb(Const("montred",_),t) ->
-        let th1 = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn t) in
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MONTRED th1))
     | Comb(Const("mldsa_montred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
-                   (ASM_CONGBOUND_RULE lfn t) in
+                   (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_MONTRED th1))
     | Comb(Const("mldsa_pointwise_montred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
-                   (ASM_CONGBOUND_RULE lfn t) in
+                   (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_POINTWISE_MONTRED th1))
     | Comb(Const("mldsa_barred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
-                     (ASM_CONGBOUND_RULE lfn t) in
+                     (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_BARRED th1))
     | Comb(Comb(Const("mldsa_montmul",_),ab),t) ->
-        let atm,btm = dest_pair ab and th0 = ASM_CONGBOUND_RULE lfn t in
+        let atm,btm = dest_pair ab and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 8380417) th0 in
         let th1 = SPECL [atm;btm] (MATCH_MP CONGBOUND_MLDSA_MONTMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("ntt_montmul",_),ab),t) ->
-        let atm,btm = dest_pair ab and th0 = ASM_CONGBOUND_RULE lfn t in
+        let atm,btm = dest_pair ab and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 3329) th0 in
         let th1 = SPECL [atm;btm] (MATCH_MP CONGBOUND_NTT_MONTMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Const("word_sx",_),t) ->
-        let th0 = ASM_CONGBOUND_RULE lfn t in
+        let th0 = rule t in
         let tyin = type_match
          (type_of(rator(rand(lhand(funpow 4 rand (snd(dest_forall
             (concl CONGBOUND_WORD_SX)))))))) (type_of(rator tm)) [] in
         let th1 = MATCH_MP (INST_TYPE tyin CONGBOUND_WORD_SX) th0 in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Const("word_neg",_),t) ->
-        let th0 = ASM_CONGBOUND_RULE lfn t in
+        let th0 = rule t in
         let th1 = MATCH_MP CONGBOUND_WORD_NEG th0 in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("word_add",_),ltm),rtm) ->
-        let lth = ASM_CONGBOUND_RULE lfn ltm
-        and rth = ASM_CONGBOUND_RULE lfn rtm in
+        let lth = rule ltm
+        and rth = rule rtm in
         let th1 = MATCH_MP CONGBOUND_WORD_ADD (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("word_sub",_),ltm),rtm) ->
-        let lth = ASM_CONGBOUND_RULE lfn ltm
-        and rth = ASM_CONGBOUND_RULE lfn rtm in
+        let lth = rule ltm
+        and rth = rule rtm in
         let th1 = MATCH_MP CONGBOUND_WORD_SUB (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("word_mul",_),ltm),rtm) ->
-        let lth = ASM_CONGBOUND_RULE lfn ltm
-        and rth = ASM_CONGBOUND_RULE lfn rtm in
+        let lth = rule ltm
+        and rth = rule rtm in
         let th1 = MATCH_MP CONGBOUND_WORD_MUL (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | _ -> CONCL_BOUNDS_RULE(ISPEC tm CONGBOUND_ATOM);;
+
+let rec ASM_CONGBOUND_RULE lfn tm =
+  try apply lfn tm with Failure _ ->
+  ASM_CONGBOUND_STEP (ASM_CONGBOUND_RULE lfn) tm;;
+
+(* Cache exact subterm results for the lifetime of the returned rule. *)
+
+let MEMOIZED_ASM_CONGBOUND_RULE lfn =
+  let cache = ref undefined in
+  let rec rule tm =
+    try apply lfn tm with Failure _ ->
+    try apply !cache tm with Failure _ ->
+    let th = ASM_CONGBOUND_STEP rule tm in
+    cache := (tm |-> th) !cache;
+    th in
+  rule;;
 
 let GEN_CONGBOUND_RULE aboths =
   ASM_CONGBOUND_RULE (PROCESS_BOUND_ASSUMPTIONS aboths);;
