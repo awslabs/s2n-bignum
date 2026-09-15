@@ -692,6 +692,11 @@ let term_of_array bs =
 let array_of_bytes bs =
   Array.init (Bytes.length bs) (Char.code o Bytes.get bs);;
 
+let define_word_list name tm =
+  try new_definition (mk_eq (mk_var (name,`:byte list`),tm))
+  with Failure _ ->
+    new_definition (mk_eq (mk_mconst (name,`:byte list`),tm));;
+
 (* term_of_relocs returns:
   (a list of HOL Light variables that are used to represent addresses of
    relocatable symbols,

@@ -9,8 +9,6 @@
 
 let arm_print_log = ref false;;
 
-loadt "common/decode32.ml";;
-
 (* ------------------------------------------------------------------------- *)
 (* Stating assumptions about instruction decoding. For ARM we                *)
 (* currently go all the way to the semantics in one jump, no asm.            *)
