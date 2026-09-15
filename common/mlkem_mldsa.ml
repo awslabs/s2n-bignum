@@ -430,8 +430,119 @@ let AVX2_INVERSE_NTT_CONV =
   ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
 
 (* ------------------------------------------------------------------------- *)
-(* Explicit computation rules to evaluate mod-8380417 powers less naively.   *)
+(* Certified linear evaluation of powers of the ML-DSA root modulo q.       *)
 (* ------------------------------------------------------------------------- *)
+
+let MLDSA_ROOT_POWER_SUC = prove
+ (`!n. (&1753 pow (SUC n)) rem &8380417 =
+       (&1753 * ((&1753 pow n) rem &8380417)) rem &8380417`,
+  GEN_TAC THEN REWRITE_TAC[INT_POW] THEN
+  CONV_TAC INT_REM_DOWN_CONV THEN REFL_TAC);;
+
+(* Prove all 512 residues once by multiplying by one more root at each step.
+   The conversions below reduce a concrete exponent modulo 512 and return the
+   cached theorem rather than reevaluating modular exponentiation. *)
+
+let MLDSA_ROOT_POWERS =
+  let th0 = prove
+   (`(&1753 pow 0) rem &8380417 = &1`,
+    CONV_TAC INT_REDUCE_CONV) in
+  let rec build n th acc =
+    if n = 512 then Array.of_list (List.rev(th::acc)) else
+    let th' =
+      REWRITE_RULE[th]
+       (SPEC (mk_small_numeral n) MLDSA_ROOT_POWER_SUC) in
+    let th'' =
+      CONV_RULE
+       (LAND_CONV (LAND_CONV (RAND_CONV NUM_SUC_CONV)) THENC
+        RAND_CONV INT_REDUCE_CONV) th' in
+    build (n + 1) th'' (th::acc) in
+  build 0 th0 [];;
+
+let MLDSA_ROOT_POWER_PERIODIC = prove
+ (`!n. (&1753 pow n) rem &8380417 =
+       (&1753 pow (n MOD 512)) rem &8380417`,
+  GEN_TAC THEN
+  TRANS_TAC EQ_TRANS
+   `(&1753 pow (512 * (n DIV 512) + n MOD 512)) rem &8380417` THEN
+  CONJ_TAC THENL [REWRITE_TAC[DIVISION_SIMP]; ALL_TAC] THEN
+  REWRITE_TAC[INT_POW_ADD; GSYM INT_POW_POW] THEN
+  GEN_REWRITE_TAC LAND_CONV [GSYM INT_MUL_REM] THEN
+  GEN_REWRITE_TAC (LAND_CONV o LAND_CONV o LAND_CONV)
+   [GSYM INT_POW_REM] THEN
+  REWRITE_TAC[MLDSA_ROOT_POWERS.(512); INT_POW_ONE; INT_REM_REM] THEN
+  CONV_TAC (ONCE_DEPTH_CONV INT_REDUCE_CONV) THEN
+  REWRITE_TAC[INT_MUL_LID; INT_REM_REM]);;
+
+(* Evaluate a concrete power of the ML-DSA root. The input must have the form
+
+     `(&1753 pow n) rem &8380417`
+
+   with numeral n. For example, applying `MLDSA_ROOT_POWER_CONV` to
+
+     `(&1753 pow 17) rem &8380417`
+
+   returns an equality with the reduced integer on the right. *)
+
+let MLDSA_ROOT_POWER_CONV tm =
+  match tm with
+    Comb(Comb(Const("rem",_),
+              Comb(Comb(Const("int_pow",_),a),n)),q)
+    when a = `(&1753:int)` && q = `(&8380417:int)` && is_numeral n ->
+      let r =
+        Num.int_of_num (mod_num (dest_numeral n) (num 512)) in
+      let pth = SPEC n MLDSA_ROOT_POWER_PERIODIC in
+      let pth' =
+        CONV_RULE
+         (RAND_CONV (LAND_CONV (RAND_CONV NUM_MOD_CONV))) pth in
+      TRANS pth' MLDSA_ROOT_POWERS.(r)
+  | _ -> failwith "MLDSA_ROOT_POWER_CONV";;
+
+let MLDSA_INVERSE_ROOT_POWER = prove
+ (`!n. (&731434 pow n) rem &8380417 =
+       (&1753 pow (511 * n)) rem &8380417`,
+  GEN_TAC THEN
+  ONCE_REWRITE_TAC[GSYM MLDSA_ROOT_POWERS.(511)] THEN
+  REWRITE_TAC[INT_POW_REM; INT_POW_POW]);;
+
+let MLDSA_INVERSE_ROOT_POWER_PERIODIC = prove
+ (`!n. (&731434 pow n) rem &8380417 =
+       (&1753 pow ((511 * n) MOD 512)) rem &8380417`,
+  GEN_TAC THEN
+  TRANS_TAC EQ_TRANS
+   `(&1753 pow (511 * n)) rem &8380417` THEN
+  CONJ_TAC THENL
+   [MATCH_ACCEPT_TAC(SPEC `n:num` MLDSA_INVERSE_ROOT_POWER);
+    MATCH_ACCEPT_TAC
+     (SPEC `511 * n` MLDSA_ROOT_POWER_PERIODIC)]);;
+
+(* Evaluate a concrete power of the inverse ML-DSA root. The input must have
+   the form `(&731434 pow n) rem &8380417` with numeral n. For example,
+
+     MLDSA_INVERSE_ROOT_POWER_CONV
+       `(&731434 pow 17) rem &8380417`
+
+   returns an equality with the reduced integer on the right. *)
+
+let MLDSA_INVERSE_ROOT_POWER_CONV tm =
+  match tm with
+    Comb(Comb(Const("rem",_),
+              Comb(Comb(Const("int_pow",_),a),n)),q)
+    when a = `(&731434:int)` && q = `(&8380417:int)` &&
+         is_numeral n ->
+      let r =
+        Num.int_of_num
+         (mod_num
+           (mult_num (num 511) (dest_numeral n))
+           (num 512)) in
+      let pth = SPEC n MLDSA_INVERSE_ROOT_POWER_PERIODIC in
+      let pth' =
+        CONV_RULE
+         (RAND_CONV
+           (LAND_CONV
+             (RAND_CONV NUM_REDUCE_CONV))) pth in
+      TRANS pth' MLDSA_ROOT_POWERS.(r)
+  | _ -> failwith "MLDSA_INVERSE_ROOT_POWER_CONV";;
 
 let BITREVERSE8_CLAUSES = end_itlist CONJ (map
  (GEN_REWRITE_CONV I [bitreverse8] THENC DEPTH_CONV WORD_NUM_RED_CONV)
@@ -471,8 +582,7 @@ let MLDSA_FORWARD_NTT_CONV =
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [MLDSA_AVX2_NTT_ORDER_CLAUSES] THENC
   DEPTH_CONV NUM_RED_CONV THENC
-  GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
-  ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
+  ONCE_DEPTH_CONV MLDSA_ROOT_POWER_CONV THENC INT_REDUCE_CONV;;
 
 (* Expand one bit-reversed forward-transform output with a concrete index.
    For example,
@@ -491,8 +601,7 @@ let MLDSA_BITREVERSE_FORWARD_NTT_EVAL_CONV =
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
   DEPTH_CONV NUM_RED_CONV THENC
-  GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
-  ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
+  ONCE_DEPTH_CONV MLDSA_ROOT_POWER_CONV THENC INT_REDUCE_CONV;;
 
 let MLDSA_BITREVERSE_FORWARD_NTT_CONV =
   GEN_REWRITE_CONV I [MLDSA_BITREVERSE_FORWARD_NTT_ALT] THENC
@@ -560,8 +669,8 @@ let MLDSA_BITREVERSE_INVERSE_NTT_EVAL_CONV =
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [BITREVERSE8_CLAUSES] THENC
   DEPTH_CONV NUM_RED_CONV THENC
-  GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
-  ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
+  ONCE_DEPTH_CONV MLDSA_INVERSE_ROOT_POWER_CONV THENC
+  INT_REDUCE_CONV;;
 
 let MLDSA_BITREVERSE_INVERSE_NTT_CONV =
   GEN_REWRITE_CONV I [MLDSA_BITREVERSE_INVERSE_NTT_ALT] THENC
@@ -594,8 +703,8 @@ let MLDSA_INVERSE_NTT_CONV =
   DEPTH_CONV NUM_RED_CONV THENC
   GEN_REWRITE_CONV ONCE_DEPTH_CONV [MLDSA_AVX2_NTT_ORDER_CLAUSES'] THENC
   DEPTH_CONV NUM_RED_CONV THENC
-  GEN_REWRITE_CONV DEPTH_CONV [INT_OF_NUM_POW; INT_OF_NUM_REM] THENC
-  ONCE_DEPTH_CONV EXP_MOD_CONV THENC INT_REDUCE_CONV;;
+  ONCE_DEPTH_CONV MLDSA_INVERSE_ROOT_POWER_CONV THENC
+  INT_REDUCE_CONV;;
 
 (* ------------------------------------------------------------------------- *)
 (* Abbreviate the Barrett reduction and multiplication and Montgomery        *)
