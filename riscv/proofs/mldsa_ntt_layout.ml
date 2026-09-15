@@ -24,66 +24,6 @@ let rv32_mldsa_ntt_phase2 = define
       (rv32_mldsa_ntt_pair (5 + 3 * g))
       (\k. x (64 * g + j + 16 * k)) r`;;
 
-let RV32_NTT_PHASE2_COEFFICIENT_ORTHOGONAL = prove
- (`!a:int32 h l r g j q.
-      h < 4 /\ l < 16 /\ r < 4 /\
-      g < 4 /\ j < 16 /\ q < 4 /\
-      ~(h = g /\ l = j)
-      ==> orthogonal_components
-           ((memory :> bytes32
-             (word_add a
-              (word(4 * (64 * h + l + 16 * r)))))
-            : (riscvstate,int32)component)
-           ((memory :> bytes32
-             (word_add a
-              (word(4 * (64 * g + j + 16 * q)))))
-            : (riscvstate,int32)component)`,
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC
-   (SPECL
-     [`a:int32`;
-      `64 * g + j + 16 * q`;
-      `64 * h + l + 16 * r`]
-     RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL) THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_ARITH_TAC;
-    ASM_ARITH_TAC;
-    ASM_CASES_TAC `h:num = g` THENL
-     [FIRST_X_ASSUM SUBST_ALL_TAC THEN
-      ASM_CASES_TAC `r:num = q` THENL
-       [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_ARITH_TAC;
-        SUBGOAL_THEN `r:num < q \/ q < r` STRIP_ASSUME_TAC THENL
-         [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]];
-      SUBGOAL_THEN `h:num < g \/ g < h` STRIP_ASSUME_TAC THENL
-       [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]]]);;
-
-let RV32_NTT_PHASE2_USE_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 3 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
-    (MATCH_MP_TAC th' THEN ASM_REWRITE_TAC[]) gl;;
-
-let RV32_NTT_PHASE2_FINAL_COEFFICIENT_TAC =
-  fun (asl,w as gl) ->
-    let th =
-      tryfind
-       (fun (_,th) ->
-         let vs,bod = strip_forall(concl th) in
-         if List.length vs = 3 && is_imp bod then th
-         else failwith "not the coefficient invariant")
-       asl in
-    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
-    let bounds =
-      CONJ (ASSUME `h < 4`)
-       (CONJ (ASSUME `l < 16`) (ASSUME `r < 4`)) in
-    ACCEPT_TAC(ASM_REWRITE_RULE[] (MATCH_MP th' bounds)) gl;;
-
 let RV32_NTT_PHASE12_INDEX = prove
  (`!h l r.
       h < 4 /\ l < 16 /\ r < 4

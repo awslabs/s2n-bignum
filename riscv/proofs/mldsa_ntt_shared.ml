@@ -11,6 +11,27 @@ needs "riscv/proofs/mldsa_objects.ml";;
 needs "riscv/proofs/mldsa_zetas.ml";;
 needs "common/mlkem_mldsa.ml";;
 
+(* Reduce a closed natural-number or integer term, and fail rather than
+   traversing a term that still contains variables. For example, applying
+   `RV32_NTT_CLOSED_NUM_CONV` to `2 EXP 8` proves `2 EXP 8 = 256`, while the
+   same conversion rejects `2 EXP n`. *)
+
+let RV32_NTT_CLOSED_NUM_CONV =
+  let numty = `:num` in
+  fun tm ->
+    if type_of tm = numty && frees tm = [] then
+      CHANGED_CONV NUM_REDUCE_CONV tm
+    else
+      failwith "RV32_NTT_CLOSED_NUM_CONV";;
+
+let RV32_NTT_CLOSED_INT_CONV =
+  let intty = `:int` in
+  fun tm ->
+    if type_of tm = intty && frees tm = [] then
+      CHANGED_CONV INT_REDUCE_CONV tm
+    else
+      failwith "RV32_NTT_CLOSED_INT_CONV";;
+
 (* Read one indexed int32 from an RV32 `wordlist_from_memory` assertion.
    Phase proofs use this theorem to select the zeta values needed by the
    current iteration without expanding all 510 table words. *)
@@ -29,6 +50,72 @@ let RV32_WORDLIST_FROM_MEMORY_EL = prove
   ASM_REWRITE_TAC[BYTES32_WBYTES] THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   DISCH_THEN ACCEPT_TAC);;
+
+(* Re-establish the complete zeta-table assertion after a composed machine
+   theorem. The tactic follows sequential and `MAYCHANGE` frame relations and
+   proves that each changed component is orthogonal to the 2040-byte table,
+   without expanding the table into individual reads. *)
+
+let RV32_MLDSA_NTT_STACK_TABLE_TAC =
+  let table = `memory :> bytes(zetas,2040)` in
+  let rec preserves_tac gl =
+    (REPEAT STRIP_TAC THEN
+     W(fun (asl,w) ->
+       let kind,args =
+         tryfind
+          (fun (_,th) ->
+            let head,args = strip_comb(concl th) in
+            let name = fst(dest_const head) in
+            if name = ",," || name = "MAYCHANGE"
+            then name,args
+            else failwith "not a frame relation")
+          asl in
+       if kind = ",," then
+         let r = List.nth args 0
+         and t = List.nth args 1 in
+         MATCH_MP_TAC
+          (ISPECL [table; r; t] SEQ_PRESERVES_COMPONENT) THEN
+         ASM_REWRITE_TAC[] THEN
+         CONJ_TAC THENL [preserves_tac; preserves_tac]
+       else
+         let cs = List.nth args 0 in
+         MATCH_MP_TAC
+          (ISPECL
+            [table; cs]
+            MAYCHANGE_PRESERVES_ORTHOGONAL_COMPONENT) THEN
+         ASM_REWRITE_TAC[ALL] THEN
+         REPEAT CONJ_TAC THEN
+         ORTHOGONAL_COMPONENTS_TAC)) gl in
+  W(fun (asl,w) ->
+    if can
+       (term_match []
+         `wordlist_from_memory(z,510) (s:riscvstate):int32 list =
+          MAP iword rv32_mldsa_ntt_zetas`)
+       w
+    then
+      let before =
+        tryfind
+         (fun (_,th) ->
+           if can
+              (term_match []
+                `wordlist_from_memory(z,510)
+                   (s:riscvstate):int32 list =
+                 MAP iword rv32_mldsa_ntt_zetas`)
+              (concl th)
+           then th
+           else failwith "not the initial table")
+         asl in
+      let before_words = lhand(concl before) in
+      TRANS_TAC EQ_TRANS before_words THEN
+      CONJ_TAC THENL
+       [REWRITE_TAC[wordlist_from_memory] THEN
+        AP_TERM_TAC THEN
+        REWRITE_TAC[DIMINDEX_32] THEN
+        CONV_TAC NUM_REDUCE_CONV THEN
+        preserves_tac;
+        ACCEPT_TAC before]
+    else
+      NO_TAC);;
 
 (* Use the common expression-abbreviation tactic only for readable RV32
    register reads. This keeps large butterfly expressions compact while
@@ -140,6 +227,66 @@ let RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL = prove
        RV32_NTT_FLAT_COEFFICIENT_NONOVERLAPPING) THEN
     ASM_REWRITE_TAC[];
     ORTHOGONAL_COMPONENTS_TAC]);;
+
+let RV32_NTT_PHASE2_COEFFICIENT_ORTHOGONAL = prove
+ (`!a:int32 h l r g j q.
+      h < 4 /\ l < 16 /\ r < 4 /\
+      g < 4 /\ j < 16 /\ q < 4 /\
+      ~(h = g /\ l = j)
+      ==> orthogonal_components
+           ((memory :> bytes32
+             (word_add a
+              (word(4 * (64 * h + l + 16 * r)))))
+            : (riscvstate,int32)component)
+           ((memory :> bytes32
+             (word_add a
+              (word(4 * (64 * g + j + 16 * q)))))
+            : (riscvstate,int32)component)`,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC
+   (SPECL
+     [`a:int32`;
+      `64 * g + j + 16 * q`;
+      `64 * h + l + 16 * r`]
+     RV32_NTT_FLAT_COEFFICIENT_ORTHOGONAL) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_ARITH_TAC;
+    ASM_ARITH_TAC;
+    ASM_CASES_TAC `h:num = g` THENL
+     [FIRST_X_ASSUM SUBST_ALL_TAC THEN
+      ASM_CASES_TAC `r:num = q` THENL
+       [FIRST_X_ASSUM SUBST_ALL_TAC THEN ASM_ARITH_TAC;
+        SUBGOAL_THEN `r:num < q \/ q < r` STRIP_ASSUME_TAC THENL
+         [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]];
+      SUBGOAL_THEN `h:num < g \/ g < h` STRIP_ASSUME_TAC THENL
+       [ASM_ARITH_TAC; ASM_ARITH_TAC; ASM_ARITH_TAC]]]);;
+
+let RV32_NTT_PHASE2_USE_COEFFICIENT_TAC =
+  fun (asl,w as gl) ->
+    let th =
+      tryfind
+       (fun (_,th) ->
+         let vs,bod = strip_forall(concl th) in
+         if List.length vs = 3 && is_imp bod then th
+         else failwith "not the coefficient invariant")
+       asl in
+    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
+    (MATCH_MP_TAC th' THEN ASM_REWRITE_TAC[]) gl;;
+
+let RV32_NTT_PHASE2_FINAL_COEFFICIENT_TAC =
+  fun (asl,w as gl) ->
+    let th =
+      tryfind
+       (fun (_,th) ->
+         let vs,bod = strip_forall(concl th) in
+         if List.length vs = 3 && is_imp bod then th
+         else failwith "not the coefficient invariant")
+       asl in
+    let th' = SPECL [`h:num`; `l:num`; `r:num`] th in
+    let bounds =
+      CONJ (ASSUME `h < 4`)
+       (CONJ (ASSUME `l < 16`) (ASSUME `r < 4`)) in
+    ACCEPT_TAC(ASM_REWRITE_RULE[] (MATCH_MP th' bounds)) gl;;
 
 let RV32_NTT_INDEX4_CASES = prove
  (`!r. r < 4 ==> r = 0 \/ r = 1 \/ r = 2 \/ r = 3`,
