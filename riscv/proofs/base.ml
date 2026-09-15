@@ -45,6 +45,7 @@ loadt "common/execution.ml";;
 
 loadt "riscv/proofs/instruction.ml";;
 loadt "riscv/proofs/decode.ml";;
+loadt "riscv/proofs/riscv.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Generic memory wordlists and standard overloading.                        *)
