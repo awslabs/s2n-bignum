@@ -51,6 +51,15 @@ let RV32_WORDLIST_FROM_MEMORY_EL = prove
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   DISCH_THEN ACCEPT_TAC);;
 
+let WORD_32_ADD_MODULUS = prove
+ (`!x. (word(4294967296 + x):int32) = word x`,
+  GEN_TAC THEN
+  REWRITE_TAC[WORD_EQ; DIMINDEX_32; CONG] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC
+   [ARITH_RULE `4294967296 + x = 1 * 4294967296 + x`;
+    MOD_MULT_ADD]);;
+
 (* Re-establish the complete zeta-table assertion after a composed machine
    theorem. The tactic follows sequential and `MAYCHANGE` frame relations and
    proves that each changed component is orthogonal to the 2040-byte table,

@@ -8,6 +8,7 @@
 (* ========================================================================= *)
 
 needs "riscv/proofs/mldsa_ntt_shared.ml";;
+needs "riscv/proofs/mldsa_ntt_slowmul_shared.ml";;
 needs "riscv/proofs/mldsa_ntt_layout.ml";;
 
 (* ------------------------------------------------------------------------- *)
@@ -108,15 +109,6 @@ let RV32_MLDSA_BARRETT_SLOW_PAIR2 =
    (REWRITE_RULE[LET_DEF; LET_END_DEF]
     (SPECL [`word 3761513:int32`; `word 1927777021:int32`]
       MLDSA_BARRETT_MUL_SLOW));;
-
-let RV32_NTT_REWRITE_SLOW_BODY_UPDATES_TAC =
-  MAP_EVERY
-   (fun n ->
-      USE_THEN ("body" ^ string_of_int n)
-       (fun th -> ONCE_REWRITE_TAC[GSYM th]) THEN
-      CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN
-      ASM_REWRITE_TAC[])
-   (rev(1--40));;
 
 let RV32_MLDSA_NTT_SLOW_PHASE1_BODY = prove
  (`!a z:int32. !x:num->int32. !i pc.
@@ -938,9 +930,6 @@ let RV32_MLDSA_NTT_SLOW_PHASE2_OUTER_SETUP = prove
     NUM_RING `(24 + 24 * g) + 20 = 4 * (11 + 6 * g)`] THEN
   ASM_REWRITE_TAC[] THEN
   CONV_TAC WORD_RULE);;
-
-let RV32_MLDSA_BARRETT_SLOW_PAIR =
-  REWRITE_RULE[LET_DEF; LET_END_DEF] MLDSA_BARRETT_MUL_SLOW;;
 
 let RV32_MLDSA_NTT_SLOW_PHASE2_BODY = prove
  (`!a z:int32. !x:num->int32. !g j pc.
