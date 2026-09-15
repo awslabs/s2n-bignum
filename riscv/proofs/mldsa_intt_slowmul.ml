@@ -6164,3 +6164,67 @@ let MLDSA_INTT_SLOW_SUBROUTINE_CORRECT = prove
     (REWRITE_RULE[fst MLDSA_INTT_SLOWMUL_EXEC]
       MLDSA_INTT_SLOW_CORE_CORRECT)
     `[S0; S1; S2; S3; S4; S5; S6; S7]` 32);;
+
+(* ========================================================================= *)
+(* Constant-time and memory-safety proof of the slow inverse NTT.            *)
+(*                                                                           *)
+(* MUL and MULH have no operand-dependent timing event in the RV32 model.    *)
+(* ========================================================================= *)
+
+needs "riscv/proofs/consttime.ml";;
+
+let mldsa_intt_slow_rv32im_signature =
+  ([("a","int32_t[static 256]","false");
+    ("zetas","int32_t[static 510]","true")],
+   "void",
+   [("a","256",4);
+    ("zetas","510",4)],
+   [("a","256",4)],
+   []);;
+
+let mldsa_intt_slow_full_spec,mldsa_intt_slow_public_vars =
+  mk_safety_spec
+    ~keep_maychanges:false
+    mldsa_intt_slow_rv32im_signature
+    MLDSA_INTT_SLOW_SUBROUTINE_CORRECT
+    MLDSA_INTT_SLOWMUL_EXEC;;
+
+let MLDSA_INTT_SLOW_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e a zetas pc stackpointer returnaddress.
+           aligned 4 a /\
+           aligned 4 zetas /\
+           aligned 16 stackpointer /\
+           aligned 4 returnaddress /\
+           ALLPAIRS nonoverlapping
+           [a,1024; word_sub stackpointer (word 32),32]
+           [word pc,LENGTH mldsa_intt_slowmul_mc; zetas,2040] /\
+           nonoverlapping
+           (a,1024) (word_sub stackpointer (word 32),32)
+           ==> ensures riscv
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    mldsa_intt_slowmul_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read RA s = returnaddress /\
+                    C_ARGUMENTS [a;zetas] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 =
+                        f_events zetas a pc
+                        (word_sub stackpointer (word 32))
+                        returnaddress /\
+                        memaccess_inbounds e2
+                        [a,1024; zetas,2040;
+                         word_sub stackpointer (word 32),32]
+                        [a,1024;
+                         word_sub stackpointer (word 32),32])
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC mldsa_intt_slow_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC
+    ~public_vars:mldsa_intt_slow_public_vars
+    MLDSA_INTT_SLOWMUL_EXEC);;
