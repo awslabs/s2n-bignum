@@ -425,3 +425,65 @@ let MLDSA_POINTWISE_MONTGOMERY_SUBROUTINE_CORRECT = prove
     (REWRITE_RULE[fst MLDSA_POINTWISE_MONTGOMERY_EXEC]
       MLDSA_POINTWISE_MONTGOMERY_CORE_CORRECT)
     `[S0; S1]` 16);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory-safety proof.                                    *)
+(*                                                                           *)
+(* MUL and MULH have no operand-dependent timing event in the RV32 model.    *)
+(* ------------------------------------------------------------------------- *)
+
+needs "riscv/proofs/consttime.ml";;
+
+let mldsa_pointwise_montgomery_rv32im_signature =
+  ([("a","int32_t[static 256]","false");
+    ("b","int32_t[static 256]","true")],
+   "void",
+   [("a","256",4);
+    ("b","256",4)],
+   [("a","256",4)],
+   []);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    mldsa_pointwise_montgomery_rv32im_signature
+    MLDSA_POINTWISE_MONTGOMERY_SUBROUTINE_CORRECT
+    MLDSA_POINTWISE_MONTGOMERY_EXEC;;
+
+let MLDSA_POINTWISE_MONTGOMERY_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e a b pc stackpointer returnaddress.
+           aligned 4 a /\
+           aligned 4 b /\
+           aligned 16 stackpointer /\
+           aligned 4 returnaddress /\
+           ALLPAIRS nonoverlapping
+           [a,1024; word_sub stackpointer (word 16),16]
+           [word pc,LENGTH mldsa_pointwise_montgomery_mc; b,1024] /\
+           nonoverlapping
+           (a,1024) (word_sub stackpointer (word 16),16)
+           ==> ensures riscv
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    mldsa_pointwise_montgomery_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read RA s = returnaddress /\
+                    C_ARGUMENTS [a;b] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    exists e2.
+                        read events s = APPEND e2 e /\
+                        e2 =
+                        f_events b a pc
+                        (word_sub stackpointer (word 16))
+                        returnaddress /\
+                        memaccess_inbounds e2
+                        [a,1024; b,1024;
+                         word_sub stackpointer (word 16),16]
+                        [a,1024;
+                         word_sub stackpointer (word 16),16])
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars
+    MLDSA_POINTWISE_MONTGOMERY_EXEC);;
