@@ -256,7 +256,7 @@ jobs:
   s2n-bignum-proofs:
     strategy:
         matrix:
-          arch: [arm, x86]
+          arch: [arm, x86, riscv]
     runs-on:
       - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
 
@@ -267,7 +267,7 @@ jobs:
     - name: Install dependent packages
       run: |
         sudo apt --allow-insecure-repositories update
-        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+        sudo apt -y install clang libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
         wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
         chmod +x install.sh
         echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
