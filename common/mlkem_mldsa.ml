@@ -1982,12 +1982,7 @@ let AUTO_ABBREV_TAC tm =
   let gv = genvar(type_of tm) in
   ABBREV_TAC(mk_eq(gv,tm));;
 
-let SIMD_SIMPLIFY_ABBREV_TAC =
-  let arm_simdable =
-    can (term_match [] `read X (s:armstate):int128 = whatever`)
-  and x86_simdable =
-    can (term_match [] `read X (s:x86state):int256 = whatever`) in
-  let simdable tm = arm_simdable tm || x86_simdable tm in
+let GEN_SIMPLIFY_ABBREV_TAC simdable =
   fun unfold_defs unfold_aux ->
     let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
     let pam t = exists (fun p -> can(term_match [] p) t) pats in
@@ -2000,6 +1995,14 @@ let SIMD_SIMPLIFY_ABBREV_TAC =
       let tms = sort free_in (find_terms pam (rand(concl th''))) in
       (MP_TAC th'' THEN MAP_EVERY AUTO_ABBREV_TAC tms THEN DISCH_TAC) (asl,w) in
   TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
+
+let SIMD_SIMPLIFY_ABBREV_TAC =
+  let arm_simdable =
+    can (term_match [] `read X (s:armstate):int128 = whatever`)
+  and x86_simdable =
+    can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm in
+  GEN_SIMPLIFY_ABBREV_TAC simdable;;
 
 (* ========================================================================= *)
 (* ML-DSA use_hint shared infrastructure lemmas                              *)
