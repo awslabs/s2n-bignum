@@ -1453,6 +1453,18 @@ let arm_PMUL_VEC = define
 let arm_NOP = new_definition
   `arm_NOP = \s s':armstate. s = s'`;;
 
+(*** This is the BTI instruction (BTI c), the landing pad emitted at entry
+ *** points by AARCH64_VALID_CALL_TARGET, treated as a NOP. That is exactly how
+ *** it behaves on machines without BTI enabled, and we do not model the
+ *** restrictions imposed when it is: those arguably belong on the indirect
+ *** branches themselves, of which there are none in s2n-bignum. It gets its own
+ *** constant rather than reusing arm_NOP so machine-code literals distinguish a
+ *** landing pad from padding, as x86_ENDBR64 does.
+ ***)
+
+let arm_BTI = new_definition
+  `arm_BTI = \s s':armstate. s = s'`;;
+
 let arm_ORN = define
  `arm_ORN Rd Rm Rn =
     \s. let m = read Rm s
@@ -3739,6 +3751,7 @@ let ARM_OPERATION_CLAUSES =
        arm_MLS_VEC_ALT;
        arm_MOVI; arm_MOVK_ALT; arm_MOVN; arm_MOVZ; arm_MSUB;
        arm_MUL_VEC_ALT;
+       arm_BTI;
        arm_NOP;
        arm_ORN; arm_ORR; arm_ORR_VEC;
        arm_PMUL_VEC_ALT;

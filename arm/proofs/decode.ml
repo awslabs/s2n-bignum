@@ -323,6 +323,10 @@ let decode = new_definition `!w:int32. decode w =
   | [0b11010101000000110010000000011111:32] ->
     SOME arm_NOP
 
+  // BTI c (hint #34), the AARCH64_VALID_CALL_TARGET landing pad; see arm_BTI
+  | [0b11010101000000110010010001011111:32] ->
+    SOME arm_BTI
+
   // SIMD ld,st operations
   // LDR/STR (immediate, SIMD&FP), Unsigned offset, no writeback
   // Currently only supports sizes 128 and 64 (not 32, 16 or 8)
@@ -1822,6 +1826,32 @@ let define_from_elf name file =
 
 let define_assert_from_elf name file =
   define_assert_word_list name (term_of_bytes (load_elf_contents_arm file));;
+
+(*** Define a variant with the initial BTI landing pad trimmed away ***)
+
+(* Arm counterpart of the x86 `define_trimmed`. Defines
+   `<name> = TRIM_LIST(4,0)(<mc>)`, i.e. the code with its leading `BTI c`
+   removed, so one proof can cover both the default and a -DNO_IBT build.
+   Simpler than the x86 version: aarch64 has no RIP-relative addressing and
+   encodes branches relatively, so dropping the first instruction needs no
+   displacement fixup inside the bytelist. Only the plain `mc = [bytes]` shape
+   is supported; a pc-parameterised mc theorem is rejected rather than
+   mishandled. *)
+
+let define_trimmed =
+  let trim_tm = `TRIM_LIST(4,0):byte list->byte list`
+  and bl_ty = `:byte list` in
+  fun name th ->
+    let avs,_ = strip_forall(concl th) in
+    if avs <> [] then
+      failwith ("define_trimmed: " ^ name ^
+                ": pc-parameterised mc theorems are not supported")
+    else
+      let eth = CONV_RULE(RAND_CONV TRIM_LIST_CONV) (AP_TERM trim_tm th) in
+      let ldef =
+        try mk_mconst(name,bl_ty) with Failure _ -> mk_var(name,bl_ty) in
+      let def' = mk_eq(ldef,lhand(concl eth)) in
+      TRANS (new_definition def') eth;;
 
 let print_literal_from_elf file =
   let bs = load_elf_contents_arm file in
