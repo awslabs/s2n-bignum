@@ -1500,12 +1500,33 @@ let ARM_BTI_WRAP_THM = prove
       (RATOR_CONV o RATOR_CONV) [MAYCHANGE_SING]) THEN
     REWRITE_TAC[ASSIGNS; assign] THEN ASM_MESON_TAC[]]);;
 
-(* safety theorems (`exists f_events. ...`) need WITNESS_F_EVENTS_TAC, which
-   the Arm side does not have yet; fail loudly rather than mishandle them. *)
+(* If the goal is `exists f_events. ..`, instantiate f_events from the one in
+   `th_noexists`, with pc replaced by pc + 4.  Term surgery only, so this is the
+   x86 WITNESS_F_EVENTS_TAC unchanged. *)
+let WITNESS_F_EVENTS_TAC (th_noexists:thm): tactic =
+  W (fun (asl,w) ->
+    if not (is_exists w) then ALL_TAC else
+    let f_events_term = find_term (fun t ->
+      is_comb t && name_of(fst(strip_comb t)) = "f_events")
+      (concl th_noexists) in
+    let f_events,args = strip_comb f_events_term in
+    let new_argdecls,new_args = unzip (map (fun t ->
+      if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
+      else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
+    let new_f_events = list_mk_abs
+      (new_argdecls,list_mk_comb(f_events,new_args)) in
+    EXISTS_TAC new_f_events);;
+
+(* Strip a leading `exists f_events.` from `th`, instantiate the goal's
+   existential to match, and run [k] on the body.  Correctness theorems (no
+   leading `exists`) go straight to [k]. *)
 let ARM_ADD_IBT_OPEN_EXISTS th (k:thm->tactic): tactic =
   if is_exists (concl th) then
-    failwith "ARM_ADD_IBT: `exists f_events` (safety) theorems not supported yet"
-  else k th;;
+    MP_TAC th THEN STRIP_TAC THEN
+    FIRST_X_ASSUM (fun th_noexists ->
+      WITNESS_F_EVENTS_TAC th_noexists THEN k th_noexists)
+  else
+    k th;;
 
 (* `extra` supplies definitions of any state predicate appearing in the
    precondition (e.g. htable_mem_8): COMPONENT_READ_OVER_WRITE_CONV cannot see
