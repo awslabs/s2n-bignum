@@ -57,14 +57,14 @@ let subroutine_signatures = [
    ],
    "size_t",
    [(* input buffers *)
-    ("in", "bit_len"(* num elems *), 1(* elem bytesize *));
+    ("in", "bit_len/8"(* num elems *), 1(* elem bytesize *));
     ("xi", "16"(* num elems *), 1(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
     ("key", "244"(* num elems *), 1(* elem bytesize *));
     ("htable", "32"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
-    ("out", "bit_len"(* num elems *), 1(* elem bytesize *));
+    ("out", "bit_len/8"(* num elems *), 1(* elem bytesize *));
     ("xi", "16"(* num elems *), 1(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
    ],
