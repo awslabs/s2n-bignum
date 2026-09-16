@@ -1,4 +1,5 @@
 (*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT
  *)
 
@@ -15,7 +16,6 @@ needs "common/mlkem_mldsa.ml";;
  ****)
 
 let mldsa_decompose_88_mc = define_assert_from_elf "mldsa_decompose_88_mc" "arm/mldsa/mldsa_decompose_88.o"
-(*** BYTECODE START ***)
 [
   0x529c0024;       (* arm_MOV W4 (rvalue (word 57345)) *)
   0x72a00fe4;       (* arm_MOVK W4 (word 127) 16 *)
@@ -70,7 +70,6 @@ let mldsa_decompose_88_mc = define_assert_from_elf "mldsa_decompose_88_mc" "arm/
   0x54fffb61;       (* arm_BNE (word 2097004) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
-(*** BYTECODE END ***)
 
 let MLDSA_DECOMPOSE_88_EXEC = ARM_MK_EXEC_RULE mldsa_decompose_88_mc;;
 

@@ -1410,8 +1410,8 @@ void call_mldsa_polyz_unpack_17(void) repeat(mldsa_polyz_unpack_17_x86((int32_t*
 void call_mldsa_polyz_unpack_19(void) repeat(mldsa_polyz_unpack_19_x86((int32_t*)b0,(const uint8_t*)b1))
 void call_mldsa_reduce(void) repeat(mldsa_reduce((int32_t*)b0))
 void call_mldsa_rej_uniform(void) repeat(mldsa_rej_uniform_VARIABLE_TIME_x86((int32_t*)b0,(uint8_t*)b1,(const uint64_t*)mldsa_rej_uniform_table))
-void call_mldsa_rej_uniform_eta2(void) {}
-void call_mldsa_rej_uniform_eta4(void) {}
+void call_mldsa_rej_uniform_eta2(void) repeat(mldsa_rej_uniform_eta2_VARIABLE_TIME_x86((int32_t*)b0,(const uint8_t*)b1,(const uint8_t*)b2))
+void call_mldsa_rej_uniform_eta4(void) repeat(mldsa_rej_uniform_eta4_VARIABLE_TIME_x86((int32_t*)b0,(const uint8_t*)b1,(const uint8_t*)b2))
 
 void call_mlkem_frombytes(void) repeat(mlkem_frombytes((uint16_t*)b0,(int8_t*)b1))
 void call_mlkem_intt(void) repeat(mlkem_intt_x86((int16_t*)b0,(int16_t*)b1))
@@ -1951,8 +1951,8 @@ int main(int argc, char *argv[])
   timingtest(all,"mldsa_polyz_unpack_17",call_mldsa_polyz_unpack_17);
   timingtest(all,"mldsa_polyz_unpack_19",call_mldsa_polyz_unpack_19);
   timingtest(arm,"mldsa_rej_uniform_VARIABLE_TIME (1200 bytes)",call_mldsa_rej_uniform);
-  timingtest(arm,"mldsa_rej_uniform_eta2_VARIABLE_TIME",call_mldsa_rej_uniform_eta2);
-  timingtest(arm,"mldsa_rej_uniform_eta4_VARIABLE_TIME",call_mldsa_rej_uniform_eta4);
+  timingtest(all,"mldsa_rej_uniform_eta2_VARIABLE_TIME",call_mldsa_rej_uniform_eta2);
+  timingtest(all,"mldsa_rej_uniform_eta4_VARIABLE_TIME",call_mldsa_rej_uniform_eta4);
   timingtest(!arm,"mldsa_reduce",call_mldsa_reduce);
   timingtest(!arm,"mldsa_rej_uniform",call_mldsa_rej_uniform);
   timingtest(bmi,"p256_montjadd",call_p256_montjadd);

@@ -26,7 +26,7 @@ S2N_BN_SYMBOL(mldsa_caddq):
         dup v4.4s, w9
         mov x1, #0x10               // =16
 
-mldsa_caddq_loop:
+Lmldsa_caddq_loop:
         ldr q0, [x0]
         ldr q1, [x0, #0x10]
         ldr q2, [x0, #0x20]
@@ -44,7 +44,7 @@ mldsa_caddq_loop:
         str q3, [x0, #0x30]
         str q0, [x0], #0x40
         subs x1, x1, #0x1
-        b.ne mldsa_caddq_loop
+        b.ne Lmldsa_caddq_loop
         ret
 
 S2N_BN_SIZE_DIRECTIVE(mldsa_caddq)

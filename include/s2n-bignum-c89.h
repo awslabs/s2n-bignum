@@ -1065,7 +1065,7 @@ extern void mldsa_caddq(int32_t a[256]);
 
 /* Infinity-norm check of polynomial coefficients for ML-DSA */
 /* Returns 1 if any coefficient has absolute value >= bound, 0 otherwise */
-/* Input a[256] (signed 32-bit words), bound (unsigned 32-bit); output function return */
+/* Input a[256] (signed 32-bit words), bound (unsigned 32-bit) */
 extern uint64_t mldsa_chknorm(const int32_t a[256], uint64_t bound);
 
 /* Coefficient decomposition for ML-DSA (GAMMA2 = (Q-1)/32, parameter sets 65/87) */
@@ -1117,12 +1117,22 @@ extern void mldsa_poly_use_hint_88(int32_t b[256], const int32_t a[256], const i
 #endif
 
 /* Rejection sampling for ML-DSA secret key (eta = 2; parameter sets 44/87) */
+/* The x86 (AVX2) backend has a divergent interface from the Arm (NEON) one: */
+/* x86 reads a fixed-size input buffer and a 2048-byte table, so it uses an */
+/* _x86-suffixed symbol; Arm takes a variable buflen and a 4096-byte table. */
 /* Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words) */
 extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME(int32_t r[256], const uint8_t *buf, unsigned buflen, const uint8_t table[4096]);
+/* Inputs buf[136], table[2048] (uint8_t); output r[256] (signed 32-bit words) */
+extern uint64_t mldsa_rej_uniform_eta2_VARIABLE_TIME_x86(int32_t r[256], const uint8_t buf[136], const uint8_t table[2048]);
 
 /* Rejection sampling for ML-DSA secret key (eta = 4; parameter set 65) */
+/* The x86 (AVX2) backend has a divergent interface from the Arm (NEON) one: */
+/* x86 reads a fixed-size input buffer and a 2048-byte table, so it uses an */
+/* _x86-suffixed symbol; Arm takes a variable buflen and a 4096-byte table. */
 /* Inputs buf[buflen], buflen, table[4096] (uint8_t); output r[256] (signed 32-bit words) */
 extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME(int32_t r[256], const uint8_t *buf, unsigned buflen, const uint8_t table[4096]);
+/* Inputs buf[272], table[2048] (uint8_t); output r[256] (signed 32-bit words) */
+extern uint64_t mldsa_rej_uniform_eta4_VARIABLE_TIME_x86(int32_t r[256], const uint8_t buf[272], const uint8_t table[2048]);
 
 /* Uniform rejection sampling for ML-DSA */
 /* Inputs *buf (unsigned bytes), buflen, table (unsigned bytes); output r[256] (signed 32-bit words), return */

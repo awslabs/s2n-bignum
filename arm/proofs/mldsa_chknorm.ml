@@ -16,7 +16,6 @@ needs "common/mlkem_mldsa.ml";;
  ****)
 
 let mldsa_chknorm_mc = define_assert_from_elf "mldsa_chknorm_mc" "arm/mldsa/mldsa_chknorm.o"
-(*** BYTECODE START ***)
 [
   0x4e040c34;       (* arm_DUP_GEN Q20 X1 32 128 *)
   0x6e351eb5;       (* arm_EOR_VEC Q21 Q21 Q21 128 *)
@@ -44,7 +43,6 @@ let mldsa_chknorm_mc = define_assert_from_elf "mldsa_chknorm_mc" "arm/mldsa/mlds
   0x12000000;       (* arm_AND W0 W0 (rvalue (word 1)) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
-(*** BYTECODE END ***)
 
 let MLDSA_CHKNORM_EXEC = ARM_MK_EXEC_RULE mldsa_chknorm_mc;;
 
@@ -184,9 +182,6 @@ let MLDSA_CHKNORM_CORRECT = prove(
 (* ------------------------------------------------------------------------- *)
 (* Subroutine correctness theorem (includes return)                          *)
 (* ------------------------------------------------------------------------- *)
-
-(* NOTE: This must be kept in sync with the CBMC specification
- * in mldsa/src/native/aarch64/src/arith_native_aarch64.h *)
 
 let MLDSA_CHKNORM_SUBROUTINE_CORRECT = prove(
  `!a (x:num->int32) (bound:int32) pc returnaddress.

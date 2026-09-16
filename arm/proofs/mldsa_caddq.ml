@@ -1,5 +1,4 @@
 (*
- * Copyright (c) The mldsa-native project authors
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
  *)
@@ -16,7 +15,6 @@ needs "common/mlkem_mldsa.ml";;
  ****)
 
 let mldsa_caddq_mc = define_assert_from_elf "mldsa_caddq_mc" "arm/mldsa/mldsa_caddq.o"
-(*** BYTECODE START ***)
 [
   0x529c0029;       (* arm_MOV W9 (rvalue (word 57345)) *)
   0x72a00fe9;       (* arm_MOVK W9 (word 127) 16 *)
@@ -42,7 +40,6 @@ let mldsa_caddq_mc = define_assert_from_elf "mldsa_caddq_mc" "arm/mldsa/mldsa_ca
   0x54fffde1;       (* arm_BNE (word 2097084) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
-(*** BYTECODE END ***)
 
 let MLDSA_CADDQ_EXEC = ARM_MK_EXEC_RULE mldsa_caddq_mc;;
 

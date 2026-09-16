@@ -17,7 +17,6 @@ needs "common/mlkem_mldsa.ml";;
 
 let mldsa_polyz_unpack_17_mc = define_assert_from_elf
   "mldsa_polyz_unpack_17_mc" "arm/mldsa/mldsa_polyz_unpack_17.o"
-(*** BYTECODE START ***)
 [
   0x3dc00058;       (* arm_LDR Q24 X2 (Immediate_Offset (word 0)) *)
   0x3dc00459;       (* arm_LDR Q25 X2 (Immediate_Offset (word 16)) *)
@@ -58,7 +57,6 @@ let mldsa_polyz_unpack_17_mc = define_assert_from_elf
   0x54fffd01;       (* arm_BNE (word 2097056) *)
   0xd65f03c0        (* arm_RET X30 *)
 ];;
-(*** BYTECODE END ***)
 
 let MLDSA_POLYZ_UNPACK_17_EXEC = ARM_MK_EXEC_RULE mldsa_polyz_unpack_17_mc;;
 
@@ -91,9 +89,9 @@ let LENGTH_SIMPLIFY_CONV =
   NUM_REDUCE_CONV THENC REWRITE_CONV [ADD_0];;
 
 (* ------------------------------------------------------------------------- *)
-(* ARM-specific SIMD lane machinery (128-bit NEON layout): base-word          *)
-(* simplifications, the zunpack TBL/USHL lane conversions, and the unaligned   *)
-(* overlapping-read splitter. Inlined here as they are aarch64-specific.       *)
+(* ARM-specific SIMD lane machinery (128-bit NEON layout): base-word         *)
+(* simplifications, the zunpack TBL/USHL lane conversions, and the unaligned *)
+(* overlapping-read splitter. Inlined here as they are aarch64-specific.     *)
 (* ------------------------------------------------------------------------- *)
 
 let mk_base_simps d =
@@ -393,9 +391,6 @@ let MLDSA_POLYZ_UNPACK_17_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 (* Subroutine correctness                                                    *)
 (* ------------------------------------------------------------------------- *)
-
-(* NOTE: This must be kept in sync with the CBMC specification
- * in mldsa/src/native/aarch64/src/arith_native_aarch64.h *)
 
 let MLDSA_POLYZ_UNPACK_17_SUBROUTINE_CORRECT = prove
  (`!r b t (l:(18 word) list) pc returnaddress.

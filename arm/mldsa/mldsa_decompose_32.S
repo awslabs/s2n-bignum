@@ -36,7 +36,7 @@ S2N_BN_SYMBOL(mldsa_decompose_32):
         dup v23.4s, w11
         mov x3, #0x10               // =16
 
-mldsa_decompose_32_loop:
+Lmldsa_decompose_32_loop:
         ldr q0, [x1]
         ldr q1, [x1, #0x10]
         ldr q2, [x1, #0x20]
@@ -74,7 +74,7 @@ mldsa_decompose_32_loop:
         str q3, [x1, #0x30]
         str q0, [x1], #0x40
         subs x3, x3, #0x1
-        b.ne mldsa_decompose_32_loop
+        b.ne Lmldsa_decompose_32_loop
         ret
 
 S2N_BN_SIZE_DIRECTIVE(mldsa_decompose_32)
