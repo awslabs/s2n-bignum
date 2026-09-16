@@ -289,11 +289,32 @@ let iclasses =
   "000011110001xxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "0000111100001xxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
 
+  (*** SQSHRUN / SQSHRUN2 (make sure immh is nonzero) ***)
+  "0x10111101xxxxxx100001xxxxxxxxxx";
+  "0x101111001xxxxx100001xxxxxxxxxx";
+  "0x1011110001xxxx100001xxxxxxxxxx";
+  "0x10111100001xxx100001xxxxxxxxxx";
+
+  (*** SQRSHRUN / SQRSHRUN2 ***)
+  "0x1011110xxxxxxx100011xxxxxxxxxx";
+
+  (*** RSHRN / RSHRN2 ***)
+  "0x0011110xxxxxxx100011xxxxxxxxxx";
+
   (*** SMLAL ***)
   "00001110xx1xxxxx100000xxxxxxxxxx";
 
   (*** SMLAL2 ***)
   "01001110xx1xxxxx100000xxxxxxxxxx";
+
+  (*** SMLAL / SMLAL2 (by element) ***)
+  "0x001111xxxxxxxx0010x0xxxxxxxxxx";
+
+  (*** UMULL / UMULL2 (by element) ***)
+  "0x101111xxxxxxxx1010x0xxxxxxxxxx";
+
+  (*** UMLSL / UMLSL2 (by element) ***)
+  "0x101111xxxxxxxx0110x0xxxxxxxxxx";
 
   (*** SMLSL ***)
   "00001110xx1xxxxx101000xxxxxxxxxx";
@@ -499,6 +520,10 @@ let check_insns () =
     "10110100xxxxxxxxxxxxxxxxxxxxxxxx";
     "10110101xxxxxxxxxxxxxxxxxxxxxxxx";
 
+    (*** tbz, tbnz ***)
+    "x0110110xxxxxxxxxxxxxxxxxxxxxxxx";
+    "x0110111xxxxxxxxxxxxxxxxxxxxxxxx";
+
     (*** ldp ***)
     "x010100x1xxxxxxxxxxxxxxxxxxxxxxx"; (* Preimmediate_Offset or Postimmediate_Offset *)
     "x01010010xxxxxxxxxxxxxxxxxxxxxxx"; (* Immediate_Offset *)
@@ -550,11 +575,11 @@ let check_insns () =
     (*** st1 (1 register, no Post-immediate offset) ***)
     "0x001100000000000111xxxxxxxxxxxx";
 
-    (*** ld1 (2 registers, Post-immediate offset) 128-bit ***)
-    "01001100110111111010xxxxxxxxxxxx";
+    (*** ld1 (2 registers, Post-immediate and register offset) 128-bit ***)
+    "01001100110xxxxx1010xxxxxxxxxxxx";
 
-    (*** st1 (2 registers, Post-immediate offset) 128-bit ***)
-    "01001100100111111010xxxxxxxxxxxx";
+    (*** st1 (2 registers, Post-immediate and register offset) 128-bit ***)
+    "01001100100xxxxx1010xxxxxxxxxxxx";
 
     (*** ld1 (2 registers, no offset) 128-bit ***)
     "01001100010000001010xxxxxxxxxxxx";

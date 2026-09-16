@@ -356,6 +356,8 @@ onlyInX86 = [
   "mldsa_pointwise_x86",
   "mldsa_reduce",
   "mldsa_rej_uniform_VARIABLE_TIME_x86",
+  "mldsa_rej_uniform_eta2_VARIABLE_TIME_x86",
+  "mldsa_rej_uniform_eta4_VARIABLE_TIME_x86",
   "mlkem_frombytes",
   "mlkem_mulcache_compute_x86",
   "mlkem_ntt_x86",
