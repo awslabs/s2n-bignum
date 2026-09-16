@@ -1448,11 +1448,18 @@ let ADRP_ADD_FOLD = prove(`forall (pc:int64) (x:int64).
   BITBLAST_TAC);;
 
 (* ========================================================================= *)
-(* Lifting a theorem about BTI-trimmed code to the full code carrying its     *)
-(* leading `BTI c` landing pad.  Arm counterpart of the x86 ADD_IBT_RULE.     *)
-(* `bti c` = 0xd503245f, i.e. bytes 95 36 3 213 little-endian.                *)
+(* Lifting a theorem about BTI-trimmed code to the full code carrying its    *)
+(* leading `BTI c` landing pad.  Arm counterpart of the x86 ADD_IBT_RULE.    *)
+(* `bti c` = 0xd503245f, i.e. bytes 95 36 3 213 little-endian.               *)
+(*                                                                           *)
+(* Naming: BTI names the Arm instruction (cf. arm_BTI); IBT names this       *)
+(* machinery and the build it selects (cf. the NO_IBT flag and the _NOIBT_   *)
+(* theorem suffix), matching the x86 originals.                              *)
 (* ========================================================================= *)
 
+(* Decode table for the landing pad: the instruction at pc is arm_BTI.  The  *)
+(* wrap theorem is generic in `mc`, so ARM_MK_EXEC_RULE cannot be used; this *)
+(* supplies the single entry ARM_SIM_TAC needs to step the pad.              *)
 let ARM_BTI_DECODE = prove
  (`!s pc. aligned_bytes_loaded s (word pc)
             (APPEND [word 95; word 36; word 3; word 213] mc)
@@ -1464,6 +1471,10 @@ let ARM_BTI_DECODE = prove
   DISCH_THEN(MP_TAC o MATCH_MP aligned_bytes_loaded_append_left) THEN
   REWRITE_TAC[dth]);;
 
+(* The loaded-code half of the split: `[bti c] ++ mc` at pc gives `mc` at    *)
+(* pc+4, which is the inner theorem's precondition.  A lemma rather than an  *)
+(* inline rewrite because aligned_bytes_loaded_append is guarded by          *)
+(* `4 divides LENGTH l1` (x86's bytes_loaded_append is unconditional).       *)
 let ARM_BTI_LOADED_SPLIT = prove
  (`!s pc. aligned_bytes_loaded s (word pc)
             (APPEND [word 95; word 36; word 3; word 213] mc)
@@ -1474,7 +1485,12 @@ let ARM_BTI_LOADED_SPLIT = prove
   REWRITE_TAC[LENGTH] THEN CONV_TAC NUM_REDUCE_CONV THEN
   REWRITE_TAC[WORD_ADD] THEN MESON_TAC[]);;
 
-let ARM_BTI_WRAP_THM = prove
+(* The lift itself: given an `ensures` for `mc` at pc+4, conclude one for    *)
+(* `[bti c] ++ mc` at pc. Proved by widening the frame to MAYCHANGE [PC] ,,  *)
+(* R (the pad writes PC), splitting the execution at pc+4 with               *)
+(* ENSURES_TRANS, and simulating the one pad instruction. The three side     *)
+(* conditions are discharged by ARM_IBT_WRAP_TAC.                            *)
+let ARM_IBT_WRAP_THM = prove
  (`R ,, R = R /\ MAYCHANGE [PC] subsumed R /\
    (!s y. P(write PC y s) <=> P s) /\
    ensures arm
@@ -1500,10 +1516,10 @@ let ARM_BTI_WRAP_THM = prove
       (RATOR_CONV o RATOR_CONV) [MAYCHANGE_SING]) THEN
     REWRITE_TAC[ASSIGNS; assign] THEN ASM_MESON_TAC[]]);;
 
-(* If the goal is `exists f_events. ..`, instantiate f_events from the one in
-   `th_noexists`, with pc replaced by pc + 4.  Term surgery only, so this is the
-   x86 WITNESS_F_EVENTS_TAC unchanged. *)
-let WITNESS_F_EVENTS_TAC (th_noexists:thm): tactic =
+(* If the goal is `exists f_events. ..`, instantiate f_events from the one   *)
+(* in `th_noexists`, with pc replaced by pc + 4. Term surgery only, so this  *)
+(* is the x86 WITNESS_F_EVENTS_TAC unchanged.                                *)
+let ARM_WITNESS_F_EVENTS_TAC (th_noexists:thm): tactic =
   W (fun (asl,w) ->
     if not (is_exists w) then ALL_TAC else
     let f_events_term = find_term (fun t ->
@@ -1517,32 +1533,41 @@ let WITNESS_F_EVENTS_TAC (th_noexists:thm): tactic =
       (new_argdecls,list_mk_comb(f_events,new_args)) in
     EXISTS_TAC new_f_events);;
 
-(* Strip a leading `exists f_events.` from `th`, instantiate the goal's
-   existential to match, and run [k] on the body.  Correctness theorems (no
-   leading `exists`) go straight to [k]. *)
+(* Strip a leading `exists f_events.` from `th`, instantiate the goal's      *)
+(* existential to match, and run [k] on the body. Correctness theorems (no   *)
+(* leading `exists`) go straight to [k].                                     *)
 let ARM_ADD_IBT_OPEN_EXISTS th (k:thm->tactic): tactic =
   if is_exists (concl th) then
     MP_TAC th THEN STRIP_TAC THEN
     FIRST_X_ASSUM (fun th_noexists ->
-      WITNESS_F_EVENTS_TAC th_noexists THEN k th_noexists)
+      ARM_WITNESS_F_EVENTS_TAC th_noexists THEN k th_noexists)
   else
     k th;;
 
-(* `extra` supplies definitions of any state predicate appearing in the
-   precondition (e.g. htable_mem_8): COMPONENT_READ_OVER_WRITE_CONV cannot see
-   inside an opaque constant, so `Pred ... (write PC y s)` would never reduce to
-   `Pred ... s` and the third subgoal's REFL_TAC would fail. *)
+(* `extra` supplies the definitions of any state predicate appearing in the  *)
+(* precondition.  Obligation (3) below needs `write PC` to be visibly inert  *)
+(* on the precondition, and COMPONENT_READ_OVER_WRITE_CONV cannot see inside *)
+(* an opaque constant: `Pred args (write PC y s)` would never reduce to      *)
+(* `Pred args s`, so REFL_TAC would fail.                                    *)
 let ARM_IBT_WRAP_TAC ?(extra:thm list = []) (discharge_inner:tactic): tactic =
-  MATCH_MP_TAC ARM_BTI_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+  MATCH_MP_TAC ARM_IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+    (* (1) the frame is idempotent *)
     MAYCHANGE_IDEMPOT_TAC;
+    (* (2) the frame permits the pad writing PC *)
     SUBSUMED_MAYCHANGE_TAC;
+    (* (3) writing PC leaves the precondition alone *)
     REPEAT GEN_TAC THEN
     REWRITE_TAC(extra @ [C_ARGUMENTS; C_RETURN; aligned_bytes_loaded;
-                         bytes_loaded]) THEN
+                         bytes_loaded; SOME_FLAGS]) THEN
     REWRITE_TAC(!simulation_precanon_thms) THEN
     CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+    (* (4) caller-supplied: the inner `ensures` at pc+4 *)
     discharge_inner ];;
 
+(* Proves the full-code goal from the trimmed-code theorem: re-express `mc`  *)
+(* as `APPEND [bti c] tmc`, respecialise the theorem with pc -> pc+4, repair *)
+(* the nonoverlapping hypotheses for the 4-byte-longer code region, then     *)
+(* apply ARM_IBT_WRAP_TAC.                                                   *)
 let ARM_ADD_IBT_TAC =
   let tweak = subst[`pc + 4`,`pc:num`]
   and EXPAND_TRIMMED_RULE =
@@ -1561,8 +1586,16 @@ let ARM_ADD_IBT_TAC =
         MAP_EVERY X_GEN_TAC avs THEN
         MP_TAC(SPECL (map tweak avs) th))) THEN
       REWRITE_TAC(!simulation_precanon_thms) THEN
-      REWRITE_TAC[C_ARGUMENTS; C_RETURN; ALL; ALLPAIRS;
-                  MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+      (* PAIRWISE as well as ALL/ALLPAIRS: several Arm _SUBROUTINE_CORRECT   *)
+      (* statements put the code region inside a PAIRWISE list, and the      *)
+      (* MONO_AND splitting below cannot reach through an unexpanded         *)
+      (* PAIRWISE. SOME_FLAGS and the MODIFIABLE_* lists are new_definition  *)
+      (* constants that MAYCHANGE_CANON_CONV does not unfold, so a frame     *)
+      (* mentioning them would leave obligations 1 and 2 stuck.              *)
+      REWRITE_TAC[C_ARGUMENTS; C_RETURN; ALL; ALLPAIRS; PAIRWISE;
+                  MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS;
+                  MODIFIABLE_SIMD_REGS; MODIFIABLE_UPPER_SIMD_REGS;
+                  MODIFIABLE_GPRS] THEN
       TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
        [REPEAT(REWRITE_TAC[] THEN
                ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
@@ -1582,7 +1615,25 @@ let ARM_ADD_IBT_TAC =
           CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV) THEN
           ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)));;
 
+(* Entry point.  Takes the two machine-code definitions and a theorem about  *)
+(* the trimmed one, and returns the same theorem restated over the full      *)
+(* code. Nothing is re-proved: the lift adds a single simulated instruction. *)
 let ARM_ADD_IBT_RULE ?(extra:thm list = []) fullmc trimc th =
   let mc = lhs(concl fullmc) and tmc = lhs(concl trimc) in
-  prove(subst [mc,tmc] (concl th), ARM_ADD_IBT_TAC ~extra fullmc trimc th);;
+  (* Build the full-code goal from the trimmed-code theorem. As well as      *)
+  (* swapping tmc for mc, every code-region size written as a NUMERAL must   *)
+  (* grow by 4: `nonoverlapping (word pc,0xe0) X` describes the trimmed      *)
+  (* code, and the full code is one instruction longer. Statements that      *)
+  (* write `LENGTH foo_tmc` instead need no adjustment -- the substitution   *)
+  (* turns them into `LENGTH foo_mc`, which is already the larger value.     *)
+  (* Mirrors the `adjust` in x86's ADD_IBT_RULE.                             *)
+  let rec adjust tm =
+    match tm with
+      Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
+          when is_numeral off ->
+        mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
+    | Comb(s,t) -> mk_comb(adjust s,adjust t)
+    | Abs(x,t) -> mk_abs(x,adjust t)
+    | _ -> if tm = tmc then mc else tm in
+  prove(adjust (concl th), ARM_ADD_IBT_TAC ~extra fullmc trimc th);;
 
