@@ -5609,8 +5609,8 @@ let AES_XTS_ENCRYPT_SUBROUTINE_CORRECT = prove(
 (* ========================================================================= *)
 (* AES-256-XTS encryption: memory safety.                                    *)
 (*                                                                           *)
-(* Proves that all memory accesses performed by aes256_xts_encrypt stay      *)
-(* within the permitted buffers:                                             *)
+(* Proves that all memory accesses performed by the body of                  *)
+(* aes256_xts_encrypt stay within the permitted buffers:                     *)
 (*   readable: plaintext [ptxt_p,len],                                       *)
 (*             ciphertext [ctxt_p,len],                                      *)
 (*             iv [iv_p,16],                                                 *)
@@ -5630,67 +5630,12 @@ let AES_XTS_ENCRYPT_SUBROUTINE_CORRECT = prove(
 needs "arm/proofs/consttime.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* File-local helper lemmas/tactics for the memory-safety proof.             *)
-(*                                                                           *)
-(* These fill small gaps in the shared subsumed/frame machinery for the      *)
-(* variable-length store patterns that arise here. They are kept file-local  *)
-(* (mirroring arm/proofs/mlkem_rej_uniform_VARIABLE_TIME.ml); the two        *)
-(* MAYCHANGE_BYTES{8,128}_SUBSUMED_BYTES lemmas are candidates for later     *)
-(* upstreaming to common/relational.ml in a separate change.                 *)
+(* File-local helper tactic for the memory-safety proof, kept file-local     *)
+(* mirroring arm/proofs/mlkem_rej_uniform_VARIABLE_TIME.ml. The MAYCHANGE    *)
+(* frame is narrowed up front with ENSURES_FRAME_SUBSUMED at each segment    *)
+(* (as elsewhere in this file), so no bespoke frame-widening machinery is    *)
+(* needed here.                                                              *)
 (* ------------------------------------------------------------------------- *)
-
-(* Transitivity of `subsumed` (no exported equivalent in common/relational). *)
-let SUBSUMED_TRANS = prove
- (`!R1 R2 R3:A->A->bool. R1 subsumed R2 /\ R2 subsumed R3 ==> R1 subsumed R3`,
-  REWRITE_TAC[subsumed] THEN MESON_TAC[]);;
-
-(* Apply a subsumed relation to a concrete pair of states. *)
-let SUBSUMED_APPLY = prove
- (`!R R' s s':A. R' s s' /\ R' subsumed R ==> R s s'`,
-  REWRITE_TAC[subsumed] THEN MESON_TAC[]);;
-
-(* A single 16-byte block store at `a` is subsumed by writing the region     *)
-(* (a,k) whenever 16 <= k. Used for the full-block ciphertext stores.        *)
-let MAYCHANGE_BYTES128_SUBSUMED_BYTES = prove
- (`!a k. 16 <= k
-         ==> MAYCHANGE [memory :> bytes128 a] subsumed MAYCHANGE [memory :> bytes (a,k)]`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[MAYCHANGE_SING; bytes128] THEN
-  MATCH_MP_TAC SUBSUMED_ASSIGNS_SUBCOMPONENTS THEN MATCH_MP_TAC SUBSUMED_TRANS THEN
-  EXISTS_TAC `ASSIGNS (bytes (a:int64,16))` THEN CONJ_TAC THENL
-  [MATCH_ACCEPT_TAC SUBSUMED_ASSIGNS_SUBCOMPONENT;
-   MATCH_MP_TAC ASSIGNS_BYTES_MONO THEN ASM_REWRITE_TAC[]]);;
-
-(* A single byte store at `b` is subsumed by writing the region (a,k)        *)
-(* whenever b is contained in it. The containment is supplied as a           *)
-(* hypothesis (discharged at the call site by CONTAINED_ASM_TAC). Used for   *)
-(* the per-byte cipher-stealing stores.                                      *)
-let MAYCHANGE_BYTES8_SUBSUMED_BYTES = prove
- (`!(a:int64) b k.
-      contained_modulo (2 EXP 64) (val b,1) (val a,k)
-      ==> MAYCHANGE [memory :> bytes8 b] subsumed MAYCHANGE [memory :> bytes (a,k)]`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[MAYCHANGE_SING; bytes8] THEN
-  MATCH_MP_TAC SUBSUMED_ASSIGNS_SUBCOMPONENTS THEN MATCH_MP_TAC SUBSUMED_TRANS THEN
-  EXISTS_TAC `ASSIGNS (bytes (b:int64,1))` THEN CONJ_TAC THENL
-  [MATCH_ACCEPT_TAC SUBSUMED_ASSIGNS_SUBCOMPONENT;
-   MATCH_MP_TAC SUBSUMED_ASSIGNS_BYTES THEN ASM_REWRITE_TAC[]]);;
-
-(* Term surgery over the `,,`-sequenced MAYCHANGE frame. Names are prefixed  *)
-(* `xts_ms_` since HOL Light has a single flat OCaml namespace shared across *)
-(* the whole build; these generic-looking helpers must not collide with (or  *)
-(* be shadowed by) same-named bindings in other proof files.                 *)
-let xts_ms_seqop =
-  `(,,):(armstate->armstate->bool)->(armstate->armstate->bool)->
-        (armstate->armstate->bool)`;;
-let rec xts_ms_seq_components t =
-  if is_comb t && is_comb(rator t) &&
-     (try fst(dest_const(rator(rator t)))=",," with _ -> false)
-  then (rand(rator t)) :: xts_ms_seq_components (rand t) else [t];;
-let xts_ms_build_seq comps =
-  let rec b = function
-      [x] -> x
-    | x::xs -> mk_comb(mk_comb(xts_ms_seqop,x),b xs)
-    | [] -> failwith "xts_ms_build_seq: empty" in
-  b comps;;
 
 (* Discharge `exists e2. read events s = APPEND e2 e /\ memaccess_inbounds`  *)
 (* for a CONCRETE event trace (events = CONS ... e), as arises at a          *)
@@ -5715,93 +5660,6 @@ let SAFETY_EXISTS_TAC : tactic =
        FIRST [ REWRITE_TAC[CONTAINED_MODULO_REFL] THEN DISJ1_TAC THEN ASM_ARITH_TAC;
                REPEAT ((DISJ1_TAC THEN CONTAINED_TAC) ORELSE DISJ2_TAC ORELSE
                        CONTAINED_TAC) ] ]) (asl,w);;
-
-(* Recognisers for ctxt_p-based memory components in a frame. *)
-let xts_ms_is_ctxt_bytes8 c =
-  can (find_term (fun t ->
-        (try fst(dest_const(fst(strip_comb t)))="bytes8" with _ -> false) &&
-        can (find_term (fun x -> x = `ctxt_p:int64`)) t)) c;;
-let xts_ms_is_ctxt_bytes128 c = can (find_term (fun x -> x = `bytes128 ctxt_p`)) c;;
-
-(* Close a MAYCHANGE frame carrying a single `bytes128 ctxt_p` store,        *)
-(* widening it to the ciphertext region bytes(ctxt_p,val len).               *)
-let FRAME_SUBSUMED_TAC : tactic =
-  fun (asl,w) ->
-    let framehyp = try snd(find (fun (_,th) ->
-                     can (find_term (fun t -> t = `memory :> bytes128 ctxt_p`))
-                         (concl th)) asl)
-                   with _ -> failwith "FRAME_SUBSUMED_TAC: no accumulated frame hyp" in
-    let rprime = rator(rator (concl framehyp)) in
-    let comps = xts_ms_seq_components rprime in
-    let newmem = `MAYCHANGE [memory :> bytes(ctxt_p:int64, val(len:int64))]` in
-    let comps' = map (fun c -> if can (find_term (fun x -> x = `bytes128 ctxt_p`)) c
-                               then newmem else c) comps in
-    let rpp = xts_ms_build_seq comps' in
-    (MATCH_MP_TAC SUBSUMED_APPLY THEN EXISTS_TAC rprime THEN CONJ_TAC THENL
-     [ FIRST_X_ASSUM ACCEPT_TAC;
-       MATCH_MP_TAC SUBSUMED_TRANS THEN EXISTS_TAC rpp THEN CONJ_TAC THENL
-       [ REPEAT (MATCH_MP_TAC SUBSUMED_SEQ THEN CONJ_TAC) THEN
-         TRY (MATCH_ACCEPT_TAC SUBSUMED_REFL) THEN
-         MATCH_MP_TAC MAYCHANGE_BYTES128_SUBSUMED_BYTES THEN ASM_ARITH_TAC;
-         SUBSUMED_MAYCHANGE_TAC ] ]) (asl,w);;
-
-(* subsumed-goal version: widen each ctxt_p-based bytes8/bytes128 component  *)
-(* to bytes(ctxt_p,val len), for the loop body's two per-byte stores.        *)
-let FRAME_SUBSUMED_LOOP_TAC : tactic =
-  fun (asl,w) ->
-    let rprime = lhand w in
-    let comps = xts_ms_seq_components rprime in
-    let newmem = `MAYCHANGE [memory :> bytes(ctxt_p:int64, val(len:int64))]` in
-    let comps' = map (fun c -> if xts_ms_is_ctxt_bytes8 c || xts_ms_is_ctxt_bytes128 c
-                               then newmem else c) comps in
-    let rpp = xts_ms_build_seq comps' in
-    let sub_one =
-      FIRST [ MATCH_ACCEPT_TAC SUBSUMED_REFL;
-              (MATCH_MP_TAC MAYCHANGE_BYTES8_SUBSUMED_BYTES THEN CONTAINED_ASM_TAC);
-              (MATCH_MP_TAC MAYCHANGE_BYTES128_SUBSUMED_BYTES THEN ASM_ARITH_TAC) ] in
-    (MATCH_MP_TAC SUBSUMED_TRANS THEN EXISTS_TAC rpp THEN CONJ_TAC THENL
-     [ REPEAT (MATCH_MP_TAC SUBSUMED_SEQ THEN CONJ_TAC) THEN sub_one;
-       SUBSUMED_MAYCHANGE_TAC ]) (asl,w);;
-
-(* Close a MAYCHANGE frame carrying the loop body's two per-byte bytes8      *)
-(* stores.                                                                   *)
-let LOOP_FRAME_TAC : tactic =
-  fun (asl,w) ->
-    let framehyp = try snd(find (fun (_,th) ->
-                     can (find_term (fun t ->
-                       (try fst(dest_const(fst(strip_comb t)))="bytes8" with _ -> false) &&
-                       can (find_term (fun x -> x = `ctxt_p:int64`)) t)) (concl th)) asl)
-                   with _ -> failwith "LOOP_FRAME_TAC: no bytes8 frame hyp" in
-    let rprime = rator(rator(concl framehyp)) in
-    (MATCH_MP_TAC SUBSUMED_APPLY THEN EXISTS_TAC rprime THEN CONJ_TAC THENL
-     [ FIRST_X_ASSUM ACCEPT_TAC;
-       FRAME_SUBSUMED_LOOP_TAC ]) (asl,w);;
-
-(* Prove `nonoverlapping (word pc,2732) (addr,1)` for a single-byte access   *)
-(* address `addr` contained in the ciphertext region (ctxt_p,val len). The   *)
-(* code region size 2732 = LENGTH aes256_xts_encrypt_mc, matched literally   *)
-(* (the goal's LENGTH is already rewritten to 2732 by the prologue).         *)
-(* `offeq` provides `word_sub addr ctxt_p = word <off>`.                     *)
-let NONOVERLAP_BYTE_TAC addr offeq : tactic =
-  MP_TAC(ISPECL [`word pc:int64`; `2732`; `ctxt_p:int64`; `val (len:int64)`;
-                 `word pc:int64`; `2732`; addr; `1`] NONOVERLAPPING_SUBREGIONS) THEN
-  ANTS_TAC THENL
-   [ REPEAT CONJ_TAC THENL
-      [ FIRST_ASSUM ACCEPT_TAC;
-        REWRITE_TAC[CONTAINED_QFREE; DIMINDEX_64; WORD_SUB_REFL; VAL_WORD_0] THEN
-        ARITH_TAC;
-        REWRITE_TAC[CONTAINED_QFREE; DIMINDEX_64] THEN REWRITE_TAC[offeq] THEN
-        REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
-        SIMP_TAC[MOD_LT; ARITH_RULE `x < 32 ==> x < 2 EXP 64`] THEN ASM_ARITH_TAC ];
-     DISCH_TAC ];;
-
-(* Offset-normalisation facts for the two cipher-stealing byte stores,       *)
-(* feeding NONOVERLAP_BYTE_TAC below (free `i` = loop counter). Prefixed.    *)
-let xts_ms_off_st1 =
-  WORD_RULE `word_sub (word_add (word_add ctxt_p (word 16)) (word i)) ctxt_p:int64 =
-             word (16 + i)`;;
-let xts_ms_off_st2 =
-  WORD_RULE `word_sub (word_add ctxt_p (word i)) ctxt_p:int64 = word i`;;
 
 (* ------------------------------------------------------------------------- *)
 (* Per-branch memory-safety lemma for the smallest length class, len<0x20    *)
@@ -5904,6 +5762,18 @@ let AES_XTS_ENCRYPT_LT_2BLOCK_MEMSAFE = prove(
               [ctxt_p,val (len:int64)])` THEN
   CONJ_TAC THENL
   [ (* ===== SEG1: entry pc+28 -> pc+2528 (first full block, straight-line) ===== *)
+    MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+    EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+      MAYCHANGE [X19; X20; X21; X22],,
+      MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+      MAYCHANGE [events],,
+      MAYCHANGE [memory :> bytes128 ctxt_p]` THEN
+    REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+    CONJ_TAC THENL [
+      REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
+              MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
+      ABBREV_TAC `vallen = val (len:int64)` THEN
+      SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
     ENSURES_INIT_TAC "s0" THEN
     ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--2) THEN
     (* Discharge the entry `b.lt`: for val len in [0x10,0x20) the tail *)
@@ -5929,9 +5799,7 @@ let AES_XTS_ENCRYPT_LT_2BLOCK_MEMSAFE = prove(
       ASM_REWRITE_TAC[]; ALL_TAC] THEN
     ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (3--118) THEN
     ENSURES_FINAL_STATE_TAC THEN
-    CONJ_TAC THENL
-     [ REPEAT CONJ_TAC THEN TRY(FIRST_X_ASSUM ACCEPT_TAC) THEN SAFETY_EXISTS_TAC;
-       FRAME_SUBSUMED_TAC ];
+    REPEAT CONJ_TAC THEN TRY(FIRST_X_ASSUM ACCEPT_TAC) THEN SAFETY_EXISTS_TAC;
 
     (* ===== SEG2: pc+2528 -> exit pc+2700 (cipher-stealing tail) ===== *)
     ENSURES_CASES_TAC
@@ -5978,11 +5846,10 @@ let AES_XTS_ENCRYPT_LT_2BLOCK_MEMSAFE = prove(
         (* (3) loop body: invariant@(i+1) @pc+2548 -> invariant@i @pc+2568. *)
         (* In order the body does: ldrb ctxt_p+i (the ciphertext *)
         (* read-back), ldrb ptxt_p+16+i, strb ctxt_p+16+i, strb ctxt_p+i. *)
-        (* Supplying the exact single-byte store nonoverlap facts lets *)
-        (* ARM_STEPS clear the symbolic-offset stores. *)
-        REPEAT STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-        ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--3) THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE `word_sub (word (i+1)) (word 1):int64 = word i`]) THEN
+        (* The frame is narrowed to the two per-byte stores up front, and *)
+        (* ARM_STEPS derives their code non-overlap from the PAIRWISE *)
+        (* nonoverlapping hypothesis. *)
+        REPEAT STRIP_TAC THEN
         SUBGOAL_THEN `val (len:int64) = 16 + val (word_and len (word 15))` ASSUME_TAC THENL
         [ MP_TAC(BITBLAST_RULE
             `val (len:int64) >= 16 ==> val len < 32 ==>
@@ -5990,8 +5857,22 @@ let AES_XTS_ENCRYPT_LT_2BLOCK_MEMSAFE = prove(
           ASM_REWRITE_TAC[]; ALL_TAC] THEN
         SUBGOAL_THEN `16 + i < val (len:int64) /\ i < val (len:int64)` STRIP_ASSUME_TAC THENL
         [ ASM_ARITH_TAC; ALL_TAC] THEN
-        NONOVERLAP_BYTE_TAC `word_add (word_add ctxt_p (word 16)) (word i):int64` xts_ms_off_st1 THEN
-        NONOVERLAP_BYTE_TAC `word_add ctxt_p (word i):int64` xts_ms_off_st2 THEN
+        MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+        EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [X19; X20; X21; X22],,
+          MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+          MAYCHANGE [events],,
+          MAYCHANGE [memory :> bytes8 (word_add (word_add ctxt_p (word 16)) (word i))],,
+          MAYCHANGE [memory :> bytes8 (word_add ctxt_p (word i))]` THEN
+        REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+        CONJ_TAC THENL [
+          REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
+                  MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
+          ABBREV_TAC `vallen = val (len:int64)` THEN
+          SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--3) THEN
+        RULE_ASSUM_TAC(REWRITE_RULE[WORD_RULE `word_sub (word (i+1)) (word 1):int64 = word i`]) THEN
         ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (4--5) THEN
         ENSURES_FINAL_STATE_TAC THEN
         REWRITE_TAC[GSYM(ASSUME `val (len:int64) = 16 + val (word_and len (word 15))`)] THEN
@@ -6008,8 +5889,7 @@ let AES_XTS_ENCRYPT_LT_2BLOCK_MEMSAFE = prove(
               REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE CONTAINED_ASM_TAC);
               FIRST_ASSUM ACCEPT_TAC ] THEN NO_TAC) THEN
         (* remaining leaves: ZF <=> i=0, and the MAYCHANGE frame *)
-        TRY(ASM_REWRITE_TAC[] THEN NO_TAC) THEN
-        LOOP_FRAME_TAC;
+        TRY(ASM_REWRITE_TAC[] THEN NO_TAC);
 
         (* (4) back-edge: invariant@i + flags @pc+2568 -> invariant@i @pc+2548 *)
         (* (b.gt taken since 0 < i < 16). *)
@@ -6036,25 +5916,28 @@ let AES_XTS_ENCRYPT_LT_2BLOCK_MEMSAFE = prove(
         (* (5) loop exit: invariant@0 + flags @pc+2568 -> postcondition @pc+2700. *)
         (* b.gt not taken (i=0): fall through Lxts_enc_load_done -- ld1 reads back *)
         (* ctxt_p (16 bytes), AES round chain (register only), st1 writes ctxt_p. *)
-        REPEAT STRIP_TAC THEN ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        REPEAT STRIP_TAC THEN
+        MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+        EXISTS_TAC `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE [X19; X20; X21; X22],,
+          MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15],,
+          MAYCHANGE [events],,
+          MAYCHANGE [memory :> bytes128 ctxt_p]` THEN
+        REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+        CONJ_TAC THENL [
+          REPEAT (GEN_REWRITE_TAC ONCE_DEPTH_CONV [GSYM SEQ_ASSOC] THEN
+                  MATCH_MP_TAC SUBSUMED_SEQ THEN REWRITE_TAC[SUBSUMED_REFL]) THEN
+          ABBREV_TAC `vallen = val (len:int64)` THEN
+          SUBSUMED_MAYCHANGE_TAC; ALL_TAC] THEN
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
         ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (1--10) THEN
-        SUBGOAL_THEN `nonoverlapping (word pc,2732) (ctxt_p:int64,16)` ASSUME_TAC THENL
-        [ MP_TAC(ISPECL [`word pc:int64`; `2732`; `ctxt_p:int64`; `val (len:int64)`;
-                         `word pc:int64`; `2732`; `ctxt_p:int64`; `16`] NONOVERLAPPING_SUBREGIONS) THEN
-          ANTS_TAC THENL
-          [ REPEAT CONJ_TAC THENL
-            [ FIRST_ASSUM ACCEPT_TAC;
-              REWRITE_TAC[CONTAINED_QFREE; DIMINDEX_64; WORD_SUB_REFL; VAL_WORD_0] THEN ARITH_TAC;
-              REWRITE_TAC[CONTAINED_QFREE; DIMINDEX_64; WORD_SUB_REFL; VAL_WORD_0] THEN ASM_ARITH_TAC ];
-            DISCH_TAC THEN FIRST_ASSUM ACCEPT_TAC ]; ALL_TAC] THEN
         ARM_STEPS_TAC AES256_XTS_ENCRYPT_EXEC (11--33) THEN
-        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
-        [ (EXISTS_TAC
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        (EXISTS_TAC
              `APPEND [EventStore (ctxt_p:int64,16); EventLoad (ctxt_p:int64,16); EventJump (word(pc+2568),word(pc+2572))] e_acc` THEN
            CONJ_TAC THENL
            [ REWRITE_TAC[APPEND];
              REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN CONJ_TAC THENL
              [ (REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN REPEAT CONJ_TAC THEN
                 REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE CONTAINED_ASM_TAC));
-               FIRST_ASSUM ACCEPT_TAC ]]);
-          FRAME_SUBSUMED_TAC ]]]]);;
+               FIRST_ASSUM ACCEPT_TAC ]])]]]);;
