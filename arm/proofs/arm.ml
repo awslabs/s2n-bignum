@@ -1446,3 +1446,194 @@ let ADRP_ADD_FOLD = prove(`forall (pc:int64) (x:int64).
 
   REWRITE_TAC[adrp_within_bounds] THEN
   BITBLAST_TAC);;
+
+(* ========================================================================= *)
+(* Lifting a theorem about BTI-trimmed code to the full code carrying its    *)
+(* leading `BTI c` landing pad.  Arm counterpart of the x86 ADD_IBT_RULE.    *)
+(* `bti c` = 0xd503245f, i.e. bytes 95 36 3 213 little-endian.               *)
+(*                                                                           *)
+(* Naming: BTI names the Arm instruction (cf. arm_BTI); IBT names this       *)
+(* machinery and the build it selects (cf. the NO_IBT flag and the _NOIBT_   *)
+(* theorem suffix), matching the x86 originals.                              *)
+(* ========================================================================= *)
+
+(* Decode table for the landing pad: the instruction at pc is arm_BTI.  The  *)
+(* wrap theorem is generic in `mc`, so ARM_MK_EXEC_RULE cannot be used; this *)
+(* supplies the single entry ARM_SIM_TAC needs to step the pad.              *)
+let ARM_BTI_DECODE = prove
+ (`!s pc. aligned_bytes_loaded s (word pc)
+            (APPEND [word 95; word 36; word 3; word 213] mc)
+          ==> arm_decode s (word pc) arm_BTI`,
+  let dth = match (snd(ARM_MK_EXEC_RULE
+      (REFL `[word 95; word 36; word 3; word 213]:byte list`))).(0) with
+    | Some t -> t | None -> failwith "no decode at offset 0" in
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(MP_TAC o MATCH_MP aligned_bytes_loaded_append_left) THEN
+  REWRITE_TAC[dth]);;
+
+(* The loaded-code half of the split: `[bti c] ++ mc` at pc gives `mc` at    *)
+(* pc+4, which is the inner theorem's precondition.  A lemma rather than an  *)
+(* inline rewrite because aligned_bytes_loaded_append is guarded by          *)
+(* `4 divides LENGTH l1` (x86's bytes_loaded_append is unconditional).       *)
+let ARM_BTI_LOADED_SPLIT = prove
+ (`!s pc. aligned_bytes_loaded s (word pc)
+            (APPEND [word 95; word 36; word 3; word 213] mc)
+          ==> aligned_bytes_loaded s (word (pc + 4)) mc`,
+  SUBGOAL_THEN `4 divides LENGTH [word 95:byte; word 36; word 3; word 213]`
+    (fun th -> REWRITE_TAC[MATCH_MP aligned_bytes_loaded_append th]) THENL
+  [ REWRITE_TAC[LENGTH] THEN CONV_TAC NUM_DIVIDES_CONV; ALL_TAC] THEN
+  REWRITE_TAC[LENGTH] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[WORD_ADD] THEN MESON_TAC[]);;
+
+(* The lift itself: given an `ensures` for `mc` at pc+4, conclude one for    *)
+(* `[bti c] ++ mc` at pc. Proved by widening the frame to MAYCHANGE [PC] ,,  *)
+(* R (the pad writes PC), splitting the execution at pc+4 with               *)
+(* ENSURES_TRANS, and simulating the one pad instruction. The three side     *)
+(* conditions are discharged by ARM_IBT_WRAP_TAC.                            *)
+let ARM_IBT_WRAP_THM = prove
+ (`R ,, R = R /\ MAYCHANGE [PC] subsumed R /\
+   (!s y. P(write PC y s) <=> P s) /\
+   ensures arm
+    (\s. aligned_bytes_loaded s (word (pc + 4)) mc /\
+         read PC s = word (pc + 4) /\ P s) Q R
+   ==> ensures arm
+        (\s. aligned_bytes_loaded s (word pc)
+               (APPEND [word 95; word 36; word 3; word 213] mc) /\
+             read PC s = word pc /\ P s) Q R`,
+  let execlen =
+    REWRITE_CONV[LENGTH_APPEND; LENGTH; ARITH]
+     `LENGTH(APPEND [word 95:byte; word 36; word 3; word 213] mc)` in
+  let execth = (execlen,[|Some ARM_BTI_DECODE; None; None; None|]) in
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+  EXISTS_TAC `(MAYCHANGE [PC] ,, R):armstate->armstate->bool` THEN
+  ASM_SIMP_TAC[SUBSUMED_FOR_SEQ; SUBSUMED_REFL] THEN
+  MATCH_MP_TAC ENSURES_TRANS THEN
+  EXISTS_TAC `\s. aligned_bytes_loaded s (word (pc + 4)) mc /\
+                  read PC s = word (pc + 4) /\ P s` THEN
+  ASM_REWRITE_TAC[] THEN ARM_SIM_TAC execth [1] THEN CONJ_TAC THENL
+   [FIRST_X_ASSUM(MP_TAC o MATCH_MP ARM_BTI_LOADED_SPLIT) THEN REWRITE_TAC[];
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE
+      (RATOR_CONV o RATOR_CONV) [MAYCHANGE_SING]) THEN
+    REWRITE_TAC[ASSIGNS; assign] THEN ASM_MESON_TAC[]]);;
+
+(* If the goal is `exists f_events. ..`, instantiate f_events from the one   *)
+(* in `th_noexists`, with pc replaced by pc + 4. Term surgery only, so this  *)
+(* is the x86 WITNESS_F_EVENTS_TAC unchanged.                                *)
+let ARM_WITNESS_F_EVENTS_TAC (th_noexists:thm): tactic =
+  W (fun (asl,w) ->
+    if not (is_exists w) then ALL_TAC else
+    let f_events_term = find_term (fun t ->
+      is_comb t && name_of(fst(strip_comb t)) = "f_events")
+      (concl th_noexists) in
+    let f_events,args = strip_comb f_events_term in
+    let new_argdecls,new_args = unzip (map (fun t ->
+      if is_var t && name_of t = "pc" then (t,mk_binary "+" (t,`4`))
+      else let newvar = genvar(type_of t) in (newvar,newvar)) args) in
+    let new_f_events = list_mk_abs
+      (new_argdecls,list_mk_comb(f_events,new_args)) in
+    EXISTS_TAC new_f_events);;
+
+(* Strip a leading `exists f_events.` from `th`, instantiate the goal's      *)
+(* existential to match, and run [k] on the body. Correctness theorems (no   *)
+(* leading `exists`) go straight to [k].                                     *)
+let ARM_ADD_IBT_OPEN_EXISTS th (k:thm->tactic): tactic =
+  if is_exists (concl th) then
+    MP_TAC th THEN STRIP_TAC THEN
+    FIRST_X_ASSUM (fun th_noexists ->
+      ARM_WITNESS_F_EVENTS_TAC th_noexists THEN k th_noexists)
+  else
+    k th;;
+
+(* `extra` supplies the definitions of any state predicate appearing in the  *)
+(* precondition.  Obligation (3) below needs `write PC` to be visibly inert  *)
+(* on the precondition, and COMPONENT_READ_OVER_WRITE_CONV cannot see inside *)
+(* an opaque constant: `Pred args (write PC y s)` would never reduce to      *)
+(* `Pred args s`, so REFL_TAC would fail.                                    *)
+let ARM_IBT_WRAP_TAC ?(extra:thm list = []) (discharge_inner:tactic): tactic =
+  MATCH_MP_TAC ARM_IBT_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+    (* (1) the frame is idempotent *)
+    MAYCHANGE_IDEMPOT_TAC;
+    (* (2) the frame permits the pad writing PC *)
+    SUBSUMED_MAYCHANGE_TAC;
+    (* (3) writing PC leaves the precondition alone *)
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC(extra @ [C_ARGUMENTS; C_RETURN; aligned_bytes_loaded;
+                         bytes_loaded; SOME_FLAGS]) THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+    (* (4) caller-supplied: the inner `ensures` at pc+4 *)
+    discharge_inner ];;
+
+(* Proves the full-code goal from the trimmed-code theorem: re-express `mc`  *)
+(* as `APPEND [bti c] tmc`, respecialise the theorem with pc -> pc+4, repair *)
+(* the nonoverlapping hypotheses for the 4-byte-longer code region, then     *)
+(* apply ARM_IBT_WRAP_TAC.                                                   *)
+let ARM_ADD_IBT_TAC =
+  let tweak = subst[`pc + 4`,`pc:num`]
+  and EXPAND_TRIMMED_RULE =
+    let pth = prove
+     (`CONS (a:byte) (CONS b (CONS c (CONS d l))) = APPEND [a;b;c;d] l`,
+      REWRITE_TAC[APPEND]) in
+    fun fullmc trimc ->
+     GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [GSYM trimc]
+     (GEN_REWRITE_RULE RAND_CONV [pth] fullmc) in
+  fun ?(extra:thm list = []) fullmc trimc th ->
+    let expth = EXPAND_TRIMMED_RULE fullmc trimc in
+    ARM_ADD_IBT_OPEN_EXISTS th (fun th_inner ->
+      MP_TAC th_inner THEN
+      DISCH_THEN (fun th -> W(fun (asl,w) ->
+        let avs = fst(strip_forall w) in
+        MAP_EVERY X_GEN_TAC avs THEN
+        MP_TAC(SPECL (map tweak avs) th))) THEN
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      (* PAIRWISE as well as ALL/ALLPAIRS: several Arm _SUBROUTINE_CORRECT   *)
+      (* statements put the code region inside a PAIRWISE list, and the      *)
+      (* MONO_AND splitting below cannot reach through an unexpanded         *)
+      (* PAIRWISE. SOME_FLAGS and the MODIFIABLE_* lists are new_definition  *)
+      (* constants that MAYCHANGE_CANON_CONV does not unfold, so a frame     *)
+      (* mentioning them would leave obligations 1 and 2 stuck.              *)
+      REWRITE_TAC[C_ARGUMENTS; C_RETURN; ALL; ALLPAIRS; PAIRWISE;
+                  MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS;
+                  MODIFIABLE_SIMD_REGS; MODIFIABLE_UPPER_SIMD_REGS;
+                  MODIFIABLE_GPRS] THEN
+      TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
+       [REPEAT(REWRITE_TAC[] THEN
+               ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
+                (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
+        REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
+        REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+        MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
+          NONOVERLAPPING_MODULO_SUBREGIONS) THEN
+        REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
+        MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
+        ALL_TAC]) THEN
+      DISCH_TAC THEN REWRITE_TAC[expth; GSYM APPEND_ASSOC] THEN
+      ARM_IBT_WRAP_TAC ~extra
+        (FIRST_X_ASSUM ACCEPT_TAC ORELSE
+         (FIRST_X_ASSUM MP_TAC THEN
+          REWRITE_TAC[LENGTH_APPEND] THEN
+          CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV) THEN
+          ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)));;
+
+(* Entry point.  Takes the two machine-code definitions and a theorem about  *)
+(* the trimmed one, and returns the same theorem restated over the full      *)
+(* code. Nothing is re-proved: the lift adds a single simulated instruction. *)
+let ARM_ADD_IBT_RULE ?(extra:thm list = []) fullmc trimc th =
+  let mc = lhs(concl fullmc) and tmc = lhs(concl trimc) in
+  (* Build the full-code goal from the trimmed-code theorem. As well as      *)
+  (* swapping tmc for mc, every code-region size written as a NUMERAL must   *)
+  (* grow by 4: `nonoverlapping (word pc,0xe0) X` describes the trimmed      *)
+  (* code, and the full code is one instruction longer. Statements that      *)
+  (* write `LENGTH foo_tmc` instead need no adjustment -- the substitution   *)
+  (* turns them into `LENGTH foo_mc`, which is already the larger value.     *)
+  (* Mirrors the `adjust` in x86's ADD_IBT_RULE.                             *)
+  let rec adjust tm =
+    match tm with
+      Comb(Comb(Const(",",_),Comb(Const("word",_),Var("pc",_))) as rat,off)
+          when is_numeral off ->
+        mk_comb(rat,mk_numeral(num 4 +/ dest_numeral off))
+    | Comb(s,t) -> mk_comb(adjust s,adjust t)
+    | Abs(x,t) -> mk_abs(x,adjust t)
+    | _ -> if tm = tmc then mc else tm in
+  prove(adjust (concl th), ARM_ADD_IBT_TAC ~extra fullmc trimc th);;
+
