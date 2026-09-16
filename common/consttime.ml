@@ -501,8 +501,22 @@ let CLOSE_ABBREVIATED_SAFETY_PROPERTY_TAC
       match conjuncts body with
       | event_eq::f_events_eq::_ -> event_eq,f_events_eq
       | _ -> failwith "expected the generated safety property" in
-    let compact_trace,_ =
-      dest_binary "APPEND" (lhs event_eq) in
+    (* A trace with no events remains the initial event list instead of
+       becoming APPEND [] initial_events. *)
+    let compact_trace,empty_trace =
+      let final_events = lhs event_eq in
+      if is_binary "APPEND" final_events then
+        fst (dest_binary "APPEND" final_events),false
+      else
+        let _,initial_events =
+          dest_binary "APPEND" (rhs event_eq) in
+        if final_events = initial_events then
+          let event_ty =
+            match dest_type (type_of final_events) with
+            | "list",[ty] -> ty
+            | _ -> failwith "expected an event list" in
+          mk_list([],event_ty),true
+        else failwith "unexpected final event trace" in
     let f_events,args = strip_comb (rhs f_events_eq) in
     let open_f_events = list_mk_abs(args,compact_trace) in
     let close_one (acc,acc_equals_open) th =
@@ -528,7 +542,7 @@ let CLOSE_ABBREVIATED_SAFETY_PROPERTY_TAC
           applied_equals_open) in
     (EXISTS_TAC compact_trace THEN
      CONJ_TAC THENL [
-       REFL_TAC;
+       (if empty_trace then REWRITE_TAC[APPEND] else REFL_TAC);
        CONJ_TAC THENL [
          UNIFY_ACCEPT_TAC [f_events] compact_equals_closed;
          DISCHARGE_MEMACCESS_INBOUNDS_TAC
