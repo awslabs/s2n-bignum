@@ -1446,3 +1446,122 @@ let ADRP_ADD_FOLD = prove(`forall (pc:int64) (x:int64).
 
   REWRITE_TAC[adrp_within_bounds] THEN
   BITBLAST_TAC);;
+
+(* ========================================================================= *)
+(* Lifting a theorem about BTI-trimmed code to the full code carrying its     *)
+(* leading `BTI c` landing pad.  Arm counterpart of the x86 ADD_IBT_RULE.     *)
+(* `bti c` = 0xd503245f, i.e. bytes 95 36 3 213 little-endian.                *)
+(* ========================================================================= *)
+
+let ARM_BTI_DECODE = prove
+ (`!s pc. aligned_bytes_loaded s (word pc)
+            (APPEND [word 95; word 36; word 3; word 213] mc)
+          ==> arm_decode s (word pc) arm_BTI`,
+  let dth = match (snd(ARM_MK_EXEC_RULE
+      (REFL `[word 95; word 36; word 3; word 213]:byte list`))).(0) with
+    | Some t -> t | None -> failwith "no decode at offset 0" in
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(MP_TAC o MATCH_MP aligned_bytes_loaded_append_left) THEN
+  REWRITE_TAC[dth]);;
+
+let ARM_BTI_LOADED_SPLIT = prove
+ (`!s pc. aligned_bytes_loaded s (word pc)
+            (APPEND [word 95; word 36; word 3; word 213] mc)
+          ==> aligned_bytes_loaded s (word (pc + 4)) mc`,
+  SUBGOAL_THEN `4 divides LENGTH [word 95:byte; word 36; word 3; word 213]`
+    (fun th -> REWRITE_TAC[MATCH_MP aligned_bytes_loaded_append th]) THENL
+  [ REWRITE_TAC[LENGTH] THEN CONV_TAC NUM_DIVIDES_CONV; ALL_TAC] THEN
+  REWRITE_TAC[LENGTH] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[WORD_ADD] THEN MESON_TAC[]);;
+
+let ARM_BTI_WRAP_THM = prove
+ (`R ,, R = R /\ MAYCHANGE [PC] subsumed R /\
+   (!s y. P(write PC y s) <=> P s) /\
+   ensures arm
+    (\s. aligned_bytes_loaded s (word (pc + 4)) mc /\
+         read PC s = word (pc + 4) /\ P s) Q R
+   ==> ensures arm
+        (\s. aligned_bytes_loaded s (word pc)
+               (APPEND [word 95; word 36; word 3; word 213] mc) /\
+             read PC s = word pc /\ P s) Q R`,
+  let execlen =
+    REWRITE_CONV[LENGTH_APPEND; LENGTH; ARITH]
+     `LENGTH(APPEND [word 95:byte; word 36; word 3; word 213] mc)` in
+  let execth = (execlen,[|Some ARM_BTI_DECODE; None; None; None|]) in
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ENSURES_FRAME_SUBSUMED THEN
+  EXISTS_TAC `(MAYCHANGE [PC] ,, R):armstate->armstate->bool` THEN
+  ASM_SIMP_TAC[SUBSUMED_FOR_SEQ; SUBSUMED_REFL] THEN
+  MATCH_MP_TAC ENSURES_TRANS THEN
+  EXISTS_TAC `\s. aligned_bytes_loaded s (word (pc + 4)) mc /\
+                  read PC s = word (pc + 4) /\ P s` THEN
+  ASM_REWRITE_TAC[] THEN ARM_SIM_TAC execth [1] THEN CONJ_TAC THENL
+   [FIRST_X_ASSUM(MP_TAC o MATCH_MP ARM_BTI_LOADED_SPLIT) THEN REWRITE_TAC[];
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE
+      (RATOR_CONV o RATOR_CONV) [MAYCHANGE_SING]) THEN
+    REWRITE_TAC[ASSIGNS; assign] THEN ASM_MESON_TAC[]]);;
+
+(* safety theorems (`exists f_events. ...`) need WITNESS_F_EVENTS_TAC, which
+   the Arm side does not have yet; fail loudly rather than mishandle them. *)
+let ARM_ADD_IBT_OPEN_EXISTS th (k:thm->tactic): tactic =
+  if is_exists (concl th) then
+    failwith "ARM_ADD_IBT: `exists f_events` (safety) theorems not supported yet"
+  else k th;;
+
+(* `extra` supplies definitions of any state predicate appearing in the
+   precondition (e.g. htable_mem_8): COMPONENT_READ_OVER_WRITE_CONV cannot see
+   inside an opaque constant, so `Pred ... (write PC y s)` would never reduce to
+   `Pred ... s` and the third subgoal's REFL_TAC would fail. *)
+let ARM_IBT_WRAP_TAC ?(extra:thm list = []) (discharge_inner:tactic): tactic =
+  MATCH_MP_TAC ARM_BTI_WRAP_THM THEN REPEAT CONJ_TAC THENL [
+    MAYCHANGE_IDEMPOT_TAC;
+    SUBSUMED_MAYCHANGE_TAC;
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC(extra @ [C_ARGUMENTS; C_RETURN; aligned_bytes_loaded;
+                         bytes_loaded]) THEN
+    REWRITE_TAC(!simulation_precanon_thms) THEN
+    CONV_TAC(TOP_DEPTH_CONV COMPONENT_READ_OVER_WRITE_CONV) THEN REFL_TAC;
+    discharge_inner ];;
+
+let ARM_ADD_IBT_TAC =
+  let tweak = subst[`pc + 4`,`pc:num`]
+  and EXPAND_TRIMMED_RULE =
+    let pth = prove
+     (`CONS (a:byte) (CONS b (CONS c (CONS d l))) = APPEND [a;b;c;d] l`,
+      REWRITE_TAC[APPEND]) in
+    fun fullmc trimc ->
+     GEN_REWRITE_RULE (RAND_CONV o RAND_CONV) [GSYM trimc]
+     (GEN_REWRITE_RULE RAND_CONV [pth] fullmc) in
+  fun ?(extra:thm list = []) fullmc trimc th ->
+    let expth = EXPAND_TRIMMED_RULE fullmc trimc in
+    ARM_ADD_IBT_OPEN_EXISTS th (fun th_inner ->
+      MP_TAC th_inner THEN
+      DISCH_THEN (fun th -> W(fun (asl,w) ->
+        let avs = fst(strip_forall w) in
+        MAP_EVERY X_GEN_TAC avs THEN
+        MP_TAC(SPECL (map tweak avs) th))) THEN
+      REWRITE_TAC(!simulation_precanon_thms) THEN
+      REWRITE_TAC[C_ARGUMENTS; C_RETURN; ALL; ALLPAIRS;
+                  MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+      TRY(MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL
+       [REPEAT(REWRITE_TAC[] THEN
+               ((MATCH_MP_TAC MONO_AND THEN CONJ_TAC) ORELSE
+                (MATCH_MP_TAC MONO_OR THEN CONJ_TAC))) THEN
+        REWRITE_TAC[expth; LENGTH; ARITH; LENGTH_APPEND] THEN
+        REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN
+        MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ_ALT]
+          NONOVERLAPPING_MODULO_SUBREGIONS) THEN
+        REWRITE_TAC[CONTAINED_MODULO_REFL; LE_REFL] THEN
+        MATCH_MP_TAC CONTAINED_MODULO_SIMPLE THEN ARITH_TAC;
+        ALL_TAC]) THEN
+      DISCH_TAC THEN REWRITE_TAC[expth; GSYM APPEND_ASSOC] THEN
+      ARM_IBT_WRAP_TAC ~extra
+        (FIRST_X_ASSUM ACCEPT_TAC ORELSE
+         (FIRST_X_ASSUM MP_TAC THEN
+          REWRITE_TAC[LENGTH_APPEND] THEN
+          CONV_TAC (ONCE_DEPTH_CONV LENGTH_CONV) THEN
+          ASM_REWRITE_TAC[ADD_ASSOC] THEN NO_TAC)));;
+
+let ARM_ADD_IBT_RULE ?(extra:thm list = []) fullmc trimc th =
+  let mc = lhs(concl fullmc) and tmc = lhs(concl trimc) in
+  prove(subst [mc,tmc] (concl th), ARM_ADD_IBT_TAC ~extra fullmc trimc th);;
+
