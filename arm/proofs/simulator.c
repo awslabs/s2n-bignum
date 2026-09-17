@@ -46,5 +46,5 @@ int main(int argc, char *argv[])
      printf("\n");
    }
 
-  return retval;
+  return 0;
 }
