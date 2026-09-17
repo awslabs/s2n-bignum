@@ -1,9 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 # This script must be run from the "x86/" directory
 # Choose output file based on input argument (no default)
 
 if [ "$#" -ne 1 ]; then
-  echo "list-x86-insns.sh <output.ml>"
+  echo "list-x86-insns.sh <output.ml>" >&2
+  exit 2
 fi
 
 outfile=$1
@@ -11,13 +13,14 @@ outfile=$1
 # Choose slightly different parameters on clang-based Mac OS / ARM setup
 
 OSTYPE_RESULT=`uname`
+CC=${CC:-gcc}
 
 if [ "$OSTYPE_RESULT" = "Darwin" ]; then
-  ASSEMBLE="as -arch x86_64"
-  OBJDUMP="objdump"
+  ASSEMBLE=${ASSEMBLE:-"${AS:-as} -arch x86_64"}
+  OBJDUMP=${OBJDUMP:-objdump}
 else
-  ASSEMBLE="as"
-  OBJDUMP="objdump --insn-width=16"
+  ASSEMBLE=${ASSEMBLE:-${AS:-as}}
+  OBJDUMP=${OBJDUMP:-"objdump --insn-width=16"}
 fi
 
 # Concatenate the code from all s2n-bignum assembler source files.
@@ -27,7 +30,7 @@ fi
 
 for i in [a-oq-z]*/*.S p[235]*/*.S
 do
-  egrep -v '\.quad|\.word' $i | gcc -E -I ../include  -xassembler-with-cpp -DWINDOWS_ABI=1 - >/tmp/source_nodata.S
+  egrep -v '\.quad|\.word' $i | $CC -E -I ../include  -xassembler-with-cpp -DWINDOWS_ABI=1 - >/tmp/source_nodata.S
   $ASSEMBLE -c /tmp/source_nodata.S -o /tmp/objcode_nodata.o
   $OBJDUMP -M intel --no-addresses --no-show-raw-insn -d /tmp/objcode_nodata.o
 done  >/tmp/all_disassembly

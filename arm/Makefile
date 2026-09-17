@@ -450,7 +450,8 @@ TUTORIAL_OBJ = $(filter-out tutorial/aes_encrypt_decrypt.o tutorial/safety.o, $(
 
 libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 
-clean:; rm -f libs2nbignum.a */*.o */*/*.o */*.correct */*.native
+clean:; rm -f libs2nbignum.a */*.o */*/*.o */*.correct */*.native \
+	proofs/cosim-runner
 
 # Proof-related parts
 #
@@ -479,9 +480,21 @@ PROOF_LOGS = $(OBJ:.o=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
+ifeq ($(OSTYPE_RESULT),Darwin)
+COSIM_ARCH_FLAGS ?= -arch arm64
+else
+COSIM_ARCH_FLAGS ?=
+endif
+
 # Build precompiled native binaries of HOL Light proofs
 
-proofs/simulator.native: proofs/simulator.ml ../common/cosim.ml $(BASE_ML) proofs/simulator_iclasses.ml ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+proofs/simulator.native: proofs/simulator.ml ../common/cosim.ml $(BASE_ML) proofs/simulator_iclasses.ml proofs/cosim-runner ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+
+COSIM_CFLAGS ?= -O2 -Wall -Wextra
+COSIM_LDFLAGS ?=
+proofs/cosim-runner: ../tools/cosim_runner.c proofs/cosim_arch.c proofs/template.S
+	$(CC) $(COSIM_ARCH_FLAGS) $(COSIM_CFLAGS) -DCOSIM_PERSISTENT -o $@ \
+		../tools/cosim_runner.c proofs/cosim_arch.c proofs/template.S $(COSIM_LDFLAGS)
 
 # For constant-time property and memory safety, collect input/output/temporary
 # buffers from function signatures in s2n-bignum.h .

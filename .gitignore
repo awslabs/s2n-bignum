@@ -9,3 +9,7 @@ tests/ctCheck
 benchmarks/benchmark
 x86/x86-insns.ml
 arm/simulator_iclasses_log.txt
+arm/proofs/cosim-runner
+x86/proofs/cosim-runner
+riscv/proofs/cosim-runner.elf
+riscv/proofs/cosim-runner.bin

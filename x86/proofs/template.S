@@ -146,7 +146,14 @@ _harness:
 // Execute the instruction, which may be modified from this placeholder
 
 modinst:
+#ifdef COSIM_PERSISTENT
+        jmp     cosim_code_slot
+        .globl  cosim_capture, _cosim_capture
+cosim_capture:
+_cosim_capture:
+#else
         .byte ICODE
+#endif
 
 // Copy new state back to the buffer
 
@@ -237,6 +244,28 @@ modinst:
 
         mov     rax, [rdi+0*8]
         ret
+
+#ifdef COSIM_PERSISTENT
+#ifdef __APPLE__
+.section __TEXT,__text
+#else
+.section .text.cosim_slot,"ax",@progbits
+#endif
+.balign 4096
+.globl  cosim_code_slot, _cosim_code_slot
+#ifndef __APPLE__
+.type   cosim_code_slot,@function
+#endif
+cosim_code_slot:
+_cosim_code_slot:
+        .space  4096,0
+.globl  cosim_code_slot_end, _cosim_code_slot_end
+cosim_code_slot_end:
+_cosim_code_slot_end:
+#ifndef __APPLE__
+.size   cosim_code_slot,.-cosim_code_slot
+#endif
+#endif
 
 #if defined(__linux__) && defined(__ELF__)
 .section .note.GNU-stack,"",%progbits

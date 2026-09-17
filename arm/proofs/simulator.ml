@@ -195,7 +195,7 @@ and tac_after memop =
 
 let arm_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_AARCH64_EXECUTOR"
-    "arm/proofs/armsimulate --persistent" "aarch64" 128);;
+    "arm/proofs/cosim-runner" "aarch64" 128);;
 
 let cosimulate_instructions (memopidx: int option) icodes =
   let icodestring =

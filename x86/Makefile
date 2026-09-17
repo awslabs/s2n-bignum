@@ -453,7 +453,8 @@ libs2nbignum.a: $(OBJ) ; ar -rc libs2nbignum.a $(OBJ)
 
 winobj: $(WINOBJ) ;
 
-clean:; rm -f libs2nbignum.a */*.o */*.obj */*.correct */*.native
+clean:; rm -f libs2nbignum.a */*.o */*.obj */*.correct */*.native \
+	proofs/cosim-runner
 
 # Dynamically regenerate or destroy the files recording which functions
 # use BMI and/or ADX instructions in the x86 versions. These won't run
@@ -493,9 +494,21 @@ PROOF_LOGS = $(OBJ:.o=.correct)
 TUTORIAL_PROOF_BINS = $(TUTORIAL_PROOFS:.ml=.native)
 TUTORIAL_PROOF_LOGS = $(TUTORIAL_PROOFS:.ml=.correct)
 
+ifeq ($(OSTYPE_RESULT),Darwin)
+COSIM_ARCH_FLAGS ?= -arch x86_64
+else
+COSIM_ARCH_FLAGS ?=
+endif
+
 # Build precompiled native binaries of HOL Light proofs
 
-proofs/simulator.native: proofs/simulator.ml ../common/cosim.ml $(BASE_ML) x86-insns.ml ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+proofs/simulator.native: proofs/simulator.ml ../common/cosim.ml $(BASE_ML) x86-insns.ml proofs/cosim-runner ; ../tools/build-proof.sh proofs/simulator.ml "$(HOLLIGHT)" "$@"
+
+COSIM_CFLAGS ?= -O2 -Wall -Wextra
+COSIM_LDFLAGS ?=
+proofs/cosim-runner: ../tools/cosim_runner.c proofs/cosim_arch.c proofs/template.S
+	$(CC) $(COSIM_ARCH_FLAGS) $(COSIM_CFLAGS) -DCOSIM_PERSISTENT -o $@ \
+		../tools/cosim_runner.c proofs/cosim_arch.c proofs/template.S $(COSIM_LDFLAGS)
 
 # For constant-time property and memory safety, collect input/output/temporary
 # buffers from function signatures in s2n-bignum.h .

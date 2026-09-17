@@ -1144,7 +1144,7 @@ let decode_inst ibytes =
 
 let x86_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_X86_64_EXECUTOR"
-    "x86/proofs/x86simulate --persistent" "x86_64" 112);;
+    "x86/proofs/cosim-runner" "x86_64" 112);;
 
 let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =

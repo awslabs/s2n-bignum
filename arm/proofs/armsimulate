@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
 
-# Compile and execute AArch64 cosimulation cases. In persistent mode this
-# script keeps the protocol connection alive, but deliberately retains the
-# historical preprocess/assemble/link/execute path for every RUN request.
+# Compile and execute one AArch64 cosimulation case.
+#
+# Usage: armsimulate instruction-words [state-word ...]
+#
+# instruction-words is a comma-separated list accepted by the assembler's
+# .inst directive, for example 0xd503201f for NOP. The following arguments
+# initialize up to 128 unsigned 64-bit state words; omitted words are zero.
+# The command prints all 128 resulting state words to standard output.
 
 set -u
 
 DIR="$(dirname -- "${BASH_SOURCE[0]}")"
 DIR="$(realpath -- "$DIR")"
-STATE_WORDS=128
-ARCH=aarch64
-
 read -r -a CC_COMMAND <<< "${CC:-cc}"
 read -r -a AS_COMMAND <<< "${AS:-as}"
 
 RUN_STAGE=idle
 RUN_STATUS=0
 CURRENT_TEMP=""
-REQUEST_OUTPUT=""
 
 cleanup_case() {
   if [[ -n "$CURRENT_TEMP" ]]; then
@@ -26,15 +27,7 @@ cleanup_case() {
   fi
 }
 
-cleanup_all() {
-  cleanup_case
-  if [[ -n "$REQUEST_OUTPUT" ]]; then
-    rm -f -- "$REQUEST_OUTPUT"
-    REQUEST_OUTPUT=""
-  fi
-}
-
-trap cleanup_all EXIT
+trap cleanup_case EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -74,96 +67,18 @@ run_once() {
   return "$RUN_STATUS"
 }
 
-hex_to_code_argument() {
-  local hex=$1
-  local length=${#hex}
-  local offset byte0 byte1 byte2 byte3 word
-  local -a words=()
-
-  if (( length == 0 || length % 8 != 0 )) ||
-      [[ ! "$hex" =~ ^[[:xdigit:]]+$ ]]; then
-    return 1
-  fi
-
-  for ((offset = 0; offset < length; offset += 8)); do
-    byte0=${hex:offset:2}
-    byte1=${hex:offset+2:2}
-    byte2=${hex:offset+4:2}
-    byte3=${hex:offset+6:2}
-    word="0x${byte3}${byte2}${byte1}${byte0}"
-    words+=("$word")
-  done
-
-  local IFS=,
-  CODE_ARGUMENT="${words[*]}"
-}
-
-run_persistent() {
-  local line code
-  local -a request output_words
-
-  printf 'READY 1 %s %d\n' "$ARCH" "$STATE_WORDS"
-  while IFS= read -r line; do
-    read -r -a request <<< "$line"
-    case "${request[0]:-}" in
-      QUIT)
-        return 0
-        ;;
-      RUN)
-        if (( ${#request[@]} != STATE_WORDS + 2 )); then
-          printf 'ERROR wrong-input-state-size\n'
-          continue
-        fi
-        code=${request[1]}
-        if ! hex_to_code_argument "$code"; then
-          printf 'ERROR malformed-aarch64-code\n'
-          continue
-        fi
-
-        REQUEST_OUTPUT="$(mktemp)" || {
-          printf 'ERROR tempfile\n'
-          continue
-        }
-        run_once "$CODE_ARGUMENT" "${request[@]:2}" >"$REQUEST_OUTPUT"
-
-        if [[ "$RUN_STAGE" != execute ]]; then
-          printf 'ERROR %s\n' "$RUN_STAGE"
-        elif [[ ! -s "$REQUEST_OUTPUT" ]]; then
-          printf 'TRAP exit-%d\n' "$RUN_STATUS"
-        else
-          read -r -a output_words <"$REQUEST_OUTPUT"
-          if (( ${#output_words[@]} != STATE_WORDS )); then
-            printf 'ERROR wrong-output-state-size\n'
-          else
-            printf 'OK'
-            printf ' %s' "${output_words[@]}"
-            printf '\n'
-          fi
-        fi
-        rm -f -- "$REQUEST_OUTPUT"
-        REQUEST_OUTPUT=""
-        ;;
-      *)
-        printf 'ERROR unknown-command\n'
-        ;;
-    esac
-  done
-}
-
 cd "$DIR"
 
-if [[ "${1:-}" == --persistent ]]; then
-  run_persistent
-elif (( $# == 0 )); then
-  printf 'usage: %s [--persistent | code state...]\n' "$0" >&2
+if (( $# == 0 )); then
+  printf 'usage: %s instruction-words [state-word ...]\n' "$0" >&2
   exit 2
-else
-  code=$1
-  shift
-  run_once "$code" "$@"
-  run_status=$?
-  if [[ "$RUN_STAGE" != execute ]]; then
-    exit 1
-  fi
-  exit "$run_status"
 fi
+
+code=$1
+shift
+run_once "$code" "$@"
+run_status=$?
+if [[ "$RUN_STAGE" != execute ]]; then
+  exit 1
+fi
+exit "$run_status"

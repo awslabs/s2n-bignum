@@ -43,6 +43,9 @@ just built:
 
     (cd ./tests; make go)
 
+For instruction cosimulation tests, including persistent native and QEMU
+execution backends, see [COSIMULATION.md](COSIMULATION.md).
+
 To run the benchmarking code to get performance numbers for your platform
 (this usually takes several minutes):
 
