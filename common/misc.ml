@@ -1155,21 +1155,20 @@ let EXISTS_NONTRIVIAL_CONV =
 
 (* ------------------------------------------------------------------------- *)
 (* Simple fix for "wraparound" of symbolics like "word(pc + n)"              *)
-(* by reducing n modulo 2^64. This is used for the IP, while the             *)
-(* BSID thing works more elaborately.                                        *)
+(* by reducing n modulo the concrete word size. This is used for the IP,     *)
+(* while the BSID thing works more elaborately.                              *)
 (* ------------------------------------------------------------------------- *)
 
 let WORD_PC_PLUS_CONV =
   let pth = prove
-    (`word(pc + NUMERAL n):int64 =
-      word(pc + NUMERAL n MOD 18446744073709551616)`,
-     REWRITE_TAC[WORD_EQ; CONG; DIMINDEX_64] THEN
-     CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC MOD_DOWN_CONV THEN
-     REWRITE_TAC[]) in
+    (`word(pc + NUMERAL n):N word =
+      word(pc + NUMERAL n MOD 2 EXP dimindex(:N))`,
+     REWRITE_TAC[WORD_ADD; WORD_MOD_SIZE]) in
   let conv =
     GEN_REWRITE_CONV I [pth] THENC
     RAND_CONV
-     (RAND_CONV NUM_MOD_CONV THENC
+     (RAND_CONV
+       (DEPTH_CONV DIMINDEX_CONV THENC NUM_REDUCE_CONV) THENC
       GEN_REWRITE_CONV TRY_CONV [ARITH_RULE `n + 0 = n`]) in
   CHANGED_CONV conv;;
 
