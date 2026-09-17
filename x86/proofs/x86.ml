@@ -4753,6 +4753,11 @@ let WORD_NUM_ASSOC_AND_ADD_CONV =
 (* Perform symbolic execution of one instruction to reach named state.       *)
 (* ------------------------------------------------------------------------- *)
 
+(* The instruction-pointer theorem must express the current address relative
+   to a symbolic code base: `word pc` at offset zero or `word (pc + n)` at byte
+   offset `n`. This is the common contract of ARM_THM, RISCV_THM and X86_THM;
+   specialize the resulting execution theorem afterward for fixed addresses. *)
+
 let X86_THM =
   let pth = prove
    (`read RIP s = word pc ==> x86_decode s (word pc) (n,instr) ==>
