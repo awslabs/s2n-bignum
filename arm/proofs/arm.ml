@@ -962,7 +962,8 @@ let ARM_ADD_RETURN_NOSTACK_TAC =
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
 
 (* ------------------------------------------------------------------------- *)
-(* Version with register save/restore and stack adjustment.                  *)
+(* Version with register save/restore and stack adjustment. The frame size   *)
+(* must be a multiple of 16 so an aligned incoming SP remains aligned.       *)
 (* ------------------------------------------------------------------------- *)
 
 let ARM_ADD_RETURN_STACK_TAC =
@@ -970,6 +971,9 @@ let ARM_ADD_RETURN_STACK_TAC =
   and dqd_thm = WORD_BLAST `(word_zx:int128->int64)(word_zx(x:int64)) = x` in
 
   fun ?(pre_post_nsteps:(int*int) option) execth coreth reglist stackoff ->
+    if stackoff mod 16 <> 0 then
+      failwith
+        "ARM_ADD_RETURN_STACK_TAC: stack frame size is not 16-byte aligned";
     let is_coreth_safety = is_exists (concl coreth) in
     let regs = dest_list reglist in
 
