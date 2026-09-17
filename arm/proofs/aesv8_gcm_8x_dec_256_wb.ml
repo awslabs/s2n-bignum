@@ -34,6 +34,11 @@
 needs "arm/proofs/aesv8_gcm_8x_dec_256_lemmas.ml";;
 needs "arm/proofs/utils/aes_gcm_dec_spec.ml";;
 needs "common/ghash_nist_bridge.ml";;
+(* The FIPS-197 <-> house-cipher byte-reversal bridge, used at the tail of this
+   file to restate the two exported CORRECT theorems over the KAT-anchored
+   aes256_cipher (common/fips197.ml).  Transitively pulls in common/fips197.ml
+   (aes256_cipher) and arm/proofs/utils/aes_encrypt_spec.ml. *)
+needs "arm/proofs/utils/aes_cipher_bridge.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Machine code (print_literal_from_elf "arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o") *)
@@ -15450,19 +15455,21 @@ let CTR0_AS_CTR_BLOCK = prove
     REWRITE_TAC[ctr_block; WORD_VAL] THEN CONV_TAC WORD_BLAST]);;
 
 (* ========================================================================= *)
-(* ROADMAP -- how to read the exported theorems below top-down.                *)
+(* ROADMAP -- how to read the theorems below top-down.                         *)
 (*                                                                             *)
-(* The whole-function contract is the PAIR                                     *)
-(*   AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT  (ABI wrapper, this file)       *)
-(*   AESV8_GCM_8X_DEC_256_GUARD               (reject path, the <=8-block chain)           *)
-(* with AESV8_GCM_8X_DEC_256_CORRECT the after-prologue core it wraps.  The  *)
-(* two exported CORRECT theorems are DERIVED from two internal                  *)
-(* H-free byte-list spines by pinning H + weakening the postcond (see their     *)
-(* headers below for the vocabulary and the derivation):                        *)
+(* The TWO EXPORTED contracts (over aes256_cipher, at the file END) are          *)
+(*   AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT  (ABI wrapper)                    *)
+(*   AESV8_GCM_8X_DEC_256_CORRECT             (after-prologue core it wraps)   *)
+(* plus AESV8_GCM_8X_DEC_256_GUARD (reject path, the <=8-block chain).  The     *)
+(* two exported contracts are DERIVED, without re-running any sim, through the   *)
+(* chain: internal H-free byte-list SPINES -> internal aes256_encrypt-form       *)
+(* lemmas (pin H, weaken postcond) -> internal aes256_cipher (FIPS-197) form     *)
+(* lemmas (byte-reversal keystone) -> exported contracts (gcm_dec_nist_input     *)
+(* block-list spelling + word_reversefields 8).  The two spines are:            *)
 (*   WBN_DEC_CORE_BYTELIST        (byte_list output, pc+0x20..pc+4528)          *)
 (*   WBN_DEC_SUBROUTINE_BYTELIST  (byte_list output, ABI wrapper)               *)
-(* The spines carry the full sim/chain proof; the exports are pure vocabulary   *)
-(* lifts on top, so nothing large propagates and the sims are never re-run.     *)
+(* The spines carry the full sim/chain proof; everything on top is pure          *)
+(* vocabulary lifts, so nothing large propagates and the sims are never re-run.  *)
 (*                                                                             *)
 (*   _SUBROUTINE_CORRECT / WBN_DEC_SUBROUTINE_BYTELIST  (Phase 8, below)        *)
 (*     = prologue (guard fall-through + d8-d15 spills)                          *)
@@ -16436,16 +16443,19 @@ let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_nist_goal,
   ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_THEN ACCEPT_TAC]);;
 
 (* ========================================================================= *)
-(* THE EXPORTED CORE CONTRACT (consolidation; reshape).                         *)
+(* INTERNAL: the after-prologue core, in the HOUSE aes256_encrypt vocabulary.   *)
+(* (WBN_DEC_CORE_ENCRYPT -- an intermediate lemma, NOT an exported contract.     *)
+(* The two exported contracts, over aes256_cipher, are derived from the          *)
+(* FIPS-197-form lemmas at the end of the file.)                                *)
 (*                                                                             *)
 (* After-prologue core correctness for the whole-blocks decrypt, in the         *)
 (* reviewer-facing NIST SP 800-38D vocabulary matching the sibling AES-GCM       *)
 (* proofs (the encrypt _GEN and the x4 kernels):                              *)
 (*   - GHASH key NAMED as the GCM hash key H = aes256_encrypt (word 0) rk        *)
-(*     (= E_K(0^128)).  aes256_encrypt (NOT aes256_cipher) is the house Arm      *)
-(*     convention (AES-XTS bottoms out in it); the aes256_encrypt=aes256_cipher  *)
-(*     FIPS-197 bridge is a separate upstream deliverable.  TODO: until it       *)
-(*     lands, that identification is an argument, not a theorem here.            *)
+(*     (= E_K(0^128)).  aes256_encrypt is the house Arm convention (AES-XTS      *)
+(*     bottoms out in it); the aes256_encrypt=aes256_cipher FIPS-197 bridge      *)
+(*     (arm/proofs/utils/aes_cipher_bridge.ml, needed above) lets the exported   *)
+(*     contracts restate this over aes256_cipher (see the file end).            *)
 (*   - NIST nonce NAMED by the hyp word_bytereverse ctr0 = ctr_block nonce c     *)
 (*     (every ctr0 admits this, CTR0_AS_CTR_BLOCK), so block j's keystream is    *)
 (*     E_K(nonce || (c + j)) -- the big-endian counter form.                     *)
@@ -16495,7 +16505,7 @@ let WBN_LOOP_INVARIANT_ENTRY = prove(wbn_entry_nist_goal,
 (*   sibling AES-GCM proofs take the identical table as a precond.               *)
 (* ========================================================================= *)
 
-let AESV8_GCM_8X_DEC_256_CORRECT = prove
+let WBN_DEC_CORE_ENCRYPT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c.
     1 <= nblk /\
@@ -16595,21 +16605,25 @@ let AESV8_GCM_8X_DEC_256_CORRECT = prove
     ASM_REWRITE_TAC[]]);;
 
 (* ========================================================================= *)
-(* THE EXPORTED SUBROUTINE CONTRACT (consolidation;                             *)
-(* reshape) -- headline.  The full AAPCS64 wrapper, same reviewer-facing         *)
-(* vocabulary as the _CORRECT export above (H pinned, nonce named, ABSTRACT      *)
+(* INTERNAL: the AAPCS64 subroutine wrapper, in the HOUSE aes256_encrypt         *)
+(* vocabulary (WBN_DEC_SUBROUTINE_ENCRYPT -- an intermediate lemma, NOT an        *)
+(* exported contract; the exported _SUBROUTINE_CORRECT over aes256_cipher is      *)
+(* derived from the FIPS-197 form at the file end).                             *)
+(*                                                                             *)
+(* The full AAPCS64 wrapper, same reviewer-facing                                *)
+(* vocabulary as the core lemma above (H pinned, nonce named, ABSTRACT           *)
 (* indexed input `inblock`, pointwise aes_ctr_block output, GHASH over           *)
 (* word_bytereverse o inblock), for EVERY representable length nblk >= 0         *)
 (* (nblk=0: entry cbz taken, returns 0; both the input-read hypothesis and the   *)
 (* output pointwise conjunct are vacuous -- no j<0 -- tag unchanged).  Its       *)
 (* bit_len = word (128*nblk) makes any invalid bit_len UNREPRESENTABLE (as       *)
 (* the encrypt _GEN).  Derived from spine WBN_DEC_SUBROUTINE_BYTELIST like        *)
-(* _CORRECT                                                                      *)
+(* the core lemma                                                                *)
 (* (INST + WBN_INPUT_ASSEMBLE + WBN_OUTPUT_POINTWISE_NONCE + the assembled        *)
-(* identities).  The ivec writeback is now included (see the _CORRECT header).    *)
+(* identities).  The ivec writeback is now included (see the core header).       *)
 (* ========================================================================= *)
 
-let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
+let WBN_DEC_SUBROUTINE_ENCRYPT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c returnaddress.
     128 * nblk < 2 EXP 62 /\
@@ -16706,14 +16720,14 @@ let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
     ASM_REWRITE_TAC[]]);;
 
 (* ------------------------------------------------------------------------- *)
-(* THE WHOLE-FUNCTION CONTRACT (headline result).                              *)
+(* INTERNAL WHOLE-FUNCTION LEMMAS (house aes256_encrypt vocabulary).            *)
 (*                                                                             *)
-(* AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT (above) IS the whole-function     *)
-(* AAPCS64 subroutine contract; AESV8_GCM_8X_DEC_256_CORRECT is the           *)
-(* after-prologue core it wraps.  These are the TWO exported CORRECT theorems    *)
-(* (consolidated five near-identical variants into these two --                  *)
-(* H pinned, nonce named, output pointwise -- so a reviewer sees ONE obvious     *)
-(* contract each).  See their headers above for the full spec.                  *)
+(* WBN_DEC_SUBROUTINE_ENCRYPT (above) is the whole-function AAPCS64 subroutine   *)
+(* lemma; WBN_DEC_CORE_ENCRYPT is the after-prologue core it wraps.  Both are     *)
+(* stated over the house aes256_encrypt cipher (H pinned, nonce named, output    *)
+(* pointwise).  The TWO EXPORTED contracts,                                      *)
+(* AESV8_GCM_8X_DEC_256_CORRECT and _SUBROUTINE_CORRECT, restate these over       *)
+(* aes256_cipher (word_reversefields 8 spelling) and appear at the file end.     *)
 (*                                                                             *)
 (* SECONDARY (entry-guard safety): AESV8_GCM_8X_DEC_256_GUARD                 *)
 (* (the <=8-block chain) is NOT part of the headline contract              *)
@@ -16727,15 +16741,16 @@ let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
 (* not the cryptographic spec.  (It mirrors the nblk<=8 DISPATCH+GUARD pairing    *)
 (* in the <=8-block chain, where GUARD played the same secondary role.)              *)
 (*                                                                             *)
-(* Soundness gate: the exported theorems (SUBROUTINE_CORRECT for all nblk>=0,     *)
-(* CORRECT for all nblk>=1, GUARD) plus the internal byte-list spines are         *)
-(* hyps=0, and the file introduces NO new axiom -- the Q19/GHASH identity that    *)
-(* was formerly scoped behind a CHEAT is closed (the R1' route).                 *)
+(* Soundness gate: these internal lemmas (subroutine for all nblk>=0, core for    *)
+(* all nblk>=1, GUARD) plus the byte-list spines are hyps=0, and the file          *)
+(* introduces NO new axiom -- the Q19/GHASH identity that was formerly scoped      *)
+(* behind a CHEAT is closed (the R1' route).  The exported aes256_cipher           *)
+(* contracts at the file end inherit this soundness (pure vocabulary lifts).       *)
 (* ------------------------------------------------------------------------- *)
 
 let () =
-  let whole_fn = [AESV8_GCM_8X_DEC_256_CORRECT;
-                  AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT;
+  let whole_fn = [WBN_DEC_CORE_ENCRYPT;
+                  WBN_DEC_SUBROUTINE_ENCRYPT;
                   AESV8_GCM_8X_DEC_256_GUARD;
                   WBN_DEC_CORE_BYTELIST; WBN_DEC_SUBROUTINE_BYTELIST] in
   (* Drift gate, two layers: (1) the byte-list SPINES are aconv-anchored to the
@@ -16878,18 +16893,381 @@ let () =
     failwith "WB dec core spine: literal drifted from the DISPATCH contract (aconv)"
   else if not (aconv (concl WBN_DEC_SUBROUTINE_BYTELIST) subr_bytelist_anchor) then
     failwith "WB dec subroutine spine: literal drifted from the core spine (aconv)"
-  else if not (aconv (concl AESV8_GCM_8X_DEC_256_CORRECT)
+  else if not (aconv (concl WBN_DEC_CORE_ENCRYPT)
                      (to_exported core_bytelist_anchor)) then
-    failwith "WB dec _CORRECT: literal drifted from the core spine (aconv)"
-  else if not (aconv (concl AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT)
+    failwith "WB dec core (encrypt form): literal drifted from the core spine (aconv)"
+  else if not (aconv (concl WBN_DEC_SUBROUTINE_ENCRYPT)
                      (to_exported subr_bytelist_anchor)) then
-    failwith "WB dec _SUBROUTINE_CORRECT: literal drifted from the subroutine spine (aconv)"
+    failwith "WB dec subroutine (encrypt form): literal drifted from the subroutine spine (aconv)"
   else if exists (fun th -> hyp th <> []) whole_fn then
     failwith "WB dec whole-function theorems: unexpected hypotheses"
   else if List.length (axioms()) <> 3 then
     failwith "WB dec whole-function: unexpected axiom count (new_axiom introduced?)"
   else Format.print_string
-    ("WB dec whole-function: CORRECT + SUBROUTINE_CORRECT (H pinned, nonce named, "^
+    ("WB dec internal encrypt-form core + subroutine (H pinned, nonce named, "^
      "indexed inblock, pointwise aes_ctr_block; aconv spines) + spines (aconv "^
      "DISPATCH) + GUARD hyps=0, axioms=3\n");;
+
+(* ========================================================================= *)
+(* INTERNAL: the core + subroutine lemmas over the FIPS-197 CIPHER.             *)
+(* (WBN_DEC_CORE_FIPS197 / WBN_DEC_SUBROUTINE_FIPS197 -- intermediate lemmas;    *)
+(* the two EXPORTED contracts are the word_reversefields-8-spelled restatements  *)
+(* of these, at the file end.)                                                  *)
+(*                                                                             *)
+(* The two encrypt-form lemmas above are stated over the house Arm cipher        *)
+(* `aes256_encrypt` (arm/proofs/utils/aes_encrypt_spec.ml) -- the little-endian  *)
+(* aese-order primitive the kernel actually runs, and the convention the merged   *)
+(* AES-XTS proofs share.  For a reviewer of the wider AES-GCM stack (and to        *)
+(* converge with John Harrison's AES-128 GCM x4 kernel proof, which is entirely    *)
+(* on the common/ side), the SAME contracts are restated below over the            *)
+(* KAT-anchored FIPS-197 cipher `aes256_cipher` (common/fips197.ml, anchored by     *)
+(* PR #389).                                                                        *)
+(*                                                                                 *)
+(* The two ciphers are NOT equal -- they are byte-reversal conjugates (proved in   *)
+(* arm/proofs/utils/aes_cipher_bridge.ml, needed above).  So the restatement is     *)
+(* NOT a symbol swap: each `aes256_encrypt X rk` becomes                            *)
+(*   word_reversefields 8 (aes256_cipher (word_bytereverse X) (MAP wr8 rk))         *)
+(* with wr8 = word_reversefields 8, matching John's `word_reversefields 8`          *)
+(* spelling (the HOL Light Library/words.ml form, `word_bytereverse =              *)
+(* word_reversefields 8`).  Two encrypt occurrences appear in each contract:        *)
+(*   - the GHASH hash key H = aes256_encrypt (word 0) rk  (word 0 reverses to        *)
+(*     word 0, so its byte-reverse wrapper on the INPUT vanishes); and              *)
+(*   - the per-block keystream, folded as aes_ctr_block nonce rk (c+j)              *)
+(*     (= aes256_encrypt (word_bytereverse (ctr_block nonce (c+j))) rk, so its       *)
+(*     inner double byte-reverse collapses, leaving aes256_cipher on the CLEAN       *)
+(*     counter block -- exactly John's aes_ctr_block shape).                         *)
+(* The `MAP word_reversefields 8 rk` key argument is the documented key             *)
+(* REPRESENTATION difference (aes_ctr_spec.ml lines ~77-94): both kernels load the  *)
+(* SAME key bytes, so this is the big-endian view of the same memory image, i.e.    *)
+(* precisely John's `rk`.                                                            *)
+(*                                                                                 *)
+(* Derived purely by rewriting the encrypt-form theorems with two conversion        *)
+(* lemmas (below), each a one-step consequence of the keystone                       *)
+(* AES256_ENCRYPT_EQ_BYTEREVERSE_CIPHER.  The 17k-line kernel proof is NOT re-run.  *)
+(* The encrypt-form theorems are retained verbatim (their drift gate above still     *)
+(* fires); dependents that were generated from them (e.g. the *_SAFE companions on  *)
+(* aes-gcm-dec-safety) are unaffected.                                              *)
+(* ========================================================================= *)
+
+(* word_bytereverse of the zero block is the zero block (reversing zero bytes). *)
+let WORD_BYTEREVERSE_128_0 = prove
+ (`word_bytereverse (word 0:int128) = word 0`,
+  CONV_TAC WORD_BLAST);;
+
+(* Conversion 1: the GHASH hash key H = E_K(0^128) as a FIPS-197 cipher.            *)
+(* word_bytereverse (word 0) = word 0, so no reverse wraps the (word 0) input.       *)
+let AES256_ENCRYPT_0_AS_CIPHER = prove
+ (`!rk:(128 word) list.
+     LENGTH rk = 15
+     ==> aes256_encrypt (word 0) rk =
+         word_reversefields 8
+           (aes256_cipher (word 0) (MAP (word_reversefields 8) rk))`,
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC[AES256_ENCRYPT_EQ_BYTEREVERSE_CIPHER] THEN
+  REWRITE_TAC[WORD_BYTEREVERSE_128_0] THEN
+  REWRITE_TAC[WORD_BYTEREVERSE_REVERSEFIELDS]);;
+
+(* Conversion 2: the per-block keystream aes_ctr_block in John's                     *)
+(* word_reversefields 8 (aes256_cipher (ctr_block ...) ...) shape.  Unfolding         *)
+(* aes_ctr_block exposes aes256_encrypt (word_bytereverse (ctr_block ...)) rk; the    *)
+(* keystone rewrites that, and the resulting inner double byte-reverse collapses      *)
+(* via WORD_REVERSEFIELDS_REVERSEFIELDS, leaving the cipher on the clean counter.     *)
+let AES_CTR_BLOCK_AS_CIPHER = prove
+ (`!nonce:96 word. !rk:(128 word) list. !i:num.
+     LENGTH rk = 15
+     ==> aes_ctr_block nonce rk i =
+         word_reversefields 8
+           (aes256_cipher (ctr_block nonce i) (MAP (word_reversefields 8) rk))`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[aes_ctr_block] THEN
+  ASM_SIMP_TAC[AES256_ENCRYPT_EQ_BYTEREVERSE_CIPHER] THEN
+  REWRITE_TAC[WORD_BYTEREVERSE_REVERSEFIELDS] THEN
+  REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS]);;
+
+(* After-prologue core, over aes256_cipher (word_reversefields 8 spelling).          *)
+let WBN_DEC_CORE_FIPS197 = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
+    tag0 ctr0 nonce c.
+    1 <= nblk /\
+    128 * nblk < 2 EXP 62 /\
+    val in_p + 16 * nblk < 2 EXP 63 /\
+    LENGTH rk = 15 /\
+    aligned 16 stackpointer /\
+    word_bytereverse ctr0 = ctr_block nonce c /\
+    ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
+    [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc; in_p,16 * nblk; key_p,240; htbl_p,192; stackpointer,80] /\
+    PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+    ALL (nonoverlapping (stackpointer,80))
+    [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc; in_p,16 * nblk; key_p,240; htbl_p,192]
+    ==> ensures arm
+         (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+              read PC s = word (pc + 32) /\
+              read SP s = stackpointer /\
+              C_ARGUMENTS
+              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+              s /\
+              (!j. j < nblk
+                   ==> read (memory :> bytes128
+                              (word_add in_p (word (16 * j)))) s = inblock j) /\
+              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+              read (memory :> bytes128 ivec_p) s = ctr0 /\
+              wordlist_from_memory (key_p,15) s = rk /\
+              htable_mem_8
+              (ghash_twist
+              (word_reversefields 8
+              (aes256_cipher (word 0) (MAP (word_reversefields 8) rk)))) htbl_p s)
+         (\s. read PC s = word (pc + 4560) /\
+              (!j. j < nblk
+                   ==> read (memory :> bytes128
+                              (word_add out_p (word (16 * j)))) s =
+                       word_xor
+                       (word_reversefields 8
+                       (aes256_cipher (ctr_block nonce (c + j))
+                       (MAP (word_reversefields 8) rk)))
+                       (inblock j)) /\
+              read (memory :> bytes128 xi_p) s =
+              word_reversefields 8
+              (nist_ghash
+              (word_reversefields 8
+              (aes256_cipher (word 0) (MAP (word_reversefields 8) rk))) tag0
+              (list_of_seq (\i. word_bytereverse (inblock i)) nblk)) /\
+              read (memory :> bytes128 ivec_p) s = word_bytereverse (ctr_block nonce (c + nblk)))
+         (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE
+          [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+           memory :> bytes (ivec_p,16);
+           memory :> bytes (word_add stackpointer (word 64),16)] ,,
+          MAYCHANGE
+          [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q8; Q9; Q10; Q11; Q12; Q13; Q14;
+           Q15; Q16; Q17; Q18; Q19; Q20; Q21; Q22; Q23; Q24; Q25; Q26; Q27;
+           Q28; Q29; Q30; Q31])`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  ASM_SIMP_TAC[GSYM AES256_ENCRYPT_0_AS_CIPHER; GSYM AES_CTR_BLOCK_AS_CIPHER] THEN
+  MP_TAC(SPEC_ALL WBN_DEC_CORE_ENCRYPT) THEN
+  ASM_REWRITE_TAC[]);;
+
+(* Whole-function AAPCS64 subroutine wrapper, over aes256_cipher.                     *)
+let WBN_DEC_SUBROUTINE_FIPS197 = prove
+ (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
+    tag0 ctr0 nonce c returnaddress.
+    128 * nblk < 2 EXP 62 /\
+    val in_p + 16 * nblk < 2 EXP 63 /\
+    LENGTH rk = 15 /\
+    aligned 16 stackpointer /\
+    word_bytereverse ctr0 = ctr_block nonce c /\
+    ALLPAIRS nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16]
+    [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc; in_p,16 * nblk; key_p,240; htbl_p,192;
+     word_sub stackpointer (word 80),80] /\
+    PAIRWISE nonoverlapping [out_p,16 * nblk; xi_p,16; ivec_p,16] /\
+    ALL (nonoverlapping (word_sub stackpointer (word 80),80))
+    [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc; in_p,16 * nblk; key_p,240; htbl_p,192]
+    ==> ensures arm
+         (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+              read PC s = word pc /\
+              read SP s = stackpointer /\
+              read X30 s = returnaddress /\
+              C_ARGUMENTS
+              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+              s /\
+              (!j. j < nblk
+                   ==> read (memory :> bytes128
+                              (word_add in_p (word (16 * j)))) s = inblock j) /\
+              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+              read (memory :> bytes128 ivec_p) s = ctr0 /\
+              wordlist_from_memory (key_p,15) s = rk /\
+              htable_mem_8
+              (ghash_twist
+              (word_reversefields 8
+              (aes256_cipher (word 0) (MAP (word_reversefields 8) rk)))) htbl_p s)
+         (\s. read PC s = returnaddress /\
+              (!j. j < nblk
+                   ==> read (memory :> bytes128
+                              (word_add out_p (word (16 * j)))) s =
+                       word_xor
+                       (word_reversefields 8
+                       (aes256_cipher (ctr_block nonce (c + j))
+                       (MAP (word_reversefields 8) rk)))
+                       (inblock j)) /\
+              read (memory :> bytes128 xi_p) s =
+              word_reversefields 8
+              (nist_ghash
+              (word_reversefields 8
+              (aes256_cipher (word 0) (MAP (word_reversefields 8) rk))) tag0
+              (list_of_seq (\i. word_bytereverse (inblock i)) nblk)) /\
+              read (memory :> bytes128 ivec_p) s = word_bytereverse (ctr_block nonce (c + nblk)))
+         (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE
+          [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+           memory :> bytes (ivec_p,16);
+           memory :> bytes (word_sub stackpointer (word 80),80)])`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  ASM_SIMP_TAC[GSYM AES256_ENCRYPT_0_AS_CIPHER; GSYM AES_CTR_BLOCK_AS_CIPHER] THEN
+  MP_TAC(SPEC_ALL WBN_DEC_SUBROUTINE_ENCRYPT) THEN
+  ASM_REWRITE_TAC[]);;
+
+(* ------------------------------------------------------------------------- *)
+(* Drift gate for the cipher-form exports.  Each _CIPHER theorem must be the     *)
+(* corresponding encrypt-form export with EXACTLY the two conversion lemmas       *)
+(* applied -- nothing else.  We re-derive that transform here by forward           *)
+(* inference (rewrite the encrypt export with the two conversions under its own    *)
+(* LENGTH rk = 15 hyp) and aconv-check the _CIPHER export's body against it.  A     *)
+(* body aconv-check (ignoring outer quantifier order, which GEN_ALL scrambles)     *)
+(* plus an identical bound-variable SET pins the statement to the encrypt export.  *)
+(* Also re-confirms hyps=0 and that no new axiom was introduced.                   *)
+(* ------------------------------------------------------------------------- *)
+
+let () =
+  let derive_cipher_form enc_thm =
+    let th = SPEC_ALL enc_thm in
+    let hyps_tm = fst(dest_imp(concl th)) in
+    let len15 = find (fun c -> concl c = `LENGTH (rk:(128 word) list) = 15`)
+                     (CONJUNCTS(ASSUME hyps_tm)) in
+    let hkey_eq = MATCH_MP AES256_ENCRYPT_0_AS_CIPHER len15 in
+    let ks_eq = MATCH_MP AES_CTR_BLOCK_AS_CIPHER len15 in
+    GEN_ALL(DISCH hyps_tm (REWRITE_RULE[hkey_eq; ks_eq] (UNDISCH th))) in
+  let body_of th = snd(strip_forall(concl th)) in
+  let varset th = setify(map (fun v -> fst(dest_var v))
+                             (fst(strip_forall(concl th)))) in
+  let check name exported enc_export =
+    let anchor = derive_cipher_form enc_export in
+    if not (aconv (body_of exported) (body_of anchor)) then
+      failwith (name^": body drifted from the encrypt export + conversions (aconv)")
+    else if varset exported <> varset anchor then
+      failwith (name^": bound-variable set differs from the encrypt export")
+    else () in
+  check "WB dec core (FIPS-197 form)" WBN_DEC_CORE_FIPS197
+        WBN_DEC_CORE_ENCRYPT;
+  check "WB dec subroutine (FIPS-197 form)" WBN_DEC_SUBROUTINE_FIPS197
+        WBN_DEC_SUBROUTINE_ENCRYPT;
+  if exists (fun th -> hyp th <> [])
+       [AES256_ENCRYPT_0_AS_CIPHER; AES_CTR_BLOCK_AS_CIPHER;
+        WBN_DEC_CORE_FIPS197;
+        WBN_DEC_SUBROUTINE_FIPS197] then
+    failwith "WB dec FIPS-197-form lemmas: unexpected hypotheses"
+  else if List.length (axioms()) <> 3 then
+    failwith "WB dec FIPS-197-form lemmas: unexpected axiom count (new_axiom introduced?)"
+  else Format.print_string
+    ("WB dec FIPS-197-form lemmas: core + subroutine "^
+     "(over aes256_cipher, word_reversefields 8; aconv-anchored to the encrypt "^
+     "forms via the byte-reversal keystone) hyps=0, axioms=3\n");;
+
+(* ========================================================================= *)
+(* STEP 3 — CONVERGENCE WITH JOHN HARRISON'S x4 DECRYPT KERNEL.                *)
+(*                                                                            *)
+(* Branch `gcm` of github.com/jargh/s2n-bignum-dev, file                       *)
+(*   arm/proofs/aes_gcm_dec_kernel_x4_scalar_iv_mem_late_tag_keep_htable.ml.  *)
+(*                                                                            *)
+(* John states the decrypt tag postcondition as                               *)
+(*   read (memory :> bytes128 tag_p) s =                                       *)
+(*     word_reversefields 8                                                    *)
+(*       (nist_ghash (aes128_cipher (word 0) rk) tag0                          *)
+(*          (list_of_seq (nist_input_block inblock) (val len_bits DIV 128)))   *)
+(* with  nist_input_block (inblock:num->int128) i = word_reversefields 8       *)
+(*       (inblock i)   (his file, `let nist_input_block = new_definition`).    *)
+(*                                                                            *)
+(* Our internal FIPS-197-form lemmas above ALREADY state the tag in nist_ghash   *)
+(* form; the only residual difference from John's spelling is the GHASH input     *)
+(* block-list argument:                                                          *)
+(*   ours:  list_of_seq (\i. word_bytereverse (inblock i)) nblk                 *)
+(*   John:  list_of_seq (nist_input_block inblock) nblk                         *)
+(* and word_bytereverse = word_reversefields 8 at :128 (BREV_RF8_128), so the   *)
+(* two are definitionally equal.                                                *)
+(*                                                                            *)
+(* This file already binds the constant `nist_input_block` to the BYTE-LIST      *)
+(* spine form (nist_input_block : byte list -> num -> int128, above), so the      *)
+(* constant name is taken; we cannot `new_definition` John's num->int128 form     *)
+(* under the same name.  We introduce `gcm_dec_nist_input` for John's operator     *)
+(* and define the TWO EXPORTED contracts in his exact block-list spelling, by      *)
+(* rewriting the FIPS-197-form lemmas with this spelling and BREV_RF8_128 (so the  *)
+(* exported statements are spelled entirely in word_reversefields 8).             *)
+(*                                                                            *)
+(* NOTE the GHASH key stays aes256_cipher (with our documented byte-reversed key   *)
+(* view) vs John's aes128_cipher rk: that is a genuine AES-256-vs-AES-128 + key-    *)
+(* representation difference, NOT part of the hash-vocabulary bridge, and is out    *)
+(* of scope here (step 4 territory).  What this step delivers is that our decrypt   *)
+(* tag and John's are the SAME nist_ghash over the SAME NIST big-endian input       *)
+(* block list spelling.                                                             *)
+(* ========================================================================= *)
+
+(* John's `nist_input_block` (num->int128 form), under a non-colliding name.    *)
+let gcm_dec_nist_input = new_definition
+ `gcm_dec_nist_input (inblock:num->int128) (i:num) : int128 =
+    word_reversefields 8 (inblock i)`;;
+
+(* The two block-list spellings coincide (pointwise, via BREV_RF8_128).         *)
+let LIST_OF_SEQ_NIST_INPUT_SPELL = prove
+ (`!(inblock:num->int128) nblk.
+     list_of_seq (\i. word_bytereverse (inblock i)) nblk =
+     list_of_seq (gcm_dec_nist_input inblock) nblk`,
+  REPEAT GEN_TAC THEN MATCH_MP_TAC LIST_OF_SEQ_EQ_PTWISE THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC[gcm_dec_nist_input; BREV_RF8_128]);;
+
+(* THE EXPORTED CORE CONTRACT.  Derived from the internal FIPS-197 core lemma by    *)
+(* (1) rewriting the GHASH block list into John's gcm_dec_nist_input spelling, and  *)
+(* (2) rewriting the two residual word_bytereverse occurrences (the ivec write-back *)
+(* and the ctr0 nonce hypothesis) into word_reversefields 8 via BREV_RF8_128, so    *)
+(* the exported statement is spelled ENTIRELY in word_reversefields 8 (the form     *)
+(* aesv8_gcm_8x_enc_256_wb and aes_gcm_dec_kernel_x4 use).  The 17k-line kernel is   *)
+(* not re-run; this is a pure vocabulary lift.                                       *)
+let AESV8_GCM_8X_DEC_256_CORRECT =
+  REWRITE_RULE[BREV_RF8_128]
+    (REWRITE_RULE[LIST_OF_SEQ_NIST_INPUT_SPELL] WBN_DEC_CORE_FIPS197);;
+
+(* THE EXPORTED SUBROUTINE CONTRACT (the AAPCS64-callable headline result).         *)
+let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT =
+  REWRITE_RULE[BREV_RF8_128]
+    (REWRITE_RULE[LIST_OF_SEQ_NIST_INPUT_SPELL] WBN_DEC_SUBROUTINE_FIPS197);;
+
+(* ------------------------------------------------------------------------- *)
+(* Soundness + spelling gate for the two EXPORTED contracts.                    *)
+(* End state (human decision 2026-09-17): EXACTLY TWO exported contracts,        *)
+(* AESV8_GCM_8X_DEC_256_CORRECT and _SUBROUTINE_CORRECT, over aes256_cipher +    *)
+(* nist_ghash, spelled entirely in word_reversefields 8.  Each is derived from   *)
+(* the internal FIPS-197-form lemma by (spell rewrite ; BREV_RF8_128), so:        *)
+(*  - hyps=0 and axioms=3 (no new_axiom snuck in);                                *)
+(*  - the conclusion mentions gcm_dec_nist_input and NO LONGER the lambda,        *)
+(*    proving the spelling rewrite fired (else it would be a no-op alias);         *)
+(*  - HARD SPELLING GATE: the conclusion contains ZERO word_bytereverse -- every  *)
+(*    byte reversal is spelled word_reversefields 8, matching the sibling AES-GCM  *)
+(*    proofs (aesv8_gcm_8x_enc_256_wb, aes_gcm_dec_kernel_x4);                     *)
+(*  - and the derivation is exactly (spell ; BREV_RF8_128) of the FIPS-197 form    *)
+(*    (aconv), pinning the exported statement to the internal lemma.               *)
+(* ------------------------------------------------------------------------- *)
+let () =
+  let mentions c th = can (find_term (fun t -> is_const t && fst(dest_const t) = c))
+                          (concl th) in
+  let has_brev th =
+    can (find_term (fun t -> is_const t && fst(dest_const t) = "word_bytereverse"))
+        (concl th) in
+  let check name exported fips197 =
+    if hyp exported <> [] then failwith (name^": unexpected hypotheses") else
+    (* the spelling rewrite must have FIRED: John's constant present... *)
+    if not (mentions "gcm_dec_nist_input" exported) then
+      failwith (name^": block list not in gcm_dec_nist_input spelling") else
+    (* ...the statement is spelled ENTIRELY in word_reversefields 8 (E2 hard gate)... *)
+    if has_brev exported then
+      failwith (name^": word_bytereverse present (must be word_reversefields 8)") else
+    (* ...it is over the FIPS-197 cipher, not the house encrypt primitive... *)
+    if mentions "aes256_encrypt" exported then
+      failwith (name^": aes256_encrypt present (exported contract must be aes256_cipher)") else
+    (* ...and it is EXACTLY the FIPS-197 form under (spell ; BREV) (aconv), which    *)
+    (* also proves it is not a no-op alias of the FIPS-197 lemma.                    *)
+    if not (aconv (concl exported)
+                  (concl (REWRITE_RULE[BREV_RF8_128]
+                           (REWRITE_RULE[LIST_OF_SEQ_NIST_INPUT_SPELL] fips197)))) then
+      failwith (name^": not the FIPS-197 form under (spell ; BREV_RF8_128) (aconv)")
+    else () in
+  check "WB dec CORRECT"
+        AESV8_GCM_8X_DEC_256_CORRECT WBN_DEC_CORE_FIPS197;
+  check "WB dec SUBROUTINE_CORRECT"
+        AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT
+        WBN_DEC_SUBROUTINE_FIPS197;
+  if List.length (axioms()) <> 3 then
+    failwith "WB dec exported contracts: unexpected axiom count (new_axiom introduced?)"
+  else Format.print_string
+    ("WB dec EXPORTED contracts: CORRECT + SUBROUTINE_CORRECT "^
+     "(over aes256_cipher + nist_ghash; tag = word_reversefields 8 (nist_ghash .. "^
+     "(list_of_seq (gcm_dec_nist_input inblock) nblk)); spelled entirely in "^
+     "word_reversefields 8, zero word_bytereverse; derived from the FIPS-197 form "^
+     "by spell + BREV_RF8_128) hyps=0, axioms=3\n");;
 
