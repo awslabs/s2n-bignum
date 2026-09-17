@@ -315,6 +315,11 @@ let XREG_NE_SP = prove
 (* Support for the "forward symbolic execution" proof style.                 *)
 (* ------------------------------------------------------------------------- *)
 
+(* The instruction-pointer theorem must express the current address relative
+   to a symbolic code base: `word pc` at offset zero or `word (pc + n)` at byte
+   offset `n`. This is the common contract of ARM_THM, RISCV_THM and X86_THM;
+   specialize the resulting execution theorem afterward for fixed addresses. *)
+
 let ARM_THM =
   let pth = prove
    (`read PC s = word pc ==> arm_decode s (word pc) instr ==>
@@ -322,7 +327,6 @@ let ARM_THM =
     REPEAT STRIP_TAC THEN REWRITE_TAC [arm] THEN
     ASM_REWRITE_TAC[GSYM WORD_ADD; arm_execute] THEN
     ASM_MESON_TAC[arm_decode_unique]) in
-  (* pc_th: `|- ... = word <pc_expr>` *)
   fun (execth2:thm option array) loaded_mc_th pc_th ->
     let th = MATCH_MP pth pc_th in
     let pc_ofs:int =
