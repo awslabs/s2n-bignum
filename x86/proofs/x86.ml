@@ -76,61 +76,7 @@ let FORALL_X86STATE = prove
   GEN_TAC THEN EQ_TAC THEN SIMP_TAC[] THEN
   REWRITE_TAC[x86state_INDUCT]);;
 
-let bytes_loaded = new_definition
- `bytes_loaded s pc l <=>
-     read (memory :> bytelist(pc,LENGTH l)) s = l`;;
-
-let bytes_loaded_nil = prove (`bytes_loaded s pc []`, REWRITE_TAC [
-  bytes_loaded; READ_COMPONENT_COMPOSE; LENGTH; bytelist_clauses]);;
-
-let bytes_loaded_append = prove
- (`bytes_loaded s pc (APPEND l1 l2) <=>
-   bytes_loaded s pc l1 /\ bytes_loaded s (word_add pc (word (LENGTH l1))) l2`,
-  REWRITE_TAC [bytes_loaded; READ_COMPONENT_COMPOSE; read_bytelist_append]);;
-
-let bytes_loaded_unique = METIS [bytes_loaded]
- `!s pc l1 l2. bytes_loaded s pc l1 ==> bytes_loaded s pc l2 ==>
-  LENGTH l1 = LENGTH l2 ==> l1 = l2`;;
-
-let bytes_loaded_update = METIS [bytes_loaded]
- `!l n. LENGTH l = n ==> !s pc. bytes_loaded s pc l ==>
-  !s'. read(memory :> bytelist(pc,n)) s' = read(memory :> bytelist(pc,n)) s ==>
-    bytes_loaded s' pc l`;;
-
-let bytes_loaded_of_append3 = prove
- (`!l l1 l2 l3. l = APPEND l1 (APPEND l2 l3) ==>
-   !s pc. bytes_loaded s (word pc) l ==>
-          bytes_loaded s (word (pc + LENGTH l1)) l2`,
-  REWRITE_TAC [WORD_ADD] THEN METIS_TAC [bytes_loaded_append]);;
-
-let BYTES_LOADED_BUTLAST = prove
- (`!s pc l. bytes_loaded s pc l ==> bytes_loaded s pc (BUTLAST l)`,
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `l:byte list = []` THEN ASM_REWRITE_TAC[BUTLAST] THEN
-  FIRST_X_ASSUM(fun th ->
-   GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV)
-     [SYM(MATCH_MP APPEND_BUTLAST_LAST th)]) THEN
-  SIMP_TAC[bytes_loaded_append]);;
-
-let BYTES_LOADED_SUB_LIST = prove
- (`!s pc l m n.
-        bytes_loaded s pc l
-        ==> bytes_loaded s (word_add pc (word m)) (SUB_LIST(m,n) l)`,
-  REPEAT GEN_TAC THEN
-  MP_TAC(ISPECL [`l:byte list`; `m + n:num`] SUB_LIST_TOPSPLIT) THEN
-  DISCH_THEN(fun th -> GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [SYM th]) THEN
-  REWRITE_TAC[bytes_loaded_append] THEN DISCH_THEN(MP_TAC o CONJUNCT1) THEN
-  REWRITE_TAC[SUB_LIST_SPLIT; ADD_CLAUSES; bytes_loaded_append] THEN
-  DISCH_THEN(MP_TAC o CONJUNCT2) THEN
-  REWRITE_TAC[LENGTH_SUB_LIST; SUB_0; MIN] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-  ASM_MESON_TAC[LE_CASES; SUB_LIST_TRIVIAL; bytes_loaded_nil]);;
-
-let BYTES_LOADED_TRIM_LIST = prove
- (`!s pc l m n.
-        bytes_loaded s pc l
-        ==> bytes_loaded s (word_add pc (word m)) (TRIM_LIST(m,n) l)`,
-  REWRITE_TAC[BYTES_LOADED_SUB_LIST; TRIM_LIST]);;
+loadt "common/code_loading.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Tweak for bytes_loaded s (word pc) (APPEND program data)                  *)
@@ -1765,6 +1711,17 @@ let x86_VMOVSHDUP = new_definition
           (word_zx x) in
         (dest := (word_zx res):N word) s`;;
 
+let x86_VPADDB = new_definition
+  `x86_VPADDB dest src1 src2 (s:x86state) =
+      let (x:N word) = read src1 s
+      and (y:N word) = read src2 s in
+      if dimindex(:N) = 256 then
+        let res:(256)word = simd32 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s
+      else
+        let res:(128)word = simd16 word_add (word_zx x) (word_zx y) in
+        (dest := (word_zx res):N word) s`;;
+
 let x86_VPADDD = new_definition
   `x86_VPADDD dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
@@ -2776,20 +2733,10 @@ let X86_DECODES_THM =
 
 let X86_MK_EXEC_RULE th0 =
   let th0 = INST [`pc':num`,`pc:num`] (SPEC_ALL th0) in
-  let th1 = AP_TERM `LENGTH:byte list->num` th0 in
-  let th2 =
-    (REWRITE_CONV [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
-      LENGTH; LENGTH_APPEND] THENC NUM_REDUCE_CONV) (rhs (concl th1)) in
-  (* Length *)
-  let execth1 = TRANS th1 th2 in
-  (* Decode *)
-  let execth2_raw:(thm*term) list = X86_DECODES_THM th0 in
-  let (decode_arr:thm option array) = Array.make
-    (dest_small_numeral (snd (dest_eq (concl execth1)))) None in
-  let _ = List.iter (fun decode_th,pcofs ->
-    decode_arr.(dest_small_numeral pcofs) <- Some decode_th)
-    execth2_raw in
-  (execth1,decode_arr);;
+  GEN_MK_EXEC_RULE
+    [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
+     LENGTH; LENGTH_APPEND]
+    X86_DECODES_THM th0;;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions for adding microarchitectural events.                    *)
@@ -3428,6 +3375,14 @@ let x86_execute = define
         (\s. (match operand_size dest with
           256 -> x86_VMOVSLDUP (OPERAND256 dest s) (OPERAND256 src s)
         | 128 -> x86_VMOVSLDUP (OPERAND128 dest s) (OPERAND128 src s)) s)) s
+    | VPADDB dest src1 src2 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,,
+         add_store_event dest s ,,
+       (\s. (match operand_size dest with
+          256 -> x86_VPADDB (OPERAND256 dest s) (OPERAND256 src1 s)
+                            (OPERAND256 src2 s)
+        | 128 -> x86_VPADDB (OPERAND128 dest s) (OPERAND128 src1 s)
+                            (OPERAND128 src2 s)) s)) s
     | VPADDD dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -4372,6 +4327,14 @@ let OPERAND_CLAUSES = prove
    OPERAND8 (%bpl) s = RBP :> bottom_32 :> bottom_16 :> bottom_8 /\
    OPERAND8 (%sil) s = RSI :> bottom_32 :> bottom_16 :> bottom_8 /\
    OPERAND8 (%dil) s = RDI :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (% r8b) s =  R8 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (% r9b) s =  R9 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r10b) s = R10 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r11b) s = R11 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r12b) s = R12 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r13b) s = R13 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r14b) s = R14 :> bottom_32 :> bottom_16 :> bottom_8 /\
+   OPERAND8 (%r15b) s = R15 :> bottom_32 :> bottom_16 :> bottom_8 /\
    OPERAND8 (%ah) s = RAX :> bottom_32 :> bottom_16 :> top_8 /\
    OPERAND8 (%ch) s = RCX :> bottom_32 :> bottom_16 :> top_8 /\
    OPERAND8 (%dh) s = RDX :> bottom_32 :> bottom_16 :> top_8 /\
@@ -4387,6 +4350,7 @@ let OPERAND_CLAUSES = prove
               r8d; r9d; r10d; r11d; r12d; r13d; r14d; r15d;
               ax; cx; dx; bx; sp; bp; si; di; ah;
               al; ch; cl; dh; dl; bh; bl; spl; bpl; sil; dil;
+              r8b; r9b; r10b; r11b; r12b; r13b; r14b; r15b;
               EAX; ECX; EDX; EBX; ESP; EBP; ESI; EDI;
               R8D; R9D; R10D; R11D; R12D; R13D; R14D; R15D;
               AX; CX; DX; BX; SP; BP; SI; DI;
@@ -4648,7 +4612,7 @@ let x86_MOVSB_ALT = prove
 (*** Simplify word operations in SIMD instructions ***)
 
 let all_simd_rules =
-   [usimd16;usimd8;usimd4;usimd2;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
+   [usimd16;usimd8;usimd4;usimd2;simd32;simd16;simd8;simd4;simd2;msimd16;msimd8;msimd4;msimd2];;
 
 let EXPAND_SIMD_RULE =
   CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
@@ -4677,6 +4641,7 @@ let x86_VMOVDQA_ALT = EXPAND_SIMD_RULE x86_VMOVDQA;;
 let x86_VMOVDQU_ALT = EXPAND_SIMD_RULE x86_VMOVDQU;;
 let x86_VMOVSHDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSHDUP;;
 let x86_VMOVSLDUP_ALT = EXPAND_SIMD_RULE x86_VMOVSLDUP;;
+let x86_VPADDB_ALT = EXPAND_SIMD_RULE x86_VPADDB;;
 let x86_VPADDD_ALT = EXPAND_SIMD_RULE x86_VPADDD;;
 let x86_VPADDQ_ALT = EXPAND_SIMD_RULE x86_VPADDQ;;
 let x86_VPADDW_ALT = EXPAND_SIMD_RULE x86_VPADDW;;
@@ -4762,7 +4727,7 @@ let X86_OPERATION_CLAUSES =
     x86_SAR; x86_SBB_ALT; x86_SET; x86_SHL; x86_SHLD; x86_SHR; x86_SHRD;
     x86_STC; x86_STD; x86_SUB_ALT; x86_TEST; x86_TZCNT; x86_XCHG; x86_XOR;
     (*** AVX2 instructions ***)
-    x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHUW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
+    x86_VPADDB_ALT; x86_VPADDD_ALT; x86_VPADDQ_ALT; x86_VPADDW_ALT; x86_VPMULHRSW_ALT; x86_VPMULHUW_ALT; x86_VPMULHW_ALT; x86_VPINSRD; x86_VPINSRQ; x86_VPINSRW; x86_VINSERTI128; x86_VEXTRACTI128;
     x86_VPCMPGTD_ALT; x86_VPCMPGTW_ALT;
     x86_VPEXTRD; x86_VPEXTRQ; x86_VPEXTRW; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBQ_ALT; x86_VPSUBW_ALT; x86_VPXOR;
     x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLDQ_ALT; x86_VPSRLVD_ALT; x86_VPSRLVQ_ALT; x86_VPSRLQ_ALT;
@@ -4890,20 +4855,13 @@ let ASSIGNS_PULL_ZEROTOP_THM = prove
   MESON_TAC[]);;
 
 (* returns true if t is `read RIP <state>`. *)
-let is_read_rip t =
-  (* do not use term_match because it is slow. *)
-  match t with
-  | Comb (Comb (Const ("read", _), Const ("RIP", _)), _) -> true
-  | _ -> false;;
+let is_read_rip = is_read_named_component "RIP";;
 
 (* For compatibility with is_read_pc in Arm *)
 let is_read_pc = is_read_rip;;
 
 (* returns true if t is `read events <state>`. *)
-let is_read_events t =
-  match t with
-  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
-  | _ -> false;;
+let is_read_events = is_read_named_component "events";;
 
 (*** decode_ths is an array from int offset i to
  ***   Some `|- !s pc. bytes_loaded s pc *_mc
@@ -4995,85 +4953,21 @@ let X86_CONV (decode_ths:thm option array) ths tm =
  ) tm;;
 
 let X86_BASIC_STEP_TAC =
-  let x86_tm = `x86` and x86_ty = `:x86state` and one = `1:num` in
-  fun (decode_ths: thm option array) sname store_inst_term_to (asl,w) ->
-    let sv = rand w and sv' = mk_var(sname,x86_ty) in
-    let atm = mk_comb(mk_comb(x86_tm,sv),sv') in
-    let eth = X86_CONV decode_ths (map snd asl) atm in
-
-    (* store the decoded instruction at store_inst_term_to *)
-    (match store_inst_term_to with
-     | Some r -> r := rhs (concl eth)
-     | None -> ());
-
-    (* prepare a tactic for progressing to a next step. *)
-    let progress_tac =
-      let c,_ = strip_comb w in
-      if name_of c = "eventually" then
-        GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ2_TAC
-      else if name_of c = "eventually_n" then
-        let stepn = dest_numeral(rand(rator(rator w))) in
-        let stepn_decr = stepn -/ num 1 in
-        (* stepn = 1+{stepn-1}*)
-        let stepn_thm = GSYM (NUM_ADD_CONV
-          (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
-        GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
-        GEN_REWRITE_TAC I [EVENTUALLY_N_STEP]
-      else failwith "X86_BASIC_STEP_TAC: neither eventually nor eventually_n"
-      in
-
-    (progress_tac THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
-      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
-        (PRINT_GOAL_TAC THEN
-        FAIL_TAC ("X86_BASIC_STEP_TAC: Equality between two states is " ^
-                  "ill-formed. Did you forget to assume an extra condition" ^
-                  " like pointer alignment?")));
-      X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth] THEN
-      REPEAT X86_UNDEFINED_CHOOSE_TAC]) (asl,w);;
+  GEN_BASIC_STEP_TAC "X86" `x86` `:x86state` X86_CONV
+    (REPEAT X86_UNDEFINED_CHOOSE_TAC);;
 
 let X86_STEP_TAC (mc_length_th,decode_ths) subths sname
       (store_inst_term_to: term ref option)
       (strip_component_tac: thm_tactic) =
-  (*** This does the basic decoding setup ***)
+  GEN_STEP_TAC X86_BASIC_STEP_TAC ALL_TAC bytes_loaded_update
+    (fun _ _ -> ()) (mc_length_th,decode_ths) subths sname
+    store_inst_term_to strip_component_tac;;
 
-  X86_BASIC_STEP_TAC decode_ths sname store_inst_term_to THEN
+let X86_VERBOSE_STEP_TAC =
+  GEN_VERBOSE_STEP_TAC X86_STEP_TAC;;
 
-  (*** This part shows the code isn't self-modifying ***)
-
-  NONSELFMODIFYING_STATE_UPDATE_TAC
-    (MATCH_MP bytes_loaded_update mc_length_th) THEN
-
-  (*** Attempt also to show subroutines aren't modified, if applicable ***)
-
-  MAP_EVERY (TRY o NONSELFMODIFYING_STATE_UPDATE_TAC o
-    MATCH_MP bytes_loaded_update o CONJUNCT1) subths THEN
-
-  (*** This part produces any updated versions of existing asms ***)
-
-  ASSUMPTION_STATE_UPDATE_TAC THEN
-
-  (*** Produce updated "MAYCHANGE" assumption ***)
-
-  MAYCHANGE_STATE_UPDATE_TAC THEN
-
-  (*** This adds state component theorems for the updates ***)
-  (*** Could also assume th itself but I throw it away   ***)
-
-  DISCH_THEN(fun th ->
-    let thl = STATE_UPDATE_NEW_RULE th in
-    if thl = [] then ALL_TAC else
-    MP_TAC(end_itlist CONJ thl) THEN
-    ASSEMBLER_SIMPLIFY_TAC THEN
-    strip_component_tac th);;
-
-let X86_VERBOSE_STEP_TAC (exth1,exth2) sname g =
-  Format.print_string("Stepping to state "^sname); Format.print_newline();
-  X86_STEP_TAC (exth1,exth2) [] sname None (K STRIP_TAC) g;;
-
-let X86_VERBOSE_SUBSTEP_TAC (exth1,exth2) subths sname g =
-  Format.print_string("Stepping to state "^sname); Format.print_newline();
-  X86_STEP_TAC (exth1,exth2) subths sname None (K STRIP_TAC) g;;
+let X86_VERBOSE_SUBSTEP_TAC =
+  GEN_VERBOSE_SUBSTEP_TAC X86_STEP_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Throw away assumptions according to patterns.                             *)
@@ -5084,83 +4978,49 @@ let DISCARD_FLAGS_TAC =
    [`read CF s = y`; `read PF s = y`; `read AF s = y`;
     `read ZF s = y`; `read SF s = y`; `read OF s = y`];;
 
-let DISCARD_STATE_TAC s =
-  DISCARD_ASSUMPTIONS_TAC (vfree_in (mk_var(s,`:x86state`)) o concl);;
+let DISCARD_STATE_TAC =
+  GEN_DISCARD_STATE_TAC `:x86state`;;
 
-let DISCARD_OLDSTATE_TAC s =
-  let v = mk_var(s,`:x86state`) in
-  let rec unbound_statevars_of_read bound_svars tm =
-    match tm with
-      Comb(Comb(Const("read",_),cmp),s) ->
-        if mem s bound_svars then [] else [s]
-    | Comb(a,b) -> union (unbound_statevars_of_read bound_svars a)
-                         (unbound_statevars_of_read bound_svars b)
-    | Abs(v,t) -> unbound_statevars_of_read (v::bound_svars) t
-    | _ -> [] in
-  DISCARD_ASSUMPTIONS_TAC(
-    fun thm ->
-      let us = unbound_statevars_of_read [] (concl thm) in
-      if us = [] || us = [v] then false
-      else if not(mem v us) then true
-      else
-        if !x86_print_log then
-          (Format.print_string
-           ("Info: assumption \`"^string_of_term (concl thm)^
-            "\` is erased, but it might have contained useful information\n");
-           true)
-        else true);;
+let DISCARD_OLDSTATE_TAC =
+  GEN_DISCARD_OLDSTATE_TAC `:x86state` x86_print_log;;
 
 (* ------------------------------------------------------------------------- *)
 (* More convenient stepping tactics, optionally with accumulation.           *)
 (* ------------------------------------------------------------------------- *)
 
-let X86_SINGLE_STEP_TAC th s =
-  time (X86_VERBOSE_STEP_TAC th s) THEN
-  DISCARD_OLDSTATE_TAC s THEN
-  CLARIFY_TAC;;
+let X86_SINGLE_STEP_TAC =
+  GEN_SINGLE_STEP_TAC X86_VERBOSE_STEP_TAC DISCARD_OLDSTATE_TAC;;
 
-let X86_VACCSTEP_TAC th aflag s =
-  X86_VERBOSE_STEP_TAC th s THEN
-  (if aflag then TRY(ACCUMULATE_ARITH_TAC s THEN CLARIFY_TAC) else ALL_TAC);;
+let X86_VACCSTEP_TAC =
+  GEN_VACCSTEP_TAC X86_VERBOSE_STEP_TAC;;
 
-let X86_XACCSTEP_TAC th excs aflag s =
-  X86_SINGLE_STEP_TAC th s THEN
-  (if aflag then TRY(ACCUMULATEX_ARITH_TAC excs s THEN CLARIFY_TAC)
-   else ALL_TAC);;
+let X86_XACCSTEP_TAC =
+  GEN_XACCSTEP_TAC X86_SINGLE_STEP_TAC;;
 
 (* X86_GEN_ACCSTEP_TAC runs acc_preproc before ACCUMULATE_ARITH_TAC. This is
    useful when the output goal of X86_SINGLE_STEP_TAC needs additional rewrites
    for accumulator to recognize it. *)
-let X86_GEN_ACCSTEP_TAC acc_preproc th aflag s =
-  X86_SINGLE_STEP_TAC th s THEN
-  (if aflag then acc_preproc THEN TRY(ACCUMULATE_ARITH_TAC s THEN CLARIFY_TAC)
-   else ALL_TAC);;
+let X86_GEN_ACCSTEP_TAC =
+  GEN_ACCSTEP_TAC X86_SINGLE_STEP_TAC;;
 
 let X86_ACCSTEP_TAC th aflag s = X86_GEN_ACCSTEP_TAC ALL_TAC th aflag s;;
 
-let X86_VSTEPS_TAC th snums =
-  MAP_EVERY (X86_VERBOSE_STEP_TAC th) (statenames "s" snums);;
+let X86_VSTEPS_TAC =
+  GEN_VSTEPS_TAC X86_VERBOSE_STEP_TAC;;
 
-let X86_STEPS_TAC th snums =
-  MAP_EVERY (X86_SINGLE_STEP_TAC th) (statenames "s" snums);;
+let X86_STEPS_TAC =
+  GEN_STEPS_TAC X86_SINGLE_STEP_TAC;;
 
-let X86_VACCSTEPS_TAC th anums snums =
-  MAP_EVERY (fun n -> X86_VACCSTEP_TAC th (mem n anums) ("s"^string_of_int n))
-            snums;;
+let X86_VACCSTEPS_TAC =
+  GEN_VACCSTEPS_TAC X86_VACCSTEP_TAC;;
 
-let X86_XACCSTEPS_TAC th excs anums snums =
-  MAP_EVERY
-   (fun n -> X86_XACCSTEP_TAC th excs (mem n anums) ("s"^string_of_int n))
-   snums;;
+let X86_XACCSTEPS_TAC =
+  GEN_XACCSTEPS_TAC X86_XACCSTEP_TAC;;
 
 (* X86_GEN_ACCSTEPS_TAC runs acc_preproc before ACCUMULATE_ARITH_TAC.
    acc_preproc is a function from string (which is a state name) to tactic. *)
-let X86_GEN_ACCSTEPS_TAC acc_preproc th anums snums =
-  MAP_EVERY
-    (fun n ->
-      let state_name = "s"^string_of_int n in
-      X86_GEN_ACCSTEP_TAC (acc_preproc state_name) th (mem n anums) state_name)
-    snums;;
+let X86_GEN_ACCSTEPS_TAC =
+  GEN_ACCSTEPS_TAC X86_GEN_ACCSTEP_TAC;;
 
 let X86_ACCSTEPS_TAC th anums snums =
   X86_GEN_ACCSTEPS_TAC (fun _ -> ALL_TAC) th anums snums;;
@@ -5210,45 +5070,7 @@ let X86_ACCSIM_TAC execth anums snums =
 (* ------------------------------------------------------------------------- *)
 
 let (X86_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
-  let lemma = prove
-   (`P s /\ (!s':S. Q s' /\ C s s' ==> eventually step R s')
-     ==> ensures step P Q C ==> eventually step R s`,
-    STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [ensures] THEN
-    DISCH_THEN(MP_TAC o SPEC `s:S`) THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(MESON[]
-     `(!s:S. eventually step P s ==> eventually step Q s)
-      ==> eventually step P s ==> eventually step Q s`) THEN
-    GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
-    ASM_REWRITE_TAC[]) in
-  fun (execth1,_) sname (asl,w) ->
-    (* do sanity-check and print a warning message if it fails *)
-    (if not (is_imp w) ||
-      let the_lhs,the_rhs = dest_imp w in
-      not (is_comb the_lhs &&
-           name_of (fst (strip_comb the_lhs)) = "ensures" &&
-           is_comb the_rhs &&
-           name_of (fst (strip_comb the_rhs)) = "eventually")
-    then
-      Printf.printf "X86_BIGSTEP_TAC: `ensures ... ==> eventually ...` expected, but got `%s`.\n"
-        (string_of_term w));
-    let sv = mk_var(sname,type_of(rand(rand w))) in
-    (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
-      (!simulation_precanon_thms) THEN
-     MATCH_MP_TAC lemma THEN CONJ_TAC THENL
-      [BETA_TAC THEN ASM_REWRITE_TAC[];
-       BETA_TAC THEN X_GEN_TAC sv THEN
-       REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [MAYCHANGE; SEQ_ID] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [GSYM SEQ_ASSOC] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_SEQ] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_THM] THEN
-       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
-       NONSELFMODIFYING_STATE_UPDATE_TAC
-        (MATCH_MP bytes_loaded_update execth1) THEN
-       ASSUMPTION_STATE_UPDATE_TAC THEN
-       MAYCHANGE_STATE_UPDATE_TAC THEN
-       DISCH_THEN(K ALL_TAC) THEN DISCARD_OLDSTATE_TAC sname])
-    (asl,w);;
+  GEN_BIGSTEP_TAC "X86" bytes_loaded_update DISCARD_OLDSTATE_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Go from |- bytes_loaded s (word pc) mc or the equivalent                  *)
@@ -5514,26 +5336,12 @@ let X86_MACRO_SIM_ABBREV_TAC =
 (* Fix up call/return boilerplate given core correctness.                    *)
 (* ------------------------------------------------------------------------- *)
 
-(* A sanity check of vars in the 'forall ....' goal *)
+(* The stack pointer and return address loaded from the caller stack are
+   recovered from initial-state equations during ABI promotion. Require their
+   names to be explicit outer quantifiers before the tactic reorders them. *)
 let check_forallvars_tac:tactic =
-  let find_and_check (lhs_pat:term) (t:term) (quants:term list) =
-    let read_eq = try Some (find_term (fun t ->
-      is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
-      with Failure _ -> None in
-    match read_eq with
-    | Some read_eq ->
-      let the_var = rhs read_eq in
-      if is_var the_var && not (mem the_var quants) then
-        failwith ("variable " ^ (string_of_term the_var)
-          ^ " (which is RHS of " ^ (string_of_term lhs_pat)
-          ^ ") does not appear at forall")
-      else
-        ALL_TAC
-    | None -> ALL_TAC in
-  W(fun (asl,w) ->
-    let quants = fst (strip_forall w) in
-    find_and_check `read RSP s` w quants THEN
-    find_and_check `read (memory :> bytes64 stackpointer) s` w quants);;
+  GEN_CHECK_FORALLVARS_TAC
+    [`read RSP s`; `read (memory :> bytes64 stackpointer) s`];;
 
 let X86_ADD_RETURN_NOSTACK_TAC =
   let lemma1 = prove
@@ -5638,20 +5446,27 @@ let X86_ADD_RETURN_NOSTACK_TAC =
 (* ------------------------------------------------------------------------- *)
 
 (* Useful lemmas *)
-let swap_forall = MESON[]
-   `(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
-    (forall y e_stack_spill. P e_stack_spill y)` and
-  swap_forall3 = MESON[]
-   `(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
-    (forall y e_stack_spill z. P e_stack_spill y z)` and
-  append_lemma = MESON[APPEND_EXISTS]
-    `(forall (e:(A)list). P e) <=>
-      (forall e_stack_spill e. P (APPEND e_stack_spill e))` and
-  mono2lemma = MESON[]
-   `(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z)) ==> (!x y. P x y) ==> (!x z. Q x z)` and
-  mono3lemma = MESON[]
-   `(!(x:A). (!(y:B) (y':C). P x y y') ==> (!(z:D) (z':E). Q x z z')) ==>
-    (!x y y'. P x y y') ==> (!x z z'. Q x z z')`;;
+let swap_forall = prove
+   (`(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
+     (forall y e_stack_spill. P e_stack_spill y)`,
+    MESON_TAC[SWAP_FORALL_THM]) and
+  swap_forall3 = prove
+   (`(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
+     (forall y e_stack_spill z. P e_stack_spill y z)`,
+    MESON_TAC[SUBROUTINE_SWAP_FORALL3]) and
+  append_lemma = prove
+   (`(forall (e:(A)list). P e) <=>
+     (forall e_stack_spill e. P (APPEND e_stack_spill e))`,
+    MESON_TAC[SUBROUTINE_APPEND_FORALL]) and
+  mono2lemma = prove
+   (`(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z))
+     ==> (!x y. P x y) ==> (!x z. Q x z)`,
+    MESON_TAC[SUBROUTINE_MONO_FORALL2]) and
+  mono3lemma = prove
+   (`(!(x:A). (!(y:B) (y':C). P x y y') ==>
+      (!(z:D) (z':E). Q x z z'))
+     ==> (!x y y'. P x y y') ==> (!x z z'. Q x z z')`,
+    MESON_TAC[SUBROUTINE_MONO_FORALL3]);;
 
 
 let GEN_X86_ADD_RETURN_STACK_TAC =

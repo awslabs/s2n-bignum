@@ -30,139 +30,9 @@ let armstate_INDUCT,armstate_RECURSION,armstate_COMPONENTS =
        events: uarch_event list            // Observable uarch events
      }";;
 
-let bytes_loaded = new_definition
- `bytes_loaded s pc l <=>
-     read (memory :> bytelist(pc,LENGTH l)) s = l`;;
+loadt "common/code_loading.ml";;
 
-let bytes_loaded_nil = prove (`bytes_loaded s pc []`, REWRITE_TAC [
-  bytes_loaded; READ_COMPONENT_COMPOSE; LENGTH; bytelist_clauses]);;
-
-let bytes_loaded_append = prove
- (`bytes_loaded s pc (APPEND l1 l2) <=>
-   bytes_loaded s pc l1 /\ bytes_loaded s (word_add pc (word (LENGTH l1))) l2`,
-  REWRITE_TAC [bytes_loaded; READ_COMPONENT_COMPOSE; read_bytelist_append]);;
-
-let bytes_loaded_unique = METIS [bytes_loaded]
- `!s pc l1 l2. bytes_loaded s pc l1 ==> bytes_loaded s pc l2 ==>
-  LENGTH l1 = LENGTH l2 ==> l1 = l2`;;
-
-let bytes_loaded_update = METIS [bytes_loaded]
- `!l n. LENGTH l = n ==> !s pc. bytes_loaded s pc l ==>
-  !s'. read(memory :> bytelist(pc,n)) s' = read(memory :> bytelist(pc,n)) s ==>
-    bytes_loaded s' pc l`;;
-
-let bytes_loaded_of_append3 = prove
- (`!l l1 l2 l3. l = APPEND l1 (APPEND l2 l3) ==>
-   !s pc. bytes_loaded s (word pc) l ==>
-          bytes_loaded s (word (pc + LENGTH l1)) l2`,
-  REWRITE_TAC [WORD_ADD] THEN METIS_TAC [bytes_loaded_append]);;
-
-let BYTES_LOADED_SUB_LIST = prove
- (`!s pc l m n.
-        bytes_loaded s pc l
-        ==> bytes_loaded s (word_add pc (word m)) (SUB_LIST(m,n) l)`,
-  REPEAT GEN_TAC THEN
-  MP_TAC(ISPECL [`l:byte list`; `m + n:num`] SUB_LIST_TOPSPLIT) THEN
-  DISCH_THEN(fun th -> GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [SYM th]) THEN
-  REWRITE_TAC[bytes_loaded_append] THEN DISCH_THEN(MP_TAC o CONJUNCT1) THEN
-  REWRITE_TAC[SUB_LIST_SPLIT; ADD_CLAUSES; bytes_loaded_append] THEN
-  DISCH_THEN(MP_TAC o CONJUNCT2) THEN
-  REWRITE_TAC[LENGTH_SUB_LIST; SUB_0; MIN] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-  ASM_MESON_TAC[LE_CASES; SUB_LIST_TRIVIAL; bytes_loaded_nil]);;
-
-let BYTES_LOADED_TRIM_LIST = prove
- (`!s pc l m n.
-        bytes_loaded s pc l
-        ==> bytes_loaded s (word_add pc (word m)) (TRIM_LIST(m,n) l)`,
-  REWRITE_TAC[BYTES_LOADED_SUB_LIST; TRIM_LIST]);;
-
-let aligned_bytes_loaded = new_definition
- `aligned_bytes_loaded s pc l <=>
-  4 divides val pc /\ bytes_loaded s pc l`;;
-
-let DIVIDES_4_VAL_WORD_64 = prove
- (`4 divides val (word pc:int64) <=> 4 divides pc`,
-  let th1 = MATCH_MP DIVIDES_EXP_LE_IMP (ARITH_RULE `2 <= 64`) in
-  let th2 = REWRITE_RULE [ARITH_RULE `2 EXP 2 = 4`] (SPEC `2` th1) in
-  let th3 = MATCH_MP CONG_DIVIDES_MODULUS (CONJ
-    (SPECL [`pc:num`; `2 EXP 64`] CONG_MOD) th2) in
-  REWRITE_TAC [VAL_WORD; DIMINDEX_64; MATCH_MP CONG_DIVIDES th3]);;
-
-let aligned_bytes_loaded_word = prove
- (`aligned_bytes_loaded s (word pc) l <=>
-   4 divides pc /\ bytes_loaded s (word pc) l`,
-  REWRITE_TAC [aligned_bytes_loaded; DIVIDES_4_VAL_WORD_64]);;
-
-let aligned_bytes_loaded_append_left = prove
- (`aligned_bytes_loaded s pc (APPEND l1 l2) ==> aligned_bytes_loaded s pc l1`,
-  REWRITE_TAC [aligned_bytes_loaded; bytes_loaded_append] THEN
-  METIS_TAC []);;
-
-let aligned_bytes_loaded_append = prove
- (`4 divides LENGTH l1 ==>
-   (aligned_bytes_loaded s pc (APPEND l1 l2) <=>
-    aligned_bytes_loaded s pc l1 /\
-    aligned_bytes_loaded s (word_add pc (word (LENGTH l1))) l2)`,
-  SPEC1_TAC `pc:int64` THEN REWRITE_TAC [FORALL_WORD; GSYM WORD_ADD;
-    aligned_bytes_loaded_word; bytes_loaded_append] THEN
-  METIS_TAC [DIVIDES_ADD]);;
-
-let aligned_bytes_loaded_append_alt = prove
- (`aligned_bytes_loaded s pc (APPEND l1 l2) <=>
-   aligned_bytes_loaded s pc l1 /\
-   bytes_loaded s (word_add pc (word (LENGTH l1))) l2`,
-  REWRITE_TAC[aligned_bytes_loaded; bytes_loaded_append; CONJ_ASSOC]);;
-
-let aligned_bytes_loaded_unique =
-  METIS [aligned_bytes_loaded; bytes_loaded_unique]
-  `!s pc l1 l2.
-   aligned_bytes_loaded s pc l1 ==> aligned_bytes_loaded s pc l2 ==>
-   LENGTH l1 = LENGTH l2 ==> l1 = l2`;;
-
-let aligned_bytes_loaded_update =
-  METIS [aligned_bytes_loaded; bytes_loaded_update]
- `!l n. LENGTH l = n ==> !s pc. aligned_bytes_loaded s pc l ==>
-  !s'. read(memory :> bytelist(pc,n)) s' = read(memory :> bytelist(pc,n)) s ==>
-    aligned_bytes_loaded s' pc l`;;
-
-let aligned_bytes_loaded_of_append3 = prove
- (`!l l1 l2 l3. l = APPEND l1 (APPEND l2 l3) ==> 4 divides LENGTH l1 ==>
-   !s pc. aligned_bytes_loaded s (word pc) l ==>
-          aligned_bytes_loaded s (word (pc + LENGTH l1)) l2`,
-  REPEAT GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [WORD_ADD] THEN
-  METIS_TAC [aligned_bytes_loaded_append; aligned_bytes_loaded_append_left]);;
-
-let ALIGNED_BYTES_LOADED_SUB_LIST = prove
- (`!s pc l m n.
-        aligned_bytes_loaded s pc l /\ 4 divides m
-        ==> aligned_bytes_loaded s (word_add pc (word m)) (SUB_LIST(m,n) l)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[aligned_bytes_loaded] THEN
-  SIMP_TAC[BYTES_LOADED_SUB_LIST; VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
-  CONV_TAC MOD_DOWN_CONV THEN REWRITE_TAC[GSYM (NUM_EXP_CONV `2 EXP 2`)] THEN
-  REWRITE_TAC[DIVIDES_MOD; MOD_MOD_EXP_MIN] THEN
-  ONCE_REWRITE_TAC[GSYM MOD_ADD_MOD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-  SIMP_TAC[] THEN CONV_TAC NUM_REDUCE_CONV);;
-
-let ALIGNED_BYTES_LOADED_SUB_LIST = prove
- (`(!s pc l m n.
-        aligned_bytes_loaded s pc l /\ 4 divides m
-        ==> aligned_bytes_loaded s (word_add pc (word m)) (SUB_LIST(m,n) l)) /\
-   (!s pc l n.
-        aligned_bytes_loaded s pc l
-        ==> aligned_bytes_loaded s pc (SUB_LIST(0,n) l))`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_SUB_LIST] THEN
-  REPEAT STRIP_TAC THEN
-  GEN_REWRITE_TAC(RATOR_CONV o RAND_CONV)
-    [GSYM (fst (CONJ_PAIR WORD_ADD_0))] THEN
-  IMP_REWRITE_TAC[WORD_ADD;ALIGNED_BYTES_LOADED_SUB_LIST] THEN
-  CONV_TAC NUM_DIVIDES_CONV);;
-
-let ALIGNED_BYTES_LOADED_TRIM_LIST = prove
- (`!s pc l m n.
-        aligned_bytes_loaded s pc l /\ 4 divides m
-        ==> aligned_bytes_loaded s (word_add pc (word m)) (TRIM_LIST(m,n) l)`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_SUB_LIST; TRIM_LIST]);;
+let DIVIDES_4_VAL_WORD_64 = DIVIDES_4_VAL_WORD;;
 
 (* ------------------------------------------------------------------------- *)
 (* Tweak for aligned_bytes_loaded s (word pc) (APPEND program data)          *)
@@ -1051,6 +921,29 @@ let arm_CBZ = define
             (PC := pc_next ,,
              events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
 
+(*** TBZ/TBNZ test a single bit (bit n) of the operand register and branch ***)
+(*** to a PC-relative target. The offset is encoded as a signed 14-bit      ***)
+(*** word, multiplied by 4 (so represented here as a 16-bit word) then      ***)
+(*** sign-extended, exactly as for the conditional branches above.          ***)
+
+let arm_TBNZ = define
+ `arm_TBNZ Rt (n:num) (off:16 word) =
+        \s. let pc = word_sub (read PC s) (word 4) in
+            let pc_next = if bit n (read Rt s)
+                   then word_add pc (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
+let arm_TBZ = define
+ `arm_TBZ Rt (n:num) (off:16 word) =
+        \s. let pc = word_sub (read PC s) (word 4) in
+            let pc_next = if ~(bit n (read Rt s))
+                   then word_add pc (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump (pc,pc_next)) (read events s)) s`;;
+
 let arm_CCMN = define
  `arm_CCMN Rm Rn (nzcv:4 word) cc =
     \s. let m = read Rm s
@@ -1430,6 +1323,18 @@ let arm_PMUL_VEC = define
 let arm_NOP = new_definition
   `arm_NOP = \s s':armstate. s = s'`;;
 
+(*** This is the BTI instruction (BTI c), the landing pad emitted at entry
+ *** points by AARCH64_VALID_CALL_TARGET, treated as a NOP. That is exactly how
+ *** it behaves on machines without BTI enabled, and we do not model the
+ *** restrictions imposed when it is: those arguably belong on the indirect
+ *** branches themselves, of which there are none in s2n-bignum. It gets its own
+ *** constant rather than reusing arm_NOP so machine-code literals distinguish a
+ *** landing pad from padding, as x86_ENDBR64 does.
+ ***)
+
+let arm_BTI = new_definition
+  `arm_BTI = \s s':armstate. s = s'`;;
+
 let arm_ORN = define
  `arm_ORN Rd Rm Rn =
     \s. let m = read Rm s
@@ -1667,6 +1572,120 @@ let arm_SHRN = define
               word_subword (word_ushr x amnt) (0,8):(8)word) n in
         // equivalent to word_zx res:(128)word, but use word_subword instead
         (Rd := word_subword res (0,128)) s`;;
+
+(* ------------------------------------------------------------------------- *)
+(* Saturating / rounding narrowing shift-right helpers (per-lane).           *)
+(*                                                                           *)
+(* In each case x:(N)word is a wide source lane and the result is a narrow   *)
+(* (M)word lane (M = N DIV 2).                                               *)
+(*                                                                           *)
+(*   word_uqshrun:  SQSHRUN  - signed source, arithmetic shift right by      *)
+(*                  shift, clamp into the UNSIGNED narrow range [0,2^M-1].   *)
+(*   word_uqrshrun: SQRSHRUN - as above but add the rounding constant        *)
+(*                  2^(shift-1) before the (rounding) shift, then clamp.     *)
+(*   word_rshrn:    RSHRN    - rounding shift right then truncate to the     *)
+(*                  low M bits (NO saturation): treat the source bits as an  *)
+(*                  unsigned value, add 2^(shift-1), shift right, keep low M.*)
+(* ------------------------------------------------------------------------- *)
+
+let word_uqshrun = new_definition
+ `(word_uqshrun:(N)word->num->(M)word) x shift =
+    let v = ival x div (&2 pow shift) in
+    if v < &0 then word 0
+    else if v > &2 pow dimindex(:M) - &1 then word(2 EXP dimindex(:M) - 1)
+    else iword v`;;
+
+let word_uqrshrun = new_definition
+ `(word_uqrshrun:(N)word->num->(M)word) x shift =
+    let v = (ival x + &2 pow (shift - 1)) div (&2 pow shift) in
+    if v < &0 then word 0
+    else if v > &2 pow dimindex(:M) - &1 then word(2 EXP dimindex(:M) - 1)
+    else iword v`;;
+
+let word_rshrn = new_definition
+ `(word_rshrn:(N)word->num->(M)word) x shift =
+    word((val x + 2 EXP (shift - 1)) DIV (2 EXP shift))`;;
+
+(* SQSHRUN: signed saturating shift right unsigned narrow (Q=0, low half). *)
+let arm_SQSHRUN = define
+ `arm_SQSHRUN Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_uqshrun x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_uqshrun x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_uqshrun x amnt:(8)word) n in
+        (Rd := word_subword res (0,128)) s`;;
+
+(* SQSHRUN2: as SQSHRUN but writes the upper 64 bits, preserving the low. *)
+let arm_SQSHRUN2 = define
+ `arm_SQSHRUN2 Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_uqshrun x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_uqshrun x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_uqshrun x amnt:(8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
+(* SQRSHRUN: signed saturating ROUNDING shift right unsigned narrow. *)
+let arm_SQRSHRUN = define
+ `arm_SQRSHRUN Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_uqrshrun x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_uqrshrun x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_uqrshrun x amnt:(8)word) n in
+        (Rd := word_subword res (0,128)) s`;;
+
+(* SQRSHRUN2: as SQRSHRUN but writes the upper 64 bits, preserving the low. *)
+let arm_SQRSHRUN2 = define
+ `arm_SQRSHRUN2 Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_uqrshrun x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_uqrshrun x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_uqrshrun x amnt:(8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
+
+(* RSHRN: rounding shift right narrow (no saturation, truncated). *)
+let arm_RSHRN = define
+ `arm_RSHRN Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_rshrn x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_rshrn x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_rshrn x amnt:(8)word) n in
+        (Rd := word_subword res (0,128)) s`;;
+
+(* RSHRN2: as RSHRN but writes the upper 64 bits, preserving the low. *)
+let arm_RSHRN2 = define
+ `arm_RSHRN2 Rd Rn amnt esize = // esize is Rd's element size
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word = read Rd s in
+        let res:(64)word =
+          if esize = 32 then
+            usimd2 (\(x:(64)word). word_rshrn x amnt:(32)word) n
+          else if esize = 16 then
+            usimd4 (\(x:(32)word). word_rshrn x amnt:(16)word) n
+          else // esize = 8
+            usimd8 (\(x:(16)word). word_rshrn x amnt:(8)word) n in
+        (Rd := word_join res (word_subword d (0,64):(64)word):(128)word) s`;;
 
 let arm_SMULH = define
  `arm_SMULH Rd Rn Rm =
@@ -3375,6 +3394,32 @@ let arm_CBZ_ALT = prove
   CONV_TAC (DEPTH_CONV let_CONV) THEN
   REWRITE_TAC[]);;
 
+let arm_TBNZ_ALT = prove
+ (`arm_TBNZ Rt (n:num) (off:16 word) =
+        \s. let pc_next = if bit n (read Rt s)
+                   then word_add (word_sub (read PC s) (word 4)) (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump
+                (word_sub (read PC s) (word 4),pc_next))
+                (read events s)) s`,
+  REWRITE_TAC[arm_TBNZ] THEN
+  CONV_TAC (DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[]);;
+
+let arm_TBZ_ALT = prove
+ (`arm_TBZ Rt (n:num) (off:16 word) =
+        \s. let pc_next = if ~(bit n (read Rt s))
+                   then word_add (word_sub (read PC s) (word 4)) (word_sx off)
+                   else read PC s in
+            (PC := pc_next ,,
+             events := CONS (EventJump
+                (word_sub (read PC s) (word 4),pc_next))
+                (read events s)) s`,
+  REWRITE_TAC[arm_TBZ] THEN
+  CONV_TAC (DEPTH_CONV let_CONV) THEN
+  REWRITE_TAC[]);;
+
 (* ------------------------------------------------------------------------- *)
 (* MOV is an alias of MOVZ when Rm is an immediate                           *)
 (* ------------------------------------------------------------------------- *)
@@ -3438,6 +3483,13 @@ let arm_REV32_VEC_ALT =  EXPAND_SIMD_RULE arm_REV32_VEC;;
 let arm_SHL_VEC_ALT =    EXPAND_SIMD_RULE arm_SHL_VEC;;
 let arm_SSHR_VEC_ALT =   EXPAND_SIMD_RULE arm_SSHR_VEC;;
 let arm_SHRN_ALT =       EXPAND_SIMD_RULE arm_SHRN;;
+(* Unfold the per-lane helpers for symbolic execution and cosimulation. *)
+let arm_SQSHRUN_ALT =    REWRITE_RULE[word_uqshrun] (EXPAND_SIMD_RULE arm_SQSHRUN);;
+let arm_SQSHRUN2_ALT =   REWRITE_RULE[word_uqshrun] (EXPAND_SIMD_RULE arm_SQSHRUN2);;
+let arm_SQRSHRUN_ALT =   REWRITE_RULE[word_uqrshrun] (EXPAND_SIMD_RULE arm_SQRSHRUN);;
+let arm_SQRSHRUN2_ALT =  REWRITE_RULE[word_uqrshrun] (EXPAND_SIMD_RULE arm_SQRSHRUN2);;
+let arm_RSHRN_ALT =      REWRITE_RULE[word_rshrn] (EXPAND_SIMD_RULE arm_RSHRN);;
+let arm_RSHRN2_ALT =     REWRITE_RULE[word_rshrn] (EXPAND_SIMD_RULE arm_RSHRN2);;
 let arm_SLI_VEC_ALT =    EXPAND_SIMD_RULE arm_SLI_VEC;;
 let arm_SMLAL_VEC_ALT =  EXPAND_SIMD_RULE arm_SMLAL_VEC;;
 let arm_SMLAL2_VEC_ALT = EXPAND_SIMD_RULE arm_SMLAL2_VEC;;
@@ -3569,11 +3621,13 @@ let ARM_OPERATION_CLAUSES =
        arm_MLS_VEC_ALT;
        arm_MOVI; arm_MOVK_ALT; arm_MOVN; arm_MOVZ; arm_MSUB;
        arm_MUL_VEC_ALT;
+       arm_BTI;
        arm_NOP;
        arm_ORN; arm_ORR; arm_ORR_VEC;
        arm_PMUL_VEC_ALT;
        arm_PMULL_VEC_ALT; arm_PMULL2_VEC_ALT;
        arm_RET; arm_REV; arm_REV32_VEC_ALT; arm_REV64_VEC_ALT; arm_RORV;
+       arm_RSHRN_ALT; arm_RSHRN2_ALT;
        arm_SBC; arm_SBCS_ALT; arm_SBFM; arm_SHL_VEC_ALT; arm_SHRN_ALT;
        arm_SRSHR_VEC_ALT;
        arm_SSHR_VEC_ALT;
@@ -3585,8 +3639,10 @@ let ARM_OPERATION_CLAUSES =
        arm_SMULH;
        arm_SQDMULH_VEC_ALT;
        arm_SQRDMULH_VEC_ALT;
+       arm_SQRSHRUN_ALT; arm_SQRSHRUN2_ALT;
+       arm_SQSHRUN_ALT; arm_SQSHRUN2_ALT;
        arm_SUB; arm_SUB_VEC_ALT; arm_SUBS_ALT;
-       arm_TBL_ALT; arm_TBL2_ALT;
+       arm_TBL_ALT; arm_TBL2_ALT; arm_TBNZ_ALT; arm_TBZ_ALT;
        arm_TRN1_ALT; arm_TRN2_ALT;
        arm_UADDLP_ALT; arm_UADDLV_ALT; arm_UMAXV_ALT; arm_UBFM; arm_UMOV; arm_UMADDL;
        arm_UMLAL_VEC_ALT; arm_UMLAL2_VEC_ALT;

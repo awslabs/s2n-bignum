@@ -792,7 +792,7 @@ Ledwards25519_scalarmuldouble_alt_standard:
         xorl    %r14d, %r14d
         xorl    %r15d, %r15d
 
-        leaq    edwards25519_scalarmuldouble_alt_constant(%rip), %rbp
+        leaq    S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)(%rip), %rbp
 
         cmpq    $1, bf
         movq    (%rbp), %rsi
@@ -1428,7 +1428,7 @@ Ledwards25519_scalarmuldouble_alt_loop:
         xorl    %r14d, %r14d
         xorl    %r15d, %r15d
 
-        leaq    edwards25519_scalarmuldouble_alt_constant(%rip), %rbp
+        leaq    S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)(%rip), %rbp
 
         cmpq    $1, bf
         movq    (%rbp), %rsi
