@@ -129,6 +129,7 @@ jobs:
           packages: gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user
           compiler: aarch64-linux-gnu-gcc
           assembler: aarch64-linux-gnu-as
+          disassembler: aarch64-linux-gnu-objdump
           executor_env: S2N_BIGNUM_AARCH64_EXECUTOR
           executor: arm/proofs/armsimulate-persistent
           run: qemu-aarch64
@@ -137,6 +138,7 @@ jobs:
           packages: gcc-x86-64-linux-gnu binutils-x86-64-linux-gnu qemu-user
           compiler: x86_64-linux-gnu-gcc
           assembler: x86_64-linux-gnu-as
+          disassembler: x86_64-linux-gnu-objdump
           executor_env: S2N_BIGNUM_X86_64_EXECUTOR
           executor: x86/proofs/x86simulate-persistent
           run: qemu-x86_64
@@ -174,6 +176,7 @@ jobs:
         TARGET: ${{ matrix.arch }}
         COSIM_CC: ${{ matrix.compiler }}
         COSIM_AS: ${{ matrix.assembler }}
+        COSIM_OBJDUMP: ${{ matrix.disassembler }}
         COSIM_LDFLAGS: -static
         COSIM_RUN: ${{ matrix.run }}
         COSIM_RUN_ARGS: -cpu max
