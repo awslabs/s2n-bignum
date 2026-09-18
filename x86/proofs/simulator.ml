@@ -7,6 +7,7 @@
 (* Encoding the registers and flags as an 80-element list of numbers.        *)
 (* ------------------------------------------------------------------------- *)
 
+needs "common/cosim.ml";;
 needs "x86/proofs/base.ml";;
 
 let regfile = new_definition
@@ -239,6 +240,18 @@ let random_regstate () =
   [num(Random.int 256 land 0b11010101)] @
   map (fun _ -> randomnd 64 d) (5--79) @
   map (fun _ -> randomnd 64 d) (80--111);;
+
+(*** The HOL-side executor client is shared in common/cosim.ml. This file
+ *** selects the x86-64 executor and supplies the state-vector shape.
+ ***
+ *** A session starts with READY 1 x86_64 112. The client sends
+ *** RUN <hex-instruction-bytes> <decimal-state-word> ... and receives
+ *** OK with the resulting 112 words, or TRAP/ERROR.
+ ***
+ *** S2N_BIGNUM_X86_64_EXECUTOR overrides the default command below with a
+ *** complete shell command. It can therefore prefix the executor with QEMU
+ *** or select another process that implements this protocol.
+ ***)
 
 (* ------------------------------------------------------------------------- *)
 (* Generate random instance of instruction class itself.                     *)
@@ -1141,6 +1154,10 @@ let decode_inst ibytes =
  *** it can be modified in between.
  ***)
 
+let x86_cosim_executor = lazy
+  (start_cosim_executor "S2N_BIGNUM_X86_64_EXECUTOR"
+    "x86/proofs/x86simulate-persistent" "x86_64" 112);;
+
 let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
@@ -1158,25 +1175,17 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
 
   let input_state = random_regstate() in
 
-  let outfile = Filename.temp_file "x86simulator" ".out" in
+  let execution =
+    cosim_execute (Lazy.force x86_cosim_executor)
+      (cosim_hex_of_bytes ibytes) (map string_of_num input_state) in
 
-  let command =
-    "x86/proofs/x86simulate '" ^
-    end_itlist (fun s t -> s ^ "," ^ t) (map string_of_int ibytes) ^
-    "' " ^
-    end_itlist (fun s t -> s ^ " " ^ t) (map string_of_num input_state) ^
-    " >" ^ outfile in
-
-  let _ = Sys.command command in
   (*** This branch determines whether the actual simulation worked ***)
   (*** In each branch we try to confirm that we likewise do or don't ***)
 
-  if strings_of_file outfile <> [] then
-    let resultstring = string_of_file outfile in
-
+  match execution with
+  | Cosim_ok output_words ->
     let output_state_raw =
-      map (fun (Ident s) -> num_of_string s)
-          (lex(explode resultstring)) in
+      map num_of_string output_words in
 
     (* Synthesize q registers from two 64 ints *)
     let output_state = output_state_raw in
@@ -1219,7 +1228,7 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
              (print_qterm gsd; Format.print_newline(); false))
      | _,[],_ -> true in
     (decoded,result)
-  else
+  | Cosim_trap _ ->
     let decoded = mk_flist(map mk_numeral icodes) in
     decoded,not(can X86_MK_EXEC_RULE(REFL ibyteterm));;
 

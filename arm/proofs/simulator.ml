@@ -7,6 +7,7 @@
 (* Encoding the registers and flags as a 32-element list of numbers.         *)
 (* ------------------------------------------------------------------------- *)
 
+needs "common/cosim.ml";;
 needs "arm/proofs/base.ml";;
 
 let regfile = new_definition
@@ -77,6 +78,18 @@ let random_regstate () =
   [mod_num (random64()) (num 16)] @
   map (fun _ -> randomnd 128 d) (0--31) @
   map (fun _ -> randomnd 128 d) (0--15);;
+
+(*** The HOL-side executor client is shared in common/cosim.ml. This file
+ *** selects the AArch64 executor and supplies the state-vector shape.
+ ***
+ *** A session starts with READY 1 aarch64 128. The client sends
+ *** RUN <hex-instruction-bytes> <decimal-state-word> ... and receives
+ *** OK with the resulting 128 words, or TRAP/ERROR.
+ ***
+ *** S2N_BIGNUM_AARCH64_EXECUTOR overrides the default command below with a
+ *** complete shell command. It can therefore prefix the executor with QEMU
+ *** or select another process that implements this protocol.
+ ***)
 
 (* ------------------------------------------------------------------------- *)
 (* Generate random instance of instruction class itself.                     *)
@@ -192,6 +205,10 @@ and tac_after memop =
  *** it can be modified in between.
  ***)
 
+let arm_cosim_executor = lazy
+  (start_cosim_executor "S2N_BIGNUM_AARCH64_EXECUTOR"
+    "arm/proofs/armsimulate-persistent" "aarch64" 128);;
+
 let cosimulate_instructions (memopidx: int option) icodes =
   let icodestring =
     end_itlist (fun s t -> s^","^t) (map string_of_num_hex icodes) in
@@ -211,8 +228,6 @@ let cosimulate_instructions (memopidx: int option) icodes =
 
   let input_state = random_regstate() in
 
-  let outfile = Filename.temp_file "armsimulator" ".out" in
-
   let command_arg =
     (* Split q registers that are 128 bits to 64 + 64 bits *)
     let xregs, qmem = chop_list 32 input_state in
@@ -220,22 +235,18 @@ let cosimulate_instructions (memopidx: int option) icodes =
     List.concat (map (fun n ->
       [Num.mod_num n num_two_to_64; Num.quo_num n num_two_to_64]) qmem) in
 
-  let command =
-    rev_itlist (fun s t -> t ^ " " ^ string_of_num s) command_arg
-    ("arm/proofs/armsimulate " ^ icodestring) ^
-    " >" ^ outfile in
-
-  let _ = Sys.command command in
+  let execution =
+    cosim_execute (Lazy.force arm_cosim_executor)
+      (cosim_hex_of_bytes (map Num.int_of_num ibytes))
+      (map string_of_num command_arg) in
 
   (*** This branch determines whether the actual simulation worked ***)
   (*** In each branch we try to confirm that we likewise do or don't ***)
 
-  if strings_of_file outfile <> [] then
-    let resultstring = string_of_file outfile in
-
+  match execution with
+  | Cosim_ok output_words ->
     let output_state_raw =
-      map (fun (Ident s) -> num_of_string s)
-          (lex(explode resultstring)) in
+      map num_of_string output_words in
 
     (* Synthesize q registers from two 64 ints *)
     let output_state =
@@ -267,7 +278,7 @@ let cosimulate_instructions (memopidx: int option) icodes =
        tac_main memopidx execth (1--length icodes) THEN
        tac_after (memopidx <> None))) in
     (decoded,result)
-  else
+  | Cosim_trap _ ->
     let decoded = mk_flist(map mk_numeral icodes) in
     decoded,not(can ARM_MK_EXEC_RULE(REFL ibyteterm));;
 
