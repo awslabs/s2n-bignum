@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+# Serve the persistent cosimulation protocol by invoking the legacy
+# x86simulate command once for each RUN request.
+
+set -u
+
+DIR="$(dirname -- "${BASH_SOURCE[0]}")"
+DIR="$(realpath -- "$DIR")"
+LEGACY="$DIR/x86simulate"
+STATE_WORDS=112
+ARCH=x86_64
+REQUEST_OUTPUT=""
+
+cleanup() {
+  if [[ -n "$REQUEST_OUTPUT" ]]; then
+    rm -f -- "$REQUEST_OUTPUT"
+    REQUEST_OUTPUT=""
+  fi
+}
+
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+hex_to_code_argument() {
+  local hex=$1
+  local length=${#hex}
+  local offset
+  local -a bytes=()
+
+  if (( length == 0 || length % 2 != 0 )) ||
+      [[ ! "$hex" =~ ^[[:xdigit:]]+$ ]]; then
+    return 1
+  fi
+
+  for ((offset = 0; offset < length; offset += 2)); do
+    bytes+=("0x${hex:offset:2}")
+  done
+
+  local IFS=,
+  CODE_ARGUMENT="${bytes[*]}"
+}
+
+run_persistent() {
+  local line code child_status
+  local -a request output_words
+
+  printf 'READY 1 %s %d\n' "$ARCH" "$STATE_WORDS"
+  while IFS= read -r line; do
+    read -r -a request <<< "$line"
+    case "${request[0]:-}" in
+      QUIT)
+        return 0
+        ;;
+      RUN)
+        if (( ${#request[@]} != STATE_WORDS + 2 )); then
+          printf 'ERROR wrong-input-state-size\n'
+          continue
+        fi
+        code=${request[1]}
+        if ! hex_to_code_argument "$code"; then
+          printf 'ERROR malformed-x86-code\n'
+          continue
+        fi
+
+        REQUEST_OUTPUT="$(mktemp)" || {
+          printf 'ERROR tempfile\n'
+          continue
+        }
+        "$LEGACY" "$CODE_ARGUMENT" "${request[@]:2}" >"$REQUEST_OUTPUT"
+        child_status=$?
+
+        if [[ ! -s "$REQUEST_OUTPUT" ]]; then
+          printf 'TRAP exit-%d\n' "$child_status"
+        else
+          read -r -a output_words <"$REQUEST_OUTPUT"
+          if (( ${#output_words[@]} != STATE_WORDS )); then
+            printf 'ERROR wrong-output-state-size\n'
+          else
+            printf 'OK'
+            printf ' %s' "${output_words[@]}"
+            printf '\n'
+          fi
+        fi
+        rm -f -- "$REQUEST_OUTPUT"
+        REQUEST_OUTPUT=""
+        ;;
+      *)
+        printf 'ERROR unknown-command\n'
+        ;;
+    esac
+  done
+}
+
+run_persistent
