@@ -315,6 +315,11 @@ let XREG_NE_SP = prove
 (* Support for the "forward symbolic execution" proof style.                 *)
 (* ------------------------------------------------------------------------- *)
 
+(* The instruction-pointer theorem must express the current address relative
+   to a symbolic code base: `word pc` at offset zero or `word (pc + n)` at byte
+   offset `n`. This is the common contract of ARM_THM, RISCV_THM and X86_THM;
+   specialize the resulting execution theorem afterward for fixed addresses. *)
+
 let ARM_THM =
   let pth = prove
    (`read PC s = word pc ==> arm_decode s (word pc) instr ==>
@@ -322,7 +327,6 @@ let ARM_THM =
     REPEAT STRIP_TAC THEN REWRITE_TAC [arm] THEN
     ASM_REWRITE_TAC[GSYM WORD_ADD; arm_execute] THEN
     ASM_MESON_TAC[arm_decode_unique]) in
-  (* pc_th: `|- ... = word <pc_expr>` *)
   fun (execth2:thm option array) loaded_mc_th pc_th ->
     let th = MATCH_MP pth pc_th in
     let pc_ofs:int =
@@ -958,7 +962,8 @@ let ARM_ADD_RETURN_NOSTACK_TAC =
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
 
 (* ------------------------------------------------------------------------- *)
-(* Version with register save/restore and stack adjustment.                  *)
+(* Version with register save/restore and stack adjustment. The frame size   *)
+(* must be a multiple of 16 so an aligned incoming SP remains aligned.       *)
 (* ------------------------------------------------------------------------- *)
 
 let ARM_ADD_RETURN_STACK_TAC =
@@ -966,6 +971,9 @@ let ARM_ADD_RETURN_STACK_TAC =
   and dqd_thm = WORD_BLAST `(word_zx:int128->int64)(word_zx(x:int64)) = x` in
 
   fun ?(pre_post_nsteps:(int*int) option) execth coreth reglist stackoff ->
+    if stackoff mod 16 <> 0 then
+      failwith
+        "ARM_ADD_RETURN_STACK_TAC: stack frame size is not 16-byte aligned";
     let is_coreth_safety = is_exists (concl coreth) in
     let regs = dest_list reglist in
 

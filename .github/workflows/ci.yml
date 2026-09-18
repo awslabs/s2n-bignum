@@ -2,7 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches: [ main ]
 
 env:
   HOLLIGHT_COMMIT: "b19af6934759eed622d7aca25092367f81656eee"
@@ -124,9 +123,9 @@ jobs:
   s2n-bignum-tutorial:
     strategy:
       matrix:
-        arch: [arm, x86]
+        arch: [arm, x86, riscv]
 
-    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || matrix.arch == 'x86' && 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
 
     steps:
     - name: Checkout code
@@ -257,7 +256,7 @@ jobs:
   s2n-bignum-proofs:
     strategy:
         matrix:
-          arch: [arm, x86]
+          arch: [arm, x86, riscv]
     runs-on:
       - codebuild-s2n-bignum-github-actions-${{ github.run_id }}-${{ github.run_attempt }}
 
@@ -268,7 +267,7 @@ jobs:
     - name: Install dependent packages
       run: |
         sudo apt --allow-insecure-repositories update
-        sudo apt -y install libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
+        sudo apt -y install clang libpcre2-dev ocaml binutils-aarch64-linux-gnu binutils-aarch64-linux-gnu binutils-x86-64-linux-gnu libstring-shellquote-perl libgmp-dev xdot
         wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
         chmod +x install.sh
         echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
@@ -295,5 +294,4 @@ jobs:
         make -j ${BUILD_CORE_COUNT} build_proofs build_tutorial
         make -j ${CORE_COUNT} proofs tutorial
         ../tools/collect-times.sh ${{ matrix.arch }}
-
 
