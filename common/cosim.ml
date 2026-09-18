@@ -19,10 +19,10 @@
  *
  *   S2N_BIGNUM_AARCH64_EXECUTOR
  *     Complete shell command for the AArch64 executor. Defaults to
- *     arm/proofs/armsimulate-persistent.
+ *     "tools/simulate-persistent arm".
  *   S2N_BIGNUM_X86_64_EXECUTOR
  *     Complete shell command for the x86-64 executor. Defaults to
- *     x86/proofs/x86simulate-persistent.
+ *     "tools/simulate-persistent x86".
  *   S2N_BIGNUM_EXECUTOR_TIMEOUT
  *     Positive per-response timeout in seconds. Defaults to 10.
  *   S2N_BIGNUM_SEMATEST_SECONDS

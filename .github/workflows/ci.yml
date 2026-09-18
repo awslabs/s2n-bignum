@@ -132,7 +132,7 @@ jobs:
           assembler: aarch64-linux-gnu-as
           disassembler: aarch64-linux-gnu-objdump
           executor_env: S2N_BIGNUM_AARCH64_EXECUTOR
-          executor: arm/proofs/armsimulate-persistent
+          executor: tools/simulate-persistent arm
           run: qemu-aarch64
         - arch: x86
           runner: ubuntu-24.04-arm
@@ -141,7 +141,7 @@ jobs:
           assembler: x86_64-linux-gnu-as
           disassembler: x86_64-linux-gnu-objdump
           executor_env: S2N_BIGNUM_X86_64_EXECUTOR
-          executor: x86/proofs/x86simulate-persistent
+          executor: tools/simulate-persistent x86
           run: qemu-x86_64
 
     runs-on: ${{ matrix.runner }}
