@@ -120,6 +120,75 @@ jobs:
         cd ${{ matrix.arch }}
         make sematest
 
+  s2n-bignum-cross-sematest:
+    strategy:
+      matrix:
+        include:
+        - arch: arm
+          runner: ubuntu-24.04
+          packages: gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu qemu-user
+          compiler: aarch64-linux-gnu-gcc
+          assembler: aarch64-linux-gnu-as
+          executor_env: S2N_BIGNUM_AARCH64_EXECUTOR
+          executor: arm/proofs/armsimulate-persistent
+          run: qemu-aarch64
+        - arch: x86
+          runner: ubuntu-24.04-arm
+          packages: gcc-x86-64-linux-gnu binutils-x86-64-linux-gnu qemu-user
+          compiler: x86_64-linux-gnu-gcc
+          assembler: x86_64-linux-gnu-as
+          executor_env: S2N_BIGNUM_X86_64_EXECUTOR
+          executor: x86/proofs/x86simulate-persistent
+          run: qemu-x86_64
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl \
+          libgmp-dev xdot ${{ matrix.packages }}
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
+        opam init --disable-sandboxing
+
+    - name: Install HOL Light
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
+    - name: Run cross-cosimulation tests
+      env:
+        TARGET: ${{ matrix.arch }}
+        COSIM_CC: ${{ matrix.compiler }}
+        COSIM_AS: ${{ matrix.assembler }}
+        COSIM_LDFLAGS: -static
+        COSIM_RUN: ${{ matrix.run }}
+        COSIM_RUN_ARGS: -cpu max
+        EXECUTOR_ENV: ${{ matrix.executor_env }}
+        EXECUTOR_COMMAND: ${{ matrix.executor }}
+      run: |
+        export HOLDIR=`pwd`/hol-light
+        make -C "$TARGET" \
+          HOLDIR="$HOLDIR" \
+          proofs/simulator.native
+        env "$EXECUTOR_ENV=$EXECUTOR_COMMAND" \
+          S2N_BIGNUM_SEMATEST_CASES=100 \
+          S2N_BIGNUM_SEMATEST_SEED=1 \
+          "./$TARGET/proofs/simulator.native"
+
   s2n-bignum-tutorial:
     strategy:
       matrix:
