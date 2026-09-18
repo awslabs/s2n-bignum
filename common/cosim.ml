@@ -25,6 +25,16 @@
  *     x86/proofs/x86simulate-persistent.
  *   S2N_BIGNUM_EXECUTOR_TIMEOUT
  *     Positive per-response timeout in seconds. Defaults to 10.
+ *   S2N_BIGNUM_SEMATEST_SECONDS
+ *     Positive wall-clock campaign limit in seconds. Defaults to 2400.
+ *   S2N_BIGNUM_SEMATEST_CASES
+ *     Optional positive limit on successful cases.
+ *   S2N_BIGNUM_SEMATEST_SEED
+ *     Optional integer random seed.
+ *
+ * The sematest controls are implemented in common/sematest.ml. The
+ * architecture-specific simulator.ml files select the architecture
+ * executor and run the campaign.
  *
  * A successful session has the following shape:
  *

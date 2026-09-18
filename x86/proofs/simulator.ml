@@ -7,7 +7,12 @@
 (* Encoding the registers and flags as an 80-element list of numbers.        *)
 (* ------------------------------------------------------------------------- *)
 
+(*** Runtime configuration is documented centrally in common/cosim.ml.
+ *** This campaign runs until a failure or its configured limit.
+ ***)
+
 needs "common/cosim.ml";;
+needs "common/sematest.ml";;
 needs "x86/proofs/base.ml";;
 
 let regfile = new_definition
@@ -248,9 +253,7 @@ let random_regstate () =
  *** RUN <hex-instruction-bytes> <decimal-state-word> ... and receives
  *** OK with the resulting 112 words, or TRAP/ERROR.
  ***
- *** S2N_BIGNUM_X86_64_EXECUTOR overrides the default command below with a
- *** complete shell command. It can therefore prefix the executor with QEMU
- *** or select another process that implements this protocol.
+ *** The x86-64 executor and state-vector shape are selected below.
  ***)
 
 (* ------------------------------------------------------------------------- *)
@@ -1719,7 +1722,8 @@ let run_random_simulation() =
     let decoded, result = run_random_simplememopsimulation() in
     decoded,result,2;;
 
-let time_limit_sec = 2400.0;;
+let time_limit_sec = sematest_seconds 2400.0;;
+let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 let tested_smp_instances = ref 0;;
@@ -1734,8 +1738,9 @@ let rec run_random_simulations start_t =
               then " (fails correctly) instruction code " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
-    let now_t = Sys.time() in
-    if now_t -. start_t > time_limit_sec then
+    let total = !tested_reg_instances + !tested_mem_instances +
+                !tested_smp_instances in
+    if sematest_finished time_limit_sec case_limit start_t total then
       let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, total: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances !tested_smp_instances
           (!tested_reg_instances + !tested_mem_instances + !tested_smp_instances) in
@@ -1750,9 +1755,9 @@ let rec run_random_simulations start_t =
  *** Random.init(Hashtbl.hash (Sys.getenv "HOST"));;
  ***)
 
-Random.self_init();;
+sematest_random_init ();;
 
-let start_t = Sys.time() (* unit is sec *) in
+let start_t = Unix.gettimeofday() (* unit is sec *) in
   match run_random_simulations start_t with
   | Some (t,_) -> Printf.printf "Error: term `%s`" (string_of_term t); failwith "simulator"
   | None -> ();;
