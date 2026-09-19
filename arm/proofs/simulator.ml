@@ -7,6 +7,12 @@
 (* Encoding the registers and flags as a 32-element list of numbers.         *)
 (* ------------------------------------------------------------------------- *)
 
+(*** Runtime configuration is documented centrally in common/cosim.ml.
+ *** This campaign runs until a failure or its configured limit.
+ ***)
+
+needs "common/cosim.ml";;
+needs "common/sematest.ml";;
 needs "arm/proofs/base.ml";;
 
 let regfile = new_definition
@@ -77,6 +83,16 @@ let random_regstate () =
   [mod_num (random64()) (num 16)] @
   map (fun _ -> randomnd 128 d) (0--31) @
   map (fun _ -> randomnd 128 d) (0--15);;
+
+(*** The HOL-side executor client is shared in common/cosim.ml. This file
+ *** selects the AArch64 executor and supplies the state-vector shape.
+ ***
+ *** A session starts with READY 1 aarch64 128. The client sends
+ *** RUN <hex-instruction-bytes> <decimal-state-word> ... and receives
+ *** OK with the resulting 128 words, or TRAP/ERROR.
+ ***
+ *** The AArch64 executor and state-vector shape are selected below.
+ ***)
 
 (* ------------------------------------------------------------------------- *)
 (* Generate random instance of instruction class itself.                     *)
@@ -192,6 +208,10 @@ and tac_after memop =
  *** it can be modified in between.
  ***)
 
+let arm_cosim_executor = lazy
+  (start_cosim_executor "S2N_BIGNUM_AARCH64_EXECUTOR"
+    "tools/simulate-persistent arm" "aarch64" 128);;
+
 let cosimulate_instructions (memopidx: int option) icodes =
   let icodestring =
     end_itlist (fun s t -> s^","^t) (map string_of_num_hex icodes) in
@@ -211,8 +231,6 @@ let cosimulate_instructions (memopidx: int option) icodes =
 
   let input_state = random_regstate() in
 
-  let outfile = Filename.temp_file "armsimulator" ".out" in
-
   let command_arg =
     (* Split q registers that are 128 bits to 64 + 64 bits *)
     let xregs, qmem = chop_list 32 input_state in
@@ -220,22 +238,18 @@ let cosimulate_instructions (memopidx: int option) icodes =
     List.concat (map (fun n ->
       [Num.mod_num n num_two_to_64; Num.quo_num n num_two_to_64]) qmem) in
 
-  let command =
-    rev_itlist (fun s t -> t ^ " " ^ string_of_num s) command_arg
-    ("arm/proofs/armsimulate " ^ icodestring) ^
-    " >" ^ outfile in
-
-  let _ = Sys.command command in
+  let execution =
+    cosim_execute (Lazy.force arm_cosim_executor)
+      (cosim_hex_of_bytes (map Num.int_of_num ibytes))
+      (map string_of_num command_arg) in
 
   (*** This branch determines whether the actual simulation worked ***)
   (*** In each branch we try to confirm that we likewise do or don't ***)
 
-  if strings_of_file outfile <> [] then
-    let resultstring = string_of_file outfile in
-
+  match execution with
+  | Cosim_ok output_words ->
     let output_state_raw =
-      map (fun (Ident s) -> num_of_string s)
-          (lex(explode resultstring)) in
+      map num_of_string output_words in
 
     (* Synthesize q registers from two 64 ints *)
     let output_state =
@@ -267,7 +281,7 @@ let cosimulate_instructions (memopidx: int option) icodes =
        tac_main memopidx execth (1--length icodes) THEN
        tac_after (memopidx <> None))) in
     (decoded,result)
-  else
+  | Cosim_trap _ ->
     let decoded = mk_flist(map mk_numeral icodes) in
     decoded,not(can ARM_MK_EXEC_RULE(REFL ibyteterm));;
 
@@ -649,7 +663,8 @@ let run_random_simulation() =
     let decoded, result = run_random_memopsimulation() in
     decoded,result,false;;
 
-let time_limit_sec = 2400.0;;
+let time_limit_sec = sematest_seconds 2400.0;;
+let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 
@@ -662,8 +677,8 @@ let rec run_random_simulations start_t =
               then " (fails correctly) instruction codes " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
-    let now_t = Sys.time() in
-    if now_t -. start_t > time_limit_sec then
+    let total = !tested_reg_instances + !tested_mem_instances in
+    if sematest_finished time_limit_sec case_limit start_t total then
       let _ = Printf.printf "Finished (time limit: %fs, tested reg instances: %d, tested mem instances: %d, total: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances
           (!tested_reg_instances + !tested_mem_instances) in
@@ -672,9 +687,9 @@ let rec run_random_simulations start_t =
   end
   else Some (decoded,result);;
 
-Random.self_init();;
+sematest_random_init ();;
 
-let start_t = Sys.time() (* unit is sec *) in
+let start_t = Unix.gettimeofday() (* unit is sec *) in
   match run_random_simulations start_t with
   | Some (t,_) -> Printf.printf "Error: term `%s`" (string_of_term t);
                   failwith "simulator"

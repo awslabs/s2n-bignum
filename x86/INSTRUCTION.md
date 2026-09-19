@@ -62,7 +62,7 @@ More complex instructions that are defined with a deeper chain of functions will
 
 [Location: x86/proofs/simulator.ml](proofs/simulator.ml)
 
-s2n-bignum conducts cosimulation tests against real machines to ensure correctness of instruction modeling. Instead of randomly generating instructions, s2n-bignum scans all assembly files for instructions to be tested in cosimulation. For the cosimulation testing, it generates random values for PC, registers, flags, and memory in the *x86state*, run the instruction on the actual machine with state values pre-set to the randomly generated values and then compare the resulting *x86state* on the machine against the model.
+s2n-bignum conducts cosimulation tests against an independent execution backend to ensure correctness of instruction modeling. Instead of randomly generating instructions, s2n-bignum scans all assembly files for instructions to be tested in cosimulation. For the cosimulation testing, it generates random values for PC, registers, flags, and memory in the *x86state*, runs the instruction through the backend with state values pre-set to the randomly generated values, and then compares the resulting *x86state* against the model.
 
 There are two sources of instructions tested. The *x86/x86-insns.ml* file is a generated file that contains instructions automatically read from existing assembly files. These are instructions that do not involve memory accesses. In addition to that, there are some manually added test instructions that are not in existing assembly files. These can be found in the definition of `iclasses` in *x86/proofs/simulator.ml*.
 
