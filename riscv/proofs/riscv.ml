@@ -254,10 +254,15 @@ let RISCV_CONV (decode_ths:thm option array) (ths:thm list) tm =
 let RISCV_BASIC_STEP_TAC =
   GEN_BASIC_STEP_TAC "RISCV" `riscv` `:riscvstate` RISCV_CONV ALL_TAC;;
 
-let RISCV_STEP_TAC (mc_length_th,decode_ths) subths sname
+let RISCV_STEP_TAC_WITH_REWRITES rewrite_ths
+      (mc_length_th,decode_ths) subths sname
       (store_inst_term_to:term ref option)
       (strip_component_tac:thm_tactic) =
-  GEN_STEP_TAC RISCV_BASIC_STEP_TAC ALL_TAC aligned_bytes_loaded_update
+  let normalize_tac =
+    if rewrite_ths = [] then ALL_TAC
+    else GEN_REWRITE_TAC TOP_DEPTH_CONV rewrite_ths in
+  GEN_STEP_TAC RISCV_BASIC_STEP_TAC normalize_tac
+    aligned_bytes_loaded_update
     (fun th thl ->
       if !riscv_print_log then begin
         Printf.printf "State update: `%s`\n" (string_of_thm th);
@@ -268,6 +273,8 @@ let RISCV_STEP_TAC (mc_length_th,decode_ths) subths sname
       end)
     (mc_length_th,decode_ths) subths sname
     store_inst_term_to strip_component_tac;;
+
+let RISCV_STEP_TAC = RISCV_STEP_TAC_WITH_REWRITES [];;
 
 let RISCV_VERBOSE_STEP_TAC =
   GEN_VERBOSE_STEP_TAC RISCV_STEP_TAC;;
