@@ -2,7 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches: [ main ]
 
 env:
   HOLLIGHT_COMMIT: "b19af6934759eed622d7aca25092367f81656eee"
@@ -196,9 +195,9 @@ jobs:
   s2n-bignum-tutorial:
     strategy:
       matrix:
-        arch: [arm, x86]
+        arch: [arm, x86, riscv]
 
-    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || matrix.arch == 'x86' && 'ubuntu-24.04' }}
+    runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
 
     steps:
     - name: Checkout code
