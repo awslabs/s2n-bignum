@@ -23,6 +23,9 @@
  *   S2N_BIGNUM_X86_64_EXECUTOR
  *     Complete shell command for the x86-64 executor. Defaults to
  *     "tools/simulate-persistent x86".
+ *   S2N_BIGNUM_RV32IM_EXECUTOR
+ *     Complete shell command for the RV32IM executor. Defaults to
+ *     riscv/proofs/cosim-runner.
  *   S2N_BIGNUM_EXECUTOR_TIMEOUT
  *     Positive per-response timeout in seconds. Defaults to 10.
  *   S2N_BIGNUM_SEMATEST_SECONDS
