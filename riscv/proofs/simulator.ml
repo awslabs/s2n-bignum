@@ -184,6 +184,32 @@ let make_input_state density =
   map (fun _ -> random32 density) (3--31) @
   map (fun _ -> random32 density) (0--63);;
 
+let rec list_update index value values =
+  match index,values with
+  | 0,_::tail -> value::tail
+  | n,head::tail when n > 0 -> head::list_update (n - 1) value tail
+  | _ -> failwith "list_update: index outside list";;
+
+let transport_register_index register =
+  if register < 0 || register > 31 then
+    failwith "transport_register_index: bad register"
+  else if register = 2 then
+    failwith "transport_register_index: SP is not transported"
+  else if register < 2 then register
+  else register - 1;;
+
+let set_input_register register value state =
+  if register = 0 && value <> num_0 then
+    failwith "set_input_register: x0 must remain zero"
+  else
+    list_update (transport_register_index register) value state;;
+
+let directed_input_state assignments =
+  itlist
+    (fun (register,value) state -> set_input_register register value state)
+    assignments
+    (map (fun _ -> num_0) (1--95));;
+
 let rec memory_operands () =
   let address = 4 * Random.int 64
   and setup = 4 * (Random.int 1024 - 512) in
@@ -301,6 +327,115 @@ let make_case kind =
   if kind < 0 || kind >= length caseclasses
   then failwith "make_case: bad instruction kind"
   else el kind caseclasses ();;
+
+let directed_r_case funct7 funct3 rd rs1 rs2 assignments =
+  { case_setup = [];
+    case_instruction = encode_r funct7 rs2 rs1 funct3 rd;
+    case_cleanup = []; case_memop_index = None;
+    case_input = directed_input_state assignments };;
+
+let directed_i_case funct3 rd rs1 immediate assignments =
+  { case_setup = [];
+    case_instruction = encode_i immediate rs1 funct3 rd 0x13;
+    case_cleanup = []; case_memop_index = None;
+    case_input = directed_input_state assignments };;
+
+let directed_lui_case rd immediate =
+  { case_setup = [];
+    case_instruction = (immediate lsl 12) lor (rd lsl 7) lor 0x37;
+    case_cleanup = []; case_memop_index = None;
+    case_input = directed_input_state [] };;
+
+(*** Run a fixed arithmetic prelude before random sampling so x0 behavior,
+ *** operand aliasing, immediate extremes, and signed wraparound do not rely
+ *** on chance. The subsequent random campaign keeps probing the wider state
+ *** space and memory harnesses.
+ ***)
+
+let directed_cases =
+  [(* ADD value cases: x0 destination, wraparound, signed overflow. *)
+   directed_r_case 0 0 0 1 3      (* add  x0, 0x00000001, 0x00000001 *)
+     [1,num 1; 3,num 1];
+   directed_r_case 0 0 1 1 3      (* add  x1, 0xffffffff, 0x00000001 *)
+     [1,num 0xffffffff; 3,num 1];
+   directed_r_case 0 0 3 1 3      (* add  x3, 0x7fffffff, 0x00000001 *)
+     [1,num 0x7fffffff; 3,num 1];
+   (* ADD register-shape case: rd = rs2. *)
+   directed_r_case 0 0 4 1 1      (* add  x4, x1, x1                 *)
+     [1,num 0x80000000];
+   (* ADDI value cases: x0 destination, sign extension, immediate extremes. *)
+   directed_i_case 0 0 1 1        (* addi x0, 0xffffffff, 1          *)
+     [1,num 0xffffffff];
+   directed_i_case 0 1 0 (-1)     (* addi x1, 0x00000000, -1         *)
+     [];
+   directed_i_case 0 1 1 2047     (* addi x1, 0x80000000, 2047       *)
+     [1,num 0x80000000];
+   directed_i_case 0 3 1 (-2048)  (* addi x3, 0x7fffffff, -2048      *)
+     [1,num 0x7fffffff];
+   (* SUB value cases: self-subtraction, zero source, INT_MIN wraparound. *)
+   directed_r_case 0x20 0 1 1 1   (* sub  x1, x1, x1                 *)
+     [1,num 0x80000000];
+   directed_r_case 0x20 0 0 1 3   (* sub  x0, 0x00000001, 0x00000001 *)
+     [1,num 1; 3,num 1];
+   directed_r_case 0x20 0 1 0 3   (* sub  x1, 0x00000000, 0x00000001 *)
+     [3,num 1];
+   directed_r_case 0x20 0 3 1 4   (* sub  x3, 0x80000000, 0x00000001 *)
+     [1,num 0x80000000; 4,num 1];
+   (* SLLI value cases: zero shift, sign-bit entry, top-bit retention. *)
+   directed_i_case 1 1 1 0        (* slli x1, 0xaaaaaaaa, 0          *)
+     [1,num 0xaaaaaaaa];
+   directed_i_case 1 3 1 31       (* slli x3, 0x00000001, 31         *)
+     [1,num 1];
+   directed_i_case 1 1 1 31       (* slli x1, 0xffffffff, 31         *)
+     [1,num 0xffffffff];
+   (* SLLI register-shape case: rd = rs1. *)
+   directed_i_case 1 4 4 1        (* slli x4, x4, 1                  *)
+     [4,num 0x80000000];
+   (* SRAI value cases: zero shift, sign fill, maximal positive clear. *)
+   directed_i_case 5 1 1 0x400          (* srai x1, 0x55555555, 0     *)
+     [1,num 0x55555555];
+   directed_i_case 5 3 1 (0x400 lor 31) (* srai x3, 0x80000000, 31    *)
+     [1,num 0x80000000];
+   directed_i_case 5 4 1 (0x400 lor 31) (* srai x4, 0xffffffff, 31    *)
+     [1,num 0xffffffff];
+   directed_i_case 5 1 1 (0x400 lor 31) (* srai x1, 0x7fffffff, 31    *)
+     [1,num 0x7fffffff];
+   (* SRAI register-shape case: rd = rs1. *)
+   directed_i_case 5 3 3 (0x400 lor 1)  (* srai x3, x3, 1             *)
+     [3,num 0x80000001];
+   (* LUI value cases: zero, low bit, sign bit, all upper bits. *)
+   directed_lui_case 1 0x00000;    (* lui  x1, 0x00000               *)
+   directed_lui_case 3 0x00001;    (* lui  x3, 0x00001               *)
+   directed_lui_case 4 0x80000;    (* lui  x4, 0x80000               *)
+   directed_lui_case 5 0xfffff;    (* lui  x5, 0xfffff               *)
+   (* LUI register-shape case: x0 destination must remain zero. *)
+   directed_lui_case 0 0x7ffff;    (* lui  x0, 0x7ffff               *)
+   (* MUL value cases: zero source, mixed sign, low-word wraparound. *)
+   directed_r_case 1 0 1 0 3       (* mul  x1, 0x00000000, 0xffffffff *)
+     [3,num 0xffffffff];
+   directed_r_case 1 0 3 1 4       (* mul  x3, 0xffffffff, 0x7fffffff *)
+     [1,num 0xffffffff; 4,num 0x7fffffff];
+   directed_r_case 1 0 1 1 3       (* mul  x1, 0x80000000, 0xffffffff *)
+     [1,num 0x80000000; 3,num 0xffffffff];
+   directed_r_case 1 0 4 1 3       (* mul  x4, 0x00010000, 0x00010000 *)
+     [1,num 0x00010000; 3,num 0x00010000];
+   directed_r_case 1 0 1 1 4       (* mul  x1, 0x80000000, 0x00000002 *)
+     [1,num 0x80000000; 4,num 2];
+   (* MULH value cases: zero high word, sign fill, signed extremes. *)
+   directed_r_case 1 1 4 1 3       (* mulh x4, 0x00000001, 0x00000001 *)
+     [1,num 1; 3,num 1];
+   directed_r_case 1 1 4 1 3       (* mulh x4, 0xffffffff, 0xffffffff *)
+     [1,num 0xffffffff; 3,num 0xffffffff];
+   directed_r_case 1 1 4 1 3       (* mulh x4, 0xffffffff, 0x00000002 *)
+     [1,num 0xffffffff; 3,num 2];
+   directed_r_case 1 1 4 1 3       (* mulh x4, 0x80000000, 0x00000002 *)
+     [1,num 0x80000000; 3,num 2];
+   directed_r_case 1 1 4 1 3       (* mulh x4, 0x80000000, 0xffffffff *)
+     [1,num 0x80000000; 3,num 0xffffffff];
+   directed_r_case 1 1 4 1 3       (* mulh x4, 0x80000000, 0x80000000 *)
+     [1,num 0x80000000; 3,num 0x80000000];
+   directed_r_case 1 1 4 1 3       (* mulh x4, 0x7fffffff, 0x7fffffff *)
+     [1,num 0x7fffffff; 3,num 0x7fffffff]];;
 
 (*** The RV32 frontend constructs complete instructions directly from their
  *** encoding fields; it has no Arm-style bit templates or x86-style byte
@@ -448,28 +583,41 @@ let cosimulate_case test_case =
       decoded,result;;
 
 let instruction_kinds = length caseclasses;;
-let tested_kinds = Array.make instruction_kinds 0;;
 let time_limit_sec = sematest_seconds 2400.0;;
 let case_limit = sematest_case_limit ();;
 
-let rec run_simulations start_time count =
-  let kind = count mod instruction_kinds in
-  let test_case = make_case kind in
+let run_case test_case count =
   let decoded,result = cosimulate_case test_case in
   if not result then begin
     Printf.printf "Error: term `%s`\n" (string_of_term decoded);
     failwith "RV32 simulator"
   end;
-  tested_kinds.(kind) <- tested_kinds.(kind) + 1;
   Printf.printf "OK: %s\n" (string_of_term decoded);
-  let tested = count + 1 in
+  count + 1;;
+
+let rec run_directed_cases start_time count cases =
+  match cases with
+  | [] -> count
+  | test_case::rest ->
+      let tested = run_case test_case count in
+      if sematest_finished time_limit_sec case_limit start_time tested then
+        tested
+      else run_directed_cases start_time tested rest;;
+
+let rec run_random_simulations start_time count =
+  let kind = count mod instruction_kinds in
+  let test_case = make_case kind in
+  let tested = run_case test_case count in
   if sematest_finished time_limit_sec case_limit start_time tested then
     tested
-  else run_simulations start_time tested;;
+  else run_random_simulations start_time tested;;
 
 sematest_random_init ();;
 
 let start_time = Unix.gettimeofday () in
-let tested = run_simulations start_time 0 in
+let tested = run_directed_cases start_time 0 directed_cases in
+let tested =
+  if sematest_finished time_limit_sec case_limit start_time tested then tested
+  else run_random_simulations start_time tested in
   Printf.printf "Finished RV32IM cosimulation testing: %d cases\n" tested;
   close_cosim_executor (Lazy.force rv32_cosim_executor);;
