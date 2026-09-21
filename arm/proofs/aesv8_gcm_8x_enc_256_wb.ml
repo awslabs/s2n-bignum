@@ -10988,6 +10988,33 @@ let WB_LEN_EQ_128_BLOCKS = prove
   MP_TAC(SPECL [`val(x:int64)`; `128`] (CONJUNCT2 DIVISION_SIMP)) THEN
   ASM_ARITH_TAC);;
 
+(* John's house form states the round keys as one compact list equation        *)
+(* (arm/proofs/aes_gcm_enc_kernel_x4_basic.ml).  This converts it into the     *)
+(* pointwise reads the interior legs consume, and yields `LENGTH rk = 15`      *)
+(* as a bonus -- the quantified form alone leaves the length unconstrained.    *)
+
+let WB_KEYS_FROM_WORDLIST = prove
+ (`!key_p:int64 rk s.
+        (wordlist_from_memory(key_p,15) s :int128 list =
+         MAP (word_reversefields 8) rk) <=>
+        LENGTH rk = 15 /\
+            (!n. n < 15
+                 ==> read (memory :> bytes128 (word_add key_p (word (16 * n)))) s =
+                     word_reversefields 8 (EL n rk))`,
+  REPEAT GEN_TAC THEN
+  CONV_TAC(ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV) THEN
+  REWRITE_TAC[LIST_EQ; LENGTH; LENGTH_MAP] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  MATCH_MP_TAC(TAUT
+    `(p <=> p') /\ (p ==> (q <=> q')) ==> (p /\ q <=> p' /\ q')`) THEN
+  CONJ_TAC THENL [ARITH_TAC; ALL_TAC] THEN
+  STRIP_TAC THEN FIRST_ASSUM(fun th -> REWRITE_TAC[SYM th]) THEN
+  ASM_SIMP_TAC[EL_MAP] THEN
+  SUBGOAL_THEN `LENGTH(rk:int128 list) = 15` SUBST1_TAC THENL
+   [ASM_ARITH_TAC; ALL_TAC] THEN
+  CONV_TAC(BINOP_CONV EXPAND_CASES_CONV) THEN CONV_TAC NUM_REDUCE_CONV THEN
+  CONV_TAC(TOP_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[WORD_ADD_0]);;
+
 let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
  (`!in_p out_p tag_p ivec_p key_p htable_p
      tag0 nonce ctr0 c rk inblock len_bits pc stackpointer returnaddress.
@@ -11011,9 +11038,8 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
             [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
            read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
            read (memory :> bytes128 ivec_p) s = ctr0 /\
-           (!n. n < 15
-                ==> read (memory :> bytes128 (word_add key_p (word (16 * n)))) s =
-                    word_reversefields 8 (EL n rk)) /\
+           wordlist_from_memory(key_p,15) s =
+             MAP (word_reversefields 8) rk /\
            htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
            (!j. j < wb_blocks len_bits
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
@@ -11038,6 +11064,9 @@ let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT = prove
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REWRITE_TAC[LENGTH_WB_MC; ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  (* Expand John's compact round-key list, in place inside the precondition,   *)
+  (* into the pointwise reads the interior legs consume.                       *)
+  REWRITE_TAC[WB_KEYS_FROM_WORDLIST] THEN
   REPEAT STRIP_TAC THEN
   (* All three paths start from the same normalised counter block.            *)
   SUBGOAL_THEN `ctr0:int128 = word_reversefields 8 (ctr_block nonce c)`
@@ -11224,9 +11253,8 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
             [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
            read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
            read (memory :> bytes128 ivec_p) s = ctr0 /\
-           (!n. n < 15
-                ==> read (memory :> bytes128 (word_add key_p (word (16 * n)))) s =
-                    word_reversefields 8 (EL n rk)) /\
+           wordlist_from_memory(key_p,15) s =
+             MAP (word_reversefields 8) rk /\
            htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
            (!j. j < wb_blocks len_bits
                 ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
@@ -11248,6 +11276,6 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
                   memory :> bytes(tag_p, 16);
                   memory :> bytes(ivec_p, 16);
                   memory :> bytes(word_sub stackpointer (word 80), 80)])`,
-  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE ~extra:[htable_mem_8]
+  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE ~extra:[htable_mem_8; wordlist_from_memory]
                      aesv8_gcm_8x_enc_256_wb_mc aesv8_gcm_8x_enc_256_wb_tmc
                      AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT));;
