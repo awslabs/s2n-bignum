@@ -637,6 +637,11 @@ let check_insns () =
 
     (*** ret ***)
     "1101011001011111000000xxxxx00000";
+
+    (*** bti c: the BTI landing pad at the head of an indirectly-called   ***)
+    (*** subroutine.  A hint with no register or memory effect, so there  ***)
+    (*** is nothing to simulate; arm_BTI models it as a no-op.            ***)
+    "11010101000000110010010001011111";
   ] in
 
   (* Check that iclasses and skipping_iclasses has no overlapping bitpattern. *)
