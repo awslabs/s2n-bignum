@@ -603,6 +603,11 @@ let READ_BOTTOM_128 = prove
    REWRITE_TAC[READ_COMPONENT_COMPOSE; bottom_128; bottomhalf;
                DIMINDEX_128; READ_SUBWORD; through; read]);;
 
+let READ_BOTTOM_256 = prove
+  (`!s:A. read (c :> bottom_256) s = word_subword (read c s) (0, 256)`,
+   REWRITE_TAC[READ_COMPONENT_COMPOSE; bottom_256; bottomhalf;
+               DIMINDEX_256; READ_SUBWORD; through; read]);;
+
 let STRONGLY_VALID_COMPONENT_SUBWORD = prove
  (`!pos len.
      dimindex(:M) = len /\ pos + len <= dimindex(:N)
@@ -784,6 +789,22 @@ let WRITE_BOTTOM_128 = prove
     ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
     REWRITE_TAC[WRITE_SUBWORD_BITWISE; BIT_WORD_JOIN; BIT_WORD_SUBWORD;
       DIMINDEX_128; DIMINDEX_256] THEN
+    CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV);;
+
+let WRITE_BOTTOM_256 = prove
+  (`!s:A y. write (c :> bottom_256) y s =
+    write c ((word_join:(256)word->(256)word->(512)word)
+      ((word_subword:(512)word->num#num->(256)word)
+          (read c s) (256,256)) y) s`,
+    REPEAT STRIP_TAC THEN
+    REWRITE_TAC[WRITE_COMPONENT_COMPOSE; bottom_256; bottomhalf;
+                DIMINDEX_256; through; write] THEN
+    AP_THM_TAC THEN AP_TERM_TAC THEN
+    SPEC_TAC (`read (c:(A,(512)word)component) s:512 word`,`d:512 word`) THEN
+    STRIP_TAC THEN
+    ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
+    REWRITE_TAC[WRITE_SUBWORD_BITWISE; BIT_WORD_JOIN; BIT_WORD_SUBWORD;
+      DIMINDEX_256; DIMINDEX_512] THEN
     CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV);;
 
 let READ_WRITE_SUBWORD = prove
@@ -1874,6 +1895,10 @@ overload_interface
 overload_interface
  ("bytes256",`bytes256:int64->((int64->byte),256 word)component`);;
 
+let bytes512 = define
+ `bytes512 (addr:A word) :((A word->byte),512 word)component =
+    bytes(addr,64) :> asword`;;
+
 let BYTES8_ELEMENT = prove
  (`(bytes8:A word->((A word->byte),byte)component) = element`,
   REWRITE_TAC[FUN_EQ_THM; COMPONENT_EQ] THEN
@@ -2167,15 +2192,48 @@ let WEAKLY_VALID_COMPONENT_BYTES256 = prove
   SIMP_TAC[VALID_IMP_WEAKLY_VALID_COMPONENT;
            VALID_COMPONENT_BYTES256]);;
 
+let STRONGLY_VALID_COMPONENT_BYTES512 = prove
+ (`!a:int64. strongly_valid_component (bytes512 a)`,
+  GEN_TAC THEN
+  MP_TAC(ISPECL [`a:int64`; `64`] EXTENSIONALLY_VALID_COMPONENT_BYTES) THEN
+  MP_TAC(ISPECL [`a:int64`; `64`] READ_WRITE_BYTES) THEN
+  REWRITE_TAC[DIMINDEX_64] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[strongly_valid_component; EXTENSIONALLY_VALID_COMPONENT] THEN
+  STRIP_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC
+   [bytes512; READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
+  ASM_REWRITE_TAC[read; write; asword; through; VAL_WORD] THEN
+  REWRITE_TAC[DIMINDEX_512] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SUBST1_TAC(GSYM(NUM_REDUCE_CONV `2 EXP (8 * 64)`)) THEN
+  ASM_REWRITE_TAC[READ_BYTES_MOD_LEN] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
+  REWRITE_TAC[GSYM DIMINDEX_512; VAL_MOD_REFL; WORD_VAL]);;
+
+let EXTENSIONALLY_VALID_COMPONENT_BYTES512 = prove
+ (`!a:int64. extensionally_valid_component (bytes512 a)`,
+  SIMP_TAC[STRONGLY_VALID_IMP_EXTENSIONALLY_VALID_COMPONENT;
+           STRONGLY_VALID_COMPONENT_BYTES512]);;
+
+let VALID_COMPONENT_BYTES512 = prove
+ (`!a:int64. valid_component (bytes512 a)`,
+  SIMP_TAC[STRONGLY_VALID_IMP_VALID_COMPONENT;
+           STRONGLY_VALID_COMPONENT_BYTES512]);;
+
+let WEAKLY_VALID_COMPONENT_BYTES512 = prove
+ (`!a:int64. weakly_valid_component (bytes512 a)`,
+  SIMP_TAC[VALID_IMP_WEAKLY_VALID_COMPONENT;
+           VALID_COMPONENT_BYTES512]);;
+
 add_valid_component_thms
   [VALID_COMPONENT_BYTES8; VALID_COMPONENT_BYTES16;
    VALID_COMPONENT_BYTES32; VALID_COMPONENT_BYTES64;
-   VALID_COMPONENT_BYTES128; VALID_COMPONENT_BYTES256];;
+   VALID_COMPONENT_BYTES128; VALID_COMPONENT_BYTES256;
+   VALID_COMPONENT_BYTES512];;
 
 add_strongly_valid_component_thms
   [STRONGLY_VALID_COMPONENT_BYTES8; STRONGLY_VALID_COMPONENT_BYTES16;
    STRONGLY_VALID_COMPONENT_BYTES32; STRONGLY_VALID_COMPONENT_BYTES64;
-   STRONGLY_VALID_COMPONENT_BYTES128; STRONGLY_VALID_COMPONENT_BYTES256];;
+   STRONGLY_VALID_COMPONENT_BYTES128; STRONGLY_VALID_COMPONENT_BYTES256;
+   STRONGLY_VALID_COMPONENT_BYTES512];;
 
 add_extensionally_valid_component_thms
   [EXTENSIONALLY_VALID_COMPONENT_BYTES8;
@@ -2183,7 +2241,8 @@ add_extensionally_valid_component_thms
    EXTENSIONALLY_VALID_COMPONENT_BYTES32;
    EXTENSIONALLY_VALID_COMPONENT_BYTES64;
    EXTENSIONALLY_VALID_COMPONENT_BYTES128;
-   EXTENSIONALLY_VALID_COMPONENT_BYTES256];;
+   EXTENSIONALLY_VALID_COMPONENT_BYTES256;
+   EXTENSIONALLY_VALID_COMPONENT_BYTES512];;
 
 add_weakly_valid_component_thms
   [WEAKLY_VALID_COMPONENT_BYTES8;
@@ -2191,7 +2250,8 @@ add_weakly_valid_component_thms
    WEAKLY_VALID_COMPONENT_BYTES32;
    WEAKLY_VALID_COMPONENT_BYTES64;
    WEAKLY_VALID_COMPONENT_BYTES128;
-   WEAKLY_VALID_COMPONENT_BYTES256];;
+   WEAKLY_VALID_COMPONENT_BYTES256;
+   WEAKLY_VALID_COMPONENT_BYTES512];;
 
 (*** NB: the composites are better-behaved than plain "bytes".
  *** So when proving "valid_component" theorems by chaining, it
@@ -2236,6 +2296,24 @@ let READ_MEMORY_BYTESIZED_SPLIT = prove
                 4 = 2 + 2 /\ 2 = 1 + 1`] THEN
   REWRITE_TAC[READ_BYTES_COMBINE] THEN ARITH_TAC);;
 
+(* Standalone 512-bit read split (kept separate from READ_MEMORY_BYTESIZED_SPLIT
+   so that its `el`/`last` positional references elsewhere are unaffected). *)
+let READ_MEMORY_BYTESIZED_SPLIT_512 = prove
+ (`!m x s. read (m :> bytes512 x) s =
+           word_join (read (m :> bytes256 (word_add x (word 32))) s)
+                     (read (m :> bytes256 x) s)`,
+  REWRITE_TAC[GSYM VAL_EQ] THEN
+  SIMP_TAC[VAL_WORD_JOIN_SIMPLE; DIMINDEX_512; DIMINDEX_256; ARITH] THEN
+  REWRITE_TAC[bytes512; bytes256] THEN
+  REWRITE_TAC[asword; through; read; READ_COMPONENT_COMPOSE] THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_512; DIMINDEX_256] THEN
+  REWRITE_TAC[ARITH_RULE
+   `2 EXP 256 = 2 EXP (8 * 32) /\ 2 EXP 512 = 2 EXP (8 * 64)`] THEN
+  SIMP_TAC[READ_BYTES_BOUND; MOD_LT] THEN
+  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV)
+   [ARITH_RULE `64 = 32 + 32`] THEN
+  REWRITE_TAC[READ_BYTES_COMBINE] THEN ARITH_TAC);;
+
 let READ_MEMORY_BYTESIZED_UNSPLIT = prove
  (`(!m (x:A word) s d.
       read (m :> bytes256 x) s = d <=>
@@ -2257,10 +2335,15 @@ let READ_MEMORY_BYTESIZED_UNSPLIT = prove
    (!m (x:A word) s d.
       read (m :> bytes16 x) s = d <=>
       read (m :> bytes8 x) s = word_subword d (0,8) /\
-      read (m :> bytes8 (word_add x (word 1))) s = word_subword d (8,8))`,
+      read (m :> bytes8 (word_add x (word 1))) s = word_subword d (8,8)) /\
+   (!m x s d.
+      read (m :> bytes512 x) s = d <=>
+      read (m :> bytes256 x) s = word_subword d (0,256) /\
+      read (m :> bytes256 (word_add x (word 32))) s =
+      word_subword d (256,256))`,
   REPEAT STRIP_TAC THEN
   GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV)
-   [READ_MEMORY_BYTESIZED_SPLIT] THEN
+   [READ_MEMORY_BYTESIZED_SPLIT; READ_MEMORY_BYTESIZED_SPLIT_512] THEN
   ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
   REWRITE_TAC[BIT_WORD_JOIN; BIT_WORD_SUBWORD] THEN
   CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
@@ -3181,6 +3264,10 @@ let ORTHOGONAL_COMPONENTS_RULE =
   let pth,qth = (CONJ_PAIR o prove)
    (`(nonoverlapping ((a1:N word),l1) (a2,l2)
       ==> orthogonal_components (bytes(a1,l1)) (bytes(a2,l2))) /\
+     (orthogonal_components (bytes(a,64)) c
+      ==> orthogonal_components (bytes512 a) c) /\
+     (orthogonal_components d (bytes(a,64))
+      ==> orthogonal_components d (bytes512 a)) /\
      (orthogonal_components (bytes((a:N word),32)) c
       ==> orthogonal_components (bytes256 a) c) /\
      (orthogonal_components d (bytes(a,32))
@@ -3212,7 +3299,7 @@ let ORTHOGONAL_COMPONENTS_RULE =
     CONJ_TAC THENL
      [REWRITE_TAC[NONOVERLAPPING_MODULO; ORTHOGONAL_COMPONENTS_BYTES] THEN
       REWRITE_TAC[WORD_VAL];
-      REWRITE_TAC[bytes256; bytes128; bytes64; bytes32; bytes16; bytes8;
+      REWRITE_TAC[bytes512; bytes256; bytes128; bytes64; bytes32; bytes16; bytes8;
                   bytelist; COMPONENT_COMPOSE_ASSOC] THEN
       REWRITE_TAC[ORTHOGONAL_COMPONENTS_SUB_LEFT;
                   ORTHOGONAL_COMPONENTS_SUB_RIGHT]]) in
