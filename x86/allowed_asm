@@ -15,8 +15,6 @@
 : and$
 : andl$
 : andq$
-: bsf$
-: bsr$
 : bswap$
 : bswapq$
 : bt$

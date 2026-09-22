@@ -74,6 +74,10 @@ Note that lots of x86_64 instructions can take memory operands. And they are tes
 
 To assist constant time verification, the `allowed_asm` file contains instructions that are known to be constant time. We refer to the [Data Operand Independent Timing instructions table](https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/resources/data-operand-independent-timing-instructions.html) from Intel for deciding whether an instruction is constant time.
 
+Instructions whose behavior may expose operand-dependent microarchitectural information are represented by `EventX86*` constructors in `common/safety.ml`. Such instructions must not also appear in `x86/allowed_asm`; `tools/check-event-policy.sh` enforces this invariant as part of `ctCheck`.
+
+When an instruction falls outside Intel's DOIT guarantee but is intentionally not represented by a microarchitectural event, that deviation should be documented explicitly together with its rationale.
+
 ### Examples
 
 Here are some examples of adding instructions:
