@@ -13436,3 +13436,155 @@ let AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE = prove
    [ BINOP_TAC THENL [ UNIFY_F_EVENTS_TAC; UNIFY_F_EVENTS_TAC ];
      DISCHARGE_MEMACCESS_INBOUNDS_TAC ])
 ;;
+
+(* --- Whole-core safety (all nb): dispatch over the 4 nb-legs (FAST1-4,      *)
+(* SETUP0_TAIL, FIXED_CORRECT_G1, GEN_CORRECT), mirroring                      *)
+(* AESV8_GCM_8X_ENC_256_CORRECT's nb-tree.  Entry pc+0x38, exit pc+0x11c4.     *)
+let AESV8_GCM_8X_ENC_256_SAFE = prove
+ (`exists f_events.
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+     tag0 nonce c rk inblock nb pc.
+    1 <= nb /\
+    bit_len = 128 * nb /\
+    val in_p + 16 * nb < 2 EXP 63 /\
+    128 * nb < 2 EXP 64 /\
+    nonoverlapping (out_p, 16 * nb)
+                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+       (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
+       (word_add stackpointer (word 0x40), 8)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+           read PC s = word (pc + 0x38) /\
+           read X0 s = in_p /\
+           read X1 s = word bit_len /\
+           read X2 s = out_p /\
+           read X3 s = tag_p /\
+           read X16 s = ivec_p /\
+           read X6 s = htable_p /\
+           read X11 s = key_p /\
+           read X9 s = word (bit_len DIV 8) /\
+           read X10 s = word_add stackpointer (word 0x40) /\
+           read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
+             word 0xc200000000000000 /\
+           read (memory :> bytes128 key_p) s = word_reversefields 8 (EL 0 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 16))) s =
+             word_reversefields 8 (EL 1 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 32))) s =
+             word_reversefields 8 (EL 2 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 48))) s =
+             word_reversefields 8 (EL 3 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 64))) s =
+             word_reversefields 8 (EL 4 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 80))) s =
+             word_reversefields 8 (EL 5 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 96))) s =
+             word_reversefields 8 (EL 6 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 112))) s =
+             word_reversefields 8 (EL 7 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 128))) s =
+             word_reversefields 8 (EL 8 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 144))) s =
+             word_reversefields 8 (EL 9 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 160))) s =
+             word_reversefields 8 (EL 10 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 176))) s =
+             word_reversefields 8 (EL 11 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 192))) s =
+             word_reversefields 8 (EL 12 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 208))) s =
+             word_reversefields 8 (EL 13 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 224))) s =
+             word_reversefields 8 (EL 14 rk) /\
+           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < nb
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           read events s = e)
+      (\s. read PC s = word (pc + 0x11c4) /\
+           (exists e2.
+              read events s = APPEND e2 e /\
+              e2 = f_events nb in_p out_p tag_p ivec_p key_p htable_p
+                     stackpointer pc /\
+              memaccess_inbounds e2
+                [in_p, 16 * nb; tag_p, 16; ivec_p, 16; key_p, 240;
+                 htable_p, 192; word_add stackpointer (word 0x40), 8]
+                [out_p, 16 * nb; tag_p, 16; ivec_p, 16]))
+      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
+       MAYCHANGE [memory :> bytes(out_p, 16 * nb);
+                  memory :> bytes(tag_p, 16);
+                  memory :> bytes(ivec_p, 16)])`,
+  X_CHOOSE_TAC `w1:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST1_SAFE THEN
+  X_CHOOSE_TAC `w2:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST2_SAFE THEN
+  X_CHOOSE_TAC `w3:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST3_SAFE THEN
+  X_CHOOSE_TAC `w4:int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FAST4_SAFE THEN
+  X_CHOOSE_TAC `wst:num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_SETUP0_TAIL_SAFE THEN
+  X_CHOOSE_TAC `wg1:num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_FIXED_CORRECT_G1_SAFE THEN
+  X_CHOOSE_TAC `wgen:num->num->int64->int64->int64->int64->int64->int64->int64->num->(uarch_event)list` AESV8_GCM_8X_ENC_256_GEN_CORRECT_SAFE THEN
+  EXISTS_TAC
+   `\(nb:num) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
+     (key_p:int64) (htable_p:int64) (stackpointer:int64) (pc:num).
+      if nb = 1 then w1 in_p out_p tag_p ivec_p key_p htable_p stackpointer pc
+      else if nb = 2 then w2 in_p out_p tag_p ivec_p key_p htable_p stackpointer pc
+      else if nb = 3 then w3 in_p out_p tag_p ivec_p key_p htable_p stackpointer pc
+      else if nb = 4 then w4 in_p out_p tag_p ivec_p key_p htable_p stackpointer pc
+      else if nb <= 8 then wst nb in_p out_p tag_p ivec_p key_p htable_p stackpointer pc
+      else if nb <= 16 then wg1 nb in_p out_p tag_p ivec_p key_p htable_p stackpointer pc
+      else wgen nb ((nb - 1) DIV 8 - 1) in_p out_p tag_p ivec_p key_p htable_p stackpointer pc
+      :(uarch_event)list` THEN
+  MAP_EVERY X_GEN_TAC
+   [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
+    `ivec_p:int64`; `key_p:int64`; `htable_p:int64`; `stackpointer:int64`;
+    `bit_len:num`; `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
+    `inblock:num->int128`; `nb:num`; `pc:num`] THEN
+  STRIP_TAC THEN BETA_TAC THEN
+  SUBGOAL_THEN `nb <= 8 \/ (9 <= nb /\ nb <= 16) \/ 17 <= nb` MP_TAC THENL
+   [ASM_ARITH_TAC; ALL_TAC] THEN
+  STRIP_TAC THENL
+   [ASM_CASES_TAC `nb = 1` THENL
+     [REWRITE_TAC[EQT_INTRO(ASSUME `nb = 1`); COND_CLAUSES] THEN
+     FIRST_X_ASSUM MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
+     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE);
+      ALL_TAC] THEN
+    ASM_CASES_TAC `nb = 2` THENL
+     [REWRITE_TAC[EQF_INTRO(ASSUME `~(nb = 1)`); EQT_INTRO(ASSUME `nb = 2`); COND_CLAUSES] THEN
+     FIRST_X_ASSUM MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
+     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE);
+      ALL_TAC] THEN
+    ASM_CASES_TAC `nb = 3` THENL
+     [REWRITE_TAC[EQF_INTRO(ASSUME `~(nb = 1)`); EQF_INTRO(ASSUME `~(nb = 2)`); EQT_INTRO(ASSUME `nb = 3`); COND_CLAUSES] THEN
+     FIRST_X_ASSUM MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
+     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE);
+      ALL_TAC] THEN
+    ASM_CASES_TAC `nb = 4` THENL
+     [REWRITE_TAC[EQF_INTRO(ASSUME `~(nb = 1)`); EQF_INTRO(ASSUME `~(nb = 2)`); EQF_INTRO(ASSUME `~(nb = 3)`); EQT_INTRO(ASSUME `nb = 4`); COND_CLAUSES] THEN
+     FIRST_X_ASSUM MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
+     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE);
+      ALL_TAC] THEN
+    SUBGOAL_THEN `~(nb = 1) /\ ~(nb = 2) /\ ~(nb = 3) /\ ~(nb = 4)` STRIP_ASSUME_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+    REWRITE_TAC[EQF_INTRO(ASSUME `~(nb = 1)`); EQF_INTRO(ASSUME `~(nb = 2)`); EQF_INTRO(ASSUME `~(nb = 3)`); EQF_INTRO(ASSUME `~(nb = 4)`); EQT_INTRO(ASSUME `nb <= 8`); COND_CLAUSES] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN REPEAT CONJ_TAC THEN
+    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE);
+    SUBGOAL_THEN `~(nb = 1) /\ ~(nb = 2) /\ ~(nb = 3) /\ ~(nb = 4) /\ ~(nb <= 8)` STRIP_ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    REWRITE_TAC[EQF_INTRO(ASSUME `~(nb = 1)`); EQF_INTRO(ASSUME `~(nb = 2)`); EQF_INTRO(ASSUME `~(nb = 3)`); EQF_INTRO(ASSUME `~(nb = 4)`); EQF_INTRO(ASSUME `~(nb <= 8)`); EQT_INTRO(ASSUME `nb <= 16`); COND_CLAUSES] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    EXISTS_TAC `word_add in_p (word (128 * (0 + 1))):int64` THEN EXISTS_TAC `0` THEN
+    REPEAT CONJ_TAC THEN
+    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE);
+    SUBGOAL_THEN `~(nb = 1) /\ ~(nb = 2) /\ ~(nb = 3) /\ ~(nb = 4) /\ ~(nb <= 8) /\ ~(nb <= 16)` STRIP_ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    REWRITE_TAC[EQF_INTRO(ASSUME `~(nb = 1)`); EQF_INTRO(ASSUME `~(nb = 2)`); EQF_INTRO(ASSUME `~(nb = 3)`); EQF_INTRO(ASSUME `~(nb = 4)`); EQF_INTRO(ASSUME `~(nb <= 8)`); EQF_INTRO(ASSUME `~(nb <= 16)`); COND_CLAUSES] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    EXISTS_TAC `word_add in_p (word (128 * (((nb - 1) DIV 8 - 1) + 1))):int64` THEN
+    MP_TAC(SPECL [`nb - 1`; `8`] DIVISION) THEN REWRITE_TAC[ARITH_EQ] THEN
+    ABBREV_TAC `q = (nb - 1) DIV 8` THEN ABBREV_TAC `r = (nb - 1) MOD 8` THEN
+    STRIP_TAC THEN REPEAT CONJ_TAC THEN
+    (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE)])
+;;
