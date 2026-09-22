@@ -11702,6 +11702,16 @@ let AESV8_GCM_8X_ENC_256_SETUP0_SAFE = prove
                     inblock j) /\
            read events s = e)
       (\s. read PC s = word (pc + 0xee0) /\
+           read X0 s = in_p /\
+           read X2 s = out_p /\
+           read X3 s = tag_p /\
+           read X9 s = word (16 * nb) /\
+           read X4 s = word_add in_p (word (16 * nb)) /\
+           read X16 s = ivec_p /\
+           read X5 s = in_p /\
+           read X6 s = htable_p /\
+           read X10 s = word_add stackpointer (word 0x40) /\
+           read X11 s = key_p /\
            (exists e2.
               read events s = APPEND e2 e /\
               e2 = f_events in_p out_p tag_p ivec_p key_p htable_p
@@ -11740,6 +11750,7 @@ let AESV8_GCM_8X_ENC_256_SETUP0_SAFE = prove
      (CONJ (ASSUME `1 <= nb`) (ASSUME `nb <= 8`)); COND_CLAUSES]) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
+  REPEAT CONJ_TAC THEN TRY SETUP0_DISPATCH THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 (* --- Tail-cascade leg safety: TAIL_REM1..8_SAFE (entry pc+0xee0, exit       *)
