@@ -5378,6 +5378,7 @@ let mk_band_goal k =
         read (memory :> bytes128 (word_add key_p (word 224))) s = k14 /\
         htable_mem_dec h htbl_p s` in
   let pc_post = `read PC s = word (pc + 4560)` in
+  let x9_post = subst [n16,`sss:num`] `read X9 s = word sss` in
   let outs = map mk_out_conj (0--(k-1)) in
   let xi_post = subst [mk_ghash_list k,`lll:int128 list`]
     `read (memory :> bytes128 xi_p) s =
@@ -5387,7 +5388,8 @@ let mk_band_goal k =
      gcm_ctr_inc_iter r ctr0 (= gcm_ctr_add (word r) ctr0); closed by
      WB_IVEC_CLOSE_TAC r in each WB_TAIL_r_TAC. *)
   let ivec_post = mk_ivec_conj k in
-  let post = mk_abs(`s:armstate`, end_itlist (curry mk_conj) (pc_post :: outs @ [xi_post; ivec_post])) in
+  let post = mk_abs(`s:armstate`,
+    end_itlist (curry mk_conj) (pc_post :: x9_post :: outs @ [xi_post; ivec_post])) in
   let frame = subst [n16,`sss:num`]
     `MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
      MAYCHANGE [memory :> bytes(out_p:int64, sss); memory :> bytes(xi_p:int64, 16);
@@ -5475,7 +5477,7 @@ let WB_PREP_TAC k =
 (* The back-leg sim `WB_PREP_TAC k THEN WB_TAIL_k_TAC` (init@s265 -> whole-   *)
 (* function exit pc+4528) was previously run TWICE per k: once inside         *)
 (* prove_band (from the full q_at k precond) and once as WB_TAIL_GEN2_k       *)
-(* (from a strictly WEAKER precond, q_at k minus 6 objdump-dead cells).  The  *)
+(* (from a strictly WEAKER precond, q_at k minus 5 objdump-dead cells).  The  *)
 (* two goals share IDENTICAL post + frame (both via mk_band_goal k), so the   *)
 (* WEAK-precond back-leg IMPLIES the full-precond one by conjunct-drop         *)
 (* weakening (ENSURES_PRECONDITION_THM, no re-simulation).  We therefore      *)
@@ -5483,10 +5485,11 @@ let WB_PREP_TAC k =
 (* prove_band (below) and the nblk>8 recomposition (WBN_PREP_TO_END, later).  *)
 (* Net: 8 per-block tail sims instead of 16 (~1,700s / ~28min off cold load). *)
 (*                                                                            *)
-(* The 6 dropped cells (sp+72, xi_p, ivec_p, in_p block-0, X1, X9) are        *)
-(* objdump-confirmed never read by the tail range [0xed4,0x11b0); each        *)
-(* WB_TAIL_GEN2_k proving hyps=0 from the weak precond IS the in-proof audit  *)
-(* of that.  (These notes were formerly at the WB_TAIL_GEN2 site.)            *)
+(* The 5 dropped cells (sp+72, xi_p, ivec_p, in_p block-0, X1) are            *)
+(* objdump-confirmed never read by the tail range [0xed4,0x11b0).  X9 is also *)
+(* unread, but is retained generically as `return_value` so the proof records *)
+(* that the byte count survives to the epilogue's `mov x0,x9`.  Each          *)
+(* WB_TAIL_GEN2_k proving hyps=0 is the in-proof audit of both facts.          *)
 (* ------------------------------------------------------------------------- *)
 
 (* the band goal split into (vars, hyps, pre, post, frame) *)
@@ -5508,18 +5511,36 @@ let wbn_tail_drop_lhs = [
   `read (memory :> bytes128 ivec_p) (s:armstate)`;
   `read (memory :> bytes128 in_p) (s:armstate)`];;
 
-(* 6-cell drop: the 4 cells PLUS the dead X1,X9.                             *)
-let wbn_tail_drop_lhs6 = wbn_tail_drop_lhs @
-  [`read X1 (s:armstate)`; `read X9 (s:armstate)`];;
-let wbn_weak_q_at6 k =
+(* Replace the fixed per-band X9 count with a generic value.  The residual    *)
+(* tail is shared by fixed bands (return_value = 16*r) and shifted whole-call *)
+(* tails (return_value = 16*nblk), and it does not write X9.                  *)
+let wbn_replace_x9 value pred =
+  let sv, body = dest_abs pred in
+  let x9lhs = subst [sv,`s:armstate`] `read X9 s` in
+  let cs = conjuncts body in
+  let cs' = map (fun c ->
+    if is_eq c && lhs c = x9lhs then mk_eq(x9lhs,value) else c) cs in
+  mk_abs(sv, end_itlist (curry mk_conj) cs');;
+
+(* 5-cell drop: the 4 memory cells plus dead X1; X9 stays in the contract.    *)
+let wbn_tail_drop_lhs5 = wbn_tail_drop_lhs @ [`read X1 (s:armstate)`];;
+let wbn_weak_q_at5_return k return_value =
   let cs = conjuncts (snd(dest_abs (q_at k))) in
-  let kept = filter (fun c -> not (is_eq c && mem (lhs c) wbn_tail_drop_lhs6)) cs in
-  mk_abs(`s:armstate`, end_itlist (curry mk_conj) kept);;
-let wbn_tail_backleg_goal6 r =
+  let kept = filter (fun c -> not (is_eq c && mem (lhs c) wbn_tail_drop_lhs5)) cs in
+  wbn_replace_x9 return_value
+    (mk_abs(`s:armstate`, end_itlist (curry mk_conj) kept));;
+let wbn_band_return k =
+  subst [mk_small_numeral(16*k),`sss:num`] `word sss:int64`;;
+let wbn_weak_q_at5 k = wbn_weak_q_at5_return k (wbn_band_return k);;
+let wbn_tail_backleg_goal5_return r =
   let (vars, hyps, pre0, post, frame) = wbn_dissect_band r in
   ignore pre0;
-  let ens = list_mk_comb(`ensures arm`, [wbn_weak_q_at6 r; post; frame]) in
-  list_mk_forall(vars, mk_imp(hyps, ens));;
+  let return_value = `return_value:int64` in
+  let ens = list_mk_comb(`ensures arm`,
+    [wbn_weak_q_at5_return r return_value;
+     wbn_replace_x9 return_value post;
+     frame]) in
+  list_mk_forall(vars @ [return_value], mk_imp(hyps, ens));;
 (* ======================================================================= *)
 (* ivec M2: counter algebra HOISTED here (from Sec 2 @~6059 and               *)
 (* Sec 9b @~9714) so WB_IVEC_CLOSE_TAC's deps (gcm_ctr_add, GCM_CTR_ADD_LANES, *)
@@ -5713,22 +5734,22 @@ let WB_IVEC_CLOSE_TAC r =
   GEN_TAC THEN CONV_TAC WORD_BLAST;;
 
 (* The 8 shared back-legs -- the ONLY per-block tail sims in the file now.    *)
-(* Each ~130-315s; each hyps=0 IS the per-r X1/X9 dead-cell audit.            *)
-let WB_TAIL_GEN2_1 = prove(wbn_tail_backleg_goal6 1,
+(* Each ~130-315s; each hyps=0 audits dead X1 and generic X9 preservation.    *)
+let WB_TAIL_GEN2_1 = prove(wbn_tail_backleg_goal5_return 1,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 1 THEN WB_TAIL_1_TAC (WB_IVEC_CLOSE_TAC 1));;
-let WB_TAIL_GEN2_2 = prove(wbn_tail_backleg_goal6 2,
+let WB_TAIL_GEN2_2 = prove(wbn_tail_backleg_goal5_return 2,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 2 THEN WB_TAIL_2_TAC (WB_IVEC_CLOSE_TAC 2));;
-let WB_TAIL_GEN2_3 = prove(wbn_tail_backleg_goal6 3,
+let WB_TAIL_GEN2_3 = prove(wbn_tail_backleg_goal5_return 3,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 3 THEN WB_TAIL_3_TAC (WB_IVEC_CLOSE_TAC 3));;
-let WB_TAIL_GEN2_4 = prove(wbn_tail_backleg_goal6 4,
+let WB_TAIL_GEN2_4 = prove(wbn_tail_backleg_goal5_return 4,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 4 THEN WB_TAIL_4_TAC (WB_IVEC_CLOSE_TAC 4));;
-let WB_TAIL_GEN2_5 = prove(wbn_tail_backleg_goal6 5,
+let WB_TAIL_GEN2_5 = prove(wbn_tail_backleg_goal5_return 5,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 5 THEN WB_TAIL_5_TAC (WB_IVEC_CLOSE_TAC 5));;
-let WB_TAIL_GEN2_6 = prove(wbn_tail_backleg_goal6 6,
+let WB_TAIL_GEN2_6 = prove(wbn_tail_backleg_goal5_return 6,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 6 THEN WB_TAIL_6_TAC (WB_IVEC_CLOSE_TAC 6));;
-let WB_TAIL_GEN2_7 = prove(wbn_tail_backleg_goal6 7,
+let WB_TAIL_GEN2_7 = prove(wbn_tail_backleg_goal5_return 7,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 7 THEN WB_TAIL_7_TAC (WB_IVEC_CLOSE_TAC 7));;
-let WB_TAIL_GEN2_8 = prove(wbn_tail_backleg_goal6 8,
+let WB_TAIL_GEN2_8 = prove(wbn_tail_backleg_goal5_return 8,
   REPEAT GEN_TAC THEN STRIP_TAC THEN WB_PREP_TAC 8 THEN WB_TAIL_8_TAC (WB_IVEC_CLOSE_TAC 8));;
 (* --- mid-load heap compaction: bound GC cost after the 8 shared back-leg    *)
 (*     sims (the file's heaviest per-block work); mirrors the ckpt Gc.compact. *)
@@ -5738,7 +5759,7 @@ Gc.compact();;
    (ENSURES_SEQUENCE_TAC throws MAYCHANGE_IDEMPOT on this frame), discharge
    the front leg with WB_FRONT_BUF; the back leg is then DISCHARGED (not
    re-simulated) from the pre-proved WB_TAIL_GEN2_k by precondition-weakening
-   (q_at k ==> the 6-cell-dropped weak precond), the same ENSURES_PRECONDITION
+   (q_at k ==> the 5-cell-dropped weak precond), the same ENSURES_PRECONDITION
    idiom used for the shifted tail feed later in the file. *)
 
 (* >>> STEP 4.2 FUSED ARC BEGIN (session 146) <<< *)
@@ -6181,6 +6202,7 @@ let WB_FUSED_1BLOCK = prove(
           read (memory :> bytes128 htbl_p) s = h /\
           read (memory :> bytes128 (word_add htbl_p (word 16))) s = hk)
      (\s. read PC s = word (pc + 0x11d0) /\
+          read X9 s = word 16 /\
           read (memory :> bytes128 out_p) s =
           word_xor cph (aes256_encrypt ctr0
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
@@ -6401,6 +6423,7 @@ let WB_FUSED_2BLOCK = prove(
           read (memory :> bytes128 (word_add htbl_p (word 16))) s = hk /\
           read (memory :> bytes128 (word_add htbl_p (word 32))) s = h2)
      (\s. read PC s = word (pc + 0x11d0) /\
+          read X9 s = word 32 /\
           read (memory :> bytes128 out_p) s =
           word_xor cph0 (aes256_encrypt ctr0
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
@@ -6673,6 +6696,7 @@ let WB_FUSED_3BLOCK = prove(
           read (memory :> bytes128 (word_add htbl_p (word 48))) s = h3 /\
           read (memory :> bytes128 (word_add htbl_p (word 64))) s = h3k)
      (\s. read PC s = word (pc + 0x11d0) /\
+          read X9 s = word 48 /\
           read (memory :> bytes128 out_p) s =
           word_xor cph0 (aes256_encrypt ctr0
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
@@ -7039,6 +7063,7 @@ let WB_FUSED_4BLOCK = prove(
           read (memory :> bytes128 (word_add htbl_p (word 64))) s = h3k /\
           read (memory :> bytes128 (word_add htbl_p (word 80))) s = h4)
      (\s. read PC s = word (pc + 0x11d0) /\
+          read X9 s = word 64 /\
           read (memory :> bytes128 out_p) s =
           word_xor cph0 (aes256_encrypt ctr0
             [(k0:int128);k1;k2;k3;k4;k5;k6;k7;k8;k9;k10;k11;k12;k13;k14]) /\
@@ -7354,7 +7379,7 @@ let prove_band k =
     MATCH_MP_TAC ENSURES_TRANS THEN EXISTS_TAC (q_at k) THEN CONJ_TAC THENL
      [MATCH_MP_TAC (wbf_at k) THEN ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
       ALL_TAC] THEN
-    MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC (wbn_weak_q_at6 k) THEN
+    MATCH_MP_TAC ENSURES_PRECONDITION_THM THEN EXISTS_TAC (wbn_weak_q_at5 k) THEN
     CONJ_TAC THENL
      [GEN_TAC THEN REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[];
       MATCH_MP_TAC (el (k-1) wbn_backlegs) THEN
@@ -7478,6 +7503,7 @@ let mk_wb_wrapper_goal k =
     (map (fun c -> if c = oldread then newread else c) (conjuncts pre_body))) in
   let post_body = snd(dest_abs post) in
   let pcc = hd(conjuncts post_body) in
+  let x9c = el 1 (conjuncts post_body) in
   let outpost = subst [n16,`nnn:num`; wb_keys_tm,`kl:int128 list`]
     `byte_list_at (gcm_dec_pt_bytes nnn ibytes ctr0 (kl:int128 list)) out_p (word nnn) s` in
   let xipost = subst [n16,`nnn:num`]
@@ -7485,7 +7511,7 @@ let mk_wb_wrapper_goal k =
   (* ivec M2: carry the band's counter write-back conjunct through
      the wrapper unchanged (spine form; not part of the byte-list vocab lift). *)
   let ivecpost = mk_ivec_conj k in
-  let post' = mk_abs(sv, list_mk_conj [pcc; outpost; xipost; ivecpost]) in
+  let post' = mk_abs(sv, list_mk_conj [pcc; x9c; outpost; xipost; ivecpost]) in
   list_mk_forall(vars,
     mk_imp(hyps, list_mk_comb(rator(rator(rator ens)), [pre'; post'; frame])));;
 
@@ -7781,6 +7807,7 @@ let AESV8_GCM_8X_DEC_256_1BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 16 /\
                byte_list_at (gcm_dec_pt_bytes 16 ibytes ctr0 rk) out_p (word 16) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -7817,6 +7844,7 @@ let AESV8_GCM_8X_DEC_256_2BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 32 /\
                byte_list_at (gcm_dec_pt_bytes 32 ibytes ctr0 rk) out_p (word 32) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -7853,6 +7881,7 @@ let AESV8_GCM_8X_DEC_256_3BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 48 /\
                byte_list_at (gcm_dec_pt_bytes 48 ibytes ctr0 rk) out_p (word 48) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -7889,6 +7918,7 @@ let AESV8_GCM_8X_DEC_256_4BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 64 /\
                byte_list_at (gcm_dec_pt_bytes 64 ibytes ctr0 rk) out_p (word 64) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -7925,6 +7955,7 @@ let AESV8_GCM_8X_DEC_256_5BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 80 /\
                byte_list_at (gcm_dec_pt_bytes 80 ibytes ctr0 rk) out_p (word 80) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -7961,6 +7992,7 @@ let AESV8_GCM_8X_DEC_256_6BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 96 /\
                byte_list_at (gcm_dec_pt_bytes 96 ibytes ctr0 rk) out_p (word 96) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -7997,6 +8029,7 @@ let AESV8_GCM_8X_DEC_256_7BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 112 /\
                byte_list_at (gcm_dec_pt_bytes 112 ibytes ctr0 rk) out_p (word 112) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -8033,6 +8066,7 @@ let AESV8_GCM_8X_DEC_256_8BLOCK = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word 128 /\
                byte_list_at (gcm_dec_pt_bytes 128 ibytes ctr0 rk) out_p (word 128) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -8078,6 +8112,7 @@ let AESV8_GCM_8X_DEC_256_DISPATCH = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = word (pc + 4560) /\
+               read X9 s = word (16 * nblk) /\
                byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk) out_p (word (16 * nblk)) s /\
                read (memory :> bytes128 xi_p) s =
                word_reversefields 8
@@ -13968,7 +14003,8 @@ let WBN_FRONT_TO_PREP_EXT2 = prove(wbn_front_to_prep_ext2_goal,
 (* -- is proved ONCE up front (refactor, at the prove_band site)             *)
 (* and reused both by prove_band and here by the nblk>8 recomposition, which *)
 (* feeds it by precondition-weakening (no re-simulation).  wbn_dissect_band, *)
-(* wbn_tail_drop_lhs(6), wbn_weak_q_at6, wbn_tail_backleg_goal6 and the       *)
+(* wbn_tail_drop_lhs5, wbn_weak_q_at5_return and                              *)
+(* wbn_tail_backleg_goal5_return plus the                                    *)
 (* WB_TAIL_GEN2_1..8 theorems are all defined at that earlier site.          *)
 (* ------------------------------------------------------------------------- *)
 
@@ -13983,12 +14019,11 @@ let WBN_FRONT_TO_PREP_EXT2 = prove(wbn_front_to_prep_ext2_goal,
 (*    ext2 delivers  read X1 s = word (128 * nblk),  read X9 s = word (16*nblk) *)
 (*    but a SPECL'd tail (in_p:=in_p+128(k+1), nblk-role:=r) wants           *)
 (*                    read X1 s = word (128 * r),    read X9 s = word (16*r).  *)
-(* For nblk = 8*(k+1)+r >= 17 these differ, so ext2_post ==> shifted_weak_q_at_r *)
-(* FAILS on X1/X9 exactly.  objdump: X1,X9 are DEAD in the tail range         *)
-(* [0xed4,0x11b0) (0 reads), so the sound fix is to DROP X1,X9 from the tail  *)
-(* precond too (6 dropped cells, not 4) and re-prove the tail leg from the    *)
-(* 63-conjunct weak precond.  WB_TAIL_GEN2_1 below CONFIRMS the tail sim      *)
-(* needs neither (hyps=0, ~133s, identical WB_PREP_TAC r THEN WB_TAIL_r_TAC). *)
+(* For nblk = 8*(k+1)+r >= 17 these differ, so ext2_post cannot feed a tail   *)
+(* theorem whose X9 is fixed to 16*r.  objdump confirms X1 and X9 are unread  *)
+(* in [0xed4,0x11b0); the sound contract drops X1 but retains X9 generically. *)
+(* The shifted tail instantiates return_value := word(16*nblk), while a fixed *)
+(* band instantiates return_value := word(16*r).                              *)
 (* ------------------------------------------------------------------------- *)
 
 (* num_of_bytelist = num_of_wordlist on byte lists (needed by WBN_INPUT_SLICE). *)
@@ -14057,8 +14092,9 @@ let WBN_INPUT_SLICE_GEN = prove
   REWRITE_TAC[NUM_OF_WORDLIST_SUB_LIST; DIMINDEX_8] THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN ARITH_TAC);;
 
-(* NOTE: the 6-cell-drop weak-precond builders                                  *)
-(* (wbn_tail_drop_lhs6, wbn_weak_q_at6, wbn_tail_backleg_goal6) and the eight    *)
+(* NOTE: the 5-cell-drop/generic-X9 weak-precond builders                        *)
+(* (wbn_tail_drop_lhs5, wbn_weak_q_at5_return,                                  *)
+(* wbn_tail_backleg_goal5_return) and the eight                                 *)
 (* WB_TAIL_GEN2_1..8 back-leg theorems are now defined ONCE at the prove_band    *)
 (* site, so the per-block tail sim runs 8x per load, not 16x.                    *)
 (* prove_band reuses them by precondition-weakening; the nblk>8 recomposition    *)
@@ -14067,18 +14103,19 @@ let WBN_INPUT_SLICE_GEN = prove
 (* ------------------------------------------------------------------------- *)
 (* WBN_PREP_TO_END_r recipe (VALIDATED for r=1 down to a full close: the       *)
 (* reconciliation tactic below takes ext2_post ==>                            *)
-(* shifted_weak_q_at6_1 to exactly its 4 trivial residuals -- 3 flags + the    *)
+(* shifted generic-X9 weak precondition to its trivial residuals -- flags +   *)
 (* input-read -- all discharged by the helpers above + a per-subgoal           *)
 (* WORD_RULE).                                                                *)
 (*                                                                           *)
-(* shift_vals r (SPECL order = wb_front_vars minus nblk, 27 terms):           *)
+(* shift_vals r (SPECL order = wb_front_vars minus nblk, then return_value,   *)
+(* 28 terms):                                                                *)
 (*   [pc; stackpointer;                                                        *)
 (*    word_add out_p (word (128*((nblk-9) DIV 8+1)));  xi_p; ivec_p;           *)
 (*    word_add in_p (word (128*((nblk-9) DIV 8+1)));   key_p; htbl_p;          *)
 (*    SUB_LIST (128*((nblk-9) DIV 8+1), 16*r) ibytes;             (:byte list) *)
 (*    word_bytereverse wbn_caught_up;                             (:int128)    *)
 (*    gcm_ctr_add (word (8*((nblk-9) DIV 8+1))) ctr0;             (:int128)    *)
-(*    k0..k14; h]   -- annotate every ibytes/int128 or SPECL invents tyvars.   *)
+(*    k0..k14; h; word(16*nblk)] -- final term is the whole-call X9 count.    *)
 (*                                                                           *)
 (* WBN_PREP_TO_END_r : ensures arm wbn_prepretail_post_ext2                    *)
 (*                       (shifted band_post r) wbn_front_C_tm                   *)
@@ -14087,12 +14124,12 @@ let WBN_INPUT_SLICE_GEN = prove
 (*     wbn_front_C_tm; SUBSUMED via SUBSUMED_ASSIGNS_BYTES on out_p sub-region  *)
 (*     bytes(out_p+128(k+1),16) subsumed bytes(out_p,16*nblk))                  *)
 (*   THEN MATCH_MP_TAC ENSURES_PRECONDITION_THM                                 *)
-(*     EXISTS_TAC (shifted weak_q_at6 r) THEN CONJ_TAC THENL                     *)
+(*     EXISTS_TAC (shifted generic-X9 weak precondition) THEN CONJ_TAC THENL     *)
 (*     [ <the pre-implication, tactic below>;                                    *)
 (*       MP_TAC(SPECL (shift_vals r) WB_TAIL_GEN2_r) THEN ANTS (nonoverlapping/  *)
 (*         LENGTH from ext2 wide hyps; SUB_LIST_LENGTH + 16*r<=remaining) ].      *)
 (*                                                                           *)
-(* PRE-IMPLICATION tactic  (!s. ext2_post s ==> shifted_weak_q_at6_r s), r=1     *)
+(* PRE-IMPLICATION tactic  (!s. ext2_post s ==> shifted generic-X9 pre), r=1     *)
 (* validated to 0 residuals with the helpers:                                   *)
 (*   REPEAT GEN_TAC THEN STRIP_TAC THEN                                          *)
 (*   ASM_REWRITE_TAC[WORD_BYTEREVERSE_BYTEREVERSE] THEN                          *)
@@ -14150,8 +14187,9 @@ let WBN_INPUT_SLICE_GEN = prove
 (* supplied by the guard/subroutine wrapper (the band contract has them).     *)
 (* ------------------------------------------------------------------------- *)
 
-(* SPECL order = wb_front_vars minus nblk, 27 terms; splices the OCaml value  *)
-(* wbn_caught_up (NOT a backtick literal -- that would introduce a free var). *)
+(* SPECL order = wb_front_vars minus nblk, then return_value (28 terms);      *)
+(* splices the OCaml value wbn_caught_up (NOT a backtick literal -- that      *)
+(* would introduce a free variable).                                         *)
 let shift_vals r =
   let rt = mk_small_numeral r in
   let slice = subst [rt, `r_:num`]
@@ -14165,7 +14203,8 @@ let shift_vals r =
     slice; xi_shifted;
     `gcm_ctr_add (word (8 * ((nblk - 9) DIV 8 + 1))) ctr0:int128`;
     `k0:int128`;`k1:int128`;`k2:int128`;`k3:int128`;`k4:int128`;`k5:int128`;`k6:int128`;`k7:int128`;
-    `k8:int128`;`k9:int128`;`k10:int128`;`k11:int128`;`k12:int128`;`k13:int128`;`k14:int128`;`h:int128`];;
+    `k8:int128`;`k9:int128`;`k10:int128`;`k11:int128`;`k12:int128`;`k13:int128`;`k14:int128`;`h:int128`;
+    `word (16 * nblk):int64`];;
 
 (* the 3 side-condition clauses (whole-length granularity). *)
 let wbn_prep_to_end_extra_clauses =
@@ -14263,7 +14302,7 @@ let WBN_SUBLIST_SHIFT = prove
 (* from the first 128(k+1) output bytes].                                        *)
 (* ------------------------------------------------------------------------- *)
 
-(* the nblk-uniform end post (PC + output forall over nblk + folded tag). *)
+(* the nblk-uniform end post (PC + byte count in X9 + output/tag/counter). *)
 let wbn_end_post =
   let end_forall = `forall j. j < nblk
     ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
@@ -14279,7 +14318,9 @@ let wbn_end_post =
      GCM_CTR_INC_ITER_ADD + GCM_CTR_ADD_COMPOSE (8(q+1)+r = nblk). *)
   let ivec = `read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter nblk ctr0` in
   mk_abs(`s:armstate`,
-    list_mk_conj [`read PC s = word (pc + 4560)`; end_forall; tag; ivec]);;
+    list_mk_conj [`read PC s = word (pc + 4560)`;
+                  `read X9 s = word (16 * nblk)`;
+                  end_forall; tag; ivec]);;
 
 (* full-post goal for a given r *)
 let wbn_prep_to_end_full_goal r =
@@ -14320,7 +14361,7 @@ let INNER_TAIL_FEED_TAC r tail_r =
   let counter_close =
     REPLICATE_TAC 14 AP_THM_TAC THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
     CONV_TAC WORD_RULE in
-  (* ivec M2: with the Q30 conjunct now carried in wbn_weak_q_at6 r,
+  (* ivec M2: with the Q30 conjunct now carried in wbn_weak_q_at5_return r,
      the shifted tail precond demands read Q30 = gcm_ctr_raw (word 8)
      (gcm_ctr_add (word (8*(q+1))) ctr0); the M1 seam (ext2post, ASM_REWRITE'd in
      above) gives gcm_ctr_raw (word (8*q+16)) ctr0.  Absorb the prior add into the
@@ -15559,6 +15600,7 @@ let WBN_DEC_CORE_BYTELIST = prove
               wordlist_from_memory (key_p,15) s = rk /\
               htable_mem_8 (ghash_twist H) htbl_p s)
          (\s. read PC s = word (pc + 4560) /\
+              read X9 s = word (16 * nblk) /\
               byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk) out_p
               (word (16 * nblk)) s /\
               read (memory :> bytes128 xi_p) s =
@@ -15699,6 +15741,7 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
                wordlist_from_memory (key_p,15) s = rk /\
                htable_mem_8 (ghash_twist H) htbl_p s)
           (\s. read PC s = returnaddress /\
+               C_RETURN s = word (16 * nblk) /\
                byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk) out_p
                (word (16 * nblk)) s /\
                read (memory :> bytes128 xi_p) s =
@@ -16534,6 +16577,7 @@ let WBN_DEC_CORE_ENCRYPT = prove
               wordlist_from_memory (key_p,15) s = rk /\
               htable_mem_8 (ghash_twist (aes256_encrypt (word 0) rk)) htbl_p s)
          (\s. read PC s = word (pc + 4560) /\
+              read X9 s = word (16 * nblk) /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
@@ -16556,6 +16600,7 @@ let WBN_DEC_CORE_ENCRYPT = prove
   MATCH_MP_TAC ENSURES_POSTCONDITION_THM THEN
   EXISTS_TAC
     `\s. read PC s = word (pc + 4560) /\
+         read X9 s = word (16 * nblk) /\
          byte_list_at
            (gcm_dec_pt_bytes (16 * nblk)
               (int128_list_to_bytes (list_of_seq inblock nblk)) ctr0 rk) out_p
@@ -16653,6 +16698,7 @@ let WBN_DEC_SUBROUTINE_ENCRYPT = prove
               wordlist_from_memory (key_p,15) s = rk /\
               htable_mem_8 (ghash_twist (aes256_encrypt (word 0) rk)) htbl_p s)
          (\s. read PC s = returnaddress /\
+              C_RETURN s = word (16 * nblk) /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
@@ -16671,6 +16717,7 @@ let WBN_DEC_SUBROUTINE_ENCRYPT = prove
   MATCH_MP_TAC ENSURES_POSTCONDITION_THM THEN
   EXISTS_TAC
     `\s. read PC s = returnaddress /\
+         C_RETURN s = word (16 * nblk) /\
          byte_list_at
            (gcm_dec_pt_bytes (16 * nblk)
               (int128_list_to_bytes (list_of_seq inblock nblk)) ctr0 rk) out_p
@@ -16684,6 +16731,7 @@ let WBN_DEC_SUBROUTINE_ENCRYPT = prove
          read (memory :> bytes128 ivec_p) s = gcm_ctr_inc_iter nblk ctr0` THEN
   CONJ_TAC THENL
    [X_GEN_TAC `s:armstate` THEN BETA_TAC THEN STRIP_TAC THEN
+    CONJ_TAC THENL [FIRST_ASSUM ACCEPT_TAC; ALL_TAC] THEN
     CONJ_TAC THENL [FIRST_ASSUM ACCEPT_TAC; ALL_TAC] THEN
     CONJ_TAC THENL
      [X_GEN_TAC `j:num` THEN DISCH_TAC THEN
@@ -16796,9 +16844,20 @@ let () =
     let cs' = itlist (fun c acc -> if c = spc then c :: x30c :: acc else c :: acc)
                      cs [] in
     let pre' = mk_abs(sv, list_mk_conj cs') in
+    (* The core exits with the processed-byte count in X9; the epilogue copies
+       it to the AAPCS64 return register X0.  Reflect that one instruction in
+       the mechanically derived subroutine anchor. *)
+    let qv, qbody = dest_abs (el 2 eargs) in
+    let x9lhs = subst [qv,`s:armstate`] `read X9 s` in
+    let x9c = find (fun c -> is_eq c && lhs c = x9lhs)
+                     (conjuncts qbody) in
+    let retlhs = subst [qv,`s:armstate`] `C_RETURN s` in
+    let post' = mk_abs(qv, list_mk_conj
+      (map (fun c -> if c = x9c then mk_eq(retlhs,rhs x9c) else c)
+           (conjuncts qbody))) in
     let frame' = mk_comb(mk_comb(rator(rator frame), rand(rator frame)),
                          rand(rator(rand frame))) in
-    let cens' = list_mk_comb(eop, [el 0 eargs; pre'; el 2 eargs; frame']) in
+    let cens' = list_mk_comb(eop, [el 0 eargs; pre'; post'; frame']) in
     let chyps' = list_mk_conj (filter (fun c -> c <> `1 <= nblk`)
                                       (conjuncts chyps)) in
     list_mk_forall(cvars @ [`returnaddress:int64`], mk_imp(chyps', cens')) in
@@ -16816,7 +16875,8 @@ let () =
      The transform: pin H; DROP the LENGTH ibytes hyp and the ibytes var, ADD the
      inblock var (in ibytes' slot) + nonce/c vars; ADD the nonce hyp after aligned;
      SWAP the input byte_list_at PREcondition conjunct for input_hyp_tm; SWAP the
-     byte-list data POSTcondition conjunct (index 1) for out_data_tm; and rewrite
+     byte-list data POSTcondition conjunct (index 2, after PC and return count)
+     for out_data_tm; and rewrite
      the GHASH input list from nist_input_block(assembled ibytes) to the clean
      word_bytereverse o inblock form.  ibytes := int128_list_to_bytes(list_of_seq
      inblock nblk) is the witness used in the actual derivation. *)
@@ -16874,7 +16934,7 @@ let () =
     (* the spine/exported ivec conjuncts, with the post's actual bound var. *)
     let ivec_from' = subst [sv,`s:armstate`] ivec_from in
     let ivec_to' = subst [sv,`s:armstate`] ivec_to in
-    let qcs' = mapi (fun i cj -> if i = 1 then out_data_tm
+    let qcs' = mapi (fun i cj -> if i = 2 then out_data_tm
                                  else if cj = ivec_from' then ivec_to'
                                  else subst [ghash_inner_tm, ghash_from] cj)
                     (conjuncts qbody) in
@@ -17017,6 +17077,7 @@ let WBN_DEC_CORE_FIPS197 = prove
               (word_reversefields 8
               (aes256_cipher (word 0) (MAP (word_reversefields 8) rk)))) htbl_p s)
          (\s. read PC s = word (pc + 4560) /\
+              read X9 s = word (16 * nblk) /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
@@ -17080,6 +17141,7 @@ let WBN_DEC_SUBROUTINE_FIPS197 = prove
               (word_reversefields 8
               (aes256_cipher (word 0) (MAP (word_reversefields 8) rk)))) htbl_p s)
          (\s. read PC s = returnaddress /\
+              C_RETURN s = word (16 * nblk) /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
@@ -17241,6 +17303,7 @@ let AESV8_GCM_8X_DEC_256_CORRECT = prove
               (word_reversefields 8
               (aes256_cipher (word 0) (MAP (word_reversefields 8) rk)))) htbl_p s)
          (\s. read PC s = word (pc + 4560) /\
+              read X9 s = word (16 * nblk) /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
@@ -17304,6 +17367,7 @@ let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
               (word_reversefields 8
               (aes256_cipher (word 0) (MAP (word_reversefields 8) rk)))) htbl_p s)
          (\s. read PC s = returnaddress /\
+              C_RETURN s = word (16 * nblk) /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add out_p (word (16 * j)))) s =
