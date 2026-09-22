@@ -1431,6 +1431,7 @@ void call_sha3_keccak2_f1600(void) {}
 void call_sha3_keccak2_f1600_alt(void) {}
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1,b2,b3))
 void call_sha3_keccak4_f1600_alt2(void) {}
+void call_sha256_compress_hw(void) repeat(sha256_compress_hw((uint32_t*)b0,(uint8_t*)b1,1))
 
 void call_aes_xts_encrypt_16(void) {}
 void call_aes_xts_encrypt_32(void) {}
@@ -1488,6 +1489,7 @@ void call_sha3_keccak2_f1600(void) repeat(sha3_keccak2_f1600(b0,b1))
 void call_sha3_keccak2_f1600_alt(void) repeat(sha3_keccak2_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt(void) repeat(sha3_keccak4_f1600_alt(b0,b1))
 void call_sha3_keccak4_f1600_alt2(void) repeat(sha3_keccak4_f1600_alt2(b0,b1))
+void call_sha256_compress_hw(void) {}
 
 void call_mlkem_frombytes(void) {}
 void call_mlkem_unpack(void) {}
@@ -1545,6 +1547,7 @@ int main(int argc, char *argv[])
   int bmi = get_arch_name() == ARCH_AARCH64 || supports_bmi2_and_adx();
   int sha3 = get_arch_name() == ARCH_AARCH64 && supports_arm_sha3();
   int aes = get_arch_name() == ARCH_AARCH64 && supports_arm_aes();
+  int sha_ni = get_arch_name() == ARCH_X86_64 && supports_intel_sha_ni();
   int all = 1;
   int arm = get_arch_name() == ARCH_AARCH64;
   char *argending;
@@ -1993,6 +1996,7 @@ int main(int argc, char *argv[])
   timingtest(all,"secp256k1_jdouble_alt",call_secp256k1_jdouble_alt);
   timingtest(bmi,"secp256k1_jmixadd",call_secp256k1_jmixadd);
   timingtest(all,"secp256k1_jmixadd_alt",call_secp256k1_jmixadd_alt);
+  timingtest(sha_ni,"sha256_compress_hw",call_sha256_compress_hw);
   timingtest(all,"sha3_keccak_f1600",call_sha3_keccak_f1600);
   timingtest(sha3,"sha3_keccak_f1600_alt",call_sha3_keccak_f1600_alt);
   timingtest(arm,"sha3_keccak_f1600_alt2",call_sha3_keccak_f1600_alt2);
