@@ -13588,3 +13588,249 @@ let AESV8_GCM_8X_ENC_256_SAFE = prove
     STRIP_TAC THEN REPEAT CONJ_TAC THEN
     (FIRST_ASSUM ACCEPT_TAC ORELSE ASM_ARITH_TAC ORELSE (REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN ASM_REWRITE_TAC[]) ORELSE CONV_TAC WORD_RULE)])
 ;;
+
+(* --- NOIBT subroutine safety (REQUIRED): 3-path wrapper mirroring            *)
+(* AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT.  f_events dispatches on the   *)
+(* public length guards (misaligned / zero / main); main = prologue + CORE_SAFE *)
+(* callee bigstep (in-frame SP = word_sub sp 0x50) + epilogue.                  *)
+let AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+   !e in_p out_p tag_p ivec_p key_p htable_p
+     tag0 nonce ctr0 c rk inblock len_bits pc stackpointer returnaddress.
+    aligned 16 stackpointer /\
+    word_reversefields 8 ctr0 = ctr_block nonce c /\
+    val in_p + 16 * wb_blocks len_bits < 2 EXP 63 /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
+       (word_sub stackpointer (word 80), 80)]
+      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+       (in_p, 16 * wb_blocks len_bits); (key_p, 240); (htable_p, 192)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
+       (word_sub stackpointer (word 80), 80)]
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+           read PC s = word pc /\
+           read SP s = stackpointer /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS
+            [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s = ctr0 /\
+           wordlist_from_memory(key_p,15) s =
+             MAP (word_reversefields 8) rk /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < wb_blocks len_bits
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           read events s = e)
+      (\s. read PC s = returnaddress /\
+           (exists e2.
+              read events s = APPEND e2 e /\
+              e2 = f_events len_bits in_p out_p tag_p ivec_p key_p htable_p pc
+                     stackpointer returnaddress /\
+              memaccess_inbounds e2
+                [in_p, 16 * wb_blocks len_bits; tag_p, 16; ivec_p, 16;
+                 key_p, 240; htable_p, 192; word_sub stackpointer (word 80), 80]
+                [out_p, 16 * wb_blocks len_bits; tag_p, 16; ivec_p, 16;
+                 word_sub stackpointer (word 80), 80]))
+      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(out_p, 16 * wb_blocks len_bits);
+                  memory :> bytes(tag_p, 16);
+                  memory :> bytes(ivec_p, 16);
+                  memory :> bytes(word_sub stackpointer (word 80), 80)])`,
+  ASSUME_CALLEE_SAFETY_TAILED_TAC AESV8_GCM_8X_ENC_256_SAFE "H_CORE" THEN
+  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; LENGTH_WB_MC; ALLPAIRS;
+              PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; WB_KEYS_FROM_WORDLIST] THEN
+  CONCRETIZE_F_EVENTS_TAC
+    `\(len_bits:int64) (in_p:int64) (out_p:int64) (tag_p:int64) (ivec_p:int64)
+      (key_p:int64) (htable_p:int64) (pc:num) (sp:int64) (retaddr:int64).
+      if val len_bits MOD 128 = 0 then
+        (if val len_bits = 0 then
+           f_ev_zero len_bits in_p out_p tag_p ivec_p key_p htable_p pc sp retaddr
+         else
+           APPEND
+             (f_ev_epi in_p out_p tag_p ivec_p key_p htable_p pc sp retaddr)
+             (APPEND
+               (f_ev_core (wb_blocks len_bits) in_p out_p tag_p ivec_p key_p htable_p sp pc)
+               (f_ev_pro in_p out_p tag_p ivec_p key_p htable_p pc sp retaddr)))
+       else
+         f_ev_mis len_bits in_p out_p tag_p ivec_p key_p htable_p pc sp retaddr
+      :(uarch_event)list` THEN
+  REPEAT META_EXISTS_TAC THEN
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `ctr0:int128 = word_reversefields 8 (ctr_block nonce c)` SUBST_ALL_TAC THENL
+   [UNDISCH_TAC `word_reversefields 8 ctr0 = ctr_block nonce c` THEN
+    DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS]; ALL_TAC] THEN
+  ABBREV_TAC `nb = wb_blocks len_bits` THEN
+  ASM_CASES_TAC `val(len_bits:int64) MOD 128 = 0` THENL
+   [ALL_TAC;
+    (* ===== PATH A: misaligned length ===== *)
+    SUBGOAL_THEN `nb = 0` SUBST_ALL_TAC THENL
+     [EXPAND_TAC "nb" THEN REWRITE_TAC[wb_blocks] THEN ASM_REWRITE_TAC[COND_CLAUSES]; ALL_TAC] THEN
+    SUBGOAL_THEN `~(val(len_bits:int64) = 0)` ASSUME_TAC THENL
+     [DISCH_TAC THEN UNDISCH_TAC `~(val(len_bits:int64) MOD 128 = 0)` THEN
+      ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+    SUBGOAL_THEN `~(len_bits:int64 = word 0)` ASSUME_TAC THENL
+     [ASM_REWRITE_TAC[GSYM VAL_EQ_0]; ALL_TAC] THEN
+    SUBGOAL_THEN `~(word_and (len_bits:int64) (word 0x7f) = word 0)` ASSUME_TAC THENL
+     [ASM_REWRITE_TAC[WB_MASK7_EQ_MOD]; ALL_TAC] THEN
+    SUBGOAL_THEN `~(val(word_and (len_bits:int64) (word 0x7f)) = 0)` ASSUME_TAC THENL
+     [ASM_REWRITE_TAC[VAL_EQ_0]; ALL_TAC] THEN
+    REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `~(val(len_bits:int64) = 0)`;
+                               ASSUME `~(len_bits:int64 = word 0)`; COND_CLAUSES]) THEN
+    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [2] THEN
+    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [3] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[
+      ASSUME `~(word_and (len_bits:int64) (word 0x7f) = word 0)`;
+      ASSUME `~(val(word_and (len_bits:int64) (word 0x7f)) = 0)`; COND_CLAUSES]) THEN
+    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [4;5] THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[COND_CLAUSES] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC] THEN
+  ASM_CASES_TAC `val(len_bits:int64) = 0` THENL
+   [(* ===== PATH B: zero length ===== *)
+    SUBGOAL_THEN `nb = 0` SUBST_ALL_TAC THENL
+     [EXPAND_TAC "nb" THEN REWRITE_TAC[wb_blocks] THEN
+      ASM_REWRITE_TAC[COND_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+    SUBGOAL_THEN `len_bits:int64 = word 0` SUBST_ALL_TAC THENL
+     [ASM_REWRITE_TAC[GSYM VAL_EQ_0]; ALL_TAC] THEN
+    REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1;2;3] THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[VAL_WORD_0; COND_CLAUSES] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  (* ===== PATH C: main (nonzero whole blocks) ===== *)
+  SUBGOAL_THEN `1 <= nb` ASSUME_TAC THENL
+   [EXPAND_TAC "nb" THEN REWRITE_TAC[wb_blocks] THEN ASM_REWRITE_TAC[] THEN
+    MP_TAC(SPECL [`val(len_bits:int64)`; `128`] (CONJUNCT2 DIVISION_SIMP)) THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `val(len_bits:int64) = 128 * nb` ASSUME_TAC THENL
+   [EXPAND_TAC "nb" THEN ASM_SIMP_TAC[WB_LEN_EQ_128_BLOCKS]; ALL_TAC] THEN
+  SUBGOAL_THEN `128 * nb < 2 EXP 64` ASSUME_TAC THENL
+   [FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN MP_TAC(ISPEC `len_bits:int64` VAL_BOUND) THEN
+    REWRITE_TAC[DIMINDEX_64] THEN ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `val(word(128 * nb):int64) = 128 * nb` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `wb_blocks(word(128 * nb):int64) = nb` ASSUME_TAC THENL
+   [ASM_REWRITE_TAC[wb_blocks] THEN
+    SIMP_TAC[DIV_MULT; MOD_MULT; ARITH_EQ] THEN REWRITE_TAC[COND_CLAUSES]; ALL_TAC] THEN
+  SUBGOAL_THEN `len_bits:int64 = word (128 * nb)` SUBST_ALL_TAC THENL
+   [FIRST_X_ASSUM(fun th -> if concl th = `val(len_bits:int64) = 128 * nb`
+      then MP_TAC th else failwith "") THEN
+    DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[WORD_VAL]; ALL_TAC] THEN
+  ENSURES_EXISTING_PRESERVED_TAC `SP` THEN
+  ENSURES_EXISTING_PRESERVED_TAC `X30` THEN
+  MAP_EVERY (fun c -> ENSURES_PRESERVED_DREG_TAC ("init_"^fst(dest_const c)) c)
+    [`D8`;`D9`;`D10`;`D11`;`D12`;`D13`;`D14`;`D15`] THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_8]) THEN
+  RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(
+    EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV THENC REWRITE_CONV[WORD_ADD_0]))) THEN
+  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [1] THEN
+  SUBGOAL_THEN `~(128 * nb = 0)` ASSUME_TAC THENL
+   [UNDISCH_TAC `1 <= nb` THEN ARITH_TAC; ALL_TAC] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_GUARD1_NONZERO_GEN
+    (CONJ (ASSUME `1 <= nb`) (ASSUME `128 * nb < 2 EXP 64`));
+    ASSUME `~(128 * nb = 0)`; COND_CLAUSES]) THEN
+  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [2] THEN
+  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC [3] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_GUARD2_MASK_GEN
+    (CONJ (ASSUME `1 <= nb`) (ASSUME `128 * nb < 2 EXP 64`));
+    VAL_WORD_0; COND_CLAUSES]) THEN
+  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC (4--14) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[MATCH_MP WB_X9_NORM (ASSUME `128 * nb < 2 EXP 64`)]) THEN
+  USE_THEN "H_CORE" (fun th0 ->
+    let th = REWRITE_RULE[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+               MODIFIABLE_SIMD_REGS; MODIFIABLE_GPRS; MODIFIABLE_UPPER_SIMD_REGS] th0 in
+    MP_TAC (GEN_REWRITE_RULE I [RIGHT_FORALL_IMP_THM]
+      (SPECL [`e:(uarch_event)list`; `in_p:int64`; `out_p:int64`; `tag_p:int64`;
+              `ivec_p:int64`; `key_p:int64`; `htable_p:int64`;
+              `word_sub stackpointer (word 80):int64`; `128 * nb`;
+              `tag0:int128`; `nonce:(96)word`; `c:num`; `rk:int128 list`;
+              `inblock:num->int128`; `nb:num`; `pc:num`] th))) THEN
+  ANTS_TAC THENL
+   [REWRITE_TAC[ALLPAIRS; PAIRWISE; ALL; NONOVERLAPPING_CLAUSES; LENGTH_WB_MC] THEN
+    REPEAT CONJ_TAC THEN
+    (NONOVERLAPPING_TAC ORELSE ASM_ARITH_TAC ORELSE CONV_TAC WORD_RULE ORELSE
+     ASM_REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS]); ALL_TAC] THEN
+  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[htable_mem_8] THEN
+  ARM_BIGSTEP_TAC AESV8_GCM_8X_ENC_256_WB_EXEC "s15" THENL
+   [ CONV_TAC(LAND_CONV CONS_TO_APPEND_CONV) THEN AP_THM_TAC THEN AP_TERM_TAC THEN
+     UNIFY_REFL_TAC; ALL_TAC ] THEN
+  ARM_STEPS_TAC AESV8_GCM_8X_ENC_256_WB_EXEC (16--22) THEN
+  ENSURES_FINAL_STATE_TAC THEN
+  ASM_REWRITE_TAC[COND_CLAUSES] THEN
+  CONJ_TAC THENL [
+    SAFE_META_EXISTS_TAC allowed_vars_e THEN
+    CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+    CONJ_TAC THENL [
+      REWRITE_TAC[APPEND_NIL] THEN
+      BINOP_TAC THENL [
+        UNIFY_F_EVENTS_TAC;
+        BINOP_TAC THENL [
+          ASM_REWRITE_TAC[] THEN UNIFY_F_EVENTS_TAC;
+          UNIFY_F_EVENTS_TAC ] ];
+      DISCHARGE_MEMACCESS_INBOUNDS_TAC ];
+    SIMP_TAC[WORD_ZX_ZX; DIMINDEX_64; DIMINDEX_128; LE_REFL; ARITH] THEN
+    REPEAT CONJ_TAC THEN CONV_TAC WORD_RULE ]
+);;
+
+(* --- IBT subroutine safety (REQUIRED): derived from the NOIBT one by
+   ARM_ADD_IBT_RULE, mirroring AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT. --- *)
+let AESV8_GCM_8X_ENC_256_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+   !e in_p out_p tag_p ivec_p key_p htable_p
+     tag0 nonce ctr0 c rk inblock len_bits pc stackpointer returnaddress.
+    aligned 16 stackpointer /\
+    word_reversefields 8 ctr0 = ctr_block nonce c /\
+    val in_p + 16 * wb_blocks len_bits < 2 EXP 63 /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
+       (word_sub stackpointer (word 80), 80)]
+      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_mc);
+       (in_p, 16 * wb_blocks len_bits); (key_p, 240); (htable_p, 192)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * wb_blocks len_bits); (tag_p, 16); (ivec_p, 16);
+       (word_sub stackpointer (word 80), 80)]
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_mc /\
+           read PC s = word pc /\
+           read SP s = stackpointer /\
+           read X30 s = returnaddress /\
+           C_ARGUMENTS
+            [in_p; len_bits; out_p; tag_p; ivec_p; key_p; htable_p] s /\
+           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s = ctr0 /\
+           wordlist_from_memory(key_p,15) s =
+             MAP (word_reversefields 8) rk /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < wb_blocks len_bits
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           read events s = e)
+      (\s. read PC s = returnaddress /\
+           (exists e2.
+              read events s = APPEND e2 e /\
+              e2 = f_events len_bits in_p out_p tag_p ivec_p key_p htable_p pc
+                     stackpointer returnaddress /\
+              memaccess_inbounds e2
+                [in_p, 16 * wb_blocks len_bits; tag_p, 16; ivec_p, 16;
+                 key_p, 240; htable_p, 192; word_sub stackpointer (word 80), 80]
+                [out_p, 16 * wb_blocks len_bits; tag_p, 16; ivec_p, 16;
+                 word_sub stackpointer (word 80), 80]))
+      (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+       MAYCHANGE [memory :> bytes(out_p, 16 * wb_blocks len_bits);
+                  memory :> bytes(tag_p, 16);
+                  memory :> bytes(ivec_p, 16);
+                  memory :> bytes(word_sub stackpointer (word 80), 80)])`,
+  MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE ~extra:[htable_mem_8; wordlist_from_memory]
+                     aesv8_gcm_8x_enc_256_wb_mc aesv8_gcm_8x_enc_256_wb_tmc
+                     AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_SAFE));;
