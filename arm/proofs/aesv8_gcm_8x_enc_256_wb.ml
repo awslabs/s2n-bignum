@@ -11279,3 +11279,336 @@ let AESV8_GCM_8X_ENC_256_SUBROUTINE_CORRECT = prove
   MATCH_ACCEPT_TAC(ARM_ADD_IBT_RULE ~extra:[htable_mem_8; wordlist_from_memory]
                      aesv8_gcm_8x_enc_256_wb_mc aesv8_gcm_8x_enc_256_wb_tmc
                      AESV8_GCM_8X_ENC_256_NOIBT_SUBROUTINE_CORRECT));;
+
+(* ========================================================================= *)
+(* SAFETY companions (constant-time + memory-safety).  Pure additions; the   *)
+(* frozen correctness statements above are unchanged.  See arm/tutorial/      *)
+(* safety.ml and bignum_emontredc_8n.ml for the recipe.                       *)
+(* ========================================================================= *)
+
+needs "arm/proofs/consttime.ml";;
+
+(* --- Core-level leg safety: FAST1..FAST4 (fixed nb, straight-line). ------- *)
+(* Entry pc+0x38, exit pc+0x11c4; frame (\s s'. T); f_events depends only on  *)
+(* the public pointers + stackpointer + pc (nb is fixed per leg).             *)
+
+let AESV8_GCM_8X_ENC_256_FAST1_SAFE = prove
+ (`exists f_events.
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+     tag0 nonce c rk inblock nb pc.
+    nb = 1 /\
+    bit_len = 128 * nb /\
+    val in_p + 16 * nb < 2 EXP 63 /\
+    128 * nb < 2 EXP 64 /\
+    nonoverlapping (out_p, 16 * nb)
+                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+       (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
+       (word_add stackpointer (word 0x40), 8)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+           read PC s = word (pc + 0x38) /\
+           read X0 s = in_p /\
+           read X1 s = word bit_len /\
+           read X2 s = out_p /\
+           read X3 s = tag_p /\
+           read X16 s = ivec_p /\
+           read X6 s = htable_p /\
+           read X11 s = key_p /\
+           read X9 s = word (bit_len DIV 8) /\
+           read X10 s = word_add stackpointer (word 0x40) /\
+           read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
+             word 0xc200000000000000 /\
+           read (memory :> bytes128 key_p) s = word_reversefields 8 (EL 0 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 16))) s =
+             word_reversefields 8 (EL 1 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 32))) s =
+             word_reversefields 8 (EL 2 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 48))) s =
+             word_reversefields 8 (EL 3 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 64))) s =
+             word_reversefields 8 (EL 4 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 80))) s =
+             word_reversefields 8 (EL 5 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 96))) s =
+             word_reversefields 8 (EL 6 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 112))) s =
+             word_reversefields 8 (EL 7 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 128))) s =
+             word_reversefields 8 (EL 8 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 144))) s =
+             word_reversefields 8 (EL 9 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 160))) s =
+             word_reversefields 8 (EL 10 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 176))) s =
+             word_reversefields 8 (EL 11 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 192))) s =
+             word_reversefields 8 (EL 12 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 208))) s =
+             word_reversefields 8 (EL 13 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 224))) s =
+             word_reversefields 8 (EL 14 rk) /\
+           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < nb
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           read events s = e)
+      (\s. read PC s = word (pc + 0x11c4) /\
+           (exists e2.
+              read events s = APPEND e2 e /\
+              e2 = f_events in_p out_p tag_p ivec_p key_p htable_p
+                     stackpointer pc /\
+              memaccess_inbounds e2
+                [in_p, 16 * nb; tag_p, 16; ivec_p, 16; key_p, 240;
+                 htable_p, 192; word_add stackpointer (word 0x40), 8]
+                [out_p, 16 * nb; tag_p, 16; ivec_p, 16]))
+      (\s s'. T)`,
+  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+
+let AESV8_GCM_8X_ENC_256_FAST2_SAFE = prove
+ (`exists f_events.
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+     tag0 nonce c rk inblock nb pc.
+    nb = 2 /\
+    bit_len = 128 * nb /\
+    val in_p + 16 * nb < 2 EXP 63 /\
+    128 * nb < 2 EXP 64 /\
+    nonoverlapping (out_p, 16 * nb)
+                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+       (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
+       (word_add stackpointer (word 0x40), 8)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+           read PC s = word (pc + 0x38) /\
+           read X0 s = in_p /\
+           read X1 s = word bit_len /\
+           read X2 s = out_p /\
+           read X3 s = tag_p /\
+           read X16 s = ivec_p /\
+           read X6 s = htable_p /\
+           read X11 s = key_p /\
+           read X9 s = word (bit_len DIV 8) /\
+           read X10 s = word_add stackpointer (word 0x40) /\
+           read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
+             word 0xc200000000000000 /\
+           read (memory :> bytes128 key_p) s = word_reversefields 8 (EL 0 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 16))) s =
+             word_reversefields 8 (EL 1 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 32))) s =
+             word_reversefields 8 (EL 2 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 48))) s =
+             word_reversefields 8 (EL 3 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 64))) s =
+             word_reversefields 8 (EL 4 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 80))) s =
+             word_reversefields 8 (EL 5 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 96))) s =
+             word_reversefields 8 (EL 6 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 112))) s =
+             word_reversefields 8 (EL 7 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 128))) s =
+             word_reversefields 8 (EL 8 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 144))) s =
+             word_reversefields 8 (EL 9 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 160))) s =
+             word_reversefields 8 (EL 10 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 176))) s =
+             word_reversefields 8 (EL 11 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 192))) s =
+             word_reversefields 8 (EL 12 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 208))) s =
+             word_reversefields 8 (EL 13 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 224))) s =
+             word_reversefields 8 (EL 14 rk) /\
+           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < nb
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           read events s = e)
+      (\s. read PC s = word (pc + 0x11c4) /\
+           (exists e2.
+              read events s = APPEND e2 e /\
+              e2 = f_events in_p out_p tag_p ivec_p key_p htable_p
+                     stackpointer pc /\
+              memaccess_inbounds e2
+                [in_p, 16 * nb; tag_p, 16; ivec_p, 16; key_p, 240;
+                 htable_p, 192; word_add stackpointer (word 0x40), 8]
+                [out_p, 16 * nb; tag_p, 16; ivec_p, 16]))
+      (\s s'. T)`,
+  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+
+let AESV8_GCM_8X_ENC_256_FAST3_SAFE = prove
+ (`exists f_events.
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+     tag0 nonce c rk inblock nb pc.
+    nb = 3 /\
+    bit_len = 128 * nb /\
+    val in_p + 16 * nb < 2 EXP 63 /\
+    128 * nb < 2 EXP 64 /\
+    nonoverlapping (out_p, 16 * nb)
+                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+       (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
+       (word_add stackpointer (word 0x40), 8)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+           read PC s = word (pc + 0x38) /\
+           read X0 s = in_p /\
+           read X1 s = word bit_len /\
+           read X2 s = out_p /\
+           read X3 s = tag_p /\
+           read X16 s = ivec_p /\
+           read X6 s = htable_p /\
+           read X11 s = key_p /\
+           read X9 s = word (bit_len DIV 8) /\
+           read X10 s = word_add stackpointer (word 0x40) /\
+           read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
+             word 0xc200000000000000 /\
+           read (memory :> bytes128 key_p) s = word_reversefields 8 (EL 0 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 16))) s =
+             word_reversefields 8 (EL 1 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 32))) s =
+             word_reversefields 8 (EL 2 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 48))) s =
+             word_reversefields 8 (EL 3 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 64))) s =
+             word_reversefields 8 (EL 4 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 80))) s =
+             word_reversefields 8 (EL 5 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 96))) s =
+             word_reversefields 8 (EL 6 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 112))) s =
+             word_reversefields 8 (EL 7 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 128))) s =
+             word_reversefields 8 (EL 8 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 144))) s =
+             word_reversefields 8 (EL 9 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 160))) s =
+             word_reversefields 8 (EL 10 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 176))) s =
+             word_reversefields 8 (EL 11 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 192))) s =
+             word_reversefields 8 (EL 12 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 208))) s =
+             word_reversefields 8 (EL 13 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 224))) s =
+             word_reversefields 8 (EL 14 rk) /\
+           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < nb
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           read events s = e)
+      (\s. read PC s = word (pc + 0x11c4) /\
+           (exists e2.
+              read events s = APPEND e2 e /\
+              e2 = f_events in_p out_p tag_p ivec_p key_p htable_p
+                     stackpointer pc /\
+              memaccess_inbounds e2
+                [in_p, 16 * nb; tag_p, 16; ivec_p, 16; key_p, 240;
+                 htable_p, 192; word_add stackpointer (word 0x40), 8]
+                [out_p, 16 * nb; tag_p, 16; ivec_p, 16]))
+      (\s s'. T)`,
+  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+
+let AESV8_GCM_8X_ENC_256_FAST4_SAFE = prove
+ (`exists f_events.
+   !e in_p out_p tag_p ivec_p key_p htable_p stackpointer bit_len
+     tag0 nonce c rk inblock nb pc.
+    nb = 4 /\
+    bit_len = 128 * nb /\
+    val in_p + 16 * nb < 2 EXP 63 /\
+    128 * nb < 2 EXP 64 /\
+    nonoverlapping (out_p, 16 * nb)
+                   (word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc) /\
+    ALLPAIRS nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+      [(word pc, LENGTH aesv8_gcm_8x_enc_256_wb_tmc);
+       (in_p, 16 * nb); (key_p, 240); (htable_p, 192);
+       (word_add stackpointer (word 0x40), 8)] /\
+    PAIRWISE nonoverlapping
+      [(out_p, 16 * nb); (tag_p, 16); (ivec_p, 16)]
+    ==> ensures arm
+      (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_enc_256_wb_tmc /\
+           read PC s = word (pc + 0x38) /\
+           read X0 s = in_p /\
+           read X1 s = word bit_len /\
+           read X2 s = out_p /\
+           read X3 s = tag_p /\
+           read X16 s = ivec_p /\
+           read X6 s = htable_p /\
+           read X11 s = key_p /\
+           read X9 s = word (bit_len DIV 8) /\
+           read X10 s = word_add stackpointer (word 0x40) /\
+           read (memory :> bytes64 (word_add stackpointer (word 0x40))) s =
+             word 0xc200000000000000 /\
+           read (memory :> bytes128 key_p) s = word_reversefields 8 (EL 0 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 16))) s =
+             word_reversefields 8 (EL 1 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 32))) s =
+             word_reversefields 8 (EL 2 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 48))) s =
+             word_reversefields 8 (EL 3 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 64))) s =
+             word_reversefields 8 (EL 4 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 80))) s =
+             word_reversefields 8 (EL 5 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 96))) s =
+             word_reversefields 8 (EL 6 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 112))) s =
+             word_reversefields 8 (EL 7 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 128))) s =
+             word_reversefields 8 (EL 8 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 144))) s =
+             word_reversefields 8 (EL 9 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 160))) s =
+             word_reversefields 8 (EL 10 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 176))) s =
+             word_reversefields 8 (EL 11 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 192))) s =
+             word_reversefields 8 (EL 12 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 208))) s =
+             word_reversefields 8 (EL 13 rk) /\
+           read (memory :> bytes128 (word_add key_p (word 224))) s =
+             word_reversefields 8 (EL 14 rk) /\
+           read (memory :> bytes128 tag_p) s = word_reversefields 8 tag0 /\
+           read (memory :> bytes128 ivec_p) s =
+             word_reversefields 8 (ctr_block nonce c) /\
+           htable_mem_8 (ghash_twist (aes256_cipher (word 0) rk)) htable_p s /\
+           (!j. j < nb
+                ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
+                    inblock j) /\
+           read events s = e)
+      (\s. read PC s = word (pc + 0x11c4) /\
+           (exists e2.
+              read events s = APPEND e2 e /\
+              e2 = f_events in_p out_p tag_p ivec_p key_p htable_p
+                     stackpointer pc /\
+              memaccess_inbounds e2
+                [in_p, 16 * nb; tag_p, 16; ivec_p, 16; key_p, 240;
+                 htable_p, 192; word_add stackpointer (word 0x40), 8]
+                [out_p, 16 * nb; tag_p, 16; ivec_p, 16]))
+      (\s s'. T)`,
+  PROVE_SAFETY_SPEC_TAC AESV8_GCM_8X_ENC_256_WB_EXEC);;
+
