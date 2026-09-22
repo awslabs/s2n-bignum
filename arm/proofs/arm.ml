@@ -18,33 +18,22 @@ let arm_decode = new_definition `arm_decode s pc inst <=>
   ?i:int32. aligned_bytes_loaded s pc (bytelist_of_num 4 (val i)) /\
             decode i = SOME inst`;;
 
+let ARM_DECODE_EQ_DECODE32 = prove
+ (`arm_decode s pc inst <=> decode32 decode s pc inst`,
+  REWRITE_TAC[arm_decode; decode32]);;
+
 let ARM_DECODE_CONS = prove
  (`!s pc l i inst l'. aligned_bytes_loaded s (word pc) l ==>
    read_int32 l = SOME (i, l') ==> decode i = SOME inst ==>
    arm_decode s (word pc) inst /\
    aligned_bytes_loaded s (word (pc + 4)) l'`,
-  REWRITE_TAC [read_int32; read_word_eq_some;
-    aligned_bytes_loaded_word] THEN
-  REPLICATE_TAC 9 STRIP_TAC THEN
-  POP_ASSUM_LIST (fun [h1;h2;h3;h4;h5;h6] ->
-    let t1,t2 = CONJ_PAIR (REWRITE_RULE
-      [GSYM WORD_ADD; h3; bytes_loaded_append; h4] h5) in
-    let th1 = MATCH_MP DIVIDES_ADD (CONJ h6 (SPEC `4` DIVIDES_REFL)) in
-    REWRITE_TAC [th1; h6; t2; h1; arm_decode; aligned_bytes_loaded_word] THEN
-    EXISTS_TAC `i:int32` THEN REWRITE_TAC [h1; h2; VAL_WORD;
-      DIMINDEX_32; ARITH_RULE `2 EXP 32 = 256 EXP 4`;
-      BYTELIST_OF_NUM_MOD; SYM h3; BYTELIST_OF_NUM_OF_BYTELIST; t1]));;
+  REWRITE_TAC[ARM_DECODE_EQ_DECODE32] THEN
+  MATCH_ACCEPT_TAC DECODE32_CONS);;
 
 let arm_decode_unique = prove
  (`!s pc x y. arm_decode s pc x ==> arm_decode s pc y ==> x = y`,
-  REWRITE_TAC [arm_decode] THEN REPEAT STRIP_TAC THEN
-  POP_ASSUM_LIST (fun [d2;l2; d1;l1] ->
-    let t = REWRITE_RULE [LENGTH_BYTELIST_OF_NUM]
-      (MATCH_MP (MATCH_MP aligned_bytes_loaded_unique l1) l2) in
-    let t2 = REWRITE_RULE [NUM_OF_BYTELIST_OF_NUM; GSYM CONG;
-      ARITH_RULE `256 EXP 4 = 2 EXP 32`; SYM DIMINDEX_32;
-      GSYM WORD_EQ; WORD_VAL] (AP_TERM `num_of_bytelist` t) in
-    ACCEPT_TAC (REWRITE_RULE [REWRITE_RULE [t2] d1; OPTION_INJ] d2)));;
+  REWRITE_TAC[ARM_DECODE_EQ_DECODE32] THEN
+  MESON_TAC[decode32_unique]);;
 
 let ARM_DECODES_THM =
   let pth = (UNDISCH_ALL o prove)
@@ -102,20 +91,10 @@ let ARM_MK_EXEC_RULE th0: thm * (thm option array) =
 
   let th0 = INST [`pc':num`,`pc:num`] (SPEC_ALL
     (PURE_REWRITE_RULE[reloc_op_convert_th] th0)) in
-  let th1 = AP_TERM `LENGTH:byte list->num` th0 in
-  let th2 =
-    (REWRITE_CONV [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
-      LENGTH; LENGTH_APPEND] THENC NUM_REDUCE_CONV) (rhs (concl th1)) in
-  (* Length *)
-  let execth1 = TRANS th1 th2 in
-  (* Decode *)
-  let execth2_raw:(thm*term) list = ARM_DECODES_THM th0 in
-  let (decode_arr:thm option array) = Array.make
-    (dest_small_numeral (snd (dest_eq (concl execth1)))) None in
-  let _ = List.iter (fun decode_th,pcofs ->
-    decode_arr.(dest_small_numeral pcofs) <- Some decode_th)
-    execth2_raw in
-  (execth1,decode_arr);;
+  GEN_MK_EXEC_RULE
+    [LENGTH_BYTELIST_OF_NUM; LENGTH_BYTELIST_OF_INT;
+     LENGTH; LENGTH_APPEND]
+    ARM_DECODES_THM th0;;
 
 
 (* Take a slice of a machine code using SUB_LIST.
@@ -374,16 +353,10 @@ let ARM_ENSURES_SUBSUBLEMMA_TAC =
   map (MATCH_MP aligned_bytes_loaded_update o CONJUNCT1);;
 
 (* returns true if t is `read PC <state>`. *)
-let is_read_pc t =
-  match t with
-  | Comb (Comb (Const ("read", _), Const ("PC", _)), _) -> true
-  | _ -> false;;
+let is_read_pc = is_read_named_component "PC";;
 
 (* returns true if t is `read events <state>`. *)
-let is_read_events t =
-  match t with
-  | Comb (Comb (Const ("read", _), Const ("events", _)), _) -> true
-  | _ -> false;;
+let is_read_events = is_read_named_component "events";;
 
 (*** decode_ths is an array from int offset i to
  ***   Some `|- !s pc. aligned_bytes_loaded s pc *_mc
@@ -458,85 +431,20 @@ let ARM_CONV (decode_ths:thm option array) (ths:thm list) tm =
  ) tm;;
 
 let ARM_BASIC_STEP_TAC =
-  let arm_tm = `arm` and arm_ty = `:armstate` and one = `1:num` in
-  fun (decode_ths: thm option array) sname (store_inst_term_to:term ref option)
-      (asl,w) ->
-    let sv = rand w and sv' = mk_var(sname,arm_ty) in
-    let atm = mk_comb(mk_comb(arm_tm,sv),sv') in
-    let eth = ARM_CONV decode_ths (map snd asl) atm in
-
-    (* store the decoded instruction at store_inst_term_to *)
-    (match store_inst_term_to with
-     | Some r -> r := rhs (concl eth)
-     | None -> ());
-
-    (* prepare a tactic for progressing to a next step. *)
-    let progress_tac =
-      let c,_ = strip_comb w in
-      if name_of c = "eventually" then
-        GEN_REWRITE_TAC I [eventually_CASES] THEN DISJ2_TAC
-      else if name_of c = "eventually_n" then
-        let stepn = dest_numeral(rand(rator(rator w))) in
-        let stepn_decr = stepn -/ num 1 in
-        (* stepn = 1+{stepn-1}*)
-        let stepn_thm = GSYM (NUM_ADD_CONV
-          (mk_binary "+" (one,mk_numeral(stepn_decr)))) in
-        GEN_REWRITE_TAC (RATOR_CONV o RATOR_CONV o RAND_CONV) [stepn_thm] THEN
-        GEN_REWRITE_TAC I [EVENTUALLY_N_STEP]
-      else failwith "ARM_BASIC_STEP_TAC: neither eventually nor eventually_n"
-      in
-
-    (progress_tac THEN CONJ_TAC THENL
-     [GEN_REWRITE_TAC BINDER_CONV [eth] THEN
-      (CONV_TAC EXISTS_NONTRIVIAL_CONV ORELSE
-        (PRINT_GOAL_TAC THEN
-        FAIL_TAC ("ARM_BASIC_STEP_TAC: Equality between two states is " ^
-                  "ill-formed. Did you forget to assume an extra condition" ^
-                  " like pointer alignment?")));
-      X_GEN_TAC sv' THEN GEN_REWRITE_TAC LAND_CONV [eth]]) (asl,w);;
+  GEN_BASIC_STEP_TAC "ARM" `arm` `:armstate` ARM_CONV ALL_TAC;;
 
 let ARM_STEP_TAC (mc_length_th,decode_ths) (subths:thm list) sname
       (store_inst_term_to: term ref option)
       (strip_component_tac: thm_tactic) =
-  (*** This does the basic decoding setup ***)
+  GEN_STEP_TAC ARM_BASIC_STEP_TAC ALL_TAC aligned_bytes_loaded_update
+    (fun _ _ -> ()) (mc_length_th,decode_ths) subths sname
+    store_inst_term_to strip_component_tac;;
 
-  ARM_BASIC_STEP_TAC decode_ths sname store_inst_term_to THEN
+let ARM_VERBOSE_STEP_TAC =
+  GEN_VERBOSE_STEP_TAC ARM_STEP_TAC;;
 
-  (*** This part shows the code isn't self-modifying ***)
-
-  NONSELFMODIFYING_STATE_UPDATE_TAC
-    (MATCH_MP aligned_bytes_loaded_update mc_length_th) THEN
-
-  (*** Attempt also to show subroutines aren't modified, if applicable ***)
-
-  MAP_EVERY (TRY o NONSELFMODIFYING_STATE_UPDATE_TAC o
-    MATCH_MP aligned_bytes_loaded_update o CONJUNCT1) subths THEN
-
-  (*** This part produces any updated versions of existing asms ***)
-
-  ASSUMPTION_STATE_UPDATE_TAC THEN
-
-  (*** Produce updated "MAYCHANGE" assumption ***)
-
-  MAYCHANGE_STATE_UPDATE_TAC THEN
-
-  (*** This adds state component theorems for the updates ***)
-  (*** Could also assume th itself but I throw it away   ***)
-
-  DISCH_THEN(fun th ->
-    let thl = STATE_UPDATE_NEW_RULE th in
-    if thl = [] then ALL_TAC else
-    MP_TAC(end_itlist CONJ thl) THEN
-    ASSEMBLER_SIMPLIFY_TAC THEN
-    strip_component_tac th);;
-
-let ARM_VERBOSE_STEP_TAC (exth1,exth2) sname g =
-  Format.print_string("Stepping to state "^sname); Format.print_newline();
-  ARM_STEP_TAC (exth1,exth2) [] sname None (K STRIP_TAC) g;;
-
-let ARM_VERBOSE_SUBSTEP_TAC (exth1,exth2) subths sname g =
-  Format.print_string("Stepping to state "^sname); Format.print_newline();
-  ARM_STEP_TAC (exth1,exth2) subths sname None (K STRIP_TAC) g;;
+let ARM_VERBOSE_SUBSTEP_TAC =
+  GEN_VERBOSE_SUBSTEP_TAC ARM_STEP_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Throw away assumptions according to patterns.                             *)
@@ -547,82 +455,49 @@ let DISCARD_FLAGS_TAC =
    [`read CF s = y`; `read ZF s = y`;
     `read NF s = y`; `read VF s = y`];;
 
-let DISCARD_STATE_TAC s =
-  DISCARD_ASSUMPTIONS_TAC (vfree_in (mk_var(s,`:armstate`)) o concl);;
+let DISCARD_STATE_TAC =
+  GEN_DISCARD_STATE_TAC `:armstate`;;
 
-let DISCARD_OLDSTATE_TAC s =
-  let v = mk_var(s,`:armstate`) in
-  let rec unbound_statevars_of_read bound_svars tm =
-    match tm with
-      Comb(Comb(Const("read",_),cmp),s) ->
-        if mem s bound_svars then [] else [s]
-    | Comb(a,b) -> union (unbound_statevars_of_read bound_svars a)
-                         (unbound_statevars_of_read bound_svars b)
-    | Abs(v,t) -> unbound_statevars_of_read (v::bound_svars) t
-    | _ -> [] in
-  DISCARD_ASSUMPTIONS_TAC(
-    fun thm ->
-      let us = unbound_statevars_of_read [] (concl thm) in
-      if us = [] || us = [v] then false
-      else if not(mem v us) then true
-      else
-        if !arm_print_log then
-          (Printf.printf
-            "Info: assumption `%s` is erased, but it might have contained useful information\n"
-            (string_of_term (concl thm)); true)
-        else true);;
+let DISCARD_OLDSTATE_TAC =
+  GEN_DISCARD_OLDSTATE_TAC `:armstate` arm_print_log;;
 
 (* ------------------------------------------------------------------------- *)
 (* More convenient stepping tactics, optionally with accumulation.           *)
 (* ------------------------------------------------------------------------- *)
 
-let ARM_SINGLE_STEP_TAC th s =
-  time (ARM_VERBOSE_STEP_TAC th s) THEN
-  DISCARD_OLDSTATE_TAC s THEN
-  CLARIFY_TAC;;
+let ARM_SINGLE_STEP_TAC =
+  GEN_SINGLE_STEP_TAC ARM_VERBOSE_STEP_TAC DISCARD_OLDSTATE_TAC;;
 
-let ARM_VACCSTEP_TAC th aflag s =
-  ARM_VERBOSE_STEP_TAC th s THEN
-  (if aflag then TRY(ACCUMULATE_ARITH_TAC s THEN CLARIFY_TAC) else ALL_TAC);;
+let ARM_VACCSTEP_TAC =
+  GEN_VACCSTEP_TAC ARM_VERBOSE_STEP_TAC;;
 
-let ARM_XACCSTEP_TAC th excs aflag s =
-  ARM_SINGLE_STEP_TAC th s THEN
-  (if aflag then TRY(ACCUMULATEX_ARITH_TAC excs s THEN CLARIFY_TAC)
-   else ALL_TAC);;
+let ARM_XACCSTEP_TAC =
+  GEN_XACCSTEP_TAC ARM_SINGLE_STEP_TAC;;
 
 (* ARM_GEN_ACCSTEP_TAC runs acc_preproc before ACCUMULATE_ARITH_TAC. This is
    useful when the output goal of ARM_SINGLE_STEP_TAC needs additional rewrites
    for accumulator to recognize it. *)
-let ARM_GEN_ACCSTEP_TAC acc_preproc th aflag s =
-  ARM_SINGLE_STEP_TAC th s THEN
-  (if aflag then acc_preproc THEN TRY(ACCUMULATE_ARITH_TAC s THEN CLARIFY_TAC)
-   else ALL_TAC);;
+let ARM_GEN_ACCSTEP_TAC =
+  GEN_ACCSTEP_TAC ARM_SINGLE_STEP_TAC;;
 
 let ARM_ACCSTEP_TAC th aflag s = ARM_GEN_ACCSTEP_TAC ALL_TAC th aflag s;;
 
-let ARM_VSTEPS_TAC th snums =
-  MAP_EVERY (ARM_VERBOSE_STEP_TAC th) (statenames "s" snums);;
+let ARM_VSTEPS_TAC =
+  GEN_VSTEPS_TAC ARM_VERBOSE_STEP_TAC;;
 
-let ARM_STEPS_TAC th snums =
-  MAP_EVERY (ARM_SINGLE_STEP_TAC th) (statenames "s" snums);;
+let ARM_STEPS_TAC =
+  GEN_STEPS_TAC ARM_SINGLE_STEP_TAC;;
 
-let ARM_VACCSTEPS_TAC th anums snums =
-  MAP_EVERY (fun n -> ARM_VACCSTEP_TAC th (mem n anums) ("s"^string_of_int n))
-            snums;;
+let ARM_VACCSTEPS_TAC =
+  GEN_VACCSTEPS_TAC ARM_VACCSTEP_TAC;;
 
-let ARM_XACCSTEPS_TAC th excs anums snums =
-  MAP_EVERY
-   (fun n -> ARM_XACCSTEP_TAC th excs (mem n anums) ("s"^string_of_int n))
-   snums;;
+let ARM_XACCSTEPS_TAC =
+  GEN_XACCSTEPS_TAC ARM_XACCSTEP_TAC;;
 
 (* ARM_GEN_ACCSTEPS_TAC runs acc_preproc before ACCUMULATE_ARITH_TAC.
    acc_preproc is a function from string (which is a state name) to tactic. *)
-let ARM_GEN_ACCSTEPS_TAC acc_preproc th anums snums =
-  MAP_EVERY
-    (fun n ->
-      let state_name = "s"^string_of_int n in
-      ARM_GEN_ACCSTEP_TAC (acc_preproc state_name) th (mem n anums) state_name)
-    snums;;
+let ARM_GEN_ACCSTEPS_TAC =
+  GEN_ACCSTEPS_TAC ARM_GEN_ACCSTEP_TAC;;
 
 let ARM_ACCSTEPS_TAC th anums snums =
   ARM_XACCSTEPS_TAC th [`SP`] anums snums;;
@@ -670,45 +545,8 @@ let ARM_ACCSIM_TAC execth anums snums =
 (* ------------------------------------------------------------------------- *)
 
 let (ARM_BIGSTEP_TAC:(thm*thm option array)->string->tactic) =
-  let lemma = prove
-   (`P s /\ (!s':S. Q s' /\ C s s' ==> eventually step R s')
-     ==> ensures step P Q C ==> eventually step R s`,
-    STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [ensures] THEN
-    DISCH_THEN(MP_TAC o SPEC `s:S`) THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(MESON[]
-     `(!s:S. eventually step P s ==> eventually step Q s)
-      ==> eventually step P s ==> eventually step Q s`) THEN
-    GEN_REWRITE_TAC I [EVENTUALLY_IMP_EVENTUALLY] THEN
-    ASM_REWRITE_TAC[]) in
-  fun (execth1,_) sname (asl,w) ->
-    (* do sanity-check and print a warning message if it fails *)
-    (if not (is_imp w) ||
-      let the_lhs,the_rhs = dest_imp w in
-      not (is_comb the_lhs &&
-           name_of (fst (strip_comb the_lhs)) = "ensures" &&
-           is_comb the_rhs &&
-           name_of (fst (strip_comb the_rhs)) = "eventually")
-    then
-      Printf.printf "ARM_BIGSTEP_TAC: `ensures ... ==> eventually ...` expected, but got `%s`.\n"
-        (string_of_term w));
-    let sv = mk_var(sname,type_of(rand(rand w))) in
-    (GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)
-      (!simulation_precanon_thms) THEN
-     MATCH_MP_TAC lemma THEN CONJ_TAC THENL
-      [BETA_TAC THEN ASM_REWRITE_TAC[];
-       BETA_TAC THEN X_GEN_TAC sv THEN
-       REPEAT(DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC)) THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [MAYCHANGE; SEQ_ID] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [GSYM SEQ_ASSOC] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_SEQ] THEN
-       GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [ASSIGNS_THM] THEN
-       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN REPEAT GEN_TAC THEN
-       NONSELFMODIFYING_STATE_UPDATE_TAC
-        (MATCH_MP aligned_bytes_loaded_update execth1) THEN
-       ASSUMPTION_STATE_UPDATE_TAC THEN
-       MAYCHANGE_STATE_UPDATE_TAC THEN
-       DISCH_THEN(K ALL_TAC) THEN DISCARD_OLDSTATE_TAC sname])
-    (asl,w);;
+  GEN_BIGSTEP_TAC
+    "ARM" aligned_bytes_loaded_update DISCARD_OLDSTATE_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Go from |- aligned_bytes_loaded s (word pc) mc or the equivalent          *)
@@ -1018,47 +856,39 @@ let ENSURES_PRESERVED_DREG_TAC =
 (* Fix up call/return boilerplate given core correctness.                    *)
 (* ------------------------------------------------------------------------- *)
 
-(* A sanity check of vars in the 'forall ....' goal *)
+(* The return address, event trace, and stack pointer are recovered from
+   initial-state equations during ABI promotion. Require their names to be
+   explicit outer quantifiers before the promotion tactic reorders them. *)
 let check_forallvars_tac:tactic =
-  let find_and_check (lhs_pat:term) (t:term) (quants:term list) =
-    let read_eq = try Some (find_term (fun t ->
-      is_eq t && can (term_match [] lhs_pat) (lhs t)) t)
-      with Failure _ -> None in
-    match read_eq with
-    | Some read_eq ->
-      let the_var = rhs read_eq in
-      if is_var the_var && not (mem the_var quants) then
-        failwith ("variable " ^ (string_of_term the_var)
-          ^ " (which is RHS of " ^ (string_of_term lhs_pat)
-          ^ ") does not appear at forall")
-      else
-        ALL_TAC
-    | None -> ALL_TAC in
-  W(fun (asl,w) ->
-    let quants = fst (strip_forall w) in
-    find_and_check `read X30 s` w quants THEN
-    find_and_check `read events s` w quants THEN
-    find_and_check `read SP s` w quants);;
+  GEN_CHECK_FORALLVARS_TAC
+    [`read X30 s`; `read events s`; `read SP s`];;
 
 (* Useful lemmas *)
-let swap_forall = MESON[]
-   `(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
-    (forall y e_stack_spill. P e_stack_spill y)` and
-  swap_forall3 = MESON[]
-   `(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
-    (forall y e_stack_spill z. P e_stack_spill y z)` and
-  append_lemma = MESON[APPEND_EXISTS]
-    `(forall (e:(A)list). P e) <=>
-      (forall e_stack_spill e. P (APPEND e_stack_spill e))` and
-  mono2lemma = MESON[]
-   `(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z)) ==> (!x y. P x y) ==> (!x z. Q x z)` and
-  mono3lemma = MESON[]
-   `(!(x:A). (!(y:B) (y':C). P x y y') ==> (!(z:D) (z':E). Q x z z')) ==>
-    (!x y y'. P x y y') ==> (!x z z'. Q x z z')` and
-  append_e2_nil =
-    prove(`forall (e:(uarch_event)list) e2.
-        e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
-    MESON_TAC[APPEND]);;
+let swap_forall = prove
+   (`(forall (e_stack_spill:A) (y:B). P e_stack_spill y) <=>
+     (forall y e_stack_spill. P e_stack_spill y)`,
+    MESON_TAC[SWAP_FORALL_THM]) and
+  swap_forall3 = prove
+   (`(forall (e_stack_spill:A) (y:B) (z:C). P e_stack_spill y z) <=>
+     (forall y e_stack_spill z. P e_stack_spill y z)`,
+    MESON_TAC[SUBROUTINE_SWAP_FORALL3]) and
+  append_lemma = prove
+   (`(forall (e:(A)list). P e) <=>
+     (forall e_stack_spill e. P (APPEND e_stack_spill e))`,
+    MESON_TAC[SUBROUTINE_APPEND_FORALL]) and
+  mono2lemma = prove
+   (`(!(x:A). (!(y:B). P x y) ==> (!(z:C). Q x z))
+     ==> (!x y. P x y) ==> (!x z. Q x z)`,
+    MESON_TAC[SUBROUTINE_MONO_FORALL2]) and
+  mono3lemma = prove
+   (`(!(x:A). (!(y:B) (y':C). P x y y') ==>
+      (!(z:D) (z':E). Q x z z'))
+     ==> (!x y y'. P x y y') ==> (!x z z'. Q x z z')`,
+    MESON_TAC[SUBROUTINE_MONO_FORALL3]) and
+  append_e2_nil = prove
+   (`forall (e:(uarch_event)list) e2.
+       e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
+    MESON_TAC[SUBROUTINE_APPEND_PREFIX_NIL]);;
 
 let ARM_ADD_RETURN_NOSTACK_TAC =
   fun execth coreth ->

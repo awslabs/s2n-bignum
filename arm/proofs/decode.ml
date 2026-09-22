@@ -91,6 +91,18 @@ let arm_ldstp_q = new_definition `arm_ldstp_q ld Rt Rt2 =
 let arm_ldstp_2q = new_definition `arm_ldstp_2q ld Rt =
   let Rtt:(5 word) = word ((val Rt + 1) MOD 32) in
   (if ld then arm_LDP else arm_STP) (QREG' Rt) (QREG' Rtt)`;;
+let arm_ldstp_4q = new_definition `arm_ldstp_4q ld Rt =
+  let Rt2:(5 word) = word ((val Rt + 1) MOD 32) in
+  let Rt3:(5 word) = word ((val Rt + 2) MOD 32) in
+  let Rt4:(5 word) = word ((val Rt + 3) MOD 32) in
+  (if ld then arm_LDP4 else arm_STP4)
+    (QREG' Rt) (QREG' Rt2) (QREG' Rt3) (QREG' Rt4)`;;
+let arm_ldstp_4d = new_definition `arm_ldstp_4d ld Rt =
+  let Rt2:(5 word) = word ((val Rt + 1) MOD 32) in
+  let Rt3:(5 word) = word ((val Rt + 2) MOD 32) in
+  let Rt4:(5 word) = word ((val Rt + 3) MOD 32) in
+  (if ld then arm_LDP4 else arm_STP4)
+    (DREG' Rt) (DREG' Rt2) (DREG' Rt3) (DREG' Rt4)`;;
 let arm_ldst2 = new_definition `arm_ldst2 ld Rt =
   let Rtt:(5 word) = word ((val Rt + 1) MOD 32) in
   (if ld then arm_LD2 else arm_ST2) (QREG' Rt) (QREG' Rtt)`;;
@@ -429,6 +441,31 @@ let decode = new_definition `!w:int32. decode w =
   //   No offset, datasize = 128
   | [0:1; 1:1; 0b0011000:7; is_ld; 0b000000:6; 0b1010:4; size:2; Rn:5; Rt:5] ->
     SOME (arm_ldstp_2q is_ld Rt (XREG_SP Rn) No_Offset)
+
+  // LD1/ST1 (multiple structures), 4 registers,
+  //   Post-immediate offset and post-register offset, and no offset.
+  // Similar to LDP/STP of SIMD registers, but for four consecutive registers,
+  // assuming little-endian architecture (see the 1-register note above).
+
+  // datasize = 128
+  //   Post-immediate offset (Rm = 31) and post-register offset
+  | [0:1; 1:1; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0010:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_4q is_ld Rt (XREG_SP Rn)
+      (if val Rm = 31 then (Postimmediate_Offset (word 64))
+                      else Postreg_Offset (XREG' Rm)))
+  //   No offset, datasize = 128
+  | [0:1; 1:1; 0b0011000:7; is_ld; 0b000000:6; 0b0010:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_4q is_ld Rt (XREG_SP Rn) No_Offset)
+
+  // datasize = 64
+  //   Post-immediate offset (Rm = 31) and post-register offset
+  | [0:1; 0:1; 0b0011001:7; is_ld; 0:1; Rm:5; 0b0010:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_4d is_ld Rt (XREG_SP Rn)
+      (if val Rm = 31 then (Postimmediate_Offset (word 32))
+                      else Postreg_Offset (XREG' Rm)))
+  //   No offset, datasize = 64
+  | [0:1; 0:1; 0b0011000:7; is_ld; 0b000000:6; 0b0010:4; size:2; Rn:5; Rt:5] ->
+    SOME (arm_ldstp_4d is_ld Rt (XREG_SP Rn) No_Offset)
 
   // LD2/ST2 (multiple structures), 2 registers, immediate offset, Post-immediate offset
   // datasize = 64
@@ -1638,7 +1675,7 @@ let PURE_DECODE_CONV =
     add_thms [arm_adcop; arm_addop; arm_adv_simd_expand_imm;
               arm_bfmop; arm_ccop; arm_csop;
               arm_ldst; arm_ldst_q; arm_ldst_d; arm_ldstb; arm_ldstp; arm_ldstp_q; arm_ldstp_d;
-              arm_ldst2; arm_ldstp_2q; arm_ldst3] rw;
+              arm_ldst2; arm_ldstp_2q; arm_ldstp_4q; arm_ldstp_4d; arm_ldst3] rw;
     (* .. that have bitmatch exprs inside *)
     List.iter (fun def_th ->
         let Some (conceal_th, opaque_const, opaque_arity, opaque_def, opaque_conv) =
@@ -1689,6 +1726,8 @@ let DECODE_CONV tm =
 (* Testing and preparation.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
+loadt "common/decode32.ml";;
+
 let rec decode_all = function
 | Const("NIL",_) -> []
 | tm ->
@@ -1700,37 +1739,6 @@ let rec decode_all = function
       let msg' = "Term `" ^ (string_of_term (concl th)) ^ "`: " ^ msg in
       failwith msg' in
   h :: decode_all next;;
-
-let dest_cons4 =
-  let assert_byte n = function
-  | Comb(Const("word",_),a) -> dest_numeral a = num n
-  | _ -> false in
-  fun n t -> match t with
-  | Comb(Comb(Const("CONS",_),a1), Comb(Comb(Const("CONS",_),a2),
-      Comb(Comb(Const("CONS",_),a3), Comb(Comb(Const("CONS",_),a4),tm)))) when
-    0 <= n && n <= 0xffffffff &&
-    assert_byte (n land 0xff) a1 &&
-    assert_byte ((n lsr 8) land 0xff) a2 &&
-    assert_byte ((n lsr 16) land 0xff) a3 &&
-    assert_byte ((n lsr 24) land 0xff) a4 -> tm
-  | _ -> failwith ("dest_cons4: 4-byte inst code " ^ string_of_int n ^
-                   " != first 4 bytes of " ^ string_of_term t);;
-
-(* Asserts that the input term is the given list of words, and returns it. *)
-let assert_word_list tm ls =
-  if type_of tm = `:byte list` then
-    let rec go = function
-    | [], Const("NIL",_) -> ()
-    | n::ls, tm -> go (ls, dest_cons4 n tm)
-    | _ -> failwith "assert_word_list" in
-    go (ls, tm)
-  else failwith "assert_word_list";
-  tm;;
-
-let define_word_list name tm =
-  try new_definition (mk_eq (mk_var (name, `:byte list`), tm))
-  with Failure _ ->
-    new_definition (mk_eq (mk_mconst (name, `:byte list`), tm));;
 
 let define_assert_word_list name tm ls =
   define_word_list name (assert_word_list tm ls);;

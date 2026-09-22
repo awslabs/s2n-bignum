@@ -37,6 +37,7 @@ loadt "common/relational.ml";;
 loadt "common/interval.ml";;
 loadt "common/elf.ml";;
 loadt "common/safety.ml";;
+loadt "common/execution.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* Support for additional SHA intrinsics (from Carl Kwan)                    *)

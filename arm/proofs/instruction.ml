@@ -30,139 +30,9 @@ let armstate_INDUCT,armstate_RECURSION,armstate_COMPONENTS =
        events: uarch_event list            // Observable uarch events
      }";;
 
-let bytes_loaded = new_definition
- `bytes_loaded s pc l <=>
-     read (memory :> bytelist(pc,LENGTH l)) s = l`;;
+loadt "common/code_loading.ml";;
 
-let bytes_loaded_nil = prove (`bytes_loaded s pc []`, REWRITE_TAC [
-  bytes_loaded; READ_COMPONENT_COMPOSE; LENGTH; bytelist_clauses]);;
-
-let bytes_loaded_append = prove
- (`bytes_loaded s pc (APPEND l1 l2) <=>
-   bytes_loaded s pc l1 /\ bytes_loaded s (word_add pc (word (LENGTH l1))) l2`,
-  REWRITE_TAC [bytes_loaded; READ_COMPONENT_COMPOSE; read_bytelist_append]);;
-
-let bytes_loaded_unique = METIS [bytes_loaded]
- `!s pc l1 l2. bytes_loaded s pc l1 ==> bytes_loaded s pc l2 ==>
-  LENGTH l1 = LENGTH l2 ==> l1 = l2`;;
-
-let bytes_loaded_update = METIS [bytes_loaded]
- `!l n. LENGTH l = n ==> !s pc. bytes_loaded s pc l ==>
-  !s'. read(memory :> bytelist(pc,n)) s' = read(memory :> bytelist(pc,n)) s ==>
-    bytes_loaded s' pc l`;;
-
-let bytes_loaded_of_append3 = prove
- (`!l l1 l2 l3. l = APPEND l1 (APPEND l2 l3) ==>
-   !s pc. bytes_loaded s (word pc) l ==>
-          bytes_loaded s (word (pc + LENGTH l1)) l2`,
-  REWRITE_TAC [WORD_ADD] THEN METIS_TAC [bytes_loaded_append]);;
-
-let BYTES_LOADED_SUB_LIST = prove
- (`!s pc l m n.
-        bytes_loaded s pc l
-        ==> bytes_loaded s (word_add pc (word m)) (SUB_LIST(m,n) l)`,
-  REPEAT GEN_TAC THEN
-  MP_TAC(ISPECL [`l:byte list`; `m + n:num`] SUB_LIST_TOPSPLIT) THEN
-  DISCH_THEN(fun th -> GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [SYM th]) THEN
-  REWRITE_TAC[bytes_loaded_append] THEN DISCH_THEN(MP_TAC o CONJUNCT1) THEN
-  REWRITE_TAC[SUB_LIST_SPLIT; ADD_CLAUSES; bytes_loaded_append] THEN
-  DISCH_THEN(MP_TAC o CONJUNCT2) THEN
-  REWRITE_TAC[LENGTH_SUB_LIST; SUB_0; MIN] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-  ASM_MESON_TAC[LE_CASES; SUB_LIST_TRIVIAL; bytes_loaded_nil]);;
-
-let BYTES_LOADED_TRIM_LIST = prove
- (`!s pc l m n.
-        bytes_loaded s pc l
-        ==> bytes_loaded s (word_add pc (word m)) (TRIM_LIST(m,n) l)`,
-  REWRITE_TAC[BYTES_LOADED_SUB_LIST; TRIM_LIST]);;
-
-let aligned_bytes_loaded = new_definition
- `aligned_bytes_loaded s pc l <=>
-  4 divides val pc /\ bytes_loaded s pc l`;;
-
-let DIVIDES_4_VAL_WORD_64 = prove
- (`4 divides val (word pc:int64) <=> 4 divides pc`,
-  let th1 = MATCH_MP DIVIDES_EXP_LE_IMP (ARITH_RULE `2 <= 64`) in
-  let th2 = REWRITE_RULE [ARITH_RULE `2 EXP 2 = 4`] (SPEC `2` th1) in
-  let th3 = MATCH_MP CONG_DIVIDES_MODULUS (CONJ
-    (SPECL [`pc:num`; `2 EXP 64`] CONG_MOD) th2) in
-  REWRITE_TAC [VAL_WORD; DIMINDEX_64; MATCH_MP CONG_DIVIDES th3]);;
-
-let aligned_bytes_loaded_word = prove
- (`aligned_bytes_loaded s (word pc) l <=>
-   4 divides pc /\ bytes_loaded s (word pc) l`,
-  REWRITE_TAC [aligned_bytes_loaded; DIVIDES_4_VAL_WORD_64]);;
-
-let aligned_bytes_loaded_append_left = prove
- (`aligned_bytes_loaded s pc (APPEND l1 l2) ==> aligned_bytes_loaded s pc l1`,
-  REWRITE_TAC [aligned_bytes_loaded; bytes_loaded_append] THEN
-  METIS_TAC []);;
-
-let aligned_bytes_loaded_append = prove
- (`4 divides LENGTH l1 ==>
-   (aligned_bytes_loaded s pc (APPEND l1 l2) <=>
-    aligned_bytes_loaded s pc l1 /\
-    aligned_bytes_loaded s (word_add pc (word (LENGTH l1))) l2)`,
-  SPEC1_TAC `pc:int64` THEN REWRITE_TAC [FORALL_WORD; GSYM WORD_ADD;
-    aligned_bytes_loaded_word; bytes_loaded_append] THEN
-  METIS_TAC [DIVIDES_ADD]);;
-
-let aligned_bytes_loaded_append_alt = prove
- (`aligned_bytes_loaded s pc (APPEND l1 l2) <=>
-   aligned_bytes_loaded s pc l1 /\
-   bytes_loaded s (word_add pc (word (LENGTH l1))) l2`,
-  REWRITE_TAC[aligned_bytes_loaded; bytes_loaded_append; CONJ_ASSOC]);;
-
-let aligned_bytes_loaded_unique =
-  METIS [aligned_bytes_loaded; bytes_loaded_unique]
-  `!s pc l1 l2.
-   aligned_bytes_loaded s pc l1 ==> aligned_bytes_loaded s pc l2 ==>
-   LENGTH l1 = LENGTH l2 ==> l1 = l2`;;
-
-let aligned_bytes_loaded_update =
-  METIS [aligned_bytes_loaded; bytes_loaded_update]
- `!l n. LENGTH l = n ==> !s pc. aligned_bytes_loaded s pc l ==>
-  !s'. read(memory :> bytelist(pc,n)) s' = read(memory :> bytelist(pc,n)) s ==>
-    aligned_bytes_loaded s' pc l`;;
-
-let aligned_bytes_loaded_of_append3 = prove
- (`!l l1 l2 l3. l = APPEND l1 (APPEND l2 l3) ==> 4 divides LENGTH l1 ==>
-   !s pc. aligned_bytes_loaded s (word pc) l ==>
-          aligned_bytes_loaded s (word (pc + LENGTH l1)) l2`,
-  REPEAT GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN REWRITE_TAC [WORD_ADD] THEN
-  METIS_TAC [aligned_bytes_loaded_append; aligned_bytes_loaded_append_left]);;
-
-let ALIGNED_BYTES_LOADED_SUB_LIST = prove
- (`!s pc l m n.
-        aligned_bytes_loaded s pc l /\ 4 divides m
-        ==> aligned_bytes_loaded s (word_add pc (word m)) (SUB_LIST(m,n) l)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[aligned_bytes_loaded] THEN
-  SIMP_TAC[BYTES_LOADED_SUB_LIST; VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
-  CONV_TAC MOD_DOWN_CONV THEN REWRITE_TAC[GSYM (NUM_EXP_CONV `2 EXP 2`)] THEN
-  REWRITE_TAC[DIVIDES_MOD; MOD_MOD_EXP_MIN] THEN
-  ONCE_REWRITE_TAC[GSYM MOD_ADD_MOD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-  SIMP_TAC[] THEN CONV_TAC NUM_REDUCE_CONV);;
-
-let ALIGNED_BYTES_LOADED_SUB_LIST = prove
- (`(!s pc l m n.
-        aligned_bytes_loaded s pc l /\ 4 divides m
-        ==> aligned_bytes_loaded s (word_add pc (word m)) (SUB_LIST(m,n) l)) /\
-   (!s pc l n.
-        aligned_bytes_loaded s pc l
-        ==> aligned_bytes_loaded s pc (SUB_LIST(0,n) l))`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_SUB_LIST] THEN
-  REPEAT STRIP_TAC THEN
-  GEN_REWRITE_TAC(RATOR_CONV o RAND_CONV)
-    [GSYM (fst (CONJ_PAIR WORD_ADD_0))] THEN
-  IMP_REWRITE_TAC[WORD_ADD;ALIGNED_BYTES_LOADED_SUB_LIST] THEN
-  CONV_TAC NUM_DIVIDES_CONV);;
-
-let ALIGNED_BYTES_LOADED_TRIM_LIST = prove
- (`!s pc l m n.
-        aligned_bytes_loaded s pc l /\ 4 divides m
-        ==> aligned_bytes_loaded s (word_add pc (word m)) (TRIM_LIST(m,n) l)`,
-  REWRITE_TAC[ALIGNED_BYTES_LOADED_SUB_LIST; TRIM_LIST]);;
+let DIVIDES_4_VAL_WORD_64 = DIVIDES_4_VAL_WORD;;
 
 (* ------------------------------------------------------------------------- *)
 (* Tweak for aligned_bytes_loaded s (word pc) (APPEND program data)          *)
@@ -2958,6 +2828,60 @@ let arm_STP = define
             else (=))
          else ASSIGNS entirety) s`;;
 
+(* Four-register contiguous load/store for little-endian LD1/ST1. *)
+
+let arm_LDP4 = define
+ `arm_LDP4 (Rt1:(armstate,N word)component)
+           (Rt2:(armstate,N word)component)
+           (Rt3:(armstate,N word)component)
+           (Rt4:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            orthogonal_components Rt1 Rt2 /\
+            orthogonal_components Rt1 Rt3 /\
+            orthogonal_components Rt1 Rt4 /\
+            orthogonal_components Rt2 Rt3 /\
+            orthogonal_components Rt2 Rt4 /\
+            orthogonal_components Rt3 Rt4 /\
+            (offset_writesback off
+             ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn /\
+                 orthogonal_components Rt3 Rn /\ orthogonal_components Rt4 Rn)
+         then
+           let w = dimindex(:N) DIV 8 in
+           Rt1 := read (memory :> wbytes addr) s ,,
+           Rt2 := read (memory :> wbytes(word_add addr (word w))) s ,,
+           Rt3 := read (memory :> wbytes(word_add addr (word(2 * w)))) s ,,
+           Rt4 := read (memory :> wbytes(word_add addr (word(3 * w)))) s ,,
+           events := CONS (EventLoad (addr,4 * w)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
+let arm_STP4 = define
+ `arm_STP4 (Rt1:(armstate,N word)component)
+           (Rt2:(armstate,N word)component)
+           (Rt3:(armstate,N word)component)
+           (Rt4:(armstate,N word)component) Rn off =
+    \s. let base = read Rn s in
+        let addr = word_add base (offset_address off s) in
+        (if (Rn = SP ==> aligned 16 base) /\
+            (offset_writesback off
+             ==> orthogonal_components Rt1 Rn /\ orthogonal_components Rt2 Rn /\
+                 orthogonal_components Rt3 Rn /\ orthogonal_components Rt4 Rn)
+         then
+           let w = dimindex(:N) DIV 8 in
+           memory :> wbytes addr := read Rt1 s ,,
+           memory :> wbytes(word_add addr (word w)) := read Rt2 s ,,
+           memory :> wbytes(word_add addr (word(2 * w))) := read Rt3 s ,,
+           memory :> wbytes(word_add addr (word(3 * w))) := read Rt4 s ,,
+           events := CONS (EventStore (addr,4 * w)) (read events s) ,,
+           (if offset_writesback off
+            then Rn := word_add base (offset_writeback off s)
+            else (=))
+         else ASSIGNS entirety) s`;;
+
 (* There is a bit of duplication in the following defintions.
   We have to do this because one step in symbolic execution
   doesn't handle let binding of pairs. *)
@@ -4014,4 +3938,5 @@ let ARM_OPERATION_CLAUSES =
 let ARM_LOAD_STORE_CLAUSES =
   map (CONV_RULE(TOP_DEPTH_CONV let_CONV) o SPEC_ALL)
       [arm_LDR; arm_STR; arm_LDRB; arm_STRB; arm_LDP; arm_STP;
+       arm_LDP4; arm_STP4;
        arm_LD2_ALT; arm_ST2_ALT; arm_LD1R; arm_LD3_ALT; arm_ST3_ALT];;
