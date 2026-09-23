@@ -2345,12 +2345,13 @@ let SUBSUMED_ASSIGNS_TAC =
   MATCH_MP_TAC SUBSUMED_ASSIGNS_BYTES THEN CONTAINED_TAC;;
 
 (* ------------------------------------------------------------------------- *)
-(* ORDERED_SUBSUMED_ASSIGNS_TAC proves goals S subsumed D. If S and D are    *)
-(* syntactically identical, it accepts any relation by reflexivity.           *)
-(* Otherwise, S and D must be right-associated sequences of ASSIGNS clauses. *)
-(* The identity relation (=) represents an empty sequence. The tactic applies *)
-(* when every clause in S is subsumed by at least one clause in D. Thus every *)
-(* change allowed by S must also be allowed by D.                            *)
+(* ORDERED_SUBSUMED_ASSIGNS_TAC proves goals S subsumed D. S and D must be   *)
+(* right-associated sequences of ASSIGNS clauses and opaque relations. The   *)
+(* identity relation (=) represents an empty sequence. Opaque clauses can    *)
+(* only match distinct, syntactically identical clauses in the other frame;  *)
+(* they are neither reordered nor combined. ASSIGNS clauses may also match  *)
+(* subsuming components. Thus every change allowed by S must also be allowed *)
+(* by D.                                                                     *)
 (*                                                                           *)
 (* For example:                                                              *)
 (*                                                                           *)
@@ -2362,6 +2363,14 @@ let SUBSUMED_ASSIGNS_TAC =
 (* the third. It reorders S to that target order. The unused SP and X1       *)
 (* positions are filled with (=), which leaves the state unchanged. This     *)
 (* builds D once instead of making one copy for each clause in S.            *)
+(*                                                                           *)
+(* An opaque relation can anchor an otherwise ordered match:                 *)
+(*                                                                           *)
+(*   S = ASSIGNS X0 ,, R                                                     *)
+(*   D = ASSIGNS X0 ,, ASSIGNS X1 ,, R                                      *)
+(*                                                                           *)
+(* R is discharged by reflexivity, while the unused X1 position is filled    *)
+(* with (=). No property of R other than syntactic identity is assumed.      *)
 (*                                                                           *)
 (* Exact assignment matches are tried first. Otherwise                       *)
 (* SUBSUMED_ASSIGNS_TAC tries to prove that the source component is          *)
@@ -2394,43 +2403,52 @@ let ORDERED_SUBSUMED_ASSIGNS_TAC =
   and pth_transport = prove
    (`C = C' ==> C' subsumed D ==> C subsumed D`,
     REWRITE_TAC[subsumed] THEN MESON_TAC[]) in
-  let rec assignments = function
-    | Comb(Comb(Const(",,",_),
-                (Comb(Const("ASSIGNS",_),c) as r)),rs) ->
-        (r,c)::assignments rs
-    | (Comb(Const("ASSIGNS",_),c) as r) -> [(r,c)]
+  let assignment = function
+    | Comb(Const("ASSIGNS",_),c) -> Some c
+    | _ -> None in
+  let rec clauses = function
+    | Comb(Comb(Const(",,",_),r),rs) ->
+        (r,assignment r)::clauses rs
     | Const("=",_) -> []
-    | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Invalid frame" in
-  let subsumed_rule asl stm ttm =
+    | r -> [(r,assignment r)] in
+  let subsumed_rule asl (stm,sc) (ttm,tc) =
     if stm = ttm then ISPEC stm SUBSUMED_REFL
-    else TAC_PROOF
-          ((asl,list_mk_icomb "subsumed" [stm;ttm]),SUBSUMED_ASSIGNS_TAC) in
-  let id_assigns_rule (_,c) =
-    MP (ISPEC c SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT)
-       (EXTENSIONALLY_VALID_COMPONENT_RULE c) in
+    else match sc,tc with
+      Some _,Some _ ->
+        TAC_PROOF
+          ((asl,list_mk_icomb "subsumed" [stm;ttm]),SUBSUMED_ASSIGNS_TAC)
+    | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Opaque mismatch" in
+  let id_clause_rule = function
+    | _,Some c ->
+        MP (ISPEC c SUBSUMED_ID_EXTENSIONALLY_VALID_COMPONENT)
+           (EXTENSIONALLY_VALID_COMPONENT_RULE c)
+    | _ -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Unmatched opaque target" in
   let rec id_rule etm = function
     | [] -> ISPEC etm SUBSUMED_REFL
-    | [rc] -> id_assigns_rule rc
+    | [rc] -> id_clause_rule rc
     | rc::rest ->
         MATCH_MP SUBSUMED_ID_SEQ
-          (CONJ (id_assigns_rule rc) (id_rule etm rest)) in
-  let find_match asl (stm,_) targets =
+          (CONJ (id_clause_rule rc) (id_rule etm rest)) in
+  let find_match asl used_opaque src targets =
     let rec exact i = function
       | [] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: No exact target"
-      | (ttm,_)::_ when stm = ttm ->
-          i,subsumed_rule asl stm ttm
+      | ((ttm,tc) as target)::_ when
+          fst src = ttm && not (tc = None && mem i used_opaque) ->
+          i,subsumed_rule asl src target
       | _::rest -> exact (i + 1) rest in
     let rec general i = function
       | [] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: No target"
-      | (ttm,_)::rest ->
-          try i,subsumed_rule asl stm ttm
+      | target::rest ->
+          try i,subsumed_rule asl src target
           with Failure _ -> general (i + 1) rest in
     try exact 0 targets with Failure _ -> general 0 targets in
-  let rec match_sources asl targets = function
+  let rec match_sources asl targets used_opaque = function
     | [] -> []
     | src::rest ->
-        let i,th = find_match asl src targets in
-        (i,src,th)::match_sources asl targets rest in
+        let i,th = find_match asl used_opaque src targets in
+        let used_opaque' =
+          if snd src = None then i::used_opaque else used_opaque in
+        (i,src,th)::match_sources asl targets used_opaque' rest in
   let rec adjacent_inversion i = function
     | (j,_,_)::((k,_,_)::_ as rest) ->
         if j > k then Some i else adjacent_inversion (i + 1) rest
@@ -2461,16 +2479,24 @@ let ORDERED_SUBSUMED_ASSIGNS_TAC =
         let same,other = same_target j rest in
         item::same,other
     | rest -> [],rest in
-  let group_rule (_,c) group =
-    let ith = MP (ISPEC c ASSIGNS_ABSORB_SAME_COMPONENTS)
-                 (WEAKLY_VALID_COMPONENT_RULE c) in
-    let rec combine = function
-      | [] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Empty group"
-      | [_,_,sth] -> sth
-      | (_,_,sth)::rest ->
-          MATCH_MP SUBSUMED_FOR_SEQ
-            (CONJ ith (CONJ sth (combine rest))) in
-    combine group in
+  let group_rule target group =
+    match target with
+      _,None ->
+        (match group with
+          [_,_,sth] -> sth
+        | _ ->
+            failwith
+              "ORDERED_SUBSUMED_ASSIGNS_TAC: Repeated opaque source")
+    | _,Some c ->
+        let ith = MP (ISPEC c ASSIGNS_ABSORB_SAME_COMPONENTS)
+                     (WEAKLY_VALID_COMPONENT_RULE c) in
+        let rec combine = function
+          | [] -> failwith "ORDERED_SUBSUMED_ASSIGNS_TAC: Empty group"
+          | [_,_,sth] -> sth
+          | (_,_,sth)::rest ->
+              MATCH_MP SUBSUMED_FOR_SEQ
+                (CONJ ith (CONJ sth (combine rest))) in
+        combine group in
   let rec build_rule etm i sources targets =
     match sources,targets with
       [],_ -> id_rule etm targets
@@ -2478,7 +2504,7 @@ let ORDERED_SUBSUMED_ASSIGNS_TAC =
     | ((j,_,_)::_ as sources),trc::trest ->
         if i < j then
           MATCH_MP SUBSUMED_SEQ_RIGHT
-            (CONJ (id_assigns_rule trc)
+            (CONJ (id_clause_rule trc)
                   (build_rule etm (i + 1) sources trest))
         else if i = j then
           let group,srest = same_target j sources in
@@ -2494,9 +2520,9 @@ let ORDERED_SUBSUMED_ASSIGNS_TAC =
     match w with
       Comb(Comb(Const("subsumed",_),stm),ttm) ->
         if stm = ttm then ACCEPT_TAC (ISPEC stm SUBSUMED_REFL) gl else
-        let sources = assignments stm
-        and targets = assignments ttm in
-        let matches = match_sources asl targets sources in
+        let sources = clauses stm
+        and targets = clauses ttm in
+        let matches = match_sources asl targets [] sources in
         let pth,matches' = sort_rule matches stm in
         let sty,_ = dest_fun_ty(type_of ttm) in
         let etm = inst [sty,`:S`] `(=):S->S->bool` in
