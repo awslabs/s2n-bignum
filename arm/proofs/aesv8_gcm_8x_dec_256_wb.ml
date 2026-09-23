@@ -47,7 +47,7 @@ needs "arm/proofs/utils/aes_cipher_bridge.ml";;
 let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb_mc"
   "arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o"
 [
-  0xd503201f;       (* arm_NOP *)
+  0xd503245f;       (* arm_BTI *)
   0xb400b9e1;       (* arm_CBZ X1 (word 5948) *)
   0xf240183f;       (* arm_TST X1 (rvalue (word 127)) *)
   0x5400b9a1;       (* arm_BNE (word 5940) *)
