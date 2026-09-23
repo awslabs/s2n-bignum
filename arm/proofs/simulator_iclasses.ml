@@ -257,6 +257,36 @@ let iclasses =
   (*** REV32 ***)
   "01101110xx100000000010xxxxxxxxxx";
 
+  (*** SADDW ***)
+  "00001110xx1xxxxx000100xxxxxxxxxx";
+
+  (*** SADDW2 ***)
+  "01001110xx1xxxxx000100xxxxxxxxxx";
+
+  (*** SSUBL ***)
+  "00001110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** SSUBL2 ***)
+  "01001110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** SSUBW ***)
+  "00001110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** SSUBW2 ***)
+  "01001110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** USUBL ***)
+  "00101110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** USUBL2 ***)
+  "01101110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** USUBW ***)
+  "00101110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** USUBW2 ***)
+  "01101110xx1xxxxx001100xxxxxxxxxx";
+
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
   "01011110000xxxxx010000xxxxxxxxxx";
@@ -602,6 +632,30 @@ let check_insns () =
 
     (*** st1 (2 registers, no offset) 128-bit ***)
     "01001100000000001010xxxxxxxxxxxx";
+
+    (*** ld1 (4 registers, Post-immediate and register offset) 128-bit ***)
+    "01001100110xxxxx0010xxxxxxxxxxxx";
+
+    (*** st1 (4 registers, Post-immediate and register offset) 128-bit ***)
+    "01001100100xxxxx0010xxxxxxxxxxxx";
+
+    (*** ld1 (4 registers, no offset) 128-bit ***)
+    "01001100010000000010xxxxxxxxxxxx";
+
+    (*** st1 (4 registers, no offset) 128-bit ***)
+    "01001100000000000010xxxxxxxxxxxx";
+
+    (*** ld1 (4 registers, Post-immediate and register offset) 64-bit ***)
+    "00001100110xxxxx0010xxxxxxxxxxxx";
+
+    (*** st1 (4 registers, Post-immediate and register offset) 64-bit ***)
+    "00001100100xxxxx0010xxxxxxxxxxxx";
+
+    (*** ld1 (4 registers, no offset) 64-bit ***)
+    "00001100010000000010xxxxxxxxxxxx";
+
+    (*** st1 (4 registers, no offset) 64-bit ***)
+    "00001100000000000010xxxxxxxxxxxx";
 
     (*** ld2 (2 register, Post-immediate offset) ***)
     "0x001100110111111000xxxxxxxxxxxx";

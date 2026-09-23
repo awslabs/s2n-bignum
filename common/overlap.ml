@@ -875,16 +875,27 @@ let CONTAINED_SIMPLE = prove
 
 let CONTAINED_SIMPLE_64 = INST_TYPE [`:64`,`:N`] CONTAINED_SIMPLE;;
 
-let NONOVERLAPPING_CLAUSES = prove
- (`(nonoverlapping (word n1:int64,l1) (a2,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (n1,l1) (val a2,l2)) /\
-   (nonoverlapping (a1:int64,l1) (word n2:int64,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (val a1,l1) (n2,l2)) /\
-   (nonoverlapping (a1:int64,l1) (a2,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (val a1,l1) (val a2,l2)) /\
-   (nonoverlapping_modulo (2 EXP 64) (val(word n1:int64),l1) (n2,l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (n1,l1) (n2,l2)) /\
-   (nonoverlapping_modulo (2 EXP 64) (n1,l1) (val(word n2:int64),l2) <=>
-        nonoverlapping_modulo (2 EXP 64) (n1,l1) (n2,l2))`,
-  REWRITE_TAC[nonoverlapping; DIMINDEX_64; VAL_WORD] THEN
+let NONOVERLAPPING_CLAUSES_GEN = prove
+ (`(nonoverlapping (word n1:N word,l1) (a2,l2) <=>
+        nonoverlapping_modulo (2 EXP dimindex(:N))
+          (n1,l1) (val a2,l2)) /\
+   (nonoverlapping (a1:N word,l1) (word n2:N word,l2) <=>
+        nonoverlapping_modulo (2 EXP dimindex(:N))
+          (val a1,l1) (n2,l2)) /\
+   (nonoverlapping (a1:N word,l1) (a2,l2) <=>
+        nonoverlapping_modulo (2 EXP dimindex(:N))
+          (val a1,l1) (val a2,l2)) /\
+   (nonoverlapping_modulo (2 EXP dimindex(:N))
+      (val(word n1:N word),l1) (n2,l2) <=>
+        nonoverlapping_modulo (2 EXP dimindex(:N))
+          (n1,l1) (n2,l2)) /\
+   (nonoverlapping_modulo (2 EXP dimindex(:N))
+      (n1,l1) (val(word n2:N word),l2) <=>
+        nonoverlapping_modulo (2 EXP dimindex(:N))
+          (n1,l1) (n2,l2))`,
+  REWRITE_TAC[nonoverlapping; VAL_WORD] THEN
   REWRITE_TAC[NONOVERLAPPING_MODULO_LMOD; NONOVERLAPPING_MODULO_RMOD]);;
+
+let NONOVERLAPPING_CLAUSES =
+  CONV_RULE (ONCE_DEPTH_CONV DIMINDEX_CONV)
+    (INST_TYPE [`:64`,`:N`] NONOVERLAPPING_CLAUSES_GEN);;

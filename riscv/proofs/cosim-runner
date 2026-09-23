@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Start the RV32IM cosimulation monitor under QEMU system mode.
+
+set -euo pipefail
+
+DIR="$(dirname -- "${BASH_SOURCE[0]}")"
+DIR="$(realpath -- "$DIR")"
+QEMU_COMMAND=${QEMU_RISCV32:-qemu-system-riscv32}
+
+read -r -a QEMU_ARGUMENTS <<< "$QEMU_COMMAND"
+if [ "${#QEMU_ARGUMENTS[@]}" -eq 0 ] ||
+   ! command -v -- "${QEMU_ARGUMENTS[0]}" >/dev/null 2>&1; then
+  echo "error: QEMU command not found: ${QEMU_ARGUMENTS[0]:-$QEMU_COMMAND}" >&2
+  exit 127
+fi
+
+exec "${QEMU_ARGUMENTS[@]}" \
+  -machine virt \
+  -cpu rv32 \
+  -smp 1 \
+  -m 16M \
+  -bios "$DIR/cosim-runner.bin" \
+  -display none \
+  -monitor none \
+  -serial none \
+  -chardev stdio,id=cosim,signal=off \
+  -semihosting-config enable=on,target=native,chardev=cosim

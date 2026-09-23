@@ -9,20 +9,23 @@
 (*  is loaded ({arm,x86}/proofs/...), as common/bignum.ml does).             *)
 (* ========================================================================= *)
 
-needs "common/equiv.ml";;
+needs "common/maychange.ml";;
 needs "common/safety.ml";;
+
+let is_uarch_event_list_ty ty =
+  try
+    let list_name,[event_ty] = dest_type ty in
+    let event_name,[_] = dest_type event_ty in
+    list_name = "list" && event_name = "address_uarch_event"
+  with Failure _ -> false;;
 
 (* Find the base pointer and access size. *)
 let find_stack_access_size (fnspec_maychange:term): (term * int) option =
   try
-    let stackptr = mk_var("stackpointer",`:int64`) in
-
     let t = find_term (fun t -> is_pair t &&
         let baseptr, sz = dest_pair t in
-        baseptr = stackptr ||
-        (is_binary "word_sub" baseptr &&
-         let a,b = dest_binary "word_sub" baseptr in
-         a = stackptr)) fnspec_maychange in
+        exists (fun t -> is_var t && name_of t = "stackpointer")
+          (frees baseptr)) fnspec_maychange in
     let baseptr,sz = dest_pair t in
     Some (baseptr, dest_small_numeral sz)
   with Failure _ -> None;;
@@ -32,13 +35,21 @@ find_stack_access_size `MAYCHANGE [memory :> bytes(z,8 * 8);
                     memory :> bytes(word_sub stackpointer (word 224),224)]`;;
 
 (* Create a safety spec. This returns a safety spec using ensures, as well
-   as the unversally quantified variables that are public information.
+   as the universally quantified variables that are public information.
 
-   NOTE: the output may need further edit if the variable for program counter
-   is named other than 'pc' in subroutine_correct_th.
+   The backend passes its memory and event components and PC/stack/return
+   address recognizers. The theorem exposes a C_ARGUMENTS precondition and a
+   bytes_loaded/aligned_bytes_loaded code predicate. Stack and return-address
+   variables follow the existing `stackpointer` and `returnaddress` naming
+   convention. c_mem_addr_to_hol must return the address word type selected by
+   memory_component.
 *)
 let gen_mk_safety_spec
-    ?(readonly_objects=([]:(term * term)list)) (* address(int64), size(num) list *)
+    ?(readonly_objects=([]:(term * term)list)) (* address(word), size(num) list *)
+    ?(c_mem_addr_to_hol=(fun (t:term) -> t))
+    ~(memory_component:term)
+    ~(events_component:term)
+    ~(is_read_pc:term->bool)
     ~(keep_maychanges:bool)
     (fnargs,_,meminputs,memoutputs,memtemps)
     (subroutine_correct_th:thm) exec
@@ -54,8 +65,15 @@ let gen_mk_safety_spec
       snd (strip_comb fnspec_ensures) in
   let fnspec_precond_bvar,fnspec_precond = dest_abs fnspec_precond in
   let fnspec_postcond_bvar,fnspec_postcond = dest_abs fnspec_postcond in
-  (* :x86state or :armstate *)
+  (* Backend state type. *)
   let state_ty = fst (dest_fun_ty (type_of arch_const)) in
+  let component_value_ty c =
+    let _,args = dest_type (type_of c) in last args in
+  let event_list_ty = component_value_ty events_component in
+  let memory_ty = component_value_ty memory_component in
+  let address_ty,_ = dest_fun_ty memory_ty in
+  let address_index_ty = dest_word_ty address_ty in
+  let range_ty = mk_type("prod",[address_ty;`:num`]) in
 
   let c_args = find_term
     (fun t -> is_comb t && let c,a = dest_comb t in
@@ -116,7 +134,7 @@ let gen_mk_safety_spec
   let (memreads:(term*term)list), (memwrites:(term*term)list) =
     let fn =
       (fun (c_varname,range,elemty_size) ->
-        c_var_to_hol c_varname,
+        c_mem_addr_to_hol (c_var_to_hol c_varname),
         (try mk_small_numeral (elemty_size * int_of_string range)
          with Failure _ ->
            mk_binary "*" (elemsz_to_hol range, mk_small_numeral elemty_size))) in
@@ -147,7 +165,7 @@ let gen_mk_safety_spec
      | Some (baseptr,sz) ->
        [`pc:num`;baseptr] @ (match returnaddress_var with Some v -> [v] | None -> [])) in
   let f_events = mk_var("f_events",
-    itlist mk_fun_ty (map type_of f_events_public_args) `:(uarch_event)list`) in
+    itlist mk_fun_ty (map type_of f_events_public_args) event_list_ty) in
 
   (* memreads,memwrites with stackpointer as well as pc :)
     These will be the arguments of memaccess_inbounds.
@@ -163,8 +181,11 @@ let gen_mk_safety_spec
     let the_mc = rand bytes_loaded_mc in
     if is_binary "APPEND" the_mc then
       let code_mc,data_mc = dest_binary "APPEND" the_mc in
-      let baseptr = subst [code_mc,`b:((8)word)list`]
-        `word (pc + LENGTH (b:((8)word)list)):int64` in
+      let word_tm = inst [address_index_ty,`:A`] `word:num->A word` in
+      let baseptr =
+        mk_comb(word_tm,
+          subst [code_mc,`b:((8)word)list`]
+            `pc + LENGTH (b:((8)word)list)`) in
       let len = subst [data_mc,`b:((8)word)list`] `LENGTH (b:((8)word)list)` in
       (memreads @ [baseptr,len], memwrites)
     else
@@ -172,10 +193,18 @@ let gen_mk_safety_spec
   (* rodata *)
   let memreads,memwrites =
     let _ = List.iter (fun (addr,sz) ->
-        if not (can dest_word_ty (type_of addr)) then
-          failwith ("rodata: not a int64 ty: " ^ (string_of_term addr)))
+        if type_of addr <> address_ty then
+          failwith ("rodata: address has type " ^
+            (string_of_type (type_of addr)) ^ ", expected " ^
+            (string_of_type address_ty) ^ ": " ^ (string_of_term addr)))
         readonly_objects in
     (memreads @ readonly_objects),memwrites in
+  let _ = List.iter (fun (addr,_) ->
+      if type_of addr <> address_ty then
+        failwith ("memory range address has type " ^
+          (string_of_type (type_of addr)) ^ ", expected " ^
+          (string_of_type address_ty) ^ ": " ^ (string_of_term addr)))
+      (memreads @ memwrites) in
   (* Remove duplicates *)
   let memreads,memwrites =
     let rec dedup l =
@@ -200,12 +229,15 @@ let gen_mk_safety_spec
       bytes_loaded_others @
       (match read_sp_eq with | None -> [] | Some t -> [ vsubst [s,s] t ]) @
       (match read_x30_eq with | None -> [] | Some t -> [ vsubst [s,s] t ]) @
-      [ mk_comb (c_args, s); `read events s = e`; ])) in
+      [ mk_comb (c_args, s);
+        mk_eq(mk_comb(mk_icomb(`read`,events_component),s),
+              mk_var("e",event_list_ty)); ])) in
 
   let postcond = mk_gabs(s,
-    let mr = mk_list (map mk_pair memreads,`:int64#num`) in
-    let mw = mk_list (map mk_pair memwrites,`:int64#num`) in
-    let e2 = mk_var("e2",`:(uarch_event)list`) in
+    let mr = mk_list (map mk_pair memreads,range_ty) in
+    let mw = mk_list (map mk_pair memwrites,range_ty) in
+    let e = mk_var("e",event_list_ty) in
+    let e2 = mk_var("e2",event_list_ty) in
     let read_pc_eq = find_term (fun t -> is_eq t && is_read_pc (lhs t))
         fnspec_postcond in
     let read_pc_eq = vsubst [s,fnspec_postcond_bvar] read_pc_eq in
@@ -214,9 +246,10 @@ let gen_mk_safety_spec
                      can work well *)
       mk_exists(e2,
         list_mk_conj [
-          `read events s = APPEND e2 e`;
+          mk_eq(mk_comb(mk_icomb(`read`,events_component),s),
+                list_mk_icomb "APPEND" [e2;e]);
           mk_eq(e2, list_mk_comb (f_events,f_events_public_args));
-          mk_comb(mk_comb(mk_comb (`memaccess_inbounds`,e2),mr),mw)
+          list_mk_icomb "memaccess_inbounds" [e2;mr;mw]
         ]))) in
 
   (* Filter unused forall vars *)
@@ -228,7 +261,7 @@ let gen_mk_safety_spec
         [arch_const;precond;postcond;maychanges] in
     if fnspec_globalasms = `true` then body
     else mk_imp(fnspec_globalasms,body) in
-  let the_e_var = mk_var("e", `:(uarch_event)list`) in
+  let the_e_var = mk_var("e",event_list_ty) in
   let fnspec_quants_filtered =
     let fvars = frees spec_without_quantifiers in
       the_e_var::List.filter (fun t -> mem t fvars) fnspec_quants in
@@ -236,39 +269,51 @@ let gen_mk_safety_spec
   (* Return the spec, as well as the HOL Light variables having public info *)
   (mk_exists(f_events,
     list_mk_forall(fnspec_quants_filtered, spec_without_quantifiers)),
-   the_e_var::`pc:num`::public_vars @ (match returnaddress_var with Some v -> [v] | None -> []) @
-      (if read_sp_eq = None then [] else [`stackpointer:int64`]));;
+   the_e_var::`pc:num`::public_vars @
+      (match returnaddress_var with Some v -> [v] | None -> []) @
+      (match stack_access_size with
+       | None -> []
+       | Some (baseptr,_) ->
+           filter (fun t -> is_var t && name_of t = "stackpointer")
+             (frees baseptr)));;
 
 let REPEAT_GEN_AND_OFFSET_STACKPTR_TAC =
+  let rec is_offset_base baseptr =
+    is_binary "word_sub" baseptr ||
+    (is_comb baseptr && is_const (rator baseptr) &&
+     mem (name_of (rator baseptr)) ["word"; "val"; "word_zx"] &&
+     is_offset_base (rand baseptr)) in
   W (fun (asl,w) ->
     (match find_stack_access_size w with
     | None -> REPEAT GEN_TAC
     | Some (baseptr,sz) ->
-      if is_binary "word_sub" baseptr then
+      if is_offset_base baseptr then
         (REPEAT (W (fun (asl,w) ->
         let x,_ = dest_forall w in
         if name_of x = "stackpointer" then NO_TAC else GEN_TAC)) THEN
         WORD_FORALL_OFFSET_TAC sz THEN
         REPEAT GEN_TAC)
-      else if is_var baseptr then GEN_TAC
-      else failwith
-        ("Don't know how to rebase offset of stackptr " ^
-         (string_of_term baseptr))) THEN
+      else REPEAT GEN_TAC) THEN
     REPEAT GEN_TAC);;
 
 (* Given a conclusion which is
   memaccess_inbounds [..(events)..] [..] [] where events is a list of
   Event* constructors (EventJump, EventLoad, ...), discharge the goal.
 *)
-let DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC =
-  REWRITE_TAC[MESON[APPEND]`APPEND ([]:(A)list) [] = []`] THEN
-  REWRITE_TAC[memaccess_inbounds;ALL;EX] THEN
-  (* CONTAINED_TAC works for contained_modulo *)
-  REWRITE_TAC[contained;DIMINDEX_64] THEN
-  REPEAT CONJ_TAC THEN
-    (TRY
-      (REPEAT ((DISJ1_TAC THEN CONTAINED_TAC) ORELSE DISJ2_TAC ORELSE
-            CONTAINED_TAC) THEN NO_TAC));;
+(* A backend may temporarily install native arithmetic normalization here.
+   Restore the default after constructing or proving its safety specs. *)
+let memaccess_inbounds_normalize_tac = ref ALL_TAC;;
+
+let DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC g =
+  ((!memaccess_inbounds_normalize_tac) THEN
+   REWRITE_TAC[MESON[APPEND]`APPEND ([]:(A)list) [] = []`] THEN
+   REWRITE_TAC[memaccess_inbounds;memaccess_inbounds_def;ALL;EX] THEN
+   (* CONTAINED_TAC works for contained_modulo *)
+   REWRITE_TAC[contained] THEN
+   REPEAT CONJ_TAC THEN
+     (TRY
+       (REPEAT ((DISJ1_TAC THEN CONTAINED_TAC) ORELSE DISJ2_TAC ORELSE
+             CONTAINED_TAC) THEN NO_TAC))) g;;
 
 let DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC:tactic =
   let try_discharge (meminb_th:thm):tactic =
@@ -452,11 +497,13 @@ let rec WHILE_TAC (flag:bool ref) tac w =
    information. This is for faster symbolic simulation. *)
 let GEN_PROVE_SAFETY_SPEC_TAC =
   let pth =
-    prove(`forall (e:(uarch_event)list) e2.
+    prove(`forall (e:((A)address_uarch_event)list) e2.
         e = APPEND e2 e <=> APPEND [] e = APPEND e2 e`,
     MESON_TAC[APPEND]) in
   let qth =
-    prove(`memaccess_inbounds [] [] []`, MESON_TAC[memaccess_inbounds;ALL]) in
+    prove(`memaccess_inbounds
+              ([]:((A)address_uarch_event)list) [] []`,
+          MESON_TAC[memaccess_inbounds_def;ALL]) in
 
   let mainfn ?(public_vars:term list option)
     ?(tac_before_maychange_simp:tactic option) exec
@@ -471,8 +518,10 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       let quantvars,forall_body = strip_forall(snd(dest_exists w)) in
       let stored_abbrevs = ref [] in
 
-      if quantvars = [] || hd quantvars <> `e:(uarch_event)list`
+      if quantvars = [] || name_of (hd quantvars) <> "e" ||
+         not (is_uarch_event_list_ty (type_of (hd quantvars)))
       then failwith "The goal must be `exists f_events. forall e ...`" else
+      let e2_var = mk_var("e2",type_of (hd quantvars)) in
 
       (* The destination PC *)
       let dest_pc_addr =
@@ -532,7 +581,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
 
       (* e2 can be []! *)
       REWRITE_TAC[pth] THEN
-      (X_META_EXISTS_TAC `e2:(uarch_event)list` ORELSE
+      (X_META_EXISTS_TAC e2_var ORELSE
        (PRINT_GOAL_TAC THEN FAIL_TAC "Not `exists e2. ...`?")) THEN
       CONJ_TAC THENL [
         AP_THM_TAC THEN AP_TERM_TAC THEN
@@ -542,7 +591,7 @@ let GEN_PROVE_SAFETY_SPEC_TAC =
       (* e2 = f_events <public info> *)
       CONJ_TAC THENL [UNIFY_REFL_TAC; ALL_TAC] THEN
       (* memaccess_inbounds *)
-      (ACCEPT_TAC qth ORELSE
+      (MATCH_ACCEPT_TAC qth ORELSE
       (POP_ASSUM MP_TAC THEN
        W (fun (asl,w) -> REWRITE_TAC(APPEND :: (map GSYM !stored_abbrevs))) THEN
        PRINT_GOAL_TAC THEN FAIL_TAC "Could not prove memaccess_inbounds")))
@@ -654,11 +703,13 @@ let CONCRETIZE_F_EVENTS_TAC (concrete_f_events:term): tactic =
          memaccess_inbounds e2 [...]`
 *)
 let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
-  let var_e2 = mk_var("e2",`:(uarch_event)list`) in
-  let find_e2_def (pred:term) : term*term*term =
+  let find_e2_def (pred:term) : term*term*term*term =
     let t_exists_e2 = find_term
-      (fun t -> is_exists t && fst (dest_exists t) = var_e2)
+      (fun t -> is_exists t &&
+        let v = fst (dest_exists t) in
+        name_of v = "e2" && is_uarch_event_list_ty (type_of v))
       pred in
+    let var_e2 = fst (dest_exists t_exists_e2) in
     let clause1,e2_equals,clause3 =
       match conjuncts (snd (dest_exists t_exists_e2)) with
         [clause1;e2_equals;clause3] -> clause1,e2_equals,clause3
@@ -668,7 +719,7 @@ let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
     then failwith ("expected `e2 = ...`, but got " ^
                    (string_of_term e2_equals)) else
     let the_def = rhs e2_equals in
-    (clause1,the_def,clause3)
+    (var_e2,clause1,the_def,clause3)
   and is_nil (t:term): bool = is_const t && name_of t = "NIL" in
 
   fun (asl,w) ->
@@ -680,7 +731,7 @@ let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
       | _ -> failwith "expected ensures with four arguments" in
 
     (* extract the 'e2 = APPEND ...' subterm, from 'exists e2. ...'. *)
-    let clause1,e2_def_post,clause3 = find_e2_def postcond in
+    let var_e2,clause1,e2_def_post,clause3 = find_e2_def postcond in
 
     if not (is_comb e2_def_post) ||
         name_of (fst (strip_comb e2_def_post)) <> "APPEND"
@@ -694,7 +745,7 @@ let ENSURES_EVENTS_SEQUENCE_TAC (pc:term) (inv:term): tactic =
 
     let e2_def_pre = try Some (find_e2_def precond) with Failure _ -> None in
     let _ = match e2_def_pre with
-      | Some (_,e2_def_pre,_) ->
+      | Some (_,_,e2_def_pre,_) ->
         if not (is_nil e2_def_pre ||
           (is_binary "APPEND" e_front_tail && rand e_front_tail = e2_def_pre))
         then failwith ("e2 in postcond must start with e2 in precond!")
@@ -749,12 +800,16 @@ let ENSURES_EVENTS_WHILE_UP2_TAC =
       | _ -> failwith "expected ensures with four arguments" in
 
     (* extract the 'e2 = APPEND ...' subterm, from 'exists e2. ...'. *)
-    let var_e2 = mk_var("e2",`:(uarch_event)list`) in
     let t_exists_e2 = find_term
-      (fun t -> is_exists t && fst (dest_exists t) = var_e2)
+      (fun t -> is_exists t &&
+        let v = fst (dest_exists t) in
+        name_of v = "e2" && is_uarch_event_list_ty (type_of v))
       postcond in
+    let var_e2 = fst (dest_exists t_exists_e2) in
     let t_exists_e2_in_pre = can (find_term
-      (fun t -> is_exists t && fst (dest_exists t) = var_e2)) precond in
+      (fun t -> is_exists t &&
+        let v = fst (dest_exists t) in
+        name_of v = "e2" && type_of v = type_of var_e2)) precond in
     let clause1,e2_equals,clause3 =
       match conjuncts (snd (dest_exists t_exists_e2)) with
         [clause1;e2_equals;clause3] -> clause1,e2_equals,clause3
@@ -807,11 +862,12 @@ let ENSURES_EVENTS_WHILE_UP2_TAC =
         | Some lb -> mk_binary "-" (loop_i,lb) in
       let new_enumeratel = list_mk_comb (the_enumeratel, [loop_i;e_loop]) in
       let new_e2_expr =
-        let atm = `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list` in
         match e_prev_trace with
-        | None -> mk_binop atm new_enumeratel e_front
+        | None -> list_mk_icomb "APPEND" [new_enumeratel;e_front]
         | Some e_prev_trace ->
-          mk_binop atm new_enumeratel (mk_binop atm e_front e_prev_trace) in
+          list_mk_icomb "APPEND"
+            [new_enumeratel;
+             list_mk_icomb "APPEND" [e_front;e_prev_trace]] in
       mk_exists (var_e2,
         list_mk_conj [clause1;mk_eq(var_e2,new_e2_expr);clause3]) in
     let new_inv = let bvars,body = strip_abs loop_inv in
@@ -1061,7 +1117,8 @@ let (MEMSAFE_ARITH_TAC:tactic) =
 let CONTAINED_ASM_TAC =
   GEN_REWRITE_TAC I [GSYM CONTAINED_MODULO_MOD2] THEN
   GEN_REWRITE_TAC (BINOP_CONV o LAND_CONV o LAND_CONV o TOP_DEPTH_CONV)
-   [VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN
+   [VAL_WORD_ADD; VAL_WORD] THEN
+  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
   CONV_TAC(BINOP_CONV(LAND_CONV MOD_DOWN_CONV)) THEN
   GEN_REWRITE_TAC I [CONTAINED_MODULO_MOD2] THEN
   ((GEN_REWRITE_TAC I [CONTAINED_MODULO_REFL] THEN
@@ -1081,7 +1138,8 @@ let DISCHARGE_MEMSAFE_ASM_TAC:tactic =
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
   REWRITE_TAC[MEMACCESS_INBOUNDS_APPEND] THEN
   CONJ_TAC THENL
-   [REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN
+   [REWRITE_TAC[memaccess_inbounds; memaccess_inbounds_def;
+                ALL; EX; FST; SND] THEN
     REPEAT CONJ_TAC THEN
     TRY(REPEAT ((DISJ1_TAC THEN CONTAINED_ASM_TAC) ORELSE DISJ2_TAC ORELSE
                 CONTAINED_ASM_TAC) THEN NO_TAC);
