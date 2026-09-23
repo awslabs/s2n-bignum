@@ -5867,6 +5867,31 @@ let GCM_SIMD_SIMPLIFY_CORE_QSCOPED_TAC =
          (if concl th' = c then Hashtbl.add gcm_simd_fixpt_tbl c ());
          th');;
 
+(* Discard a fact about an OLD state when the same fact (modulo the state variable) already holds of
+   the current state and no other assumption refers to that old state.  A fact refers to a state that
+   occurs in it other than as the state its own left-hand read is about: the latest value of a register
+   may mention an earlier state's memory read (`read Q5 s84 = .. read (memory :> ..) s34 ..`), which
+   keeps s34's facts (the closers resolve that read from them) but says nothing about s84.
+   The stepper re-derives the anchored memory facts, the in_p/out_p foralls and aligned_bytes_loaded
+   at every step; without this they accumulate one copy per state and every ARM_STEP_TAC and
+   ASM_REWRITE_TAC is linear in the assumption list. *)
+let DISCARD_STALE_TAC sname : tactic = fun (asl,w) ->
+  let sv = mk_var(sname,`:armstate`) in
+  let is_st v = is_var v && type_of v = `:armstate` in
+  let cs = map (fun (_,th) -> concl th) asl in
+  let own c = try (match strip_comb (lhs c) with
+                     (Const("read",_),[_;st]) when is_st st -> [st] | _ -> [])
+              with Failure _ -> [] in
+  let live = itlist (fun c acc ->
+      let svs = filter is_st (frees c) in
+      if length svs >= 2 then union (subtract svs (own c)) acc else acc) cs [] in
+  let cur = filter (vfree_in sv) cs in
+  DISCARD_ASSUMPTIONS_TAC (fun th ->
+    let c = concl th in
+    match filter is_st (frees c) with
+      [s] when s <> sv && not (mem s live) -> exists (aconv (vsubst [sv,s] c)) cur
+    | _ -> false) (asl,w);;
+
 (* ---- per-window symbolic-execution stepper (single-pass GCM_SIMD, refine-093;
    Q-scoped normalizer, refine-097) ----
    MAP_EVERY over the step range: verbose-step, single-pass Q-scoped GCM_SIMD
@@ -5876,7 +5901,8 @@ let GCM_SIMD_SIMPLIFY_CORE_QSCOPED_TAC =
    ckpt (refine-093); the Q-scope cuts a further ~40-55% off the normalizer (refine-097). *)
 let ARM_STEPS_FOLD_KEEPGHALL_TAC exec snums =
   MAP_EVERY (fun s -> ARM_VERBOSE_STEP_TAC exec s THEN GCM_SIMD_SIMPLIFY_CORE_QSCOPED_TAC THEN
-              DISCARD_OLDSTATE_KEEPGHALL_TAC s THEN CLARIFY_TAC) (statenames "s" snums);;
+              DISCARD_OLDSTATE_KEEPGHALL_TAC s THEN DISCARD_STALE_TAC s THEN CLARIFY_TAC)
+    (statenames "s" snums);;
 
 (* ---- ctr0 rebuild: the byte-shuffled reconstruction of the 128-bit counter ---- *)
 let JOIN_IS_CTR0 = prove(
