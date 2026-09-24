@@ -15,6 +15,8 @@
 (* ========================================================================= *)
 
 needs "x86/proofs/base.ml";;
+
+x86_ymm_view := true;;
 needs "common/mlkem_mldsa.ml";;
 
 (**** print_literal_from_elf "x86/mldsa/mldsa_polyz_unpack_19.o";;

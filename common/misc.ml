@@ -353,6 +353,7 @@ let VAL_BOUND_128 = prove
 
 (* TODO: move to HOL Light *)
 new_type_abbrev("int256",`:(256)word`);;
+new_type_abbrev("int512",`:(512)word`);;
 
 let VAL_BOUND_256 = prove
   (`!x:int256. val x < 2 EXP 256`,
