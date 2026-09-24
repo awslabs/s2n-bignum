@@ -907,7 +907,11 @@ let polyval_chain =
       let w_num = dest_numeral(rand w_tm) in
       let sq_th = MATCH_MP POLYVAL_SQUARE_STEP prev_th in
       let sq_th' = CONV_RULE(rhs_conv(REWR_CONV(SPEC w_tm PMUL_128_256_BRIDGE))) sq_th in
-      let sq_th'' = CONV_RULE(rhs_conv(RAND_CONV WORD_PMUL_CONV)) sq_th' in
+      (* WORD_PMUL_NUM_CONV (common/ghash.ml), not Library/words.ml's
+         WORD_PMUL_CONV: the latter's base case tests the wrong operand, so it
+         runs 256 bit-recursions per step where 128 suffice. This one conversion
+         was 112.9s of this phrase's 120.8s; bit-identical, 120.8 -> 71.6 s. *)
+      let sq_th'' = CONV_RULE(rhs_conv(RAND_CONV WORD_PMUL_NUM_CONV)) sq_th' in
       let y_num = poly_mul_gf2 w_num w_num in
       let z_num = x_powpow.(k) in
       let q_num = quotients.(k-1) in
