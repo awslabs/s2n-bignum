@@ -171,6 +171,7 @@ let evex_tuple_INDUCT,evex_tuple_RECURSION = define_type
   | Tuple1_Scalar_Byte | Tuple1_Scalar_Word | Tuple1_Scalar | Tuple1_Fixed
   | Tuple2 | Tuple4 | Tuple8
   | Full_Mem | Mem_128 | MovDDup | Half_Mem | Quarter_Mem | Eighth_Mem";;
+
 let evex_tuple_disp_scale = define
  `(evex_tuple_disp_scale Full_Tuple w bcast sz =
      if bcast then (if w then 8 else 4)
@@ -196,6 +197,7 @@ let evex_tuple_disp_scale = define
      (match sz with Lower_128 -> 4 | Lower_256 -> 8 | Full_512 -> 16)) /\
   (evex_tuple_disp_scale Eighth_Mem w bcast sz =
      (match sz with Lower_128 -> 2 | Lower_256 -> 4 | Full_512 -> 8))`;;
+
 let read_displacement_scaled = new_definition
  `read_displacement_scaled (n:num) (md:2 word) l =
   match val md with
@@ -203,6 +205,7 @@ let read_displacement_scaled = new_definition
   | 1 -> read_byte l >>= \(b,l). SOME(word_mul (word n) (word_sx b),l)
   | 2 -> read_int32 l >>= \(w,l). SOME(word_sx w,l)
   | _ -> NONE`;;
+
 let RM_INDUCTION,RM_RECURSION = define_type
  "RM = RM_reg (4 word) | RM_reg_evex (5 word) | RM_mem bsid";;
 
@@ -337,6 +340,7 @@ let VEXM_INDUCTION,VEXM_RECURSION = define_type
 
 let EVEXM_INDUCTION,EVEXM_RECURSION = define_type
  "EVEXM = EVEXM_0F | EVEXM_0F38 | EVEXM_0F3A | EVEXM_MAP5 | EVEXM_MAP6";;
+
 let read_VEXM = new_definition `read_VEXM (m:5 word) =
   bitmatch m with
   | [1:5] -> SOME VEXM_0F
@@ -2233,6 +2237,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
     REWRITE_CONV [evex_tuple_disp_scale] THENC
     REWRITE_CONV [COND_CLAUSES] THENC
     TOP_DEPTH_CONV MATCH_CONV in
+
   let scale_num n =
     if is_numeral n then n else rhs (concl (EVEX_DISP_SCALE_CONV n)) in
   let scale_of n = Num.int_of_num (dest_numeral (scale_num n)) in
@@ -2270,6 +2275,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
                 .(Num.int_of_num (dest_numeral a))
                 [rex,`rex:(4 word)option`; l,`l:byte list`])
   | _ -> failwith "READ_MODRM_SCALED_CONV" in
+
   let READ_VEX_CONV = function
   | Comb(Comb(Const("read_VEX",_),Const("T",_)),l) ->
     fst !read_vex_func [l,`l:byte list`]
@@ -2831,6 +2837,7 @@ let READ_SIB_CONV,READ_MODRM_CONV,READ_VEX_CONV,DECODE_CONV =
         with Failure _ as e -> fun _ -> raise e)
       done;
       n, tbl) ns in
+
   let decode_table =
     let rex,pfxs,t = `rex:(4 word)option`,`pfxs:pfxs`,`t:byte list`
     and f = C INST o MATCH_MP decode'_of_aux in
@@ -3259,6 +3266,7 @@ let list_linear_read_EVEX_ModRM = (add_ll_opt o prove)
  (`!n rex r' x. list_linear_f (read_EVEX_ModRM n rex r' x)`,
   UNETA_TAC `read_EVEX_ModRM n rex r' x l` THEN
   REWRITE_TAC [read_EVEX_ModRM] THEN REPEAT LL_TAC);;
+
 let list_linear_decode_aux = prove
  (`!pfxs rex h. list_linear_f (\l. decode_aux pfxs rex (CONS h l))`,
   REPEAT GEN_TAC THEN REWRITE_TAC [decode_aux; read_byte_val;
