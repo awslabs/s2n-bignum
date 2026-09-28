@@ -15,6 +15,8 @@ needs "common/cosim.ml";;
 needs "common/sematest.ml";;
 needs "x86/proofs/base.ml";;
 
+x86_ymm_view := false;;
+
 let regfile = new_definition
  `regfile s =
    [val(read RAX s); val(read RCX s); val(read RDX s); val(read RBX s);
@@ -24,70 +26,270 @@ let regfile = new_definition
     val(read RBP s); val(read RSI s); val(read RDI s); val(read R8 s);
     val(read R9 s); val(read R10 s); val(read R11 s); val(read R12 s);
     val(read R13 s); val(read R14 s); val(read R15 s);
-    val(word_subword (read YMM0 s) (0,64):int64);
-    val(word_subword (read YMM0 s) (64,64):int64);
-    val(word_subword (read YMM0 s) (128,64):int64);
-    val(word_subword (read YMM0 s) (192,64):int64);
-    val(word_subword (read YMM1 s) (0,64):int64);
-    val(word_subword (read YMM1 s) (64,64):int64);
-    val(word_subword (read YMM1 s) (128,64):int64);
-    val(word_subword (read YMM1 s) (192,64):int64);
-    val(word_subword (read YMM2 s) (0,64):int64);
-    val(word_subword (read YMM2 s) (64,64):int64);
-    val(word_subword (read YMM2 s) (128,64):int64);
-    val(word_subword (read YMM2 s) (192,64):int64);
-    val(word_subword (read YMM3 s) (0,64):int64);
-    val(word_subword (read YMM3 s) (64,64):int64);
-    val(word_subword (read YMM3 s) (128,64):int64);
-    val(word_subword (read YMM3 s) (192,64):int64);
-    val(word_subword (read YMM4 s) (0,64):int64);
-    val(word_subword (read YMM4 s) (64,64):int64);
-    val(word_subword (read YMM4 s) (128,64):int64);
-    val(word_subword (read YMM4 s) (192,64):int64);
-    val(word_subword (read YMM5 s) (0,64):int64);
-    val(word_subword (read YMM5 s) (64,64):int64);
-    val(word_subword (read YMM5 s) (128,64):int64);
-    val(word_subword (read YMM5 s) (192,64):int64);
-    val(word_subword (read YMM6 s) (0,64):int64);
-    val(word_subword (read YMM6 s) (64,64):int64);
-    val(word_subword (read YMM6 s) (128,64):int64);
-    val(word_subword (read YMM6 s) (192,64):int64);
-    val(word_subword (read YMM7 s) (0,64):int64);
-    val(word_subword (read YMM7 s) (64,64):int64);
-    val(word_subword (read YMM7 s) (128,64):int64);
-    val(word_subword (read YMM7 s) (192,64):int64);
-    val(word_subword (read YMM8 s) (0,64):int64);
-    val(word_subword (read YMM8 s) (64,64):int64);
-    val(word_subword (read YMM8 s) (128,64):int64);
-    val(word_subword (read YMM8 s) (192,64):int64);
-    val(word_subword (read YMM9 s) (0,64):int64);
-    val(word_subword (read YMM9 s) (64,64):int64);
-    val(word_subword (read YMM9 s) (128,64):int64);
-    val(word_subword (read YMM9 s) (192,64):int64);
-    val(word_subword (read YMM10 s) (0,64):int64);
-    val(word_subword (read YMM10 s) (64,64):int64);
-    val(word_subword (read YMM10 s) (128,64):int64);
-    val(word_subword (read YMM10 s) (192,64):int64);
-    val(word_subword (read YMM11 s) (0,64):int64);
-    val(word_subword (read YMM11 s) (64,64):int64);
-    val(word_subword (read YMM11 s) (128,64):int64);
-    val(word_subword (read YMM11 s) (192,64):int64);
-    val(word_subword (read YMM12 s) (0,64):int64);
-    val(word_subword (read YMM12 s) (64,64):int64);
-    val(word_subword (read YMM12 s) (128,64):int64);
-    val(word_subword (read YMM12 s) (192,64):int64);
-    val(word_subword (read YMM13 s) (0,64):int64);
-    val(word_subword (read YMM13 s) (64,64):int64);
-    val(word_subword (read YMM13 s) (128,64):int64);
-    val(word_subword (read YMM13 s) (192,64):int64);
-    val(word_subword (read YMM14 s) (0,64):int64);
-    val(word_subword (read YMM14 s) (64,64):int64);
-    val(word_subword (read YMM14 s) (128,64):int64);
-    val(word_subword (read YMM14 s) (192,64):int64);
-    val(word_subword (read YMM15 s) (0,64):int64);
-    val(word_subword (read YMM15 s) (64,64):int64);
-    val(word_subword (read YMM15 s) (128,64):int64);
-    val(word_subword (read YMM15 s) (192,64):int64);
+    val(word_subword (read ZMM0 s) (0,64):int64);
+    val(word_subword (read ZMM0 s) (64,64):int64);
+    val(word_subword (read ZMM0 s) (128,64):int64);
+    val(word_subword (read ZMM0 s) (192,64):int64);
+    val(word_subword (read ZMM0 s) (256,64):int64);
+    val(word_subword (read ZMM0 s) (320,64):int64);
+    val(word_subword (read ZMM0 s) (384,64):int64);
+    val(word_subword (read ZMM0 s) (448,64):int64);
+    val(word_subword (read ZMM1 s) (0,64):int64);
+    val(word_subword (read ZMM1 s) (64,64):int64);
+    val(word_subword (read ZMM1 s) (128,64):int64);
+    val(word_subword (read ZMM1 s) (192,64):int64);
+    val(word_subword (read ZMM1 s) (256,64):int64);
+    val(word_subword (read ZMM1 s) (320,64):int64);
+    val(word_subword (read ZMM1 s) (384,64):int64);
+    val(word_subword (read ZMM1 s) (448,64):int64);
+    val(word_subword (read ZMM2 s) (0,64):int64);
+    val(word_subword (read ZMM2 s) (64,64):int64);
+    val(word_subword (read ZMM2 s) (128,64):int64);
+    val(word_subword (read ZMM2 s) (192,64):int64);
+    val(word_subword (read ZMM2 s) (256,64):int64);
+    val(word_subword (read ZMM2 s) (320,64):int64);
+    val(word_subword (read ZMM2 s) (384,64):int64);
+    val(word_subword (read ZMM2 s) (448,64):int64);
+    val(word_subword (read ZMM3 s) (0,64):int64);
+    val(word_subword (read ZMM3 s) (64,64):int64);
+    val(word_subword (read ZMM3 s) (128,64):int64);
+    val(word_subword (read ZMM3 s) (192,64):int64);
+    val(word_subword (read ZMM3 s) (256,64):int64);
+    val(word_subword (read ZMM3 s) (320,64):int64);
+    val(word_subword (read ZMM3 s) (384,64):int64);
+    val(word_subword (read ZMM3 s) (448,64):int64);
+    val(word_subword (read ZMM4 s) (0,64):int64);
+    val(word_subword (read ZMM4 s) (64,64):int64);
+    val(word_subword (read ZMM4 s) (128,64):int64);
+    val(word_subword (read ZMM4 s) (192,64):int64);
+    val(word_subword (read ZMM4 s) (256,64):int64);
+    val(word_subword (read ZMM4 s) (320,64):int64);
+    val(word_subword (read ZMM4 s) (384,64):int64);
+    val(word_subword (read ZMM4 s) (448,64):int64);
+    val(word_subword (read ZMM5 s) (0,64):int64);
+    val(word_subword (read ZMM5 s) (64,64):int64);
+    val(word_subword (read ZMM5 s) (128,64):int64);
+    val(word_subword (read ZMM5 s) (192,64):int64);
+    val(word_subword (read ZMM5 s) (256,64):int64);
+    val(word_subword (read ZMM5 s) (320,64):int64);
+    val(word_subword (read ZMM5 s) (384,64):int64);
+    val(word_subword (read ZMM5 s) (448,64):int64);
+    val(word_subword (read ZMM6 s) (0,64):int64);
+    val(word_subword (read ZMM6 s) (64,64):int64);
+    val(word_subword (read ZMM6 s) (128,64):int64);
+    val(word_subword (read ZMM6 s) (192,64):int64);
+    val(word_subword (read ZMM6 s) (256,64):int64);
+    val(word_subword (read ZMM6 s) (320,64):int64);
+    val(word_subword (read ZMM6 s) (384,64):int64);
+    val(word_subword (read ZMM6 s) (448,64):int64);
+    val(word_subword (read ZMM7 s) (0,64):int64);
+    val(word_subword (read ZMM7 s) (64,64):int64);
+    val(word_subword (read ZMM7 s) (128,64):int64);
+    val(word_subword (read ZMM7 s) (192,64):int64);
+    val(word_subword (read ZMM7 s) (256,64):int64);
+    val(word_subword (read ZMM7 s) (320,64):int64);
+    val(word_subword (read ZMM7 s) (384,64):int64);
+    val(word_subword (read ZMM7 s) (448,64):int64);
+    val(word_subword (read ZMM8 s) (0,64):int64);
+    val(word_subword (read ZMM8 s) (64,64):int64);
+    val(word_subword (read ZMM8 s) (128,64):int64);
+    val(word_subword (read ZMM8 s) (192,64):int64);
+    val(word_subword (read ZMM8 s) (256,64):int64);
+    val(word_subword (read ZMM8 s) (320,64):int64);
+    val(word_subword (read ZMM8 s) (384,64):int64);
+    val(word_subword (read ZMM8 s) (448,64):int64);
+    val(word_subword (read ZMM9 s) (0,64):int64);
+    val(word_subword (read ZMM9 s) (64,64):int64);
+    val(word_subword (read ZMM9 s) (128,64):int64);
+    val(word_subword (read ZMM9 s) (192,64):int64);
+    val(word_subword (read ZMM9 s) (256,64):int64);
+    val(word_subword (read ZMM9 s) (320,64):int64);
+    val(word_subword (read ZMM9 s) (384,64):int64);
+    val(word_subword (read ZMM9 s) (448,64):int64);
+    val(word_subword (read ZMM10 s) (0,64):int64);
+    val(word_subword (read ZMM10 s) (64,64):int64);
+    val(word_subword (read ZMM10 s) (128,64):int64);
+    val(word_subword (read ZMM10 s) (192,64):int64);
+    val(word_subword (read ZMM10 s) (256,64):int64);
+    val(word_subword (read ZMM10 s) (320,64):int64);
+    val(word_subword (read ZMM10 s) (384,64):int64);
+    val(word_subword (read ZMM10 s) (448,64):int64);
+    val(word_subword (read ZMM11 s) (0,64):int64);
+    val(word_subword (read ZMM11 s) (64,64):int64);
+    val(word_subword (read ZMM11 s) (128,64):int64);
+    val(word_subword (read ZMM11 s) (192,64):int64);
+    val(word_subword (read ZMM11 s) (256,64):int64);
+    val(word_subword (read ZMM11 s) (320,64):int64);
+    val(word_subword (read ZMM11 s) (384,64):int64);
+    val(word_subword (read ZMM11 s) (448,64):int64);
+    val(word_subword (read ZMM12 s) (0,64):int64);
+    val(word_subword (read ZMM12 s) (64,64):int64);
+    val(word_subword (read ZMM12 s) (128,64):int64);
+    val(word_subword (read ZMM12 s) (192,64):int64);
+    val(word_subword (read ZMM12 s) (256,64):int64);
+    val(word_subword (read ZMM12 s) (320,64):int64);
+    val(word_subword (read ZMM12 s) (384,64):int64);
+    val(word_subword (read ZMM12 s) (448,64):int64);
+    val(word_subword (read ZMM13 s) (0,64):int64);
+    val(word_subword (read ZMM13 s) (64,64):int64);
+    val(word_subword (read ZMM13 s) (128,64):int64);
+    val(word_subword (read ZMM13 s) (192,64):int64);
+    val(word_subword (read ZMM13 s) (256,64):int64);
+    val(word_subword (read ZMM13 s) (320,64):int64);
+    val(word_subword (read ZMM13 s) (384,64):int64);
+    val(word_subword (read ZMM13 s) (448,64):int64);
+    val(word_subword (read ZMM14 s) (0,64):int64);
+    val(word_subword (read ZMM14 s) (64,64):int64);
+    val(word_subword (read ZMM14 s) (128,64):int64);
+    val(word_subword (read ZMM14 s) (192,64):int64);
+    val(word_subword (read ZMM14 s) (256,64):int64);
+    val(word_subword (read ZMM14 s) (320,64):int64);
+    val(word_subword (read ZMM14 s) (384,64):int64);
+    val(word_subword (read ZMM14 s) (448,64):int64);
+    val(word_subword (read ZMM15 s) (0,64):int64);
+    val(word_subword (read ZMM15 s) (64,64):int64);
+    val(word_subword (read ZMM15 s) (128,64):int64);
+    val(word_subword (read ZMM15 s) (192,64):int64);
+    val(word_subword (read ZMM15 s) (256,64):int64);
+    val(word_subword (read ZMM15 s) (320,64):int64);
+    val(word_subword (read ZMM15 s) (384,64):int64);
+    val(word_subword (read ZMM15 s) (448,64):int64);
+    val(word_subword (read ZMM16 s) (0,64):int64);
+    val(word_subword (read ZMM16 s) (64,64):int64);
+    val(word_subword (read ZMM16 s) (128,64):int64);
+    val(word_subword (read ZMM16 s) (192,64):int64);
+    val(word_subword (read ZMM16 s) (256,64):int64);
+    val(word_subword (read ZMM16 s) (320,64):int64);
+    val(word_subword (read ZMM16 s) (384,64):int64);
+    val(word_subword (read ZMM16 s) (448,64):int64);
+    val(word_subword (read ZMM17 s) (0,64):int64);
+    val(word_subword (read ZMM17 s) (64,64):int64);
+    val(word_subword (read ZMM17 s) (128,64):int64);
+    val(word_subword (read ZMM17 s) (192,64):int64);
+    val(word_subword (read ZMM17 s) (256,64):int64);
+    val(word_subword (read ZMM17 s) (320,64):int64);
+    val(word_subword (read ZMM17 s) (384,64):int64);
+    val(word_subword (read ZMM17 s) (448,64):int64);
+    val(word_subword (read ZMM18 s) (0,64):int64);
+    val(word_subword (read ZMM18 s) (64,64):int64);
+    val(word_subword (read ZMM18 s) (128,64):int64);
+    val(word_subword (read ZMM18 s) (192,64):int64);
+    val(word_subword (read ZMM18 s) (256,64):int64);
+    val(word_subword (read ZMM18 s) (320,64):int64);
+    val(word_subword (read ZMM18 s) (384,64):int64);
+    val(word_subword (read ZMM18 s) (448,64):int64);
+    val(word_subword (read ZMM19 s) (0,64):int64);
+    val(word_subword (read ZMM19 s) (64,64):int64);
+    val(word_subword (read ZMM19 s) (128,64):int64);
+    val(word_subword (read ZMM19 s) (192,64):int64);
+    val(word_subword (read ZMM19 s) (256,64):int64);
+    val(word_subword (read ZMM19 s) (320,64):int64);
+    val(word_subword (read ZMM19 s) (384,64):int64);
+    val(word_subword (read ZMM19 s) (448,64):int64);
+    val(word_subword (read ZMM20 s) (0,64):int64);
+    val(word_subword (read ZMM20 s) (64,64):int64);
+    val(word_subword (read ZMM20 s) (128,64):int64);
+    val(word_subword (read ZMM20 s) (192,64):int64);
+    val(word_subword (read ZMM20 s) (256,64):int64);
+    val(word_subword (read ZMM20 s) (320,64):int64);
+    val(word_subword (read ZMM20 s) (384,64):int64);
+    val(word_subword (read ZMM20 s) (448,64):int64);
+    val(word_subword (read ZMM21 s) (0,64):int64);
+    val(word_subword (read ZMM21 s) (64,64):int64);
+    val(word_subword (read ZMM21 s) (128,64):int64);
+    val(word_subword (read ZMM21 s) (192,64):int64);
+    val(word_subword (read ZMM21 s) (256,64):int64);
+    val(word_subword (read ZMM21 s) (320,64):int64);
+    val(word_subword (read ZMM21 s) (384,64):int64);
+    val(word_subword (read ZMM21 s) (448,64):int64);
+    val(word_subword (read ZMM22 s) (0,64):int64);
+    val(word_subword (read ZMM22 s) (64,64):int64);
+    val(word_subword (read ZMM22 s) (128,64):int64);
+    val(word_subword (read ZMM22 s) (192,64):int64);
+    val(word_subword (read ZMM22 s) (256,64):int64);
+    val(word_subword (read ZMM22 s) (320,64):int64);
+    val(word_subword (read ZMM22 s) (384,64):int64);
+    val(word_subword (read ZMM22 s) (448,64):int64);
+    val(word_subword (read ZMM23 s) (0,64):int64);
+    val(word_subword (read ZMM23 s) (64,64):int64);
+    val(word_subword (read ZMM23 s) (128,64):int64);
+    val(word_subword (read ZMM23 s) (192,64):int64);
+    val(word_subword (read ZMM23 s) (256,64):int64);
+    val(word_subword (read ZMM23 s) (320,64):int64);
+    val(word_subword (read ZMM23 s) (384,64):int64);
+    val(word_subword (read ZMM23 s) (448,64):int64);
+    val(word_subword (read ZMM24 s) (0,64):int64);
+    val(word_subword (read ZMM24 s) (64,64):int64);
+    val(word_subword (read ZMM24 s) (128,64):int64);
+    val(word_subword (read ZMM24 s) (192,64):int64);
+    val(word_subword (read ZMM24 s) (256,64):int64);
+    val(word_subword (read ZMM24 s) (320,64):int64);
+    val(word_subword (read ZMM24 s) (384,64):int64);
+    val(word_subword (read ZMM24 s) (448,64):int64);
+    val(word_subword (read ZMM25 s) (0,64):int64);
+    val(word_subword (read ZMM25 s) (64,64):int64);
+    val(word_subword (read ZMM25 s) (128,64):int64);
+    val(word_subword (read ZMM25 s) (192,64):int64);
+    val(word_subword (read ZMM25 s) (256,64):int64);
+    val(word_subword (read ZMM25 s) (320,64):int64);
+    val(word_subword (read ZMM25 s) (384,64):int64);
+    val(word_subword (read ZMM25 s) (448,64):int64);
+    val(word_subword (read ZMM26 s) (0,64):int64);
+    val(word_subword (read ZMM26 s) (64,64):int64);
+    val(word_subword (read ZMM26 s) (128,64):int64);
+    val(word_subword (read ZMM26 s) (192,64):int64);
+    val(word_subword (read ZMM26 s) (256,64):int64);
+    val(word_subword (read ZMM26 s) (320,64):int64);
+    val(word_subword (read ZMM26 s) (384,64):int64);
+    val(word_subword (read ZMM26 s) (448,64):int64);
+    val(word_subword (read ZMM27 s) (0,64):int64);
+    val(word_subword (read ZMM27 s) (64,64):int64);
+    val(word_subword (read ZMM27 s) (128,64):int64);
+    val(word_subword (read ZMM27 s) (192,64):int64);
+    val(word_subword (read ZMM27 s) (256,64):int64);
+    val(word_subword (read ZMM27 s) (320,64):int64);
+    val(word_subword (read ZMM27 s) (384,64):int64);
+    val(word_subword (read ZMM27 s) (448,64):int64);
+    val(word_subword (read ZMM28 s) (0,64):int64);
+    val(word_subword (read ZMM28 s) (64,64):int64);
+    val(word_subword (read ZMM28 s) (128,64):int64);
+    val(word_subword (read ZMM28 s) (192,64):int64);
+    val(word_subword (read ZMM28 s) (256,64):int64);
+    val(word_subword (read ZMM28 s) (320,64):int64);
+    val(word_subword (read ZMM28 s) (384,64):int64);
+    val(word_subword (read ZMM28 s) (448,64):int64);
+    val(word_subword (read ZMM29 s) (0,64):int64);
+    val(word_subword (read ZMM29 s) (64,64):int64);
+    val(word_subword (read ZMM29 s) (128,64):int64);
+    val(word_subword (read ZMM29 s) (192,64):int64);
+    val(word_subword (read ZMM29 s) (256,64):int64);
+    val(word_subword (read ZMM29 s) (320,64):int64);
+    val(word_subword (read ZMM29 s) (384,64):int64);
+    val(word_subword (read ZMM29 s) (448,64):int64);
+    val(word_subword (read ZMM30 s) (0,64):int64);
+    val(word_subword (read ZMM30 s) (64,64):int64);
+    val(word_subword (read ZMM30 s) (128,64):int64);
+    val(word_subword (read ZMM30 s) (192,64):int64);
+    val(word_subword (read ZMM30 s) (256,64):int64);
+    val(word_subword (read ZMM30 s) (320,64):int64);
+    val(word_subword (read ZMM30 s) (384,64):int64);
+    val(word_subword (read ZMM30 s) (448,64):int64);
+    val(word_subword (read ZMM31 s) (0,64):int64);
+    val(word_subword (read ZMM31 s) (64,64):int64);
+    val(word_subword (read ZMM31 s) (128,64):int64);
+    val(word_subword (read ZMM31 s) (192,64):int64);
+    val(word_subword (read ZMM31 s) (256,64):int64);
+    val(word_subword (read ZMM31 s) (320,64):int64);
+    val(word_subword (read ZMM31 s) (384,64):int64);
+    val(word_subword (read ZMM31 s) (448,64):int64);
+    val(read (maskregisters :> element(word 0)) s:int64);
+    val(read (maskregisters :> element(word 1)) s:int64);
+    val(read (maskregisters :> element(word 2)) s:int64);
+    val(read (maskregisters :> element(word 3)) s:int64);
+    val(read (maskregisters :> element(word 4)) s:int64);
+    val(read (maskregisters :> element(word 5)) s:int64);
+    val(read (maskregisters :> element(word 6)) s:int64);
+    val(read (maskregisters :> element(word 7)) s:int64);
     val(word_subword (read (memory :> bytes256(read RSP s)) s) (0,64):int64);
     val(word_subword (read (memory :> bytes256(read RSP s)) s) (64,64):int64);
     val(word_subword (read (memory :> bytes256(read RSP s)) s) (128,64):int64);
@@ -169,6 +371,41 @@ let YMMENCODING_REGROUP = prove
   CONV_TAC(TOP_DEPTH_CONV BIT_WORD_CONV) THEN
   REWRITE_TAC[CONJ_ASSOC]);;
 
+let ZMMENCODING_REGROUP = prove
+ (`(!(z:512 word) (z0:int64) (z1:int64) (z2:int64) (z3:int64)
+       (z4:int64) (z5:int64) (z6:int64) (z7:int64).
+    word_subword z (0,64) = z0 /\
+    word_subword z (64,64) = z1 /\
+    word_subword z (128,64) = z2 /\
+    word_subword z (192,64) = z3 /\
+    word_subword z (256,64) = z4 /\
+    word_subword z (320,64) = z5 /\
+    word_subword z (384,64) = z6 /\
+    word_subword z (448,64) = z7 <=>
+    z = word_join
+         (word_join (word_join z7 z6:128 word) (word_join z5 z4:128 word):256 word)
+         (word_join (word_join z3 z2:128 word) (word_join z1 z0:128 word):256 word)) /\
+   (!(z:512 word) (z0:int64) (z1:int64) (z2:int64) (z3:int64)
+       (z4:int64) (z5:int64) (z6:int64) (z7:int64) P.
+    word_subword z (0,64) = z0 /\
+    word_subword z (64,64) = z1 /\
+    word_subword z (128,64) = z2 /\
+    word_subword z (192,64) = z3 /\
+    word_subword z (256,64) = z4 /\
+    word_subword z (320,64) = z5 /\
+    word_subword z (384,64) = z6 /\
+    word_subword z (448,64) = z7 /\
+    P <=>
+    z = word_join
+         (word_join (word_join z7 z6:128 word) (word_join z5 z4:128 word):256 word)
+         (word_join (word_join z3 z2:128 word) (word_join z1 z0:128 word):256 word) /\ P)`,
+  CONJ_TAC THEN REPEAT GEN_TAC THEN
+  ONCE_REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
+  REWRITE_TAC[DIMINDEX_64; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512] THEN
+  CONV_TAC(ONCE_DEPTH_CONV EXPAND_CASES_CONV) THEN
+  CONV_TAC(TOP_DEPTH_CONV BIT_WORD_CONV) THEN
+  REWRITE_TAC[CONJ_ASSOC]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Explicit execution for x86_movsb (not needed for usual proofs)            *)
 (* ------------------------------------------------------------------------- *)
@@ -241,10 +478,13 @@ let random64() = randomnd 64 (Random.int 65);;
 
 let random_regstate () =
   let d = Random.int 65 in
+  let dk = Random.int 65 in
   map (fun _ -> randomnd 64 d) (0--3) @
   [num(Random.int 256 land 0b11010101)] @
-  map (fun _ -> randomnd 64 d) (5--79) @
-  map (fun _ -> randomnd 64 d) (80--111);;
+  map (fun _ -> randomnd 64 d) (5--15) @
+  map (fun _ -> randomnd 64 d) (16--271) @
+  map (fun _ -> randomnd 64 dk) (272--279) @
+  map (fun _ -> randomnd 64 d) (280--311);;
 
 (*** The HOL-side executor client is shared in common/cosim.ml. This file
  *** selects the x86-64 executor and supplies the state-vector shape.
@@ -271,6 +511,7 @@ let random_instruction iclasses =
 loadt "x86/x86-insns.ml";;
 
 let iclasses = iclasses_regreg @
+
 
 (*** The elements here were added manually for additional checks. ***)
 
@@ -1038,7 +1279,13 @@ let template =
      (MAYCHANGE [RIP; RSP; RAX; RCX; RDX; RBX; RBP; RSI; RDI;
                  R8; R9; R10; R11; R12; R13; R14; R15] ,,
       MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7;
-                 ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15] ,,
+                 ZMM8; ZMM9; ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15;
+                 ZMM16; ZMM17; ZMM18; ZMM19; ZMM20; ZMM21; ZMM22; ZMM23;
+                 ZMM24; ZMM25; ZMM26; ZMM27; ZMM28; ZMM29; ZMM30; ZMM31] ,,
+      MAYCHANGE [maskregisters :> element(word 0); maskregisters :> element(word 1);
+                 maskregisters :> element(word 2); maskregisters :> element(word 3);
+                 maskregisters :> element(word 4); maskregisters :> element(word 5);
+                 maskregisters :> element(word 6); maskregisters :> element(word 7)] ,,
       MAYCHANGE [memory :> bytes(stackpointer,256)] ,,
       MAYCHANGE [CF; PF; AF; ZF; SF; OF; DF] ,, MAYCHANGE [events])`;;
 
@@ -1095,13 +1342,15 @@ let extra_movsb_tac =
 let tac_before memop =
   REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
   REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
-  REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN CONV_TAC NUM_REDUCE_CONV THEN
-  REWRITE_TAC[YMMENCODING_REGROUP] THEN CONV_TAC(DEPTH_CONV WORD_JOIN_CONV) THEN
+  REWRITE_TAC[DIMINDEX_64; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512] THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[ZMMENCODING_REGROUP; YMMENCODING_REGROUP] THEN
+  CONV_TAC(DEPTH_CONV WORD_JOIN_CONV) THEN
   REWRITE_TAC[SOME_FLAGS] THEN ONCE_REWRITE_TAC[MESON[]
    `read RSP s = stackpointer /\ P (read RSP s) s <=>
     read RSP s = stackpointer /\ P stackpointer s`] THEN
   ENSURES_INIT_TAC "s0" THEN
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC)
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC [5;0;1;2;3;4] else ALL_TAC)
 and tac_main (memopidx: int option) mc states =
   begin match memopidx with
   | Some idx ->
@@ -1128,7 +1377,7 @@ and tac_after memop =
    example). To further assist, we will perform the READ_MEMORY_FULLMERGE_CONV
    and rewrite/simplification again for spliting out the memory read and
    simplify the goal. *)
-  (if memop then MAP_EVERY MEMORY_SPLIT_TAC (0--4) else ALL_TAC) THEN
+  (if memop then MAP_EVERY MEMORY_SPLIT_TAC [5;0;1;2;3;4] else ALL_TAC) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   (if memop then CONV_TAC(ONCE_DEPTH_CONV READ_MEMORY_FULLMERGE_CONV)
    else ALL_TAC) THEN
@@ -1159,7 +1408,7 @@ let decode_inst ibytes =
 
 let x86_cosim_executor = lazy
   (start_cosim_executor "S2N_BIGNUM_X86_64_EXECUTOR"
-    "tools/simulate-persistent x86" "x86_64" 112);;
+    "tools/simulate-persistent x86" "x86_64" 312);;
 
 let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
@@ -1226,7 +1475,8 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
           else
             let _,[_,gsd],_ =
              (REWRITE_TAC[regfile; CONS_11; FLAGENCODING_11; VAL_WORD_GALOIS] THEN
-              REWRITE_TAC[DIMINDEX_64; DIMINDEX_128] THEN CONV_TAC NUM_REDUCE_CONV THEN
+              REWRITE_TAC[DIMINDEX_64; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512] THEN
+              CONV_TAC NUM_REDUCE_CONV THEN
               REWRITE_TAC[SOME_FLAGS]) ([], goal) in
              (print_qterm gsd; Format.print_newline(); false))
      | _,[],_ -> true in

@@ -13,6 +13,8 @@
 
 needs "x86/proofs/equiv.ml";;
 
+x86_ymm_view := true;;
+
 (* This example will define & prove the equivalence of two programs
    using EQUIV_STEPS_TAC.
    This tactic is useful if two programs are supposed to have many

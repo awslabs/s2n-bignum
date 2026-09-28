@@ -22,18 +22,9 @@
 //      R13 = regfile[13]
 //      R14 = regfile[14]
 //      R15 = regfile[15]
-//      YMM0.d[0] = regfile[16]
-//      YMM0.d[1] = regfile[17]
-//      YMM0.d[2] = regfile[18]
-//      YMM0.d[3] = regfile[19]
-//      YMM1.d[0] = regfile[20]
 //      ...
-//      YMM15.d[2] = regfile[78]
-//      YMM15.d[3] = regfile[79]
 //
-//      [SP+0,...,SP+7] = regfile[80]
 //      ...
-//      [SP+248,...,SP+255] = regfile[111]
 //
 // executes the instruction at "modinst", then copies the new state
 // back into the same array, also returning new value RAX directly.
@@ -77,23 +68,22 @@ _harness:
         push    rdi
 
 // Create little 256-byte buffer and copy in the contents
-// We can use ymm0 because it hasn't been set yet
         sub rsp, 256
-        vmovdqu ymm0, [rdi+640+0*32]
+        vmovdqu ymm0, [rdi+2240+0*32]
         vmovdqu [rsp], ymm0
-        vmovdqu ymm0, [rdi+640+1*32]
+        vmovdqu ymm0, [rdi+2240+1*32]
         vmovdqu [rsp+1*32], ymm0
-        vmovdqu ymm0, [rdi+640+2*32]
+        vmovdqu ymm0, [rdi+2240+2*32]
         vmovdqu [rsp+2*32], ymm0
-        vmovdqu ymm0, [rdi+640+3*32]
+        vmovdqu ymm0, [rdi+2240+3*32]
         vmovdqu [rsp+3*32], ymm0
-        vmovdqu ymm0, [rdi+640+4*32]
+        vmovdqu ymm0, [rdi+2240+4*32]
         vmovdqu [rsp+4*32], ymm0
-        vmovdqu ymm0, [rdi+640+5*32]
+        vmovdqu ymm0, [rdi+2240+5*32]
         vmovdqu [rsp+5*32], ymm0
-        vmovdqu ymm0, [rdi+640+6*32]
+        vmovdqu ymm0, [rdi+2240+6*32]
         vmovdqu [rsp+6*32], ymm0
-        vmovdqu ymm0, [rdi+640+7*32]
+        vmovdqu ymm0, [rdi+2240+7*32]
         vmovdqu [rsp+7*32], ymm0
 
 // Load new register contents from rdi (last overwrites the input pointer)
@@ -124,22 +114,46 @@ _harness:
         mov     r14, [rdi+14*8]
         mov     r15, [rdi+15*8]
 
-        vmovdqu ymm0, [rdi+16*8]
-        vmovdqu ymm1, [rdi+20*8]
-        vmovdqu ymm2, [rdi+24*8]
-        vmovdqu ymm3, [rdi+28*8]
-        vmovdqu ymm4, [rdi+32*8]
-        vmovdqu ymm5, [rdi+36*8]
-        vmovdqu ymm6, [rdi+40*8]
-        vmovdqu ymm7, [rdi+44*8]
-        vmovdqu ymm8, [rdi+48*8]
-        vmovdqu ymm9, [rdi+52*8]
-        vmovdqu ymm10, [rdi+56*8]
-        vmovdqu ymm11, [rdi+60*8]
-        vmovdqu ymm12, [rdi+64*8]
-        vmovdqu ymm13, [rdi+68*8]
-        vmovdqu ymm14, [rdi+72*8]
-        vmovdqu ymm15, [rdi+76*8]
+        vmovdqu64 zmm0,  [rdi+128+0*64]
+        vmovdqu64 zmm1,  [rdi+128+1*64]
+        vmovdqu64 zmm2,  [rdi+128+2*64]
+        vmovdqu64 zmm3,  [rdi+128+3*64]
+        vmovdqu64 zmm4,  [rdi+128+4*64]
+        vmovdqu64 zmm5,  [rdi+128+5*64]
+        vmovdqu64 zmm6,  [rdi+128+6*64]
+        vmovdqu64 zmm7,  [rdi+128+7*64]
+        vmovdqu64 zmm8,  [rdi+128+8*64]
+        vmovdqu64 zmm9,  [rdi+128+9*64]
+        vmovdqu64 zmm10, [rdi+128+10*64]
+        vmovdqu64 zmm11, [rdi+128+11*64]
+        vmovdqu64 zmm12, [rdi+128+12*64]
+        vmovdqu64 zmm13, [rdi+128+13*64]
+        vmovdqu64 zmm14, [rdi+128+14*64]
+        vmovdqu64 zmm15, [rdi+128+15*64]
+        vmovdqu64 zmm16, [rdi+128+16*64]
+        vmovdqu64 zmm17, [rdi+128+17*64]
+        vmovdqu64 zmm18, [rdi+128+18*64]
+        vmovdqu64 zmm19, [rdi+128+19*64]
+        vmovdqu64 zmm20, [rdi+128+20*64]
+        vmovdqu64 zmm21, [rdi+128+21*64]
+        vmovdqu64 zmm22, [rdi+128+22*64]
+        vmovdqu64 zmm23, [rdi+128+23*64]
+        vmovdqu64 zmm24, [rdi+128+24*64]
+        vmovdqu64 zmm25, [rdi+128+25*64]
+        vmovdqu64 zmm26, [rdi+128+26*64]
+        vmovdqu64 zmm27, [rdi+128+27*64]
+        vmovdqu64 zmm28, [rdi+128+28*64]
+        vmovdqu64 zmm29, [rdi+128+29*64]
+        vmovdqu64 zmm30, [rdi+128+30*64]
+        vmovdqu64 zmm31, [rdi+128+31*64]
+
+        kmovq   k1, [rdi+273*8]
+        kmovq   k2, [rdi+274*8]
+        kmovq   k3, [rdi+275*8]
+        kmovq   k4, [rdi+276*8]
+        kmovq   k5, [rdi+277*8]
+        kmovq   k6, [rdi+278*8]
+        kmovq   k7, [rdi+279*8]
 
         mov     rdi, [rdi+7*8]
 
@@ -159,22 +173,46 @@ modinst:
         and     rax, 0b110011010101
         mov     [rdi+4*8], rax
 
-        vmovdqu [rdi+16*8],  ymm0
-        vmovdqu [rdi+20*8],  ymm1
-        vmovdqu [rdi+24*8],  ymm2
-        vmovdqu [rdi+28*8],  ymm3
-        vmovdqu [rdi+32*8],  ymm4
-        vmovdqu [rdi+36*8],  ymm5
-        vmovdqu [rdi+40*8],  ymm6
-        vmovdqu [rdi+44*8],  ymm7
-        vmovdqu [rdi+48*8],  ymm8
-        vmovdqu [rdi+52*8],  ymm9
-        vmovdqu [rdi+56*8], ymm10
-        vmovdqu [rdi+60*8], ymm11
-        vmovdqu [rdi+64*8], ymm12
-        vmovdqu [rdi+68*8], ymm13
-        vmovdqu [rdi+72*8], ymm14
-        vmovdqu [rdi+76*8], ymm15
+        vmovdqu64 [rdi+128+0*64],  zmm0
+        vmovdqu64 [rdi+128+1*64],  zmm1
+        vmovdqu64 [rdi+128+2*64],  zmm2
+        vmovdqu64 [rdi+128+3*64],  zmm3
+        vmovdqu64 [rdi+128+4*64],  zmm4
+        vmovdqu64 [rdi+128+5*64],  zmm5
+        vmovdqu64 [rdi+128+6*64],  zmm6
+        vmovdqu64 [rdi+128+7*64],  zmm7
+        vmovdqu64 [rdi+128+8*64],  zmm8
+        vmovdqu64 [rdi+128+9*64],  zmm9
+        vmovdqu64 [rdi+128+10*64], zmm10
+        vmovdqu64 [rdi+128+11*64], zmm11
+        vmovdqu64 [rdi+128+12*64], zmm12
+        vmovdqu64 [rdi+128+13*64], zmm13
+        vmovdqu64 [rdi+128+14*64], zmm14
+        vmovdqu64 [rdi+128+15*64], zmm15
+        vmovdqu64 [rdi+128+16*64], zmm16
+        vmovdqu64 [rdi+128+17*64], zmm17
+        vmovdqu64 [rdi+128+18*64], zmm18
+        vmovdqu64 [rdi+128+19*64], zmm19
+        vmovdqu64 [rdi+128+20*64], zmm20
+        vmovdqu64 [rdi+128+21*64], zmm21
+        vmovdqu64 [rdi+128+22*64], zmm22
+        vmovdqu64 [rdi+128+23*64], zmm23
+        vmovdqu64 [rdi+128+24*64], zmm24
+        vmovdqu64 [rdi+128+25*64], zmm25
+        vmovdqu64 [rdi+128+26*64], zmm26
+        vmovdqu64 [rdi+128+27*64], zmm27
+        vmovdqu64 [rdi+128+28*64], zmm28
+        vmovdqu64 [rdi+128+29*64], zmm29
+        vmovdqu64 [rdi+128+30*64], zmm30
+        vmovdqu64 [rdi+128+31*64], zmm31
+
+        kmovq   [rdi+273*8], k1
+        kmovq   [rdi+274*8], k2
+        kmovq   [rdi+275*8], k3
+        kmovq   [rdi+276*8], k4
+        kmovq   [rdi+277*8], k5
+        kmovq   [rdi+278*8], k6
+        kmovq   [rdi+279*8], k7
 
         mov     [rdi+1*8],  rcx
         mov     [rdi+2*8],  rdx
@@ -193,23 +231,22 @@ modinst:
         mov     [rdi+7*8],  rcx
 
 // Copy back contents of the buffer and deallocate stack
-// We can use ymm0 because its value has already been saved to regfile
         vmovdqu ymm0, [rsp]
-        vmovdqu [rdi+640+0*32], ymm0
+        vmovdqu [rdi+2240+0*32], ymm0
         vmovdqu ymm0, [rsp+1*32]
-        vmovdqu [rdi+640+1*32], ymm0
+        vmovdqu [rdi+2240+1*32], ymm0
         vmovdqu ymm0, [rsp+2*32]
-        vmovdqu [rdi+640+2*32], ymm0
+        vmovdqu [rdi+2240+2*32], ymm0
         vmovdqu ymm0, [rsp+3*32]
-        vmovdqu [rdi+640+3*32], ymm0
+        vmovdqu [rdi+2240+3*32], ymm0
         vmovdqu ymm0, [rsp+4*32]
-        vmovdqu [rdi+640+4*32], ymm0
+        vmovdqu [rdi+2240+4*32], ymm0
         vmovdqu ymm0, [rsp+5*32]
-        vmovdqu [rdi+640+5*32], ymm0
+        vmovdqu [rdi+2240+5*32], ymm0
         vmovdqu ymm0, [rsp+6*32]
-        vmovdqu [rdi+640+6*32], ymm0
+        vmovdqu [rdi+2240+6*32], ymm0
         vmovdqu ymm0, [rsp+7*32]
-        vmovdqu [rdi+640+7*32], ymm0
+        vmovdqu [rdi+2240+7*32], ymm0
         add rsp, 256
 
 // Dummy pop to match push of rdi
