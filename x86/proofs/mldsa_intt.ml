@@ -9,6 +9,7 @@
 
 needs "x86/proofs/base.ml";;
 needs "common/mlkem_mldsa.ml";;
+needs "common/int_linear.ml";;
 
 (*** print_literal_from_elf "x86/mldsa/mldsa_intt.o";;
  ***)
@@ -4513,10 +4514,7 @@ let MLDSA_INTT_CORRECT = prove
       MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
       CONV_TAC(ONCE_DEPTH_CONV MLDSA_INVERSE_NTT_CONV) THEN
       REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
-      REWRITE_TAC[INT_REM_EQ] THEN
-      REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
-      REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
-      CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
+      REWRITE_TAC[INT_REM_EQ] THEN INT_LINEAR_CONG_TAC;
       MATCH_MP_TAC(INT_ARITH
        `l':int <= l /\ u <= u'
         ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN

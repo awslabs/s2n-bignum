@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+
+# Serve the persistent cosimulation protocol for one architecture by
+# invoking its legacy one-case simulator command for each RUN request.
+#
+# Usage: tools/simulate-persistent <arm|x86>
+#
+# The two architectures differ only in the legacy command, the greeting
+# they announce, the state size, and the unit the legacy command expects
+# the instruction encoding in: armsimulate takes little-endian 32-bit
+# words, x86simulate takes individual bytes.
+
+set -u
+
+DIR="$(dirname -- "${BASH_SOURCE[0]}")"
+DIR="$(realpath -- "$DIR")"
+ROOT="$(dirname -- "$DIR")"
+REQUEST_OUTPUT=""
+
+usage() {
+  printf 'usage: simulate-persistent <arm|x86>\n' >&2
+  exit 2
+}
+
+(( $# == 1 )) || usage
+
+case $1 in
+  arm)
+    LEGACY="$ROOT/arm/proofs/armsimulate"
+    ARCH=aarch64
+    STATE_WORDS=128
+    CODE_UNIT_BYTES=4
+    ;;
+  x86)
+    LEGACY="$ROOT/x86/proofs/x86simulate"
+    ARCH=x86_64
+    STATE_WORDS=112
+    CODE_UNIT_BYTES=1
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+cleanup() {
+  if [[ -n "$REQUEST_OUTPUT" ]]; then
+    rm -f -- "$REQUEST_OUTPUT"
+    REQUEST_OUTPUT=""
+  fi
+}
+
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Split the hexadecimal encoding into the units the legacy command takes,
+# reversing the bytes within each unit so that a multi-byte unit is passed
+# in the little-endian form the assembler template expects.
+
+hex_to_code_argument() {
+  local hex=$1
+  local length=${#hex}
+  local digits=$(( CODE_UNIT_BYTES * 2 ))
+  local offset index unit
+  local -a units=()
+
+  if (( length == 0 || length % digits != 0 )) ||
+      [[ ! "$hex" =~ ^[[:xdigit:]]+$ ]]; then
+    return 1
+  fi
+
+  for ((offset = 0; offset < length; offset += digits)); do
+    unit=""
+    for ((index = digits - 2; index >= 0; index -= 2)); do
+      unit+=${hex:offset+index:2}
+    done
+    units+=("0x$unit")
+  done
+
+  local IFS=,
+  CODE_ARGUMENT="${units[*]}"
+}
+
+run_persistent() {
+  local line code child_status
+  local -a request output_words
+
+  printf 'READY 1 %s %d\n' "$ARCH" "$STATE_WORDS"
+  while IFS= read -r line; do
+    read -r -a request <<< "$line"
+    case "${request[0]:-}" in
+      QUIT)
+        return 0
+        ;;
+      RUN)
+        if (( ${#request[@]} != STATE_WORDS + 2 )); then
+          printf 'ERROR wrong-input-state-size\n'
+          continue
+        fi
+        code=${request[1]}
+        if ! hex_to_code_argument "$code"; then
+          printf 'ERROR malformed-%s-code\n' "$ARCH"
+          continue
+        fi
+
+        REQUEST_OUTPUT="$(mktemp)" || {
+          printf 'ERROR tempfile\n'
+          continue
+        }
+        "$LEGACY" "$CODE_ARGUMENT" "${request[@]:2}" >"$REQUEST_OUTPUT"
+        child_status=$?
+
+        if [[ ! -s "$REQUEST_OUTPUT" ]]; then
+          printf 'TRAP exit-%d\n' "$child_status"
+        else
+          read -r -a output_words <"$REQUEST_OUTPUT"
+          if (( ${#output_words[@]} != STATE_WORDS )); then
+            printf 'ERROR wrong-output-state-size\n'
+          else
+            printf 'OK'
+            printf ' %s' "${output_words[@]}"
+            printf '\n'
+          fi
+        fi
+        rm -f -- "$REQUEST_OUTPUT"
+        REQUEST_OUTPUT=""
+        ;;
+      *)
+        printf 'ERROR unknown-command\n'
+        ;;
+    esac
+  done
+}
+
+run_persistent

@@ -10,6 +10,7 @@
 (* ========================================================================= *)
 
 needs "common/relational2.ml";;
+needs "common/maychange.ml";;
 
 let equiv_print_log = ref false;;
 
@@ -20,72 +21,6 @@ let equiv_print_log = ref false;;
 (* can be somehow inferred from it. MK_MEMORY_READ_EQ_BIGDIGIT_CONV examples *)
 (* demonstrate a few useful cases.                                           *)
 (* ------------------------------------------------------------------------- *)
-
-(* Given t which is `memory :> bytes (..)` or `memory :> bytes64 (..)`,
-   return the address, byte size and constructor name ("bytes64", "bytes", ...).
-   Note that this relies on the fact that both armstate and x86state structures
-   have the memory field. *)
-let get_memory_read_info =
-  let szs = [
-    "bytes16",`2`;
-    "bytes32",`4`;
-    "bytes64",`8`;
-    "bytes128",`16`;
-    "bytes256",`32`
-  ] in
-  fun (t:term): (term * term * string) option ->
-    if not (is_binary ":>" t) then None else
-    let l,r = dest_binary ":>" t in
-    let lname,_ = dest_const l in
-    if lname <> "memory" then None else
-    let c,args = strip_comb r in
-    let accessor:string = fst (dest_const c) in
-    try
-      let bytewidth:term = assoc accessor szs in
-      (* args is just a location *)
-      if List.length args <> 1 then failwith "get_memory_read_info" else
-      Some (List.hd args, bytewidth, accessor)
-    with Failure _ ->
-      begin match accessor with
-      | "bytes" ->
-        (* args is (loc, len). *)
-        if List.length args <> 1 then failwith "get_memory_read_info" else
-        let a, sz = dest_pair (List.hd args) in
-        Some (a, sz, "bytes")
-      | _ -> (* don't know what it is *)
-        None
-      end;;
-
-let get_base_ptr_and_ofs (t:term): term * term =
-  try (* t is "word_add baseptr (word ofs)" *)
-    let baseptr,y = dest_binary "word_add" t in
-    let wordc, ofs = dest_comb y in
-    if name_of wordc <> "word" then failwith "not word" else
-    (baseptr, ofs)
-  with Failure _ -> (t, mk_small_numeral 0);;
-
-assert (get_base_ptr_and_ofs `x:int64` = (`x:int64`,`0`));;
-assert (get_base_ptr_and_ofs `word_add x (word 32):int64` = (`x:int64`,`32`));;
-assert (get_base_ptr_and_ofs `word_add x (word (8*4)):int64` = (`x:int64`,`8*4`));;
-(* To get (x, 48) from this, WORD_ADD_ASSOC_CONST must be applied first. *)
-assert (get_base_ptr_and_ofs `word_add (word_add x (word 16)) (word 32):int64` =
-        (`word_add x (word 16):int64`, `32`));;
-assert (get_base_ptr_and_ofs `word_add x (word k):int64` = (`x:int64`, `k:num`));;
-
-let get_base_ptr_and_constofs (t:term): term * int =
-  let base,ofs = get_base_ptr_and_ofs t in
-  if is_numeral ofs then (base,dest_small_numeral ofs)
-  else
-    try
-      let ofs = rhs (concl (NUM_RED_CONV ofs)) in
-      (base,dest_small_numeral ofs)
-    with Failure _ -> (t,0);;
-
-assert (get_base_ptr_and_constofs `word_add x (word (8*4)):int64` = (`x:int64`,32));;
-
-
-let WORD_SUB2 = MESON [WORD_SUB]
-  `y <= x ==> word_sub (word x) (word y):int64 = word (x - y)`;;
 
 (** See the examples below.
     Input: a term 'read (memory :> ...)' as well as assumptions list.
@@ -99,7 +34,9 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
     | Comb (Comb (Const ("read", _), comp), state_var) ->
       begin match get_memory_read_info comp with
       | Some (x,size,constrname) ->
-        Some (x,get_base_ptr_and_ofs x,size,constrname,state_var)
+        let memory_component = fst(dest_binary ":>" comp) in
+        Some (memory_component,x,get_base_ptr_and_ofs x,size,
+              constrname,state_var)
       | _ -> None
       end
     | _ -> None in
@@ -173,7 +110,7 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
       then Some (mk_small_numeral (const1 - const2))
       else None in
 
-  let rec mk_word_add =
+  let rec mk_word_add ptrofs imm =
     let rec num_add expr (imm:int) =
       if is_numeral expr then
         mk_small_numeral(imm + dest_small_numeral expr)
@@ -181,27 +118,27 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
         let l,r = dest_binary "+" expr in
         mk_binary "+" (l,num_add r imm)
       else mk_binary "+" (expr,mk_small_numeral imm) in
-    let template = `word_add ptr (word ofs):int64` in
-    (fun ptrofs imm ->
-      if is_binary "word_add" ptrofs then
-        let ptr,ofs = dest_binary "word_add" ptrofs in
-        let ofs = mk_word_add ofs imm in
-        mk_binop `word_add:int64->int64->int64` ptr ofs
-      else if is_comb ptrofs && is_const (fst (dest_comb ptrofs)) &&
-              name_of (fst (dest_comb ptrofs)) = "word" then
-        let expr = snd (dest_comb ptrofs) in
-        mk_comb(`word:num->int64`,num_add expr imm)
-      else vsubst [ptrofs,`ptr:int64`;(mk_small_numeral imm),`ofs:num`] template) in
-  let mk_read_mem_bytes64 =
-    let template = ref None in
-    (fun ptrofs state_var ->
-      let temp = match !template with
-        | None -> let t = `read (memory :> bytes64 ptrofs)` in
-          (* The 'memory' constant must be parsable at this point. It is either armstate
-              or x86state. *)
-          (template := Some t; t)
-        | Some t -> t in
-      mk_comb(vsubst [ptrofs,`ptrofs:int64`] temp, state_var)) in
+    let address_index_ty = dest_word_ty (type_of ptrofs) in
+    let word_tm = inst [address_index_ty,`:A`] `word:num->A word`
+    and word_add_tm =
+      inst [address_index_ty,`:A`] `word_add:A word->A word->A word` in
+    if is_binary "word_add" ptrofs then
+      let ptr,ofs = dest_binary "word_add" ptrofs in
+      mk_binop word_add_tm ptr (mk_word_add ofs imm)
+    else if is_comb ptrofs && is_const (fst (dest_comb ptrofs)) &&
+            name_of (fst (dest_comb ptrofs)) = "word" then
+      let expr = snd (dest_comb ptrofs) in
+      mk_comb(word_tm,num_add expr imm)
+    else
+      mk_binop word_add_tm ptrofs
+        (mk_comb(word_tm,mk_small_numeral imm)) in
+  let mk_read_mem_bytes64 memory_component ptrofs state_var =
+    let accessor =
+      mk_icomb
+        (`bytes64:A word->((A word->byte),int64)component`,ptrofs) in
+    let memory_accessor =
+      list_mk_icomb ":>" [memory_component;accessor] in
+    mk_comb(mk_icomb(`read`,memory_accessor),state_var) in
   let mk_word_join_128 =
     let wj = `word_join:int64->int64->int128` in
     (fun high low -> (mk_comb ((mk_comb (wj,high)),low))) in
@@ -221,7 +158,8 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
 
   fun (t:term) (assumptions:(string * thm) list): (thm * (thm list)) ->
     match get_full_info t with
-    | Some (ptrofs,(ptr, ofs),size,constr_name,state_var) ->
+    | Some (memory_component,ptrofs,(ptr, ofs),size,
+            constr_name,state_var) ->
       (* if ptrofs is word_add p (word_sub (word x) (word y)), try to make it
         'word_add p (word (x - y))' *)
       let canon_wordsub_rule = ref None in
@@ -253,12 +191,14 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
             let c = lhs c in
             let c_access_info = get_full_info c in
             begin match c_access_info with
-            | Some (ptrofs2,(ptr2,ofs2),size2,"bytes",state_var2) ->
+            | Some (memory_component2,ptrofs2,(ptr2,ofs2),size2,
+                    "bytes",state_var2) ->
               begin
               (if !equiv_print_log then
                 Printf.printf "read bytes assum: (`%s`,`%s`), sz=`%s`\n"
                   (string_of_term ptr2) (string_of_term ofs2) (string_of_term size2));
-              if (ptr = ptr2 && state_var = state_var2 &&
+              if (memory_component = memory_component2 &&
+                  ptr = ptr2 && state_var = state_var2 &&
 
               begin match ofs_opt,(const_num_opt size2),(const_num_opt ofs2) with
               | Some ofs,Some size2,Some ofs2 ->
@@ -286,7 +226,8 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
           List.iter (fun th,_ -> Printf.printf "  `%s`\n" (string_of_term (concl th))) larger_reads));
 
         let extracted_reads = filter_map
-          (fun larger_read_th,(ptrofs2,(ptr2,ofs2),size2,_,_) ->
+          (fun larger_read_th,
+               (_,ptrofs2,(ptr2,ofs2),size2,_,_) ->
           try
             let larger_read = lhs (concl larger_read_th) in
             if not (is_multiple_of_8 ofs2) then
@@ -355,8 +296,11 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
 
       else if constr_name = "bytes128" then
         (* bytes128 to word_join of two bytes64 reads *)
-        let readl = mk_read_mem_bytes64 ptrofs state_var in
-        let readh = mk_read_mem_bytes64 (mk_word_add ptrofs 8) state_var in
+        let readl =
+          mk_read_mem_bytes64 memory_component ptrofs state_var in
+        let readh =
+          mk_read_mem_bytes64 memory_component
+            (mk_word_add ptrofs 8) state_var in
         let construct_bigdigit_rule t =
           match List.find_opt (fun _,asm -> let c = concl asm in is_eq c && lhs c = t) assumptions with
           | None -> MK_MEMORY_READ_EQ_BIGDIGIT_CONV t assumptions
@@ -393,36 +337,36 @@ let rec MK_MEMORY_READ_EQ_BIGDIGIT_CONV =
 (*** examples ***)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes64 x) s`
-    ["",mk_fthm([], `read (memory :> bytes (x:int64,32)) s = k`)];;
+    ["",mk_fthm([], `read (memory :> bytes (x,32)) s = k`)];;
 (* (_FALSITY_ |- read (memory :> bytes64 x) s = word (bigdigit k 0), []) *)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes64 (word_add x (word 16))) s`
-    ["",mk_fthm([], `read (memory :> bytes (word_add x (word 8):int64,32)) s = k`)];;
+    ["",mk_fthm([], `read (memory :> bytes (word_add x (word 8),32)) s = k`)];;
 (* (_FALSITY_ |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1), []) *)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes64 (word_add x (word 16))) s`
-    ["",mk_fthm([], `read (memory :> bytes (word_add x (word 8):int64,8 * 4)) s = k`)];;
+    ["",mk_fthm([], `read (memory :> bytes (word_add x (word 8),8 * 4)) s = k`)];;
 (* (_FALSITY_ |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1), []) *)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes64 (word_add x (word 16))) s`
-    ["",mk_fthm([], `read (memory :> bytes (word_add x (word 8):int64,8 * n)) s = k`);
+    ["",mk_fthm([], `read (memory :> bytes (word_add x (word 8),8 * n)) s = k`);
      "",mk_fthm([], `n > 3`)];;
 (* (_FALSITY_ |- read (memory :> bytes64 (word_add x (word 16))) s = word (bigdigit k 1), []) *)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes64 (word_add x (word (8 * 2)))) s`
-    ["",mk_fthm([], `read (memory :> bytes (word_add x (word (8 * 1)):int64,8 * n)) s = k`);
+    ["",mk_fthm([], `read (memory :> bytes (word_add x (word (8 * 1)),8 * n)) s = k`);
      "",mk_fthm([], `n > 3`)];;
 (* (_FALSITY_ |- read (memory :> bytes64 (word_add x (word (8 * 2)))) s = word (bigdigit k 1), []) *)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes64 (word_add x (word (8 * 2)))) s`
-    ["",mk_fthm([], `read (memory :> bytes (x:int64,8 * 2)) s = k`);
-     "",mk_fthm([], `read (memory :> bytes (word_add x (word (8 * 2)):int64,8 * n)) s = k2`);
-     "",mk_fthm([], `read (memory :> bytes (word_add x (word (8 * 4)):int64,8 * n)) s = k2`);
+    ["",mk_fthm([], `read (memory :> bytes (x,8 * 2)) s = k`);
+     "",mk_fthm([], `read (memory :> bytes (word_add x (word (8 * 2)),8 * n)) s = k2`);
+     "",mk_fthm([], `read (memory :> bytes (word_add x (word (8 * 4)),8 * n)) s = k2`);
      "",mk_fthm([], `n > 3`)];;
 (* (_FALSITY_ |- read (memory :> bytes64 (word_add x (word (8 * 2)))) s = word (bigdigit k2 0), []) *)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes64 (word_add x (word (8 * i)))) s`
-    ["",mk_fthm ([],`read (memory :> bytes (x:int64,8 * n)) s = k`);
+    ["",mk_fthm ([],`read (memory :> bytes (x,8 * n)) s = k`);
      "",mk_fthm ([],`i < n`)];;
 (* (_FALSITY_ |- read (memory :> bytes64 (word_add x (word (8 * i)))) s =
     word (bigdigit k i),
@@ -465,9 +409,9 @@ MK_MEMORY_READ_EQ_BIGDIGIT_CONV
 (** bytes128 **)
 
 MK_MEMORY_READ_EQ_BIGDIGIT_CONV `read (memory :> bytes128 (word_add x (word (8 * 2)))) s`
-    ["",mk_fthm ([],`read (memory :> bytes (x:int64,8 * 2)) s = k`);
-     "",mk_fthm ([],`read (memory :> bytes (word_add x (word (8 * 2)):int64,8 * n)) s = k2`);
-     "",mk_fthm ([],`read (memory :> bytes (word_add x (word (8 * 4)):int64,8 * n)) s = k2`);
+    ["",mk_fthm ([],`read (memory :> bytes (x,8 * 2)) s = k`);
+     "",mk_fthm ([],`read (memory :> bytes (word_add x (word (8 * 2)),8 * n)) s = k2`);
+     "",mk_fthm ([],`read (memory :> bytes (word_add x (word (8 * 4)),8 * n)) s = k2`);
      "",mk_fthm ([],`n > 3`)];;
 (* (_FALSITY_
  |- read (memory :> bytes128 (word_add x (word (8 * 2)))) s =
@@ -851,14 +795,47 @@ let WRITE_ELEMENT_BYTES8 = prove(
   IMP_REWRITE_TAC[DIV_1;MOD_LT] THEN
   REWRITE_TAC[WORD_VAL;ARITH_RULE`256=2 EXP 8`;VAL_BOUND;GSYM DIMINDEX_8]);;
 
-let READ_OVER_WRITE_BYTELIST =
-  prove(`!s (loc:int64) (l:((8)word)list).
-      LENGTH l < 2 EXP 64
+(* A bytelist is recursively an element at loc followed by a bytelist at
+   loc + 1. A read-after-write proof therefore needs the head element to be
+   orthogonal to the tail. Since word addresses wrap, that separation depends
+   on the list fitting within the address space. The helper below proves the
+   orthogonality needed by the inductive step.
+
+   The read-after-write theorems retain the existing strict length premise.
+   For a nonempty list, it implies the helper's
+
+     1 + LENGTH tail <= 2 EXP dimindex(:N)
+
+   premise. The _GEN theorems derive this modulus from the address type.
+   The MEMORY variants lift the result through any valid memory component.
+   The APPEND variants state that reading the prefix after writing an appended
+   list returns the original prefix.
+
+   The unsuffixed theorems specialize these results to the existing memory or
+   int64 address type and reduce dimindex(:64) to the literal 64, preserving
+   the previous theorem statements used by ARM and x86 automation. *)
+let ORTHOGONAL_COMPONENTS_ELEMENT_BYTELIST = prove
+ (`!(loc:N word) n.
+      1 + n <= 2 EXP dimindex(:N)
+      ==> orthogonal_components
+            (element loc)
+            (bytelist(word_add loc (word 1),n))`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[GSYM BYTES8_ELEMENT; bytes8; bytelist] THEN
+  MATCH_MP_TAC ORTHOGONAL_COMPONENTS_COMPOSE_LEFT THEN
+  REWRITE_TAC[ORTHOGONAL_COMPONENTS_BYTES] THEN
+  REWRITE_TAC[VAL_WORD_ADD;VAL_WORD_1;NONOVERLAPPING_MODULO_RMOD] THEN
+  MATCH_MP_TAC NONOVERLAPPING_MODULO_OFFSET_SIMPLE_RIGHT THEN
+  ASM_ARITH_TAC);;
+
+let READ_OVER_WRITE_BYTELIST_GEN =
+  prove(`!s (loc:N word) (l:((8)word)list).
+      LENGTH l < 2 EXP dimindex(:N)
       ==> read (bytelist (loc,LENGTH l))
         (write (bytelist (loc,LENGTH l)) l s) = l`,
     REPEAT GEN_TAC THEN
     MAP_EVERY SPEC_TAC [
-      `loc:int64`,`loc:int64`;`s:(64)word->(8)word`,`s:(64)word->(8)word`;
+      `loc:N word`,`loc:N word`;`s:N word->(8)word`,`s:N word->(8)word`;
       `l:((8)word)list`,`l:((8)word)list`] THEN
     MATCH_MP_TAC list_INDUCT THEN
     CONJ_TAC THENL [
@@ -874,30 +851,42 @@ let READ_OVER_WRITE_BYTELIST =
         REWRITE_TAC[WRITE_ELEMENT_BYTES8] THEN
         IMP_REWRITE_TAC[READ_WRITE_ORTHOGONAL_COMPONENTS] THEN
         CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-        ORTHOGONAL_COMPONENTS_TAC
+        ONCE_REWRITE_TAC[ORTHOGONAL_COMPONENTS_SYM] THEN
+        MATCH_MP_TAC ORTHOGONAL_COMPONENTS_ELEMENT_BYTELIST THEN
+        ASM_ARITH_TAC
       ]
     ]);;
 
-let READ_OVER_WRITE_MEMORY_BYTELIST =
-  prove(`!s (loc:int64) (l:((8)word)list).
-      LENGTH l < 2 EXP 64
-      ==> read (memory :> bytelist (loc,LENGTH l))
-        (write (memory :> bytelist (loc,LENGTH l)) l s) = l`,
-  let read_write_mem_th =
-    ISPECL [`memory`] READ_WRITE_VALID_COMPONENT in
-  REWRITE_TAC[component_compose] THEN
-  REWRITE_TAC[read;write;o_THM] THEN
-  IMP_REWRITE_TAC([read_write_mem_th] @ (!valid_component_thms)) THEN
-  REWRITE_TAC[READ_OVER_WRITE_BYTELIST]);;
+let READ_OVER_WRITE_BYTELIST =
+  CONV_RULE (ONCE_DEPTH_CONV DIMINDEX_CONV)
+    (INST_TYPE [`:64`,`:N`] READ_OVER_WRITE_BYTELIST_GEN);;
 
-let READ_OVER_WRITE_APPEND_BYTELIST =
-  prove(`!s (loc:int64) (l:((8)word)list) (l':((8)word)list).
-      LENGTH (APPEND l l') < 2 EXP 64
+let READ_OVER_WRITE_MEMORY_BYTELIST_GEN =
+  prove(`!mem:(S,N word->byte)component.
+      valid_component mem
+      ==> !s (loc:N word) (l:((8)word)list).
+          LENGTH l < 2 EXP dimindex(:N)
+          ==> read (mem :> bytelist (loc,LENGTH l))
+            (write (mem :> bytelist (loc,LENGTH l)) l s) = l`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[component_compose;read;write;o_THM] THEN
+  IMP_REWRITE_TAC[READ_WRITE_VALID_COMPONENT;
+                  READ_OVER_WRITE_BYTELIST_GEN]);;
+
+let READ_OVER_WRITE_MEMORY_BYTELIST =
+  CONV_RULE (ONCE_DEPTH_CONV DIMINDEX_CONV)
+    (MATCH_MP
+      (ISPEC `memory` READ_OVER_WRITE_MEMORY_BYTELIST_GEN)
+      (VALID_COMPONENT_RULE `memory`));;
+
+let READ_OVER_WRITE_APPEND_BYTELIST_GEN =
+  prove(`!s (loc:N word) (l:((8)word)list) (l':((8)word)list).
+      LENGTH (APPEND l l') < 2 EXP dimindex(:N)
       ==> read (bytelist (loc,LENGTH l))
         (write (bytelist (loc,LENGTH (APPEND l l'))) (APPEND l l') s) = l`,
     REPEAT GEN_TAC THEN
     MAP_EVERY SPEC_TAC [
-      `loc:int64`,`loc:int64`;`s:(64)word->(8)word`,`s:(64)word->(8)word`;
+      `loc:N word`,`loc:N word`;`s:N word->(8)word`,`s:N word->(8)word`;
       `l:((8)word)list`,`l:((8)word)list`] THEN
     MATCH_MP_TAC list_INDUCT THEN
     CONJ_TAC THENL [
@@ -916,21 +905,34 @@ let READ_OVER_WRITE_APPEND_BYTELIST =
         IMP_REWRITE_TAC[READ_WRITE_ORTHOGONAL_COMPONENTS] THEN
         CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
         RULE_ASSUM_TAC(REWRITE_RULE[LENGTH_APPEND]) THEN
-        ORTHOGONAL_COMPONENTS_TAC
+        ONCE_REWRITE_TAC[ORTHOGONAL_COMPONENTS_SYM] THEN
+        MATCH_MP_TAC ORTHOGONAL_COMPONENTS_ELEMENT_BYTELIST THEN
+        ASM_ARITH_TAC
       ]
     ]);;
 
+let READ_OVER_WRITE_APPEND_BYTELIST =
+  CONV_RULE (ONCE_DEPTH_CONV DIMINDEX_CONV)
+    (INST_TYPE [`:64`,`:N`] READ_OVER_WRITE_APPEND_BYTELIST_GEN);;
+
+let READ_OVER_WRITE_MEMORY_APPEND_BYTELIST_GEN =
+  prove(`!mem:(S,N word->byte)component.
+      valid_component mem
+      ==> !s (loc:N word) (l:((8)word)list) (l':((8)word)list).
+          LENGTH (APPEND l l') < 2 EXP dimindex(:N)
+          ==> read (mem :> bytelist (loc,LENGTH l))
+            (write (mem :> bytelist (loc,LENGTH (APPEND l l')))
+              (APPEND l l') s) = l`,
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[component_compose;read;write;o_THM] THEN
+  IMP_REWRITE_TAC[READ_WRITE_VALID_COMPONENT;
+                  READ_OVER_WRITE_APPEND_BYTELIST_GEN]);;
+
 let READ_OVER_WRITE_MEMORY_APPEND_BYTELIST =
-  prove(`!s (loc:int64) (l:((8)word)list) (l':((8)word)list).
-      LENGTH (APPEND l l') < 2 EXP 64
-      ==> read (memory :> bytelist (loc,LENGTH l))
-        (write (memory :> bytelist (loc,LENGTH (APPEND l l'))) (APPEND l l') s) = l`,
-  let read_write_mem_th =
-    ISPECL [`memory`] READ_WRITE_VALID_COMPONENT in
-  REWRITE_TAC[component_compose] THEN
-  REWRITE_TAC[read;write;o_THM] THEN
-  IMP_REWRITE_TAC([read_write_mem_th] @ (!valid_component_thms)) THEN
-  REWRITE_TAC[READ_OVER_WRITE_APPEND_BYTELIST]);;
+  CONV_RULE (ONCE_DEPTH_CONV DIMINDEX_CONV)
+    (MATCH_MP
+      (ISPEC `memory` READ_OVER_WRITE_MEMORY_APPEND_BYTELIST_GEN)
+      (VALID_COMPONENT_RULE `memory`));;
 
 
 let prove_conj_of_eq_reads_unfold_rules = ref [bytes_loaded];;
@@ -1038,6 +1040,10 @@ let mk_equiv_statement_template
   let _ = List.map2 type_check
       [assum;maychange1;maychange2]
       [`:bool`;maychange_ty;maychange_ty] in
+  let _,pc_component_tys = dest_type (type_of pc_reg_comp) in
+  let pc_ty = last pc_component_tys in
+  let pc_index_ty = dest_word_ty pc_ty in
+  let word_pc = inst [pc_index_ty,`:A`] `word:num->A word` in
 
   let quants_in,equiv_in_body = strip_forall (concl equiv_in) in
   let quants_out,equiv_out_body = strip_forall (concl equiv_out) in
@@ -1068,16 +1074,16 @@ let mk_equiv_statement_template
       let _ = type_check data `:((8)word)list` in
       list_mk_icomb "APPEND" [mc;data]
     in
-    list_mk_comb (bytes_loaded_const,[s;mk_comb(`word:num->(64)word`,pc_var);mc_all])
+    list_mk_comb (bytes_loaded_const,[s;mk_comb(word_pc,pc_var);mc_all])
   in
   let mk_read_pc (s:term) (pc_var:term) (pc_ofs:int):term =
     let _ = List.map2 type_check [s;pc_var] [state_ty;`:num`] in
     if pc_ofs = 0 then
       mk_eq (list_mk_icomb "read" [pc_reg_comp;s],
-             mk_comb(`word:num->(64)word`,pc_var))
+             mk_comb(word_pc,pc_var))
     else
       mk_eq (list_mk_icomb "read" [pc_reg_comp;s],
-             mk_comb(`word:num->(64)word`,
+             mk_comb(word_pc,
               mk_binary "+" (pc_var,mk_small_numeral(pc_ofs))))
   in
   let s = mk_var("s",state_ty) and s2 = mk_var("s2",state_ty) in
@@ -1118,171 +1124,3 @@ let mk_equiv_statement_template
      [opsem_const;precond;postcond;maychange;fnsteps1;fnsteps2] in
   let imp = mk_imp (assum,ensures2_pred) in
   list_mk_forall (quants, imp);;
-
-(* ------------------------------------------------------------------------- *)
-(* MAYCHANGE simplifier. This helps symbolic simulator run faster.           *)
-(* ------------------------------------------------------------------------- *)
-
-(* maychanges: `(MAYCHANGE [..] ,, MAYCHANGE ...)`
-   combine MAYCHANGE of fragmented memory accesses of constant sizes into
-   one if contiguous. *)
-let simplify_maychanges: term -> term =
-  let maychange_const = `MAYCHANGE` and seq_const = `,,` in
-  let word64ty = `:(64)word` and word128ty = `:(128)word` in
-  let the_base_ptr = `base_ptr:int64` and the_ofs = `ofs:num` and
-      the_len = `len:num` in
-  let the_base_ptr_ofs = `(word_add base_ptr (word ofs)):int64` and
-      the_memory_base_ptr = `(memory :> bytes64 base_ptr)` in
-  let the_memory_base_ptr_len = `(memory :> bytes(base_ptr,len))` in
-  let zero = `0` in
-
-  fun (maychanges:term) ->
-    let maychange_regs64 = ref [] and
-        maychange_regs128 = ref [] and
-        maychange_mems = ref [] and
-        maychange_others = ref [] in
-    (* t: `X1`, `PC`, `Q0`, `memory :> bytes64 (x:int64)`, ... *)
-    let add_maychange (t:term): unit =
-      match get_memory_read_info t with
-      | Some (ptr,len,_) -> maychange_mems := !maychange_mems @ [(t, (ptr,len))]
-      | None ->
-        (* t is register *)
-        let _,args = dest_type (type_of t) in
-        let destty = last args in
-        if destty = word64ty then begin
-          if not (mem t !maychange_regs64) then
-            maychange_regs64 := !maychange_regs64 @ [t]
-        end else if destty = word128ty then begin
-          if not (mem t !maychange_regs128) then
-            maychange_regs128 := !maychange_regs128 @ [t]
-        end else begin
-          if not (mem t !maychange_others) then
-            maychange_others := !maychange_others @ [t]
-        end in
-
-    let rec f (t:term): unit =
-      if is_binary ",," t then
-        let lhs,rhs = dest_binary ",," t in
-        let _, args = dest_comb lhs in
-        let _ = List.iter add_maychange (dest_list args) in
-        f rhs
-      else
-        let _, args = dest_comb t in
-        List.iter add_maychange (dest_list args) in
-
-    let _ = f maychanges in
-
-    (*** now merge memory accesses. ***)
-
-    (* Collect MAYCHANGE [memory :> ...] *)
-    let maychange_mems_merged = ref [] in
-    let add_maychange_mem (base_ptr, ofs, len): unit =
-      (* if len is 8, just use bytes64. *)
-      let base_ptr = if ofs = 0 then base_ptr else
-        subst [base_ptr,the_base_ptr;mk_small_numeral ofs,the_ofs] the_base_ptr_ofs in
-      let final_term = if len = 8 then
-          subst [base_ptr,the_base_ptr] the_memory_base_ptr
-        else
-          subst [base_ptr,the_base_ptr;mk_small_numeral len,the_len]
-              the_memory_base_ptr_len in
-      maychange_mems_merged := !maychange_mems_merged @ [final_term] in
-
-    (* Iteratively consume maychange_mems and make maychange_mems_merged grow *)
-    while length !maychange_mems <> 0 do
-      let next_term,(ptr,len) = List.hd !maychange_mems in
-      if not (is_numeral len) then begin
-        (* if len is not a constant, be conservative and just add it
-           unless it already exists *)
-        (if not (mem next_term !maychange_mems_merged) then
-          maychange_mems_merged := next_term::!maychange_mems_merged);
-        maychange_mems := List.tl !maychange_mems
-      end else
-        let baseptr, _ = get_base_ptr_and_constofs ptr in
-
-        (* Find the memory accesses with the same base pointer *)
-        let mems_of_interest, remaining = List.partition
-          (fun _,(ptr,len) -> baseptr = fst (get_base_ptr_and_constofs ptr) &&
-                              is_numeral len)
-          !maychange_mems in
-        maychange_mems := remaining;
-
-        if List.length mems_of_interest = 1 then
-          maychange_mems_merged := (fst (List.hd mems_of_interest)) :: !maychange_mems_merged
-        else
-          (* combine mem accesses in mems_of_interest *)
-          (* get (ofs, len). len must be constant. *)
-          let ranges = map
-            (fun (_,(t,len)) -> snd (get_base_ptr_and_constofs t),dest_small_numeral len)
-            mems_of_interest in
-          let ranges = mergesort (<) ranges in
-          let rec merge_and_update ranges =
-            match ranges with
-            | (ofs,len)::[] -> add_maychange_mem (baseptr,ofs,len)
-            | (ofs1,len1)::(ofs2,len2)::t ->
-              if ofs2 <= ofs1 + len1 then
-                let len = max len1 (ofs2 + len2 - ofs1) in
-                merge_and_update ((ofs1,len)::t)
-              else
-                let _ = add_maychange_mem (baseptr, ofs1, len1) in
-                merge_and_update ((ofs2,len2)::t) in
-          merge_and_update ranges
-    done;
-
-    (* now rebuild maychange terms! *)
-    let result = ref zero in
-    let rec join_result (comps:term list): unit =
-      match comps with
-      | [] -> ()
-      | first_comp::comps ->
-        let fcty = type_of first_comp in
-        let comps0,comps1 = List.partition (fun c -> type_of c = fcty)
-          comps in
-        let mterm = mk_icomb (maychange_const, mk_flist (first_comp::comps0)) in
-        (if !result = zero then result := mterm
-        else result := mk_icomb(mk_icomb (seq_const,mterm),!result));
-        join_result comps1 in
-    let _ = join_result !maychange_regs64 in
-    let _ = join_result !maychange_regs128 in
-    let _ = join_result !maychange_others in
-    let _ = List.iter (fun t -> join_result [t]) !maychange_mems_merged in
-    !result;;
-
-(*
-    simplify_maychanges `MAYCHANGE [PC] ,, MAYCHANGE [X0]`;;
-    simplify_maychanges `MAYCHANGE [PC] ,, MAYCHANGE [Q0] ,, MAYCHANGE [ZF]`;;
-    simplify_maychanges `MAYCHANGE [memory :> bytes64 (x:int64)] ,, MAYCHANGE [X0]`;;
-    simplify_maychanges `MAYCHANGE [memory :> bytes64 (x:int64)] ,,
-                         MAYCHANGE [memory :> bytes64 (word_add x (word 8))]`;;
-    simplify_maychanges `MAYCHANGE [memory :> bytes64 (x:int64)] ,,
-                         MAYCHANGE [memory :> bytes64 (word_add x (word 16))] ,,
-                         MAYCHANGE [memory :> bytes64 (word_add x (word 24))] ,,
-                         MAYCHANGE [memory :> bytes64 (word_add x (word 8))]`;;
-    simplify_maychanges `MAYCHANGE [memory :> bytes64 (word_add x (word 8))] ,,
-                         MAYCHANGE [memory :> bytes64 (x:int64)] ,,
-                         MAYCHANGE [memory :> bytes64 (word_add y (word 24))] ,,
-                         MAYCHANGE [memory :> bytes64 (word_add y (word 16))]`;;
-    TODO:
-    simplify_maychanges
-       `MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i)))] ,,
-        MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i + 8)))] ,,
-        MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i + 16)))] ,,
-        MAYCHANGE [memory :> bytes64 (word_add z (word (8 * 4 * i + 24)))]`;;
-*)
-
-let SIMPLIFY_MAYCHANGES_TAC =
-  W(fun (asl,w) ->
-    let mcs = filter_map
-      (fun (_,asm) -> if maychange_term (concl asm) then Some asm else None) asl in
-    MAP_EVERY (fun asm ->
-        let x, st2 = dest_comb (concl asm) in
-        let mainterm, st1 = dest_comb x in
-        let newterm = simplify_maychanges mainterm in
-        let _ = Printf.printf "SIMPLIFY_MAYCHANGES_TAC: Simplifying `%s` to `%s`\n"
-            (string_of_term (concl asm)) (string_of_term newterm) in
-        if mainterm = newterm then ALL_TAC
-        else
-          (SUBGOAL_THEN (list_mk_comb (newterm,[st1;st2])) ASSUME_TAC THENL
-          [ POP_ASSUM_LIST (K ALL_TAC) THEN ASSUME_TAC asm THEN MONOTONE_MAYCHANGE_TAC;
-            ALL_TAC ] THEN
-          UNDISCH_THEN (concl asm) (K ALL_TAC)))
-      mcs);;

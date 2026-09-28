@@ -3015,11 +3015,6 @@ let assert_word_list =
     else failwith "assert_word_list";
     tm;;
 
-let define_word_list name tm =
-  try new_definition (mk_eq (mk_var (name, `:byte list`), tm))
-  with Failure _ ->
-    new_definition (mk_eq (mk_mconst (name, `:byte list`), tm));;
-
 let define_assert_word_list name tm ls =
   define_word_list name (assert_word_list tm ls);;
 

@@ -1851,8 +1851,7 @@ let CONCL_BOUNDS_RULE =
 let SIDE_ELIM_RULE th =
   MP th (EQT_ELIM(DIMINDEX_INT_REDUCE_CONV(lhand(concl th))));;
 
-let rec ASM_CONGBOUND_RULE lfn tm =
-    try apply lfn tm with Failure _ ->
+let ASM_CONGBOUND_STEP rule tm =
     match tm with
       Comb(Const("word",_),n) when is_numeral n ->
         let th1 = ISPEC tm CONGBOUND_CONST in
@@ -1864,79 +1863,95 @@ let rec ASM_CONGBOUND_RULE lfn tm =
         let th2 = WORD_RED_CONV(lhand(lhand(snd(strip_forall(concl th1))))) in
         SUBS[SYM th0] (MATCH_MP th1 th2)
     | Comb(Comb(Const("barmul",_),kb),t) ->
-        let ktm,btm = dest_pair kb and th0 = ASM_CONGBOUND_RULE lfn t in
+        let ktm,btm = dest_pair kb and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 3329) th0 in
         let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_BARMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("arm_mldsa_barmul",_),kb),t) ->
-        let ktm,btm = dest_pair kb and th0 = ASM_CONGBOUND_RULE lfn t in
+        let ktm,btm = dest_pair kb and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 8380417) th0 in
         let th1 = SPECL [ktm;btm] (MATCH_MP CONGBOUND_ARM_MLDSA_BARMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("montmul_x86",_),ltm),rtm) ->
-        let lth = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn ltm)
-        and rth = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn rtm) in
+        let lth = WEAKEN_INTCONG_RULE (num 3329) (rule ltm)
+        and rth = WEAKEN_INTCONG_RULE (num 3329) (rule rtm) in
         let th1 = MATCH_MP CONGBOUND_MONTMUL_X86
                    (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(th1)
     | Comb(Const("barred",_),t) ->
-        let th1 = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn t) in
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         MATCH_MP CONGBOUND_BARRED th1
     | Comb(Const("barred_x86",_),t) ->
-        let th1 = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn t) in
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         MATCH_MP CONGBOUND_BARRED_X86 th1
     | Comb(Const("montred",_),t) ->
-        let th1 = WEAKEN_INTCONG_RULE (num 3329) (ASM_CONGBOUND_RULE lfn t) in
+        let th1 = WEAKEN_INTCONG_RULE (num 3329) (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MONTRED th1))
     | Comb(Const("mldsa_montred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
-                   (ASM_CONGBOUND_RULE lfn t) in
+                   (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_MONTRED th1))
     | Comb(Const("mldsa_pointwise_montred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
-                   (ASM_CONGBOUND_RULE lfn t) in
+                   (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_POINTWISE_MONTRED th1))
     | Comb(Const("mldsa_barred",_),t) ->
         let th1 = WEAKEN_INTCONG_RULE (num 8380417)
-                     (ASM_CONGBOUND_RULE lfn t) in
+                     (rule t) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE(MATCH_MP CONGBOUND_MLDSA_BARRED th1))
     | Comb(Comb(Const("mldsa_montmul",_),ab),t) ->
-        let atm,btm = dest_pair ab and th0 = ASM_CONGBOUND_RULE lfn t in
+        let atm,btm = dest_pair ab and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 8380417) th0 in
         let th1 = SPECL [atm;btm] (MATCH_MP CONGBOUND_MLDSA_MONTMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("ntt_montmul",_),ab),t) ->
-        let atm,btm = dest_pair ab and th0 = ASM_CONGBOUND_RULE lfn t in
+        let atm,btm = dest_pair ab and th0 = rule t in
         let th0' = WEAKEN_INTCONG_RULE (num 3329) th0 in
         let th1 = SPECL [atm;btm] (MATCH_MP CONGBOUND_NTT_MONTMUL th0') in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Const("word_sx",_),t) ->
-        let th0 = ASM_CONGBOUND_RULE lfn t in
+        let th0 = rule t in
         let tyin = type_match
          (type_of(rator(rand(lhand(funpow 4 rand (snd(dest_forall
             (concl CONGBOUND_WORD_SX)))))))) (type_of(rator tm)) [] in
         let th1 = MATCH_MP (INST_TYPE tyin CONGBOUND_WORD_SX) th0 in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Const("word_neg",_),t) ->
-        let th0 = ASM_CONGBOUND_RULE lfn t in
+        let th0 = rule t in
         let th1 = MATCH_MP CONGBOUND_WORD_NEG th0 in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("word_add",_),ltm),rtm) ->
-        let lth = ASM_CONGBOUND_RULE lfn ltm
-        and rth = ASM_CONGBOUND_RULE lfn rtm in
+        let lth = rule ltm
+        and rth = rule rtm in
         let th1 = MATCH_MP CONGBOUND_WORD_ADD (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("word_sub",_),ltm),rtm) ->
-        let lth = ASM_CONGBOUND_RULE lfn ltm
-        and rth = ASM_CONGBOUND_RULE lfn rtm in
+        let lth = rule ltm
+        and rth = rule rtm in
         let th1 = MATCH_MP CONGBOUND_WORD_SUB (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | Comb(Comb(Const("word_mul",_),ltm),rtm) ->
-        let lth = ASM_CONGBOUND_RULE lfn ltm
-        and rth = ASM_CONGBOUND_RULE lfn rtm in
+        let lth = rule ltm
+        and rth = rule rtm in
         let th1 = MATCH_MP CONGBOUND_WORD_MUL (UNIFY_INTCONG_RULE lth rth) in
         CONCL_BOUNDS_RULE(SIDE_ELIM_RULE th1)
     | _ -> CONCL_BOUNDS_RULE(ISPEC tm CONGBOUND_ATOM);;
+
+let rec ASM_CONGBOUND_RULE lfn tm =
+  try apply lfn tm with Failure _ ->
+  ASM_CONGBOUND_STEP (ASM_CONGBOUND_RULE lfn) tm;;
+
+(* Cache exact subterm results for the lifetime of the returned rule. *)
+
+let MEMOIZED_ASM_CONGBOUND_RULE lfn =
+  let cache = ref undefined in
+  let rec rule tm =
+    try apply lfn tm with Failure _ ->
+    try apply !cache tm with Failure _ ->
+    let th = ASM_CONGBOUND_STEP rule tm in
+    cache := (tm |-> th) !cache;
+    th in
+  rule;;
 
 let GEN_CONGBOUND_RULE aboths =
   ASM_CONGBOUND_RULE (PROCESS_BOUND_ASSUMPTIONS aboths);;
@@ -1982,12 +1997,7 @@ let AUTO_ABBREV_TAC tm =
   let gv = genvar(type_of tm) in
   ABBREV_TAC(mk_eq(gv,tm));;
 
-let SIMD_SIMPLIFY_ABBREV_TAC =
-  let arm_simdable =
-    can (term_match [] `read X (s:armstate):int128 = whatever`)
-  and x86_simdable =
-    can (term_match [] `read X (s:x86state):int256 = whatever`) in
-  let simdable tm = arm_simdable tm || x86_simdable tm in
+let GEN_SIMPLIFY_ABBREV_TAC simdable =
   fun unfold_defs unfold_aux ->
     let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
     let pam t = exists (fun p -> can(term_match [] p) t) pats in
@@ -2000,6 +2010,14 @@ let SIMD_SIMPLIFY_ABBREV_TAC =
       let tms = sort free_in (find_terms pam (rand(concl th''))) in
       (MP_TAC th'' THEN MAP_EVERY AUTO_ABBREV_TAC tms THEN DISCH_TAC) (asl,w) in
   TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
+
+let SIMD_SIMPLIFY_ABBREV_TAC =
+  let arm_simdable =
+    can (term_match [] `read X (s:armstate):int128 = whatever`)
+  and x86_simdable =
+    can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm in
+  GEN_SIMPLIFY_ABBREV_TAC simdable;;
 
 (* ========================================================================= *)
 (* ML-DSA use_hint shared infrastructure lemmas                              *)
@@ -2828,3 +2846,201 @@ let mk_subword_cases d chunk_size =
       (SPEC (inst [d_ty, `:L`] `ls:(L word)list`) base) in
     CONV_RULE NUM_REDUCE_CONV (REWRITE_RULE[ARITH] th) in
   map mk (0 -- (chunk_size - 1));;
+
+(* ========================================================================= *)
+(* Shared infrastructure for the x86 AVX2 poly_use_hint_{32,88} proofs.      *)
+(* Ported from mldsa-native's x86_64/proofs/mldsa_utils.ml. These are the    *)
+(* generic (arch- and parameter-independent) block/lane framework lemmas and *)
+(* Barrett DIV/MOD tactics shared by BOTH the 32 and 88 use_hint ports; the  *)
+(* per-function bracket lemmas stay inline in the respective proof files.    *)
+(* ========================================================================= *)
+
+(* --- 256-bit-block / 8-lane framework (loop over 32 blocks of 8 int32) --- *)
+
+(* Eight consecutive int32 coefficients packed into one 256-bit word. *)
+let pack8 = new_definition
+  `pack8 (f:num->int32) (b:num) : int256 =
+     word_join
+       (word_join (word_join (f (8*b+7)) (f (8*b+6)):int64)
+                  (word_join (f (8*b+5)) (f (8*b+4)):int64):int128)
+       (word_join (word_join (f (8*b+3)) (f (8*b+2)):int64)
+                  (word_join (f (8*b+1)) (f (8*b+0)):int64):int128)`;;
+
+(* Lane k (k<8) of a packed block is coefficient 8b+k. *)
+let PACK8_LANE = prove(
+  `!f b. !k. k < 8 ==> word_subword (pack8 f b) (32*k,32):int32 = f(8*b+k)`,
+  GEN_TAC THEN GEN_TAC THEN
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REWRITE_TAC[pack8] THEN REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
+
+(* Lane k of a SIMD8 map is the scalar map applied to the corresponding lanes. *)
+let SIMD8_LANE = prove(
+  `!(g:int32->int32->int32) av hv. !k. k < 8 ==>
+      word_subword (simd8 g av hv) (32*k,32):int32 =
+      g (word_subword av (32*k,32)) (word_subword hv (32*k,32))`,
+  GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN
+  REWRITE_TAC[simd8;simd4;simd2;DIMINDEX_32] THEN
+  CONV_TAC EXPAND_CASES_CONV THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT CONJ_TAC THEN CONV_TAC(DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REFL_TAC);;
+
+(* Coefficient address 4*(8b+k) split into block base 32*b plus lane offset. *)
+let ADDR_SPLIT = prove(
+  `!p:int64 b k. word_add p (word(4*(8*b+k))) =
+                 word_add (word_add p (word(32*b))) (word(4*k))`,
+  REPEAT GEN_TAC THEN REWRITE_TAC[ARITH_RULE `4*(8*b+k) = 32*b+4*k`] THEN
+  CONV_TAC WORD_RULE);;
+
+(* BLOCK_SPLIT and PACK8_MERGE are x86-specific (typed over x86state) and are
+   therefore defined inline in the x86 use_hint proof files rather than here:
+   this common file is shared with the AArch64 build, where an x86state-typed
+   term fails to typecheck. *)
+
+(* Two int256 words agree if all eight 32-bit lanes agree. *)
+let LANES8_EQ = prove
+ (`!x y:int256. (!k. k < 8 ==> word_subword x (32*k,32):int32 = word_subword y (32*k,32)) ==> x = y`,
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(fun th -> MP_TAC(CONV_RULE(EXPAND_CASES_CONV THENC NUM_REDUCE_CONV) th)) THEN
+  CONV_TAC WORD_BLAST);;
+
+(* 32-byte blocks preserve 32-byte alignment of the base pointer. *)
+let ALIGNED_32I = prove
+ (`!i. aligned 32 (word(32*i):int64)`,
+  GEN_TAC THEN REWRITE_TAC[aligned; DIMINDEX_64; VAL_WORD; DIMINDEX_64] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[DIVIDES_MOD] THEN CONV_TAC NUM_REDUCE_CONV;
+    MP_TAC(SPECL [`32`; `32 * i`; `2 EXP 64`] DIVIDES_MOD2) THEN
+    ANTS_TAC THENL
+     [REWRITE_TAC[DIVIDES_MOD] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+    DISCH_THEN(SUBST1_TAC o SYM) THEN NUMBER_TAC]);;
+
+let ALIGNED_BLOCK = prove
+ (`!a:int64 i. aligned 32 a ==> aligned 32 (word_add a (word(32*i)))`,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC ALIGNED_WORD_ADD THEN
+  ASM_REWRITE_TAC[ALIGNED_32I]);;
+
+(* word_join of a zero high half is just zero-extension of the low half. *)
+let JOIN_ZERO_ZX = prove
+ (`!lo:(16)word. word_join (word 0:(16)word) lo :int32 = word_zx lo`,
+  GEN_TAC THEN CONV_TAC WORD_BLAST);;
+
+(* word_ile/word_igt against 0 are complementary on int32. *)
+let ILE_IGT = BITBLAST_RULE
+  `!a0:int32. word_ile a0 (word 0) <=> ~(word_igt a0 (word 0))`;;
+
+let WORD_NOT_0 = WORD_RULE `!x:N word. word_and x (word_not (word 0)) = x`;;
+
+(* Per-step state compaction during SIMD body simulation: abbreviate every large
+   int256 register value to a fresh atom so it propagates compactly (essential
+   for instructions like VPBLENDVB whose byte-mux otherwise duplicates the value). *)
+let ABBREV_BIG_TAC : tactic = fun (asl,w) ->
+  MAP_EVERY (fun (_,th) -> AUTO_ABBREV_TAC (rand(concl th)))
+    (filter (fun (_,th) -> let c=concl th in is_eq c &&
+       (try is_comb(lhs c) && fst(dest_const(fst(strip_comb(lhs c))))="read"
+            && type_of(lhs c)=`:int256` && not(is_var(rand c)) with _->false)
+       && String.length(string_of_term(rand c)) > 1500) asl) (asl,w);;
+
+(* --- Shared scalar UseHint lemmas (arch/parameter-independent) --- *)
+
+(* Rounding division: ((q DIV n) + 1) DIV 2 = (q + n) DIV (2 * n). *)
+let ROUND_DIV = prove(`!q n. ~(n = 0) ==> (q DIV n + 1) DIV 2 = (q + n) DIV (2 * n)`,
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN `(q + n) DIV (2 * n) = (q + n) DIV n DIV 2` SUBST1_TAC THENL
+  [REWRITE_TAC[DIV_DIV] THEN AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN `(q + n) DIV n = q DIV n + 1` (fun th -> REWRITE_TAC[th]) THEN
+  ASM_SIMP_TAC[DIV_ADD; DIVIDES_REFL] THEN ASM_SIMP_TAC[DIV_REFL]);;
+
+(* The pre-shift t = (a + 127) >>u 7 has value (val a + 127) DIV 128. *)
+let VAL_T = prove(`!x:int32. val x < 8380417
+   ==> val(word_ushr (word_add (word 127) x) 7 :int32) = (val x + 127) DIV 128`,
+  GEN_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[VAL_WORD_USHR] THEN
+  SUBGOAL_THEN `val(word_add (word 127:int32) x) = val x + 127` SUBST1_TAC THENL
+  [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
+   SUBGOAL_THEN `(127 + val(x:int32)) MOD 4294967296 = 127 + val x`
+     (fun th -> REWRITE_TAC[th] THEN ARITH_TAC) THEN
+   MATCH_MP_TAC MOD_LT THEN MP_TAC(ISPEC `x:int32` VAL_BOUND) THEN
+   REWRITE_TAC[DIMINDEX_32] THEN ASM_ARITH_TAC;
+   REWRITE_TAC[ARITH_RULE `2 EXP 7 = 128`]]);;
+
+(* Bounded 16->32 sign-extension equals the value for a 16-bit lane below 2^15. *)
+let VAL_WORD_SX_SMALL = prove(`!u:16 word. val u < 32768
+   ==> val((word_sx u):int32) = val u`,
+  GEN_TAC THEN DISCH_TAC THEN
+  SUBGOAL_THEN `(word_sx (u:16 word)):int32 = word_zx u` SUBST1_TAC THENL
+  [REWRITE_TAC[WORD_SX_ZX_GEN; DIMINDEX_16] THEN
+   CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
+   SUBGOAL_THEN `bit 15 (u:16 word) = F` SUBST1_TAC THENL
+   [REWRITE_TAC[BIT_VAL] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+   REWRITE_TAC[BITVAL_CLAUSES;
+               WORD_REDUCE_CONV `word_shl (word_neg (word 0:int32)) 16`;
+               WORD_OR_0]; ALL_TAC] THEN
+  REWRITE_TAC[VAL_WORD_ZX_GEN; DIMINDEX_32] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN `val(u:16 word) MOD 4294967296 = val u` (fun th->REWRITE_TAC[th]) THEN
+  MATCH_MP_TAC MOD_LT THEN MP_TAC(ISPEC `u:16 word` VAL_BOUND) THEN
+  REWRITE_TAC[DIMINDEX_16] THEN ARITH_TAC);;
+
+(* delta encoding bridge (needs the hint bound val h <= 1). *)
+let DELTA_EQ_BOUNDED = prove
+ (`!a0:int32 h:int32. val h <= 1 ==>
+     word_sub h (word_shl (word_and (word_not
+        (if word_igt a0 (word 0) then word 4294967295 else word 0)) h) 1) =
+     word_mul (word_or (word_neg (word (bitval (word_ile a0 (word 0))))) (word 1)) h`,
+  REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[ILE_IGT] THEN
+  SUBGOAL_THEN `h:int32 = word 0 \/ h = word 1` STRIP_ASSUME_TAC THENL
+   [POP_ASSUM MP_TAC THEN SPEC_TAC(`h:int32`,`h:int32`) THEN
+    REWRITE_TAC[GSYM VAL_EQ_0; GSYM VAL_EQ_1] THEN ARITH_TAC;
+    ASM_REWRITE_TAC[] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN CONV_TAC WORD_BLAST;
+    ASM_REWRITE_TAC[] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN CONV_TAC WORD_BLAST]);;
+
+(* --- Barrett-quotient DIV/MOD tactics over the per-variant divisor 2*GAMMA2 --- *)
+(* (523776 for use_hint_32, 190464 for use_hint_88). Each proof aliases these    *)
+(* at its concrete divisor gg.                                                    *)
+
+(* Eliminate `r MOD gg` / `r DIV gg` and abstract them for ASM_ARITH_TAC. *)
+let LINEARIZE_DIV_MOD_BY_TAC gg =
+  let s = subst [mk_small_numeral gg, `gg:num`] in
+  REPEAT(FIRST_X_ASSUM(MP_TAC o check (fun th ->
+    free_in (s `r MOD gg`) (concl th) || free_in (s `r DIV gg`) (concl th)))) THEN
+  MP_TAC(SPECL [`r:num`; mk_small_numeral gg] (CONJUNCT1 DIVISION_SIMP)) THEN
+  SPEC_TAC(s `r MOD gg`, `m:num`) THEN
+  SPEC_TAC(s `r DIV gg`, `q:num`) THEN
+  REPEAT GEN_TAC THEN ASM_ARITH_TAC;;
+
+(* Replace `(r - r MOD gg) DIV gg` with `r DIV gg`. *)
+let DIV_MOD_TO_DIV_BY_TAC gg =
+  let s = subst [mk_small_numeral gg, `gg:num`] in
+  SUBGOAL_THEN (s `(r - r MOD gg) DIV gg = r DIV gg`) SUBST1_TAC THENL
+  [MP_TAC(SPECL [`r:num`; mk_small_numeral gg] (CONJUNCT1 DIVISION_SIMP)) THEN
+   DISCH_TAC THEN
+   SUBGOAL_THEN (s `r - r MOD gg = gg * r DIV gg`) SUBST1_TAC THENL
+   [ASM_ARITH_TAC; ALL_TAC] THEN
+   MP_TAC(SPECL [mk_small_numeral gg; s `r DIV gg`] DIV_MULT) THEN
+   CONV_TAC NUM_REDUCE_CONV; ALL_TAC];;
+
+(* Prove `r DIV gg = k` via DIV_SANDWICH + LE_MULT_RCANCEL. *)
+let DIV_EQ_K_BY_TAC gg k =
+  let s = subst [mk_small_numeral gg, `gg:num`] in
+  let k_num = mk_small_numeral k and km1 = mk_small_numeral (k-1)
+  and kp1 = mk_small_numeral (k+1)
+  and q = mk_var("q",`:num`) and le = `(<=):num->num->bool`
+  and lt = `(<):num->num->bool` and c = mk_small_numeral gg in
+  let mk_mul a b = mk_binop (rator(rator `0*0`)) a b in
+  MATCH_MP_TAC DIV_SANDWICH THEN CONV_TAC NUM_REDUCE_CONV THEN
+  REPEAT(FIRST_X_ASSUM(MP_TAC o check (fun th ->
+    free_in (s `r MOD gg`) (concl th) || free_in (s `r DIV gg`) (concl th)))) THEN
+  MP_TAC(SPECL [`r:num`; c] (CONJUNCT1 DIVISION_SIMP)) THEN
+  SPEC_TAC(s `r MOD gg`, `m:num`) THEN
+  SPEC_TAC(s `r DIV gg`, q) THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  ASM_CASES_TAC(mk_comb(mk_comb(le, q), km1)) THENL
+  [SUBGOAL_THEN(mk_comb(mk_comb(le, mk_mul q c), mk_mul km1 c)) ASSUME_TAC THENL
+   [ASM_SIMP_TAC[LE_MULT_RCANCEL]; ALL_TAC] THEN
+   CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC;
+   SUBGOAL_THEN(mk_comb(mk_comb(le, mk_mul k_num c), mk_mul q c)) ASSUME_TAC THENL
+   [ASM_SIMP_TAC[LE_MULT_RCANCEL] THEN DISJ1_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
+   ASM_CASES_TAC(mk_comb(mk_comb(lt, k_num), q)) THENL
+   [SUBGOAL_THEN(mk_comb(mk_comb(le, mk_mul kp1 c), mk_mul q c)) ASSUME_TAC THENL
+    [ASM_SIMP_TAC[LE_MULT_RCANCEL] THEN DISJ1_TAC THEN ASM_ARITH_TAC; ALL_TAC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC;
+    CONV_TAC NUM_REDUCE_CONV THEN ASM_ARITH_TAC]];;

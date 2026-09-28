@@ -23,7 +23,9 @@ let mk_safety_spec
   let read_sth_eq (f:term->bool):term->bool =
     fun t -> is_eq t && let l = lhs t in is_binary "read" l &&
       let l' = fst (dest_binary "read" l) in f l' in
-  gen_mk_safety_spec ~readonly_objects ~keep_maychanges
+  gen_mk_safety_spec ~readonly_objects
+    ~memory_component:`memory` ~events_component:`events` ~is_read_pc
+    ~keep_maychanges
     (fnargs,xx,meminputs,memoutputs,memtemps)
     subroutine_correct_th exec
     (read_sth_eq (fun t -> t = `RSP`))
@@ -85,4 +87,3 @@ let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
     ?tac_before_maychange_simp:(Some EXPAND_MAYCHANGE_YMM_REGS_TAC)
     [BYTES_LOADED_APPEND_CLAUSE]
     X86_SINGLE_STEP_TAC;;
-
