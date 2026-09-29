@@ -15,11 +15,56 @@ needs "common/mlkem_mldsa.ml";;
 (* "seqapply: Length mismatch" failures from fresh tyvars across subgoals).  *)
 type_invention_error := true;;
 
-
 (* Lookup table used by rejection sampling in the x86_64 AVX2 impl.          *)
 (* Shared with the base mldsa_rej_uniform proof (same 2048-byte VPSHUFB      *)
 (* table); defined once in x86/proofs/mldsa_rej_uniform_table.ml.            *)
 needs "x86/proofs/mldsa_rej_uniform_table.ml";;
+
+let VEX_READ_ZMM_FOLD:thm list = map (fun (goal,ymmdef) ->
+  prove(goal, REWRITE_TAC[ymmdef; READ_ZEROTOP_256]))
+ [(`!s:x86state. word_zx (read ZMM0 s):256 word = read YMM0 s`,YMM0);
+  (`!s:x86state. word_zx (read ZMM1 s):256 word = read YMM1 s`,YMM1);
+  (`!s:x86state. word_zx (read ZMM2 s):256 word = read YMM2 s`,YMM2);
+  (`!s:x86state. word_zx (read ZMM3 s):256 word = read YMM3 s`,YMM3);
+  (`!s:x86state. word_zx (read ZMM4 s):256 word = read YMM4 s`,YMM4);
+  (`!s:x86state. word_zx (read ZMM5 s):256 word = read YMM5 s`,YMM5);
+  (`!s:x86state. word_zx (read ZMM6 s):256 word = read YMM6 s`,YMM6);
+  (`!s:x86state. word_zx (read ZMM7 s):256 word = read YMM7 s`,YMM7);
+  (`!s:x86state. word_zx (read ZMM8 s):256 word = read YMM8 s`,YMM8);
+  (`!s:x86state. word_zx (read ZMM9 s):256 word = read YMM9 s`,YMM9);
+  (`!s:x86state. word_zx (read ZMM10 s):256 word = read YMM10 s`,YMM10);
+  (`!s:x86state. word_zx (read ZMM11 s):256 word = read YMM11 s`,YMM11);
+  (`!s:x86state. word_zx (read ZMM12 s):256 word = read YMM12 s`,YMM12);
+  (`!s:x86state. word_zx (read ZMM13 s):256 word = read YMM13 s`,YMM13);
+  (`!s:x86state. word_zx (read ZMM14 s):256 word = read YMM14 s`,YMM14);
+  (`!s:x86state. word_zx (read ZMM15 s):256 word = read YMM15 s`,YMM15);
+  (`!s:x86state. word_zx (read ZMM16 s):256 word = read YMM16 s`,YMM16);
+  (`!s:x86state. word_zx (read ZMM17 s):256 word = read YMM17 s`,YMM17);
+  (`!s:x86state. word_zx (read ZMM18 s):256 word = read YMM18 s`,YMM18);
+  (`!s:x86state. word_zx (read ZMM19 s):256 word = read YMM19 s`,YMM19);
+  (`!s:x86state. word_zx (read ZMM20 s):256 word = read YMM20 s`,YMM20);
+  (`!s:x86state. word_zx (read ZMM21 s):256 word = read YMM21 s`,YMM21);
+  (`!s:x86state. word_zx (read ZMM22 s):256 word = read YMM22 s`,YMM22);
+  (`!s:x86state. word_zx (read ZMM23 s):256 word = read YMM23 s`,YMM23);
+  (`!s:x86state. word_zx (read ZMM24 s):256 word = read YMM24 s`,YMM24);
+  (`!s:x86state. word_zx (read ZMM25 s):256 word = read YMM25 s`,YMM25);
+  (`!s:x86state. word_zx (read ZMM26 s):256 word = read YMM26 s`,YMM26);
+  (`!s:x86state. word_zx (read ZMM27 s):256 word = read YMM27 s`,YMM27);
+  (`!s:x86state. word_zx (read ZMM28 s):256 word = read YMM28 s`,YMM28);
+  (`!s:x86state. word_zx (read ZMM29 s):256 word = read YMM29 s`,YMM29);
+  (`!s:x86state. word_zx (read ZMM30 s):256 word = read YMM30 s`,YMM30);
+  (`!s:x86state. word_zx (read ZMM31 s):256 word = read YMM31 s`,YMM31)];;
+
+let X86_YMM_RESUGAR_TAC:tactic =
+  RULE_ASSUM_TAC(PURE_REWRITE_RULE VEX_READ_ZMM_FOLD) THEN
+  PURE_REWRITE_TAC VEX_READ_ZMM_FOLD THEN
+  SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+           DIMINDEX_32; DIMINDEX_64;
+           ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+           ARITH_RULE `256 <= 512`; ARITH_RULE `32 <= 64`;
+           ARITH_RULE `32 <= 128`; ARITH_RULE `32 <= 256`;
+           ARITH_RULE `32 <= 512`; ARITH_RULE `64 <= 128`;
+           ARITH_RULE `64 <= 256`; ARITH_RULE `64 <= 512`];;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper definitions/lemmas inlined from mldsa-native's                     *)
@@ -672,7 +717,6 @@ let SUBWORD_USHR = prove
   REWRITE_TAC[BIT_WORD_SUBWORD; BIT_WORD_USHR] THEN
   REWRITE_TAC[ARITH_RULE `(lo + k) + n = (lo + n) + k`]);;
 
-
 (* --- prefix_g_full_tac ---                                                 *)
 
 (* [from mldsa-native mldsa_utils.ml] *)
@@ -737,7 +781,6 @@ let LENGTH_BUTLAST_GEN = prove
   MP_TAC(ISPEC `l:A list` APPEND_BUTLAST_LAST) THEN ASM_REWRITE_TAC[] THEN
   DISCH_THEN(fun th -> GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [SYM th]) THEN
   REWRITE_TAC[LENGTH_APPEND; LENGTH] THEN ARITH_TAC);;
-
 
 let mldsa_rej_uniform_eta4_mc = define_assert_from_elf
   "mldsa_rej_uniform_eta4_mc" "x86/mldsa/mldsa_rej_uniform_eta4_VARIABLE_TIME.o"
@@ -3260,7 +3303,9 @@ let mk_pf_proof (pshuf:term) (tab:term) : tactic =
     SIMP_TAC[WORD_SUBWORD_SUBWORD;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256;DIMINDEX_4;ARITH] THEN
     CONV_TAC NUM_REDUCE_CONV THEN
     REWRITE_TAC[WORD_ZX_TRIVIAL; VAL_WORD_ZX_GEN; DIMINDEX_64; DIMINDEX_32; DIMINDEX_8] THEN CONV_TAC NUM_REDUCE_CONV THEN
-    CONV_TAC(TOP_DEPTH_CONV SUBWORD_ZX_LOW_CONV) THEN REWRITE_TAC[ZX_128_256_128]);;
+    CONV_TAC(TOP_DEPTH_CONV SUBWORD_ZX_LOW_CONV) THEN REWRITE_TAC[ZX_128_256_128] THEN
+    SIMP_TAC[WORD_SUBWORD_SUBWORD; DIMINDEX_8; DIMINDEX_128; DIMINDEX_256;
+             ARITH_RULE `8 <= 128`; ARITH_RULE `128 <= 128`; ARITH_RULE `128 <= 256`]);;
 
 let PF_PROOF : tactic = mk_pf_proof `pshuf1:int256` `tab1:int256`;;
 
@@ -3282,6 +3327,174 @@ let rip_mp (memsafe:bool) (pcoff:int) (st:int) : tactic =
                           then MP_TAC th else NO_TAC)
   else
     FIRST_ASSUM(fun th -> if can(find_term(fun u->u=pctm))(concl th) then MP_TAC th else NO_TAC);;
+
+(* ------------------------------------------------------------------------- *)
+let REFOLD_ALL_YMM_TAC : tactic =
+  let collapse_conv =
+    SIMP_CONV[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+              DIMINDEX_32; DIMINDEX_64;
+              ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+              ARITH_RULE `256 <= 512`; ARITH_RULE `32 <= 64`;
+              ARITH_RULE `32 <= 128`; ARITH_RULE `32 <= 256`;
+              ARITH_RULE `32 <= 512`; ARITH_RULE `64 <= 128`;
+              ARITH_RULE `64 <= 256`; ARITH_RULE `64 <= 512`] in
+  fun (asl,w) ->
+    let read_key th =
+      if not(is_eq(concl th)) then None else
+      match lhs(concl th) with
+        Comb(Comb(Const("read",_),Const(r,_)),Var(sv,_))
+          when String.length r >= 4 -> Some(String.sub r 0 3, r, sv)
+      | _ -> None in
+    let have_ymm =
+      setify(itlist (fun (_,th) acc -> match read_key th with
+                Some("YMM",r,sv) -> (r,sv)::acc | _ -> acc) asl []) in
+    MAP_EVERY (fun (_,zth) -> match read_key zth with
+        Some("ZMM",zr,sv) ->
+          let ymmname = "YMM" ^ String.sub zr 3 (String.length zr - 3) in
+          if mem (ymmname,sv) have_ymm then ALL_TAC
+          else (fun g ->
+            (try
+               let k = int_of_string(String.sub zr 3 (String.length zr - 3)) in
+               if k > 15 then failwith "hi-reg" else
+               let fold_k = el k VEX_READ_ZMM_FOLD in
+               let ythm0 = SPEC (rand(lhs(concl zth))) (GSYM fold_k) in
+               let ythm1 = CONV_RULE(RAND_CONV(RAND_CONV(REWR_CONV zth))) ythm0 in
+               let ythm2 = CONV_RULE(RAND_CONV(TRY_CONV collapse_conv)) ythm1 in
+               ASSUME_TAC ythm2 g
+             with Failure _ -> ALL_TAC g))
+      | _ -> ALL_TAC) asl (asl,w);;
+
+let X86_VSTEPS_ORIG = X86_VSTEPS_TAC;;
+let X86_STEPS_ORIG = X86_STEPS_TAC;;
+let X86_VERBOSE_STEP_ORIG = X86_VERBOSE_STEP_TAC;;
+let PROPAGATE_YMM_CONSTS_TAC : tactic =
+  fun (asl,w) ->
+    let is_const_ymm th =
+      is_eq(concl th) &&
+      (match lhs(concl th) with
+         Comb(Comb(Const("read",_),Const(r,_)),Var(_,_)) ->
+           String.length r >= 4 && String.sub r 0 3 = "YMM"
+       | _ -> false) &&
+      (let rt = rhs(concl th) in
+       is_comb rt && is_const(rator rt) &&
+       fst(dest_const(rator rt)) = "word" && is_numeral(rand rt)) in
+    let consts = map snd (filter (fun (_,th) -> is_const_ymm th) asl) in
+    if consts = [] then ALL_TAC (asl,w)
+    else RULE_ASSUM_TAC(fun th -> if is_const_ymm th then th
+                                  else REWRITE_RULE consts th) (asl,w);;
+
+let PROPAGATE_YMM_CONSTS_FIX_TAC : tactic =
+  PROPAGATE_YMM_CONSTS_TAC THEN PROPAGATE_YMM_CONSTS_TAC;;
+
+let ZMM_STEP_REPAIR_TAC =
+  REFOLD_ALL_YMM_TAC THEN X86_YMM_RESUGAR_TAC THEN PROPAGATE_YMM_CONSTS_FIX_TAC;;
+let ZMM_REDUCE_ABBREV (v:term) : tactic =
+  fun (asl,w) ->
+    let lanefacts = map ASSUME
+      (filter (fun t ->
+         not(can (find_term (fun u -> is_const u && fst(dest_const u) = "read")) t) &&
+         can (find_term (fun u -> match u with Comb(Const("word_subword",_),_) -> true | _ -> false)) t &&
+         can (find_term (fun u -> match u with Comb(Const("word",_),_) -> true | _ -> false)) t)
+        (map (concl o snd) asl)) in
+    RULE_ASSUM_TAC(fun th ->
+      if is_eq(concl th) && lhand(concl th) = v
+      then CONV_RULE(RAND_CONV(REWRITE_CONV lanefacts THENC
+                               ONCE_DEPTH_CONV WORD_NUM_RED_CONV)) th
+      else th) (asl,w);;
+let f1bnd_def_ref = ref TRUTH;;
+let ZMM_REABBREV_TAC (k:int) (sN:string) (v:term) : tactic =
+  let vfold = SPEC (mk_var(sN,`:x86state`)) (el k VEX_READ_ZMM_FOLD) in
+  let zread = rand(lhand(concl vfold)) in
+  let yread = rand(concl vfold) in
+  let zx_v = mk_comb(`word_zx:int256->int512`, v) in
+  SUBGOAL_THEN (mk_eq(zread, zx_v)) ASSUME_TAC THENL
+   [FIRST_ASSUM(fun zth -> if is_eq(concl zth) && lhand(concl zth)=zread then ONCE_REWRITE_TAC[zth] else NO_TAC) THEN
+    AP_TERM_TAC THEN
+    MP_TAC vfold THEN
+    FIRST_ASSUM(fun zth -> if is_eq(concl zth) && lhand(concl zth)=zread then REWRITE_TAC[zth] else NO_TAC) THEN
+    SIMP_TAC[WORD_ZX_ZX;DIMINDEX_256;DIMINDEX_512;ARITH_RULE `256<=512`] THEN
+    FIRST_ASSUM(fun yth -> if is_eq(concl yth) && lhand(concl yth)=yread && rand(concl yth)=v
+                           then REWRITE_TAC[yth] else NO_TAC) THEN
+    DISCH_THEN ACCEPT_TAC;
+    ALL_TAC] THEN
+  FIRST_X_ASSUM(fun th -> if is_eq(concl th) && lhand(concl th)=zread && not(rand(concl th)=zx_v)
+                          then ALL_TAC else failwith "keep");;
+let pshuf_peq_ref = ref TRUTH;;
+let ZMM_CAPTURE_PSHUF_PEQ (pshufv:term) : tactic =
+  fun (asl,w) ->
+    (try FIRST_ASSUM(fun th ->
+           if is_eq(concl th) && rand(concl th) = pshufv &&
+              can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)
+           then (pshuf_peq_ref := th; ALL_TAC) else NO_TAC)
+     with Failure _ -> ALL_TAC) (asl,w);;
+let ZMM_STORE_REFOLD (sN:string) (sxv:term) : tactic =
+  fun (asl,w) ->
+    let sv = mk_var(sN,`:x86state`) in
+    let storeLHS =
+      tryfind (fun (_,th) -> let c=concl th in
+        if is_eq c &&
+           can(find_term(fun u->match u with Const("bytes256",_)->true|_->false))(lhand c) &&
+           can(find_term(fun u->u=sv))(lhand c)
+        then lhand c else fail()) asl in
+    let sxdef =
+      tryfind (fun (_,th) -> let c=concl th in
+        if is_eq c && lhand c = sxv &&
+           can(find_term(fun u->match u with Const("usimd8",_)->true|_->false))(rand c)
+        then th else fail()) asl in
+    let target = mk_eq(storeLHS, rand(concl sxdef)) in
+    (SUBGOAL_THEN target ASSUME_TAC THENL
+     [FIRST_ASSUM(fun th -> if is_eq(concl th) && lhand(concl th)=storeLHS then SUBST1_TAC th else NO_TAC) THEN
+      REWRITE_TAC[GSYM sxdef] THEN
+      SIMP_TAC[WORD_ZX_ZX;DIMINDEX_256;DIMINDEX_512;ARITH_RULE `256<=512`] THEN
+      CONV_TAC WORD_BLAST;
+      ALL_TAC]) (asl,w);;
+let ZMM_STORE_COLLAPSE (sN:string) (sxv:term) : tactic =
+  fun (asl,w) ->
+    let sv = mk_var(sN,`:x86state`) in
+    let storeLHS =
+      tryfind (fun (_,th) -> let c=concl th in
+        if is_eq c &&
+           can(find_term(fun u->match u with Const("bytes256",_)->true|_->false))(lhand c) &&
+           can(find_term(fun u->u=sv))(lhand c) &&
+           can(find_term(fun u->u=sxv))(rand c)
+        then lhand c else fail()) asl in
+    let target = mk_eq(storeLHS, sxv) in
+    (SUBGOAL_THEN target ASSUME_TAC THENL
+     [FIRST_ASSUM(fun th -> if is_eq(concl th) && lhand(concl th)=storeLHS then SUBST1_TAC th else NO_TAC) THEN
+      CONV_TAC WORD_BLAST;
+      ALL_TAC]) (asl,w);;
+let ZMM_FOLD_MASKSRC (v:term) : tactic =
+  let zxzx_conv =
+    SIMP_CONV[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+              ARITH_RULE `256 <= 512`; ARITH_RULE `128 <= 256`;
+              ARITH_RULE `128 <= 512`] in
+  fun (asl,w) ->
+    let vdef = try tryfind (fun (_,th) ->
+                 if is_eq(concl th) && lhand(concl th) = v then th else fail()) asl
+               with Failure _ -> !f1bnd_def_ref in
+    RULE_ASSUM_TAC(fun th ->
+      if concl th = concl vdef then th
+      else CONV_RULE(TOP_DEPTH_CONV(REWR_CONV(GSYM vdef)) THENC
+                     TRY_CONV zxzx_conv) th) (asl,w);;
+let ZMM_CAPTURE_F1BND_TAC : tactic =
+  FIRST_ASSUM(fun th ->
+    if is_eq(concl th) && lhand(concl th) = `f1bnd:int256`
+    then (f1bnd_def_ref := th; ALL_TAC) else NO_TAC);;
+let REFOLD_YMM_READS_TAC : tactic =
+  fun (asl,w) ->
+    let is_abbrev th =
+      is_eq(concl th) && is_var(lhand(concl th)) &&
+      (match rand(concl th) with
+         Comb(Comb(Const("read",_),Const(r,_)),Var(_,_)) ->
+           String.length r >= 4 && String.sub r 0 3 = "YMM"
+       | _ -> false) in
+    let folds = map (GSYM o snd) (filter (fun (_,th) -> is_abbrev th) asl) in
+    if folds = [] then ALL_TAC (asl,w)
+    else RULE_ASSUM_TAC(fun th -> if is_abbrev th then th
+                                  else REWRITE_RULE folds th) (asl,w);;
+let X86_VSTEPS_TAC exec rng = X86_VSTEPS_ORIG exec rng THEN ZMM_STEP_REPAIR_TAC;;
+let X86_STEPS_TAC exec rng = X86_STEPS_ORIG exec rng THEN ZMM_STEP_REPAIR_TAC;;
+let X86_VERBOSE_STEP_TAC exec st = X86_VERBOSE_STEP_ORIG exec st THEN ZMM_STEP_REPAIR_TAC;;
 
 let mk_prefix_g_full (memsafe:bool) : tactic =
   REPEAT GEN_TAC THEN
@@ -3346,10 +3559,13 @@ let mk_prefix_g_full (memsafe:bool) : tactic =
   RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `read YMM0 s8 = fn:int256`;
      ASSUME `read YMM4 s8 = word 4086779620140571603184858294424279100703646517610843436686738259102816340233:int256`]) THEN
   ABBREV_TAC `f1bnd:int256 = read YMM1 s9` THEN
+  ZMM_REDUCE_ABBREV `f1bnd:int256` THEN
   X86_VSTEPS_TAC EXEC (10--10) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `read YMM0 s9 = fn:int256`;
      ASSUME `read YMM3 s9 = word 1816346497840254045859937019744124044757176230049263749638550337379029484548:int256`]) THEN
   ABBREV_TAC `f0sub:int256 = read YMM0 s10` THEN
+  ZMM_REDUCE_ABBREV `f0sub:int256` THEN
+  ZMM_REABBREV_TAC 0 "s10" `f0sub:int256` THEN
   W(fun (asl,w) ->
       let f0d = find (fun th -> is_eq(concl th) && lhand(concl th) = `f0sub:int256`) (map snd asl) in
       let gather_imp = prove
@@ -3568,6 +3784,7 @@ let mk_prefix_g_full (memsafe:bool) : tactic =
      `read YMM1 s10 = f1bnd` fold) instead of the expanded word_join, so stage d's popeq / low8 /
      BOOL_CASES (over `word_subword f1bnd (8k,8)`) match the popcount term. Without this, R9 s21 =
      popcount(...word_join expanded...) and stage d leaves unsolved goals. *)
+  ZMM_CAPTURE_F1BND_TAC THEN
   REPEAT(FIRST_X_ASSUM(fun th ->
      if is_eq(concl th) && (lhand(concl th) = `f0sub:int256` || lhand(concl th) = `f1bnd:int256`)
      then ALL_TAC else failwith "keep")) THEN
@@ -3585,22 +3802,27 @@ let mk_prefix_g_full (memsafe:bool) : tactic =
   X86_VERBOSE_STEP_TAC EXEC "s13" THEN
   MOVZBL_R10_CAPTURE_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `read R8 s12 = mask8:int64`]) THEN
+  ZMM_FOLD_MASKSRC `f1bnd:int256` THEN
   (SUBGOAL_THEN maskbit_tgt ASSUME_TAC THENL [MASKBIT_TGT_TAC; ALL_TAC]) THEN
   X86_VSTEPS_TAC EXEC (14--14) THEN
   TAB1_TEQ_TAC THEN
   REABBREV_TAC `tab1 = read YMM6 s14` THEN
   X86_VSTEPS_TAC EXEC (15--15) THEN REABBREV_TAC `pshuf1 = read YMM6 s15` THEN
   PURGE_STALE_STATES_TAC ["s14"] THEN
-  X86_VSTEPS_TAC EXEC (16--16) THEN REABBREV_TAC `sx1 = read YMM1 s16` THEN
+  X86_VSTEPS_TAC EXEC (16--16) THEN REFOLD_YMM_READS_TAC THEN REABBREV_TAC `sx1 = read YMM1 s16` THEN ZMM_REABBREV_TAC 1 "s16" `sx1:int256` THEN
   (* stepA: establish sx1 = usimd8 word_sx (word_zx(word_zx pshuf1)) (the vpmovsxbd lane form). *)
   SUBGOAL_THEN `sx1:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf1:int256):int128):int64)` ASSUME_TAC THENL
    [W(fun (asl,w) ->
        let sx1def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx1:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx1def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf1:int256` &&
+            can(find_term(fun u->u=`tab1:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
+  ZMM_CAPTURE_PSHUF_PEQ `pshuf1:int256` THEN
   PURGE_STALE_STATES_TAC ["s15"] THEN
   X86_STEPS_TAC EXEC (17--17) THEN
   PURGE_STALE_STATES_TAC ["s16"] THEN
@@ -3718,6 +3940,7 @@ let PREFIX_G_FULL_TAC : tactic = mk_prefix_g_full false;;
    ALREADY ASSUMEd by PREFIX_G_FULL_TAC, so fetch them from asl (no SUBGOAL_THEN). Only
    pf_target is a real subgoal, discharged by PF_PROOF (genuine table-load bridge). *)
 let SI1_FOLD_V2 : tactic =
+  ZMM_STORE_REFOLD "s23" `sx1:int256` THEN
   SUBGOAL_THEN pf_target (fun pfth ->
     W(fun (asl,w) ->
       let asms = map snd asl in
@@ -3946,7 +4169,7 @@ let SI2_INTEGRATED : tactic =
   X86_VSTEPS_TAC EXEC (26--26) THEN TAB2_TEQ_TAC THEN REABBREV_TAC `tab2 = read YMM6 s26` THEN
   X86_VSTEPS_TAC EXEC (27--27) THEN REABBREV_TAC `pshuf2 = read YMM6 s27` THEN
   PURGE_STALE_STATES_TAC ["s26"] THEN
-  X86_VSTEPS_TAC EXEC (28--28) THEN REABBREV_TAC `sx2 = read YMM1 s28` THEN
+  X86_VSTEPS_TAC EXEC (28--28) THEN REABBREV_TAC `sx2 = read YMM1 s28` THEN ZMM_REABBREV_TAC 1 "s28" `sx2:int256` THEN
   VAL_INT64_TAC `acc1:num` THEN
   X86_STEPS_TAC EXEC (29--29) THEN
   SUBGOAL_THEN `sx2:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf2:int256):int128):int64)` ASSUME_TAC THENL
@@ -3954,11 +4177,15 @@ let SI2_INTEGRATED : tactic =
        let sx2def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx2:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx2def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf2:int256` &&
+            can(find_term(fun u->u=`tab2:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
   (SUBGOAL_THEN maskbit_tgt_2 ASSUME_TAC THENL [MASKBIT_TGT_2_TAC; ALL_TAC]) THEN
   (SUBGOAL_THEN pf_target_2 ASSUME_TAC THENL [PF_PROOF_2; ALL_TAC]) THEN
+  ZMM_STORE_COLLAPSE "s29" `sx2:int256` THEN
   ACC1_IDENT_TAC THEN
   W(fun (asl,w) ->
     let asms = map snd asl in
@@ -4160,7 +4387,7 @@ let SI3_INTEGRATED : tactic =
   X86_VSTEPS_TAC EXEC (38--38) THEN TAB3_TEQ_TAC THEN REABBREV_TAC `tab3 = read YMM6 s38` THEN
   X86_VSTEPS_TAC EXEC (39--39) THEN REABBREV_TAC `pshuf3 = read YMM6 s39` THEN
   PURGE_STALE_STATES_TAC ["s38"] THEN
-  X86_VSTEPS_TAC EXEC (40--40) THEN REABBREV_TAC `sx3 = read YMM1 s40` THEN
+  X86_VSTEPS_TAC EXEC (40--40) THEN REABBREV_TAC `sx3 = read YMM1 s40` THEN ZMM_REABBREV_TAC 1 "s40" `sx3:int256` THEN
   VAL_INT64_TAC `acc2:num` THEN
   X86_STEPS_TAC EXEC (41--41) THEN
   SUBGOAL_THEN `sx3:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf3:int256):int128):int64)` ASSUME_TAC THENL
@@ -4168,11 +4395,15 @@ let SI3_INTEGRATED : tactic =
        let sx3def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx3:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx3def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf3:int256` &&
+            can(find_term(fun u->u=`tab3:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
   (SUBGOAL_THEN maskbit_tgt_3 ASSUME_TAC THENL [MASKBIT_TGT_3_TAC; ALL_TAC]) THEN
   (SUBGOAL_THEN pf_target_3 ASSUME_TAC THENL [PF_PROOF_3; ALL_TAC]) THEN
+  ZMM_STORE_COLLAPSE "s41" `sx3:int256` THEN
   ACC2_IDENT_TAC THEN
   W(fun (asl,w) ->
     let asms = map snd asl in
@@ -4303,7 +4534,7 @@ let SI4_INTEGRATED : tactic =
   X86_VSTEPS_TAC EXEC (50--50) THEN TAB4_TEQ_TAC THEN REABBREV_TAC `tab4 = read YMM6 s50` THEN
   X86_VSTEPS_TAC EXEC (51--51) THEN REABBREV_TAC `pshuf4 = read YMM6 s51` THEN
   PURGE_STALE_STATES_TAC ["s50"] THEN
-  X86_VSTEPS_TAC EXEC (52--52) THEN REABBREV_TAC `sx4 = read YMM1 s52` THEN
+  X86_VSTEPS_TAC EXEC (52--52) THEN REABBREV_TAC `sx4 = read YMM1 s52` THEN ZMM_REABBREV_TAC 1 "s52" `sx4:int256` THEN
   VAL_INT64_TAC `acc3:num` THEN
   X86_STEPS_TAC EXEC (53--53) THEN
   SUBGOAL_THEN `sx4:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf4:int256):int128):int64)` ASSUME_TAC THENL
@@ -4311,11 +4542,15 @@ let SI4_INTEGRATED : tactic =
        let sx4def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx4:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx4def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf4:int256` &&
+            can(find_term(fun u->u=`tab4:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
   (SUBGOAL_THEN maskbit_tgt_4 ASSUME_TAC THENL [MASKBIT_TGT_4_TAC; ALL_TAC]) THEN
   (SUBGOAL_THEN pf_target_4 ASSUME_TAC THENL [PF_PROOF_4; ALL_TAC]) THEN
+  ZMM_STORE_COLLAPSE "s53" `sx4:int256` THEN
   ACC3_IDENT_TAC THEN
   W(fun (asl,w) ->
     let asms = map snd asl in
@@ -4475,7 +4710,8 @@ let RCX_FINAL_TAC : tactic =
      (.tab2_teq_tac MUST precede .si2_fold_pieces — TAB2_TEQ_TAC dependency. Verified
  , hyps=0 = clean_body_tm exactly.) *)
 let CLEAN_BODY_FULL_TAC : tactic =
-  PREFIX_G_FULL_TAC THEN SI1_FOLD_V2 THEN SI2_INTEGRATED THEN SI3_INTEGRATED THEN SI4_INTEGRATED THEN
+  PREFIX_G_FULL_TAC THEN
+  SI1_FOLD_V2 THEN SI2_INTEGRATED THEN SI3_INTEGRATED THEN SI4_INTEGRATED THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `16*i+16 = 16*(i+1)`]) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   CONJ_TAC THENL [RAX_FINAL_TAC; RCX_FINAL_TAC];;
@@ -5694,10 +5930,13 @@ let mk_prefix_to_s21 (memsafe:bool) : tactic =
   RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `read YMM0 s8 = fn:int256`;
      ASSUME `read YMM4 s8 = word 4086779620140571603184858294424279100703646517610843436686738259102816340233:int256`]) THEN
   ABBREV_TAC `f1bnd:int256 = read YMM1 s9` THEN
+  ZMM_REDUCE_ABBREV `f1bnd:int256` THEN
   X86_VSTEPS_TAC EXEC (10--10) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `read YMM0 s9 = fn:int256`;
      ASSUME `read YMM3 s9 = word 1816346497840254045859937019744124044757176230049263749638550337379029484548:int256`]) THEN
   ABBREV_TAC `f0sub:int256 = read YMM0 s10` THEN
+  ZMM_REDUCE_ABBREV `f0sub:int256` THEN
+  ZMM_REABBREV_TAC 0 "s10" `f0sub:int256` THEN
   W(fun (asl,w) ->
       let f0d = find (fun th -> is_eq(concl th) && lhand(concl th) = `f0sub:int256`) (map snd asl) in
       let gather_imp = prove
@@ -5916,6 +6155,7 @@ let mk_prefix_to_s21 (memsafe:bool) : tactic =
      `read YMM1 s10 = f1bnd` fold) instead of the expanded word_join, so stage d's popeq / low8 /
      BOOL_CASES (over `word_subword f1bnd (8k,8)`) match the popcount term. Without this, R9 s21 =
      popcount(...word_join expanded...) and stage d leaves unsolved goals. *)
+  ZMM_CAPTURE_F1BND_TAC THEN
   REPEAT(FIRST_X_ASSUM(fun th ->
      if is_eq(concl th) && (lhand(concl th) = `f0sub:int256` || lhand(concl th) = `f1bnd:int256`)
      then ALL_TAC else failwith "keep")) THEN
@@ -5933,22 +6173,27 @@ let mk_prefix_to_s21 (memsafe:bool) : tactic =
   X86_VERBOSE_STEP_TAC EXEC "s13" THEN
   MOVZBL_R10_CAPTURE_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `read R8 s12 = mask8:int64`]) THEN
+  ZMM_FOLD_MASKSRC `f1bnd:int256` THEN
   (SUBGOAL_THEN maskbit_tgt ASSUME_TAC THENL [MASKBIT_TGT_TAC; ALL_TAC]) THEN
   X86_VSTEPS_TAC EXEC (14--14) THEN
   TAB1_TEQ_TAC THEN
   REABBREV_TAC `tab1 = read YMM6 s14` THEN
   X86_VSTEPS_TAC EXEC (15--15) THEN REABBREV_TAC `pshuf1 = read YMM6 s15` THEN
   PURGE_STALE_STATES_TAC ["s14"] THEN
-  X86_VSTEPS_TAC EXEC (16--16) THEN REABBREV_TAC `sx1 = read YMM1 s16` THEN
+  X86_VSTEPS_TAC EXEC (16--16) THEN REFOLD_YMM_READS_TAC THEN REABBREV_TAC `sx1 = read YMM1 s16` THEN ZMM_REABBREV_TAC 1 "s16" `sx1:int256` THEN
   (* stepA: establish sx1 = usimd8 word_sx (word_zx(word_zx pshuf1)) (the vpmovsxbd lane form). *)
   SUBGOAL_THEN `sx1:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf1:int256):int128):int64)` ASSUME_TAC THENL
    [W(fun (asl,w) ->
        let sx1def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx1:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx1def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf1:int256` &&
+            can(find_term(fun u->u=`tab1:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
+  ZMM_CAPTURE_PSHUF_PEQ `pshuf1:int256` THEN
   PURGE_STALE_STATES_TAC ["s15"] THEN
   X86_STEPS_TAC EXEC (17--17) THEN
   PURGE_STALE_STATES_TAC ["s16"] THEN
@@ -5965,7 +6210,6 @@ let mk_prefix_to_s21 (memsafe:bool) : tactic =
   ALL_TAC);;
 
 let PREFIX_TO_S21_TAC : tactic = mk_prefix_to_s21 false;;
-
 
 (* --- mg1_nt ---                                                            *)
 (* MG1_NT_TAC: from s21 (pc+152, sub-iter-1 gather done, RAX=popcount-accumulate),
@@ -6284,7 +6528,7 @@ let SI4_BODY4_TAC : tactic =
   X86_VSTEPS_TAC EXEC (50--50) THEN TAB4_TEQ_TAC THEN REABBREV_TAC `tab4 = read YMM6 s50` THEN
   X86_VSTEPS_TAC EXEC (51--51) THEN REABBREV_TAC `pshuf4 = read YMM6 s51` THEN
   PURGE_STALE_STATES_TAC ["s50"] THEN
-  X86_VSTEPS_TAC EXEC (52--52) THEN REABBREV_TAC `sx4 = read YMM1 s52` THEN
+  X86_VSTEPS_TAC EXEC (52--52) THEN REABBREV_TAC `sx4 = read YMM1 s52` THEN ZMM_REABBREV_TAC 1 "s52" `sx4:int256` THEN
   VAL_INT64_TAC `acc3:num` THEN
   X86_STEPS_TAC EXEC (53--53) THEN
   SUBGOAL_THEN `sx4:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf4:int256):int128):int64)` ASSUME_TAC THENL
@@ -6292,11 +6536,15 @@ let SI4_BODY4_TAC : tactic =
        let sx4def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx4:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx4def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf4:int256` &&
+            can(find_term(fun u->u=`tab4:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
   (SUBGOAL_THEN maskbit_tgt_4 ASSUME_TAC THENL [MASKBIT_TGT_4_TAC; ALL_TAC]) THEN
   (SUBGOAL_THEN pf_target_4 ASSUME_TAC THENL [PF_PROOF_4; ALL_TAC]) THEN
+  ZMM_STORE_COLLAPSE "s53" `sx4:int256` THEN
   ACC3_IDENT_TAC THEN
   W(fun (asl,w) ->
     let asms = map snd asl in
@@ -6530,7 +6778,7 @@ let SI2_BODY_TAC : tactic =
   X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_ETA4_EXEC (26--26) THEN TAB2_TEQ_TAC THEN REABBREV_TAC `tab2 = read YMM6 s26` THEN
   X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_ETA4_EXEC (27--27) THEN REABBREV_TAC `pshuf2 = read YMM6 s27` THEN
   PURGE_STALE_STATES_TAC ["s26"] THEN
-  X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_ETA4_EXEC (28--28) THEN REABBREV_TAC `sx2 = read YMM1 s28` THEN
+  X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_ETA4_EXEC (28--28) THEN REABBREV_TAC `sx2 = read YMM1 s28` THEN ZMM_REABBREV_TAC 1 "s28" `sx2:int256` THEN
   VAL_INT64_TAC `acc1:num` THEN
   X86_STEPS_TAC MLDSA_REJ_UNIFORM_ETA4_EXEC (29--29) THEN
   SUBGOAL_THEN `sx2:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf2:int256):int128):int64)` ASSUME_TAC THENL
@@ -6538,11 +6786,15 @@ let SI2_BODY_TAC : tactic =
        let sx2def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx2:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx2def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf2:int256` &&
+            can(find_term(fun u->u=`tab2:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
   (SUBGOAL_THEN maskbit_tgt_2 ASSUME_TAC THENL [MASKBIT_TGT_2_TAC; ALL_TAC]) THEN
   (SUBGOAL_THEN pf_target_2 ASSUME_TAC THENL [PF_PROOF_2; ALL_TAC]) THEN
+  ZMM_STORE_COLLAPSE "s29" `sx2:int256` THEN
   ACC1_IDENT_TAC THEN
   W(fun (asl,w) ->
     let asms = map snd asl in
@@ -6756,7 +7008,7 @@ let SI3_BODY3_TAC : tactic =
   X86_VSTEPS_TAC EXEC (38--38) THEN TAB3_TEQ_TAC THEN REABBREV_TAC `tab3 = read YMM6 s38` THEN
   X86_VSTEPS_TAC EXEC (39--39) THEN REABBREV_TAC `pshuf3 = read YMM6 s39` THEN
   PURGE_STALE_STATES_TAC ["s38"] THEN
-  X86_VSTEPS_TAC EXEC (40--40) THEN REABBREV_TAC `sx3 = read YMM1 s40` THEN
+  X86_VSTEPS_TAC EXEC (40--40) THEN REABBREV_TAC `sx3 = read YMM1 s40` THEN ZMM_REABBREV_TAC 1 "s40" `sx3:int256` THEN
   VAL_INT64_TAC `acc2:num` THEN
   X86_STEPS_TAC EXEC (41--41) THEN
   SUBGOAL_THEN `sx3:int256 = usimd8 (\b:byte. word_sx b:int32) (word_zx(word_zx (pshuf3:int256):int128):int64)` ASSUME_TAC THENL
@@ -6764,11 +7016,15 @@ let SI3_BODY3_TAC : tactic =
        let sx3def = find (fun th -> is_eq(concl th) && rand(concl th)=`sx3:int256` &&
            can(find_term(fun u->match u with Const("word_join",_)->true|_->false))(concl th)) (map snd asl) in
        SUBST1_TAC(SYM sx3def) THEN
+       (FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th)=`pshuf3:int256` &&
+            can(find_term(fun u->u=`tab3:int256`))(concl th)
+          then REWRITE_TAC[GSYM th] else NO_TAC)) THEN
        REWRITE_TAC[usimd8;usimd4;usimd2;DIMINDEX_8;DIMINDEX_16;DIMINDEX_32;DIMINDEX_64;DIMINDEX_128;DIMINDEX_256] THEN
        CONV_TAC WORD_BLAST);
     ALL_TAC] THEN
   (SUBGOAL_THEN maskbit_tgt_3 ASSUME_TAC THENL [MASKBIT_TGT_3_TAC; ALL_TAC]) THEN
   (SUBGOAL_THEN pf_target_3 ASSUME_TAC THENL [PF_PROOF_3; ALL_TAC]) THEN
+  ZMM_STORE_COLLAPSE "s41" `sx3:int256` THEN
   ACC2_IDENT_TAC THEN
   W(fun (asl,w) ->
     let asms = map snd asl in
@@ -8165,11 +8421,6 @@ let MLDSA_REJ_UNIFORM_ETA4_SCALAR_TAIL_AT_P_MEMSAFE = prove
 
 let PREFIX_TO_S21_MS_TAC : tactic = mk_prefix_to_s21 true;;
 
-
-
-
-
-
 let midexit1_ms_tm =
   let qvars, body = strip_forall midexit1_tm in
   let hyps_tm, ens = dest_imp body in
@@ -8796,9 +9047,8 @@ let MLDSA_REJ_UNIFORM_ETA4_NOIBT_WINDOWS_SUBROUTINE_CORRECT =
     ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
     ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
     ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-    REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-    REWRITE_TAC(map GSYM [YMM6]) THEN
-    GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
+    REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+    GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
     GLOBALIZE_PRECONDITION_TAC THEN
     ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLDSA_REJ_UNIFORM_ETA4_WINDOWS_TMC_EXEC (1--7) THEN
@@ -8819,7 +9069,7 @@ let MLDSA_REJ_UNIFORM_ETA4_NOIBT_WINDOWS_SUBROUTINE_CORRECT =
       RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
     RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV let_CONV)) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[C_RETURN]) THEN
-    ABBREV_TAC `ymm6_epilog = read YMM6 s8` THEN
+    ABBREV_TAC `zmm6_epilog = read ZMM6 s8` THEN
     X86_STEPS_TAC MLDSA_REJ_UNIFORM_ETA4_WINDOWS_TMC_EXEC (9--13) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
@@ -8890,9 +9140,8 @@ let MLDSA_REJ_UNIFORM_ETA4_NOIBT_WINDOWS_SUBROUTINE_SAFE =
     ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
     ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
     ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-    REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-    REWRITE_TAC(map GSYM [YMM6]) THEN
-    GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
+    REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+    GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
     GLOBALIZE_PRECONDITION_TAC THEN
     ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC MLDSA_REJ_UNIFORM_ETA4_WINDOWS_TMC_EXEC (1--7) THEN
@@ -8911,7 +9160,7 @@ let MLDSA_REJ_UNIFORM_ETA4_NOIBT_WINDOWS_SUBROUTINE_SAFE =
         (AP_TERM `BUTLAST:byte list->byte list` mldsa_rej_uniform_eta4_tmc))
        27));
       RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
-    ABBREV_TAC `ymm6_epilog = read YMM6 s8` THEN
+    ABBREV_TAC `zmm6_epilog = read ZMM6 s8` THEN
     X86_STEPS_TAC MLDSA_REJ_UNIFORM_ETA4_WINDOWS_TMC_EXEC (9--13) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN

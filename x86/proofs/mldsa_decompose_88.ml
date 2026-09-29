@@ -18,6 +18,26 @@
 needs "x86/proofs/base.ml";;
 needs "common/mlkem_mldsa.ml";;
 
+let ZMM_STORE_ZX_COLLAPSE_TAC : tactic =
+  RULE_ASSUM_TAC(SIMP_RULE[WORD_ZX_ZX;
+    DIMINDEX_8; DIMINDEX_16; DIMINDEX_32; DIMINDEX_64;
+    DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+    ARITH_RULE `32 <= 64`; ARITH_RULE `32 <= 128`; ARITH_RULE `32 <= 256`;
+    ARITH_RULE `32 <= 512`; ARITH_RULE `64 <= 128`; ARITH_RULE `64 <= 256`;
+    ARITH_RULE `64 <= 512`; ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+    ARITH_RULE `256 <= 512`; ARITH_RULE `256 <= 256`; ARITH_RULE `8 <= 512`;
+    ARITH_RULE `16 <= 512`]);;
+
+let SIMD_SIMPLIFY_TAC_ZMM unfold_defs =
+  let arm_simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  let x86_simdable = can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let x86_simdable512 = can (term_match [] `read X (s:x86state):int512 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm || x86_simdable512 tm in
+  TRY(FIRST_X_ASSUM
+   (ASSUME_TAC o
+    CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o
+    check (simdable o concl)));;
+
 (**** print_literal_from_elf "x86/mldsa/mldsa_decompose_88.o";;
  ****)
 
@@ -1237,8 +1257,10 @@ let MLDSA_DECOMPOSE_88_CORRECT = prove(
   STRIP_TAC THEN
   MAP_EVERY (fun n ->
     X86_STEPS_TAC MLDSA_DECOMPOSE_88_TMC_EXEC [n] THEN
-    SIMD_SIMPLIFY_TAC[decompose88_a1; decompose88_a0]) (1--399) THEN
+    SIMD_SIMPLIFY_TAC_ZMM[decompose88_a1; decompose88_a0]) (1--399) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[WORD_NOT_JOIN_256; WORD_NOT_JOIN_128; WORD_NOT_JOIN_64]) THEN
+  ZMM_STORE_ZX_COLLAPSE_TAC THEN
   RULE_ASSUM_TAC(REWRITE_RULE[WORD_NOT_JOIN_256; WORD_NOT_JOIN_128; WORD_NOT_JOIN_64]) THEN
   REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
      CONV_RULE(SIMD_SIMPLIFY_CONV[decompose88_h; decompose88_a1; decompose88_a0]) o
@@ -1484,15 +1506,13 @@ let MLDSA_DECOMPOSE_88_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_PRESERVED_TAC "init_xmm13" `ZMM13 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM10;YMM11;YMM12;YMM13;YMM14]) THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
 
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
+  GHOST_INTRO_TAC `init_zmm13:int512` `read ZMM13` THEN
+  GHOST_INTRO_TAC `init_zmm14:int512` `read ZMM14` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -1514,11 +1534,11 @@ let MLDSA_DECOMPOSE_88_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
   MAP_EVERY ABBREV_TAC
-   [`ymm10_epilog = read YMM10 s11`;
-    `ymm11_epilog = read YMM11 s11`;
-    `ymm12_epilog = read YMM12 s11`;
-    `ymm13_epilog = read YMM13 s11`;
-    `ymm14_epilog = read YMM14 s11`] THEN
+   [`zmm10_epilog = read ZMM10 s11`;
+    `zmm11_epilog = read ZMM11 s11`;
+    `zmm12_epilog = read ZMM12 s11`;
+    `zmm13_epilog = read ZMM13 s11`;
+    `zmm14_epilog = read ZMM14 s11`] THEN
 
   X86_STEPS_TAC MLDSA_DECOMPOSE_88_WINDOWS_TMC_EXEC (19--27) THEN
 
@@ -1621,15 +1641,13 @@ let MLDSA_DECOMPOSE_88_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   ENSURES_PRESERVED_TAC "init_xmm13" `ZMM13 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM10;YMM11;YMM12;YMM13;YMM14]) THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
 
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
+  GHOST_INTRO_TAC `init_zmm13:int512` `read ZMM13` THEN
+  GHOST_INTRO_TAC `init_zmm14:int512` `read ZMM14` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -1659,11 +1677,11 @@ let MLDSA_DECOMPOSE_88_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
   MAP_EVERY ABBREV_TAC
-   [`ymm10_epilog = read YMM10 s11`;
-    `ymm11_epilog = read YMM11 s11`;
-    `ymm12_epilog = read YMM12 s11`;
-    `ymm13_epilog = read YMM13 s11`;
-    `ymm14_epilog = read YMM14 s11`] THEN
+   [`zmm10_epilog = read ZMM10 s11`;
+    `zmm11_epilog = read ZMM11 s11`;
+    `zmm12_epilog = read ZMM12 s11`;
+    `zmm13_epilog = read ZMM13 s11`;
+    `zmm14_epilog = read ZMM14 s11`] THEN
 
   X86_STEPS_TAC MLDSA_DECOMPOSE_88_WINDOWS_TMC_EXEC (19--27) THEN
 

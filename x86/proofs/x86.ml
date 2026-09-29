@@ -323,6 +323,41 @@ add_component_alias_thms
   XMM16; XMM17; XMM18; XMM19; XMM20; XMM21; XMM22; XMM23;
   XMM24; XMM25; XMM26; XMM27; XMM28; XMM29; XMM30; XMM31 ];;
 
+let VEX_READ_ZMM_FOLD:thm list = map (fun (goal,ymmdef) ->
+  prove(goal, REWRITE_TAC[ymmdef; READ_ZEROTOP_256]))
+ [(`!s:x86state. word_zx (read ZMM0 s):256 word = read YMM0 s`,YMM0);
+  (`!s:x86state. word_zx (read ZMM1 s):256 word = read YMM1 s`,YMM1);
+  (`!s:x86state. word_zx (read ZMM2 s):256 word = read YMM2 s`,YMM2);
+  (`!s:x86state. word_zx (read ZMM3 s):256 word = read YMM3 s`,YMM3);
+  (`!s:x86state. word_zx (read ZMM4 s):256 word = read YMM4 s`,YMM4);
+  (`!s:x86state. word_zx (read ZMM5 s):256 word = read YMM5 s`,YMM5);
+  (`!s:x86state. word_zx (read ZMM6 s):256 word = read YMM6 s`,YMM6);
+  (`!s:x86state. word_zx (read ZMM7 s):256 word = read YMM7 s`,YMM7);
+  (`!s:x86state. word_zx (read ZMM8 s):256 word = read YMM8 s`,YMM8);
+  (`!s:x86state. word_zx (read ZMM9 s):256 word = read YMM9 s`,YMM9);
+  (`!s:x86state. word_zx (read ZMM10 s):256 word = read YMM10 s`,YMM10);
+  (`!s:x86state. word_zx (read ZMM11 s):256 word = read YMM11 s`,YMM11);
+  (`!s:x86state. word_zx (read ZMM12 s):256 word = read YMM12 s`,YMM12);
+  (`!s:x86state. word_zx (read ZMM13 s):256 word = read YMM13 s`,YMM13);
+  (`!s:x86state. word_zx (read ZMM14 s):256 word = read YMM14 s`,YMM14);
+  (`!s:x86state. word_zx (read ZMM15 s):256 word = read YMM15 s`,YMM15);
+  (`!s:x86state. word_zx (read ZMM16 s):256 word = read YMM16 s`,YMM16);
+  (`!s:x86state. word_zx (read ZMM17 s):256 word = read YMM17 s`,YMM17);
+  (`!s:x86state. word_zx (read ZMM18 s):256 word = read YMM18 s`,YMM18);
+  (`!s:x86state. word_zx (read ZMM19 s):256 word = read YMM19 s`,YMM19);
+  (`!s:x86state. word_zx (read ZMM20 s):256 word = read YMM20 s`,YMM20);
+  (`!s:x86state. word_zx (read ZMM21 s):256 word = read YMM21 s`,YMM21);
+  (`!s:x86state. word_zx (read ZMM22 s):256 word = read YMM22 s`,YMM22);
+  (`!s:x86state. word_zx (read ZMM23 s):256 word = read YMM23 s`,YMM23);
+  (`!s:x86state. word_zx (read ZMM24 s):256 word = read YMM24 s`,YMM24);
+  (`!s:x86state. word_zx (read ZMM25 s):256 word = read YMM25 s`,YMM25);
+  (`!s:x86state. word_zx (read ZMM26 s):256 word = read YMM26 s`,YMM26);
+  (`!s:x86state. word_zx (read ZMM27 s):256 word = read YMM27 s`,YMM27);
+  (`!s:x86state. word_zx (read ZMM28 s):256 word = read YMM28 s`,YMM28);
+  (`!s:x86state. word_zx (read ZMM29 s):256 word = read YMM29 s`,YMM29);
+  (`!s:x86state. word_zx (read ZMM30 s):256 word = read YMM30 s`,YMM30);
+  (`!s:x86state. word_zx (read ZMM31 s):256 word = read YMM31 s`,YMM31)];;
+
 (*** Note that K0 is actually hardwired to all-1s              ***)
 (*** So strictly we should have left it out of the state above ***)
 
@@ -1004,22 +1039,22 @@ let x86_ENDBR64 = new_definition
 
 let x86_VZEROUPPER = new_definition
  `x86_VZEROUPPER (s:x86state) =
-  (YMM0  := word_zx(word_subword (read YMM0  s) (0,128):int128) ,,
-   YMM1  := word_zx(word_subword (read YMM1  s) (0,128):int128) ,,
-   YMM2  := word_zx(word_subword (read YMM2  s) (0,128):int128) ,,
-   YMM3  := word_zx(word_subword (read YMM3  s) (0,128):int128) ,,
-   YMM4  := word_zx(word_subword (read YMM4  s) (0,128):int128) ,,
-   YMM5  := word_zx(word_subword (read YMM5  s) (0,128):int128) ,,
-   YMM6  := word_zx(word_subword (read YMM6  s) (0,128):int128) ,,
-   YMM7  := word_zx(word_subword (read YMM7  s) (0,128):int128) ,,
-   YMM8  := word_zx(word_subword (read YMM8  s) (0,128):int128) ,,
-   YMM9  := word_zx(word_subword (read YMM9  s) (0,128):int128) ,,
-   YMM10 := word_zx(word_subword (read YMM10 s) (0,128):int128) ,,
-   YMM11 := word_zx(word_subword (read YMM11 s) (0,128):int128) ,,
-   YMM12 := word_zx(word_subword (read YMM12 s) (0,128):int128) ,,
-   YMM13 := word_zx(word_subword (read YMM13 s) (0,128):int128) ,,
-   YMM14 := word_zx(word_subword (read YMM14 s) (0,128):int128) ,,
-   YMM15 := word_zx(word_subword (read YMM15 s) (0,128):int128)) s`;;
+  (ZMM0  := (word_zx(word_subword (read ZMM0  s) (0,128):int128):int512) ,,
+   ZMM1  := (word_zx(word_subword (read ZMM1  s) (0,128):int128):int512) ,,
+   ZMM2  := (word_zx(word_subword (read ZMM2  s) (0,128):int128):int512) ,,
+   ZMM3  := (word_zx(word_subword (read ZMM3  s) (0,128):int128):int512) ,,
+   ZMM4  := (word_zx(word_subword (read ZMM4  s) (0,128):int128):int512) ,,
+   ZMM5  := (word_zx(word_subword (read ZMM5  s) (0,128):int128):int512) ,,
+   ZMM6  := (word_zx(word_subword (read ZMM6  s) (0,128):int128):int512) ,,
+   ZMM7  := (word_zx(word_subword (read ZMM7  s) (0,128):int128):int512) ,,
+   ZMM8  := (word_zx(word_subword (read ZMM8  s) (0,128):int128):int512) ,,
+   ZMM9  := (word_zx(word_subword (read ZMM9  s) (0,128):int128):int512) ,,
+   ZMM10 := (word_zx(word_subword (read ZMM10 s) (0,128):int128):int512) ,,
+   ZMM11 := (word_zx(word_subword (read ZMM11 s) (0,128):int128):int512) ,,
+   ZMM12 := (word_zx(word_subword (read ZMM12 s) (0,128):int128):int512) ,,
+   ZMM13 := (word_zx(word_subword (read ZMM13 s) (0,128):int128):int512) ,,
+   ZMM14 := (word_zx(word_subword (read ZMM14 s) (0,128):int128):int512) ,,
+   ZMM15 := (word_zx(word_subword (read ZMM15 s) (0,128):int128):int512)) s`;;
 
 (*** There are really four different multiplies here.
  ***
@@ -2409,7 +2444,14 @@ let x86_VPUNPCKHQDQ = new_definition
   `x86_VPUNPCKHQDQ dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s in
-      if dimindex(:N) = 256 then
+      if dimindex(:N) = 512 then
+        let g = (\i. (word_join:int64->int64->int128)
+                       (word_subword (word_zx y:512 word) (128*i+64,64))
+                       (word_subword (word_zx x:512 word) (128*i+64,64))) in
+        let res:512 word =
+          word_join (word_join (g 3) (g 2):int256) (word_join (g 1) (g 0):int256) in
+        (dest := (word_zx res):N word) s
+      else if dimindex(:N) = 256 then
         let x_low_high = (word_subword:int256->num#num->int64) (word_zx x) (64,64)
         and x_high_high = (word_subword:int256->num#num->int64) (word_zx x) (192,64)
         and y_low_high = (word_subword:int256->num#num->int64) (word_zx y) (64,64)
@@ -2428,7 +2470,14 @@ let x86_VPUNPCKLQDQ = new_definition
   `x86_VPUNPCKLQDQ dest src1 src2 (s:x86state) =
       let (x:N word) = read src1 s
       and (y:N word) = read src2 s in
-      if dimindex(:N) = 256 then
+      if dimindex(:N) = 512 then
+        let g = (\i. (word_join:int64->int64->int128)
+                       (word_subword (word_zx y:512 word) (128*i,64))
+                       (word_subword (word_zx x:512 word) (128*i,64))) in
+        let res:512 word =
+          word_join (word_join (g 3) (g 2):int256) (word_join (g 1) (g 0):int256) in
+        (dest := (word_zx res):N word) s
+      else if dimindex(:N) = 256 then
         let x_low = (word_subword:int256->num#num->int64) (word_zx x) (0,64)
         and x_high = (word_subword:int256->num#num->int64) (word_zx x) (128,64)
         and y_low = (word_subword:int256->num#num->int64) (word_zx y) (0,64)
@@ -2527,6 +2576,179 @@ let apply_evex_masking_qword = new_definition
   | Zero_mask k ->
       let m = qword_expand_mask (evex_mask k s) : N word in
       word_and m result`;;
+
+let x86_VPTERNLOGD = new_definition
+ `x86_VPTERNLOGD dest src2 src3 ibyte masking (s:x86state) =
+        let a:N word = read dest s
+        and b:N word = read src2 s
+        and c:N word = read src3 s
+        and imm:byte = read ibyte s in
+        let t0 = if bit 0 imm then word_and (word_not a) (word_and (word_not b) (word_not c)) else word 0
+        and t1 = if bit 1 imm then word_and (word_not a) (word_and (word_not b) c) else word 0
+        and t2 = if bit 2 imm then word_and (word_not a) (word_and b (word_not c)) else word 0
+        and t3 = if bit 3 imm then word_and (word_not a) (word_and b c) else word 0
+        and t4 = if bit 4 imm then word_and a (word_and (word_not b) (word_not c)) else word 0
+        and t5 = if bit 5 imm then word_and a (word_and (word_not b) c) else word 0
+        and t6 = if bit 6 imm then word_and a (word_and b (word_not c)) else word 0
+        and t7 = if bit 7 imm then word_and a (word_and b c) else word 0 in
+        let z = word_or t0 (word_or t1 (word_or t2 (word_or t3
+                (word_or t4 (word_or t5 (word_or t6 t7)))))) in
+        (dest := apply_evex_masking_dword masking z a s) s`;;
+
+let x86_VPTERNLOGQ = new_definition
+ `x86_VPTERNLOGQ dest src2 src3 ibyte masking (s:x86state) =
+        let a:N word = read dest s
+        and b:N word = read src2 s
+        and c:N word = read src3 s
+        and imm:byte = read ibyte s in
+        let t0 = if bit 0 imm then word_and (word_not a) (word_and (word_not b) (word_not c)) else word 0
+        and t1 = if bit 1 imm then word_and (word_not a) (word_and (word_not b) c) else word 0
+        and t2 = if bit 2 imm then word_and (word_not a) (word_and b (word_not c)) else word 0
+        and t3 = if bit 3 imm then word_and (word_not a) (word_and b c) else word 0
+        and t4 = if bit 4 imm then word_and a (word_and (word_not b) (word_not c)) else word 0
+        and t5 = if bit 5 imm then word_and a (word_and (word_not b) c) else word 0
+        and t6 = if bit 6 imm then word_and a (word_and b (word_not c)) else word 0
+        and t7 = if bit 7 imm then word_and a (word_and b c) else word 0 in
+        let z = word_or t0 (word_or t1 (word_or t2 (word_or t3
+                (word_or t4 (word_or t5 (word_or t6 t7)))))) in
+        (dest := apply_evex_masking_qword masking z a s) s`;;
+
+let x86_VPXORQ = new_definition
+ `x86_VPXORQ dest src1 src2 masking (s:x86state) =
+        let a:N word = read dest s
+        and x:N word = read src1 s
+        and y:N word = read src2 s in
+        let z = word_xor x y in
+        (dest := apply_evex_masking_qword masking z a s) s`;;
+
+let x86_VPROLQ = new_definition
+ `x86_VPROLQ dest src imm8 masking (s:x86state) =
+        let a:N word = read dest s
+        and x:N word = read src s
+        and c = val (read imm8 s) in
+        let z:N word =
+          if dimindex(:N) = 512
+          then word_zx(usimd8 (\(y:64 word). word_rol y c) (word_zx x:512 word))
+          else if dimindex(:N) = 256
+          then word_zx(usimd4 (\(y:64 word). word_rol y c) (word_zx x:256 word))
+          else word_zx(usimd2 (\(y:64 word). word_rol y c) (word_zx x:128 word)) in
+        (dest := apply_evex_masking_qword masking z a s) s`;;
+
+let x86_VPROLVQ = new_definition
+ `x86_VPROLVQ dest src cnt masking (s:x86state) =
+        let a:N word = read dest s
+        and x:N word = read src s
+        and k:N word = read cnt s in
+        let f = (\(y:64 word) (c:64 word). word_rol y (val c MOD 64)) in
+        let z:N word =
+          if dimindex(:N) = 512
+          then word_zx(simd8 f (word_zx x:512 word) (word_zx k:512 word))
+          else if dimindex(:N) = 256
+          then word_zx(simd4 f (word_zx x:256 word) (word_zx k:256 word))
+          else word_zx(simd2 f (word_zx x:128 word) (word_zx k:128 word)) in
+        (dest := apply_evex_masking_qword masking z a s) s`;;
+
+let x86_VPERMQV = new_definition
+ `x86_VPERMQV dest idx src masking (s:x86state) =
+        let a:N word = read dest s
+        and x:N word = read src s
+        and ix:N word = read idx s in
+        let z:N word =
+          if dimindex(:N) = 512
+          then word_zx(usimd8 (\(i:64 word).
+                 word_subword (word_zx x:512 word)
+                   (64 * val(word_subword i (0,3):3 word),64):64 word)
+                 (word_zx ix:512 word))
+          else if dimindex(:N) = 256
+          then word_zx(usimd4 (\(i:64 word).
+                 word_subword (word_zx x:256 word)
+                   (64 * val(word_subword i (0,2):2 word),64):64 word)
+                 (word_zx ix:256 word))
+          else word_zx(usimd2 (\(i:64 word).
+                 word_subword (word_zx x:128 word)
+                   (64 * val(word_subword i (0,1):1 word),64):64 word)
+                 (word_zx ix:128 word)) in
+        (dest := apply_evex_masking_qword masking z a s) s`;;
+
+let x86_VPBLENDMQ = new_definition
+ `x86_VPBLENDMQ dest src1 src2 masking (s:x86state) =
+        let a:N word = read src1 s
+        and b:N word = read src2 s in
+        (dest := apply_evex_masking_qword masking b a s) s`;;
+
+let x86_VMOVDQ64 = new_definition
+ `x86_VMOVDQ64 dest src masking (s:x86state) =
+        let a:N word = read dest s
+        and x:N word = read src s in
+        (dest := apply_evex_masking_qword masking x a s) s`;;
+
+let x86_VSHUFI64X2 = new_definition
+ `x86_VSHUFI64X2 dest src1 src2 imm8 (s:x86state) =
+        let a:N word = read src1 s
+        and b:N word = read src2 s
+        and c:byte = read imm8 s in
+        if dimindex(:N) = 512 then
+          let x:512 word = word_zx a and y:512 word = word_zx b in
+          let d0 = word_subword x (128 * val(word_subword c (0,2):2 word),128):int128
+          and d1 = word_subword x (128 * val(word_subword c (2,2):2 word),128):int128
+          and d2 = word_subword y (128 * val(word_subword c (4,2):2 word),128):int128
+          and d3 = word_subword y (128 * val(word_subword c (6,2):2 word),128):int128 in
+          let res:512 word =
+            word_join (word_join d3 d2:256 word) (word_join d1 d0:256 word) in
+          (dest := (word_zx res):N word) s
+        else
+          let x:256 word = word_zx a and y:256 word = word_zx b in
+          let d0 = word_subword x (128 * bitval(bit 0 c),128):int128
+          and d1 = word_subword y (128 * bitval(bit 1 c),128):int128 in
+          let res:256 word = word_join d1 d0 in
+          (dest := (word_zx res):N word) s`;;
+
+let x86_VINSERTI32X4 = new_definition
+ `x86_VINSERTI32X4 dest src1 src2 imm8 (s:x86state) =
+        let a:N word = read src1 s
+        and b:128 word = read src2 s
+        and c:byte = read imm8 s in
+        if dimindex(:N) = 512 then
+          let x:512 word = word_zx a and sel = val(word_subword c (0,2):2 word) in
+          let lane = (\i. if i = sel then b
+                          else word_subword x (128*i,128):int128) in
+          let res:512 word =
+            word_join (word_join (lane 3) (lane 2):256 word)
+                      (word_join (lane 1) (lane 0):256 word) in
+          (dest := (word_zx res):N word) s
+        else
+          let x:256 word = word_zx a in
+          let lo = if bit 0 c then word_subword x (0,128):int128 else b
+          and hi = if bit 0 c then b else word_subword x (128,128):int128 in
+          let res:256 word = word_join hi lo in
+          (dest := (word_zx res):N word) s`;;
+
+let x86_VEXTRACTI32X4 = new_definition
+ `x86_VEXTRACTI32X4 dest src imm8 (s:x86state) =
+        let a:N word = read src s
+        and c:byte = read imm8 s in
+        let sel = if dimindex(:N) = 512 then val(word_subword c (0,2):2 word)
+                  else bitval(bit 0 c) in
+        (dest := (word_subword (word_zx a:512 word) (128*sel,128):128 word)) s`;;
+
+let x86_KXNORW = new_definition
+ `x86_KXNORW (dst:3 word) (src1:3 word) (src2:3 word) (s:x86state) =
+        let a:16 word = word_zx (read (maskregisters :> element src1) s)
+        and b:16 word = word_zx (read (maskregisters :> element src2) s) in
+        let z:16 word = word_not (word_xor a b) in
+        (maskregisters :> element dst := (word_zx z:64 word)) s`;;
+
+let x86_KSHIFTRW = new_definition
+ `x86_KSHIFTRW (dst:3 word) (src:3 word) (imm8:byte) (s:x86state) =
+        let a:16 word = word_zx (read (maskregisters :> element src) s) in
+        let z:16 word = word_ushr a (val imm8) in
+        (maskregisters :> element dst := (word_zx z:64 word)) s`;;
+
+let x86_KSHIFTLW = new_definition
+ `x86_KSHIFTLW (dst:3 word) (src:3 word) (imm8:byte) (s:x86state) =
+        let a:16 word = word_zx (read (maskregisters :> element src) s) in
+        let z:16 word = word_shl a (val imm8) in
+        (maskregisters :> element dst := (word_zx z:64 word)) s`;;
 
 (* Only deal with register-register exchange *)
 let x86_XCHG = new_definition
@@ -3523,7 +3745,10 @@ let x86_execute = define
     | VPBROADCASTQ dest src ->
         (add_load_event src s ,, add_store_event dest s ,,
         (\s. (match operand_size dest with
-          256 -> (match operand_size src with
+          512 -> (match operand_size src with
+                    128 -> x86_VPBROADCASTQ (OPERAND512 dest s) (OPERAND128 src s)
+                  |  64 -> x86_VPBROADCASTQ (OPERAND512 dest s) (OPERAND64 src s))
+         | 256 -> (match operand_size src with
                     128 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND128 src s)
                   |  64 -> x86_VPBROADCASTQ (OPERAND256 dest s) (OPERAND64 src s))
          | 128 -> (match operand_size src with
@@ -3855,6 +4080,96 @@ let x86_execute = define
                             (OPERAND8 imm8 s)
         | 128 -> x86_VPSRLW (OPERAND128 dest s) (OPERAND128 src s)
                             (OPERAND8 imm8 s)) s)) s
+    | VPTERNLOGD dest src2 src3 imm8 (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src2 s ,,
+         add_load_event src3 s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VPTERNLOGD (OPERAND512 dest s) (OPERAND512 src2 s)
+                   (simd_src3 brc (OPERAND512 src3 s) src3 s) (OPERAND8 imm8 s) masking
+        | 256 -> x86_VPTERNLOGD (OPERAND256 dest s) (OPERAND256 src2 s)
+                   (simd_src3 brc (OPERAND256 src3 s) src3 s) (OPERAND8 imm8 s) masking
+        | 128 -> x86_VPTERNLOGD (OPERAND128 dest s) (OPERAND128 src2 s)
+                   (simd_src3 brc (OPERAND128 src3 s) src3 s) (OPERAND8 imm8 s) masking) s)) s
+    | VPTERNLOGQ dest src2 src3 imm8 (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src2 s ,,
+         add_load_event src3 s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VPTERNLOGQ (OPERAND512 dest s) (OPERAND512 src2 s)
+                   (OPERAND512 src3 s) (OPERAND8 imm8 s) masking
+        | 256 -> x86_VPTERNLOGQ (OPERAND256 dest s) (OPERAND256 src2 s)
+                   (OPERAND256 src3 s) (OPERAND8 imm8 s) masking
+        | 128 -> x86_VPTERNLOGQ (OPERAND128 dest s) (OPERAND128 src2 s)
+                   (OPERAND128 src3 s) (OPERAND8 imm8 s) masking) s)) s
+    | VPXORQ dest src1 src2 (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src1 s ,,
+         add_load_event src2 s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VPXORQ (OPERAND512 dest s) (OPERAND512 src1 s)
+                   (OPERAND512 src2 s) masking
+        | 256 -> x86_VPXORQ (OPERAND256 dest s) (OPERAND256 src1 s)
+                   (OPERAND256 src2 s) masking
+        | 128 -> x86_VPXORQ (OPERAND128 dest s) (OPERAND128 src1 s)
+                   (OPERAND128 src2 s) masking) s)) s
+    | VPROLQ dest src imm8 (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VPROLQ (OPERAND512 dest s) (OPERAND512 src s) (OPERAND8 imm8 s) masking
+        | 256 -> x86_VPROLQ (OPERAND256 dest s) (OPERAND256 src s) (OPERAND8 imm8 s) masking
+        | 128 -> x86_VPROLQ (OPERAND128 dest s) (OPERAND128 src s) (OPERAND8 imm8 s) masking) s)) s
+    | VPROLVQ dest src cnt (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src s ,,
+         add_load_event cnt s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VPROLVQ (OPERAND512 dest s) (OPERAND512 src s) (OPERAND512 cnt s) masking
+        | 256 -> x86_VPROLVQ (OPERAND256 dest s) (OPERAND256 src s) (OPERAND256 cnt s) masking
+        | 128 -> x86_VPROLVQ (OPERAND128 dest s) (OPERAND128 src s) (OPERAND128 cnt s) masking) s)) s
+    | VPERMQV dest idx src (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event idx s ,,
+         add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VPERMQV (OPERAND512 dest s) (OPERAND512 idx s) (OPERAND512 src s) masking
+        | 256 -> x86_VPERMQV (OPERAND256 dest s) (OPERAND256 idx s) (OPERAND256 src s) masking
+        | 128 -> x86_VPERMQV (OPERAND128 dest s) (OPERAND128 idx s) (OPERAND128 src s) masking) s)) s
+    | VPBLENDMQ dest src1 src2 (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src1 s ,,
+         add_load_event src2 s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VPBLENDMQ (OPERAND512 dest s) (OPERAND512 src1 s) (OPERAND512 src2 s) masking
+        | 256 -> x86_VPBLENDMQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) masking
+        | 128 -> x86_VPBLENDMQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s) masking) s)) s
+    | VMOVDQA64 dest src (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VMOVDQ64 (OPERAND512 dest s) (OPERAND512 src s) masking
+        | 256 -> x86_VMOVDQ64 (OPERAND256 dest s) (OPERAND256 src s) masking
+        | 128 -> x86_VMOVDQ64 (OPERAND128 dest s) (OPERAND128 src s) masking) s)) s
+    | VMOVDQU64 dest src (Evex_deco masking brc) ->
+        (add_load_event dest s ,, add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VMOVDQ64 (OPERAND512 dest s) (OPERAND512 src s) masking
+        | 256 -> x86_VMOVDQ64 (OPERAND256 dest s) (OPERAND256 src s) masking
+        | 128 -> x86_VMOVDQ64 (OPERAND128 dest s) (OPERAND128 src s) masking) s)) s
+    | VSHUFI64X2 dest src1 src2 imm8 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VSHUFI64X2 (OPERAND512 dest s) (OPERAND512 src1 s) (OPERAND512 src2 s) (OPERAND8 imm8 s)
+        | 256 -> x86_VSHUFI64X2 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s) (OPERAND8 imm8 s)) s)) s
+    | VINSERTI32X4 dest src1 src2 imm8 ->
+        (add_load_event src1 s ,, add_load_event src2 s ,, add_store_event dest s ,,
+        (\s. (match operand_size dest with
+          512 -> x86_VINSERTI32X4 (OPERAND512 dest s) (OPERAND512 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)
+        | 256 -> x86_VINSERTI32X4 (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND128 src2 s) (OPERAND8 imm8 s)) s)) s
+    | VEXTRACTI32X4 dest src imm8 ->
+        (add_load_event src s ,, add_store_event dest s ,,
+        (\s. (match operand_size src with
+          512 -> x86_VEXTRACTI32X4 (OPERAND128 dest s) (OPERAND512 src s) (OPERAND8 imm8 s)
+        | 256 -> x86_VEXTRACTI32X4 (OPERAND128 dest s) (OPERAND256 src s) (OPERAND8 imm8 s)) s)) s
+    | KXNORW dst src1 src2 ->
+        x86_KXNORW dst src1 src2 s
+    | KSHIFTRW dst src imm8 ->
+        x86_KSHIFTRW dst src imm8 s
+    | KSHIFTLW dst src imm8 ->
+        x86_KSHIFTLW dst src imm8 s
     | VPXOR dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
@@ -3894,13 +4209,15 @@ let x86_execute = define
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
         (\s. (match operand_size dest with
-          256 -> x86_VPUNPCKHQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+          512 -> x86_VPUNPCKHQDQ (OPERAND512 dest s) (OPERAND512 src1 s) (OPERAND512 src2 s)
+        | 256 -> x86_VPUNPCKHQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPUNPCKHQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s)) s
     | VPUNPCKLQDQ dest src1 src2 ->
         (add_load_event src1 s ,, add_load_event src2 s ,,
          add_store_event dest s ,,
         (\s. (match operand_size dest with
-          256 -> x86_VPUNPCKLQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
+          512 -> x86_VPUNPCKLQDQ (OPERAND512 dest s) (OPERAND512 src1 s) (OPERAND512 src2 s)
+        | 256 -> x86_VPUNPCKLQDQ (OPERAND256 dest s) (OPERAND256 src1 s) (OPERAND256 src2 s)
         | 128 -> x86_VPUNPCKLQDQ (OPERAND128 dest s) (OPERAND128 src1 s) (OPERAND128 src2 s)) s)) s
     | VZEROUPPER ->
         x86_VZEROUPPER s
@@ -4300,60 +4617,126 @@ let BSID_CLAUSES = prove
   REWRITE_TAC[BSID_CLAUSES_GEN; base_displacement]);;
 
 let OPERAND_CLAUSES = prove
- (`OPERAND128(%_% xmm0) s = YMM0 :> zerotop_128  /\
-   OPERAND128(%_% xmm1) s = YMM1 :> zerotop_128  /\
-   OPERAND128(%_% xmm2) s = YMM2 :> zerotop_128  /\
-   OPERAND128(%_% xmm3) s = YMM3 :> zerotop_128  /\
-   OPERAND128(%_% xmm4) s = YMM4 :> zerotop_128  /\
-   OPERAND128(%_% xmm5) s = YMM5 :> zerotop_128  /\
-   OPERAND128(%_% xmm6) s = YMM6 :> zerotop_128  /\
-   OPERAND128(%_% xmm7) s = YMM7 :> zerotop_128  /\
-   OPERAND128(%_% xmm8) s = YMM8 :> zerotop_128  /\
-   OPERAND128(%_% xmm9) s = YMM9 :> zerotop_128  /\
-   OPERAND128(%_% xmm10) s = YMM10 :> zerotop_128  /\
-   OPERAND128(%_% xmm11) s = YMM11 :> zerotop_128  /\
-   OPERAND128(%_% xmm12) s = YMM12 :> zerotop_128  /\
-   OPERAND128(%_% xmm13) s = YMM13 :> zerotop_128  /\
-   OPERAND128(%_% xmm14) s = YMM14 :> zerotop_128  /\
-   OPERAND128(%_% xmm15) s = YMM15 :> zerotop_128  /\
+ (`OPERAND128(%_% xmm0) s = (ZMM0 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm1) s = (ZMM1 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm2) s = (ZMM2 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm3) s = (ZMM3 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm4) s = (ZMM4 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm5) s = (ZMM5 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm6) s = (ZMM6 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm7) s = (ZMM7 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm8) s = (ZMM8 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm9) s = (ZMM9 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm10) s = (ZMM10 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm11) s = (ZMM11 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm12) s = (ZMM12 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm13) s = (ZMM13 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm14) s = (ZMM14 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm15) s = (ZMM15 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm16) s = (ZMM16 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm17) s = (ZMM17 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm18) s = (ZMM18 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm19) s = (ZMM19 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm20) s = (ZMM20 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm21) s = (ZMM21 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm22) s = (ZMM22 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm23) s = (ZMM23 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm24) s = (ZMM24 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm25) s = (ZMM25 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm26) s = (ZMM26 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm27) s = (ZMM27 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm28) s = (ZMM28 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm29) s = (ZMM29 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm30) s = (ZMM30 :> zerotop_256) :> zerotop_128  /\
+   OPERAND128(%_% xmm31) s = (ZMM31 :> zerotop_256) :> zerotop_128  /\
    OPERAND128 (Memop Word128 bsid) s =
     memory :> bytes128 (bsid_semantics bsid s) /\
-   OPERAND128_SSE(%_% xmm0) s = YMM0_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm1) s = YMM1_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm2) s = YMM2_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm3) s = YMM3_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm4) s = YMM4_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm5) s = YMM5_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm6) s = YMM6_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm7) s = YMM7_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm8) s = YMM8_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm9) s = YMM9_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm10) s = YMM10_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm11) s = YMM11_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm12) s = YMM12_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm13) s = YMM13_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm14) s = YMM14_SSE :> bottom_128  /\
-   OPERAND128_SSE(%_% xmm15) s = YMM15_SSE :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm0) s = (ZMM0 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm1) s = (ZMM1 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm2) s = (ZMM2 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm3) s = (ZMM3 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm4) s = (ZMM4 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm5) s = (ZMM5 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm6) s = (ZMM6 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm7) s = (ZMM7 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm8) s = (ZMM8 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm9) s = (ZMM9 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm10) s = (ZMM10 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm11) s = (ZMM11 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm12) s = (ZMM12 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm13) s = (ZMM13 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm14) s = (ZMM14 :> bottom_256) :> bottom_128  /\
+   OPERAND128_SSE(%_% xmm15) s = (ZMM15 :> bottom_256) :> bottom_128  /\
    OPERAND128_SSE (Memop Word128 bsid) s =
     memory :> bytes128 (bsid_semantics bsid s) /\
-   OPERAND256(%_% ymm0) s = YMM0  /\
-   OPERAND256(%_% ymm1) s = YMM1  /\
-   OPERAND256(%_% ymm2) s = YMM2  /\
-   OPERAND256(%_% ymm3) s = YMM3  /\
-   OPERAND256(%_% ymm4) s = YMM4  /\
-   OPERAND256(%_% ymm5) s = YMM5  /\
-   OPERAND256(%_% ymm6) s = YMM6  /\
-   OPERAND256(%_% ymm7) s = YMM7  /\
-   OPERAND256(%_% ymm8) s = YMM8  /\
-   OPERAND256(%_% ymm9) s = YMM9  /\
-   OPERAND256(%_% ymm10) s = YMM10  /\
-   OPERAND256(%_% ymm11) s = YMM11  /\
-   OPERAND256(%_% ymm12) s = YMM12  /\
-   OPERAND256(%_% ymm13) s = YMM13  /\
-   OPERAND256(%_% ymm14) s = YMM14  /\
-   OPERAND256(%_% ymm15) s = YMM15  /\
+   OPERAND256(%_% ymm0) s = ZMM0 :> zerotop_256  /\
+   OPERAND256(%_% ymm1) s = ZMM1 :> zerotop_256  /\
+   OPERAND256(%_% ymm2) s = ZMM2 :> zerotop_256  /\
+   OPERAND256(%_% ymm3) s = ZMM3 :> zerotop_256  /\
+   OPERAND256(%_% ymm4) s = ZMM4 :> zerotop_256  /\
+   OPERAND256(%_% ymm5) s = ZMM5 :> zerotop_256  /\
+   OPERAND256(%_% ymm6) s = ZMM6 :> zerotop_256  /\
+   OPERAND256(%_% ymm7) s = ZMM7 :> zerotop_256  /\
+   OPERAND256(%_% ymm8) s = ZMM8 :> zerotop_256  /\
+   OPERAND256(%_% ymm9) s = ZMM9 :> zerotop_256  /\
+   OPERAND256(%_% ymm10) s = ZMM10 :> zerotop_256  /\
+   OPERAND256(%_% ymm11) s = ZMM11 :> zerotop_256  /\
+   OPERAND256(%_% ymm12) s = ZMM12 :> zerotop_256  /\
+   OPERAND256(%_% ymm13) s = ZMM13 :> zerotop_256  /\
+   OPERAND256(%_% ymm14) s = ZMM14 :> zerotop_256  /\
+   OPERAND256(%_% ymm15) s = ZMM15 :> zerotop_256  /\
+   OPERAND256(%_% ymm16) s = ZMM16 :> zerotop_256  /\
+   OPERAND256(%_% ymm17) s = ZMM17 :> zerotop_256  /\
+   OPERAND256(%_% ymm18) s = ZMM18 :> zerotop_256  /\
+   OPERAND256(%_% ymm19) s = ZMM19 :> zerotop_256  /\
+   OPERAND256(%_% ymm20) s = ZMM20 :> zerotop_256  /\
+   OPERAND256(%_% ymm21) s = ZMM21 :> zerotop_256  /\
+   OPERAND256(%_% ymm22) s = ZMM22 :> zerotop_256  /\
+   OPERAND256(%_% ymm23) s = ZMM23 :> zerotop_256  /\
+   OPERAND256(%_% ymm24) s = ZMM24 :> zerotop_256  /\
+   OPERAND256(%_% ymm25) s = ZMM25 :> zerotop_256  /\
+   OPERAND256(%_% ymm26) s = ZMM26 :> zerotop_256  /\
+   OPERAND256(%_% ymm27) s = ZMM27 :> zerotop_256  /\
+   OPERAND256(%_% ymm28) s = ZMM28 :> zerotop_256  /\
+   OPERAND256(%_% ymm29) s = ZMM29 :> zerotop_256  /\
+   OPERAND256(%_% ymm30) s = ZMM30 :> zerotop_256  /\
+   OPERAND256(%_% ymm31) s = ZMM31 :> zerotop_256  /\
    OPERAND256 (Memop Word256 bsid) s =
     memory :> bytes256 (bsid_semantics bsid s) /\
+   OPERAND512(%_% zmm0) s = ZMM0  /\
+   OPERAND512(%_% zmm1) s = ZMM1  /\
+   OPERAND512(%_% zmm2) s = ZMM2  /\
+   OPERAND512(%_% zmm3) s = ZMM3  /\
+   OPERAND512(%_% zmm4) s = ZMM4  /\
+   OPERAND512(%_% zmm5) s = ZMM5  /\
+   OPERAND512(%_% zmm6) s = ZMM6  /\
+   OPERAND512(%_% zmm7) s = ZMM7  /\
+   OPERAND512(%_% zmm8) s = ZMM8  /\
+   OPERAND512(%_% zmm9) s = ZMM9  /\
+   OPERAND512(%_% zmm10) s = ZMM10  /\
+   OPERAND512(%_% zmm11) s = ZMM11  /\
+   OPERAND512(%_% zmm12) s = ZMM12  /\
+   OPERAND512(%_% zmm13) s = ZMM13  /\
+   OPERAND512(%_% zmm14) s = ZMM14  /\
+   OPERAND512(%_% zmm15) s = ZMM15  /\
+   OPERAND512(%_% zmm16) s = ZMM16  /\
+   OPERAND512(%_% zmm17) s = ZMM17  /\
+   OPERAND512(%_% zmm18) s = ZMM18  /\
+   OPERAND512(%_% zmm19) s = ZMM19  /\
+   OPERAND512(%_% zmm20) s = ZMM20  /\
+   OPERAND512(%_% zmm21) s = ZMM21  /\
+   OPERAND512(%_% zmm22) s = ZMM22  /\
+   OPERAND512(%_% zmm23) s = ZMM23  /\
+   OPERAND512(%_% zmm24) s = ZMM24  /\
+   OPERAND512(%_% zmm25) s = ZMM25  /\
+   OPERAND512(%_% zmm26) s = ZMM26  /\
+   OPERAND512(%_% zmm27) s = ZMM27  /\
+   OPERAND512(%_% zmm28) s = ZMM28  /\
+   OPERAND512(%_% zmm29) s = ZMM29  /\
+   OPERAND512(%_% zmm30) s = ZMM30  /\
+   OPERAND512(%_% zmm31) s = ZMM31  /\
+   OPERAND512 (Memop Word512 bsid) s =
+    memory :> bytes512 (bsid_semantics bsid s) /\
    OPERAND64 (%rax) s = RAX /\
    OPERAND64 (%rcx) s = RCX /\
    OPERAND64 (%rdx) s = RDX /\
@@ -4810,6 +5193,9 @@ let x86_VPSRAW_ALT = EXPAND_SIMD_RULE x86_VPSRAW;;
 let x86_VPSRLW_ALT = EXPAND_SIMD_RULE x86_VPSRLW;;
 let x86_VPUNPCKHQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKHQDQ;;
 let x86_VPUNPCKLQDQ_ALT = EXPAND_SIMD_RULE x86_VPUNPCKLQDQ;;
+let x86_VPROLQ_ALT = EXPAND_SIMD_RULE x86_VPROLQ;;
+let x86_VPROLVQ_ALT = EXPAND_SIMD_RULE x86_VPROLVQ;;
+let x86_VPERMQV_ALT = EXPAND_SIMD_RULE x86_VPERMQV;;
 
 let X86_OPERATION_CLAUSES =
   map (CONV_RULE (TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) o
@@ -4835,6 +5221,11 @@ let X86_OPERATION_CLAUSES =
     x86_VPCMPGTD_ALT; x86_VPCMPGTW_ALT;
     x86_VPEXTRD; x86_VPEXTRQ; x86_VPEXTRW; x86_VPMULLD_ALT; x86_VPMULLW_ALT; x86_VPSUBD_ALT; x86_VPSUBQ_ALT; x86_VPSUBW_ALT; x86_VPXOR;
     x86_VPAND; x86_VPANDN; x86_VPOR; x86_VPSRAD_ALT; x86_VPSRAW_ALT; x86_VPSRLD_ALT; x86_VPSRLDQ_ALT; x86_VPSRLVD_ALT; x86_VPSRLVQ_ALT; x86_VPSRLQ_ALT;
+    x86_VPTERNLOGD;
+    x86_VPTERNLOGQ; x86_VPXORQ; x86_VPROLQ_ALT; x86_VPROLVQ_ALT; x86_VPERMQV_ALT;
+    x86_VPBLENDMQ; x86_VMOVDQ64;
+    x86_VSHUFI64X2; x86_VINSERTI32X4; x86_VEXTRACTI32X4;
+    x86_KXNORW; x86_KSHIFTRW; x86_KSHIFTLW;
     x86_VPSRLW_ALT; x86_VPBROADCASTD_ALT; x86_VPBROADCASTW_ALT; x86_VPSLLD_ALT; x86_VPSLLVD_ALT; x86_VPSLLQ_ALT; x86_VPSLLW_ALT;
     x86_VMOVDQA_ALT; x86_VMOVDQU_ALT; x86_VPMADDUBSW_ALT; x86_VPMADDWD_ALT; x86_VPMULDQ_ALT; x86_VMOVSHDUP_ALT; x86_VMOVSLDUP_ALT;
     x86_VPACKUSWB_ALT; x86_VPBLENDVB_ALT;

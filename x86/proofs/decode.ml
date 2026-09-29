@@ -711,6 +711,214 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     SOME (PUSH (%(Gpr (rex_reg (rex_B rex) r) Full_64)),l)
   | [0b01011:5; r:3] -> if has_pfxs pfxs then NONE else
     SOME (POP (%(Gpr (rex_reg (rex_B rex) r) Full_64)),l)
+  | [0x62:8] -> if has_pfxs pfxs then NONE else
+    if is_some rex then NONE else
+    read_EVEX l >>= \((rex,r',m,v,pfxs,z,LL,bcast,a),l).
+    evexL_size LL >>= \sz.
+    let masking = if a = word 0 then Unmasked
+                  else if z = word 1 then Zero_mask a
+                  else Merge_mask a in
+    let brc = if bcast then Broadcast else No_brc in
+    let deco = Evex_deco masking brc in
+    (match m with
+      EVEXM_0F3A ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0x25:8] ->
+          if rex_W rex then
+            read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+            read_imm Byte l >>= \(imm8,l).
+            (if bcast then NONE
+             else match pfxs with
+               | (T, Rep0, SG0) ->
+                 SOME (VPTERNLOGQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8 deco,l)
+               | _ -> NONE)
+          else
+          read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple F bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          read_imm Byte l >>= \(imm8,l).
+          (if bcast then match rm with
+              RM_mem ea ->
+                (match pfxs with
+                 | (T, Rep0, SG0) ->
+                   SOME (VPTERNLOGD (mmreg reg sz) (mmreg v sz) (Memop Doubleword ea) imm8 deco,l)
+                 | _ -> NONE)
+            | _ -> NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               SOME (VPTERNLOGD (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8 deco,l)
+             | _ -> NONE)
+        | [0x43:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           read_imm Byte l >>= \(imm8,l).
+           (if bcast then NONE else if a = word 0 then
+             (match pfxs with
+              | (T, Rep0, SG0) ->
+                SOME (VSHUFI64X2 (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) imm8,l)
+              | _ -> NONE) else NONE)) else NONE
+        | [0x38:8] ->
+          if rex_W rex then NONE else
+          (read_EVEX_ModRM (evex_tuple_disp_scale Tuple4 F bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           read_imm Byte l >>= \(imm8,l).
+           (if bcast then NONE else if a = word 0 then
+             (match pfxs with
+              | (T, Rep0, SG0) ->
+                (match rm with
+                 | RM_reg_evex r -> SOME (VINSERTI32X4 (mmreg reg sz) (mmreg v sz) (mmreg r Lower_128) imm8,l)
+                 | RM_mem ea -> SOME (VINSERTI32X4 (mmreg reg sz) (mmreg v sz) (Memop Word128 ea) imm8,l)
+                 | _ -> NONE)
+              | _ -> NONE) else NONE))
+        | [0x39:8] ->
+          if rex_W rex then NONE else
+          (read_EVEX_ModRM (evex_tuple_disp_scale Tuple4 F bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           read_imm Byte l >>= \(imm8,l).
+           (if bcast then NONE else if a = word 0 then
+             (match pfxs with
+              | (T, Rep0, SG0) ->
+                (match rm with
+                 | RM_reg_evex r -> SOME (VEXTRACTI32X4 (mmreg r Lower_128) (mmreg reg sz) imm8,l)
+                 | RM_mem ea -> SOME (VEXTRACTI32X4 (Memop Word128 ea) (mmreg reg sz) imm8,l)
+                 | _ -> NONE)
+              | _ -> NONE) else NONE))
+        | [0x22:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Tuple1_Scalar T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           read_imm Byte l >>= \(imm8,l).
+           (if bcast then NONE else if a = word 0 then
+             (if is_memop rm then
+               (match pfxs with
+                | (T, Rep0, SG0) ->
+                  SOME (VPINSRQ (mmreg reg Lower_128) (mmreg v Lower_128) (operand_of_RM Full_64 rm) imm8,l)
+                | _ -> NONE) else NONE) else NONE)) else NONE
+        | [0x16:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Tuple1_Scalar T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           read_imm Byte l >>= \(imm8,l).
+           (if bcast then NONE else if a = word 0 then
+             (if is_memop rm then
+               (match pfxs with
+                | (T, Rep0, SG0) ->
+                  SOME (VPEXTRQ (operand_of_RM Full_64 rm) (mmreg reg Lower_128) imm8,l)
+                | _ -> NONE) else NONE) else NONE)) else NONE
+        | _ -> NONE)
+    | EVEXM_0F38 ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0x15:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          (if bcast then NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               SOME (VPROLVQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) deco,l)
+             | _ -> NONE)) else NONE
+        | [0x36:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          (if bcast then NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               SOME (VPERMQV (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) deco,l)
+             | _ -> NONE)) else NONE
+        | [0x64:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          (if bcast then NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               SOME (VPBLENDMQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) deco,l)
+             | _ -> NONE)) else NONE
+        | [0x59:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Tuple1_Scalar T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           (if bcast then NONE else if a = word 0 then
+             (match pfxs with
+              | (T, Rep0, SG0) ->
+                (match rm with
+                 | RM_mem ea -> SOME (VPBROADCASTQ (mmreg reg sz) (Memop Quadword ea),l)
+                 | RM_reg_evex r -> SOME (VPBROADCASTQ (mmreg reg sz) (mmreg r Lower_128),l)
+                 | _ -> NONE)
+              | _ -> NONE) else NONE)) else NONE
+        | _ -> NONE)
+    | EVEXM_0F ->
+        read_byte l >>= \(b,l).
+        (bitmatch b with
+        | [0x6F:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Mem T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          (if bcast then NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               SOME (VMOVDQA64 (mmreg reg sz) (simd_of_RM sz rm) deco,l)
+             | (F, RepZ, SG0) ->
+               SOME (VMOVDQU64 (mmreg reg sz) (simd_of_RM sz rm) deco,l)
+             | _ -> NONE)) else NONE
+        | [0x7F:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Mem T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          (if bcast then NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               SOME (VMOVDQA64 (simd_of_RM sz rm) (mmreg reg sz) deco,l)
+             | (F, RepZ, SG0) ->
+               SOME (VMOVDQU64 (simd_of_RM sz rm) (mmreg reg sz) deco,l)
+             | _ -> NONE)) else NONE
+        | [0x72:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          read_imm Byte l >>= \(imm8,l).
+          (let r3:3 word = word_zx reg in
+           if bcast then NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               (bitmatch r3 with
+                | [0b001:3] -> SOME (VPROLQ (mmreg v sz) (simd_of_RM sz rm) imm8 deco,l)
+                | _ -> NONE)
+             | _ -> NONE)) else NONE
+        | [0xEF:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+          (if bcast then NONE
+           else match pfxs with
+             | (T, Rep0, SG0) ->
+               SOME (VPXORQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm) deco,l)
+             | _ -> NONE)) else NONE
+        | [0x6C:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           (if bcast then NONE else if a = word 0 then
+             (match pfxs with
+              | (T, Rep0, SG0) ->
+                SOME (VPUNPCKLQDQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
+              | _ -> NONE) else NONE)) else NONE
+        | [0x6D:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Full_Tuple T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           (if bcast then NONE else if a = word 0 then
+             (match pfxs with
+              | (T, Rep0, SG0) ->
+                SOME (VPUNPCKHQDQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
+              | _ -> NONE) else NONE)) else NONE
+        | [0x6E:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Tuple1_Scalar T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           (if bcast then NONE else if a = word 0 then
+             (if is_memop rm then
+               (match pfxs with
+                | (T, Rep0, SG0) ->
+                  SOME (VMOVQ (mmreg reg Lower_128) (operand_of_RM Full_64 rm),l)
+                | _ -> NONE) else NONE) else NONE)) else NONE
+        | [0x7E:8] ->
+          if rex_W rex then
+          (read_EVEX_ModRM (evex_tuple_disp_scale Tuple1_Scalar T bcast sz) rex r' (rex_X rex) l >>= \((reg,rm),l).
+           (if bcast then NONE else if a = word 0 then
+             (if is_memop rm then
+               (match pfxs with
+                | (T, Rep0, SG0) ->
+                  SOME (VMOVQ (operand_of_RM Full_64 rm) (mmreg reg Lower_128),l)
+                | _ -> NONE) else NONE) else NONE)) else NONE
+        | _ -> NONE)
+    | _ -> NONE)
   | [0x63:8] -> if has_pfxs pfxs then NONE else
     let sz2 = op_size_W rex T pfxs in
     read_ModRM rex l >>= \((reg,rm),l).
@@ -944,6 +1152,17 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     | VEXM_0F ->
         read_byte l >>= \(b,l).
         (bitmatch b with
+        | [0x46:8] ->
+          (read_ModRM rex l >>= \((reg,rm),l).
+           if rex_W rex then NONE else
+           match rm with
+           | RM_reg r ->
+             (match pfxs with
+              | (F, Rep0, SG0) ->
+                if L then SOME (KXNORW (word_zx reg) (word_zx v) (word_zx r),l)
+                else NONE
+              | _ -> NONE)
+           | _ -> NONE)
         | [0x12:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -1250,6 +1469,32 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
     | VEXM_0F3A ->
         read_byte l >>= \(b,l).
         (bitmatch b with
+        | [0x30:8] ->
+          (read_ModRM rex l >>= \((reg,rm),l).
+           read_byte l >>= \(imm8,l).
+           if rex_W rex then
+           (match rm with
+            | RM_reg r ->
+              (match pfxs with
+               | (T, Rep0, SG0) ->
+                 if L then NONE
+                 else SOME (KSHIFTRW (word_zx reg) (word_zx r) imm8,l)
+               | _ -> NONE)
+            | _ -> NONE)
+           else NONE)
+        | [0x32:8] ->
+          (read_ModRM rex l >>= \((reg,rm),l).
+           read_byte l >>= \(imm8,l).
+           if rex_W rex then
+           (match rm with
+            | RM_reg r ->
+              (match pfxs with
+               | (T, Rep0, SG0) ->
+                 if L then NONE
+                 else SOME (KSHIFTLW (word_zx reg) (word_zx r) imm8,l)
+               | _ -> NONE)
+            | _ -> NONE)
+           else NONE)
         | [0x00:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).

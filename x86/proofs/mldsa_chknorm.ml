@@ -12,6 +12,16 @@
 needs "x86/proofs/base.ml";;
 needs "common/mlkem_mldsa.ml";;
 
+let ZMM_STORE_ZX_COLLAPSE_TAC : tactic =
+  SIMP_TAC[WORD_ZX_ZX;
+    DIMINDEX_8; DIMINDEX_16; DIMINDEX_32; DIMINDEX_64;
+    DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+    ARITH_RULE `32 <= 64`; ARITH_RULE `32 <= 128`; ARITH_RULE `32 <= 256`;
+    ARITH_RULE `32 <= 512`; ARITH_RULE `64 <= 128`; ARITH_RULE `64 <= 256`;
+    ARITH_RULE `64 <= 512`; ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+    ARITH_RULE `256 <= 512`; ARITH_RULE `256 <= 256`; ARITH_RULE `8 <= 512`;
+    ARITH_RULE `16 <= 512`];;
+
 (**** print_literal_from_elf "x86/mldsa/mldsa_chknorm.o";;
  ****)
 
@@ -326,6 +336,8 @@ let MLDSA_CHKNORM_CORRECT = prove(
   RULE_ASSUM_TAC(REWRITE_RULE
     [WORD_BLAST `(word_zx:int64->int32)((word_zx:int32->int64) x) = x`]) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ZMM_STORE_ZX_COLLAPSE_TAC THEN
+  REWRITE_TAC[WORD_JOIN_OR_TYBIT0; BIT_TO_MASK32_OR] THEN
   (* Fold vpabsd+vpcmpgtd lane forms into bd, then to abs(ival x) >= ival bound. *)
   ASM_SIMP_TAC[VPABSD_VPCMPGTD_BD] THEN
   REWRITE_TAC[GSYM bd] THEN

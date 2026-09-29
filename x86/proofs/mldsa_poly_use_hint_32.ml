@@ -12,6 +12,26 @@
 needs "x86/proofs/base.ml";;
 needs "common/mlkem_mldsa.ml";;
 
+let ZMM_STORE_ZX_COLLAPSE_TAC : tactic =
+  RULE_ASSUM_TAC(SIMP_RULE[WORD_ZX_ZX;
+    DIMINDEX_8; DIMINDEX_16; DIMINDEX_32; DIMINDEX_64;
+    DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+    ARITH_RULE `32 <= 64`; ARITH_RULE `32 <= 128`; ARITH_RULE `32 <= 256`;
+    ARITH_RULE `32 <= 512`; ARITH_RULE `64 <= 128`; ARITH_RULE `64 <= 256`;
+    ARITH_RULE `64 <= 512`; ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+    ARITH_RULE `256 <= 512`; ARITH_RULE `256 <= 256`; ARITH_RULE `8 <= 512`;
+    ARITH_RULE `16 <= 512`]);;
+
+let SIMD_SIMPLIFY_TAC_ZMM unfold_defs =
+  let arm_simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  let x86_simdable = can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let x86_simdable512 = can (term_match [] `read X (s:x86state):int512 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm || x86_simdable512 tm in
+  TRY(FIRST_X_ASSUM
+   (ASSUME_TAC o
+    CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o
+    check (simdable o concl)));;
+
 (* x86-specific SIMD block/lane memory lemmas (typed over x86state, so kept
    here rather than in the arch-shared common/mlkem_mldsa.ml). Depend on
    ADDR_SPLIT and pack8 from that shared file. *)
@@ -999,8 +1019,9 @@ let MLDSA_POLY_USE_HINT_32_BODY_BLOCK_TAC : tactic =
         `!b. i <= b /\ b < 32 ==> read(memory :> bytes256(word_add a (word(32*b)))) s0 = xb b`) (concl th)
       then MP_TAC(SPEC `b:num` th) else failwith "no") THEN
     ANTS_TAC THENL [ASM_ARITH_TAC; DISCH_THEN ACCEPT_TAC]; ALL_TAC] THEN
-  EVERY (map (fun n -> X86_STEPS_TAC MLDSA_POLY_USE_HINT_32_EXEC [n] THEN SIMD_SIMPLIFY_TAC[]) (1--24)) THEN
+  EVERY (map (fun n -> X86_STEPS_TAC MLDSA_POLY_USE_HINT_32_EXEC [n] THEN SIMD_SIMPLIFY_TAC_ZMM[]) (1--24)) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  ZMM_STORE_ZX_COLLAPSE_TAC THEN
   REPEAT CONJ_TAC THEN
   TRY(REWRITE_TAC[ARITH_RULE `32 * (i + 1) = 32 * i + 32`] THEN CONV_TAC WORD_RULE) THEN
   TRY(X_GEN_TAC `b:num` THEN DISCH_TAC THEN ASM_CASES_TAC `b < i` THENL
@@ -1056,12 +1077,12 @@ let MLDSA_POLY_USE_HINT_32_BLOCK_CORRECT = prove
       (read RDI s = word_add a (word(32 * i)) /\
        read RSI s = word_add h (word(32 * i)) /\
        read RAX s = word(32 * i) /\
-       read YMM5 s = (word_duplicate (word 127:int32):int256) /\
-       read YMM8 s = (word_duplicate (word 1025:int32):int256) /\
-       read YMM7 s = (word_duplicate (word 512:int32):int256) /\
-       read YMM4 s = (word_duplicate (word 8118528:int32):int256) /\
-       read YMM6 s = (word 0:int256) /\
-       read YMM3 s = (word_duplicate (word 15:int32):int256) /\
+       read ZMM5 s = (word 3423913227525323174502430081042878883520180111764122672559515536195711:int512) /\
+       read ZMM8 s = (word 27633945340263435069803077425739770516599878854789179050185066335437825:int512) /\
+       read ZMM7 s = (word 13803492696795003664135781114125621955608915096245911876775369720726016:int512) /\
+       read ZMM4 s = (word 218875081946729975600369013236132924539112762223623301674088649976692072704:int512) /\
+       read ZMM6 s = (word 0:int512) /\
+       read ZMM3 s = (word 404399200101416122972727962327899080730729934460329449514903409786895:int512) /\
        (!b. b < 32 ==> read(memory :> bytes256(word_add h (word(32 * b)))) s = yb b) /\
        (!b. i <= b /\ b < 32
             ==> read(memory :> bytes256(word_add a (word(32 * b)))) s = xb b) /\
@@ -1367,7 +1388,6 @@ let MLDSA_POLY_USE_HINT_32_SUBROUTINE_SAFE = time prove
                (\s s'. true)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_POLY_USE_HINT_32_NOIBT_SUBROUTINE_SAFE));;
 
-
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Windows ABI version.                                       *)
 (* The low halves of xmm6..xmm11 are callee-saved under the Microsoft x64    *)
@@ -1432,15 +1452,14 @@ let MLDSA_POLY_USE_HINT_32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_PRESERVED_TAC "init_xmm10" `ZMM10 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm11" `ZMM11 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11]) THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
 
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -1462,12 +1481,12 @@ let MLDSA_POLY_USE_HINT_32_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
   MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s12`;
-    `ymm7_epilog = read YMM7 s12`;
-    `ymm8_epilog = read YMM8 s12`;
-    `ymm9_epilog = read YMM9 s12`;
-    `ymm10_epilog = read YMM10 s12`;
-    `ymm11_epilog = read YMM11 s12`] THEN
+   [`zmm6_epilog = read ZMM6 s12`;
+    `zmm7_epilog = read ZMM7 s12`;
+    `zmm8_epilog = read ZMM8 s12`;
+    `zmm9_epilog = read ZMM9 s12`;
+    `zmm10_epilog = read ZMM10 s12`;
+    `zmm11_epilog = read ZMM11 s12`] THEN
 
   X86_STEPS_TAC MLDSA_POLY_USE_HINT_32_WINDOWS_TMC_EXEC (20--29) THEN
 
@@ -1565,15 +1584,14 @@ let MLDSA_POLY_USE_HINT_32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   ENSURES_PRESERVED_TAC "init_xmm10" `ZMM10 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm11" `ZMM11 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11]) THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
 
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -1603,12 +1621,12 @@ let MLDSA_POLY_USE_HINT_32_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
   MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s12`;
-    `ymm7_epilog = read YMM7 s12`;
-    `ymm8_epilog = read YMM8 s12`;
-    `ymm9_epilog = read YMM9 s12`;
-    `ymm10_epilog = read YMM10 s12`;
-    `ymm11_epilog = read YMM11 s12`] THEN
+   [`zmm6_epilog = read ZMM6 s12`;
+    `zmm7_epilog = read ZMM7 s12`;
+    `zmm8_epilog = read ZMM8 s12`;
+    `zmm9_epilog = read ZMM9 s12`;
+    `zmm10_epilog = read ZMM10 s12`;
+    `zmm11_epilog = read ZMM11 s12`] THEN
 
   X86_STEPS_TAC MLDSA_POLY_USE_HINT_32_WINDOWS_TMC_EXEC (20--29) THEN
 

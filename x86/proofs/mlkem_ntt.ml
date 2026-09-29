@@ -1097,6 +1097,27 @@ let qdata_full = define
     -- &32384; -- &6280; -- &14903; -- &11044; &14469; -- &21498; -- &20198; &23210; -- &17442; -- &23860;
     -- &20257; &7756; &23132]`;;
 
+let SIMD_SIMPLIFY_ABBREV_TAC_ZMM =
+  let arm_simdable =
+    can (term_match [] `read X (s:armstate):int128 = whatever`)
+  and x86_simdable256 =
+    can (term_match [] `read X (s:x86state):int256 = whatever`)
+  and x86_simdable512 =
+    can (term_match [] `read X (s:x86state):int512 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable256 tm || x86_simdable512 tm in
+  fun unfold_defs unfold_aux ->
+    let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
+    let pam t = exists (fun p -> can(term_match [] p) t) pats in
+    let ttac th (asl,w) =
+      let th' = CONV_RULE(RAND_CONV
+                 (SIMD_SIMPLIFY_CONV (unfold_defs @ unfold_aux))) th in
+      let asms =
+        map snd (filter (is_local_definition unfold_defs o concl o snd) asl) in
+      let th'' = GEN_REWRITE_RULE (RAND_CONV o TOP_DEPTH_CONV) asms th' in
+      let tms = sort free_in (find_terms pam (rand(concl th''))) in
+      (MP_TAC th'' THEN MAP_EVERY AUTO_ABBREV_TAC tms THEN DISCH_TAC) (asl,w) in
+  TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
+
 let MLKEM_NTT_CORRECT = prove
   (`!a zetas (zetas_list:int16 list) x pc.
     aligned 32 a /\
@@ -1168,7 +1189,7 @@ let MLKEM_NTT_CORRECT = prove
   CONV_TAC(LAND_CONV WORD_REDUCE_CONV) THEN STRIP_TAC THEN
 
   MAP_EVERY (fun n -> X86_STEPS_TAC MLKEM_NTT_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_ABBREV_TAC[ntt_montmul] [ntt_montmul_add; ntt_montmul_sub])
+                      SIMD_SIMPLIFY_ABBREV_TAC_ZMM[ntt_montmul] [ntt_montmul_add; ntt_montmul_sub])
         (1--587) THEN
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
@@ -1374,22 +1395,17 @@ let MLKEM_NTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
   ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
 
 (*** Handle the ZMM/YMM register notation conversion ***)
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
-
-(*** Introduce ghost variables for initial XMM register values
- *** These will track the register states for restoration in the epilogue ***)
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
+  GHOST_INTRO_TAC `init_zmm13:int512` `read ZMM13` THEN
+  GHOST_INTRO_TAC `init_zmm14:int512` `read ZMM14` THEN
+  GHOST_INTRO_TAC `init_zmm15:int512` `read ZMM15` THEN
 
 (*** Globalize preconditions and substitute preserved register values ***)
   GLOBALIZE_PRECONDITION_TAC THEN
@@ -1424,16 +1440,16 @@ let MLKEM_NTT_NOIBT_WINDOWS_SUBROUTINE_CORRECT  = prove
 
     (*** Capture the final YMM register states after main computation ***)
   MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s16`;
-    `ymm7_epilog = read YMM7 s16`;
-    `ymm8_epilog = read YMM8 s16`;
-    `ymm9_epilog = read YMM9 s16`;
-    `ymm10_epilog = read YMM10 s16`;
-    `ymm11_epilog = read YMM11 s16`;
-    `ymm12_epilog = read YMM12 s16`;
-    `ymm13_epilog = read YMM13 s16`;
-    `ymm14_epilog = read YMM14 s16`;
-    `ymm15_epilog = read YMM15 s16`] THEN
+   [`zmm6_epilog = read ZMM6 s16`;
+    `zmm7_epilog = read ZMM7 s16`;
+    `zmm8_epilog = read ZMM8 s16`;
+    `zmm9_epilog = read ZMM9 s16`;
+    `zmm10_epilog = read ZMM10 s16`;
+    `zmm11_epilog = read ZMM11 s16`;
+    `zmm12_epilog = read ZMM12 s16`;
+    `zmm13_epilog = read ZMM13 s16`;
+    `zmm14_epilog = read ZMM14 s16`;
+    `zmm15_epilog = read ZMM15 s16`] THEN
 
 (*** Simulate the epilogue (register restoration and return)
  *** Steps 17-30 cover the Windows epilogue that restores XMM registers from stack ***)
