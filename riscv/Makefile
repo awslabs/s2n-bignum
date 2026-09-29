@@ -37,7 +37,7 @@ COSIM_CFLAGS ?= -Os -Wall -Wextra -ffreestanding -fno-builtin \
 COSIM_LDFLAGS ?= -static -nostdlib -nostartfiles -Wl,--no-relax \
 	-Wl,--build-id=none
 
-.PHONY: build_tutorial tutorial sematest clean FORCE
+.PHONY: build_tutorial tutorial sematest sematest-sail clean FORCE
 
 TUTORIAL_PROOFS := $(wildcard tutorial/*.ml)
 TUTORIAL_PROOF_BINS := $(TUTORIAL_PROOFS:.ml=.native)
@@ -70,6 +70,16 @@ proofs/cosim-runner.elf: proofs/cosim_runner.c proofs/cosim_start.S \
 proofs/cosim-runner.bin: proofs/cosim-runner.elf
 	$(RISCV_OBJCOPY) -O binary $< $@
 
+# `make sematest-sail` runs the same campaign against the Sail RISC-V model
+# (the RISC-V International golden model, https://github.com/riscv/sail-riscv)
+# instead of QEMU. proofs/sail-cosim-runner speaks the cosim protocol and runs
+# each case on Sail's `sail_riscv_sim`, patching a one-shot template program
+# (proofs/sail_cosim.S). Set SAIL_RISCV_SIM if the simulator is not on PATH.
+proofs/sail-cosim.elf: proofs/sail_cosim.S proofs/sail_cosim.ld
+	$(RISCV_CC) -march=$(RISCV_MARCH) -mabi=ilp32 \
+		$(COSIM_LDFLAGS) -Wl,-T,proofs/sail_cosim.ld \
+		-o $@ proofs/sail_cosim.S
+
 proofs/simulator.native: proofs/simulator.ml ../common/cosim.ml \
 		../common/sematest.ml $(MODEL_ML) proofs/cosim-runner \
 		proofs/cosim-runner.bin
@@ -82,8 +92,13 @@ NUM_CORES_FOR_SEMATEST ?= 1
 sematest: FORCE proofs/simulator.native
 	../tools/run-sematest.sh riscv $(NUM_CORES_FOR_SEMATEST)
 
+sematest-sail: FORCE proofs/simulator.native proofs/sail-cosim.elf
+	S2N_BIGNUM_RV32IM_EXECUTOR=riscv/proofs/sail-cosim-runner \
+		../tools/run-sematest.sh riscv $(NUM_CORES_FOR_SEMATEST)
+
 clean:
 	rm -f $(MODEL_CHECK_BINS) $(MODEL_CHECK_LOGS) \
 		$(TUTORIAL_PROOF_BINS) $(TUTORIAL_PROOF_LOGS) \
 		proofs/simulator.native \
-		proofs/cosim-runner.elf proofs/cosim-runner.bin
+		proofs/cosim-runner.elf proofs/cosim-runner.bin \
+		proofs/sail-cosim.elf

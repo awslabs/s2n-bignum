@@ -1,0 +1,171 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+
+"""Sail-backed RV32IM executor for the cosimulation protocol.
+
+This speaks the same line protocol as the QEMU monitor in
+riscv/proofs/cosim_runner.c (see common/cosim.ml), but runs every RUN
+request on the Sail RISC-V model (https://github.com/riscv/sail-riscv), the
+RISC-V International golden model, instead of QEMU. Select it with
+
+    S2N_BIGNUM_RV32IM_EXECUTOR=riscv/proofs/sail-cosim-runner
+
+Each RUN patches a copy of the template ELF built from sail_cosim.S (the
+instruction bytes, the input registers and the input scratch words), runs it
+on the Sail simulator, and reads the result back from the signature region
+the simulator dumps on exit. See sail_cosim.S for the memory layout.
+
+Environment variables:
+
+  SAIL_RISCV_SIM    Sail simulator command. Defaults to "sail_riscv_sim".
+  SAIL_COSIM_ELF    Template ELF. Defaults to sail-cosim.elf next to this
+                    script (built by `make proofs/sail-cosim.elf`).
+
+Command-line arguments are ignored.
+"""
+
+import os
+import shlex
+import struct
+import subprocess
+import sys
+import tempfile
+
+STATE_WORDS = 95
+REGISTER_WORDS = 31          # x0, x1, x3..x31
+SCRATCH_WORDS = 64
+
+# Layout of the `.cosim` section, shared with sail_cosim.S / sail_cosim.ld.
+COSIM_ADDRESS = 0x80001000
+CODE_SLOT = 0x000
+CODE_SLOT_SIZE = 0x100
+REGS_IN = 0x100
+SCRATCH = 0x200
+SIGNATURE_WORDS = 32 + SCRATCH_WORDS + 4   # regs_out, scratch, meta
+
+BREAKPOINT = 3
+INSTRUCTION_LIMIT = 100000
+SIMULATOR_TIMEOUT = 30
+
+
+def find_section(image, name):
+    """Return (file offset, address, size) of a section in a 32-bit LE ELF."""
+    if image[:4] != b"\x7fELF" or image[4] != 1 or image[5] != 1:
+        raise ValueError("template is not a 32-bit little-endian ELF")
+    shoff, = struct.unpack_from("<I", image, 0x20)
+    shentsize, shnum, shstrndx = struct.unpack_from("<HHH", image, 0x2E)
+
+    def header(index):
+        return struct.unpack_from("<IIIIIIIIII", image, shoff + index * shentsize)
+
+    strtab_offset = header(shstrndx)[4]
+    for index in range(shnum):
+        sh_name, _, _, sh_addr, sh_offset, sh_size = header(index)[:6]
+        start = strtab_offset + sh_name
+        end = image.index(b"\0", start)
+        if image[start:end].decode() == name:
+            return sh_offset, sh_addr, sh_size
+    raise ValueError("section %s not found in template" % name)
+
+
+class Executor:
+    def __init__(self):
+        here = os.path.dirname(os.path.realpath(__file__))
+        template_path = os.environ.get(
+            "SAIL_COSIM_ELF", os.path.join(here, "sail-cosim.elf"))
+        with open(template_path, "rb") as template_file:
+            self.template = template_file.read()
+        self.cosim_offset, address, size = find_section(self.template, ".cosim")
+        if address != COSIM_ADDRESS or size < SCRATCH + 4 * SCRATCH_WORDS:
+            raise ValueError("template .cosim layout does not match the runner")
+        self.simulator = shlex.split(
+            os.environ.get("SAIL_RISCV_SIM", "sail_riscv_sim"))
+        self.directory = tempfile.mkdtemp(prefix="sail-cosim-")
+        self.elf_path = os.path.join(self.directory, "case.elf")
+        self.signature_path = os.path.join(self.directory, "case.sig")
+
+    def run(self, code, state):
+        image = bytearray(self.template)
+        base = self.cosim_offset
+        # The rest of the code slot is pre-filled with `ebreak`, so the word
+        # right after the injected code is the terminating breakpoint.
+        image[base + CODE_SLOT:base + CODE_SLOT + len(code)] = code
+        for i in range(REGISTER_WORDS):
+            struct.pack_into("<I", image, base + REGS_IN + 4 * i, state[i])
+        for i in range(SCRATCH_WORDS):
+            struct.pack_into("<I", image, base + SCRATCH + 4 * i,
+                             state[REGISTER_WORDS + i])
+        with open(self.elf_path, "wb") as elf_file:
+            elf_file.write(image)
+        if os.path.exists(self.signature_path):
+            os.remove(self.signature_path)
+
+        try:
+            subprocess.run(
+                self.simulator + ["--rv32",
+                                  "--inst-limit", str(INSTRUCTION_LIMIT),
+                                  "--test-signature", self.signature_path,
+                                  self.elf_path],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                timeout=SIMULATOR_TIMEOUT, check=True)
+            with open(self.signature_path) as signature_file:
+                words = [int(line, 16) for line in signature_file.read().split()]
+        except (OSError, subprocess.SubprocessError, ValueError):
+            return "ERROR sail-simulator-failed"
+        if len(words) != SIGNATURE_WORDS:
+            return "ERROR sail-signature-size"
+
+        registers = words[0:32]
+        scratch = words[32:32 + SCRATCH_WORDS]
+        mcause, mtval, mepc = words[96:99]
+        expected_break = COSIM_ADDRESS + CODE_SLOT + len(code)
+        if mcause != BREAKPOINT or mepc != expected_break:
+            return "TRAP mcause-%d mtval-%d" % (mcause, mtval)
+        output = [0] + registers[1:REGISTER_WORDS] + scratch
+        return "OK " + " ".join(str(word) for word in output)
+
+
+def parse_run(tokens):
+    if not tokens:
+        return None, "malformed-code"
+    try:
+        code = bytes.fromhex(tokens[0])
+    except ValueError:
+        return None, "malformed-code"
+    if len(code) == 0 or len(code) % 4 != 0:
+        return None, "malformed-code"
+    if len(code) > CODE_SLOT_SIZE - 4:
+        return None, "code-too-large"
+    if len(tokens) != 1 + STATE_WORDS:
+        return None, "malformed-input-state"
+    try:
+        state = [int(word, 10) for word in tokens[1:]]
+    except ValueError:
+        return None, "malformed-input-state"
+    if any(word < 0 or word >= 1 << 32 for word in state):
+        return None, "malformed-input-state"
+    return (code, state), None
+
+
+def main():
+    executor = Executor()
+    print("READY 1 rv32im %d" % STATE_WORDS, flush=True)
+    for line in sys.stdin:
+        tokens = line.split()
+        if not tokens:
+            continue
+        if tokens[0] == "QUIT":
+            return 0
+        if tokens[0] != "RUN":
+            print("ERROR unknown-command", flush=True)
+            continue
+        request, error = parse_run(tokens[1:])
+        if error is not None:
+            print("ERROR " + error, flush=True)
+        else:
+            print(executor.run(*request), flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
