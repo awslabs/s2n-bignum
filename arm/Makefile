@@ -553,6 +553,13 @@ sm2/sm2_montjscalarmul_alt.native: sm2/sm2_montjadd_alt.native sm2/sm2_montjdoub
 tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
                         curve25519/bignum_mod_n25519.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
+
+# The four software-pipelined AES-GCM proofs share arm/proofs/aes_gcm_utils.ml.
+aes-gcm/aes128_gcm_dec.native: proofs/aes_gcm_utils.ml
+aes-gcm/aes128_gcm_enc.native: proofs/aes_gcm_utils.ml
+aes-gcm/aes256_gcm_dec.native: proofs/aes_gcm_utils.ml
+aes-gcm/aes256_gcm_enc.native: proofs/aes_gcm_utils.ml
+
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \
                                      tutorial/aes_encrypt.o tutorial/aes_decrypt.o ; \
