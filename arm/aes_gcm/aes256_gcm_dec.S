@@ -37,273 +37,253 @@
         .text
 
 // Arguments
-input    .req x0
-len_bits .req x1
-output   .req x2
-tag_ptr  .req x3
-ivec     .req x4
-key      .req x5
-Htable   .req x6
+#define input x0
+#define len_bits x1
+#define output x2
+#define tag_ptr x3
+#define ivec x4
+#define key x5
+#define Htable x6
 
-byte_len .req x15
+#define byte_len x15
 
-constant_temp .req x25
+#define constant_temp x25
 
-count           .req x1
-full_blocks     .req x7
-remainder       .req x9
+#define count x1
+#define full_blocks x7
+#define remainder x9
 
-ctr_tmp   .req x14
-ctr_tmp_w .req w14
+#define ctr_tmp x14
+#define ctr_tmp_w w14
 
-ivec_0_63    .req x11
-ivec_64_96   .req x12
-ivec_64_96_w .req w12
+#define ivec_0_63 x11
+#define ivec_64_96 x12
+#define ivec_64_96_w w12
 
-ctr      .req w13
-ctr_x    .req x13
+#define ctr w13
+#define ctr_x x13
 
-aes_st    .req v0
-aes_st_q  .req q0
-aes_st_d  .req d0
+#define aes_st v0
+#define aes_st_q q0
+#define aes_st_d d0
 
-res       .req v0
-res_q     .req q0
+#define res v0
+#define res_q q0
 
-ghash_hi    .req v9
-ghash_lo    .req v8
-ghash_mid   .req v10
-ghash_mid_d .req d10
+#define ghash_hi v9
+#define ghash_lo v8
+#define ghash_mid v10
+#define ghash_mid_d d10
 
-ghash_tmp   .req v11
-ghash_tmp_d .req d11
+#define ghash_tmp v11
+#define ghash_tmp_d d11
 
-ghash_mod   .req v7
-ghash_mod_d .req d7
+#define ghash_mod v7
+#define ghash_mod_d d7
 
-modulo_tmp0 .req v0
-modulo_tmp1 .req v1
+#define modulo_tmp0 v0
+#define modulo_tmp1 v1
 
-Ht1q    .req q12
-Ht2q    .req q13
-Ht12q   .req q14
+#define Ht1q q12
+#define Ht2q q13
+#define Ht12q q14
 
-Ht1    .req v12
-Ht2    .req v13
-Ht12   .req v14
+#define Ht1 v12
+#define Ht2 v13
+#define Ht12 v14
 
-Ht3q    .req Ht1q
-Ht4q    .req Ht2q
-Ht34q   .req Ht12q
+#define Ht3q Ht1q
+#define Ht4q Ht2q
+#define Ht34q Ht12q
 
-Ht3    .req Ht1
-Ht4    .req Ht2
-Ht34   .req Ht12
+#define Ht3 Ht1
+#define Ht4 Ht2
+#define Ht34 Ht12
 
-Ht5q    .req Ht1q
-Ht6q    .req Ht2q
-Ht56q   .req Ht12q
+#define Ht5q Ht1q
+#define Ht6q Ht2q
+#define Ht56q Ht12q
 
-Ht5    .req Ht1
-Ht6    .req Ht2
-Ht56   .req Ht12
+#define Ht5 Ht1
+#define Ht6 Ht2
+#define Ht56 Ht12
 
-Ht7q    .req Ht1q
-Ht8q    .req Ht2q
-Ht78q   .req Ht12q
+#define Ht7q Ht1q
+#define Ht8q Ht2q
+#define Ht78q Ht12q
 
-Ht7    .req Ht1
-Ht8    .req Ht2
-Ht78   .req Ht12
+#define Ht7 Ht1
+#define Ht8 Ht2
+#define Ht78 Ht12
 
-rk0q   .req q18
-rk1q   .req q19
-rk2q   .req q20
-rk3q   .req q21
-rk4q   .req q22
-rk5q   .req q23
-rk6q   .req q24
-rk7q   .req q25
-rk8q   .req q26
-rk9q   .req q27
-rk10q  .req q28
+#define rk0q q18
+#define rk1q q19
+#define rk2q q20
+#define rk3q q21
+#define rk4q q22
+#define rk5q q23
+#define rk6q q24
+#define rk7q q25
+#define rk8q q26
+#define rk9q q27
+#define rk10q q28
 
-rk11q  .req q15
-rk12q  .req q16
-rk13q  .req q17
-rk14q  .req q2
+#define rk11q q15
+#define rk12q q16
+#define rk13q q17
+#define rk14q q2
 
-rk0    .req v18
-rk1    .req v19
-rk2    .req v20
-rk3    .req v21
-rk4    .req v22
-rk5    .req v23
-rk6    .req v24
-rk7    .req v25
-rk8    .req v26
-rk9    .req v27
-rk10   .req v28
+#define rk0 v18
+#define rk1 v19
+#define rk2 v20
+#define rk3 v21
+#define rk4 v22
+#define rk5 v23
+#define rk6 v24
+#define rk7 v25
+#define rk8 v26
+#define rk9 v27
+#define rk10 v28
 
-rk11   .req v15
-rk12   .req v16
-rk13   .req v17
-rk14   .req v2
+#define rk11 v15
+#define rk12 v16
+#define rk13 v17
+#define rk14 v2
 
-plain   .req v29
-plain_q .req q29
+#define plain v29
+#define plain_q q29
 
-tag    .req v30
-tag_q  .req q30
+#define tag v30
+#define tag_q q30
 
 #define UNROLL 4
 
-#define STACK_SIZE_GPRS  (6*16)
-#define STACK_SIZE_VREGS (4*16)
-#define STACK_SIZE  (STACK_SIZE_GPRS + STACK_SIZE_VREGS + UNROLL*16)
+#define STACK_SIZE_GPRS 96  /* (6*16) */
+#define STACK_SIZE_VREGS 64  /* (4*16) */
+#define STACK_SIZE 224  /* (STACK_SIZE_GPRS + STACK_SIZE_VREGS + UNROLL*16) */
 
-#define STACK_BASE_GPRS  (0)
-#define STACK_BASE_VREGS (STACK_SIZE_GPRS)
-#define STACK_BASE_AES_ST (STACK_SIZE_GPRS + STACK_SIZE_VREGS)
+#define STACK_BASE_GPRS 0  /* (0) */
+#define STACK_BASE_VREGS 96  /* (STACK_SIZE_GPRS) */
+#define STACK_BASE_AES_ST 160  /* (STACK_SIZE_GPRS + STACK_SIZE_VREGS) */
+#define STACK_BASE_AES_CTR 172  /* STACK_BASE_AES_ST + 12: counter word of an AES state slot */
 
 /* ****************************************************************** */
 /* Generic preamble/postamble macros */
 /* ****************************************************************** */
 
-.macro save_vregs
-        stp  d8,  d9, [sp, #(STACK_BASE_VREGS + 16*0)]
-        stp d10, d11, [sp, #(STACK_BASE_VREGS + 16*1)]
-        stp d12, d13, [sp, #(STACK_BASE_VREGS + 16*2)]
-        stp d14, d15, [sp, #(STACK_BASE_VREGS + 16*3)]
-.endm
+#define S2N_BN_PASTE(a, b) a##b
 
-.macro restore_vregs
-        ldp  d8,  d9, [sp, #(STACK_BASE_VREGS + 16*0)]
-        ldp d10, d11, [sp, #(STACK_BASE_VREGS + 16*1)]
-        ldp d12, d13, [sp, #(STACK_BASE_VREGS + 16*2)]
-        ldp d14, d15, [sp, #(STACK_BASE_VREGS + 16*3)]
-.endm
+#define save_vregs \
+        stp  d8,  d9, [sp, #(STACK_BASE_VREGS+16*0)] __LF \
+        stp d10, d11, [sp, #(STACK_BASE_VREGS+16*1)] __LF \
+        stp d12, d13, [sp, #(STACK_BASE_VREGS+16*2)] __LF \
+        stp d14, d15, [sp, #(STACK_BASE_VREGS+16*3)]
 
-.macro save_gprs
-        stp x19, x20, [sp, #(STACK_BASE_GPRS + 16*0)]
-        stp x21, x22, [sp, #(STACK_BASE_GPRS + 16*1)]
-        stp x23, x24, [sp, #(STACK_BASE_GPRS + 16*2)]
-        stp x25, x26, [sp, #(STACK_BASE_GPRS + 16*3)]
-        stp x27, x28, [sp, #(STACK_BASE_GPRS + 16*4)]
-        stp x29, x30, [sp, #(STACK_BASE_GPRS + 16*5)]
-.endm
+#define restore_vregs \
+        ldp  d8,  d9, [sp, #(STACK_BASE_VREGS+16*0)] __LF \
+        ldp d10, d11, [sp, #(STACK_BASE_VREGS+16*1)] __LF \
+        ldp d12, d13, [sp, #(STACK_BASE_VREGS+16*2)] __LF \
+        ldp d14, d15, [sp, #(STACK_BASE_VREGS+16*3)]
 
-.macro restore_gprs
-        ldp x19, x20, [sp, #(STACK_BASE_GPRS + 16*0)]
-        ldp x21, x22, [sp, #(STACK_BASE_GPRS + 16*1)]
-        ldp x23, x24, [sp, #(STACK_BASE_GPRS + 16*2)]
-        ldp x25, x26, [sp, #(STACK_BASE_GPRS + 16*3)]
-        ldp x27, x28, [sp, #(STACK_BASE_GPRS + 16*4)]
-        ldp x29, x30, [sp, #(STACK_BASE_GPRS + 16*5)]
-.endm
+#define save_gprs \
+        stp x19, x20, [sp, #(STACK_BASE_GPRS+16*0)] __LF \
+        stp x21, x22, [sp, #(STACK_BASE_GPRS+16*1)] __LF \
+        stp x23, x24, [sp, #(STACK_BASE_GPRS+16*2)] __LF \
+        stp x25, x26, [sp, #(STACK_BASE_GPRS+16*3)] __LF \
+        stp x27, x28, [sp, #(STACK_BASE_GPRS+16*4)] __LF \
+        stp x29, x30, [sp, #(STACK_BASE_GPRS+16*5)]
+
+#define restore_gprs \
+        ldp x19, x20, [sp, #(STACK_BASE_GPRS+16*0)] __LF \
+        ldp x21, x22, [sp, #(STACK_BASE_GPRS+16*1)] __LF \
+        ldp x23, x24, [sp, #(STACK_BASE_GPRS+16*2)] __LF \
+        ldp x25, x26, [sp, #(STACK_BASE_GPRS+16*3)] __LF \
+        ldp x27, x28, [sp, #(STACK_BASE_GPRS+16*4)] __LF \
+        ldp x29, x30, [sp, #(STACK_BASE_GPRS+16*5)]
 
 // Derive number of iterations of unrolled loop and single-block loop
-.macro prepare_loop_counts
-        // Number of AES Blocks (16b each)
-        lsr  full_blocks, byte_len, #4
-        // Number of iterations of the unrolled loop (UNROLL=4, so divide by 4)
-        lsr  count, full_blocks, #2
-        // Number of iterations for the tail loop (full_blocks mod 4)
+#define prepare_loop_counts \
+        /* Number of AES Blocks (16b each) */ \
+        lsr  full_blocks, byte_len, #4 __LF \
+        /* Number of iterations of the unrolled loop (UNROLL=4, so divide by 4) */ \
+        lsr  count, full_blocks, #2 __LF \
+        /* Number of iterations for the tail loop (full_blocks mod 4) */ \
         and  remainder, full_blocks, #3
-.endm
 
 /* ****************************************************************** */
 /* AES related macros */
 /* ****************************************************************** */
 
-.macro load_iv
-        ldp        ivec_0_63, ivec_64_96, [ivec]
-        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST + 0*16)] // @slothy:writes=stack_0
-        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST + 1*16)] // @slothy:writes=stack_1
-        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST + 2*16)] // @slothy:writes=stack_2
-        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST + 3*16)] // @slothy:writes=stack_3
+#define load_iv \
+        ldp        ivec_0_63, ivec_64_96, [ivec] __LF \
+        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST+0*16)] __LF  /* @slothy:writes=stack_0 */ \
+        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST+1*16)] __LF  /* @slothy:writes=stack_1 */ \
+        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST+2*16)] __LF  /* @slothy:writes=stack_2 */ \
+        stp        ivec_0_63, ivec_64_96, [sp, #(STACK_BASE_AES_ST+3*16)] __LF  /* @slothy:writes=stack_3 */ \
+        lsr        ctr_x, ivec_64_96, #32 __LF \
+        rev        ctr, ctr __LF \
+        orr        ivec_64_96_w, ivec_64_96_w, ivec_64_96_w  /* clear top 32 bit */
 
-        lsr        ctr_x, ivec_64_96, #32
-        rev        ctr, ctr
-        orr        ivec_64_96_w, ivec_64_96_w, ivec_64_96_w // clear top 32 bit
-.endm
-
-.macro next_ctr_init_aes aes_st, loc
-        add        ctr_tmp_w, ctr, #\loc
-        rev        ctr_tmp_w, ctr_tmp_w
-        str        ctr_tmp_w, [sp, #(STACK_BASE_AES_ST + \loc*16 + 12)] // @slothy:writes=stack_\loc
-        ldr        \aes_st\()_q, [sp, #(STACK_BASE_AES_ST + \loc*16)]   // @slothy:reads=stack_\loc
-.endm
+#define next_ctr_init_aes(aes_st, loc) \
+        add        ctr_tmp_w, ctr, #(loc) __LF \
+        rev        ctr_tmp_w, ctr_tmp_w __LF \
+        str        ctr_tmp_w, [sp, #(STACK_BASE_AES_ST+loc*16+12)] __LF  /* @slothy:writes=stack_\loc */ \
+        ldr        aes_st##_q, [sp, #(STACK_BASE_AES_ST+loc*16)]  /* @slothy:reads=stack_\loc */
 
 // A single AES round
 // Prevent SLOTHY from unfolding because uArchs tend to fuse AESMC+AESE
-.macro aesr data, key // @slothy:no-unfold
-        aese  \data, \key
-        aesmc \data, \data
-.endm
+/* @slothy:no-unfold */
+#define aesr(data, key) \
+        aese  data, key __LF \
+        aesmc data, data
 
-.macro aesr_0_8 data, key
-        aesr \data\().16b, \key\()0.16b
-        aesr \data\().16b, \key\()1.16b
-        aesr \data\().16b, \key\()2.16b
-        aesr \data\().16b, \key\()3.16b
-        aesr \data\().16b, \key\()4.16b
-        aesr \data\().16b, \key\()5.16b
-        aesr \data\().16b, \key\()6.16b
-        aesr \data\().16b, \key\()7.16b
-        aesr \data\().16b, \key\()8.16b
-.endm
+#define aesr_0_8(data, key) \
+        aesr(data.16b, S2N_BN_PASTE(key, 0).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 1).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 2).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 3).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 4).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 5).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 6).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 7).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 8).16b)
 
-.macro aesr_9_10 data, key
-        aesr \data\().16b, \key\()9.16b
-        aesr \data\().16b, \key\()10.16b
-.endm
+#define aesr_9_10(data, key) \
+        aesr(data.16b, S2N_BN_PASTE(key, 9).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 10).16b)
 
-.macro aesr_11_12 data, key
-        aesr \data\().16b, \key\()11.16b
-        aesr \data\().16b, \key\()12.16b
-.endm
+#define aesr_11_12(data, key) \
+        aesr(data.16b, S2N_BN_PASTE(key, 11).16b) __LF \
+        aesr(data.16b, S2N_BN_PASTE(key, 12).16b)
 
 // Destructs inA
-.macro eor3 out, inA, inB, inC
-        eor \inA, \inA, \inB
-        eor \out, \inA, \inC
-.endm
+#define eor3(out, inA, inB, inC) \
+        eor inA, inA, inB __LF \
+        eor out, inA, inC
 
-.macro aesr_final aes_st, plain, out
-        aese \aes_st\().16b, rk13.16b
-        eor3 \out\().16b, \aes_st\().16b, rk14.16b, \plain\().16b
-.endm
+#define aesr_final(aes_st, plain, out) \
+        aese aes_st.16b, rk13.16b __LF \
+        eor3(out.16b, aes_st.16b, rk14.16b, plain.16b)
 
-.macro aes_full_block aes_st, input, output, loc
-        next_ctr_init_aes \aes_st, \loc
-        aesr_0_8 \aes_st\(), rk
-        aesr_9_10 \aes_st\(), rk
-        aesr_11_12 \aes_st\(), rk
-        aesr_final \aes_st, \input, \output
-.endm
+#define load_round_key(i) \
+        ldr rk##i##q, [key, #(i*16)]
 
-.macro load_round_key i
-        ldr rk\i\()q, [key, #((\i)*16)]
-.endm
-
-.macro load_round_keys
-        load_round_key 0
-        load_round_key 1
-        load_round_key 2
-        load_round_key 3
-        load_round_key 4
-        load_round_key 5
-        load_round_key 6
-        load_round_key 7
-        load_round_key 8
-        load_round_key 9
-        load_round_key 10
-        load_round_key 11
-        load_round_key 12
-        load_round_key 13
-        load_round_key 14
-.endm
+#define load_round_keys \
+        load_round_key(0) __LF \
+        load_round_key(1) __LF \
+        load_round_key(2) __LF \
+        load_round_key(3) __LF \
+        load_round_key(4) __LF \
+        load_round_key(5) __LF \
+        load_round_key(6) __LF \
+        load_round_key(7) __LF \
+        load_round_key(8) __LF \
+        load_round_key(9) __LF \
+        load_round_key(10) __LF \
+        load_round_key(11) __LF \
+        load_round_key(12) __LF \
+        load_round_key(13) __LF \
+        load_round_key(14)
 
 /* ****************************************************************** */
 /* Loading of H-table (precomputed H-powers for GHASH) */
@@ -311,230 +291,202 @@ tag_q  .req q30
 
 // This has to be synchronized with the H-table generation
 
-.macro load_h1 dst, dst_q
-        ldr \dst_q, [Htable]
-.endm
+#define load_h1(dst, dst_q) \
+        ldr dst_q, [Htable]
 
-.macro load_h2 dst, dst_q
-        ldr \dst_q, [Htable, #32]
-.endm
+#define load_h2(dst, dst_q) \
+        ldr dst_q, [Htable, #32]
 
-.macro load_h3 dst, dst_q
-        ldr \dst_q, [Htable, #48]
-.endm
+#define load_h3(dst, dst_q) \
+        ldr dst_q, [Htable, #48]
 
-.macro load_h4 dst, dst_q
-        ldr \dst_q, [Htable, #80]
-.endm
+#define load_h4(dst, dst_q) \
+        ldr dst_q, [Htable, #80]
 
-.macro load_h5 dst, dst_q
-        ldr \dst_q, [Htable, #96]
-.endm
+#define load_h5(dst, dst_q) \
+        ldr dst_q, [Htable, #96]
 
-.macro load_h6 dst, dst_q
-        ldr \dst_q, [Htable, #128]
-.endm
+#define load_h6(dst, dst_q) \
+        ldr dst_q, [Htable, #128]
 
-.macro load_h7 dst, dst_q
-        ldr \dst_q, [Htable, #144]
-.endm
+#define load_h7(dst, dst_q) \
+        ldr dst_q, [Htable, #144]
 
-.macro load_h8 dst, dst_q
-        ldr \dst_q, [Htable, #176]
-.endm
+#define load_h8(dst, dst_q) \
+        ldr dst_q, [Htable, #176]
 
-.macro load_h12 dst, dst_q
-        ldr \dst_q, [Htable, #16]
-.endm
+#define load_h12(dst, dst_q) \
+        ldr dst_q, [Htable, #16]
 
-.macro load_h34 dst, dst_q
-        ldr \dst_q, [Htable, #64]
-.endm
+#define load_h34(dst, dst_q) \
+        ldr dst_q, [Htable, #64]
 
-.macro load_h56 dst, dst_q
-        ldr \dst_q, [Htable, #112]
-.endm
+#define load_h56(dst, dst_q) \
+        ldr dst_q, [Htable, #112]
 
-.macro load_h78 dst, dst_q
-        ldr \dst_q, [Htable, #160]
-.endm
+#define load_h78(dst, dst_q) \
+        ldr dst_q, [Htable, #160]
 
-.macro load_full_htable
-        load_h1  Ht1,  Ht1q
-        load_h2  Ht2,  Ht2q
-        load_h3  Ht3,  Ht3q
-        load_h4  Ht4,  Ht4q
-        load_h5  Ht5,  Ht5q
-        load_h6  Ht6,  Ht6q
-        load_h12 Ht12, Ht12q
-        load_h34 Ht34, Ht34q
-        load_h56 Ht56, Ht56q
-.endm
+#define load_full_htable \
+        load_h1(Ht1,  Ht1q) __LF \
+        load_h2(Ht2,  Ht2q) __LF \
+        load_h3(Ht3,  Ht3q) __LF \
+        load_h4(Ht4,  Ht4q) __LF \
+        load_h5(Ht5,  Ht5q) __LF \
+        load_h6(Ht6,  Ht6q) __LF \
+        load_h12(Ht12, Ht12q) __LF \
+        load_h34(Ht34, Ht34q) __LF \
+        load_h56(Ht56, Ht56q)
 
-.macro load_htable_12
-        load_h1  Ht1,  Ht1q
-        load_h2  Ht2,  Ht2q
-        load_h12 Ht12, Ht12q
-.endm
+#define load_htable_12 \
+        load_h1(Ht1,  Ht1q) __LF \
+        load_h2(Ht2,  Ht2q) __LF \
+        load_h12(Ht12, Ht12q)
 
-.macro load_htable_34
-        load_h3  Ht3,  Ht3q
-        load_h4  Ht4,  Ht4q
-        load_h34 Ht34, Ht34q
-.endm
+#define load_htable_34 \
+        load_h3(Ht3,  Ht3q) __LF \
+        load_h4(Ht4,  Ht4q) __LF \
+        load_h34(Ht34, Ht34q)
 
-.macro load_htable_56
-        load_h5  Ht5,  Ht5q
-        load_h6  Ht6,  Ht6q
-        load_h56 Ht56, Ht56q
-.endm
+#define load_htable_56 \
+        load_h5(Ht5,  Ht5q) __LF \
+        load_h6(Ht6,  Ht6q) __LF \
+        load_h56(Ht56, Ht56q)
 
-.macro load_htable_78
-        load_h7  Ht7,  Ht7q
-        load_h8  Ht8,  Ht8q
-        load_h78 Ht78, Ht78q
-.endm
+#define load_htable_78 \
+        load_h7(Ht7,  Ht7q) __LF \
+        load_h8(Ht8,  Ht8q) __LF \
+        load_h78(Ht78, Ht78q)
 
 /* ****************************************************************** */
 /* Macros for GHASH udpate */
 /* ****************************************************************** */
 
-.macro ghash_init_0 input, Hk, Hk_mid
-        rev64 \input\().16b, \input\().16b
-        // Low product
-        pmull   ghash_lo.1q, \input\().1d, \Hk\().1d
-        // High product
-        pmull2  ghash_hi.1q, \input\().2d, \Hk\().2d
-        // Middle product
-        mov     ghash_tmp_d, \input\().d[1]
-        eor     ghash_tmp.8b, ghash_tmp.8b, \input\().8b
-        pmull   ghash_mid.1q, ghash_tmp.1d, \Hk_mid\().1d
-.endm
+#define ghash_init_0(input, Hk, Hk_mid) \
+        rev64 input.16b, input.16b __LF \
+        /* Low product */ \
+        pmull   ghash_lo.1q, input.1d, Hk.1d __LF \
+        /* High product */ \
+        pmull2  ghash_hi.1q, input.2d, Hk.2d __LF \
+        /* Middle product */ \
+        mov     ghash_tmp_d, input.d[1] __LF \
+        eor     ghash_tmp.8b, ghash_tmp.8b, input.8b __LF \
+        pmull   ghash_mid.1q, ghash_tmp.1d, Hk_mid.1d
 
-.macro ghash_init_1 input, Hk, Hk_mid
-        rev64 \input\().16b, \input\().16b
-        // Low product
-        pmull   ghash_lo.1q, \input\().1d, \Hk\().1d
-        // High product
-        pmull2  ghash_hi.1q, \input\().2d, \Hk\().2d
-        // Middle product
-        ext     ghash_tmp.16b, \input\().16b, \input\().16b, #8
-        eor     ghash_tmp.16b, ghash_tmp.16b, \input\().16b
-        pmull2  ghash_mid.1q, ghash_tmp.2d, \Hk_mid\().2d
-.endm
+#define ghash_init_1(input, Hk, Hk_mid) \
+        rev64 input.16b, input.16b __LF \
+        /* Low product */ \
+        pmull   ghash_lo.1q, input.1d, Hk.1d __LF \
+        /* High product */ \
+        pmull2  ghash_hi.1q, input.2d, Hk.2d __LF \
+        /* Middle product */ \
+        ext     ghash_tmp.16b, input.16b, input.16b, #8 __LF \
+        eor     ghash_tmp.16b, ghash_tmp.16b, input.16b __LF \
+        pmull2  ghash_mid.1q, ghash_tmp.2d, Hk_mid.2d
 
-.macro ghash_acc_0 input, Hk, Hk_mid
-        rev64   \input\().16b, \input\().16b
-        // Low product
-        pmull   ghash_tmp.1q, \input\().1d, \Hk\().1d
-        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b
-        // High product
-        pmull2  ghash_tmp.1q, \input\().2d, \Hk\().2d
-        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b
-        // Middle product
-        mov     ghash_tmp_d, \input\().d[1]
-        eor     ghash_tmp.8b, ghash_tmp.8b, \input\().8b
-        pmull   ghash_tmp.1q, ghash_tmp.1d, \Hk_mid\().1d
+#define ghash_acc_0(input, Hk, Hk_mid) \
+        rev64   input.16b, input.16b __LF \
+        /* Low product */ \
+        pmull   ghash_tmp.1q, input.1d, Hk.1d __LF \
+        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b __LF \
+        /* High product */ \
+        pmull2  ghash_tmp.1q, input.2d, Hk.2d __LF \
+        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b __LF \
+        /* Middle product */ \
+        mov     ghash_tmp_d, input.d[1] __LF \
+        eor     ghash_tmp.8b, ghash_tmp.8b, input.8b __LF \
+        pmull   ghash_tmp.1q, ghash_tmp.1d, Hk_mid.1d __LF \
         eor     ghash_mid.16b, ghash_mid.16b, ghash_tmp.16b
-.endm
 
-.macro ghash_acc_1 input, Hk, Hk_mid
-        rev64   \input\().16b, \input\().16b
-        // Low product
-        pmull   ghash_tmp.1q, \input\().1d, \Hk\().1d
-        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b
-        // High product
-        pmull2  ghash_tmp.1q, \input\().2d, \Hk\().2d
-        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b
-        // Middle product
-        ext     ghash_tmp.16b, \input\().16b, \input\().16b, #8
-        eor     ghash_tmp.16b, ghash_tmp.16b, \input\().16b
-        pmull2  ghash_tmp.1q, ghash_tmp.2d, \Hk_mid\().2d
+#define ghash_acc_1(input, Hk, Hk_mid) \
+        rev64   input.16b, input.16b __LF \
+        /* Low product */ \
+        pmull   ghash_tmp.1q, input.1d, Hk.1d __LF \
+        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b __LF \
+        /* High product */ \
+        pmull2  ghash_tmp.1q, input.2d, Hk.2d __LF \
+        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b __LF \
+        /* Middle product */ \
+        ext     ghash_tmp.16b, input.16b, input.16b, #8 __LF \
+        eor     ghash_tmp.16b, ghash_tmp.16b, input.16b __LF \
+        pmull2  ghash_tmp.1q, ghash_tmp.2d, Hk_mid.2d __LF \
         eor     ghash_mid.16b, ghash_mid.16b, ghash_tmp.16b
-.endm
 
-.macro ghash_init_with_tag_0 input, Hk, Hk_mid, tag
-        rev64 \input\().16b, \input\().16b
-        eor   \input\().16b, \input\().16b, \tag\().16b
-        // Low product
-        pmull   ghash_lo.1q, \input\().1d, \Hk\().1d
-        // High product
-        pmull2  ghash_hi.1q, \input\().2d, \Hk\().2d
-        // Middle product
-        mov     ghash_tmp_d, \input\().d[1]
-        eor     ghash_tmp.8b, ghash_tmp.8b, \input\().8b
-        pmull   ghash_mid.1q, ghash_tmp.1d, \Hk_mid\().1d
-.endm
+#define ghash_init_with_tag_0(input, Hk, Hk_mid, tag) \
+        rev64 input.16b, input.16b __LF \
+        eor   input.16b, input.16b, tag.16b __LF \
+        /* Low product */ \
+        pmull   ghash_lo.1q, input.1d, Hk.1d __LF \
+        /* High product */ \
+        pmull2  ghash_hi.1q, input.2d, Hk.2d __LF \
+        /* Middle product */ \
+        mov     ghash_tmp_d, input.d[1] __LF \
+        eor     ghash_tmp.8b, ghash_tmp.8b, input.8b __LF \
+        pmull   ghash_mid.1q, ghash_tmp.1d, Hk_mid.1d
 
-.macro ghash_init_with_tag_1 input, Hk, Hk_mid, tag
-        rev64 \input\().16b, \input\().16b
-        eor   \input\().16b, \input\().16b, \tag\().16b
-        // Low product
-        pmull   ghash_lo.1q, \input\().1d, \Hk\().1d
-        // High product
-        pmull2  ghash_hi.1q, \input\().2d, \Hk\().2d
-        // Middle product
-        ext     ghash_tmp.16b, \input\().16b, \input\().16b, #8
-        eor     ghash_tmp.16b, ghash_tmp.16b, \input\().16b
-        pmull2  ghash_mid.1q, ghash_tmp.2d, \Hk_mid\().2d
-.endm
+#define ghash_init_with_tag_1(input, Hk, Hk_mid, tag) \
+        rev64 input.16b, input.16b __LF \
+        eor   input.16b, input.16b, tag.16b __LF \
+        /* Low product */ \
+        pmull   ghash_lo.1q, input.1d, Hk.1d __LF \
+        /* High product */ \
+        pmull2  ghash_hi.1q, input.2d, Hk.2d __LF \
+        /* Middle product */ \
+        ext     ghash_tmp.16b, input.16b, input.16b, #8 __LF \
+        eor     ghash_tmp.16b, ghash_tmp.16b, input.16b __LF \
+        pmull2  ghash_mid.1q, ghash_tmp.2d, Hk_mid.2d
 
-.macro ghash_acc_with_tag_0 input, Hk, Hk_mid, tag
-        rev64   \input\().16b, \input\().16b
-        eor   \input\().16b, \input\().16b, \tag\().16b
-        // Low product
-        pmull   ghash_tmp.1q, \input\().1d, \Hk\().1d
-        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b
-        // High product
-        pmull2  ghash_tmp.1q, \input\().2d, \Hk\().2d
-        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b
-        // Middle product
-        mov     ghash_tmp_d, \input\().d[1]
-        eor     ghash_tmp.8b, ghash_tmp.8b, \input\().8b
-        pmull   ghash_tmp.1q, ghash_tmp.1d, \Hk_mid\().1d
+#define ghash_acc_with_tag_0(input, Hk, Hk_mid, tag) \
+        rev64   input.16b, input.16b __LF \
+        eor   input.16b, input.16b, tag.16b __LF \
+        /* Low product */ \
+        pmull   ghash_tmp.1q, input.1d, Hk.1d __LF \
+        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b __LF \
+        /* High product */ \
+        pmull2  ghash_tmp.1q, input.2d, Hk.2d __LF \
+        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b __LF \
+        /* Middle product */ \
+        mov     ghash_tmp_d, input.d[1] __LF \
+        eor     ghash_tmp.8b, ghash_tmp.8b, input.8b __LF \
+        pmull   ghash_tmp.1q, ghash_tmp.1d, Hk_mid.1d __LF \
         eor     ghash_mid.16b, ghash_mid.16b, ghash_tmp.16b
-.endm
 
-.macro ghash_acc_with_tag_1 input, Hk, Hk_mid, tag
-        rev64   \input\().16b, \input\().16b
-        eor   \input\().16b, \input\().16b, \tag\().16b
-        // Low product
-        pmull   ghash_tmp.1q, \input\().1d, \Hk\().1d
-        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b
-        // High product
-        pmull2  ghash_tmp.1q, \input\().2d, \Hk\().2d
-        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b
-        // Middle product
-        ext     ghash_tmp.16b, \input\().16b, \input\().16b, #8
-        eor     ghash_tmp.16b, ghash_tmp.16b, \input\().16b
-        pmull2  ghash_tmp.1q, ghash_tmp.2d, \Hk_mid\().2d
+#define ghash_acc_with_tag_1(input, Hk, Hk_mid, tag) \
+        rev64   input.16b, input.16b __LF \
+        eor   input.16b, input.16b, tag.16b __LF \
+        /* Low product */ \
+        pmull   ghash_tmp.1q, input.1d, Hk.1d __LF \
+        eor     ghash_lo.16b, ghash_lo.16b, ghash_tmp.16b __LF \
+        /* High product */ \
+        pmull2  ghash_tmp.1q, input.2d, Hk.2d __LF \
+        eor     ghash_hi.16b, ghash_hi.16b, ghash_tmp.16b __LF \
+        /* Middle product */ \
+        ext     ghash_tmp.16b, input.16b, input.16b, #8 __LF \
+        eor     ghash_tmp.16b, ghash_tmp.16b, input.16b __LF \
+        pmull2  ghash_tmp.1q, ghash_tmp.2d, Hk_mid.2d __LF \
         eor     ghash_mid.16b, ghash_mid.16b, ghash_tmp.16b
-.endm
 
-.macro ghash_finalize tag
-        eor        modulo_tmp0.16b, ghash_lo.16b,  ghash_hi.16b
-        pmull      modulo_tmp1.1q,  ghash_hi.1d,   ghash_mod.1d
-        ext        ghash_hi.16b,    ghash_hi.16b,  ghash_hi.16b, #8
-        eor        ghash_mid.16b,   ghash_mid.16b, modulo_tmp0.16b
-        eor        modulo_tmp1.16b, ghash_hi.16b,  modulo_tmp1.16b
-        eor        ghash_mid.16b,   ghash_mid.16b, modulo_tmp1.16b
-        pmull      ghash_hi.1q,     ghash_mid.1d,  ghash_mod.1d
-        eor        ghash_lo.16b,    ghash_lo.16b,  ghash_hi.16b
-        ext        ghash_mid.16b,   ghash_mid.16b, ghash_mid.16b, #8
-        eor        \tag\().16b,     ghash_lo.16b,  ghash_mid.16b
-        ext        \tag\().16b, \tag\().16b, \tag\().16b, #8
-.endm
+#define ghash_finalize(tag) \
+        eor        modulo_tmp0.16b, ghash_lo.16b,  ghash_hi.16b __LF \
+        pmull      modulo_tmp1.1q,  ghash_hi.1d,   ghash_mod.1d __LF \
+        ext        ghash_hi.16b,    ghash_hi.16b,  ghash_hi.16b, #8 __LF \
+        eor        ghash_mid.16b,   ghash_mid.16b, modulo_tmp0.16b __LF \
+        eor        modulo_tmp1.16b, ghash_hi.16b,  modulo_tmp1.16b __LF \
+        eor        ghash_mid.16b,   ghash_mid.16b, modulo_tmp1.16b __LF \
+        pmull      ghash_hi.1q,     ghash_mid.1d,  ghash_mod.1d __LF \
+        eor        ghash_lo.16b,    ghash_lo.16b,  ghash_hi.16b __LF \
+        ext        ghash_mid.16b,   ghash_mid.16b, ghash_mid.16b, #8 __LF \
+        eor        tag.16b,     ghash_lo.16b,  ghash_mid.16b __LF \
+        ext        tag.16b, tag.16b, tag.16b, #8
 
-.macro load_tag
-        ldr      tag_q, [tag_ptr]
+#define load_tag \
+        ldr      tag_q, [tag_ptr] __LF \
         rev64    tag.16b, tag.16b
-.endm
 
-.macro prepare_ghash
-        // Prepare constant for modular reduction
-        movi ghash_mod.8b, #0xc2
+#define prepare_ghash \
+        /* Prepare constant for modular reduction */ \
+        movi ghash_mod.8b, #0xc2 __LF \
         shl  ghash_mod_d, ghash_mod_d, #56
-.endm
 
 /* ****************************************************************** */
 /* Core routine */
@@ -548,7 +500,7 @@ S2N_BN_SYMBOL(aes256_gcm_dec):
         CFI_DEC_SP(STACK_SIZE)
 
 
-Ldec_preamble_start:
+Laes256_gcm_dec_preamble_start:
         save_gprs
         save_vregs
 
@@ -561,9 +513,9 @@ Ldec_preamble_start:
         prepare_loop_counts
         prepare_ghash
 
-Ldec_preamble_end:
+Laes256_gcm_dec_preamble_end:
 
-        cbz count, Lloop_unrolled_end
+        cbz count, Laes256_gcm_dec_loop_unrolled_end
                                                       // Instructions:    80
                                                       // Expected cycles: 45
                                                       // Expected IPC:    1.78
@@ -587,75 +539,75 @@ Ldec_preamble_end:
         rev w30, w11                                  // .*...........................................
         ldr q13, [x6, #64]                            // ..*..........................................
         add w27, w13, #3                              // ..*..........................................
-        str w30, [sp, #STACK_BASE_AES_ST + 28]        // ..*.......................................... // @slothy:writes=stack_1
+        str w30, [sp, #(STACK_BASE_AES_ST+28)]        // ..*.......................................... // @slothy:writes=stack_1
         add w25, w13, #0                              // ..*..........................................
         ldr q1, [x0, #16]                             // ...*.........................................
         rev w17, w25                                  // ...*.........................................
         rev w7, w27                                   // ...*.........................................
-        str w12, [sp, #STACK_BASE_AES_ST + 44]        // ...*......................................... // @slothy:writes=stack_2
+        str w12, [sp, #(STACK_BASE_AES_ST+44)]        // ...*......................................... // @slothy:writes=stack_2
         rev64 v8.16B, v0.16B                          // ....*........................................
-        ldr q3, [sp, #STACK_BASE_AES_ST + 16]         // ....*........................................ // @slothy:reads=stack_1
+        ldr q3, [sp, #(STACK_BASE_AES_ST+16)]         // ....*........................................ // @slothy:reads=stack_1
         rev64 v14.16B, v29.16B                        // .....*.......................................
-        ldr q12, [sp, #STACK_BASE_AES_ST + 32]        // .....*....................................... // @slothy:reads=stack_2
-        str w7, [sp, #STACK_BASE_AES_ST + 60]         // .....*....................................... // @slothy:writes=stack_3
+        ldr q12, [sp, #(STACK_BASE_AES_ST+32)]        // .....*....................................... // @slothy:reads=stack_2
+        str w7, [sp, #(STACK_BASE_AES_ST+60)]         // .....*....................................... // @slothy:writes=stack_3
         pmull v10.1q, v8.1d, v5.1d                    // ......*......................................
         mov d6, v8.d[1]                               // ......*......................................
-        str w17, [sp, #STACK_BASE_AES_ST + 12]        // ......*...................................... // @slothy:writes=stack_0
+        str w17, [sp, #(STACK_BASE_AES_ST+12)]        // ......*...................................... // @slothy:writes=stack_0
         pmull2 v11.1q, v8.2d, v5.2d                   // .......*.....................................
         ldr q5, [x6, #16]                             // .......*.....................................
         ext v4.16B, v14.16B, v14.16B, #8              // ........*....................................
-        aesr v3.16b, v18.16b                          // ........*....................................
-        aesr v12.16b, v18.16b                         // .........*...................................
+        aesr(v3.16b, v18.16b)  /* ........*.................................... */
+        aesr(v12.16b, v18.16b)  /* .........*................................... */
         eor v6.8B, v6.8B, v8.8B                       // .........*...................................
         eor v8.16B, v4.16B, v14.16B                   // ..........*..................................
-        aesr v3.16b, v19.16b                          // ..........*..................................
+        aesr(v3.16b, v19.16b)  /* ..........*.................................. */
         rev64 v9.16B, v1.16B                          // ...........*.................................
         pmull v4.1q, v6.1d, v5.1d                     // ...........*.................................
         pmull2 v8.1q, v8.2d, v5.2d                    // ............*................................
         ldr q5, [x6, #32]                             // ............*................................
-        aesr v3.16b, v20.16b                          // .............*...............................
-        aesr v12.16b, v19.16b                         // ..............*..............................
-        aesr v3.16b, v21.16b                          // ...............*.............................
-        aesr v12.16b, v20.16b                         // ................*............................
+        aesr(v3.16b, v20.16b)  /* .............*............................... */
+        aesr(v12.16b, v19.16b)  /* ..............*.............................. */
+        aesr(v3.16b, v21.16b)  /* ...............*............................. */
+        aesr(v12.16b, v20.16b)  /* ................*............................ */
         pmull2 v6.1q, v14.2d, v5.2d                   // .................*...........................
-        aesr v12.16b, v21.16b                         // ..................*..........................
+        aesr(v12.16b, v21.16b)  /* ..................*.......................... */
         eor v11.16B, v11.16B, v6.16B                  // ...................*.........................
-        aesr v3.16b, v22.16b                          // ...................*.........................
-        aesr v12.16b, v22.16b                         // ....................*........................
+        aesr(v3.16b, v22.16b)  /* ...................*......................... */
+        aesr(v12.16b, v22.16b)  /* ....................*........................ */
         eor v6.16B, v4.16B, v8.16B                    // ....................*........................
         mov d8, v9.d[1]                               // .....................*.......................
-        aesr v3.16b, v23.16b                          // .....................*.......................
-        aesr v12.16b, v23.16b                         // ......................*......................
-        aesr v3.16b, v24.16b                          // .......................*.....................
+        aesr(v3.16b, v23.16b)  /* .....................*....................... */
+        aesr(v12.16b, v23.16b)  /* ......................*...................... */
+        aesr(v3.16b, v24.16b)  /* .......................*..................... */
         eor v4.8B, v8.8B, v9.8B                       // .......................*.....................
-        aesr v12.16b, v24.16b                         // ........................*....................
-        ldr q8, [sp, #STACK_BASE_AES_ST + 48]         // ........................*.................... // @slothy:reads=stack_3
-        aesr v3.16b, v25.16b                          // .........................*...................
-        aesr v12.16b, v25.16b                         // ..........................*..................
-        aesr v3.16b, v26.16b                          // ...........................*.................
-        aesr v12.16b, v26.16b                         // ............................*................
-        aesr v3.16b, v27.16b                          // .............................*...............
-        aesr v12.16b, v27.16b                         // ..............................*..............
-        aesr v3.16b, v28.16b                          // ...............................*.............
-        aesr v12.16b, v28.16b                         // ................................*............
-        aesr v8.16b, v18.16b                          // .................................*...........
-        aesr v12.16b, v15.16b                         // ..................................*..........
+        aesr(v12.16b, v24.16b)  /* ........................*.................... */
+        ldr q8, [sp, #(STACK_BASE_AES_ST+48)]         // ........................*.................... // @slothy:reads=stack_3
+        aesr(v3.16b, v25.16b)  /* .........................*................... */
+        aesr(v12.16b, v25.16b)  /* ..........................*.................. */
+        aesr(v3.16b, v26.16b)  /* ...........................*................. */
+        aesr(v12.16b, v26.16b)  /* ............................*................ */
+        aesr(v3.16b, v27.16b)  /* .............................*............... */
+        aesr(v12.16b, v27.16b)  /* ..............................*.............. */
+        aesr(v3.16b, v28.16b)  /* ...............................*............. */
+        aesr(v12.16b, v28.16b)  /* ................................*............ */
+        aesr(v8.16b, v18.16b)  /* .................................*........... */
+        aesr(v12.16b, v15.16b)  /* ..................................*.......... */
         pmull v14.1q, v14.1d, v5.1d                   // ...................................*.........
-        aesr v12.16b, v16.16b                         // ....................................*........
+        aesr(v12.16b, v16.16b)  /* ....................................*........ */
         eor v10.16B, v10.16B, v14.16B                 // .....................................*.......
-        aesr v8.16b, v19.16b                          // .....................................*.......
+        aesr(v8.16b, v19.16b)  /* .....................................*....... */
         aese v12.16b, v17.16b                         // ......................................*......
         ldr q14, [x0], #(4*16)                        // ......................................*......
         pmull2 v5.1q, v9.2d, v31.2d                   // .......................................*.....
         eor v12.16B, v12.16B, v2.16B                  // ........................................*....
-        aesr v8.16b, v20.16b                          // ........................................*....
+        aesr(v8.16b, v20.16b)  /* ........................................*.... */
         pmull v9.1q, v9.1d, v31.1d                    // .........................................*...
         ldr q31, [sp, #STACK_BASE_AES_ST]             // .........................................*... // @slothy:reads=stack_0
         eor v12.16B, v12.16B, v29.16B                 // ..........................................*..
-        aesr v8.16b, v21.16b                          // ..........................................*..
+        aesr(v8.16b, v21.16b)  /* ..........................................*.. */
         ldr q29, [x6, #80]                            // ...........................................*.
-        aesr v3.16b, v15.16b                          // ...........................................*.
-        aesr v8.16b, v22.16b                          // ............................................*
+        aesr(v3.16b, v15.16b)  /* ...........................................*. */
+        aesr(v8.16b, v22.16b)  /* ............................................* */
         str q12, [x2, #32]                            // ............................................*
 
                                                                     // ------------- cycle (expected) ------------->
@@ -743,8 +695,8 @@ Ldec_preamble_end:
         // str Q<ssa_54>, [x2, #32]                                 // ............................................*
 
         sub count, count, #1
-cbz count, Lloop_unrolled_start_postamble
-Lloop_unrolled_start:
+cbz count, Laes256_gcm_dec_loop_unrolled_start_postamble
+Laes256_gcm_dec_loop_unrolled_start:
                                                       // Instructions:    140
                                                       // Expected cycles: 70
                                                       // Expected IPC:    2.00
@@ -762,141 +714,141 @@ Lloop_unrolled_start:
         pmull v5.1q, v4.1d, v13.1d                    // *.....................................................................
         add w13, w13, #UNROLL                         // *.....................................................................
         eor v4.16B, v10.16B, v9.16B                   // .*....................................................................
-        aesr v31.16b, v18.16b                         // .*....................................................................
+        aesr(v31.16b, v18.16b)  /* .*.................................................................... */
         add w27, w13, #3                              // .e....................................................................
         add w12, w13, #2                              // .e....................................................................
-        aesr v3.16b, v16.16b                          // ..*...................................................................
+        aesr(v3.16b, v16.16b)  /* ..*................................................................... */
         rev64 v9.16B, v14.16B                         // ..*...................................................................
         add w17, w13, #1                              // ..e...................................................................
         rev w11, w12                                  // ..e...................................................................
-        aesr v31.16b, v19.16b                         // ...*..................................................................
-        str w11, [sp, #STACK_BASE_AES_ST + 44]        // ...e.................................................................. // @slothy:writes=stack_2
+        aesr(v31.16b, v19.16b)  /* ...*.................................................................. */
+        str w11, [sp, #(STACK_BASE_AES_ST+44)]        // ...e.................................................................. // @slothy:writes=stack_2
         rev w25, w17                                  // ...e..................................................................
         aese v3.16b, v17.16b                          // ....*.................................................................
         eor v10.16B, v9.16B, v30.16B                  // ....*.................................................................
-        str w25, [sp, #STACK_BASE_AES_ST + 28]        // ....e................................................................. // @slothy:writes=stack_1
+        str w25, [sp, #(STACK_BASE_AES_ST+28)]        // ....e................................................................. // @slothy:writes=stack_1
         add w7, w13, #0                               // ....e.................................................................
-        aesr v31.16b, v20.16b                         // .....*................................................................
-        ldr q30, [sp, #STACK_BASE_AES_ST + 32]        // .....e................................................................ // @slothy:reads=stack_2
+        aesr(v31.16b, v20.16b)  /* .....*................................................................ */
+        ldr q30, [sp, #(STACK_BASE_AES_ST+32)]        // .....e................................................................ // @slothy:reads=stack_2
         rev w30, w7                                   // .....e................................................................
         eor v5.16B, v6.16B, v5.16B                    // ......*...............................................................
         pmull v11.1q, v10.1d, v29.1d                  // ......*...............................................................
         rev w8, w27                                   // ......e...............................................................
         eor v3.16B, v3.16B, v2.16B                    // .......*..............................................................
-        aesr v31.16b, v21.16b                         // .......*..............................................................
-        str w8, [sp, #STACK_BASE_AES_ST + 60]         // .......e.............................................................. // @slothy:writes=stack_3
+        aesr(v31.16b, v21.16b)  /* .......*.............................................................. */
+        str w8, [sp, #(STACK_BASE_AES_ST+60)]         // .......e.............................................................. // @slothy:writes=stack_3
         eor v4.16B, v4.16B, v11.16B                   // ........*.............................................................
         pmull2 v11.1q, v10.2d, v29.2d                 // ........*.............................................................
-        str w30, [sp, #STACK_BASE_AES_ST + 12]        // ........e............................................................. // @slothy:writes=stack_0
-        aesr v30.16b, v18.16b                         // .........e............................................................
-        aesr v31.16b, v22.16b                         // ..........*...........................................................
+        str w30, [sp, #(STACK_BASE_AES_ST+12)]        // ........e............................................................. // @slothy:writes=stack_0
+        aesr(v30.16b, v18.16b)  /* .........e............................................................ */
+        aesr(v31.16b, v22.16b)  /* ..........*........................................................... */
         eor v9.16B, v12.16B, v11.16B                  // ..........*...........................................................
         ext v12.16B, v10.16B, v10.16B, #8             // ...........*..........................................................
-        aesr v30.16b, v19.16b                         // ...........e..........................................................
+        aesr(v30.16b, v19.16b)  /* ...........e.......................................................... */
         eor v1.16B, v3.16B, v1.16B                    // ............*.........................................................
-        aesr v8.16b, v23.16b                          // ............*.........................................................
+        aesr(v8.16b, v23.16b)  /* ............*......................................................... */
         eor v3.16B, v12.16B, v10.16B                  // .............*........................................................
-        aesr v30.16b, v20.16b                         // .............e........................................................
-        aesr v8.16b, v24.16b                          // ..............*.......................................................
+        aesr(v30.16b, v20.16b)  /* .............e........................................................ */
+        aesr(v8.16b, v24.16b)  /* ..............*....................................................... */
         str q1, [x2, #16]                             // ..............*.......................................................
-        aesr v30.16b, v21.16b                         // ...............e......................................................
+        aesr(v30.16b, v21.16b)  /* ...............e...................................................... */
         ldr q1, [x0, #32]                             // ...............e......................................................
-        aesr v8.16b, v25.16b                          // ................*.....................................................
+        aesr(v8.16b, v25.16b)  /* ................*..................................................... */
         ext v6.16B, v9.16B, v9.16B, #8                // ................*.....................................................
         pmull v12.1q, v9.1d, v7.1d                    // .................*....................................................
-        aesr v8.16b, v26.16b                          // ..................*...................................................
+        aesr(v8.16b, v26.16b)  /* ..................*................................................... */
         pmull2 v11.1q, v3.2d, v13.2d                  // ...................*..................................................
         eor v9.16B, v4.16B, v9.16B                    // ...................*..................................................
         eor v3.16B, v6.16B, v12.16B                   // ....................*.................................................
-        aesr v8.16b, v27.16b                          // ....................*.................................................
-        aesr v30.16b, v22.16b                         // .....................e................................................
+        aesr(v8.16b, v27.16b)  /* ....................*................................................. */
+        aesr(v30.16b, v22.16b)  /* .....................e................................................ */
         eor v12.16B, v5.16B, v11.16B                  // .....................*................................................
         rev64 v29.16B, v1.16B                         // ......................e...............................................
-        aesr v8.16b, v28.16b                          // ......................*...............................................
+        aesr(v8.16b, v28.16b)  /* ......................*............................................... */
         ldr q10, [x6, #16]                            // .......................e..............................................
-        aesr v30.16b, v23.16b                         // .......................e..............................................
+        aesr(v30.16b, v23.16b)  /* .......................e.............................................. */
         ext v13.16B, v29.16B, v29.16B, #8             // ........................e.............................................
-        aesr v8.16b, v15.16b                          // ........................*.............................................
-        aesr v30.16b, v24.16b                         // .........................e............................................
+        aesr(v8.16b, v15.16b)  /* ........................*............................................. */
+        aesr(v30.16b, v24.16b)  /* .........................e............................................ */
         eor v6.16B, v13.16B, v29.16B                  // ..........................e...........................................
-        aesr v8.16b, v16.16b                          // ..........................*...........................................
+        aesr(v8.16b, v16.16b)  /* ..........................*........................................... */
         eor v13.16B, v12.16B, v9.16B                  // ...........................*..........................................
-        aesr v30.16b, v25.16b                         // ...........................e..........................................
+        aesr(v30.16b, v25.16b)  /* ...........................e.......................................... */
         aese v8.16b, v17.16b                          // ............................*.........................................
         eor v9.16B, v13.16B, v3.16B                   // .............................*........................................
-        aesr v30.16b, v26.16b                         // .............................e........................................
+        aesr(v30.16b, v26.16b)  /* .............................e........................................ */
         eor v11.16B, v8.16B, v2.16B                   // ..............................*.......................................
-        aesr v31.16b, v23.16b                         // ..............................*.......................................
-        ldr q8, [sp, #STACK_BASE_AES_ST + 48]         // ...............................e...................................... // @slothy:reads=stack_3
-        aesr v30.16b, v27.16b                         // ...............................e......................................
+        aesr(v31.16b, v23.16b)  /* ..............................*....................................... */
+        ldr q8, [sp, #(STACK_BASE_AES_ST+48)]         // ...............................e...................................... // @slothy:reads=stack_3
+        aesr(v30.16b, v27.16b)  /* ...............................e...................................... */
         eor v13.16B, v11.16B, v0.16B                  // ................................*.....................................
         pmull v5.1q, v9.1d, v7.1d                     // ................................*.....................................
         ldr q0, [x0, #48]                             // .................................e....................................
-        aesr v30.16b, v28.16b                         // .................................e....................................
-        aesr v31.16b, v24.16b                         // ..................................*...................................
+        aesr(v30.16b, v28.16b)  /* .................................e.................................... */
+        aesr(v31.16b, v24.16b)  /* ..................................*................................... */
         str q13, [x2, #48]                            // ..................................*...................................
         eor v12.16B, v4.16B, v5.16B                   // ...................................*..................................
-        aesr v30.16b, v15.16b                         // ...................................e..................................
-        aesr v31.16b, v25.16b                         // ....................................*.................................
+        aesr(v30.16b, v15.16b)  /* ...................................e.................................. */
+        aesr(v31.16b, v25.16b)  /* ....................................*................................. */
         ext v5.16B, v9.16B, v9.16B, #8                // ....................................*.................................
         rev64 v11.16B, v0.16B                         // .....................................e................................
-        aesr v30.16b, v16.16b                         // .....................................e................................
-        aesr v31.16b, v26.16b                         // ......................................*...............................
+        aesr(v30.16b, v16.16b)  /* .....................................e................................ */
+        aesr(v31.16b, v26.16b)  /* ......................................*............................... */
         eor v5.16B, v12.16B, v5.16B                   // ......................................*...............................
-        ldr q3, [sp, #STACK_BASE_AES_ST + 16]         // .......................................e.............................. // @slothy:reads=stack_1
+        ldr q3, [sp, #(STACK_BASE_AES_ST+16)]         // .......................................e.............................. // @slothy:reads=stack_1
         aese v30.16b, v17.16b                         // .......................................e..............................
         mov d12, v11.d[1]                             // ........................................e.............................
-        aesr v31.16b, v27.16b                         // ........................................*.............................
-        aesr v8.16b, v18.16b                          // .........................................e............................
+        aesr(v31.16b, v27.16b)  /* ........................................*............................. */
+        aesr(v8.16b, v18.16b)  /* .........................................e............................ */
         eor v4.16B, v30.16B, v2.16B                   // .........................................e............................
         eor v12.8B, v12.8B, v11.8B                    // ..........................................e...........................
-        aesr v31.16b, v28.16b                         // ..........................................*...........................
-        aesr v3.16b, v18.16b                          // ...........................................e..........................
-        aesr v8.16b, v19.16b                          // ............................................e.........................
-        aesr v31.16b, v15.16b                         // .............................................*........................
+        aesr(v31.16b, v28.16b)  /* ..........................................*........................... */
+        aesr(v3.16b, v18.16b)  /* ...........................................e.......................... */
+        aesr(v8.16b, v19.16b)  /* ............................................e......................... */
+        aesr(v31.16b, v15.16b)  /* .............................................*........................ */
         ldr q30, [x6]                                 // .............................................e........................
         pmull2 v9.1q, v6.2d, v10.2d                   // ..............................................e.......................
         ldr q13, [x6, #32]                            // ..............................................e.......................
-        aesr v3.16b, v19.16b                          // ...............................................e......................
+        aesr(v3.16b, v19.16b)  /* ...............................................e...................... */
         pmull v6.1q, v12.1d, v10.1d                   // ................................................e.....................
         eor v12.16B, v4.16B, v1.16B                   // ................................................e.....................
-        aesr v3.16b, v20.16b                          // .................................................e....................
+        aesr(v3.16b, v20.16b)  /* .................................................e.................... */
         eor v6.16B, v6.16B, v9.16B                    // ..................................................e...................
-        aesr v31.16b, v16.16b                         // ..................................................*...................
-        aesr v3.16b, v21.16b                          // ...................................................e..................
+        aesr(v31.16b, v16.16b)  /* ..................................................*................... */
+        aesr(v3.16b, v21.16b)  /* ...................................................e.................. */
         aese v31.16b, v17.16b                         // ....................................................*.................
-        aesr v3.16b, v22.16b                          // .....................................................e................
+        aesr(v3.16b, v22.16b)  /* .....................................................e................ */
         ldr q1, [x0, #16]                             // .....................................................e................
         eor v31.16B, v31.16B, v2.16B                  // ......................................................*...............
         pmull v4.1q, v11.1d, v30.1d                   // ......................................................e...............
-        aesr v3.16b, v23.16b                          // .......................................................e..............
+        aesr(v3.16b, v23.16b)  /* .......................................................e.............. */
         eor v10.16B, v31.16B, v14.16B                 // ........................................................*.............
         pmull2 v11.1q, v11.2d, v30.2d                 // ........................................................e.............
         ldr q14, [x6, #48]                            // .........................................................e............
-        aesr v3.16b, v24.16b                          // .........................................................e............
+        aesr(v3.16b, v24.16b)  /* .........................................................e............ */
         ext v30.16B, v5.16B, v5.16B, #8               // ..........................................................*...........
-        aesr v8.16b, v20.16b                          // ..........................................................e...........
-        aesr v3.16b, v25.16b                          // ...........................................................e..........
+        aesr(v8.16b, v20.16b)  /* ..........................................................e........... */
+        aesr(v3.16b, v25.16b)  /* ...........................................................e.......... */
         rev64 v31.16B, v1.16B                         // ...........................................................e..........
         str q10, [x2], #(4*16)                        // ............................................................*.........
         pmull v10.1q, v29.1d, v13.1d                  // ............................................................e.........
-        aesr v3.16b, v26.16b                          // .............................................................e........
+        aesr(v3.16b, v26.16b)  /* .............................................................e........ */
         mov d5, v31.d[1]                              // .............................................................e........
         pmull2 v29.1q, v29.2d, v13.2d                 // ..............................................................e.......
         eor v10.16B, v4.16B, v10.16B                  // ..............................................................e.......
-        aesr v3.16b, v27.16b                          // ...............................................................e......
+        aesr(v3.16b, v27.16b)  /* ...............................................................e...... */
         eor v4.8B, v5.8B, v31.8B                      // ...............................................................e......
         pmull v9.1q, v31.1d, v14.1d                   // ................................................................e.....
         ldr q13, [x6, #64]                            // ................................................................e.....
         pmull2 v5.1q, v31.2d, v14.2d                  // .................................................................e....
         ldr q14, [x0], #(4*16)                        // .................................................................e....
         eor v11.16B, v11.16B, v29.16B                 // ..................................................................e...
-        aesr v3.16b, v28.16b                          // ..................................................................e...
+        aesr(v3.16b, v28.16b)  /* ..................................................................e... */
         ldr q31, [sp, #STACK_BASE_AES_ST]             // ...................................................................e.. // @slothy:reads=stack_0
-        aesr v8.16b, v21.16b                          // ...................................................................e..
+        aesr(v8.16b, v21.16b)  /* ...................................................................e.. */
         ldr q29, [x6, #80]                            // ....................................................................e.
-        aesr v3.16b, v15.16b                          // ....................................................................e.
-        aesr v8.16b, v22.16b                          // .....................................................................e
+        aesr(v3.16b, v15.16b)  /* ....................................................................e. */
+        aesr(v8.16b, v22.16b)  /* .....................................................................e */
         str q12, [x2, #32]                            // .....................................................................e
 
                                                                         // ------------------------------------------------------- cycle (expected) -------------------------------------------------------->
@@ -1044,8 +996,8 @@ Lloop_unrolled_start:
         // add w13, w13, #UNROLL                                        // .....................................................................*............................................................
 
         sub count, count, 1
-        cbnz count, Lloop_unrolled_start
-Lloop_unrolled_start_postamble:// end of loop kernel
+        cbnz count, Laes256_gcm_dec_loop_unrolled_start
+Laes256_gcm_dec_loop_unrolled_start_postamble:// end of loop kernel
                                                 // Instructions:    60
                                                 // Expected cycles: 37
                                                 // Expected IPC:    1.62
@@ -1062,53 +1014,53 @@ Lloop_unrolled_start_postamble:// end of loop kernel
         pmull v4.1q, v4.1d, v13.1d              // *....................................
         rev64 v12.16B, v14.16B                  // *....................................
         add w13, w13, #UNROLL                   // *....................................
-        aesr v31.16b, v18.16b                   // .*...................................
+        aesr(v31.16b, v18.16b)  /* .*................................... */
         eor v10.16B, v10.16B, v9.16B            // .*...................................
         eor v9.16B, v6.16B, v4.16B              // ..*..................................
-        aesr v8.16b, v23.16b                    // ..*..................................
-        aesr v31.16b, v19.16b                   // ...*.................................
+        aesr(v8.16b, v23.16b)  /* ..*.................................. */
+        aesr(v31.16b, v19.16b)  /* ...*................................. */
         eor v30.16B, v12.16B, v30.16B           // ...*.................................
         eor v12.16B, v11.16B, v5.16B            // ....*................................
-        aesr v8.16b, v24.16b                    // ....*................................
+        aesr(v8.16b, v24.16b)  /* ....*................................ */
         pmull2 v4.1q, v30.2d, v29.2d            // .....*...............................
         ext v6.16B, v30.16B, v30.16B, #8        // .....*...............................
         pmull v5.1q, v30.1d, v29.1d             // ......*..............................
-        aesr v8.16b, v25.16b                    // .......*.............................
+        aesr(v8.16b, v25.16b)  /* .......*............................. */
         eor v30.16B, v6.16B, v30.16B            // .......*.............................
         eor v10.16B, v10.16B, v5.16B            // ........*............................
-        aesr v31.16b, v20.16b                   // ........*............................
+        aesr(v31.16b, v20.16b)  /* ........*............................ */
         pmull2 v11.1q, v30.2d, v13.2d           // .........*...........................
         eor v4.16B, v12.16B, v4.16B             // .........*...........................
-        aesr v31.16b, v21.16b                   // ..........*..........................
+        aesr(v31.16b, v21.16b)  /* ..........*.......................... */
         pmull v13.1q, v4.1d, v7.1d              // ...........*.........................
         ext v30.16B, v4.16B, v4.16B, #8         // ...........*.........................
-        aesr v31.16b, v22.16b                   // ............*........................
+        aesr(v31.16b, v22.16b)  /* ............*........................ */
         eor v5.16B, v9.16B, v11.16B             // ............*........................
-        aesr v8.16b, v26.16b                    // .............*.......................
+        aesr(v8.16b, v26.16b)  /* .............*....................... */
         eor v9.16B, v10.16B, v4.16B             // .............*.......................
         eor v6.16B, v30.16B, v13.16B            // ..............*......................
-        aesr v31.16b, v23.16b                   // ..............*......................
+        aesr(v31.16b, v23.16b)  /* ..............*...................... */
         eor v5.16B, v5.16B, v9.16B              // ...............*.....................
-        aesr v8.16b, v27.16b                    // ...............*.....................
-        aesr v31.16b, v24.16b                   // ................*....................
-        aesr v8.16b, v28.16b                    // .................*...................
+        aesr(v8.16b, v27.16b)  /* ...............*..................... */
+        aesr(v31.16b, v24.16b)  /* ................*.................... */
+        aesr(v8.16b, v28.16b)  /* .................*................... */
         eor v5.16B, v5.16B, v6.16B              // .................*...................
-        aesr v31.16b, v25.16b                   // ..................*..................
-        aesr v8.16b, v15.16b                    // ...................*.................
-        aesr v31.16b, v26.16b                   // ....................*................
+        aesr(v31.16b, v25.16b)  /* ..................*.................. */
+        aesr(v8.16b, v15.16b)  /* ...................*................. */
+        aesr(v31.16b, v26.16b)  /* ....................*................ */
         pmull v6.1q, v5.1d, v7.1d               // .....................*...............
         ext v5.16B, v5.16B, v5.16B, #8          // .....................*...............
-        aesr v31.16b, v27.16b                   // ......................*..............
-        aesr v8.16b, v16.16b                    // .......................*.............
+        aesr(v31.16b, v27.16b)  /* ......................*.............. */
+        aesr(v8.16b, v16.16b)  /* .......................*............. */
         eor v10.16B, v10.16B, v6.16B            // .......................*.............
-        aesr v31.16b, v28.16b                   // ........................*............
+        aesr(v31.16b, v28.16b)  /* ........................*............ */
         aese v8.16b, v17.16b                    // .........................*...........
         eor v5.16B, v10.16B, v5.16B             // .........................*...........
-        aesr v31.16b, v15.16b                   // ..........................*..........
-        aesr v3.16b, v16.16b                    // ...........................*.........
+        aesr(v31.16b, v15.16b)  /* ..........................*.......... */
+        aesr(v3.16b, v16.16b)  /* ...........................*......... */
         ext v30.16B, v5.16B, v5.16B, #8         // ...........................*.........
         eor v5.16B, v8.16B, v2.16B              // ............................*........
-        aesr v31.16b, v16.16b                   // ............................*........
+        aesr(v31.16b, v16.16b)  /* ............................*........ */
         aese v3.16b, v17.16b                    // .............................*.......
         eor v5.16B, v5.16B, v0.16B              // ..............................*......
         aese v31.16b, v17.16b                   // ..............................*......
@@ -1184,14 +1136,14 @@ Lloop_unrolled_start_postamble:// end of loop kernel
         // ext v30.16B, V<ssa_46>.16B, V<ssa_46>.16B, #8            // ...........................*.........
         // str Q<ssa_57>, [x2], #(4*16)                             // ....................................*
 
-        b Lloop_unrolled_start_end
-Lloop_unrolled_start_end:
-Lloop_unrolled_end:
+        b Laes256_gcm_dec_loop_unrolled_start_end
+Laes256_gcm_dec_loop_unrolled_start_end:
+Laes256_gcm_dec_loop_unrolled_end:
 
         load_htable_12
 
-        cbz remainder, Lloop_1x_end
-Lloop_1x_start:
+        cbz remainder, Laes256_gcm_dec_loop_1x_end
+Laes256_gcm_dec_loop_1x_start:
                                                       // Instructions:    41
                                                       // Expected cycles: 41
                                                       // Expected IPC:    1.00
@@ -1209,38 +1161,38 @@ Lloop_1x_start:
         add w26, w13, #0                              // *........................................
         add w13, w13, #1                              // *........................................
         rev w24, w26                                  // .*.......................................
-        str w24, [sp, #STACK_BASE_AES_ST + 12]        // ..*......................................  // @slothy:writes=stack_0
+        str w24, [sp, #(STACK_BASE_AES_ST+12)]        // ..*......................................  // @slothy:writes=stack_0
         ldr q5, [sp, #STACK_BASE_AES_ST]              // ....*....................................  // @slothy:reads=stack_0
         rev64 v3.16B, v8.16B                          // ....*....................................
         eor v30.16B, v3.16B, v30.16B                  // ......*..................................
         mov d9, v30.d[1]                              // ........*................................
-        aesr v5.16b, v18.16b                          // ........*................................
+        aesr(v5.16b, v18.16b)  /* ........*................................ */
         pmull2 v13.1q, v30.2d, v12.2d                 // .........*...............................
         eor v1.8B, v9.8B, v30.8B                      // ..........*..............................
-        aesr v5.16b, v19.16b                          // ..........*..............................
+        aesr(v5.16b, v19.16b)  /* ..........*.............................. */
         ext v29.16B, v13.16B, v13.16B, #8             // ...........*.............................
         pmull v11.1q, v30.1d, v12.1d                  // ...........*.............................
-        aesr v5.16b, v20.16b                          // ............*............................
+        aesr(v5.16b, v20.16b)  /* ............*............................ */
         eor v31.16B, v11.16B, v13.16B                 // .............*...........................
         pmull v13.1q, v13.1d, v7.1d                   // .............*...........................
-        aesr v5.16b, v21.16b                          // ..............*..........................
+        aesr(v5.16b, v21.16b)  /* ..............*.......................... */
         eor v13.16B, v29.16B, v13.16B                 // ...............*.........................
         pmull v6.1q, v1.1d, v14.1d                    // ...............*.........................
-        aesr v5.16b, v22.16b                          // ................*........................
+        aesr(v5.16b, v22.16b)  /* ................*........................ */
         eor v29.16B, v6.16B, v31.16B                  // .................*.......................
-        aesr v5.16b, v23.16b                          // ..................*......................
+        aesr(v5.16b, v23.16b)  /* ..................*...................... */
         eor v13.16B, v29.16B, v13.16B                 // ...................*.....................
-        aesr v5.16b, v24.16b                          // ....................*....................
+        aesr(v5.16b, v24.16b)  /* ....................*.................... */
         ext v0.16B, v13.16B, v13.16B, #8              // .....................*...................
         pmull v13.1q, v13.1d, v7.1d                   // .....................*...................
-        aesr v5.16b, v25.16b                          // ......................*..................
+        aesr(v5.16b, v25.16b)  /* ......................*.................. */
         eor v29.16B, v11.16B, v13.16B                 // .......................*.................
-        aesr v5.16b, v26.16b                          // ........................*................
+        aesr(v5.16b, v26.16b)  /* ........................*................ */
         eor v13.16B, v29.16B, v0.16B                  // .........................*...............
-        aesr v5.16b, v27.16b                          // ..........................*..............
-        aesr v5.16b, v28.16b                          // ............................*............
-        aesr v5.16b, v15.16b                          // ..............................*..........
-        aesr v5.16b, v16.16b                          // ................................*........
+        aesr(v5.16b, v27.16b)  /* ..........................*.............. */
+        aesr(v5.16b, v28.16b)  /* ............................*............ */
+        aesr(v5.16b, v15.16b)  /* ..............................*.......... */
+        aesr(v5.16b, v16.16b)  /* ................................*........ */
         aese v5.16b, v17.16b                          // ..................................*......
         eor v30.16B, v5.16B, v2.16B                   // ....................................*....
         eor v30.16B, v30.16B, v8.16B                  // ......................................*..
@@ -1293,8 +1245,8 @@ Lloop_1x_start:
         // add w13, w13, #1                                              // *........................................
 
         sub remainder, remainder, 1
-        cbnz remainder, Lloop_1x_start
-Lloop_1x_end:
+        cbnz remainder, Laes256_gcm_dec_loop_1x_start
+Laes256_gcm_dec_loop_1x_end:
 
         // Return number of bytes processed
         mov x0, byte_len
@@ -1309,7 +1261,7 @@ Lloop_1x_end:
         restore_vregs
         restore_gprs
 
-Ldec_postamble_end:
+Laes256_gcm_dec_postamble_end:
         CFI_INC_SP(STACK_SIZE)
 
         CFI_RET
