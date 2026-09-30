@@ -36,7 +36,7 @@ needs "common/ghash_nist_bridge.ml";;
 needs "common/karatsuba_pmul.ml";;
 needs "arm/proofs/aes_gcm_utils.ml";;
 
-let aes256_gcm_dec_mc = define_assert_from_elf "aes256_gcm_dec_mc" "arm/aes-gcm/aes256_gcm_dec.o"
+let aes256_gcm_dec_mc = define_assert_from_elf "aes256_gcm_dec_mc" "arm/aes_gcm/aes256_gcm_dec.o"
 [
   0xd10383ff;       (* arm_SUB SP SP (rvalue (word 224)) *)
   0xa90053f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0))) *)

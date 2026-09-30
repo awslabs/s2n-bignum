@@ -46,7 +46,7 @@ needs "arm/proofs/aes_gcm_utils.ml";;
 (* The machine code (the plain SWP kernel).                                  *)
 (* ------------------------------------------------------------------------- *)
 
-let aes256_gcm_enc_mc = define_assert_from_elf "aes256_gcm_enc_mc" "arm/aes-gcm/aes256_gcm_enc.o"
+let aes256_gcm_enc_mc = define_assert_from_elf "aes256_gcm_enc_mc" "arm/aes_gcm/aes256_gcm_enc.o"
 [
   0xd10383ff;       (* arm_SUB SP SP (rvalue (word 224)) *)
   0xa90053f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0))) *)

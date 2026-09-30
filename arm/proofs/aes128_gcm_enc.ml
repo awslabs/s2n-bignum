@@ -131,7 +131,7 @@ needs "arm/proofs/aes_gcm_utils.ml";;
 
 (* ===================== aes128_gcm_enc_mc + the direct correctness proof ===================== *)
 
-let aes128_gcm_enc_mc = define_assert_from_elf "aes128_gcm_enc_mc" "arm/aes-gcm/aes128_gcm_enc.o"
+let aes128_gcm_enc_mc = define_assert_from_elf "aes128_gcm_enc_mc" "arm/aes_gcm/aes128_gcm_enc.o"
 [
   0xd10383ff;       (* arm_SUB SP SP (rvalue (word 224)) *)
   0xa90053f3;       (* arm_STP X19 X20 SP (Immediate_Offset (iword (&0))) *)
