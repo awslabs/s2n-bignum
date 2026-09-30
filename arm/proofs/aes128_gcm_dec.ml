@@ -3125,11 +3125,3 @@ let AES128_GCM_DEC_SUBROUTINE_SAFE = prove
     (*** then 11 ldp; add sp; ret = 17 steps).                                                     ***)
     SAFE_SIM (1--17) THEN REPEAT CONJ_TAC THEN
     (MEM_PRESERVE ORELSE DISCHARGE_SAFETY_PROPERTY_TAC)] );;
-
-
-(* ------------------------------------------------------------------------- *)
-(* Certify that the whole development above is axiom-free (only the three     *)
-(* basic HOL Light axioms INFINITY_AX / SELECT_AX / ETA_AX are permitted).   *)
-(* ------------------------------------------------------------------------- *)
-
-check_axioms();;

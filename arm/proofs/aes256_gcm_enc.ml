@@ -3561,8 +3561,6 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30;
       D8; D9; D10; D11; D12; D13; D14; D15]` 224);;
 
-(* Report the axiom count (check_axioms is the real gate; expect the 3 HOL base axioms). *)
-
 (* ------------------------------------------------------------------------- *)
 (* Constant-time and memory-safety for the AES-256-GCM SWP encrypt kernel.    *)
 (* Event scaffold (CONCRETIZE_F_EVENTS_TAC) walked with the event-tracking    *)

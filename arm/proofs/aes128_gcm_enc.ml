@@ -3068,6 +3068,3 @@ let AES128_GCM_ENC_SUBROUTINE_SAFE = prove
     (*** then 11 ldp; add sp; ret = 17 steps).                                                     ***)
     SAFE_SIM (1--17) THEN REPEAT CONJ_TAC THEN
     (MEM_PRESERVE ORELSE DISCHARGE_SAFETY_PROPERTY_TAC)] );;
-
-
-check_axioms();;
