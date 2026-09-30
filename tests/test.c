@@ -17474,13 +17474,10 @@ typedef void (*ref_aes_gcm_fn)(const uint8_t *in, uint64_t len_bits,
                                uint8_t *out, uint8_t *tag, uint8_t *ivec,
                                const s2n_bignum_AES_KEY *key);
 
+#ifndef __x86_64__
 static int test_aes_gcm(const char *name, int keybytes,
                         aes_gcm_fn fn, ref_aes_gcm_fn ref)
 {
-#ifdef __x86_64__
-  (void)name; (void)keybytes; (void)fn; (void)ref;
-  return 1;
-#else
   uint64_t t;
   uint8_t key[32], h[16], zero[16], htable[192];
   uint8_t iv_asm[16], iv_ref[16], tag_asm[16], tag_ref[16];
@@ -17538,20 +17535,44 @@ static int test_aes_gcm(const char *name, int keybytes,
    }
   printf("All OK\n");
   return 0;
+}
+#endif
+
+int test_aes128_gcm_enc(void)
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_enc", 16, aes128_gcm_enc, ref_aes128_gcm_enc);
 #endif
 }
 
-int test_aes128_gcm_enc(void)
-{ return test_aes_gcm("aes128_gcm_enc", 16, aes128_gcm_enc, ref_aes128_gcm_enc); }
-
 int test_aes128_gcm_dec(void)
-{ return test_aes_gcm("aes128_gcm_dec", 16, aes128_gcm_dec, ref_aes128_gcm_dec); }
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes128_gcm_dec", 16, aes128_gcm_dec, ref_aes128_gcm_dec);
+#endif
+}
 
 int test_aes256_gcm_enc(void)
-{ return test_aes_gcm("aes256_gcm_enc", 32, aes256_gcm_enc, ref_aes256_gcm_enc); }
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_enc", 32, aes256_gcm_enc, ref_aes256_gcm_enc);
+#endif
+}
 
 int test_aes256_gcm_dec(void)
-{ return test_aes_gcm("aes256_gcm_dec", 32, aes256_gcm_dec, ref_aes256_gcm_dec); }
+{
+#ifdef __x86_64__
+  return 1;
+#else
+  return test_aes_gcm("aes256_gcm_dec", 32, aes256_gcm_dec, ref_aes256_gcm_dec);
+#endif
+}
 
 int test_aes_xts_roundtrip(void)
 {
