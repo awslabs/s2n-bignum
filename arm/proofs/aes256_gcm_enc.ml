@@ -2548,6 +2548,7 @@ let tail_post = mk_abs(`s:armstate`, list_mk_conj
      (nist_ghash (aes256_cipher (word 0) rk) tag0
         (list_of_seq (aes256_nist_cipher_block c nonce rk inblock) nblocks))`;
   `read (memory :> bytes128 ivec_p) s = word_reversefields 8 (ctr_block nonce (nblocks + c))`;
+  `read X0 s = word (len_bits DIV 8)`;
   `!j. j < nblocks ==> read (memory :> bytes128 (word_add out_p (word(16*j)))) s =
            word_xor (aes256_ctr_block c nonce rk j) (inblock j)`]);;
 
@@ -3325,7 +3326,8 @@ let AES256_GCM_ENC_CORRECT = prove
                               (val len_bits DIV 128))) /\
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
-               (ctr_block nonce (val len_bits DIV 128 + c)))
+               (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
        MAYCHANGE [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15; Q29; Q30; Q31] ,,
@@ -3546,7 +3548,8 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
                               (val len_bits DIV 128))) /\
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
-               (ctr_block nonce (val len_bits DIV 128 + c)))
+               (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
                   memory :> bytes(tag_p, 16);

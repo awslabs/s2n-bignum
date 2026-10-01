@@ -1646,7 +1646,8 @@ let swps_tail_goal =
             (nist_ghash (aes128_cipher (word 0) rk) tag0
                (list_of_seq (nist_cipher_block c nonce rk inblock) nblocks))`;
         `read (memory :> bytes128 ivec_p) s =
-           word_reversefields 8 (ctr_block nonce (nblocks + c))`]) ;
+           word_reversefields 8 (ctr_block nonce (nblocks + c))`;
+        `read X0 s = word (len_bits DIV 8)`]) ;
      swps_broad_frame]);;
 
 let swps_tail_tac =
@@ -2409,7 +2410,8 @@ let core_from88_stmt =
               (nist_ghash (aes128_cipher (word 0) rk) tag0
                  (list_of_seq (nist_cipher_block c nonce rk inblock) nblocks)) /\
            read (memory :> bytes128 ivec_p) s =
-             word_reversefields 8 (ctr_block nonce (nblocks + c)))
+             word_reversefields 8 (ctr_block nonce (nblocks + c)) /\
+           read X0 s = word (len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30] ,,
        MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
@@ -2544,7 +2546,8 @@ let AES128_GCM_ENC_CORRECT = prove
                               (val len_bits DIV 128))) /\
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
-               (ctr_block nonce (val len_bits DIV 128 + c)))
+               (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [X19; X20; X21; X22; X23; X24;
                   X25; X26; X27; X28; X29; X30] ,,
@@ -2692,7 +2695,8 @@ let AES128_GCM_ENC_SUBROUTINE_CORRECT = prove
                               (val len_bits DIV 128))) /\
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
-               (ctr_block nonce (val len_bits DIV 128 + c)))
+               (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
                   memory :> bytes(tag_p, 16);

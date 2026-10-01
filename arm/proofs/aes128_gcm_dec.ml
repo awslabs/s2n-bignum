@@ -2315,7 +2315,8 @@ let AES128_GCM_DEC_CORRECT = prove
                               (val len_bits DIV 128))) /\
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
-               (ctr_block nonce (val len_bits DIV 128 + c)))
+               (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [X19; X20; X21; X22; X23; X24;
                   X25; X26; X27; X28; X29; X30] ,,
@@ -2758,7 +2759,8 @@ let AES128_GCM_DEC_SUBROUTINE_CORRECT = prove
                               (val len_bits DIV 128))) /\
            read (memory :> bytes128 ivec_p) s =
              word_reversefields 8
-               (ctr_block nonce (val len_bits DIV 128 + c)))
+               (ctr_block nonce (val len_bits DIV 128 + c)) /\
+           read X0 s = word (val len_bits DIV 8))
       (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
        MAYCHANGE [memory :> bytes(out_p, 16 * val len_bits DIV 128);
                   memory :> bytes(tag_p, 16);
