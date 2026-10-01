@@ -591,6 +591,15 @@ let decode = new_definition `!w:int32. decode w =
     let datasize = if q then 128 else 64 in
     SOME (arm_DUP_GEN (QREG' Rd) (XREG' Rn) esize datasize)
 
+  | [0b01011110000:11; imm5:5; 0b000001:6; Rn:5; Rd:5] ->
+    // DUP (element), scalar form (e.g. mov Dd, Vn.d[index]): imm5 encodes both
+    // the element size (position of its lowest set bit) and the index above it
+    let size = word_ctz imm5 in
+    if size > 3 then NONE else
+    let esize = 8 * 2 EXP size in
+    let idx = val imm5 DIV (2 EXP (size + 1)) in
+    SOME (arm_DUP_ELEM_SCALAR (QREG' Rd) (QREG' Rn) idx esize)
+
   | [0:1; q; 0b001110000:9; imm5:5; 0b000001:6; Rn:5; Rd:5] ->
     // DUP (element): broadcast Vn.<T>[index] across Vd
     let size = word_ctz imm5 in
@@ -939,6 +948,13 @@ let decode = new_definition `!w:int32. decode w =
       if q then SOME (arm_MOVI (QREG' Rd) (word_duplicate abcdefgh))
       else SOME (arm_MOVI (DREG' Rd) (word_duplicate abcdefgh))
     else NONE
+
+  | [0:1; 1:1; 0b0111110:7; immh:4; immb:3; 0b010101:6; Rn:5; Rd:5] ->
+    // SHL (scalar): only the 64-bit form is defined (top bit of immh set)
+    if ~(bit 3 immh) then NONE
+    else
+      let amt = val(word_join immh immb:7 word) - 64 in
+      SOME (arm_SHL_VEC (QREG' Rd) (QREG' Rn) amt 64 64)
 
   | [0:1; q; 0b0011110:7; immh:4; immb:3; 0b010101:6; Rn:5; Rd:5] ->
     // SHL

@@ -1,4 +1,112 @@
 let subroutine_signatures = [
+("aes128_gcm_dec",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("len_bits", "uint64_t", (*is const?*)"false");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("tag", "uint64_t*", (*is const?*)"false");
+     ("ivec", "uint8_t*", (*is const?*)"false");
+     ("key", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("htable", "uint64_t*", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+    ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+    ("key", "176"(* num elems *), 1(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("aes128_gcm_enc",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("len_bits", "uint64_t", (*is const?*)"false");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("tag", "uint64_t*", (*is const?*)"false");
+     ("ivec", "uint8_t*", (*is const?*)"false");
+     ("key", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("htable", "uint64_t*", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+    ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+    ("key", "176"(* num elems *), 1(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("aes256_gcm_dec",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("len_bits", "uint64_t", (*is const?*)"false");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("tag", "uint64_t*", (*is const?*)"false");
+     ("ivec", "uint8_t*", (*is const?*)"false");
+     ("key", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("htable", "uint64_t*", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+    ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+    ("key", "240"(* num elems *), 1(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("aes256_gcm_enc",
+  ([(*args*)
+     ("in", "uint8_t*", (*is const?*)"true");
+     ("len_bits", "uint64_t", (*is const?*)"false");
+     ("out", "uint8_t*", (*is const?*)"false");
+     ("tag", "uint64_t*", (*is const?*)"false");
+     ("ivec", "uint8_t*", (*is const?*)"false");
+     ("key", "s2n_bignum_AES_KEY*", (*is const?*)"true");
+     ("htable", "uint64_t*", (*is const?*)"true");
+   ],
+   "uint64_t",
+   [(* input buffers *)
+    ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+    ("key", "240"(* num elems *), 1(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
+    ("ivec", "16"(* num elems *), 1(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("aes_xts_decrypt",
   ([(*args*)
      ("in", "uint8_t*", (*is const?*)"true");
