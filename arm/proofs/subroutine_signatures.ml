@@ -12,14 +12,14 @@ let subroutine_signatures = [
    "uint64_t",
    [(* input buffers *)
     ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
     ("key", "176"(* num elems *), 1(* elem bytesize *));
-    ("htable", "192"(* num elems *), 8(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
    ],
    [(* temporary buffers *)
@@ -39,14 +39,14 @@ let subroutine_signatures = [
    "uint64_t",
    [(* input buffers *)
     ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
     ("key", "176"(* num elems *), 1(* elem bytesize *));
-    ("htable", "192"(* num elems *), 8(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
    ],
    [(* temporary buffers *)
@@ -66,14 +66,14 @@ let subroutine_signatures = [
    "uint64_t",
    [(* input buffers *)
     ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
     ("key", "240"(* num elems *), 1(* elem bytesize *));
-    ("htable", "192"(* num elems *), 8(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
    ],
    [(* temporary buffers *)
@@ -93,14 +93,14 @@ let subroutine_signatures = [
    "uint64_t",
    [(* input buffers *)
     ("in", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
     ("key", "240"(* num elems *), 1(* elem bytesize *));
-    ("htable", "192"(* num elems *), 8(* elem bytesize *));
+    ("htable", "12"(* num elems *), 8(* elem bytesize *));
    ],
    [(* output buffers *)
     ("out", "len_bits/8"(* num elems *), 1(* elem bytesize *));
-    ("tag", "16"(* num elems *), 8(* elem bytesize *));
+    ("tag", "2"(* num elems *), 8(* elem bytesize *));
     ("ivec", "16"(* num elems *), 1(* elem bytesize *));
    ],
    [(* temporary buffers *)

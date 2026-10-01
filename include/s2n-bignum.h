@@ -47,22 +47,22 @@ extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
         const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[S2N_BIGNUM_STATIC 16]);
 
 // AES128_GCM_DEC (AES-128-GCM bulk decryption of whole blocks with GHASH tag update)
-// Inputs in[len_bits/8], len_bits, tag[16], ivec[16], key[176], htable[192]; outputs out[len_bits/8], tag[16], ivec[16], returns bytes processed
+// Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[176], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 extern uint64_t aes128_gcm_dec(const uint8_t *in, uint64_t len_bits, uint8_t *out,
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
 // AES128_GCM_ENC (AES-128-GCM bulk encryption of whole blocks with GHASH tag update)
-// Inputs in[len_bits/8], len_bits, tag[16], ivec[16], key[176], htable[192]; outputs out[len_bits/8], tag[16], ivec[16], returns bytes processed
+// Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[176], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 extern uint64_t aes128_gcm_enc(const uint8_t *in, uint64_t len_bits, uint8_t *out,
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
 // AES256_GCM_DEC (AES-256-GCM bulk decryption of whole blocks with GHASH tag update)
-// Inputs in[len_bits/8], len_bits, tag[16], ivec[16], key[240], htable[192]; outputs out[len_bits/8], tag[16], ivec[16], returns bytes processed
+// Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 extern uint64_t aes256_gcm_dec(const uint8_t *in, uint64_t len_bits, uint8_t *out,
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
 // AES256_GCM_ENC (AES-256-GCM bulk encryption of whole blocks with GHASH tag update)
-// Inputs in[len_bits/8], len_bits, tag[16], ivec[16], key[240], htable[192]; outputs out[len_bits/8], tag[16], ivec[16], returns bytes processed
+// Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed
 extern uint64_t aes256_gcm_enc(const uint8_t *in, uint64_t len_bits, uint8_t *out,
         uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
 
