@@ -782,7 +782,7 @@ let CLOSE_R2_SUB : tactic = CLOSE_R2_WITH [MEM_PRESERVE];;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions and lemmas shared by the four software-pipelined AES-GCM       *)
-(* proofs (formerly duplicated in the proof files).                            *)
+(* proofs.                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
 let (MUST:tactic->tactic) = fun t (asl,w) ->

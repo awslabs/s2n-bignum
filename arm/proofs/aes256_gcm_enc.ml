@@ -43,7 +43,7 @@ needs "common/karatsuba_pmul.ml";;
 needs "arm/proofs/aes_gcm_utils.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* The machine code (the plain SWP kernel).                                  *)
+(* The machine code.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
 let aes256_gcm_enc_mc = define_assert_from_elf "aes256_gcm_enc_mc" "arm/aes_gcm/aes256_gcm_enc.o"
@@ -1961,12 +1961,12 @@ let fill_setup_tac =
   RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[htable_mem_4]) THEN REWRITE_TAC[htable_mem_4] THEN
   FILL_INPUT_SPLIT_TAC;;
-  (* NO init-abstraction: abstracting rk-lanes to init_k created two problems -- (1) tag_p/
-     ivec_p/rk14 conjuncts showed opaque init_k and needed un-abbrev, (2) the aese tower keys became init_k (unknown EL
-     mapping) so the body's close_aesNc (which expects word_reversefields 8 (EL k rk)) could not match.  Dropping the
-     abstraction keeps EVERYTHING concrete: the aese towers have real EL-keys (body close_aesNc works VERBATIM) and the
-     memory reads stay in closable form.  Speed is preserved by the harvest every-15 WORD_SIMPLE_SUBWORD_CONV in the
-     stepper (the abstraction was only a speed hack; every-15 already bounds the tower). *)
+  (* No init-abstraction of the rk lanes: abstracting them to init_k would leave opaque init_k in the
+     tag_p/ivec_p/rk14 conjuncts (needing un-abbreviation) and turn the aese tower keys into init_k, so the
+     body's close_aesNc (which expects word_reversefields 8 (EL k rk)) could not match.  Keeping everything
+     concrete lets the aese towers carry real EL-keys (body close_aesNc applies verbatim) and keeps the
+     memory reads in closable form; speed comes from the every-15 WORD_SIMPLE_SUBWORD_CONV harvest in the
+     stepper, which already bounds the tower. *)
 
 (* FILL merges (body merges256 plus the group-0 counter/input stores below).  The FILL
    region 0xbc..0x558 is straight-line = (0x558-0xbc)/4 = 295 instrs, then sub@0x558 = 296; the cbz@0x55c
@@ -1999,10 +1999,10 @@ let fill_step_prefix =
   (fun (asl,w) ->
      (MAP_EVERY (fun k ->
         gkeepF REDSETX256 AES256_GCM_ENC_EXEC ("s"^string_of_int k) THEN
-        (* BODY-IDENTICAL per-step conv (WORD_SIMPLE_SUBWORD + NORMALIZE_RELATIVE_ADDRESS + IN_P_ADDR_FOLD): the
-           earlier every-15 subword conv was a speed hack, but it DROPPED the tag_p/ivec_p bytes128 memory reads
-           (conj3,4 FAIL: the s297 read absent from asl).  The body keeps them with
-           per-step conv; no-abstraction run showed per-step speed is fine.  Restore per-step to retain mem reads. *)
+        (* BODY-IDENTICAL per-step conv (WORD_SIMPLE_SUBWORD + NORMALIZE_RELATIVE_ADDRESS + IN_P_ADDR_FOLD): a
+           sparser every-15 subword conv would drop the tag_p/ivec_p bytes128 memory reads that conjuncts 3
+           and 4 need (the s297 read), so the FILL uses the body's per-step conv, which keeps them at no
+           measurable cost. *)
         RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV THENC
                                  ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV THENC IN_P_ADDR_FOLD_CONV)) THEN
         (if List.mem_assoc k fill_merges_guess then TRY(MERGE_CTR128_TAC (List.assoc k fill_merges_guess) ("s"^string_of_int k))

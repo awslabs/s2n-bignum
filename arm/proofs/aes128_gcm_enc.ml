@@ -1868,15 +1868,15 @@ let widen_frame_to_broad th =
 
 (* BODYLEG_BROAD / FILLLEG_BROAD : the same legs, broad frame, precond re-DISCHed, then RE-GENERALIZED
    over the leg's original universally-quantified vars (so downstream `SPEC `loop_count-2`` / MATCH_MP_TAC
-   work).  Robust to BOTH a real prove() result (concl = `!vars. pre ==> ensures`) and the SKIP mk_thm
-   placeholder (concl = `pre ==> ensures`, vars free): SPEC_ALL strips any leading foralls, we widen the
-   bare `pre ==> ensures`, then GENL re-closes over exactly those vars. *)
+   work).  Works whether or not the leg's conclusion carries leading foralls: SPEC_ALL strips any that are
+   present, we widen the bare `pre ==> ensures`, then GENL re-closes over exactly those vars, or over the
+   free variables when there were none. *)
 let widen_leg leg =
   let vars,body = strip_forall (concl leg) in
   let leg0 = SPEC_ALL leg in                    (* leg0 : pre ==> ensures ... (vars now free) *)
   let pre = lhand(concl leg0) in
   let broad = DISCH pre (widen_frame_to_broad (UNDISCH leg0)) in
-  (* re-generalize: prefer the leg's own forall vars; if none (mk_thm placeholder), close over free vars. *)
+  (* re-generalize: prefer the leg's own forall vars; if none, close over the free vars. *)
   GENL (if vars = [] then frees(concl broad) else vars) broad;;
 let BODYLEG_BROAD = widen_leg BODYLEG;;
 let FILLLEG_BROAD = widen_leg FILLLEG;;

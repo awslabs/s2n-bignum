@@ -1808,11 +1808,11 @@ let CLOSE_DEC : tactic =
    ============================================================================ *)
 
 (* ---- keep-sets, goal, stepper ---- *)
-(* X11/X12 dropped from the invariant (DISASM 0x288 add w12,w13,#2; 0x29c rev w11,w12 -- the body
-   CLOBBERS them as counter-scratch, never restores; they are NOT resident nonce lanes.  The staged counter
-   blocks live in MEMORY (bytes128 sp+OFF conjuncts, reconstructed from X13), so the X11/X12 REGISTER values are
-   dead at the loop head.  Dropped from the invariant + here.  (X11 kept in REDSETX so the stepper still tracks
-   it harmlessly; ghost X11 dropped -- no longer an invariant input.) *)
+(* X11/X12 are not invariant lanes (DISASM 0x288 add w12,w13,#2; 0x29c rev w11,w12 -- the body
+   CLOBBERS them as counter-scratch and never restores them; they are NOT resident nonce lanes).  The
+   staged counter blocks live in MEMORY (bytes128 sp+OFF conjuncts, reconstructed from X13), so the X11/X12
+   REGISTER values are dead at the loop head and appear neither in the invariant nor here.  (X11 stays in
+   REDSETX so the stepper still tracks it harmlessly, but it is not a ghost input.) *)
 let REDSETX_DEC = ["Q0";"Q1";"Q2";"Q3";"Q4";"Q5";"Q6";"Q7";"Q8";"Q9";"Q10";"Q11";"Q12";"Q13";"Q14";
                    "Q29";"Q30";"Q31"; "X7";"X8";"X13";"X17";"X25";"X27";"X30"];;
 let ghost_lanes_dec = ["X7";"X8";"X17";"X25";"X27";"X30";"X13"];;
