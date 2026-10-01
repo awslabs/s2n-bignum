@@ -48,7 +48,10 @@ let nist_cipher_block = new_definition
 
 (* Restricted Htable predicate: only the entries the kernel actually reads.
    The x4-unrolled loop uses H^1..H^4 and their Karatsuba mid terms (the
-   first 6 entries = offsets 0..80 of the full htable_mem layout).
+   first 6 entries = offsets 0..80 of the table gcm_init_v8 produces; each
+   mid entry holds the lower power's mid term in the low 64-bit lane, which
+   is the opposite order from htable_mem in common/polyval_ghash.ml, not
+   used here).
    The tail loop only uses H^1..H^2 (offsets 0..32) but we assert all four
    here since the outer loop needs them and the precondition is shared. *)
 

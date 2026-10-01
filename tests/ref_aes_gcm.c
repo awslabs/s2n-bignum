@@ -338,11 +338,14 @@ static void ref_aes128_gcm_dec(const uint8_t *in, uint64_t len_bits,
 // Htable construction: feeds the assembly kernel's "Htable" argument
 // ***************************************************************************
 //
-// The kernel reads precomputed powers of H in the OpenSSL gcm_init_v8 layout
-// (also formalized as "htable_mem" in common/polyval_ghash.ml). Rather than
-// transliterate the SIMD twiddling, we build the table directly from that
-// formal specification using GF(2)[x] arithmetic on 128-bit values, where a
-// 128-bit value is a pair (lo,hi) of 64-bit words (lo = bits 0..63):
+// The kernel reads precomputed powers of H in the OpenSSL gcm_init_v8 layout;
+// the entries it uses are formalized as htable_mem_4 in
+// arm/proofs/aes_gcm_utils.ml. (The htable_mem predicate in
+// common/polyval_ghash.ml packs the Karatsuba middle terms in the opposite
+// lane order and does not describe this table.) Rather than transliterate the
+// SIMD twiddling, we build the table directly from that formal specification
+// using GF(2)[x] arithmetic on 128-bit values, where a 128-bit value is a pair
+// (lo,hi) of 64-bit words (lo = bits 0..63):
 //
 //   table base   h  = ghash_twist(H)             (multiply-by-x in the POLYVAL
 //                                                  representation, the "C2" form)
@@ -458,7 +461,8 @@ static uint64_t ref_karatsuba_mid(ref_u128 x)
 }
 
 // Build the 192-byte Htable for GHASH subkey H (16 bytes, = AES_K(0)).
-// Layout (matching htable_mem in common/polyval_ghash.ml), 12 x 16-byte slots:
+// Layout (gcm_init_v8's; slots 0..80 are htable_mem_4), 12 x 16-byte slots,
+// where mid(A,B) holds mid(A) in the low 64 bits and mid(B) in the high 64:
 //   0:bswap(H^1) 16:mid(H^1,H^2) 32:bswap(H^2) 48:bswap(H^3) 64:mid(H^3,H^4)
 //   80:bswap(H^4) 96:bswap(H^5) 112:mid(H^5,H^6) 128:bswap(H^6) 144:bswap(H^7)
 //   160:mid(H^7,H^8) 176:bswap(H^8)
