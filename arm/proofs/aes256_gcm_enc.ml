@@ -1271,22 +1271,22 @@ let mk_body_goal_b bound inv =
      2 <= loop_count /\ i < loop_count - 2 /\ 16 * nblocks < 2 EXP 64 /\ aligned 16 (stackpointer:int64) /\
      nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
      nonoverlapping (out_p:int64,16 * nblocks) (in_p:int64,16 * nblocks) /\
-     nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,192) /\
+     nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
      nonoverlapping (out_p:int64,16 * nblocks) (tag_p:int64,16) /\
      nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
      nonoverlapping (out_p:int64,16*nblocks) (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
      nonoverlapping (tag_p:int64,16) (in_p:int64,16*nblocks) /\
-     nonoverlapping (tag_p:int64,16) (htable_p:int64,192) /\
+     nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (tag_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
      nonoverlapping (ivec_p:int64,16) (in_p:int64,16*nblocks) /\
-     nonoverlapping (ivec_p:int64,16) (htable_p:int64,192) /\
+     nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (ivec_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64) (word pc:int64,3860) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64) (in_p:int64,16*nblocks) /\
-     nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,192)`,
+     nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,96)`,
    list_mk_icomb "ensures" [`arm`;
      leg_state inv `0x560` `i:num` ;
      leg_state inv `0x8a4` `i+1` ;
@@ -1875,22 +1875,22 @@ let fill_goal = mk_imp
    3 <= loop_count /\ 16 * nblocks < 2 EXP 64 /\ aligned 16 (stackpointer:int64) /\
    nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
    nonoverlapping (out_p:int64,16 * nblocks) (in_p:int64,16 * nblocks) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,192) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
    nonoverlapping (out_p:int64,16 * nblocks) (tag_p:int64,16) /\
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
    nonoverlapping (out_p:int64,16*nblocks) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
    nonoverlapping (tag_p:int64,16) (in_p:int64,16*nblocks) /\
-   nonoverlapping (tag_p:int64,16) (htable_p:int64,192) /\
+   nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
    nonoverlapping (ivec_p:int64,16) (in_p:int64,16*nblocks) /\
-   nonoverlapping (ivec_p:int64,16) (htable_p:int64,192) /\
+   nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (ivec_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (word pc:int64,3860) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (in_p:int64,16*nblocks) /\
-   nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,192) /\
+   nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,96) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (out_p:int64,16*nblocks)`,
   list_mk_icomb "ensures" [`arm`;
     mk_abs(`s:armstate`, list_mk_conj
@@ -2256,22 +2256,22 @@ let drain_goal = mk_imp
    2 <= loop_count /\ 16 * nblocks < 2 EXP 64 /\ aligned 16 (stackpointer:int64) /\
    nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
    nonoverlapping (out_p:int64,16 * nblocks) (in_p:int64,16 * nblocks) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,192) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
    nonoverlapping (out_p:int64,16 * nblocks) (tag_p:int64,16) /\
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
    nonoverlapping (out_p:int64,16*nblocks) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
    nonoverlapping (tag_p:int64,16) (in_p:int64,16*nblocks) /\
-   nonoverlapping (tag_p:int64,16) (htable_p:int64,192) /\
+   nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
    nonoverlapping (ivec_p:int64,16) (in_p:int64,16*nblocks) /\
-   nonoverlapping (ivec_p:int64,16) (htable_p:int64,192) /\
+   nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (ivec_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (word pc:int64,3860) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (in_p:int64,16*nblocks) /\
-   nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,192)`,
+   nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,96)`,
   list_mk_icomb "ensures" [`arm`;
     leg_state swp_inv `0x8a4` `loop_count - 1` ;
     drain_bridge ;
@@ -2562,22 +2562,22 @@ let tail_goal = mk_imp
    16 * nblocks < 2 EXP 64 /\ aligned 16 (stackpointer:int64) /\
    nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,3860) /\
    nonoverlapping (out_p:int64,16 * nblocks) (in_p:int64,16 * nblocks) /\
-   nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,192) /\
+   nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
    nonoverlapping (out_p:int64,16 * nblocks) (tag_p:int64,16) /\
    nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
    nonoverlapping (tag_p:int64,16) (word pc:int64,3860) /\
    nonoverlapping (tag_p:int64,16) (in_p:int64,16*nblocks) /\
-   nonoverlapping (tag_p:int64,16) (htable_p:int64,192) /\
+   nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (ivec_p:int64,16) (word pc:int64,3860) /\
    nonoverlapping (ivec_p:int64,16) (in_p:int64,16*nblocks) /\
-   nonoverlapping (ivec_p:int64,16) (htable_p:int64,192) /\
+   nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
    nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
    nonoverlapping (out_p:int64,16*nblocks) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (tag_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (ivec_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (word pc:int64,3860) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (in_p:int64,16*nblocks) /\
-   nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,192) /\
+   nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,96) /\
    nonoverlapping (word_add stackpointer (word 160):int64,64) (out_p:int64,16*nblocks)`,
   list_mk_icomb "ensures" [`arm`;
     drain_bridge ;
@@ -3294,7 +3294,7 @@ let AES256_GCM_ENC_CORRECT = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
         [(word pc, LENGTH aes256_gcm_enc_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
        PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
@@ -3515,7 +3515,7 @@ let AES256_GCM_ENC_SUBROUTINE_CORRECT = prove
       [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 224), 224)]
       [(word pc, LENGTH aes256_gcm_enc_mc);
-       (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+       (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 224), 224)]
@@ -3625,7 +3625,7 @@ let AES256_GCM_ENC_SAFE = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
         [(word pc, LENGTH aes256_gcm_enc_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
       PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
@@ -3639,7 +3639,7 @@ let AES256_GCM_ENC_SAFE = prove
                     read events s = APPEND e2 e /\
                     e2 = f_events in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer /\
                     memaccess_inbounds e2
-                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 192;
+                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 96;
                        out_p, 16 * val len_bits DIV 128; word_add stackpointer (word 160), 64]
                       [out_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16;
                        word_add stackpointer (word 160), 64]))
@@ -3708,7 +3708,7 @@ let AES256_GCM_ENC_SUBROUTINE_SAFE = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_sub stackpointer (word 224), 224)]
         [(word pc, LENGTH aes256_gcm_enc_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
       PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_sub stackpointer (word 224), 224)]
@@ -3723,7 +3723,7 @@ let AES256_GCM_ENC_SUBROUTINE_SAFE = prove
                     e2 = f_events in_p out_p tag_p ivec_p key_p htable_p len_bits pc
                            (word_sub stackpointer (word 224)) returnaddress /\
                     memaccess_inbounds e2
-                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 192;
+                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 96;
                        out_p, 16 * val len_bits DIV 128; word_sub stackpointer (word 224), 224]
                       [out_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16;
                        word_sub stackpointer (word 224), 224]))

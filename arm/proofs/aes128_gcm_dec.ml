@@ -864,7 +864,7 @@ let XOR_AES128_CIPHER_RECONSTRUCT_DEC = prove
 (*   X3 = tag       16-byte GHASH accumulator (in/out)                       *)
 (*   X4 = ivec      16-byte counter block (in/out)                           *)
 (*   X5 = key       AES-128 round keys (176 bytes = 11 x 16)                 *)
-(*   X6 = Htable    192-byte precomputed H-powers table                      *)
+(*   X6 = Htable    precomputed H-powers table (first 96 bytes read)                      *)
 (*   returns X0 = byte_len (= len_bits / 8)                                  *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1398,7 +1398,7 @@ let leg_hyps = `aligned 16 (stackpointer:int64) /\
     nonoverlapping ((out_p:int64), 16 * nblocks) (word pc, 2988) /\
     nonoverlapping (word_add (stackpointer:int64) (word 160), 64) (word pc, 2988) /\
     nonoverlapping (word_add (stackpointer:int64) (word 160), 64) ((key_p:int64), 176) /\
-    nonoverlapping (word_add (stackpointer:int64) (word 160), 64) ((htable_p:int64), 192) /\
+    nonoverlapping (word_add (stackpointer:int64) (word 160), 64) ((htable_p:int64), 96) /\
     nonoverlapping ((out_p:int64), 16 * nblocks) ((in_p:int64), 16 * nblocks) /\
     nonoverlapping ((in_p:int64), 16 * nblocks) (word_add (stackpointer:int64) (word 160), 64) /\
     nonoverlapping ((out_p:int64), 16 * nblocks) (word_add (stackpointer:int64) (word 160), 64) /\
@@ -1406,8 +1406,8 @@ let leg_hyps = `aligned 16 (stackpointer:int64) /\
     nonoverlapping ((tag_p:int64), 16) (word_add (stackpointer:int64) (word 160), 64) /\
     nonoverlapping ((ivec_p:int64), 16) ((out_p:int64), 16 * nblocks) /\
     nonoverlapping ((ivec_p:int64), 16) (word_add (stackpointer:int64) (word 160), 64) /\
-    nonoverlapping ((htable_p:int64), 192) ((out_p:int64), 16 * nblocks) /\
-    nonoverlapping ((htable_p:int64), 192) (word_add (stackpointer:int64) (word 160), 64)`;;
+    nonoverlapping ((htable_p:int64), 96) ((out_p:int64), 16 * nblocks) /\
+    nonoverlapping ((htable_p:int64), 96) (word_add (stackpointer:int64) (word 160), 64)`;;
 let vs = [`in_p:int64`;`out_p:int64`;`len_bits:int64`;`tag_p:int64`;`ivec_p:int64`;`key_p:int64`;`htable_p:int64`;
           `tag0:int128`;`nonce:int128`;`rk:(int128)list`;`inblock:num->int128`;`pc:num`;
           `stackpointer:int64`;`nblocks:num`;`loop_count:num`;`loop_remain:num`];;
@@ -2283,7 +2283,7 @@ let AES128_GCM_DEC_CORRECT = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
         [(word pc, LENGTH aes128_gcm_dec_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
        PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
@@ -2726,7 +2726,7 @@ let AES128_GCM_DEC_SUBROUTINE_CORRECT = prove
       [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 224), 224)]
       [(word pc, LENGTH aes128_gcm_dec_mc);
-       (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 192)] /\
+       (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 224), 224)]
@@ -2846,7 +2846,7 @@ let AES128_GCM_DEC_SAFE = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
         [(word pc, LENGTH aes128_gcm_dec_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
       PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
@@ -2861,7 +2861,7 @@ let AES128_GCM_DEC_SAFE = prove
                     read events s = APPEND e2 e /\
                     e2 = f_events in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer /\
                     memaccess_inbounds e2
-                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 176; htable_p, 192;
+                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 176; htable_p, 96;
                        out_p, 16 * val len_bits DIV 128; word_add stackpointer (word 160), 64]
                       [out_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16;
                        word_add stackpointer (word 160), 64]))
@@ -2967,7 +2967,7 @@ let AES128_GCM_DEC_SUBROUTINE_SAFE = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_sub stackpointer (word 224), 224)]
         [(word pc, LENGTH aes128_gcm_dec_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 176); (htable_p, 96)] /\
       PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_sub stackpointer (word 224), 224)]
@@ -2984,7 +2984,7 @@ let AES128_GCM_DEC_SUBROUTINE_SAFE = prove
                     e2 = f_events in_p out_p tag_p ivec_p key_p htable_p len_bits pc
                            (word_sub stackpointer (word 224)) returnaddress /\
                     memaccess_inbounds e2
-                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 176; htable_p, 192;
+                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 176; htable_p, 96;
                        out_p, 16 * val len_bits DIV 128; word_sub stackpointer (word 224), 224]
                       [out_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16;
                        word_sub stackpointer (word 224), 224]))

@@ -1837,22 +1837,22 @@ let leg_hyps_common = `([EL 0 rk; EL 1 rk; EL 2 rk; EL 3 rk; EL 4 rk; EL 5 rk; E
      16 * nblocks < 2 EXP 64 /\ aligned 16 (stackpointer:int64) /\
      nonoverlapping (out_p:int64,16 * nblocks) (word pc:int64,2036) /\
      nonoverlapping (out_p:int64,16 * nblocks) (in_p:int64,16 * nblocks) /\
-     nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,192) /\
+     nonoverlapping (out_p:int64,16 * nblocks) (htable_p:int64,96) /\
      nonoverlapping (out_p:int64,16 * nblocks) (tag_p:int64,16) /\
      nonoverlapping (out_p:int64,16 * nblocks) (ivec_p:int64,16) /\
      nonoverlapping (out_p:int64,16*nblocks) (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (tag_p:int64,16) (word pc:int64,2036) /\
      nonoverlapping (tag_p:int64,16) (in_p:int64,16*nblocks) /\
-     nonoverlapping (tag_p:int64,16) (htable_p:int64,192) /\
+     nonoverlapping (tag_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (tag_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (ivec_p:int64,16) (word pc:int64,2036) /\
      nonoverlapping (ivec_p:int64,16) (in_p:int64,16*nblocks) /\
-     nonoverlapping (ivec_p:int64,16) (htable_p:int64,192) /\
+     nonoverlapping (ivec_p:int64,16) (htable_p:int64,96) /\
      nonoverlapping (ivec_p:int64,16) (word_add stackpointer (word 160):int64,64) /\
      nonoverlapping (tag_p:int64,16) (ivec_p:int64,16) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64) (word pc:int64,2036) /\
      nonoverlapping (word_add stackpointer (word 160):int64,64) (in_p:int64,16*nblocks) /\
-     nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,192)`;;
+     nonoverlapping (word_add stackpointer (word 160):int64,64) (htable_p:int64,96)`;;
 let mk_leg_hyps lc_facts len_facts extra =
   let pre,rest = chop_list 4 (conjuncts leg_hyps_common) in
   list_mk_conj (pre @ lc_facts @ [hd rest] @ len_facts @ tl rest @ extra);;
@@ -2706,7 +2706,7 @@ let TAIL_CTR_MERGE sK : tactic =
 
 (* STRIP the 6-way htable_mem_4 conjunction (after RULE_ASSUM REWRITE[htable_mem_4]) into 6 individual reads so
    ARM_STEP advances each to the final state (else they stay folded at s0 and the htable_mem_4 conjunct can't close).
-   Mirrors DRAIN's setup.  Requires the tail_hyps `nonoverlapping (htable_p,192)(sp+160,64)` so the reads cross the
+   Mirrors DRAIN's setup.  Requires the tail_hyps `nonoverlapping (htable_p,96)(sp+160,64)` so the reads cross the
    counter store.  *)
 
 (* --- STEP closers --- *)
@@ -3287,7 +3287,7 @@ let AES256_GCM_DEC_CORRECT = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
         [(word pc, LENGTH aes256_gcm_dec_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
        PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
@@ -3384,7 +3384,7 @@ let AES256_GCM_DEC_SUBROUTINE_CORRECT = prove
       [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 224), 224)]
       [(word pc, LENGTH aes256_gcm_dec_mc);
-       (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+       (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
     PAIRWISE nonoverlapping
       [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
        (word_sub stackpointer (word 224), 224)]
@@ -3499,7 +3499,7 @@ let AES256_GCM_DEC_SAFE = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
         [(word pc, LENGTH aes256_gcm_dec_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
       PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_add stackpointer (word 160), 64)]
@@ -3514,7 +3514,7 @@ let AES256_GCM_DEC_SAFE = prove
                     read events s = APPEND e2 e /\
                     e2 = f_events in_p out_p tag_p ivec_p key_p htable_p len_bits pc stackpointer /\
                     memaccess_inbounds e2
-                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 192;
+                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 96;
                        out_p, 16 * val len_bits DIV 128; word_add stackpointer (word 160), 64]
                       [out_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16;
                        word_add stackpointer (word 160), 64]))
@@ -3604,7 +3604,7 @@ let AES256_GCM_DEC_SUBROUTINE_SAFE = prove
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_sub stackpointer (word 224), 224)]
         [(word pc, LENGTH aes256_gcm_dec_mc);
-         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 192)] /\
+         (in_p,  16 * val len_bits DIV 128); (key_p, 240); (htable_p, 96)] /\
       PAIRWISE nonoverlapping
         [(out_p, 16 * val len_bits DIV 128); (tag_p, 16); (ivec_p, 16);
          (word_sub stackpointer (word 224), 224)]
@@ -3621,7 +3621,7 @@ let AES256_GCM_DEC_SUBROUTINE_SAFE = prove
                     e2 = f_events in_p out_p tag_p ivec_p key_p htable_p len_bits pc
                            (word_sub stackpointer (word 224)) returnaddress /\
                     memaccess_inbounds e2
-                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 192;
+                      [in_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16; key_p, 240; htable_p, 96;
                        out_p, 16 * val len_bits DIV 128; word_sub stackpointer (word 224), 224]
                       [out_p, 16 * val len_bits DIV 128; tag_p, 16; ivec_p, 16;
                        word_sub stackpointer (word 224), 224]))
