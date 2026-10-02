@@ -145,15 +145,19 @@ let iclasses =
   "0x00111000100000010110xxxxxxxxxx";
   "0x001110xx100000010110xxxxxxxxxx";
 
-  (*** DUP ***)
+  (*** DUP (general, from Xn) ***)
   "01001110000x1000000011xxxxxxxxxx"; (* original DUP Vd.2d, xn *)
   "0x001110000xxxxx000011xxxxxxxxxx"; (* other variants too     *)
+
+  (*** DUP (element): broadcast Vn.<T>[index] across Vd ***)
+  "0x001110000xxxxx000001xxxxxxxxxx";
 
   (*** EOR ***)
   "0x101110001xxxxx000111xxxxxxxxxx";
 
   (*** EXT ***)
-  "01101110000xxxxx0xxxx0xxxxxxxxxx"; (* 128 bits only *)
+  "01101110000xxxxx0xxxx0xxxxxxxxxx"; (* q=1, 128 bits *)
+  "00101110000xxxxx0xxxx0xxxxxxxxxx"; (* q=0, 64 bits or UNDEFINED *)
 
   (*** FCSEL, 32 and 64 bits ***)
   "00011110001xxxxxxxxx11xxxxxxxxxx";
@@ -253,6 +257,42 @@ let iclasses =
   (*** REV32 ***)
   "01101110xx100000000010xxxxxxxxxx";
 
+  (*** SADDW ***)
+  "00001110xx1xxxxx000100xxxxxxxxxx";
+
+  (*** SADDW2 ***)
+  "01001110xx1xxxxx000100xxxxxxxxxx";
+
+  (*** SSUBL ***)
+  "00001110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** SSUBL2 ***)
+  "01001110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** SSUBW ***)
+  "00001110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** SSUBW2 ***)
+  "01001110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** USUBL ***)
+  "00101110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** USUBL2 ***)
+  "01101110xx1xxxxx001000xxxxxxxxxx";
+
+  (*** USUBW ***)
+  "00101110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** USUBW2 ***)
+  "01101110xx1xxxxx001100xxxxxxxxxx";
+
+  (*** ADDV (across-vector add reduction) ***)
+  "0x001110xx110001101110xxxxxxxxxx";
+
+  (*** SMAX (signed element-wise maximum) ***)
+  "0x001110xx1xxxxx011001xxxxxxxxxx";
+
   (*** SHA256 Intrinsics ***)
   (*** SHA256H ***)
   "01011110000xxxxx010000xxxxxxxxxx";
@@ -288,6 +328,12 @@ let iclasses =
   "00001111001xxxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "000011110001xxxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
   "0000111100001xxx100001xxxxxxxxxx"; (* q=0, immh!=0 *)
+
+  (*** SHRN2 (make sure immh is nonzero) ***)
+  "0100111101xxxxxx100001xxxxxxxxxx"; (* immh<3> = 1, UNDEFINED *)
+  "01001111001xxxxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
+  "010011110001xxxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
+  "0100111100001xxx100001xxxxxxxxxx"; (* q=1, immh!=0 *)
 
   (*** SQSHRUN / SQSHRUN2 (make sure immh is nonzero) ***)
   "0x10111101xxxxxx100001xxxxxxxxxx";
@@ -373,8 +419,14 @@ let iclasses =
   (*** TBL2 ***)
   "0x001110000xxxxx001000xxxxxxxxxx";
 
+  (*** TBL3 (3-register table, len = 2) ***)
+  "0x001110000xxxxx010000xxxxxxxxxx";
+
   (*** TRN1 and TRN2 ***)
   "0x001110xx0xxxxx0x1010xxxxxxxxxx";
+
+  (*** UADALP (unsigned pairwise add and accumulate long) ***)
+  "0x101110xx100000011010xxxxxxxxxx";
 
   (*** UADDLP ***)
   "01101110xx100000001010xxxxxxxxxx";
@@ -382,8 +434,14 @@ let iclasses =
   (*** UADDLV ***)
   "0x101110xx110000001110xxxxxxxxxx";
 
+  (*** UMAX (unsigned element-wise maximum) ***)
+  "0x101110xx1xxxxx011001xxxxxxxxxx";
+
   (*** UMAXV ***)
   "0x101110xx110000101010xxxxxxxxxx";
+
+  (*** URHADD (unsigned rounding halving add) ***)
+  "0x101110xx1xxxxx000101xxxxxxxxxx";
 
   (*** UMIN, vector ***)
   "0x101110xx1xxxxx011011xxxxxxxxxx";
@@ -448,8 +506,11 @@ let iclasses =
   (*** UZP2 ***)
   "01001110xx0xxxxx010110xxxxxxxxxx";
 
-  (*** XTN ***)
+  (*** XTN (q=0, low half) ***)
   "00001110xx100001001010xxxxxxxxxx";
+
+  (*** XTN2 (q=1, high half) ***)
+  "01001110xx100001001010xxxxxxxxxx";
 
   (*** ZIP1 ***)
   "0x001110xx0xxxxx001110xxxxxxxxxx";
