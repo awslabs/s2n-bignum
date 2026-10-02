@@ -356,8 +356,8 @@ let MLKEM_REDUCE_CORRECT = prove(
    (EXPAND_CASES_CONV THENC
     ONCE_DEPTH_CONV NUM_MULT_CONV)))) THEN
 
-  GHOST_INTRO_TAC `init_ymm0:int256` `read YMM0` THEN
-  GHOST_INTRO_TAC `init_ymm1:int256` `read YMM1` THEN
+  GHOST_INTRO_TAC `init_zmm0:int512` `read ZMM0` THEN
+  GHOST_INTRO_TAC `init_zmm1:int512` `read ZMM1` THEN
 
   ENSURES_INIT_TAC "s0" THEN
 
@@ -495,15 +495,12 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_PRESERVED_TAC "init_xmm9" `ZMM9 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM12]) THEN
-
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -525,11 +522,11 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
   MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s9`;
-    `ymm7_epilog = read YMM7 s9`;
-    `ymm8_epilog = read YMM8 s9`;
-    `ymm9_epilog = read YMM9 s9`;
-    `ymm12_epilog = read YMM12 s9`] THEN
+   [`zmm6_epilog = read ZMM6 s9`;
+    `zmm7_epilog = read ZMM7 s9`;
+    `zmm8_epilog = read ZMM8 s9`;
+    `zmm9_epilog = read ZMM9 s9`;
+    `zmm12_epilog = read ZMM12 s9`] THEN
 
   X86_STEPS_TAC mlkem_reduce_windows_tmc_EXEC (15--22) THEN
 
@@ -707,15 +704,12 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   ENSURES_PRESERVED_TAC "init_xmm9" `ZMM9 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM12]) THEN
-
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -748,11 +742,11 @@ let MLKEM_REDUCE_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
   MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s9`;
-    `ymm7_epilog = read YMM7 s9`;
-    `ymm8_epilog = read YMM8 s9`;
-    `ymm9_epilog = read YMM9 s9`;
-    `ymm12_epilog = read YMM12 s9`] THEN
+   [`zmm6_epilog = read ZMM6 s9`;
+    `zmm7_epilog = read ZMM7 s9`;
+    `zmm8_epilog = read ZMM8 s9`;
+    `zmm9_epilog = read ZMM9 s9`;
+    `zmm12_epilog = read ZMM12 s9`] THEN
 
   X86_STEPS_TAC mlkem_reduce_windows_tmc_EXEC (15--22) THEN
 

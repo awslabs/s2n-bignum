@@ -5920,6 +5920,40 @@ let subroutine_signatures = [
    ])
 );
 
+("sha3_keccak4_f1600_avx512vl",
+  ([(*args*)
+     ("a", "uint64_t[100]", (*is const?*)"false");
+     ("rc", "uint64_t[24]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "100"(* num elems *), 8(* elem bytesize *));
+    ("rc", "24"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "100"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
+("sha3_keccak8_f1600_avx512",
+  ([(*args*)
+     ("a", "uint64_t[200]", (*is const?*)"false");
+     ("rc", "uint64_t[24]", (*is const?*)"true");
+   ],
+   "void",
+   [(* input buffers *)
+    ("a", "200"(* num elems *), 8(* elem bytesize *));
+    ("rc", "24"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* output buffers *)
+    ("a", "200"(* num elems *), 8(* elem bytesize *));
+   ],
+   [(* temporary buffers *)
+   ])
+);
+
 ("sha3_keccak_f1600",
   ([(*args*)
      ("a", "uint64_t[25]", (*is const?*)"false");

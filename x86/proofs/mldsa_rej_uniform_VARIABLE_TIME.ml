@@ -10,6 +10,44 @@
 needs "x86/proofs/base.ml";;
 needs "x86/proofs/mldsa_rej_uniform_table.ml";;
 
+let VEX_READ_ZMM_FOLD:thm list = map (fun (goal,ymmdef) ->
+  prove(goal, REWRITE_TAC[ymmdef; READ_ZEROTOP_256]))
+ [(`!s:x86state. word_zx (read ZMM0 s):256 word = read YMM0 s`,YMM0);
+  (`!s:x86state. word_zx (read ZMM1 s):256 word = read YMM1 s`,YMM1);
+  (`!s:x86state. word_zx (read ZMM2 s):256 word = read YMM2 s`,YMM2);
+  (`!s:x86state. word_zx (read ZMM3 s):256 word = read YMM3 s`,YMM3);
+  (`!s:x86state. word_zx (read ZMM4 s):256 word = read YMM4 s`,YMM4);
+  (`!s:x86state. word_zx (read ZMM5 s):256 word = read YMM5 s`,YMM5);
+  (`!s:x86state. word_zx (read ZMM6 s):256 word = read YMM6 s`,YMM6);
+  (`!s:x86state. word_zx (read ZMM7 s):256 word = read YMM7 s`,YMM7);
+  (`!s:x86state. word_zx (read ZMM8 s):256 word = read YMM8 s`,YMM8);
+  (`!s:x86state. word_zx (read ZMM9 s):256 word = read YMM9 s`,YMM9);
+  (`!s:x86state. word_zx (read ZMM10 s):256 word = read YMM10 s`,YMM10);
+  (`!s:x86state. word_zx (read ZMM11 s):256 word = read YMM11 s`,YMM11);
+  (`!s:x86state. word_zx (read ZMM12 s):256 word = read YMM12 s`,YMM12);
+  (`!s:x86state. word_zx (read ZMM13 s):256 word = read YMM13 s`,YMM13);
+  (`!s:x86state. word_zx (read ZMM14 s):256 word = read YMM14 s`,YMM14);
+  (`!s:x86state. word_zx (read ZMM15 s):256 word = read YMM15 s`,YMM15);
+  (`!s:x86state. word_zx (read ZMM16 s):256 word = read YMM16 s`,YMM16);
+  (`!s:x86state. word_zx (read ZMM17 s):256 word = read YMM17 s`,YMM17);
+  (`!s:x86state. word_zx (read ZMM18 s):256 word = read YMM18 s`,YMM18);
+  (`!s:x86state. word_zx (read ZMM19 s):256 word = read YMM19 s`,YMM19);
+  (`!s:x86state. word_zx (read ZMM20 s):256 word = read YMM20 s`,YMM20);
+  (`!s:x86state. word_zx (read ZMM21 s):256 word = read YMM21 s`,YMM21);
+  (`!s:x86state. word_zx (read ZMM22 s):256 word = read YMM22 s`,YMM22);
+  (`!s:x86state. word_zx (read ZMM23 s):256 word = read YMM23 s`,YMM23);
+  (`!s:x86state. word_zx (read ZMM24 s):256 word = read YMM24 s`,YMM24);
+  (`!s:x86state. word_zx (read ZMM25 s):256 word = read YMM25 s`,YMM25);
+  (`!s:x86state. word_zx (read ZMM26 s):256 word = read YMM26 s`,YMM26);
+  (`!s:x86state. word_zx (read ZMM27 s):256 word = read YMM27 s`,YMM27);
+  (`!s:x86state. word_zx (read ZMM28 s):256 word = read YMM28 s`,YMM28);
+  (`!s:x86state. word_zx (read ZMM29 s):256 word = read YMM29 s`,YMM29);
+  (`!s:x86state. word_zx (read ZMM30 s):256 word = read YMM30 s`,YMM30);
+  (`!s:x86state. word_zx (read ZMM31 s):256 word = read YMM31 s`,YMM31)];;
+
+let FOLD_ZMM_READS_IN_ASMS:tactic =
+  RULE_ASSUM_TAC(PURE_REWRITE_RULE VEX_READ_ZMM_FOLD);;
+
 (*** print_literal_from_elf "x86/mldsa/mldsa_rej_uniform_VARIABLE_TIME.o";;
  ***)
 
@@ -750,7 +788,6 @@ let COEFF_FROM_BYTES = prove
     word_zx(word_subword (buf:192 word) (24*j,23):23 word)`,
   CONV_TAC WORD_BLAST);;
 
-
 (* ========================================================================= *)
 (* REJ_SAMPLE algebra.                                                       *)
 (* ========================================================================= *)
@@ -932,6 +969,44 @@ let MLDSA_VPERMD_BRIDGE = prove
   REWRITE_TAC[WORD_JOIN_SUBWORDS_256] THEN
   CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   DISCH_THEN ACCEPT_TAC);;
+
+let q3memlink = ref TRUTH;;
+let z3s26ref = ref TRUTH;;
+let y0ref = ref TRUTH;;
+let y1ref = ref TRUTH;;
+let z3s29ref = ref TRUTH;;
+let y2ref = ref TRUTH;;
+let z3s32ref = ref TRUTH;;
+let YMM3_ZX_COLLAPSE = prove
+ (`word_zx(word_zx(x:(256)word):int512):(256)word = x`,
+  SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+           ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+           ARITH_RULE `256 <= 512`]);;
+let REFOLD_YMM3_TAC states : tactic =
+  fun (asl,w) ->
+    let has_const name t = (try fst(dest_const t) = name with _ -> false) in
+    let has_var name t = (try fst(dest_var t) = name with _ -> false) in
+    let mk_refold st =
+      let z = snd(List.find (fun (_,th) ->
+        is_eq(concl th) &&
+        can(find_term(has_const "ZMM3"))(lhs(concl th)) &&
+        can(find_term(has_var st))(lhs(concl th)) &&
+        not(can(find_term(has_const "MAYCHANGE"))(concl th)) &&
+        (try fst(dest_const(fst(strip_comb(rhs(concl th))))) = "word_zx" with _ -> false)) asl) in
+      let ydef = REWRITE_CONV[YMM3; READ_ZEROTOP_256]
+        (subst[mk_var(st,`:x86state`),`s35:x86state`] `read YMM3 s35:int256`) in
+      CONV_RULE(RAND_CONV(RAND_CONV(REWR_CONV z))) ydef in
+    MAP_EVERY (fun st -> (try ASSUME_TAC(mk_refold st) with _ -> ALL_TAC)) states (asl,w);;
+let SUBWORD_ZX_OFFS =
+  let tmpl8 = `word_subword (q:int512) (0,8):byte =
+               word_subword (word_zx (q:int512):(256)word) (0,8):byte` in
+  let tmpl4 = `word_subword (q:int512) (0,4):(4)word =
+               word_subword (word_zx (q:int512):(256)word) (0,4):(4)word` in
+  let mkl tmpl p = mk_forall(`q:int512`, subst[mk_small_numeral p,`0`] tmpl) in
+  itlist (fun p acc ->
+     prove(mkl tmpl8 p, CONV_TAC WORD_BLAST) ::
+     prove(mkl tmpl4 p, CONV_TAC WORD_BLAST) :: acc)
+     (map (fun j -> 8*j) (0--31)) [];;
 
 (* ------------------------------------------------------------------------- *)
 (* REJ_SAMPLE list decomposition helpers for the post-loop proof.            *)
@@ -2370,7 +2445,20 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
                 LENGTH; num_of_wordlist] THEN
     CONV_TAC NUM_REDUCE_CONV THEN
     REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_MEMORY_BYTES_TRIVIAL] THEN
-    CONV_TAC WORD_REDUCE_CONV;
+    CONV_TAC WORD_REDUCE_CONV THEN
+    (SUBGOAL_THEN
+         `read YMM0 s17 =
+            word 115366376096492355175489748997433888275274855593258845241081954797768348401920 /\
+          read YMM1 s17 =
+            word 226156397384342666605459106258636701594091082888230722833791023177481060351 /\
+          read YMM2 s17 =
+            word 225935595421087293402315996791205668696012104344015382954355885915737415681`
+         (fun th -> ACCEPT_TAC th) THENL
+        [REWRITE_TAC[YMM0; YMM1; YMM2; READ_ZEROTOP_256] THEN ASM_REWRITE_TAC[] THEN
+         SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+                  ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+                  ARITH_RULE `256 <= 512`] THEN
+         CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN REWRITE_TAC[]]);
 
     (* ================================================================= *)
     (* Subgoal 2: Loop body preservation (i -> i+1)                      *)
@@ -2416,7 +2504,26 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
      [RESOLVE_JA_OFFSET_TAC; ALL_TAC] THEN
 
     (* (d) SIMD body: all verbose to preserve VMOVDQU→VPSHUFB→VPAND chain *)
-    X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (22--29) THEN
+    X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (22--25) THEN
+    (ABBREV_TAC `zmm_q3in:int512 = read ZMM3 s25` THEN
+       FIRST_X_ASSUM(fun th ->
+         if String.length(string_of_term(concl th)) > 5000
+         then (q3memlink := th; ALL_TAC) else failwith "not big")) THEN
+    X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (26--29) THEN
+    (FOLD_ZMM_READS_IN_ASMS) THEN
+    (FIRST_ASSUM(fun th ->
+         if can (find_term ((=) `ZMM3`)) (concl th) &&
+            can (find_term ((=) (mk_var("s26",`:x86state`)))) (concl th) &&
+            is_eq(concl th) && String.length(string_of_term(concl th)) < 400
+         then (z3s26ref := th; ALL_TAC) else failwith "no z3s26")) THEN
+    (FIRST_ASSUM(fun th ->
+         if can (find_term ((=) `ZMM3`)) (concl th) &&
+            can (find_term ((=) (mk_var("s29",`:x86state`)))) (concl th) &&
+            is_eq(concl th) && String.length(string_of_term(concl th)) < 400
+         then (z3s29ref := th; ALL_TAC) else failwith "no z3s29")) THEN
+    (FIRST_ASSUM(fun th -> if is_eq(concl th) && lhs(concl th) = `read YMM0 s24` then (y0ref := th; ALL_TAC) else failwith "no y0")) THEN
+    (FIRST_ASSUM(fun th -> if is_eq(concl th) && lhs(concl th) = `read YMM1 s25` then (y1ref := th; ALL_TAC) else failwith "no y1")) THEN
+    (FIRST_ASSUM(fun th -> if is_eq(concl th) && lhs(concl th) = `read YMM2 s26` then (y2ref := th; ALL_TAC) else failwith "no y2")) THEN
 
     (* Abbreviate the 8 masked coefficients from YMM3 after VPAND *)
     (* Semantic bridge: use POPCNT_VMOVMSKPS_LEMMA to establish
@@ -2437,6 +2544,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
          word_subword (read YMM3 s26) (224,32)]))`
     MP_TAC THENL
      [ASM_REWRITE_TAC[] THEN
+      (REWRITE_TAC[YMM3; READ_ZEROTOP_256] THEN ASM_REWRITE_TAC[]) THEN
       CONV_TAC(LAND_CONV(REWR_CONV word_zx)) THEN
       REWRITE_TAC[VAL_WORD; DIMINDEX_32] THEN
       CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
@@ -2451,6 +2559,9 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
                ARITH_RULE `32 <= 64`] THEN
       SIMP_TAC[WORD_POPCOUNT_WORD_ZX; DIMINDEX_8; DIMINDEX_32;
                ARITH_RULE `8 <= 32`] THEN
+      (CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+         FOLD_ZMM_READS_IN_ASMS THEN
+         CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV)) THEN
       REWRITE_TAC[VMOVMSKPS_POPCOUNT_EQ; BIT_NESTED_JOIN_8] THEN
       REWRITE_TAC[POPCNT_VMOVMSKPS_LEMMA] THEN
       MATCH_MP_TAC MOD_LT THEN
@@ -2497,14 +2608,27 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
            with _ -> false)) c ||
          can (find_term ((=) `MAYCHANGE`)) c ||
          can (find_term ((=) `bytes_loaded`)) c)))) THEN
+      (SUBGOAL_THEN `read YMM3 s26 = word_and (word_zx (zmm_q3in:int512)) (read YMM1 s25)`
+        ASSUME_TAC THENL
+         [W(fun _ -> MP_TAC(!z3s26ref)) THEN
+          DISCH_THEN(fun z -> REWRITE_TAC[YMM3; READ_ZEROTOP_256; z]) THEN
+          CONV_TAC WORD_BLAST;
+          ALL_TAC] THEN
+        W(fun _ -> MP_TAC(!q3memlink)) THEN
+        DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))) THEN
       FIRST_X_ASSUM(fun th ->
         if can (find_term ((=) `YMM3`)) (concl th) &&
            can (find_term ((=) (mk_var("s26",`:x86state`)))) (concl th) &&
            is_eq(concl th)
         then GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [th]
         else failwith "") THEN
+      (REWRITE_TAC SUBWORD_ZX_OFFS THEN
+         PURE_REWRITE_TAC VEX_READ_ZMM_FOLD THEN
+         W(fun _ -> REWRITE_TAC[!y0ref; !y1ref]) THEN
+         CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV)) THEN
       CONV_TAC(TOP_DEPTH_CONV
         (REWR_CONV WORD_SUBWORD_AND ORELSEC WORD_SIMPLE_SUBWORD_CONV)) THEN
+
       CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
       SUBGOAL_THEN `1 * val(word(24 * i):int64) = 24 * i` SUBST1_TAC THENL
        [REWRITE_TAC[MULT_CLAUSES; VAL_WORD; DIMINDEX_64] THEN
@@ -2531,7 +2655,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
               let rec has840 j = j + 2 < n &&
                 (s.[j] = '8' && s.[j+1] = '4' && s.[j+2] = '0' || has840 (j+1)) in
               has840 0)
-          then GEN_REWRITE_TAC (RAND_CONV o LAND_CONV o LAND_CONV) [GSYM th]
+          then GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM th]
           else failwith "") THEN
         REWRITE_TAC[GSYM READ_BYTES_DIV; GSYM READ_BYTES_MOD;
                     ARITH_RULE `8 * (24 * i) = 192 * i`;
@@ -2626,6 +2750,16 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
     (* Derive FILTER = REJ_SAMPLE BEFORE ABBREVs, while all state hyps exist.
        The SIMD subgoal proved LENGTH equality. Now prove FILTER equality
        by using read YMM3 s26 = read YMM3 s29 (unchanged through s27-s29). *)
+    (SUBGOAL_THEN `read YMM3 s29 = word_and (word_zx (zmm_q3in:int512)) (word 226156397384342666605459106258636701594091082888230722833791023177481060351:int256)` ASSUME_TAC THENL
+       [W(fun _ -> MP_TAC(!z3s29ref) THEN MP_TAC(!y1ref)) THEN
+        REWRITE_TAC[YMM3; READ_ZEROTOP_256] THEN
+        DISCH_THEN(fun ymask -> DISCH_THEN(fun z -> REWRITE_TAC[z; ymask])) THEN
+        CONV_TAC WORD_BLAST; ALL_TAC] THEN
+      SUBGOAL_THEN `read YMM3 s26 = word_and (word_zx (zmm_q3in:int512)) (word 226156397384342666605459106258636701594091082888230722833791023177481060351:int256)` ASSUME_TAC THENL
+       [W(fun _ -> MP_TAC(!z3s26ref) THEN MP_TAC(!y1ref)) THEN
+        REWRITE_TAC[YMM3; READ_ZEROTOP_256] THEN
+        DISCH_THEN(fun ymask -> DISCH_THEN(fun z -> REWRITE_TAC[z; ymask])) THEN
+        CONV_TAC WORD_BLAST; ALL_TAC]) THEN
     SUBGOAL_THEN
       `FILTER (\c:int32. val c < 8380417)
          [word_subword (read YMM3 s29:int256) (0,32):int32;
@@ -2648,7 +2782,6 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
         not(can (find_term ((=) `LENGTH:(int32 list)->num`)) (concl th)))) THEN
       ASM_REWRITE_TAC[];
       ALL_TAC] THEN
-
     (* Save the 8 bounds val(word_subword (read YMM3 s29) (k,32)) < 8388608
        BEFORE ABBREV substitutes coeffs_ymm3. Otherwise these bounds are
        consumed as intermediate lemmas during CMP_MASK discharge and the
@@ -2671,7 +2804,8 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
             (try let ops,args = strip_comb(lhs c) in
                  fst(dest_const ops) = "read" &&
                  List.length args = 2 &&
-                 fst(dest_const(List.hd args)) = "YMM3"
+                 fst(dest_const(List.hd args)) = "YMM3" &&
+                 List.nth args 1 = mk_var("s29",`:x86state`)
              with _ -> false)
          then SUBST1_TAC th
          else failwith "no YMM3 word_and") THEN
@@ -2681,7 +2815,8 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
        MATCH_MP_TAC(ARITH_RULE `n <= 8388607 ==> n < 8388608`) THEN
        REWRITE_TAC[VAL_WORD_AND_WORD_LE];
        ALL_TAC] THEN
-
+    (W(fun _ -> RULE_ASSUM_TAC(REWRITE_RULE[!y1ref])) THEN
+       FOLD_ZMM_READS_IN_ASMS) THEN
     (* Ghost state: ABBREV key s29 values before DISCARD kills them. *)
     ABBREV_TAC `coeffs_ymm3:int256 = read YMM3 s29` THEN
     ABBREV_TAC `cmp_mask:int64 = read R8 s29` THEN
@@ -2725,6 +2860,17 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
          bit 31 (word_subword x (k,32)) patterns via GSYM BIT_SUBWORD_256
          (so we see bit (32k+31) of the nested word_join), then fold the
          word(sum of bitvals) via GSYM VMOVMSKPS_BYTE_EQ into word_of_bits. *)
+      (SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+                  ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+                  ARITH_RULE `256 <= 512`] THEN
+         (fun (asl,w) ->
+            let y2 = !y2ref in
+            let tmpl = `word_subword (read YMM2 s26) (0,32):int32` in
+            let lanefacts = map (fun k ->
+               (REWRITE_CONV[y2] THENC WORD_NUM_RED_CONV)
+                 (subst[mk_small_numeral k,`0`] tmpl))
+               [0;32;64;96;128;160;192;224] in
+            REWRITE_TAC lanefacts (asl,w))) THEN
       REWRITE_TAC[GSYM BIT_SUBWORD_256; GSYM VMOVMSKPS_BYTE_EQ] THEN
       MATCH_MP_TAC(ISPECL [
         `word_subword (coeffs_ymm3:int256) (0,32):int32`;
@@ -2752,10 +2898,12 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
       MATCH_MP_TAC(ARITH_RULE `n <= 8388607 ==> n < 8388608`) THEN
       REWRITE_TAC[VAL_WORD_AND_WORD_LE];
       ALL_TAC] THEN
-
     DISCARD_OLDSTATE_TAC "s29" THEN CLARIFY_TAC THEN
     (* Step 30-32 WITHOUT discard to keep VPERMD hypothesis chain *)
     X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (30--32) THEN
+    (FIRST_ASSUM(fun th ->
+         if is_eq(concl th) && lhs(concl th) = `read ZMM3 s32` then (z3s32ref := th; ALL_TAC)
+         else failwith "no z3s32")) THEN
     SUBGOAL_THEN
       `val(read YMM3 s32:int256) MOD 2 EXP (32 * newlen) =
        num_of_wordlist(REJ_SAMPLE(SUB_LIST(8*i,8) (inlist:(24 word)list)))`
@@ -2788,6 +2936,12 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
             MP_TAC(SPEC `val(word_subword (coeffs_ymm3:int256) (224,32):int32) < 8380417` BITVAL_BOUND) THEN
             ARITH_TAC];
           ASM_REWRITE_TAC[]]; ALL_TAC] THEN
+      (W(fun _ ->
+           let z = !z3s32ref in
+           let ymm_zmm = REWRITE_CONV[YMM3; READ_ZEROTOP_256] `read YMM3 s32:int256` in
+           let sub = CONV_RULE(RAND_CONV(RAND_CONV(REWR_CONV z))) ymm_zmm in
+           let collapsed = CONV_RULE(RAND_CONV(REWR_CONV YMM3_ZX_COLLAPSE)) sub in
+           ASSUME_TAC collapsed)) THEN
       (* Step B: substitute read YMM3 s32 into goal (exposes the VPERMD expansion). *)
       FIRST_X_ASSUM (fun th ->
         let s = string_of_term (concl th) in
@@ -2833,6 +2987,15 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
         let newlen_bitval = TRANS (TRANS newlen_def
           (AP_TERM `LENGTH:int32 list -> num` (SYM filter_rej_eq))) length_filter_eq in
         REWRITE_TAC[newlen_bitval; SYM filter_rej_eq] (asl, w)) THEN
+      (SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+                  ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+                  ARITH_RULE `256 <= 512`] THEN
+         FIRST_ASSUM(fun h30 ->
+           if is_eq(concl h30) && is_var(lhs(concl h30)) &&
+              (try fst(dest_var(lhs(concl h30))) = "coeffs_ymm3" with _ -> false) &&
+              (try fst(dest_const(fst(strip_comb(rhs(concl h30))))) = "word_and"
+               with _ -> false)
+           then REWRITE_TAC[GSYM h30] else failwith "no h30 (vpermd)")) THEN
       (* Step D: fold raw memory read back to table_entry, then collapse word_zx(word_zx ...) via
          WORD_SIMPLE_SUBWORD_CONV to expose word_subword table_entry (k,3). *)
       (fun (asl, w) ->
@@ -2884,6 +3047,7 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
       ALL_TAC] THEN
     (* VSTEPS for all 3 steps to preserve bytes256 + VPERMD hyps *)
     X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (33--35) THEN
+    (REFOLD_YMM3_TAC ["s32";"s33";"s34";"s35"]) THEN
 
     (* (e) COND_CASES_TAC: continue (i+1 < N) vs exit (~(i+1 < N)) *)
     COND_CASES_TAC THENL
@@ -3078,6 +3242,8 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
        [UNDISCH_TAC `~(i + 1 < N)` THEN UNDISCH_TAC `i:num < N` THEN ARITH_TAC;
         ALL_TAC] THEN
       X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (36--37) THEN
+      (REFOLD_YMM3_TAC ["s36";"s37"]) THEN
+      (REFOLD_YMM3_TAC ["s36";"s37"]) THEN
       FIRST_X_ASSUM(DISJ_CASES_TAC o check (is_disj o concl)) THENL
        [(* J1: offset exit (832 < 24 * (N + 1) disjunct holds).
            Split on whether count-exit ALSO fires:
@@ -3316,6 +3482,8 @@ let MLDSA_REJ_UNIFORM_CORRECT = prove
             can (find_term (fun t ->
               try fst(dest_const t) = "COND" with _ -> false)) (rhs c))) THEN
           X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (38--39) THEN
+          (REFOLD_YMM3_TAC ["s38";"s39";"s40";"s41"]) THEN
+          (REFOLD_YMM3_TAC ["s38";"s39";"s40";"s41"]) THEN
           (* Resolve RIP s39 = word(pc + 181) via JA analysis *)
           SUBGOAL_THEN `read RIP s39 = word(pc + 181):int64` MP_TAC THENL
            [FIRST_X_ASSUM(fun th ->
@@ -5147,7 +5315,6 @@ let SCALAR_BODY_LEMMA_MEMSAFE = prove
           DISCHARGE_MEMSAFE_ASM_TAC;
           REWRITE_TAC[SOME_FLAGS] THEN MONOTONE_MAYCHANGE_TAC]]]]);;
 
-
 let MLDSA_REJ_UNIFORM_MEMSAFE = prove
  (`!res buf table (inlist:(24 word)list) e pc.
     LENGTH inlist = 280 /\
@@ -5228,6 +5395,11 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
     CONV_TAC NUM_REDUCE_CONV THEN
     REWRITE_TAC[READ_COMPONENT_COMPOSE; READ_MEMORY_BYTES_TRIVIAL] THEN
     CONV_TAC WORD_REDUCE_CONV THEN
+    (REWRITE_TAC[YMM0; YMM1; YMM2; READ_ZEROTOP_256] THEN ASM_REWRITE_TAC[] THEN
+       SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+                ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+                ARITH_RULE `256 <= 512`] THEN
+       CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV)) THEN
     EXISTS_TAC `[]:(uarch_event)list` THEN
     REWRITE_TAC[APPEND; memaccess_inbounds; ALL];
 
@@ -5303,7 +5475,29 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
         try fst(dest_const t) = "COND" with _ -> false)) (rhs c)))) THEN
 
     (* (d) SIMD body: all verbose to preserve VMOVDQU→VPSHUFB→VPAND chain *)
-    X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (22--29) THEN
+    X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (22--25) THEN
+    (ABBREV_TAC `zmm_q3in:int512 = read ZMM3 s25` THEN
+       FIRST_X_ASSUM(fun th ->
+         if String.length(string_of_term(concl th)) > 5000
+         then (q3memlink := th; ALL_TAC) else failwith "not big(memsafe)")) THEN
+    X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (26--29) THEN
+    (FOLD_ZMM_READS_IN_ASMS) THEN
+    (FIRST_ASSUM(fun th -> if is_eq(concl th) && lhs(concl th) = `read YMM1 s25`
+                             then (y1ref := th; ALL_TAC) else failwith "no y1(memsafe)")) THEN
+    (FIRST_ASSUM(fun th -> if is_eq(concl th) && lhs(concl th) = `read YMM2 s26`
+                             then (y2ref := th; ALL_TAC) else failwith "no y2(memsafe)")) THEN
+    (FIRST_ASSUM(fun th -> if is_eq(concl th) && lhs(concl th) = `read YMM0 s24`
+                             then (y0ref := th; ALL_TAC) else failwith "no y0(memsafe)")) THEN
+    (FIRST_ASSUM(fun th ->
+         if can (find_term ((=) `ZMM3`)) (concl th) &&
+            can (find_term ((=) (mk_var("s26",`:x86state`)))) (concl th) &&
+            is_eq(concl th) && String.length(string_of_term(concl th)) < 400
+         then (z3s26ref := th; ALL_TAC) else failwith "no z3s26(memsafe)")) THEN
+    (FIRST_ASSUM(fun th ->
+         if can (find_term ((=) `ZMM3`)) (concl th) &&
+            can (find_term ((=) (mk_var("s29",`:x86state`)))) (concl th) &&
+            is_eq(concl th) && String.length(string_of_term(concl th)) < 400
+         then (z3s29ref := th; ALL_TAC) else failwith "no z3s29(memsafe)")) THEN
 
     (* Abbreviate the 8 masked coefficients from YMM3 after VPAND *)
     (* Semantic bridge: use POPCNT_VMOVMSKPS_LEMMA to establish
@@ -5324,6 +5518,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
          word_subword (read YMM3 s26) (224,32)]))`
     MP_TAC THENL
      [ASM_REWRITE_TAC[] THEN
+      (REWRITE_TAC[YMM3; READ_ZEROTOP_256] THEN ASM_REWRITE_TAC[]) THEN
       CONV_TAC(LAND_CONV(REWR_CONV word_zx)) THEN
       REWRITE_TAC[VAL_WORD; DIMINDEX_32] THEN
       CONV_TAC(ONCE_DEPTH_CONV NUM_REDUCE_CONV) THEN
@@ -5338,6 +5533,9 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
                ARITH_RULE `32 <= 64`] THEN
       SIMP_TAC[WORD_POPCOUNT_WORD_ZX; DIMINDEX_8; DIMINDEX_32;
                ARITH_RULE `8 <= 32`] THEN
+      (CONV_TAC(TOP_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+         FOLD_ZMM_READS_IN_ASMS THEN
+         CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV)) THEN
       REWRITE_TAC[VMOVMSKPS_POPCOUNT_EQ; BIT_NESTED_JOIN_8] THEN
       REWRITE_TAC[POPCNT_VMOVMSKPS_LEMMA] THEN
       MATCH_MP_TAC MOD_LT THEN
@@ -5384,12 +5582,24 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
            with _ -> false)) c ||
          can (find_term ((=) `MAYCHANGE`)) c ||
          can (find_term ((=) `bytes_loaded`)) c)))) THEN
+      (SUBGOAL_THEN `read YMM3 s26 = word_and (word_zx (zmm_q3in:int512)) (read YMM1 s25)`
+        ASSUME_TAC THENL
+         [W(fun _ -> MP_TAC(!z3s26ref)) THEN
+          DISCH_THEN(fun z -> REWRITE_TAC[YMM3; READ_ZEROTOP_256; z]) THEN
+          CONV_TAC WORD_BLAST;
+          ALL_TAC] THEN
+        W(fun _ -> MP_TAC(!q3memlink)) THEN
+        DISCH_THEN(fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))) THEN
       FIRST_X_ASSUM(fun th ->
         if can (find_term ((=) `YMM3`)) (concl th) &&
            can (find_term ((=) (mk_var("s26",`:x86state`)))) (concl th) &&
            is_eq(concl th)
         then GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [th]
         else failwith "") THEN
+      (REWRITE_TAC SUBWORD_ZX_OFFS THEN
+         PURE_REWRITE_TAC VEX_READ_ZMM_FOLD THEN
+         W(fun _ -> REWRITE_TAC[!y0ref; !y1ref]) THEN
+         CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV)) THEN
       CONV_TAC(TOP_DEPTH_CONV
         (REWR_CONV WORD_SUBWORD_AND ORELSEC WORD_SIMPLE_SUBWORD_CONV)) THEN
       CONV_TAC(DEPTH_CONV WORD_NUM_RED_CONV) THEN
@@ -5418,7 +5628,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
               let rec has840 j = j + 2 < n &&
                 (s.[j] = '8' && s.[j+1] = '4' && s.[j+2] = '0' || has840 (j+1)) in
               has840 0)
-          then GEN_REWRITE_TAC (RAND_CONV o LAND_CONV o LAND_CONV) [GSYM th]
+          then GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM th]
           else failwith "") THEN
         REWRITE_TAC[GSYM READ_BYTES_DIV; GSYM READ_BYTES_MOD;
                     ARITH_RULE `8 * (24 * i) = 192 * i`;
@@ -5485,7 +5695,6 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
         ALL_TAC] THEN
       ASM_SIMP_TAC[CONV_RULE NUM_REDUCE_CONV MAP_REJ_COEFFS];
       ALL_TAC] THEN
-
     (* Derive LENGTH from FILTER equality for the ABBREV *)
     FIRST_X_ASSUM(fun th ->
       if can (find_term (fun t -> try fst(dest_const t) = "FILTER" with _ -> false)) (concl th) &&
@@ -5513,6 +5722,16 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
     (* Derive FILTER = REJ_SAMPLE BEFORE ABBREVs, while all state hyps exist.
        The SIMD subgoal proved LENGTH equality. Now prove FILTER equality
        by using read YMM3 s26 = read YMM3 s29 (unchanged through s27-s29). *)
+    (SUBGOAL_THEN `read YMM3 s29 = word_and (word_zx (zmm_q3in:int512)) (word 226156397384342666605459106258636701594091082888230722833791023177481060351:int256)` ASSUME_TAC THENL
+        [W(fun _ -> MP_TAC(!z3s29ref) THEN MP_TAC(!y1ref)) THEN
+         REWRITE_TAC[YMM3; READ_ZEROTOP_256] THEN
+         DISCH_THEN(fun ymask -> DISCH_THEN(fun z -> REWRITE_TAC[z; ymask])) THEN
+         CONV_TAC WORD_BLAST; ALL_TAC]) THEN
+    (SUBGOAL_THEN `read YMM3 s26 = word_and (word_zx (zmm_q3in:int512)) (word 226156397384342666605459106258636701594091082888230722833791023177481060351:int256)` ASSUME_TAC THENL
+        [W(fun _ -> MP_TAC(!z3s26ref) THEN MP_TAC(!y1ref)) THEN
+         REWRITE_TAC[YMM3; READ_ZEROTOP_256] THEN
+         DISCH_THEN(fun ymask -> DISCH_THEN(fun z -> REWRITE_TAC[z; ymask])) THEN
+         CONV_TAC WORD_BLAST; ALL_TAC]) THEN
     SUBGOAL_THEN
       `FILTER (\c:int32. val c < 8380417)
          [word_subword (read YMM3 s29:int256) (0,32):int32;
@@ -5558,7 +5777,8 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
             (try let ops,args = strip_comb(lhs c) in
                  fst(dest_const ops) = "read" &&
                  List.length args = 2 &&
-                 fst(dest_const(List.hd args)) = "YMM3"
+                 fst(dest_const(List.hd args)) = "YMM3" &&
+                 List.nth args 1 = mk_var("s29",`:x86state`)
              with _ -> false)
          then SUBST1_TAC th
          else failwith "no YMM3 word_and") THEN
@@ -5569,6 +5789,8 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
        REWRITE_TAC[VAL_WORD_AND_WORD_LE];
        ALL_TAC] THEN
 
+    (W(fun _ -> RULE_ASSUM_TAC(REWRITE_RULE[!y1ref])) THEN
+       FOLD_ZMM_READS_IN_ASMS) THEN
     (* Ghost state: ABBREV key s29 values before DISCARD kills them. *)
     ABBREV_TAC `coeffs_ymm3:int256 = read YMM3 s29` THEN
     ABBREV_TAC `cmp_mask:int64 = read R8 s29` THEN
@@ -5578,7 +5800,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
     (* Preserve cmp_mask ↔ coefficient comparison relationship.
        cmp_mask encodes which coefficients pass val < Q via VMOVMSKPS.
        This connects cmp_mask to the FILTER predicate for the brute force. *)
-    SUBGOAL_THEN
+        SUBGOAL_THEN
       `val(cmp_mask:int64) =
        bitval(val(word_subword (coeffs_ymm3:int256) (0,32):int32) < 8380417) +
        2 * bitval(val(word_subword (coeffs_ymm3:int256) (32,32):int32) < 8380417) +
@@ -5607,11 +5829,17 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
               SUBST1_TAC(REWRITE_RULE[GSYM h30] h31)
             else failwith "not h31")
         else failwith "not h30") THEN
-      (* Normalize the bit-31/word_subword/word-of-sum shape to match
-         CMP_MASK_CORRECT's word_of_bits form: first collapse the
-         bit 31 (word_subword x (k,32)) patterns via GSYM BIT_SUBWORD_256
-         (so we see bit (32k+31) of the nested word_join), then fold the
-         word(sum of bitvals) via GSYM VMOVMSKPS_BYTE_EQ into word_of_bits. *)
+      (SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+                  ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+                  ARITH_RULE `256 <= 512`] THEN
+         (fun (asl,w) ->
+            let y2 = !y2ref in
+            let tmpl = `word_subword (read YMM2 s26) (0,32):int32` in
+            let lanefacts = map (fun k ->
+               (REWRITE_CONV[y2] THENC WORD_NUM_RED_CONV)
+                 (subst[mk_small_numeral k,`0`] tmpl))
+               [0;32;64;96;128;160;192;224] in
+            REWRITE_TAC lanefacts (asl,w))) THEN
       REWRITE_TAC[GSYM BIT_SUBWORD_256; GSYM VMOVMSKPS_BYTE_EQ] THEN
       MATCH_MP_TAC(ISPECL [
         `word_subword (coeffs_ymm3:int256) (0,32):int32`;
@@ -5667,7 +5895,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
       ALL_TAC] THEN
     (* Bound on val(cmp_mask) needed by memaccess_inbounds discharge for the
        table EventLoad event (address = table + 8*val cmp_mask, size = 8). *)
-    SUBGOAL_THEN `val(cmp_mask:int64) <= 255` ASSUME_TAC THENL
+        SUBGOAL_THEN `val(cmp_mask:int64) <= 255` ASSUME_TAC THENL
      [FIRST_ASSUM(fun th ->
         if is_eq(concl th) &&
            (try fst(dest_var(lhs(concl th))) = "val" with _ -> false) ||
@@ -5702,6 +5930,9 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
     DISCARD_OLDSTATE_KEEP_EVENTS_TAC "s29" THEN CLARIFY_TAC THEN
     (* Step 30-32 WITHOUT discard to keep VPERMD hypothesis chain *)
     X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (30--32) THEN
+    (FIRST_ASSUM(fun th ->
+         if is_eq(concl th) && lhs(concl th) = `read ZMM3 s32` then (z3s32ref := th; ALL_TAC)
+         else failwith "no z3s32(memsafe)")) THEN
     SUBGOAL_THEN
       `val(read YMM3 s32:int256) MOD 2 EXP (32 * newlen) =
        num_of_wordlist(REJ_SAMPLE(SUB_LIST(8*i,8) (inlist:(24 word)list)))`
@@ -5718,7 +5949,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
           `val(read(memory :> bytes64(word_add table (word(8 * val(cmp_mask:int64))))) s32 :int64) =
            (num_of_wordlist mldsa_rej_uniform_table DIV 2 EXP (64 * val cmp_mask)) MOD 2 EXP 64`
           MP_TAC THENL
-         [MATCH_MP_TAC TABLE_ENTRY_FROM_MEMORY THEN CONJ_TAC THENL
+         [         MATCH_MP_TAC TABLE_ENTRY_FROM_MEMORY THEN CONJ_TAC THENL
            [ASM_REWRITE_TAC[];
             FIRST_X_ASSUM(fun th ->
               if can (find_term ((=) `bitval`)) (concl th) && is_eq(concl th) &&
@@ -5734,6 +5965,12 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
             MP_TAC(SPEC `val(word_subword (coeffs_ymm3:int256) (224,32):int32) < 8380417` BITVAL_BOUND) THEN
             ARITH_TAC];
           ASM_REWRITE_TAC[]]; ALL_TAC] THEN
+      (W(fun _ ->
+           let z = !z3s32ref in
+           let ymm_zmm = REWRITE_CONV[YMM3; READ_ZEROTOP_256] `read YMM3 s32:int256` in
+           let sub = CONV_RULE(RAND_CONV(RAND_CONV(REWR_CONV z))) ymm_zmm in
+           let collapsed = CONV_RULE(RAND_CONV(REWR_CONV YMM3_ZX_COLLAPSE)) sub in
+           ASSUME_TAC collapsed)) THEN
       (* Step B: substitute read YMM3 s32 into goal (exposes the VPERMD expansion). *)
       FIRST_X_ASSUM (fun th ->
         let s = string_of_term (concl th) in
@@ -5779,6 +6016,15 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
         let newlen_bitval = TRANS (TRANS newlen_def
           (AP_TERM `LENGTH:int32 list -> num` (SYM filter_rej_eq))) length_filter_eq in
         REWRITE_TAC[newlen_bitval; SYM filter_rej_eq] (asl, w)) THEN
+      (SIMP_TAC[WORD_ZX_ZX; DIMINDEX_128; DIMINDEX_256; DIMINDEX_512;
+                  ARITH_RULE `128 <= 256`; ARITH_RULE `128 <= 512`;
+                  ARITH_RULE `256 <= 512`] THEN
+         FIRST_ASSUM(fun h30 ->
+           if is_eq(concl h30) && is_var(lhs(concl h30)) &&
+              (try fst(dest_var(lhs(concl h30))) = "coeffs_ymm3" with _ -> false) &&
+              (try fst(dest_const(fst(strip_comb(rhs(concl h30))))) = "word_and"
+               with _ -> false)
+           then REWRITE_TAC[GSYM h30] else failwith "no h30 (vpermd memsafe)")) THEN
       (* Step D: fold raw memory read back to table_entry, then collapse word_zx(word_zx ...) via
          WORD_SIMPLE_SUBWORD_CONV to expose word_subword table_entry (k,3). *)
       (fun (asl, w) ->
@@ -5830,6 +6076,7 @@ let MLDSA_REJ_UNIFORM_MEMSAFE = prove
       ALL_TAC] THEN
     (* VSTEPS for all 3 steps to preserve bytes256 + VPERMD hyps *)
     X86_VSTEPS_TAC MLDSA_REJ_UNIFORM_EXEC (33--35) THEN
+    (REFOLD_YMM3_TAC ["s32";"s33";"s34";"s35"]) THEN
 
     (* (e) COND_CASES_TAC: continue (i+1 < N) vs exit (~(i+1 < N)) *)
     COND_CASES_TAC THENL
@@ -7464,4 +7711,3 @@ let MLDSA_REJ_UNIFORM_WINDOWS_SUBROUTINE_SAFE = time prove
           MAYCHANGE [memory :> bytes(res,1024)] ,,
           MAYCHANGE [memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_REJ_UNIFORM_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
-

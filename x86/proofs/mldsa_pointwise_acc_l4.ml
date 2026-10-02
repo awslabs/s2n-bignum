@@ -179,6 +179,16 @@ let MLDSA_POINTWISE_ACC_L4_TMC_EXEC = X86_MK_CORE_EXEC_RULE mldsa_pointwise_acc_
 (* Correctness proof                                                         *)
 (* ========================================================================= *)
 
+let SIMD_SIMPLIFY_TAC_ZMM unfold_defs =
+  let arm_simdable = can (term_match [] `read X (s:armstate):int128 = whatever`) in
+  let x86_simdable = can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let x86_simdable512 = can (term_match [] `read X (s:x86state):int512 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm || x86_simdable512 tm in
+  TRY(FIRST_X_ASSUM
+   (ASSUME_TAC o
+    CONV_RULE(RAND_CONV (SIMD_SIMPLIFY_CONV unfold_defs)) o
+    check (simdable o concl)));;
+
 let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
  (`!c a b consts x y pc.
     aligned 32 c /\
@@ -308,7 +318,7 @@ let MLDSA_POINTWISE_ACC_L4_CORRECT = prove
    ALL_TAC] THEN
 
   MAP_EVERY (fun n -> X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_TMC_EXEC [n] THEN
-                      SIMD_SIMPLIFY_TAC[mldsa_pointwise_montred])
+                      SIMD_SIMPLIFY_TAC_ZMM[mldsa_pointwise_montred])
         (1--1411) THEN
   ENSURES_FINAL_STATE_TAC THEN
   ASM_REWRITE_TAC[] THEN
@@ -562,20 +572,17 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
-
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
+  GHOST_INTRO_TAC `init_zmm13:int512` `read ZMM13` THEN
+  GHOST_INTRO_TAC `init_zmm14:int512` `read ZMM14` THEN
+  GHOST_INTRO_TAC `init_zmm15:int512` `read ZMM15` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -605,16 +612,16 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
 
   (* Capture final YMM states before epilogue *)
   MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s18`;
-    `ymm7_epilog = read YMM7 s18`;
-    `ymm8_epilog = read YMM8 s18`;
-    `ymm9_epilog = read YMM9 s18`;
-    `ymm10_epilog = read YMM10 s18`;
-    `ymm11_epilog = read YMM11 s18`;
-    `ymm12_epilog = read YMM12 s18`;
-    `ymm13_epilog = read YMM13 s18`;
-    `ymm14_epilog = read YMM14 s18`;
-    `ymm15_epilog = read YMM15 s18`] THEN
+   [`zmm6_epilog = read ZMM6 s18`;
+    `zmm7_epilog = read ZMM7 s18`;
+    `zmm8_epilog = read ZMM8 s18`;
+    `zmm9_epilog = read ZMM9 s18`;
+    `zmm10_epilog = read ZMM10 s18`;
+    `zmm11_epilog = read ZMM11 s18`;
+    `zmm12_epilog = read ZMM12 s18`;
+    `zmm13_epilog = read ZMM13 s18`;
+    `zmm14_epilog = read ZMM14 s18`;
+    `zmm15_epilog = read ZMM15 s18`] THEN
 
   (* Execute Windows epilogue: 14 instructions including RET *)
   X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC (19--32) THEN
@@ -819,19 +826,17 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
+  GHOST_INTRO_TAC `init_zmm13:int512` `read ZMM13` THEN
+  GHOST_INTRO_TAC `init_zmm14:int512` `read ZMM14` THEN
+  GHOST_INTRO_TAC `init_zmm15:int512` `read ZMM15` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -859,11 +864,11 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
      98));
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
   MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s18`; `ymm7_epilog = read YMM7 s18`;
-    `ymm8_epilog = read YMM8 s18`; `ymm9_epilog = read YMM9 s18`;
-    `ymm10_epilog = read YMM10 s18`; `ymm11_epilog = read YMM11 s18`;
-    `ymm12_epilog = read YMM12 s18`; `ymm13_epilog = read YMM13 s18`;
-    `ymm14_epilog = read YMM14 s18`; `ymm15_epilog = read YMM15 s18`] THEN
+   [`zmm6_epilog = read ZMM6 s18`; `zmm7_epilog = read ZMM7 s18`;
+    `zmm8_epilog = read ZMM8 s18`; `zmm9_epilog = read ZMM9 s18`;
+    `zmm10_epilog = read ZMM10 s18`; `zmm11_epilog = read ZMM11 s18`;
+    `zmm12_epilog = read ZMM12 s18`; `zmm13_epilog = read ZMM13 s18`;
+    `zmm14_epilog = read ZMM14 s18`; `zmm15_epilog = read ZMM15 s18`] THEN
   X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC (19--32) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
