@@ -388,6 +388,18 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         let sz = Lower_128 in
         read_ModRM rex l >>= \((reg,rm),l).
         SOME (AESDECLAST (mmreg reg sz) (simd_of_RM sz rm), l)
+      | [0xcb:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (SHA256RNDS2 (mmreg reg sz) (simd_of_RM sz rm), l)
+      | [0xcc:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (SHA256MSG1 (mmreg reg sz) (simd_of_RM sz rm), l)
+      | [0xcd:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        SOME (SHA256MSG2 (mmreg reg sz) (simd_of_RM sz rm), l)
       | [0xf6:8] ->
         let sz = op_size T (rex_W rex) T pfxs in
         read_ModRM_operand rex sz l >>= \((reg,rm),l).
@@ -403,6 +415,11 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
         read_ModRM rex l >>= \((reg,rm),l).
         read_imm Byte l >>= \(imm8,l).
         SOME (PBLENDW (mmreg reg sz) (simd_of_RM sz rm) imm8, l)
+      | [0x0f:8] -> if has_unhandled_pfxs pfxs then NONE else
+        let sz = Lower_128 in
+        read_ModRM rex l >>= \((reg,rm),l).
+        read_imm Byte l >>= \(imm8,l).
+        SOME (PALIGNR (mmreg reg sz) (simd_of_RM sz rm) imm8, l)
       | [0x22:8] -> if has_unhandled_pfxs pfxs then NONE else
         read_ModRM rex l >>= \((reg,rm),l).
         read_imm Byte l >>= \(imm8,l).
@@ -432,6 +449,14 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
       let sz = Lower_128 in
       read_ModRM rex l >>= \((reg,rm),l).
       SOME (PCMPGTD (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0x6c:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (PUNPCKLQDQ (mmreg reg sz) (simd_of_RM sz rm), l)
+    | [0x6d:8] -> if has_unhandled_pfxs pfxs then NONE else
+      let sz = Lower_128 in
+      read_ModRM rex l >>= \((reg,rm),l).
+      SOME (PUNPCKHQDQ (mmreg reg sz) (simd_of_RM sz rm), l)
     | [0x6e:8] -> if has_unhandled_pfxs pfxs then NONE else
       read_ModRM rex l >>= \((reg,rm),l).
       let dest = mmreg reg Lower_128 in
