@@ -17290,6 +17290,25 @@ let LIST_OF_SEQ_NIST_INPUT_SPELL = prove
   REPEAT GEN_TAC THEN MATCH_MP_TAC LIST_OF_SEQ_EQ_PTWISE THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[gcm_dec_nist_input; BREV_RF8_128]);;
 
+(* The number of complete blocks processed by the public decrypt entry point.
+   Both entry-reject paths map to zero blocks: a zero bit length is already
+   zero under DIV, while a non-multiple of 128 is rejected before any memory
+   access.  The decrypt-specific name avoids colliding with the corresponding
+   definition in the encrypt proof when both files are loaded. *)
+let gcm_dec_wb_blocks = new_definition
+ `gcm_dec_wb_blocks (bit_len:int64) =
+    if val bit_len MOD 128 = 0 then val bit_len DIV 128 else 0`;;
+
+let GCM_DEC_WB_BLOCKS_VALID = prove
+ (`!bit_len:int64.
+      val bit_len MOD 128 = 0
+      ==> val bit_len = 128 * gcm_dec_wb_blocks bit_len`,
+  REWRITE_TAC[gcm_dec_wb_blocks] THEN REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
+    (CONJUNCT2 DIVISION_SIMP)) THEN
+  ASM_ARITH_TAC);;
+
 (* THE EXPORTED CORE CONTRACT.  Derived from the internal FIPS-197 core lemma by    *)
 (* (1) rewriting the GHASH block list into John's gcm_dec_nist_input spelling, and  *)
 (* (2) rewriting the two residual word_bytereverse occurrences (the ivec write-back *)
@@ -17359,8 +17378,9 @@ let AESV8_GCM_8X_DEC_256_CORRECT = prove
     (REWRITE_RULE[BREV_RF8_128]
       (REWRITE_RULE[LIST_OF_SEQ_NIST_INPUT_SPELL] WBN_DEC_CORE_FIPS197)));;
 
-(* THE EXPORTED SUBROUTINE CONTRACT (the AAPCS64-callable headline result).         *)
-let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
+(* The valid whole-block subroutine result remains as an internal helper for
+   the nonzero main path of the public arbitrary-length theorem below. *)
+let WBN_DEC_VALID_SUBROUTINE_CORRECT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c returnaddress.
     128 * nblk < 2 EXP 62 /\
@@ -17420,20 +17440,174 @@ let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
       (REWRITE_RULE[LIST_OF_SEQ_NIST_INPUT_SPELL]
         WBN_DEC_SUBROUTINE_FIPS197)));;
 
+(* THE EXPORTED SUBROUTINE CONTRACT (the AAPCS64-callable headline result).
+   This mirrors the assembly's public length contract directly:
+   - invalid non-multiples of 128 process zero blocks and reject;
+   - zero processes zero blocks and returns immediately;
+   - valid nonzero lengths reduce to WBN_DEC_VALID_SUBROUTINE_CORRECT.
+   Because all data-dependent clauses are indexed by gcm_dec_wb_blocks, the
+   same functional postcondition describes all three paths. *)
+let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
+ (`!pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p inblock rk
+    tag0 ctr0 nonce c returnaddress.
+    val bit_len < 2 EXP 62 /\
+    val in_p + 16 * gcm_dec_wb_blocks bit_len < 2 EXP 63 /\
+    LENGTH rk = 15 /\
+    aligned 16 stackpointer /\
+    word_reversefields 8 ctr0 = ctr_block nonce c /\
+    ALLPAIRS nonoverlapping
+    [out_p,16 * gcm_dec_wb_blocks bit_len; xi_p,16; ivec_p,16]
+    [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc;
+     in_p,16 * gcm_dec_wb_blocks bit_len; key_p,240; htbl_p,192;
+     word_sub stackpointer (word 80),80] /\
+    PAIRWISE nonoverlapping
+    [out_p,16 * gcm_dec_wb_blocks bit_len; xi_p,16; ivec_p,16] /\
+    ALL (nonoverlapping (word_sub stackpointer (word 80),80))
+    [word pc, LENGTH aesv8_gcm_8x_dec_256_wb_mc;
+     in_p,16 * gcm_dec_wb_blocks bit_len; key_p,240; htbl_p,192]
+    ==> ensures arm
+         (\s. aligned_bytes_loaded s (word pc) aesv8_gcm_8x_dec_256_wb_mc /\
+              read PC s = word pc /\
+              read SP s = stackpointer /\
+              read X30 s = returnaddress /\
+              C_ARGUMENTS
+              [in_p; bit_len; out_p; xi_p; ivec_p; key_p; htbl_p] s /\
+              (!j. j < gcm_dec_wb_blocks bit_len
+                   ==> read (memory :> bytes128
+                              (word_add in_p (word (16 * j)))) s = inblock j) /\
+              read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
+              read (memory :> bytes128 ivec_p) s = ctr0 /\
+              wordlist_from_memory (key_p,15) s = rk /\
+              htable_mem_8
+              (ghash_twist
+              (word_reversefields 8
+              (aes256_cipher (word 0) (MAP (word_reversefields 8) rk)))) htbl_p s)
+         (\s. read PC s = returnaddress /\
+              C_RETURN s = word (16 * gcm_dec_wb_blocks bit_len) /\
+              (!j. j < gcm_dec_wb_blocks bit_len
+                   ==> read (memory :> bytes128
+                              (word_add out_p (word (16 * j)))) s =
+                       word_xor
+                       (word_reversefields 8
+                       (aes256_cipher (ctr_block nonce (c + j))
+                       (MAP (word_reversefields 8) rk)))
+                       (inblock j)) /\
+              read (memory :> bytes128 xi_p) s =
+              word_reversefields 8
+              (nist_ghash
+              (word_reversefields 8
+              (aes256_cipher (word 0) (MAP (word_reversefields 8) rk))) tag0
+              (list_of_seq (gcm_dec_nist_input inblock)
+                           (gcm_dec_wb_blocks bit_len))) /\
+              read (memory :> bytes128 ivec_p) s =
+              word_reversefields 8
+                (ctr_block nonce (c + gcm_dec_wb_blocks bit_len)))
+         (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+          MAYCHANGE
+          [memory :> bytes
+             (out_p,16 * gcm_dec_wb_blocks bit_len);
+           memory :> bytes (xi_p,16);
+           memory :> bytes (ivec_p,16);
+           memory :> bytes (word_sub stackpointer (word 80),80)])`,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  SUBGOAL_THEN
+   `ctr0:int128 = word_reversefields 8 (ctr_block nonce c)`
+  SUBST_ALL_TAC THENL
+   [UNDISCH_TAC `word_reversefields 8 ctr0 = ctr_block nonce c` THEN
+    DISCH_THEN(SUBST1_TAC o SYM) THEN
+    REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS];
+    ALL_TAC] THEN
+  ABBREV_TAC `nblk = gcm_dec_wb_blocks bit_len` THEN
+  ASM_CASES_TAC `val(bit_len:int64) MOD 128 = 0` THENL
+   [ALL_TAC;
+    (* Invalid non-multiple: cbz falls through, tst/b.ne rejects, and no
+       memory is touched. *)
+    SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
+     [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_dec_wb_blocks] THEN
+      ASM_REWRITE_TAC[COND_CLAUSES];
+      ALL_TAC] THEN
+    SUBGOAL_THEN `~(val(bit_len:int64) = 0)` ASSUME_TAC THENL
+     [DISCH_TAC THEN
+      UNDISCH_TAC `~(val(bit_len:int64) MOD 128 = 0)` THEN
+      ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
+      ALL_TAC] THEN
+    SUBGOAL_THEN
+     `~(val(word_and (bit_len:int64) (word 127)) = 0)`
+    ASSUME_TAC THENL
+     [SUBGOAL_THEN `127 = 2 EXP 7 - 1` SUBST1_TAC THENL
+       [CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+      REWRITE_TAC[VAL_WORD_AND_MASK_WORD] THEN
+      ASM_REWRITE_TAC[ARITH_RULE `2 EXP 7 = 128`];
+      ALL_TAC] THEN
+    REWRITE_TAC[MULT_CLAUSES;ADD_CLAUSES;
+                MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                MODIFIABLE_SIMD_REGS;MODIFIABLE_GPRS;
+                MODIFIABLE_UPPER_SIMD_REGS;C_ARGUMENTS;C_RETURN;SOME_FLAGS] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (1--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[list_of_seq;nist_ghash;
+                    WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
+    REWRITE_TAC[ARITH_RULE `j < 0 <=> F`]] THEN
+  ASM_CASES_TAC `val(bit_len:int64) = 0` THENL
+   [(* Zero length: cbz returns before the stack saves. *)
+    SUBGOAL_THEN `nblk = 0` SUBST_ALL_TAC THENL
+     [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_dec_wb_blocks] THEN
+      ASM_REWRITE_TAC[COND_CLAUSES] THEN CONV_TAC NUM_REDUCE_CONV;
+      ALL_TAC] THEN
+    SUBGOAL_THEN `bit_len:int64 = word 0` SUBST_ALL_TAC THENL
+     [ASM_REWRITE_TAC[GSYM VAL_EQ_0];
+      ALL_TAC] THEN
+    REWRITE_TAC[MULT_CLAUSES;ADD_CLAUSES;
+                MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
+                MODIFIABLE_SIMD_REGS;MODIFIABLE_GPRS;
+                MODIFIABLE_UPPER_SIMD_REGS;C_ARGUMENTS;C_RETURN;SOME_FLAGS] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC AESV8_GCM_8X_DEC_256_WB_EXEC (1--4) THEN
+    ENSURES_FINAL_STATE_TAC THEN
+    ASM_REWRITE_TAC[list_of_seq;nist_ghash;
+                    WORD_REVERSEFIELDS_REVERSEFIELDS] THEN
+    REWRITE_TAC[ARITH_RULE `j < 0 <=> F`];
+    ALL_TAC] THEN
+  (* Valid nonzero length: recover the canonical word (128*nblk) argument and
+     invoke the existing whole-block result. *)
+  SUBGOAL_THEN `1 <= nblk` ASSUME_TAC THENL
+   [EXPAND_TAC "nblk" THEN REWRITE_TAC[gcm_dec_wb_blocks] THEN
+    ASM_REWRITE_TAC[] THEN
+    MP_TAC(SPECL [`val(bit_len:int64)`; `128`]
+      (CONJUNCT2 DIVISION_SIMP)) THEN
+    ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `val(bit_len:int64) = 128 * nblk` ASSUME_TAC THENL
+   [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_DEC_WB_BLOCKS_VALID];
+    ALL_TAC] THEN
+  SUBGOAL_THEN `128 * nblk < 2 EXP 62` ASSUME_TAC THENL
+   [ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `bit_len:int64 = word (128 * nblk)` SUBST_ALL_TAC THENL
+   [FIRST_X_ASSUM(fun th ->
+      if concl th = `val(bit_len:int64) = 128 * nblk`
+      then MP_TAC th else failwith "") THEN
+    DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[WORD_VAL];
+    ALL_TAC] THEN
+  MATCH_MP_TAC WBN_DEC_VALID_SUBROUTINE_CORRECT THEN
+  ASM_REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS]);;
+
 (* ------------------------------------------------------------------------- *)
 (* Soundness + spelling gate for the two EXPORTED contracts.                    *)
-(* End state (human decision 2026-09-17): EXACTLY TWO exported contracts,        *)
-(* AESV8_GCM_8X_DEC_256_CORRECT and _SUBROUTINE_CORRECT, over aes256_cipher +    *)
-(* nist_ghash, spelled entirely in word_reversefields 8.  Each is derived from   *)
-(* the internal FIPS-197-form lemma by (spell rewrite ; BREV_RF8_128), so:        *)
+(* AESV8_GCM_8X_DEC_256_CORRECT remains the valid-only core result, while the    *)
+(* exported SUBROUTINE_CORRECT is the arbitrary-bit_len three-path contract.     *)
+(* The valid subroutine helper is still derived from the internal FIPS-197 form. *)
+(* All three are over aes256_cipher + nist_ghash and are spelled entirely in     *)
+(* word_reversefields 8, so:                                                     *)
 (*  - hyps=0 and axioms=3 (no new_axiom snuck in);                                *)
 (*  - the conclusion mentions gcm_dec_nist_input and NO LONGER the lambda,        *)
 (*    proving the spelling rewrite fired (else it would be a no-op alias);         *)
 (*  - HARD SPELLING GATE: the conclusion contains ZERO word_bytereverse -- every  *)
 (*    byte reversal is spelled word_reversefields 8, matching the sibling AES-GCM  *)
 (*    proofs (aesv8_gcm_8x_enc_256_wb, aes_gcm_dec_kernel_x4);                     *)
-(*  - and the derivation is exactly (spell ; BREV_RF8_128) of the FIPS-197 form    *)
-(*    (aconv), pinning the exported statement to the internal lemma.               *)
+(*  - core and valid-subroutine helper derivations are exactly (spell ; BREV)      *)
+(*    of their FIPS-197 forms (aconv).                                             *)
 (* ------------------------------------------------------------------------- *)
 let () =
   let mentions c th = can (find_term (fun t -> is_const t && fst(dest_const t) = c))
@@ -17461,14 +17635,23 @@ let () =
     else () in
   check "WB dec CORRECT"
         AESV8_GCM_8X_DEC_256_CORRECT WBN_DEC_CORE_FIPS197;
-  check "WB dec SUBROUTINE_CORRECT"
-        AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT
+  check "WB dec valid subroutine helper"
+        WBN_DEC_VALID_SUBROUTINE_CORRECT
         WBN_DEC_SUBROUTINE_FIPS197;
-  if List.length (axioms()) <> 3 then
+  if hyp AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT <> [] then
+    failwith "WB dec SUBROUTINE_CORRECT: unexpected hypotheses"
+  else if not (mentions "gcm_dec_wb_blocks"
+                       AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT) then
+    failwith "WB dec SUBROUTINE_CORRECT: processed-block definition absent"
+  else if has_brev AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT then
+    failwith "WB dec SUBROUTINE_CORRECT: word_bytereverse present"
+  else if mentions "aes256_encrypt"
+                   AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT then
+    failwith "WB dec SUBROUTINE_CORRECT: aes256_encrypt present"
+  else if List.length (axioms()) <> 3 then
     failwith "WB dec exported contracts: unexpected axiom count (new_axiom introduced?)"
   else Format.print_string
-    ("WB dec EXPORTED contracts: CORRECT + SUBROUTINE_CORRECT "^
-     "(over aes256_cipher + nist_ghash; tag = word_reversefields 8 (nist_ghash .. "^
-     "(list_of_seq (gcm_dec_nist_input inblock) nblk)); spelled entirely in "^
-     "word_reversefields 8, zero word_bytereverse; derived from the FIPS-197 form "^
-     "by spell + BREV_RF8_128) hyps=0, axioms=3\n");;
+    ("WB dec EXPORTED contracts: valid-only CORRECT + arbitrary-bit_len "^
+     "SUBROUTINE_CORRECT (gcm_dec_wb_blocks; invalid/zero/valid paths; "^
+     "aes256_cipher + nist_ghash; word_reversefields 8 spelling) "^
+     "hyps=0, axioms=3\n");;
