@@ -17380,7 +17380,7 @@ let AESV8_GCM_8X_DEC_256_CORRECT = prove
 
 (* The valid whole-block subroutine result remains as an internal helper for
    the nonzero main path of the public arbitrary-length theorem below. *)
-let WBN_DEC_VALID_SUBROUTINE_CORRECT = prove
+let WBN_DEC_VALID_CALL_CORRECT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c returnaddress.
     128 * nblk < 2 EXP 62 /\
@@ -17444,7 +17444,7 @@ let WBN_DEC_VALID_SUBROUTINE_CORRECT = prove
    This mirrors the assembly's public length contract directly:
    - invalid non-multiples of 128 process zero blocks and reject;
    - zero processes zero blocks and returns immediately;
-   - valid nonzero lengths reduce to WBN_DEC_VALID_SUBROUTINE_CORRECT.
+   - valid nonzero lengths reduce to WBN_DEC_VALID_CALL_CORRECT.
    Because all data-dependent clauses are indexed by gcm_dec_wb_blocks, the
    same functional postcondition describes all three paths. *)
 let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
@@ -17590,7 +17590,7 @@ let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
       then MP_TAC th else failwith "") THEN
     DISCH_THEN(SUBST1_TAC o SYM) THEN REWRITE_TAC[WORD_VAL];
     ALL_TAC] THEN
-  MATCH_MP_TAC WBN_DEC_VALID_SUBROUTINE_CORRECT THEN
+  MATCH_MP_TAC WBN_DEC_VALID_CALL_CORRECT THEN
   ASM_REWRITE_TAC[WORD_REVERSEFIELDS_REVERSEFIELDS]);;
 
 (* ------------------------------------------------------------------------- *)
@@ -17636,7 +17636,7 @@ let () =
   check "WB dec CORRECT"
         AESV8_GCM_8X_DEC_256_CORRECT WBN_DEC_CORE_FIPS197;
   check "WB dec valid subroutine helper"
-        WBN_DEC_VALID_SUBROUTINE_CORRECT
+        WBN_DEC_VALID_CALL_CORRECT
         WBN_DEC_SUBROUTINE_FIPS197;
   if hyp AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT <> [] then
     failwith "WB dec SUBROUTINE_CORRECT: unexpected hypotheses"
