@@ -105,6 +105,13 @@ let gen_mk_safety_spec
       let expr_rhs = String.sub s (idx+1) (l - idx - 1) in
       mk_binary "*" (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
     | None ->
+     let l = String.length s in
+     if starts_with "max(" s && l > 5 && String.get s (l - 1) = ')' then
+       (match String.split_on_char ',' (String.sub s 4 (l - 5)) with
+        | [a;b] -> mk_binary "MAX"
+            (elemsz_to_hol (String.trim a), elemsz_to_hol (String.trim b))
+        | _ -> failwith ("elemsz_to_hol: cannot parse " ^ s))
+     else
      (try mk_small_numeral (int_of_string s)
       with Failure _ ->
         let v = c_var_to_hol s in
