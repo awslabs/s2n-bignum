@@ -4023,3 +4023,56 @@ let CURVE25519_LADDERSTEP_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC CURVE25519_LADDERSTEP_EXEC
    CURVE25519_LADDERSTEP_CORRECT
    `[X19;X20;X21;X30]` 320);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The swap bit b is not a public     *)
+(* input: the event trace (no branches, CSEL-based selection) does not       *)
+(* depend on it.                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "curve25519_ladderstep" subroutine_signatures)
+    CURVE25519_LADDERSTEP_CORRECT
+    CURVE25519_LADDERSTEP_EXEC;;
+
+let CURVE25519_LADDERSTEP_SAFE = time prove(full_spec,
+  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars CURVE25519_LADDERSTEP_EXEC);;
+
+let CURVE25519_LADDERSTEP_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e rr point pp b pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALLPAIRS nonoverlapping
+         [(rr,128); (word_sub stackpointer (word 320),320)]
+         [(word pc,LENGTH curve25519_ladderstep_mc); (point,64); (pp,128)] /\
+        nonoverlapping (rr,128) (word_sub stackpointer (word 320),320)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) curve25519_ladderstep_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [rr; point; pp; b] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events point pp rr pc
+                              (word_sub stackpointer (word 320))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [point,64; pp,128; rr,128;
+                          word_sub stackpointer (word 320),320]
+                         [rr,128; word_sub stackpointer (word 320),320]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(rr,128);
+                      memory :> bytes(word_sub stackpointer (word 320),320)])`,
+  REWRITE_TAC[fst CURVE25519_LADDERSTEP_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC CURVE25519_LADDERSTEP_EXEC
+    (REWRITE_RULE[fst CURVE25519_LADDERSTEP_EXEC]CURVE25519_LADDERSTEP_SAFE)
+    `[X19;X20;X21;X30]` 320 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
