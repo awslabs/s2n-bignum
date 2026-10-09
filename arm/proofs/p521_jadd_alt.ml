@@ -6667,3 +6667,52 @@ let P521_JADD_ALT_SUBROUTINE_CORRECT = time prove
    P521_JADD_ALT_CORRECT
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28]`
    592);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time / memory-safety property.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p521_jadd_alt" subroutine_signatures)
+    P521_JADD_ALT_CORRECT
+    P521_JADD_ALT_EXEC;;
+
+let P521_JADD_ALT_SAFE = time prove(full_spec,
+  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P521_JADD_ALT_EXEC);;
+
+let P521_JADD_ALT_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 592),592))
+            [(word pc,LENGTH p521_jadd_alt_mc); (p1,216); (p2,216); (p3,216)] /\
+        nonoverlapping (p3,216) (word pc,LENGTH p521_jadd_alt_mc)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p521_jadd_alt_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [p3; p1; p2] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc
+                              (word_sub stackpointer (word 592))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [p1,216; p2,216; p3,216; word_sub stackpointer (word 592),592]
+                         [p3,216; word_sub stackpointer (word 592),592]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(p3,216);
+                      memory :> bytes(word_sub stackpointer (word 592),592)])`,
+  REWRITE_TAC[fst P521_JADD_ALT_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC P521_JADD_ALT_EXEC
+    (REWRITE_RULE[fst P521_JADD_ALT_EXEC]P521_JADD_ALT_SAFE)
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28]` 592 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
