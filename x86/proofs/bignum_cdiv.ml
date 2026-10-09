@@ -2042,3 +2042,405 @@ let BIGNUM_CDIV_WINDOWS_SUBROUTINE_CORRECT = prove
                        memory :> bytes(word_sub stackpointer (word 56),56)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CDIV_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_cdiv" subroutine_signatures)
+    BIGNUM_CDIV_CORRECT
+    BIGNUM_CDIV_EXEC;;
+
+(* Close the non-event conjuncts of a postcondition after simulation. *)
+
+let BIGNUM_CDIV_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
+               NO_TAC);
+              (ASM_REWRITE_TAC[] THEN NO_TAC);
+              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
+              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+               CONV_TAC WORD_RULE THEN NO_TAC);
+              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
+        ALL_TAC]
+    else NO_TAC));;
+
+let BIGNUM_CDIV_CLOSE_TAC =
+  BIGNUM_CDIV_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let BIGNUM_CDIV_POST_REASSOC_TAC =
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
+   [METIS[APPEND_ASSOC]
+     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
+      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
+
+(* Reduce the conditionals `if p then a else b` of the goal according to an
+   assumption p or ~p, without rewriting with p itself. *)
+
+let BIGNUM_CDIV_COND_TAC (p:term) =
+  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
+  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]);;
+
+(* Facts for an up-counting loop with index register word e (e an expression
+   in the loop variable v), whose backward branch compares e + 1 with bnd;
+   cnt is the iteration count. *)
+
+let BIGNUM_CDIV_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
+  let e1 = mk_binary "+" (e,`1`) in
+  let wd t = mk_comb(`word:num->int64`,t) in
+  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
+  SUBGOAL_THEN (list_mk_conj
+    [mkval e; mkval e1;
+     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
+           wd e1);
+     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      CONV_TAC WORD_RULE;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* Facts for a down-counting register holding word (c - v), decremented
+   before a test of zero. *)
+
+let BIGNUM_CDIV_DOWNFACTS_TAC (v:term) (c:term) =
+  let sub t = subst [c,`c:num`; v,`j:num`] t in
+  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
+                     val (word (c - j):int64) = c - j /\
+                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
+                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
+       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+let BIGNUM_CDIV_BETA_VAR_CONV v tm =
+  if is_comb tm && is_abs (rator tm) && name_of (bndvar (rator tm)) = v
+  then BETA_CONV tm else failwith "BIGNUM_CDIV_BETA_VAR_CONV";;
+
+let BIGNUM_CDIV_SAFE = time prove
+ (`exists f_events.
+       forall e k z n x m pc.
+           nonoverlapping (word pc,591) (z,8 * val k) /\
+           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val k))
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST bignum_cdiv_tmc) /\
+                    read RIP s = word (pc + 9) /\
+                    C_ARGUMENTS [k; z; n; x; m] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 581) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z k n pc /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (MAYCHANGE
+                [RIP; RAX; RCX; RDX; R8; R9; R10; R11; RBX; R12; R13; R14;
+                 R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(x:int64) (z:int64) (k:int64) (n:int64) (pc:num).
+      APPEND
+       (if val k = 0 then f_ev_k0 x z k n pc
+        else
+          APPEND (f_ev_post x z k n pc)
+           (APPEND
+             (ENUMERATEL (val k) (\i.
+                if i < val n - 1 then f_ev_bload x z k n pc i
+                else f_ev_bskip x z k n pc i))
+             (if val n = 0 then f_ev_pre0 x z k n pc
+              else f_ev_pre1 x z k n pc)))
+       (if val n = 0 then f_ev_n0 x z k n pc
+        else
+          APPEND (f_ev_cpost x z k n pc)
+           (APPEND (ENUMERATEL (val n) (f_ev_cloop x z k n pc))
+                   (f_ev_cpre x z k n pc))) :(uarch_event) list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `n:num` THEN
+  MAP_EVERY X_GEN_TAC [`x:int64`; `m:int64`; `pc:num`] THEN
+  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `val (word (n - 1):int64) = n - 1` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    UNDISCH_TAC `n < 2 EXP 64` THEN ARITH_TAC;
+    ALL_TAC] THEN
+
+  (*** The first phase: x mod m, skipped if n = 0 ***)
+
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x17c`
+   `\s. read RDI s = word k /\ read RSI s = z /\ read R9 s = word n /\
+        read R10 s = x` THEN
+  CONJ_TAC THENL
+   [ASM_CASES_TAC `n = 0` THENL
+     [BIGNUM_CDIV_COND_TAC `n = 0` THEN
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--6) THEN
+      BIGNUM_CDIV_CLOSE_TAC;
+      ALL_TAC] THEN
+    BIGNUM_CDIV_COND_TAC `n = 0` THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + 0xfb` `pc + 0x11e`
+     `\i s. read RDI s = word k /\ read RSI s = z /\ read R9 s = word n /\
+            read R10 s = x /\ read RBX s = word (n - i)` THEN
+    REPEAT CONJ_TAC THENL
+     [ASM_REWRITE_TAC[];
+      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--66) THEN
+      BIGNUM_CDIV_CLOSE_TAC;
+      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+      BIGNUM_CDIV_DOWNFACTS_TAC `i:num` `n:num` THEN
+      SUBGOAL_THEN
+       `word (8 * (n - i) + 18446744073709551608):int64 =
+        word (8 * (n - (i + 1)))`
+      ASSUME_TAC THENL
+       [REWRITE_TAC[WORD_BLAST
+         `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+        IMP_REWRITE_TAC[WORD_SUB2] THEN
+        CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+        ALL_TAC] THEN
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--11) THEN
+      BIGNUM_CDIV_CLOSE_TAC;
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--30) THEN
+      BIGNUM_CDIV_CLOSE_TAC];
+    (*** The second phase: the exact division of x by m ***)
+
+    ASM_CASES_TAC `k = 0` THENL
+     [BIGNUM_CDIV_COND_TAC `k = 0` THEN
+      FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--3) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+      ALL_TAC] THEN
+    BIGNUM_CDIV_COND_TAC `k = 0` THEN
+    SUBGOAL_THEN `8 * k < 2 EXP 64` ASSUME_TAC THENL
+     [EVERY_ASSUM(fun th ->
+        try MP_TAC
+         (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th)
+        with Failure _ -> ALL_TAC) THEN
+      UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
+      ALL_TAC] THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x204` `pc + 0x242`
+     `\i s. read RDI s = word k /\ read RSI s = z /\ read R9 s = word (n - 1) /\
+            read R10 s = (if n = 0 then x else word_add x (word 8)) /\
+            read RBX s = word i` THEN
+    REPEAT CONJ_TAC THENL
+     [ASM_REWRITE_TAC[];
+      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+      ASM_CASES_TAC `n = 0` THENL
+       [BIGNUM_CDIV_COND_TAC `n = 0` THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--35) THEN
+        BIGNUM_CDIV_CLOSE_TAC;
+        BIGNUM_CDIV_COND_TAC `n = 0` THEN
+        SUBGOAL_THEN `word_sub (word n) (word 1):int64 = word (n - 1)` ASSUME_TAC THENL
+         [IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(n = 0)` THEN ARITH_TAC;
+          ALL_TAC] THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--38) THEN
+        BIGNUM_CDIV_CLOSE_TAC];
+      ALL_TAC;
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--1) THEN
+      BIGNUM_CDIV_CLOSE_TAC] THEN
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
+    CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BIGNUM_CDIV_BETA_VAR_CONV "i")))) THEN
+    BIGNUM_CDIV_POST_REASSOC_TAC THEN
+    BIGNUM_CDIV_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+    ASM_CASES_TAC `i < n - 1` THENL
+     [BIGNUM_CDIV_COND_TAC `i < n - 1` THEN
+      SUBGOAL_THEN
+       `(if n = 0 then x else word_add x (word 8)):int64 = word_add x (word 8) /\
+        word_add (word_add x (word 8)) (word (8 * i)):int64 =
+        word_add x (word (8 * (i + 1))) /\
+        i + 1 < n`
+      STRIP_ASSUME_TAC THENL
+       [REPEAT CONJ_TAC THENL
+         [COND_CASES_TAC THEN REWRITE_TAC[] THEN
+          UNDISCH_TAC `i < n - 1` THEN ASM_REWRITE_TAC[] THEN ARITH_TAC;
+          CONV_TAC WORD_RULE;
+          UNDISCH_TAC `i < n - 1` THEN ARITH_TAC];
+        ALL_TAC] THEN
+      FIRST_X_ASSUM(SUBST1_TAC o check (is_cond o lhand o concl)) THEN
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--20) THEN
+      BIGNUM_CDIV_CLOSE_TAC;
+      BIGNUM_CDIV_COND_TAC `i < n - 1` THEN
+      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXEC (1--19) THEN
+      BIGNUM_CDIV_CLOSE_TAC]]);;
+
+let BIGNUM_CDIV_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z n x m pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (word_sub stackpointer (word 40),48) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 40),40))
+        [word pc,LENGTH bignum_cdiv_tmc; x,8 * val n] /\
+        nonoverlapping (word pc,LENGTH bignum_cdiv_tmc) (z,8 * val k) /\
+        (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val k))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_cdiv_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; z; n; x; m] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z k n pc (word_sub stackpointer (word 40))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val n * 8; z,val k * 8;
+                       word_sub stackpointer (word 40),48]
+                      [z,val k * 8; word_sub stackpointer (word 40),40]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k);
+              memory :> bytes (word_sub stackpointer (word 40),40)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_cdiv_tmc BIGNUM_CDIV_SAFE `[RBX; R12; R13; R14; R15]` 40 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_CDIV_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z n x m pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (word_sub stackpointer (word 40),48) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 40),40))
+        [word pc,LENGTH bignum_cdiv_mc; x,8 * val n] /\
+        nonoverlapping (word pc,LENGTH bignum_cdiv_mc) (z,8 * val k) /\
+        (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val k))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_cdiv_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; z; n; x; m] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z k n pc (word_sub stackpointer (word 40))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val n * 8; z,val k * 8;
+                       word_sub stackpointer (word 40),48]
+                      [z,val k * 8; word_sub stackpointer (word 40),40]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k);
+              memory :> bytes (word_sub stackpointer (word 40),40)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CDIV_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_CDIV_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z n x m pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (word_sub stackpointer (word 56),64) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 56),56))
+        [word pc,LENGTH bignum_cdiv_windows_tmc; x,8 * val n] /\
+        nonoverlapping (word pc,LENGTH bignum_cdiv_windows_tmc) (z,8 * val k) /\
+        (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val k))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_cdiv_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; z; n; x; m] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z k n pc (word_sub stackpointer (word 56))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val n * 8; z,val k * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 56),64]
+                      [z,val k * 8; word_sub stackpointer (word 56),56]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k);
+              memory :> bytes (word_sub stackpointer (word 56),56)])`,
+  WINDOWS_X86_WRAP_STACK_TAC bignum_cdiv_windows_tmc bignum_cdiv_tmc BIGNUM_CDIV_SAFE `[RBX; R12; R13; R14; R15]` 40 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_CDIV_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z n x m pc stackpointer returnaddress.
+        nonoverlapping (z,8 * val k) (word_sub stackpointer (word 56),64) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 56),56))
+        [word pc,LENGTH bignum_cdiv_windows_mc; x,8 * val n] /\
+        nonoverlapping (word pc,LENGTH bignum_cdiv_windows_mc) (z,8 * val k) /\
+        (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val k))
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_cdiv_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; z; n; x; m] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z k n pc (word_sub stackpointer (word 56))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val n * 8; z,val k * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 56),64]
+                      [z,val k * 8; word_sub stackpointer (word 56),56]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k);
+              memory :> bytes (word_sub stackpointer (word 56),56)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CDIV_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
