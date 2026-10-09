@@ -2008,3 +2008,23 @@ let P521_JADD_SUBROUTINE_CORRECT = time prove
    P521_JADD_CORRECT
     `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]`
    816);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The code is branch-free apart      *)
+(* from calls to local multiplication, squaring and subtraction subroutines, *)
+(* so the whole subroutine (including those calls, whose own stack frames    *)
+(* move SP) is handled by symbolic execution with PROVE_SAFETY_SPEC_TAC.     *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let p521_jadd_full_spec,p521_jadd_public_vars = mk_safety_spec
+    ~keep_maychanges:false
+    (assoc "p521_jadd" subroutine_signatures)
+    P521_JADD_SUBROUTINE_CORRECT
+    P521_JADD_EXEC;;
+
+let P521_JADD_SUBROUTINE_SAFE = time prove
+ (p521_jadd_full_spec,
+  PROVE_SAFETY_SPEC_TAC ~public_vars:p521_jadd_public_vars P521_JADD_EXEC);;
