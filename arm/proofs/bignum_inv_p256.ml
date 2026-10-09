@@ -3139,3 +3139,101 @@ let BIGNUM_INV_P256_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC
    BIGNUM_INV_P256_EXEC BIGNUM_INV_P256_CORRECT
    `[X19;X20;X21;X22;X23;X24]` 208);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The divstep loop runs a fixed 10   *)
+(* times and only accesses the stack. It is entered in the middle (B to      *)
+(* pc + 0x540), so as in the correctness proof the loop head is taken        *)
+(* there: each of the first 9 iterations goes through the (taken) BNE and    *)
+(* the matrix update back to pc + 0x540, and the last pass falls             *)
+(* through the BNE into the final reconstruction.                            *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_inv_p256" subroutine_signatures)
+    BIGNUM_INV_P256_CORRECT
+    BIGNUM_INV_P256_EXEC;;
+
+let BIGNUM_INV_P256_SAFE = time prove
+ (full_spec,
+  CONCRETIZE_F_EVENTS_TAC
+   `\(x:int64) (z:int64) (pc:num) (stackpointer:int64).
+      APPEND (f_ev_post x z pc stackpointer)
+        (APPEND (ENUMERATEL 9 (f_ev_loop x z pc stackpointer))
+                (f_ev_pre x z pc stackpointer))
+      :(uarch_event) list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `pc:num`; `stackpointer:int64`] THEN
+  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `9` `pc + 0x540` `pc + 0x540`
+   `\i s. read SP s = stackpointer /\ read X20 s = z /\ read X21 s = word(10 - i)` THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+
+    (* pre: pc + 0x10 -> B at pc + 0x7c -> pc + 0x540, 28 steps *)
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+      BIGNUM_INV_P256_EXEC (1--28) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (* loop body: pc + 0x540 -> BNE (taken) at pc + 0xec8 -> pc + 0x80 ->
+       pc + 0x540, 915 steps *)
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    SUBGOAL_THEN `word_sub (word(10 - i)) (word 1):int64 = word(10 - (i + 1))`
+    ASSUME_TAC THENL
+     [SUBGOAL_THEN `10 - i = (10 - (i + 1)) + 1` SUBST1_TAC THENL
+       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+      ALL_TAC] THEN
+    SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)` ASSUME_TAC THENL
+     [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `~(val(word_sub (word(10 - i)) (word 1):int64) = 0)` ASSUME_TAC THENL
+     [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+      BIGNUM_INV_P256_EXEC (1--915) THEN
+    REWRITE_TAC[COND_ID] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (* post: pc + 0x540 -> BNE (not taken) -> pc + 0x10b0, 732 steps *)
+    REWRITE_TAC[ARITH_RULE `10 - 9 = 1`] THEN
+    SUBGOAL_THEN `val(word_sub (word 1) (word 1):int64) = 0` ASSUME_TAC THENL
+     [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+      BIGNUM_INV_P256_EXEC (1--732) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let BIGNUM_INV_P256_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc stackpointer returnaddress.
+        aligned 16 stackpointer /\
+        ALL (nonoverlapping (word_sub stackpointer (word 208),208))
+            [word pc,LENGTH bignum_inv_p256_mc; z,8 * 4; x,8 * 4] /\
+        nonoverlapping (word pc,LENGTH bignum_inv_p256_mc) (z,8 * 4)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) bignum_inv_p256_mc /\
+                  read PC s = word pc /\
+                  read SP s = stackpointer /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [z; x] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc
+                              (word_sub stackpointer (word 208))
+                              returnaddress /\
+                         memaccess_inbounds e2
+                         [x,32; z,32; word_sub stackpointer (word 208),208]
+                         [z,32; word_sub stackpointer (word 208),208]))
+          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+           MAYCHANGE [memory :> bytes(z,8 * 4);
+                      memory :> bytes(word_sub stackpointer (word 208),208)])`,
+  REWRITE_TAC[fst BIGNUM_INV_P256_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC BIGNUM_INV_P256_EXEC
+    (REWRITE_RULE[fst BIGNUM_INV_P256_EXEC] BIGNUM_INV_P256_SAFE)
+    `[X19;X20;X21;X22;X23;X24]` 208 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
