@@ -313,3 +313,294 @@ let BIGNUM_DIVMOD10_WINDOWS_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DIVMOD10_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_divmod10" subroutine_signatures)
+    BIGNUM_DIVMOD10_CORRECT
+    BIGNUM_DIVMOD10_EXEC;;
+
+(* Close the non-event conjuncts of a postcondition after simulation. *)
+
+let BIGNUM_DIVMOD10_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
+               NO_TAC);
+              (ASM_REWRITE_TAC[] THEN NO_TAC);
+              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
+              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+               CONV_TAC WORD_RULE THEN NO_TAC);
+              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
+        ALL_TAC]
+    else NO_TAC));;
+
+let BIGNUM_DIVMOD10_CLOSE_TAC =
+  BIGNUM_DIVMOD10_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* Reduce the conditionals `if p then a else b` of the goal according to an
+   assumption p or ~p, without rewriting with p itself. *)
+
+let BIGNUM_DIVMOD10_COND_TAC (p:term) =
+  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
+  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]);;
+
+(* Discharge a leg whose postcondition trace is fully concrete (e.g. after a
+   zero-step leg): instantiate e2 with the witness, then close the trace
+   equation by APPEND normalization and memaccess_inbounds from the carried
+   assumption, after normalizing val(word v) = v. *)
+
+let BIGNUM_DIVMOD10_CONCRETE_DISCHARGE_TAC : tactic =
+  let is_valfact th =
+    let c = concl th in
+    is_eq c &&
+    (try let v,a = dest_comb (lhs c) in
+         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  W(fun (a,w) ->
+      let e2v, body = dest_exists w in
+      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
+      EXISTS_TAC wit) THEN
+  REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
+    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
+    ASSUM_LIST(fun ths ->
+      let vths = filter is_valfact ths in
+      let nths = filter (fun th -> let c = concl th in
+                           is_neg c && is_eq (dest_neg c)) ths in
+      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
+                               GSYM APPEND_ASSOC] in
+      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
+
+(* Facts for a down-counting register holding word (c - v), decremented
+   before a test of zero. *)
+
+let BIGNUM_DIVMOD10_DOWNFACTS_TAC (v:term) (c:term) =
+  let sub t = subst [c,`c:num`; v,`j:num`] t in
+  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
+                     val (word (c - j):int64) = c - j /\
+                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
+                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
+       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+let BIGNUM_DIVMOD10_SAFE = time prove
+ (`exists f_events.
+       forall e k z pc.
+           nonoverlapping (word pc,82) (z,8 * val k)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST bignum_divmod10_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [k; z] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 81) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events z k pc /\
+                         memaccess_inbounds e2 [z,val k * 8] [z,val k * 8]))
+               (MAYCHANGE [RIP; RDI; RAX; RDX; RCX; R8; R9; R10] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(z:int64) (k:int64) (pc:num).
+      if val k = 0 then f_ev_k0 z k pc
+      else APPEND []
+            (APPEND (ENUMERATEL (val k) (f_ev_loop z k pc))
+                    (f_ev_pre z k pc)) :(uarch_event) list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `pc:num`] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** The degenerate case k = 0 ***)
+
+  ASM_CASES_TAC `k = 0` THENL
+   [BIGNUM_DIVMOD10_COND_TAC `k = 0` THEN
+    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--3) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  BIGNUM_DIVMOD10_COND_TAC `k = 0` THEN
+
+  (*** The main loop from the top word down ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x17` `pc + 0x51`
+   `\i s. read RSI s = z /\ read RDI s = word (k - i)` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--5) THEN
+    BIGNUM_DIVMOD10_CLOSE_TAC;
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    BIGNUM_DIVMOD10_DOWNFACTS_TAC `i:num` `k:num` THEN
+    SUBGOAL_THEN
+     `word (8 * (k - i) + 18446744073709551608):int64 =
+      word (8 * (k - (i + 1)))`
+    ASSUME_TAC THENL
+     [REWRITE_TAC[WORD_BLAST
+       `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+      IMP_REWRITE_TAC[WORD_SUB2] THEN
+      CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+      ALL_TAC] THEN
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--16) THEN
+    BIGNUM_DIVMOD10_CLOSE_TAC;
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC [] THEN
+    BIGNUM_DIVMOD10_PEEL_TAC THEN BIGNUM_DIVMOD10_CONCRETE_DISCHARGE_TAC]);;
+
+(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
+let BIGNUM_DIVMOD10_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_divmod10_tmc) (z,8 * val k) /\
+        nonoverlapping (stackpointer,8) (z,8 * val k)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_divmod10_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; z] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events z k pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [z,val k * 8; stackpointer,8]
+                      [z,val k * 8; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bignum (z,val k)])`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_divmod10_tmc BIGNUM_DIVMOD10_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_DIVMOD10_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z pc stackpointer returnaddress.
+        nonoverlapping (word pc,LENGTH bignum_divmod10_mc) (z,8 * val k) /\
+        nonoverlapping (stackpointer,8) (z,8 * val k)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_divmod10_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; z] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 = f_events z k pc stackpointer returnaddress /\
+                      memaccess_inbounds e2 [z,val k * 8; stackpointer,8]
+                      [z,val k * 8; stackpointer,0]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bignum (z,val k)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DIVMOD10_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_DIVMOD10_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),16)
+        (word pc,LENGTH bignum_divmod10_windows_tmc) /\
+        nonoverlapping (word pc,LENGTH bignum_divmod10_windows_tmc)
+        (z,8 * val k) /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_divmod10_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; z] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events z k pc (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [z,val k * 8; word_sub stackpointer (word 16),24]
+                      [z,val k * 8; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_divmod10_windows_tmc bignum_divmod10_tmc BIGNUM_DIVMOD10_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_DIVMOD10_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 16),16)
+        (word pc,LENGTH bignum_divmod10_windows_mc) /\
+        nonoverlapping (word pc,LENGTH bignum_divmod10_windows_mc)
+        (z,8 * val k) /\
+        nonoverlapping (word_sub stackpointer (word 16),24) (z,8 * val k)
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_divmod10_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; z] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events z k pc (word_sub stackpointer (word 16))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [z,val k * 8; word_sub stackpointer (word 16),24]
+                      [z,val k * 8; word_sub stackpointer (word 16),16]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k);
+              memory :> bytes (word_sub stackpointer (word 16),16)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DIVMOD10_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
