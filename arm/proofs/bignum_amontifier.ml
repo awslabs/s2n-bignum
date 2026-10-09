@@ -2360,7 +2360,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let amontifier_full_spec,amontifier_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_amontifier" subroutine_signatures)
     BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT
     BIGNUM_AMONTIFIER_EXEC;;
@@ -2509,7 +2509,8 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_SAFE = prove
   REPEAT META_EXISTS_TAC THEN X_GEN_TAC `e:(uarch_event)list` THEN
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`; `t:int64`; `pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS] THEN
+  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   (*** k = 0: CBZ -> RET ***)
   ASM_CASES_TAC `k = 0` THENL

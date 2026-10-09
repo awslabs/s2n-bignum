@@ -796,7 +796,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let amontmul_full_spec,amontmul_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_amontmul" subroutine_signatures)
     BIGNUM_AMONTMUL_SUBROUTINE_CORRECT
     BIGNUM_AMONTMUL_EXEC;;
@@ -920,7 +920,8 @@ let BIGNUM_AMONTMUL_SUBROUTINE_SAFE = prove
   REPEAT META_EXISTS_TAC THEN STRIP_TAC (* e *) THEN
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`; `pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS] THEN
+  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   (*** k=0: CBZ-taken -> RET ***)
   ASM_CASES_TAC `k = 0` THENL
