@@ -695,3 +695,310 @@ let BIGNUM_MODEXP_SUBROUTINE_CORRECT = prove
                       memory :> bytes(word_sub stackpointer (word 64),64)])`,
   ARM_ADD_RETURN_STACK_TAC BIGNUM_MODEXP_EXEC BIGNUM_MODEXP_CORRECT
    `[X19;X20;X21;X22;X23;X24;X25;X30]` 64);;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof. The exponent is not a public       *)
+(* input: its bits are only passed as the selector to bignum_mux, which is   *)
+(* constant-time. The main loop runs a fixed 64 * k iterations and all the   *)
+(* subroutines are called with public sizes and pointers, so their own       *)
+(* safety theorems are used through ARM_SUBROUTINE_SIM_TAC.                  *)
+(* ------------------------------------------------------------------------- *)
+
+needs "arm/proofs/consttime.ml";;
+needs "arm/proofs/subroutine_signatures.ml";;
+
+(* The safety theorem of bignum_mux has the trivial frame (\s s'. true),     *)
+(* which would lose the caller's state across the call, so prove a version   *)
+(* with the frame of its correctness theorem.                                *)
+
+let LOCAL_MUX_SAFE = time prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_mux" subroutine_signatures)
+       BIGNUM_MUX_SUBROUTINE_CORRECT BIGNUM_MUX_EXEC),
+  CONCRETIZE_F_EVENTS_TAC
+    `\(x:int64) (y:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
+      if val k = 0 then (f_ev_k0 x y z k pc returnaddress)
+      else
+        (APPEND
+          (f_ev_loop_post x y z k pc returnaddress)
+          (APPEND
+            (ENUMERATEL (val k) (f_ev_loop x y z k pc returnaddress))
+            (f_ev_loop_pre x y z k pc returnaddress)))
+      :(uarch_event) list` THEN
+  REPEAT META_EXISTS_TAC THEN
+  STRIP_TAC (* event e *) THEN
+  MAP_EVERY W64_GEN_TAC [`b:num`; `k:num`] THEN
+  MAP_EVERY X_GEN_TAC [`x:int64`; `y:int64`; `z:int64`; `pc:num`] THEN
+  GEN_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ASM_CASES_TAC `k = 0` THENL
+   [ASM_REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_MUX_EXEC (1--2) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  ASM_REWRITE_TAC[ASSUME `val(word k:int64) = k`] THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x8` `pc + 0x20`
+   `\i s. read X2 s = z /\
+          read X3 s = x /\
+          read X4 s = y /\
+          read X1 s = word(k - i) /\
+          read X30 s = returnaddress` THEN
+  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL [
+    (* pre *)
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_MUX_EXEC (1--2) THEN
+    ASM_REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (* main loop *)
+    ALL_TAC;
+
+    (* post *)
+    REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+        ~canonicalize_pc_diff:false BIGNUM_MUX_EXEC (1--1) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
+  SUBGOAL_THEN `word_sub (word(k - i)) (word 1):int64 = word(k - (i+1))`
+  ASSUME_TAC THENL
+   [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+     [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+  MP_TAC(ISPECL [`pc:num`; `z:int64`; `k:num`; `i:num`]
+    BIGNUM_MUX_STORE_NONOV) THEN
+  ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_TAC] THEN
+  REWRITE_TAC[] THEN
+  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_MUX_EXEC (1--6) THEN
+  SUBGOAL_THEN `val(word(k - (i+1)):int64) = k - (i+1)` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN `(~(k - (i + 1) = 0)) <=> i + 1 < k` SUBST1_TAC THENL
+   [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let LOCAL_MODEXP_ALLOWED_VARS = ref
+ [`a:int64`; `p:int64`; `m:int64`; `z:int64`; `t:int64`; `k:num`;
+  `pc:num`; `i:num`;
+  `f_ev_loop:int64->int64->int64->int64->int64->int64->num->num->(uarch_event)list`];;
+
+let LOCAL_AMONTIFIER_SAFETY_TAC (assump_name:string) (n:int) =
+  ADJUST_LOCAL_POINTERS_TAC THEN
+  REMOVE_THEN assump_name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
+       0x10c,bignum_amontifier_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+       `read X3 s`; `pc + 0x10c`; `read X30 s`] n THENL
+     [EXISTS_E2_TAC LOCAL_MODEXP_ALLOWED_VARS;
+      LABEL_TAC assump_name safety_th]);;
+
+let LOCAL_AMONTMUL_SAFETY_TAC (assump_name:string) (n:int) =
+  ADJUST_LOCAL_POINTERS_TAC THEN
+  REMOVE_THEN assump_name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
+       0x428,bignum_amontmul_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+       `read X3 s`; `read X4 s`; `pc + 0x428`; `read X30 s`] n THENL
+     [EXISTS_E2_TAC LOCAL_MODEXP_ALLOWED_VARS;
+      LABEL_TAC assump_name safety_th]);;
+
+let LOCAL_DEMONT_SAFETY_TAC (assump_name:string) (n:int) =
+  ADJUST_LOCAL_POINTERS_TAC THEN
+  REMOVE_THEN assump_name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
+       0x558,bignum_demont_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+       `read X3 s`; `pc + 0x558`; `read X30 s`] n THENL
+     [EXISTS_E2_TAC LOCAL_MODEXP_ALLOWED_VARS;
+      LABEL_TAC assump_name safety_th]);;
+
+let LOCAL_MUX_SAFETY_TAC (assump_name:string) (n:int) =
+  ADJUST_LOCAL_POINTERS_TAC THEN
+  REMOVE_THEN assump_name (fun safety_th ->
+    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (bignum_modexp_mc,BIGNUM_MODEXP_EXEC,
+       0x660,bignum_mux_mc,safety_th)
+      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X3 s`;
+       `read X4 s`; `read X2 s`; `pc + 0x660`; `read X30 s`] n THENL
+     [EXISTS_E2_TAC LOCAL_MODEXP_ALLOWED_VARS;
+      LABEL_TAC assump_name safety_th]);;
+
+(* Close the PC and register conjuncts left after simulating a loop leg. *)
+
+let BIGNUM_MODEXP_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
+               NO_TAC);
+              (ASM_REWRITE_TAC[] THEN NO_TAC);
+              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
+        ALL_TAC]
+    else NO_TAC));;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_modexp" subroutine_signatures)
+    BIGNUM_MODEXP_CORRECT
+    BIGNUM_MODEXP_EXEC;;
+
+let BIGNUM_MODEXP_SAFE = time prove
+ (full_spec,
+  (* Prepare the safety theorems of the subroutines to be used. This is
+     necessary to keep introduction of metavariables in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_AMONTIFIER_SUBROUTINE_SAFE
+    "H_AMONTIFIER" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_AMONTMUL_SUBROUTINE_SAFE
+    "H_AMONTMUL" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_DEMONT_SUBROUTINE_SAFE
+    "H_DEMONT" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_MUX_SAFE "H_MUX" THEN
+  CONCRETIZE_F_EVENTS_TAC
+   `\(a:int64) (p:int64) (m:int64) (z:int64) (t:int64) (k:int64) (pc:num).
+      if val k = 0 then f_ev_k0 a p m z t k pc
+      else
+        APPEND (f_ev_post a p m z t k pc)
+          (APPEND (ENUMERATEL (64 * val k) (f_ev_loop a p m z t k pc))
+                  (f_ev_pre a p m z t k pc))
+      :(uarch_event) list` THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  W64_GEN_TAC `k:num` THEN
+  MAP_EVERY X_GEN_TAC
+   [`z:int64`; `a:int64`; `p:int64`; `m:int64`; `t:int64`; `pc:num`] THEN
+  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** The degenerate case k = 0 ***)
+
+  ASM_CASES_TAC `k = 0` THENL
+   [ASM_REWRITE_TAC[] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_MODEXP_EXEC (1--1) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+
+  (*** The main loop, with counter X25 = 64 * k - i at its head ***)
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `64 * k` `pc + 0x70` `pc + 0xcc`
+   `\i s. read X19 s = word k /\
+          read X20 s = z /\
+          read X21 s = a /\
+          read X22 s = p /\
+          read X23 s = m /\
+          read X24 s = t /\
+          read X25 s = word(64 * k - i)` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[MULT_EQ_0; ARITH_EQ];
+
+    (*** Initialization ***)
+
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (1--12) THEN
+    LOCAL_AMONTIFIER_SAFETY_TAC "H_AMONTIFIER" 13 THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (14--19) THEN
+    LOCAL_AMONTMUL_SAFETY_TAC "H_AMONTMUL" 20 THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (21--25) THEN
+    LOCAL_DEMONT_SAFETY_TAC "H_DEMONT" 26 THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC [27] THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    BIGNUM_MODEXP_PEEL_TAC THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** Main loop body: two Montgomery multiplications, the load of the
+         exponent word holding bit 64 * k - (i + 1), and the selection ***)
+
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    SUBGOAL_THEN `64 * k < 2 EXP 64` ASSUME_TAC THENL
+     [UNDISCH_TAC `k < 2 EXP 58` THEN ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN
+     `word_sub (word (64 * k - i)) (word 1):int64 = word (64 * k - (i + 1))`
+    ASSUME_TAC THENL
+     [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+       [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+      ALL_TAC] THEN
+    SUBGOAL_THEN `val (word (64 * k - (i + 1)):int64) = 64 * k - (i + 1)`
+    ASSUME_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+      SIMPLE_ARITH_TAC;
+      ALL_TAC] THEN
+    SUBGOAL_THEN `(64 * k - (i + 1)) DIV 64 < k` ASSUME_TAC THENL
+     [SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN
+     `word (8 * val (word_ushr (word (64 * k - (i + 1)):int64) 6)):int64 =
+      word (8 * ((64 * k - (i + 1)) DIV 64))` ASSUME_TAC THENL
+     [AP_TERM_TAC THEN AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+      ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+    SUBGOAL_THEN `(~(64 * k - (i + 1) = 0) <=> i + 1 < 64 * k)`
+    ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (1--7) THEN
+    LOCAL_AMONTMUL_SAFETY_TAC "H_AMONTMUL" 8 THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (9--14) THEN
+    LOCAL_AMONTMUL_SAFETY_TAC "H_AMONTMUL" 15 THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (16--24) THEN
+    LOCAL_MUX_SAFETY_TAC "H_MUX" 25 THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC [26] THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    BIGNUM_MODEXP_PEEL_TAC THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** The finale: conversion out of Montgomery form and the final
+         selection, which copies the result to z ***)
+
+    REWRITE_TAC[] THEN
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (1--5) THEN
+    LOCAL_DEMONT_SAFETY_TAC "H_DEMONT" 6 THEN
+    ARM_STEPS_TAC BIGNUM_MODEXP_EXEC (7--12) THEN
+    LOCAL_MUX_SAFETY_TAC "H_MUX" 13 THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+
+let BIGNUM_MODEXP_SUBROUTINE_SAFE = time prove
+ (`exists f_events.
+     forall e k z a p m t pc stackpointer returnaddress.
+       val k < 2 EXP 58 /\
+       aligned 16 stackpointer /\
+       ALL (nonoverlapping (word_sub stackpointer (word 64),64))
+           [(word pc,0x684); (z,8 * val k); (t,24 * val k);
+            (a,8 * val k); (p,8 * val k); (m,8 * val k)] /\
+       ALL (nonoverlapping (word pc,0x684)) [(z,8 * val k); (t,24 * val k)] /\
+       ALL (nonoverlapping (t,24 * val k))
+           [(z,8 * val k); (a,8 * val k); (p,8 * val k); (m,8 * val k)]
+       ==> ensures arm
+            (\s. aligned_bytes_loaded s (word pc) bignum_modexp_mc /\
+                 read PC s = word pc /\
+                 read SP s = stackpointer /\
+                 read X30 s = returnaddress /\
+                 C_ARGUMENTS [k; z; a; p; m; t] s /\
+                 read events s = e)
+            (\s. read PC s = returnaddress /\
+                 (exists e2.
+                    read events s = APPEND e2 e /\
+                    e2 = f_events a p m z t k pc
+                           (word_sub stackpointer (word 64)) returnaddress /\
+                    memaccess_inbounds e2
+                      [a,val k * 8; p,val k * 8; m,val k * 8; z,val k * 8;
+                       t,(3 * val k) * 8; word_sub stackpointer (word 64),64]
+                      [z,val k * 8; t,(3 * val k) * 8;
+                       word_sub stackpointer (word 64),64]))
+            (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE [memory :> bignum(z,val k);
+                        memory :> bytes(t,24 * val k);
+                        memory :> bytes(word_sub stackpointer (word 64),64)])`,
+  ARM_ADD_RETURN_STACK_TAC BIGNUM_MODEXP_EXEC BIGNUM_MODEXP_SAFE
+   `[X19;X20;X21;X22;X23;X24;X25;X30]` 64 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
