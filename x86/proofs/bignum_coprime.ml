@@ -3220,3 +3220,868 @@ let BIGNUM_COPRIME_WINDOWS_SUBROUTINE_CORRECT = prove
                        memory :> bytes(word_sub stackpointer (word 112),112)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPRIME_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_coprime" subroutine_signatures)
+    BIGNUM_COPRIME_CORRECT
+    BIGNUM_COPRIME_EXEC;;
+
+(* Close the non-event conjuncts of a postcondition after simulation. *)
+
+let BIGNUM_COPRIME_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
+               NO_TAC);
+              (ASM_REWRITE_TAC[] THEN NO_TAC);
+              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
+              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+               CONV_TAC WORD_RULE THEN NO_TAC);
+              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
+        ALL_TAC]
+    else NO_TAC));;
+
+let BIGNUM_COPRIME_CLOSE_TAC =
+  BIGNUM_COPRIME_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let BIGNUM_COPRIME_POST_REASSOC_TAC =
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
+   [METIS[APPEND_ASSOC]
+     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
+      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
+
+(* Rewrite the postcondition trace to APPEND <head> <precondition trace> when
+   a loop is entered from the post-leg of the previous loop. *)
+
+let BIGNUM_COPRIME_CARRY_REASSOC_TAC : tactic = fun (asl,w) ->
+  let _,args = strip_comb w in
+  let pre = el 1 args and post = el 2 args in
+  let e2v = `e2:(uarch_event)list` in
+  let find_rhs t = rhs (find_term (fun u -> is_eq u && lhs u = e2v) t) in
+  let pre_rhs = find_rhs pre and post_rhs = find_rhs post in
+  let x0 = lhand (lhand post_rhs) in
+  let eq = mk_eq(post_rhs,
+    mk_binop `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
+      x0 pre_rhs) in
+  let th = prove(eq, REWRITE_TAC[APPEND_ASSOC]) in
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [th] (asl,w);;
+
+(* Reduce the conditionals `if p then a else b` of the goal according to an
+   assumption p or ~p, without rewriting with p itself. *)
+
+let BIGNUM_COPRIME_COND_TAC (p:term) =
+  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
+  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]);;
+
+(* Discharge a leg whose postcondition trace is fully concrete (e.g. after a
+   zero-step leg): instantiate e2 with the witness, then close the trace
+   equation by APPEND normalization and memaccess_inbounds from the carried
+   assumption, after normalizing val(word v) = v. *)
+
+let BIGNUM_COPRIME_CONCRETE_DISCHARGE_TAC : tactic =
+  let is_valfact th =
+    let c = concl th in
+    is_eq c &&
+    (try let v,a = dest_comb (lhs c) in
+         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  W(fun (a,w) ->
+      let e2v, body = dest_exists w in
+      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
+      EXISTS_TAC wit) THEN
+  REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
+    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
+    ASSUM_LIST(fun ths ->
+      let vths = filter is_valfact ths in
+      let nths = filter (fun th -> let c = concl th in
+                           is_neg c && is_eq (dest_neg c)) ths in
+      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
+                               GSYM APPEND_ASSOC] in
+      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
+
+(* Facts for an up-counting loop with index register word e (e an expression
+   in the loop variable v), whose backward branch compares e + 1 with bnd;
+   cnt is the iteration count. *)
+
+let BIGNUM_COPRIME_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
+  let e1 = mk_binary "+" (e,`1`) in
+  let wd t = mk_comb(`word:num->int64`,t) in
+  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
+  SUBGOAL_THEN (list_mk_conj
+    [mkval e; mkval e1;
+     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
+           wd e1);
+     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      CONV_TAC WORD_RULE;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* Facts for a down-counting register holding word (c - v), decremented
+   before a test of zero. *)
+
+let BIGNUM_COPRIME_DOWNFACTS_TAC (v:term) (c:term) =
+  let sub t = subst [c,`c:num`; v,`j:num`] t in
+  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
+                     val (word (c - j):int64) = c - j /\
+                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
+                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
+       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* The structure follows the correctness proof: copying of the inputs into
+   the two halves of the buffer, optional swap, the main loop of
+   (t + 57) DIV 58 iterations for t = 64 * (m + n), and the final check.
+   Each outer iteration operates on l = MIN k ((t - 58 * i + 63) DIV 64)
+   words for k = MAX m n, in five inner loops (top words, 58 divsteps,
+   cross multiplication, negation and shift); all of them have at least
+   one iteration since l > 0. *)
+
+let BIGNUM_COPRIME_WORD_ADD_2EXP64 = prove
+ (`!a. word (a + 2 EXP 64):int64 = word a`,
+  GEN_TAC THEN ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+  REWRITE_TAC[MOD_MULT_ADD; ARITH_RULE `a + 2 EXP 64 = 1 * 2 EXP 64 + a`]);;
+
+let BIGNUM_COPRIME_WITNESS = `\(x:int64) (y:int64) (w:int64) (n:int64) (m:int64) (pc:num) (stackpointer:int64).
+  if MAX (val m) (val n) = 0 then f_ev_k0 x y w n m pc stackpointer
+  else
+  APPEND
+   (APPEND
+    (APPEND
+     (APPEND
+      (APPEND
+        (if MAX (val m) (val n) = 1 then f_ev_fin1 x y w n m pc stackpointer
+         else APPEND (f_ev_finpost x y w n m pc stackpointer)
+                (APPEND (ENUMERATEL (MAX (val m) (val n) - 1) (f_ev_or x y w n m pc stackpointer))
+                        (f_ev_finpre x y w n m pc stackpointer)))
+        (APPEND
+          (ENUMERATEL ((64 * (val m + val n) + 57) DIV 58)
+           (\i. APPEND
+             (APPEND
+              (APPEND
+               (APPEND
+                (APPEND (f_ev_b6 x y w n m pc stackpointer i)
+                  (APPEND
+                    (ENUMERATEL
+                      (MIN (MAX (val m) (val n))
+                           ((64 * (val m + val n) - 58 * i + 63) DIV 64))
+                      (\j. f_ev_shift x y w n m pc stackpointer i j))
+                    (f_ev_b5 x y w n m pc stackpointer i)))
+                (APPEND
+                  (ENUMERATEL
+                    (MIN (MAX (val m) (val n))
+                         ((64 * (val m + val n) - 58 * i + 63) DIV 64))
+                    (\j. f_ev_neg x y w n m pc stackpointer i j))
+                  (f_ev_b4 x y w n m pc stackpointer i)))
+               (APPEND
+                 (ENUMERATEL
+                   (MIN (MAX (val m) (val n))
+                        ((64 * (val m + val n) - 58 * i + 63) DIV 64))
+                   (\j. f_ev_cross x y w n m pc stackpointer i j))
+                 (f_ev_b3 x y w n m pc stackpointer i)))
+              (APPEND (ENUMERATEL 58 (\j. f_ev_div x y w n m pc stackpointer i j))
+                      (f_ev_b2 x y w n m pc stackpointer i)))
+             (APPEND
+               (ENUMERATEL
+                 (MIN (MAX (val m) (val n))
+                      ((64 * (val m + val n) - 58 * i + 63) DIV 64))
+                 (\j. f_ev_top x y w n m pc stackpointer i j))
+               (f_ev_b1 x y w n m pc stackpointer i))))
+          []))
+      (APPEND (ENUMERATEL (MAX (val m) (val n)) (f_ev_swap x y w n m pc stackpointer))
+              (f_ev_swappre x y w n m pc stackpointer)))
+     (if val n = 0
+      then APPEND [] (APPEND (ENUMERATEL (MAX (val m) (val n)) (f_ev_ypad0 x y w n m pc stackpointer))
+                             (f_ev_ypre0 x y w n m pc stackpointer))
+      else if val n = MAX (val m) (val n)
+      then APPEND (f_ev_ybcs x y w n m pc stackpointer)
+             (APPEND (ENUMERATEL (val n) (f_ev_ycopyk x y w n m pc stackpointer))
+                     (f_ev_yprek x y w n m pc stackpointer))
+      else APPEND
+             (APPEND []
+               (APPEND (ENUMERATEL (MAX (val m) (val n) - val n) (f_ev_ypad x y w n m pc stackpointer))
+                       (f_ev_ymid x y w n m pc stackpointer)))
+             (APPEND (ENUMERATEL (val n) (f_ev_ycopy x y w n m pc stackpointer))
+                     (f_ev_ypre x y w n m pc stackpointer))))
+    (if val m = 0
+     then APPEND [] (APPEND (ENUMERATEL (MAX (val m) (val n)) (f_ev_xpad0 x y w n m pc stackpointer))
+                            (f_ev_xpre0 x y w n m pc stackpointer))
+     else if val m = MAX (val m) (val n)
+     then APPEND (f_ev_xbcs x y w n m pc stackpointer)
+            (APPEND (ENUMERATEL (val m) (f_ev_xcopyk x y w n m pc stackpointer))
+                    (f_ev_xprek x y w n m pc stackpointer))
+     else APPEND
+            (APPEND []
+              (APPEND (ENUMERATEL (MAX (val m) (val n) - val m) (f_ev_xpad x y w n m pc stackpointer))
+                      (f_ev_xmid x y w n m pc stackpointer)))
+            (APPEND (ENUMERATEL (val m) (f_ev_xcopy x y w n m pc stackpointer))
+                    (f_ev_xpre x y w n m pc stackpointer))))
+   (f_ev_a x y w n m pc stackpointer)
+  :(uarch_event) list`;;
+
+let BIGNUM_COPRIME_SIM n =
+  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+    ~canonicalize_pc_diff:false BIGNUM_COPRIME_EXEC n;;
+
+let BIGNUM_COPRIME_UPBODY_TAC v e bnd cnt n =
+  X_GEN_TAC v THEN STRIP_TAC THEN BIGNUM_COPRIME_UPFACTS_TAC v e bnd cnt THEN
+  BIGNUM_COPRIME_SIM (1--n) THEN BIGNUM_COPRIME_CLOSE_TAC;;
+
+let BIGNUM_COPRIME_XPHASE_TAC =
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x55`
+   `\s. read RSP s = stackpointer /\ read RDI s = word m /\
+        read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+        read R15 s = word_add w (word (8 * MAX m n)) /\
+        read R14 s = word (MAX m n)` THEN
+  CONJ_TAC THENL
+   [ASM_CASES_TAC `m = 0` THENL
+     [BIGNUM_COPRIME_COND_TAC `m = 0` THEN
+      UNDISCH_THEN `m = 0` SUBST_ALL_TAC THEN
+      RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `MAX 0 n = n`]) THEN
+      REWRITE_TAC[ARITH_RULE `MAX 0 n = n`] THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + 0x45` `pc + 0x55`
+       `\i s. read RSP s = stackpointer /\ read RDI s = word 0 /\
+              read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+              read R15 s = word_add w (word (8 * n)) /\
+              read R14 s = word n /\ read R9 s = word i` THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC;
+        BIGNUM_COPRIME_UPBODY_TAC `i:num` `i:num` `n:num` `n:num` 4;
+        BIGNUM_COPRIME_SIM [] THEN BIGNUM_COPRIME_CONCRETE_DISCHARGE_TAC];
+      ALL_TAC] THEN
+    ASM_CASES_TAC `m = MAX m n` THENL
+     [BIGNUM_COPRIME_COND_TAC `m = 0` THEN BIGNUM_COPRIME_COND_TAC `m = MAX m n` THEN
+      SUBGOAL_THEN `MAX m n = m` SUBST_ALL_TAC THENL
+       [ASM_MESON_TAC[]; ALL_TAC] THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `m:num` `pc + 0x30` `pc + 0x40`
+       `\i s. read RSP s = stackpointer /\ read RDI s = word m /\
+              read RSI s = x /\
+              read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+              read R15 s = word_add w (word (8 * m)) /\
+              read R14 s = word m /\ read R9 s = word i` THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC;
+        BIGNUM_COPRIME_UPBODY_TAC `i:num` `i:num` `m:num` `m:num` 5;
+        BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC];
+      ALL_TAC] THEN
+    BIGNUM_COPRIME_COND_TAC `m = 0` THEN BIGNUM_COPRIME_COND_TAC `m = MAX m n` THEN
+    SUBGOAL_THEN `m < MAX m n /\ ~(MAX m n <= m)` STRIP_ASSUME_TAC THENL
+     [MAP_EVERY UNDISCH_TAC [`m <= MAX m n`; `~(m = MAX m n)`] THEN ARITH_TAC;
+      ALL_TAC] THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `m:num` `pc + 0x30` `pc + 0x40`
+     `\i s. read RSP s = stackpointer /\ read RDI s = word m /\
+            read RSI s = x /\
+            read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+            read R15 s = word_add w (word (8 * MAX m n)) /\
+            read R14 s = word (MAX m n) /\ read R9 s = word i` THEN
+    REPEAT CONJ_TAC THENL
+     [ASM_REWRITE_TAC[];
+      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+      BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC;
+      BIGNUM_COPRIME_UPBODY_TAC `i:num` `i:num` `m:num` `m:num` 5;
+      BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `MAX m n - m` `pc + 0x45` `pc + 0x55`
+       `\i s. read RSP s = stackpointer /\ read RDI s = word m /\
+              read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+              read R15 s = word_add w (word (8 * MAX m n)) /\
+              read R14 s = word (MAX m n) /\ read R9 s = word (m + i)` THEN
+      REPEAT CONJ_TAC THENL
+       [MAP_EVERY UNDISCH_TAC [`m < MAX m n`] THEN ARITH_TAC;
+        REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+        BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC;
+        BIGNUM_COPRIME_UPBODY_TAC `i:num` `m + i` `MAX m n` `MAX m n - m` 4;
+        BIGNUM_COPRIME_SIM [] THEN BIGNUM_COPRIME_CONCRETE_DISCHARGE_TAC]];
+    ALL_TAC] THEN
+  BIGNUM_COPRIME_POST_REASSOC_TAC;;
+
+let BIGNUM_COPRIME_YPHASE_TAC =
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x82`
+   `\s. read RSP s = stackpointer /\ read RDI s = word m /\
+        read RDX s = word n /\ read R8 s = w /\
+        read R15 s = word_add w (word (8 * MAX m n)) /\
+        read R14 s = word (MAX m n)` THEN
+  CONJ_TAC THENL
+   [ASM_CASES_TAC `n = 0` THENL
+     [BIGNUM_COPRIME_COND_TAC `n = 0` THEN
+      UNDISCH_THEN `n = 0` SUBST_ALL_TAC THEN
+      RULE_ASSUM_TAC(REWRITE_RULE[ARITH_RULE `MAX m 0 = m`]) THEN
+      REWRITE_TAC[ARITH_RULE `MAX m 0 = m`] THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `m:num` `pc + 0x72` `pc + 0x82`
+       `\i s. read RSP s = stackpointer /\ read RDI s = word m /\
+              read RDX s = word 0 /\ read R8 s = w /\
+              read R15 s = word_add w (word (8 * m)) /\
+              read R14 s = word m /\ read R9 s = word i` THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        BIGNUM_COPRIME_SIM (1--3) THEN BIGNUM_COPRIME_CLOSE_TAC;
+        BIGNUM_COPRIME_UPBODY_TAC `i:num` `i:num` `m:num` `m:num` 4;
+        BIGNUM_COPRIME_SIM [] THEN BIGNUM_COPRIME_CONCRETE_DISCHARGE_TAC];
+      ALL_TAC] THEN
+    ASM_CASES_TAC `n = MAX m n` THENL
+     [BIGNUM_COPRIME_COND_TAC `n = 0` THEN BIGNUM_COPRIME_COND_TAC `n = MAX m n` THEN
+      SUBGOAL_THEN `MAX m n = n` SUBST_ALL_TAC THENL
+       [ASM_MESON_TAC[]; ALL_TAC] THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + 0x5d` `pc + 0x6d`
+       `\i s. read RSP s = stackpointer /\ read RDI s = word m /\
+              read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+              read R15 s = word_add w (word (8 * n)) /\
+              read R14 s = word n /\ read R9 s = word i` THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        BIGNUM_COPRIME_SIM (1--3) THEN BIGNUM_COPRIME_CLOSE_TAC;
+        BIGNUM_COPRIME_UPBODY_TAC `i:num` `i:num` `n:num` `n:num` 5;
+        BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC];
+      ALL_TAC] THEN
+    BIGNUM_COPRIME_COND_TAC `n = 0` THEN BIGNUM_COPRIME_COND_TAC `n = MAX m n` THEN
+    SUBGOAL_THEN `n < MAX m n /\ ~(MAX m n <= n)` STRIP_ASSUME_TAC THENL
+     [MAP_EVERY UNDISCH_TAC [`n <= MAX m n`; `~(n = MAX m n)`] THEN ARITH_TAC;
+      ALL_TAC] THEN
+    ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + 0x5d` `pc + 0x6d`
+     `\i s. read RSP s = stackpointer /\ read RDI s = word m /\
+            read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+            read R15 s = word_add w (word (8 * MAX m n)) /\
+            read R14 s = word (MAX m n) /\ read R9 s = word i` THEN
+    REPEAT CONJ_TAC THENL
+     [ASM_REWRITE_TAC[];
+      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+      BIGNUM_COPRIME_SIM (1--3) THEN BIGNUM_COPRIME_CLOSE_TAC;
+      BIGNUM_COPRIME_UPBODY_TAC `i:num` `i:num` `n:num` `n:num` 5;
+      BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `MAX m n - n` `pc + 0x72` `pc + 0x82`
+       `\i s. read RSP s = stackpointer /\ read RDI s = word m /\
+              read RDX s = word n /\ read R8 s = w /\
+              read R15 s = word_add w (word (8 * MAX m n)) /\
+              read R14 s = word (MAX m n) /\ read R9 s = word (n + i)` THEN
+      REPEAT CONJ_TAC THENL
+       [MAP_EVERY UNDISCH_TAC [`n < MAX m n`] THEN ARITH_TAC;
+        REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+        BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC;
+        BIGNUM_COPRIME_UPBODY_TAC `i:num` `n + i` `MAX m n` `MAX m n - n` 4;
+        BIGNUM_COPRIME_SIM [] THEN BIGNUM_COPRIME_CONCRETE_DISCHARGE_TAC]];
+    ALL_TAC];;
+
+let BIGNUM_COPRIME_SWAP_TAC =
+  ENSURES_EVENTS_WHILE_UP2_TAC `MAX m n` `pc + 0xa8` `pc + 0xcf`
+   `\i s. read RSP s = stackpointer /\
+          read (memory :> bytes64(word_add stackpointer (word 32))) s =
+          word (64 * (m + n)) /\
+          read R8 s = w /\ read R15 s = word_add w (word (8 * MAX m n)) /\
+          read R14 s = word (MAX m n) /\ read R9 s = word i` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    SUBGOAL_THEN `word_add (word m) (word n):int64 = word (m + n) /\
+                  word_shl (word (m + n):int64) 6 = word (64 * (m + n))`
+    STRIP_ASSUME_TAC THENL
+     [REWRITE_TAC[WORD_SHL_WORD; WORD_ADD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+      REWRITE_TAC[MULT_SYM];
+      ALL_TAC] THEN
+    BIGNUM_COPRIME_SIM (1--10) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    BIGNUM_COPRIME_UPFACTS_TAC `i:num` `i:num` `MAX m n` `MAX m n` THEN
+    SUBGOAL_THEN `(i + 1 = MAX m n) <=> ~(i + 1 < MAX m n)` ASSUME_TAC THENL
+     [UNDISCH_TAC `i < MAX m n` THEN ARITH_TAC; ALL_TAC] THEN
+    BIGNUM_COPRIME_SIM (1--12) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    ALL_TAC];;
+
+let BIGNUM_COPRIME_FIN_TAC =
+  ASM_CASES_TAC `MAX m n = 1` THENL
+   [BIGNUM_COPRIME_COND_TAC `MAX m n = 1` THEN
+    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `MAX m n = 1`)) THEN
+    BIGNUM_COPRIME_SIM (1--8) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    ALL_TAC] THEN
+  BIGNUM_COPRIME_COND_TAC `MAX m n = 1` THEN
+  BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `MAX m n - 1` `pc + 0x315` `pc + 0x321`
+   `\i s. read RSP s = stackpointer /\
+          read R15 s = word_add w (word (8 * MAX m n)) /\
+          read R14 s = word (MAX m n) /\ read R9 s = word (1 + i)` THEN
+  REPEAT CONJ_TAC THENL
+   [MAP_EVERY UNDISCH_TAC [`~(MAX m n = 0)`; `~(MAX m n = 1)`] THEN ARITH_TAC;
+    REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+    SUBGOAL_THEN `~(val (word_sub (word (MAX m n)) (word 1):int64) = 0)`
+    ASSUME_TAC THENL
+     [ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_1]; ALL_TAC] THEN
+    BIGNUM_COPRIME_SIM (1--5) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    BIGNUM_COPRIME_UPBODY_TAC `i:num` `1 + i` `MAX m n` `MAX m n - 1` 4;
+    BIGNUM_COPRIME_SIM (1--4) THEN BIGNUM_COPRIME_CLOSE_TAC];;
+
+let BIGNUM_COPRIME_MAIN_SKEL_TAC (body_tac:tactic) =
+  BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `(64 * (m + n) + 57) DIV 58` `pc + 0xcf` `pc + 0x302`
+   `\i s. read RSP s = stackpointer /\
+          read (memory :> bytes64(word_add stackpointer (word 32))) s =
+          word_sub (word (64 * (m + n))) (word (58 * i)) /\
+          read R8 s = w /\ read R15 s = word_add w (word (8 * MAX m n)) /\
+          read R14 s = word (MAX m n)` THEN
+  REPEAT CONJ_TAC THENL
+   [SIMP_TAC[DIV_EQ_0; ARITH_EQ] THEN UNDISCH_TAC `~(MAX m n = 0)` THEN
+    REWRITE_TAC[MAX] THEN ARITH_TAC;
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_COPRIME_SIM [] THEN BIGNUM_COPRIME_PEEL_TAC THEN BIGNUM_COPRIME_CONCRETE_DISCHARGE_TAC;
+    body_tac;
+    BIGNUM_COPRIME_FIN_TAC];;
+
+let BIGNUM_COPRIME_L_FACTS_TAC =
+  SUBGOAL_THEN `58 * i < 64 * (m + n)` ASSUME_TAC THENL
+   [MP_TAC(SPECL [`64 * (m + n) + 57`; `58`] DIVISION) THEN
+    UNDISCH_TAC `i < (64 * (m + n) + 57) DIV 58` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `word_sub (word (64 * (m + n))) (word (58 * i)):int64 =
+                word (64 * (m + n) - 58 * i)` ASSUME_TAC THENL
+   [ASM_SIMP_TAC[WORD_SUB; LT_IMP_LE]; ALL_TAC] THEN
+  SUBGOAL_THEN `64 * (m + n) - 58 * i + 63 < 2 EXP 64` ASSUME_TAC THENL
+   [UNDISCH_TAC `m < 2 EXP 57` THEN UNDISCH_TAC `n < 2 EXP 57` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `word_ushr (word_add (word (64 * (m + n) - 58 * i)) (word 63):int64) 6 =
+    word ((64 * (m + n) - 58 * i + 63) DIV 64)` ASSUME_TAC THENL
+   [REWRITE_TAC[GSYM WORD_ADD] THEN ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+    REWRITE_TAC[VAL_WORD_USHR] THEN
+    SUBGOAL_THEN `val (word (64 * (m + n) - 58 * i + 63):int64) =
+                  64 * (m + n) - 58 * i + 63` SUBST1_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN ASM_REWRITE_TAC[DIMINDEX_64]; ALL_TAC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC SYM_CONV THEN
+    MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    TRANS_TAC LET_TRANS `64 * (m + n) - 58 * i + 63` THEN
+    ASM_SIMP_TAC[DIV_LE; ARITH_EQ];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `val (word ((64 * (m + n) - 58 * i + 63) DIV 64):int64) =
+    (64 * (m + n) - 58 * i + 63) DIV 64` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    TRANS_TAC LET_TRANS `64 * (m + n) - 58 * i + 63` THEN
+    ASM_SIMP_TAC[DIV_LE; ARITH_EQ];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `(if MAX m n <= (64 * (m + n) - 58 * i + 63) DIV 64
+     then word (MAX m n)
+     else word ((64 * (m + n) - 58 * i + 63) DIV 64)):int64 =
+    word (MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64))`
+  ASSUME_TAC THENL
+   [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
+    AP_TERM_TAC THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `~(MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64) = 0) /\
+    MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64) <= MAX m n`
+  STRIP_ASSUME_TAC THENL
+   [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[LE_REFL] THEN
+    SIMP_TAC[DIV_EQ_0; ARITH_EQ] THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `val (word (MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64)):int64) =
+    MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64)` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    UNDISCH_TAC
+     `MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64) <= MAX m n` THEN
+    UNDISCH_TAC `MAX m n < 2 EXP 57` THEN ARITH_TAC;
+    ALL_TAC];;
+
+
+let BIGNUM_COPRIME_L_TERM = `MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64)`;;
+
+let BIGNUM_COPRIME_INNER_INV (extra:term) =
+  let inv = `\(j:num) (s:x86state).
+      read RSP s = stackpointer /\
+      read (memory :> bytes64(word_add stackpointer (word 32))) s =
+      word_sub (word (64 * (m + n))) (word (58 * i)) /\
+      read R8 s = w /\ read R15 s = word_add w (word (8 * MAX m n)) /\
+      read R14 s = word (MAX m n) /\
+      read R13 s = word (MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64))` in
+  let v,b = dest_abs inv in
+  let s,b2 = dest_abs b in
+  mk_abs(v,mk_abs(s,mk_conj(b2,extra)));;
+
+
+let BIGNUM_COPRIME_DIV_INV = `\(j:num) (s:x86state).
+      read RSP s = stackpointer /\
+      read (memory :> bytes64(word_add stackpointer (word 32))) s =
+      word_sub (word (64 * (m + n))) (word (58 * i)) /\
+      read (memory :> bytes64 stackpointer) s = w /\
+      read (memory :> bytes64(word_add stackpointer (word 8))) s = word (MAX m n) /\
+      read (memory :> bytes64(word_add stackpointer (word 16))) s =
+      word (MIN (MAX m n) ((64 * (m + n) - 58 * i + 63) DIV 64)) /\
+      read (memory :> bytes64(word_add stackpointer (word 24))) s =
+      word_add w (word (8 * MAX m n)) /\
+      read R9 s = word (58 - j)`;;
+
+let BIGNUM_COPRIME_SHIFT_ADDR_TAC =
+  let l = BIGNUM_COPRIME_L_TERM in
+  SUBGOAL_THEN (subst [l,`l:num`]
+    `word (8 * (l - j) + 18446744073709551608):int64 = word (8 * (l - (j + 1)))`)
+  ASSUME_TAC THENL
+   [SUBGOAL_THEN (subst [l,`l:num`]
+      `8 * (l - j) + 18446744073709551608 = 8 * (l - (j + 1)) + 2 EXP 64`)
+    SUBST1_TAC THENL
+     [UNDISCH_TAC (subst [l,`l:num`] `j < l`) THEN ARITH_TAC;
+      REWRITE_TAC[BIGNUM_COPRIME_WORD_ADD_2EXP64]];
+    ALL_TAC];;
+
+let BIGNUM_COPRIME_JA_FACTS_TAC =
+  SUBGOAL_THEN `val (word (64 * (m + n) - 58 * i):int64) = 64 * (m + n) - 58 * i /\
+                val (word (64 * (m + n)):int64) = 64 * (m + n) /\
+                val (word (58 * (i + 1)):int64) = 58 * (i + 1)`
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THEN MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    MAP_EVERY UNDISCH_TAC [`m < 2 EXP 57`; `n < 2 EXP 57`; `58 * i < 64 * (m + n)`] THEN
+    ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `val (word 58:int64) = 58` ASSUME_TAC THENL
+   [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+  SUBGOAL_THEN `word_sub (word (64 * (m + n) - 58 * i)) (word 58):int64 =
+                word_sub (word (64 * (m + n))) (word (58 * (i + 1)))`
+  ASSUME_TAC THENL
+   [FIRST_ASSUM(fun th ->
+      if concl th = `word_sub (word (64 * (m + n))) (word (58 * i)):int64 =
+                     word (64 * (m + n) - 58 * i)`
+      then REWRITE_TAC[GSYM th] else NO_TAC) THEN
+    CONV_TAC WORD_RULE;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `(~(64 * (m + n) - 58 * i < 58 \/ 64 * (m + n) - 58 * i = 58) <=>
+     i + 1 < (64 * (m + n) + 57) DIV 58) /\
+    (~(64 * (m + n) - 58 * i < 58 \/ 64 * (m + n) = 58 * (i + 1)) <=>
+     i + 1 < (64 * (m + n) + 57) DIV 58)` STRIP_ASSUME_TAC THENL
+   [REWRITE_TAC[ARITH_RULE `a < b <=> a + 1 <= b`] THEN
+    SIMP_TAC[LE_RDIV_EQ; ARITH_EQ] THEN
+    UNDISCH_TAC `58 * i < 64 * (m + n)` THEN ARITH_TAC;
+    ALL_TAC];;
+
+(* One outer iteration; R8 is used as a temporary in the divstep loop. *)
+
+let BIGNUM_COPRIME_BODY_TAC =
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+  REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  BIGNUM_COPRIME_POST_REASSOC_TAC THEN
+  ENSURES_EXISTING_PRESERVED_TAC `R8` THEN
+  BIGNUM_COPRIME_L_FACTS_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC BIGNUM_COPRIME_L_TERM `pc + 0xf5` `pc + 0x12a`
+    (BIGNUM_COPRIME_INNER_INV `read R9 s = word j`) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_COPRIME_SIM (1--11) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    BIGNUM_COPRIME_UPBODY_TAC `j:num` `j:num` BIGNUM_COPRIME_L_TERM BIGNUM_COPRIME_L_TERM 16;
+    ALL_TAC] THEN
+  BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `58` `pc + 0x17b` `pc + 0x1df` BIGNUM_COPRIME_DIV_INV THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_COPRIME_SIM (1--19) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN BIGNUM_COPRIME_DOWNFACTS_TAC `j:num` `58` THEN
+    BIGNUM_COPRIME_SIM (1--30) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    ALL_TAC] THEN
+  BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC BIGNUM_COPRIME_L_TERM `pc + 0x214` `pc + 0x27d`
+    (BIGNUM_COPRIME_INNER_INV `read R9 s = word j`) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_COPRIME_SIM (1--13) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    BIGNUM_COPRIME_UPBODY_TAC `j:num` `j:num` BIGNUM_COPRIME_L_TERM BIGNUM_COPRIME_L_TERM 31;
+    ALL_TAC] THEN
+  BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC BIGNUM_COPRIME_L_TERM `pc + 0x28c` `pc + 0x2be`
+    (BIGNUM_COPRIME_INNER_INV `read R9 s = word j`) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_COPRIME_SIM (1--5) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    BIGNUM_COPRIME_UPBODY_TAC `j:num` `j:num` BIGNUM_COPRIME_L_TERM BIGNUM_COPRIME_L_TERM 15;
+    ALL_TAC] THEN
+  BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC BIGNUM_COPRIME_L_TERM `pc + 0x2c7` `pc + 0x2f6`
+    (BIGNUM_COPRIME_INNER_INV (subst [BIGNUM_COPRIME_L_TERM,`l:num`] `read R9 s = word (l - j)`)) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_COPRIME_SIM (1--3) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN BIGNUM_COPRIME_DOWNFACTS_TAC `j:num` BIGNUM_COPRIME_L_TERM THEN
+    BIGNUM_COPRIME_SHIFT_ADDR_TAC THEN BIGNUM_COPRIME_SIM (1--12) THEN BIGNUM_COPRIME_CLOSE_TAC;
+    ALL_TAC] THEN
+  BIGNUM_COPRIME_CARRY_REASSOC_TAC THEN BIGNUM_COPRIME_JA_FACTS_TAC THEN
+  BIGNUM_COPRIME_SIM (1--2) THEN BIGNUM_COPRIME_CLOSE_TAC;;
+
+let BIGNUM_COPRIME_SAFE = time prove
+ (`exists f_events.
+       forall e m x n y w pc stackpointer.
+           nonoverlapping (word pc,830) (stackpointer,48) /\
+           ALL (nonoverlapping (w,8 * 2 * MAX (val m) (val n)))
+           [word pc,830; stackpointer,48; x,8 * val m; y,8 * val n] /\
+           val m < 2 EXP 57 /\
+           val n < 2 EXP 57
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST bignum_coprime_tmc) /\
+                    read RIP s = word (pc + 14) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [m; x; n; y; w] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 815) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y w n m pc stackpointer /\
+                         memaccess_inbounds e2
+                         [x,val m * 8; y,val n * 8;
+                          w,(2 * MAX (val m) (val n)) * 8; stackpointer,48]
+                         [w,(2 * MAX (val m) (val n)) * 8; stackpointer,48]))
+               (MAYCHANGE
+                [RIP; RAX; RBX; RCX; RDX; RBP; RDI; RSI; R9; R10; R11; R12;
+                 R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bignum (w,2 * MAX (val m) (val n));
+                 memory :> bytes (stackpointer,48)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  CONCRETIZE_F_EVENTS_TAC BIGNUM_COPRIME_WITNESS THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  W64_GEN_TAC `m:num` THEN X_GEN_TAC `x:int64` THEN
+  W64_GEN_TAC `n:num` THEN
+  MAP_EVERY X_GEN_TAC [`y:int64`; `w:int64`; `pc:num`; `stackpointer:int64`] THEN
+  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  SUBGOAL_THEN `(if m < n then word n else word m):int64 = word (MAX m n)`
+  ASSUME_TAC THENL
+   [REWRITE_TAC[ARITH_RULE `MAX m n = if m < n then n else m`] THEN
+    COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  SUBGOAL_THEN `val (word (MAX m n):int64) = MAX m n` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    UNDISCH_TAC `m < 2 EXP 57` THEN UNDISCH_TAC `n < 2 EXP 57` THEN ARITH_TAC;
+    ALL_TAC] THEN
+
+  (*** The degenerate case k = MAX m n = 0 ***)
+
+  ASM_CASES_TAC `MAX m n = 0` THENL
+   [ASM_REWRITE_TAC[] THEN BIGNUM_COPRIME_SIM (1--6) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN `~(MAX m n = 0) /\ MAX m n < 2 EXP 57 /\ m <= MAX m n /\ n <= MAX m n`
+  MP_TAC THENL
+   [ASM_REWRITE_TAC[] THEN REWRITE_TAC[MAX] THEN
+    UNDISCH_TAC `m < 2 EXP 57` THEN UNDISCH_TAC `n < 2 EXP 57` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  STRIP_TAC THEN
+
+  (*** Computation of k and the start of the second buffer ***)
+
+  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x2b`
+   `\s. read RSP s = stackpointer /\ read RDI s = word m /\ read RSI s = x /\
+        read RDX s = word n /\ read RCX s = y /\ read R8 s = w /\
+        read R15 s = word_add w (word (8 * MAX m n)) /\
+        read R14 s = word (MAX m n) /\ read R9 s = word 0` THEN
+  CONJ_TAC THENL
+   [BIGNUM_COPRIME_SIM (1--8) THEN BIGNUM_COPRIME_CLOSE_TAC; ALL_TAC] THEN
+  BIGNUM_COPRIME_POST_REASSOC_TAC THEN
+
+  (*** Copying of x and y, the optional swap and the main loop ***)
+
+  BIGNUM_COPRIME_XPHASE_TAC THEN
+  BIGNUM_COPRIME_YPHASE_TAC THEN
+  BIGNUM_COPRIME_SWAP_TAC THEN
+  BIGNUM_COPRIME_MAIN_SKEL_TAC BIGNUM_COPRIME_BODY_TAC);;
+
+let BIGNUM_COPRIME_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m x n y w pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 96),104)
+        (w,8 * 2 * MAX (val m) (val n)) /\
+        ALLPAIRS nonoverlapping
+        [w,8 * 2 * MAX (val m) (val n); word_sub stackpointer (word 96),96]
+        [word pc,LENGTH bignum_coprime_tmc; x,8 * val m; y,8 * val n] /\
+        val m < 2 EXP 57 /\
+        val n < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_coprime_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [m; x; n; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y w n m pc (word_sub stackpointer (word 96))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8;
+                       w,(2 * MAX (val m) (val n)) * 8;
+                       word_sub stackpointer (word 96),104]
+                      [w,(2 * MAX (val m) (val n)) * 8;
+                       word_sub stackpointer (word 96),96]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (w,2 * MAX (val m) (val n));
+              memory :> bytes (word_sub stackpointer (word 96),96)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_coprime_tmc BIGNUM_COPRIME_SAFE `[RBX; RBP; R12; R13; R14; R15]` 96 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_COPRIME_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m x n y w pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 96),104)
+        (w,8 * 2 * MAX (val m) (val n)) /\
+        ALLPAIRS nonoverlapping
+        [w,8 * 2 * MAX (val m) (val n); word_sub stackpointer (word 96),96]
+        [word pc,LENGTH bignum_coprime_mc; x,8 * val m; y,8 * val n] /\
+        val m < 2 EXP 57 /\
+        val n < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_coprime_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [m; x; n; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y w n m pc (word_sub stackpointer (word 96))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8;
+                       w,(2 * MAX (val m) (val n)) * 8;
+                       word_sub stackpointer (word 96),104]
+                      [w,(2 * MAX (val m) (val n)) * 8;
+                       word_sub stackpointer (word 96),96]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (w,2 * MAX (val m) (val n));
+              memory :> bytes (word_sub stackpointer (word 96),96)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPRIME_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_COPRIME_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m x n y w pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 112),120)
+        (w,8 * 2 * MAX (val m) (val n)) /\
+        ALLPAIRS nonoverlapping
+        [w,8 * 2 * MAX (val m) (val n); word_sub stackpointer (word 112),112]
+        [word pc,LENGTH bignum_coprime_windows_tmc; x,8 * val m; y,8 * val n] /\
+        val m < 2 EXP 57 /\
+        val n < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_coprime_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [m; x; n; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y w n m pc
+                      (word_sub stackpointer (word 112))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8;
+                       w,(2 * MAX (val m) (val n)) * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 112),120]
+                      [w,(2 * MAX (val m) (val n)) * 8;
+                       word_sub stackpointer (word 112),112]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (w,2 * MAX (val m) (val n));
+              memory :> bytes (word_sub stackpointer (word 112),112)])`,
+  WINDOWS_X86_WRAP_STACK_TAC bignum_coprime_windows_tmc bignum_coprime_tmc BIGNUM_COPRIME_SAFE `[RBX; RBP; R12; R13; R14; R15]` 96 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_COPRIME_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e m x n y w pc stackpointer returnaddress.
+        nonoverlapping (word_sub stackpointer (word 112),120)
+        (w,8 * 2 * MAX (val m) (val n)) /\
+        ALLPAIRS nonoverlapping
+        [w,8 * 2 * MAX (val m) (val n); word_sub stackpointer (word 112),112]
+        [word pc,LENGTH bignum_coprime_windows_mc; x,8 * val m; y,8 * val n] /\
+        val m < 2 EXP 57 /\
+        val n < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_coprime_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [m; x; n; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y w n m pc
+                      (word_sub stackpointer (word 112))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val m * 8; y,val n * 8;
+                       w,(2 * MAX (val m) (val n)) * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 112),120]
+                      [w,(2 * MAX (val m) (val n)) * 8;
+                       word_sub stackpointer (word 112),112]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (w,2 * MAX (val m) (val n));
+              memory :> bytes (word_sub stackpointer (word 112),112)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_COPRIME_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
