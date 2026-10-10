@@ -11582,3 +11582,593 @@ let P256_SCALARMUL_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
                      memory :> bytes(word_sub stackpointer (word 1392),1392)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE P256_SCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+(* Local versions of the subroutines. *)
+
+let LOCAL_DEMONT_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0xb96,bignum_demont_p256_alt_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+        `pc + 0xb96`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_INV_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0xc55,bignum_inv_p256_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+        `pc + 0xc55`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_MUL_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0x21c4,bignum_montmul_p256_alt_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+        `pc + 0x21c4`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_SQR_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0x23f7,bignum_montsqr_p256_alt_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+        `pc + 0x23f7`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_TOMONT_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0x25cc,bignum_tomont_p256_alt_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+        `pc + 0x25cc`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_JADD_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0x280c,p256_montjadd_alt_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+        `pc + 0x280c`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_JDOUBLE_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0x4f74,p256_montjdouble_alt_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+        `pc + 0x4f74`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let LOCAL_JMIXADD_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    let th =
+      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
+        safety_th) in
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
+          0x643d,p256_montjmixadd_alt_tmc,th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+        `pc + 0x643d`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
+        n THENL [
+      EXISTS_E2_TAC(ref
+        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
+         (* inside the loop... *)
+         `i:num`;
+         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p256_scalarmul_alt" subroutine_signatures)
+    P256_SCALARMUL_ALT_CORRECT
+    P256_SCALARMUL_ALT_EXEC;;
+
+let P256_SCALARMUL_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           ALL (nonoverlapping (stackpointer,1320))
+           [word pc,32705; res,64; scalar,32; point,64] /\
+           nonoverlapping (res,64) (word pc,32705)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) p256_scalarmul_alt_tmc /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = word_add stackpointer (word 296) /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 2948) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,64; res,64; stackpointer,1320]
+                         [res,64; stackpointer,1320]))
+               (MAYCHANGE [RIP] ,,
+                MAYCHANGE [RAX; RCX; RDX; RSI; RDI; R8; R9; R10; R11] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [RBX; RBP; R12; R13; R14; R15] ,,
+                MAYCHANGE
+                [memory :> bytes (res,64);
+                 memory :> bytes (stackpointer,1320)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+
+  (* Prepare the safety theorems of the subroutines to be used. This is
+     necessary to keep introduction of metavariables in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE BIGNUM_DEMONT_P256_ALT_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_NOSTACK_TAC bignum_demont_p256_alt_tmc BIGNUM_DEMONT_P256_ALT_SAFE THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_DEMONT_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE BIGNUM_INV_P256_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC bignum_inv_p256_tmc BIGNUM_INV_P256_SAFE `[RBX; RBP; R12; R13; R14; R15]` 288 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_INV_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE BIGNUM_MONTMUL_P256_ALT_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC bignum_montmul_p256_alt_tmc BIGNUM_MONTMUL_P256_ALT_SAFE `[RBX; R12; R13; R14; R15]` 40 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_MUL_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE BIGNUM_MONTSQR_P256_ALT_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC bignum_montsqr_p256_alt_tmc BIGNUM_MONTSQR_P256_ALT_SAFE `[RBX; R12; R13; R14; R15]` 40 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_SQR_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE BIGNUM_TOMONT_P256_ALT_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC bignum_tomont_p256_alt_tmc BIGNUM_TOMONT_P256_ALT_SAFE `[R12; R13; R14; R15]` 32 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_TOMONT_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE P256_MONTJADD_ALT_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC p256_montjadd_alt_tmc P256_MONTJADD_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 272 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_JADD_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE P256_MONTJDOUBLE_ALT_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC p256_montjdouble_alt_tmc P256_MONTJDOUBLE_ALT_SAFE `[RBX; R12; R13; R14; R15]` 232 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_JDOUBLE_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC
+      (X86_SIMD_SHARPEN_RULE P256_MONTJMIXADD_ALT_NOIBT_SUBROUTINE_SAFE
+        (X86_PROMOTE_RETURN_STACK_TAC p256_montjmixadd_alt_tmc P256_MONTJMIXADD_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 240 THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))
+      "H_JMIXADD_SAFE" THEN
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_loop_post scalar point res pc stackpointer)
+        (APPEND
+          (ENUMERATEL 63 (f_ev_loop scalar point res pc stackpointer))
+            (f_ev_loop_pre scalar point res pc stackpointer))
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN
+  STRIP_TAC (* event e *) THEN
+
+  REWRITE_TAC[GSYM SEQ_ASSOC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; ALL] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS] THEN
+  ENSURES_EXISTING_PRESERVED_TAC `RSP` THEN
+
+  (*** Main loop invariant setup. ***)
+  ENSURES_EVENTS_WHILE_UP2_TAC `63` `pc + 0x629`
+    `pc + 0xae1`(*after jne*)
+    `\i s.
+      read RSP s = word_add stackpointer (word 296) /\
+      read (memory :> bytes64(word_add stackpointer (word 1288))) s = res /\
+      read RBP s = word (4 * (63 - i))` THEN
+  REPEAT CONJ_TAC THENL [
+    ARITH_TAC;
+
+    (*** Initial holding of invariant ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (1--41) THEN
+    LOCAL_TOMONT_SAFETY_TAC "H_TOMONT_SAFE" 42 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (43--45) THEN
+    LOCAL_TOMONT_SAFETY_TAC "H_TOMONT_SAFE" 46 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (47--79) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 80 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (81--84) THEN
+    LOCAL_JMIXADD_SAFETY_TAC "H_JMIXADD_SAFE" 85 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (86--88) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 89 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (90--93) THEN
+    LOCAL_JMIXADD_SAFETY_TAC "H_JMIXADD_SAFE" 94 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (95--97) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 98 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (99--102) THEN
+    LOCAL_JMIXADD_SAFETY_TAC "H_JMIXADD_SAFE" 103 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (104--106) THEN
+    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 107 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (108--238) THEN
+
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    (*** Defer the main invariant preservation proof till below ***)
+
+    ALL_TAC;
+
+    (*** Final conversion to affine form and copying to the output ***)
+
+    REWRITE_TAC[] THEN
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (1--3) THEN
+    LOCAL_SQR_SAFETY_TAC "H_SQR_SAFE" 4 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (5--8) THEN
+    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 9 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (10--12) THEN
+    LOCAL_DEMONT_SAFETY_TAC "H_DEMONT_SAFE" 13 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (14--16) THEN
+    LOCAL_INV_SAFETY_TAC "H_INV_SAFE" 17 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (18--21) THEN
+    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 22 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (23--27) THEN
+    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 28 THEN
+    X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (29--32) THEN
+    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 33 THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  (**** Preservation of the loop invariant ***)
+
+  REWRITE_TAC[] THEN
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+  CONV_TAC NUM_REDUCE_CONV THEN
+
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (1--4) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 5 THEN
+  X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (6--8) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 9 THEN
+  X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (10--12) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 13 THEN
+  X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (14--16) THEN
+  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 17 THEN
+  X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (18--173) THEN
+  LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 174 THEN
+  X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (175--176) THEN
+
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN
+    SIMPLE_ARITH_TAC;
+    ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+      AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC
+    ];
+    ALL_TAC
+  ] THEN
+
+  SUBGOAL_THEN
+    `word (8 * val (word_ushr (word_sub (word (4 * (63 - i))) (word 4):int64) 6))
+     :int64 = word (8 * (4 * (62 - i)) DIV 2 EXP 6)`
+  SUBST_ALL_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+      ALL_TAC; SIMPLE_ARITH_TAC
+    ] THEN
+    AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+    IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN CONJ_TAC THENL [
+      BINOP_TAC THENL [REFL_TAC;ALL_TAC] THEN
+      BINOP_TAC THENL [SIMPLE_ARITH_TAC; REFL_TAC];
+
+      SIMPLE_ARITH_TAC
+    ];
+
+    ALL_TAC
+  ] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P256_SCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1368),1368))
+        [word pc,LENGTH p256_scalarmul_alt_tmc; scalar,32; point,64] /\
+        ALL (nonoverlapping (res,64))
+        [word pc,LENGTH p256_scalarmul_alt_tmc;
+         word_sub stackpointer (word 1368),1376]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p256_scalarmul_alt_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1368))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,64; res,64;
+                       word_sub stackpointer (word 1368),1376]
+                      [res,64; word_sub stackpointer (word 1368),1368]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 1368),1368)])`,
+  X86_ADD_RETURN_STACK_TAC P256_SCALARMUL_ALT_EXEC
+     P256_SCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 1368
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P256_SCALARMUL_ALT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1368),1368))
+        [word pc,LENGTH p256_scalarmul_alt_mc; scalar,32; point,64] /\
+        ALL (nonoverlapping (res,64))
+        [word pc,LENGTH p256_scalarmul_alt_mc;
+         word_sub stackpointer (word 1368),1376]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p256_scalarmul_alt_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1368))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,64; res,64;
+                       word_sub stackpointer (word 1368),1376]
+                      [res,64; word_sub stackpointer (word 1368),1368]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 1368),1368)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P256_SCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let P256_SCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1392),1392))
+        [word pc,LENGTH p256_scalarmul_alt_windows_tmc; scalar,32; point,64] /\
+        ALL (nonoverlapping (res,64))
+        [word pc,LENGTH p256_scalarmul_alt_windows_tmc;
+         word_sub stackpointer (word 1392),1400]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p256_scalarmul_alt_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1392))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,64; res,64;
+                       word_sub stackpointer (word 1392),1400]
+                      [res,64; word_sub stackpointer (word 1392),1392]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 1392),1392)])`,
+  let WINDOWS_P256_SCALARMUL_ALT_EXEC =
+    X86_MK_EXEC_RULE p256_scalarmul_alt_windows_tmc
+  and baseth =
+    X86_SIMD_SHARPEN_RULE P256_SCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE
+    (X86_ADD_RETURN_STACK_TAC P256_SCALARMUL_ALT_EXEC
+     P256_SCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 1368 THEN
+     DISCHARGE_SAFETY_PROPERTY_TAC) in
+  let subth =
+    CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
+     (REWRITE_RULE[bignum_pair_from_memory] baseth) in
+
+  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
+
+  META_EXISTS_TAC THEN STRIP_TAC (* e *) THEN
+
+  REWRITE_TAC[fst WINDOWS_P256_SCALARMUL_ALT_EXEC] THEN
+  REPLICATE_TAC 4 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 1392 THEN
+  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
+  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+  REWRITE_TAC[bignum_pair_from_memory; WORD_RULE `word(8 * 4) = word 32`] THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+  UNDISCH_THEN `read RSP s0 = word_add stackpointer (word 1392)`
+   (fun th -> SUBST_ALL_TAC th THEN ASSUME_TAC th) THEN
+  RULE_ASSUM_TAC
+   (CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
+  X86_STEPS_TAC WINDOWS_P256_SCALARMUL_ALT_EXEC (1--6) THEN
+  REMOVE_THEN "H_CALLEE" (fun subth ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+    (p256_scalarmul_alt_windows_tmc,
+      WINDOWS_P256_SCALARMUL_ALT_EXEC,
+      0x13,p256_scalarmul_alt_tmc,subth)
+    [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+      `pc + 0x13`; `read RSP s`;
+      `read (memory :> bytes64 (read RSP s)) s`] 7) THENL [
+    EXISTS_E2_TAC(ref [`pc:num`;`stackpointer:int64`]);
+
+    ALL_TAC
+  ] THEN
+  X86_STEPS_TAC WINDOWS_P256_SCALARMUL_ALT_EXEC (8--10) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]
+
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let P256_SCALARMUL_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e res scalar point pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 1392),1392))
+        [word pc,LENGTH p256_scalarmul_alt_windows_mc; scalar,32; point,64] /\
+        ALL (nonoverlapping (res,64))
+        [word pc,LENGTH p256_scalarmul_alt_windows_mc;
+         word_sub stackpointer (word 1392),1400]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) p256_scalarmul_alt_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [res; scalar; point] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events scalar point res pc
+                      (word_sub stackpointer (word 1392))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [scalar,32; point,64; res,64;
+                       word_sub stackpointer (word 1392),1400]
+                      [res,64; word_sub stackpointer (word 1392),1392]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (res,64);
+              memory :> bytes (word_sub stackpointer (word 1392),1392)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE P256_SCALARMUL_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
