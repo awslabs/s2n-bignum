@@ -4887,3 +4887,741 @@ let BIGNUM_MODINV_WINDOWS_SUBROUTINE_CORRECT = prove
                     memory :> bytes(word_sub stackpointer (word 144),144)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MODINV_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_modinv" subroutine_signatures)
+    BIGNUM_MODINV_CORRECT
+    BIGNUM_MODINV_EXEC;;
+
+(* Close the non-event conjuncts of a postcondition after simulation. *)
+
+let BIGNUM_MODINV_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
+               NO_TAC);
+              (ASM_REWRITE_TAC[] THEN NO_TAC);
+              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
+              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+               CONV_TAC WORD_RULE THEN NO_TAC);
+              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
+        ALL_TAC]
+    else NO_TAC));;
+
+let BIGNUM_MODINV_CLOSE_TAC =
+  BIGNUM_MODINV_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let BIGNUM_MODINV_POST_REASSOC_TAC =
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
+   [METIS[APPEND_ASSOC]
+     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
+      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
+
+(* Rewrite the postcondition trace to APPEND <head> <precondition trace> when
+   a loop is entered from the post-leg of the previous loop. *)
+
+let BIGNUM_MODINV_CARRY_REASSOC_TAC : tactic = fun (asl,w) ->
+  let _,args = strip_comb w in
+  let pre = el 1 args and post = el 2 args in
+  let e2v = `e2:(uarch_event)list` in
+  let find_rhs t = rhs (find_term (fun u -> is_eq u && lhs u = e2v) t) in
+  let pre_rhs = find_rhs pre and post_rhs = find_rhs post in
+  let x0 = lhand (lhand post_rhs) in
+  let eq = mk_eq(post_rhs,
+    mk_binop `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
+      x0 pre_rhs) in
+  let th = prove(eq, REWRITE_TAC[APPEND_ASSOC]) in
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [th] (asl,w);;
+
+(* Reduce the conditionals `if p then a else b` of the goal according to an
+   assumption p or ~p, without rewriting with p itself. *)
+
+let BIGNUM_MODINV_COND_TAC (p:term) =
+  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
+  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]);;
+
+(* Discharge a leg whose postcondition trace is fully concrete (e.g. after a
+   zero-step leg): instantiate e2 with the witness, then close the trace
+   equation by APPEND normalization and memaccess_inbounds from the carried
+   assumption, after normalizing val(word v) = v. *)
+
+let BIGNUM_MODINV_CONCRETE_DISCHARGE_TAC : tactic =
+  let is_valfact th =
+    let c = concl th in
+    is_eq c &&
+    (try let v,a = dest_comb (lhs c) in
+         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  W(fun (a,w) ->
+      let e2v, body = dest_exists w in
+      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
+      EXISTS_TAC wit) THEN
+  REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
+    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
+    ASSUM_LIST(fun ths ->
+      let vths = filter is_valfact ths in
+      let nths = filter (fun th -> let c = concl th in
+                           is_neg c && is_eq (dest_neg c)) ths in
+      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
+                               GSYM APPEND_ASSOC] in
+      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
+
+(* Facts for an up-counting loop with index register word e (e an expression
+   in the loop variable v), whose backward branch compares e + 1 with bnd;
+   cnt is the iteration count. *)
+
+let BIGNUM_MODINV_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
+  let e1 = mk_binary "+" (e,`1`) in
+  let wd t = mk_comb(`word:num->int64`,t) in
+  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
+  SUBGOAL_THEN (list_mk_conj
+    [mkval e; mkval e1;
+     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
+           wd e1);
+     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      CONV_TAC WORD_RULE;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* Facts for a down-counting register holding word (c - v), decremented
+   before a test of zero. *)
+
+let BIGNUM_MODINV_DOWNFACTS_TAC (v:term) (c:term) =
+  let sub t = subst [c,`c:num`; v,`j:num`] t in
+  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
+                     val (word (c - j):int64) = c - j /\
+                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
+                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
+       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* The structure follows the correctness proof: copying of the inputs into
+   the buffers, the initial computation of the negated inverse word, and the
+   main loop of (128 * k + 57) DIV 58 iterations. Each outer iteration
+   consists of inner loops over l = MIN k ((128 * k - 58 * i + 63) DIV 64)
+   words (top words, cross multiplication, negation and shift of m and n),
+   58 divsteps, and loops over the k words of w and z (congruence update,
+   Montgomery reduction, comparison, correction and the final negation);
+   only the two Montgomery reduction loops of k - 1 iterations can be
+   skipped, when k = 1. *)
+
+let BIGNUM_MODINV_WORD_ADD_2EXP64 = prove
+ (`!a. word (a + 2 EXP 64):int64 = word a`,
+  GEN_TAC THEN ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+  REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN
+  REWRITE_TAC[MOD_MULT_ADD; ARITH_RULE `a + 2 EXP 64 = 1 * 2 EXP 64 + a`]);;
+
+let BIGNUM_MODINV_WITNESS = `\(x:int64) (y:int64) (z:int64) (w:int64) (k:int64) (pc:num) (stackpointer:int64).
+  if val k = 0 then f_ev_k0 x y z w k pc stackpointer
+  else APPEND
+   (APPEND []
+    (APPEND
+     (ENUMERATEL ((128 * val k + 57) DIV 58)
+      (\i. APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND
+        (f_ev_b14 x y z w k pc stackpointer i)
+        (APPEND (ENUMERATEL (val k) (\j. f_ev_flip x y z w k pc stackpointer i j)) (f_ev_b13 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL (MIN (val k) ((128 * val k - 58 * i + 63) DIV 64)) (\j. f_ev_shift x y z w k pc stackpointer i j)) (f_ev_b12 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL (MIN (val k) ((128 * val k - 58 * i + 63) DIV 64)) (\j. f_ev_neg x y z w k pc stackpointer i j)) (f_ev_b11 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL (MIN (val k) ((128 * val k - 58 * i + 63) DIV 64)) (\j. f_ev_cross x y z w k pc stackpointer i j)) (f_ev_b10 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL (val k) (\j. f_ev_zcorr x y z w k pc stackpointer i j)) (f_ev_b9 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL (val k) (\j. f_ev_zcmp x y z w k pc stackpointer i j)) (f_ev_b8 x y z w k pc stackpointer i)))
+        (if val k = 1 then f_ev_zskip x y z w k pc stackpointer i
+         else APPEND [] (APPEND (ENUMERATEL (val k - 1) (\j. f_ev_zmont x y z w k pc stackpointer i j)) (f_ev_b7 x y z w k pc stackpointer i))))
+        (APPEND (ENUMERATEL (val k) (\j. f_ev_wcorr x y z w k pc stackpointer i j)) (f_ev_b6 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL (val k) (\j. f_ev_wcmp x y z w k pc stackpointer i j)) (f_ev_b5 x y z w k pc stackpointer i)))
+        (if val k = 1 then f_ev_wskip x y z w k pc stackpointer i
+         else APPEND [] (APPEND (ENUMERATEL (val k - 1) (\j. f_ev_wmont x y z w k pc stackpointer i j)) (f_ev_b4 x y z w k pc stackpointer i))))
+        (APPEND (ENUMERATEL (val k) (\j. f_ev_cong x y z w k pc stackpointer i j)) (f_ev_b3 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL 58 (\j. f_ev_div x y z w k pc stackpointer i j)) (f_ev_b2 x y z w k pc stackpointer i)))
+        (APPEND (ENUMERATEL (MIN (val k) ((128 * val k - 58 * i + 63) DIV 64)) (\j. f_ev_top x y z w k pc stackpointer i j)) (f_ev_b1 x y z w k pc stackpointer i))))
+     (f_ev_mainpre x y z w k pc stackpointer)))
+   (APPEND (ENUMERATEL (val k) (f_ev_copy x y z w k pc stackpointer)) (f_ev_copypre x y z w k pc stackpointer))
+  :(uarch_event) list`;;
+
+let BIGNUM_MODINV_SIM n =
+  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+    ~canonicalize_pc_diff:false BIGNUM_MODINV_EXEC n;;
+
+let BIGNUM_MODINV_UPBODY_TAC v e bnd cnt (pre_tac:tactic) n =
+  X_GEN_TAC v THEN STRIP_TAC THEN BIGNUM_MODINV_UPFACTS_TAC v e bnd cnt THEN
+  pre_tac THEN BIGNUM_MODINV_SIM (1--n) THEN BIGNUM_MODINV_CLOSE_TAC;;
+
+let BIGNUM_MODINV_OUTER = `\s:x86state.
+   read RSP s = stackpointer /\
+   read (memory :> bytes64(word_add stackpointer (word 32))) s =
+   word_sub (word (128 * k)) (word (58 * i)) /\
+   read (memory :> bytes64(word_add stackpointer (word 48))) s = word_add w (word (8 * k)) /\
+   read (memory :> bytes64(word_add stackpointer (word 56))) s = w /\
+   read (memory :> bytes64(word_add stackpointer (word 64))) s = z /\
+   read (memory :> bytes64(word_add stackpointer (word 72))) s = y`;;
+
+let BIGNUM_MODINV_INV (extra:term) =
+  let s,b = dest_abs BIGNUM_MODINV_OUTER in
+  mk_abs(`j:num`,mk_abs(s,mk_conj(b,extra)));;
+
+let BIGNUM_MODINV_SEQ (extra:term) =
+  let s,b = dest_abs BIGNUM_MODINV_OUTER in
+  mk_abs(s,mk_conj(b,extra));;
+
+
+let BIGNUM_MODINV_L_FACTS_TAC =
+  SUBGOAL_THEN `58 * i < 128 * k` ASSUME_TAC THENL
+   [MP_TAC(SPECL [`128 * k + 57`; `58`] DIVISION) THEN
+    UNDISCH_TAC `i < (128 * k + 57) DIV 58` THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `word_sub (word (128 * k)) (word (58 * i)):int64 =
+                word (128 * k - 58 * i)` ASSUME_TAC THENL
+   [ASM_SIMP_TAC[WORD_SUB; LT_IMP_LE]; ALL_TAC] THEN
+  SUBGOAL_THEN `128 * k - 58 * i + 63 < 2 EXP 64` ASSUME_TAC THENL
+   [UNDISCH_TAC `k < 2 EXP 57` THEN ARITH_TAC; ALL_TAC] THEN
+  SUBGOAL_THEN
+   `word_ushr (word_add (word (128 * k - 58 * i)) (word 63):int64) 6 =
+    word ((128 * k - 58 * i + 63) DIV 64)` ASSUME_TAC THENL
+   [REWRITE_TAC[GSYM WORD_ADD] THEN ONCE_REWRITE_TAC[GSYM VAL_EQ] THEN
+    REWRITE_TAC[VAL_WORD_USHR] THEN
+    SUBGOAL_THEN `val (word (128 * k - 58 * i + 63):int64) =
+                  128 * k - 58 * i + 63` SUBST1_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN ASM_REWRITE_TAC[DIMINDEX_64]; ALL_TAC] THEN
+    CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC SYM_CONV THEN
+    MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    TRANS_TAC LET_TRANS `128 * k - 58 * i + 63` THEN
+    ASM_SIMP_TAC[DIV_LE; ARITH_EQ];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `val (word ((128 * k - 58 * i + 63) DIV 64):int64) =
+    (128 * k - 58 * i + 63) DIV 64` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    TRANS_TAC LET_TRANS `128 * k - 58 * i + 63` THEN
+    ASM_SIMP_TAC[DIV_LE; ARITH_EQ];
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `(if k <= (128 * k - 58 * i + 63) DIV 64
+     then word k else word ((128 * k - 58 * i + 63) DIV 64)):int64 =
+    word (MIN k ((128 * k - 58 * i + 63) DIV 64))`
+  ASSUME_TAC THENL
+   [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
+    AP_TERM_TAC THEN POP_ASSUM MP_TAC THEN ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `~(MIN k ((128 * k - 58 * i + 63) DIV 64) = 0) /\
+    MIN k ((128 * k - 58 * i + 63) DIV 64) <= k`
+  STRIP_ASSUME_TAC THENL
+   [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[LE_REFL] THEN
+    SIMP_TAC[DIV_EQ_0; ARITH_EQ] THEN
+    MAP_EVERY UNDISCH_TAC
+     [`58 * i < 128 * k`; `~(k <= (128 * k - 58 * i + 63) DIV 64)`] THEN
+    ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `val (word (MIN k ((128 * k - 58 * i + 63) DIV 64)):int64) =
+    MIN k ((128 * k - 58 * i + 63) DIV 64)` ASSUME_TAC THENL
+   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    UNDISCH_TAC `MIN k ((128 * k - 58 * i + 63) DIV 64) <= k` THEN
+    UNDISCH_TAC `k < 2 EXP 57` THEN ARITH_TAC;
+    ALL_TAC];;
+
+
+let BIGNUM_MODINV_LT = `MIN k ((128 * k - 58 * i + 63) DIV 64)`;;
+
+let BIGNUM_MODINV_KM1_FACTS_TAC =
+  SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word (k - 1) /\
+                val (word (k - 1):int64) = k - 1 /\
+                word (8 * k + 18446744073709551608):int64 = word (8 * (k - 1))`
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [SUBGOAL_THEN `k = (k - 1) + 1`
+       (fun th -> GEN_REWRITE_TAC (LAND_CONV o LAND_CONV o RAND_CONV) [th])
+      THENL [UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC; CONV_TAC WORD_RULE];
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+      UNDISCH_TAC `k < 2 EXP 57` THEN ARITH_TAC;
+      SUBGOAL_THEN `8 * k + 18446744073709551608 = 8 * (k - 1) + 2 EXP 64`
+      SUBST1_TAC THENL
+       [UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
+        REWRITE_TAC[BIGNUM_MODINV_WORD_ADD_2EXP64]]];
+    ALL_TAC];;
+
+let BIGNUM_MODINV_MONT_IDX_TAC =
+  SUBGOAL_THEN `word (8 * (1 + j) + 18446744073709551608):int64 = word (8 * j)`
+  ASSUME_TAC THENL
+   [SUBGOAL_THEN `8 * (1 + j) + 18446744073709551608 = 8 * j + 2 EXP 64`
+    SUBST1_TAC THENL [ARITH_TAC; REWRITE_TAC[BIGNUM_MODINV_WORD_ADD_2EXP64]];
+    ALL_TAC];;
+
+let BIGNUM_MODINV_SHIFT_ADDR_TAC =
+  let l = BIGNUM_MODINV_LT in
+  SUBGOAL_THEN (subst [l,`l:num`]
+    `word (8 * (l - j) + 18446744073709551608):int64 = word (8 * (l - (j + 1)))`)
+  ASSUME_TAC THENL
+   [SUBGOAL_THEN (subst [l,`l:num`]
+      `8 * (l - j) + 18446744073709551608 = 8 * (l - (j + 1)) + 2 EXP 64`)
+    SUBST1_TAC THENL
+     [UNDISCH_TAC (subst [l,`l:num`] `j < l`) THEN ARITH_TAC;
+      REWRITE_TAC[BIGNUM_MODINV_WORD_ADD_2EXP64]];
+    ALL_TAC];;
+
+let BIGNUM_MODINV_JA_FACTS_TAC =
+  SUBGOAL_THEN `val (word (128 * k - 58 * i):int64) = 128 * k - 58 * i /\
+                val (word (128 * k):int64) = 128 * k /\
+                val (word (58 * (i + 1)):int64) = 58 * (i + 1)`
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THEN MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+    MAP_EVERY UNDISCH_TAC [`k < 2 EXP 57`; `58 * i < 128 * k`] THEN
+    ARITH_TAC;
+    ALL_TAC] THEN
+  SUBGOAL_THEN `val (word 58:int64) = 58` ASSUME_TAC THENL
+   [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+  SUBGOAL_THEN `word_sub (word (128 * k - 58 * i)) (word 58):int64 =
+                word_sub (word (128 * k)) (word (58 * (i + 1)))`
+  ASSUME_TAC THENL
+   [FIRST_ASSUM(fun th ->
+      if concl th = `word_sub (word (128 * k)) (word (58 * i)):int64 =
+                     word (128 * k - 58 * i)`
+      then REWRITE_TAC[GSYM th] else NO_TAC) THEN
+    CONV_TAC WORD_RULE;
+    ALL_TAC] THEN
+  SUBGOAL_THEN
+   `(~(128 * k - 58 * i < 58 \/ 128 * k - 58 * i = 58) <=>
+     i + 1 < (128 * k + 57) DIV 58) /\
+    (~(128 * k - 58 * i < 58 \/ 128 * k = 58 * (i + 1)) <=>
+     i + 1 < (128 * k + 57) DIV 58)` STRIP_ASSUME_TAC THENL
+   [REWRITE_TAC[ARITH_RULE `a < b <=> a + 1 <= b`] THEN
+    SIMP_TAC[LE_RDIV_EQ; ARITH_EQ] THEN
+    UNDISCH_TAC `58 * i < 128 * k` THEN ARITH_TAC;
+    ALL_TAC];;
+
+let BIGNUM_MODINV_UPLOOP_TAC (cnt:term) (head:term) (exitpc:term) (extra:term)
+                  (npre:int) (nbody:int) =
+  ENSURES_EVENTS_WHILE_UP2_TAC cnt head exitpc
+    (BIGNUM_MODINV_INV (mk_conj(extra,`read R9 s = word j`))) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
+    BIGNUM_MODINV_UPBODY_TAC `j:num` `j:num` cnt cnt ALL_TAC nbody;
+    ALL_TAC];;
+
+(* A comparison loop counting RCX down from k while R9 counts up. *)
+
+let BIGNUM_MODINV_CMPLOOP_TAC (head:term) (exitpc:term) (extra:term) (npre:int) (nbody:int) =
+  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` head exitpc
+    (BIGNUM_MODINV_INV (mk_conj(extra,`read R9 s = word j /\ read RCX s = word (k - j)`))) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    BIGNUM_MODINV_UPFACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
+    BIGNUM_MODINV_DOWNFACTS_TAC `j:num` `k:num` THEN
+    BIGNUM_MODINV_SIM (1--nbody) THEN BIGNUM_MODINV_CLOSE_TAC;
+    ALL_TAC];;
+
+(* A Montgomery reduction loop over indices 1..k-1, skipped when k = 1; the
+   sequence ends at the common exit seqpc of skip and loop. *)
+
+let BIGNUM_MODINV_MONT_TAC (seqpc:term) (head:term) (extra:term) (npre:int) (nbody:int) =
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN BIGNUM_MODINV_POST_REASSOC_TAC THEN
+  ENSURES_EVENTS_SEQUENCE_TAC seqpc (BIGNUM_MODINV_SEQ extra) THEN
+  CONJ_TAC THENL
+   [ASM_CASES_TAC `k = 1` THENL
+     [BIGNUM_MODINV_COND_TAC `k = 1` THEN
+      SUBGOAL_THEN `k - 1 = 0` ASSUME_TAC THENL
+       [UNDISCH_TAC `k = 1` THEN ARITH_TAC; ALL_TAC] THEN
+      UNDISCH_THEN `k = 1` (K ALL_TAC) THEN
+      CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+      ASM_REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0] THEN
+      BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
+      BIGNUM_MODINV_COND_TAC `k = 1` THEN
+      SUBGOAL_THEN `~(k - 1 = 0)` ASSUME_TAC THENL
+       [MAP_EVERY UNDISCH_TAC [`~(k = 0)`; `~(k = 1)`] THEN ARITH_TAC; ALL_TAC] THEN
+      ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` head seqpc
+        (BIGNUM_MODINV_INV (mk_conj(extra,
+          `read R9 s = word (1 + j) /\ read RCX s = word ((k - 1) - j)`))) THEN
+      REPEAT CONJ_TAC THENL
+       [ASM_REWRITE_TAC[];
+        REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+        BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
+        X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+        BIGNUM_MODINV_UPFACTS_TAC `j:num` `1 + j` `k:num` `k - 1` THEN
+        BIGNUM_MODINV_DOWNFACTS_TAC `j:num` `k - 1` THEN BIGNUM_MODINV_MONT_IDX_TAC THEN
+        BIGNUM_MODINV_SIM (1--nbody) THEN BIGNUM_MODINV_CLOSE_TAC;
+        BIGNUM_MODINV_SIM [] THEN BIGNUM_MODINV_PEEL_TAC THEN BIGNUM_MODINV_CONCRETE_DISCHARGE_TAC]];
+    ALL_TAC];;
+
+let BIGNUM_MODINV_BODY_TAC =
+  X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+  REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  BIGNUM_MODINV_POST_REASSOC_TAC THEN
+  BIGNUM_MODINV_L_FACTS_TAC THEN BIGNUM_MODINV_KM1_FACTS_TAC THEN
+
+  (*** The toploop picking out the high words of m and n ***)
+
+  BIGNUM_MODINV_UPLOOP_TAC BIGNUM_MODINV_LT `pc + 0xfd` `pc + 0x132`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = word_add w (word (8 * k)) /\ read R15 s = word_add w (word (16 * k))`
+   13 16 THEN
+
+  (*** The 58 divsteps on the approximations ***)
+
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `58` `pc + 0x183` `pc + 0x1e7`
+    (BIGNUM_MODINV_INV `read (memory :> bytes64 stackpointer) s = word_add w (word (8 * k)) /\
+             read (memory :> bytes64(word_add stackpointer (word 8))) s = word k /\
+             read (memory :> bytes64(word_add stackpointer (word 16))) s =
+             word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+             read (memory :> bytes64(word_add stackpointer (word 24))) s =
+             word_add w (word (16 * k)) /\
+             read R9 s = word (58 - j)`) THEN
+  REPEAT CONJ_TAC THENL
+   [ARITH_TAC;
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_MODINV_SIM (1--19) THEN BIGNUM_MODINV_CLOSE_TAC;
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN BIGNUM_MODINV_DOWNFACTS_TAC `j:num` `58` THEN
+    BIGNUM_MODINV_SIM (1--30) THEN BIGNUM_MODINV_CLOSE_TAC;
+    ALL_TAC] THEN
+
+  (*** The congruence cross-multiplication loop on w and z ***)
+
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x226` `pc + 0x293`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = w /\ read R15 s = z` 15 31 THEN
+
+  (*** Montgomery reduction, comparison and correction of w ***)
+
+  BIGNUM_MODINV_MONT_TAC `pc + 0x2ec` `pc + 0x2c8`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = w /\ read R15 s = y` 14 11 THEN
+  BIGNUM_MODINV_CMPLOOP_TAC `pc + 0x300` `pc + 0x310`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = w /\ read R15 s = y` 6 5 THEN
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x320` `pc + 0x340`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = w /\ read R15 s = y` 5 10 THEN
+
+  (*** Montgomery reduction, comparison and correction of z ***)
+
+  BIGNUM_MODINV_MONT_TAC `pc + 0x38f` `pc + 0x36b`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = z /\ read R15 s = y` 12 11 THEN
+  BIGNUM_MODINV_CMPLOOP_TAC `pc + 0x3a3` `pc + 0x3b3`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = z /\ read R15 s = y` 6 5 THEN
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x3c3` `pc + 0x3e3`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = z /\ read R15 s = y` 5 10 THEN
+
+  (*** The cross-multiplication, negation and shift loops on m and n ***)
+
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODINV_UPLOOP_TAC BIGNUM_MODINV_LT `pc + 0x3fb` `pc + 0x464`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = word_add w (word (8 * k)) /\ read R15 s = word_add w (word (16 * k))`
+   7 31 THEN
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODINV_UPLOOP_TAC BIGNUM_MODINV_LT `pc + 0x473` `pc + 0x4a5`
+   `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+    read R8 s = word_add w (word (8 * k)) /\ read R15 s = word_add w (word (16 * k))`
+   5 15 THEN
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC BIGNUM_MODINV_LT `pc + 0x4ae` `pc + 0x4dd`
+    (BIGNUM_MODINV_INV `read RDI s = word k /\
+             read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
+             read R8 s = word_add w (word (8 * k)) /\
+             read R15 s = word_add w (word (16 * k)) /\
+             read R9 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64) - j)`) THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_MODINV_SIM (1--3) THEN BIGNUM_MODINV_CLOSE_TAC;
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN BIGNUM_MODINV_DOWNFACTS_TAC `j:num` BIGNUM_MODINV_LT THEN
+    BIGNUM_MODINV_SHIFT_ADDR_TAC THEN BIGNUM_MODINV_SIM (1--12) THEN BIGNUM_MODINV_CLOSE_TAC;
+    ALL_TAC] THEN
+
+  (*** The optional modular negations of w and z ***)
+
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x4f8` `pc + 0x535`
+   `read RDI s = word k /\ read RCX s = y /\ read R8 s = w /\ read R15 s = z` 7 19 THEN
+
+  (*** The update of the bound and the loop back ***)
+
+  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN BIGNUM_MODINV_JA_FACTS_TAC THEN
+  BIGNUM_MODINV_SIM (1--2) THEN BIGNUM_MODINV_CLOSE_TAC;;
+
+let BIGNUM_MODINV_PREFIX_TAC =
+  CONCRETIZE_F_EVENTS_TAC BIGNUM_MODINV_WITNESS THEN
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+  W64_GEN_TAC `k:num` THEN
+  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `w:int64`; `pc:num`; `stackpointer:int64`] THEN
+  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
+  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+  ASM_CASES_TAC `k = 0` THENL
+   [ASM_REWRITE_TAC[] THEN BIGNUM_MODINV_SIM (1--2) THEN DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  BIGNUM_MODINV_COND_TAC `k = 0` THEN
+  SUBGOAL_THEN `word_shl (word k) 7:int64 = word (128 * k) /\
+                word_add (word_add w (word (8 * k))) (word (8 * k)):int64 =
+                word_add w (word (16 * k))`
+  STRIP_ASSUME_TAC THENL
+   [REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+    REPEAT CONJ_TAC THEN TRY(AP_TERM_TAC THEN ARITH_TAC) THEN CONV_TAC WORD_RULE;
+    ALL_TAC] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x39` `pc + 0x59`
+   `\i s. read RSP s = stackpointer /\
+          read (memory :> bytes64(word_add stackpointer (word 48))) s = word_add w (word (8 * k)) /\
+          read (memory :> bytes64(word_add stackpointer (word 56))) s = w /\
+          read (memory :> bytes64(word_add stackpointer (word 64))) s = z /\
+          read (memory :> bytes64(word_add stackpointer (word 72))) s = y /\
+          read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
+          read RCX s = y /\ read R8 s = w /\
+          read R10 s = word_add w (word (8 * k)) /\
+          read R15 s = word_add w (word (16 * k)) /\ read R11 s = word 0 /\
+          read R9 s = word i` THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_MODINV_SIM (1--10) THEN BIGNUM_MODINV_CLOSE_TAC;
+    BIGNUM_MODINV_UPBODY_TAC `i:num` `i:num` `k:num` `k:num` ALL_TAC 9;
+    ALL_TAC] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `(128 * k + 57) DIV 58` `pc + 0xce` `pc + 0x541`
+   (mk_abs(`i:num`,BIGNUM_MODINV_SEQ `read RDI s = word k`)) THEN
+  REPEAT CONJ_TAC THENL
+   [SIMP_TAC[DIV_EQ_0; ARITH_EQ] THEN UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_MODINV_SIM (1--31) THEN BIGNUM_MODINV_CLOSE_TAC;
+    ALL_TAC;
+    BIGNUM_MODINV_SIM [] THEN BIGNUM_MODINV_CONCRETE_DISCHARGE_TAC];;
+
+let BIGNUM_MODINV_SAFE = time prove
+ (`exists f_events.
+       forall e k z x y w pc stackpointer.
+           nonoverlapping (w,8 * 3 * val k) (z,8 * val k) /\
+           ALL (nonoverlapping (stackpointer,80))
+           [word pc,1360; x,8 * val k; y,8 * val k] /\
+           ALLPAIRS nonoverlapping [w,8 * 3 * val k; z,8 * val k]
+           [word pc,1360; stackpointer,80; x,8 * val k; y,8 * val k] /\
+           val k < 2 EXP 57
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST bignum_modinv_tmc) /\
+                    read RIP s = word (pc + 14) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [k; z; x; y; w] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 1345) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z w k pc stackpointer /\
+                         memaccess_inbounds e2
+                         [x,val k * 8; y,val k * 8; z,val k * 8;
+                          w,(3 * val k) * 8; stackpointer,80]
+                         [z,val k * 8; w,(3 * val k) * 8; stackpointer,80]))
+               (MAYCHANGE
+                [RIP; RAX; RBX; RCX; RDX; RBP; RDI; RSI; R8; R9; R10; R11;
+                 R12; R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bignum (z,val k); memory :> bignum (w,3 * val k);
+                 memory :> bytes (stackpointer,80)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  BIGNUM_MODINV_PREFIX_TAC THEN
+  BIGNUM_MODINV_BODY_TAC);;
+
+let BIGNUM_MODINV_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z x y w pc stackpointer returnaddress.
+        nonoverlapping (w,8 * 3 * val k) (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 128),128))
+        [word pc,LENGTH bignum_modinv_tmc; x,8 * val k; y,8 * val k] /\
+        ALLPAIRS nonoverlapping [w,8 * 3 * val k; z,8 * val k]
+        [word pc,LENGTH bignum_modinv_tmc;
+         word_sub stackpointer (word 128),136; x,8 * val k; y,8 * val k] /\
+        val k < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_modinv_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; z; x; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y z w k pc
+                      (word_sub stackpointer (word 128))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val k * 8; y,val k * 8; z,val k * 8;
+                       w,(3 * val k) * 8;
+                       word_sub stackpointer (word 128),136]
+                      [z,val k * 8; w,(3 * val k) * 8;
+                       word_sub stackpointer (word 128),128]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k); memory :> bignum (w,3 * val k);
+              memory :> bytes (word_sub stackpointer (word 128),128)])`,
+  X86_PROMOTE_RETURN_STACK_TAC bignum_modinv_tmc BIGNUM_MODINV_SAFE `[RBX; RBP; R12; R13; R14; R15]` 128 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_MODINV_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z x y w pc stackpointer returnaddress.
+        nonoverlapping (w,8 * 3 * val k) (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 128),128))
+        [word pc,LENGTH bignum_modinv_mc; x,8 * val k; y,8 * val k] /\
+        ALLPAIRS nonoverlapping [w,8 * 3 * val k; z,8 * val k]
+        [word pc,LENGTH bignum_modinv_mc;
+         word_sub stackpointer (word 128),136; x,8 * val k; y,8 * val k] /\
+        val k < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_modinv_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [k; z; x; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y z w k pc
+                      (word_sub stackpointer (word 128))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val k * 8; y,val k * 8; z,val k * 8;
+                       w,(3 * val k) * 8;
+                       word_sub stackpointer (word 128),136]
+                      [z,val k * 8; w,(3 * val k) * 8;
+                       word_sub stackpointer (word 128),128]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k); memory :> bignum (w,3 * val k);
+              memory :> bytes (word_sub stackpointer (word 128),128)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MODINV_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_MODINV_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z x y w pc stackpointer returnaddress.
+        nonoverlapping (w,8 * 3 * val k) (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 144),144))
+        [word pc,LENGTH bignum_modinv_windows_tmc; x,8 * val k; y,8 * val k] /\
+        ALLPAIRS nonoverlapping [w,8 * 3 * val k; z,8 * val k]
+        [word pc,LENGTH bignum_modinv_windows_tmc;
+         word_sub stackpointer (word 144),152; x,8 * val k; y,8 * val k] /\
+        val k < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_modinv_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; z; x; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y z w k pc
+                      (word_sub stackpointer (word 144))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val k * 8; y,val k * 8; z,val k * 8;
+                       w,(3 * val k) * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 144),152]
+                      [z,val k * 8; w,(3 * val k) * 8;
+                       word_sub stackpointer (word 144),144]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k); memory :> bignum (w,3 * val k);
+              memory :> bytes (word_sub stackpointer (word 144),144)])`,
+  WINDOWS_X86_WRAP_STACK_TAC bignum_modinv_windows_tmc bignum_modinv_tmc BIGNUM_MODINV_SAFE `[RBX; RBP; R12; R13; R14; R15]` 128 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_MODINV_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e k z x y w pc stackpointer returnaddress.
+        nonoverlapping (w,8 * 3 * val k) (z,8 * val k) /\
+        ALL (nonoverlapping (word_sub stackpointer (word 144),144))
+        [word pc,LENGTH bignum_modinv_windows_mc; x,8 * val k; y,8 * val k] /\
+        ALLPAIRS nonoverlapping [w,8 * 3 * val k; z,8 * val k]
+        [word pc,LENGTH bignum_modinv_windows_mc;
+         word_sub stackpointer (word 144),152; x,8 * val k; y,8 * val k] /\
+        val k < 2 EXP 57
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_modinv_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [k; z; x; y; w] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x y z w k pc
+                      (word_sub stackpointer (word 144))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,val k * 8; y,val k * 8; z,val k * 8;
+                       w,(3 * val k) * 8;
+                       word_add stackpointer (word 40),8;
+                       word_sub stackpointer (word 144),152]
+                      [z,val k * 8; w,(3 * val k) * 8;
+                       word_sub stackpointer (word 144),144]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bignum (z,val k); memory :> bignum (w,3 * val k);
+              memory :> bytes (word_sub stackpointer (word 144),144)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_MODINV_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
