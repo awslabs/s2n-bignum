@@ -1839,3 +1839,414 @@ let BIGNUM_INVSQRT_P25519_WINDOWS_SUBROUTINE_CORRECT = time prove
                     memory :> bytes(word_sub stackpointer (word 256),256)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_INVSQRT_P25519_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* (specs generated with generate_four_variants_of_x86_safety_specs)         *)
+(* ------------------------------------------------------------------------- *)
+
+needs "x86/proofs/consttime.ml";;
+needs "x86/proofs/subroutine_signatures.ml";;
+
+(* generated with:
+  mk_safety_spec ~keep_maychanges:true
+      (assoc "bignum_mul_p25519" subroutine_signatures)
+      LOCAL_MUL_P25519_CORRECT
+      BIGNUM_INVSQRT_P25519_EXEC;; *)
+let LOCAL_MUL_P25519_SAFE = time prove
+ (`exists f_events.
+        forall e z x y pc.
+            nonoverlapping (word pc,0x792) (z,8 * 4)
+            ==> ensures x86
+                (\s.
+                     bytes_loaded s (word pc) bignum_invsqrt_p25519_tmc /\
+                     read RIP s = word (pc + 0x3d4) /\
+                     C_ARGUMENTS [z; x; y] s /\
+                     read events s = e)
+                (\s.
+                     read RIP s = word (pc + 0x582) /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events x y z pc /\
+                          memaccess_inbounds e2 [x,32; y,32; z,32] [z,32]))
+                (MAYCHANGE
+                 [RIP; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11; R12; R13;
+                  R14; R15] ,,
+                 MAYCHANGE [memory :> bytes (z,8 * 4)] ,,
+                 MAYCHANGE SOME_FLAGS ,,
+                 MAYCHANGE [events])`,
+  PROVE_SAFETY_SPEC_TAC BIGNUM_INVSQRT_P25519_EXEC);;
+
+let LOCAL_MUL_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (bignum_invsqrt_p25519_tmc,BIGNUM_INVSQRT_P25519_EXEC,
+        0x0,bignum_invsqrt_p25519_tmc,safety_th)
+      [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+      `pc:num`] n
+    THENL [
+      EXISTS_E2_TAC (ref [`z:int64`;`x:int64`;`pc:num`;`stackpointer:int64`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+(* LOCAL_NSQR_P25519 is not a separate subroutine in s2n-bignum.h, so its
+   specification is written by hand following LOCAL_MUL_P25519_SAFE. *)
+let LOCAL_NSQR_P25519_SAFE = time prove
+ (`exists f_events.
+        forall e z k x pc stackpointer.
+          nonoverlapping (word pc,0x792) (z,8 * 4) /\
+          nonoverlapping (stackpointer,184) (word pc,0x792) /\
+          1 <= val k /\ val k <= 1000
+          ==> ensures x86
+                (\s.
+                    bytes_loaded s (word pc) bignum_invsqrt_p25519_tmc /\
+                    read RIP s = word(pc + 0x583) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [z; k; x] s /\
+                    read events s = e)
+                (\s. read RIP s = word (pc + 0x791) /\
+                     (exists e2.
+                          read events s = APPEND e2 e /\
+                          e2 = f_events z k x pc stackpointer /\
+                          memaccess_inbounds e2
+                              [x,32; z,32; stackpointer,184]
+                              [z,32; word_add stackpointer (word 136),32]))
+                (MAYCHANGE [RIP; RSI; RAX; RBX; RCX; RDX; RBP;
+                      R8; R9; R10; R11; R12; R13; R14; R15] ,,
+                MAYCHANGE [memory :> bytes(z,8 * 4);
+                  memory :> bytes(word_add stackpointer (word 136),8*4)] ,,
+                MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
+
+  CONCRETIZE_F_EVENTS_TAC
+    `\(z:int64) (k:int64) (x:int64) (pc:num) (stackpointer:int64).
+      APPEND
+        (f_ev_loop_post z k x pc stackpointer)
+        (APPEND
+          (ENUMERATEL (val k) (f_ev_loop z k x pc stackpointer))
+            (f_ev_loop_pre z k x pc stackpointer))
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+
+  REPEAT STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; ALL; SOME_FLAGS] THEN
+
+  ENSURES_EVENTS_WHILE_UP2_TAC `val (k:int64)` `pc + 0x5b2` `pc + 0x756`
+   `\i s. read RSP s = stackpointer /\
+          read RDI s = z /\
+          read RSI s = word((val (k:int64)) - i)` THEN REPEAT CONJ_TAC THENL [
+    ASM_ARITH_TAC;
+
+    ENSURES_INIT_TAC "s0" THEN
+    X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (1--8) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0;WORD_VAL];ALL_TAC] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC; (*** Main loop invariant ***)
+
+    ENSURES_INIT_TAC "s0" THEN
+    STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (1--17) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  REPEAT STRIP_TAC THEN
+  ENSURES_INIT_TAC "s0" THEN
+  STRIP_EXISTS_ASSUM_TAC THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (1--69) THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (70--70) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    ABBREV_TAC `k' = val (k:int64)` THEN
+    VAL_INT64_TAC `k' - i` THEN VAL_INT64_TAC `1` THEN
+    ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN
+    SIMPLE_ARITH_TAC; ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN
+    ABBREV_TAC `k' = val (k:int64)` THEN
+    CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+    ALL_TAC
+  ] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let LOCAL_NSQR_SAFETY_TAC (assump_name:string) (n:int) =
+  REMOVE_THEN assump_name (fun safety_th ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (bignum_invsqrt_p25519_tmc,BIGNUM_INVSQRT_P25519_EXEC,
+          0x0,bignum_invsqrt_p25519_tmc,safety_th)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
+        `pc:num`; `stackpointer:int64`] n THENL [
+      EXISTS_E2_TAC (ref [`z:int64`;`x:int64`;`pc:num`;`stackpointer:int64`]);
+
+      LABEL_TAC assump_name safety_th
+    ]);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_invsqrt_p25519" subroutine_signatures)
+    BIGNUM_INVSQRT_P25519_CORRECT
+    BIGNUM_INVSQRT_P25519_EXEC;;
+
+let BIGNUM_INVSQRT_P25519_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc stackpointer.
+           ALL (nonoverlapping (stackpointer,184))
+           [word pc,1938; z,8 * 4; x,8 * 4] /\
+           nonoverlapping (word pc,1938) (z,8 * 4)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) bignum_invsqrt_p25519_tmc /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 962) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc stackpointer /\
+                         memaccess_inbounds e2 [x,32; z,32; stackpointer,184]
+                         [z,32; stackpointer,184]))
+               (MAYCHANGE
+                [RIP; RDI; RSI; RAX; RBX; RCX; RDX; RBP; R8; R9; R10; R11;
+                 R12; R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 4);
+                 memory :> bytes (stackpointer,184)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_MUL_P25519_SAFE "H_MUL" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_NSQR_P25519_SAFE "H_NSQR" THEN
+  META_EXISTS_TAC THEN
+  REWRITE_TAC[ALL;SOME_FLAGS;C_ARGUMENTS] THEN
+  REPEAT STRIP_TAC THEN
+  ENSURES_EXISTING_PRESERVED_TAC `RSP` THEN
+
+  ENSURES_INIT_TAC "s0" THEN
+
+  (*** Initial modular reduction ***)
+
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (1--25) THEN
+
+  (*** The exponentiation tower and the final computations; the step
+       numbers are those of the correctness proof plus 100 ***)
+
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (101--104) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 105 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (106--110) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 111 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (112--116) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 117 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (118--122) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 123 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (124--128) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 129 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (130--134) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 135 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (136--140) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 141 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (142--146) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 147 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (148--152) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 153 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (154--158) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 159 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (160--164) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 165 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (166--170) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 171 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (172--176) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 177 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (178--182) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 183 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (184--188) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 189 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (190--194) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 195 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (196--200) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 201 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (202--206) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 207 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (208--212) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 213 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (214--218) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 219 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (220--224) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 225 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (226--230) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 231 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (232--244) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 245 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (246--250) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 251 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (252--256) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 257 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (258--301) THEN LOCAL_NSQR_SAFETY_TAC "H_NSQR" 302 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (303--307) THEN LOCAL_MUL_SAFETY_TAC "H_MUL" 308 THEN
+  X86_STEPS_TAC BIGNUM_INVSQRT_P25519_EXEC (309--325) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_INVSQRT_P25519_NOIBT_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 232),232))
+        [word pc,LENGTH bignum_invsqrt_p25519_tmc; z,8 * 4; x,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 4))
+        [word pc,LENGTH bignum_invsqrt_p25519_tmc;
+         word_sub stackpointer (word 232),240]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_invsqrt_p25519_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 232))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,32; z,32; word_sub stackpointer (word 232),240]
+                      [z,32; word_sub stackpointer (word 232),232]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 4);
+              memory :> bytes (word_sub stackpointer (word 232),232)])`,
+  X86_ADD_RETURN_STACK_TAC
+    BIGNUM_INVSQRT_P25519_EXEC BIGNUM_INVSQRT_P25519_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 232
+  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_INVSQRT_P25519_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 232),232))
+        [word pc,LENGTH bignum_invsqrt_p25519_mc; z,8 * 4; x,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 4))
+        [word pc,LENGTH bignum_invsqrt_p25519_mc;
+         word_sub stackpointer (word 232),240]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_invsqrt_p25519_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 232))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,32; z,32; word_sub stackpointer (word 232),240]
+                      [z,32; word_sub stackpointer (word 232),232]))
+            (MAYCHANGE [RSP] ,,
+             MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 4);
+              memory :> bytes (word_sub stackpointer (word 232),232)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_INVSQRT_P25519_NOIBT_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof of Windows ABI version.             *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_INVSQRT_P25519_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 256),256))
+        [word pc,LENGTH bignum_invsqrt_p25519_windows_tmc; z,8 * 4; x,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 4))
+        [word pc,LENGTH bignum_invsqrt_p25519_windows_tmc;
+         word_sub stackpointer (word 256),264]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_invsqrt_p25519_windows_tmc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 256))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,32; z,32; word_sub stackpointer (word 256),264]
+                      [z,32; word_sub stackpointer (word 256),256]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 4);
+              memory :> bytes (word_sub stackpointer (word 256),256)])`,
+  let WINDOWS_BIGNUM_INVSQRT_P25519_EXEC =
+    X86_MK_EXEC_RULE bignum_invsqrt_p25519_windows_tmc
+  and subth =
+   X86_SIMD_SHARPEN_RULE
+    (REWRITE_RULE[fst BIGNUM_INVSQRT_P25519_EXEC]
+      BIGNUM_INVSQRT_P25519_NOIBT_SUBROUTINE_SAFE)
+    (X86_ADD_RETURN_STACK_TAC
+     BIGNUM_INVSQRT_P25519_EXEC BIGNUM_INVSQRT_P25519_SAFE
+     `[RBX; RBP; R12; R13; R14; R15]` 232 THEN
+     DISCHARGE_SAFETY_PROPERTY_TAC) in
+  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
+  META_EXISTS_TAC THEN STRIP_TAC THEN
+
+  REWRITE_TAC[fst WINDOWS_BIGNUM_INVSQRT_P25519_EXEC] THEN
+  REPLICATE_TAC 3 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 256 THEN
+  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS; C_RETURN;
+              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
+  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+  X86_STEPS_TAC WINDOWS_BIGNUM_INVSQRT_P25519_EXEC (1--5) THEN
+  REMOVE_THEN "H_CALLEE" (fun subth ->
+    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+      (bignum_invsqrt_p25519_windows_tmc,
+        WINDOWS_BIGNUM_INVSQRT_P25519_EXEC,
+        0x10,bignum_invsqrt_p25519_tmc,subth)
+        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
+          `pc + 0x10`; `read RSP s`; `read (memory :> bytes64 (read RSP s)) s`]
+          6) THENL [
+    EXISTS_E2_TAC (ref [`stackpointer:int64`;`pc:num`]);
+    ALL_TAC
+  ] THEN
+  X86_STEPS_TAC WINDOWS_BIGNUM_INVSQRT_P25519_EXEC (7--9) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let BIGNUM_INVSQRT_P25519_WINDOWS_SUBROUTINE_SAFE = time prove
+ (`
+exists f_events.
+    forall e z x pc stackpointer returnaddress.
+        ALL (nonoverlapping (word_sub stackpointer (word 256),256))
+        [word pc,LENGTH bignum_invsqrt_p25519_windows_mc; z,8 * 4; x,8 * 4] /\
+        ALL (nonoverlapping (z,8 * 4))
+        [word pc,LENGTH bignum_invsqrt_p25519_windows_mc;
+         word_sub stackpointer (word 256),264]
+        ==> ensures x86
+            (\s.
+                 bytes_loaded s (word pc) bignum_invsqrt_p25519_windows_mc /\
+                 read RIP s = word pc /\
+                 read RSP s = stackpointer /\
+                 read (memory :> bytes64 stackpointer) s = returnaddress /\
+                 WINDOWS_C_ARGUMENTS [z; x] s /\
+                 read events s = e)
+            (\s.
+                 read RIP s = returnaddress /\
+                 read RSP s = word_add stackpointer (word 8) /\
+                 (exists e2.
+                      read events s = APPEND e2 e /\
+                      e2 =
+                      f_events x z pc (word_sub stackpointer (word 256))
+                      returnaddress /\
+                      memaccess_inbounds e2
+                      [x,32; z,32; word_sub stackpointer (word 256),264]
+                      [z,32; word_sub stackpointer (word 256),256]))
+            (MAYCHANGE [RSP] ,,
+             WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+             MAYCHANGE
+             [memory :> bytes (z,8 * 4);
+              memory :> bytes (word_sub stackpointer (word 256),256)])`,
+  MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_INVSQRT_P25519_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
