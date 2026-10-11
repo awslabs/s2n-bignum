@@ -93,20 +93,39 @@ let gen_mk_safety_spec
       Some (find_term find_eq_returnaddress fnspec_precond)
     with Failure _ -> None in
 
-  (* An expression s to a term of :num type. *)
+  (* An expression s to a term of :num type. Besides numerals, variables and
+     max(a,b), it may use parentheses and the binary operators + - * and /
+     (as DIV), with the precedences and left associativity of C. *)
   let rec elemsz_to_hol (s:string): term =
     let s = if starts_with ">=" s
       then String.sub s 2 (String.length s - 2) else s in
+    let l = String.length s in
 
-    match String.index_opt s '*' with
+    (* The index of the last of the operators ops outside parentheses *)
+    let rec find_op ops i depth =
+      if i < 0 then None else
+      match String.get s i with
+      | ')' -> find_op ops (i - 1) (depth + 1)
+      | '(' -> find_op ops (i - 1) (depth - 1)
+      | c -> if depth = 0 && mem c ops then Some i
+             else find_op ops (i - 1) depth in
+
+    let op_idx = match find_op ['+';'-'] (l - 1) 0 with
+      | None -> find_op ['*';'/'] (l - 1) 0
+      | idx -> idx in
+
+    match op_idx with
     | Some idx ->
       let expr_lhs = String.sub s 0 idx in
-      let l = String.length s in
       let expr_rhs = String.sub s (idx+1) (l - idx - 1) in
-      mk_binary "*" (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
+      let op = match String.get s idx with
+        | '/' -> "DIV"
+        | c -> String.make 1 c in
+      mk_binary op (elemsz_to_hol expr_lhs, elemsz_to_hol expr_rhs)
     | None ->
-     let l = String.length s in
-     if starts_with "max(" s && l > 5 && String.get s (l - 1) = ')' then
+     if l > 2 && String.get s 0 = '(' && String.get s (l - 1) = ')' then
+       elemsz_to_hol (String.sub s 1 (l - 2))
+     else if starts_with "max(" s && l > 5 && String.get s (l - 1) = ')' then
        (match String.split_on_char ',' (String.sub s 4 (l - 5)) with
         | [a;b] -> mk_binary "MAX"
             (elemsz_to_hol (String.trim a), elemsz_to_hol (String.trim b))
