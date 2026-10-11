@@ -562,3 +562,47 @@ let BIGNUM_LITTLEENDIAN_6_WINDOWS_SUBROUTINE_SAFE = time prove
              [memory :> bignum (z,6);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_LITTLEENDIAN_6_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* The aliases bignum_fromlebytes_6 and bignum_tolebytes_6 run the same      *)
+(* code, and their signatures and correctness theorems give the same safety  *)
+(* specifications. This is checked for the core one here; those of the       *)
+(* subroutine forms are derived from it and the assumptions of the           *)
+(* subroutine correctness theorems, which are also the same.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_FROMLEBYTES_6_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_fromlebytes_6" subroutine_signatures)
+       BIGNUM_FROMLEBYTES_6_CORRECT BIGNUM_LITTLEENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_6_SAFE);;
+
+let BIGNUM_FROMLEBYTES_6_NOIBT_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_NOIBT_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMLEBYTES_6_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMLEBYTES_6_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMLEBYTES_6_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_6_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_tolebytes_6" subroutine_signatures)
+       BIGNUM_TOLEBYTES_6_CORRECT BIGNUM_LITTLEENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_6_SAFE);;
+
+let BIGNUM_TOLEBYTES_6_NOIBT_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_NOIBT_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_6_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_6_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_6_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_6_WINDOWS_SUBROUTINE_SAFE;;
