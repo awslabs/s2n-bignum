@@ -574,3 +574,47 @@ exists f_events.
              [memory :> bignum (z,4);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_BIGENDIAN_4_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* The aliases bignum_frombebytes_4 and bignum_tobebytes_4 run the same      *)
+(* code, and their signatures and correctness theorems give the same safety  *)
+(* specifications. This is checked for the core one here; those of the       *)
+(* subroutine forms are derived from it and the assumptions of the           *)
+(* subroutine correctness theorems, which are also the same.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_FROMBEBYTES_4_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_frombebytes_4" subroutine_signatures)
+       BIGNUM_FROMBEBYTES_4_CORRECT BIGNUM_BIGENDIAN_4_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_BIGENDIAN_4_SAFE);;
+
+let BIGNUM_FROMBEBYTES_4_NOIBT_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_NOIBT_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMBEBYTES_4_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMBEBYTES_4_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMBEBYTES_4_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOBEBYTES_4_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_tobebytes_4" subroutine_signatures)
+       BIGNUM_TOBEBYTES_4_CORRECT BIGNUM_BIGENDIAN_4_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_BIGENDIAN_4_SAFE);;
+
+let BIGNUM_TOBEBYTES_4_NOIBT_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_NOIBT_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOBEBYTES_4_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOBEBYTES_4_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOBEBYTES_4_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_BIGENDIAN_4_WINDOWS_SUBROUTINE_SAFE;;
