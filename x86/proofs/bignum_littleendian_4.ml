@@ -560,3 +560,47 @@ exists f_events.
              [memory :> bignum (z,4);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_LITTLEENDIAN_4_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* The aliases bignum_fromlebytes_4 and bignum_tolebytes_4 run the same      *)
+(* code, and their signatures and correctness theorems give the same safety  *)
+(* specifications. This is checked for the core one here; those of the       *)
+(* subroutine forms are derived from it and the assumptions of the           *)
+(* subroutine correctness theorems, which are also the same.                 *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_FROMLEBYTES_4_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_fromlebytes_4" subroutine_signatures)
+       BIGNUM_FROMLEBYTES_4_CORRECT BIGNUM_LITTLEENDIAN_4_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_4_SAFE);;
+
+let BIGNUM_FROMLEBYTES_4_NOIBT_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_NOIBT_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMLEBYTES_4_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMLEBYTES_4_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_FROMLEBYTES_4_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_4_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:true
+       (assoc "bignum_tolebytes_4" subroutine_signatures)
+       BIGNUM_TOLEBYTES_4_CORRECT BIGNUM_LITTLEENDIAN_4_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_4_SAFE);;
+
+let BIGNUM_TOLEBYTES_4_NOIBT_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_NOIBT_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_4_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_4_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let BIGNUM_TOLEBYTES_4_WINDOWS_SUBROUTINE_SAFE =
+  BIGNUM_LITTLEENDIAN_4_WINDOWS_SUBROUTINE_SAFE;;
