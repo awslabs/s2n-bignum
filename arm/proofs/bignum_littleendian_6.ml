@@ -294,3 +294,21 @@ let BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE = time prove
                (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_LITTLEENDIAN_6_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The aliases bignum_fromlebytes_6 and bignum_tolebytes_6 run the same      *)
+(* code, and their signatures and correctness theorems give the same safety  *)
+(* specification.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_FROMLEBYTES_6_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:false
+       (assoc "bignum_fromlebytes_6" subroutine_signatures)
+       BIGNUM_FROMLEBYTES_6_SUBROUTINE_CORRECT BIGNUM_LITTLEENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE);;
+
+let BIGNUM_TOLEBYTES_6_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:false
+       (assoc "bignum_tolebytes_6" subroutine_signatures)
+       BIGNUM_TOLEBYTES_6_SUBROUTINE_CORRECT BIGNUM_LITTLEENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE);;
