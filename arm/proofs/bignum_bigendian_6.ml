@@ -298,3 +298,21 @@ let BIGNUM_BIGENDIAN_6_SUBROUTINE_SAFE = time prove
              (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_BIGENDIAN_6_EXEC);;
+
+(* ------------------------------------------------------------------------- *)
+(* The aliases bignum_frombebytes_6 and bignum_tobebytes_6 run the same      *)
+(* code, and their signatures and correctness theorems give the same safety  *)
+(* specification.                                                            *)
+(* ------------------------------------------------------------------------- *)
+
+let BIGNUM_FROMBEBYTES_6_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:false
+       (assoc "bignum_frombebytes_6" subroutine_signatures)
+       BIGNUM_FROMBEBYTES_6_SUBROUTINE_CORRECT BIGNUM_BIGENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_BIGENDIAN_6_SUBROUTINE_SAFE);;
+
+let BIGNUM_TOBEBYTES_6_SUBROUTINE_SAFE = prove
+ (fst(mk_safety_spec ~keep_maychanges:false
+       (assoc "bignum_tobebytes_6" subroutine_signatures)
+       BIGNUM_TOBEBYTES_6_SUBROUTINE_CORRECT BIGNUM_BIGENDIAN_6_EXEC),
+  MATCH_ACCEPT_TAC BIGNUM_BIGENDIAN_6_SUBROUTINE_SAFE);;
