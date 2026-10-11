@@ -5797,3 +5797,21 @@ let CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_SAFE = time prove
   MATCH_ACCEPT_TAC(ADD_IBT_RULE
                      ~bridge:(Some CURVE25519_X25519BASE_WINDOWS_MC_BRIDGE)
                      CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
+
+(* ------------------------------------------------------------------------- *)
+(* The alias curve25519_x25519base_byte runs the same code, and its          *)
+(* subroutine correctness theorems have the same assumptions, so its safety  *)
+(* specifications are the same.                                              *)
+(* ------------------------------------------------------------------------- *)
+
+let CURVE25519_X25519BASE_BYTE_NOIBT_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_NOIBT_SUBROUTINE_SAFE;;
+
+let CURVE25519_X25519BASE_BYTE_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_SUBROUTINE_SAFE;;
+
+let CURVE25519_X25519BASE_BYTE_NOIBT_WINDOWS_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_NOIBT_WINDOWS_SUBROUTINE_SAFE;;
+
+let CURVE25519_X25519BASE_BYTE_WINDOWS_SUBROUTINE_SAFE =
+  CURVE25519_X25519BASE_WINDOWS_SUBROUTINE_SAFE;;
