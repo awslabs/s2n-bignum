@@ -4459,7 +4459,7 @@ let SM2_MONTJSCALARMUL_ALT_SUBROUTINE_CORRECT = time prove
    SM2_MONTJSCALARMUL_ALT_CORRECT `[X19; X20; X21; X30]` 1248);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time / memory-safety property.                                   *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 (* Local versions of the subroutines.  *)
