@@ -274,71 +274,6 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_COPY_CORRECT
     BIGNUM_COPY_EXEC;;
 
-let BIGNUM_COPY_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let BIGNUM_COPY_CLOSE_TAC = BIGNUM_COPY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let BIGNUM_COPY_COND_TAC (p:term) =
-  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
-  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
-  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]);;
-
-let BIGNUM_COPY_CONCRETE_DISCHARGE_TAC : tactic =
-  let is_valfact th =
-    let c = concl th in
-    is_eq c &&
-    (try let v,a = dest_comb (lhs c) in
-         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
-  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
-  W(fun (a,w) ->
-      let e2v, body = dest_exists w in
-      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
-      EXISTS_TAC wit) THEN
-  REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
-    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
-    ASSUM_LIST(fun ths ->
-      let vths = filter is_valfact ths in
-      let nths = filter (fun th -> let c = concl th in
-                           is_neg c && is_eq (dest_neg c)) ths in
-      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
-                               GSYM APPEND_ASSOC] in
-      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
-
-let BIGNUM_COPY_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
-  let e1 = mk_binary "+" (e,`1`) in
-  let wd t = mk_comb(`word:num->int64`,t) in
-  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
-  SUBGOAL_THEN (list_mk_conj
-    [mkval e; mkval e1;
-     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
-           wd e1);
-     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      CONV_TAC WORD_RULE;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
 let BIGNUM_COPY_SAFE = time prove
  (`exists f_events.
        forall e k z n x pc.
@@ -397,14 +332,14 @@ let BIGNUM_COPY_SAFE = time prove
    `\s. read RDI s = word k /\ read RSI s = z /\ read R8 s = word (MIN n k)` THEN
   CONJ_TAC THENL
    [ASM_CASES_TAC `MIN n k = 0` THENL
-     [BIGNUM_COPY_COND_TAC `MIN n k = 0` THEN
+     [SAFETY_COND_TAC `MIN n k = 0` THEN
       FIRST_X_ASSUM(SUBST_ALL_TAC o
         check (fun th -> concl th = `MIN n k = 0`)) THEN
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
       DISCHARGE_SAFETY_PROPERTY_TAC;
       ALL_TAC] THEN
-    BIGNUM_COPY_COND_TAC `MIN n k = 0` THEN
+    SAFETY_COND_TAC `MIN n k = 0` THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `MIN n k` `pc + 0xf` `pc + 0x1f`
      `\i s. read RDI s = word k /\ read RSI s = z /\ read RCX s = x /\
             read RDX s = word (MIN n k) /\ read R8 s = word i` THEN
@@ -413,28 +348,28 @@ let BIGNUM_COPY_SAFE = time prove
       REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
-      BIGNUM_COPY_CLOSE_TAC;
+      SAFETY_CLOSE_TAC;
       X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      BIGNUM_COPY_UPFACTS_TAC `i:num` `i:num` `MIN n k` `MIN n k` THEN
+      SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `MIN n k` `MIN n k` THEN
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
-      BIGNUM_COPY_CLOSE_TAC;
+      SAFETY_CLOSE_TAC;
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC [] THEN
-      BIGNUM_COPY_PEEL_TAC THEN BIGNUM_COPY_CONCRETE_DISCHARGE_TAC];
+      SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC];
     ALL_TAC] THEN
 
   (*** The padding loop for the remaining k - MIN n k words ***)
 
   ASM_CASES_TAC `MIN n k = k` THENL
-   [BIGNUM_COPY_COND_TAC `MIN n k = k` THEN
+   [SAFETY_COND_TAC `MIN n k = k` THEN
     FIRST_X_ASSUM(SUBST_ALL_TAC o
       check (fun th -> concl th = `MIN n k = k`)) THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--2) THEN
-    BIGNUM_COPY_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     ALL_TAC] THEN
-  BIGNUM_COPY_COND_TAC `MIN n k = k` THEN
+  SAFETY_COND_TAC `MIN n k = k` THEN
   SUBGOAL_THEN `MIN n k < k /\ ~(k <= MIN n k)` STRIP_ASSUME_TAC THENL
    [MAP_EVERY UNDISCH_TAC [`~(MIN n k = k)`; `MIN n k <= k`] THEN ARITH_TAC;
     ALL_TAC] THEN
@@ -446,17 +381,16 @@ let BIGNUM_COPY_SAFE = time prove
     REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--3) THEN
-    BIGNUM_COPY_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_COPY_UPFACTS_TAC `i:num` `MIN n k + i` `k:num` `k - MIN n k` THEN
+    SAFETY_UPCOUNT_FACTS_TAC `i:num` `MIN n k + i` `k:num` `k - MIN n k` THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--4) THEN
-    BIGNUM_COPY_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC [] THEN
-    BIGNUM_COPY_PEEL_TAC THEN BIGNUM_COPY_CONCRETE_DISCHARGE_TAC]);;
+    SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let BIGNUM_COPY_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -484,7 +418,8 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bignum (z,val k)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_copy_tmc BIGNUM_COPY_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_copy_tmc BIGNUM_COPY_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_COPY_SUBROUTINE_SAFE = time prove
  (`
@@ -553,7 +488,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val k);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_copy_windows_tmc bignum_copy_tmc BIGNUM_COPY_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_copy_windows_tmc bignum_copy_tmc
+    BIGNUM_COPY_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_COPY_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

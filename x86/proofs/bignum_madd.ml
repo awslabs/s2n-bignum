@@ -671,81 +671,6 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_MADD_CORRECT
     BIGNUM_MADD_EXEC;;
 
-(* Close the non-event conjuncts of a postcondition after simulation. *)
-
-let BIGNUM_MADD_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let BIGNUM_MADD_CLOSE_TAC =
-  BIGNUM_MADD_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let BIGNUM_MADD_POST_REASSOC_TAC =
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-   [METIS[APPEND_ASSOC]
-     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
-      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
-
-(* Reduce the conditionals `if p then a else b` of the goal according to an
-   assumption p or ~p, without rewriting with p itself. *)
-
-let BIGNUM_MADD_COND_TAC (p:term) =
-  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
-  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
-  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]);;
-
-(* Facts for an up-counting loop with index register word e (e an expression
-   in the loop variable v), whose backward branch compares e + 1 with bnd;
-   cnt is the iteration count. *)
-
-let BIGNUM_MADD_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
-  let e1 = mk_binary "+" (e,`1`) in
-  let wd t = mk_comb(`word:num->int64`,t) in
-  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
-  SUBGOAL_THEN (list_mk_conj
-    [mkval e; mkval e1;
-     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
-           wd e1);
-     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      CONV_TAC WORD_RULE;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
-(* Facts for a down-counting register holding word (c - v), decremented
-   before a test of zero. *)
-
-let BIGNUM_MADD_DOWNFACTS_TAC (v:term) (c:term) =
-  let sub t = subst [c,`c:num`; v,`j:num`] t in
-  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
-                     val (word (c - j):int64) = c - j /\
-                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
-                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
-       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
 (* Helpers for nested loops: reassociation of the expanded outer-loop body
    and beta-reduction of the outer ENUMERATEL body only (bound variable v),
    leaving the instantiated f_events lambdas untouched. *)
@@ -754,10 +679,6 @@ let BIGNUM_MADD_REASSOC3 = prove
  (`!a b c d:(uarch_event)list.
      APPEND (APPEND (APPEND a b) c) d = APPEND a (APPEND b (APPEND c d))`,
   REWRITE_TAC[APPEND_ASSOC]);;
-
-let BIGNUM_MADD_BETA_VAR_CONV v tm =
-  if is_comb tm && is_abs (rator tm) && name_of (bndvar (rator tm)) = v
-  then BETA_CONV tm else failwith "BIGNUM_MADD_BETA_VAR_CONV";;
 
 (* Normalization of a load address y + 8 * d - 8 + 8 * (c + 1). *)
 
@@ -826,13 +747,13 @@ let BIGNUM_MADD_SAFE = time prove
   (*** The degenerate case p = 0 ***)
 
   ASM_CASES_TAC `p = 0` THENL
-   [BIGNUM_MADD_COND_TAC `p = 0` THEN
+   [SAFETY_COND_TAC `p = 0` THEN
     FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `p = 0`)) THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC (1--4) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  BIGNUM_MADD_COND_TAC `p = 0` THEN
+  SAFETY_COND_TAC `p = 0` THEN
   SUBGOAL_THEN `8 * p < 2 EXP 64 /\ 8 * m < 2 EXP 64 /\ 8 * n < 2 EXP 64`
   STRIP_ASSUME_TAC THENL
    [EVERY_ASSUM(fun th ->
@@ -853,14 +774,14 @@ let BIGNUM_MADD_SAFE = time prove
     REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC (1--7) THEN
-    BIGNUM_MADD_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     ALL_TAC;
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC [1] THEN
-    BIGNUM_MADD_CLOSE_TAC] THEN
+    SAFETY_CLOSE_TAC] THEN
   X_GEN_TAC `k:num` THEN STRIP_TAC THEN
   GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
-  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BIGNUM_MADD_BETA_VAR_CONV "i")))) THEN
+  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
   GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [BIGNUM_MADD_REASSOC3] THEN
 
   (*** The computation of the summation range for output word k ***)
@@ -872,7 +793,7 @@ let BIGNUM_MADD_SAFE = time prove
         read RAX s = word ((k + 1) - n) /\ read RBX s = word (MIN (k + 1) m) /\
         read RDX s = word ((k + 1) - MIN (k + 1) m)` THEN
   CONJ_TAC THENL
-   [BIGNUM_MADD_UPFACTS_TAC `k:num` `k:num` `p:num` `p:num` THEN
+   [SAFETY_UPCOUNT_FACTS_TAC `k:num` `k:num` `p:num` `p:num` THEN
     SUBGOAL_THEN
      `(if k + 1 < n then word 0 else word_sub (word (k + 1)) (word n)):int64 =
       word ((k + 1) - n) /\
@@ -896,17 +817,17 @@ let BIGNUM_MADD_SAFE = time prove
 
   (*** The final accumulation into z[k] and the outer loop test ***)
 
-  BIGNUM_MADD_POST_REASSOC_TAC THEN
+  SAFETY_POST_REASSOC_TAC THEN
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x67`
    `\s. read RDI s = word p /\ read RSI s = word_add z (word (8 * k)) /\
         read RBP s = word m /\ read RCX s = x /\ read R8 s = word n /\
         read R9 s = y /\ read R10 s = word (k + 1)` THEN
   CONJ_TAC THENL
    [ALL_TAC;
-    BIGNUM_MADD_UPFACTS_TAC `k:num` `k:num` `p:num` `p:num` THEN
+    SAFETY_UPCOUNT_FACTS_TAC `k:num` `k:num` `p:num` `p:num` THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC (1--8) THEN
-    BIGNUM_MADD_CLOSE_TAC] THEN
+    SAFETY_CLOSE_TAC] THEN
 
   (*** The inner multiply-accumulate loop, skipped if the sum is empty ***)
 
@@ -924,7 +845,7 @@ let BIGNUM_MADD_SAFE = time prove
       ARITH_TAC];
     ALL_TAC] THEN
   ASM_CASES_TAC `MIN (k + 1) m <= (k + 1) - n` THENL
-   [BIGNUM_MADD_COND_TAC `MIN (k + 1) m <= (k + 1) - n` THEN
+   [SAFETY_COND_TAC `MIN (k + 1) m <= (k + 1) - n` THEN
     SUBGOAL_THEN
      `(MIN (k + 1) m < (k + 1) - n \/
        val (word_sub (word (MIN (k + 1) m)) (word ((k + 1) - n)):int64) = 0) <=>
@@ -935,7 +856,7 @@ let BIGNUM_MADD_SAFE = time prove
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC (1--2) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  BIGNUM_MADD_COND_TAC `MIN (k + 1) m <= (k + 1) - n` THEN
+  SAFETY_COND_TAC `MIN (k + 1) m <= (k + 1) - n` THEN
   SUBGOAL_THEN
    `word_sub (word (MIN (k + 1) m)) (word ((k + 1) - n)):int64 =
     word (MIN (k + 1) m - ((k + 1) - n)) /\
@@ -969,9 +890,9 @@ let BIGNUM_MADD_SAFE = time prove
     REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC (1--4) THEN
-    BIGNUM_MADD_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-    BIGNUM_MADD_DOWNFACTS_TAC `j:num` `MIN (k + 1) m - ((k + 1) - n)` THEN
+    SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `MIN (k + 1) m - ((k + 1) - n)` THEN
     SUBGOAL_THEN
      `word_add (word_add y (word (8 * ((k + 1) - MIN (k + 1) m) +
                                   18446744073709551608)))
@@ -993,10 +914,10 @@ let BIGNUM_MADD_SAFE = time prove
       ALL_TAC] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC (1--8) THEN
-    BIGNUM_MADD_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_MADD_EXEC [] THEN
-    BIGNUM_MADD_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC]);;
+    SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
 let BIGNUM_MADD_NOIBT_SUBROUTINE_SAFE = time prove
  (`
@@ -1032,7 +953,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val p);
               memory :> bytes (word_sub stackpointer (word 48),56)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_madd_tmc BIGNUM_MADD_SAFE `[RBX; RBP; R12; R13; R14; R15]` 48 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_madd_tmc BIGNUM_MADD_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 48 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MADD_SUBROUTINE_SAFE = time prove
  (`
@@ -1110,7 +1033,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val p);
               memory :> bytes (word_sub stackpointer (word 64),72)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_madd_windows_tmc bignum_madd_tmc BIGNUM_MADD_SAFE `[RBX; RBP; R12; R13; R14; R15]` 48 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_madd_windows_tmc bignum_madd_tmc
+    BIGNUM_MADD_SAFE `[RBX; RBP; R12; R13; R14; R15]` 48 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MADD_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

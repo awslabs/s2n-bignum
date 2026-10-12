@@ -4902,126 +4902,6 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_MODINV_CORRECT
     BIGNUM_MODINV_EXEC;;
 
-(* Close the non-event conjuncts of a postcondition after simulation. *)
-
-let BIGNUM_MODINV_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let BIGNUM_MODINV_CLOSE_TAC =
-  BIGNUM_MODINV_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let BIGNUM_MODINV_POST_REASSOC_TAC =
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-   [METIS[APPEND_ASSOC]
-     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
-      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
-
-(* Rewrite the postcondition trace to APPEND <head> <precondition trace> when
-   a loop is entered from the post-leg of the previous loop. *)
-
-let BIGNUM_MODINV_CARRY_REASSOC_TAC : tactic = fun (asl,w) ->
-  let _,args = strip_comb w in
-  let pre = el 1 args and post = el 2 args in
-  let e2v = `e2:(uarch_event)list` in
-  let find_rhs t = rhs (find_term (fun u -> is_eq u && lhs u = e2v) t) in
-  let pre_rhs = find_rhs pre and post_rhs = find_rhs post in
-  let x0 = lhand (lhand post_rhs) in
-  let eq = mk_eq(post_rhs,
-    mk_binop `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
-      x0 pre_rhs) in
-  let th = prove(eq, REWRITE_TAC[APPEND_ASSOC]) in
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [th] (asl,w);;
-
-(* Reduce the conditionals `if p then a else b` of the goal according to an
-   assumption p or ~p, without rewriting with p itself. *)
-
-let BIGNUM_MODINV_COND_TAC (p:term) =
-  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
-  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
-  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]);;
-
-(* Discharge a leg whose postcondition trace is fully concrete (e.g. after a
-   zero-step leg): instantiate e2 with the witness, then close the trace
-   equation by APPEND normalization and memaccess_inbounds from the carried
-   assumption, after normalizing val(word v) = v. *)
-
-let BIGNUM_MODINV_CONCRETE_DISCHARGE_TAC : tactic =
-  let is_valfact th =
-    let c = concl th in
-    is_eq c &&
-    (try let v,a = dest_comb (lhs c) in
-         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
-  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
-  W(fun (a,w) ->
-      let e2v, body = dest_exists w in
-      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
-      EXISTS_TAC wit) THEN
-  REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
-    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
-    ASSUM_LIST(fun ths ->
-      let vths = filter is_valfact ths in
-      let nths = filter (fun th -> let c = concl th in
-                           is_neg c && is_eq (dest_neg c)) ths in
-      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
-                               GSYM APPEND_ASSOC] in
-      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
-
-(* Facts for an up-counting loop with index register word e (e an expression
-   in the loop variable v), whose backward branch compares e + 1 with bnd;
-   cnt is the iteration count. *)
-
-let BIGNUM_MODINV_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
-  let e1 = mk_binary "+" (e,`1`) in
-  let wd t = mk_comb(`word:num->int64`,t) in
-  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
-  SUBGOAL_THEN (list_mk_conj
-    [mkval e; mkval e1;
-     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
-           wd e1);
-     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      CONV_TAC WORD_RULE;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
-(* Facts for a down-counting register holding word (c - v), decremented
-   before a test of zero. *)
-
-let BIGNUM_MODINV_DOWNFACTS_TAC (v:term) (c:term) =
-  let sub t = subst [c,`c:num`; v,`j:num`] t in
-  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
-                     val (word (c - j):int64) = c - j /\
-                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
-                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
-       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
 (* The structure follows the correctness proof: copying of the inputs into
    the buffers, the initial computation of the negated inverse word, and the
    main loop of (128 * k + 57) DIV 58 iterations. Each outer iteration
@@ -5070,8 +4950,8 @@ let BIGNUM_MODINV_SIM n =
     ~canonicalize_pc_diff:false BIGNUM_MODINV_EXEC n;;
 
 let BIGNUM_MODINV_UPBODY_TAC v e bnd cnt (pre_tac:tactic) n =
-  X_GEN_TAC v THEN STRIP_TAC THEN BIGNUM_MODINV_UPFACTS_TAC v e bnd cnt THEN
-  pre_tac THEN BIGNUM_MODINV_SIM (1--n) THEN BIGNUM_MODINV_CLOSE_TAC;;
+  X_GEN_TAC v THEN STRIP_TAC THEN SAFETY_UPCOUNT_FACTS_TAC v e bnd cnt THEN
+  pre_tac THEN BIGNUM_MODINV_SIM (1--n) THEN SAFETY_CLOSE_TAC;;
 
 let BIGNUM_MODINV_OUTER = `\s:x86state.
    read RSP s = stackpointer /\
@@ -5223,7 +5103,7 @@ let BIGNUM_MODINV_UPLOOP_TAC (cnt:term) (head:term) (exitpc:term) (extra:term)
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
     REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
+    BIGNUM_MODINV_SIM (1--npre) THEN SAFETY_CLOSE_TAC;
     BIGNUM_MODINV_UPBODY_TAC `j:num` `j:num` cnt cnt ALL_TAC nbody;
     ALL_TAC];;
 
@@ -5235,29 +5115,29 @@ let BIGNUM_MODINV_CMPLOOP_TAC (head:term) (exitpc:term) (extra:term) (npre:int) 
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
     REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
+    BIGNUM_MODINV_SIM (1--npre) THEN SAFETY_CLOSE_TAC;
     X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-    BIGNUM_MODINV_UPFACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
-    BIGNUM_MODINV_DOWNFACTS_TAC `j:num` `k:num` THEN
-    BIGNUM_MODINV_SIM (1--nbody) THEN BIGNUM_MODINV_CLOSE_TAC;
+    SAFETY_UPCOUNT_FACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
+    SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k:num` THEN
+    BIGNUM_MODINV_SIM (1--nbody) THEN SAFETY_CLOSE_TAC;
     ALL_TAC];;
 
 (* A Montgomery reduction loop over indices 1..k-1, skipped when k = 1; the
    sequence ends at the common exit seqpc of skip and loop. *)
 
 let BIGNUM_MODINV_MONT_TAC (seqpc:term) (head:term) (extra:term) (npre:int) (nbody:int) =
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN BIGNUM_MODINV_POST_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN SAFETY_POST_REASSOC_TAC THEN
   ENSURES_EVENTS_SEQUENCE_TAC seqpc (BIGNUM_MODINV_SEQ extra) THEN
   CONJ_TAC THENL
    [ASM_CASES_TAC `k = 1` THENL
-     [BIGNUM_MODINV_COND_TAC `k = 1` THEN
+     [SAFETY_COND_TAC `k = 1` THEN
       SUBGOAL_THEN `k - 1 = 0` ASSUME_TAC THENL
        [UNDISCH_TAC `k = 1` THEN ARITH_TAC; ALL_TAC] THEN
       UNDISCH_THEN `k = 1` (K ALL_TAC) THEN
       CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
       ASM_REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0] THEN
-      BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
-      BIGNUM_MODINV_COND_TAC `k = 1` THEN
+      BIGNUM_MODINV_SIM (1--npre) THEN SAFETY_CLOSE_TAC;
+      SAFETY_COND_TAC `k = 1` THEN
       SUBGOAL_THEN `~(k - 1 = 0)` ASSUME_TAC THENL
        [MAP_EVERY UNDISCH_TAC [`~(k = 0)`; `~(k = 1)`] THEN ARITH_TAC; ALL_TAC] THEN
       ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` head seqpc
@@ -5266,18 +5146,18 @@ let BIGNUM_MODINV_MONT_TAC (seqpc:term) (head:term) (extra:term) (npre:int) (nbo
       REPEAT CONJ_TAC THENL
        [ASM_REWRITE_TAC[];
         REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
-        BIGNUM_MODINV_SIM (1--npre) THEN BIGNUM_MODINV_CLOSE_TAC;
+        BIGNUM_MODINV_SIM (1--npre) THEN SAFETY_CLOSE_TAC;
         X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-        BIGNUM_MODINV_UPFACTS_TAC `j:num` `1 + j` `k:num` `k - 1` THEN
-        BIGNUM_MODINV_DOWNFACTS_TAC `j:num` `k - 1` THEN BIGNUM_MODINV_MONT_IDX_TAC THEN
-        BIGNUM_MODINV_SIM (1--nbody) THEN BIGNUM_MODINV_CLOSE_TAC;
-        BIGNUM_MODINV_SIM [] THEN BIGNUM_MODINV_PEEL_TAC THEN BIGNUM_MODINV_CONCRETE_DISCHARGE_TAC]];
+        SAFETY_UPCOUNT_FACTS_TAC `j:num` `1 + j` `k:num` `k - 1` THEN
+        SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k - 1` THEN BIGNUM_MODINV_MONT_IDX_TAC THEN
+        BIGNUM_MODINV_SIM (1--nbody) THEN SAFETY_CLOSE_TAC;
+        BIGNUM_MODINV_SIM [] THEN SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]];
     ALL_TAC];;
 
 let BIGNUM_MODINV_BODY_TAC =
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN
   REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
-  BIGNUM_MODINV_POST_REASSOC_TAC THEN
+  SAFETY_POST_REASSOC_TAC THEN
   BIGNUM_MODINV_L_FACTS_TAC THEN BIGNUM_MODINV_KM1_FACTS_TAC THEN
 
   (*** The toploop picking out the high words of m and n ***)
@@ -5289,7 +5169,7 @@ let BIGNUM_MODINV_BODY_TAC =
 
   (*** The 58 divsteps on the approximations ***)
 
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `58` `pc + 0x183` `pc + 0x1e7`
     (BIGNUM_MODINV_INV `read (memory :> bytes64 stackpointer) s = word_add w (word (8 * k)) /\
              read (memory :> bytes64(word_add stackpointer (word 8))) s = word k /\
@@ -5301,14 +5181,14 @@ let BIGNUM_MODINV_BODY_TAC =
   REPEAT CONJ_TAC THENL
    [ARITH_TAC;
     REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    BIGNUM_MODINV_SIM (1--19) THEN BIGNUM_MODINV_CLOSE_TAC;
-    X_GEN_TAC `j:num` THEN STRIP_TAC THEN BIGNUM_MODINV_DOWNFACTS_TAC `j:num` `58` THEN
-    BIGNUM_MODINV_SIM (1--30) THEN BIGNUM_MODINV_CLOSE_TAC;
+    BIGNUM_MODINV_SIM (1--19) THEN SAFETY_CLOSE_TAC;
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `58` THEN
+    BIGNUM_MODINV_SIM (1--30) THEN SAFETY_CLOSE_TAC;
     ALL_TAC] THEN
 
   (*** The congruence cross-multiplication loop on w and z ***)
 
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x226` `pc + 0x293`
    `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
     read R8 s = w /\ read R15 s = z` 15 31 THEN
@@ -5321,7 +5201,7 @@ let BIGNUM_MODINV_BODY_TAC =
   BIGNUM_MODINV_CMPLOOP_TAC `pc + 0x300` `pc + 0x310`
    `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
     read R8 s = w /\ read R15 s = y` 6 5 THEN
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x320` `pc + 0x340`
    `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
     read R8 s = w /\ read R15 s = y` 5 10 THEN
@@ -5334,24 +5214,24 @@ let BIGNUM_MODINV_BODY_TAC =
   BIGNUM_MODINV_CMPLOOP_TAC `pc + 0x3a3` `pc + 0x3b3`
    `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
     read R8 s = z /\ read R15 s = y` 6 5 THEN
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x3c3` `pc + 0x3e3`
    `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
     read R8 s = z /\ read R15 s = y` 5 10 THEN
 
   (*** The cross-multiplication, negation and shift loops on m and n ***)
 
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   BIGNUM_MODINV_UPLOOP_TAC BIGNUM_MODINV_LT `pc + 0x3fb` `pc + 0x464`
    `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
     read R8 s = word_add w (word (8 * k)) /\ read R15 s = word_add w (word (16 * k))`
    7 31 THEN
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   BIGNUM_MODINV_UPLOOP_TAC BIGNUM_MODINV_LT `pc + 0x473` `pc + 0x4a5`
    `read RDI s = word k /\ read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
     read R8 s = word_add w (word (8 * k)) /\ read R15 s = word_add w (word (16 * k))`
    5 15 THEN
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC BIGNUM_MODINV_LT `pc + 0x4ae` `pc + 0x4dd`
     (BIGNUM_MODINV_INV `read RDI s = word k /\
              read R13 s = word (MIN k ((128 * k - 58 * i + 63) DIV 64)) /\
@@ -5361,21 +5241,21 @@ let BIGNUM_MODINV_BODY_TAC =
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
     REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    BIGNUM_MODINV_SIM (1--3) THEN BIGNUM_MODINV_CLOSE_TAC;
-    X_GEN_TAC `j:num` THEN STRIP_TAC THEN BIGNUM_MODINV_DOWNFACTS_TAC `j:num` BIGNUM_MODINV_LT THEN
-    BIGNUM_MODINV_SHIFT_ADDR_TAC THEN BIGNUM_MODINV_SIM (1--12) THEN BIGNUM_MODINV_CLOSE_TAC;
+    BIGNUM_MODINV_SIM (1--3) THEN SAFETY_CLOSE_TAC;
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN SAFETY_DOWNCOUNT_FACTS_TAC `j:num` BIGNUM_MODINV_LT THEN
+    BIGNUM_MODINV_SHIFT_ADDR_TAC THEN BIGNUM_MODINV_SIM (1--12) THEN SAFETY_CLOSE_TAC;
     ALL_TAC] THEN
 
   (*** The optional modular negations of w and z ***)
 
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   BIGNUM_MODINV_UPLOOP_TAC `k:num` `pc + 0x4f8` `pc + 0x535`
    `read RDI s = word k /\ read RCX s = y /\ read R8 s = w /\ read R15 s = z` 7 19 THEN
 
   (*** The update of the bound and the loop back ***)
 
-  BIGNUM_MODINV_CARRY_REASSOC_TAC THEN BIGNUM_MODINV_JA_FACTS_TAC THEN
-  BIGNUM_MODINV_SIM (1--2) THEN BIGNUM_MODINV_CLOSE_TAC;;
+  SAFETY_CARRY_REASSOC_TAC THEN BIGNUM_MODINV_JA_FACTS_TAC THEN
+  BIGNUM_MODINV_SIM (1--2) THEN SAFETY_CLOSE_TAC;;
 
 let BIGNUM_MODINV_PREFIX_TAC =
   CONCRETIZE_F_EVENTS_TAC BIGNUM_MODINV_WITNESS THEN
@@ -5387,7 +5267,7 @@ let BIGNUM_MODINV_PREFIX_TAC =
   ASM_CASES_TAC `k = 0` THENL
    [ASM_REWRITE_TAC[] THEN BIGNUM_MODINV_SIM (1--2) THEN DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  BIGNUM_MODINV_COND_TAC `k = 0` THEN
+  SAFETY_COND_TAC `k = 0` THEN
   SUBGOAL_THEN `word_shl (word k) 7:int64 = word (128 * k) /\
                 word_add (word_add w (word (8 * k))) (word (8 * k)):int64 =
                 word_add w (word (16 * k))`
@@ -5408,16 +5288,16 @@ let BIGNUM_MODINV_PREFIX_TAC =
           read R9 s = word i` THEN
   REPEAT CONJ_TAC THENL
    [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_MODINV_SIM (1--10) THEN BIGNUM_MODINV_CLOSE_TAC;
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_MODINV_SIM (1--10) THEN SAFETY_CLOSE_TAC;
     BIGNUM_MODINV_UPBODY_TAC `i:num` `i:num` `k:num` `k:num` ALL_TAC 9;
     ALL_TAC] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `(128 * k + 57) DIV 58` `pc + 0xce` `pc + 0x541`
    (mk_abs(`i:num`,BIGNUM_MODINV_SEQ `read RDI s = word k`)) THEN
   REPEAT CONJ_TAC THENL
    [SIMP_TAC[DIV_EQ_0; ARITH_EQ] THEN UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_MODINV_SIM (1--31) THEN BIGNUM_MODINV_CLOSE_TAC;
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_MODINV_SIM (1--31) THEN SAFETY_CLOSE_TAC;
     ALL_TAC;
-    BIGNUM_MODINV_SIM [] THEN BIGNUM_MODINV_CONCRETE_DISCHARGE_TAC];;
+    BIGNUM_MODINV_SIM [] THEN SAFETY_CONCRETE_DISCHARGE_TAC];;
 
 let BIGNUM_MODINV_SAFE = time prove
  (`exists f_events.

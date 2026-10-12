@@ -411,86 +411,6 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_SHL_SMALL_CORRECT
     BIGNUM_SHL_SMALL_EXEC;;
 
-(* Close the non-event conjuncts of a postcondition after simulation. *)
-
-let BIGNUM_SHL_SMALL_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let BIGNUM_SHL_SMALL_CLOSE_TAC =
-  BIGNUM_SHL_SMALL_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-(* Reduce the conditionals `if p then a else b` of the goal according to an
-   assumption p or ~p, without rewriting with p itself. *)
-
-let BIGNUM_SHL_SMALL_COND_TAC (p:term) =
-  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
-  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
-  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]);;
-
-(* Discharge a leg whose postcondition trace is fully concrete (e.g. after a
-   zero-step leg): instantiate e2 with the witness, then close the trace
-   equation by APPEND normalization and memaccess_inbounds from the carried
-   assumption, after normalizing val(word v) = v. *)
-
-let BIGNUM_SHL_SMALL_CONCRETE_DISCHARGE_TAC : tactic =
-  let is_valfact th =
-    let c = concl th in
-    is_eq c &&
-    (try let v,a = dest_comb (lhs c) in
-         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
-  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
-  W(fun (a,w) ->
-      let e2v, body = dest_exists w in
-      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
-      EXISTS_TAC wit) THEN
-  REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
-    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
-    ASSUM_LIST(fun ths ->
-      let vths = filter is_valfact ths in
-      let nths = filter (fun th -> let c = concl th in
-                           is_neg c && is_eq (dest_neg c)) ths in
-      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
-                               GSYM APPEND_ASSOC] in
-      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
-
-(* Facts for an up-counting loop with index register word e (e an expression
-   in the loop variable v), whose backward branch compares e + 1 with bnd;
-   cnt is the iteration count. *)
-
-let BIGNUM_SHL_SMALL_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
-  let e1 = mk_binary "+" (e,`1`) in
-  let wd t = mk_comb(`word:num->int64`,t) in
-  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
-  SUBGOAL_THEN (list_mk_conj
-    [mkval e; mkval e1;
-     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
-           wd e1);
-     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      CONV_TAC WORD_RULE;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
 let BIGNUM_SHL_SMALL_SAFE = time prove
  (`exists f_events.
        forall e p z n x c pc.
@@ -550,14 +470,14 @@ let BIGNUM_SHL_SMALL_SAFE = time prove
    `\s. read RDI s = word p /\ read RSI s = z /\ read R11 s = word (MIN n p)` THEN
   CONJ_TAC THENL
    [ASM_CASES_TAC `MIN n p = 0` THENL
-     [BIGNUM_SHL_SMALL_COND_TAC `MIN n p = 0` THEN
+     [SAFETY_COND_TAC `MIN n p = 0` THEN
       FIRST_X_ASSUM(SUBST_ALL_TAC o
         check (fun th -> concl th = `MIN n p = 0`)) THEN
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--6) THEN
       DISCHARGE_SAFETY_PROPERTY_TAC;
       ALL_TAC] THEN
-    BIGNUM_SHL_SMALL_COND_TAC `MIN n p = 0` THEN
+    SAFETY_COND_TAC `MIN n p = 0` THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `MIN n p` `pc + 0x18` `pc + 0x32`
      `\i s. read RDI s = word p /\ read RSI s = z /\ read R9 s = x /\
             read RDX s = word (MIN n p) /\ read R11 s = word i` THEN
@@ -568,26 +488,26 @@ let BIGNUM_SHL_SMALL_SAFE = time prove
         ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--8) THEN
       DISCHARGE_SAFETY_PROPERTY_TAC;
       X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      BIGNUM_SHL_SMALL_UPFACTS_TAC `i:num` `i:num` `MIN n p` `MIN n p` THEN
+      SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `MIN n p` `MIN n p` THEN
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--8) THEN
-      BIGNUM_SHL_SMALL_CLOSE_TAC;
+      SAFETY_CLOSE_TAC;
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--3) THEN
-      BIGNUM_SHL_SMALL_CLOSE_TAC];
+      SAFETY_CLOSE_TAC];
     ALL_TAC] THEN
 
   (*** The tail: nothing, just the carry word, or the carry and padding ***)
 
   ASM_CASES_TAC `MIN n p = p` THENL
-   [BIGNUM_SHL_SMALL_COND_TAC `MIN n p = p` THEN
+   [SAFETY_COND_TAC `MIN n p = p` THEN
     FIRST_X_ASSUM(SUBST_ALL_TAC o
       check (fun th -> concl th = `MIN n p = p`)) THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--2) THEN
-    BIGNUM_SHL_SMALL_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     ALL_TAC] THEN
-  BIGNUM_SHL_SMALL_COND_TAC `MIN n p = p` THEN
+  SAFETY_COND_TAC `MIN n p = p` THEN
   SUBGOAL_THEN
    `MIN n p < p /\ ~(p <= MIN n p) /\
     word_add (word (MIN n p)) (word 1):int64 = word (MIN n p + 1) /\
@@ -603,12 +523,12 @@ let BIGNUM_SHL_SMALL_SAFE = time prove
       ARITH_TAC];
     ALL_TAC] THEN
   ASM_CASES_TAC `MIN n p + 1 = p` THENL
-   [BIGNUM_SHL_SMALL_COND_TAC `MIN n p + 1 = p` THEN
+   [SAFETY_COND_TAC `MIN n p + 1 = p` THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--7) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  BIGNUM_SHL_SMALL_COND_TAC `MIN n p + 1 = p` THEN
+  SAFETY_COND_TAC `MIN n p + 1 = p` THEN
   SUBGOAL_THEN `MIN n p + 1 < p /\ ~(p <= MIN n p + 1)` STRIP_ASSUME_TAC THENL
    [MAP_EVERY UNDISCH_TAC [`~(MIN n p + 1 = p)`; `MIN n p < p`] THEN ARITH_TAC;
     ALL_TAC] THEN
@@ -622,15 +542,14 @@ let BIGNUM_SHL_SMALL_SAFE = time prove
       ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--7) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_SHL_SMALL_UPFACTS_TAC `i:num` `MIN n p + 1 + i` `p:num` `p - (MIN n p + 1)` THEN
+    SAFETY_UPCOUNT_FACTS_TAC `i:num` `MIN n p + 1 + i` `p:num` `p - (MIN n p + 1)` THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC (1--4) THEN
-    BIGNUM_SHL_SMALL_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_SHL_SMALL_EXEC [] THEN
-    BIGNUM_SHL_SMALL_PEEL_TAC THEN BIGNUM_SHL_SMALL_CONCRETE_DISCHARGE_TAC]);;
+    SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let BIGNUM_SHL_SMALL_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -658,7 +577,8 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bignum (z,val p)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_shl_small_tmc BIGNUM_SHL_SMALL_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_shl_small_tmc BIGNUM_SHL_SMALL_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_SHL_SMALL_SUBROUTINE_SAFE = time prove
  (`
@@ -729,7 +649,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val p);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_shl_small_windows_tmc bignum_shl_small_tmc BIGNUM_SHL_SMALL_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_shl_small_windows_tmc bignum_shl_small_tmc
+    BIGNUM_SHL_SMALL_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_SHL_SMALL_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

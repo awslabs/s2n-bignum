@@ -592,67 +592,6 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_CDIV_EXACT_CORRECT
     BIGNUM_CDIV_EXACT_EXEC;;
 
-(* Close the non-event conjuncts of a postcondition after simulation. *)
-
-let BIGNUM_CDIV_EXACT_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let BIGNUM_CDIV_EXACT_CLOSE_TAC =
-  BIGNUM_CDIV_EXACT_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let BIGNUM_CDIV_EXACT_POST_REASSOC_TAC =
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-   [METIS[APPEND_ASSOC]
-     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
-      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
-
-(* Reduce the conditionals `if p then a else b` of the goal according to an
-   assumption p or ~p, without rewriting with p itself. *)
-
-let BIGNUM_CDIV_EXACT_COND_TAC (p:term) =
-  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
-  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
-  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]);;
-
-(* Facts for an up-counting loop with index register word e (e an expression
-   in the loop variable v), whose backward branch compares e + 1 with bnd;
-   cnt is the iteration count. *)
-
-let BIGNUM_CDIV_EXACT_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
-  let e1 = mk_binary "+" (e,`1`) in
-  let wd t = mk_comb(`word:num->int64`,t) in
-  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
-  SUBGOAL_THEN (list_mk_conj
-    [mkval e; mkval e1;
-     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
-           wd e1);
-     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      CONV_TAC WORD_RULE;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
-let BIGNUM_CDIV_EXACT_BETA_VAR_CONV v tm =
-  if is_comb tm && is_abs (rator tm) && name_of (bndvar (rator tm)) = v
-  then BETA_CONV tm else failwith "BIGNUM_CDIV_EXACT_BETA_VAR_CONV";;
-
 let BIGNUM_CDIV_EXACT_SAFE = time prove
  (`exists f_events.
        forall e k z n x m pc.
@@ -697,13 +636,13 @@ let BIGNUM_CDIV_EXACT_SAFE = time prove
   (*** The degenerate case k = 0 ***)
 
   ASM_CASES_TAC `k = 0` THENL
-   [BIGNUM_CDIV_EXACT_COND_TAC `k = 0` THEN
+   [SAFETY_COND_TAC `k = 0` THEN
     FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--2) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  BIGNUM_CDIV_EXACT_COND_TAC `k = 0` THEN
+  SAFETY_COND_TAC `k = 0` THEN
   SUBGOAL_THEN `8 * k < 2 EXP 64` ASSUME_TAC THENL
    [EVERY_ASSUM(fun th ->
       try MP_TAC
@@ -726,31 +665,31 @@ let BIGNUM_CDIV_EXACT_SAFE = time prove
    [ASM_REWRITE_TAC[];
     REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
     ASM_CASES_TAC `n = 0` THENL
-     [BIGNUM_CDIV_EXACT_COND_TAC `n = 0` THEN
+     [SAFETY_COND_TAC `n = 0` THEN
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--34) THEN
-      BIGNUM_CDIV_EXACT_CLOSE_TAC;
-      BIGNUM_CDIV_EXACT_COND_TAC `n = 0` THEN
+      SAFETY_CLOSE_TAC;
+      SAFETY_COND_TAC `n = 0` THEN
       SUBGOAL_THEN `word_sub (word n) (word 1):int64 = word (n - 1)` ASSUME_TAC THENL
        [IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(n = 0)` THEN ARITH_TAC;
         ALL_TAC] THEN
       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
         ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--37) THEN
-      BIGNUM_CDIV_EXACT_CLOSE_TAC];
+      SAFETY_CLOSE_TAC];
     ALL_TAC;
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC [] THEN
-    BIGNUM_CDIV_EXACT_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC] THEN
+    SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC] THEN
 
   (*** The loop body, with a load of x[i+1] if i < n - 1 ***)
 
   X_GEN_TAC `i:num` THEN STRIP_TAC THEN
   GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
-  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BIGNUM_CDIV_EXACT_BETA_VAR_CONV "i")))) THEN
-  BIGNUM_CDIV_EXACT_POST_REASSOC_TAC THEN
-  BIGNUM_CDIV_EXACT_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
+  SAFETY_POST_REASSOC_TAC THEN
+  SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
   ASM_CASES_TAC `i < n - 1` THENL
-   [BIGNUM_CDIV_EXACT_COND_TAC `i < n - 1` THEN
+   [SAFETY_COND_TAC `i < n - 1` THEN
     SUBGOAL_THEN
      `(if n = 0 then x else word_add x (word 8)):int64 = word_add x (word 8) /\
       word_add (word_add x (word 8)) (word (8 * i)):int64 =
@@ -766,11 +705,11 @@ let BIGNUM_CDIV_EXACT_SAFE = time prove
     FIRST_X_ASSUM(SUBST1_TAC o check (is_cond o lhand o concl)) THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--20) THEN
-    BIGNUM_CDIV_EXACT_CLOSE_TAC;
-    BIGNUM_CDIV_EXACT_COND_TAC `i < n - 1` THEN
+    SAFETY_CLOSE_TAC;
+    SAFETY_COND_TAC `i < n - 1` THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--19) THEN
-    BIGNUM_CDIV_EXACT_CLOSE_TAC]);;
+    SAFETY_CLOSE_TAC]);;
 
 let BIGNUM_CDIV_EXACT_NOIBT_SUBROUTINE_SAFE = time prove
  (`
@@ -806,7 +745,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val k);
               memory :> bytes (word_sub stackpointer (word 32),32)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_cdiv_exact_tmc BIGNUM_CDIV_EXACT_SAFE `[RBX; R12; R13; R14]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_cdiv_exact_tmc BIGNUM_CDIV_EXACT_SAFE
+    `[RBX; R12; R13; R14]` 32 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CDIV_EXACT_SUBROUTINE_SAFE = time prove
  (`
@@ -884,7 +825,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val k);
               memory :> bytes (word_sub stackpointer (word 48),48)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_cdiv_exact_windows_tmc bignum_cdiv_exact_tmc BIGNUM_CDIV_EXACT_SAFE `[RBX; R12; R13; R14]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_cdiv_exact_windows_tmc bignum_cdiv_exact_tmc
+    BIGNUM_CDIV_EXACT_SAFE `[RBX; R12; R13; R14]` 32 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CDIV_EXACT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

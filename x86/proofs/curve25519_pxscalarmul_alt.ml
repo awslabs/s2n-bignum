@@ -3741,26 +3741,6 @@ let full_spec,public_vars = mk_safety_spec
     CURVE25519_PXSCALARMUL_ALT_CORRECT
     CURVE25519_PXSCALARMUL_ALT_EXEC;;
 
-(* Close the non-event conjuncts of a postcondition after simulation. *)
-
-let CURVE25519_PXSCALARMUL_ALT_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let CURVE25519_PXSCALARMUL_ALT_CLOSE_TAC =
-  CURVE25519_PXSCALARMUL_ALT_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
 let CURVE25519_PXSCALARMUL_ALT_SAFE = time prove
  (`exists f_events.
        forall e res scalar point pc stackpointer.
@@ -3820,7 +3800,7 @@ let CURVE25519_PXSCALARMUL_ALT_SAFE = time prove
     REWRITE_TAC[ENUMERATEL_APPEND_ZERO] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false CURVE25519_PXSCALARMUL_ALT_EXEC (1--28) THEN
-    CURVE25519_PXSCALARMUL_ALT_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
 
     (*** The loop body; the scalar word read is scalar[(255 - i) DIV 64] ***)
 
@@ -3848,13 +3828,13 @@ let CURVE25519_PXSCALARMUL_ALT_SAFE = time prove
       ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false CURVE25519_PXSCALARMUL_ALT_EXEC (1--1270) THEN
-    CURVE25519_PXSCALARMUL_ALT_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
 
     (*** The final reconstruction and output ***)
 
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false CURVE25519_PXSCALARMUL_ALT_EXEC (1--45) THEN
-    CURVE25519_PXSCALARMUL_ALT_CLOSE_TAC]);;
+    SAFETY_CLOSE_TAC]);;
 
 let CURVE25519_PXSCALARMUL_ALT_NOIBT_SUBROUTINE_SAFE = time prove
  (`
@@ -3891,7 +3871,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (res,64);
               memory :> bytes (word_sub stackpointer (word 408),408)])`,
-  X86_PROMOTE_RETURN_STACK_TAC curve25519_pxscalarmul_alt_tmc CURVE25519_PXSCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 408 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC curve25519_pxscalarmul_alt_tmc CURVE25519_PXSCALARMUL_ALT_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 408 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let CURVE25519_PXSCALARMUL_ALT_SUBROUTINE_SAFE = time prove
  (`
@@ -3971,7 +3953,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (res,64);
               memory :> bytes (word_sub stackpointer (word 424),424)])`,
-  WINDOWS_X86_WRAP_STACK_TAC curve25519_pxscalarmul_alt_windows_tmc curve25519_pxscalarmul_alt_tmc CURVE25519_PXSCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 408 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC curve25519_pxscalarmul_alt_windows_tmc curve25519_pxscalarmul_alt_tmc
+    CURVE25519_PXSCALARMUL_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 408 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let CURVE25519_PXSCALARMUL_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`
