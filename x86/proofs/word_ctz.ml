@@ -153,51 +153,49 @@ let WORD_CTZ_SAFE = time prove
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars WORD_CTZ_EXEC);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let WORD_CTZ_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
     forall e a pc stackpointer returnaddress.
-        true
-        ==> ensures x86
-            (\s.
-                 bytes_loaded s (word pc) word_ctz_tmc /\
-                 read RIP s = word pc /\
-                 read RSP s = stackpointer /\
-                 read (memory :> bytes64 stackpointer) s = returnaddress /\
-                 C_ARGUMENTS [a] s /\
-                 read events s = e)
-            (\s.
-                 read RIP s = returnaddress /\
-                 read RSP s = word_add stackpointer (word 8) /\
-                 (exists e2.
-                      read events s = APPEND e2 e /\
-                      e2 = f_events pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [stackpointer,8] [stackpointer,0]))
-            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC word_ctz_tmc WORD_CTZ_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+        ensures x86
+        (\s.
+             bytes_loaded s (word pc) word_ctz_tmc /\
+             read RIP s = word pc /\
+             read RSP s = stackpointer /\
+             read (memory :> bytes64 stackpointer) s = returnaddress /\
+             C_ARGUMENTS [a] s /\
+             read events s = e)
+        (\s.
+             read RIP s = returnaddress /\
+             read RSP s = word_add stackpointer (word 8) /\
+             (exists e2.
+                  read events s = APPEND e2 e /\
+                  e2 = f_events pc stackpointer returnaddress /\
+                  memaccess_inbounds e2 [stackpointer,8] [stackpointer,0]))
+        (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+  X86_PROMOTE_RETURN_NOSTACK_TAC word_ctz_tmc WORD_CTZ_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let WORD_CTZ_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
     forall e a pc stackpointer returnaddress.
-        true
-        ==> ensures x86
-            (\s.
-                 bytes_loaded s (word pc) word_ctz_mc /\
-                 read RIP s = word pc /\
-                 read RSP s = stackpointer /\
-                 read (memory :> bytes64 stackpointer) s = returnaddress /\
-                 C_ARGUMENTS [a] s /\
-                 read events s = e)
-            (\s.
-                 read RIP s = returnaddress /\
-                 read RSP s = word_add stackpointer (word 8) /\
-                 (exists e2.
-                      read events s = APPEND e2 e /\
-                      e2 = f_events pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [stackpointer,8] [stackpointer,0]))
-            (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
+        ensures x86
+        (\s.
+             bytes_loaded s (word pc) word_ctz_mc /\
+             read RIP s = word pc /\
+             read RSP s = stackpointer /\
+             read (memory :> bytes64 stackpointer) s = returnaddress /\
+             C_ARGUMENTS [a] s /\
+             read events s = e)
+        (\s.
+             read RIP s = returnaddress /\
+             read RSP s = word_add stackpointer (word 8) /\
+             (exists e2.
+                  read events s = APPEND e2 e /\
+                  e2 = f_events pc stackpointer returnaddress /\
+                  memaccess_inbounds e2 [stackpointer,8] [stackpointer,0]))
+        (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE WORD_CTZ_NOIBT_SUBROUTINE_SAFE));;
 
 (* ------------------------------------------------------------------------- *)
@@ -232,7 +230,9 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC word_ctz_windows_tmc word_ctz_tmc WORD_CTZ_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC word_ctz_windows_tmc word_ctz_tmc
+    WORD_CTZ_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let WORD_CTZ_WINDOWS_SUBROUTINE_SAFE = time prove
  (`
