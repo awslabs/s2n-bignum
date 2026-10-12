@@ -4342,7 +4342,36 @@ let CURVE25519_PXSCALARMUL_PEEL_TAC =
     else NO_TAC));;
 
 let CURVE25519_PXSCALARMUL_SAFE = time prove
- (full_spec,
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           aligned 16 stackpointer /\
+           ALLPAIRS nonoverlapping [res,64; stackpointer,256]
+           [word pc,6524; scalar,32; point,32] /\
+           nonoverlapping (res,64) (stackpointer,256)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    curve25519_pxscalarmul_mc /\
+                    read PC s = word (pc + 12) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 6508) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,32; res,64; stackpointer,256]
+                         [res,64; stackpointer,256]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (res,64); memory :> bytes (stackpointer,256)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
       APPEND (f_ev_post scalar point res pc stackpointer)

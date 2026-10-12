@@ -2344,20 +2344,23 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT = time prove
     BIGNUM_AMONTIFIER_EXEC BIGNUM_AMONTIFIER_CORRECT);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory-safety proof.                                    *)
+(* Constant-time and memory safety proof.                                    *)
 (* k=0 (CBZ -> RET) and k=1 (straight line through all the loops) arms;      *)
-(* general k>=2: a chain of fourteen loops (copy; normalization outer loop   *)
+(* general k>=2: a chain of sixteen loops (copy; normalization outer loop    *)
 (* with inner shuffle; bit shift; 62-step reciprocal estimate; multiply;     *)
 (* remainder; two doubling/correction pairs; main outer loop with inner      *)
 (* multiply-accumulate and correction loops; Montgomery reduction; final     *)
 (* subtraction). Each loop is entered from the post-leg of the previous      *)
 (* one, with the carried event trace re-associated to match its precondition *)
-(* (AMONTIFIER_CARRY_REASSOC_TAC); the inner loops of the two nests are      *)
+(* (SAFETY_CARRY_REASSOC_TAC); the inner loops of the two nests are          *)
 (* applied directly to the outer loop bodies.                                *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
+
+(* The frame of the correctness theorem is kept (keep_maychanges:true), so
+   that the safety theorem can be used for callers such as bignum_modexp. *)
 
 let amontifier_full_spec,amontifier_public_vars = mk_safety_spec
     ~keep_maychanges:true
@@ -2365,7 +2368,7 @@ let amontifier_full_spec,amontifier_public_vars = mk_safety_spec
     BIGNUM_AMONTIFIER_SUBROUTINE_CORRECT
     BIGNUM_AMONTIFIER_EXEC;;
 
-let AMONTIFIER_PEEL_TAC (idx_add:term) (cond:term) =
+let BIGNUM_AMONTIFIER_PEEL_TAC (idx_add:term) (cond:term) =
   REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
           then CONJ_TAC THENL
             [FIRST[GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [ASSUME idx_add] THEN
@@ -2376,7 +2379,7 @@ let AMONTIFIER_PEEL_TAC (idx_add:term) (cond:term) =
              ALL_TAC]
           else NO_TAC));;
 
-let AMONTIFIER_IDX_FACTS_TAC (v:term) (bnd:term) (bases:term list) =
+let BIGNUM_AMONTIFIER_IDX_FACTS_TAC (v:term) (bnd:term) (bases:term list) =
   let sub t = subst [v,`i:num`; bnd,`k:num`] t in
   VAL_INT64_TAC v THEN
   MAP_EVERY (fun b ->
@@ -2393,33 +2396,16 @@ let AMONTIFIER_IDX_FACTS_TAC (v:term) (bnd:term) (bases:term list) =
     ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
   REWRITE_TAC[APPEND_NIL];;
 
-let AMONTIFIER_GEN_UPBODY_TAC (v:term) (bases:term list) (n:int) =
+let BIGNUM_AMONTIFIER_GEN_UPBODY_TAC (v:term) (bases:term list) (n:int) =
   X_GEN_TAC v THEN STRIP_TAC THEN
-  AMONTIFIER_IDX_FACTS_TAC v `k:num` bases THEN
+  BIGNUM_AMONTIFIER_IDX_FACTS_TAC v `k:num` bases THEN
   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
     BIGNUM_AMONTIFIER_EXEC (1--n) THEN
-  AMONTIFIER_PEEL_TAC (subst [v,`i:num`] `word_add (word i:int64) (word 1) = word(i + 1)`)
+  BIGNUM_AMONTIFIER_PEEL_TAC (subst [v,`i:num`] `word_add (word i:int64) (word 1) = word(i + 1)`)
                (subst [v,`i:num`] `(~(val(word_sub (word(i + 1):int64) (word k)) = 0) <=> i + 1 < k)`) THEN
   DISCHARGE_SAFETY_PROPERTY_TAC;;
 
-let AMONTIFIER_POST_REASSOC_TAC =
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-   [METIS[APPEND_ASSOC]
-     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
-      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
-
-let AMONTIFIER_CARRY_REASSOC_TAC : tactic = fun (asl,w) ->
-  let _,args = strip_comb w in
-  let pre = el 1 args and post = el 2 args in
-  let e2v = `e2:(uarch_event)list` in
-  let find_rhs t = rhs (find_term (fun u -> is_eq u && lhs u = e2v) t) in
-  let pre_rhs = find_rhs pre and post_rhs = find_rhs post in
-  let x0 = lhand (lhand post_rhs) in
-  let eq = mk_eq(post_rhs, mk_binop `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list` x0 pre_rhs) in
-  let th = prove(eq, REWRITE_TAC[APPEND_ASSOC]) in
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [th] (asl,w);;
-
-let AMONTIFIER_DOWNCOUNT_FACTS_TAC (cnt:term) (iv:term) =
+let BIGNUM_AMONTIFIER_DOWNCOUNT_FACTS_TAC (cnt:term) (iv:term) =
   let sub t = subst [cnt,`n:num`; iv,`i:num`] t in
   SUBGOAL_THEN (sub `word_sub (word(n - i)) (word 1):int64 = word(n - (i + 1))`) ASSUME_TAC THENL
    [SUBGOAL_THEN (sub `n - i = (n - (i + 1)) + 1`) SUBST1_TAC THENL
@@ -2431,7 +2417,7 @@ let AMONTIFIER_DOWNCOUNT_FACTS_TAC (cnt:term) (iv:term) =
   SUBGOAL_THEN (sub `(~(val(word_sub (word(n - i)) (word 1):int64) = 0) <=> i + 1 < n)`) ASSUME_TAC THENL
    [ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC; ALL_TAC];;
 
-let AMONTIFIER_CLOSE_TAC =
+let BIGNUM_AMONTIFIER_CLOSE_TAC =
   REPEAT(W(fun (asl,w) ->
     if is_conj w then
       CONJ_TAC THENL
@@ -2447,7 +2433,7 @@ let amontifier_inv (reg:term) = subst [reg,`X4:(armstate,int64)component`]
   `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = m /\ read X3 s = t /\
          read X4 s = word i /\ read X30 s = returnaddress`;;
 
-let AMONTIFIER_UPLOOP_TAC (head:term) (exitpc:term) (reg:term) (pre_steps:int) (pre_tac:tactic)
+let BIGNUM_AMONTIFIER_UPLOOP_TAC (head:term) (exitpc:term) (reg:term) (pre_steps:int) (pre_tac:tactic)
                    (bases:term list) (body_steps:int) =
   ENSURES_EVENTS_WHILE_UP2_TAC `k:num` head exitpc (amontifier_inv reg) THEN
   CONJ_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
@@ -2455,11 +2441,11 @@ let AMONTIFIER_UPLOOP_TAC (head:term) (exitpc:term) (reg:term) (pre_steps:int) (
    [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN pre_tac THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--pre_steps) THEN
-    AMONTIFIER_CLOSE_TAC;
+    BIGNUM_AMONTIFIER_CLOSE_TAC;
     ALL_TAC] THEN
-  CONJ_TAC THENL [AMONTIFIER_GEN_UPBODY_TAC `i:num` bases body_steps; ALL_TAC];;
+  CONJ_TAC THENL [BIGNUM_AMONTIFIER_GEN_UPBODY_TAC `i:num` bases body_steps; ALL_TAC];;
 
-let AMONTIFIER_KM1_FACTS_TAC =
+let BIGNUM_AMONTIFIER_KM1_FACTS_TAC =
   SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word(k - 1)` ASSUME_TAC THENL
    [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
      [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
@@ -2475,7 +2461,7 @@ let amontifier_inv2 =
   `\j s. read X0 s = word k /\ read X1 s = z /\ read X2 s = m /\ read X3 s = t /\
          read X4 s = word(k - i) /\ read X5 s = word j /\ read X30 s = returnaddress`;;
 
-let AMONTIFIER_R12_BODY_TAC =
+let BIGNUM_AMONTIFIER_R12_BODY_TAC =
   X_GEN_TAC `j:num` THEN STRIP_TAC THEN
   SUBGOAL_THEN `1 + j < k /\ val(word(1 + j):int64) = 1 + j` STRIP_ASSUME_TAC THENL
    [CONJ_TAC THENL [SIMPLE_ARITH_TAC; IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
@@ -2496,15 +2482,64 @@ let AMONTIFIER_R12_BODY_TAC =
   REWRITE_TAC[APPEND_NIL] THEN
   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
     BIGNUM_AMONTIFIER_EXEC (1--12) THEN
-  AMONTIFIER_CLOSE_TAC;;
+  BIGNUM_AMONTIFIER_CLOSE_TAC;;
 
 let BIGNUM_AMONTIFIER_SUBROUTINE_SAFE = prove
- (amontifier_full_spec,
+ (`exists f_events.
+       forall e k z m t pc returnaddress.
+           nonoverlapping (z,8 * val k) (t,8 * val k) /\
+           ALLPAIRS nonoverlapping [z,8 * val k; t,8 * val k]
+           [word pc,796; m,8 * val k]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_amontifier_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; m; t] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events m z t k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [m,val k * 8; z,val k * 8; t,val k * 8]
+                         [z,val k * 8; t,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * val k); memory :> bytes (t,8 * val k)])`,
+  ASSERT_CONCL_TAC amontifier_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(m:int64) (z:int64) (t:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 m z t k pc returnaddress
       else if val k = 1 then f_ev_k1 m z t k pc returnaddress
-      else (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (f_ev_p13 m z t k pc returnaddress) (APPEND (ENUMERATEL (val k) (f_ev_l13 m z t k pc returnaddress)) (f_ev_q13 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k - 1) (f_ev_l12 m z t k pc returnaddress)) (f_ev_q12 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (\i. (APPEND (APPEND (f_ev_l11e m z t k pc returnaddress i) (APPEND (ENUMERATEL (val k) (\j. f_ev_l11c m z t k pc returnaddress i j)) (f_ev_l11m m z t k pc returnaddress i))) (APPEND (ENUMERATEL (val k) (\j. f_ev_l11a m z t k pc returnaddress i j)) (f_ev_l11p m z t k pc returnaddress i))))) (f_ev_q11 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l10 m z t k pc returnaddress)) (f_ev_q10 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l9 m z t k pc returnaddress)) (f_ev_q9 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l8 m z t k pc returnaddress)) (f_ev_q8 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l7 m z t k pc returnaddress)) (f_ev_q7 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l6 m z t k pc returnaddress)) (f_ev_q6 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l5 m z t k pc returnaddress)) (f_ev_q5 m z t k pc returnaddress))) (APPEND (ENUMERATEL (62) (f_ev_l4 m z t k pc returnaddress)) (f_ev_q4 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l3 m z t k pc returnaddress)) (f_ev_q3 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k - 1) (\i. (APPEND (f_ev_l2e m z t k pc returnaddress i) (APPEND (ENUMERATEL (val k) (\j. f_ev_l2b m z t k pc returnaddress i j)) (f_ev_l2p m z t k pc returnaddress i))))) (f_ev_q2 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l1 m z t k pc returnaddress)) (f_ev_q1 m z t k pc returnaddress)))
+      else (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND (APPEND
+        (APPEND (APPEND (APPEND (APPEND (APPEND (f_ev_p13 m z t k pc
+        returnaddress) (APPEND (ENUMERATEL (val k) (f_ev_l13 m z t k pc
+        returnaddress)) (f_ev_q13 m z t k pc returnaddress))) (APPEND (ENUMERATEL
+        (val k - 1) (f_ev_l12 m z t k pc returnaddress)) (f_ev_q12 m z t k pc
+        returnaddress))) (APPEND (ENUMERATEL (val k) (\i. (APPEND (APPEND
+        (f_ev_l11e m z t k pc returnaddress i) (APPEND (ENUMERATEL (val k) (\j.
+        f_ev_l11c m z t k pc returnaddress i j)) (f_ev_l11m m z t k pc
+        returnaddress i))) (APPEND (ENUMERATEL (val k) (\j. f_ev_l11a m z t k pc
+        returnaddress i j)) (f_ev_l11p m z t k pc returnaddress i))))) (f_ev_q11
+        m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l10 m z t k
+        pc returnaddress)) (f_ev_q10 m z t k pc returnaddress))) (APPEND
+        (ENUMERATEL (val k) (f_ev_l9 m z t k pc returnaddress)) (f_ev_q9 m z t k
+        pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l8 m z t k pc
+        returnaddress)) (f_ev_q8 m z t k pc returnaddress))) (APPEND (ENUMERATEL
+        (val k) (f_ev_l7 m z t k pc returnaddress)) (f_ev_q7 m z t k pc
+        returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l6 m z t k pc
+        returnaddress)) (f_ev_q6 m z t k pc returnaddress))) (APPEND (ENUMERATEL
+        (val k) (f_ev_l5 m z t k pc returnaddress)) (f_ev_q5 m z t k pc
+        returnaddress))) (APPEND (ENUMERATEL (62) (f_ev_l4 m z t k pc
+        returnaddress)) (f_ev_q4 m z t k pc returnaddress))) (APPEND (ENUMERATEL
+        (val k) (f_ev_l3 m z t k pc returnaddress)) (f_ev_q3 m z t k pc
+        returnaddress))) (APPEND (ENUMERATEL (val k - 1) (\i. (APPEND (f_ev_l2e m
+        z t k pc returnaddress i) (APPEND (ENUMERATEL (val k) (\j. f_ev_l2b m z t
+        k pc returnaddress i j)) (f_ev_l2p m z t k pc returnaddress i)))))
+        (f_ev_q2 m z t k pc returnaddress))) (APPEND (ENUMERATEL (val k) (f_ev_l1
+        m z t k pc returnaddress)) (f_ev_q1 m z t k pc returnaddress)))
       :(uarch_event) list` THEN
   REPEAT META_EXISTS_TAC THEN X_GEN_TAC `e:(uarch_event)list` THEN
   W64_GEN_TAC `k:num` THEN
@@ -2532,14 +2567,14 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_SAFE = prove
     ANTS_TAC THENL [CONV_TAC NUM_REDUCE_CONV; ARITH_TAC];
     ALL_TAC] THEN
   (*** copy m into t, 0x8..0x18 ***)
-  AMONTIFIER_UPLOOP_TAC `pc + 0x8` `pc + 0x1c` `X4` 2 ALL_TAC [`m:int64`; `t:int64`] 5 THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x8` `pc + 0x1c` `X4` 2 ALL_TAC [`m:int64`; `t:int64`] 5 THEN
   (*** digitwise normalization: outer loop k - 1 times (X4 counting down), inner shuffle loop ***)
   ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x24` `pc + 0x54`
    `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = m /\ read X3 s = t /\
           read X4 s = word((k - 1) - i) /\ read X30 s = returnaddress` THEN
   CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
   CONJ_TAC THENL
-   [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN AMONTIFIER_KM1_FACTS_TAC THEN
+   [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_AMONTIFIER_KM1_FACTS_TAC THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--2) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
@@ -2547,7 +2582,7 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_SAFE = prove
   CONJ_TAC THENL
    [X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
-    AMONTIFIER_POST_REASSOC_TAC THEN
+    SAFETY_POST_REASSOC_TAC THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x30` `pc + 0x4c`
      `\j s. read X0 s = word k /\ read X1 s = z /\ read X2 s = m /\ read X3 s = t /\
             read X4 s = word((k - 1) - i) /\ read X5 s = word j /\ read X30 s = returnaddress` THEN
@@ -2558,48 +2593,48 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_SAFE = prove
       BIGNUM_AMONTIFIER_EXEC (1--3) THEN
       DISCHARGE_SAFETY_PROPERTY_TAC;
       ALL_TAC] THEN
-    CONJ_TAC THENL [AMONTIFIER_GEN_UPBODY_TAC `j:num` [`t:int64`] 7; ALL_TAC] THEN
-    AMONTIFIER_DOWNCOUNT_FACTS_TAC `k - 1` `i:num` THEN
+    CONJ_TAC THENL [BIGNUM_AMONTIFIER_GEN_UPBODY_TAC `j:num` [`t:int64`] 7; ALL_TAC] THEN
+    BIGNUM_AMONTIFIER_DOWNCOUNT_FACTS_TAC `k - 1` `i:num` THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--2) THEN
-    AMONTIFIER_CLOSE_TAC;
+    BIGNUM_AMONTIFIER_CLOSE_TAC;
     ALL_TAC] THEN
   (*** bitwise normalization ***)
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0x6c` `pc + 0x90` `X4` 6 ALL_TAC [`t:int64`] 9 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x6c` `pc + 0x90` `X4` 6 ALL_TAC [`t:int64`] 9 THEN
   (*** reciprocal estimate, 62 iterations (X4 counting down); preload of t[k-1] ***)
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `62` `pc + 0xa4` `pc + 0xd0`
    `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = m /\ read X3 s = t /\
           read X4 s = word(62 - i) /\ read X30 s = returnaddress` THEN
   CONJ_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   CONJ_TAC THENL
-   [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN AMONTIFIER_KM1_FACTS_TAC THEN
+   [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_AMONTIFIER_KM1_FACTS_TAC THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--5) THEN
-    AMONTIFIER_CLOSE_TAC;
+    BIGNUM_AMONTIFIER_CLOSE_TAC;
     ALL_TAC] THEN
   CONJ_TAC THENL
-   [X_GEN_TAC `i:num` THEN STRIP_TAC THEN AMONTIFIER_DOWNCOUNT_FACTS_TAC `62` `i:num` THEN
+   [X_GEN_TAC `i:num` THEN STRIP_TAC THEN BIGNUM_AMONTIFIER_DOWNCOUNT_FACTS_TAC `62` `i:num` THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--11) THEN
-    AMONTIFIER_CLOSE_TAC;
+    BIGNUM_AMONTIFIER_CLOSE_TAC;
     ALL_TAC] THEN
   (*** multiply, remainder, and two doubling/correction loop pairs ***)
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0xe0`  `pc + 0x100` `X4` 4 ALL_TAC [`t:int64`; `z:int64`] 8 THEN
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0x114` `pc + 0x134` `X4` 5 ALL_TAC [`t:int64`; `z:int64`] 8 THEN
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0x13c` `pc + 0x160` `X5` 2 ALL_TAC [`z:int64`; `t:int64`] 9 THEN
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0x16c` `pc + 0x18c` `X5` 3 ALL_TAC [`z:int64`; `t:int64`] 8 THEN
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0x194` `pc + 0x1b8` `X5` 2 ALL_TAC [`z:int64`; `t:int64`] 9 THEN
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0x1c4` `pc + 0x1e8` `X5` 3 ALL_TAC [`z:int64`; `t:int64`] 9 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0xe0`  `pc + 0x100` `X4` 4 ALL_TAC [`t:int64`; `z:int64`] 8 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x114` `pc + 0x134` `X4` 5 ALL_TAC [`t:int64`; `z:int64`] 8 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x13c` `pc + 0x160` `X5` 2 ALL_TAC [`z:int64`; `t:int64`] 9 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x16c` `pc + 0x18c` `X5` 3 ALL_TAC [`z:int64`; `t:int64`] 8 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x194` `pc + 0x1b8` `X5` 2 ALL_TAC [`z:int64`; `t:int64`] 9 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x1c4` `pc + 0x1e8` `X5` 3 ALL_TAC [`z:int64`; `t:int64`] 9 THEN
   (*** main loop, k times (X4 counting down): inner multiply-accumulate then correction ***)
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x1f0` `pc + 0x260`
    `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = m /\ read X3 s = t /\
           read X4 s = word(k - i) /\ read X30 s = returnaddress` THEN
@@ -2608,53 +2643,53 @@ let BIGNUM_AMONTIFIER_SUBROUTINE_SAFE = prove
    [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--2) THEN
-    AMONTIFIER_CLOSE_TAC;
+    BIGNUM_AMONTIFIER_CLOSE_TAC;
     ALL_TAC] THEN
   CONJ_TAC THENL
    [X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     REWRITE_TAC[ENUMERATEL_ADD1] THEN CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
-    AMONTIFIER_POST_REASSOC_TAC THEN
+    SAFETY_POST_REASSOC_TAC THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x1fc` `pc + 0x228` amontifier_inv2 THEN
     CONJ_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
     CONJ_TAC THENL
      [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--3) THEN
-      AMONTIFIER_CLOSE_TAC;
+      BIGNUM_AMONTIFIER_CLOSE_TAC;
       ALL_TAC] THEN
-    CONJ_TAC THENL [AMONTIFIER_GEN_UPBODY_TAC `j:num` [`z:int64`; `t:int64`] 11; ALL_TAC] THEN
-    AMONTIFIER_CARRY_REASSOC_TAC THEN
+    CONJ_TAC THENL [BIGNUM_AMONTIFIER_GEN_UPBODY_TAC `j:num` [`z:int64`; `t:int64`] 11; ALL_TAC] THEN
+    SAFETY_CARRY_REASSOC_TAC THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x234` `pc + 0x254` amontifier_inv2 THEN
     CONJ_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
     CONJ_TAC THENL
      [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--3) THEN
-      AMONTIFIER_CLOSE_TAC;
+      BIGNUM_AMONTIFIER_CLOSE_TAC;
       ALL_TAC] THEN
-    CONJ_TAC THENL [AMONTIFIER_GEN_UPBODY_TAC `j:num` [`t:int64`; `z:int64`] 8; ALL_TAC] THEN
-    AMONTIFIER_DOWNCOUNT_FACTS_TAC `k:num` `i:num` THEN
+    CONJ_TAC THENL [BIGNUM_AMONTIFIER_GEN_UPBODY_TAC `j:num` [`t:int64`; `z:int64`] 8; ALL_TAC] THEN
+    BIGNUM_AMONTIFIER_DOWNCOUNT_FACTS_TAC `k:num` `i:num` THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--3) THEN
-    AMONTIFIER_CLOSE_TAC;
+    BIGNUM_AMONTIFIER_CLOSE_TAC;
     ALL_TAC] THEN
   (*** Montgomery reduction loop, k - 1 times with index 1 + j ***)
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x2b4` `pc + 0x2e4`
    `\j s. read X0 s = word k /\ read X1 s = z /\ read X2 s = m /\ read X3 s = t /\
           read X5 s = word(1 + j) /\ read X30 s = returnaddress` THEN
   CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
   CONJ_TAC THENL
-   [REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL_APPEND_ZERO] THEN AMONTIFIER_KM1_FACTS_TAC THEN
+   [REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL_APPEND_ZERO] THEN BIGNUM_AMONTIFIER_KM1_FACTS_TAC THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--21) THEN
-    AMONTIFIER_CLOSE_TAC;
+    BIGNUM_AMONTIFIER_CLOSE_TAC;
     ALL_TAC] THEN
-  CONJ_TAC THENL [AMONTIFIER_R12_BODY_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL [BIGNUM_AMONTIFIER_R12_BODY_TAC; ALL_TAC] THEN
   (*** final masked subtraction loop, then RET ***)
-  AMONTIFIER_CARRY_REASSOC_TAC THEN
-  AMONTIFIER_UPLOOP_TAC `pc + 0x2f8` `pc + 0x318` `X5` 5 AMONTIFIER_KM1_FACTS_TAC
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_AMONTIFIER_UPLOOP_TAC `pc + 0x2f8` `pc + 0x318` `X5` 5 BIGNUM_AMONTIFIER_KM1_FACTS_TAC
     [`t:int64`; `m:int64`; `z:int64`] 8 THEN
   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTIFIER_EXEC (1--1) THEN
-  AMONTIFIER_CLOSE_TAC);;
+  BIGNUM_AMONTIFIER_CLOSE_TAC);;

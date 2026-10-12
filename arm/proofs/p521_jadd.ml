@@ -2026,5 +2026,32 @@ let p521_jadd_full_spec,p521_jadd_public_vars = mk_safety_spec
     P521_JADD_EXEC;;
 
 let P521_JADD_SUBROUTINE_SAFE = time prove
- (p521_jadd_full_spec,
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (word_sub stackpointer (word 816),816))
+           [word pc,LENGTH p521_jadd_mc; p1,216; p2,216; p3,216] /\
+           nonoverlapping (p3,216) (word pc,LENGTH p521_jadd_mc)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p521_jadd_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p3; p1; p2] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events p1 p2 p3 pc
+                         (word_sub stackpointer (word 816))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [p1,216; p2,216; p3,216;
+                          word_sub stackpointer (word 816),816]
+                         [p3,216; word_sub stackpointer (word 816),816]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC p521_jadd_full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:p521_jadd_public_vars P521_JADD_EXEC);;

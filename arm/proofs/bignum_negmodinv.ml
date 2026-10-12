@@ -620,7 +620,7 @@ let BIGNUM_NEGMODINV_SUBROUTINE_CORRECT = prove
     BIGNUM_NEGMODINV_EXEC BIGNUM_NEGMODINV_CORRECT);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory-safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* k=0/1/2 straight-line arms; general k>=3 = prologue ++ initloop UP(k-1) ++  *)
 (* bridge ++ outer nest (UP(k-2) with walking z-pointer and inner UP(k-2-t))   *)
 (* ++ finale. Modelled on bignum_madd.ml (triangular nest) + bignum_cmul.ml.   *)
@@ -635,7 +635,26 @@ let negmodinv_full_spec,negmodinv_public_vars =
     BIGNUM_NEGMODINV_SUBROUTINE_CORRECT BIGNUM_NEGMODINV_EXEC;;
 
 let BIGNUM_NEGMODINV_SUBROUTINE_SAFE = prove
- (negmodinv_full_spec,
+ (`exists f_events.
+       forall e k z x pc returnaddress.
+           nonoverlapping (word pc,216) (z,8 * val k) /\
+           nonoverlapping (x,8 * val k) (z,8 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_negmodinv_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z k pc returnaddress /\
+                         memaccess_inbounds e2 [x,val k * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC negmodinv_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(x:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 x z k pc returnaddress
@@ -694,7 +713,6 @@ let BIGNUM_NEGMODINV_SUBROUTINE_SAFE = prove
   REWRITE_TAC[METIS[APPEND_ASSOC]
     `(exists e2. P e2 /\ e2 = APPEND fin (APPEND outr (APPEND brg (APPEND ini prol))) /\ Q e2)
      <=> (exists e2. P e2 /\ e2 = APPEND (APPEND fin (APPEND outr brg)) (APPEND ini prol) /\ Q e2)`] THEN
-  GHOST_INTRO_TAC `w:int64` `read X3` THEN
   (* TOP SEQUENCE 0x6c: CONJ1 block 0x0->0x6c, CONJ2 rest 0x6c->RET *)
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x6c`
    `\s. read X0 s = word k /\ read X1 s = z /\ read X2 s = x /\ read X30 s = returnaddress` THEN

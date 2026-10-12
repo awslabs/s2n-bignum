@@ -469,7 +469,7 @@ let BIGNUM_NORMALIZE_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_NOSTACK_TAC BIGNUM_NORMALIZE_EXEC BIGNUM_NORMALIZE_CORRECT);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory-safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* k=0 and k=1 straight-line arms; general k>=2 = begin ++ nested normloop    *)
 (* (outer PUP(k-1) with inner shufloop PUP k) ++ bitpre ++ bitloop UP(k) ++   *)
 (* epilogue. Modelled on bignum_emontredc.ml (nest) + bignum_shl_small.ml.    *)
@@ -499,7 +499,7 @@ let normalize_full_spec,normalize_public_vars = mk_safety_spec
    FULL_UNIFY_F_EVENTS_TAC has no live metavar to bind and throws "UNIFY_F_EVENTS_TAC"/"Not a var"). Try the
    standard metavar discharge first; on failure, read the concrete WIT off the `e2 = WIT` conjunct and
    EXISTS_TAC it (no metavar), then close trace-eq by APPEND-normalization+REFL and memaccess by DMI. *)
-let NORM_DEGEN_DISCHARGE_TAC : tactic =
+let BIGNUM_NORMALIZE_DEGEN_DISCHARGE_TAC : tactic =
   DISCHARGE_SAFETY_PROPERTY_TAC ORELSE
   (CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
    W(fun (a,w) ->
@@ -518,7 +518,24 @@ let NORM_DEGEN_DISCHARGE_TAC : tactic =
              DISCHARGE_MEMACCESS_INBOUNDS_TAC)));;
 
 let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
- (normalize_full_spec,
+ (`exists f_events.
+       forall e k z pc returnaddress.
+           nonoverlapping (word pc,148) (z,8 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_normalize_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events z k pc returnaddress /\
+                         memaccess_inbounds e2 [z,val k * 8] [z,val k * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC normalize_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(z:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then
@@ -646,7 +663,7 @@ let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
        [(* outer_prol 0x14->0x24: MOV X8=0,CMP X5,CSINC X2,MOV X3=0 (4 steps, NO events). f_ev_outer_prol:=[]. *)
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
           BIGNUM_NORMALIZE_EXEC (1--4) THEN ASM_REWRITE_TAC[] THEN
-        NORM_DEGEN_DISCHARGE_TAC;
+        BIGNUM_NORMALIZE_DEGEN_DISCHARGE_TAC;
         ALL_TAC] THEN
       (* inner shufloop box: SEQUENCE 0x40 [ shufWHILE 0x24->0x40 ; outer_epil 0x40->0x48 ].
          beta-reduce the f_ev_outer_prol:=[] redexes, clean nils, reassoc so e_back=outer_epil. *)
@@ -669,7 +686,7 @@ let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
           REWRITE_TAC[ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
           ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
             BIGNUM_NORMALIZE_EXEC [] THEN ASM_REWRITE_TAC[] THEN
-          NORM_DEGEN_DISCHARGE_TAC;
+          BIGNUM_NORMALIZE_DEGEN_DISCHARGE_TAC;
           ALL_TAC] THEN
         CONJ_TAC THENL
          [(* shuf body 0x24->{0x24 if j+1<k else 0x40}, index X8=j. reads z[j]@0x28, writes z[j]@0x30. 7 steps. *)
@@ -714,7 +731,7 @@ let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
           BIGNUM_NORMALIZE_EXEC [] THEN
         REWRITE_TAC[APPEND_NIL; CONJUNCT1 APPEND] THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-        NORM_DEGEN_DISCHARGE_TAC;
+        BIGNUM_NORMALIZE_DEGEN_DISCHARGE_TAC;
         ALL_TAC] THEN
       (*** outer_epil 0x40->0x48: SUBS X7@0x40, BNE@0x44 (back to 0x14 if X7-1!=0 i.e. i+1<k-1). 2 steps.
            ARM_SIM normalises the SUBS result word_sub(word(k-1-i))(word 1) via the first SUBGOAL to
@@ -745,20 +762,17 @@ let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_NORMALIZE_EXEC [] THEN
       REWRITE_TAC[APPEND_NIL; CONJUNCT1 APPEND] THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-      NORM_DEGEN_DISCHARGE_TAC];
+      BIGNUM_NORMALIZE_DEGEN_DISCHARGE_TAC];
     (*** BITBLOCK 0x48->exit: bitpre 0x48->0x68 (8 instrs, no mem; X7:=0) + bitloop 0x68->0x8c + epil 0x8c,0x90.
          Witness = APPEND f_ev_epil (APPEND bitENUM(k) f_ev_bitpre). ***)
     SUBGOAL_THEN `~(k < 1)` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-    (* bitblock e2 (CONJ2 of 0x48 SEQ) = APPEND (APPEND f_ev_epil (APPEND bitENUM f_ev_bitpre)) CARRIED, where
-       CARRIED = APPEND normENUM begin. Do NOT SEQUENCE bitpre off (its e_front would carry CARRIED and EXISTS_E2
-       rejects f_ev_bitpre). Instead run the bitloop WHILE directly: its pre-leg spans 0x48->0x68 (the 8 bitpre
-       steps, f_ev_bitpre:=[]), e_front = APPEND f_ev_bitpre CARRIED, e_back = APPEND f_ev_epil [] = f_ev_epil.
-       Regroup to APPEND f_ev_epil (APPEND bitENUM (APPEND f_ev_bitpre CARRIED)) then the UP2 wrap. *)
-    (* WHILE_UP2 wants e2 = APPEND (APPEND e_back (APPEND (ENUMERATEL n loop) e_front)) e_prev with
-       e_back=f_ev_epil, loop=bitENUM, e_front=f_ev_bitpre, e_prev=CARRIED. Current e2 (after 0x48 SEQ CONJ2
-       reconstruction) = APPEND (APPEND f_ev_epil (APPEND bitE bitpre)) CARRIED -- already the right shape!
-       Just need the e_back/e_front structure explicit: e_back=f_ev_epil, so regroup inner to
-       APPEND f_ev_epil (APPEND bitE bitpre). *)
+    (* The bit loop is run directly by the WHILE rule, without first sequencing
+       off bitpre (its e_front would carry the previous trace, and EXISTS_E2
+       rejects f_ev_bitpre): its pre-leg runs the 8 bitpre steps from 0x48 to
+       0x68, with f_ev_bitpre := []. The trace after the SEQUENCE at 0x48,
+       APPEND (APPEND f_ev_epil (APPEND bitENUM f_ev_bitpre)) CARRIED, where
+       CARRIED = APPEND normENUM begin, already has the shape the rule wants:
+       e_back = f_ev_epil, e_front = f_ev_bitpre and e_prev = CARRIED. *)
     ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x68` `pc + 0x8c`
      `\i s. read X0 s = word k /\ read X1 s = z /\ read X7 s = word i /\ read X30 s = returnaddress` THEN
     CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -767,7 +781,7 @@ let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
       REWRITE_TAC[ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_NORMALIZE_EXEC (1--8) THEN ASM_REWRITE_TAC[] THEN
-      NORM_DEGEN_DISCHARGE_TAC;
+      BIGNUM_NORMALIZE_DEGEN_DISCHARGE_TAC;
       ALL_TAC] THEN
     CONJ_TAC THENL
        [(* bit body 0x68->{0x68 if i+1<k else 0x8c}, X7=i. reads z[i]@0x68 writes z[i]@0x7c. 9 steps

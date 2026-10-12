@@ -8870,31 +8870,14 @@ let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_CORRECT = time prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-(* mk_safety_spec expects the stack pointer to be called stackpointer.       *)
+(* The stack pointer is called sp in the correctness theorem; mk_safety_spec
+   renames it to stackpointer. *)
 
-let full_spec,public_vars =
-  let th = BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_CORRECT in
-  let vs = fst(strip_forall(concl th)) in
-  let vs' = map (fun v ->
-    if name_of v = "sp" then mk_var("stackpointer",type_of v) else v) vs in
-  mk_safety_spec ~keep_maychanges:false
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:false
     (assoc "bignum_emontredc_8n_cdiff" subroutine_signatures)
-    (GENL vs' (SPECL vs' th)) BIGNUM_EMONTREDC_8N_CDIFF_EXEC;;
-
-let BIGNUM_EMONTREDC_8N_CDIFF_COND_WORD_LIFT = prove
- (`!(b:bool) (a:num) (c:num).
-     (if b then word a:int64 else word c) = word (if b then a else c)`,
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]);;
-
-(* Rewrite only the assumptions "read c s = ..." for the given components c. *)
-
-let BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC names ths =
-  let reads_comp tm =
-    try let c = rand(rator(lhs tm)) in
-        is_const c && mem (fst(dest_const c)) names
-    with Failure _ -> false in
-  RULE_ASSUM_TAC (fun th ->
-    if reads_comp (concl th) then REWRITE_RULE ths th else th);;
+    BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_CORRECT
+    BIGNUM_EMONTREDC_8N_CDIFF_EXEC;;
 
 (* Regroup the events of one iteration of the main loop for the inner loop. *)
 
@@ -9063,14 +9046,14 @@ let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_SAFE = time prove
         ALL_TAC] THEN
       ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
       ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--29) THEN
-      BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X2"]
+      SAFETY_REWRITE_READS_TAC ["X2"]
        [WORD_RULE `word_add (word_add (m:int64) (word (32 * i))) (word 32) =
                    word_add m (word (32 * (i + 1)))`] THEN
-      BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X30"]
+      SAFETY_REWRITE_READS_TAC ["X30"]
        [WORD_RULE `word_add (word_add (m:int64) (word (96 * i))) (word 96) =
                    word_add m (word (96 * (i + 1)))`] THEN
-      BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["PC"]
-       [BIGNUM_EMONTREDC_8N_CDIFF_COND_WORD_LIFT] THEN
+      SAFETY_REWRITE_READS_TAC ["PC"]
+       [SAFETY_COND_WORD_LIFT] THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
       DISCHARGE_SAFETY_PROPERTY_TAC;
 
@@ -9102,7 +9085,7 @@ let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_SAFE = time prove
     REWRITE_TAC[MULT_CLAUSES; WORD_ADD_0; SUB_0; ENUMERATEL_APPEND_ZERO] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--3) THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X0"]
+    SAFETY_REWRITE_READS_TAC ["X0"]
      [WORD_SHL_WORD; ARITH_RULE `2 EXP 5 * n = 32 * n`] THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
@@ -9159,7 +9142,7 @@ let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_SAFE = time prove
       ALL_TAC] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--212) THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X1"]
+    SAFETY_REWRITE_READS_TAC ["X1"]
      [WORD_RULE `word_add (word_add (z:int64) (word (32 * i))) (word 32) =
                  word_add z (word (32 * i + 32))`] THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -9188,19 +9171,19 @@ let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_SAFE = time prove
       ALL_TAC] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--151) THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X1"]
+    SAFETY_REWRITE_READS_TAC ["X1"]
      [WORD_RULE `word_add (word_add (z:int64) (word (32 * i + 32 * (j + 1))))
                           (word 32) =
                  word_add z (word (32 * i + 32 * ((j + 1) + 1)))`] THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X2"]
+    SAFETY_REWRITE_READS_TAC ["X2"]
      [WORD_RULE `word_add (word_add (m:int64) (word (32 * (j + 1)))) (word 32) =
                  word_add m (word (32 * ((j + 1) + 1)))`] THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X30"]
+    SAFETY_REWRITE_READS_TAC ["X30"]
      [WORD_RULE `word_add (word_add (m:int64) (word (96 * (j + 1)))) (word 96) =
                  word_add m (word (96 * ((j + 1) + 1)))`] THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["PC"]
-     [BIGNUM_EMONTREDC_8N_CDIFF_COND_WORD_LIFT] THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["events"]
+    SAFETY_REWRITE_READS_TAC ["PC"]
+     [SAFETY_COND_WORD_LIFT] THEN
+    SAFETY_REWRITE_READS_TAC ["events"]
       BIGNUM_EMONTREDC_8N_CDIFF_NEGOFF_RULES THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
@@ -9227,18 +9210,18 @@ let BIGNUM_EMONTREDC_8N_CDIFF_SUBROUTINE_SAFE = time prove
      [SIMPLE_ARITH_TAC; ALL_TAC] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
     REMOVE_THEN "k4m1" (fun th ->
-      BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X1"; "X2"] [th]) THEN
+      SAFETY_REWRITE_READS_TAC ["X1"; "X2"] [th]) THEN
     ARM_STEPS_TAC BIGNUM_EMONTREDC_8N_CDIFF_EXEC (1--123) THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X1"]
+    SAFETY_REWRITE_READS_TAC ["X1"]
      [WORD_RULE
        `word_add (word_sub (word_add (z:int64) (word (32 * i + 32 * n)))
                            (word (32 * n))) (word 32) =
         word_add z (word (32 * (i + 1)))`] THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["X2"]
+    SAFETY_REWRITE_READS_TAC ["X2"]
      [WORD_RULE `word_sub (word_add (m:int64) (word n)) (word n) = m`] THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["PC"]
-     [BIGNUM_EMONTREDC_8N_CDIFF_COND_WORD_LIFT] THEN
-    BIGNUM_EMONTREDC_8N_CDIFF_REWRITE_READS_TAC ["events"]
+    SAFETY_REWRITE_READS_TAC ["PC"]
+     [SAFETY_COND_WORD_LIFT] THEN
+    SAFETY_REWRITE_READS_TAC ["events"]
       BIGNUM_EMONTREDC_8N_CDIFF_NEGOFF_RULES THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC]);;

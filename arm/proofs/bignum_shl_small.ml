@@ -362,7 +362,7 @@ let shl_small_full_spec,shl_small_public_vars = mk_safety_spec
 
 (* Helper rewrite resolving the clamped-length CSEL selector. *)
 
-let SHL_CLAMP = prove
+let BIGNUM_SHL_SMALL_CLAMP = prove
  (`(if p <= n then word p else word n):int64 = word(MIN p n)`,
   REWRITE_TAC[ARITH_RULE `MIN p n = if p <= n then p else n`] THEN
   COND_CASES_TAC THEN REWRITE_TAC[]);;
@@ -511,7 +511,7 @@ let BIGNUM_SHL_SMALL_SAFE_MINGT = prove
         SUBGOAL_THEN `~(val(word(MIN n p):int64) = 0)` ASSUME_TAC THENL
          [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN
           REWRITE_TAC[ARITH_RULE `MIN n p = MIN p n`] THEN ASM_SIMP_TAC[] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        ASSUME_TAC SHL_CLAMP THEN
+        ASSUME_TAC BIGNUM_SHL_SMALL_CLAMP THEN
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
           BIGNUM_SHL_SMALL_EXEC (1--8) THEN
         REPEAT CONJ_TAC THENL
@@ -621,7 +621,26 @@ let BIGNUM_SHL_SMALL_SAFE_MINGT = prove
                 BIGNUM_SHL_SMALL_EXEC (1--2) THEN DISCHARGE_SAFETY_PROPERTY_TAC ] ] ]]);;
 
 let BIGNUM_SHL_SMALL_SUBROUTINE_SAFE = prove
- (shl_small_full_spec,
+ (`exists f_events.
+       forall e p z n x c pc returnaddress.
+           nonoverlapping (word pc,120) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val p))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_shl_small_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; n; x; c] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z p n pc returnaddress /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC shl_small_full_spec THEN
   X_CHOOSE_TAC
     `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_SHL_SMALL_SAFE_MIN0 THEN

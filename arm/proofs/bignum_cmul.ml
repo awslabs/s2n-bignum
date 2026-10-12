@@ -424,7 +424,7 @@ let cmul_full_spec,cmul_public_vars = mk_safety_spec
 
 (* cmul MINGT rebuilt in MIN n p operand order throughout (matches clamp word(MIN n p)),
    eliminating the MIN p n / MIN n p duality. *)
-let CMUL_CLAMP = prove
+let BIGNUM_CMUL_CLAMP = prove
  (`(if p <= n then word p else word n):int64 = word(MIN n p)`,
   REWRITE_TAC[ARITH_RULE `MIN n p = if p <= n then p else n`] THEN
   COND_CASES_TAC THEN REWRITE_TAC[]);;
@@ -467,7 +467,7 @@ let BIGNUM_CMUL_SAFE_MINGT = prove
   SUBGOAL_THEN `MIN n p <= p /\ MIN n p <= n` STRIP_ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `~(p = 0) /\ ~(n = 0) /\ ~(MIN n p = 0)` STRIP_ASSUME_TAC THENL
    [ASM_MESON_TAC[ARITH_RULE `MIN n p = 0 <=> n = 0 \/ p = 0`]; ALL_TAC] THEN
-  ASSUME_TAC CMUL_CLAMP THEN
+  ASSUME_TAC BIGNUM_CMUL_CLAMP THEN
   SUBGOAL_THEN `~(val(word(MIN n p):int64) = 0)` ASSUME_TAC THENL
    [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `val(word(MIN n p):int64) = MIN n p` ASSUME_TAC THENL
@@ -581,7 +581,8 @@ let BIGNUM_CMUL_SAFE_MINGT = prove
       [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
      SUBGOAL_THEN `8 * MIN n p < 8 * p` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
      ASM_CASES_TAC `MIN n p + 1 = p` THENL
-      [ (* 1 pad word: STR X6,MOV,SUBS,BEQ taken. SIM 1--5 *)
+      [ (* 1 pad word: CBZ not taken, STR X6, MOV, SUBS, BEQ taken, MOV, RET:
+           7 steps *)
         SUBGOAL_THEN `p - MIN n p = 1` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
         ASM_REWRITE_TAC[] THEN
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
@@ -782,7 +783,26 @@ let BIGNUM_CMUL_SAFE_MIN0 = prove
      DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
 let BIGNUM_CMUL_SUBROUTINE_SAFE = prove
- (cmul_full_spec,
+ (`exists f_events.
+       forall e p z c n x pc returnaddress.
+           nonoverlapping (word pc,136) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val p))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_cmul_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; c; n; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z p n pc returnaddress /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC cmul_full_spec THEN
   X_CHOOSE_TAC
     `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_CMUL_SAFE_MIN0 THEN

@@ -400,7 +400,24 @@ let modp_full_spec,modp_public_vars = mk_safety_spec
     BIGNUM_MOD_P256K1_EXEC;;
 
 let BIGNUM_MOD_P256K1_SUBROUTINE_SAFE = prove
- (modp_full_spec,
+ (`exists f_events.
+       forall e z k x pc returnaddress.
+           nonoverlapping (word pc,208) (z,32)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mod_p256k1_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; k; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z k pc returnaddress /\
+                         memaccess_inbounds e2 [x,val k * 8; z,32] [z,32]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC modp_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(z:int64) (x:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 z x k pc returnaddress

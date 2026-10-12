@@ -671,7 +671,26 @@ let BIGNUM_SHR_SMALL_SAFE_MINGT = prove
         DISCHARGE_SAFETY_PROPERTY_TAC]]);;
 
 let BIGNUM_SHR_SMALL_SUBROUTINE_SAFE = prove
- (shr_small_full_spec,
+ (`exists f_events.
+       forall e p z n x c pc returnaddress.
+           nonoverlapping (word pc,100) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val p))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_shr_small_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; n; x; c] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z p n pc returnaddress /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC shr_small_full_spec THEN
   X_CHOOSE_TAC
     `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_SHR_SMALL_SAFE_MIN0 THEN

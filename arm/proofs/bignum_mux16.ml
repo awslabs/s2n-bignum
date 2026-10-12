@@ -291,7 +291,27 @@ let mux16_full_spec,mux16_public_vars = mk_safety_spec
    branch is on k (number of output words), handled by the loop count.      *)
 
 let BIGNUM_MUX16_SUBROUTINE_SAFE = prove
- (mux16_full_spec,
+ (`exists f_events.
+       forall e k z xs i pc returnaddress.
+           nonoverlapping (word pc,284) (z,8 * val k) /\
+           nonoverlapping (xs,8 * 16 * val k) (z,8 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mux16_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; xs; i] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events xs z k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [xs,(16 * val k) * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC mux16_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(xs:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 xs z k pc returnaddress

@@ -1640,6 +1640,32 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_MUL_8_16_EXEC;;
 
 let BIGNUM_MUL_8_16_SUBROUTINE_SAFE = time prove
- (full_spec,
+ (`exists f_events.
+       forall e z x y pc stackpointer returnaddress.
+           aligned 16 stackpointer /\
+           nonoverlapping (z,8 * 16) (word_sub stackpointer (word 48),48) /\
+           ALLPAIRS nonoverlapping
+           [z,8 * 16; word_sub stackpointer (word 48),48]
+           [word pc,2000; x,8 * 8; y,8 * 8]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mul_8_16_mc /\
+                    read PC s = word pc /\
+                    read SP s = stackpointer /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events x y z pc (word_sub stackpointer (word 48))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [x,64; y,64; z,128;
+                          word_sub stackpointer (word 48),48]
+                         [z,128; word_sub stackpointer (word 48),48]))
+               (\s s'. true)`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MUL_8_16_EXEC);;

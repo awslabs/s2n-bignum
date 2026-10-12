@@ -194,17 +194,17 @@ let copy_full_spec,copy_public_vars = mk_safety_spec
 
 (* Helper rewrites resolving the clamped-length CBZ/CSEL selectors. *)
 
-let COPY_CLAMP = prove
+let BIGNUM_COPY_CLAMP = prove
  (`(if k < n then word k else word n):int64 = word(MIN n k)`,
   REWRITE_TAC[ARITH_RULE `MIN n k = if k < n then k else n`] THEN
   COND_CASES_TAC THEN REWRITE_TAC[]);;
 
-let COPY_CLAMP0N = prove
+let BIGNUM_COPY_CLAMP0N = prove
  (`!n:num. (if 0 < n then word 0 else word n):int64 = word 0`,
   GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[NOT_LT; LE]) THEN ASM_REWRITE_TAC[]);;
 
-let COPY_CLAMPK0 = prove
+let BIGNUM_COPY_CLAMPK0 = prove
  (`(if k < 0 then word k else word 0):int64 = word 0`, REWRITE_TAC[LT]);;
 
 (* The safety proof splits on whether MIN (val n) (val k) is zero; each case
@@ -252,7 +252,7 @@ let BIGNUM_COPY_SAFE_MIN0 = prove
   SUBGOAL_THEN `MIN n k <= k /\ MIN n k <= n` STRIP_ASSUME_TAC THENL
    [ARITH_TAC; ALL_TAC] THEN
   ASM_CASES_TAC `k = 0` THENL
-   [ASM_REWRITE_TAC[] THEN MP_TAC(SPEC `n:num` COPY_CLAMP0N) THEN DISCH_TAC THEN
+   [ASM_REWRITE_TAC[] THEN MP_TAC(SPEC `n:num` BIGNUM_COPY_CLAMP0N) THEN DISCH_TAC THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_COPY_EXEC (1--7) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
@@ -264,7 +264,7 @@ let BIGNUM_COPY_SAFE_MIN0 = prove
    `\i s. read X0 s = word k /\ read X1 s = z /\ read X4 s = word i /\
           read X30 s = returnaddress` THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN ASSUME_TAC COPY_CLAMPK0 THEN
+   [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN ASSUME_TAC BIGNUM_COPY_CLAMPK0 THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_COPY_EXEC (1--6) THEN
     ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;
@@ -345,7 +345,7 @@ let BIGNUM_COPY_SAFE_MINgt = prove
      [REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_COPY_EXEC (1--4) THEN
-      REWRITE_TAC[COPY_CLAMP] THEN
+      REWRITE_TAC[BIGNUM_COPY_CLAMP] THEN
       SUBGOAL_THEN `~(val(word(MIN n k):int64) = 0)` ASSUME_TAC THENL
        [IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN ASM_SIMP_TAC[] THEN
         SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -434,7 +434,27 @@ let BIGNUM_COPY_SAFE_MINgt = prove
     DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
 let BIGNUM_COPY_SUBROUTINE_SAFE = prove
- (copy_full_spec,
+ (`exists f_events.
+       forall e k z n x pc returnaddress.
+           nonoverlapping (word pc,64) (z,8 * val k) /\
+           (x = z \/
+            nonoverlapping (x,8 * MIN (val n) (val k)) (z,8 * val k))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_copy_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; n; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z k n pc returnaddress /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC copy_full_spec THEN
   X_CHOOSE_TAC
     `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_COPY_SAFE_MIN0 THEN

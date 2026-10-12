@@ -659,9 +659,10 @@ let add_full_spec,add_public_vars = mk_safety_spec
     BIGNUM_ADD_SUBROUTINE_CORRECT
     BIGNUM_ADD_EXEC;;
 
-(* bignum_add XLONG (~(MIN m p < MIN n p)). LEFT-ASSOC witness, BARE ENUMERATEL bodies, clamp PC-fix.
-   Witness exec order clamp->main->top->pad; left-assoc APPEND(APPEND(APPEND pad top) main) clamp.
-   Plain DISCHARGE_SAFETY_PROPERTY_TAC throughout (verified interactively). *)
+(* The case ~(MIN m p < MIN n p) (XLONG), where the BCC at 0x14 is not taken.
+   The witness lists the parts in execution order clamp, main loop, top loop,
+   padding, left-associated as APPEND (APPEND (APPEND pad top) main) clamp,
+   with the bare loop bodies as ENUMERATEL arguments. *)
 let BIGNUM_ADD_SAFE_XLONG = prove
  (`exists f_events.
        forall e p z m x n y pc returnaddress.
@@ -715,7 +716,8 @@ let BIGNUM_ADD_SAFE_XLONG = prove
     CONJ_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
   SUBGOAL_THEN `val(word(MIN m p):int64) = MIN m p /\ val(word(MIN n p):int64) = MIN n p` STRIP_ASSUME_TAC THENL
    [CONJ_TAC THEN IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-  (* ===== clamp -> 0x18 (BCC not taken: ~(MIN m p < MIN n p)); peels f_ev_clamp ===== *)
+  (* ===== clamp, to 0x18 (BCC not taken as ~(MIN m p < MIN n p)), peeling
+     f_ev_clamp. ===== *)
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x18`
    `\s. read X0 s = word p /\ read X1 s = z /\ read X2 s = word(MIN m p) /\
         read X3 s = x /\ read X4 s = word(MIN n p) /\ read X5 s = y /\
@@ -729,7 +731,8 @@ let BIGNUM_ADD_SAFE_XLONG = prove
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   REWRITE_TAC[] THEN
-  (* ===== main-section: SEQUENCE 0x44; peels main (now outermost right arg). ===== *)
+  (* ===== main loop: SEQUENCE at 0x44, peeling main (now the outermost right
+     argument). ===== *)
   GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x44`
    `\s. read X0 s = word(p - MIN m p) /\ read X1 s = z /\ read X2 s = word(MIN m p - MIN n p) /\
@@ -799,7 +802,8 @@ let BIGNUM_ADD_SAFE_XLONG = prove
         DISCHARGE_SAFETY_PROPERTY_TAC];
      ALL_TAC] THEN
   REWRITE_TAC[] THEN
-  (* ===== top-section: SEQUENCE 0x60; normalize, peel top (NO abbrev — DISCHARGE needs concrete trace) ===== *)
+  (* ===== top loop: SEQUENCE at 0x60, peeling top (no abbreviation, as the
+     discharge needs the concrete trace). ===== *)
   GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x60`
    `\s. read X0 s = word(p - MIN m p) /\ read X1 s = z /\ read X6 s = word(MIN m p) /\
@@ -864,7 +868,8 @@ let BIGNUM_ADD_SAFE_XLONG = prove
         DISCHARGE_SAFETY_PROPERTY_TAC];
      ALL_TAC] THEN
   REWRITE_TAC[] THEN
-  (* ===== pad decision at 0x60: CBNZ X0 (=p-MIN m p). Three-way: nopad / pad1 / loop. ===== *)
+  (* ===== padding, decided by the CBNZ X0 (= p - MIN m p) at 0x60: no padding,
+     one word or a loop. ===== *)
   GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
   ASM_CASES_TAC `MIN m p = p` THENL
    [ SUBGOAL_THEN `p - MIN m p = 0` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -878,9 +883,10 @@ let BIGNUM_ADD_SAFE_XLONG = prove
   ASM_REWRITE_TAC[] THEN
   SUBGOAL_THEN `~(val(word(p - MIN m p):int64) = 0)` ASSUME_TAC THENL
    [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-  (* single-pad case (dedicated f_ev_pad1 witness arm): CBNZ taken -> carry word -> B ->
-     one SUB that zeroes X0 -> CBNZ not taken -> MOV -> RET. Full run to returnaddress (1--9),
-     then bare DISCHARGE (pad1 is one opaque free var, so SAFE_UNIFY assigns it the whole trace). *)
+  (* One padding word (witness f_ev_pad1): CBNZ taken, CSET and STR of the
+     carry, B, ADD, SUB zeroing X0, CBNZ not taken, MOV and RET, 9 steps to the
+     return; f_ev_pad1 is one free variable, so the discharge assigns it the
+     whole trace. *)
   ASM_CASES_TAC `MIN m p + 1 = p` THENL
    [ SUBGOAL_THEN `p - MIN m p = 1 /\ p - MIN m p - 1 = 0` STRIP_ASSUME_TAC THENL
       [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -890,12 +896,13 @@ let BIGNUM_ADD_SAFE_XLONG = prove
      CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
      DISCHARGE_SAFETY_PROPERTY_TAC;
      ALL_TAC] THEN
-  (* general pad loop: p >= MIN m p + 2. COPY-STYLE: NO sequence/reassoc. The natural witness
-     APPEND (APPEND padpost (APPEND padloop padpre)) prev is already the exact WHILE shape.
-     WHILE 0xc8/0xd4 (loop-top=STR XZR at 0xc8, exit=CBNZ at 0xd4). count VERBATIM p-MIN m p-1.
-     precond leg spans whole prologue 0x60->0xc8 = 7 steps (CBNZ-taken,CSET,STR-carry,B,ADD,SUB,CBNZ);
-     body 0xc8->0xc8 = 4 (STR,ADD,SUB,CBNZ); exit 0xd4->ret = 3 (CBNZ-fall,MOV,RET).
-     Invariant X0=word(p-MIN m p-1-i), X6=word((MIN m p+1)+i). *)
+  (* The padding loop, p >= MIN m p + 2. The witness APPEND (APPEND padpost
+     (APPEND padloop padpre)) prev already has the shape of the WHILE rule, so
+     there is no SEQUENCE or reassociation. The loop runs p - MIN m p - 1 times
+     from the STR XZR at 0xc8 to 0xd8, after the CBNZ at 0xd4: the pre-leg from
+     0x60 is 7 steps (CBNZ taken, CSET, STR of the carry, B, ADD, SUB, CBNZ), the
+     body 4 (STR, ADD, SUB, CBNZ) and the post-leg 2 (MOV, RET). Invariant
+     X0 = word(p - MIN m p - 1 - i), X6 = word((MIN m p + 1) + i). *)
   SUBGOAL_THEN `~(MIN m p + 1 = p) /\ MIN m p + 1 < p /\ 0 < p - MIN m p - 1 /\
                 ~(p - MIN m p - 1 = 0) /\ ~(p - MIN m p = 1) /\ MIN m p + 1 <= p`
     STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -950,9 +957,8 @@ let BIGNUM_ADD_SAFE_XLONG = prove
        BIGNUM_ADD_EXEC (1--2) THEN
      CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
      DISCHARGE_SAFETY_PROPERTY_TAC]);;
-(* bignum_add YLONG (m<n). LEFT-ASSOC witness, BARE ENUMERATEL bodies, clamp PC-fix.
-   Witness exec order clamp->main->top->pad; left-assoc APPEND(APPEND(APPEND pad top) main) clamp.
-   Plain DISCHARGE_SAFETY_PROPERTY_TAC throughout (verified interactively). *)
+(* The case MIN m p < MIN n p (YLONG), where the BCC at 0x14 is taken to the
+   mirrored code at 0x6c. The witness has the same shape as for XLONG. *)
 let BIGNUM_ADD_SAFE_YLONG = prove
  (`exists f_events.
        forall e p z m x n y pc returnaddress.
@@ -1006,8 +1012,8 @@ let BIGNUM_ADD_SAFE_YLONG = prove
     CONJ_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
   SUBGOAL_THEN `val(word(MIN n p):int64) = MIN n p /\ val(word(MIN m p):int64) = MIN m p` STRIP_ASSUME_TAC THENL
    [CONJ_TAC THEN IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-  (* ===== clamp -> 0x6c (BCC TAKEN: MIN m p < MIN n p, i.e. m<n); peels f_ev_clamp.
-     clamp HW identical both paths: X2=MIN m p, X4=MIN n p. ===== *)
+  (* ===== clamp, to 0x6c (BCC taken as MIN m p < MIN n p), peeling f_ev_clamp;
+     on both paths it sets X2 = MIN m p and X4 = MIN n p. ===== *)
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x6c`
    `\s. read X0 s = word p /\ read X1 s = z /\ read X2 s = word(MIN m p) /\
         read X3 s = x /\ read X4 s = word(MIN n p) /\ read X5 s = y /\
@@ -1021,7 +1027,8 @@ let BIGNUM_ADD_SAFE_YLONG = prove
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
   REWRITE_TAC[] THEN
-  (* ===== main-section: SEQUENCE 0x44; peels main (now outermost right arg). ===== *)
+  (* ===== main loop: SEQUENCE at 0x98, peeling main (now the outermost right
+     argument). ===== *)
   GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x98`
    `\s. read X0 s = word(p - MIN n p) /\ read X1 s = z /\ read X4 s = word(MIN n p - MIN m p) /\
@@ -1091,7 +1098,8 @@ let BIGNUM_ADD_SAFE_YLONG = prove
         DISCHARGE_SAFETY_PROPERTY_TAC];
      ALL_TAC] THEN
   REWRITE_TAC[] THEN
-  (* ===== top-section: SEQUENCE 0x60; normalize, peel top (NO abbrev — DISCHARGE needs concrete trace) ===== *)
+  (* ===== top loop: SEQUENCE at 0xb0, peeling top (no abbreviation, as the
+     discharge needs the concrete trace). ===== *)
   GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0xb0`
    `\s. read X0 s = word(p - MIN n p) /\ read X1 s = z /\ read X6 s = word(MIN n p) /\
@@ -1154,7 +1162,8 @@ let BIGNUM_ADD_SAFE_YLONG = prove
         DISCHARGE_SAFETY_PROPERTY_TAC];
      ALL_TAC] THEN
   REWRITE_TAC[] THEN
-  (* ===== pad decision at 0x60: CBNZ X0 (=p-MIN n p). Three-way: nopad / pad1 / loop. ===== *)
+  (* ===== padding, decided by the CBNZ X0 (= p - MIN n p) at 0xb0: no padding,
+     one word or a loop. ===== *)
   GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
   ASM_CASES_TAC `MIN n p = p` THENL
    [ SUBGOAL_THEN `p - MIN n p = 0` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -1168,9 +1177,10 @@ let BIGNUM_ADD_SAFE_YLONG = prove
   ASM_REWRITE_TAC[] THEN
   SUBGOAL_THEN `~(val(word(p - MIN n p):int64) = 0)` ASSUME_TAC THENL
    [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-  (* single-pad case (dedicated f_ev_pad1 witness arm): CBNZ taken -> carry word -> B ->
-     one SUB that zeroes X0 -> CBNZ not taken -> MOV -> RET. Full run to returnaddress (1--9),
-     then bare DISCHARGE (pad1 is one opaque free var, so SAFE_UNIFY assigns it the whole trace). *)
+  (* One padding word (witness f_ev_pad1): CBNZ taken, CSET and STR of the
+     carry, B, ADD, SUB zeroing X0, CBNZ not taken, MOV and RET, 9 steps to the
+     return; f_ev_pad1 is one free variable, so the discharge assigns it the
+     whole trace. *)
   ASM_CASES_TAC `MIN n p + 1 = p` THENL
    [ SUBGOAL_THEN `p - MIN n p = 1 /\ p - MIN n p - 1 = 0` STRIP_ASSUME_TAC THENL
       [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -1180,12 +1190,13 @@ let BIGNUM_ADD_SAFE_YLONG = prove
      CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
      DISCHARGE_SAFETY_PROPERTY_TAC;
      ALL_TAC] THEN
-  (* general pad loop: p >= MIN n p + 2. COPY-STYLE: NO sequence/reassoc. The natural witness
-     APPEND (APPEND padpost (APPEND padloop padpre)) prev is already the exact WHILE shape.
-     WHILE 0xc8/0xd4 (loop-top=STR XZR at 0xc8, exit=CBNZ at 0xd4). count VERBATIM p-MIN n p-1.
-     precond leg spans whole prologue 0x60->0xc8 = 7 steps (CBNZ-taken,CSET,STR-carry,B,ADD,SUB,CBNZ);
-     body 0xc8->0xc8 = 4 (STR,ADD,SUB,CBNZ); exit 0xd4->ret = 3 (CBNZ-fall,MOV,RET).
-     Invariant X0=word(p-MIN n p-1-i), X6=word((MIN n p+1)+i). *)
+  (* The padding loop, p >= MIN n p + 2. The witness APPEND (APPEND padpost
+     (APPEND padloop padpre)) prev already has the shape of the WHILE rule, so
+     there is no SEQUENCE or reassociation. The loop runs p - MIN n p - 1 times
+     from the STR XZR at 0xc8 to 0xd8, after the CBNZ at 0xd4: the pre-leg from
+     0xb0 is 7 steps (CBNZ taken, CSET, STR of the carry, B, ADD, SUB, CBNZ), the
+     body 4 (STR, ADD, SUB, CBNZ) and the post-leg 2 (MOV, RET). Invariant
+     X0 = word(p - MIN n p - 1 - i), X6 = word((MIN n p + 1) + i). *)
   SUBGOAL_THEN `~(MIN n p + 1 = p) /\ MIN n p + 1 < p /\ 0 < p - MIN n p - 1 /\
                 ~(p - MIN n p - 1 = 0) /\ ~(p - MIN n p = 1) /\ MIN n p + 1 <= p`
     STRIP_ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -1246,7 +1257,28 @@ let BIGNUM_ADD_SAFE_YLONG = prove
 (* ------------------------------------------------------------------------- *)
 
 let BIGNUM_ADD_SUBROUTINE_SAFE = prove
- (add_full_spec,
+ (`exists f_events.
+       forall e p z m x n y pc returnaddress.
+           nonoverlapping (word pc,224) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val m) (z,8 * val p)) /\
+           (y = z \/ nonoverlapping (y,8 * val n) (z,8 * val p))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_add_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; m; x; n; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z p n m pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val m * 8; y,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC add_full_spec THEN
   X_CHOOSE_TAC
     `fx:int64->int64->int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_ADD_SAFE_XLONG THEN

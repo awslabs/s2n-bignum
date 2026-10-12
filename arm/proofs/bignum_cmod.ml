@@ -1316,7 +1316,23 @@ let cmod_full_spec,cmod_public_vars = mk_safety_spec
    event trace is one ENUMERATEL over k; the k = 0 case returns immediately. *)
 
 let BIGNUM_CMOD_SUBROUTINE_SAFE = prove
- (cmod_full_spec,
+ (`exists f_events.
+       forall e k x m pc returnaddress.
+           ensures arm
+           (\s.
+                aligned_bytes_loaded s (word pc) bignum_cmod_mc /\
+                read PC s = word pc /\
+                read X30 s = returnaddress /\
+                C_ARGUMENTS [k; x; m] s /\
+                read events s = e)
+           (\s.
+                read PC s = returnaddress /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events x k pc returnaddress /\
+                     memaccess_inbounds e2 [x,val k * 8] []))
+           (\s s'. true)`,
+  ASSERT_CONCL_TAC cmod_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 x k pc returnaddress

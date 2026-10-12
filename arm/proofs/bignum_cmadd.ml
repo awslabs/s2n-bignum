@@ -469,7 +469,7 @@ let cmadd_full_spec,cmadd_public_vars = mk_safety_spec
    are proved as separate lemmas (so they do not share the f_events metavariable)
    and then combined. *)
 
-let CMADD_CLAMP = prove
+let BIGNUM_CMADD_CLAMP = prove
  (`(if p <= n then word p else word n):int64 = word(MIN n p)`,
   REWRITE_TAC[ARITH_RULE `MIN n p = if p <= n then p else n`] THEN
   COND_CASES_TAC THEN REWRITE_TAC[]);;
@@ -501,7 +501,7 @@ let BIGNUM_CMADD_SAFE_MIN0 = prove
   SUBGOAL_THEN `MIN n p = 0` ASSUME_TAC THENL
    [ASM_MESON_TAC[ARITH_RULE `MIN n p = MIN p n`]; ALL_TAC] THEN
   SUBGOAL_THEN `(if p <= n then word p else word n):int64 = word 0` ASSUME_TAC THENL
-   [ASM_REWRITE_TAC[CMADD_CLAMP]; ALL_TAC] THEN
+   [ASM_REWRITE_TAC[BIGNUM_CMADD_CLAMP]; ALL_TAC] THEN
   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
     BIGNUM_CMADD_EXEC (1--7) THEN
   CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
@@ -546,7 +546,7 @@ let BIGNUM_CMADD_SAFE_MINGT = prove
   SUBGOAL_THEN `MIN n p <= p /\ MIN n p <= n` STRIP_ASSUME_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `~(p = 0) /\ ~(n = 0) /\ ~(MIN n p = 0)` STRIP_ASSUME_TAC THENL
    [ASM_MESON_TAC[ARITH_RULE `MIN n p = 0 <=> n = 0 \/ p = 0`]; ALL_TAC] THEN
-  ASSUME_TAC CMADD_CLAMP THEN
+  ASSUME_TAC BIGNUM_CMADD_CLAMP THEN
   SUBGOAL_THEN `~(val(word(MIN n p):int64) = 0)` ASSUME_TAC THENL
    [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
   SUBGOAL_THEN `val(word(MIN n p):int64) = MIN n p` ASSUME_TAC THENL
@@ -733,7 +733,26 @@ let BIGNUM_CMADD_SAFE_MINGT = prove
         DISCHARGE_SAFETY_PROPERTY_TAC]]);;
 
 let BIGNUM_CMADD_SUBROUTINE_SAFE = prove
- (cmadd_full_spec,
+ (`exists f_events.
+       forall e p z c n x pc returnaddress.
+           nonoverlapping (word pc,160) (z,8 * val p) /\
+           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val p))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_cmadd_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; c; n; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z p n pc returnaddress /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC cmadd_full_spec THEN
   X_CHOOSE_TAC `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_CMADD_SAFE_MIN0 THEN
   X_CHOOSE_TAC `fmg:int64->int64->int64->int64->num->int64->(uarch_event)list`

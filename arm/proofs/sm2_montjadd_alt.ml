@@ -2724,7 +2724,7 @@ let SM2_MONTJADD_ALT_SUBROUTINE_CORRECT = time prove
    SM2_MONTJADD_ALT_CORRECT `[]` 224);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time / memory-safety property.                                   *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
@@ -2736,8 +2736,36 @@ let full_spec,public_vars = mk_safety_spec
     SM2_MONTJADD_ALT_CORRECT
     SM2_MONTJADD_ALT_EXEC;;
 
-let SM2_MONTJADD_ALT_SAFE = time prove(full_spec,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+let SM2_MONTJADD_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,224))
+           [word pc,7812; p1,96; p2,96; p3,96] /\
+           nonoverlapping (p3,96) (word pc,7812)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) sm2_montjadd_alt_mc /\
+                    read PC s = word (pc + 4) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1; p2] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 7804) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,96; p2,96; p3,96; stackpointer,224]
+                         [p3,96; stackpointer,224]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,96); memory :> bytes (stackpointer,224)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SM2_MONTJADD_ALT_EXEC);;
 
 let SM2_MONTJADD_ALT_SUBROUTINE_SAFE = time prove

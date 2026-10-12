@@ -105,7 +105,7 @@ let full_spec,public_vars = mk_safety_spec
 
 (* Containment of a word-indexed load a[w] (8 bytes) within [a, n * 8] when the
    index w is below n. *)
-let ISZERO_LOAD_CONTAINED = prove
+let BIGNUM_ISZERO_LOAD_CONTAINED = prove
  (`!(a:int64) (n:num) (m:num).
       m < n /\ n < 2 EXP 64
       ==> contained_modulo (2 EXP 64)
@@ -194,7 +194,7 @@ let BIGNUM_ISZERO_SUBROUTINE_SAFE = time prove
   GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN CONJ_TAC THENL
    [ (* the iteration's own jump (vacuous) and load *)
      REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN
-     MATCH_MP_TAC ISZERO_LOAD_CONTAINED THEN CONJ_TAC THEN SIMPLE_ARITH_TAC;
+     MATCH_MP_TAC BIGNUM_ISZERO_LOAD_CONTAINED THEN CONJ_TAC THEN SIMPLE_ARITH_TAC;
      (* accumulated ENUMERATEL prefix + prologue: discharge from the
         strengthened loop-invariant assumption. *)
      DISCHARGE_MEMACCESS_INBOUNDS_USING_ASM_TAC ]);;

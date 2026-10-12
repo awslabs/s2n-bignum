@@ -1891,11 +1891,11 @@ let cdiv_full_spec,cdiv_public_vars = mk_safety_spec
    by the exact-division code of bignum_cdiv_exact: an up-counter loop over
    the k output digits with a conditional in-loop load. The k = 0 case still
    runs the remainder part. The remainder loop is proved by
-   CDIV_REMAINDER_LOOP_TAC, which is used both for k = 0 (with the tail
+   BIGNUM_CDIV_REMAINDER_LOOP_TAC, which is used both for k = 0 (with the tail
    going to the return) and inside the pre-leg of the output loop for k > 0
    (with the tail going on to the output loop's preload).                    *)
 
-let CDIV_REMAINDER_LOOP_TAC (tail_steps:int) : tactic =
+let BIGNUM_CDIV_REMAINDER_LOOP_TAC (tail_steps:int) : tactic =
   ENSURES_EVENTS_WHILE_UP2_TAC `n:num` `pc + 0xc4` `pc + 0xec`
    `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = word n /\
           read X3 s = x /\ read X6 s = word(n - i) /\ read X30 s = returnaddress` THEN
@@ -1938,7 +1938,26 @@ let CDIV_REMAINDER_LOOP_TAC (tail_steps:int) : tactic =
      DISCHARGE_SAFETY_PROPERTY_TAC];;
 
 let BIGNUM_CDIV_SUBROUTINE_SAFE = prove
- (cdiv_full_spec,
+ (`exists f_events.
+       forall e k z n x m pc returnaddress.
+           nonoverlapping (word pc,524) (z,8 * val k) /\
+           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val k))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_cdiv_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; n; x; m] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z k n pc returnaddress /\
+                         memaccess_inbounds e2 [x,val n * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC cdiv_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (z:int64) (k:int64) (n:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then
@@ -1976,7 +1995,7 @@ let BIGNUM_CDIV_SUBROUTINE_SAFE = prove
        ASM_REWRITE_TAC[] THEN
        SUBGOAL_THEN `~(val(word n:int64) = 0)` ASSUME_TAC THENL
         [ASM_REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-       CDIV_REMAINDER_LOOP_TAC 26];
+       BIGNUM_CDIV_REMAINDER_LOOP_TAC 26];
     ALL_TAC] THEN
   ASM_REWRITE_TAC[] THEN
   ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x1b4` `pc + 0x204`
@@ -2001,7 +2020,7 @@ let BIGNUM_CDIV_SUBROUTINE_SAFE = prove
        SUBGOAL_THEN `word_sub (word n:int64) (word 1) = word(n - 1)` ASSUME_TAC THENL
         [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
           [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
-       CDIV_REMAINDER_LOOP_TAC 50];
+       BIGNUM_CDIV_REMAINDER_LOOP_TAC 50];
 
      (* loop body 0x1b4..0x200; i<nn load (SIM 1--20) / else noload (SIM 1--19). Manual discharge,
         as in bignum_cdiv_exact. *)

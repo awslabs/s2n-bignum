@@ -4783,7 +4783,40 @@ let CURVE25519_X25519_PEEL_TAC =
     else NO_TAC));;
 
 let CURVE25519_X25519_SAFE = time prove
- (full_spec,
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,224))
+           [word pc,9556; res,32; scalar,32; point,32] /\
+           nonoverlapping (res,32) (word pc,9556)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) curve25519_x25519_mc /\
+                    read PC s = word (pc + 44) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 9472) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,32; res,32; stackpointer,224]
+                         [res,32; stackpointer,224]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25;
+                 X26; X27; X28; X29; X30] ,,
+                MAYCHANGE
+                [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q8; Q9; Q10; Q11; Q12; Q13;
+                 Q14; Q15; Q16; Q17; Q18; Q19; Q20; Q21; Q22; Q23; Q24; Q25;
+                 Q26; Q27; Q28; Q29; Q30; Q31] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (res,32); memory :> bytes (stackpointer,224)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
       APPEND

@@ -504,7 +504,27 @@ let emontredc_full_spec,emontredc_public_vars = mk_safety_spec
     BIGNUM_EMONTREDC_SUBROUTINE_CORRECT
     BIGNUM_EMONTREDC_EXEC;;
 let BIGNUM_EMONTREDC_SUBROUTINE_SAFE = prove
- (emontredc_full_spec,
+ (`exists f_events.
+       forall e k z m w pc returnaddress.
+           nonoverlapping (word pc,144) (z,8 * 2 * val k) /\
+           nonoverlapping (m,8 * val k) (z,8 * 2 * val k)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_emontredc_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; m; w] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events m z k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [z,(2 * val k) * 8; m,val k * 8]
+                         [z,(2 * val k) * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC emontredc_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(m:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then
@@ -564,7 +584,7 @@ let BIGNUM_EMONTREDC_SUBROUTINE_SAFE = prove
    [ASM_REWRITE_TAC[]; ALL_TAC] THEN
   ASM_REWRITE_TAC[] THEN
   (*** Outer loop setup. NB UP2 exit = fall-through PC AFTER the backedge BCC (0x84->0xc),
-       i.e. 0x88 (MOV X0 X7) — NOT correctness's plain-UP pc2=0x80 (the CMP). The UP2 event
+       i.e. 0x88 (MOV X0 X7) - NOT correctness's plain-UP pc2=0x80 (the CMP). The UP2 event
        tactic folds the backedge into the body, so pc2 must be past it. (cf. bignum_mul SAFE:
        correctness 0x78 -> SAFE UP2 0x80, "+8"). ***)
   ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xc` `pc + 0x88`
@@ -692,7 +712,7 @@ let BIGNUM_EMONTREDC_SUBROUTINE_SAFE = prove
     (* inner body *)
     ALL_TAC;
     (* inner postcond: exit 0x60 = outer-epil SEQUENCE boundary -> 0 steps. f_ev_inner_post:=[]
-       (e_back, no exit events — SUB+CBNZ folded into body). f_ev_inner_pre already []; collapse the
+       (e_back, no exit events - SUB+CBNZ folded into body). f_ev_inner_pre already []; collapse the
        trailing APPEND _ [] then bare DISCHARGE (NIL case: APPEND (f_ev) l = l). *)
     REWRITE_TAC[APPEND_NIL; CONJUNCT1 APPEND] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)

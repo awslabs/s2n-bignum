@@ -548,8 +548,27 @@ let madd_full_spec,madd_public_vars = mk_safety_spec
    pointer offsets are shown in bounds via the same case split on
    8 * n <= 8 * k + 8 used in bignum_mul. *)
 
-let BIGNUM_MADD_SUBROUTINE_SAFE = prove(
-  madd_full_spec,
+let BIGNUM_MADD_SUBROUTINE_SAFE = prove
+ (`exists f_events.
+       forall e p m n z x y pc returnaddress.
+           ALL (nonoverlapping (z,8 * val p))
+           [word pc,148; x,8 * val m; y,8 * val n]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_madd_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [p; z; m; x; n; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z p n m pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val m * 8; y,val n * 8; z,val p * 8]
+                         [z,val p * 8]))
+               (\s s'. true)`,
   ASSERT_CONCL_TAC madd_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(x:int64) (y:int64) (z:int64) (p:int64) (n:int64) (m:int64)
@@ -647,9 +666,9 @@ let BIGNUM_MADD_SUBROUTINE_SAFE = prove(
         e2 = APPEND a (APPEND f_ev_outer_inv_prol (APPEND enumc tail)) /\ Q e2)`
   ] THEN
 
-  (* clamp-arithmetic sequence: outer top 0x10 -> 0x3c (just after ptr base is NOT set;
-     stop right before BLS decision? mul stops at 0x28 capturing X11,X12,X8=0).
-     For madd capture X11=(k+1)-n, X12=MIN(k+1)m after the CSELs, i.e. pc+0x34 (after CSEL X11). *)
+  (* The clamp arithmetic at the top of the outer loop, from 0x10 to 0x34 just
+     after the second CSEL, which leaves X11 = (k + 1) - n and
+     X12 = MIN (k + 1) m. *)
   ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x34`
    `\s. read X0 s = word p /\
         read X1 s = z /\

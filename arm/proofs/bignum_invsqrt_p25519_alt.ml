@@ -1347,8 +1347,37 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_INVSQRT_P25519_ALT_CORRECT
     BIGNUM_INVSQRT_P25519_ALT_EXEC;;
 
-let BIGNUM_INVSQRT_P25519_ALT_SAFE = time prove(full_spec,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+let BIGNUM_INVSQRT_P25519_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,128))
+           [word pc,1512; z,8 * 4; x,8 * 4] /\
+           nonoverlapping (word pc,1512) (z,8 * 4)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    bignum_invsqrt_p25519_alt_mc /\
+                    read PC s = word (pc + 8) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 756) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc stackpointer /\
+                         memaccess_inbounds e2 [x,32; z,32; stackpointer,128]
+                         [z,32; stackpointer,128]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X30] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 4);
+                 memory :> bytes (stackpointer,128)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_INVSQRT_P25519_ALT_EXEC);;
 
 let BIGNUM_INVSQRT_P25519_ALT_SUBROUTINE_SAFE = time prove

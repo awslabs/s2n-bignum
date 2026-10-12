@@ -2367,8 +2367,37 @@ let full_spec,public_vars = mk_safety_spec
     CURVE25519_LADDERSTEP_ALT_CORRECT
     CURVE25519_LADDERSTEP_ALT_EXEC;;
 
-let CURVE25519_LADDERSTEP_ALT_SAFE = time prove(full_spec,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+let CURVE25519_LADDERSTEP_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e rr point pp b pc stackpointer.
+           aligned 16 stackpointer /\
+           ALLPAIRS nonoverlapping [rr,128; stackpointer,288]
+           [word pc,3924; point,64; pp,128] /\
+           nonoverlapping (rr,128) (stackpointer,288)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    curve25519_ladderstep_alt_mc /\
+                    read PC s = word (pc + 12) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [rr; point; pp; b] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 3908) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events point pp rr pc stackpointer /\
+                         memaccess_inbounds e2
+                         [point,64; pp,128; rr,128; stackpointer,288]
+                         [rr,128; stackpointer,288]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (rr,128); memory :> bytes (stackpointer,288)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars CURVE25519_LADDERSTEP_ALT_EXEC);;
 
 let CURVE25519_LADDERSTEP_ALT_SUBROUTINE_SAFE = time prove

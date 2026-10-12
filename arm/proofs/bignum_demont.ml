@@ -699,6 +699,9 @@ let BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+(* The frame of the correctness theorem is kept (keep_maychanges:true), so
+   that the safety theorem can be used for callers such as bignum_modexp. *)
+
 let demont_full_spec,demont_public_vars = mk_safety_spec
     ~keep_maychanges:true
     (assoc "bignum_demont" subroutine_signatures)
@@ -706,7 +709,29 @@ let demont_full_spec,demont_public_vars = mk_safety_spec
     BIGNUM_DEMONT_EXEC;;
 
 let BIGNUM_DEMONT_SUBROUTINE_SAFE = prove
- (demont_full_spec,
+ (`exists f_events.
+       forall e k z x m pc returnaddress.
+           nonoverlapping (word pc,264) (z,8 * val k) /\
+           nonoverlapping (m,8 * val k) (z,8 * val k) /\
+           (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_demont_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; x; m] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x m z k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val k * 8; m,val k * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * val k)])`,
+  ASSERT_CONCL_TAC demont_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (m:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 x m z k pc returnaddress
@@ -898,7 +923,8 @@ let BIGNUM_DEMONT_SUBROUTINE_SAFE = prove
                                 then SUBST1_TAC(SYM th) else NO_TAC) THEN
         FIRST_ASSUM ACCEPT_TAC] THEN
       (*** inner body: 0x78 -> {0x78 if j+1<k-1 else 0xa8}, index j.
-           reads m[1+j]@0x78, z[1+j]@0x7c; writes z[(1+j)-1]=z[j]@0x98. 11 steps THROUGH SUB@0xa0+CBNZ@0xa4. ***)
+           reads m[1+j]@0x78, z[1+j]@0x7c; writes z[(1+j)-1]=z[j]@0x98.
+           12 steps, through SUB@0xa0 and CBNZ@0xa4. ***)
       REWRITE_TAC[] THEN
       X_GEN_TAC `j:num` THEN STRIP_TAC THEN
       REWRITE_TAC[ENUMERATEL_ADD1] THEN
@@ -1020,10 +1046,11 @@ let BIGNUM_DEMONT_SUBROUTINE_SAFE = prove
         CONJ_TAC THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
       SUBGOAL_THEN `val(word(i + 1):int64) = i + 1` ASSUME_TAC THENL
        [IMP_REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-      (* cond-equiv in BOTH num-k (for the WHILE-exit PC conjunct) and val(word k) (for the carried-witness
-         EXISTS fresh event) forms. The e2 witness `f_ev_cmp` is applied to `word k`, so it can only emit
-         `val(word k)`; the exits/PC use num `k`. These are SEPARATE subgoals after CONJ_TAC, each gets its form.
-         (W64_GEN's num/word split — see memory safety-arm-demont-port, SESSION-3 root cause.) *)
+      (* The loop condition is needed in two forms: with the number k for the
+         exit PC conjunct of the WHILE rule, and with val(word k) for the event
+         of the carried witness, since f_ev_cmp is applied to word k (both are
+         introduced by W64_GEN_TAC). They are separate subgoals after CONJ_TAC,
+         each getting its own form. *)
       SUBGOAL_THEN `word_add (word i:int64) (word 1) = word(i + 1)` ASSUME_TAC THENL
        [CONV_TAC WORD_RULE; ALL_TAC] THEN
       SUBGOAL_THEN `(~(val(word_sub (word(i + 1):int64) (word k)) = 0) <=> i + 1 < k)` ASSUME_TAC THENL

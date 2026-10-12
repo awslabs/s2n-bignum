@@ -2088,7 +2088,7 @@ let SECP256K1_JDOUBLE_ALT_SUBROUTINE_CORRECT = time prove
    SECP256K1_JDOUBLE_ALT_CORRECT `[]` 384);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time / memory-safety property.                                   *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
@@ -2100,8 +2100,36 @@ let full_spec,public_vars = mk_safety_spec
     SECP256K1_JDOUBLE_ALT_CORRECT
     SECP256K1_JDOUBLE_ALT_EXEC;;
 
-let SECP256K1_JDOUBLE_ALT_SAFE = time prove(full_spec,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+let SECP256K1_JDOUBLE_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,384))
+           [word pc,2852; p1,96; p3,96] /\
+           nonoverlapping (p3,96) (word pc,2852)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) secp256k1_jdouble_alt_mc /\
+                    read PC s = word (pc + 4) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 2844) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,96; p3,96; stackpointer,384]
+                         [p3,96; stackpointer,384]))
+               (MAYCHANGE
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,96); memory :> bytes (stackpointer,384)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SECP256K1_JDOUBLE_ALT_EXEC);;
 
 let SECP256K1_JDOUBLE_ALT_SUBROUTINE_SAFE = time prove
