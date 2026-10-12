@@ -97,21 +97,23 @@ let gen_mk_safety_spec
      max(a,b), it may use parentheses and the binary operators + - * and /
      (as DIV), with the precedences and left associativity of C. *)
   let rec elemsz_to_hol (s:string): term =
+    let s = String.trim s in
     let s = if starts_with ">=" s
-      then String.sub s 2 (String.length s - 2) else s in
+      then String.trim (String.sub s 2 (String.length s - 2)) else s in
     let l = String.length s in
 
-    (* The index of the last of the operators ops outside parentheses *)
-    let rec find_op ops i depth =
-      if i < 0 then None else
-      match String.get s i with
-      | ')' -> find_op ops (i - 1) (depth + 1)
-      | '(' -> find_op ops (i - 1) (depth - 1)
-      | c -> if depth = 0 && mem c ops then Some i
-             else find_op ops (i - 1) depth in
+    (* The index of the last of the characters cs in str outside parentheses *)
+    let find_op (str:string) cs =
+      let rec go i depth =
+        if i < 0 then None else
+        match String.get str i with
+        | ')' -> go (i - 1) (depth + 1)
+        | '(' -> go (i - 1) (depth - 1)
+        | c -> if depth = 0 && mem c cs then Some i else go (i - 1) depth in
+      go (String.length str - 1) 0 in
 
-    let op_idx = match find_op ['+';'-'] (l - 1) 0 with
-      | None -> find_op ['*';'/'] (l - 1) 0
+    let op_idx = match find_op s ['+';'-'] with
+      | None -> find_op s ['*';'/']
       | idx -> idx in
 
     match op_idx with
@@ -126,10 +128,13 @@ let gen_mk_safety_spec
      if l > 2 && String.get s 0 = '(' && String.get s (l - 1) = ')' then
        elemsz_to_hol (String.sub s 1 (l - 2))
      else if starts_with "max(" s && l > 5 && String.get s (l - 1) = ')' then
-       (match String.split_on_char ',' (String.sub s 4 (l - 5)) with
-        | [a;b] -> mk_binary "MAX"
-            (elemsz_to_hol (String.trim a), elemsz_to_hol (String.trim b))
-        | _ -> failwith ("elemsz_to_hol: cannot parse " ^ s))
+       let args = String.sub s 4 (l - 5) in
+       (match find_op args [','] with
+        | Some i ->
+          let a = String.sub args 0 i
+          and b = String.sub args (i + 1) (String.length args - i - 1) in
+          mk_binary "MAX" (elemsz_to_hol a, elemsz_to_hol b)
+        | None -> failwith ("elemsz_to_hol: cannot parse " ^ s))
      else
      (try mk_small_numeral (int_of_string s)
       with Failure _ ->
