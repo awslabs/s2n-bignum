@@ -57,11 +57,21 @@ let mk_noibt_subroutine_safe_spec
   let new_uvs =
     if already_has_stackptr then s_uvs @ [retaddr]
     else s_uvs @ [stackptr;retaddr] in
+  (* drop the assumptions about variables that the SAFE theorem does not have,
+     as mk_safety_spec does *)
+  let new_assum =
+    match filter (fun c -> subset (intersect (frees c) uvs) new_uvs)
+                 (conjuncts new_assum) with
+    | [] -> `T`
+    | l -> list_mk_conj l in
 
   let safe_ensures =
     let sbody_noq = snd (strip_forall sbody) in
     if is_imp sbody_noq then snd (dest_imp sbody_noq) else sbody_noq in
   let ensures_const,(x86_const::pre::post::_) = strip_comb safe_ensures in
+  (* the state variables of the SAFE pre/postconditions, which also appear in
+     pre_read_events and post_e2_pred; those of the CORRECT may differ (s') *)
+  let pre_sv = bndvar pre and post_sv = bndvar post in
   let pre_read_events::_ = rev (conjuncts (snd (dest_abs pre))) in
   let post_e2_pred::_ = rev (conjuncts (snd (dest_abs post))) in
   (* post_e2_pred is:

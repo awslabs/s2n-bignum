@@ -288,8 +288,14 @@ let gen_mk_safety_spec
       in
     let body = list_mk_icomb "ensures"
         [arch_const;precond;postcond;maychanges] in
-    if fnspec_globalasms = `true` then body
-    else mk_imp(fnspec_globalasms,body) in
+    (* Drop the assumptions that only constrain variables the safety property
+       does not mention, such as a < n for the input values a and n *)
+    let asms = filter (fun c ->
+        let vs = intersect (frees c) fnspec_quants in
+        vs = [] || intersect vs (frees body) <> [])
+      (conjuncts fnspec_globalasms) in
+    if fnspec_globalasms = `true` || asms = [] then body
+    else mk_imp(list_mk_conj asms,body) in
   let the_e_var = mk_var("e", `:(uarch_event)list`) in
   let fnspec_quants_filtered =
     let fvars = frees spec_without_quantifiers in

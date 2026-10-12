@@ -355,33 +355,24 @@ let modadd_full_spec,modadd_public_vars = mk_safety_spec
    Used to align the recorded EventJump targets of already-processed loops
    with the i+1<k form produced by ENSURES_EVENTS_WHILE_UP2_TAC. *)
 
-let MODADD_JUMPC = ARITH_RULE `~(k - (i + 1) = 0) <=> i + 1 < k`;;
+let BIGNUM_MODADD_JUMPC = ARITH_RULE `~(k - (i + 1) = 0) <=> i + 1 < k`;;
 
-(* Custom safety-property discharge for the later loops: DISCHARGE_SAFETY_PROPERTY_TAC
-   inlined, with a canonicalization inserted once the trace is fully concrete (after
-   FULL_UNIFY_F_EVENTS_TAC) but before the memaccess-inbounds discharge.  The earlier
-   loops' back-branch EventJumps are recorded by ENSURES_EVENTS_WHILE_UP2_TAC as an
-   applied lambda carrying `val(word k)`; beta-reducing then rewriting `val(word k) = k`
-   (supplied as vwk) and MODADD_JUMPC brings them into the same `i + 1 < k` form as the
-   freshly simulated head, so DISCHARGE_MEMACCESS_INBOUNDS_TAC can match. *)
+(* Discharge for the later loops, which first canonicalizes the (concrete)
+   trace in both the goal and the memaccess assumptions. The earlier loops'
+   back-branch EventJumps are recorded by ENSURES_EVENTS_WHILE_UP2_TAC as an
+   applied lambda carrying `val(word k)`; beta-reducing, then rewriting
+   `val(word k) = k` (supplied as vwk, also under the ENUMERATEL lambdas) and
+   BIGNUM_MODADD_JUMPC brings them into the same `i + 1 < k` form as the freshly
+   simulated head, so DISCHARGE_MEMACCESS_INBOUNDS_TAC can match them. *)
 
-let DISCHARGE_MODADD_TAC vwk =
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  W (fun (asl,w) ->
-    (if is_conj w then (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ])
-     else ALL_TAC) THEN
-    (* Canonicalize the (concrete) trace in BOTH goal and the memaccess assumptions:
-       beta-reduce the applied loop lambdas, rewrite val(word k)=k (also under the
-       ENUMERATEL loop lambdas via a depth conv), reduce the head's word_sub, then
-       normalize every back-branch jump condition to the i+1<k form. *)
-    CONV_TAC(TOP_DEPTH_CONV GEN_BETA_CONV) THEN
+let BIGNUM_MODADD_DISCHARGE_TAC vwk =
+  GEN_DISCHARGE_SAFETY_PROPERTY_TAC
+   (CONV_TAC(TOP_DEPTH_CONV GEN_BETA_CONV) THEN
     RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV GEN_BETA_CONV)) THEN
     CONV_TAC(TOP_DEPTH_CONV(REWR_CONV vwk)) THEN
     RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV(REWR_CONV vwk))) THEN
-    CONV_TAC(TOP_DEPTH_CONV(REWR_CONV MODADD_JUMPC)) THEN
-    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV(REWR_CONV MODADD_JUMPC))) THEN
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+    CONV_TAC(TOP_DEPTH_CONV(REWR_CONV BIGNUM_MODADD_JUMPC)) THEN
+    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV(REWR_CONV BIGNUM_MODADD_JUMPC))));;
 
 (* The function skips all three loops to the return when k = 0; otherwise it
    runs three sequential k-iteration loops (add, compare, masked subtract).
@@ -390,12 +381,12 @@ let DISCHARGE_MODADD_TAC vwk =
 
 let BIGNUM_MODADD_SAFE_K0 = prove
  (`exists f_events.
-       forall e k z x y m a b n pc returnaddress.
+       forall e k z x y m pc returnaddress.
            nonoverlapping (word pc,128) (z,8 * val k) /\
            nonoverlapping (m,8 * val k) (z,8 * val k) /\
            (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k)) /\
            (y = z \/ nonoverlapping (y,8 * val k) (z,8 * val k)) /\
-           a < n /\ b < n /\ val k = 0
+           val k = 0
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc) bignum_modadd_mc /\
                     read PC s = word pc /\ read X30 s = returnaddress /\
@@ -412,7 +403,7 @@ let BIGNUM_MODADD_SAFE_K0 = prove
       f_ev_k0 x y m z k pc returnaddress :(uarch_event) list` THEN
   REPEAT META_EXISTS_TAC THEN X_GEN_TAC `e:(uarch_event)list` THEN
   W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`;`x:int64`;`y:int64`;`m:int64`] THEN
-  MAP_EVERY X_GEN_TAC [`a:num`;`b:num`;`n:num`;`pc:num`;`returnaddress:int64`] THEN
+  MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
               fst BIGNUM_MODADD_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -423,12 +414,12 @@ let BIGNUM_MODADD_SAFE_K0 = prove
 
 let BIGNUM_MODADD_SAFE_KGT = prove
  (`exists f_events.
-       forall e k z x y m a b n pc returnaddress.
+       forall e k z x y m pc returnaddress.
            nonoverlapping (word pc,128) (z,8 * val k) /\
            nonoverlapping (m,8 * val k) (z,8 * val k) /\
            (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k)) /\
            (y = z \/ nonoverlapping (y,8 * val k) (z,8 * val k)) /\
-           a < n /\ b < n /\ ~(val k = 0)
+           ~(val k = 0)
            ==> ensures arm
                (\s. aligned_bytes_loaded s (word pc) bignum_modadd_mc /\
                     read PC s = word pc /\ read X30 s = returnaddress /\
@@ -453,7 +444,7 @@ let BIGNUM_MODADD_SAFE_KGT = prove
         (f_ev_begin x y m z k pc returnaddress) :(uarch_event) list` THEN
   REPEAT META_EXISTS_TAC THEN X_GEN_TAC `e:(uarch_event)list` THEN
   W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`;`x:int64`;`y:int64`;`m:int64`] THEN
-  MAP_EVERY X_GEN_TAC [`a:num`;`b:num`;`n:num`;`pc:num`;`returnaddress:int64`] THEN
+  MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
               fst BIGNUM_MODADD_EXEC] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -512,7 +503,7 @@ let BIGNUM_MODADD_SAFE_KGT = prove
     REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_MODADD_EXEC (1--3) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[MODADD_JUMPC]) THEN REWRITE_TAC[MODADD_JUMPC] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[BIGNUM_MODADD_JUMPC]) THEN REWRITE_TAC[BIGNUM_MODADD_JUMPC] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     SUBGOAL_THEN `i:num < k` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -532,7 +523,7 @@ let BIGNUM_MODADD_SAFE_KGT = prove
      [REWRITE_TAC[ARITH_RULE `k - (i + 1) = 0 <=> ~(i + 1 < k)`] THEN
       COND_CASES_TAC THEN ASM_REWRITE_TAC[];
       REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`] THEN CONV_TAC WORD_RULE;
-      DISCHARGE_MODADD_TAC (ASSUME `val(word k:int64) = k`)];
+      BIGNUM_MODADD_DISCHARGE_TAC (ASSUME `val(word k:int64) = k`)];
     ALL_TAC] THEN
   REWRITE_TAC[] THEN GEN_REWRITE_TAC (ONCE_DEPTH_CONV) [GSYM APPEND_ASSOC] THEN
   (* subloop: pc+0x5c .. pc+0x7c (preceded by 4-instr glue), then final RET *)
@@ -545,7 +536,7 @@ let BIGNUM_MODADD_SAFE_KGT = prove
     REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_MODADD_EXEC (1--4) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[MODADD_JUMPC]) THEN REWRITE_TAC[MODADD_JUMPC] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[BIGNUM_MODADD_JUMPC]) THEN REWRITE_TAC[BIGNUM_MODADD_JUMPC] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
     SUBGOAL_THEN `i:num < k` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -565,17 +556,39 @@ let BIGNUM_MODADD_SAFE_KGT = prove
      [REWRITE_TAC[ARITH_RULE `k - (i + 1) = 0 <=> ~(i + 1 < k)`] THEN
       COND_CASES_TAC THEN ASM_REWRITE_TAC[];
       REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`] THEN CONV_TAC WORD_RULE;
-      DISCHARGE_MODADD_TAC (ASSUME `val(word k:int64) = k`)];
+      BIGNUM_MODADD_DISCHARGE_TAC (ASSUME `val(word k:int64) = k`)];
     REWRITE_TAC[] THEN
     ASM_SIMP_TAC[ARITH_RULE `~(k <= 0) ==> k - k = 0`] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_MODADD_EXEC (1--1) THEN
     SUBGOAL_THEN `val(word k:int64) = k` ASSUME_TAC THENL
      [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-    DISCHARGE_MODADD_TAC (ASSUME `val(word k:int64) = k`)]);;
+    BIGNUM_MODADD_DISCHARGE_TAC (ASSUME `val(word k:int64) = k`)]);;
 
 let BIGNUM_MODADD_SUBROUTINE_SAFE = prove
- (modadd_full_spec,
+ (`exists f_events.
+       forall e k z x y m pc returnaddress.
+           nonoverlapping (word pc,128) (z,8 * val k) /\
+           nonoverlapping (m,8 * val k) (z,8 * val k) /\
+           (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k)) /\
+           (y = z \/ nonoverlapping (y,8 * val k) (z,8 * val k))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_modadd_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; x; y; m] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y m z k pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val k * 8; y,val k * 8; m,val k * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC modadd_full_spec THEN
   X_CHOOSE_TAC
     `fk0:int64->int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_MODADD_SAFE_K0 THEN
@@ -588,13 +601,13 @@ let BIGNUM_MODADD_SUBROUTINE_SAFE = prove
        else fkg x y m z k pc returnaddress):(uarch_event)list` THEN
   MAP_EVERY X_GEN_TAC
    [`e:(uarch_event)list`;`k:int64`;`z:int64`;`x:int64`;`y:int64`;`m:int64`;
-    `a:num`;`b:num`;`n:num`;`pc:num`;`returnaddress:int64`] THEN
+    `pc:num`;`returnaddress:int64`] THEN
   DISCH_TAC THEN
   ASM_CASES_TAC `val(k:int64) = 0` THEN ASM_REWRITE_TAC[] THENL
    [FIRST_X_ASSUM(fun th ->
       MP_TAC(SPECL
         [`e:(uarch_event)list`;`k:int64`;`z:int64`;`x:int64`;`y:int64`;`m:int64`;
-         `a:num`;`b:num`;`n:num`;`pc:num`;`returnaddress:int64`]
+         `pc:num`;`returnaddress:int64`]
         (check(fun th -> free_in
           `fk0:int64->int64->int64->int64->int64->num->int64->(uarch_event)list`
           (concl th)) th))) THEN
@@ -602,7 +615,7 @@ let BIGNUM_MODADD_SUBROUTINE_SAFE = prove
     FIRST_X_ASSUM(fun th ->
       MP_TAC(SPECL
         [`e:(uarch_event)list`;`k:int64`;`z:int64`;`x:int64`;`y:int64`;`m:int64`;
-         `a:num`;`b:num`;`n:num`;`pc:num`;`returnaddress:int64`]
+         `pc:num`;`returnaddress:int64`]
         (check(fun th -> free_in
           `fkg:int64->int64->int64->int64->int64->num->int64->(uarch_event)list`
           (concl th)) th))) THEN

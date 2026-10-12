@@ -294,12 +294,11 @@ let full_spec,public_vars = mk_safety_spec
 
 let BIGNUM_MODSUB_SUBROUTINE_SAFE = time prove
  (`exists f_events.
-       forall e k z x y m a b n pc returnaddress.
+       forall e k z x y m pc returnaddress.
            nonoverlapping (word pc,88) (z,8 * val k) /\
            nonoverlapping (m,8 * val k) (z,8 * val k) /\
            (x = z \/ nonoverlapping (x,8 * val k) (z,8 * val k)) /\
-           (y = z \/ nonoverlapping (y,8 * val k) (z,8 * val k)) /\
-           a < n /\ b < n
+           (y = z \/ nonoverlapping (y,8 * val k) (z,8 * val k))
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc) bignum_modsub_mc /\
@@ -336,8 +335,8 @@ let BIGNUM_MODSUB_SUBROUTINE_SAFE = time prove
   REPEAT META_EXISTS_TAC THEN
   STRIP_TAC (* event e *) THEN
   W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`] THEN
-  MAP_EVERY X_GEN_TAC [`a:num`; `b:num`; `n:num`; `pc:num`] THEN GEN_TAC THEN
+  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`; `pc:num`] THEN
+  GEN_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ASM_CASES_TAC `k = 0` THENL
