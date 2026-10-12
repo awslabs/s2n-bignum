@@ -905,73 +905,44 @@ let BIGNUM_AMONTREDC_SUBROUTINE_CORRECT = time prove
     BIGNUM_AMONTREDC_EXEC BIGNUM_AMONTREDC_CORRECT);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory-safety proof.                                     *)
-(* k=0/k=1 arms (k=1 skips the inner loop via CBZ) and general k>=2:          *)
-(* prologue ++ 3-way buffer-init (copy MIN(k,r) / zero-fill) ++ (p=0: RET |   *)
-(* main nest: outer UP(p) with single inner UP(k-1), then the masked-subtract *)
-(* loop). Ported from bignum_montredc.ml (no compare loop; p=0 skips to RET). *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+(* The main loop runs p times, so p is public as well as the sizes. *)
 
-let amontredc_full_spec0,amontredc_public_vars =
-  mk_safety_spec ~keep_maychanges:false
+let amontredc_full_spec,amontredc_public_vars =
+  mk_safety_spec ~extra_public_vars:[`p:int64`] ~keep_maychanges:false
     (assoc "bignum_amontredc" subroutine_signatures)
     BIGNUM_AMONTREDC_SUBROUTINE_CORRECT BIGNUM_AMONTREDC_EXEC;;
 
-(* insert p:int64 into f_events args before pc *)
-let amontredc_full_spec =
-  let fev,body = dest_exists amontredc_full_spec0 in
-  let app = find_term (fun t -> is_comb t && fst(strip_comb t) = fev) body in
-  let _,args = strip_comb app in
-  let rec insert_before_pc l = match l with
-    | (a::rest) when is_var a && name_of a = "pc" -> `p:int64`::a::rest
-    | (a::rest) -> a::insert_before_pc rest
-    | [] -> failwith "no pc" in
-  let args' = insert_before_pc args in
-  let newty = itlist mk_fun_ty (map type_of args') `:(uarch_event)list` in
-  let fev' = mk_var("f_events",newty) in
-  let app' = list_mk_comb(fev',args') in
-  let rec replace t =
-    if t = app then app'
-    else if is_comb t then mk_comb(replace(rator t), replace(rand t))
-    else if is_abs t then let v,b = dest_abs t in mk_abs(v, replace b)
-    else t in
-  mk_exists(fev', replace body);;
+(* The trace witness in the proof follows the control flow of the code, which
+   is that of bignum_montredc without the compare loop:
+   - k = 0: CBZ X0 at 0x00 jumps to the RET at 0x130.
+   - Prologue 0x00-0x44 and buffer initialization 0x48-0x70 as in
+     bignum_montredc: r = 0 zero-fills k words (padA), k <= r copies k words
+     (copyB) and 0 < r < k copies r words and zero-fills k - r words (copyC,
+     padC).
+   - Main nest: CBZ X5 at 0x78 jumps to the RET at 0x130 if p = 0; else the
+     outer loop 0x80-0x104 runs p times. Its body is oprol 0x80-0xa0, whose
+     CBZ X13 at 0xa0 skips the inner loop if k = 1, the inner loop 0xa4-0xd0
+     (12 instructions) over k - 1 words and oepil 0xd4-0x104, which loads
+     x[k + i] only if k + i < r (oepilL, else oepilN by the BCS at 0xe4).
+   - Correction 0x108-0x130: the mask by NEG at 0x108, NEGS at 0x10c, the
+     masked-subtract loop 0x110-0x12c over k words and the RET at 0x130.
+   The case k = 1 has its own arm, as its outer loop has no inner loop. All
+   accesses use Shiftreg_Offset X_ 3, i.e. word_shl (word i) 3 = word(8 * i). *)
 
-(* WITNESS (control-flow from decode; all branch PCs pinned):
-   k=0: CBZ@0x00 -> RET.  k=1: special (inner loop body degenerate, SUB X13=X0-1=0 CBZ@0xa0 taken).
-   general k>=2:
-    prologue 0x00->0x44 (modinv seed + CMP X2 X0 + CSEL X8=MIN(k,r) + MOV X7=0 + CBZ X8@0x44).
-    buffer-init: copy loop 0x48->0x58(BCC back to 0x48) count MIN(k,r); CMP X7 X0 BCS@0x60 skip;
-      zero-fill 0x64->0x70(BCC back 0x64) count up to k. Branches by r vs k:
-        r=0: copy skipped (CBZ X8 taken@0x44 since MIN=0), pad all k.  (padA)
-        0<r, k<=r: copy MIN=k words, then CMP X7(=k) X0(=k) BCS taken -> no pad. (copyB)
-        0<r, k>r: copy r words (MIN=r), then pad k-r. (copyC + padC)
-    main nest: MOV X14=0, CBZ X5(=p)@0x78 -> if p=0 skip to 0x108 corrective (mainskip).
-      outer WHILE p: 0x80->0x100 (BCC@0x104 back to 0x80). outer body:
-        oprol 0x80->0xa0 (LDR z[0],MAD X9,LDR m[0],MAD,UMULH,ADDS,MOV X8=1,SUB X13=X0-1,CBZ X13@0xa0).
-          For k>=2 X13=k-1 != 0 so CBZ not taken -> inner. For k=1 X13=0 CBZ taken -> skip inner (k=1 case).
-        inner WHILE_AUP 1 k: 0xa4->0xd0 (CBNZ@0xd0 back to 0xa4), body 11 instr, reduces, z[X8-1] store.
-        oepil 0xd0->0x100: ADCS,ADC X14,ADD X8=X8+X7,CMP X8 X2(=r),BCS@0xe4 skip-load (if k+i>=r),
-          else LDR x[X8],ADDS,ADC; SUB X8=X0-1,STR X10 z[X8-1=k-1],ADD X7,CMP X7 X5,BCC back.
-          cond `k+i<r` picks load-vs-skip (oepilL vs oepilN).
-    corrective 0x108->0x150:
-      cmp loop WHILE_UP k: 0x10c->0x120 (NEGS X8=0 @0x108; CBNZ@0x120 back) SBCS compare z vs m.
-      SBCS XZR X14 / CSINV X14 (mask=if borrow then -1 else 0) @0x124,0x128.
-      msub loop WHILE_UP k: 0x12c NEGS X8=0; 0x130->0x14c (CBNZ@0x14c back) AND m&mask, SBCS z-=, STR z.
-      RET@0x150.
-   addresses: all Shiftreg_Offset X_ 3 => word_shl(word idx)3 = word(8*idx); store z[X8-1]=word(8*(X8-1)).
-   NB k=1 needs its own arm (inner-skip via CBZ X13@0xa0 taken) -- witness f_ev1_* placeholder, may need
-   restructure once the k=1 straight-line length is measured by SIM. *)
+(* Discharge a leg whose postcondition trace is APPEND <new events> <carried
+   trace>, where the carried trace contains unresolved f_ev metavariables:
+   bind the f_ev of the leg with FULL_UNIFY_F_EVENTS_TAC, and split the
+   memaccess_inbounds goal with MEMACCESS_INBOUNDS_APPEND into the new
+   (concrete) part and the carried part, which is folded back to the
+   assumption about e2 after normalizing val(word k) = k and APPEND_ASSOC. *)
 
-(* Discharge a leg whose postcond e2 = APPEND <new-concrete-events> <carried>, where <carried>
-   contains unresolved f_ev metavars: bind the leg's own f_ev via FULL_UNIFY, split the memaccess
-   with MEMACCESS_INBOUNDS_APPEND into new (concrete) + carried (GSYM-folded to the e2 assumption
-   after normalizing val(word k)=k and APPEND assoc on both sides). *)
-let AMONTREDC_CARRIED_DISCHARGE_TAC =
+let BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC =
   CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN ASM_REWRITE_TAC[] THEN
   CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
@@ -991,12 +962,164 @@ let AMONTREDC_CARRIED_DISCHARGE_TAC =
       FIRST_ASSUM MATCH_ACCEPT_TAC)
      ORELSE DISCHARGE_MEMACCESS_INBOUNDS_TAC)];;
 
-(* MIN n 0 = 0, used to simplify after the substitution r := 0 in the r = 0 arm. *)
-let AMONTREDC_MIN_N0 = prove
+(* MIN n 0 = 0, used after the substitution r := 0 in the r = 0 arm. *)
+
+let BIGNUM_AMONTREDC_MIN_N0 = prove
  (`!n:num. MIN n 0 = 0`, GEN_TAC THEN REWRITE_TAC[MIN; LE] THEN ARITH_TAC);;
 
+(* The trace shape expected by ENSURES_EVENTS_WHILE_UP2_TAC for a loop with
+   empty prologue and epilogue, and the reassociation of the postcondition
+   trace after ENUMERATEL_ADD1 in a loop body. *)
+
+let BIGNUM_AMONTREDC_WHILE_WRAP = prove
+ (`!n f b:(uarch_event)list.
+     APPEND (ENUMERATEL n f) b =
+     APPEND (APPEND [] (APPEND (ENUMERATEL n f) [])) b`,
+  REWRITE_TAC[APPEND; APPEND_NIL]);;
+
+let BIGNUM_AMONTREDC_BODY_REASSOC = METIS[APPEND_ASSOC]
+  `(exists e2. P e2 /\ e2 = APPEND (APPEND fresh enumc) tail /\ Q e2) <=>
+   (exists e2. P e2 /\ e2 = APPEND fresh (APPEND enumc tail:(uarch_event)list) /\
+               Q e2)`;;
+
+(* Close a leg that adds no events, such as the empty pre- or post-leg of a
+   loop: after the rewrites ths (e.g. reducing the invariant to iteration 0),
+   simulate the steps, apply asm_tac and take the carried trace e2 as the
+   witness. *)
+
+let BIGNUM_AMONTREDC_NOEVENT_LEG_TAC (ths:thm list) (asm_tac:tactic) steps =
+  REWRITE_TAC ths THEN
+  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+    BIGNUM_AMONTREDC_EXEC steps THEN
+  asm_tac THEN
+  FIRST_ASSUM(fun th -> let c = concl th in
+    if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
+    then EXISTS_TAC(lhs c) else NO_TAC) THEN
+  ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];;
+
+let BIGNUM_AMONTREDC_PRE_LEG_TAC =
+  BIGNUM_AMONTREDC_NOEVENT_LEG_TAC
+    [SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL]
+    (ASM_REWRITE_TAC[]);;
+
+let BIGNUM_AMONTREDC_POST_LEG_TAC =
+  BIGNUM_AMONTREDC_NOEVENT_LEG_TAC [CONJUNCT1 APPEND; APPEND_NIL] ALL_TAC [];;
+
+(* Close the empty post-leg of a loop of the buffer initialization. The
+   carried assumptions are normalized to the forms in the goal and used
+   directly: rewriting with all assumptions would also expand e2 in the
+   memaccess_inbounds conjunct with the assumption e2 = ..., which the
+   carried memaccess_inbounds assumption about e2 then no longer matches. *)
+
+let BIGNUM_AMONTREDC_INIT_POST_LEG_TAC =
+  REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
+  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+    BIGNUM_AMONTREDC_EXEC [] THEN
+  RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `val(word k:int64) = k`]) THEN
+  FIRST_ASSUM(fun th -> let c = concl th in
+    if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
+    then EXISTS_TAC(lhs c) else NO_TAC) THEN
+  REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
+  CONJ_TAC THENL
+   [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE ASM_REWRITE_TAC[]; ALL_TAC] THEN
+  CONJ_TAC THENL
+   [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE
+    ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
+    FIRST_ASSUM MATCH_ACCEPT_TAC];;
+
+(* Close the leading conjuncts of a postcondition other than its trace part,
+   each with the first of the tactics tacs that applies. *)
+
+let BIGNUM_AMONTREDC_PEEL_TAC (tacs:tactic list) =
+  REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
+    then CONJ_TAC THENL [FIRST tacs; ALL_TAC]
+    else NO_TAC));;
+
+(* Prove the equivalence eq for the loop-back condition of the steps just
+   simulated by tac, and rewrite the assumptions and the goal with it. *)
+
+let BIGNUM_AMONTREDC_BACKEDGE_TAC (eq:term) (tac:tactic) =
+  SUBGOAL_THEN eq ASSUME_TAC THENL [tac; ALL_TAC] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[ASSUME eq]) THEN REWRITE_TAC[ASSUME eq];;
+
+(* The copy loop 0x48-0x58 of the buffer initialization over n = MIN k r
+   words, whose pre-leg is the prologue. *)
+
+let BIGNUM_AMONTREDC_COPY_LOOP_TAC (n:term) =
+  ENSURES_EVENTS_WHILE_UP2_TAC n `pc + 0x48` `pc + 0x5c`
+   `\j s. read X0 s = word k /\ read X1 s = z /\ read X2 s = word r /\ read X3 s = x /\
+          read X4 s = m /\ read X5 s = word p /\ read X7 s = word j /\
+          read X8 s = word(MIN k r) /\ read X30 s = returnaddress` THEN
+  REWRITE_TAC[LT_NZ] THEN
+  CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL
+   [(* pre-leg: the prologue (17 steps) and CBZ X8 not taken *)
+    REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
+    SUBGOAL_THEN `~(val(word(MIN k r):int64) = 0)` ASSUME_TAC THENL
+     [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+      BIGNUM_AMONTREDC_EXEC (1--18) THEN
+    ASM_REWRITE_TAC[] THEN
+    CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+    BIGNUM_AMONTREDC_PEEL_TAC
+      [REFL_TAC; CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL
+   [(* body: LDR x[j], STR z[j], ADD, CMP, BCC (5 steps) *)
+    X_GEN_TAC `j:num` THEN STRIP_TAC THEN
+    SUBGOAL_THEN `j:num < k /\ j < r` STRIP_ASSUME_TAC THENL
+     [CONJ_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `val(word j:int64) = j` ASSUME_TAC THENL
+     [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `word_shl (word j:int64) 3 = word(8 * j)` ASSUME_TAC THENL
+     [REWRITE_TAC[WORD_SHL_WORD] THEN REWRITE_TAC[ARITH_RULE `2 EXP 3 * m = 8 * m`] THEN
+      CONV_TAC WORD_RULE; ALL_TAC] THEN
+    SUBGOAL_THEN `8 * j + 8 <= 8 * k /\ 8 * j + 8 <= 8 * r` STRIP_ASSUME_TAC THENL
+     [CONJ_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
+      BIGNUM_AMONTREDC_EXEC (1--5) THEN
+    SUBGOAL_THEN `val(word_add (word j) (word 1):int64) = j + 1` ASSUME_TAC THENL
+     [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD_1; DIMINDEX_64] THEN
+      IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    SUBGOAL_THEN `val(word(MIN k r):int64) = MIN k r` ASSUME_TAC THENL
+     [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+    BIGNUM_AMONTREDC_PEEL_TAC
+      [REFL_TAC;
+       ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN REWRITE_TAC[];
+       CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]] THEN
+    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    BIGNUM_AMONTREDC_INIT_POST_LEG_TAC];;
+
 let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
- (amontredc_full_spec,
+ (`exists f_events.
+       forall e k z r x m p pc returnaddress.
+           nonoverlapping (word pc,308) (z,8 * val k) /\
+           nonoverlapping (m,8 * val k) (z,8 * val k) /\
+           (x = z \/ nonoverlapping (x,8 * val r) (z,8 * val k)) /\
+           val p < 2 EXP 61 /\
+           val r < 2 EXP 61
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_amontredc_mc /\
+                    read PC s = word pc /\
+                    read X30 s = returnaddress /\
+                    C_ARGUMENTS [k; z; r; x; m; p] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = returnaddress /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x m z k r p pc returnaddress /\
+                         memaccess_inbounds e2
+                         [x,val r * 8; m,val k * 8; z,val k * 8]
+                         [z,val k * 8]))
+               (\s s'. true)`,
+  ASSERT_CONCL_TAC amontredc_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (m:int64) (z:int64) (k:int64) (r:int64) (p:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 x m z k r p pc returnaddress
@@ -1051,7 +1174,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
-  (*** k=0: CBZ@0x00 -> RET@0x150. 2 steps ***)
+  (*** k=0: CBZ@0x00 -> RET@0x130. 2 steps ***)
   ASM_CASES_TAC `k = 0` THENL
    [ASM_REWRITE_TAC[] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
@@ -1107,7 +1230,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
       ASM_REWRITE_TAC[] THEN
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_AMONTREDC_EXEC (1--3) THEN
-      AMONTREDC_CARRIED_DISCHARGE_TAC;
+      BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
       ALL_TAC] THEN
     ASM_REWRITE_TAC[] THEN
     SUBGOAL_THEN `~(val(word p:int64) = 0)` ASSUME_TAC THENL
@@ -1130,12 +1253,11 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
       CONJ_TAC THENL
        [ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
           BIGNUM_AMONTREDC_EXEC (1--3) THEN
-        AMONTREDC_CARRIED_DISCHARGE_TAC;
+        BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
         ALL_TAC] THEN
       (* outer WHILE_UP2 p 0x80/0x108 with straight-line body *)
       GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-        [MESON[APPEND; APPEND_NIL]
-          `APPEND (ENUMERATEL n f) b = APPEND (APPEND [] (APPEND (ENUMERATEL n f) [])) b`] THEN
+        [BIGNUM_AMONTREDC_WHILE_WRAP] THEN
       ENSURES_EVENTS_WHILE_UP2_TAC `p:num` `pc + 0x80` `pc + 0x108`
        `\i s. read X0 s = word 1 /\ read X1 s = z /\ read X2 s = word r /\ read X3 s = x /\
               read X4 s = m /\ read X5 s = word p /\ read X7 s = word i /\ read X30 s = returnaddress` THEN
@@ -1143,23 +1265,14 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
       CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
       CONJ_TAC THENL
        [(* pre-leg 0-step *)
-        REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-        ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-          BIGNUM_AMONTREDC_EXEC [] THEN
-        ASM_REWRITE_TAC[] THEN
-        FIRST_ASSUM(fun th -> let c = concl th in
-          if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-          then EXISTS_TAC(lhs c) else NO_TAC) THEN
-        ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
+        BIGNUM_AMONTREDC_PRE_LEG_TAC [];
         ALL_TAC] THEN
       CONJ_TAC THENL
        [(* body i: oprol 9 (CBZ taken) + oepil 13/10 by 1+i<r *)
         X_GEN_TAC `i:num` THEN STRIP_TAC THEN
         REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
         REWRITE_TAC[ENUMERATEL_ADD1] THEN
-        REWRITE_TAC[METIS[APPEND_ASSOC]
-            `(exists e2. P e2 /\ e2 = APPEND (APPEND fresh enumc) tail /\ Q e2)
-             <=> (exists e2. P e2 /\ e2 = APPEND fresh (APPEND enumc tail) /\ Q e2)`] THEN
+        REWRITE_TAC[BIGNUM_AMONTREDC_BODY_REASSOC] THEN
         SUBGOAL_THEN `1 + i < 2 EXP 64 /\ val(word i:int64) = i /\ val(word(1 + i):int64) = 1 + i`
         STRIP_ASSUME_TAC THENL
          [REPEAT CONJ_TAC THEN TRY (IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT]) THEN
@@ -1186,16 +1299,11 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
           SUBGOAL_THEN `~(r <= 1 + i)` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
           ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
             BIGNUM_AMONTREDC_EXEC (1--22) THEN
-          SUBGOAL_THEN `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)` ASSUME_TAC THENL
-           [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-          RULE_ASSUM_TAC(REWRITE_RULE[ASSUME
-            `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`]) THEN
-          REWRITE_TAC[ASSUME
-            `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`] THEN
-          REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-            then CONJ_TAC THENL
-              [FIRST[COND_CASES_TAC THEN REWRITE_TAC[]; CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]]; ALL_TAC]
-            else NO_TAC)) THEN
+          BIGNUM_AMONTREDC_BACKEDGE_TAC
+            `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`
+            (ASM_REWRITE_TAC[]) THEN
+          BIGNUM_AMONTREDC_PEEL_TAC
+            [COND_CASES_TAC THEN REWRITE_TAC[]; CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]] THEN
           DISCHARGE_SAFETY_PROPERTY_TAC;
           (* bodyN: skip load. 19 steps *)
           ASM_REWRITE_TAC[] THEN
@@ -1204,25 +1312,14 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
           SUBGOAL_THEN `r <= 1 + i` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
           ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
             BIGNUM_AMONTREDC_EXEC (1--19) THEN
-          SUBGOAL_THEN `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)` ASSUME_TAC THENL
-           [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-          RULE_ASSUM_TAC(REWRITE_RULE[ASSUME
-            `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`]) THEN
-          REWRITE_TAC[ASSUME
-            `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`] THEN
-          REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-            then CONJ_TAC THENL
-              [FIRST[COND_CASES_TAC THEN REWRITE_TAC[]; CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]]; ALL_TAC]
-            else NO_TAC)) THEN
+          BIGNUM_AMONTREDC_BACKEDGE_TAC
+            `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`
+            (ASM_REWRITE_TAC[]) THEN
+          BIGNUM_AMONTREDC_PEEL_TAC
+            [COND_CASES_TAC THEN REWRITE_TAC[]; CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]] THEN
           DISCHARGE_SAFETY_PROPERTY_TAC];
         (* post-leg 0-step at 0x108 *)
-        REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-        ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-          BIGNUM_AMONTREDC_EXEC [] THEN
-        FIRST_ASSUM(fun th -> let c = concl th in
-          if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-          then EXISTS_TAC(lhs c) else NO_TAC) THEN
-        ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]];
+        BIGNUM_AMONTREDC_POST_LEG_TAC];
       ALL_TAC] THEN
     (* tail: corrective k=1 straight-line: NEG, NEGS, msub-iter (8), RET = 11 steps. *)
     SUBGOAL_THEN `word_shl (word 0:int64) 3 = word(8 * 0)` ASSUME_TAC THENL
@@ -1235,7 +1332,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
     SUBGOAL_THEN `val(word 0:int64) = 0` ASSUME_TAC THENL [REWRITE_TAC[VAL_WORD_0]; ALL_TAC] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTREDC_EXEC (1--11) THEN
-    AMONTREDC_CARRIED_DISCHARGE_TAC;
+    BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
     ALL_TAC] THEN
 
   (*** general k>=2 ***)
@@ -1260,7 +1357,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
          discharging, as in the bignum_copy pad loop. *)
       UNDISCH_THEN `(if k <= r then word k else word r):int64 = word(MIN k r)` (K ALL_TAC) THEN
       SUBST1_TAC(ASSUME `r = 0`) THEN
-      REWRITE_TAC[AMONTREDC_MIN_N0] THEN RULE_ASSUM_TAC(REWRITE_RULE[AMONTREDC_MIN_N0]) THEN
+      REWRITE_TAC[BIGNUM_AMONTREDC_MIN_N0] THEN RULE_ASSUM_TAC(REWRITE_RULE[BIGNUM_AMONTREDC_MIN_N0]) THEN
       ASM_REWRITE_TAC[] THEN
       SUBGOAL_THEN `~(k <= 0) /\ val(word 0:int64) = 0` STRIP_ASSUME_TAC THENL
        [REWRITE_TAC[VAL_WORD_0] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -1302,39 +1399,15 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
          [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD_1; DIMINDEX_64] THEN
           IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
         SUBGOAL_THEN `val(word k:int64) = k` ASSUME_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-        REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-          then CONJ_TAC THENL
-            [FIRST[REFL_TAC;
-                   ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN REWRITE_TAC[];
-                   CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]]; ALL_TAC]
-          else NO_TAC)) THEN
+        BIGNUM_AMONTREDC_PEEL_TAC
+          [REFL_TAC;
+           ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN REWRITE_TAC[];
+           CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]] THEN
         RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
         RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
         DISCHARGE_SAFETY_PROPERTY_TAC;
-        (* padA post-leg: 0-step at 0x74. Degenerate: EXISTS the carried e2 (the VAR), then close
-           the three conjuncts SEPARATELY. Blanket ASM_REWRITE must NOT touch the memaccess
-           conjunct: it uses hyp `e2 = ...` to EXPAND e2 there, after which the carried
-           `memaccess_inbounds e2 ...` assumption (on the VAR) can no longer fire — leaving a
-           residual goal that LEAKS out of this THENL branch into the r<>0 script (whose
-           `~(MIN k r = 0)` SUBGOAL under the leaked r=0 hyps produced the long-mysterious
-           `MIN k 0 = 0` SIMPLE_ARITH failure). Normalize the carried hyps (APPEND_NIL wrappers +
-           val(word k)->k) so they match the goal forms, then ACCEPT them directly. *)
-        REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-        ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-          BIGNUM_AMONTREDC_EXEC [] THEN
-        RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]) THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `val(word k:int64) = k`]) THEN
-        FIRST_ASSUM(fun th -> let c = concl th in
-          if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-          then EXISTS_TAC(lhs c) else NO_TAC) THEN
-        REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-        CONJ_TAC THENL
-         [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE ASM_REWRITE_TAC[]; ALL_TAC] THEN
-        CONJ_TAC THENL
-         [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE
-          ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
-          FIRST_ASSUM MATCH_ACCEPT_TAC]];
+        (* padA post-leg: 0 steps at 0x74 *)
+        BIGNUM_AMONTREDC_INIT_POST_LEG_TAC];
       ALL_TAC] THEN
     (* r != 0 *)
     ASM_REWRITE_TAC[] THEN
@@ -1361,79 +1434,12 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
             read X30 s = returnaddress` THEN
       CONJ_TAC THENL
        [(* copy loop block: pre-leg = prologue+CBZ-nt (18 steps) to 0x48, WHILE k 0x48/0x5c *)
-        ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x48` `pc + 0x5c`
-         `\j s. read X0 s = word k /\ read X1 s = z /\ read X2 s = word r /\ read X3 s = x /\
-                read X4 s = m /\ read X5 s = word p /\ read X7 s = word j /\
-                read X8 s = word(MIN k r) /\ read X30 s = returnaddress` THEN
-        REWRITE_TAC[LT_NZ] THEN
-        CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        CONJ_TAC THENL
-         [(* pre-leg: 18 steps (prologue 17 + CBZ X8 nt) to 0x48 *)
-          REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-          SUBGOAL_THEN `~(val(word(MIN k r):int64) = 0)` ASSUME_TAC THENL
-           [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-            BIGNUM_AMONTREDC_EXEC (1--18) THEN
-          ASM_REWRITE_TAC[] THEN
-          CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-          REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-            then CONJ_TAC THENL [FIRST[REFL_TAC; CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]]; ALL_TAC]
-            else NO_TAC)) THEN
-          DISCHARGE_SAFETY_PROPERTY_TAC;
-          ALL_TAC] THEN
-        CONJ_TAC THENL
-         [(* copy body: LDR x[X7],STR z[X7],ADD,CMP,BCC = 5 steps; backedge cond j+1 < MIN k r = k.
-             copy-style: NO manual peel/RULE_ASSUM; COND_RAND for PC. *)
-          X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-          SUBGOAL_THEN `j:num < k /\ j < r` STRIP_ASSUME_TAC THENL
-           [CONJ_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-          SUBGOAL_THEN `val(word j:int64) = j` ASSUME_TAC THENL
-           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-          SUBGOAL_THEN `word_shl (word j:int64) 3 = word(8 * j)` ASSUME_TAC THENL
-           [REWRITE_TAC[WORD_SHL_WORD] THEN REWRITE_TAC[ARITH_RULE `2 EXP 3 * m = 8 * m`] THEN
-            CONV_TAC WORD_RULE; ALL_TAC] THEN
-          SUBGOAL_THEN `8 * j + 8 <= 8 * k /\ 8 * j + 8 <= 8 * r` STRIP_ASSUME_TAC THENL
-           [CONJ_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-            BIGNUM_AMONTREDC_EXEC (1--5) THEN
-          SUBGOAL_THEN `val(word_add (word j) (word 1):int64) = j + 1` ASSUME_TAC THENL
-           [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD_1; DIMINDEX_64] THEN
-            IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-          SUBGOAL_THEN `val(word(MIN k r):int64) = MIN k r` ASSUME_TAC THENL
-           [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-          REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-            then CONJ_TAC THENL
-              [FIRST[REFL_TAC;
-                     ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN REWRITE_TAC[];
-                     CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]]; ALL_TAC]
-            else NO_TAC)) THEN
-          RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
-          RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
-          DISCHARGE_SAFETY_PROPERTY_TAC;
-          (* copy post-leg: 0-step at 0x5c. Normalize carried asm + close conjuncts separately
-             (blanket ASM_REWRITE[GSYM APPEND_ASSOC] on the carried ENUMERATEL loops the memaccess
-             conjunct in DISCHARGE_MEMACCESS -> Stack overflow; same fix as padA post-leg). *)
-          REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-            BIGNUM_AMONTREDC_EXEC [] THEN
-          RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
-          RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]) THEN
-          RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `val(word k:int64) = k`]) THEN
-          FIRST_ASSUM(fun th -> let c = concl th in
-            if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-            then EXISTS_TAC(lhs c) else NO_TAC) THEN
-          REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-          CONJ_TAC THENL
-           [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE ASM_REWRITE_TAC[]; ALL_TAC] THEN
-          CONJ_TAC THENL
-           [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE
-            ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
-            FIRST_ASSUM MATCH_ACCEPT_TAC]];
+        BIGNUM_AMONTREDC_COPY_LOOP_TAC `k:num`;
         ALL_TAC] THEN
       (* copyBpost: CMP X7 X0 (X7=k), BCS taken (k>=k) -> 0x74. 2 steps. *)
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_AMONTREDC_EXEC (1--2) THEN
-      AMONTREDC_CARRIED_DISCHARGE_TAC;
+      BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
       ALL_TAC] THEN
     (* copyC/padC: 0 < r < k. MIN=r. copy r then CMP/BCS nt then pad k-r. *)
     ASM_REWRITE_TAC[] THEN
@@ -1453,72 +1459,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
           read X30 s = returnaddress` THEN
     CONJ_TAC THENL
      [(* copy block: pre-leg 18 steps + copy WHILE r 0x48/0x5c *)
-      ENSURES_EVENTS_WHILE_UP2_TAC `r:num` `pc + 0x48` `pc + 0x5c`
-       `\j s. read X0 s = word k /\ read X1 s = z /\ read X2 s = word r /\ read X3 s = x /\
-              read X4 s = m /\ read X5 s = word p /\ read X7 s = word j /\
-              read X8 s = word(MIN k r) /\ read X30 s = returnaddress` THEN
-      REWRITE_TAC[LT_NZ] THEN
-      CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-      CONJ_TAC THENL
-       [REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-        SUBGOAL_THEN `~(val(word(MIN k r):int64) = 0)` ASSUME_TAC THENL
-         [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-        ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-          BIGNUM_AMONTREDC_EXEC (1--18) THEN
-        ASM_REWRITE_TAC[] THEN
-        CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-        REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-          then CONJ_TAC THENL [FIRST[REFL_TAC; CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]]; ALL_TAC]
-          else NO_TAC)) THEN
-        DISCHARGE_SAFETY_PROPERTY_TAC;
-        ALL_TAC] THEN
-      CONJ_TAC THENL
-       [(* copy body (count r): 5 steps; backedge cond j+1 < MIN k r = r.
-           copy-style: NO manual peel/RULE_ASSUM; COND_RAND for PC. *)
-        X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-        SUBGOAL_THEN `j:num < k /\ j < r` STRIP_ASSUME_TAC THENL
-         [CONJ_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        SUBGOAL_THEN `val(word j:int64) = j` ASSUME_TAC THENL
-         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        SUBGOAL_THEN `word_shl (word j:int64) 3 = word(8 * j)` ASSUME_TAC THENL
-         [REWRITE_TAC[WORD_SHL_WORD] THEN REWRITE_TAC[ARITH_RULE `2 EXP 3 * m = 8 * m`] THEN
-          CONV_TAC WORD_RULE; ALL_TAC] THEN
-        SUBGOAL_THEN `8 * j + 8 <= 8 * k /\ 8 * j + 8 <= 8 * r` STRIP_ASSUME_TAC THENL
-         [CONJ_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-          BIGNUM_AMONTREDC_EXEC (1--5) THEN
-        SUBGOAL_THEN `val(word_add (word j) (word 1):int64) = j + 1` ASSUME_TAC THENL
-         [REWRITE_TAC[VAL_WORD_ADD; VAL_WORD_1; DIMINDEX_64] THEN
-          IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        SUBGOAL_THEN `val(word(MIN k r):int64) = MIN k r` ASSUME_TAC THENL
-         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-          then CONJ_TAC THENL
-            [FIRST[REFL_TAC;
-                   ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN REWRITE_TAC[];
-                   CONV_TAC WORD_RULE; ASM_REWRITE_TAC[]]; ALL_TAC]
-          else NO_TAC)) THEN
-        RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
-        DISCHARGE_SAFETY_PROPERTY_TAC;
-        (* copy post-leg 0-step at 0x5c. Normalize carried asm + separate-conjunct close (same
-           GSYM-APPEND-ASSOC overflow fix as padA/copyB post-legs). *)
-        REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-        ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-          BIGNUM_AMONTREDC_EXEC [] THEN
-        RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]) THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `val(word k:int64) = k`]) THEN
-        FIRST_ASSUM(fun th -> let c = concl th in
-          if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-          then EXISTS_TAC(lhs c) else NO_TAC) THEN
-        REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-        CONJ_TAC THENL
-         [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE ASM_REWRITE_TAC[]; ALL_TAC] THEN
-        CONJ_TAC THENL
-         [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE
-          ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
-          FIRST_ASSUM MATCH_ACCEPT_TAC]];
+      BIGNUM_AMONTREDC_COPY_LOOP_TAC `r:num`;
       ALL_TAC] THEN
     (* padC: CMP X7 X0 BCS-nt (r<k) 2 steps = padCpre, then pad WHILE (k-r) 0x64/0x74 *)
     GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
@@ -1536,7 +1477,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
        [ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_AMONTREDC_EXEC (1--2) THEN
-      AMONTREDC_CARRIED_DISCHARGE_TAC;
+      BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
       ALL_TAC] THEN
     (* pad WHILE (k-r) 0x64/0x74, X7 = r + j *)
     ENSURES_EVENTS_WHILE_UP2_TAC `k - r:num` `pc + 0x64` `pc + 0x74`
@@ -1547,18 +1488,13 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
     CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
     CONJ_TAC THENL
      [(* pre-leg 0-step: X7 = word r = word(r+0) *)
-      REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        BIGNUM_AMONTREDC_EXEC [] THEN
-      ASM_REWRITE_TAC[] THEN
-      FIRST_ASSUM(fun th -> let c = concl th in
-        if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-        then EXISTS_TAC(lhs c) else NO_TAC) THEN
-      ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
+      BIGNUM_AMONTREDC_NOEVENT_LEG_TAC
+        [SUB_0; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL]
+        (ASM_REWRITE_TAC[]) [];
       ALL_TAC] THEN
     CONJ_TAC THENL
-     [(* padC body: STR z[r+j],ADD,CMP,BCC 4 steps; cond r+j+1 < k.
-         copy-style: NO manual peel/RULE_ASSUM; COND_RAND for PC; keep r+(j+1) reassoc for X7. *)
+     [(* padC body: STR z[r+j], ADD, CMP, BCC (4 steps); loop-back condition
+           r + j + 1 < k, with X7 = word((r + j) + 1). *)
       X_GEN_TAC `j:num` THEN STRIP_TAC THEN
       SUBGOAL_THEN `r + j < k /\ val(word(r + j):int64) = r + j` STRIP_ASSUME_TAC THENL
        [CONJ_TAC THENL
@@ -1578,34 +1514,16 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
       (* each closer all-or-nothing (THEN NO_TAC): a closer that only REWRITES still "succeeds"
          inside FIRST, leaving a residual conjunct that then hits DISCHARGE's dest_exists. The PC
          closer needs the backedge-cond equivalence (r+j)+1 < k <=> j+1 < k-r (as bignum_copy). *)
-      REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-        then CONJ_TAC THENL
-          [FIRST[REFL_TAC;
-                 (ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN
-                  REWRITE_TAC[ARITH_RULE `(r + j) + 1 < k <=> j + 1 < k - r`] THEN NO_TAC);
-                 CONV_TAC WORD_RULE; (ASM_REWRITE_TAC[] THEN NO_TAC)]; ALL_TAC]
-        else NO_TAC)) THEN
+      BIGNUM_AMONTREDC_PEEL_TAC
+        [REFL_TAC;
+         (ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN
+         REWRITE_TAC[ARITH_RULE `(r + j) + 1 < k <=> j + 1 < k - r`] THEN NO_TAC);
+         CONV_TAC WORD_RULE; (ASM_REWRITE_TAC[] THEN NO_TAC)] THEN
       RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
       RULE_ASSUM_TAC(REWRITE_RULE[GSYM APPEND_ASSOC]) THEN
       DISCHARGE_SAFETY_PROPERTY_TAC;
-      (* padC post-leg 0-step at 0x74. Normalize carried asm + separate-conjunct close (same
-         GSYM-APPEND-ASSOC overflow fix as padA/copyB/copyC post-legs). *)
-      REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        BIGNUM_AMONTREDC_EXEC [] THEN
-      RULE_ASSUM_TAC(CONV_RULE(TRY_CONV(RAND_CONV(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV)))) THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]) THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[ASSUME `val(word k:int64) = k`]) THEN
-      FIRST_ASSUM(fun th -> let c = concl th in
-        if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-        then EXISTS_TAC(lhs c) else NO_TAC) THEN
-      REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-      CONJ_TAC THENL
-       [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE ASM_REWRITE_TAC[]; ALL_TAC] THEN
-      CONJ_TAC THENL
-       [FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE
-        ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
-        FIRST_ASSUM MATCH_ACCEPT_TAC]];
+      (* padC post-leg: 0 steps at 0x74 *)
+      BIGNUM_AMONTREDC_INIT_POST_LEG_TAC];
     ALL_TAC] THEN
   SUBGOAL_THEN `k < 2 EXP 61` ASSUME_TAC THENL
    [UNDISCH_TAC `8 * k < 2 EXP 64` THEN ARITH_TAC; ALL_TAC] THEN
@@ -1614,7 +1532,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
     ASM_REWRITE_TAC[] THEN
     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
       BIGNUM_AMONTREDC_EXEC (1--3) THEN
-    AMONTREDC_CARRIED_DISCHARGE_TAC;
+    BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
     ALL_TAC] THEN
   ASM_REWRITE_TAC[] THEN
   SUBGOAL_THEN `~(val(word p:int64) = 0)` ASSUME_TAC THENL
@@ -1636,12 +1554,11 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
     CONJ_TAC THENL
      [ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_AMONTREDC_EXEC (1--3) THEN
-      AMONTREDC_CARRIED_DISCHARGE_TAC;
+      BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
       ALL_TAC] THEN
     (* outer WHILE_UP2 p 0x80/0x108 *)
     GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-      [MESON[APPEND; APPEND_NIL]
-        `APPEND (ENUMERATEL n f) b = APPEND (APPEND [] (APPEND (ENUMERATEL n f) [])) b`] THEN
+      [BIGNUM_AMONTREDC_WHILE_WRAP] THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `p:num` `pc + 0x80` `pc + 0x108`
      `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = word r /\ read X3 s = x /\
             read X4 s = m /\ read X5 s = word p /\ read X7 s = word i /\ read X30 s = returnaddress` THEN
@@ -1649,14 +1566,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
     CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
     CONJ_TAC THENL
      [(* outer pre-leg 0-step *)
-      REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        BIGNUM_AMONTREDC_EXEC [] THEN
-      ASM_REWRITE_TAC[] THEN
-      FIRST_ASSUM(fun th -> let c = concl th in
-        if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-        then EXISTS_TAC(lhs c) else NO_TAC) THEN
-      ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
+      BIGNUM_AMONTREDC_PRE_LEG_TAC [];
       ALL_TAC] THEN
     CONJ_TAC THENL
      [(* OUTER BODY per i *)
@@ -1681,7 +1591,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
           ALL_TAC] THEN
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
           BIGNUM_AMONTREDC_EXEC (1--9) THEN
-        AMONTREDC_CARRIED_DISCHARGE_TAC;
+        BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC;
         ALL_TAC] THEN
       (* inner | oepil: SEQUENCE 0xd4 *)
       REWRITE_TAC[METIS[APPEND_ASSOC]
@@ -1694,8 +1604,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
       CONJ_TAC THENL
        [(* inner WHILE_UP2 (k-1) 0xa4/0xd4 *)
         GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-          [MESON[APPEND; APPEND_NIL]
-            `APPEND (ENUMERATEL n f) b = APPEND (APPEND [] (APPEND (ENUMERATEL n f) [])) b`] THEN
+          [BIGNUM_AMONTREDC_WHILE_WRAP] THEN
         ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0xa4` `pc + 0xd4`
          `\j s. read X0 s = word k /\ read X1 s = z /\ read X2 s = word r /\ read X3 s = x /\
                 read X4 s = m /\ read X5 s = word p /\ read X7 s = word i /\
@@ -1704,23 +1613,16 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
         CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
         CONJ_TAC THENL
          [(* inner pre-leg 0-step *)
-          REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-            BIGNUM_AMONTREDC_EXEC [] THEN
-          ASM_REWRITE_TAC[ARITH_RULE `1 + 0 = 1`] THEN
-          FIRST_ASSUM(fun th -> let c = concl th in
-            if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-            then EXISTS_TAC(lhs c) else NO_TAC) THEN
-          ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
+          BIGNUM_AMONTREDC_NOEVENT_LEG_TAC
+            [SUB_0; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL]
+            (ASM_REWRITE_TAC[ARITH_RULE `1 + 0 = 1`]) [];
           ALL_TAC] THEN
         CONJ_TAC THENL
          [(* inner body: 12 steps 0xa4..0xd0 *)
           X_GEN_TAC `j:num` THEN STRIP_TAC THEN
           REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
           REWRITE_TAC[ENUMERATEL_ADD1] THEN
-          REWRITE_TAC[METIS[APPEND_ASSOC]
-              `(exists e2. P e2 /\ e2 = APPEND (APPEND fresh enumc) tail /\ Q e2)
-               <=> (exists e2. P e2 /\ e2 = APPEND fresh (APPEND enumc tail) /\ Q e2)`] THEN
+          REWRITE_TAC[BIGNUM_AMONTREDC_BODY_REASSOC] THEN
           SUBGOAL_THEN `1 + j < k /\ val(word(1 + j):int64) = 1 + j` STRIP_ASSUME_TAC THENL
            [CONJ_TAC THENL
              [SIMPLE_ARITH_TAC;
@@ -1742,38 +1644,26 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
           SUBGOAL_THEN `8 * j + 8 <= 8 * k` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
           ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
             BIGNUM_AMONTREDC_EXEC (1--12) THEN
-          SUBGOAL_THEN
+          BIGNUM_AMONTREDC_BACKEDGE_TAC
             `(~(val (word_sub (word_add (word (1 + j)) (word 1)) (word k:int64)) = 0)) <=>
-             (j + 1 < k - 1)` ASSUME_TAC THENL
-           [SUBGOAL_THEN `word_add (word (1 + j):int64) (word 1) = word((1 + j) + 1)` SUBST1_TAC THENL
-             [CONV_TAC WORD_RULE; ALL_TAC] THEN
-            SUBGOAL_THEN `val(word((1 + j) + 1):int64) = (1 + j) + 1` ASSUME_TAC THENL
-             [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-            REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC;
-            ALL_TAC] THEN
-          RULE_ASSUM_TAC(REWRITE_RULE[ASSUME
-            `(~(val (word_sub (word_add (word (1 + j)) (word 1)) (word k:int64)) = 0)) <=>
-             (j + 1 < k - 1)`]) THEN
-          REWRITE_TAC[ASSUME
-            `(~(val (word_sub (word_add (word (1 + j)) (word 1)) (word k:int64)) = 0)) <=>
-             (j + 1 < k - 1)`] THEN
+             (j + 1 < k - 1)`
+            (SUBGOAL_THEN `word_add (word (1 + j):int64) (word 1) = word((1 + j) + 1)`
+             SUBST1_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+             SUBGOAL_THEN `val(word((1 + j) + 1):int64) = (1 + j) + 1` ASSUME_TAC THENL
+              [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+             REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC) THEN
           CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
           CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
           DISCHARGE_SAFETY_PROPERTY_TAC;
           (* inner post-leg 0-step at 0xd4 *)
-          REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-          ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-            BIGNUM_AMONTREDC_EXEC [] THEN
-          FIRST_ASSUM(fun th -> let c = concl th in
-            if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-            then EXISTS_TAC(lhs c) else NO_TAC) THEN
-          ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]];
+          BIGNUM_AMONTREDC_POST_LEG_TAC];
         ALL_TAC] THEN
       (* OEPIL leg 0xd4 -> (0x80|0x108): 13 steps (k+i<r, x-load) or 10 steps (skip). *)
-      (* CONSUME the equation (don't ASSUME it): RULE_ASSUM_TAC with an ASSUMEd hyp rewrites that hyp
-         into `T`, and a `T` assumption makes ASSEMBLER_SIMPLIFY_TAC's final pure
-         ASM(GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV)) loop on `T = T` -> Stack overflow
-         in the next SIM step whose state fact contains a `T` (here the BCS@0xe4 events update). *)
+      (* Rewrite with this equation without keeping it as an assumption: an
+         assumption rewritten with itself becomes `T`, and a `T` assumption
+         makes the final rewriting with the assumptions in ASSEMBLER_SIMPLIFY_TAC
+         loop (Stack overflow) at the next simulation step with a `T` in the
+         state, here the BCS at 0xe4. *)
       SUBGOAL_THEN `word(1 + (k - 1)):int64 = word k`
         (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN REWRITE_TAC[th]) THENL
        [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
@@ -1806,19 +1696,13 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
         SUBGOAL_THEN `~(r <= k + i)` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
           BIGNUM_AMONTREDC_EXEC (1--13) THEN
-        SUBGOAL_THEN
-          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)` ASSUME_TAC THENL
-         [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[ASSUME
-          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`]) THEN
-        REWRITE_TAC[ASSUME
-          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`] THEN
+        BIGNUM_AMONTREDC_BACKEDGE_TAC
+          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`
+          (ASM_REWRITE_TAC[]) THEN
         (* adaptive all-or-nothing peel: the SIM may already close X7, leaving 1 or 2 leading conjuncts *)
-        REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-          then CONJ_TAC THENL
-            [FIRST[REFL_TAC; (COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC);
-                   CONV_TAC WORD_RULE; (ASM_REWRITE_TAC[] THEN NO_TAC)]; ALL_TAC]
-          else NO_TAC)) THEN
+        BIGNUM_AMONTREDC_PEEL_TAC
+          [REFL_TAC; (COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC);
+           CONV_TAC WORD_RULE; (ASM_REWRITE_TAC[] THEN NO_TAC)] THEN
         DISCHARGE_SAFETY_PROPERTY_TAC;
         (* oepilN: skip x load, 10 steps *)
         ASM_REWRITE_TAC[] THEN
@@ -1827,28 +1711,16 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
         SUBGOAL_THEN `r <= k + i` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
           BIGNUM_AMONTREDC_EXEC (1--10) THEN
-        SUBGOAL_THEN
-          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)` ASSUME_TAC THENL
-         [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[ASSUME
-          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`]) THEN
-        REWRITE_TAC[ASSUME
-          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`] THEN
+        BIGNUM_AMONTREDC_BACKEDGE_TAC
+          `(val(word(i + 1):int64) < val(word p:int64)) <=> (i + 1 < p)`
+          (ASM_REWRITE_TAC[]) THEN
         (* adaptive all-or-nothing peel: the SIM may already close X7, leaving 1 or 2 leading conjuncts *)
-        REPEAT(W(fun (asl,w) -> if is_conj w && not(is_exists w)
-          then CONJ_TAC THENL
-            [FIRST[REFL_TAC; (COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC);
-                   CONV_TAC WORD_RULE; (ASM_REWRITE_TAC[] THEN NO_TAC)]; ALL_TAC]
-          else NO_TAC)) THEN
+        BIGNUM_AMONTREDC_PEEL_TAC
+          [REFL_TAC; (COND_CASES_TAC THEN REWRITE_TAC[] THEN NO_TAC);
+           CONV_TAC WORD_RULE; (ASM_REWRITE_TAC[] THEN NO_TAC)] THEN
         DISCHARGE_SAFETY_PROPERTY_TAC];
       (* outer post-leg 0-step at 0x108 *)
-      REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        BIGNUM_AMONTREDC_EXEC [] THEN
-      FIRST_ASSUM(fun th -> let c = concl th in
-        if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-        then EXISTS_TAC(lhs c) else NO_TAC) THEN
-      ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]];
+      BIGNUM_AMONTREDC_POST_LEG_TAC];
     ALL_TAC] THEN
   (*** corrective 0x108->RET: SEQUENCE 0x130 (mask+msub | RET); msub WHILE_UP2 k 0x110/0x130
        (pre-leg NEG,NEGS 2 steps), RET leg. ***)
@@ -1862,8 +1734,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
   CONJ_TAC THENL
    [(* mask NEG X14 + NEGS X8 (2 instr, no events) + msub WHILE_UP2 k 0x110/0x130 *)
     GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-      [MESON[APPEND; APPEND_NIL]
-        `APPEND (ENUMERATEL n f) b = APPEND (APPEND [] (APPEND (ENUMERATEL n f) [])) b`] THEN
+      [BIGNUM_AMONTREDC_WHILE_WRAP] THEN
     ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x110` `pc + 0x130`
      `\j s. read X0 s = word k /\ read X1 s = z /\ read X4 s = m /\
             read X8 s = word j /\ read X30 s = returnaddress` THEN
@@ -1871,23 +1742,14 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
     CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
     CONJ_TAC THENL
      [(* pre-leg: NEG,NEGS 2 steps no events *)
-      REWRITE_TAC[SUB_0; MULT_CLAUSES; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        BIGNUM_AMONTREDC_EXEC (1--2) THEN
-      ASM_REWRITE_TAC[] THEN
-      FIRST_ASSUM(fun th -> let c = concl th in
-        if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-        then EXISTS_TAC(lhs c) else NO_TAC) THEN
-      ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC];
+      BIGNUM_AMONTREDC_PRE_LEG_TAC (1--2);
       ALL_TAC] THEN
     CONJ_TAC THENL
      [(* msub body: 8 steps LDR,LDR,AND,SBCS,STR,ADD,SUB,CBNZ *)
       X_GEN_TAC `j:num` THEN STRIP_TAC THEN
       REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
       REWRITE_TAC[ENUMERATEL_ADD1] THEN
-      REWRITE_TAC[METIS[APPEND_ASSOC]
-          `(exists e2. P e2 /\ e2 = APPEND (APPEND fresh enumc) tail /\ Q e2)
-           <=> (exists e2. P e2 /\ e2 = APPEND fresh (APPEND enumc tail) /\ Q e2)`] THEN
+      REWRITE_TAC[BIGNUM_AMONTREDC_BODY_REASSOC] THEN
       SUBGOAL_THEN `val(word j:int64) = j` ASSUME_TAC THENL
        [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
       SUBGOAL_THEN `word_shl (word j:int64) 3 = word(8 * j)` ASSUME_TAC THENL
@@ -1897,32 +1759,21 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
       SUBGOAL_THEN `(j + 1 = k <=> ~(j + 1 < k))` ASSUME_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
       ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
         BIGNUM_AMONTREDC_EXEC (1--8) THEN
-      SUBGOAL_THEN
-        `(~(val (word_sub (word_add (word j) (word 1)) (word k:int64)) = 0)) <=> (j + 1 < k)`
-      ASSUME_TAC THENL
-       [SUBGOAL_THEN `word_add (word j:int64) (word 1) = word(j + 1)` SUBST1_TAC THENL
-         [CONV_TAC WORD_RULE; ALL_TAC] THEN
-        SUBGOAL_THEN `val(word(j + 1):int64) = j + 1` ASSUME_TAC THENL
-         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-        REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC;
-        ALL_TAC] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[ASSUME
-        `(~(val (word_sub (word_add (word j) (word 1)) (word k:int64)) = 0)) <=> (j + 1 < k)`]) THEN
-      REWRITE_TAC[ASSUME
-        `(~(val (word_sub (word_add (word j) (word 1)) (word k:int64)) = 0)) <=> (j + 1 < k)`] THEN
+      BIGNUM_AMONTREDC_BACKEDGE_TAC
+        `(~(val (word_sub (word_add (word j) (word 1)) (word k:int64)) = 0)) <=>
+         (j + 1 < k)`
+        (SUBGOAL_THEN `word_add (word j:int64) (word 1) = word(j + 1)` SUBST1_TAC THENL
+          [CONV_TAC WORD_RULE; ALL_TAC] THEN
+         SUBGOAL_THEN `val(word(j + 1):int64) = j + 1` ASSUME_TAC THENL
+          [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+         REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC) THEN
       CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
       CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
       DISCHARGE_SAFETY_PROPERTY_TAC;
       (* msub post-leg: 0-step at 0x130 *)
-      REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        BIGNUM_AMONTREDC_EXEC [] THEN
-      FIRST_ASSUM(fun th -> let c = concl th in
-        if is_eq c && (try fst(dest_var(lhs c))="e2" with _ -> false)
-        then EXISTS_TAC(lhs c) else NO_TAC) THEN
-      ASM_REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL; GSYM APPEND_ASSOC]];
+      BIGNUM_AMONTREDC_POST_LEG_TAC];
     ALL_TAC] THEN
   (* RET leg 0x130->returnaddress, 1 step. *)
   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
     BIGNUM_AMONTREDC_EXEC (1--1) THEN
-  AMONTREDC_CARRIED_DISCHARGE_TAC);;
+  BIGNUM_AMONTREDC_CARRIED_DISCHARGE_TAC);;
