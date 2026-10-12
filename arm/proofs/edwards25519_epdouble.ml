@@ -2701,7 +2701,7 @@ let EDWARDS25519_EPDOUBLE_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC EDWARDS25519_EPDOUBLE_EXEC
     EDWARDS25519_EPDOUBLE_CORRECT `[X19; X20]` 176);;
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
@@ -2718,17 +2718,17 @@ let EDWARDS25519_EPDOUBLE_SAFE = time prove
        forall e p3 p1 pc stackpointer.
            aligned 16 stackpointer /\
            ALL (nonoverlapping (stackpointer,160))
-           [word pc,LENGTH edwards25519_epdouble_mc; p1,96; p3,128] /\
-           nonoverlapping (p3,128) (word pc,LENGTH edwards25519_epdouble_mc)
+           [word pc,5340; p3,128; p1,96] /\
+           nonoverlapping (p3,128) (word pc,5340)
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc) edwards25519_epdouble_mc /\
-                    read PC s = word (pc + 0x8) /\
+                    read PC s = word (pc + 8) /\
                     read SP s = stackpointer /\
                     C_ARGUMENTS [p3; p1] s /\
                     read events s = e)
                (\s.
-                    read PC s = word (pc + 0x14d0) /\
+                    read PC s = word (pc + 5328) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events p1 p3 pc stackpointer /\
@@ -2736,13 +2736,13 @@ let EDWARDS25519_EPDOUBLE_SAFE = time prove
                          [p1,96; p3,128; stackpointer,160]
                          [p3,128; stackpointer,160]))
                (MAYCHANGE
-                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14; X15; X16; X17; X19] ,,
-                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19] ,,
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (p3,128); memory :> bytes (stackpointer,160)])`,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars EDWARDS25519_EPDOUBLE_EXEC);;
 
 let EDWARDS25519_EPDOUBLE_SUBROUTINE_SAFE = time prove

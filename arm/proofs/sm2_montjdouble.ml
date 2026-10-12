@@ -3129,7 +3129,7 @@ let SM2_MONTJDOUBLE_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC SM2_MONTJDOUBLE_EXEC
     SM2_MONTJDOUBLE_CORRECT `[X19; X20]` 208);;
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
@@ -3146,17 +3146,17 @@ let SM2_MONTJDOUBLE_SAFE = time prove
        forall e p3 p1 pc stackpointer.
            aligned 16 stackpointer /\
            ALL (nonoverlapping (stackpointer,192))
-           [word pc,LENGTH sm2_montjdouble_mc; p1,96; p3,96] /\
-           nonoverlapping (p3,96) (word pc,LENGTH sm2_montjdouble_mc)
+           [word pc,5504; p1,96; p3,96] /\
+           nonoverlapping (p3,96) (word pc,5504)
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc) sm2_montjdouble_mc /\
-                    read PC s = word (pc + 0x8) /\
+                    read PC s = word (pc + 8) /\
                     read SP s = stackpointer /\
                     C_ARGUMENTS [p3; p1] s /\
                     read events s = e)
                (\s.
-                    read PC s = word (pc + 0x1574) /\
+                    read PC s = word (pc + 5492) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events p1 p3 pc stackpointer /\
@@ -3164,13 +3164,13 @@ let SM2_MONTJDOUBLE_SAFE = time prove
                          [p1,96; p3,96; stackpointer,192]
                          [p3,96; stackpointer,192]))
                (MAYCHANGE
-                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14; X15; X16; X17; X19; X20] ,,
-                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20] ,,
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (p3,96); memory :> bytes (stackpointer,192)])`,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SM2_MONTJDOUBLE_EXEC);;
 
 let SM2_MONTJDOUBLE_SUBROUTINE_SAFE = time prove

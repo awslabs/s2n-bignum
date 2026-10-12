@@ -5566,7 +5566,7 @@ let P384_MONTJMIXADD_SUBROUTINE_CORRECT = time prove
    P384_MONTJMIXADD_CORRECT
     `[X19; X20; X21; X22; X23; X24; X25; X26]` 352);;
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
@@ -5583,17 +5583,17 @@ let P384_MONTJMIXADD_SAFE = time prove
        forall e p3 p1 p2 pc stackpointer.
            aligned 16 stackpointer /\
            ALL (nonoverlapping (stackpointer,288))
-           [word pc,LENGTH p384_montjmixadd_mc; p1,144; p2,96; p3,144] /\
-           nonoverlapping (p3,144) (word pc,LENGTH p384_montjmixadd_mc)
+           [word pc,16212; p1,144; p2,96; p3,144] /\
+           nonoverlapping (p3,144) (word pc,16212)
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc) p384_montjmixadd_mc /\
-                    read PC s = word (pc + 0x14) /\
+                    read PC s = word (pc + 20) /\
                     read SP s = stackpointer /\
                     C_ARGUMENTS [p3; p1; p2] s /\
                     read events s = e)
                (\s.
-                    read PC s = word (pc + 0x3f3c) /\
+                    read PC s = word (pc + 16188) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events p1 p2 p3 pc stackpointer /\
@@ -5601,13 +5601,14 @@ let P384_MONTJMIXADD_SAFE = time prove
                          [p1,144; p2,96; p3,144; stackpointer,288]
                          [p3,144; stackpointer,288]))
                (MAYCHANGE
-                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25; X26] ,,
-                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25;
+                 X26] ,,
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (p3,144); memory :> bytes (stackpointer,288)])`,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P384_MONTJMIXADD_EXEC);;
 
 let P384_MONTJMIXADD_SUBROUTINE_SAFE = time prove

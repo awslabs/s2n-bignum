@@ -3843,7 +3843,7 @@ let SECP256K1_JADD_SUBROUTINE_CORRECT = time prove
   ARM_ADD_RETURN_STACK_TAC SECP256K1_JADD_EXEC
    SECP256K1_JADD_CORRECT `[X19; X20; X21; X22]` 256);;
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
@@ -3860,17 +3860,17 @@ let SECP256K1_JADD_SAFE = time prove
        forall e p3 p1 p2 pc stackpointer.
            aligned 16 stackpointer /\
            ALL (nonoverlapping (stackpointer,224))
-           [word pc,LENGTH secp256k1_jadd_mc; p1,96; p2,96; p3,96] /\
-           nonoverlapping (p3,96) (word pc,LENGTH secp256k1_jadd_mc)
+           [word pc,10392; p1,96; p2,96; p3,96] /\
+           nonoverlapping (p3,96) (word pc,10392)
            ==> ensures arm
                (\s.
                     aligned_bytes_loaded s (word pc) secp256k1_jadd_mc /\
-                    read PC s = word (pc + 0xc) /\
+                    read PC s = word (pc + 12) /\
                     read SP s = stackpointer /\
                     C_ARGUMENTS [p3; p1; p2] s /\
                     read events s = e)
                (\s.
-                    read PC s = word (pc + 0x2888) /\
+                    read PC s = word (pc + 10376) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events p1 p2 p3 pc stackpointer /\
@@ -3878,13 +3878,13 @@ let SECP256K1_JADD_SAFE = time prove
                          [p1,96; p2,96; p3,96; stackpointer,224]
                          [p3,96; stackpointer,224]))
                (MAYCHANGE
-                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
-                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12;
+                 X13; X14; X15; X16; X17; X19; X20; X21; X22] ,,
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (p3,96); memory :> bytes (stackpointer,224)])`,
-  REWRITE_TAC[MODIFIABLE_SIMD_REGS;SOME_FLAGS] THEN
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars SECP256K1_JADD_EXEC);;
 
 let SECP256K1_JADD_SUBROUTINE_SAFE = time prove
