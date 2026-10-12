@@ -308,7 +308,6 @@ let BIGNUM_DEAMONT_SM2_SAFE = time prove
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_DEAMONT_SM2_EXEC);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let BIGNUM_DEAMONT_SM2_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -334,7 +333,8 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (z,8 * 4)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_deamont_sm2_tmc BIGNUM_DEAMONT_SM2_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_deamont_sm2_tmc BIGNUM_DEAMONT_SM2_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DEAMONT_SM2_SUBROUTINE_SAFE = time prove
  (`
@@ -400,7 +400,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_deamont_sm2_windows_tmc bignum_deamont_sm2_tmc BIGNUM_DEAMONT_SM2_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_deamont_sm2_windows_tmc bignum_deamont_sm2_tmc
+    BIGNUM_DEAMONT_SM2_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DEAMONT_SM2_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

@@ -442,7 +442,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 6);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_demont_p384_tmc BIGNUM_DEMONT_P384_SAFE `[R12; R13]` 16 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_demont_p384_tmc BIGNUM_DEMONT_P384_SAFE
+    `[R12; R13]` 16 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DEMONT_P384_SUBROUTINE_SAFE = time prove
  (`
@@ -515,7 +517,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 6);
               memory :> bytes (word_sub stackpointer (word 32),32)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_demont_p384_windows_tmc bignum_demont_p384_tmc BIGNUM_DEMONT_P384_SAFE `[R12; R13]` 16 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_demont_p384_windows_tmc bignum_demont_p384_tmc
+    BIGNUM_DEMONT_P384_SAFE `[R12; R13]` 16 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DEMONT_P384_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

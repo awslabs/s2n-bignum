@@ -3383,7 +3383,7 @@ let SECP256K1_JADD_WINDOWS_SUBROUTINE_CORRECT = time prove
   MATCH_ACCEPT_TAC(ADD_IBT_RULE SECP256K1_JADD_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/consttime.ml";;

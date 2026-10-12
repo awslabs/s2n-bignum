@@ -517,7 +517,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,9);
               memory :> bytes (word_sub stackpointer (word 32),32)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_cmul_p521_tmc BIGNUM_CMUL_P521_SAFE `[RBX; RBP; R12; R13]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_cmul_p521_tmc BIGNUM_CMUL_P521_SAFE
+    `[RBX; RBP; R12; R13]` 32 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CMUL_P521_SUBROUTINE_SAFE = time prove
  (`
@@ -589,7 +591,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,9);
               memory :> bytes (word_sub stackpointer (word 48),48)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_cmul_p521_windows_tmc bignum_cmul_p521_tmc BIGNUM_CMUL_P521_SAFE `[RBX; RBP; R12; R13]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_cmul_p521_windows_tmc bignum_cmul_p521_tmc
+    BIGNUM_CMUL_P521_SAFE `[RBX; RBP; R12; R13]` 32 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CMUL_P521_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

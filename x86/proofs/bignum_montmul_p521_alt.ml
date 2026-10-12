@@ -1039,7 +1039,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 9);
               memory :> bytes (word_sub stackpointer (word 104),104)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_montmul_p521_alt_tmc BIGNUM_MONTMUL_P521_ALT_SAFE `[R12; R13; R14; R15]` 104 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_montmul_p521_alt_tmc BIGNUM_MONTMUL_P521_ALT_SAFE
+    `[R12; R13; R14; R15]` 104 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MONTMUL_P521_ALT_SUBROUTINE_SAFE = time prove
  (`
@@ -1113,7 +1115,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 9);
               memory :> bytes (word_sub stackpointer (word 120),120)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_montmul_p521_alt_windows_tmc bignum_montmul_p521_alt_tmc BIGNUM_MONTMUL_P521_ALT_SAFE `[R12; R13; R14; R15]` 104 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_montmul_p521_alt_windows_tmc bignum_montmul_p521_alt_tmc
+    BIGNUM_MONTMUL_P521_ALT_SAFE `[R12; R13; R14; R15]` 104 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MONTMUL_P521_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

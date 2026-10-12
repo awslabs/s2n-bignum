@@ -539,7 +539,6 @@ let BIGNUM_MUL_8_16_ALT_SAFE = time prove
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MUL_8_16_ALT_EXEC);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let BIGNUM_MUL_8_16_ALT_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -567,7 +566,8 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (z,8 * 16)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_mul_8_16_alt_tmc BIGNUM_MUL_8_16_ALT_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_mul_8_16_alt_tmc BIGNUM_MUL_8_16_ALT_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MUL_8_16_ALT_SUBROUTINE_SAFE = time prove
  (`
@@ -635,7 +635,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 16);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_mul_8_16_alt_windows_tmc bignum_mul_8_16_alt_tmc BIGNUM_MUL_8_16_ALT_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_mul_8_16_alt_windows_tmc bignum_mul_8_16_alt_tmc
+    BIGNUM_MUL_8_16_ALT_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MUL_8_16_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

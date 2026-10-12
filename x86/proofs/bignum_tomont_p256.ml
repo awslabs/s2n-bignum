@@ -515,7 +515,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 32),32)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_tomont_p256_tmc BIGNUM_TOMONT_P256_SAFE `[R12; R13; R14; R15]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_tomont_p256_tmc BIGNUM_TOMONT_P256_SAFE
+    `[R12; R13; R14; R15]` 32 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_TOMONT_P256_SUBROUTINE_SAFE = time prove
  (`
@@ -588,7 +590,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 48),48)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_tomont_p256_windows_tmc bignum_tomont_p256_tmc BIGNUM_TOMONT_P256_SAFE `[R12; R13; R14; R15]` 32 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_tomont_p256_windows_tmc bignum_tomont_p256_tmc
+    BIGNUM_TOMONT_P256_SAFE `[R12; R13; R14; R15]` 32 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_TOMONT_P256_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

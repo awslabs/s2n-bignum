@@ -2164,7 +2164,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (p3,96);
               memory :> bytes (word_sub stackpointer (word 200),200)])`,
-  X86_PROMOTE_RETURN_STACK_TAC edwards25519_pdouble_alt_tmc EDWARDS25519_PDOUBLE_ALT_SAFE `[RBX; R12; R13; R14; R15]` 200 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC edwards25519_pdouble_alt_tmc EDWARDS25519_PDOUBLE_ALT_SAFE
+    `[RBX; R12; R13; R14; R15]` 200 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let EDWARDS25519_PDOUBLE_ALT_SUBROUTINE_SAFE = time prove
  (`
@@ -2238,7 +2240,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (p3,96);
               memory :> bytes (word_sub stackpointer (word 216),216)])`,
-  WINDOWS_X86_WRAP_STACK_TAC edwards25519_pdouble_alt_windows_tmc edwards25519_pdouble_alt_tmc EDWARDS25519_PDOUBLE_ALT_SAFE `[RBX; R12; R13; R14; R15]` 200 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC edwards25519_pdouble_alt_windows_tmc edwards25519_pdouble_alt_tmc
+    EDWARDS25519_PDOUBLE_ALT_SAFE `[RBX; R12; R13; R14; R15]` 200 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let EDWARDS25519_PDOUBLE_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

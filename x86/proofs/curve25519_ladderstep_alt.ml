@@ -3487,7 +3487,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (rr,128);
               memory :> bytes (word_sub stackpointer (word 464),464)])`,
-  X86_PROMOTE_RETURN_STACK_TAC curve25519_ladderstep_alt_tmc CURVE25519_LADDERSTEP_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 464 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC curve25519_ladderstep_alt_tmc CURVE25519_LADDERSTEP_ALT_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 464 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let CURVE25519_LADDERSTEP_ALT_SUBROUTINE_SAFE = time prove
  (`
@@ -3565,7 +3567,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (rr,128);
               memory :> bytes (word_sub stackpointer (word 480),480)])`,
-  WINDOWS_X86_WRAP_STACK_TAC curve25519_ladderstep_alt_windows_tmc curve25519_ladderstep_alt_tmc CURVE25519_LADDERSTEP_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 464 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC curve25519_ladderstep_alt_windows_tmc curve25519_ladderstep_alt_tmc
+    CURVE25519_LADDERSTEP_ALT_SAFE `[RBX; RBP; R12; R13; R14; R15]` 464 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let CURVE25519_LADDERSTEP_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

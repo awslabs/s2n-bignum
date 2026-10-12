@@ -807,7 +807,6 @@ let MLDSA_REDUCE_SAFE = time prove
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_REDUCE_TMC_EXEC);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let MLDSA_REDUCE_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -834,7 +833,8 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (a,1024)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_reduce_tmc MLDSA_REDUCE_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_reduce_tmc MLDSA_REDUCE_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let MLDSA_REDUCE_SUBROUTINE_SAFE = time prove
  (`
@@ -990,7 +990,7 @@ exists f_events.
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   (* safety property specific *)
   CONJ_TAC THENL [ DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  (* functional correctness *)
+  (* the preserved XMM registers, as in the functional correctness proof *)
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_REDUCE_WINDOWS_SUBROUTINE_SAFE = time prove

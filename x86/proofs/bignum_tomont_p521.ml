@@ -477,7 +477,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,9);
               memory :> bytes (word_sub stackpointer (word 8),8)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_tomont_p521_tmc BIGNUM_TOMONT_P521_SAFE `[RBX]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_tomont_p521_tmc BIGNUM_TOMONT_P521_SAFE
+    `[RBX]` 8 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_TOMONT_P521_SUBROUTINE_SAFE = time prove
  (`
@@ -550,7 +552,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,9);
               memory :> bytes (word_sub stackpointer (word 24),24)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_tomont_p521_windows_tmc bignum_tomont_p521_tmc BIGNUM_TOMONT_P521_SAFE `[RBX]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_tomont_p521_windows_tmc bignum_tomont_p521_tmc
+    BIGNUM_TOMONT_P521_SAFE `[RBX]` 8 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_TOMONT_P521_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

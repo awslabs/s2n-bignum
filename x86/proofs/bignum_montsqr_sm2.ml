@@ -640,7 +640,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 48),48)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_montsqr_sm2_tmc BIGNUM_MONTSQR_SM2_SAFE `[RBX; RBP; R12; R13; R14; R15]` 48 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_montsqr_sm2_tmc BIGNUM_MONTSQR_SM2_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 48 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MONTSQR_SM2_SUBROUTINE_SAFE = time prove
  (`
@@ -713,7 +715,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 64),64)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_montsqr_sm2_windows_tmc bignum_montsqr_sm2_tmc BIGNUM_MONTSQR_SM2_SAFE `[RBX; RBP; R12; R13; R14; R15]` 48 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_montsqr_sm2_windows_tmc bignum_montsqr_sm2_tmc
+    BIGNUM_MONTSQR_SM2_SAFE `[RBX; RBP; R12; R13; R14; R15]` 48 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MONTSQR_SM2_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

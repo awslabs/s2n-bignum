@@ -395,7 +395,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 6);
               memory :> bytes (word_sub stackpointer (word 8),8)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_cmul_p384_alt_tmc BIGNUM_CMUL_P384_ALT_SAFE `[R12]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_cmul_p384_alt_tmc BIGNUM_CMUL_P384_ALT_SAFE
+    `[R12]` 8 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CMUL_P384_ALT_SUBROUTINE_SAFE = time prove
  (`
@@ -468,7 +470,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 6);
               memory :> bytes (word_sub stackpointer (word 24),24)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_cmul_p384_alt_windows_tmc bignum_cmul_p384_alt_tmc BIGNUM_CMUL_P384_ALT_SAFE `[R12]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_cmul_p384_alt_windows_tmc bignum_cmul_p384_alt_tmc
+    BIGNUM_CMUL_P384_ALT_SAFE `[R12]` 8 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CMUL_P384_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

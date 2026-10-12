@@ -374,7 +374,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 8),8)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_deamont_p256_tmc BIGNUM_DEAMONT_P256_SAFE `[RBX]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_deamont_p256_tmc BIGNUM_DEAMONT_P256_SAFE
+    `[RBX]` 8 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DEAMONT_P256_SUBROUTINE_SAFE = time prove
  (`
@@ -447,7 +449,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 24),24)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_deamont_p256_windows_tmc bignum_deamont_p256_tmc BIGNUM_DEAMONT_P256_SAFE `[RBX]` 8 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_deamont_p256_windows_tmc bignum_deamont_p256_tmc
+    BIGNUM_DEAMONT_P256_SAFE `[RBX]` 8 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DEAMONT_P256_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

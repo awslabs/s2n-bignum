@@ -450,7 +450,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 40),40)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_sqr_p256k1_tmc BIGNUM_SQR_P256K1_SAFE `[RBX; R12; R13; R14; R15]` 40 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_sqr_p256k1_tmc BIGNUM_SQR_P256K1_SAFE
+    `[RBX; R12; R13; R14; R15]` 40 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_SQR_P256K1_SUBROUTINE_SAFE = time prove
  (`
@@ -523,7 +525,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 4);
               memory :> bytes (word_sub stackpointer (word 56),56)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_sqr_p256k1_windows_tmc bignum_sqr_p256k1_tmc BIGNUM_SQR_P256K1_SAFE `[RBX; R12; R13; R14; R15]` 40 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_sqr_p256k1_windows_tmc bignum_sqr_p256k1_tmc
+    BIGNUM_SQR_P256K1_SAFE `[RBX; R12; R13; R14; R15]` 40 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_SQR_P256K1_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

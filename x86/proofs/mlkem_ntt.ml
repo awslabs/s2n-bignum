@@ -1525,7 +1525,6 @@ let MLKEM_NTT_SAFE =
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_NTT_TMC_EXEC));;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let MLKEM_NTT_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.

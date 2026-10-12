@@ -331,7 +331,6 @@ let BIGNUM_OF_WORD_SAFE = time prove
       ~canonicalize_pc_diff:false BIGNUM_OF_WORD_EXEC [] THEN
     BIGNUM_OF_WORD_CONCRETE_DISCHARGE_TAC]);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let BIGNUM_OF_WORD_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -357,7 +356,8 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bignum (z,val k)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_of_word_tmc BIGNUM_OF_WORD_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_of_word_tmc BIGNUM_OF_WORD_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_OF_WORD_SUBROUTINE_SAFE = time prove
  (`
@@ -423,7 +423,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val k);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_of_word_windows_tmc bignum_of_word_tmc BIGNUM_OF_WORD_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_of_word_windows_tmc bignum_of_word_tmc
+    BIGNUM_OF_WORD_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_OF_WORD_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

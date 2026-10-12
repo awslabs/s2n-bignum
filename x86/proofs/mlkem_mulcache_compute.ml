@@ -557,7 +557,6 @@ let MLKEM_MULCACHE_COMPUTE_SAFE = time prove
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_MULCACHE_COMPUTE_TMC_EXEC);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let MLKEM_MULCACHE_COMPUTE_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.

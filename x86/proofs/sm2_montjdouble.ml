@@ -3048,7 +3048,7 @@ let SM2_MONTJDOUBLE_WINDOWS_SUBROUTINE_CORRECT = time prove
   MATCH_ACCEPT_TAC(ADD_IBT_RULE SM2_MONTJDOUBLE_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof.                                     *)
+(* Constant-time and memory safety proof.                                    *)
 (* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/consttime.ml";;

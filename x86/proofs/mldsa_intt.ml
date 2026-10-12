@@ -4796,7 +4796,6 @@ let MLDSA_INTT_SAFE =
   REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI; SOME_FLAGS] THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_INTT_TMC_EXEC));;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let MLDSA_INTT_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -4995,7 +4994,7 @@ exists f_events.
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
   (* safety property specific *)
   CONJ_TAC THENL [ DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  (* functional correctness (no correctness conjunct remains for pure safety; keep for parity) *)
+  (* the preserved XMM registers, as in the functional correctness proof *)
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLDSA_INTT_WINDOWS_SUBROUTINE_SAFE = time prove

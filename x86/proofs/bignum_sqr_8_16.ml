@@ -526,7 +526,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 16);
               memory :> bytes (word_sub stackpointer (word 40),40)])`,
-  X86_PROMOTE_RETURN_STACK_TAC bignum_sqr_8_16_tmc BIGNUM_SQR_8_16_SAFE `[RBP; R12; R13; R14; R15]` 40 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_STACK_TAC bignum_sqr_8_16_tmc BIGNUM_SQR_8_16_SAFE
+    `[RBP; R12; R13; R14; R15]` 40 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_SQR_8_16_SUBROUTINE_SAFE = time prove
  (`
@@ -601,7 +603,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bytes (z,8 * 16);
               memory :> bytes (word_sub stackpointer (word 56),56)])`,
-  WINDOWS_X86_WRAP_STACK_TAC bignum_sqr_8_16_windows_tmc bignum_sqr_8_16_tmc BIGNUM_SQR_8_16_SAFE `[RBP; R12; R13; R14; R15]` 40 THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_STACK_TAC bignum_sqr_8_16_windows_tmc bignum_sqr_8_16_tmc
+    BIGNUM_SQR_8_16_SAFE `[RBP; R12; R13; R14; R15]` 40 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_SQR_8_16_WINDOWS_SUBROUTINE_SAFE = time prove
  (`
