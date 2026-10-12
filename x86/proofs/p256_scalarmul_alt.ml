@@ -11591,175 +11591,59 @@ let P256_SCALARMUL_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
 needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/subroutine_signatures.ml";;
 
-(* Local versions of the subroutines. *)
+(* Simulate a call to one of the local subroutines at offset off, using the  *)
+(* safety theorem registered under the label assump_name.                    *)
 
-let LOCAL_DEMONT_SAFETY_TAC (assump_name:string) (n:int) =
+let P256_SCALARMUL_ALT_CALL_TAC off sub_tmc args assump_name n =
+  let pcoff = mk_binary "+" (`pc:num`,mk_small_numeral off) in
+  let args' = `e:(uarch_event)list`::
+    map (fun t -> if t = `pc:num` then pcoff else t) args in
   REMOVE_THEN assump_name (fun safety_th ->
     let th =
       CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
         (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
         safety_th) in
     X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0xb96,bignum_demont_p256_alt_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `pc + 0xb96`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
+        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,off,sub_tmc,th)
+        args' n THENL [
       EXISTS_E2_TAC(ref
         [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
          `i:num`;
          `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
-
       LABEL_TAC assump_name safety_th
     ]);;
 
-let LOCAL_INV_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    let th =
-      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-        safety_th) in
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0xc55,bignum_inv_p256_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `pc + 0xc55`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+let P256_SCALARMUL_ALT_ARGS3 =
+  [`read RDI s`; `read RSI s`; `read RDX s`; `pc:num`; `read RSP s`;
+   `read (memory :> bytes64(read RSP s)) s`];;
 
-      LABEL_TAC assump_name safety_th
-    ]);;
+let P256_SCALARMUL_ALT_ARGS2 =
+  [`read RDI s`; `read RSI s`; `pc:num`; `read RSP s`;
+   `read (memory :> bytes64(read RSP s)) s`];;
 
-let LOCAL_MUL_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    let th =
-      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-        safety_th) in
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0x21c4,bignum_montmul_p256_alt_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
-        `pc + 0x21c4`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+let P256_SCALARMUL_ALT_JADD_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0x280c p256_montjadd_alt_tmc P256_SCALARMUL_ALT_ARGS3 "H_JADD_SAFE";;
 
-      LABEL_TAC assump_name safety_th
-    ]);;
+let P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0x4f74 p256_montjdouble_alt_tmc P256_SCALARMUL_ALT_ARGS2 "H_JDOUBLE_SAFE";;
 
-let LOCAL_SQR_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    let th =
-      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-        safety_th) in
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0x23f7,bignum_montsqr_p256_alt_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `pc + 0x23f7`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+let P256_SCALARMUL_ALT_JMIXADD_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0x643d p256_montjmixadd_alt_tmc P256_SCALARMUL_ALT_ARGS3 "H_JMIXADD_SAFE";;
 
-      LABEL_TAC assump_name safety_th
-    ]);;
+let P256_SCALARMUL_ALT_TOMONT_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0x25cc bignum_tomont_p256_alt_tmc P256_SCALARMUL_ALT_ARGS2 "H_TOMONT_SAFE";;
 
-let LOCAL_TOMONT_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    let th =
-      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-        safety_th) in
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0x25cc,bignum_tomont_p256_alt_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `pc + 0x25cc`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+let P256_SCALARMUL_ALT_MUL_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0x21c4 bignum_montmul_p256_alt_tmc P256_SCALARMUL_ALT_ARGS3 "H_MUL_SAFE";;
 
-      LABEL_TAC assump_name safety_th
-    ]);;
+let P256_SCALARMUL_ALT_SQR_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0x23f7 bignum_montsqr_p256_alt_tmc P256_SCALARMUL_ALT_ARGS2 "H_SQR_SAFE";;
 
-let LOCAL_JADD_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    let th =
-      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-        safety_th) in
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0x280c,p256_montjadd_alt_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
-        `pc + 0x280c`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
+let P256_SCALARMUL_ALT_DEMONT_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0xb96 bignum_demont_p256_alt_tmc P256_SCALARMUL_ALT_ARGS2 "H_DEMONT_SAFE";;
 
-      LABEL_TAC assump_name safety_th
-    ]);;
-
-let LOCAL_JDOUBLE_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    let th =
-      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-        safety_th) in
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0x4f74,p256_montjdouble_alt_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`;
-        `pc + 0x4f74`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
-
-      LABEL_TAC assump_name safety_th
-    ]);;
-
-let LOCAL_JMIXADD_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    let th =
-      CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV)
-        (REWRITE_RULE[bignum_triple_from_memory; bignum_pair_from_memory]
-        safety_th) in
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-        (p256_scalarmul_alt_tmc,P256_SCALARMUL_ALT_EXEC,
-          0x643d,p256_montjmixadd_alt_tmc,th)
-        [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
-        `pc + 0x643d`; `read RSP s`; `read (memory :> bytes64(read RSP s)) s`]
-        n THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;`stackpointer:int64`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
-
-      LABEL_TAC assump_name safety_th
-    ]);;
+let P256_SCALARMUL_ALT_INV_SAFETY_TAC = P256_SCALARMUL_ALT_CALL_TAC
+  0xc55 bignum_inv_p256_tmc P256_SCALARMUL_ALT_ARGS2 "H_INV_SAFE";;
 
 let full_spec,public_vars = mk_safety_spec
     ~keep_maychanges:true
@@ -11872,23 +11756,23 @@ let P256_SCALARMUL_ALT_SAFE = time prove
 
     ENSURES_INIT_TAC "s0" THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (1--41) THEN
-    LOCAL_TOMONT_SAFETY_TAC "H_TOMONT_SAFE" 42 THEN
+    P256_SCALARMUL_ALT_TOMONT_SAFETY_TAC 42 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (43--45) THEN
-    LOCAL_TOMONT_SAFETY_TAC "H_TOMONT_SAFE" 46 THEN
+    P256_SCALARMUL_ALT_TOMONT_SAFETY_TAC 46 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (47--79) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 80 THEN
+    P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 80 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (81--84) THEN
-    LOCAL_JMIXADD_SAFETY_TAC "H_JMIXADD_SAFE" 85 THEN
+    P256_SCALARMUL_ALT_JMIXADD_SAFETY_TAC 85 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (86--88) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 89 THEN
+    P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 89 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (90--93) THEN
-    LOCAL_JMIXADD_SAFETY_TAC "H_JMIXADD_SAFE" 94 THEN
+    P256_SCALARMUL_ALT_JMIXADD_SAFETY_TAC 94 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (95--97) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 98 THEN
+    P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 98 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (99--102) THEN
-    LOCAL_JMIXADD_SAFETY_TAC "H_JMIXADD_SAFE" 103 THEN
+    P256_SCALARMUL_ALT_JMIXADD_SAFETY_TAC 103 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (104--106) THEN
-    LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 107 THEN
+    P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 107 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (108--238) THEN
 
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -11905,19 +11789,19 @@ let P256_SCALARMUL_ALT_SAFE = time prove
     ENSURES_INIT_TAC "s0" THEN
     STRIP_EXISTS_ASSUM_TAC THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (1--3) THEN
-    LOCAL_SQR_SAFETY_TAC "H_SQR_SAFE" 4 THEN
+    P256_SCALARMUL_ALT_SQR_SAFETY_TAC 4 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (5--8) THEN
-    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 9 THEN
+    P256_SCALARMUL_ALT_MUL_SAFETY_TAC 9 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (10--12) THEN
-    LOCAL_DEMONT_SAFETY_TAC "H_DEMONT_SAFE" 13 THEN
+    P256_SCALARMUL_ALT_DEMONT_SAFETY_TAC 13 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (14--16) THEN
-    LOCAL_INV_SAFETY_TAC "H_INV_SAFE" 17 THEN
+    P256_SCALARMUL_ALT_INV_SAFETY_TAC 17 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (18--21) THEN
-    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 22 THEN
+    P256_SCALARMUL_ALT_MUL_SAFETY_TAC 22 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (23--27) THEN
-    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 28 THEN
+    P256_SCALARMUL_ALT_MUL_SAFETY_TAC 28 THEN
     X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (29--32) THEN
-    LOCAL_MUL_SAFETY_TAC "H_MUL_SAFE" 33 THEN
+    P256_SCALARMUL_ALT_MUL_SAFETY_TAC 33 THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC
   ] THEN
@@ -11931,15 +11815,15 @@ let P256_SCALARMUL_ALT_SAFE = time prove
   ENSURES_INIT_TAC "s0" THEN
   STRIP_EXISTS_ASSUM_TAC THEN
   X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (1--4) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 5 THEN
+  P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 5 THEN
   X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (6--8) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 9 THEN
+  P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 9 THEN
   X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (10--12) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 13 THEN
+  P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 13 THEN
   X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (14--16) THEN
-  LOCAL_JDOUBLE_SAFETY_TAC "H_JDOUBLE_SAFE" 17 THEN
+  P256_SCALARMUL_ALT_JDOUBLE_SAFETY_TAC 17 THEN
   X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (18--173) THEN
-  LOCAL_JADD_SAFETY_TAC "H_JADD_SAFE" 174 THEN
+  P256_SCALARMUL_ALT_JADD_SAFETY_TAC 174 THEN
   X86_STEPS_TAC P256_SCALARMUL_ALT_EXEC (175--176) THEN
 
   ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN

@@ -4828,18 +4828,16 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (* frame (\s s'. true), which would lose the caller's state across a call,   *)
 (* so prove versions keeping the frames of their correctness theorems.       *)
 
-let P256_SCALARMULBASE_LOCAL_SAFE fn correct_th exec_th =
-  let spec,pubs = mk_safety_spec ~keep_maychanges:true
-    (assoc fn subroutine_signatures) correct_th exec_th in
-  time prove(spec, PROVE_SAFETY_SPEC_TAC ~public_vars:pubs exec_th);;
-
-let LOCAL_MONTMUL_P256_SAFE = P256_SCALARMULBASE_LOCAL_SAFE "bignum_montmul_p256"
+let LOCAL_MONTMUL_P256_SAFE = PROVE_GENERATED_SAFETY ~keep_maychanges:true
+  (assoc "bignum_montmul_p256" subroutine_signatures)
   BIGNUM_MONTMUL_P256_SUBROUTINE_CORRECT BIGNUM_MONTMUL_P256_EXEC;;
 
-let LOCAL_MONTSQR_P256_SAFE = P256_SCALARMULBASE_LOCAL_SAFE "bignum_montsqr_p256"
+let LOCAL_MONTSQR_P256_SAFE = PROVE_GENERATED_SAFETY ~keep_maychanges:true
+  (assoc "bignum_montsqr_p256" subroutine_signatures)
   BIGNUM_MONTSQR_P256_SUBROUTINE_CORRECT BIGNUM_MONTSQR_P256_EXEC;;
 
-let LOCAL_DEMONT_P256_SAFE = P256_SCALARMULBASE_LOCAL_SAFE "bignum_demont_p256"
+let LOCAL_DEMONT_P256_SAFE = PROVE_GENERATED_SAFETY ~keep_maychanges:true
+  (assoc "bignum_demont_p256" subroutine_signatures)
   BIGNUM_DEMONT_P256_SUBROUTINE_CORRECT BIGNUM_DEMONT_P256_EXEC;;
 
 (* Simulate a call to one of the local subroutines at offset off, using the  *)
@@ -4870,28 +4868,28 @@ let P256_SCALARMULBASE_CALL_TAC off sub_mc args assump_name n =
       LABEL_TAC assump_name safety_th
     ]);;
 
-let LOCAL_JMIXADD_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC 0x195c
-  p256_montjmixadd_mc
+let P256_SCALARMULBASE_JMIXADD_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC
+  0x195c p256_montjmixadd_mc
   [`read X0 s`; `read X1 s`; `read X2 s`; `pc:num`; `read SP s`; `read X30 s`]
   "H_JMIXADD_SAFE";;
 
-let LOCAL_MUL_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC 0x1404
-  bignum_montmul_p256_mc
+let P256_SCALARMULBASE_MUL_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC
+  0x1404 bignum_montmul_p256_mc
   [`read X0 s`; `read X1 s`; `read X2 s`; `pc:num`; `read X30 s`]
   "H_MUL_SAFE";;
 
-let LOCAL_SQR_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC 0x1738
-  bignum_montsqr_p256_mc
+let P256_SCALARMULBASE_SQR_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC
+  0x1738 bignum_montsqr_p256_mc
   [`read X0 s`; `read X1 s`; `pc:num`; `read X30 s`]
   "H_SQR_SAFE";;
 
-let LOCAL_DEMONT_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC 0x2ac
-  bignum_demont_p256_mc
+let P256_SCALARMULBASE_DEMONT_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC
+  0x2ac bignum_demont_p256_mc
   [`read X0 s`; `read X1 s`; `pc:num`; `read X30 s`]
   "H_DEMONT_SAFE";;
 
-let LOCAL_INV_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC 0x340
-  bignum_inv_p256_mc
+let P256_SCALARMULBASE_INV_SAFETY_TAC = P256_SCALARMULBASE_CALL_TAC
+  0x340 bignum_inv_p256_mc
   [`read X0 s`; `read X1 s`; `pc:num`; `read SP s`; `read X30 s`]
   "H_INV_SAFE";;
 
@@ -4953,32 +4951,11 @@ let P256_SCALARMULBASE_REASSOC = METIS[APPEND_ASSOC]
   (exists e2. P e2 /\ e2 = APPEND (APPEND a (APPEND b c)) (APPEND d f) /\
               Q e2)`;;
 
-let P256_SCALARMULBASE_COND_WORD_LIFT = prove
- (`!(b:bool) (a:num) (c:num).
-     (if b then word a:int64 else word c) = word (if b then a else c)`,
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]);;
-
-(* Rewrite only the assumptions "read c s = ..." for the given components c. *)
-
-let P256_SCALARMULBASE_REWRITE_READS_TAC names ths =
-  let reads_comp tm =
-    try let c = rand(rator(lhs tm)) in
-        is_const c && mem (fst(dest_const c)) names
-    with Failure _ -> false in
-  RULE_ASSUM_TAC (fun th ->
-    if reads_comp (concl th) then REWRITE_RULE ths th else th);;
-
 (* The memory-safety reasoning about table offsets wants assumptions free   *)
 (* of "val", so abbreviate the block size after the trace is unified.        *)
 
 let P256_SCALARMULBASE_DISCHARGE_TAC =
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  W (fun (asl,w) ->
-    if is_conj w then (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ])
-    else ALL_TAC) THEN
-  ABBREV_TAC `bsv = val (blocksize:int64)` THEN
-  DISCHARGE_MEMACCESS_INBOUNDS_TAC;;
+  GEN_DISCHARGE_SAFETY_PROPERTY_TAC (ABBREV_TAC `bsv = val (blocksize:int64)`);;
 
 let P256_SCALARMULBASE_SAFE = time prove
  (`exists f_events.
@@ -5072,13 +5049,20 @@ let P256_SCALARMULBASE_SAFE = time prove
 
     REWRITE_TAC[] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (1--3) THEN LOCAL_SQR_SAFETY_TAC 4 THEN
-    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (5--8) THEN LOCAL_MUL_SAFETY_TAC 9 THEN
-    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (10--12) THEN LOCAL_DEMONT_SAFETY_TAC 13 THEN
-    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (14--16) THEN LOCAL_INV_SAFETY_TAC 17 THEN
-    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (18--21) THEN LOCAL_MUL_SAFETY_TAC 22 THEN
-    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (23--26) THEN LOCAL_MUL_SAFETY_TAC 27 THEN
-    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (28--31) THEN LOCAL_MUL_SAFETY_TAC 32 THEN
+    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (1--3) THEN
+    P256_SCALARMULBASE_SQR_SAFETY_TAC 4 THEN
+    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (5--8) THEN
+    P256_SCALARMULBASE_MUL_SAFETY_TAC 9 THEN
+    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (10--12) THEN
+    P256_SCALARMULBASE_DEMONT_SAFETY_TAC 13 THEN
+    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (14--16) THEN
+    P256_SCALARMULBASE_INV_SAFETY_TAC 17 THEN
+    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (18--21) THEN
+    P256_SCALARMULBASE_MUL_SAFETY_TAC 22 THEN
+    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (23--26) THEN
+    P256_SCALARMULBASE_MUL_SAFETY_TAC 27 THEN
+    ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (28--31) THEN
+    P256_SCALARMULBASE_MUL_SAFETY_TAC 32 THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     DISCHARGE_SAFETY_PROPERTY_TAC] THEN
 
@@ -5114,7 +5098,7 @@ let P256_SCALARMULBASE_SAFE = time prove
     ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_TAC] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (1--31) THEN
-    P256_SCALARMULBASE_REWRITE_READS_TAC ["X16"]
+    SAFETY_REWRITE_READS_TAC ["X16"]
      [ASSUME `word_ushr (word_jshl (word 1) blocksize) 1:int64 =
               word (2 EXP (val (blocksize:int64) - 1))`] THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -5154,11 +5138,11 @@ let P256_SCALARMULBASE_SAFE = time prove
       ALL_TAC] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (1--16) THEN
-    P256_SCALARMULBASE_REWRITE_READS_TAC ["X21"]
+    SAFETY_REWRITE_READS_TAC ["X21"]
      [WORD_RULE `word_add (word_add (tab:int64) (word (64 * (k + t)))) (word 64) =
                  word_add tab (word (64 * (k + (t + 1))))`] THEN
-    P256_SCALARMULBASE_REWRITE_READS_TAC ["PC"]
-     [P256_SCALARMULBASE_COND_WORD_LIFT] THEN
+    SAFETY_REWRITE_READS_TAC ["PC"]
+     [SAFETY_COND_WORD_LIFT] THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     P256_SCALARMULBASE_DISCHARGE_TAC;
 
@@ -5171,10 +5155,10 @@ let P256_SCALARMULBASE_SAFE = time prove
     ANTS_TAC THENL [ASM_REWRITE_TAC[]; DISCH_TAC] THEN
     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
     ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (1--20) THEN
-    LOCAL_JMIXADD_SAFETY_TAC 21 THEN
+    P256_SCALARMULBASE_JMIXADD_SAFETY_TAC 21 THEN
     ARM_STEPS_TAC P256_SCALARMULBASE_EXEC (22--56) THEN
-    P256_SCALARMULBASE_REWRITE_READS_TAC ["PC"]
-     [P256_SCALARMULBASE_COND_WORD_LIFT] THEN
+    SAFETY_REWRITE_READS_TAC ["PC"]
+     [SAFETY_COND_WORD_LIFT] THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
     P256_SCALARMULBASE_DISCHARGE_TAC]);;
 
