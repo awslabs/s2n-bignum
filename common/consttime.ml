@@ -1074,12 +1074,190 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
     e2 = f_events <public args> /\     <--- this clause is optional.
     memaccess_inbounds e2 ...'
 *)
-let DISCHARGE_SAFETY_PROPERTY_TAC =
+(* pre_memaccess_tac runs just before the memaccess_inbounds predicates are
+   proved, e.g. to abbreviate terms that would get in the way of arithmetic. *)
+let GEN_DISCHARGE_SAFETY_PROPERTY_TAC (pre_memaccess_tac:tactic) =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
   W (fun (asl,w) ->
     (if is_conj w then
       (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ])
     else ALL_TAC) THEN
+    pre_memaccess_tac THEN
     (* Prove memaccess_inbounds predicates *)
     DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+
+let DISCHARGE_SAFETY_PROPERTY_TAC = GEN_DISCHARGE_SAFETY_PROPERTY_TAC ALL_TAC;;
+
+(* ------------------------------------------------------------------------- *)
+(* Helpers for safety proofs written by hand, e.g. for programs with loops.  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Close the conjuncts of a postcondition before its event part, such as the
+   values of registers and of the PC, after symbolic simulation. *)
+
+let SAFETY_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
+               NO_TAC);
+              (ASM_REWRITE_TAC[] THEN NO_TAC);
+              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
+              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+               CONV_TAC WORD_RULE THEN NO_TAC);
+              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
+        ALL_TAC]
+    else NO_TAC));;
+
+let SAFETY_CLOSE_TAC = SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* Remove the assumptions t = (\x. ...) a with t not a variable, such as the
+   instantiated event traces of earlier iterations. *)
+
+let SAFETY_DROP_BETA_EQS_TAC =
+  REPEAT(FIRST_X_ASSUM(K ALL_TAC o check (fun th ->
+    let c = concl th in is_eq c && not (is_var (lhs c)) &&
+    is_abs (fst (strip_comb (rhs c))))));;
+
+(* Reduce the conditionals `if p then a else b` of the goal according to p or
+   ~p, proved by prove_tac (for SAFETY_COND_TAC, from an assumption), without
+   rewriting with p itself. *)
+
+let GEN_SAFETY_COND_TAC (prove_tac:tactic) (p:term) =
+  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN prove_tac in
+  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]);;
+
+let SAFETY_COND_TAC = GEN_SAFETY_COND_TAC (FIRST_ASSUM ACCEPT_TAC);;
+
+(* Facts for an up-counting loop with index register word e (e an expression
+   in the loop variable v), whose backward branch compares e + 1 with bnd;
+   cnt is the iteration count. *)
+
+let SAFETY_UPCOUNT_FACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
+  let e1 = mk_binary "+" (e,`1`) in
+  let wd t = mk_comb(`word:num->int64`,t) in
+  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
+  SUBGOAL_THEN (list_mk_conj
+    [mkval e; mkval e1;
+     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
+           wd e1);
+     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      CONV_TAC WORD_RULE;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* Facts for a down-counting register holding word (c - v), decremented
+   before a test of zero. *)
+
+let SAFETY_DOWNCOUNT_FACTS_TAC (v:term) (c:term) =
+  let sub t = subst [c,`c:num`; v,`j:num`] t in
+  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
+                     val (word (c - j):int64) = c - j /\
+                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
+                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
+       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* Regroup the postcondition trace e2 = APPEND (APPEND x y) z as
+   APPEND x (APPEND y z). *)
+
+let SAFETY_POST_REASSOC_TAC =
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
+   [METIS[APPEND_ASSOC]
+     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
+      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
+
+(* Rewrite the postcondition trace to APPEND <head> <precondition trace> when
+   a loop is entered from the post-leg of the previous loop. *)
+
+let SAFETY_CARRY_REASSOC_TAC : tactic = fun (asl,w) ->
+  let _,args = strip_comb w in
+  let pre = el 1 args and post = el 2 args in
+  let e2v = `e2:(uarch_event)list` in
+  let find_rhs t = rhs (find_term (fun u -> is_eq u && lhs u = e2v) t) in
+  let pre_rhs = find_rhs pre and post_rhs = find_rhs post in
+  let x0 = lhand (lhand post_rhs) in
+  let eq = mk_eq(post_rhs,
+    mk_binop `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
+      x0 pre_rhs) in
+  let th = prove(eq, REWRITE_TAC[APPEND_ASSOC]) in
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [th] (asl,w);;
+
+(* Reorder the postcondition conjuncts so that the trace part comes last
+   (after ENSURES_PRESERVED_TAC / ENSURES_EXISTING_PRESERVED_TAC add more). *)
+
+let SAFETY_EXISTS_LAST_TAC =
+  let conv tm =
+    let cs = conjuncts tm in
+    let ex,others = partition is_exists cs in
+    if ex = [] || others = [] then REFL tm
+    else CONJ_ACI_RULE (mk_eq(tm,list_mk_conj(others @ ex))) in
+  CONV_TAC(RATOR_CONV(RAND_CONV(ABS_CONV conv)));;
+
+(* Discharge a goal `exists e2. ... e2 = <trace> ...` whose witness is given
+   explicitly, e.g. for a leg of zero steps, after simplifying with the
+   assumptions `val x = x` and `~(x = y)`. *)
+
+let SAFETY_CONCRETE_DISCHARGE_TAC : tactic =
+  let is_valfact th =
+    let c = concl th in
+    is_eq c &&
+    (try let v,a = dest_comb (lhs c) in
+         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  W(fun (a,w) ->
+      let e2v, body = dest_exists w in
+      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
+      EXISTS_TAC wit) THEN
+  REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
+    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
+    ASSUM_LIST(fun ths ->
+      let vths = filter is_valfact ths in
+      let nths = filter (fun th -> let c = concl th in
+                           is_neg c && is_eq (dest_neg c)) ths in
+      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
+                               GSYM APPEND_ASSOC] in
+      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
+
+(* Lift the word constructor out of a conditional, e.g. in a branch target. *)
+
+let SAFETY_COND_WORD_LIFT = prove
+ (`!(b:bool) (a:num) (c:num).
+     (if b then word a:int64 else word c) = word (if b then a else c)`,
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]);;
+
+(* Beta-reduce an application of an abstraction whose bound variable is
+   called v, e.g. to unfold one particular instantiated event trace. *)
+
+let BETA_VAR_CONV v tm =
+  if is_comb tm && is_abs (rator tm) && name_of (bndvar (rator tm)) = v
+  then BETA_CONV tm else failwith "BETA_VAR_CONV";;
+
+(* Rewrite with ths only the assumptions `read c s = ...` for the components
+   c whose names are in names, e.g. to normalize a pointer or a PC. *)
+
+let SAFETY_REWRITE_READS_TAC names ths =
+  let reads_comp tm =
+    try let c = rand(rator(lhs tm)) in
+        is_const c && mem (fst(dest_const c)) names
+    with Failure _ -> false in
+  RULE_ASSUM_TAC (fun th ->
+    if reads_comp (concl th) then REWRITE_RULE ths th else th);;
