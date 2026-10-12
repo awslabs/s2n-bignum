@@ -3211,111 +3211,73 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_MODIFIER_CORRECT
     BIGNUM_MODIFIER_EXEC;;
 
-(* Close the non-event conjuncts of a postcondition after simulation. *)
-
-let BIGNUM_MODIFIER_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let BIGNUM_MODIFIER_CLOSE_TAC =
-  BIGNUM_MODIFIER_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-let BIGNUM_MODIFIER_POST_REASSOC_TAC =
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-   [METIS[APPEND_ASSOC]
-     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
-      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
-
-(* Reduce the conditionals `if p then a else b` of the goal according to an
-   assumption p or ~p, without rewriting with p itself. *)
-
-let BIGNUM_MODIFIER_COND_TAC (p:term) =
-  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
-  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
-  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]);;
-
-(* Facts for an up-counting loop with index register word e (e an expression
-   in the loop variable v), whose backward branch compares e + 1 with bnd;
-   cnt is the iteration count. *)
-
-let BIGNUM_MODIFIER_UPFACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
-  let e1 = mk_binary "+" (e,`1`) in
-  let wd t = mk_comb(`word:num->int64`,t) in
-  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
-  SUBGOAL_THEN (list_mk_conj
-    [mkval e; mkval e1;
-     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
-           wd e1);
-     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      CONV_TAC WORD_RULE;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
-(* Facts for a down-counting register holding word (c - v), decremented
-   before a test of zero. *)
-
-let BIGNUM_MODIFIER_DOWNFACTS_TAC (v:term) (c:term) =
-  let sub t = subst [c,`c:num`; v,`j:num`] t in
-  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
-                     val (word (c - j):int64) = c - j /\
-                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
-                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
-       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
-let BIGNUM_MODIFIER_BETA_VAR_CONV v tm =
-  if is_comb tm && is_abs (rator tm) && name_of (bndvar (rator tm)) = v
-  then BETA_CONV tm else failwith "BIGNUM_MODIFIER_BETA_VAR_CONV";;
-
-(* Rewrite the postcondition trace to APPEND <head> <precondition trace> when
-   a loop is entered from the post-leg of the previous loop. *)
-
-let BIGNUM_MODIFIER_CARRY_REASSOC_TAC : tactic = fun (asl,w) ->
-  let _,args = strip_comb w in
-  let pre = el 1 args and post = el 2 args in
-  let e2v = `e2:(uarch_event)list` in
-  let find_rhs t = rhs (find_term (fun u -> is_eq u && lhs u = e2v) t) in
-  let pre_rhs = find_rhs pre and post_rhs = find_rhs post in
-  let x0 = lhand (lhand post_rhs) in
-  let eq = mk_eq(post_rhs,
-    mk_binop `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
-      x0 pre_rhs) in
-  let th = prove(eq, REWRITE_TAC[APPEND_ASSOC]) in
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [th] (asl,w);;
-
-(* Drop assumptions equating a list of events with an instantiated (beta-redex)
-   trace; ASM_REWRITE_TAC would loop on them. *)
-
-let BIGNUM_MODIFIER_DROP_BETA_EQS_TAC =
-  REPEAT(FIRST_X_ASSUM(K ALL_TAC o check (fun th ->
-    let c = concl th in is_eq c && not (is_var (lhs c)) &&
-    is_abs (fst (strip_comb (rhs c))))));;
-
 let BIGNUM_MODIFIER_CLOSE2_TAC =
-  BIGNUM_MODIFIER_PEEL_TAC THEN BIGNUM_MODIFIER_DROP_BETA_EQS_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+  SAFETY_PEEL_TAC THEN SAFETY_DROP_BETA_EQS_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let BIGNUM_MODIFIER_SIM_TAC (steps:int list) =
+  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+    ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC steps;;
+
+(* A loop of cnt (nonzero) iterations from head to exitpc with invariant inv,
+   whose leg before the loop takes pre steps and whose body takes body steps
+   after body_tac. The goal for the leg after the loop is left. *)
+
+let BIGNUM_MODIFIER_LOOP_TAC (cnt:term) (head:term) (exitpc:term) (inv:term)
+                               (pre:int) (body_tac:tactic) (body:int) =
+  ENSURES_EVENTS_WHILE_UP2_TAC cnt head exitpc inv THEN
+  REPEAT CONJ_TAC THENL
+   [ASM_REWRITE_TAC[ARITH_EQ];
+    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+    BIGNUM_MODIFIER_SIM_TAC (1--pre) THEN SAFETY_CLOSE_TAC;
+    X_GEN_TAC (fst(dest_abs inv)) THEN STRIP_TAC THEN body_tac THEN
+    BIGNUM_MODIFIER_SIM_TAC (1--body) THEN SAFETY_CLOSE_TAC;
+    ALL_TAC];;
+
+(* The loops over i < k with the counter word i in register reg. *)
+
+let bignum_modifier_inv (reg:term) =
+  subst [reg,`RBX:(x86state,int64)component`]
+   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
+          read R13 s = t /\ read RBX s = word i`;;
+
+let BIGNUM_MODIFIER_UPLOOP_TAC (head:term) (exitpc:term) (reg:term)
+                                 (pre:int) (body:int) =
+  BIGNUM_MODIFIER_LOOP_TAC `k:num` head exitpc (bignum_modifier_inv reg)
+    pre (SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num`) body;;
+
+(* The outer loop of a nest, with a down-counting outer counter: unfold
+   iteration i of the trace, run inner_tac for the inner loops and then the
+   post steps that end the iteration. *)
+
+let BIGNUM_MODIFIER_NEST_TAC (cnt:term) (head:term) (exitpc:term) (inv:term)
+                               (pre:int) (inner_tac:tactic) (post:int) =
+  BIGNUM_MODIFIER_LOOP_TAC cnt head exitpc inv pre
+   (GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
+      [ENUMERATEL_ADD1] THEN
+    CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
+    SAFETY_POST_REASSOC_TAC THEN inner_tac THEN
+    SAFETY_DOWNCOUNT_FACTS_TAC `i:num` cnt)
+   post;;
+
+(* Facts for the loops over j < k - 1 with the index word (1 + j). *)
+
+let BIGNUM_MODIFIER_IDX1_FACTS_TAC =
+  SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k - 1` THEN
+  SUBGOAL_THEN
+   `1 + j < k /\ val (word (1 + j):int64) = 1 + j /\
+    word_add (word (1 + j)) (word 1):int64 = word (1 + (j + 1)) /\
+    word (8 * (1 + j) + 18446744073709551608):int64 = word (8 * j)`
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [UNDISCH_TAC `j < k - 1` THEN ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+      MAP_EVERY UNDISCH_TAC [`j < k - 1`; `k < 2 EXP 64`] THEN ARITH_TAC;
+      REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN ARITH_TAC;
+      REWRITE_TAC[WORD_BLAST
+       `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+      IMP_REWRITE_TAC[WORD_SUB2] THEN
+      CONJ_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ARITH_TAC]];
+    ALL_TAC];;
 
 let BIGNUM_MODIFIER_SAFE = time prove
  (`exists f_events.
@@ -3390,18 +3352,16 @@ let BIGNUM_MODIFIER_SAFE = time prove
   (*** The degenerate case k = 0 ***)
 
   ASM_CASES_TAC `k = 0` THENL
-   [BIGNUM_MODIFIER_COND_TAC `k = 0` THEN
+   [SAFETY_COND_TAC `k = 0` THEN
     FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
+    BIGNUM_MODIFIER_SIM_TAC (1--4) THEN DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  BIGNUM_MODIFIER_COND_TAC `k = 0` THEN
+  SAFETY_COND_TAC `k = 0` THEN
 
   (*** The case k = 1: straight line apart from the reciprocal loop ***)
 
   ASM_CASES_TAC `k = 1` THENL
-   [BIGNUM_MODIFIER_COND_TAC `k = 1` THEN
+   [SAFETY_COND_TAC `k = 1` THEN
     FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 1`)) THEN
     RULE_ASSUM_TAC(fun th -> if can (find_term ((=) `2 EXP 64`)) (concl th)
                              then th else CONV_RULE NUM_REDUCE_CONV th) THEN
@@ -3418,23 +3378,15 @@ let BIGNUM_MODIFIER_SAFE = time prove
        `\s. read RDI s = word 1 /\ read RSI s = z /\ read R12 s = m /\
             read R13 s = t /\ read RBX s = word 0` THEN
       CONJ_TAC THENL
-       [X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--17) THEN
-        BIGNUM_MODIFIER_CLOSE2_TAC;
-        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--13) THEN
-        BIGNUM_MODIFIER_CLOSE2_TAC];
+       [BIGNUM_MODIFIER_SIM_TAC (1--17) THEN BIGNUM_MODIFIER_CLOSE2_TAC;
+        BIGNUM_MODIFIER_SIM_TAC (1--13) THEN BIGNUM_MODIFIER_CLOSE2_TAC];
       X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      BIGNUM_MODIFIER_DOWNFACTS_TAC `i:num` `62` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--12) THEN
-      BIGNUM_MODIFIER_CLOSE2_TAC;
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--203) THEN
-      BIGNUM_MODIFIER_CLOSE2_TAC];
+      SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `62` THEN
+      BIGNUM_MODIFIER_SIM_TAC (1--12) THEN BIGNUM_MODIFIER_CLOSE2_TAC;
+      BIGNUM_MODIFIER_SIM_TAC (1--203) THEN BIGNUM_MODIFIER_CLOSE2_TAC];
     ALL_TAC] THEN
 
-  BIGNUM_MODIFIER_COND_TAC `k = 1` THEN
+  SAFETY_COND_TAC `k = 1` THEN
   SUBGOAL_THEN `8 * k < 2 EXP 64` ASSUME_TAC THENL
    [EVERY_ASSUM(fun th ->
       try MP_TAC
@@ -3461,416 +3413,126 @@ let BIGNUM_MODIFIER_SAFE = time prove
 
   (*** R1: copy m into t ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x18` `pc + 0x29`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBX s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--5) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--5) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x18` `pc + 0x29` `RBX` 5 5 THEN
 
   (*** R2: digitwise normalization, outer loop k - 1 times ***)
-  ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x31` `pc + 0x5d`
+
+  BIGNUM_MODIFIER_NEST_TAC `k - 1` `pc + 0x31` `pc + 0x5d`
    `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBX s = word ((k - 1) - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--3) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
-    CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BIGNUM_MODIFIER_BETA_VAR_CONV "i")))) THEN
-    BIGNUM_MODIFIER_POST_REASSOC_TAC THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x3f` `pc + 0x58`
+          read R13 s = t /\ read RBX s = word ((k - 1) - i)` 3
+   (BIGNUM_MODIFIER_LOOP_TAC `k:num` `pc + 0x3f` `pc + 0x58`
      `\j s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
             read R13 s = t /\ read RBX s = word ((k - 1) - i) /\
-            read RBP s = word j /\ read R11 s = word (k - j)` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-      BIGNUM_MODIFIER_UPFACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
-      BIGNUM_MODIFIER_DOWNFACTS_TAC `j:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--7) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      BIGNUM_MODIFIER_DOWNFACTS_TAC `i:num` `k - 1` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--2) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC];
-    ALL_TAC] THEN
-
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+            read RBP s = word j /\ read R11 s = word (k - j)` 4
+     (SAFETY_UPCOUNT_FACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
+      SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k:num`) 7)
+   2 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R3: bitwise normalization ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x6b` `pc + 0x87`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBX s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--8) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x6b` `pc + 0x87` `RBX` 4 8 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R4: reciprocal approximation, 62 iterations ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `62` `pc + 0x9d` `pc + 0xc0`
+  BIGNUM_MODIFIER_LOOP_TAC `62` `pc + 0x9d` `pc + 0xc0`
    `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBX s = word (62 - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ARITH_TAC;
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--5) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_DOWNFACTS_TAC `i:num` `62` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--12) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+          read R13 s = t /\ read RBX s = word (62 - i)` 5
+   (SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `62`) 12 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R5: multiplication by the reciprocal ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xd0` `pc + 0xee`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBX s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--5) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--9) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0xd0` `pc + 0xee` `RBX` 5 9 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R6: subtraction giving the remainder ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x107` `pc + 0x125`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBX s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--6) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--9) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x107` `pc + 0x125` `RBX` 6 9 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R7: first doubling ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x12e` `pc + 0x151`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBP s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--3) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--10) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x12e` `pc + 0x151` `RBP` 3 10 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R8: first correction ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x15e` `pc + 0x17c`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBP s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--9) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x15e` `pc + 0x17c` `RBP` 4 9 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R9: second doubling ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x185` `pc + 0x1a8`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBP s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--3) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--10) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x185` `pc + 0x1a8` `RBP` 3 10 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R10: second correction, also copied back ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x1b5` `pc + 0x1d8`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBP s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--10) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x1b5` `pc + 0x1d8` `RBP` 4 10 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R11: main loop k times, multiply-accumulate then correction ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x1de` `pc + 0x24b`
+  BIGNUM_MODIFIER_NEST_TAC `k:num` `pc + 0x1de` `pc + 0x24b`
    `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBX s = word (k - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--2) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
-    CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BIGNUM_MODIFIER_BETA_VAR_CONV "i")))) THEN
-    BIGNUM_MODIFIER_POST_REASSOC_TAC THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x1ea` `pc + 0x212`
+          read R13 s = t /\ read RBX s = word (k - i)` 2
+   (BIGNUM_MODIFIER_LOOP_TAC `k:num` `pc + 0x1ea` `pc + 0x212`
      `\j s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
             read R13 s = t /\ read RBX s = word (k - i) /\
-            read RBP s = word j /\ read R8 s = word (k - j)` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-      BIGNUM_MODIFIER_UPFACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
-      BIGNUM_MODIFIER_DOWNFACTS_TAC `j:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--12) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      ALL_TAC] THEN
-    BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x221` `pc + 0x243`
+            read RBP s = word j /\ read R8 s = word (k - j)` 4
+     (SAFETY_UPCOUNT_FACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
+      SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k:num`) 12 THEN
+    SAFETY_CARRY_REASSOC_TAC THEN
+    BIGNUM_MODIFIER_LOOP_TAC `k:num` `pc + 0x221` `pc + 0x243`
      `\j s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
             read R13 s = t /\ read RBX s = word (k - i) /\
-            read RBP s = word j` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--5) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-      BIGNUM_MODIFIER_UPFACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--10) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      BIGNUM_MODIFIER_DOWNFACTS_TAC `i:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--3) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC];
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+            read RBP s = word j` 5
+     (SAFETY_UPCOUNT_FACTS_TAC `j:num` `j:num` `k:num` `k:num`) 10)
+   3 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R12: Montgomery reduction, k - 1 times with index 1 + j ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x2cc` `pc + 0x2f1`
+  BIGNUM_MODIFIER_LOOP_TAC `k - 1` `pc + 0x2cc` `pc + 0x2f1`
    `\j s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
           read R13 s = t /\ read RBP s = word (1 + j) /\
-          read R8 s = word ((k - 1) - j)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--35) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_DOWNFACTS_TAC `j:num` `k - 1` THEN
-    SUBGOAL_THEN
-     `1 + j < k /\ val (word (1 + j):int64) = 1 + j /\
-      word_add (word (1 + j)) (word 1):int64 = word (1 + (j + 1)) /\
-      word (8 * (1 + j) + 18446744073709551608):int64 = word (8 * j)`
-    STRIP_ASSUME_TAC THENL
-     [REPEAT CONJ_TAC THENL
-       [UNDISCH_TAC `j < k - 1` THEN ARITH_TAC;
-        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-        MAP_EVERY UNDISCH_TAC [`j < k - 1`; `k < 2 EXP 64`] THEN ARITH_TAC;
-        REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN ARITH_TAC;
-        REWRITE_TAC[WORD_BLAST
-         `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
-        IMP_REWRITE_TAC[WORD_SUB2] THEN
-        CONJ_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ARITH_TAC]];
-      ALL_TAC] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--11) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+          read R8 s = word ((k - 1) - j)` 35
+   BIGNUM_MODIFIER_IDX1_FACTS_TAC 11 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R13: masked subtraction into z ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x302` `pc + 0x323`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBP s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--5) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--10) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x302` `pc + 0x323` `RBP` 5 10 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R14: reduction modulo m, k times, inner loop k - 1 times ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x326` `pc + 0x37c`
+  BIGNUM_MODIFIER_NEST_TAC `k:num` `pc + 0x326` `pc + 0x37c`
    `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read R11 s = word (k - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--1) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
-    CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BIGNUM_MODIFIER_BETA_VAR_CONV "i")))) THEN
-    BIGNUM_MODIFIER_POST_REASSOC_TAC THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x34a` `pc + 0x36e`
+          read R13 s = t /\ read R11 s = word (k - i)` 1
+   (BIGNUM_MODIFIER_LOOP_TAC `k - 1` `pc + 0x34a` `pc + 0x36e`
      `\j s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
             read R13 s = t /\ read R11 s = word (k - i) /\
-            read RBP s = word (1 + j) /\ read R8 s = word ((k - 1) - j)` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--11) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-      BIGNUM_MODIFIER_DOWNFACTS_TAC `j:num` `k - 1` THEN
-      SUBGOAL_THEN
-       `1 + j < k /\ val (word (1 + j):int64) = 1 + j /\
-        word_add (word (1 + j)) (word 1):int64 = word (1 + (j + 1)) /\
-        word (8 * (1 + j) + 18446744073709551608):int64 = word (8 * j)`
-      STRIP_ASSUME_TAC THENL
-       [REPEAT CONJ_TAC THENL
-         [UNDISCH_TAC `j < k - 1` THEN ARITH_TAC;
-          MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-          MAP_EVERY UNDISCH_TAC [`j < k - 1`; `k < 2 EXP 64`] THEN ARITH_TAC;
-          REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN ARITH_TAC;
-          REWRITE_TAC[WORD_BLAST
-           `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
-          IMP_REWRITE_TAC[WORD_SUB2] THEN
-          CONJ_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ARITH_TAC]];
-        ALL_TAC] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--11) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC;
-      BIGNUM_MODIFIER_DOWNFACTS_TAC `i:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-      BIGNUM_MODIFIER_CLOSE_TAC];
-    ALL_TAC] THEN
-
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+            read RBP s = word (1 + j) /\ read R8 s = word ((k - 1) - j)` 11
+     BIGNUM_MODIFIER_IDX1_FACTS_TAC 11)
+   4 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R15: comparison with m ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x382` `pc + 0x392`
+  BIGNUM_MODIFIER_LOOP_TAC `k:num` `pc + 0x382` `pc + 0x392`
    `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBP s = word i /\ read R8 s = word (k - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--2) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    BIGNUM_MODIFIER_DOWNFACTS_TAC `i:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--5) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    ALL_TAC] THEN
-
-  BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
+          read R13 s = t /\ read RBP s = word i /\ read R8 s = word (k - i)` 2
+   (SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+    SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num`) 5 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
 
   (*** R16: final masked subtraction of m ***)
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x39e` `pc + 0x3b7`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R12 s = m /\
-          read R13 s = t /\ read RBP s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--4) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_MODIFIER_UPFACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC (1--8) THEN
-    BIGNUM_MODIFIER_CLOSE_TAC;
-    BIGNUM_MODIFIER_CARRY_REASSOC_TAC THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODIFIER_EXEC [] THEN
-    BIGNUM_MODIFIER_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC]);;
+  BIGNUM_MODIFIER_UPLOOP_TAC `pc + 0x39e` `pc + 0x3b7` `RBP` 4 8 THEN
+  SAFETY_CARRY_REASSOC_TAC THEN
+  BIGNUM_MODIFIER_SIM_TAC [] THEN SAFETY_CLOSE_TAC);;
 
 let BIGNUM_MODIFIER_NOIBT_SUBROUTINE_SAFE = time prove
  (`
