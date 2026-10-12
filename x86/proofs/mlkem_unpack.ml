@@ -578,10 +578,10 @@ let MLKEM_UNPACK_SAFE = time prove
 let MLKEM_UNPACK_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e a pc stackpointer returnaddress.
-          aligned 32 a /\
-          nonoverlapping (word pc, LENGTH mlkem_unpack_tmc) (a, 512) /\
-          nonoverlapping (stackpointer, 8) (a, 512)
-          ==> ensures x86
+           aligned 32 a /\
+           nonoverlapping (word pc,LENGTH mlkem_unpack_tmc) (a,512) /\
+           nonoverlapping (stackpointer,8) (a,512)
+           ==> ensures x86
                (\s.
                     bytes_loaded s (word pc) mlkem_unpack_tmc /\
                     read RIP s = word pc /\
@@ -589,24 +589,27 @@ let MLKEM_UNPACK_NOIBT_SUBROUTINE_SAFE = time prove
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [a] s /\
                     read events s = e)
-               (\s. read RIP s = returnaddress /\
+               (\s.
+                    read RIP s = returnaddress /\
                     read RSP s = word_add stackpointer (word 8) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events a pc stackpointer returnaddress /\
                          memaccess_inbounds e2 [a,512; stackpointer,8]
-                                               [a,512; stackpointer,8]))
-               (\s s'. true)`,
+                         [a,512; stackpointer,0]))
+               (MAYCHANGE [RSP] ,,
+                MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (a,512)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_unpack_tmc MLKEM_UNPACK_SAFE THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let MLKEM_UNPACK_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e a pc stackpointer returnaddress.
-          aligned 32 a /\
-          nonoverlapping (word pc, LENGTH mlkem_unpack_mc) (a, 512) /\
-          nonoverlapping (stackpointer, 8) (a, 512)
-          ==> ensures x86
+           aligned 32 a /\
+           nonoverlapping (word pc,LENGTH mlkem_unpack_mc) (a,512) /\
+           nonoverlapping (stackpointer,8) (a,512)
+           ==> ensures x86
                (\s.
                     bytes_loaded s (word pc) mlkem_unpack_mc /\
                     read RIP s = word pc /\
@@ -614,14 +617,17 @@ let MLKEM_UNPACK_SUBROUTINE_SAFE = time prove
                     read (memory :> bytes64 stackpointer) s = returnaddress /\
                     C_ARGUMENTS [a] s /\
                     read events s = e)
-               (\s. read RIP s = returnaddress /\
+               (\s.
+                    read RIP s = returnaddress /\
                     read RSP s = word_add stackpointer (word 8) /\
                     (exists e2.
                          read events s = APPEND e2 e /\
                          e2 = f_events a pc stackpointer returnaddress /\
                          memaccess_inbounds e2 [a,512; stackpointer,8]
-                                               [a,512; stackpointer,8]))
-               (\s s'. true)`,
+                         [a,512; stackpointer,0]))
+               (MAYCHANGE [RSP] ,,
+                MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (a,512)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_UNPACK_NOIBT_SUBROUTINE_SAFE));;
 
 (* ------------------------------------------------------------------------- *)
@@ -629,32 +635,37 @@ let MLKEM_UNPACK_SUBROUTINE_SAFE = time prove
 (* ------------------------------------------------------------------------- *)
 
 let MLKEM_UNPACK_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
- (`exists f_events. forall e a pc stackpointer returnaddress.
-        aligned 32 a /\
-        nonoverlapping (word pc, LENGTH mlkem_unpack_windows_tmc) (a, 512) /\
-        nonoverlapping (word_sub stackpointer (word 176), 184) (a, 512) /\
-        nonoverlapping (word pc, LENGTH mlkem_unpack_windows_tmc)
-                       (word_sub stackpointer (word 176), 176)
-        ==> ensures x86
-              (\s.
-                  bytes_loaded s (word pc) mlkem_unpack_windows_tmc /\
-                  read RIP s = word pc /\
-                  read RSP s = stackpointer /\
-                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                  WINDOWS_C_ARGUMENTS [a] s /\
-                  read events s = e)
-              (\s. read RIP s = returnaddress /\
-                  read RSP s = word_add stackpointer (word 8) /\
-                  (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events a pc (word_sub stackpointer (word 176)) returnaddress /\
-                        memaccess_inbounds e2
-                          [a,512; word_sub stackpointer (word 176),184]
-                          [a,512; word_sub stackpointer (word 176),184]))
-              (MAYCHANGE [RSP] ,,
-               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
-               MAYCHANGE [memory :> bytes(a, 512)])`,
+ (`exists f_events.
+       forall e a pc stackpointer returnaddress.
+           aligned 32 a /\
+           nonoverlapping (word pc,LENGTH mlkem_unpack_windows_tmc) (a,512) /\
+           nonoverlapping (word_sub stackpointer (word 176),184) (a,512) /\
+           nonoverlapping (word pc,LENGTH mlkem_unpack_windows_tmc)
+           (word_sub stackpointer (word 176),176)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) mlkem_unpack_windows_tmc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    WINDOWS_C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events a pc (word_sub stackpointer (word 176))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,512; word_sub stackpointer (word 176),184]
+                         [a,512; word_sub stackpointer (word 176),176]))
+               (MAYCHANGE [RSP] ,,
+                MAYCHANGE [memory :> bytes (a,512)] ,,
+                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (word_sub stackpointer (word 176),176)])`,
   (* The safety property specific tactics *)
   ASSUME_CALLEE_SAFETY_TAC MLKEM_UNPACK_SAFE "H_subth" THEN
   META_EXISTS_TAC THEN
@@ -750,30 +761,35 @@ let MLKEM_UNPACK_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
   REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
 
 let MLKEM_UNPACK_WINDOWS_SUBROUTINE_SAFE = prove
- (`exists f_events. forall e a pc stackpointer returnaddress.
-        aligned 32 a /\
-        nonoverlapping (word pc, LENGTH mlkem_unpack_windows_mc) (a, 512) /\
-        nonoverlapping (word_sub stackpointer (word 176), 184) (a, 512) /\
-        nonoverlapping (word pc, LENGTH mlkem_unpack_windows_mc)
-                       (word_sub stackpointer (word 176), 176)
-        ==> ensures x86
-              (\s.
-                  bytes_loaded s (word pc) mlkem_unpack_windows_mc /\
-                  read RIP s = word pc /\
-                  read RSP s = stackpointer /\
-                  read (memory :> bytes64 stackpointer) s = returnaddress /\
-                  WINDOWS_C_ARGUMENTS [a] s /\
-                  read events s = e)
-              (\s. read RIP s = returnaddress /\
-                  read RSP s = word_add stackpointer (word 8) /\
-                  (exists e2.
-                        read events s = APPEND e2 e /\
-                        e2 = f_events a pc (word_sub stackpointer (word 176)) returnaddress /\
-                        memaccess_inbounds e2
-                          [a,512; word_sub stackpointer (word 176),184]
-                          [a,512; word_sub stackpointer (word 176),184]))
-              (MAYCHANGE [RSP] ,,
-               WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-               MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
-               MAYCHANGE [memory :> bytes(a, 512)])`,
+ (`exists f_events.
+       forall e a pc stackpointer returnaddress.
+           aligned 32 a /\
+           nonoverlapping (word pc,LENGTH mlkem_unpack_windows_mc) (a,512) /\
+           nonoverlapping (word_sub stackpointer (word 176),184) (a,512) /\
+           nonoverlapping (word pc,LENGTH mlkem_unpack_windows_mc)
+           (word_sub stackpointer (word 176),176)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) mlkem_unpack_windows_mc /\
+                    read RIP s = word pc /\
+                    read RSP s = stackpointer /\
+                    read (memory :> bytes64 stackpointer) s = returnaddress /\
+                    WINDOWS_C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = returnaddress /\
+                    read RSP s = word_add stackpointer (word 8) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 =
+                         f_events a pc (word_sub stackpointer (word 176))
+                         returnaddress /\
+                         memaccess_inbounds e2
+                         [a,512; word_sub stackpointer (word 176),184]
+                         [a,512; word_sub stackpointer (word 176),176]))
+               (MAYCHANGE [RSP] ,,
+                MAYCHANGE [memory :> bytes (a,512)] ,,
+                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (word_sub stackpointer (word 176),176)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_UNPACK_NOIBT_WINDOWS_SUBROUTINE_SAFE));;
