@@ -191,18 +191,6 @@ let full_spec,public_vars = mk_safety_spec ~keep_maychanges:true
     (assoc "bignum_digit" subroutine_signatures)
     BIGNUM_DIGIT_CORRECT BIGNUM_DIGIT_EXEC;;
 
-let DIGIT_LOAD_CONTAINED = prove
- (`!(a:int64) (n:num) (m:num).
-      m < n /\ n < 2 EXP 64
-      ==> contained_modulo (2 EXP 64)
-            (val(word_add a (word(8 * m))),8) (val a, n * 8)`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[contained_modulo] THEN
-  X_GEN_TAC `d:num` THEN DISCH_TAC THEN EXISTS_TAC `8 * m + d` THEN
-  CONJ_TAC THENL
-   [ ASM_ARITH_TAC;
-     REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN REWRITE_TAC[CONG] THEN
-     CONV_TAC MOD_DOWN_CONV THEN AP_THM_TAC THEN AP_TERM_TAC THEN ARITH_TAC ]);;
-
 let BIGNUM_DIGIT_SAFE = prove
  (`exists f_events. forall e k x n pc.
        ensures x86
@@ -214,44 +202,39 @@ let BIGNUM_DIGIT_SAFE = prove
        (MAYCHANGE [RIP; RAX; RCX; R8] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (k:int64) (pc:num). if val k = 0 then f_ev_k0 x k pc
-      else APPEND (f_ev_post x k pc) (APPEND (ENUMERATEL (val k) (f_ev_loop x k pc)) (f_ev_pre x k pc)):(uarch_event) list` THEN
+   `\(x:int64) (k:int64) (pc:num).
+      if val k = 0 then f_ev_k0 x k pc
+      else APPEND (f_ev_post x k pc)
+                  (APPEND (ENUMERATEL (val k) (f_ev_loop x k pc))
+                          (f_ev_pre x k pc)) :(uarch_event) list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `n:int64`; `pc:num`] THEN
+  W64_GEN_TAC `k:num` THEN
+  MAP_EVERY X_GEN_TAC [`x:int64`; `n:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+
+  (*** The degenerate case k = 0 ***)
+
   ASM_CASES_TAC `k = 0` THENL
-   [ ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--3) THEN DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
+   [ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--3) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
   ASM_REWRITE_TAC[ASSUME `val(word k:int64) = k`] THEN
+
+  (*** The main loop ***)
+
   ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xb` `pc + 0x1e`
    `\i s. read RSI s = x /\ read RDI s = word k /\ read RCX s = word i` THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [ X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--4) THEN ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;
-     ALL_TAC;
-     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC ] THEN
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN REWRITE_TAC[] THEN
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  X86_STEPS_TAC BIGNUM_DIGIT_EXEC (1--6) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `word_add (word i) (word 1):int64 = word(i+1)` ASSUME_TAC THENL [ CONV_TAC WORD_RULE; ALL_TAC ] THEN
-  SUBGOAL_THEN `val(word(i+1):int64) = i + 1` ASSUME_TAC THENL
-   [ MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `(val(word (i+1):int64) < k) <=> i + 1 < k` SUBST1_TAC THENL
-   [ IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  SUBGOAL_THEN `i < k` ASSUME_TAC THENL [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  W (fun (asl,w) -> (if is_conj w then (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ]) else ALL_TAC)) THEN
-  ASM_REWRITE_TAC[] THEN
-  GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN CONJ_TAC THENL
-   [ REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN
-     MATCH_MP_TAC DIGIT_LOAD_CONTAINED THEN CONJ_TAC THEN SIMPLE_ARITH_TAC;
-     FIRST_X_ASSUM(fun th -> if is_eq(concl th) && is_var(lhs(concl th)) && name_of(lhs(concl th))="e2"
-                             then MP_TAC(CONV_RULE(RAND_CONV(ONCE_DEPTH_CONV BETA_CONV)) th) else NO_TAC) THEN
-     FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th) = `k:num` && (is_comb(lhs(concl th)) && name_of(rator(lhs(concl th)))="val")
-                           then REWRITE_TAC[th] else NO_TAC) THEN
-     DISCH_THEN(SUBST_ALL_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC ]);;
+   [X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--4) THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_DIGIT_EXEC (1--6) THEN
+    SAFETY_CLOSE_TAC;
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
 let BIGNUM_DIGIT_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -265,9 +248,11 @@ let BIGNUM_DIGIT_NOIBT_SUBROUTINE_SAFE = time prove
                  read RSP s = word_add stackpointer (word 8) /\
                  (exists e2. read events s = APPEND e2 e /\
                       e2 = f_events x k pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8] []))
+                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_digit_tmc BIGNUM_DIGIT_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_digit_tmc BIGNUM_DIGIT_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DIGIT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -281,7 +266,8 @@ let BIGNUM_DIGIT_SUBROUTINE_SAFE = time prove
                  read RSP s = word_add stackpointer (word 8) /\
                  (exists e2. read events s = APPEND e2 e /\
                       e2 = f_events x k pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8] []))
+                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_DIGIT_NOIBT_SUBROUTINE_SAFE));;
 
@@ -309,7 +295,9 @@ let BIGNUM_DIGIT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
             (MAYCHANGE [RSP] ,,
              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_digit_windows_tmc bignum_digit_tmc BIGNUM_DIGIT_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_digit_windows_tmc bignum_digit_tmc
+    BIGNUM_DIGIT_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_DIGIT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.

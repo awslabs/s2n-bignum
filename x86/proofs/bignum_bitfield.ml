@@ -403,9 +403,11 @@ let BIGNUM_BITFIELD_NOIBT_SUBROUTINE_SAFE = time prove
                  read RSP s = word_add stackpointer (word 8) /\
                  (exists e2. read events s = APPEND e2 e /\
                       e2 = f_events x k pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8] []))
+                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_bitfield_tmc BIGNUM_BITFIELD_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_bitfield_tmc BIGNUM_BITFIELD_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_BITFIELD_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -419,7 +421,8 @@ let BIGNUM_BITFIELD_SUBROUTINE_SAFE = time prove
                  read RSP s = word_add stackpointer (word 8) /\
                  (exists e2. read events s = APPEND e2 e /\
                       e2 = f_events x k pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8] []))
+                      memaccess_inbounds e2 [x,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_BITFIELD_NOIBT_SUBROUTINE_SAFE));;
 
@@ -447,7 +450,9 @@ let BIGNUM_BITFIELD_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
             (MAYCHANGE [RSP] ,,
              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_bitfield_windows_tmc bignum_bitfield_tmc BIGNUM_BITFIELD_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_bitfield_windows_tmc bignum_bitfield_tmc
+    BIGNUM_BITFIELD_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_BITFIELD_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.

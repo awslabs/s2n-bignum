@@ -237,9 +237,10 @@ exists f_events.
                       read events s = APPEND e2 e /\
                       e2 = f_events a k pc stackpointer returnaddress /\
                       memaccess_inbounds e2 [a,val k * 8; stackpointer,8]
-                      []))
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_nonzero_tmc BIGNUM_NONZERO_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_nonzero_tmc BIGNUM_NONZERO_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_NONZERO_SUBROUTINE_SAFE = time prove
  (`
@@ -260,7 +261,7 @@ exists f_events.
                       read events s = APPEND e2 e /\
                       e2 = f_events a k pc stackpointer returnaddress /\
                       memaccess_inbounds e2 [a,val k * 8; stackpointer,8]
-                      []))
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_NONZERO_NOIBT_SUBROUTINE_SAFE));;
 
@@ -296,7 +297,9 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_nonzero_windows_tmc bignum_nonzero_tmc BIGNUM_NONZERO_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_nonzero_windows_tmc bignum_nonzero_tmc
+    BIGNUM_NONZERO_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_NONZERO_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

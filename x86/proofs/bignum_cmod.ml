@@ -1468,54 +1468,6 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_CMOD_CORRECT
     BIGNUM_CMOD_EXEC;;
 
-(* Close the non-event conjuncts of a postcondition after simulation. *)
-
-let BIGNUM_CMOD_PEEL_TAC =
-  REPEAT(W(fun (asl,w) ->
-    if is_conj w then
-      CONJ_TAC THENL
-       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
-              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
-               NO_TAC);
-              (ASM_REWRITE_TAC[] THEN NO_TAC);
-              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
-              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
-               CONV_TAC WORD_RULE THEN NO_TAC);
-              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
-        ALL_TAC]
-    else NO_TAC));;
-
-let BIGNUM_CMOD_CLOSE_TAC =
-  BIGNUM_CMOD_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
-
-(* Reduce the conditionals `if p then a else b` of the goal according to an
-   assumption p or ~p, without rewriting with p itself. *)
-
-let BIGNUM_CMOD_COND_TAC (p:term) =
-  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN FIRST_ASSUM ACCEPT_TAC in
-  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
-  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
-    [prove_tac THEN NO_TAC; ALL_TAC]);;
-
-(* Facts for a down-counting register holding word (c - v), decremented
-   before a test of zero. *)
-
-let BIGNUM_CMOD_DOWNFACTS_TAC (v:term) (c:term) =
-  let sub t = subst [c,`c:num`; v,`j:num`] t in
-  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
-                     val (word (c - j):int64) = c - j /\
-                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
-                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
-       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC];
-    ALL_TAC];;
-
 let BIGNUM_CMOD_SAFE = time prove
  (`exists f_events.
        forall e k x m pc.
@@ -1548,13 +1500,13 @@ let BIGNUM_CMOD_SAFE = time prove
   (*** The degenerate case k = 0 ***)
 
   ASM_CASES_TAC `k = 0` THENL
-   [BIGNUM_CMOD_COND_TAC `k = 0` THEN
+   [SAFETY_COND_TAC `k = 0` THEN
     FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--4) THEN
     DISCHARGE_SAFETY_PROPERTY_TAC;
     ALL_TAC] THEN
-  BIGNUM_CMOD_COND_TAC `k = 0` THEN
+  SAFETY_COND_TAC `k = 0` THEN
 
   (*** The main loop from the top word down ***)
 
@@ -1565,9 +1517,9 @@ let BIGNUM_CMOD_SAFE = time prove
     REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--64) THEN
-    BIGNUM_CMOD_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    BIGNUM_CMOD_DOWNFACTS_TAC `i:num` `k:num` THEN
+    SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
     SUBGOAL_THEN
      `word (8 * (k - i) + 18446744073709551608):int64 =
       word (8 * (k - (i + 1)))`
@@ -1579,12 +1531,11 @@ let BIGNUM_CMOD_SAFE = time prove
       ALL_TAC] THEN
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--11) THEN
-    BIGNUM_CMOD_CLOSE_TAC;
+    SAFETY_CLOSE_TAC;
     X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
       ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--30) THEN
-    BIGNUM_CMOD_CLOSE_TAC]);;
+    SAFETY_CLOSE_TAC]);;
 
-(* Has no "word_sub stackpointer (word ..)"; stackofs is None *)
 let BIGNUM_CMOD_NOIBT_SUBROUTINE_SAFE = time prove
  (`
 exists f_events.
@@ -1604,9 +1555,10 @@ exists f_events.
                       read events s = APPEND e2 e /\
                       e2 = f_events x k pc stackpointer returnaddress /\
                       memaccess_inbounds e2 [x,val k * 8; stackpointer,8]
-                      []))
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_cmod_tmc BIGNUM_CMOD_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_cmod_tmc BIGNUM_CMOD_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CMOD_SUBROUTINE_SAFE = time prove
  (`
@@ -1627,7 +1579,7 @@ exists f_events.
                       read events s = APPEND e2 e /\
                       e2 = f_events x k pc stackpointer returnaddress /\
                       memaccess_inbounds e2 [x,val k * 8; stackpointer,8]
-                      []))
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_CMOD_NOIBT_SUBROUTINE_SAFE));;
 
@@ -1663,7 +1615,9 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_cmod_windows_tmc bignum_cmod_tmc BIGNUM_CMOD_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_cmod_windows_tmc bignum_cmod_tmc
+    BIGNUM_CMOD_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_CMOD_WINDOWS_SUBROUTINE_SAFE = time prove
  (`

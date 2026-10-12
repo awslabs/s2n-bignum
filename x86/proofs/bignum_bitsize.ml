@@ -352,9 +352,11 @@ let BIGNUM_BITSIZE_NOIBT_SUBROUTINE_SAFE = time prove
                  read RSP s = word_add stackpointer (word 8) /\
                  (exists e2. read events s = APPEND e2 e /\
                       e2 = f_events a k pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [a,val k * 8; stackpointer,8] []))
+                      memaccess_inbounds e2 [a,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_bitsize_tmc BIGNUM_BITSIZE_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_bitsize_tmc BIGNUM_BITSIZE_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_BITSIZE_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -368,7 +370,8 @@ let BIGNUM_BITSIZE_SUBROUTINE_SAFE = time prove
                  read RSP s = word_add stackpointer (word 8) /\
                  (exists e2. read events s = APPEND e2 e /\
                       e2 = f_events a k pc stackpointer returnaddress /\
-                      memaccess_inbounds e2 [a,val k * 8; stackpointer,8] []))
+                      memaccess_inbounds e2 [a,val k * 8; stackpointer,8]
+                      [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE BIGNUM_BITSIZE_NOIBT_SUBROUTINE_SAFE));;
 
@@ -396,7 +399,9 @@ let BIGNUM_BITSIZE_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
             (MAYCHANGE [RSP] ,,
              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_bitsize_windows_tmc bignum_bitsize_tmc BIGNUM_BITSIZE_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_bitsize_windows_tmc bignum_bitsize_tmc
+    BIGNUM_BITSIZE_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_BITSIZE_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.

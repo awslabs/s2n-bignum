@@ -261,25 +261,6 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_MULADD10_CORRECT
     BIGNUM_MULADD10_EXEC;;
 
-(* Containment of a word-indexed memory access buf[m] (8 bytes) within
-   [buf, n * 8] when m < n.  Used for the in-place load and store z[i]. *)
-let MULADD10_CONTAINED = prove
- (`!(a:int64) (n:num) (m:num).
-      m < n /\ n < 2 EXP 64
-      ==> contained_modulo (2 EXP 64)
-            (val(word_add a (word(8 * m))),8) (val a, n * 8)`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[contained_modulo] THEN
-  X_GEN_TAC `d:num` THEN DISCH_TAC THEN EXISTS_TAC `8 * m + d` THEN
-  CONJ_TAC THENL
-   [ ASM_ARITH_TAC;
-     REWRITE_TAC[VAL_WORD_ADD; VAL_WORD; DIMINDEX_64] THEN REWRITE_TAC[CONG] THEN
-     CONV_TAC MOD_DOWN_CONV THEN AP_THM_TAC THEN AP_TERM_TAC THEN ARITH_TAC ]);;
-
-let rec MULADD10_CONTAIN_TAC g =
-  (FIRST [ MATCH_MP_TAC MULADD10_CONTAINED THEN CONJ_TAC THEN SIMPLE_ARITH_TAC;
-           DISJ1_TAC THEN MULADD10_CONTAIN_TAC;
-           DISJ2_TAC THEN MULADD10_CONTAIN_TAC ]) g;;
-
 let BIGNUM_MULADD10_SAFE = prove
  (`exists f_events.
        forall e k z d pc.
@@ -302,45 +283,42 @@ let BIGNUM_MULADD10_SAFE = prove
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
-   `\(z:int64) (k:int64) (pc:num). if val k = 0 then f_ev_k0 z k pc
-      else APPEND (f_ev_post z k pc) (APPEND (ENUMERATEL (val k) (f_ev_loop z k pc)) (f_ev_pre z k pc)):(uarch_event) list` THEN
+   `\(z:int64) (k:int64) (pc:num).
+      if val k = 0 then f_ev_k0 z k pc
+      else APPEND (f_ev_post z k pc)
+                  (APPEND (ENUMERATEL (val k) (f_ev_loop z k pc))
+                          (f_ev_pre z k pc)) :(uarch_event) list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `d:int64`; `pc:num`] THEN
+  W64_GEN_TAC `k:num` THEN
+  MAP_EVERY X_GEN_TAC [`z:int64`; `d:int64`; `pc:num`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+
+  (*** The degenerate case k = 0 ***)
+
   ASM_CASES_TAC `k = 0` THENL
-   [ ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_MULADD10_EXEC (1--4) THEN DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
+   [ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_MULADD10_EXEC (1--4) THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    ALL_TAC] THEN
   ASM_REWRITE_TAC[ASSUME `val(word k:int64) = k`] THEN
+
+  (*** The main loop ***)
+
   ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x11` `pc + 0x2e`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R9 s = word 10 /\ read R8 s = word i` THEN
+   `\i s. read RDI s = word k /\ read RSI s = z /\ read R9 s = word 10 /\
+          read R8 s = word i` THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [ X86_SIM_TAC BIGNUM_MULADD10_EXEC (1--5) THEN ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC;
-     ALL_TAC;
-     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN X86_STEPS_TAC BIGNUM_MULADD10_EXEC (1--1) THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN DISCHARGE_SAFETY_PROPERTY_TAC ] THEN
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN REWRITE_TAC[] THEN
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  X86_STEPS_TAC BIGNUM_MULADD10_EXEC (1--9) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `word_add (word i) (word 1):int64 = word(i+1)` ASSUME_TAC THENL [ CONV_TAC WORD_RULE; ALL_TAC ] THEN
-  SUBGOAL_THEN `val(word(i+1):int64) = i + 1` ASSUME_TAC THENL
-   [ MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `(val(word (i+1):int64) < k) <=> i + 1 < k` SUBST1_TAC THENL
-   [ IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  SUBGOAL_THEN `i < k` ASSUME_TAC THENL [ SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  W (fun (asl,w) -> (if is_conj w then (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ]) else ALL_TAC)) THEN
-  ASM_REWRITE_TAC[] THEN
-  GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN CONJ_TAC THEN
-  ((REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND] THEN REPEAT CONJ_TAC THEN MULADD10_CONTAIN_TAC)
-   ORELSE
-   (FIRST_X_ASSUM(fun th -> if is_eq(concl th) && is_var(lhs(concl th)) && name_of(lhs(concl th))="e2"
-                            then MP_TAC(CONV_RULE(RAND_CONV(ONCE_DEPTH_CONV BETA_CONV)) th) else NO_TAC) THEN
-    FIRST_ASSUM(fun th -> if is_eq(concl th) && rand(concl th) = `k:num` && (is_comb(lhs(concl th)) && name_of(rator(lhs(concl th)))="val")
-                          then REWRITE_TAC[th] else NO_TAC) THEN
-    DISCH_THEN(SUBST_ALL_TAC o SYM) THEN FIRST_ASSUM ACCEPT_TAC)));;
+   [X86_SIM_TAC BIGNUM_MULADD10_EXEC (1--5) THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
+    SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+      ~canonicalize_pc_diff:false BIGNUM_MULADD10_EXEC (1--9) THEN
+    SAFETY_CLOSE_TAC;
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC BIGNUM_MULADD10_EXEC (1--1) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC]);;
 
 let BIGNUM_MULADD10_NOIBT_SUBROUTINE_SAFE = time prove
  (`
@@ -367,7 +345,8 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bignum (z,val k)])`,
-  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_muladd10_tmc BIGNUM_MULADD10_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_PROMOTE_RETURN_NOSTACK_TAC bignum_muladd10_tmc BIGNUM_MULADD10_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MULADD10_SUBROUTINE_SAFE = time prove
  (`
@@ -432,7 +411,9 @@ exists f_events.
              MAYCHANGE
              [memory :> bignum (z,val k);
               memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_muladd10_windows_tmc bignum_muladd10_tmc BIGNUM_MULADD10_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  WINDOWS_X86_WRAP_NOSTACK_TAC bignum_muladd10_windows_tmc bignum_muladd10_tmc
+    BIGNUM_MULADD10_SAFE THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_MULADD10_WINDOWS_SUBROUTINE_SAFE = time prove
  (`
