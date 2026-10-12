@@ -17,13 +17,14 @@ let _ = match `:armstate`,`:x86state` with
 
 let mk_safety_spec
     ?(readonly_objects=([]:(term * term)list))
+    ?(extra_public_vars=([]:term list))
     ~(keep_maychanges:bool)
     (fnargs,xx,meminputs,memoutputs,memtemps)
     (subroutine_correct_th:thm) exec: term*(term list) =
   let read_sth_eq (f:term->bool):term->bool =
     fun t -> is_eq t && let l = lhs t in is_binary "read" l &&
       let l' = fst (dest_binary "read" l) in f l' in
-  gen_mk_safety_spec ~readonly_objects ~keep_maychanges
+  gen_mk_safety_spec ~readonly_objects ~extra_public_vars ~keep_maychanges
     (fnargs,xx,meminputs,memoutputs,memtemps)
     subroutine_correct_th exec
     (read_sth_eq (fun t -> t = `RSP`))

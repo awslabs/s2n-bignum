@@ -39,11 +39,27 @@ find_stack_access_size `MAYCHANGE [memory :> bytes(z,8 * 8);
 *)
 let gen_mk_safety_spec
     ?(readonly_objects=([]:(term * term)list)) (* address(int64), size(num) list *)
+    ?(extra_public_vars=([]:term list)) (* public scalars that are not sizes *)
     ~(keep_maychanges:bool)
     (fnargs,_,meminputs,memoutputs,memtemps)
     (subroutine_correct_th:thm) exec
     (find_eq_stackpointer:term->bool)
     (find_eq_returnaddress:term->bool): term*(term list) =
+
+  (* The stack pointer variable is assumed to be called stackpointer below,
+     so rename it if the correctness theorem calls it differently. *)
+  let subroutine_correct_th =
+    try
+      let vs,body = strip_forall (concl subroutine_correct_th) in
+      let ens = if is_imp body then snd(dest_imp body) else body in
+      let pre = snd(dest_abs(el 1 (snd(strip_comb ens)))) in
+      let v = rhs (find_term find_eq_stackpointer pre) in
+      if is_var v && mem v vs && name_of v <> "stackpointer" then
+        let vs' = map (fun u -> if u = v then mk_var("stackpointer",type_of u)
+                                else u) vs in
+        GENL vs' (SPECL vs' subroutine_correct_th)
+      else subroutine_correct_th
+    with Failure _ -> subroutine_correct_th in
 
   (* Decompose the functional correctness. *)
   let fnspec:term = concl subroutine_correct_th in
@@ -160,6 +176,7 @@ let gen_mk_safety_spec
     let pvars = find_terms is_var baseptr in
     let szvars = find_terms is_var sz in
     union (union pvars l) szvars) (memreads @ memwrites) [] in
+  let public_vars = public_vars @ subtract extra_public_vars public_vars in
 
   (* Create the f_events var as well as expressions (not necessarily var)
      as args of f_events containing public information *)
@@ -239,6 +256,20 @@ let gen_mk_safety_spec
     let e2 = mk_var("e2",`:(uarch_event)list`) in
     let read_pc_eq = find_term (fun t -> is_eq t && is_read_pc (lhs t))
         fnspec_postcond in
+    (* Keep a disjunction of the possible final PCs, as for a program with
+       several exits (without repetitions, as all exits of a subroutine
+       return to the same address). *)
+    let read_pc_eq =
+      try let c = find (fun c -> is_disj c &&
+                    forall (fun d -> is_eq d && is_read_pc (lhs d))
+                      (disjuncts c))
+                    (conjuncts fnspec_postcond) in
+          let rec nodups l =
+            match l with [] -> [] | h::t -> h::nodups (filter ((<>) h) t) in
+          let ds = disjuncts c in
+          let ds' = nodups ds in
+          if length ds' = length ds then c else list_mk_disj ds'
+      with Failure _ -> read_pc_eq in
     let read_pc_eq = vsubst [s,fnspec_postcond_bvar] read_pc_eq in
     mk_conj (
       read_pc_eq, (* put read_pc_eq out, so that specialized Hoare rule tactics
