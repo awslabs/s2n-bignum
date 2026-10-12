@@ -3380,46 +3380,9 @@ let BIGNUM_KMUL_32_64_SAFE = time prove
               MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   BIGNUM_KMUL_32_64_CORE_SAFE_TAC bignum_kmul_32_64_tmc BIGNUM_KMUL_32_64_EXEC 0xe1a);;
 
-let BIGNUM_KMUL_32_64_WRAP_TAC execth (off:int) (core_th:thm) pres
-    (nsteps_pre:int) (nsteps_post:int) =
-  ASSUME_CALLEE_SAFETY_TAC core_th "H_core" THEN
-  META_EXISTS_TAC THEN
-  REWRITE_TAC[fst execth] THEN
-  REWRITE_TAC[MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI;
-              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  MAP_EVERY X_GEN_TAC
-   [`e:(uarch_event)list`; `z:int64`; `x:int64`; `y:int64`; `t:int64`;
-    `pc:num`] THEN
-  WORD_FORALL_OFFSET_TAC off THEN
-  MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
-  REWRITE_TAC[WORD_RULE
-   (mk_eq(mk_binop `word_sub:int64->int64->int64`
-            (mk_binop `word_add:int64->int64->int64` `x:int64`
-               (mk_comb(`word:num->int64`,mk_small_numeral off)))
-            (mk_comb(`word:num->int64`,mk_small_numeral off)),`x:int64`))] THEN
-  REWRITE_TAC[C_ARGUMENTS; WINDOWS_C_ARGUMENTS; SOME_FLAGS] THEN
-  REWRITE_TAC[ALL; ALLPAIRS; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-  MAP_EVERY (fun (n,r) -> ENSURES_PRESERVED_TAC n r) pres THEN
-  ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC execth (1--nsteps_pre) THEN
-  W(fun (asl,w) ->
-    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
-      if is_eq t && is_read_events (lhs t) then Some (rhs t)
-      else None) asl in
-    if length current_events <> 1
-    then failwith "More than 'read events .. = ..?'"
-    else
-      REMOVE_THEN "H_core"
-        (MP_TAC o SPECL [hd current_events;
-          `z:int64`; `x:int64`; `y:int64`; `t:int64`; `pc:num`;
-          `stackpointer:int64`])) THEN
-  ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; ALL; ALLPAIRS;
-                  NONOVERLAPPING_CLAUSES] THEN
-  ANTS_TAC THENL [REPEAT CONJ_TAC THEN NONOVERLAPPING_TAC; ALL_TAC] THEN
-  X86_BIGSTEP_TAC execth ("s"^string_of_int(nsteps_pre+1)) THEN
-  X86_STEPS_TAC execth ((nsteps_pre+2)--(nsteps_pre+1+nsteps_post)) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC;;
+(* The wrappers step over the register saves and the push of t before the
+   core (7 instructions, or 13 for Windows with the argument moves) and over
+   the restores and the return after it (8, or 10 for Windows). *)
 
 let BIGNUM_KMUL_32_64_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -3456,9 +3419,9 @@ let BIGNUM_KMUL_32_64_NOIBT_SUBROUTINE_SAFE = time prove
              MAYCHANGE
              [memory :> bytes (z,8 * 64); memory :> bytes (t,8 * 96);
               memory :> bytes (word_sub stackpointer (word 64),64)])`,
-  BIGNUM_KMUL_32_64_WRAP_TAC BIGNUM_KMUL_32_64_EXEC 64 BIGNUM_KMUL_32_64_SAFE
-   [("rbx_init",`RBX`); ("rbp_init",`RBP`); ("r12_init",`R12`);
-    ("r13_init",`R13`); ("r14_init",`R14`); ("r15_init",`R15`)] 7 8);;
+  GEN_X86_ADD_RETURN_STACK_TAC BIGNUM_KMUL_32_64_EXEC BIGNUM_KMUL_32_64_SAFE
+    `[RBX; RBP; R12; R13; R14; R15]` 64 (7,8) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_KMUL_32_64_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -3567,11 +3530,10 @@ let BIGNUM_KMUL_32_64_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
              MAYCHANGE
              [memory :> bytes (z,8 * 64); memory :> bytes (t,8 * 96);
               memory :> bytes (word_sub stackpointer (word 80),80)])`,
-  BIGNUM_KMUL_32_64_WRAP_TAC WINDOWS_BIGNUM_KMUL_32_64_EXEC 80
-   BIGNUM_KMUL_32_64_WINDOWS_CORE_SAFE
-   [("rdi_init",`RDI`); ("rsi_init",`RSI`);
-    ("rbx_init",`RBX`); ("rbp_init",`RBP`); ("r12_init",`R12`);
-    ("r13_init",`R13`); ("r14_init",`R14`); ("r15_init",`R15`)] 13 10);;
+  GEN_X86_ADD_RETURN_STACK_TAC WINDOWS_BIGNUM_KMUL_32_64_EXEC
+    BIGNUM_KMUL_32_64_WINDOWS_CORE_SAFE
+    `[RDI; RSI; RBX; RBP; R12; R13; R14; R15]` 80 (13,10) THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
 
 let BIGNUM_KMUL_32_64_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.
