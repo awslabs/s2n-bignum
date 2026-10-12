@@ -5694,13 +5694,12 @@ let P384_MONTJMIXADD_ALT_WINDOWS_SUBROUTINE_CORRECT = time prove
                       memory :> bytes(word_sub stackpointer (word 368),368)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE P384_MONTJMIXADD_ALT_NOIBT_WINDOWS_SUBROUTINE_CORRECT));;
 
+(* ------------------------------------------------------------------------- *)
+(* Constant-time and memory safety proof.                                    *)
+(* ------------------------------------------------------------------------- *)
 
 needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/subroutine_signatures.ml";;
-
-(* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety.                                          *)
-(* ------------------------------------------------------------------------- *)
 
 let full_spec,public_vars = mk_safety_spec
     ~keep_maychanges:true
@@ -5708,7 +5707,36 @@ let full_spec,public_vars = mk_safety_spec
     P384_MONTJMIXADD_ALT_CORRECT
     P384_MONTJMIXADD_ALT_EXEC;;
 
-let P384_MONTJMIXADD_ALT_SAFE = time prove(full_spec,
+let P384_MONTJMIXADD_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer.
+           ALL (nonoverlapping (stackpointer,304))
+           [word pc,15838; p1,144; p2,96; p3,144] /\
+           nonoverlapping (p3,144) (word pc,15838)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc)
+                    (BUTLAST p384_montjmixadd_alt_tmc) /\
+                    read RIP s = word (pc + 17) /\
+                    read RSP s = stackpointer /\
+                    C_ARGUMENTS [p3; p1; p2] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 15820) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,144; p2,96; p3,144; stackpointer,304]
+                         [p3,144; stackpointer,304]))
+               (MAYCHANGE
+                [RIP; RSI; RAX; RDX; RCX; R8; R9; R10; R11; RBX; RBP; R12;
+                 R13; R14; R15] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bytes (p3,144); memory :> bytes (stackpointer,304)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars P384_MONTJMIXADD_ALT_EXEC);;
 
 let P384_MONTJMIXADD_ALT_NOIBT_SUBROUTINE_SAFE = time prove
