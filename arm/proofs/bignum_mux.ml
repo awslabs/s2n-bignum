@@ -127,8 +127,11 @@ let BIGNUM_MUX_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+(* The frame of the correctness theorem is kept (keep_maychanges:true), so
+   that the safety theorem can be used for callers such as bignum_modexp. *)
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_mux" subroutine_signatures)
     BIGNUM_MUX_SUBROUTINE_CORRECT
     BIGNUM_MUX_EXEC;;
@@ -162,7 +165,8 @@ let BIGNUM_MUX_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2
                          [x,val k * 8; y,val k * 8; z,val k * 8]
                          [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(x:int64) (y:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -179,7 +183,8 @@ let BIGNUM_MUX_SUBROUTINE_SAFE = time prove
   MAP_EVERY W64_GEN_TAC [`b:num`; `k:num`] THEN
   MAP_EVERY X_GEN_TAC [`x:int64`; `y:int64`; `z:int64`; `pc:num`] THEN
   GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS;
+              MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ASM_CASES_TAC `k = 0` THENL
    [ASM_REWRITE_TAC[] THEN
