@@ -887,7 +887,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_copy_row_from_table_8n" subroutine_signatures)
     BIGNUM_COPY_ROW_FROM_TABLE_8N_SUBROUTINE_CORRECT
     BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC;;
@@ -917,7 +917,8 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_SUBROUTINE_SAFE = prove(
                          memaccess_inbounds e2
                          [table,(val height * val width) * 8; z,val width * 8]
                          [z,val width * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * val width)])`,
 
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
@@ -955,7 +956,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_8N_SUBROUTINE_SAFE = prove(
   MAP_EVERY W64_GEN_TAC [`h:num`;`w:num`;`idx:num`] THEN
   REPEAT GEN_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
-              fst BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC] THEN
+              fst BIGNUM_COPY_ROW_FROM_TABLE_8N_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT STRIP_TAC THEN
 
   (*** Get basic bounds from the nonoverlapping assumptions ***)

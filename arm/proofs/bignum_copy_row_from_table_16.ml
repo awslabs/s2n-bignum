@@ -347,7 +347,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_copy_row_from_table_16" subroutine_signatures)
     BIGNUM_COPY_ROW_FROM_TABLE_16_SUBROUTINE_CORRECT
     BIGNUM_COPY_ROW_FROM_TABLE_16_EXEC;;
@@ -375,7 +375,8 @@ let BIGNUM_COPY_ROW_FROM_TABLE_16_SUBROUTINE_SAFE = prove(
                          memaccess_inbounds e2
                          [table,(val height * 16) * 8; z,128]
                          [z,128]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * 16)])`,
 
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
@@ -394,7 +395,7 @@ let BIGNUM_COPY_ROW_FROM_TABLE_16_SUBROUTINE_SAFE = prove(
   MAP_EVERY W64_GEN_TAC [`h:num`;`idx:num`] THEN
   REPEAT GEN_TAC THEN
   REWRITE_TAC[C_ARGUMENTS; NONOVERLAPPING_CLAUSES;
-              fst BIGNUM_COPY_ROW_FROM_TABLE_16_EXEC] THEN
+              fst BIGNUM_COPY_ROW_FROM_TABLE_16_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   REPEAT STRIP_TAC THEN
 
   ENSURES_EVENTS_WHILE_UP2_TAC `h:num` `pc + 0x24` `pc + 0x80`
