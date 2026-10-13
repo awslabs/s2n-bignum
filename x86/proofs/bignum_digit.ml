@@ -201,40 +201,24 @@ let BIGNUM_DIGIT_SAFE = prove
                  memaccess_inbounds e2 [x,val k * 8] []))
        (MAYCHANGE [RIP; RAX; RCX; R8] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 x k pc
-      else APPEND (f_ev_post x k pc)
-                  (APPEND (ENUMERATEL (val k) (f_ev_loop x k pc))
-                          (f_ev_pre x k pc)) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`x:int64`; `n:int64`; `pc:num`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--3) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[ASSUME `val(word k:int64) = k`] THEN
-
-  (*** The main loop ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xb` `pc + 0x1e`
-   `\i s. read RSI s = x /\ read RDI s = word k /\ read RCX s = word i` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--4) THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_DIGIT_EXEC (1--6) THEN
-    SAFETY_CLOSE_TAC;
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+  X86_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--3) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Loop(`k:num`, `pc + 0xb`, `pc + 0x1e`,
+       `\i s. read RSI s = x /\ read RDI s = word k /\ read RCX s = word i`,
+       Leg("pre",
+         X86_SIM_TAC BIGNUM_DIGIT_EXEC (1--4) THEN ASM_REWRITE_TAC[] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("loop",
+         SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+         X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+           ~canonicalize_pc_diff:false BIGNUM_DIGIT_EXEC (1--6) THEN
+         SAFETY_CLOSE_TAC),
+       Leg("post",
+         X86_SAFETY_SIM_TAC BIGNUM_DIGIT_EXEC [] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC)))));;
 
 let BIGNUM_DIGIT_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.

@@ -181,43 +181,36 @@ let BIGNUM_ISZERO_SAFE = prove
                  memaccess_inbounds e2 [a,val k * 8] []))
        (MAYCHANGE [RIP; RAX; RDI] ,, MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(a:int64) (k:int64) (pc:num). if val k = 0 then f_ev_k0 a k pc
-      else APPEND (f_ev_post a k pc) (APPEND (ENUMERATEL (val k) (f_ev_loop a k pc)) (f_ev_pre a k pc)):(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`a:int64`; `pc:num`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-  ASM_CASES_TAC `k = 0` THENL
-   [ ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_ISZERO_EXEC (1--4) THEN DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  ASM_REWRITE_TAC[ASSUME `val(word k:int64) = k`] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x8` `pc + 0x12`
-   `\i s. read RSI s = a /\ read RDI s = word(k - i)` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [ X86_SIM_TAC BIGNUM_ISZERO_EXEC (1--3) THEN ASM_REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC;
-     ALL_TAC;
-     ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-     X86_STEPS_TAC BIGNUM_ISZERO_EXEC (1--3) THEN ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-     DISCHARGE_SAFETY_PROPERTY_TAC ] THEN
-  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  X86_STEPS_TAC BIGNUM_ISZERO_EXEC (1--3) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `val(word(k - i):int64) = k - i` ASSUME_TAC THENL
-   [ MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  (* Rewrite the decremented counter word(k-i)-1 -> word(k-(i+1)) and the loop
-     load address 8*val(word(k-i))-8 -> 8*(k-(i+1)) EVERYWHERE (SUBST_ALL_TAC),
-     so the EventLoad address in the goal is in clean word(8*m) form and the
-     automatic memory-safety discharge can prove containment. *)
-  SUBGOAL_THEN `word_sub (word(k - i)) (word 1):int64 = word(k - (i+1))` SUBST_ALL_TAC THENL
-   [ IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
-  SUBGOAL_THEN `word (8 * val(word(k - i):int64) + 18446744073709551608):int64 = word (8 * (k - (i + 1)))` SUBST_ALL_TAC THENL
-   [ ASM_REWRITE_TAC[] THEN REWRITE_TAC[WORD_BLAST `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
-     IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
-  ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `(~(val(word(k - (i+1)):int64) = 0)) <=> i + 1 < k` SUBST1_TAC THENL
-   [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN X86_SIM_TAC BIGNUM_ISZERO_EXEC (1--4) THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+     Loop(`k:num`, `pc + 0x8`, `pc + 0x12`,
+       `\i s. read RSI s = a /\ read RDI s = word(k - i)`,
+       Leg("pre",
+         X86_SIM_TAC BIGNUM_ISZERO_EXEC (1--3) THEN ASM_REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("loop",
+         ASM_REWRITE_TAC[] THEN
+         X86_SAFETY_SIM_TAC BIGNUM_ISZERO_EXEC (1--3) THEN
+         SUBGOAL_THEN `val(word(k - i):int64) = k - i` ASSUME_TAC THENL
+         [ MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         (* Rewrite the decremented counter word(k-i)-1 -> word(k-(i+1)) and the loop
+         load address 8*val(word(k-i))-8 -> 8*(k-(i+1)) EVERYWHERE (SUBST_ALL_TAC),
+         so the EventLoad address in the goal is in clean word(8*m) form and the
+         automatic memory-safety discharge can prove containment. *)
+         SUBGOAL_THEN `word_sub (word(k - i)) (word 1):int64 = word(k - (i+1))` SUBST_ALL_TAC THENL
+         [ IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
+         SUBGOAL_THEN `word (8 * val(word(k - i):int64) + 18446744073709551608):int64 = word (8 * (k - (i + 1)))` SUBST_ALL_TAC THENL
+         [ ASM_REWRITE_TAC[] THEN REWRITE_TAC[WORD_BLAST `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+         IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
+         ASM_REWRITE_TAC[] THEN
+         SUBGOAL_THEN `(~(val(word(k - (i+1)):int64) = 0)) <=> i + 1 < k` SUBST1_TAC THENL
+         [ IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+         CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC),
+       Leg("post",
+         X86_SAFETY_SIM_TAC BIGNUM_ISZERO_EXEC (1--3) THEN
+         DISCHARGE_SAFETY_PROPERTY_TAC)))));;
 
 let BIGNUM_ISZERO_NOIBT_SUBROUTINE_SAFE = time prove
  (`
