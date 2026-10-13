@@ -479,7 +479,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let normalize_full_spec,normalize_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_normalize" subroutine_signatures)
     BIGNUM_NORMALIZE_SUBROUTINE_CORRECT
     BIGNUM_NORMALIZE_EXEC;;
@@ -534,7 +534,8 @@ let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
                          read events s = APPEND e2 e /\
                          e2 = f_events z k pc returnaddress /\
                          memaccess_inbounds e2 [z,val k * 8] [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * val k)])`,
   ASSERT_CONCL_TAC normalize_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(z:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -564,7 +565,7 @@ let BIGNUM_NORMALIZE_SUBROUTINE_SAFE = prove
   REPEAT META_EXISTS_TAC THEN STRIP_TAC (* e *) THEN
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS] THEN
+  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   (*** k=0: SUBS X7=k-1 (borrow), BCC@0x4 taken -> 0x90 RET -> returnaddress. 3 steps (SUBS,BCC,RET). ***)
   ASM_CASES_TAC `k = 0` THENL

@@ -196,7 +196,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_optneg" subroutine_signatures)
     BIGNUM_OPTNEG_SUBROUTINE_CORRECT
     BIGNUM_OPTNEG_EXEC;;
@@ -220,7 +220,8 @@ let BIGNUM_OPTNEG_SUBROUTINE_SAFE = time prove
                          e2 = f_events x z k pc returnaddress /\
                          memaccess_inbounds e2 [x,val k * 8; z,val k * 8]
                          [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(x:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -238,7 +239,7 @@ let BIGNUM_OPTNEG_SUBROUTINE_SAFE = time prove
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `b:int64`; `x:int64`; `pc:num`] THEN
   GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ASM_CASES_TAC `k = 0` THENL
    [ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)

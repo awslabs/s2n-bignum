@@ -364,7 +364,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_lt" subroutine_signatures)
     BIGNUM_LT_SUBROUTINE_CORRECT
     BIGNUM_LT_EXEC;;
@@ -385,7 +385,7 @@ let BIGNUM_LT_SUBROUTINE_SAFE = time prove
                     read events s = APPEND e2 e /\
                     e2 = f_events a b n m pc returnaddress /\
                     memaccess_inbounds e2 [a,val m * 8; b,val n * 8] [])
-           (\s s'. true)`,
+           MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
 
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
@@ -432,7 +432,7 @@ let BIGNUM_LT_SUBROUTINE_SAFE = time prove
   W64_GEN_TAC `m:num` THEN X_GEN_TAC `a:int64` THEN
   W64_GEN_TAC `n:num` THEN X_GEN_TAC `b:int64` THEN
   MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; fst BIGNUM_LT_EXEC] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; fst BIGNUM_LT_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   VAL_INT64_TAC `1` THEN
 
   (*** Case split following the initial branch, m >= n case then m < n ***)

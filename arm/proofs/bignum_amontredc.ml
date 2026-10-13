@@ -914,7 +914,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 (* The main loop runs p times, so p is public as well as the sizes. *)
 
 let amontredc_full_spec,amontredc_public_vars =
-  mk_safety_spec ~extra_public_vars:[`p:int64`] ~keep_maychanges:false
+  mk_safety_spec ~extra_public_vars:[`p:int64`] ~keep_maychanges:true
     (assoc "bignum_amontredc" subroutine_signatures)
     BIGNUM_AMONTREDC_SUBROUTINE_CORRECT BIGNUM_AMONTREDC_EXEC;;
 
@@ -1118,7 +1118,8 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
                          memaccess_inbounds e2
                          [x,val r * 8; m,val k * 8; z,val k * 8]
                          [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * val k)])`,
   ASSERT_CONCL_TAC amontredc_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (m:int64) (z:int64) (k:int64) (r:int64) (p:int64) (pc:num) (returnaddress:int64).
@@ -1171,7 +1172,7 @@ let BIGNUM_AMONTREDC_SUBROUTINE_SAFE = prove
   X_GEN_TAC `m:int64` THEN W64_GEN_TAC `p:num` THEN
   MAP_EVERY X_GEN_TAC [`pc:num`; `returnaddress:int64`] THEN
   REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
   (*** k=0: CBZ@0x00 -> RET@0x130. 2 steps ***)

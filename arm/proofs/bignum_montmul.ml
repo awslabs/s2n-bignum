@@ -876,7 +876,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let montmul_full_spec,montmul_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_montmul" subroutine_signatures)
     BIGNUM_MONTMUL_SUBROUTINE_CORRECT
     BIGNUM_MONTMUL_EXEC;;
@@ -972,7 +972,8 @@ let BIGNUM_MONTMUL_SUBROUTINE_SAFE = prove
                          memaccess_inbounds e2
                          [x,val k * 8; y,val k * 8; m,val k * 8; z,val k * 8]
                          [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,8 * val k)])`,
   ASSERT_CONCL_TAC montmul_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (y:int64) (m:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -1017,7 +1018,7 @@ let BIGNUM_MONTMUL_SUBROUTINE_SAFE = prove
   REPEAT META_EXISTS_TAC THEN STRIP_TAC (* e *) THEN
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`; `pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS] THEN
+  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   (*** k=0: CBZ-taken -> RET ***)
   ASM_CASES_TAC `k = 0` THENL

@@ -187,7 +187,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let copy_full_spec,copy_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_copy" subroutine_signatures)
     BIGNUM_COPY_SUBROUTINE_CORRECT
     BIGNUM_COPY_EXEC;;
@@ -228,7 +228,8 @@ let BIGNUM_COPY_SAFE_MIN0 = prove
                         e2 = f_events x z k n pc returnaddress /\
                         memaccess_inbounds e2 [x,val n * 8; z,val k * 8]
                                               [z,val k * 8])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (z:int64) (k:int64) (n:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_min0k0 x z k n pc returnaddress
@@ -242,7 +243,7 @@ let BIGNUM_COPY_SAFE_MIN0 = prove
   W64_GEN_TAC `n:num` THEN X_GEN_TAC `x:int64` THEN
   MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst BIGNUM_COPY_EXEC] THEN
+              fst BIGNUM_COPY_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SUBGOAL_THEN `8 * k < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ]
@@ -305,7 +306,8 @@ let BIGNUM_COPY_SAFE_MINgt = prove
                         e2 = f_events x z k n pc returnaddress /\
                         memaccess_inbounds e2 [x,val n * 8; z,val k * 8]
                                               [z,val k * 8])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (z:int64) (k:int64) (n:int64) (pc:num) (returnaddress:int64).
       APPEND
@@ -323,7 +325,7 @@ let BIGNUM_COPY_SAFE_MINgt = prove
   W64_GEN_TAC `n:num` THEN X_GEN_TAC `x:int64` THEN
   MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst BIGNUM_COPY_EXEC] THEN
+              fst BIGNUM_COPY_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SUBGOAL_THEN `8 * k < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ]
@@ -453,7 +455,8 @@ let BIGNUM_COPY_SUBROUTINE_SAFE = prove
                          e2 = f_events x z k n pc returnaddress /\
                          memaccess_inbounds e2 [x,val n * 8; z,val k * 8]
                          [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC copy_full_spec THEN
   X_CHOOSE_TAC
     `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`

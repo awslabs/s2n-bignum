@@ -119,7 +119,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_of_word" subroutine_signatures)
     BIGNUM_OF_WORD_SUBROUTINE_CORRECT
     BIGNUM_OF_WORD_EXEC;;
@@ -141,7 +141,8 @@ let BIGNUM_OF_WORD_SUBROUTINE_SAFE = time prove
                          read events s = APPEND e2 e /\
                          e2 = f_events z k pc returnaddress /\
                          memaccess_inbounds e2 [z,val k * 8] [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(z:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -151,7 +152,7 @@ let BIGNUM_OF_WORD_SUBROUTINE_SAFE = time prove
              (APPEND (ENUMERATEL (val k - 1) (f_ev_loop z k pc returnaddress))
                      (f_ev_pre z k pc returnaddress)):(uarch_event) list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN REPEAT STRIP_TAC THEN
   ABBREV_TAC `k' = val (k:int64)` THEN
   SUBGOAL_THEN `k' < 2 EXP 64` ASSUME_TAC THENL [
     EXPAND_TAC "k'" THEN MATCH_ACCEPT_TAC VAL_BOUND_64; ALL_TAC ] THEN

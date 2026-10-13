@@ -74,7 +74,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_even" subroutine_signatures)
     BIGNUM_EVEN_SUBROUTINE_CORRECT
     BIGNUM_EVEN_EXEC;;
@@ -102,14 +102,14 @@ let BIGNUM_EVEN_SUBROUTINE_SAFE = time prove
                      read events s = APPEND e2 e /\
                      e2 = f_events a k pc returnaddress /\
                      memaccess_inbounds e2 [a,val k * 8] []))
-           (\s s'. true)`,
+           MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(a:int64) (k:int64) (pc:num) (returnaddress:int64).
       if val k = 0 then f_ev_k0 a k pc returnaddress
       else f_ev_pos a k pc returnaddress:(uarch_event) list` THEN
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS] THEN REPEAT STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN REPEAT STRIP_TAC THEN
   ASM_CASES_TAC `val(k:int64) = 0` THEN ASM_REWRITE_TAC[] THENL
    [ ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
        ~canonicalize_pc_diff:false BIGNUM_EVEN_EXEC (1--3) THEN

@@ -345,7 +345,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let modadd_full_spec,modadd_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_modadd" subroutine_signatures)
     BIGNUM_MODADD_SUBROUTINE_CORRECT
     BIGNUM_MODADD_EXEC;;
@@ -397,7 +397,8 @@ let BIGNUM_MODADD_SAFE_K0 = prove
                         memaccess_inbounds e2
                           [x,val k * 8; y,val k * 8; m,val k * 8; z,val k * 8]
                           [z,val k * 8])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (y:int64) (m:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
       f_ev_k0 x y m z k pc returnaddress :(uarch_event) list` THEN
@@ -405,7 +406,7 @@ let BIGNUM_MODADD_SAFE_K0 = prove
   W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`;`x:int64`;`y:int64`;`m:int64`] THEN
   MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst BIGNUM_MODADD_EXEC] THEN
+              fst BIGNUM_MODADD_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ASM_REWRITE_TAC[] THEN
   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
@@ -430,7 +431,8 @@ let BIGNUM_MODADD_SAFE_KGT = prove
                         memaccess_inbounds e2
                           [x,val k * 8; y,val k * 8; m,val k * 8; z,val k * 8]
                           [z,val k * 8])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (y:int64) (m:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
       APPEND (APPEND (APPEND
@@ -446,7 +448,7 @@ let BIGNUM_MODADD_SAFE_KGT = prove
   W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`;`x:int64`;`y:int64`;`m:int64`] THEN
   MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
   REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES;
-              fst BIGNUM_MODADD_EXEC] THEN
+              fst BIGNUM_MODADD_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SUBGOAL_THEN `8 * k < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ]
@@ -587,7 +589,8 @@ let BIGNUM_MODADD_SUBROUTINE_SAFE = prove
                          memaccess_inbounds e2
                          [x,val k * 8; y,val k * 8; m,val k * 8; z,val k * 8]
                          [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC modadd_full_spec THEN
   X_CHOOSE_TAC
     `fk0:int64->int64->int64->int64->int64->num->int64->(uarch_event)list`

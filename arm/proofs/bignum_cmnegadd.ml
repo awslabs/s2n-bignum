@@ -484,7 +484,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let cmnegadd_full_spec,cmnegadd_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_cmnegadd" subroutine_signatures)
     BIGNUM_CMNEGADD_SUBROUTINE_CORRECT
     BIGNUM_CMNEGADD_EXEC;;
@@ -518,7 +518,8 @@ let BIGNUM_CMNEGADD_SAFE_MIN0 = prove
                     exists e2. read events s = APPEND e2 e /\
                         e2 = f_events x z p n pc returnaddress /\
                         memaccess_inbounds e2 [x,val n * 8; z,val p * 8] [z,val p * 8])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val p)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (z:int64) (p:int64) (n:int64) (pc:num) (returnaddress:int64).
       f_ev x z p n pc returnaddress :(uarch_event) list` THEN
@@ -526,7 +527,7 @@ let BIGNUM_CMNEGADD_SAFE_MIN0 = prove
   W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `c:num` THEN W64_GEN_TAC `n:num` THEN
   X_GEN_TAC `x:int64` THEN MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst BIGNUM_CMNEGADD_EXEC] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst BIGNUM_CMNEGADD_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SUBGOAL_THEN `MIN n p = 0` ASSUME_TAC THENL
    [ASM_MESON_TAC[ARITH_RULE `MIN n p = MIN p n`]; ALL_TAC] THEN
@@ -551,7 +552,8 @@ let BIGNUM_CMNEGADD_SAFE_MINGT = prove
                     exists e2. read events s = APPEND e2 e /\
                         e2 = f_events x z p n pc returnaddress /\
                         memaccess_inbounds e2 [x,val n * 8; z,val p * 8] [z,val p * 8])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val p)])`,
   CONCRETIZE_F_EVENTS_TAC
    `\(x:int64) (z:int64) (p:int64) (n:int64) (pc:num) (returnaddress:int64).
       APPEND
@@ -569,7 +571,7 @@ let BIGNUM_CMNEGADD_SAFE_MINGT = prove
   W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN
   W64_GEN_TAC `c:num` THEN W64_GEN_TAC `n:num` THEN
   X_GEN_TAC `x:int64` THEN MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst BIGNUM_CMNEGADD_EXEC] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst BIGNUM_CMNEGADD_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SUBGOAL_THEN `8 * p < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th) with Failure _ -> ALL_TAC) THEN ARITH_TAC; ALL_TAC] THEN
@@ -782,7 +784,8 @@ let BIGNUM_CMNEGADD_SUBROUTINE_SAFE = prove
                          e2 = f_events x z p n pc returnaddress /\
                          memaccess_inbounds e2 [x,val n * 8; z,val p * 8]
                          [z,val p * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val p)])`,
   ASSERT_CONCL_TAC cmnegadd_full_spec THEN
   X_CHOOSE_TAC `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`
     BIGNUM_CMNEGADD_SAFE_MIN0 THEN

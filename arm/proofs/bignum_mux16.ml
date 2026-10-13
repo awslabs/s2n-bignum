@@ -280,7 +280,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let mux16_full_spec,mux16_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_mux16" subroutine_signatures)
     BIGNUM_MUX16_SUBROUTINE_CORRECT
     BIGNUM_MUX16_EXEC;;
@@ -310,7 +310,8 @@ let BIGNUM_MUX16_SUBROUTINE_SAFE = prove
                          memaccess_inbounds e2
                          [xs,(16 * val k) * 8; z,val k * 8]
                          [z,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC mux16_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(xs:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -323,7 +324,7 @@ let BIGNUM_MUX16_SUBROUTINE_SAFE = prove
   W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN
   X_GEN_TAC `xs:int64` THEN W64_GEN_TAC `i:num` THEN
   MAP_EVERY X_GEN_TAC [`pc:num`;`returnaddress:int64`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst BIGNUM_MUX16_EXEC] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; NONOVERLAPPING_CLAUSES; fst BIGNUM_MUX16_EXEC; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   SUBGOAL_THEN `8 * 16 * k < 2 EXP 64` STRIP_ASSUME_TAC THENL
    [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th) with Failure _ -> ALL_TAC) THEN ARITH_TAC; ALL_TAC] THEN

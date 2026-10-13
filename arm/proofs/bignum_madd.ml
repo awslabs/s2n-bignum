@@ -532,7 +532,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let madd_full_spec,madd_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_madd" subroutine_signatures)
     BIGNUM_MADD_SUBROUTINE_CORRECT
     BIGNUM_MADD_EXEC;;
@@ -568,7 +568,8 @@ let BIGNUM_MADD_SUBROUTINE_SAFE = prove
                          memaccess_inbounds e2
                          [x,val m * 8; y,val n * 8; z,val p * 8]
                          [z,val p * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,val p)])`,
   ASSERT_CONCL_TAC madd_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
     `\(x:int64) (y:int64) (z:int64) (p:int64) (n:int64) (m:int64)
@@ -606,7 +607,7 @@ let BIGNUM_MADD_SUBROUTINE_SAFE = prove
   MAP_EVERY X_GEN_TAC
    [`z:int64`; `x:int64`; `y:int64`; `pc:num`; `returnaddress:int64`] THEN
   REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES] THEN
-  REWRITE_TAC[C_ARGUMENTS] THEN
+  REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
 
   ASM_CASES_TAC `p = 0` THENL [

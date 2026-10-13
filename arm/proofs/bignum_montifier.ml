@@ -2890,7 +2890,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let montifier_full_spec,montifier_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_montifier" subroutine_signatures)
     BIGNUM_MONTIFIER_SUBROUTINE_CORRECT
     BIGNUM_MONTIFIER_EXEC;;
@@ -3032,7 +3032,9 @@ let BIGNUM_MONTIFIER_SUBROUTINE_SAFE = prove
                          memaccess_inbounds e2
                          [m,val k * 8; z,val k * 8; t,val k * 8]
                          [z,val k * 8; t,val k * 8]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * val k); memory :> bytes (t,8 * val k)])`,
   ASSERT_CONCL_TAC montifier_full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(m:int64) (z:int64) (t:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -3076,7 +3078,7 @@ let BIGNUM_MONTIFIER_SUBROUTINE_SAFE = prove
   REPEAT META_EXISTS_TAC THEN X_GEN_TAC `e:(uarch_event)list` THEN
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`; `t:int64`; `pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS] THEN
+  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   (*** k = 0: CBZ -> RET ***)
   ASM_CASES_TAC `k = 0` THENL

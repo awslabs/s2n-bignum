@@ -163,7 +163,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_ctd" subroutine_signatures)
     BIGNUM_CTD_SUBROUTINE_CORRECT
     BIGNUM_CTD_EXEC;;
@@ -198,7 +198,7 @@ let BIGNUM_CTD_SUBROUTINE_SAFE = time prove
                      read events s = APPEND e2 e /\
                      e2 = f_events a k pc returnaddress /\
                      memaccess_inbounds e2 [a,val k * 8] []))
-           (\s s'. true)`,
+           MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
   ASSERT_CONCL_TAC full_spec THEN
   CONCRETIZE_F_EVENTS_TAC
    `\(a:int64) (k:int64) (pc:num) (returnaddress:int64).
@@ -209,7 +209,7 @@ let BIGNUM_CTD_SUBROUTINE_SAFE = time prove
   REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
   W64_GEN_TAC `k:num` THEN
   MAP_EVERY X_GEN_TAC [`a:int64`; `pc:num`] THEN GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
   ASM_CASES_TAC `k = 0` THENL
    [ ASM_REWRITE_TAC[] THEN
      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
