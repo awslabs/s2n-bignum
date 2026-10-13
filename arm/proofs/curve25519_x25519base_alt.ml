@@ -3731,28 +3731,7 @@ let CURVE25519_X25519BASE_ALT_SUBROUTINE_CORRECT = time prove
 
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
-
-let LOCAL_MODINV_SAFETY_TAC (assump_name:string) (n:int) =
-  REMOVE_THEN assump_name (fun safety_th ->
-    ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-      (curve25519_x25519base_alt_mc',CURVE25519_X25519BASE_ALT_EXEC,
-       0x10a8,
-        (GEN_REWRITE_CONV RAND_CONV [bignum_inv_p25519_mc] THENC TRIM_LIST_CONV)
-        `TRIM_LIST (12,16) bignum_inv_p25519_mc`,
-        safety_th)
-      [`e:(uarch_event)list`; `read X0 s`; `read X1 s`;
-        `pc + 0x10a8`; `stackpointer:int64`] n
-    THENL [
-      EXISTS_E2_TAC(ref
-        [`scalar:int64`;`point:int64`;`res:int64`;`pc:num`;
-         `stackpointer:int64`;`tables:num`;
-         (* inside the loop... *)
-         `i:num`;
-         `f_ev_loop:int64->int64->int64->num->int64->num->(uarch_event)list`]);
-
-      LABEL_TAC assump_name safety_th
-    ]
-  );;
+needs "arm/proofs/utils/curve25519_x25519base_safety.ml";;
 
 let full_spec,public_vars = mk_safety_spec
     ~readonly_objects:[`word tables:int64`,`48576`]
@@ -3796,113 +3775,13 @@ let CURVE25519_X25519BASE_ALT_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (res,32); memory :> bytes (stackpointer,448)])`,
-
   (* ASSERT_CONCL_TAC full_spec THEN <- this fails due to the extra precond *)
-
-  (* Prepare the safety theorem of subroutine to be used! This is necessary to
-     keep introduction of metavariable in the right order. *)
-  ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE
-      "H_INV_SAFE" THEN
-
-  CONCRETIZE_F_EVENTS_TAC
-    `\(scalar:int64) (res:int64) (tables:num) (pc:num) (stackpointer:int64).
-      APPEND
-        (f_ev_epil scalar res tables pc stackpointer)
-        (APPEND
-          (ENUMERATEL 63 (\i.
-            f_ev_loop scalar res tables pc stackpointer i))
-          (f_ev_prol scalar res tables pc stackpointer))
-    :(uarch_event)list` THEN
-
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[ALLPAIRS; ALL] THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-
-  REWRITE_TAC[BYTES_LOADED_DATA] THEN
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `63` `pc + 0xc8` `pc + 0x1020`(*+2 insn *)
-   `\i s.
-      read (memory :> bytes(word tables,48576)) s =
-        num_of_bytelist curve25519_x25519base_alt_constant_data /\
-      read SP s = stackpointer /\
-      read X23 s = res /\
-      read X19 s = word(tables + 0xc0 + 768 * i) /\
-      read X20 s = word (4 * (i + 1))` THEN
-  REPEAT CONJ_TAC THENL [
-    ARITH_TAC;
-
-    (*** Initial setup and modification of the inputs ***)
-
-    ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (1--10) THEN
-
-    FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP ADRP_ADD_FOLD) THEN
-
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (11--46) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-    CONJ_TAC THENL [WORD_ARITH_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (*** The main loop invariant for adding the next table entry ***)
-
-    REPEAT STRIP_TAC THEN
-    ENSURES_INIT_TAC "s0" THEN
-    STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (1--5) THEN
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (6--11) THEN
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (12--183) THEN
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (184--211) THEN
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (212--
-      (211+(14(*DOUBLE_TWICE4*) + 16(*SUB_TWICE4*) + 16(*ADD_TWICE4*) +
-            94(*MUL_4*) + 94(*MUL_4*) + 94(*MUL_4*) + 16(*SUB_TWICE4*) +
-            16(*ADD_TWICE4*) + 16(*SUB_TWICE4*) + 16(*ADD_TWICE4*) +
-            94(*MUL_4*) + 94(*MUL_4*) + 94(*MUL_4*) + 94(*MUL_4*)))) THEN
-
-    ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (980--982) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[VAL_WORD_ADD] THEN
-      MAP_EVERY VAL_INT64_TAC [`4*(i+1)`;`4`] THEN
-      ASM_REWRITE_TAC[DIMINDEX_64] THEN
-      ONCE_REWRITE_TAC[GSYM COND_RAND] THEN
-      IMP_REWRITE_TAC[MOD_LT] THEN
-      SIMPLE_ARITH_TAC;
-
-      ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE;ALL_TAC] THEN
-    CONJ_TAC THENL [CONV_TAC WORD_RULE;ALL_TAC] THEN
-
-    (* Found this pattern from safety_print_log := true *)
-    SUBGOAL_THEN
-      `word (8 * val (word_ushr (word (4 * (i + 1)):int64) 6))
-      :int64 = word (8 * (4 * (i + 1)) DIV 2 EXP 6)`
-    SUBST_ALL_TAC THENL [
-      AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
-      IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-      ALL_TAC
-    ] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    ALL_TAC
-  ] THEN
-
-  (*** Clean up ready for the final translation part ***)
-
-  ENSURES_INIT_TAC "s0" THEN
-  STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (1--2) THEN
-  ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (3--
-      (2+16(*ADD_TWICE4*) + 16(*SUB_TWICE4*))) THEN
-  (*ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (35--36) THEN*)
-  LOCAL_MODINV_SAFETY_TAC "H_INV_SAFE" 35 THEN
-  ARM_STEPS_TAC CURVE25519_X25519BASE_ALT_EXEC (36--(35+100)) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-
-  SUBST_ALL_TAC (ARITH_RULE`2 EXP 6 = 64`) THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  CURVE25519_X25519BASE_SAFETY_TAC
+    (curve25519_x25519base_alt_mc',CURVE25519_X25519BASE_ALT_EXEC,
+     `curve25519_x25519base_alt_constant_data`)
+    CORE_INV_P25519_SAFE
+    ~inv:0x10a8 ~loop:(0xc8,0x1020) ~init:10 ~mul_4:94 ~mul_p25519:100
+    ~out_steps:0);;
 
 let CURVE25519_X25519BASE_ALT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
