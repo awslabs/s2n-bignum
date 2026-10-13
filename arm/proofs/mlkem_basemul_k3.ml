@@ -485,8 +485,40 @@ let MLKEM_BASEMUL_K3_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "mlkem_basemul_k3" subroutine_signatures)
+    MLKEM_BASEMUL_K3_CORRECT
+    MLKEM_BASEMUL_K3_EXEC;;
+
+let MLKEM_BASEMUL_K3_SAFE = time prove
+ (`exists f_events.
+       forall e srcA srcB srcBt dst pc.
+           ALL (nonoverlapping (dst,512))
+           [word pc,LENGTH mlkem_basemul_k3_mc; srcA,1536; srcB,1536;
+            srcBt,768]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) mlkem_basemul_k3_mc /\
+                    read PC s = word (pc + 20) /\
+                    C_ARGUMENTS [dst; srcA; srcB; srcBt] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 856) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events srcA srcB srcBt dst pc /\
+                         memaccess_inbounds e2
+                         [srcA,1536; srcB,1536; srcBt,768; dst,512]
+                         [dst,512]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
+                MAYCHANGE [memory :> bytes (dst,512)])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars MLKEM_BASEMUL_K3_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_basemul_k3" subroutine_signatures)
     MLKEM_BASEMUL_K3_SUBROUTINE_CORRECT
     MLKEM_BASEMUL_K3_EXEC;;
@@ -520,6 +552,12 @@ let MLKEM_BASEMUL_K3_SUBROUTINE_SAFE = time prove
                         [srcA,1536; srcB,1536; srcBt,768; dst,512;
                          word_sub stackpointer (word 64),64]
                         [dst,512; word_sub stackpointer (word 64),64])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (dst,512);
+                 memory :> bytes (word_sub stackpointer (word 64),64)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_BASEMUL_K3_EXEC);;
+  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(5,5) MLKEM_BASEMUL_K3_EXEC
+      (REWRITE_RULE[fst MLKEM_BASEMUL_K3_EXEC] MLKEM_BASEMUL_K3_SAFE)
+       `[D8; D9; D10; D11; D12; D13; D14; D15]` 64 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

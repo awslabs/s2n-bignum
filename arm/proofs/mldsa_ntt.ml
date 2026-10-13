@@ -868,8 +868,39 @@ let MLDSA_NTT_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "mldsa_ntt_arm" subroutine_signatures)
+    MLDSA_NTT_CORRECT
+    MLDSA_NTT_EXEC;;
+
+let MLDSA_NTT_SAFE = time prove
+ (`exists f_events.
+       forall e a z_012345 z_67 pc.
+           ALL (nonoverlapping (a,1024))
+           [word pc,2336; z_012345,576; z_67,1536]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) mldsa_ntt_mc /\
+                    read PC s = word (pc + 20) /\
+                    C_ARGUMENTS [a; z_012345; z_67] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 2312) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events z_012345 z_67 a pc /\
+                         memaccess_inbounds e2
+                         [a,1024; z_012345,576; z_67,1536]
+                         [a,1024]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [Q8; Q9; Q10; Q11; Q12; Q13; Q14; Q15] ,,
+                MAYCHANGE [memory :> bytes (a,1024)])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars MLDSA_NTT_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mldsa_ntt_arm" subroutine_signatures)
     MLDSA_NTT_SUBROUTINE_CORRECT
     MLDSA_NTT_EXEC;;
@@ -902,6 +933,20 @@ let MLDSA_NTT_SUBROUTINE_SAFE = time prove
                         [a,1024; z_012345,576; z_67,1536;
                          word_sub stackpointer (word 64),64]
                         [a,1024; word_sub stackpointer (word 64),64])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (a,1024);
+                 memory :> bytes (word_sub stackpointer (word 64),64)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_NTT_EXEC);;
+  let TWEAK_CONV =
+    ONCE_DEPTH_CONV let_CONV THENC
+    ONCE_DEPTH_CONV WORDLIST_FROM_MEMORY_CONV THENC
+    ONCE_DEPTH_CONV EXPAND_CASES_CONV THENC
+    ONCE_DEPTH_CONV NUM_MULT_CONV THENC
+    PURE_REWRITE_CONV [WORD_ADD_0] in
+  REWRITE_TAC[fst MLDSA_NTT_EXEC] THEN
+  CONV_TAC TWEAK_CONV THEN
+  ARM_ADD_RETURN_STACK_TAC ~pre_post_nsteps:(5,5) MLDSA_NTT_EXEC
+   (REWRITE_RULE[fst MLDSA_NTT_EXEC] (CONV_RULE TWEAK_CONV MLDSA_NTT_SAFE))
+    `[D8; D9; D10; D11; D12; D13; D14; D15]` 64 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

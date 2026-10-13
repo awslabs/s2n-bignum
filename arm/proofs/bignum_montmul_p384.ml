@@ -2689,8 +2689,43 @@ let BIGNUM_AMONTMUL_P384_SUBROUTINE_CORRECT = time prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_montmul_p384" subroutine_signatures)
+    BIGNUM_MONTMUL_P384_CORRECT
+    BIGNUM_MONTMUL_P384_EXEC;;
+
+let BIGNUM_MONTMUL_P384_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc.
+           nonoverlapping (word pc,LENGTH bignum_montmul_p384_mc) (z,8 * 6)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_montmul_p384_mc /\
+                    read PC s = word (pc + 12) /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s =
+                    word ((pc + 12) + LENGTH bignum_montmul_p384_core_mc) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z pc /\
+                         memaccess_inbounds e2 [x,48; y,48; z,48] [z,48]))
+               (MAYCHANGE
+                [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
+                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
+                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                MAYCHANGE [memory :> bytes (z,8 * 6)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  REWRITE_TAC[fst BIGNUM_MONTMUL_P384_CORE_EXEC; GSYM ADD_ASSOC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_MONTMUL_P384_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_montmul_p384" subroutine_signatures)
     BIGNUM_MONTMUL_P384_SUBROUTINE_CORRECT
     BIGNUM_MONTMUL_P384_EXEC;;
@@ -2721,6 +2756,17 @@ let BIGNUM_MONTMUL_P384_SUBROUTINE_SAFE = time prove
                          [x,48; y,48; z,48;
                           word_sub stackpointer (word 48),48]
                          [z,48; word_sub stackpointer (word 48),48]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 6);
+                 memory :> bytes (word_sub stackpointer (word 48),48)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MONTMUL_P384_EXEC);;
+  REWRITE_TAC[fst BIGNUM_MONTMUL_P384_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC
+   BIGNUM_MONTMUL_P384_EXEC
+   (let th = REWRITE_RULE [fst BIGNUM_MONTMUL_P384_CORE_EXEC;
+        fst BIGNUM_MONTMUL_P384_EXEC;GSYM ADD_ASSOC]
+      BIGNUM_MONTMUL_P384_SAFE in
+    CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) th)
+   `[X19;X20;X21;X22;X23;X24]` 48 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
