@@ -425,6 +425,7 @@ let BIGNUM_MOD_N256_SUBROUTINE_CORRECT = time prove
 
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/bignum_mod_safety.ml";;
 
 let BIGNUM_MOD_N256_SAFE = time prove
  (`exists f_events.
@@ -447,143 +448,7 @@ let BIGNUM_MOD_N256_SAFE = time prove
                  MAYCHANGE SOME_FLAGS ,,
                  MAYCHANGE [events] ,,
                  MAYCHANGE [memory :> bignum (z,4)])`,
-  CONCRETIZE_F_EVENTS_TAC
-    `\(x:int64) (z:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 x z k pc
-      else if val k = 1 then f_ev_k1 x z k pc
-      else if val k = 2 then f_ev_k2 x z k pc
-      else if val k = 3 then f_ev_k3 x z k pc
-      else
-        APPEND
-          (if val k = 4 then f_ev_4 x z k pc
-           else APPEND
-            (f_ev_loop_post x z k pc)
-            (APPEND
-              (ENUMERATEL (val k - 4) (f_ev_loop x z k pc))
-              (f_ev_loop_pre x z k pc)))
-          (f_ev_1 x z k pc)
-      :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-  REPEAT STRIP_TAC THEN
-  ABBREV_TAC `k' = val (k:int64)` THEN
-  SUBGOAL_THEN `k' < 2 EXP 64` ASSUME_TAC THENL [
-    EXPAND_TAC "k'" THEN MATCH_ACCEPT_TAC VAL_BOUND_64; ALL_TAC
-  ] THEN
-  ASM_CASES_TAC `k' < 4` THENL [
-    FIRST_ASSUM(MP_TAC o MATCH_MP (ARITH_RULE
-      `k < 4 ==> k = 0 \/ k = 1 \/ k = 2 \/ k = 3`)) THEN
-    STRIP_TAC THENL [
-      ASM_REWRITE_TAC[ARITH] THEN
-      ARM_SIM_TAC BIGNUM_MOD_N256_EXEC (1--9) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ASM_REWRITE_TAC[ARITH] THEN
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      ARM_SIM_TAC BIGNUM_MOD_N256_EXEC (1--12) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ASM_REWRITE_TAC[ARITH] THEN
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      ARM_SIM_TAC BIGNUM_MOD_N256_EXEC (1--15) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ASM_REWRITE_TAC[ARITH] THEN
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      ARM_SIM_TAC BIGNUM_MOD_N256_EXEC (1--17) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-    ];
-    ALL_TAC
-  ] THEN
-  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
-    `~(k < 4) ==> ~(k = 0) /\ ~(k = 1) /\ ~(k = 2) /\ ~(k = 3)`)) THEN
-  ASM_REWRITE_TAC[] THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x60`
-   `\s. read X0 s = z /\
-        read X2 s = x /\
-        read X1 s = word(k' - 4)` THEN CONJ_TAC THENL [
-    ARM_SIM_TAC ~canonicalize_pc_diff:false
-      BIGNUM_MOD_N256_EXEC (1--24) THEN
-    CONJ_TAC THENL [
-      IMP_REWRITE_TAC[GSYM WORD_SUB2] THEN
-      EXPAND_TAC "k'" THEN ASM_REWRITE_TAC[WORD_VAL] THEN ASM_ARITH_TAC;
-      ALL_TAC
-    ] THEN
-    SUBGOAL_THEN
-      `word_add (word_shl (word_sub k (word 4)) 3) x:int64 =
-       word_add x (word (8 * (k' - 4)))` MP_TAC THENL [
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
-        CONV_TAC WORD_RULE; SIMPLE_ARITH_TAC];
-      ALL_TAC
-    ] THEN
-    DISCH_THEN SUBST_ALL_TAC THEN
-    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC
-  ] THEN
-  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
-   `~(k' < 4) ==> k' = 4 \/ (~(k' = 4) /\ 4 < k')`))
-  THENL
-   [ASM_REWRITE_TAC[SUB_REFL;MULT_0] THEN
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC BIGNUM_MOD_N256_EXEC (1--3) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k' - 4` `pc + 0x64` `pc + 0xe0`
-   `\i s. read X0 s = z /\
-          read X2 s = x /\
-          read X1 s = word ((k' - 4) - i)` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL [
-    SIMPLE_ARITH_TAC;
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC BIGNUM_MOD_N256_EXEC [1] THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [
-      IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
-      SIMPLE_ARITH_TAC;
-      ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0]; ALL_TAC] THEN
-    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC;
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC BIGNUM_MOD_N256_EXEC (1--2) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC
-  ] THEN
-  REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC BIGNUM_MOD_N256_EXEC (1--31) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [
-    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-    IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
-    REPEAT CONJ_TAC THENL [
-      GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC;
-    ];
-    ALL_TAC
-  ] THEN
-  CONJ_TAC THENL [
-    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-    [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ];
-    ALL_TAC
-  ] THEN
-  SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-  REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
-  SUBGOAL_THEN `word_sub (word (k' - 4 - i)) (word 1) =
-                word (k' - 4 - (i + 1)):int64` SUBST_ALL_TAC THENL [
-    IMP_REWRITE_TAC[WORD_SUB2] THEN
-    CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-    ALL_TAC
-  ] THEN
-  MAP_EVERY VAL_INT64_TAC [`k':num`; `k'-4`] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  BIGNUM_MOD_SAFETY_TAC BIGNUM_MOD_N256_EXEC 4 (0x60,24) (0xe0,31));;
 
 let BIGNUM_MOD_N256_SUBROUTINE_SAFE = time prove
  (`exists f_events.
