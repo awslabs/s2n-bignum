@@ -89,6 +89,15 @@ jobs:
 
     runs-on: ${{ matrix.arch == 'arm' && 'ubuntu-24.04-arm' || matrix.arch == 'x86' && 'ubuntu-24.04' }}
 
+    # The x86 leg cosimulates under Intel SDE (emulating a Sapphire Rapids
+    # CPU): the harness saves/restores the full ZMM register file, which
+    # faults on GitHub x86 runners that lack AVX-512. The arm leg runs
+    # natively. See also s2n-bignum-sematest-sde.
+    env:
+      SDE_VERSION_TAG: sde-external-9.58.0-2025-06-16-lin
+      SDE_URL: https://downloadmirror.intel.com/859732/sde-external-9.58.0-2025-06-16-lin.tar.xz
+      SDE_SHA256: f849acecad4c9b108259c643b2688fd65c35723cd23368abe5dd64b917cc18c0
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -117,6 +126,17 @@ jobs:
     - name: Run tests
       run: |
         export HOLDIR=`pwd`/hol-light
+        if [ "${{ matrix.arch }}" = "x86" ]; then
+          curl -sSL -o sde.tar.xz "$SDE_URL"
+          echo "$SDE_SHA256  sde.tar.xz" | sha256sum -c -
+          tar -xJf sde.tar.xz
+          # Pin attaches to the traced process via ptrace.
+          sudo sysctl -w kernel.yama.ptrace_scope=0
+          export COSIM_LDFLAGS=-static
+          export COSIM_RUN="`pwd`/$SDE_VERSION_TAG/sde64"
+          export COSIM_RUN_ARGS="-spr -chip_check_exe_only --"
+          "$COSIM_RUN" -spr -- /bin/true
+        fi
         cd ${{ matrix.arch }}
         make sematest
 
@@ -133,15 +153,9 @@ jobs:
           executor_env: S2N_BIGNUM_AARCH64_EXECUTOR
           executor: tools/simulate-persistent arm
           run: qemu-aarch64
-        - arch: x86
-          runner: ubuntu-24.04-arm
-          packages: gcc-x86-64-linux-gnu binutils-x86-64-linux-gnu qemu-user
-          compiler: x86_64-linux-gnu-gcc
-          assembler: x86_64-linux-gnu-as
-          disassembler: x86_64-linux-gnu-objdump
-          executor_env: S2N_BIGNUM_X86_64_EXECUTOR
-          executor: tools/simulate-persistent x86
-          run: qemu-x86_64
+        # There is no x86 entry: QEMU's TCG does not implement AVX-512, and
+        # the x86 template saves/restores the full ZMM register file. x86
+        # emulated cosimulation runs under Intel SDE in s2n-bignum-sematest-sde.
 
     runs-on: ${{ matrix.runner }}
 
@@ -191,6 +205,68 @@ jobs:
           S2N_BIGNUM_SEMATEST_CASES=100 \
           S2N_BIGNUM_SEMATEST_SEED=1 \
           "./$TARGET/proofs/simulator.native"
+
+  # Cosimulate x86 under Intel SDE so AVX-512 instruction models are tested
+  # on an emulated AVX-512 CPU regardless of the runner's actual hardware.
+  s2n-bignum-sematest-sde:
+    strategy:
+      matrix:
+        sde_cpu: [spr]
+
+    runs-on: ubuntu-24.04
+
+    env:
+      SDE_VERSION_TAG: sde-external-9.58.0-2025-06-16-lin
+      SDE_URL: https://downloadmirror.intel.com/859732/sde-external-9.58.0-2025-06-16-lin.tar.xz
+      SDE_SHA256: f849acecad4c9b108259c643b2688fd65c35723cd23368abe5dd64b917cc18c0
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependent packages
+      run: |
+        sudo apt update
+        sudo apt install libpcre2-dev ocaml libstring-shellquote-perl libgmp-dev xdot
+        wget https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh
+        chmod +x install.sh
+        echo "/usr/local/bin" | sh ./install.sh --version 2.5.2
+        opam init --disable-sandboxing
+
+    - name: Install Intel SDE
+      run: |
+        curl -sSL -o sde.tar.xz "$SDE_URL"
+        echo "$SDE_SHA256  sde.tar.xz" | sha256sum -c -
+        tar -xJf sde.tar.xz
+        echo "SDE_PATH=`pwd`/$SDE_VERSION_TAG/sde64" >> "$GITHUB_ENV"
+        # Pin attaches to the traced process via ptrace.
+        sudo sysctl -w kernel.yama.ptrace_scope=0
+
+    - name: Install HOL Light
+      run: |
+        git clone https://github.com/jrh13/hol-light.git
+        cd hol-light
+        git checkout ${{ env.HOLLIGHT_COMMIT }}
+        make switch-5
+        eval $(opam env)
+        echo $(ocamlc -version)
+        echo $(camlp5 -v)
+        HOLLIGHT_USE_MODULE=1 make
+        cd ..
+
+    - name: Run SDE cosimulation tests
+      env:
+        COSIM_LDFLAGS: -static
+        COSIM_RUN_ARGS: -${{ matrix.sde_cpu }} -chip_check_exe_only --
+      run: |
+        export HOLDIR=`pwd`/hol-light
+        "$SDE_PATH" -${{ matrix.sde_cpu }} -- /bin/true
+        make -C x86 HOLDIR="$HOLDIR" proofs/simulator.native
+        env COSIM_RUN="$SDE_PATH" \
+          S2N_BIGNUM_X86_64_EXECUTOR="tools/simulate-persistent x86" \
+          S2N_BIGNUM_SEMATEST_CASES=1000 \
+          S2N_BIGNUM_SEMATEST_SEED=1 \
+          ./x86/proofs/simulator.native
 
   s2n-bignum-sematest-riscv:
     runs-on: ubuntu-24.04
