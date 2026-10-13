@@ -34,3 +34,19 @@ let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
     [ALIGNED_BYTES_LOADED_APPEND_CLAUSE;MODIFIABLE_SIMD_REGS;
      MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
     ARM_SINGLE_STEP_TAC;;
+
+(* Symbolic simulation of steps snums of a leg of a safety proof. *)
+
+let ARM_SAFETY_SIM_TAC exec snums =
+  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+    ~canonicalize_pc_diff:false exec snums;;
+
+(* Prove a safety property following the skeleton sk (SAFETY_SKELETON_TAC),
+   introducing the variables (W64_GEN_TAC for the word variables named in
+   w64) and rewriting with ths and the usual ARM definitions. *)
+
+let ARM_SAFETY_SKELETON_TAC ?(ths=[]) ?(rename=[]) w64 sk =
+  SAFETY_SKELETON_TAC
+    (GEN_SAFETY_INTRO_TAC ~rename
+      ([C_ARGUMENTS; C_RETURN; SOME_FLAGS;
+        MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] @ ths) w64) sk;;

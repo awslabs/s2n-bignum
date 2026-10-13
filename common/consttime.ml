@@ -1296,3 +1296,183 @@ let SAFETY_REWRITE_READS_TAC names ths =
     with Failure _ -> false in
   RULE_ASSUM_TAC (fun th ->
     if reads_comp (concl th) then REWRITE_RULE ths th else th);;
+
+(* ------------------------------------------------------------------------- *)
+(* Safety proofs following the control flow of the program.                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* The skeleton of a safety proof follows the control flow of the program:
+     Leg(name,tac)    a straight-line piece, proved by tac, whose events are
+                      given by a fresh f_ev_<name> applied to the public
+                      variables and to the indices of the enclosing loops;
+     Seq(pc,inv,a,b)  a and then b, meeting at pc where inv holds;
+     Loop(n,pc1,pc2,inv,pre,body,post)
+                      a loop of n iterations with head pc1, exit pc2 and
+                      invariant inv = \i s. ..., entered by pre and left by
+                      post (ENSURES_EVENTS_WHILE_UP2_TAC); the body starts
+                      with the assumptions about i;
+     Cases(p,a,b)     a when p holds and b otherwise;
+     Then(tac,a)      a after tac, e.g. to establish facts for several legs.
+   The terms n and p are about the variables of the proof, in which the word
+   variables generalized by W64_GEN_TAC are numbers. *)
+
+type safety_skeleton =
+    Leg of string * tactic
+  | Seq of term * term * safety_skeleton * safety_skeleton
+  | Loop of term * term * term * term *
+            safety_skeleton * safety_skeleton * safety_skeleton
+  | Cases of term * safety_skeleton * safety_skeleton
+  | Then of tactic * safety_skeleton;;
+
+let rec safety_skeleton_is_leg sk =
+  match sk with
+    Leg _ -> true
+  | Then(_,a) -> safety_skeleton_is_leg a
+  | _ -> false;;
+
+(* The f_events witness of a skeleton, as a function of the public variables
+   args; the numbers k of the proof are val k for word variables k in args. *)
+
+let safety_skeleton_witness (args:term list) (sk:safety_skeleton) : term =
+  let ety = `:(uarch_event)list` in
+  let app = `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
+  and enum = `ENUMERATEL:num->(num->(uarch_event)list)->(uarch_event)list` in
+  let theta = mapfilter (fun a ->
+    if type_of a = `:int64`
+    then mk_comb(`val:int64->num`,a),mk_var(name_of a,`:num`)
+    else fail()) args in
+  let rec wit idxs sk =
+    match sk with
+      Leg(name,_) ->
+        let vs = args @ idxs in
+        let f = mk_var("f_ev_" ^ name,itlist (mk_fun_ty o type_of) vs ety) in
+        list_mk_comb(f,vs)
+    | Seq(_,_,a,b) -> mk_binop app (wit idxs b) (wit idxs a)
+    | Loop(n,_,_,inv,pre,body,post) ->
+        let i = fst(dest_abs inv) in
+        let bw = wit (idxs @ [i]) body in
+        let bw = if safety_skeleton_is_leg body then rator bw else mk_abs(i,bw) in
+        mk_binop app (wit idxs post)
+          (mk_binop app (list_mk_comb(enum,[subst theta n; bw])) (wit idxs pre))
+    | Cases(p,a,b) -> mk_cond(subst theta p,wit idxs a,wit idxs b)
+    | Then(_,a) -> wit idxs a in
+  list_mk_abs(args,wit [] sk);;
+
+(* Whether the precondition of an ensures goal has a trace exists e2. ... *)
+
+let safety_pre_has_trace w =
+  let e2 = `e2:(uarch_event)list` in
+  can (find_term (fun t -> is_exists t && fst(dest_exists t) = e2))
+      (el 1 (snd(strip_comb w)));;
+
+(* Rewrite the trace D of the postcondition of an ensures goal (e2 = D) by
+   conv. Only D is changed, not the instantiated f_ev of the precondition. *)
+
+let SAFETY_POST_TRACE_CONV_TAC (conv:conv) : tactic = fun (asl,w) ->
+  let e2 = `e2:(uarch_event)list` in
+  let d = rhs(find_term (fun t -> is_eq t && lhs t = e2)
+                        (el 2 (snd(strip_comb w)))) in
+  let at_d t = if t = d then conv t else failwith "SAFETY_POST_TRACE_CONV_TAC" in
+  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV at_d))) (asl,w);;
+
+let SAFETY_APPEND_ASSOC_CONV = REWR_CONV(GSYM APPEND_ASSOC);;
+
+(* Rewrite with the assumptions val(word x) = x, which keeps the traces of
+   the precondition and of the postcondition alike when an instantiated f_ev
+   brings val(word x) back. *)
+
+let SAFETY_VAL_WORD_TAC : tactic =
+  let is_valfact th =
+    let c = concl th in
+    is_eq c &&
+    (try let v,a = dest_comb (lhs c) in
+         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
+  ASSUM_LIST(fun ths ->
+    let vths = filter is_valfact ths in
+    if vths = [] then ALL_TAC else REWRITE_TAC vths);;
+
+(* Prove an ensures goal following a skeleton, where the trace of its
+   postcondition is the witness of the skeleton (followed by the trace of
+   the precondition if any). Legs see the goals of the ENSURES_EVENTS tactics
+   after SAFETY_VAL_WORD_TAC; the other nodes regroup the trace first. As in
+   the usual ENSURES_EVENTS_WHILE_UP2_TAC ... THEN ASM_REWRITE_TAC[] idiom,
+   the goals of a loop are rewritten with the assumptions. The straight-line
+   legs of a node are proved before its loops, so that the events of a loop
+   body are mostly instantiated when the body is proved (as in the usual
+   pre, post, body order). *)
+
+let is_ensures t = try fst(dest_const(fst(strip_comb t))) = "ensures"
+                    with Failure _ -> false;;
+
+let rec SAFETY_SKELETON_WALK_TAC (sk:safety_skeleton) : tactic =
+  match sk with
+    Leg(_,tac) -> SAFETY_VAL_WORD_TAC THEN tac
+  | Then(tac,a) -> tac THEN SAFETY_SKELETON_WALK_TAC a
+  | Cases(p,a,b) ->
+      ASM_CASES_TAC p THENL
+       [SAFETY_COND_TAC p THEN SAFETY_SKELETON_WALK_TAC a;
+        SAFETY_COND_TAC p THEN SAFETY_SKELETON_WALK_TAC b]
+  | Seq(pc,inv,a,b) ->
+      W(fun (_,w) ->
+        if safety_pre_has_trace w
+        then SAFETY_POST_TRACE_CONV_TAC SAFETY_APPEND_ASSOC_CONV
+        else ALL_TAC) THEN
+      ENSURES_EVENTS_SEQUENCE_TAC pc inv THEN
+      (if safety_skeleton_is_leg b && not(safety_skeleton_is_leg a) then
+         CONJ_TAC THENL [ALL_TAC; SAFETY_SKELETON_WALK_TAC b] THEN
+         SAFETY_SKELETON_WALK_TAC a
+       else
+         CONJ_TAC THENL [SAFETY_SKELETON_WALK_TAC a; SAFETY_SKELETON_WALK_TAC b])
+  | Loop(n,pc1,pc2,inv,pre,body,post) -> W(fun (_,w) ->
+      let i = fst(dest_abs inv) and nested = safety_pre_has_trace w in
+      ENSURES_EVENTS_WHILE_UP2_TAC n pc1 pc2 inv THEN ASM_REWRITE_TAC[] THEN
+      W(fun (_,w) ->
+        if is_ensures (lhand w) then ALL_TAC else
+        CONJ_TAC THENL [SIMPLE_ARITH_TAC ORELSE ASM_ARITH_TAC; ALL_TAC]) THEN
+      CONJ_TAC THENL
+       [(if safety_skeleton_is_leg pre then ALL_TAC
+         else SAFETY_POST_TRACE_CONV_TAC
+                (REWR_CONV(CONJUNCT1 ENUMERATEL_APPEND_ZERO))) THEN
+        SAFETY_SKELETON_WALK_TAC pre;
+        ALL_TAC] THEN
+      CONJ_TAC THENL
+       [ALL_TAC;
+        (if safety_skeleton_is_leg post || not nested then ALL_TAC
+         else SAFETY_POST_TRACE_CONV_TAC
+                (SAFETY_APPEND_ASSOC_CONV THENC
+                 RAND_CONV SAFETY_APPEND_ASSOC_CONV)) THEN
+        SAFETY_SKELETON_WALK_TAC post] THEN
+      X_GEN_TAC i THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+      (if safety_skeleton_is_leg body then ALL_TAC else
+       SAFETY_POST_TRACE_CONV_TAC
+        (LAND_CONV(REWR_CONV ENUMERATEL_ADD1) THENC
+         SAFETY_APPEND_ASSOC_CONV THENC LAND_CONV BETA_CONV)) THEN
+      SAFETY_SKELETON_WALK_TAC body);;
+
+(* Prove a goal `exists f_events. ...` following the skeleton sk: introduce
+   the witness given by the skeleton, then do intro (which should generalize
+   by W64_GEN_TAC the word variables used as numbers in sk) and the steps of
+   the skeleton. *)
+
+let SAFETY_SKELETON_TAC (intro:tactic) (sk:safety_skeleton) : tactic =
+  fun (asl,w) ->
+    let fev,body = dest_exists w in
+    let app = find_term (fun t -> is_comb t && fst(strip_comb t) = fev) body in
+    let wit = safety_skeleton_witness (snd(strip_comb app)) sk in
+    (CONCRETIZE_F_EVENTS_TAC wit THEN REPEAT META_EXISTS_TAC THEN intro THEN
+     SAFETY_SKELETON_WALK_TAC sk) (asl,w);;
+
+(* Introduce the variables of a safety goal, by W64_GEN_TAC for the word
+   variables named in w64 and renaming them by the list rename of pairs of
+   names, rewrite with ths and assume the hypotheses. *)
+
+let GEN_SAFETY_INTRO_TAC ?(rename=([]:(string*string)list)) (ths:thm list)
+    (w64:string list) : tactic =
+  REPEAT(W(fun (asl,w) ->
+    let v,_ = dest_forall w in
+    let n = name_of v in
+    let n' = try assoc n rename with Failure _ -> n in
+    if mem n w64 && type_of v = `:int64`
+    then W64_GEN_TAC (mk_var(n',`:num`)) else X_GEN_TAC (mk_var(n',type_of v)))) THEN
+  REWRITE_TAC ths THEN
+  TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC));;
