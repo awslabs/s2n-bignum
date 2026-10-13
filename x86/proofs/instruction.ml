@@ -414,6 +414,9 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPINSRW operand operand operand operand
    | VEXTRACTI128 operand operand operand
    | VINSERTI128 operand operand operand operand
+   | VSHUFI64X2 operand operand operand operand
+   | VINSERTI32X4 operand operand operand operand
+   | VEXTRACTI32X4 operand operand operand
    | VPABSD operand operand
    | VPACKUSWB operand operand operand
    | VPCMPGTD operand operand operand
@@ -450,9 +453,21 @@ let instruction_INDUCTION,instruction_RECURSION = define_type
    | VPSUBQ operand operand operand
    | VPSUBW operand operand operand
    | VPTEST operand operand
+   | VPTERNLOGD operand operand operand operand evex_deco
+   | VPTERNLOGQ operand operand operand operand evex_deco
    | VPUNPCKHQDQ operand operand operand
    | VPUNPCKLQDQ operand operand operand
    | VPXOR operand operand operand
+   | VPXORQ operand operand operand evex_deco
+   | VPROLQ operand operand operand evex_deco
+   | VPROLVQ operand operand operand evex_deco
+   | VPERMQV operand operand operand evex_deco
+   | VPBLENDMQ operand operand operand evex_deco
+   | VMOVDQA64 operand operand evex_deco
+   | VMOVDQU64 operand operand evex_deco
+   | KXNORW (3 word) (3 word) (3 word)
+   | KSHIFTRW (3 word) (3 word) (8 word)
+   | KSHIFTLW (3 word) (3 word) (8 word)
    | VZEROUPPER
    | XCHG operand operand
    | XOR operand operand";;
