@@ -725,7 +725,8 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2
                            [a,4096; b,4096; consts,64; c,1024; stackpointer,8]
                            [c,1024; stackpointer,8]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(c, 1024)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_pointwise_acc_l4_tmc
     MLDSA_POINTWISE_ACC_L4_SAFE THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
 
@@ -756,7 +757,8 @@ let MLDSA_POINTWISE_ACC_L4_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2
                            [a,4096; b,4096; consts,64; c,1024; stackpointer,8]
                            [c,1024; stackpointer,8]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(c, 1024)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_POINTWISE_ACC_L4_NOIBT_SUBROUTINE_SAFE));;
 
 (* ------------------------------------------------------------------------- *)

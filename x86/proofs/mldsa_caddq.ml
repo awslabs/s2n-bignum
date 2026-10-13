@@ -474,7 +474,8 @@ let MLDSA_CADDQ_NOIBT_SUBROUTINE_SAFE = time prove
                          e2 = f_events a pc stackpointer returnaddress /\
                          memaccess_inbounds e2 [a,1024; stackpointer,8]
                                                [a,1024; stackpointer,8]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,1024)])`,
   X86_PROMOTE_RETURN_NOSTACK_TAC mldsa_caddq_tmc MLDSA_CADDQ_SAFE THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
 
@@ -499,7 +500,8 @@ let MLDSA_CADDQ_SUBROUTINE_SAFE = time prove
                          e2 = f_events a pc stackpointer returnaddress /\
                          memaccess_inbounds e2 [a,1024; stackpointer,8]
                                                [a,1024; stackpointer,8]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a,1024)])`,
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLDSA_CADDQ_NOIBT_SUBROUTINE_SAFE));;
 
 (* ------------------------------------------------------------------------- *)

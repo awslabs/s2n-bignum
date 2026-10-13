@@ -626,7 +626,8 @@ let MLKEM_REDUCE_NOIBT_SUBROUTINE_SAFE = time prove
                          e2 = f_events a pc stackpointer returnaddress /\
                          memaccess_inbounds e2 [a,512; stackpointer,8]
                                                [a,512; stackpointer,8]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a, 512)])`,
 
   X86_PROMOTE_RETURN_NOSTACK_TAC mlkem_reduce_tmc MLKEM_REDUCE_SAFE THEN
   DISCHARGE_SAFETY_PROPERTY_TAC);;
@@ -652,7 +653,8 @@ let MLKEM_REDUCE_SUBROUTINE_SAFE = time prove
                          e2 = f_events a pc stackpointer returnaddress /\
                          memaccess_inbounds e2 [a,512; stackpointer,8]
                                                [a,512; stackpointer,8]))
-               (\s s'. true)`,
+               (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes(a, 512)])`,
 
   MATCH_ACCEPT_TAC(ADD_IBT_RULE MLKEM_REDUCE_NOIBT_SUBROUTINE_SAFE));;
 
