@@ -7568,7 +7568,32 @@ let full_spec,public_vars = mk_safety_spec
     P256_SCALARMUL_ALT_EXEC;;
 
 let P256_SCALARMUL_ALT_SAFE = time prove
- (full_spec,
+ (`exists f_events.
+       forall e res scalar point pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,1216))
+           [word pc,25164; res,64; scalar,32; point,64] /\
+           nonoverlapping (res,64) (word pc,25164)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p256_scalarmul_alt_mc /\
+                    read PC s = word (pc + 12) /\
+                    read SP s = word_add stackpointer (word 224) /\
+                    C_ARGUMENTS [res; scalar; point] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 2072) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events scalar point res pc stackpointer /\
+                         memaccess_inbounds e2
+                         [scalar,32; point,64; res,64; stackpointer,1216]
+                         [res,64; stackpointer,1216]))
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [X19; X20; X21; X30] ,,
+                MAYCHANGE
+                [memory :> bytes (res,64); memory :> bytes (stackpointer,1216)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   (* Prepare the safety theorems of the subroutines to be used. This is
      necessary to keep introduction of metavariables in the right order. *)
   ASSUME_CALLEE_SAFETY_TAILED_TAC P256_MONTJADD_ALT_SUBROUTINE_SAFE "H_JADD_SAFE" THEN
