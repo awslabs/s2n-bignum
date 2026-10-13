@@ -61,6 +61,27 @@ let gen_mk_safety_spec
       else subroutine_correct_th
     with Failure _ -> subroutine_correct_th in
 
+  (* Likewise the program counter is assumed to be called pc, so rename it if
+     the correctness theorem calls it differently, e.g. pc2 in a core. *)
+  let subroutine_correct_th =
+    try
+      let vs,body = strip_forall (concl subroutine_correct_th) in
+      let ens = if is_imp body then snd(dest_imp body) else body in
+      let pre = snd(dest_abs(el 1 (snd(strip_comb ens)))) in
+      let pc_of t =
+        let c,args = strip_comb t in
+        if is_const c &&
+           mem (name_of c) ["bytes_loaded"; "aligned_bytes_loaded"] &&
+           length args = 3 then rand(el 1 args) else failwith "pc_of" in
+      let v = pc_of (find_term (can pc_of) pre) in
+      let pcv = mk_var("pc",type_of v) in
+      if is_var v && mem v vs && starts_with "pc" (name_of v) &&
+         name_of v <> "pc" && not(mem pcv vs) then
+        let vs' = map (fun u -> if u = v then pcv else u) vs in
+        GENL vs' (SPECL vs' subroutine_correct_th)
+      else subroutine_correct_th
+    with Failure _ -> subroutine_correct_th in
+
   (* Decompose the functional correctness. *)
   let fnspec:term = concl subroutine_correct_th in
   let fnspec_quants,t = strip_forall fnspec in
