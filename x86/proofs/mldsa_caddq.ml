@@ -450,7 +450,28 @@ let full_spec,public_vars = mk_safety_spec
     MLDSA_CADDQ_TMC_EXEC;;
 
 let MLDSA_CADDQ_SAFE = time prove
- (full_spec,
+ (`exists f_events.
+       forall e a pc.
+           aligned 32 a /\ nonoverlapping (word pc,876) (a,1024)
+           ==> ensures x86
+               (\s.
+                    bytes_loaded s (word pc) (BUTLAST mldsa_caddq_tmc) /\
+                    read RIP s = word pc /\
+                    C_ARGUMENTS [a] s /\
+                    read events s = e)
+               (\s.
+                    read RIP s = word (pc + 875) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events a pc /\
+                         memaccess_inbounds e2 [a,1024] [a,1024]))
+               (MAYCHANGE [RIP] ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5] ,,
+                MAYCHANGE [RAX] ,,
+                MAYCHANGE [CF; PF; AF; ZF; SF; OF] ,,
+                MAYCHANGE [memory :> bytes (a,1024)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_CADDQ_TMC_EXEC);;
 
 let MLDSA_CADDQ_NOIBT_SUBROUTINE_SAFE = time prove

@@ -348,7 +348,24 @@ let bitfield_full_spec,bitfield_public_vars = mk_safety_spec
     BIGNUM_BITFIELD_CORRECT
     BIGNUM_BITFIELD_EXEC;;
 
-let BIGNUM_BITFIELD_SAFE = prove(bitfield_full_spec,
+let BIGNUM_BITFIELD_SAFE = prove
+ (`exists f_events.
+       forall e k x n l pc.
+           ensures x86
+           (\s.
+                bytes_loaded s (word pc) (BUTLAST bignum_bitfield_tmc) /\
+                read RIP s = word pc /\
+                C_ARGUMENTS [k; x; n; l] s /\
+                read events s = e)
+           (\s.
+                read RIP s = word (pc + 98) /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events x k pc /\
+                     memaccess_inbounds e2 [x,val k * 8] []))
+           (MAYCHANGE [RIP; RDX; RCX; RAX; R8; R9; R10; R11] ,,
+            MAYCHANGE SOME_FLAGS ,,
+            MAYCHANGE [events])`,
   ASSERT_CONCL_TAC bitfield_full_spec THEN
   X86_SAFETY_SKELETON_TAC ["k"]
    (Cases(`k = 0`,

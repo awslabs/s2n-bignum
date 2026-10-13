@@ -297,7 +297,24 @@ let bitsize_full_spec,bitsize_public_vars = mk_safety_spec
     BIGNUM_BITSIZE_CORRECT
     BIGNUM_BITSIZE_EXEC;;
 
-let BIGNUM_BITSIZE_SAFE = prove(bitsize_full_spec,
+let BIGNUM_BITSIZE_SAFE = prove
+ (`exists f_events.
+       forall e k a pc.
+           ensures x86
+           (\s.
+                bytes_loaded s (word pc) (BUTLAST bignum_bitsize_tmc) /\
+                read RIP s = word pc /\
+                C_ARGUMENTS [k; a] s /\
+                read events s = e)
+           (\s.
+                read RIP s = word (pc + 56) /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a k pc /\
+                     memaccess_inbounds e2 [a,val k * 8] []))
+           (MAYCHANGE [RIP; RDI; RDX; RCX; RAX; R8] ,,
+            MAYCHANGE SOME_FLAGS ,,
+            MAYCHANGE [events])`,
   ASSERT_CONCL_TAC bitsize_full_spec THEN
   X86_SAFETY_SKELETON_TAC ["k"]
    (Cases(`k = 0`,

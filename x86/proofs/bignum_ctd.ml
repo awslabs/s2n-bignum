@@ -254,7 +254,23 @@ let full_spec,public_vars = mk_safety_spec ~keep_maychanges:true
     (assoc "bignum_ctd" subroutine_signatures) BIGNUM_CTD_CORRECT BIGNUM_CTD_EXEC;;
 
 let BIGNUM_CTD_SAFE = prove
- (full_spec,
+ (`exists f_events.
+       forall e k a pc.
+           ensures x86
+           (\s.
+                bytes_loaded s (word pc) (BUTLAST bignum_ctd_tmc) /\
+                read RIP s = word pc /\
+                C_ARGUMENTS [k; a] s /\
+                read events s = e)
+           (\s.
+                read RIP s = word (pc + 37) /\
+                (exists e2.
+                     read events s = APPEND e2 e /\
+                     e2 = f_events a k pc /\
+                     memaccess_inbounds e2 [a,val k * 8] []))
+           (MAYCHANGE [RIP; RDI; RDX; RAX] ,,
+            MAYCHANGE SOME_FLAGS ,,
+            MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
   X86_SAFETY_SKELETON_TAC ["k"]
    (Cases(`k = 0`,
