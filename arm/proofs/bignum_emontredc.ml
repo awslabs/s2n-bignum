@@ -503,6 +503,26 @@ let emontredc_full_spec,emontredc_public_vars = mk_safety_spec
     (assoc "bignum_emontredc" subroutine_signatures)
     BIGNUM_EMONTREDC_SUBROUTINE_CORRECT
     BIGNUM_EMONTREDC_EXEC;;
+(* Two closers: after symbolic simulation, and for the legs storing at a
+   computed offset, whose new events are checked concretely. *)
+
+let BIGNUM_EMONTREDC_CLOSE_TAC =
+  CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN
+  REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+let BIGNUM_EMONTREDC_STORE_DISCHARGE_TAC =
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [EXISTS_E2_TAC allowed_vars_e; ALL_TAC] THEN
+  CONJ_TAC THENL [FULL_UNIFY_F_EVENTS_TAC; ALL_TAC] THEN
+  REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
+  REWRITE_TAC[CONJUNCT2 APPEND] THEN
+  CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
+  GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
+  CONJ_TAC THENL
+   [DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
+
 let BIGNUM_EMONTREDC_SUBROUTINE_SAFE = prove
  (`exists f_events.
        forall e k z m w pc returnaddress.
@@ -526,252 +546,144 @@ let BIGNUM_EMONTREDC_SUBROUTINE_SAFE = prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bytes (z,8 * 2 * val k)])`,
   ASSERT_CONCL_TAC emontredc_full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(m:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
-      if val k = 0 then
-        f_ev_k0 m z k pc returnaddress
-      else if val k = 1 then
-        f_ev_k1 m z k pc returnaddress
-      else
-        APPEND
-          (f_ev_outer_post m z k pc returnaddress)
-          (APPEND
-            (ENUMERATEL (val k)
-              (\i.
-                APPEND
-                  (APPEND
-                    (f_ev_outer_epil m z k pc returnaddress i)
-                    (APPEND
-                      (f_ev_inner_post m z k pc returnaddress i)
-                      (APPEND
-                        (ENUMERATEL (val k - 1)
-                          (\j. f_ev_inner_inv m z k pc returnaddress i j))
-                        (f_ev_inner_pre m z k pc returnaddress i))))
-                  (f_ev_outer_prol m z k pc returnaddress i)))
-            (f_ev_outer_pre m z k pc returnaddress))
-      :(uarch_event)list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC (* e *) THEN
-  W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`; `w:int64`; `pc:num`; `returnaddress:int64`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ASM_CASES_TAC `k = 0` THENL
-   [ASM_REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--2) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `8 * 2 * k < 2 EXP 64 /\ 8 * k < 2 EXP 64` STRIP_ASSUME_TAC THENL
-   [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th) with Failure _ -> ALL_TAC) THEN
-    UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
-    ALL_TAC] THEN
-  SUBGOAL_THEN `val(word k:int64) = k` ASSUME_TAC THENL
-   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-    ALL_TAC] THEN
-  (*** k=1 top-level case: single outer iteration, montloop skipped (CBZ@0x30 taken->0x60),
-       STRAIGHT-LINE (no loop) 0x0->RET. Keeps the general arm free of the k=1-vs-k>1 CBZ branch
-       (which, inside the per-iteration witness, is incompatible with outer-prol's DISCHARGE_MEMACCESS). ***)
-  ASM_CASES_TAC `k = 1` THENL
-   [
-    ASM_REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--25) THEN
-    CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  (*** General arm k>=2: collapse the witness `else if val k=1` to the general branch. ***)
-  SUBGOAL_THEN `~(val(word k:int64) = 1)` ASSUME_TAC THENL
-   [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN
-  (*** Outer loop setup. NB UP2 exit = fall-through PC AFTER the backedge BCC (0x84->0xc),
-       i.e. 0x88 (MOV X0 X7) - NOT correctness's plain-UP pc2=0x80 (the CMP). The UP2 event
-       tactic folds the backedge into the body, so pc2 must be past it. (cf. bignum_mul SAFE:
-       correctness 0x78 -> SAFE UP2 0x80, "+8"). ***)
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xc` `pc + 0x88`
-   `\i s. read X0 s = word k /\
-          read X1 s = word_add z (word(8 * i)) /\
-          read X2 s = m /\
-          read X3 s = w /\
-          read X4 s = word i /\
-          read X30 s = returnaddress` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [(* outer pre: 0x0 -> 0xc, 3 steps (CBZ-not-taken, MOV X7, MOV X4) *)
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--3) THEN
-    ASM_REWRITE_TAC[WORD_ADD_0; MULT_CLAUSES] THEN
-    CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    (* outer body *)
-    ALL_TAC;
-    (* outer post: 0x88 reached with i=k; 2 steps (MOV X0 X7, RET) -> PC=returnaddress. *)
-    REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--2) THEN
-    CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC] THEN
-  (*** Outer loop invariant ***)
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-  REWRITE_TAC[] THEN
-  REWRITE_TAC[ENUMERATEL_ADD1] THEN
-  REWRITE_TAC[METIS[APPEND_ASSOC]
-      `(exists e2. P e2 /\
-        e2 = APPEND (APPEND (APPEND a f_ev_outer_prol) enumc) tail /\ Q e2)
-       <=>
-       (exists e2. P e2 /\
-        e2 = APPEND a (APPEND f_ev_outer_prol (APPEND enumc tail)) /\ Q e2)`] THEN
-  (*** Outer prologue: 0xc -> 0x34 (ABSORBS the CBZ X11@0x30 not-taken, since k>=2 => k-1>=1).
-       This makes the inner-loop pre-leg 0 steps (f_ev_inner_pre:=[]), avoiding the inner-pre
-       memaccess/unify issues entirely. ***)
-  SUBGOAL_THEN `~(val(word(k - 1):int64) = 0)` ASSUME_TAC THENL
-   [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x34`
-   `\s. read X0 s = word k /\
-        read X1 s = word_add z (word(8 * i)) /\
-        read X2 s = m /\
-        read X3 s = w /\
-        read X4 s = word i /\
-        read X5 s = word 1 /\
-        read X11 s = word(k - 1) /\
-        read X30 s = returnaddress` THEN
-  SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word(k - 1)` ASSUME_TAC THENL
-   [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
-     [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC] THEN
-  CONJ_TAC THENL
-   [
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--10) THEN
-    ASM_REWRITE_TAC[] THEN
-    CONV_TAC(ONCE_DEPTH_CONV CONS_TO_APPEND_CONV) THEN REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  (*** Outer epilogue break at 0x60 ***)
-  REWRITE_TAC[] THEN
-  REWRITE_TAC[METIS[APPEND_ASSOC]
-      `(exists e2. P e2 /\ e2 = APPEND (APPEND f_ev_outer_epil a) tail /\ Q e2)
-       <=>
-       (exists e2. P e2 /\ e2 = APPEND f_ev_outer_epil (APPEND a tail) /\ Q e2)`] THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x60`
-   `\s. read X0 s = word k /\
-        read X1 s = word_add z (word(8 * i)) /\
-        read X2 s = m /\
-        read X3 s = w /\
-        read X4 s = word i /\
-        read X30 s = returnaddress` THEN
-  CONJ_TAC THENL
-   [ALL_TAC;
-    (* outer epilogue 0x60 -> {0xc if i+1<k else 0x88}: ...,CMP X4 X0,BCC = 10 steps (madd-style). *)
-    SUBGOAL_THEN `word_add (word_add z (word(8 * i))) (word 8):int64 =
-                  word_add z (word(8 * (i + 1)))` ASSUME_TAC THENL
-     [REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--10) THEN
-    CONJ_TAC THENL
-     [MAP_EVERY VAL_INT64_TAC [`i:num`;`1`] THEN
-      IMP_REWRITE_TAC[VAL_WORD_ADD;DIMINDEX_64;MOD_LT;GSYM COND_RAND] THEN
-      SIMPLE_ARITH_TAC; ALL_TAC] THEN
-    CONJ_TAC THENL [ASM_REWRITE_TAC[] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-    (* z'[k] computed write/read at word_add(word_add z(8*i))(8*k): normalize to word_add z(8*(i+k))
-       so DISCHARGE_CONCRETE sees a single base+offset. in-bounds needs 8*(i+k)+8 <= 2k*8 i.e. i<k. *)
-    SUBGOAL_THEN `word_add (word_add z (word(8 * i))) (word(8 * k)):int64 =
-                  word_add z (word(8 * (i + k)))` ASSUME_TAC THENL
-     [REWRITE_TAC[ARITH_RULE `8 * (i + k) = 8 * i + 8 * k`] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-    ASM_REWRITE_TAC[] THEN
-    SAFE_META_EXISTS_TAC allowed_vars_e THEN
-    CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-    CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
-    REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-    REWRITE_TAC[CONJUNCT2 APPEND] THEN
-    CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
-    GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
-    CONJ_TAC THENL
-     [DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
-      DISCHARGE_MEMACCESS_INBOUNDS_TAC]] THEN
-  (*** Montgomery inner loop setup (k>=2, both k=0 and k=1 handled top-level). Loop-top 0x34 =
-       prologue-SEQUENCE end, so inner-pre is 0 steps. ***)
-  REWRITE_TAC[] THEN
-  SUBGOAL_THEN `0 < k - 1 /\ 1 < k` STRIP_ASSUME_TAC THENL
-   [CONJ_TAC THEN SIMPLE_ARITH_TAC;
-    ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x34` `pc + 0x60`
-   `\j s. read X0 s = word k /\
-          read X1 s = word_add z (word(8 * i)) /\
-          read X2 s = m /\
-          read X3 s = w /\
-          read X4 s = word i /\
-          read X5 s = word(1 + j) /\
-          read X30 s = returnaddress` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [(* count *)
-    SIMPLE_ARITH_TAC;
-    (* inner precond: loop-top 0x34 reached by prologue SEQUENCE -> 0 steps. f_ev_inner_pre:=[]. *)
-    REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC [] THEN
-    ASM_REWRITE_TAC[ARITH_RULE `1 + 0 = 1`] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    (* inner body *)
-    ALL_TAC;
-    (* inner postcond: exit 0x60 = outer-epil SEQUENCE boundary -> 0 steps. f_ev_inner_post:=[]
-       (e_back, no exit events - SUB+CBNZ folded into body). f_ev_inner_pre already []; collapse the
-       trailing APPEND _ [] then bare DISCHARGE (NIL case: APPEND (f_ev) l = l). *)
-    REWRITE_TAC[APPEND_NIL; CONJUNCT1 APPEND] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC [] THEN
-    REWRITE_TAC[APPEND_NIL; CONJUNCT1 APPEND] THEN
-    (* e_back f_ev_inner_post must be []: RHS `APPEND (APPEND f_ev_inner_post ENUM) REST`; GSYM
-       APPEND_ASSOC -> `APPEND f_ev_inner_post (APPEND ENUM REST)` = `APPEND f_ev_inner_post LHS`,
-       then FULL_UNIFY NIL case `l = APPEND (f_ev) l` assigns f_ev_inner_post:=[]. *)
-    REWRITE_TAC[GSYM APPEND_ASSOC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC] THEN
-  (*** Inner loop body: 0x34 -> {0x34 if j+1<k-1 else 0x60}, index j, reads m[1+j], z'[1+j].
-       11 steps THROUGH the SUB(0x58)+CBNZ(0x5c) backedge. ***)
-  REWRITE_TAC[] THEN
-  X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-  REWRITE_TAC[ENUMERATEL_ADD1] THEN
-  (* reassoc so the fresh f_ev_inner_inv is the peelable head (tail = ENUMERATEL j ++ rest). *)
-  REWRITE_TAC[METIS[APPEND_ASSOC]
-      `(exists e2. P e2 /\
-        e2 = APPEND (APPEND fresh enumc) tail /\ Q e2)
-       <=>
-       (exists e2. P e2 /\
-        e2 = APPEND fresh (APPEND enumc tail) /\ Q e2)`] THEN
-  SUBGOAL_THEN `1 + j < k /\ val(word(1 + j):int64) = 1 + j` STRIP_ASSUME_TAC THENL
-   [CONJ_TAC THENL [SIMPLE_ARITH_TAC; IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `(j + 1 = k - 1 <=> ~(j + 1 < k - 1))` ASSUME_TAC THENL
-   [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-  SUBGOAL_THEN `word_add (word_add z (word(8 * i))) (word(8 * (1 + j))):int64 =
-                word_add z (word(8 * (i + (1 + j))))` ASSUME_TAC THENL
-   [REWRITE_TAC[ARITH_RULE `8 * (i + (1 + j)) = 8 * i + 8 * (1 + j)`] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-    ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--11) THEN
-  (* Normalise SIM's X5 = word_add (word(1+j)) (word 1) to word((1+j)+1). *)
-  SUBGOAL_THEN `word_add (word(1 + j):int64) (word 1) = word((1 + j) + 1)` ASSUME_TAC THENL
-   [CONV_TAC WORD_RULE; ALL_TAC] THEN
-  (* CBNZ cond-equivalence: ~(val(word_sub (word((1+j)+1)) (word k))=0) <=> j+1<k-1 *)
-  SUBGOAL_THEN
-   `(~(val(word_sub (word((1 + j) + 1):int64) (word k)) = 0) <=> j + 1 < k - 1)`
-   ASSUME_TAC THENL
-   [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-    MAP_EVERY VAL_INT64_TAC [`(1 + j) + 1`; `k:num`] THEN ASM_REWRITE_TAC[] THEN
-    SIMPLE_ARITH_TAC;
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN
-  (* PC conjunct (its own branch): SIM cond -> j+1<k-1 (asm equiv), then GSYM COND_RAND pulls word
-     out so both sides are word(if j+1<k-1 then..); REFL. Keeps the e2 single (no goal-wide COND lift). *)
-  CONJ_TAC THENL
-   [GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [GSYM COND_RAND] THEN
-    ASM_REWRITE_TAC[] THEN REFL_TAC;
-    ALL_TAC] THEN
-  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
-  REWRITE_TAC[CONJUNCT1 APPEND; APPEND_NIL] THEN
-  REWRITE_TAC[CONJUNCT2 APPEND] THEN
-  CONV_TAC ((RATOR_CONV o RATOR_CONV o RAND_CONV) CONS_TO_APPEND_CONV) THEN
-  GEN_REWRITE_TAC I [MEMACCESS_INBOUNDS_APPEND] THEN
-  CONJ_TAC THENL
-   [DISCHARGE_CONCRETE_MEMACCESS_INBOUNDS_TAC;
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC]);;
+  ARM_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Then(SUBGOAL_THEN `8 * 2 * k < 2 EXP 64 /\ 8 * k < 2 EXP 64`
+           STRIP_ASSUME_TAC THENL
+           [EVERY_ASSUM(fun th -> try MP_TAC (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ]
+              NONOVERLAPPING_IMP_SMALL_2) th) with Failure _ -> ALL_TAC) THEN
+            UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
+            ALL_TAC],
+     (*** k = 1: a single outer iteration, the inner loop is skipped (the CBZ
+          at 0x30 is taken), straight-line from 0x0 to the return. ***)
+     Cases(`k = 1`,
+       Leg("k1",
+         ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC (1--25) THEN
+         BIGNUM_EMONTREDC_CLOSE_TAC),
+     (*** The outer loop; its exit 0x88 is the fall-through after the
+          backward branch, which is folded into the body. ***)
+     Loop(`k:num`, `pc + 0xc`, `pc + 0x88`,
+       `\i s. read X0 s = word k /\
+              read X1 s = word_add z (word(8 * i)) /\
+              read X2 s = m /\
+              read X3 s = w /\
+              read X4 s = word i /\
+              read X30 s = returnaddress`,
+       Leg("outer_pre",
+         ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC (1--3) THEN
+         ASM_REWRITE_TAC[WORD_ADD_0; MULT_CLAUSES] THEN
+         BIGNUM_EMONTREDC_CLOSE_TAC),
+       Then(VAL_INT64_TAC `i:num` THEN
+            SUBGOAL_THEN `~(val(word(k - 1):int64) = 0)` ASSUME_TAC THENL
+             [REWRITE_TAC[VAL_WORD; DIMINDEX_64] THEN IMP_REWRITE_TAC[MOD_LT] THEN
+              SIMPLE_ARITH_TAC; ALL_TAC] THEN
+            SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word(k - 1)`
+             ASSUME_TAC THENL
+             [GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN COND_CASES_TAC THENL
+               [REFL_TAC; POP_ASSUM MP_TAC THEN SIMPLE_ARITH_TAC]; ALL_TAC],
+       (*** The outer prologue 0xc -> 0x34 includes the CBZ X11 at 0x30, not
+            taken since k >= 2, so the inner loop has no pre-leg steps. ***)
+       Seq(`pc + 0x34`,
+         `\s. read X0 s = word k /\
+              read X1 s = word_add z (word(8 * i)) /\
+              read X2 s = m /\
+              read X3 s = w /\
+              read X4 s = word i /\
+              read X5 s = word 1 /\
+              read X11 s = word(k - 1) /\
+              read X30 s = returnaddress`,
+         Leg("outer_prol",
+           ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC (1--10) THEN
+           ASM_REWRITE_TAC[] THEN BIGNUM_EMONTREDC_CLOSE_TAC),
+         Seq(`pc + 0x60`,
+           `\s. read X0 s = word k /\
+                read X1 s = word_add z (word(8 * i)) /\
+                read X2 s = m /\
+                read X3 s = w /\
+                read X4 s = word i /\
+                read X30 s = returnaddress`,
+           (*** The Montgomery inner loop, from 0x34 to 0x60 ***)
+           Loop(`k - 1`, `pc + 0x34`, `pc + 0x60`,
+             `\j s. read X0 s = word k /\
+                    read X1 s = word_add z (word(8 * i)) /\
+                    read X2 s = m /\
+                    read X3 s = w /\
+                    read X4 s = word i /\
+                    read X5 s = word(1 + j) /\
+                    read X30 s = returnaddress`,
+             Leg("inner_pre",
+               REWRITE_TAC[SUB_0; ADD_0; ENUMERATEL; CONJUNCT1 APPEND; APPEND_NIL] THEN
+               ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC [] THEN
+               ASM_REWRITE_TAC[ARITH_RULE `1 + 0 = 1`] THEN
+               DISCHARGE_SAFETY_PROPERTY_TAC),
+             (* 11 steps through the SUB and the CBNZ of the backward branch *)
+             Leg("inner_inv",
+               REWRITE_TAC[ENUMERATEL_ADD1] THEN
+               REWRITE_TAC[METIS[APPEND_ASSOC]
+                   `(exists e2. P e2 /\
+                     e2 = APPEND (APPEND fresh enumc) tail /\ Q e2)
+                    <=>
+                    (exists e2. P e2 /\
+                     e2 = APPEND fresh (APPEND enumc tail) /\ Q e2)`] THEN
+               SUBGOAL_THEN `1 + j < k /\ val(word(1 + j):int64) = 1 + j`
+                 STRIP_ASSUME_TAC THENL
+                [CONJ_TAC THENL [SIMPLE_ARITH_TAC; IMP_REWRITE_TAC[VAL_WORD;
+                   DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC];
+                 ALL_TAC] THEN
+               SUBGOAL_THEN `(j + 1 = k - 1 <=> ~(j + 1 < k - 1))` ASSUME_TAC THENL
+                [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+               SUBGOAL_THEN `word_add (word_add z (word(8 * i))) (word(8 * (1 + j))):int64 =
+                             word_add z (word(8 * (i + (1 + j))))` ASSUME_TAC THENL
+                [REWRITE_TAC[ARITH_RULE `8 * (i + (1 + j)) = 8 * i + 8 * (1 + j)`] THEN
+                 CONV_TAC WORD_RULE; ALL_TAC] THEN
+               ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC (1--11) THEN
+               SUBGOAL_THEN `word_add (word(1 + j):int64) (word 1) = word((1 + j) + 1)`
+                 ASSUME_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+               SUBGOAL_THEN
+                `(~(val(word_sub (word((1 + j) + 1):int64) (word k)) = 0) <=>
+                  j + 1 < k - 1)`
+                ASSUME_TAC THENL
+                [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+                 MAP_EVERY VAL_INT64_TAC [`(1 + j) + 1`; `k:num`] THEN
+                 ASM_REWRITE_TAC[] THEN SIMPLE_ARITH_TAC;
+                 ALL_TAC] THEN
+               ASM_REWRITE_TAC[] THEN
+               CONJ_TAC THENL
+                [GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [GSYM COND_RAND] THEN
+                 ASM_REWRITE_TAC[] THEN REFL_TAC;
+                 ALL_TAC] THEN
+               CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+               BIGNUM_EMONTREDC_STORE_DISCHARGE_TAC),
+             (* The exit 0x60 is reached with no more steps; the events of
+                the post-leg are [] *)
+             Leg("inner_post",
+               REWRITE_TAC[APPEND_NIL; CONJUNCT1 APPEND] THEN
+               ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC [] THEN
+               REWRITE_TAC[APPEND_NIL; CONJUNCT1 APPEND] THEN
+               REWRITE_TAC[GSYM APPEND_ASSOC] THEN
+               DISCHARGE_SAFETY_PROPERTY_TAC)),
+           (*** The outer epilogue, 10 steps from 0x60 to 0xc or 0x88 ***)
+           Leg("outer_epil",
+             SUBGOAL_THEN `word_add (word_add z (word(8 * i))) (word 8):int64 =
+                           word_add z (word(8 * (i + 1)))` ASSUME_TAC THENL
+              [REWRITE_TAC[ARITH_RULE `8 * (i + 1) = 8 * i + 8`] THEN
+               CONV_TAC WORD_RULE; ALL_TAC] THEN
+             ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC (1--10) THEN
+             CONJ_TAC THENL
+              [MAP_EVERY VAL_INT64_TAC [`i:num`;`1`] THEN
+               IMP_REWRITE_TAC[VAL_WORD_ADD;DIMINDEX_64;MOD_LT;GSYM COND_RAND] THEN
+               SIMPLE_ARITH_TAC; ALL_TAC] THEN
+             CONJ_TAC THENL [ASM_REWRITE_TAC[] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
+             (* the access to z[i+k] at a computed address, in bounds as i < k *)
+             SUBGOAL_THEN `word_add (word_add z (word(8 * i))) (word(8 * k)):int64 =
+                           word_add z (word(8 * (i + k)))` ASSUME_TAC THENL
+              [REWRITE_TAC[ARITH_RULE `8 * (i + k) = 8 * i + 8 * k`] THEN
+               CONV_TAC WORD_RULE; ALL_TAC] THEN
+             ASM_REWRITE_TAC[] THEN
+             BIGNUM_EMONTREDC_STORE_DISCHARGE_TAC)))),
+       Leg("outer_post",
+         ARM_SAFETY_SIM_TAC BIGNUM_EMONTREDC_EXEC (1--2) THEN
+         BIGNUM_EMONTREDC_CLOSE_TAC)))))));;

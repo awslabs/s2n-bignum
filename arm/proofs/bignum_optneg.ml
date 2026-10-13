@@ -223,74 +223,47 @@ let BIGNUM_OPTNEG_SUBROUTINE_SAFE = time prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(x:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
-      if val k = 0 then (f_ev_k0 x z k pc returnaddress)
-      else
-        (APPEND
-          (f_ev_loop_post x z k pc returnaddress)
-          (APPEND
-            (ENUMERATEL (val k) (f_ev_loop x z k pc returnaddress))
-            (f_ev_loop_pre x z k pc returnaddress)))
-      :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN
-  STRIP_TAC (* event e *) THEN
-  W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC
-   [`z:int64`; `b:int64`; `x:int64`; `pc:num`] THEN
-  GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ASM_CASES_TAC `k = 0` THENL
-   [ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_OPTNEG_EXEC (1--2) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
+  ARM_SAFETY_SKELETON_TAC ~rename:["p","b"] ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ARM_SAFETY_SIM_TAC BIGNUM_OPTNEG_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Then((*** Main loop setup ***)
 
-  (*** Main loop setup ***)
-
-  ABBREV_TAC `p <=> ~(b:int64 = word 0)` THEN
-  ASM_REWRITE_TAC[] THEN
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x14` `pc + 0x30`
-   `\i s. read X1 s = z /\
-          read X3 s = x /\
-          read X2 s = word_neg(word(bitval p)) /\
-          read X0 s = word(k - i) /\
-          read X5 s = word (8 * i) /\
-          read X30 s = returnaddress` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL [
-    (* pre *)
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_OPTNEG_EXEC (1--5) THEN
-    ASM_REWRITE_TAC[SUB_0;MULT_0;WORD_SUB_0] THEN
-    CONJ_TAC THENL [REWRITE_TAC[WORD_MASK] THEN EXPAND_TAC "p" THEN
-      BITBLAST_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* main loop *)
-    ALL_TAC;
-
-    (* post *)
-    REWRITE_TAC[] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_OPTNEG_EXEC (1--4) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC
-  ] THEN
-
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-  REWRITE_TAC[] THEN
-  ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_OPTNEG_EXEC (1--7) THEN
-  (* PC-target closes by cases on i+1<k *)
-  SUBGOAL_THEN `(~(val(word_sub (word(k-i)) (word 1):int64) = 0)) <=> i + 1 < k`
-    SUBST1_TAC THENL
-   [ REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN
-     SIMPLE_ARITH_TAC; ALL_TAC ] THEN
-  CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
-  (* counter decrement *)
-  CONJ_TAC THENL [ IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-    [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
-  (* byte offset update *)
-  CONJ_TAC THENL [ CONV_TAC WORD_RULE; ALL_TAC ] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+       ABBREV_TAC `p <=> ~(b:int64 = word 0)` THEN
+       ASM_REWRITE_TAC[],
+      Loop(`k:num`, `pc + 0x14`, `pc + 0x30`,
+        `\i s. read X1 s = z /\
+               read X3 s = x /\
+               read X2 s = word_neg(word(bitval p)) /\
+               read X0 s = word(k - i) /\
+               read X5 s = word (8 * i) /\
+               read X30 s = returnaddress`,
+        Leg("pre",
+          (* pre *)
+          ARM_SAFETY_SIM_TAC BIGNUM_OPTNEG_EXEC (1--5) THEN
+          ASM_REWRITE_TAC[SUB_0;MULT_0;WORD_SUB_0] THEN
+          CONJ_TAC THENL [REWRITE_TAC[WORD_MASK] THEN EXPAND_TAC "p" THEN
+            BITBLAST_TAC; ALL_TAC] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        Leg("loop",
+          VAL_INT64_TAC `i:num` THEN
+          REWRITE_TAC[] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_OPTNEG_EXEC (1--7) THEN
+          (* PC-target closes by cases on i+1<k *)
+          SUBGOAL_THEN `(~(val(word_sub (word(k-i)) (word 1):int64) = 0)) <=> i + 1 < k`
+          SUBST1_TAC THENL
+          [ REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN IMP_REWRITE_TAC[VAL_WORD_EQ;DIMINDEX_64] THEN
+          SIMPLE_ARITH_TAC; ALL_TAC ] THEN
+          CONJ_TAC THENL [ COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC ] THEN
+          (* counter decrement *)
+          CONJ_TAC THENL [ IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+          [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ]; ALL_TAC ] THEN
+          (* byte offset update *)
+          CONJ_TAC THENL [ CONV_TAC WORD_RULE; ALL_TAC ] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        Leg("post",
+          (* post *)
+          REWRITE_TAC[] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_OPTNEG_EXEC (1--4) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC))))));;
