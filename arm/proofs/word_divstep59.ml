@@ -1297,7 +1297,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "word_divstep59" subroutine_signatures)
     WORD_DIVSTEP59_SUBROUTINE_CORRECT
     WORD_DIVSTEP59_EXEC;;
@@ -1319,6 +1319,7 @@ let WORD_DIVSTEP59_SUBROUTINE_SAFE = time prove
                        read events s = APPEND e2 e /\
                        e2 = f_events m pc returnaddress /\
                        memaccess_inbounds e2 [m,32] [m,32]))
-             (\s s'. true)`,
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bytes (m,32)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars WORD_DIVSTEP59_EXEC);;

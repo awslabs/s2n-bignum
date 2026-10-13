@@ -129,7 +129,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_add_sm2" subroutine_signatures)
     BIGNUM_ADD_SM2_SUBROUTINE_CORRECT
     BIGNUM_ADD_SM2_EXEC;;
@@ -151,6 +151,7 @@ let BIGNUM_ADD_SM2_SUBROUTINE_SAFE = time prove
                        read events s = APPEND e2 e /\
                        e2 = f_events x y z pc returnaddress /\
                        memaccess_inbounds e2 [x,32; y,32; z,32] [z,32]))
-             (\s s'. true)`,
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE [memory :> bignum (z,4)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_ADD_SM2_EXEC);;

@@ -79,7 +79,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "word_bytereverse" subroutine_signatures)
     WORD_BYTEREVERSE_SUBROUTINE_CORRECT
     WORD_BYTEREVERSE_EXEC;;
@@ -100,6 +100,6 @@ let WORD_BYTEREVERSE_SUBROUTINE_SAFE = time prove
                    read events s = APPEND e2 e /\
                    e2 = f_events pc returnaddress /\
                    memaccess_inbounds e2 [] []))
-         (\s s'. true)`,
+         MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars WORD_BYTEREVERSE_EXEC);;
