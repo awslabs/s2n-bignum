@@ -212,3 +212,197 @@ let BIGNUM_MOD_SAFETY_TAC execth shift n xreg (pre_end,pre_steps)
      X86_STEPS_TAC execth (1--n) THEN
      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
      DISCHARGE_SAFETY_PROPERTY_TAC ];;
+
+(* The safety proof of the core of bignum_mod_m25519 and bignum_mod_n25519
+   (k digits modulo a 4-digit modulus with another reduction step), given the
+   decoding theorem, the PC offset where the load of the top digits ends and
+   its number of steps, and the PC offset of the end of the main loop. *)
+
+let BIGNUM_MOD_25519_SAFETY_TAC exec (pre_end,pre_steps) loop_end =
+  let off i = mk_comb(`(+) (pc:num)`,mk_small_numeral i) in
+  CONCRETIZE_F_EVENTS_TAC
+    `\(x:int64) (z:int64) (k:int64) (pc:num).
+      if val k = 0 then
+        f_ev_k0 x z k pc
+      else if val k = 1 then
+        f_ev_k1 x z k pc
+      else if val k = 2 then
+        f_ev_k2 x z k pc
+      else if val k = 3 then
+        f_ev_k3 x z k pc
+      else
+        APPEND
+          (if val k = 4 then
+            f_ev_4 x z k pc
+           else APPEND
+            (f_ev_loop_post x z k pc)
+            (APPEND
+              (ENUMERATEL (val k - 4) (f_ev_loop x z k pc))
+              (f_ev_loop_pre x z k pc)))
+          (f_ev_1 x z k pc)
+      :(uarch_event) list` THEN
+
+  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
+
+  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
+  REPEAT STRIP_TAC THEN
+
+  ABBREV_TAC `k' = val (k:int64)` THEN
+  SUBGOAL_THEN `k' < 2 EXP 64` ASSUME_TAC THENL [
+    EXPAND_TAC "k'" THEN MATCH_ACCEPT_TAC VAL_BOUND_64; ALL_TAC
+  ] THEN
+  ASM_CASES_TAC `k' < 4` THENL [
+    FIRST_ASSUM(MP_TAC o MATCH_MP (ARITH_RULE
+      `k < 4 ==> k = 0 \/ k = 1 \/ k = 2 \/ k = 3`)) THEN
+    STRIP_TAC THENL [
+      ASM_REWRITE_TAC[ARITH] THEN
+      X86_SIM_TAC exec (1--12) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (* k = 1 *)
+      ASM_REWRITE_TAC[ARITH] THEN
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      X86_SIM_TAC exec (1--15) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (* k = 2 *)
+      ASM_REWRITE_TAC[ARITH] THEN
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      X86_SIM_TAC exec (1--18) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+
+      (* k = 3 *)
+      ASM_REWRITE_TAC[ARITH] THEN
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      X86_SIM_TAC exec (1--19) THEN
+      DISCHARGE_SAFETY_PROPERTY_TAC;
+    ];
+
+    ALL_TAC
+  ] THEN
+
+  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
+    `~(k < 4) ==> ~(k = 0) /\ ~(k = 1) /\ ~(k = 2) /\ ~(k = 3)`)) THEN
+  ASM_REWRITE_TAC[] THEN
+
+  ENSURES_EVENTS_SEQUENCE_TAC (off pre_end)
+   `\s. read RDI s = z /\
+        read RCX s = x /\
+        read RSI s = word(k' - 4)` THEN CONJ_TAC THENL [
+    X86_SIM_TAC ~canonicalize_pc_diff:false
+      exec (1--pre_steps) THEN
+    CONJ_TAC THENL [
+      IMP_REWRITE_TAC[GSYM WORD_SUB2] THEN
+      EXPAND_TAC "k'" THEN ASM_REWRITE_TAC[WORD_VAL] THEN ASM_ARITH_TAC;
+      ALL_TAC
+    ] THEN
+
+    (* to help memory inbounds reasoning (got from fn correctness proof *)
+    SUBGOAL_THEN
+      `8 * val (word_sub k (word 4):int64) = (8 * (k' - 4))` MP_TAC THENL [
+      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+        IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN SIMPLE_ARITH_TAC;
+        SIMPLE_ARITH_TAC];
+      ALL_TAC
+    ] THEN
+    DISCH_THEN SUBST_ALL_TAC THEN
+    (* rewrite k with word k' *)
+    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC
+  ] THEN
+
+  (*** Finish off the k = 4 case which is now just the writeback ***)
+
+  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
+   `~(k' < 4) ==> k' = 4 \/ (~(k' = 4) /\ 4 < k')`))
+  THENL
+   [ASM_REWRITE_TAC[SUB_REFL;MULT_0] THEN
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC exec (1--6) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    SAFE_META_EXISTS_TAC allowed_vars_e THEN
+    CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+    CONJ_TAC THENL [ CONV_TAC (ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
+      FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC;
+
+    ALL_TAC] THEN
+
+  ASM_REWRITE_TAC[] THEN
+  ENSURES_EVENTS_WHILE_UP2_TAC `k' - 4` (off (pre_end + 9)) (off loop_end)
+   `\i s. read RDI s = z /\
+          read RCX s = x /\
+          read RSI s = word ((k' - 4) - i)` THEN
+  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL [
+    SIMPLE_ARITH_TAC;
+
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC exec (1--2) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    CONJ_TAC THENL [
+      IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
+      SIMPLE_ARITH_TAC;
+
+      ALL_TAC
+    ] THEN
+    CONJ_TAC THENL [REWRITE_TAC[SUB_0]; ALL_TAC] THEN
+    (* rewrite k with word k' *)
+    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC;
+
+    ALL_TAC;
+
+    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+    X86_STEPS_TAC exec (1--5) THEN
+    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    DISCHARGE_SAFETY_PROPERTY_TAC
+  ] THEN
+
+  REPEAT STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+  MAP_EVERY VAL_INT64_TAC [`k':num`; `k'-4`; `k' - 4 - i`] THEN
+  X86_STEPS_TAC exec (1--36) THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  CONJ_TAC THENL [
+    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
+    REPEAT CONJ_TAC THENL [
+      GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC;
+    ];
+    ALL_TAC
+  ] THEN
+  CONJ_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+    [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ];
+    ALL_TAC
+  ] THEN
+  (* safety_print_log := 1;; revealed that CONTAINED_TAC could not prove
+     expressions including `word_sub (word (k' - 4 - i)) (word 1)` and
+     `word (8 * (...) + 1844...)`. *)
+  SUBGOAL_THEN `word_sub (word (k' - 4 - i)) (word 1) =
+                word (k' - 4 - (i + 1)):int64` SUBST_ALL_TAC THENL [
+    IMP_REWRITE_TAC[WORD_SUB2] THEN
+    CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+    ALL_TAC
+  ] THEN
+  SUBGOAL_THEN `word (8 * (k' - 4 - i) + 18446744073709551608):int64 =
+                word (8 * (k' - 4 - (i + 1)))` SUBST_ALL_TAC THENL [
+    REWRITE_TAC[WORD_BLAST
+      `word (x + 18446744073709551608) = word_sub (word x) (word 8):int64`] THEN
+    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+      AP_TERM_TAC THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC
+    ];
+    ALL_TAC
+  ] THEN
+  (* rewrite k with word k' *)
+  SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
+  REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
