@@ -351,7 +351,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mldsa_pointwise_acc_l5" subroutine_signatures)
     MLDSA_POINTWISE_ACC_L5_SUBROUTINE_CORRECT
     MLDSA_POINTWISE_ACC_L5_EXEC;;
@@ -380,7 +380,8 @@ let MLDSA_POINTWISE_ACC_L5_SUBROUTINE_SAFE = time prove
                          e2 = f_events a b r pc returnaddress /\
                          memaccess_inbounds e2 [a,5120; b,5120; r,1024]
                          [r,1024]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (r,1024)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_POINTWISE_ACC_L5_EXEC);;
 

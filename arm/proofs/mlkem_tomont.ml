@@ -222,7 +222,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_tomont" subroutine_signatures)
     MLKEM_TOMONT_SUBROUTINE_CORRECT
     MLKEM_TOMONT_EXEC;;
@@ -244,6 +244,7 @@ let MLKEM_TOMONT_SUBROUTINE_SAFE = time prove
                         read events s = APPEND e2 e /\
                         e2 = f_events ptr pc returnaddress /\
                         memaccess_inbounds e2 [ptr,512] [ptr,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (ptr,512)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_TOMONT_EXEC);;

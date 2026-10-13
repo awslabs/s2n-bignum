@@ -255,7 +255,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_mulcache_compute" subroutine_signatures)
     MLKEM_MULCACHE_COMPUTE_SUBROUTINE_CORRECT
     MLKEM_MULCACHE_COMPUTE_EXEC;;
@@ -283,6 +283,7 @@ let MLKEM_MULCACHE_COMPUTE_SUBROUTINE_SAFE = time prove
                         memaccess_inbounds e2
                         [src,512; zetas,256; zetas_twisted,256; dst,256]
                         [dst,256])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (dst,256)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_MULCACHE_COMPUTE_EXEC);;

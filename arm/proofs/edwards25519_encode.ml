@@ -175,7 +175,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "edwards25519_encode" subroutine_signatures)
     EDWARDS25519_ENCODE_SUBROUTINE_CORRECT
     EDWARDS25519_ENCODE_EXEC;;
@@ -197,6 +197,7 @@ let EDWARDS25519_ENCODE_SUBROUTINE_SAFE = time prove
                          read events s = APPEND e2 e /\
                          e2 = f_events p z pc returnaddress /\
                          memaccess_inbounds e2 [p,64; z,32] [z,32]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (z,32)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars EDWARDS25519_ENCODE_EXEC);;

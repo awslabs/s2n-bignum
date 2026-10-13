@@ -889,7 +889,7 @@ needs "arm/proofs/subroutine_signatures.ml";;
 
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mldsa_poly_use_hint_32" subroutine_signatures)
     MLDSA_USE_HINT_32_SUBROUTINE_CORRECT
     MLDSA_USE_HINT_32_EXEC;;
@@ -915,7 +915,8 @@ let MLDSA_USE_HINT_32_SUBROUTINE_SAFE = time prove
                          e2 = f_events a h b pc returnaddress /\
                          memaccess_inbounds e2 [a,1024; h,1024; b,1024]
                          [b,1024]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (b,1024)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLDSA_USE_HINT_32_EXEC);;
 

@@ -268,7 +268,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_littleendian_6" subroutine_signatures)
     BIGNUM_LITTLEENDIAN_6_SUBROUTINE_CORRECT
     BIGNUM_LITTLEENDIAN_6_EXEC;;
@@ -291,7 +291,8 @@ let BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE = time prove
                          read events s = APPEND e2 e /\
                          e2 = f_events x z pc returnaddress /\
                          memaccess_inbounds e2 [x,48; z,48] [z,48]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bignum (z,6)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_LITTLEENDIAN_6_EXEC);;
 
@@ -302,13 +303,13 @@ let BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE = time prove
 (* ------------------------------------------------------------------------- *)
 
 let BIGNUM_FROMLEBYTES_6_SUBROUTINE_SAFE = prove
- (fst(mk_safety_spec ~keep_maychanges:false
+ (fst(mk_safety_spec ~keep_maychanges:true
        (assoc "bignum_fromlebytes_6" subroutine_signatures)
        BIGNUM_FROMLEBYTES_6_SUBROUTINE_CORRECT BIGNUM_LITTLEENDIAN_6_EXEC),
   MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE);;
 
 let BIGNUM_TOLEBYTES_6_SUBROUTINE_SAFE = prove
- (fst(mk_safety_spec ~keep_maychanges:false
+ (fst(mk_safety_spec ~keep_maychanges:true
        (assoc "bignum_tolebytes_6" subroutine_signatures)
        BIGNUM_TOLEBYTES_6_SUBROUTINE_CORRECT BIGNUM_LITTLEENDIAN_6_EXEC),
   MATCH_ACCEPT_TAC BIGNUM_LITTLEENDIAN_6_SUBROUTINE_SAFE);;

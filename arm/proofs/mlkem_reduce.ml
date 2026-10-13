@@ -207,7 +207,7 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "mlkem_reduce" subroutine_signatures)
     MLKEM_REDUCE_SUBROUTINE_CORRECT
     MLKEM_REDUCE_EXEC;;
@@ -229,6 +229,7 @@ let MLKEM_REDUCE_SUBROUTINE_SAFE = time prove
                         read events s = APPEND e2 e /\
                         e2 = f_events a pc returnaddress /\
                         memaccess_inbounds e2 [a,512] [a,512])
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE [memory :> bytes (a,512)])`,
   ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars MLKEM_REDUCE_EXEC);;
