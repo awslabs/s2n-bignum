@@ -1315,8 +1315,46 @@ let BIGNUM_SQR_8_16_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_sqr_8_16" subroutine_signatures)
+    BIGNUM_SQR_8_16_CORRECT
+    BIGNUM_SQR_8_16_EXEC;;
+
+let BIGNUM_SQR_8_16_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc.
+           ALL (nonoverlapping (z,8 * 16))
+           [word pc,LENGTH bignum_sqr_8_16_mc; x,8 * 8]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_sqr_8_16_mc /\
+                    read PC s = word (pc + 8) /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s =
+                    word (pc + 8 + LENGTH bignum_sqr_8_16_core_mc) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc /\
+                         memaccess_inbounds e2 [x,64; z,128] [z,128]))
+               (MAYCHANGE
+                [PC; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14;
+                 X15; X16; X17; X19; X20; X21; X22] ,,
+                MAYCHANGE
+                [Q0; Q1; Q2; Q3; Q4; Q5; Q6; Q7; Q16; Q17; Q18; Q19; Q20;
+                 Q21; Q22; Q23; Q30] ,,
+                MAYCHANGE [memory :> bytes (z,8 * 16)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  REWRITE_TAC[fst BIGNUM_SQR_8_16_CORE_EXEC; GSYM ADD_ASSOC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_SQR_8_16_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_sqr_8_16" subroutine_signatures)
     BIGNUM_SQR_8_16_SUBROUTINE_CORRECT
     BIGNUM_SQR_8_16_EXEC;;
@@ -1347,6 +1385,16 @@ let BIGNUM_SQR_8_16_SUBROUTINE_SAFE = time prove
                          memaccess_inbounds e2
                          [x,64; z,128; word_sub stackpointer (word 32),32]
                          [z,128; word_sub stackpointer (word 32),32]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 16);
+                 memory :> bytes (word_sub stackpointer (word 32),32)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_SQR_8_16_EXEC);;
+  ARM_ADD_RETURN_STACK_TAC
+   BIGNUM_SQR_8_16_EXEC
+   ((CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV) o
+     REWRITE_RULE [fst BIGNUM_SQR_8_16_EXEC;
+                   fst BIGNUM_SQR_8_16_CORE_EXEC])
+     BIGNUM_SQR_8_16_SAFE)
+   `[X19;X20;X21;X22]` 32 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

@@ -591,8 +591,39 @@ let BIGNUM_MUL_6_12_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mul_6_12" subroutine_signatures)
+    BIGNUM_MUL_6_12_CORRECT
+    BIGNUM_MUL_6_12_EXEC;;
+
+let BIGNUM_MUL_6_12_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc.
+           ALL (nonoverlapping (z,8 * 12)) [word pc,1088; x,8 * 6; y,8 * 6]
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mul_6_12_mc /\
+                    read PC s = word (pc + 4) /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 1080) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z pc /\
+                         memaccess_inbounds e2 [x,48; y,48; z,96] [z,96]))
+               (MAYCHANGE
+                [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
+                 X14; X15; X16; X17; X19; X20] ,,
+                MAYCHANGE [memory :> bytes (z,8 * 12)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_MUL_6_12_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_mul_6_12" subroutine_signatures)
     BIGNUM_MUL_6_12_SUBROUTINE_CORRECT
     BIGNUM_MUL_6_12_EXEC;;
@@ -623,6 +654,12 @@ let BIGNUM_MUL_6_12_SUBROUTINE_SAFE = time prove
                        memaccess_inbounds e2
                        [x,48; y,48; z,96; word_sub stackpointer (word 16),16]
                        [z,96; word_sub stackpointer (word 16),16]))
-             (\s s'. true)`,
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+              [memory :> bytes (z,8 * 12);
+               memory :> bytes (word_sub stackpointer (word 16),16)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MUL_6_12_EXEC);;
+  ARM_ADD_RETURN_STACK_TAC
+   BIGNUM_MUL_6_12_EXEC BIGNUM_MUL_6_12_SAFE
+   `[X19;X20]` 16 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

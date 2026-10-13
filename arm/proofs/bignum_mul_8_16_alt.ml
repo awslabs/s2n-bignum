@@ -365,8 +365,40 @@ let BIGNUM_MUL_8_16_ALT_SUBROUTINE_CORRECT = time prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mul_8_16_alt" subroutine_signatures)
+    BIGNUM_MUL_8_16_ALT_CORRECT
+    BIGNUM_MUL_8_16_ALT_EXEC;;
+
+let BIGNUM_MUL_8_16_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc.
+           nonoverlapping (word pc,1112) (z,8 * 16) /\
+           (x = z \/ nonoverlapping (x,8 * 8) (z,8 * 16))
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_mul_8_16_alt_mc /\
+                    read PC s = word (pc + 12) /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 1096) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z pc /\
+                         memaccess_inbounds e2 [x,64; y,64; z,128] [z,128]))
+               (MAYCHANGE
+                [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13; X14;
+                 X15; X16; X17; X19; X20; X21; X22; X23; X24] ,,
+                MAYCHANGE [memory :> bytes (z,8 * 16)] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_MUL_8_16_ALT_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_mul_8_16_alt" subroutine_signatures)
     BIGNUM_MUL_8_16_ALT_SUBROUTINE_CORRECT
     BIGNUM_MUL_8_16_ALT_EXEC;;
@@ -398,6 +430,12 @@ let BIGNUM_MUL_8_16_ALT_SUBROUTINE_SAFE = time prove
                        memaccess_inbounds e2
                        [x,64; y,64; z,128; word_sub stackpointer (word 48),48]
                        [z,128; word_sub stackpointer (word 48),48]))
-             (\s s'. true)`,
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+              [memory :> bytes (z,8 * 16);
+               memory :> bytes (word_sub stackpointer (word 48),48)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MUL_8_16_ALT_EXEC);;
+  ARM_ADD_RETURN_STACK_TAC
+    BIGNUM_MUL_8_16_ALT_EXEC BIGNUM_MUL_8_16_ALT_SAFE
+    `[X19;X20;X21;X22;X23;X24]` 48 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

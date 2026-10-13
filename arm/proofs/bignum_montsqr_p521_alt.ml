@@ -602,8 +602,41 @@ let BIGNUM_MONTSQR_P521_ALT_SUBROUTINE_CORRECT = time prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_montsqr_p521_alt" subroutine_signatures)
+    BIGNUM_MONTSQR_P521_ALT_CORRECT
+    BIGNUM_MONTSQR_P521_ALT_EXEC;;
+
+let BIGNUM_MONTSQR_P521_ALT_SAFE = time prove
+ (`exists f_events.
+       forall e z x pc.
+           nonoverlapping (word pc,1004) (z,8 * 9)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc)
+                    bignum_montsqr_p521_alt_mc /\
+                    read PC s = word (pc + 20) /\
+                    C_ARGUMENTS [z; x] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 980) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x z pc /\
+                         memaccess_inbounds e2 [x,72; z,72] [z,72]))
+               (MAYCHANGE
+                [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
+                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25; X26;
+                 X27; X29] ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bignum (z,9)])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_MONTSQR_P521_ALT_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_montsqr_p521_alt" subroutine_signatures)
     BIGNUM_MONTSQR_P521_ALT_SUBROUTINE_CORRECT
     BIGNUM_MONTSQR_P521_ALT_EXEC;;
@@ -634,6 +667,12 @@ let BIGNUM_MONTSQR_P521_ALT_SUBROUTINE_SAFE = time prove
                        memaccess_inbounds e2
                        [x,72; z,72; word_sub stackpointer (word 80),80]
                        [z,72; word_sub stackpointer (word 80),80]))
-             (\s s'. true)`,
+             (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+              MAYCHANGE
+              [memory :> bytes (z,8 * 9);
+               memory :> bytes (word_sub stackpointer (word 80),80)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MONTSQR_P521_ALT_EXEC);;
+  ARM_ADD_RETURN_STACK_TAC
+   BIGNUM_MONTSQR_P521_ALT_EXEC BIGNUM_MONTSQR_P521_ALT_SAFE
+   `[X19;X20;X21;X22;X23;X24;X25;X26;X27;X29]` 80 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;

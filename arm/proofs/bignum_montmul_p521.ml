@@ -2840,8 +2840,50 @@ let BIGNUM_MONTMUL_P521_SUBROUTINE_CORRECT = prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
+let core_full_spec,core_public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_montmul_p521" subroutine_signatures)
+    BIGNUM_MONTMUL_P521_CORRECT
+    BIGNUM_MONTMUL_P521_EXEC;;
+
+let BIGNUM_MONTMUL_P521_SAFE = time prove
+ (`exists f_events.
+       forall e z x y pc stackpointer.
+           aligned 16 stackpointer /\
+           ALL (nonoverlapping (stackpointer,80))
+           [word pc,LENGTH bignum_montmul_p521_mc; z,8 * 9; x,8 * 9; y,8 * 9] /\
+           nonoverlapping (z,8 * 9) (word pc,LENGTH bignum_montmul_p521_mc)
+           ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) bignum_montmul_p521_mc /\
+                    read PC s = word (pc + 20) /\
+                    read SP s = stackpointer /\
+                    C_ARGUMENTS [z; x; y] s /\
+                    read events s = e)
+               (\s.
+                    read PC s =
+                    word (pc + 20 + LENGTH bignum_montmul_p521_core_mc) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z pc stackpointer /\
+                         memaccess_inbounds e2
+                         [x,72; y,72; z,72; stackpointer,80]
+                         [z,72; stackpointer,80]))
+               (MAYCHANGE
+                [PC; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13;
+                 X14; X15; X16; X17; X19; X20; X21; X22; X23; X24; X25; X26] ,,
+                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                MAYCHANGE SOME_FLAGS ,,
+                MAYCHANGE [events] ,,
+                MAYCHANGE
+                [memory :> bignum (z,9); memory :> bytes (stackpointer,80)])`,
+  ASSERT_CONCL_TAC core_full_spec THEN
+  REWRITE_TAC[fst BIGNUM_MONTMUL_P521_CORE_EXEC; GSYM ADD_ASSOC] THEN
+  CONV_TAC(ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
+  PROVE_SAFETY_SPEC_TAC ~public_vars:core_public_vars BIGNUM_MONTMUL_P521_EXEC);;
+
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:false
+    ~keep_maychanges:true
     (assoc "bignum_montmul_p521" subroutine_signatures)
     BIGNUM_MONTMUL_P521_SUBROUTINE_CORRECT
     BIGNUM_MONTMUL_P521_EXEC;;
@@ -2872,6 +2914,17 @@ let BIGNUM_MONTMUL_P521_SUBROUTINE_SAFE = time prove
                          [x,72; y,72; z,72;
                           word_sub stackpointer (word 144),144]
                          [z,72; word_sub stackpointer (word 144),144]))
-               (\s s'. true)`,
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (z,8 * 9);
+                 memory :> bytes (word_sub stackpointer (word 144),144)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MONTMUL_P521_EXEC);;
+  let th = CONV_RULE (ONCE_DEPTH_CONV NUM_ADD_CONV)
+    (REWRITE_RULE [fst BIGNUM_MONTMUL_P521_CORE_EXEC;
+                   fst BIGNUM_MONTMUL_P521_EXEC]
+     BIGNUM_MONTMUL_P521_SAFE) in
+  REWRITE_TAC[fst BIGNUM_MONTMUL_P521_EXEC] THEN
+  ARM_ADD_RETURN_STACK_TAC
+   BIGNUM_MONTMUL_P521_EXEC th
+   `[X19;X20;X21;X22;X23;X24;X25;X26]` 144 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
