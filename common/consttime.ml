@@ -225,8 +225,16 @@ let gen_mk_safety_spec
     match stack_access_size with
     | None -> memreads,memwrites
     | Some (baseptr,sz) ->
-      (memreads @ [baseptr,mk_small_numeral sz],
-       memwrites @ [baseptr,mk_small_numeral sz]) in
+      (* Further regions at fixed offsets from the stack pointer, e.g. a slot
+         of the frame of the caller of a core *)
+      let stackptr = mk_var("stackpointer",`:int64`) in
+      let others = setify (find_terms (fun t -> is_pair t &&
+          let b,_ = dest_pair t in
+          is_binary "word_add" b && fst(dest_binary "word_add" b) = stackptr)
+        fnspec_maychanges) in
+      let others = map dest_pair others in
+      (memreads @ [baseptr,mk_small_numeral sz] @ others,
+       memwrites @ [baseptr,mk_small_numeral sz] @ others) in
   (* coda *)
   let memreads,memwrites =
     let the_mc = rand bytes_loaded_mc in
