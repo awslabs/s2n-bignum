@@ -165,10 +165,11 @@ let read_displacement = new_definition `read_displacement (md:2 word) l =
   | 2 -> read_int32 l >>= \(w,l). SOME(word_sx w,l)
   | _ -> NONE`;;
 
-let evex_tuple_INDUCT,evex_tuple_RECURSION = define_type
+let evex_tuple_INDUCTION,evex_tuple_RECURSION = define_type
  "evex_tuple =
     Full_Tuple | Half_Tuple
-  | Tuple1_Scalar_Byte | Tuple1_Scalar_Word | Tuple1_Scalar | Tuple1_Fixed
+  | Tuple1_Scalar_Byte | Tuple1_Scalar_Word | Tuple1_Scalar
+  | Tuple1_Fixed_32 | Tuple1_Fixed_64
   | Tuple2 | Tuple4 | Tuple8
   | Full_Mem | Mem_128 | MovDDup | Half_Mem | Quarter_Mem | Eighth_Mem";;
 
@@ -182,7 +183,8 @@ let evex_tuple_disp_scale = define
   (evex_tuple_disp_scale Tuple1_Scalar_Byte w bcast sz = 1) /\
   (evex_tuple_disp_scale Tuple1_Scalar_Word w bcast sz = 2) /\
   (evex_tuple_disp_scale Tuple1_Scalar w bcast sz = if w then 8 else 4) /\
-  (evex_tuple_disp_scale Tuple1_Fixed w bcast sz = if w then 8 else 4) /\
+  (evex_tuple_disp_scale Tuple1_Fixed_32 w bcast sz = 4) /\
+  (evex_tuple_disp_scale Tuple1_Fixed_64 w bcast sz = 8) /\
   (evex_tuple_disp_scale Tuple2 w bcast sz = if w then 16 else 8) /\
   (evex_tuple_disp_scale Tuple4 w bcast sz = if w then 32 else 16) /\
   (evex_tuple_disp_scale Tuple8 w bcast sz = 32) /\
@@ -220,7 +222,7 @@ let read_sib_displacement = new_definition
 
 let read_sib_displacement_scaled = new_definition
  `read_sib_displacement_scaled (n:num) (md:2 word) (reg:4 word) l =
-  if reg = word 5 /\ md = word 0 then
+  if (word_zx reg:3 word) = word 5 /\ md = word 0 then
     read_int32 l >>= \(w,l).
     SOME((word_sx w,NONE),l)
   else
@@ -2048,7 +2050,8 @@ let mk_sib_disp_scaled_thm =
         (ONCE_DEPTH_CONV WORD_RED_CONV THENC
          REWRITE_CONV [disp md; obind])
         (INST [n',`n:num`; md',`md:2 word`] (SPEC_ALL read_sib_displacement_scaled)) in
-      let conv = ONCE_DEPTH_CONV (WORD_RED_CONV ORELSEC GPR_CONV) THENC
+      let conv = ONCE_DEPTH_CONV WORD_ZX_CONV THENC
+        ONCE_DEPTH_CONV (WORD_RED_CONV ORELSEC GPR_CONV) THENC
         REWRITE_CONV [] in
       fun reg ->
         let reg' = mk_comb (word4, mk_numeral (num reg)) in

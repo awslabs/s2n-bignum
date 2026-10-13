@@ -1839,6 +1839,10 @@ let bytes256 = define
  `bytes256 (addr:A word) :((A word->byte),256 word)component =
     bytes(addr,32) :> asword`;;
 
+let bytes512 = define
+ `bytes512 (addr:A word) :((A word->byte),512 word)component =
+    bytes(addr,64) :> asword`;;
+
 (* Keep unconstrained quotations such as `bytes32` at their historical
    int64 instance. Existing ARM and x86 proof scripts use exact OCaml-level
    term searches for these quotations. A surrounding memory component or an
@@ -1895,9 +1899,12 @@ overload_interface
 overload_interface
  ("bytes256",`bytes256:int64->((int64->byte),256 word)component`);;
 
-let bytes512 = define
- `bytes512 (addr:A word) :((A word->byte),512 word)component =
-    bytes(addr,64) :> asword`;;
+make_overloadable "bytes512"
+ `:A word->((A word->byte),512 word)component`;;
+overload_interface
+ ("bytes512",`bytes512:A word->((A word->byte),512 word)component`);;
+overload_interface
+ ("bytes512",`bytes512:int64->((int64->byte),512 word)component`);;
 
 let BYTES8_ELEMENT = prove
  (`(bytes8:A word->((A word->byte),byte)component) = element`,
@@ -2193,11 +2200,22 @@ let WEAKLY_VALID_COMPONENT_BYTES256 = prove
            VALID_COMPONENT_BYTES256]);;
 
 let STRONGLY_VALID_COMPONENT_BYTES512 = prove
- (`!a:int64. strongly_valid_component (bytes512 a)`,
+ (`!a:(((N tybit0)tybit0)tybit0)word.
+      strongly_valid_component (bytes512 a)`,
   GEN_TAC THEN
-  MP_TAC(ISPECL [`a:int64`; `64`] EXTENSIONALLY_VALID_COMPONENT_BYTES) THEN
-  MP_TAC(ISPECL [`a:int64`; `64`] READ_WRITE_BYTES) THEN
-  REWRITE_TAC[DIMINDEX_64] THEN CONV_TAC NUM_REDUCE_CONV THEN
+  SUBGOAL_THEN
+   `64 <= 2 EXP dimindex(:(((N tybit0)tybit0)tybit0))`
+   ASSUME_TAC THENL
+   [REWRITE_TAC[DIMINDEX_TYBIT0] THEN
+    GEN_REWRITE_TAC LAND_CONV [GSYM(NUM_REDUCE_CONV `2 EXP 6`)] THEN
+    REWRITE_TAC[LE_EXP; ARITH_EQ] THEN
+    MP_TAC(ISPEC `UNIV:N->bool` DIMINDEX_GE_1) THEN ARITH_TAC;
+    ALL_TAC] THEN
+  MP_TAC(ISPECL [`a:(((N tybit0)tybit0)tybit0)word`; `64`]
+    EXTENSIONALLY_VALID_COMPONENT_BYTES) THEN
+  MP_TAC(ISPECL [`a:(((N tybit0)tybit0)tybit0)word`; `64`]
+    READ_WRITE_BYTES) THEN
+  ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[strongly_valid_component; EXTENSIONALLY_VALID_COMPONENT] THEN
   STRIP_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC
    [bytes512; READ_COMPONENT_COMPOSE; WRITE_COMPONENT_COMPOSE] THEN
@@ -2209,17 +2227,19 @@ let STRONGLY_VALID_COMPONENT_BYTES512 = prove
   REWRITE_TAC[GSYM DIMINDEX_512; VAL_MOD_REFL; WORD_VAL]);;
 
 let EXTENSIONALLY_VALID_COMPONENT_BYTES512 = prove
- (`!a:int64. extensionally_valid_component (bytes512 a)`,
+ (`!a:(((N tybit0)tybit0)tybit0)word.
+      extensionally_valid_component (bytes512 a)`,
   SIMP_TAC[STRONGLY_VALID_IMP_EXTENSIONALLY_VALID_COMPONENT;
            STRONGLY_VALID_COMPONENT_BYTES512]);;
 
 let VALID_COMPONENT_BYTES512 = prove
- (`!a:int64. valid_component (bytes512 a)`,
+ (`!a:(((N tybit0)tybit0)tybit0)word. valid_component (bytes512 a)`,
   SIMP_TAC[STRONGLY_VALID_IMP_VALID_COMPONENT;
            STRONGLY_VALID_COMPONENT_BYTES512]);;
 
 let WEAKLY_VALID_COMPONENT_BYTES512 = prove
- (`!a:int64. weakly_valid_component (bytes512 a)`,
+ (`!a:(((N tybit0)tybit0)tybit0)word.
+      weakly_valid_component (bytes512 a)`,
   SIMP_TAC[VALID_IMP_WEAKLY_VALID_COMPONENT;
            VALID_COMPONENT_BYTES512]);;
 
@@ -2299,7 +2319,7 @@ let READ_MEMORY_BYTESIZED_SPLIT = prove
 (* Standalone 512-bit read split (kept separate from READ_MEMORY_BYTESIZED_SPLIT
    so that its `el`/`last` positional references elsewhere are unaffected). *)
 let READ_MEMORY_BYTESIZED_SPLIT_512 = prove
- (`!m x s. read (m :> bytes512 x) s =
+ (`!m (x:A word) s. read (m :> bytes512 x) s =
            word_join (read (m :> bytes256 (word_add x (word 32))) s)
                      (read (m :> bytes256 x) s)`,
   REWRITE_TAC[GSYM VAL_EQ] THEN
@@ -2336,7 +2356,7 @@ let READ_MEMORY_BYTESIZED_UNSPLIT = prove
       read (m :> bytes16 x) s = d <=>
       read (m :> bytes8 x) s = word_subword d (0,8) /\
       read (m :> bytes8 (word_add x (word 1))) s = word_subword d (8,8)) /\
-   (!m x s d.
+   (!m (x:A word) s d.
       read (m :> bytes512 x) s = d <=>
       read (m :> bytes256 x) s = word_subword d (0,256) /\
       read (m :> bytes256 (word_add x (word 32))) s =
