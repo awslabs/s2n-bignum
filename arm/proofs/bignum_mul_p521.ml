@@ -2849,7 +2849,7 @@ let BIGNUM_MUL_P521_CORE_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bignum (z,9); memory :> bytes (stackpointer,80)])`,
-  (* ASSERT_CONCL_TAC full_spec THEN <- pc2 != pc *)
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars BIGNUM_MUL_P521_CORE_EXEC);;
 
 let BIGNUM_MUL_P521_SAFE = time prove
