@@ -309,6 +309,19 @@ let MEMORY_256_FROM_64_TAC =
       READ_MEMORY_MERGE_CONV 2 (subst[itm,n_tm] pat') in
     MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
 
+(* 512-bit analog of MEMORY_256_FROM_64_TAC: READ_MEMORY_MERGE_CONV stops at
+   bytes256, so each bytes512 read is first split into two bytes256 halves. *)
+let MEMORY_512_FROM_64_TAC =
+  let a_tm = `a:int64` and n_tm = `n:num` and i64_ty = `:int64`
+  and pat = `read (memory :> bytes512(word_add a (word n))) s0` in
+  fun v boff n ->
+    let pat' = subst[mk_var(v,i64_ty),a_tm] pat in
+    let f i =
+      let itm = mk_small_numeral(boff + 64*i) in
+      (GEN_REWRITE_CONV I [READ_MEMORY_BYTESIZED_SPLIT_512] THENC
+       BINOP_CONV(READ_MEMORY_MERGE_CONV 2)) (subst[itm,n_tm] pat') in
+    MP_TAC(end_itlist CONJ (map f (0--(n-1))));;
+
 let WORD_SUBWORD_JOIN_EXTRACT_64 = prove
  (`!a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (0,64)):int64) = d /\
  !a:int64 b:int64 c:int64 d:int64. ((word_subword (word_join ((word_join a b):int128) ((word_join c d):int128):int256) (64,64)):int64) = c /\

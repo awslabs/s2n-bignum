@@ -227,9 +227,9 @@ let equiv_goal = mk_equiv_statement_simple
   pxor_eq  (* Input state equivalence *)
   pxor_eq (* Output state equivalence *)
   pxor_mc PXOR_EXEC  (* First program machine code *)
-  `MAYCHANGE [RIP] ,, MAYCHANGE [YMM1_SSE]`
+  `MAYCHANGE [RIP] ,, MAYCHANGE [ZMM1]`
   pxor_mc PXOR_EXEC (* Second program machine code *)
-  `MAYCHANGE [RIP] ,, MAYCHANGE [YMM1_SSE]`;;
+  `MAYCHANGE [RIP] ,, MAYCHANGE [ZMM1]`;;
 
 
 (* Given `read XMM{n}_SSE s0 = rhs`, this rule proves
@@ -259,10 +259,42 @@ let EXPAND_READ_XMM_SSE_RULE th =
   with Failure _ -> failwith ("Could not expand " ^ (string_of_thm th));;
 
 
+(* word_join a (word_join b c) = word_join (word_join a b) c : re-associate so
+   the outer split of the 512-bit write is [384-bit upper | 128-bit low], i.e.
+   so ABBREV_READS_TAC's single word_join peel lands on the constrained low 128. *)
+let WJ_REASSOC = WORD_BLAST
+  `!(a:(256)word) (b:(128)word) (c:(128)word).
+      word_join a (word_join b c:(256)word):int512 =
+      word_join (word_join a b:(384)word) c`;;
+
+(* Reconstruct the full 512-bit read `read ZMMn s = word_join (h:256) l` from the
+   256-bit low `l` written via zerotop_256, exposing an opaque ghost top h.  Same
+   lemma as in the sha3_keccak4_f1600 proofs. *)
+let YMM_EXISTSTOP = prove
+ (`!c s:S. read (c :> zerotop_256) s = l
+           ==> ?h. read c s = (word_join:int256->int256->int512) h l`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  EXISTS_TAC `word_subword (read c (s:S):int512) (256,256):int256` THEN
+  REWRITE_TAC[READ_ZEROTOP_256] THEN CONV_TAC WORD_BLAST);;
+
+(* Replace every `read YMMn s = word_join u rhs` hypothesis with its
+   reconstructed full read, then WJ_REASSOC-re-associate the 256-bit low so the
+   outer split becomes [384-bit ghost | constrained low 128 `rhs`]. *)
+let ZMM_EXISTSTOP_ALL:tactic =
+  let rule y = REWRITE_RULE (map GSYM
+       [YMM0; YMM1; YMM2; YMM3; YMM4; YMM5; YMM6; YMM7;
+        YMM8; YMM9; YMM10; YMM11; YMM12; YMM13; YMM14; YMM15])
+      (ISPEC y YMM_EXISTSTOP) in
+  REPEAT (FIRST_X_ASSUM(fun th ->
+    let zth = tryfind (fun r -> MATCH_MP (rule r) th) [`ZMM1`; `ZMM2`; `ZMM3`] in
+    X_CHOOSE_THEN (genvar `:int256`)
+      (ASSUME_TAC o CONV_RULE(RAND_CONV(GEN_REWRITE_CONV I [WJ_REASSOC]))) zth));;
+
 let org_extra_word_conv = !extra_word_CONV;;
 
 (* Enable simplification of word_subwords by default *)
-extra_word_CONV := [WORD_SIMPLE_SUBWORD_CONV] @ !extra_word_CONV;;
+extra_word_CONV := [WORD_SIMPLE_SUBWORD_CONV;
+                    GEN_REWRITE_CONV I [WJ_REASSOC]] @ !extra_word_CONV;;
 
 (* Now, let's prove the program equivalence. *)
 let EQUIV = prove(equiv_goal,
@@ -274,19 +306,24 @@ let EQUIV = prove(equiv_goal,
   EQUIV_INITIATE_TAC pxor_eq THEN
   REPEAT (FIRST_X_ASSUM
     (fun th -> MP_TAC (EXPAND_READ_XMM_SSE_RULE th) THEN STRIP_TAC)) THEN
+  (* Reconstruct the full 512-bit ZMM reads with an opaque upper ghost so the
+     "equal" lockstep can abbreviate the shared low 128 bits. *)
+  ZMM_EXISTSTOP_ALL THEN
 
   EQUIV_STEPS_TAC [
     ("equal",0,2,0,2);
   ] PXOR_EXEC PXOR_EXEC THEN
 
   REPEAT_N 2 ENSURES_FINAL_STATE_TAC THEN
-  (* Prove remaining clauses from the postcondition *)
+  (* Prove remaining clauses from the postcondition; the MAYCHANGE [ZMM1] frame
+     is discharged here (no CONJ_TAC needed). *)
   ASM_REWRITE_TAC[] THEN
 
-  (* No CONJ_TAC this time, because MAYCHANGE part was already discharged! *)
-  ASM_REWRITE_TAC([pxor_eq] @ [XMM1_SSE; XMM2_SSE; XMM3_SSE; READ_BOTTOM_128] @
-      READ_YMM_SSE_EQUIV) THEN
-  CONV_TAC (ONCE_DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
+  (* Output equivalence: each XMM{n}_SSE low half is the shared value. *)
+  REWRITE_TAC[pxor_eq; XMM1_SSE; XMM2_SSE; XMM3_SSE;
+              YMM1_SSE; YMM2_SSE; YMM3_SSE; READ_BOTTOM_128; READ_BOTTOM_256] THEN
+  ASM_REWRITE_TAC[] THEN
+  CONV_TAC (DEPTH_CONV WORD_SIMPLE_SUBWORD_CONV) THEN
   MESON_TAC[]);;
 
 
