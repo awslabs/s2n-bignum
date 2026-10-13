@@ -4,6 +4,24 @@
  *)
 
  needs "x86/proofs/base.ml";;
+
+let YMM_EXISTSTOP = prove
+ (`!c s:S. read (c :> zerotop_256) s = l
+           ==> ?h. read c s = (word_join:int256->int256->int512) h l`,
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN
+  EXISTS_TAC `word_subword (read c (s:S):int512) (256,256):int256` THEN
+  REWRITE_TAC[READ_ZEROTOP_256] THEN CONV_TAC WORD_BLAST);;
+let YMM_EXISTSTOP_RULE =
+  REWRITE_RULE (map GSYM
+   [YMM0; YMM1; YMM2; YMM3; YMM4; YMM5; YMM6; YMM7;
+    YMM8; YMM9; YMM10; YMM11; YMM12; YMM13; YMM14; YMM15]) o
+  C ISPEC YMM_EXISTSTOP;;
+let YMM_EXISTSTOP_TAC top y =
+  FIRST_X_ASSUM(MP_TAC o MATCH_MP (YMM_EXISTSTOP_RULE y)) THEN
+  DISCH_THEN(X_CHOOSE_TAC(mk_var(top,`:int256`)));;
+
+
+
  needs "x86/proofs/utils/keccak_spec.ml";;
 
 (**** print_literal_from_elf "x86/sha3/sha3_keccak4_f1600.o";;
@@ -947,7 +965,8 @@ let SHA3_KECCAK4_F1600_CORRECT = prove
     REPEAT STRIP_TAC THEN
     X86_STEPS_TAC SHA3_KECCAK4_F1600_EXEC (1--102) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REPEAT CONJ_TAC THENL 
+    (REWRITE_TAC[YMM5; READ_ZEROTOP_256] THEN ASM_REWRITE_TAC[]) THEN
+    REPEAT CONJ_TAC THENL
         [PURE_ONCE_REWRITE_TAC[ARITH_RULE `8 * 0 = 0`] THEN
         REWRITE_TAC[WORD_ADD_0];
         ASM_REWRITE_TAC [WORD_SUBWORD_JOIN_EXTRACT_64] THEN
@@ -977,6 +996,7 @@ let SHA3_KECCAK4_F1600_CORRECT = prove
     DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
     CHANGED_TAC(REWRITE_TAC[MAP2; CONS_11; GSYM CONJ_ASSOC]) THEN
     ENSURES_INIT_TAC "s0" THEN
+    YMM_EXISTSTOP_TAC "top5" `ZMM5` THEN
 
     SUBGOAL_THEN
      `read (memory :> bytes64(word_add rc_pointer (word(8 * i)))) s0 =
@@ -989,6 +1009,7 @@ let SHA3_KECCAK4_F1600_CORRECT = prove
       CONV_TAC(ONCE_DEPTH_CONV EL_CONV) THEN REWRITE_TAC[]; ALL_TAC] THEN
     X86_STEPS_TAC SHA3_KECCAK4_F1600_EXEC (1--269) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+    (REWRITE_TAC[YMM5; READ_ZEROTOP_256] THEN ASM_REWRITE_TAC[]) THEN
     REPEAT CONJ_TAC THENL
       [REWRITE_TAC[WORD_ADD];
       CONV_TAC WORD_BLAST;
@@ -1027,6 +1048,7 @@ let SHA3_KECCAK4_F1600_CORRECT = prove
     DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
     REWRITE_TAC[MAP2; CONS_11; GSYM CONJ_ASSOC] THEN
     ENSURES_INIT_TAC "s0" THEN
+    YMM_EXISTSTOP_TAC "top5" `ZMM5` THEN
     X86_STEPS_TAC SHA3_KECCAK4_F1600_EXEC (1--103) THEN
     REPEAT(FIRST_X_ASSUM(STRIP_ASSUME_TAC o
       CONV_RULE(READ_MEMORY_SPLIT_CONV 2) o
@@ -1194,20 +1216,17 @@ let SHA3_KECCAK4_F1600_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
   ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
   ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
 
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
-
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
+  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER] THEN
+  GHOST_INTRO_TAC `init_zmm6:int512` `read ZMM6` THEN
+  GHOST_INTRO_TAC `init_zmm7:int512` `read ZMM7` THEN
+  GHOST_INTRO_TAC `init_zmm8:int512` `read ZMM8` THEN
+  GHOST_INTRO_TAC `init_zmm9:int512` `read ZMM9` THEN
+  GHOST_INTRO_TAC `init_zmm10:int512` `read ZMM10` THEN
+  GHOST_INTRO_TAC `init_zmm11:int512` `read ZMM11` THEN
+  GHOST_INTRO_TAC `init_zmm12:int512` `read ZMM12` THEN
+  GHOST_INTRO_TAC `init_zmm13:int512` `read ZMM13` THEN
+  GHOST_INTRO_TAC `init_zmm14:int512` `read ZMM14` THEN
+  GHOST_INTRO_TAC `init_zmm15:int512` `read ZMM15` THEN
 
   GLOBALIZE_PRECONDITION_TAC THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
@@ -1253,17 +1272,17 @@ let SHA3_KECCAK4_F1600_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
     RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
 
 
-    MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s19`;
-    `ymm7_epilog = read YMM7 s19`;
-    `ymm8_epilog = read YMM8 s19`;
-    `ymm9_epilog = read YMM9 s19`;
-    `ymm10_epilog = read YMM10 s19`;
-    `ymm11_epilog = read YMM11 s19`;
-    `ymm12_epilog = read YMM12 s19`;
-    `ymm13_epilog = read YMM13 s19`;
-    `ymm14_epilog = read YMM14 s19`;
-    `ymm15_epilog = read YMM15 s19`] THEN
+  MAP_EVERY ABBREV_TAC
+   [`zmm6_epilog = read ZMM6 s19`;
+    `zmm7_epilog = read ZMM7 s19`;
+    `zmm8_epilog = read ZMM8 s19`;
+    `zmm9_epilog = read ZMM9 s19`;
+    `zmm10_epilog = read ZMM10 s19`;
+    `zmm11_epilog = read ZMM11 s19`;
+    `zmm12_epilog = read ZMM12 s19`;
+    `zmm13_epilog = read ZMM13 s19`;
+    `zmm14_epilog = read ZMM14 s19`;
+    `zmm15_epilog = read ZMM15 s19`] THEN
 
   X86_STEPS_TAC sha3_keccak4_f1600_windows_tmc_EXEC (20--34) THEN
 

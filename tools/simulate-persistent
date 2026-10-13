@@ -34,7 +34,7 @@ case $1 in
   x86)
     LEGACY="$ROOT/x86/proofs/x86simulate"
     ARCH=x86_64
-    STATE_WORDS=112
+    STATE_WORDS=312
     CODE_UNIT_BYTES=1
     ;;
   *)
