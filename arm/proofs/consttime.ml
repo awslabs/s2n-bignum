@@ -34,12 +34,3 @@ let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
     [ALIGNED_BYTES_LOADED_APPEND_CLAUSE;MODIFIABLE_SIMD_REGS;
      MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI]
     ARM_SINGLE_STEP_TAC;;
-
-(* Prove the safety property generated from the correctness theorem of a
-   straight-line subroutine, for example keeping its frame (with
-   ~keep_maychanges:true) when it is needed as a callee. *)
-
-let PROVE_GENERATED_SAFETY ~(keep_maychanges:bool) signature correct_th exec =
-  let spec,public_vars =
-    mk_safety_spec ~keep_maychanges signature correct_th exec in
-  prove(spec, PROVE_SAFETY_SPEC_TAC ~public_vars exec);;

@@ -4098,22 +4098,6 @@ let P256_SCALARMULBASE_ALT_SUBROUTINE_CORRECT = time prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-(* The safety theorems of the field operations used here have the trivial    *)
-(* frame (\s s'. true), which would lose the caller's state across a call,   *)
-(* so prove versions keeping the frames of their correctness theorems.       *)
-
-let LOCAL_MONTMUL_P256_ALT_SAFE = PROVE_GENERATED_SAFETY ~keep_maychanges:true
-  (assoc "bignum_montmul_p256_alt" subroutine_signatures)
-  BIGNUM_MONTMUL_P256_ALT_SUBROUTINE_CORRECT BIGNUM_MONTMUL_P256_ALT_EXEC;;
-
-let LOCAL_MONTSQR_P256_ALT_SAFE = PROVE_GENERATED_SAFETY ~keep_maychanges:true
-  (assoc "bignum_montsqr_p256_alt" subroutine_signatures)
-  BIGNUM_MONTSQR_P256_ALT_SUBROUTINE_CORRECT BIGNUM_MONTSQR_P256_ALT_EXEC;;
-
-let LOCAL_DEMONT_P256_SAFE = PROVE_GENERATED_SAFETY ~keep_maychanges:true
-  (assoc "bignum_demont_p256" subroutine_signatures)
-  BIGNUM_DEMONT_P256_SUBROUTINE_CORRECT BIGNUM_DEMONT_P256_EXEC;;
-
 (* Simulate a call to one of the local subroutines at offset off, using the  *)
 (* safety theorem registered under the label assump_name.                    *)
 
@@ -4262,9 +4246,9 @@ let P256_SCALARMULBASE_ALT_SAFE = time prove
   (* Prepare the safety theorems of the subroutines to be used. This is
      necessary to keep introduction of metavariables in the right order. *)
   ASSUME_CALLEE_SAFETY_TAILED_TAC P256_MONTJMIXADD_ALT_SUBROUTINE_SAFE "H_JMIXADD_SAFE" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_MONTMUL_P256_ALT_SAFE "H_MUL_SAFE" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_MONTSQR_P256_ALT_SAFE "H_SQR_SAFE" THEN
-  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_DEMONT_P256_SAFE "H_DEMONT_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_MONTMUL_P256_ALT_SUBROUTINE_SAFE "H_MUL_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_MONTSQR_P256_ALT_SUBROUTINE_SAFE "H_SQR_SAFE" THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_DEMONT_P256_SUBROUTINE_SAFE "H_DEMONT_SAFE" THEN
   ASSUME_CALLEE_SAFETY_TAILED_TAC BIGNUM_INV_P256_SUBROUTINE_SAFE "H_INV_SAFE" THEN
 
   CONCRETIZE_F_EVENTS_TAC

@@ -699,9 +699,6 @@ let BIGNUM_DEMONT_SUBROUTINE_CORRECT = time prove
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 
-(* The frame of the correctness theorem is kept (keep_maychanges:true), so
-   that the safety theorem can be used for callers such as bignum_modexp. *)
-
 let demont_full_spec,demont_public_vars = mk_safety_spec
     ~keep_maychanges:true
     (assoc "bignum_demont" subroutine_signatures)
