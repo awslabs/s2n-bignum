@@ -496,223 +496,13 @@ let BIGNUM_GE_WINDOWS_SUBROUTINE_CORRECT = prove
 
 needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/subroutine_signatures.ml";;
+needs "x86/proofs/utils/bignum_cmp_safety.ml";;
 
 let full_spec,public_vars = mk_safety_spec
     ~keep_maychanges:true
     (assoc "bignum_ge" subroutine_signatures)
     BIGNUM_GE_CORRECT
     BIGNUM_GE_EXEC;;
-
-(* The core has two exits, so the trace of a subroutine variant ends with one
-   of two different RET events, which X86_ADD_RETURN_NOSTACK_TAC and
-   WINDOWS_X86_WRAP_NOSTACK_TAC cannot express through a single f_events
-   metavariable. Instead, as in the correctness proofs, the core and the two
-   NOIBT subroutine variants are proved by one tactic with an explicit trace.
-   Its parameters are the decoding theorem, the map pcoff from offsets in the
-   core to PC terms, the numbers npre and nret of extra instructions at the
-   entry and at each exit, the extra arguments fev_args of f_events, the
-   tactic intro_tac that introduces the remaining variables and the
-   assumptions, and the conjuncts stack_inv about the stack carried by the
-   invariants. *)
-
-let BIGNUM_GE_SAFE_TAC execth pcoff npre nret fev_args intro_tac stack_inv =
-  let with_stack t =
-    let vs,bod = strip_abs t in
-    list_mk_abs(vs,list_mk_conj(conjuncts bod @ stack_inv))
-  and entry_steps k = 1--(k + npre)
-  and exit_steps k = 1--(k + nret)
-  and sim_tac = X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-                  ~canonicalize_pc_diff:false execth in
-  let f_events =
-    let core =
-     `\(a:int64) (b:int64) (n:int64) (m:int64) (pc:num).
-        if val m < val n then
-          APPEND
-           (APPEND (f_ev_q2 a b n m pc)
-             (APPEND (ENUMERATEL (val n - val m) (f_ev_l2 a b n m pc))
-                     (f_ev_p2 a b n m pc)))
-           (if val m = 0 then f_ev_s1 a b n m pc
-            else APPEND (f_ev_q1 a b n m pc)
-                  (APPEND (ENUMERATEL (val m) (f_ev_l1 a b n m pc))
-                          (f_ev_p1 a b n m pc)))
-        else
-          APPEND
-           (if val m = val n then f_ev_s4 a b n m pc
-            else APPEND (f_ev_q4 a b n m pc)
-                  (APPEND (ENUMERATEL (val m - val n) (f_ev_l4 a b n m pc))
-                          (f_ev_p4 a b n m pc)))
-           (if val n = 0 then f_ev_s3 a b n m pc
-            else APPEND (f_ev_q3 a b n m pc)
-                  (APPEND (ENUMERATEL (val n) (f_ev_l3 a b n m pc))
-                          (f_ev_p3 a b n m pc))) :(uarch_event) list` in
-    let vs,bod = strip_abs core in
-    let ext f =
-      let rty = funpow (length vs) (snd o dest_fun_ty) (type_of f) in
-      mk_var(name_of f,itlist (mk_fun_ty o type_of) (vs @ fev_args) rty) in
-    let fevs = filter (starts_with "f_ev" o name_of) (frees bod) in
-    list_mk_abs(vs @ fev_args,
-      subst (map (fun f -> list_mk_comb(ext f,vs @ fev_args),
-                           list_mk_comb(f,vs)) fevs) bod) in
-  CONCRETIZE_F_EVENTS_TAC f_events THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `m:num` THEN X_GEN_TAC `a:int64` THEN
-  W64_GEN_TAC `n:num` THEN MAP_EVERY X_GEN_TAC [`b:int64`; `pc:num`] THEN
-  intro_tac THEN
-  ASM_CASES_TAC `m < n` THENL
-   [SAFETY_COND_TAC `m < n` THEN
-    SUBGOAL_THEN
-     `word_add (word_sub (word m) (word n)) (word n):int64 = word m /\
-      word_sub (word n) (word m):int64 = word (n - m) /\
-      val (word (n - m):int64) = n - m /\ ~(n - m = 0)`
-    STRIP_ASSUME_TAC THENL
-     [REPEAT CONJ_TAC THENL
-       [CONV_TAC WORD_RULE;
-        IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `m < n` THEN ARITH_TAC;
-        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-        UNDISCH_TAC `n < 2 EXP 64` THEN ARITH_TAC;
-        UNDISCH_TAC `m < n` THEN ARITH_TAC];
-      ALL_TAC] THEN
-    ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0x54)
-     (with_stack
-       `\s. read RSI s = a /\ read RCX s = b /\ read RDX s = word (n - m) /\
-            read R8 s = word m`) THEN
-    CONJ_TAC THENL
-     [ASM_CASES_TAC `m = 0` THENL
-       [SAFETY_COND_TAC `m = 0` THEN
-        FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `m = 0`)) THEN
-        sim_tac (entry_steps 7) THEN
-        SAFETY_CLOSE_TAC;
-        ALL_TAC] THEN
-      SAFETY_COND_TAC `m = 0` THEN
-      ENSURES_EVENTS_WHILE_UP2_TAC `m:num` (pcoff 0x44) (pcoff 0x54)
-       (with_stack
-         `\i s. read RSI s = a /\ read RCX s = b /\ read RDX s = word (n - m) /\
-                read RDI s = word (m - i) /\ read R8 s = word i`) THEN
-      REPEAT CONJ_TAC THENL
-       [ASM_REWRITE_TAC[];
-        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-        sim_tac (entry_steps 7) THEN
-        SAFETY_CLOSE_TAC;
-        X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-        SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `m:num` `m:num` THEN
-        SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `m:num` THEN
-        sim_tac (1--5) THEN
-        SAFETY_CLOSE_TAC;
-        sim_tac [] THEN
-        SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC];
-      ENSURES_EVENTS_WHILE_UP2_TAC `n - m` (pcoff 0x54) (pcoff 0x65)
-       (with_stack
-         `\i s. read RSI s = a /\ read RCX s = b /\
-                read RDX s = word ((n - m) - i) /\ read R8 s = word (m + i)`) THEN
-      REPEAT CONJ_TAC THENL
-       [ASM_REWRITE_TAC[];
-        REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
-        sim_tac [] THEN
-        SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;
-        X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-        SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `n - m` THEN
-        SUBGOAL_THEN
-         `val (word (m + i):int64) = m + i /\
-          word_add (word (m + i)) (word 1):int64 = word (m + (i + 1)) /\
-          m + i < n`
-        STRIP_ASSUME_TAC THENL
-         [REPEAT CONJ_TAC THENL
-           [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-            MAP_EVERY UNDISCH_TAC [`i < n - m`; `n < 2 EXP 64`] THEN ARITH_TAC;
-            REWRITE_TAC[GSYM WORD_ADD; ADD_ASSOC];
-            UNDISCH_TAC `i < n - m` THEN ARITH_TAC];
-          ALL_TAC] THEN
-        sim_tac (1--5) THEN
-        SAFETY_CLOSE_TAC;
-        SAFETY_CARRY_REASSOC_TAC THEN
-        sim_tac (exit_steps 2) THEN
-        SAFETY_CLOSE_TAC]];
-    SAFETY_COND_TAC `m < n` THEN
-      SUBGOAL_THEN
-       `word_sub (word m) (word n):int64 = word (m - n) /\
-        word_add (word (m - n)) (word 1):int64 = word (m - n + 1)`
-      STRIP_ASSUME_TAC THENL
-       [CONJ_TAC THENL
-         [IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(m < n)` THEN ARITH_TAC;
-          REWRITE_TAC[GSYM WORD_ADD]];
-        ALL_TAC] THEN
-      ENSURES_EVENTS_SEQUENCE_TAC (pcoff 0x2d)
-       (with_stack
-         `\s. read RSI s = a /\ read RCX s = b /\ read RDI s = word (m - n + 1) /\
-              read R8 s = word n`) THEN
-      CONJ_TAC THENL
-       [ASM_CASES_TAC `n = 0` THENL
-         [SAFETY_COND_TAC `n = 0` THEN
-          FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `n = 0`)) THEN
-          sim_tac (entry_steps 6) THEN
-          SAFETY_CLOSE_TAC;
-          ALL_TAC] THEN
-        SAFETY_COND_TAC `n = 0` THEN
-        ENSURES_EVENTS_WHILE_UP2_TAC `n:num` (pcoff 0x10) (pcoff 0x20)
-         (with_stack
-           `\i s. read RSI s = a /\ read RCX s = b /\ read RDI s = word (m - n + 1) /\
-                  read RDX s = word (n - i) /\ read R8 s = word i`) THEN
-        REPEAT CONJ_TAC THENL
-         [ASM_REWRITE_TAC[];
-          REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-          sim_tac (entry_steps 6) THEN
-          SAFETY_CLOSE_TAC;
-          X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-          SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `n:num` `n:num` THEN
-          SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `n:num` THEN
-          SUBGOAL_THEN `i < m` ASSUME_TAC THENL
-           [MAP_EVERY UNDISCH_TAC [`i < n`; `~(m < n)`] THEN ARITH_TAC; ALL_TAC] THEN
-          sim_tac (1--5) THEN
-          SAFETY_CLOSE_TAC;
-          sim_tac (1--1) THEN
-          SAFETY_CLOSE_TAC];
-        ASM_CASES_TAC `m:num = n` THENL
-         [SAFETY_COND_TAC `m:num = n` THEN
-          SUBGOAL_THEN `m - n + 1 = 1` ASSUME_TAC THENL
-           [UNDISCH_TAC `m:num = n` THEN ARITH_TAC; ALL_TAC] THEN
-          FIRST_X_ASSUM(K ALL_TAC o check (fun th -> concl th = `m:num = n`)) THEN
-          sim_tac (exit_steps 4) THEN
-          SAFETY_CLOSE_TAC;
-          ALL_TAC] THEN
-        SAFETY_COND_TAC `m:num = n` THEN
-        ENSURES_EVENTS_WHILE_UP2_TAC `m - n` (pcoff 0x2d) (pcoff 0x2d)
-         (with_stack
-           `\i s. read RSI s = a /\ read RCX s = b /\
-                  read RDI s = word ((m - n + 1) - i) /\ read R8 s = word (n + i)`) THEN
-        REPEAT CONJ_TAC THENL
-         [UNDISCH_TAC `~(m:num = n)` THEN UNDISCH_TAC `~(m < n)` THEN ARITH_TAC;
-          REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
-          sim_tac [] THEN
-          SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;
-          X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-          SUBGOAL_THEN
-           `word_sub (word ((m - n + 1) - i)) (word 1):int64 = word (m - n - i) /\
-            val (word (m - n - i):int64) = m - n - i /\ ~(m - n - i = 0) /\
-            (m - n + 1) - (i + 1) = m - n - i /\
-            val (word (n + i):int64) = n + i /\
-            word_add (word (n + i)) (word 1):int64 = word (n + (i + 1)) /\
-            n + i < m`
-          STRIP_ASSUME_TAC THENL
-           [REPEAT CONJ_TAC THENL
-             [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-               [AP_TERM_TAC THEN UNDISCH_TAC `i < m - n` THEN ARITH_TAC;
-                UNDISCH_TAC `i < m - n` THEN ARITH_TAC];
-              MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-              UNDISCH_TAC `m < 2 EXP 64` THEN ARITH_TAC;
-              UNDISCH_TAC `i < m - n` THEN ARITH_TAC;
-              UNDISCH_TAC `i < m - n` THEN ARITH_TAC;
-              MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-              MAP_EVERY UNDISCH_TAC [`i < m - n`; `m < 2 EXP 64`] THEN ARITH_TAC;
-              REWRITE_TAC[GSYM WORD_ADD; ADD_ASSOC];
-              UNDISCH_TAC `i < m - n` THEN ARITH_TAC];
-            ALL_TAC] THEN
-          sim_tac (1--5) THEN
-          SAFETY_CLOSE_TAC;
-          SUBGOAL_THEN `(m - n + 1) - (m - n) = 1` ASSUME_TAC THENL
-           [ARITH_TAC; ALL_TAC] THEN
-          SAFETY_CARRY_REASSOC_TAC THEN
-          sim_tac (exit_steps 4) THEN
-          SAFETY_CLOSE_TAC]]];;
 
 let BIGNUM_GE_SAFE = time prove
  (`exists f_events.
@@ -734,7 +524,7 @@ let BIGNUM_GE_SAFE = time prove
             MAYCHANGE SOME_FLAGS ,,
             MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
-  BIGNUM_GE_SAFE_TAC BIGNUM_GE_EXEC
+  BIGNUM_CMP_SAFE_TAC false BIGNUM_GE_EXEC
     (curry mk_comb `(+) (pc:num)` o mk_small_numeral) 0 0 []
     (REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS])
     []);;
@@ -761,7 +551,7 @@ exists f_events.
                       [a,val m * 8; b,val n * 8; stackpointer,8]
                       [stackpointer,0]))
             (MAYCHANGE [RSP] ,, MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI)`,
-  BIGNUM_GE_SAFE_TAC BIGNUM_GE_EXEC
+  BIGNUM_CMP_SAFE_TAC false BIGNUM_GE_EXEC
     (curry mk_comb `(+) (pc:num)` o mk_small_numeral) 0 1
     [`stackpointer:int64`; `returnaddress:int64`]
     (MAP_EVERY X_GEN_TAC [`stackpointer:int64`; `returnaddress:int64`] THEN
@@ -829,7 +619,7 @@ exists f_events.
             (MAYCHANGE [RSP] ,,
              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
              MAYCHANGE [memory :> bytes (word_sub stackpointer (word 16),16)])`,
-  BIGNUM_GE_SAFE_TAC BIGNUM_GE_WINDOWS_EXEC
+  BIGNUM_CMP_SAFE_TAC false BIGNUM_GE_WINDOWS_EXEC
     (curry mk_comb `(+) (pc:num)` o mk_small_numeral o
      (fun n -> if n < 0x38 then n + 14 else n + 16)) 6 3
     [`stackpointer:int64`; `returnaddress:int64`]
