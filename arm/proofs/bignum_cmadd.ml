@@ -460,54 +460,14 @@ let cmadd_full_spec,cmadd_public_vars = mk_safety_spec
     BIGNUM_CMADD_SUBROUTINE_CORRECT
     BIGNUM_CMADD_EXEC;;
 
-(* The safety proof splits on whether MIN (val n) (val p) is zero. The nonzero
-   case has a peeled first multiply-add iteration (f_ev_main1 for MIN = 1) then
-   a down-counter multiply loop, and a carry-propagation tail that is itself a
-   three-way split (no pad / one carry word / pad loop) ending in the carry-out
-   word. The zero case skips everything: with the clamp giving MIN = 0 the first
-   CBZ jumps straight to the final carry-out, leaving z untouched. Everything is
-   phrased with the clamp operand order MIN n p to match the CSEL. The two cases
-   are proved as separate lemmas (so they do not share the f_events metavariable)
-   and then combined. *)
-
-let BIGNUM_CMADD_SAFE_MIN0 = prove
- (`exists f_events.
-       forall e p z c n x pc returnaddress.
-           nonoverlapping (word pc,160) (z,8 * val p) /\
-           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val p)) /\
-           MIN (val n) (val p) = 0
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) bignum_cmadd_mc /\
-                    read PC s = word pc /\ read X30 s = returnaddress /\
-                    C_ARGUMENTS [p; z; c; n; x] s /\ read events s = e)
-               (\s. read PC s = returnaddress /\
-                    exists e2. read events s = APPEND e2 e /\
-                        e2 = f_events x z p n pc returnaddress /\
-                        memaccess_inbounds e2 [x,val n * 8; z,val p * 8] [z,val p * 8])
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bignum (z,val p)])`,
-  BIGNUM_CMADD_MIN0_SAFETY_TAC BIGNUM_CMADD_EXEC);;
-
-let BIGNUM_CMADD_SAFE_MINGT = prove
- (`exists f_events.
-       forall e p z c n x pc returnaddress.
-           nonoverlapping (word pc,160) (z,8 * val p) /\
-           (x = z \/ nonoverlapping (x,8 * val n) (z,8 * val p)) /\
-           ~(MIN (val n) (val p) = 0)
-           ==> ensures arm
-               (\s. aligned_bytes_loaded s (word pc) bignum_cmadd_mc /\
-                    read PC s = word pc /\ read X30 s = returnaddress /\
-                    C_ARGUMENTS [p; z; c; n; x] s /\ read events s = e)
-               (\s. read PC s = returnaddress /\
-                    exists e2. read events s = APPEND e2 e /\
-                        e2 = f_events x z p n pc returnaddress /\
-                        memaccess_inbounds e2 [x,val n * 8; z,val p * 8] [z,val p * 8])
-               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
-                MAYCHANGE [memory :> bignum (z,val p)])`,
-  BIGNUM_CMADD_MINGT_SAFETY_TAC BIGNUM_CMADD_EXEC
-    ~mul_start:0x38 ~mul_end:0x64 ~mul_first:14 ~mul_body:11 ~top_steps:3
-    ~one_carry_steps:9 ~carry_start:0x80 ~carry_end:0x98 ~carry_first:7
-    ~carry_exit:2);;
+(* The safety proof splits on whether MIN (val n) (val p) is zero. The
+   nonzero case has a peeled first multiply-add iteration (f_ev_main1 for
+   MIN = 1) then a down-counter multiply loop, and a carry-propagation tail
+   that is itself a three-way split (no pad / one carry word / pad loop)
+   ending in the carry-out word. The zero case skips everything: with the
+   clamp giving MIN = 0 the first CBZ jumps straight to the final carry-out,
+   leaving z untouched. Everything is phrased with the clamp operand order
+   MIN n p to match the CSEL. *)
 
 let BIGNUM_CMADD_SUBROUTINE_SAFE = prove
  (`exists f_events.
@@ -531,19 +491,7 @@ let BIGNUM_CMADD_SUBROUTINE_SAFE = prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bignum (z,val p)])`,
   ASSERT_CONCL_TAC cmadd_full_spec THEN
-  X_CHOOSE_TAC `fm0:int64->int64->int64->int64->num->int64->(uarch_event)list`
-    BIGNUM_CMADD_SAFE_MIN0 THEN
-  X_CHOOSE_TAC `fmg:int64->int64->int64->int64->num->int64->(uarch_event)list`
-    BIGNUM_CMADD_SAFE_MINGT THEN
-  EXISTS_TAC
-   `\(x:int64) (z:int64) (p:int64) (n:int64) (pc:num) (returnaddress:int64).
-      (if MIN (val n) (val p) = 0 then fm0 x z p n pc returnaddress
-       else fmg x z p n pc returnaddress):(uarch_event)list` THEN
-  MAP_EVERY X_GEN_TAC
-   [`e:(uarch_event)list`;`p:int64`;`z:int64`;`c:int64`;`n:int64`;`x:int64`;
-    `pc:num`;`returnaddress:int64`] THEN
-  DISCH_TAC THEN
-  ASM_CASES_TAC `MIN (val(n:int64)) (val(p:int64)) = 0` THEN
-  ASM_REWRITE_TAC[] THENL
-   [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[];
-    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]]);;
+  BIGNUM_CMADD_SAFETY_TAC BIGNUM_CMADD_EXEC
+    ~mul_start:0x38 ~mul_end:0x64 ~mul_first:14 ~mul_body:11 ~top_steps:3
+    ~one_carry_steps:9 ~carry_start:0x80 ~carry_end:0x98 ~carry_first:7
+    ~carry_exit:2);;
