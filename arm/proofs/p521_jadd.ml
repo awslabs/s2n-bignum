@@ -2010,17 +2010,178 @@ let P521_JADD_SUBROUTINE_CORRECT = time prove
    816);;
 
 (* ------------------------------------------------------------------------- *)
-(* Constant-time and memory safety proof. The code is branch-free apart      *)
-(* from calls to local multiplication, squaring and subtraction subroutines, *)
-(* so the whole subroutine (including those calls, whose own stack frames    *)
-(* move SP) is handled by symbolic execution with PROVE_SAFETY_SPEC_TAC.     *)
+(* Constant-time and memory safety proof. As for correctness, the core is    *)
+(* proved first, using the safety theorems of the local multiplication,      *)
+(* squaring and subtraction subroutines, then the subroutine from it.        *)
 (* ------------------------------------------------------------------------- *)
 
 needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
+needs "arm/proofs/utils/p521_callee_safety.ml";;
 
-let p521_jadd_full_spec,p521_jadd_public_vars = mk_safety_spec
-    ~keep_maychanges:false
+let LOCAL_SQR_P521_SAFETY_TAC (assump_name:string) =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+
+    ARM_STEPS_TAC P521_JADD_EXEC ((n+1)--(n+3)) THEN
+    REMOVE_THEN assump_name (fun safety_th ->
+      ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p521_jadd_mc,P521_JADD_EXEC,
+        0xe78,bignum_sqr_p521_mc,safety_th)
+        [`e:(uarch_event)list`; `read X0 s`; `read X1 s`;
+          `pc + 0xe78`; `read SP s`; `read X30 s`] (n+4) THENL [
+        EXISTS_E2_TAC(ref
+          [`p1:int64`;`p2:int64`;`p3:int64`;`pc:num`;`stackpointer:int64`]);
+
+        LABEL_TAC assump_name safety_th
+      ]
+    ));;
+
+let LOCAL_MUL_P521_SAFETY_TAC (assump_name:string) =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+
+    ARM_STEPS_TAC P521_JADD_EXEC ((n+1)--(n+4)) THEN
+    REMOVE_THEN assump_name (fun safety_th ->
+      ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p521_jadd_mc,P521_JADD_EXEC,
+        0x3ec,bignum_mul_p521_mc,safety_th)
+        [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+          `pc + 0x3ec`; `read SP s`; `read X30 s`] (n+5) THENL [
+        EXISTS_E2_TAC(ref
+          [`p1:int64`;`p2:int64`;`p3:int64`;`pc:num`;`stackpointer:int64`]);
+
+        LABEL_TAC assump_name safety_th
+      ]
+    ));;
+
+(* The local subtraction. *)
+
+let LOCAL_SUB_P521_SUBR_SAFE = prove
+ (`exists f_events. forall e z x y pc returnaddress.
+        nonoverlapping (word pc,LENGTH p521_jadd_mc) (z,8 * 9)
+        ==> ensures arm
+             (\s. aligned_bytes_loaded s (word pc) p521_jadd_mc /\
+                  read PC s = word(pc + 0x16d0) /\
+                  read X30 s = returnaddress /\
+                  C_ARGUMENTS [z; x; y] s /\
+                  read events s = e)
+             (\s. read PC s = returnaddress /\
+                  (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events x y z pc returnaddress /\
+                         memaccess_inbounds e2 [x,72; y,72; z,72] [z,72]))
+          (MAYCHANGE [PC; X3; X4; X5; X6; X7; X8; X9; X10; X11; X12; X13] ,,
+           MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+           MAYCHANGE [memory :> bignum(z,9)])`,
+  PROVE_SAFETY_SPEC_TAC P521_JADD_EXEC);;
+
+let LOCAL_SUB_P521_SUBR_SAFETY_TAC (assump_name:string) =
+  W(fun (asl,w) ->
+    let sname = name_of(rand w) in
+    let n = int_of_string (String.sub sname 1 (String.length sname - 1)) in
+
+    ARM_STEPS_TAC P521_JADD_EXEC ((n+1)--(n+4)) THEN
+    REMOVE_THEN assump_name (fun safety_th ->
+      ARM_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+        (p521_jadd_mc,P521_JADD_EXEC,
+         0,p521_jadd_mc,safety_th)
+        [`e:(uarch_event)list`; `read X0 s`; `read X1 s`; `read X2 s`;
+          `pc:num`; `read X30 s`] (n+5) THENL [
+        EXISTS_E2_TAC(ref
+          [`p1:int64`;`p2:int64`;`p3:int64`;`pc:num`;`stackpointer:int64`]);
+
+        LABEL_TAC assump_name safety_th
+      ]
+    ));;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "p521_jadd" subroutine_signatures)
+    P521_JADD_CORRECT
+    P521_JADD_EXEC;;
+
+let P521_JADD_SAFE = time prove
+ (`exists f_events.
+       forall e p3 p1 p2 pc stackpointer.
+          aligned 16 stackpointer /\
+          ALL (nonoverlapping (stackpointer,720))
+              [(word pc,LENGTH p521_jadd_mc); (p1,216); (p2,216); (p3,216)] /\
+          nonoverlapping (p3,216) (word pc,LENGTH p521_jadd_mc)
+          ==> ensures arm
+               (\s.
+                    aligned_bytes_loaded s (word pc) p521_jadd_mc /\
+                    read PC s = word (pc + 0x1c) /\
+                    read SP s = word_add stackpointer (word 144) /\
+                    C_ARGUMENTS [p3; p1; p2] s /\
+                    read events s = e)
+               (\s.
+                    read PC s = word (pc + 0x3cc) /\
+                    (exists e2.
+                         read events s = APPEND e2 e /\
+                         e2 = f_events p1 p2 p3 pc stackpointer /\
+                         memaccess_inbounds e2
+                         [p1,216; p2,216; p3,216; stackpointer,720]
+                         [p3,216; stackpointer,720]))
+               (MAYCHANGE [PC; X0; X1; X2; X3; X4; X5; X6; X7; X8; X9; X10;
+                            X11; X12; X13; X14; X15; X16; X17; X19; X20;
+                            X21; X22; X23; X24; X25; X26; X27; X28; X30] ,,
+                MAYCHANGE MODIFIABLE_SIMD_REGS ,,
+                MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
+                MAYCHANGE [memory :> bytes(p3,216);
+                            memory :> bytes(stackpointer,720)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  (* Prepare the safety theorem of subroutine to be used! This is necessary to
+     keep introduction of metavariable in the right order. *)
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_SQR_P521_SUBR_SAFE "H_SQR_SAFE"
+  THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_MUL_P521_SUBR_SAFE "H_MUL_SAFE"
+  THEN
+  ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_SUB_P521_SUBR_SAFE "H_SUB_SAFE"
+  THEN
+
+  META_EXISTS_TAC THEN GEN_TAC(*e*) THEN
+
+  REWRITE_TAC[fst P521_JADD_EXEC] THEN
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS; PAIR_EQ; bignum_triple_from_memory] THEN
+  ENSURES_INIT_TAC "s0" THEN
+
+  ARM_STEPS_TAC P521_JADD_EXEC (1--3) THEN
+  LOCAL_SQR_P521_SAFETY_TAC "H_SQR_SAFE" THEN
+  LOCAL_SQR_P521_SAFETY_TAC "H_SQR_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_SUB_P521_SUBR_SAFETY_TAC "H_SUB_SAFE" THEN
+  LOCAL_SUB_P521_SUBR_SAFETY_TAC "H_SUB_SAFE" THEN
+  LOCAL_SQR_P521_SAFETY_TAC "H_SQR_SAFE" THEN
+  LOCAL_SQR_P521_SAFETY_TAC "H_SQR_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_SUB_P521_SUBR_SAFETY_TAC "H_SUB_SAFE" THEN
+  LOCAL_SUB_P521_SUBR_SAFETY_TAC "H_SUB_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_SUB_P521_SUBR_SAFETY_TAC "H_SUB_SAFE" THEN
+  LOCAL_SUB_P521_SUBR_SAFETY_TAC "H_SUB_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_MUL_P521_SAFETY_TAC "H_MUL_SAFE" THEN
+  LOCAL_SUB_P521_SUBR_SAFETY_TAC "H_SUB_SAFE" THEN
+
+  ARM_STEPS_TAC P521_JADD_EXEC (115--259) THEN
+
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
+
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
     (assoc "p521_jadd" subroutine_signatures)
     P521_JADD_SUBROUTINE_CORRECT
     P521_JADD_EXEC;;
@@ -2052,6 +2213,11 @@ let P521_JADD_SUBROUTINE_SAFE = time prove
                          [p1,216; p2,216; p3,216;
                           word_sub stackpointer (word 816),816]
                          [p3,216; word_sub stackpointer (word 816),816]))
-               (\s s'. true)`,
-  ASSERT_CONCL_TAC p521_jadd_full_spec THEN
-  PROVE_SAFETY_SPEC_TAC ~public_vars:p521_jadd_public_vars P521_JADD_EXEC);;
+               (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
+                MAYCHANGE
+                [memory :> bytes (p3,216);
+                 memory :> bytes (word_sub stackpointer (word 816),816)])`,
+  ASSERT_CONCL_TAC full_spec THEN
+  ARM_ADD_RETURN_STACK_TAC P521_JADD_EXEC P521_JADD_SAFE
+    `[X19; X20; X21; X22; X23; X24; X25; X26; X27; X28; X29; X30]` 816 THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC);;
