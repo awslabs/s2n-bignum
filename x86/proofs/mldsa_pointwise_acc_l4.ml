@@ -799,79 +799,11 @@ let MLDSA_POINTWISE_ACC_L4_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
                WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                MAYCHANGE [memory :> bytes(word_sub stackpointer (word 176), 176)] ,,
                MAYCHANGE [memory :> bytes(c, 1024)])`,
-
-  ASSUME_CALLEE_SAFETY_TAC MLDSA_POINTWISE_ACC_L4_SAFE "H_subth" THEN
-  META_EXISTS_TAC THEN
-  REPLICATE_TAC 6 GEN_TAC THEN
-  WORD_FORALL_OFFSET_TAC 176 THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[fst MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
-  REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-
-  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
-  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
-  ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm7" `ZMM7 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm8" `ZMM8 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm9" `ZMM9 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm10" `ZMM10 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm11" `ZMM11 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm13" `ZMM13 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm14" `ZMM14 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm15" `ZMM15 :> bottomhalf :> bottomhalf` THEN
-
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12;YMM13;YMM14;YMM15]) THEN
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-  GHOST_INTRO_TAC `init_ymm13:int256` `read YMM13` THEN
-  GHOST_INTRO_TAC `init_ymm14:int256` `read YMM14` THEN
-  GHOST_INTRO_TAC `init_ymm15:int256` `read YMM15` THEN
-
-  GLOBALIZE_PRECONDITION_TAC THEN
-  REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
-  ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC (1--17) THEN
-
-  W(fun (asl,w) ->
-    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
-      if is_eq t && is_read_events (lhs t) then Some (rhs t)
-      else None) asl in
-    if length current_events <> 1
-    then failwith "More than 'read events .. = ..?'"
-    else
-      REMOVE_THEN "H_subth"
-        (MP_TAC o SPECL [hd current_events; `c:int64`; `a:int64`; `b:int64`;
-                         `consts:int64`; `pc + 98`]))
-  THEN
-  ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
-  X86_BIGSTEP_TAC MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC "s18" THENL
-   [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mldsa_pointwise_acc_l4_windows_tmc
-     (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mldsa_pointwise_acc_l4_tmc))
-     98));
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
-  MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s18`; `ymm7_epilog = read YMM7 s18`;
-    `ymm8_epilog = read YMM8 s18`; `ymm9_epilog = read YMM9 s18`;
-    `ymm10_epilog = read YMM10 s18`; `ymm11_epilog = read YMM11 s18`;
-    `ymm12_epilog = read YMM12 s18`; `ymm13_epilog = read YMM13 s18`;
-    `ymm14_epilog = read YMM14 s18`; `ymm15_epilog = read YMM15 s18`] THEN
-  X86_STEPS_TAC MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC (19--32) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [ DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
+  X86_WINDOWS_XMM_WRAP_SAFETY_TAC
+    (mldsa_pointwise_acc_l4_windows_tmc,MLDSA_POINTWISE_ACC_L4_WINDOWS_TMC_EXEC)
+    (mldsa_pointwise_acc_l4_tmc,MLDSA_POINTWISE_ACC_L4_SAFE)
+    ~gprs:[`RDI`; `RSI`] ~xmms:[6; 7; 8; 9; 10; 11; 12; 13; 14; 15] ~off:98
+    ~pre:17 ~post:14);;
 
 let MLDSA_POINTWISE_ACC_L4_WINDOWS_SUBROUTINE_SAFE = prove
  (`exists f_events. forall e c a b consts pc stackpointer returnaddress.

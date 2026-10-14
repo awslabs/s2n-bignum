@@ -696,90 +696,11 @@ let MLKEM_TOBYTES_NOIBT_WINDOWS_SUBROUTINE_SAFE = prove
                 MAYCHANGE
                 [memory :> bytes (word_sub stackpointer (word 128),128)] ,,
                 MAYCHANGE [memory :> bytes (r,384)])`,
-  (* The safety property specific tactics *)
-  ASSUME_CALLEE_SAFETY_TAC MLKEM_TOBYTES_SAFE "H_subth" THEN
-  META_EXISTS_TAC THEN
-
-  (* Copied from functional correctness *)
-  REPLICATE_TAC 4 GEN_TAC THEN
-  WORD_FORALL_OFFSET_TAC 128 THEN
-  REPEAT GEN_TAC THEN
-
-  REWRITE_TAC[fst mlkem_tobytes_windows_tmc_EXEC] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[WINDOWS_C_ARGUMENTS] THEN
-  REWRITE_TAC[WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-
-  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
-  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
-  ENSURES_PRESERVED_TAC "init_xmm6" `ZMM6 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm7" `ZMM7 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm8" `ZMM8 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm9" `ZMM9 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm10" `ZMM10 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm11" `ZMM11 :> bottomhalf :> bottomhalf` THEN
-  ENSURES_PRESERVED_TAC "init_xmm12" `ZMM12 :> bottomhalf :> bottomhalf` THEN
-
-  REWRITE_TAC[READ_ZMM_BOTTOM_QUARTER'] THEN
-  REWRITE_TAC(map GSYM
-    [YMM6;YMM7;YMM8;YMM9;YMM10;YMM11;YMM12]) THEN
-
-  GHOST_INTRO_TAC `init_ymm6:int256` `read YMM6` THEN
-  GHOST_INTRO_TAC `init_ymm7:int256` `read YMM7` THEN
-  GHOST_INTRO_TAC `init_ymm8:int256` `read YMM8` THEN
-  GHOST_INTRO_TAC `init_ymm9:int256` `read YMM9` THEN
-  GHOST_INTRO_TAC `init_ymm10:int256` `read YMM10` THEN
-  GHOST_INTRO_TAC `init_ymm11:int256` `read YMM11` THEN
-  GHOST_INTRO_TAC `init_ymm12:int256` `read YMM12` THEN
-
-  GLOBALIZE_PRECONDITION_TAC THEN
-  REPEAT(FIRST_X_ASSUM(SUBST1_TAC o SYM)) THEN
-
-  ENSURES_INIT_TAC "s0" THEN
-  X86_STEPS_TAC mlkem_tobytes_windows_tmc_EXEC (1--12) THEN
-
-  (* safety property version *)
-  W(fun (asl,w) ->
-    (* grab the current event list *)
-    let current_events = filter_map (fun (_,ath) -> let t = concl ath in
-      if is_eq t && is_read_events (lhs t) then Some (rhs t)
-      else None) asl in
-    if length current_events <> 1
-    then failwith "More than 'read events .. = ..?'"
-    else
-      REMOVE_THEN "H_subth"
-        (MP_TAC o SPECL [hd current_events; `r:int64`; `a:int64`; `pc + 62`]))
-  THEN
-  (* coming back to the functional correctness *)
-  ASM_REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
-
-  X86_BIGSTEP_TAC mlkem_tobytes_windows_tmc_EXEC "s13" THENL
-   [FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP
-     (BYTES_LOADED_SUBPROGRAM_RULE mlkem_tobytes_windows_tmc
-     (REWRITE_RULE[BUTLAST_CLAUSES]
-      (AP_TERM `BUTLAST:byte list->byte list` mlkem_tobytes_tmc))
-     62));
-    RULE_ASSUM_TAC(CONV_RULE(TRY_CONV RIP_PLUS_CONV))] THEN
-
-  MAP_EVERY ABBREV_TAC
-   [`ymm6_epilog = read YMM6 s13`;
-    `ymm7_epilog = read YMM7 s13`;
-    `ymm8_epilog = read YMM8 s13`;
-    `ymm9_epilog = read YMM9 s13`;
-    `ymm10_epilog = read YMM10 s13`;
-    `ymm11_epilog = read YMM11 s13`;
-    `ymm12_epilog = read YMM12 s13`] THEN
-
-  X86_STEPS_TAC mlkem_tobytes_windows_tmc_EXEC (14--24) THEN
-
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_ZMM_QUARTER]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[MAYCHANGE_YMM_SSE_QUARTER]) THEN
-
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (* safety property specific *)
-  CONJ_TAC THENL [ DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  (* preserved YMM registers *)
-  REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST);;
+  X86_WINDOWS_XMM_WRAP_SAFETY_TAC
+    (mlkem_tobytes_windows_tmc,mlkem_tobytes_windows_tmc_EXEC)
+    (mlkem_tobytes_tmc,MLKEM_TOBYTES_SAFE)
+    ~gprs:[`RDI`; `RSI`] ~xmms:[6; 7; 8; 9; 10; 11; 12] ~off:62 ~pre:12
+    ~post:11);;
 
 let MLKEM_TOBYTES_WINDOWS_SUBROUTINE_SAFE = prove
  (`exists f_events.
