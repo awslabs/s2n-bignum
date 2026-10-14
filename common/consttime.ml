@@ -1348,6 +1348,11 @@ let rec safety_skeleton_is_leg sk =
 
 let safety_skeleton_witness (args:term list) (sk:safety_skeleton) : term =
   let ety = `:(uarch_event)list` in
+  (* the arguments that are not variables, such as a stack pointer offset,
+     are abstracted by fresh variables *)
+  let args = itlist (fun a vs ->
+    (if is_var a then a else variant (args @ vs) (mk_var("arg",type_of a)))::vs)
+    args [] in
   let app = `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
   and enum = `ENUMERATEL:num->(num->(uarch_event)list)->(uarch_event)list` in
   let theta = mapfilter (fun a ->
@@ -1407,7 +1412,9 @@ let SAFETY_VAL_WORD_TAC : tactic =
 (* Prove an ensures goal following a skeleton, where the trace of its
    postcondition is the witness of the skeleton (followed by the trace of
    the precondition if any). Legs see the goals of the ENSURES_EVENTS tactics
-   after SAFETY_VAL_WORD_TAC; the other nodes regroup the trace first. As in
+   after SAFETY_VAL_WORD_TAC; the other nodes regroup the trace first. The
+   last leg of a loop after earlier code is tried as is, then with its trace
+   regrouped too (needed when the leg adds no events). As in
    the usual ENSURES_EVENTS_WHILE_UP2_TAC ... THEN ASM_REWRITE_TAC[] idiom,
    the goals of a loop are rewritten with the assumptions. The straight-line
    legs of a node are proved before its loops, so that the events of a loop
@@ -1445,16 +1452,18 @@ let rec SAFETY_SKELETON_WALK_TAC (sk:safety_skeleton) : tactic =
       CONJ_TAC THENL
        [(if safety_skeleton_is_leg pre then ALL_TAC
          else SAFETY_POST_TRACE_CONV_TAC
-                (REWR_CONV(CONJUNCT1 ENUMERATEL_APPEND_ZERO))) THEN
+                (REWR_CONV(CONJUNCT1(SPEC_ALL ENUMERATEL_APPEND_ZERO)))) THEN
         SAFETY_SKELETON_WALK_TAC pre;
         ALL_TAC] THEN
       CONJ_TAC THENL
        [ALL_TAC;
-        (if safety_skeleton_is_leg post || not nested then ALL_TAC
-         else SAFETY_POST_TRACE_CONV_TAC
-                (SAFETY_APPEND_ASSOC_CONV THENC
-                 RAND_CONV SAFETY_APPEND_ASSOC_CONV)) THEN
-        SAFETY_SKELETON_WALK_TAC post] THEN
+        let regroup = SAFETY_POST_TRACE_CONV_TAC
+          (SAFETY_APPEND_ASSOC_CONV THENC RAND_CONV SAFETY_APPEND_ASSOC_CONV) in
+        if not nested then SAFETY_SKELETON_WALK_TAC post
+        else if safety_skeleton_is_leg post then
+          (SAFETY_SKELETON_WALK_TAC post) ORELSE
+          (regroup THEN SAFETY_SKELETON_WALK_TAC post)
+        else regroup THEN SAFETY_SKELETON_WALK_TAC post] THEN
       X_GEN_TAC i THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
       (if safety_skeleton_is_leg body then ALL_TAC else
        SAFETY_POST_TRACE_CONV_TAC
