@@ -2340,6 +2340,7 @@ let EDWARDS25519_DECODE_SAFE = time prove
                  MAYCHANGE
                  [memory :> bytes (z,8 * 8);
                   memory :> bytes (stackpointer,264)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   EDWARDS25519_DECODE_SAFETY_TAC
     (edwards25519_decode_tmc,EDWARDS25519_DECODE_EXEC)
     (LOCAL_MUL_P25519_SAFE,LOCAL_NSQR_P25519_SAFE));;

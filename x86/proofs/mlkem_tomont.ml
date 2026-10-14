@@ -510,6 +510,7 @@ let MLKEM_TOMONT_SAFE = time prove
                 MAYCHANGE
                 [ZMM0; ZMM1; ZMM2; ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9;
                  ZMM10; ZMM11; ZMM12; ZMM13; ZMM14; ZMM15])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars mlkem_tomont_TMC_EXEC);;
 
 let MLKEM_TOMONT_NOIBT_SUBROUTINE_SAFE = time prove

@@ -573,6 +573,7 @@ let MLKEM_UNPACK_SAFE = time prove
                 MAYCHANGE [RAX] ,,
                 MAYCHANGE
                 [ZMM3; ZMM4; ZMM5; ZMM6; ZMM7; ZMM8; ZMM9; ZMM10; ZMM11])`,
+  ASSERT_CONCL_TAC full_spec THEN
   PROVE_SAFETY_SPEC_TAC ~public_vars:public_vars mlkem_unpack_TMC_EXEC);;
 
 let MLKEM_UNPACK_NOIBT_SUBROUTINE_SAFE = time prove

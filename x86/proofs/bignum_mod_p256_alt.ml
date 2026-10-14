@@ -650,6 +650,12 @@ let BIGNUM_MOD_P256_ALT_SUBROUTINE_SAFE = time prove
 (* Constant-time and memory safety proof of Windows ABI version.             *)
 (* ------------------------------------------------------------------------- *)
 
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mod_p256_alt" subroutine_signatures)
+    BIGNUM_MOD_P256_ALT_WINDOWS_CORRECT
+    (X86_MK_EXEC_RULE bignum_mod_p256_alt_windows_tmc);;
+
 let BIGNUM_MOD_P256_ALT_WINDOWS_SAFE = time prove
  (`exists f_events.
      forall e z k x pc.
@@ -670,6 +676,7 @@ let BIGNUM_MOD_P256_ALT_WINDOWS_SAFE = time prove
               MAYCHANGE SOME_FLAGS ,,
               MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum (z,4)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   BIGNUM_MOD_SAFETY_TAC (X86_MK_EXEC_RULE bignum_mod_p256_alt_windows_tmc) 11
     4 `RCX` (0x5a,21) (0x63,0xf3,38));;
 

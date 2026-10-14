@@ -652,6 +652,12 @@ let BIGNUM_MOD_P256_SUBROUTINE_SAFE = time prove
 (* Constant-time and memory safety proof of Windows ABI version.             *)
 (* ------------------------------------------------------------------------- *)
 
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mod_p256" subroutine_signatures)
+    BIGNUM_MOD_P256_WINDOWS_CORRECT
+    (X86_MK_EXEC_RULE bignum_mod_p256_windows_tmc);;
+
 (* The Windows binary does not embed the System V core byte-for-byte, so we
    prove a safety spec for the Windows core directly (reusing
    BIGNUM_MOD_SAFETY_TAC with the +11 shim offset) and promote it, exactly
@@ -676,6 +682,7 @@ let BIGNUM_MOD_P256_WINDOWS_SAFE = time prove
               MAYCHANGE SOME_FLAGS ,,
               MAYCHANGE [events] ,,
               MAYCHANGE [memory :> bignum (z,4)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   BIGNUM_MOD_SAFETY_TAC (X86_MK_EXEC_RULE bignum_mod_p256_windows_tmc) 11
     4 `RCX` (0x5a,21) (0x63,0xef,36));;
 

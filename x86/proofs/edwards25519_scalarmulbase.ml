@@ -5502,15 +5502,11 @@ let full_spec,public_vars = mk_safety_spec
     EDWARDS25519_SCALARMULBASE_CORRECT
     EDWARDS25519_SCALARMULBASE_EXEC;;
 
-(* The hand-written precondition below uses the leaner
-   `nonoverlapping (res,64) (word pc,0x3076)` form. This is intentionally
-   weaker than what `mk_safety_spec`'s `~readonly_objects` would produce
-   (which folds `word tables,48576` into the same `nonoverlapping (res,64)`
-   ALL list). Strengthening to the full form to enable
-   `ASSERT_CONCL_TAC full_spec` propagates an extra `nonoverlapping (res,64)
-   (word tables,48576)` hypothesis through `STRIP_TAC`/`X86_STEPS_TAC` and
-   trips later automated steps. So `ASSERT_CONCL_TAC full_spec` is omitted
-   here. *)
+(* The precondition below does not assume that res and the tables are
+   disjoint, unlike the specification computed from the correctness
+   theorem (with ~readonly_objects); the proof does not need it, and the
+   extra hypothesis would get in the way of later automated steps. The
+   statement is checked to imply the computed specification. *)
 let EDWARDS25519_SCALARMULBASE_SAFE = time prove
  (`exists f_events.
        forall e tables res scalar pc stackpointer.
@@ -5544,6 +5540,7 @@ let EDWARDS25519_SCALARMULBASE_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (res,64); memory :> bytes (stackpointer,488)])`,
+  ASSERT_CONCL_STRONGER_TAC full_spec THEN
   EDWARDS25519_SCALARMULBASE_SAFETY_TAC
     (edwards25519_scalarmulbase_tmc',EDWARDS25519_SCALARMULBASE_EXEC,
      `edwards25519_scalarmulbase_constant_data`)

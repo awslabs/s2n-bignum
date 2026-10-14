@@ -4426,6 +4426,12 @@ let CORE_INV_P25519_SAFE = time prove
   ] THEN
   DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
 
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_inv_p25519" subroutine_signatures)
+    BIGNUM_INV_P25519_CORRECT
+    BIGNUM_INV_P25519_EXEC;;
+
 let BIGNUM_INV_P25519_SAFE = time prove
  (`exists f_events. forall e z x pc stackpointer.
         ALL (nonoverlapping (stackpointer,208))
@@ -4449,6 +4455,7 @@ let BIGNUM_INV_P25519_SAFE = time prove
            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(z,8 * 4);
                       memory :> bytes(stackpointer,208)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   ASSUME_CALLEE_SAFETY_TAC CORE_INV_P25519_SAFE "H_CORE_SAFE" THEN
   META_EXISTS_TAC THEN
 

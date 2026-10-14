@@ -653,6 +653,19 @@ let ASSERT_CONCL_TAC (t:term): tactic =
        failwith "ASSERT_CONCL_TAC") (asl,w)
     else ALL_TAC (asl,w);;
 
+(* Check that the goal, a safety statement which may make fewer assumptions
+   than the specification t computed by mk_safety_spec, implies t. *)
+
+let ASSERT_CONCL_STRONGER_TAC (t:term): tactic =
+  fun (asl,w) ->
+    let _ = prove(mk_imp(w,t),
+      MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN
+      REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
+      MATCH_MP_TAC(TAUT `(p ==> q) ==> (q ==> r) ==> (p ==> r)`) THEN
+      REWRITE_TAC[ALL; ALLPAIRS; PAIRWISE] THEN STRIP_TAC THEN
+      ASM_REWRITE_TAC[]) in
+    ALL_TAC (asl,w);;
+
 (* ------------------------------------------------------------------------- *)
 (* Tactics corresponding to Hoare rules.                                     *)
 (* ------------------------------------------------------------------------- *)

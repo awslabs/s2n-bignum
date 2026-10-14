@@ -5507,6 +5507,9 @@ let full_spec,public_vars = mk_safety_spec
     CURVE25519_X25519BASE_ALT_CORRECT
     CURVE25519_X25519BASE_ALT_EXEC;;
 
+(* As for edwards25519_scalarmulbase, the precondition below does not
+   assume that res and the tables are disjoint, unlike the computed
+   specification; the statement is checked to imply it. *)
 let CURVE25519_X25519BASE_ALT_SAFE = time prove
  (`exists f_events.
        forall e tables res scalar pc stackpointer.
@@ -5540,6 +5543,7 @@ let CURVE25519_X25519BASE_ALT_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE
                 [memory :> bytes (res,32); memory :> bytes (stackpointer,488)])`,
+  ASSERT_CONCL_STRONGER_TAC full_spec THEN
   (* Prepare the safety theorem of subroutine to be used; this keeps
      introduction of metavariables in the right order. *)
   ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE
