@@ -8546,139 +8546,103 @@ let CURVE25519_X25519_SAFE = time prove
      keep introduction of metavariable in the right order. *)
   ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE
       "H_INV_SAFE" THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
-      APPEND
-        (f_ev_epil scalar point res pc stackpointer)
-        (APPEND
-          (ENUMERATEL 251 (\i.
-            f_ev_loop scalar point res pc stackpointer i))
-          (f_ev_prol scalar point res pc stackpointer))
-    :(uarch_event)list` THEN
+  SAFETY_SKELETON_TAC
+   (STRIP_TAC THEN
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+    REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS])
+   ((*** Setup of the main loop ***)
+    Loop(`251`, `pc + 0xa08`, `pc + 0x1ed9`,
+      `\i s.
+         read RSP s = stackpointer /\
+         read(memory :> bytes64(word_add stackpointer (word 384))) s = res /\
+         read RAX s = word_sub (word (254 - i)) (word 1) /\
+         read(memory :> bytes64(word_add stackpointer (word 392))) s =
+             word_sub (word (254 - i)) (word 1)`,
+      Leg("pre",
+        ENSURES_INIT_TAC "s0" THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (1--
+          (29 + 19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
+           19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*))) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (350--351) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
+        CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("loop",
+        (* Found this pattern from safety_print_log := true *)
+        ENSURES_INIT_TAC "s0" THEN
+        STRIP_EXISTS_ASSUM_TAC THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (1--
+          (19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 19(*SUB_TWICE4*) +
+           19(*ADD_TWICE4*))) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (77--84) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (85--
+          (84+(16(*MUX_4*) + 16(*MUX_4*) + 75(*MUL_5*) + 75(*MUL_5*) + 68(*SQR_4*)
+              + 29(*SUB5_4*) + 23(*ADD5_4*) + 68(*SQR_4*) + 68(*SQR_4*)
+              + 19(*SUB_TWICE4*) + 68(*SQR_4*) + 31(*CMADD_4*) + 82(*MUL_4*)
+              + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (887--889) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (890--891) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        CONJ_TAC THENL [
+          REWRITE_TAC[VAL_WORD_SUB_CASES] THEN
+          VAL_INT64_TAC `1` THEN VAL_INT64_TAC `254 - i` THEN
+          ASM_REWRITE_TAC[DIMINDEX_64] THEN
+          GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [COND_RAND] THEN
+          SIMPLE_ARITH_TAC;
+          ALL_TAC
+        ] THEN
+        CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
+          IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+          [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+          ALL_TAC] THEN
+        CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
+          IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+          [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+          ALL_TAC] THEN
+        SUBGOAL_THEN
+          `word (8 * val (word_ushr (word_sub (word (254 - i)) (word 1):int64) 6))
+          :int64 = word (8 * (254 - (i + 1)) DIV 2 EXP 6)`
+        SUBST_ALL_TAC THENL [
+          IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+            ALL_TAC; SIMPLE_ARITH_TAC
+          ] THEN
+          AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+          IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN CONJ_TAC THENL [
+            BINOP_TAC THENL [REFL_TAC;ALL_TAC] THEN
+            BINOP_TAC THENL [SIMPLE_ARITH_TAC; REFL_TAC];
 
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
+            SIMPLE_ARITH_TAC
+          ];
 
-  (*** Setup of the main loop ***)
+          ALL_TAC
+        ] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("post",
+        (*** Now the final recoding, inversion and multiplication ***)
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (1--4) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (5--
+          (4+(16(*MUX_4*) + 16(*MUX_4*)))) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (37--
+          (36+(19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
+               19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (425--
+          (424+(19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
+               19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (813--
+          (812+(19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
+               19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
+        LOCAL_MODINV_SAFETY_TAC "H_INV_SAFE" 1201 THEN
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (1202--(1201+(91(*MUL_P25519*)-1))) THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `251` `pc + 0xa08` `pc + 0x1ed9`(*+2 insns *)
-   `\i s.
-      read RSP s = stackpointer /\
-      read(memory :> bytes64(word_add stackpointer (word 384))) s = res /\
-      read RAX s = word_sub (word (254 - i)) (word 1) /\
-      read(memory :> bytes64(word_add stackpointer (word 392))) s =
-          word_sub (word (254 - i)) (word 1)` THEN
-  REPEAT CONJ_TAC THENL [
-    ARITH_TAC;
+        X86_STEPS_TAC CURVE25519_X25519_EXEC (1292--1293) THEN
 
-    ENSURES_INIT_TAC "s0" THEN
-    X86_STEPS_TAC CURVE25519_X25519_EXEC (1--
-      (29 + 19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
-       19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*))) THEN
-    X86_STEPS_TAC CURVE25519_X25519_EXEC (350--351) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
-    (*** The main loop invariant for the Montgomery ladder ***)
-
-    REPEAT STRIP_TAC THEN
-    ENSURES_INIT_TAC "s0" THEN
-    STRIP_EXISTS_ASSUM_TAC THEN
-    X86_STEPS_TAC CURVE25519_X25519_EXEC (1--
-      (19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 19(*SUB_TWICE4*) +
-       19(*ADD_TWICE4*))) THEN
-    X86_STEPS_TAC CURVE25519_X25519_EXEC (77--84) THEN
-    X86_STEPS_TAC CURVE25519_X25519_EXEC (85--
-      (84+(16(*MUX_4*) + 16(*MUX_4*) + 75(*MUL_5*) + 75(*MUL_5*) + 68(*SQR_4*)
-          + 29(*SUB5_4*) + 23(*ADD5_4*) + 68(*SQR_4*) + 68(*SQR_4*)
-          + 19(*SUB_TWICE4*) + 68(*SQR_4*) + 31(*CMADD_4*) + 82(*MUL_4*)
-          + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
-    X86_STEPS_TAC CURVE25519_X25519_EXEC (887--889) THEN
-    X86_STEPS_TAC CURVE25519_X25519_EXEC (890--891) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[VAL_WORD_SUB_CASES] THEN
-      VAL_INT64_TAC `1` THEN VAL_INT64_TAC `254 - i` THEN
-      ASM_REWRITE_TAC[DIMINDEX_64] THEN
-      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [COND_RAND] THEN
-      SIMPLE_ARITH_TAC;
-      ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-      [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-      ALL_TAC] THEN
-    CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-      [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-      ALL_TAC] THEN
-
-    (* Found this pattern from safety_print_log := true *)
-    SUBGOAL_THEN
-      `word (8 * val (word_ushr (word_sub (word (254 - i)) (word 1):int64) 6))
-      :int64 = word (8 * (254 - (i + 1)) DIV 2 EXP 6)`
-    SUBST_ALL_TAC THENL [
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
-        ALL_TAC; SIMPLE_ARITH_TAC
-      ] THEN
-      AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
-      IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN CONJ_TAC THENL [
-        BINOP_TAC THENL [REFL_TAC;ALL_TAC] THEN
-        BINOP_TAC THENL [SIMPLE_ARITH_TAC; REFL_TAC];
-
-        SIMPLE_ARITH_TAC
-      ];
-
-      ALL_TAC
-    ] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    ALL_TAC
-  ] THEN
-
-  (*** Now the final recoding, inversion and multiplication ***)
-
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  X86_STEPS_TAC CURVE25519_X25519_EXEC (1--4) THEN
-  X86_STEPS_TAC CURVE25519_X25519_EXEC (5--
-    (4+(16(*MUX_4*) + 16(*MUX_4*)))) THEN
-
-  (*** The first doubling to get from nn/8 to nn/4 ***)
-
-  X86_STEPS_TAC CURVE25519_X25519_EXEC (37--
-    (36+(19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
-         19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
-
-  (*** The next doubling to get from nn/4 to nn/2 ***)
-
-  X86_STEPS_TAC CURVE25519_X25519_EXEC (425--
-    (424+(19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
-         19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
-
-  (*** The final doubling to get from nn/2 to nn ***)
-
-  X86_STEPS_TAC CURVE25519_X25519_EXEC (813--
-    (812+(19(*SUB_TWICE4*) + 19(*ADD_TWICE4*) + 68(*SQR_4*) + 68(*SQR_4*) +
-         19(*SUB_TWICE4*) + 31(*CMADD_4*) + 82(*MUL_4*) + 82(*MUL_4*)))) THEN
-
-  (*** The inlining of modular inverse ***)
-
-  LOCAL_MODINV_SAFETY_TAC "H_INV_SAFE" 1201 THEN
-
-  (*** Final multiplication ***)
-
-  X86_STEPS_TAC CURVE25519_X25519_EXEC (1202--(1201+(91(*MUL_P25519*)-1))) THEN
-
-  X86_STEPS_TAC CURVE25519_X25519_EXEC (1292--1293) THEN
-
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-
-  SUBST_ALL_TAC (ARITH_RULE`2 EXP 6 = 64`) THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+        SUBST_ALL_TAC (ARITH_RULE`2 EXP 6 = 64`) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))));;
 
 let CURVE25519_X25519_NOIBT_SUBROUTINE_SAFE = time prove
  (`exists f_events.

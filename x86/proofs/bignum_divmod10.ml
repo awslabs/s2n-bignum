@@ -349,55 +349,40 @@ let BIGNUM_DIVMOD10_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(z:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 z k pc
-      else APPEND []
-            (APPEND (ENUMERATEL (val k) (f_ev_loop z k pc))
-                    (f_ev_pre z k pc)) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `pc:num`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [SAFETY_COND_TAC `k = 0` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--3) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `k = 0` THEN
-
-  (*** The main loop from the top word down ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x17` `pc + 0x51`
-   `\i s. read RSI s = z /\ read RDI s = word (k - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--5) THEN
-    SAFETY_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
-    SUBGOAL_THEN
-     `word (8 * (k - i) + 18446744073709551608):int64 =
-      word (8 * (k - (i + 1)))`
-    ASSUME_TAC THENL
-     [REWRITE_TAC[WORD_BLAST
-       `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN
-      CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-      ALL_TAC] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--16) THEN
-    SAFETY_CLOSE_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC [] THEN
-    SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]);;
+  X86_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"]
+   ((*** The degenerate case k = 0 ***)
+    Cases(`k = 0`,
+      Leg("k0",
+        FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--3) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      (*** The main loop from the top word down ***)
+      Loop(`k:num`, `pc + 0x17`, `pc + 0x51`,
+        `\i s. read RSI s = z /\ read RDI s = word (k - i)`,
+        Leg("pre",
+          REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--5) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("loop",
+          SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
+          SUBGOAL_THEN
+           `word (8 * (k - i) + 18446744073709551608):int64 =
+            word (8 * (k - (i + 1)))`
+          ASSUME_TAC THENL
+           [REWRITE_TAC[WORD_BLAST
+             `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+            IMP_REWRITE_TAC[WORD_SUB2] THEN
+            CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+            ALL_TAC] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC (1--16) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("post",
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_DIVMOD10_EXEC [] THEN
+          SAFETY_CLOSE_TAC)))));;
 
 let BIGNUM_DIVMOD10_NOIBT_SUBROUTINE_SAFE = time prove
  (`

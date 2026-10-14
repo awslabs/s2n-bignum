@@ -4290,141 +4290,94 @@ let CORE_INV_P25519_SAFE = time prove
   ASSUME_CALLEE_SAFETY_TAILED_TAC LOCAL_WORD_DIVSTEP59_SAFE
       "H_DIVSTEP59_SAFE" THEN
 
-  CONCRETIZE_F_EVENTS_TAC
-    `\(z:int64) (x:int64) (pc:num) (stackpointer:int64).
-      APPEND
-        (f_ev_loop_post z x pc stackpointer)
-        (APPEND
-          (ENUMERATEL 9 (f_ev_loop z x pc stackpointer))
-            (f_ev_loop_pre z x pc stackpointer))
-      :(uarch_event) list` THEN
+  X86_SAFETY_SKELETON_TAC ~ths:[ALLPAIRS; ALL] []
+   ((*** Set up the main loop invariant ***)
+    Loop(`9`, `pc + 0x4fc`, `pc + 0x4fc`,
+      `\i s.
+         read RSP s = stackpointer /\
+         read (memory :> bytes64(word_add stackpointer (word 192))) s = z /\
+         read (memory :> bytes64(word_add stackpointer (word 144))) s =
+           word(10 - i)`,
+      Leg("pre",
+        (*** Initial holding of the invariant ***)
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false CORE_INV_P25519_EXEC (1--49) THEN
+        CONJ_TAC THENL [WORD_ARITH_TAC; ALL_TAC] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("loop",
+        (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
+             'exists e_stack_spill. .. ==> ...' *)
+        ENSURES_INIT_TAC "s0" THEN
+        STRIP_EXISTS_ASSUM_TAC THEN
+        USE_THEN "H_DIVSTEP59_SAFE"
+          (MP_TAC o SPECL [`e:(uarch_event)list`;`pc:num`;`stackpointer:int64`]) THEN
+        ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+        META_EXISTS_TAC THEN
+        REWRITE_TAC[SOME_FLAGS] THEN
+        ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN NO_TAC; ALL_TAC] THEN
+        X86_BIGSTEP_TAC CORE_INV_P25519_EXEC "s1" THENL [
+          BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+          NO_TAC;
+          ALL_TAC
+        ] THEN
+        X86_STEPS_TAC CORE_INV_P25519_EXEC (2--4) THEN
+        SUBGOAL_THEN
+         `word_sub (word (10 - i)) (word 1):int64 = word(10 - (i + 1))`
+        SUBST_ALL_TAC THENL
+         [REWRITE_TAC[ARITH_RULE `10 - (i + 1) = (10 - i) - 1`] THEN
+          GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN
+          ASM_SIMP_TAC[ARITH_RULE `i < 9 ==> 1 <= 10 - i`];
+          ALL_TAC] THEN
+        SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)`
+         (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))
+        THENL
+         [VAL_INT64_TAC `10 - (i + 1)` THEN ASM_REWRITE_TAC[] THEN
+          UNDISCH_TAC `i < 9` THEN ARITH_TAC;
+          ALL_TAC] THEN
 
-  REPEAT META_EXISTS_TAC THEN
-  STRIP_TAC (* event e *) THEN
+        X86_STEPS_TAC CORE_INV_P25519_EXEC (5--294) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        CONJ_TAC THENL [REWRITE_TAC[COND_ID]; ALL_TAC] THEN
+        SAFE_META_EXISTS_TAC allowed_vars_e THEN
+        CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+        CONJ_TAC THENL [
+          PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
+          REWRITE_TAC[APPEND_ASSOC] THEN
+          AP_THM_TAC THEN AP_TERM_TAC THEN
+          REWRITE_TAC[ENUMERATEL_ADD1] THEN
+          AP_THM_TAC THEN AP_TERM_TAC THEN
+          UNIFY_F_EVENTS_TAC; ALL_TAC
+        ] THEN
+        DISCHARGE_MEMACCESS_INBOUNDS_TAC),
+      Leg("post",
+        (*** Start on the tail computation, with similar divstep reasoning ***)
+        REWRITE_TAC[] THEN
+        ENSURES_INIT_TAC "s0" THEN
+        STRIP_EXISTS_ASSUM_TAC THEN
 
-  (* functional correctness *)
-  MAP_EVERY X_GEN_TAC
-   [`z:int64`; `x:int64`; `pc:num`; `stackpointer:int64`] THEN
-  REWRITE_TAC[ALLPAIRS; ALL] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** Set up the main loop invariant ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `9` `pc + 0x4fc` `pc + 0x4fc`
-   `\i s.
-      read RSP s = stackpointer /\
-      read (memory :> bytes64(word_add stackpointer (word 192))) s = z /\
-      read (memory :> bytes64(word_add stackpointer (word 144))) s =
-        word(10 - i)`
-  THEN REPEAT CONJ_TAC THENL [
-    ARITH_TAC;
-
-    (*** Initial holding of the invariant ***)
-
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false CORE_INV_P25519_EXEC (1--49) THEN
-    CONJ_TAC THENL [WORD_ARITH_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (*** Main invariant proof ***)
-
-    REWRITE_TAC[] THEN
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    ENSURES_INIT_TAC "s0" THEN
-    STRIP_EXISTS_ASSUM_TAC THEN
-    (* bigstep *)
-    (* safety *)
-    USE_THEN "H_DIVSTEP59_SAFE"
-      (MP_TAC o SPECL [`e:(uarch_event)list`;`pc:num`;`stackpointer:int64`]) THEN
-    (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
-         'exists e_stack_spill. .. ==> ...' *)
-    ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
-    META_EXISTS_TAC THEN
-    REWRITE_TAC[SOME_FLAGS] THEN
-    ANTS_TAC THENL [ASM_REWRITE_TAC[] THEN NO_TAC; ALL_TAC] THEN
-    X86_BIGSTEP_TAC CORE_INV_P25519_EXEC "s1" THENL [
-      BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
-      NO_TAC;
-      ALL_TAC
-    ] THEN
-
-    (*** The trivial fact that we loop back ***)
-
-    X86_STEPS_TAC CORE_INV_P25519_EXEC (2--4) THEN
-    SUBGOAL_THEN
-     `word_sub (word (10 - i)) (word 1):int64 = word(10 - (i + 1))`
-    SUBST_ALL_TAC THENL
-     [REWRITE_TAC[ARITH_RULE `10 - (i + 1) = (10 - i) - 1`] THEN
-      GEN_REWRITE_TAC RAND_CONV [WORD_SUB] THEN
-      ASM_SIMP_TAC[ARITH_RULE `i < 9 ==> 1 <= 10 - i`];
-      ALL_TAC] THEN
-    SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)`
-     (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]))
-    THENL
-     [VAL_INT64_TAC `10 - (i + 1)` THEN ASM_REWRITE_TAC[] THEN
-      UNDISCH_TAC `i < 9` THEN ARITH_TAC;
-      ALL_TAC] THEN
-
-    X86_STEPS_TAC CORE_INV_P25519_EXEC (5--294) THEN
-
-    (*** Finish the simulation before proceeding ***)
-
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [REWRITE_TAC[COND_ID]; ALL_TAC] THEN
-    (* since automation of DISCHARGE_SAFETY_PROPERTY_TAC is insufficient,
-       manually write the proof here *)
-    SAFE_META_EXISTS_TAC allowed_vars_e THEN
-    CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-    CONJ_TAC THENL [
-      PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
-      REWRITE_TAC[APPEND_ASSOC] THEN
-      AP_THM_TAC THEN AP_TERM_TAC THEN
-      REWRITE_TAC[ENUMERATEL_ADD1] THEN
-      AP_THM_TAC THEN AP_TERM_TAC THEN
-      UNIFY_F_EVENTS_TAC; ALL_TAC
-    ] THEN
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC;
-
-    ALL_TAC
-  ] THEN
-
-  (*** Start on the tail computation, with similar divstep reasoning ***)
-
-  REWRITE_TAC[] THEN
-  ENSURES_INIT_TAC "s0" THEN
-  STRIP_EXISTS_ASSUM_TAC THEN
-
-  USE_THEN "H_DIVSTEP59_SAFE"
-      (MP_TAC o SPECL [`e:(uarch_event)list`;`pc:num`;`stackpointer:int64`]) THEN
-  (* Finally turn '(forall e_stack_spill. ..) ==> ...' to
-        'exists e_stack_spill. .. ==> ...' *)
-  ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
-  META_EXISTS_TAC THEN
-  REWRITE_TAC[SOME_FLAGS] THEN
-  ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
-  X86_BIGSTEP_TAC CORE_INV_P25519_EXEC "s1" THENL [
-    BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
-    NO_TAC;
-    ALL_TAC
-  ] THEN
-
-  (*** Complete all the simulation first ***)
-
-  X86_STEPS_TAC CORE_INV_P25519_EXEC
-   (2--107) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (* since automation of DISCHARGE_SAFETY_PROPERTY_TAC is insufficient,
-      manually write the proof here *)
-  SAFE_META_EXISTS_TAC allowed_vars_e THEN
-  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-  CONJ_TAC THENL [
-    PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
-    REWRITE_TAC[APPEND_ASSOC] THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN
-    AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC; ALL_TAC
-  ] THEN
-  DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+        USE_THEN "H_DIVSTEP59_SAFE"
+            (MP_TAC o SPECL [`e:(uarch_event)list`;`pc:num`;`stackpointer:int64`]) THEN
+        ONCE_REWRITE_TAC[GSYM LEFT_EXISTS_IMP_THM] THEN
+        META_EXISTS_TAC THEN
+        REWRITE_TAC[SOME_FLAGS] THEN
+        ANTS_TAC THENL [NONOVERLAPPING_TAC; ALL_TAC] THEN
+        X86_BIGSTEP_TAC CORE_INV_P25519_EXEC "s1" THENL [
+          BINOP_TAC THENL [ UNIFY_REFL_TAC; REFL_TAC ] THEN
+          NO_TAC;
+          ALL_TAC
+        ] THEN
+        X86_STEPS_TAC CORE_INV_P25519_EXEC
+         (2--107) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        SAFE_META_EXISTS_TAC allowed_vars_e THEN
+        CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+        CONJ_TAC THENL [
+          PURE_REWRITE_TAC[APPEND_NIL;CONJUNCT1 APPEND] THEN
+          REWRITE_TAC[APPEND_ASSOC] THEN
+          AP_THM_TAC THEN AP_TERM_TAC THEN
+          AP_THM_TAC THEN AP_TERM_TAC THEN UNIFY_F_EVENTS_TAC; ALL_TAC
+        ] THEN
+        DISCHARGE_MEMACCESS_INBOUNDS_TAC))));;
 
 let full_spec,public_vars = mk_safety_spec
     ~keep_maychanges:true

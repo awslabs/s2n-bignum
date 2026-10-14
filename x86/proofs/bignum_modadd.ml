@@ -476,112 +476,77 @@ let BIGNUM_MODADD_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (y:int64) (m:int64) (z:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 x y m z k pc
-      else
-       APPEND
-        (APPEND
-          (APPEND []
-            (APPEND (ENUMERATEL (val k) (f_ev_l3 x y m z k pc))
-                    (f_ev_p3 x y m z k pc)))
-          (APPEND []
-            (APPEND (ENUMERATEL (val k) (f_ev_l2 x y m z k pc))
-                    (f_ev_p2 x y m z k pc))))
-        (APPEND []
-          (APPEND (ENUMERATEL (val k) (f_ev_l1 x y m z k pc))
-                  (f_ev_p1 x y m z k pc))) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`; `pc:num`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [SAFETY_COND_TAC `k = 0` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--2) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `k = 0` THEN
-
-  (*** The addition loop ***)
-
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x22`
-   `\s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
-        read RCX s = y /\ read R8 s = m` THEN
-  CONJ_TAC THENL
-   [ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xe` `pc + 0x22`
-     `\i s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
-            read RCX s = y /\ read R8 s = m /\
-            read R9 s = word i /\ read R10 s = word (k - i)` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--5) THEN
-      SAFETY_CLOSE_TAC;
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-      SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--6) THEN
-      SAFETY_CLOSE_TAC;
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC [] THEN
-      SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC];
-    ALL_TAC] THEN
-
-  (*** The comparison loop ***)
-
-  SAFETY_POST_REASSOC_TAC THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x3c`
-   `\s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
-        read RCX s = y /\ read R8 s = m` THEN
-  CONJ_TAC THENL
-   [ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x2c` `pc + 0x3c`
-     `\i s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
-            read RCX s = y /\ read R8 s = m /\
-            read R9 s = word i /\ read R10 s = word (k - i)` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--3) THEN
-      SAFETY_CLOSE_TAC;
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-      SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--5) THEN
-      SAFETY_CLOSE_TAC;
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC [] THEN
-      SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC];
-    ALL_TAC] THEN
-
-  (*** The masked correction loop ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x46` `pc + 0x5f`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R8 s = m /\
-          read R9 s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--3) THEN
-    SAFETY_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--8) THEN
-    SAFETY_CLOSE_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC [] THEN
-    SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]);;
+  X86_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"]
+   ((*** The degenerate case k = 0 ***)
+    Cases(`k = 0`,
+      Leg("k0",
+        FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--2) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      (*** The addition loop ***)
+      Seq(`pc + 0x22`,
+        `\s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
+             read RCX s = y /\ read R8 s = m`,
+        Loop(`k:num`, `pc + 0xe`, `pc + 0x22`,
+          `\i s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
+                 read RCX s = y /\ read R8 s = m /\
+                 read R9 s = word i /\ read R10 s = word (k - i)`,
+          Leg("pre1",
+            REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+            X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+              ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--5) THEN
+            SAFETY_CLOSE_TAC),
+          Leg("loop1",
+            SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+            SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
+            X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+              ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--6) THEN
+            SAFETY_CLOSE_TAC),
+          Leg("post1",
+            X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+              ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC [] THEN
+            SAFETY_CLOSE_TAC)),
+        Seq(`pc + 0x3c`,
+          `\s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
+               read RCX s = y /\ read R8 s = m`,
+          Loop(`k:num`, `pc + 0x2c`, `pc + 0x3c`,
+            `\i s. read RDI s = word k /\ read RSI s = z /\ read RDX s = x /\
+                   read RCX s = y /\ read R8 s = m /\
+                   read R9 s = word i /\ read R10 s = word (k - i)`,
+            Leg("pre2",
+              REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--3) THEN
+              SAFETY_CLOSE_TAC),
+            Leg("loop2",
+              SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+              SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--5) THEN
+              SAFETY_CLOSE_TAC),
+            Leg("post2",
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC [] THEN
+              SAFETY_CLOSE_TAC)),
+          (*** The masked correction loop ***)
+          Loop(`k:num`, `pc + 0x46`, `pc + 0x5f`,
+            `\i s. read RDI s = word k /\ read RSI s = z /\ read R8 s = m /\
+                   read R9 s = word i`,
+            Leg("pre3",
+              REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--3) THEN
+              SAFETY_CLOSE_TAC),
+            Leg("loop3",
+              SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC (1--8) THEN
+              SAFETY_CLOSE_TAC),
+            Leg("post3",
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_MODADD_EXEC [] THEN
+              SAFETY_CLOSE_TAC)))))));;
 
 let BIGNUM_MODADD_NOIBT_SUBROUTINE_SAFE = time prove
  (`

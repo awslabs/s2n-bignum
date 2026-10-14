@@ -259,48 +259,30 @@ let BIGNUM_MUX_SAFE = prove
                 MAYCHANGE [memory :> bignum (z,val k)] ,,
                 MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (y:int64) (z:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 x y z k pc
-      else APPEND (f_ev_post x y z k pc)
-                  (APPEND (ENUMERATEL (val k) (f_ev_loop x y z k pc))
-                          (f_ev_pre x y z k pc)) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  X_GEN_TAC `b:int64` THEN W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`x:int64`; `y:int64`; `z:int64`; `pc:num`] THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [ASM_REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0" THEN
-    X86_STEPS_TAC BIGNUM_MUX_EXEC (1--2) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SUBGOAL_THEN `~(val(word k:int64) = 0)` ASSUME_TAC THENL
-   [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[ASSUME `val(word k:int64) = k`] THEN
-
-  (*** The main loop ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xb` `pc + 0x23`
-   `\i s. read RCX s = x /\ read R8 s = y /\ read RDX s = z /\
-          read RSI s = word(k - i) /\ read R9 s = word i` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [ENSURES_INIT_TAC "s0" THEN X86_STEPS_TAC BIGNUM_MUX_EXEC (1--4) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[SUB_0] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MUX_EXEC (1--7) THEN
-    SAFETY_CLOSE_TAC;
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+  X86_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN X86_SAFETY_SIM_TAC BIGNUM_MUX_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Then(SUBGOAL_THEN `~(val(word k:int64) = 0)` ASSUME_TAC THENL
+           [ASM_REWRITE_TAC[]; ALL_TAC],
+      (*** The main loop ***)
+      Loop(`k:num`, `pc + 0xb`, `pc + 0x23`,
+        `\i s. read RCX s = x /\ read R8 s = y /\ read RDX s = z /\
+               read RSI s = word(k - i) /\ read R9 s = word i`,
+        Leg("pre",
+          ENSURES_INIT_TAC "s0" THEN X86_STEPS_TAC BIGNUM_MUX_EXEC (1--4) THEN
+          ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[SUB_0] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        Leg("loop",
+          SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+          SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_MUX_EXEC (1--7) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("post",
+          X86_SAFETY_SIM_TAC BIGNUM_MUX_EXEC [] THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC))))));;
 
 let BIGNUM_MUX_NOIBT_SUBROUTINE_SAFE = time prove
  (`

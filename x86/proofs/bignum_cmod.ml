@@ -1487,54 +1487,43 @@ let BIGNUM_CMOD_SAFE = time prove
             MAYCHANGE SOME_FLAGS ,,
             MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 x k pc
-      else APPEND (f_ev_post x k pc)
-            (APPEND (ENUMERATEL (val k) (f_ev_loop x k pc))
-                    (f_ev_pre x k pc)) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `m:int64`; `pc:num`] THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [SAFETY_COND_TAC `k = 0` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--4) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `k = 0` THEN
-
-  (*** The main loop from the top word down ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xec` `pc + 0x10f`
-   `\i s. read RSI s = x /\ read RDI s = word (k - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--64) THEN
-    SAFETY_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
-    SUBGOAL_THEN
-     `word (8 * (k - i) + 18446744073709551608):int64 =
-      word (8 * (k - (i + 1)))`
-    ASSUME_TAC THENL
-     [REWRITE_TAC[WORD_BLAST
-       `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN
-      CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-      ALL_TAC] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--11) THEN
-    SAFETY_CLOSE_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--30) THEN
-    SAFETY_CLOSE_TAC]);;
+  SAFETY_SKELETON_TAC
+   (STRIP_TAC THEN
+    W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `m:int64`; `pc:num`] THEN
+    REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS])
+   ((*** The degenerate case k = 0 ***)
+    Cases(`k = 0`,
+      Leg("k0",
+        FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--4) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      (*** The main loop from the top word down ***)
+      Loop(`k:num`, `pc + 0xec`, `pc + 0x10f`,
+        `\i s. read RSI s = x /\ read RDI s = word (k - i)`,
+        Leg("pre",
+          REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--64) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("loop",
+          SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k:num` THEN
+          SUBGOAL_THEN
+           `word (8 * (k - i) + 18446744073709551608):int64 =
+            word (8 * (k - (i + 1)))`
+          ASSUME_TAC THENL
+           [REWRITE_TAC[WORD_BLAST
+             `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+            IMP_REWRITE_TAC[WORD_SUB2] THEN
+            CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+            ALL_TAC] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--11) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("post",
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_CMOD_EXEC (1--30) THEN
+          SAFETY_CLOSE_TAC)))));;
 
 let BIGNUM_CMOD_NOIBT_SUBROUTINE_SAFE = time prove
  (`

@@ -689,111 +689,82 @@ let BIGNUM_EMONTREDC_SAFE = time prove
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(m:int64) (z:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 m z k pc
-      else
-       APPEND (f_ev_post m z k pc)
-        (APPEND
-          (ENUMERATEL (val k) (\i.
-             APPEND (f_ev_oepil m z k pc i)
-              (if val k = 1 then f_ev_oprol1 m z k pc i
-               else APPEND []
-                     (APPEND
-                       (ENUMERATEL (val k - 1) (\j. f_ev_inner m z k pc i j))
-                       (f_ev_oprol m z k pc i)))))
-          (f_ev_pre m z k pc)) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`z:int64`; `m:int64`; `w:int64`; `pc:num`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [SAFETY_COND_TAC `k = 0` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--4) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `k = 0` THEN
-
-  (*** The outer loop, with the walking pointer into z ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x15` `pc + 0x89`
-   `\i s. read RDI s = word k /\ read RSI s = word_add z (word (8 * i)) /\
-          read RCX s = w /\ read R8 s = m /\ read R9 s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--5) THEN
-    SAFETY_CLOSE_TAC;
-    ALL_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC [1] THEN
-    SAFETY_CLOSE_TAC] THEN
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
-  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [BIGNUM_EMONTREDC_REASSOC3] THEN
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x61`
-   `\s. read RDI s = word k /\ read RSI s = word_add z (word (8 * i)) /\
-        read RCX s = w /\ read R8 s = m /\ read R9 s = word i` THEN
-  CONJ_TAC THENL
-   [ASM_CASES_TAC `k = 1` THENL
-     [SAFETY_COND_TAC `k = 1` THEN
-      SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word 0` ASSUME_TAC THENL
-       [UNDISCH_TAC `k = 1` THEN DISCH_THEN SUBST1_TAC THEN CONV_TAC WORD_RULE;
-        ALL_TAC] THEN
-      FIRST_X_ASSUM(K ALL_TAC o check (fun th -> concl th = `k = 1`)) THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--12) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ALL_TAC] THEN
-    SAFETY_COND_TAC `k = 1` THEN
-    SUBGOAL_THEN
-     `~(val (word_sub (word k) (word 1):int64) = 0) /\
-      word_sub (word k) (word 1):int64 = word (k - 1) /\
-      val (word (k - 1):int64) = k - 1 /\ ~(k - 1 = 0)`
-    STRIP_ASSUME_TAC THENL
-     [REPEAT CONJ_TAC THENL
-       [REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_1] THEN ASM_REWRITE_TAC[];
-        IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
-        MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-        UNDISCH_TAC `k < 2 EXP 64` THEN ARITH_TAC;
-        MAP_EVERY UNDISCH_TAC [`~(k = 0)`; `~(k = 1)`] THEN ARITH_TAC];
-      ALL_TAC] THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x3e` `pc + 0x61`
-     `\j s. read RDI s = word k /\ read RSI s = word_add z (word (8 * i)) /\
-            read RCX s = w /\ read R8 s = m /\ read R9 s = word i /\
-            read R10 s = word (j + 1) /\ read R13 s = word (k - 1 - j)` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--13) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-      SAFETY_UPCOUNT_FACTS_TAC `j:num` `j + 1` `k:num` `k - 1` THEN
-      SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k - 1` THEN
-      SUBGOAL_THEN `i + (j + 1) < 2 * k` ASSUME_TAC THENL
-       [MAP_EVERY UNDISCH_TAC [`i < k`; `j < k - 1`] THEN ARITH_TAC; ALL_TAC] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--11) THEN
-      SAFETY_CLOSE_TAC;
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC [] THEN
-      SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC];
-    ALL_TAC] THEN
-  SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-  SUBGOAL_THEN `i + k < 2 * k` ASSUME_TAC THENL
-   [UNDISCH_TAC `i < k` THEN ARITH_TAC; ALL_TAC] THEN
-  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-    ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--11) THEN
-  SAFETY_CLOSE_TAC);;
+  X86_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"]
+   ((*** The degenerate case k = 0 ***)
+    Cases(`k = 0`,
+      Leg("k0",
+        FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--4) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      (*** The outer loop, with the walking pointer into z ***)
+      Loop(`k:num`, `pc + 0x15`, `pc + 0x89`,
+        `\i s. read RDI s = word k /\ read RSI s = word_add z (word (8 * i)) /\
+               read RCX s = w /\ read R8 s = m /\ read R9 s = word i`,
+        Leg("pre1",
+          REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--5) THEN
+          SAFETY_CLOSE_TAC),
+        Then(GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
+             CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
+             GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [BIGNUM_EMONTREDC_REASSOC3],
+         Seq(`pc + 0x61`,
+           `\s. read RDI s = word k /\ read RSI s = word_add z (word (8 * i)) /\
+                read RCX s = w /\ read R8 s = m /\ read R9 s = word i`,
+           Cases(`k = 1`,
+             Leg("k1",
+               SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word 0` ASSUME_TAC THENL
+                [UNDISCH_TAC `k = 1` THEN DISCH_THEN SUBST1_TAC THEN CONV_TAC WORD_RULE;
+                 ALL_TAC] THEN
+               FIRST_X_ASSUM(K ALL_TAC o check (fun th -> concl th = `k = 1`)) THEN
+               X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                 ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--12) THEN
+               DISCHARGE_SAFETY_PROPERTY_TAC),
+             Then(SUBGOAL_THEN
+                   `~(val (word_sub (word k) (word 1):int64) = 0) /\
+                    word_sub (word k) (word 1):int64 = word (k - 1) /\
+                    val (word (k - 1):int64) = k - 1 /\ ~(k - 1 = 0)`
+                  STRIP_ASSUME_TAC THENL
+                   [REPEAT CONJ_TAC THENL
+                     [REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_1] THEN ASM_REWRITE_TAC[];
+                      IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
+                      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+                      UNDISCH_TAC `k < 2 EXP 64` THEN ARITH_TAC;
+                      MAP_EVERY UNDISCH_TAC [`~(k = 0)`; `~(k = 1)`] THEN ARITH_TAC];
+                    ALL_TAC],
+              Loop(`k - 1`, `pc + 0x3e`, `pc + 0x61`,
+                `\j s. read RDI s = word k /\ read RSI s = word_add z (word (8 * i)) /\
+                       read RCX s = w /\ read R8 s = m /\ read R9 s = word i /\
+                       read R10 s = word (j + 1) /\ read R13 s = word (k - 1 - j)`,
+                Leg("pre2",
+                  REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+                  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                    ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--13) THEN
+                  DISCHARGE_SAFETY_PROPERTY_TAC),
+                Leg("loop2",
+                  SAFETY_UPCOUNT_FACTS_TAC `j:num` `j + 1` `k:num` `k - 1` THEN
+                  SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k - 1` THEN
+                  SUBGOAL_THEN `i + (j + 1) < 2 * k` ASSUME_TAC THENL
+                   [MAP_EVERY UNDISCH_TAC [`i < k`; `j < k - 1`] THEN ARITH_TAC; ALL_TAC] THEN
+                  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                    ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--11) THEN
+                  SAFETY_CLOSE_TAC),
+                Leg("post2",
+                  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                    ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC [] THEN
+                  SAFETY_CLOSE_TAC)))),
+           Leg("loop1",
+             SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+             SUBGOAL_THEN `i + k < 2 * k` ASSUME_TAC THENL
+              [UNDISCH_TAC `i < k` THEN ARITH_TAC; ALL_TAC] THEN
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC (1--11) THEN
+             SAFETY_CLOSE_TAC))),
+        Leg("post1",
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_EMONTREDC_EXEC [1] THEN
+          SAFETY_CLOSE_TAC)))));;
 
 let BIGNUM_EMONTREDC_NOIBT_SUBROUTINE_SAFE = time prove
  (`

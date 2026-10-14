@@ -425,57 +425,38 @@ let BIGNUM_MUX16_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(xs:int64) (z:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 xs z k pc
-      else APPEND []
-            (APPEND (ENUMERATEL (val k) (f_ev_loop xs z k pc))
-                    (f_ev_pre xs z k pc)) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`z:int64`; `xs:int64`; `i:int64`; `pc:num`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [SAFETY_COND_TAC `k = 0` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC (1--2) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `k = 0` THEN
-
-  (*** Get a basic bound on k from the nonoverlapping assumptions ***)
-
-  FIRST_ASSUM(MP_TAC o MATCH_MP
-   (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) o
-   check (free_in `val (xs:int64)` o concl)) THEN
-  ANTS_TAC THENL [UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC; DISCH_TAC] THEN
-
-  (*** The main loop ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x15` `pc + 0x101`
-   `\j s. read RDI s = word k /\ read RSI s = word_add z (word (8 * j)) /\
-          read RCX s = word_add xs (word (8 * j)) /\
-          read R10 s = word (k - j)` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC (1--6) THEN
-    SAFETY_CLOSE_TAC;
-    X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-    SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k:num` THEN
-    BIGNUM_MUX16_CHAIN_TAC THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC (1--67) THEN
-    SAFETY_CLOSE_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC [] THEN
-    SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]);;
+  X86_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"]
+   ((*** The degenerate case k = 0 ***)
+    Cases(`k = 0`,
+      Leg("k0",
+        FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC (1--2) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Then(FIRST_ASSUM(MP_TAC o MATCH_MP
+            (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) o
+            check (free_in `val (xs:int64)` o concl)) THEN
+           ANTS_TAC THENL [UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC; DISCH_TAC],
+       (*** The main loop ***)
+       Loop(`k:num`, `pc + 0x15`, `pc + 0x101`,
+         `\j s. read RDI s = word k /\ read RSI s = word_add z (word (8 * j)) /\
+                read RCX s = word_add xs (word (8 * j)) /\
+                read R10 s = word (k - j)`,
+         Leg("pre",
+           REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC (1--6) THEN
+           SAFETY_CLOSE_TAC),
+         Leg("loop",
+           SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k:num` THEN
+           BIGNUM_MUX16_CHAIN_TAC THEN
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC (1--67) THEN
+           SAFETY_CLOSE_TAC),
+         Leg("post",
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_MUX16_EXEC [] THEN
+           SAFETY_CLOSE_TAC))))));;
 
 let BIGNUM_MUX16_NOIBT_SUBROUTINE_SAFE = time prove
  (`

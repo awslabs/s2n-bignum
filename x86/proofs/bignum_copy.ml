@@ -298,98 +298,75 @@ let BIGNUM_COPY_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (z:int64) (k:int64) (n:int64) (pc:num).
-      APPEND
-       (if MIN (val n) (val k) = val k then f_ev_p0 x z k n pc
-        else APPEND []
-              (APPEND (ENUMERATEL (val k - MIN (val n) (val k)) (f_ev_pad x z k n pc))
-                      (f_ev_ppre x z k n pc)))
-       (if MIN (val n) (val k) = 0 then f_ev_c0 x z k n pc
-        else APPEND []
-              (APPEND (ENUMERATEL (MIN (val n) (val k)) (f_ev_copy x z k n pc))
-                      (f_ev_cpre x z k n pc))) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `n:num` THEN
-  X_GEN_TAC `x:int64` THEN X_GEN_TAC `pc:num` THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  SUBGOAL_THEN
-   `(if k < n then word k else word n):int64 = word (MIN n k) /\
-    val (word (MIN n k):int64) = MIN n k /\ MIN n k <= k /\ MIN n k <= n`
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN COND_CASES_TAC THEN
-      REWRITE_TAC[] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-      UNDISCH_TAC `k < 2 EXP 64` THEN ARITH_TAC;
-      ARITH_TAC; ARITH_TAC];
-    ALL_TAC] THEN
-
-  (*** The copying loop for the first MIN n k words ***)
-
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x1f`
-   `\s. read RDI s = word k /\ read RSI s = z /\ read R8 s = word (MIN n k)` THEN
-  CONJ_TAC THENL
-   [ASM_CASES_TAC `MIN n k = 0` THENL
-     [SAFETY_COND_TAC `MIN n k = 0` THEN
-      FIRST_X_ASSUM(SUBST_ALL_TAC o
-        check (fun th -> concl th = `MIN n k = 0`)) THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ALL_TAC] THEN
-    SAFETY_COND_TAC `MIN n k = 0` THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `MIN n k` `pc + 0xf` `pc + 0x1f`
-     `\i s. read RDI s = word k /\ read RSI s = z /\ read RCX s = x /\
-            read RDX s = word (MIN n k) /\ read R8 s = word i` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
-      SAFETY_CLOSE_TAC;
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `MIN n k` `MIN n k` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
-      SAFETY_CLOSE_TAC;
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC [] THEN
-      SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC];
-    ALL_TAC] THEN
-
-  (*** The padding loop for the remaining k - MIN n k words ***)
-
-  ASM_CASES_TAC `MIN n k = k` THENL
-   [SAFETY_COND_TAC `MIN n k = k` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o
-      check (fun th -> concl th = `MIN n k = k`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--2) THEN
-    SAFETY_CLOSE_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `MIN n k = k` THEN
-  SUBGOAL_THEN `MIN n k < k /\ ~(k <= MIN n k)` STRIP_ASSUME_TAC THENL
-   [MAP_EVERY UNDISCH_TAC [`~(MIN n k = k)`; `MIN n k <= k`] THEN ARITH_TAC;
-    ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k - MIN n k` `pc + 0x27` `pc + 0x33`
-   `\i s. read RDI s = word k /\ read RSI s = z /\
-          read R8 s = word (MIN n k + i)` THEN
-  REPEAT CONJ_TAC THENL
-   [UNDISCH_TAC `MIN n k < k` THEN ARITH_TAC;
-    REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--3) THEN
-    SAFETY_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_UPCOUNT_FACTS_TAC `i:num` `MIN n k + i` `k:num` `k - MIN n k` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--4) THEN
-    SAFETY_CLOSE_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC [] THEN
-    SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]);;
+  X86_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"; "n"]
+   (Then(SUBGOAL_THEN
+          `(if k < n then word k else word n):int64 = word (MIN n k) /\
+           val (word (MIN n k):int64) = MIN n k /\ MIN n k <= k /\ MIN n k <= n`
+         STRIP_ASSUME_TAC THENL
+          [REPEAT CONJ_TAC THENL
+            [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN COND_CASES_TAC THEN
+             REWRITE_TAC[] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+             MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+             UNDISCH_TAC `k < 2 EXP 64` THEN ARITH_TAC;
+             ARITH_TAC; ARITH_TAC];
+           ALL_TAC],
+     (*** The copying loop for the first MIN n k words ***)
+     Seq(`pc + 0x1f`,
+       `\s. read RDI s = word k /\ read RSI s = z /\ read R8 s = word (MIN n k)`,
+       Cases(`MIN n k = 0`,
+         Leg("case",
+           FIRST_X_ASSUM(SUBST_ALL_TAC o
+             check (fun th -> concl th = `MIN n k = 0`)) THEN
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Loop(`MIN n k`, `pc + 0xf`, `pc + 0x1f`,
+           `\i s. read RDI s = word k /\ read RSI s = z /\ read RCX s = x /\
+                  read RDX s = word (MIN n k) /\ read R8 s = word i`,
+           Leg("pre1",
+             REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
+             SAFETY_CLOSE_TAC),
+           Leg("loop1",
+             SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `MIN n k` `MIN n k` THEN
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--5) THEN
+             SAFETY_CLOSE_TAC),
+           Leg("post1",
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC [] THEN
+             SAFETY_CLOSE_TAC))),
+       (*** The padding loop for the remaining k - MIN n k words ***)
+       Cases(`MIN n k = k`,
+         Leg("case2",
+           FIRST_X_ASSUM(SUBST_ALL_TAC o
+             check (fun th -> concl th = `MIN n k = k`)) THEN
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--2) THEN
+           SAFETY_CLOSE_TAC),
+         Then(SUBGOAL_THEN `MIN n k < k /\ ~(k <= MIN n k)` STRIP_ASSUME_TAC THENL
+               [MAP_EVERY UNDISCH_TAC [`~(MIN n k = k)`; `MIN n k <= k`] THEN ARITH_TAC;
+                ALL_TAC],
+          Then(SUBGOAL_THEN `~((k - MIN n k) = 0)` ASSUME_TAC THENL
+                [UNDISCH_TAC `MIN n k < k` THEN ARITH_TAC; ALL_TAC],
+           Loop(`k - MIN n k`, `pc + 0x27`, `pc + 0x33`,
+             `\i s. read RDI s = word k /\ read RSI s = z /\
+                    read R8 s = word (MIN n k + i)`,
+             Leg("pre2",
+               REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+               X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                 ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--3) THEN
+               SAFETY_CLOSE_TAC),
+             Leg("loop2",
+               SAFETY_UPCOUNT_FACTS_TAC `i:num` `MIN n k + i` `k:num` `k - MIN n k` THEN
+               X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                 ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC (1--4) THEN
+               SAFETY_CLOSE_TAC),
+             Leg("post2",
+               X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                 ~canonicalize_pc_diff:false BIGNUM_COPY_EXEC [] THEN
+               SAFETY_CLOSE_TAC)))))))));;
 
 let BIGNUM_COPY_NOIBT_SUBROUTINE_SAFE = time prove
  (`

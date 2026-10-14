@@ -504,139 +504,110 @@ let BIGNUM_CMUL_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,val p)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (z:int64) (p:int64) (n:int64) (pc:num).
-      APPEND
-       (if MIN (val n) (val p) = val p then f_ev_t0 x z p n pc
-        else if MIN (val n) (val p) + 1 = val p then f_ev_t1 x z p n pc
-        else APPEND (f_ev_tpost x z p n pc)
-              (APPEND (ENUMERATEL (val p - (MIN (val n) (val p) + 1))
-                                  (f_ev_pad x z p n pc))
-                      (f_ev_ppre x z p n pc)))
-       (if MIN (val n) (val p) = 0 then f_ev_c0 x z p n pc
-        else if MIN (val n) (val p) = 1 then f_ev_c1 x z p n pc
-        else APPEND []
-              (APPEND (ENUMERATEL (MIN (val n) (val p) - 1)
-                                  (f_ev_mul x z p n pc))
-                      (f_ev_mpre x z p n pc))) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `p:num` THEN X_GEN_TAC `z:int64` THEN X_GEN_TAC `c:int64` THEN
-  W64_GEN_TAC `n:num` THEN MAP_EVERY X_GEN_TAC [`x:int64`; `pc:num`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  SUBGOAL_THEN
-   `(if p < n then word p else word n):int64 = word (MIN n p) /\
-    val (word (MIN n p):int64) = MIN n p /\ MIN n p <= p /\ MIN n p <= n`
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN COND_CASES_TAC THEN
-      REWRITE_TAC[] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-      UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
-      ARITH_TAC; ARITH_TAC];
-    ALL_TAC] THEN
-
-  (*** The multiplication loop over the first MIN n p words ***)
-
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x46`
-   `\s. read RDI s = word p /\ read RSI s = z /\ read R10 s = word (MIN n p)` THEN
-  CONJ_TAC THENL
-   [ASM_CASES_TAC `MIN n p = 0` THENL
-     [SAFETY_COND_TAC `MIN n p = 0` THEN
-      FIRST_X_ASSUM(SUBST_ALL_TAC o
-        check (fun th -> concl th = `MIN n p = 0`)) THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--6) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ALL_TAC] THEN
-    SAFETY_COND_TAC `MIN n p = 0` THEN
-    ASM_CASES_TAC `MIN n p = 1` THENL
-     [SAFETY_COND_TAC `MIN n p = 1` THEN
-      FIRST_X_ASSUM(SUBST_ALL_TAC o
-        check (fun th -> concl th = `MIN n p = 1`)) THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--14) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ALL_TAC] THEN
-    SAFETY_COND_TAC `MIN n p = 1` THEN
-    SUBGOAL_THEN
-     `~(val (word_sub (word 1) (word (MIN n p)):int64) = 0) /\
-      1 < MIN n p /\ MIN n p - 1 + 1 = MIN n p`
-    STRIP_ASSUME_TAC THENL
-     [ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_1] THEN
-      MAP_EVERY UNDISCH_TAC [`~(MIN n p = 0)`; `~(MIN n p = 1)`] THEN ARITH_TAC;
-      ALL_TAC] THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `MIN n p - 1` `pc + 0x29` `pc + 0x46`
-     `\i s. read RDI s = word p /\ read RSI s = z /\ read R8 s = x /\
-            read RCX s = word (MIN n p) /\ read R10 s = word (i + 1)` THEN
-    REPEAT CONJ_TAC THENL
-     [UNDISCH_TAC `1 < MIN n p` THEN ARITH_TAC;
-      REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--14) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      SAFETY_UPCOUNT_FACTS_TAC `i:num` `i + 1` `MIN n p` `MIN n p - 1` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--9) THEN
-      SAFETY_CLOSE_TAC;
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC [] THEN
-      SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC];
-    ALL_TAC] THEN
-
-  (*** The tail: nothing, just the carry word, or the carry and padding ***)
-
-  ASM_CASES_TAC `MIN n p = p` THENL
-   [SAFETY_COND_TAC `MIN n p = p` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o
-      check (fun th -> concl th = `MIN n p = p`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--3) THEN
-    SAFETY_CLOSE_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `MIN n p = p` THEN
-  SUBGOAL_THEN
-   `MIN n p < p /\ ~(p <= MIN n p) /\
-    word_add (word (MIN n p)) (word 1):int64 = word (MIN n p + 1) /\
-    val (word (MIN n p + 1):int64) = MIN n p + 1`
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MAP_EVERY UNDISCH_TAC [`~(MIN n p = p)`; `MIN n p <= p`] THEN ARITH_TAC;
-      MAP_EVERY UNDISCH_TAC [`~(MIN n p = p)`; `MIN n p <= p`] THEN ARITH_TAC;
-      CONV_TAC WORD_RULE;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-      MAP_EVERY UNDISCH_TAC
-       [`~(MIN n p = p)`; `MIN n p <= p`; `p < 2 EXP 64`] THEN
-      ARITH_TAC];
-    ALL_TAC] THEN
-  ASM_CASES_TAC `MIN n p + 1 = p` THENL
-   [SAFETY_COND_TAC `MIN n p + 1 = p` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--8) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `MIN n p + 1 = p` THEN
-  SUBGOAL_THEN `MIN n p + 1 < p /\ ~(p <= MIN n p + 1)` STRIP_ASSUME_TAC THENL
-   [MAP_EVERY UNDISCH_TAC [`~(MIN n p + 1 = p)`; `MIN n p < p`] THEN ARITH_TAC;
-    ALL_TAC] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `p - (MIN n p + 1)` `pc + 0x5a` `pc + 0x66`
-   `\i s. read RDI s = word p /\ read RSI s = z /\
-          read R10 s = word (MIN n p + 1 + i)` THEN
-  REPEAT CONJ_TAC THENL
-   [UNDISCH_TAC `MIN n p + 1 < p` THEN ARITH_TAC;
-    REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--7) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_UPCOUNT_FACTS_TAC `i:num` `MIN n p + 1 + i` `p:num` `p - (MIN n p + 1)` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--4) THEN
-    SAFETY_CLOSE_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC [1] THEN
-    SAFETY_CLOSE_TAC]);;
+  X86_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["p"; "n"]
+   (Then(SUBGOAL_THEN
+          `(if p < n then word p else word n):int64 = word (MIN n p) /\
+           val (word (MIN n p):int64) = MIN n p /\ MIN n p <= p /\ MIN n p <= n`
+         STRIP_ASSUME_TAC THENL
+          [REPEAT CONJ_TAC THENL
+            [REWRITE_TAC[MIN] THEN COND_CASES_TAC THEN COND_CASES_TAC THEN
+             REWRITE_TAC[] THEN AP_TERM_TAC THEN ASM_ARITH_TAC;
+             MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+             UNDISCH_TAC `p < 2 EXP 64` THEN ARITH_TAC;
+             ARITH_TAC; ARITH_TAC];
+           ALL_TAC],
+     (*** The multiplication loop over the first MIN n p words ***)
+     Seq(`pc + 0x46`,
+       `\s. read RDI s = word p /\ read RSI s = z /\ read R10 s = word (MIN n p)`,
+       Cases(`MIN n p = 0`,
+         Leg("case",
+           FIRST_X_ASSUM(SUBST_ALL_TAC o
+             check (fun th -> concl th = `MIN n p = 0`)) THEN
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--6) THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Cases(`MIN n p = 1`,
+           Leg("case2",
+             FIRST_X_ASSUM(SUBST_ALL_TAC o
+               check (fun th -> concl th = `MIN n p = 1`)) THEN
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--14) THEN
+             DISCHARGE_SAFETY_PROPERTY_TAC),
+           Then(SUBGOAL_THEN
+                 `~(val (word_sub (word 1) (word (MIN n p)):int64) = 0) /\
+                  1 < MIN n p /\ MIN n p - 1 + 1 = MIN n p`
+                STRIP_ASSUME_TAC THENL
+                 [ASM_REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_1] THEN
+                  MAP_EVERY UNDISCH_TAC [`~(MIN n p = 0)`; `~(MIN n p = 1)`] THEN ARITH_TAC;
+                  ALL_TAC],
+            Then(SUBGOAL_THEN `~((MIN n p - 1) = 0)` ASSUME_TAC THENL
+                  [UNDISCH_TAC `1 < MIN n p` THEN ARITH_TAC; ALL_TAC],
+             Loop(`MIN n p - 1`, `pc + 0x29`, `pc + 0x46`,
+               `\i s. read RDI s = word p /\ read RSI s = z /\ read R8 s = x /\
+                      read RCX s = word (MIN n p) /\ read R10 s = word (i + 1)`,
+               Leg("pre1",
+                 REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+                 X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                   ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--14) THEN
+                 DISCHARGE_SAFETY_PROPERTY_TAC),
+               Leg("loop1",
+                 SAFETY_UPCOUNT_FACTS_TAC `i:num` `i + 1` `MIN n p` `MIN n p - 1` THEN
+                 X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                   ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--9) THEN
+                 SAFETY_CLOSE_TAC),
+               Leg("post1",
+                 X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                   ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC [] THEN
+                 SAFETY_CLOSE_TAC)))))),
+       (*** The tail: nothing, just the carry word, or the carry and padding ***)
+       Cases(`MIN n p = p`,
+         Leg("case3",
+           FIRST_X_ASSUM(SUBST_ALL_TAC o
+             check (fun th -> concl th = `MIN n p = p`)) THEN
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--3) THEN
+           SAFETY_CLOSE_TAC),
+         Then(SUBGOAL_THEN
+               `MIN n p < p /\ ~(p <= MIN n p) /\
+                word_add (word (MIN n p)) (word 1):int64 = word (MIN n p + 1) /\
+                val (word (MIN n p + 1):int64) = MIN n p + 1`
+              STRIP_ASSUME_TAC THENL
+               [REPEAT CONJ_TAC THENL
+                 [MAP_EVERY UNDISCH_TAC [`~(MIN n p = p)`; `MIN n p <= p`] THEN ARITH_TAC;
+                  MAP_EVERY UNDISCH_TAC [`~(MIN n p = p)`; `MIN n p <= p`] THEN ARITH_TAC;
+                  CONV_TAC WORD_RULE;
+                  MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+                  MAP_EVERY UNDISCH_TAC
+                   [`~(MIN n p = p)`; `MIN n p <= p`; `p < 2 EXP 64`] THEN
+                  ARITH_TAC];
+                ALL_TAC],
+          Cases(`MIN n p + 1 = p`,
+            Leg("case4",
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--8) THEN
+              DISCHARGE_SAFETY_PROPERTY_TAC),
+            Then(SUBGOAL_THEN `MIN n p + 1 < p /\ ~(p <= MIN n p + 1)` STRIP_ASSUME_TAC THENL
+                  [MAP_EVERY UNDISCH_TAC [`~(MIN n p + 1 = p)`; `MIN n p < p`] THEN ARITH_TAC;
+                   ALL_TAC],
+             Then(SUBGOAL_THEN `~((p - (MIN n p + 1)) = 0)` ASSUME_TAC THENL
+                   [UNDISCH_TAC `MIN n p + 1 < p` THEN ARITH_TAC; ALL_TAC],
+              Loop(`p - (MIN n p + 1)`, `pc + 0x5a`, `pc + 0x66`,
+                `\i s. read RDI s = word p /\ read RSI s = z /\
+                       read R10 s = word (MIN n p + 1 + i)`,
+                Leg("pre2",
+                  REWRITE_TAC[SUB_0; ADD_CLAUSES; ENUMERATEL_APPEND_ZERO] THEN
+                  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                    ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--7) THEN
+                  DISCHARGE_SAFETY_PROPERTY_TAC),
+                Leg("loop2",
+                  SAFETY_UPCOUNT_FACTS_TAC `i:num` `MIN n p + 1 + i` `p:num` `p - (MIN n p + 1)` THEN
+                  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                    ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC (1--4) THEN
+                  SAFETY_CLOSE_TAC),
+                Leg("post2",
+                  X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                    ~canonicalize_pc_diff:false BIGNUM_CMUL_EXEC [1] THEN
+                  SAFETY_CLOSE_TAC)))))))))));;
 
 let BIGNUM_CMUL_NOIBT_SUBROUTINE_SAFE = time prove
  (`

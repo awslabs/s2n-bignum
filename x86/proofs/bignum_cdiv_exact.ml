@@ -616,100 +616,73 @@ let BIGNUM_CDIV_EXACT_SAFE = time prove
                 MAYCHANGE [events] ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (z:int64) (k:int64) (n:int64) (pc:num).
-      if val k = 0 then f_ev_k0 x z k n pc
-      else
-        APPEND (f_ev_post x z k n pc)
-         (APPEND
-           (ENUMERATEL (val k) (\i.
-              if i < val n - 1 then f_ev_bload x z k n pc i
-              else f_ev_bskip x z k n pc i))
-           (if val n = 0 then f_ev_pre0 x z k n pc
-            else f_ev_pre1 x z k n pc)) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN X_GEN_TAC `z:int64` THEN W64_GEN_TAC `n:num` THEN
-  MAP_EVERY X_GEN_TAC [`x:int64`; `m:int64`; `pc:num`] THEN
-  REWRITE_TAC[ALL; NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [SAFETY_COND_TAC `k = 0` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--2) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `k = 0` THEN
-  SUBGOAL_THEN `8 * k < 2 EXP 64` ASSUME_TAC THENL
-   [EVERY_ASSUM(fun th ->
-      try MP_TAC
-       (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th)
-      with Failure _ -> ALL_TAC) THEN
-    UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
-    ALL_TAC] THEN
-  SUBGOAL_THEN `val (word (n - 1):int64) = n - 1` ASSUME_TAC THENL
-   [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-    UNDISCH_TAC `n < 2 EXP 64` THEN ARITH_TAC;
-    ALL_TAC] THEN
-
-  (*** The main loop, with the first word of x preloaded if n > 0 ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x8c` `pc + 0xca`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R9 s = word (n - 1) /\
-          read R10 s = (if n = 0 then x else word_add x (word 8)) /\
-          read RBX s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    ASM_CASES_TAC `n = 0` THENL
-     [SAFETY_COND_TAC `n = 0` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--34) THEN
-      SAFETY_CLOSE_TAC;
-      SAFETY_COND_TAC `n = 0` THEN
-      SUBGOAL_THEN `word_sub (word n) (word 1):int64 = word (n - 1)` ASSUME_TAC THENL
-       [IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(n = 0)` THEN ARITH_TAC;
-        ALL_TAC] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--37) THEN
-      SAFETY_CLOSE_TAC];
-    ALL_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC [] THEN
-    SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC] THEN
-
-  (*** The loop body, with a load of x[i+1] if i < n - 1 ***)
-
-  X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
-  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
-  SAFETY_POST_REASSOC_TAC THEN
-  SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-  ASM_CASES_TAC `i < n - 1` THENL
-   [SAFETY_COND_TAC `i < n - 1` THEN
-    SUBGOAL_THEN
-     `(if n = 0 then x else word_add x (word 8)):int64 = word_add x (word 8) /\
-      word_add (word_add x (word 8)) (word (8 * i)):int64 =
-      word_add x (word (8 * (i + 1))) /\
-      i + 1 < n`
-    STRIP_ASSUME_TAC THENL
-     [REPEAT CONJ_TAC THENL
-       [COND_CASES_TAC THEN REWRITE_TAC[] THEN
-        UNDISCH_TAC `i < n - 1` THEN ASM_REWRITE_TAC[] THEN ARITH_TAC;
-        CONV_TAC WORD_RULE;
-        UNDISCH_TAC `i < n - 1` THEN ARITH_TAC];
-      ALL_TAC] THEN
-    FIRST_X_ASSUM(SUBST1_TAC o check (is_cond o lhand o concl)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--20) THEN
-    SAFETY_CLOSE_TAC;
-    SAFETY_COND_TAC `i < n - 1` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--19) THEN
-    SAFETY_CLOSE_TAC]);;
+  X86_SAFETY_SKELETON_TAC ~ths:[ALL; NONOVERLAPPING_CLAUSES] ["k"; "n"]
+   ((*** The degenerate case k = 0 ***)
+    Cases(`k = 0`,
+      Leg("k0",
+        FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
+        X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+          ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--2) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Then(SUBGOAL_THEN `8 * k < 2 EXP 64` ASSUME_TAC THENL
+            [EVERY_ASSUM(fun th ->
+               try MP_TAC
+                (MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ] NONOVERLAPPING_IMP_SMALL_2) th)
+               with Failure _ -> ALL_TAC) THEN
+             UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
+             ALL_TAC] THEN
+           SUBGOAL_THEN `val (word (n - 1):int64) = n - 1` ASSUME_TAC THENL
+            [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+             UNDISCH_TAC `n < 2 EXP 64` THEN ARITH_TAC;
+             ALL_TAC],
+       (*** The main loop, with the first word of x preloaded if n > 0 ***)
+       Loop(`k:num`, `pc + 0x8c`, `pc + 0xca`,
+         `\i s. read RDI s = word k /\ read RSI s = z /\ read R9 s = word (n - 1) /\
+                read R10 s = (if n = 0 then x else word_add x (word 8)) /\
+                read RBX s = word i`,
+         Then(REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO],
+          Cases(`n = 0`,
+            Leg("pre0",
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--34) THEN
+              SAFETY_CLOSE_TAC),
+            Leg("pre1",
+              SUBGOAL_THEN `word_sub (word n) (word 1):int64 = word (n - 1)` ASSUME_TAC THENL
+               [IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(n = 0)` THEN ARITH_TAC;
+                ALL_TAC] THEN
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--37) THEN
+              SAFETY_CLOSE_TAC))),
+         Then(GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [ENUMERATEL_ADD1] THEN
+              CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
+              SAFETY_POST_REASSOC_TAC THEN
+              SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num`,
+          Cases(`i < n - 1`,
+            Leg("bload",
+              SUBGOAL_THEN
+               `(if n = 0 then x else word_add x (word 8)):int64 = word_add x (word 8) /\
+                word_add (word_add x (word 8)) (word (8 * i)):int64 =
+                word_add x (word (8 * (i + 1))) /\
+                i + 1 < n`
+              STRIP_ASSUME_TAC THENL
+               [REPEAT CONJ_TAC THENL
+                 [COND_CASES_TAC THEN REWRITE_TAC[] THEN
+                  UNDISCH_TAC `i < n - 1` THEN ASM_REWRITE_TAC[] THEN ARITH_TAC;
+                  CONV_TAC WORD_RULE;
+                  UNDISCH_TAC `i < n - 1` THEN ARITH_TAC];
+                ALL_TAC] THEN
+              FIRST_X_ASSUM(SUBST1_TAC o check (is_cond o lhand o concl)) THEN
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--20) THEN
+              SAFETY_CLOSE_TAC),
+            Leg("bskip",
+              X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+                ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC (1--19) THEN
+              SAFETY_CLOSE_TAC))),
+         Leg("post",
+           X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+             ~canonicalize_pc_diff:false BIGNUM_CDIV_EXACT_EXEC [] THEN
+           SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC))))));;
 
 let BIGNUM_CDIV_EXACT_NOIBT_SUBROUTINE_SAFE = time prove
  (`
