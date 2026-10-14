@@ -581,121 +581,86 @@ let BIGNUM_NORMALIZE_SAFE = time prove
                 MAYCHANGE SOME_FLAGS ,,
                 MAYCHANGE [events])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(z:int64) (k:int64) (pc:num).
-      if val k = 0 then f_ev_k0 z k pc
-      else
-       APPEND
-        (APPEND []
-          (APPEND (ENUMERATEL (val k) (f_ev_bit z k pc)) (f_ev_bpre z k pc)))
-        (if val k = 1 then f_ev_k1 z k pc
-         else APPEND []
-               (APPEND
-                 (ENUMERATEL (val k - 1) (\i.
-                    APPEND (f_ev_oepil z k pc i)
-                     (APPEND (ENUMERATEL (val k) (\j. f_ev_shuf z k pc i j))
-                             (f_ev_oprol z k pc i))))
-                 (f_ev_npre z k pc))) :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  W64_GEN_TAC `k:num` THEN MAP_EVERY X_GEN_TAC [`z:int64`; `pc:num`] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES; C_ARGUMENTS; SOME_FLAGS] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-
-  (*** The degenerate case k = 0 ***)
-
-  ASM_CASES_TAC `k = 0` THENL
-   [SAFETY_COND_TAC `k = 0` THEN
-    FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 0`)) THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--4) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  SAFETY_COND_TAC `k = 0` THEN
-  SUBGOAL_THEN
-   `word_sub (word k) (word 1):int64 = word (k - 1) /\
-    val (word (k - 1):int64) = k - 1 /\ ~(k < 1)`
-  STRIP_ASSUME_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC;
-      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-      UNDISCH_TAC `k < 2 EXP 64` THEN ARITH_TAC;
-      UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC];
-    ALL_TAC] THEN
-
-  (*** The word-level normalization by repeated shuffling ***)
-
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x46`
-   `\s. read RDI s = word k /\ read RSI s = z` THEN
-  CONJ_TAC THENL
-   [ASM_CASES_TAC `k = 1` THENL
-     [SAFETY_COND_TAC `k = 1` THEN
-      FIRST_X_ASSUM(SUBST_ALL_TAC o check (fun th -> concl th = `k = 1`)) THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--6) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-      ALL_TAC] THEN
-    SAFETY_COND_TAC `k = 1` THEN
-    SUBGOAL_THEN `~(k - 1 = 0)` ASSUME_TAC THENL
-     [MAP_EVERY UNDISCH_TAC [`~(k = 0)`; `~(k = 1)`] THEN ARITH_TAC;
-      ALL_TAC] THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `k - 1` `pc + 0x12` `pc + 0x46`
-     `\i s. read RDI s = word k /\ read RSI s = z /\
-            read R8 s = word (k - 1 - i)` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--6) THEN
-      SAFETY_CLOSE_TAC;
-      ALL_TAC;
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC [] THEN
-      SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC] THEN
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-     [ENUMERATEL_ADD1] THEN
-    CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV(BETA_VAR_CONV "i")))) THEN
-    SAFETY_POST_REASSOC_TAC THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x2a` `pc + 0x41`
-     `\j s. read RDI s = word k /\ read RSI s = z /\
-            read R8 s = word (k - 1 - i) /\
-            read R9 s = word (k - j) /\ read R10 s = word j` THEN
-    REPEAT CONJ_TAC THENL
-     [ASM_REWRITE_TAC[];
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--7) THEN
-      SAFETY_CLOSE_TAC;
-      X_GEN_TAC `j:num` THEN STRIP_TAC THEN
-      SAFETY_UPCOUNT_FACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
-      SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k:num` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--7) THEN
-      SAFETY_CLOSE_TAC;
-      SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k - 1` THEN
-      X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--2) THEN
-      SAFETY_CLOSE_TAC];
-    ALL_TAC] THEN
-
-  (*** The bit-level normalization loop ***)
-
-  ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x64` `pc + 0x7e`
-   `\i s. read RDI s = word k /\ read RSI s = z /\ read R8 s = word i` THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_REWRITE_TAC[];
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--8) THEN
-    SAFETY_CLOSE_TAC;
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--8) THEN
-    SAFETY_CLOSE_TAC;
-    X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-      ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC [] THEN
-    SAFETY_PEEL_TAC THEN SAFETY_CONCRETE_DISCHARGE_TAC]);;
+  X86_SAFETY_SKELETON_TAC ~ths:[NONOVERLAPPING_CLAUSES] ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       FIRST_X_ASSUM(SUBST_ALL_TAC o
+         check (fun th -> concl th = `k = 0`)) THEN
+       X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+         ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--4) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Then(SUBGOAL_THEN
+           `word_sub (word k) (word 1):int64 = word (k - 1) /\
+            val (word (k - 1):int64) = k - 1 /\ ~(k < 1)`
+          STRIP_ASSUME_TAC THENL
+           [REPEAT CONJ_TAC THENL
+             [IMP_REWRITE_TAC[WORD_SUB2] THEN UNDISCH_TAC `~(k = 0)` THEN
+              ARITH_TAC;
+              MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
+              UNDISCH_TAC `k < 2 EXP 64` THEN ARITH_TAC;
+              UNDISCH_TAC `~(k = 0)` THEN ARITH_TAC];
+            ALL_TAC],
+      Seq(`pc + 0x46`, `\s. read RDI s = word k /\ read RSI s = z`,
+       (*** The word-level normalization by repeated shuffling ***)
+       Cases(`k = 1`,
+        Leg("k1",
+          FIRST_X_ASSUM(SUBST_ALL_TAC o
+            check (fun th -> concl th = `k = 1`)) THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--6) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        Then(SUBGOAL_THEN `~(k - 1 = 0)` ASSUME_TAC THENL
+              [MAP_EVERY UNDISCH_TAC [`~(k = 0)`; `~(k = 1)`] THEN ARITH_TAC;
+               ALL_TAC],
+         Loop(`k - 1`, `pc + 0x12`, `pc + 0x46`,
+          `\i s. read RDI s = word k /\ read RSI s = z /\
+                 read R8 s = word (k - 1 - i)`,
+          Leg("npre",
+            REWRITE_TAC[SUB_0] THEN
+            X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+              ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--6) THEN
+            SAFETY_CLOSE_TAC),
+          Loop(`k:num`, `pc + 0x2a`, `pc + 0x41`,
+           `\j s. read RDI s = word k /\ read RSI s = z /\
+                  read R8 s = word (k - 1 - i) /\
+                  read R9 s = word (k - j) /\ read R10 s = word j`,
+           Leg("oprol",
+             REWRITE_TAC[SUB_0] THEN
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--7) THEN
+             SAFETY_CLOSE_TAC),
+           Leg("shuf",
+             SAFETY_UPCOUNT_FACTS_TAC `j:num` `j:num` `k:num` `k:num` THEN
+             SAFETY_DOWNCOUNT_FACTS_TAC `j:num` `k:num` THEN
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--7) THEN
+             SAFETY_CLOSE_TAC),
+           Leg("oepil",
+             SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k - 1` THEN
+             X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+               ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--2) THEN
+             SAFETY_CLOSE_TAC)),
+          Leg("npost",
+            X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+              ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC [] THEN
+            SAFETY_CLOSE_TAC)))),
+       (*** The bit-level normalization loop ***)
+       Loop(`k:num`, `pc + 0x64`, `pc + 0x7e`,
+        `\i s. read RDI s = word k /\ read RSI s = z /\ read R8 s = word i`,
+        Leg("bpre",
+          REWRITE_TAC[SUB_0] THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--8) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("bit",
+          SAFETY_UPCOUNT_FACTS_TAC `i:num` `i:num` `k:num` `k:num` THEN
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC (1--8) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("bpost",
+          X86_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
+            ~canonicalize_pc_diff:false BIGNUM_NORMALIZE_EXEC [] THEN
+          SAFETY_CLOSE_TAC)))))));;
 
 let BIGNUM_NORMALIZE_NOIBT_SUBROUTINE_SAFE = time prove
  (`
