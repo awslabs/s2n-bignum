@@ -424,11 +424,12 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 needs "arm/proofs/utils/bignum_mod_safety.ml";;
 
-(* generated with:
-  mk_safety_spec ~keep_maychanges:true
-      (assoc "bignum_mod_m25519" subroutine_signatures)
-      BIGNUM_MOD_M25519_CORRECT
-      BIGNUM_MOD_M25519_EXEC;; *)
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mod_m25519" subroutine_signatures)
+    BIGNUM_MOD_M25519_CORRECT
+    BIGNUM_MOD_M25519_EXEC;;
+
 let BIGNUM_MOD_M25519_SAFE = time prove
  (`exists f_events.
         forall e z k x pc.
@@ -450,6 +451,7 @@ let BIGNUM_MOD_M25519_SAFE = time prove
                  MAYCHANGE SOME_FLAGS ,,
                  MAYCHANGE [events] ,,
                  MAYCHANGE [memory :> bignum (z,4)])`,
+  ASSERT_CONCL_TAC full_spec THEN
 
   BIGNUM_MOD_SAFETY_TAC BIGNUM_MOD_M25519_EXEC 4 (0x60,24) (0xc8,25));;
 

@@ -426,6 +426,12 @@ needs "arm/proofs/consttime.ml";;
 needs "arm/proofs/subroutine_signatures.ml";;
 needs "arm/proofs/utils/bignum_mod_safety.ml";;
 
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_mod_sm2" subroutine_signatures)
+    BIGNUM_MOD_SM2_CORRECT
+    BIGNUM_MOD_SM2_EXEC;;
+
 let BIGNUM_MOD_SM2_SAFE = time prove
  (`exists f_events.
         forall e z k x pc.
@@ -447,6 +453,7 @@ let BIGNUM_MOD_SM2_SAFE = time prove
                  MAYCHANGE SOME_FLAGS ,,
                  MAYCHANGE [events] ,,
                  MAYCHANGE [memory :> bignum (z,4)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   BIGNUM_MOD_SAFETY_TAC BIGNUM_MOD_SM2_EXEC 4 (0x44,17) (0xac,25));;
 
 let BIGNUM_MOD_SM2_SUBROUTINE_SAFE = time prove

@@ -3365,6 +3365,12 @@ let CORE_MONTINV_P256_SAFE = time prove
   ] THEN
   DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
 
+let full_spec,public_vars = mk_safety_spec
+    ~keep_maychanges:true
+    (assoc "bignum_montinv_p256" subroutine_signatures)
+    BIGNUM_MONTINV_P256_CORRECT
+    BIGNUM_MONTINV_P256_EXEC;;
+
 let BIGNUM_MONTINV_P256_SAFE = time prove
  (`exists f_events. forall e z x pc stackpointer.
         aligned 16 stackpointer /\
@@ -3389,6 +3395,7 @@ let BIGNUM_MONTINV_P256_SAFE = time prove
            MAYCHANGE SOME_FLAGS ,, MAYCHANGE [events] ,,
            MAYCHANGE [memory :> bytes(z,8 * 4);
                       memory :> bytes(stackpointer,160)])`,
+  ASSERT_CONCL_TAC full_spec THEN
   ASSUME_CALLEE_SAFETY_TAC CORE_MONTINV_P256_SAFE "H_CORE_SAFE" THEN
   META_EXISTS_TAC THEN
   MAP_EVERY X_GEN_TAC
