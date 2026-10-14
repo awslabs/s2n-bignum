@@ -1042,7 +1042,9 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
           ENUMERATEL (i + 1) loop
         *)
         GEN_REWRITE_TAC RAND_CONV [ENUMERATEL_ADD1] THEN
-        AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
+        AP_THM_TAC THEN AP_TERM_TAC THEN
+        (* loop i is a beta-redex unless loop is a function like f_ev x *)
+        CONV_TAC (RAND_CONV (TRY_CONV BETA_CONV)) THEN
         UNIFY_F_EVENTS_TAC
       | _, _ -> do_fail "Unknown 'APPEND _ _ = _' case"
       end
