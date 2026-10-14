@@ -1129,6 +1129,19 @@ let arm_DUP_ELEM = define
             else word_duplicate (word_subword n (8*idx,8):8 word) in
           (Rd := word_zx d:(128)word) s`;;
 
+(*** DUP (element), scalar form: copy the esize-bit lane (index idx) of       ***)
+(*** Vn into the low esize bits of Vd and zero the rest of Vd.  Vn is read    ***)
+(*** before Vd is written, so Rd = Rn is fine.                                ***)
+let arm_DUP_ELEM_SCALAR = define
+ `arm_DUP_ELEM_SCALAR Rd Rn idx esize =
+    \s. let n:(128)word = read Rn (s:armstate) in
+        let d:(128)word =
+          if esize = 64 then word_zx (word_subword n (64*idx,64):64 word)
+          else if esize = 32 then word_zx (word_subword n (32*idx,32):32 word)
+          else if esize = 16 then word_zx (word_subword n (16*idx,16):16 word)
+          else word_zx (word_subword n (8*idx,8):8 word) in
+        (Rd := d) s`;;
+
 let arm_EON = define
  `arm_EON Rd Rm Rn =
     \s. let m = read Rm s
@@ -4090,7 +4103,7 @@ let ARM_OPERATION_CLAUSES =
        arm_CBNZ_ALT; arm_CBZ_ALT; arm_CCMN; arm_CCMP; arm_CLZ;
        arm_CMGE_VEC_ALT; arm_CMGT_VEC_ALT; arm_CMHI_VEC_ALT; arm_CMLE_VEC_ZERO_ALT; arm_CNT_ALT;
        arm_CSEL; arm_CSINC; arm_CSINV; arm_CSNEG;
-       arm_DUP_ELEM_ALT; arm_DUP_GEN_ALT;
+       arm_DUP_ELEM_ALT; arm_DUP_ELEM_SCALAR; arm_DUP_GEN_ALT;
        arm_EON; arm_EOR; arm_EOR_VEC; arm_EOR3; arm_EXT; arm_EXTR;
        arm_FCSEL; arm_FMOV_FtoI; arm_FMOV_ItoF; arm_INS; arm_INS_GEN;
        arm_LSL; arm_LSLV; arm_LSR; arm_LSRV;
