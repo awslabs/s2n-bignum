@@ -292,6 +292,24 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_MODSUB_SUBROUTINE_CORRECT
     BIGNUM_MODSUB_EXEC;;
 
+(* One iteration of either loop (n steps): the counter word(k - i) is
+   decremented and tested for zero. *)
+
+let BIGNUM_MODSUB_BODY_TAC n =
+  VAL_INT64_TAC `i:num` THEN REWRITE_TAC[] THEN
+  ARM_SAFETY_SIM_TAC BIGNUM_MODSUB_EXEC (1--n) THEN
+  SUBGOAL_THEN
+   `(~(val(word_sub (word(k-i)) (word 1):int64) = 0)) <=> i + 1 < k`
+    SUBST1_TAC THENL
+   [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
+    IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+    ALL_TAC] THEN
+  CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
+  CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
+  CONJ_TAC THENL [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+    [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC]; ALL_TAC] THEN
+  DISCHARGE_SAFETY_PROPERTY_TAC;;
+
 let BIGNUM_MODSUB_SUBROUTINE_SAFE = time prove
  (`exists f_events.
        forall e k z x y m pc returnaddress.
@@ -317,110 +335,42 @@ let BIGNUM_MODSUB_SUBROUTINE_SAFE = time prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(x:int64) (y:int64) (m:int64) (z:int64) (k:int64) (pc:num) (returnaddress:int64).
-      if val k = 0 then (f_ev_k0 x y m z k pc returnaddress)
-      else
-        (APPEND
-          (APPEND
-            (f_ev_l2post x y m z k pc returnaddress)
-            (APPEND
-              (ENUMERATEL (val k) (f_ev_l2 x y m z k pc returnaddress))
-              (f_ev_l2pre x y m z k pc returnaddress)))
-          (APPEND
-            (f_ev_mid x y m z k pc returnaddress)
-            (APPEND
-              (ENUMERATEL (val k) (f_ev_l1 x y m z k pc returnaddress))
-              (f_ev_pre x y m z k pc returnaddress))))
-      :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN
-  STRIP_TAC (* event e *) THEN
-  W64_GEN_TAC `k:num` THEN
-  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `y:int64`; `m:int64`; `pc:num`] THEN
-  GEN_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ASM_CASES_TAC `k = 0` THENL
-   [ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-        ~canonicalize_pc_diff:false BIGNUM_MODSUB_EXEC (1--3) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN
-
-  (*** Split at the boundary between the two loops (masked-add setup) ***)
-
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 0x30`
-   `\s. read X0 s = word k /\ read X1 s = z /\ read X4 s = m /\
-        read X6 s = word k /\ read X30 s = returnaddress` THEN
-  CONJ_TAC THENL
-   [(*** Part 1: subtraction loop ***)
-    ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0xc` `pc + 0x28`
-     `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = x /\
-            read X3 s = y /\ read X4 s = m /\
-            read X5 s = word(8 * i) /\ read X6 s = word(k - i) /\
-            read X30 s = returnaddress` THEN
-    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-     [(* loop1 entry *)
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODSUB_EXEC (1--3) THEN
-      ASM_REWRITE_TAC[SUB_0; MULT_0; WORD_SUB_0; WORD_ADD_0] THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* loop1 body *)
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-      REWRITE_TAC[] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODSUB_EXEC (1--7) THEN
-      SUBGOAL_THEN
-       `(~(val(word_sub (word(k-i)) (word 1):int64) = 0)) <=> i + 1 < k`
-        SUBST1_TAC THENL
-       [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-        IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-        ALL_TAC] THEN
-      CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
-      CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-      CONJ_TAC THENL [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-        [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC]; ALL_TAC] THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* loop1 exit -> masked-add setup (pc+0x30) *)
-      REWRITE_TAC[] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODSUB_EXEC (1--2) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC];
-
-    (*** Part 2: masked addition loop ***)
-    ENSURES_EVENTS_WHILE_UP2_TAC `k:num` `pc + 0x34` `pc + 0x54`
-     `\i s. read X0 s = word k /\ read X1 s = z /\ read X4 s = m /\
-            read X5 s = word(8 * i) /\ read X6 s = word(k - i) /\
-            read X30 s = returnaddress` THEN
-    ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-     [(* loop2 entry: masked-add ADDS sets offset 0 *)
-      ASM_REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODSUB_EXEC (1--1) THEN
-      ASM_REWRITE_TAC[SUB_0; MULT_0; WORD_ADD_0] THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* loop2 body *)
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN VAL_INT64_TAC `i:num` THEN
-      REWRITE_TAC[] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODSUB_EXEC (1--8) THEN
-      SUBGOAL_THEN
-       `(~(val(word_sub (word(k-i)) (word 1):int64) = 0)) <=> i + 1 < k`
-        SUBST1_TAC THENL
-       [REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-        IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
-        ALL_TAC] THEN
-      CONJ_TAC THENL [COND_CASES_TAC THEN REWRITE_TAC[]; ALL_TAC] THEN
-      CONJ_TAC THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-      CONJ_TAC THENL [IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-        [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC]; ALL_TAC] THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* loop2 exit -> RET *)
-      REWRITE_TAC[] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-          ~canonicalize_pc_diff:false BIGNUM_MODSUB_EXEC (1--1) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC]]);;
+  ARM_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ARM_SAFETY_SIM_TAC BIGNUM_MODSUB_EXEC (1--3) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     (*** Split at the boundary between the two loops (masked-add setup) ***)
+     Seq(`pc + 0x30`,
+       `\s. read X0 s = word k /\ read X1 s = z /\ read X4 s = m /\
+            read X6 s = word k /\ read X30 s = returnaddress`,
+       (*** Part 1: subtraction loop ***)
+       Loop(`k:num`, `pc + 0xc`, `pc + 0x28`,
+         `\i s. read X0 s = word k /\ read X1 s = z /\ read X2 s = x /\
+                read X3 s = y /\ read X4 s = m /\
+                read X5 s = word(8 * i) /\ read X6 s = word(k - i) /\
+                read X30 s = returnaddress`,
+         Leg("pre",
+           ARM_SAFETY_SIM_TAC BIGNUM_MODSUB_EXEC (1--3) THEN
+           ASM_REWRITE_TAC[SUB_0; MULT_0; WORD_SUB_0; WORD_ADD_0] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("l1", BIGNUM_MODSUB_BODY_TAC 7),
+         (* exit to the masked-add setup (pc + 0x30) *)
+         Leg("mid",
+           ARM_SAFETY_SIM_TAC BIGNUM_MODSUB_EXEC (1--2) THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC)),
+       (*** Part 2: masked addition loop ***)
+       Loop(`k:num`, `pc + 0x34`, `pc + 0x54`,
+         `\i s. read X0 s = word k /\ read X1 s = z /\ read X4 s = m /\
+                read X5 s = word(8 * i) /\ read X6 s = word(k - i) /\
+                read X30 s = returnaddress`,
+         (* the masked-add ADDS sets offset 0 *)
+         Leg("l2pre",
+           ASM_REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+           ARM_SAFETY_SIM_TAC BIGNUM_MODSUB_EXEC (1--1) THEN
+           ASM_REWRITE_TAC[SUB_0; MULT_0; WORD_ADD_0] THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("l2", BIGNUM_MODSUB_BODY_TAC 8),
+         Leg("l2post",
+           ARM_SAFETY_SIM_TAC BIGNUM_MODSUB_EXEC (1--1) THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC))))));;

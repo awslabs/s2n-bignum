@@ -3221,51 +3221,34 @@ let BIGNUM_MONTINV_SM2_SAFE = time prove
                 [memory :> bytes (z,8 * 4);
                  memory :> bytes (stackpointer,160)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(x:int64) (z:int64) (pc:num) (stackpointer:int64).
-      APPEND (f_ev_post x z pc stackpointer)
-        (APPEND (ENUMERATEL 9 (f_ev_loop x z pc stackpointer))
-                (f_ev_pre x z pc stackpointer))
-      :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  MAP_EVERY X_GEN_TAC [`z:int64`; `x:int64`; `pc:num`; `stackpointer:int64`] THEN
-  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `9` `pc + 0x54c` `pc + 0x54c`
-   `\i s. read SP s = stackpointer /\ read X20 s = z /\ read X21 s = word(10 - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ARITH_TAC;
-
-    (* pre: pc + 0x10 -> B at pc + 0x98 -> pc + 0x54c, 35 steps *)
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-      BIGNUM_MONTINV_SM2_EXEC (1--35) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* loop body: pc + 0x54c -> BNE (taken) at pc + 0xed4 -> pc + 0x9c ->
-       pc + 0x54c, 911 steps *)
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SUBGOAL_THEN `word_sub (word(10 - i)) (word 1):int64 = word(10 - (i + 1))`
-    ASSUME_TAC THENL
-     [SUBGOAL_THEN `10 - i = (10 - (i + 1)) + 1` SUBST1_TAC THENL
-       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
-      ALL_TAC] THEN
-    SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)` ASSUME_TAC THENL
-     [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `~(val(word_sub (word(10 - i)) (word 1):int64) = 0)` ASSUME_TAC THENL
-     [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-      BIGNUM_MONTINV_SM2_EXEC (1--911) THEN
-    REWRITE_TAC[COND_ID] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* post: pc + 0x54c -> BNE (not taken) -> pc + 0x10b4, 730 steps *)
-    REWRITE_TAC[ARITH_RULE `10 - 9 = 1`] THEN
-    SUBGOAL_THEN `val(word_sub (word 1) (word 1):int64) = 0` ASSUME_TAC THENL
-     [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-      BIGNUM_MONTINV_SM2_EXEC (1--730) THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC]);;
+  ARM_SAFETY_SKELETON_TAC ~ths:[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] []
+   (Loop(`9`, `pc + 0x54c`, `pc + 0x54c`,
+      `\i s. read SP s = stackpointer /\ read X20 s = z /\ read X21 s = word(10 - i)`,
+      Leg("pre",
+        (* pre: pc + 0x10 -> B at pc + 0x98 -> pc + 0x54c, 35 steps *)
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_MONTINV_SM2_EXEC (1--35) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("loop",
+        SUBGOAL_THEN `word_sub (word(10 - i)) (word 1):int64 = word(10 - (i + 1))`
+        ASSUME_TAC THENL
+         [SUBGOAL_THEN `10 - i = (10 - (i + 1)) + 1` SUBST1_TAC THENL
+           [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+          ALL_TAC] THEN
+        SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)` ASSUME_TAC THENL
+         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN `~(val(word_sub (word(10 - i)) (word 1):int64) = 0)` ASSUME_TAC THENL
+         [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_MONTINV_SM2_EXEC (1--911) THEN
+        REWRITE_TAC[COND_ID] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("post",
+        (* post: pc + 0x54c -> BNE (not taken) -> pc + 0x10b4, 730 steps *)
+        REWRITE_TAC[ARITH_RULE `10 - 9 = 1`] THEN
+        SUBGOAL_THEN `val(word_sub (word 1) (word 1):int64) = 0` ASSUME_TAC THENL
+         [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_MONTINV_SM2_EXEC (1--730) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))));;
 
 let BIGNUM_MONTINV_SM2_SUBROUTINE_SAFE = time prove
  (`exists f_events.

@@ -5033,101 +5033,79 @@ let CURVE25519_X25519_BYTE_SAFE = time prove
      keep introduction of metavariable in the right order. *)
   ASSUME_CALLEE_SAFETY_TAILED_TAC CORE_INV_P25519_SAFE
       "H_INV_SAFE" THEN
-  CONCRETIZE_F_EVENTS_TAC
-    `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
-      APPEND
-        (f_ev_epil scalar point res pc stackpointer)
-        (APPEND
-          (ENUMERATEL 255 (\i.
-            f_ev_loop scalar point res pc stackpointer i))
-          (f_ev_prol scalar point res pc stackpointer))
-    :(uarch_event)list` THEN
+  SAFETY_SKELETON_TAC
+   (STRIP_TAC THEN
+    REPEAT GEN_TAC THEN
+    REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
+    REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS])
+   ((*** Setup of the main loop ***)
+    Loop(`255`, `pc + 0x308`, `pc + 0x1300`,
+      `\i s.
+         read SP s = stackpointer /\
+         read (memory :> bytes64(word_add stackpointer (word 192))) s = res /\
+         read X0 s = word_sub (word (255 - i)) (word 1) /\
+         read (memory :> bytes64(word_add stackpointer (word 200))) s =
+           word_sub (word (255 - i)) (word 1)`,
+      Leg("pre",
+        ENSURES_INIT_TAC "s0" THEN
+        ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1--183) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
+        CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("loop",
+        (* Found this pattern from safety_print_log := true *)
+        ENSURES_INIT_TAC "s0" THEN
+        STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1--1021) THEN
+        ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1022--1022) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+        CONJ_TAC THENL [
+          REWRITE_TAC[VAL_WORD_SUB_CASES] THEN
+          VAL_INT64_TAC `1` THEN VAL_INT64_TAC `255 - i` THEN
+          ASM_REWRITE_TAC[DIMINDEX_64] THEN
+          GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [COND_RAND] THEN
+          SIMPLE_ARITH_TAC;
+          ALL_TAC
+        ] THEN
+        CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
+          IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+          [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+          ALL_TAC] THEN
+        CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
+          IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
+          [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+          ALL_TAC] THEN
+        SUBGOAL_THEN
+          `word (8 * val (word_ushr (word_sub (word (255 - i)) (word 1):int64) 6))
+          :int64 = word (8 * (255 - (i + 1)) DIV 2 EXP 6)`
+        SUBST_ALL_TAC THENL [
+          IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
+            ALL_TAC; SIMPLE_ARITH_TAC
+          ] THEN
+          AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+          IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN CONJ_TAC THENL [
+            BINOP_TAC THENL [REFL_TAC;ALL_TAC] THEN
+            BINOP_TAC THENL [SIMPLE_ARITH_TAC; REFL_TAC];
 
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
+            SIMPLE_ARITH_TAC
+          ];
 
-  (*** Setup of the main loop ***)
+          ALL_TAC
+        ] THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("post",
+        (*** Now the final recoding, inversion and multiplication ***)
+        ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
+        ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1--61) THEN
+        LOCAL_MODINV_SAFETY_TAC "H_INV_SAFE" 62 THEN
+        ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (63--(63+160)) THEN
+        ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (224--(224+126-64)) THEN
+        ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (287--305) THEN
+        ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
 
-  ENSURES_EVENTS_WHILE_UP2_TAC `255` `pc + 0x308` `pc + 0x1300`
-   `\i s.
-      read SP s = stackpointer /\
-      read (memory :> bytes64(word_add stackpointer (word 192))) s = res /\
-      read X0 s = word_sub (word (255 - i)) (word 1) /\
-      read (memory :> bytes64(word_add stackpointer (word 200))) s =
-        word_sub (word (255 - i)) (word 1)` THEN
-  REPEAT CONJ_TAC THENL [
-    ARITH_TAC;
-
-    ENSURES_INIT_TAC "s0" THEN
-    ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1--183) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0] THEN WORD_ARITH_TAC; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (*** The main loop invariant for the Montgomery ladder ***)
-
-    REPEAT STRIP_TAC THEN
-    ENSURES_INIT_TAC "s0" THEN
-    STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1--1021) THEN
-    ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1022--1022) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[VAL_WORD_SUB_CASES] THEN
-      VAL_INT64_TAC `1` THEN VAL_INT64_TAC `255 - i` THEN
-      ASM_REWRITE_TAC[DIMINDEX_64] THEN
-      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) [COND_RAND] THEN
-      SIMPLE_ARITH_TAC;
-      ALL_TAC
-    ] THEN
-    CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-      [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-      ALL_TAC] THEN
-    CONJ_TAC THENL [AP_THM_TAC THEN AP_TERM_TAC THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-      [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-      ALL_TAC] THEN
-
-    (* Found this pattern from safety_print_log := true *)
-    SUBGOAL_THEN
-      `word (8 * val (word_ushr (word_sub (word (255 - i)) (word 1):int64) 6))
-      :int64 = word (8 * (255 - (i + 1)) DIV 2 EXP 6)`
-    SUBST_ALL_TAC THENL [
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
-        ALL_TAC; SIMPLE_ARITH_TAC
-      ] THEN
-      AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
-      IMP_REWRITE_TAC[VAL_WORD;MOD_LT;DIMINDEX_64] THEN CONJ_TAC THENL [
-        BINOP_TAC THENL [REFL_TAC;ALL_TAC] THEN
-        BINOP_TAC THENL [SIMPLE_ARITH_TAC; REFL_TAC];
-
-        SIMPLE_ARITH_TAC
-      ];
-
-      ALL_TAC
-    ] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    ALL_TAC
-  ] THEN
-
-  (*** Now the final recoding, inversion and multiplication ***)
-
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (1--61) THEN
-  LOCAL_MODINV_SAFETY_TAC "H_INV_SAFE" 62 THEN
-  (* LOCAL_MUL_P25519_TAC : 63 *)
-  ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (63--(63+160)) THEN
-  ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (224--(224+126-64)) THEN
-  ARM_STEPS_TAC CURVE25519_X25519_BYTE_EXEC (287--305) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-
-  SUBST_ALL_TAC (ARITH_RULE`2 EXP 6 = 64`) THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+        SUBST_ALL_TAC (ARITH_RULE`2 EXP 6 = 64`) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC))));;
 
 let CURVE25519_X25519_BYTE_SUBROUTINE_SAFE = time prove
  (`exists f_events.

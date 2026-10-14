@@ -5431,104 +5431,73 @@ let CURVE25519_X25519_ALT_SAFE = time prove
                 MAYCHANGE
                 [memory :> bytes (res,32); memory :> bytes (stackpointer,320)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(scalar:int64) (point:int64) (res:int64) (pc:num) (stackpointer:int64).
-      APPEND
-        (APPEND (f_ev_post2 scalar point res pc stackpointer)
-          (APPEND (ENUMERATEL 9 (f_ev_loop2 scalar point res pc stackpointer))
-                  (f_ev_pre2 scalar point res pc stackpointer)))
-        (APPEND (ENUMERATEL 251 (f_ev_loop1 scalar point res pc stackpointer))
-                (f_ev_pre1 scalar point res pc stackpointer))
-      :(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  MAP_EVERY X_GEN_TAC
-   [`res:int64`; `scalar:int64`; `point:int64`; `pc:num`; `stackpointer:int64`] THEN
-  REWRITE_TAC[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; SOME_FLAGS] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `251` `pc + 0x6c8` `pc + 0x155c`
-   `\i s. read SP s = stackpointer /\ read X23 s = res /\
-          read X20 s = word(253 - i)` THEN
-  REPEAT CONJ_TAC THENL
-   [ARITH_TAC;
-
-    (* ladder pre-leg: pc + 0x10 -> pc + 0x6c8, 430 steps *)
-    REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-      CURVE25519_X25519_ALT_EXEC (1--430) THEN
-    CURVE25519_X25519_ALT_PEEL_TAC THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* ladder body: pc + 0x6c8 -> SUB X20, CMP X20 #3, BCS at pc + 0x1558, 933 steps.
-       The scalar word read is at stackpointer + 8 * ((253 - i) DIV 64). *)
-    X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-    SUBGOAL_THEN `val(word(253 - i):int64) = 253 - i` ASSUME_TAC THENL
-     [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `word_sub (word(253 - i)) (word 1):int64 = word(253 - (i + 1))`
-    ASSUME_TAC THENL
-     [SUBGOAL_THEN `253 - i = (253 - (i + 1)) + 1` SUBST1_TAC THENL
-       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
-      ALL_TAC] THEN
-    SUBGOAL_THEN `val(word(253 - (i + 1)):int64) = 253 - (i + 1)` ASSUME_TAC THENL
-     [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `(3 <= 253 - (i + 1) <=> i + 1 < 251)` ASSUME_TAC THENL
-     [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN `(3 <= val(word_sub (word(253 - i)) (word 1):int64) <=> i + 1 < 251)`
-    ASSUME_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-    SUBGOAL_THEN `(253 - i) DIV 64 < 4` ASSUME_TAC THENL
-     [SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN ASM_ARITH_TAC; ALL_TAC] THEN
-    SUBGOAL_THEN
-     `word (8 * val (word_ushr (word(253 - i):int64) 6)):int64 =
-      word (8 * ((253 - i) DIV 64))` ASSUME_TAC THENL
-     [AP_TERM_TAC THEN AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
-      ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-      CURVE25519_X25519_ALT_EXEC (1--933) THEN
-    CURVE25519_X25519_ALT_PEEL_TAC THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* ladder post-leg = the inlined modular inverse: divstep loop entered
-       via B at pc + 0x29d8 to the loop head pc + 0x2e04. *)
-    REWRITE_TAC[] THEN
-    ENSURES_EVENTS_WHILE_UP2_TAC `9` `pc + 0x2e04` `pc + 0x2e04`
-     `\i s. read SP s = stackpointer /\ read X23 s = res /\
-            read X20 s = word_add stackpointer (word 160) /\
-            read X21 s = word(10 - i)` THEN
-    REPEAT CONJ_TAC THENL
-     [ARITH_TAC;
-
-      (* inverse pre-leg: pc + 0x155c -> doublings -> B -> pc + 0x2e04, 1312 steps *)
-      REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        CURVE25519_X25519_ALT_EXEC (1--1312) THEN
-      CURVE25519_X25519_ALT_PEEL_TAC THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* inverse body: pc + 0x2e04 -> BNE (taken) at pc + 0x378c ->
-         pc + 0x29dc -> pc + 0x2e04, 877 steps *)
-      X_GEN_TAC `i:num` THEN STRIP_TAC THEN
-      SUBGOAL_THEN `word_sub (word(10 - i)) (word 1):int64 = word(10 - (i + 1))`
-      ASSUME_TAC THENL
-       [SUBGOAL_THEN `10 - i = (10 - (i + 1)) + 1` SUBST1_TAC THENL
-         [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
-        ALL_TAC] THEN
-      SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)` ASSUME_TAC THENL
-       [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
-      SUBGOAL_THEN `~(val(word_sub (word(10 - i)) (word 1):int64) = 0)` ASSUME_TAC THENL
-       [ASM_REWRITE_TAC[]; ALL_TAC] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        CURVE25519_X25519_ALT_EXEC (1--877) THEN
-      CURVE25519_X25519_ALT_PEEL_TAC THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* inverse post-leg: pc + 0x2e04 -> BNE (not taken) -> pc + 0x3ab8,
-         813 steps *)
-      REWRITE_TAC[ARITH_RULE `10 - 9 = 1`] THEN
-      SUBGOAL_THEN `val(word_sub (word 1) (word 1):int64) = 0` ASSUME_TAC THENL
-       [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
-      ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-        CURVE25519_X25519_ALT_EXEC (1--813) THEN
-      CURVE25519_X25519_ALT_PEEL_TAC THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC]]);;
+  ARM_SAFETY_SKELETON_TAC ~ths:[ALLPAIRS; ALL; NONOVERLAPPING_CLAUSES] []
+   (Loop(`251`, `pc + 0x6c8`, `pc + 0x155c`,
+      `\i s. read SP s = stackpointer /\ read X23 s = res /\
+             read X20 s = word(253 - i)`,
+      Leg("pre1",
+        (* ladder pre-leg: pc + 0x10 -> pc + 0x6c8, 430 steps *)
+        REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+        ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--430) THEN
+        CURVE25519_X25519_ALT_PEEL_TAC THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Leg("loop1",
+        SUBGOAL_THEN `val(word(253 - i):int64) = 253 - i` ASSUME_TAC THENL
+         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN `word_sub (word(253 - i)) (word 1):int64 = word(253 - (i + 1))`
+        ASSUME_TAC THENL
+         [SUBGOAL_THEN `253 - i = (253 - (i + 1)) + 1` SUBST1_TAC THENL
+           [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+          ALL_TAC] THEN
+        SUBGOAL_THEN `val(word(253 - (i + 1)):int64) = 253 - (i + 1)` ASSUME_TAC THENL
+         [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN `(3 <= 253 - (i + 1) <=> i + 1 < 251)` ASSUME_TAC THENL
+         [SIMPLE_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN `(3 <= val(word_sub (word(253 - i)) (word 1):int64) <=> i + 1 < 251)`
+        ASSUME_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+        SUBGOAL_THEN `(253 - i) DIV 64 < 4` ASSUME_TAC THENL
+         [SIMP_TAC[RDIV_LT_EQ; ARITH_EQ] THEN ASM_ARITH_TAC; ALL_TAC] THEN
+        SUBGOAL_THEN
+         `word (8 * val (word_ushr (word(253 - i):int64) 6)):int64 =
+          word (8 * ((253 - i) DIV 64))` ASSUME_TAC THENL
+         [AP_TERM_TAC THEN AP_TERM_TAC THEN REWRITE_TAC[VAL_WORD_USHR] THEN
+          ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV; ALL_TAC] THEN
+        ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--933) THEN
+        CURVE25519_X25519_ALT_PEEL_TAC THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Then(REWRITE_TAC[],
+       Loop(`9`, `pc + 0x2e04`, `pc + 0x2e04`,
+         `\i s. read SP s = stackpointer /\ read X23 s = res /\
+                read X20 s = word_add stackpointer (word 160) /\
+                read X21 s = word(10 - i)`,
+         Leg("pre2",
+           (* inverse pre-leg: pc + 0x155c -> doublings -> B -> pc + 0x2e04, 1312 steps *)
+           REWRITE_TAC[SUB_0; ENUMERATEL_APPEND_ZERO] THEN
+           ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--1312) THEN
+           CURVE25519_X25519_ALT_PEEL_TAC THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("loop2",
+           SUBGOAL_THEN `word_sub (word(10 - i)) (word 1):int64 = word(10 - (i + 1))`
+           ASSUME_TAC THENL
+            [SUBGOAL_THEN `10 - i = (10 - (i + 1)) + 1` SUBST1_TAC THENL
+              [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+             ALL_TAC] THEN
+           SUBGOAL_THEN `~(val(word(10 - (i + 1)):int64) = 0)` ASSUME_TAC THENL
+            [IMP_REWRITE_TAC[VAL_WORD; DIMINDEX_64; MOD_LT] THEN SIMPLE_ARITH_TAC; ALL_TAC] THEN
+           SUBGOAL_THEN `~(val(word_sub (word(10 - i)) (word 1):int64) = 0)` ASSUME_TAC THENL
+            [ASM_REWRITE_TAC[]; ALL_TAC] THEN
+           ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--877) THEN
+           CURVE25519_X25519_ALT_PEEL_TAC THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC),
+         Leg("post2",
+           (* inverse post-leg: pc + 0x2e04 -> BNE (not taken) -> pc + 0x3ab8,
+              813 steps *)
+           REWRITE_TAC[ARITH_RULE `10 - 9 = 1`] THEN
+           SUBGOAL_THEN `val(word_sub (word 1) (word 1):int64) = 0` ASSUME_TAC THENL
+            [CONV_TAC WORD_REDUCE_CONV; ALL_TAC] THEN
+           ARM_SAFETY_SIM_TAC CURVE25519_X25519_ALT_EXEC (1--813) THEN
+           CURVE25519_X25519_ALT_PEEL_TAC THEN
+           DISCHARGE_SAFETY_PROPERTY_TAC))))));;
 
 let CURVE25519_X25519_ALT_SUBROUTINE_SAFE = time prove
  (`exists f_events.
