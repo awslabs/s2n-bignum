@@ -181,3 +181,73 @@ let X86_WINDOWS_XMM_WRAP_SAFETY_TAC ?(pre_ants=ALL_TAC) (wintmc,winexec)
      CONJ_TAC THENL [DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC] THEN
      (* the preserved vector registers *)
      REPEAT CONJ_TAC THEN CONV_TAC WORD_BLAST) (asl,w);;
+
+(* Prove the safety of the Windows entry point of a function whose Windows
+   code saves RSI and RDI, moves the arguments to the standard registers and
+   calls the standard entry point tmc, whose safety theorem (with its frame,
+   for instance as given by X86_SIMD_SHARPEN_RULE) is subth. vars are the
+   variables the trace of the call may depend on. The goal is first rewritten
+   with rewrites (for instance about the constant data of the code); pre_tac
+   is run before the simulation; with normalize_stack the addresses relative
+   to the stack pointer are normalized first. *)
+
+let X86_WINDOWS_CALL_WRAP_SAFETY_TAC ?(rewrites=[]) ?(pre_tac=ALL_TAC)
+    ?(normalize_stack=false) (wintmc,winexec) (tmc,subth) vars =
+  let argregs = ["RDI"; "RSI"; "RDX"; "RCX"; "R8"; "R9"] in
+  let count_args tm =
+    let is_args t = is_comb t && is_const(rator t) &&
+                    fst(dest_const(rator t)) = "WINDOWS_C_ARGUMENTS" in
+    length(dest_list(rand(find_term is_args tm))) in
+  let callee_args th =
+    let is_args t = is_comb t && is_const(rator t) &&
+                    fst(dest_const(rator t)) = "C_ARGUMENTS" in
+    dest_list(rand(find_term is_args (concl th))) in
+  fun (asl,w) ->
+    let vs = fst(strip_forall(snd(dest_exists w))) in
+    let ngen = index `stackpointer:int64` vs - 1 in
+    let stackoff =
+      let t = find_term (fun t -> is_binary "word_sub" t &&
+                                  lhand t = `stackpointer:int64`) w in
+      dest_small_numeral (rand(rand t)) in
+    let nargs = count_args w in
+    let pre = nargs + 3 in
+    let off = 8 + (match nargs with
+        1 -> 5 | 2 -> 8 | 3 -> 11 | 4 -> 14 | 5 -> 19 | 6 -> 24
+      | _ -> failwith "X86_WINDOWS_CALL_WRAP_SAFETY_TAC: number of arguments") in
+    let sub_vs = fst(strip_forall(snd(dest_exists(concl subth)))) in
+    let cargs = callee_args subth in
+    let arg_of v =
+      if mem v cargs then
+        parse_term ("read " ^ el (index v cargs) argregs ^ " s")
+      else if v = `pc:num` then mk_binary "+" (v,mk_small_numeral off)
+      else if v = `stackpointer:int64` then `read RSP s`
+      else if v = `returnaddress:int64` then
+        `read (memory :> bytes64 (read RSP s)) s`
+      else v in
+    let args = map arg_of sub_vs in
+    let rsp_th = vsubst [mk_small_numeral stackoff,`n:num`]
+      `read RSP s0 = word_add stackpointer (word n)` in
+    (ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
+     META_EXISTS_TAC THEN GEN_TAC THEN
+     REWRITE_TAC(rewrites @ [fst winexec]) THEN
+     REPLICATE_TAC ngen GEN_TAC THEN WORD_FORALL_OFFSET_TAC stackoff THEN
+     REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS; C_RETURN;
+                 WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
+     REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
+     ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
+     ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
+     pre_tac THEN
+     REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
+     (if normalize_stack then
+        UNDISCH_THEN rsp_th (fun th -> SUBST_ALL_TAC th THEN ASSUME_TAC th) THEN
+        RULE_ASSUM_TAC
+         (CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV))
+      else ALL_TAC) THEN
+     X86_STEPS_TAC winexec (1--pre) THEN
+     REMOVE_THEN "H_CALLEE" (fun subth ->
+       X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
+         (wintmc,winexec,off,tmc,subth) args (pre+1)) THENL
+      [EXISTS_E2_TAC(ref vars); ALL_TAC] THEN
+     X86_STEPS_TAC winexec ((pre+2)--(pre+4)) THEN
+     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
+     DISCHARGE_SAFETY_PROPERTY_TAC) (asl,w);;

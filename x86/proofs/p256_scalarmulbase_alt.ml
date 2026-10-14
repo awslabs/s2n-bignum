@@ -6283,39 +6283,11 @@ let P256_SCALARMULBASE_ALT_NOIBT_WINDOWS_SUBROUTINE_SAFE = time prove
      DISCHARGE_SAFETY_PROPERTY_TAC) in
   let subth = CONV_RULE(ONCE_DEPTH_CONV NUM_MULT_CONV) baseth in
 
-  ASSUME_CALLEE_SAFETY_TAILED_TAC subth "H_CALLEE" THEN
-
-  META_EXISTS_TAC THEN STRIP_TAC (* e *) THEN
-
-  REWRITE_TAC[fst WINDOWS_P256_SCALARMULBASE_ALT_EXEC] THEN
-  REPLICATE_TAC 6 GEN_TAC THEN WORD_FORALL_OFFSET_TAC 728 THEN
-  REWRITE_TAC[ALL; WINDOWS_C_ARGUMENTS; SOME_FLAGS;
-              WINDOWS_MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN
-  REWRITE_TAC[NONOVERLAPPING_CLAUSES] THEN REPEAT STRIP_TAC THEN
-  ENSURES_PRESERVED_TAC "rsi_init" `RSI` THEN
-  ENSURES_PRESERVED_TAC "rdi_init" `RDI` THEN
-  REWRITE_TAC(!simulation_precanon_thms) THEN ENSURES_INIT_TAC "s0" THEN
-  UNDISCH_THEN `read RSP s0 = word_add stackpointer (word 728)`
-   (fun th -> SUBST_ALL_TAC th THEN ASSUME_TAC th) THEN
-  RULE_ASSUM_TAC
-   (CONV_RULE(ONCE_DEPTH_CONV NORMALIZE_RELATIVE_ADDRESS_CONV)) THEN
-  X86_STEPS_TAC WINDOWS_P256_SCALARMULBASE_ALT_EXEC (1--7) THEN
-  REMOVE_THEN "H_CALLEE" (fun subth ->
-    X86_SUBROUTINE_SIM_TAC ~is_safety_thm:true
-    (p256_scalarmulbase_alt_windows_tmc,
-      WINDOWS_P256_SCALARMULBASE_ALT_EXEC,
-      0x16,p256_scalarmulbase_alt_tmc,subth)
-    [`e:(uarch_event)list`; `read RDI s`; `read RSI s`; `read RDX s`;
-      `read RCX s`; `len:num`; `pc + 0x16`; `read RSP s`;
-      `read (memory :> bytes64 (read RSP s)) s`] 8) THENL [
-    EXISTS_E2_TAC(ref [`pc:num`;`stackpointer:int64`]);
-
-    ALL_TAC
-  ] THEN
-  X86_STEPS_TAC WINDOWS_P256_SCALARMULBASE_ALT_EXEC (9--11) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[]
-
-  THEN DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_WINDOWS_CALL_WRAP_SAFETY_TAC
+    ~normalize_stack:true
+    (p256_scalarmulbase_alt_windows_tmc,WINDOWS_P256_SCALARMULBASE_ALT_EXEC)
+    (p256_scalarmulbase_alt_tmc,subth)
+    [`pc:num`;`stackpointer:int64`]);;
 
 let P256_SCALARMULBASE_ALT_WINDOWS_SUBROUTINE_SAFE = time prove
  (`exists f_events.
