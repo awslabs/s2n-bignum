@@ -76,9 +76,7 @@ let full_spec,public_vars = mk_safety_spec
     BIGNUM_ODD_SUBROUTINE_CORRECT
     BIGNUM_ODD_EXEC;;
 
-(* bignum_odd branches on k (the length, a public value): see bignum_even for the
-   same pattern. The k<>0 read range [a,val k*8] memaccess_inbounds goal is closed
-   manually since it needs the k<>0 hypothesis. *)
+(* As for bignum_even, the code reads a[0] unless k = 0. *)
 
 let BIGNUM_ODD_SUBROUTINE_SAFE = time prove
  (`exists f_events.
@@ -98,23 +96,12 @@ let BIGNUM_ODD_SUBROUTINE_SAFE = time prove
                      memaccess_inbounds e2 [a,val k * 8] []))
            MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(a:int64) (k:int64) (pc:num) (returnaddress:int64).
-      if val k = 0 then f_ev_k0 a k pc returnaddress
-      else f_ev_pos a k pc returnaddress:(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `val(k:int64) = 0` THEN ASM_REWRITE_TAC[] THENL
-   [ ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-       ~canonicalize_pc_diff:false BIGNUM_ODD_EXEC (1--2) THEN
-     DISCHARGE_SAFETY_PROPERTY_TAC;
-     ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
-       ~canonicalize_pc_diff:false BIGNUM_ODD_EXEC (1--4) THEN
-     SAFE_META_EXISTS_TAC allowed_vars_e THEN
-     CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-     W (fun (asl,w) ->
-       (if is_conj w then (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ])
-        else ALL_TAC)) THEN
-     REWRITE_TAC[memaccess_inbounds; ALL; EX; FST; SND; contained_modulo] THEN
-     REPEAT STRIP_TAC THEN EXISTS_TAC `i:num` THEN
-     ASM_REWRITE_TAC[CONG_REFL] THEN ASM_ARITH_TAC ]);;
+  ARM_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_ODD_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Leg("pos",
+       ARM_SAFETY_SIM_TAC BIGNUM_ODD_EXEC (1--4) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC))));;

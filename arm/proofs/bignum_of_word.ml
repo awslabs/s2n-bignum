@@ -144,71 +144,43 @@ let BIGNUM_OF_WORD_SUBROUTINE_SAFE = time prove
                (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
                 MAYCHANGE [memory :> bignum (z,val k)])`,
   ASSERT_CONCL_TAC full_spec THEN
-  CONCRETIZE_F_EVENTS_TAC
-   `\(z:int64) (k:int64) (pc:num) (returnaddress:int64).
-      if val k = 0 then f_ev_k0 z k pc returnaddress
-      else if val k = 1 then f_ev_k1 z k pc returnaddress
-      else APPEND (f_ev_post z k pc returnaddress)
-             (APPEND (ENUMERATEL (val k - 1) (f_ev_loop z k pc returnaddress))
-                     (f_ev_pre z k pc returnaddress)):(uarch_event) list` THEN
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS; MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI] THEN REPEAT STRIP_TAC THEN
-  ABBREV_TAC `k' = val (k:int64)` THEN
-  SUBGOAL_THEN `k' < 2 EXP 64` ASSUME_TAC THENL [
-    EXPAND_TAC "k'" THEN MATCH_ACCEPT_TAC VAL_BOUND_64; ALL_TAC ] THEN
-  ASM_CASES_TAC `k' = 0` THENL [
-   ASM_REWRITE_TAC[] THEN
-   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-     BIGNUM_OF_WORD_EXEC (1--2) THEN DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  ASM_CASES_TAC `k' = 1` THENL [
-   ASM_REWRITE_TAC[] THEN SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-   ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-     BIGNUM_OF_WORD_EXEC (1--5) THEN DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  ASM_REWRITE_TAC[] THEN
-  ENSURES_EVENTS_WHILE_UP2_TAC `k' - 1` `pc + 0x10` `pc + 0x1c`
-   `\i s. read X1 s = z /\ read X0 s = word((k' - 1) - i) /\ read X30 s = returnaddress` THEN
-  ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [SIMPLE_ARITH_TAC; ALL_TAC] THEN
-  CONJ_TAC THENL [
-    (* prologue: CBZ (not taken), pre-store, SUBS, BEQ (not taken) -> pc+16 *)
-    SUBGOAL_THEN `~(val(word_sub k (word 1):int64) = 0)` ASSUME_TAC THENL [
-      REWRITE_TAC[VAL_WORD_SUB_EQ_0; VAL_WORD_1] THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-    ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC) ~canonicalize_pc_diff:false
-      BIGNUM_OF_WORD_EXEC (1--4) THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[SUB_0] THEN SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      ASM_REWRITE_TAC[] THEN REWRITE_TAC[GSYM VAL_WORD_1] THEN
-      ASM_SIMP_TAC[WORD_SUB; LE_1] THEN REWRITE_TAC[VAL_WORD_1]; ALL_TAC] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  CONJ_TAC THENL [
-    (* loop body: store z[k'-1-i], decrement, branch *)
-    REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    ARM_STEPS_TAC BIGNUM_OF_WORD_EXEC (1--3) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [
-      REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-      IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
-      REPEAT CONJ_TAC THENL [
-        GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN SIMPLE_ARITH_TAC;
-        SIMPLE_ARITH_TAC;
-        SIMPLE_ARITH_TAC ];
-      ALL_TAC ] THEN
-    CONJ_TAC THENL [
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-      [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ];
-      ALL_TAC ] THEN
-    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
-    SUBGOAL_THEN `word_sub (word (k' - 1 - i)) (word 1) =
-                  word (k' - 1 - (i + 1)):int64` SUBST_ALL_TAC THENL [
-      IMP_REWRITE_TAC[WORD_SUB2] THEN
-      CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-      ALL_TAC ] THEN
-    MAP_EVERY VAL_INT64_TAC [`k':num`; `k'-1`] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC; ALL_TAC ] THEN
-  (* exit: RET *)
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  ARM_STEPS_TAC BIGNUM_OF_WORD_EXEC (1--1) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  ARM_SAFETY_SKELETON_TAC ["k"]
+   (Cases(`k = 0`,
+     Leg("k0",
+       ASM_REWRITE_TAC[] THEN
+       ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--2) THEN
+       DISCHARGE_SAFETY_PROPERTY_TAC),
+     Cases(`k = 1`,
+      Leg("k1",
+        ASM_REWRITE_TAC[] THEN
+        ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--5) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+      Loop(`k - 1`, `pc + 0x10`, `pc + 0x1c`,
+        `\i s. read X1 s = z /\ read X0 s = word(k - 1 - i) /\
+               read X30 s = returnaddress`,
+        Leg("pre",
+          SUBGOAL_THEN `word_sub (word k) (word 1):int64 = word(k - 1)`
+          ASSUME_TAC THENL [MATCH_MP_TAC WORD_SUB2 THEN SIMPLE_ARITH_TAC;
+                            ALL_TAC] THEN
+          SUBGOAL_THEN `~(val(word(k - 1):int64) = 0)` ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--4) THEN
+          REWRITE_TAC[SUB_0] THEN DISCHARGE_SAFETY_PROPERTY_TAC),
+        Leg("loop",
+          SUBGOAL_THEN
+           `word_sub (word(k - 1 - i)) (word 1):int64 = word(k - 1 - (i + 1))`
+          ASSUME_TAC THENL
+           [SUBGOAL_THEN `k - 1 - i = (k - 1 - (i + 1)) + 1` SUBST1_TAC THENL
+             [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+            ALL_TAC] THEN
+          SUBGOAL_THEN
+           `(~(val(word(k - 1 - (i + 1)):int64) = 0) <=> i + 1 < k - 1)`
+          ASSUME_TAC THENL
+           [IMP_REWRITE_TAC[VAL_WORD_EQ; DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+            ALL_TAC] THEN
+          ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--3) THEN
+          SAFETY_CLOSE_TAC),
+        Leg("post",
+          ARM_SAFETY_SIM_TAC BIGNUM_OF_WORD_EXEC (1--1) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC))))));;
