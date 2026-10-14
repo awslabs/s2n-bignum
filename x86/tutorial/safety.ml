@@ -157,15 +157,15 @@ let bignum_mux_4_safety_spec =
 
   3. The MAYCHANGE part is copied from the functional correctness.
 
-    However, it is often beneficial to simply use '\s s'. true' because the
-  MAYCHANGE part is already proven in the original functional correctness
-  statement (BIGNUM_MUX_4_CORRECT). Using simple '\s s'. true' makes the tactics
-  used while proving the safety spec faster.
-    In this example, this was necessary because we are going to do compositional
-  reasoning over the safety proof. Compositional reasoning is about reusing
-  already proven facts about a smaller code snippet to prove a larger code.
-  In this case, the MAYCHANGE part has to be concretely defined, like
-  bignum_mux_4_safety_spec.
+    It is already proven in the original functional correctness statement
+  (BIGNUM_MUX_4_CORRECT), but the safety property needs it too for
+  compositional reasoning, which is about reusing already proven facts about a
+  smaller code snippet to prove a larger code: below, the safety of the
+  subroutine is derived from that of its core, and the safety theorem of a
+  function is used in the same way in the safety proofs of its callers. For
+  this, the MAYCHANGE part has to be concretely defined, like
+  bignum_mux_4_safety_spec, and all the safety theorems in s2n-bignum have the
+  MAYCHANGE parts of their functional correctness theorems.
 *)
 
 (*
@@ -429,16 +429,34 @@ let public_vars =
 
 (* If the program of interest has a conditional branch or unbounded loop,
   the end-to-end symbolic simulation tactic (PROVE_SAFETY_SPEC_TAC) won't work.
-  Instead, you can use CONCRETIZE_F_EVENTS_TAC which receives a scaffolding of
-  the structure of f_events that will mimic the control flow structure of the
-  program. After that, the ensures with scaffolding can be broken down
-  into smaller ensure triples using tactics for Hoare logic rules
-  (ENSURES_EVENTS_SEQUENCE_TAC and ENSURES_EVENTS_WHILE_UP2_TAC).
+  Instead, the proof follows the control flow of the program, which is
+  described by a skeleton (the safety_skeleton type in common/consttime.ml):
 
-  The scaffolding of f_events typically follows the flow of the functional
-  correctness proof. For example, if the functional correctness proof
-  special-cases n = 0 and do symbolic simulation in this case, then the
-  scaffolding will also have 'if n = 0 then ... else ...'.
+    Leg(name,tac)    a straight-line piece of code, proved by tac;
+    Seq(pc,inv,a,b)  a and then b, meeting at pc where inv holds;
+    Loop(n,pc1,pc2,inv,pre,body,post)
+                     a loop of n iterations (n must not be 0) with head pc1,
+                     exit pc2 and invariant inv = \i s. ..., entered by pre
+                     and left by post;
+    Cases(p,a,b)     a when p holds and b otherwise;
+    Then(tac,a)      a after tac, e.g. to establish facts for several legs.
+
+  The skeleton typically follows the flow of the functional correctness proof.
+  For example, if the functional correctness proof special-cases n = 0 and
+  does symbolic simulation in this case, then the skeleton will also have
+  Cases(`n = 0`,...). Similarly, a Seq corresponds to an ENSURES_SEQUENCE_TAC
+  and a Loop to an ENSURES_WHILE_*_TAC with the same loop head; the exit of
+  the Loop is the instruction after the branch back to the head.
+
+  X86_SAFETY_SKELETON_TAC computes from the skeleton a scaffolding of f_events
+  that mimics the control flow structure of the program, gives it to
+  CONCRETIZE_F_EVENTS_TAC, and breaks the ensures with scaffolding down into
+  smaller ensure triples using tactics for Hoare logic rules
+  (ENSURES_EVENTS_SEQUENCE_TAC for Seq, ENSURES_EVENTS_WHILE_UP2_TAC for Loop)
+  and case splits (for Cases). The definitions of these tactics in
+  common/consttime.ml have detailed explanations. Each leg then proves its
+  ensures triple, typically by symbolic simulation as in a functional
+  correctness proof followed by DISCHARGE_SAFETY_PROPERTY_TAC.
 
   For its example, bignum_mod_n25519 will be illustrated. It takes a big integer
   x of k words (8*k bytes), and stores (n % n_25519) (where n_25519 is a large
@@ -446,6 +464,7 @@ let public_vars =
   expertise in the algorithmic details, but proving its safety does not need
   that much.
 *)
+
 let bignum_mod_n25519_mc =
   define_from_elf "bignum_mod_n25519_mc" "x86/curve25519/bignum_mod_n25519.o";;
 
@@ -476,41 +495,40 @@ let BIGNUM_MOD_N25519_SAFE = time prove
                  MAYCHANGE [events] ,,
                  MAYCHANGE [memory :> bignum (z,4)])`,
 
-  (* Give a scaffolding to f_events. Each f_ev* variable corresponds to
-     a sequence of microarchitectural events that can be simply proven with
-     end-to-end symbolic simluation tactic. *)
-  CONCRETIZE_F_EVENTS_TAC
-    `\(x:int64) (z:int64) (k:int64) (pc:num).
-      // bignum_mod_n25519 has shortcuts when n < 4, and a special case when
-      // n = 4. Typically corresponds to ASM_CASES_TAC or tactics like that.
-      if val k = 0 then
-        f_ev_k0 x z k pc
-      else if val k = 1 then
-        f_ev_k1 x z k pc
-      else if val k = 2 then
-        f_ev_k2 x z k pc
-      else if val k = 3 then
-        f_ev_k3 x z k pc
-      else
-        // This APPEND concatenates two event lists, each of which is created
-        // after ENSURES_EVENTS_SEQUENCE_TAC .
-        APPEND
-          (if val k = 4 then
-            f_ev_4 x z k pc
-           else
-            // This 'APPEND post (APPEND (ENUMERATEL <loopcount> body) pre)'
-            // represents the list of events for three sub ensures,
-            // created after ENSURES_EVENTS_WHILE_UP2_TAC .
-            APPEND
-              (f_ev_loop_post x z k pc)
-              (APPEND
-                (ENUMERATEL (val k - 4) (f_ev_loop x z k pc))
-                (f_ev_loop_pre x z k pc)))
-          (f_ev_1 x z k pc)
-      :(uarch_event) list` THEN
+  (* The skeleton below gives the following scaffolding to f_events. Each
+     f_ev_<name> variable corresponds to the sequence of microarchitectural
+     events of the leg <name>, which can be simply proven with symbolic
+     simulation.
 
-  (* Instantiate existential variables 'f_ev*' as metavariables. *)
-  (* META_EXISTS_TAC is a handy tactic for instantiating existentially
+      \x z k pc.
+        // bignum_mod_n25519 has shortcuts when k < 4 (Cases).
+        if val k = 0 then
+          f_ev_k0 x z k pc
+        else if val k = 1 then
+          f_ev_k1 x z k pc
+        else if val k = 2 then
+          f_ev_k2 x z k pc
+        else if val k = 3 then
+          f_ev_k3 x z k pc
+        else
+          // This APPEND concatenates the event lists of the two parts of
+          // a Seq.
+          APPEND
+            (if val k - 4 = 0 then
+              f_ev_k4 x z k pc
+             else
+              // This 'APPEND post (APPEND (ENUMERATEL <loopcount> body) pre)'
+              // represents the list of events of a Loop.
+              APPEND
+                (f_ev_post x z k pc)
+                (APPEND
+                  (ENUMERATEL (val k - 4) (f_ev_loop x z k pc))
+                  (f_ev_pre x z k pc)))
+            (f_ev_top x z k pc)
+
+     The existentially quantified variables 'f_ev*' are then instantiated
+     as metavariables.
+     META_EXISTS_TAC is a handy tactic for instantiating existentially
      quantified variable 'x' in the goal 'exists x. ..' where x is some var.
      Compared to `EXISTS_TAC` which has to immediately mention
      what `x` is, `META_EXISTS_TAC` defers the concrete value of `x` until
@@ -519,196 +537,100 @@ let BIGNUM_MOD_N25519_SAFE = time prove
      This is extensively used in safety proofs to defer the instantiation of
      list of microarchitectural events, like 'f_events', because otherwise the
      HOL Light user has to give a lengthy expression for that which can be
-     prone to errors.
+     prone to errors. Here, DISCHARGE_SAFETY_PROPERTY_TAC instantiates the
+     f_ev* of each leg.
+
+     The word variables listed in the first argument of X86_SAFETY_SKELETON_TAC
+     (here, the number of words k) are generalized as numbers by W64_GEN_TAC,
+     with the assumptions `k < 2 EXP 64` and `val (word k) = k`. The terms of
+     the skeleton, like `k - 4`, are about these numbers.
+
+     When writing a skeleton, PRINT_GOAL_TAC at the start of a leg shows its
+     goal, and 'safety_print_log := true;;' makes
+     DISCHARGE_SAFETY_PROPERTY_TAC print the memory accesses that it could not
+     prove to be within bounds.
   *)
-  REPEAT META_EXISTS_TAC THEN STRIP_TAC THEN
-
-  REWRITE_TAC[C_ARGUMENTS; C_RETURN; SOME_FLAGS] THEN
-  REPEAT STRIP_TAC THEN
-
-  ABBREV_TAC `k' = val (k:int64)` THEN
-  SUBGOAL_THEN `k' < 2 EXP 64` ASSUME_TAC THENL [
-    EXPAND_TAC "k'" THEN MATCH_ACCEPT_TAC VAL_BOUND_64; ALL_TAC
-  ] THEN
-  (* The four shortcuts. The lengthy expression 'e2 = ...' in postcondition
-     is simplified. *)
-  ASM_CASES_TAC `k' < 4` THENL [
-    FIRST_ASSUM(MP_TAC o MATCH_MP (ARITH_RULE
-      `k < 4 ==> k = 0 \/ k = 1 \/ k = 2 \/ k = 3`)) THEN
-    STRIP_TAC THENL [
-      ASM_REWRITE_TAC[ARITH] THEN
-      X86_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--12) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* k = 1 *)
-      ASM_REWRITE_TAC[ARITH] THEN
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      X86_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--15) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* k = 2 *)
-      ASM_REWRITE_TAC[ARITH] THEN
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      X86_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--18) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-
-      (* k = 3 *)
-      ASM_REWRITE_TAC[ARITH] THEN
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      X86_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--19) THEN
-      DISCHARGE_SAFETY_PROPERTY_TAC;
-    ];
-
-    ALL_TAC
-  ] THEN
-
-  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
-    `~(k < 4) ==> ~(k = 0) /\ ~(k = 1) /\ ~(k = 2) /\ ~(k = 3)`)) THEN
-  ASM_REWRITE_TAC[] THEN
-
-  (* Recognizes the outermost APPEND in the postcondition of the goal
-     ensures and splits that & distribute each of them to two subgoals.
-     The definition of ENSURES_EVENTS_SEQUENCE_TAC (common/consttime.ml)
-     has detailed explanation.
-  *)
-  ENSURES_EVENTS_SEQUENCE_TAC `pc + 162`
-   `\s. read RDI s = z /\
-        read RCX s = x /\
-        read RSI s = word(k' - 4)` THEN CONJ_TAC THENL [
-    X86_SIM_TAC ~canonicalize_pc_diff:false
-      BIGNUM_MOD_N25519_EXEC (1--35) THEN
-    CONJ_TAC THENL [
-      IMP_REWRITE_TAC[GSYM WORD_SUB2] THEN
-      EXPAND_TAC "k'" THEN ASM_REWRITE_TAC[WORD_VAL] THEN ASM_ARITH_TAC;
-      ALL_TAC
-    ] THEN
-
-    (* to help memory inbounds reasoning (got from fn correctness proof *)
-    SUBGOAL_THEN
-      `8 * val (word_sub k (word 4):int64) = (8 * (k' - 4))` MP_TAC THENL [
-      SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-      IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
-        IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN SIMPLE_ARITH_TAC;
-        SIMPLE_ARITH_TAC];
-      ALL_TAC
-    ] THEN
-    DISCH_THEN SUBST_ALL_TAC THEN
-    (* rewrite k with word k', because the LHS of 'APPEND e2 e' in the
-       conclusion is using k' whereas the RHS of 'e2 = ...' in the conclusion
-       is using k. *)
-    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    ALL_TAC
-  ] THEN
-
-  (*** Finish off the k = 4 case which is now just the writeback ***)
-
-  FIRST_ASSUM(STRIP_ASSUME_TAC o MATCH_MP (ARITH_RULE
-   `~(k' < 4) ==> k' = 4 \/ (~(k' = 4) /\ 4 < k')`))
-  THENL
-   [ASM_REWRITE_TAC[SUB_REFL;MULT_0] THEN
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    X86_STEPS_TAC BIGNUM_MOD_N25519_EXEC (1--6) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    SAFE_META_EXISTS_TAC allowed_vars_e THEN
-    CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
-    CONJ_TAC THENL [ CONV_TAC (ONCE_DEPTH_CONV NUM_ADD_CONV) THEN
-      FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ] THEN
-    DISCHARGE_MEMACCESS_INBOUNDS_TAC;
-
-    ALL_TAC] THEN
-
-  ASM_REWRITE_TAC[] THEN
-  (* The loop.
-     The definition of ENSURES_EVENTS_WHILE_UP2_TAC (common/consttime.ml)
-     has detailed explanation. *)
-  ENSURES_EVENTS_WHILE_UP2_TAC `k' - 4` `pc + 171` `pc + 328`
-   `\i s. read RDI s = z /\
-          read RCX s = x /\
-          read RSI s = word ((k' - 4) - i)` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL [
-    SIMPLE_ARITH_TAC;
-
-    (* Begin to precondition *)
-    ENSURES_INIT_TAC "s0" THEN
-    (* Break 'exists e2. ...' in the precondition. *)
-    STRIP_EXISTS_ASSUM_TAC THEN
-    X86_STEPS_TAC BIGNUM_MOD_N25519_EXEC (1--2) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    (* Prove that the program counter is right *)
-    CONJ_TAC THENL [
-      IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
-      SIMPLE_ARITH_TAC;
-
-      ALL_TAC
-    ] THEN
-    (* Prove loop counter equality *)
-    CONJ_TAC THENL [REWRITE_TAC[SUB_0]; ALL_TAC] THEN
-    (* The main part, 'exists e2. ...'. *)
-    (* rewrite k with word k' *)
-    SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-    REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC;
-
-    (* Main loop *)
-    ALL_TAC;
-
-    (* Postcondition to end *)
-    ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-    X86_STEPS_TAC BIGNUM_MOD_N25519_EXEC (1--5) THEN
-    ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    DISCHARGE_SAFETY_PROPERTY_TAC
-  ] THEN
-
-  (* The loop body *)
-  REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  ENSURES_INIT_TAC "s0" THEN STRIP_EXISTS_ASSUM_TAC THEN
-  MAP_EVERY VAL_INT64_TAC [`k':num`; `k'-4`; `k' - 4 - i`] THEN
-  X86_STEPS_TAC BIGNUM_MOD_N25519_EXEC (1--36) THEN
-  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-  (* Prove that the program counter is right *)
-  CONJ_TAC THENL [
-    REWRITE_TAC[VAL_WORD_SUB_EQ_0] THEN
-    IMP_REWRITE_TAC[VAL_WORD;DIMINDEX_64;MOD_LT] THEN
-    REPEAT CONJ_TAC THENL [
-      GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC;
-    ];
-    ALL_TAC
-  ] THEN
-  (* Prove loop counter equality *)
-  CONJ_TAC THENL [
-    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL
-    [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC ];
-    ALL_TAC
-  ] THEN
-  (* The main part, 'exists e2. ...'. *)
-  (* safety_print_log := 1;; revealed that CONTAINED_TAC could not prove
-     expressions including `word_sub (word (k' - 4 - i)) (word 1)` and
-     `word (8 * (...) + 1844...)`. *)
-  SUBGOAL_THEN `word_sub (word (k' - 4 - i)) (word 1) =
-                word (k' - 4 - (i + 1)):int64` SUBST_ALL_TAC THENL [
-    IMP_REWRITE_TAC[WORD_SUB2] THEN
-    CONJ_TAC THENL [ AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
-    ALL_TAC
-  ] THEN
-  SUBGOAL_THEN `word (8 * (k' - 4 - i) + 18446744073709551608):int64 =
-                word (8 * (k' - 4 - (i + 1)))` SUBST_ALL_TAC THENL [
-    REWRITE_TAC[WORD_BLAST
-      `word (x + 18446744073709551608) = word_sub (word x) (word 8):int64`] THEN
-    IMP_REWRITE_TAC[WORD_SUB2] THEN CONJ_TAC THENL [
-      AP_TERM_TAC THEN SIMPLE_ARITH_TAC;
-      SIMPLE_ARITH_TAC
-    ];
-    ALL_TAC
-  ] THEN
-  (* rewrite k with word k' *)
-  SUBST1_TAC (ISPEC `k:int64` (GSYM WORD_VAL)) THEN
-  REWRITE_TAC[ASSUME `val (k:int64) = k'`] THEN
-  DISCHARGE_SAFETY_PROPERTY_TAC);;
+  X86_SAFETY_SKELETON_TAC ["k"]
+   ((* The four shortcuts. Each leg rewrites the goal with k = 0, ..., so
+       UNIFY_REFL_TAC warns that word 0, ... in the arguments of f_ev_k0, ...
+       are not variables, which is harmless *)
+    Cases(`k = 0`,
+      Leg("k0",
+        ASM_REWRITE_TAC[] THEN
+        X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--12) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+    Cases(`k = 1`,
+      Leg("k1",
+        ASM_REWRITE_TAC[] THEN
+        X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--15) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+    Cases(`k = 2`,
+      Leg("k2",
+        ASM_REWRITE_TAC[] THEN
+        X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--18) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+    Cases(`k = 3`,
+      Leg("k3",
+        ASM_REWRITE_TAC[] THEN
+        X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--19) THEN
+        DISCHARGE_SAFETY_PROPERTY_TAC),
+    (* The symbolic simulation uses this to take the branch for k >= 4 *)
+    Then(SUBGOAL_THEN `~(k < 4)` ASSUME_TAC THENL [ASM_ARITH_TAC; ALL_TAC],
+    (* The top 4 words of x are loaded, then the rest of the program starts at
+       pc + 162, where the RSI register holds the number of remaining words *)
+    Seq(`pc + 162`,
+      `\s. read RDI s = z /\ read RCX s = x /\ read RSI s = word(k - 4)`,
+      Leg("top",
+        (* Facts to normalize the value of RSI and the address of the loads,
+           so that the invariant and the bounds of the memory accesses can be
+           proven *)
+        SUBGOAL_THEN `word_sub (word k) (word 4):int64 = word(k - 4)`
+          ASSUME_TAC THENL
+         [MATCH_MP_TAC WORD_SUB2 THEN ASM_ARITH_TAC; ALL_TAC] THEN
+        VAL_INT64_TAC `k - 4` THEN
+        X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--35) THEN
+        (* SAFETY_CLOSE_TAC proves the other conjuncts of the postcondition,
+           here the invariant, before DISCHARGE_SAFETY_PROPERTY_TAC *)
+        SAFETY_CLOSE_TAC),
+      (* The main loop runs k - 4 times. As the number of iterations of a Loop
+         must not be 0, the case k = 4, which only writes the result back, is
+         separate *)
+      Cases(`k - 4 = 0`,
+        Leg("k4",
+          (* With k - 4 = 0, simplify the addresses in the events of the
+             top leg, as the symbolic simulation does *)
+          ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES; WORD_ADD_0] THEN
+          X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--6) THEN
+          DISCHARGE_SAFETY_PROPERTY_TAC),
+        (* The loop from pc + 171 to the branch back at pc + 322, exiting at
+           pc + 328. RSI counts the remaining words down. *)
+        Loop(`k - 4`, `pc + 171`, `pc + 328`,
+          `\i s. read RDI s = z /\ read RCX s = x /\ read RSI s = word(k - 4 - i)`,
+          Leg("pre",
+            VAL_INT64_TAC `k - 4` THEN
+            X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--2) THEN
+            SAFETY_CLOSE_TAC),
+          Leg("loop",
+            (* Facts about the counter word(k - 4 - i), decremented and tested
+               for zero, in particular word_sub (word(k - 4 - i)) (word 1) =
+               word(k - 4 - (i + 1)) *)
+            SAFETY_DOWNCOUNT_FACTS_TAC `i:num` `k - 4` THEN
+            (* The address of the load, word_add x (word(8 * (k - 4 - i) - 8))
+               modulo 2^64 *)
+            SUBGOAL_THEN
+             `word (8 * (k - 4 - i) + 18446744073709551608):int64 =
+              word (8 * (k - 4 - (i + 1)))`
+            ASSUME_TAC THENL
+             [REWRITE_TAC[WORD_BLAST
+               `word (x + 18446744073709551608):int64 = word_sub (word x) (word 8)`] THEN
+              IMP_REWRITE_TAC[WORD_SUB2] THEN
+              CONJ_TAC THENL [AP_TERM_TAC THEN SIMPLE_ARITH_TAC; SIMPLE_ARITH_TAC];
+              ALL_TAC] THEN
+            X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--36) THEN
+            SAFETY_CLOSE_TAC),
+          Leg("post",
+            X86_SAFETY_SIM_TAC BIGNUM_MOD_N25519_EXEC (1--5) THEN
+            DISCHARGE_SAFETY_PROPERTY_TAC)))))))))));;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -731,6 +653,9 @@ let BIGNUM_MOD_N25519_SAFE = time prove
       like this:
         ARM_SIM_TAC ~preprocess_tac:(TRY STRIP_EXISTS_ASSUM_TAC)
           ~canonicalize_pc_diff:false MY_EXEC (..)
+      ARM_SAFETY_SIM_TAC MY_EXEC (..) is this ARM_SIM_TAC, and
+      X86_SAFETY_SIM_TAC MY_EXEC (..) is a similar simulation for x86. They
+      are used in the legs of the skeletons.
 
   - {ARM,X86}_SUBROUTINE_SIM_TAC: needs is_safety_thm to be set to true, and
       the 'subth' argument must have picked from the assumption registered
