@@ -1,32 +1,38 @@
-(* ============================================================================
-   AES-256-GCM DECRYPT: recursive whole-buffer output + GHASH specification.
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
 
-   This is the decrypt analogue of the encrypt spec layer (gcm_ct_rec /
-   gcm_ghash_blocks / aes256_gcm_encrypt / gcm_final_xi).  It moves the
-   per-block expansion OFF the readable band theorem statements and INTO recursive
-   spec functions of the whole input byte buffer `x` and its length; each band's
-   readable wrapper then states its postcondition as `gcm_dec_pt_bytes (val len) x
-   ctr0 keys` (output) and `gcm_dec_final_xi (val len) x xi h` (tag), with the block
-   decomposition hidden.  Per-N unfold lemmas (GCM_DEC_GHASH_BLOCKS_N /
-   GCM_DEC_PT_BYTES_N) rewrite these back to the explicit N-block list a band's
-   BODY produces, so the wrappers stay sim-free.
-
-   The decrypt mirror of encrypt (XOR is symmetric):
-     - plaintext output block k = word_xor (ciphertext block k) keystream_k
-       (identical formula to enc's ciphertext store) — captured by our existing
-       aes_ctr / aes_ctr_full_tail_bytes (arm/proofs/utils/aes_ctr_spec.ml).
-     - GHASH is over the RAW ciphertext INPUT blocks (masked partial tail),
-       NOT word_xor'd with the keystream — this is the one genuine dec/enc
-       difference, so gcm_dec_ghash_blocks below uses the raw input blocks
-       `bytes_to_int128 (SUB_LIST (16*k,16) x)` (enc GHASHes gcm_ct_rec instead).
-
-   Vocabulary matches our binary's band theorems: base counter `ctr0` (= ivec),
-   `aes256_encrypt` + `gcm_ctr_inc_iter` (our gcm_ctr_iter), GHASH key `byteswap128 h`,
-   `word_bytereverse` per block (= word_reversefields 8, provably equal).
-
-   needs arm/proofs/utils/aes_ctr_spec.ml (aes_ctr / aes_ctr_full_tail_bytes /
-   int128_to_bytes / bytes_to_int128).
-   ============================================================================ *)
+(* ========================================================================= *)
+(* AES-256-GCM DECRYPT: recursive whole-buffer output + GHASH specification. *)
+(*                                                                           *)
+(* This is the decrypt analogue of the encrypt spec layer (gcm_ct_rec /      *)
+(* gcm_ghash_blocks / aes256_gcm_encrypt / gcm_final_xi). It moves the       *)
+(* per-block expansion off the readable band theorem statements and into    *)
+(* recursive spec functions of the whole input byte buffer `x` and its      *)
+(* length. Each band's readable wrapper then states its postcondition as     *)
+(* `gcm_dec_pt_bytes (val len) x ctr0 keys` (output) and                      *)
+(* `gcm_dec_final_xi (val len) x xi h` (tag), with the block decomposition   *)
+(* hidden. Per-N unfold lemmas (GCM_DEC_GHASH_BLOCKS_N /                     *)
+(* GCM_DEC_PT_BYTES_N) rewrite these back to the explicit N-block list a     *)
+(* band's body produces, so the wrappers stay sim-free.                      *)
+(*                                                                           *)
+(* The decrypt mirror of encrypt (XOR is symmetric):                         *)
+(*  - plaintext output block k = word_xor ciphertext_block keystream_k,     *)
+(*    captured by aes_ctr / aes_ctr_full_tail_bytes in aes_ctr_spec.ml;      *)
+(*  - GHASH is over the raw ciphertext input blocks (masked partial tail),   *)
+(*    not the plaintext produced by XOR with the keystream. Therefore        *)
+(*    gcm_dec_ghash_blocks uses the raw input blocks                          *)
+(*    `bytes_to_int128 (SUB_LIST (16*k,16) x)`, unlike encrypt's gcm_ct_rec. *)
+(*                                                                           *)
+(* Vocabulary matches the binary's band theorems: base counter `ctr0`       *)
+(* (= ivec), `aes256_encrypt` + `gcm_ctr_inc_iter`, GHASH key                *)
+(* `byteswap128 h`, and `word_bytereverse` per block                         *)
+(* (= word_reversefields 8, provably equal).                                 *)
+(*                                                                           *)
+(* Needs aes_ctr_spec.ml for aes_ctr, aes_ctr_full_tail_bytes,               *)
+(* int128_to_bytes, and bytes_to_int128.                                     *)
+(* ========================================================================= *)
 
 needs "arm/proofs/utils/aes_ctr_spec.ml";;
 
