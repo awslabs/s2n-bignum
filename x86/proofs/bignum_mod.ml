@@ -936,7 +936,7 @@ let BIGNUM_MOD_RECIP_BLOCK = prove
        MAYCHANGE [memory :> bytes64(word_add stackpointer (word 40))])`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   REWRITE_TAC[SOME_FLAGS] THEN
-  (*** Globablize the top-bit-set assumption ***)
+  (*** Globalize the top-bit-set assumption ***)
 
   ASM_CASES_TAC `bit 63 (a:int64)` THENL
    [ASM_REWRITE_TAC[] THEN ENSURES_INIT_TAC "s0";
@@ -1897,6 +1897,13 @@ let BIGNUM_MOD_FINAL = prove
 (* Correctness proof.                                                        *)
 (* ------------------------------------------------------------------------- *)
 
+(* Many facts only hold for a nonzero modulus b, and are kept in the form  *)
+(* ~(b = 0) ==> P. Once ~(b = 0) is assumed, this turns them all into P.   *)
+
+let BIGNUM_MOD_UNGUARD_TAC =
+  REPEAT(FIRST_X_ASSUM(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC o
+                       C MP (ASSUME `~(b = 0)`)));;
+
 let BIGNUM_MOD_CORRECT = prove
  (`!k z n x m a b pc stackpointer.
       ALL (nonoverlapping (stackpointer,72))
@@ -2218,11 +2225,8 @@ let BIGNUM_MOD_CORRECT = prove
         2 EXP 128 <= (2 EXP 64 + val w + 1) * d`
   ASSUME_TAC THENL
    [DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      is_imp(concl th) && free_in `w:int64` (concl th))) THEN
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      is_imp(concl th) && free_in `p:num` (concl th))) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_THEN(SUBST_ALL_TAC o SYM) THEN
+    REPEAT(FIRST_X_ASSUM(MP_TAC o C MP (ASSUME `~(b = 0)`))) THEN
+    DISCH_THEN(SUBST_ALL_TAC o SYM) THEN
     SUBGOAL_THEN `&0 < &d:real` ASSUME_TAC THENL
      [REWRITE_TAC[REAL_OF_NUM_LT] THEN EXPAND_TAC "d" THEN ARITH_TAC;
       ASM_SIMP_TAC[REAL_LT_RDIV_EQ; REAL_LE_LDIV_EQ]] THEN
@@ -2391,7 +2395,7 @@ let BIGNUM_MOD_CORRECT = prove
     GHOST_INTRO_TAC `zt:int64`
      `read (memory :> bytes64(word_add stackpointer (word 8)))` THEN
     GHOST_INTRO_TAC `zm:num` `bignum_from_memory (z,k)` THEN
-    GLOBALIZE_PRECONDITION_TAC THEN
+    GLOBALIZE_PRECONDITION_TAC THEN BIGNUM_TERMRANGE_TAC `k:num` `zm:num` THEN
     ABBREV_TAC `Z = 2 EXP (64 * k) * val(zt:int64) + zm` THEN
     REWRITE_TAC[ARITH_RULE `(i + 1) + 1 = i + 2`] THEN
     ABBREV_TAC `ib = 61 * (N - (i + 1))` THEN
@@ -2736,20 +2740,13 @@ let BIGNUM_MOD_CORRECT = prove
           Z' < 2 EXP (64 * l') /\
           (Z' == a DIV 2 EXP ib) (mod b)`
     ASSUME_TAC THENL
-     [DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        free_in `u:num` (concl th) && is_imp(concl th))) THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        free_in `Z:num` (concl th) && is_imp(concl th))) THEN
-      ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+     [DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
       MP_TAC(SPECL [`b:num`; `p:num`; `u:num`; `d:num`; `w:int64`; `Z:num`;
                     `h:int64`; `qw:int64`] BIGNUM_MOD_ESTIMATE) THEN
       ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
       SUBGOAL_THEN `Z < 2 EXP (64 * (L + 1))` ASSUME_TAC THENL
-       [FIRST_X_ASSUM(DISJ_CASES_THEN ASSUME_TAC o check (fun th ->
-          is_disj(concl th) && free_in `L:num` (concl th))) THENL
+       [UNDISCH_THEN `L = k \/ 61 * (i + 1) <= 64 * (L + 1)`
+         (DISJ_CASES_THEN ASSUME_TAC) THENL
          [TRANS_TAC LTE_TRANS `2 EXP 64 * b` THEN ASM_REWRITE_TAC[] THEN
           ASM_REWRITE_TAC[ARITH_RULE `64 * (k + 1) = 64 + 64 * k`; EXP_ADD;
                           LE_MULT_LCANCEL] THEN
@@ -2778,8 +2775,8 @@ let BIGNUM_MOD_CORRECT = prove
         MAP_EVERY UNDISCH_TAC
          [`Z < 2 EXP (64 * (L + 1))`; `~(b < 2 EXP (64 * (L + 1)))`] THEN
         ARITH_TAC;
-        FIRST_X_ASSUM(DISJ_CASES_THEN ASSUME_TAC o check (fun th ->
-          is_disj(concl th) && free_in `l':num` (concl th))) THENL
+        UNDISCH_THEN `l' = k + 1 \/ 61 * (i + 2) <= 64 * l'`
+         (DISJ_CASES_THEN ASSUME_TAC) THENL
          [TRANS_TAC LTE_TRANS `2 EXP 64 * b` THEN ASM_REWRITE_TAC[] THEN
           ASM_REWRITE_TAC[ARITH_RULE `64 * (k + 1) = 64 + 64 * k`; EXP_ADD;
                           LE_MULT_LCANCEL] THEN
@@ -2850,14 +2847,7 @@ let BIGNUM_MOD_CORRECT = prove
       X86_STEPS_TAC BIGNUM_MOD_EXEC (1--16) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
       REWRITE_TAC[MOD_64_CLAUSES] THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_imp(concl th) && free_in `zm':num` (concl th))) THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_imp(concl th) && free_in `Z':num` (concl th) &&
-        free_in `l':num` (concl th))) THEN
-      ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+      BIGNUM_MOD_UNGUARD_TAC THEN
       ASM_REWRITE_TAC[] THEN
       SUBGOAL_THEN
        `(if val(word_sub (word l') (word (p DIV 64 + 1)):int64) = 0
@@ -2902,8 +2892,7 @@ let BIGNUM_MOD_CORRECT = prove
       ALL_TAC] THEN
     ASM_CASES_TAC `L:num = k` THENL
      [FIRST_X_ASSUM SUBST_ALL_TAC THEN
-      FIRST_X_ASSUM(SUBST_ALL_TAC o C MP (REFL `k:num`) o check (fun th ->
-        is_imp(concl th) && lhand(concl th) = `k:num = k`)) THEN
+      FIRST_X_ASSUM(SUBST_ALL_TAC o C MP (REFL `k:num`)) THEN
       REWRITE_TAC[BIGNUM_FROM_MEMORY_BYTES] THEN ENSURES_INIT_TAC "s0" THEN
       X86_STEPS_TAC BIGNUM_MOD_EXEC (1--29) THEN
       ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -2915,12 +2904,7 @@ let BIGNUM_MOD_CORRECT = prove
         DISCH_THEN(SUBST1_TAC o SYM) THEN
         REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; BIGNUM_FROM_MEMORY_BOUND];
         ALL_TAC] THEN
-      DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_imp(concl th) && free_in `Z':num` (concl th) &&
-        free_in `lowdigits b (k + 1)` (concl th))) THEN
-      ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+      DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
       ABBREV_TAC
        `ss = word_add (word_add zt hh)
               (word_zx
@@ -2928,10 +2912,9 @@ let BIGNUM_MOD_CORRECT = prove
       ABBREV_TAC `c' = word_subword (word_join (ss:int64) (cin:int64):int128)
                                     (3,64):int64` THEN
       MP_TAC(SPECL [`W:num`; `k:num`; `val(cin:int64)`; `val(hh:int64)`;
-                    `val(ss:int64)`;
-                    `val(zt:int64)`; `0`; `val(qw:int64)`; `cc:num`;
-                    `lowdigits zm k`; `lowdigits b k`; `Z - val(qw:int64) * b`;
-                    `val(c':int64)`]
+                    `val(ss:int64)`; `val(zt:int64)`; `0`; `val(qw:int64)`;
+                    `cc:num`; `lowdigits zm k`; `lowdigits b k`;
+                    `Z - val(qw:int64) * b`; `val(c':int64)`]
              BIGNUM_MOD_TAIL) THEN
       ANTS_TAC THENL
        [ASM_REWRITE_TAC[VAL_BOUND_64] THEN REPEAT CONJ_TAC THENL
@@ -2946,16 +2929,6 @@ let BIGNUM_MOD_CORRECT = prove
           CONV_TAC MOD_DOWN_CONV THEN REWRITE_TAC[CONG_LMOD] THEN
           MATCH_MP_TAC EQ_IMP_CONG THEN ARITH_TAC;
           CONV_TAC NUM_REDUCE_CONV;
-          SUBGOAL_THEN `zm < 2 EXP (64 * k)` ASSUME_TAC THENL
-           [REWRITE_TAC[GSYM HIGHDIGITS_EQ_0] THEN
-            UNDISCH_TAC
-             `read
-               (memory :> bytes (word_add z (word (8 * k)),8 * (k - k))) s29 =
-              highdigits zm k` THEN
-            REWRITE_TAC[SUB_REFL; GSYM BIGNUM_FROM_MEMORY_BYTES;
-                        BIGNUM_FROM_MEMORY_TRIVIAL] THEN
-            MESON_TAC[];
-            ALL_TAC] THEN
           ASM_SIMP_TAC[LOWDIGITS_SELF; MULT_CLAUSES; ADD_CLAUSES] THEN
           MAP_EVERY UNDISCH_TAC
            [`val(qw:int64) * b <= Z`;
@@ -2996,11 +2969,7 @@ let BIGNUM_MOD_CORRECT = prove
      [MAP_EVERY UNDISCH_TAC [`L <= k`; `~(L:num = k)`] THEN ARITH_TAC;
       ALL_TAC] THEN
     SUBGOAL_THEN `~(b = 0) ==> val(zt:int64) = 0 /\ zm:num = Z` ASSUME_TAC THENL
-     [DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_imp(concl th) && free_in `Z':num` (concl th) &&
-        free_in `lowdigits b (L + 1)` (concl th))) THEN
-      ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
+     [DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
       MATCH_MP_TAC(TAUT `p /\ (p ==> q) ==> p /\ q`) THEN CONJ_TAC THENL
        [MATCH_MP_TAC BIGNUM_MOD_QZERO THEN
         MAP_EVERY EXISTS_TAC [`2 EXP (64 * k)`; `Z:num`] THEN CONJ_TAC THENL
@@ -3082,22 +3051,12 @@ let BIGNUM_MOD_CORRECT = prove
         SIMP_TAC[DIV_MULT_ADD; EXP_EQ_0; ARITH_EQ] THEN
         ASM_SIMP_TAC[DIV_LT; ADD_CLAUSES; MOD_LT; VAL_BOUND_64; WORD_VAL];
         ALL_TAC] THEN
-      DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_imp(concl th) && free_in `zm:num` (concl th) &&
-        free_in `zt:int64` (concl th))) THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_imp(concl th) && free_in `Z':num` (concl th) &&
-        free_in `lowdigits b (L + 1)` (concl th))) THEN
-      ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-      DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST_ALL_TAC) THEN
+      DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
+      UNDISCH_THEN `zm:num = Z` SUBST_ALL_TAC THEN
       MP_TAC(SPECL [`W:num`; `L:num`; `val(cin:int64)`; `val(hh:int64)`;
                     `val(ss:int64)`; `bigdigit Z L`; `bigdigit b L`;
-                    `val(qw:int64)`;
-                    `cc:num`; `lowdigits Z L`; `lowdigits b L`;
-                    `Z - val(qw:int64) * b`;
-                    `val(c':int64)`]
+                    `val(qw:int64)`; `cc:num`; `lowdigits Z L`; `lowdigits b L`;
+                    `Z - val(qw:int64) * b`; `val(c':int64)`]
              BIGNUM_MOD_TAIL) THEN
       ASM_REWRITE_TAC[VAL_BOUND_64; BIGDIGIT_BOUND; ADD_ASSOC] THEN
       DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THENL
@@ -3140,19 +3099,8 @@ let BIGNUM_MOD_CORRECT = prove
         CONJ_TAC THENL
          [REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN ARITH_TAC;
           ALL_TAC] THEN
-        DISCH_TAC THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_imp(concl th) && free_in `zm:num` (concl th) &&
-          free_in `zt:int64` (concl th))) THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_imp(concl th) && free_in `Z':num` (concl th) &&
-          free_in `lowdigits b (L + 1)` (concl th))) THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_imp(concl th) && free_in `zl:num` (concl th) &&
-          free_in `Z':num` (concl th))) THEN
-        ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-        DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-        DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST_ALL_TAC) THEN
+        DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
+        UNDISCH_THEN `zm:num = Z` SUBST_ALL_TAC THEN
         SUBGOAL_THEN `zl:num = Z'` SUBST_ALL_TAC THENL
          [SUBGOAL_THEN `val(sw:int64) DIV 8 = 0` ASSUME_TAC THENL
            [MATCH_MP_TAC BIGNUM_MOD_QZERO THEN
@@ -3212,11 +3160,10 @@ let BIGNUM_MOD_CORRECT = prove
          [REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN ARITH_TAC;
           ALL_TAC] THEN
         CONJ_TAC THENL [AP_TERM_TAC THEN ARITH_TAC; ALL_TAC] THEN
-        DISCH_TAC THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_imp(concl th) && free_in `zl:num` (concl th) &&
-          free_in `Z':num` (concl th))) THEN
-        ASM_REWRITE_TAC[] THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
+        DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
+        UNDISCH_THEN
+         `zl + 2 EXP (64 * (L + 1)) * val(sw:int64) DIV 8 =
+          Z'` (SUBST1_TAC o SYM) THEN
         GEN_REWRITE_TAC (LAND_CONV o LAND_CONV) [ADD_SYM];
 
         (*** Extension into memory ***)
@@ -3243,19 +3190,8 @@ let BIGNUM_MOD_CORRECT = prove
         CONJ_TAC THENL
          [REWRITE_TAC[GSYM WORD_ADD] THEN AP_TERM_TAC THEN ARITH_TAC;
           ALL_TAC] THEN
-        DISCH_TAC THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_imp(concl th) && free_in `zm:num` (concl th) &&
-          free_in `zt:int64` (concl th))) THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_imp(concl th) && free_in `Z':num` (concl th) &&
-          free_in `lowdigits b (L + 1)` (concl th))) THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_imp(concl th) && free_in `zl:num` (concl th) &&
-          free_in `Z':num` (concl th))) THEN
-        ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-        DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-        DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST_ALL_TAC) THEN
+        DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
+        UNDISCH_THEN `zm:num = Z` SUBST_ALL_TAC THEN
         SUBGOAL_THEN
          `read (memory :> bytes (z,8 * k)) s24 =
           2 EXP (64 * (L + 2)) * highdigits Z (L + 2) +
@@ -3279,10 +3215,9 @@ let BIGNUM_MOD_CORRECT = prove
           ASM_REWRITE_TAC[LE_EXP] THEN
           ARITH_TAC;
           ALL_TAC] THEN
-        FIRST_X_ASSUM(MP_TAC o check (fun th ->
-          is_eq(concl th) && free_in `zl:num` (concl th) &&
-          free_in `Z':num` (concl th))) THEN
-        DISCH_THEN(SUBST1_TAC o SYM) THEN
+        UNDISCH_THEN
+         `zl + 2 EXP (64 * (L + 1)) * val(sw:int64) DIV 8 =
+          Z'` (SUBST1_TAC o SYM) THEN
         ASM_REWRITE_TAC[MULT_CLAUSES; ADD_CLAUSES]] THEN
 
       (*** Common logging reasoning for both extension cases ***)
@@ -3325,7 +3260,7 @@ let BIGNUM_MOD_CORRECT = prove
   GHOST_INTRO_TAC `zt:int64`
    `read (memory :> bytes64(word_add stackpointer (word 8)))` THEN
   GHOST_INTRO_TAC `zm:num` `bignum_from_memory (z,k)` THEN
-  GLOBALIZE_PRECONDITION_TAC THEN
+  GLOBALIZE_PRECONDITION_TAC THEN BIGNUM_TERMRANGE_TAC `k:num` `zm:num` THEN
   ABBREV_TAC `Z = 2 EXP (64 * k) * val(zt:int64) + zm` THEN
   ABBREV_TAC
    `qw = word_add (word_zx (word_ushr (word(val(w:int64) * val(h:int64)):int128)
@@ -3342,11 +3277,7 @@ let BIGNUM_MOD_CORRECT = prove
      [MATCH_MP_TAC MOD_LT THEN
       MP_TAC(SPECL [`p + 3`; `2 EXP 64`] MOD_LT_EQ) THEN ARITH_TAC;
       DISCH_TAC] THEN
-    SUBGOAL_THEN `p <= 64 * k` ASSUME_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_imp(concl th) && free_in `u:num` (concl th))) THEN
-      ASM_SIMP_TAC[];
-      ALL_TAC] THEN
+    BIGNUM_MOD_UNGUARD_TAC THEN
     SUBGOAL_THEN `p + 3 < 2 EXP 64` ASSUME_TAC THENL
      [MAP_EVERY UNDISCH_TAC [`p <= 64 * k`; `k < 2 EXP 58`] THEN ARITH_TAC;
       ASM_SIMP_TAC[MOD_LT]] THEN
@@ -3479,13 +3410,7 @@ let BIGNUM_MOD_CORRECT = prove
         MAP_EVERY UNDISCH_TAC [`j < k`; `k < 2 EXP 58`] THEN ARITH_TAC;
         X86_SIM_TAC BIGNUM_MOD_EXEC (1--2)];
       X86_SIM_TAC BIGNUM_MOD_EXEC (1--2) THEN
-      SUBGOAL_THEN `zm < 2 EXP (64 * k)` ASSUME_TAC THENL
-       [REWRITE_TAC[GSYM HIGHDIGITS_EQ_0] THEN
-        FIRST_X_ASSUM(MP_TAC o check (free_in `highdigits zm k` o concl)) THEN
-        REWRITE_TAC[SUB_REFL; GSYM BIGNUM_FROM_MEMORY_BYTES;
-                    BIGNUM_FROM_MEMORY_TRIVIAL] THEN
-        MESON_TAC[];
-        ASM_SIMP_TAC[LOWDIGITS_SELF; LE_REFL]]];
+      ASM_SIMP_TAC[LOWDIGITS_SELF; LE_REFL]];
     ALL_TAC] THEN
 
   (*** The top word of Z - q * b, and the final quotient estimate ***)
@@ -3516,15 +3441,9 @@ let BIGNUM_MOD_CORRECT = prove
       ALL_TAC] THEN
     X86_STEPS_TAC BIGNUM_MOD_EXEC (1--26) THEN
     ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[MOD_64_CLAUSES] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      is_imp(concl th) && free_in `e1:num` (concl th) &&
-      free_in `(p + 3) DIV 64` (concl th))) THEN
-    ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (ASSUME_TAC o SYM) ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      is_imp(concl th) && free_in `lf:int64` (concl th))) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST_ALL_TAC THEN
+    REWRITE_TAC[MOD_64_CLAUSES] THEN DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
+    UNDISCH_THEN `e1 = (p + 3) DIV 64` (ASSUME_TAC o SYM) THEN
+    FIRST_X_ASSUM(SUBST_ALL_TAC o C MP (ASSUME `e1 <= k`)) THEN
 
     (*** The selection of the top 64 bits of Z1 via the logged words ***)
 
@@ -3556,8 +3475,7 @@ let BIGNUM_MOD_CORRECT = prove
            BIGNUM_MOD_FIELD) THEN
     REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
     SUBGOAL_THEN `64 * e1 + (p + 3) MOD 64 = 3 + p` SUBST1_TAC THENL
-     [FIRST_X_ASSUM(SUBST1_TAC o SYM o check (fun th ->
-        is_eq(concl th) && rhs(concl th) = `e1:num`)) THEN
+     [UNDISCH_THEN `(p + 3) DIV 64 = e1` (SUBST1_TAC o SYM) THEN
       MP_TAC(SPECL [`p + 3`; `64`] DIVISION) THEN ARITH_TAC;
       ALL_TAC] THEN
     REWRITE_TAC[ARITH_RULE `2 EXP 64 * x = 2 EXP 3 * 2 EXP 61 * x`;
@@ -3567,14 +3485,6 @@ let BIGNUM_MOD_CORRECT = prove
 
     (*** The mathematics, assuming the modulus is nonzero ***)
 
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      free_in `u:num` (concl th) && is_imp(concl th))) THEN
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      free_in `Z:num` (concl th) && is_imp(concl th) &&
-      free_in `h:int64` (concl th))) THEN
-    ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-    DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
     MP_TAC(SPECL [`b:num`; `p:num`; `u:num`; `d:num`; `w:int64`; `Z:num`;
                   `h:int64`; `qw:int64`] BIGNUM_MOD_ESTIMATE) THEN
     ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
@@ -3583,9 +3493,8 @@ let BIGNUM_MOD_CORRECT = prove
       REWRITE_TAC[VAL_WORD_ADD; VAL_WORD_SUB; DIMINDEX_64] THEN
       CONV_TAC MOD_DOWN_CONV THEN
       MATCH_MP_TAC(SPECL [`zl:num`; `2 EXP (64 * k)`; `val(zt:int64)`;
-                          `val(hh:int64)`;
-                          `val(qw:int64)`; `zm:num`; `b:num`; `Z1:num`]
-                   BIGNUM_MOD_TOP) THEN
+                          `val(hh:int64)`; `val(qw:int64)`; `zm:num`; `b:num`;
+                          `Z1:num`] BIGNUM_MOD_TOP) THEN
       ASM_REWRITE_TAC[VAL_BOUND_64] THEN
       REWRITE_TAC[GSYM REAL_OF_NUM_POW] THEN ASM_REWRITE_TAC[] THEN
       CONJ_TAC THENL
@@ -3621,8 +3530,8 @@ let BIGNUM_MOD_CORRECT = prove
            (word_zx (word_ushr (word(val(w:int64) * val(h1:int64)):int128) 64))
            h1` THEN
     MP_TAC(SPECL [`b:num`; `p:num`; `u:num`; `d:num`; `w:int64`;
-                  `2 EXP 61 * Z1`;
-                  `h1:int64`; `Q:int64`] BIGNUM_MOD_ESTIMATE) THEN
+                  `2 EXP 61 * Z1`; `h1:int64`;
+                  `Q:int64`] BIGNUM_MOD_ESTIMATE) THEN
     ASM_REWRITE_TAC[] THEN ANTS_TAC THENL
      [UNDISCH_TAC `Z1 < 6 * b` THEN ARITH_TAC; STRIP_TAC] THEN
     SUBGOAL_THEN
@@ -3779,17 +3688,13 @@ let BIGNUM_MOD_CORRECT = prove
   SUBGOAL_THEN
    `~(b = 0) ==> r2 + bitval mc * b = a MOD b + 2 EXP (64 * k) * bitval mc`
   ASSUME_TAC THENL
-   [DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      is_imp(concl th) && free_in `zt1:int64` (concl th))) THEN
-    ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
+   [DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
     MP_TAC(SPECL [`a:num`; `b:num`; `2 EXP (64 * k)`; `r2:num`;
                   `val(zt1:int64) + val(hh2:int64) + bitval c2`;
                   `val(q2:int64)`; `Z1:num`] BIGNUM_MOD_FINAL) THEN
     ASM_REWRITE_TAC[VAL_BOUND_64] THEN ANTS_TAC THENL
      [SUBST1_TAC(SYM(ASSUME `2 EXP (64 * k) * val(zt1:int64) + zl = Z1`)) THEN
-      FIRST_X_ASSUM(MP_TAC o check (fun th ->
-        is_eq(concl th) && free_in `r2:num` (concl th))) THEN
+      FIRST_X_ASSUM(MP_TAC o check (free_in `&r2:real` o concl)) THEN
       REWRITE_TAC[GSYM REAL_OF_NUM_CLAUSES] THEN REAL_ARITH_TAC;
       ALL_TAC] THEN
     EXPAND_TAC "mc" THEN
@@ -3866,12 +3771,9 @@ let BIGNUM_MOD_CORRECT = prove
 
     GHOST_INTRO_TAC `ck:num` `\s. val(word_neg(read RDI s))` THEN
     X86_SIM_TAC BIGNUM_MOD_EXEC (1--2) THEN
-    DISCH_TAC THEN
+    DISCH_TAC THEN BIGNUM_MOD_UNGUARD_TAC THEN
     FIRST_X_ASSUM(MP_TAC o check (free_in `lowdigits b k` o concl)) THEN
-    ASM_SIMP_TAC[LOWDIGITS_SELF; REAL_OF_NUM_CLAUSES] THEN
-    FIRST_X_ASSUM(MP_TAC o check (fun th ->
-      is_imp(concl th) && free_in `mc:bool` (concl th))) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN DISCH_TAC THEN
+    ASM_SIMP_TAC[LOWDIGITS_SELF; REAL_OF_NUM_CLAUSES] THEN DISCH_TAC THEN
     MATCH_MP_TAC CONG_IMP_EQ THEN EXISTS_TAC `2 EXP (64 * k)` THEN
     REPEAT CONJ_TAC THENL
      [REWRITE_TAC[GSYM BIGNUM_FROM_MEMORY_BYTES; BIGNUM_FROM_MEMORY_BOUND];
@@ -3942,7 +3844,7 @@ let BIGNUM_MOD_NOIBT_WINDOWS_SUBROUTINE_CORRECT = prove
         ALLPAIRS nonoverlapping
          [(z,8 * val k); (word_sub stackpointer (word 136),136)]
          [(word pc,LENGTH bignum_mod_windows_tmc); (x,8 * val n);
-                                                   (m,8 * val k)] /\
+          (m,8 * val k)] /\
         ~(val k = 0) /\ val k < 2 EXP 58 /\ val n < 2 EXP 58 - 1
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_mod_windows_tmc /\
@@ -3969,7 +3871,7 @@ let BIGNUM_MOD_WINDOWS_SUBROUTINE_CORRECT = prove
         ALLPAIRS nonoverlapping
          [(z,8 * val k); (word_sub stackpointer (word 136),136)]
          [(word pc,LENGTH bignum_mod_windows_mc); (x,8 * val n);
-                                                  (m,8 * val k)] /\
+          (m,8 * val k)] /\
         ~(val k = 0) /\ val k < 2 EXP 58 /\ val n < 2 EXP 58 - 1
         ==> ensures x86
              (\s. bytes_loaded s (word pc) bignum_mod_windows_mc /\
