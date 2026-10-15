@@ -988,7 +988,9 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
           ENUMERATEL (i + 1) loop
         *)
         GEN_REWRITE_TAC RAND_CONV [ENUMERATEL_ADD1] THEN
-        AP_THM_TAC THEN AP_TERM_TAC THEN CONV_TAC (RAND_CONV BETA_CONV) THEN
+        AP_THM_TAC THEN AP_TERM_TAC THEN
+        (* loop i is a beta-redex unless loop is a function like f_ev x *)
+        CONV_TAC (RAND_CONV (TRY_CONV BETA_CONV)) THEN
         UNIFY_F_EVENTS_TAC
       | _, _ -> do_fail "Unknown 'APPEND _ _ = _' case"
       end
@@ -1068,15 +1070,20 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
     e2 = f_events <public args> /\     <--- this clause is optional.
     memaccess_inbounds e2 ...'
 *)
-let DISCHARGE_SAFETY_PROPERTY_TAC =
+(* pre_memaccess_tac runs just before the memaccess_inbounds predicates are
+   proved, e.g. to abbreviate terms that would get in the way of arithmetic. *)
+let GEN_DISCHARGE_SAFETY_PROPERTY_TAC (pre_memaccess_tac:tactic) =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
   W (fun (asl,w) ->
     (if is_conj w then
       (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ])
     else ALL_TAC) THEN
+    pre_memaccess_tac THEN
     (* Prove memaccess_inbounds predicates *)
     DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
+
+let DISCHARGE_SAFETY_PROPERTY_TAC = GEN_DISCHARGE_SAFETY_PROPERTY_TAC ALL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Loop-body memory-safety helpers.                                          *)
@@ -1145,3 +1152,365 @@ let DISCHARGE_MEMSAFE_ASM_TAC:tactic =
                 CONTAINED_ASM_TAC) THEN NO_TAC);
     REWRITE_TAC[APPEND; APPEND_NIL] THEN
     FIRST_ASSUM ACCEPT_TAC];;
+
+(* ------------------------------------------------------------------------- *)
+(* Helpers for safety proofs written by hand, e.g. for programs with loops.  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Close the conjuncts of a postcondition before its event part, such as the
+   values of registers and of the PC, after symbolic simulation. *)
+
+let SAFETY_PEEL_TAC =
+  REPEAT(W(fun (asl,w) ->
+    if is_conj w then
+      CONJ_TAC THENL
+       [FIRST[(REWRITE_TAC[COND_ID] THEN NO_TAC);
+              (GEN_REWRITE_TAC RAND_CONV [COND_RAND] THEN ASM_REWRITE_TAC[] THEN
+               NO_TAC);
+              (ASM_REWRITE_TAC[] THEN NO_TAC);
+              (ASM_REWRITE_TAC[ADD_CLAUSES; SUB_0] THEN NO_TAC);
+              (REWRITE_TAC[WORD_SHL_WORD] THEN CONV_TAC NUM_REDUCE_CONV THEN
+               CONV_TAC WORD_RULE THEN NO_TAC);
+              (REWRITE_TAC[SUB_0] THEN CONV_TAC WORD_RULE)];
+        ALL_TAC]
+    else NO_TAC));;
+
+let SAFETY_CLOSE_TAC = SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+
+(* Remove the assumptions t = (\x. ...) a with t not a variable, such as the
+   instantiated event traces of earlier iterations. *)
+
+let SAFETY_DROP_BETA_EQS_TAC =
+  REPEAT(FIRST_X_ASSUM(K ALL_TAC o check (fun th ->
+    let c = concl th in is_eq c && not (is_var (lhs c)) &&
+    is_abs (fst (strip_comb (rhs c))))));;
+
+(* Reduce the conditionals `if p then a else b` of the goal according to p or
+   ~p, proved by prove_tac (for SAFETY_COND_TAC, from an assumption), without
+   rewriting with p itself. *)
+
+let GEN_SAFETY_COND_TAC (prove_tac:tactic) (p:term) =
+  let prove_tac = REWRITE_TAC[EQ_CLAUSES] THEN prove_tac in
+  (SUBGOAL_THEN (mk_iff(p,`T`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]) ORELSE
+  (SUBGOAL_THEN (mk_iff(p,`F`)) (fun th -> REWRITE_TAC[th; COND_CLAUSES]) THENL
+    [prove_tac THEN NO_TAC; ALL_TAC]);;
+
+let SAFETY_COND_TAC = GEN_SAFETY_COND_TAC (FIRST_ASSUM ACCEPT_TAC);;
+
+(* Facts for an up-counting loop with index register word e (e an expression
+   in the loop variable v), whose backward branch compares e + 1 with bnd;
+   cnt is the iteration count. *)
+
+let SAFETY_UPCOUNT_FACTS_TAC (v:term) (e:term) (bnd:term) (cnt:term) =
+  let e1 = mk_binary "+" (e,`1`) in
+  let wd t = mk_comb(`word:num->int64`,t) in
+  let mkval t = mk_eq(mk_icomb(`val:int64->num`,wd t),t) in
+  SUBGOAL_THEN (list_mk_conj
+    [mkval e; mkval e1;
+     mk_eq(list_mk_comb(`word_add:int64->int64->int64`,[wd e; `word 1:int64`]),
+           wd e1);
+     mk_iff(mk_binary "<" (e1,bnd), mk_binary "<" (mk_binary "+" (v,`1`),cnt))])
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      CONV_TAC WORD_RULE;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* Facts for a down-counting register holding word (c - v), decremented
+   before a test of zero. *)
+
+let SAFETY_DOWNCOUNT_FACTS_TAC (v:term) (c:term) =
+  let sub t = subst [c,`c:num`; v,`j:num`] t in
+  SUBGOAL_THEN (sub `word_sub (word (c - j)) (word 1):int64 = word (c - (j + 1)) /\
+                     val (word (c - j):int64) = c - j /\
+                     val (word (c - (j + 1)):int64) = c - (j + 1) /\
+                     (~(c - (j + 1) = 0) <=> j + 1 < c)`)
+  STRIP_ASSUME_TAC THENL
+   [REPEAT CONJ_TAC THENL
+     [SUBGOAL_THEN (sub `c - j = (c - (j + 1)) + 1`) SUBST1_TAC THENL
+       [SIMPLE_ARITH_TAC; CONV_TAC WORD_RULE];
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN SIMPLE_ARITH_TAC;
+      SIMPLE_ARITH_TAC];
+    ALL_TAC];;
+
+(* Regroup the postcondition trace e2 = APPEND (APPEND x y) z as
+   APPEND x (APPEND y z). *)
+
+let SAFETY_POST_REASSOC_TAC =
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV)
+   [METIS[APPEND_ASSOC]
+     `(exists e2. P e2 /\ e2 = APPEND (APPEND (x:(uarch_event)list) y) z /\ Q e2) <=>
+      (exists e2. P e2 /\ e2 = APPEND x (APPEND y z) /\ Q e2)`];;
+
+(* Rewrite the postcondition trace to APPEND <head> <precondition trace> when
+   a loop is entered from the post-leg of the previous loop. *)
+
+let SAFETY_CARRY_REASSOC_TAC : tactic = fun (asl,w) ->
+  let _,args = strip_comb w in
+  let pre = el 1 args and post = el 2 args in
+  let e2v = `e2:(uarch_event)list` in
+  let find_rhs t = rhs (find_term (fun u -> is_eq u && lhs u = e2v) t) in
+  let pre_rhs = find_rhs pre and post_rhs = find_rhs post in
+  let x0 = lhand (lhand post_rhs) in
+  let eq = mk_eq(post_rhs,
+    mk_binop `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
+      x0 pre_rhs) in
+  let th = prove(eq, REWRITE_TAC[APPEND_ASSOC]) in
+  GEN_REWRITE_TAC (RATOR_CONV o RAND_CONV o ONCE_DEPTH_CONV) [th] (asl,w);;
+
+(* Reorder the postcondition conjuncts so that the trace part comes last
+   (after ENSURES_PRESERVED_TAC / ENSURES_EXISTING_PRESERVED_TAC add more). *)
+
+let SAFETY_EXISTS_LAST_TAC =
+  let conv tm =
+    let cs = conjuncts tm in
+    let ex,others = partition is_exists cs in
+    if ex = [] || others = [] then REFL tm
+    else CONJ_ACI_RULE (mk_eq(tm,list_mk_conj(others @ ex))) in
+  CONV_TAC(RATOR_CONV(RAND_CONV(ABS_CONV conv)));;
+
+(* Discharge a goal `exists e2. ... e2 = <trace> ...` whose witness is given
+   explicitly, e.g. for a leg of zero steps, after simplifying with the
+   assumptions `val x = x` and `~(x = y)`. *)
+
+let SAFETY_CONCRETE_DISCHARGE_TAC : tactic =
+  let is_valfact th =
+    let c = concl th in
+    is_eq c &&
+    (try let v,a = dest_comb (lhs c) in
+         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
+  CONV_TAC(TOP_DEPTH_CONV BETA_CONV) THEN
+  W(fun (a,w) ->
+      let e2v, body = dest_exists w in
+      let wit = rhs (find (fun c -> is_eq c && lhs c = e2v) (conjuncts body)) in
+      EXISTS_TAC wit) THEN
+  REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[APPEND; APPEND_NIL; GSYM APPEND_ASSOC] THEN NO_TAC;
+    RULE_ASSUM_TAC(CONV_RULE(TOP_DEPTH_CONV BETA_CONV)) THEN
+    ASSUM_LIST(fun ths ->
+      let vths = filter is_valfact ths in
+      let nths = filter (fun th -> let c = concl th in
+                           is_neg c && is_eq (dest_neg c)) ths in
+      let rws = vths @ nths @ [COND_CLAUSES; APPEND_NIL; CONJUNCT1 APPEND;
+                               GSYM APPEND_ASSOC] in
+      RULE_ASSUM_TAC(REWRITE_RULE rws) THEN REWRITE_TAC rws) THEN
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC];;
+
+(* Lift the word constructor out of a conditional, e.g. in a branch target. *)
+
+let SAFETY_COND_WORD_LIFT = prove
+ (`!(b:bool) (a:num) (c:num).
+     (if b then word a:int64 else word c) = word (if b then a else c)`,
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC[]);;
+
+(* Beta-reduce an application of an abstraction whose bound variable is
+   called v, e.g. to unfold one particular instantiated event trace. *)
+
+let BETA_VAR_CONV v tm =
+  if is_comb tm && is_abs (rator tm) && name_of (bndvar (rator tm)) = v
+  then BETA_CONV tm else failwith "BETA_VAR_CONV";;
+
+(* Rewrite with ths only the assumptions `read c s = ...` for the components
+   c whose names are in names, e.g. to normalize a pointer or a PC. *)
+
+let SAFETY_REWRITE_READS_TAC names ths =
+  let reads_comp tm =
+    try let c = rand(rator(lhs tm)) in
+        is_const c && mem (fst(dest_const c)) names
+    with Failure _ -> false in
+  RULE_ASSUM_TAC (fun th ->
+    if reads_comp (concl th) then REWRITE_RULE ths th else th);;
+
+(* ------------------------------------------------------------------------- *)
+(* Safety proofs following the control flow of the program.                  *)
+(* ------------------------------------------------------------------------- *)
+
+(* The skeleton of a safety proof follows the control flow of the program:
+     Leg(name,tac)    a straight-line piece, proved by tac, whose events are
+                      given by a fresh f_ev_<name> applied to the public
+                      variables and to the indices of the enclosing loops;
+     Seq(pc,inv,a,b)  a and then b, meeting at pc where inv holds;
+     Loop(n,pc1,pc2,inv,pre,body,post)
+                      a loop of n iterations with head pc1, exit pc2 and
+                      invariant inv = \i s. ..., entered by pre and left by
+                      post (ENSURES_EVENTS_WHILE_UP2_TAC); the body starts
+                      with the assumptions about i;
+     Cases(p,a,b)     a when p holds and b otherwise;
+     Then(tac,a)      a after tac, e.g. to establish facts for several legs.
+   The terms n and p are about the variables of the proof, in which the word
+   variables generalized by W64_GEN_TAC are numbers. *)
+
+type safety_skeleton =
+    Leg of string * tactic
+  | Seq of term * term * safety_skeleton * safety_skeleton
+  | Loop of term * term * term * term *
+            safety_skeleton * safety_skeleton * safety_skeleton
+  | Cases of term * safety_skeleton * safety_skeleton
+  | Then of tactic * safety_skeleton;;
+
+let rec safety_skeleton_is_leg sk =
+  match sk with
+    Leg _ -> true
+  | Then(_,a) -> safety_skeleton_is_leg a
+  | _ -> false;;
+
+(* The f_events witness of a skeleton, as a function of the public variables
+   args; the numbers k of the proof are val k for word variables k in args. *)
+
+let safety_skeleton_witness (args:term list) (sk:safety_skeleton) : term =
+  let ety = `:(uarch_event)list` in
+  (* the arguments that are not variables, such as a stack pointer offset,
+     are abstracted by fresh variables *)
+  let args = itlist (fun a vs ->
+    (if is_var a then a else variant (args @ vs) (mk_var("arg",type_of a)))::vs)
+    args [] in
+  let app = `APPEND:(uarch_event)list->(uarch_event)list->(uarch_event)list`
+  and enum = `ENUMERATEL:num->(num->(uarch_event)list)->(uarch_event)list` in
+  let theta = mapfilter (fun a ->
+    if type_of a = `:int64`
+    then mk_comb(`val:int64->num`,a),mk_var(name_of a,`:num`)
+    else fail()) args in
+  let rec wit idxs sk =
+    match sk with
+      Leg(name,_) ->
+        let vs = args @ idxs in
+        let f = mk_var("f_ev_" ^ name,itlist (mk_fun_ty o type_of) vs ety) in
+        list_mk_comb(f,vs)
+    | Seq(_,_,a,b) -> mk_binop app (wit idxs b) (wit idxs a)
+    | Loop(n,_,_,inv,pre,body,post) ->
+        let i = fst(dest_abs inv) in
+        let bw = wit (idxs @ [i]) body in
+        let bw = if safety_skeleton_is_leg body then rator bw else mk_abs(i,bw) in
+        mk_binop app (wit idxs post)
+          (mk_binop app (list_mk_comb(enum,[subst theta n; bw])) (wit idxs pre))
+    | Cases(p,a,b) -> mk_cond(subst theta p,wit idxs a,wit idxs b)
+    | Then(_,a) -> wit idxs a in
+  list_mk_abs(args,wit [] sk);;
+
+(* Whether the precondition of an ensures goal has a trace exists e2. ... *)
+
+let safety_pre_has_trace w =
+  let e2 = `e2:(uarch_event)list` in
+  can (find_term (fun t -> is_exists t && fst(dest_exists t) = e2))
+      (el 1 (snd(strip_comb w)));;
+
+(* Rewrite the trace D of the postcondition of an ensures goal (e2 = D) by
+   conv. Only D is changed, not the instantiated f_ev of the precondition. *)
+
+let SAFETY_POST_TRACE_CONV_TAC (conv:conv) : tactic = fun (asl,w) ->
+  let e2 = `e2:(uarch_event)list` in
+  let d = rhs(find_term (fun t -> is_eq t && lhs t = e2)
+                        (el 2 (snd(strip_comb w)))) in
+  let at_d t = if t = d then conv t else failwith "SAFETY_POST_TRACE_CONV_TAC" in
+  CONV_TAC(RATOR_CONV(RAND_CONV(ONCE_DEPTH_CONV at_d))) (asl,w);;
+
+let SAFETY_APPEND_ASSOC_CONV = REWR_CONV(GSYM APPEND_ASSOC);;
+
+(* Rewrite with the assumptions val(word x) = x, which keeps the traces of
+   the precondition and of the postcondition alike when an instantiated f_ev
+   brings val(word x) back. *)
+
+let SAFETY_VAL_WORD_TAC : tactic =
+  let is_valfact th =
+    let c = concl th in
+    is_eq c &&
+    (try let v,a = dest_comb (lhs c) in
+         name_of v = "val" && rand a = rhs c with Failure _ -> false) in
+  ASSUM_LIST(fun ths ->
+    let vths = filter is_valfact ths in
+    if vths = [] then ALL_TAC else REWRITE_TAC vths);;
+
+(* Prove an ensures goal following a skeleton, where the trace of its
+   postcondition is the witness of the skeleton (followed by the trace of
+   the precondition if any). Legs see the goals of the ENSURES_EVENTS tactics
+   after SAFETY_VAL_WORD_TAC; the other nodes regroup the trace first. The
+   last leg of a loop after earlier code is tried as is, then with its trace
+   regrouped too (needed when the leg adds no events). As in
+   the usual ENSURES_EVENTS_WHILE_UP2_TAC ... THEN ASM_REWRITE_TAC[] idiom,
+   the goals of a loop are rewritten with the assumptions. The straight-line
+   legs of a node are proved before its loops, so that the events of a loop
+   body are mostly instantiated when the body is proved (as in the usual
+   pre, post, body order). *)
+
+let is_ensures t = try fst(dest_const(fst(strip_comb t))) = "ensures"
+                    with Failure _ -> false;;
+
+let rec SAFETY_SKELETON_WALK_TAC (sk:safety_skeleton) : tactic =
+  match sk with
+    Leg(_,tac) -> SAFETY_VAL_WORD_TAC THEN tac
+  | Then(tac,a) -> tac THEN SAFETY_SKELETON_WALK_TAC a
+  | Cases(p,a,b) ->
+      ASM_CASES_TAC p THENL
+       [SAFETY_COND_TAC p THEN SAFETY_SKELETON_WALK_TAC a;
+        SAFETY_COND_TAC p THEN SAFETY_SKELETON_WALK_TAC b]
+  | Seq(pc,inv,a,b) ->
+      W(fun (_,w) ->
+        if safety_pre_has_trace w
+        then SAFETY_POST_TRACE_CONV_TAC SAFETY_APPEND_ASSOC_CONV
+        else ALL_TAC) THEN
+      ENSURES_EVENTS_SEQUENCE_TAC pc inv THEN
+      (if safety_skeleton_is_leg b && not(safety_skeleton_is_leg a) then
+         CONJ_TAC THENL [ALL_TAC; SAFETY_SKELETON_WALK_TAC b] THEN
+         SAFETY_SKELETON_WALK_TAC a
+       else
+         CONJ_TAC THENL [SAFETY_SKELETON_WALK_TAC a; SAFETY_SKELETON_WALK_TAC b])
+  | Loop(n,pc1,pc2,inv,pre,body,post) -> W(fun (_,w) ->
+      let i = fst(dest_abs inv) and nested = safety_pre_has_trace w in
+      ENSURES_EVENTS_WHILE_UP2_TAC n pc1 pc2 inv THEN ASM_REWRITE_TAC[] THEN
+      W(fun (_,w) ->
+        if is_ensures (lhand w) then ALL_TAC else
+        CONJ_TAC THENL [SIMPLE_ARITH_TAC ORELSE ASM_ARITH_TAC; ALL_TAC]) THEN
+      CONJ_TAC THENL
+       [(if safety_skeleton_is_leg pre then ALL_TAC
+         else SAFETY_POST_TRACE_CONV_TAC
+                (REWR_CONV(CONJUNCT1(SPEC_ALL ENUMERATEL_APPEND_ZERO)))) THEN
+        SAFETY_SKELETON_WALK_TAC pre;
+        ALL_TAC] THEN
+      CONJ_TAC THENL
+       [ALL_TAC;
+        let regroup = SAFETY_POST_TRACE_CONV_TAC
+          (SAFETY_APPEND_ASSOC_CONV THENC RAND_CONV SAFETY_APPEND_ASSOC_CONV) in
+        if not nested then SAFETY_SKELETON_WALK_TAC post
+        else if safety_skeleton_is_leg post then
+          (SAFETY_SKELETON_WALK_TAC post) ORELSE
+          (regroup THEN SAFETY_SKELETON_WALK_TAC post)
+        else regroup THEN SAFETY_SKELETON_WALK_TAC post] THEN
+      X_GEN_TAC i THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
+      (if safety_skeleton_is_leg body then ALL_TAC else
+       SAFETY_POST_TRACE_CONV_TAC
+        (LAND_CONV(REWR_CONV ENUMERATEL_ADD1) THENC
+         SAFETY_APPEND_ASSOC_CONV THENC LAND_CONV BETA_CONV)) THEN
+      SAFETY_SKELETON_WALK_TAC body);;
+
+(* Prove a goal `exists f_events. ...` following the skeleton sk: introduce
+   the witness given by the skeleton, then do intro (which should generalize
+   by W64_GEN_TAC the word variables used as numbers in sk) and the steps of
+   the skeleton. *)
+
+let SAFETY_SKELETON_TAC (intro:tactic) (sk:safety_skeleton) : tactic =
+  fun (asl,w) ->
+    let fev,body = dest_exists w in
+    let app = find_term (fun t -> is_comb t && fst(strip_comb t) = fev) body in
+    let wit = safety_skeleton_witness (snd(strip_comb app)) sk in
+    (CONCRETIZE_F_EVENTS_TAC wit THEN REPEAT META_EXISTS_TAC THEN intro THEN
+     SAFETY_SKELETON_WALK_TAC sk) (asl,w);;
+
+(* Introduce the variables of a safety goal, by W64_GEN_TAC for the word
+   variables named in w64 and renaming them by the list rename of pairs of
+   names, rewrite with ths and assume the hypotheses. *)
+
+let GEN_SAFETY_INTRO_TAC ?(rename=([]:(string*string)list)) (ths:thm list)
+    (w64:string list) : tactic =
+  REPEAT(W(fun (asl,w) ->
+    let v,_ = dest_forall w in
+    let n = name_of v in
+    let n' = try assoc n rename with Failure _ -> n in
+    if mem n w64 && type_of v = `:int64`
+    then W64_GEN_TAC (mk_var(n',`:num`)) else X_GEN_TAC (mk_var(n',type_of v)))) THEN
+  REWRITE_TAC ths THEN
+  TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC));;

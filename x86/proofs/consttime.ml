@@ -87,3 +87,20 @@ let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
     ?tac_before_maychange_simp:(Some EXPAND_MAYCHANGE_YMM_REGS_TAC)
     [BYTES_LOADED_APPEND_CLAUSE]
     X86_SINGLE_STEP_TAC;;
+
+(* Symbolic simulation of steps snums of a leg of a safety proof. *)
+
+let X86_SAFETY_SIM_TAC exec snums =
+  REWRITE_TAC(!simulation_precanon_thms) THEN
+  ENSURES_INIT_TAC "s0" THEN TRY STRIP_EXISTS_ASSUM_TAC THEN
+  X86_STEPS_TAC exec snums THEN
+  ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[];;
+
+(* Prove a safety property following the skeleton sk (SAFETY_SKELETON_TAC),
+   introducing the variables (W64_GEN_TAC for the word variables named in
+   w64) and rewriting with ths and the usual x86 definitions. *)
+
+let X86_SAFETY_SKELETON_TAC ?(ths=[]) ?(rename=[]) w64 sk =
+  SAFETY_SKELETON_TAC
+    (GEN_SAFETY_INTRO_TAC ~rename ([C_ARGUMENTS; C_RETURN; SOME_FLAGS] @ ths) w64)
+    sk;;
