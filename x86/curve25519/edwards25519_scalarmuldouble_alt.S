@@ -792,7 +792,7 @@ Ledwards25519_scalarmuldouble_alt_standard:
         xor     r14d, r14d
         xor     r15d, r15d
 
-        lea     rbp, [rip+edwards25519_scalarmuldouble_alt_constant]
+        lea     rbp, [rip+S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)]
 
         cmp     bf, 1
         mov     rsi, [rbp]
@@ -1428,7 +1428,7 @@ Ledwards25519_scalarmuldouble_alt_loop:
         xor     r14d, r14d
         xor     r15d, r15d
 
-        lea     rbp, [rip+edwards25519_scalarmuldouble_alt_constant]
+        lea     rbp, [rip+S2N_BN_SYMBOL(edwards25519_scalarmuldouble_alt_constant)]
 
         cmp     bf, 1
         mov     rsi, [rbp]

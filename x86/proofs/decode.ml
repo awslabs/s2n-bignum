@@ -1023,6 +1023,12 @@ let decode_aux = new_definition `!pfxs rex l. decode_aux pfxs rex l =
            match pfxs with
            | (T, Rep0, SG0) -> SOME (VPSUBQ (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
            | _ -> NONE)
+        | [0xfc:8] ->
+          let sz = vexL_size L in
+          (read_ModRM rex l >>= \((reg,rm),l).
+           match pfxs with
+           | (T, Rep0, SG0) -> SOME (VPADDB (mmreg reg sz) (mmreg v sz) (simd_of_RM sz rm),l)
+           | _ -> NONE)
         | [0xfd:8] ->
           let sz = vexL_size L in
           (read_ModRM rex l >>= \((reg,rm),l).
@@ -3008,11 +3014,6 @@ let assert_word_list =
     if type_of tm = `:byte list` then go (ls, tm)
     else failwith "assert_word_list";
     tm;;
-
-let define_word_list name tm =
-  try new_definition (mk_eq (mk_var (name, `:byte list`), tm))
-  with Failure _ ->
-    new_definition (mk_eq (mk_mconst (name, `:byte list`), tm));;
 
 let define_assert_word_list name tm ls =
   define_word_list name (assert_word_list tm ls);;

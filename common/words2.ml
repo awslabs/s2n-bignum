@@ -7,6 +7,9 @@
 (* Additions to Library/words.ml.                                            *)
 (* ========================================================================= *)
 
+let WORD_SUB2 = MESON [WORD_SUB]
+  `y <= x ==> word_sub (word x) (word y):N word = word (x - y)`;;
+
 (* ------------------------------------------------------------------------- *)
 (* Conversionals returning iword instead of word                             *)
 (* ------------------------------------------------------------------------- *)
@@ -452,3 +455,6 @@ let msimd8 = new_definition
 
 let msimd16 = new_definition
  `msimd16 (f:M word->N word->N word->N word) = msimd2 (msimd8 f)`;;
+
+let simd32 = new_definition
+ `simd32 (f: N word -> N word -> N word) = simd2 (simd16 f)`;;
