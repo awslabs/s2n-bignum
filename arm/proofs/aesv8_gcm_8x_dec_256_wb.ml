@@ -4311,7 +4311,7 @@ let wb_front_postcond = mk_abs(`s:armstate`,
 (* (entry 0x20 -> the 0x42c b.ge, all straight-line, only round-key/counter    *)
 (* loads, NO input-block reads) are byte-identical work in BOTH bands, so we   *)
 (* factor them into WBN_FRONT_PREFIX_259 proved ONCE on the UNION band         *)
-(* (1<=nblk /\ 128*nblk<2^62), keeping X5 general via the _ANY mask and KEEPING *)
+(* (1<=nblk /\ 128*nblk<2^64), keeping X5 general via the _ANY mask and KEEPING *)
 (* the raw NF/VF/ZF/CF pre-branch flag facts.  Each consumer then chains a     *)
 (* short post-branch leg via ENSURES_TRANS_SIMPLE (WB_FRONT_BUF: 0x42c TAKEN   *)
 (* in the <=8 band -> 6 steps 260..265 to s265; WBN_FRONT_PREFIX: 0x42c FALLS  *)
@@ -4425,17 +4425,17 @@ let GUARD_LE_FALLTHRU = prove
   ASM_ARITH_TAC);;
 
 (* union band = the 17 hyps shared by <=8 (wb_front_hyps_tm) and >=9
-   (wbn_front_hyps_ge9_tm) PLUS 5<=nblk PLUS 128*nblk<2^62.  Both bands imply it.
+   (wbn_front_hyps_ge9_tm) PLUS 5<=nblk PLUS 128*nblk<2^64.  Both bands imply it.
    FUSED SPLICE (STEP 4): strengthened 1<=nblk -> 5<=nblk.  The new guard b.le at
    step 8 falls through only for nblk>=5, so every consumer of the union front
    (readable bands 5..8 via WB_FRONT_BUF; the nblk>=9 chain) is on the 5<=nblk
    side; nblk in {1,2,3,4} takes the fused path and is proved by the fused bands.
    GUARD_LE_FALLTHRU discharges the guard from 5<=nblk (+ 16*nblk<2^63, which
-   follows from the 128*nblk<2^62 conjunct here). *)
+   follows from the 128*nblk<2^64 conjunct here). *)
 let wbn_front_hyps_uni_tm =
   let cs8 = conjuncts wb_front_hyps_tm in
   end_itlist (curry mk_conj)
-    (`5 <= nblk`::`128 * nblk < 2 EXP 62`::
+    (`5 <= nblk`::`128 * nblk < 2 EXP 64`::
      (filter (fun c -> not(c = `5 <= nblk` || c = `1 <= nblk` || c = `nblk <= 8`)) cs8));;
 
 (* FUSED SPLICE (STEP 4.1 fix, session-147): the union hyps now carry `5 <= nblk`
@@ -4446,7 +4446,7 @@ let wbn_front_hyps_uni_tm =
    Use `5 <= nblk` (present) -- it implies every bound `1 <= nblk` supplied to
    USHR_128NBLK_ANY / AND_MASK_16NBLK_ANY / INPUT_BYTES_TO_BYTE128_LANES via ARITH. *)
 let NBLK_ARITH_UNI_TAC =
-  MP_TAC(ASSUME `5 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN
+  MP_TAC(ASSUME `5 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN
   POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC;;
 
 let WBN_FRONT_PREP_BUF_UNI_TAC =
@@ -8314,7 +8314,7 @@ let WB_PTRCMP_FLAGS = prove
 (* specialization for the 0x42c loop-entry b.ge with x0 = in_p (a = 0):
    in the nblk>8 regime the branch FALLS THROUGH (NF=T <=> VF=F test fails) *)
 let WB_LOOPENTER_FLAGS = prove
- (`!(in_p:int64) nblk. 17 <= nblk /\ 128 * nblk < 2 EXP 62 /\
+ (`!(in_p:int64) nblk. 17 <= nblk /\ 128 * nblk < 2 EXP 64 /\
         val in_p + 16 * nblk < 2 EXP 63
     ==> (ival (word_sub in_p (word_add (word (128 * (nblk - 1) DIV 8)) in_p)) < &0 <=> T) /\
         (ival in_p - ival (word_add (word (128 * (nblk - 1) DIV 8)) in_p) =
@@ -8324,7 +8324,7 @@ let WB_LOOPENTER_FLAGS = prove
   SUBGOAL_THEN `1 <= d /\ d <= 16 * nblk /\ d <= 2 EXP 63` STRIP_ASSUME_TAC THENL
    [EXPAND_TAC "d" THEN
     MP_TAC(SPECL [`nblk - 1`; `8`] DIVISION) THEN
-    MP_TAC(ASSUME `17 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN
+    MP_TAC(ASSUME `17 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT STRIP_TAC THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
   REWRITE_TAC[WORD_RULE `word_sub p (word_add (word d) p):int64 = word_neg (word d)`] THEN
@@ -8432,7 +8432,7 @@ let GCM_CTR_RAW_ABSORB_NUM = prove
 (*    head) IS the i=0 instance of the ENSURES_WHILE loop invariant.          *)
 (*                                                                            *)
 (* Deltas vs the <=8-block WB_FRONT_BUF (entry 0x20 -> 0x42c tail):                         *)
-(*  - hyps: 1<=nblk /\ nblk<=8  becomes  17<=nblk /\ 128*nblk<2^62 /\         *)
+(*  - hyps: 1<=nblk /\ nblk<=8  becomes  17<=nblk /\ 128*nblk<2^64 /\         *)
 (*    val in_p + 16*nblk < 2^63 (the signed pointer-compare no-2^63-straddle).*)
 (*  - prep uses the _ANY scalar rungs (X5 = word(128*((nblk-1)DIV8)) not 0).  *)
 (*  - front steps 1..259 identical to WB_FRONT_STEP_TAC modulo mk_discard2[30]*)
@@ -8467,7 +8467,7 @@ let GCM_CTR_RAW_ABSORB_NUM = prove
 let wbn_front_hyps_tm =
   let _,rest1 = dest_conj wb_front_hyps_tm in
   let _,rest = dest_conj rest1 in
-  mk_conj(`17 <= nblk /\ 128 * nblk < 2 EXP 62 /\ val (in_p:int64) + 16 * nblk < 2 EXP 63`,
+  mk_conj(`17 <= nblk /\ 128 * nblk < 2 EXP 64 /\ val (in_p:int64) + 16 * nblk < 2 EXP 63`,
           mk_conj(`nonoverlapping (out_p:int64,16 * nblk) (stackpointer:int64,80)`,
                   rest));;
 
@@ -8479,7 +8479,7 @@ let mk_wbn_front_goal postcond =
 
 (* pure-arith closer for the nblk>=17 side conditions *)
 let NBLK_ARITH_TAC =
-  MP_TAC(ASSUME `17 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN
+  MP_TAC(ASSUME `17 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN
   POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC;;
 
 (* nblk>8 buffer prep: same shape as the <=8-block WB_FRONT_PREP_BUF_TAC but with the
@@ -8634,7 +8634,7 @@ let wbn_front_hyps_ge9_tm =
 (* 0x42c b.ge falls through whenever d=128*((nblk-1)DIV8) >= 1, i.e. nblk>=9.
    (union of WB_LOOPENTER_FLAGS's 17<= and WB_LOOPENTER_FLAGS_916's 9..16). *)
 let WB_LOOPENTER_FLAGS_GE9 = prove
- (`!(in_p:int64) nblk. 9 <= nblk /\ 128 * nblk < 2 EXP 62 /\
+ (`!(in_p:int64) nblk. 9 <= nblk /\ 128 * nblk < 2 EXP 64 /\
         val in_p + 16 * nblk < 2 EXP 63
     ==> (ival (word_sub in_p (word_add (word (128 * (nblk - 1) DIV 8)) in_p)) < &0 <=> T) /\
         (ival in_p - ival (word_add (word (128 * (nblk - 1) DIV 8)) in_p) =
@@ -8644,7 +8644,7 @@ let WB_LOOPENTER_FLAGS_GE9 = prove
   SUBGOAL_THEN `1 <= d /\ d <= 16 * nblk /\ d <= 2 EXP 63` STRIP_ASSUME_TAC THENL
    [EXPAND_TAC "d" THEN
     MP_TAC(SPECL [`nblk - 1`; `8`] DIVISION) THEN
-    MP_TAC(ASSUME `9 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN
+    MP_TAC(ASSUME `9 <= nblk`) THEN MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT STRIP_TAC THEN ASM_ARITH_TAC;
     ALL_TAC] THEN
   REWRITE_TAC[WORD_RULE `word_sub p (word_add (word d) p):int64 = word_neg (word d)`] THEN
@@ -8663,7 +8663,7 @@ let WB_LOOPENTER_FLAGS_GE9 = prove
 (* pure-arith closer for the union-band side conditions *)
 let NBLK_ARITH_GE9_TAC =
   MP_TAC(ASSUME `9 <= nblk`) THEN
-  MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN
+  MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN
   POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC;;
 
 (* union-band variants of the front prefix/lane/init tactics (mirror the 17<=
@@ -13686,7 +13686,7 @@ let wbn_prepretail_post =
 
 (* index bound for the first tail block lane (8*k+8 < nblk when nblk>=17). *)
 let WBN_Q9_INDEX_LT = prove
- (`!nblk. 17 <= nblk /\ 128 * nblk < 2 EXP 62 ==> 8 * ((nblk - 9) DIV 8) + 8 < nblk`,
+ (`!nblk. 17 <= nblk /\ 128 * nblk < 2 EXP 64 ==> 8 * ((nblk - 9) DIV 8) + 8 < nblk`,
   GEN_TAC THEN STRIP_TAC THEN
   MP_TAC(SPECL[`nblk - 9`;`8`] DIVISION) THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   ABBREV_TAC `k = (nblk - 9) DIV 8` THEN ASM_ARITH_TAC);;
@@ -13697,7 +13697,7 @@ let WBN_Q9_INDEX_LT = prove
    the unified prepretail sim WBN_PREPRETAIL_EXT2_UNIFIED can consume it; also still
    used by the FRONT-916 / PREP_TO_END_916 chain below. *)
 let WBN_Q9_INDEX_LT_9 = prove
- (`!nblk. 9 <= nblk /\ 128 * nblk < 2 EXP 62 ==> 8 * ((nblk - 9) DIV 8) + 8 < nblk`,
+ (`!nblk. 9 <= nblk /\ 128 * nblk < 2 EXP 64 ==> 8 * ((nblk - 9) DIV 8) + 8 < nblk`,
   GEN_TAC THEN STRIP_TAC THEN
   MP_TAC(SPECL[`nblk - 9`;`8`] DIVISION) THEN ANTS_TAC THENL [ARITH_TAC; ALL_TAC] THEN
   ABBREV_TAC `k = (nblk - 9) DIV 8` THEN ASM_ARITH_TAC);;
@@ -14838,7 +14838,7 @@ let DIV8_916 = prove
 
 (* 0x42c b.ge (loop-entry test, X0=in_p<X5): FALLS THROUGH for 9..16 too. *)
 let WB_LOOPENTER_FLAGS_916 = prove
- (`!(in_p:int64) nblk. 9 <= nblk /\ nblk <= 16 /\ 128 * nblk < 2 EXP 62 /\
+ (`!(in_p:int64) nblk. 9 <= nblk /\ nblk <= 16 /\ 128 * nblk < 2 EXP 64 /\
         val in_p + 16 * nblk < 2 EXP 63
     ==> (ival (word_sub in_p (word_add (word (128 * (nblk - 1) DIV 8)) in_p)) < &0 <=> T) /\
         (ival in_p - ival (word_add (word (128 * (nblk - 1) DIV 8)) in_p) =
@@ -14866,7 +14866,7 @@ let WB_LOOPENTER_FLAGS_916 = prove
    17<=nblk; these mirror the shape with the 9..16 band). *)
 let NBLK_ARITH_916_TAC =
   MP_TAC(ASSUME `9 <= nblk`) THEN MP_TAC(ASSUME `nblk <= 16`) THEN
-  MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN
+  MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN
   POP_ASSUM_LIST(K ALL_TAC) THEN ARITH_TAC;;
 
 let WBN_FRONT_PREP_BUF_916_TAC =
@@ -15359,7 +15359,7 @@ let SUB_LIST_INT128_LIST_TO_BYTES_EL = prove
    lemma above closes the 16-byte slice back to EL j. *)
 let WBN_OUTPUT_POINTWISE = prove
  (`!nblk ibytes ctr0 rk out_p s.
-     1 <= nblk /\ 128 * nblk < 2 EXP 62 /\
+     1 <= nblk /\ 128 * nblk < 2 EXP 64 /\
      byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk)
                   out_p (word (16 * nblk)) s
      ==> !j. j < nblk
@@ -15381,7 +15381,7 @@ let WBN_OUTPUT_POINTWISE = prove
                 LENGTH_GCM_DEC_BLOCKS_FROM] THEN
     CONV_TAC SYM_CONV THEN
     MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-    MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN ARITH_TAC;
+    MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN ARITH_TAC;
     ALL_TAC] THEN
   X_GEN_TAC `j:num` THEN DISCH_TAC THEN
   MP_TAC(ISPECL [`16 * j`; `int128_list_to_bytes
@@ -15434,10 +15434,10 @@ let WBN_ENDBLOCK_IS_AES_CTR = prove
 (* (word_xor(word_xor cph aes13..)k14) collapses to                             *)
 (* byte_list_at(gcm_dec_pt_bytes(16*nblk)..) over the whole buffer.  The        *)
 (* symbolic-nblk analogue of prove_wb_wrapper's BYTE_LIST_AT_WHOLE_CTR leg.     *)
-(* 128*nblk < 2 EXP 62 (from the chain hyps) gives val(word(16*nblk))=16*nblk.  *)
+(* 128*nblk < 2 EXP 64 (from the chain hyps) gives val(word(16*nblk))=16*nblk.  *)
 let WBN_END_OUTPUT_BYTE_LIST = prove
  (`!nblk ibytes ctr0 k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14 out_p s.
-     1 <= nblk /\ 128 * nblk < 2 EXP 62 /\
+     1 <= nblk /\ 128 * nblk < 2 EXP 64 /\
      (!j. j < nblk
           ==> read (memory :> bytes128 (word_add out_p (word (16 * j)))) s =
               word_xor
@@ -15580,7 +15580,7 @@ let CTR0_AS_CTR_BLOCK = prove
 (* hyps flatten from the DISPATCH ALLPAIRS/PAIRWISE/ALL form.                    *)
 (*                                                                             *)
 (* The unified statement is the DISPATCH statement with the `nblk<=8` bound      *)
-(* DROPPED (just 1<=nblk) and the two size bounds 128*nblk<2 EXP 62 /            *)
+(* DROPPED (just 1<=nblk) and the two size bounds 128*nblk<2 EXP 64 /            *)
 (* val in_p+16*nblk<2 EXP 63 ADDED to the antecedent (genuine preconditions the  *)
 (* Phase-8 wrapper/guard supplies -- for nblk<=8 they follow from small nblk;    *)
 (* for symbolic large nblk they must be assumed to avoid pointer/length          *)
@@ -15590,7 +15590,7 @@ let CTR0_AS_CTR_BLOCK = prove
 (* The statement is spelled out literally (XTS style) so the
    reader sees the full pre/post/frame contract first.  It is the DISPATCH
    ensures-body verbatim, with the `nblk<=8` bound replaced by `1<=nblk` plus the
-   two size bounds the Phase-8 wrapper/guard supplies (128*nblk<2 EXP 62 and
+   two size bounds the Phase-8 wrapper/guard supplies (128*nblk<2 EXP 64 and
    val in_p+16*nblk<2 EXP 63 -- for nblk<=8 they follow from small nblk; for
    symbolic large nblk they rule out pointer/length overflow).  This spine keeps
    H free and the output as the whole-buffer byte list; the exported _CORRECT
@@ -15603,7 +15603,7 @@ let WBN_DEC_CORE_BYTELIST = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk ibytes rk H
     tag0 ctr0.
     1 <= nblk /\
-    128 * nblk < 2 EXP 62 /\
+    128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     LENGTH ibytes = 16 * nblk /\
     LENGTH rk = 15 /\
@@ -15728,7 +15728,7 @@ let WBN_DEC_CORE_BYTELIST = prove
 (*    stp ...,[sp,#-80]!);                                                      *)
 (*  - WB_CORE_INST_UF2 unfolds the folded input mem predicates (byte_list_at /  *)
 (*    wordlist_from_memory / htable_mem_8) AND concretizes val(word(16*nblk)) = *)
-(*    16*nblk (from 128*nblk<2 EXP 62) so ARM_STEPS carries the quantified      *)
+(*    16*nblk (from 128*nblk<2 EXP 64) so ARM_STEPS carries the quantified      *)
 (*    input byte read past the disjoint stack stores (else it drops it);        *)
 (*  - WB_GUARD_FALLTHROUGH_TAC injects the guard fall-through facts             *)
 (*    (val(word(128*nblk))=128*nblk; ~(128*nblk=0); val(word_and .. 127)=0) so  *)
@@ -15742,7 +15742,7 @@ let WBN_DEC_CORE_BYTELIST = prove
 let WBN_DEC_SUBROUTINE_BYTELIST = prove
    (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk ibytes rk H
       tag0 ctr0 returnaddress.
-      128 * nblk < 2 EXP 62 /\
+      128 * nblk < 2 EXP 64 /\
       val in_p + 16 * nblk < 2 EXP 63 /\
       LENGTH ibytes = 16 * nblk /\
       LENGTH rk = 15 /\
@@ -15789,9 +15789,9 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
            `key_p:int64`; `htbl_p:int64`; `nblk:num`; `ibytes:byte list`;
            `rk:int128 list`; `H:int128`; `tag0:int128`; `ctr0:int128`]
           WBN_DEC_CORE_BYTELIST in
-  (* val(word(16*nblk))=16*nblk from 128*nblk<2 EXP 62 (so 16*nblk<2 EXP 64) *)
+  (* val(word(16*nblk))=16*nblk from 128*nblk<2 EXP 64 (so 16*nblk<2 EXP 64) *)
   let VAL16EQ = prove
-   (`128 * nblk < 2 EXP 62 ==> val (word (16 * nblk):int64) = 16 * nblk`,
+   (`128 * nblk < 2 EXP 64 ==> val (word (16 * nblk):int64) = 16 * nblk`,
     DISCH_TAC THEN MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
     ASM_ARITH_TAC) in
   (* unfold folded input mem preds + concretize the byte bound in the core *)
@@ -15877,7 +15877,7 @@ let WBN_DEC_SUBROUTINE_BYTELIST = prove
 (* ------------------------------------------------------------------------- *)
 let WBN_OUTPUT_POINTWISE_NONCE = prove
  (`!nblk ibytes ctr0 rk out_p s nonce c.
-     1 <= nblk /\ 128 * nblk < 2 EXP 62 /\
+     1 <= nblk /\ 128 * nblk < 2 EXP 64 /\
      word_bytereverse ctr0 = ctr_block nonce c /\
      byte_list_at (gcm_dec_pt_bytes (16 * nblk) ibytes ctr0 rk)
                   out_p (word (16 * nblk)) s
@@ -15929,7 +15929,7 @@ let LIST_OF_SEQ_EQ_PTWISE = prove
 (* per-block reads -> byte_list_at.                                             *)
 let WBN_INPUT_ASSEMBLE = prove
  (`!inblock nblk in_p s.
-     128 * nblk < 2 EXP 62 /\
+     128 * nblk < 2 EXP 64 /\
      (!j. j < nblk
           ==> read (memory :> bytes128 (word_add in_p (word (16 * j)))) s =
               inblock j)
@@ -15939,7 +15939,7 @@ let WBN_INPUT_ASSEMBLE = prove
   REWRITE_TAC[byte_list_at] THEN
   SUBGOAL_THEN `val (word (16 * nblk):int64) = 16 * nblk` SUBST1_TAC THENL
    [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-    MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN ARITH_TAC; ALL_TAC] THEN
+    MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN ARITH_TAC; ALL_TAC] THEN
   X_GEN_TAC `i:num` THEN DISCH_TAC THEN
   SUBGOAL_THEN `i DIV 16 < nblk` ASSUME_TAC THENL
    [SUBGOAL_THEN `i < 16 * nblk` MP_TAC THENL [ASM_REWRITE_TAC[]; ALL_TAC] THEN
@@ -16255,7 +16255,7 @@ let Q19_NIST_ASSEMBLED = prove
 (* input buffer: the whole-buffer byte read = the per-block bytes128 reads.      *)
 let INPUT_FORALL_IFF = prove
  (`!inblock nblk in_p s.
-     128 * nblk < 2 EXP 62
+     128 * nblk < 2 EXP 64
      ==> (read (memory :> bytes (in_p,16 * nblk)) s =
             num_of_bytelist (int128_list_to_bytes (list_of_seq inblock nblk)) <=>
           (!j. j < nblk
@@ -16295,7 +16295,7 @@ let INPUT_FORALL_IFF = prove
     ASM_REWRITE_TAC[byte_list_at] THEN
     SUBGOAL_THEN `val (word (16 * nblk):int64) = 16 * nblk` SUBST1_TAC THENL
      [MATCH_MP_TAC VAL_WORD_EQ THEN REWRITE_TAC[DIMINDEX_64] THEN
-      MP_TAC(ASSUME `128 * nblk < 2 EXP 62`) THEN ARITH_TAC; ALL_TAC] THEN
+      MP_TAC(ASSUME `128 * nblk < 2 EXP 64`) THEN ARITH_TAC; ALL_TAC] THEN
     REWRITE_TAC[]]);;
 
 (* The two invariants coincide under the standard adapter hypotheses plus the   *)
@@ -16305,7 +16305,7 @@ let WBN_LOOP_INV_VOCAB = prove
  (`!pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer nblk ibytes xi h
      k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14
      nonce c inblock tag0 rk i s.
-     128 * nblk < 2 EXP 62 /\
+     128 * nblk < 2 EXP 64 /\
      8 * (i + 1) <= nblk /\
      word_bytereverse ctr0 = ctr_block nonce c /\
      xi = word_reversefields 8 tag0 /\
@@ -16370,7 +16370,7 @@ let WBN_INV_CORE_VOCAB = prove
  (`!pc ctr0 in_p out_p xi_p ivec_p key_p htbl_p stackpointer nblk ibytes xi h
      k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 k13 k14
      nonce c inblock tag0 rk i s.
-     128 * nblk < 2 EXP 62 /\
+     128 * nblk < 2 EXP 64 /\
      8 * (i + 1) <= nblk /\
      word_bytereverse ctr0 = ctr_block nonce c /\
      xi = word_reversefields 8 tag0 /\
@@ -16578,7 +16578,7 @@ let WBN_DEC_CORE_ENCRYPT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c.
     1 <= nblk /\
-    128 * nblk < 2 EXP 62 /\
+    128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
@@ -16697,7 +16697,7 @@ let WBN_DEC_CORE_ENCRYPT = prove
 let WBN_DEC_SUBROUTINE_ENCRYPT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c returnaddress.
-    128 * nblk < 2 EXP 62 /\
+    128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
@@ -16844,7 +16844,7 @@ let () =
     let dvars, dbody = strip_forall (concl AESV8_GCM_8X_DEC_256_DISPATCH) in
     let dhyps, dens = dest_imp dbody in
     let hyps0 = filter (fun c -> c <> `nblk <= 8`) (conjuncts dhyps) in
-    let hyps' = `1 <= nblk` :: `128 * nblk < 2 EXP 62` ::
+    let hyps' = `1 <= nblk` :: `128 * nblk < 2 EXP 64` ::
                 `val (in_p:int64) + 16 * nblk < 2 EXP 63` ::
                 (filter (fun c -> c <> `1 <= nblk`) hyps0) in
     list_mk_forall(dvars, mk_imp(list_mk_conj hyps', dens)) in
@@ -17075,7 +17075,7 @@ let WBN_DEC_CORE_FIPS197 = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c.
     1 <= nblk /\
-    128 * nblk < 2 EXP 62 /\
+    128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
@@ -17137,7 +17137,7 @@ let WBN_DEC_CORE_FIPS197 = prove
 let WBN_DEC_SUBROUTINE_FIPS197 = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c returnaddress.
-    128 * nblk < 2 EXP 62 /\
+    128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
@@ -17320,7 +17320,7 @@ let AESV8_GCM_8X_DEC_256_CORRECT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c.
     1 <= nblk /\
-    128 * nblk < 2 EXP 62 /\
+    128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
@@ -17383,7 +17383,7 @@ let AESV8_GCM_8X_DEC_256_CORRECT = prove
 let WBN_DEC_VALID_CALL_CORRECT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c returnaddress.
-    128 * nblk < 2 EXP 62 /\
+    128 * nblk < 2 EXP 64 /\
     val in_p + 16 * nblk < 2 EXP 63 /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
@@ -17445,12 +17445,17 @@ let WBN_DEC_VALID_CALL_CORRECT = prove
    - invalid non-multiples of 128 process zero blocks and reject;
    - zero processes zero blocks and returns immediately;
    - valid nonzero lengths reduce to WBN_DEC_VALID_CALL_CORRECT.
+   The headline contract also enforces the NIST SP 800-38D per-invocation
+   plaintext/ciphertext limit: at most 2^39 - 256 bits, equivalently
+   2^32 - 2 complete AES blocks. The internal 2^64 hypotheses below are only
+   machine-arithmetic no-wrap bounds, retained to match the proof structure
+   used by the sibling AES-GCM kernels.
    Because all data-dependent clauses are indexed by gcm_dec_wb_blocks, the
    same functional postcondition describes all three paths. *)
 let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
  (`!pc stackpointer in_p bit_len out_p xi_p ivec_p key_p htbl_p inblock rk
     tag0 ctr0 nonce c returnaddress.
-    val bit_len < 2 EXP 62 /\
+    val bit_len <= 2 EXP 39 - 256 /\
     val in_p + 16 * gcm_dec_wb_blocks bit_len < 2 EXP 63 /\
     LENGTH rk = 15 /\
     aligned 16 stackpointer /\
@@ -17581,8 +17586,10 @@ let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
   SUBGOAL_THEN `val(bit_len:int64) = 128 * nblk` ASSUME_TAC THENL
    [EXPAND_TAC "nblk" THEN ASM_SIMP_TAC[GCM_DEC_WB_BLOCKS_VALID];
     ALL_TAC] THEN
-  SUBGOAL_THEN `128 * nblk < 2 EXP 62` ASSUME_TAC THENL
-   [ASM_ARITH_TAC;
+  SUBGOAL_THEN `128 * nblk < 2 EXP 64` ASSUME_TAC THENL
+   [SUBGOAL_THEN `2 EXP 39 - 256 < 2 EXP 64` MP_TAC THENL
+     [CONV_TAC NUM_REDUCE_CONV;
+      ASM_ARITH_TAC];
     ALL_TAC] THEN
   SUBGOAL_THEN `bit_len:int64 = word (128 * nblk)` SUBST_ALL_TAC THENL
    [FIRST_X_ASSUM(fun th ->
@@ -17596,7 +17603,7 @@ let AESV8_GCM_8X_DEC_256_SUBROUTINE_CORRECT = prove
 (* ------------------------------------------------------------------------- *)
 (* Soundness + spelling gate for the two EXPORTED contracts.                    *)
 (* AESV8_GCM_8X_DEC_256_CORRECT remains the valid-only core result, while the    *)
-(* exported SUBROUTINE_CORRECT is the arbitrary-bit_len three-path contract.     *)
+(* exported SUBROUTINE_CORRECT is the NIST-bounded bit_len three-path contract.  *)
 (* The valid subroutine helper is still derived from the internal FIPS-197 form. *)
 (* All three are over aes256_cipher + nist_ghash and are spelled entirely in     *)
 (* word_reversefields 8, so:                                                     *)
@@ -17651,7 +17658,7 @@ let () =
   else if List.length (axioms()) <> 3 then
     failwith "WB dec exported contracts: unexpected axiom count (new_axiom introduced?)"
   else Format.print_string
-    ("WB dec EXPORTED contracts: valid-only CORRECT + arbitrary-bit_len "^
+    ("WB dec EXPORTED contracts: valid-only CORRECT + NIST-bounded bit_len "^
      "SUBROUTINE_CORRECT (gcm_dec_wb_blocks; invalid/zero/valid paths; "^
      "aes256_cipher + nist_ghash; word_reversefields 8 spelling) "^
      "hyps=0, axioms=3\n");;
