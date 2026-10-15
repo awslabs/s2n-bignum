@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* WB AES-256-GCM decrypt main loop (nblk > 8): ENSURES_WHILE proof.          *)
 (*                                                                            *)
@@ -15618,8 +15623,8 @@ let WBN_DEC_CORE_BYTELIST = prove
               read PC s = word (pc + 32) /\
               read SP s = stackpointer /\
               C_ARGUMENTS
-              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
-              s /\
+                [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+                s /\
               byte_list_at ibytes in_p (word (16 * nblk)) s /\
               read (memory :> bytes128 xi_p) s = word_reversefields 8 tag0 /\
               read (memory :> bytes128 ivec_p) s = ctr0 /\
@@ -16714,8 +16719,8 @@ let WBN_DEC_SUBROUTINE_ENCRYPT = prove
               read SP s = stackpointer /\
               read X30 s = returnaddress /\
               C_ARGUMENTS
-              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
-              s /\
+                [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+                s /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add in_p (word (16 * j)))) s = inblock j) /\
@@ -17090,8 +17095,8 @@ let WBN_DEC_CORE_FIPS197 = prove
               read PC s = word (pc + 32) /\
               read SP s = stackpointer /\
               C_ARGUMENTS
-              [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
-              s /\
+                [in_p; word (128 * nblk); out_p; xi_p; ivec_p; key_p; htbl_p]
+                s /\
               (!j. j < nblk
                    ==> read (memory :> bytes128
                               (word_add in_p (word (16 * j)))) s = inblock j) /\
@@ -17309,13 +17314,19 @@ let GCM_DEC_WB_BLOCKS_VALID = prove
     (CONJUNCT2 DIVISION_SIMP)) THEN
   ASM_ARITH_TAC);;
 
-(* THE EXPORTED CORE CONTRACT.  Derived from the internal FIPS-197 core lemma by    *)
-(* (1) rewriting the GHASH block list into John's gcm_dec_nist_input spelling, and  *)
-(* (2) rewriting the two residual word_bytereverse occurrences (the ivec write-back *)
-(* and the ctr0 nonce hypothesis) into word_reversefields 8 via BREV_RF8_128, so    *)
-(* the exported statement is spelled ENTIRELY in word_reversefields 8 (the form     *)
-(* aesv8_gcm_8x_enc_256_wb and aes_gcm_dec_kernel_x4 use).  The 17k-line kernel is   *)
-(* not re-run; this is a pure vocabulary lift.                                       *)
+(* THE EXPORTED CORE CONTRACT. Derived from the internal FIPS-197 core lemma  *)
+(* by rewriting the GHASH block list into John's gcm_dec_nist_input spelling *)
+(* and the residual word_bytereverse occurrences into word_reversefields 8.  *)
+(*                                                                           *)
+(* Each element of `rk` is the 128-bit word read directly from little-endian *)
+(* ARM memory. FIPS-197's aes256_cipher uses the opposite byte convention,   *)
+(* so every round key is converted by MAP (word_reversefields 8), while the  *)
+(* outer word_reversefields converts the cipher result back to the ARM view. *)
+(* This is exactly the relation proved by AES256_ENCRYPT_*_AS_CIPHER.        *)
+(*                                                                           *)
+(* The SIMD frame deliberately contains Q0 through Q31: the machine code     *)
+(* writes every one of the 32 architectural vector registers.                *)
+(* The 17k-line kernel is not re-run; this is a pure vocabulary lift.        *)
 let AESV8_GCM_8X_DEC_256_CORRECT = prove
  (`!pc stackpointer in_p out_p xi_p ivec_p key_p htbl_p nblk inblock rk
     tag0 ctr0 nonce c.
@@ -17367,7 +17378,8 @@ let AESV8_GCM_8X_DEC_256_CORRECT = prove
               word_reversefields 8 (ctr_block nonce (c + nblk)))
          (MAYCHANGE_REGS_AND_FLAGS_PERMITTED_BY_ABI ,,
           MAYCHANGE
-          [memory :> bytes (out_p,16 * nblk); memory :> bytes (xi_p,16);
+          [memory :> bytes (out_p,16 * nblk);
+           memory :> bytes (xi_p,16);
            memory :> bytes (ivec_p,16);
            memory :> bytes (word_add stackpointer (word 64),16)] ,,
           MAYCHANGE
