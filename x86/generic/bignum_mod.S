@@ -282,7 +282,9 @@ Lbignum_mod_findertail:
 
 Lbignum_mod_loop:
 
-// i -= BLOCKSIZE;  c = bitfield(n,x,i,BLOCKSIZE) via two-word funnel
+// i -= BLOCKSIZE;  c = bitfield(n,x,i,BLOCKSIZE) via two-word funnel.
+// The upper word index is clamped to n - 1 so as not to read past x;
+// when that happens its bits are not part of the field anyway.
 
         sub     i, BLOCKSIZE
 
@@ -292,7 +294,10 @@ Lbignum_mod_loop:
         mov     rcx, i
         and     rcx, 63                  // shift s = i & 63
         mov     r10, [rdi+8*rax]         // lo = x[off]
-        mov     r11, [rdi+8*rax+8]       // hi = x[off+1]
+        lea     rdx, [rax+1]
+        cmp     rdx, nn
+        cmovnc  rdx, rax                 // min(off+1,n-1), as off < n
+        mov     r11, [rdi+8*rdx]         // hi = x[min(off+1,n-1)]
         shrd    r10, r11, cl             // (lo>>s)|(hi<<(64-s)); s=0 -> lo
         mov     r11, r10                 // c = block (top garbage masked on use)
 
