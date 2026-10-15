@@ -246,14 +246,18 @@ Lbignum_mod_loop:
 
 // i -= BLOCKSIZE;
 // c = bitfield(n,x,i,BLOCKSIZE);
-// We don't bother masking c since that happens anyway when it's used
+// We don't bother masking c since that happens anyway when it's used.
+// The upper word index is clamped to n - 1 so as not to read past x;
+// when that happens its bits are not part of the field anyway.
 
         sub     i, i, #BLOCKSIZE
 
         lsr     t2, i, #6
-        lsl     t2, t2, #3
-        add     t2, x, t2
-        ldp     t0, t1, [t2]
+        ldr     t0, [x, t2, lsl #3]
+        add     t3, t2, #1
+        cmp     t3, n
+        csel    t3, t3, t2, cc
+        ldr     t1, [x, t3, lsl #3]
 
         and     t2, i, #63
         neg     t3, t2
