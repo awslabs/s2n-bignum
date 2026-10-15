@@ -554,11 +554,13 @@ tutorial/safety.native: tutorial/safety.ml proofs/bignum_mux_4.ml \
                         curve25519/bignum_mod_n25519.o ; \
   ../tools/build-proof.sh "$<" "$(HOLLIGHT)" "$@"
 
-# The four software-pipelined AES-GCM proofs share arm/proofs/aes_gcm_utils.ml.
-aes_gcm/aes128_gcm_dec.native: proofs/aes_gcm_utils.ml
-aes_gcm/aes128_gcm_enc.native: proofs/aes_gcm_utils.ml
-aes_gcm/aes256_gcm_dec.native: proofs/aes_gcm_utils.ml
-aes_gcm/aes256_gcm_enc.native: proofs/aes_gcm_utils.ml
+# The four software-pipelined AES-GCM proofs share the specification and
+# lemmas in arm/proofs/utils/aes_gcm_{spec,common}.ml.
+AES_GCM_PROOF_UTILS = proofs/utils/aes_gcm_spec.ml proofs/utils/aes_gcm_common.ml
+aes_gcm/aes128_gcm_dec.native: $(AES_GCM_PROOF_UTILS)
+aes_gcm/aes128_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
+aes_gcm/aes256_gcm_dec.native: $(AES_GCM_PROOF_UTILS)
+aes_gcm/aes256_gcm_enc.native: $(AES_GCM_PROOF_UTILS)
 
 # aes_encrypt_decrypt tutorial concatenates proofs for both aes_encrypt.S and aes_decrypt.S
 tutorial/aes_encrypt_decrypt.native: tutorial/aes_encrypt_decrypt.ml \

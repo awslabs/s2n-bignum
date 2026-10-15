@@ -1109,18 +1109,18 @@ let arm_DUP_GEN = define
             else word_duplicate (word_zx n:8 word) in
           (Rd := word_zx d:(128)word) s`;;
 
-(*** DUP (element): broadcast a single esize-bit lane (index idx) of Vn        ***)
-(*** across the destination.  esize is the element size; idx is the source     ***)
-(*** lane index.  datasize is 64 or 128.                                       ***)
-(*** DUP (element), scalar form (e.g. mov Dd, Vn.d[index]): extracts the
- *** index-th esize-bit element of Rn and writes it, zero-extended, to the
- *** 128-bit SIMD destination.  Distinct from the vector arm_DUP_ELEM.      ***)
+(*** DUP (element), scalar form (e.g. mov Dd, Vn.d[index]): extract the     ***)
+(*** index-th esize-bit element of Rn and write it, zero-extended, to the      ***)
+(*** 128-bit SIMD destination.  Distinct from the vector arm_DUP_ELEM.        ***)
 let arm_DUP_ELEM_SCALAR = define
  `arm_DUP_ELEM_SCALAR Rd Rn idx esize =
     \s. let n:(128)word = read Rn (s:armstate) in
         let e:(64)word = word_subword n (idx * esize, esize) in
         (Rd := word_zx e:(128)word) s`;;
 
+(*** DUP (element): broadcast a single esize-bit lane (index idx) of Vn        ***)
+(*** across the destination.  esize is the element size; idx is the source     ***)
+(*** lane index.  datasize is 64 or 128.                                       ***)
 let arm_DUP_ELEM = define
  `arm_DUP_ELEM Rd Rn idx esize datasize =
     \s. let n:(128)word = read Rn (s:armstate) in
