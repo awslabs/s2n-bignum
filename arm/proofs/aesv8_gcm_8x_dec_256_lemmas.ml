@@ -4,25 +4,19 @@
  *)
 
 (* ========================================================================= *)
-(* Shared BINARY-INDEPENDENT proof machinery for the AES-GCM decrypt proofs. *)
+(* Binary-independent proof machinery for the AES-GCM 8x decrypt proof      *)
+(* (arm/proofs/aesv8_gcm_8x_dec_256_wb.ml), which loads this file.           *)
 (*                                                                            *)
-(* Used by BOTH decrypt binaries:                                             *)
-(*   - aesv8_gcm_8x_dec_256.o    (masked band chain: core -> le1..le8block)   *)
-(*   - aesv8_gcm_8x_dec_256_wb.o (whole-blocks variant: wb)                   *)
-(* so that each proof chain loads ONLY its own binary.                        *)
-(*                                                                            *)
-(* Contents (formerly the tail of aesv8_gcm_8x_dec_256_core.ml; provenance    *)
-(* notes retained in place):                                                  *)
+(* Contents:                                                                  *)
 (*   - the GHASH/Karatsuba bridge lemma layer (KARATSUBA_LIMBS,               *)
 (*     GHASH_1BLOCK_CORRECT, GMULT_REDUCE_PROP3, GMULT_FULL_CORRECT_BA, ...); *)
 (*   - the SIMD-fold stepping layer (GCM_SIMD_SIMPLIFY_TAC, the per-step-     *)
 (*     discard steppers, ARM_VSTEPS_FOLD_TAC, ...);                           *)
 (*   - the bridge-close helpers (PMUL_CONG_128, ABBREV_INNER_PMULS_TAC,       *)
-(*     QQ0SPLIT, JOINMID, FINISH_WV_REDUCE_TAC, ...);                         *)
+(*     QQ0SPLIT, JOINMID, ...);                                               *)
 (*   - the N-block bridge infra (JOIN_EQ_SPLIT, SUBW_* lane lemmas,           *)
-(*     MERGE_2BLK_TAC, mk_discard2, GMULT2_FULL_CORRECT_BA,                   *)
-(*     DEC_2BLK_GMULT2_BRIDGE_TAC, LANE_CLOSE_TAC).                           *)
-(* No machine code is defined here.  No CHEAT_TAC, no new axioms.             *)
+(*     MERGE_2BLK_TAC, GMULT2_FULL_CORRECT_BA, LANE_CLOSE_TAC).               *)
+(* No machine code is defined here, and no axioms.                           *)
 (* ========================================================================= *)
 
 needs "arm/proofs/base.ml";;
@@ -42,11 +36,7 @@ needs "arm/proofs/utils/aes_ctr_spec.ml";;
 (* Nothing below this banner (until the DECRYPT-SPECIFIC section at the end)  *)
 (* is decrypt-specific: it is word/SIMD algebra, the GHASH/Karatsuba bridge   *)
 (* layer, exec-parameterized steppers, and N-block byteform merge/close       *)
-(* tactics equally valid for the ENCRYPT binaries.  The enc proof files       *)
-(* (aesv8_gcm_8x_enc_256_*.ml) currently carry their own private copies of    *)
-(* much of this (REV64_*, KARATSUBA_LIMBS, GCM_SIMD_SIMPLIFY_TAC, QQ0SPLIT,   *)
-(* MERGE_2BLK_TAC, ...); pointing them here and deleting the copies is a      *)
-(* planned cleanup (needs enc re-verification).                               *)
+(* tactics equally valid for the ENCRYPT binaries.                            *)
 (* ========================================================================= *)
 
 (* ------------------------------------------------------------------------- *)
@@ -95,33 +85,26 @@ let WORD_SWAP_HALVES_INVOLUTION = prove(
       (64,128):(128)word = a`,
   CONV_TAC WORD_BLAST);;
 
-(* ins->ext runtime opt (2026-08-11): the GHASH-tail Karatsuba mids now use
+(* ins->ext: the GHASH-tail Karatsuba mids use
    `ext vD.16b,vN.16b,vN.16b,#8` in place of `ins vD.d[0],vN.d[1]` (a false-dep
    break; both consumed lane-0-only, values identical).  The stepper models
    `ext vD,vN,vN,#8` on a 128-bit register as
    `word_subword (word_join vN vN:256 word) (64,128):128 word` (a rot-by-64).
    Every one of the 9 sites consumes ONLY lane 0 downstream (via `eor .8b` or
    `pmull .1d`), i.e. the projection `word_subword (<ext form>) (0,64)`, which
-   is exactly the plain lane `word_subword vN (64,64)` the old `ins` form gave.
-   Collapsing this COMPOSED projection (NOT the standalone register — that would
+   is exactly the plain lane `word_subword vN (64,64)` that AWS-LC's `ins` gives.
+   Collapsing this COMPOSED projection (NOT the standalone register -- that would
    false-fire on the byteswap/REV64 machinery, which uses the same
-   word_subword(word_join a a)(64,128) shape) restores the pre-opt syntactic
-   form, so ABBREV_INNER_PMULS's setify qq-numbering and every downstream tail
-   bridge match unchanged.  This is the same identity as SJ_COLLAPSE
-   (mainloop.ml), lifted here so the per-step normalizer below can fire it. *)
+   word_subword(word_join a a)(64,128) shape) restores the syntactic form of
+   the `ins` lane, so ABBREV_INNER_PMULS's setify qq-numbering and every
+   downstream tail bridge match as with `ins`.  This is the same identity as
+   SJ_COLLAPSE in aesv8_gcm_8x_dec_256_wb.ml, stated here so the per-step
+   normalizer below can fire it. *)
 let EXT8_LANE0_IS_SUBWORD_HI = prove(
   `!(w:(128)word).
     word_subword (word_subword (word_join w w:(256)word) (64,128):(128)word) (0,64):(64)word =
     word_subword w (64,64)`,
   GEN_TAC THEN CONV_TAC WORD_BLAST);;
-
-(* The xi_p store value is the per-lane byte-reverse of the GHASH result R
-   (rev64 on each 64-bit lane); that equals word_bytereverse of the whole 128. *)
-let REV64_LANES_EQ = prove(
-  `!R:int128. word_join (word_reversefields 8 (word_subword R (0,64):(64)word))
-                        (word_reversefields 8 (word_subword R (64,64):(64)word)):(128)word =
-              word_bytereverse R`,
-  CONV_TAC WORD_BLAST);;
 
 (* Structural normalization lemmas for the GHASH bridge close (from the standalone
    gcm_gmult_v8 proof).  word_insert comes from the INS instr, nested word_subword
@@ -145,7 +128,7 @@ let WORD_SUBWORD_SUBWORD = prove(
 (* These prove the Karatsuba + Prop3 reduction the assembly computes equals   *)
 (* the spec-level polyval_dot / ghash_polyval_acc, so the symbolic Q19 result *)
 (* at the xi_p store can be bridged to the postcondition.  All are BITBLAST / *)
-(* WORD_RULE proofs (no CHEAT, no axioms).                                    *)
+(* WORD_RULE proofs.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
 let KARATSUBA_LIMBS = prove(
@@ -181,44 +164,9 @@ let BYTESWAP128_INVOLUTION = prove(
   `!x:int128. byteswap128(byteswap128 x) = x`,
   GEN_TAC THEN REWRITE_TAC[byteswap128] THEN BITBLAST_TAC);;
 
-let BYTEREVERSE128_XOR = prove(
-  `!x y:int128. word_bytereverse(word_xor x y) =
-                word_xor (word_bytereverse x) (word_bytereverse y)`,
-  REPEAT GEN_TAC THEN BITBLAST_TAC);;
-
 (* ------------------------------------------------------------------------- *)
-(* DEC bridge helper lemmas (proven interactively; TODO: move to common file).*)
-(* These collapse the dec 1-block GHASH data block at the s350 bridge state.  *)
-(*                                                                             *)
-(* The dec data block fed to the GHASH multiply reduces to the byteswap128-   *)
-(* WRAPPED form (unlike enc, which is unwrapped).  FULLBLK / FULLBLK2 prove    *)
-(* the block (tag-half XOR ciphertext-half, both byteswapped per the dec EXT   *)
-(* lane order) = byteswap128 (word_xor (brev xi) (brev cph)).  tagv abbrev =   *)
-(* word_subword (word_join xi xi) (64,128).                                    *)
+(* Decrypt GHASH bridge helper lemma.                                         *)
 (* ------------------------------------------------------------------------- *)
-let FULLBLK = prove(
-  `!xi cph:int128.
-     word_xor
-       (word_subword (word_join
-          (byteswap128 (word_bytereverse (word_subword (word_join xi xi:(256)word)(64,128):int128)))
-          (byteswap128 (word_bytereverse (word_subword (word_join xi xi:(256)word)(64,128):int128))):(256)word)(64,128):int128)
-       (byteswap128 (word_bytereverse cph))
-     = byteswap128 (word_xor (word_bytereverse xi) (word_bytereverse cph))`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[byteswap128] THEN CONV_TAC WORD_BLAST);;
-
-(* Same, stated over a free tagv with the half-swap hypothesis (matches the    *)
-(* live Q19 hyp where tagv is an abbreviation).                                *)
-let FULLBLK2 = prove(
-  `!xi cph tagv:int128.
-     word_subword (word_join (xi:int128) xi:(256)word) (64,128) = tagv
-     ==> word_xor
-           (word_subword (word_join
-              (byteswap128 (word_bytereverse tagv))
-              (byteswap128 (word_bytereverse tagv)):(256)word)(64,128):int128)
-           (byteswap128 (word_bytereverse cph))
-         = byteswap128 (word_xor (word_bytereverse xi) (word_bytereverse cph))`,
-  REPEAT GEN_TAC THEN DISCH_THEN(SUBST1_TAC o SYM) THEN
-  REWRITE_TAC[byteswap128] THEN CONV_TAC WORD_BLAST);;
 
 (* word_subword (word_insert x (0,64) y) (0,64) = word_subword y (0,64):        *)
 (* discards the leftover tag tree x in the Karatsuba cross-term of the dec      *)
@@ -228,40 +176,6 @@ let INSERT_SUBWORD_KILL = prove(
      word_subword ((word_insert x (0,64) y):(128)word) (0,64):(64)word
      = word_subword y (0,64)`,
   REPEAT GEN_TAC THEN CONV_TAC WORD_BLAST);;
-
-(* byteswap128 in this codebase is a pure 64-bit LANE SWAP (not a byte reverse):     *)
-(* subword(byteswap128 X)(0,64) = subword X (64,64) and (64,64) <- (0,64).            *)
-(* KEY to the dec bridge: the dec GHASH data operand is byteswap128-wrapped (FULLBLK).*)
-(* Rewriting with SUBWORD_BYTESWAP BEFORE GMULT expansion turns the byteswapped       *)
-(* product subwords into clean swapped-lane subwords, so ABBREV_INNER_PMULS yields     *)
-(* the clean enc-shape qq0/qq1/qq2 (lo/hi/mid) instead of 6 unmergeable products.      *)
-let SUBWORD_BYTESWAP = prove(
-  `!X:int128.
-     word_subword (byteswap128 X) (0,64):(64)word = word_subword X (64,64) /\
-     word_subword (byteswap128 X) (64,64):(64)word = word_subword X (0,64)`,
-  GEN_TAC THEN REWRITE_TAC[byteswap128] THEN CONJ_TAC THEN CONV_TAC WORD_BLAST);;
-
-(* TODO: move to common file. Lane-split + per-shift folds used by the dec GHASH *)
-(* bridge close to reduce the W-reduction to pure 64-bit identities.             *)
-(* int128 equality via its two 64-bit subwords.                                  *)
-let EQ_BY_SUBWORDS_128 = prove(
-  `!a b:int128.
-     a = b <=>
-     (word_subword a (0,64):(64)word = word_subword b (0,64) /\
-      word_subword a (64,64):(64)word = word_subword b (64,64))`,
-  REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC[] THEN CONV_TAC WORD_BLAST);;
-
-(* The shl63/62/57 W-reduction triple's subwords as clean 64-bit ops.            *)
-let TRIPLE_LO = prove(
-  `!v:(64)word.
-     word_subword (word_xor (word_xor (word_shl (word_zx v:(128)word) 63) (word_shl (word_zx v:(128)word) 62)) (word_shl (word_zx v:(128)word) 57)) (0,64):(64)word
-     = word_xor (word_xor (word_shl v 63) (word_shl v 62)) (word_shl v 57)`,
-  GEN_TAC THEN CONV_TAC WORD_BLAST);;
-let TRIPLE_HI = prove(
-  `!v:(64)word.
-     word_subword (word_xor (word_xor (word_shl (word_zx v:(128)word) 63) (word_shl (word_zx v:(128)word) 62)) (word_shl (word_zx v:(128)word) 57)) (64,64):(64)word
-     = word_xor (word_xor (word_ushr v 1) (word_ushr v 2)) (word_ushr v 7)`,
-  GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
 (* ------------------------------------------------------------------------- *)
 (* Scalable (a)+(b) decomposition of the GHASH multiply+reduce bridge.         *)
@@ -275,7 +189,6 @@ let TRIPLE_HI = prove(
 (*       (lo/hi/mid) byteform = word_pmul a b (the 256-bit product).            *)
 (*   (b) GMULT_REDUCE_PROP3 (below): the assembly's W-reduction byteform over   *)
 (*       an ABSTRACT 256-bit accumulator t = polyval_reduce_prop3 t.            *)
-(* See memory/project_bridge_lemma_scalability.md for the full analysis.       *)
 (* ------------------------------------------------------------------------- *)
 
 (* Helper: the low 64-bit lane of v0 = word_join aa bb XOR wa.  Used to make    *)
@@ -310,7 +223,7 @@ let GMULT_REDUCE_PROP3 = prove(
 
 (* The full GHASH multiply+reduce bridge: the byte-level Karatsuba/Prop3 the   *)
 (* assembly computes (left-hand side, in terms of 64-bit pmul limbs) equals    *)
-(* the spec-level polyval_dot.  Now derived from (a) PMUL_KARATSUBA + (b)       *)
+(* the spec-level polyval_dot.  Derived from (a) PMUL_KARATSUBA + (b)         *)
 (* GMULT_REDUCE_PROP3 + KARATSUBA_LIMBS (lanes of word_pmul a b = the limbs),   *)
 (* instead of a single monolithic BITBLAST.                                     *)
 let GMULT_FULL_CORRECT_BA = prove(
@@ -339,7 +252,7 @@ let GMULT_FULL_CORRECT_BA = prove(
      word_pmul a b = the Karatsuba 256-word assembly K  [(a) PMUL_KARATSUBA];
      polyval_reduce_prop3 K = the W-reduction byteform over K's lanes  [GSYM (b) GMULT_REDUCE_PROP3];
      K's lanes = the p_lo/cross/p_hi limbs  [KARATSUBA_LIMBS]; then the two byteforms are
-     identical up to pmul argument order  [WORD_PMUL_SYM].  Replaces the old monolithic BITBLAST. *)
+     identical up to pmul argument order  [WORD_PMUL_SYM]. *)
   REPEAT GEN_TAC THEN
   CONV_TAC(TOP_DEPTH_CONV let_CONV) THEN REWRITE_TAC[polyval_dot] THEN
   GEN_REWRITE_TAC (RAND_CONV o RAND_CONV)
@@ -358,20 +271,20 @@ let SIMD_SIMPLIFY_ASSUM_TAC =
 (* ------------------------------------------------------------------------- *)
 (* REV32 (vector) per-32-bit-lane reversefields bridge.                        *)
 (*                                                                             *)
-(* Upstream f4ff9971 (#406) defines arm_REV32_VEC via                          *)
+(* The ISA model (arm/proofs/instruction.ml) defines arm_REV32_VEC via        *)
 (*   usimd4 (word_reversefields esize) n,                                      *)
 (* so arm_REV32_VEC_ALT (= EXPAND_SIMD_RULE) leaves, per 32-bit lane,          *)
 (*   word_reversefields esize (word_subword n (32k,32)).                       *)
 (* WORD_SIMPLE_SUBWORD_CONV is a NO-OP on word_reversefields (it does not      *)
 (* reduce through it), so the wrapper stays stuck; a downstream positional     *)
 (* RAND_CONV then lands on a non-combination and raises "RAND_CONV: Not a      *)
-(* combination" (the cold-load-from-source failure at front step s265, the     *)
-(* 0x440 aese before the 0x444 b.ge).  The decoder only ever emits esize in    *)
+(* combination" (without the rewrites below, at front step s267, the          *)
+(* 0x448 aese before the 0x44c b.ge).  The decoder only ever emits esize in   *)
 (* {8,16} (decode.ml: esize = 8 << size, size in {0,1}; 2,3 -> UNDEFINED), so  *)
-(* these two per-lane rewrites — typed at :(32)word so they never touch the    *)
-(* REV64 64-bit-lane word_reversefields above — cover every REV32 the decoder  *)
-(* can produce and let the subword chain reduce fully to the same canonical    *)
-(* byte form the older local (staged word_join/word_subword) model gave.       *)
+(* these two per-lane rewrites -- typed at :(32)word so they never touch the   *)
+(* REV64 64-bit-lane word_reversefields above -- cover every REV32 the decoder *)
+(* can produce and let the subword chain reduce fully to the staged           *)
+(* word_join/word_subword byte form the downstream bridges expect.            *)
 (* ------------------------------------------------------------------------- *)
 let WORD_REVERSEFIELDS_8_32 = prove
  (`word_reversefields 8 (x:(32)word) =
@@ -411,18 +324,6 @@ let GCM_SIMD_SIMPLIFY_CORE_TAC =
 let GCM_SIMD_SIMPLIFY_TAC =
   GCM_SIMD_SIMPLIFY_CORE_TAC THEN GCM_SIMD_SIMPLIFY_CORE_TAC;;
 
-(* Discard large counter-increment register hypotheses *)
-let DISCARD_COUNTER_REGS_TAC =
-  DISCARD_ASSUMPTIONS_TAC(fun th ->
-    let s = string_of_term (concl th) in
-    String.length s > 500 &&
-    (let has sub = let slen = String.length s and sublen = String.length sub in
-      let rec check j = if j > slen - sublen then false
-        else if String.sub s j sublen = sub then true else check (j+1) in check 0 in
-     has "read Q1 " || has "read Q2 " || has "read Q3 " || has "read Q4 " ||
-     has "read Q5 " || has "read Q6 " || has "read Q7 " || has "read Q30 " ||
-     has "read Q16 " || has "read Q17 " || has "read Q18 " || has "read Q19 "));;
-
 (* Resolve conditional branches in PC hypotheses *)
 let RESOLVE_BRANCH_TAC =
   RULE_ASSUM_TAC(fun th ->
@@ -446,23 +347,6 @@ let RESOLVE_BRANCH_TAC =
 let ARM_STEPS_RESOLVE_TAC exec range =
   MAP_EVERY (fun n -> RESOLVE_BRANCH_TAC THEN ARM_STEPS_TAC exec [n]) (range);;
 
-(* Step with branch resolution + per-step SIMD REV64 folding.
-   Folds the byte-tree the instant each REV64/EXT step produces it, so the
-   final closure never sees a 145k-char term. *)
-let ARM_STEPS_RESOLVE_SIMD_TAC exec range =
-  MAP_EVERY (fun n ->
-    RESOLVE_BRANCH_TAC THEN ARM_STEPS_TAC exec [n] THEN GCM_SIMD_SIMPLIFY_TAC)
-    (range);;
-
-(* VSTEPS variant: keeps register hypotheses alive (needed to capture the
-   ciphertext/xi store read-backs) AND folds the REV64 byte-tree per step.
-   Used for the store windows where ARM_STEPS_TAC would discard the register
-   value the store read-back references. *)
-let ARM_VSTEPS_RESOLVE_SIMD_TAC exec range =
-  MAP_EVERY (fun n ->
-    RESOLVE_BRANCH_TAC THEN ARM_VSTEPS_TAC exec [n] THEN GCM_SIMD_SIMPLIFY_TAC)
-    (range);;
-
 (* Straight-line VSTEPS + per-step fold (no branch resolution).  Used for the
    GHASH multiply/reduce tail (steps 333-351), which has no branches.  Keeps the
    GHASH accumulators (Q17/Q18/Q19) and the xi_p store read-back alive while
@@ -479,50 +363,14 @@ let ARM_VSTEPS_FOLD_TAC exec range =
    Folding before discarding is essential: the fold collapses the ~49k-char byte-tree into the
    bounded GHASH accumulator term in Q19, which then survives the discard.  Discarding per step
    holds the hypothesis pile flat at ~77 (vs ~1357 if old states were kept), so each step is
-   cheap; measured region 333-348 ~8.8s (was ~90s with the original keep-everything ARM_VSTEPS_FOLD).
-   This is the XTS-style "step and simplify as we go" — bare ARM_STEPS_TAC already does the
+   cheap; measured region 333-348 ~8.8s (vs ~90s when every state is kept).
+   This is the XTS-style "step and simplify as we go" -- bare ARM_STEPS_TAC already does the
    step+discard; we only add the byte-tree fold that GHASH's REV64s require. *)
 let ARM_STEPS_FOLD_DISCARD_TAC exec snums =
   MAP_EVERY
     (fun s -> ARM_VERBOSE_STEP_TAC exec s THEN GCM_SIMD_SIMPLIFY_TAC THEN
               DISCARD_OLDSTATE_TAC s THEN CLARIFY_TAC)
     (statenames "s" snums);;
-
-(* Branch-resolving variant of ARM_STEPS_FOLD_DISCARD_TAC: resolve the conditional
-   branch in the PC hypothesis, step, fold the REV64 byte-tree, THEN discard the old
-   state so the hypothesis pile stays flat.  This is the per-step-discard form of
-   ARM_VSTEPS_RESOLVE_SIMD_TAC: use it for the multi-block masked-GHASH tail windows,
-   which have branches (b.gt cascade) but need NO intermediate-state readback — the
-   only readbacks (Q9 mask collapse, Q12 plaintext capture, store, GHASH accumulator)
-   land at the window ENDS, whose current state is preserved.  Keeping ARM_VSTEPS's
-   keep-everything form over a 16-19 step window makes each GCM_SIMD_SIMPLIFY pass scan
-   a linearly-growing pile (goal ballooned to ~677k chars, O(n^2) total); discarding
-   per step holds it flat (~10s vs ~140s per window, measured on the dec le4 tail). *)
-let ARM_STEPS_RESOLVE_SIMD_DISCARD_TAC exec snums =
-  MAP_EVERY
-    (fun s -> RESOLVE_BRANCH_TAC THEN ARM_VERBOSE_STEP_TAC exec s THEN
-              GCM_SIMD_SIMPLIFY_TAC THEN DISCARD_OLDSTATE_TAC s THEN CLARIFY_TAC)
-    (statenames "s" snums);;
-
-(* Tactic to abbreviate all word_pmul subterms in the goal *)
-let ABBREV_ALL_PMUL_TAC =
-  let is_pmul t =
-    try let (f,_) = dest_comb t in
-        let (g,_) = dest_comb f in
-        fst(dest_const g) = "word_pmul"
-    with _ -> false in
-  fun (asl,w) ->
-    let pmuls = find_terms is_pmul w in
-    let unique_pmuls = setify pmuls in
-    let all_frees = frees w @
-      List.concat (map (fun (_,th) -> frees(concl th)) asl) in
-    let n = ref 0 in
-    let tacs = List.map (fun t ->
-      incr n;
-      let v = variant all_frees (mk_var("pmul_"^string_of_int !n, type_of t)) in
-      ABBREV_TAC (mk_eq(v, t))
-    ) unique_pmuls in
-    (EVERY tacs) (asl,w);;
 
 (* Discard stale flag hypotheses but KEEP read PC (ENSURES_FINAL_STATE_TAC needs the
    final PC value to discharge the PC postcondition). *)
@@ -536,7 +384,7 @@ let DISCARD_COUNTER_ONLY_TAC =
     with _ -> false)));;
 
 (* ------------------------------------------------------------------------- *)
-(* GHASH s348 bridge close.  The assembly computes, in Q19 at s348, the       *)
+(* GHASH s341 bridge close.  The assembly computes, in Q19 at s341, the       *)
 (* Karatsuba+Prop3 GHASH over the block word_xor (brev xi)(brev ct) with KEY  *)
 (* byteswap128 h (the htable H is stored twisted; the real GHASH key is        *)
 (* byteswap128(read htbl_p)).  GMULT_FULL_CORRECT_BA with b := byteswap128 h   *)
@@ -604,71 +452,6 @@ let MERGE_PMUL_ATOMS_TAC : tactic = fun (asl,w) ->
         ORELSE chain rest in
   chain cand (asl,w);;
 
-(* Abbreviate the innermost Prop3 reduction pmul (word_pmul (word_subword _ (0,64)) W). *)
-let ABBREV_WA_TAC : tactic = fun (asl,w) ->
-  let is_wa t = try let (h,a)=strip_comb t in fst(dest_const h)="word_pmul" &&
-                    string_of_term(List.nth a 1)="word 13979173243358019584" &&
-                    (let (h2,_)=strip_comb(List.nth a 0) in fst(dest_const h2)="word_subword")
-                with _ -> false in
-  let was = setify(find_terms is_wa w) in
-  let inner = filter (fun t -> not(can (find_term (fun s -> s<>t && is_wa s)) t)) was in
-  (match inner with
-   | t::_ -> ABBREV_TAC (mk_eq(`wa_atom:int128`, t))
-   | [] -> ALL_TAC) (asl,w);;
-
-(* Final: if exactly two pmuls remain (the two wv reductions), prove them equal and blast. *)
-let FINISH_WV_TAC : tactic = fun (asl,w) ->
-  let is_pmul_app t = try let (h,a)=strip_comb t in
-        fst(dest_const h)="word_pmul" && length a=2 with _ -> false in
-  let pmuls = setify(find_terms is_pmul_app w) in
-  match pmuls with
-  | [p0;p1] ->
-     (SUBGOAL_THEN (mk_eq(p0,p1)) (fun th -> REWRITE_TAC[th]) THENL
-       [MATCH_MP_TAC PMUL_CONG_128 THEN CONJ_TAC THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-      CONV_TAC WORD_BLAST) (asl,w)
-  | _ -> CONV_TAC WORD_BLAST (asl,w);;
-
-(* Abbreviate the two 64-bit halves of every Karatsuba pmul output as fresh xNl/xNh vars
-   (label l=low subword(0,64), h=hi subword(64,64); N from the operand kind: l for
-   subword-at-0 product, h for subword-at-64, m for the (a xor b) mid product). *)
-let ABBREV_PMUL_HALVES_TAC : tactic = fun (asl,w) ->
-  let classify_pmul eqn =
-    try
-      let lhs, rhs = dest_eq eqn in
-      let pmul, _ = dest_comb lhs in
-      let pmul_fn, x_arg = dest_comb pmul in
-      if name_of pmul_fn <> "word_pmul" then None
-      else begin
-        match x_arg with
-        | Comb(Comb(Const("word_xor",_), _), _) -> Some ("m", rhs)
-        | Comb(Comb(Const("word_subword",_), _), pair) ->
-          (try
-             let k_term, _ = dest_pair pair in
-             let k = dest_small_numeral k_term in
-             if k = 0 then Some ("l", rhs)
-             else if k = 64 then Some ("h", rhs)
-             else None
-           with _ -> None)
-        | _ -> None
-      end
-    with _ -> None in
-  let pmul_vs = List.filter_map (fun (_, th) -> classify_pmul (concl th)) asl in
-  let all_frees =
-    frees w @ List.concat (map (fun (_,th) -> frees(concl th)) asl) in
-  let subword_const =
-    inst [`:128`, `:M`; `:64`, `:N`] `word_subword:(M)word->num#num->(N)word` in
-  let rec process all tasks (asl,w) =
-    match tasks with
-    | [] -> ALL_TAC (asl,w)
-    | (label, v_term) :: rest ->
-      let vname = "x" ^ label in
-      let vl_var = variant all (mk_var(vname ^ "l", `:(64)word`)) in
-      let vh_var = variant all (mk_var(vname ^ "h", `:(64)word`)) in
-      let el = mk_eq(vl_var, mk_comb(mk_comb(subword_const, v_term), `0,64`)) in
-      let eh = mk_eq(vh_var, mk_comb(mk_comb(subword_const, v_term), `64,64`)) in
-      (ABBREV_TAC el THEN ABBREV_TAC eh THEN process (vl_var::vh_var::all) rest) (asl,w) in
-  process all_frees pmul_vs (asl,w);;
-
 (* Half projection helpers for the lane-fold close. *)
 let JOINMID = prove(
   `!q:int128. word_subword (word_join q q :(256)word) (64,128):int128 =
@@ -678,69 +461,17 @@ let QQ0SPLIT = prove(
   `!q:int128. q = word_join (word_subword q (64,64):64 word) (word_subword q (0,64):64 word)`,
   GEN_TAC THEN CONV_TAC WORD_BLAST);;
 
-(* W-reduction lane-fold close: reduce the post-MERGE GHASH bridge goal to a
-   pure 64-bit XOR identity instead of one monolithic WORD_BLAST over `word_pmul _ W`.  Method:
-   PMUL_W_64_128 (pmul-by-W -> shl 63/62/57), JOINMID, split qq0/qq1/qq2 into named 64-bit halves
-   (QQ0SPLIT), fold the r1/u shift-triples to abbreviations, finish with a flat 64-bit blast.
-   NOTE: NOT used by the committed dec close — on the dec goal shape this tactic stack-overflows,
-   so the bridge below inlines the r1/u/r2 staging by hand.  Kept as reference for the
-   technique. *)
-let FINISH_WV_REDUCE_TAC : tactic =
-  REWRITE_TAC[PMUL_W_64_128] THEN
-  ABBREV_PMUL_HALVES_TAC THEN
-  REWRITE_TAC[JOINMID] THEN
-  SUBGOAL_THEN
-    `qq0:int128 = word_join (xlh:64 word) (xll:64 word) /\
-     qq1:int128 = word_join (xhh:64 word) (xhl:64 word) /\
-     qq2:int128 = word_join (xmh''':64 word) (xml''':64 word)`
-    (fun th -> REWRITE_TAC[CONJUNCT1 th] THEN
-               REWRITE_TAC[CONJUNCT1(CONJUNCT2 th)] THEN
-               REWRITE_TAC[CONJUNCT2(CONJUNCT2 th)]) THENL
-   [(* Each conjunct qqN = word_join (sub qqN 64,64) (sub qqN 0,64) by QQ0SPLIT, then the two
-       half hypotheses substitute the subwords.  Direct LAND rewrite + ASM_REWRITE is ~0.4s here;
-       the previous ASM_MESON_TAC[QQ0SPLIT] was ~48s (it searched instead of rewriting). *)
-    REPEAT CONJ_TAC THEN GEN_REWRITE_TAC LAND_CONV [QQ0SPLIT] THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-  REWRITE_TAC[WORD_SUBWORD_XOR] THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[JOIN_SUBWORD_RULES] THEN
-  ABBREV_TAC
-   `r1:(128)word = word_xor (word_xor (word_shl (word_zx (xhl:(64)word):(128)word) 63)
-                                      (word_shl (word_zx xhl:(128)word) 62))
-                            (word_shl (word_zx xhl:(128)word) 57)` THEN
-  SUBGOAL_THEN
-   `word_xor (word_xor (word_subword (word_shl (word_zx (xhl:(64)word):(128)word) 63) (0,64):(64)word)
-                       (word_subword (word_shl (word_zx xhl:(128)word) 62) (0,64):(64)word))
-             (word_subword (word_shl (word_zx xhl:(128)word) 57) (0,64):(64)word) =
-    word_subword (r1:(128)word) (0,64):(64)word`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "r1" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor (word_xor (word_subword (word_shl (word_zx (xhl:(64)word):(128)word) 63) (64,64):(64)word)
-                       (word_subword (word_shl (word_zx xhl:(128)word) 62) (64,64):(64)word))
-             (word_subword (word_shl (word_zx xhl:(128)word) 57) (64,64):(64)word) =
-    word_subword (r1:(128)word) (64,64):(64)word`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "r1" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  ABBREV_TAC `u:(64)word = word_xor (word_xor (xhh:64 word) (word_xor (word_xor (xml''':64 word) (xhl:64 word)) (xll:64 word))) (word_subword (r1:(128)word) (0,64))` THEN
-  SUBGOAL_THEN
-   `word_xor (word_xor (word_xor (word_xor (xml''':64 word) (xhl:64 word)) (xll:64 word)) (word_subword (r1:128 word) (0,64))) (xhh:64 word) = u`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "u" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  REWRITE_TAC[WORD_SUBWORD_XOR] THEN
-  REWRITE_TAC[JOIN_SUBWORD_RULES] THEN
-  SUBGOAL_THEN
-   `word_xor (word_xor (word_xor (word_xor (xml''':64 word) (xhl:64 word)) (xll:64 word)) (word_subword (r1:128 word) (0,64))) (xhh:64 word) = u`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "u" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  CONV_TAC WORD_BLAST;;
-
 (* ========================================================================= *)
-(* N-block GHASH bridge infrastructure (formerly aesv8_gcm_8x_dec_256_        *)
-(* 2block.ml), used by the le2..le8 bands.                                    *)
+(* N-block GHASH bridge infrastructure, used by the 2..8-block bands.       *)
 (*                                                                            *)
 (* All library needs are at the top of this file: gmult_nblock_lemmas.ml is   *)
-(* SELF-CONTAINED (it proves its own GMULT_REDUCE_PROP3/V0LO), so load order  *)
-(* no longer matters.  The V0LO/GMULT_REDUCE_PROP3 definitions earlier in     *)
+(* self-contained (it proves its own GMULT_REDUCE_PROP3/V0LO), so load order  *)
+(* does not matter.  The V0LO/GMULT_REDUCE_PROP3 definitions earlier in       *)
 (* this file harmlessly shadow the identical library ones.                    *)
 (* ========================================================================= *)
 (* ========================================================================= *)
-(* Helper lemmas for the 2-product GHASH bridge (copied verbatim from the      *)
-(* encrypt 2-block proof; they are byte-form-agnostic so transfer unchanged).  *)
+(* Helper lemmas for the 2-product GHASH bridge (byte-form-agnostic, so they  *)
+(* hold for either direction).                                                *)
 (* ========================================================================= *)
 
 (* word_join lane split: reduces a 128-bit word_join equality to two 64-bit   *)
@@ -835,7 +566,7 @@ let ABBREV_ALL_SUBWORDS_TAC : tactic = fun (asl,w) ->
   tac (asl,w);;
 
 (* Fast closer for a merge's operand-equality subgoal (flatten 256-bit Karatsuba *)
-(* lanes to 64-bit, abbreviate, WORD_BITWISE — <1s vs ~90s WORD_BLAST).           *)
+(* lanes to 64-bit, abbreviate, WORD_BITWISE -- <1s vs ~90s WORD_BLAST).          *)
 let FAST_OPERAND_TAC : tactic =
   REWRITE_TAC[SUBW_XOR_256; SUBW_ZX_256; SUBW_SHL64_256; SUBW_SHL128_256;
               SUBW_ZX128_256; SUBW_SHL64_128_256; SUBW_SHL128_128_256] THEN
@@ -891,52 +622,22 @@ let MERGE_ONE_2BLK_TAC : tactic = fun (asl,w) ->
 (* Repeat the single-merge to a fixpoint. *)
 let MERGE_2BLK_TAC : tactic = REPEAT MERGE_ONE_2BLK_TAC;;
 
-(* Discard helpers for the front (keep block-0/1 keystreams + GHASH tag). *)
-let mk_discard2 keepset =
-  DISCARD_ASSUMPTIONS_TAC(fun th ->
-    let s = string_of_term (concl th) in
-    String.length s > 500 &&
-    (let has sub = let sl=String.length s and bl=String.length sub in
-      let rec ck j = if j>sl-bl then false else if String.sub s j bl=sub then true else ck(j+1) in ck 0 in
-     List.exists (fun n -> has ("read Q"^string_of_int n^" ")) keepset));;
 
-
-
-(* The flatten-and-blast close for the 2-product reduction structural identity. *)
-let FINISH_2BLK_TAC : tactic =
-  REWRITE_TAC[SUBW_XOR_256; SUBW_ZX_256; SUBW_SHL64_256; SUBW_SHL128_256;
-              SUBW_ZX128_256; SUBW_SHL64_128_256; SUBW_SHL128_128_256] THEN
-  REWRITE_TAC[WORD_XOR_0; WORD_SUBWORD_SUBWORD] THEN
-  GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
-  REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
-  REWRITE_TAC[JOINMID] THEN
-  REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
-  ABBREV_ALL_SUBWORDS_TAC THEN
-  REWRITE_TAC[JOIN_EQ_SPLIT] THEN
-  REPEAT CONJ_TAC THEN WORD_BITWISE_TAC;;
 
 (* ========================================================================= *)
-(* GMULT2 fast-reduce bridge (the ~35s route, replacing the ~73s MERGE/FINISH *)
-(* reduce-blast).  GMULT2_FULL_CORRECT_BA is the scalable 2-block fused        *)
+(* GMULT2 fast-reduce bridge.  GMULT2_FULL_CORRECT_BA is the 2-block fused    *)
 (* multiply+reduce: the assembly's byteform that XOR-accumulates TWO Karatsuba *)
 (* triples then runs the shared W-reduction equals                            *)
 (*   polyval_reduce_prop3 (word_pmul a0 b0 XOR word_pmul a1 b1).               *)
-(* Built from PMUL_KARATSUBA + GMULT_REDUCE_PROP3 (W-reduction proven ONCE in  *)
-(* the dec 1-block file), so the reduction is NEVER re-blasted.  It is this    *)
-(* binary's analog of GHASH_NBLOCK_KARATSUBA_EQ_PROP3; the per-block           *)
-(* operand transpose (rev64/h <-> brev/byteswap128) is reconciled by MERGE_2BLK *)
-(* and the W-reduction *surface* arrangement is closed by the r1/u/r2 hand     *)
-(* staging in DEC_2BLK_GMULT2_BRIDGE_TAC (the dec 1-block W-staging generalized *)
-(* from 3 atoms to 6).                                                         *)
+(* Built from PMUL_KARATSUBA + GMULT_REDUCE_PROP3 (the W-reduction is proved  *)
+(* once), so the reduction is never re-blasted.  The per-block operand        *)
+(* transpose (rev64/h <-> brev/byteswap128) is reconciled by MERGE_2BLK_TAC.  *)
 (* ------------------------------------------------------------------------- *)
 
 (* GMULT2_FULL_CORRECT_BA: the 2-block fused multiply+reduce byteform =          *)
-(* polyval_reduce_prop3 (word_pmul a0 b0 XOR word_pmul a1 b1).  Built INSTANTLY  *)
-(* by the shared fast GMULTn builder (common/gmult_nblock_lemmas.ml); the build *)
-(* reproduces the old hand-written dec2_tL + PACK2_ID derivation's concl exactly. *)
-let PACK2_ID, GMULT2_FULL_CORRECT_BA = build_GMULTn_fast 2;;
-
-
+(* polyval_reduce_prop3 (word_pmul a0 b0 XOR word_pmul a1 b1), built by the     *)
+(* shared fast GMULTn builder (common/gmult_nblock_lemmas.ml).                  *)
+let _, GMULT2_FULL_CORRECT_BA = build_GMULTn_fast 2;;
 
 (* Targeted lane closer: fold ONLY the 64-bit lane-subword equations (rhs a    *)
 (* qqNl/qqNh var), NOT the pmul atom defs (which would re-expand qq atoms),     *)
@@ -956,147 +657,11 @@ let LANE_CLOSE_TAC : tactic = fun (asl,w) ->
 (* SECTION 2: DECRYPT-SPECIFIC LEMMAS AND TACTICS.                            *)
 (*                                                                            *)
 (* Everything below is keyed to the DECRYPT dataflow (GHASH input = the RAW   *)
-(* loaded ciphertext blocks cph_i; the masked less_than_1 path ANDs the       *)
-(* loaded block).  The encrypt analogues differ in which term feeds the       *)
+(* loaded ciphertext blocks cph_i, the last block included: no block is       *)
+(* masked).  The encrypt analogues differ in which term feeds the             *)
 (* GHASH multiply (computed ciphertext), so these do NOT transfer.            *)
 (* ========================================================================= *)
-
-(* Collapse the all-ones partial-block mask on the block-1 ciphertext: the dec
-   less_than_1 path applies `and v9,v9,v0` with an all-ones mask v0, so the GHASH
-   multiply (rev64 v8,v9) carries `word_and <mask> cph1` inside Q8/Q17/Q18/Q19.
-   For a full block the mask is all-ones (its 64-bit lanes are 0xff..ff, the
-   aes-junk base fully overwritten), so `word_and <mask> cph1 = cph1` by WORD_BLAST.
-   This tactic finds that masked term inside Q8 and rewrites it to cph1 everywhere,
-   so the bridge merge sees the clean `word_reversefields 8 cph1` block.  (Without
-   this the block-1 pmul atoms carry the masked form and the merge cannot pair them
-   with the spec's brev cph1 atoms.) *)
-let MASK_COLLAPSE_CPH1_TAC : tactic = fun (asl,w) ->
-  let q8 = tryfind (fun (_,th)-> if (try string_of_term(rand(rator(lhs(concl th))))="Q8" with _->false) then th else fail()) asl in
-  let mterm = hd (find_terms (fun t-> try fst(dest_const(rator(rator t)))="word_and" && rand t = `cph1:int128` with _->false) (rhs(concl q8))) in
-  let eqn = mk_eq(mterm, `cph1:int128`) in
-  (SUBGOAL_THEN eqn (fun th -> RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN ASSUME_TAC th)
-    THENL [CONV_TAC WORD_BLAST; ALL_TAC]) (asl,w);;
 
 (* XOR-commutativity helper for the wal lane (the two byteforms present the     *)
 (* wa-round lane sum in opposite operand order).                               *)
 let DEC2_WXSYM = WORD_RULE `word_xor qq6l qq1l = word_xor qq1l qq6l`;;
-
-(* The full GMULT2 bridge close.  Assumes the goal is
-     <gq19 s370 byteform> = ghash_polyval_acc (byteswap128 h)(brev xi)
-                              [brev cph0; brev cph1]
-   with the hk preconditions + the H^2 relation (asm25) in the assumptions.
-   Steps: (1) fold the spec RHS to the GMULT2-instantiated byteform (operands
-   a0=brev xi^brev cph0, b0=byteswap128 h2, a1=brev cph1, b1=byteswap128 h) via
-   GHASH_POLYVAL_ACC_2 + asm25 GSYM + GMULT2_FULL_CORRECT_BA; (2) MERGE_2BLK the
-   block products to the 6 atoms {qq0,qq1,qq4,qq5,qq6,qq10}; (3) the r1/u/r2
-   W-reduction hand staging (generalized from the dec 1-block, 3 atoms -> 6) then
-   a flat per-lane WORD_RULE.  ~30s total (was ~73s MERGE/FINISH). *)
-let DEC_2BLK_GMULT2_BRIDGE_TAC : tactic =
-  let a0t = `word_xor (word_bytereverse xi) (word_bytereverse cph0):int128`
-  and a1t = `word_bytereverse cph1:int128` in
-  let gmult2_dec = REWRITE_RULE[LET_DEF;LET_END_DEF]
-    (SPECL [a0t; `byteswap128 h2:int128`; a1t; `byteswap128 h:int128`] GMULT2_FULL_CORRECT_BA) in
-  let r1def = `word_xor (word_xor (word_shl (word_zx (wal:64 word):128 word) 63) (word_shl (word_zx wal:128 word) 62)) (word_shl (word_zx wal:128 word) 57)` in
-  let udef = `word_xor (word_subword (r1:128 word) (0,64):64 word) (word_xor (word_xor qq1h qq6h) (word_xor (word_xor qq0l (word_xor qq1l qq4l)) (word_xor qq5l (word_xor qq10l qq6l))))` in
-  (* spec -> prop3(...) -> GMULT2 byteform LHS *)
-  FIRST_ASSUM(fun th ->
-    if (try lhs(concl th)=`byteswap128 h2` with _->false)
-    then GEN_REWRITE_TAC RAND_CONV
-           [REWRITE_RULE[GSYM gmult2_dec]
-             (GEN_REWRITE_RULE (RAND_CONV o ONCE_DEPTH_CONV) [GSYM th]
-               (SPECL [`byteswap128 h:int128`; `word_bytereverse xi:int128`;
-                       `word_bytereverse cph0:int128`; `word_bytereverse cph1:int128`]
-                 GHASH_POLYVAL_ACC_2))]
-    else NO_TAC) THEN
-  REWRITE_TAC[WORD_XOR_0; WORD_XOR_0_LEFT] THEN
-  REWRITE_TAC[byteswap128] THEN
-  REWRITE_TAC[WORD_BYTEREVERSE_REVERSEFIELDS] THEN
-  REWRITE_TAC[WORD_INSERT_SUBWORD; WORD_SUBWORD_SUBWORD] THEN
-  REWRITE_TAC[SUBWORD_XOR_JOIN_DIST] THEN
-  REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; RF8_SUBWORD] THEN
-  REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES] THEN
-  ABBREV_INNER_PMULS_TAC THEN MERGE_2BLK_TAC THEN
-  REWRITE_TAC[PMUL_W_64_128] THEN REWRITE_TAC[JOINMID] THEN
-  REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
-  EVERY (map (fun a ->
-    let av = mk_var(a,`:int128`) in
-    ABBREV_TAC (mk_eq(mk_var(a^"l",`:64 word`), mk_comb(mk_comb(`word_subword:int128->num#num->64 word`, av), `(0,64)`))) THEN
-    ABBREV_TAC (mk_eq(mk_var(a^"h",`:64 word`), mk_comb(mk_comb(`word_subword:int128->num#num->64 word`, av), `(64,64)`))))
-    ["qq0";"qq1";"qq4";"qq5";"qq6";"qq10"]) THEN
-  ABBREV_TAC `wal:64 word = word_xor qq1l qq6l` THEN
-  REWRITE_TAC[DEC2_WXSYM] THEN
-  FIRST_ASSUM(fun th -> if (try rhs(concl th)=`wal:64 word` && lhs(concl th)=`word_xor qq1l qq6l:64 word` with _->false) then REWRITE_TAC[th] else NO_TAC) THEN
-  ABBREV_TAC (mk_eq(`r1:128 word`, r1def)) THEN
-  SUBGOAL_THEN
-   `word_xor (word_xor (word_subword (word_shl (word_zx (wal:64 word):128 word) 63) (0,64):64 word) (word_subword (word_shl (word_zx wal:128 word) 62) (0,64):64 word)) (word_subword (word_shl (word_zx wal:128 word) 57) (0,64):64 word) = word_subword (r1:128 word) (0,64):64 word`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "r1" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor (word_xor (word_subword (word_shl (word_zx (wal:64 word):128 word) 63) (64,64):64 word) (word_subword (word_shl (word_zx wal:128 word) 62) (64,64):64 word)) (word_subword (word_shl (word_zx wal:128 word) 57) (64,64):64 word) = word_subword (r1:128 word) (64,64):64 word`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "r1" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor (word_subword (word_shl (word_zx (wal:64 word):128 word) 57) (0,64):64 word) (word_xor (word_subword (word_shl (word_zx wal:128 word) 62) (0,64):64 word) (word_subword (word_shl (word_zx wal:128 word) 63) (0,64):64 word)) = word_subword (r1:128 word) (0,64):64 word`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "r1" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor (word_subword (word_shl (word_zx (wal:64 word):128 word) 57) (64,64):64 word) (word_xor (word_subword (word_shl (word_zx wal:128 word) 62) (64,64):64 word) (word_subword (word_shl (word_zx wal:128 word) 63) (64,64):64 word)) = word_subword (r1:128 word) (64,64):64 word`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "r1" THEN CONV_TAC WORD_BLAST; ALL_TAC] THEN
-  ABBREV_TAC (mk_eq(`u:64 word`, udef)) THEN
-  SUBGOAL_THEN
-   `word_xor (word_xor (word_xor qq10l qq4l) (word_xor wal (word_xor qq0l qq5l))) (word_xor (word_xor qq1h qq6h) (word_subword (r1:128 word) (0,64):64 word)) = u`
-   (fun th -> REWRITE_TAC[th]) THENL [MAP_EVERY EXPAND_TAC ["u";"wal"] THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `word_xor (word_subword (r1:128 word) (0,64):64 word) (word_xor (word_xor qq1h qq6h) (word_xor (word_xor qq0l (word_xor qq1l qq4l)) (word_xor qq5l (word_xor qq10l qq6l)))) = u`
-   (fun th -> REWRITE_TAC[th]) THENL [EXPAND_TAC "u" THEN CONV_TAC WORD_RULE; ALL_TAC] THEN
-  ABBREV_TAC `us57:128 word = word_shl (word_zx (u:64 word):128 word) 57` THEN
-  ABBREV_TAC `us62:128 word = word_shl (word_zx (u:64 word):128 word) 62` THEN
-  ABBREV_TAC `us63:128 word = word_shl (word_zx (u:64 word):128 word) 63` THEN
-  GEN_REWRITE_TAC ONCE_DEPTH_CONV [QQ0SPLIT] THEN
-  REWRITE_TAC[WORD_SUBWORD_SUBWORD; JOIN_SUBWORD_RULES; WORD_SUBWORD_XOR] THEN
-  REWRITE_TAC[JOIN_EQ_SPLIT] THEN CONJ_TAC THEN LANE_CLOSE_TAC;;
-(* -------------------------------------------------------------------------
-   PROGRESS (dec 2-block, mirror of enc 2-block + dec tail dataflow)
-   -------------------------------------------------------------------------
-   HYBRID: dec binary (dec mc/EXEC, dec step->PC map, dec tail dataflow where
-   Q9 = input ciphertext is GHASHed and Q12 = plaintext is stored) + the enc
-   2-block STRATEGY (keep Q1/ctr1, cascade to more_than_1 then less_than_1,
-   GHASH_POLYVAL_ACC_2 bridge).
-
-   STEP->PC MAP DISCOVERED (dec binary, this proof):
-     1--5   prologue 0x18..0x28; s5 pc+0x2c, X9=32, X1=256.
-     6--30  CTR setup (per-step fold, keep Q0,Q1,Q30); s30 pc+0x90.
-     31--84 AES bulk; s84 pc+360.  85--173; s173 pc+716, X5=word 0.
-     174--177 GHASH tag load+rev64 + GCM_SIMD_SIMPLIFY -> Q19 stable
-              reversefields(xi) form.  178--184; 185--254; s254 pc+1040.
-     [255] cmp x0,x5/b.ge -> tail (INT_SUB_REFL).  256--265; s265 pc+3788.
-       set X5=word 32 (WORD_RULE).  Q9 s265 = cph0; Q16 = partial tag.
-     266--272 tail+eor3 v12,v9,v0,v29 -> s272 pc+3816 Q12 = block-0 plaintext.
-       Abbrev Q12 -> pt0 = word_xor cph0 (aes256_encrypt ctr0 keys) (spec form).
-     273--312 cascade movs (DISCARD_OLDSTATE at s312 to flatten pile!).
-       *** Use ARM_VSTEPS_FOLD then DISCARD_OLDSTATE; do NOT keep all states
-       (the mov v_k cascade copies Q1's 2666-char keystream into Q2..Q7 across
-       40 states = pile blow-up).
-     [313] RESOLVE_BRANCH (x5=32>16, b.gt) -> s313 pc+4340 = 0x10f4 = more_than_1.
-       Q7 = block-1 keystream; Q9 = cph0; Q12 = pt0; Q17/18/19 = 0.
-
-   NEXT (more_than_1 0x10f4..0x1134, dec block-0 GHASH vs H^2):
-     - st1 v12,[x2],#16 stores pt0 to out_p, advances X2 to out_p+16.
-       *** capture out_p block-0 readback = pt0 BEFORE discard.
-     - rev64 v8,v9 (v9=cph0 ATOM, so no tower blow-up unlike enc's ct0);
-       eor v8,v8,v16 (feed tag); pmull2/pmull/mid vs Q22=h2 + Q21=hk hi lane;
-       accumulate Q17/Q19/Q18.  ldr q9,[x0]=cph1; eor3 v12,v9,v7 = block-1 PT.
-       *** abbrev block-1 Q12 -> pt1 = word_xor cph1 (aes256_encrypt ctr1 keys);
-       ctr1 keystream input = gcm_ctr_inc ctr0 (GCM_CTR_INC_LANES on Q7/Q1).
-     - less_than_1 0x1450..: X1=128 -> mask all-ones, Q9=cph1; block-1 GHASH vs
-       Q20=h; accumulate; single Prop3 reduction folds BOTH blocks.  store pt1.
-     - BRIDGE at dec s351-analog (NOT s350): the dec MODULO splits enc's 3 eor3
-       into 6 eors, so the final eor lands one step later.  Find the analog of
-       enc s367 (clean polyval) empirically; assert read Q19 =
-         ghash_polyval_acc (byteswap128 h)(brev xi)[brev cph0; brev cph1]
-       via DEC_2BLK_GMULT2_BRIDGE_TAC (GMULT2 fast route, ~30s; the old
-         GHASH_POLYVAL_ACC_2 + MERGE_2BLK + FINISH_2BLK reduce-blast was ~73s).
-     - ext+rev64 -> word_bytereverse gval; store xi_p; exit pc+0x11e4.
-
-   UPDATE: bridge state is s370 (pc+4568), the analog of dec 1-block s351 (after
-   the final `eor v19,v19,v18`, before `ext v19`).  out_p block-0 store readback
-   = pt0 (captured at s320), block-1 = pt1 (captured at s363).  pt0/pt1 abbreviated
-   to the spec forms word_xor cph_i (aes256_encrypt ctr_i keys).
-   ------------------------------------------------------------------------- *)
