@@ -243,7 +243,7 @@ Lbignum_mod_findertail:
 
         mov     rdi, kk
         lea     rax, [rdi+1]             // k+1
-        mov     rdx, BLOCKSIZE + 63
+        mov     rdx, BLOCKSIZE+63
         shr     rdx, 6                   // (j+63)/64
         cmp     rax, rdx
         cmovnc  rax, rdx
@@ -312,7 +312,7 @@ Lbignum_mod_loop:
 // shl_small funnel (via shrd) and logging of the field around bit p.
 
         xor     hf, hf                   // hf = 0
-        shl     r11, (64 - BLOCKSIZE)    // c <<= (64-BLOCKSIZE)
+        shl     r11, (64-BLOCKSIZE)      // c <<= (64-BLOCKSIZE)
         mov     r9, q                    // hh = q
         xor     r10, r10                 // ii = 0
 
@@ -330,7 +330,7 @@ Lbignum_mod_innerloop:
         adc     r9, 0                    // hh = mm + CF1
         add     rcx, rax                 // ss += ll   (CF2)
         adc     r9, 0                    // hh = mm + CF1 + CF2
-        shrd    r11, rcx, (64 - BLOCKSIZE) // c = extr(ss, c, 64-BLOCKSIZE)
+        shrd    r11, rcx, (64-BLOCKSIZE) // c = extr(ss, c, 64-BLOCKSIZE)
         mov     [z+8*r10], r11           // z[ii] = c
         cmp     r10, pc
         cmovb   lf, r11                  // ii < pcode -> lf = c
@@ -356,7 +356,7 @@ Lbignum_mod_offendm:
         mov     rcx, [rdi]               // ss = *(z[ii] or zt)
         add     rcx, r9                  // ss += hh
         add     rcx, rax                 // ss += ll
-        shrd    r11, rcx, (64 - BLOCKSIZE) // c = extr(ss, c, 64-BLOCKSIZE)
+        shrd    r11, rcx, (64-BLOCKSIZE) // c = extr(ss, c, 64-BLOCKSIZE)
         mov     [rdi], r11               // store c to z[ii] or zt
         cmp     r10, pc
         cmovb   lf, r11
@@ -381,7 +381,7 @@ Lbignum_mod_offendm:
         cmp     r10, l
         je      Lbignum_mod_noel
         mov     rax, rcx                 // ss
-        shr     rax, (64 - BLOCKSIZE)    // ss >> (64-BLOCKSIZE)
+        shr     rax, (64-BLOCKSIZE)      // ss >> (64-BLOCKSIZE)
         mov     r11, rax                 // c = ss >> (64-BLOCKSIZE)
         lea     rax, [z+8*r10]           // &z[ii]
         lea     rdi, zt                  // &zt
@@ -436,7 +436,7 @@ Lbignum_mod_noel:
         mov     r9, q                    // hh = q
         xor     r10, r10                 // ii = 0
         mov     r11, pp
-        add     r11, (64 - BLOCKSIZE)    // p += (64 - BLOCKSIZE)
+        add     r11, (64-BLOCKSIZE)      // p += (64 - BLOCKSIZE)
         mov     pp, r11
         shr     r11, 6
         mov     pc, r11                  // pcode = p >> 6
