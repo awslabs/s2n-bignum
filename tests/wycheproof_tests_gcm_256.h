@@ -1,17 +1,20 @@
-// AES-256-GCM known-answer vectors for aesv8_gcm_8x_dec_256_wb, from Wycheproof.
+// Wycheproof AES-256-GCM vectors whose plaintext is a whole number of
+// 16-byte blocks.
 //
-// Imported from aws-lc third_party/vectors/converted/wycheproof/testvectors_v1/
-// aes_gcm_test.txt (itself converted from Wycheproof aes_gcm_test.json).
+// Source: Wycheproof (https://github.com/C2SP/wycheproof),
+// testvectors_v1/aes_gcm_test.json ("numberOfTests": 316) as vendored in
+// aws-lc at third_party/vectors/upstream/wycheproof/testvectors_v1/, checked
+// against aws-lc commit a2e6e617cbfc4b62decd89340306916699f45b54.  These are
+// all 17 of its test cases with keySize 256, tagSize 128, result "valid" and a
+// plaintext ("msg") that is a nonzero whole number of 16-byte blocks.  None
+// has AAD, and the IVs are 1, 2, 4, 6, 8, 10, 12 or 16 bytes long; requiring
+// ivSize 96 as well would leave the seven with tcIds 97, 105, 108, 111, 114,
+// 128 and 129.
 //
-// Filtered to the records this kernel can accept: keySize 256, tagSize 128,
-// result = valid, and a plaintext that is a nonzero multiple of 16 bytes (the
-// whole-blocks contract). Wycheproof negative vectors (result = invalid) are
-// deliberately excluded -- they are authentication-failure cases, which this
-// harness is not shaped to assert.
-//
-// Each vector drives the production call path: CRYPTO_gcm128_setiv ->
-// CRYPTO_gcm128_aad -> the asm kernel -> CRYPTO_gcm128_finish, then checks the
-// recovered plaintext and the tag against the published values.
+// Each record is GCM_KAT(key, iv, aad, msg, ct, tag): the fields of the test
+// case with the tcId given, copied verbatim.  The including file defines
+// GCM_KAT, to test encryption (msg to ct and tag) or decryption (ct to msg and
+// tag).
 //
 // DO NOT EDIT: these hex strings are the exact Wycheproof test bytes.
 
