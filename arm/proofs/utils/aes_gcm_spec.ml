@@ -81,3 +81,26 @@ let htable_mem_4 = new_definition
               (karatsuba_mid(h_power h 2) : 64 word) /\
   read (memory :> bytes128 (word_add ptr (word 80))) s =
     byteswap128(h_power h 3)`;;
+
+(* The whole table, all 12 entries (192 bytes) for H^1..H^8, as read by the  *)
+(* 8-way unrolled kernels.  It is htable_mem_4 plus the six further entries, *)
+(* so htable_mem_4 is a definitional prefix; HTABLE_MEM_8_FLAT in            *)
+(* aes_gcm_common.ml gives it as 12 flat conjuncts.                          *)
+
+let htable_mem_8 = new_definition
+ `htable_mem_8 (h:int128) (ptr:int64) (s:armstate) <=>
+  htable_mem_4 h ptr s /\
+  read (memory :> bytes128 (word_add ptr (word 96))) s =
+    byteswap128(h_power h 4) /\
+  read (memory :> bytes128 (word_add ptr (word 112))) s =
+    word_join (karatsuba_mid(h_power h 5) : 64 word)
+              (karatsuba_mid(h_power h 4) : 64 word) /\
+  read (memory :> bytes128 (word_add ptr (word 128))) s =
+    byteswap128(h_power h 5) /\
+  read (memory :> bytes128 (word_add ptr (word 144))) s =
+    byteswap128(h_power h 6) /\
+  read (memory :> bytes128 (word_add ptr (word 160))) s =
+    word_join (karatsuba_mid(h_power h 7) : 64 word)
+              (karatsuba_mid(h_power h 6) : 64 word) /\
+  read (memory :> bytes128 (word_add ptr (word 176))) s =
+    byteswap128(h_power h 7)`;;
