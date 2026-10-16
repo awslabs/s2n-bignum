@@ -430,7 +430,7 @@ AES_GCM_OBJ = aes_gcm/aes128_gcm_dec.o \
               aes_gcm/aes128_gcm_enc.o \
               aes_gcm/aes256_gcm_dec.o \
               aes_gcm/aes256_gcm_enc.o \
-              aes-gcm/aesv8_gcm_8x_dec_256_wb.o
+              aes_gcm/aesv8_gcm_8x_dec_256_wb.o
 
 OBJ = $(POINT_OBJ) $(BIGNUM_OBJ) $(AES_XTS_OBJ) $(AES_GCM_OBJ)
 
