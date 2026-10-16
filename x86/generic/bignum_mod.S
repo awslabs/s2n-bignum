@@ -304,7 +304,7 @@ Lbignum_mod_loop:
 // q = multop(w,h) + h;  (multop = high 64 of w*h)
 
         mov     rax, ww
-        mul     QWORD PTR hs             // rdx:rax = w * h
+        mul     hs                       // rdx:rax = w * h
         mov     q, rdx
         add     q, hs                    // q = hi(w*h) + h
 
@@ -426,7 +426,7 @@ Lbignum_mod_noel:
 // q = multop(w,h) + h;
 
         mov     rax, ww
-        mul     QWORD PTR hs
+        mul     hs
         mov     q, rdx
         add     q, hs
 
@@ -490,7 +490,7 @@ Lbignum_mod_negaddtail1:
 // q = multop(w,h) + h;  then q = (q >> BLOCKSIZE) + 1;
 
         mov     rax, ww
-        mul     QWORD PTR hs
+        mul     hs
         mov     q, rdx
         add     q, hs
         shr     q, BLOCKSIZE
