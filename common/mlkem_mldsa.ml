@@ -9,6 +9,7 @@
 
 needs "Library/words.ml";;
 needs "Library/isum.ml";;
+needs "common/int_linear.ml";;
 
 (* ------------------------------------------------------------------------- *)
 (* The pure forms of forward and inverse NTT with no reordering.             *)
@@ -2160,10 +2161,7 @@ let CONGBOUND_NTT_TAC lfn_seed markers split_tac cong_prelude ntt_conv =
        MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
        CONV_TAC(ONCE_DEPTH_CONV ntt_conv) THEN
        REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
-       REWRITE_TAC[INT_REM_EQ] THEN
-       REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
-       REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
-       CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
+       REWRITE_TAC[INT_REM_EQ] THEN INT_LINEAR_CONG_TAC;
        CONGBOUND_BOUNDS_TAC]));;
 
 (* The basemul driver: congruence only (GEN_CONGBOUND_RULE over the whole      *)
