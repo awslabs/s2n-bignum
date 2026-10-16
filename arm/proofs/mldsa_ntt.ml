@@ -793,9 +793,30 @@ let MLDSA_NTT_CORRECT = prove
   CONV_TAC(EXPAND_CASES_CONV THENC ONCE_DEPTH_CONV NUM_MULT_CONV) THEN
   ASM_REWRITE_TAC[I_THM; WORD_ADD_0] THEN DISCARD_STATE_TAC "s1959" THEN
 
-  CONGBOUND_NTT_TAC
-    CONGBOUND_LFN_BOUNDED [arm_mldsa_barmul] CONGBOUND_SPLIT_ARM ALL_TAC
-    ARM_MLDSA_FORWARD_NTT_CONV);;
+  W(fun (asl,w) ->
+    let lfn = PROCESS_BOUND_ASSUMPTIONS
+      (CONJUNCTS(tryfind (CONV_RULE EXPAND_CASES_CONV o snd) asl))
+    and asms =
+      map snd (filter (is_local_definition [arm_mldsa_barmul] o concl o snd) asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+
+    REPEAT(W(fun (asl,w) ->
+      if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
+
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
+        rand o lhand o rator o lhand o snd) THEN
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+     [MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
+      CONV_TAC(ONCE_DEPTH_CONV ARM_MLDSA_FORWARD_NTT_CONV) THEN
+      REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
+      REWRITE_TAC[INT_REM_EQ] THEN
+      REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
+      REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
+      CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
+      MATCH_MP_TAC(INT_ARITH
+       `l':int <= l /\ u <= u'
+        ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
+      CONV_TAC INT_REDUCE_CONV])));;
 
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 let MLDSA_NTT_SUBROUTINE_CORRECT = prove

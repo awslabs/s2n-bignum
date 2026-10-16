@@ -546,9 +546,30 @@ let MLKEM_INTT_CORRECT = prove
 
   (*** Perform congruence and bound propagation and finish ***)
 
-  CONGBOUND_NTT_TAC
-    CONGBOUND_LFN_EMPTY [barred; barmul] CONGBOUND_SPLIT_ARM ALL_TAC
-    INVERSE_NTT_CONV);;
+  W(fun (asl,w) ->
+    let lfn = undefined
+    and asms =
+      map snd (filter (is_local_definition [barred; barmul] o concl o snd)
+              asl) in
+    let lfn' = LOCAL_CONGBOUND_RULE lfn (rev asms) in
+
+    REPEAT(W(fun (asl,w) ->
+      if length(conjuncts w) > 3 then CONJ_TAC else NO_TAC)) THEN
+
+    W(MP_TAC o ASM_CONGBOUND_RULE lfn' o
+      rand o lhand o rator o lhand o snd) THEN
+   (MATCH_MP_TAC MONO_AND THEN CONJ_TAC THENL
+     [MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INT_CONG_TRANS) THEN
+      CONV_TAC(ONCE_DEPTH_CONV INVERSE_NTT_CONV) THEN
+      REWRITE_TAC[GSYM INT_REM_EQ; o_THM] THEN CONV_TAC INT_REM_DOWN_CONV THEN
+      REWRITE_TAC[INT_REM_EQ] THEN
+      REWRITE_TAC[REAL_INT_CONGRUENCE; INT_OF_NUM_EQ; ARITH_EQ] THEN
+      REWRITE_TAC[GSYM REAL_OF_INT_CLAUSES] THEN
+      CONV_TAC(RAND_CONV REAL_POLY_CONV) THEN REAL_INTEGER_TAC;
+      MATCH_MP_TAC(INT_ARITH
+       `l':int <= l /\ u <= u'
+        ==> l <= x /\ x <= u ==> l' <= x /\ x <= u'`) THEN
+      CONV_TAC INT_REDUCE_CONV])));;
 
 (*** Subroutine form, somewhat messy elaboration of the usual wrapper ***)
 

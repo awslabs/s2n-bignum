@@ -2028,29 +2028,6 @@ let is_local_definition unfold_defs =
   let pam t = exists (fun p -> can(term_match [] p) t) pats in
   fun tm -> is_eq tm && is_var(rand tm) && pam(lhand tm);;
 
-let AUTO_ABBREV_TAC tm =
-  let gv = genvar(type_of tm) in
-  ABBREV_TAC(mk_eq(gv,tm));;
-
-let SIMD_SIMPLIFY_ABBREV_TAC =
-  let arm_simdable =
-    can (term_match [] `read X (s:armstate):int128 = whatever`)
-  and x86_simdable =
-    can (term_match [] `read X (s:x86state):int256 = whatever`) in
-  let simdable tm = arm_simdable tm || x86_simdable tm in
-  fun unfold_defs unfold_aux ->
-    let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
-    let pam t = exists (fun p -> can(term_match [] p) t) pats in
-    let ttac th (asl,w) =
-      let th' = CONV_RULE(RAND_CONV
-                 (SIMD_SIMPLIFY_CONV (unfold_defs @ unfold_aux))) th in
-      let asms =
-        map snd (filter (is_local_definition unfold_defs o concl o snd) asl) in
-      let th'' = GEN_REWRITE_RULE (RAND_CONV o TOP_DEPTH_CONV) asms th' in
-      let tms = sort free_in (find_terms pam (rand(concl th''))) in
-      (MP_TAC th'' THEN MAP_EVERY AUTO_ABBREV_TAC tms THEN DISCH_TAC) (asl,w) in
-  TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
-
 (* ------------------------------------------------------------------------- *)
 (* Caller-side drivers that discharge a "congruence-and-bounds" goal using    *)
 (* the machinery above.  These factor out the boilerplate that was previously *)
@@ -2135,6 +2112,29 @@ let CONGBOUND_INT_RING_TAC =
   REWRITE_TAC[GSYM INT_REM_EQ] THEN CONV_TAC INT_REM_DOWN_CONV THEN
   MATCH_MP_TAC EQ_IMP THEN AP_TERM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
   CONV_TAC INT_RING;;
+
+let AUTO_ABBREV_TAC tm =
+  let gv = genvar(type_of tm) in
+  ABBREV_TAC(mk_eq(gv,tm));;
+
+let SIMD_SIMPLIFY_ABBREV_TAC =
+  let arm_simdable =
+    can (term_match [] `read X (s:armstate):int128 = whatever`)
+  and x86_simdable =
+    can (term_match [] `read X (s:x86state):int256 = whatever`) in
+  let simdable tm = arm_simdable tm || x86_simdable tm in
+  fun unfold_defs unfold_aux ->
+    let pats = map (lhand o snd o strip_forall o concl) unfold_defs in
+    let pam t = exists (fun p -> can(term_match [] p) t) pats in
+    let ttac th (asl,w) =
+      let th' = CONV_RULE(RAND_CONV
+                 (SIMD_SIMPLIFY_CONV (unfold_defs @ unfold_aux))) th in
+      let asms =
+        map snd (filter (is_local_definition unfold_defs o concl o snd) asl) in
+      let th'' = GEN_REWRITE_RULE (RAND_CONV o TOP_DEPTH_CONV) asms th' in
+      let tms = sort free_in (find_terms pam (rand(concl th''))) in
+      (MP_TAC th'' THEN MAP_EVERY AUTO_ABBREV_TAC tms THEN DISCH_TAC) (asl,w) in
+  TRY(FIRST_X_ASSUM(ttac o check (simdable o concl)));;
 
 (* ========================================================================= *)
 (* ML-DSA use_hint shared infrastructure lemmas                              *)
