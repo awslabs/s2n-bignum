@@ -11,7 +11,7 @@
 (* (0x4a0..0x9ec), the GHASH catch-up prepretail (0x9f0..0xec0), and the tail *)
 (* cascade (0xec0), so correctness holds for arbitrary nblk >= 1.             *)
 (*                                                                            *)
-(* Binary: arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o                              *)
+(* Binary: arm/aes_gcm/aesv8_gcm_8x_dec_256_wb.o                              *)
 (*                                                                            *)
 (* KEY PIPELINE FACT:                                                         *)
 (*         GHASH lags stores by one 8-block group, so the ENSURES_WHILE       *)
@@ -46,11 +46,11 @@ needs "common/ghash_nist_bridge.ml";;
 needs "arm/proofs/utils/aes_cipher_bridge.ml";;
 
 (* ------------------------------------------------------------------------- *)
-(* Machine code (print_literal_from_elf "arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o") *)
+(* Machine code (print_literal_from_elf "arm/aes_gcm/aesv8_gcm_8x_dec_256_wb.o") *)
 (* ------------------------------------------------------------------------- *)
 
 let aesv8_gcm_8x_dec_256_wb_mc = define_assert_from_elf "aesv8_gcm_8x_dec_256_wb_mc"
-  "arm/aes-gcm/aesv8_gcm_8x_dec_256_wb.o"
+  "arm/aes_gcm/aesv8_gcm_8x_dec_256_wb.o"
 [
   0xd503245f;       (* arm_BTI *)
   0xb400b9e1;       (* arm_CBZ X1 (word 5948) *)
