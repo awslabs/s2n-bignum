@@ -18,14 +18,16 @@ let _ = match `:armstate`,`:x86state` with
 let mk_safety_spec
     ?(readonly_objects=([]:(term * term)list))
     ?(extra_public_vars=([]:term list))
+    ?(drop_ghost_asms=false)
     ~(keep_maychanges:bool)
     (fnargs,xx,meminputs,memoutputs,memtemps)
     (subroutine_correct_th:thm) exec: term*(term list) =
   let read_sth_eq (f:term->bool):term->bool =
     fun t -> is_eq t && let l = lhs t in is_binary "read" l &&
       let l' = fst (dest_binary "read" l) in f l' in
-  gen_mk_safety_spec ~readonly_objects ~extra_public_vars ~keep_maychanges
+  gen_mk_safety_spec ~readonly_objects ~keep_maychanges
     (fnargs,xx,meminputs,memoutputs,memtemps)
+    ~extra_public_vars ~drop_ghost_asms
     subroutine_correct_th exec
     (read_sth_eq (fun t -> t = `RSP`))
     (can (fun t ->
@@ -80,12 +82,6 @@ let EXPAND_MAYCHANGE_YMM_REGS_TAC:tactic =
     DISCH_TAC THEN PRINT_GOAL_TAC THEN MONOTONE_MAYCHANGE_TAC;
     DISCH_TAC
   ];;
-
-let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
-  GEN_PROVE_SAFETY_SPEC_TAC ?public_vars:public_vars exec
-    ?tac_before_maychange_simp:(Some EXPAND_MAYCHANGE_YMM_REGS_TAC)
-    [BYTES_LOADED_APPEND_CLAUSE]
-    X86_SINGLE_STEP_TAC;;
 
 (* Symbolic simulation of steps snums of a leg of a safety proof. *)
 
@@ -251,3 +247,9 @@ let X86_WINDOWS_CALL_WRAP_SAFETY_TAC ?(rewrites=[]) ?(pre_tac=ALL_TAC)
      X86_STEPS_TAC winexec ((pre+2)--(pre+4)) THEN
      ENSURES_FINAL_STATE_TAC THEN ASM_REWRITE_TAC[] THEN
      DISCHARGE_SAFETY_PROPERTY_TAC) (asl,w);;
+
+let PROVE_SAFETY_SPEC_TAC ?(public_vars:term list option) exec:tactic =
+  GEN_PROVE_SAFETY_SPEC_TAC ?public_vars:public_vars exec
+    ?tac_before_maychange_simp:(Some EXPAND_MAYCHANGE_YMM_REGS_TAC)
+    [BYTES_LOADED_APPEND_CLAUSE]
+    X86_SINGLE_STEP_TAC;;

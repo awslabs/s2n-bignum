@@ -39,8 +39,9 @@ find_stack_access_size `MAYCHANGE [memory :> bytes(z,8 * 8);
 *)
 let gen_mk_safety_spec
     ?(readonly_objects=([]:(term * term)list)) (* address(int64), size(num) list *)
-    ?(extra_public_vars=([]:term list)) (* public scalars that are not sizes *)
     ~(keep_maychanges:bool)
+    ?(extra_public_vars=([]:term list)) (* public scalars that are not sizes *)
+    ?(drop_ghost_asms=false) (* drop assumptions only about ghost values *)
     (fnargs,_,meminputs,memoutputs,memtemps)
     (subroutine_correct_th:thm) exec
     (find_eq_stackpointer:term->bool)
@@ -317,14 +318,19 @@ let gen_mk_safety_spec
       in
     let body = list_mk_icomb "ensures"
         [arch_const;precond;postcond;maychanges] in
-    (* Drop the assumptions that only constrain variables the safety property
-       does not mention, such as a < n for the input values a and n *)
-    let asms = filter (fun c ->
-        let vs = intersect (frees c) fnspec_quants in
-        vs = [] || intersect vs (frees body) <> [])
-      (conjuncts fnspec_globalasms) in
-    if fnspec_globalasms = `true` || asms = [] then body
-    else mk_imp(list_mk_conj asms,body) in
+    (* With drop_ghost_asms, drop the assumptions that only constrain
+       variables the safety property does not mention, such as a < n for the
+       input values a and n *)
+    let fnspec_globalasms =
+      if not drop_ghost_asms then fnspec_globalasms else
+      match filter (fun c ->
+          let vs = intersect (frees c) fnspec_quants in
+          vs = [] || intersect vs (frees body) <> [])
+        (conjuncts fnspec_globalasms) with
+      | [] -> `true`
+      | asms -> list_mk_conj asms in
+    if fnspec_globalasms = `true` then body
+    else mk_imp(fnspec_globalasms,body) in
   let the_e_var = mk_var("e", `:(uarch_event)list`) in
   let fnspec_quants_filtered =
     let fvars = frees spec_without_quantifiers in
@@ -1118,14 +1124,10 @@ let FULL_UNIFY_F_EVENTS_TAC:tactic =
         end
       end) (asl,w)) ORELSE CANONICALIZE_UNIFY_F_EVENTS_TAC;;
 
-(* The input goal:
-  exists e2.
-    read events s = APPEND e2 e /\
-    e2 = f_events <public args> /\     <--- this clause is optional.
-    memaccess_inbounds e2 ...'
-*)
-(* pre_memaccess_tac runs just before the memaccess_inbounds predicates are
-   proved, e.g. to abbreviate terms that would get in the way of arithmetic. *)
+(* DISCHARGE_SAFETY_PROPERTY_TAC below with a tactic pre_memaccess_tac run
+   just before the memaccess_inbounds predicates are proved, e.g. to
+   abbreviate terms that would get in the way of arithmetic.
+   DISCHARGE_SAFETY_PROPERTY_TAC is the case ALL_TAC. *)
 let GEN_DISCHARGE_SAFETY_PROPERTY_TAC (pre_memaccess_tac:tactic) =
   SAFE_META_EXISTS_TAC allowed_vars_e THEN
   CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
@@ -1136,8 +1138,6 @@ let GEN_DISCHARGE_SAFETY_PROPERTY_TAC (pre_memaccess_tac:tactic) =
     pre_memaccess_tac THEN
     (* Prove memaccess_inbounds predicates *)
     DISCHARGE_MEMACCESS_INBOUNDS_TAC);;
-
-let DISCHARGE_SAFETY_PROPERTY_TAC = GEN_DISCHARGE_SAFETY_PROPERTY_TAC ALL_TAC;;
 
 (* ------------------------------------------------------------------------- *)
 (* Helpers for safety proofs written by hand, e.g. for programs with loops.  *)
@@ -1161,7 +1161,8 @@ let SAFETY_PEEL_TAC =
         ALL_TAC]
     else NO_TAC));;
 
-let SAFETY_CLOSE_TAC = SAFETY_PEEL_TAC THEN DISCHARGE_SAFETY_PROPERTY_TAC;;
+let SAFETY_CLOSE_TAC =
+  SAFETY_PEEL_TAC THEN GEN_DISCHARGE_SAFETY_PROPERTY_TAC ALL_TAC;;
 
 (* Remove the assumptions t = (\x. ...) a with t not a variable, such as the
    instantiated event traces of earlier iterations. *)
@@ -1500,3 +1501,19 @@ let GEN_SAFETY_INTRO_TAC ?(rename=([]:(string*string)list)) (ths:thm list)
     then W64_GEN_TAC (mk_var(n',`:num`)) else X_GEN_TAC (mk_var(n',type_of v)))) THEN
   REWRITE_TAC ths THEN
   TRY(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC));;
+
+(* The input goal:
+  exists e2.
+    read events s = APPEND e2 e /\
+    e2 = f_events <public args> /\     <--- this clause is optional.
+    memaccess_inbounds e2 ...'
+*)
+let DISCHARGE_SAFETY_PROPERTY_TAC =
+  SAFE_META_EXISTS_TAC allowed_vars_e THEN
+  CONJ_TAC THENL [ EXISTS_E2_TAC allowed_vars_e; ALL_TAC ] THEN
+  W (fun (asl,w) ->
+    (if is_conj w then
+      (CONJ_TAC THENL [ FULL_UNIFY_F_EVENTS_TAC; ALL_TAC ])
+    else ALL_TAC) THEN
+    (* Prove memaccess_inbounds predicates *)
+    DISCHARGE_MEMACCESS_INBOUNDS_TAC);;

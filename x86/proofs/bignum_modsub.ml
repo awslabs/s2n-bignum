@@ -387,7 +387,7 @@ needs "x86/proofs/consttime.ml";;
 needs "x86/proofs/subroutine_signatures.ml";;
 
 let full_spec,public_vars = mk_safety_spec
-    ~keep_maychanges:true
+    ~keep_maychanges:true ~drop_ghost_asms:true
     (assoc "bignum_modsub" subroutine_signatures)
     BIGNUM_MODSUB_CORRECT
     BIGNUM_MODSUB_EXEC;;
