@@ -41,6 +41,26 @@ extern void aes_xts_decrypt(const uint8_t *in, uint8_t *out, size_t length,
 extern void aes_xts_encrypt(const uint8_t *in, uint8_t *out, size_t length,
         const s2n_bignum_AES_KEY *key1, const s2n_bignum_AES_KEY *key2, const uint8_t iv[16]);
 
+/* AES128_GCM_DEC (AES-128-GCM bulk decryption of whole blocks with GHASH tag update) */
+/* Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[176], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed */
+extern uint64_t aes128_gcm_dec(const uint8_t *in, uint64_t len_bits, uint8_t *out,
+        uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
+
+/* AES128_GCM_ENC (AES-128-GCM bulk encryption of whole blocks with GHASH tag update) */
+/* Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[176], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed */
+extern uint64_t aes128_gcm_enc(const uint8_t *in, uint64_t len_bits, uint8_t *out,
+        uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
+
+/* AES256_GCM_DEC (AES-256-GCM bulk decryption of whole blocks with GHASH tag update) */
+/* Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed */
+extern uint64_t aes256_gcm_dec(const uint8_t *in, uint64_t len_bits, uint8_t *out,
+        uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
+
+/* AES256_GCM_ENC (AES-256-GCM bulk encryption of whole blocks with GHASH tag update) */
+/* Inputs in[len_bits/8], len_bits, tag[2], ivec[16], key[240], htable[12]; outputs out[len_bits/8], tag[2], ivec[16], returns bytes processed */
+extern uint64_t aes256_gcm_enc(const uint8_t *in, uint64_t len_bits, uint8_t *out,
+        uint64_t *tag, uint8_t *ivec, const s2n_bignum_AES_KEY *key, const uint64_t *htable);
+
 /* AESV8_GCM_8X_DEC_256_WB (AES-256-GCM decryption, whole blocks only) */
 /* Whole-blocks-only variant of aesv8_gcm_8x_dec_256: identical contract, but */
 /* requires "bit_len" to be a nonzero multiple of 128 (whole 16-byte blocks) and */
@@ -1074,7 +1094,7 @@ extern void mldsa_caddq(int32_t a[256]);
 
 /* Infinity-norm check of polynomial coefficients for ML-DSA */
 /* Returns 1 if any coefficient has absolute value >= bound, 0 otherwise */
-/* Input a[256] (signed 32-bit words), bound (unsigned 32-bit) */
+/* Input a[256] (signed 32-bit words), bound (unsigned 32-bit); output function return */
 extern uint64_t mldsa_chknorm(const int32_t a[256], uint64_t bound);
 
 /* Coefficient decomposition for ML-DSA (GAMMA2 = (Q-1)/32, parameter sets 65/87) */
