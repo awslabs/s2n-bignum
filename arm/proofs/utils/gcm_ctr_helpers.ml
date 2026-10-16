@@ -12,10 +12,16 @@
 (* counter iterator (gcm_ctr_inc_iter) so block k's counter composes in a     *)
 (* recursion / N-block induction.                                            *)
 (*                                                                            *)
-(* gcm_ctr_inc and GCM_CTR_INC_LANES are byte-identical to the definitions   *)
-(* in arm/proofs/aesv8_gcm_8x_enc_256_2block.ml, so that file can drop its   *)
-(* inline copies and `needs` this one as a no-op.  inc32 is the NIST         *)
-(* SP 800-38D increment; see the BEGIN/END block below.                      *)
+(* inc32 is the NIST SP 800-38D increment; see its definition below.       *)
+(*                                                                            *)
+(* Why this counter vocabulary is private, next to the shared ctr_block of   *)
+(* aes_gcm_spec.ml: gcm_ctr_inc is the update in exactly the form the ARM    *)
+(* simulation produces (rev32, add, rev32 on the top lane of the ivec        *)
+(* register), so the simulated postconditions of the 8x decrypt proof are    *)
+(* stated in gcm_ctr_inc / gcm_ctr_inc_iter (and in the proof's own          *)
+(* gcm_ctr_add and gcm_ctr_raw).  Restating them would mean re-simulating;   *)
+(* instead the exported theorems are moved to ctr_block nonce c through      *)
+(* GCM_CTR_INC_ITER_INC32 below and the ctr_block bridge in the proof.       *)
 (*                                                                            *)
 (* No CHEAT_TAC, no new axioms.  Depends only on base.ml (word primitives).   *)
 (* ========================================================================= *)
@@ -26,8 +32,7 @@ needs "arm/proofs/base.ml";;
 (* The AES-GCM counter increment (the ARM binary's rev32+ADD+rev32).          *)
 (*                                                                            *)
 (* gcm_ctr_inc ivec = ivec with its top 32-bit lane byte-reversed, +1, and    *)
-(* byte-reversed back.  Byte-identical to the definition in                  *)
-(* arm/proofs/aesv8_gcm_8x_enc_256_2block.ml.                                *)
+(* byte-reversed back.                                                        *)
 (* ========================================================================= *)
 
 let gcm_ctr_inc = new_definition
@@ -42,7 +47,6 @@ let gcm_ctr_inc = new_definition
 (* emits (rev32 of the top lane incremented, low 96 bits unchanged, all built  *)
 (* from 8-bit subwords of ctr0).  One BITBLAST (~1s); used to fold the spec     *)
 (* var ctr1 to the form the Q9 keystream readback carries.                     *)
-(* Lifted VERBATIM from aesv8_gcm_8x_enc_256_2block.ml.                         *)
 let GCM_CTR_INC_LANES = prove(
  `!ctr0:int128.
     gcm_ctr_inc ctr0 =
@@ -103,9 +107,12 @@ let GCM_CTR_INC_LANES = prove(
 (* ========================================================================= *)
 
 (* inc32 per NIST SP 800-38D Section 6.2.  Self-contained (word primitives
-   only, zero dependencies).
-   TODO: drop this definition and `needs "common/gcm.ml"` instead, once a
-   shared inc32 is available there. *)
+   only, zero dependencies).  It is the same definition as common/gcm.ml's
+   inc32, so loading both files is a benign redefinition.  It is repeated here
+   because common/gcm.ml also defines the rest of the SP 800-38D spec and
+   runs its KATs at load time, which this proof does not need.
+   TODO: drop this definition and `needs "common/gcm.ml"` instead, once the
+   KATs are split out of that file. *)
 let inc32 = new_definition
  `inc32 (cb:128 word) : 128 word =
     let top96:96 word = word_subword cb (32,96) in
@@ -139,11 +146,6 @@ let gcm_ctr_inc_iter = define
 let GCM_CTR_INC_ITER_ITER = prove
  (`!k x:128 word. gcm_ctr_inc_iter k x = ITER k gcm_ctr_inc x`,
   INDUCT_TAC THEN ASM_REWRITE_TAC[gcm_ctr_inc_iter; ITER]);;
-
-(* Base case sanity: one increment = gcm_ctr_inc (the 2-block block-1 form).   *)
-let GCM_CTR_INC_ITER_1 = prove
- (`!x:128 word. gcm_ctr_inc_iter 1 x = gcm_ctr_inc x`,
-  REWRITE_TAC[ONE; gcm_ctr_inc_iter]);;
 
 (* Iterator splits over +, so an N-block proof can peel one block at a time.   *)
 let GCM_CTR_INC_ITER_ADD = prove

@@ -1,18 +1,16 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* N-block GHASH Karatsuba layer.                                             *)
 (*                                                                            *)
-(* Contents: BOOL_POLY_MUL_ASSOC, HELPER_3, GHASH_POLYVAL_ACC_3/4, the       *)
-(* karatsuba_block_p{l,h,m} / kara_acc / karatsuba_reduce_shared /           *)
-(* ghash_Nblock_karatsuba / pack_corrected / kara_quad_* / project_triples   *)
-(* layer, and GHASH_NBLOCK_KARATSUBA_EQ_PROP3.  Standalone: no               *)
-(* aes256_block_enc or band-tactic dependencies.                             *)
-(*                                                                            *)
-(* WHY: GHASH_NBLOCK_KARATSUBA_EQ_PROP3 is the hard induction proven ONCE at  *)
-(* load; it bridges the assembly-shape Karatsuba tower (ghash_Nblock_karatsuba*)
-(* = kara_acc + karatsuba_reduce_shared) directly to polyval_reduce_prop3 of  *)
-(* the per-block word_pmul sum, with ZERO residual operand equalities.  Each  *)
-(* band only INSTANTIATES it: ~0.05-0.10s/band (flat in N) vs the per-band    *)
-(* MERGE/FINISH lane-flatten at ~73s.                                        *)
+(* Contents: HELPER_3 and GHASH_POLYVAL_ACC_3/4/5 (3/4/5-block Horner        *)
+(* unrolling), the KARATSUBA_LIMBS lemmas, and the karatsuba_block_p{l,h,m} / *)
+(* kara_acc / pack_corrected / kara_quad_* / project_triples layer, whose    *)
+(* KARA_ACC_PACK_HELPER equates the packed XOR-accumulated per-block         *)
+(* Karatsuba triples with the XOR of the per-block word_pmul products.       *)
 (*                                                                            *)
 (* Loads clean on common/polyval_ghash.ml + common/karatsuba_pmul.ml: ADDS    *)
 (* only lemmas, defines no constant that conflicts with ours.                 *)
@@ -21,27 +19,11 @@
 needs "common/karatsuba_pmul.ml";;
 needs "common/polyval_ghash.ml";;
 
-(* ---- GHASH spec extras (3/4-block Horner unrolling + ring helpers) ---- *)
-(* Ring algebra helpers for bool_poly *)
-let BOOL_POLY_MUL_ASSOC = prove
- (`!a b c. a IN ring_carrier bool_poly /\
-           b IN ring_carrier bool_poly /\
-           c IN ring_carrier bool_poly
-           ==> ring_mul bool_poly (ring_mul bool_poly a b) c =
-               ring_mul bool_poly a (ring_mul bool_poly b c)`,
-  SIMP_TAC[RING_MUL_ASSOC]);;
+(* ---- GHASH spec extras (3/4/5-block Horner unrolling) ---- *)
 
-let BOOL_POLY_MUL_ASSOC_REV = prove
- (`!a b c. a IN ring_carrier bool_poly /\
-           b IN ring_carrier bool_poly /\
-           c IN ring_carrier bool_poly
-           ==> ring_mul bool_poly a (ring_mul bool_poly b c) =
-               ring_mul bool_poly (ring_mul bool_poly a b) c`,
-  SIMP_TAC[RING_MUL_ASSOC]);;
-
-(* Helper: polyval_dot(a⊕p, h)·h² ≡ a·h³ + p·h³ (mod Q), where               *)
-(* h³ = polyval_dot h (polyval_dot h h).  Bridges via INNER_CONG_GEN,         *)
-(* after first commuting polyval_dot h h² = polyval_dot h² h (via pmul_sym). *)
+(* Helper: polyval_dot(a XOR p, h)*h^2 == a*h^3 + p*h^3 (mod Q), where       *)
+(* h^3 = polyval_dot h (polyval_dot h h).  Bridges via INNER_CONG_GEN,        *)
+(* after first commuting polyval_dot h h^2 = polyval_dot h^2 h (via pmul_sym). *)
 
 let HELPER_3 = prove
  (`!(a:int128) (p:int128) (h:int128).
@@ -254,68 +236,26 @@ let kara_acc = define
       (word_xor ph_acc (karatsuba_block_ph input h_tw))
       (word_xor pm_acc (karatsuba_block_pm input hk)))`;;
 
-(* The shared Barrett reduction taking the accumulated (pl, ph, pm) triple
-   and producing the final 128-bit GHASH digest. This mirrors the let-chain
-   in ghash_1block_karatsuba (lines 96-112 of gcm_aesgcm_helpers.ml) and the
-   matching let-chain in ghash_2block_karatsuba. *)
-let karatsuba_reduce_shared = new_definition
- `karatsuba_reduce_shared (pl:int128) (ph:int128) (pm:int128) : int128 =
-  let mid:int128 = word_xor (word_xor pm ph) pl in
-  let a:64 word = word_subword pl (0,64) in
-  let b:64 word = word_xor (word_subword pl (64,64)) (word_subword mid (0,64)) in
-  let c:64 word = word_xor (word_subword ph (0,64)) (word_subword mid (64,64)) in
-  let d:64 word = word_subword ph (64,64) in
-  let w:64 word = word 13979173243358019584 in
-  let wa:128 word = word_pmul a w in
-  let wa_lo:64 word = word_subword wa (0,64) in
-  let wa_hi:64 word = word_subword wa (64,64) in
-  let v:64 word = word_xor b wa_lo in
-  let u:64 word = word_xor (word_xor c a) wa_hi in
-  let wv:128 word = word_pmul v w in
-  let wv_lo:64 word = word_subword wv (0,64) in
-  let wv_hi:64 word = word_subword wv (64,64) in
-  let f:64 word = word_xor u wv_lo in
-  let g:64 word = word_xor (word_xor d v) wv_hi in
-  word_reversefields 8 (word_join g f : 128 word)`;;
-
-(* The full N-block assembly-shape spec: accumulate Karatsuba triples,
-   then apply the shared Barrett reduction. *)
-let ghash_Nblock_karatsuba = new_definition
- `ghash_Nblock_karatsuba (triples:(int128#int128#int128)list) : int128 =
-  let pl,ph,pm = kara_acc triples (word 0) (word 0) (word 0) in
-  karatsuba_reduce_shared pl ph pm`;;
-
-
 (* ========================================================================= *)
-(* INDUCTIVE BRIDGE                                                           *)
+(* Packing the accumulated Karatsuba triples.                                *)
 (*                                                                           *)
-(* GHASH_NBLOCK_KARATSUBA_EQ_PROP3 is proved BY INDUCTION on the block list  *)
-(* via three structural lemmas:                                               *)
+(* KARA_ACC_PACK_HELPER is proved by induction on the block list from two    *)
+(* structural lemmas:                                                         *)
 (*                                                                           *)
-(*   1. KARATSUBA_REDUCE_AS_PROP3_CLEAN:                                     *)
-(*      karatsuba_reduce_shared pl ph pm =                                    *)
-(*        word_reversefields 8 (polyval_reduce_prop3 (pack_corrected pl ph pm)) *)
-(*      (i.e., the assembly-shape Barrett reduction equals prop3 on the      *)
-(*       Karatsuba-corrected packed value, modulo a final byte-reversal.)    *)
-(*                                                                           *)
-(*   2. KARATSUBA_BLOCK_PACKS_TO_PMUL_CLEAN:                                 *)
+(*   KARATSUBA_BLOCK_PACKS_TO_PMUL_CLEAN:                                    *)
 (*      pack_corrected (pl_k, ph_k, pm_k) = pmul input_k h_k (256-bit)        *)
 (*      under the precondition that hk's low half = karatsuba_mid h_k.        *)
 (*                                                                           *)
-(*   3. PACK_CORRECTED_XOR (additivity / linearity):                          *)
+(*   PACK_CORRECTED_XOR (additivity / linearity):                             *)
 (*      pack_corrected commutes with XOR in all three arguments.              *)
 (*                                                                           *)
-(* From these three the inductive bridge follows: kara_acc XOR-folds         *)
-(* per-block (pl, ph, pm); pack distributes over XOR; each block contributes *)
-(* pmul input_k h_k; the total equals XOR of pmul input_k h_k; then          *)
-(* karatsuba_reduce_shared = prop3 on this total.                             *)
-(*                                                                           *)
-(* The N=1, 2, 3, ..., 8 bridges are derived from this inductive bridge      *)
-(* + GHASH_POLYVAL_ACC_<N> (from ghash_spec.ml).                              *)
+(* kara_acc XOR-folds the per-block (pl, ph, pm), pack_corrected distributes *)
+(* over XOR, and each block contributes pmul input_k h_k, so the packed      *)
+(* accumulator is the XOR of the per-block products (kara_quad_pmul).        *)
 (* ========================================================================= *)
 
 (* Pack-corrected: combines (pl, ph, pm) into the 256-bit Karatsuba layout
-   (with mid corrected by ⊕ pl ⊕ ph). *)
+   (with mid corrected by XOR pl XOR ph). *)
 let pack_corrected = new_definition
  `pack_corrected (pl:int128) (ph:int128) (pm:int128) :256 word =
    word_xor (word_xor
@@ -323,60 +263,7 @@ let pack_corrected = new_definition
      (word_shl (word_zx (word_xor (word_xor pl ph) pm) :256 word) 64))
     (word_shl (word_zx ph :256 word) 128)`;;
 
-(* Lemma 1: structural identity karatsuba_reduce_shared = prop3 ∘ pack_corrected *)
-let KARATSUBA_REDUCE_AS_PROP3 = prove
- (`!pl ph pm:int128.
-    karatsuba_reduce_shared pl ph pm =
-    word_reversefields 8 (polyval_reduce_prop3
-      (word_xor (word_xor
-        (word_zx pl :256 word)
-        (word_shl (word_zx (word_xor (word_xor pl ph) pm) :256 word) 64))
-       (word_shl (word_zx ph :256 word) 128)))`,
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[karatsuba_reduce_shared; polyval_reduce_prop3;
-              LET_DEF; LET_END_DEF] THEN
-  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  AP_TERM_TAC THEN
-  REWRITE_TAC[KARATSUBA_LIMBS] THEN
-  REWRITE_TAC[WORD_SUBWORD_XOR] THEN
-  ABBREV_TAC `(plL:(64)word) = word_subword (pl:(128)word) (0,64)` THEN
-  ABBREV_TAC `(plH:(64)word) = word_subword (pl:(128)word) (64,64)` THEN
-  ABBREV_TAC `(phL:(64)word) = word_subword (ph:(128)word) (0,64)` THEN
-  ABBREV_TAC `(phH:(64)word) = word_subword (ph:(128)word) (64,64)` THEN
-  ABBREV_TAC `(pmL:(64)word) = word_subword (pm:(128)word) (0,64)` THEN
-  ABBREV_TAC `(pmH:(64)word) = word_subword (pm:(128)word) (64,64)` THEN
-  SUBGOAL_THEN
-    `word_xor (word_xor (plH:(64)word)
-                (word_xor (word_xor pmL phL) plL))
-              (word_subword (word_pmul plL
-                              (word 13979173243358019584:(64)word):(128)word)
-                            (0,64):(64)word) =
-     word_xor (word_xor plH
-                (word_xor (word_xor plL phL) pmL))
-              (word_subword (word_pmul plL
-                              (word 13979173243358019584:(64)word):(128)word)
-                            (0,64):(64)word):(64)word`
-    (fun th -> REWRITE_TAC[th]) THENL [CONV_TAC WORD_RULE; ALL_TAC] THEN
-  ABBREV_TAC
-    `qBig = word_pmul (word_xor (plH:(64)word)
-                         (word_xor (word_xor plL phL) pmL))
-                      (word 13979173243358019584:(64)word):(128)word` THEN
-  ABBREV_TAC
-    `qSmall = word_pmul (plL:(64)word)
-                        (word 13979173243358019584:(64)word):(128)word` THEN
-  ABBREV_TAC `qBigL = word_subword (qBig:(128)word) (0,64):(64)word` THEN
-  ABBREV_TAC `qBigH = word_subword (qBig:(128)word) (64,64):(64)word` THEN
-  ABBREV_TAC `qSmallL = word_subword (qSmall:(128)word) (0,64):(64)word` THEN
-  ABBREV_TAC `qSmallH = word_subword (qSmall:(128)word) (64,64):(64)word` THEN
-  BINOP_TAC THENL [CONV_TAC WORD_RULE; CONV_TAC WORD_RULE]);;
-
-let KARATSUBA_REDUCE_AS_PROP3_CLEAN = prove
- (`!pl ph pm:int128.
-    karatsuba_reduce_shared pl ph pm =
-    word_reversefields 8 (polyval_reduce_prop3 (pack_corrected pl ph pm))`,
-  REWRITE_TAC[pack_corrected; KARATSUBA_REDUCE_AS_PROP3]);;
-
-(* Lemma 2: per-block pack identity *)
+(* Per-block pack identity. *)
 let KARATSUBA_BLOCK_PACKS_TO_PMUL = prove
  (`!(input:int128) (h:int128) (hk:int128).
     word_subword hk (0,64):(64)word = karatsuba_mid h
@@ -419,7 +306,7 @@ let KARATSUBA_BLOCK_PACKS_TO_PMUL_CLEAN = prove
     word_pmul input h : 256 word`,
   REWRITE_TAC[pack_corrected; KARATSUBA_BLOCK_PACKS_TO_PMUL]);;
 
-(* Lemma 3: pack_corrected is XOR-additive in each argument *)
+(* pack_corrected is XOR-additive in each argument. *)
 let PACK_CORRECTED_XOR = prove
  (`!pl1 ph1 pm1 pl2 ph2 pm2:int128.
    pack_corrected (word_xor pl1 pl2) (word_xor ph1 ph2) (word_xor pm1 pm2) =
@@ -536,29 +423,3 @@ let KARA_ACC_PACK_HELPER = prove
     REWRITE_TAC[GSYM PACK_CORRECTED_XOR] THEN
     REWRITE_TAC[PACK_CORRECTED_XOR] THEN
     CONV_TAC WORD_RULE]);;
-
-(* THE INDUCTIVE BRIDGE *)
-let GHASH_NBLOCK_KARATSUBA_EQ_PROP3 = prove
- (`!quads.
-    kara_quad_ok quads
-    ==>
-    ghash_Nblock_karatsuba (project_triples quads) =
-    word_reversefields 8
-      (polyval_reduce_prop3 (kara_quad_pmul quads (word 0:256 word)))`,
-  GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[ghash_Nblock_karatsuba; LET_DEF; LET_END_DEF] THEN
-  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  REWRITE_TAC[KARATSUBA_REDUCE_AS_PROP3_CLEAN] THEN
-  MP_TAC(SPECL [`quads:(int128#int128#int128#int128)list`; `word 0:256 word`]
-               KARA_ACC_PACK_HELPER) THEN
-  ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[FORALL_PAIR_THM] THEN
-  SPEC_TAC(`kara_acc (project_triples (quads:(int128#int128#int128#int128)list))
-                     (word 0:int128) (word 0:int128) (word 0:int128)`,
-           `q:int128#int128#int128`) THEN
-  REWRITE_TAC[FORALL_PAIR_THM] THEN
-  MAP_EVERY X_GEN_TAC [`pl:int128`; `ph:int128`; `pm:int128`] THEN
-  REWRITE_TAC[LET_DEF; LET_END_DEF] THEN
-  CONV_TAC(DEPTH_CONV BETA_CONV) THEN
-  DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[WORD_XOR_0_LEFT]);;

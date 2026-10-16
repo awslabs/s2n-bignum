@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ========================================================================= *)
 (* AES tower reconstruction lemmas, shared across the AES-GCM                *)
 (* decrypt chain (wb bands, NIST convergence layer, future main-loop proof). *)
@@ -31,7 +36,11 @@ let AES256_XOR_ENCRYPT_RECONSTRUCT = prove
    xor happens per-block in the tail eor3).  Naming it collapses in-flight
    front-postcondition Q towers from ~2.6k chars each to one application, and
    the reconstruct lemma below keeps every tail capture site working on the
-   folded form. *)
+   folded form.  The shared XOR_AES256_CIPHER_RECONSTRUCT folds only the complete
+   cipher; this partial tower is what the 8x schedule holds in registers
+   between the front and the per-block final xor, so aes13 stays private
+   machine-level vocabulary, and the exported theorems mention only
+   aes256_cipher. *)
 let aes13 = new_definition
  `aes13 (p:int128) (k0:int128) (k1:int128) (k2:int128) (k3:int128) (k4:int128)
         (k5:int128) (k6:int128) (k7:int128) (k8:int128) (k9:int128) (k10:int128)

@@ -1,3 +1,8 @@
+(*
+ * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0 OR ISC OR MIT-0
+ *)
+
 (* ============================================================================
    FAST, REUSABLE GMULTn builder for the AES-GCM decrypt band proofs.
 
@@ -6,24 +11,16 @@
      - GMULTn_FULL_CORRECT_BA  : polyval_reduce_prop3 (XOR_k word_pmul a_k b_k)
                                  expressed in the machine's Karatsuba-limb byteform.
 
-   This replaces the old hand-written `decN_tL` term + monolithic `CONV_TAC WORD_RULE`
-   `PACKn_ID` (which bit-blasts a 256-bit identity and cost ~30s at N=2, ~373s at N=3,
-   and never finished at N=4).  Method: prove `decN_tL = XOR_k dec1[k]` STRUCTURALLY
-   by XOR-AC over opaque pmul atoms (`AC WORD_XOR_ACI`, no bit-blast), then fold each
-   single-block `dec1[k]` to `word_pmul a_k b_k` via PMUL_KARATSUBA (0.02s each).  The
-   whole build is ~0.1-0.4s for any N and is the shared GHASH-bridge multiply lemma for
-   every dec band (le2/le3/le4 ... le8).
+   Method: prove `decN_tL = XOR_k dec1[k]` structurally by XOR-AC over opaque
+   pmul atoms (`AC WORD_XOR_ACI`, no bit-blast; a direct WORD_RULE proof of the
+   256-bit identity does not scale past N=3), then fold each single-block
+   `dec1[k]` to `word_pmul a_k b_k` via PMUL_KARATSUBA.  This is the shared
+   GHASH-bridge multiply lemma for every 2..8-block band.
 
-   Verified: build_GMULTn_fast 2 / 3 reproduce the old hand-written
-   GMULT2_FULL_CORRECT_BA / GMULT3_FULL_CORRECT_BA concl EXACTLY.
-
-   SELF-CONTAINED: needs only the common nblock GHASH layer (PMUL_KARATSUBA /
+   Self-contained: it needs only the common nblock GHASH layer (PMUL_KARATSUBA /
    KARATSUBA_LIMBS from common/ghash_nblock_karatsuba.ml); the shared Prop3
-   reduction lemma GMULT_REDUCE_PROP3 (+ its V0LO helper) is proved HERE so the
-   file loads correctly in ANY order.  (It was previously proved only inside
-   the dec proof chain, which armed a load-order landmine: loading this file
-   first failed with Unbound GMULT_REDUCE_PROP3, `needs` still marked it
-   loaded, and the eventual caller died with Unbound build_GMULTn_fast.)
+   reduction lemma GMULT_REDUCE_PROP3 (+ its V0LO helper) is proved here, so the
+   file loads correctly in any order.
    ============================================================================ *)
 
 needs "common/ghash_nblock_karatsuba.ml";;
@@ -89,12 +86,6 @@ let mk_decN_tL n =
   let xor256 x y = mk_comb(mk_comb(`word_xor:256 word->256 word->256 word`,x),y) in
   xor256 (xor256 (zx (xor_fold128 blk_lo n)) (shl (zx (xor_fold128 blk_mid n)) 64))
          (shl (zx (xor_fold128 blk_hi n)) 128);;
-let mk_packed_L n =
-  let term k = let a=mk_var(Printf.sprintf "a%d" k,`:int128`) and b=mk_var(Printf.sprintf "b%d" k,`:int128`) in
-               mk_comb(mk_comb(`word_pmul:int128->int128->256 word`,a),b) in
-  match map term (0--(n-1)) with
-  | x::rest -> List.fold_left (fun acc y -> mk_comb(mk_comb(`word_xor:256 word->256 word->256 word`,acc),y)) x rest
-  | [] -> failwith "";;
 let blkvars n = List.concat (map (fun k -> [mk_var(Printf.sprintf "a%d" k,`:int128`); mk_var(Printf.sprintf "b%d" k,`:int128`)]) (0--(n-1)));;
 let dec1_at k =
   subst [mk_var(Printf.sprintf "a%d" k,`:int128`),`a0:int128`;
