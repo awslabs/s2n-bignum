@@ -1,19 +1,63 @@
 #!/bin/bash
-# Get the directory path that includes this 'armsimulate' file
+
+# The HOL semantic tests invoke this script to execute an encoded AArch64
+# instruction sequence against a serialized machine state.
+#
+# Usage: armsimulate instruction-words [state-word ...]
+#
+# The instruction words are passed to the assembler's .inst directive.
+# The state words initialize the registers, flags, vectors, and stack
+# memory; omitted words are zero. The command prints 128 output words.
+#
+# Internally, the script preprocesses template.S with -DICODE, assembles
+# it, links it with simulator.c, and runs the resulting temporary binary.
+#
+# The build and execution commands can be changed with:
+#
+#   COSIM_CC          compiler used for preprocessing and linking
+#   COSIM_AS          assembler
+#   COSIM_LDFLAGS     additional flags passed when linking
+#   COSIM_RUN         executable used to run the temporary binary
+#   COSIM_RUN_ARGS    additional arguments passed to COSIM_RUN
+#
+# COSIM_CC and COSIM_AS default to cc and as. COSIM_RUN defaults to direct
+# execution. The defaults preserve the native one-case build path.
+
 DIR="$( dirname -- "${BASH_SOURCE[0]}"; )"
 DIR="$( realpath -- "$DIR"; )"
 
-
+# Build in the directory containing this script so the relative template
+# and harness paths below do not depend on the caller's working directory.
 cd $DIR
+
+COSIM_CC="${COSIM_CC:-cc}"
+COSIM_AS="${COSIM_AS:-as}"
+COSIM_LDFLAGS="${COSIM_LDFLAGS:-}"
+COSIM_RUN="${COSIM_RUN:-}"
+COSIM_RUN_ARGS="${COSIM_RUN_ARGS:-}"
+read -r -a link_flags <<< "$COSIM_LDFLAGS"
+read -r -a run_args <<< "$COSIM_RUN_ARGS"
+
+# Use one temporary basename for the executable, preprocessed assembly,
+# and object file produced for this case.
 temp="$( mktemp )"
 temp_s="${temp}.S"
 temp_o="${temp}.o"
 #cat template.S | sed -e "s/ICODE/$1/" >$temp_s
-cc -DICODE=$1 -E -xassembler-with-cpp template.S -o $temp_s
-as $temp_s -o $temp_o
-cc -o $temp simulator.c $temp_o
 
+# Insert the instruction encoding into the template, assemble it, and link
+# the resulting harness with the C program that owns the state array.
+"$COSIM_CC" -DICODE=$1 -E -xassembler-with-cpp template.S -o $temp_s
+"$COSIM_AS" $temp_s -o $temp_o
+"$COSIM_CC" "${link_flags[@]}" -o $temp simulator.c $temp_o
+
+# Drop the instruction argument before forwarding the state words.
 shift 1
-$temp $*
+if [[ -n "$COSIM_RUN" ]]; then
+  "$COSIM_RUN" "${run_args[@]}" "$temp" "$@"
+else
+  "$temp" "$@"
+fi
 
+# Remove all per-case build products.
 rm -f $temp $temp_s $temp_o

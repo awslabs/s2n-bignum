@@ -446,7 +446,7 @@ Ledwards25519_scalarmulbase_standard:
 // Initialize accumulator "acc" to either 0 or 2^251 * B depending on
 // bit 251 of the (reduced) scalar. That leaves bits 0..250 to handle.
 
-        leaq    edwards25519_scalarmulbase_constant(%rip), %r10
+        leaq    S2N_BN_SYMBOL(edwards25519_scalarmulbase_constant)(%rip), %r10
         leaq    8*12(%r10), %r11
 
         movq    (%r10), %rax

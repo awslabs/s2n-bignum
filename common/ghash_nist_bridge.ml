@@ -17,71 +17,12 @@
 (* ========================================================================= *)
 
 
+needs "common/ghash_nist_defs.ml";;
 needs "common/polyval_ghash.ml";;
-
-(* ========================================================================= *)
-(* Step 1: Define bit-reflection on 128-bit words                            *)
-(* ========================================================================= *)
-
-let bit_reflect128 = new_definition
-  `bit_reflect128 (a:int128) : int128 = word_reversefields 1 a`;;
-
-(* bit i (bit_reflect128 a) <=> bit (127 - i) a, for i < 128                 *)
-let BIT_REFLECT128 = prove
- (`!a:int128. !i. i < 128
-    ==> (bit i (bit_reflect128 a) <=> bit (127 - i) a)`,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[bit_reflect128; BIT_WORD_REVERSEFIELDS] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  ASM_REWRITE_TAC[] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN
-  ASM_SIMP_TAC[ARITH_RULE `i < 128 ==> i < 1 * 128`] THEN
-  AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC);;
-
-(* bit_reflect128 is an involution                                           *)
-let REFLECT128_INVOLUTION = prove
- (`!a:int128. bit_reflect128 (bit_reflect128 a) = a`,
-  GEN_TAC THEN REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[BIT_REFLECT128] THEN
-  SUBGOAL_THEN `127 - i < 128` ASSUME_TAC THENL
-   [ASM_ARITH_TAC; ALL_TAC] THEN
-  ASM_SIMP_TAC[BIT_REFLECT128] THEN
-  AP_THM_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC);;
-
-(* bit_reflect128 distributes over XOR                                       *)
-let REFLECT128_XOR = prove
- (`!a b:int128. bit_reflect128 (word_xor a b) =
-                word_xor (bit_reflect128 a) (bit_reflect128 b)`,
-  REPEAT GEN_TAC THEN REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[BIT_REFLECT128; BIT_WORD_XOR; DIMINDEX_128;
-               ARITH_RULE `i < 128 ==> 127 - i < 128`]);;
-
-(* bit_reflect128 of zero is zero                                            *)
-let REFLECT128_0 = prove
- (`bit_reflect128 (word 0 : int128) = word 0`,
-  REWRITE_TAC[WORD_EQ_BITS_ALT] THEN
-  CONV_TAC(ONCE_DEPTH_CONV DIMINDEX_CONV) THEN
-  X_GEN_TAC `i:num` THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[BIT_REFLECT128; BIT_WORD_0]);;
 
 (* ========================================================================= *)
 (* Step 2: Product reversal identity and helper lemmas                       *)
 (* ========================================================================= *)
-
-(* Helper: bit index must be < 128 for 128-bit words                         *)
-let BIT_LT_128 = prove
- (`!(w:int128) i. bit i w ==> i < 128`,
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM CONTRAPOS_THM] THEN
-  REWRITE_TAC[NOT_LT; NOT_CLAUSES] THEN DISCH_TAC THEN
-  MP_TAC(ISPECL [`w:int128`; `i:num`] BIT_TRIVIAL) THEN
-  REWRITE_TAC[DIMINDEX_128] THEN ASM_REWRITE_TAC[]);;
-
-let BIT_TRIVIAL_128 = prove
- (`!(w:int128) i. 128 <= i ==> ~bit i w`,
-  MESON_TAC[BIT_LT_128; NOT_LT]);;
 
 (* Product reversal: reflecting inputs reverses the product bits.
    bit k (pmul(REF a, REF b)) = bit (254-k) (pmul(a, b)) for k <= 254.
@@ -913,19 +854,10 @@ let GUERON_PROP1 = prove(
 (* NIST_GHASH_IS_POLYVAL bridges to ghash_polyval_acc via GUERON_PROP1.      *)
 (* ========================================================================= *)
 
-let nist_dot = new_definition
-  `nist_dot (a:int128) (b:int128) : int128 =
-   bit_reflect128(ghash_reduce(word_pmul (bit_reflect128 a) (bit_reflect128 b)))`;;
-
 (* GUERON_PROP1 restated in terms of nist_dot                                *)
 let NIST_DOT_IS_POLYVAL_DOT = prove
  (`!a b:int128. nist_dot a b = polyval_dot a (ghash_twist b)`,
   REWRITE_TAC[nist_dot; GUERON_PROP1]);;
-
-let nist_ghash = define
- `nist_ghash (h:int128) (acc:int128) [] = acc /\
-  nist_ghash h acc (CONS x xs) =
-    nist_ghash h (nist_dot (word_xor acc x) h) xs`;;
 
 (* The core bridge: NIST GHASH = POLYVAL Horner with twisted key.            *)
 (* Proof by list induction; the step case uses GUERON_PROP1 via              *)
@@ -935,15 +867,6 @@ let NIST_GHASH_IS_POLYVAL = prove
   GEN_TAC THEN ONCE_REWRITE_TAC[SWAP_FORALL_THM] THEN
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC[nist_ghash; ghash_polyval_acc; NIST_DOT_IS_POLYVAL_DOT]);;
-
-let NIST_GHASH_NIL = prove
- (`!h acc. nist_ghash h acc [] = acc`,
-  REWRITE_TAC[nist_ghash]);;
-
-let NIST_GHASH_CONS = prove
- (`!h acc x xs. nist_ghash h acc (CONS x xs) =
-                nist_ghash h (nist_dot (word_xor acc x) h) xs`,
-  REWRITE_TAC[nist_ghash]);;
 
 let NIST_GHASH_APPEND = prove
  (`!h xs ys acc. nist_ghash h acc (APPEND xs ys) =

@@ -7,6 +7,12 @@
 (* Encoding the registers and flags as an 80-element list of numbers.        *)
 (* ------------------------------------------------------------------------- *)
 
+(*** Runtime configuration is documented centrally in common/cosim.ml.
+ *** This campaign runs until a failure or its configured limit.
+ ***)
+
+needs "common/cosim.ml";;
+needs "common/sematest.ml";;
 needs "x86/proofs/base.ml";;
 
 let regfile = new_definition
@@ -239,6 +245,16 @@ let random_regstate () =
   [num(Random.int 256 land 0b11010101)] @
   map (fun _ -> randomnd 64 d) (5--79) @
   map (fun _ -> randomnd 64 d) (80--111);;
+
+(*** The HOL-side executor client is shared in common/cosim.ml. This file
+ *** selects the x86-64 executor and supplies the state-vector shape.
+ ***
+ *** A session starts with READY 1 x86_64 112. The client sends
+ *** RUN <hex-instruction-bytes> <decimal-state-word> ... and receives
+ *** OK with the resulting 112 words, or TRAP/ERROR.
+ ***
+ *** The x86-64 executor and state-vector shape are selected below.
+ ***)
 
 (* ------------------------------------------------------------------------- *)
 (* Generate random instance of instruction class itself.                     *)
@@ -506,6 +522,14 @@ let iclasses = iclasses_regreg @
  [0xc4; 0x41; 0x4d; 0xfe; 0xf7]; (* VPADDD ymm14, ymm14, ymm15 *)
  [0xc4; 0x41; 0x19; 0xfe; 0xdd]; (* VPADDD (%_% xmm11) (%_% xmm12) (%_% xmm13) *)
  [0xc4; 0x41; 0x11; 0xfe; 0xfc]; (* VPADDD (%_% xmm15) (%_% xmm13) (%_% xmm12) *)
+ [0xC5; 0xFD; 0xFC; 0xC1];        (* VPADDB ymm0, ymm0, ymm1 *)
+ [0xC5; 0xE5; 0xFC; 0xDC];        (* VPADDB ymm3, ymm3, ymm4 *)
+ [0xC4; 0x41; 0x3D; 0xFC; 0xC1];  (* VPADDB ymm8, ymm8, ymm9 *)
+ [0xC4; 0x41; 0x0D; 0xFC; 0xF7];  (* VPADDB ymm14, ymm14, ymm15 *)
+ [0xC5; 0xE9; 0xFC; 0xCB];        (* VPADDB xmm1, xmm2, xmm3 *)
+ [0xC4; 0x41; 0x19; 0xFC; 0xDD];  (* VPADDB xmm11, xmm12, xmm13 *)
+ [0xC5; 0xD5; 0xFC; 0xD7];        (* VPADDB ymm2, ymm5, ymm7 *)
+ [0xC4; 0x41; 0x2D; 0xFC; 0xE3];  (* VPADDB ymm12, ymm10, ymm11 *)
  [0xc5; 0xfd; 0x66; 0xc1]; (* VPCMPGTD ymm0, ymm0, ymm1 *)
  [0xc5; 0xf5; 0x66; 0xca]; (* VPCMPGTD ymm1, ymm1, ymm2 *)
  [0xc5; 0xed; 0x66; 0xd3]; (* VPCMPGTD ymm2, ymm2, ymm3 *)
@@ -1133,6 +1157,10 @@ let decode_inst ibytes =
  *** it can be modified in between.
  ***)
 
+let x86_cosim_executor = lazy
+  (start_cosim_executor "S2N_BIGNUM_X86_64_EXECUTOR"
+    "tools/simulate-persistent x86" "x86_64" 112);;
+
 let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list =
   let ibyte_to_icode_fn =
     fun ibyte -> (itlist (fun h t -> num h +/ num 256 */ t) (List.rev ibyte) num_0) in
@@ -1150,25 +1178,17 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
 
   let input_state = random_regstate() in
 
-  let outfile = Filename.temp_file "x86simulator" ".out" in
+  let execution =
+    cosim_execute (Lazy.force x86_cosim_executor)
+      (cosim_hex_of_bytes ibytes) (map string_of_num input_state) in
 
-  let command =
-    "x86/proofs/x86simulate '" ^
-    end_itlist (fun s t -> s ^ "," ^ t) (map string_of_int ibytes) ^
-    "' " ^
-    end_itlist (fun s t -> s ^ " " ^ t) (map string_of_num input_state) ^
-    " >" ^ outfile in
-
-  let _ = Sys.command command in
   (*** This branch determines whether the actual simulation worked ***)
   (*** In each branch we try to confirm that we likewise do or don't ***)
 
-  if strings_of_file outfile <> [] then
-    let resultstring = string_of_file outfile in
-
+  match execution with
+  | Cosim_ok output_words ->
     let output_state_raw =
-      map (fun (Ident s) -> num_of_string s)
-          (lex(explode resultstring)) in
+      map num_of_string output_words in
 
     (* Synthesize q registers from two 64 ints *)
     let output_state = output_state_raw in
@@ -1211,7 +1231,7 @@ let cosimulate_instructions (memopidx: int option) (add_assum: int) ibytes_list 
              (print_qterm gsd; Format.print_newline(); false))
      | _,[],_ -> true in
     (decoded,result)
-  else
+  | Cosim_trap _ ->
     let decoded = mk_flist(map mk_numeral icodes) in
     decoded,not(can X86_MK_EXEC_RULE(REFL ibyteterm));;
 
@@ -1649,6 +1669,10 @@ let simple_memory_iclasses = iclasses_simplemem @
   [0xc4; 0x61; 0x79; 0x17; 0x3c; 0x24];  (* vmovhpd [rsp], xmm15 *)
   [0xc5; 0xe9; 0xc4; 0x4c; 0x24; 0x07; 0x05]; (* vpinsrw xmm1, xmm2, [rsp + 0x7], 0x5 *)
   [0xc5; 0x79; 0xc4; 0x74; 0x24; 0x06; 0x0c]; (* vpinsrw xmm14, xmm0, [rsp + 0x6], 0xc *)
+  [0xC5; 0x99; 0xFC; 0x0C; 0x24]; (* VPADDB (%_% xmm1) (%_% xmm12) (Memop Word128 (%% (rsp,0))) *)
+  [0xC5; 0xD9; 0xFC; 0x54; 0x24; 0x10]; (* VPADDB (%_% xmm2) (%_% xmm4) (Memop Word128 (%% (rsp,16))) *)
+  [0xC5; 0x65; 0xFC; 0x44; 0x24; 0x20]; (* VPADDB (%_% ymm8) (%_% ymm3) (Memop Word256 (%% (rsp,32))) *)
+  [0xC5; 0x0D; 0xFC; 0x74; 0x24; 0x40]; (* VPADDB (%_% ymm14) (%_% ymm14) (Memop Word256 (%% (rsp,64))) *)
   [0xc5; 0x99; 0xd4; 0x0c; 0x24]; (* VPADDQ (%_% xmm1) (%_% xmm12) (Memop Word128 (%% (rsp,0))) *)
   [0xc5; 0x65; 0xd4; 0x44; 0x24; 0x20]; (* VPADDQ (%_% ymm8) (%_% ymm3) (Memop Word256 (%% (rsp,32))) *)
   [0xc5; 0x0d; 0xd4; 0x74; 0x24; 0x40]; (* VPADDQ (%_% ymm14) (%_% ymm14) (Memop Word256 (%% (rsp,64))) *)
@@ -1698,7 +1722,8 @@ let run_random_simulation() =
     let decoded, result = run_random_simplememopsimulation() in
     decoded,result,2;;
 
-let time_limit_sec = 2400.0;;
+let time_limit_sec = sematest_seconds 2400.0;;
+let case_limit = sematest_case_limit ();;
 let tested_reg_instances = ref 0;;
 let tested_mem_instances = ref 0;;
 let tested_smp_instances = ref 0;;
@@ -1713,8 +1738,9 @@ let rec run_random_simulations start_t =
               then " (fails correctly) instruction code " else " " in
     let _ = Format.print_string("OK:" ^ fey ^ string_of_term decoded);
             Format.print_newline() in
-    let now_t = Sys.time() in
-    if now_t -. start_t > time_limit_sec then
+    let total = !tested_reg_instances + !tested_mem_instances +
+                !tested_smp_instances in
+    if sematest_finished time_limit_sec case_limit start_t total then
       let _ = Printf.printf "Finished (time limit: %fs, tested register-only: %d, general memory: %d, special memory: %d, total: %d)\n"
           time_limit_sec !tested_reg_instances !tested_mem_instances !tested_smp_instances
           (!tested_reg_instances + !tested_mem_instances + !tested_smp_instances) in
@@ -1729,9 +1755,9 @@ let rec run_random_simulations start_t =
  *** Random.init(Hashtbl.hash (Sys.getenv "HOST"));;
  ***)
 
-Random.self_init();;
+sematest_random_init ();;
 
-let start_t = Sys.time() (* unit is sec *) in
+let start_t = Unix.gettimeofday() (* unit is sec *) in
   match run_random_simulations start_t with
   | Some (t,_) -> Printf.printf "Error: term `%s`" (string_of_term t); failwith "simulator"
   | None -> ();;
